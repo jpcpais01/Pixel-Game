@@ -2,6 +2,9 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { WorldScene } from './scenes/WorldScene';
 import { UIScene } from './scenes/UIScene';
+import { setupApp } from './pwa';
+
+setupApp();
 
 const game = new Phaser.Game({
   type: Phaser.WEBGL,

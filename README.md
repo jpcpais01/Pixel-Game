@@ -28,6 +28,14 @@ Animations in `src/art/wizard.ts` are lists of poses (lift, breath, foot offsets
 
 ![Sprite sheet](docs/wizard_sheet.png)
 
+## App icon and install
+
+<img src="docs/icon.png" width="128" alt="App icon" align="right" />
+
+The game is a PWA: on Android, Chrome offers an **Install** button (top right); on iPhone, use Share > Add to Home Screen. Installed, it opens fullscreen in landscape, and it keeps working offline because a service worker caches the whole build. In a phone browser tab, the first tap goes fullscreen and, on Android, locks to landscape. Held upright, the game asks you to turn the phone sideways (tap to play in portrait anyway).
+
+The icon is drawn in code too (`src/art/icon.ts`): the wizard's portrait against a dithered night sky, lit by his crystal. `scripts/pwa.ts` is a Vite plugin that renders every icon size, writes the manifest and generates the service worker at build time, so there are no icon files to keep in sync. Maskable icons use a wider grid so the crystal survives a round mask.
+
 ## Running it
 
 ```bash
@@ -35,6 +43,7 @@ npm install
 npm run dev      # open the printed URL on your phone (same Wi-Fi) or desktop
 npm run build    # static build in dist/
 npm run sheet    # write zoomed sprite sheets to sheets/ for reviewing the art
+npm run icons    # write every app icon to sheets/icons/ for reviewing
 ```
 
 Controls: on a touch screen, use the left joystick and the right button. On desktop, use WASD or the arrow keys, and Space or J to cast.
