@@ -1,7 +1,7 @@
 // Dev tool: render a character's frames to a zoomed PNG contact sheet.
-// Usage: npx tsx scripts/sheet.ts [outDir] [scale] [wizard|warrior|paladin]
+// Usage: npx tsx scripts/sheet.ts [outDir] [scale] [wizard|void|warrior|paladin]
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { buildWizardFrames, FRAME_W as WIZ_W, FRAME_H as WIZ_H, ANIMS, DIRS } from '../src/art/wizard';
+import { buildWizardFrames, FRAME_W as WIZ_W, FRAME_H as WIZ_H, ANIMS, DIRS, VOID_LOOK } from '../src/art/wizard';
 import { buildWarriorFrames, WARRIOR_W, WARRIOR_H, WARRIOR_ANIMS } from '../src/art/warrior';
 import { buildPaladinFrames, PALADIN_W, PALADIN_H, PALADIN_ANIMS } from '../src/art/paladin';
 import { encodePNG } from './png';
@@ -13,7 +13,7 @@ mkdirSync(out, { recursive: true });
 const FRAME_W = hero === 'warrior' ? WARRIOR_W : hero === 'paladin' ? PALADIN_W : WIZ_W;
 const FRAME_H = hero === 'warrior' ? WARRIOR_H : hero === 'paladin' ? PALADIN_H : WIZ_H;
 const built: { anim: string; dir: string | null; canvas: { render(): ReturnType<ReturnType<typeof buildWizardFrames>[number]['canvas']['render']> } }[] =
-  hero === 'warrior' ? buildWarriorFrames() : hero === 'paladin' ? buildPaladinFrames() : buildWizardFrames();
+  hero === 'warrior' ? buildWarriorFrames() : hero === 'paladin' ? buildPaladinFrames() : buildWizardFrames(process.argv[4] === 'void' ? VOID_LOOK : undefined);
 const frames = built.map((f) => ({ ...f, r: f.canvas.render() }));
 const rows: { anim: string; dir: string | null }[] = [];
 for (const a of hero === 'warrior' ? WARRIOR_ANIMS : hero === 'paladin' ? PALADIN_ANIMS : ANIMS) for (const d of DIRS) rows.push({ anim: a.name, dir: d });
@@ -49,6 +49,6 @@ for (const layer of ['composite', 'diffuse', 'normal', 'emissive'] as const) {
       }
     });
   });
-  writeFileSync(`${out}/${hero}_${layer}.png`, encodePNG(W, H, img));
+  writeFileSync(`${out}/${process.argv[4] === 'void' ? 'void' : hero}_${layer}.png`, encodePNG(W, H, img));
 }
 console.log('frames', frames.length, 'sheet', W, H);

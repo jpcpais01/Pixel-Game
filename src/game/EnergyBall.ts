@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { snap } from './display';
+import { ARCANE_STYLE, type SpellStyle } from './spells';
 
 const SPEED = 175;
 const LIFETIME = 1100;
@@ -17,22 +18,24 @@ export class EnergyBall {
   private halo: Phaser.GameObjects.Image;
   private light: Phaser.GameObjects.Light;
   private trail: Phaser.GameObjects.Particles.ParticleEmitter;
+  private k: SpellStyle;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, dx: number, dy: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, dx: number, dy: number, style: SpellStyle = ARCANE_STYLE) {
     this.scene = scene;
+    this.k = style;
     this.x = x;
     this.y = y;
     this.vx = dx * SPEED;
     this.vy = dy * SPEED;
-    this.sprite = scene.add.sprite(x, y, 'orb_e', 'o0').setBlendMode(Phaser.BlendModes.ADD).play('orb_spin');
-    this.halo = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x39c6f0).setAlpha(0.8);
-    this.light = scene.lights.addLight(x, y, 90, 0x5fdcff, 2.2);
+    this.sprite = scene.add.sprite(x, y, style.orb.texture, 'o0').setBlendMode(Phaser.BlendModes.ADD).play(style.orb.anim);
+    this.halo = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(style.glow).setAlpha(0.8);
+    this.light = scene.lights.addLight(x, y, 90, style.light, 2.2);
     this.trail = scene.add.particles(0, 0, 'spark', {
       lifespan: { min: 220, max: 460 },
       speed: { min: 3, max: 16 },
       scale: { start: 1, end: 0 },
       alpha: { start: 0.95, end: 0 },
-      tint: [0x9ff6ff, 0x39c6f0, 0x3a5ce0, 0x8a55f0],
+      tint: style.sparks,
       blendMode: Phaser.BlendModes.ADD,
       frequency: 16,
     });
@@ -41,7 +44,7 @@ export class EnergyBall {
   }
 
   private castFlash(x: number, y: number): void {
-    const flash = this.scene.lights.addLight(x, y, 60, 0xbff8ff, 3);
+    const flash = this.scene.lights.addLight(x, y, 60, this.k.flash, 3);
     this.scene.tweens.add({
       targets: flash,
       intensity: 0,
@@ -73,10 +76,10 @@ export class EnergyBall {
     this.dead = true;
     const { scene } = this;
     const burst = scene.add
-      .sprite(snap(this.x), snap(this.y), 'burst_e', 'b0')
+      .sprite(snap(this.x), snap(this.y), this.k.burst.texture, 'b0')
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(this.y + 20)
-      .play('burst_pop');
+      .play(this.k.burst.anim);
     burst.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => burst.destroy());
     const light = this.light;
     scene.tweens.add({

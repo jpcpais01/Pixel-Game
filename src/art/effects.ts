@@ -2,7 +2,21 @@
 // These are pure light, so they only produce emissive pixels.
 
 import { PixelCanvas, type RGB } from './pixel';
-import { EMBER_CORE, EMBER_DEEP, EMBER_HOT, EMBER_MID, HOLY_CORE, HOLY_HOT, HOLY_MID, HOLY_SKY, MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID, MAGIC_VIOLET } from './palette';
+import { EMBER_CORE, EMBER_DEEP, EMBER_HOT, EMBER_MID, MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID, MAGIC_VIOLET, HOLY_CORE, HOLY_HOT, HOLY_MID, HOLY_SKY, VOID_CORE, VOID_DEEP, VOID_HOT, VOID_MID, VOID_TEAL } from './palette';
+
+/** Colours of a spell, brightest first; `accent` is the contrasting fleck. */
+export interface SpellColors {
+  core: RGB;
+  hot: RGB;
+  mid: RGB;
+  deep: RGB;
+  accent: RGB;
+  /** A hollow orb: a bright ring around a dim heart (the void look). */
+  hollow?: boolean;
+}
+
+export const ARCANE_SPELL: SpellColors = { core: MAGIC_CORE, hot: MAGIC_HOT, mid: MAGIC_MID, deep: MAGIC_DEEP, accent: MAGIC_VIOLET };
+export const VOID_SPELL: SpellColors = { core: VOID_CORE, hot: VOID_HOT, mid: VOID_MID, deep: VOID_DEEP, accent: VOID_TEAL, hollow: true };
 
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
@@ -13,8 +27,11 @@ const hash = (a: number, b: number, c = 0) => {
 export const ORB_SIZE = 16;
 export const ORB_FRAMES = 4;
 
-/** Energy ball: white-hot core, cyan body, flickering deep-blue halo, two orbiting motes. */
-export function orbFrame(f: number): PixelCanvas {
+/**
+ * Energy ball: white-hot core, bright body, flickering deep halo, two orbiting motes.
+ * A hollow orb swaps the core for a dim heart inside a blazing ring.
+ */
+export function orbFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanvas {
   const c = new PixelCanvas(ORB_SIZE, ORB_SIZE);
   const cx = 8;
   const cy = 8;
@@ -22,17 +39,18 @@ export function orbFrame(f: number): PixelCanvas {
   for (let y = 0; y < ORB_SIZE; y++) {
     for (let x = 0; x < ORB_SIZE; x++) {
       const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
-      if (d <= 1.6) c.spark(x, y, MAGIC_CORE, 1);
-      else if (d <= 2.9) c.spark(x, y, MAGIC_HOT, 1);
-      else if (d <= 4.0 + pulse) c.spark(x, y, MAGIC_MID, 0.85);
-      else if (d <= 5.4 + pulse && hash(x, y, f) > 0.35) c.spark(x, y, MAGIC_DEEP, 0.55);
-      else if (d <= 6.6 && hash(x, y, f + 9) > 0.86) c.spark(x, y, MAGIC_DEEP, 0.35);
+      if (k.hollow && d <= 1.6) c.spark(x, y, k.deep, 0.7);
+      else if (d <= 1.6) c.spark(x, y, k.core, 1);
+      else if (d <= 2.9) c.spark(x, y, k.hollow ? k.core : k.hot, 1);
+      else if (d <= 4.0 + pulse) c.spark(x, y, k.hollow ? k.hot : k.mid, 0.85);
+      else if (d <= 5.4 + pulse && hash(x, y, f) > 0.35) c.spark(x, y, k.hollow ? k.mid : k.deep, 0.55);
+      else if (d <= 6.6 && hash(x, y, f + 9) > 0.86) c.spark(x, y, k.deep, 0.35);
     }
   }
-  for (let k = 0; k < 2; k++) {
-    const a = ((f * 45 + k * 180) * Math.PI) / 180;
-    c.spark(cx + Math.cos(a) * 5.6, cy + Math.sin(a) * 5.6, MAGIC_HOT, 1);
-    c.spark(cx + Math.cos(a - 0.5) * 5.6, cy + Math.sin(a - 0.5) * 5.6, MAGIC_MID, 0.5);
+  for (let m = 0; m < 2; m++) {
+    const a = ((f * 45 + m * 180) * Math.PI) / 180;
+    c.spark(cx + Math.cos(a) * 5.6, cy + Math.sin(a) * 5.6, k.hollow ? k.accent : k.hot, 1);
+    c.spark(cx + Math.cos(a - 0.5) * 5.6, cy + Math.sin(a - 0.5) * 5.6, k.mid, 0.5);
   }
   return c;
 }
@@ -41,26 +59,26 @@ export const BURST_SIZE = 32;
 export const BURST_FRAMES = 7;
 
 /** Impact: a flash, an expanding shock ring and sparks flung outward. */
-export function burstFrame(f: number): PixelCanvas {
+export function burstFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanvas {
   const c = new PixelCanvas(BURST_SIZE, BURST_SIZE);
   const cx = 16;
   const cy = 16;
   const t = f / (BURST_FRAMES - 1);
   const r = 2.5 + f * 2.0;
   const thick = Math.max(0.7, 2.2 - f * 0.3);
-  const ringCol: RGB = f < 2 ? MAGIC_HOT : f < 4 ? MAGIC_MID : MAGIC_DEEP;
+  const ringCol: RGB = f < 2 ? k.hot : f < 4 ? k.mid : k.deep;
   for (let y = 0; y < BURST_SIZE; y++) {
     for (let x = 0; x < BURST_SIZE; x++) {
       const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
-      if (f <= 1 && d <= 3.6 - f * 1.2) c.spark(x, y, MAGIC_CORE, 1);
-      else if (f <= 2 && d <= 5 - f) c.spark(x, y, MAGIC_HOT, 0.7);
+      if (f <= 1 && d <= 3.6 - f * 1.2) c.spark(x, y, k.core, 1);
+      else if (f <= 2 && d <= 5 - f) c.spark(x, y, k.hot, 0.7);
       if (Math.abs(d - r) <= thick / 2 && hash(x, y, f) > t * 0.55) c.spark(x, y, ringCol, 1 - t * 0.6);
     }
   }
-  for (let k = 0; k < 10; k++) {
-    const a = (k / 10) * Math.PI * 2 + hash(k, 1) * 0.5;
-    const dist = r + 1.5 + hash(k, 2) * 3;
-    const col = k % 3 === 0 ? MAGIC_VIOLET : MAGIC_HOT;
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + hash(i, 1) * 0.5;
+    const dist = r + 1.5 + hash(i, 2) * 3;
+    const col = i % 3 === 0 ? k.accent : k.hot;
     if (f < BURST_FRAMES - 1) c.spark(cx + Math.cos(a) * dist, cy + Math.sin(a) * dist, col, 1 - t);
   }
   return c;
@@ -217,11 +235,11 @@ export function skyIcon(kind: 'sun' | 'moon'): Uint8ClampedArray {
   return px;
 }
 
-/** 16x16 icon for the beam button: a ray of light bursting from a star, drawn additively. */
-export function beamIcon(): Uint8ClampedArray {
+/** 16x16 icon for the beam button: a ray of light bursting from a star, with a strand of the accent colour, drawn additively. */
+export function beamIcon(k: SpellColors = ARCANE_SPELL): Uint8ClampedArray {
   const S = 16;
   const px = new Uint8ClampedArray(S * S * 4);
-  const cols: RGB[] = [MAGIC_CORE, MAGIC_HOT, MAGIC_MID, MAGIC_DEEP, MAGIC_VIOLET];
+  const cols: RGB[] = [k.core, k.hot, k.mid, k.deep, k.accent];
   const put = (x: number, y: number, c: RGB) => {
     if (x < 0 || y < 0 || x >= S || y >= S) return;
     const i = (y * S + x) * 4;

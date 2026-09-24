@@ -122,6 +122,73 @@ export const EMBER_MID = hex('#ff9a2e');
 export const EMBER_DEEP = hex('#d9432b');
 
 // ---------------------------------------------------------------------------
+// The Void wizard skin: a plum-black hooded robe, silver trim, an obsidian
+// staff with a silver crescent, and violet-rose magic with teal sparks.
+
+const VOID_INK = hex('#0a0612');
+
+export const VOID_ROBE: Material = {
+  ramp: ramp('#120a1f', '#211537', '#332153', '#4a3072', '#654595'),
+  outline: VOID_INK,
+  outlineLit: hex('#231838'),
+};
+
+/** Hood lining and the robe's open front: a deep wine-magenta. */
+export const VOID_LINING: Material = {
+  ramp: ramp('#1c0721', '#330e3a', '#4d1856', '#692470'),
+  outline: VOID_INK,
+};
+
+export const SILVER: Material = {
+  ramp: ramp('#262838', '#4b5068', '#858ca8', '#c4cadf', '#f4f6ff'),
+  outline: hex('#0e0d18'),
+  shine: true,
+};
+
+export const OBSIDIAN: Material = {
+  ramp: ramp('#0e0b16', '#1f1a2e', '#342c4a', '#51476d'),
+  outline: hex('#07050c'),
+  shine: true,
+};
+
+/** The dark inside of the hood, where only the eyes show. */
+export const HOOD_SHADOW: Material = {
+  ramp: ramp('#06030b', '#0b0614', '#120a1e'),
+  outline: VOID_INK,
+  noAO: true,
+  noOutline: true,
+};
+
+export const VOID_EYE: Material = {
+  ramp: ramp('#ff8cf0', '#ffe2fb'),
+  outline: VOID_INK,
+  emissive: 1,
+  noAO: true,
+};
+
+/** Pale, cold hands. */
+export const PALE_SKIN: Material = {
+  ramp: ramp('#4a3450', '#7d6184', '#b79dbc', '#e4d2e6'),
+  outline: hex('#1a0f1e'),
+  outlineLit: hex('#34233a'),
+};
+
+export const VOID_CRYSTAL: Material = {
+  ramp: ramp('#5e1a86', '#a642d6', '#e48cff', '#ffe8ff'),
+  outline: hex('#1d0830'),
+  outlineLit: hex('#3a1057'),
+  emissive: 0.85,
+  shine: true,
+  noAO: true,
+};
+
+export const VOID_CORE = hex('#fff0ff');
+export const VOID_HOT = hex('#ffa8f4');
+export const VOID_MID = hex('#d05cf0');
+export const VOID_DEEP = hex('#6a2fd0');
+export const VOID_TEAL = hex('#6ff0e0');
+
+// ---------------------------------------------------------------------------
 // The paladin: bright white-silver plate, a royal azure cape and shield, an
 // ivory tabard, gold trim and holy light.
 
