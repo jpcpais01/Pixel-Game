@@ -50,6 +50,14 @@ export class FpsScene extends Phaser.Scene {
   private draws = 0;
   private gpu = 0;
   private gpuFrames = 0;
+  /** The GPU test: each layer's cost, measured by turning it off. */
+  private bench: { steps: [string, (() => () => void) | null][]; i: number; at: number; restore: (() => void) | null } | null = null;
+  private benchDone = false;
+  private benchWait = 0;
+  private benchTime = 0;
+  private benchFrames = 0;
+  private benchGpu = 0;
+  private results: string[] = [];
 
   constructor() {
     super('fps');
@@ -65,6 +73,7 @@ export class FpsScene extends Phaser.Scene {
     const unhook = gl ? this.countDraws(gl) : () => {};
     const timer = gl ? (gl.getExtension('EXT_disjoint_timer_query') as TimerExt | null) : null;
     const pending: WebGLQuery[] = [];
+    const pixel = new Uint8Array(4);
     let query: WebGLQuery | null = null;
 
     const events = this.game.events;
@@ -83,14 +92,18 @@ export class FpsScene extends Phaser.Scene {
       this.render_ += performance.now() - this.renderStart;
       this.frames++;
       const interval = this.game.loop.rawDelta;
+      this.benchTime += interval;
+      this.benchFrames++;
       if (interval < 1000) this.worst = Math.max(this.worst, interval);
       this.best = Math.min(this.best, interval);
       if (gl && !timer && settings.values.profiler) {
-        // No GPU timer (most phones): wait for the GPU to finish the frame
-        // and time that. It stalls the pipeline a little, so only here.
+        // No GPU timer (most phones): read back one pixel, which has to wait
+        // until the GPU has drawn the whole frame, and time that wait. It
+        // stalls the pipeline a little, so only here.
         const t = performance.now();
-        gl.finish();
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
         this.gpu += performance.now() - t;
+        this.benchGpu += performance.now() - t;
         this.gpuFrames++;
       }
       if (timer && gl) {
@@ -103,7 +116,9 @@ export class FpsScene extends Phaser.Scene {
         while (pending.length && timer.getQueryObjectEXT(pending[0], timer.QUERY_RESULT_AVAILABLE_EXT)) {
           const q = pending.shift()!;
           if (!disjoint) {
-            this.gpu += (timer.getQueryObjectEXT(q, timer.QUERY_RESULT_EXT) as number) / 1e6;
+            const ms = (timer.getQueryObjectEXT(q, timer.QUERY_RESULT_EXT) as number) / 1e6;
+            this.gpu += ms;
+            this.benchGpu += ms;
             this.gpuFrames++;
           }
           timer.deleteQueryEXT(q);
@@ -115,11 +130,17 @@ export class FpsScene extends Phaser.Scene {
     events.on(Phaser.Core.Events.POST_RENDER, end);
     const off = settings.watch((s) => {
       this.text.setVisible(s.showFps);
+      if (!s.profiler) {
+        this.stopBench();
+        this.results = [];
+        this.benchDone = false;
+      }
       this.since = 1e9;
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       off();
       unhook();
+      this.stopBench();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.place, this);
       events.off(Phaser.Core.Events.PRE_STEP, start);
       events.off(Phaser.Core.Events.PRE_RENDER, preRender);
@@ -146,6 +167,7 @@ export class FpsScene extends Phaser.Scene {
   }
 
   update(_time: number, dt: number): void {
+    this.runBench(dt);
     this.since += dt;
     if (this.since < 500) return;
     this.since = 0;
@@ -171,6 +193,9 @@ export class FpsScene extends Phaser.Scene {
         `\nFRAMES ${Math.round(this.best)}-${Math.round(this.worst)} MS  DRAWS ${Math.round(this.draws / n)}` +
         `\nLIGHTS ${lights}  PARTS ${particles}` +
         `\n${width}X${height} X${DPR.toFixed(2)} Z${pixelGrid.zoom} ${settings.values.quality.toUpperCase()}`;
+      if (this.bench) text += `\nTESTING ${this.bench.i + 1}/${this.bench.steps.length} - STAND STILL`;
+      if (this.results.length) text += '\nFRAME/GPU MS WITH A LAYER OFF';
+      for (let i = 0; i < this.results.length; i += 2) text += `\n${this.results.slice(i, i + 2).join('   ')}`;
     }
     this.update_ = 0;
     this.render_ = 0;
@@ -182,6 +207,65 @@ export class FpsScene extends Phaser.Scene {
     this.gpuFrames = 0;
     this.text.setText(text).setTint(fps >= 55 ? 0x9dffb0 : fps >= 30 ? 0xffe28a : 0xff8a8a);
     this.place();
+  }
+
+  /**
+   * Once the profiler is on and the world has run for a moment, measure the
+   * frame with everything, then with each layer turned off in turn: average
+   * frame time and GPU wait per step. A layer whose removal saves the most is
+   * what the phone struggles with.
+   */
+  private runBench(dt: number): void {
+    const world = this.scene.get('world') as (Phaser.Scene & { benchLayers?(): [string, () => () => void][] }) | null;
+    const running = !!world?.benchLayers && this.scene.isActive('world') && settings.values.profiler;
+    if (!running) {
+      this.stopBench();
+      this.benchWait = 0;
+      return;
+    }
+    if (this.benchDone) return;
+    if (!this.bench) {
+      this.benchWait += dt;
+      if (this.benchWait < 2000) return;
+      this.bench = { steps: [['ALL', null], ...world.benchLayers!()], i: -1, at: 0, restore: null };
+      this.results = [];
+      this.nextStep();
+      return;
+    }
+    const b = this.bench;
+    const now = performance.now();
+    // Let the change settle, then measure.
+    if (b.at > now) {
+      this.benchTime = 0;
+      this.benchFrames = 0;
+      this.benchGpu = 0;
+      return;
+    }
+    if (now - b.at < 1500) return;
+    const n = Math.max(1, this.benchFrames);
+    const name = b.i === 0 ? 'ALL' : `-${b.steps[b.i][0]}`;
+    this.results.push(`${name} ${(this.benchTime / n).toFixed(1)}/${(this.benchGpu / n).toFixed(1)}`);
+    this.nextStep();
+  }
+
+  private nextStep(): void {
+    const b = this.bench!;
+    b.restore?.();
+    b.restore = null;
+    b.i++;
+    if (b.i >= b.steps.length) {
+      this.bench = null;
+      this.benchDone = true;
+      this.since = 1e9;
+      return;
+    }
+    b.restore = b.steps[b.i][1]?.() ?? null;
+    b.at = performance.now() + 400;
+  }
+
+  private stopBench(): void {
+    this.bench?.restore?.();
+    this.bench = null;
   }
 
   private place(): void {
