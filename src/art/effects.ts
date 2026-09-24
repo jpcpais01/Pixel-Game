@@ -284,8 +284,46 @@ export function beamIcon(k: SpellColors = ARCANE_SPELL): Uint8ClampedArray {
   return px;
 }
 
+/** Colours for the sword icon: blade (lit, shaded, tip), guard (lit, highlight, dark), grip and outline. */
+export interface SwordIconColors {
+  blade: string;
+  bladeDark: string;
+  tip: string;
+  guard: string;
+  guardLit: string;
+  guardDark: string;
+  grip: string;
+  ink: string;
+  /** A short round tsuba and a longer grip. */
+  katana?: boolean;
+}
+
+const KNIGHT_SWORD_ICON: SwordIconColors = {
+  blade: '#dfe8f7',
+  bladeDark: '#8d9dbd',
+  tip: '#f4f8ff',
+  guard: '#f4cf6a',
+  guardLit: '#fff4bf',
+  guardDark: '#d69a3a',
+  grip: '#8f5a36',
+  ink: '#0c0f18',
+};
+
+/** The jade warrior's katana: pale green-tempered steel, a short gold tsuba, a long jade grip. */
+export const JADE_SWORD_ICON: SwordIconColors = {
+  blade: '#d6ece5',
+  bladeDark: '#82a39b',
+  tip: '#f2fffa',
+  guard: '#f4cf6a',
+  guardLit: '#fff4bf',
+  guardDark: '#d69a3a',
+  grip: '#22845e',
+  ink: '#040907',
+  katana: true,
+};
+
 /** 16x16 sword for the warrior's attack button: steel blade, gold guard, dark outline (normal blend). */
-export function swordIcon(): Uint8ClampedArray {
+export function swordIcon(k: SwordIconColors = KNIGHT_SWORD_ICON): Uint8ClampedArray {
   const S = 16;
   const px = new Uint8ClampedArray(S * S * 4);
   const put = (x: number, y: number, c: string) => {
@@ -299,15 +337,22 @@ export function swordIcon(): Uint8ClampedArray {
   };
   // Blade from the lower left up to the upper right, a lit and a shaded bevel.
   for (let i = 0; i < 9; i++) {
-    put(5 + i, 10 - i, i > 6 ? '#f4f8ff' : '#dfe8f7');
-    put(6 + i, 10 - i, '#8d9dbd');
+    put(5 + i, 10 - i, i > 6 ? k.tip : k.blade);
+    put(6 + i, 10 - i, k.bladeDark);
   }
-  put(14, 1, '#f4f8ff');
+  put(14, 1, k.tip);
   // Crossguard, grip and pommel.
-  for (const [x, y] of [[2, 9], [3, 10], [4, 11], [5, 12], [6, 13]]) put(x, y, '#f4cf6a');
-  put(3, 9, '#fff4bf');
-  for (const [x, y] of [[3, 12], [2, 13]]) put(x, y, '#8f5a36');
-  put(1, 14, '#d69a3a');
+  if (k.katana) {
+    for (const [x, y] of [[3, 10], [4, 11], [5, 12]]) put(x, y, k.guard);
+    put(3, 10, k.guardLit);
+    for (const [x, y] of [[3, 12], [2, 13], [1, 14]]) put(x, y, k.grip);
+    put(0, 15, k.guard);
+  } else {
+    for (const [x, y] of [[2, 9], [3, 10], [4, 11], [5, 12], [6, 13]]) put(x, y, k.guard);
+    put(3, 9, k.guardLit);
+    for (const [x, y] of [[3, 12], [2, 13]]) put(x, y, k.grip);
+    put(1, 14, k.guardDark);
+  }
   // Outline.
   const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < S && y < S && px[(y * S + x) * 4 + 3] === 255;
   const out: [number, number][] = [];
@@ -317,15 +362,14 @@ export function swordIcon(): Uint8ClampedArray {
       if (filled(x + 1, y) || filled(x - 1, y) || filled(x, y + 1) || filled(x, y - 1)) out.push([x, y]);
     }
   }
-  for (const [x, y] of out) put(x, y, '#0c0f18');
+  for (const [x, y] of out) put(x, y, k.ink);
   return px;
 }
 
 /** 16x16 icon for the whirlwind button: a spiral of golden fire around a bright heart, drawn additively. */
-export function whirlIcon(): Uint8ClampedArray {
+export function whirlIcon(cols: RGB[] = [EMBER_CORE, EMBER_HOT, EMBER_MID, EMBER_DEEP]): Uint8ClampedArray {
   const S = 16;
   const px = new Uint8ClampedArray(S * S * 4);
-  const cols: RGB[] = [EMBER_CORE, EMBER_HOT, EMBER_MID, EMBER_DEEP];
   const put = (x: number, y: number, c: RGB) => {
     if (x < 0 || y < 0 || x >= S || y >= S) return;
     const i = (y * S + x) * 4;
