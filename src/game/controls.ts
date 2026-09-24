@@ -6,7 +6,7 @@ export const controls = {
   moveY: 0,
   /** Attack button held. */
   attack: false,
-  /** Beam button held. */
+  /** Special button held (the wizard's beam). */
   beam: false,
 };
 

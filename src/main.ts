@@ -5,6 +5,9 @@ import { UIScene } from './scenes/UIScene';
 import { LitPipeline } from './game/LitPipeline';
 import { DPR, viewSize } from './game/display';
 import { SoundScene } from './scenes/SoundScene';
+import { HomeScene } from './scenes/HomeScene';
+import { SelectScene } from './scenes/SelectScene';
+import { FpsScene } from './scenes/FpsScene';
 import { sound } from './audio';
 
 sound.init();
@@ -24,7 +27,8 @@ const game = new Phaser.Game({
   render: { maxLights: 16 },
   pipeline: { Lit: LitPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
   input: { activePointers: 3 },
-  scene: [BootScene, WorldScene, UIScene, SoundScene],
+  // Later scenes draw on top.
+  scene: [BootScene, HomeScene, SelectScene, WorldScene, UIScene, SoundScene, FpsScene],
 });
 
 window.addEventListener('resize', () => {

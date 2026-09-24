@@ -2,10 +2,13 @@ import Phaser from 'phaser';
 import { controls, beamHud } from '../game/controls';
 import { daynight } from '../game/daynight';
 import { DPR as D } from '../game/display';
+import { characterById } from '../game/characters';
 
 /**
  * Touch controls: a floating joystick on the left half of the screen, an
- * attack button on the right and, above it, the beam button (hold to charge). Rendered at screen resolution over the world.
+ * attack button on the right and, above it, the special button (the wizard's
+ * beam: hold to charge). Icons come from the chosen character. Rendered at
+ * screen resolution over the world.
  */
 export class UIScene extends Phaser.Scene {
   private stick!: Phaser.GameObjects.Graphics;
@@ -56,18 +59,20 @@ export class UIScene extends Phaser.Scene {
     return new Phaser.Math.Vector2(R * (1.6 + 0.7 * 2), this.scale.height - R * 1.45);
   }
 
-  create(): void {
+  create(data: { character?: string }): void {
+    const hero = characterById(data?.character);
     this.stick = this.add.graphics();
     this.button = this.add.graphics();
-    this.icon = this.add.sprite(0, 0, 'orb_e', 'o0').setBlendMode(Phaser.BlendModes.ADD);
-    this.icon.play('orb_spin');
+    const { attack, special } = hero.buttons;
+    this.icon = this.add.sprite(0, 0, attack.texture, attack.frame).setBlendMode(Phaser.BlendModes.ADD);
+    if (attack.anim) this.icon.play(attack.anim);
     this.beamButton = this.add.graphics();
-    this.beamIcon = this.add.image(0, 0, 'icon_beam').setBlendMode(Phaser.BlendModes.ADD);
+    this.beamIcon = this.add.image(0, 0, special.texture).setBlendMode(Phaser.BlendModes.ADD);
     this.toggle = this.add.graphics();
     this.sun = this.add.image(0, 0, 'icon_sun');
     this.moon = this.add.image(0, 0, 'icon_moon');
     this.hint = this.add
-      .text(12 * D, 10 * D, 'Joystick or WASD to walk  ·  Space to cast  ·  hold K to charge a beam  ·  N for day/night', {
+      .text(12 * D, 10 * D, `Joystick or WASD to walk  ·  ${hero.hint}  ·  N for day/night`, {
         fontFamily: 'ui-monospace, Menlo, monospace',
         fontSize: `${12 * D}px`,
         color: '#dfe6ff',
@@ -186,7 +191,8 @@ export class UIScene extends Phaser.Scene {
     const iconScale = Math.max(2, Math.floor(tr.height / 16));
     this.sun.setPosition(tr.x + seg / 2, tr.centerY).setScale(iconScale).setAlpha(0.55 + d * 0.45);
     this.moon.setPosition(tr.x + seg * 1.5, tr.centerY).setScale(iconScale).setAlpha(1 - d * 0.45);
-    this.hint.setPosition(tr.right + 14 * D, tr.centerY - this.hint.height / 2);
+    // Under the toggle, clear of the FPS counter at the top centre.
+    this.hint.setPosition(tr.x, tr.bottom + 10 * D);
 
     // Hide the keyboard hint on small touch screens.
     this.hint.setVisible(this.scale.width > 700 * D || !this.sys.game.device.input.touch);

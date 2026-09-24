@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
 import { controls } from '../game/controls';
-import { Wizard, sunShadow, SUN_SHADOW_ALPHA } from '../game/Wizard';
+import { sunShadow, SUN_SHADOW_ALPHA } from '../game/Wizard';
 import { EnergyBall } from '../game/EnergyBall';
 import { Beam } from '../game/Beam';
 import { daynight } from '../game/daynight';
 import { sky } from '../game/LitPipeline';
 import { pixelGrid } from '../game/display';
+import { characterById, type Hero } from '../game/characters';
 
 type V3 = [number, number, number];
 
@@ -47,7 +48,8 @@ interface Dummy {
 }
 
 export class WorldScene extends Phaser.Scene {
-  private wizard!: Wizard;
+  private hero!: Hero;
+  private worldRect = new Phaser.Geom.Rectangle(0, 0, WORLD_W, WORLD_H);
   private balls: EnergyBall[] = [];
   private beams: Beam[] = [];
   private flickers: Flicker[] = [];
@@ -68,7 +70,7 @@ export class WorldScene extends Phaser.Scene {
     super('world');
   }
 
-  create(): void {
+  create(data: { character?: string }): void {
     const cx = WORLD_W / 2;
     const cy = WORLD_H / 2;
 
@@ -84,7 +86,7 @@ export class WorldScene extends Phaser.Scene {
     this.clouds = this.add.tileSprite(0, 0, WORLD_W, WORLD_H, 'clouds').setOrigin(0).setDepth(10000);
     this.shafts = this.add.tileSprite(0, 0, WORLD_W, WORLD_H, 'shafts').setOrigin(0).setDepth(10001).setBlendMode(Phaser.BlendModes.ADD);
 
-    const world = new Phaser.Geom.Rectangle(0, 0, WORLD_W, WORLD_H);
+    const world = this.worldRect;
     this.pollen = this.add.particles(0, 0, 'spark', {
       emitZone: { type: 'random', source: world } as Phaser.Types.GameObjects.Particles.EmitZoneData,
       lifespan: 5000,
@@ -135,19 +137,11 @@ export class WorldScene extends Phaser.Scene {
     this.dummy(cx + 64, cy - 8);
     this.dummy(cx - 70, cy + 34);
 
-    this.wizard = new Wizard(this, cx, cy + 20, {
-      cast: (x, y, dx, dy) => {
-        this.balls.push(new EnergyBall(this, x, y, dx, dy));
-        sound.cast(this.pan(x));
-      },
-      beam: (x, y, dx, dy, power) => {
-        this.beams.push(new Beam(this, x, y, dx, dy, power, world, this.wizard.depthAhead(), this.beamHit));
-        sound.beamFire(this.pan(x), power);
-      },
-    });
+    this.hero = characterById(data?.character).spawn(this, cx, cy + 20);
 
     const cam = this.cameras.main;
     this.vignette = cam.postFX.addVignette(0.5, 0.5, 0.92, 0.32);
+    cam.fadeIn(500, 7, 8, 13);
     this.fitCamera();
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.fitCamera());
 
@@ -156,12 +150,23 @@ export class WorldScene extends Phaser.Scene {
     this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N') as Record<string, Phaser.Input.Keyboard.Key>;
   }
 
+  castEnergyBall(x: number, y: number, dx: number, dy: number): void {
+    this.balls.push(new EnergyBall(this, x, y, dx, dy));
+    sound.cast(this.pan(x));
+  }
+
+  /** A beam from (x, y) along (dx, dy); `depth` sorts it against the caster. */
+  fireBeam(x: number, y: number, dx: number, dy: number, power: number, depth: number): void {
+    this.beams.push(new Beam(this, x, y, dx, dy, power, this.worldRect, depth, this.beamHit));
+    sound.beamFire(this.pan(x), power);
+  }
+
   /**
-   * Keep the camera locked on the wizard, snapped to device pixels. The
-   * wizard snaps to the same grid, so he holds still on screen and stays
+   * Keep the camera locked on the hero, snapped to device pixels. The
+   * hero snaps to the same grid, so they hold still on screen and stays
    * crisp, while the world scrolls in smooth sub-art-pixel steps.
    */
-  private followWizard(): void {
+  private followHero(): void {
     const cam = this.cameras.main;
     const z = cam.zoom;
     const halfW = cam.width / 2;
@@ -173,8 +178,8 @@ export class WorldScene extends Phaser.Scene {
     const maxX = WORLD_W - viewW / 2 - halfW;
     const minY = viewH / 2 - halfH;
     const maxY = WORLD_H - viewH / 2 - halfH;
-    const tx = this.wizard.x - halfW;
-    const ty = this.wizard.y - 12 - halfH;
+    const tx = this.hero.x - halfW;
+    const ty = this.hero.y - 12 - halfH;
     const sx = maxX < minX ? (minX + maxX) / 2 : Phaser.Math.Clamp(tx, minX, maxX);
     const sy = maxY < minY ? (minY + maxY) / 2 : Phaser.Math.Clamp(ty, minY, maxY);
     // Screen x = (worldX - scroll) * z + half * (1 - z). Choose scroll so the
@@ -297,11 +302,11 @@ export class WorldScene extends Phaser.Scene {
     return Phaser.Math.Clamp((x - cam.midPoint.x) / (cam.worldView.width / 2), -1, 1);
   }
 
-  /** How loud the braziers' crackle should be where the wizard stands. */
+  /** How loud the braziers' crackle should be where the hero stands. */
   private fireNearby(): number {
     let near = Infinity;
     for (const f of this.flickers) {
-      if (f.seed >= 0) near = Math.min(near, Phaser.Math.Distance.Between(f.light.x, f.light.y, this.wizard.x, this.wizard.y));
+      if (f.seed >= 0) near = Math.min(near, Phaser.Math.Distance.Between(f.light.x, f.light.y, this.hero.x, this.hero.y));
     }
     const k = Phaser.Math.Clamp(1 - (near - 16) / 150, 0, 1);
     return 0.12 + 0.88 * k * k;
@@ -319,10 +324,10 @@ export class WorldScene extends Phaser.Scene {
       my = ky / l;
     }
     const attack = controls.attack || k.SPACE.isDown || k.J.isDown;
-    const beam = controls.beam || k.K.isDown || k.SHIFT.isDown;
-    this.wizard.daylight = daynight.daylight;
-    this.wizard.update(dt, mx, my, attack, beam, this.bounds);
-    this.followWizard();
+    const special = controls.beam || k.K.isDown || k.SHIFT.isDown;
+    this.hero.daylight = daynight.daylight;
+    this.hero.update(dt, mx, my, attack, special, this.bounds);
+    this.followHero();
 
     for (const b of this.balls) {
       this.struck = false;
