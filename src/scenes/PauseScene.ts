@@ -9,7 +9,7 @@ import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText 
 import { fpsBottom } from './FpsScene';
 
 const PANEL_W = 172;
-const PANEL_H = 150;
+const PANEL_H = 166;
 const ROW_H = 16;
 const CONTROL_X = 86;
 const CONTROL_W = 76;
@@ -17,7 +17,7 @@ const CONTROL_W = 76;
 /**
  * The in-game pause button (top right, beside the speaker; Esc or P on a
  * keyboard) and the menu it opens: brightness, music and sound volume, time
- * of day, the FPS counter, and a way back to the home screen. Pausing freezes
+ * of day, the FPS counter, graphics quality, and a way back to the home screen. Pausing freezes
  * the world and the touch controls; the frozen world stays on screen, dimmed.
  *
  * The camera works in menu art pixels; the HUD button is drawn in device
@@ -39,6 +39,7 @@ export class PauseScene extends Phaser.Scene {
   private controlsRow: (PixelSlider | PixelButton)[] = [];
   private dayButton!: PixelButton;
   private fpsButton!: PixelButton;
+  private qualityButton!: PixelButton;
   private resume!: PixelButton;
   private home!: PixelButton;
 
@@ -99,12 +100,16 @@ export class PauseScene extends Phaser.Scene {
       new PixelSlider(this, CONTROL_W, value, color, (x) => settings.set(key, x));
     this.dayButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => daynight.toggle());
     this.fpsButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => settings.set('showFps', !settings.values.showFps));
+    this.qualityButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () =>
+      settings.set('quality', settings.values.quality === 'fast' ? 'full' : 'fast'),
+    );
     const rows: [string, PixelSlider | PixelButton][] = [
       ['Brightness', slider(0xffe08a, v.brightness, 'brightness')],
       ['Music', slider(0x6fe4ff, v.music, 'music')],
       ['Sound FX', slider(0x9dffb0, v.sfx, 'sfx')],
       ['Time of day', this.dayButton],
       ['FPS counter', this.fpsButton],
+      ['Graphics', this.qualityButton],
     ];
     this.labels = rows.map(([text]) => pixelText(this, 0, 0, text, 0xb8a8e8));
     this.controlsRow = rows.map(([, c]) => c);
@@ -125,6 +130,7 @@ export class PauseScene extends Phaser.Scene {
   private syncToggles(): void {
     this.dayButton.setText(daynight.target > 0.5 ? 'Day' : 'Night');
     this.fpsButton.setText(settings.values.showFps ? 'Shown' : 'Hidden');
+    this.qualityButton.setText(settings.values.quality === 'fast' ? 'Fast' : 'Full');
   }
 
   private setOpen(open: boolean): void {
@@ -140,7 +146,7 @@ export class PauseScene extends Phaser.Scene {
       this.scene.resume('ui');
     }
     this.hud.setVisible(!open);
-    for (const b of [this.dayButton, this.fpsButton, this.resume, this.home]) b.setEnabled(open);
+    for (const b of [this.dayButton, this.fpsButton, this.qualityButton, this.resume, this.home]) b.setEnabled(open);
     this.tweens.killTweensOf(this.menu);
     if (open) this.menu.setVisible(true);
     this.tweens.add({ targets: this.menu, alpha: open ? 1 : 0, duration: 140, onComplete: () => this.menu.setVisible(open) });

@@ -6,7 +6,20 @@
 // uneven and blurry while things move. The world's ground is drawn at art
 // resolution and scaled up (see PixelPipeline); everything else draws at
 // full resolution.
-export const DPR = Math.max(1, Math.min(4, window.devicePixelRatio || 1));
+const DEVICE_DPR = Math.max(1, Math.min(4, window.devicePixelRatio || 1));
+
+/**
+ * Canvas pixels per CSS pixel. At full quality that is one canvas pixel per
+ * device pixel. Fast quality makes each canvas pixel a whole square of
+ * device pixels (2x2 on most phones), so the browser still scales the canvas
+ * up evenly and the art stays crisp, with a quarter of the pixels to draw.
+ */
+export let DPR = DEVICE_DPR;
+
+/** Pick the render resolution; call `viewSize` afterwards for the new canvas size. */
+export function setFastRender(fast: boolean): void {
+  DPR = fast ? DEVICE_DPR / Math.ceil(DEVICE_DPR / 1.5) : DEVICE_DPR;
+}
 
 /** The world camera's zoom (device pixels per art pixel), set with the canvas size. */
 export const pixelGrid = { zoom: 2 };
