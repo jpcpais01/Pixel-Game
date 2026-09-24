@@ -5,9 +5,12 @@
 import Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, WIZARD_LOOKS, type FrameMeta } from './wizard';
-import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, maceIcon, sanctuaryIcon } from './effects';
+import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, type IconColors } from './effects';
+import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FRAMES, twirlStart, TWIRL_FPS, type JediMeta } from './jedi';
+import { hex } from './pixel';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_W, type PaladinMeta } from './paladin';
-import { buildWarriorFrames, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_W, type WarriorMeta } from './warrior';
+import { buildWarriorFrames, JADE_LOOK, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, type WarriorMeta } from './warrior';
+import { WIND_DEEP } from './palette';
 import { buildBeetleSheet, buildFrogSheet, buildPuffcapSheet, ringCanvas, venomGlob, type MonsterSheet } from './monsters';
 import { buildGround, NIGHT_GROUND, DAY_GROUND, brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 
@@ -108,6 +111,7 @@ const frameList = (canvases: PixelCanvas[], prefix: string) => canvases.map((c, 
 export const wizardMeta = new Map<string, FrameMeta>();
 export const warriorMeta = new Map<string, WarriorMeta>();
 export const paladinMeta = new Map<string, PaladinMeta>();
+export const jediMeta = new Map<string, JediMeta>();
 
 export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: number): void {
   // Wizard, once per look. Every look shares the rig, so the crystal meta is the same for all.
@@ -128,18 +132,20 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
     }
   }
 
-  // Warrior. Spin frames have no animation: the whirlwind picks them by angle.
-  const hf = buildWarriorFrames();
-  hf.forEach((f) => warriorMeta.set(f.key, f.meta));
-  register(scene, 'warrior', pack(hf.map((f) => ({ name: f.key, r: f.canvas.render() })), WARRIOR_W, WARRIOR_H), WARRIOR_W, WARRIOR_H);
-  for (const a of WARRIOR_ANIMS) {
-    for (const d of DIRS) {
-      scene.anims.create({
-        key: `warrior_${a.name}_${d}`,
-        frames: hf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: 'warrior', frame: f.key })),
-        frameRate: a.fps,
-        repeat: a.loop ? -1 : 0,
-      });
+  // Warrior, once per look. Spin frames have no animation: the whirlwind picks them by angle.
+  for (const look of WARRIOR_LOOKS) {
+    const hf = buildWarriorFrames(look);
+    if (!warriorMeta.size) hf.forEach((f) => warriorMeta.set(f.key, f.meta));
+    register(scene, look.key, pack(hf.map((f) => ({ name: f.key, r: f.canvas.render() })), WARRIOR_W, WARRIOR_H), WARRIOR_W, WARRIOR_H);
+    for (const a of WARRIOR_ANIMS) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: hf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
     }
   }
 
@@ -155,6 +161,31 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
         frames: pf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: 'paladin', frame: f.key })),
         frameRate: a.fps,
         repeat: a.loop ? -1 : 0,
+      });
+    }
+  }
+
+  // Jedi, once per look; the looks share the rig, so the blade meta is the same for all.
+  // The twirl plays a whole turn starting from whichever way he faces.
+  for (const look of JEDI_LOOKS) {
+    const jf = buildJediFrames(look);
+    if (!jediMeta.size) jf.forEach((f) => jediMeta.set(f.key, f.meta));
+    register(scene, look.key, pack(jf.map((f) => ({ name: f.key, r: f.canvas.render() })), JEDI_W, JEDI_H), JEDI_W, JEDI_H);
+    for (const d of DIRS) {
+      for (const a of JEDI_ANIMS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: jf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
+      const k0 = twirlStart(d);
+      scene.anims.create({
+        key: `${look.key}_twirl_${d}`,
+        frames: Array.from({ length: TWIRL_FRAMES + 1 }, (_, i) => ({ key: look.key, frame: `twirl_${(k0 + i) % TWIRL_FRAMES}` })),
+        frameRate: TWIRL_FPS,
+        repeat: 0,
       });
     }
   }
@@ -190,8 +221,18 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
   scene.textures.addCanvas('icon_beam_void', toCanvas(16, 16, beamIcon(VOID_SPELL)));
   scene.textures.addCanvas('icon_sword', toCanvas(16, 16, swordIcon()));
   scene.textures.addCanvas('icon_whirl', toCanvas(16, 16, whirlIcon()));
+  scene.textures.addCanvas('icon_sword_jade', toCanvas(16, 16, swordIcon(JADE_SWORD_ICON)));
+  scene.textures.addCanvas('icon_whirl_jade', toCanvas(16, 16, whirlIcon([JADE_LOOK.glow.core, JADE_LOOK.glow.hot, JADE_LOOK.glow.mid, WIND_DEEP])));
   scene.textures.addCanvas('icon_mace', toCanvas(16, 16, maceIcon()));
   scene.textures.addCanvas('icon_sanctuary', toCanvas(16, 16, sanctuaryIcon()));
+  const icons: [string, IconColors, IconColors][] = [
+    ['', [hex('#f6feff'), hex('#86d2ff'), hex('#4aa6ff'), hex('#2a7cff')], [hex('#ffffff'), hex('#d8f0ff'), hex('#8cc4ff'), hex('#4a70c0')]],
+    ['_sith', [hex('#fff6f2'), hex('#ff6a62'), hex('#f0283a'), hex('#c81628')], [hex('#fff0f4'), hex('#ff8a9a'), hex('#d0304a'), hex('#6a1030')]],
+  ];
+  for (const [suffix, saber, force] of icons) {
+    scene.textures.addCanvas(`icon_saber${suffix}`, toCanvas(16, 16, saberIcon(saber)));
+    scene.textures.addCanvas(`icon_force${suffix}`, toCanvas(16, 16, forceIcon(force)));
+  }
 
   register(scene, 'brazier', pack(frameList([0, 1, 2, 3].map(brazierFrame), 'f'), 16, 26), 16, 26);
   scene.anims.create({ key: 'brazier_burn', frames: scene.anims.generateFrameNames('brazier_e', { prefix: 'f', start: 0, end: 3 }), frameRate: 9, repeat: -1 });

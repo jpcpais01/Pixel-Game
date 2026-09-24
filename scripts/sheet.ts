@@ -1,23 +1,26 @@
 // Dev tool: render a character's frames to a zoomed PNG contact sheet.
-// Usage: npx tsx scripts/sheet.ts [outDir] [scale] [wizard|void|warrior|paladin]
+// Usage: npx tsx scripts/sheet.ts [outDir] [scale] [wizard|void|warrior|jade|paladin|jedi|sith]
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { buildWizardFrames, FRAME_W as WIZ_W, FRAME_H as WIZ_H, ANIMS, DIRS, VOID_LOOK } from '../src/art/wizard';
-import { buildWarriorFrames, WARRIOR_W, WARRIOR_H, WARRIOR_ANIMS } from '../src/art/warrior';
+import { buildWarriorFrames, JADE_LOOK, WARRIOR_W, WARRIOR_H, WARRIOR_ANIMS } from '../src/art/warrior';
 import { buildPaladinFrames, PALADIN_W, PALADIN_H, PALADIN_ANIMS } from '../src/art/paladin';
+import { buildJediFrames, JEDI_W, JEDI_H, JEDI_ANIMS, SITH_LOOK } from '../src/art/jedi';
 import { encodePNG } from './png';
 
 const out = process.argv[2] ?? 'sheets';
 const S = Number(process.argv[3] ?? 5);
-const hero = process.argv[4] === 'warrior' || process.argv[4] === 'paladin' ? process.argv[4] : 'wizard';
+const arg = process.argv[4];
+const hero = arg === 'warrior' || arg === 'jade' ? 'warrior' : arg === 'paladin' ? 'paladin' : arg === 'jedi' || arg === 'sith' ? 'jedi' : 'wizard';
 mkdirSync(out, { recursive: true });
-const FRAME_W = hero === 'warrior' ? WARRIOR_W : hero === 'paladin' ? PALADIN_W : WIZ_W;
-const FRAME_H = hero === 'warrior' ? WARRIOR_H : hero === 'paladin' ? PALADIN_H : WIZ_H;
+const FRAME_W = hero === 'jedi' ? JEDI_W : hero === 'warrior' ? WARRIOR_W : hero === 'paladin' ? PALADIN_W : WIZ_W;
+const FRAME_H = hero === 'jedi' ? JEDI_H : hero === 'warrior' ? WARRIOR_H : hero === 'paladin' ? PALADIN_H : WIZ_H;
 const built: { anim: string; dir: string | null; canvas: { render(): ReturnType<ReturnType<typeof buildWizardFrames>[number]['canvas']['render']> } }[] =
-  hero === 'warrior' ? buildWarriorFrames() : hero === 'paladin' ? buildPaladinFrames() : buildWizardFrames(process.argv[4] === 'void' ? VOID_LOOK : undefined);
+  hero === 'jedi' ? buildJediFrames(arg === 'sith' ? SITH_LOOK : undefined) : hero === 'warrior' ? buildWarriorFrames(arg === 'jade' ? JADE_LOOK : undefined) : hero === 'paladin' ? buildPaladinFrames() : buildWizardFrames(arg === 'void' ? VOID_LOOK : undefined);
 const frames = built.map((f) => ({ ...f, r: f.canvas.render() }));
 const rows: { anim: string; dir: string | null }[] = [];
-for (const a of hero === 'warrior' ? WARRIOR_ANIMS : hero === 'paladin' ? PALADIN_ANIMS : ANIMS) for (const d of DIRS) rows.push({ anim: a.name, dir: d });
+for (const a of hero === 'jedi' ? JEDI_ANIMS : hero === 'warrior' ? WARRIOR_ANIMS : hero === 'paladin' ? PALADIN_ANIMS : ANIMS) for (const d of DIRS) rows.push({ anim: a.name, dir: d });
 if (hero === 'warrior') rows.push({ anim: 'spin', dir: null });
+if (hero === 'jedi') rows.push({ anim: 'twirl', dir: null });
 const cols = Math.max(...rows.map((r) => frames.filter((f) => f.anim === r.anim && f.dir === r.dir).length));
 const pad = 2;
 const W = cols * (FRAME_W + pad) * S;
@@ -49,6 +52,6 @@ for (const layer of ['composite', 'diffuse', 'normal', 'emissive'] as const) {
       }
     });
   });
-  writeFileSync(`${out}/${process.argv[4] === 'void' ? 'void' : hero}_${layer}.png`, encodePNG(W, H, img));
+  writeFileSync(`${out}/${arg === 'void' || arg === 'jade' || arg === 'sith' ? arg : hero}_${layer}.png`, encodePNG(W, H, img));
 }
 console.log('frames', frames.length, 'sheet', W, H);

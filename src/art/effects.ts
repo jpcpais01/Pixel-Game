@@ -284,8 +284,46 @@ export function beamIcon(k: SpellColors = ARCANE_SPELL): Uint8ClampedArray {
   return px;
 }
 
+/** Colours for the sword icon: blade (lit, shaded, tip), guard (lit, highlight, dark), grip and outline. */
+export interface SwordIconColors {
+  blade: string;
+  bladeDark: string;
+  tip: string;
+  guard: string;
+  guardLit: string;
+  guardDark: string;
+  grip: string;
+  ink: string;
+  /** A short round tsuba and a longer grip. */
+  katana?: boolean;
+}
+
+const KNIGHT_SWORD_ICON: SwordIconColors = {
+  blade: '#dfe8f7',
+  bladeDark: '#8d9dbd',
+  tip: '#f4f8ff',
+  guard: '#f4cf6a',
+  guardLit: '#fff4bf',
+  guardDark: '#d69a3a',
+  grip: '#8f5a36',
+  ink: '#0c0f18',
+};
+
+/** The jade warrior's katana: pale green-tempered steel, a short gold tsuba, a long jade grip. */
+export const JADE_SWORD_ICON: SwordIconColors = {
+  blade: '#d6ece5',
+  bladeDark: '#82a39b',
+  tip: '#f2fffa',
+  guard: '#f4cf6a',
+  guardLit: '#fff4bf',
+  guardDark: '#d69a3a',
+  grip: '#22845e',
+  ink: '#040907',
+  katana: true,
+};
+
 /** 16x16 sword for the warrior's attack button: steel blade, gold guard, dark outline (normal blend). */
-export function swordIcon(): Uint8ClampedArray {
+export function swordIcon(k: SwordIconColors = KNIGHT_SWORD_ICON): Uint8ClampedArray {
   const S = 16;
   const px = new Uint8ClampedArray(S * S * 4);
   const put = (x: number, y: number, c: string) => {
@@ -299,15 +337,22 @@ export function swordIcon(): Uint8ClampedArray {
   };
   // Blade from the lower left up to the upper right, a lit and a shaded bevel.
   for (let i = 0; i < 9; i++) {
-    put(5 + i, 10 - i, i > 6 ? '#f4f8ff' : '#dfe8f7');
-    put(6 + i, 10 - i, '#8d9dbd');
+    put(5 + i, 10 - i, i > 6 ? k.tip : k.blade);
+    put(6 + i, 10 - i, k.bladeDark);
   }
-  put(14, 1, '#f4f8ff');
+  put(14, 1, k.tip);
   // Crossguard, grip and pommel.
-  for (const [x, y] of [[2, 9], [3, 10], [4, 11], [5, 12], [6, 13]]) put(x, y, '#f4cf6a');
-  put(3, 9, '#fff4bf');
-  for (const [x, y] of [[3, 12], [2, 13]]) put(x, y, '#8f5a36');
-  put(1, 14, '#d69a3a');
+  if (k.katana) {
+    for (const [x, y] of [[3, 10], [4, 11], [5, 12]]) put(x, y, k.guard);
+    put(3, 10, k.guardLit);
+    for (const [x, y] of [[3, 12], [2, 13], [1, 14]]) put(x, y, k.grip);
+    put(0, 15, k.guard);
+  } else {
+    for (const [x, y] of [[2, 9], [3, 10], [4, 11], [5, 12], [6, 13]]) put(x, y, k.guard);
+    put(3, 9, k.guardLit);
+    for (const [x, y] of [[3, 12], [2, 13]]) put(x, y, k.grip);
+    put(1, 14, k.guardDark);
+  }
   // Outline.
   const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < S && y < S && px[(y * S + x) * 4 + 3] === 255;
   const out: [number, number][] = [];
@@ -317,15 +362,14 @@ export function swordIcon(): Uint8ClampedArray {
       if (filled(x + 1, y) || filled(x - 1, y) || filled(x, y + 1) || filled(x, y - 1)) out.push([x, y]);
     }
   }
-  for (const [x, y] of out) put(x, y, '#0c0f18');
+  for (const [x, y] of out) put(x, y, k.ink);
   return px;
 }
 
 /** 16x16 icon for the whirlwind button: a spiral of golden fire around a bright heart, drawn additively. */
-export function whirlIcon(): Uint8ClampedArray {
+export function whirlIcon(cols: RGB[] = [EMBER_CORE, EMBER_HOT, EMBER_MID, EMBER_DEEP]): Uint8ClampedArray {
   const S = 16;
   const px = new Uint8ClampedArray(S * S * 4);
-  const cols: RGB[] = [EMBER_CORE, EMBER_HOT, EMBER_MID, EMBER_DEEP];
   const put = (x: number, y: number, c: RGB) => {
     if (x < 0 || y < 0 || x >= S || y >= S) return;
     const i = (y * S + x) * 4;
@@ -430,5 +474,71 @@ export function sanctuaryIcon(): Uint8ClampedArray {
   for (let x = 4; x <= 11; x++) put(x, 5, x > 5 && x < 10 ? cols[0] : cols[1]);
   for (let x = 5; x <= 10; x++) put(x, 6, cols[2]);
   for (const [x, y] of [[3, 2], [12, 3], [5, 9], [11, 8]]) put(x, y, cols[3]);
+  return px;
+}
+
+/** Brightest-first colours for a Jedi icon: a white core, then the blade or Force colour. */
+export type IconColors = [RGB, RGB, RGB, RGB];
+
+/** 16x16 saber for the Jedi's attack button: a chrome hilt and a glowing blade, drawn additively. */
+export function saberIcon(cols: IconColors): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: RGB, a = 1) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    px[i] = Math.min(255, px[i] + c[0] * a);
+    px[i + 1] = Math.min(255, px[i + 1] + c[1] * a);
+    px[i + 2] = Math.min(255, px[i + 2] + c[2] * a);
+    px[i + 3] = 255;
+  };
+  // Blade from the hilt at the lower left up to the upper right: a white core, coloured edges, a soft halo.
+  for (let i = 0; i < 10; i++) {
+    const x = 5 + i;
+    const y = 10 - i;
+    put(x, y, cols[0]);
+    put(x + 1, y, cols[1], 0.9);
+    put(x, y - 1, cols[1], 0.9);
+    put(x + 1, y + 1, cols[3], 0.35);
+    put(x - 1, y - 1, cols[3], 0.35);
+  }
+  // Hilt: bright chrome caps round a darker grip.
+  for (const [x, y, k] of [[4, 11, 0.9], [3, 12, 0.45], [2, 13, 0.45], [1, 14, 0.8]] as const) put(x, y, [200, 208, 224], k);
+  put(4, 10, [200, 208, 224], 0.5);
+  put(5, 11, [200, 208, 224], 0.5);
+  return px;
+}
+
+/** 16x16 icon for the Force push button: an open palm of light and waves rolling off it, drawn additively. */
+export function forceIcon(cols: IconColors): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: RGB) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    if (px[i] + px[i + 1] + px[i + 2] >= c[0] + c[1] + c[2]) return;
+    px[i] = c[0];
+    px[i + 1] = c[1];
+    px[i + 2] = c[2];
+    px[i + 3] = 255;
+  };
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - 3;
+      const dy = y + 0.5 - 8;
+      const r = Math.hypot(dx, dy);
+      const a = Math.abs(Math.atan2(dy, dx));
+      // Three arcs, widening and fading as they roll out to the right.
+      [5.5, 8.8, 12].forEach((R, i) => {
+        const spread = 0.75 - i * 0.05;
+        if (a > spread || Math.abs(r - R) > 0.55 + i * 0.1) return;
+        const edge = a > spread - 0.2;
+        put(x, y, cols[Math.min(3, i + (edge ? 1 : 0))]);
+      });
+      if (r < 1.4) put(x, y, cols[0]);
+      else if (r < 2.4) put(x, y, cols[1]);
+      else if (r < 3.1 && hash(x, y, 9) > 0.4) put(x, y, cols[2]);
+    }
+  }
   return px;
 }

@@ -233,3 +233,114 @@ export const HOLY_CORE = hex('#fffdf0');
 export const HOLY_HOT = hex('#fff0a8');
 export const HOLY_MID = hex('#ffd35c');
 export const HOLY_SKY = hex('#8cc8ff');
+
+// ---------------------------------------------------------------------------
+// The Jade warrior skin: black lacquered plate laced in brass, a jade
+// surcoat and headband, a gold crescent crest, a katana, and jade wind.
+
+const LACQUER_INK = hex('#040509');
+
+export const LACQUER: Material = {
+  ramp: ramp('#0b0d12', '#171b24', '#252b37', '#3a4351', '#66728a'),
+  outline: LACQUER_INK,
+  outlineLit: hex('#161a24'),
+  shine: true,
+};
+
+/** Arm guards and the skirt of lames: the same lacquer, a step duller. */
+export const LACQUER_DARK: Material = {
+  ramp: ramp('#0a0c10', '#15181f', '#20242d', '#2f3540'),
+  outline: LACQUER_INK,
+};
+
+export const JADE: Material = {
+  ramp: ramp('#072821', '#0e4334', '#166148', '#22845e', '#3aaa7a'),
+  outline: hex('#03120d'),
+  outlineLit: hex('#0a2a20'),
+};
+
+export const BRASS: Material = {
+  ramp: ramp('#33260f', '#634a20', '#977636', '#c9ab5e', '#eee0a0'),
+  outline: hex('#1a1208'),
+  shine: true,
+};
+
+/** Hakama: dark slate trousers. */
+export const HAKAMA: Material = {
+  ramp: ramp('#12181a', '#1f282b', '#303c40', '#445357'),
+  outline: INK,
+};
+
+/** Katana steel, with a faint green temper line. */
+export const KATANA: Material = {
+  ramp: ramp('#3c5550', '#82a39b', '#c5e2d8', '#f2fffa'),
+  outline: hex('#0b1512'),
+  outlineLit: hex('#18291f'),
+  shine: true,
+  noAO: true,
+};
+
+// Jade wind (light-only pixels) for the blade's glow.
+export const WIND_CORE = hex('#f6fff0');
+export const WIND_HOT = hex('#b6ffb0');
+export const WIND_MID = hex('#3fd98a');
+export const WIND_DEEP = hex('#16806a');
+
+// ---------------------------------------------------------------------------
+// The Jedi: an oat-coloured tunic under a brown hooded robe, a silver saber
+// hilt and a blade of light. The Sith skin: black robes, the hood up, amber
+// eyes and a red blade.
+
+export const JEDI_ROBE: Material = {
+  ramp: ramp('#22140e', '#3d2517', '#5c3b24', '#7d5634', '#a0774b'),
+  outline: hex('#120a08'),
+  outlineLit: hex('#2c1a12'),
+};
+
+export const JEDI_TUNIC: Material = {
+  ramp: ramp('#554333', '#86705a', '#b69d7c', '#dcc9a4'),
+  outline: hex('#1e1510'),
+  outlineLit: hex('#382a20'),
+};
+
+export const JEDI_HAIR: Material = {
+  ramp: ramp('#26140d', '#452716', '#6a3f22', '#93602f'),
+  outline: hex('#140a07'),
+};
+
+export const SITH_ROBE: Material = {
+  ramp: ramp('#09080d', '#141219', '#211e28', '#312d3a', '#46404f'),
+  outline: hex('#030205'),
+  outlineLit: hex('#17141d'),
+};
+
+export const SITH_TUNIC: Material = {
+  ramp: ramp('#12090c', '#221117', '#351a22', '#4b2530'),
+  outline: hex('#030205'),
+};
+
+export const SITH_EYE: Material = {
+  ramp: ramp('#ffb23a', '#fff0a0'),
+  outline: hex('#030205'),
+  emissive: 1,
+  noAO: true,
+};
+
+/** Hilt metal: dark bands between bright chrome. */
+export const HILT_DARK: Material = {
+  ramp: ramp('#07070b', '#16161e', '#2a2a36'),
+  outline: hex('#050408'),
+};
+
+/** A saber blade: a white-hot core and the coloured light around it. Blades cast no outline. */
+const blade = (core: string[], edge: string[]): { core: Material; edge: Material } => ({
+  core: { ramp: ramp(...core), outline: INK, emissive: 1, noAO: true, noOutline: true },
+  edge: { ramp: ramp(...edge), outline: INK, emissive: 1, noAO: true, noOutline: true },
+});
+
+export const SABER_BLUE = blade(['#d6f6ff', '#f6feff'], ['#2a7cff', '#4aa6ff', '#86d2ff']);
+export const SABER_RED = blade(['#ffe0da', '#fff6f2'], ['#c81628', '#f0283a', '#ff6a62']);
+
+// Saber light (light-only pixels).
+export const SABER_BLUE_GLOW = hex('#3f9cff');
+export const SABER_RED_GLOW = hex('#ff2a3a');

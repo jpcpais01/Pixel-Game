@@ -5,9 +5,108 @@
 // (BODY_X, BODY_Y) inside a WARRIOR_W x WARRIOR_H frame, and every drawing
 // function works in body-box coordinates.
 
-import { PixelCanvas, cyl, sphere, type Material, type Vec3 } from './pixel';
-import { BLADE, BOOT, CRIMSON, EMBER_CORE, EMBER_HOT, EMBER_MID, EYE, GOLD, LEATHER, MAIL, SKIN, STEEL, TROUSER } from './palette';
+import { PixelCanvas, cyl, sphere, type Material, type RGB, type Vec3 } from './pixel';
+import {
+  BLADE,
+  BOOT,
+  BRASS,
+  CRIMSON,
+  EMBER_CORE,
+  EMBER_HOT,
+  EMBER_MID,
+  EYE,
+  GOLD,
+  HAKAMA,
+  JADE,
+  KATANA,
+  LACQUER,
+  LACQUER_DARK,
+  LEATHER,
+  MAIL,
+  SKIN,
+  STEEL,
+  TROUSER,
+  WIND_CORE,
+  WIND_HOT,
+  WIND_MID,
+} from './palette';
 import { DIRS, type Dir } from './wizard';
+
+// ---------------------------------------------------------------------------
+// Looks (skins). Every look shares the rig and poses, so the blade sits on the
+// same pixels in every frame and gameplay is identical.
+
+export interface WarriorLook {
+  /** Texture and animation key prefix, e.g. "warrior" or "warrior_jade". */
+  key: string;
+  plate: Material;
+  mail: Material;
+  /** Cape and tabard. */
+  cloth: Material;
+  /** Plume, or the headband's tails. */
+  plume: Material;
+  trim: Material;
+  belt: Material;
+  glove: Material;
+  boot: Material;
+  trouser: Material;
+  skin: Material;
+  blade: Material;
+  grip: Material;
+  /** Crossguard and pommel. */
+  guard: Material;
+  /** The blade's glow during the special (light-only colours). */
+  glow: { core: RGB; hot: RGB; mid: RGB };
+  /**
+   * false: round helm with a horsehair plume, round pauldrons, broadsword.
+   * true: a kabuto with a crescent crest and flared neck guard, headband
+   * tails, square laced shoulder plates and a long-gripped katana.
+   */
+  samurai: boolean;
+}
+
+export const KNIGHT_LOOK: WarriorLook = {
+  key: 'warrior',
+  plate: STEEL,
+  mail: MAIL,
+  cloth: CRIMSON,
+  plume: CRIMSON,
+  trim: GOLD,
+  belt: LEATHER,
+  glove: LEATHER,
+  boot: BOOT,
+  trouser: TROUSER,
+  skin: SKIN,
+  blade: BLADE,
+  grip: LEATHER,
+  guard: GOLD,
+  glow: { core: EMBER_CORE, hot: EMBER_HOT, mid: EMBER_MID },
+  samurai: false,
+};
+
+export const JADE_LOOK: WarriorLook = {
+  key: 'warrior_jade',
+  plate: LACQUER,
+  mail: LACQUER_DARK,
+  cloth: JADE,
+  plume: JADE,
+  trim: BRASS,
+  belt: JADE,
+  glove: LACQUER_DARK,
+  boot: BOOT,
+  trouser: HAKAMA,
+  skin: SKIN,
+  blade: KATANA,
+  grip: JADE,
+  guard: GOLD,
+  glow: { core: WIND_CORE, hot: WIND_HOT, mid: WIND_MID },
+  samurai: true,
+};
+
+export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK];
+
+/** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
+let LK: WarriorLook = KNIGHT_LOOK;
 
 export const WARRIOR_W = 48;
 export const WARRIOR_H = 50;
@@ -95,40 +194,42 @@ function drawSword(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
     return { x: sx / l, y: -sy / l, z: z / l };
   };
 
-  // Grip and pommel.
+  // Grip and pommel; the katana's grip is long enough for two hands.
+  const gripEnd = LK.samurai ? -2.9 : -1.7;
   c.part();
   box((x, y, along, side) => {
-    if (along > -1.7 && along < 1.1 && Math.abs(side) < 0.62) c.px(x, y, LEATHER, facing(px * side - 0.3, py * side + 0.3, 0.8));
+    if (along > gripEnd && along < 1.1 && Math.abs(side) < 0.62) c.px(x, y, LK.grip, facing(px * side - 0.3, py * side + 0.3, 0.8));
   });
   c.part();
   box((x, y, along, side) => {
-    if (Math.hypot(along + 2.4, side) < 0.85) c.px(x, y, GOLD, sphere(-0.4, -0.4), { bias: 1 });
+    if (Math.hypot(along - gripEnd + 0.7, side) < (LK.samurai ? 0.7 : 0.85)) c.px(x, y, LK.guard, sphere(-0.4, -0.4), { bias: 1 });
   });
   // Blade: two bevels either side of a ridge, one catching the light, tapering to a point.
   c.part();
   box((x, y, along, side) => {
     if (along < BLADE_START - 0.2 || along > end) return;
     const rest = end - along;
-    const hw = rest < 2.4 ? 0.25 + rest * 0.33 : 0.98;
+    const hw = LK.samurai ? (rest < 1.8 ? 0.2 + rest * 0.4 : 0.8) : rest < 2.4 ? 0.25 + rest * 0.33 : 0.98;
     if (Math.abs(side) > hw) return;
     const k = side >= 0 ? 1 : -1;
-    c.px(x, y, BLADE, facing(px * k * 0.7, py * k * 0.7, 0.72), { glow: glow * 0.85 });
+    c.px(x, y, LK.blade, facing(px * k * 0.7, py * k * 0.7, 0.72), { glow: glow * 0.85 });
   });
-  // Crossguard.
+  // Crossguard, or the katana's small round tsuba.
+  const guardW = LK.samurai ? 1.6 : 2.5;
   c.part();
   box((x, y, along, side) => {
-    if (Math.abs(along - 1.6) < 0.62 && Math.abs(side) < 2.5) c.px(x, y, GOLD, facing(px * side * 0.25 - 0.25, py * side * 0.25 - 0.35, 0.85));
+    if (Math.abs(along - 1.6) < 0.62 && Math.abs(side) < guardW) c.px(x, y, LK.guard, facing(px * side * 0.25 - 0.25, py * side * 0.25 - 0.35, 0.85));
   });
 
   if (glow > 0) {
     // Embers licking along the edges and a hot point at the tip.
     for (let t = BLADE_START + 1; t < end; t += 1.5) {
       const w = 1.6 + ((t * 7) % 3) * 0.3;
-      c.spark(s.hx + dx * t + px * w, s.hy + dy * t + py * w, EMBER_HOT, glow * 0.55);
-      c.spark(s.hx + dx * t - px * w, s.hy + dy * t - py * w, EMBER_MID, glow * 0.45);
-      c.spark(s.hx + dx * t, s.hy + dy * t, EMBER_MID, glow * 0.35);
+      c.spark(s.hx + dx * t + px * w, s.hy + dy * t + py * w, LK.glow.hot, glow * 0.55);
+      c.spark(s.hx + dx * t - px * w, s.hy + dy * t - py * w, LK.glow.mid, glow * 0.45);
+      c.spark(s.hx + dx * t, s.hy + dy * t, LK.glow.mid, glow * 0.35);
     }
-    c.spark(tip.x, tip.y, EMBER_CORE, glow);
+    c.spark(tip.x, tip.y, LK.glow.core, glow);
   }
   return tip;
 }
@@ -138,28 +239,48 @@ function arm(c: PixelCanvas, sx: number, sy: number, hx: number, hy: number, bia
   const vx = hx - sx;
   const vy = hy - sy;
   const l = Math.hypot(vx, vy) || 1;
-  c.capsule(sx, sy, hx - (vx / l) * 1.0, hy - (vy / l) * 1.0, 1.3, 1.1, MAIL, { bias });
+  c.capsule(sx, sy, hx - (vx / l) * 1.0, hy - (vy / l) * 1.0, 1.3, 1.1, LK.mail, { bias });
 }
 
 function glove(c: PixelCanvas, x: number, y: number): void {
   c.part();
-  c.ellipse(x, y, 1.25, 1.2, LEATHER);
+  c.ellipse(x, y, 1.25, 1.2, LK.glove);
 }
 
 function pauldron(c: PixelCanvas, x: number, y: number, rx = 2.3, ry = 1.75): void {
+  if (LK.samurai) {
+    sode(c, x, y, rx, ry);
+    return;
+  }
   c.part();
-  c.ellipse(x, y, rx, ry, STEEL, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.25, 0.95) });
+  c.ellipse(x, y, rx, ry, LK.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.25, 0.95) });
+}
+
+/** Samurai shoulder plate: a squarer stack of lacquered lames, laced in brass. */
+function sode(c: PixelCanvas, x: number, y: number, rx: number, ry: number): void {
+  const y0 = Math.round(y - ry + 0.3);
+  const y1 = Math.round(y + ry + 0.8);
+  c.part();
+  c.shape(y0, y1, (yy) => {
+    const u = (yy - y0) / Math.max(1, y1 - y0);
+    const hw = rx - 0.25 + u * 0.45;
+    return [x - hw, x + hw];
+  }, LK.plate, (_x, _y, t, u) => sphere(t * 0.8, u * 0.9 - 0.45, 1));
+  c.part();
+  const lace = (y1 + y0) / 2;
+  c.shape(Math.round(lace), Math.round(lace), () => [x - rx + 0.4, x + rx - 0.4], LK.trim, (_x, _y, t) => cyl(t * 0.8, 0));
+  c.shade(Math.round(x), y1, -1);
 }
 
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
   c.part();
-  if (side) c.ellipse(x, y, 2.2, 1.25, BOOT, { flatten: 0.8, bias });
-  else c.ellipse(x, y, 1.75, 1.3, BOOT, { flatten: 0.8, bias });
+  if (side) c.ellipse(x, y, 2.2, 1.25, LK.boot, { flatten: 0.8, bias });
+  else c.ellipse(x, y, 1.75, 1.3, LK.boot, { flatten: 0.8, bias });
 }
 
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
   c.part();
-  c.capsule(hx, hy, fx, fy, 1.4, 1.2, TROUSER, { bias });
+  c.capsule(hx, hy, fx, fy, 1.4, 1.2, LK.trouser, { bias });
 }
 
 /** A strip of cloth (tabard panel) between rows, `edges` per row, trimmed in gold at the bottom. */
@@ -169,7 +290,7 @@ function cloth(c: PixelCanvas, y0: number, y1: number, edges: (y: number) => [nu
   if (trim) {
     c.part();
     const e = edges(y1 + 1);
-    c.shape(y1 + 1, y1 + 1, () => e, GOLD, (_x, _y, t) => cyl(t, -0.1));
+    c.shape(y1 + 1, y1 + 1, () => e, LK.trim, (_x, _y, t) => cyl(t, -0.1));
   }
 }
 
@@ -179,7 +300,7 @@ function plume(c: PixelCanvas, pts: [number, number][], r0 = 1.35, r1 = 0.9): vo
   for (let i = 0; i < pts.length - 1; i++) {
     const ra = r0 + ((r1 - r0) * i) / (pts.length - 1);
     const rb = r0 + ((r1 - r0) * (i + 1)) / (pts.length - 1);
-    c.capsule(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], ra, rb, CRIMSON, { bias: 1 });
+    c.capsule(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], ra, rb, LK.plume, { bias: 1 });
   }
 }
 
@@ -194,12 +315,31 @@ function dome(c: PixelCanvas, cx: number, y0: number, y1: number, hw: number, ba
       const w = 1.4 + (hw - 1.4) * Math.sqrt(u);
       return [cx - w, cx + w + back * u];
     },
-    STEEL,
+    LK.plate,
     (_x, _y, t, u) => sphere(t * 0.95, u * 1.25 - 0.95, 1),
   );
   // Rim: a brighter band just above the eyes.
   c.part();
-  c.shape(y1, y1, () => [cx - hw - 0.3, cx + hw + 0.3 + back], STEEL, (_x, _y, t) => cyl(t, -0.2), { bias: 1 });
+  c.shape(y1, y1, () => [cx - hw - 0.3, cx + hw + 0.3 + back], LK.plate, (_x, _y, t) => cyl(t, -0.2), { bias: 1 });
+}
+
+/** The kabuto's gold crescent crest, horns sweeping up from the brow; `view` picks how it is seen. */
+function crest(c: PixelCanvas, cx: number, y: number, view: 'front' | 'back' | 'side'): void {
+  c.part();
+  if (view === 'side') {
+    // Edge-on: one horn curving forward, then back.
+    c.capsule(cx, y, cx - 1, y - 2, 0.8, 0.65, LK.guard, { bias: 1 });
+    c.capsule(cx - 1, y - 2, cx - 0.5, y - 4.2, 0.65, 0.45, LK.guard, { bias: 1 });
+  } else {
+    for (const k of [-1, 1]) {
+      c.capsule(cx + k * 0.6, y, cx + k * 2.4, y - 1.6, 0.85, 0.7, LK.guard, { bias: 1 });
+      c.capsule(cx + k * 2.4, y - 1.6, cx + k * 4.2, y - 4, 0.7, 0.45, LK.guard, { bias: 1 });
+    }
+  }
+  if (view === 'back') return;
+  // A jade boss where the horns meet.
+  c.part();
+  c.px(cx - 0.5, y + 0.2, LK.cloth, sphere(-0.3, -0.3), { bias: 1 });
 }
 
 const FLAT_DOWN: Vec3 = { x: 0, y: -0.3, z: 0.95 };
@@ -228,7 +368,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     const hw = 4.8 + 1.8 * u;
     const x = cx + p.cape * u * u;
     return [x - hw, x + hw];
-  }, CRIMSON, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.3), { bias: -2 });
+  }, LK.cloth, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.3), { bias: -2 });
 
   leg(c, 9.9, 24 + L, 9.8, 28.4 - p.footA);
   leg(c, 14.1, 24 + L, 14.2, 28.4 - p.footB);
@@ -243,7 +383,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     const u = (y + 0.5 - top) / (waist - top);
     const hw = 4.5 - 0.9 * u * u;
     return [cx - hw, cx + hw];
-  }, STEEL, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
+  }, LK.plate, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
 
   // Mail skirt, then the tabard falling over chest and skirt.
   const hem = 26 + L;
@@ -253,26 +393,26 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     const hw = 3.9 + 1.1 * u;
     const x = cx + p.cape * 0.3 * u;
     return [x - hw, x + hw];
-  }, MAIL, (_x, _y, t, u) => cyl(t, 0.1 - u * 0.2));
+  }, LK.mail, (_x, _y, t, u) => cyl(t, 0.1 - u * 0.2));
   for (let y = waist + 1; y <= hem; y += 2) c.shade(cx - 3, y, -1);
   cloth(c, top + 2, hem, (y) => {
     const u = Math.max(0, (y - waist) / (hem - waist));
     const hw = 1.7 + u * 0.4;
     const x = cx + p.cape * 0.4 * u * u;
     return [x - hw, x + hw];
-  }, CRIMSON, true);
+  }, LK.cloth, true);
   // Belt and buckle.
   c.part();
-  c.shape(waist, waist, () => [cx - 3.9, cx + 3.9], LEATHER, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist, () => [cx - 3.9, cx + 3.9], LK.belt, (_x, _y, t) => cyl(t, 0));
   c.part();
-  c.px(11, waist, GOLD, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
-  c.px(12, waist, GOLD, { x: 0.2, y: 0.3, z: 0.9 });
+  c.px(11, waist, LK.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
+  c.px(12, waist, LK.trim, { x: 0.2, y: 0.3, z: 0.9 });
   // Crest on the tabard: a small gold chevron.
   c.part();
-  c.px(11, 18 + U, GOLD, { x: -0.4, y: 0.4, z: 0.8 }, { bias: 1 });
-  c.px(12, 18 + U, GOLD, { x: 0.3, y: 0.4, z: 0.85 });
-  c.px(11, 19 + U, GOLD, FLAT_DOWN, { bias: -1 });
-  c.px(12, 19 + U, GOLD, FLAT_DOWN, { bias: -1 });
+  c.px(11, 18 + U, LK.trim, { x: -0.4, y: 0.4, z: 0.8 }, { bias: 1 });
+  c.px(12, 18 + U, LK.trim, { x: 0.3, y: 0.4, z: 0.85 });
+  c.px(11, 19 + U, LK.trim, FLAT_DOWN, { bias: -1 });
+  c.px(12, 19 + U, LK.trim, FLAT_DOWN, { bias: -1 });
 
   // Free arm (character's left, screen right).
   const fh = p.free ? { x: p.free.x, y: p.free.y + U } : { x: 17.6, y: 22.2 + U + p.arm };
@@ -282,34 +422,47 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
 
   // Mail gorget between chin and breastplate.
   c.part();
-  c.shape(15 + U, 15 + U, () => [cx - 2.4, cx + 2.4], MAIL, (_x, _y, t) => cyl(t, 0.2));
+  c.shape(15 + U, 15 + U, () => [cx - 2.4, cx + 2.4], LK.mail, (_x, _y, t) => cyl(t, 0.2));
 
   // Head: face framed by the helmet's cheek guards, a plume on top.
   c.part();
-  c.ellipse(cx, 12.6 + U, 3.2, 2.8, SKIN);
+  c.ellipse(cx, 12.6 + U, 3.2, 2.8, LK.skin);
   c.part();
-  c.px(11, 13 + U, SKIN, sphere(-0.4, -0.3), { bias: 1 });
-  c.px(12, 13 + U, SKIN, sphere(0.35, -0.2));
+  c.px(11, 13 + U, LK.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 13 + U, LK.skin, sphere(0.35, -0.2));
   c.shade(11, 14 + U, -1);
   c.shade(12, 14 + U, -1);
   c.part();
   if (p.blink) {
-    c.px(10, 12 + U, SKIN, FLAT_DOWN, { bias: -1 });
-    c.px(13, 12 + U, SKIN, FLAT_DOWN, { bias: -1 });
+    c.px(10, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
+    c.px(13, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
   } else {
     c.px(10, 12 + U, EYE);
     c.px(13, 12 + U, EYE);
   }
-  plume(c, [
-    [cx, 6 + U],
-    [cx + p.plume * 0.4, 3.4 + U],
-    [cx + p.plume, 1.8 + U],
-  ], 1.7, 1.15);
+  if (!LK.samurai) {
+    plume(c, [
+      [cx, 6 + U],
+      [cx + p.plume * 0.4, 3.4 + U],
+      [cx + p.plume, 1.8 + U],
+    ], 1.7, 1.15);
+  }
   dome(c, cx, 5 + U, 10 + U, 4.7);
   c.part();
-  const guard = [1.9, 1.7, 1.3, 0.8];
-  c.shape(11 + U, 14 + U, (y) => [7.6, 7.6 + guard[y - 11 - U]], STEEL, (_x, _y, t) => cyl(t * 0.4 - 0.6, 0.1));
-  c.shape(11 + U, 14 + U, (y) => [16.4 - guard[y - 11 - U], 16.4], STEEL, (_x, _y, t) => cyl(t * 0.4 + 0.6, 0.1));
+  if (LK.samurai) {
+    // Shikoro: lames flaring out and down past the cheeks.
+    const flare = [0.2, 0.7, 1.2, 1.7];
+    const guard = [1.6, 1.6, 1.5, 1.3];
+    c.shape(11 + U, 14 + U, (y) => [7.6 - flare[y - 11 - U], 7.6 - flare[y - 11 - U] + guard[y - 11 - U]], LK.plate, (_x, _y, t) => cyl(t * 0.4 - 0.6, 0.1));
+    c.shape(11 + U, 14 + U, (y) => [16.4 + flare[y - 11 - U] - guard[y - 11 - U], 16.4 + flare[y - 11 - U]], LK.plate, (_x, _y, t) => cyl(t * 0.4 + 0.6, 0.1));
+    c.shade(6, 13 + U, -1);
+    c.shade(18, 13 + U, -1);
+    crest(c, cx, 5.4 + U, 'front');
+  } else {
+    const guard = [1.9, 1.7, 1.3, 0.8];
+    c.shape(11 + U, 14 + U, (y) => [7.6, 7.6 + guard[y - 11 - U]], LK.plate, (_x, _y, t) => cyl(t * 0.4 - 0.6, 0.1));
+    c.shape(11 + U, 14 + U, (y) => [16.4 - guard[y - 11 - U], 16.4], LK.plate, (_x, _y, t) => cyl(t * 0.4 + 0.6, 0.1));
+  }
 
   // Sword arm (character's right, screen left).
   if (!p.swordBehind) {
@@ -347,13 +500,13 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
     const u = (y + 0.5 - top) / (waist - top);
     const hw = 4.5 - 0.9 * u * u;
     return [cx - hw, cx + hw];
-  }, STEEL, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
+  }, LK.plate, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
   c.part();
   c.shape(waist, hem, (y) => {
     const u = (y + 0.5 - waist) / (hem + 1 - waist);
     const hw = 3.9 + 1.1 * u;
     return [cx - hw, cx + hw];
-  }, MAIL, (_x, _y, t, u) => cyl(t, 0.1 - u * 0.2));
+  }, LK.mail, (_x, _y, t, u) => cyl(t, 0.1 - u * 0.2));
 
   // Free arm (character's left, now screen left), under the cape's edge.
   const fh = p.free ? { x: 24 - p.free.x, y: p.free.y + U } : { x: 6.4, y: 22.2 + U + p.arm };
@@ -369,7 +522,7 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
     const x = cx + p.cape * u * u;
     return [x - hw, x + hw];
   };
-  cloth(c, ct, cb, capeEdges, CRIMSON, true);
+  cloth(c, ct, cb, capeEdges, LK.cloth, true);
   for (let y = Math.round(ct + 5); y <= cb; y++) {
     const [l, r] = capeEdges(y);
     c.shade(Math.round(l + (r - l) * 0.3), y, -1);
@@ -378,15 +531,37 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
 
   // Helmet from behind, with a mail neck guard; the plume runs down its back.
   c.part();
-  c.shape(13 + U, 15 + U, () => [cx - 3.4, cx + 3.4], MAIL, (_x, _y, t) => cyl(t, 0));
+  c.shape(13 + U, 15 + U, () => [cx - 3.4, cx + 3.4], LK.mail, (_x, _y, t) => cyl(t, 0));
+  if (LK.samurai) crest(c, cx, 5.8 + U, 'back'); // behind the helmet: only the horns show
   c.part();
-  c.ellipse(cx, 10.2 + U, 4.7, 4.5, STEEL, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.15, 1) });
-  plume(c, [
-    [cx, 5.2 + U],
-    [cx + p.plume * 0.3, 8.5 + U],
-    [cx + p.plume * 0.7, 11.5 + U],
-    [cx + p.plume, 14.5 + U],
-  ], 1.3, 0.8);
+  c.ellipse(cx, 10.2 + U, 4.7, 4.5, LK.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.15, 1) });
+  if (LK.samurai) {
+    // Flared neck guard, then the headband's knot and two tails.
+    c.part();
+    c.shape(12 + U, 14 + U, (y) => {
+      const f = (y - 12 - U) * 0.6;
+      return [cx - 5 - f, cx + 5 + f];
+    }, LK.plate, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.4));
+    c.shade(cx - 3, 13 + U, -1);
+    c.shade(cx + 3, 13 + U, -1);
+    plume(c, [
+      [cx - 0.5, 10.5 + U],
+      [cx - 1.2 + p.plume * 0.4, 13 + U],
+      [cx - 1.6 + p.plume, 16 + U],
+    ], 0.8, 0.55);
+    plume(c, [
+      [cx + 0.5, 10.5 + U],
+      [cx + 1.4 + p.plume * 0.5, 12.6 + U],
+      [cx + 2.2 + p.plume, 15 + U],
+    ], 0.8, 0.55);
+  } else {
+    plume(c, [
+      [cx, 5.2 + U],
+      [cx + p.plume * 0.3, 8.5 + U],
+      [cx + p.plume * 0.7, 11.5 + U],
+      [cx + p.plume, 14.5 + U],
+    ], 1.3, 0.8);
+  }
 
   if (!p.swordBehind) {
     tip = drawSword(c, p.sword, p.glow);
@@ -418,11 +593,11 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     const l = hx + 1 - 1.6 * u - S * u;
     const r = hx + 3.4 + 2.6 * Math.pow(u, 1.2) + p.cape * u * u - S * u;
     return [l, r];
-  }, CRIMSON, (_x, _y, t, u) => cyl(t * 0.8 + 0.15, 0.25 - u * 0.3), { bias: -1 });
+  }, LK.cloth, (_x, _y, t, u) => cyl(t * 0.8 + 0.15, 0.25 - u * 0.3), { bias: -1 });
   c.part();
   {
     const u = 1;
-    c.shape(cb + 1, cb + 1, () => [hx + 1 - 1.6 * u - S, hx + 3.4 + 2.6 + p.cape - S], GOLD, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
+    c.shape(cb + 1, cb + 1, () => [hx + 1 - 1.6 * u - S, hx + 3.4 + 2.6 + p.cape - S], LK.trim, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
   }
 
   // Far arm, mostly hidden behind the body.
@@ -446,47 +621,61 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     return [hx - 2.9 - chest, hx + 2.8];
   };
   c.part();
-  c.shape(top, waist - 1, torso, STEEL, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
+  c.shape(top, waist - 1, torso, LK.plate, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
   const skirt = (y: number): [number, number] => {
     const u = (y + 0.5 - waist) / (hem + 1 - waist);
     return [cx - 3.1 + S * 0.5 - u * 0.5, cx + 3.0 + u * 0.8];
   };
   c.part();
-  c.shape(waist, hem, skirt, MAIL, (_x, _y, t, u) => cyl(t * 0.9 - 0.1, 0.1 - u * 0.2));
+  c.shape(waist, hem, skirt, LK.mail, (_x, _y, t, u) => cyl(t * 0.9 - 0.1, 0.1 - u * 0.2));
   // Tabard front edge down chest and skirt.
   cloth(c, top + 2, hem, (y) => {
     const [l] = y < waist ? torso(y) : skirt(y);
     return [l, l + 1.6];
-  }, CRIMSON, true);
+  }, LK.cloth, true);
   c.part();
   const [bl, br] = torso(waist - 1);
-  c.shape(waist, waist, () => [bl - 0.1, br + 0.2], LEATHER, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist, () => [bl - 0.1, br + 0.2], LK.belt, (_x, _y, t) => cyl(t, 0));
   c.part();
-  c.px(Math.round(bl), waist, GOLD, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
+  c.px(Math.round(bl), waist, LK.trim, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
 
   // Head: profile face under the helmet, cheek guard, plume streaming back.
   c.part();
-  c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.6], MAIL, (_x, _y, t) => cyl(t, 0.2));
+  c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.6], LK.mail, (_x, _y, t) => cyl(t, 0.2));
   c.part();
-  c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, SKIN);
+  c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, LK.skin);
   c.part();
-  c.px(hx - 5, 13 + U, SKIN, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(hx - 5, 13 + U, LK.skin, sphere(-0.6, -0.2), { bias: 1 });
   c.shade(hx - 4, 14 + U, -1);
   c.part();
-  if (p.blink) c.px(hx - 3, 12 + U, SKIN, FLAT_DOWN, { bias: -1 });
+  if (p.blink) c.px(hx - 3, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
   else c.px(hx - 3, 12 + U, EYE);
-  plume(c, [
-    [hx + 0.6, 5.4 + U],
-    [hx + 3.4 + p.plume * 0.3, 5.2 + U],
-    [hx + 5.6 + p.plume * 0.7, 7.6 + U],
-    [hx + 6.4 + p.plume, 10.6 + U],
-  ], 1.35, 0.8);
+  if (LK.samurai) {
+    plume(c, [
+      [hx + 3.2, 9.4 + U],
+      [hx + 5.4 + p.plume * 0.4, 10.2 + U],
+      [hx + 7.2 + p.plume, 12.4 + U],
+    ], 0.8, 0.55);
+  } else {
+    plume(c, [
+      [hx + 0.6, 5.4 + U],
+      [hx + 3.4 + p.plume * 0.3, 5.2 + U],
+      [hx + 5.6 + p.plume * 0.7, 7.6 + U],
+      [hx + 6.4 + p.plume, 10.6 + U],
+    ], 1.35, 0.8);
+  }
   dome(c, hx - 0.2, 5 + U, 10 + U, 4.5, 0.6);
   c.part();
   // Back of the helmet over the nape, and the cheek guard.
-  c.shape(11 + U, 14 + U, (y) => [hx + 0.8, hx + 4.4 - (y - 11 - U) * 0.35], STEEL, (_x, _y, t, u) => sphere(t * 0.7 + 0.2, u * 0.8, 1));
-  c.shape(11 + U, 13 + U, (y) => [hx - 0.6 + (y - 11 - U) * 0.3, hx + 0.9], STEEL, (_x, _y, t) => cyl(t * 0.5, 0.1), { bias: 1 });
-  c.px(hx - 5, 10 + U, STEEL, { x: -0.3, y: 0.2, z: 0.93 }); // brow lip
+  c.shape(11 + U, 14 + U, (y) => [hx + 0.8, hx + 4.4 - (y - 11 - U) * 0.35], LK.plate, (_x, _y, t, u) => sphere(t * 0.7 + 0.2, u * 0.8, 1));
+  c.shape(11 + U, 13 + U, (y) => [hx - 0.6 + (y - 11 - U) * 0.3, hx + 0.9], LK.plate, (_x, _y, t) => cyl(t * 0.5, 0.1), { bias: 1 });
+  c.px(hx - 5, 10 + U, LK.plate, { x: -0.3, y: 0.2, z: 0.93 }); // brow lip
+  if (LK.samurai) {
+    // The neck guard flares further back, and the crest rises from the brow.
+    c.shape(13 + U, 14 + U, (y) => [hx + 2, hx + 5 + (y - 13 - U) * 0.8], LK.plate, (_x, _y, t, u) => cyl(t * 0.6 + 0.3, 0.2 - u * 0.4));
+    c.shade(Math.round(hx + 4), 14 + U, -1);
+    crest(c, hx - 2.8, 6 + U, 'side');
+  }
 
   // Near arm and sword.
   if (!p.swordBehind) tip = drawSword(c, p.sword, p.glow);
@@ -739,7 +928,8 @@ export interface WarriorFrame {
   meta: WarriorMeta;
 }
 
-export function drawWarriorFrame(dir: Dir, pose: Pose): { canvas: PixelCanvas; meta: WarriorMeta } {
+export function drawWarriorFrame(dir: Dir, pose: Pose, look: WarriorLook = KNIGHT_LOOK): { canvas: PixelCanvas; meta: WarriorMeta } {
+  LK = look;
   const c = new PixelCanvas(WARRIOR_W, WARRIOR_H).offset(BODY_X, BODY_Y);
   let meta: WarriorMeta;
   if (dir === 'down') meta = drawDown(c, pose);
@@ -750,20 +940,20 @@ export function drawWarriorFrame(dir: Dir, pose: Pose): { canvas: PixelCanvas; m
   return { canvas: c, meta };
 }
 
-export function buildWarriorFrames(): WarriorFrame[] {
+export function buildWarriorFrames(look: WarriorLook = KNIGHT_LOOK): WarriorFrame[] {
   const out: WarriorFrame[] = [];
   for (const a of WARRIOR_ANIMS) {
     for (const dir of DIRS) {
       const view: View = dir === 'left' || dir === 'right' ? 'side' : dir;
       a.poses(view).forEach((pose, index) => {
-        const { canvas, meta } = drawWarriorFrame(dir, pose);
+        const { canvas, meta } = drawWarriorFrame(dir, pose, look);
         out.push({ key: `${a.name}_${dir}_${index}`, anim: a.name, dir, canvas, meta });
       });
     }
   }
   for (let k = 0; k < SPIN_FRAMES; k++) {
     const { dir, pose } = spinFrame(k);
-    const { canvas, meta } = drawWarriorFrame(dir, pose);
+    const { canvas, meta } = drawWarriorFrame(dir, pose, look);
     out.push({ key: `spin_${k}`, anim: 'spin', dir: null, canvas, meta });
   }
   return out;
