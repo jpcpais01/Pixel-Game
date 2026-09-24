@@ -135,8 +135,6 @@ export class WorldScene extends Phaser.Scene {
     });
 
     const cam = this.cameras.main;
-    cam.setBounds(0, 0, WORLD_W, WORLD_H);
-    cam.startFollow(this.followTarget, true, 0.12, 0.12);
     this.vignette = cam.postFX.addVignette(0.5, 0.5, 0.92, 0.32);
     this.fitCamera();
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.fitCamera());
@@ -146,12 +144,32 @@ export class WorldScene extends Phaser.Scene {
     this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,N') as Record<string, Phaser.Input.Keyboard.Key>;
   }
 
-  private followTarget = { x: WORLD_W / 2, y: WORLD_H / 2 } as unknown as Phaser.GameObjects.GameObject;
+  /**
+   * Keep the camera locked on the wizard, snapped to whole art pixels. The
+   * wizard is also drawn at whole pixels, so he never shifts against the
+   * screen grid and stays crisp; the world scrolls in whole-pixel steps.
+   */
+  private followWizard(): void {
+    const cam = this.cameras.main;
+    const halfW = cam.width / 2;
+    const halfH = cam.height / 2;
+    const viewW = cam.width / cam.zoom;
+    const viewH = cam.height / cam.zoom;
+    // Scroll is measured to the unzoomed viewport's top-left; zoom pivots on its centre.
+    const minX = viewW / 2 - halfW;
+    const maxX = WORLD_W - viewW / 2 - halfW;
+    const minY = viewH / 2 - halfH;
+    const maxY = WORLD_H - viewH / 2 - halfH;
+    const tx = Math.round(this.wizard.x) - halfW;
+    const ty = Math.round(this.wizard.y) - 12 - halfH;
+    cam.scrollX = Math.round(maxX < minX ? (minX + maxX) / 2 : Phaser.Math.Clamp(tx, minX, maxX));
+    cam.scrollY = Math.round(maxY < minY ? (minY + maxY) / 2 : Phaser.Math.Clamp(ty, minY, maxY));
+  }
 
-  /** Integer zoom so pixels stay square; aims for ~185+ world px on the short side. */
   private fitCamera(): void {
     const { width, height } = this.scale;
-    const zoom = Math.max(2, Math.floor(Math.min(width, height) / 185));
+    // Whole device pixels per art pixel; about 190 art pixels on the short side.
+    const zoom = Math.max(2, Math.floor(Math.min(width, height) / 190));
     this.cameras.main.setZoom(zoom);
   }
 
@@ -236,8 +254,7 @@ export class WorldScene extends Phaser.Scene {
     const attack = controls.attack || k.SPACE.isDown || k.J.isDown;
     this.wizard.daylight = daynight.daylight;
     this.wizard.update(dt, mx, my, attack, this.bounds);
-    (this.followTarget as unknown as { x: number; y: number }).x = this.wizard.x;
-    (this.followTarget as unknown as { x: number; y: number }).y = this.wizard.y - 12;
+    this.followWizard();
 
     for (const b of this.balls) b.update(dt, this.hitTest, this.bounds);
     this.balls = this.balls.filter((b) => !b.dead);

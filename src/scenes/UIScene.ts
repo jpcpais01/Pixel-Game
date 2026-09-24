@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { controls } from '../game/controls';
 import { daynight } from '../game/daynight';
+import { DPR as D } from '../game/display';
 
 /**
  * Touch controls: a floating joystick on the left half of the screen and an
@@ -21,8 +22,8 @@ export class UIScene extends Phaser.Scene {
 
   /** Day/night toggle: a two-segment pill in the top-left corner. */
   private get toggleRect(): Phaser.Geom.Rectangle {
-    const seg = Math.round(Math.max(48, Math.min(this.scale.width, this.scale.height) * 0.13));
-    return new Phaser.Geom.Rectangle(12, 12, seg * 2, Math.round(seg * 0.8));
+    const seg = Math.round(Math.max(48 * D, Math.min(this.scale.width, this.scale.height) * 0.13));
+    return new Phaser.Geom.Rectangle(12 * D, 12 * D, seg * 2, Math.round(seg * 0.8));
   }
 
   constructor() {
@@ -30,7 +31,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private get R(): number {
-    return Math.max(42, Math.min(this.scale.width, this.scale.height) * 0.13);
+    return Math.max(42 * D, Math.min(this.scale.width, this.scale.height) * 0.13);
   }
 
   private get buttonPos(): Phaser.Math.Vector2 {
@@ -54,12 +55,12 @@ export class UIScene extends Phaser.Scene {
     this.sun = this.add.image(0, 0, 'icon_sun');
     this.moon = this.add.image(0, 0, 'icon_moon');
     this.hint = this.add
-      .text(12, 10, 'Joystick or WASD to walk  ·  button or Space to cast  ·  N for day/night', {
+      .text(12 * D, 10 * D, 'Joystick or WASD to walk  ·  button or Space to cast  ·  N for day/night', {
         fontFamily: 'ui-monospace, Menlo, monospace',
-        fontSize: '12px',
+        fontSize: `${12 * D}px`,
         color: '#dfe6ff',
         stroke: '#0a0c1c',
-        strokeThickness: 3,
+        strokeThickness: 3 * D,
       })
       .setAlpha(0.75);
     this.base.copy(this.restPos);
@@ -68,7 +69,7 @@ export class UIScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       const bp = this.buttonPos;
       const tr = this.toggleRect;
-      if (Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width + 8, tr.height + 8), p.x, p.y)) {
+      if (Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width + 8 * D, tr.height + 8 * D), p.x, p.y)) {
         // Tap a side to pick it; tapping the active side flips it.
         const onSun = p.x < tr.centerX;
         daynight.set(onSun === (daynight.target < 0.5) ? onSun : !onSun);
@@ -122,11 +123,11 @@ export class UIScene extends Phaser.Scene {
     const g = this.stick.clear();
     g.fillStyle(0x0a0c1c, active ? 0.45 : 0.28);
     g.fillCircle(this.base.x, this.base.y, R);
-    g.lineStyle(2, 0xb8c4ff, active ? 0.45 : 0.22);
+    g.lineStyle(2 * D, 0xb8c4ff, active ? 0.45 : 0.22);
     g.strokeCircle(this.base.x, this.base.y, R);
     g.fillStyle(0xdfe6ff, active ? 0.55 : 0.3);
     g.fillCircle(this.knob.x, this.knob.y, R * 0.42);
-    g.lineStyle(2, 0xffffff, active ? 0.5 : 0.2);
+    g.lineStyle(2 * D, 0xffffff, active ? 0.5 : 0.2);
     g.strokeCircle(this.knob.x, this.knob.y, R * 0.42);
 
     const bp = this.buttonPos;
@@ -135,10 +136,10 @@ export class UIScene extends Phaser.Scene {
     const b = this.button.clear();
     b.fillStyle(0x0c1433, pressed ? 0.75 : 0.55);
     b.fillCircle(bp.x, bp.y, br);
-    b.lineStyle(3, 0x6fe4ff, pressed ? 0.95 : 0.65);
+    b.lineStyle(3 * D, 0x6fe4ff, pressed ? 0.95 : 0.65);
     b.strokeCircle(bp.x, bp.y, br);
-    b.lineStyle(1, 0x6fe4ff, 0.25);
-    b.strokeCircle(bp.x, bp.y, br + 6);
+    b.lineStyle(1 * D, 0x6fe4ff, 0.25);
+    b.strokeCircle(bp.x, bp.y, br + 6 * D);
     this.icon.setPosition(bp.x, bp.y).setScale(Math.max(2, Math.round(R / 14)) * (pressed ? 0.9 : 1));
 
     const tr = this.toggleRect;
@@ -148,7 +149,8 @@ export class UIScene extends Phaser.Scene {
     tg.fillStyle(0x0a0c1c, 0.55);
     tg.fillRoundedRect(tr.x, tr.y, tr.width, tr.height, tr.height / 2);
     // Sliding highlight: warm under the sun, cool under the moon.
-    const hx = tr.x + 3 + (1 - d) * seg;
+    const pad = 3 * D;
+    const hx = tr.x + pad + (1 - d) * seg;
     const col = Phaser.Display.Color.Interpolate.ColorWithColor(
       Phaser.Display.Color.ValueToColor(0x6b74c9),
       Phaser.Display.Color.ValueToColor(0x8ec9f5),
@@ -156,15 +158,15 @@ export class UIScene extends Phaser.Scene {
       Math.round(d * 100),
     );
     tg.fillStyle(Phaser.Display.Color.GetColor(col.r, col.g, col.b), 0.85);
-    tg.fillRoundedRect(hx, tr.y + 3, seg - 6, tr.height - 6, (tr.height - 6) / 2);
-    tg.lineStyle(2, 0xdfe6ff, 0.35);
+    tg.fillRoundedRect(hx, tr.y + pad, seg - pad * 2, tr.height - pad * 2, (tr.height - pad * 2) / 2);
+    tg.lineStyle(2 * D, 0xdfe6ff, 0.35);
     tg.strokeRoundedRect(tr.x, tr.y, tr.width, tr.height, tr.height / 2);
     const iconScale = Math.max(2, Math.floor(tr.height / 16));
     this.sun.setPosition(tr.x + seg / 2, tr.centerY).setScale(iconScale).setAlpha(0.55 + d * 0.45);
     this.moon.setPosition(tr.x + seg * 1.5, tr.centerY).setScale(iconScale).setAlpha(1 - d * 0.45);
-    this.hint.setPosition(tr.right + 14, tr.centerY - this.hint.height / 2);
+    this.hint.setPosition(tr.right + 14 * D, tr.centerY - this.hint.height / 2);
 
     // Hide the keyboard hint on small touch screens.
-    this.hint.setVisible(this.scale.width > 700 || !this.sys.game.device.input.touch);
+    this.hint.setVisible(this.scale.width > 700 * D || !this.sys.game.device.input.touch);
   }
 }
