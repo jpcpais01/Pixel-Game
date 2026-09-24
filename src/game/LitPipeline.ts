@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { PixelPipeline } from './PixelPipeline';
 
 // Phaser's Light2D only has point lights, all sitting just above the ground,
 // so it can't make sunlight. This pipeline keeps those point lights and adds:
@@ -34,6 +35,8 @@ uniform vec3 uSunDir;
 uniform vec3 uSunColor;
 uniform vec3 uSkyColor;
 uniform vec3 uBounceColor;
+// Device pixels per fragment: above 1 when the camera renders at art resolution.
+uniform float uFragScale;
 
 varying vec2 outTexCoord;
 varying float outTexId;
@@ -72,7 +75,7 @@ void main ()
         if (index < uLightCount)
         {
             Light light = uLights[index];
-            vec3 lightDir = vec3((light.position.xy / res) - (gl_FragCoord.xy / res), 0.1);
+            vec3 lightDir = vec3((light.position.xy / res) - (gl_FragCoord.xy * uFragScale / res), 0.1);
             vec3 lightNormal = normalize(lightDir);
             float distToSurf = length(lightDir) * uCamera.w;
             float diffuseFactor = max(dot(normal, lightNormal), 0.0);
@@ -114,5 +117,6 @@ export class LitPipeline extends Phaser.Renderer.WebGL.Pipelines.LightPipeline {
     this.set3f('uSunColor', ...sky.sunColor);
     this.set3f('uSkyColor', ...sky.sky);
     this.set3f('uBounceColor', ...sky.bounce);
+    this.set1f('uFragScale', PixelPipeline.zoomOf(camera));
   }
 }

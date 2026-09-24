@@ -6,6 +6,7 @@ import { Beam } from '../game/Beam';
 import { daynight } from '../game/daynight';
 import { sky } from '../game/LitPipeline';
 import { pixelGrid } from '../game/display';
+import { PixelPipeline } from '../game/PixelPipeline';
 import { characterById, type Hero } from '../game/characters';
 
 type V3 = [number, number, number];
@@ -70,7 +71,7 @@ export class WorldScene extends Phaser.Scene {
   private shadows: Phaser.GameObjects.Image[] = [];
   private pollen!: Phaser.GameObjects.Particles.ParticleEmitter;
   private fireflies!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private vignette!: Phaser.FX.Vignette;
+  private pixels!: PixelPipeline;
 
   constructor() {
     super('world');
@@ -146,7 +147,8 @@ export class WorldScene extends Phaser.Scene {
     this.hero = characterById(data?.character).spawn(this, cx, cy + 20);
 
     const cam = this.cameras.main;
-    this.vignette = cam.postFX.addVignette(0.5, 0.5, 0.92, 0.32);
+    cam.setPostPipeline('Pixel');
+    this.pixels = cam.getPostPipeline('Pixel') as PixelPipeline;
     cam.fadeIn(500, 7, 8, 13);
     this.fitCamera();
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.fitCamera());
@@ -200,9 +202,9 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Keep the camera locked on the hero, snapped to device pixels. The
-   * hero snaps to the same grid, so they hold still on screen and stays
-   * crisp, while the world scrolls in smooth sub-art-pixel steps.
+   * Keep the camera locked on the hero, snapped so whole art pixels land on
+   * whole pixels of the art-resolution render. The hero snaps to the same
+   * grid, so they hold still on screen.
    */
   private followHero(): void {
     const cam = this.cameras.main;
@@ -220,21 +222,21 @@ export class WorldScene extends Phaser.Scene {
     const ty = this.hero.y - 12 - halfH;
     const sx = maxX < minX ? (minX + maxX) / 2 : Phaser.Math.Clamp(tx, minX, maxX);
     const sy = maxY < minY ? (minY + maxY) / 2 : Phaser.Math.Clamp(ty, minY, maxY);
-    // Screen x = (worldX - scroll) * z + half * (1 - z). Choose scroll so the
-    // constant part lands on a whole device pixel.
-    const cx = halfW * (1 - z);
-    const cy = halfH * (1 - z);
-    cam.scrollX = (Math.round(sx * z - cx) + cx) / z;
-    cam.scrollY = (Math.round(sy * z - cy) + cy) / z;
+    // In render pixels, x = worldX - scroll + half * (1 - z) / z. Choose scroll
+    // so the constant part is whole, then nudge it a hair so sprites with a
+    // half-pixel origin never sit exactly on a sampling point and round the
+    // same way everywhere.
+    const cx = (halfW * (1 - z)) / z;
+    const cy = (halfH * (1 - z)) / z;
+    cam.scrollX = Math.round(sx - cx) + cx + 1 / 64;
+    cam.scrollY = Math.round(sy - cy) + cy + 1 / 64;
   }
 
   private fitCamera(): void {
-    const { width, height } = this.scale;
-    // Whole device pixels per art pixel; about 190 art pixels on the short side.
-    const zoom = Math.max(2, Math.floor(Math.min(width, height) / 190));
-    pixelGrid.zoom = zoom;
-    // We snap to device pixels ourselves; Phaser's rounding would snap the
-    // camera to whole art pixels, which makes scrolling steppy.
+    // Set with the canvas size, which is a whole number of art pixels.
+    const zoom = pixelGrid.zoom;
+    this.pixels.zoom = zoom;
+    // We snap to the art grid ourselves; Phaser's rounding works in device pixels.
     this.cameras.main.setZoom(zoom).setRoundPixels(false);
   }
 
@@ -280,7 +282,7 @@ export class WorldScene extends Phaser.Scene {
     for (const d of this.dummies) {
       if (Math.abs(x - d.x) < 7 && y > d.y - 24 && y < d.y + 2) {
         this.hitDummy(d);
-        this.cameras.main.shake(70, 0.0035);
+        this.cameras.main.shake(70, 0.00035);
         this.struck = true;
         return true;
       }
@@ -327,7 +329,7 @@ export class WorldScene extends Phaser.Scene {
     this.clouds.setAlpha(d).setTilePosition(time * 0.004, time * 0.0022);
     this.shafts.setAlpha(d * (0.1 + Math.sin(time * 0.0007) * 0.03));
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
-    this.vignette.strength = 0.32 - d * 0.14;
+    this.pixels.vignetteStrength = 0.32 - d * 0.14;
     this.pollen.emitting = d > 0.5;
     this.fireflies.emitting = d < 0.5;
     sound.setDaylight(d);

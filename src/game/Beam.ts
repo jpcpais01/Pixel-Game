@@ -403,7 +403,7 @@ export class Beam {
       onComplete: () => scene.lights.removeLight(flash),
     });
     // A gentle rumble: enough to feel the release, not to blur the view.
-    scene.cameras.main.shake(this.duration * 0.8, 0.0002 + power * 0.0005);
+    scene.cameras.main.shake(this.duration * 0.8, 0.00002 + power * 0.00005);
   }
 
   update(dt: number): void {
