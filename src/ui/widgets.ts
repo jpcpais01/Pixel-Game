@@ -88,6 +88,12 @@ export class PixelButton extends Phaser.GameObjects.Container {
     });
   }
 
+  setText(text: string): this {
+    this.label.setText(text.toUpperCase());
+    this.layoutLabel();
+    return this;
+  }
+
   setEnabled(on: boolean): this {
     if (this.bg.input) this.bg.input.enabled = on;
     if (!on && this.down) this.press(false);

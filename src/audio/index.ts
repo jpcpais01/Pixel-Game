@@ -25,6 +25,7 @@ class GameSound {
   private daylight = 0;
   private fire = 0;
   private _muted = readMuted();
+  private volume = { music: 1, sfx: 1 };
 
   get muted(): boolean {
     return this._muted;
@@ -69,6 +70,20 @@ class GameSound {
     // Let the fade finish before suspending, which also saves battery.
     window.setTimeout(() => this.syncSuspend(), muted ? 400 : 0);
     this.emit();
+  }
+
+  /** Player volume per bus, 0..1 (sound effects include the ambience). */
+  setVolumes(music: number, sfx: number): void {
+    this.volume = { music, sfx };
+    if (this.ctx && this.mixer) this.applyVolumes(this.mixer, this.ctx.currentTime);
+  }
+
+  private applyVolumes(m: Mixer, t: number): void {
+    // Squared so the slider feels even to the ear.
+    const set = (g: GainNode, base: number, v: number) => g.gain.setTargetAtTime(base * v * v, t, 0.05);
+    set(m.music, MUSIC_LEVEL, this.volume.music);
+    set(m.ambience, AMBIENCE_LEVEL, this.volume.sfx);
+    set(m.sfx, SFX_LEVEL, this.volume.sfx);
   }
 
   /** 0 = night, 1 = day; crossfades the ambience. */
@@ -165,6 +180,7 @@ class GameSound {
   private build(ctx: AudioContext): void {
     const m = (this.mixer = new Mixer(ctx));
     if (this._muted) m.master.gain.value = 0;
+    this.applyVolumes(m, 0);
     this.music = new Music(m);
     this.ambience = new Ambience(m);
     this.sfx = new Sfx(m);
@@ -194,6 +210,11 @@ class GameSound {
     for (const fn of this.listeners) fn();
   }
 }
+
+/** The mixer's own bus levels, which the player's volumes scale. */
+const MUSIC_LEVEL = 0.3;
+const AMBIENCE_LEVEL = 0.55;
+const SFX_LEVEL = 0.75;
 
 const GESTURES = ['pointerdown', 'pointerup', 'touchend', 'keydown', 'click'] as const;
 
