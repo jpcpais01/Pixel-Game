@@ -6,6 +6,7 @@ import { BeamCharge, CHARGE_TIME, HOLD_TIME, beamSpec } from './Beam';
 import { beamHud } from './controls';
 import { sound } from '../audio';
 import type { Hero } from './characters';
+import { ARCANE_STYLE, VOID_STYLE, type SpellStyle } from './spells';
 
 const SPEED = 58; // world px / second
 const CAST_COOLDOWN = 180; // ms after a cast ends before the next can start
@@ -25,6 +26,15 @@ export interface WizardHooks {
   /** Beam fired from the crystal with the given charge (0..1). */
   beam(x: number, y: number, dx: number, dy: number, power: number): void;
 }
+
+/** Which look to wear: the texture/animation prefix and the matching spell colours. */
+export interface WizardSkin {
+  key: string;
+  style: SpellStyle;
+}
+
+export const ARCANE_SKIN: WizardSkin = { key: 'wizard', style: ARCANE_STYLE };
+export const VOID_SKIN: WizardSkin = { key: 'wizard_void', style: VOID_STYLE };
 
 type State = 'free' | 'cast' | 'charge' | 'beam';
 
@@ -55,34 +65,37 @@ export class Wizard implements Hero {
   private firing = 0;
   /** After a fizzle the button must be let go before charging again. */
   private beamLatch = false;
+  /** Texture and animation prefix of the worn look. */
+  private key: string;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, hooks: WizardHooks) {
+  constructor(scene: Phaser.Scene, x: number, y: number, hooks: WizardHooks, skin: WizardSkin = ARCANE_SKIN) {
     this.x = x;
     this.y = y;
     this.hooks = hooks;
+    const key = (this.key = skin.key);
     this.shadow = scene.add.image(x, y, 'shadow').setDepth(1);
-    this.castShadow = sunShadow(scene.add.sprite(x, y, 'wizard_s', 'idle_down_0').setOrigin(ORIGIN_X / 24, ORIGIN_Y / 32));
+    this.castShadow = sunShadow(scene.add.sprite(x, y, `${key}_s`, 'idle_down_0').setOrigin(ORIGIN_X / 24, ORIGIN_Y / 32));
     this.body = scene.add
-      .sprite(x, y, 'wizard', 'idle_down_0')
+      .sprite(x, y, key, 'idle_down_0')
       .setOrigin(ORIGIN_X / 24, ORIGIN_Y / 32)
       .setPipeline('Lit');
     this.glowLayer = scene.add
-      .sprite(x, y, 'wizard_e', 'idle_down_0')
+      .sprite(x, y, `${key}_e`, 'idle_down_0')
       .setOrigin(ORIGIN_X / 24, ORIGIN_Y / 32)
       .setBlendMode(Phaser.BlendModes.ADD);
-    this.halo = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x5fdcff).setScale(0.55);
-    this.staffLight = scene.lights.addLight(x, y, 56, 0x6fe4ff, 1.1);
-    this.charge = new BeamCharge(scene);
-    this.body.play('wizard_idle_down');
+    this.halo = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(skin.style.glow).setScale(0.55);
+    this.staffLight = scene.lights.addLight(x, y, 56, skin.style.light, 1.1);
+    this.charge = new BeamCharge(scene, skin.style);
+    this.body.play(`${key}_idle_down`);
     this.body.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (anim: Phaser.Animations.Animation) => {
-      if (anim.key.startsWith('wizard_cast') && this.state === 'cast') {
+      if (anim.key.startsWith(`${key}_cast`) && this.state === 'cast') {
         this.state = 'free';
         this.cooldown = CAST_COOLDOWN;
-        this.body.play(`wizard_idle_${this.dir}`);
+        this.body.play(`${this.key}_idle_${this.dir}`);
       }
     });
     this.body.on(Phaser.Animations.Events.ANIMATION_UPDATE, (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
-      if (anim.key.startsWith('wizard_walk') && FOOTFALLS.has(frame.index - 1)) sound.step();
+      if (anim.key.startsWith(`${key}_walk`) && FOOTFALLS.has(frame.index - 1)) sound.step();
     });
   }
 
@@ -112,7 +125,7 @@ export class Wizard implements Hero {
 
     if (this.state === 'free') {
       if (moving) this.dir = dirOf(mx, my);
-      const key = `wizard_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = `${this.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else if (this.state === 'cast') {
       if (!this.released && this.body.anims.currentFrame && this.body.anims.currentFrame.index - 1 >= CAST_RELEASE) {
@@ -128,7 +141,7 @@ export class Wizard implements Hero {
         this.state = 'free';
         this.cooldown = BEAM_COOLDOWN;
         beamHud.firing = false;
-        this.body.play(`wizard_idle_${this.dir}`);
+        this.body.play(`${this.key}_idle_${this.dir}`);
       }
     }
 
@@ -146,7 +159,7 @@ export class Wizard implements Hero {
     this.held = 0;
     this.castDir.copy(this.lastMove);
     this.dir = dirOf(this.castDir.x, this.castDir.y);
-    this.body.play(`wizard_aim_${this.dir}`).chain(`wizard_charge_${this.dir}`);
+    this.body.play(`${this.key}_aim_${this.dir}`).chain(`${this.key}_charge_${this.dir}`);
   }
 
   private updateCharge(dt: number, moving: boolean, beam: boolean): void {
@@ -157,7 +170,7 @@ export class Wizard implements Hero {
       if (d !== this.dir) {
         this.dir = d;
         this.body.chain(); // drop the queued charge loop if still aiming
-        this.body.play(`wizard_charge_${d}`);
+        this.body.play(`${this.key}_charge_${d}`);
       }
     }
 
@@ -176,7 +189,7 @@ export class Wizard implements Hero {
         this.beamLatch = true;
         this.state = 'free';
         this.cooldown = BEAM_COOLDOWN;
-        this.body.play(`wizard_idle_${this.dir}`);
+        this.body.play(`${this.key}_idle_${this.dir}`);
       }
     }
     beamHud.charge = this.charged / CHARGE_TIME;
@@ -193,7 +206,7 @@ export class Wizard implements Hero {
     beamHud.charge = beamHud.over = 0;
     beamHud.firing = true;
     this.body.chain();
-    this.body.play(`wizard_beam_${this.dir}`);
+    this.body.play(`${this.key}_beam_${this.dir}`);
     // Tip of the firing pose (same staff as the charge pose).
     this.sync();
     const t = this.crystal();
@@ -210,7 +223,7 @@ export class Wizard implements Hero {
     this.released = false;
     this.castDir.copy(this.lastMove);
     this.dir = dirOf(this.castDir.x, this.castDir.y);
-    this.body.play(`wizard_cast_${this.dir}`);
+    this.body.play(`${this.key}_cast_${this.dir}`);
     sound.charge();
   }
 

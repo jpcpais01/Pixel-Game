@@ -4,9 +4,10 @@
 
 import type Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
-import { Wizard } from './Wizard';
+import { ARCANE_SKIN, VOID_SKIN, Wizard } from './Wizard';
 import { Warrior } from './Warrior';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
+import { wear, type SkinDef } from './skins';
 
 /** What the world needs from the player's character each frame. */
 export interface Hero {
@@ -49,7 +50,10 @@ export interface CharacterDef {
   };
   /** Keyboard help shown on wide screens. */
   hint: string;
-  spawn(world: WorldScene, x: number, y: number): Hero;
+  /** Alternate looks, same gameplay; the first is the default (see skins.ts). */
+  skins?: SkinDef[];
+  /** `skin` is the id of the worn skin, for characters that have skins. */
+  spawn(world: WorldScene, x: number, y: number, skin?: string): Hero;
 }
 
 export const CHARACTERS: CharacterDef[] = [
@@ -67,11 +71,34 @@ export const CHARACTERS: CharacterDef[] = [
       special: { texture: 'icon_beam' },
     },
     hint: 'Space to cast  ·  hold K to charge a beam',
-    spawn(world, x, y) {
-      const w: Wizard = new Wizard(world, x, y, {
-        cast: (x, y, dx, dy) => world.castEnergyBall(x, y, dx, dy),
-        beam: (x, y, dx, dy, power) => world.fireBeam(x, y, dx, dy, power, w.depthAhead()),
-      });
+    skins: [
+      { id: 'arcane', name: 'Arcane' },
+      {
+        id: 'void',
+        name: 'Void',
+        role: 'Void caller',
+        accent: 0xc47cff,
+        attack: 'Void orb',
+        special: 'Umbral beam',
+        preview: { texture: 'wizard_void', glow: 'wizard_void_e', idle: 'wizard_void_idle_down', chosen: 'wizard_void_cast_down' },
+        buttons: {
+          attack: { texture: 'orb_void_e', frame: 'o0', anim: 'orb_void_spin' },
+          special: { texture: 'icon_beam_void' },
+        },
+      },
+    ],
+    spawn(world, x, y, skin) {
+      const look = skin === 'void' ? VOID_SKIN : ARCANE_SKIN;
+      const w: Wizard = new Wizard(
+        world,
+        x,
+        y,
+        {
+          cast: (x, y, dx, dy) => world.castEnergyBall(x, y, dx, dy, look.style),
+          beam: (x, y, dx, dy, power) => world.fireBeam(x, y, dx, dy, power, w.depthAhead(), look.style),
+        },
+        look,
+      );
       return w;
     },
   },
@@ -93,6 +120,7 @@ export const CHARACTERS: CharacterDef[] = [
   },
 ];
 
+/** The character in its currently worn skin. */
 export function characterById(id: string | undefined): CharacterDef {
-  return CHARACTERS.find((c) => c.id === id) ?? CHARACTERS[0];
+  return wear(CHARACTERS.find((c) => c.id === id) ?? CHARACTERS[0]);
 }
