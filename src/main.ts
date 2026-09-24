@@ -34,7 +34,7 @@ const game = new Phaser.Game({
     ...initial,
     zoom: 1 / DPR,
   },
-  render: { maxLights: 16 },
+  render: { maxLights: 16, powerPreference: 'high-performance' },
   pipeline: { Lit: LitPipeline, Pixel: PixelPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
   input: { activePointers: 3 },
   // Later scenes draw on top.

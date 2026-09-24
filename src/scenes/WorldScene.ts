@@ -272,8 +272,19 @@ export class WorldScene extends Phaser.Scene {
     // constant part lands on a whole device pixel: scroll = (k + c) / z.
     const cx = halfW * (1 - z);
     const cy = halfH * (1 - z);
-    const kx = Math.round(sx * z - cx);
-    const ky = Math.round(sy * z - cy);
+    // A shake moves the whole view, ground and props alike, by whole device
+    // pixels. Phaser would only shift the main camera's image, by fractions.
+    const shake = cam.shakeEffect as unknown as { isRunning: boolean; _offsetX: number; _offsetY: number };
+    let dx = 0;
+    let dy = 0;
+    if (shake.isRunning) {
+      dx = Math.round(shake._offsetX * z);
+      dy = Math.round(shake._offsetY * z);
+      shake._offsetX = 0;
+      shake._offsetY = 0;
+    }
+    const kx = Math.round(sx * z - cx) - dx;
+    const ky = Math.round(sy * z - cy) - dy;
     cam.scrollX = (kx + cx) / z;
     cam.scrollY = (ky + cy) / z;
     const ax = Math.floor(kx / z);
