@@ -11,6 +11,11 @@ import { pixelGrid } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { characterById, type Hero } from '../game/characters';
+import { areaOrigin, reaches, type Harm, type Hit, type Hurtbox, type MeleeArea, type Strike } from '../game/combat';
+import { HealthBar } from '../game/HealthBar';
+import { HealPop } from '../game/Holy';
+import type { Effect } from '../game/Slash';
+import { separate, Spawner, type Monster, type SpawnSpot } from '../game/monsters';
 
 type V3 = [number, number, number];
 
@@ -44,17 +49,47 @@ interface Flicker {
   haloBase: number;
 }
 
-/** Where a melee blow reaches, in world pixels. Angles in radians. */
-export type MeleeArea =
-  | { kind: 'arc'; x: number; y: number; radius: number; angle: number; spread: number }
-  | { kind: 'circle'; x: number; y: number; radius: number }
-  | { kind: 'line'; x0: number; y0: number; x1: number; y1: number; radius: number };
+export type { MeleeArea } from '../game/combat';
 
-interface Dummy {
-  sprite: Phaser.GameObjects.Sprite;
-  x: number;
-  y: number;
-  wobble: number;
+/** The starting plaza's monsters, around the edge of the clearing. */
+const PLAZA_SPAWNS: SpawnSpot[] = [
+  { kind: 'frog', x: 150, y: 118 },
+  { kind: 'frog', x: 522, y: 334 },
+  { kind: 'puffcap', x: 470, y: 104 },
+  { kind: 'puffcap', x: 494, y: 122 },
+  { kind: 'puffcap', x: 462, y: 130 },
+  { kind: 'beetle', x: 148, y: 342 },
+];
+
+/** How long the hero lies fallen before rising again at the plaza. */
+const DOWN_TIME = 3500;
+/** Invulnerable this long after being struck, and after rising. */
+const HURT_GRACE = 550;
+const RISE_GRACE = 2200;
+/** The hero's body, for monster hits: centre height above the feet, and radius. */
+const HERO_BODY_Y = 11;
+const HERO_RADIUS = 6;
+
+/** A straw training dummy: struck like a monster, but never falls. */
+class Dummy implements Hurtbox {
+  readonly bodyY = 11;
+  readonly radius = 6;
+  readonly alive = true;
+  wobble = 0;
+
+  constructor(
+    private world: WorldScene,
+    readonly sprite: Phaser.GameObjects.Sprite,
+    readonly x: number,
+    readonly y: number,
+  ) {}
+
+  hurt(hit: Hit): void {
+    this.wobble = hit.heavy ? 1.4 : 1;
+    this.sprite.setFrame('d1');
+    this.world.time.delayedCall(90, () => this.sprite.setFrame('d0'));
+    this.world.popNumber(this.x, this.y - 30, `${Math.round(hit.damage)}`, hit.heavy ? 0xffe28a : 0xffffff);
+  }
 }
 
 export class WorldScene extends Phaser.Scene {
@@ -67,6 +102,24 @@ export class WorldScene extends Phaser.Scene {
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private struck = false;
   private bounds = new Phaser.Geom.Rectangle(28, 40, WORLD_W - 56, WORLD_H - 64);
+  /** Where monsters may roam (the same walkable area as the hero's). */
+  get monsterBounds(): Phaser.Geom.Rectangle {
+    return this.bounds;
+  }
+  private spawners: Spawner[] = [];
+  private effects: Effect[] = [];
+  private debrisEmitters = new Map<string, Phaser.GameObjects.Particles.ParticleEmitter>();
+  private heroBar!: HealthBar;
+  private spawnX = 0;
+  private spawnY = 0;
+  /** Time left lying fallen, or 0 while standing. */
+  private downT = 0;
+  private grace = 0;
+  private rising = false;
+  private hurtTint = 0;
+  private pushX = 0;
+  private pushY = 0;
+  private fallen: Phaser.GameObjects.BitmapText | null = null;
   private groundDay!: Phaser.GameObjects.Image;
   private runes!: Phaser.GameObjects.Image;
   private shafts!: Phaser.GameObjects.TileSprite;
@@ -90,6 +143,11 @@ export class WorldScene extends Phaser.Scene {
     this.flickers = [];
     this.dummies = [];
     this.shadows = [];
+    this.spawners = [];
+    this.effects = [];
+    this.debrisEmitters = new Map();
+    this.downT = this.grace = this.hurtTint = this.pushX = this.pushY = 0;
+    this.fallen = null;
     const cx = WORLD_W / 2;
     const cy = WORLD_H / 2;
 
@@ -184,7 +242,11 @@ export class WorldScene extends Phaser.Scene {
     this.dummy(cx + 64, cy - 8);
     this.dummy(cx - 70, cy + 34);
 
-    this.hero = characterById(data?.character).spawn(this, cx, cy + 20);
+    this.spawnX = cx;
+    this.spawnY = cy + 20;
+    this.hero = characterById(data?.character).spawn(this, this.spawnX, this.spawnY);
+    this.heroBar = new HealthBar(this);
+    this.spawners.push(new Spawner(this, PLAZA_SPAWNS));
 
     // Screen-fixed; it covers the ground camera's image too, as it draws first.
     this.skyLayer = this.add.image(0, 0, 'clouds').setScrollFactor(0).setDepth(20000).setPipeline('Sky');
@@ -206,42 +268,183 @@ export class WorldScene extends Phaser.Scene {
 
   /** A beam from (x, y) along (dx, dy); `depth` sorts it against the caster. */
   fireBeam(x: number, y: number, dx: number, dy: number, power: number, depth: number, style?: SpellStyle): void {
-    this.beams.push(new Beam(this, x, y, dx, dy, power, this.worldRect, depth, this.beamHit, style));
+    const strike: Strike = { damage: Math.round(3 + 5 * power), knock: 40 + 40 * power, fromX: x, fromY: y };
+    this.beams.push(new Beam(this, x, y, dx, dy, power, this.worldRect, depth, (x0, y0, x1, y1, r) => this.beamHit(x0, y0, x1, y1, r, strike), style));
     sound.beamFire(this.pan(x), power);
   }
 
+  /** Everything the heroes can strike right now. */
+  private hurtboxes(): Hurtbox[] {
+    const out: Hurtbox[] = [...this.dummies];
+    for (const sp of this.spawners) for (const m of sp.monsters) if (m.alive) out.push(m);
+    return out;
+  }
+
   /**
-   * A melee blow. Everything whose body falls inside `area` is struck; returns
-   * where each blow landed (on the side facing `from`), for sparks and sound.
+   * A blow over an area. Everything whose body falls inside `area` is struck;
+   * returns where each blow landed (on the side facing the blow), for sparks
+   * and sound. `strike` may be a bare `heavy` flag, which deals a default hit.
    */
-  melee(area: MeleeArea, heavy: boolean): { x: number; y: number }[] {
+  melee(area: MeleeArea, strike: Strike | boolean): { x: number; y: number }[] {
+    const s: Strike = typeof strike === 'boolean' ? { damage: strike ? 16 : 10, heavy: strike } : strike;
+    const o = areaOrigin(area);
+    const hit = this.toHit(s, o.x, o.y);
     const hits: { x: number; y: number }[] = [];
-    for (const d of this.dummies) {
-      const bx = d.x;
-      const by = d.y - 11;
-      let hit = false;
-      if (area.kind === 'circle') {
-        hit = Phaser.Math.Distance.Between(bx, by, area.x, area.y) <= area.radius + 6;
-      } else if (area.kind === 'arc') {
-        const dist = Phaser.Math.Distance.Between(bx, by, area.x, area.y);
-        const off = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(by - area.y, bx - area.x) - area.angle));
-        hit = dist <= area.radius + 6 && (off <= area.spread || dist < 10);
-      } else {
-        const vx = area.x1 - area.x0;
-        const vy = area.y1 - area.y0;
-        const t = Phaser.Math.Clamp(((bx - area.x0) * vx + (by - area.y0) * vy) / (vx * vx + vy * vy || 1), 0, 1);
-        hit = Phaser.Math.Distance.Between(bx, by, area.x0 + vx * t, area.y0 + vy * t) <= area.radius + 6;
-      }
-      if (!hit) continue;
-      this.hitDummy(d, heavy ? 1.4 : 1);
-      const fx = area.kind === 'line' ? area.x0 : area.x;
-      const fy = area.kind === 'line' ? area.y0 : area.y;
-      const l = Math.hypot(fx - bx, fy - by) || 1;
-      hits.push({ x: bx + ((fx - bx) / l) * 5, y: by + ((fy - by) / l) * 4 });
+    for (const h of this.hurtboxes()) {
+      const bx = h.x;
+      const by = h.y - h.bodyY;
+      if (!reaches(area, bx, by, h.radius)) continue;
+      h.hurt(hit);
+      const l = Math.hypot(o.x - bx, o.y - by) || 1;
+      hits.push({ x: bx + ((o.x - bx) / l) * (h.radius - 1), y: by + ((o.y - by) / l) * (h.radius - 2) });
     }
     return hits;
   }
 
+  /** A projectile at (x, y): strikes the first body there. Returns whether it hit. */
+  strikeAt(x: number, y: number, strike: Strike): boolean {
+    for (const h of this.hurtboxes()) {
+      const dx = (x - h.x) / (h.radius + 2);
+      const dy = (y - (h.y - h.bodyY)) / (h.bodyY + 3);
+      if (dx * dx + dy * dy > 1) continue;
+      h.hurt(this.toHit(strike, x, y));
+      return true;
+    }
+    return false;
+  }
+
+  private toHit(s: Strike, x: number, y: number): Hit {
+    return { damage: s.damage, heavy: !!s.heavy, knock: s.knock ?? (s.heavy ? 130 : 60), fromX: s.fromX ?? x, fromY: s.fromY ?? y };
+  }
+
+  /** A monster's blow lands on the hero if its reach (a circle at (x, y)) touches the hero's body. */
+  hurtHeroAt(x: number, y: number, radius: number, harm: Harm): boolean {
+    if (this.downT > 0) return false;
+    if (Math.hypot(this.hero.x - x, this.hero.y - HERO_BODY_Y - y) > radius + HERO_RADIUS) return false;
+    this.hurtHero(harm);
+    return true;
+  }
+
+  /** A burst over an ellipse on the ground centred at (x, y). */
+  hurtHeroInEllipse(x: number, y: number, rx: number, ry: number, harm: Harm): boolean {
+    if (this.downT > 0) return false;
+    const dx = (this.hero.x - x) / (rx + HERO_RADIUS - 2);
+    const dy = (this.hero.y - y) / (ry + 3);
+    if (dx * dx + dy * dy > 1) return false;
+    this.hurtHero(harm);
+    return true;
+  }
+
+  /** Damage the hero, unless they are down or still in their grace window. */
+  hurtHero(harm: Harm): void {
+    const h = this.hero;
+    if (this.downT > 0 || this.grace > 0) return;
+    const lost = h.vitals.damage(harm.damage);
+    this.grace = HURT_GRACE;
+    this.rising = false;
+    this.popNumber(snap(h.x), snap(h.y) - 38, `-${Math.round(harm.damage)}`, lost > 0 ? 0xff6a5a : 0xffd35c);
+    h.sprite.setTint(0xff8070);
+    this.hurtTint = 140;
+    const dx = h.x - harm.fromX;
+    const dy = h.y - HERO_BODY_Y - harm.fromY;
+    const l = Math.hypot(dx, dy) || 1;
+    const k = harm.knock ?? 60;
+    this.pushX = (dx / l) * k;
+    this.pushY = (dy / l) * k;
+    this.cameras.main.shake(120, 0.0006);
+    sound.hurt();
+    if (!h.vitals.alive) this.fall();
+  }
+
+  private fall(): void {
+    const h = this.hero;
+    this.downT = DOWN_TIME;
+    this.pushX = this.pushY = 0;
+    this.debris([0xffffff, 0xdff8ff, 0xb0c8ff], snap(h.x), snap(h.y) - 12, 20, h.y + 20, 'spores');
+    this.fallen = this.add.bitmapText(Math.round(h.x), Math.round(h.y) - 40, 'pixel', 'FALLEN').setLetterSpacing(-1).setOrigin(0.5, 1).setTint(0xffb0a0).setDepth(10002).setAlpha(0);
+    sound.fall();
+  }
+
+  private rise(): void {
+    const h = this.hero;
+    h.x = this.spawnX;
+    h.y = this.spawnY;
+    h.vitals.reset();
+    this.grace = RISE_GRACE;
+    this.rising = true;
+    this.fallen?.destroy();
+    this.fallen = null;
+    this.debris([0xfffdf0, 0xfff0a8, 0xffd35c], snap(h.x), snap(h.y) - 12, 24, h.y + 20, 'spores');
+    sound.revive();
+  }
+
+  /** The hero's life: falling, rising, hit tint, knockback and the health bar. */
+  private updateHeroLife(dt: number): void {
+    const h = this.hero;
+    this.grace = Math.max(0, this.grace - dt);
+    if (this.hurtTint > 0) {
+      this.hurtTint -= dt;
+      if (this.hurtTint <= 0) h.sprite.clearTint();
+    }
+    if (this.downT > 0) {
+      this.downT -= dt;
+      const t = DOWN_TIME - this.downT;
+      h.alpha = Math.max(0, 1 - t / 700);
+      this.fallen?.setAlpha(Phaser.Math.Clamp((t - 300) / 400, 0, 1)).setPosition(Math.round(h.x), Math.round(h.y) - 40 - Math.min(6, t / 250));
+      if (this.downT <= 0) {
+        this.downT = 0;
+        this.rise();
+      }
+    } else if (this.rising && this.grace > 0) {
+      // Blinks while the grace after rising lasts.
+      h.alpha = Math.sin(this.grace * 0.03) > -0.3 ? 1 : 0.35;
+    } else {
+      h.alpha = 1;
+    }
+    if (this.pushX || this.pushY) {
+      const b = this.bounds;
+      h.x = Phaser.Math.Clamp(h.x + (this.pushX * dt) / 1000, b.left, b.right);
+      h.y = Phaser.Math.Clamp(h.y + (this.pushY * dt) / 1000, b.top, b.bottom);
+      const k = Math.exp(-dt / 80);
+      this.pushX *= k;
+      this.pushY *= k;
+      if (Math.abs(this.pushX) + Math.abs(this.pushY) < 2) this.pushX = this.pushY = 0;
+    }
+    const v = h.vitals;
+    this.heroBar.update(dt, snap(h.x), snap(h.y) - 34, this.downT > 0 ? 0 : v.hp, v.max, v.barrier);
+  }
+
+  /** A number (or word) that floats up and fades: damage dealt and taken. */
+  popNumber(x: number, y: number, text: string, tint: number): void {
+    this.effects.push(new HealPop(this, x + Math.round((Math.random() - 0.5) * 6), y, text, tint));
+  }
+
+  /** Let the world update an effect each frame until it is dead. */
+  addEffect(e: Effect): void {
+    this.effects.push(e);
+  }
+
+  /**
+   * A burst of light specks, from one shared emitter per palette and style:
+   * 'burst' flies apart, 'spores' drifts up slowly, 'trail' barely moves,
+   * 'gather' fades in and out in place.
+   */
+  debris(tints: number[], x: number, y: number, count: number, depth: number, style: 'burst' | 'spores' | 'trail' | 'gather' = 'burst'): void {
+    const key = `${style}:${tints.join()}`;
+    let e = this.debrisEmitters.get(key);
+    if (!e) {
+      const base = { tint: tints, blendMode: Phaser.BlendModes.ADD, emitting: false };
+      const cfg: Record<string, Phaser.Types.GameObjects.Particles.ParticleEmitterConfig> = {
+        burst: { ...base, lifespan: { min: 250, max: 600 }, speed: { min: 20, max: 70 }, scale: { start: 1, end: 0 }, alpha: { start: 1, end: 0 } },
+        spores: { ...base, lifespan: { min: 700, max: 1300 }, speed: { min: 10, max: 42 }, gravityY: -18, scale: { start: 1, end: 0.5 }, alpha: { start: 1, end: 0 } },
+        trail: { ...base, lifespan: { min: 200, max: 420 }, speed: { min: 2, max: 10 }, scale: { start: 1, end: 0 }, alpha: { start: 0.9, end: 0 } },
+        gather: { ...base, lifespan: 260, speed: { min: 2, max: 8 }, scale: 0.5, alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * Math.PI) } },
+      };
+      e = this.add.particles(0, 0, 'spark', cfg[style]);
+      this.debrisEmitters.set(key, e);
+    }
+    e.setDepth(depth).explode(count, x, y);
+  }
   /**
    * Keep the camera locked on the hero, snapped to device pixels. The
    * hero snaps to the same grid, so they hold still on screen and stays
@@ -377,49 +580,28 @@ export class WorldScene extends Phaser.Scene {
     this.add.image(x, y, 'shadow').setDepth(1);
     const sprite = this.add.sprite(x, y, 'dummy', 'd0').setOrigin(0.5, 26 / 28).setPipeline('Lit').setDepth(y);
     this.shadows.push(sunShadow(this.add.image(x, y, 'dummy_s', 'd0').setOrigin(0.5, 26 / 28)));
-    this.dummies.push({ sprite, x, y, wobble: 0 });
+    this.dummies.push(new Dummy(this, sprite, x, y));
   }
 
-  private hitDummy(d: Dummy, force = 1): void {
-    d.wobble = force;
-    d.sprite.setFrame('d1');
-    this.time.delayedCall(90, () => d.sprite.setFrame('d0'));
-  }
-
+  /** The energy ball's hit test. */
   private hitTest = (x: number, y: number): boolean => {
-    for (const d of this.dummies) {
-      if (Math.abs(x - d.x) < 7 && y > d.y - 24 && y < d.y + 2) {
-        this.hitDummy(d);
-        this.cameras.main.shake(70, 0.00035);
-        this.struck = true;
-        return true;
-      }
-    }
-    return false;
+    if (!this.strikeAt(x, y, { damage: 12, knock: 80 })) return false;
+    this.cameras.main.shake(70, 0.00035);
+    this.struck = true;
+    return true;
   };
 
   /** Everything within `radius` of the beam's line takes a hit and throws off a burst of light. */
-  private beamHit = (x0: number, y0: number, x1: number, y1: number, radius: number): void => {
-    const line = new Phaser.Geom.Line(x0, y0, x1, y1);
-    const p = new Phaser.Geom.Point();
-    for (const d of this.dummies) {
-      const body = new Phaser.Geom.Point(d.x, d.y - 11);
-      Phaser.Geom.Line.GetNearestPoint(line, body, p);
-      // Clamp the nearest point onto the segment.
-      const len = Phaser.Geom.Line.Length(line);
-      const t = len > 0 ? Phaser.Math.Clamp(((p.x - x0) * (x1 - x0) + (p.y - y0) * (y1 - y0)) / (len * len), 0, 1) : 0;
-      const nx = x0 + (x1 - x0) * t;
-      const ny = y0 + (y1 - y0) * t;
-      if (Phaser.Math.Distance.Between(nx, ny, body.x, body.y) > radius + 6) continue;
-      this.hitDummy(d);
+  private beamHit(x0: number, y0: number, x1: number, y1: number, radius: number, strike: Strike): void {
+    for (const p of this.melee({ kind: 'line', x0, y0, x1, y1, radius }, strike)) {
       const burst = this.add
-        .sprite(Math.round(nx), Math.round(ny), 'burst_e', 'b0')
+        .sprite(Math.round(p.x), Math.round(p.y), 'burst_e', 'b0')
         .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(d.y + 1)
+        .setDepth(p.y + 12)
         .play('burst_pop');
       burst.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => burst.destroy());
     }
-  };
+  }
 
   /** Ease toward the chosen time of day and push it into every layer. */
   private updateDaylight(time: number, dt: number): number {
@@ -473,10 +655,25 @@ export class WorldScene extends Phaser.Scene {
       mx = kx / l;
       my = ky / l;
     }
-    const attack = controls.attack || k.SPACE.isDown || k.J.isDown;
-    const special = controls.beam || k.K.isDown || k.SHIFT.isDown;
+    let attack = controls.attack || k.SPACE.isDown || k.J.isDown;
+    let special = controls.beam || k.K.isDown || k.SHIFT.isDown;
+    if (this.downT > 0) {
+      mx = my = 0;
+      attack = special = false;
+    }
     this.hero.daylight = daynight.daylight;
     this.hero.update(dt, mx, my, attack, special, this.bounds);
+    this.updateHeroLife(dt);
+
+    const target = this.downT > 0 ? null : this.hero;
+    const monsters: Monster[] = [];
+    for (const sp of this.spawners) {
+      sp.update(dt, target, daynight.daylight);
+      monsters.push(...sp.monsters);
+    }
+    separate(monsters, target, HERO_RADIUS);
+    for (const e of this.effects) e.update(dt);
+    this.effects = this.effects.filter((e) => !e.dead);
     this.followHero();
 
     for (const b of this.balls) {

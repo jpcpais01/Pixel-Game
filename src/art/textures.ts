@@ -8,6 +8,7 @@ import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, WIZARD_LOOKS, type Fr
 import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, maceIcon, sanctuaryIcon } from './effects';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_W, type PaladinMeta } from './paladin';
 import { buildWarriorFrames, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_W, type WarriorMeta } from './warrior';
+import { buildBeetleSheet, buildFrogSheet, buildPuffcapSheet, ringCanvas, venomGlob, type MonsterSheet } from './monsters';
 import { buildGround, NIGHT_GROUND, DAY_GROUND, brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 
 function toCanvas(w: number, h: number, px: Uint8ClampedArray): HTMLCanvasElement {
@@ -24,6 +25,8 @@ interface Packed {
   emissive: HTMLCanvasElement;
   /** Solid silhouette, used for sun shadows. */
   silhouette: HTMLCanvasElement;
+  /** White silhouette, flashed over a sprite when it is struck. */
+  white: () => HTMLCanvasElement;
   rects: { name: string; x: number; y: number }[];
 }
 
@@ -53,7 +56,13 @@ function pack(frames: { name: string; r: RenderedFrame }[], fw: number, fh: numb
     sil[i * 4 + 2] = 22;
     sil[i * 4 + 3] = layers.diffuse[i * 4 + 3];
   }
+  const white = () => {
+    const px = new Uint8ClampedArray(W * H * 4).fill(255);
+    for (let i = 0; i < W * H; i++) px[i * 4 + 3] = layers.diffuse[i * 4 + 3];
+    return toCanvas(W, H, px);
+  };
   return {
+    white,
     silhouette: toCanvas(W, H, sil),
     diffuse: toCanvas(W, H, layers.diffuse),
     normal: toCanvas(W, H, layers.normal),
@@ -62,15 +71,35 @@ function pack(frames: { name: string; r: RenderedFrame }[], fw: number, fh: numb
   };
 }
 
-function register(scene: Phaser.Scene, key: string, p: Packed, fw: number, fh: number, withEmissive = true): void {
+function register(scene: Phaser.Scene, key: string, p: Packed, fw: number, fh: number, withEmissive = true, withFlash = false): void {
   const tex = scene.textures.addCanvas(key, p.diffuse)!;
   tex.setDataSource(p.normal);
   const etex = withEmissive ? scene.textures.addCanvas(`${key}_e`, p.emissive)! : null;
   const stex = scene.textures.addCanvas(`${key}_s`, p.silhouette)!;
+  const wtex = withFlash ? scene.textures.addCanvas(`${key}_w`, p.white())! : null;
   for (const r of p.rects) {
     tex.add(r.name, 0, r.x, r.y, fw, fh);
     etex?.add(r.name, 0, r.x, r.y, fw, fh);
     stex.add(r.name, 0, r.x, r.y, fw, fh);
+    wtex?.add(r.name, 0, r.x, r.y, fw, fh);
+  }
+}
+
+/**
+ * A monster's frames as `<key>` (lit), `<key>_e` (glow), `<key>_s` (sun
+ * shadow) and `<key>_w` (hit flash), with animations `<key>_<anim>_<r|l>`.
+ */
+function registerMonster(scene: Phaser.Scene, key: string, sh: MonsterSheet): void {
+  register(scene, key, pack(sh.frames.map((f) => ({ name: f.name, r: f.canvas.render() })), sh.w, sh.h), sh.w, sh.h, true, true);
+  for (const a of sh.anims) {
+    for (const side of ['r', 'l']) {
+      scene.anims.create({
+        key: `${key}_${a.name}_${side}`,
+        frames: a.frames.map((f) => ({ key, frame: `${f}_${side}` })),
+        frameRate: a.fps,
+        repeat: a.loop ? -1 : 0,
+      });
+    }
   }
 }
 
@@ -168,5 +197,13 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
   scene.anims.create({ key: 'brazier_burn', frames: scene.anims.generateFrameNames('brazier_e', { prefix: 'f', start: 0, end: 3 }), frameRate: 9, repeat: -1 });
   register(scene, 'crystals', pack(frameList([crystalCluster(3), crystalCluster(8)], 'c'), 20, 22), 20, 22);
   register(scene, 'rock', pack(frameList([rock(1), rock(2), rock(5)], 'r'), 18, 14), 18, 14, false);
+  // Monsters.
+  registerMonster(scene, 'frog', buildFrogSheet());
+  registerMonster(scene, 'beetle', buildBeetleSheet());
+  registerMonster(scene, 'puffcap', buildPuffcapSheet());
+  scene.textures.addCanvas('venom', toCanvas(7, 7, venomGlob()));
+  const ring = ringCanvas(22, 12);
+  scene.textures.addCanvas('danger_ring', toCanvas(ring.w, ring.h, ring.px));
+
   register(scene, 'dummy', pack(frameList([dummyFrame(false), dummyFrame(true)], 'd'), 18, 28), 18, 28, false);
 }

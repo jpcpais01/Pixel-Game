@@ -57,4 +57,8 @@ export class HealthBar {
     this.barrier.setPosition(left + hw, y + 1).setDisplaySize(bw, 2);
     this.barrierLit.setPosition(left + hw, y + 1).setDisplaySize(bw, 1);
   }
+
+  destroy(): void {
+    for (const p of this.parts) p.destroy();
+  }
 }

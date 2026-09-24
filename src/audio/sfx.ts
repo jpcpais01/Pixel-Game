@@ -439,6 +439,169 @@ export class Sfx {
     this.bell(out, t + 0.07, [1175, 1319, 1480][i], 0.03, 0.6);
   }
 
+  // ------------------------------------------------------------ Monsters
+
+  /** Noise through a filter with a quick envelope: the building block of most creature sounds. */
+  private burstNoise(out: AudioNode, t: number, type: BiquadFilterType, from: number, to: number, q: number, level: number, dur: number, pink = false): void {
+    const ctx = this.m.ctx;
+    const g = gain(ctx, 0, out);
+    hit(g.gain, t, level, 0.004, dur);
+    const f = filter(ctx, type, from, q, g);
+    sweep(f.frequency, t, from, to, dur);
+    const src = this.m.noiseSource(pink);
+    src.connect(f);
+    this.m.startNoise(src, t, dur + 0.05);
+  }
+
+  /** A pitched blip that slides from `from` to `to` Hz. */
+  private chirp(out: AudioNode, t: number, type: OscillatorType, from: number, to: number, level: number, dur: number): void {
+    const ctx = this.m.ctx;
+    const g = gain(ctx, 0, out);
+    hit(g.gain, t, level, 0.004, dur);
+    const o = osc(ctx, type, from, g);
+    sweep(o.frequency, t, from, to, dur);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+
+  /** A monster spots the player: a short, rising two-note call. */
+  notice(t: number, pan: number): void {
+    const out = this.out(pan, 0.35, 0.2);
+    this.chirp(out, t, 'triangle', 420, 640, 0.25, 0.08);
+    this.chirp(out, t + 0.07, 'triangle', 560, 900, 0.2, 0.1);
+  }
+
+  /** The frog's throat swelling: a low, wet, rising croak. */
+  gulp(t: number, pan: number): void {
+    const out = this.out(pan, 0.6, 0.25);
+    const ctx = this.m.ctx;
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 900, 3, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.35, t + 0.25);
+    g.gain.linearRampToValueAtTime(0, t + 0.55);
+    const o = osc(ctx, 'sawtooth', 90, g);
+    sweep(o.frequency, t, 90, 150, 0.5);
+    const lfo = osc(ctx, 'sine', 22, gain(ctx, 25, o.frequency));
+    lfo.start(t);
+    lfo.stop(t + 0.6);
+    o.start(t);
+    o.stop(t + 0.6);
+  }
+
+  /** The venom leaving the frog's mouth: a wet pop and a little glitter. */
+  spit(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.35);
+    this.chirp(out, t, 'sine', 900, 260, 0.35, 0.09);
+    this.burstNoise(out, t, 'bandpass', 2400, 700, 2, 0.35, 0.12);
+    this.sparkle(out, t + 0.04, 2, 0.04);
+  }
+
+  /** A soft hop on the grass. */
+  hop(t: number, pan: number): void {
+    const out = this.out(pan, 0.3, 0.05);
+    this.chirp(out, t, 'sine', 240, 120, 0.25, 0.06);
+  }
+
+  /** Venom bursting: a fizzy splat. */
+  splash(t: number, pan: number): void {
+    const out = this.out(pan, 0.6, 0.3);
+    this.burstNoise(out, t, 'bandpass', 1800, 500, 1.5, 0.45, 0.2);
+    this.burstNoise(out, t + 0.02, 'highpass', 5000, 7000, 0.7, 0.1, 0.25);
+    this.sparkle(out, t + 0.03, 3, 0.03);
+  }
+
+  /** The beetle bracing to charge: dry clicks of chitin, quickening. */
+  chitter(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.2);
+    for (let i = 0; i < 7; i++) {
+      const at = t + i * (0.11 - i * 0.008);
+      this.burstNoise(out, at, 'bandpass', rand(2600, 3400), 2000, 6, 0.4, 0.025);
+    }
+    this.chirp(out, t, 'sawtooth', 60, 110, 0.12, 0.7);
+  }
+
+  /** Wings blurring into a charge: a rough buzzing drone. */
+  buzz(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.6, 0.25);
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 1600, 1, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.3, t + 0.04);
+    g.gain.setTargetAtTime(0, t + 0.45, 0.08);
+    for (const f of [118, 121]) {
+      const o = osc(ctx, 'sawtooth', f, g);
+      sweep(o.frequency, t, f * 1.2, f, 0.3);
+      o.start(t);
+      o.stop(t + 0.9);
+    }
+  }
+
+  /** The beetle landing: a heavy thump, and a crack if it hit a wall. */
+  thud(t: number, pan: number, hard: boolean): void {
+    const out = this.out(pan, hard ? 1 : 0.7, 0.3);
+    this.chirp(out, t, 'sine', 120, 40, 0.6, 0.22);
+    this.burstNoise(out, t, 'lowpass', 1200, 300, 0.7, 0.35, 0.15, true);
+    if (hard) this.burstNoise(out, t, 'bandpass', 800, 600, 3, 0.4, 0.1);
+  }
+
+  /** The puffcap swelling: an airy, rising hiss. */
+  swell(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.5, 0.3);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.3, t + 0.65);
+    g.gain.linearRampToValueAtTime(0, t + 0.72);
+    const bp = filter(ctx, 'bandpass', 500, 3, g);
+    sweep(bp.frequency, t, 500, 2600, 0.7);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, 0.75);
+  }
+
+  /** The spores bursting out: a soft, round whoomp. */
+  puff(t: number, pan: number): void {
+    const out = this.out(pan, 0.8, 0.5);
+    this.chirp(out, t, 'sine', 180, 60, 0.45, 0.2);
+    this.burstNoise(out, t, 'lowpass', 2200, 400, 0.8, 0.5, 0.35, true);
+    this.sparkle(out, t + 0.05, 3, 0.05);
+  }
+
+  /** A monster falling: a descending chirp and a puff; heavier monsters sound lower. */
+  monsterDie(t: number, pan: number, mass: number): void {
+    const out = this.out(pan, 0.7, 0.4);
+    const k = 1 / Math.sqrt(mass);
+    this.chirp(out, t, 'triangle', 700 * k, 160 * k, 0.3, 0.3);
+    this.burstNoise(out, t + 0.05, 'lowpass', 1800, 300, 0.7, 0.3, 0.3, true);
+    this.bell(out, t + 0.08, 1320, 0.03, 0.5);
+  }
+
+  /** The player is struck: a dull thump and a short grunt-like buzz. */
+  hurt(t: number): void {
+    const out = this.out(0, 0.9, 0.2);
+    this.chirp(out, t, 'sine', 160, 55, 0.6, 0.18);
+    this.burstNoise(out, t, 'bandpass', 900, 400, 1.5, 0.35, 0.12);
+    this.chirp(filter(this.m.ctx, 'lowpass', 900, 1, out), t, 'sawtooth', 220, 150, 0.08, 0.12);
+  }
+
+  /** The player falls: a long, sinking chord. */
+  fall(t: number): void {
+    const out = this.out(0, 0.8, 0.7);
+    for (const [f, d] of [
+      [392, 0],
+      [311, 0.12],
+      [262, 0.24],
+    ]) this.chirp(out, t + d, 'triangle', f, f * 0.7, 0.18, 1.1);
+    this.burstNoise(out, t, 'lowpass', 1400, 200, 0.7, 0.3, 0.6, true);
+  }
+
+  /** The player rises again: a bright, rising arpeggio. */
+  revive(t: number): void {
+    const out = this.out(0, 0.6, 0.6);
+    [523, 659, 784, 1047, 1319].forEach((f, i) => this.bell(out, t + i * 0.07, f, 0.05, 1.1));
+    this.sparkle(out, t + 0.3, 4, 0.05);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {
