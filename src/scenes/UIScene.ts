@@ -21,7 +21,6 @@ export class UIScene extends Phaser.Scene {
   private beamPointer: number | null = null;
   private base = new Phaser.Math.Vector2();
   private knob = new Phaser.Math.Vector2();
-  private hint!: Phaser.GameObjects.Text;
   private toggle!: Phaser.GameObjects.Graphics;
   private sun!: Phaser.GameObjects.Image;
   private moon!: Phaser.GameObjects.Image;
@@ -86,15 +85,6 @@ export class UIScene extends Phaser.Scene {
     this.toggle = this.add.graphics();
     this.sun = this.add.image(0, 0, 'icon_sun');
     this.moon = this.add.image(0, 0, 'icon_moon');
-    this.hint = this.add
-      .text(12 * D, 10 * D, `Joystick or WASD to walk  ·  ${hero.hint}  ·  N for day/night`, {
-        fontFamily: 'ui-monospace, Menlo, monospace',
-        fontSize: `${12 * D}px`,
-        color: '#dfe6ff',
-        stroke: '#0a0c1c',
-        strokeThickness: 3 * D,
-      })
-      .setAlpha(0.75);
     this.base.copy(this.restPos);
     this.knob.copy(this.restPos);
 
@@ -250,10 +240,7 @@ export class UIScene extends Phaser.Scene {
       .setScale(iconScale)
       .setAlpha(1 - d * 0.45);
     // Under the toggle, clear of the FPS counter at the top centre.
-    this.hint.setPosition(tr.x, tr.bottom + 10 * D);
 
-    // Hide the keyboard hint on small touch screens.
-    this.hint.setVisible(this.scale.width > 700 * D || !this.sys.game.device.input.touch);
   }
   /** The beam button, ringed by its charge: filling cyan, white-hot when full, draining violet when held too long. */
   private drawBeamButton(R: number): void {

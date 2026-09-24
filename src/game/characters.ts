@@ -50,8 +50,6 @@ export interface CharacterDef {
     attack: { texture: string; frame?: string; anim?: string };
     special: { texture: string };
   };
-  /** Keyboard help shown on wide screens. */
-  hint: string;
   /** Alternate looks, same gameplay; the first is the default (see skins.ts). */
   skins?: SkinDef[];
   /** `skin` is the id of the worn skin, for characters that have skins. */
@@ -72,7 +70,6 @@ export const CHARACTERS: CharacterDef[] = [
       attack: { texture: 'orb_e', frame: 'o0', anim: 'orb_spin' },
       special: { texture: 'icon_beam' },
     },
-    hint: 'Space to cast  ·  hold K to charge a beam',
     skins: [
       { id: 'arcane', name: 'Arcane' },
       {
@@ -117,7 +114,6 @@ export const CHARACTERS: CharacterDef[] = [
       attack: { texture: 'icon_sword' },
       special: { texture: 'icon_whirl' },
     },
-    hint: 'Space to swing (chain 3 for a combo)  ·  K for a whirlwind',
     spawn: (world, x, y) => new Warrior(world, x, y),
   },
   {
@@ -133,7 +129,6 @@ export const CHARACTERS: CharacterDef[] = [
       attack: { texture: 'icon_mace' },
       special: { texture: 'icon_sanctuary' },
     },
-    hint: 'Space to smite  ·  K to consecrate the ground (heals you)',
     spawn: (world, x, y) => new Paladin(world, x, y),
   },
 ];
