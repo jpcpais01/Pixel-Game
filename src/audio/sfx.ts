@@ -223,6 +223,130 @@ export class Sfx {
     this.m.startNoise(src, t, 0.3);
   }
 
+  /** A blade cutting the air. The finisher (`step` 3) is lower, heavier and longer. */
+  swing(t: number, pan: number, step: number): void {
+    const ctx = this.m.ctx;
+    const heavy = step >= 3;
+    const out = this.out(pan, heavy ? 0.85 : 0.7, 0.2);
+    const dur = heavy ? 0.26 : 0.17;
+    const w = gain(ctx, 0, out);
+    hit(w.gain, t, heavy ? 0.6 : 0.5, 0.02, dur);
+    const bp = filter(ctx, 'bandpass', 1800, heavy ? 1.6 : 2.4, w);
+    const top = [2600, 3200, 1900][Math.min(2, step - 1)] * rand(0.95, 1.05);
+    sweep(bp.frequency, t, top * 0.6, top, dur * 0.35);
+    sweep(bp.frequency, t + dur * 0.35, top, top * 0.4, dur * 0.65);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, dur + 0.05);
+    // A faint ring of steel.
+    const r = gain(ctx, 0, out);
+    hit(r.gain, t + 0.01, 0.025, 0.003, 0.18);
+    const o = osc(ctx, 'sine', rand(2900, 3300), r);
+    o.start(t);
+    o.stop(t + 0.25);
+    if (heavy) {
+      const g = gain(ctx, 0, out);
+      hit(g.gain, t, 0.25, 0.01, 0.2);
+      const lo = osc(ctx, 'sine', 160, g);
+      sweep(lo.frequency, t, 160, 70, 0.2);
+      lo.start(t);
+      lo.stop(t + 0.25);
+    }
+  }
+
+  /** The blade biting into a target: a thump, a crack of splinters and a bright ring of steel. */
+  clash(t: number, pan: number, heavy: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, heavy ? 1 : 0.8, 0.35);
+    const th = gain(ctx, 0, out);
+    hit(th.gain, t, heavy ? 0.7 : 0.5, 0.002, heavy ? 0.22 : 0.14);
+    const o = osc(ctx, 'sine', heavy ? 140 : 190, th);
+    sweep(o.frequency, t, heavy ? 140 : 190, 50, 0.18);
+    o.start(t);
+    o.stop(t + 0.3);
+
+    const k = gain(ctx, 0, out);
+    hit(k.gain, t, 0.45, 0.001, 0.09);
+    const wood = filter(ctx, 'bandpass', rand(700, 900), 3, k);
+    const n = this.m.noiseSource();
+    n.connect(wood);
+    this.m.startNoise(n, t, 0.12);
+
+    const ring = gain(ctx, 0, filter(ctx, 'highpass', 1200, 0.7, out));
+    hit(ring.gain, t, 0.07, 0.001, heavy ? 0.4 : 0.25);
+    for (const f of [1870, 2790, 4130]) {
+      const r = osc(ctx, 'triangle', f * rand(0.98, 1.02), gain(ctx, 0.5, ring));
+      r.start(t);
+      r.stop(t + 0.45);
+    }
+  }
+
+  /** The whirlwind kindling: a breath of fire rising in pitch. */
+  rise(t: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.7, 0.4);
+    const dur = 0.3;
+    const f = gain(ctx, 0, out);
+    f.gain.setValueAtTime(0, t);
+    f.gain.linearRampToValueAtTime(0.4, t + dur);
+    f.gain.linearRampToValueAtTime(0, t + dur + 0.08);
+    const bp = filter(ctx, 'bandpass', 500, 1.5, f);
+    sweep(bp.frequency, t, 400, 2200, dur);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, dur + 0.1);
+    const tone = gain(ctx, 0, out);
+    tone.gain.setValueAtTime(0, t);
+    tone.gain.linearRampToValueAtTime(0.06, t + dur);
+    tone.gain.linearRampToValueAtTime(0, t + dur + 0.1);
+    for (const fr of [220, 330]) {
+      const o = osc(ctx, 'sawtooth', fr, filter(ctx, 'lowpass', 1400, 0.7, tone));
+      sweep(o.frequency, t, fr, fr * 2, dur);
+      o.start(t);
+      o.stop(t + dur + 0.15);
+    }
+  }
+
+  /** One turn of the whirlwind: a roaring whoosh of fire. */
+  whirl(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.65, 0.3);
+    const w = gain(ctx, 0, out);
+    hit(w.gain, t, 0.45, 0.06, 0.26);
+    const bp = filter(ctx, 'bandpass', 900, 1.1, w);
+    sweep(bp.frequency, t, 600, 1600, 0.12);
+    sweep(bp.frequency, t + 0.12, 1600, 500, 0.2);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, 0.34);
+    const c = gain(ctx, 0, out);
+    hit(c.gain, t, 0.12, 0.01, 0.25);
+    const crackle = filter(ctx, 'highpass', 4000, 0.7, c);
+    const n = this.m.noiseSource(true);
+    n.connect(crackle);
+    this.m.startNoise(n, t, 0.3);
+  }
+
+  /** The whirlwind's closing blast: a deep boom and a roll of fire. */
+  slam(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 1, 0.55);
+    const b = gain(ctx, 0, out);
+    hit(b.gain, t, 0.8, 0.004, 0.55);
+    const lo = osc(ctx, 'sine', 110, b);
+    sweep(lo.frequency, t, 110, 32, 0.5);
+    lo.start(t);
+    lo.stop(t + 0.7);
+    const r = gain(ctx, 0, out);
+    hit(r.gain, t, 0.5, 0.005, 0.6);
+    const lp = filter(ctx, 'lowpass', 3000, 0.8, r);
+    sweep(lp.frequency, t, 4000, 300, 0.6);
+    const src = this.m.noiseSource();
+    src.connect(lp);
+    this.m.startNoise(src, t, 0.65);
+    this.sparkle(out, t + 0.04, 4, 0.04);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {

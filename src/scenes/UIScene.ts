@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { controls, beamHud } from '../game/controls';
+import { controls, beamHud, comboHud } from '../game/controls';
 import { daynight } from '../game/daynight';
 import { DPR as D } from '../game/display';
 import { characterById } from '../game/characters';
@@ -166,6 +166,26 @@ export class UIScene extends Phaser.Scene {
     b.lineStyle(1 * D, 0x6fe4ff, 0.25);
     b.strokeCircle(bp.x, bp.y, br + 6 * D);
     this.icon.setPosition(bp.x, bp.y).setScale(Math.max(2, Math.round(R / 14)) * (pressed ? 0.9 : 1));
+
+    // Combo pips over the attack button: one per hit landed, and a thin arc
+    // draining over the time left to chain the next.
+    if (comboHud.window > 0) {
+      const top = -Math.PI / 2;
+      b.lineStyle(2 * D, 0xffd66b, 0.55 * Math.min(1, comboHud.window * 3));
+      b.beginPath();
+      b.arc(bp.x, bp.y, br + 6 * D, top, top + Math.PI * 2 * comboHud.window, false);
+      b.strokePath();
+      for (let i = 0; i < 3; i++) {
+        const a = top + (i - 1) * 0.34;
+        const px = bp.x + Math.cos(a) * (br + 15 * D);
+        const py = bp.y + Math.sin(a) * (br + 15 * D);
+        const lit = i < comboHud.hits;
+        b.fillStyle(lit ? 0xffd66b : 0x0a0c1c, lit ? 0.95 : 0.5);
+        b.fillCircle(px, py, 4 * D);
+        b.lineStyle(1.5 * D, lit ? 0xfff4bf : 0xffd66b, lit ? 0.9 : 0.45);
+        b.strokeCircle(px, py, 4 * D);
+      }
+    }
 
     this.drawBeamButton(R);
 

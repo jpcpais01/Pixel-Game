@@ -275,14 +275,12 @@ export class ThrustStreak implements Effect {
 /** A star of light where a blow lands. */
 export class HitSpark implements Effect {
   dead = false;
-  private scene: Phaser.Scene;
   private layer: PixelLayer;
   private glow: Phaser.GameObjects.Image;
   private age = 0;
   private readonly duration = 200;
 
   constructor(scene: Phaser.Scene, x: number, y: number, private scheme: Scheme, depth: number, private big = false) {
-    this.scene = scene;
     x = Math.round(x);
     y = Math.round(y);
     this.layer = new PixelLayer(scene, 21, 21);
@@ -425,14 +423,12 @@ export class Tempest {
 /** The whirlwind's last swing slams out as a ring of fire rolling across the ground. */
 export class Shockwave implements Effect {
   dead = false;
-  private scene: Phaser.Scene;
   private layer: PixelLayer;
   private half: number;
   private age = 0;
   private readonly duration = 420;
 
-  constructor(scene: Phaser.Scene, private x: number, private y: number, private maxR: number) {
-    this.scene = scene;
+  constructor(scene: Phaser.Scene, x: number, y: number, private maxR: number) {
     this.half = Math.ceil(maxR) + 4;
     this.layer = new PixelLayer(scene, this.half * 2, this.half * 2);
     // On the ground: under every standing thing, over the ground's shadows.

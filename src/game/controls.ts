@@ -19,3 +19,11 @@ export const beamHud = {
   /** The beam is firing. */
   firing: false,
 };
+
+// The warrior's combo, read by the UI to light pips on the attack button.
+export const comboHud = {
+  /** Hits landed in the current chain, 0..3. */
+  hits: 0,
+  /** 0..1 of the time left to chain the next hit. */
+  window: 0,
+};

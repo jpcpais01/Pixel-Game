@@ -31,8 +31,9 @@ class Card extends Phaser.GameObjects.Container {
     const fy = 78;
     this.pedestal = scene.add.image(fx, fy - 2, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(def.accent).setScale(1.4, 0.45);
     const shadow = scene.add.image(fx, fy, 'shadow').setScale(2);
-    this.sprite = scene.add.sprite(fx, fy, def.preview.texture).setOrigin(0.5, 31 / 32).setScale(2).play(def.preview.idle);
-    if (def.preview.glow) this.glow = scene.add.sprite(fx, fy, def.preview.glow).setOrigin(0.5, 31 / 32).setScale(2).setBlendMode(Phaser.BlendModes.ADD);
+    const oy = def.preview.originY ?? 31 / 32;
+    this.sprite = scene.add.sprite(fx, fy, def.preview.texture).setOrigin(0.5, oy).setScale(2).play(def.preview.idle);
+    if (def.preview.glow) this.glow = scene.add.sprite(fx, fy, def.preview.glow).setOrigin(0.5, oy).setScale(2).setBlendMode(Phaser.BlendModes.ADD);
 
     const x = 64;
     const name = pixelText(scene, x, 7, def.name, 0xfff4d6, 2);

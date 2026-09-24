@@ -119,6 +119,26 @@ class GameSound {
     if (this.live()) this.sfx!.beamFizzle(this.ctx!.currentTime);
   }
 
+  swing(step: number, pan = 0): void {
+    if (this.live()) this.sfx!.swing(this.ctx!.currentTime, pan, step);
+  }
+
+  clash(pan = 0, heavy = false): void {
+    if (this.live()) this.sfx!.clash(this.ctx!.currentTime, pan, heavy);
+  }
+
+  rise(): void {
+    if (this.live()) this.sfx!.rise(this.ctx!.currentTime);
+  }
+
+  whirl(pan = 0): void {
+    if (this.live()) this.sfx!.whirl(this.ctx!.currentTime, pan);
+  }
+
+  slam(pan = 0): void {
+    if (this.live()) this.sfx!.slam(this.ctx!.currentTime, pan);
+  }
+
   step(): void {
     if (this.live()) this.sfx!.step(this.ctx!.currentTime);
   }

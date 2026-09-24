@@ -40,6 +40,12 @@ interface Flicker {
   haloBase: number;
 }
 
+/** Where a melee blow reaches, in world pixels. Angles in radians. */
+export type MeleeArea =
+  | { kind: 'arc'; x: number; y: number; radius: number; angle: number; spread: number }
+  | { kind: 'circle'; x: number; y: number; radius: number }
+  | { kind: 'line'; x0: number; y0: number; x1: number; y1: number; radius: number };
+
 interface Dummy {
   sprite: Phaser.GameObjects.Sprite;
   x: number;
@@ -162,6 +168,38 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
+   * A melee blow. Everything whose body falls inside `area` is struck; returns
+   * where each blow landed (on the side facing `from`), for sparks and sound.
+   */
+  melee(area: MeleeArea, heavy: boolean): { x: number; y: number }[] {
+    const hits: { x: number; y: number }[] = [];
+    for (const d of this.dummies) {
+      const bx = d.x;
+      const by = d.y - 11;
+      let hit = false;
+      if (area.kind === 'circle') {
+        hit = Phaser.Math.Distance.Between(bx, by, area.x, area.y) <= area.radius + 6;
+      } else if (area.kind === 'arc') {
+        const dist = Phaser.Math.Distance.Between(bx, by, area.x, area.y);
+        const off = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(by - area.y, bx - area.x) - area.angle));
+        hit = dist <= area.radius + 6 && (off <= area.spread || dist < 10);
+      } else {
+        const vx = area.x1 - area.x0;
+        const vy = area.y1 - area.y0;
+        const t = Phaser.Math.Clamp(((bx - area.x0) * vx + (by - area.y0) * vy) / (vx * vx + vy * vy || 1), 0, 1);
+        hit = Phaser.Math.Distance.Between(bx, by, area.x0 + vx * t, area.y0 + vy * t) <= area.radius + 6;
+      }
+      if (!hit) continue;
+      this.hitDummy(d, heavy ? 1.4 : 1);
+      const fx = area.kind === 'line' ? area.x0 : area.x;
+      const fy = area.kind === 'line' ? area.y0 : area.y;
+      const l = Math.hypot(fx - bx, fy - by) || 1;
+      hits.push({ x: bx + ((fx - bx) / l) * 5, y: by + ((fy - by) / l) * 4 });
+    }
+    return hits;
+  }
+
+  /**
    * Keep the camera locked on the hero, snapped to device pixels. The
    * hero snaps to the same grid, so they hold still on screen and stays
    * crisp, while the world scrolls in smooth sub-art-pixel steps.
@@ -232,8 +270,8 @@ export class WorldScene extends Phaser.Scene {
     this.dummies.push({ sprite, x, y, wobble: 0 });
   }
 
-  private hitDummy(d: Dummy): void {
-    d.wobble = 1;
+  private hitDummy(d: Dummy, force = 1): void {
+    d.wobble = force;
     d.sprite.setFrame('d1');
     this.time.delayedCall(90, () => d.sprite.setFrame('d0'));
   }
@@ -297,7 +335,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Stereo position of a world x on screen, -1..1. */
-  private pan(x: number): number {
+  pan(x: number): number {
     const cam = this.cameras.main;
     return Phaser.Math.Clamp((x - cam.midPoint.x) / (cam.worldView.width / 2), -1, 1);
   }

@@ -5,6 +5,8 @@
 import type Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
 import { Wizard } from './Wizard';
+import { Warrior } from './Warrior';
+import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
 
 /** What the world needs from the player's character each frame. */
 export interface Hero {
@@ -37,6 +39,8 @@ export interface CharacterDef {
     idle: string;
     /** Played once when the character is picked. */
     chosen: string;
+    /** Feet as a fraction of the frame height, when frames aren't 24x32. */
+    originY?: number;
   };
   /** Icons on the two ability buttons. */
   buttons: {
@@ -70,6 +74,22 @@ export const CHARACTERS: CharacterDef[] = [
       });
       return w;
     },
+  },
+  {
+    id: 'warrior',
+    name: 'Warrior',
+    role: 'Sword and steel',
+    accent: 0xffb54a,
+    stats: { power: 5, speed: 4, range: 2 },
+    attack: 'Three-hit combo',
+    special: 'Whirlwind',
+    preview: { texture: 'warrior', glow: 'warrior_e', idle: 'warrior_idle_down', chosen: 'warrior_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+    buttons: {
+      attack: { texture: 'icon_sword' },
+      special: { texture: 'icon_whirl' },
+    },
+    hint: 'Space to swing (chain 3 for a combo)  ·  K for a whirlwind',
+    spawn: (world, x, y) => new Warrior(world, x, y),
   },
 ];
 

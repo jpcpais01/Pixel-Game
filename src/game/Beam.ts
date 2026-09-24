@@ -261,15 +261,6 @@ export class BeamCharge {
     this.inflow.killAll();
   }
 
-  /** Remove everything for good (the wizard left the scene). */
-  destroy(): void {
-    this.hide();
-    this.layer.destroy();
-    this.halo.destroy();
-    this.inflow.destroy();
-    this.scene.lights.removeLight(this.light);
-  }
-
   /** Held too long: the light sputters out in a puff of violet sparks. */
   fizzle(x: number, y: number): void {
     this.hide();
