@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ARCANE_STYLE, type SpellStyle } from './spells';
 
 // The wizard's second attack: hold to gather light at the staff, release to
 // fire a beam that burns through everything along its line.
@@ -18,14 +19,6 @@ export type BeamHit = (x0: number, y0: number, x1: number, y1: number, radius: n
 
 const HIT_EVERY = 140;
 const CHARGE_SIZE = 48; // canvas for the charge orb, centred on the crystal // ms between damage ticks while the beam burns
-
-// Palette, as ints for Graphics (matches the magic colours in art/palette).
-const CORE = 0xf2ffff;
-const HOT = 0x9ff6ff;
-const MID = 0x39c6f0;
-const DEEP = 0x3a5ce0;
-const VIOLET = 0x8a55f0;
-const SPARK_TINTS = [0x9ff6ff, 0x39c6f0, 0x3a5ce0, 0x8a55f0];
 
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
@@ -99,13 +92,16 @@ export class BeamCharge {
   /** Age of the "fully charged" shock ring, or -1 when none is showing. */
   private readyAge = -1;
   private active = false;
+  private k: SpellStyle;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, style: SpellStyle = ARCANE_STYLE) {
     this.scene = scene;
+    this.k = style;
+    const k = style;
     this.layer = new PixelLayer(scene, CHARGE_SIZE, CHARGE_SIZE);
     this.layer.image.setVisible(false);
-    this.halo = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x39c6f0).setVisible(false);
-    this.light = scene.lights.addLight(0, 0, 40, 0x6fe4ff, 0);
+    this.halo = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(k.glow).setVisible(false);
+    this.light = scene.lights.addLight(0, 0, 40, k.light, 0);
     // Motes of light drawn in from all around, converging on the crystal.
     this.inflow = scene.add.particles(0, 0, 'spark', {
       emitZone: { type: 'edge', source: new Phaser.Geom.Circle(0, 0, 17), quantity: 36 } as Phaser.Types.GameObjects.Particles.EmitZoneData,
@@ -114,7 +110,7 @@ export class BeamCharge {
       lifespan: 380,
       scale: { start: 0.5, end: 1 },
       alpha: { start: 0.2, end: 1 },
-      tint: SPARK_TINTS,
+      tint: k.sparks,
       blendMode: Phaser.BlendModes.ADD,
       frequency: 60,
       emitting: false,
@@ -123,6 +119,7 @@ export class BeamCharge {
 
   /** (x, y) is the crystal's pixel, on the wizard's pixel grid. `level` is the charge (0..1); `over` how much of the hold time at full charge is used up. */
   update(dt: number, x: number, y: number, level: number, over: number, depth: number, daylight: number): void {
+    const k = this.k;
     if (!this.active) {
       this.active = true;
       this.t = 0;
@@ -137,7 +134,7 @@ export class BeamCharge {
     const full = level >= 1;
     if (full && !this.wasFull) {
       this.readyAge = 0;
-      this.flash(x, y, 0xbff8ff, 3.2, 130);
+      this.flash(x, y, k.flash, 3.2, 130);
     }
     this.wasFull = full;
     if (this.readyAge >= 0) {
@@ -166,10 +163,10 @@ export class BeamCharge {
       for (let dx = -R; dx <= R; dx++) {
         const d = Math.hypot(dx, dy) / r;
         const unstable = over > 0 && hash(dx, dy, frame) < over * 0.35;
-        if (d <= 0.45) b.put(cx + dx, cy + dy, CORE);
-        else if (d <= 0.8) b.put(cx + dx, cy + dy, unstable ? VIOLET : HOT);
-        else if (d <= 1.05) b.put(cx + dx, cy + dy, unstable ? CORE : MID, 0.9);
-        else if (d <= 1.35 && hash(dx, dy, frame) > 0.4) b.put(cx + dx, cy + dy, over > 0.5 ? VIOLET : DEEP, 0.6);
+        if (d <= 0.45) b.put(cx + dx, cy + dy, k.core);
+        else if (d <= 0.8) b.put(cx + dx, cy + dy, unstable ? k.accent : k.hot);
+        else if (d <= 1.05) b.put(cx + dx, cy + dy, unstable ? k.core : k.mid, 0.9);
+        else if (d <= 1.35 && hash(dx, dy, frame) > 0.4) b.put(cx + dx, cy + dy, over > 0.5 ? k.accent : k.deep, 0.6);
       }
     }
 
@@ -178,12 +175,12 @@ export class BeamCharge {
       const period = 560 - 280 * level;
       const ph = (t % period) / period;
       const rr = 15 - (15 - (r + 1.5)) * ph * ph;
-      this.ring(cx, cy, rr, MID, 0.25 + ph * 0.6, frame, 0.35);
+      this.ring(cx, cy, rr, k.mid, 0.25 + ph * 0.6, frame, 0.35);
     }
     // The moment it fills: a bright ring snaps outward.
     if (this.readyAge >= 0) {
-      const k = this.readyAge / 320;
-      this.ring(cx, cy, r + 2 + k * 16, k < 0.35 ? CORE : HOT, 1 - k, frame, 0.15);
+      const q = this.readyAge / 320;
+      this.ring(cx, cy, r + 2 + q * 16, q < 0.35 ? k.core : k.hot, 1 - q, frame, 0.15);
     }
 
     // Motes orbiting the orb; more of them as it fills.
@@ -191,23 +188,23 @@ export class BeamCharge {
     for (let i = 0; i < motes; i++) {
       const a = t * 0.009 * (1 + level) + (i / motes) * Math.PI * 2;
       const or = r + 2.6;
-      b.put(Math.round(cx + Math.cos(a) * or), Math.round(cy + Math.sin(a) * or * 0.8), over > 0.5 && i % 2 ? VIOLET : HOT);
+      b.put(Math.round(cx + Math.cos(a) * or), Math.round(cy + Math.sin(a) * or * 0.8), over > 0.5 && i % 2 ? k.accent : k.hot);
     }
 
     // Unstable: jagged crackles of light arcing off the orb.
     if (over > 0) {
       const arcs = Math.floor(1 + over * 3);
-      for (let k = 0; k < arcs; k++) {
-        if (hash(frame, k, 7) > 0.35 + over * 0.5) continue;
-        let a = hash(frame, k, 9) * Math.PI * 2;
+      for (let m = 0; m < arcs; m++) {
+        if (hash(frame, m, 7) > 0.35 + over * 0.5) continue;
+        let a = hash(frame, m, 9) * Math.PI * 2;
         let px = cx + Math.cos(a) * (r + 1);
         let py = cy + Math.sin(a) * (r + 1);
-        const len = 3 + Math.floor(hash(frame, k, 11) * 4);
+        const len = 3 + Math.floor(hash(frame, m, 11) * 4);
         for (let s = 0; s < len; s++) {
-          a += (hash(frame, k, s + 20) - 0.5) * 1.4;
+          a += (hash(frame, m, s + 20) - 0.5) * 1.4;
           px += Math.cos(a);
           py += Math.sin(a);
-          b.put(Math.round(px), Math.round(py), s === 0 ? CORE : VIOLET, 1 - s / (len + 1));
+          b.put(Math.round(px), Math.round(py), s === 0 ? k.core : k.accent, 1 - s / (len + 1));
         }
       }
     }
@@ -220,7 +217,7 @@ export class BeamCharge {
       .setPosition(wx, wy)
       .setDepth(depth - 0.1)
       .setScale(0.45 + level * 0.65)
-      .setTint(over > 0.5 ? 0x7f6cf0 : 0x39c6f0)
+      .setTint(over > 0.5 ? k.unstable : k.glow)
       .setAlpha((0.4 + level * 0.45) * flicker * (1 - daylight * 0.35));
     this.light.setPosition(wx, wy);
     this.light.radius = 40 + level * 50;
@@ -265,12 +262,12 @@ export class BeamCharge {
   fizzle(x: number, y: number): void {
     this.hide();
     const puff = this.scene.add
-      .sprite(Math.round(x), Math.round(y), 'burst_e', 'b2')
+      .sprite(Math.round(x), Math.round(y), this.k.burst.texture, 'b2')
       .setBlendMode(Phaser.BlendModes.ADD)
-      .setTint(0xb49cff)
+      .setTint(this.k.fizzle)
       .setAlpha(0.7)
       .setDepth(this.layer.image.depth)
-      .play({ key: 'burst_pop', startFrame: 2 });
+      .play({ key: this.k.burst.anim, startFrame: 2 });
     puff.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => puff.destroy());
     const sparks = this.scene.add
       .particles(0, 0, 'spark', {
@@ -279,14 +276,14 @@ export class BeamCharge {
         gravityY: 40,
         scale: { start: 0.5, end: 0.5 },
         alpha: { start: 1, end: 0 },
-        tint: [0xb49cff, 0x8a55f0, 0xf2ffff],
+        tint: this.k.fizzleSparks,
         blendMode: Phaser.BlendModes.ADD,
         emitting: false,
       })
       .setDepth(this.layer.image.depth);
     sparks.explode(16, x, y);
     this.scene.time.delayedCall(700, () => sparks.destroy());
-    this.flash(x, y, 0x9a6cff, 2.2, 90);
+    this.flash(x, y, this.k.fizzle, 2.2, 90);
   }
 }
 
@@ -315,6 +312,7 @@ export class Beam {
   private age = 0;
   private nextHit = 0;
   private hit: BeamHit;
+  private k: SpellStyle;
 
   constructor(
     scene: Phaser.Scene,
@@ -326,8 +324,11 @@ export class Beam {
     world: Phaser.Geom.Rectangle,
     depth: number,
     hit: BeamHit,
+    style: SpellStyle = ARCANE_STYLE,
   ) {
     this.scene = scene;
+    this.k = style;
+    const k = style;
     // (x, y) is the crystal's pixel on the wizard's grid; the beam starts at its centre.
     this.ox = x;
     this.oy = y;
@@ -368,13 +369,13 @@ export class Beam {
         scene.add
           .image(0, 0, 'glow')
           .setBlendMode(Phaser.BlendModes.ADD)
-          .setTint(0x39c6f0)
+          .setTint(k.glow)
           .setScale(0.5 + power * 0.5)
           .setDepth(depth - 0.1)
           .setVisible(false),
       );
     }
-    for (let i = 0; i < 4; i++) this.lights.push(scene.lights.addLight(this.x0, this.y0, 50 + power * 30, 0x6fe4ff, 0));
+    for (let i = 0; i < 4; i++) this.lights.push(scene.lights.addLight(this.x0, this.y0, 50 + power * 30, k.light, 0));
 
     const x1 = this.x0 + this.ux * this.length;
     const y1 = this.y0 + this.uy * this.length;
@@ -385,7 +386,7 @@ export class Beam {
         speed: { min: 6, max: 26 + power * 20 },
         scale: { start: 0.5, end: 0.5 },
         alpha: { start: 1, end: 0 },
-        tint: SPARK_TINTS,
+        tint: k.sparks,
         blendMode: Phaser.BlendModes.ADD,
         frequency: 22 - power * 14,
         quantity: 1 + Math.round(power),
@@ -393,7 +394,7 @@ export class Beam {
       .setDepth(depth + 0.1);
 
     // The kick of release.
-    const flash = scene.lights.addLight(this.x0, this.y0, 60, 0xdffcff, 2 + power * 1.5);
+    const flash = scene.lights.addLight(this.x0, this.y0, 60, k.flash, 2 + power * 1.5);
     scene.tweens.add({
       targets: flash,
       intensity: 0,
@@ -443,6 +444,7 @@ export class Beam {
   }
 
   private draw(cur: number, hw: number, t: number): void {
+    const k = this.k;
     // Local coordinates: whole numbers are pixel corners on the wizard's grid.
     const x0 = this.x0 - this.ox;
     const y0 = this.y0 - this.oy;
@@ -487,19 +489,19 @@ export class Beam {
         if (along > 3 && along < cur && d > 0.55 && d <= 1.25) {
           const off = Math.sin(along * 0.23 - t * 0.021) * hw * 1.05;
           if (Math.abs(side - off) < 0.55 || Math.abs(side + off) < 0.55) {
-            b.put(px - lx, py - ly, VIOLET, 0.85);
+            b.put(px - lx, py - ly, k.accent, 0.85);
             continue;
           }
         }
 
         const qx = px - lx;
         const qy = py - ly;
-        if (d <= 0.3) b.put(qx, qy, CORE);
-        else if (d <= 0.58) b.put(qx, qy, flow ? CORE : HOT);
-        else if (d <= 0.82) b.put(qx, qy, flow ? HOT : MID);
+        if (d <= 0.3) b.put(qx, qy, k.core);
+        else if (d <= 0.58) b.put(qx, qy, flow ? k.core : k.hot);
+        else if (d <= 0.82) b.put(qx, qy, flow ? k.hot : k.mid);
         else if (d <= 1) {
-          if (hash(px, py, frame) > 0.22) b.put(qx, qy, DEEP, 0.85);
-        } else if (d <= 1.4 && hash(px, py, frame + 5) > 0.88) b.put(qx, qy, hash(px, py, 1) > 0.5 ? VIOLET : DEEP, 0.6);
+          if (hash(px, py, frame) > 0.22) b.put(qx, qy, k.deep, 0.85);
+        } else if (d <= 1.4 && hash(px, py, frame + 5) > 0.88) b.put(qx, qy, hash(px, py, 1) > 0.5 ? k.accent : k.deep, 0.6);
 
       }
     }

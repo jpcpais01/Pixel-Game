@@ -4,8 +4,8 @@
 
 import Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
-import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, type FrameMeta } from './wizard';
-import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon } from './effects';
+import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, WIZARD_LOOKS, type FrameMeta } from './wizard';
+import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon } from './effects';
 import { buildWarriorFrames, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_W, type WarriorMeta } from './warrior';
 import { buildGround, NIGHT_GROUND, DAY_GROUND, brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 
@@ -79,19 +79,21 @@ export const wizardMeta = new Map<string, FrameMeta>();
 export const warriorMeta = new Map<string, WarriorMeta>();
 
 export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: number): void {
-  // Wizard.
-  const wf = buildWizardFrames();
-  wf.forEach((f) => wizardMeta.set(f.key, f.meta));
-  register(scene, 'wizard', pack(wf.map((f) => ({ name: f.key, r: f.canvas.render() })), FRAME_W, FRAME_H), FRAME_W, FRAME_H);
-  for (const a of ANIMS) {
-    for (const d of DIRS) {
-      const frames = wf.filter((f) => f.anim === a.name && f.dir === d);
-      scene.anims.create({
-        key: `wizard_${a.name}_${d}`,
-        frames: frames.map((f) => ({ key: 'wizard', frame: f.key })),
-        frameRate: a.fps,
-        repeat: a.loop ? -1 : 0,
-      });
+  // Wizard, once per look. Every look shares the rig, so the crystal meta is the same for all.
+  for (const look of WIZARD_LOOKS) {
+    const wf = buildWizardFrames(look);
+    if (!wizardMeta.size) wf.forEach((f) => wizardMeta.set(f.key, f.meta));
+    register(scene, look.key, pack(wf.map((f) => ({ name: f.key, r: f.canvas.render() })), FRAME_W, FRAME_H), FRAME_W, FRAME_H);
+    for (const a of ANIMS) {
+      for (const d of DIRS) {
+        const frames = wf.filter((f) => f.anim === a.name && f.dir === d);
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: frames.map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
     }
   }
 
@@ -111,10 +113,13 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
   }
 
   // Effects (pure light).
-  register(scene, 'orb', pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
-  register(scene, 'burst', pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
-  scene.anims.create({ key: 'orb_spin', frames: scene.anims.generateFrameNames('orb_e', { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });
-  scene.anims.create({ key: 'burst_pop', frames: scene.anims.generateFrameNames('burst_e', { prefix: 'b', start: 0, end: BURST_FRAMES - 1 }), frameRate: 22, repeat: 0 });
+  // Energy ball and impact per spell look: 'orb'/'burst' (arcane) and 'orb_void'/'burst_void'.
+  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL]] as const) {
+    register(scene, `orb${suffix}`, pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i, k)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
+    register(scene, `burst${suffix}`, pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i, k)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
+    scene.anims.create({ key: `orb${suffix}_spin`, frames: scene.anims.generateFrameNames(`orb${suffix}_e`, { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });
+    scene.anims.create({ key: `burst${suffix}_pop`, frames: scene.anims.generateFrameNames(`burst${suffix}_e`, { prefix: 'b', start: 0, end: BURST_FRAMES - 1 }), frameRate: 22, repeat: 0 });
+  }
   scene.textures.addCanvas('glow', toCanvas(32, 32, glowCanvas(32)));
   scene.textures.addCanvas('shadow', toCanvas(16, 6, shadowCanvas(16, 6)));
   scene.textures.addCanvas('shadow_big', toCanvas(24, 8, shadowCanvas(24, 8)));
@@ -136,6 +141,7 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
   scene.textures.addCanvas('icon_sun', toCanvas(12, 12, skyIcon('sun')));
   scene.textures.addCanvas('icon_moon', toCanvas(12, 12, skyIcon('moon')));
   scene.textures.addCanvas('icon_beam', toCanvas(16, 16, beamIcon()));
+  scene.textures.addCanvas('icon_beam_void', toCanvas(16, 16, beamIcon(VOID_SPELL)));
   scene.textures.addCanvas('icon_sword', toCanvas(16, 16, swordIcon()));
   scene.textures.addCanvas('icon_whirl', toCanvas(16, 16, whirlIcon()));
 

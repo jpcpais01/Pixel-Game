@@ -3,6 +3,7 @@ import { controls } from '../game/controls';
 import { sunShadow, SUN_SHADOW_ALPHA } from '../game/Wizard';
 import { EnergyBall } from '../game/EnergyBall';
 import { Beam } from '../game/Beam';
+import type { SpellStyle } from '../game/spells';
 import { daynight } from '../game/daynight';
 import { settings } from '../game/settings';
 import { sky } from '../game/LitPipeline';
@@ -200,14 +201,14 @@ export class WorldScene extends Phaser.Scene {
     this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N') as Record<string, Phaser.Input.Keyboard.Key>;
   }
 
-  castEnergyBall(x: number, y: number, dx: number, dy: number): void {
-    this.balls.push(new EnergyBall(this, x, y, dx, dy));
+  castEnergyBall(x: number, y: number, dx: number, dy: number, style?: SpellStyle): void {
+    this.balls.push(new EnergyBall(this, x, y, dx, dy, style));
     sound.cast(this.pan(x));
   }
 
   /** A beam from (x, y) along (dx, dy); `depth` sorts it against the caster. */
-  fireBeam(x: number, y: number, dx: number, dy: number, power: number, depth: number): void {
-    this.beams.push(new Beam(this, x, y, dx, dy, power, this.worldRect, depth, this.beamHit));
+  fireBeam(x: number, y: number, dx: number, dy: number, power: number, depth: number, style?: SpellStyle): void {
+    this.beams.push(new Beam(this, x, y, dx, dy, power, this.worldRect, depth, this.beamHit, style));
     sound.beamFire(this.pan(x), power);
   }
 
