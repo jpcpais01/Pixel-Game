@@ -42,10 +42,36 @@ function valueNoise(x: number, y: number, scale: number, s: number): number {
   return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
 }
 
-const GRASS = ramp('#0c1a1b', '#12282a', '#183a33', '#20503d', '#2d6645', '#437d4e');
-const STONE = ramp('#1c1a24', '#2a2733', '#3a3644', '#4d4857', '#625c6b', '#7b7483');
-const GROUT = ramp('#0d0c13', '#151a1a', '#1a2a24');
-const DIRT = ramp('#141418', '#1e1d21', '#29272a', '#353133');
+export interface GroundPalette {
+  grass: RGB[];
+  stone: RGB[];
+  grout: RGB[];
+  dirt: RGB[];
+  flowers: RGB[];
+  /** How strongly the forest edge sinks into shadow. */
+  edgeDark: number;
+}
+
+/** Night: cool, deep, low contrast so fire and magic carry the scene. */
+export const NIGHT_GROUND: GroundPalette = {
+  grass: ramp('#0c1a1b', '#12282a', '#183a33', '#20503d', '#2d6645', '#437d4e'),
+  stone: ramp('#1c1a24', '#2a2733', '#3a3644', '#4d4857', '#625c6b', '#7b7483'),
+  grout: ramp('#0d0c13', '#151a1a', '#1a2a24'),
+  dirt: ramp('#141418', '#1e1d21', '#29272a', '#353133'),
+  flowers: ramp('#5d6a8a', '#4a4f78', '#6a5a80'),
+  edgeDark: 2.4,
+};
+
+/** Day: sunlit meadow greens, warm sandstone, wildflowers. */
+export const DAY_GROUND: GroundPalette = {
+  grass: ramp('#1f4a2c', '#2b6233', '#3b7a38', '#56943f', '#76ad4a', '#9cc75c'),
+  stone: ramp('#4a4450', '#605862', '#7a7078', '#948a8a', '#b0a59c', '#cabfae'),
+  grout: ramp('#2a2a2c', '#2e3d2a', '#3c5a30'),
+  dirt: ramp('#4f3d33', '#654e3e', '#7e644c', '#97795b'),
+  flowers: ramp('#fff6d8', '#ffd84a', '#ff9ec4', '#b9a6ff'),
+  edgeDark: 1.3,
+};
+
 const RUNE: RGB = [150, 110, 255];
 
 export interface GroundLayers extends RenderedFrame {}
@@ -54,7 +80,8 @@ export interface GroundLayers extends RenderedFrame {}
  * Ground texture for a w x h pixel world. The plaza is centred; the ground
  * darkens toward the edges to frame the clearing.
  */
-export function buildGround(w: number, h: number, seed = 7): GroundLayers {
+export function buildGround(w: number, h: number, pal: GroundPalette, seed = 7): GroundLayers {
+  const { grass: GRASS, stone: STONE, grout: GROUT, dirt: DIRT } = pal;
   const n = w * h;
   const height = new Float32Array(n);
   const kind = new Uint8Array(n); // 0 grass, 1 stone, 2 grout, 3 dirt
@@ -142,6 +169,23 @@ export function buildGround(w: number, h: number, seed = 7): GroundLayers {
     }
   }
 
+  // Wildflowers: tiny clusters in the meadow, one colour per cluster.
+  for (let k = 0; k < (w * h) / 900; k++) {
+    const x0 = Math.floor(R() * w);
+    const y0 = Math.floor(R() * h);
+    const colour = Math.floor(R() * 8);
+    for (let j = 0; j < 4; j++) {
+      const x = x0 + Math.floor(R() * 7) - 3;
+      const y = y0 + Math.floor(R() * 5) - 2;
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      const i = y * w + x;
+      if (kind[i] !== 0) continue;
+      kind[i] = 4;
+      height[i] = 0.9;
+      tone[i] = colour;
+    }
+  }
+
   // Faint rune circle in the plaza.
   const runeR = plazaR * 0.42;
   for (let y = 0; y < h; y++) {
@@ -160,7 +204,7 @@ export function buildGround(w: number, h: number, seed = 7): GroundLayers {
         emissive[i + 1] = RUNE[1] * s;
         emissive[i + 2] = RUNE[2] * s;
         emissive[i + 3] = 255;
-        kind[y * w + x] = kind[y * w + x] === 0 ? 0 : 2;
+        kind[y * w + x] = kind[y * w + x] === 0 || kind[y * w + x] === 4 ? 0 : 2;
       }
     }
   }
@@ -184,12 +228,13 @@ export function buildGround(w: number, h: number, seed = 7): GroundLayers {
       const lit = (nx * L.x + ny * L.y + nz * L.z) / Ll;
       // Vignette the clearing: the forest edges sink into shadow.
       const vd = Math.hypot((x - cx) / (w / 2), (y - cy) / (h / 2));
-      const dark = Math.max(0, vd - 0.55) * 2.4;
+      const dark = Math.max(0, vd - 0.55) * pal.edgeDark;
       let col: RGB;
       const shade = (lit - 0.78) * 6 + tone[i] - dark;
       if (kind[i] === 1) col = STONE[clamp(Math.round(3 + shade), 0, STONE.length - 1)];
       else if (kind[i] === 2) col = GROUT[clamp(Math.round(tone[i]), 0, GROUT.length - 1)];
       else if (kind[i] === 3) col = DIRT[clamp(Math.round(2 + shade), 0, DIRT.length - 1)];
+      else if (kind[i] === 4) col = pal.flowers[Math.floor(tone[i]) % pal.flowers.length];
       else col = GRASS[clamp(Math.round(2.4 + shade), 0, GRASS.length - 1)];
       const o = i * 4;
       diffuse[o] = col[0];

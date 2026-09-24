@@ -80,6 +80,9 @@ export class PixelCanvas {
   /** Pure light pixels (magic trails, sparks): only in the emissive layer. */
   light: Float32Array;
   private curLayer = 0;
+  /** Added to every coordinate drawn, so a figure can be drawn in its own box inside a larger frame. */
+  private ox = 0;
+  private oy = 0;
   private materials: Material[] = [];
   private matIndex = new Map<Material, number>();
 
@@ -107,6 +110,13 @@ export class PixelCanvas {
     return i;
   }
 
+  /** Shift everything drawn from now on by (x, y) pixels. */
+  offset(x: number, y: number): this {
+    this.ox = x;
+    this.oy = y;
+    return this;
+  }
+
   /** Start a new part: parts drawn later sit in front of earlier ones. */
   part(): this {
     this.curLayer++;
@@ -114,8 +124,8 @@ export class PixelCanvas {
   }
 
   px(x: number, y: number, m: Material, n: Vec3 = FLAT, o: DrawOpts = {}): void {
-    x = Math.floor(x);
-    y = Math.floor(y);
+    x = Math.floor(x) + this.ox;
+    y = Math.floor(y) + this.oy;
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
     const i = y * this.w + x;
     this.mat[i] = this.id(m);
@@ -129,21 +139,23 @@ export class PixelCanvas {
 
   /** Nudge the shading of an already drawn pixel. */
   shade(x: number, y: number, delta: number): void {
-    x = Math.floor(x);
-    y = Math.floor(y);
+    x = Math.floor(x) + this.ox;
+    y = Math.floor(y) + this.oy;
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
     const i = y * this.w + x;
     if (this.mat[i] >= 0) this.bias[i] += delta;
   }
 
   erase(x: number, y: number): void {
-    x = Math.floor(x);
-    y = Math.floor(y);
+    x = Math.floor(x) + this.ox;
+    y = Math.floor(y) + this.oy;
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
     this.mat[y * this.w + x] = -1;
   }
 
   filled(x: number, y: number): boolean {
+    x += this.ox;
+    y += this.oy;
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return false;
     return this.mat[y * this.w + x] >= 0;
   }
@@ -262,8 +274,8 @@ export class PixelCanvas {
 
   /** Additive light pixel for the emissive layer only (sparks, trails). */
   spark(x: number, y: number, c: RGB, a = 1): void {
-    x = Math.floor(x);
-    y = Math.floor(y);
+    x = Math.floor(x) + this.ox;
+    y = Math.floor(y) + this.oy;
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
     const i = (y * this.w + x) * 4;
     this.light[i] = Math.min(255, this.light[i] + c[0] * a);

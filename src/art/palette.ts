@@ -77,3 +77,46 @@ export const MAGIC_HOT = hex('#9ff6ff');
 export const MAGIC_MID = hex('#39c6f0');
 export const MAGIC_DEEP = hex('#3a5ce0');
 export const MAGIC_VIOLET = hex('#8a55f0');
+
+// ---------------------------------------------------------------------------
+// The warrior: cool polished steel, a crimson tabard and cape, gold trim.
+
+const STEEL_INK = hex('#0c0f18');
+
+export const STEEL: Material = {
+  ramp: ramp('#1d2233', '#353f58', '#5a6883', '#8f9db8', '#cdd8ea'),
+  outline: STEEL_INK,
+  outlineLit: hex('#232a3e'),
+  shine: true,
+};
+
+/** Chainmail: darker, duller steel for sleeves and the mail skirt. */
+export const MAIL: Material = {
+  ramp: ramp('#191d29', '#2b3244', '#434d63', '#5f6b84'),
+  outline: STEEL_INK,
+};
+
+export const BLADE: Material = {
+  ramp: ramp('#4a5878', '#8d9dbd', '#cbd7ec', '#f4f8ff'),
+  outline: hex('#10141f'),
+  outlineLit: hex('#1e2638'),
+  shine: true,
+  noAO: true,
+};
+
+export const CRIMSON: Material = {
+  ramp: ramp('#360b1b', '#611326', '#8f2033', '#bd383d', '#df6556'),
+  outline: hex('#1a0710'),
+  outlineLit: hex('#3b1020'),
+};
+
+export const TROUSER: Material = {
+  ramp: ramp('#1b1824', '#2c2839', '#413b53', '#58506c'),
+  outline: INK,
+};
+
+// Ember colours for the warrior's special (light-only pixels).
+export const EMBER_CORE = hex('#fff8e0');
+export const EMBER_HOT = hex('#ffd66b');
+export const EMBER_MID = hex('#ff9a2e');
+export const EMBER_DEEP = hex('#d9432b');

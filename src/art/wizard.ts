@@ -566,33 +566,35 @@ function walk(view: 'down' | 'up' | 'side'): Pose[] {
 /** Index of the frame in the cast animation that releases the projectile. */
 export const CAST_RELEASE = 6;
 
+// Twirl centre and release pose per view (shared by the cast and the beam).
+const CAST_CFG = {
+  down: {
+    wind: { hx: 6.4, hy: 19.2, angle: -18, len: 21, grip: 0.4, float: 1.2 },
+    spin: { hx: 12, hy: 18, len: 15, grip: 0.5 },
+    release: { hx: 12, hy: 19.5, angle: 180, len: 12, grip: 0.3, float: 0 },
+    recover: { hx: 6.2, hy: 20.6, angle: -8, len: 22, grip: 0.38, float: 1.2 },
+    behindRelease: false,
+  },
+  up: {
+    wind: { hx: 17.6, hy: 19.2, angle: 18, len: 21, grip: 0.4, float: 1.2 },
+    spin: { hx: 16, hy: 11, len: 12, grip: 0.5 },
+    release: { hx: 14.8, hy: 12.5, angle: -8, len: 13, grip: 0.3, float: 0 },
+    recover: { hx: 17.8, hy: 20.6, angle: 8, len: 22, grip: 0.38, float: 1.2 },
+    behindRelease: true,
+  },
+  side: {
+    wind: { hx: 14.6, hy: 18.6, angle: 24, len: 21, grip: 0.4, float: 1.2 },
+    spin: { hx: 9, hy: 17, len: 14, grip: 0.5 },
+    release: { hx: 10, hy: 18, angle: -75, len: 11, grip: 0.3, float: 0 },
+    recover: { hx: 9, hy: 20.4, angle: -14, len: 22, grip: 0.38, float: 1.2 },
+    behindRelease: false,
+  },
+};
+
 function cast(view: 'down' | 'up' | 'side'): Pose[] {
   const frames: Pose[] = [];
   const twirl = [30, 100, 170, 240, 310];
-  // Twirl centre and release pose per view.
-  const cfg = {
-    down: {
-      wind: { hx: 6.4, hy: 19.2, angle: -18, len: 21, grip: 0.4, float: 1.2 },
-      spin: { hx: 12, hy: 18, len: 15, grip: 0.5 },
-      release: { hx: 12, hy: 19.5, angle: 180, len: 12, grip: 0.3, float: 0 },
-      recover: { hx: 6.2, hy: 20.6, angle: -8, len: 22, grip: 0.38, float: 1.2 },
-      behindRelease: false,
-    },
-    up: {
-      wind: { hx: 17.6, hy: 19.2, angle: 18, len: 21, grip: 0.4, float: 1.2 },
-      spin: { hx: 16, hy: 11, len: 12, grip: 0.5 },
-      release: { hx: 14.8, hy: 12.5, angle: -8, len: 13, grip: 0.3, float: 0 },
-      recover: { hx: 17.8, hy: 20.6, angle: 8, len: 22, grip: 0.38, float: 1.2 },
-      behindRelease: true,
-    },
-    side: {
-      wind: { hx: 14.6, hy: 18.6, angle: 24, len: 21, grip: 0.4, float: 1.2 },
-      spin: { hx: 9, hy: 17, len: 14, grip: 0.5 },
-      release: { hx: 10, hy: 18, angle: -75, len: 11, grip: 0.3, float: 0 },
-      recover: { hx: 9, hy: 20.4, angle: -14, len: 22, grip: 0.38, float: 1.2 },
-      behindRelease: false,
-    },
-  }[view];
+  const cfg = CAST_CFG[view];
 
   // 0: wind-up, gathering light.
   const w = base(view);
@@ -640,10 +642,60 @@ function cast(view: 'down' | 'up' | 'side'): Pose[] {
   return frames;
 }
 
+/** Beam, part 1: the staff swings from a wind-up to level at the target. */
+function aim(view: 'down' | 'up' | 'side'): Pose[] {
+  const cfg = CAST_CFG[view];
+  const w = base(view);
+  w.staff = { ...cfg.wind };
+  w.breath = 1;
+  w.glow = 0.9;
+  w.hat = view === 'side' ? -1 : 1;
+
+  const l = base(view);
+  l.staff = { ...cfg.release };
+  l.staffBehind = cfg.behindRelease;
+  l.glow = 1;
+  l.flash = 0.3;
+  return [w, l];
+}
+
+/** Beam, part 2: braced and gathering light, the crystal thrumming at the staff's end. */
+function charge(view: 'down' | 'up' | 'side'): Pose[] {
+  const cfg = CAST_CFG[view];
+  const flash = [0.25, 0.4, 0.55, 0.4];
+  return flash.map((f, i) => {
+    const p = base(view);
+    p.staff = { ...cfg.release, float: i === 1 || i === 2 ? 1 : 0 };
+    p.staffBehind = cfg.behindRelease;
+    p.glow = 1;
+    p.flash = f;
+    p.breath = i === 1 || i === 2 ? 1 : 0;
+    // The gathering magic stirs the robe and hat.
+    p.hem = view === 'side' ? (i < 2 ? 1 : 0) : [0, 1, 0, -1][i];
+    p.hat = i % 2 ? (view === 'side' ? -1 : 1) : 0;
+    return p;
+  });
+}
+
+/** Beam, part 3: firing. The staff kicks back against the beam's push. */
+function fire(view: 'down' | 'up' | 'side'): Pose[] {
+  const cfg = CAST_CFG[view];
+  return [1, 0.8].map((f, i) => {
+    const p = base(view);
+    p.staff = { ...cfg.release };
+    p.staffBehind = cfg.behindRelease;
+    p.glow = 1;
+    p.flash = f;
+    p.hem = view === 'side' ? 1 : i ? 1 : -1;
+    p.hat = view === 'side' ? -1 : 1;
+    return p;
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type AnimName = 'idle' | 'walk' | 'cast';
+export type AnimName = 'idle' | 'walk' | 'cast' | 'aim' | 'charge' | 'beam';
 
 export interface AnimDef {
   name: AnimName;
@@ -656,6 +708,9 @@ export const ANIMS: AnimDef[] = [
   { name: 'idle', fps: 8, loop: true, poses: idle },
   { name: 'walk', fps: 10, loop: true, poses: walk },
   { name: 'cast', fps: 15, loop: false, poses: cast },
+  { name: 'aim', fps: 14, loop: false, poses: aim },
+  { name: 'charge', fps: 10, loop: true, poses: charge },
+  { name: 'beam', fps: 16, loop: true, poses: fire },
 ];
 
 export interface WizardFrame {

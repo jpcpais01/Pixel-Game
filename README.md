@@ -4,6 +4,19 @@ A mobile-first, top-down pixel-art PvE game: walk with the joystick on the left,
 
 ![Gameplay](docs/gameplay.gif)
 
+## Day and night
+
+The sun and moon toggle in the top-left corner (or the N key) fades the scene between two moods:
+
+- **Day**: a warm sun from the upper left, blue sky light on upward-facing surfaces, a meadow with wildflowers, drifting cloud shadows, shafts of sunlight, floating pollen, and cast shadows under the wizard and props.
+- **Night**: cool moonlight from the upper right, torches and crystals doing most of the lighting, the rune circle glowing, and fireflies.
+
+| Day | Night |
+| --- | --- |
+| ![](docs/day.png) | ![](docs/night.png) |
+
+The lighting runs through a custom `Lit` pipeline (`src/game/LitPipeline.ts`). It extends Phaser's Light2D with a directional sun and a sky/bounce ambient term, because Light2D alone only has point lights.
+
 ## The wizard
 
 All art is generated in code. There are no image files in the game. The wizard fits in a 24x32 frame and has:
@@ -28,6 +41,14 @@ Animations in `src/art/wizard.ts` are lists of poses (lift, breath, foot offsets
 
 ![Sprite sheet](docs/wizard_sheet.png)
 
+## App icon and install
+
+<img src="docs/icon.png" width="128" alt="App icon" align="right" />
+
+The game is a PWA: on Android, Chrome offers an **Install** button (top right); on iPhone, use Share > Add to Home Screen. Installed, it opens fullscreen in landscape, and it keeps working offline because a service worker caches the whole build. In a phone browser tab, the first tap goes fullscreen and, on Android, locks to landscape. Held upright, the game asks you to turn the phone sideways (tap to play in portrait anyway).
+
+The icon is drawn in code too (`src/art/icon.ts`): the wizard's portrait against a dithered night sky, lit by his crystal. `scripts/pwa.ts` is a Vite plugin that renders every icon size, writes the manifest and generates the service worker at build time, so there are no icon files to keep in sync. Maskable icons use a wider grid so the crystal survives a round mask.
+
 ## Running it
 
 ```bash
@@ -35,6 +56,7 @@ npm install
 npm run dev      # open the printed URL on your phone (same Wi-Fi) or desktop
 npm run build    # static build in dist/
 npm run sheet    # write zoomed sprite sheets to sheets/ for reviewing the art
+npm run icons    # write every app icon to sheets/icons/ for reviewing
 ```
 
 Controls: on a touch screen, use the left joystick and the right button. On desktop, use WASD or the arrow keys, and Space or J to cast.

@@ -2,7 +2,7 @@
 // These are pure light, so they only produce emissive pixels.
 
 import { PixelCanvas, type RGB } from './pixel';
-import { MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID, MAGIC_VIOLET } from './palette';
+import { EMBER_CORE, EMBER_DEEP, EMBER_HOT, EMBER_MID, MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID, MAGIC_VIOLET } from './palette';
 
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
@@ -104,6 +104,239 @@ export function shadowCanvas(w = 16, h = 6): Uint8ClampedArray {
       px[i + 1] = 6;
       px[i + 2] = 20;
       px[i + 3] = d <= 0.45 ? 150 : d <= 1 ? 90 : 0;
+    }
+  }
+  return px;
+}
+
+// ---------------------------------------------------------------------------
+// Sky: cloud shadows, sun shafts, motes and the day/night icons.
+
+/** Tileable value noise: lattice wraps every `period` cells. */
+function tileNoise(x: number, y: number, cell: number, period: number, seed: number): number {
+  const fx = x / cell;
+  const fy = y / cell;
+  const x0 = Math.floor(fx);
+  const y0 = Math.floor(fy);
+  const tx = fx - x0;
+  const ty = fy - y0;
+  const sx = tx * tx * (3 - 2 * tx);
+  const sy = ty * ty * (3 - 2 * ty);
+  const h = (a: number, b: number) => hash(((a % period) + period) % period, ((b % period) + period) % period, seed);
+  const a = h(x0, y0);
+  const b = h(x0 + 1, y0);
+  const c = h(x0, y0 + 1);
+  const d = h(x0 + 1, y0 + 1);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+/** Soft, banded cloud shadows that tile seamlessly (size must divide by 64). */
+export function cloudShadowCanvas(size = 256): Uint8ClampedArray {
+  const px = new Uint8ClampedArray(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const n =
+        tileNoise(x, y, 64, size / 64, 1) * 0.6 + tileNoise(x, y, 32, size / 32, 2) * 0.28 + tileNoise(x, y, 16, size / 16, 3) * 0.12;
+      const a = n > 0.66 ? 0.26 : n > 0.6 ? 0.17 : n > 0.56 ? 0.08 : 0;
+      const i = (y * size + x) * 4;
+      px[i] = 18;
+      px[i + 1] = 26;
+      px[i + 2] = 58;
+      px[i + 3] = Math.round(a * 255);
+    }
+  }
+  return px;
+}
+
+/** Diagonal shafts of sunlight (drawn additively, very faint). */
+export function sunShaftCanvas(w = 256, h = 256): Uint8ClampedArray {
+  const px = new Uint8ClampedArray(w * h * 4);
+  const shafts = [
+    { at: 40, width: 18, a: 0.5 },
+    { at: 92, width: 9, a: 0.35 },
+    { at: 150, width: 26, a: 0.45 },
+    { at: 205, width: 12, a: 0.3 },
+  ];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      // Rays run from the top-left toward the bottom-right.
+      const u = x - y * 0.55;
+      let a = 0;
+      for (const s of shafts) {
+        const d = Math.abs(u - s.at) / s.width;
+        if (d < 1) a = Math.max(a, (d < 0.5 ? 1 : 0.55) * s.a);
+      }
+      a *= Math.max(0, 1 - y / h) ** 0.7; // fade toward the bottom
+      const i = (y * w + x) * 4;
+      px[i] = Math.round(255 * a);
+      px[i + 1] = Math.round(236 * a);
+      px[i + 2] = Math.round(190 * a);
+      px[i + 3] = 255;
+    }
+  }
+  return px;
+}
+
+/** 12x12 pixel sun and moon icons for the time-of-day toggle. */
+export function skyIcon(kind: 'sun' | 'moon'): Uint8ClampedArray {
+  const S = 12;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: string) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const n = parseInt(c.slice(1), 16);
+    const i = (y * S + x) * 4;
+    px[i] = n >> 16;
+    px[i + 1] = (n >> 8) & 255;
+    px[i + 2] = n & 255;
+    px[i + 3] = 255;
+  };
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - 6;
+      const dy = y + 0.5 - 6;
+      const d = Math.hypot(dx, dy);
+      if (kind === 'sun') {
+        if (d <= 2.6) put(x, y, dx + dy < -1.5 ? '#fff6c8' : '#ffd24a');
+        else if (d <= 3.4) put(x, y, '#f29a2e');
+      } else {
+        const cut = Math.hypot(dx - 1.8, dy + 1.4);
+        if (d <= 4.4 && cut > 3.4) put(x, y, dx < -2 && dy < 1 ? '#f2f0ff' : '#c9c8f0');
+      }
+    }
+  }
+  if (kind === 'sun') {
+    for (const [x, y] of [
+      [6, 0], [5, 0], [6, 11], [5, 11], [0, 5], [0, 6], [11, 5], [11, 6],
+      [2, 2], [9, 2], [2, 9], [9, 9],
+    ]) put(x, y, '#ffc23a');
+  } else {
+    put(9, 2, '#ffffff');
+    put(10, 5, '#b8c0ff');
+    put(8, 9, '#dfe4ff');
+  }
+  return px;
+}
+
+/** 16x16 icon for the beam button: a ray of light bursting from a star, drawn additively. */
+export function beamIcon(): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const cols: RGB[] = [MAGIC_CORE, MAGIC_HOT, MAGIC_MID, MAGIC_DEEP, MAGIC_VIOLET];
+  const put = (x: number, y: number, c: RGB) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    // Keep the brighter colour where shapes overlap.
+    if (px[i] + px[i + 1] + px[i + 2] >= c[0] + c[1] + c[2]) return;
+    px[i] = c[0];
+    px[i + 1] = c[1];
+    px[i + 2] = c[2];
+    px[i + 3] = 255;
+  };
+  // The ray runs from the lower left to the upper right, widening as it goes.
+  const ox = 3.5;
+  const oy = 12.5;
+  const ux = Math.SQRT1_2;
+  const uy = -Math.SQRT1_2;
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const rx = x + 0.5 - ox;
+      const ry = y + 0.5 - oy;
+      const along = rx * ux + ry * uy;
+      const side = rx * uy - ry * ux;
+      if (along < 0 || along > 14) continue;
+      const w = 0.6 + along * 0.14;
+      const d = Math.abs(side) / w;
+      if (d <= 0.5) put(x, y, cols[0]);
+      else if (d <= 1.1) put(x, y, cols[1]);
+      else if (d <= 1.7) put(x, y, cols[2]);
+      else if (d <= 2.3 && hash(x, y, 4) > 0.3) put(x, y, cols[3]);
+      // A violet strand winding round the ray.
+      if (Math.abs(side - Math.sin(along * 0.9) * w * 1.9) < 0.5 && d > 1) put(x, y, cols[4]);
+    }
+  }
+  // Star at the source.
+  const sx = Math.floor(ox);
+  const sy = Math.floor(oy);
+  for (let i = -3; i <= 3; i++) {
+    const c = Math.abs(i) <= 1 ? cols[0] : cols[1];
+    put(sx + i, sy, c);
+    put(sx, sy + i, c);
+  }
+  for (const [dx, dy] of [[-1, -1], [1, 1], [-1, 1], [1, -1]]) put(sx + dx, sy + dy, cols[2]);
+  return px;
+}
+
+/** 16x16 sword for the warrior's attack button: steel blade, gold guard, dark outline (normal blend). */
+export function swordIcon(): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: string) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const n = parseInt(c.slice(1), 16);
+    const i = (y * S + x) * 4;
+    px[i] = n >> 16;
+    px[i + 1] = (n >> 8) & 255;
+    px[i + 2] = n & 255;
+    px[i + 3] = 255;
+  };
+  // Blade from the lower left up to the upper right, a lit and a shaded bevel.
+  for (let i = 0; i < 9; i++) {
+    put(5 + i, 10 - i, i > 6 ? '#f4f8ff' : '#dfe8f7');
+    put(6 + i, 10 - i, '#8d9dbd');
+  }
+  put(14, 1, '#f4f8ff');
+  // Crossguard, grip and pommel.
+  for (const [x, y] of [[2, 9], [3, 10], [4, 11], [5, 12], [6, 13]]) put(x, y, '#f4cf6a');
+  put(3, 9, '#fff4bf');
+  for (const [x, y] of [[3, 12], [2, 13]]) put(x, y, '#8f5a36');
+  put(1, 14, '#d69a3a');
+  // Outline.
+  const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < S && y < S && px[(y * S + x) * 4 + 3] === 255;
+  const out: [number, number][] = [];
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      if (filled(x, y)) continue;
+      if (filled(x + 1, y) || filled(x - 1, y) || filled(x, y + 1) || filled(x, y - 1)) out.push([x, y]);
+    }
+  }
+  for (const [x, y] of out) put(x, y, '#0c0f18');
+  return px;
+}
+
+/** 16x16 icon for the whirlwind button: a spiral of golden fire around a bright heart, drawn additively. */
+export function whirlIcon(): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const cols: RGB[] = [EMBER_CORE, EMBER_HOT, EMBER_MID, EMBER_DEEP];
+  const put = (x: number, y: number, c: RGB) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    if (px[i] + px[i + 1] + px[i + 2] >= c[0] + c[1] + c[2]) return;
+    px[i] = c[0];
+    px[i + 1] = c[1];
+    px[i + 2] = c[2];
+    px[i + 3] = 255;
+  };
+  // Two crescents chasing each other round the centre, thick and hot at their heads.
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - 8;
+      const dy = y + 0.5 - 8;
+      const r = Math.hypot(dx, dy);
+      const a = (Math.atan2(dy, dx) / Math.PI + 1) * 180; // 0..360
+      for (const head of [40, 220]) {
+        const behind = (((head - a) % 360) + 360) % 360;
+        if (behind > 170) continue;
+        const k = 1 - behind / 170;
+        const rr = 3 + 4.3 * (1 - behind / 170) ** 0.6;
+        const d = Math.abs(r - rr);
+        const th = 0.45 + k * 1.1;
+        if (d <= th * 0.45) put(x, y, k > 0.7 ? cols[0] : cols[1]);
+        else if (d <= th) put(x, y, k > 0.45 ? cols[1] : cols[2]);
+        else if (d <= th + 0.6 && k > 0.2 && hash(x, y, 3) > 0.4) put(x, y, cols[3]);
+      }
+      if (r <= 1.3) put(x, y, cols[0]);
+      else if (r <= 2.1) put(x, y, cols[1]);
     }
   }
   return px;
