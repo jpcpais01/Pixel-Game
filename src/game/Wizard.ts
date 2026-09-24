@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CAST_RELEASE, type Dir } from '../art/wizard';
 import { wizardMeta } from '../art/textures';
+import { sound } from '../audio';
 
 const SPEED = 58; // world px / second
 const CAST_COOLDOWN = 180; // ms after a cast ends before the next can start
@@ -8,6 +9,9 @@ const CAST_COOLDOWN = 180; // ms after a cast ends before the next can start
 // Sprite origin: frame centre horizontally, just under the boots vertically.
 const ORIGIN_X = 12;
 const ORIGIN_Y = 31;
+
+// Walk frames where a foot lands (the stride peaks in the walk cycle).
+const FOOTFALLS = new Set([1, 4]);
 
 export type CastHandler = (x: number, y: number, dx: number, dy: number) => void;
 
@@ -50,6 +54,9 @@ export class Wizard {
         this.body.play(`wizard_idle_${this.dir}`);
       }
     });
+    this.body.on(Phaser.Animations.Events.ANIMATION_UPDATE, (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
+      if (anim.key.startsWith('wizard_walk') && FOOTFALLS.has(frame.index - 1)) sound.step();
+    });
   }
 
   update(dt: number, mx: number, my: number, attack: boolean, bounds: Phaser.Geom.Rectangle): void {
@@ -86,6 +93,7 @@ export class Wizard {
     this.castDir.copy(this.lastMove);
     this.dir = dirOf(this.castDir.x, this.castDir.y);
     this.body.play(`wizard_cast_${this.dir}`);
+    sound.charge();
   }
 
   /** Crystal position in world space for the current frame. */

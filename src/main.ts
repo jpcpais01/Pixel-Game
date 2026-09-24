@@ -2,6 +2,10 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { WorldScene } from './scenes/WorldScene';
 import { UIScene } from './scenes/UIScene';
+import { SoundScene } from './scenes/SoundScene';
+import { sound } from './audio';
+
+sound.init();
 
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
@@ -16,7 +20,7 @@ const game = new Phaser.Game({
   },
   render: { maxLights: 16 },
   input: { activePointers: 3 },
-  scene: [BootScene, WorldScene, UIScene],
+  scene: [BootScene, WorldScene, UIScene, SoundScene],
 });
 
 (window as unknown as { game: Phaser.Game }).game = game;

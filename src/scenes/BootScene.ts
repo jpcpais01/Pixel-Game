@@ -12,5 +12,6 @@ export class BootScene extends Phaser.Scene {
     buildAllTextures(this, WORLD_W, WORLD_H);
     this.scene.start('world');
     this.scene.launch('ui');
+    this.scene.launch('sound');
   }
 }

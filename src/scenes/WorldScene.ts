@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { controls } from '../game/controls';
 import { Wizard } from '../game/Wizard';
 import { EnergyBall } from '../game/EnergyBall';
+import { sound } from '../audio';
 
 export const WORLD_W = 640;
 export const WORLD_H = 448;
@@ -27,6 +28,7 @@ export class WorldScene extends Phaser.Scene {
   private flickers: Flicker[] = [];
   private dummies: Dummy[] = [];
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
+  private struck = false;
   private bounds = new Phaser.Geom.Rectangle(28, 40, WORLD_W - 56, WORLD_H - 64);
 
   constructor() {
@@ -72,6 +74,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.wizard = new Wizard(this, cx, cy + 20, (x, y, dx, dy) => {
       this.balls.push(new EnergyBall(this, x, y, dx, dy));
+      sound.cast(this.pan(x));
     });
 
     const cam = this.cameras.main;
@@ -130,11 +133,28 @@ export class WorldScene extends Phaser.Scene {
         d.sprite.setFrame('d1');
         this.time.delayedCall(90, () => d.sprite.setFrame('d0'));
         this.cameras.main.shake(70, 0.0035);
+        this.struck = true;
         return true;
       }
     }
     return false;
   };
+
+  /** Stereo position of a world x on screen, -1..1. */
+  private pan(x: number): number {
+    const cam = this.cameras.main;
+    return Phaser.Math.Clamp((x - cam.midPoint.x) / (cam.worldView.width / 2), -1, 1);
+  }
+
+  /** How loud the braziers' crackle should be where the wizard stands. */
+  private fireNearby(): number {
+    let near = Infinity;
+    for (const f of this.flickers) {
+      if (f.seed >= 0) near = Math.min(near, Phaser.Math.Distance.Between(f.light.x, f.light.y, this.wizard.x, this.wizard.y));
+    }
+    const k = Phaser.Math.Clamp(1 - (near - 16) / 150, 0, 1);
+    return 0.12 + 0.88 * k * k;
+  }
 
   update(time: number, dt: number): void {
     const k = this.keys;
@@ -152,7 +172,12 @@ export class WorldScene extends Phaser.Scene {
     (this.followTarget as unknown as { x: number; y: number }).x = this.wizard.x;
     (this.followTarget as unknown as { x: number; y: number }).y = this.wizard.y - 12;
 
-    for (const b of this.balls) b.update(dt, this.hitTest, this.bounds);
+    for (const b of this.balls) {
+      this.struck = false;
+      b.update(dt, this.hitTest, this.bounds);
+      if (b.dead) sound.impact(this.pan(b.x), this.struck);
+    }
+    sound.setFire(this.fireNearby());
     this.balls = this.balls.filter((b) => !b.dead);
 
     for (const f of this.flickers) {
