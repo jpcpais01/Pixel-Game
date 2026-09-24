@@ -281,7 +281,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     const scale = Math.max(2, Math.round(R / 16));
-    const shake = over > 0.25 ? (Math.random() - 0.5) * over * 3 * D : 0;
+    const shake = over > 0.25 ? (Math.random() - 0.5) * over * 0.3 * D : 0;
     this.beamIcon
       .setPosition(Math.round(mp.x + shake), Math.round(mp.y))
       .setScale(scale * (pressed ? 0.9 : 1))

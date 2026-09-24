@@ -192,7 +192,7 @@ export class Warrior implements Hero {
       this.fx.push(new HitSpark(this.world, h.x, h.y, scheme, h.y + 13, heavy));
       sound.clash(this.world.pan(h.x), heavy);
     }
-    if (hits.length) this.world.cameras.main.shake(heavy ? 110 : 70, heavy ? 0.005 : 0.003);
+    if (hits.length) this.world.cameras.main.shake(heavy ? 110 : 70, heavy ? 0.0005 : 0.0003);
   }
 
   private startRise(): void {
@@ -244,7 +244,7 @@ export class Warrior implements Hero {
     const hits = this.world.melee({ kind: 'circle', x, y: y - CHEST_Y, radius: 36 }, true);
     this.impact(hits, GOLD_FX, true);
     sound.slam(this.world.pan(x));
-    this.world.cameras.main.shake(220, 0.006);
+    this.world.cameras.main.shake(220, 0.0006);
     const a = (this.phi * Math.PI) / 180;
     this.dir = dirOf(Math.cos(a), Math.sin(a));
     this.state = 'settle';
