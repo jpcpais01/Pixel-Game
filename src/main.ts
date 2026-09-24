@@ -9,7 +9,9 @@ import { HomeScene } from './scenes/HomeScene';
 import { SelectScene } from './scenes/SelectScene';
 import { FpsScene } from './scenes/FpsScene';
 import { sound } from './audio';
+import { setupApp } from './pwa';
 
+setupApp();
 sound.init();
 
 const game = new Phaser.Game({

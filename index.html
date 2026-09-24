@@ -4,17 +4,47 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#07080d" />
+    <meta name="description" content="Top-down pixel-art PvE battles with friends." />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Pixel Battle" />
+    <meta name="application-name" content="Pixel Battle" />
     <title>Pixel Battle</title>
     <style>
       html, body { margin: 0; height: 100%; background: #07080d; overflow: hidden; overscroll-behavior: none; }
       body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
       #app { position: fixed; inset: 0; }
       canvas { display: block; image-rendering: pixelated; }
+      .chrome { font: 13px/1.3 ui-monospace, Menlo, monospace; color: #cdd2ff; }
+      .chrome[hidden] { display: none !important; }
+      #install {
+        position: fixed; z-index: 2;
+        top: calc(10px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right));
+        padding: 7px 12px; border: 0; border-radius: 0; cursor: pointer;
+        background: #342f8e; color: #f2ffff;
+        box-shadow: inset 2px 2px 0 #6468d8, inset -2px -2px 0 #171236, 0 0 0 2px #07080d;
+      }
+      #install:active { box-shadow: inset 2px 2px 0 #171236, inset -2px -2px 0 #6468d8, 0 0 0 2px #07080d; }
+      #rotate {
+        position: fixed; inset: 0; z-index: 3;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+        background: rgba(7, 8, 13, 0.92); text-align: center; padding: 24px;
+      }
+      #rotate img { width: 96px; height: 96px; image-rendering: pixelated; animation: tilt 2.4s steps(1) infinite; }
+      #rotate b { font-size: 16px; color: #f2ffff; }
+      #rotate small { color: #7c82b8; }
+      @keyframes tilt { 0%, 45% { transform: rotate(0deg); } 50%, 95% { transform: rotate(90deg); } }
     </style>
   </head>
   <body>
     <div id="app"></div>
+    <button id="install" class="chrome" hidden>Install</button>
+    <div id="rotate" class="chrome" hidden>
+      <img src="icons/icon-192.png" alt="" />
+      <b>Turn your phone sideways</b>
+      <small>Tap to play in portrait anyway</small>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
