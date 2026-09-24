@@ -157,7 +157,7 @@ export class SelectScene extends Phaser.Scene {
     this.header.setPosition(Math.round((vw - this.header.width) / 2), top);
 
     const buttonsY = Math.round(vh - 26);
-    this.play.place((vw - this.play.w) / 2, buttonsY);
+    this.play.place((vw - this.play.boxW) / 2, buttonsY);
     this.back.place(8, buttonsY + 1);
 
     // Cards in rows, centred in the space between the header and the buttons.

@@ -60,8 +60,8 @@ export function pixelText(scene: Phaser.Scene, x: number, y: number, text: strin
 
 /** A pressable pixel button; `onClick` fires when a press is released on it. */
 export class PixelButton extends Phaser.GameObjects.Container {
-  readonly w: number;
-  readonly h: number;
+  readonly boxW: number;
+  readonly boxH: number;
   private bg: Phaser.GameObjects.Image;
   private label: Phaser.GameObjects.BitmapText;
   private keys: [string, string];
@@ -69,8 +69,8 @@ export class PixelButton extends Phaser.GameObjects.Container {
 
   constructor(scene: Phaser.Scene, text: string, w: number, h: number, styles: [PanelStyle, PanelStyle], name: string, onClick: () => void) {
     super(scene, 0, 0);
-    this.w = w;
-    this.h = h;
+    this.boxW = w;
+    this.boxH = h;
     this.keys = [panelTexture(scene, name, w, h, styles[0]), panelTexture(scene, `${name}_down`, w, h, styles[1])];
     this.bg = scene.add.image(0, 0, this.keys[0]).setOrigin(0);
     this.label = pixelText(scene, 0, 0, text);
@@ -106,7 +106,7 @@ export class PixelButton extends Phaser.GameObjects.Container {
   }
 
   private layoutLabel(): void {
-    this.label.setPosition(Math.round((this.w - this.label.width) / 2), Math.round((this.h - this.label.height) / 2) + (this.down ? 1 : 0));
+    this.label.setPosition(Math.round((this.boxW - this.label.width) / 2), Math.round((this.boxH - this.label.height) / 2) + (this.down ? 1 : 0));
     this.label.setTint(this.down ? 0xd8c8a0 : 0xfff4d6);
   }
 }

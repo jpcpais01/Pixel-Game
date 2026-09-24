@@ -98,7 +98,8 @@ export function buildPixelFont(scene: Phaser.Scene): void {
     }
   });
   scene.textures.addCanvas('pixelfont', b.toCanvas());
-  const data = Phaser.GameObjects.RetroFont.Parse(scene, {
+  // Parse returns a complete cache entry ({ data, texture, frame }).
+  const entry = Phaser.GameObjects.RetroFont.Parse(scene, {
     image: 'pixelfont',
     width: CELL_W,
     height: CELL_H,
@@ -110,7 +111,7 @@ export function buildPixelFont(scene: Phaser.Scene): void {
     'offset.y': 0,
     lineSpacing: 1,
   });
-  scene.cache.bitmapFont.add('pixel', { data, texture: 'pixelfont', frame: null });
+  scene.cache.bitmapFont.add('pixel', entry);
 }
 
 /**
