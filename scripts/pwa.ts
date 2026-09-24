@@ -19,8 +19,8 @@ import { encodePNG } from './png';
 const BG = '#07080d';
 
 const SCREENSHOTS = [
-  { src: 'docs/screenshot.png', out: 'screenshots/arena.png', sizes: '844x390', label: 'The wizard in the arena' },
-  { src: 'docs/screenshot_cast.png', out: 'screenshots/cast.png', sizes: '844x390', label: 'Casting an energy ball' },
+  { src: 'docs/day.png', out: 'screenshots/arena.png', sizes: '844x390', label: 'The wizard in the arena' },
+  { src: 'docs/day_cast.png', out: 'screenshots/cast.png', sizes: '844x390', label: 'Casting an energy ball' },
 ];
 
 function manifest() {
