@@ -9,13 +9,60 @@ import type { HomeScene } from './HomeScene';
 const CARD_W = 164;
 const CARD_H = 92;
 const GAP = 8;
-// Skin swatches, in card pixels, inside the portrait's top-left corner.
-const SWATCH = 7;
-const SWATCH_STEP = 11;
-const SWATCH_X = 10;
-const SWATCH_Y = 10;
+// Skin arrows: tall, thin tabs down the card's left and right edges.
+const ARROW_W = 8;
+const ARROW_INSET = 3;
+// Portrait's left edge: nudged right to make room for the arrows on cards that have skins.
+const PORTRAIT_X = 5;
+const PORTRAIT_X_SKINS = ARROW_INSET + ARROW_W + 1;
 
-/** One hero on the select screen: an animated portrait, stats and abilities, and skin swatches. */
+/** A tall, thin arrow tab on the side of a card that steps through skins. */
+class SkinArrow extends Phaser.GameObjects.Container {
+  private g: Phaser.GameObjects.Graphics;
+  private dir: -1 | 1;
+  private h: number;
+  private down = false;
+
+  constructor(scene: Phaser.Scene, x: number, dir: -1 | 1, onStep: () => void) {
+    super(scene, x, ARROW_INSET);
+    this.dir = dir;
+    this.h = CARD_H - ARROW_INSET * 2;
+    this.g = scene.add.graphics();
+    // A generous hit area: the full height of the card and out past its edge into the gap.
+    const reach = ARROW_INSET + GAP / 2;
+    const hit = scene.add.zone(dir < 0 ? -reach : -2, -ARROW_INSET, ARROW_W + reach + 2, CARD_H).setOrigin(0);
+    hit.setInteractive({ useHandCursor: true });
+    hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, () => {
+      this.draw(true);
+      onStep();
+    });
+    hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => this.draw(false));
+    hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OUT, () => this.draw(false));
+    this.add([this.g, hit]);
+    this.draw(false);
+  }
+
+  draw(down = this.down, accent = 0xffe08a): void {
+    this.down = down;
+    const { g, h } = this;
+    const w = ARROW_W;
+    g.clear();
+    // Recessed tab with a lit rim, pressed in when held.
+    g.fillStyle(0x0b0818, 0.9).fillRect(0, 0, w, h);
+    g.fillStyle(down ? 0x33296a : 0x231b46).fillRect(1, 1, w - 2, h - 2);
+    g.fillStyle(down ? 0x1a1434 : 0x4a3d86).fillRect(1, 1, w - 2, 1);
+    // Chevron: 4 wide, 9 tall, pointing out of the card.
+    const cx = Math.floor(w / 2) - (this.dir < 0 ? -1 : 2) + (down ? this.dir : 0);
+    const cy = Math.floor(h / 2) - 4;
+    for (let i = 0; i < 4; i++) {
+      const x = this.dir < 0 ? cx - i : cx + i;
+      g.fillStyle(accent).fillRect(x, cy + i, 1, 9 - i * 2);
+      g.fillStyle(0xffffff, 0.4).fillRect(x, cy + i, 1, 1);
+    }
+  }
+}
+
+/** One hero on the select screen: an animated portrait, stats and abilities, and skin arrows. */
 class Card extends Phaser.GameObjects.Container {
   /** The registry entry, without a skin applied. */
   readonly base: CharacterDef;
@@ -27,55 +74,63 @@ class Card extends Phaser.GameObjects.Container {
   private role: Phaser.GameObjects.BitmapText;
   private pips: Phaser.GameObjects.Graphics;
   private abilities: Phaser.GameObjects.BitmapText[];
-  private swatches?: Phaser.GameObjects.Graphics;
+  private skinName?: Phaser.GameObjects.BitmapText;
+  private arrows: SkinArrow[] = [];
   private picked = false;
+  /** Left edge of the portrait and of the text, in card pixels. */
+  private px: number;
+  private tx: number;
 
-  constructor(scene: Phaser.Scene, base: CharacterDef, onTap: () => void, onSkin: () => void) {
+  constructor(scene: Phaser.Scene, base: CharacterDef, onTap: () => void) {
     super(scene, 0, 0);
     this.base = base;
+    const skins = base.skins ?? [];
+    this.px = skins.length > 1 ? PORTRAIT_X_SKINS : PORTRAIT_X;
+    this.tx = this.px + (skins.length > 1 ? 57 : 59);
     const def = this.def;
     this.keys = [panelTexture(scene, 'card', CARD_W, CARD_H, PANEL), panelTexture(scene, 'card_picked', CARD_W, CARD_H, PANEL_PICKED)];
     this.bg = scene.add.image(0, 0, this.keys[0]).setOrigin(0);
     this.bg.setInteractive({ useHandCursor: true }).on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, onTap);
 
     // Portrait: the character at 2x on a lit pedestal.
-    const inset = scene.add.image(5, 5, panelTexture(scene, 'portrait', 54, 82, PANEL_INSET)).setOrigin(0);
-    const fx = 32;
+    const inset = scene.add.image(this.px, 5, panelTexture(scene, 'portrait', 54, 82, PANEL_INSET)).setOrigin(0);
+    const fx = this.px + 27;
     const fy = 78;
     this.pedestal = scene.add.image(fx, fy - 2, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(1.4, 0.45);
     const shadow = scene.add.image(fx, fy, 'shadow').setScale(2);
     this.sprite = scene.add.sprite(fx, fy, def.preview.texture).setScale(2);
     if (def.preview.glow) this.glow = scene.add.sprite(fx, fy, def.preview.glow).setScale(2).setBlendMode(Phaser.BlendModes.ADD);
 
-    const x = 64;
+    const x = this.tx;
     const name = pixelText(scene, x, 7, def.name, 0xfff4d6, 2);
     this.role = pixelText(scene, x, 27, def.role, 0xb8a8e8);
     this.pips = scene.add.graphics();
     const labels = ['Power', 'Speed', 'Range'].map((label, i) => pixelText(scene, x, 39 + i * 9, label, 0x8a7cc0));
     this.abilities = [0, 1].map((i) => pixelText(scene, x, 68 + i * 10, ''));
 
-    // Skin swatches along the top of the portrait: tap one to change the look.
-    const parts: Phaser.GameObjects.GameObject[] = [];
-    const skins = base.skins ?? [];
+    // Skins: arrows on both sides step through them; the worn one is named over the portrait.
     if (skins.length > 1) {
-      this.swatches = scene.add.graphics();
-      skins.forEach((skin, i) => {
-        const hit = scene.add.zone(SWATCH_X - 2 + i * SWATCH_STEP, SWATCH_Y - 2, SWATCH + 4, SWATCH + 4).setOrigin(0);
-        hit.setInteractive({ useHandCursor: true }).on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, () => {
-          if (skinOf(base)?.id !== skin.id) {
-            setSkin(base, skin.id);
-            this.applySkin(true);
-          }
-          onSkin();
-        });
-        parts.push(hit);
-      });
+      this.skinName = pixelText(scene, 0, 9, '');
+      this.arrows = [
+        new SkinArrow(scene, ARROW_INSET, -1, () => this.stepSkin(-1, onTap)),
+        new SkinArrow(scene, CARD_W - ARROW_INSET - ARROW_W, 1, () => this.stepSkin(1, onTap)),
+      ];
     }
 
-    this.add([this.bg, inset, this.pedestal, shadow, this.sprite, ...(this.glow ? [this.glow] : []), name, this.role, this.pips, ...labels, ...this.abilities, ...(this.swatches ? [this.swatches] : []), ...parts]);
+    this.add([this.bg, inset, this.pedestal, shadow, this.sprite, ...(this.glow ? [this.glow] : []), name, this.role, this.pips, ...labels, ...this.abilities, ...(this.skinName ? [this.skinName] : []), ...this.arrows]);
     scene.add.existing(this);
     this.applySkin(false);
     this.setPicked(false);
+  }
+
+  /** Wear the next (or previous) skin, and pick this card. */
+  stepSkin(step: -1 | 1, pick: () => void): void {
+    const skins = this.base.skins ?? [];
+    if (skins.length < 2) return;
+    const at = skins.findIndex((s) => s.id === skinOf(this.base)?.id);
+    setSkin(this.base, skins[(at + step + skins.length) % skins.length].id);
+    this.applySkin(true);
+    pick();
   }
 
   /** The character in its worn skin. */
@@ -83,7 +138,7 @@ class Card extends Phaser.GameObjects.Container {
     return wear(this.base);
   }
 
-  /** Show the worn skin: portrait, accent colour, role, ability names and swatches. */
+  /** Show the worn skin: portrait, accent colour, role, ability names, skin name and arrows. */
   private applySkin(animate: boolean): void {
     const def = this.def;
     const oy = def.preview.originY ?? 31 / 32;
@@ -92,7 +147,7 @@ class Card extends Phaser.GameObjects.Container {
     this.pedestal.setTint(def.accent);
     this.role.setText(def.role.toUpperCase());
 
-    const x = 64;
+    const x = this.tx;
     const stats = [def.stats.power, def.stats.speed, def.stats.range];
     const pips = this.pips.clear();
     stats.forEach((value, i) => {
@@ -105,17 +160,11 @@ class Card extends Phaser.GameObjects.Container {
     });
     [def.attack, def.special].forEach((a, i) => this.abilities[i].setText(`* ${a}`.toUpperCase()).setCharacterTint(0, 1, false, def.accent));
 
-    if (this.swatches) {
-      const worn = skinOf(this.base)?.id;
-      const g = this.swatches.clear();
-      (this.base.skins ?? []).forEach((skin, i) => {
-        const sx = SWATCH_X + i * SWATCH_STEP;
-        const on = skin.id === worn;
-        g.fillStyle(on ? 0xffe08a : 0x0b0818).fillRect(sx - 1, SWATCH_Y - 1, SWATCH + 2, SWATCH + 2);
-        g.fillStyle(0x0b0818).fillRect(sx, SWATCH_Y, SWATCH, SWATCH);
-        g.fillStyle(skin.accent ?? this.base.accent, on ? 1 : 0.55).fillRect(sx + 1, SWATCH_Y + 1, SWATCH - 2, SWATCH - 2);
-        g.fillStyle(0xffffff, on ? 0.5 : 0.2).fillRect(sx + 1, SWATCH_Y + 1, SWATCH - 2, 1);
-      });
+    if (this.skinName) {
+      const skin = skinOf(this.base);
+      this.skinName.setText((skin?.name ?? '').toUpperCase()).setTint(def.accent);
+      this.skinName.setX(Math.round(this.px + 27 - this.skinName.width / 2));
+      for (const a of this.arrows) a.draw(undefined, def.accent);
     }
 
     if (animate && this.picked) this.sprite.play(def.preview.chosen).chain(def.preview.idle);
@@ -161,7 +210,8 @@ export class SelectScene extends Phaser.Scene {
 
     this.shade = this.add.rectangle(0, 0, 1, 1, 0x0b0818, 0.45).setOrigin(0);
     this.header = pixelText(this, 0, 0, '* Choose your hero *', 0xf4cf6a);
-    this.cards = CHARACTERS.map((def, i) => new Card(this, def, () => (i === this.picked ? this.startGame() : this.pick(i)), () => this.pick(i)));
+    // Tapping a card only picks it; the game starts from the Play button (or Enter).
+    this.cards = CHARACTERS.map((def, i) => new Card(this, def, () => this.pick(i)));
     this.back = new PixelButton(this, 'Back', 48, 18, BUTTON_PLAIN, 'back', () => this.goBack());
     this.play = new PixelButton(this, 'Play', 64, 20, BUTTON_GOLD, 'play', () => this.startGame());
     this.picked = 0;
@@ -170,6 +220,8 @@ export class SelectScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     kb?.on('keydown-LEFT', () => this.pick((this.picked + this.cards.length - 1) % this.cards.length));
     kb?.on('keydown-RIGHT', () => this.pick((this.picked + 1) % this.cards.length));
+    kb?.on('keydown-UP', () => this.cards[this.picked].stepSkin(-1, () => {}));
+    kb?.on('keydown-DOWN', () => this.cards[this.picked].stepSkin(1, () => {}));
     kb?.on('keydown-ENTER', () => this.startGame());
     kb?.on('keydown-SPACE', () => this.startGame());
     kb?.on('keydown-ESC', () => this.goBack());
