@@ -4,6 +4,7 @@ import { WorldScene } from './scenes/WorldScene';
 import { UIScene } from './scenes/UIScene';
 import { LitPipeline } from './game/LitPipeline';
 import { PixelPipeline } from './game/PixelPipeline';
+import { SkyPipeline } from './game/SkyPipeline';
 import { DPR, setFastRender, viewSize } from './game/display';
 import { SoundScene } from './scenes/SoundScene';
 import { HomeScene } from './scenes/HomeScene';
@@ -35,7 +36,7 @@ const game = new Phaser.Game({
     zoom: 1 / DPR,
   },
   render: { maxLights: 16, powerPreference: 'high-performance' },
-  pipeline: { Lit: LitPipeline, Pixel: PixelPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
+  pipeline: { Lit: LitPipeline, Pixel: PixelPipeline, Sky: SkyPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
   input: { activePointers: 3 },
   // Later scenes draw on top.
   scene: [BootScene, HomeScene, SelectScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],

@@ -94,7 +94,11 @@ export class PixelPipeline extends Phaser.Renderer.WebGL.Pipelines.PostFXPipelin
     this.set2f('uTexSize', target.width, target.height);
     this.set1f('uZoom', this.zoom);
     this.set1f('uScreenH', renderer.height);
+    // The ground is opaque: skip blending, so the GPU needn't read the
+    // screen back for this full-screen pass.
+    this.gl.disable(this.gl.BLEND);
     this.bindAndDraw(target);
+    this.gl.enable(this.gl.BLEND);
   }
 
   destroy(): this {

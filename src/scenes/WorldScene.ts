@@ -9,6 +9,7 @@ import { settings } from '../game/settings';
 import { sky } from '../game/LitPipeline';
 import { pixelGrid } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
+import { skyState } from '../game/SkyPipeline';
 import { characterById, type Hero } from '../game/characters';
 
 type V3 = [number, number, number];
@@ -68,7 +69,6 @@ export class WorldScene extends Phaser.Scene {
   private bounds = new Phaser.Geom.Rectangle(28, 40, WORLD_W - 56, WORLD_H - 64);
   private groundDay!: Phaser.GameObjects.Image;
   private runes!: Phaser.GameObjects.Image;
-  private clouds!: Phaser.GameObjects.TileSprite;
   private shafts!: Phaser.GameObjects.TileSprite;
   private shadows: Phaser.GameObjects.Image[] = [];
   private pollen!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -76,8 +76,8 @@ export class WorldScene extends Phaser.Scene {
   private pixels!: PixelPipeline;
   /** Draws the ground at art resolution, under the main camera's sprites. */
   private groundCam!: Phaser.Cameras.Scene2D.Camera;
-  private vignette!: Phaser.GameObjects.Image;
-  private vignetteKey = '';
+  /** Cloud shadows and the vignette, drawn in one pass (see SkyPipeline). */
+  private skyLayer!: Phaser.GameObjects.Image;
 
   constructor() {
     super('world');
@@ -120,9 +120,8 @@ export class WorldScene extends Phaser.Scene {
     this.groundDay = ground(this.add.image(0, 0, 'ground_day').setOrigin(0).setPipeline('Lit')) as Phaser.GameObjects.Image;
     this.runes = ground(this.add.image(0, 0, 'ground_e').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD)) as Phaser.GameObjects.Image;
 
-    // Sky layers above everything in the world: drifting cloud shadows and
-    // faint shafts of sunlight.
-    this.clouds = this.add.tileSprite(0, 0, WORLD_W, WORLD_H, 'clouds').setOrigin(0).setDepth(10000);
+    // Faint shafts of sunlight over the ground. Drifting cloud shadows are
+    // drawn over everything, with the vignette (see below).
     // The shafts are faint enough to light only the ground.
     this.shafts = ground(this.add.tileSprite(0, 0, WORLD_W, WORLD_H, 'shafts').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD)) as Phaser.GameObjects.TileSprite;
 
@@ -188,8 +187,7 @@ export class WorldScene extends Phaser.Scene {
     this.hero = characterById(data?.character).spawn(this, cx, cy + 20);
 
     // Screen-fixed; it covers the ground camera's image too, as it draws first.
-    this.vignette = this.add.image(0, 0, '__WHITE').setScrollFactor(0).setDepth(20000);
-    this.vignetteKey = '';
+    this.skyLayer = this.add.image(0, 0, 'clouds').setScrollFactor(0).setDepth(20000).setPipeline('Sky');
     this.setVignette(0.32 - Phaser.Math.Easing.Sine.InOut(daynight.daylight) * 0.14);
     cam.fadeIn(500, 7, 8, 13);
     this.fitCamera();
@@ -318,8 +316,7 @@ export class WorldScene extends Phaser.Scene {
       return () => this.scene.setVisible(true, 'ui');
     };
     return [
-      ['CLOUDS', hide(this.clouds)],
-      ['VIGNETTE', hide(this.vignette)],
+      ['SKY', hide(this.skyLayer)],
       ['LIGHTING', unlit],
       ['GROUND', hide(this.groundCam)],
       ['SPRITES', hide(this.cameras.main)],
@@ -336,49 +333,19 @@ export class WorldScene extends Phaser.Scene {
     // camera to whole art pixels, which makes scrolling steppy.
     this.cameras.main.setZoom(zoom).setRoundPixels(false);
     this.groundCam.setSize(width, height).setZoom(zoom);
-    this.fitVignette();
+    this.fitSky();
   }
 
   /** Cover the screen. The zoom pivots on the camera's centre, which is where a scroll-fixed object sits. */
-  private fitVignette(): void {
+  private fitSky(): void {
     const { width, height } = this.scale;
     const zoom = pixelGrid.zoom;
-    this.vignette.setPosition(width / 2, height / 2).setDisplaySize(width / zoom, height / zoom);
+    this.skyLayer.setPosition(width / 2, height / 2).setDisplaySize(width / zoom, height / zoom);
   }
 
-  /**
-   * A vignette as a black overlay: the same falloff as Phaser's vignette
-   * effect, without a second full-screen render pass. Painted once for each
-   * strength it passes through (to two decimals) and cached.
-   */
+  /** Vignette strength, as Phaser's vignette effect; drawn by SkyPipeline. */
   private setVignette(strength: number): void {
-    const s = Math.round(strength * 100);
-    const key = `vignette_${s}`;
-    if (key === this.vignetteKey) return;
-    if (!this.textures.exists(key)) {
-      const N = 128;
-      const tex = this.textures.createCanvas(key, N, N)!;
-      const img = tex.context.createImageData(N, N);
-      const radius = 0.92;
-      for (let y = 0; y < N; y++) {
-        for (let x = 0; x < N; x++) {
-          const d = Math.hypot((x + 0.5) / N - 0.5, (y + 0.5) / N - 0.5);
-          let a = 1;
-          if (d <= radius) {
-            const g = Math.sin((d / radius) * 3.14 * (s / 100));
-            a = g * g * g;
-          }
-          img.data[(y * N + x) * 4 + 3] = Math.round(a * 255);
-        }
-      }
-      tex.context.putImageData(img, 0, 0);
-      tex.refresh();
-      // A smooth gradient, not pixel art.
-      tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
-    }
-    this.vignette.setTexture(key);
-    this.vignetteKey = key;
-    this.fitVignette();
+    skyState.vignette = strength;
   }
 
   private brazier(x: number, y: number): void {
@@ -467,7 +434,9 @@ export class WorldScene extends Phaser.Scene {
 
     this.groundDay.setAlpha(d);
     this.runes.setAlpha(0.9 - d * 0.6);
-    this.clouds.setAlpha(d).setTilePosition(time * 0.004, time * 0.0022);
+    skyState.clouds = d;
+    skyState.tileX = time * 0.004;
+    skyState.tileY = time * 0.0022;
     this.shafts.setAlpha(d * (0.1 + Math.sin(time * 0.0007) * 0.03));
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
     this.setVignette(0.32 - d * 0.14);
