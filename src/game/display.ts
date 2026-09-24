@@ -9,3 +9,13 @@ export const viewSize = () => ({
   width: Math.round(window.innerWidth * DPR),
   height: Math.round(window.innerHeight * DPR),
 });
+
+/**
+ * The world camera's zoom (device pixels per art pixel). Moving things snap
+ * to device pixels rather than whole art pixels: sprites stay crisp because
+ * every art pixel still covers whole device pixels, and motion stays smooth
+ * because a step is a fraction of an art pixel.
+ */
+export const pixelGrid = { zoom: 1 };
+
+export const snap = (v: number): number => Math.round(v * pixelGrid.zoom) / pixelGrid.zoom;

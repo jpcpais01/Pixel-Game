@@ -4,6 +4,7 @@ import { Wizard, sunShadow, SUN_SHADOW_ALPHA } from '../game/Wizard';
 import { EnergyBall } from '../game/EnergyBall';
 import { daynight } from '../game/daynight';
 import { sky } from '../game/LitPipeline';
+import { pixelGrid } from '../game/display';
 
 type V3 = [number, number, number];
 
@@ -123,8 +124,8 @@ export class WorldScene extends Phaser.Scene {
       const x = cx + Math.cos(a) * d * 1.3;
       const y = cy + Math.sin(a) * d;
       if (x < 16 || y < 16 || x > WORLD_W - 16 || y > WORLD_H - 8) continue;
-      this.add.image(Math.round(x), Math.round(y), 'rock', `r${i % 3}`).setOrigin(0.5, 0.85).setPipeline('Lit').setDepth(y);
-      this.shadows.push(sunShadow(this.add.image(Math.round(x), Math.round(y), 'rock_s', `r${i % 3}`).setOrigin(0.5, 0.85)));
+      this.add.image(Math.round(x), Math.round(y), 'rock', `r${i % 3}`).setOrigin(0.5, 12 / 14).setPipeline('Lit').setDepth(y);
+      this.shadows.push(sunShadow(this.add.image(Math.round(x), Math.round(y), 'rock_s', `r${i % 3}`).setOrigin(0.5, 12 / 14)));
     }
 
     this.dummy(cx + 64, cy - 8);
@@ -145,32 +146,42 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Keep the camera locked on the wizard, snapped to whole art pixels. The
-   * wizard is also drawn at whole pixels, so he never shifts against the
-   * screen grid and stays crisp; the world scrolls in whole-pixel steps.
+   * Keep the camera locked on the wizard, snapped to device pixels. The
+   * wizard snaps to the same grid, so he holds still on screen and stays
+   * crisp, while the world scrolls in smooth sub-art-pixel steps.
    */
   private followWizard(): void {
     const cam = this.cameras.main;
+    const z = cam.zoom;
     const halfW = cam.width / 2;
     const halfH = cam.height / 2;
-    const viewW = cam.width / cam.zoom;
-    const viewH = cam.height / cam.zoom;
+    const viewW = cam.width / z;
+    const viewH = cam.height / z;
     // Scroll is measured to the unzoomed viewport's top-left; zoom pivots on its centre.
     const minX = viewW / 2 - halfW;
     const maxX = WORLD_W - viewW / 2 - halfW;
     const minY = viewH / 2 - halfH;
     const maxY = WORLD_H - viewH / 2 - halfH;
-    const tx = Math.round(this.wizard.x) - halfW;
-    const ty = Math.round(this.wizard.y) - 12 - halfH;
-    cam.scrollX = Math.round(maxX < minX ? (minX + maxX) / 2 : Phaser.Math.Clamp(tx, minX, maxX));
-    cam.scrollY = Math.round(maxY < minY ? (minY + maxY) / 2 : Phaser.Math.Clamp(ty, minY, maxY));
+    const tx = this.wizard.x - halfW;
+    const ty = this.wizard.y - 12 - halfH;
+    const sx = maxX < minX ? (minX + maxX) / 2 : Phaser.Math.Clamp(tx, minX, maxX);
+    const sy = maxY < minY ? (minY + maxY) / 2 : Phaser.Math.Clamp(ty, minY, maxY);
+    // Screen x = (worldX - scroll) * z + half * (1 - z). Choose scroll so the
+    // constant part lands on a whole device pixel.
+    const cx = halfW * (1 - z);
+    const cy = halfH * (1 - z);
+    cam.scrollX = (Math.round(sx * z - cx) + cx) / z;
+    cam.scrollY = (Math.round(sy * z - cy) + cy) / z;
   }
 
   private fitCamera(): void {
     const { width, height } = this.scale;
     // Whole device pixels per art pixel; about 190 art pixels on the short side.
     const zoom = Math.max(2, Math.floor(Math.min(width, height) / 190));
-    this.cameras.main.setZoom(zoom);
+    pixelGrid.zoom = zoom;
+    // We snap to device pixels ourselves; Phaser's rounding would snap the
+    // camera to whole art pixels, which makes scrolling steppy.
+    this.cameras.main.setZoom(zoom).setRoundPixels(false);
   }
 
   private brazier(x: number, y: number): void {

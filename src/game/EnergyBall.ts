@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { snap } from './display';
 
 const SPEED = 175;
 const LIFETIME = 1100;
@@ -57,7 +58,7 @@ export class EnergyBall {
     this.x += this.vx * (dt / 1000);
     this.y += this.vy * (dt / 1000);
     const depth = this.y + 20;
-    this.sprite.setPosition(Math.round(this.x), Math.round(this.y)).setDepth(depth);
+    this.sprite.setPosition(snap(this.x), snap(this.y)).setDepth(depth);
     const pulse = 1 + Math.sin(this.age * 0.03) * 0.08;
     this.halo.setPosition(this.x, this.y).setDepth(depth - 0.1).setScale(1.1 * pulse);
     this.light.setPosition(this.x, this.y);
@@ -72,7 +73,7 @@ export class EnergyBall {
     this.dead = true;
     const { scene } = this;
     const burst = scene.add
-      .sprite(Math.round(this.x), Math.round(this.y), 'burst_e', 'b0')
+      .sprite(snap(this.x), snap(this.y), 'burst_e', 'b0')
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(this.y + 20)
       .play('burst_pop');

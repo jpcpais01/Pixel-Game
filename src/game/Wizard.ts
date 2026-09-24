@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CAST_RELEASE, type Dir } from '../art/wizard';
 import { wizardMeta } from '../art/textures';
+import { snap } from './display';
 
 const SPEED = 58; // world px / second
 const CAST_COOLDOWN = 180; // ms after a cast ends before the next can start
@@ -96,12 +97,12 @@ export class Wizard {
   tip(): { x: number; y: number; glow: number } {
     const m = wizardMeta.get(this.body.frame.name as string);
     if (!m) return { x: this.x, y: this.y - 20, glow: 0.6 };
-    return { x: Math.round(this.x) - ORIGIN_X + m.tipX, y: Math.round(this.y) - ORIGIN_Y + m.tipY, glow: m.glow };
+    return { x: snap(this.x) - ORIGIN_X + m.tipX, y: snap(this.y) - ORIGIN_Y + m.tipY, glow: m.glow };
   }
 
   private sync(): void {
-    const rx = Math.round(this.x);
-    const ry = Math.round(this.y);
+    const rx = snap(this.x);
+    const ry = snap(this.y);
     this.body.setPosition(rx, ry).setDepth(ry);
     this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(this.body.frame.name);
     this.shadow.setPosition(rx, ry - 1);
