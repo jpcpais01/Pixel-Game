@@ -347,6 +347,98 @@ export class Sfx {
     this.sparkle(out, t + 0.04, 4, 0.04);
   }
 
+  /** A bell of holy light: inharmonic partials, the high ones dying first. */
+  private bell(dest: AudioNode, t: number, f: number, level: number, decay: number): void {
+    const ctx = this.m.ctx;
+    for (const [r, a] of [
+      [1, 1],
+      [2, 0.45],
+      [2.76, 0.3],
+      [5.4, 0.12],
+    ]) {
+      const g = gain(ctx, 0, dest);
+      hit(g.gain, t, level * a, 0.003, decay / (0.5 + r * 0.5));
+      const o = osc(ctx, 'sine', f * r * rand(0.997, 1.003), g);
+      o.start(t);
+      o.stop(t + decay + 0.1);
+    }
+  }
+
+  /** The paladin's mace kindling: a breath of air and a rising chord of bells. */
+  hallow(t: number): void {
+    const out = this.out(0, 0.6, 0.55);
+    const ctx = this.m.ctx;
+    const dur = 0.45;
+    const air = gain(ctx, 0, out);
+    air.gain.setValueAtTime(0, t);
+    air.gain.linearRampToValueAtTime(0.22, t + dur);
+    air.gain.linearRampToValueAtTime(0, t + dur + 0.1);
+    const bp = filter(ctx, 'bandpass', 900, 2, air);
+    sweep(bp.frequency, t, 700, 3200, dur);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, dur + 0.15);
+    [523, 659, 784, 1047].forEach((f, i) => this.bell(out, t + i * 0.09, f, 0.05, 0.9));
+  }
+
+  /** The mace coming down: a heavy thump, and a bright bell when it lands on something. */
+  smite(t: number, pan: number, struck: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.9, 0.4);
+    const th = gain(ctx, 0, out);
+    hit(th.gain, t, 0.6, 0.003, 0.2);
+    const o = osc(ctx, 'sine', 150, th);
+    sweep(o.frequency, t, 150, 45, 0.18);
+    o.start(t);
+    o.stop(t + 0.3);
+    const k = gain(ctx, 0, out);
+    hit(k.gain, t, 0.3, 0.002, 0.1);
+    const lp = filter(ctx, 'lowpass', 1400, 0.8, k);
+    const n = this.m.noiseSource(true);
+    n.connect(lp);
+    this.m.startNoise(n, t, 0.14);
+    this.bell(out, t + 0.005, struck ? rand(880, 900) : rand(660, 680), struck ? 0.07 : 0.035, struck ? 1.1 : 0.6);
+    if (struck) this.sparkle(out, t + 0.03, 3, 0.04);
+  }
+
+  /** Consecration: the ground struck, a deep boom under a swelling major chord. */
+  consecrate(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 1, 0.65);
+    const b = gain(ctx, 0, out);
+    hit(b.gain, t, 0.75, 0.004, 0.6);
+    const lo = osc(ctx, 'sine', 98, b);
+    sweep(lo.frequency, t, 98, 36, 0.55);
+    lo.start(t);
+    lo.stop(t + 0.8);
+    // A choir-like pad: soft saws through a closing lowpass, swelling then fading.
+    const pad = gain(ctx, 0, out);
+    pad.gain.setValueAtTime(0, t);
+    pad.gain.linearRampToValueAtTime(0.07, t + 0.12);
+    pad.gain.setTargetAtTime(0, t + 0.5, 0.45);
+    const lp = filter(ctx, 'lowpass', 2600, 0.6, pad);
+    sweep(lp.frequency, t, 2600, 700, 2);
+    for (const f of [262, 330, 392, 523]) {
+      for (const d of [-6, 6]) {
+        const v = osc(ctx, 'sawtooth', f, gain(ctx, 0.5, lp));
+        v.detune.value = d;
+        v.start(t);
+        v.stop(t + 2.6);
+      }
+    }
+    this.bell(out, t, 523, 0.08, 1.8);
+    this.bell(out, t + 0.07, 784, 0.05, 1.6);
+    this.sparkle(out, t + 0.05, 5, 0.05);
+  }
+
+  /** A pulse of healing: two soft rising notes. */
+  heal(t: number, pan: number): void {
+    const out = this.out(pan, 0.45, 0.5);
+    const i = Math.floor(Math.random() * 3);
+    this.bell(out, t, [784, 880, 988][i], 0.035, 0.5);
+    this.bell(out, t + 0.07, [1175, 1319, 1480][i], 0.03, 0.6);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {

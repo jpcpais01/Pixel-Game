@@ -154,6 +154,22 @@ class GameSound {
     if (this.live()) this.sfx!.slam(this.ctx!.currentTime, pan);
   }
 
+  hallow(): void {
+    if (this.live()) this.sfx!.hallow(this.ctx!.currentTime);
+  }
+
+  smite(pan = 0, struck = false): void {
+    if (this.live()) this.sfx!.smite(this.ctx!.currentTime, pan, struck);
+  }
+
+  consecrate(pan = 0): void {
+    if (this.live()) this.sfx!.consecrate(this.ctx!.currentTime, pan);
+  }
+
+  heal(pan = 0): void {
+    if (this.live()) this.sfx!.heal(this.ctx!.currentTime, pan);
+  }
+
   step(): void {
     if (this.live()) this.sfx!.step(this.ctx!.currentTime);
   }

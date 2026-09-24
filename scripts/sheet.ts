@@ -1,21 +1,22 @@
 // Dev tool: render a character's frames to a zoomed PNG contact sheet.
-// Usage: npx tsx scripts/sheet.ts [outDir] [scale] [wizard|void|warrior]
+// Usage: npx tsx scripts/sheet.ts [outDir] [scale] [wizard|void|warrior|paladin]
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { buildWizardFrames, FRAME_W as WIZ_W, FRAME_H as WIZ_H, ANIMS, DIRS, VOID_LOOK } from '../src/art/wizard';
 import { buildWarriorFrames, WARRIOR_W, WARRIOR_H, WARRIOR_ANIMS } from '../src/art/warrior';
+import { buildPaladinFrames, PALADIN_W, PALADIN_H, PALADIN_ANIMS } from '../src/art/paladin';
 import { encodePNG } from './png';
 
 const out = process.argv[2] ?? 'sheets';
 const S = Number(process.argv[3] ?? 5);
-const hero = process.argv[4] === 'warrior' ? 'warrior' : 'wizard';
+const hero = process.argv[4] === 'warrior' || process.argv[4] === 'paladin' ? process.argv[4] : 'wizard';
 mkdirSync(out, { recursive: true });
-const FRAME_W = hero === 'warrior' ? WARRIOR_W : WIZ_W;
-const FRAME_H = hero === 'warrior' ? WARRIOR_H : WIZ_H;
+const FRAME_W = hero === 'warrior' ? WARRIOR_W : hero === 'paladin' ? PALADIN_W : WIZ_W;
+const FRAME_H = hero === 'warrior' ? WARRIOR_H : hero === 'paladin' ? PALADIN_H : WIZ_H;
 const built: { anim: string; dir: string | null; canvas: { render(): ReturnType<ReturnType<typeof buildWizardFrames>[number]['canvas']['render']> } }[] =
-  hero === 'warrior' ? buildWarriorFrames() : buildWizardFrames(process.argv[4] === 'void' ? VOID_LOOK : undefined);
+  hero === 'warrior' ? buildWarriorFrames() : hero === 'paladin' ? buildPaladinFrames() : buildWizardFrames(process.argv[4] === 'void' ? VOID_LOOK : undefined);
 const frames = built.map((f) => ({ ...f, r: f.canvas.render() }));
 const rows: { anim: string; dir: string | null }[] = [];
-for (const a of hero === 'warrior' ? WARRIOR_ANIMS : ANIMS) for (const d of DIRS) rows.push({ anim: a.name, dir: d });
+for (const a of hero === 'warrior' ? WARRIOR_ANIMS : hero === 'paladin' ? PALADIN_ANIMS : ANIMS) for (const d of DIRS) rows.push({ anim: a.name, dir: d });
 if (hero === 'warrior') rows.push({ anim: 'spin', dir: null });
 const cols = Math.max(...rows.map((r) => frames.filter((f) => f.anim === r.anim && f.dir === r.dir).length));
 const pad = 2;

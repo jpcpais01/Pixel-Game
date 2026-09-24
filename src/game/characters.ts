@@ -7,6 +7,8 @@ import type { WorldScene } from '../scenes/WorldScene';
 import { ARCANE_SKIN, VOID_SKIN, Wizard } from './Wizard';
 import { Warrior } from './Warrior';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
+import { Paladin } from './Paladin';
+import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { wear, type SkinDef } from './skins';
 
 /** What the world needs from the player's character each frame. */
@@ -117,6 +119,22 @@ export const CHARACTERS: CharacterDef[] = [
     },
     hint: 'Space to swing (chain 3 for a combo)  ·  K for a whirlwind',
     spawn: (world, x, y) => new Warrior(world, x, y),
+  },
+  {
+    id: 'paladin',
+    name: 'Paladin',
+    role: 'Tank and healer',
+    accent: 0x7fb2ff,
+    stats: { power: 3, speed: 2, range: 2 },
+    attack: 'Smite',
+    special: 'Consecration',
+    preview: { texture: 'paladin', glow: 'paladin_e', idle: 'paladin_idle_down', chosen: 'paladin_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
+    buttons: {
+      attack: { texture: 'icon_mace' },
+      special: { texture: 'icon_sanctuary' },
+    },
+    hint: 'Space to smite  ·  K to consecrate the ground (heals you)',
+    spawn: (world, x, y) => new Paladin(world, x, y),
   },
 ];
 
