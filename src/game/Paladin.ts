@@ -5,9 +5,9 @@ import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
+import { Vitals } from './combat';
 import { HitSpark, type Effect } from './Slash';
 import { Aegis, HealPop, HOLY_FX, Sanctuary, SmiteBurst } from './Holy';
-import { HealthBar } from './HealthBar';
 import type { Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 
@@ -51,8 +51,9 @@ export class Paladin implements Hero {
   y: number;
   /** 0 = night, 1 = day. */
   daylight = 0;
-  hp = MAX_HP;
-  barrier = 0;
+  readonly vitals = new Vitals(MAX_HP, BARRIER_MAX);
+  /** 0..1, fades the whole figure (see Hero). */
+  alpha = 1;
   private dir: Dir = 'down';
   private world: WorldScene;
   private body: Phaser.GameObjects.Sprite;
@@ -62,7 +63,6 @@ export class Paladin implements Hero {
   /** A faint holy light so he can be made out at night away from the fires. */
   private aura: Phaser.GameObjects.Light;
   private motes: Phaser.GameObjects.Particles.ParticleEmitter;
-  private bar: HealthBar;
   private aegis: Aegis;
   private state: State = 'free';
   private lastMove = new Phaser.Math.Vector2(0, 1);
@@ -72,6 +72,11 @@ export class Paladin implements Hero {
   private sanctuary: Sanctuary | null = null;
   private pulseIn = 0;
   private fx: Effect[] = [];
+
+  /** The body sprite (see Hero). */
+  get sprite(): Phaser.GameObjects.Sprite {
+    return this.body;
+  }
 
   constructor(world: WorldScene, x: number, y: number) {
     this.world = world;
@@ -94,7 +99,6 @@ export class Paladin implements Hero {
       blendMode: Phaser.BlendModes.ADD,
       emitting: false,
     });
-    this.bar = new HealthBar(world);
     this.aegis = new Aegis(world);
     this.body.play('paladin_idle_down');
 
@@ -153,9 +157,8 @@ export class Paladin implements Hero {
 
   /** Healing: first to health, the rest to the barrier. */
   heal(amount: number): void {
-    const toHp = Math.min(amount, MAX_HP - this.hp);
-    this.hp += toHp;
-    this.barrier = Math.min(BARRIER_MAX, this.barrier + amount - toHp);
+    if (!this.vitals.alive) return;
+    const toHp = this.vitals.heal(amount);
     const x = snap(this.x) + Math.round((Math.random() - 0.5) * 8);
     this.fx.push(new HealPop(this.world, x, snap(this.y) - 35, `+${amount}`, toHp > 0 ? HEAL_TINT : BARRIER_TINT));
     this.motes.setDepth(snap(this.y) + 0.5).explode(5, snap(this.x), snap(this.y) - 6);
@@ -175,7 +178,7 @@ export class Paladin implements Hero {
     const gx = snap(this.x) + r.x;
     const gy = snap(this.y) + r.y;
     this.fx.push(new SmiteBurst(this.world, gx, gy));
-    const hits = this.world.melee({ kind: 'circle', x: gx, y: gy - 6, radius: 11 }, true);
+    const hits = this.world.melee({ kind: 'circle', x: gx, y: gy - 6, radius: 11 }, { damage: 15, heavy: true });
     for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, HOLY_FX, h.y + 13, true));
     sound.smite(this.world.pan(gx), hits.length > 0);
     this.world.cameras.main.shake(hits.length ? 110 : 60, hits.length ? 0.0005 : 0.0002);
@@ -199,7 +202,7 @@ export class Paladin implements Hero {
     this.sanctuary = new Sanctuary(this.world, x, y, SANCTUARY_RADIUS, SANCTUARY_TIME);
     this.pulseIn = PULSE_EVERY * 0.6;
     this.fx.push(new SmiteBurst(this.world, x + r.x * 0.6, y + r.y * 0.6, true));
-    const hits = this.world.melee({ kind: 'circle', x, y: y - 6, radius: SANCTUARY_RADIUS }, true);
+    const hits = this.world.melee({ kind: 'circle', x, y: y - 6, radius: SANCTUARY_RADIUS }, { damage: 12, heavy: true, knock: 150 });
     for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, HOLY_FX, h.y + 13, true));
     sound.consecrate(this.world.pan(x));
     this.world.cameras.main.shake(200, 0.0006);
@@ -215,7 +218,7 @@ export class Paladin implements Hero {
         this.pulseIn += PULSE_EVERY;
         s.pulse();
         // Foes inside burn; the paladin (and, later, his allies) are healed.
-        const hits = this.world.melee({ kind: 'circle', x: s.x, y: s.y - 6, radius: s.radius - 4 }, false);
+        const hits = this.world.melee({ kind: 'circle', x: s.x, y: s.y - 6, radius: s.radius - 4 }, { damage: 4, knock: 0 });
         for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, HOLY_FX, h.y + 13));
         if (s.contains(this.x, this.y)) {
           this.heal(PULSE_HEAL);
@@ -224,7 +227,7 @@ export class Paladin implements Hero {
       }
       if (s.dead) this.sanctuary = null;
     } else {
-      this.barrier = Math.max(0, this.barrier - (BARRIER_DECAY * dt) / 1000);
+      this.vitals.barrier = Math.max(0, this.vitals.barrier - (BARRIER_DECAY * dt) / 1000);
     }
   }
 
@@ -241,13 +244,12 @@ export class Paladin implements Hero {
     const rx = snap(this.x);
     const ry = snap(this.y);
     const frame = this.body.frame.name;
-    this.body.setPosition(rx, ry).setDepth(ry);
-    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(frame);
-    this.shadow.setPosition(rx, ry - 1);
-    this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight);
+    this.body.setPosition(rx, ry).setDepth(ry).setAlpha(this.alpha);
+    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(frame).setAlpha(this.alpha);
+    this.shadow.setPosition(rx, ry - 1).setAlpha(this.alpha);
+    this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * this.alpha);
     this.aura.setPosition(rx, ry - 14);
     this.aura.intensity = 0.55 * (1 - this.daylight) + (this.state === 'consecrate' ? 0.8 : 0);
-    this.bar.update(dt, rx, ry - 33, this.hp, MAX_HP, this.barrier);
-    this.aegis.update(dt, rx, ry, this.barrier / BARRIER_MAX);
+    this.aegis.update(dt, rx, ry, (this.vitals.barrier / BARRIER_MAX) * this.alpha);
   }
 }

@@ -39,7 +39,8 @@ export class HealthBar {
   /** (x, y) is the bar's centre top, on the character's pixel grid. */
   update(dt: number, x: number, y: number, hp: number, max: number, barrier: number): void {
     const key = `${Math.round(hp)} ${Math.round(barrier)}`;
-    if (key !== this.last || hp < max || barrier > 0.5) this.hold = 1800;
+    // The first reading only sets the baseline, so a fresh bar starts hidden.
+    if ((key !== this.last && this.last !== '') || hp < max || barrier > 0.5) this.hold = 1800;
     else this.hold = Math.max(0, this.hold - dt);
     this.last = key;
     this.shown = Phaser.Math.Clamp(this.shown + (this.hold > 0 ? dt / 150 : -dt / 400), 0, 1);
@@ -56,5 +57,9 @@ export class HealthBar {
     this.hpLit.setPosition(left, y + 1).setDisplaySize(hw, 1);
     this.barrier.setPosition(left + hw, y + 1).setDisplaySize(bw, 2);
     this.barrierLit.setPosition(left + hw, y + 1).setDisplaySize(bw, 1);
+  }
+
+  destroy(): void {
+    for (const p of this.parts) p.destroy();
   }
 }

@@ -5,9 +5,11 @@ import { snap } from './display';
 import { BeamCharge, CHARGE_TIME, HOLD_TIME, beamSpec } from './Beam';
 import { beamHud } from './controls';
 import { sound } from '../audio';
+import { Vitals } from './combat';
 import type { Hero } from './characters';
 import { ARCANE_STYLE, VOID_STYLE, type SpellStyle } from './spells';
 
+export const MAX_HP = 80;
 const SPEED = 58; // world px / second
 const CAST_COOLDOWN = 180; // ms after a cast ends before the next can start
 const BEAM_COOLDOWN = 380; // ms after a beam (or a fizzle) before the next attack
@@ -50,6 +52,9 @@ export class Wizard implements Hero {
   private castShadow: Phaser.GameObjects.Sprite;
   /** 0 = night, 1 = day: softens the staff light and shows the sun shadow. */
   daylight = 0;
+  readonly vitals = new Vitals(MAX_HP);
+  /** 0..1, fades the whole figure (see Hero). */
+  alpha = 1;
   private state: State = 'free';
   private released = false;
   private castDir = new Phaser.Math.Vector2(0, 1);
@@ -67,6 +72,11 @@ export class Wizard implements Hero {
   private beamLatch = false;
   /** Texture and animation prefix of the worn look. */
   private key: string;
+
+  /** The body sprite (see Hero). */
+  get sprite(): Phaser.GameObjects.Sprite {
+    return this.body;
+  }
 
   constructor(scene: Phaser.Scene, x: number, y: number, hooks: WizardHooks, skin: WizardSkin = ARCANE_SKIN) {
     this.x = x;
@@ -245,16 +255,16 @@ export class Wizard implements Hero {
   private sync(): void {
     const rx = snap(this.x);
     const ry = snap(this.y);
-    this.body.setPosition(rx, ry).setDepth(ry);
-    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(this.body.frame.name);
-    this.shadow.setPosition(rx, ry - 1);
-    this.castShadow.setPosition(rx, ry - 1).setFrame(this.body.frame.name).setAlpha(SUN_SHADOW_ALPHA * this.daylight);
+    this.body.setPosition(rx, ry).setDepth(ry).setAlpha(this.alpha);
+    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(this.body.frame.name).setAlpha(this.alpha);
+    this.shadow.setPosition(rx, ry - 1).setAlpha(this.alpha);
+    this.castShadow.setPosition(rx, ry - 1).setFrame(this.body.frame.name).setAlpha(SUN_SHADOW_ALPHA * this.daylight * this.alpha);
     const t = this.tip();
     const flicker = 0.92 + Math.random() * 0.08;
     this.staffLight.setPosition(t.x, t.y);
     this.staffLight.intensity = (0.55 + t.glow * 0.9) * flicker * (this.busy ? 1.35 : 1) * (1 - this.daylight * 0.45);
     this.staffLight.radius = this.busy ? 80 : 58;
-    this.halo.setPosition(t.x, t.y).setDepth(ry + 0.2).setAlpha((0.35 + t.glow * 0.4) * (1 - this.daylight * 0.5)).setScale(this.busy ? 0.75 : 0.5);
+    this.halo.setPosition(t.x, t.y).setDepth(ry + 0.2).setAlpha((0.35 + t.glow * 0.4) * (1 - this.daylight * 0.5) * this.alpha).setScale(this.busy ? 0.75 : 0.5);
   }
 }
 

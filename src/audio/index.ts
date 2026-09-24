@@ -170,6 +170,62 @@ class GameSound {
     if (this.live()) this.sfx!.heal(this.ctx!.currentTime, pan);
   }
 
+  notice(pan = 0): void {
+    if (this.live()) this.sfx!.notice(this.ctx!.currentTime, pan);
+  }
+
+  gulp(pan = 0): void {
+    if (this.live()) this.sfx!.gulp(this.ctx!.currentTime, pan);
+  }
+
+  spit(pan = 0): void {
+    if (this.live()) this.sfx!.spit(this.ctx!.currentTime, pan);
+  }
+
+  hop(pan = 0): void {
+    if (this.live()) this.sfx!.hop(this.ctx!.currentTime, pan);
+  }
+
+  splash(pan = 0): void {
+    if (this.live()) this.sfx!.splash(this.ctx!.currentTime, pan);
+  }
+
+  chitter(pan = 0): void {
+    if (this.live()) this.sfx!.chitter(this.ctx!.currentTime, pan);
+  }
+
+  buzz(pan = 0): void {
+    if (this.live()) this.sfx!.buzz(this.ctx!.currentTime, pan);
+  }
+
+  thud(pan = 0, hard = false): void {
+    if (this.live()) this.sfx!.thud(this.ctx!.currentTime, pan, hard);
+  }
+
+  swell(pan = 0): void {
+    if (this.live()) this.sfx!.swell(this.ctx!.currentTime, pan);
+  }
+
+  puff(pan = 0): void {
+    if (this.live()) this.sfx!.puff(this.ctx!.currentTime, pan);
+  }
+
+  monsterDie(pan = 0, mass = 1): void {
+    if (this.live()) this.sfx!.monsterDie(this.ctx!.currentTime, pan, mass);
+  }
+
+  hurt(): void {
+    if (this.live()) this.sfx!.hurt(this.ctx!.currentTime);
+  }
+
+  fall(): void {
+    if (this.live()) this.sfx!.fall(this.ctx!.currentTime);
+  }
+
+  revive(): void {
+    if (this.live()) this.sfx!.revive(this.ctx!.currentTime);
+  }
+
   saberSwing(step: number, pan = 0): void {
     if (this.live()) this.sfx!.saberSwing(this.ctx!.currentTime, pan, step);
   }

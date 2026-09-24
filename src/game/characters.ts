@@ -12,6 +12,7 @@ import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { wear, type SkinDef } from './skins';
+import type { Vitals } from './combat';
 
 /** What the world needs from the player's character each frame. */
 export interface Hero {
@@ -19,6 +20,12 @@ export interface Hero {
   y: number;
   /** 0 = night, 1 = day. */
   daylight: number;
+  /** Health (and any barrier). The world deals damage and draws the bar over the head; the hero may heal itself. */
+  readonly vitals: Vitals;
+  /** The body sprite, tinted red for a moment when struck. */
+  readonly sprite: Phaser.GameObjects.Sprite;
+  /** 0..1: the world fades the whole figure through this (falling, rising); the hero applies it to its sprites each frame. */
+  alpha: number;
   /** `attack` and `special` are the two ability buttons (held = true). */
   update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle): void;
 }
