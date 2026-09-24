@@ -9,13 +9,15 @@ export interface Settings {
   music: number;
   sfx: number;
   showFps: boolean;
+  /** With the FPS counter: a breakdown of where each frame's time goes. */
+  profiler: boolean;
   /** Fast renders at a lower resolution (see display.ts) with fewer particles. */
   quality: 'fast' | 'full';
 }
 
 // Phones and tablets start on Fast; they have dense screens and small GPUs.
 const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true, quality: touch ? 'fast' : 'full' };
+const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true, profiler: false, quality: touch ? 'fast' : 'full' };
 
 type Listener = (s: Settings) => void;
 
