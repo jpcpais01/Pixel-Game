@@ -439,6 +439,148 @@ export class Sfx {
     this.bell(out, t + 0.07, [1175, 1319, 1480][i], 0.03, 0.6);
   }
 
+  /** A saber's hum rising and falling as the blade sweeps past: two detuned buzzes under a whoosh. */
+  saberSwing(t: number, pan: number, step: number): void {
+    const ctx = this.m.ctx;
+    const twirl = step >= 3;
+    const dur = twirl ? 0.34 : 0.2;
+    const out = this.out(pan, twirl ? 0.8 : 0.7, 0.3);
+    const hum = gain(ctx, 0, out);
+    hit(hum.gain, t, 0.22, 0.03, dur);
+    const lp = filter(ctx, 'lowpass', 900, 2.5, hum);
+    sweep(lp.frequency, t, 500, twirl ? 1800 : 1400, dur * 0.4);
+    sweep(lp.frequency, t + dur * 0.4, twirl ? 1800 : 1400, 400, dur * 0.6);
+    const f0 = [92, 104, 86][Math.min(2, step - 1)] * rand(0.97, 1.03);
+    for (const [f, d] of [
+      [f0, -8],
+      [f0 * 1.5, 7],
+    ]) {
+      const o = osc(ctx, 'sawtooth', f, lp);
+      o.detune.value = d;
+      // The Doppler bend of the blade passing close.
+      sweep(o.frequency, t, f, f * 1.45, dur * 0.4);
+      sweep(o.frequency, t + dur * 0.4, f * 1.45, f * 0.8, dur * 0.6);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+    const w = gain(ctx, 0, out);
+    hit(w.gain, t, 0.3, 0.03, dur);
+    const bp = filter(ctx, 'bandpass', 1200, 1.4, w);
+    sweep(bp.frequency, t, 700, 2200, dur * 0.4);
+    sweep(bp.frequency, t + dur * 0.4, 2200, 600, dur * 0.6);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, dur + 0.05);
+  }
+
+  /** The blade burning into a target: a crackling sizzle and a buzzing bite. */
+  saberHit(t: number, pan: number, heavy: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, heavy ? 0.9 : 0.75, 0.3);
+    const z = gain(ctx, 0, out);
+    hit(z.gain, t, 0.45, 0.002, heavy ? 0.28 : 0.18);
+    const hp = filter(ctx, 'highpass', 2500, 0.8, z);
+    const n = this.m.noiseSource();
+    n.connect(hp);
+    this.m.startNoise(n, t, 0.3);
+    const b = gain(ctx, 0, out);
+    hit(b.gain, t, 0.2, 0.002, 0.16);
+    const o = osc(ctx, 'sawtooth', 220, filter(ctx, 'lowpass', 1600, 1, b));
+    sweep(o.frequency, t, 220, 70, 0.15);
+    o.start(t);
+    o.stop(t + 0.2);
+    const th = gain(ctx, 0, out);
+    hit(th.gain, t, heavy ? 0.4 : 0.25, 0.002, 0.12);
+    const lo = osc(ctx, 'sine', 150, th);
+    sweep(lo.frequency, t, 150, 55, 0.12);
+    lo.start(t);
+    lo.stop(t + 0.18);
+  }
+
+  /** The saber lighting: a snap, then a hum swelling up to pitch. */
+  ignite(t: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.55, 0.3);
+    const snap = gain(ctx, 0, out);
+    hit(snap.gain, t, 0.35, 0.001, 0.08);
+    const hp = filter(ctx, 'highpass', 1800, 0.7, snap);
+    const n = this.m.noiseSource();
+    n.connect(hp);
+    this.m.startNoise(n, t, 0.1);
+    const hum = gain(ctx, 0, out);
+    hum.gain.setValueAtTime(0, t);
+    hum.gain.linearRampToValueAtTime(0.16, t + 0.12);
+    hum.gain.setTargetAtTime(0, t + 0.35, 0.18);
+    const lp = filter(ctx, 'lowpass', 700, 2, hum);
+    sweep(lp.frequency, t, 2400, 600, 0.4);
+    for (const [f, d] of [
+      [90, -6],
+      [135, 6],
+    ]) {
+      const o = osc(ctx, 'sawtooth', f * 0.5, lp);
+      o.detune.value = d;
+      sweep(o.frequency, t, f * 0.5, f, 0.2);
+      o.start(t);
+      o.stop(t + 1.2);
+    }
+  }
+
+  /** The Force gathering in the palm: air drawn in, rising. */
+  forceGather(t: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.6, 0.5);
+    const dur = 0.3;
+    const air = gain(ctx, 0, out);
+    air.gain.setValueAtTime(0, t);
+    air.gain.linearRampToValueAtTime(0.35, t + dur);
+    air.gain.linearRampToValueAtTime(0, t + dur + 0.06);
+    const lp = filter(ctx, 'lowpass', 300, 1.5, air);
+    sweep(lp.frequency, t, 250, 1800, dur);
+    const src = this.m.noiseSource(true);
+    src.connect(lp);
+    this.m.startNoise(src, t, dur + 0.1);
+    const lo = gain(ctx, 0, out);
+    lo.gain.setValueAtTime(0, t);
+    lo.gain.linearRampToValueAtTime(0.18, t + dur);
+    lo.gain.linearRampToValueAtTime(0, t + dur + 0.08);
+    const o = osc(ctx, 'sine', 55, lo);
+    sweep(o.frequency, t, 55, 90, dur);
+    o.start(t);
+    o.stop(t + dur + 0.1);
+  }
+
+  /** The push: a deep, rolling whump of air; on the dark side, a crackle of lightning with it. */
+  forcePush(t: number, pan: number, dark: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 1, 0.6);
+    const b = gain(ctx, 0, out);
+    hit(b.gain, t, 0.8, 0.01, 0.5);
+    const lo = osc(ctx, 'sine', 95, b);
+    sweep(lo.frequency, t, 95, 30, 0.45);
+    lo.start(t);
+    lo.stop(t + 0.6);
+    const r = gain(ctx, 0, out);
+    hit(r.gain, t, 0.55, 0.02, 0.5);
+    const lp = filter(ctx, 'lowpass', 2400, 0.9, r);
+    sweep(lp.frequency, t, 2600, 250, 0.5);
+    const src = this.m.noiseSource(true);
+    src.connect(lp);
+    this.m.startNoise(src, t, 0.55);
+    if (dark) {
+      const z = gain(ctx, 0, out);
+      hit(z.gain, t + 0.01, 0.3, 0.004, 0.35);
+      const hp = filter(ctx, 'highpass', 3000, 0.7, z);
+      const trem = osc(ctx, 'square', 37, gain(ctx, 0.25, z.gain));
+      trem.start(t);
+      trem.stop(t + 0.4);
+      const n = this.m.noiseSource();
+      n.connect(hp);
+      this.m.startNoise(n, t, 0.4);
+    } else {
+      this.sparkle(out, t + 0.05, 3, 0.05);
+    }
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {

@@ -170,6 +170,26 @@ class GameSound {
     if (this.live()) this.sfx!.heal(this.ctx!.currentTime, pan);
   }
 
+  saberSwing(step: number, pan = 0): void {
+    if (this.live()) this.sfx!.saberSwing(this.ctx!.currentTime, pan, step);
+  }
+
+  saberHit(pan = 0, heavy = false): void {
+    if (this.live()) this.sfx!.saberHit(this.ctx!.currentTime, pan, heavy);
+  }
+
+  ignite(): void {
+    if (this.live()) this.sfx!.ignite(this.ctx!.currentTime);
+  }
+
+  forceGather(): void {
+    if (this.live()) this.sfx!.forceGather(this.ctx!.currentTime);
+  }
+
+  forcePush(pan = 0, dark = false): void {
+    if (this.live()) this.sfx!.forcePush(this.ctx!.currentTime, pan, dark);
+  }
+
   step(): void {
     if (this.live()) this.sfx!.step(this.ctx!.currentTime);
   }
