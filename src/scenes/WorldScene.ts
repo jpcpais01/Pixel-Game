@@ -7,7 +7,7 @@ import type { SpellStyle } from '../game/spells';
 import { daynight } from '../game/daynight';
 import { settings } from '../game/settings';
 import { sky } from '../game/LitPipeline';
-import { pixelGrid } from '../game/display';
+import { pixelGrid, snap } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { characterById, type Hero } from '../game/characters';
@@ -342,7 +342,7 @@ export class WorldScene extends Phaser.Scene {
     const lost = h.vitals.damage(harm.damage);
     this.grace = HURT_GRACE;
     this.rising = false;
-    this.popNumber(snap(h.x), snap(h.y) - 38, `-${Math.round(harm.damage)}`, lost > 0 ? 0xff6a5a : 0xffd35c);
+    this.popNumber(snap(h.x), snap(h.y) - 38, `-${Math.round(harm.damage)}`, lost > 0 ? 0xff8a78 : 0xffd35c);
     h.sprite.setTint(0xff8070);
     this.hurtTint = 140;
     const dx = h.x - harm.fromX;

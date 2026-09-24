@@ -6,11 +6,13 @@ import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
+import { Vitals } from './combat';
 import { HitSpark, SlashArc, type Effect, type Scheme } from './Slash';
 import { ForceWave } from './Force';
 import type { Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 
+export const MAX_HP = 95;
 const SPEED = 64; // world px / second: light on his feet
 /** A swing chains into the next if it starts within this long of the previous one. */
 const COMBO_WINDOW = 1500;
@@ -63,6 +65,9 @@ export class Jedi implements Hero {
   y: number;
   /** 0 = night, 1 = day. */
   daylight = 0;
+  readonly vitals = new Vitals(MAX_HP);
+  /** 0..1, fades the whole figure (see Hero). */
+  alpha = 1;
   private dir: Dir = 'down';
   private world: WorldScene;
   private style: JediStyle;
@@ -87,6 +92,11 @@ export class Jedi implements Hero {
   private dash = { vx: 0, vy: 0, t: 0 };
 
   private fx: Effect[] = [];
+
+  /** The body sprite (see Hero). */
+  get sprite(): Phaser.GameObjects.Sprite {
+    return this.body;
+  }
 
   constructor(world: WorldScene, x: number, y: number, style: JediStyle = JEDI_STYLE) {
     this.world = world;
@@ -198,14 +208,14 @@ export class Jedi implements Hero {
     if (this.swing === 'twirl') {
       // A full turn, starting and ending where he faces.
       this.fx.push(new SlashArc(this.world, cx, cy, deg, deg + 360, 19, saber, depth, 260));
-      this.impact(this.world.melee({ kind: 'circle', x: cx, y: cy, radius: 22 }, true), true);
+      this.impact(this.world.melee({ kind: 'circle', x: cx, y: cy, radius: 22 }, { damage: 14, heavy: true }), true);
       return;
     }
     // Forehand and backhand sweep opposite ways; mirrored frames swap the saber hand.
     const hand = this.dir === 'right' ? -1 : 1;
     const sweep = this.swing === 'slash1' ? hand : -hand;
     this.fx.push(new SlashArc(this.world, cx, cy, deg + sweep * 100, deg - sweep * 100, 17, saber, depth, 170));
-    this.impact(this.world.melee({ kind: 'arc', x: cx, y: cy, radius: 22, angle: (deg * Math.PI) / 180, spread: (115 * Math.PI) / 180 }, false), false);
+    this.impact(this.world.melee({ kind: 'arc', x: cx, y: cy, radius: 22, angle: (deg * Math.PI) / 180, spread: (115 * Math.PI) / 180 }, { damage: 9 }), false);
   }
 
   private impact(hits: { x: number; y: number }[], heavy: boolean): void {
@@ -232,7 +242,7 @@ export class Jedi implements Hero {
     const x = snap(this.x) + u.x * 6;
     const y = snap(this.y) - CHEST_Y + 1 + u.y * 4;
     this.fx.push(new ForceWave(this.world, x, y, u.x, u.y, PUSH_REACH, this.style.force, snap(this.y), this.style.dark));
-    const hits = this.world.melee({ kind: 'arc', x, y, radius: PUSH_REACH, angle: Math.atan2(u.y, u.x), spread: PUSH_SPREAD }, true);
+    const hits = this.world.melee({ kind: 'arc', x, y, radius: PUSH_REACH, angle: Math.atan2(u.y, u.x), spread: PUSH_SPREAD }, { damage: 10, heavy: true, knock: 260, fromX: x, fromY: y });
     for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, this.style.force, h.y + 13, true));
     sound.forcePush(this.world.pan(x), this.style.dark);
     this.world.cameras.main.shake(180, 0.0006);
@@ -259,10 +269,10 @@ export class Jedi implements Hero {
     const rx = snap(this.x);
     const ry = snap(this.y);
     const frame = this.body.frame.name;
-    this.body.setPosition(rx, ry).setDepth(ry);
-    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(frame);
-    this.shadow.setPosition(rx, ry - 1);
-    this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight);
+    this.body.setPosition(rx, ry).setDepth(ry).setAlpha(this.alpha);
+    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(frame).setAlpha(this.alpha);
+    this.shadow.setPosition(rx, ry - 1).setAlpha(this.alpha);
+    this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * this.alpha);
     // The blade lights the ground around its middle, brightest at night.
     const m = jediMeta.get(frame);
     const bx = m ? (m.tipX + m.handX) / 2 - JEDI_ORIGIN_X : 0;
