@@ -20,6 +20,8 @@ sound.init();
 settings.watch((s) => sound.setVolumes(s.music, s.sfx));
 setFastRender(settings.values.quality === 'fast');
 
+const initial = viewSize();
+
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
   parent: 'app',
@@ -29,7 +31,7 @@ const game = new Phaser.Game({
   // Full device resolution, displayed at CSS size (see display.ts).
   scale: {
     mode: Phaser.Scale.NONE,
-    ...viewSize(),
+    ...initial,
     zoom: 1 / DPR,
   },
   render: { maxLights: 16 },
@@ -41,10 +43,12 @@ const game = new Phaser.Game({
 
 // Fit the canvas to the window once per frame at most, and only when the
 // size or resolution really changed: every resize makes each scene lay itself
-// out again and the world recreate its ground render target. Resuming the
-// app can report an interim size (bars still animating) and then settle
-// without another window resize, so the page's own size is also watched.
-let fitted = '';
+// out again and the world recreate its ground render target. A phone can
+// report an interim size at launch or on resume (bars still animating, the
+// web view still settling) and then settle without another window resize, so
+// the game element's own size, the pixel ratio and a few moments after launch
+// are all checked too.
+let fitted = `${initial.width}x${initial.height}@${DPR}`;
 let fitQueued = false;
 const fitCanvas = () => {
   fitQueued = false;
@@ -65,11 +69,21 @@ window.visualViewport?.addEventListener('resize', queueFit);
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) queueFit();
 });
+window.addEventListener('orientationchange', queueFit);
+document.addEventListener('fullscreenchange', queueFit);
 new ResizeObserver(queueFit).observe(document.getElementById('app')!);
-fitted = (() => {
-  const { width, height } = viewSize();
-  return `${width}x${height}@${DPR}`;
-})();
+window.addEventListener('load', queueFit);
+for (const ms of [250, 1000, 2500]) setTimeout(queueFit, ms);
+// The pixel ratio changes without a resize when the page is zoomed or moves
+// to another screen; a media query on the current ratio notices.
+const watchRatio = () => {
+  const mq = matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+  mq.addEventListener('change', () => {
+    queueFit();
+    watchRatio();
+  }, { once: true });
+};
+watchRatio();
 
 let quality = settings.values.quality;
 settings.watch((s) => {

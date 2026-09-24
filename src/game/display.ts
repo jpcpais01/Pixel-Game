@@ -4,7 +4,10 @@
 // browser resample the whole canvas, which blurs it. The world's ground is
 // drawn at art resolution and scaled up (see PixelPipeline); everything else
 // draws at canvas resolution.
-const DEVICE_DPR = Math.max(1, Math.min(4, window.devicePixelRatio || 1));
+// The device's pixel ratio is read afresh with every size: a phone's web
+// view can report a different one once the page has settled.
+const deviceDpr = () => Math.max(1, Math.min(4, window.devicePixelRatio || 1));
+let fastRender = false;
 
 /**
  * Canvas pixels per CSS pixel. At full quality that is one canvas pixel per
@@ -12,35 +15,53 @@ const DEVICE_DPR = Math.max(1, Math.min(4, window.devicePixelRatio || 1));
  * device pixels (2x2 on most phones), so the browser still scales the canvas
  * up evenly and the art stays crisp, with a quarter of the pixels to draw.
  */
-export let DPR = DEVICE_DPR;
+export let DPR = deviceDpr();
+/** Device pixels per canvas pixel: 1 at full quality, usually 2 on Fast. */
+let devicePerCanvas = 1;
+
+function updateDpr(): void {
+  const d = deviceDpr();
+  devicePerCanvas = fastRender ? Math.ceil(d / 1.5) : 1;
+  DPR = d / devicePerCanvas;
+}
 
 /** Pick the render resolution; call `viewSize` afterwards for the new canvas size. */
 export function setFastRender(fast: boolean): void {
-  DPR = fast ? DEVICE_DPR / Math.ceil(DEVICE_DPR / 1.5) : DEVICE_DPR;
+  fastRender = fast;
+  updateDpr();
 }
 
 /** The world camera's zoom (device pixels per art pixel), set with the canvas size. */
 export const pixelGrid = { zoom: 2 };
 
 /**
- * Canvas pixels per art pixel in the world, for a canvas of this size: about
- * 250 art pixels on the short side, the same framing on Fast and Full. It is
- * picked in device pixels, rounded to the nearest multiple of the device
- * pixels per canvas pixel, so the world zoom never depends on the graphics
- * setting. Rounding to the nearest (rather than down) keeps it steady when the
- * browser's bars come and go and the height changes a little.
+ * Canvas pixels per art pixel for a canvas of this size, in the world and on
+ * every menu alike: about 250 art pixels on the short side, the same framing
+ * on Fast and Full. It is picked in device pixels, rounded to the nearest
+ * multiple of the device pixels per canvas pixel, so it never depends on the
+ * graphics setting. Rounding to the nearest (rather than down) keeps it steady
+ * when the browser's bars come and go and the height changes a little.
  */
-export const worldZoom = (width: number, height: number): number => {
-  const k = Math.round(DEVICE_DPR / DPR);
-  const device = (Math.min(width, height) * DEVICE_DPR) / DPR;
-  return Math.max(1, Math.round(device / 250 / k), Math.ceil(2 / k));
+export const artZoom = (width: number, height: number): number => {
+  const k = devicePerCanvas;
+  const device = Math.min(width, height) * k;
+  return Math.max(Math.round(device / 250 / k), Math.ceil(2 / k));
 };
 
-/** The canvas size in canvas pixels. Also sets the world zoom for that size. */
+/**
+ * The canvas size in canvas pixels: the game element's own size, which is
+ * what the canvas fills (the page may be inset by safe areas). Also updates
+ * the pixel ratio and sets the world zoom for that size.
+ */
 export const viewSize = () => {
-  const width = Math.round(window.innerWidth * DPR);
-  const height = Math.round(window.innerHeight * DPR);
-  pixelGrid.zoom = worldZoom(width, height);
+  updateDpr();
+  const app = document.getElementById('app');
+  const rect = app?.getBoundingClientRect();
+  const cssW = rect && rect.width > 0 ? rect.width : window.innerWidth;
+  const cssH = rect && rect.height > 0 ? rect.height : window.innerHeight;
+  const width = Math.round(cssW * DPR);
+  const height = Math.round(cssH * DPR);
+  pixelGrid.zoom = artZoom(width, height);
   return { width, height };
 };
 
@@ -51,5 +72,5 @@ export const viewSize = () => {
  */
 export const snap = (v: number): number => Math.round(v * pixelGrid.zoom) / pixelGrid.zoom;
 
-/** Device pixels per art pixel on the menus: about 180 art pixels on the short side. */
-export const menuZoom = (width: number, height: number): number => Math.max(2, Math.floor(Math.min(width, height) / 180));
+/** Canvas pixels per art pixel on the menus: the same as the world's. */
+export const menuZoom = artZoom;
