@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { WorldScene } from './scenes/WorldScene';
 import { UIScene } from './scenes/UIScene';
+import { LitPipeline } from './game/LitPipeline';
 
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
@@ -15,6 +16,7 @@ const game = new Phaser.Game({
     height: window.innerHeight,
   },
   render: { maxLights: 16 },
+  pipeline: { Lit: LitPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
   input: { activePointers: 3 },
   scene: [BootScene, WorldScene, UIScene],
 });

@@ -4,6 +4,19 @@ A mobile-first, top-down pixel-art PvE game: walk with the joystick on the left,
 
 ![Gameplay](docs/gameplay.gif)
 
+## Day and night
+
+The sun and moon toggle in the top-left corner (or the N key) fades the scene between two moods:
+
+- **Day**: a warm sun from the upper left, blue sky light on upward-facing surfaces, a meadow with wildflowers, drifting cloud shadows, shafts of sunlight, floating pollen, and cast shadows under the wizard and props.
+- **Night**: cool moonlight from the upper right, torches and crystals doing most of the lighting, the rune circle glowing, and fireflies.
+
+| Day | Night |
+| --- | --- |
+| ![](docs/day.png) | ![](docs/night.png) |
+
+The lighting runs through a custom `Lit` pipeline (`src/game/LitPipeline.ts`). It extends Phaser's Light2D with a directional sun and a sky/bounce ambient term, because Light2D alone only has point lights.
+
 ## The wizard
 
 All art is generated in code. There are no image files in the game. The wizard fits in a 24x32 frame and has:

@@ -5,8 +5,8 @@
 import Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, type FrameMeta } from './wizard';
-import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, glowCanvas, shadowCanvas } from './effects';
-import { buildGround, brazierFrame, crystalCluster, rock, dummyFrame } from './env';
+import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon } from './effects';
+import { buildGround, NIGHT_GROUND, DAY_GROUND, brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 
 function toCanvas(w: number, h: number, px: Uint8ClampedArray): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -20,6 +20,8 @@ interface Packed {
   diffuse: HTMLCanvasElement;
   normal: HTMLCanvasElement;
   emissive: HTMLCanvasElement;
+  /** Solid silhouette, used for sun shadows. */
+  silhouette: HTMLCanvasElement;
   rects: { name: string; x: number; y: number }[];
 }
 
@@ -42,7 +44,15 @@ function pack(frames: { name: string; r: RenderedFrame }[], fw: number, fh: numb
       }
     }
   });
+  const sil = new Uint8ClampedArray(W * H * 4);
+  for (let i = 0; i < W * H; i++) {
+    sil[i * 4] = 6;
+    sil[i * 4 + 1] = 8;
+    sil[i * 4 + 2] = 22;
+    sil[i * 4 + 3] = layers.diffuse[i * 4 + 3];
+  }
   return {
+    silhouette: toCanvas(W, H, sil),
     diffuse: toCanvas(W, H, layers.diffuse),
     normal: toCanvas(W, H, layers.normal),
     emissive: toCanvas(W, H, layers.emissive),
@@ -54,9 +64,11 @@ function register(scene: Phaser.Scene, key: string, p: Packed, fw: number, fh: n
   const tex = scene.textures.addCanvas(key, p.diffuse)!;
   tex.setDataSource(p.normal);
   const etex = withEmissive ? scene.textures.addCanvas(`${key}_e`, p.emissive)! : null;
+  const stex = scene.textures.addCanvas(`${key}_s`, p.silhouette)!;
   for (const r of p.rects) {
     tex.add(r.name, 0, r.x, r.y, fw, fh);
     etex?.add(r.name, 0, r.x, r.y, fw, fh);
+    stex.add(r.name, 0, r.x, r.y, fw, fh);
   }
 }
 
@@ -93,10 +105,19 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
   scene.textures.addCanvas('spark', toCanvas(2, 2, spark));
 
   // Environment.
-  const g = buildGround(worldW, worldH);
+  const g = buildGround(worldW, worldH, NIGHT_GROUND);
   const gt = scene.textures.addCanvas('ground', toCanvas(g.w, g.h, g.diffuse))!;
   gt.setDataSource(toCanvas(g.w, g.h, g.normal));
   scene.textures.addCanvas('ground_e', toCanvas(g.w, g.h, g.emissive));
+  const gd = buildGround(worldW, worldH, DAY_GROUND);
+  const gdt = scene.textures.addCanvas('ground_day', toCanvas(gd.w, gd.h, gd.diffuse))!;
+  gdt.setDataSource(toCanvas(gd.w, gd.h, gd.normal));
+
+  // Sky.
+  scene.textures.addCanvas('clouds', toCanvas(256, 256, cloudShadowCanvas(256)));
+  scene.textures.addCanvas('shafts', toCanvas(256, 256, sunShaftCanvas(256, 256)));
+  scene.textures.addCanvas('icon_sun', toCanvas(12, 12, skyIcon('sun')));
+  scene.textures.addCanvas('icon_moon', toCanvas(12, 12, skyIcon('moon')));
 
   register(scene, 'brazier', pack(frameList([0, 1, 2, 3].map(brazierFrame), 'f'), 16, 26), 16, 26);
   scene.anims.create({ key: 'brazier_burn', frames: scene.anims.generateFrameNames('brazier_e', { prefix: 'f', start: 0, end: 3 }), frameRate: 9, repeat: -1 });

@@ -108,3 +108,111 @@ export function shadowCanvas(w = 16, h = 6): Uint8ClampedArray {
   }
   return px;
 }
+
+// ---------------------------------------------------------------------------
+// Sky: cloud shadows, sun shafts, motes and the day/night icons.
+
+/** Tileable value noise: lattice wraps every `period` cells. */
+function tileNoise(x: number, y: number, cell: number, period: number, seed: number): number {
+  const fx = x / cell;
+  const fy = y / cell;
+  const x0 = Math.floor(fx);
+  const y0 = Math.floor(fy);
+  const tx = fx - x0;
+  const ty = fy - y0;
+  const sx = tx * tx * (3 - 2 * tx);
+  const sy = ty * ty * (3 - 2 * ty);
+  const h = (a: number, b: number) => hash(((a % period) + period) % period, ((b % period) + period) % period, seed);
+  const a = h(x0, y0);
+  const b = h(x0 + 1, y0);
+  const c = h(x0, y0 + 1);
+  const d = h(x0 + 1, y0 + 1);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+/** Soft, banded cloud shadows that tile seamlessly (size must divide by 64). */
+export function cloudShadowCanvas(size = 256): Uint8ClampedArray {
+  const px = new Uint8ClampedArray(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const n =
+        tileNoise(x, y, 64, size / 64, 1) * 0.6 + tileNoise(x, y, 32, size / 32, 2) * 0.28 + tileNoise(x, y, 16, size / 16, 3) * 0.12;
+      const a = n > 0.66 ? 0.26 : n > 0.6 ? 0.17 : n > 0.56 ? 0.08 : 0;
+      const i = (y * size + x) * 4;
+      px[i] = 18;
+      px[i + 1] = 26;
+      px[i + 2] = 58;
+      px[i + 3] = Math.round(a * 255);
+    }
+  }
+  return px;
+}
+
+/** Diagonal shafts of sunlight (drawn additively, very faint). */
+export function sunShaftCanvas(w = 256, h = 256): Uint8ClampedArray {
+  const px = new Uint8ClampedArray(w * h * 4);
+  const shafts = [
+    { at: 40, width: 18, a: 0.5 },
+    { at: 92, width: 9, a: 0.35 },
+    { at: 150, width: 26, a: 0.45 },
+    { at: 205, width: 12, a: 0.3 },
+  ];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      // Rays run from the top-left toward the bottom-right.
+      const u = x - y * 0.55;
+      let a = 0;
+      for (const s of shafts) {
+        const d = Math.abs(u - s.at) / s.width;
+        if (d < 1) a = Math.max(a, (d < 0.5 ? 1 : 0.55) * s.a);
+      }
+      a *= Math.max(0, 1 - y / h) ** 0.7; // fade toward the bottom
+      const i = (y * w + x) * 4;
+      px[i] = Math.round(255 * a);
+      px[i + 1] = Math.round(236 * a);
+      px[i + 2] = Math.round(190 * a);
+      px[i + 3] = 255;
+    }
+  }
+  return px;
+}
+
+/** 12x12 pixel sun and moon icons for the time-of-day toggle. */
+export function skyIcon(kind: 'sun' | 'moon'): Uint8ClampedArray {
+  const S = 12;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: string) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const n = parseInt(c.slice(1), 16);
+    const i = (y * S + x) * 4;
+    px[i] = n >> 16;
+    px[i + 1] = (n >> 8) & 255;
+    px[i + 2] = n & 255;
+    px[i + 3] = 255;
+  };
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - 6;
+      const dy = y + 0.5 - 6;
+      const d = Math.hypot(dx, dy);
+      if (kind === 'sun') {
+        if (d <= 2.6) put(x, y, dx + dy < -1.5 ? '#fff6c8' : '#ffd24a');
+        else if (d <= 3.4) put(x, y, '#f29a2e');
+      } else {
+        const cut = Math.hypot(dx - 1.8, dy + 1.4);
+        if (d <= 4.4 && cut > 3.4) put(x, y, dx < -2 && dy < 1 ? '#f2f0ff' : '#c9c8f0');
+      }
+    }
+  }
+  if (kind === 'sun') {
+    for (const [x, y] of [
+      [6, 0], [5, 0], [6, 11], [5, 11], [0, 5], [0, 6], [11, 5], [11, 6],
+      [2, 2], [9, 2], [2, 9], [9, 9],
+    ]) put(x, y, '#ffc23a');
+  } else {
+    put(9, 2, '#ffffff');
+    put(10, 5, '#b8c0ff');
+    put(8, 9, '#dfe4ff');
+  }
+  return px;
+}
