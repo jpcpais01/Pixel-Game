@@ -432,3 +432,69 @@ export function sanctuaryIcon(): Uint8ClampedArray {
   for (const [x, y] of [[3, 2], [12, 3], [5, 9], [11, 8]]) put(x, y, cols[3]);
   return px;
 }
+
+/** Brightest-first colours for a Jedi icon: a white core, then the blade or Force colour. */
+export type IconColors = [RGB, RGB, RGB, RGB];
+
+/** 16x16 saber for the Jedi's attack button: a chrome hilt and a glowing blade, drawn additively. */
+export function saberIcon(cols: IconColors): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: RGB, a = 1) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    px[i] = Math.min(255, px[i] + c[0] * a);
+    px[i + 1] = Math.min(255, px[i + 1] + c[1] * a);
+    px[i + 2] = Math.min(255, px[i + 2] + c[2] * a);
+    px[i + 3] = 255;
+  };
+  // Blade from the hilt at the lower left up to the upper right: a white core, coloured edges, a soft halo.
+  for (let i = 0; i < 10; i++) {
+    const x = 5 + i;
+    const y = 10 - i;
+    put(x, y, cols[0]);
+    put(x + 1, y, cols[1], 0.9);
+    put(x, y - 1, cols[1], 0.9);
+    put(x + 1, y + 1, cols[3], 0.35);
+    put(x - 1, y - 1, cols[3], 0.35);
+  }
+  // Hilt: bright chrome caps round a darker grip.
+  for (const [x, y, k] of [[4, 11, 0.9], [3, 12, 0.45], [2, 13, 0.45], [1, 14, 0.8]] as const) put(x, y, [200, 208, 224], k);
+  put(4, 10, [200, 208, 224], 0.5);
+  put(5, 11, [200, 208, 224], 0.5);
+  return px;
+}
+
+/** 16x16 icon for the Force push button: an open palm of light and waves rolling off it, drawn additively. */
+export function forceIcon(cols: IconColors): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: RGB) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    if (px[i] + px[i + 1] + px[i + 2] >= c[0] + c[1] + c[2]) return;
+    px[i] = c[0];
+    px[i + 1] = c[1];
+    px[i + 2] = c[2];
+    px[i + 3] = 255;
+  };
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - 3;
+      const dy = y + 0.5 - 8;
+      const r = Math.hypot(dx, dy);
+      const a = Math.abs(Math.atan2(dy, dx));
+      // Three arcs, widening and fading as they roll out to the right.
+      [5.5, 8.8, 12].forEach((R, i) => {
+        const spread = 0.75 - i * 0.05;
+        if (a > spread || Math.abs(r - R) > 0.55 + i * 0.1) return;
+        const edge = a > spread - 0.2;
+        put(x, y, cols[Math.min(3, i + (edge ? 1 : 0))]);
+      });
+      if (r < 1.4) put(x, y, cols[0]);
+      else if (r < 2.4) put(x, y, cols[1]);
+      else if (r < 3.1 && hash(x, y, 9) > 0.4) put(x, y, cols[2]);
+    }
+  }
+  return px;
+}
