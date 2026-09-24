@@ -6,4 +6,16 @@ export const controls = {
   moveY: 0,
   /** Attack button held. */
   attack: false,
+  /** Beam button held. */
+  beam: false,
+};
+
+// Beam state written by the wizard, read by the UI to draw the button's charge ring.
+export const beamHud = {
+  /** 0..1 charge gathered. */
+  charge: 0,
+  /** 0..1 of the grace period used up while held at full charge. */
+  over: 0,
+  /** The beam is firing. */
+  firing: false,
 };

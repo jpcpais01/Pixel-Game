@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { controls } from '../game/controls';
 import { Wizard, sunShadow, SUN_SHADOW_ALPHA } from '../game/Wizard';
 import { EnergyBall } from '../game/EnergyBall';
+import { Beam } from '../game/Beam';
 import { daynight } from '../game/daynight';
 import { sky } from '../game/LitPipeline';
 import { pixelGrid } from '../game/display';
@@ -47,6 +48,7 @@ interface Dummy {
 export class WorldScene extends Phaser.Scene {
   private wizard!: Wizard;
   private balls: EnergyBall[] = [];
+  private beams: Beam[] = [];
   private flickers: Flicker[] = [];
   private dummies: Dummy[] = [];
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -131,8 +133,9 @@ export class WorldScene extends Phaser.Scene {
     this.dummy(cx + 64, cy - 8);
     this.dummy(cx - 70, cy + 34);
 
-    this.wizard = new Wizard(this, cx, cy + 20, (x, y, dx, dy) => {
-      this.balls.push(new EnergyBall(this, x, y, dx, dy));
+    this.wizard = new Wizard(this, cx, cy + 20, {
+      cast: (x, y, dx, dy) => this.balls.push(new EnergyBall(this, x, y, dx, dy)),
+      beam: (x, y, dx, dy, power) => this.beams.push(new Beam(this, x, y, dx, dy, power, world, this.wizard.depthAhead(), this.beamHit)),
     });
 
     const cam = this.cameras.main;
@@ -142,7 +145,7 @@ export class WorldScene extends Phaser.Scene {
 
     const kb = this.input.keyboard!;
     kb.on('keydown-N', () => daynight.toggle());
-    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,N') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N') as Record<string, Phaser.Input.Keyboard.Key>;
   }
 
   /**
@@ -216,17 +219,44 @@ export class WorldScene extends Phaser.Scene {
     this.dummies.push({ sprite, x, y, wobble: 0 });
   }
 
+  private hitDummy(d: Dummy): void {
+    d.wobble = 1;
+    d.sprite.setFrame('d1');
+    this.time.delayedCall(90, () => d.sprite.setFrame('d0'));
+  }
+
   private hitTest = (x: number, y: number): boolean => {
     for (const d of this.dummies) {
       if (Math.abs(x - d.x) < 7 && y > d.y - 24 && y < d.y + 2) {
-        d.wobble = 1;
-        d.sprite.setFrame('d1');
-        this.time.delayedCall(90, () => d.sprite.setFrame('d0'));
+        this.hitDummy(d);
         this.cameras.main.shake(70, 0.0035);
         return true;
       }
     }
     return false;
+  };
+
+  /** Everything within `radius` of the beam's line takes a hit and throws off a burst of light. */
+  private beamHit = (x0: number, y0: number, x1: number, y1: number, radius: number): void => {
+    const line = new Phaser.Geom.Line(x0, y0, x1, y1);
+    const p = new Phaser.Geom.Point();
+    for (const d of this.dummies) {
+      const body = new Phaser.Geom.Point(d.x, d.y - 11);
+      Phaser.Geom.Line.GetNearestPoint(line, body, p);
+      // Clamp the nearest point onto the segment.
+      const len = Phaser.Geom.Line.Length(line);
+      const t = len > 0 ? Phaser.Math.Clamp(((p.x - x0) * (x1 - x0) + (p.y - y0) * (y1 - y0)) / (len * len), 0, 1) : 0;
+      const nx = x0 + (x1 - x0) * t;
+      const ny = y0 + (y1 - y0) * t;
+      if (Phaser.Math.Distance.Between(nx, ny, body.x, body.y) > radius + 6) continue;
+      this.hitDummy(d);
+      const burst = this.add
+        .sprite(Math.round(nx), Math.round(ny), 'burst_e', 'b0')
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(d.y + 1)
+        .play('burst_pop');
+      burst.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => burst.destroy());
+    }
   };
 
   /** Ease toward the chosen time of day and push it into every layer. */
@@ -263,12 +293,15 @@ export class WorldScene extends Phaser.Scene {
       my = ky / l;
     }
     const attack = controls.attack || k.SPACE.isDown || k.J.isDown;
+    const beam = controls.beam || k.K.isDown || k.SHIFT.isDown;
     this.wizard.daylight = daynight.daylight;
-    this.wizard.update(dt, mx, my, attack, this.bounds);
+    this.wizard.update(dt, mx, my, attack, beam, this.bounds);
     this.followWizard();
 
     for (const b of this.balls) b.update(dt, this.hitTest, this.bounds);
     this.balls = this.balls.filter((b) => !b.dead);
+    for (const b of this.beams) b.update(dt);
+    this.beams = this.beams.filter((b) => !b.dead);
 
     const d = this.updateDaylight(time, dt);
     for (const f of this.flickers) {

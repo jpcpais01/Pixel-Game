@@ -5,7 +5,7 @@
 import Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, type FrameMeta } from './wizard';
-import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon } from './effects';
+import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon } from './effects';
 import { buildGround, NIGHT_GROUND, DAY_GROUND, brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 
 function toCanvas(w: number, h: number, px: Uint8ClampedArray): HTMLCanvasElement {
@@ -118,6 +118,7 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
   scene.textures.addCanvas('shafts', toCanvas(256, 256, sunShaftCanvas(256, 256)));
   scene.textures.addCanvas('icon_sun', toCanvas(12, 12, skyIcon('sun')));
   scene.textures.addCanvas('icon_moon', toCanvas(12, 12, skyIcon('moon')));
+  scene.textures.addCanvas('icon_beam', toCanvas(16, 16, beamIcon()));
 
   register(scene, 'brazier', pack(frameList([0, 1, 2, 3].map(brazierFrame), 'f'), 16, 26), 16, 26);
   scene.anims.create({ key: 'brazier_burn', frames: scene.anims.generateFrameNames('brazier_e', { prefix: 'f', start: 0, end: 3 }), frameRate: 9, repeat: -1 });

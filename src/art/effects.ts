@@ -216,3 +216,52 @@ export function skyIcon(kind: 'sun' | 'moon'): Uint8ClampedArray {
   }
   return px;
 }
+
+/** 16x16 icon for the beam button: a ray of light bursting from a star, drawn additively. */
+export function beamIcon(): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const cols: RGB[] = [MAGIC_CORE, MAGIC_HOT, MAGIC_MID, MAGIC_DEEP, MAGIC_VIOLET];
+  const put = (x: number, y: number, c: RGB) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    // Keep the brighter colour where shapes overlap.
+    if (px[i] + px[i + 1] + px[i + 2] >= c[0] + c[1] + c[2]) return;
+    px[i] = c[0];
+    px[i + 1] = c[1];
+    px[i + 2] = c[2];
+    px[i + 3] = 255;
+  };
+  // The ray runs from the lower left to the upper right, widening as it goes.
+  const ox = 3.5;
+  const oy = 12.5;
+  const ux = Math.SQRT1_2;
+  const uy = -Math.SQRT1_2;
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const rx = x + 0.5 - ox;
+      const ry = y + 0.5 - oy;
+      const along = rx * ux + ry * uy;
+      const side = rx * uy - ry * ux;
+      if (along < 0 || along > 14) continue;
+      const w = 0.6 + along * 0.14;
+      const d = Math.abs(side) / w;
+      if (d <= 0.5) put(x, y, cols[0]);
+      else if (d <= 1.1) put(x, y, cols[1]);
+      else if (d <= 1.7) put(x, y, cols[2]);
+      else if (d <= 2.3 && hash(x, y, 4) > 0.3) put(x, y, cols[3]);
+      // A violet strand winding round the ray.
+      if (Math.abs(side - Math.sin(along * 0.9) * w * 1.9) < 0.5 && d > 1) put(x, y, cols[4]);
+    }
+  }
+  // Star at the source.
+  const sx = Math.floor(ox);
+  const sy = Math.floor(oy);
+  for (let i = -3; i <= 3; i++) {
+    const c = Math.abs(i) <= 1 ? cols[0] : cols[1];
+    put(sx + i, sy, c);
+    put(sx, sy + i, c);
+  }
+  for (const [dx, dy] of [[-1, -1], [1, 1], [-1, 1], [1, -1]]) put(sx + dx, sy + dy, cols[2]);
+  return px;
+}
