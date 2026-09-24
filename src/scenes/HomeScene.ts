@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
-import { titleBitmap } from '../art/font';
+import { LOGO_FRAMES, everlandsLogo, sparkleBitmap } from '../art/logo';
 import { hex } from '../art/pixel';
 import type { Bitmap } from '../art/bitmap';
 import {
@@ -30,6 +30,9 @@ interface Strip {
 }
 
 const SUN_R = 11;
+/** How often the glint sweeps the title, and how long each of its frames shows. */
+const SHIMMER_EVERY = 5200;
+const SHIMMER_FRAME = 45;
 
 /**
  * The home screen: a forest at dusk scrolling past in parallax layers, the
@@ -51,6 +54,11 @@ export class HomeScene extends Phaser.Scene {
   private fireflyZone = new Phaser.Geom.Rectangle(0, 0, 1, 1);
   private menu!: Phaser.GameObjects.Container;
   private title!: Phaser.GameObjects.Image;
+  private titleGlow!: Phaser.GameObjects.Image;
+  private sparkles: Phaser.GameObjects.Image[] = [];
+  private sparkleSpots: { x: number; y: number }[] = [];
+  private titleScale = 1;
+  private titleFrame = 0;
   private start!: PixelButton;
   private arrows: Phaser.GameObjects.BitmapText[] = [];
   private titleY = 0;
@@ -65,7 +73,9 @@ export class HomeScene extends Phaser.Scene {
     this.strips = [];
     this.skyKey = '';
     this.menuOpen = true;
+    this.titleFrame = 0;
     this.buildTextures();
+    this.sparkleSpots = this.registry.get('logoSparkles');
     this.cameras.main.setOrigin(0, 0);
     this.cameras.main.postFX.addVignette(0.5, 0.5, 0.95, 0.3);
 
@@ -111,10 +121,12 @@ export class HomeScene extends Phaser.Scene {
     });
 
     this.menu = this.add.container(0, 0);
-    this.title = this.add.image(0, 0, 'forest_title').setOrigin(0);
+    this.titleGlow = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffb050);
+    this.title = this.add.image(0, 0, 'forest_title', 0).setOrigin(0);
+    this.sparkles = this.sparkleSpots.map(() => this.add.image(0, 0, 'forest_sparkle').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0));
     this.start = new PixelButton(this, 'Start Game', 84, 22, BUTTON_GOLD, 'start', () => this.openSelect());
     this.arrows = [pixelText(this, 0, 0, '>', 0xf4cf6a), pixelText(this, 0, 0, '<', 0xf4cf6a)];
-    this.menu.add([this.title, this.start, ...this.arrows]);
+    this.menu.add([this.titleGlow, this.title, ...this.sparkles, this.start, ...this.arrows]);
 
     const kb = this.input.keyboard;
     kb?.on('keydown-ENTER', () => this.openSelect());
@@ -164,7 +176,11 @@ export class HomeScene extends Phaser.Scene {
     add('forest_mist1', mist(91, hex('#c98aa6')));
     add('forest_rays0', sunRays(3));
     add('forest_rays1', sunRays(9));
-    add('forest_title', titleBitmap('Pixel Battle'));
+    const logo = everlandsLogo();
+    const title = add('forest_title', logo.sheet);
+    for (let i = 0; i < LOGO_FRAMES; i++) title.add(i, 0, 0, i * logo.frameH, logo.frameW, logo.frameH);
+    this.registry.set('logoSparkles', logo.sparkles);
+    add('forest_sparkle', sparkleBitmap());
     const leaves = add('forest_leaf', leafSheet());
     for (let i = 0; i < 3; i++) leaves.add(`l${i}`, 0, i * 3, 0, 3, 2);
     const dot = this.textures.createCanvas('forest_dot', 1, 1)!;
@@ -203,9 +219,11 @@ export class HomeScene extends Phaser.Scene {
     this.leafZone.setTo(0, -4, vw + 40, vh * 0.6);
     this.fireflyZone.setTo(0, vh - 70, vw + 20, 62);
 
-    // Title: 2x on wide views; kept clear of the FPS counter.
-    const ts = vw >= 300 ? 2 : 1;
+    // Title: 2x when it fits with a margin; kept clear of the FPS counter.
+    const ts = vw >= this.title.width * 2 + 16 ? 2 : 1;
+    this.titleScale = ts;
     this.title.setScale(ts);
+    this.titleGlow.setScale((this.title.width * ts * 1.15) / 32, (this.title.height * ts * 1.3) / 32);
     const top = Math.ceil(fpsBottom() / this.z) + 6;
     this.titleY = Math.max(top, Math.round(vh * 0.17));
     this.title.setPosition(Math.round((vw - this.title.displayWidth) / 2), this.titleY);
@@ -224,7 +242,24 @@ export class HomeScene extends Phaser.Scene {
     this.sunGlow.setAlpha(0.3 + 0.05 * Math.sin(time * 0.0011));
 
     if (this.menu.visible) {
-      this.title.y = this.titleY + Math.round(Math.sin(time * 0.0016) * 1.5);
+      const ty = this.titleY + Math.round(Math.sin(time * 0.0016) * 1.5);
+      const tx = this.title.x;
+      const ts = this.titleScale;
+      this.title.y = ty;
+      this.titleGlow.setPosition(tx + this.title.displayWidth / 2, ty + this.title.displayHeight * 0.45);
+      this.titleGlow.setAlpha(0.2 + 0.07 * Math.sin(time * 0.0013));
+      const p = time % SHIMMER_EVERY;
+      const f = p < (LOGO_FRAMES - 1) * SHIMMER_FRAME ? 1 + Math.floor(p / SHIMMER_FRAME) : 0;
+      if (f !== this.titleFrame) {
+        this.titleFrame = f;
+        this.title.setFrame(f);
+      }
+      // Each twinkle flares briefly on its own beat.
+      this.sparkles.forEach((s, i) => {
+        const spot = this.sparkleSpots[i];
+        const k = Math.max(0, Math.sin(time * 0.0021 + i * 2.3) * 2 - 1);
+        s.setPosition(tx + (spot.x + 0.5) * ts, ty + (spot.y + 0.5) * ts).setAlpha(k).setScale(0.5 + 0.5 * k);
+      });
       const nudge = Math.round((Math.sin(time * 0.006) + 1) * 1.2);
       const b = this.start;
       const ay = b.y + Math.round((b.boxH - this.arrows[0].height) / 2);
