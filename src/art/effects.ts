@@ -2,7 +2,7 @@
 // These are pure light, so they only produce emissive pixels.
 
 import { PixelCanvas, type RGB } from './pixel';
-import { EMBER_CORE, EMBER_DEEP, EMBER_HOT, EMBER_MID, MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID, MAGIC_VIOLET } from './palette';
+import { EMBER_CORE, EMBER_DEEP, EMBER_HOT, EMBER_MID, HOLY_CORE, HOLY_HOT, HOLY_MID, HOLY_SKY, MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID, MAGIC_VIOLET } from './palette';
 
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
@@ -339,5 +339,78 @@ export function whirlIcon(): Uint8ClampedArray {
       else if (r <= 2.1) put(x, y, cols[1]);
     }
   }
+  return px;
+}
+
+/** 16x16 mace for the paladin's attack button: a flanged steel head with a spike, gold bands, dark outline. */
+export function maceIcon(): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: string) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const n = parseInt(c.slice(1), 16);
+    const i = (y * S + x) * 4;
+    px[i] = n >> 16;
+    px[i + 1] = (n >> 8) & 255;
+    px[i + 2] = n & 255;
+    px[i + 3] = 255;
+  };
+  // Haft from the lower left up toward the head.
+  for (let i = 0; i < 8; i++) put(2 + i, 13 - i, i < 3 ? '#6a3d26' : i === 5 ? '#f4cf6a' : '#a9774c');
+  put(1, 14, '#d69a3a');
+  // Head: a round steel ball lit from the upper left.
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - 11;
+      const dy = y + 0.5 - 5;
+      const d = Math.hypot(dx, dy);
+      if (d <= 2.9) put(x, y, dx + dy < -2.2 ? '#eef2fb' : dx + dy < 0.6 ? '#bcc6dc' : d > 2.2 ? '#48536f' : '#7f8ba8');
+    }
+  }
+  // Gold flanges across the head and a spike out of the top.
+  for (const [x, y] of [[7, 3], [8, 2], [13, 8], [14, 9], [8, 8], [7, 9], [14, 2], [13, 3]]) put(x, y, '#f4cf6a');
+  put(12, 1, '#fff4bf');
+  put(13, 0, '#fff4bf');
+  put(11, 4, '#ffffff');
+  const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < S && y < S && px[(y * S + x) * 4 + 3] === 255;
+  const out: [number, number][] = [];
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      if (filled(x, y)) continue;
+      if (filled(x + 1, y) || filled(x - 1, y) || filled(x, y + 1) || filled(x, y - 1)) out.push([x, y]);
+    }
+  }
+  for (const [x, y] of out) put(x, y, '#0e1120');
+  return px;
+}
+
+/** 16x16 icon for the consecration button: a ring of holy light on the ground under a rising sun cross, drawn additively. */
+export function sanctuaryIcon(): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const cols: RGB[] = [HOLY_CORE, HOLY_HOT, HOLY_MID, HOLY_SKY];
+  const put = (x: number, y: number, c: RGB) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    if (px[i] + px[i + 1] + px[i + 2] >= c[0] + c[1] + c[2]) return;
+    px[i] = c[0];
+    px[i + 1] = c[1];
+    px[i + 2] = c[2];
+    px[i + 3] = 255;
+  };
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      // The ring, seen at an angle, low in the icon.
+      const q = Math.hypot((x + 0.5 - 8) / 7, (y + 0.5 - 11.5) / 3.6);
+      if (Math.abs(q - 0.9) < 0.1) put(x, y, y > 11 ? cols[1] : cols[2]);
+      else if (Math.abs(q - 0.72) < 0.08 && hash(x, y, 5) > 0.45) put(x, y, cols[3]);
+    }
+  }
+  // The cross rising from its centre, with a bright heart.
+  for (let y = 2; y <= 12; y++) put(8, y, y < 5 || y > 9 ? cols[1] : cols[0]);
+  for (let y = 3; y <= 10; y++) put(7, y, cols[2]);
+  for (let x = 4; x <= 11; x++) put(x, 5, x > 5 && x < 10 ? cols[0] : cols[1]);
+  for (let x = 5; x <= 10; x++) put(x, 6, cols[2]);
+  for (const [x, y] of [[3, 2], [12, 3], [5, 9], [11, 8]]) put(x, y, cols[3]);
   return px;
 }

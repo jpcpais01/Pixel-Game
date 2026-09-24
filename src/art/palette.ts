@@ -120,3 +120,49 @@ export const EMBER_CORE = hex('#fff8e0');
 export const EMBER_HOT = hex('#ffd66b');
 export const EMBER_MID = hex('#ff9a2e');
 export const EMBER_DEEP = hex('#d9432b');
+
+// ---------------------------------------------------------------------------
+// The paladin: bright white-silver plate, a royal azure cape and shield, an
+// ivory tabard, gold trim and holy light.
+
+const PLATE_INK = hex('#0e1120');
+
+export const PLATE: Material = {
+  ramp: ramp('#262b41', '#48536f', '#7f8ba8', '#bcc6dc', '#eef2fb'),
+  outline: PLATE_INK,
+  outlineLit: hex('#262d45'),
+  shine: true,
+};
+
+/** Plate on the legs and arms: the same steel, a step darker so the body reads first. */
+export const PLATE_DARK: Material = {
+  ramp: ramp('#1e2236', '#394260', '#626f8e', '#96a3bf'),
+  outline: PLATE_INK,
+};
+
+export const AZURE: Material = {
+  ramp: ramp('#0d1640', '#182b70', '#2544a0', '#3866c9', '#5a92e6'),
+  outline: hex('#070b22'),
+  outlineLit: hex('#12204f'),
+};
+
+export const IVORY: Material = {
+  ramp: ramp('#5a4b45', '#948273', '#c9baa2', '#ede3cf'),
+  outline: hex('#1f1614'),
+  outlineLit: hex('#3a2d28'),
+};
+
+/** Holy light that glows in the dark: the shield's sun and the mace when blessed. */
+export const HALLOW: Material = {
+  ramp: ramp('#c98a2a', '#f2c65a', '#fff0a8', '#fffdf0'),
+  outline: hex('#3a2410'),
+  emissive: 0.7,
+  shine: true,
+  noAO: true,
+};
+
+// Holy colours (light-only pixels): white-gold light with an azure edge.
+export const HOLY_CORE = hex('#fffdf0');
+export const HOLY_HOT = hex('#fff0a8');
+export const HOLY_MID = hex('#ffd35c');
+export const HOLY_SKY = hex('#8cc8ff');

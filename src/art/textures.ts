@@ -5,7 +5,8 @@
 import Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, type FrameMeta } from './wizard';
-import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon } from './effects';
+import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, maceIcon, sanctuaryIcon } from './effects';
+import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_W, type PaladinMeta } from './paladin';
 import { buildWarriorFrames, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_W, type WarriorMeta } from './warrior';
 import { buildGround, NIGHT_GROUND, DAY_GROUND, brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 
@@ -77,6 +78,7 @@ const frameList = (canvases: PixelCanvas[], prefix: string) => canvases.map((c, 
 
 export const wizardMeta = new Map<string, FrameMeta>();
 export const warriorMeta = new Map<string, WarriorMeta>();
+export const paladinMeta = new Map<string, PaladinMeta>();
 
 export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: number): void {
   // Wizard.
@@ -104,6 +106,21 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
       scene.anims.create({
         key: `warrior_${a.name}_${d}`,
         frames: hf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: 'warrior', frame: f.key })),
+        frameRate: a.fps,
+        repeat: a.loop ? -1 : 0,
+      });
+    }
+  }
+
+  // Paladin.
+  const pf = buildPaladinFrames();
+  pf.forEach((f) => paladinMeta.set(f.key, f.meta));
+  register(scene, 'paladin', pack(pf.map((f) => ({ name: f.key, r: f.canvas.render() })), PALADIN_W, PALADIN_H), PALADIN_W, PALADIN_H);
+  for (const a of PALADIN_ANIMS) {
+    for (const d of DIRS) {
+      scene.anims.create({
+        key: `paladin_${a.name}_${d}`,
+        frames: pf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: 'paladin', frame: f.key })),
         frameRate: a.fps,
         repeat: a.loop ? -1 : 0,
       });
@@ -138,6 +155,8 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
   scene.textures.addCanvas('icon_beam', toCanvas(16, 16, beamIcon()));
   scene.textures.addCanvas('icon_sword', toCanvas(16, 16, swordIcon()));
   scene.textures.addCanvas('icon_whirl', toCanvas(16, 16, whirlIcon()));
+  scene.textures.addCanvas('icon_mace', toCanvas(16, 16, maceIcon()));
+  scene.textures.addCanvas('icon_sanctuary', toCanvas(16, 16, sanctuaryIcon()));
 
   register(scene, 'brazier', pack(frameList([0, 1, 2, 3].map(brazierFrame), 'f'), 16, 26), 16, 26);
   scene.anims.create({ key: 'brazier_burn', frames: scene.anims.generateFrameNames('brazier_e', { prefix: 'f', start: 0, end: 3 }), frameRate: 9, repeat: -1 });
