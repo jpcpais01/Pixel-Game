@@ -11,13 +11,20 @@ export interface Scheme {
   hot: number;
   mid: number;
   deep: number;
+  /** Colour of the real light the whirlwind and shockwave cast (defaults to `hot`). */
+  light?: number;
 }
 
 /** Cold steel for ordinary swings. */
 export const STEEL_FX: Scheme = { core: 0xffffff, hot: 0xe6f2ff, mid: 0x9fc2f7, deep: 0x5a72c8 };
 /** Gold and ember for the finisher and the whirlwind. */
-export const GOLD_FX: Scheme = { core: 0xfff8e0, hot: 0xffd66b, mid: 0xff9a2e, deep: 0xd9432b };
-const EMBER_TINTS = [0xfff8e0, 0xffd66b, 0xff9a2e, 0xd9432b];
+export const GOLD_FX: Scheme = { core: 0xfff8e0, hot: 0xffd66b, mid: 0xff9a2e, deep: 0xd9432b, light: 0xffb050 };
+/** The jade skin's swings: pale, green-tempered steel. */
+export const JADE_STEEL_FX: Scheme = { core: 0xffffff, hot: 0xe2fff2, mid: 0x93ecc6, deep: 0x2f9c86 };
+/** The jade skin's finisher and whirlwind: a gale of jade light. */
+export const JADE_FX: Scheme = { core: 0xf6fff0, hot: 0xb6ffb0, mid: 0x3fd98a, deep: 0x16806a, light: 0x70f0b0 };
+
+const tints = (c: Scheme) => [c.core, c.hot, c.mid, c.deep];
 
 /** Swings are circles on the ground seen at an angle: squash them vertically. */
 const SQUASH = 0.78;
@@ -344,18 +351,18 @@ export class Tempest {
   private t = 0;
   readonly radius = 17;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, private scheme: Scheme = GOLD_FX) {
     this.scene = scene;
     this.layer = new SplitLayer(scene, this.radius + 6);
-    this.glow = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff9a40).setScale(1.5);
-    this.light = scene.lights.addLight(0, 0, 100, 0xffb050, 0);
+    this.glow = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(scheme.mid).setScale(1.5);
+    this.light = scene.lights.addLight(0, 0, 100, scheme.light ?? scheme.hot, 0);
     this.embers = scene.add.particles(0, 0, 'spark', {
       lifespan: { min: 300, max: 600 },
       speed: { min: 8, max: 30 },
       gravityY: -26,
       scale: 0.5,
       alpha: { start: 1, end: 0 },
-      tint: EMBER_TINTS,
+      tint: tints(scheme),
       blendMode: Phaser.BlendModes.ADD,
       emitting: false,
     });
@@ -365,6 +372,7 @@ export class Tempest {
   update(dt: number, x: number, y: number, phi: number, depth: number, daylight: number): void {
     this.t += dt;
     const R = this.radius;
+    const C = this.scheme;
     const frame = Math.floor(this.t / 45);
     const ramp = Math.min(1, this.t / 150); // the ring grows in over the first swing
     const b = this.layer;
@@ -386,16 +394,16 @@ export class Tempest {
         const th = 1 + 3.8 * k;
         if (q <= R + 0.6 && q >= R - th) {
           const radial = (R + 0.6 - q) / (th + 0.6);
-          if (k > 0.86) b.put(dx, dy, radial < 0.75 ? GOLD_FX.core : GOLD_FX.hot);
-          else if (k > 0.58) b.put(dx, dy, radial < 0.4 ? GOLD_FX.hot : GOLD_FX.mid);
+          if (k > 0.86) b.put(dx, dy, radial < 0.75 ? C.core : C.hot);
+          else if (k > 0.58) b.put(dx, dy, radial < 0.4 ? C.hot : C.mid);
           else if (k > 0.3) {
-            if (radial < 0.35) b.put(dx, dy, GOLD_FX.mid, 0.95);
-            else if (n > 0.25) b.put(dx, dy, GOLD_FX.deep, 0.85);
-          } else if (n > 0.5 + (0.3 - k)) b.put(dx, dy, GOLD_FX.deep, 0.7);
+            if (radial < 0.35) b.put(dx, dy, C.mid, 0.95);
+            else if (n > 0.25) b.put(dx, dy, C.deep, 0.85);
+          } else if (n > 0.5 + (0.3 - k)) b.put(dx, dy, C.deep, 0.7);
         } else if (Math.abs(q - R * 0.62) < 0.5 && k > 0.45 && n > 0.55) {
-          b.put(dx, dy, GOLD_FX.deep, 0.55); // a fainter inner eddy
+          b.put(dx, dy, C.deep, 0.55); // a fainter inner eddy
         } else if (q > R + 1 && k > 0.5 && n > 0.93) {
-          b.put(dx, dy, GOLD_FX.hot, 0.9); // flecks thrown off the edge
+          b.put(dx, dy, C.hot, 0.9); // flecks thrown off the edge
         }
       }
     }
@@ -428,13 +436,13 @@ export class Shockwave implements Effect {
   private age = 0;
   private readonly duration = 420;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, private maxR: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, private maxR: number, private scheme: Scheme = GOLD_FX) {
     this.half = Math.ceil(maxR) + 4;
     this.layer = new PixelLayer(scene, this.half * 2, this.half * 2);
     // On the ground: under every standing thing, over the ground's shadows.
     this.layer.image.setPosition(x - this.half, y - this.half).setDepth(3);
 
-    const flash = scene.lights.addLight(x, y, 60, 0xffc070, 3.2);
+    const flash = scene.lights.addLight(x, y, 60, scheme.light ?? scheme.hot, 3.2);
     scene.tweens.add({
       targets: flash,
       intensity: 0,
@@ -450,7 +458,7 @@ export class Shockwave implements Effect {
         gravityY: 70,
         scale: 0.5,
         alpha: { start: 1, end: 0 },
-        tint: EMBER_TINTS,
+        tint: tints(scheme),
         blendMode: Phaser.BlendModes.ADD,
         emitting: false,
       })
@@ -472,9 +480,10 @@ export class Shockwave implements Effect {
 
   private draw(): void {
     const t = this.age / this.duration;
+    const C = this.scheme;
     const r = 6 + (this.maxR - 6) * easeOut(t * 1.1);
     const th = 1 + 3.5 * (1 - t);
-    const col = t < 0.15 ? GOLD_FX.core : t < 0.4 ? GOLD_FX.hot : t < 0.7 ? GOLD_FX.mid : GOLD_FX.deep;
+    const col = t < 0.15 ? C.core : t < 0.4 ? C.hot : t < 0.7 ? C.mid : C.deep;
     const frame = Math.floor(this.age / 40);
     const H = this.half;
     const b = this.layer;
@@ -488,12 +497,12 @@ export class Shockwave implements Effect {
         if (d < -0.6 || d > th) continue;
         const n = hash(px, py, frame);
         if (n < t * 0.6) continue; // breaks up as it spreads
-        b.put(px, py, d < th * 0.4 ? col : GOLD_FX.deep, 1 - t * 0.5);
+        b.put(px, py, d < th * 0.4 ? col : C.deep, 1 - t * 0.5);
       }
     }
     // The blast's heart, briefly.
     if (t < 0.25) {
-      for (let py = -4; py <= 4; py++) for (let px = -5; px <= 5; px++) if (Math.hypot(px, py / SQUASH) < 5 * (1 - t * 3)) b.put(H + px, H + py, GOLD_FX.core, 0.9);
+      for (let py = -4; py <= 4; py++) for (let px = -5; px <= 5; px++) if (Math.hypot(px, py / SQUASH) < 5 * (1 - t * 3)) b.put(H + px, H + py, C.core, 0.9);
     }
     b.flush();
   }

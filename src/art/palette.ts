@@ -233,3 +233,55 @@ export const HOLY_CORE = hex('#fffdf0');
 export const HOLY_HOT = hex('#fff0a8');
 export const HOLY_MID = hex('#ffd35c');
 export const HOLY_SKY = hex('#8cc8ff');
+
+// ---------------------------------------------------------------------------
+// The Jade warrior skin: black lacquered plate laced in brass, a jade
+// surcoat and headband, a gold crescent crest, a katana, and jade wind.
+
+const LACQUER_INK = hex('#040509');
+
+export const LACQUER: Material = {
+  ramp: ramp('#0b0d12', '#171b24', '#252b37', '#3a4351', '#66728a'),
+  outline: LACQUER_INK,
+  outlineLit: hex('#161a24'),
+  shine: true,
+};
+
+/** Arm guards and the skirt of lames: the same lacquer, a step duller. */
+export const LACQUER_DARK: Material = {
+  ramp: ramp('#0a0c10', '#15181f', '#20242d', '#2f3540'),
+  outline: LACQUER_INK,
+};
+
+export const JADE: Material = {
+  ramp: ramp('#072821', '#0e4334', '#166148', '#22845e', '#3aaa7a'),
+  outline: hex('#03120d'),
+  outlineLit: hex('#0a2a20'),
+};
+
+export const BRASS: Material = {
+  ramp: ramp('#33260f', '#634a20', '#977636', '#c9ab5e', '#eee0a0'),
+  outline: hex('#1a1208'),
+  shine: true,
+};
+
+/** Hakama: dark slate trousers. */
+export const HAKAMA: Material = {
+  ramp: ramp('#12181a', '#1f282b', '#303c40', '#445357'),
+  outline: INK,
+};
+
+/** Katana steel, with a faint green temper line. */
+export const KATANA: Material = {
+  ramp: ramp('#3c5550', '#82a39b', '#c5e2d8', '#f2fffa'),
+  outline: hex('#0b1512'),
+  outlineLit: hex('#18291f'),
+  shine: true,
+  noAO: true,
+};
+
+// Jade wind (light-only pixels) for the blade's glow.
+export const WIND_CORE = hex('#f6fff0');
+export const WIND_HOT = hex('#b6ffb0');
+export const WIND_MID = hex('#3fd98a');
+export const WIND_DEEP = hex('#16806a');
