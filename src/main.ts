@@ -8,11 +8,15 @@ import { SoundScene } from './scenes/SoundScene';
 import { HomeScene } from './scenes/HomeScene';
 import { SelectScene } from './scenes/SelectScene';
 import { FpsScene } from './scenes/FpsScene';
+import { ShadeScene } from './scenes/ShadeScene';
+import { PauseScene } from './scenes/PauseScene';
+import { settings } from './game/settings';
 import { sound } from './audio';
 import { setupApp } from './pwa';
 
 setupApp();
 sound.init();
+settings.watch((s) => sound.setVolumes(s.music, s.sfx));
 
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
@@ -30,7 +34,7 @@ const game = new Phaser.Game({
   pipeline: { Lit: LitPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
   input: { activePointers: 3 },
   // Later scenes draw on top.
-  scene: [BootScene, HomeScene, SelectScene, WorldScene, UIScene, SoundScene, FpsScene],
+  scene: [BootScene, HomeScene, SelectScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
 });
 
 window.addEventListener('resize', () => {

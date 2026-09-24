@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CELL_H } from '../art/font';
 import { DPR } from '../game/display';
+import { settings } from '../game/settings';
 import { pixelText } from '../ui/widgets';
 
 /** Device pixels per font pixel for the counter. */
@@ -24,7 +25,11 @@ export class FpsScene extends Phaser.Scene {
     this.text = pixelText(this, 0, 0, '-- FPS', 0xdfe6ff).setAlpha(0.85);
     this.place();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.place, this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.place, this));
+    const off = settings.watch((s) => this.text.setVisible(s.showFps));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      off();
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.place, this);
+    });
   }
 
   update(_time: number, dt: number): void {
