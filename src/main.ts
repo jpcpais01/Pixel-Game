@@ -39,12 +39,37 @@ const game = new Phaser.Game({
   scene: [BootScene, HomeScene, SelectScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
 });
 
+// Fit the canvas to the window once per frame at most, and only when the
+// size or resolution really changed: every resize makes each scene lay itself
+// out again and the world recreate its ground render target. Resuming the
+// app can report an interim size (bars still animating) and then settle
+// without another window resize, so the page's own size is also watched.
+let fitted = '';
+let fitQueued = false;
 const fitCanvas = () => {
+  fitQueued = false;
   const { width, height } = viewSize();
+  const key = `${width}x${height}@${DPR}`;
+  if (key === fitted) return;
+  fitted = key;
   game.scale.setZoom(1 / DPR);
   game.scale.resize(width, height);
 };
-window.addEventListener('resize', fitCanvas);
+const queueFit = () => {
+  if (fitQueued) return;
+  fitQueued = true;
+  requestAnimationFrame(fitCanvas);
+};
+window.addEventListener('resize', queueFit);
+window.visualViewport?.addEventListener('resize', queueFit);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) queueFit();
+});
+new ResizeObserver(queueFit).observe(document.getElementById('app')!);
+fitted = (() => {
+  const { width, height } = viewSize();
+  return `${width}x${height}@${DPR}`;
+})();
 
 let quality = settings.values.quality;
 settings.watch((s) => {

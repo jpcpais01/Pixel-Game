@@ -1,11 +1,9 @@
 // The canvas renders at the device's exact pixel density and is shown at CSS
-// size, so each canvas pixel is one physical pixel and every art pixel maps
-// to a whole number of them. Rounding the ratio (say 2.625 up to 2.75) would
-// make the browser resample the whole canvas, which blurs it. At CSS resolution the browser would stretch the canvas by the
-// device pixel ratio (often 2.625 or 2.75 on phones), leaving art pixels
-// uneven and blurry while things move. The world's ground is drawn at art
-// resolution and scaled up (see PixelPipeline); everything else draws at
-// full resolution.
+// size, so each canvas pixel is a whole number of physical pixels and so is
+// every art pixel. Rounding the ratio (say 2.625 up to 2.75) would make the
+// browser resample the whole canvas, which blurs it. The world's ground is
+// drawn at art resolution and scaled up (see PixelPipeline); everything else
+// draws at canvas resolution.
 const DEVICE_DPR = Math.max(1, Math.min(4, window.devicePixelRatio || 1));
 
 /**
@@ -24,10 +22,21 @@ export function setFastRender(fast: boolean): void {
 /** The world camera's zoom (device pixels per art pixel), set with the canvas size. */
 export const pixelGrid = { zoom: 2 };
 
-/** Device pixels per art pixel in the world: about 190 art pixels on the short side. */
-export const worldZoom = (width: number, height: number): number => Math.max(2, Math.floor(Math.min(width, height) / 190));
+/**
+ * Canvas pixels per art pixel in the world, for a canvas of this size: about
+ * 250 art pixels on the short side, the same framing on Fast and Full. It is
+ * picked in device pixels, rounded to the nearest multiple of the device
+ * pixels per canvas pixel, so the world zoom never depends on the graphics
+ * setting. Rounding to the nearest (rather than down) keeps it steady when the
+ * browser's bars come and go and the height changes a little.
+ */
+export const worldZoom = (width: number, height: number): number => {
+  const k = Math.round(DEVICE_DPR / DPR);
+  const device = (Math.min(width, height) * DEVICE_DPR) / DPR;
+  return Math.max(1, Math.round(device / 250 / k), Math.ceil(2 / k));
+};
 
-/** The canvas size in device pixels. Also sets the world zoom for that size. */
+/** The canvas size in canvas pixels. Also sets the world zoom for that size. */
 export const viewSize = () => {
   const width = Math.round(window.innerWidth * DPR);
   const height = Math.round(window.innerHeight * DPR);
