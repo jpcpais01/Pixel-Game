@@ -295,6 +295,38 @@ export class WorldScene extends Phaser.Scene {
     this.pixels.offsetY = ky - ay * z;
   }
 
+  /**
+   * Layers the profiler's GPU test turns off one at a time: each entry hides
+   * its layer and returns the function that brings it back.
+   */
+  benchLayers(): [string, () => () => void][] {
+    const hide = (o: { visible: boolean; setVisible(v: boolean): unknown }) => () => {
+      const was = o.visible;
+      o.setVisible(false);
+      return () => o.setVisible(was);
+    };
+    const unlit = () => {
+      type Piped = Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Pipeline;
+      const lit = this.children.list.filter((o): o is Piped => (o as Partial<Piped>).pipeline?.name === 'Lit');
+      for (const o of lit) o.resetPipeline();
+      return () => {
+        for (const o of lit) if (o.active) o.setPipeline('Lit');
+      };
+    };
+    const ui = () => {
+      this.scene.setVisible(false, 'ui');
+      return () => this.scene.setVisible(true, 'ui');
+    };
+    return [
+      ['CLOUDS', hide(this.clouds)],
+      ['VIGNETTE', hide(this.vignette)],
+      ['LIGHTING', unlit],
+      ['GROUND', hide(this.groundCam)],
+      ['SPRITES', hide(this.cameras.main)],
+      ['HUD', ui],
+    ];
+  }
+
   private fitCamera(): void {
     const { width, height } = this.scale;
     // Set with the canvas size: whole device pixels per art pixel.
