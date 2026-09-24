@@ -72,6 +72,10 @@ export class WorldScene extends Phaser.Scene {
   private pollen!: Phaser.GameObjects.Particles.ParticleEmitter;
   private fireflies!: Phaser.GameObjects.Particles.ParticleEmitter;
   private pixels!: PixelPipeline;
+  /** Draws the ground at art resolution, under the main camera's sprites. */
+  private groundCam!: Phaser.Cameras.Scene2D.Camera;
+  private vignette!: Phaser.GameObjects.Image;
+  private vignetteKey = '';
 
   constructor() {
     super('world');
@@ -90,14 +94,35 @@ export class WorldScene extends Phaser.Scene {
     // Ambient comes from the Lit pipeline's sky and sun, driven by daynight.
     this.lights.enable().setAmbientColor(0x000000);
 
-    this.add.image(0, 0, 'ground').setOrigin(0).setPipeline('Lit').setDepth(-10);
-    this.groundDay = this.add.image(0, 0, 'ground_day').setOrigin(0).setPipeline('Lit').setDepth(-10);
-    this.runes = this.add.image(0, 0, 'ground_e').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(-9);
+    // The full-screen ground layers are the costly part to light, so a second
+    // camera draws only them, at art resolution, before the main camera draws
+    // everything else over them at full resolution (see PixelPipeline).
+    const cam = this.cameras.main;
+    this.groundCam = this.cameras.add(0, 0, cam.width, cam.height, false, 'ground');
+    const order = this.cameras.cameras;
+    order.splice(order.indexOf(this.groundCam), 1);
+    order.unshift(this.groundCam);
+    this.groundCam.setPostPipeline('Pixel').setRoundPixels(false);
+    this.pixels = this.groundCam.getPostPipeline('Pixel') as PixelPipeline;
+    const groundCam = this.groundCam;
+    const hideFromGround = (obj: Phaser.GameObjects.GameObject) => groundCam.ignore(obj);
+    this.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, hideFromGround);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, hideFromGround));
+    const ground = (obj: Phaser.GameObjects.Image | Phaser.GameObjects.TileSprite) => {
+      obj.cameraFilter &= ~groundCam.id;
+      cam.ignore(obj);
+      return obj;
+    };
+
+    ground(this.add.image(0, 0, 'ground').setOrigin(0).setPipeline('Lit'));
+    this.groundDay = ground(this.add.image(0, 0, 'ground_day').setOrigin(0).setPipeline('Lit')) as Phaser.GameObjects.Image;
+    this.runes = ground(this.add.image(0, 0, 'ground_e').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD)) as Phaser.GameObjects.Image;
 
     // Sky layers above everything in the world: drifting cloud shadows and
     // faint shafts of sunlight.
     this.clouds = this.add.tileSprite(0, 0, WORLD_W, WORLD_H, 'clouds').setOrigin(0).setDepth(10000);
-    this.shafts = this.add.tileSprite(0, 0, WORLD_W, WORLD_H, 'shafts').setOrigin(0).setDepth(10001).setBlendMode(Phaser.BlendModes.ADD);
+    // The shafts are faint enough to light only the ground.
+    this.shafts = ground(this.add.tileSprite(0, 0, WORLD_W, WORLD_H, 'shafts').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD)) as Phaser.GameObjects.TileSprite;
 
     const world = this.worldRect;
     this.pollen = this.add.particles(0, 0, 'spark', {
@@ -152,9 +177,10 @@ export class WorldScene extends Phaser.Scene {
 
     this.hero = characterById(data?.character).spawn(this, cx, cy + 20);
 
-    const cam = this.cameras.main;
-    cam.setPostPipeline('Pixel');
-    this.pixels = cam.getPostPipeline('Pixel') as PixelPipeline;
+    // Screen-fixed; it covers the ground camera's image too, as it draws first.
+    this.vignette = this.add.image(0, 0, '__WHITE').setScrollFactor(0).setDepth(20000);
+    this.vignetteKey = '';
+    this.setVignette(0.32 - Phaser.Math.Easing.Sine.InOut(daynight.daylight) * 0.14);
     cam.fadeIn(500, 7, 8, 13);
     this.fitCamera();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
@@ -209,9 +235,12 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Keep the camera locked on the hero, snapped so whole art pixels land on
-   * whole pixels of the art-resolution render. The hero snaps to the same
-   * grid, so they hold still on screen.
+   * Keep the camera locked on the hero, snapped to device pixels. The
+   * hero snaps to the same grid, so they hold still on screen and stays
+   * crisp, while the world scrolls in smooth sub-art-pixel steps.
+   *
+   * The ground camera can only scroll in whole art pixels, so it takes the
+   * whole part and its image is shifted by the device pixels left over.
    */
   private followHero(): void {
     const cam = this.cameras.main;
@@ -229,22 +258,74 @@ export class WorldScene extends Phaser.Scene {
     const ty = this.hero.y - 12 - halfH;
     const sx = maxX < minX ? (minX + maxX) / 2 : Phaser.Math.Clamp(tx, minX, maxX);
     const sy = maxY < minY ? (minY + maxY) / 2 : Phaser.Math.Clamp(ty, minY, maxY);
-    // In render pixels, x = worldX - scroll + half * (1 - z) / z. Choose scroll
-    // so the constant part is whole, then nudge it a hair so sprites with a
-    // half-pixel origin never sit exactly on a sampling point and round the
-    // same way everywhere.
-    const cx = (halfW * (1 - z)) / z;
-    const cy = (halfH * (1 - z)) / z;
-    cam.scrollX = Math.round(sx - cx) + cx + 1 / 64;
-    cam.scrollY = Math.round(sy - cy) + cy + 1 / 64;
+    // Screen x = (worldX - scroll) * z + half * (1 - z). Choose scroll so the
+    // constant part lands on a whole device pixel: scroll = (k + c) / z.
+    const cx = halfW * (1 - z);
+    const cy = halfH * (1 - z);
+    const kx = Math.round(sx * z - cx);
+    const ky = Math.round(sy * z - cy);
+    cam.scrollX = (kx + cx) / z;
+    cam.scrollY = (ky + cy) / z;
+    const ax = Math.floor(kx / z);
+    const ay = Math.floor(ky / z);
+    this.groundCam.scrollX = ax + cx / z;
+    this.groundCam.scrollY = ay + cy / z;
+    this.pixels.offsetX = kx - ax * z;
+    this.pixels.offsetY = ky - ay * z;
   }
 
   private fitCamera(): void {
-    // Set with the canvas size, which is a whole number of art pixels.
+    const { width, height } = this.scale;
+    // Set with the canvas size: whole device pixels per art pixel.
     const zoom = pixelGrid.zoom;
     this.pixels.zoom = zoom;
-    // We snap to the art grid ourselves; Phaser's rounding works in device pixels.
+    // We snap to device pixels ourselves; Phaser's rounding would snap the
+    // camera to whole art pixels, which makes scrolling steppy.
     this.cameras.main.setZoom(zoom).setRoundPixels(false);
+    this.groundCam.setSize(width, height).setZoom(zoom);
+    this.fitVignette();
+  }
+
+  /** Cover the screen. The zoom pivots on the camera's centre, which is where a scroll-fixed object sits. */
+  private fitVignette(): void {
+    const { width, height } = this.scale;
+    const zoom = pixelGrid.zoom;
+    this.vignette.setPosition(width / 2, height / 2).setDisplaySize(width / zoom, height / zoom);
+  }
+
+  /**
+   * A vignette as a black overlay: the same falloff as Phaser's vignette
+   * effect, without a second full-screen render pass. Painted once for each
+   * strength it passes through (to two decimals) and cached.
+   */
+  private setVignette(strength: number): void {
+    const s = Math.round(strength * 100);
+    const key = `vignette_${s}`;
+    if (key === this.vignetteKey) return;
+    if (!this.textures.exists(key)) {
+      const N = 128;
+      const tex = this.textures.createCanvas(key, N, N)!;
+      const img = tex.context.createImageData(N, N);
+      const radius = 0.92;
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          const d = Math.hypot((x + 0.5) / N - 0.5, (y + 0.5) / N - 0.5);
+          let a = 1;
+          if (d <= radius) {
+            const g = Math.sin((d / radius) * 3.14 * (s / 100));
+            a = g * g * g;
+          }
+          img.data[(y * N + x) * 4 + 3] = Math.round(a * 255);
+        }
+      }
+      tex.context.putImageData(img, 0, 0);
+      tex.refresh();
+      // A smooth gradient, not pixel art.
+      tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
+    this.vignette.setTexture(key);
+    this.vignetteKey = key;
+    this.fitVignette();
   }
 
   private brazier(x: number, y: number): void {
@@ -336,7 +417,7 @@ export class WorldScene extends Phaser.Scene {
     this.clouds.setAlpha(d).setTilePosition(time * 0.004, time * 0.0022);
     this.shafts.setAlpha(d * (0.1 + Math.sin(time * 0.0007) * 0.03));
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
-    this.pixels.vignetteStrength = 0.32 - d * 0.14;
+    this.setVignette(0.32 - d * 0.14);
     this.pollen.emitting = d > 0.5;
     this.fireflies.emitting = d < 0.5;
     sound.setDaylight(d);

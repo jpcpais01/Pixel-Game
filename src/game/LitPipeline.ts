@@ -35,8 +35,10 @@ uniform vec3 uSunDir;
 uniform vec3 uSunColor;
 uniform vec3 uSkyColor;
 uniform vec3 uBounceColor;
-// Device pixels per fragment: above 1 when the camera renders at art resolution.
+// Maps a fragment to device pixels of the light coordinates: above 1 when the
+// camera renders at art resolution (see PixelPipeline).
 uniform float uFragScale;
+uniform float uFragShiftY;
 
 varying vec2 outTexCoord;
 varying float outTexId;
@@ -75,7 +77,7 @@ void main ()
         if (index < uLightCount)
         {
             Light light = uLights[index];
-            vec3 lightDir = vec3((light.position.xy / res) - (gl_FragCoord.xy * uFragScale / res), 0.1);
+            vec3 lightDir = vec3((light.position.xy / res) - ((gl_FragCoord.xy * uFragScale - vec2(0.0, uFragShiftY)) / res), 0.1);
             vec3 lightNormal = normalize(lightDir);
             float distToSurf = length(lightDir) * uCamera.w;
             float diffuseFactor = max(dot(normal, lightNormal), 0.0);
@@ -117,6 +119,8 @@ export class LitPipeline extends Phaser.Renderer.WebGL.Pipelines.LightPipeline {
     this.set3f('uSunColor', ...sky.sunColor);
     this.set3f('uSkyColor', ...sky.sky);
     this.set3f('uBounceColor', ...sky.bounce);
-    this.set1f('uFragScale', PixelPipeline.zoomOf(camera));
+    const frame = PixelPipeline.frameOf(camera);
+    this.set1f('uFragScale', frame.scale);
+    this.set1f('uFragShiftY', frame.shiftY);
   }
 }
