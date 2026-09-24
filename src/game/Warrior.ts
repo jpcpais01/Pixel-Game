@@ -5,7 +5,7 @@ import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
-import { GOLD_FX, HitSpark, STEEL_FX, Shockwave, SlashArc, Tempest, ThrustStreak, type Effect, type Scheme } from './Slash';
+import { GOLD_FX, HitSpark, JADE_FX, JADE_STEEL_FX, STEEL_FX, Shockwave, SlashArc, Tempest, ThrustStreak, type Effect, type Scheme } from './Slash';
 import type { Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 
@@ -25,6 +25,20 @@ const FOOTFALLS = new Set([1, 4]);
 
 type State = 'free' | 'swing' | 'rise' | 'spin' | 'settle';
 
+/** A look for the warrior: its texture key and the colours of its blade's light. */
+export interface WarriorSkin {
+  key: string;
+  /** Forehand and backhand slashes. */
+  swing: Scheme;
+  /** The thrust, the whirlwind and its shockwave. */
+  heavy: Scheme;
+  /** The faint light around him at night. */
+  aura: number;
+}
+
+export const KNIGHT_SKIN: WarriorSkin = { key: 'warrior', swing: STEEL_FX, heavy: GOLD_FX, aura: 0xffd2a0 };
+export const JADE_SKIN: WarriorSkin = { key: 'warrior_jade', swing: JADE_STEEL_FX, heavy: JADE_FX, aura: 0xc8ffe0 };
+
 /**
  * The warrior: a three-hit sword combo on the attack button (slash, backhand,
  * lunging thrust) and a whirlwind of fire on the special button.
@@ -36,6 +50,7 @@ export class Warrior implements Hero {
   daylight = 0;
   private dir: Dir = 'down';
   private world: WorldScene;
+  private skin: WarriorSkin;
   private body: Phaser.GameObjects.Sprite;
   private glowLayer: Phaser.GameObjects.Sprite;
   private shadow: Phaser.GameObjects.Image;
@@ -66,34 +81,36 @@ export class Warrior implements Hero {
 
   private fx: Effect[] = [];
 
-  constructor(world: WorldScene, x: number, y: number) {
+  constructor(world: WorldScene, x: number, y: number, skin: WarriorSkin = KNIGHT_SKIN) {
     this.world = world;
+    this.skin = skin;
+    const key = skin.key;
     this.x = x;
     this.y = y;
     const ox = WARRIOR_ORIGIN_X / WARRIOR_W;
     const oy = WARRIOR_ORIGIN_Y / WARRIOR_H;
     this.shadow = world.add.image(x, y, 'shadow').setDepth(1);
-    this.castShadow = sunShadow(world.add.sprite(x, y, 'warrior_s', 'idle_down_0').setOrigin(ox, oy));
-    this.body = world.add.sprite(x, y, 'warrior', 'idle_down_0').setOrigin(ox, oy).setPipeline('Lit');
-    this.glowLayer = world.add.sprite(x, y, 'warrior_e', 'idle_down_0').setOrigin(ox, oy).setBlendMode(Phaser.BlendModes.ADD);
-    this.aura = world.lights.addLight(x, y, 56, 0xffd2a0, 0);
-    this.body.play('warrior_idle_down');
+    this.castShadow = sunShadow(world.add.sprite(x, y, `${key}_s`, 'idle_down_0').setOrigin(ox, oy));
+    this.body = world.add.sprite(x, y, key, 'idle_down_0').setOrigin(ox, oy).setPipeline('Lit');
+    this.glowLayer = world.add.sprite(x, y, `${key}_e`, 'idle_down_0').setOrigin(ox, oy).setBlendMode(Phaser.BlendModes.ADD);
+    this.aura = world.lights.addLight(x, y, 56, skin.aura, 0);
+    this.body.play(`${key}_idle_down`);
 
     this.body.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (anim: Phaser.Animations.Animation) => {
       const k = anim.key;
-      if (this.state === 'swing' && SWINGS.some((s) => k.startsWith(`warrior_${s}_`))) {
+      if (this.state === 'swing' && SWINGS.some((s) => k.startsWith(`${key}_${s}_`))) {
         this.state = 'free';
         this.cooldown = this.swing === 'thrust' ? 160 : 30;
-        this.body.play(`warrior_idle_${this.dir}`);
-      } else if (this.state === 'rise' && k.startsWith('warrior_rise')) {
+        this.body.play(`${this.skin.key}_idle_${this.dir}`);
+      } else if (this.state === 'rise' && k.startsWith(`${key}_rise_`)) {
         this.startSpin();
-      } else if (this.state === 'settle' && k.startsWith('warrior_settle')) {
+      } else if (this.state === 'settle' && k.startsWith(`${key}_settle_`)) {
         this.state = 'free';
-        this.body.play(`warrior_idle_${this.dir}`);
+        this.body.play(`${this.skin.key}_idle_${this.dir}`);
       }
     });
     this.body.on(Phaser.Animations.Events.ANIMATION_UPDATE, (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
-      if (anim.key.startsWith('warrior_walk') && FOOTFALLS.has(frame.index - 1)) sound.step();
+      if (anim.key.startsWith(`${key}_walk_`) && FOOTFALLS.has(frame.index - 1)) sound.step();
     });
   }
 
@@ -129,7 +146,7 @@ export class Warrior implements Hero {
 
     if (this.state === 'free') {
       if (moving) this.dir = dirOf(mx, my);
-      const key = `warrior_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = `${this.skin.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else if (this.state === 'swing') {
       const f = this.body.anims.currentFrame;
@@ -157,7 +174,7 @@ export class Warrior implements Hero {
     this.struck = false;
     this.state = 'swing';
     this.dir = dirOf(this.lastMove.x, this.lastMove.y);
-    this.body.play(`warrior_${this.swing}_${this.dir}`);
+    this.body.play(`${this.skin.key}_${this.swing}_${this.dir}`);
     sound.swing(this.step, this.world.pan(this.x));
     if (this.swing !== 'thrust') {
       const u = this.facing();
@@ -172,19 +189,19 @@ export class Warrior implements Hero {
     const depth = snap(this.y);
     const u = this.facing();
     if (this.swing === 'thrust') {
-      this.fx.push(new ThrustStreak(this.world, cx, cy, u.x, u.y, 30, GOLD_FX, depth));
+      this.fx.push(new ThrustStreak(this.world, cx, cy, u.x, u.y, 30, this.skin.heavy, depth));
       this.dash = { vx: u.x * 120, vy: u.y * 120, t: 100 };
       const hits = this.world.melee({ kind: 'line', x0: cx, y0: cy, x1: cx + u.x * 34, y1: cy + u.y * 34, radius: 7 }, true);
-      this.impact(hits, GOLD_FX, true);
+      this.impact(hits, this.skin.heavy, true);
       return;
     }
     // Forehand and backhand sweep opposite ways; mirrored frames swap the sword hand.
     const deg = FACING_DEG[this.dir];
     const hand = this.dir === 'right' ? -1 : 1;
     const sweep = this.swing === 'slash1' ? hand : -hand;
-    this.fx.push(new SlashArc(this.world, cx, cy, deg + sweep * 100, deg - sweep * 100, 17, STEEL_FX, depth));
+    this.fx.push(new SlashArc(this.world, cx, cy, deg + sweep * 100, deg - sweep * 100, 17, this.skin.swing, depth));
     const hits = this.world.melee({ kind: 'arc', x: cx, y: cy, radius: 22, angle: (deg * Math.PI) / 180, spread: (115 * Math.PI) / 180 }, false);
-    this.impact(hits, STEEL_FX, false);
+    this.impact(hits, this.skin.swing, false);
   }
 
   private impact(hits: { x: number; y: number }[], scheme: Scheme, heavy: boolean): void {
@@ -199,7 +216,7 @@ export class Warrior implements Hero {
     this.state = 'rise';
     this.step = 0;
     this.dir = dirOf(this.lastMove.x, this.lastMove.y);
-    this.body.play(`warrior_rise_${this.dir}`);
+    this.body.play(`${this.skin.key}_rise_${this.dir}`);
     sound.rise();
   }
 
@@ -210,7 +227,7 @@ export class Warrior implements Hero {
     this.nextTurn = this.phi;
     this.hitTimer = 60;
     this.body.anims.stop();
-    this.tempest = new Tempest(this.world);
+    this.tempest = new Tempest(this.world, this.skin.heavy);
     beamHud.firing = true;
   }
 
@@ -228,7 +245,7 @@ export class Warrior implements Hero {
     if (this.hitTimer <= 0) {
       this.hitTimer += SPIN_HIT_EVERY;
       const hits = this.world.melee({ kind: 'circle', x: snap(this.x), y: snap(this.y) - CHEST_Y, radius: 20 }, false);
-      this.impact(hits, GOLD_FX, false);
+      this.impact(hits, this.skin.heavy, false);
     }
     if (this.spinT >= SPIN_TIME) this.endSpin();
   }
@@ -240,16 +257,16 @@ export class Warrior implements Hero {
     beamHud.firing = false;
     const x = snap(this.x);
     const y = snap(this.y);
-    this.fx.push(new Shockwave(this.world, x, y - 1, 40));
+    this.fx.push(new Shockwave(this.world, x, y - 1, 40, this.skin.heavy));
     const hits = this.world.melee({ kind: 'circle', x, y: y - CHEST_Y, radius: 36 }, true);
-    this.impact(hits, GOLD_FX, true);
+    this.impact(hits, this.skin.heavy, true);
     sound.slam(this.world.pan(x));
     this.world.cameras.main.shake(220, 0.0006);
     const a = (this.phi * Math.PI) / 180;
     this.dir = dirOf(Math.cos(a), Math.sin(a));
     this.state = 'settle';
     this.specialCd = SPECIAL_COOLDOWN;
-    this.body.play(`warrior_settle_${this.dir}`);
+    this.body.play(`${this.skin.key}_settle_${this.dir}`);
   }
 
   private facing(): { x: number; y: number } {

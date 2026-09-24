@@ -5,11 +5,12 @@
 import Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, WIZARD_LOOKS, type FrameMeta } from './wizard';
-import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, maceIcon, sanctuaryIcon, saberIcon, forceIcon, type IconColors } from './effects';
+import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, type IconColors } from './effects';
 import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FRAMES, twirlStart, TWIRL_FPS, type JediMeta } from './jedi';
 import { hex } from './pixel';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_W, type PaladinMeta } from './paladin';
-import { buildWarriorFrames, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_W, type WarriorMeta } from './warrior';
+import { buildWarriorFrames, JADE_LOOK, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, type WarriorMeta } from './warrior';
+import { WIND_DEEP } from './palette';
 import { buildGround, NIGHT_GROUND, DAY_GROUND, brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 
 function toCanvas(w: number, h: number, px: Uint8ClampedArray): HTMLCanvasElement {
@@ -102,18 +103,20 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
     }
   }
 
-  // Warrior. Spin frames have no animation: the whirlwind picks them by angle.
-  const hf = buildWarriorFrames();
-  hf.forEach((f) => warriorMeta.set(f.key, f.meta));
-  register(scene, 'warrior', pack(hf.map((f) => ({ name: f.key, r: f.canvas.render() })), WARRIOR_W, WARRIOR_H), WARRIOR_W, WARRIOR_H);
-  for (const a of WARRIOR_ANIMS) {
-    for (const d of DIRS) {
-      scene.anims.create({
-        key: `warrior_${a.name}_${d}`,
-        frames: hf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: 'warrior', frame: f.key })),
-        frameRate: a.fps,
-        repeat: a.loop ? -1 : 0,
-      });
+  // Warrior, once per look. Spin frames have no animation: the whirlwind picks them by angle.
+  for (const look of WARRIOR_LOOKS) {
+    const hf = buildWarriorFrames(look);
+    if (!warriorMeta.size) hf.forEach((f) => warriorMeta.set(f.key, f.meta));
+    register(scene, look.key, pack(hf.map((f) => ({ name: f.key, r: f.canvas.render() })), WARRIOR_W, WARRIOR_H), WARRIOR_W, WARRIOR_H);
+    for (const a of WARRIOR_ANIMS) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: hf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
     }
   }
 
@@ -189,6 +192,8 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
   scene.textures.addCanvas('icon_beam_void', toCanvas(16, 16, beamIcon(VOID_SPELL)));
   scene.textures.addCanvas('icon_sword', toCanvas(16, 16, swordIcon()));
   scene.textures.addCanvas('icon_whirl', toCanvas(16, 16, whirlIcon()));
+  scene.textures.addCanvas('icon_sword_jade', toCanvas(16, 16, swordIcon(JADE_SWORD_ICON)));
+  scene.textures.addCanvas('icon_whirl_jade', toCanvas(16, 16, whirlIcon([JADE_LOOK.glow.core, JADE_LOOK.glow.hot, JADE_LOOK.glow.mid, WIND_DEEP])));
   scene.textures.addCanvas('icon_mace', toCanvas(16, 16, maceIcon()));
   scene.textures.addCanvas('icon_sanctuary', toCanvas(16, 16, sanctuaryIcon()));
   const icons: [string, IconColors, IconColors][] = [

@@ -5,7 +5,7 @@
 import type Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
 import { ARCANE_SKIN, VOID_SKIN, Wizard } from './Wizard';
-import { Warrior } from './Warrior';
+import { JADE_SKIN, KNIGHT_SKIN, Warrior } from './Warrior';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
 import { Paladin } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
@@ -116,7 +116,23 @@ export const CHARACTERS: CharacterDef[] = [
       attack: { texture: 'icon_sword' },
       special: { texture: 'icon_whirl' },
     },
-    spawn: (world, x, y) => new Warrior(world, x, y),
+    skins: [
+      { id: 'knight', name: 'Knight' },
+      {
+        id: 'jade',
+        name: 'Jade',
+        role: 'Blade of the jade wind',
+        accent: 0x4fe0a0,
+        attack: 'Katana combo',
+        special: 'Jade gale',
+        preview: { texture: 'warrior_jade', glow: 'warrior_jade_e', idle: 'warrior_jade_idle_down', chosen: 'warrior_jade_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+        buttons: {
+          attack: { texture: 'icon_sword_jade' },
+          special: { texture: 'icon_whirl_jade' },
+        },
+      },
+    ],
+    spawn: (world, x, y, skin) => new Warrior(world, x, y, skin === 'jade' ? JADE_SKIN : KNIGHT_SKIN),
   },
   {
     id: 'paladin',
