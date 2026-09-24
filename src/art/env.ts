@@ -20,13 +20,13 @@ export function rng(seed: number) {
   };
 }
 
-const hash2 = (x: number, y: number, s = 0) => {
+export const hash2 = (x: number, y: number, s = 0) => {
   let h = (x * 374761393 + y * 668265263 + s * 982451653) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 };
 
-function valueNoise(x: number, y: number, scale: number, s: number): number {
+export function valueNoise(x: number, y: number, scale: number, s: number): number {
   const fx = x / scale;
   const fy = y / scale;
   const x0 = Math.floor(fx);
