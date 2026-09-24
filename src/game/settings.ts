@@ -9,9 +9,13 @@ export interface Settings {
   music: number;
   sfx: number;
   showFps: boolean;
+  /** Fast renders at a lower resolution (see display.ts) with fewer particles. */
+  quality: 'fast' | 'full';
 }
 
-const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true };
+// Phones and tablets start on Fast; they have dense screens and small GPUs.
+const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true, quality: touch ? 'fast' : 'full' };
 
 type Listener = (s: Settings) => void;
 

@@ -4,7 +4,7 @@ import { WorldScene } from './scenes/WorldScene';
 import { UIScene } from './scenes/UIScene';
 import { LitPipeline } from './game/LitPipeline';
 import { PixelPipeline } from './game/PixelPipeline';
-import { DPR, viewSize } from './game/display';
+import { DPR, setFastRender, viewSize } from './game/display';
 import { SoundScene } from './scenes/SoundScene';
 import { HomeScene } from './scenes/HomeScene';
 import { SelectScene } from './scenes/SelectScene';
@@ -18,6 +18,7 @@ import { setupApp } from './pwa';
 setupApp();
 sound.init();
 settings.watch((s) => sound.setVolumes(s.music, s.sfx));
+setFastRender(settings.values.quality === 'fast');
 
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
@@ -38,9 +39,19 @@ const game = new Phaser.Game({
   scene: [BootScene, HomeScene, SelectScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
 });
 
-window.addEventListener('resize', () => {
+const fitCanvas = () => {
   const { width, height } = viewSize();
+  game.scale.setZoom(1 / DPR);
   game.scale.resize(width, height);
+};
+window.addEventListener('resize', fitCanvas);
+
+let quality = settings.values.quality;
+settings.watch((s) => {
+  if (s.quality === quality) return;
+  quality = s.quality;
+  setFastRender(quality === 'fast');
+  fitCanvas();
 });
 
 (window as unknown as { game: Phaser.Game }).game = game;

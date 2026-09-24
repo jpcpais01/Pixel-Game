@@ -4,6 +4,7 @@ import { sunShadow, SUN_SHADOW_ALPHA } from '../game/Wizard';
 import { EnergyBall } from '../game/EnergyBall';
 import { Beam } from '../game/Beam';
 import { daynight } from '../game/daynight';
+import { settings } from '../game/settings';
 import { sky } from '../game/LitPipeline';
 import { pixelGrid } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
@@ -146,6 +147,14 @@ export class WorldScene extends Phaser.Scene {
       blendMode: Phaser.BlendModes.ADD,
       frequency: 160,
     }).setDepth(9999);
+
+    // Half the drifting motes on Fast graphics.
+    const offQuality = settings.watch((s) => {
+      const k = s.quality === 'fast' ? 2 : 1;
+      this.pollen.frequency = 90 * k;
+      this.fireflies.frequency = 160 * k;
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, offQuality);
 
     // Braziers around the plaza.
     const r = Math.min(WORLD_W, WORLD_H) * 0.3;
