@@ -51,20 +51,33 @@ export class GroundStreamer {
     });
   }
 
+  /**
+   * Build the strips covering world rows `top` to `bottom` ahead of time
+   * (while booting), so the world opens without a pause.
+   */
+  static prebuild(scene: Phaser.Scene, top: number, bottom: number): void {
+    const streamer = new GroundStreamer(scene, (img) => img);
+    for (let i = Math.max(0, Math.floor(top / STRIP_H)); i <= Math.min(STRIP_COUNT - 1, Math.floor(bottom / STRIP_H)); i++) {
+      if (!streamer.ready(i)) streamer.buildNow(i);
+    }
+  }
+
   /** Build everything the view shows right now, however long it takes. */
   prime(view: Phaser.Geom.Rectangle): void {
-    for (const i of this.wanted(view, 0)) {
-      if (this.ready(i)) continue;
-      const gen = buildStrip(i);
-      let r = gen.next();
-      while (!r.done) r = gen.next();
-      this.install(r.value);
-    }
     this.update(view, 0);
   }
 
-  /** Keep the strips around `view` built and shown; spend at most `budget` ms building. */
+  /**
+   * Keep the strips around `view` built and shown; spend at most `budget` ms
+   * building ahead. A strip the view already shows (after a jump, like
+   * rising back at the plaza) is built at once, whatever it costs.
+   */
   update(view: Phaser.Geom.Rectangle, budget: number): void {
+    for (const i of this.wanted(view, 0)) {
+      if (this.ready(i)) continue;
+      if (this.job?.index === i) this.job = null;
+      this.buildNow(i);
+    }
     const first = Math.floor(view.top / STRIP_H);
     const last = Math.floor(view.bottom / STRIP_H);
     for (const i of this.wanted(view, AHEAD)) {
@@ -116,6 +129,13 @@ export class GroundStreamer {
     const list: number[] = [];
     for (let i = first; i <= last; i++) list.push(i);
     return list.sort((a, b) => Math.abs(a + 0.5 - mid) - Math.abs(b + 0.5 - mid));
+  }
+
+  private buildNow(i: number): void {
+    const gen = buildStrip(i);
+    let r = gen.next();
+    while (!r.done) r = gen.next();
+    this.install(r.value);
   }
 
   private ready(i: number): boolean {

@@ -136,46 +136,83 @@ export interface GroundStrip {
 const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
 
 // Treetop clumps: one per cell of a jittered grid; a pixel belongs to the
-// clump whose dome stands highest over it.
+// clump whose dome stands highest over it. Each strip caches its cells.
 const CLUMP = 17;
 const canopy = { z: 0, z2: 0, nx: 0, ny: 0, nz: 1, species: 0, edge: 0, hi: 0 };
 
-function canopyAt(x: number, y: number): boolean {
-  const gx = Math.floor(x / CLUMP);
-  const gy = Math.floor(y / CLUMP);
-  let best = -1;
-  let second = -1;
-  for (let oy = -1; oy <= 1; oy++) {
-    for (let ox = -1; ox <= 1; ox++) {
-      const cx = gx + ox;
-      const cy = gy + oy;
-      const sx = (cx + 0.15 + hash2(cx, cy, 101) * 0.7) * CLUMP;
-      const sy = (cy + 0.15 + hash2(cx, cy, 103) * 0.7) * CLUMP;
-      const rad = 11 + hash2(cx, cy, 107) * 7;
-      const dx = (x + 0.5 - sx) / rad;
-      const dy = (y + 0.5 - sy) / (rad * 0.85);
-      const d2 = dx * dx + dy * dy;
-      if (d2 >= 1) continue;
-      const z = hash2(cx, cy, 109) * 0.55 + Math.sqrt(1 - d2);
-      if (z > best) {
-        second = best;
-        best = z;
+class Clumps {
+  readonly gx0: number;
+  readonly gy0: number;
+  readonly cols: number;
+  readonly sx: Float32Array;
+  readonly sy: Float32Array;
+  readonly rad: Float32Array;
+  readonly zb: Float32Array;
+  readonly species: Uint8Array;
+
+  constructor(x0: number, x1: number, y0: number, y1: number) {
+    this.gx0 = Math.floor(x0 / CLUMP) - 1;
+    this.gy0 = Math.floor(y0 / CLUMP) - 1;
+    this.cols = Math.floor(x1 / CLUMP) + 2 - this.gx0;
+    const rows = Math.floor(y1 / CLUMP) + 2 - this.gy0;
+    const n = this.cols * rows;
+    this.sx = new Float32Array(n);
+    this.sy = new Float32Array(n);
+    this.rad = new Float32Array(n);
+    this.zb = new Float32Array(n);
+    this.species = new Uint8Array(n);
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < this.cols; i++) {
+        const cx = this.gx0 + i;
+        const cy = this.gy0 + j;
+        const k = j * this.cols + i;
+        const sx = (cx + 0.15 + hash2(cx, cy, 101) * 0.7) * CLUMP;
+        const sy = (cy + 0.15 + hash2(cx, cy, 103) * 0.7) * CLUMP;
+        this.sx[k] = sx;
+        this.sy[k] = sy;
+        this.rad[k] = 11 + hash2(cx, cy, 107) * 7;
+        this.zb[k] = hash2(cx, cy, 109) * 0.55;
+        // Neighbouring clumps mostly share a kind of tree; now and then a
+        // whole crown has turned gold.
         const s = valueNoise(sx, sy, 90, 97) + (hash2(cx, cy, 113) - 0.5) * 0.35;
-        canopy.species = hash2(cx, cy, 127) > 0.972 ? 3 : s < 0.3 ? 2 : s > 0.74 ? 1 : 0;
-        // Dome normal, leaning a little toward the top of the screen.
-        const nz = Math.sqrt(Math.max(0.05, 1 - d2)) * 1.1;
-        const l = Math.hypot(dx, -dy + 0.15, nz);
-        canopy.nx = dx / l;
-        canopy.ny = (-dy + 0.15) / l;
-        canopy.nz = nz / l;
-        canopy.edge = d2;
-        canopy.hi = dx < -0.1 && dy < -0.25 ? 1 : 0;
-      } else if (z > second) second = z;
+        this.species[k] = valueNoise(sx, sy, 34, 131) > 0.82 ? 3 : s < 0.3 ? 2 : s > 0.74 ? 1 : 0;
+      }
     }
   }
-  canopy.z = best;
-  canopy.z2 = second;
-  return best > 0;
+
+  at(x: number, y: number): boolean {
+    const gx = Math.floor(x / CLUMP) - this.gx0;
+    const gy = Math.floor(y / CLUMP) - this.gy0;
+    let best = -1;
+    let second = -1;
+    for (let oy = -1; oy <= 1; oy++) {
+      for (let ox = -1; ox <= 1; ox++) {
+        const k = (gy + oy) * this.cols + gx + ox;
+        const rad = this.rad[k];
+        const dx = (x + 0.5 - this.sx[k]) / rad;
+        const dy = (y + 0.5 - this.sy[k]) / (rad * 0.85);
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= 1) continue;
+        const z = this.zb[k] + Math.sqrt(1 - d2);
+        if (z > best) {
+          second = best;
+          best = z;
+          canopy.species = this.species[k];
+          // Dome normal, leaning a little toward the top of the screen.
+          const nz = Math.sqrt(Math.max(0.05, 1 - d2)) * 1.1;
+          const l = Math.hypot(dx, -dy + 0.15, nz);
+          canopy.nx = dx / l;
+          canopy.ny = (-dy + 0.15) / l;
+          canopy.nz = nz / l;
+          canopy.edge = d2;
+          canopy.hi = dx < -0.1 && dy < -0.25 ? 1 : 0;
+        } else if (z > second) second = z;
+      }
+    }
+    canopy.z = best;
+    canopy.z2 = second;
+    return best > 0;
+  }
 }
 
 /** Nearest flagstone seeds (world grid, shared by the plaza and the old paving on the path). */
@@ -205,15 +242,8 @@ function flagstone(x: number, y: number): void {
   stone.t = t;
 }
 
-interface Shade {
-  x: number;
-  y: number;
-  rx: number;
-  ry: number;
-  /** Where the trunk's shadow starts. */
-  bx: number;
-  by: number;
-}
+/** How far above a strip its roof grid reaches, for the shadows the treetops cast into it. */
+const CAST_REACH = 18;
 
 /** Build strip `index`, yielding every few rows so the work spreads across frames. */
 export function* buildStrip(index: number): Generator<void, GroundStrip, void> {
@@ -236,7 +266,7 @@ export function* buildStrip(index: number): Generator<void, GroundStrip, void> {
   let glows = false;
 
   // Per-row values, reaching far enough up for the shadows cast from above.
-  const rowBase = y0 - 1 - 24;
+  const rowBase = y0 - 1 - CAST_REACH;
   const rows: Row[] = [];
   const halves: number[] = [];
   for (let y = rowBase; y <= y0 + H + 1; y++) {
@@ -245,6 +275,19 @@ export function* buildStrip(index: number): Generator<void, GroundStrip, void> {
   }
   const rowAt = (y: number) => rows[y - rowBase] ?? row(y);
   const inPlazaBand = y0 + H > PLAZA_Y - 40;
+
+  // How deep into the treetops each pixel is, from CAST_REACH rows above the
+  // strip down to its margin, x from -1 to W.
+  const RW = W + 2;
+  const roof = new Float32Array(RW * (y0 + H + 1 - rowBase + 1));
+  for (let y = rowBase; y <= y0 + H; y++) {
+    const r = rowAt(y);
+    const o = (y - rowBase) * RW;
+    for (let x = -1; x <= W; x++) roof[o + x + 1] = roofDepth(x, y, r);
+    if ((y & 15) === 15) yield;
+  }
+  const roofAt = (x: number, y: number) => roof[(y - rowBase) * RW + clamp(x, -1, W) + 1];
+  const clumps = new Clumps(-1, W, y0 - 1, y0 + H);
 
   for (let py = 0; py < PH; py++) {
     const wy = y0 - 1 + py;
@@ -255,12 +298,12 @@ export function* buildStrip(index: number): Generator<void, GroundStrip, void> {
     for (let px = 0; px < PW; px++) {
       const wx = px - 1;
       const i = py * PW + px;
-      const rd = roofDepth(wx, wy, r);
+      const rd = roofAt(wx, wy);
       wall[i] = rd;
       if (rd > 0) {
         kind[i] = K.Roof;
         height[i] = 3;
-        if (canopyAt(wx, wy)) {
+        if (clumps.at(wx, wy)) {
           sub[i] = canopy.species;
           rnx[i] = canopy.nx;
           rny[i] = canopy.ny;
@@ -357,7 +400,7 @@ export function* buildStrip(index: number): Generator<void, GroundStrip, void> {
         tone[i] = (valueNoise(wx, wy, 16, 33) - 0.5) * 2 + (valueNoise(wx, wy, 5, 35) - 0.5) * 0.8;
       }
     }
-    if ((py & 7) === 7) yield;
+    if ((py & 3) === 3) yield;
   }
 
   // Small scattered details.
@@ -486,20 +529,57 @@ export function* buildStrip(index: number): Generator<void, GroundStrip, void> {
     const L = KEY_LIGHT;
     const Ll = Math.hypot(L.x, L.y, L.z);
     const [ox, oy] = look.cast;
-    // Each tree's canopy shadow on the ground, and its trunk's.
-    const shades: Shade[] = trees.map((t) => {
-      const s = TREE_SHAPE[t.kind];
-      return { x: t.x + ox * 1.4, y: t.y + Math.abs(oy) * 0.4, rx: s.canopyR * 0.9, ry: s.canopyR * 0.5, bx: t.x, by: t.y };
-    });
+    const shadow = new Float32Array(W * H);
+    const light = new Float32Array(W * H);
+    const put = (a: Float32Array, x: number, y: number, v: number) => {
+      if (x < 0 || x >= W || y < y0 || y >= y0 + H) return;
+      const i = (y - y0) * W + x;
+      if (v > a[i]) a[i] = v;
+    };
+    // The treetops' shadow, with a softer edge...
+    for (let y = y0; y < Math.min(y0 + H, PLAZA_Y + 60); y++) {
+      for (let x = 0; x < W; x++) {
+        const s = roofAt(x - ox, y - oy) > 0 ? 1 : roofAt(x - Math.round(ox * 0.7), y - Math.round(oy * 0.7)) > 0 ? 0.5 : 0;
+        if (s) shadow[(y - y0) * W + x] = s;
+      }
+      if ((y & 31) === 31) yield;
+    }
+    // ...each tree's crown and trunk...
+    for (const t of trees) {
+      const sh = TREE_SHAPE[t.kind];
+      const cx = t.x + ox * 1.4;
+      const cy = t.y + Math.abs(oy) * 0.4;
+      const rx = sh.canopyR * 0.9;
+      const ry = sh.canopyR * 0.5;
+      for (let y = Math.floor(cy - ry); y <= cy + ry; y++) {
+        for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
+          const e = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
+          if (e < 1) put(shadow, x, y, e < 0.7 ? 1 : 0.5);
+        }
+      }
+      const steps = Math.ceil(Math.hypot(cx - t.x, cy - t.y));
+      for (let k = 0; k <= steps; k++) {
+        const x = Math.round(t.x + ((cx - t.x) * k) / steps);
+        const y = Math.round(t.y + ((cy - t.y) * k) / steps);
+        put(shadow, x, y, 0.8);
+        put(shadow, x + 1, y, 0.8);
+      }
+    }
+    // ...and pools of light where the rays land.
+    for (const p of pools) {
+      for (let y = p.y - 7; y <= p.y + 7; y++) {
+        for (let x = p.x - 15; x <= p.x + 15; x++) {
+          const e = ((x - p.x) / 15) ** 2 + ((y - p.y) / 7) ** 2;
+          if (e < 1) put(light, x, y, e < 0.45 ? 1 : 0.55 - (hash2(x, y, 81) > 0.5 ? 0.25 : 0));
+        }
+      }
+    }
     const g = look.ground;
     for (let y = 0; y < H; y++) {
       const wy = y0 + y;
       const r = rowAt(wy);
-      const half = halves[wy - rowBase];
       const reg = smoothstep(PLAZA_Y + 90, PLAZA_Y - 20, wy);
       const ly = wy - PLAZA_Y;
-      const castRow = rowAt(wy - oy);
-      const castRow2 = rowAt(wy - Math.round(oy * 0.7));
       for (let x = 0; x < W; x++) {
         const i = (y + 1) * PW + x + 1;
         const o = (y * W + x) * 4;
@@ -514,9 +594,12 @@ export function* buildStrip(index: number): Generator<void, GroundStrip, void> {
         } else {
           // Normals from the height field, ignoring the step up to the treetops.
           const hc = height[i];
-          const hh = (j: number) => (kind[j] === K.Roof ? hc : height[j]);
-          nx = (hh(i - 1) - hh(i + 1)) * 3.2;
-          ny = (hh(i + PW) - hh(i - PW)) * 3.2;
+          const hl = kind[i - 1] === K.Roof ? hc : height[i - 1];
+          const hr = kind[i + 1] === K.Roof ? hc : height[i + 1];
+          const hu = kind[i - PW] === K.Roof ? hc : height[i - PW];
+          const hd = kind[i + PW] === K.Roof ? hc : height[i + PW];
+          nx = (hl - hr) * 3.2;
+          ny = (hd - hu) * 3.2;
           nz = 1;
           const l = Math.hypot(nx, ny, nz);
           nx /= l;
@@ -537,35 +620,11 @@ export function* buildStrip(index: number): Generator<void, GroundStrip, void> {
           const fd = smoothstep(-46, 0, wall[i]) * look.wallDark;
           let dark = pd * (1 - reg) + fd * reg;
 
-          let s = 0;
-          if (wy < PLAZA_Y + 60) {
-            const c1 = roofDepth(x - ox, wy - oy, castRow);
-            s = c1 > 0 ? 1 : roofDepth(x - Math.round(ox * 0.7), wy - Math.round(oy * 0.7), castRow2) > 0 ? 0.5 : 0;
-          }
-          for (const t of shades) {
-            if (s >= 1) break;
-            const dx = (x - t.x) / t.rx;
-            const dy = (wy - t.y) / t.ry;
-            const e = dx * dx + dy * dy;
-            if (e < 1) s = Math.max(s, e < 0.7 ? 1 : 0.5);
-            else {
-              // The trunk's shadow, from its base toward the canopy's.
-              const vx = t.x - t.bx;
-              const vy = t.y - t.by;
-              const u = ((x - t.bx) * vx + (wy - t.by) * vy) / (vx * vx + vy * vy);
-              if (u > 0 && u < 1 && Math.hypot(x - t.bx - vx * u, wy - t.by - vy * u) < 1.6) s = Math.max(s, 0.8);
-            }
-          }
+          const j = y * W + x;
+          let s = shadow[j];
           // Dappled light through the leaves.
           if (s > 0 && valueNoise(x, wy, 4, 77) > 0.7) s *= 0.3;
-          // Pools of light where the rays land.
-          let pool = 0;
-          for (const p of pools) {
-            const dx = (x - p.x) / 15;
-            const dy = (wy - p.y) / 7;
-            const e = dx * dx + dy * dy;
-            if (e < 1) pool = Math.max(pool, e < 0.45 ? 1 : 0.55 - (hash2(x, wy, 81) > 0.5 ? 0.25 : 0));
-          }
+          const pool = light[j];
           if (pool > 0) s *= 1 - pool;
           dark += s * look.shadow - pool * look.pool;
 
@@ -615,7 +674,7 @@ export function* buildStrip(index: number): Generator<void, GroundStrip, void> {
         normal[o + 2] = Math.round((nz * 0.5 + 0.5) * 255);
         normal[o + 3] = 255;
       }
-      if ((y & 15) === 15) yield;
+      if ((y & 7) === 7) yield;
     }
     return { diffuse, normal };
   }

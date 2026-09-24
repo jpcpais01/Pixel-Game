@@ -1,6 +1,8 @@
 import type { WorldScene } from '../../scenes/WorldScene';
+import { Barkling } from './Barkling';
 import { Beetle } from './Beetle';
 import { Frog } from './Frog';
+import { Glowmoth } from './Glowmoth';
 import type { Monster, Target } from './Monster';
 import { Puffcap } from './Puffcap';
 
@@ -11,6 +13,8 @@ export const MONSTERS = {
   frog: (world: WorldScene, x: number, y: number) => new Frog(world, x, y),
   beetle: (world: WorldScene, x: number, y: number) => new Beetle(world, x, y),
   puffcap: (world: WorldScene, x: number, y: number) => new Puffcap(world, x, y),
+  barkling: (world: WorldScene, x: number, y: number) => new Barkling(world, x, y),
+  glowmoth: (world: WorldScene, x: number, y: number) => new Glowmoth(world, x, y),
 } satisfies Record<string, (world: WorldScene, x: number, y: number) => Monster>;
 
 export type MonsterKind = keyof typeof MONSTERS;
