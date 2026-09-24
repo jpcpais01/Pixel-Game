@@ -19,3 +19,6 @@ export const viewSize = () => ({
 export const pixelGrid = { zoom: 1 };
 
 export const snap = (v: number): number => Math.round(v * pixelGrid.zoom) / pixelGrid.zoom;
+
+/** Device pixels per art pixel on the menus: about 180 art pixels on the short side. */
+export const menuZoom = (width: number, height: number): number => Math.max(2, Math.floor(Math.min(width, height) / 180));

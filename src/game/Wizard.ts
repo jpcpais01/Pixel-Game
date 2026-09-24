@@ -5,6 +5,7 @@ import { snap } from './display';
 import { BeamCharge, CHARGE_TIME, HOLD_TIME, beamSpec } from './Beam';
 import { beamHud } from './controls';
 import { sound } from '../audio';
+import type { Hero } from './characters';
 
 const SPEED = 58; // world px / second
 const CAST_COOLDOWN = 180; // ms after a cast ends before the next can start
@@ -27,7 +28,7 @@ export interface WizardHooks {
 
 type State = 'free' | 'cast' | 'charge' | 'beam';
 
-export class Wizard {
+export class Wizard implements Hero {
   x: number;
   y: number;
   dir: Dir = 'down';
