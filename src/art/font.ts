@@ -98,7 +98,7 @@ export function buildPixelFont(scene: Phaser.Scene): void {
     }
   });
   scene.textures.addCanvas('pixelfont', b.toCanvas());
-  // Parse returns the whole cache entry ({ data, texture, frame }), not just the data.
+  // Parse returns a complete cache entry ({ data, texture, frame }).
   const entry = Phaser.GameObjects.RetroFont.Parse(scene, {
     image: 'pixelfont',
     width: CELL_W,

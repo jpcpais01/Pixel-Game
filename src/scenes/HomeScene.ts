@@ -206,7 +206,7 @@ export class HomeScene extends Phaser.Scene {
     this.titleY = Math.max(top, Math.round(vh * 0.17));
     this.title.setPosition(Math.round((vw - this.title.displayWidth) / 2), this.titleY);
     const by = Math.max(this.titleY + this.title.displayHeight + 14, Math.round(vh * 0.52));
-    this.start.place((vw - this.start.w) / 2, by);
+    this.start.place((vw - this.start.boxW) / 2, by);
   }
 
   update(time: number, dt: number): void {
@@ -223,9 +223,9 @@ export class HomeScene extends Phaser.Scene {
       this.title.y = this.titleY + Math.round(Math.sin(time * 0.0016) * 1.5);
       const nudge = Math.round((Math.sin(time * 0.006) + 1) * 1.2);
       const b = this.start;
-      const ay = b.y + Math.round((b.h - this.arrows[0].height) / 2);
+      const ay = b.y + Math.round((b.boxH - this.arrows[0].height) / 2);
       this.arrows[0].setPosition(b.x - 10 + nudge, ay);
-      this.arrows[1].setPosition(b.x + b.w + 10 - this.arrows[1].width - nudge, ay);
+      this.arrows[1].setPosition(b.x + b.boxW + 10 - this.arrows[1].width - nudge, ay);
     }
   }
 }
