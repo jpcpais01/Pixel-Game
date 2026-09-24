@@ -4,6 +4,7 @@ import { wizardMeta } from '../art/textures';
 import { snap } from './display';
 import { BeamCharge, CHARGE_TIME, HOLD_TIME, beamSpec } from './Beam';
 import { beamHud } from './controls';
+import { sound } from '../audio';
 
 const SPEED = 58; // world px / second
 const CAST_COOLDOWN = 180; // ms after a cast ends before the next can start
@@ -13,6 +14,9 @@ const MIN_POWER = 0.12; // a tap still fires a thin beam
 // Sprite origin: frame centre horizontally, just under the boots vertically.
 const ORIGIN_X = 12;
 const ORIGIN_Y = 31;
+
+// Walk frames where a foot lands (the stride peaks in the walk cycle).
+const FOOTFALLS = new Set([1, 4]);
 
 export interface WizardHooks {
   /** Energy ball released from the crystal. */
@@ -75,6 +79,9 @@ export class Wizard {
         this.cooldown = CAST_COOLDOWN;
         this.body.play(`wizard_idle_${this.dir}`);
       }
+    });
+    this.body.on(Phaser.Animations.Events.ANIMATION_UPDATE, (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
+      if (anim.key.startsWith('wizard_walk') && FOOTFALLS.has(frame.index - 1)) sound.step();
     });
   }
 
@@ -164,6 +171,7 @@ export class Wizard {
         // Held too long: the gathered light slips away.
         const t = this.crystal();
         this.charge.fizzle(t.x + 0.5, t.y + 0.5);
+        sound.beamFizzle();
         this.beamLatch = true;
         this.state = 'free';
         this.cooldown = BEAM_COOLDOWN;
@@ -172,6 +180,7 @@ export class Wizard {
     }
     beamHud.charge = this.charged / CHARGE_TIME;
     beamHud.over = this.held / HOLD_TIME;
+    if (this.state === 'charge') sound.beamCharge(beamHud.charge, beamHud.over);
     if (this.state !== 'charge') beamHud.charge = beamHud.over = 0;
   }
 
@@ -201,6 +210,7 @@ export class Wizard {
     this.castDir.copy(this.lastMove);
     this.dir = dirOf(this.castDir.x, this.castDir.y);
     this.body.play(`wizard_cast_${this.dir}`);
+    sound.charge();
   }
 
   /** The crystal's pixel (top-left corner, on the sprite's pixel grid) for the current frame. */

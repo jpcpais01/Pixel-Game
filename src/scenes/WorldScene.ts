@@ -23,6 +23,7 @@ const DAY = {
   bounce: [0.4, 0.36, 0.32] as V3,
 };
 const mix3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+import { sound } from '../audio';
 
 export const WORLD_W = 640;
 export const WORLD_H = 448;
@@ -52,6 +53,7 @@ export class WorldScene extends Phaser.Scene {
   private flickers: Flicker[] = [];
   private dummies: Dummy[] = [];
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
+  private struck = false;
   private bounds = new Phaser.Geom.Rectangle(28, 40, WORLD_W - 56, WORLD_H - 64);
   private groundDay!: Phaser.GameObjects.Image;
   private runes!: Phaser.GameObjects.Image;
@@ -134,8 +136,14 @@ export class WorldScene extends Phaser.Scene {
     this.dummy(cx - 70, cy + 34);
 
     this.wizard = new Wizard(this, cx, cy + 20, {
-      cast: (x, y, dx, dy) => this.balls.push(new EnergyBall(this, x, y, dx, dy)),
-      beam: (x, y, dx, dy, power) => this.beams.push(new Beam(this, x, y, dx, dy, power, world, this.wizard.depthAhead(), this.beamHit)),
+      cast: (x, y, dx, dy) => {
+        this.balls.push(new EnergyBall(this, x, y, dx, dy));
+        sound.cast(this.pan(x));
+      },
+      beam: (x, y, dx, dy, power) => {
+        this.beams.push(new Beam(this, x, y, dx, dy, power, world, this.wizard.depthAhead(), this.beamHit));
+        sound.beamFire(this.pan(x), power);
+      },
     });
 
     const cam = this.cameras.main;
@@ -230,6 +238,7 @@ export class WorldScene extends Phaser.Scene {
       if (Math.abs(x - d.x) < 7 && y > d.y - 24 && y < d.y + 2) {
         this.hitDummy(d);
         this.cameras.main.shake(70, 0.0035);
+        this.struck = true;
         return true;
       }
     }
@@ -278,7 +287,24 @@ export class WorldScene extends Phaser.Scene {
     this.vignette.strength = 0.32 - d * 0.14;
     this.pollen.emitting = d > 0.5;
     this.fireflies.emitting = d < 0.5;
+    sound.setDaylight(d);
     return d;
+  }
+
+  /** Stereo position of a world x on screen, -1..1. */
+  private pan(x: number): number {
+    const cam = this.cameras.main;
+    return Phaser.Math.Clamp((x - cam.midPoint.x) / (cam.worldView.width / 2), -1, 1);
+  }
+
+  /** How loud the braziers' crackle should be where the wizard stands. */
+  private fireNearby(): number {
+    let near = Infinity;
+    for (const f of this.flickers) {
+      if (f.seed >= 0) near = Math.min(near, Phaser.Math.Distance.Between(f.light.x, f.light.y, this.wizard.x, this.wizard.y));
+    }
+    const k = Phaser.Math.Clamp(1 - (near - 16) / 150, 0, 1);
+    return 0.12 + 0.88 * k * k;
   }
 
   update(time: number, dt: number): void {
@@ -298,7 +324,12 @@ export class WorldScene extends Phaser.Scene {
     this.wizard.update(dt, mx, my, attack, beam, this.bounds);
     this.followWizard();
 
-    for (const b of this.balls) b.update(dt, this.hitTest, this.bounds);
+    for (const b of this.balls) {
+      this.struck = false;
+      b.update(dt, this.hitTest, this.bounds);
+      if (b.dead) sound.impact(this.pan(b.x), this.struck);
+    }
+    sound.setFire(this.fireNearby());
     this.balls = this.balls.filter((b) => !b.dead);
     for (const b of this.beams) b.update(dt);
     this.beams = this.beams.filter((b) => !b.dead);

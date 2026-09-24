@@ -402,7 +402,8 @@ export class Beam {
       ease: 'Quad.easeOut',
       onComplete: () => scene.lights.removeLight(flash),
     });
-    scene.cameras.main.shake(this.duration * 0.8, 0.002 + power * 0.005);
+    // A gentle rumble: enough to feel the release, not to blur the view.
+    scene.cameras.main.shake(this.duration * 0.8, 0.0002 + power * 0.0005);
   }
 
   update(dt: number): void {

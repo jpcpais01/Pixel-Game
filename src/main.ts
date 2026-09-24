@@ -4,6 +4,10 @@ import { WorldScene } from './scenes/WorldScene';
 import { UIScene } from './scenes/UIScene';
 import { LitPipeline } from './game/LitPipeline';
 import { DPR, viewSize } from './game/display';
+import { SoundScene } from './scenes/SoundScene';
+import { sound } from './audio';
+
+sound.init();
 
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
@@ -20,7 +24,7 @@ const game = new Phaser.Game({
   render: { maxLights: 16 },
   pipeline: { Lit: LitPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
   input: { activePointers: 3 },
-  scene: [BootScene, WorldScene, UIScene],
+  scene: [BootScene, WorldScene, UIScene, SoundScene],
 });
 
 window.addEventListener('resize', () => {
