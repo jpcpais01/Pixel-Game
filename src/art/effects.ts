@@ -2,7 +2,7 @@
 // These are pure light, so they only produce emissive pixels.
 
 import { PixelCanvas, type RGB } from './pixel';
-import { MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID, MAGIC_VIOLET } from './palette';
+import { EMBER_CORE, EMBER_DEEP, EMBER_HOT, EMBER_MID, MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID, MAGIC_VIOLET } from './palette';
 
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
@@ -263,5 +263,81 @@ export function beamIcon(): Uint8ClampedArray {
     put(sx, sy + i, c);
   }
   for (const [dx, dy] of [[-1, -1], [1, 1], [-1, 1], [1, -1]]) put(sx + dx, sy + dy, cols[2]);
+  return px;
+}
+
+/** 16x16 sword for the warrior's attack button: steel blade, gold guard, dark outline (normal blend). */
+export function swordIcon(): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: string) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const n = parseInt(c.slice(1), 16);
+    const i = (y * S + x) * 4;
+    px[i] = n >> 16;
+    px[i + 1] = (n >> 8) & 255;
+    px[i + 2] = n & 255;
+    px[i + 3] = 255;
+  };
+  // Blade from the lower left up to the upper right, a lit and a shaded bevel.
+  for (let i = 0; i < 9; i++) {
+    put(5 + i, 10 - i, i > 6 ? '#f4f8ff' : '#dfe8f7');
+    put(6 + i, 10 - i, '#8d9dbd');
+  }
+  put(14, 1, '#f4f8ff');
+  // Crossguard, grip and pommel.
+  for (const [x, y] of [[2, 9], [3, 10], [4, 11], [5, 12], [6, 13]]) put(x, y, '#f4cf6a');
+  put(3, 9, '#fff4bf');
+  for (const [x, y] of [[3, 12], [2, 13]]) put(x, y, '#8f5a36');
+  put(1, 14, '#d69a3a');
+  // Outline.
+  const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < S && y < S && px[(y * S + x) * 4 + 3] === 255;
+  const out: [number, number][] = [];
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      if (filled(x, y)) continue;
+      if (filled(x + 1, y) || filled(x - 1, y) || filled(x, y + 1) || filled(x, y - 1)) out.push([x, y]);
+    }
+  }
+  for (const [x, y] of out) put(x, y, '#0c0f18');
+  return px;
+}
+
+/** 16x16 icon for the whirlwind button: a spiral of golden fire around a bright heart, drawn additively. */
+export function whirlIcon(): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const cols: RGB[] = [EMBER_CORE, EMBER_HOT, EMBER_MID, EMBER_DEEP];
+  const put = (x: number, y: number, c: RGB) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    if (px[i] + px[i + 1] + px[i + 2] >= c[0] + c[1] + c[2]) return;
+    px[i] = c[0];
+    px[i + 1] = c[1];
+    px[i + 2] = c[2];
+    px[i + 3] = 255;
+  };
+  // Two crescents chasing each other round the centre, thick and hot at their heads.
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - 8;
+      const dy = y + 0.5 - 8;
+      const r = Math.hypot(dx, dy);
+      const a = (Math.atan2(dy, dx) / Math.PI + 1) * 180; // 0..360
+      for (const head of [40, 220]) {
+        const behind = (((head - a) % 360) + 360) % 360;
+        if (behind > 170) continue;
+        const k = 1 - behind / 170;
+        const rr = 3 + 4.3 * (1 - behind / 170) ** 0.6;
+        const d = Math.abs(r - rr);
+        const th = 0.45 + k * 1.1;
+        if (d <= th * 0.45) put(x, y, k > 0.7 ? cols[0] : cols[1]);
+        else if (d <= th) put(x, y, k > 0.45 ? cols[1] : cols[2]);
+        else if (d <= th + 0.6 && k > 0.2 && hash(x, y, 3) > 0.4) put(x, y, cols[3]);
+      }
+      if (r <= 1.3) put(x, y, cols[0]);
+      else if (r <= 2.1) put(x, y, cols[1]);
+    }
+  }
   return px;
 }

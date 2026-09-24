@@ -1,15 +1,22 @@
-// Dev tool: render the wizard's frames to a zoomed PNG contact sheet.
-// Usage: npx tsx scripts/sheet.ts [outDir] [scale]
+// Dev tool: render a character's frames to a zoomed PNG contact sheet.
+// Usage: npx tsx scripts/sheet.ts [outDir] [scale] [wizard|warrior]
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { buildWizardFrames, FRAME_W, FRAME_H, ANIMS, DIRS } from '../src/art/wizard';
+import { buildWizardFrames, FRAME_W as WIZ_W, FRAME_H as WIZ_H, ANIMS, DIRS } from '../src/art/wizard';
+import { buildWarriorFrames, WARRIOR_W, WARRIOR_H, WARRIOR_ANIMS } from '../src/art/warrior';
 import { encodePNG } from './png';
 
 const out = process.argv[2] ?? 'sheets';
 const S = Number(process.argv[3] ?? 5);
+const hero = process.argv[4] === 'warrior' ? 'warrior' : 'wizard';
 mkdirSync(out, { recursive: true });
-const frames = buildWizardFrames().map((f) => ({ ...f, r: f.canvas.render() }));
-const rows: { anim: string; dir: string }[] = [];
-for (const a of ANIMS) for (const d of DIRS) rows.push({ anim: a.name, dir: d });
+const FRAME_W = hero === 'warrior' ? WARRIOR_W : WIZ_W;
+const FRAME_H = hero === 'warrior' ? WARRIOR_H : WIZ_H;
+const built: { anim: string; dir: string | null; canvas: { render(): ReturnType<ReturnType<typeof buildWizardFrames>[number]['canvas']['render']> } }[] =
+  hero === 'warrior' ? buildWarriorFrames() : buildWizardFrames();
+const frames = built.map((f) => ({ ...f, r: f.canvas.render() }));
+const rows: { anim: string; dir: string | null }[] = [];
+for (const a of hero === 'warrior' ? WARRIOR_ANIMS : ANIMS) for (const d of DIRS) rows.push({ anim: a.name, dir: d });
+if (hero === 'warrior') rows.push({ anim: 'spin', dir: null });
 const cols = Math.max(...rows.map((r) => frames.filter((f) => f.anim === r.anim && f.dir === r.dir).length));
 const pad = 2;
 const W = cols * (FRAME_W + pad) * S;
@@ -41,6 +48,6 @@ for (const layer of ['composite', 'diffuse', 'normal', 'emissive'] as const) {
       }
     });
   });
-  writeFileSync(`${out}/wizard_${layer}.png`, encodePNG(W, H, img));
+  writeFileSync(`${out}/${hero}_${layer}.png`, encodePNG(W, H, img));
 }
 console.log('frames', frames.length, 'sheet', W, H);

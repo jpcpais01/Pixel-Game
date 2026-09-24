@@ -41,7 +41,7 @@ let layerId = 0;
  * over sunlit stone; soft glows and real lights around it add the bloom.
  * Where shapes overlap, the more opaque (then brighter) pixel wins.
  */
-class PixelLayer {
+export class PixelLayer {
   readonly image: Phaser.GameObjects.Image;
   readonly w: number;
   readonly h: number;
@@ -259,6 +259,15 @@ export class BeamCharge {
     this.light.intensity = 0;
     this.inflow.stop();
     this.inflow.killAll();
+  }
+
+  /** Remove everything for good (the wizard left the scene). */
+  destroy(): void {
+    this.hide();
+    this.layer.destroy();
+    this.halo.destroy();
+    this.inflow.destroy();
+    this.scene.lights.removeLight(this.light);
   }
 
   /** Held too long: the light sputters out in a puff of violet sparks. */
