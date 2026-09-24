@@ -61,6 +61,10 @@ export class HomeScene extends Phaser.Scene {
   }
 
   create(): void {
+    // The scene object is reused when the game returns here from the pause menu.
+    this.strips = [];
+    this.skyKey = '';
+    this.menuOpen = true;
     this.buildTextures();
     this.cameras.main.setOrigin(0, 0);
     this.cameras.main.postFX.addVignette(0.5, 0.5, 0.95, 0.3);

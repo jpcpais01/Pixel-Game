@@ -1,0 +1,48 @@
+// Player options from the pause menu, saved in localStorage.
+
+const KEY = 'pixel-battle.settings';
+
+export interface Settings {
+  /** 0..1, where 0.5 is neutral: below darkens the world, above lifts it. */
+  brightness: number;
+  /** 0..1 volume of each bus. */
+  music: number;
+  sfx: number;
+  showFps: boolean;
+}
+
+const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true };
+
+type Listener = (s: Settings) => void;
+
+function load(): Settings {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) return { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) };
+  } catch {
+    // Storage unavailable or corrupt: fall back to the defaults.
+  }
+  return { ...DEFAULTS };
+}
+
+const listeners = new Set<Listener>();
+
+export const settings = {
+  values: load(),
+  set<K extends keyof Settings>(key: K, value: Settings[K]): void {
+    if (this.values[key] === value) return;
+    this.values[key] = value;
+    try {
+      localStorage.setItem(KEY, JSON.stringify(this.values));
+    } catch {
+      // Not persisted; the change still applies for this visit.
+    }
+    for (const fn of listeners) fn(this.values);
+  },
+  /** Call `fn` now and on every change; returns the unsubscribe. */
+  watch(fn: Listener): () => void {
+    listeners.add(fn);
+    fn(this.values);
+    return () => listeners.delete(fn);
+  },
+};

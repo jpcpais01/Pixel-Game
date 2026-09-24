@@ -141,7 +141,9 @@ export class SelectScene extends Phaser.Scene {
     for (const cam of fade) cam.fadeOut(450, 7, 8, 13);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.scene.stop('home');
+      this.scene.launch('shade');
       this.scene.launch('ui', { character });
+      this.scene.launch('pause');
       this.scene.start('world', { character });
     });
   }

@@ -61,6 +61,7 @@ export class UIScene extends Phaser.Scene {
 
   create(data: { character?: string }): void {
     const hero = characterById(data?.character);
+    this.stickPointer = this.buttonPointer = this.beamPointer = null;
     this.stick = this.add.graphics();
     this.button = this.add.graphics();
     const { attack, special } = hero.buttons;
@@ -134,12 +135,28 @@ export class UIScene extends Phaser.Scene {
     };
     this.input.on(Phaser.Input.Events.POINTER_UP, release);
     this.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, release);
-    this.scale.on(Phaser.Scale.Events.RESIZE, () => {
-      if (this.stickPointer === null) {
-        this.base.copy(this.restPos);
-        this.knob.copy(this.restPos);
-      }
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
+    // A paused scene misses its pointer-ups, so let go of everything on pause.
+    this.events.on(Phaser.Scenes.Events.PAUSE, this.releaseAll, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
+      this.events.off(Phaser.Scenes.Events.PAUSE, this.releaseAll, this);
     });
+  }
+
+  private onResize(): void {
+    if (this.stickPointer === null) {
+      this.base.copy(this.restPos);
+      this.knob.copy(this.restPos);
+    }
+  }
+
+  private releaseAll(): void {
+    this.stickPointer = this.buttonPointer = this.beamPointer = null;
+    controls.moveX = controls.moveY = 0;
+    controls.attack = controls.beam = false;
+    this.base.copy(this.restPos);
+    this.knob.copy(this.restPos);
   }
 
   update(): void {

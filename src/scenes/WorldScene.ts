@@ -77,6 +77,12 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(data: { character?: string }): void {
+    // The scene object is reused when a new game starts from the home screen.
+    this.balls = [];
+    this.beams = [];
+    this.flickers = [];
+    this.dummies = [];
+    this.shadows = [];
     const cx = WORLD_W / 2;
     const cy = WORLD_H / 2;
 
@@ -149,7 +155,8 @@ export class WorldScene extends Phaser.Scene {
     this.vignette = cam.postFX.addVignette(0.5, 0.5, 0.92, 0.32);
     cam.fadeIn(500, 7, 8, 13);
     this.fitCamera();
-    this.scale.on(Phaser.Scale.Events.RESIZE, () => this.fitCamera());
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this));
 
     const kb = this.input.keyboard!;
     kb.on('keydown-N', () => daynight.toggle());
