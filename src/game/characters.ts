@@ -9,7 +9,10 @@ import { JADE_SKIN, KNIGHT_SKIN, Warrior } from './Warrior';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
 import { Paladin } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
+import { Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
+import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { wear, type SkinDef } from './skins';
+import type { Vitals } from './combat';
 
 /** What the world needs from the player's character each frame. */
 export interface Hero {
@@ -17,6 +20,12 @@ export interface Hero {
   y: number;
   /** 0 = night, 1 = day. */
   daylight: number;
+  /** Health (and any barrier). The world deals damage and draws the bar over the head; the hero may heal itself. */
+  readonly vitals: Vitals;
+  /** The body sprite, tinted red for a moment when struck. */
+  readonly sprite: Phaser.GameObjects.Sprite;
+  /** 0..1: the world fades the whole figure through this (falling, rising); the hero applies it to its sprites each frame. */
+  alpha: number;
   /** `attack` and `special` are the two ability buttons (held = true). */
   update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle): void;
 }
@@ -146,6 +155,36 @@ export const CHARACTERS: CharacterDef[] = [
       special: { texture: 'icon_sanctuary' },
     },
     spawn: (world, x, y) => new Paladin(world, x, y),
+  },
+  {
+    id: 'jedi',
+    name: 'Jedi',
+    role: 'Saber and Force',
+    accent: 0x5fb4ff,
+    stats: { power: 4, speed: 5, range: 3 },
+    attack: 'Saber flurry',
+    special: 'Force push',
+    preview: { texture: 'jedi', glow: 'jedi_e', idle: 'jedi_idle_down', chosen: 'jedi_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
+    buttons: {
+      attack: { texture: 'icon_saber' },
+      special: { texture: 'icon_force' },
+    },
+    skins: [
+      { id: 'knight', name: 'Knight' },
+      {
+        id: 'sith',
+        name: 'Sith',
+        role: 'Dark side',
+        accent: 0xff4a4a,
+        special: 'Force storm',
+        preview: { texture: 'jedi_sith', glow: 'jedi_sith_e', idle: 'jedi_sith_idle_down', chosen: 'jedi_sith_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
+        buttons: {
+          attack: { texture: 'icon_saber_sith' },
+          special: { texture: 'icon_force_sith' },
+        },
+      },
+    ],
+    spawn: (world, x, y, skin) => new Jedi(world, x, y, skin === 'sith' ? SITH_STYLE : JEDI_STYLE),
   },
 ];
 

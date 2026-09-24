@@ -5,10 +5,12 @@ import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
+import { Vitals } from './combat';
 import { GOLD_FX, HitSpark, JADE_FX, JADE_STEEL_FX, STEEL_FX, Shockwave, SlashArc, Tempest, ThrustStreak, type Effect, type Scheme } from './Slash';
 import type { Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 
+export const MAX_HP = 110;
 const SPEED = 60; // world px / second
 /** A swing chains into the next hit of the combo if it starts within this long of the previous one. */
 const COMBO_WINDOW = 2000;
@@ -48,6 +50,9 @@ export class Warrior implements Hero {
   y: number;
   /** 0 = night, 1 = day. */
   daylight = 0;
+  readonly vitals = new Vitals(MAX_HP);
+  /** 0..1, fades the whole figure (see Hero). */
+  alpha = 1;
   private dir: Dir = 'down';
   private world: WorldScene;
   private skin: WarriorSkin;
@@ -80,6 +85,11 @@ export class Warrior implements Hero {
   private hitTimer = 0;
 
   private fx: Effect[] = [];
+
+  /** The body sprite (see Hero). */
+  get sprite(): Phaser.GameObjects.Sprite {
+    return this.body;
+  }
 
   constructor(world: WorldScene, x: number, y: number, skin: WarriorSkin = KNIGHT_SKIN) {
     this.world = world;
@@ -191,7 +201,7 @@ export class Warrior implements Hero {
     if (this.swing === 'thrust') {
       this.fx.push(new ThrustStreak(this.world, cx, cy, u.x, u.y, 30, this.skin.heavy, depth));
       this.dash = { vx: u.x * 120, vy: u.y * 120, t: 100 };
-      const hits = this.world.melee({ kind: 'line', x0: cx, y0: cy, x1: cx + u.x * 34, y1: cy + u.y * 34, radius: 7 }, true);
+      const hits = this.world.melee({ kind: 'line', x0: cx, y0: cy, x1: cx + u.x * 34, y1: cy + u.y * 34, radius: 7 }, { damage: 18, heavy: true, knock: 160 });
       this.impact(hits, this.skin.heavy, true);
       return;
     }
@@ -200,7 +210,7 @@ export class Warrior implements Hero {
     const hand = this.dir === 'right' ? -1 : 1;
     const sweep = this.swing === 'slash1' ? hand : -hand;
     this.fx.push(new SlashArc(this.world, cx, cy, deg + sweep * 100, deg - sweep * 100, 17, this.skin.swing, depth));
-    const hits = this.world.melee({ kind: 'arc', x: cx, y: cy, radius: 22, angle: (deg * Math.PI) / 180, spread: (115 * Math.PI) / 180 }, false);
+    const hits = this.world.melee({ kind: 'arc', x: cx, y: cy, radius: 22, angle: (deg * Math.PI) / 180, spread: (115 * Math.PI) / 180 }, { damage: 11 });
     this.impact(hits, this.skin.swing, false);
   }
 
@@ -244,7 +254,7 @@ export class Warrior implements Hero {
     this.hitTimer -= dt;
     if (this.hitTimer <= 0) {
       this.hitTimer += SPIN_HIT_EVERY;
-      const hits = this.world.melee({ kind: 'circle', x: snap(this.x), y: snap(this.y) - CHEST_Y, radius: 20 }, false);
+      const hits = this.world.melee({ kind: 'circle', x: snap(this.x), y: snap(this.y) - CHEST_Y, radius: 20 }, { damage: 5, knock: 40 });
       this.impact(hits, this.skin.heavy, false);
     }
     if (this.spinT >= SPIN_TIME) this.endSpin();
@@ -258,7 +268,7 @@ export class Warrior implements Hero {
     const x = snap(this.x);
     const y = snap(this.y);
     this.fx.push(new Shockwave(this.world, x, y - 1, 40, this.skin.heavy));
-    const hits = this.world.melee({ kind: 'circle', x, y: y - CHEST_Y, radius: 36 }, true);
+    const hits = this.world.melee({ kind: 'circle', x, y: y - CHEST_Y, radius: 36 }, { damage: 16, heavy: true, knock: 170 });
     this.impact(hits, this.skin.heavy, true);
     sound.slam(this.world.pan(x));
     this.world.cameras.main.shake(220, 0.0006);
@@ -287,10 +297,10 @@ export class Warrior implements Hero {
     const rx = snap(this.x);
     const ry = snap(this.y);
     const frame = this.body.frame.name;
-    this.body.setPosition(rx, ry).setDepth(ry);
-    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(frame);
-    this.shadow.setPosition(rx, ry - 1);
-    this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight);
+    this.body.setPosition(rx, ry).setDepth(ry).setAlpha(this.alpha);
+    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(frame).setAlpha(this.alpha);
+    this.shadow.setPosition(rx, ry - 1).setAlpha(this.alpha);
+    this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * this.alpha);
     this.aura.setPosition(rx, ry - 14);
     this.aura.intensity = 0.55 * (1 - this.daylight);
   }
