@@ -33,6 +33,8 @@ export interface MonsterStats {
   barY: number;
   /** Tints of the burst it leaves when it dies. */
   debris: number[];
+  /** No bar over its head (a boss shows its health across the top of the screen). */
+  noBar?: boolean;
 }
 
 export type MonsterState = 'spawn' | 'idle' | 'wander' | 'notice' | 'chase' | 'windup' | 'attack' | 'recover' | 'hurt' | 'return' | 'dying';
@@ -110,6 +112,11 @@ export abstract class Monster implements Hurtbox {
 
   get bodyY(): number {
     return this.stats.bodyY + this.hover;
+  }
+
+  /** A boss: the camera leans toward it while it fights. */
+  get boss(): boolean {
+    return !!this.stats.noBar;
   }
 
   get radius(): number {
@@ -246,6 +253,9 @@ export abstract class Monster implements Hurtbox {
   /** Clean up any telegraph when an attack is cut short. */
   protected onInterrupted(): void {}
 
+  /** It has just been slain (a boss makes more of it). */
+  protected onDeath(): void {}
+
   protected enter(state: MonsterState, time: number): void {
     this.state = state;
     this.timer = time;
@@ -321,6 +331,7 @@ export abstract class Monster implements Hurtbox {
     this.world.debris(this.stats.debris, snap(this.x), snap(this.y) - this.stats.bodyY, 18, this.y + 1);
     sound.monsterDie(this.world.pan(this.x), this.stats.mass);
     this.world.monsterSlain(this.stats.key, this.x, this.y, this.stats.bodyY);
+    this.onDeath();
   }
 
   /** Separation: nudge by (dx, dy) unless pinned in place. */
@@ -351,7 +362,7 @@ export abstract class Monster implements Hurtbox {
     const lift = Math.min(1, this.hover / 10);
     this.shadow.setPosition(rx, ry - 1).setAlpha(alpha * (1 - lift * 0.4));
     this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * alpha);
-    this.bar.update(dt, rx, ry - this.stats.barY, this.state === 'dying' ? 0 : this.hp, this.stats.hp, 0);
+    if (!this.stats.noBar) this.bar.update(dt, rx, ry - this.stats.barY, this.state === 'dying' ? 0 : this.hp, this.stats.hp, 0);
   }
 
   destroy(): void {

@@ -22,6 +22,8 @@ import { Scenery } from '../world/Scenery';
 import { arenaById, type ArenaDef } from '../world/arenas';
 import { PLAZA_H, PLAZA_Y, plazaProps } from '../world/clearing';
 import { Garden } from '../world/Garden';
+import { CosmosArena } from '../world/Cosmos';
+import { isPainted } from '../world/arenas';
 
 type V3 = [number, number, number];
 
@@ -93,6 +95,10 @@ export class WorldScene extends Phaser.Scene {
   private arena!: ArenaDef;
   /** The arena's own living parts, when it is the Sunken Garden. */
   private garden: Garden | null = null;
+  /** The arena's own living parts, when it is the Cosmos Arena. */
+  private cosmos: CosmosArena | null = null;
+  /** How far the camera leans off the hero, toward a boss towering over the fight. */
+  private lean = { x: 0, y: 0 };
   /** The light this frame: 0 night .. 1 day (fixed in arenas without day and night). */
   private daylight = 1;
   /** Healing from buffs, gathered until it makes a whole point, and shown once a second. */
@@ -119,7 +125,8 @@ export class WorldScene extends Phaser.Scene {
   }
   /** Can feet stand at (x, y)? The arena's walls, trees and water say no, and so do standing flowers. */
   walkable = (x: number, y: number): boolean => this.arena.walkable(x, y) && (!this.garden || this.garden.walkable(x, y));
-  private ground!: GroundStreamer;
+  /** The streamed ground, or null in an arena painted in one piece. */
+  private ground: GroundStreamer | null = null;
   private scenery!: Scenery;
   /** The camera's view of the world, in world pixels. */
   private view = new Phaser.Geom.Rectangle();
@@ -173,6 +180,8 @@ export class WorldScene extends Phaser.Scene {
     this.fallen = null;
     this.banner = null;
     this.garden = null;
+    this.cosmos = null;
+    this.lean.x = this.lean.y = 0;
     this.shafts = null;
     this.regenAcc = this.regenShown = this.regenT = this.auraT = 0;
     const arena = (this.arena = arenaById(data?.arena));
@@ -207,7 +216,9 @@ export class WorldScene extends Phaser.Scene {
     };
 
     // The ground streams in strips as the hero walks (see GroundStreamer).
-    this.ground = new GroundStreamer(this, arena.ground, (img) => ground(img) as Phaser.GameObjects.Image);
+    this.ground = isPainted(arena.ground) ? null : new GroundStreamer(this, arena.ground, (img) => ground(img) as Phaser.GameObjects.Image);
+    sound.setOutdoors(arena.id !== 'cosmos');
+    if (arena.id === 'cosmos') this.cosmos = new CosmosArena(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
 
     // Faint shafts of sunlight over the clearing's ground. Drifting cloud
     // shadows are drawn over everything, with the vignette (see below).
@@ -265,7 +276,7 @@ export class WorldScene extends Phaser.Scene {
     this.spawnY = arena.spawn.y;
     this.hero = characterById(data?.character).spawn(this, this.spawnX, this.spawnY);
     this.heroBar = new HealthBar(this);
-    this.spawners.push(new Spawner(this, arena.monsters));
+    this.spawners.push(new Spawner(this, arena.monsters, arena.respawn));
     this.scenery = new Scenery(this, arena.scenery(), arena.drift);
 
     // Screen-fixed; it covers the ground camera's image too, as it draws first.
@@ -274,7 +285,7 @@ export class WorldScene extends Phaser.Scene {
     cam.fadeIn(500, 7, 8, 13);
     this.fitCamera();
     this.followHero();
-    this.ground.prime(this.view);
+    this.ground?.prime(this.view);
     this.showBanner(arena.name);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this));
@@ -383,6 +394,21 @@ export class WorldScene extends Phaser.Scene {
     if (dx * dx + dy * dy > 1) return false;
     this.hurtHero(harm);
     return true;
+  }
+
+  /** Drag the hero toward (x, y) at `speed` px/s (a boss's gravity), never through walls. */
+  pullHero(x: number, y: number, speed: number, dt: number): void {
+    if (this.downT > 0) return;
+    const h = this.hero;
+    const dx = x - h.x;
+    const dy = y - h.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 4) return;
+    const s = Math.min(d, (speed * dt) / 1000);
+    const nx = h.x + (dx / d) * s;
+    const ny = h.y + (dy / d) * s;
+    if (this.walkable(nx, h.y)) h.x = nx;
+    if (this.walkable(h.x, ny)) h.y = ny;
   }
 
   /** Damage the hero, unless they are down or still in their grace window. */
@@ -632,8 +658,8 @@ export class WorldScene extends Phaser.Scene {
     const maxX = this.worldRect.width - viewW / 2 - halfW;
     const minY = viewH / 2 - halfH;
     const maxY = this.worldRect.height - viewH / 2 - halfH;
-    const tx = this.hero.x - halfW;
-    const ty = this.hero.y - 12 - halfH;
+    const tx = this.hero.x + this.lean.x - halfW;
+    const ty = this.hero.y - 12 + this.lean.y - halfH;
     const sx = maxX < minX ? (minX + maxX) / 2 : Phaser.Math.Clamp(tx, minX, maxX);
     const sy = maxY < minY ? (minY + maxY) / 2 : Phaser.Math.Clamp(ty, minY, maxY);
     // Screen x = (worldX - scroll) * z + half * (1 - z). Choose scroll so the
@@ -786,15 +812,16 @@ export class WorldScene extends Phaser.Scene {
     sky.sky = mix3(NIGHT.sky, DAY.sky, d);
     sky.bounce = mix3(NIGHT.bounce, DAY.bounce, d);
 
-    this.ground.setLight(d, 0.9 - d * 0.6);
+    this.ground?.setLight(d, 0.9 - d * 0.6);
     skyState.clouds = d;
     skyState.tileX = time * 0.004;
     skyState.tileY = time * 0.0022;
     this.shafts?.setAlpha(d * (0.1 + Math.sin(time * 0.0007) * 0.03));
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
     this.setVignette(0.32 - d * 0.14);
-    this.pollen.emitting = d > 0.5;
-    this.fireflies.emitting = d < 0.5;
+    // Out in the void there is neither pollen nor fireflies (the arena has its own stardust).
+    this.pollen.emitting = !this.cosmos && d > 0.5;
+    this.fireflies.emitting = !this.cosmos && d < 0.5;
     sound.setDaylight(d);
     return d;
   }
@@ -838,6 +865,23 @@ export class WorldScene extends Phaser.Scene {
     if (near === Infinity) return 0;
     const k = Phaser.Math.Clamp(1 - (near - 16) / 150, 0, 1);
     return 0.12 + 0.88 * k * k;
+  }
+
+  /**
+   * A boss stands four heroes tall, so while it fights the camera leans part
+   * of the way toward its heart, keeping it in view, and eases back after.
+   */
+  private leanToBoss(dt: number, monsters: Monster[]): void {
+    let gx = 0;
+    let gy = 0;
+    const boss = this.downT > 0 ? null : monsters.find((m) => m.boss && m.alive && m.state !== 'idle' && m.state !== 'wander');
+    if (boss) {
+      gx = Phaser.Math.Clamp((boss.x - this.hero.x) * 0.3, -50, 50);
+      gy = Phaser.Math.Clamp((boss.y - 60 - this.hero.y) * 0.35, -60, 30);
+    }
+    const k = 1 - Math.exp(-dt / 450);
+    this.lean.x += (gx - this.lean.x) * k;
+    this.lean.y += (gy - this.lean.y) * k;
   }
 
   /** Unit vector from the hero's chest towards the mouse, in the world. */
@@ -890,6 +934,7 @@ export class WorldScene extends Phaser.Scene {
       monsters.push(...sp.monsters);
     }
     separate(monsters, target, HERO_RADIUS);
+    this.leanToBoss(dt, monsters);
     for (const e of this.effects) e.update(dt);
     this.effects = this.effects.filter((e) => !e.dead);
     this.followHero();
@@ -905,9 +950,11 @@ export class WorldScene extends Phaser.Scene {
     this.beams = this.beams.filter((b) => !b.dead);
 
     const d = this.updateDaylight(time, dt);
-    this.ground.update(this.view, settings.values.quality === 'fast' ? 2.5 : 4);
+    this.ground?.update(this.view, settings.values.quality === 'fast' ? 2.5 : 4);
     this.scenery.update(time, dt, d, this.hero, this.view);
     this.garden?.update(time, dt, target, d, this.view);
+    // After the day/night light: the cosmos lights itself.
+    this.cosmos?.update(time, dt);
     this.updateBanner();
     for (const f of this.flickers) {
       const k = 1 + (f.day - 1) * d;

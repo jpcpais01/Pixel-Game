@@ -49,8 +49,9 @@ export const MONSTER_FRAME = {
   puffcap: { w: 20, h: 22, ox: 10, oy: 20 },
   barkling: { w: 28, h: 32, ox: 14, oy: 30 },
   glowmoth: { w: 26, h: 22, ox: 13, oy: 21 },
+  warden: { w: 96, h: 116, ox: 48, oy: 113 },
 };
-type FrameBox = (typeof MONSTER_FRAME)[keyof typeof MONSTER_FRAME];
+export type FrameBox = (typeof MONSTER_FRAME)[keyof typeof MONSTER_FRAME];
 
 export interface MonsterSheet {
   w: number;
@@ -63,7 +64,7 @@ export interface MonsterSheet {
 }
 
 /** Every pose, drawn facing right and mirrored. */
-function sheet({ w, h, ox: originX, oy: originY }: FrameBox, poses: Record<string, () => PixelCanvas>, anims: { name: string; frames: string[]; fps: number; loop: boolean }[]): MonsterSheet {
+export function sheet({ w, h, ox: originX, oy: originY }: FrameBox, poses: Record<string, () => PixelCanvas>, anims: { name: string; frames: string[]; fps: number; loop: boolean }[]): MonsterSheet {
   const frames: MonsterSheet['frames'] = [];
   for (const [name, draw] of Object.entries(poses)) {
     const c = draw();
