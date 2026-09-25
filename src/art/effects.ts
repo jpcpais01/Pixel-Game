@@ -2,7 +2,7 @@
 // These are pure light, so they only produce emissive pixels.
 
 import { PixelCanvas, hex, type RGB } from './pixel';
-import { EMBER_CORE, EMBER_DEEP, EMBER_HOT, EMBER_MID, MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID, MAGIC_VIOLET, HOLY_CORE, HOLY_HOT, HOLY_MID, HOLY_SKY, VOID_CORE, VOID_DEEP, VOID_HOT, VOID_MID, VOID_TEAL } from './palette';
+import { EMBER_CORE, EMBER_DEEP, EMBER_HOT, EMBER_MID, MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID, MAGIC_VIOLET, HOLY_CORE, HOLY_HOT, HOLY_MID, HOLY_SKY, SUN_CORE, SUN_HOT, SUN_MID, VOID_CORE, VOID_DEEP, VOID_HOT, VOID_MID, VOID_TEAL } from './palette';
 
 /** Colours of a spell, brightest first; `accent` is the contrasting fleck. */
 export interface SpellColors {
@@ -613,6 +613,88 @@ export function sanctuaryIcon(): Uint8ClampedArray {
   for (let x = 4; x <= 11; x++) put(x, 5, x > 5 && x < 10 ? cols[0] : cols[1]);
   for (let x = 5; x <= 10; x++) put(x, 6, cols[2]);
   for (const [x, y] of [[3, 2], [12, 3], [5, 9], [11, 8]]) put(x, y, cols[3]);
+  return px;
+}
+
+/** 16x16 warhammer for the Crusader's attack button: a squared steel head banded in gold, a spike, a long haft. */
+export function hammerIcon(): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: string) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const n = parseInt(c.slice(1), 16);
+    const i = (y * S + x) * 4;
+    px[i] = n >> 16;
+    px[i + 1] = (n >> 8) & 255;
+    px[i + 2] = n & 255;
+    px[i + 3] = 255;
+  };
+  // Haft from the lower left up to the head.
+  for (let i = 0; i < 9; i++) put(2 + i, 13 - i, i < 3 ? '#6a3d26' : '#a9774c');
+  put(1, 14, '#d69a3a');
+  // The head, square across the haft's end: steel lit from the upper left, gold bands at both faces.
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const u = (x + 0.5 - 11) * 0.7071 + (y + 0.5 - 5) * 0.7071; // across the haft, along the head
+      const v = (x + 0.5 - 11) * 0.7071 - (y + 0.5 - 5) * 0.7071; // up the haft
+      if (Math.abs(u) > 4.2 || Math.abs(v) > 2.2) continue;
+      const band = Math.abs(u) > 3.0;
+      const lit = v > 0.9 || u < -2.2;
+      put(x, y, band ? (lit ? '#fff4bf' : '#d69a3a') : lit ? '#d4c8cc' : v < -0.9 ? '#43363f' : '#8a7f8e');
+    }
+  }
+  // A spike off the top of the head, glowing with sunfire.
+  put(13, 2, '#ffd070');
+  put(14, 1, '#ff9a3a');
+  put(15, 0, '#e0602a');
+  const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < S && y < S && px[(y * S + x) * 4 + 3] === 255;
+  const out: [number, number][] = [];
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      if (filled(x, y)) continue;
+      if (filled(x + 1, y) || filled(x - 1, y) || filled(x, y + 1) || filled(x, y - 1)) out.push([x, y]);
+    }
+  }
+  for (const [x, y] of out) put(x, y, '#0c0a12');
+  return px;
+}
+
+/** 16x16 icon for the Crusader's Sunfall: a sun high up, its fire pouring down into a blast ring, drawn additively. */
+export function sunfallIcon(): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const cols: RGB[] = [SUN_CORE, SUN_HOT, SUN_MID, EMBER_DEEP];
+  const put = (x: number, y: number, c: RGB) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    if (px[i] + px[i + 1] + px[i + 2] >= c[0] + c[1] + c[2]) return;
+    px[i] = c[0];
+    px[i + 1] = c[1];
+    px[i + 2] = c[2];
+    px[i + 3] = 255;
+  };
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      // The sun.
+      const d = Math.hypot(x + 0.5 - 8, y + 0.5 - 3.5);
+      if (d < 1.6) put(x, y, cols[0]);
+      else if (d < 2.6) put(x, y, cols[1]);
+      else if (d < 3.3 && hash(x, y, 7) > 0.35) put(x, y, cols[2]);
+      // The blast ring, seen at an angle.
+      const q = Math.hypot((x + 0.5 - 8) / 7.2, (y + 0.5 - 12) / 3.4);
+      if (Math.abs(q - 0.9) < 0.11) put(x, y, y > 12 ? cols[1] : cols[2]);
+      else if (Math.abs(q - 0.66) < 0.09 && hash(x, y, 9) > 0.5) put(x, y, cols[3]);
+    }
+  }
+  // Fire pouring down from the sun into the ring's heart.
+  for (let y = 6; y <= 12; y++) {
+    put(8, y, y > 10 ? cols[0] : cols[1]);
+    put(7, y, cols[2]);
+    if (y > 8) put(9, y, cols[2]);
+  }
+  // Short rays round the sun, and embers.
+  for (const [x, y] of [[4, 3], [12, 3], [8, 0], [5, 1], [11, 1], [5, 6], [11, 6]]) put(x, y, cols[2]);
+  for (const [x, y] of [[3, 9], [13, 8]]) put(x, y, cols[3]);
   return px;
 }
 
