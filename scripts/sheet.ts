@@ -13,7 +13,7 @@ import { encodePNG } from './png';
 const out = process.argv[2] ?? 'sheets';
 const S = Number(process.argv[3] ?? 5);
 const arg = process.argv[4];
-const hero = arg === 'archer' || arg === 'storm' ? 'archer' : arg === 'alchemist' || arg === 'witch' || arg === 'chem' || arg === 'chem' ? 'alchemist' : arg === 'fighter' ? 'fighter' : arg === 'warrior' || arg === 'jade' ? 'warrior' : arg === 'paladin' ? 'paladin' : arg === 'jedi' || arg === 'sith' ? 'jedi' : 'wizard';
+const hero = arg === 'archer' || arg === 'storm' ? 'archer' : arg === 'alchemist' || arg === 'witch' || arg === 'chem' ? 'alchemist' : arg === 'fighter' ? 'fighter' : arg === 'warrior' || arg === 'jade' ? 'warrior' : arg === 'paladin' ? 'paladin' : arg === 'jedi' || arg === 'sith' ? 'jedi' : 'wizard';
 mkdirSync(out, { recursive: true });
 const FRAME_W = hero === 'archer' ? ARCHER_W : hero === 'alchemist' ? ALCH_W : hero === 'fighter' ? FIGHTER_W : hero === 'jedi' ? JEDI_W : hero === 'warrior' ? WARRIOR_W : hero === 'paladin' ? PALADIN_W : WIZ_W;
 const FRAME_H = hero === 'archer' ? ARCHER_H : hero === 'alchemist' ? ALCH_H : hero === 'fighter' ? FIGHTER_H : hero === 'jedi' ? JEDI_H : hero === 'warrior' ? WARRIOR_H : hero === 'paladin' ? PALADIN_H : WIZ_H;
