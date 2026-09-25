@@ -216,7 +216,7 @@ export class SelectScene extends Phaser.Scene {
   private back!: PixelButton;
   private play!: PixelButton;
   private leaving = false;
-  /** The cards, laid out in a grid when they fit, else in one row that scrolls sideways. */
+  /** The cards in two rows, which scroll sideways only when they can't fit. */
   private strip!: Phaser.GameObjects.Container;
   private hints: Phaser.GameObjects.Graphics[] = [];
   private scroll = 0;
@@ -224,6 +224,7 @@ export class SelectScene extends Phaser.Scene {
   /** Where the row sits when unscrolled, and how wide the visible part is (art pixels). */
   private stripX = 0;
   private viewW = 0;
+  private stripH = CARD_H;
   /** Scroll speed in art pixels per second, left over from a fling or a nudge. */
   private velocity = 0;
   /** Scroll position being eased to (keyboard, hint taps), or null. */
@@ -301,7 +302,7 @@ export class SelectScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       // Only a press on the row of cards (or the gaps around it) drags it.
       const y = p.y / this.cameras.main.zoom - this.strip.y;
-      if (this.maxScroll <= 0 || y < -GAP || y > CARD_H + GAP) return;
+      if (this.maxScroll <= 0 || y < -GAP || y > this.stripH + GAP) return;
       this.drag = { x: p.x, scroll: this.scroll, t: p.time, last: this.scroll };
       this.velocity = 0;
       this.target = null;
@@ -398,51 +399,59 @@ export class SelectScene extends Phaser.Scene {
 
   private layout(): void {
     const { width, height } = this.scale;
-    const z = menuZoom(width, height);
+    // Two rows of cards, as many columns as that takes. When they don't fit at the
+    // usual zoom, zoom out a whole step at a time (keeping the pixels crisp), but no
+    // further than half; past that the rows scroll sideways.
+    const n = this.cards.length;
+    const rows = Math.min(2, n);
+    const cols = Math.ceil(n / rows);
+    const margin = 8;
+    const fullW = cols * CARD_W + (cols - 1) * GAP;
+    const blockH = rows * CARD_H + (rows - 1) * GAP;
+    const zMax = menuZoom(width, height);
+    const zMin = Math.max(1, Math.ceil(zMax / 2));
+    let z = zMax;
+    let area = this.area(height / z, z);
+    while (z > zMin && (fullW + margin * 2 > width / z || blockH > area.h)) {
+      z--;
+      area = this.area(height / z, z);
+    }
     this.cameras.main.setZoom(z);
     const vw = width / z;
     const vh = height / z;
     this.shade.setSize(Math.ceil(vw) + 1, Math.ceil(vh) + 1);
+    this.header.setPosition(Math.round((vw - this.header.width) / 2), area.headerY);
+    this.play.place((vw - this.play.boxW) / 2, area.buttonsY);
+    this.back.place(8, area.buttonsY + 1);
 
-    const top = Math.ceil(fpsBottom() / z) + 4;
-    this.header.setPosition(Math.round((vw - this.header.width) / 2), top);
-
-    const buttonsY = Math.round(vh - 26);
-    this.play.place((vw - this.play.boxW) / 2, buttonsY);
-    this.back.place(8, buttonsY + 1);
-
-    // Cards in rows, centred in the space between the header and the buttons. When the
-    // rows don't fit, they become one row that scrolls sideways.
-    const n = this.cards.length;
-    const margin = 8;
-    const areaTop = top + this.header.height + 6;
-    const areaH = buttonsY - 6 - areaTop;
-    let perRow = Math.max(1, Math.min(n, Math.floor((vw - margin * 2 + GAP) / (CARD_W + GAP))));
-    let rows = Math.ceil(n / perRow);
-    if (rows * CARD_H + (rows - 1) * GAP > areaH) {
-      perRow = n;
-      rows = 1;
-    }
-    const blockH = rows * CARD_H + (rows - 1) * GAP;
-    const y0 = Math.max(areaTop, Math.round(areaTop + (areaH - blockH) / 2));
-    const fullW = perRow * CARD_W + (perRow - 1) * GAP;
+    // The rows are centred on each other and in the space between the header and the buttons.
+    const y0 = Math.max(area.top, Math.round(area.top + (area.h - blockH) / 2));
     this.cards.forEach((c, i) => {
-      const r = Math.floor(i / perRow);
-      const inRow = Math.min(perRow, n - r * perRow);
+      const r = Math.floor(i / cols);
+      const inRow = Math.min(cols, n - r * cols);
       const rowW = inRow * CARD_W + (inRow - 1) * GAP;
-      c.setPosition(Math.round((fullW - rowW) / 2) + (i % perRow) * (CARD_W + GAP), r * (CARD_H + GAP));
+      c.setPosition(Math.round((fullW - rowW) / 2) + (i % cols) * (CARD_W + GAP), r * (CARD_H + GAP));
     });
 
     this.viewW = vw - margin * 2;
     this.maxScroll = Math.max(0, fullW - this.viewW);
     this.stripX = this.maxScroll > 0 ? margin : Math.round((vw - fullW) / 2);
     this.strip.y = y0;
-    const hintY = Math.round(y0 + CARD_H / 2 - 5);
+    this.stripH = blockH;
+    const hintY = Math.round(y0 + blockH / 2 - 5);
     this.hints[0].setPosition(2, hintY);
     this.hints[1].setPosition(Math.floor(vw) - 6, hintY);
     this.target = null;
     this.velocity = 0;
     this.setScroll(this.scroll);
     this.reveal(this.picked);
+  }
+
+  /** Where the header and buttons go on a view this tall (art pixels), and the space left for cards. */
+  private area(vh: number, z: number): { headerY: number; buttonsY: number; top: number; h: number } {
+    const headerY = Math.ceil(fpsBottom() / z) + 4;
+    const buttonsY = Math.round(vh - 26);
+    const top = headerY + this.header.height + 6;
+    return { headerY, buttonsY, top, h: buttonsY - 6 - top };
   }
 }
