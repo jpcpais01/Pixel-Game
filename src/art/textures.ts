@@ -5,11 +5,11 @@
 import Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, WIZARD_LOOKS, type FrameMeta } from './wizard';
-import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, fistIcon, barrageIcon, flaskIcon, bogIcon, fumeCanvas, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
+import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, fistIcon, barrageIcon, palmIcon, quakeIcon, flaskIcon, bogIcon, fumeCanvas, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
 import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FRAMES, twirlStart, TWIRL_FPS, type JediMeta } from './jedi';
 import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, buildAlchemistFrames, flaskFrame } from './alchemist';
 import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE, arrowFrame, buildArcherFrames, stuckArrowFrame } from './archer';
-import { buildFighterFrames, FIGHTER_ANIMS, FIGHTER_H, FIGHTER_W } from './fighter';
+import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
 import { hex } from './pixel';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_W, type PaladinMeta } from './paladin';
@@ -209,17 +209,19 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     }
   }
 
-  // Fighter.
-  const ff = buildFighterFrames();
-  register(scene, 'fighter', pack(ff.map((f) => ({ name: f.key, r: f.canvas.render() })), FIGHTER_W, FIGHTER_H), FIGHTER_W, FIGHTER_H);
-  for (const a of FIGHTER_ANIMS) {
-    for (const d of DIRS) {
-      scene.anims.create({
-        key: `fighter_${a.name}_${d}`,
-        frames: ff.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: 'fighter', frame: f.key })),
-        frameRate: a.fps,
-        repeat: a.loop ? -1 : 0,
-      });
+  // Fighter once per style: 'fighter' for the brawler, 'fighter_monk' for the iron monk.
+  for (const look of FIGHTER_LOOKS) {
+    const ff = buildFighterFrames(look);
+    register(scene, look.key, pack(ff.map((f) => ({ name: f.key, r: f.canvas.render() })), FIGHTER_W, FIGHTER_H), FIGHTER_W, FIGHTER_H);
+    for (const a of look.anims) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: ff.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
     }
   }
 
@@ -321,6 +323,8 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   }
 
   scene.textures.addCanvas('icon_fist', toCanvas(16, 16, fistIcon()));
+  scene.textures.addCanvas('icon_palm', toCanvas(16, 16, palmIcon()));
+  scene.textures.addCanvas('icon_quake', toCanvas(16, 16, quakeIcon()));
   scene.textures.addCanvas('icon_barrage', toCanvas(16, 16, barrageIcon([hex('#fffbe8'), hex('#ffd66b'), hex('#ff8a36'), hex('#d8402a')])));
 
   // Items: hotbar icons and the bottles monsters drop.

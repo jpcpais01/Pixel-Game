@@ -1,6 +1,7 @@
-// Character skins: alternate looks with identical gameplay. A character lists
-// its skins in its registry entry (the first is its default look); the pick
-// for each character is remembered in localStorage.
+// Character skins: alternate looks, and (from the iron monk on) alternate
+// styles of play with their own stats and moves. A character lists its skins
+// in its registry entry (the first is its default look); the pick for each
+// character is remembered in localStorage.
 
 import type { CharacterDef } from './characters';
 
@@ -12,6 +13,8 @@ export interface SkinDef {
   /** What changes on the select card and the HUD while this skin is worn. */
   role?: string;
   accent?: number;
+  /** A skin that plays differently shows its own pips on the card. */
+  stats?: CharacterDef['stats'];
   attack?: string;
   special?: string;
   preview?: CharacterDef['preview'];

@@ -10,6 +10,10 @@ import type { Effect, Scheme } from './Slash';
 export const AIR_FX: Scheme = { core: 0xffffff, hot: 0xfff2dc, mid: 0xffc49a, deep: 0xc8704a };
 /** The finisher and the barrage: fists of burning chi. */
 export const CHI_FX: Scheme = { core: 0xfffbe8, hot: 0xffd66b, mid: 0xff8a36, deep: 0xd8402a, light: 0xffa050 };
+/** The monk's palms: pale gold force with a little dust in it. */
+export const PALM_FX: Scheme = { core: 0xfffbea, hot: 0xfff0c0, mid: 0xe8c47a, deep: 0x9a7448 };
+/** The monk's double palm and earthshaker: golden qi. */
+export const QI_FX: Scheme = { core: 0xfffbea, hot: 0xffe7a0, mid: 0xe0b050, deep: 0x8a5a2a, light: 0xffd080 };
 
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
@@ -268,5 +272,73 @@ export class Flurry {
     this.scene.lights.removeLight(this.light);
     this.embers.stop();
     this.scene.time.delayedCall(500, () => this.embers.destroy());
+  }
+}
+
+/**
+ * Cracked earth where the monk came down: jagged fissures running out from
+ * the point of impact, glowing with qi at first, then fading. Drawn once, so
+ * it costs nothing while it lingers.
+ */
+export class Fissure implements Effect {
+  dead = false;
+  private layer: PixelLayer;
+  private age = 0;
+  private readonly duration = 1600;
+
+  constructor(scene: Phaser.Scene, x: number, y: number, radius: number) {
+    const W = Math.ceil(radius * 2) + 4;
+    const H = Math.ceil(radius * 1.3) + 4;
+    this.layer = new PixelLayer(scene, W, H);
+    // On the ground, under the shockwave.
+    this.layer.image.setPosition(Math.round(x - W / 2), Math.round(y - H / 2)).setDepth(2.5);
+    const cx = W / 2;
+    const cy = H / 2;
+    const b = this.layer;
+    const seed = Math.floor(x * 7 + y * 13);
+    const cracks = 7;
+    for (let i = 0; i < cracks; i++) {
+      let a = (i / cracks) * Math.PI * 2 + hash(seed, i) * 0.6;
+      let px = cx;
+      let py = cy;
+      const len = radius * (0.55 + hash(seed, i, 1) * 0.45);
+      for (let s = 0; s < len; s++) {
+        // Wander a little as it runs; squashed into the ground plane.
+        a += (hash(seed, i, s + 2) - 0.5) * 0.7;
+        px += Math.cos(a);
+        py += Math.sin(a) * 0.62;
+        const k = s / len;
+        const ix = Math.floor(px);
+        const iy = Math.floor(py);
+        b.put(ix, iy, k < 0.35 ? 0xffe7a0 : k < 0.6 ? 0xc07a30 : 0x2a1a10, k < 0.35 ? 1 : 0.9 - k * 0.4);
+        // A lip of broken ground beside the crack near its root.
+        if (k < 0.5) b.put(ix, iy + 1, 0x1a100a, 0.7);
+        // Now and then it forks.
+        if (s > 3 && hash(seed, i, s + 50) > 0.88) {
+          const fa = a + (hash(seed, s) > 0.5 ? 0.9 : -0.9);
+          for (let t = 1; t < 4; t++) b.put(Math.floor(px + Math.cos(fa) * t), Math.floor(py + Math.sin(fa) * t * 0.62), 0x2a1a10, 0.7);
+        }
+      }
+    }
+    // The crater's heart.
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -3; dx <= 3; dx++) if (Math.hypot(dx, dy * 1.5) < 3.2) b.put(Math.floor(cx + dx), Math.floor(cy + dy), Math.hypot(dx, dy * 1.5) < 1.6 ? 0xfffbea : 0x3a2414, 0.9);
+    b.flush();
+  }
+
+  update(dt: number): void {
+    if (this.dead) return;
+    this.age += dt;
+    if (this.age >= this.duration) {
+      this.destroy();
+      return;
+    }
+    const t = this.age / this.duration;
+    this.layer.image.setAlpha(t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4);
+  }
+
+  destroy(): void {
+    if (this.dead) return;
+    this.dead = true;
+    this.layer.destroy();
   }
 }

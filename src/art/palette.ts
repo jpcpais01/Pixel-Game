@@ -609,3 +609,52 @@ export const BOLT_CORE = hex('#ffffff');
 export const BOLT_HOT = hex('#bff0ff');
 export const BOLT_MID = hex('#4ab4ff');
 export const BOLT_DEEP = hex('#2a5ad8');
+
+// ---------------------------------------------------------------------------
+// The iron monk (the fighter's second style): a saffron robe under a crimson
+// sash slung over one shoulder, maroon trousers, bronze bracers, a string of
+// dark prayer beads, a shaved head and bare open hands.
+
+export const MONK_ROBE: Material = {
+  ramp: ramp('#6a2c10', '#b0561a', '#e8902a', '#ffb648', '#ffe09a'),
+  outline: hex('#1f0c08'),
+  outlineLit: hex('#3a180e'),
+};
+
+export const MONK_TROUSER: Material = {
+  ramp: ramp('#240c16', '#431426', '#652036', '#8a3048'),
+  outline: INK,
+};
+
+export const MONK_SASH: Material = {
+  ramp: ramp('#3a0a12', '#6e1420', '#a52430', '#d0453e'),
+  outline: hex('#18060a'),
+};
+
+export const BRONZE: Material = {
+  ramp: ramp('#3a2012', '#6e4220', '#a8702e', '#dcaa52', '#fff0b0'),
+  outline: hex('#1c0e08'),
+  shine: true,
+};
+
+/** Straw-coloured cloth wound round the feet. */
+export const MONK_WRAP: Material = {
+  ramp: ramp('#4a3a2a', '#7a6446', '#ad9468', '#d8c49a'),
+  outline: hex('#1a120c'),
+};
+
+export const PRAYER_BEAD: Material = {
+  ramp: ramp('#1c0e0a', '#3e2216', '#6a3e24', '#96643a'),
+  outline: hex('#0c0604'),
+  shine: true,
+};
+
+export const MONK_BROW: Material = {
+  ramp: ramp('#1a100c', '#2e1c14', '#44291c', '#5c3a28'),
+  outline: hex('#0a0604'),
+};
+
+// Qi (light-only pixels): the monk's palms of golden force.
+export const QI_CORE = hex('#fffbea');
+export const QI_HOT = hex('#ffe7a0');
+export const QI_MID = hex('#e0b050');

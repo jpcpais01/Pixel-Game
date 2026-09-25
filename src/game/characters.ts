@@ -11,7 +11,7 @@ import { Paladin } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
-import { Fighter } from './Fighter';
+import { BRAWLER_STYLE, Fighter, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, PLAGUE_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
@@ -77,7 +77,7 @@ export interface CharacterDef {
     attack: { texture: string; frame?: string; anim?: string };
     special: { texture: string };
   };
-  /** Alternate looks, same gameplay; the first is the default (see skins.ts). */
+  /** Alternate looks (some with their own stats and moves); the first is the default (see skins.ts). */
   skins?: SkinDef[];
   /** `skin` is the id of the worn skin, for characters that have skins. */
   spawn(world: WorldScene, x: number, y: number, skin?: string): Hero;
@@ -217,7 +217,24 @@ export const CHARACTERS: CharacterDef[] = [
       attack: { texture: 'icon_fist' },
       special: { texture: 'icon_barrage' },
     },
-    spawn: (world, x, y) => new Fighter(world, x, y),
+    skins: [
+      { id: 'brawler', name: 'Brawler' },
+      {
+        id: 'monk',
+        name: 'Iron monk',
+        role: 'Palms of stone',
+        accent: 0xf0a63a,
+        stats: { power: 5, speed: 2, range: 3 },
+        attack: 'Iron palm',
+        special: 'Earthshaker',
+        preview: { texture: 'fighter_monk', glow: 'fighter_monk_e', idle: 'fighter_monk_idle_down', chosen: 'fighter_monk_leap_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
+        buttons: {
+          attack: { texture: 'icon_palm' },
+          special: { texture: 'icon_quake' },
+        },
+      },
+    ],
+    spawn: (world, x, y, skin) => new Fighter(world, x, y, skin === 'monk' ? MONK_STYLE : BRAWLER_STYLE),
   },
   {
     id: 'alchemist',

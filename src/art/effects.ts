@@ -899,3 +899,54 @@ export function rainIcon(k: QuiverColors = RANGER_QUIVER, bolt = false): Uint8Cl
   }
   return px;
 }
+
+const MONK_SKIN = ['#f7c9a3', '#e09a78', '#a85f50'] as const;
+const MONK_BRONZE = ['#fff0b0', '#dcaa52', '#a8702e', '#6e4220'] as const;
+const QI = ['#fffbea', '#ffe7a0', '#e0b050'] as const;
+
+/** 16x16 icon for the monk's palm strikes: an open hand held up, a bronze bracer at the wrist, qi rising off it. */
+export function palmIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  const skin = (x: number, y: number) => (x + y * 0.4 < 7.5 ? MONK_SKIN[0] : x + y * 0.4 < 11.5 ? MONK_SKIN[1] : MONK_SKIN[2]);
+  // Four fingers, the middle two longest, a darker seam down the right of each.
+  const tops = [3, 2, 2, 3];
+  tops.forEach((top, i) => {
+    const x0 = 4 + i * 2;
+    for (let y = top; y <= 7; y++) {
+      put(x0, y, skin(x0, y));
+      put(x0 + 1, y, i < 3 && y > top ? MONK_SKIN[2] : skin(x0 + 1, y));
+    }
+  });
+  // The palm, the thumb folded out to the left.
+  for (let y = 8; y <= 11; y++) for (let x = 4; x <= 11; x++) if (!(y === 11 && (x === 4 || x === 11))) put(x, y, skin(x, y));
+  for (const [x, y] of [[2, 6], [2, 7], [3, 7], [3, 8], [3, 9]] as const) put(x, y, MONK_SKIN[x === 2 ? 0 : 1]);
+  put(7, 9, MONK_SKIN[2]);
+  put(8, 10, MONK_SKIN[2]);
+  // Bronze bracer.
+  for (let y = 12; y <= 14; y++) for (let x = 5; x <= 10; x++) put(x, y, y === 12 ? MONK_BRONZE[3] : x < 7 ? MONK_BRONZE[0] : x < 9 ? MONK_BRONZE[1] : MONK_BRONZE[2]);
+  outline('#1a0e08');
+  // Qi flickering up off the fingertips.
+  for (const [x, y, c] of [[5, 0, 1], [8, 0, 0], [11, 1, 1], [13, 4, 2], [1, 3, 2], [14, 7, 1]] as const) put(x, y, QI[c]);
+  return px;
+}
+
+/** 16x16 icon for the monk's earthshaker: a palm driven down into cracked ground, force rolling out along it. */
+export function quakeIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  // Bracer at the top, the hand coming down, fingers pointing at the ground.
+  for (let y = 0; y <= 2; y++) for (let x = 6; x <= 9; x++) put(x, y, y === 2 ? MONK_BRONZE[3] : x < 8 ? MONK_BRONZE[0] : MONK_BRONZE[2]);
+  for (let y = 3; y <= 6; y++) for (let x = 5; x <= 10; x++) put(x, y, x < 7 ? MONK_SKIN[0] : x < 9 ? MONK_SKIN[1] : MONK_SKIN[2]);
+  for (let y = 7; y <= 8; y++) for (let x = 5; x <= 10; x++) put(x, y, x % 2 === 0 ? MONK_SKIN[2] : MONK_SKIN[1]);
+  put(4, 4, MONK_SKIN[0]);
+  put(4, 5, MONK_SKIN[1]);
+  // The ground, split where the palm struck.
+  for (let y = 11; y <= 15; y++) for (let x = 0; x < 16; x++) put(x, y, y === 11 ? '#96643a' : (x + y) % 5 === 0 ? '#3e2216' : '#6a3e24');
+  outline('#1a0e08');
+  for (const [x, y] of [[7, 12], [6, 13], [5, 14], [4, 15], [9, 12], [10, 13], [11, 13], [12, 14], [13, 15], [8, 14], [8, 15]] as const) put(x, y, '#1c0e0a');
+  // Qi flaring out of the cracks and rolling along the ground.
+  for (const [x, y] of [[7, 11], [8, 11], [9, 11]] as const) put(x, y, QI[0]);
+  put(8, 12, QI[1]);
+  put(8, 13, QI[2]);
+  for (const [x, y, c] of [[3, 10, 1], [2, 9, 2], [1, 10, 2], [12, 10, 1], [13, 9, 2], [14, 10, 2], [0, 8, 2], [15, 8, 2]] as const) put(x, y, QI[c]);
+  return px;
+}
