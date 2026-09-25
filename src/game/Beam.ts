@@ -28,35 +28,61 @@ const hash = (a: number, b: number, c = 0) => {
 
 let layerId = 0;
 
+/** Textures of finished layers, by size, for the next layer of that size. */
+const spare = new Map<string, { key: string; pixels: Uint8Array }[]>();
+const SPARE_PER_SIZE = 8;
+
 /**
  * A small canvas of solid light pixels. Drawn with normal blending, not
  * additive, so the beam keeps its crisp white core and deep-blue edge even
  * over sunlit stone; soft glows and real lights around it add the bloom.
  * Where shapes overlap, the more opaque (then brighter) pixel wins.
+ *
+ * The pixels go straight to the GPU from a byte array. Going through a 2D
+ * canvas made the browser read the canvas back from the GPU on every upload,
+ * which phones do slowly, and many effects redraw every frame. Textures are
+ * reused by later layers of the same size instead of being made anew.
  */
 export class PixelLayer {
   readonly image: Phaser.GameObjects.Image;
   readonly w: number;
   readonly h: number;
-  private tex: Phaser.Textures.CanvasTexture;
-  private data: ImageData;
+  private scene: Phaser.Scene;
+  private key: string;
+  private pixels: Uint8Array;
+  /** Whether the pixels changed since the last upload. */
+  private dirty = false;
+  /** Whether any pixel may be lit (so a clear changes something). */
+  private inked = false;
 
   constructor(scene: Phaser.Scene, w: number, h: number) {
+    this.scene = scene;
     this.w = w;
     this.h = h;
-    const key = `pixel-layer-${layerId++}`;
-    this.tex = scene.textures.createCanvas(key, w, h)!;
-    this.data = this.tex.context.createImageData(w, h);
-    this.image = scene.add.image(0, 0, key).setOrigin(0);
+    const reuse = spare.get(`${w}x${h}`)?.pop();
+    if (reuse && scene.textures.exists(reuse.key)) {
+      this.key = reuse.key;
+      this.pixels = reuse.pixels;
+      this.pixels.fill(0);
+      this.dirty = true;
+    } else {
+      this.key = `pixel-layer-${layerId++}`;
+      this.pixels = new Uint8Array(w * h * 4);
+      scene.textures.addUint8Array(this.key, this.pixels, w, h);
+    }
+    this.image = scene.add.image(0, 0, this.key).setOrigin(0);
   }
 
   clear(): void {
-    this.data.data.fill(0);
+    if (!this.inked) return;
+    this.pixels.fill(0);
+    this.inked = false;
+    this.dirty = true;
   }
 
   put(x: number, y: number, color: number, alpha = 1): void {
     if (x < 0 || y < 0 || x >= this.w || y >= this.h || alpha <= 0) return;
-    const d = this.data.data;
+    const d = this.pixels;
     const i = (y * this.w + x) * 4;
     const a = Math.round(Math.min(1, alpha) * 255);
     const r = (color >> 16) & 255;
@@ -67,16 +93,24 @@ export class PixelLayer {
     d[i + 1] = g;
     d[i + 2] = b;
     d[i + 3] = a;
+    this.inked = this.dirty = true;
   }
 
   flush(): void {
-    this.tex.context.putImageData(this.data, 0, 0);
-    this.tex.refresh();
+    if (!this.dirty) return;
+    this.dirty = false;
+    const tex = this.scene.textures.get(this.key).source[0].glTexture;
+    // Premultiplied on upload, like every other texture.
+    tex?.update(this.pixels, this.w, this.h, false, tex.wrapS, tex.wrapT, tex.minFilter, tex.magFilter, tex.format);
   }
 
   destroy(): void {
     this.image.destroy();
-    this.tex.destroy();
+    const size = `${this.w}x${this.h}`;
+    const list = spare.get(size) ?? [];
+    spare.set(size, list);
+    if (list.length < SPARE_PER_SIZE) list.push({ key: this.key, pixels: this.pixels });
+    else this.scene.textures.remove(this.key);
   }
 }
 
