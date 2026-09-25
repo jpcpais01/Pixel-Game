@@ -35,6 +35,8 @@ export class Ambience {
   private birds: Bird[];
   private crickets: Cricket[];
   private daylight = 0;
+  /** 0 out in the void, where there is no wind, bird or cricket. */
+  private outdoors = 1;
   private fireLevel = 0;
   private nextGust = 0;
   private nextRustle = 0;
@@ -91,8 +93,18 @@ export class Ambience {
   setDaylight(d: number, t: number): void {
     if (Math.abs(d - this.daylight) < 0.005) return;
     this.daylight = d;
-    this.day.gain.setTargetAtTime(d, t, 0.3);
-    this.night.gain.setTargetAtTime(1 - d, t, 0.3);
+    this.day.gain.setTargetAtTime(d * this.outdoors, t, 0.3);
+    this.night.gain.setTargetAtTime((1 - d) * this.outdoors, t, 0.3);
+    this.wind.gain.setTargetAtTime(this.windLevel(), t, 0.3);
+  }
+
+  /** Nature's sounds on (a world) or off (deep space). */
+  setOutdoors(on: boolean, t: number): void {
+    const k = on ? 1 : 0;
+    if (k === this.outdoors) return;
+    this.outdoors = k;
+    this.day.gain.setTargetAtTime(this.daylight * k, t, 0.3);
+    this.night.gain.setTargetAtTime((1 - this.daylight) * k, t, 0.3);
     this.wind.gain.setTargetAtTime(this.windLevel(), t, 0.3);
   }
 
@@ -117,7 +129,7 @@ export class Ambience {
     this.nextRustle = catchUp(this.nextRustle);
     while (this.nextRustle < until) {
       const t = this.nextRustle;
-      const amount = (0.35 + 0.65 * this.daylight) * this.gust;
+      const amount = (0.35 + 0.65 * this.daylight) * this.gust * this.outdoors;
       this.leaves.gain.setTargetAtTime(0.09 * amount * Math.pow(Math.random(), 2), t, 0.025);
       this.nextRustle += rand(0.04, 0.14);
     }
@@ -153,7 +165,7 @@ export class Ambience {
   }
 
   private windLevel(): number {
-    return (0.1 + this.gust * 0.35) * (0.6 + 0.4 * this.daylight);
+    return (0.1 + this.gust * 0.35) * (0.6 + 0.4 * this.daylight) * this.outdoors;
   }
 
   /** A voice routed through a pan, with some of it sent into the reverb. */

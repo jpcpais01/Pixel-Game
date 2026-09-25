@@ -57,7 +57,7 @@ function add(px: Uint8ClampedArray, i: number, c: RGB, k: number): void {
  * nebulae stay dim and are dithered to a few steps, so they read as pixel
  * art rather than a smooth gradient.
  */
-export function spaceCanvas(): Uint8ClampedArray {
+export function* spaceCanvas(): Generator<void, Uint8ClampedArray, void> {
   const W = COSMOS_W;
   const H = COSMOS_H;
   const px = new Uint8ClampedArray(W * H * 4);
@@ -71,6 +71,7 @@ export function spaceCanvas(): Uint8ClampedArray {
   const gF = new Float32Array(GW * GH);
   const gL = new Float32Array(GW * GH);
   for (let gy = 0; gy < GH; gy++) {
+    if (gy % 8 === 0) yield;
     for (let gx = 0; gx < GW; gx++) {
       const x = gx * 2;
       const y = gy * 2;
@@ -99,6 +100,7 @@ export function spaceCanvas(): Uint8ClampedArray {
   };
 
   for (let y = 0; y < H; y++) {
+    if (y % 16 === 0) yield;
     for (let x = 0; x < W; x++) {
       const i = (y * W + x) * 4;
       const n = sample(gN, x, y);
@@ -129,6 +131,7 @@ export function spaceCanvas(): Uint8ClampedArray {
 
   // A glow of violet haze around the platform, as if it lit the dust near it.
   for (let y = 0; y < H; y++) {
+    if (y % 32 === 0) yield;
     for (let x = 0; x < W; x++) {
       const r = Math.hypot((x - COSMOS_CX) / (COSMOS_RX * 1.25), (y - COSMOS_CY - 12) / (COSMOS_RY * 1.3));
       const k = Math.exp(-((r - 0.8) ** 2) * 6) * 0.22;
@@ -291,7 +294,7 @@ function inStar(u: number, v: number, ro: number, ri: number, points = 8): boole
  * side hangs below: layered rock with crystal veins, breaking off into
  * jagged spurs.
  */
-export function platformArt(): PlatformArt {
+export function* platformArt(): Generator<void, PlatformArt, void> {
   const W = PLATFORM_W;
   const H = PLATFORM_H;
   const diffuse = new Uint8ClampedArray(W * H * 4);
@@ -328,6 +331,7 @@ export function platformArt(): PlatformArt {
   };
 
   for (let py = 0; py < H; py++) {
+    if (py % 12 === 0) yield;
     for (let pxl = 0; pxl < W; pxl++) {
       const x = pxl + PLATFORM_X + 0.5;
       const y = py + PLATFORM_Y + 0.5;

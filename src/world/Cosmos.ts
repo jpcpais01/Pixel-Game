@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { OBELISK_H, OBELISK_OY, PLATFORM_X, PLATFORM_Y, twinkleSpots } from '../art/cosmos';
-import { buildCosmosTextures } from '../art/textures';
+import { warmCosmos } from '../art/textures';
 import { sky } from '../game/LitPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { settings } from '../game/settings';
@@ -70,7 +70,7 @@ export class CosmosArena {
     ground: (img: Img) => Img,
     view: Phaser.Geom.Rectangle,
   ) {
-    buildCosmosTextures(scene);
+    warmCosmos(scene);
     const add = scene.add;
     ground(add.image(0, 0, 'cosmos_space').setOrigin(0).setDepth(-2));
     ground(add.image(PLATFORM_X, PLATFORM_Y, 'cosmos_platform').setOrigin(0).setPipeline('Lit').setDepth(0));

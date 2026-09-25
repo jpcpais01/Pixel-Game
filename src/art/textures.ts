@@ -332,19 +332,42 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   register(scene, 'dummy', pack(frameList([dummyFrame(false), dummyFrame(true)], 'd'), 18, 28), 18, 28, false);
 }
 
+/** The Cosmos Arena's textures being built, a little per call. */
+const cosmosJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
+
 /**
- * The Cosmos Arena's backdrop, platform, props and spell textures. Built
- * the first time the arena opens (the backdrop is large), then kept.
+ * Build the Cosmos Arena's backdrop, platform, props and spell textures,
+ * spending at most `budget` ms (the arena select warms it up a little each
+ * frame; the world finishes it at once). They are kept once built. Returns
+ * true when they are all there.
  */
-export function buildCosmosTextures(scene: Phaser.Scene): void {
-  if (scene.textures.exists('cosmos_space')) return;
-  scene.textures.addCanvas('cosmos_space', toCanvas(COSMOS_W, COSMOS_H, spaceCanvas()));
-  const plat = platformArt();
+export function warmCosmos(scene: Phaser.Scene, budget = Infinity): boolean {
+  if (scene.textures.exists('cosmos_streak')) return true;
+  let job = cosmosJobs.get(scene);
+  if (!job) {
+    job = cosmosTextures(scene);
+    cosmosJobs.set(scene, job);
+  }
+  const start = performance.now();
+  while (performance.now() - start < budget) {
+    if (job.next().done) {
+      cosmosJobs.delete(scene);
+      return true;
+    }
+  }
+  return false;
+}
+
+function* cosmosTextures(scene: Phaser.Scene): Generator<void, void, void> {
+  const space = yield* spaceCanvas();
+  scene.textures.addCanvas('cosmos_space', toCanvas(COSMOS_W, COSMOS_H, space));
+  const plat = yield* platformArt();
   scene.textures.addCanvas('cosmos_platform', toCanvas(PLATFORM_W, PLATFORM_H, plat.diffuse))!.setDataSource(toCanvas(PLATFORM_W, PLATFORM_H, plat.normal));
   scene.textures.addCanvas('cosmos_platform_e', toCanvas(PLATFORM_W, PLATFORM_H, plat.emissive));
+  yield;
   register(scene, 'cosmos_obelisk', pack(frameList([0, 1, 2].map(obelisk), 'o'), OBELISK_W, OBELISK_H), OBELISK_W, OBELISK_H);
   register(scene, 'cosmos_rock', pack(frameList([0, 1, 2].map(floatingRock), 'r'), FLOAT_ROCK_W, FLOAT_ROCK_H), FLOAT_ROCK_W, FLOAT_ROCK_H);
-
+  yield;
   const rays = scene.textures.addCanvas('cosmos_ray', toCanvas(COSMIC_RAY_W * 3, COSMIC_RAY_H, sideBySide(COSMIC_RAY_W, COSMIC_RAY_H, [cosmicRay(5), cosmicRay(17), cosmicRay(40)])))!;
   [0, 1, 2].forEach((v) => rays.add(`ray${v}`, 0, v * COSMIC_RAY_W, 0, COSMIC_RAY_W, COSMIC_RAY_H));
   scene.textures.addCanvas('cosmos_pool', toCanvas(64, 26, lightPool(64, 26)));
@@ -355,5 +378,6 @@ export function buildCosmosTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('cosmos_hole_ring', toCanvas(HOLE_SIZE, HOLE_SIZE, hole.ring));
   const nova = ringCanvas(92, 62);
   scene.textures.addCanvas('cosmos_nova_ring', toCanvas(nova.w, nova.h, nova.px));
+  // Last: its presence means everything above is built.
   scene.textures.addCanvas('cosmos_streak', toCanvas(40, 3, streak(40)));
 }

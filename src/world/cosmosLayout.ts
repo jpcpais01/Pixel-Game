@@ -14,7 +14,7 @@ export const COSMOS_RY = 128;
 export const COSMOS_RIM = 32;
 
 /** Where heroes arrive: the platform's south edge, facing the Warden. */
-export const COSMOS_SPAWN = { x: COSMOS_CX, y: COSMOS_CY + 98 };
+export const COSMOS_SPAWN = { x: COSMOS_CX, y: COSMOS_CY + 108 };
 
 /** Six obelisks stand around the rim; the way in from the south is left open. */
 export const OBELISKS: { x: number; y: number }[] = [0, 60, 120, 180, 240, 300].map((deg) => {

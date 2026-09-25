@@ -23,6 +23,7 @@ class GameSound {
   private hum: BeamHum | null = null;
   private listeners = new Set<Listener>();
   private daylight = 0;
+  private outdoors = true;
   private fire = 0;
   private _muted = readMuted();
   private volume = { music: 1, sfx: 1 };
@@ -90,6 +91,12 @@ class GameSound {
   setDaylight(d: number): void {
     this.daylight = d;
     if (this.ctx) this.ambience?.setDaylight(d, this.ctx.currentTime);
+  }
+
+  /** Wind, birds and crickets: on in the world's arenas, off out in space. */
+  setOutdoors(on: boolean): void {
+    this.outdoors = on;
+    if (this.ctx) this.ambience?.setOutdoors(on, this.ctx.currentTime);
   }
 
   /** 0..1, how close the player is to a fire. */
@@ -337,6 +344,7 @@ class GameSound {
     this.ambience = new Ambience(m);
     this.sfx = new Sfx(m);
     this.ambience.setDaylight(this.daylight, 0);
+    this.ambience.setOutdoors(this.outdoors, 0);
     this.ambience.setFire(this.fire, 0);
     this.music.start(ctx.currentTime);
     window.setInterval(() => this.tick(), TICK_MS);

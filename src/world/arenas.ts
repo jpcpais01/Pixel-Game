@@ -10,6 +10,9 @@ import type { SpawnSpot } from '../game/monsters';
 import type { SceneryLayout } from './common';
 import type { Drift } from './Scenery';
 import { CLEARING_GROUND, CLEARING_SPAWN, CLEARING_SPAWNS, PLAZA_CX, PLAZA_CY, PLAZA_Y, clearingScenery, clearingWalkable, plazaProps } from './clearing';
+import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
+import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
+import { warmCosmos } from '../art/textures';
 import { GARDEN_GROUND, GARDEN_SPAWN, GARDEN_SPAWNS, POOL, gardenLayout, gardenScenery, gardenWalkable } from './sunken';
 
 /** A sprite shown in the arena's window on its select card (world coordinates). */
@@ -24,6 +27,22 @@ export interface PreviewSprite {
   glow?: string;
 }
 
+/**
+ * Ground painted in one piece instead of streamed in strips (the Cosmos
+ * Arena: a backdrop and a platform). The arena builds its own images.
+ */
+export interface PaintedGround {
+  painted: true;
+  w: number;
+  h: number;
+  /** Build its textures, at most `budget` ms at a time; true once they are all there. */
+  warm(scene: Phaser.Scene, budget: number): boolean;
+  /** What the select card's window shows of it: textures at world positions, some glowing. */
+  layers: { key: string; x: number; y: number; glow?: boolean }[];
+}
+
+export const isPainted = (g: GroundSpec | PaintedGround): g is PaintedGround => 'painted' in g;
+
 export interface ArenaDef {
   id: string;
   name: string;
@@ -31,7 +50,7 @@ export interface ArenaDef {
   blurb: string;
   /** Card highlight colour. */
   accent: number;
-  ground: GroundSpec;
+  ground: GroundSpec | PaintedGround;
   /** Where the hero starts, and rises after falling. */
   spawn: { x: number; y: number };
   monsters: SpawnSpot[];
@@ -45,6 +64,8 @@ export interface ArenaDef {
    */
   dayNight?: boolean;
   daylight?: number;
+  /** ms before a slain monster is replaced (9 s by default). */
+  respawn?: number;
   /** The select card's window onto the arena: its centre, and what stands in view. */
   preview: { x: number; y: number; sprites(): PreviewSprite[] };
 }
@@ -111,6 +132,40 @@ export const ARENAS: ArenaDef[] = [
           ...g.crystals.map((c) => ({ texture: 'crystals', frame: c.frame, glow: 'crystals_e', x: c.x, y: c.y, originY: 20 / 22 })),
         ];
       },
+    },
+  },
+  {
+    id: 'cosmos',
+    name: 'Cosmos Arena',
+    blurb: 'Adrift in the void',
+    accent: 0xb89cff,
+    ground: {
+      painted: true,
+      w: COSMOS_W,
+      h: COSMOS_H,
+      warm: warmCosmos,
+      layers: [
+        { key: 'cosmos_space', x: 0, y: 0 },
+        { key: 'cosmos_platform', x: PLATFORM_X, y: PLATFORM_Y },
+        { key: 'cosmos_platform_e', x: PLATFORM_X, y: PLATFORM_Y, glow: true },
+      ],
+    },
+    spawn: COSMOS_SPAWN,
+    // The Astral Warden alone, over the heart of the platform.
+    monsters: [{ kind: 'warden', x: COSMOS_CX, y: COSMOS_CY }],
+    respawn: 20000,
+    scenery: () => ({ trees: [], props: [], rays: [], colliders: [] }),
+    walkable: cosmosWalkable,
+    drift: { tints: [0xffffff], frequency: 100000, where: () => false },
+    // No day or night out here: a fixed, starlit dark (the arena sets its own light).
+    daylight: 0,
+    preview: {
+      x: COSMOS_CX,
+      y: COSMOS_CY - 54,
+      sprites: () => [
+        { texture: 'warden', frame: 'idle0_r', glow: 'warden_e', x: COSMOS_CX, y: COSMOS_CY - 2, originY: 113 / 116 },
+        ...OBELISKS.map((o) => ({ texture: 'cosmos_obelisk', frame: 'o0', glow: 'cosmos_obelisk_e', x: o.x, y: o.y, originY: 47 / 50 })),
+      ],
     },
   },
 ];

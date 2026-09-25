@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { STRIP_H } from '../art/ground';
 import { menuZoom } from '../game/display';
-import { ARENAS, lastArena, rememberArena, type ArenaDef, type PreviewSprite } from '../world/arenas';
+import { ARENAS, isPainted, lastArena, rememberArena, type ArenaDef, type PreviewSprite } from '../world/arenas';
 import { GroundStreamer } from '../world/GroundStreamer';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PANEL_PICKED, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
@@ -63,7 +63,7 @@ class ArenaCard extends Phaser.GameObjects.Container {
     if (this.built) return;
     const { preview, ground } = this.arena;
     const top = Math.floor(preview.y - WIN_H / 2);
-    if (!GroundStreamer.warm(this.scene, ground, top, top + WIN_H, WARM_BUDGET)) return;
+    if (isPainted(ground) ? !ground.warm(this.scene, WARM_BUDGET) : !GroundStreamer.warm(this.scene, ground, top, top + WIN_H, WARM_BUDGET)) return;
     this.built = true;
     this.loading.setVisible(false);
     this.buildView();
@@ -96,9 +96,17 @@ class ArenaCard extends Phaser.GameObjects.Container {
       objs.push(img);
       return true;
     };
-    for (let i = Math.floor(y0 / STRIP_H); i <= Math.floor((y0 + WIN_H) / STRIP_H); i++) {
-      const key = `${GroundStreamer.key(ground, i)}_day`;
-      if (scene.textures.exists(key)) clip(scene.add.image(0, 0, key), -x0, i * STRIP_H - y0);
+    if (isPainted(ground)) {
+      for (const l of ground.layers) {
+        const img = scene.add.image(0, 0, l.key);
+        if (l.glow) img.setBlendMode(Phaser.BlendModes.ADD);
+        clip(img, l.x - x0, l.y - y0);
+      }
+    } else {
+      for (let i = Math.floor(y0 / STRIP_H); i <= Math.floor((y0 + WIN_H) / STRIP_H); i++) {
+        const key = `${GroundStreamer.key(ground, i)}_day`;
+        if (scene.textures.exists(key)) clip(scene.add.image(0, 0, key), -x0, i * STRIP_H - y0);
+      }
     }
     const sprites: PreviewSprite[] = preview.sprites().sort((a, b) => a.y - b.y);
     for (const s of sprites) {

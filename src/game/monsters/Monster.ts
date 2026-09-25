@@ -114,6 +114,11 @@ export abstract class Monster implements Hurtbox {
     return this.stats.bodyY + this.hover;
   }
 
+  /** A boss: the camera leans toward it while it fights. */
+  get boss(): boolean {
+    return !!this.stats.noBar;
+  }
+
   get radius(): number {
     return this.stats.radius;
   }
