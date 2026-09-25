@@ -207,7 +207,7 @@ class Card extends Phaser.GameObjects.Container {
   }
 }
 
-/** Character select, opened over the home screen's forest. */
+/** Character select, opened over the home screen's hall. */
 export class SelectScene extends Phaser.Scene {
   private cards: Card[] = [];
   private picked = 0;
