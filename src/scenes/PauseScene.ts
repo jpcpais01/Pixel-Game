@@ -105,9 +105,11 @@ export class PauseScene extends Phaser.Scene {
       settings.set('profiler', showFps && !profiler);
       settings.set('showFps', !showFps || !profiler);
     });
-    this.qualityButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () =>
-      settings.set('quality', settings.values.quality === 'fast' ? 'full' : 'fast'),
-    );
+    // Full, then Fast, then Low (drawn at art resolution), then Full again.
+    this.qualityButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => {
+      const q = settings.values.quality;
+      settings.set('quality', q === 'full' ? 'fast' : q === 'fast' ? 'low' : 'full');
+    });
     const rows: [string, PixelSlider | PixelButton][] = [
       ['Brightness', slider(0xffe08a, v.brightness, 'brightness')],
       ['Music', slider(0x6fe4ff, v.music, 'music')],
@@ -136,7 +138,7 @@ export class PauseScene extends Phaser.Scene {
     // Arenas without day and night keep their own light.
     this.dayButton.setText(!daynight.enabled ? 'Fixed' : daynight.target > 0.5 ? 'Day' : 'Night');
     this.fpsButton.setText(!settings.values.showFps ? 'Hidden' : settings.values.profiler ? 'Details' : 'Shown');
-    this.qualityButton.setText(settings.values.quality === 'fast' ? 'Fast' : 'Full');
+    this.qualityButton.setText({ full: 'Full', fast: 'Fast', low: 'Low' }[settings.values.quality]);
   }
 
   private setOpen(open: boolean): void {

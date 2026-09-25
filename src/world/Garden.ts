@@ -428,7 +428,7 @@ class Fountain {
     }
 
     const offQuality = settings.watch((s) => {
-      this.fast = s.quality === 'fast';
+      this.fast = s.quality !== 'full';
       this.spray.frequency = this.fast ? 150 : 75;
       this.motes.frequency = this.fast ? 480 : 240;
     });

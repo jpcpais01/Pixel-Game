@@ -12,7 +12,7 @@ export interface Settings {
   /** With the FPS counter: a breakdown of where each frame's time goes. */
   profiler: boolean;
   /** Fast renders at a lower resolution (see display.ts) with fewer particles. */
-  quality: 'fast' | 'full';
+  quality: 'full' | 'fast' | 'low';
 }
 
 // Phones and tablets start on Fast; they have dense screens and small GPUs.
