@@ -12,8 +12,9 @@ import { heroBuffs } from '../game/buffs';
  * beam: hold to charge). Icons come from the chosen character. Rendered at
  * screen resolution over the world.
  *
- * With a mouse, a left click anywhere else on the world is the attack (the
- * world aims it at the cursor) and the joystick hides; the keyboard walks.
+ * With a mouse, a left click on the world is the attack (the world aims it
+ * at the cursor), Space the special and the keyboard walks, so the joystick
+ * and ability buttons hide.
  *
  * Along the bottom, between the joystick and the buttons, the hotbar: nine
  * item slots, tapped or pressed 1 to 9. Active buffs show as badges under the
@@ -149,10 +150,10 @@ export class UIScene extends Phaser.Scene {
         // Tap a side to pick it; tapping the active side flips it.
         const onSun = p.x < tr.centerX;
         daynight.set(onSun === (daynight.target < 0.5) ? onSun : !onSun);
-      } else if (Phaser.Math.Distance.Between(p.x, p.y, mp.x, mp.y) < this.R * 0.95) {
+      } else if (p.wasTouch && Phaser.Math.Distance.Between(p.x, p.y, mp.x, mp.y) < this.R * 0.95) {
         this.beamPointer = p.id;
         controls.beam = true;
-      } else if (Phaser.Math.Distance.Between(p.x, p.y, bp.x, bp.y) < this.R * 1.1) {
+      } else if (p.wasTouch && Phaser.Math.Distance.Between(p.x, p.y, bp.x, bp.y) < this.R * 1.1) {
         this.buttonPointer = p.id;
         controls.attack = true;
       } else if (this.slotAt(p.x, p.y) >= 0) {
@@ -233,6 +234,8 @@ export class UIScene extends Phaser.Scene {
     const R = this.R;
     const active = this.stickPointer !== null;
     this.stick.setVisible(active || !controls.mouse);
+    // With a mouse the abilities are the click and Space, so their buttons hide too.
+    for (const o of [this.button, this.icon, this.beamButton, this.beamIcon]) o.setVisible(!controls.mouse);
     const g = this.redraw(this.stick, `${active} ${this.base.x} ${this.base.y} ${this.knob.x} ${this.knob.y} ${R}`);
     if (g) {
       g.fillStyle(0x0a0c1c, active ? 0.45 : 0.28);
