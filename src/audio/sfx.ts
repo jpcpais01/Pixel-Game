@@ -1061,6 +1061,39 @@ export class Sfx {
     }
   }
 
+  /** A dagger flicked out: a thin, quick hiss of steel, lower and longer on the finisher. */
+  knife(t: number, pan: number, step: number, finisher: boolean): void {
+    const dur = finisher ? 0.16 : 0.07;
+    const out = this.out(pan, finisher ? 0.7 : 0.5, 0.15);
+    const top = finisher ? 3200 : [5200, 4600, 4900, 4400][Math.min(3, step - 1)] * rand(0.95, 1.05);
+    this.burstNoise(out, t, 'bandpass', top * 0.6, top, 3, 0.4, dur);
+    // A ring of the blade's edge.
+    this.chirp(out, t, 'triangle', top * 0.5, top * 0.62, 0.04, dur * 1.4);
+    if (finisher) this.burstNoise(out, t + 0.05, 'bandpass', 2200, 900, 1.6, 0.35, 0.12);
+  }
+
+  /** A dagger going in: a sharp, dry bite and a small thock. */
+  knifeHit(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.85 : 0.65, 0.15);
+    this.burstNoise(out, t, 'highpass', rand(3200, 4200), 2400, 0.9, heavy ? 0.5 : 0.4, 0.035);
+    this.chirp(out, t, 'sine', heavy ? 260 : 320, heavy ? 80 : 110, heavy ? 0.45 : 0.32, heavy ? 0.1 : 0.06);
+    if (heavy) this.burstNoise(out, t + 0.008, 'bandpass', 1400, 600, 1.8, 0.35, 0.09);
+  }
+
+  /** Vanishing into smoke: a soft, falling poof of air (with a shimmer for the dancer). */
+  vanish(t: number, pan: number, dance: boolean): void {
+    const out = this.out(pan, 0.7, 0.4);
+    this.burstNoise(out, t, 'lowpass', 2600, 300, 0.7, 0.55, 0.3, true);
+    this.burstNoise(out, t + 0.02, 'bandpass', 5200, 1800, 1.2, 0.2, 0.22);
+    if (dance) for (let i = 0; i < 3; i++) this.chirp(out, t + 0.03 + i * 0.05, 'sine', SPARKLE[i * 2], SPARKLE[i * 2] * 1.2, 0.05, 0.14);
+  }
+
+  /** A blink through the shadows to the next foe: a quick breath of air swept upward. */
+  blink(t: number, pan: number): void {
+    const out = this.out(pan, 0.5, 0.25);
+    this.burstNoise(out, t, 'bandpass', 900, 4200, 1.4, 0.3, 0.07);
+  }
+
   /** Electricity: bright noise stuttered by a fast square tremolo. */
   private zap(out: AudioNode, t: number, level: number, dur: number): void {
     const ctx = this.m.ctx;
