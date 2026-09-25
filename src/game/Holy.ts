@@ -55,7 +55,7 @@ export class SmiteBurst implements Effect {
     this.layer.image.setPosition(x - this.W / 2, y - (this.H - this.W / 2)).setDepth(y + 0.5);
     const glowScale = ring ? ring / 16 : big ? 1.8 : 1.1;
     this.glow = scene.add.image(x, y - 4, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(fx.mid).setScale(glowScale, glowScale * SQUASH).setDepth(y + 0.6);
-    this.light = scene.lights.addLight(x, y - 6, ring ? ring * 3 : big ? 110 : 70, fx === HOLY_FX ? 0xffe6a0 : 0xffb070, big || ring ? 3 : 2);
+    this.light = scene.lights.addLight(x, y - 6, ring ? ring * 3 : big ? 110 : 70, fx.light ?? (fx === HOLY_FX ? 0xffe6a0 : 0xffb070), big || ring ? 3 : 2);
     this.draw();
   }
 

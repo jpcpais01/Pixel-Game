@@ -788,3 +788,102 @@ export const MONK_BROW: Material = {
 export const QI_CORE = hex('#fffbea');
 export const QI_HOT = hex('#ffe7a0');
 export const QI_MID = hex('#e0b050');
+
+// ---------------------------------------------------------------------------
+// The necromancer: a deep grave-violet robe and hood, a mantle of old bone,
+// soul-green trim and eyes, a gnarled staff crowned with a skull.
+
+export const NECRO_ROBE: Material = {
+  ramp: ramp('#100e1a', '#1c1830', '#2a2446', '#3a335e', '#4e4678'),
+  outline: hex('#06050c'),
+  outlineLit: hex('#141024'),
+};
+
+export const NECRO_INNER: Material = {
+  ramp: ramp('#08070e', '#12101e', '#1c182c', '#26213a'),
+  outline: hex('#040308'),
+};
+
+/** Old bone: yellowed ivory, cold in the shadows. */
+export const BONE: Material = {
+  ramp: ramp('#4a4a4e', '#7e7a6c', '#b0a98e', '#dcd4b4', '#f8f2da'),
+  outline: hex('#1a1814'),
+  outlineLit: hex('#2e2a22'),
+  shine: true,
+};
+
+/** Grey, bloodless skin. */
+export const GRAVE_SKIN: Material = {
+  ramp: ramp('#4a4e56', '#747a80', '#a2a8a8', '#cfd4cc'),
+  outline: hex('#15171c'),
+  outlineLit: hex('#262a30'),
+};
+
+/** Soul-green trim that glows faintly in the dark. */
+export const SOUL_TRIM: Material = {
+  ramp: ramp('#0c3e32', '#17664f', '#2a9a70', '#52cc98'),
+  outline: hex('#061c16'),
+  emissive: 0.25,
+};
+
+export const SOUL_EYE: Material = {
+  ramp: ramp('#2fbf86', '#6cf4bc'),
+  outline: hex('#061c16'),
+  emissive: 1,
+  noAO: true,
+};
+
+/** Gnarled grave-wood, near black. */
+export const GRAVE_WOOD: Material = {
+  ramp: ramp('#100c10', '#221a1e', '#382a2a', '#503c36'),
+  outline: hex('#060406'),
+};
+
+// Soul fire (light-only pixels).
+export const SOUL_CORE = hex('#f0fff8');
+export const SOUL_HOT = hex('#9dffd4');
+export const SOUL_MID = hex('#3fe0a0');
+export const SOUL_DEEP = hex('#127a62');
+
+// ---------------------------------------------------------------------------
+// The blood mage (the necromancer's second style): crimson robes over black,
+// a bone-white mane, no hood, eyes like embers, and a blood orb caged in bone.
+
+export const BLOOD_ROBE: Material = {
+  ramp: ramp('#22060e', '#420a18', '#681224', '#901c32', '#b62e44'),
+  outline: hex('#0e0206'),
+  outlineLit: hex('#260610'),
+};
+
+export const BLOOD_INNER: Material = {
+  ramp: ramp('#0a0608', '#161012', '#221a1c', '#30262a'),
+  outline: hex('#040204'),
+};
+
+export const BLOOD_HAIR: Material = {
+  ramp: ramp('#56526a', '#86829a', '#b6b2c6', '#e2e0ec'),
+  outline: hex('#1e1a26'),
+  outlineLit: hex('#34303e'),
+};
+
+export const BLOOD_EYE: Material = {
+  ramp: ramp('#ff3048', '#ffb0b8'),
+  outline: hex('#2a0610'),
+  emissive: 1,
+  noAO: true,
+};
+
+/** The caged orb and the clasp: blood that glows. */
+export const BLOOD_GEM: Material = {
+  ramp: ramp('#5a0614', '#a8102a', '#f0304a', '#ff9aa6'),
+  outline: hex('#1e0208'),
+  emissive: 0.7,
+  shine: true,
+  noAO: true,
+};
+
+// Blood light (light-only pixels).
+export const BLOOD_CORE = hex('#fff0f0');
+export const BLOOD_HOT = hex('#ff8a96');
+export const BLOOD_MID = hex('#e8243c');
+export const BLOOD_DEEP = hex('#7a0a1e');
