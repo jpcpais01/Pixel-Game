@@ -499,3 +499,113 @@ export const HEX_BREW: Material = {
 export const HEX_CORE = hex('#fff0fe');
 export const HEX_HOT = hex('#ff9cf2');
 export const HEX_MID = hex('#d64ce0');
+
+// ---------------------------------------------------------------------------
+// The archer: a ranger in a forest-green hooded cloak over a moss tunic and a
+// tan leather jerkin, auburn hair under the hood, a yew longbow and a quiver
+// of red-fletched arrows on the back.
+
+export const RANGER_CLOAK: Material = {
+  ramp: ramp('#0f1d14', '#1b3321', '#2a4d30', '#3d6b41', '#578a55'),
+  outline: hex('#060d08'),
+  outlineLit: hex('#12241a'),
+};
+
+export const RANGER_TUNIC: Material = {
+  ramp: ramp('#23260f', '#3a3f1a', '#555c28', '#737b3a', '#939a52'),
+  outline: hex('#0c0e06'),
+};
+
+export const JERKIN: Material = {
+  ramp: ramp('#2a170e', '#4a2c1a', '#6e4428', '#93603a', '#b6824f'),
+  outline: hex('#140a06'),
+  outlineLit: hex('#2a180e'),
+};
+
+export const RANGER_HAIR: Material = {
+  ramp: ramp('#34140c', '#5e2614', '#8c3c1e', '#b85a2c', '#dc8448'),
+  outline: hex('#140604'),
+};
+
+/** Yew: pale sapwood, polished by the hand. */
+export const YEW: Material = {
+  ramp: ramp('#3a1f10', '#65391c', '#94602e', '#c28c4a', '#e6b872'),
+  outline: hex('#170c06'),
+  outlineLit: hex('#2c1a0c'),
+  shine: true,
+};
+
+export const BOWSTRING: Material = {
+  ramp: ramp('#5e5848', '#8a8270', '#b4ac94'),
+  outline: hex('#2a261e'),
+  noAO: true,
+  noOutline: true,
+};
+
+export const FLETCH: Material = {
+  ramp: ramp('#4a0e14', '#86202a', '#bc363a', '#e65a4e', '#ff8c72'),
+  outline: hex('#1c0608'),
+};
+
+// The storm archer (the archer's other look): a hood and cloak of thunderhead
+// indigo edged in silver, silver hair, a bow of dark steel strung with living
+// lightning, and arrows fletched with it.
+
+export const STORM_CLOAK: Material = {
+  ramp: ramp('#0a0d22', '#141a3c', '#20295a', '#303e7c', '#4a5ca2'),
+  outline: hex('#04050e'),
+  outlineLit: hex('#10142e'),
+};
+
+export const STORM_TUNIC: Material = {
+  ramp: ramp('#161a26', '#262c3c', '#3a4256', '#525c74', '#707c96'),
+  outline: hex('#080a10'),
+};
+
+export const STORM_JERKIN: Material = {
+  ramp: ramp('#10121c', '#1e2230', '#30364a', '#484f68', '#666e8c'),
+  outline: hex('#06070c'),
+  outlineLit: hex('#141824'),
+};
+
+export const STORM_TRIM: Material = {
+  ramp: ramp('#4a5470', '#7a86a6', '#b4c0dc', '#eaf2ff'),
+  outline: hex('#141a2a'),
+  shine: true,
+};
+
+export const STORM_BOW: Material = {
+  ramp: ramp('#161826', '#282c40', '#40465e', '#646c8c', '#9ca8cc'),
+  outline: hex('#06070c'),
+  outlineLit: hex('#141828'),
+  shine: true,
+};
+
+/** The string and fletching of the storm bow: lightning held still. */
+export const ARC: Material = {
+  ramp: ramp('#2c6ae0', '#4ab4ff', '#a8e8ff', '#ffffff'),
+  outline: hex('#0a1a3a'),
+  emissive: 0.9,
+  noAO: true,
+  noOutline: true,
+};
+
+export const ARC_FLETCH: Material = {
+  ramp: ramp('#2a5ad8', '#3e9cff', '#8ad8ff', '#e8faff'),
+  outline: hex('#0a1636'),
+  emissive: 0.7,
+  noAO: true,
+};
+
+export const STORM_EYE: Material = {
+  ramp: ramp('#2a80e0', '#58c4ff', '#b0ecff', '#ffffff'),
+  outline: hex('#0a1636'),
+  emissive: 0.8,
+  noAO: true,
+};
+
+// Lightning (light-only pixels): the storm archer's arcs and bolts.
+export const BOLT_CORE = hex('#ffffff');
+export const BOLT_HOT = hex('#bff0ff');
+export const BOLT_MID = hex('#4ab4ff');
+export const BOLT_DEEP = hex('#2a5ad8');

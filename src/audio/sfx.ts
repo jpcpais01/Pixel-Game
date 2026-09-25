@@ -952,6 +952,121 @@ export class Sfx {
     this.chirp(filter(this.m.ctx, 'lowpass', 1200, 1, out), t + 0.02, 'sine', f, f * 1.8, 0.12, 0.05);
   }
 
+  /** The bow drawn: the wood creaking as the string comes back, longer for the volley. */
+  bowDraw(t: number, big: boolean): void {
+    const ctx = this.m.ctx;
+    const dur = big ? 0.5 : 0.14;
+    const out = this.out(0, big ? 0.5 : 0.28, 0.15);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(big ? 0.3 : 0.22, t + dur * 0.8);
+    g.gain.linearRampToValueAtTime(0, t + dur + 0.04);
+    const bp = filter(ctx, 'bandpass', 700, 6, g);
+    sweep(bp.frequency, t, 520, big ? 1100 : 900, dur);
+    // A creak is a fast train of clicks: a low square wave through the resonance.
+    const o = osc(ctx, 'square', big ? 38 : 55, bp);
+    sweep(o.frequency, t, big ? 30 : 45, big ? 70 : 80, dur);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+
+  /** An arrow loosed: the string's twang, the thrum of the limbs and a whip of air; the storm bow snaps with a spark. */
+  bowShot(t: number, pan: number, storm: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.75, 0.2);
+    const tw = gain(ctx, 0, out);
+    hit(tw.gain, t, 0.4, 0.002, 0.16);
+    const f = rand(150, 175);
+    const o = osc(ctx, 'triangle', f * 2.2, filter(ctx, 'lowpass', 2600, 2, tw));
+    sweep(o.frequency, t, f * 2.2, f, 0.05);
+    o.start(t);
+    o.stop(t + 0.2);
+    this.chirp(out, t, 'sine', 120, 70, 0.3, 0.08);
+    this.burstNoise(out, t + 0.01, 'bandpass', 3200, 1400, 1.6, 0.35, 0.12);
+    if (storm) this.zap(out, t, 0.18, 0.12);
+  }
+
+  /** An arrow striking home: a hard wooden thock into the body; the storm arrow bursts in a crackle. */
+  arrowHit(t: number, pan: number, storm: boolean): void {
+    const out = this.out(pan, 0.8, 0.2);
+    this.chirp(out, t, 'sine', 220, 70, 0.55, 0.08);
+    this.burstNoise(out, t, 'bandpass', rand(1500, 1900), 700, 3, 0.45, 0.04);
+    this.burstNoise(out, t, 'lowpass', 1800, 300, 0.8, 0.3, 0.06, true);
+    if (storm) this.zap(out, t + 0.005, 0.26, 0.18);
+  }
+
+  /** An arrow thudding into the ground. */
+  arrowStick(t: number, pan: number, level: number): void {
+    const out = this.out(pan, level, 0.1);
+    this.chirp(out, t, 'sine', 180, 90, 0.35, 0.05);
+    this.burstNoise(out, t, 'bandpass', rand(900, 1300), 500, 2.5, 0.25, 0.03);
+  }
+
+  /** The volley loosed skyward: a deep twang and the arrow whistling up out of sight. */
+  volley(t: number, pan: number, storm: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.85, 0.45);
+    const tw = gain(ctx, 0, out);
+    hit(tw.gain, t, 0.45, 0.002, 0.3);
+    const o = osc(ctx, 'triangle', 240, filter(ctx, 'lowpass', 2200, 2, tw));
+    sweep(o.frequency, t, 260, 110, 0.08);
+    o.start(t);
+    o.stop(t + 0.35);
+    const w = gain(ctx, 0, out);
+    w.gain.setValueAtTime(0, t);
+    w.gain.linearRampToValueAtTime(0.12, t + 0.05);
+    w.gain.linearRampToValueAtTime(0, t + 0.5);
+    const wo = osc(ctx, 'sine', 1400, w);
+    sweep(wo.frequency, t, 1300, 3200, 0.5);
+    wo.start(t);
+    wo.stop(t + 0.55);
+    if (storm) this.zap(out, t, 0.3, 0.3);
+  }
+
+  /** The rain coming down: a swarm of falling whistles; in the storm, a crack of thunder and its rumble. */
+  arrowRain(t: number, pan: number, storm: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.7, 0.5);
+    for (let i = 0; i < 5; i++) {
+      const at = t + i * 0.06 * rand(0.7, 1.3);
+      const g = gain(ctx, 0, out);
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(0.05, at + 0.05);
+      g.gain.linearRampToValueAtTime(0, at + 0.35);
+      const f = rand(2600, 3400);
+      const o = osc(ctx, 'sine', f, g);
+      sweep(o.frequency, at, f, f * 0.45, 0.35);
+      o.start(at);
+      o.stop(at + 0.4);
+    }
+    if (storm) {
+      this.zap(out, t, 0.5, 0.25);
+      const r = gain(ctx, 0, out);
+      r.gain.setValueAtTime(0, t);
+      r.gain.linearRampToValueAtTime(0.7, t + 0.03);
+      r.gain.setTargetAtTime(0, t + 0.1, 0.45);
+      const lp = filter(ctx, 'lowpass', 900, 0.8, r);
+      sweep(lp.frequency, t, 1400, 160, 1.2);
+      const src = this.m.noiseSource(true);
+      src.connect(lp);
+      this.m.startNoise(src, t, 2);
+    }
+  }
+
+  /** Electricity: bright noise stuttered by a fast square tremolo. */
+  private zap(out: AudioNode, t: number, level: number, dur: number): void {
+    const ctx = this.m.ctx;
+    const z = gain(ctx, 0, out);
+    hit(z.gain, t, level, 0.002, dur);
+    const trem = osc(ctx, 'square', rand(45, 70), gain(ctx, level * 0.8, z.gain));
+    trem.start(t);
+    trem.stop(t + dur + 0.05);
+    const hp = filter(ctx, 'highpass', 2800, 0.7, z);
+    const n = this.m.noiseSource();
+    n.connect(hp);
+    this.m.startNoise(n, t, dur + 0.05);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {
