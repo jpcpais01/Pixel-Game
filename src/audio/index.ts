@@ -246,6 +246,22 @@ class GameSound {
     if (this.live()) this.sfx!.forcePush(this.ctx!.currentTime, pan, dark);
   }
 
+  punch(step: number, pan = 0): void {
+    if (this.live()) this.sfx!.punch(this.ctx!.currentTime, pan, step);
+  }
+
+  punchHit(pan = 0, heavy = false): void {
+    if (this.live()) this.sfx!.punchHit(this.ctx!.currentTime, pan, heavy);
+  }
+
+  flurry(pan = 0): void {
+    if (this.live()) this.sfx!.flurry(this.ctx!.currentTime, pan);
+  }
+
+  kiai(): void {
+    if (this.live()) this.sfx!.kiai(this.ctx!.currentTime);
+  }
+
   step(): void {
     if (this.live()) this.sfx!.step(this.ctx!.currentTime);
   }

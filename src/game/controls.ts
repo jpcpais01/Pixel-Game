@@ -24,10 +24,12 @@ export const beamHud = {
   firing: false,
 };
 
-// The warrior's combo, read by the UI to light pips on the attack button.
+// The melee heroes' combo, read by the UI to light pips on the attack button.
 export const comboHud = {
-  /** Hits landed in the current chain, 0..3. */
+  /** Hits landed in the current chain, 0..max. */
   hits: 0,
+  /** Hits in a full chain: one pip each. */
+  max: 3,
   /** 0..1 of the time left to chain the next hit. */
   window: 0,
 };

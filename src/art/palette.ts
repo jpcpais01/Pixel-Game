@@ -344,3 +344,51 @@ export const SABER_RED = blade(['#ffe0da', '#fff6f2'], ['#c81628', '#f0283a', '#
 // Saber light (light-only pixels).
 export const SABER_BLUE_GLOW = hex('#3f9cff');
 export const SABER_RED_GLOW = hex('#ff2a3a');
+
+// ---------------------------------------------------------------------------
+// The fighter: a sleeveless off-white gi with a black belt over indigo
+// trousers, a red headband, taped forearms and red leather gloves.
+
+export const GI: Material = {
+  ramp: ramp('#4a4466', '#7c7896', '#b8b3c8', '#e6e0d6', '#fffaf0'),
+  outline: hex('#15121f'),
+  outlineLit: hex('#2c2840'),
+};
+
+export const GI_TROUSER: Material = {
+  ramp: ramp('#12132e', '#1f2352', '#2f387e', '#4552a6'),
+  outline: INK,
+};
+
+export const BLACK_BELT: Material = {
+  ramp: ramp('#0b0a10', '#19161f', '#2b2735', '#433d50'),
+  outline: hex('#050408'),
+};
+
+export const HEADBAND: Material = {
+  ramp: ramp('#4a0c16', '#8a1822', '#c92e2e', '#f25a48'),
+  outline: hex('#1c070c'),
+};
+
+export const GLOVE: Material = {
+  ramp: ramp('#3d0a14', '#7a1420', '#bd262c', '#ea4838', '#ff8c66'),
+  outline: hex('#1c070c'),
+  outlineLit: hex('#3a0e16'),
+  shine: true,
+};
+
+/** Hand and foot tape. */
+export const WRAP: Material = {
+  ramp: ramp('#5c5670', '#968fa8', '#cfc9d8', '#f2eef4'),
+  outline: hex('#1a1624'),
+};
+
+export const FIGHTER_HAIR: Material = {
+  ramp: ramp('#0f0c14', '#1e1824', '#322838', '#4c3c4c'),
+  outline: hex('#060409'),
+};
+
+// Chi (light-only pixels): the special's fists of fire.
+export const CHI_CORE = hex('#fffbe8');
+export const CHI_HOT = hex('#ffd66b');
+export const CHI_MID = hex('#ff8a36');
