@@ -15,6 +15,9 @@ import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_W, type PaladinMe
 import { buildWarriorFrames, JADE_LOOK, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, type WarriorMeta } from './warrior';
 import { WIND_DEEP } from './palette';
 import { buildBarklingSheet, buildBeetleSheet, buildFrogSheet, buildGlowmothSheet, buildPuffcapSheet, ringCanvas, thornFrame, THORN_H, THORN_W, venomGlob, type MonsterSheet } from './monsters';
+import { buildWardenSheet } from './warden';
+import { FLOAT_ROCK_H, FLOAT_ROCK_W, HOLE_SIZE, METEOR_H, METEOR_W, OBELISK_H, OBELISK_W, PLATFORM_H, PLATFORM_W, RAY_H as COSMIC_RAY_H, RAY_W as COSMIC_RAY_W, cosmicRay, floatingRock, lightPool, meteor, obelisk, platformArt, shockRing, singularity, spaceCanvas, streak } from './cosmos';
+import { COSMOS_H, COSMOS_W } from '../world/cosmosLayout';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import { BOUGH_H, BOUGH_W, PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, bough, leafBit, rayCanvas } from './trees';
 
@@ -310,10 +313,37 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   registerMonster(scene, 'puffcap', buildPuffcapSheet());
   registerMonster(scene, 'barkling', buildBarklingSheet());
   registerMonster(scene, 'glowmoth', buildGlowmothSheet());
+  registerMonster(scene, 'warden', buildWardenSheet());
   register(scene, 'thorns', pack(frameList([0, 1, 2].map(thornFrame), 't'), THORN_W, THORN_H), THORN_W, THORN_H, false);
   scene.textures.addCanvas('venom', toCanvas(7, 7, venomGlob()));
   const ring = ringCanvas(22, 12);
   scene.textures.addCanvas('danger_ring', toCanvas(ring.w, ring.h, ring.px));
 
   register(scene, 'dummy', pack(frameList([dummyFrame(false), dummyFrame(true)], 'd'), 18, 28), 18, 28, false);
+}
+
+/**
+ * The Cosmos Arena's backdrop, platform, props and spell textures. Built
+ * the first time the arena opens (the backdrop is large), then kept.
+ */
+export function buildCosmosTextures(scene: Phaser.Scene): void {
+  if (scene.textures.exists('cosmos_space')) return;
+  scene.textures.addCanvas('cosmos_space', toCanvas(COSMOS_W, COSMOS_H, spaceCanvas()));
+  const plat = platformArt();
+  scene.textures.addCanvas('cosmos_platform', toCanvas(PLATFORM_W, PLATFORM_H, plat.diffuse))!.setDataSource(toCanvas(PLATFORM_W, PLATFORM_H, plat.normal));
+  scene.textures.addCanvas('cosmos_platform_e', toCanvas(PLATFORM_W, PLATFORM_H, plat.emissive));
+  register(scene, 'cosmos_obelisk', pack(frameList([0, 1, 2].map(obelisk), 'o'), OBELISK_W, OBELISK_H), OBELISK_W, OBELISK_H);
+  register(scene, 'cosmos_rock', pack(frameList([0, 1, 2].map(floatingRock), 'r'), FLOAT_ROCK_W, FLOAT_ROCK_H), FLOAT_ROCK_W, FLOAT_ROCK_H);
+
+  const rays = scene.textures.addCanvas('cosmos_ray', toCanvas(COSMIC_RAY_W * 3, COSMIC_RAY_H, sideBySide(COSMIC_RAY_W, COSMIC_RAY_H, [cosmicRay(5), cosmicRay(17), cosmicRay(40)])))!;
+  [0, 1, 2].forEach((v) => rays.add(`ray${v}`, 0, v * COSMIC_RAY_W, 0, COSMIC_RAY_W, COSMIC_RAY_H));
+  scene.textures.addCanvas('cosmos_pool', toCanvas(64, 26, lightPool(64, 26)));
+  scene.textures.addCanvas('cosmos_meteor', toCanvas(METEOR_W, METEOR_H, meteor()));
+  scene.textures.addCanvas('cosmos_wave', toCanvas(80, 80, shockRing(80, 80, 0.22)));
+  const hole = singularity();
+  scene.textures.addCanvas('cosmos_hole', toCanvas(HOLE_SIZE, HOLE_SIZE, hole.core));
+  scene.textures.addCanvas('cosmos_hole_ring', toCanvas(HOLE_SIZE, HOLE_SIZE, hole.ring));
+  const nova = ringCanvas(92, 62);
+  scene.textures.addCanvas('cosmos_nova_ring', toCanvas(nova.w, nova.h, nova.px));
+  scene.textures.addCanvas('cosmos_streak', toCanvas(40, 3, streak(40)));
 }

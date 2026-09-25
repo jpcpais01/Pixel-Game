@@ -596,6 +596,74 @@ export class Sfx {
     this.bell(out, t + 0.08, 1320, 0.03, 0.5);
   }
 
+  /** The Warden calls the stars down: a rising chord of bells over a shimmer. */
+  starcall(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.8, 0.7);
+    [392, 523, 659, 784].forEach((f, i) => this.bell(out, t + i * 0.11, f, 0.05, 1.4));
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.25, t + 0.6);
+    g.gain.linearRampToValueAtTime(0, t + 0.95);
+    const bp = filter(ctx, 'bandpass', 1200, 5, g);
+    sweep(bp.frequency, t, 900, 4200, 0.9);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, 1);
+    this.sparkle(out, t + 0.3, 6, 0.07);
+  }
+
+  /** A falling star striking the platform: a bright crack and a deep thud. */
+  starImpact(t: number, pan: number): void {
+    const out = this.out(pan, 0.75, 0.45);
+    this.chirp(out, t, 'sine', 220, 38, 0.6, 0.35);
+    this.burstNoise(out, t, 'lowpass', 5000, 400, 0.8, 0.45, 0.3, true);
+    this.sparkle(out, t + 0.02, 3, 0.04);
+  }
+
+  /** The singularity forming: a low drone that climbs and tightens for `dur` seconds. */
+  gravityWell(t: number, dur: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.9, 0.6);
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 900, 1, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.35, t + dur * 0.8);
+    g.gain.linearRampToValueAtTime(0, t + dur + 0.05);
+    for (const f of [41, 41.6, 82]) {
+      const o = osc(ctx, 'sawtooth', f, g);
+      sweep(o.frequency, t, f, f * 2.2, dur);
+      o.start(t);
+      o.stop(t + dur + 0.1);
+    }
+    const air = gain(ctx, 0, out);
+    air.gain.setValueAtTime(0, t);
+    air.gain.linearRampToValueAtTime(0.3, t + dur);
+    air.gain.linearRampToValueAtTime(0, t + dur + 0.05);
+    const bp = filter(ctx, 'bandpass', 300, 6, air);
+    sweep(bp.frequency, t, 300, 1800, dur);
+    const lfo = osc(ctx, 'sine', 6, gain(ctx, 120, bp.frequency));
+    lfo.start(t);
+    lfo.stop(t + dur + 0.1);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, dur + 0.1);
+  }
+
+  /** The supernova: a huge boom, a roar of light and a ringing chord. */
+  nova(t: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 1, 0.8);
+    const b = gain(ctx, 0, out);
+    hit(b.gain, t, 1, 0.004, 1.1);
+    const lo = osc(ctx, 'sine', 90, b);
+    sweep(lo.frequency, t, 90, 24, 1);
+    lo.start(t);
+    lo.stop(t + 1.2);
+    this.burstNoise(out, t, 'lowpass', 6000, 250, 0.7, 0.7, 1, true);
+    [523, 659, 784, 1047].forEach((f) => this.bell(out, t + 0.05, f, 0.045, 2));
+    this.sparkle(out, t + 0.08, 8, 0.05);
+  }
+
   /** The player is struck: a dull thump and a short grunt-like buzz. */
   hurt(t: number): void {
     const out = this.out(0, 0.9, 0.2);

@@ -246,6 +246,22 @@ class GameSound {
     if (this.live()) this.sfx!.ignite(this.ctx!.currentTime);
   }
 
+  starcall(pan = 0): void {
+    if (this.live()) this.sfx!.starcall(this.ctx!.currentTime, pan);
+  }
+
+  starImpact(pan = 0): void {
+    if (this.live()) this.sfx!.starImpact(this.ctx!.currentTime, pan);
+  }
+
+  gravityWell(seconds: number): void {
+    if (this.live()) this.sfx!.gravityWell(this.ctx!.currentTime, seconds);
+  }
+
+  nova(): void {
+    if (this.live()) this.sfx!.nova(this.ctx!.currentTime);
+  }
+
   forceGather(): void {
     if (this.live()) this.sfx!.forceGather(this.ctx!.currentTime);
   }

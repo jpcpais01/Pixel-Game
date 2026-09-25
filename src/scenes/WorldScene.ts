@@ -394,6 +394,21 @@ export class WorldScene extends Phaser.Scene {
     return true;
   }
 
+  /** Drag the hero toward (x, y) at `speed` px/s (a boss's gravity), never through walls. */
+  pullHero(x: number, y: number, speed: number, dt: number): void {
+    if (this.downT > 0) return;
+    const h = this.hero;
+    const dx = x - h.x;
+    const dy = y - h.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 4) return;
+    const s = Math.min(d, (speed * dt) / 1000);
+    const nx = h.x + (dx / d) * s;
+    const ny = h.y + (dy / d) * s;
+    if (this.walkable(nx, h.y)) h.x = nx;
+    if (this.walkable(h.x, ny)) h.y = ny;
+  }
+
   /** Damage the hero, unless they are down or still in their grace window. */
   hurtHero(harm: Harm): void {
     const h = this.hero;
