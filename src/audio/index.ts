@@ -166,6 +166,14 @@ class GameSound {
     if (this.live()) this.sfx!.consecrate(this.ctx!.currentTime, pan);
   }
 
+  drink(swift = false): void {
+    if (this.live()) this.sfx!.drink(this.ctx!.currentTime, swift);
+  }
+
+  pickup(pan = 0): void {
+    if (this.live()) this.sfx!.pickup(this.ctx!.currentTime, pan);
+  }
+
   heal(pan = 0): void {
     if (this.live()) this.sfx!.heal(this.ctx!.currentTime, pan);
   }

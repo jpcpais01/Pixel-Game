@@ -12,6 +12,8 @@ export const controls = {
   mouse: false,
   /** Left mouse button held on the game world (the attack on a computer). */
   click: false,
+  /** Hotbar slots (0..8) asked to be used since the world last looked: taps on the HUD and keys 1 to 9. */
+  items: [] as number[],
 };
 
 // Beam state written by the wizard, read by the UI to draw the button's charge ring.

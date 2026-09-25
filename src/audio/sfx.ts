@@ -432,6 +432,26 @@ export class Sfx {
   }
 
   /** A pulse of healing: two soft rising notes. */
+  /** Quaffing a potion: two glugs, then a chime (warm for health, a quick rising run for speed). */
+  drink(t: number, swift: boolean): void {
+    const out = this.out(0, 0.55, 0.35);
+    for (const at of [0, 0.13]) {
+      this.chirp(out, t + at, 'sine', 180 * rand(0.95, 1.05), 420, 0.28, 0.08);
+      this.burstNoise(out, t + at, 'bandpass', 700, 1500, 4, 0.12, 0.07, true);
+    }
+    const c = t + 0.26;
+    if (swift) [880, 1175, 1568, 2093].forEach((f, i) => this.bell(out, c + i * 0.045, f, 0.035, 0.45));
+    else [659, 784, 1047].forEach((f, i) => this.bell(out, c + i * 0.08, f, 0.045, 0.8));
+    this.sparkle(out, c + 0.1, 3, 0.05);
+  }
+
+  /** Picking an item up: a bright double blip. */
+  pickup(t: number, pan: number): void {
+    const out = this.out(pan, 0.45, 0.3);
+    this.chirp(out, t, 'triangle', 988, 1319, 0.2, 0.06);
+    this.chirp(out, t + 0.07, 'triangle', 1319, 1760, 0.18, 0.09);
+  }
+
   heal(t: number, pan: number): void {
     const out = this.out(pan, 0.45, 0.5);
     const i = Math.floor(Math.random() * 3);
