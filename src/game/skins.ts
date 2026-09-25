@@ -1,8 +1,8 @@
-// Character skins: alternate looks, and from Chemtech on, subtypes that also
-// play a little differently (their own stats pips here, and their own numbers
-// in the hero's spawn, which gets the skin id). A character lists
-// its skins in its registry entry (the first is its default look); the pick
-// for each character is remembered in localStorage.
+// Character skins (subtypes): alternate looks, and since the Pyromancer
+// sometimes their own stats and abilities too. A character lists its skins in
+// its registry entry (the first is its default look); the pick for each
+// character is remembered in localStorage. Gameplay differences live in the
+// hero's spawn, which gets the worn skin's id.
 
 import type { CharacterDef } from './characters';
 
@@ -14,7 +14,7 @@ export interface SkinDef {
   /** What changes on the select card and the HUD while this skin is worn. */
   role?: string;
   accent?: number;
-  /** A subtype's own pips on the select card. */
+  /** A subtype that plays differently shows its own pips. */
   stats?: CharacterDef['stats'];
   attack?: string;
   special?: string;
