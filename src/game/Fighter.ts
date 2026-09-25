@@ -246,7 +246,9 @@ export class Fighter implements Hero {
     this.y = Phaser.Math.Clamp(this.y + vy * (dt / 1000), bounds.top, bounds.bottom);
 
     if (this.state === 'free') {
-      if (moving) this.dir = dirOf(mx, my);
+      // Fighting faces the aim, even walking backwards; otherwise the way of the walk.
+      if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
+      else if (moving) this.dir = dirOf(mx, my);
       const key = `${this.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else if (this.state === 'punch') {
@@ -331,6 +333,8 @@ export class Fighter implements Hero {
     this.step = 0;
     this.buffered = false;
     this.line = this.aimLine();
+    // Once the aim lets go (a touch button released), the stick steers on from here.
+    this.lastMove.set(this.line.x, this.line.y);
     this.dir = dirOf(this.line.x, this.line.y);
     this.body.play(`${this.key}_barrage_${this.dir}`);
     this.flurry = new Flurry(this.world, BARRAGE_REACH);

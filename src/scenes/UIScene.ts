@@ -22,15 +22,36 @@ import { GearHud } from '../ui/gearHud';
  * day/night toggle, draining as they run out. Gear found has a chest button
  * by the pause button (or I / G) that opens the bag (see ui/gearHud.ts).
  */
+/**
+ * A touch ability button's press: where the finger went down and how far it
+ * has been dragged since, like a small stick of its own.
+ */
+interface Pad {
+  pointer: number | null;
+  /** When it was pressed. */
+  t: number;
+  dx: number;
+  dy: number;
+  /** Dragged out of the centre at some point: it is being aimed. */
+  out: boolean;
+  /** Pressed down in the game (hold-style buttons). */
+  held: boolean;
+}
+
+/** A tap shorter than this fires on release; holding longer presses the button down. */
+const TAP_GRACE = 90;
+
 export class UIScene extends Phaser.Scene {
   private stick!: Phaser.GameObjects.Graphics;
   private button!: Phaser.GameObjects.Graphics;
   private icon!: Phaser.GameObjects.Sprite;
   private stickPointer: number | null = null;
-  private buttonPointer: number | null = null;
+  private attackPad: Pad = UIScene.pad();
   private beamButton!: Phaser.GameObjects.Graphics;
   private beamIcon!: Phaser.GameObjects.Image;
-  private beamPointer: number | null = null;
+  private beamPad: Pad = UIScene.pad();
+  /** The special is held to charge (see CharacterDef.chargeSpecial). */
+  private chargeSpecial = false;
   private clickPointer: number | null = null;
   private base = new Phaser.Math.Vector2();
   private knob = new Phaser.Math.Vector2();
@@ -56,6 +77,15 @@ export class UIScene extends Phaser.Scene {
 
   constructor() {
     super('ui');
+  }
+
+  private static pad(pointer: number | null = null, t = 0): Pad {
+    return { pointer, t, dx: 0, dy: 0, out: false, held: false };
+  }
+
+  /** How far a button must be dragged to aim it; pulling back inside cancels the special. */
+  private get deadZone(): number {
+    return this.R * 0.32;
   }
 
   /**
@@ -138,7 +168,10 @@ export class UIScene extends Phaser.Scene {
 
   create(data: { character?: string }): void {
     const hero = characterById(data?.character);
-    this.stickPointer = this.buttonPointer = this.beamPointer = this.clickPointer = null;
+    this.stickPointer = this.clickPointer = null;
+    this.attackPad = UIScene.pad();
+    this.beamPad = UIScene.pad();
+    this.chargeSpecial = !!hero.chargeSpecial;
     this.stick = this.add.graphics();
     this.button = this.add.graphics();
     const { attack, special } = hero.buttons;
@@ -176,12 +209,12 @@ export class UIScene extends Phaser.Scene {
         // Tap a side to pick it; tapping the active side flips it.
         const onSun = p.x < tr.centerX;
         daynight.set(onSun === (daynight.target < 0.5) ? onSun : !onSun);
-      } else if (p.wasTouch && Phaser.Math.Distance.Between(p.x, p.y, mp.x, mp.y) < this.R * 0.95) {
-        this.beamPointer = p.id;
-        controls.beam = true;
-      } else if (p.wasTouch && Phaser.Math.Distance.Between(p.x, p.y, bp.x, bp.y) < this.R * 1.1) {
-        this.buttonPointer = p.id;
-        controls.attack = true;
+      } else if (p.wasTouch && this.beamPad.pointer === null && Phaser.Math.Distance.Between(p.x, p.y, mp.x, mp.y) < this.R * 0.95) {
+        this.beamPad = UIScene.pad(p.id, this.time.now);
+        controls.beamAim = null;
+      } else if (p.wasTouch && this.attackPad.pointer === null && Phaser.Math.Distance.Between(p.x, p.y, bp.x, bp.y) < this.R * 1.1) {
+        this.attackPad = UIScene.pad(p.id, this.time.now);
+        controls.attackAim = null;
       } else if (this.slotAt(p.x, p.y) >= 0) {
         controls.items.push(this.slotAt(p.x, p.y));
       } else if (!p.wasTouch) {
@@ -199,6 +232,8 @@ export class UIScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
       if (!p.wasTouch) controls.mouse = true;
       this.gearHud.pointerMove(p);
+      if (p.id === this.attackPad.pointer) this.dragPad(this.attackPad, p, false);
+      if (p.id === this.beamPad.pointer) this.dragPad(this.beamPad, p, true);
       if (p.id !== this.stickPointer) return;
       const R = this.R;
       const v = new Phaser.Math.Vector2(p.x - this.base.x, p.y - this.base.y);
@@ -218,13 +253,21 @@ export class UIScene extends Phaser.Scene {
         this.base.copy(this.restPos);
         this.knob.copy(this.restPos);
       }
-      if (p.id === this.buttonPointer) {
-        this.buttonPointer = null;
+      if (p.id === this.attackPad.pointer) {
+        // A quick tap never got pressed down: fire it once now.
+        if (!this.attackPad.held) controls.attackTap = true;
+        this.attackPad = UIScene.pad();
         controls.attack = false;
+        if (controls.aiming && !controls.aiming.special) controls.aiming = null;
       }
-      if (p.id === this.beamPointer) {
-        this.beamPointer = null;
+      if (p.id === this.beamPad.pointer) {
+        const pad = this.beamPad;
+        // Held to charge: let go to fire. Otherwise it fires now, where it was
+        // dragged (or at the nearest enemy for a tap), unless pulled back to the centre.
+        if (this.chargeSpecial ? !pad.held : !(pad.out && Math.hypot(pad.dx, pad.dy) < this.deadZone)) controls.beamTap = true;
+        this.beamPad = UIScene.pad();
         controls.beam = false;
+        if (controls.aiming?.special) controls.aiming = null;
       }
       if (p.id === this.clickPointer) {
         this.clickPointer = null;
@@ -242,6 +285,32 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
+  /** The finger on an ability button moved: aim the way it is dragged, or at the nearest enemy while inside the centre. */
+  private dragPad(pad: Pad, p: Phaser.Input.Pointer, special: boolean): void {
+    pad.dx = p.x - p.downX;
+    pad.dy = p.y - p.downY;
+    const l = Math.hypot(pad.dx, pad.dy);
+    const inside = l < this.deadZone;
+    if (!inside) pad.out = true;
+    const aim = inside ? null : { x: pad.dx / l, y: pad.dy / l };
+    if (special) controls.beamAim = aim;
+    else controls.attackAim = aim;
+    // The aim line in the world; the special's wins when both are dragged.
+    if (pad.out && (special || !controls.aiming?.special)) controls.aiming = { special, cancel: inside && special && !this.chargeSpecial };
+  }
+
+  /**
+   * Hold-style buttons (the attack, a charged special) press down once held
+   * past a tap or dragged out, and stay down until let go.
+   */
+  private holdPads(): void {
+    const now = this.time.now;
+    const a = this.attackPad;
+    if (a.pointer !== null && !a.held && (a.out || now - a.t >= TAP_GRACE)) a.held = controls.attack = true;
+    const b = this.beamPad;
+    if (this.chargeSpecial && b.pointer !== null && !b.held && (b.out || now - b.t >= TAP_GRACE)) b.held = controls.beam = true;
+  }
+
   private onResize(): void {
     if (this.stickPointer === null) {
       this.base.copy(this.restPos);
@@ -250,15 +319,21 @@ export class UIScene extends Phaser.Scene {
   }
 
   private releaseAll(): void {
-    this.stickPointer = this.buttonPointer = this.beamPointer = this.clickPointer = null;
+    this.stickPointer = this.clickPointer = null;
+    this.attackPad = UIScene.pad();
+    this.beamPad = UIScene.pad();
     controls.moveX = controls.moveY = 0;
     controls.attack = controls.beam = controls.click = false;
+    controls.attackTap = controls.beamTap = false;
+    controls.attackAim = controls.beamAim = null;
+    controls.aiming = null;
     this.base.copy(this.restPos);
     this.knob.copy(this.restPos);
   }
 
   update(_time: number, delta: number): void {
     this.gearHud.update(delta);
+    this.holdPads();
     const R = this.R;
     const active = this.stickPointer !== null;
     this.stick.setVisible(active || !controls.mouse);
@@ -279,10 +354,11 @@ export class UIScene extends Phaser.Scene {
     const k = this.padScale;
     const u = controls.mouse ? 0.6 : 1; // pip and ring spacing
     const bp = this.buttonPos;
-    const pressed = this.buttonPointer !== null || (controls.mouse && controls.click);
+    const pressed = this.attackPad.pointer !== null || (controls.mouse && controls.click);
     const br = R * k * (pressed ? 0.78 : 0.84);
-    this.icon.setPosition(bp.x, bp.y).setScale(Math.max(controls.mouse ? 1 : 2, Math.round((R * k) / 14)) * (pressed ? 0.9 : 1));
-    const b = this.redraw(this.button, `${pressed} ${bp.x} ${bp.y} ${R * k} ${comboHud.window} ${comboHud.hits} ${comboHud.max}`);
+    const ak = this.knobOffset(this.attackPad, br);
+    this.icon.setPosition(bp.x + ak.x, bp.y + ak.y).setScale(Math.max(controls.mouse ? 1 : 2, Math.round((R * k) / 14)) * (pressed ? 0.9 : 1));
+    const b = this.redraw(this.button, `${pressed} ${bp.x} ${bp.y} ${R * k} ${comboHud.window} ${comboHud.hits} ${comboHud.max} ${ak.x} ${ak.y}`);
     if (b) {
       b.fillStyle(0x0c1433, pressed ? 0.75 : 0.55);
       b.fillCircle(bp.x, bp.y, br);
@@ -290,6 +366,7 @@ export class UIScene extends Phaser.Scene {
       b.strokeCircle(bp.x, bp.y, br);
       b.lineStyle(1 * D, 0x6fe4ff, 0.25);
       b.strokeCircle(bp.x, bp.y, br + 6 * D * u);
+      this.drawKnob(b, bp.x, bp.y, ak, br, 0x9ff6ff);
 
       // Combo pips over the attack button: one per hit landed, and a thin arc
       // draining over the time left to chain the next.
@@ -437,10 +514,30 @@ export class UIScene extends Phaser.Scene {
       g.fillRect(x, y + size + 3 * D, Math.round(size * k), bh);
     });
   }
+  /** Where the knob of a dragged button sits against its centre (zero when not dragged out). */
+  private knobOffset(pad: Pad, br: number): { x: number; y: number } {
+    if (pad.pointer === null || !pad.out) return { x: 0, y: 0 };
+    const l = Math.hypot(pad.dx, pad.dy);
+    const k = l > 0 ? Math.min(l, br * 0.7) / l : 0;
+    return { x: Math.round(pad.dx * k), y: Math.round(pad.dy * k) };
+  }
+
+  /** A small knob on a button being aimed, showing which way it is dragged. */
+  private drawKnob(g: Phaser.GameObjects.Graphics, x: number, y: number, off: { x: number; y: number }, br: number, col: number): void {
+    if (!off.x && !off.y) return;
+    g.fillStyle(col, 0.3);
+    g.fillCircle(x + off.x, y + off.y, br * 0.38);
+    g.lineStyle(2 * D, 0xffffff, 0.6);
+    g.strokeCircle(x + off.x, y + off.y, br * 0.38);
+  }
+
   /** The beam button, ringed by its charge: filling cyan, white-hot when full, draining violet when held too long. */
   private drawBeamButton(R: number, u: number): void {
     const mp = this.beamPos;
-    const pressed = this.beamPointer !== null;
+    const pressed = this.beamPad.pointer !== null;
+    const pad = this.beamPad;
+    // Pulled back to the centre after aiming: letting go now cancels the special.
+    const cancel = !this.chargeSpecial && pad.out && Math.hypot(pad.dx, pad.dy) < this.deadZone;
     const { charge, over, firing } = beamHud;
     const t = this.time.now;
     const full = charge >= 1;
@@ -448,20 +545,22 @@ export class UIScene extends Phaser.Scene {
 
     const scale = Math.max(controls.mouse ? 1 : 2, Math.round(R / 16));
     const shake = over > 0.25 ? (Math.random() - 0.5) * over * 0.3 * D : 0;
+    const knob = this.knobOffset(pad, br);
     this.beamIcon
-      .setPosition(Math.round(mp.x + shake), Math.round(mp.y))
+      .setPosition(Math.round(mp.x + knob.x + shake), Math.round(mp.y + knob.y))
       .setScale(scale * (pressed ? 0.9 : 1))
       .setAlpha(firing || full ? 1 : 0.7 + charge * 0.3);
 
     // The ring only animates with time while full or draining.
     const tick = full || over > 0 ? t : 0;
-    const g = this.redraw(this.beamButton, `${pressed} ${charge} ${over} ${firing} ${mp.x} ${mp.y} ${R} ${tick}`);
+    const g = this.redraw(this.beamButton, `${pressed} ${charge} ${over} ${firing} ${mp.x} ${mp.y} ${R} ${tick} ${knob.x} ${knob.y} ${cancel}`);
     if (!g) return;
 
-    g.fillStyle(firing ? 0x1a3a66 : 0x0c1433, pressed || firing ? 0.78 : 0.55);
+    g.fillStyle(cancel ? 0x3a0c14 : firing ? 0x1a3a66 : 0x0c1433, pressed || firing ? 0.78 : 0.55);
     g.fillCircle(mp.x, mp.y, br);
-    g.lineStyle(2 * D, 0x6fe4ff, pressed ? 0.5 : 0.65);
+    g.lineStyle(2 * D, cancel ? 0xff6b6b : 0x6fe4ff, pressed ? 0.5 : 0.65);
     g.strokeCircle(mp.x, mp.y, br);
+    this.drawKnob(g, mp.x, mp.y, knob, br, 0xffd66b);
 
     // Charge ring just outside the rim, filling clockwise from the top.
     const rr = br + 5 * D * u;

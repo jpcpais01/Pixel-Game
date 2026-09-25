@@ -245,7 +245,9 @@ export class Rogue implements Hero {
     this.y = Phaser.Math.Clamp(this.y + vy * (dt / 1000), bounds.top, bounds.bottom);
 
     if (this.state === 'free') {
-      if (moving) this.dir = dirOf(mx, my);
+      // Fighting faces the aim, even walking backwards; otherwise the way of the walk.
+      if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
+      else if (moving) this.dir = dirOf(mx, my);
       const key = `${this.style.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else if (this.state === 'strike') {
