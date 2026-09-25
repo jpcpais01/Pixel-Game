@@ -316,6 +316,11 @@ export class Garden {
     return this.flowers.filter((f) => f.alive);
   }
 
+  /** Every flower, alive or not, without building a list (for per-frame scans). */
+  get allHurtboxes(): readonly Hurtbox[] {
+    return this.flowers;
+  }
+
   update(time: number, dt: number, hero: { x: number; y: number } | null, daylight: number, view: Phaser.Geom.Rectangle): void {
     const vx0 = view.x - 24;
     const vx1 = view.right + 24;
