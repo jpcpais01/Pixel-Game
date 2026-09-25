@@ -392,3 +392,63 @@ export const FIGHTER_HAIR: Material = {
 export const CHI_CORE = hex('#fffbe8');
 export const CHI_HOT = hex('#ffd66b');
 export const CHI_MID = hex('#ff8a36');
+
+// ---------------------------------------------------------------------------
+// The alchemist: a plague doctor in a plum greatcoat and shoulder mantle, a
+// black wide-brimmed hat, a bone-white beaked mask with glowing green lenses,
+// and a bandolier of poison vials across the chest.
+
+const PLUM_INK = hex('#0b0612');
+
+export const PLAGUE_COAT: Material = {
+  ramp: ramp('#1f1229', '#341d4a', '#4d2d66', '#6a4484', '#8c62a4'),
+  outline: PLUM_INK,
+  outlineLit: hex('#1e1030'),
+};
+
+export const MANTLE: Material = {
+  ramp: ramp('#150c1e', '#251634', '#3a234f', '#52346c'),
+  outline: PLUM_INK,
+};
+
+export const PLAGUE_HAT: Material = {
+  ramp: ramp('#09080d', '#15131c', '#24202e', '#383244', '#4e4760'),
+  outline: hex('#040308'),
+  outlineLit: hex('#15121c'),
+};
+
+/** The beaked mask: waxed leather gone the colour of old bone. */
+export const BEAK: Material = {
+  ramp: ramp('#4e3e34', '#85705a', '#b9a283', '#e0cfad', '#fbf1d6'),
+  outline: hex('#1e140f'),
+  outlineLit: hex('#3a2a20'),
+};
+
+/** Goggle lenses lit from within by the fumes. */
+export const LENS: Material = {
+  ramp: ramp('#1f7a22', '#3fc02a', '#6ee83a', '#98f850'),
+  outline: hex('#0c1a08'),
+  emissive: 0.55,
+  noAO: true,
+};
+
+export const GLASS: Material = {
+  ramp: ramp('#26404c', '#4d7886', '#8fc0c8', '#d8f6f4'),
+  outline: hex('#0a141a'),
+  shine: true,
+  noAO: true,
+};
+
+/** The poison itself: it glows. */
+export const TOXIN: Material = {
+  ramp: ramp('#1e6a1a', '#3fae2a', '#6ee03a', '#a8ff4a'),
+  outline: hex('#0a1a06'),
+  emissive: 0.75,
+  noAO: true,
+};
+
+// Toxic light (light-only pixels): fumes, bubbles and splashes.
+export const TOX_CORE = hex('#f2ffd2');
+export const TOX_HOT = hex('#b8ff5c');
+export const TOX_MID = hex('#52d62e');
+export const TOX_DEEP = hex('#1c7a3a');

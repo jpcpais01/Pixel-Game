@@ -73,6 +73,9 @@ const RISE_GRACE = 2200;
 const HERO_BODY_Y = 11;
 const HERO_RADIUS = 6;
 
+/** Damage numbers from poison. */
+export const POISON_TINT = 0x9dff5a;
+
 /** A straw training dummy: struck like a monster, but never falls. */
 class Dummy implements Hurtbox {
   readonly bodyY = 11;
@@ -91,7 +94,7 @@ class Dummy implements Hurtbox {
     this.wobble = hit.heavy ? 1.4 : 1;
     this.sprite.setFrame('d1');
     this.world.time.delayedCall(90, () => this.sprite.setFrame('d0'));
-    this.world.popNumber(this.x, this.y - 30, `${Math.round(hit.damage)}`, hit.heavy ? 0xffe28a : 0xffffff);
+    this.world.popNumber(this.x, this.y - 30, `${Math.round(hit.damage)}`, hit.poison ? POISON_TINT : hit.heavy ? 0xffe28a : 0xffffff);
   }
 }
 
@@ -337,7 +340,12 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private toHit(s: Strike, x: number, y: number): Hit {
-    return { damage: s.damage, heavy: !!s.heavy, knock: s.knock ?? (s.heavy ? 130 : 60), fromX: s.fromX ?? x, fromY: s.fromY ?? y };
+    return { damage: s.damage, heavy: !!s.heavy, knock: s.knock ?? (s.heavy ? 130 : 60), fromX: s.fromX ?? x, fromY: s.fromY ?? y, poison: s.poison };
+  }
+
+  /** Everything strikeable that passes `test`, for heroes that hurt by other means than a single blow (poison). */
+  hurtboxesWhere(test: (h: Hurtbox) => boolean): Hurtbox[] {
+    return this.hurtboxes().filter(test);
   }
 
   /** A monster's blow lands on the hero if its reach (a circle at (x, y)) touches the hero's body. */
@@ -715,7 +723,7 @@ export class WorldScene extends Phaser.Scene {
     const dx = w.x - this.hero.x;
     const dy = w.y - (this.hero.y - 14);
     const l = Math.hypot(dx, dy);
-    return l < 1 ? null : { x: dx / l, y: dy / l };
+    return l < 1 ? null : { x: dx / l, y: dy / l, dist: l };
   }
 
   update(time: number, dt: number): void {

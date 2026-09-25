@@ -262,6 +262,26 @@ class GameSound {
     if (this.live()) this.sfx!.kiai(this.ctx!.currentTime);
   }
 
+  toss(pan = 0, big = false): void {
+    if (this.live()) this.sfx!.toss(this.ctx!.currentTime, pan, big);
+  }
+
+  shatter(pan = 0, big = false): void {
+    if (this.live()) this.sfx!.shatter(this.ctx!.currentTime, pan, big);
+  }
+
+  brew(): void {
+    if (this.live()) this.sfx!.brew(this.ctx!.currentTime);
+  }
+
+  bog(pan = 0): void {
+    if (this.live()) this.sfx!.bog(this.ctx!.currentTime, pan);
+  }
+
+  sizzle(pan = 0): void {
+    if (this.live()) this.sfx!.sizzle(this.ctx!.currentTime, pan);
+  }
+
   step(): void {
     if (this.live()) this.sfx!.step(this.ctx!.currentTime);
   }
