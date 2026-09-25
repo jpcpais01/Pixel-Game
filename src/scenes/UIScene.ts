@@ -14,7 +14,7 @@ import { heroBuffs } from '../game/buffs';
  *
  * With a mouse, a left click on the world is the attack (the world aims it
  * at the cursor), Space the special and the keyboard walks, so the joystick
- * and ability buttons hide.
+ * hides and the ability buttons shrink to indicators above the hotbar.
  *
  * Along the bottom, between the joystick and the buttons, the hotbar: nine
  * item slots, tapped or pressed 1 to 9. Active buffs show as badges under the
@@ -70,16 +70,36 @@ export class UIScene extends Phaser.Scene {
     return Math.max(42 * D, Math.min(this.scale.width, this.scale.height) * 0.13);
   }
 
-  private get buttonPos(): Phaser.Math.Vector2 {
+  /** Where the touch attack button sits (the hotbar is laid out around it). */
+  private get padPos(): Phaser.Math.Vector2 {
     const R = this.R;
     // Inset from the edge by 70% of the button's diameter beyond the original spot.
     return new Phaser.Math.Vector2(this.scale.width - R * (1.55 + 0.7 * 1.68), this.scale.height - R * 1.45);
   }
 
+  /** With a mouse the buttons shrink to indicators; this is their size against the touch buttons. */
+  private get padScale(): number {
+    return controls.mouse ? 0.42 : 1;
+  }
+
+  /** With a mouse: the two indicators side by side, centred just above the hotbar. */
+  private get indicatorPos(): { attack: Phaser.Math.Vector2; special: Phaser.Math.Vector2 } {
+    const r = this.R * this.padScale;
+    const { x, y, s, gap } = this.hotbar;
+    const cx = x + (s * HOTBAR_SIZE + gap * (HOTBAR_SIZE - 1)) / 2;
+    const cy = y - r - 10 * D;
+    return { attack: new Phaser.Math.Vector2(cx - r * 1.25, cy), special: new Phaser.Math.Vector2(cx + r * 1.25, cy) };
+  }
+
+  private get buttonPos(): Phaser.Math.Vector2 {
+    return controls.mouse ? this.indicatorPos.attack : this.padPos;
+  }
+
   /** The beam button sits above and just outside the attack button, in easy reach of the thumb. */
   private get beamPos(): Phaser.Math.Vector2 {
+    if (controls.mouse) return this.indicatorPos.special;
     const R = this.R;
-    const bp = this.buttonPos;
+    const bp = this.padPos;
     return new Phaser.Math.Vector2(bp.x + R * 0.55, bp.y - R * 1.95);
   }
 
@@ -90,7 +110,7 @@ export class UIScene extends Phaser.Scene {
   private get hotbar(): { x: number; y: number; s: number; gap: number } {
     const R = this.R;
     const left = this.restPos.x + R * 1.1;
-    const right = this.buttonPos.x - R * 1.2;
+    const right = this.padPos.x - R * 1.2;
     const gap = Math.round(3 * D);
     const fit = Math.floor((right - left - gap * (HOTBAR_SIZE - 1)) / HOTBAR_SIZE);
     const s = Math.max(Math.round(20 * D), Math.min(fit, Math.round(Phaser.Math.Clamp(Math.min(this.scale.width, this.scale.height) * 0.085, 30 * D, 46 * D))));
@@ -234,8 +254,6 @@ export class UIScene extends Phaser.Scene {
     const R = this.R;
     const active = this.stickPointer !== null;
     this.stick.setVisible(active || !controls.mouse);
-    // With a mouse the abilities are the click and Space, so their buttons hide too.
-    for (const o of [this.button, this.icon, this.beamButton, this.beamIcon]) o.setVisible(!controls.mouse);
     const g = this.redraw(this.stick, `${active} ${this.base.x} ${this.base.y} ${this.knob.x} ${this.knob.y} ${R}`);
     if (g) {
       g.fillStyle(0x0a0c1c, active ? 0.45 : 0.28);
@@ -248,18 +266,22 @@ export class UIScene extends Phaser.Scene {
       g.strokeCircle(this.knob.x, this.knob.y, R * 0.42);
     }
 
+    // With a mouse the abilities are the click and Space, so the buttons become
+    // small indicators above the hotbar: same combo pips and cooldown rings.
+    const k = this.padScale;
+    const u = controls.mouse ? 0.6 : 1; // pip and ring spacing
     const bp = this.buttonPos;
-    const pressed = this.buttonPointer !== null;
-    const br = R * (pressed ? 0.78 : 0.84);
-    this.icon.setPosition(bp.x, bp.y).setScale(Math.max(2, Math.round(R / 14)) * (pressed ? 0.9 : 1));
-    const b = this.redraw(this.button, `${pressed} ${bp.x} ${bp.y} ${R} ${comboHud.window} ${comboHud.hits} ${comboHud.max}`);
+    const pressed = this.buttonPointer !== null || (controls.mouse && controls.click);
+    const br = R * k * (pressed ? 0.78 : 0.84);
+    this.icon.setPosition(bp.x, bp.y).setScale(Math.max(controls.mouse ? 1 : 2, Math.round((R * k) / 14)) * (pressed ? 0.9 : 1));
+    const b = this.redraw(this.button, `${pressed} ${bp.x} ${bp.y} ${R * k} ${comboHud.window} ${comboHud.hits} ${comboHud.max}`);
     if (b) {
       b.fillStyle(0x0c1433, pressed ? 0.75 : 0.55);
       b.fillCircle(bp.x, bp.y, br);
       b.lineStyle(3 * D, 0x6fe4ff, pressed ? 0.95 : 0.65);
       b.strokeCircle(bp.x, bp.y, br);
       b.lineStyle(1 * D, 0x6fe4ff, 0.25);
-      b.strokeCircle(bp.x, bp.y, br + 6 * D);
+      b.strokeCircle(bp.x, bp.y, br + 6 * D * u);
 
       // Combo pips over the attack button: one per hit landed, and a thin arc
       // draining over the time left to chain the next.
@@ -267,24 +289,24 @@ export class UIScene extends Phaser.Scene {
         const top = -Math.PI / 2;
         b.lineStyle(2 * D, 0xffd66b, 0.55 * Math.min(1, comboHud.window * 3));
         b.beginPath();
-        b.arc(bp.x, bp.y, br + 6 * D, top, top + Math.PI * 2 * comboHud.window, false);
+        b.arc(bp.x, bp.y, br + 6 * D * u, top, top + Math.PI * 2 * comboHud.window, false);
         b.strokePath();
         const n = comboHud.max;
         const gap = n > 3 ? 0.27 : 0.34;
         for (let i = 0; i < n; i++) {
           const a = top + (i - (n - 1) / 2) * gap;
-          const px = bp.x + Math.cos(a) * (br + 15 * D);
-          const py = bp.y + Math.sin(a) * (br + 15 * D);
+          const px = bp.x + Math.cos(a) * (br + 15 * D * u);
+          const py = bp.y + Math.sin(a) * (br + 15 * D * u);
           const lit = i < comboHud.hits;
           b.fillStyle(lit ? 0xffd66b : 0x0a0c1c, lit ? 0.95 : 0.5);
-          b.fillCircle(px, py, 4 * D);
+          b.fillCircle(px, py, 4 * D * u);
           b.lineStyle(1.5 * D, lit ? 0xfff4bf : 0xffd66b, lit ? 0.9 : 0.45);
-          b.strokeCircle(px, py, 4 * D);
+          b.strokeCircle(px, py, 4 * D * u);
         }
       }
     }
 
-    this.drawBeamButton(R);
+    this.drawBeamButton(R * k, u);
 
     const tr = this.toggleRect;
     const seg = tr.width / 2;
@@ -405,7 +427,7 @@ export class UIScene extends Phaser.Scene {
     });
   }
   /** The beam button, ringed by its charge: filling cyan, white-hot when full, draining violet when held too long. */
-  private drawBeamButton(R: number): void {
+  private drawBeamButton(R: number, u: number): void {
     const mp = this.beamPos;
     const pressed = this.beamPointer !== null;
     const { charge, over, firing } = beamHud;
@@ -413,7 +435,7 @@ export class UIScene extends Phaser.Scene {
     const full = charge >= 1;
     const br = R * (pressed ? 0.66 : 0.72);
 
-    const scale = Math.max(2, Math.round(R / 16));
+    const scale = Math.max(controls.mouse ? 1 : 2, Math.round(R / 16));
     const shake = over > 0.25 ? (Math.random() - 0.5) * over * 0.3 * D : 0;
     this.beamIcon
       .setPosition(Math.round(mp.x + shake), Math.round(mp.y))
@@ -431,9 +453,9 @@ export class UIScene extends Phaser.Scene {
     g.strokeCircle(mp.x, mp.y, br);
 
     // Charge ring just outside the rim, filling clockwise from the top.
-    const rr = br + 5 * D;
+    const rr = br + 5 * D * u;
     const top = -Math.PI / 2;
-    g.lineStyle(4 * D, 0x0a0c1c, 0.45);
+    g.lineStyle(4 * D * u, 0x0a0c1c, 0.45);
     g.strokeCircle(mp.x, mp.y, rr);
     if (charge > 0) {
       let col = 0x39c6f0;
@@ -448,13 +470,13 @@ export class UIScene extends Phaser.Scene {
         col = 0xf2ffff;
         alpha = 0.75 + 0.25 * Math.sin(t * 0.012);
       }
-      g.lineStyle(4 * D, col, alpha);
+      g.lineStyle(4 * D * u, col, alpha);
       g.beginPath();
       g.arc(mp.x, mp.y, rr, top, top + Math.PI * 2 * fill, false);
       g.strokePath();
       if (full && over === 0) {
         g.lineStyle(1.5 * D, 0x9ff6ff, 0.35 + 0.25 * Math.sin(t * 0.012));
-        g.strokeCircle(mp.x, mp.y, rr + 5 * D);
+        g.strokeCircle(mp.x, mp.y, rr + 5 * D * u);
       }
     } else {
       g.lineStyle(1 * D, 0x6fe4ff, 0.25);
