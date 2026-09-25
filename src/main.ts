@@ -95,4 +95,24 @@ settings.watch((s) => {
   fitCanvas();
 });
 
+// A safety net for Full graphics on a device that can't keep up: if the world
+// runs below 30 FPS for five seconds straight, switch to Fast (the pause
+// menu shows it, and it can be switched back).
+let slowFor = 0;
+game.events.on(Phaser.Core.Events.POST_STEP, () => {
+  const world = game.scene.getScene('world');
+  if (settings.values.quality !== 'full' || !world || !game.scene.isActive('world') || document.hidden) {
+    slowFor = 0;
+    return;
+  }
+  const dt = game.loop.rawDelta;
+  // A long gap is the app resuming, not a slow frame.
+  if (dt > 250) return;
+  slowFor = dt > 1000 / 30 ? slowFor + dt : Math.max(0, slowFor - dt * 2);
+  if (slowFor > 5000) {
+    slowFor = 0;
+    settings.set('quality', 'fast');
+  }
+});
+
 (window as unknown as { game: Phaser.Game }).game = game;

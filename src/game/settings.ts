@@ -24,7 +24,9 @@ type Listener = (s: Settings) => void;
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) };
+    // The profiler waits on the GPU every frame, which costs frames of its
+    // own, so it's never left on from an earlier visit.
+    if (raw) return { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>), profiler: false };
   } catch {
     // Storage unavailable or corrupt: fall back to the defaults.
   }
