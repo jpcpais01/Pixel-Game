@@ -11,8 +11,9 @@ import { hex } from './pixel';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_W, type PaladinMeta } from './paladin';
 import { buildWarriorFrames, JADE_LOOK, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, type WarriorMeta } from './warrior';
 import { WIND_DEEP } from './palette';
-import { buildBeetleSheet, buildFrogSheet, buildPuffcapSheet, ringCanvas, venomGlob, type MonsterSheet } from './monsters';
-import { buildGround, NIGHT_GROUND, DAY_GROUND, brazierFrame, crystalCluster, rock, dummyFrame } from './env';
+import { buildBarklingSheet, buildBeetleSheet, buildFrogSheet, buildGlowmothSheet, buildPuffcapSheet, ringCanvas, thornFrame, THORN_H, THORN_W, venomGlob, type MonsterSheet } from './monsters';
+import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
+import { BOUGH_H, BOUGH_W, PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, bough, leafBit, rayCanvas } from './trees';
 
 function toCanvas(w: number, h: number, px: Uint8ClampedArray): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -106,6 +107,16 @@ function registerMonster(scene: Phaser.Scene, key: string, sh: MonsterSheet): vo
   }
 }
 
+/** Lay equally sized RGBA images out in a row. */
+function sideBySide(w: number, h: number, images: Uint8ClampedArray[]): Uint8ClampedArray {
+  const W = w * images.length;
+  const out = new Uint8ClampedArray(W * h * 4);
+  images.forEach((px, k) => {
+    for (let y = 0; y < h; y++) out.set(px.subarray(y * w * 4, (y + 1) * w * 4), (y * W + k * w) * 4);
+  });
+  return out;
+}
+
 const frameList = (canvases: PixelCanvas[], prefix: string) => canvases.map((c, i) => ({ name: `${prefix}${i}`, r: c.render() }));
 
 export const wizardMeta = new Map<string, FrameMeta>();
@@ -113,7 +124,7 @@ export const warriorMeta = new Map<string, WarriorMeta>();
 export const paladinMeta = new Map<string, PaladinMeta>();
 export const jediMeta = new Map<string, JediMeta>();
 
-export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: number): void {
+export function buildAllTextures(scene: Phaser.Scene): void {
   // Wizard, once per look. Every look shares the rig, so the crystal meta is the same for all.
   for (const look of WIZARD_LOOKS) {
     const wf = buildWizardFrames(look);
@@ -203,14 +214,16 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
   const spark = new Uint8ClampedArray(4 * 4).fill(255);
   scene.textures.addCanvas('spark', toCanvas(2, 2, spark));
 
-  // Environment.
-  const g = buildGround(worldW, worldH, NIGHT_GROUND);
-  const gt = scene.textures.addCanvas('ground', toCanvas(g.w, g.h, g.diffuse))!;
-  gt.setDataSource(toCanvas(g.w, g.h, g.normal));
-  scene.textures.addCanvas('ground_e', toCanvas(g.w, g.h, g.emissive));
-  const gd = buildGround(worldW, worldH, DAY_GROUND);
-  const gdt = scene.textures.addCanvas('ground_day', toCanvas(gd.w, gd.h, gd.diffuse))!;
-  gdt.setDataSource(toCanvas(gd.w, gd.h, gd.normal));
+  // Environment. The ground itself streams in as the heroes walk (see world/GroundStreamer.ts).
+  register(scene, 'tree', pack(TREE_FRAMES.map((f) => ({ name: f.name, r: f.draw().render() })), TREE_W, TREE_H, 9), TREE_W, TREE_H, false);
+  register(scene, 'flora', pack(PROP_FRAMES.map((f) => ({ name: f.name, r: f.draw().render() })), PROP_W, PROP_H, 10), PROP_W, PROP_H);
+  const rays = scene.textures.addCanvas('ray', toCanvas(RAY_W * 2, RAY_H, sideBySide(RAY_W, RAY_H, [rayCanvas(11), rayCanvas(29)])))!;
+  rays.add('ray0', 0, 0, 0, RAY_W, RAY_H);
+  rays.add('ray1', 0, RAY_W, 0, RAY_W, RAY_H);
+  const boughs = [0, 1, 2].map((v) => bough(v).render().diffuse);
+  const bt = scene.textures.addCanvas('bough', toCanvas(BOUGH_W * 3, BOUGH_H, sideBySide(BOUGH_W, BOUGH_H, boughs)))!;
+  boughs.forEach((_, v) => bt.add(`b${v}`, 0, v * BOUGH_W, 0, BOUGH_W, BOUGH_H));
+  scene.textures.addCanvas('leafbit', toCanvas(3, 2, leafBit()));
 
   // Sky.
   scene.textures.addCanvas('clouds', toCanvas(256, 256, cloudShadowCanvas(256)));
@@ -242,6 +255,9 @@ export function buildAllTextures(scene: Phaser.Scene, worldW: number, worldH: nu
   registerMonster(scene, 'frog', buildFrogSheet());
   registerMonster(scene, 'beetle', buildBeetleSheet());
   registerMonster(scene, 'puffcap', buildPuffcapSheet());
+  registerMonster(scene, 'barkling', buildBarklingSheet());
+  registerMonster(scene, 'glowmoth', buildGlowmothSheet());
+  register(scene, 'thorns', pack(frameList([0, 1, 2].map(thornFrame), 't'), THORN_W, THORN_H), THORN_W, THORN_H, false);
   scene.textures.addCanvas('venom', toCanvas(7, 7, venomGlob()));
   const ring = ringCanvas(22, 12);
   scene.textures.addCanvas('danger_ring', toCanvas(ring.w, ring.h, ring.px));

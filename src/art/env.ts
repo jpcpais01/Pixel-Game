@@ -1,9 +1,9 @@
-// Environment art for the preview arena: a mossy forest clearing with a
-// flagstone plaza, a faint rune circle, braziers, crystals, rocks and a
-// training dummy. Everything is generated with diffuse + normal (+ emissive)
+// Environment art for the starting plaza: the ground palettes (the ground
+// itself is built strip by strip in ground.ts), braziers, crystals, rocks and
+// a training dummy. Everything is generated with diffuse + normal (+ emissive)
 // layers so it responds to the dynamic lights.
 
-import { PixelCanvas, hex, KEY_LIGHT, cyl, sphere, type Material, type RGB, type RenderedFrame } from './pixel';
+import { PixelCanvas, hex, cyl, sphere, type Material, type RGB } from './pixel';
 import { MAGIC_VIOLET } from './palette';
 
 const ramp = (...c: string[]): RGB[] => c.map(hex);
@@ -20,13 +20,13 @@ export function rng(seed: number) {
   };
 }
 
-const hash2 = (x: number, y: number, s = 0) => {
+export const hash2 = (x: number, y: number, s = 0) => {
   let h = (x * 374761393 + y * 668265263 + s * 982451653) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 };
 
-function valueNoise(x: number, y: number, scale: number, s: number): number {
+export function valueNoise(x: number, y: number, scale: number, s: number): number {
   const fx = x / scale;
   const fy = y / scale;
   const x0 = Math.floor(fx);
@@ -72,185 +72,6 @@ export const DAY_GROUND: GroundPalette = {
   edgeDark: 1.3,
 };
 
-const RUNE: RGB = [150, 110, 255];
-
-export interface GroundLayers extends RenderedFrame {}
-
-/**
- * Ground texture for a w x h pixel world. The plaza is centred; the ground
- * darkens toward the edges to frame the clearing.
- */
-export function buildGround(w: number, h: number, pal: GroundPalette, seed = 7): GroundLayers {
-  const { grass: GRASS, stone: STONE, grout: GROUT, dirt: DIRT } = pal;
-  const n = w * h;
-  const height = new Float32Array(n);
-  const kind = new Uint8Array(n); // 0 grass, 1 stone, 2 grout, 3 dirt
-  const tone = new Float32Array(n);
-  const emissive = new Uint8ClampedArray(n * 4);
-  const cx = w / 2;
-  const cy = h / 2;
-  const plazaR = Math.min(w, h) * 0.3;
-  const R = rng(seed);
-
-  // Flagstone seeds on a jittered grid.
-  const cell = 19;
-  const seeds: { x: number; y: number; t: number }[][] = [];
-  for (let gy = -1; gy <= Math.ceil(h / cell) + 1; gy++) {
-    const row: { x: number; y: number; t: number }[] = [];
-    for (let gx = -1; gx <= Math.ceil(w / cell) + 1; gx++) {
-      row.push({ x: (gx + 0.2 + R() * 0.6) * cell, y: (gy + 0.2 + R() * 0.6) * cell, t: R() });
-    }
-    seeds.push(row);
-  }
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      const d = Math.hypot(x - cx, (y - cy) * 1.15);
-      const edgeNoise = (valueNoise(x, y, 9, 3) - 0.5) * 22;
-      const inPlaza = d < plazaR + edgeNoise;
-      const mossy = valueNoise(x, y, 14, 5);
-      if (inPlaza) {
-        // Nearest two seeds: distance difference gives a bevel toward edges.
-        const gx = Math.floor(x / cell) + 1;
-        const gy = Math.floor(y / cell) + 1;
-        let d1 = 1e9;
-        let d2 = 1e9;
-        let t = 0;
-        for (let oy = -1; oy <= 1; oy++) {
-          for (let ox = -1; ox <= 1; ox++) {
-            const s = seeds[gy + oy]?.[gx + ox];
-            if (!s) continue;
-            const dd = Math.hypot(x + 0.5 - s.x, y + 0.5 - s.y);
-            if (dd < d1) {
-              d2 = d1;
-              d1 = dd;
-              t = s.t;
-            } else if (dd < d2) d2 = dd;
-          }
-        }
-        const edge = (d2 - d1) / 2;
-        if (edge < 0.55) {
-          kind[i] = 2;
-          height[i] = 0;
-          tone[i] = mossy > 0.55 ? 2 : mossy > 0.4 ? 1 : 0;
-        } else {
-          kind[i] = 1;
-          height[i] = Math.min(1, edge / 2.2) * 0.7 + valueNoise(x, y, 3, 11) * 0.08;
-          tone[i] = (t - 0.5) * 0.9 + (valueNoise(x, y, 6, 13) - 0.5) * 0.6;
-          // Moss creeping onto stones near the plaza edge.
-          if (mossy > 0.62 && d > plazaR * 0.55 && hash2(x, y, 3) > 0.35) kind[i] = 0;
-        }
-      } else {
-        const dirt = valueNoise(x, y, 20, 21);
-        if (dirt > 0.8 && d < plazaR + 40) {
-          kind[i] = 3;
-          height[i] = valueNoise(x, y, 2, 23) * 0.2;
-          tone[i] = (valueNoise(x, y, 4, 29) - 0.5) * 1.5;
-        } else {
-          kind[i] = 0;
-          height[i] = valueNoise(x, y, 4, 17) * 0.25 + valueNoise(x, y, 11, 19) * 0.25;
-          tone[i] = (valueNoise(x, y, 18, 31) - 0.5) * 2.2;
-        }
-      }
-    }
-  }
-
-  // Grass blades: short strokes that catch the light.
-  for (let k = 0; k < (w * h) / 22; k++) {
-    const x = Math.floor(R() * w);
-    const y = Math.floor(R() * h);
-    const len = 1 + Math.floor(R() * 3);
-    for (let j = 0; j < len; j++) {
-      const i = (y - j) * w + x;
-      if (y - j < 0 || kind[i] !== 0) break;
-      height[i] = 0.55 + j * 0.2;
-      tone[i] += 0.9 + j * 0.4;
-    }
-  }
-
-  // Wildflowers: tiny clusters in the meadow, one colour per cluster.
-  for (let k = 0; k < (w * h) / 900; k++) {
-    const x0 = Math.floor(R() * w);
-    const y0 = Math.floor(R() * h);
-    const colour = Math.floor(R() * 8);
-    for (let j = 0; j < 4; j++) {
-      const x = x0 + Math.floor(R() * 7) - 3;
-      const y = y0 + Math.floor(R() * 5) - 2;
-      if (x < 0 || y < 0 || x >= w || y >= h) continue;
-      const i = y * w + x;
-      if (kind[i] !== 0) continue;
-      kind[i] = 4;
-      height[i] = 0.9;
-      tone[i] = colour;
-    }
-  }
-
-  // Faint rune circle in the plaza.
-  const runeR = plazaR * 0.42;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const dx = x + 0.5 - cx;
-      const dy = (y + 0.5 - cy) * 1.15;
-      const d = Math.hypot(dx, dy);
-      const a = Math.atan2(dy, dx);
-      const ring = Math.abs(d - runeR) < 0.6 || Math.abs(d - runeR * 0.82) < 0.55;
-      const tick = Math.abs(d - runeR * 0.91) < 2.2 && Math.abs(((a * 12) / Math.PI) % 2) < 0.18;
-      const glyph = Math.abs(d - runeR * 0.91) < 1.8 && hash2(Math.floor(a * 30), Math.floor(d), 5) > 0.72;
-      if (ring || tick || glyph) {
-        const i = (y * w + x) * 4;
-        const s = ring ? 0.55 : 0.4;
-        emissive[i] = RUNE[0] * s;
-        emissive[i + 1] = RUNE[1] * s;
-        emissive[i + 2] = RUNE[2] * s;
-        emissive[i + 3] = 255;
-        kind[y * w + x] = kind[y * w + x] === 0 || kind[y * w + x] === 4 ? 0 : 2;
-      }
-    }
-  }
-
-  const diffuse = new Uint8ClampedArray(n * 4);
-  const normal = new Uint8ClampedArray(n * 4);
-  const L = KEY_LIGHT;
-  const Ll = Math.hypot(L.x, L.y, L.z);
-  const H = (x: number, y: number) => height[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))];
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      const k = 3.2;
-      let nx = (H(x - 1, y) - H(x + 1, y)) * k;
-      let ny = (H(x, y + 1) - H(x, y - 1)) * k;
-      let nz = 1;
-      const l = Math.hypot(nx, ny, nz);
-      nx /= l;
-      ny /= l;
-      nz /= l;
-      const lit = (nx * L.x + ny * L.y + nz * L.z) / Ll;
-      // Vignette the clearing: the forest edges sink into shadow.
-      const vd = Math.hypot((x - cx) / (w / 2), (y - cy) / (h / 2));
-      const dark = Math.max(0, vd - 0.55) * pal.edgeDark;
-      let col: RGB;
-      const shade = (lit - 0.78) * 6 + tone[i] - dark;
-      if (kind[i] === 1) col = STONE[clamp(Math.round(3 + shade), 0, STONE.length - 1)];
-      else if (kind[i] === 2) col = GROUT[clamp(Math.round(tone[i]), 0, GROUT.length - 1)];
-      else if (kind[i] === 3) col = DIRT[clamp(Math.round(2 + shade), 0, DIRT.length - 1)];
-      else if (kind[i] === 4) col = pal.flowers[Math.floor(tone[i]) % pal.flowers.length];
-      else col = GRASS[clamp(Math.round(2.4 + shade), 0, GRASS.length - 1)];
-      const o = i * 4;
-      diffuse[o] = col[0];
-      diffuse[o + 1] = col[1];
-      diffuse[o + 2] = col[2];
-      diffuse[o + 3] = 255;
-      normal[o] = Math.round((nx * 0.5 + 0.5) * 255);
-      normal[o + 1] = Math.round((ny * 0.5 + 0.5) * 255);
-      normal[o + 2] = Math.round((nz * 0.5 + 0.5) * 255);
-      normal[o + 3] = 255;
-    }
-  }
-  return { w, h, diffuse, normal, emissive };
-}
-
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 // ---------------------------------------------------------------------------
 // Props

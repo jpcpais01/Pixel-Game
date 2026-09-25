@@ -16,6 +16,10 @@ import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
 import type { Effect } from '../game/Slash';
 import { separate, Spawner, type Monster, type SpawnSpot } from '../game/monsters';
+import { PLAZA_CX, PLAZA_CY, PLAZA_H, PLAZA_Y, WORLD_H, WORLD_W, freeBox, pathHalfW, pathX, walkable } from '../world/layout';
+import { GroundStreamer } from '../world/GroundStreamer';
+import { Forest } from '../world/Forest';
+import { FOREST_SPAWNS, regionAt, type Region } from '../world/regions';
 
 type V3 = [number, number, number];
 
@@ -35,8 +39,7 @@ const DAY = {
 const mix3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 import { sound } from '../audio';
 
-export const WORLD_W = 640;
-export const WORLD_H = 448;
+export { WORLD_W, WORLD_H } from '../world/layout';
 
 interface Flicker {
   light: Phaser.GameObjects.Light;
@@ -51,7 +54,7 @@ interface Flicker {
 
 export type { MeleeArea } from '../game/combat';
 
-/** The starting plaza's monsters, around the edge of the clearing. */
+/** The starting plaza's monsters, around the edge of the clearing (plaza coordinates). */
 const PLAZA_SPAWNS: SpawnSpot[] = [
   { kind: 'frog', x: 150, y: 118 },
   { kind: 'frog', x: 522, y: 334 },
@@ -59,7 +62,7 @@ const PLAZA_SPAWNS: SpawnSpot[] = [
   { kind: 'puffcap', x: 494, y: 122 },
   { kind: 'puffcap', x: 462, y: 130 },
   { kind: 'beetle', x: 148, y: 342 },
-];
+].map((s) => ({ ...s, kind: s.kind as SpawnSpot['kind'], y: s.y + PLAZA_Y }));
 
 /** How long the hero lies fallen before rising again at the plaza. */
 const DOWN_TIME = 3500;
@@ -102,11 +105,24 @@ export class WorldScene extends Phaser.Scene {
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mouseWorld = new Phaser.Math.Vector2();
   private struck = false;
-  private bounds = new Phaser.Geom.Rectangle(28, 40, WORLD_W - 56, WORLD_H - 64);
-  /** Where monsters may roam (the same walkable area as the hero's). */
+  /** The world's outer edge; within it, `walkable` decides where feet may go. */
+  private bounds = new Phaser.Geom.Rectangle(8, 10, WORLD_W - 16, WORLD_H - 34);
+  /** How far the hero may step this frame before bumping into something. */
+  private heroBox = new Phaser.Geom.Rectangle();
+  /** Where monsters may roam: the world's edge, and `walkable` within it. */
   get monsterBounds(): Phaser.Geom.Rectangle {
     return this.bounds;
   }
+  /** Can feet stand at (x, y)? Trees, the forest's edge and the plaza's walls say no. */
+  walkable(x: number, y: number): boolean {
+    return walkable(x, y);
+  }
+  private ground!: GroundStreamer;
+  private forest!: Forest;
+  /** The camera's view of the world, in world pixels. */
+  private view = new Phaser.Geom.Rectangle();
+  private region: Region | null = null;
+  private banner: Phaser.GameObjects.BitmapText | null = null;
   private spawners: Spawner[] = [];
   private effects: Effect[] = [];
   private debrisEmitters = new Map<string, Phaser.GameObjects.Particles.ParticleEmitter>();
@@ -121,8 +137,6 @@ export class WorldScene extends Phaser.Scene {
   private pushX = 0;
   private pushY = 0;
   private fallen: Phaser.GameObjects.BitmapText | null = null;
-  private groundDay!: Phaser.GameObjects.Image;
-  private runes!: Phaser.GameObjects.Image;
   private shafts!: Phaser.GameObjects.TileSprite;
   private shadows: Phaser.GameObjects.Image[] = [];
   private pollen!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -149,8 +163,10 @@ export class WorldScene extends Phaser.Scene {
     this.debrisEmitters = new Map();
     this.downT = this.grace = this.hurtTint = this.pushX = this.pushY = 0;
     this.fallen = null;
-    const cx = WORLD_W / 2;
-    const cy = WORLD_H / 2;
+    this.region = null;
+    this.banner = null;
+    const cx = PLAZA_CX;
+    const cy = PLAZA_CY;
 
     // Ambient comes from the Lit pipeline's sky and sun, driven by daynight.
     this.lights.enable().setAmbientColor(0x000000);
@@ -175,18 +191,18 @@ export class WorldScene extends Phaser.Scene {
       return obj;
     };
 
-    ground(this.add.image(0, 0, 'ground').setOrigin(0).setPipeline('Lit'));
-    this.groundDay = ground(this.add.image(0, 0, 'ground_day').setOrigin(0).setPipeline('Lit')) as Phaser.GameObjects.Image;
-    this.runes = ground(this.add.image(0, 0, 'ground_e').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD)) as Phaser.GameObjects.Image;
+    // The ground streams in strips as the hero walks (see GroundStreamer).
+    this.ground = new GroundStreamer(this, (img) => ground(img) as Phaser.GameObjects.Image);
 
-    // Faint shafts of sunlight over the ground. Drifting cloud shadows are
-    // drawn over everything, with the vignette (see below).
-    // The shafts are faint enough to light only the ground.
-    this.shafts = ground(this.add.tileSprite(0, 0, WORLD_W, WORLD_H, 'shafts').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD)) as Phaser.GameObjects.TileSprite;
+    // Faint shafts of sunlight over the plaza's ground; the forest has its
+    // own, falling through the leaves. Drifting cloud shadows are drawn over
+    // everything, with the vignette (see below).
+    this.shafts = ground(this.add.tileSprite(0, PLAZA_Y, WORLD_W, PLAZA_H, 'shafts').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(3)) as Phaser.GameObjects.TileSprite;
 
-    const world = this.worldRect;
+    // Motes drift wherever the camera looks.
+    const view = this.view;
     this.pollen = this.add.particles(0, 0, 'spark', {
-      emitZone: { type: 'random', source: world } as Phaser.Types.GameObjects.Particles.EmitZoneData,
+      emitZone: { type: 'random', source: view } as Phaser.Types.GameObjects.Particles.EmitZoneData,
       lifespan: 5000,
       speedX: { min: 2, max: 9 },
       speedY: { min: -4, max: 3 },
@@ -197,7 +213,7 @@ export class WorldScene extends Phaser.Scene {
       frequency: 90,
     }).setDepth(9999);
     this.fireflies = this.add.particles(0, 0, 'spark', {
-      emitZone: { type: 'random', source: world } as Phaser.Types.GameObjects.Particles.EmitZoneData,
+      emitZone: { type: 'random', source: view } as Phaser.Types.GameObjects.Particles.EmitZoneData,
       lifespan: { min: 2500, max: 4500 },
       speed: { min: 2, max: 7 },
       scale: 0.5,
@@ -227,7 +243,7 @@ export class WorldScene extends Phaser.Scene {
     }
     this.crystals(cx - r - 40, cy - 30, 'c0');
     this.crystals(cx + r + 46, cy + 22, 'c1');
-    this.crystals(cx + 30, cy - r - 44, 'c1');
+    this.crystals(cx + 50, cy - r - 40, 'c1');
 
     const R = new Phaser.Math.RandomDataGenerator(['rocks']);
     for (let i = 0; i < 18; i++) {
@@ -235,7 +251,9 @@ export class WorldScene extends Phaser.Scene {
       const d = r + 30 + R.frac() * 120;
       const x = cx + Math.cos(a) * d * 1.3;
       const y = cy + Math.sin(a) * d;
-      if (x < 16 || y < 16 || x > WORLD_W - 16 || y > WORLD_H - 8) continue;
+      // Keep the lawn's edge and the way north clear.
+      if (x < 16 || y < PLAZA_Y + 44 || x > WORLD_W - 16 || y > WORLD_H - 8) continue;
+      if (Math.abs(x - pathX(y)) < pathHalfW(y) + 12) continue;
       this.add.image(Math.round(x), Math.round(y), 'rock', `r${i % 3}`).setOrigin(0.5, 12 / 14).setPipeline('Lit').setDepth(y);
       this.shadows.push(sunShadow(this.add.image(Math.round(x), Math.round(y), 'rock_s', `r${i % 3}`).setOrigin(0.5, 12 / 14)));
     }
@@ -248,12 +266,16 @@ export class WorldScene extends Phaser.Scene {
     this.hero = characterById(data?.character).spawn(this, this.spawnX, this.spawnY);
     this.heroBar = new HealthBar(this);
     this.spawners.push(new Spawner(this, PLAZA_SPAWNS));
+    this.spawners.push(new Spawner(this, FOREST_SPAWNS));
+    this.forest = new Forest(this);
 
     // Screen-fixed; it covers the ground camera's image too, as it draws first.
     this.skyLayer = this.add.image(0, 0, 'clouds').setScrollFactor(0).setDepth(20000).setPipeline('Sky');
     this.setVignette(0.32 - Phaser.Math.Easing.Sine.InOut(daynight.daylight) * 0.14);
     cam.fadeIn(500, 7, 8, 13);
     this.fitCamera();
+    this.followHero();
+    this.ground.prime(this.view);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this));
 
@@ -403,9 +425,13 @@ export class WorldScene extends Phaser.Scene {
       h.alpha = 1;
     }
     if (this.pushX || this.pushY) {
-      const b = this.bounds;
-      h.x = Phaser.Math.Clamp(h.x + (this.pushX * dt) / 1000, b.left, b.right);
-      h.y = Phaser.Math.Clamp(h.y + (this.pushY * dt) / 1000, b.top, b.bottom);
+      // Knocked back, but never into a tree or through the forest's edge.
+      const nx = h.x + (this.pushX * dt) / 1000;
+      const ny = h.y + (this.pushY * dt) / 1000;
+      if (walkable(nx, h.y)) h.x = nx;
+      else this.pushX = 0;
+      if (walkable(h.x, ny)) h.y = ny;
+      else this.pushY = 0;
       const k = Math.exp(-dt / 80);
       this.pushX *= k;
       this.pushY *= k;
@@ -495,6 +521,8 @@ export class WorldScene extends Phaser.Scene {
     this.groundCam.scrollY = ay + cy / z;
     this.pixels.offsetX = kx - ax * z;
     this.pixels.offsetY = ky - ay * z;
+    // Scroll is to the unzoomed viewport's top-left, and the zoom pivots on its centre.
+    this.view.setTo(cam.scrollX + halfW - viewW / 2, cam.scrollY + halfH - viewH / 2, viewW, viewH);
   }
 
   /**
@@ -615,18 +643,52 @@ export class WorldScene extends Phaser.Scene {
     sky.sky = mix3(NIGHT.sky, DAY.sky, d);
     sky.bounce = mix3(NIGHT.bounce, DAY.bounce, d);
 
-    this.groundDay.setAlpha(d);
-    this.runes.setAlpha(0.9 - d * 0.6);
-    skyState.clouds = d;
+    // Under the trees the light is softer and greener, the edges darker.
+    const f = this.forest.depth;
+    if (f > 0) {
+      sky.sunColor = mix3(sky.sunColor, [sky.sunColor[0] * 0.78, sky.sunColor[1] * 0.84, sky.sunColor[2] * 0.74], f);
+      sky.sky = mix3(sky.sky, [sky.sky[0] * 0.8, sky.sky[1] * 0.94, sky.sky[2] * 0.84], f);
+    }
+
+    this.ground.setLight(d, 0.9 - d * 0.6);
+    skyState.clouds = d * (1 - f * 0.4);
     skyState.tileX = time * 0.004;
     skyState.tileY = time * 0.0022;
     this.shafts.setAlpha(d * (0.1 + Math.sin(time * 0.0007) * 0.03));
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
-    this.setVignette(0.32 - d * 0.14);
+    this.setVignette(0.32 - d * 0.14 + f * 0.07);
     this.pollen.emitting = d > 0.5;
     this.fireflies.emitting = d < 0.5;
     sound.setDaylight(d);
     return d;
+  }
+
+  /** Name the region as the hero walks into it, like a signpost. */
+  private updateRegion(): void {
+    const r = regionAt(this.hero.y, this.region);
+    if (r !== this.region) {
+      this.region = r;
+      this.showBanner(r.name);
+    }
+    this.banner?.setPosition(Math.round(this.view.centerX), Math.round(this.view.y + this.view.height * 0.2));
+  }
+
+  private showBanner(name: string): void {
+    this.banner?.destroy();
+    const text = this.add.bitmapText(0, 0, 'pixel', name.toUpperCase()).setLetterSpacing(-1).setScale(2).setOrigin(0.5).setTint(0xfff0c8).setDepth(10003).setAlpha(0);
+    this.banner = text;
+    this.tweens.chain({
+      targets: text,
+      tweens: [
+        { alpha: 1, duration: 700, ease: 'Sine.Out' },
+        { alpha: 1, duration: 1800 },
+        { alpha: 0, duration: 900, ease: 'Sine.In' },
+      ],
+      onComplete: () => {
+        text.destroy();
+        if (this.banner === text) this.banner = null;
+      },
+    });
   }
 
   /** Stereo position of a world x on screen, -1..1. */
@@ -675,7 +737,11 @@ export class WorldScene extends Phaser.Scene {
       attack = special = false;
     }
     this.hero.daylight = daynight.daylight;
-    this.hero.update(dt, mx, my, attack, special, this.bounds, controls.mouse ? this.mouseAim() : null);
+    // The heroes clamp their step to a box; make it the room around them, so
+    // they slide along trees and the forest's edge.
+    const hb = this.heroBox;
+    freeBox(this.hero.x, this.hero.y, 14, hb);
+    this.hero.update(dt, mx, my, attack, special, hb, controls.mouse ? this.mouseAim() : null);
     this.updateHeroLife(dt);
 
     const target = this.downT > 0 ? null : this.hero;
@@ -700,6 +766,9 @@ export class WorldScene extends Phaser.Scene {
     this.beams = this.beams.filter((b) => !b.dead);
 
     const d = this.updateDaylight(time, dt);
+    this.ground.update(this.view, settings.values.quality === 'fast' ? 2.5 : 4);
+    this.forest.update(time, dt, d, this.hero, this.view);
+    this.updateRegion();
     for (const f of this.flickers) {
       const k = 1 + (f.day - 1) * d;
       if (f.seed < 0) {

@@ -47,6 +47,8 @@ export const MONSTER_FRAME = {
   frog: { w: 22, h: 18, ox: 11, oy: 16 },
   beetle: { w: 30, h: 22, ox: 14, oy: 20 },
   puffcap: { w: 20, h: 22, ox: 10, oy: 20 },
+  barkling: { w: 28, h: 32, ox: 14, oy: 30 },
+  glowmoth: { w: 26, h: 22, ox: 13, oy: 21 },
 };
 type FrameBox = (typeof MONSTER_FRAME)[keyof typeof MONSTER_FRAME];
 
@@ -382,6 +384,250 @@ export function buildPuffcapSheet(): MonsterSheet {
       { name: 'burst', frames: ['burst', 'burst', 'idle0'], fps: 6, loop: false },
     ],
   );
+}
+
+// ---------------------------------------------------------------- Barkling
+
+// A stump come to life: bark body, root legs, twig arms, a crown of leaves
+// and amber eyes glowing in its knot-hole face.
+const BARK: Material = { ramp: ramp('#1e130c', '#352216', '#503422', '#6c4a32', '#8a6648'), outline: hex('#0f0906'), outlineLit: hex('#26180f') };
+const HEARTWOOD: Material = { ramp: ramp('#0c0706', '#1a0f0a'), outline: hex('#0f0906'), noAO: true };
+const CROWN: Material = { ramp: ramp('#132d1b', '#1d4226', '#2a5a30', '#3b753b', '#539046', '#72aa55'), outline: hex('#08150d'), outlineLit: hex('#18301c') };
+const BLOSSOM: Material = { ramp: ramp('#8a3a6a', '#d06a9a', '#f6a8c8', '#fff0f6'), outline: hex('#2a0e1e'), noOutline: true };
+const AMBER: Material = { ramp: ramp('#7a3a08', '#e08a1a', '#ffc85a', '#fff0b0'), outline: hex('#0f0906'), emissive: 0.9, noAO: true };
+export const BARK_TINTS = [0x8a6648, 0x539046, 0xffc85a, 0x3b753b];
+
+interface BarkPose {
+  bob?: number;
+  /** Which leg is forward, -1..1. */
+  step?: number;
+  /** Arms: 0 hanging, 1 raised overhead, -1 slammed into the ground. */
+  arms?: number;
+  /** Eyes' brightness, 0..1. */
+  glare?: number;
+}
+
+function barkling(p: BarkPose): PixelCanvas {
+  const c = new PixelCanvas(28, 32);
+  const bob = p.bob ?? 0;
+  const st = p.step ?? 0;
+  const arms = p.arms ?? 0;
+  const slam = arms < 0 ? -arms : 0;
+  const top = 11 + bob + slam * 2;
+  const cx = 14;
+
+  // Root legs.
+  c.part();
+  c.capsule(cx - 3, top + 12, cx - 4 - st * 2, 29, 2.2, 1.6, BARK);
+  c.capsule(cx + 3, top + 12, cx + 4 + st * 2, 29, 2.2, 1.6, BARK);
+  c.px(cx - 6 - st * 2, 29, BARK, sphere(-0.6, 0.3));
+  c.px(cx + 6 + st * 2, 29, BARK, sphere(0.6, 0.3));
+
+  // Far arm, behind the body.
+  const arm = (side: number, far: boolean) => {
+    const sx = cx + side * 5;
+    const sy = top + 6;
+    let ex: number;
+    let ey: number;
+    if (slam) {
+      ex = cx + side * 8;
+      ey = 28;
+    } else {
+      ex = cx + side * (8 - arms * 2);
+      ey = sy + 8 - arms * 17;
+    }
+    c.part();
+    c.capsule(sx, sy, ex, ey, 1.8, 1.2, far ? { ...BARK, bias: -1 } : BARK);
+    // Twig fingers.
+    const fy = slam ? 0 : arms > 0.5 ? -1 : 1;
+    c.line(ex, ey, ex + side * 2, ey + fy * 2, BARK, () => sphere(side * 0.5, -0.3));
+    c.line(ex, ey, ex - side, ey + fy * 3, BARK, () => sphere(0, -0.3));
+  };
+  arm(-1, true);
+
+  // Trunk body: a short, stout cylinder with furrowed bark.
+  c.part();
+  c.shape(top, top + 14, (y) => {
+    const u = (y - top) / 14;
+    const hw = 5.2 + Math.sin(u * Math.PI) * 0.8 + u * 0.6;
+    return [cx - hw, cx + hw];
+  }, BARK, (_x, _y, t) => cyl(t, 0.12));
+  for (const [x, y0, len] of [
+    [cx - 3, top + 1, 5],
+    [cx + 2, top + 3, 6],
+    [cx - 1, top + 9, 4],
+    [cx + 4, top + 8, 5],
+  ]) {
+    for (let j = 0; j < len; j++) c.shade(x, y0 + j, -1);
+  }
+  // Knot-hole face with glowing eyes.
+  c.part();
+  const g = 0.55 + (p.glare ?? 0) * 0.45;
+  c.px(cx - 2, top + 5, AMBER, sphere(0, 0), { glow: g });
+  c.px(cx + 2, top + 5, AMBER, sphere(0, 0), { glow: g });
+  c.px(cx - 1, top + 9, HEARTWOOD);
+  c.px(cx, top + 9, HEARTWOOD);
+  c.px(cx + 1, top + 9, HEARTWOOD);
+  if ((p.glare ?? 0) > 0.5) c.px(cx, top + 10, HEARTWOOD);
+
+  arm(1, false);
+
+  // Crown of leaves, with a blossom or two.
+  for (const [x, y, r] of [
+    [cx - 4, top - 1, 4.2],
+    [cx + 3.5, top - 1.5, 4.4],
+    [cx, top - 4, 4.6],
+    [cx - 1, top + 0.5, 3.6],
+  ] as const) {
+    c.part();
+    c.ellipse(x, y, r, r * 0.8, CROWN);
+  }
+  c.part();
+  c.px(cx + 3, top - 4, BLOSSOM, sphere(-0.3, -0.5));
+  c.px(cx - 4, top - 2, BLOSSOM, sphere(-0.3, -0.5));
+  return c;
+}
+
+export function buildBarklingSheet(): MonsterSheet {
+  return sheet(
+    MONSTER_FRAME.barkling,
+    {
+      idle0: () => barkling({}),
+      idle1: () => barkling({ bob: 1 }),
+      walk0: () => barkling({ step: 1 }),
+      walk1: () => barkling({ step: -1, bob: 1 }),
+      raise0: () => barkling({ arms: 0.6, glare: 0.6 }),
+      raise1: () => barkling({ arms: 1, glare: 1, bob: -1 }),
+      slam: () => barkling({ arms: -1, glare: 1 }),
+    },
+    [
+      { name: 'idle', frames: ['idle0', 'idle1'], fps: 2, loop: true },
+      { name: 'walk', frames: ['walk0', 'idle0', 'walk1', 'idle1'], fps: 5, loop: true },
+      { name: 'windup', frames: ['raise0', 'raise1'], fps: 3, loop: false },
+      { name: 'slam', frames: ['slam', 'slam', 'raise0', 'idle0'], fps: 6, loop: false },
+    ],
+  );
+}
+
+// ---------------------------------------------------------------- Glowmoth
+
+// A big soft moth with lilac wings and glowing eye-spots. It flutters above
+// the ground, so its frames leave room for the body to ride high.
+const MOTH_WING: Material = { ramp: ramp('#2e2350', '#4a3c80', '#7462b0', '#a494dc', '#d6ccf6', '#f4f0ff'), outline: hex('#140e28'), outlineLit: hex('#2a2048') };
+const MOTH_FUR: Material = { ramp: ramp('#4a3a2c', '#7a644c', '#a88e6c', '#d6c09a', '#f4e8cc'), outline: hex('#1a120c') };
+const MOTH_SPOT: Material = { ramp: ramp('#1a8a7a', '#48d8c0', '#a8fff0', '#f0fffc'), outline: hex('#140e28'), emissive: 0.8, noAO: true, noOutline: true };
+const MOTH_EYE: Material = { ramp: ramp('#06050e', '#1a1a3a', '#6a6aa0'), outline: hex('#06050e'), shine: true, noAO: true };
+export const MOTH_TINTS = [0xd6ccf6, 0xa8fff0, 0x7462b0, 0xffffff];
+const MOTH_DUST = hex('#c8fff4');
+
+interface MothPose {
+  /** Wing beat: 1 raised, 0 spread, -1 lowered. */
+  beat: number;
+  /** Swept back for a dive. */
+  dive?: boolean;
+  /** 0..1 eye-spots flaring before a dive. */
+  flare?: number;
+}
+
+function glowmoth(p: MothPose): PixelCanvas {
+  const c = new PixelCanvas(26, 22);
+  const cx = 13;
+  const cy = 11;
+  const b = p.beat;
+  const glow = 0.55 + (p.flare ?? 0) * 0.45;
+  const wing = (side: number, hind: boolean) => {
+    c.part();
+    if (p.dive) {
+      // Folded back along the body.
+      const x = cx + side * (hind ? 3 : 4);
+      c.ellipse(x, cy + (hind ? 3 : 0), hind ? 2.6 : 3, hind ? 3.2 : 4.2, MOTH_WING, { bias: hind ? -1 : 0 });
+      return;
+    }
+    const reach = hind ? 7 : 10 - Math.abs(b) * 1.5;
+    const x = cx + side * (2 + reach * 0.55);
+    const y = cy + (hind ? 3 : -1) - b * (hind ? 2 : 4);
+    const rx = reach * 0.6;
+    const ry = hind ? 3 : 4.5 - Math.abs(b) * 1.2;
+    c.ellipse(x, y, rx, Math.max(1.5, ry), MOTH_WING, { bias: hind ? -1 : 0, flatten: 0.7 });
+    if (!hind) {
+      c.part();
+      c.ellipse(x + side * 1.2, y - 0.3, 1.4, Math.max(0.8, ry * 0.35), MOTH_SPOT, { glow });
+    }
+  };
+  wing(-1, true);
+  wing(1, true);
+  wing(-1, false);
+  wing(1, false);
+  // Fuzzy body and head.
+  c.part();
+  c.capsule(cx, cy - 1, cx, cy + 5, 1.8, 1.3, MOTH_FUR);
+  c.part();
+  c.ellipse(cx, cy - 2.5, 2.2, 1.9, MOTH_FUR);
+  c.part();
+  c.px(cx - 1, cy - 2, MOTH_EYE, sphere(-0.3, -0.3));
+  c.px(cx + 1, cy - 2, MOTH_EYE, sphere(0.3, -0.3));
+  // Feathery antennae.
+  c.line(cx - 1, cy - 4, cx - 3, cy - 7, MOTH_FUR, () => sphere(-0.3, -0.6));
+  c.line(cx + 1, cy - 4, cx + 3, cy - 7, MOTH_FUR, () => sphere(0.3, -0.6));
+  // Glittering scales shed from the wings.
+  if (!p.dive) {
+    c.spark(cx - 8, cy + 3 - b * 3, MOTH_DUST, 0.5);
+    c.spark(cx + 9, cy + 2 - b * 3, MOTH_DUST, 0.4);
+  }
+  return c;
+}
+
+export function buildGlowmothSheet(): MonsterSheet {
+  return sheet(
+    MONSTER_FRAME.glowmoth,
+    {
+      idle0: () => glowmoth({ beat: 1 }),
+      idle1: () => glowmoth({ beat: 0 }),
+      idle2: () => glowmoth({ beat: -1 }),
+      flare0: () => glowmoth({ beat: 1, flare: 1 }),
+      flare1: () => glowmoth({ beat: -1, flare: 1 }),
+      dive: () => glowmoth({ beat: 0, dive: true, flare: 0.6 }),
+    },
+    [
+      { name: 'idle', frames: ['idle0', 'idle1', 'idle2', 'idle1'], fps: 12, loop: true },
+      { name: 'walk', frames: ['idle0', 'idle1', 'idle2', 'idle1'], fps: 16, loop: true },
+      { name: 'windup', frames: ['flare0', 'idle1', 'flare1', 'idle1'], fps: 18, loop: true },
+    ],
+  );
+}
+
+/** Wooden thorns bursting out of the ground, 3 frames of 30x22 (lit). */
+export const THORN_W = 30;
+export const THORN_H = 22;
+export function thornFrame(f: number): PixelCanvas {
+  const c = new PixelCanvas(THORN_W, THORN_H);
+  const grow = [0.45, 1, 0.7][f];
+  const spikes = [
+    { x: 15, h: 17, w: 2.6, lean: 0 },
+    { x: 9, h: 12, w: 2.2, lean: -1.6 },
+    { x: 21, h: 13, w: 2.2, lean: 1.4 },
+    { x: 5, h: 7, w: 1.6, lean: -2 },
+    { x: 25, h: 8, w: 1.6, lean: 2.2 },
+    { x: 12, h: 8, w: 1.8, lean: -0.6 },
+    { x: 18.5, h: 9, w: 1.8, lean: 0.8 },
+  ];
+  for (const s of spikes) {
+    c.part();
+    const h = s.h * grow;
+    const base = 19 - (s.x % 3);
+    const top = base - h;
+    c.shape(Math.round(top), base, (y) => {
+      const u = (y - top) / (h || 1);
+      const hw = Math.max(0.5, u * s.w);
+      const x = s.x + s.lean * (1 - u);
+      return [x - hw, x + hw];
+    }, BARK, (_x, _y, t) => cyl(t, 0.3));
+    if (h > 6) c.px(s.x + s.lean * 0.3, base - h * 0.55, CROWN, sphere(-0.4, -0.5));
+  }
+  // Clods of earth thrown up.
+  c.part();
+  c.ellipse(15, 19.5, 11 * grow + 2, 2.2, { ...BARK, bias: -1 }, { flatten: 0.5 });
+  return c;
 }
 
 // ---------------------------------------------------------------- Effects

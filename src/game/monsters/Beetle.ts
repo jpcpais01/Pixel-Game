@@ -117,7 +117,7 @@ export class Beetle extends Monster {
     const b = this.world.monsterBounds;
     const nx = this.x + this.ux * s;
     const ny = this.y + this.uy * s;
-    const wall = nx < b.left || nx > b.right || ny < b.top || ny > b.bottom;
+    const wall = nx < b.left || nx > b.right || ny < b.top || ny > b.bottom || !this.world.walkable(nx, ny);
     this.x = nx;
     this.y = ny;
     const p = Phaser.Math.Clamp(1 - this.timer / Math.max(1, (this.charge / CHARGE_SPEED) * 1000), 0, 1);
