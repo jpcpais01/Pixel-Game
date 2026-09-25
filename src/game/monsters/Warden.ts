@@ -57,7 +57,7 @@ class FallingStar implements Effect {
     const add = world.add;
     this.mark = add.image(x, y, 'danger_ring').setTint(0xb89cff).setAlpha(0).setDepth(2).setScale(STAR_RX / 22, STAR_RY / 12);
     this.fill = add.image(x, y, 'danger_ring').setTint(0xd8c8ff).setAlpha(0).setDepth(2).setBlendMode(Phaser.BlendModes.ADD).setScale(0);
-    this.column = add.image(x, y, 'cosmos_ray', 'ray0').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setTint(0xb8a8ff).setAlpha(0).setScale(0.3, 1).setDepth(9000);
+    this.column = add.image(x, y, 'cosmos_ray', 'ray0').setOrigin(0.5, 1).setAngle(-14).setBlendMode(Phaser.BlendModes.ADD).setTint(0xb8a8ff).setAlpha(0).setScale(0.3, 1).setDepth(9000);
     this.star = add.image(x, y, 'cosmos_meteor').setOrigin(0.5, (METEOR_H - 5.5) / METEOR_H).setBlendMode(Phaser.BlendModes.ADD).setVisible(false).setDepth(9001).setAngle(-14);
   }
 
