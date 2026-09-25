@@ -8,8 +8,11 @@ export const controls = {
   attack: false,
   /** Special button held (the wizard's beam). */
   beam: false,
-  /** A mouse is in use (it moved or clicked since the last touch): abilities aim at it. */
-  mouse: false,
+  /**
+   * A mouse is in use (it moved or clicked since the last touch): abilities aim
+   * at it. Starts true on computers, whose main pointer is a mouse.
+   */
+  mouse: typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches,
   /** Left mouse button held on the game world (the attack on a computer). */
   click: false,
   /** Hotbar slots (0..8) asked to be used since the world last looked: taps on the HUD and keys 1 to 9. */
