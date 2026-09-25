@@ -13,7 +13,7 @@ import { Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { Fighter } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
-import { Alchemist } from './Alchemist';
+import { Alchemist, PLAGUE_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
 import { wear, type SkinDef } from './skins';
 import type { Vitals } from './combat';
@@ -230,7 +230,23 @@ export const CHARACTERS: CharacterDef[] = [
       attack: { texture: 'icon_flask' },
       special: { texture: 'icon_bog' },
     },
-    spawn: (world, x, y) => new Alchemist(world, x, y),
+    skins: [
+      { id: 'plague', name: 'Plague doctor' },
+      {
+        id: 'witch',
+        name: 'Hex witch',
+        role: 'Hexes and brews',
+        accent: 0xe060ff,
+        attack: 'Hex flask',
+        special: 'Hex mire',
+        preview: { texture: 'alchemist_witch', glow: 'alchemist_witch_e', idle: 'alchemist_witch_idle_down', chosen: 'alchemist_witch_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
+        buttons: {
+          attack: { texture: 'icon_flask_witch' },
+          special: { texture: 'icon_bog_witch' },
+        },
+      },
+    ],
+    spawn: (world, x, y, skin) => new Alchemist(world, x, y, skin === 'witch' ? WITCH_STYLE : PLAGUE_STYLE),
   },
 ];
 

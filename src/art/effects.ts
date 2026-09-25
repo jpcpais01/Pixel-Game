@@ -648,8 +648,40 @@ function iconPainter(): { px: Uint8ClampedArray; put: (x: number, y: number, c: 
   return { px, put, outline };
 }
 
+/** The colours of an alchemist's brew on his icons and fumes. */
+export interface BrewColors {
+  /** The liquid from lit to shadowed. */
+  ramp: [string, string, string, string];
+  /** Its surface, and a glint. */
+  surface: string;
+  glint: string;
+  /** The skull in the bog cloud: bone, bone in shadow, sockets. */
+  bone: [string, string, string];
+  ink: string;
+  /** Fumes from lit to shadowed. */
+  fume: [string, string, string, string];
+}
+
+export const PLAGUE_BREW: BrewColors = {
+  ramp: ['#c8ff7a', '#6ee03a', '#3fae2a', '#1e6a1a'],
+  surface: '#b8ff5c',
+  glint: '#f2ffd2',
+  bone: ['#e8f2d8', '#a9b89a', '#10200c'],
+  ink: '#0a1410',
+  fume: ['#d2ff9a', '#8ee85a', '#4fb83a', '#2a7a34'],
+};
+
+export const HEX_BREW_COLORS: BrewColors = {
+  ramp: ['#ffb8f8', '#e060ec', '#a834c4', '#5a1878'],
+  surface: '#ff9cf2',
+  glint: '#fff0fe',
+  bone: ['#f4e8f4', '#b8a0bc', '#200c24'],
+  ink: '#140a18',
+  fume: ['#ffd0fa', '#e880f0', '#b048c8', '#6a2488'],
+};
+
 /** 16x16 icon for the alchemist's attack: a round flask of glowing poison, corked, bubbles rising off it. */
-export function flaskIcon(): Uint8ClampedArray {
+export function flaskIcon(b: BrewColors = PLAGUE_BREW): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
   const cx = 7.5;
   const cy = 10;
@@ -664,15 +696,15 @@ export function flaskIcon(): Uint8ClampedArray {
       if (dy < -1.6) put(x, y, dx + dy < -4 ? '#d8f6f4' : '#8fc0c8');
       else {
         const k = dx + dy * 0.6;
-        put(x, y, d > r - 1 && k > 1 ? '#1e6a1a' : k < -2.2 ? '#c8ff7a' : k < 0.6 ? '#6ee03a' : '#3fae2a');
+        put(x, y, d > r - 1 && k > 1 ? b.ramp[3] : k < -2.2 ? b.ramp[0] : k < 0.6 ? b.ramp[1] : b.ramp[2]);
       }
     }
   }
   // The liquid's surface, a glint on the glass and a bubble inside.
-  for (let x = 4; x <= 11; x++) if (Math.hypot(x + 0.5 - cx, 8.5 - cy) <= r) put(x, 8, '#b8ff5c');
-  put(5, 8, '#f2ffd2');
+  for (let x = 4; x <= 11; x++) if (Math.hypot(x + 0.5 - cx, 8.5 - cy) <= r) put(x, 8, b.surface);
+  put(5, 8, b.glint);
   put(5, 7, '#ffffff');
-  put(9, 11, '#c8ff7a');
+  put(9, 11, b.ramp[0]);
   // Neck and cork.
   for (let y = 3; y <= 5; y++) {
     put(7, y, '#8fc0c8');
@@ -684,16 +716,16 @@ export function flaskIcon(): Uint8ClampedArray {
   put(9, 2, '#523023');
   put(7, 1, '#7d4f33');
   put(8, 1, '#523023');
-  outline('#0a1410');
+  outline(b.ink);
   // Fumes curling up off the cork, outside the outline.
-  put(11, 3, '#b8ff5c');
-  put(12, 1, '#6ee03a');
-  put(13, 4, '#6ee03a');
+  put(11, 3, b.surface);
+  put(12, 1, b.ramp[1]);
+  put(13, 4, b.ramp[1]);
   return px;
 }
 
 /** 16x16 icon for the plague bog: a toxic cloud with a skull in it, bubbles popping underneath. */
-export function bogIcon(): Uint8ClampedArray {
+export function bogIcon(b: BrewColors = PLAGUE_BREW): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
   // Three round puffs make the cloud; the lit side is up and to the left.
   const puffs: [number, number, number][] = [
@@ -714,29 +746,28 @@ export function bogIcon(): Uint8ClampedArray {
         }
       }
       if (!inside || y > 14) continue;
-      put(x, y, lit > 0.8 ? '#b8ff5c' : lit > 0.1 ? '#6ee03a' : lit > -0.6 ? '#3fae2a' : '#1e6a1a');
+      put(x, y, lit > 0.8 ? b.surface : lit > 0.1 ? b.ramp[1] : lit > -0.6 ? b.ramp[2] : b.ramp[3]);
     }
   }
   // The skull.
-  const bone = '#e8f2d8';
-  const shade = '#a9b89a';
+  const [bone, shade, socket] = b.bone;
   for (const [x, y] of [[7, 5], [8, 5], [9, 5], [6, 6], [7, 6], [8, 6], [9, 6], [10, 6], [6, 7], [8, 7], [10, 7], [6, 8], [7, 8], [8, 8], [9, 8], [10, 8], [7, 9], [9, 9]] as const) put(x, y, x >= 9 && y >= 7 ? shade : bone);
-  put(7, 7, '#10200c');
-  put(9, 7, '#10200c');
-  put(8, 9, '#10200c');
+  put(7, 7, socket);
+  put(9, 7, socket);
+  put(8, 9, socket);
   put(7, 10, bone);
   put(8, 10, shade);
   put(9, 10, shade);
-  outline('#0a1410');
+  outline(b.ink);
   // Bubbles bursting below.
-  put(3, 14, '#b8ff5c');
-  put(12, 13, '#b8ff5c');
-  put(13, 15, '#6ee03a');
+  put(3, 14, b.surface);
+  put(12, 13, b.surface);
+  put(13, 15, b.ramp[1]);
   return px;
 }
 
 /** A soft pixel puff of poison fumes, `size` across, dithered at the edge. Variant `v` shifts the shape. */
-export function fumeCanvas(size: number, v: number): Uint8ClampedArray {
+export function fumeCanvas(size: number, v: number, b: BrewColors = PLAGUE_BREW): Uint8ClampedArray {
   const px = new Uint8ClampedArray(size * size * 4);
   const m = size / 2;
   const lobes: [number, number, number][] = [
@@ -744,7 +775,7 @@ export function fumeCanvas(size: number, v: number): Uint8ClampedArray {
     [m + size * 0.14, m - size * 0.04, size * 0.33],
     [m + (hash(v, 1) - 0.5) * size * 0.2, m - size * 0.16, size * 0.26],
   ];
-  const cols = [hex('#d2ff9a'), hex('#8ee85a'), hex('#4fb83a'), hex('#2a7a34')];
+  const cols = b.fume.map(hex);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       let best = 0;
