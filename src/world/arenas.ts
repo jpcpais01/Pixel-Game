@@ -1,0 +1,139 @@
+// The arenas a run can be played in. The arena select lists ARENAS in order,
+// and the world builds whichever one was picked. A new arena is one entry
+// here: its ground (a GroundSpec), what can be walked on, its monsters and
+// the scenery along its edge. Anything more of its own (the clearing's
+// braziers, the garden's flowers) the world builds by the arena's id.
+
+import type Phaser from 'phaser';
+import type { GroundSpec } from '../art/ground';
+import type { SpawnSpot } from '../game/monsters';
+import type { SceneryLayout } from './common';
+import type { Drift } from './Scenery';
+import { CLEARING_GROUND, CLEARING_SPAWN, CLEARING_SPAWNS, PLAZA_CX, PLAZA_CY, PLAZA_Y, clearingScenery, clearingWalkable, plazaProps } from './clearing';
+import { GARDEN_GROUND, GARDEN_SPAWN, GARDEN_SPAWNS, POOL, gardenLayout, gardenScenery, gardenWalkable } from './sunken';
+
+/** A sprite shown in the arena's window on its select card (world coordinates). */
+export interface PreviewSprite {
+  texture: string;
+  frame?: string;
+  x: number;
+  y: number;
+  /** Feet as a fraction of the frame: (0.5, 1) by default. */
+  originY?: number;
+  /** Additive glow layer with the same frames, if any. */
+  glow?: string;
+}
+
+export interface ArenaDef {
+  id: string;
+  name: string;
+  /** A line under the name on the select card. */
+  blurb: string;
+  /** Card highlight colour. */
+  accent: number;
+  ground: GroundSpec;
+  /** Where the hero starts, and rises after falling. */
+  spawn: { x: number; y: number };
+  monsters: SpawnSpot[];
+  scenery(): SceneryLayout;
+  walkable(x: number, y: number): boolean;
+  /** Leaves (or petals) drifting down. */
+  drift: Drift;
+  /**
+   * Day and night: true when this arena follows the day/night toggle. Arenas
+   * without it keep a fixed light, `daylight` (0 night .. 1 day).
+   */
+  dayNight?: boolean;
+  daylight?: number;
+  /** The select card's window onto the arena: its centre, and what stands in view. */
+  preview: { x: number; y: number; sprites(): PreviewSprite[] };
+}
+
+export const ARENAS: ArenaDef[] = [
+  {
+    id: 'clearing',
+    name: 'Runestone Clearing',
+    blurb: 'A plaza lit by braziers',
+    accent: 0xffb45a,
+    ground: CLEARING_GROUND,
+    spawn: CLEARING_SPAWN,
+    monsters: CLEARING_SPAWNS,
+    scenery: clearingScenery,
+    walkable: clearingWalkable,
+    drift: {
+      tints: [0x5f9a4b, 0x80b35a, 0x3b753c, 0xd49e34, 0xb8873a],
+      frequency: 520,
+      where: (view: Phaser.Geom.Rectangle) => view.top < PLAZA_Y + 120,
+    },
+    dayNight: true,
+    preview: {
+      x: PLAZA_CX + 80,
+      y: PLAZA_CY - 80,
+      sprites: () => {
+        const p = plazaProps();
+        return [
+          ...p.braziers.map((b) => ({ texture: 'brazier', frame: 'f0', glow: 'brazier_e', x: b.x, y: b.y, originY: 25 / 26 })),
+          ...p.crystals.map((c) => ({ texture: 'crystals', frame: c.frame, glow: 'crystals_e', x: c.x, y: c.y, originY: 20 / 22 })),
+          ...p.dummies.map((d) => ({ texture: 'dummy', frame: 'd0', x: d.x, y: d.y, originY: 26 / 28 })),
+          ...p.rocks.map((r) => ({ texture: 'rock', frame: r.frame, x: r.x, y: r.y, originY: 12 / 14 })),
+        ];
+      },
+    },
+  },
+  {
+    id: 'garden',
+    name: 'Sunken Garden',
+    blurb: 'Ruins lost under giant flowers',
+    accent: 0xff8ac0,
+    ground: GARDEN_GROUND,
+    spawn: GARDEN_SPAWN,
+    monsters: GARDEN_SPAWNS,
+    scenery: gardenScenery,
+    walkable: gardenWalkable,
+    drift: {
+      tints: [0xffc4de, 0xff9ec8, 0xfff4fa, 0xe2b4ff, 0x80b35a],
+      frequency: 380,
+      where: () => true,
+    },
+    daylight: 0.85,
+    preview: {
+      x: POOL.x - 62,
+      y: POOL.y - 16,
+      sprites: () => {
+        const g = gardenLayout();
+        return [
+          { texture: 'fountain', frame: 'f0', glow: 'fountain_e', x: g.fountain.x, y: g.fountain.y, originY: 50 / 52 },
+          ...g.hwalls.map((w) => ({ texture: 'ruin_h', frame: `h${w.v}`, x: w.x, y: w.y, originY: 22 / 24 })),
+          ...g.vwalls.map((w) => ({ texture: 'ruin_v', frame: `v${w.v}`, x: w.x, y: w.y, originY: 28 / 30 })),
+          ...g.pillars.map((p) => ({ texture: 'pillar', frame: `p${p.v}`, x: p.x, y: p.y, originY: 52 / 54 })),
+          ...g.thorns.map((t) => ({ texture: 'thornbloom', frame: 'bloom', glow: 'thornbloom_e', x: t.x, y: t.y, originY: 63 / 66 })),
+          ...g.blooms.map((b) => ({ texture: 'bloom', frame: `${b.kind}_open`, glow: 'bloom_e', x: b.x, y: b.y, originY: 44 / 46 })),
+          ...g.crystals.map((c) => ({ texture: 'crystals', frame: c.frame, glow: 'crystals_e', x: c.x, y: c.y, originY: 20 / 22 })),
+        ];
+      },
+    },
+  },
+];
+
+export function arenaById(id: string | undefined): ArenaDef {
+  return ARENAS.find((a) => a.id === id) ?? ARENAS[0];
+}
+
+const KEY = 'pixel-battle.arena';
+
+/** The arena picked last time, remembered across visits. */
+export function lastArena(): string {
+  try {
+    return localStorage.getItem(KEY) ?? ARENAS[0].id;
+  } catch {
+    return ARENAS[0].id;
+  }
+}
+
+export function rememberArena(id: string): void {
+  try {
+    localStorage.setItem(KEY, id);
+  } catch {
+    // Not persisted; the pick still applies for this visit.
+  }
+}

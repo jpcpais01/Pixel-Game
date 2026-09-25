@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { buildStrip, STRIP_COUNT, STRIP_H, type GroundStrip } from '../art/ground';
+import { buildStrip, stripCount, STRIP_H, type GroundSpec, type GroundStrip } from '../art/ground';
 
 // Streams the ground in and out as strips, so the world can be far larger
 // than what fits in memory at once and there is never a loading screen.
@@ -21,7 +21,6 @@ const KEEP = 5;
 /** How far past the view to build ahead, in strips. */
 const AHEAD = 2;
 
-const key = (i: number) => `gnd${i}`;
 
 function toCanvas(w: number, h: number, px: Uint8ClampedArray): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -41,10 +40,14 @@ export class GroundStreamer {
    * `adopt` hands each new ground image to the camera that draws the ground
    * (and hides it from the others).
    */
+  private count: number;
+
   constructor(
     private scene: Phaser.Scene,
+    private spec: GroundSpec,
     private adopt: (img: Img) => Img,
   ) {
+    this.count = stripCount(spec);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.job = null;
       this.shown.clear();
@@ -55,11 +58,46 @@ export class GroundStreamer {
    * Build the strips covering world rows `top` to `bottom` ahead of time
    * (while booting), so the world opens without a pause.
    */
-  static prebuild(scene: Phaser.Scene, top: number, bottom: number): void {
-    const streamer = new GroundStreamer(scene, (img) => img);
-    for (let i = Math.max(0, Math.floor(top / STRIP_H)); i <= Math.min(STRIP_COUNT - 1, Math.floor(bottom / STRIP_H)); i++) {
+  static prebuild(scene: Phaser.Scene, spec: GroundSpec, top: number, bottom: number): void {
+    const streamer = new GroundStreamer(scene, spec, (img) => img);
+    for (let i = Math.max(0, Math.floor(top / STRIP_H)); i <= Math.min(streamer.count - 1, Math.floor(bottom / STRIP_H)); i++) {
       if (!streamer.ready(i)) streamer.buildNow(i);
     }
+  }
+
+  /** The texture holding strip `i` of `spec`'s ground (day look adds `_day`, glow `_e`). */
+  static key(spec: GroundSpec, i: number): string {
+    return `gnd_${spec.key}_${i}`;
+  }
+
+  /**
+   * Build the strips covering rows `top` to `bottom` a little at a time, at
+   * most `budget` ms per call (a menu warming an arena up). Returns true
+   * once they are all built.
+   */
+  static warm(scene: Phaser.Scene, spec: GroundSpec, top: number, bottom: number, budget: number): boolean {
+    let w = warming.get(scene);
+    if (!w || w.spec !== spec) {
+      w = { spec, job: null };
+      warming.set(scene, w);
+    }
+    const first = Math.max(0, Math.floor(top / STRIP_H));
+    const last = Math.min(stripCount(spec) - 1, Math.floor(bottom / STRIP_H));
+    const start = performance.now();
+    for (let i = first; i <= last; i++) {
+      if (scene.textures.exists(GroundStreamer.key(spec, i))) continue;
+      if (w.job?.index !== i) w.job = { index: i, gen: buildStrip(spec, i) };
+      while (performance.now() - start < budget) {
+        const r = w.job.gen.next();
+        if (r.done) {
+          w.job = null;
+          install(scene, spec, r.value);
+          break;
+        }
+      }
+      if (w.job) return false;
+    }
+    return true;
   }
 
   /** Build everything the view shows right now, however long it takes. */
@@ -100,7 +138,7 @@ export class GroundStreamer {
       if (!this.job) {
         const next = this.wanted(view, AHEAD).find((i) => !this.ready(i));
         if (next === undefined) return;
-        this.job = { index: next, gen: buildStrip(next) };
+        this.job = { index: next, gen: buildStrip(this.spec, next) };
       }
       const r = this.job.gen.next();
       if (r.done) {
@@ -124,7 +162,7 @@ export class GroundStreamer {
   /** Strip indices from the view's centre outward, reaching `ahead` strips past its edges. */
   private wanted(view: Phaser.Geom.Rectangle, ahead: number): number[] {
     const first = Math.max(0, Math.floor(view.top / STRIP_H) - ahead);
-    const last = Math.min(STRIP_COUNT - 1, Math.floor(view.bottom / STRIP_H) + ahead);
+    const last = Math.min(this.count - 1, Math.floor(view.bottom / STRIP_H) + ahead);
     const mid = view.centerY / STRIP_H;
     const list: number[] = [];
     for (let i = first; i <= last; i++) list.push(i);
@@ -132,29 +170,27 @@ export class GroundStreamer {
   }
 
   private buildNow(i: number): void {
-    const gen = buildStrip(i);
+    const gen = buildStrip(this.spec, i);
     let r = gen.next();
     while (!r.done) r = gen.next();
     this.install(r.value);
   }
 
   private ready(i: number): boolean {
-    return this.scene.textures.exists(key(i));
+    return this.scene.textures.exists(this.key(i));
+  }
+
+  private key(i: number): string {
+    return GroundStreamer.key(this.spec, i);
   }
 
   private install(s: GroundStrip): void {
-    const k = key(s.index);
-    const textures = this.scene.textures;
-    const night = textures.addCanvas(k, toCanvas(s.w, s.h, s.night.diffuse))!;
-    night.setDataSource(toCanvas(s.w, s.h, s.night.normal));
-    const day = textures.addCanvas(`${k}_day`, toCanvas(s.w, s.h, s.day.diffuse))!;
-    day.setDataSource(toCanvas(s.w, s.h, s.day.normal));
-    if (s.emissive) textures.addCanvas(`${k}_e`, toCanvas(s.w, s.h, s.emissive));
+    install(this.scene, this.spec, s);
   }
 
   private show(i: number): void {
     if (this.shown.has(i)) return;
-    const k = key(i);
+    const k = this.key(i);
     const y = i * STRIP_H;
     const add = this.scene.add;
     const night = this.adopt(add.image(0, y, k).setOrigin(0).setPipeline('Lit').setDepth(0));
@@ -172,7 +208,21 @@ export class GroundStreamer {
     s.night.destroy();
     s.day.destroy();
     s.glow?.destroy();
-    const k = key(i);
+    const k = this.key(i);
     for (const t of [k, `${k}_day`, `${k}_e`]) if (this.scene.textures.exists(t)) this.scene.textures.remove(t);
   }
+}
+
+/** A menu's strip being built a little at a time, per scene. */
+const warming = new WeakMap<Phaser.Scene, { spec: GroundSpec; job: { index: number; gen: Generator<void, GroundStrip, void> } | null }>();
+
+/** Turn a built strip into textures: night and day, each with its normal map, and its glow. */
+function install(scene: Phaser.Scene, spec: GroundSpec, s: GroundStrip): void {
+  const k = GroundStreamer.key(spec, s.index);
+  const textures = scene.textures;
+  const night = textures.addCanvas(k, toCanvas(s.w, s.h, s.night.diffuse))!;
+  night.setDataSource(toCanvas(s.w, s.h, s.night.normal));
+  const day = textures.addCanvas(`${k}_day`, toCanvas(s.w, s.h, s.day.diffuse))!;
+  day.setDataSource(toCanvas(s.w, s.h, s.day.normal));
+  if (s.emissive) textures.addCanvas(`${k}_e`, toCanvas(s.w, s.h, s.emissive));
 }

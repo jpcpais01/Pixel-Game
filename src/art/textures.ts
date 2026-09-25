@@ -19,7 +19,8 @@ import { buildWardenSheet } from './warden';
 import { FLOAT_ROCK_H, FLOAT_ROCK_W, HOLE_SIZE, METEOR_H, METEOR_W, OBELISK_H, OBELISK_W, PLATFORM_H, PLATFORM_W, RAY_H as COSMIC_RAY_H, RAY_W as COSMIC_RAY_W, cosmicRay, floatingRock, lightPool, meteor, obelisk, platformArt, shockRing, singularity, spaceCanvas, streak } from './cosmos';
 import { COSMOS_H, COSMOS_W } from '../world/cosmosLayout';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
-import { BOUGH_H, BOUGH_W, PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, bough, leafBit, rayCanvas } from './trees';
+import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, leafBit, rayCanvas } from './trees';
+import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
 
 function toCanvas(w: number, h: number, px: Uint8ClampedArray): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -267,9 +268,6 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   const rays = scene.textures.addCanvas('ray', toCanvas(RAY_W * 2, RAY_H, sideBySide(RAY_W, RAY_H, [rayCanvas(11), rayCanvas(29)])))!;
   rays.add('ray0', 0, 0, 0, RAY_W, RAY_H);
   rays.add('ray1', 0, RAY_W, 0, RAY_W, RAY_H);
-  const boughs = [0, 1, 2].map((v) => bough(v).render().diffuse);
-  const bt = scene.textures.addCanvas('bough', toCanvas(BOUGH_W * 3, BOUGH_H, sideBySide(BOUGH_W, BOUGH_H, boughs)))!;
-  boughs.forEach((_, v) => bt.add(`b${v}`, 0, v * BOUGH_W, 0, BOUGH_W, BOUGH_H));
   scene.textures.addCanvas('leafbit', toCanvas(3, 2, leafBit()));
 
   // Sky.
@@ -308,6 +306,18 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   register(scene, 'crystals', pack(frameList([crystalCluster(3), crystalCluster(8)], 'c'), 20, 22), 20, 22);
   register(scene, 'rock', pack(frameList([rock(1), rock(2), rock(5)], 'r'), 18, 14), 18, 14, false);
   // Monsters.
+  // The Sunken Garden: ruins, the fountain, thornblooms, blooms and their seeds, and the buffs' icons.
+  register(scene, 'ruin_h', pack(frameList([0, 1, 2].map(ruinH), 'h'), RUIN_H_W, RUIN_H_H), RUIN_H_W, RUIN_H_H, false);
+  register(scene, 'ruin_v', pack(frameList([0, 1, 2].map(ruinV), 'v'), RUIN_V_W, RUIN_V_H), RUIN_V_W, RUIN_V_H, false);
+  register(scene, 'pillar', pack(frameList([0, 1, 2].map(pillar), 'p'), PILLAR_W, PILLAR_H), PILLAR_W, PILLAR_H, false);
+  register(scene, 'fountain', pack(frameList(Array.from({ length: FOUNTAIN_FRAMES }, (_, f) => fountain(f)), 'f'), FOUNTAIN_W, FOUNTAIN_H), FOUNTAIN_W, FOUNTAIN_H);
+  scene.anims.create({ key: 'fountain_flow', frames: scene.anims.generateFrameNames('fountain_e', { prefix: 'f', start: 0, end: FOUNTAIN_FRAMES - 1 }), frameRate: 8, repeat: -1 });
+  register(scene, 'thornbloom', pack([{ name: 'bloom', r: thornbloom(false).render() }, { name: 'stump', r: thornbloom(true).render() }], THORNBLOOM_W, THORNBLOOM_H), THORNBLOOM_W, THORNBLOOM_H, true, true);
+  const blooms = BLOOM_KINDS.flatMap((k) => (['open', 'bud', 'cut'] as const).map((stage) => ({ name: `${k}_${stage}`, r: bloom(k, stage).render() })));
+  register(scene, 'bloom', pack(blooms, BLOOM_W, BLOOM_H, 12), BLOOM_W, BLOOM_H, true, true);
+  register(scene, 'seed', pack(BLOOM_KINDS.map((k) => ({ name: k, r: bloomSeed(k).render() })), SEED_W, SEED_H), SEED_W, SEED_H);
+  for (const k of ['might', 'ward', 'renew'] as const) scene.textures.addCanvas(`buff_${k}`, toCanvas(16, 16, buffIcon(k)));
+
   registerMonster(scene, 'frog', buildFrogSheet());
   registerMonster(scene, 'beetle', buildBeetleSheet());
   registerMonster(scene, 'puffcap', buildPuffcapSheet());

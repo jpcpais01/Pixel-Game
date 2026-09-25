@@ -98,7 +98,7 @@ export class PauseScene extends Phaser.Scene {
 
     const slider = (color: number, value: number, key: 'brightness' | 'music' | 'sfx') =>
       new PixelSlider(this, CONTROL_W, value, color, (x) => settings.set(key, x));
-    this.dayButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => daynight.toggle());
+    this.dayButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => daynight.enabled && daynight.toggle());
     this.fpsButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => {
       // Hidden, then Shown, then Details (the profiler), then Hidden again.
       const { showFps, profiler } = settings.values;
@@ -133,7 +133,8 @@ export class PauseScene extends Phaser.Scene {
   }
 
   private syncToggles(): void {
-    this.dayButton.setText(daynight.target > 0.5 ? 'Day' : 'Night');
+    // Arenas without day and night keep their own light.
+    this.dayButton.setText(!daynight.enabled ? 'Fixed' : daynight.target > 0.5 ? 'Day' : 'Night');
     this.fpsButton.setText(!settings.values.showFps ? 'Hidden' : settings.values.profiler ? 'Details' : 'Shown');
     this.qualityButton.setText(settings.values.quality === 'fast' ? 'Fast' : 'Full');
   }
