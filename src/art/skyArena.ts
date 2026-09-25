@@ -1,0 +1,605 @@
+// The home screen's Sky Arena: a marble arena on a floating island above a
+// sea of clouds, on a bright golden morning. The sun hangs low on the left,
+// so the arena's columns and blossom tree throw long shadows across the
+// floor, clouds glow on their sunward sides, and waterfalls spill off the
+// island's edge into the cloud sea.
+//
+// Pieces are painted separately so the home scene can move them: a sky for
+// the view size, three cloud strips that tile horizontally (far, middle and a
+// near one in front of the island), the island itself, a few small islets,
+// a waterfall strip, sun rays, a bird and a petal.
+
+import { hex, type RGB } from './pixel';
+import { rng } from './env';
+import { Bitmap, bayer, clamp01, mix } from './bitmap';
+
+const ramp = (...c: string[]) => c.map(hex);
+
+const MARBLE = 1;
+const GOLD = 2;
+const ROCK = 3;
+const GRASS = 4;
+const BLOSSOM = 5;
+const BARK = 6;
+const CRYSTAL = 7;
+const WATER = 8;
+const CLOTH = 9;
+
+const RAMPS: RGB[][] = [
+  [],
+  ramp('#3b3552', '#57506e', '#7a7290', '#9e96ad', '#c3bccb', '#e2dbe2', '#f6f0ee', '#fffcf8'),
+  ramp('#4a2a14', '#7a4a1c', '#a87028', '#d49a38', '#f0c452', '#ffe08a', '#fff4c8'),
+  ramp('#241c2e', '#35283c', '#4a3646', '#62464e', '#7e5a58', '#9c7466', '#bf9478', '#e0b892'),
+  ramp('#1c3a34', '#24503a', '#2f6a3e', '#44863f', '#64a444', '#8cc050', '#bcd96a', '#e8f09a'),
+  ramp('#6e3a5c', '#9a4f72', '#c2708c', '#e095a8', '#f4b9c4', '#ffd9de', '#fff0f0'),
+  ramp('#2a1a20', '#3e2628', '#5a3830', '#7a4e3a', '#9c6848', '#be8a5e'),
+  ramp('#1c3a6a', '#2a64a0', '#44a0d0', '#7ad6ec', '#c4f4ff', '#ffffff'),
+  ramp('#3a6aa8', '#5a94cc', '#8cc4e8', '#c8ecf8', '#ffffff'),
+  ramp('#3a0e1c', '#62182a', '#8e2434', '#bc3a3c', '#e0624a', '#ff9a6a'),
+];
+
+const CLOUD = ramp('#7d78b4', '#978ec4', '#b4a6d2', '#d2bddc', '#ecd2dc', '#fbe3d6', '#fff0e2', '#fffaf2');
+const SKY = ramp('#3d63b8', '#4f78c6', '#6690d2', '#82a8de', '#a2c0e6', '#c4d4ea', '#e6dde6', '#fbe3d4', '#ffeccf', '#fff5e2');
+/** Where the cloud sea meets the sky, as a fraction of the view height. */
+export const HORIZON = 0.6;
+
+function hash(i: number, s: number): number {
+  let h = (i * 374761393 + s * 668265263) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h = Math.imul(h ^ (h >>> 16), 2246822519);
+  return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
+}
+
+/** Smooth 1D value noise, repeating every `period` cells (0 for never). */
+function noise(x: number, s: number, period = 0): number {
+  const i = Math.floor(x);
+  const t = x - i;
+  const u = t * t * (3 - 2 * t);
+  const k = (n: number) => (period ? ((n % period) + period) % period : n);
+  const a = hash(k(i), s);
+  return a + (hash(k(i + 1), s) - a) * u;
+}
+
+const pick = (rp: RGB[], l: number, x: number, y: number): RGB =>
+  rp[Math.max(0, Math.min(rp.length - 1, Math.floor(l * (rp.length - 1) + bayer(x, y) * 0.55 + 0.22)))];
+
+/** The sun's place in the view. */
+export const sunAt = (w: number, h: number) => ({ x: Math.round(w * 0.2), y: Math.round(h * 0.3) });
+
+/** The sky for a `w` x `h` view: a clear morning gradient and the sun low on the left. */
+export function paintSky(w: number, h: number): Bitmap {
+  const out = new Bitmap(w, h);
+  const hy = Math.round(h * HORIZON);
+  const sun = sunAt(w, h);
+  const R = 9;
+  const n = SKY.length - 1;
+  for (let y = 0; y < h; y++) {
+    const t = clamp01(1 - (hy - y) / (hy * 0.95));
+    for (let x = 0; x < w; x++) {
+      let c: RGB;
+      if (y >= hy) c = CLOUD[4];
+      else {
+        const f = t * t * n;
+        const i = Math.floor(f);
+        const fr = clamp01((f - i - 0.5) * 2.6 + 0.5);
+        c = SKY[Math.min(n, i + (fr > bayer(x, y) ? 1 : 0))];
+      }
+      const d = Math.hypot(x + 0.5 - sun.x, y + 0.5 - sun.y);
+      if (d <= R) c = d > R - 1 ? hex('#fff4d0') : hex('#fffdf4');
+      else {
+        const g = clamp01(1 - (d - R) / (R * 6)) ** 1.6;
+        const q = Math.floor(g * 6 + bayer(x, y)) / 6;
+        if (q > 0) c = mix(c, hex('#fff2d2'), q * 0.9);
+      }
+      out.set(x, y, c);
+    }
+  }
+  return out;
+}
+
+export const CLOUD_W = 512;
+
+interface CloudLayer {
+  h: number;
+  /** Row where the solid cloud sea starts; puffs rise above it. */
+  base: number;
+  rMin: number;
+  rMax: number;
+  /** How much the layer fades into the horizon's haze. */
+  haze: number;
+  seed: number;
+}
+
+export const CLOUD_LAYERS: CloudLayer[] = [
+  { h: 110, base: 26, rMin: 4, rMax: 10, haze: 0.45, seed: 3 },
+  { h: 150, base: 40, rMin: 7, rMax: 18, haze: 0.2, seed: 5 },
+  { h: 170, base: 58, rMin: 12, rMax: 30, haze: 0, seed: 9 },
+];
+
+/** A strip of cumulus that tiles every CLOUD_W px, lit from the upper left. */
+export function cloudStrip(L: CloudLayer): Bitmap {
+  const out = new Bitmap(CLOUD_W, L.h);
+  const r = rng(L.seed);
+  const puffs: { x: number; y: number; r: number }[] = [];
+  // Dome-shaped masses: a row of puffs, tallest in the middle, with billows on top.
+  for (let x = 0; x < CLOUD_W - L.rMin; ) {
+    const big = noise((x / CLOUD_W) * 8, L.seed, 8);
+    const mr = L.rMin + (L.rMax - L.rMin) * (0.25 + 0.75 * big) * (0.75 + r() * 0.35);
+    const n = 3 + Math.floor(r() * 4);
+    for (let j = 0; j < n; j++) {
+      const k = Math.sin((Math.PI * (j + 0.5)) / n);
+      const pr = mr * (0.45 + 0.55 * k) * (0.8 + r() * 0.35);
+      const px = x + j * mr * 0.62 + (r() - 0.5) * mr * 0.2;
+      const py = L.base - pr * 0.35 + (r() - 0.5) * mr * 0.15;
+      puffs.push({ x: px, y: py, r: pr });
+      if (k > 0.6 && r() < 0.8) {
+        const tr = pr * (0.5 + r() * 0.25);
+        puffs.push({ x: px + (r() - 0.5) * pr * 0.6, y: py - pr * (0.5 + r() * 0.3), r: tr });
+        if (r() < 0.4) puffs.push({ x: px + (r() - 0.5) * tr, y: py - pr * 0.6 - tr * 0.7, r: tr * 0.6 });
+      }
+    }
+    x += n * mr * 0.62 + r() * mr * 0.6;
+  }
+  puffs.sort((a, b) => a.y - b.y);
+  const lx = -0.6;
+  const ly = -0.65;
+  const lz = 0.46;
+  const horizon = hex('#fbe3d4');
+  const cell = new Float32Array(CLOUD_W * L.h).fill(-1);
+  for (const p of puffs) {
+    for (let y = Math.floor(p.y - p.r); y <= p.y + p.r; y++) {
+      if (y < 0 || y >= L.h) continue;
+      for (let xi = Math.floor(p.x - p.r); xi <= p.x + p.r; xi++) {
+        const nx = (xi + 0.5 - p.x) / p.r;
+        const ny = (y + 0.5 - p.y) / (p.r * 0.85);
+        const d = nx * nx + ny * ny;
+        if (d > 1) continue;
+        const nz = Math.sqrt(1 - d);
+        let lam = clamp01(lx * nx + ly * ny + lz * nz);
+        // Silver lining where the edge faces the sun.
+        if (nz < 0.35 && lx * nx + ly * ny > 0.3) lam += 0.25;
+        cell[y * CLOUD_W + (((xi % CLOUD_W) + CLOUD_W) % CLOUD_W)] = 0.04 + lam * 0.98;
+      }
+    }
+  }
+  for (let y = 0; y < L.h; y++) {
+    for (let x = 0; x < CLOUD_W; x++) {
+      let l = cell[y * CLOUD_W + x];
+      const sea = L.base + (noise((x / CLOUD_W) * 32, L.seed + 1, 32) - 0.5) * 4;
+      if (l < 0) {
+        if (y < sea) continue;
+        l = 0.36 - (y - sea) * 0.003 + (noise((x / CLOUD_W) * 64 + y * 0.3, L.seed + 2, 64) - 0.5) * 0.08;
+      }
+      let c = pick(CLOUD, l, x, y);
+      if (L.haze) c = mix(c, horizon, L.haze);
+      out.set(x, y, c);
+    }
+  }
+  return out;
+}
+
+/** A tileable 6 x 32 strip of falling water. */
+export function waterfall(): Bitmap {
+  const W = 6;
+  const H = 32;
+  const out = new Bitmap(W, H);
+  const cols = ramp('#8cc4e8', '#c8ecf8', '#ffffff');
+  for (let x = 0; x < W; x++) {
+    const edge = x === 0 || x === W - 1;
+    for (let y = 0; y < H; y++) {
+      const n = noise(y / 4 + x * 7.3, 40 + x, 8);
+      const i = n > 0.62 ? 2 : n > 0.35 ? 1 : 0;
+      out.set(x, y, cols[edge ? Math.max(0, i - 1) : i], edge ? 150 : 235);
+    }
+  }
+  return out;
+}
+
+export const RAYS_W = 360;
+export const RAYS_H = 240;
+
+/** Soft rays fanning out from the centre, for additive blending. */
+export function sunRays(seed: number): Bitmap {
+  const out = new Bitmap(RAYS_W, RAYS_H);
+  const ox = RAYS_W / 2;
+  const oy = RAYS_H / 2;
+  const col = hex('#fff0c8');
+  for (let y = 0; y < RAYS_H; y++) {
+    for (let x = 0; x < RAYS_W; x++) {
+      const dx = x + 0.5 - ox;
+      const dy = y + 0.5 - oy;
+      const d = Math.hypot(dx, dy);
+      const a = (Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2);
+      const n = noise(a * 40, seed, 40) * 0.7 + noise(a * 10, seed + 1, 10) * 0.3;
+      const ray = clamp01((n - 0.5) / 0.25);
+      const fall = clamp01(1 - d / (RAYS_H * 0.7)) ** 1.3 * clamp01((d - 8) / 12);
+      const q = Math.floor(ray * fall * 4 + bayer(x, y)) / 4;
+      out.set(x, y, mix([0, 0, 0], col, q * 0.4));
+    }
+  }
+  return out;
+}
+
+/** A distant bird: two 5 x 3 frames, wings up then down. */
+export function birdSheet(): Bitmap {
+  const b = new Bitmap(10, 3);
+  const c = hex('#4a4a78');
+  for (const [x, y] of [[0, 0], [4, 0], [1, 1], [3, 1], [2, 2]]) b.set(x, y, c);
+  for (const [x, y] of [[0, 1], [1, 1], [3, 1], [4, 1], [2, 2]]) b.set(5 + x, y, c);
+  return b;
+}
+
+/** Two 2 x 2 blossom petals. */
+export function petalSheet(): Bitmap {
+  const b = new Bitmap(4, 2);
+  const [a, l] = ramp('#f4b9c4', '#fff0f0');
+  b.set(0, 0, l);
+  b.set(1, 0, a);
+  b.set(0, 1, a);
+  b.set(2, 0, a);
+  b.set(3, 1, l);
+  b.set(2, 1, a);
+  return b;
+}
+
+/** Per-pixel material and light, then one pass through the ramps. */
+class Paint {
+  readonly mat: Uint8Array;
+  readonly lum: Float32Array;
+
+  constructor(
+    readonly w: number,
+    readonly h: number,
+  ) {
+    this.mat = new Uint8Array(w * h);
+    this.lum = new Float32Array(w * h);
+  }
+
+  put(x: number, y: number, m: number, l: number): void {
+    x = Math.floor(x);
+    y = Math.floor(y);
+    if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
+    this.mat[y * this.w + x] = m;
+    this.lum[y * this.w + x] = l;
+  }
+
+  at(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.w || y >= this.h) return 0;
+    return this.mat[y * this.w + x];
+  }
+
+  /** Darken (x, y) if it holds material `m`. */
+  shade(x: number, y: number, m: number, dl: number): void {
+    if (this.at(x, y) === m) this.lum[y * this.w + x] += dl;
+  }
+
+  toBitmap(): Bitmap {
+    const out = new Bitmap(this.w, this.h);
+    for (let y = 0; y < this.h; y++) {
+      for (let x = 0; x < this.w; x++) {
+        const m = this.mat[y * this.w + x];
+        if (!m) continue;
+        let l = this.lum[y * this.w + x];
+        // Sky light catches every upper-left edge.
+        if (m !== GOLD && (!this.at(x - 1, y) || !this.at(x, y - 1))) l += 0.1;
+        out.set(x, y, pick(RAMPS[m], l, x, y));
+      }
+    }
+    return out;
+  }
+}
+
+/** A cumulus-like clump of leaves or blossom, lit from the upper left. */
+function clump(p: Paint, m: number, cx: number, cy: number, r: number, base = 0.3): void {
+  for (let y = Math.floor(cy - r); y <= cy + r; y++) {
+    for (let x = Math.floor(cx - r); x <= cx + r; x++) {
+      const nx = (x + 0.5 - cx) / r;
+      const ny = (y + 0.5 - cy) / r;
+      const d = nx * nx + ny * ny;
+      if (d > 1) continue;
+      const lam = clamp01(-0.6 * nx - 0.65 * ny + 0.46 * Math.sqrt(1 - d));
+      p.put(x, y, m, base + lam * 0.65);
+    }
+  }
+}
+
+export interface IslandArt {
+  bmp: Bitmap;
+  /** Centre of the arena floor within the bitmap. */
+  cx: number;
+  cy: number;
+  /** Where waterfalls leave the island (top of each fall's left edge). */
+  falls: { x: number; y: number }[];
+  /** The blossom tree's canopy, for falling petals. */
+  canopy: { x: number; y: number; w: number; h: number };
+}
+
+/** The floating arena island; `rx` is the arena floor's half-width. */
+export function paintIsland(rx: number): IslandArt {
+  const r = rng(17);
+  const ry = Math.round(rx * 0.28);
+  const thick = Math.max(4, Math.round(rx * 0.045));
+  const lip = 3;
+  const D = Math.round(rx * 0.85);
+  const T = Math.round(rx * 0.82);
+  const W = Math.round(rx * 2 + 30);
+  const H = T + ry * 2 + thick + lip + D + 12;
+  const cx = W / 2;
+  const cy = T + ry;
+  const p = new Paint(W, H);
+  const floor = new Uint8Array(W * H);
+
+  const front = (x: number) => {
+    const u = (x + 0.5 - cx) / rx;
+    return Math.abs(u) > 1 ? -1 : cy + ry * Math.sqrt(1 - u * u);
+  };
+
+  // --- Rock underside, soil lip and the platform's marble side. -------
+  for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
+    const u = (x + 0.5 - cx) / rx;
+    const au = Math.abs(u);
+    const edge = front(x);
+    if (edge < 0) continue;
+    const sideB = edge + thick;
+    const lipB = sideB + lip;
+    const depth = D * (1 - au ** 1.5) ** 1.3 * (0.72 + 0.28 * noise(u * 5 + 9, 23)) + (noise(x / 3, 24) > 0.72 ? 7 * (1 - au) : 0);
+    const bottom = lipB + depth;
+    for (let y = Math.floor(edge); y < bottom; y++) {
+      if (y < sideB) {
+        // Marble blocks with a gold band.
+        const k = y - Math.floor(edge);
+        let l = 0.5 - u * 0.2 - (x % 9 === 0 ? 0.08 : 0);
+        if (k === Math.floor(thick / 2)) {
+          p.put(x, y, GOLD, 0.45 - u * 0.2);
+          continue;
+        }
+        if (k === 0) l += 0.12;
+        p.put(x, y, MARBLE, l);
+      } else if (y < lipB) {
+        p.put(x, y, GRASS, 0.5 - u * 0.15 - (y - sideB) * 0.08);
+      } else {
+        const t = (y - lipB) / Math.max(1, D);
+        const strata = noise((y + noise(x / 11, 25) * 7) / 4, 26) - 0.5;
+        const l = 0.46 - u * 0.24 - t * 0.35 + strata * 0.12 + (hash(x * 131 + y, 27) < 0.04 ? -0.08 : 0);
+        p.put(x, y, ROCK, l);
+      }
+    }
+    // Grass hanging over the lip.
+    if (r() < 0.6) {
+      const len = 1 + Math.floor(r() * 4);
+      for (let k = 0; k < len; k++) p.put(x, lipB + k, GRASS, 0.4 - u * 0.15 - k * 0.05);
+    }
+  }
+  // Roots and vines dangling from under the lip.
+  for (let i = 0; i < 9; i++) {
+    const u = (r() - 0.5) * 1.6;
+    let x = Math.round(cx + u * rx);
+    const y0 = Math.round(front(x) + thick + lip);
+    const len = 5 + r() * 14;
+    const vine = r() < 0.5;
+    for (let k = 0; k < len; k++) {
+      if (r() < 0.25) x += r() < 0.5 ? -1 : 1;
+      p.put(x, y0 + k, vine ? GRASS : BARK, (vine ? 0.36 : 0.3) - u * 0.1);
+      if (vine && k % 3 === 2) p.put(x + 1, y0 + k, GRASS, 0.5);
+    }
+  }
+  // Crystals growing out of the rock.
+  for (let i = 0; i < 5; i++) {
+    const u = (r() - 0.5) * 1.1;
+    const x = Math.round(cx + u * rx);
+    const y = Math.round(front(x) + thick + lip + 6 + r() * D * 0.35 * (1 - Math.abs(u)));
+    if (p.at(x, y) !== ROCK) continue;
+    const s = 2 + Math.floor(r() * 3);
+    for (let k = 0; k < s * 2; k++) {
+      const hw = Math.max(0, Math.round(s * 0.5 - Math.abs(k - s) * 0.5));
+      for (let dx = -hw; dx <= hw; dx++) p.put(x + dx, y - k + s, CRYSTAL, 0.45 + (dx < 0 ? 0.25 : 0) + (k > s ? 0.1 : 0));
+    }
+  }
+  // Springs where the waterfalls leave the rock.
+  const falls: { x: number; y: number }[] = [];
+  for (const u of [-0.46, 0.3]) {
+    const x = Math.round(cx + u * rx);
+    const y = Math.round(front(x) + thick + lip + 1);
+    for (let dx = -3; dx <= 3; dx++) for (let dy = -1; dy <= 1; dy++) if (Math.abs(dx) + Math.abs(dy) * 2 < 4) p.put(x + dx, y + dy, ROCK, 0.08);
+    for (let dx = -2; dx <= 3; dx++) p.put(x + dx, y + 1, WATER, 0.6 + (dx === 0 ? 0.3 : 0));
+    falls.push({ x: x - 2, y: y + 2 });
+  }
+
+  // --- Arena floor. -----------------------------------------------------
+  const grad = (u: number, v: number, rr: number) => Math.hypot(u / rx, v / ry) / Math.max(rr, 1e-6);
+  const segAt = (x: number, y: number) => {
+    const u = (x + 0.5 - cx) / rx;
+    const v = (y + 0.5 - cy) / ry;
+    const rr = Math.hypot(u, v);
+    const a = Math.atan2(v, u) / (Math.PI * 2) + 0.5;
+    const ring = rr < 0.34 ? -1 : rr < 0.62 ? Math.floor(rr / 0.14) : 10 + Math.floor(rr / 0.12);
+    const seg = rr < 0.34 ? -1 : Math.floor(a * (rr < 0.62 ? 16 : 32));
+    return ring * 100 + seg;
+  };
+  for (let y = Math.floor(cy - ry); y <= cy + ry; y++) {
+    for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
+      const u = (x + 0.5 - cx) / rx;
+      const v = (y + 0.5 - cy) / ry;
+      const rr = Math.hypot(u, v);
+      if (rr > 1) continue;
+      floor[y * W + x] = 1;
+      const dist = (rr - 1) / grad(u, v, rr);
+      let m = MARBLE;
+      let l = 0.78 + (hash(segAt(x, y) + 7, 28) - 0.5) * 0.05 - v * 0.04;
+      if (dist > -2) l = 0.92;
+      else if (dist > -3) l = 0.5;
+      else if (Math.abs(rr - 0.62) < 0.018 || Math.abs(rr - 0.34) < 0.016) {
+        m = GOLD;
+        l = 0.6;
+      } else if (rr < 0.34) {
+        const a = Math.atan2(v, u);
+        const star = 0.3 * (0.35 + 0.65 * Math.abs(Math.cos(a * 4)) ** 10);
+        if (rr < star) {
+          m = GOLD;
+          l = 0.55 + (Math.cos(a * 4) * Math.sin(a * 8) > 0 ? 0.12 : 0);
+        } else l = 0.62;
+      } else if (segAt(x, y) !== segAt(x - 1, y) || segAt(x, y) !== segAt(x, y - 1)) l -= 0.12;
+      p.put(x, y, m, l);
+    }
+  }
+
+  // --- Shadows: the sun is low on the left, so they reach right and toward us.
+  const SX = 1;
+  const SY = 0.3;
+  const shadow = (x: number, y: number) => {
+    x = Math.floor(x);
+    y = Math.floor(y);
+    if (x < 0 || y < 0 || x >= W || y >= H || !floor[y * W + x]) return;
+    if (floor[y * W + x] === 2) return;
+    floor[y * W + x] = 2;
+    p.lum[y * W + x] -= 0.3;
+  };
+
+  // Columns around the rim, leaving the front open; some broken.
+  const angles = [150, 176, 202, 228, 254, 280, 332, 358, 24];
+  const cols = angles.map((deg, k) => {
+    const a = (deg * Math.PI) / 180;
+    const s = 0.85 + 0.15 * Math.sin(a);
+    const hc = Math.round(rx * 0.28 * s * (hash(k, 29) < 0.3 ? 0.45 + hash(k, 30) * 0.2 : 1));
+    return { x: Math.round(cx + Math.cos(a) * rx * 0.9), y: Math.round(cy + Math.sin(a) * ry * 0.9), hc, cw: Math.max(3, Math.round(rx * 0.05 * s)) | 1, broken: hc < rx * 0.2 };
+  });
+  for (const c of cols) {
+    const L = c.hc * 1.15;
+    for (let k = 0; k < L; k++) {
+      for (let dx = -Math.ceil(c.cw / 2); dx <= Math.floor(c.cw / 2); dx++) {
+        for (const dy of [0, 0.5]) shadow(c.x + dx + k * SX, c.y + dy + k * SY);
+      }
+    }
+  }
+  // The blossom tree at the back right.
+  const tx = Math.round(cx + rx * 0.4);
+  const ty = Math.round(cy - ry * 0.6);
+  const th = Math.round(rx * 0.22);
+  const rc = rx * 0.2;
+  const canopyY = ty - th - rc * 0.35;
+  {
+    const L = th + rc;
+    const ox = tx + L * SX * 0.9;
+    const oy = ty + L * SY * 0.9;
+    for (let y = Math.floor(oy - rc * 0.45); y <= oy + rc * 0.45; y++) {
+      for (let x = Math.floor(ox - rc * 1.2); x <= ox + rc * 1.2; x++) {
+        const d = ((x + 0.5 - ox) / (rc * 1.2)) ** 2 + ((y + 0.5 - oy) / (rc * 0.45)) ** 2;
+        // Dappled: sun flecks come through the blossom.
+        if (d <= 1 && noise(x / 2.3 + y * 1.7, 31) < 0.72) shadow(x, y);
+      }
+    }
+    for (let k = 0; k < th; k++) for (let dx = -1; dx <= 1; dx++) shadow(tx + dx + k * SX, ty + k * SY);
+  }
+
+  // Columns, back to front.
+  const tree = { x: tx, y: ty, draw: true };
+  const drawTree = () => {
+    for (let k = 0; k <= th; k++) {
+      const t = k / th;
+      const bx = tx + Math.round(Math.sin(t * 2.2) * 2);
+      const hw = Math.round(2 - t * 1.2);
+      for (let dx = -hw; dx <= hw; dx++) p.put(bx + dx, ty - k, BARK, 0.5 - (dx + hw) * 0.12);
+    }
+    for (const s of [-1, 1]) {
+      for (let k = 0; k < rc * 0.6; k++) p.put(tx + s * (1 + k * 0.8), ty - th * 0.7 - k * 0.6, BARK, 0.4);
+    }
+    const blobs: { x: number; y: number; r: number }[] = [];
+    for (let i = 0; i < 15; i++) {
+      const a = r() * Math.PI * 2;
+      const d = Math.sqrt(r());
+      blobs.push({ x: tx + 2 + Math.cos(a) * d * rc * 1.05, y: canopyY + Math.sin(a) * d * rc * 0.6, r: rc * (0.32 + r() * 0.16) });
+    }
+    blobs.sort((a, b) => a.y - b.y);
+    for (const b of blobs) clump(p, BLOSSOM, b.x, b.y, b.r, 0.26);
+    // Bright single blooms on the sunny side.
+    for (let i = 0; i < 26; i++) {
+      const x = Math.round(tx - rc + r() * rc * 2);
+      const y = Math.round(canopyY - rc * 0.6 + r() * rc * 1.2);
+      if (p.at(x, y) === BLOSSOM && p.lum[y * W + x] > 0.55) p.put(x, y, BLOSSOM, 0.98);
+    }
+    for (let i = -4; i <= 4; i++) if (r() < 0.8) p.put(tx + i, ty + 1 - (r() < 0.4 ? 1 : 0), GRASS, 0.55);
+  };
+  const byDepth = [...cols.map((c) => ({ ...c, tree: false })), { ...tree, hc: 0, cw: 0, broken: false, tree: true }].sort((a, b) => a.y - b.y);
+  for (const c of byDepth) {
+    if (c.tree) {
+      drawTree();
+      continue;
+    }
+    const hw = Math.floor(c.cw / 2);
+    const x0 = c.x - hw;
+    const x1 = c.x + hw;
+    const top = c.y - c.hc;
+    for (let y = top; y <= c.y + 1; y++) {
+      let e = 0;
+      if (y >= c.y - 1) e = 1;
+      else if (!c.broken && y <= top + 2) e = y === top ? 2 : 1;
+      for (let x = x0 - e; x <= x1 + e; x++) {
+        const n = (x - (x0 - e)) / Math.max(1, x1 - x0 + 2 * e);
+        let l = 0.9 - n * 0.55;
+        if (!e && x > x0 && x < x1 && (x - x0) % 2 === 1) l -= 0.06;
+        if (c.broken && y < top + 3 && hash(x * 7 + y, 32) < 0.5) continue;
+        p.put(x, y, MARBLE, l);
+      }
+      if (!c.broken && y === top + 3) for (let x = x0; x <= x1; x++) p.put(x, y, GOLD, 0.7 - ((x - x0) / Math.max(1, x1 - x0)) * 0.4);
+    }
+    // A tuft of grass at the foot.
+    for (let i = -hw - 2; i <= hw + 2; i++) if (r() < 0.45) p.put(c.x + i, c.y + 1, GRASS, 0.6);
+  }
+
+  // Banners flanking the open front.
+  for (const deg of [58, 122]) {
+    const a = (deg * Math.PI) / 180;
+    const bx = Math.round(cx + Math.cos(a) * rx * 0.97);
+    const by = Math.round(cy + Math.sin(a) * ry * 0.97);
+    const ph = Math.round(rx * 0.3);
+    for (let k = 0; k < ph; k++) {
+      p.put(bx, by - k, GOLD, 0.62);
+      p.put(bx + 1, by - k, GOLD, 0.35);
+    }
+    p.put(bx, by - ph, GOLD, 0.9);
+    p.put(bx + 1, by - ph, GOLD, 0.7);
+    const fw = Math.round(rx * 0.14);
+    const fh = Math.round(rx * 0.1);
+    for (let i = 1; i <= fw; i++) {
+      const t = i / fw;
+      const wave = Math.round(Math.sin(t * Math.PI * 1.5) * 1.5);
+      const half = fh * (1 - t * 0.8);
+      for (let j = 0; j < half; j++) {
+        const y = by - ph + 2 + j + wave;
+        p.put(bx + 1 + i, y, j === 0 || j >= half - 1 ? GOLD : CLOTH, j === 0 || j >= half - 1 ? 0.6 : 0.5 + (wave > 0 ? -0.12 : 0.1));
+      }
+    }
+  }
+
+  return {
+    bmp: p.toBitmap(),
+    cx,
+    cy,
+    falls,
+    canopy: { x: tx + 2 - rc, y: canopyY - rc * 0.6, w: rc * 2, h: rc * 1.2 },
+  };
+}
+
+/** A small floating islet of grass and rock, `s` px wide. */
+export function paintIslet(s: number, seed: number): Bitmap {
+  const r = rng(seed);
+  const W = s + 4;
+  const H = Math.round(s * 1.3) + 6;
+  const p = new Paint(W, H);
+  const cx = W / 2;
+  const top = Math.round(s * 0.25);
+  const ry = Math.max(2, Math.round(s * 0.16));
+  for (let x = 0; x < W; x++) {
+    const u = (x + 0.5 - cx) / (s / 2);
+    if (Math.abs(u) > 1) continue;
+    const e = top + ry * Math.sqrt(1 - u * u);
+    const depth = s * 0.9 * (1 - Math.abs(u) ** 1.4) * (0.7 + 0.3 * noise(u * 4, seed));
+    for (let y = Math.floor(top - ry * Math.sqrt(1 - u * u)); y < e + 2 + depth; y++) {
+      if (y < e) p.put(x, y, GRASS, 0.62 - u * 0.12);
+      else if (y < e + 2) p.put(x, y, GRASS, 0.42 - u * 0.12);
+      else p.put(x, y, ROCK, 0.46 - u * 0.24 - ((y - e) / (s * 0.9)) * 0.35);
+    }
+  }
+  if (s >= 12) clump(p, r() < 0.5 ? GRASS : BLOSSOM, cx + (r() - 0.5) * s * 0.3, top - s * 0.12, s * 0.2, 0.3);
+  return p.toBitmap();
+}
