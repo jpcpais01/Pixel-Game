@@ -86,6 +86,8 @@ export class Arrow implements Effect {
   /** Stuck in the ground: ms left before it fades. */
   private stuck = -1;
   private readonly key: string;
+  /** Made once: is a body in this arrow's path at its current point? */
+  private readonly inPathNow = (h: Hurtbox) => inPath(h, this.x, this.y);
 
   constructor(
     private world: WorldScene,
@@ -130,9 +132,9 @@ export class Arrow implements Effect {
         this.destroy();
         return;
       }
-      const hits = this.world.hurtboxesWhere((h) => h.alive && inPath(h, this.x, this.y));
-      if (hits.length) {
-        this.strike(hits[0]);
+      const hit = this.world.firstHurtbox(this.inPathNow);
+      if (hit) {
+        this.strike(hit);
         return;
       }
       if (this.travelled >= this.range) {
