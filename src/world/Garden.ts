@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
-import { BLOOM_H, BLOOM_BASE, FOUNTAIN_BASE, FOUNTAIN_H, PILLAR_BASE, PILLAR_H, RUIN_H_BASE, RUIN_H_H, RUIN_V_BASE, RUIN_V_H, SEED_H, THORNBLOOM_BASE, THORNBLOOM_H, type BloomKind } from '../art/garden';
+import { BLOOM_H, BLOOM_BASE, FOUNTAIN_BASE, FOUNTAIN_H, FOUNTAIN_HEART_Y, FOUNTAIN_JET_Y, PILLAR_BASE, PILLAR_H, RUIN_H_BASE, RUIN_H_H, RUIN_V_BASE, RUIN_V_H, SEED_H, THORNBLOOM_BASE, THORNBLOOM_H, type BloomKind } from '../art/garden';
 import { MIGHT, RENEW, SWIFTNESS, WARD, heroBuffs, type BuffDef } from '../game/buffs';
 import type { Hit, Hurtbox } from '../game/combat';
 import { snap } from '../game/display';
 import { sunShadow } from '../game/Wizard';
 import { sound } from '../audio';
+import { settings } from '../game/settings';
 import type { WorldScene } from '../scenes/WorldScene';
-import { gardenLayout, type Rect } from './sunken';
+import { POOL, gardenLayout, type Rect } from './sunken';
 
 // The Sunken Garden's living parts: the ruins (culled to the view), the
 // fountain, and its flowers. Thornblooms block doorways until they are cut
@@ -248,6 +249,7 @@ export class Garden {
   private flowers: Flower[] = [];
   private seeds: Seed[] = [];
   private placed: Placed[] = [];
+  private fountain: Fountain;
 
   constructor(private world: WorldScene) {
     const g = gardenLayout();
@@ -264,12 +266,7 @@ export class Garden {
     for (const p of g.pillars) place(p.x, p.y, 44, PILLAR_H + 10, ...lit('pillar', `p${p.v}`, p.x, p.y, PILLAR_BASE / PILLAR_H));
     for (const c of g.crystals) world.crystals(c.x, c.y, c.frame);
 
-    // The fountain, lit by its own glowing heart.
-    const f = g.fountain;
-    const oy = FOUNTAIN_BASE / FOUNTAIN_H;
-    add.image(f.x, f.y, 'fountain', 'f0').setOrigin(0.5, oy).setPipeline('Lit').setDepth(f.y);
-    add.sprite(f.x, f.y, 'fountain_e', 'f0').setOrigin(0.5, oy).setBlendMode(Phaser.BlendModes.ADD).setDepth(f.y + 0.1).play('fountain_flow');
-    world.glowLight(f.x, f.y - 42, 170, 0x7ae8ff, 1.5, 0.55, 0x6ae0ff, 1.4);
+    this.fountain = new Fountain(world, g.fountain.x, g.fountain.y);
 
     const thorn: FlowerStyle = {
       texture: 'thornbloom',
@@ -330,6 +327,7 @@ export class Garden {
       const on = p.x1 > vx0 && p.x0 < vx1 && p.y1 > vy0 && p.y0 < vy1;
       for (const o of p.objs) (o as Img).setVisible(on);
     }
+    this.fountain.update(time, view);
     for (const f of this.flowers) f.update(time, dt, hero, daylight, f.x + 30 > vx0 && f.x - 30 < vx1 && f.y + 4 > vy0 && f.y - THORNBLOOM_H < vy1);
 
     for (const s of this.seeds) {
@@ -341,5 +339,122 @@ export class Garden {
       s.destroy();
     }
     this.seeds = this.seeds.filter((s) => !s.dead);
+  }
+}
+
+/**
+ * The fountain and what plays round it: spray thrown off the jet, a mist
+ * breathing over the basin, rings spreading across the pool and specks of
+ * light rising off the water. All of it is small sprites and a few dozen
+ * particles, and it stops when the fountain is out of view.
+ */
+class Fountain {
+  private glow: Phaser.GameObjects.Sprite;
+  private spray: Phaser.GameObjects.Particles.ParticleEmitter;
+  private motes: Phaser.GameObjects.Particles.ParticleEmitter;
+  private mists: { img: Img; base: number; seed: number }[] = [];
+  private ripples: Phaser.GameObjects.Sprite[] = [];
+  private nextRipple = 0;
+  private shown = true;
+  private fast = false;
+
+  constructor(
+    world: WorldScene,
+    x: number,
+    private y: number,
+  ) {
+    const add = world.add;
+    const oy = FOUNTAIN_BASE / FOUNTAIN_H;
+    const top = y - FOUNTAIN_BASE;
+    add.image(x, y, 'fountain', 'f0').setOrigin(0.5, oy).setPipeline('Lit').setDepth(y);
+    this.glow = add.sprite(x, y, 'fountain_e', 'f0').setOrigin(0.5, oy).setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 0.1).play('fountain_flow');
+    // The heart lights the stone round it and the water below.
+    world.glowLight(x, top + FOUNTAIN_HEART_Y + 14, 170, 0x5ad8ff, 1.1, 0.5, 0x5ad8ff, 1.1);
+
+    // Mist over the basin and round the middle bowl, breathing slowly.
+    for (const [my, sx, sy, a] of [
+      [y - 10, 2.6, 0.6, 0.09],
+      [y - 44, 1.4, 0.5, 0.08],
+      [top + FOUNTAIN_HEART_Y, 0.8, 0.8, 0.26],
+    ] as const) {
+      const img = add.image(x, my, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x5ad8ff).setScale(sx, sy).setAlpha(a).setDepth(y + 0.2);
+      this.mists.push({ img, base: a, seed: Math.random() * 10 });
+    }
+
+    // Spray thrown off the top of the jet, falling back into the bowls.
+    this.spray = add
+      .particles(x, top + FOUNTAIN_JET_Y, 'spark', {
+        speedX: { min: -17, max: 17 },
+        speedY: { min: -24, max: -6 },
+        gravityY: 72,
+        lifespan: { min: 650, max: 1050 },
+        scale: 0.5,
+        alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.min(1, (1 - t) * 2.5) * 0.9 },
+        tint: [0xd6faff, 0xffffff, 0x96e2ff],
+        blendMode: Phaser.BlendModes.ADD,
+        frequency: 75,
+      })
+      .setDepth(y + 0.3);
+
+    // Specks of light lifting off the pool.
+    const zone = {
+      getRandomPoint: (pt: Phaser.Types.Math.Vector2Like) => {
+        const a = Math.random() * Math.PI * 2;
+        const r = 0.45 + Math.random() * 0.45;
+        pt.x = POOL.x + Math.cos(a) * POOL.rx * r;
+        pt.y = POOL.y + Math.sin(a) * POOL.ry * r;
+        return pt;
+      },
+    };
+    this.motes = add
+      .particles(0, 0, 'spark', {
+        emitZone: { type: 'random', source: zone } as unknown as Phaser.Types.GameObjects.Particles.EmitZoneData,
+        speedX: { min: -3, max: 3 },
+        speedY: { min: -12, max: -5 },
+        lifespan: { min: 2400, max: 3800 },
+        scale: 0.5,
+        alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * Math.PI) * 0.85 },
+        tint: [0x9af4ff, 0xc8fff4, 0xffb4d8],
+        blendMode: Phaser.BlendModes.ADD,
+        frequency: 240,
+      })
+      .setDepth(POOL.y + POOL.ry + 40);
+
+    // Rings spreading on the pool, on the water just above the ground.
+    for (let i = 0; i < 5; i++) {
+      const r = add.sprite(0, 0, 'ripple', 'r0').setBlendMode(Phaser.BlendModes.ADD).setTint(0xb8f2ff).setAlpha(0.55).setDepth(2).setVisible(false);
+      r.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => r.setVisible(false));
+      this.ripples.push(r);
+    }
+
+    const offQuality = settings.watch((s) => {
+      this.fast = s.quality === 'fast';
+      this.spray.frequency = this.fast ? 150 : 75;
+      this.motes.frequency = this.fast ? 480 : 240;
+    });
+    world.events.once(Phaser.Scenes.Events.SHUTDOWN, offQuality);
+  }
+
+  update(time: number, view: Phaser.Geom.Rectangle): void {
+    const on = view.right > POOL.x - POOL.rx - 20 && view.x < POOL.x + POOL.rx + 20 && view.bottom > this.y - FOUNTAIN_BASE - 30 && view.y < POOL.y + POOL.ry + 20;
+    if (on !== this.shown) {
+      this.shown = on;
+      this.spray.emitting = on;
+      this.motes.emitting = on;
+      this.glow.anims[on ? 'resume' : 'pause']();
+    }
+    if (!on) return;
+    for (const m of this.mists) m.img.setAlpha(m.base * (0.75 + Math.sin(time * 0.0013 + m.seed) * 0.25));
+
+    if (time < this.nextRipple) return;
+    this.nextRipple = time + (this.fast ? 900 : 450) + Math.random() * 500;
+    const r = this.ripples.find((s) => !s.visible);
+    if (!r) return;
+    // Anywhere on open water: not under the basin, not off the pool's edge.
+    const a = Math.random() * Math.PI * 2;
+    const k = 0.62 + Math.random() * 0.26;
+    const rx = Math.round(POOL.x + Math.cos(a) * POOL.rx * k);
+    const ry = Math.round(POOL.y + Math.sin(a) * POOL.ry * k);
+    r.setPosition(rx, ry).setVisible(true).play('ripple_spread');
   }
 }

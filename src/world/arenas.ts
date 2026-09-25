@@ -4,6 +4,7 @@
 // the scenery along its edge. Anything more of its own (the clearing's
 // braziers, the garden's flowers) the world builds by the arena's id.
 
+import { FOUNTAIN_BASE, FOUNTAIN_H } from '../art/garden';
 import type Phaser from 'phaser';
 import type { GroundSpec } from '../art/ground';
 import type { SpawnSpot } from '../game/monsters';
@@ -119,11 +120,11 @@ export const ARENAS: ArenaDef[] = [
     daylight: 0.85,
     preview: {
       x: POOL.x - 62,
-      y: POOL.y - 16,
+      y: POOL.y - 30,
       sprites: () => {
         const g = gardenLayout();
         return [
-          { texture: 'fountain', frame: 'f0', glow: 'fountain_e', x: g.fountain.x, y: g.fountain.y, originY: 50 / 52 },
+          { texture: 'fountain', frame: 'f0', glow: 'fountain_e', x: g.fountain.x, y: g.fountain.y, originY: FOUNTAIN_BASE / FOUNTAIN_H },
           ...g.hwalls.map((w) => ({ texture: 'ruin_h', frame: `h${w.v}`, x: w.x, y: w.y, originY: 22 / 24 })),
           ...g.vwalls.map((w) => ({ texture: 'ruin_v', frame: `v${w.v}`, x: w.x, y: w.y, originY: 28 / 30 })),
           ...g.pillars.map((p) => ({ texture: 'pillar', frame: `p${p.v}`, x: p.x, y: p.y, originY: 52 / 54 })),

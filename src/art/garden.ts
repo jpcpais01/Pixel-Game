@@ -3,7 +3,7 @@
 // the glowing blooms that hold buffs. Everything is lit (diffuse + normal),
 // with emissive where it glows, like the rest of the world's props.
 
-import { PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
+import { FLAT, PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
 import { hash2, rng } from './env';
 
 const ramp = (...c: string[]): RGB[] => c.map(hex);
@@ -268,81 +268,269 @@ export function pillar(v: number): PixelCanvas {
 }
 
 // ---------------------------------------------------------------------------
-// The fountain in the pool: two basins, a stone bud with a glowing heart, and
-// water spilling over (three frames, drawn as light).
+// The fountain in the pool: a wide carved basin, a column carrying a second
+// bowl, and on top a stone lotus holding a glowing heart that throws up a jet
+// of water. The water that moves (the jet, the veils spilling from each
+// bowl, splashes and rings where they land) is drawn as light, frame by
+// frame, so it glows over the lit stone.
 
-export const FOUNTAIN_W = 56;
-export const FOUNTAIN_H = 52;
-export const FOUNTAIN_BASE = 50;
-export const FOUNTAIN_FRAMES = 3;
+export const FOUNTAIN_W = 80;
+export const FOUNTAIN_H = 90;
+export const FOUNTAIN_BASE = 86;
+export const FOUNTAIN_FRAMES = 6;
+/** Where the jet tops out and where the heart sits, in the frame. */
+export const FOUNTAIN_JET_Y = 4;
+export const FOUNTAIN_HEART_Y = 19;
+
+const FOAM: RGB = [214, 250, 255];
+const SPRAY: RGB = [150, 226, 255];
+const DEEP_SPRAY: RGB = [90, 190, 230];
 
 export function fountain(f: number): PixelCanvas {
   const c = new PixelCanvas(FOUNTAIN_W, FOUNTAIN_H);
-  const cx = 28;
-  // A round basin: its front wall, rim and water. `top` is the rim's centre row, `h` the wall's height.
-  const basin = (cy: number, rx: number, ry: number, h: number, rim: number) => {
+  const R = rng(733);
+  const cx = 40;
+  const p = f / FOUNTAIN_FRAMES;
+
+  // A round bowl: its front wall (with carved panels when `panels`), rim and water.
+  const bowl = (cy: number, rx: number, ry: number, h: number, rim: number, panels: number) => {
     c.part();
     for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
       const dx = (x + 0.5 - cx) / rx;
       if (Math.abs(dx) > 1) continue;
       const lower = cy + ry * Math.sqrt(1 - dx * dx);
-      for (let y = Math.floor(lower); y <= lower + h; y++) c.px(x, y, RUIN, cyl(dx, 0.05), { bias: y > lower + h - 1 ? -1 : 0 });
+      // Panels between carved ribs, spaced evenly round the bowl.
+      const a = Math.asin(Math.max(-1, Math.min(1, dx)));
+      const rib = panels > 0 && Math.abs(((a / Math.PI) * panels + 0.5) % 1 - 0.5) < 0.09;
+      for (let y = Math.floor(lower); y <= lower + h; y++) {
+        const lip = y < lower + 1.2;
+        const foot = y > lower + h - 1;
+        c.px(x, y, RUIN, cyl(dx, 0.05), { bias: lip ? 1 : foot ? -1 : rib ? 1 : 0 });
+      }
+      // A recessed band across each panel.
+      if (panels > 0 && !rib && h > 4) c.shade(x, Math.floor(lower + h * 0.55), -1);
     }
     c.part();
-    c.ellipse(cx, cy, rx, ry, RUIN, { normal: () => TOP, bias: 1 });
+    c.ellipse(cx, cy, rx, ry, RUIN, { normal: () => TOP, bias: 0 });
+    // Joints between the rim's coping stones.
+    for (let k = 0; k < 10; k++) {
+      const a = (k / 10) * Math.PI * 2 + 0.3;
+      c.shade(cx + Math.cos(a) * (rx - rim * 0.45), cy + Math.sin(a) * (ry - rim * 0.35), -1);
+    }
     c.part();
-    c.ellipse(cx, cy + 0.4, rx - rim, ry - rim * 0.75, WATER, {
-      normal: (x) => tilt(Math.sin(x * 1.3 + f * 2) * 0.15, 0.4, 0.9),
+    c.ellipse(cx, cy + 0.4, rx - rim, ry - rim * 0.72, WATER, {
+      normal: (x, y) => tilt(Math.sin(x * 1.1 + y * 0.7) * 0.12, 0.35, 0.92),
       bias: 0,
     });
   };
-  basin(40, 25, 8.5, 5, 3.2);
-  // Pedestal.
+
+  // The great basin.
+  bowl(72, 35, 10, 7, 3.6, 7);
+  // Moss creeping over its foot and rim, ivy trailing down its wall.
   c.part();
-  c.shape(22, 41, (y) => {
-    const hw = y > 37 ? 4.5 : y < 25 ? 3.6 : 2.8;
+  for (let x = cx - 34; x <= cx + 34; x++) {
+    const dx = (x + 0.5 - cx) / 35;
+    const lower = 72 + 10 * Math.sqrt(Math.max(0, 1 - dx * dx));
+    if (hash2(x, 5, 41) < 0.45) c.px(x, lower + 7, MOSS, FLAT, { bias: hash2(x, 6, 42) < 0.5 ? 1 : 0 });
+    if (hash2(x, 7, 43) < 0.18) c.px(x, lower + 6, MOSS, FLAT);
+  }
+  for (const [x, len] of [
+    [cx - 27, 6],
+    [cx - 12, 5],
+    [cx + 9, 7],
+    [cx + 25, 5],
+  ] as const) {
+    const dx = (x + 0.5 - cx) / 35;
+    ivy(c, x, 72 + 10 * Math.sqrt(1 - dx * dx) - 1, len, R, 0.6);
+  }
+
+  // The column, flared at its foot, banded, flaring again into the bowl above.
+  c.part();
+  c.shape(44, 71, (y) => {
+    const hw = y > 68 ? 7 : y > 66 ? 5.6 : y > 62 ? 4.4 : y > 58 ? 5.2 : y > 50 ? 3.8 : 4.4 + (50 - y) * 0.5;
     return [cx - hw, cx + hw];
   }, RUIN, (_x, _y, t) => cyl(t, 0.1));
-  basin(22, 12.5, 4.2, 3, 2.2);
-  // The stone bud on top, cupping a glowing heart.
-  c.part();
-  c.shape(9, 20, (y) => {
-    const u = (y - 9) / 11;
-    const hw = Math.sin(Math.min(1, u * 1.15) * Math.PI) ** 0.7 * 4.6 + (u > 0.85 ? 1 : 0);
-    return [cx - hw, cx + hw];
-  }, RUIN, (_x, _y, t, u) => cyl(t, 0.35 - u * 0.5));
-  for (let y = 11; y <= 19; y += 1) {
+  for (const y of [58, 62, 67]) for (let x = cx - 6; x <= cx + 6; x++) if (c.filled(x, y)) c.shade(x, y, -1);
+  // Fluting.
+  for (let y = 51; y <= 57; y++) {
     c.shade(cx - 2, y, -1);
-    c.shade(cx + 2, y, -1);
+    c.shade(cx + 1, y, -1);
   }
+
+  // The middle bowl, its underside curving in to the column.
   c.part();
-  c.ellipse(cx, 8.5, 2.2, 2, LUMEN, { glow: 0.95 });
-  c.spark(cx - 1, 7, [255, 255, 255], 0.9);
-  // Water spilling from the upper bowl into the lower, in beads that move down the arc each frame.
-  const falls: [number, number, number][] = [
-    [-11, 36, -1],
-    [11, 36, 1],
-    [-6, 40, -1],
-    [6, 40, 1],
-  ];
-  for (const [ox, land, dir] of falls) {
-    for (let k = 0; k < 14; k++) {
-      const s = (k + f * 0.33 * 3) % 14;
-      const t = s / 13;
-      const x = cx + ox + dir * t * 5 * (Math.abs(ox) > 8 ? 1.6 : 1);
-      const y = 24 + t * (land - 24) + t * t * 2;
-      const bright = (k + f) % 3 === 0 ? 1 : 0.55;
-      c.spark(x, y, [170, 236, 255], bright);
-    }
-    // Splashes where it lands.
-    c.spark(cx + ox + dir * 8 + ((f % 2) * 2 - 1), land + 1, [220, 250, 255], 0.8);
+  c.shape(44, 50, (y) => {
+    const u = (y - 44) / 6;
+    const hw = 18.5 - Math.sin(u * Math.PI * 0.5) * 13;
+    return [cx - hw, cx + hw];
+  }, RUIN, (_x, _y, t, u) => cyl(t, -0.2 - u * 0.4));
+  bowl(40, 19, 5.5, 3, 2.6, 0);
+
+  // The slender stem up to the lotus, with a knot halfway.
+  c.part();
+  c.shape(23, 39, (y) => {
+    const hw = Math.abs(y - 31) < 1.5 ? 3.6 : y > 36 ? 3.4 : 2.6;
+    return [cx - hw, cx + hw];
+  }, RUIN, (_x, _y, t) => cyl(t, 0.15));
+  c.shade(cx, 31, 1);
+
+  // The stone lotus: a shallow cup, petals rising round it, the heart held inside.
+  const lotusY = 23;
+  c.part();
+  c.ellipse(cx, lotusY, 9, 3.2, RUIN, { normal: () => TOP, bias: 0 });
+  const petal = (a: number, len: number, w: number, bias: number) => {
+    const bx = cx + Math.cos(a) * 8;
+    const by = lotusY + Math.sin(a) * 2.6;
+    // Up and out from the cup.
+    const out = Math.cos(a);
+    leaf(c, bx, by + 1, -Math.PI / 2 + out * 0.95, len, w, RUIN, bias);
+  };
+  c.part();
+  for (const a of [Math.PI * 1.15, Math.PI * 1.35, Math.PI * 1.65, Math.PI * 1.85]) petal(a, 8, 2.3, 0);
+  c.part();
+  c.ellipse(cx, FOUNTAIN_HEART_Y, 3.4, 3.2, LUMEN, { glow: 1 });
+  c.part();
+  for (const a of [Math.PI * 0.05, Math.PI * 0.3, Math.PI * 0.5, Math.PI * 0.7, Math.PI * 0.95]) petal(a, 6, 2.2, 1);
+
+  // --- Light: the water, which moves from frame to frame. ---
+
+  // The heart's glint, and a faint halo that turns with the frames.
+  c.spark(cx - 1, FOUNTAIN_HEART_Y - 2, [255, 255, 255], 1);
+  for (let k = 0; k < 6; k++) {
+    const a = k * (Math.PI / 3) + p * Math.PI * 2 * 0.34;
+    c.spark(cx + Math.cos(a) * 5, FOUNTAIN_HEART_Y + Math.sin(a) * 3.2, [120, 240, 230], 0.28);
   }
-  // Light rippling on the lower basin.
-  for (let k = 0; k < 5; k++) {
-    const a = k * 1.3 + f * 0.7;
-    c.spark(cx + Math.cos(a) * 15, 41 + Math.sin(a) * 3.5, [150, 230, 240], 0.5);
+
+  // The jet: a column from the heart, bright knots running up it.
+  const top = FOUNTAIN_JET_Y;
+  for (let y = top + 1; y < FOUNTAIN_HEART_Y - 3; y++) {
+    const knot = (((y + f * 2) % 4) + 4) % 4 < 1.5 ? 0.45 : 0;
+    c.spark(cx, y, FOAM, 0.5 + knot);
+    if (y > top + 4) c.spark(cx + ((y + f) % 2 === 0 ? -1 : 1), y, SPRAY, 0.22);
+  }
+  // Its crown, bursting.
+  for (let k = -2; k <= 2; k++) c.spark(cx + k, top + (Math.abs(k) === 2 ? 1 : 0), FOAM, Math.abs(k) === 2 ? 0.5 : 0.9);
+  c.spark(cx + (f % 2 === 0 ? -1 : 1), top - 1, FOAM, 0.6);
+
+  // Arcs falling from the crown, some into the lotus and most out into the middle bowl.
+  const arcs: [number, number, number][] = [
+    [7, lotusY - 1, 8],
+    [12, 40, 12],
+    [16, 41, 14],
+  ];
+  for (const dir of [-1, 1]) {
+    arcs.forEach(([reach, land, n], i) => {
+      for (let k = 0; k < n; k++) {
+        const t = ((k + p * 3 + i * 0.4) % n) / n;
+        const x = cx + dir * reach * t;
+        const y = top - 5 * t + (land - top + 5) * t * t;
+        const lead = (k + f + i) % 3 === 0;
+        c.spark(x, y, lead ? FOAM : SPRAY, lead ? 0.85 : 0.4);
+      }
+      // A splash where it lands.
+      if ((f + i) % 2 === 0) c.spark(cx + dir * (reach + 1), land - 1, FOAM, 0.7);
+      c.spark(cx + dir * reach, land, FOAM, 0.5);
+    });
+  }
+
+  // Veils spilling over the middle bowl's lip into the basin: a few pixels wide,
+  // with brighter bands sliding down them.
+  const veil = (a: number, fromY: number, rx: number, ry: number, toY: number, wide: number, lean: number) => {
+    const x0 = cx + Math.cos(a) * rx;
+    const y0 = fromY + Math.sin(a) * ry + 1;
+    const dir = Math.sign(Math.cos(a)) || 0;
+    for (let y = Math.floor(y0); y <= toY; y++) {
+      const t = (y - y0) / Math.max(1, toY - y0);
+      const x = x0 + dir * lean * (Math.sqrt(t) * 0.8);
+      const band = ((((y - f * 3) % 6) + 6) % 6) < 2 ? 0.45 : 0;
+      for (let w = 0; w < wide; w++) c.spark(x + w * (dir || 1) - (wide > 1 ? dir * 0.5 : 0), y, w === 0 ? FOAM : SPRAY, (0.32 + band) * (w === 0 ? 1 : 0.6));
+    }
+    // Foam and rings where it lands.
+    const lx = x0 + dir * lean * 0.8;
+    for (let k = -1; k <= 1; k++) c.spark(lx + k, toY + 1, FOAM, k === 0 ? 0.8 : 0.4);
+    if (f % 2 === 1) c.spark(lx + (f % 4 === 1 ? -1 : 1), toY - 1, FOAM, 0.6);
+    return lx;
+  };
+  const lands: [number, number][] = [];
+  for (const [a, wide] of [
+    [0.12, 2],
+    [0.55, 2],
+    [1.05, 1],
+    [1.57, 2],
+    [2.09, 1],
+    [2.59, 2],
+    [3.02, 2],
+  ] as const) {
+    const toY = Math.round(72 + Math.sin(a) * 5);
+    lands.push([veil(a, 40, 19, 5.5, toY, wide, 3), toY + 1]);
+  }
+  // Thinner veils from the lotus into the middle bowl.
+  for (const a of [0.35, 1.25, 1.9, 2.8]) veil(a, lotusY, 9, 3.2, Math.round(40 + Math.sin(a) * 3), 1, 1.5);
+
+  // Rings spreading on the basin where the veils land.
+  const inBasin = (x: number, y: number) => ((x - cx) / 31) ** 2 + ((y - 72.4) / 7.3) ** 2 < 1;
+  lands.forEach(([lx, ly], i) => {
+    const age = (p + i * 0.37) % 1;
+    const r = 1.5 + age * 5;
+    const alpha = (1 - age) * 0.45;
+    for (let k = 0; k < 20; k++) {
+      const a = (k / 20) * Math.PI * 2;
+      const x = lx + Math.cos(a) * r;
+      const y = ly + Math.sin(a) * r * 0.34;
+      if (inBasin(x, y)) c.spark(x, y, SPRAY, alpha);
+    }
+  });
+  // Light playing on both bowls' water.
+  for (let k = 0; k < 9; k++) {
+    const a = k * 0.7 + p * Math.PI * 2;
+    const r = 0.55 + ((k * 0.37) % 0.4);
+    const x = cx + Math.cos(a + k) * 31 * r;
+    const y = 72.4 + Math.sin(a * 1.3 + k) * 6.5 * r;
+    if (inBasin(x, y)) c.spark(x, y, DEEP_SPRAY, 0.4);
+  }
+  for (let k = 0; k < 4; k++) {
+    const a = k * 1.6 + p * Math.PI * 2;
+    c.spark(cx + Math.cos(a) * 12, 40.4 + Math.sin(a) * 2, DEEP_SPRAY, 0.4);
   }
   return c;
+}
+
+/** Rings spreading on still water: frames r0.. of a thin ellipse growing and fading. */
+export const RIPPLE_W = 30;
+export const RIPPLE_H = 11;
+export const RIPPLE_FRAMES = 6;
+
+export function rippleFrames(): Uint8ClampedArray[] {
+  const out: Uint8ClampedArray[] = [];
+  for (let f = 0; f < RIPPLE_FRAMES; f++) {
+    const px = new Uint8ClampedArray(RIPPLE_W * RIPPLE_H * 4);
+    const t = f / (RIPPLE_FRAMES - 1);
+    const rx = 2.5 + t * 11.5;
+    const ry = rx * 0.36;
+    const alpha = Math.round(255 * (1 - t * 0.8));
+    const inside = (x: number, y: number) => ((x + 0.5 - RIPPLE_W / 2) / rx) ** 2 + ((y + 0.5 - RIPPLE_H / 2) / ry) ** 2 <= 1;
+    for (let y = 0; y < RIPPLE_H; y++) {
+      for (let x = 0; x < RIPPLE_W; x++) {
+        if (!inside(x, y) || (inside(x - 1, y) && inside(x + 1, y) && inside(x, y - 1) && inside(x, y + 1))) continue;
+        // Brighter on the near side, broken here and there as it spreads.
+        const near = y + 0.5 > RIPPLE_H / 2;
+        if (f > 2 && hash2(x, y + f * 13, 57) < 0.25) continue;
+        px.set([255, 255, 255, near ? alpha : Math.round(alpha * 0.55)], (y * RIPPLE_W + x) * 4);
+      }
+    }
+    // A second, fainter ring inside once the first has spread.
+    if (f >= 2) {
+      const r2 = rx * 0.5;
+      for (let k = 0; k < 24; k++) {
+        const a = (k / 24) * Math.PI * 2;
+        const x = Math.floor(RIPPLE_W / 2 + Math.cos(a) * r2);
+        const y = Math.floor(RIPPLE_H / 2 + Math.sin(a) * r2 * 0.36);
+        px.set([255, 255, 255, Math.round(alpha * 0.45)], (y * RIPPLE_W + x) * 4);
+      }
+    }
+    out.push(px);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------

@@ -153,7 +153,7 @@ export function gardenLayout(): GardenLayout {
       { x: 76, y: 268, frame: 'c0' },
       { x: 566, y: 560, frame: 'c0' },
     ],
-    fountain: { x: POOL.x, y: POOL.y + 6 },
+    fountain: { x: POOL.x, y: POOL.y + 10 },
     walls,
   };
   return layout;
