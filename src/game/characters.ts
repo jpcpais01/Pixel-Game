@@ -18,6 +18,8 @@ import { Alchemist, CHEM_STYLE, PLAGUE_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
 import { Archer, RANGER_STYLE, STORM_STYLE } from './Archer';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
+import { BLOOD_KIT, NECRO_KIT, Necromancer } from './Necromancer';
+import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { wear, type SkinDef } from './skins';
 import type { Vitals } from './combat';
 
@@ -365,6 +367,40 @@ export const CHARACTERS: CharacterDef[] = [
       },
     ],
     spawn: (world, x, y, skin) => new Archer(world, x, y, skin === 'storm' ? STORM_STYLE : RANGER_STYLE),
+  },
+  {
+    id: 'necromancer',
+    name: 'Necromancer',
+    role: 'Bone and soul',
+    accent: 0x5cf0b0,
+    stats: { power: 3, speed: 3, range: 4 },
+    attack: 'Soul bolt',
+    special: 'Raise dead',
+    preview: { texture: 'necro', glow: 'necro_e', idle: 'necro_idle_down', chosen: 'necro_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
+    buttons: {
+      attack: { texture: 'icon_soul' },
+      special: { texture: 'icon_raise' },
+    },
+    skins: [
+      { id: 'necro', name: 'Necromancer' },
+      {
+        // A gameplay subtype: tougher, with fast lances that pierce and heal,
+        // and a nova paid for in his own blood instead of raising the dead.
+        id: 'blood',
+        name: 'Blood mage',
+        role: 'Blood and sacrifice',
+        accent: 0xff3a4a,
+        stats: { power: 5, speed: 3, range: 3 },
+        attack: 'Blood lance',
+        special: 'Crimson nova',
+        preview: { texture: 'necro_blood', glow: 'necro_blood_e', idle: 'necro_blood_idle_down', chosen: 'necro_blood_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
+        buttons: {
+          attack: { texture: 'icon_lance' },
+          special: { texture: 'icon_nova' },
+        },
+      },
+    ],
+    spawn: (world, x, y, skin) => new Necromancer(world, x, y, skin === 'blood' ? BLOOD_KIT : NECRO_KIT),
   },
 ];
 

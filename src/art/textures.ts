@@ -9,6 +9,8 @@ import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, A
 import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FRAMES, twirlStart, TWIRL_FPS, type JediMeta } from './jedi';
 import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, buildAlchemistFrames, flaskFrame } from './alchemist';
 import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE, arrowFrame, buildArcherFrames, stuckArrowFrame } from './archer';
+import { BLOOD_SPELL, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W, SOUL_SPELL, bloodLanceIcon, buildNecroFrames, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
+import { buildSkeletonSheet } from './skeleton';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
 import { hex } from './pixel';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
@@ -284,8 +286,31 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     scene.textures.addCanvas(`icon_rain${sfx}`, toCanvas(16, 16, rainIcon(q, look.storm)));
   }
 
+  // Necromancer once per look: 'necro' and 'necro_blood' for the blood mage.
+  // Their bolts use the spell orbs below ('orb_soul', 'orb_blood'); the dead
+  // they raise are 'skeleton', registered like a monster.
+  for (const look of NECRO_LOOKS) {
+    const nf = buildNecroFrames(look);
+    register(scene, look.key, pack(nf.map((f) => ({ name: f.key, r: f.canvas.render() })), NECRO_W, NECRO_H), NECRO_W, NECRO_H);
+    for (const a of NECRO_ANIMS) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: nf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
+    }
+  }
+  registerMonster(scene, 'skeleton', buildSkeletonSheet());
+  scene.textures.addCanvas('icon_soul', toCanvas(16, 16, soulBoltIcon()));
+  scene.textures.addCanvas('icon_raise', toCanvas(16, 16, raiseIcon()));
+  scene.textures.addCanvas('icon_lance', toCanvas(16, 16, bloodLanceIcon()));
+  scene.textures.addCanvas('icon_nova', toCanvas(16, 16, novaIcon()));
+
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
-  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL]] as const) {
+  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL]] as const) {
     register(scene, `orb${suffix}`, pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i, k)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
     register(scene, `burst${suffix}`, pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i, k)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
     scene.anims.create({ key: `orb${suffix}_spin`, frames: scene.anims.generateFrameNames(`orb${suffix}_e`, { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });

@@ -341,6 +341,30 @@ class GameSound {
     if (this.live()) this.sfx!.arrowRain(this.ctx!.currentTime, pan, storm);
   }
 
+  soulCast(pan = 0, blood = false): void {
+    if (this.live()) this.sfx!.soulCast(this.ctx!.currentTime, pan, blood);
+  }
+
+  soulHit(pan = 0, blood = false): void {
+    if (this.live()) this.sfx!.soulHit(this.ctx!.currentTime, pan, blood);
+  }
+
+  raiseDead(pan = 0): void {
+    if (this.live()) this.sfx!.raiseDead(this.ctx!.currentTime, pan);
+  }
+
+  boneHit(pan = 0): void {
+    if (this.live()) this.sfx!.boneHit(this.ctx!.currentTime, pan);
+  }
+
+  boneCrumble(pan = 0): void {
+    if (this.live()) this.sfx!.boneCrumble(this.ctx!.currentTime, pan);
+  }
+
+  bloodNova(pan = 0): void {
+    if (this.live()) this.sfx!.bloodNova(this.ctx!.currentTime, pan);
+  }
+
   step(): void {
     if (this.live()) this.sfx!.step(this.ctx!.currentTime);
   }

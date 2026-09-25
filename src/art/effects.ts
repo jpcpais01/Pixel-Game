@@ -843,7 +843,7 @@ export function barrageIcon(cols: IconColors): Uint8ClampedArray {
 }
 
 /** Paints 16x16 icons from a hex colour per pixel, then rings the shape in a dark outline. */
-function iconPainter(): { px: Uint8ClampedArray; put: (x: number, y: number, c: string) => void; outline: (c: string) => void } {
+export function iconPainter(): { px: Uint8ClampedArray; put: (x: number, y: number, c: string) => void; outline: (c: string) => void } {
   const S = 16;
   const px = new Uint8ClampedArray(S * S * 4);
   const put = (x: number, y: number, c: string) => {

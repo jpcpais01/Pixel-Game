@@ -960,6 +960,88 @@ export class Sfx {
     this.chirp(filter(this.m.ctx, 'lowpass', 1200, 1, out), t + 0.02, 'sine', f, f * 1.8, 0.12, 0.05);
   }
 
+  /** A soul bolt loosed: a hollow, falling moan and a breath of air; the blood lance is a wet, sharp hiss. */
+  soulCast(t: number, pan: number, blood: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.7, 0.5);
+    if (blood) {
+      this.burstNoise(out, t, 'bandpass', 2400, 900, 2.2, 0.35, 0.16);
+      this.chirp(filter(ctx, 'lowpass', 1400, 1, out), t, 'sawtooth', 320, 140, 0.12, 0.14);
+      return;
+    }
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 1800, 1.5, out));
+    hit(g.gain, t, 0.16, 0.03, 0.4);
+    for (const f of [440, 466]) {
+      const o = osc(ctx, 'triangle', f, g);
+      sweep(o.frequency, t, f, f * 0.6, 0.4);
+      o.start(t);
+      o.stop(t + 0.45);
+    }
+    this.burstNoise(out, t, 'bandpass', 900, 2600, 1.2, 0.18, 0.3);
+  }
+
+  /** A soul bolt striking: a cold chime and a puff; blood strikes wetter and lower. */
+  soulHit(t: number, pan: number, blood: boolean): void {
+    const out = this.out(pan, 0.7, 0.35);
+    if (blood) {
+      this.chirp(out, t, 'sine', 180, 60, 0.45, 0.1);
+      this.burstNoise(out, t, 'lowpass', 1400, 300, 1, 0.35, 0.12, true);
+      return;
+    }
+    this.bell(out, t, rand(1500, 1700), 0.04, 0.3);
+    this.burstNoise(out, t, 'bandpass', 1800, 700, 1.4, 0.3, 0.14);
+  }
+
+  /** The staff driven into the ground and the dead answering: a deep thud, a rising chord of wails, earth cracking. */
+  raiseDead(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.9, 0.6);
+    this.chirp(out, t, 'sine', 110, 40, 0.7, 0.4);
+    this.burstNoise(out, t, 'lowpass', 900, 200, 0.8, 0.45, 0.35, true);
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 2200, 1, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.1, t + 0.25);
+    g.gain.linearRampToValueAtTime(0, t + 1.1);
+    for (const f of [220, 262, 330]) {
+      const o = osc(ctx, 'triangle', f * 0.8, g);
+      sweep(o.frequency, t, f * 0.8, f, 0.9);
+      o.start(t);
+      o.stop(t + 1.15);
+    }
+    for (let i = 0; i < 4; i++) this.burstNoise(out, t + 0.1 + i * rand(0.05, 0.1), 'bandpass', rand(1800, 2600), 900, 3, 0.2, 0.04);
+  }
+
+  /** A risen blade biting: a dry bony clack and a scrape. */
+  boneHit(t: number, pan: number): void {
+    const out = this.out(pan, 0.5, 0.15);
+    this.burstNoise(out, t, 'bandpass', rand(2600, 3200), 1800, 4, 0.35, 0.03);
+    this.chirp(out, t, 'triangle', 600, 300, 0.12, 0.04);
+    this.burstNoise(out, t + 0.02, 'highpass', 4000, 5200, 0.8, 0.12, 0.08);
+  }
+
+  /** The risen falling apart: a patter of bones on the ground. */
+  boneCrumble(t: number, pan: number): void {
+    const out = this.out(pan, 0.45, 0.2);
+    for (let i = 0; i < 6; i++) this.burstNoise(out, t + i * rand(0.03, 0.07), 'bandpass', rand(1400, 2600), rand(900, 1400), 4, 0.25, 0.03);
+  }
+
+  /** The crimson nova: a heartbeat, then a wet roar spreading out. */
+  bloodNova(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.95, 0.55);
+    this.chirp(out, t, 'sine', 90, 45, 0.7, 0.18);
+    this.chirp(out, t + 0.14, 'sine', 80, 40, 0.55, 0.2);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t + 0.12);
+    g.gain.linearRampToValueAtTime(0.4, t + 0.18);
+    g.gain.setTargetAtTime(0, t + 0.3, 0.2);
+    const lp = filter(ctx, 'lowpass', 2400, 1, g);
+    sweep(lp.frequency, t + 0.12, 2400, 500, 0.6);
+    const src = this.m.noiseSource();
+    src.connect(lp);
+    this.m.startNoise(src, t + 0.12, 0.9);
+  }
+
   /** The bow drawn: the wood creaking as the string comes back, longer for the volley. */
   bowDraw(t: number, big: boolean): void {
     const ctx = this.m.ctx;
