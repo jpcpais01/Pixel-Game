@@ -341,6 +341,22 @@ class GameSound {
     if (this.live()) this.sfx!.arrowRain(this.ctx!.currentTime, pan, storm);
   }
 
+  knife(pan = 0, step = 1, finisher = false): void {
+    if (this.live()) this.sfx!.knife(this.ctx!.currentTime, pan, step, finisher);
+  }
+
+  knifeHit(pan = 0, heavy = false): void {
+    if (this.live()) this.sfx!.knifeHit(this.ctx!.currentTime, pan, heavy);
+  }
+
+  vanish(pan = 0, dance = false): void {
+    if (this.live()) this.sfx!.vanish(this.ctx!.currentTime, pan, dance);
+  }
+
+  blink(pan = 0): void {
+    if (this.live()) this.sfx!.blink(this.ctx!.currentTime, pan);
+  }
+
   soulCast(pan = 0, blood = false): void {
     if (this.live()) this.sfx!.soulCast(this.ctx!.currentTime, pan, blood);
   }

@@ -1,5 +1,5 @@
 // Dev tool: render a character's frames to a zoomed PNG contact sheet.
-// Usage: npx tsx scripts/sheet.ts [outDir] [scale] [wizard|void|pyro|warrior|jade|paladin|crusader|jedi|sith|fighter|monk|alchemist|witch|chem|archer|storm]
+// Usage: npx tsx scripts/sheet.ts [outDir] [scale] [wizard|void|pyro|warrior|jade|paladin|crusader|jedi|sith|fighter|monk|alchemist|witch|chem|archer|storm|rogue|dancer]
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { buildWizardFrames, FRAME_W as WIZ_W, FRAME_H as WIZ_H, ANIMS, DIRS, PYRO_LOOK, VOID_LOOK } from '../src/art/wizard';
 import { buildWarriorFrames, JADE_LOOK, WARRIOR_W, WARRIOR_H, WARRIOR_ANIMS } from '../src/art/warrior';
@@ -8,20 +8,21 @@ import { buildJediFrames, JEDI_W, JEDI_H, JEDI_ANIMS, SITH_LOOK } from '../src/a
 import { buildFighterFrames, FIGHTER_W, FIGHTER_H, FIGHTER_ANIMS, MONK_LOOK } from '../src/art/fighter';
 import { buildAlchemistFrames, ALCH_W, ALCH_H, ALCHEMIST_ANIMS, WITCH_LOOK, CHEM_LOOK } from '../src/art/alchemist';
 import { buildArcherFrames, ARCHER_W, ARCHER_H, ARCHER_ANIMS, STORM_LOOK } from '../src/art/archer';
+import { buildRogueFrames, ROGUE_W, ROGUE_H, ROGUE_ANIMS, DANCER_LOOK } from '../src/art/rogue';
 import { encodePNG } from './png';
 
 const out = process.argv[2] ?? 'sheets';
 const S = Number(process.argv[3] ?? 5);
 const arg = process.argv[4];
-const hero = arg === 'archer' || arg === 'storm' ? 'archer' : arg === 'alchemist' || arg === 'witch' || arg === 'chem' ? 'alchemist' : arg === 'fighter' || arg === 'monk' ? 'fighter' : arg === 'warrior' || arg === 'jade' ? 'warrior' : arg === 'paladin' || arg === 'crusader' ? 'paladin' : arg === 'jedi' || arg === 'sith' ? 'jedi' : 'wizard';
+const hero = arg === 'rogue' || arg === 'dancer' ? 'rogue' : arg === 'archer' || arg === 'storm' ? 'archer' : arg === 'alchemist' || arg === 'witch' || arg === 'chem' ? 'alchemist' : arg === 'fighter' || arg === 'monk' ? 'fighter' : arg === 'warrior' || arg === 'jade' ? 'warrior' : arg === 'paladin' || arg === 'crusader' ? 'paladin' : arg === 'jedi' || arg === 'sith' ? 'jedi' : 'wizard';
 mkdirSync(out, { recursive: true });
-const FRAME_W = hero === 'archer' ? ARCHER_W : hero === 'alchemist' ? ALCH_W : hero === 'fighter' ? FIGHTER_W : hero === 'jedi' ? JEDI_W : hero === 'warrior' ? WARRIOR_W : hero === 'paladin' ? PALADIN_W : WIZ_W;
-const FRAME_H = hero === 'archer' ? ARCHER_H : hero === 'alchemist' ? ALCH_H : hero === 'fighter' ? FIGHTER_H : hero === 'jedi' ? JEDI_H : hero === 'warrior' ? WARRIOR_H : hero === 'paladin' ? PALADIN_H : WIZ_H;
+const FRAME_W = hero === 'rogue' ? ROGUE_W : hero === 'archer' ? ARCHER_W : hero === 'alchemist' ? ALCH_W : hero === 'fighter' ? FIGHTER_W : hero === 'jedi' ? JEDI_W : hero === 'warrior' ? WARRIOR_W : hero === 'paladin' ? PALADIN_W : WIZ_W;
+const FRAME_H = hero === 'rogue' ? ROGUE_H : hero === 'archer' ? ARCHER_H : hero === 'alchemist' ? ALCH_H : hero === 'fighter' ? FIGHTER_H : hero === 'jedi' ? JEDI_H : hero === 'warrior' ? WARRIOR_H : hero === 'paladin' ? PALADIN_H : WIZ_H;
 const built: { anim: string; dir: string | null; canvas: { render(): ReturnType<ReturnType<typeof buildWizardFrames>[number]['canvas']['render']> } }[] =
-  hero === 'archer' ? buildArcherFrames(arg === 'storm' ? STORM_LOOK : undefined) : hero === 'alchemist' ? buildAlchemistFrames(arg === 'witch' ? WITCH_LOOK : arg === 'chem' ? CHEM_LOOK : undefined) : hero === 'fighter' ? buildFighterFrames(arg === 'monk' ? MONK_LOOK : undefined) : hero === 'jedi' ? buildJediFrames(arg === 'sith' ? SITH_LOOK : undefined) : hero === 'warrior' ? buildWarriorFrames(arg === 'jade' ? JADE_LOOK : undefined) : hero === 'paladin' ? buildPaladinFrames(arg === 'crusader' ? CRUSADER_LOOK : undefined) : buildWizardFrames(arg === 'void' ? VOID_LOOK : arg === 'pyro' ? PYRO_LOOK : undefined);
+  hero === 'rogue' ? buildRogueFrames(arg === 'dancer' ? DANCER_LOOK : undefined) : hero === 'archer' ? buildArcherFrames(arg === 'storm' ? STORM_LOOK : undefined) : hero === 'alchemist' ? buildAlchemistFrames(arg === 'witch' ? WITCH_LOOK : arg === 'chem' ? CHEM_LOOK : undefined) : hero === 'fighter' ? buildFighterFrames(arg === 'monk' ? MONK_LOOK : undefined) : hero === 'jedi' ? buildJediFrames(arg === 'sith' ? SITH_LOOK : undefined) : hero === 'warrior' ? buildWarriorFrames(arg === 'jade' ? JADE_LOOK : undefined) : hero === 'paladin' ? buildPaladinFrames(arg === 'crusader' ? CRUSADER_LOOK : undefined) : buildWizardFrames(arg === 'void' ? VOID_LOOK : arg === 'pyro' ? PYRO_LOOK : undefined);
 const frames = built.map((f) => ({ ...f, r: f.canvas.render() }));
 const rows: { anim: string; dir: string | null }[] = [];
-for (const a of hero === 'archer' ? ARCHER_ANIMS : hero === 'alchemist' ? ALCHEMIST_ANIMS : hero === 'fighter' ? (arg === 'monk' ? MONK_LOOK.anims : FIGHTER_ANIMS) : hero === 'jedi' ? JEDI_ANIMS : hero === 'warrior' ? WARRIOR_ANIMS : hero === 'paladin' ? PALADIN_ANIMS : ANIMS) for (const d of DIRS) rows.push({ anim: a.name, dir: d });
+for (const a of hero === 'rogue' ? ROGUE_ANIMS : hero === 'archer' ? ARCHER_ANIMS : hero === 'alchemist' ? ALCHEMIST_ANIMS : hero === 'fighter' ? (arg === 'monk' ? MONK_LOOK.anims : FIGHTER_ANIMS) : hero === 'jedi' ? JEDI_ANIMS : hero === 'warrior' ? WARRIOR_ANIMS : hero === 'paladin' ? PALADIN_ANIMS : ANIMS) for (const d of DIRS) rows.push({ anim: a.name, dir: d });
 if (hero === 'warrior') rows.push({ anim: 'spin', dir: null });
 if (hero === 'jedi') rows.push({ anim: 'twirl', dir: null });
 const cols = Math.max(...rows.map((r) => frames.filter((f) => f.anim === r.anim && f.dir === r.dir).length));
@@ -55,6 +56,6 @@ for (const layer of ['composite', 'diffuse', 'normal', 'emissive'] as const) {
       }
     });
   });
-  writeFileSync(`${out}/${arg === 'void' || arg === 'pyro' || arg === 'jade' || arg === 'sith' || arg === 'witch' || arg === 'chem' || arg === 'storm' ? arg : hero}_${layer}.png`, encodePNG(W, H, img));
+  writeFileSync(`${out}/${arg === 'void' || arg === 'pyro' || arg === 'jade' || arg === 'sith' || arg === 'witch' || arg === 'chem' || arg === 'storm' || arg === 'dancer' ? arg : hero}_${layer}.png`, encodePNG(W, H, img));
 }
 console.log('frames', frames.length, 'sheet', W, H);

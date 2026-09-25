@@ -18,6 +18,8 @@ import { Alchemist, CHEM_STYLE, PLAGUE_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
 import { Archer, RANGER_STYLE, STORM_STYLE } from './Archer';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
+import { DANCER_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
+import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { wear, type SkinDef } from './skins';
@@ -367,6 +369,40 @@ export const CHARACTERS: CharacterDef[] = [
       },
     ],
     spawn: (world, x, y, skin) => new Archer(world, x, y, skin === 'storm' ? STORM_STYLE : RANGER_STYLE),
+  },
+  {
+    id: 'rogue',
+    name: 'Rogue',
+    role: 'Daggers and shadows',
+    accent: 0xe8505a,
+    stats: { power: 4, speed: 5, range: 2 },
+    attack: 'Bleeding stabs',
+    special: 'Shadowstep',
+    preview: { texture: 'rogue', glow: 'rogue_e', idle: 'rogue_idle_down', chosen: 'rogue_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
+    buttons: {
+      attack: { texture: 'icon_daggers' },
+      special: { texture: 'icon_shadowstep' },
+    },
+    skins: [
+      { id: 'rogue', name: 'Rogue' },
+      {
+        // A gameplay subtype: a lighter, wider four-cut chain ending in a
+        // spin, and a dance that blinks from foe to foe instead of a dash.
+        id: 'dancer',
+        name: 'Shadow dancer',
+        role: 'Blades in the dark',
+        accent: 0xa878ff,
+        stats: { power: 3, speed: 5, range: 3 },
+        attack: 'Shadow cuts',
+        special: 'Shadow dance',
+        preview: { texture: 'rogue_dancer', glow: 'rogue_dancer_e', idle: 'rogue_dancer_idle_down', chosen: 'rogue_dancer_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
+        buttons: {
+          attack: { texture: 'icon_daggers_dancer' },
+          special: { texture: 'icon_shadowstep_dancer' },
+        },
+      },
+    ],
+    spawn: (world, x, y, skin) => new Rogue(world, x, y, skin === 'dancer' ? DANCER_STYLE : ROGUE_STYLE),
   },
   {
     id: 'necromancer',

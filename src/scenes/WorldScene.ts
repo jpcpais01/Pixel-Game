@@ -431,6 +431,11 @@ export class WorldScene extends Phaser.Scene {
     if (this.walkable(h.x, ny)) h.y = ny;
   }
 
+  /** The hero slips out of reach for `ms`: nothing can touch them (a rogue's shadow tricks). */
+  evade(ms: number): void {
+    this.grace = Math.max(this.grace, ms);
+  }
+
   /** Damage the hero, unless they are down or still in their grace window. */
   hurtHero(harm: Harm): void {
     const h = this.hero;
