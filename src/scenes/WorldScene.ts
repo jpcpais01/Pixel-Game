@@ -23,6 +23,7 @@ import { arenaById, type ArenaDef } from '../world/arenas';
 import { PLAZA_H, PLAZA_Y, plazaProps } from '../world/clearing';
 import { Garden } from '../world/Garden';
 import { CosmosArena } from '../world/Cosmos';
+import { FloatingIsland } from '../world/Island';
 import { isPainted } from '../world/arenas';
 
 type V3 = [number, number, number];
@@ -104,6 +105,8 @@ export class WorldScene extends Phaser.Scene {
   private garden: Garden | null = null;
   /** The arena's own living parts, when it is the Cosmos Arena. */
   private cosmos: CosmosArena | null = null;
+  /** The arena's own living parts, when it is the Floating Island. */
+  private island: FloatingIsland | null = null;
   /** How far the camera leans off the hero, toward a boss towering over the fight. */
   private lean = { x: 0, y: 0 };
   /** The light this frame: 0 night .. 1 day (fixed in arenas without day and night). */
@@ -198,6 +201,7 @@ export class WorldScene extends Phaser.Scene {
     this.banner = null;
     this.garden = null;
     this.cosmos = null;
+    this.island = null;
     this.lean.x = this.lean.y = 0;
     this.shafts = null;
     this.regenAcc = this.regenShown = this.regenT = this.auraT = 0;
@@ -236,6 +240,10 @@ export class WorldScene extends Phaser.Scene {
     this.ground = isPainted(arena.ground) ? null : new GroundStreamer(this, arena.ground, (img) => ground(img) as Phaser.GameObjects.Image);
     sound.setOutdoors(arena.id !== 'cosmos');
     if (arena.id === 'cosmos') this.cosmos = new CosmosArena(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
+    if (arena.id === 'island') {
+      this.island = new FloatingIsland(this, ground, this.view);
+      this.shadows.push(...this.island.shadows);
+    }
 
     // Faint shafts of sunlight over the clearing's ground. Drifting cloud
     // shadows are drawn over everything, with the vignette (see below).
@@ -1098,6 +1106,7 @@ export class WorldScene extends Phaser.Scene {
     this.garden?.update(time, dt, target, d, this.view);
     // After the day/night light: the cosmos lights itself.
     this.cosmos?.update(time, dt);
+    this.island?.update(time, dt);
     this.updateBanner();
     for (const f of this.flickers) {
       const k = 1 + (f.day - 1) * d;

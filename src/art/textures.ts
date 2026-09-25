@@ -24,6 +24,9 @@ import { buildBarklingSheet, buildBeetleSheet, buildFrogSheet, buildGlowmothShee
 import { buildWardenSheet } from './warden';
 import { FLOAT_ROCK_H, FLOAT_ROCK_W, HOLE_SIZE, METEOR_H, METEOR_W, OBELISK_H, OBELISK_W, PLATFORM_H, PLATFORM_W, RAY_H as COSMIC_RAY_H, RAY_W as COSMIC_RAY_W, cosmicRay, floatingRock, lightPool, meteor, obelisk, platformArt, shockRing, singularity, spaceCanvas, streak } from './cosmos';
 import { COSMOS_H, COSMOS_W } from '../world/cosmosLayout';
+import { COLUMN_H, COLUMN_W, ISLAND_H, ISLAND_W, ISLETS, column, fallStrip, foam, islandArt, islet, skyCanvas, wisp } from './island';
+import { ISLE_H, ISLE_W } from '../world/islandLayout';
+import { birdSheet } from './skyArena';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, leafBit, rayCanvas } from './trees';
 import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, RIPPLE_FRAMES, RIPPLE_H, RIPPLE_W, rippleFrames, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
@@ -483,4 +486,49 @@ function* cosmosTextures(scene: Phaser.Scene): Generator<void, void, void> {
   scene.textures.addCanvas('cosmos_nova_ring', toCanvas(nova.w, nova.h, nova.px));
   // Last: its presence means everything above is built.
   scene.textures.addCanvas('cosmos_streak', toCanvas(40, 3, streak(40)));
+}
+
+/** The Floating Island's textures being built, a little per call. */
+const islandJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
+
+/**
+ * Build the Floating Island's sky, island, columns and the sky's moving
+ * parts, spending at most `budget` ms (as warmCosmos). Returns true when
+ * they are all there.
+ */
+export function warmIsland(scene: Phaser.Scene, budget = Infinity): boolean {
+  if (scene.textures.exists('isle_bird')) return true;
+  let job = islandJobs.get(scene);
+  if (!job) {
+    job = islandTextures(scene);
+    islandJobs.set(scene, job);
+  }
+  const start = performance.now();
+  while (performance.now() - start < budget) {
+    if (job.next().done) {
+      islandJobs.delete(scene);
+      return true;
+    }
+  }
+  return false;
+}
+
+function* islandTextures(scene: Phaser.Scene): Generator<void, void, void> {
+  const sky = yield* skyCanvas();
+  scene.textures.addCanvas('isle_sky', toCanvas(ISLE_W, ISLE_H, sky));
+  const land = yield* islandArt();
+  scene.textures.addCanvas('isle_land', toCanvas(ISLAND_W, ISLAND_H, land.diffuse))!.setDataSource(toCanvas(ISLAND_W, ISLAND_H, land.normal));
+  scene.textures.addCanvas('isle_land_e', toCanvas(ISLAND_W, ISLAND_H, land.emissive));
+  yield;
+  register(scene, 'isle_column', pack(frameList([column(0), column(1)], 'c'), COLUMN_W, COLUMN_H), COLUMN_W, COLUMN_H, false);
+  yield;
+  ISLETS.forEach((l, k) => scene.textures.addCanvas(`isle_islet${k}`, islet(l.s, l.seed, l.kind).toCanvas()));
+  yield;
+  [0, 1, 2].forEach((k) => scene.textures.addCanvas(`isle_wisp${k}`, wisp(300 + k * 17).toCanvas()));
+  scene.textures.addCanvas('isle_foam', foam().toCanvas());
+  scene.textures.addCanvas('isle_fall', fallStrip().toCanvas());
+  // Last: its presence means everything above is built.
+  const bird = scene.textures.addCanvas('isle_bird', birdSheet().toCanvas())!;
+  bird.add('b0', 0, 0, 0, 5, 3);
+  bird.add('b1', 0, 5, 0, 5, 3);
 }
