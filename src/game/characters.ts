@@ -11,6 +11,8 @@ import { Paladin } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
+import { Fighter } from './Fighter';
+import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { wear, type SkinDef } from './skins';
 import type { Vitals } from './combat';
 
@@ -195,6 +197,21 @@ export const CHARACTERS: CharacterDef[] = [
       },
     ],
     spawn: (world, x, y, skin) => new Jedi(world, x, y, skin === 'sith' ? SITH_STYLE : JEDI_STYLE),
+  },
+  {
+    id: 'fighter',
+    name: 'Fighter',
+    role: 'Fists of fury',
+    accent: 0xff6a4a,
+    stats: { power: 4, speed: 4, range: 2 },
+    attack: 'Five-hit combo',
+    special: 'Barrage',
+    preview: { texture: 'fighter', glow: 'fighter_e', idle: 'fighter_idle_down', chosen: 'fighter_smash_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
+    buttons: {
+      attack: { texture: 'icon_fist' },
+      special: { texture: 'icon_barrage' },
+    },
+    spawn: (world, x, y) => new Fighter(world, x, y),
   },
 ];
 

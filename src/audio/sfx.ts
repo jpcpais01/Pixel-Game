@@ -744,6 +744,66 @@ export class Sfx {
     }
   }
 
+  /** A punch cutting the air: a short, tight whoosh, heavier and lower down the combo. */
+  punch(t: number, pan: number, step: number): void {
+    const ctx = this.m.ctx;
+    const heavy = step >= 5;
+    const dur = heavy ? 0.24 : 0.09 + step * 0.012;
+    const out = this.out(pan, heavy ? 0.85 : 0.6, 0.15);
+    const w = gain(ctx, 0, out);
+    hit(w.gain, t, heavy ? 0.55 : 0.45, 0.008, dur);
+    const bp = filter(ctx, 'bandpass', 1500, heavy ? 1.2 : 1.8, w);
+    const top = (heavy ? 1300 : [3000, 2600, 2200, 2400][Math.min(3, step - 1)]) * rand(0.94, 1.06);
+    sweep(bp.frequency, t, top * 0.5, top, dur * 0.3);
+    sweep(bp.frequency, t + dur * 0.3, top, top * 0.45, dur * 0.7);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, dur + 0.03);
+    if (heavy) {
+      // The finisher's wind-up snaps into a deep push of air.
+      this.chirp(out, t, 'sine', 180, 55, 0.4, 0.22);
+    }
+  }
+
+  /** A fist landing: a meaty thump under the slap of leather. */
+  punchHit(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 1 : 0.75, heavy ? 0.35 : 0.2);
+    this.chirp(out, t, 'sine', heavy ? 150 : 190, heavy ? 42 : 60, heavy ? 0.75 : 0.55, heavy ? 0.2 : 0.11);
+    this.burstNoise(out, t, 'lowpass', 2600, 500, 0.8, heavy ? 0.6 : 0.45, heavy ? 0.12 : 0.06, true);
+    this.burstNoise(out, t, 'bandpass', rand(1300, 1700), 900, 2.2, heavy ? 0.45 : 0.35, 0.035);
+    if (heavy) this.burstNoise(out, t + 0.01, 'bandpass', 420, 180, 1.5, 0.4, 0.18, true);
+  }
+
+  /** One fist of the barrage: the lightest tick of air, so dozens a second never pile up. */
+  flurry(t: number, pan: number): void {
+    const out = this.out(pan, 0.4, 0.1);
+    this.burstNoise(out, t, 'bandpass', rand(2600, 3400), rand(1200, 1600), 2, 0.35, 0.045);
+  }
+
+  /** The barrage kindling: breath drawn in hard and a rising roar of fire. */
+  kiai(t: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.75, 0.45);
+    const dur = 0.4;
+    const air = gain(ctx, 0, out);
+    air.gain.setValueAtTime(0, t);
+    air.gain.linearRampToValueAtTime(0.45, t + dur * 0.8);
+    air.gain.linearRampToValueAtTime(0, t + dur + 0.1);
+    const bp = filter(ctx, 'bandpass', 400, 1.2, air);
+    sweep(bp.frequency, t, 300, 2400, dur);
+    const src = this.m.noiseSource(true);
+    src.connect(bp);
+    this.m.startNoise(src, t, dur + 0.15);
+    const lo = gain(ctx, 0, out);
+    lo.gain.setValueAtTime(0, t);
+    lo.gain.linearRampToValueAtTime(0.25, t + dur * 0.9);
+    lo.gain.linearRampToValueAtTime(0, t + dur + 0.12);
+    const o = osc(ctx, 'sawtooth', 70, filter(ctx, 'lowpass', 500, 1, lo));
+    sweep(o.frequency, t, 70, 140, dur);
+    o.start(t);
+    o.stop(t + dur + 0.15);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {

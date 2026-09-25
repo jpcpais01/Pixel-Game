@@ -542,3 +542,81 @@ export function forceIcon(cols: IconColors): Uint8ClampedArray {
   }
   return px;
 }
+
+/** 16x16 red glove for the fighter's attack button: a clenched fist over a taped wrist, speed lines behind it. */
+export function fistIcon(): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: string) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const n = parseInt(c.slice(1), 16);
+    const i = (y * S + x) * 4;
+    px[i] = n >> 16;
+    px[i + 1] = (n >> 8) & 255;
+    px[i + 2] = n & 255;
+    px[i + 3] = 255;
+  };
+  const glove = (dx: number, dy: number) => (dx + dy < -4.2 ? '#ff8c66' : dx + dy < -1.2 ? '#ea4838' : dx + dy < 2.4 ? '#bd262c' : '#7a1420');
+  // Tape round the wrist, lower left.
+  for (let y = 10; y <= 14; y++) {
+    for (let x = 3; x <= 8; x++) {
+      const d = x - 3 + (14 - y);
+      if (d < 2 || d > 7) continue;
+      put(x, y, (x + y) % 3 === 0 ? '#968fa8' : x < 5 ? '#f2eef4' : '#cfc9d8');
+    }
+  }
+  // The fist: a rounded block of knuckles leaning up to the right.
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = (x + 0.5 - 9.5) / 5;
+      const dy = (y + 0.5 - 6.5) / 4.6;
+      if (dx * dx + dy * dy <= 1) put(x, y, glove(x + 0.5 - 9.5, y + 0.5 - 6.5));
+    }
+  }
+  // Finger creases across the knuckles, and the thumb folded over them.
+  for (const x of [8, 10, 12]) for (let y = 3; y <= 6; y++) put(x + (y > 4 ? 1 : 0), y, '#7a1420');
+  for (let x = 6; x <= 10; x++) put(x, 8, x < 8 ? '#ff8c66' : '#ea4838');
+  for (let x = 6; x <= 10; x++) put(x, 9, '#7a1420');
+  put(12, 3, '#ffd6c0');
+  put(7, 3, '#ffd6c0');
+  // Speed lines behind it.
+  for (const [x0, y, n] of [[0, 4, 3], [1, 7, 2], [0, 10, 2]]) for (let i = 0; i < n; i++) put(x0 + i, y, i === n - 1 ? '#fff2dc' : '#ffc49a');
+  const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < S && y < S && px[(y * S + x) * 4 + 3] === 255;
+  const out: [number, number][] = [];
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      if (filled(x, y)) continue;
+      if (filled(x + 1, y) || filled(x - 1, y) || filled(x, y + 1) || filled(x, y - 1)) out.push([x, y]);
+    }
+  }
+  for (const [x, y] of out) put(x, y, '#0e1120');
+  return px;
+}
+
+/** 16x16 icon for the fighter's barrage: a volley of burning fists streaking out to the right, drawn additively. */
+export function barrageIcon(cols: IconColors): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: RGB) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    if (px[i] + px[i + 1] + px[i + 2] >= c[0] + c[1] + c[2]) return;
+    px[i] = c[0];
+    px[i + 1] = c[1];
+    px[i + 2] = c[2];
+    px[i + 3] = 255;
+  };
+  // Three fists, the nearest largest, each with a tapering streak behind it.
+  for (const [fx, fy, r, len] of [[12, 4, 1.9, 7], [9.5, 11, 1.9, 7], [13.5, 9, 2.4, 9]] as const) {
+    for (let x = 0; x < S; x++) {
+      for (let y = 0; y < S; y++) {
+        const dx = x + 0.5 - fx;
+        const dy = y + 0.5 - fy;
+        const d = Math.hypot(dx, dy);
+        if (d <= r) put(x, y, dx > r * 0.3 ? cols[0] : d < r * 0.6 ? cols[1] : cols[2]);
+        else if (dx < 0 && -dx < len && Math.abs(dy) < r * (1 + dx / len) + 0.2) put(x, y, -dx < len * 0.4 ? cols[2] : cols[3]);
+      }
+    }
+  }
+  return px;
+}

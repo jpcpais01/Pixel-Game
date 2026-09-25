@@ -199,7 +199,7 @@ export class UIScene extends Phaser.Scene {
     const pressed = this.buttonPointer !== null;
     const br = R * (pressed ? 0.78 : 0.84);
     this.icon.setPosition(bp.x, bp.y).setScale(Math.max(2, Math.round(R / 14)) * (pressed ? 0.9 : 1));
-    const b = this.redraw(this.button, `${pressed} ${bp.x} ${bp.y} ${R} ${comboHud.window} ${comboHud.hits}`);
+    const b = this.redraw(this.button, `${pressed} ${bp.x} ${bp.y} ${R} ${comboHud.window} ${comboHud.hits} ${comboHud.max}`);
     if (b) {
       b.fillStyle(0x0c1433, pressed ? 0.75 : 0.55);
       b.fillCircle(bp.x, bp.y, br);
@@ -216,8 +216,10 @@ export class UIScene extends Phaser.Scene {
         b.beginPath();
         b.arc(bp.x, bp.y, br + 6 * D, top, top + Math.PI * 2 * comboHud.window, false);
         b.strokePath();
-        for (let i = 0; i < 3; i++) {
-          const a = top + (i - 1) * 0.34;
+        const n = comboHud.max;
+        const gap = n > 3 ? 0.27 : 0.34;
+        for (let i = 0; i < n; i++) {
+          const a = top + (i - (n - 1) / 2) * gap;
           const px = bp.x + Math.cos(a) * (br + 15 * D);
           const py = bp.y + Math.sin(a) * (br + 15 * D);
           const lit = i < comboHud.hits;
