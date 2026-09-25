@@ -5,6 +5,14 @@ import { ARCANE_STYLE, type SpellStyle } from './spells';
 const SPEED = 175;
 const LIFETIME = 1100;
 
+/** How a ball flies, and what happens where it bursts (the pyromancer's fireball blasts). */
+export interface BallKind {
+  speed?: number;
+  lifetime?: number;
+  /** Called once where the ball bursts, whether it struck something or not. */
+  onBurst?: (x: number, y: number) => void;
+}
+
 /** The wizard's first attack: a crackling ball of light with a sparkling trail. */
 export class EnergyBall {
   x: number;
@@ -19,14 +27,19 @@ export class EnergyBall {
   private light: Phaser.GameObjects.Light;
   private trail: Phaser.GameObjects.Particles.ParticleEmitter;
   private k: SpellStyle;
+  private lifetime: number;
+  readonly onBurst?: (x: number, y: number) => void;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, dx: number, dy: number, style: SpellStyle = ARCANE_STYLE) {
+  constructor(scene: Phaser.Scene, x: number, y: number, dx: number, dy: number, style: SpellStyle = ARCANE_STYLE, kind: BallKind = {}) {
     this.scene = scene;
     this.k = style;
     this.x = x;
     this.y = y;
-    this.vx = dx * SPEED;
-    this.vy = dy * SPEED;
+    const speed = kind.speed ?? SPEED;
+    this.vx = dx * speed;
+    this.vy = dy * speed;
+    this.lifetime = kind.lifetime ?? LIFETIME;
+    this.onBurst = kind.onBurst;
     this.sprite = scene.add.sprite(x, y, style.orb.texture, 'o0').setBlendMode(Phaser.BlendModes.ADD).play(style.orb.anim);
     this.halo = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(style.glow).setAlpha(0.8);
     this.light = scene.lights.addLight(x, y, 90, style.light, 2.2);
@@ -68,7 +81,7 @@ export class EnergyBall {
     this.light.intensity = 2.0 + Math.sin(this.age * 0.05) * 0.3;
     this.trail.setDepth(depth - 0.2);
 
-    if (hitTest(this.x, this.y) || this.age > LIFETIME || !bounds.contains(this.x, this.y)) this.explode();
+    if (hitTest(this.x, this.y) || this.age > this.lifetime || !bounds.contains(this.x, this.y)) this.explode();
   }
 
   explode(): void {

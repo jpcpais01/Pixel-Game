@@ -189,6 +189,51 @@ export const VOID_DEEP = hex('#6a2fd0');
 export const VOID_TEAL = hex('#6ff0e0');
 
 // ---------------------------------------------------------------------------
+// The Pyromancer wizard: a smouldering crimson robe over charcoal, molten-gold
+// trim that glows faintly, an ash-white beard, a charred staff and an ember crystal.
+// Its magic uses the EMBER colours above.
+
+export const PYRO_ROBE: Material = {
+  ramp: ramp('#1e0a0c', '#3a1014', '#5e1a1a', '#8a2a1e', '#b8432a'),
+  outline: INK,
+  outlineLit: hex('#2a0c10'),
+};
+
+export const PYRO_INNER: Material = {
+  ramp: ramp('#120808', '#221010', '#341816', '#48221e'),
+  outline: INK,
+};
+
+/** Molten gold: the trim smoulders in the dark. */
+export const PYRO_TRIM: Material = {
+  ramp: ramp('#5a1e0c', '#a8481a', '#e88a2a', '#ffc85a', '#fff0b0'),
+  outline: hex('#2a0c08'),
+  shine: true,
+  emissive: 0.3,
+};
+
+/** A beard gone ash-white in the heat, warm against the crimson. */
+export const PYRO_BEARD: Material = {
+  ramp: ramp('#5a4644', '#8c7470', '#c2aca2', '#f2e4d8'),
+  outline: hex('#1e0e0c'),
+  outlineLit: hex('#3a2220'),
+};
+
+export const CHAR_WOOD: Material = {
+  ramp: ramp('#120a0a', '#261412', '#3e2018', '#5a3020'),
+  outline: hex('#080404'),
+};
+
+export const EMBER_CRYSTAL: Material = {
+  ramp: ramp('#8a1e0e', '#e0501c', '#ffa63a', '#fff2c0'),
+  outline: hex('#2a0806'),
+  outlineLit: hex('#4a1008'),
+  emissive: 0.9,
+  shine: true,
+  noAO: true,
+};
+
+// ---------------------------------------------------------------------------
 // The paladin: bright white-silver plate, a royal azure cape and shield, an
 // ivory tabard, gold trim and holy light.
 

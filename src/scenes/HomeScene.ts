@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
-import { LOGO_FRAMES, everlandsLogo, sparkleBitmap } from '../art/logo';
+import { LOGO_FRAMES, mythsLogo, sparkleBitmap } from '../art/logo';
 import { type Backdrop, makeBackdrop } from './homeBackdrops';
 import { BUTTON_GOLD, PixelButton, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
@@ -86,7 +86,7 @@ export class HomeScene extends Phaser.Scene {
 
   private buildTextures(): void {
     if (this.textures.exists('home_title')) return;
-    const logo = everlandsLogo();
+    const logo = mythsLogo();
     const title = this.textures.addCanvas('home_title', logo.sheet.toCanvas())!;
     for (let i = 0; i < LOGO_FRAMES; i++) title.add(i, 0, 0, i * logo.frameH, logo.frameW, logo.frameH);
     this.registry.set('logoSparkles', logo.sparkles);
@@ -116,7 +116,7 @@ export class HomeScene extends Phaser.Scene {
     this.title.setScale(ts);
     this.titleGlow.setScale((this.title.width * ts * 1.15) / 32, (this.title.height * ts * 1.3) / 32);
     const top = Math.ceil(fpsBottom() / this.z) + 6;
-    this.titleY = Math.max(top, Math.round(vh * 0.17));
+    this.titleY = Math.max(top, Math.round(vh * 0.1));
     this.title.setPosition(Math.round((vw - this.title.displayWidth) / 2), this.titleY);
     const by = Math.max(this.titleY + this.title.displayHeight + 14, Math.round(vh * 0.52));
     this.start.place((vw - this.start.boxW) / 2, by);

@@ -25,14 +25,32 @@ const FOOTFALLS = new Set([1, 4]);
 export interface WizardHooks {
   /** Energy ball released from the crystal. */
   cast(x: number, y: number, dx: number, dy: number): void;
-  /** Beam fired from the crystal with the given charge (0..1). */
-  beam(x: number, y: number, dx: number, dy: number, power: number): void;
+  /** Special released from the crystal with the given charge (0..1); `dist` is how far away the mouse is, on a computer. */
+  beam(x: number, y: number, dx: number, dy: number, power: number, dist?: number): void;
+  /** Each frame while the special charges: where it is aimed. For specials that land at a spot. */
+  target?(dx: number, dy: number, level: number, dist?: number): void;
+  /** The charge ended (released or fizzled). */
+  untarget?(): void;
 }
+
+/** What a wizard look plays like. Looks without one play as the arcane wizard. */
+export interface WizardKit {
+  maxHp: number;
+  /** Walking speed, world px / second. */
+  speed: number;
+  /** ms after a cast ends before the next can start. */
+  castCooldown: number;
+  /** How long the wizard stands rooted after releasing the special at `power`. */
+  fireTime(power: number): number;
+}
+
+export const ARCANE_KIT: WizardKit = { maxHp: MAX_HP, speed: SPEED, castCooldown: CAST_COOLDOWN, fireTime: (p) => beamSpec(p).duration };
 
 /** Which look to wear: the texture/animation prefix and the matching spell colours. */
 export interface WizardSkin {
   key: string;
   style: SpellStyle;
+  kit?: WizardKit;
 }
 
 export const ARCANE_SKIN: WizardSkin = { key: 'wizard', style: ARCANE_STYLE };
@@ -52,7 +70,7 @@ export class Wizard implements Hero {
   private castShadow: Phaser.GameObjects.Sprite;
   /** 0 = night, 1 = day: softens the staff light and shows the sun shadow. */
   daylight = 0;
-  readonly vitals = new Vitals(MAX_HP);
+  readonly vitals: Vitals;
   /** 0..1, fades the whole figure (see Hero). */
   alpha = 1;
   private state: State = 'free';
@@ -74,6 +92,7 @@ export class Wizard implements Hero {
   private beamLatch = false;
   /** Texture and animation prefix of the worn look. */
   private key: string;
+  private kit: WizardKit;
 
   /** The body sprite (see Hero). */
   get sprite(): Phaser.GameObjects.Sprite {
@@ -84,6 +103,8 @@ export class Wizard implements Hero {
     this.x = x;
     this.y = y;
     this.hooks = hooks;
+    this.kit = skin.kit ?? ARCANE_KIT;
+    this.vitals = new Vitals(this.kit.maxHp);
     const key = (this.key = skin.key);
     this.shadow = scene.add.image(x, y, 'shadow').setDepth(1);
     this.castShadow = sunShadow(scene.add.sprite(x, y, `${key}_s`, 'idle_down_0').setOrigin(ORIGIN_X / 24, ORIGIN_Y / 32));
@@ -102,7 +123,7 @@ export class Wizard implements Hero {
     this.body.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (anim: Phaser.Animations.Animation) => {
       if (anim.key.startsWith(`${key}_cast`) && this.state === 'cast') {
         this.state = 'free';
-        this.cooldown = CAST_COOLDOWN;
+        this.cooldown = this.kit.castCooldown;
         this.body.play(`${this.key}_idle_${this.dir}`);
       }
     });
@@ -130,7 +151,8 @@ export class Wizard implements Hero {
 
     // Movement: full speed walking, a slow shuffle while casting or charging,
     // rooted in place while the beam fires.
-    const speed = { free: SPEED * Math.min(1, len), cast: SPEED * 0.25, charge: SPEED * 0.2, beam: 0 }[this.state];
+    const pace = this.kit.speed;
+    const speed = { free: pace * Math.min(1, len), cast: pace * 0.25, charge: pace * 0.2, beam: 0 }[this.state];
     if (moving && speed > 0) {
       this.x = Phaser.Math.Clamp(this.x + (mx / len) * speed * (dt / 1000), bounds.left, bounds.right);
       this.y = Phaser.Math.Clamp(this.y + (my / len) * speed * (dt / 1000), bounds.top, bounds.bottom);
@@ -199,12 +221,14 @@ export class Wizard implements Hero {
         const t = this.crystal();
         this.charge.fizzle(t.x + 0.5, t.y + 0.5);
         sound.beamFizzle();
+        this.hooks.untarget?.();
         this.beamLatch = true;
         this.state = 'free';
         this.cooldown = BEAM_COOLDOWN;
         this.body.play(`${this.key}_idle_${this.dir}`);
       }
     }
+    if (this.state === 'charge') this.hooks.target?.(this.castDir.x, this.castDir.y, this.charged / CHARGE_TIME, this.aim?.dist);
     beamHud.charge = this.charged / CHARGE_TIME;
     beamHud.over = this.held / HOLD_TIME;
     if (this.state === 'charge') sound.beamCharge(beamHud.charge, beamHud.over);
@@ -215,7 +239,8 @@ export class Wizard implements Hero {
     const power = Math.max(MIN_POWER, this.charged / CHARGE_TIME);
     this.charge.hide();
     this.state = 'beam';
-    this.firing = beamSpec(power).duration;
+    this.firing = this.kit.fireTime(power);
+    this.hooks.untarget?.();
     beamHud.charge = beamHud.over = 0;
     beamHud.firing = true;
     this.body.chain();
@@ -223,7 +248,7 @@ export class Wizard implements Hero {
     // Tip of the firing pose (same staff as the charge pose).
     this.sync();
     const t = this.crystal();
-    this.hooks.beam(t.x, t.y, this.castDir.x, this.castDir.y, power);
+    this.hooks.beam(t.x, t.y, this.castDir.x, this.castDir.y, power, this.aim?.dist);
   }
 
   /** Depth for magic at the crystal: behind the wizard when facing away, in front otherwise. */

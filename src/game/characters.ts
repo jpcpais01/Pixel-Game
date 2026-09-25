@@ -5,6 +5,7 @@
 import type Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
 import { ARCANE_SKIN, VOID_SKIN, Wizard } from './Wizard';
+import { PYRO_SKIN, Pyromancy } from './Pyro';
 import { JADE_SKIN, KNIGHT_SKIN, Warrior } from './Warrior';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
 import { CRUSADER_KIT, HOLY_KIT, Paladin } from './Paladin';
@@ -77,7 +78,7 @@ export interface CharacterDef {
     attack: { texture: string; frame?: string; anim?: string };
     special: { texture: string };
   };
-  /** Alternate looks or gameplay subtypes; the first is the default (see skins.ts). */
+  /** Alternate looks (some with their own stats and abilities); the first is the default (see skins.ts). */
   skins?: SkinDef[];
   /** `skin` is the id of the worn skin, for characters that have skins. */
   spawn(world: WorldScene, x: number, y: number, skin?: string): Hero;
@@ -112,8 +113,41 @@ export const CHARACTERS: CharacterDef[] = [
           special: { texture: 'icon_beam_void' },
         },
       },
+      {
+        id: 'pyro',
+        name: 'Pyromancer',
+        role: 'Fire and fury',
+        accent: 0xff8a30,
+        stats: { power: 5, speed: 3, range: 4 },
+        attack: 'Fireball',
+        special: 'Meteor',
+        preview: { texture: 'wizard_pyro', glow: 'wizard_pyro_e', idle: 'wizard_pyro_idle_down', chosen: 'wizard_pyro_cast_down' },
+        buttons: {
+          attack: { texture: 'orb_pyro_e', frame: 'o0', anim: 'orb_pyro_spin' },
+          special: { texture: 'icon_meteor' },
+        },
+      },
     ],
     spawn(world, x, y, skin) {
+      if (skin === 'pyro') {
+        // Fireballs that blast and burn; a charged meteor called down where it's aimed.
+        const fire = new Pyromancy(world);
+        const w = new Wizard(
+          world,
+          x,
+          y,
+          {
+            cast: (x, y, dx, dy) => fire.fireball(x, y, dx, dy),
+            beam: (_x, _y, dx, dy, power, dist) => fire.meteor(dx, dy, power, dist),
+            target: (dx, dy, level, dist) => fire.target(dx, dy, level, dist),
+            untarget: () => fire.untarget(),
+          },
+          PYRO_SKIN,
+        );
+        fire.caster = w;
+        world.addEffect(fire);
+        return w;
+      }
       const look = skin === 'void' ? VOID_SKIN : ARCANE_SKIN;
       const w: Wizard = new Wizard(
         world,

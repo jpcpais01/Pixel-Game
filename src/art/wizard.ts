@@ -8,7 +8,13 @@ import { PixelCanvas, cyl, sphere, type Material, type RGB, type Vec3 } from './
 import {
   BEARD,
   BOOT,
+  CHAR_WOOD,
   CRYSTAL,
+  EMBER_CORE,
+  EMBER_CRYSTAL,
+  EMBER_DEEP,
+  EMBER_HOT,
+  EMBER_MID,
   EYE,
   GOLD,
   HAIR,
@@ -20,6 +26,10 @@ import {
   MAGIC_MID,
   OBSIDIAN,
   PALE_SKIN,
+  PYRO_BEARD,
+  PYRO_INNER,
+  PYRO_ROBE,
+  PYRO_TRIM,
   ROBE,
   ROBE_INNER,
   SILVER,
@@ -57,6 +67,10 @@ export interface WizardLook {
    * and a crescent-headed staff.
    */
   hooded: boolean;
+  /** Beard and hair of the hatted look (default: white). */
+  beard?: Material;
+  /** The emblem on the hat: a star, or a flame. */
+  sigil?: 'star' | 'flame';
 }
 
 export const ARCANE_LOOK: WizardLook = {
@@ -87,7 +101,24 @@ export const VOID_LOOK: WizardLook = {
   hooded: true,
 };
 
-export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK];
+/** The Pyromancer: the classic hat and beard in fire colours, a flame on the hat. */
+export const PYRO_LOOK: WizardLook = {
+  key: 'wizard_pyro',
+  robe: PYRO_ROBE,
+  inner: PYRO_INNER,
+  trim: PYRO_TRIM,
+  belt: PYRO_INNER,
+  boot: BOOT,
+  skin: SKIN,
+  shaft: CHAR_WOOD,
+  crystal: EMBER_CRYSTAL,
+  magic: { core: EMBER_CORE, hot: EMBER_HOT, mid: EMBER_MID, deep: EMBER_DEEP },
+  hooded: false,
+  beard: PYRO_BEARD,
+  sigil: 'flame',
+};
+
+export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let S: WizardLook = ARCANE_LOOK;
@@ -356,6 +387,17 @@ function brim(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number): v
 function star(c: PixelCanvas, x: number, y: number): void {
   c.part();
   const n: Vec3 = { x: -0.3, y: 0.4, z: 0.86 };
+  if (S.sigil === 'flame') {
+    // A little flame: a round base, a hot heart, licking up to a tip that curls right.
+    c.px(x - 1, y + 1, S.trim, n);
+    c.px(x, y + 1, S.trim, n);
+    c.px(x + 1, y + 1, S.trim, n);
+    c.px(x - 1, y, S.trim, n);
+    c.px(x, y, S.trim, n, { bias: 2 });
+    c.px(x, y - 1, S.trim, n, { bias: 1 });
+    c.px(x + 1, y - 2, S.trim, n, { bias: 1 });
+    return;
+  }
   c.px(x, y, S.trim, n, { bias: 1 });
   c.px(x - 1, y, S.trim, n);
   c.px(x + 1, y, S.trim, n);
@@ -371,14 +413,14 @@ function beardedHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.part();
   c.ellipse(cx, 13.4 + U, 3.7, 2.7, S.skin);
   c.part();
-  c.shape(12 + U, 14 + U, () => [7.6, 9.2], BEARD, (_x, _y, t) => cyl(t - 0.6, 0.2));
-  c.shape(12 + U, 14 + U, () => [14.8, 16.4], BEARD, (_x, _y, t) => cyl(t + 0.6, 0.2));
+  c.shape(12 + U, 14 + U, () => [7.6, 9.2], S.beard ?? BEARD, (_x, _y, t) => cyl(t - 0.6, 0.2));
+  c.shape(12 + U, 14 + U, () => [14.8, 16.4], S.beard ?? BEARD, (_x, _y, t) => cyl(t + 0.6, 0.2));
   c.part();
   const bw = [4.3, 4.1, 3.7, 3.1, 2.4, 1.7, 1.0];
   c.shape(14 + U, 20 + U, (y) => {
     const hw = bw[y - 14 - U];
     return [cx - hw, cx + hw];
-  }, BEARD, (_x, _y, t, u) => sphere(t * 0.85, (u - 0.25) * 1.1, 0.9));
+  }, S.beard ?? BEARD, (_x, _y, t, u) => sphere(t * 0.85, (u - 0.25) * 1.1, 0.9));
   // Strands.
   c.shade(10, 17 + U, -1);
   c.shade(13, 18 + U, -1);
@@ -405,14 +447,14 @@ function beardedHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
 function beardedHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   // Back of the head: long hair and beard edges.
   c.part();
-  c.ellipse(cx, 13.6 + U, 4.0, 3.0, HAIR, {
+  c.ellipse(cx, 13.6 + U, 4.0, 3.0, S.beard ?? HAIR, {
     normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9),
   });
   c.part();
   c.shape(15 + U, 17 + U, (y) => {
     const hw = [3.4, 2.8, 1.8][y - 15 - U];
     return [cx - hw, cx + hw];
-  }, HAIR, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 0.9));
+  }, S.beard ?? HAIR, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 0.9));
   // Strands of hair.
   c.shade(10, 13 + U, -1);
   c.shade(10, 14 + U, -1);
@@ -429,7 +471,7 @@ function beardedHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
 function beardedHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   // Head: hair at the back, profile face, nose, beard.
   c.part();
-  c.ellipse(cx + 1.2, 13.4 + U, 3.3, 2.8, HAIR, {
+  c.ellipse(cx + 1.2, 13.4 + U, 3.3, 2.8, S.beard ?? HAIR, {
     normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 0.9),
   });
   c.part();
@@ -446,7 +488,7 @@ function beardedHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
     [cx - 4.0, cx - 1.2],
     [cx - 3.6, cx - 1.8],
   ];
-  c.shape(14 + U, 19 + U, (y) => bw[y - 14 - U] as [number, number], BEARD, (_x, _y, t, u) => sphere(t * 0.8 - 0.1, (u - 0.2) * 1.1, 0.9), { bias: 1 });
+  c.shape(14 + U, 19 + U, (y) => bw[y - 14 - U] as [number, number], S.beard ?? BEARD, (_x, _y, t, u) => sphere(t * 0.8 - 0.1, (u - 0.2) * 1.1, 0.9), { bias: 1 });
   c.shade(cx - 3, 17 + U, -1);
   c.shade(cx - 2, 15 + U, -1);
   c.part();
