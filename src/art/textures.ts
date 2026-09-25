@@ -21,7 +21,7 @@ import { FLOAT_ROCK_H, FLOAT_ROCK_W, HOLE_SIZE, METEOR_H, METEOR_W, OBELISK_H, O
 import { COSMOS_H, COSMOS_W } from '../world/cosmosLayout';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, leafBit, rayCanvas } from './trees';
-import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
+import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, RIPPLE_FRAMES, RIPPLE_H, RIPPLE_W, rippleFrames, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
 
 function toCanvas(w: number, h: number, px: Uint8ClampedArray): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -353,7 +353,10 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   register(scene, 'ruin_v', pack(frameList([0, 1, 2].map(ruinV), 'v'), RUIN_V_W, RUIN_V_H), RUIN_V_W, RUIN_V_H, false);
   register(scene, 'pillar', pack(frameList([0, 1, 2].map(pillar), 'p'), PILLAR_W, PILLAR_H), PILLAR_W, PILLAR_H, false);
   register(scene, 'fountain', pack(frameList(Array.from({ length: FOUNTAIN_FRAMES }, (_, f) => fountain(f)), 'f'), FOUNTAIN_W, FOUNTAIN_H), FOUNTAIN_W, FOUNTAIN_H);
-  scene.anims.create({ key: 'fountain_flow', frames: scene.anims.generateFrameNames('fountain_e', { prefix: 'f', start: 0, end: FOUNTAIN_FRAMES - 1 }), frameRate: 8, repeat: -1 });
+  scene.anims.create({ key: 'fountain_flow', frames: scene.anims.generateFrameNames('fountain_e', { prefix: 'f', start: 0, end: FOUNTAIN_FRAMES - 1 }), frameRate: 10, repeat: -1 });
+  const ripples = scene.textures.addCanvas('ripple', toCanvas(RIPPLE_W * RIPPLE_FRAMES, RIPPLE_H, sideBySide(RIPPLE_W, RIPPLE_H, rippleFrames())))!;
+  for (let i = 0; i < RIPPLE_FRAMES; i++) ripples.add(`r${i}`, 0, i * RIPPLE_W, 0, RIPPLE_W, RIPPLE_H);
+  scene.anims.create({ key: 'ripple_spread', frames: scene.anims.generateFrameNames('ripple', { prefix: 'r', start: 0, end: RIPPLE_FRAMES - 1 }), frameRate: 7, repeat: 0 });
   register(scene, 'thornbloom', pack([{ name: 'bloom', r: thornbloom(false).render() }, { name: 'stump', r: thornbloom(true).render() }], THORNBLOOM_W, THORNBLOOM_H), THORNBLOOM_W, THORNBLOOM_H, true, true);
   const blooms = BLOOM_KINDS.flatMap((k) => (['open', 'bud', 'cut'] as const).map((stage) => ({ name: `${k}_${stage}`, r: bloom(k, stage).render() })));
   register(scene, 'bloom', pack(blooms, BLOOM_W, BLOOM_H, 12), BLOOM_W, BLOOM_H, true, true);
