@@ -6,9 +6,18 @@ import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PANEL_PICKED, PixelButto
 import { fpsBottom } from './FpsScene';
 import type { HomeScene } from './HomeScene';
 
-const CARD_W = 164;
-const CARD_H = 92;
-const GAP = 8;
+// Wide enough for the longest names, roles and ability names in the pixel font.
+const CARD_W = 208;
+const CARD_H = 102;
+const GAP = 6;
+// Portrait inset, and the gap between it and the text column.
+const PORTRAIT_W = 66;
+const TEXT_GAP = 5;
+// Text rows: the name and role are centred in the band above the stats; abilities sit at the bottom.
+const TITLE_TOP = 6;
+const STATS_Y = 48;
+const ABILITY_Y = CARD_H - 24;
+const LINE_H = 9;
 // Skin arrows: tall, thin tabs down the card's left and right edges.
 const ARROW_W = 8;
 const ARROW_INSET = 3;
@@ -22,6 +31,32 @@ const FLING_KEEP = 0.004;
 
 /** The hero picked last, kept while the game runs. */
 let lastPicked = 0;
+
+/** Word-wrap `text` into lines no wider than `maxW` at the pixel font's size, at most `maxLines`. */
+function wrapText(probe: Phaser.GameObjects.BitmapText, text: string, maxW: number, maxLines: number): string[] {
+  const fits = (t: string) => probe.setText(t).width <= maxW;
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.toUpperCase().split(/\s+/)) {
+    const next = line ? `${line} ${word}` : word;
+    if (!line || fits(next)) line = next;
+    else {
+      lines.push(line);
+      line = word;
+    }
+  }
+  if (line) lines.push(line);
+  // Too many lines: fold the rest into the last one, which then gets trimmed.
+  if (lines.length > maxLines) lines.splice(maxLines - 1, lines.length, lines.slice(maxLines - 1).join(' '));
+  return lines.map((l) => fitLine(probe, l, maxW));
+}
+
+/** Trim a single line to `maxW`, ending in a dot, as a last resort for text too long to fit. */
+function fitLine(probe: Phaser.GameObjects.BitmapText, text: string, maxW: number): string {
+  let t = text;
+  while (t.length > 1 && probe.setText(t).width > maxW) t = t.slice(0, -2).trimEnd() + '.';
+  return t;
+}
 
 /** True when a released pointer moved too far from where it went down to be a tap. */
 const dragged = (scene: Phaser.Scene, p: Phaser.Input.Pointer): boolean => p.getDistance() / scene.cameras.main.zoom > TAP_SLOP;
@@ -83,22 +118,28 @@ class Card extends Phaser.GameObjects.Container {
   private sprite: Phaser.GameObjects.Sprite;
   private glow?: Phaser.GameObjects.Sprite;
   private pedestal: Phaser.GameObjects.Image;
+  private title: Phaser.GameObjects.BitmapText;
   private role: Phaser.GameObjects.BitmapText;
+  /** Measures text without showing it. */
+  private probe: Phaser.GameObjects.BitmapText;
   private pips: Phaser.GameObjects.Graphics;
   private abilities: Phaser.GameObjects.BitmapText[];
   private skinName?: Phaser.GameObjects.BitmapText;
   private arrows: SkinArrow[] = [];
   private picked = false;
-  /** Left edge of the portrait and of the text, in card pixels. */
+  /** Left edge of the portrait and of the text, and the text column's width, in card pixels. */
   private px: number;
   private tx: number;
+  private textW: number;
 
   constructor(scene: Phaser.Scene, base: CharacterDef, onTap: () => void) {
     super(scene, 0, 0);
     this.base = base;
     const skins = base.skins ?? [];
     this.px = skins.length > 1 ? PORTRAIT_X_SKINS : PORTRAIT_X;
-    this.tx = this.px + (skins.length > 1 ? 57 : 59);
+    this.tx = this.px + PORTRAIT_W + TEXT_GAP;
+    const right = skins.length > 1 ? ARROW_INSET + ARROW_W + 3 : PORTRAIT_X + 2;
+    this.textW = CARD_W - right - this.tx;
     const def = this.def;
     this.keys = [panelTexture(scene, 'card', CARD_W, CARD_H, PANEL), panelTexture(scene, 'card_picked', CARD_W, CARD_H, PANEL_PICKED)];
     this.bg = scene.add.image(0, 0, this.keys[0]).setOrigin(0);
@@ -114,31 +155,34 @@ class Card extends Phaser.GameObjects.Container {
     scene.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, () => (pressed = false));
 
     // Portrait: the character at 2x on a lit pedestal.
-    const inset = scene.add.image(this.px, 5, panelTexture(scene, 'portrait', 54, 82, PANEL_INSET)).setOrigin(0);
-    const fx = this.px + 27;
-    const fy = 78;
+    const inset = scene.add.image(this.px, 5, panelTexture(scene, 'portrait', PORTRAIT_W, CARD_H - 10, PANEL_INSET)).setOrigin(0);
+    const fx = this.px + PORTRAIT_W / 2;
+    const fy = CARD_H - 14;
     this.pedestal = scene.add.image(fx, fy - 2, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(1.4, 0.45);
     const shadow = scene.add.image(fx, fy, 'shadow').setScale(2);
     this.sprite = scene.add.sprite(fx, fy, def.preview.texture).setScale(2);
     if (def.preview.glow) this.glow = scene.add.sprite(fx, fy, def.preview.glow).setScale(2).setBlendMode(Phaser.BlendModes.ADD);
 
     const x = this.tx;
-    const name = pixelText(scene, x, 7, def.name, 0xfff4d6, 2);
-    this.role = pixelText(scene, x, 27, def.role, 0xb8a8e8);
+    this.probe = pixelText(scene, 0, 0, '').setVisible(false);
+    // The name is big when it fits the column, else normal size (and trimmed only if it still won't).
+    this.title = pixelText(scene, x, 0, def.name, 0xfff4d6, 2);
+    if (this.title.width > this.textW) this.title.setScale(1).setText(fitLine(this.probe, def.name.toUpperCase(), this.textW));
+    this.role = pixelText(scene, x, 0, '', 0xb8a8e8);
     this.pips = scene.add.graphics();
-    const labels = ['Power', 'Speed', 'Range'].map((label, i) => pixelText(scene, x, 39 + i * 9, label, 0x8a7cc0));
-    this.abilities = [0, 1].map((i) => pixelText(scene, x, 68 + i * 10, ''));
+    const labels = ['Power', 'Speed', 'Range'].map((label, i) => pixelText(scene, x, STATS_Y + i * LINE_H, label, 0x8a7cc0));
+    this.abilities = [0, 1].map((i) => pixelText(scene, x, ABILITY_Y + i * 10, ''));
 
     // Skins: arrows on both sides step through them; the worn one is named over the portrait.
     if (skins.length > 1) {
-      this.skinName = pixelText(scene, 0, 9, '');
+      this.skinName = pixelText(scene, 0, 9, '').setCenterAlign();
       this.arrows = [
         new SkinArrow(scene, ARROW_INSET, -1, () => this.stepSkin(-1, onTap)),
         new SkinArrow(scene, CARD_W - ARROW_INSET - ARROW_W, 1, () => this.stepSkin(1, onTap)),
       ];
     }
 
-    this.add([this.bg, inset, this.pedestal, shadow, this.sprite, ...(this.glow ? [this.glow] : []), name, this.role, this.pips, ...labels, ...this.abilities, ...(this.skinName ? [this.skinName] : []), ...this.arrows]);
+    this.add([this.bg, inset, this.pedestal, shadow, this.sprite, ...(this.glow ? [this.glow] : []), this.title, this.role, this.pips, ...labels, ...this.abilities, ...(this.skinName ? [this.skinName] : []), ...this.arrows]);
     scene.add.existing(this);
     this.applySkin(false);
     this.setPicked(false);
@@ -166,25 +210,36 @@ class Card extends Phaser.GameObjects.Container {
     this.sprite.setTexture(def.preview.texture).setOrigin(0.5, oy);
     if (def.preview.glow) this.glow?.setTexture(def.preview.glow).setOrigin(0.5, oy);
     this.pedestal.setTint(def.accent);
-    this.role.setText(def.role.toUpperCase());
-
     const x = this.tx;
+    // Name and role (wrapped to two lines if need be), centred together above the stats.
+    const roleLines = wrapText(this.probe, def.role, this.textW, 2);
+    this.role.setText(roleLines.join('\n'));
+    const nameH = this.title.height;
+    const blockH = nameH + 2 + this.role.height;
+    const top = Math.round(TITLE_TOP + (STATS_Y - 3 - TITLE_TOP - blockH) / 2);
+    this.title.setY(top);
+    this.role.setY(top + nameH + 2);
+
     const stats = [def.stats.power, def.stats.speed, def.stats.range];
     const pips = this.pips.clear();
     stats.forEach((value, i) => {
-      const y = 39 + i * 9;
+      const y = STATS_Y + i * LINE_H;
       for (let p = 0; p < 5; p++) {
         pips.fillStyle(0x0b0818).fillRect(x + 36 + p * 7, y + 1, 7, 7);
         pips.fillStyle(p < value ? def.accent : 0x2a2150).fillRect(x + 37 + p * 7, y + 2, 5, 5);
         if (p < value) pips.fillStyle(0xffffff, 0.45).fillRect(x + 37 + p * 7, y + 2, 5, 1);
       }
     });
-    [def.attack, def.special].forEach((a, i) => this.abilities[i].setText(`* ${a}`.toUpperCase()).setCharacterTint(0, 1, false, def.accent));
+    [def.attack, def.special].forEach((a, i) => {
+      const text = fitLine(this.probe, `* ${a}`.toUpperCase(), this.textW);
+      this.abilities[i].setText(text).setCharacterTint(0, 1, false, def.accent);
+    });
 
     if (this.skinName) {
       const skin = skinOf(this.base);
-      this.skinName.setText((skin?.name ?? '').toUpperCase()).setTint(def.accent);
-      this.skinName.setX(Math.round(this.px + 27 - this.skinName.width / 2));
+      // Long subtype names take two lines over the portrait.
+      this.skinName.setText(wrapText(this.probe, skin?.name ?? '', PORTRAIT_W - 4, 2).join('\n')).setTint(def.accent);
+      this.skinName.setX(Math.round(this.px + (PORTRAIT_W - this.skinName.width) / 2));
       for (const a of this.arrows) a.draw(undefined, def.accent);
     }
 
@@ -403,7 +458,7 @@ export class SelectScene extends Phaser.Scene {
     const n = this.cards.length;
     const rows = Math.min(2, n);
     const cols = Math.ceil(n / rows);
-    const margin = 8;
+    const margin = 6;
     const fullW = cols * CARD_W + (cols - 1) * GAP;
     const blockH = rows * CARD_H + (rows - 1) * GAP;
     const zMax = menuZoom(width, height);
