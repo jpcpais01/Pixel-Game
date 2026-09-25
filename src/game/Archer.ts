@@ -72,7 +72,6 @@ export class Archer implements Hero {
   private loosed = false;
   private cooldown = 0;
   private specialCd = 0;
-  private bounds = new Phaser.Geom.Rectangle();
   private style: ArcherStyle;
 
   /** The body sprite (see Hero). */
@@ -112,7 +111,6 @@ export class Archer implements Hero {
 
   update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle, aim: Aim | null = null): void {
     this.aim = aim;
-    this.bounds = bounds;
     const len = Math.hypot(mx, my);
     const moving = len > 0.18;
     if (moving) this.lastMove.set(mx / len, my / len);
@@ -172,14 +170,15 @@ export class Archer implements Hero {
   }
 
   /**
-   * The arrow leaves the string. It flies at chest height, the height the
+   * The arrow leaves the string. It flies over the whole world, not just the
+   * room the hero's step is clamped to. It flies at chest height, the height the
    * mouse is aimed from, so its ground track runs from his feet along the aim.
    */
   private loose(): void {
     const u = this.line;
     sound.bowShot(this.world.pan(this.x), this.style.arrow.storm);
     this.world.addEffect(
-      new Arrow(this.world, this.x + u.x * 6, this.y + u.y * 3, u.x, u.y, ARROW_RANGE, this.bounds, (h, x, y) => {
+      new Arrow(this.world, this.x + u.x * 6, this.y + u.y * 3, u.x, u.y, ARROW_RANGE, this.world.area, (h, x, y) => {
         h.hurt({ damage: ARROW_DAMAGE, heavy: false, knock: 70, fromX: x - u.x * 8, fromY: y - u.y * 8 });
       }, this.style.arrow),
     );
@@ -189,8 +188,9 @@ export class Archer implements Hero {
   private looseVolley(): void {
     const u = this.line;
     const fromChest = this.aim?.dist !== undefined;
-    const tx = Phaser.Math.Clamp(this.x + u.x * this.range, this.bounds.left, this.bounds.right);
-    const ty = Phaser.Math.Clamp((fromChest ? this.y - ARROW_H : this.y) + u.y * this.range, this.bounds.top, this.bounds.bottom);
+    const area = this.world.area;
+    const tx = Phaser.Math.Clamp(this.x + u.x * this.range, area.left, area.right);
+    const ty = Phaser.Math.Clamp((fromChest ? this.y - ARROW_H : this.y) + u.y * this.range, area.top, area.bottom);
     this.specialCd = SPECIAL_COOLDOWN;
     sound.volley(this.world.pan(this.x), this.style.arrow.storm);
     this.world.cameras.main.shake(60, 0.0002);

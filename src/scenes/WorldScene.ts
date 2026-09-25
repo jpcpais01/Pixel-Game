@@ -108,6 +108,10 @@ export class WorldScene extends Phaser.Scene {
   /** Time until the next speck rising from a buff's glow. */
   private auraT = 0;
   private worldRect = new Phaser.Geom.Rectangle();
+  /** The whole world, for shots that fly beyond the room around the hero. */
+  get area(): Phaser.Geom.Rectangle {
+    return this.worldRect;
+  }
   private balls: EnergyBall[] = [];
   private beams: Beam[] = [];
   private flickers: Flicker[] = [];
