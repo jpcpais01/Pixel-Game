@@ -1,6 +1,13 @@
-// Playable characters. The select screen lists CHARACTERS in order, and the
-// world spawns whichever one was picked. A new hero is one entry here, plus
-// its textures (built in art/textures.ts) and its Hero class.
+// Playable characters, in three levels:
+//  - a class (the Wizard) is a hero with its own Hero class and art;
+//  - a type (the Pyromancer) is a way to play that class, with its own stats
+//    and abilities; the first type is the class's base type;
+//  - a skin (Void) belongs to a type and changes only its looks.
+// The select screen lists CLASSES in order, and the world spawns whichever
+// look was picked. A class's spawn gets a look id: a type's own id for its
+// base look, or one of its skins' ids. Ids are unique within a class, so the
+// look id alone says both the type and the skin (and old saves, which stored
+// one id per hero, still load).
 
 import type Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
@@ -22,7 +29,7 @@ import { DANCER_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
-import { wear, type SkinDef } from './skins';
+import { worn } from './skins';
 import type { Vitals } from './combat';
 
 /** A unit direction. */
@@ -56,76 +63,136 @@ export interface Hero {
   update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle, aim?: Aim | null): void;
 }
 
-export interface CharacterDef {
+type Stats = { power: number; speed: number; range: number };
+
+/** The animated portrait on the select screen. */
+export interface Preview {
+  texture: string;
+  /** Additive glow layer with the same frame names, if any. */
+  glow?: string;
+  /** Looping idle animation key. */
+  idle: string;
+  /** Played once when the look is picked. */
+  chosen: string;
+  /** Feet as a fraction of the frame height, when frames aren't 24x32. */
+  originY?: number;
+}
+
+/** Icons on the two ability buttons. */
+export interface Buttons {
+  attack: { texture: string; frame?: string; anim?: string };
+  special: { texture: string };
+}
+
+/** A skin: the same type in a different look. Its ability names may change with the look, never what they do. */
+export interface SkinDef {
   id: string;
   name: string;
-  /** A few words under the name, e.g. "Arcane caster". */
+  /** Overrides for the type's colour, tagline and ability names while worn. */
+  accent?: number;
+  role?: string;
+  attack?: string;
+  special?: string;
+  preview: Preview;
+  buttons: Buttons;
+}
+
+/** A type: a way to play a class, with its own stats and abilities, and its own skins. */
+export interface TypeDef {
+  id: string;
+  name: string;
+  /** A few words about how it plays, e.g. "Fire and fury". */
   role: string;
-  /** Card highlight colour. */
+  /** Highlight colour. */
   accent: number;
-  /** 1..5 pips each on the select card. */
-  stats: { power: number; speed: number; range: number };
-  /** Ability names shown on the card. */
+  /** 1..5 pips each on the select screen. */
+  stats: Stats;
+  /** Ability names. */
   attack: string;
   special: string;
-  /** The animated portrait on the select card. */
-  preview: {
-    texture: string;
-    /** Additive glow layer with the same frame names, if any. */
-    glow?: string;
-    /** Looping idle animation key. */
-    idle: string;
-    /** Played once when the character is picked. */
-    chosen: string;
-    /** Feet as a fraction of the frame height, when frames aren't 24x32. */
-    originY?: number;
-  };
+  /** The type's own look (its first skin). */
+  preview: Preview;
+  buttons: Buttons;
+  /** What its own look is called in the skin list. */
+  lookName?: string;
+  /** Other looks for this type. */
+  skins?: SkinDef[];
+}
+
+export interface ClassDef {
+  id: string;
+  name: string;
+  /** One line about the class as a whole. */
+  blurb: string;
   /**
    * The special is held to charge and fires on release (the wizard's beam), so
    * its touch button presses at once and dragging steers it, rather than
    * aiming first and firing on release.
    */
   chargeSpecial?: boolean;
-  /** Icons on the two ability buttons. */
-  buttons: {
-    attack: { texture: string; frame?: string; anim?: string };
-    special: { texture: string };
-  };
-  /** Alternate looks (some with their own stats and abilities); the first is the default (see skins.ts). */
-  skins?: SkinDef[];
-  /** `skin` is the id of the worn skin, for characters that have skins. */
-  spawn(world: WorldScene, x: number, y: number, skin?: string): Hero;
+  /** The first is the base type. */
+  types: TypeDef[];
+  /** `look` is a type's id or one of its skins' ids. */
+  spawn(world: WorldScene, x: number, y: number, look: string): Hero;
 }
 
-export const CHARACTERS: CharacterDef[] = [
+/** A class as played: in one type and skin, with everything the HUD and the world need. */
+export interface CharacterDef {
+  /** The class id. */
+  id: string;
+  name: string;
+  type: TypeDef;
+  /** The worn skin, or null for the type's own look. */
+  skin: SkinDef | null;
+  /** The worn look's id (the type's id or the skin's). */
+  look: string;
+  role: string;
+  accent: number;
+  stats: Stats;
+  attack: string;
+  special: string;
+  preview: Preview;
+  buttons: Buttons;
+  chargeSpecial?: boolean;
+  spawn(world: WorldScene, x: number, y: number): Hero;
+}
+
+export const CLASSES: ClassDef[] = [
   {
     id: 'wizard',
     name: 'Wizard',
-    role: 'Arcane caster',
-    accent: 0x6fe4ff,
-    stats: { power: 4, speed: 3, range: 5 },
-    attack: 'Energy ball',
-    special: 'Charged beam',
+    blurb: 'Master of spells',
     chargeSpecial: true,
-    preview: { texture: 'wizard', glow: 'wizard_e', idle: 'wizard_idle_down', chosen: 'wizard_cast_down' },
-    buttons: {
-      attack: { texture: 'orb_e', frame: 'o0', anim: 'orb_spin' },
-      special: { texture: 'icon_beam' },
-    },
-    skins: [
-      { id: 'arcane', name: 'Arcane' },
+    types: [
       {
-        id: 'void',
-        name: 'Void',
-        role: 'Void caller',
-        accent: 0xc47cff,
-        attack: 'Void orb',
-        special: 'Umbral beam',
-        preview: { texture: 'wizard_void', glow: 'wizard_void_e', idle: 'wizard_void_idle_down', chosen: 'wizard_void_cast_down' },
+        id: 'arcane',
+        name: 'Arcanist',
+        role: 'Arcane caster',
+        accent: 0x6fe4ff,
+        stats: { power: 4, speed: 3, range: 5 },
+        attack: 'Energy ball',
+        special: 'Charged beam',
+        preview: { texture: 'wizard', glow: 'wizard_e', idle: 'wizard_idle_down', chosen: 'wizard_cast_down' },
         buttons: {
-          attack: { texture: 'orb_void_e', frame: 'o0', anim: 'orb_void_spin' },
-          special: { texture: 'icon_beam_void' },
+          attack: { texture: 'orb_e', frame: 'o0', anim: 'orb_spin' },
+          special: { texture: 'icon_beam' },
         },
+        lookName: 'Arcane',
+        skins: [
+          {
+            id: 'void',
+            name: 'Void',
+            role: 'Void caller',
+            accent: 0xc47cff,
+            attack: 'Void orb',
+            special: 'Umbral beam',
+            preview: { texture: 'wizard_void', glow: 'wizard_void_e', idle: 'wizard_void_idle_down', chosen: 'wizard_void_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_void_e', frame: 'o0', anim: 'orb_void_spin' },
+              special: { texture: 'icon_beam_void' },
+            },
+          },
+        ],
       },
       {
         id: 'pyro',
@@ -140,10 +207,11 @@ export const CHARACTERS: CharacterDef[] = [
           attack: { texture: 'orb_pyro_e', frame: 'o0', anim: 'orb_pyro_spin' },
           special: { texture: 'icon_meteor' },
         },
+        lookName: 'Ember',
       },
     ],
-    spawn(world, x, y, skin) {
-      if (skin === 'pyro') {
+    spawn(world, x, y, look) {
+      if (look === 'pyro') {
         // Fireballs that blast and burn; a charged meteor called down where it's aimed.
         const fire = new Pyromancy(world);
         const w = new Wizard(
@@ -162,16 +230,16 @@ export const CHARACTERS: CharacterDef[] = [
         world.addEffect(fire);
         return w;
       }
-      const look = skin === 'void' ? VOID_SKIN : ARCANE_SKIN;
+      const skin = look === 'void' ? VOID_SKIN : ARCANE_SKIN;
       const w: Wizard = new Wizard(
         world,
         x,
         y,
         {
-          cast: (x, y, dx, dy) => world.castEnergyBall(x, y, dx, dy, look.style),
-          beam: (x, y, dx, dy, power) => world.fireBeam(x, y, dx, dy, power, w.depthAhead(), look.style),
+          cast: (x, y, dx, dy) => world.castEnergyBall(x, y, dx, dy, skin.style),
+          beam: (x, y, dx, dy, power) => world.fireBeam(x, y, dx, dy, power, w.depthAhead(), skin.style),
         },
-        look,
+        skin,
       );
       return w;
     },
@@ -179,51 +247,63 @@ export const CHARACTERS: CharacterDef[] = [
   {
     id: 'warrior',
     name: 'Warrior',
-    role: 'Sword and steel',
-    accent: 0xffb54a,
-    stats: { power: 5, speed: 4, range: 2 },
-    attack: 'Three-hit combo',
-    special: 'Whirlwind',
-    preview: { texture: 'warrior', glow: 'warrior_e', idle: 'warrior_idle_down', chosen: 'warrior_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
-    buttons: {
-      attack: { texture: 'icon_sword' },
-      special: { texture: 'icon_whirl' },
-    },
-    skins: [
-      { id: 'knight', name: 'Knight' },
+    blurb: 'Blade in the front line',
+    types: [
       {
-        id: 'jade',
-        name: 'Jade',
-        role: 'Blade of the jade wind',
-        accent: 0x4fe0a0,
-        attack: 'Katana combo',
-        special: 'Jade gale',
-        preview: { texture: 'warrior_jade', glow: 'warrior_jade_e', idle: 'warrior_jade_idle_down', chosen: 'warrior_jade_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+        id: 'knight',
+        name: 'Knight',
+        role: 'Sword and steel',
+        accent: 0xffb54a,
+        stats: { power: 5, speed: 4, range: 2 },
+        attack: 'Three-hit combo',
+        special: 'Whirlwind',
+        preview: { texture: 'warrior', glow: 'warrior_e', idle: 'warrior_idle_down', chosen: 'warrior_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
         buttons: {
-          attack: { texture: 'icon_sword_jade' },
-          special: { texture: 'icon_whirl_jade' },
+          attack: { texture: 'icon_sword' },
+          special: { texture: 'icon_whirl' },
         },
+        lookName: 'Steel',
+        skins: [
+          {
+            id: 'jade',
+            name: 'Jade',
+            role: 'Blade of the jade wind',
+            accent: 0x4fe0a0,
+            attack: 'Katana combo',
+            special: 'Jade gale',
+            preview: { texture: 'warrior_jade', glow: 'warrior_jade_e', idle: 'warrior_jade_idle_down', chosen: 'warrior_jade_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_sword_jade' },
+              special: { texture: 'icon_whirl_jade' },
+            },
+          },
+        ],
       },
     ],
-    spawn: (world, x, y, skin) => new Warrior(world, x, y, skin === 'jade' ? JADE_SKIN : KNIGHT_SKIN),
+    spawn: (world, x, y, look) => new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : KNIGHT_SKIN),
   },
   {
     id: 'paladin',
     name: 'Paladin',
-    role: 'Tank and healer',
-    accent: 0x7fb2ff,
-    stats: { power: 3, speed: 2, range: 2 },
-    attack: 'Smite',
-    special: 'Consecration',
-    preview: { texture: 'paladin', glow: 'paladin_e', idle: 'paladin_idle_down', chosen: 'paladin_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
-    buttons: {
-      attack: { texture: 'icon_mace' },
-      special: { texture: 'icon_sanctuary' },
-    },
-    skins: [
-      { id: 'holy', name: 'Paladin' },
+    blurb: 'Holy shield of the party',
+    types: [
       {
-        // A gameplay subtype: harder, slower hammer blows and a burst of sunfire instead of healing ground.
+        id: 'holy',
+        name: 'Templar',
+        role: 'Tank and healer',
+        accent: 0x7fb2ff,
+        stats: { power: 3, speed: 2, range: 2 },
+        attack: 'Smite',
+        special: 'Consecration',
+        preview: { texture: 'paladin', glow: 'paladin_e', idle: 'paladin_idle_down', chosen: 'paladin_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
+        buttons: {
+          attack: { texture: 'icon_mace' },
+          special: { texture: 'icon_sanctuary' },
+        },
+        lookName: 'Holy',
+      },
+      {
+        // Harder, slower hammer blows and a burst of sunfire instead of healing ground.
         id: 'crusader',
         name: 'Crusader',
         role: 'Hammer and sunfire',
@@ -236,55 +316,68 @@ export const CHARACTERS: CharacterDef[] = [
           attack: { texture: 'icon_hammer' },
           special: { texture: 'icon_sunfall' },
         },
+        lookName: 'Sunforged',
       },
     ],
-    spawn: (world, x, y, skin) => new Paladin(world, x, y, skin === 'crusader' ? CRUSADER_KIT : HOLY_KIT),
+    spawn: (world, x, y, look) => new Paladin(world, x, y, look === 'crusader' ? CRUSADER_KIT : HOLY_KIT),
   },
   {
     id: 'jedi',
     name: 'Jedi',
-    role: 'Saber and Force',
-    accent: 0x5fb4ff,
-    stats: { power: 4, speed: 5, range: 3 },
-    attack: 'Saber flurry',
-    special: 'Force push',
-    preview: { texture: 'jedi', glow: 'jedi_e', idle: 'jedi_idle_down', chosen: 'jedi_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
-    buttons: {
-      attack: { texture: 'icon_saber' },
-      special: { texture: 'icon_force' },
-    },
-    skins: [
-      { id: 'knight', name: 'Knight' },
+    blurb: 'Saber and the Force',
+    types: [
       {
-        id: 'sith',
-        name: 'Sith',
-        role: 'Dark side',
-        accent: 0xff4a4a,
-        special: 'Force storm',
-        preview: { texture: 'jedi_sith', glow: 'jedi_sith_e', idle: 'jedi_sith_idle_down', chosen: 'jedi_sith_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
+        id: 'knight',
+        name: 'Jedi knight',
+        role: 'Saber and Force',
+        accent: 0x5fb4ff,
+        stats: { power: 4, speed: 5, range: 3 },
+        attack: 'Saber flurry',
+        special: 'Force push',
+        preview: { texture: 'jedi', glow: 'jedi_e', idle: 'jedi_idle_down', chosen: 'jedi_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
         buttons: {
-          attack: { texture: 'icon_saber_sith' },
-          special: { texture: 'icon_force_sith' },
+          attack: { texture: 'icon_saber' },
+          special: { texture: 'icon_force' },
         },
+        lookName: 'Light side',
+        skins: [
+          {
+            id: 'sith',
+            name: 'Sith',
+            role: 'Dark side',
+            accent: 0xff4a4a,
+            special: 'Force storm',
+            preview: { texture: 'jedi_sith', glow: 'jedi_sith_e', idle: 'jedi_sith_idle_down', chosen: 'jedi_sith_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
+            buttons: {
+              attack: { texture: 'icon_saber_sith' },
+              special: { texture: 'icon_force_sith' },
+            },
+          },
+        ],
       },
     ],
-    spawn: (world, x, y, skin) => new Jedi(world, x, y, skin === 'sith' ? SITH_STYLE : JEDI_STYLE),
+    spawn: (world, x, y, look) => new Jedi(world, x, y, look === 'sith' ? SITH_STYLE : JEDI_STYLE),
   },
   {
     id: 'fighter',
     name: 'Fighter',
-    role: 'Fists of fury',
-    accent: 0xff6a4a,
-    stats: { power: 4, speed: 4, range: 2 },
-    attack: 'Five-hit combo',
-    special: 'Barrage',
-    preview: { texture: 'fighter', glow: 'fighter_e', idle: 'fighter_idle_down', chosen: 'fighter_smash_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
-    buttons: {
-      attack: { texture: 'icon_fist' },
-      special: { texture: 'icon_barrage' },
-    },
-    skins: [
-      { id: 'brawler', name: 'Brawler' },
+    blurb: 'Bare hands, no mercy',
+    types: [
+      {
+        id: 'brawler',
+        name: 'Brawler',
+        role: 'Fists of fury',
+        accent: 0xff6a4a,
+        stats: { power: 4, speed: 4, range: 2 },
+        attack: 'Five-hit combo',
+        special: 'Barrage',
+        preview: { texture: 'fighter', glow: 'fighter_e', idle: 'fighter_idle_down', chosen: 'fighter_smash_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
+        buttons: {
+          attack: { texture: 'icon_fist' },
+          special: { texture: 'icon_barrage' },
+        },
+        lookName: 'Street',
+      },
       {
         id: 'monk',
         name: 'Iron monk',
@@ -298,41 +391,49 @@ export const CHARACTERS: CharacterDef[] = [
           attack: { texture: 'icon_palm' },
           special: { texture: 'icon_quake' },
         },
+        lookName: 'Temple',
       },
     ],
-    spawn: (world, x, y, skin) => new Fighter(world, x, y, skin === 'monk' ? MONK_STYLE : BRAWLER_STYLE),
+    spawn: (world, x, y, look) => new Fighter(world, x, y, look === 'monk' ? MONK_STYLE : BRAWLER_STYLE),
   },
   {
     id: 'alchemist',
     name: 'Alchemist',
-    role: 'Poisons and potions',
-    accent: 0x8cff5a,
-    stats: { power: 3, speed: 3, range: 4 },
-    attack: 'Poison flask',
-    special: 'Plague bog',
-    preview: { texture: 'alchemist', glow: 'alchemist_e', idle: 'alchemist_idle_down', chosen: 'alchemist_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
-    buttons: {
-      attack: { texture: 'icon_flask' },
-      special: { texture: 'icon_bog' },
-    },
-    skins: [
-      { id: 'plague', name: 'Plague doctor' },
+    blurb: 'Brews that melt foes',
+    types: [
       {
-        id: 'witch',
-        name: 'Hex witch',
-        role: 'Hexes and brews',
-        accent: 0xe060ff,
-        attack: 'Hex flask',
-        special: 'Hex mire',
-        preview: { texture: 'alchemist_witch', glow: 'alchemist_witch_e', idle: 'alchemist_witch_idle_down', chosen: 'alchemist_witch_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
+        id: 'plague',
+        name: 'Plague doctor',
+        role: 'Poisons and potions',
+        accent: 0x8cff5a,
+        stats: { power: 3, speed: 3, range: 4 },
+        attack: 'Poison flask',
+        special: 'Plague bog',
+        preview: { texture: 'alchemist', glow: 'alchemist_e', idle: 'alchemist_idle_down', chosen: 'alchemist_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
         buttons: {
-          attack: { texture: 'icon_flask_witch' },
-          special: { texture: 'icon_bog_witch' },
+          attack: { texture: 'icon_flask' },
+          special: { texture: 'icon_bog' },
         },
+        lookName: 'Plague',
+        skins: [
+          {
+            id: 'witch',
+            name: 'Hex witch',
+            role: 'Hexes and brews',
+            accent: 0xe060ff,
+            attack: 'Hex flask',
+            special: 'Hex mire',
+            preview: { texture: 'alchemist_witch', glow: 'alchemist_witch_e', idle: 'alchemist_witch_idle_down', chosen: 'alchemist_witch_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
+            buttons: {
+              attack: { texture: 'icon_flask_witch' },
+              special: { texture: 'icon_bog_witch' },
+            },
+          },
+        ],
       },
       {
-        // A gameplay subtype: quicker, shorter throws, corrosive chem that
-        // stacks higher, and a fan of three canisters on the special.
+        // Quicker, shorter throws, corrosive chem that stacks higher, and a
+        // fan of three canisters on the special.
         id: 'chem',
         name: 'Chemtech',
         role: 'Chem canisters',
@@ -345,59 +446,72 @@ export const CHARACTERS: CharacterDef[] = [
           attack: { texture: 'icon_flask_chem' },
           special: { texture: 'icon_bog_chem' },
         },
+        lookName: 'Hazmat',
       },
     ],
-    spawn: (world, x, y, skin) => new Alchemist(world, x, y, skin === 'chem' ? CHEM_STYLE : skin === 'witch' ? WITCH_STYLE : PLAGUE_STYLE),
+    spawn: (world, x, y, look) => new Alchemist(world, x, y, look === 'chem' ? CHEM_STYLE : look === 'witch' ? WITCH_STYLE : PLAGUE_STYLE),
   },
   {
     id: 'archer',
     name: 'Archer',
-    role: 'Bow and arrow',
-    accent: 0x9ad65a,
-    stats: { power: 3, speed: 4, range: 5 },
-    attack: 'Quick shot',
-    special: 'Arrow rain',
-    preview: { texture: 'archer', glow: 'archer_e', idle: 'archer_idle_down', chosen: 'archer_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
-    buttons: {
-      attack: { texture: 'icon_bow' },
-      special: { texture: 'icon_rain' },
-    },
-    skins: [
-      { id: 'ranger', name: 'Ranger' },
+    blurb: 'Death from afar',
+    types: [
       {
-        id: 'storm',
-        name: 'Storm',
-        role: 'Arrows of lightning',
-        accent: 0x5ec8ff,
-        attack: 'Lightning shot',
-        special: 'Thunder rain',
-        preview: { texture: 'archer_storm', glow: 'archer_storm_e', idle: 'archer_storm_idle_down', chosen: 'archer_storm_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+        id: 'ranger',
+        name: 'Ranger',
+        role: 'Bow and arrow',
+        accent: 0x9ad65a,
+        stats: { power: 3, speed: 4, range: 5 },
+        attack: 'Quick shot',
+        special: 'Arrow rain',
+        preview: { texture: 'archer', glow: 'archer_e', idle: 'archer_idle_down', chosen: 'archer_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
         buttons: {
-          attack: { texture: 'icon_bow_storm' },
-          special: { texture: 'icon_rain_storm' },
+          attack: { texture: 'icon_bow' },
+          special: { texture: 'icon_rain' },
         },
+        lookName: 'Forest',
+        skins: [
+          {
+            id: 'storm',
+            name: 'Storm',
+            role: 'Arrows of lightning',
+            accent: 0x5ec8ff,
+            attack: 'Lightning shot',
+            special: 'Thunder rain',
+            preview: { texture: 'archer_storm', glow: 'archer_storm_e', idle: 'archer_storm_idle_down', chosen: 'archer_storm_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+            buttons: {
+              attack: { texture: 'icon_bow_storm' },
+              special: { texture: 'icon_rain_storm' },
+            },
+          },
+        ],
       },
     ],
-    spawn: (world, x, y, skin) => new Archer(world, x, y, skin === 'storm' ? STORM_STYLE : RANGER_STYLE),
+    spawn: (world, x, y, look) => new Archer(world, x, y, look === 'storm' ? STORM_STYLE : RANGER_STYLE),
   },
   {
     id: 'rogue',
     name: 'Rogue',
-    role: 'Daggers and shadows',
-    accent: 0xe8505a,
-    stats: { power: 4, speed: 5, range: 2 },
-    attack: 'Bleeding stabs',
-    special: 'Shadowstep',
-    preview: { texture: 'rogue', glow: 'rogue_e', idle: 'rogue_idle_down', chosen: 'rogue_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
-    buttons: {
-      attack: { texture: 'icon_daggers' },
-      special: { texture: 'icon_shadowstep' },
-    },
-    skins: [
-      { id: 'rogue', name: 'Rogue' },
+    blurb: 'Strike from the shadows',
+    types: [
       {
-        // A gameplay subtype: a lighter, wider four-cut chain ending in a
-        // spin, and a dance that blinks from foe to foe instead of a dash.
+        id: 'rogue',
+        name: 'Cutthroat',
+        role: 'Daggers and shadows',
+        accent: 0xe8505a,
+        stats: { power: 4, speed: 5, range: 2 },
+        attack: 'Bleeding stabs',
+        special: 'Shadowstep',
+        preview: { texture: 'rogue', glow: 'rogue_e', idle: 'rogue_idle_down', chosen: 'rogue_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
+        buttons: {
+          attack: { texture: 'icon_daggers' },
+          special: { texture: 'icon_shadowstep' },
+        },
+        lookName: 'Crimson',
+      },
+      {
+        // A lighter, wider four-cut chain ending in a spin, and a dance that
+        // blinks from foe to foe instead of a dash.
         id: 'dancer',
         name: 'Shadow dancer',
         role: 'Blades in the dark',
@@ -410,28 +524,34 @@ export const CHARACTERS: CharacterDef[] = [
           attack: { texture: 'icon_daggers_dancer' },
           special: { texture: 'icon_shadowstep_dancer' },
         },
+        lookName: 'Dusk',
       },
     ],
-    spawn: (world, x, y, skin) => new Rogue(world, x, y, skin === 'dancer' ? DANCER_STYLE : ROGUE_STYLE),
+    spawn: (world, x, y, look) => new Rogue(world, x, y, look === 'dancer' ? DANCER_STYLE : ROGUE_STYLE),
   },
   {
     id: 'necromancer',
     name: 'Necromancer',
-    role: 'Bone and soul',
-    accent: 0x5cf0b0,
-    stats: { power: 3, speed: 3, range: 4 },
-    attack: 'Soul bolt',
-    special: 'Raise dead',
-    preview: { texture: 'necro', glow: 'necro_e', idle: 'necro_idle_down', chosen: 'necro_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
-    buttons: {
-      attack: { texture: 'icon_soul' },
-      special: { texture: 'icon_raise' },
-    },
-    skins: [
-      { id: 'necro', name: 'Necromancer' },
+    blurb: 'Lord of the restless dead',
+    types: [
       {
-        // A gameplay subtype: tougher, with fast lances that pierce and heal,
-        // and a nova paid for in his own blood instead of raising the dead.
+        id: 'necro',
+        name: 'Bonecaller',
+        role: 'Bone and soul',
+        accent: 0x5cf0b0,
+        stats: { power: 3, speed: 3, range: 4 },
+        attack: 'Soul bolt',
+        special: 'Raise dead',
+        preview: { texture: 'necro', glow: 'necro_e', idle: 'necro_idle_down', chosen: 'necro_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
+        buttons: {
+          attack: { texture: 'icon_soul' },
+          special: { texture: 'icon_raise' },
+        },
+        lookName: 'Grave',
+      },
+      {
+        // Tougher, with fast lances that pierce and heal, and a nova paid for
+        // in his own blood instead of raising the dead.
         id: 'blood',
         name: 'Blood mage',
         role: 'Blood and sacrifice',
@@ -444,13 +564,16 @@ export const CHARACTERS: CharacterDef[] = [
           attack: { texture: 'icon_lance' },
           special: { texture: 'icon_nova' },
         },
+        lookName: 'Sanguine',
       },
     ],
-    spawn: (world, x, y, skin) => new Necromancer(world, x, y, skin === 'blood' ? BLOOD_KIT : NECRO_KIT),
+    spawn: (world, x, y, look) => new Necromancer(world, x, y, look === 'blood' ? BLOOD_KIT : NECRO_KIT),
   },
 ];
 
-/** The character in its currently worn skin. */
+export const classById = (id: string | undefined): ClassDef => CLASSES.find((c) => c.id === id) ?? CLASSES[0];
+
+/** The class as played in its chosen type and skin. */
 export function characterById(id: string | undefined): CharacterDef {
-  return wear(CHARACTERS.find((c) => c.id === id) ?? CHARACTERS[0]);
+  return worn(classById(id));
 }
