@@ -66,6 +66,7 @@ export class InventoryScene extends Phaser.Scene {
   private equipLabel!: Phaser.GameObjects.BitmapText;
   private itemsLabel!: Phaser.GameObjects.BitmapText;
   private info!: Phaser.GameObjects.BitmapText;
+  private detail!: Phaser.GameObjects.BitmapText;
   private who!: Phaser.GameObjects.BitmapText;
   private emptyNote!: Phaser.GameObjects.BitmapText;
   private slots: Cell[] = [];
@@ -98,8 +99,9 @@ export class InventoryScene extends Phaser.Scene {
     this.equipLabel = pixelText(this, 0, 0, 'Equipped', 0x9a90c8);
     this.itemsLabel = pixelText(this, 0, 0, 'Items', 0x9a90c8);
     this.info = pixelText(this, 0, 0, '', 0xfff4d6);
+    this.detail = pixelText(this, 0, 0, '', 0x9a90c8);
     this.who = pixelText(this, 0, 0, '', 0x9a90c8);
-    this.emptyNote = pixelText(this, 0, 0, 'Nothing yet. Monsters drop items.', 0x7c82b8);
+    this.emptyNote = pixelText(this, 0, 0, 'Nothing yet. Monsters drop gear and potions.', 0x7c82b8);
     this.slots = [];
     for (let i = 0; i < EQUIP_SLOTS; i++) this.slots.push(new Cell(this, () => this.tapSlot(i)));
     this.cells = [];
@@ -124,7 +126,7 @@ export class InventoryScene extends Phaser.Scene {
 
   /** Redraw the slots and grid from the collection. */
   private refresh(): void {
-    const owned = collection.owned();
+    const owned = this.order();
     while (this.cells.length < owned.length) {
       const cell = new Cell(this, () => this.tapItem(cell.getData('id')));
       this.cells.push(cell);
@@ -150,18 +152,29 @@ export class InventoryScene extends Phaser.Scene {
     this.layout();
   }
 
+  /** Gear first (it's what gets equipped), then potions, each in the order found. */
+  private order(): string[] {
+    const ids = collection.owned();
+    return [...ids.filter((id) => itemInfo(id).equippable), ...ids.filter((id) => !itemInfo(id).equippable)];
+  }
+
   private showInfo(msg?: string): void {
-    let text = msg ?? '';
-    if (!msg && this.picked && collection.count(this.picked)) {
-      const info = itemInfo(this.picked);
-      text = `${info.name} x${collection.count(this.picked)}${collection.isEquipped(this.picked) ? '  (equipped)' : ''}`;
-    } else if (!msg) text = 'Tap an item to equip it';
-    this.info.setText(text.toUpperCase());
+    const id = this.picked;
+    if (!msg && id && collection.count(id)) {
+      const info = itemInfo(id);
+      const n = collection.count(id);
+      this.info.setText(`${info.name}${n > 1 ? ` x${n}` : ''}${collection.isEquipped(id) ? '  (equipped)' : ''}`.toUpperCase()).setTint(info.tint);
+      this.detail.setText(info.detail.toUpperCase());
+      return;
+    }
+    this.info.setText((msg ?? 'Tap gear to equip it').toUpperCase()).setTint(0xfff4d6);
+    this.detail.setText(msg ? '' : 'Equipped gear counts from the start of every run'.toUpperCase());
   }
 
   private tapItem(id: string | null): void {
     if (!id || this.formOpen) return;
     this.picked = id;
+    if (!itemInfo(id).equippable) return this.showInfo();
     const at = collection.data.equipped.indexOf(id);
     if (at >= 0) collection.unequip(at);
     else if (!collection.equip(id)) return this.showInfo('All 6 slots full: tap one to empty it');
@@ -170,7 +183,7 @@ export class InventoryScene extends Phaser.Scene {
   private tapSlot(i: number): void {
     if (this.formOpen) return;
     const id = collection.data.equipped[i];
-    if (!id) return this.showInfo('Tap an item below to equip it');
+    if (!id) return this.showInfo('Tap a piece of gear to equip it');
     this.picked = id;
     collection.unequip(i);
   }
@@ -214,7 +227,7 @@ export class InventoryScene extends Phaser.Scene {
   private setScroll(v: number): void {
     this.scroll = Phaser.Math.Clamp(v, 0, Math.max(0, this.maxScroll));
     const g = this.grid;
-    const owned = collection.owned().length;
+    const owned = this.order().length;
     this.cells.forEach((c, i) => {
       if (i >= owned) return;
       const y = g.y + Math.floor(i / g.cols) * (CELL + GAP) - Math.round(this.scroll);
@@ -237,7 +250,7 @@ export class InventoryScene extends Phaser.Scene {
     this.back.place(MARGIN, buttonsY + 1);
     this.accountBtn.place(vw - MARGIN - this.accountBtn.boxW, buttonsY + 1);
     this.who.setPosition(Math.round(this.accountBtn.x - 6 - this.who.width), buttonsY + 6);
-    const infoY = buttonsY - 10;
+    const infoY = buttonsY - 20;
 
     const top = headerY + this.header.height + 6;
     const labelH = 11;
@@ -256,6 +269,7 @@ export class InventoryScene extends Phaser.Scene {
     this.itemsLabel.setPosition(gx, top);
     this.emptyNote.setPosition(gx, y0 + 4);
     this.info.setPosition(x0, infoY);
+    this.detail.setPosition(x0, infoY + 10);
 
     const rows = Math.ceil(collection.owned().length / cols);
     const fullH = rows * CELL + Math.max(0, rows - 1) * GAP;

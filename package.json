@@ -9,7 +9,8 @@
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit",
     "sheet": "tsx scripts/sheet.ts sheets 5",
-    "icons": "tsx scripts/icons.ts"
+    "icons": "tsx scripts/icons.ts",
+    "gear": "tsx scripts/gear.ts gear.png 4"
   },
   "dependencies": {
     "phaser": "3.90.0"

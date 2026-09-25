@@ -5,6 +5,7 @@ import { DPR as D } from '../game/display';
 import { characterById } from '../game/characters';
 import { HOTBAR_SIZE, inventory } from '../game/items';
 import { heroBuffs } from '../game/buffs';
+import { GearHud } from '../ui/gearHud';
 
 /**
  * Touch controls: a floating joystick on the left half of the screen, an
@@ -18,7 +19,8 @@ import { heroBuffs } from '../game/buffs';
  *
  * Along the bottom, between the joystick and the buttons, the hotbar: nine
  * item slots, tapped or pressed 1 to 9. Active buffs show as badges under the
- * day/night toggle, draining as they run out.
+ * day/night toggle, draining as they run out. Gear found has a chest button
+ * by the pause button (or I / G) that opens the bag (see ui/gearHud.ts).
  */
 export class UIScene extends Phaser.Scene {
   private stick!: Phaser.GameObjects.Graphics;
@@ -41,6 +43,7 @@ export class UIScene extends Phaser.Scene {
   private slotCounts: Phaser.GameObjects.BitmapText[] = [];
   private buffBadges!: Phaser.GameObjects.Graphics;
   private buffIcons: Phaser.GameObjects.Image[] = [];
+  private gearHud!: GearHud;
 
   /** Day/night toggle: a two-segment pill in the top-left corner. */
   private get toggleRect(): Phaser.Geom.Rectangle {
@@ -160,13 +163,16 @@ export class UIScene extends Phaser.Scene {
     }
     this.buffBadges = this.add.graphics();
     this.buffIcons = [];
+    this.gearHud = new GearHud(this);
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       controls.mouse = !p.wasTouch;
       const bp = this.buttonPos;
       const mp = this.beamPos;
       const tr = this.toggleRect;
-      if (daynight.enabled && Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width + 8 * D, tr.height + 8 * D), p.x, p.y)) {
+      if (this.gearHud.pointerDown(p)) {
+        // The bag's button, or a tap while the bag is open.
+      } else if (daynight.enabled && Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width + 8 * D, tr.height + 8 * D), p.x, p.y)) {
         // Tap a side to pick it; tapping the active side flips it.
         const onSun = p.x < tr.centerX;
         daynight.set(onSun === (daynight.target < 0.5) ? onSun : !onSun);
@@ -192,6 +198,7 @@ export class UIScene extends Phaser.Scene {
     });
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
       if (!p.wasTouch) controls.mouse = true;
+      this.gearHud.pointerMove(p);
       if (p.id !== this.stickPointer) return;
       const R = this.R;
       const v = new Phaser.Math.Vector2(p.x - this.base.x, p.y - this.base.y);
@@ -250,7 +257,8 @@ export class UIScene extends Phaser.Scene {
     this.knob.copy(this.restPos);
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
+    this.gearHud.update(delta);
     const R = this.R;
     const active = this.stickPointer !== null;
     this.stick.setVisible(active || !controls.mouse);

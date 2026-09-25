@@ -45,6 +45,7 @@ import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
 import { heroBuffs, type BuffDef } from '../game/buffs';
 import { Pickup } from '../game/Pickup';
+import { gear, gearById, RARITY, type GearDef } from '../game/gear';
 import { collection } from '../game/collection';
 
 interface Flicker {
@@ -306,6 +307,9 @@ export class WorldScene extends Phaser.Scene {
     // A fresh hotbar and no buffs each run.
     inventory.reset(STARTING_ITEMS);
     heroBuffs.clear();
+    // The six pieces kept equipped on the Inventory page count from the start of every run.
+    gear.reset(collection.equippedIds().map(gearById).filter((g): g is GearDef => !!g));
+    if (gear.totals.hp) this.hero.vitals.grow(gear.totals.hp);
     controls.items.length = 0;
     this.itemCtx = {
       hero: this.hero,
@@ -429,7 +433,7 @@ export class WorldScene extends Phaser.Scene {
     const h = this.hero;
     if (this.downT > 0 || this.grace > 0) return;
     // A ward takes the edge off every blow.
-    const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard')));
+    const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard') * gear.guard));
     const lost = h.vitals.damage(damage);
     this.grace = HURT_GRACE;
     this.rising = false;
@@ -510,10 +514,32 @@ export class WorldScene extends Phaser.Scene {
     this.heroBar.update(dt, snap(h.x), snap(h.y) - 34, this.downT > 0 ? 0 : v.hp, v.max, v.barrier);
   }
 
-  /** A monster fell at (x, y): sometimes it leaves a potion, popping out of its body. */
+  /** A monster fell at (x, y): sometimes it leaves a potion or a piece of gear, popping out of its body. */
   monsterSlain(kind: string, x: number, y: number, bodyY: number): void {
     const id = rollDrop(kind);
-    if (id) this.pickups.push(new Pickup(this, x, y - bodyY, id));
+    if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
+    const away = new Set<string>();
+    for (const p of this.pickups) if (p.loot.kind === 'gear') away.add(p.loot.def.id);
+    const def = gear.roll(kind, away);
+    if (def) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'gear', def }));
+  }
+
+  /** A piece of gear was picked up: it counts from now on. */
+  private gainGear(def: GearDef): void {
+    if (!gear.add(def)) return;
+    const h = this.hero;
+    if (def.stats.hp) h.vitals.grow(def.stats.hp);
+    const tint = RARITY[def.rarity].tint;
+    this.popNumber(snap(h.x), snap(h.y) - 40, def.name.toUpperCase(), tint);
+    this.debris([0xffffff, tint], snap(h.x), snap(h.y) - 12, def.rarity === 'legendary' ? 26 : 16, h.y + 20, 'burst');
+    sound.gear(def.rarity === 'legendary' || def.rarity === 'epic');
+  }
+
+  /** The hero's blow dealt `damage`: lifesteal from gear heals a share of it. */
+  leech(damage: number): void {
+    const k = gear.totals.leech;
+    if (k <= 0 || this.downT > 0) return;
+    this.regenAcc += damage * k;
   }
 
   /** Use the items asked for this frame, then tick cooldowns, buffs and what lies on the ground. */
@@ -533,11 +559,15 @@ export class WorldScene extends Phaser.Scene {
 
     const down = this.downT > 0;
     for (const p of this.pickups) {
-      if (!p.update(dt, down ? null : h.x, down ? null : h.y, inventory.canTake(p.id), this.daylight)) continue;
-      inventory.add(p.id);
-      collection.add(p.id);
-      sound.pickup(this.pan(p.x));
-      this.debris([0xffffff, 0xfff0a8], snap(p.x), snap(p.y) - 6, 8, p.y + 20, 'spores');
+      const loot = p.loot;
+      const room = loot.kind === 'item' ? inventory.canTake(loot.id) : !gear.has(loot.def.id);
+      if (!p.update(dt, down ? null : h.x, down ? null : h.y, room, this.daylight)) continue;
+      collection.add(loot.kind === 'item' ? loot.id : loot.def.id);
+      if (loot.kind === 'item') {
+        inventory.add(loot.id);
+        sound.pickup(this.pan(p.x));
+        this.debris([0xffffff, 0xfff0a8], snap(p.x), snap(p.y) - 6, 8, p.y + 20, 'spores');
+      } else this.gainGear(loot.def);
       p.destroy();
     }
     this.pickups = this.pickups.filter((p) => !p.dead);
@@ -563,9 +593,10 @@ export class WorldScene extends Phaser.Scene {
       }
     }
 
-    // Renew: healing a little at a time, counted up above the head once a second.
-    const regen = heroBuffs.regen;
-    if (regen > 0 && !down && h.vitals.hp < h.vitals.max) {
+    // Renew, gear and lifesteal: healing a little at a time, counted up above the head once a second.
+    const regen = heroBuffs.regen + gear.totals.regen;
+    if (down || h.vitals.hp >= h.vitals.max) this.regenAcc = 0;
+    else {
       this.regenAcc += (regen * dt) / 1000;
       const whole = Math.floor(this.regenAcc);
       if (whole > 0) {
@@ -581,9 +612,9 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** How hard the hero's blows land: more under Might. */
+  /** How hard the hero's blows land: more under Might, and with gear. */
   get might(): number {
-    return heroBuffs.mod('damage');
+    return heroBuffs.mod('damage') * gear.power;
   }
 
   /** A buff was just picked up: its name over the hero, and a burst of its colour. */
@@ -936,7 +967,7 @@ export class WorldScene extends Phaser.Scene {
     const x0 = this.hero.x;
     const y0 = this.hero.y;
     this.hero.update(dt, mx, my, attack, special, hb, controls.mouse ? this.mouseAim() : null);
-    const fast = heroBuffs.mod('speed');
+    const fast = heroBuffs.mod('speed') * gear.speed;
     if (fast !== 1 && this.downT <= 0) this.stretchStep(x0, y0, fast - 1, hb);
     this.updateHeroLife(dt);
     this.updateItems(dt);

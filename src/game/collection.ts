@@ -4,6 +4,7 @@
 // they log into. Changes save a moment later, so a burst of pickups is one
 // write.
 
+import { itemInfo } from './itemInfo';
 import { account, cloudReady, loadSave, onAccount, writeSave, type SaveData } from './cloud';
 
 export const EQUIP_SLOTS = 6;
@@ -81,13 +82,18 @@ class Collection {
     this.changed();
   }
 
+  /** Ids of the items in the equip slots, skipping empty ones. */
+  equippedIds(): string[] {
+    return this.data.equipped.filter((id): id is string => !!id);
+  }
+
   isEquipped(id: string): boolean {
     return this.data.equipped.includes(id);
   }
 
   /** Put `id` in slot `slot`, or the first empty one. Returns false when it can't be. */
   equip(id: string, slot?: number): boolean {
-    if (!this.count(id)) return false;
+    if (!this.count(id) || !itemInfo(id).equippable) return false;
     const eq = this.data.equipped;
     const i = slot ?? eq.indexOf(null);
     if (i < 0 || i >= EQUIP_SLOTS) return false;
