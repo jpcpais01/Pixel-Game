@@ -1,4 +1,4 @@
-// Gear: equipment that monsters drop. Walking over a piece picks it up and
+// Gear: forty pieces of equipment that monsters drop. Walking over a piece picks it up and
 // keeps it for good (see collection.ts). Each piece has one of six slot
 // types, and the hero wears one piece per type: only worn pieces count. A
 // piece goes on by itself when its slot is empty; otherwise the player swaps
@@ -82,6 +82,27 @@ export const GEAR: GearDef[] = [
   piece('dragonfang', 'Dragonfang', 'legendary', 'weapon', { power: 0.35, hp: 20 }),
   piece('golden_aegis', 'Golden Aegis', 'legendary', 'defence', { armor: 0.2, hp: 40 }),
   piece('phoenix_feather', 'Phoenix Feather', 'legendary', 'headwear', { regen: 3, speed: 0.12, hp: 20 }),
+  // The second twenty, weighted toward what the first twenty had least of: helms, body armour, boots and shields.
+  piece('leather_hood', 'Ranger Hood', 'common', 'headwear', { hp: 8, speed: 0.04 }),
+  piece('wizard_hat', 'Starry Hat', 'uncommon', 'headwear', { power: 0.08, regen: 0.5 }),
+  piece('horned_helm', 'Horned Helm', 'rare', 'headwear', { hp: 20, power: 0.06 }),
+  piece('jeweled_crown', 'Jeweled Crown', 'epic', 'headwear', { hp: 25, regen: 1.5 }),
+  piece('valkyrie_helm', 'Valkyrie Helm', 'legendary', 'headwear', { armor: 0.12, hp: 30, speed: 0.06 }),
+  piece('padded_tunic', 'Padded Tunic', 'common', 'chest', { hp: 12, armor: 0.03 }),
+  piece('chainmail', 'Chainmail', 'uncommon', 'chest', { armor: 0.08, hp: 10 }),
+  piece('shadow_cloak', 'Shadow Cloak', 'rare', 'chest', { speed: 0.1, leech: 0.03 }),
+  piece('dragonscale_mail', 'Dragonscale Mail', 'epic', 'chest', { armor: 0.14, hp: 30 }),
+  piece('fur_boots', 'Fur Boots', 'common', 'boots', { speed: 0.04, regen: 0.3 }),
+  piece('iron_greaves', 'Iron Greaves', 'uncommon', 'boots', { armor: 0.06, speed: 0.04 }),
+  piece('lava_striders', 'Lava Striders', 'epic', 'boots', { speed: 0.16, power: 0.08 }),
+  piece('leather_bracers', 'Leather Bracers', 'common', 'defence', { armor: 0.05 }),
+  piece('spiked_buckler', 'Spiked Buckler', 'uncommon', 'defence', { armor: 0.05, power: 0.05 }),
+  piece('tower_shield', 'Tower Shield', 'rare', 'defence', { armor: 0.14, hp: 10 }),
+  piece('frostguard', 'Frostguard', 'epic', 'defence', { armor: 0.14, regen: 1 }),
+  piece('wolf_tooth', 'Wolf Tooth Charm', 'common', 'accessory', { power: 0.06 }),
+  piece('clover_charm', 'Clover Locket', 'uncommon', 'accessory', { regen: 0.8, speed: 0.04 }),
+  piece('hunter_longbow', 'Hunter Longbow', 'rare', 'weapon', { power: 0.14, speed: 0.04 }),
+  piece('void_scythe', 'Void Scythe', 'legendary', 'weapon', { power: 0.3, leech: 0.08 }),
 ];
 
 export const gearById = (id: string): GearDef | undefined => GEAR.find((g) => g.id === id);

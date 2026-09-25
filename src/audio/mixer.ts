@@ -27,7 +27,8 @@ export class Mixer {
     this.sfx = gain(ctx, 0.75, this.master);
 
     const conv = ctx.createConvolver();
-    conv.buffer = impulse(ctx, 3.2);
+    // Short enough to stay cheap on phones; the tail is near silent past this anyway.
+    conv.buffer = impulse(ctx, 1.8);
     this.reverb = gain(ctx, 1, conv);
     conv.connect(gain(ctx, 0.5, this.master));
 
