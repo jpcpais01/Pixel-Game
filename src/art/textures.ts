@@ -12,6 +12,8 @@ import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE,
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
 import { hex } from './pixel';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
+import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
+import { GEAR } from '../game/gear';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_LOOKS, PALADIN_W, type PaladinMeta } from './paladin';
 import { buildWarriorFrames, JADE_LOOK, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, type WarriorMeta } from './warrior';
 import { WIND_DEEP } from './palette';
@@ -342,6 +344,13 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     scene.textures.addCanvas(`item_${kind}`, toCanvas(ITEM_ICON_SIZE, ITEM_ICON_SIZE, potionIcon(kind)));
     scene.textures.addCanvas(`drop_${kind}`, toCanvas(DROP_W, DROP_H, potionDrop(kind)));
   }
+  // Gear: 32x32 icons for the bag, 16x16 sprites for the ground, and the bag's chest button.
+  for (const g of GEAR) {
+    const art = gearArt(g.id);
+    scene.textures.addCanvas(g.icon, toCanvas(GEAR_ICON, GEAR_ICON, art.icon));
+    scene.textures.addCanvas(g.drop, toCanvas(GEAR_DROP, GEAR_DROP, art.drop));
+  }
+  scene.textures.addCanvas('icon_chest', toCanvas(16, 16, chestIcon()));
 
   register(scene, 'brazier', pack(frameList([0, 1, 2, 3].map(brazierFrame), 'f'), 16, 26), 16, 26);
   scene.anims.create({ key: 'brazier_burn', frames: scene.anims.generateFrameNames('brazier_e', { prefix: 'f', start: 0, end: 3 }), frameRate: 9, repeat: -1 });

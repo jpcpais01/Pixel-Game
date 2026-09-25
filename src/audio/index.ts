@@ -177,6 +177,10 @@ class GameSound {
     if (this.live()) this.sfx!.drink(this.ctx!.currentTime, swift);
   }
 
+  gear(rare = false): void {
+    if (this.live()) this.sfx!.gear(this.ctx!.currentTime, rare);
+  }
+
   pickup(pan = 0): void {
     if (this.live()) this.sfx!.pickup(this.ctx!.currentTime, pan);
   }

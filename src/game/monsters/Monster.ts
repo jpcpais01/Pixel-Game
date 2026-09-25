@@ -217,6 +217,7 @@ export abstract class Monster implements Hurtbox {
     if (!this.alive) return;
     // Buffs like Might make every blow land harder.
     const damage = hit.damage * this.world.might;
+    this.world.leech(Math.min(damage, Math.max(0, this.hp)));
     this.hp -= damage;
     this.flashT = FLASH_TIME;
     this.world.popNumber(snap(this.x), snap(this.y) - this.stats.barY - 3, `${Math.round(damage)}`, hit.poison ?? (hit.heavy ? 0xffe28a : 0xffffff));
