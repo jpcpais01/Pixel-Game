@@ -13,7 +13,7 @@ import { Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { Fighter } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
-import { Alchemist, PLAGUE_STYLE, WITCH_STYLE } from './Alchemist';
+import { Alchemist, CHEM_STYLE, PLAGUE_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
 import { Archer, RANGER_STYLE, STORM_STYLE } from './Archer';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
@@ -247,8 +247,24 @@ export const CHARACTERS: CharacterDef[] = [
           special: { texture: 'icon_bog_witch' },
         },
       },
+      {
+        // A gameplay subtype: quicker, shorter throws, corrosive chem that
+        // stacks higher, and a fan of three canisters on the special.
+        id: 'chem',
+        name: 'Chemtech',
+        role: 'Chem canisters',
+        accent: 0xd4f030,
+        stats: { power: 3, speed: 4, range: 3 },
+        attack: 'Chem canister',
+        special: 'Chem barrage',
+        preview: { texture: 'alchemist_chem', glow: 'alchemist_chem_e', idle: 'alchemist_chem_idle_down', chosen: 'alchemist_chem_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
+        buttons: {
+          attack: { texture: 'icon_flask_chem' },
+          special: { texture: 'icon_bog_chem' },
+        },
+      },
     ],
-    spawn: (world, x, y, skin) => new Alchemist(world, x, y, skin === 'witch' ? WITCH_STYLE : PLAGUE_STYLE),
+    spawn: (world, x, y, skin) => new Alchemist(world, x, y, skin === 'chem' ? CHEM_STYLE : skin === 'witch' ? WITCH_STYLE : PLAGUE_STYLE),
   },
   {
     id: 'archer',

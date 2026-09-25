@@ -1,4 +1,6 @@
-// Character skins: alternate looks with identical gameplay. A character lists
+// Character skins: alternate looks, and from Chemtech on, subtypes that also
+// play a little differently (their own stats pips here, and their own numbers
+// in the hero's spawn, which gets the skin id). A character lists
 // its skins in its registry entry (the first is its default look); the pick
 // for each character is remembered in localStorage.
 
@@ -12,6 +14,8 @@ export interface SkinDef {
   /** What changes on the select card and the HUD while this skin is worn. */
   role?: string;
   accent?: number;
+  /** A subtype's own pips on the select card. */
+  stats?: CharacterDef['stats'];
   attack?: string;
   special?: string;
   preview?: CharacterDef['preview'];
