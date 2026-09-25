@@ -13,7 +13,9 @@ import type { Drift } from './Scenery';
 import { CLEARING_GROUND, CLEARING_SPAWN, CLEARING_SPAWNS, PLAZA_CX, PLAZA_CY, PLAZA_Y, clearingScenery, clearingWalkable, plazaProps } from './clearing';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
-import { warmCosmos } from '../art/textures';
+import { warmCosmos, warmIsland } from '../art/textures';
+import { COLUMN_BASE, COLUMN_H, ISLAND_X, ISLAND_Y } from '../art/island';
+import { COLUMNS, ISLE_H, ISLE_SPAWN, ISLE_W, RING_CX, RING_CY, islandScenery, islandWalkable } from './islandLayout';
 import { GARDEN_GROUND, GARDEN_SPAWN, GARDEN_SPAWNS, POOL, gardenLayout, gardenScenery, gardenWalkable } from './sunken';
 
 /** A sprite shown in the arena's window on its select card (world coordinates). */
@@ -65,6 +67,11 @@ export interface ArenaDef {
    */
   dayNight?: boolean;
   daylight?: number;
+  /**
+   * A 1v1 duelling arena: no monsters. The duel itself needs the multiplayer
+   * server; until then it can be walked and fought in alone.
+   */
+  duel?: boolean;
   /** ms before a slain monster is replaced (9 s by default). */
   respawn?: number;
   /** The select card's window onto the arena: its centre, and what stands in view. */
@@ -167,6 +174,35 @@ export const ARENAS: ArenaDef[] = [
         { texture: 'warden', frame: 'idle0_r', glow: 'warden_e', x: COSMOS_CX, y: COSMOS_CY - 2, originY: 113 / 116 },
         ...OBELISKS.map((o) => ({ texture: 'cosmos_obelisk', frame: 'o0', glow: 'cosmos_obelisk_e', x: o.x, y: o.y, originY: 47 / 50 })),
       ],
+    },
+  },
+  {
+    id: 'island',
+    name: 'Floating Island',
+    blurb: 'A marble ring for 1v1 duels',
+    accent: 0x8fd8ff,
+    ground: {
+      painted: true,
+      w: ISLE_W,
+      h: ISLE_H,
+      warm: warmIsland,
+      layers: [
+        { key: 'isle_sky', x: 0, y: 0 },
+        { key: 'isle_land', x: ISLAND_X, y: ISLAND_Y },
+      ],
+    },
+    spawn: ISLE_SPAWN,
+    monsters: [],
+    duel: true,
+    scenery: islandScenery,
+    walkable: islandWalkable,
+    drift: { tints: [0xffc4de, 0xfff4fa, 0xffe0ec, 0xffffff], frequency: 650, where: () => true },
+    // Always a bright, clear day up here.
+    daylight: 1,
+    preview: {
+      x: RING_CX,
+      y: RING_CY + 28,
+      sprites: () => COLUMNS.map((c) => ({ texture: 'isle_column', frame: `c${c.v}`, x: c.x, y: c.y, originY: COLUMN_BASE / COLUMN_H })),
     },
   },
 ];
