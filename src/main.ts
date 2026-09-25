@@ -5,7 +5,7 @@ import { UIScene } from './scenes/UIScene';
 import { LitPipeline } from './game/LitPipeline';
 import { PixelPipeline } from './game/PixelPipeline';
 import { SkyPipeline } from './game/SkyPipeline';
-import { DPR, setRenderQuality, viewSize } from './game/display';
+import { DPR, setRenderQuality, setViewZoom, viewSize } from './game/display';
 import { SoundScene } from './scenes/SoundScene';
 import { HomeScene } from './scenes/HomeScene';
 import { SelectScene } from './scenes/SelectScene';
@@ -24,6 +24,7 @@ streamVertexBuffers();
 sound.init();
 settings.watch((s) => sound.setVolumes(s.music, s.sfx));
 setRenderQuality(settings.values.quality);
+setViewZoom(settings.values.zoom);
 
 const initial = viewSize();
 
@@ -55,12 +56,12 @@ const game = new Phaser.Game({
 // web view still settling) and then settle without another window resize, so
 // the game element's own size, the pixel ratio and a few moments after launch
 // are all checked too.
-let fitted = `${initial.width}x${initial.height}@${DPR}`;
+let fitted = `${initial.width}x${initial.height}@${DPR}z${settings.values.zoom}`;
 let fitQueued = false;
 const fitCanvas = () => {
   fitQueued = false;
   const { width, height } = viewSize();
-  const key = `${width}x${height}@${DPR}`;
+  const key = `${width}x${height}@${DPR}z${settings.values.zoom}`;
   if (key === fitted) return;
   fitted = key;
   game.scale.setZoom(1 / DPR);
@@ -93,10 +94,13 @@ const watchRatio = () => {
 watchRatio();
 
 let quality = settings.values.quality;
+let zoom = settings.values.zoom;
 settings.watch((s) => {
-  if (s.quality === quality) return;
+  if (s.quality === quality && s.zoom === zoom) return;
   quality = s.quality;
+  zoom = s.zoom;
   setRenderQuality(quality);
+  setViewZoom(zoom);
   fitCanvas();
 });
 
