@@ -43,7 +43,6 @@ export class HomeScene extends Phaser.Scene {
     this.buildTextures();
     this.sparkleSpots = this.registry.get('logoSparkles');
     this.cameras.main.setOrigin(0, 0);
-    this.cameras.main.postFX.addVignette(0.5, 0.5, 0.9, 0.35);
 
     this.backdrop = makeBackdrop(this);
 
