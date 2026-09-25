@@ -166,6 +166,31 @@ export function paintSky(w: number, h: number): Bitmap {
       out.set(x, y, c);
     }
   }
+  // Baked in so the home screen draws fewer full-screen layers: the far
+  // cloud bank (it drifts too slowly to miss), then the sun's rays and a wide
+  // bloom added over sky and clouds alike.
+  const far = CLOUD_LAYERS[0];
+  const fb = cloudStrip(far);
+  const top = hy - far.base;
+  for (let y = Math.max(0, top); y < Math.min(h, top + far.h); y++) {
+    for (let x = 0; x < w; x++) {
+      const i = ((y - top) * CLOUD_W + (x % CLOUD_W)) * 4;
+      if (!fb.data[i + 3]) continue;
+      out.set(x, y, [fb.data[i], fb.data[i + 1], fb.data[i + 2]]);
+    }
+  }
+  const rays = godRays(w, h, 61);
+  const bloom = hex('#ffd79a');
+  const bw = w * 0.55;
+  const bh = h * 0.5;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const g = clamp01(1 - Math.hypot((x + 0.5 - sun.x) / bw, (y + 0.5 - sun.y) / bh)) ** 2 * 0.22;
+      const q = Math.floor(g * 8 + bayer(x, y)) / 8;
+      for (let k = 0; k < 3; k++) out.data[i + k] = Math.min(255, out.data[i + k] + rays.data[i + k] + bloom[k] * q);
+    }
+  }
   return out;
 }
 

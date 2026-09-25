@@ -3,16 +3,13 @@ import { paintHall } from '../art/hall';
 import {
   CLOUD_LAYERS,
   CLOUD_W,
-  HORIZON,
   birdSheet,
   cloudStrip,
-  godRays,
   paintIsland,
   paintIslet,
   paintSky,
   petalSheet,
   rainbow,
-  sunAt,
   waterfall,
 } from '../art/skyArena';
 
@@ -44,8 +41,7 @@ class HallBackdrop implements Backdrop {
   private layer: Phaser.GameObjects.Layer;
   private key = '';
   private hall: Phaser.GameObjects.Image;
-  private sun: Phaser.GameObjects.Image;
-  private shafts: Phaser.GameObjects.Image[];
+  private shaft: Phaser.GameObjects.Image;
   private glows: Phaser.GameObjects.Image[] = [];
   /** Light rays (x0, y0, x1, y1) that dust is scattered along. */
   private rays: Float32Array = new Float32Array(0);
@@ -53,8 +49,7 @@ class HallBackdrop implements Backdrop {
   constructor(private scene: Phaser.Scene) {
     this.layer = scene.add.layer();
     this.hall = scene.add.image(0, 0, '__DEFAULT').setOrigin(0);
-    this.sun = scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD);
-    this.shafts = [0, 1].map(() => scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD));
+    this.shaft = scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD);
     // Dust motes, only ever seen where they drift through the light.
     const dust: Phaser.Types.GameObjects.Particles.RandomZoneSource = {
       getRandomPoint: (p: Phaser.Types.Math.Vector2Like) => {
@@ -77,7 +72,7 @@ class HallBackdrop implements Backdrop {
       blendMode: Phaser.BlendModes.ADD,
       frequency: 35,
     });
-    this.layer.add([this.hall, this.sun, ...this.shafts, motes]);
+    this.layer.add([this.hall, this.shaft, motes]);
   }
 
   layout(vw: number, vh: number): void {
@@ -87,10 +82,21 @@ class HallBackdrop implements Backdrop {
     if (key === this.key) return;
     const art = paintHall(w, h);
     const tex = this.scene.textures;
-    [art.base, art.sun, ...art.shafts].forEach((b, i) => {
+    // One image for the hall, its sunlight and a vignette, so the screen
+    // draws a single full-size layer plus the shafts.
+    const base = art.base;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const r = Math.hypot((x + 0.5) / w - 0.5, (y + 0.5) / h - 0.5) / 0.7071;
+        const v = 1 - 0.4 * Phaser.Math.Clamp((r - 0.45) / 0.55, 0, 1) ** 2;
+        for (let k = 0; k < 3; k++) base.data[i + k] = Math.min(255, base.data[i + k] + art.sun.data[i + k]) * v;
+      }
+    }
+    [base, art.shafts[0]].forEach((b, i) => {
       const k = `${key}_${i}`;
       if (!tex.exists(k)) tex.addCanvas(k, b.toCanvas());
-      [this.hall, this.sun, ...this.shafts][i].setTexture(k);
+      [this.hall, this.shaft][i].setTexture(k);
       if (this.key) tex.remove(`${this.key}_${i}`);
     });
     this.key = key;
@@ -109,10 +115,7 @@ class HallBackdrop implements Backdrop {
   update(time: number, t: number): void {
     // Clouds drift over the sun now and then, and the shafts shimmer.
     const cloud = 0.86 + 0.14 * (0.5 + 0.5 * (0.6 * Math.sin(t * 0.21) + 0.4 * Math.sin(t * 0.53 + 1.7)));
-    const shimmer = 0.3 * Math.sin(time * 0.0006);
-    this.sun.setAlpha(cloud);
-    this.shafts[0].setAlpha(cloud * (0.7 + shimmer));
-    this.shafts[1].setAlpha(cloud * (0.7 - shimmer));
+    this.shaft.setAlpha(cloud * (0.85 + 0.15 * Math.sin(time * 0.0006)));
     for (const g of this.glows) g.setAlpha(0.22 * cloud);
   }
 }
@@ -153,9 +156,6 @@ class SkyBackdrop implements Backdrop {
   private vw = 0;
   private vh = 0;
   private sky: Phaser.GameObjects.Image;
-  private sunGlow: Phaser.GameObjects.Image;
-  private rays: Phaser.GameObjects.Image;
-  private bloom: Phaser.GameObjects.Image;
   private rainbow: Phaser.GameObjects.Image;
   private mists: Phaser.GameObjects.Image[] = [];
   private strips: Strip[] = [];
@@ -174,14 +174,12 @@ class SkyBackdrop implements Backdrop {
     this.layer = scene.add.layer();
     const L = this.layer;
     this.sky = scene.add.image(0, 0, '__DEFAULT').setOrigin(0);
-    this.sunGlow = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe2a8).setScale(7);
-    L.add([this.sky, this.sunGlow]);
+    L.add(this.sky);
     this.birds = [0, 1, 2, 3].map((i) => {
       const img = scene.add.image(0, 0, 'sky_bird', 0);
       L.add(img);
       return { img, y: 0.12 + i * 0.07 + (i % 2) * 0.03, speed: 7 + i * 1.7, phase: i * 1.9 };
     });
-    this.strips.push(this.strip('sky_cloud0', 1.5, HORIZON, 0));
     this.islets = [
       { fx: 0.1, fy: 0.5, s: 18, seed: 51 },
       { fx: 0.9, fy: 0.44, s: 14, seed: 52 },
@@ -195,11 +193,6 @@ class SkyBackdrop implements Backdrop {
       return { img, fx: d.fx, fy: d.fy, phase: i * 1.3 };
     });
     this.strips.push(this.strip('sky_cloud1', 4, 0.74, 1));
-    // Sunbeams fall across the far clouds and haze, and a wide bloom
-    // washes out everything near the sun.
-    this.rays = scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD);
-    this.bloom = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffd79a);
-    L.add([this.rays, this.bloom]);
     this.island = scene.add.image(0, 0, '__DEFAULT').setOrigin(0);
     L.add(this.island);
     const petals = scene.add.particles(0, 0, 'sky_petal', {
@@ -225,8 +218,9 @@ class SkyBackdrop implements Backdrop {
 
   private static textures(scene: Phaser.Scene): void {
     const tex = scene.textures;
-    if (tex.exists('sky_cloud0')) return;
-    CLOUD_LAYERS.forEach((l, i) => tex.addCanvas(`sky_cloud${i}`, cloudStrip(l).toCanvas()));
+    if (tex.exists('sky_cloud1')) return;
+    // The far layer is baked into the sky.
+    CLOUD_LAYERS.forEach((l, i) => i > 0 && tex.addCanvas(`sky_cloud${i}`, cloudStrip(l).toCanvas()));
     tex.addCanvas('sky_rainbow', rainbow(34).toCanvas());
     tex.addCanvas('sky_fall', waterfall().toCanvas());
     const bird = tex.addCanvas('sky_bird', birdSheet().toCanvas())!;
@@ -252,21 +246,11 @@ class SkyBackdrop implements Backdrop {
     const tex = this.scene.textures;
     const key = `sky_bg_${w}x${h}`;
     if (key !== this.skyKey) {
-      if (!tex.exists(key)) {
-        tex.addCanvas(key, paintSky(w, h).toCanvas());
-        tex.addCanvas(`${key}_rays`, godRays(w, h, 61).toCanvas());
-      }
+      if (!tex.exists(key)) tex.addCanvas(key, paintSky(w, h).toCanvas());
       this.sky.setTexture(key);
-      this.rays.setTexture(`${key}_rays`);
-      if (this.skyKey) {
-        tex.remove(this.skyKey);
-        tex.remove(`${this.skyKey}_rays`);
-      }
+      if (this.skyKey) tex.remove(this.skyKey);
       this.skyKey = key;
     }
-    const sun = sunAt(w, h);
-    this.sunGlow.setPosition(sun.x, sun.y);
-    this.bloom.setPosition(sun.x, sun.y).setScale(vw / 32, vh / 40);
     for (const s of this.strips) s.sprite.setPosition(0, Math.round(vh * s.at) - s.base).setSize(w + 1, s.sprite.height);
 
     // The island: sized to the view, centred, floating in the clouds.
@@ -320,9 +304,6 @@ class SkyBackdrop implements Backdrop {
       const y = this.vh * b.y + Math.sin(t * 0.7 + b.phase) * 3;
       b.img.setPosition(snap(x, z), snap(y, z)).setFrame(Math.floor(time / 160 + b.phase * 3) % 2);
     }
-    this.rays.setAlpha(0.8 + 0.2 * Math.sin(time * 0.0005));
-    this.sunGlow.setAlpha(0.45 + 0.05 * Math.sin(time * 0.0011));
-    this.bloom.setAlpha(0.2 + 0.04 * Math.sin(time * 0.0007));
     this.rainbow.setAlpha(0.75 + 0.25 * Math.sin(t * 0.4));
     for (const [i, m] of this.mists.entries()) m.setAlpha(0.3 + 0.08 * Math.sin(t * 1.3 + i));
   }
