@@ -5,7 +5,7 @@ import { UIScene } from './scenes/UIScene';
 import { LitPipeline } from './game/LitPipeline';
 import { PixelPipeline } from './game/PixelPipeline';
 import { SkyPipeline } from './game/SkyPipeline';
-import { DPR, setFastRender, viewSize } from './game/display';
+import { DPR, setRenderQuality, viewSize } from './game/display';
 import { SoundScene } from './scenes/SoundScene';
 import { HomeScene } from './scenes/HomeScene';
 import { SelectScene } from './scenes/SelectScene';
@@ -13,6 +13,7 @@ import { ArenaScene } from './scenes/ArenaScene';
 import { FpsScene } from './scenes/FpsScene';
 import { ShadeScene } from './scenes/ShadeScene';
 import { PauseScene } from './scenes/PauseScene';
+import { InventoryScene } from './scenes/InventoryScene';
 import { settings } from './game/settings';
 import { sound } from './audio';
 import { setupApp } from './pwa';
@@ -20,7 +21,7 @@ import { setupApp } from './pwa';
 setupApp();
 sound.init();
 settings.watch((s) => sound.setVolumes(s.music, s.sfx));
-setFastRender(settings.values.quality === 'fast');
+setRenderQuality(settings.values.quality);
 
 const initial = viewSize();
 
@@ -40,7 +41,7 @@ const game = new Phaser.Game({
   pipeline: { Lit: LitPipeline, Pixel: PixelPipeline, Sky: SkyPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
   input: { activePointers: 3 },
   // Later scenes draw on top.
-  scene: [BootScene, HomeScene, SelectScene, ArenaScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
+  scene: [BootScene, HomeScene, SelectScene, InventoryScene, ArenaScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
 });
 
 // Fit the canvas to the window once per frame at most, and only when the
@@ -91,17 +92,17 @@ let quality = settings.values.quality;
 settings.watch((s) => {
   if (s.quality === quality) return;
   quality = s.quality;
-  setFastRender(quality === 'fast');
+  setRenderQuality(quality);
   fitCanvas();
 });
 
-// A safety net for Full graphics on a device that can't keep up: if the world
-// runs below 30 FPS for five seconds straight, switch to Fast (the pause
-// menu shows it, and it can be switched back).
+// A safety net for a device that can't keep up: if the world runs below 30
+// FPS for five seconds straight, step down a graphics level, Full to Fast to
+// Low (the pause menu shows it, and it can be switched back).
 let slowFor = 0;
 game.events.on(Phaser.Core.Events.POST_STEP, () => {
   const world = game.scene.getScene('world');
-  if (settings.values.quality !== 'full' || !world || !game.scene.isActive('world') || document.hidden) {
+  if (settings.values.quality === 'low' || !world || !game.scene.isActive('world') || document.hidden) {
     slowFor = 0;
     return;
   }
@@ -111,7 +112,7 @@ game.events.on(Phaser.Core.Events.POST_STEP, () => {
   slowFor = dt > 1000 / 30 ? slowFor + dt : Math.max(0, slowFor - dt * 2);
   if (slowFor > 5000) {
     slowFor = 0;
-    settings.set('quality', 'fast');
+    settings.set('quality', settings.values.quality === 'full' ? 'fast' : 'low');
   }
 });
 

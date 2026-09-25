@@ -45,7 +45,8 @@ import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
 import { heroBuffs, type BuffDef } from '../game/buffs';
 import { Pickup } from '../game/Pickup';
-import { gear, RARITY, type GearDef } from '../game/gear';
+import { gear, gearById, RARITY, type GearDef } from '../game/gear';
+import { collection } from '../game/collection';
 
 interface Flicker {
   light: Phaser.GameObjects.Light;
@@ -257,7 +258,7 @@ export class WorldScene extends Phaser.Scene {
 
     // Half the drifting motes on Fast graphics.
     const offQuality = settings.watch((s) => {
-      const k = s.quality === 'fast' ? 2 : 1;
+      const k = s.quality !== 'full' ? 2 : 1;
       this.pollen.frequency = 90 * k;
       this.fireflies.frequency = 160 * k;
     });
@@ -288,6 +289,9 @@ export class WorldScene extends Phaser.Scene {
     this.skyLayer = this.add.image(0, 0, 'clouds').setScrollFactor(0).setDepth(20000).setPipeline('Sky');
     this.setVignette(0.32 - Phaser.Math.Easing.Sine.InOut(this.daylight) * 0.14);
     cam.fadeIn(500, 7, 8, 13);
+    // Phaser keeps drawing a finished fade (fully clear) over the whole screen
+    // every frame until it is reset: a full-screen layer for nothing.
+    cam.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => cam.fadeEffect.reset());
     this.fitCamera();
     this.followHero();
     this.ground?.prime(this.view);
@@ -306,7 +310,9 @@ export class WorldScene extends Phaser.Scene {
     // A fresh hotbar and no buffs each run.
     inventory.reset(STARTING_ITEMS);
     heroBuffs.clear();
-    gear.reset();
+    // The six pieces kept equipped on the Inventory page count from the start of every run.
+    gear.reset(collection.equippedIds().map(gearById).filter((g): g is GearDef => !!g));
+    if (gear.totals.hp) this.hero.vitals.grow(gear.totals.hp);
     controls.items.length = 0;
     this.itemCtx = {
       hero: this.hero,
@@ -564,6 +570,7 @@ export class WorldScene extends Phaser.Scene {
       const loot = p.loot;
       const room = loot.kind === 'item' ? inventory.canTake(loot.id) : !gear.has(loot.def.id);
       if (!p.update(dt, down ? null : h.x, down ? null : h.y, room, this.daylight)) continue;
+      collection.add(loot.kind === 'item' ? loot.id : loot.def.id);
       if (loot.kind === 'item') {
         inventory.add(loot.id);
         sound.pickup(this.pan(p.x));
@@ -999,7 +1006,7 @@ export class WorldScene extends Phaser.Scene {
     this.beams = this.beams.filter((b) => !b.dead);
 
     const d = this.updateDaylight(time, dt);
-    this.ground?.update(this.view, settings.values.quality === 'fast' ? 2.5 : 4);
+    this.ground?.update(this.view, settings.values.quality !== 'full' ? 2.5 : 4);
     this.scenery.update(time, dt, d, this.hero, this.view);
     this.garden?.update(time, dt, target, d, this.view);
     // After the day/night light: the cosmos lights itself.
