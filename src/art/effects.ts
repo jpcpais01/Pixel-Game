@@ -802,3 +802,100 @@ export function fumeCanvas(size: number, v: number, b: BrewColors = PLAGUE_BREW)
   }
   return px;
 }
+
+/** The colours of an archer's icons: bow, string, fletching and the light of the shot. */
+export interface QuiverColors {
+  /** The bow from lit to shadowed. */
+  bow: [string, string, string];
+  string: string;
+  fletch: [string, string];
+  head: [string, string];
+  /** Light: streaks, the target ring, the bolt, brightest first. */
+  light: [string, string, string];
+  ink: string;
+}
+
+export const RANGER_QUIVER: QuiverColors = {
+  bow: ['#e6b872', '#c28c4a', '#65391c'],
+  string: '#d8d0b8',
+  fletch: ['#ff8c72', '#bc363a'],
+  head: ['#eef4ff', '#8f9db8'],
+  light: ['#fffbe8', '#ffe2a0', '#e8a850'],
+  ink: '#170c06',
+};
+
+export const STORM_QUIVER: QuiverColors = {
+  bow: ['#9ca8cc', '#646c8c', '#282c40'],
+  string: '#bff0ff',
+  fletch: ['#e8faff', '#3e9cff'],
+  head: ['#ffffff', '#8ad8ff'],
+  light: ['#ffffff', '#bff0ff', '#4ab4ff'],
+  ink: '#06070c',
+};
+
+/** 16x16 icon for the archer's attack: a recurve bow drawn with an arrow on the string, aimed up and right. */
+export function bowIcon(k: QuiverColors = RANGER_QUIVER): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  // The bow's belly arcs round the upper right; its tips at the upper left and lower right.
+  for (let i = 0; i <= 40; i++) {
+    const t = (i / 40) * 2 - 1;
+    const x = 8 + t * 5.6 + (1 - t * t) * 2.3 + 0.5;
+    const y = 8 + t * 5.6 - (1 - t * t) * 2.3 + 0.5;
+    const lit = t < -0.2 ? 0 : t < 0.5 ? 1 : 2;
+    put(Math.floor(x), Math.floor(y), k.bow[lit]);
+    if (Math.abs(t) < 0.75) put(Math.floor(x + 0.7), Math.floor(y - 0.7), k.bow[Math.min(2, lit + 1)]);
+  }
+  outline(k.ink);
+  // The string, from each tip back to the nock at the lower left.
+  const nock: [number, number] = [4, 11];
+  for (const [tx, ty] of [[2.9, 2.9], [13.1, 13.1]] as const) {
+    for (let i = 0; i <= 8; i++) {
+      const u = i / 8;
+      put(Math.round(tx + (nock[0] - tx) * u), Math.round(ty + (nock[1] - ty) * u), k.string);
+    }
+  }
+  // The arrow, nock to head, out past the bow.
+  for (let i = 0; i <= 9; i++) put(nock[0] + i, nock[1] - i, i < 2 ? k.fletch[0] : '#c28c4a');
+  put(3, 11, k.fletch[1]);
+  put(4, 12, k.fletch[1]);
+  put(5, 11, k.fletch[0]);
+  put(4, 10, k.fletch[0]);
+  put(13, 2, k.head[1]);
+  put(14, 1, k.head[0]);
+  put(13, 1, k.head[0]);
+  put(14, 2, k.head[1]);
+  return px;
+}
+
+/** 16x16 icon for the arrow rain: arrows plunging onto a ring on the ground (with a bolt among them in the storm). */
+export function rainIcon(k: QuiverColors = RANGER_QUIVER, bolt = false): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  // Three arrows falling at a slant, heads down.
+  const arrows: [number, number, number][] = [
+    [3, 1, 8],
+    [8, 0, 10],
+    [12, 3, 7],
+  ];
+  for (const [x0, y0, len] of arrows) {
+    for (let i = 0; i < len; i++) {
+      const x = x0 + Math.floor(i * 0.3);
+      const y = y0 + i;
+      put(x, y, i < 2 ? k.fletch[i % 2] : i >= len - 2 ? k.head[i === len - 1 ? 0 : 1] : '#c28c4a');
+    }
+    put(x0 - 1, y0 + 1, k.fletch[1]);
+    put(x0 + 1, y0 + 1, k.fletch[0]);
+  }
+  outline(k.ink);
+  // The ring they fall into, seen at an angle.
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const q = Math.hypot((x + 0.5 - 8) / 7, (y + 0.5 - 13) / 2.6);
+      if (Math.abs(q - 0.88) < 0.14 && px[(y * 16 + x) * 4 + 3] === 0) put(x, y, y > 12 ? k.light[1] : k.light[2]);
+    }
+  }
+  if (bolt) {
+    // A jag of lightning striking down beside the middle arrow.
+    for (const [x, y, c] of [[6, 1, 0], [6, 2, 0], [5, 3, 1], [6, 4, 0], [7, 5, 0], [7, 6, 1], [6, 7, 0], [6, 8, 0], [7, 9, 1], [7, 10, 0], [7, 11, 0]] as const) put(x, y, k.light[c]);
+  }
+  return px;
+}

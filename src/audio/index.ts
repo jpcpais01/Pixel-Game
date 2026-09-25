@@ -313,6 +313,30 @@ class GameSound {
     if (this.live()) this.sfx!.sizzle(this.ctx!.currentTime, pan);
   }
 
+  bowDraw(big = false): void {
+    if (this.live()) this.sfx!.bowDraw(this.ctx!.currentTime, big);
+  }
+
+  bowShot(pan = 0, storm = false): void {
+    if (this.live()) this.sfx!.bowShot(this.ctx!.currentTime, pan, storm);
+  }
+
+  arrowHit(pan = 0, storm = false): void {
+    if (this.live()) this.sfx!.arrowHit(this.ctx!.currentTime, pan, storm);
+  }
+
+  arrowStick(pan = 0, level = 0.4): void {
+    if (this.live()) this.sfx!.arrowStick(this.ctx!.currentTime, pan, level);
+  }
+
+  volley(pan = 0, storm = false): void {
+    if (this.live()) this.sfx!.volley(this.ctx!.currentTime, pan, storm);
+  }
+
+  arrowRain(pan = 0, storm = false): void {
+    if (this.live()) this.sfx!.arrowRain(this.ctx!.currentTime, pan, storm);
+  }
+
   step(): void {
     if (this.live()) this.sfx!.step(this.ctx!.currentTime);
   }

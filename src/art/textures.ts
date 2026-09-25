@@ -5,9 +5,10 @@
 import Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, WIZARD_LOOKS, type FrameMeta } from './wizard';
-import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, fistIcon, barrageIcon, flaskIcon, bogIcon, fumeCanvas, HEX_BREW_COLORS, PLAGUE_BREW, type IconColors } from './effects';
+import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, fistIcon, barrageIcon, flaskIcon, bogIcon, fumeCanvas, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
 import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FRAMES, twirlStart, TWIRL_FPS, type JediMeta } from './jedi';
 import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, buildAlchemistFrames, flaskFrame } from './alchemist';
+import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE, arrowFrame, buildArcherFrames, stuckArrowFrame } from './archer';
 import { buildFighterFrames, FIGHTER_ANIMS, FIGHTER_H, FIGHTER_W } from './fighter';
 import { hex } from './pixel';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
@@ -247,6 +248,33 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     [0, 1, 2].forEach((v) => fumes.add(`f${v}`, 0, v * 18, 0, 18, 18));
     scene.textures.addCanvas(`icon_flask${sfx}`, toCanvas(16, 16, flaskIcon(brew)));
     scene.textures.addCanvas(`icon_bog${sfx}`, toCanvas(16, 16, bogIcon(brew)));
+  }
+
+  // Archer once per look, and the arrows each looses: 'arrow' frames r0..r15
+  // (sixteen headings in flight) and k0..k2 (stuck in the ground), with a
+  // '_storm' suffix for the storm archer.
+  for (const look of ARCHER_LOOKS) {
+    const sfx = look.key.slice('archer'.length);
+    const rf = buildArcherFrames(look);
+    register(scene, look.key, pack(rf.map((f) => ({ name: f.key, r: f.canvas.render() })), ARCHER_W, ARCHER_H), ARCHER_W, ARCHER_H);
+    for (const a of ARCHER_ANIMS) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: rf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
+    }
+    const arrows = [
+      ...frameList(Array.from({ length: ARROW_DIRS }, (_, i) => arrowFrame(i, look)), 'r'),
+      ...frameList([0, 1, 2].map((k) => stuckArrowFrame(k, look)), 'k'),
+    ];
+    register(scene, `arrow${sfx}`, pack(arrows, ARROW_SIZE, ARROW_SIZE), ARROW_SIZE, ARROW_SIZE);
+    const q = look.storm ? STORM_QUIVER : RANGER_QUIVER;
+    scene.textures.addCanvas(`icon_bow${sfx}`, toCanvas(16, 16, bowIcon(q)));
+    scene.textures.addCanvas(`icon_rain${sfx}`, toCanvas(16, 16, rainIcon(q, look.storm)));
   }
 
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane) and 'orb_void'/'burst_void'.

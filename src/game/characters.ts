@@ -15,6 +15,8 @@ import { Fighter } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, PLAGUE_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
+import { Archer, RANGER_STYLE, STORM_STYLE } from './Archer';
+import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
 import { wear, type SkinDef } from './skins';
 import type { Vitals } from './combat';
 
@@ -247,6 +249,37 @@ export const CHARACTERS: CharacterDef[] = [
       },
     ],
     spawn: (world, x, y, skin) => new Alchemist(world, x, y, skin === 'witch' ? WITCH_STYLE : PLAGUE_STYLE),
+  },
+  {
+    id: 'archer',
+    name: 'Archer',
+    role: 'Bow and arrow',
+    accent: 0x9ad65a,
+    stats: { power: 3, speed: 4, range: 5 },
+    attack: 'Quick shot',
+    special: 'Arrow rain',
+    preview: { texture: 'archer', glow: 'archer_e', idle: 'archer_idle_down', chosen: 'archer_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+    buttons: {
+      attack: { texture: 'icon_bow' },
+      special: { texture: 'icon_rain' },
+    },
+    skins: [
+      { id: 'ranger', name: 'Ranger' },
+      {
+        id: 'storm',
+        name: 'Storm',
+        role: 'Arrows of lightning',
+        accent: 0x5ec8ff,
+        attack: 'Lightning shot',
+        special: 'Thunder rain',
+        preview: { texture: 'archer_storm', glow: 'archer_storm_e', idle: 'archer_storm_idle_down', chosen: 'archer_storm_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+        buttons: {
+          attack: { texture: 'icon_bow_storm' },
+          special: { texture: 'icon_rain_storm' },
+        },
+      },
+    ],
+    spawn: (world, x, y, skin) => new Archer(world, x, y, skin === 'storm' ? STORM_STYLE : RANGER_STYLE),
   },
 ];
 
