@@ -6,6 +6,9 @@ import { Sfx, type BeamHum } from './sfx';
 const MUTE_KEY = 'pixel-game:muted';
 const LOOKAHEAD = 0.4; // seconds of music/ambience scheduled ahead of the clock
 const TICK_MS = 100;
+const SAME_SOUND_GAP = 0.04; // seconds before the same one-shot may play again
+const BUSY_WINDOW = 0.25; // seconds
+const BUSY_LIMIT = 12; // new one-shots allowed per window
 
 type Listener = () => void;
 
@@ -22,6 +25,8 @@ class GameSound {
   private sfx: Sfx | null = null;
   private hum: BeamHum | null = null;
   private listeners = new Set<Listener>();
+  private lastPlayed = new Map<string, number>();
+  private recent: number[] = [];
   private daylight = 0;
   private outdoors = true;
   private fire = 0;
@@ -106,15 +111,18 @@ class GameSound {
   }
 
   charge(): void {
-    if (this.live()) this.sfx!.charge(this.ctx!.currentTime);
+    const t = this.slot('charge');
+    if (t !== null) this.sfx!.charge(t);
   }
 
   cast(pan = 0): void {
-    if (this.live()) this.sfx!.cast(this.ctx!.currentTime, pan);
+    const t = this.slot('cast');
+    if (t !== null) this.sfx!.cast(t, pan);
   }
 
   impact(pan = 0, struck = false): void {
-    if (this.live()) this.sfx!.impact(this.ctx!.currentTime, pan, struck);
+    const t = this.slot('impact');
+    if (t !== null) this.sfx!.impact(t, pan, struck);
   }
 
   /** The beam's gathering hum: `level` 0..1 is the charge, `over` 0..1 the unstable hold. */
@@ -133,260 +141,340 @@ class GameSound {
 
   beamFire(pan = 0, power = 1): void {
     this.beamChargeEnd();
-    if (this.live()) this.sfx!.beamFire(this.ctx!.currentTime, pan, power);
+    const t = this.slot('beamFire');
+    if (t !== null) this.sfx!.beamFire(t, pan, power);
   }
 
   beamFizzle(): void {
     this.beamChargeEnd();
-    if (this.live()) this.sfx!.beamFizzle(this.ctx!.currentTime);
+    const t = this.slot('beamFizzle');
+    if (t !== null) this.sfx!.beamFizzle(t);
   }
 
   swing(step: number, pan = 0): void {
-    if (this.live()) this.sfx!.swing(this.ctx!.currentTime, pan, step);
+    const t = this.slot('swing');
+    if (t !== null) this.sfx!.swing(t, pan, step);
   }
 
   clash(pan = 0, heavy = false): void {
-    if (this.live()) this.sfx!.clash(this.ctx!.currentTime, pan, heavy);
+    const t = this.slot('clash');
+    if (t !== null) this.sfx!.clash(t, pan, heavy);
   }
 
   rise(): void {
-    if (this.live()) this.sfx!.rise(this.ctx!.currentTime);
+    const t = this.slot('rise');
+    if (t !== null) this.sfx!.rise(t);
   }
 
   whirl(pan = 0): void {
-    if (this.live()) this.sfx!.whirl(this.ctx!.currentTime, pan);
+    const t = this.slot('whirl');
+    if (t !== null) this.sfx!.whirl(t, pan);
   }
 
   slam(pan = 0): void {
-    if (this.live()) this.sfx!.slam(this.ctx!.currentTime, pan);
+    const t = this.slot('slam');
+    if (t !== null) this.sfx!.slam(t, pan);
   }
 
   hallow(): void {
-    if (this.live()) this.sfx!.hallow(this.ctx!.currentTime);
+    const t = this.slot('hallow');
+    if (t !== null) this.sfx!.hallow(t);
   }
 
   smite(pan = 0, struck = false): void {
-    if (this.live()) this.sfx!.smite(this.ctx!.currentTime, pan, struck);
+    const t = this.slot('smite');
+    if (t !== null) this.sfx!.smite(t, pan, struck);
   }
 
   consecrate(pan = 0): void {
-    if (this.live()) this.sfx!.consecrate(this.ctx!.currentTime, pan);
+    const t = this.slot('consecrate');
+    if (t !== null) this.sfx!.consecrate(t, pan);
   }
 
   drink(swift = false): void {
-    if (this.live()) this.sfx!.drink(this.ctx!.currentTime, swift);
+    const t = this.slot('drink');
+    if (t !== null) this.sfx!.drink(t, swift);
   }
 
   gear(rare = false): void {
-    if (this.live()) this.sfx!.gear(this.ctx!.currentTime, rare);
+    const t = this.slot('gear');
+    if (t !== null) this.sfx!.gear(t, rare);
   }
 
   pickup(pan = 0): void {
-    if (this.live()) this.sfx!.pickup(this.ctx!.currentTime, pan);
+    const t = this.slot('pickup');
+    if (t !== null) this.sfx!.pickup(t, pan);
   }
 
   heal(pan = 0): void {
-    if (this.live()) this.sfx!.heal(this.ctx!.currentTime, pan);
+    const t = this.slot('heal');
+    if (t !== null) this.sfx!.heal(t, pan);
   }
 
   notice(pan = 0): void {
-    if (this.live()) this.sfx!.notice(this.ctx!.currentTime, pan);
+    const t = this.slot('notice');
+    if (t !== null) this.sfx!.notice(t, pan);
   }
 
   gulp(pan = 0): void {
-    if (this.live()) this.sfx!.gulp(this.ctx!.currentTime, pan);
+    const t = this.slot('gulp');
+    if (t !== null) this.sfx!.gulp(t, pan);
   }
 
   spit(pan = 0): void {
-    if (this.live()) this.sfx!.spit(this.ctx!.currentTime, pan);
+    const t = this.slot('spit');
+    if (t !== null) this.sfx!.spit(t, pan);
   }
 
   hop(pan = 0): void {
-    if (this.live()) this.sfx!.hop(this.ctx!.currentTime, pan);
+    const t = this.slot('hop');
+    if (t !== null) this.sfx!.hop(t, pan);
   }
 
   splash(pan = 0): void {
-    if (this.live()) this.sfx!.splash(this.ctx!.currentTime, pan);
+    const t = this.slot('splash');
+    if (t !== null) this.sfx!.splash(t, pan);
   }
 
   chitter(pan = 0): void {
-    if (this.live()) this.sfx!.chitter(this.ctx!.currentTime, pan);
+    const t = this.slot('chitter');
+    if (t !== null) this.sfx!.chitter(t, pan);
   }
 
   buzz(pan = 0): void {
-    if (this.live()) this.sfx!.buzz(this.ctx!.currentTime, pan);
+    const t = this.slot('buzz');
+    if (t !== null) this.sfx!.buzz(t, pan);
   }
 
   thud(pan = 0, hard = false): void {
-    if (this.live()) this.sfx!.thud(this.ctx!.currentTime, pan, hard);
+    const t = this.slot('thud');
+    if (t !== null) this.sfx!.thud(t, pan, hard);
   }
 
   swell(pan = 0): void {
-    if (this.live()) this.sfx!.swell(this.ctx!.currentTime, pan);
+    const t = this.slot('swell');
+    if (t !== null) this.sfx!.swell(t, pan);
   }
 
   puff(pan = 0): void {
-    if (this.live()) this.sfx!.puff(this.ctx!.currentTime, pan);
+    const t = this.slot('puff');
+    if (t !== null) this.sfx!.puff(t, pan);
   }
 
   monsterDie(pan = 0, mass = 1): void {
-    if (this.live()) this.sfx!.monsterDie(this.ctx!.currentTime, pan, mass);
+    const t = this.slot('monsterDie');
+    if (t !== null) this.sfx!.monsterDie(t, pan, mass);
   }
 
   hurt(): void {
-    if (this.live()) this.sfx!.hurt(this.ctx!.currentTime);
+    const t = this.slot('hurt');
+    if (t !== null) this.sfx!.hurt(t);
   }
 
   fall(): void {
-    if (this.live()) this.sfx!.fall(this.ctx!.currentTime);
+    const t = this.slot('fall');
+    if (t !== null) this.sfx!.fall(t);
   }
 
   revive(): void {
-    if (this.live()) this.sfx!.revive(this.ctx!.currentTime);
+    const t = this.slot('revive');
+    if (t !== null) this.sfx!.revive(t);
   }
 
   saberSwing(step: number, pan = 0): void {
-    if (this.live()) this.sfx!.saberSwing(this.ctx!.currentTime, pan, step);
+    const t = this.slot('saberSwing');
+    if (t !== null) this.sfx!.saberSwing(t, pan, step);
   }
 
   saberHit(pan = 0, heavy = false): void {
-    if (this.live()) this.sfx!.saberHit(this.ctx!.currentTime, pan, heavy);
+    const t = this.slot('saberHit');
+    if (t !== null) this.sfx!.saberHit(t, pan, heavy);
   }
 
   ignite(): void {
-    if (this.live()) this.sfx!.ignite(this.ctx!.currentTime);
+    const t = this.slot('ignite');
+    if (t !== null) this.sfx!.ignite(t);
   }
 
   starcall(pan = 0): void {
-    if (this.live()) this.sfx!.starcall(this.ctx!.currentTime, pan);
+    const t = this.slot('starcall');
+    if (t !== null) this.sfx!.starcall(t, pan);
   }
 
   starImpact(pan = 0): void {
-    if (this.live()) this.sfx!.starImpact(this.ctx!.currentTime, pan);
+    const t = this.slot('starImpact');
+    if (t !== null) this.sfx!.starImpact(t, pan);
   }
 
   gravityWell(seconds: number): void {
-    if (this.live()) this.sfx!.gravityWell(this.ctx!.currentTime, seconds);
+    const t = this.slot('gravityWell');
+    if (t !== null) this.sfx!.gravityWell(t, seconds);
   }
 
   nova(): void {
-    if (this.live()) this.sfx!.nova(this.ctx!.currentTime);
+    const t = this.slot('nova');
+    if (t !== null) this.sfx!.nova(t);
   }
 
   forceGather(): void {
-    if (this.live()) this.sfx!.forceGather(this.ctx!.currentTime);
+    const t = this.slot('forceGather');
+    if (t !== null) this.sfx!.forceGather(t);
   }
 
   forcePush(pan = 0, dark = false): void {
-    if (this.live()) this.sfx!.forcePush(this.ctx!.currentTime, pan, dark);
+    const t = this.slot('forcePush');
+    if (t !== null) this.sfx!.forcePush(t, pan, dark);
   }
 
   punch(step: number, pan = 0): void {
-    if (this.live()) this.sfx!.punch(this.ctx!.currentTime, pan, step);
+    const t = this.slot('punch');
+    if (t !== null) this.sfx!.punch(t, pan, step);
   }
 
   punchHit(pan = 0, heavy = false): void {
-    if (this.live()) this.sfx!.punchHit(this.ctx!.currentTime, pan, heavy);
+    const t = this.slot('punchHit');
+    if (t !== null) this.sfx!.punchHit(t, pan, heavy);
   }
 
   flurry(pan = 0): void {
-    if (this.live()) this.sfx!.flurry(this.ctx!.currentTime, pan);
+    const t = this.slot('flurry');
+    if (t !== null) this.sfx!.flurry(t, pan);
   }
 
   kiai(): void {
-    if (this.live()) this.sfx!.kiai(this.ctx!.currentTime);
+    const t = this.slot('kiai');
+    if (t !== null) this.sfx!.kiai(t);
   }
 
   toss(pan = 0, big = false): void {
-    if (this.live()) this.sfx!.toss(this.ctx!.currentTime, pan, big);
+    const t = this.slot('toss');
+    if (t !== null) this.sfx!.toss(t, pan, big);
   }
 
   shatter(pan = 0, big = false): void {
-    if (this.live()) this.sfx!.shatter(this.ctx!.currentTime, pan, big);
+    const t = this.slot('shatter');
+    if (t !== null) this.sfx!.shatter(t, pan, big);
   }
 
   brew(): void {
-    if (this.live()) this.sfx!.brew(this.ctx!.currentTime);
+    const t = this.slot('brew');
+    if (t !== null) this.sfx!.brew(t);
   }
 
   bog(pan = 0): void {
-    if (this.live()) this.sfx!.bog(this.ctx!.currentTime, pan);
+    const t = this.slot('bog');
+    if (t !== null) this.sfx!.bog(t, pan);
   }
 
   sizzle(pan = 0): void {
-    if (this.live()) this.sfx!.sizzle(this.ctx!.currentTime, pan);
+    const t = this.slot('sizzle');
+    if (t !== null) this.sfx!.sizzle(t, pan);
   }
 
   bowDraw(big = false): void {
-    if (this.live()) this.sfx!.bowDraw(this.ctx!.currentTime, big);
+    const t = this.slot('bowDraw');
+    if (t !== null) this.sfx!.bowDraw(t, big);
   }
 
   bowShot(pan = 0, storm = false): void {
-    if (this.live()) this.sfx!.bowShot(this.ctx!.currentTime, pan, storm);
+    const t = this.slot('bowShot');
+    if (t !== null) this.sfx!.bowShot(t, pan, storm);
   }
 
   arrowHit(pan = 0, storm = false): void {
-    if (this.live()) this.sfx!.arrowHit(this.ctx!.currentTime, pan, storm);
+    const t = this.slot('arrowHit');
+    if (t !== null) this.sfx!.arrowHit(t, pan, storm);
   }
 
   arrowStick(pan = 0, level = 0.4): void {
-    if (this.live()) this.sfx!.arrowStick(this.ctx!.currentTime, pan, level);
+    const t = this.slot('arrowStick');
+    if (t !== null) this.sfx!.arrowStick(t, pan, level);
   }
 
   volley(pan = 0, storm = false): void {
-    if (this.live()) this.sfx!.volley(this.ctx!.currentTime, pan, storm);
+    const t = this.slot('volley');
+    if (t !== null) this.sfx!.volley(t, pan, storm);
   }
 
   arrowRain(pan = 0, storm = false): void {
-    if (this.live()) this.sfx!.arrowRain(this.ctx!.currentTime, pan, storm);
+    const t = this.slot('arrowRain');
+    if (t !== null) this.sfx!.arrowRain(t, pan, storm);
   }
 
   knife(pan = 0, step = 1, finisher = false): void {
-    if (this.live()) this.sfx!.knife(this.ctx!.currentTime, pan, step, finisher);
+    const t = this.slot('knife');
+    if (t !== null) this.sfx!.knife(t, pan, step, finisher);
   }
 
   knifeHit(pan = 0, heavy = false): void {
-    if (this.live()) this.sfx!.knifeHit(this.ctx!.currentTime, pan, heavy);
+    const t = this.slot('knifeHit');
+    if (t !== null) this.sfx!.knifeHit(t, pan, heavy);
   }
 
   vanish(pan = 0, dance = false): void {
-    if (this.live()) this.sfx!.vanish(this.ctx!.currentTime, pan, dance);
+    const t = this.slot('vanish');
+    if (t !== null) this.sfx!.vanish(t, pan, dance);
   }
 
   blink(pan = 0): void {
-    if (this.live()) this.sfx!.blink(this.ctx!.currentTime, pan);
+    const t = this.slot('blink');
+    if (t !== null) this.sfx!.blink(t, pan);
   }
 
   soulCast(pan = 0, blood = false): void {
-    if (this.live()) this.sfx!.soulCast(this.ctx!.currentTime, pan, blood);
+    const t = this.slot('soulCast');
+    if (t !== null) this.sfx!.soulCast(t, pan, blood);
   }
 
   soulHit(pan = 0, blood = false): void {
-    if (this.live()) this.sfx!.soulHit(this.ctx!.currentTime, pan, blood);
+    const t = this.slot('soulHit');
+    if (t !== null) this.sfx!.soulHit(t, pan, blood);
   }
 
   raiseDead(pan = 0): void {
-    if (this.live()) this.sfx!.raiseDead(this.ctx!.currentTime, pan);
+    const t = this.slot('raiseDead');
+    if (t !== null) this.sfx!.raiseDead(t, pan);
   }
 
   boneHit(pan = 0): void {
-    if (this.live()) this.sfx!.boneHit(this.ctx!.currentTime, pan);
+    const t = this.slot('boneHit');
+    if (t !== null) this.sfx!.boneHit(t, pan);
   }
 
   boneCrumble(pan = 0): void {
-    if (this.live()) this.sfx!.boneCrumble(this.ctx!.currentTime, pan);
+    const t = this.slot('boneCrumble');
+    if (t !== null) this.sfx!.boneCrumble(t, pan);
   }
 
   bloodNova(pan = 0): void {
-    if (this.live()) this.sfx!.bloodNova(this.ctx!.currentTime, pan);
+    const t = this.slot('bloodNova');
+    if (t !== null) this.sfx!.bloodNova(t, pan);
   }
 
   step(): void {
-    if (this.live()) this.sfx!.step(this.ctx!.currentTime);
+    const t = this.slot('step');
+    if (t !== null) this.sfx!.step(t);
   }
 
   private live(): boolean {
     return this.running && !this._muted;
+  }
+
+  /**
+   * When a one-shot may start, or null to drop it. Phones glitch when the audio
+   * thread is handed dozens of overlapping voices at once (a swarm all
+   * chittering, a volley of arrows landing), so the same sound can't restart
+   * within a few milliseconds and only so many new sounds start per moment.
+   */
+  private slot(name: string): number | null {
+    if (!this.live()) return null;
+    const now = this.ctx!.currentTime;
+    if (now - (this.lastPlayed.get(name) ?? -1) < SAME_SOUND_GAP) return null;
+    while (this.recent.length && now - this.recent[0] > BUSY_WINDOW) this.recent.shift();
+    if (this.recent.length >= BUSY_LIMIT) return null;
+    this.recent.push(now);
+    this.lastPlayed.set(name, now);
+    return now;
   }
 
   private unlock(): void {
@@ -396,7 +484,10 @@ class GameSound {
       // iOS: play through the ring/silent switch like a game should.
       const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
       if (session) session.type = 'playback';
-      this.ctx = new AC({ latencyHint: 'interactive' });
+      // Phones get a roomier output buffer (~45 ms): the smallest one underruns,
+      // which is heard as stutter, whenever the audio thread has a busy moment.
+      const touch = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+      this.ctx = new AC({ latencyHint: touch ? 0.045 : 'interactive' });
       this.ctx.addEventListener('statechange', () => this.emit());
       this.build(this.ctx);
     }
