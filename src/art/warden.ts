@@ -211,9 +211,11 @@ function warden(p: WardenPose): PixelCanvas {
   // Hood: peaked, deep, draped onto the shoulders.
   c.part();
   c.shape(12, 46, (y) => {
-    if (y < 20) {
-      const u = (y - 12) / 8;
-      return [CX - u * 10 - 0.6, CX + u * 10 + 0.6];
+    if (y < 24) {
+      // A soft peak rounding out into the crown of the hood.
+      const u = (y - 11.5) / 12.5;
+      const hw = 12.5 * Math.sin(Math.min(1, u) * Math.PI * 0.5) ** 0.8;
+      return [CX - hw - 0.3, CX + hw + 0.3];
     }
     if (y < 36) return [CX - 12.5, CX + 12.5];
     const u = (y - 36) / 10;

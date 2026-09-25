@@ -11,7 +11,7 @@ export const COSMOS_CY = 290;
 export const COSMOS_RX = 170;
 export const COSMOS_RY = 128;
 /** How far the platform's side hangs below its top edge, at the front. */
-export const COSMOS_RIM = 26;
+export const COSMOS_RIM = 32;
 
 /** Where heroes arrive: the platform's south edge, facing the Warden. */
 export const COSMOS_SPAWN = { x: COSMOS_CX, y: COSMOS_CY + 98 };

@@ -80,9 +80,9 @@ export function spaceCanvas(): Uint8ClampedArray {
       const j = gy * GW + gx;
       gN[j] = fbm(wx, wy, 150, 3);
       gF[j] = fbm(wx, wy, 26, 7, 2);
-      // Dark lanes of dust cut through the clouds where this noise crosses the middle.
+      // Dark lanes of dust drift across the clouds.
       const l = fbm(wx * 1.4, wy * 1.4, 60, 41, 3);
-      gL[j] = 1 - Math.max(0, 1 - Math.abs(l - 0.5) / 0.04) * 0.8;
+      gL[j] = 1 - smooth(0.52, 0.7, l) * 0.75;
     }
   }
   const sample = (g: Float32Array, x: number, y: number) => {
@@ -214,6 +214,8 @@ export function spaceCanvas(): Uint8ClampedArray {
     const y = Math.floor(R() * H);
     const b = Math.pow(R(), 3);
     const c = STARS[Math.floor(R() * STARS.length)];
+    // Not in front of the planet or the moon.
+    if (Math.hypot(x - pX, y - pY) < pR + 1.5 || Math.hypot(x - 628, y - 62) < 12.5) continue;
     const i = (y * W + x) * 4;
     add(px, i, c, 0.25 + b * 0.75);
     if (b > 0.55) {
@@ -346,7 +348,7 @@ export function platformArt(): PlatformArt {
             put(i, pick(GOLD, 2 + shadeOf(n) * 1.5), n);
             continue;
           }
-          const idx = 2.2 + shadeOf(n) * 3 + (hash2(pxl, py, 5) - 0.5) * 0.6;
+          const idx = 1.5 + shadeOf(n) * 2.6 + (hash2(pxl, py, 5) - 0.5) * 0.6;
           // Rune gems set into the rim every 22.5 degrees.
           const seg = (Math.PI * 2) / 16;
           const off = Math.abs((((ang % seg) + seg) % seg) - seg / 2) * r * COSMOS_RX;
@@ -447,7 +449,7 @@ export function platformArt(): PlatformArt {
       const edgeY = COSMOS_CY + COSMOS_RY * Math.sqrt(1 - u * u);
       const front = Math.sqrt(1 - u * u);
       const drop = y - edgeY;
-      const spur = Math.pow(fbm(x, 0, 7, 88, 2), 2.2) * 30 + (hash2(Math.floor(x / 3), 0, 9) > 0.8 ? 6 : 0);
+      const spur = Math.pow(fbm(x, 0, 9, 88, 2), 2) * 34 + (hash2(Math.floor(x / 3), 0, 9) > 0.8 ? 5 : 0);
       const depth = COSMOS_RIM * (0.55 + 0.45 * front) + spur * front;
       if (drop < 0 || drop > depth) continue;
       const sideN: [number, number, number] = [u * 0.7, -0.35, 0.75];
@@ -460,10 +462,11 @@ export function platformArt(): PlatformArt {
       const fade = drop / depth;
       let idx = 3 - fade * 2.6 - strata * 0.5 + shadeOf(sideN) * 1.2 + (fbm(x, y, 4, 71, 2) - 0.5) * 0.8;
       // Crystal veins through the rock, glowing violet and cyan.
-      const vein = fbm(x * 0.8, y * 2.2, 14, 23, 3);
-      if (Math.abs(vein - 0.5) < 0.018 && fade < 0.85) {
-        const cyan = hash2(Math.floor(x / 20), 0, 4) > 0.5;
-        put(i, cyan ? hex('#8ae8ff') : hex('#c8a0ff'), sideN, cyan ? GLOW_CYAN : GLOW_VIOLET, 0.7 * (1 - fade));
+      // Veins of crystal run along the strata here and there, glowing violet and cyan.
+      const vein = fbm(x, y * 3, 40, 23, 2);
+      if (Math.abs(vein - 0.5) < 0.025 && fade > 0.15 && fade < 0.8 && fbm(x, 0, 30, 57, 2) > 0.55) {
+        const cyan = hash2(Math.floor(x / 40), 0, 4) > 0.5;
+        put(i, cyan ? hex('#4ab8d8') : hex('#8a60d0'), sideN, cyan ? GLOW_CYAN : GLOW_VIOLET, 0.35 * (1 - fade));
         continue;
       }
       if (fade > 0.92) idx -= 1;
