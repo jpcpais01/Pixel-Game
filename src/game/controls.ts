@@ -21,6 +21,10 @@ export const controls = {
    */
   attackAim: null as { x: number; y: number } | null,
   beamAim: null as { x: number; y: number } | null,
+  /** The Special's touch button dragged this way (see attackAim). */
+  ultAim: null as { x: number; y: number } | null,
+  /** The Special's touch button let go (or C pressed): cast it once, if there is energy for it. */
+  ultTap: false,
   /**
    * One-shot presses from the touch buttons (a tap, or letting go after
    * dragging the special): the world presses the button for one frame, then
@@ -28,8 +32,8 @@ export const controls = {
    */
   attackTap: false,
   beamTap: false,
-  /** A touch button being dragged, for the world's aim line; `cancel` when pulled back to its centre. */
-  aiming: null as { special: boolean; cancel: boolean } | null,
+  /** A touch button being dragged, for the world's aim line; `cancel` when pulled back to its centre. `ult` is the Special's button. */
+  aiming: null as { special: boolean; ult?: boolean; cancel: boolean } | null,
   /** Hotbar slots (0..8) asked to be used since the world last looked: taps on the HUD and keys 1 to 9. */
   items: [] as number[],
 };

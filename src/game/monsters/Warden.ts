@@ -151,6 +151,7 @@ export class Warden extends Monster {
       barY: 72,
       debris: WARDEN_TINTS,
       noBar: true,
+      rank: 'myth',
     });
     this.hover = HOVER;
     this.cooldown = 1400;

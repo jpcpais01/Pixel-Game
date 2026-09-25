@@ -1190,6 +1190,65 @@ export class Sfx {
     this.m.startNoise(n, t, dur + 0.05);
   }
 
+  /** A Special gathering: a deep swell and a bright riser that climb together for `dur` seconds. */
+  ultCharge(t: number, dur: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.8, 0.7);
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 2400, 0.8, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.22, t + dur * 0.9);
+    g.gain.linearRampToValueAtTime(0, t + dur + 0.06);
+    for (const [f, type] of [
+      [55, 'sawtooth'],
+      [82.5, 'sawtooth'],
+      [220, 'triangle'],
+    ] as const) {
+      const o = osc(ctx, type, f, g);
+      sweep(o.frequency, t, f, f * 2, dur);
+      o.start(t);
+      o.stop(t + dur + 0.1);
+    }
+    const air = gain(ctx, 0, out);
+    air.gain.setValueAtTime(0, t);
+    air.gain.linearRampToValueAtTime(0.4, t + dur);
+    air.gain.linearRampToValueAtTime(0, t + dur + 0.05);
+    const bp = filter(ctx, 'bandpass', 400, 3, air);
+    sweep(bp.frequency, t, 400, 4200, dur);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, dur + 0.1);
+    this.sparkle(out, t + dur * 0.5, 4, dur * 0.1);
+  }
+
+  /** A Special unleashed: a heavy boom under a triumphant, ringing chord. */
+  ultRelease(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 1, 0.8);
+    const b = gain(ctx, 0, out);
+    hit(b.gain, t, 0.9, 0.004, 0.9);
+    const lo = osc(ctx, 'sine', 110, b);
+    sweep(lo.frequency, t, 110, 30, 0.8);
+    lo.start(t);
+    lo.stop(t + 1);
+    this.burstNoise(out, t, 'lowpass', 7000, 300, 0.7, 0.55, 0.6, true);
+    [392, 523, 659, 784].forEach((f) => this.bell(out, t + 0.03, f, 0.04, 1.6));
+    this.sparkle(out, t + 0.06, 6, 0.045);
+  }
+
+  /** Energy soaked up from a fallen foe: a soft, rising blip. */
+  energy(t: number, pan: number): void {
+    const out = this.out(pan, 0.35, 0.3);
+    this.chirp(out, t, 'sine', 880, 1760, 0.12, 0.12);
+    this.chirp(out, t + 0.03, 'triangle', 1320, 2640, 0.05, 0.1);
+  }
+
+  /** The Special is ready: a quick, bright fanfare. */
+  ultReady(t: number): void {
+    const out = this.out(0, 0.55, 0.6);
+    [659, 784, 988, 1319].forEach((f, i) => this.bell(out, t + i * 0.06, f, 0.05, 0.9));
+    this.sparkle(out, t + 0.22, 4, 0.04);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {

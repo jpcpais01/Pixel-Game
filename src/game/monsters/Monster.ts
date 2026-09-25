@@ -35,6 +35,8 @@ export interface MonsterStats {
   debris: number[];
   /** No bar over its head (a boss shows its health across the top of the screen). */
   noBar?: boolean;
+  /** A boss's rank: a Legend or, greater still, a Myth. Slaying one fills a lot of the hero's energy. */
+  rank?: 'legend' | 'myth';
 }
 
 export type MonsterState = 'spawn' | 'idle' | 'wander' | 'notice' | 'chase' | 'windup' | 'attack' | 'recover' | 'hurt' | 'return' | 'dying';
@@ -331,7 +333,7 @@ export abstract class Monster implements Hurtbox {
     this.flashT = DEATH_TIME;
     this.world.debris(this.stats.debris, snap(this.x), snap(this.y) - this.stats.bodyY, 18, this.y + 1);
     sound.monsterDie(this.world.pan(this.x), this.stats.mass);
-    this.world.monsterSlain(this.stats.key, this.x, this.y, this.stats.bodyY);
+    this.world.monsterSlain(this.stats.key, this.x, this.y, this.stats.bodyY, this.stats);
     this.onDeath();
   }
 
