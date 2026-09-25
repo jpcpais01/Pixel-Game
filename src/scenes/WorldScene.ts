@@ -15,11 +15,13 @@ import { areaOrigin, reaches, type Harm, type Hit, type Hurtbox, type MeleeArea,
 import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
 import type { Effect } from '../game/Slash';
-import { separate, Spawner, type Monster, type SpawnSpot } from '../game/monsters';
-import { PLAZA_CX, PLAZA_CY, PLAZA_H, PLAZA_Y, WORLD_H, WORLD_W, freeBox, pathHalfW, pathX, walkable } from '../world/layout';
+import { separate, Spawner, type Monster } from '../game/monsters';
+import { freeBox } from '../world/common';
 import { GroundStreamer } from '../world/GroundStreamer';
-import { Forest } from '../world/Forest';
-import { FOREST_SPAWNS, regionAt, type Region } from '../world/regions';
+import { Scenery } from '../world/Scenery';
+import { arenaById, type ArenaDef } from '../world/arenas';
+import { PLAZA_H, PLAZA_Y, plazaProps } from '../world/clearing';
+import { Garden } from '../world/Garden';
 
 type V3 = [number, number, number];
 
@@ -39,10 +41,8 @@ const DAY = {
 const mix3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
-import { heroBuffs } from '../game/buffs';
+import { heroBuffs, type BuffDef } from '../game/buffs';
 import { Pickup } from '../game/Pickup';
-
-export { WORLD_W, WORLD_H } from '../world/layout';
 
 interface Flicker {
   light: Phaser.GameObjects.Light;
@@ -56,16 +56,6 @@ interface Flicker {
 }
 
 export type { MeleeArea } from '../game/combat';
-
-/** The starting plaza's monsters, around the edge of the clearing (plaza coordinates). */
-const PLAZA_SPAWNS: SpawnSpot[] = [
-  { kind: 'frog', x: 150, y: 118 },
-  { kind: 'frog', x: 522, y: 334 },
-  { kind: 'puffcap', x: 470, y: 104 },
-  { kind: 'puffcap', x: 494, y: 122 },
-  { kind: 'puffcap', x: 462, y: 130 },
-  { kind: 'beetle', x: 148, y: 342 },
-].map((s) => ({ ...s, kind: s.kind as SpawnSpot['kind'], y: s.y + PLAZA_Y }));
 
 /** How long the hero lies fallen before rising again at the plaza. */
 const DOWN_TIME = 3500;
@@ -94,13 +84,24 @@ class Dummy implements Hurtbox {
     this.wobble = hit.heavy ? 1.4 : 1;
     this.sprite.setFrame('d1');
     this.world.time.delayedCall(90, () => this.sprite.setFrame('d0'));
-    this.world.popNumber(this.x, this.y - 30, `${Math.round(hit.damage)}`, hit.poison ?? (hit.heavy ? 0xffe28a : 0xffffff));
+    this.world.popNumber(this.x, this.y - 30, `${Math.round(hit.damage * this.world.might)}`, hit.poison ?? (hit.heavy ? 0xffe28a : 0xffffff));
   }
 }
 
 export class WorldScene extends Phaser.Scene {
   private hero!: Hero;
-  private worldRect = new Phaser.Geom.Rectangle(0, 0, WORLD_W, WORLD_H);
+  private arena!: ArenaDef;
+  /** The arena's own living parts, when it is the Sunken Garden. */
+  private garden: Garden | null = null;
+  /** The light this frame: 0 night .. 1 day (fixed in arenas without day and night). */
+  private daylight = 1;
+  /** Healing from buffs, gathered until it makes a whole point, and shown once a second. */
+  private regenAcc = 0;
+  private regenShown = 0;
+  private regenT = 0;
+  /** Time until the next speck rising from a buff's glow. */
+  private auraT = 0;
+  private worldRect = new Phaser.Geom.Rectangle();
   private balls: EnergyBall[] = [];
   private beams: Beam[] = [];
   private flickers: Flicker[] = [];
@@ -109,22 +110,19 @@ export class WorldScene extends Phaser.Scene {
   private mouseWorld = new Phaser.Math.Vector2();
   private struck = false;
   /** The world's outer edge; within it, `walkable` decides where feet may go. */
-  private bounds = new Phaser.Geom.Rectangle(8, 10, WORLD_W - 16, WORLD_H - 34);
+  private bounds = new Phaser.Geom.Rectangle();
   /** How far the hero may step this frame before bumping into something. */
   private heroBox = new Phaser.Geom.Rectangle();
   /** Where monsters may roam: the world's edge, and `walkable` within it. */
   get monsterBounds(): Phaser.Geom.Rectangle {
     return this.bounds;
   }
-  /** Can feet stand at (x, y)? Trees, the forest's edge and the plaza's walls say no. */
-  walkable(x: number, y: number): boolean {
-    return walkable(x, y);
-  }
+  /** Can feet stand at (x, y)? The arena's walls, trees and water say no, and so do standing flowers. */
+  walkable = (x: number, y: number): boolean => this.arena.walkable(x, y) && (!this.garden || this.garden.walkable(x, y));
   private ground!: GroundStreamer;
-  private forest!: Forest;
+  private scenery!: Scenery;
   /** The camera's view of the world, in world pixels. */
   private view = new Phaser.Geom.Rectangle();
-  private region: Region | null = null;
   private banner: Phaser.GameObjects.BitmapText | null = null;
   private spawners: Spawner[] = [];
   private effects: Effect[] = [];
@@ -146,7 +144,7 @@ export class WorldScene extends Phaser.Scene {
   private pushX = 0;
   private pushY = 0;
   private fallen: Phaser.GameObjects.BitmapText | null = null;
-  private shafts!: Phaser.GameObjects.TileSprite;
+  private shafts: Phaser.GameObjects.TileSprite | null = null;
   private shadows: Phaser.GameObjects.Image[] = [];
   private pollen!: Phaser.GameObjects.Particles.ParticleEmitter;
   private fireflies!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -160,7 +158,7 @@ export class WorldScene extends Phaser.Scene {
     super('world');
   }
 
-  create(data: { character?: string }): void {
+  create(data: { character?: string; arena?: string }): void {
     // The scene object is reused when a new game starts from the home screen.
     this.balls = [];
     this.beams = [];
@@ -173,10 +171,17 @@ export class WorldScene extends Phaser.Scene {
     this.debrisEmitters = new Map();
     this.downT = this.grace = this.hurtTint = this.pushX = this.pushY = 0;
     this.fallen = null;
-    this.region = null;
     this.banner = null;
-    const cx = PLAZA_CX;
-    const cy = PLAZA_CY;
+    this.garden = null;
+    this.shafts = null;
+    this.regenAcc = this.regenShown = this.regenT = this.auraT = 0;
+    const arena = (this.arena = arenaById(data?.arena));
+    const W = arena.ground.w;
+    const H = arena.ground.h;
+    this.worldRect.setTo(0, 0, W, H);
+    this.bounds.setTo(8, 10, W - 16, H - 24);
+    daynight.enabled = !!arena.dayNight;
+    this.daylight = arena.dayNight ? daynight.daylight : (arena.daylight ?? 1);
 
     // Ambient comes from the Lit pipeline's sky and sun, driven by daynight.
     this.lights.enable().setAmbientColor(0x000000);
@@ -202,12 +207,13 @@ export class WorldScene extends Phaser.Scene {
     };
 
     // The ground streams in strips as the hero walks (see GroundStreamer).
-    this.ground = new GroundStreamer(this, (img) => ground(img) as Phaser.GameObjects.Image);
+    this.ground = new GroundStreamer(this, arena.ground, (img) => ground(img) as Phaser.GameObjects.Image);
 
-    // Faint shafts of sunlight over the plaza's ground; the forest has its
-    // own, falling through the leaves. Drifting cloud shadows are drawn over
-    // everything, with the vignette (see below).
-    this.shafts = ground(this.add.tileSprite(0, PLAZA_Y, WORLD_W, PLAZA_H, 'shafts').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(3)) as Phaser.GameObjects.TileSprite;
+    // Faint shafts of sunlight over the clearing's ground. Drifting cloud
+    // shadows are drawn over everything, with the vignette (see below).
+    if (arena.id === 'clearing') {
+      this.shafts = ground(this.add.tileSprite(0, PLAZA_Y, W, PLAZA_H, 'shafts').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(3)) as Phaser.GameObjects.TileSprite;
+    }
 
     // Motes drift wherever the camera looks.
     const view = this.view;
@@ -241,56 +247,40 @@ export class WorldScene extends Phaser.Scene {
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, offQuality);
 
-    // Braziers around the plaza.
-    const r = Math.min(WORLD_W, WORLD_H) * 0.3;
-    for (const [ax, ay] of [
-      [-0.78, -0.62],
-      [0.78, -0.62],
-      [-0.78, 0.62],
-      [0.78, 0.62],
-    ]) {
-      this.brazier(cx + ax * r, cy + ay * r * 0.87);
-    }
-    this.crystals(cx - r - 40, cy - 30, 'c0');
-    this.crystals(cx + r + 46, cy + 22, 'c1');
-    this.crystals(cx + 50, cy - r - 40, 'c1');
-
-    const R = new Phaser.Math.RandomDataGenerator(['rocks']);
-    for (let i = 0; i < 18; i++) {
-      const a = R.frac() * Math.PI * 2;
-      const d = r + 30 + R.frac() * 120;
-      const x = cx + Math.cos(a) * d * 1.3;
-      const y = cy + Math.sin(a) * d;
-      // Keep the lawn's edge and the way north clear.
-      if (x < 16 || y < PLAZA_Y + 44 || x > WORLD_W - 16 || y > WORLD_H - 8) continue;
-      if (Math.abs(x - pathX(y)) < pathHalfW(y) + 12) continue;
-      this.add.image(Math.round(x), Math.round(y), 'rock', `r${i % 3}`).setOrigin(0.5, 12 / 14).setPipeline('Lit').setDepth(y);
-      this.shadows.push(sunShadow(this.add.image(Math.round(x), Math.round(y), 'rock_s', `r${i % 3}`).setOrigin(0.5, 12 / 14)));
+    if (arena.id === 'clearing') {
+      // Braziers, crystals, rocks and training dummies round the plaza.
+      const p = plazaProps();
+      for (const b of p.braziers) this.brazier(b.x, b.y);
+      for (const c of p.crystals) this.crystals(c.x, c.y, c.frame);
+      for (const r of p.rocks) {
+        this.add.image(r.x, r.y, 'rock', r.frame).setOrigin(0.5, 12 / 14).setPipeline('Lit').setDepth(r.y);
+        this.shadows.push(sunShadow(this.add.image(r.x, r.y, 'rock_s', r.frame).setOrigin(0.5, 12 / 14)));
+      }
+      for (const d of p.dummies) this.dummy(d.x, d.y);
+    } else if (arena.id === 'garden') {
+      this.garden = new Garden(this);
     }
 
-    this.dummy(cx + 64, cy - 8);
-    this.dummy(cx - 70, cy + 34);
-
-    this.spawnX = cx;
-    this.spawnY = cy + 20;
+    this.spawnX = arena.spawn.x;
+    this.spawnY = arena.spawn.y;
     this.hero = characterById(data?.character).spawn(this, this.spawnX, this.spawnY);
     this.heroBar = new HealthBar(this);
-    this.spawners.push(new Spawner(this, PLAZA_SPAWNS));
-    this.spawners.push(new Spawner(this, FOREST_SPAWNS));
-    this.forest = new Forest(this);
+    this.spawners.push(new Spawner(this, arena.monsters));
+    this.scenery = new Scenery(this, arena.scenery(), arena.drift);
 
     // Screen-fixed; it covers the ground camera's image too, as it draws first.
     this.skyLayer = this.add.image(0, 0, 'clouds').setScrollFactor(0).setDepth(20000).setPipeline('Sky');
-    this.setVignette(0.32 - Phaser.Math.Easing.Sine.InOut(daynight.daylight) * 0.14);
+    this.setVignette(0.32 - Phaser.Math.Easing.Sine.InOut(this.daylight) * 0.14);
     cam.fadeIn(500, 7, 8, 13);
     this.fitCamera();
     this.followHero();
     this.ground.prime(this.view);
+    this.showBanner(arena.name);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this));
 
     const kb = this.input.keyboard!;
-    kb.on('keydown-N', () => daynight.toggle());
+    kb.on('keydown-N', () => daynight.enabled && daynight.toggle());
     // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
       const n = e.key.length === 1 ? e.key.charCodeAt(0) - 49 : -1;
@@ -330,6 +320,7 @@ export class WorldScene extends Phaser.Scene {
   /** Everything the heroes can strike right now. */
   private hurtboxes(): Hurtbox[] {
     const out: Hurtbox[] = [...this.dummies];
+    if (this.garden) out.push(...this.garden.hurtboxes());
     for (const sp of this.spawners) for (const m of sp.monsters) if (m.alive) out.push(m);
     return out;
   }
@@ -398,10 +389,12 @@ export class WorldScene extends Phaser.Scene {
   hurtHero(harm: Harm): void {
     const h = this.hero;
     if (this.downT > 0 || this.grace > 0) return;
-    const lost = h.vitals.damage(harm.damage);
+    // A ward takes the edge off every blow.
+    const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard')));
+    const lost = h.vitals.damage(damage);
     this.grace = HURT_GRACE;
     this.rising = false;
-    this.popNumber(snap(h.x), snap(h.y) - 38, `-${Math.round(harm.damage)}`, lost > 0 ? 0xff8a78 : 0xffd35c);
+    this.popNumber(snap(h.x), snap(h.y) - 38, `-${damage}`, lost > 0 ? 0xff8a78 : 0xffd35c);
     h.sprite.setTint(0xff8070);
     this.hurtTint = 140;
     const dx = h.x - harm.fromX;
@@ -465,9 +458,9 @@ export class WorldScene extends Phaser.Scene {
       // Knocked back, but never into a tree or through the forest's edge.
       const nx = h.x + (this.pushX * dt) / 1000;
       const ny = h.y + (this.pushY * dt) / 1000;
-      if (walkable(nx, h.y)) h.x = nx;
+      if (this.walkable(nx, h.y)) h.x = nx;
       else this.pushX = 0;
-      if (walkable(h.x, ny)) h.y = ny;
+      if (this.walkable(h.x, ny)) h.y = ny;
       else this.pushY = 0;
       const k = Math.exp(-dt / 80);
       this.pushX *= k;
@@ -501,7 +494,7 @@ export class WorldScene extends Phaser.Scene {
 
     const down = this.downT > 0;
     for (const p of this.pickups) {
-      if (!p.update(dt, down ? null : h.x, down ? null : h.y, inventory.canTake(p.id), daynight.daylight)) continue;
+      if (!p.update(dt, down ? null : h.x, down ? null : h.y, inventory.canTake(p.id), this.daylight)) continue;
       inventory.add(p.id);
       sound.pickup(this.pan(p.x));
       this.debris([0xffffff, 0xfff0a8], snap(p.x), snap(p.y) - 6, 8, p.y + 20, 'spores');
@@ -518,6 +511,62 @@ export class WorldScene extends Phaser.Scene {
         this.debris([0xffffff, 0x9cecff, 0x36c2f2], snap(h.x), snap(h.y) - 4 - Math.random() * 10, 1, h.y - 1, 'trail');
       }
     }
+
+    // The other buffs glow about the hero: specks of their colour drifting up.
+    const glowing = heroBuffs.active.filter((b) => !b.def.mods.speed);
+    if (glowing.length && !down) {
+      this.auraT -= dt;
+      if (this.auraT <= 0) {
+        this.auraT = 170;
+        const b = glowing[Math.floor(Math.random() * glowing.length)];
+        this.debris([0xffffff, b.def.tint], snap(h.x + (Math.random() - 0.5) * 12), snap(h.y) - 2 - Math.random() * 16, 1, h.y + 1, 'spores');
+      }
+    }
+
+    // Renew: healing a little at a time, counted up above the head once a second.
+    const regen = heroBuffs.regen;
+    if (regen > 0 && !down && h.vitals.hp < h.vitals.max) {
+      this.regenAcc += (regen * dt) / 1000;
+      const whole = Math.floor(this.regenAcc);
+      if (whole > 0) {
+        this.regenAcc -= whole;
+        this.regenShown += h.vitals.heal(whole);
+      }
+    }
+    this.regenT -= dt;
+    if (this.regenT <= 0) {
+      this.regenT = 1000;
+      if (this.regenShown > 0) this.popNumber(snap(h.x), snap(h.y) - 38, `+${this.regenShown}`, 0x9dff9a);
+      this.regenShown = 0;
+    }
+  }
+
+  /** How hard the hero's blows land: more under Might. */
+  get might(): number {
+    return heroBuffs.mod('damage');
+  }
+
+  /** A buff was just picked up: its name over the hero, and a burst of its colour. */
+  buffGained(def: BuffDef): void {
+    const h = this.hero;
+    this.popNumber(snap(h.x), snap(h.y) - 40, def.name.toUpperCase(), def.tint);
+    this.debris([0xffffff, def.tint], snap(h.x), snap(h.y) - 12, 20, h.y + 20, 'burst');
+  }
+
+  /** Give a sun shadow to the world, which fades it with the light. */
+  addShadow<T extends Phaser.GameObjects.Image | Phaser.GameObjects.Sprite>(obj: T): T {
+    this.shadows.push(obj);
+    return obj;
+  }
+
+  /**
+   * A light that breathes slowly, with a soft halo: `day` is how much of it
+   * survives in daylight.
+   */
+  glowLight(x: number, y: number, radius: number, color: number, intensity: number, day: number, haloTint: number, haloScale: number): void {
+    const halo = this.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(haloTint).setScale(haloScale).setDepth(y + 60).setAlpha(0.45);
+    const light = this.lights.addLight(x, y, radius, color, intensity);
+    this.flickers.push({ light, halo, base: intensity, radius, seed: -1, day, haloBase: 0.45 });
   }
 
   /**
@@ -528,8 +577,8 @@ export class WorldScene extends Phaser.Scene {
     const h = this.hero;
     const nx = Phaser.Math.Clamp(h.x + (h.x - x0) * extra, room.left, room.right);
     const ny = Phaser.Math.Clamp(h.y + (h.y - y0) * extra, room.top, room.bottom);
-    if (walkable(nx, h.y)) h.x = nx;
-    if (walkable(h.x, ny)) h.y = ny;
+    if (this.walkable(nx, h.y)) h.x = nx;
+    if (this.walkable(h.x, ny)) h.y = ny;
   }
 
   /** A number (or word) that floats up and fades: damage dealt and taken. */
@@ -580,9 +629,9 @@ export class WorldScene extends Phaser.Scene {
     const viewH = cam.height / z;
     // Scroll is measured to the unzoomed viewport's top-left; zoom pivots on its centre.
     const minX = viewW / 2 - halfW;
-    const maxX = WORLD_W - viewW / 2 - halfW;
+    const maxX = this.worldRect.width - viewW / 2 - halfW;
     const minY = viewH / 2 - halfH;
-    const maxY = WORLD_H - viewH / 2 - halfH;
+    const maxY = this.worldRect.height - viewH / 2 - halfH;
     const tx = this.hero.x - halfW;
     const ty = this.hero.y - 12 - halfH;
     const sx = maxX < minX ? (minX + maxX) / 2 : Phaser.Math.Clamp(tx, minX, maxX);
@@ -683,7 +732,7 @@ export class WorldScene extends Phaser.Scene {
     this.flickers.push({ light, halo, base: 2.0, radius: 140, seed: Math.random() * 100, day: 0.3, haloBase: 0.55 });
   }
 
-  private crystals(x: number, y: number, frame: string): void {
+  crystals(x: number, y: number, frame: string): void {
     x = Math.round(x);
     y = Math.round(y);
     this.add.image(x, y, 'crystals', frame).setOrigin(0.5, 20 / 22).setPipeline('Lit').setDepth(y);
@@ -725,42 +774,33 @@ export class WorldScene extends Phaser.Scene {
 
   /** Ease toward the chosen time of day and push it into every layer. */
   private updateDaylight(time: number, dt: number): number {
-    const step = dt / 1400;
-    daynight.daylight += Phaser.Math.Clamp(daynight.target - daynight.daylight, -step, step);
-    const d = Phaser.Math.Easing.Sine.InOut(daynight.daylight);
+    if (this.arena.dayNight) {
+      const step = dt / 1400;
+      daynight.daylight += Phaser.Math.Clamp(daynight.target - daynight.daylight, -step, step);
+      this.daylight = daynight.daylight;
+    }
+    const d = Phaser.Math.Easing.Sine.InOut(this.daylight);
 
     sky.sunDir = mix3(NIGHT.sunDir, DAY.sunDir, d);
     sky.sunColor = mix3(NIGHT.sun, DAY.sun, d);
     sky.sky = mix3(NIGHT.sky, DAY.sky, d);
     sky.bounce = mix3(NIGHT.bounce, DAY.bounce, d);
 
-    // Under the trees the light is softer and greener, the edges darker.
-    const f = this.forest.depth;
-    if (f > 0) {
-      sky.sunColor = mix3(sky.sunColor, [sky.sunColor[0] * 0.78, sky.sunColor[1] * 0.84, sky.sunColor[2] * 0.74], f);
-      sky.sky = mix3(sky.sky, [sky.sky[0] * 0.8, sky.sky[1] * 0.94, sky.sky[2] * 0.84], f);
-    }
-
     this.ground.setLight(d, 0.9 - d * 0.6);
-    skyState.clouds = d * (1 - f * 0.4);
+    skyState.clouds = d;
     skyState.tileX = time * 0.004;
     skyState.tileY = time * 0.0022;
-    this.shafts.setAlpha(d * (0.1 + Math.sin(time * 0.0007) * 0.03));
+    this.shafts?.setAlpha(d * (0.1 + Math.sin(time * 0.0007) * 0.03));
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
-    this.setVignette(0.32 - d * 0.14 + f * 0.07);
+    this.setVignette(0.32 - d * 0.14);
     this.pollen.emitting = d > 0.5;
     this.fireflies.emitting = d < 0.5;
     sound.setDaylight(d);
     return d;
   }
 
-  /** Name the region as the hero walks into it, like a signpost. */
-  private updateRegion(): void {
-    const r = regionAt(this.hero.y, this.region);
-    if (r !== this.region) {
-      this.region = r;
-      this.showBanner(r.name);
-    }
+  /** The arena's name, shown as the run begins, stays put on screen. */
+  private updateBanner(): void {
     this.banner?.setPosition(Math.round(this.view.centerX), Math.round(this.view.y + this.view.height * 0.2));
   }
 
@@ -794,6 +834,8 @@ export class WorldScene extends Phaser.Scene {
     for (const f of this.flickers) {
       if (f.seed >= 0) near = Math.min(near, Phaser.Math.Distance.Between(f.light.x, f.light.y, this.hero.x, this.hero.y));
     }
+    // No fire in this arena: no crackle.
+    if (near === Infinity) return 0;
     const k = Phaser.Math.Clamp(1 - (near - 16) / 150, 0, 1);
     return 0.12 + 0.88 * k * k;
   }
@@ -827,11 +869,11 @@ export class WorldScene extends Phaser.Scene {
       mx = my = 0;
       attack = special = false;
     }
-    this.hero.daylight = daynight.daylight;
+    this.hero.daylight = this.daylight;
     // The heroes clamp their step to a box; make it the room around them, so
     // they slide along trees and the forest's edge.
     const hb = this.heroBox;
-    freeBox(this.hero.x, this.hero.y, 14, hb);
+    freeBox(this.walkable, this.hero.x, this.hero.y, 14, hb);
     const x0 = this.hero.x;
     const y0 = this.hero.y;
     this.hero.update(dt, mx, my, attack, special, hb, controls.mouse ? this.mouseAim() : null);
@@ -843,7 +885,7 @@ export class WorldScene extends Phaser.Scene {
     const target = this.downT > 0 ? null : this.hero;
     const monsters: Monster[] = [];
     for (const sp of this.spawners) {
-      sp.update(dt, target, daynight.daylight);
+      sp.update(dt, target, this.daylight);
       monsters.push(...sp.monsters);
     }
     separate(monsters, target, HERO_RADIUS);
@@ -863,8 +905,9 @@ export class WorldScene extends Phaser.Scene {
 
     const d = this.updateDaylight(time, dt);
     this.ground.update(this.view, settings.values.quality === 'fast' ? 2.5 : 4);
-    this.forest.update(time, dt, d, this.hero, this.view);
-    this.updateRegion();
+    this.scenery.update(time, dt, d, this.hero, this.view);
+    this.garden?.update(time, dt, target, d, this.view);
+    this.updateBanner();
     for (const f of this.flickers) {
       const k = 1 + (f.day - 1) * d;
       if (f.seed < 0) {
