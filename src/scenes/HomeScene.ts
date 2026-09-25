@@ -2,7 +2,9 @@ import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
 import { LOGO_FRAMES, mythsLogo, sparkleBitmap } from '../art/logo';
 import { type Backdrop, makeBackdrop } from './homeBackdrops';
-import { BUTTON_GOLD, PixelButton, pixelText } from '../ui/widgets';
+import { BUTTON_GOLD, BUTTON_PLAIN, PixelButton, pixelText } from '../ui/widgets';
+import { account, cloudReady, logOut, onAccount } from '../game/cloud';
+import { openAccountForm } from '../ui/accountForm';
 import { fpsBottom } from './FpsScene';
 
 /** How often the glint sweeps the title, and how long each of its frames shows. */
@@ -28,6 +30,9 @@ export class HomeScene extends Phaser.Scene {
   private titleScale = 1;
   private titleFrame = 0;
   private start!: PixelButton;
+  private inventory!: PixelButton;
+  private accountBtn!: PixelButton;
+  private who!: Phaser.GameObjects.BitmapText;
   private arrows: Phaser.GameObjects.BitmapText[] = [];
   private titleY = 0;
   private menuOpen = true;
@@ -51,8 +56,15 @@ export class HomeScene extends Phaser.Scene {
     this.title = this.add.image(0, 0, 'home_title', 0).setOrigin(0);
     this.sparkles = this.sparkleSpots.map(() => this.add.image(0, 0, 'home_sparkle').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0));
     this.start = new PixelButton(this, 'Start Game', 84, 22, BUTTON_GOLD, 'start', () => this.openSelect());
+    this.inventory = new PixelButton(this, 'Inventory', 84, 18, BUTTON_PLAIN, 'inventory', () => this.openInventory());
+    this.accountBtn = new PixelButton(this, 'Log in', 84, 18, BUTTON_PLAIN, 'account', () => this.tapAccount());
+    this.accountBtn.setVisible(cloudReady());
+    this.who = pixelText(this, 0, 0, '', 0x9a90c8);
     this.arrows = [pixelText(this, 0, 0, '>', 0xf4cf6a), pixelText(this, 0, 0, '<', 0xf4cf6a)];
-    this.menu.add([this.titleGlow, this.title, ...this.sparkles, this.start, ...this.arrows]);
+    this.menu.add([this.titleGlow, this.title, ...this.sparkles, this.start, this.inventory, this.accountBtn, this.who, ...this.arrows]);
+    this.showAccount();
+    const unAccount = onAccount(() => this.showAccount());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unAccount);
 
     const kb = this.input.keyboard;
     kb?.on('keydown-ENTER', () => this.openSelect());
@@ -67,6 +79,8 @@ export class HomeScene extends Phaser.Scene {
   showMenu(open: boolean): void {
     this.menuOpen = open;
     this.start.setEnabled(open);
+    this.inventory.setEnabled(open);
+    this.accountBtn.setEnabled(open);
     this.tweens.killTweensOf(this.menu);
     if (open) this.menu.setVisible(true);
     this.tweens.add({
@@ -81,6 +95,27 @@ export class HomeScene extends Phaser.Scene {
     if (!this.menuOpen) return;
     this.showMenu(false);
     this.scene.launch('select');
+  }
+
+  private openInventory(): void {
+    if (!this.menuOpen) return;
+    this.showMenu(false);
+    this.scene.launch('inventory');
+  }
+
+  /** Log in through the account form, or log out. */
+  private tapAccount(): void {
+    if (!this.menuOpen) return;
+    if (account()) return logOut();
+    this.menuOpen = false;
+    openAccountForm(() => (this.menuOpen = true));
+  }
+
+  private showAccount(): void {
+    const a = account();
+    this.accountBtn.setText(a ? 'Log out' : 'Log in');
+    this.who.setText(a ? `Playing as ${a.username}`.toUpperCase() : '');
+    if (this.vw) this.layout();
   }
 
   private buildTextures(): void {
@@ -119,6 +154,9 @@ export class HomeScene extends Phaser.Scene {
     this.title.setPosition(Math.round((vw - this.title.displayWidth) / 2), this.titleY);
     const by = Math.max(this.titleY + this.title.displayHeight + 14, Math.round(vh * 0.52));
     this.start.place((vw - this.start.boxW) / 2, by);
+    this.inventory.place((vw - this.inventory.boxW) / 2, by + this.start.boxH + 6);
+    this.accountBtn.place((vw - this.accountBtn.boxW) / 2, this.inventory.y + this.inventory.boxH + 5);
+    this.who.setPosition(Math.round((vw - this.who.width) / 2), this.accountBtn.y + this.accountBtn.boxH + 4);
   }
 
   update(time: number, dt: number): void {

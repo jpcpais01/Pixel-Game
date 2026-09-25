@@ -45,6 +45,7 @@ import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
 import { heroBuffs, type BuffDef } from '../game/buffs';
 import { Pickup } from '../game/Pickup';
+import { collection } from '../game/collection';
 
 interface Flicker {
   light: Phaser.GameObjects.Light;
@@ -534,6 +535,7 @@ export class WorldScene extends Phaser.Scene {
     for (const p of this.pickups) {
       if (!p.update(dt, down ? null : h.x, down ? null : h.y, inventory.canTake(p.id), this.daylight)) continue;
       inventory.add(p.id);
+      collection.add(p.id);
       sound.pickup(this.pan(p.x));
       this.debris([0xffffff, 0xfff0a8], snap(p.x), snap(p.y) - 6, 8, p.y + 20, 'spores');
       p.destroy();
