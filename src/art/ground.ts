@@ -38,7 +38,7 @@ const ramp = (...c: string[]): RGB[] => c.map(hex);
 /** Moonlight version of a daylight colour: dim, cool, a little desaturated. */
 function nightify(c: RGB): RGB {
   const l = c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
-  return [Math.round(c[0] * 0.2 + l * 0.08), Math.round(c[1] * 0.3 + l * 0.11), Math.round(c[2] * 0.26 + l * 0.24 + 9)];
+  return [Math.round(c[0] * 0.23 + l * 0.09), Math.round(c[1] * 0.34 + l * 0.12), Math.round(c[2] * 0.3 + l * 0.26 + 10)];
 }
 
 interface Look {
@@ -71,7 +71,7 @@ const DAY_LOOK: Look = {
     ramp('#0d2419', '#133220', '#1b4328', '#255630', '#336b38', '#468241', '#5f9a4b', '#80b35a'),
     ramp('#1a3319', '#26461f', '#355d25', '#46742c', '#5c8c35', '#77a53f', '#96be4f', '#b8d466'),
     ramp('#0a1f1d', '#0f2b27', '#153830', '#1d4739', '#275743', '#33694d', '#437b58', '#568e64'),
-    ramp('#3a220d', '#573511', '#7a4c15', '#9c661b', '#bf8424', '#dca334', '#f0c250', '#fbdc7c'),
+    ramp('#2c2410', '#433716', '#5c4b1c', '#776021', '#937629', '#ad8d35', '#c6a647', '#dcc068'),
   ],
   bloom: ramp('#7d8cf0', '#eef3ff', '#f4e27c', '#f0a0cf', '#a6d8ff'),
   shroom: hex('#c8fff0'),
@@ -175,7 +175,7 @@ class Clumps {
         // Neighbouring clumps mostly share a kind of tree; now and then a
         // whole crown has turned gold.
         const s = valueNoise(sx, sy, 90, 97) + (hash2(cx, cy, 113) - 0.5) * 0.35;
-        this.species[k] = valueNoise(sx, sy, 34, 131) > 0.82 ? 3 : s < 0.3 ? 2 : s > 0.74 ? 1 : 0;
+        this.species[k] = valueNoise(sx, sy, 34, 131) > 0.86 ? 3 : s < 0.3 ? 2 : s > 0.74 ? 1 : 0;
       }
     }
   }

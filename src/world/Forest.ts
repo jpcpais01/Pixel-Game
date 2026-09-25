@@ -213,7 +213,7 @@ export class Forest {
     // Boughs overhead: parallax, a slow sway, dark against the sky.
     const cx = view.centerX;
     const cy = view.centerY;
-    const tint = Phaser.Display.Color.GetColor(Math.round(64 + 186 * daylight), Math.round(74 + 181 * daylight), Math.round(102 + 148 * daylight));
+    const tint = Phaser.Display.Color.GetColor(Math.round(88 + 162 * daylight), Math.round(98 + 157 * daylight), Math.round(128 + 122 * daylight));
     for (const b of this.boughs) {
       const x = b.x + (b.x - cx) * PARALLAX;
       const y = b.y + (b.y - cy) * PARALLAX;
