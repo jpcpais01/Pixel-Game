@@ -31,6 +31,8 @@ export interface Aim {
   y: number;
   /** How far away the mouse is, in world px, for abilities that land at a spot. */
   dist?: number;
+  /** The hero is fighting: it should face this way, even while walking another. */
+  look?: boolean;
 }
 
 /** What the world needs from the player's character each frame. */
@@ -47,8 +49,9 @@ export interface Hero {
   alpha: number;
   /**
    * `attack` and `special` are the two ability buttons (held = true). `aim` is
-   * a unit vector towards the mouse on a computer; abilities go that way
-   * instead of the way the hero last walked.
+   * a unit vector towards the mouse on a computer, or on a touch screen the
+   * way an ability button is dragged (else the nearest enemy); abilities go
+   * that way instead of the way the hero last walked. Null: no aim.
    */
   update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle, aim?: Aim | null): void;
 }
@@ -77,6 +80,12 @@ export interface CharacterDef {
     /** Feet as a fraction of the frame height, when frames aren't 24x32. */
     originY?: number;
   };
+  /**
+   * The special is held to charge and fires on release (the wizard's beam), so
+   * its touch button presses at once and dragging steers it, rather than
+   * aiming first and firing on release.
+   */
+  chargeSpecial?: boolean;
   /** Icons on the two ability buttons. */
   buttons: {
     attack: { texture: string; frame?: string; anim?: string };
@@ -97,6 +106,7 @@ export const CHARACTERS: CharacterDef[] = [
     stats: { power: 4, speed: 3, range: 5 },
     attack: 'Energy ball',
     special: 'Charged beam',
+    chargeSpecial: true,
     preview: { texture: 'wizard', glow: 'wizard_e', idle: 'wizard_idle_down', chosen: 'wizard_cast_down' },
     buttons: {
       attack: { texture: 'orb_e', frame: 'o0', anim: 'orb_spin' },

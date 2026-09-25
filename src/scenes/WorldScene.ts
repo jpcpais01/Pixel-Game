@@ -92,6 +92,11 @@ class Dummy implements Hurtbox {
   }
 }
 
+/** Touch abilities tapped without dragging aim at the nearest enemy this close to the hero, in world px. */
+const AUTO_AIM_RANGE = 150;
+/** How long the hero keeps facing the aim after an ability, in ms. */
+const LOOK_LINGER = 450;
+
 export class WorldScene extends Phaser.Scene {
   private hero!: Hero;
   private arena!: ArenaDef;
@@ -120,6 +125,12 @@ export class WorldScene extends Phaser.Scene {
   private dummies: Dummy[] = [];
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private mouseWorld = new Phaser.Math.Vector2();
+  /** Time left facing the last aim after an ability, so walking between blows doesn't swing the hero round. */
+  private lookT = 0;
+  private lastAim: Aim | null = null;
+  /** The dotted line from the hero while a touch ability button is dragged. */
+  private aimLine!: Phaser.GameObjects.Graphics;
+  private aimShown = false;
   private struck = false;
   /** The world's outer edge; within it, `walkable` decides where feet may go. */
   private bounds = new Phaser.Geom.Rectangle();
@@ -282,6 +293,10 @@ export class WorldScene extends Phaser.Scene {
     this.spawnY = arena.spawn.y;
     this.hero = characterById(data?.character).spawn(this, this.spawnX, this.spawnY);
     this.heroBar = new HealthBar(this);
+    this.aimLine = this.add.graphics().setDepth(15000).setVisible(false);
+    this.aimShown = false;
+    this.lookT = 0;
+    this.lastAim = null;
     this.spawners.push(new Spawner(this, arena.monsters, arena.respawn));
     this.scenery = new Scenery(this, arena.scenery(), arena.drift);
 
@@ -949,6 +964,75 @@ export class WorldScene extends Phaser.Scene {
     return l < 1 ? null : { x: dx / l, y: dy / l, dist: l };
   }
 
+  /**
+   * Touch aim: the way the button is dragged, or else at the nearest enemy in
+   * reach (null when there is none: the hero goes the way it last walked).
+   */
+  private touchAim(drag: { x: number; y: number } | null): Aim | null {
+    if (drag) return { x: drag.x, y: drag.y };
+    const cx = this.hero.x;
+    const cy = this.hero.y - 14;
+    let best: Hurtbox | null = null;
+    let bestD = AUTO_AIM_RANGE;
+    const consider = (h: Hurtbox) => {
+      if (!h.alive) return;
+      const d = Math.hypot(h.x - cx, h.y - h.bodyY - cy);
+      if (d < bestD) {
+        bestD = d;
+        best = h;
+      }
+    };
+    for (const sp of this.spawners) for (const m of sp.monsters) consider(m);
+    for (const d of this.dummies) consider(d);
+    const t = best as Hurtbox | null;
+    if (!t || bestD < 1) return null;
+    return { x: (t.x - cx) / bestD, y: (t.y - t.bodyY - cy) / bestD, dist: bestD };
+  }
+
+  /** Where the abilities go this frame (see Hero.update), and whether the hero should face it. */
+  private heroAim(dt: number, attack: boolean, special: boolean): Aim | null {
+    let aim: Aim | null;
+    if (controls.mouse) aim = this.mouseAim();
+    else if (controls.beam || controls.beamTap) aim = this.touchAim(controls.beamAim);
+    else if (controls.attack || controls.attackTap) aim = this.touchAim(controls.attackAim);
+    else aim = this.lookT > 0 ? this.lastAim : null;
+    if (attack || special) {
+      this.lookT = LOOK_LINGER;
+      this.lastAim = aim;
+    } else this.lookT = Math.max(0, this.lookT - dt);
+    return aim && { ...aim, look: this.lookT > 0 };
+  }
+
+  /** A dotted line with an arrowhead from the hero the way a touch button is dragged; hidden when not aiming. */
+  private drawAimLine(): void {
+    const a = controls.aiming;
+    const u = a && !controls.mouse && this.downT <= 0 && !a.cancel ? (a.special ? controls.beamAim : controls.attackAim) : null;
+    if (!u) {
+      if (this.aimShown) this.aimLine.clear().setVisible(false);
+      this.aimShown = false;
+      return;
+    }
+    this.aimShown = true;
+    const g = this.aimLine.clear().setVisible(true);
+    const col = a!.special ? 0xffd66b : 0x9ff6ff;
+    const cx = snap(this.hero.x);
+    const cy = snap(this.hero.y) - 12;
+    const len = 52;
+    for (let d = 12; d < len; d += 6) {
+      g.fillStyle(col, 0.35 + (0.4 * (d - 12)) / len);
+      g.fillRect(Math.round(cx + u.x * d) - 1, Math.round(cy + u.y * d) - 1, 2, 2);
+    }
+    // The arrowhead: two short strokes swept back from the tip.
+    const tx = cx + u.x * (len + 4);
+    const ty = cy + u.y * (len + 4);
+    g.fillStyle(col, 0.85);
+    for (const side of [-1, 1]) {
+      const bx = -u.x * 0.7 + -u.y * side * 0.7;
+      const by = -u.y * 0.7 + u.x * side * 0.7;
+      for (let i = 0; i <= 4; i += 2) g.fillRect(Math.round(tx + bx * i) - 1, Math.round(ty + by * i) - 1, 2, 2);
+    }
+  }
+
   update(time: number, dt: number): void {
     const k = this.keys;
     let mx = controls.moveX;
@@ -961,8 +1045,8 @@ export class WorldScene extends Phaser.Scene {
       my = ky / l;
     }
     // On a computer: WASD to walk, left click to attack, Space for the special.
-    let attack = controls.attack || controls.click || k.J.isDown;
-    let special = controls.beam || k.SPACE.isDown || k.K.isDown || k.SHIFT.isDown;
+    let attack = controls.attack || controls.attackTap || controls.click || k.J.isDown;
+    let special = controls.beam || controls.beamTap || k.SPACE.isDown || k.K.isDown || k.SHIFT.isDown;
     if (this.downT > 0) {
       mx = my = 0;
       attack = special = false;
@@ -974,7 +1058,10 @@ export class WorldScene extends Phaser.Scene {
     freeBox(this.walkable, this.hero.x, this.hero.y, 14, hb);
     const x0 = this.hero.x;
     const y0 = this.hero.y;
-    this.hero.update(dt, mx, my, attack, special, hb, controls.mouse ? this.mouseAim() : null);
+    this.hero.update(dt, mx, my, attack, special, hb, this.heroAim(dt, attack, special));
+    // Taps press for one frame.
+    controls.attackTap = controls.beamTap = false;
+    this.drawAimLine();
     const fast = heroBuffs.mod('speed') * gear.speed;
     if (fast !== 1 && this.downT <= 0) this.stretchStep(x0, y0, fast - 1, hb);
     this.updateHeroLife(dt);

@@ -159,7 +159,9 @@ export class Wizard implements Hero {
     }
 
     if (this.state === 'free') {
-      if (moving) this.dir = dirOf(mx, my);
+      // Fighting faces the aim, even walking backwards; otherwise the way of the walk.
+      if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
+      else if (moving) this.dir = dirOf(mx, my);
       const key = `${this.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else if (this.state === 'cast') {
