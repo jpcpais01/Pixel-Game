@@ -9,7 +9,7 @@ import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText 
 import { fpsBottom } from './FpsScene';
 
 const PANEL_W = 172;
-const PANEL_H = 166;
+const PANEL_H = 182;
 const ROW_H = 16;
 const CONTROL_X = 86;
 const CONTROL_W = 76;
@@ -40,6 +40,7 @@ export class PauseScene extends Phaser.Scene {
   private dayButton!: PixelButton;
   private fpsButton!: PixelButton;
   private qualityButton!: PixelButton;
+  private zoomButton!: PixelButton;
   private resume!: PixelButton;
   private home!: PixelButton;
 
@@ -110,6 +111,11 @@ export class PauseScene extends Phaser.Scene {
       const q = settings.values.quality;
       settings.set('quality', q === 'full' ? 'fast' : q === 'fast' ? 'low' : 'full');
     });
+    // Far, then Normal, then Close, then Far again.
+    this.zoomButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => {
+      const z = settings.values.zoom;
+      settings.set('zoom', z === 'far' ? 'normal' : z === 'normal' ? 'close' : 'far');
+    });
     const rows: [string, PixelSlider | PixelButton][] = [
       ['Brightness', slider(0xffe08a, v.brightness, 'brightness')],
       ['Music', slider(0x6fe4ff, v.music, 'music')],
@@ -117,6 +123,7 @@ export class PauseScene extends Phaser.Scene {
       ['Time of day', this.dayButton],
       ['FPS counter', this.fpsButton],
       ['Graphics', this.qualityButton],
+      ['Zoom', this.zoomButton],
     ];
     this.labels = rows.map(([text]) => pixelText(this, 0, 0, text, 0xb8a8e8));
     this.controlsRow = rows.map(([, c]) => c);
@@ -139,6 +146,7 @@ export class PauseScene extends Phaser.Scene {
     this.dayButton.setText(!daynight.enabled ? 'Fixed' : daynight.target > 0.5 ? 'Day' : 'Night');
     this.fpsButton.setText(!settings.values.showFps ? 'Hidden' : settings.values.profiler ? 'Details' : 'Shown');
     this.qualityButton.setText({ full: 'Full', fast: 'Fast', low: 'Low' }[settings.values.quality]);
+    this.zoomButton.setText({ far: 'Far', normal: 'Normal', close: 'Close' }[settings.values.zoom]);
   }
 
   private setOpen(open: boolean): void {
@@ -154,7 +162,7 @@ export class PauseScene extends Phaser.Scene {
       this.scene.resume('ui');
     }
     this.hud.setVisible(!open);
-    for (const b of [this.dayButton, this.fpsButton, this.qualityButton, this.resume, this.home]) b.setEnabled(open);
+    for (const b of [this.dayButton, this.fpsButton, this.qualityButton, this.zoomButton, this.resume, this.home]) b.setEnabled(open);
     this.tweens.killTweensOf(this.menu);
     if (open) this.menu.setVisible(true);
     this.tweens.add({ targets: this.menu, alpha: open ? 1 : 0, duration: 140, onComplete: () => this.menu.setVisible(open) });

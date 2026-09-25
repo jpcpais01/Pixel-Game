@@ -41,6 +41,26 @@ export function setRenderQuality(q: RenderQuality): void {
 /** The world camera's zoom (device pixels per art pixel), set with the canvas size. */
 export const pixelGrid = { zoom: 2 };
 
+export type ViewZoom = 'far' | 'normal' | 'close';
+let viewZoom: ViewZoom = 'far';
+
+/** Pick the world's zoom setting; call `viewSize` afterwards to apply it. */
+export function setViewZoom(z: ViewZoom): void {
+  viewZoom = z;
+}
+
+/**
+ * The world's zoom in canvas pixels per art pixel. Far is the menus' zoom
+ * (about 250 art pixels on the short side); Normal and Close are about 1.25x
+ * and 1.5x that, and always at least one whole step closer than the level
+ * before, since the zoom can only be a whole number of canvas pixels.
+ */
+const worldZoom = (width: number, height: number): number => {
+  const far = artZoom(width, height);
+  const normal = Math.max(far + 1, Math.round(far * 1.25));
+  return viewZoom === 'far' ? far : viewZoom === 'normal' ? normal : Math.max(normal + 1, Math.round(far * 1.5));
+};
+
 /**
  * Canvas pixels per art pixel for a canvas of this size, in the world and on
  * every menu alike: about 250 art pixels on the short side, the same framing
@@ -68,7 +88,7 @@ export const viewSize = () => {
   updateDpr(Math.min(cssW, cssH));
   const width = Math.round(cssW * DPR);
   const height = Math.round(cssH * DPR);
-  pixelGrid.zoom = artZoom(width, height);
+  pixelGrid.zoom = worldZoom(width, height);
   return { width, height };
 };
 

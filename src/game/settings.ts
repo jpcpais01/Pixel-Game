@@ -13,11 +13,13 @@ export interface Settings {
   profiler: boolean;
   /** Fast renders at a lower resolution (see display.ts) with fewer particles. */
   quality: 'full' | 'fast' | 'low';
+  /** How much of the world fits on screen: Far shows the most. */
+  zoom: 'far' | 'normal' | 'close';
 }
 
 // Phones and tablets start on Fast; they have dense screens and small GPUs.
 const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true, profiler: false, quality: touch ? 'fast' : 'full' };
+const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true, profiler: false, quality: touch ? 'fast' : 'full', zoom: 'far' };
 
 type Listener = (s: Settings) => void;
 
