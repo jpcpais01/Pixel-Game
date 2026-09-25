@@ -5,7 +5,7 @@
 import Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, WIZARD_LOOKS, type FrameMeta } from './wizard';
-import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, fistIcon, barrageIcon, flaskIcon, bogIcon, fumeCanvas, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
+import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, PYRO_SPELL, PYRO_METEOR_H, PYRO_METEOR_W, meteorIcon, pyroMeteor, scorchCanvas, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, fistIcon, barrageIcon, flaskIcon, bogIcon, fumeCanvas, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
 import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FRAMES, twirlStart, TWIRL_FPS, type JediMeta } from './jedi';
 import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, buildAlchemistFrames, flaskFrame } from './alchemist';
 import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE, arrowFrame, buildArcherFrames, stuckArrowFrame } from './archer';
@@ -277,8 +277,8 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     scene.textures.addCanvas(`icon_rain${sfx}`, toCanvas(16, 16, rainIcon(q, look.storm)));
   }
 
-  // Energy ball and impact per spell look: 'orb'/'burst' (arcane) and 'orb_void'/'burst_void'.
-  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL]] as const) {
+  // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
+  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL]] as const) {
     register(scene, `orb${suffix}`, pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i, k)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
     register(scene, `burst${suffix}`, pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i, k)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
     scene.anims.create({ key: `orb${suffix}_spin`, frames: scene.anims.generateFrameNames(`orb${suffix}_e`, { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });
@@ -305,6 +305,11 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_moon', toCanvas(12, 12, skyIcon('moon')));
   scene.textures.addCanvas('icon_beam', toCanvas(16, 16, beamIcon()));
   scene.textures.addCanvas('icon_beam_void', toCanvas(16, 16, beamIcon(VOID_SPELL)));
+  // The pyromancer's meteor: its button, three flickering frames of the falling rock, and its scorch.
+  scene.textures.addCanvas('icon_meteor', toCanvas(16, 16, meteorIcon()));
+  const meteors = scene.textures.addCanvas('pyro_meteor', toCanvas(PYRO_METEOR_W * 3, PYRO_METEOR_H, sideBySide(PYRO_METEOR_W, PYRO_METEOR_H, [0, 1, 2].map(pyroMeteor))))!;
+  for (let i = 0; i < 3; i++) meteors.add(`m${i}`, 0, i * PYRO_METEOR_W, 0, PYRO_METEOR_W, PYRO_METEOR_H);
+  scene.textures.addCanvas('scorch', toCanvas(48, 24, scorchCanvas(48, 24)));
   scene.textures.addCanvas('icon_sword', toCanvas(16, 16, swordIcon()));
   scene.textures.addCanvas('icon_whirl', toCanvas(16, 16, whirlIcon()));
   scene.textures.addCanvas('icon_sword_jade', toCanvas(16, 16, swordIcon(JADE_SWORD_ICON)));
