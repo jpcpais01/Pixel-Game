@@ -5,9 +5,9 @@
 import Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, WIZARD_LOOKS, type FrameMeta } from './wizard';
-import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, fistIcon, barrageIcon, flaskIcon, bogIcon, fumeCanvas, type IconColors } from './effects';
+import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, fistIcon, barrageIcon, flaskIcon, bogIcon, fumeCanvas, HEX_BREW_COLORS, PLAGUE_BREW, type IconColors } from './effects';
 import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FRAMES, twirlStart, TWIRL_FPS, type JediMeta } from './jedi';
-import { ALCHEMIST_ANIMS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, buildAlchemistFrames, flaskFrame } from './alchemist';
+import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, buildAlchemistFrames, flaskFrame } from './alchemist';
 import { buildFighterFrames, FIGHTER_ANIMS, FIGHTER_H, FIGHTER_W } from './fighter';
 import { hex } from './pixel';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
@@ -218,24 +218,32 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     }
   }
 
-  // Alchemist, and the flasks he throws (tumbling frames r0..r7), plus the fumes of his bog.
-  const af = buildAlchemistFrames();
-  register(scene, 'alchemist', pack(af.map((f) => ({ name: f.key, r: f.canvas.render() })), ALCH_W, ALCH_H), ALCH_W, ALCH_H);
-  for (const a of ALCHEMIST_ANIMS) {
-    for (const d of DIRS) {
-      scene.anims.create({
-        key: `alchemist_${a.name}_${d}`,
-        frames: af.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: 'alchemist', frame: f.key })),
-        frameRate: a.fps,
-        repeat: a.loop ? -1 : 0,
-      });
+  // Alchemist once per look, and the flasks each throws (tumbling frames r0..r7),
+  // plus the fumes of each bog: 'alchemist'/'flask'/'fume' for the plague
+  // doctor, with a '_witch' suffix for the hex witch.
+  for (const look of ALCHEMIST_LOOKS) {
+    const sfx = look.key.slice('alchemist'.length);
+    const af = buildAlchemistFrames(look);
+    register(scene, look.key, pack(af.map((f) => ({ name: f.key, r: f.canvas.render() })), ALCH_W, ALCH_H), ALCH_W, ALCH_H);
+    for (const a of ALCHEMIST_ANIMS) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: af.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
     }
+    for (const [key, big, size] of [[`flask${sfx}`, false, FLASK_SIZE], [`flask_big${sfx}`, true, BIG_FLASK_SIZE]] as const) {
+      register(scene, key, pack(frameList(Array.from({ length: FLASK_FRAMES }, (_, i) => flaskFrame(i, big, look)), 'r'), size, size), size, size);
+    }
+    const brew = look.witch ? HEX_BREW_COLORS : PLAGUE_BREW;
+    const fumes = scene.textures.addCanvas(`fume${sfx}`, toCanvas(18 * 3, 18, sideBySide(18, 18, [0, 1, 2].map((v) => fumeCanvas(18, v, brew)))))!;
+    [0, 1, 2].forEach((v) => fumes.add(`f${v}`, 0, v * 18, 0, 18, 18));
+    scene.textures.addCanvas(`icon_flask${sfx}`, toCanvas(16, 16, flaskIcon(brew)));
+    scene.textures.addCanvas(`icon_bog${sfx}`, toCanvas(16, 16, bogIcon(brew)));
   }
-  for (const [key, big, size] of [['flask', false, FLASK_SIZE], ['flask_big', true, BIG_FLASK_SIZE]] as const) {
-    register(scene, key, pack(frameList(Array.from({ length: FLASK_FRAMES }, (_, i) => flaskFrame(i, big)), 'r'), size, size), size, size);
-  }
-  const fumes = scene.textures.addCanvas('fume', toCanvas(18 * 3, 18, sideBySide(18, 18, [0, 1, 2].map((v) => fumeCanvas(18, v)))))!;
-  [0, 1, 2].forEach((v) => fumes.add(`f${v}`, 0, v * 18, 0, 18, 18));
 
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane) and 'orb_void'/'burst_void'.
   for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL]] as const) {
@@ -284,8 +292,6 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   }
 
   scene.textures.addCanvas('icon_fist', toCanvas(16, 16, fistIcon()));
-  scene.textures.addCanvas('icon_flask', toCanvas(16, 16, flaskIcon()));
-  scene.textures.addCanvas('icon_bog', toCanvas(16, 16, bogIcon()));
   scene.textures.addCanvas('icon_barrage', toCanvas(16, 16, barrageIcon([hex('#fffbe8'), hex('#ffd66b'), hex('#ff8a36'), hex('#d8402a')])));
 
   // Items: hotbar icons and the bottles monsters drop.

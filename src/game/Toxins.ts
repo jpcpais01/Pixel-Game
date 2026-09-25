@@ -11,9 +11,46 @@ import type { WorldScene } from '../scenes/WorldScene';
 // biting whatever it touched. Ground effects are small canvases of solid
 // pixels like the other heroes' effects, redrawn at a steady pixel-art pace.
 
-export const TOX = { core: 0xf2ffd2, hot: 0xb8ff5c, mid: 0x52d62e, deep: 0x1c7a3a, murk: 0x123f24 };
-export const TOX_TINTS = [TOX.core, TOX.hot, TOX.mid];
-const TOX_LIGHT = 0x7cff4a;
+/** The colours of one alchemist's poison, and the textures that go with it. */
+export interface ToxStyle {
+  core: number;
+  hot: number;
+  mid: number;
+  deep: number;
+  murk: number;
+  /** Debris tints, brightest first. */
+  tints: number[];
+  /** Its light on the ground. */
+  light: number;
+  /** Damage numbers it pops. */
+  numbers: number;
+  /** Texture key suffix: '' for the plague doctor, '_witch' for the hex witch. */
+  suffix: string;
+}
+
+export const PLAGUE_TOX: ToxStyle = {
+  core: 0xf2ffd2,
+  hot: 0xb8ff5c,
+  mid: 0x52d62e,
+  deep: 0x1c7a3a,
+  murk: 0x123f24,
+  tints: [0xf2ffd2, 0xb8ff5c, 0x52d62e],
+  light: 0x7cff4a,
+  numbers: 0x9dff5a,
+  suffix: '',
+};
+
+export const HEX_TOX: ToxStyle = {
+  core: 0xfff0fe,
+  hot: 0xff9cf2,
+  mid: 0xd64ce0,
+  deep: 0x6e2090,
+  murk: 0x2e1040,
+  tints: [0xfff0fe, 0xff9cf2, 0xd64ce0],
+  light: 0xe060ff,
+  numbers: 0xf890ff,
+  suffix: '_witch',
+};
 
 /** Splashes are circles on the ground seen at an angle: squash them vertically. */
 const SQUASH = 0.58;
@@ -62,6 +99,7 @@ export class Flask implements Effect {
     private y1: number,
     private big: boolean,
     private onLand: (x: number, y: number) => void,
+    private style: ToxStyle = PLAGUE_TOX,
   ) {
     const dist = Math.hypot(x1 - x0, y1 - y0);
     this.flight = Phaser.Math.Clamp(dist / 150, 0.26, 0.62) * 1000 + (big ? 160 : 0);
@@ -69,10 +107,10 @@ export class Flask implements Effect {
     this.spin = (x1 >= x0 ? 1 : -1) * (big ? 0.022 : 0.034);
     this.gx = x0;
     this.gy = y0;
-    const key = big ? 'flask_big' : 'flask';
+    const key = (big ? 'flask_big' : 'flask') + style.suffix;
     this.sprite = world.add.sprite(x0, y0 - h0, key, 'r0').setPipeline('Lit');
     this.glowLayer = world.add.sprite(x0, y0 - h0, `${key}_e`, 'r0').setBlendMode(Phaser.BlendModes.ADD);
-    this.halo = world.add.image(x0, y0 - h0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(TOX.mid).setScale(big ? 0.8 : 0.5).setAlpha(0.6);
+    this.halo = world.add.image(x0, y0 - h0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(this.style.mid).setScale(big ? 0.8 : 0.5).setAlpha(0.6);
     this.shadow = world.add.image(x0, y0, 'shadow').setDepth(1).setAlpha(0.5);
     this.update(0);
   }
@@ -98,7 +136,7 @@ export class Flask implements Effect {
     this.trailT -= dt;
     if (this.trailT <= 0) {
       this.trailT = this.big ? 30 : 45;
-      this.world.debris(TOX_TINTS, x, y, 1, depth - 0.2, 'trail');
+      this.world.debris(this.style.tints, x, y, 1, depth - 0.2, 'trail');
     }
 
     // Coming down, it bursts on the first body in its way.
@@ -151,6 +189,7 @@ export class Splash implements Effect {
     x: number,
     y: number,
     private radius: number,
+    private style: ToxStyle = PLAGUE_TOX,
   ) {
     this.duration = 700 + radius * 20;
     this.gw = Math.ceil(radius) + 4;
@@ -161,8 +200,8 @@ export class Splash implements Effect {
     this.ah = Math.ceil(radius * 0.9) + 8;
     this.air = new PixelLayer(scene, this.gw * 2, this.ah + this.gh);
     this.air.image.setPosition(x - this.gw, y - this.ah).setDepth(y + 14);
-    this.glow = scene.add.image(x, y - 2, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(TOX.mid).setScale(radius / 10, (radius * SQUASH) / 10).setDepth(y + 13);
-    this.light = scene.lights.addLight(x, y - 4, radius * 5, TOX_LIGHT, 2.6);
+    this.glow = scene.add.image(x, y - 2, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(this.style.mid).setScale(radius / 10, (radius * SQUASH) / 10).setDepth(y + 13);
+    this.light = scene.lights.addLight(x, y - 4, radius * 5, this.style.light, 2.6);
     this.draw();
   }
 
@@ -201,7 +240,7 @@ export class Splash implements Effect {
           const d = Math.hypot((x + 0.5) / (pr * wob), (y + 0.5) / (pr * SQUASH * wob));
           if (d > 1) continue;
           const edge = d > 0.78;
-          const col = edge ? TOX.mid : hash(x, y, seed + Math.floor(ms / 120)) > 0.86 ? TOX.hot : d < 0.4 ? TOX.mid : TOX.deep;
+          const col = edge ? this.style.mid : hash(x, y, seed + Math.floor(ms / 120)) > 0.86 ? this.style.hot : d < 0.4 ? this.style.mid : this.style.deep;
           g.put(gw + x, gh + y, col, edge ? 0.8 : 0.7);
         }
       }
@@ -210,7 +249,7 @@ export class Splash implements Effect {
     const rt = ms / 260;
     if (rt < 1) {
       const rr = 2 + (R - 2) * easeOut(rt);
-      const col = rt < 0.3 ? TOX.core : rt < 0.6 ? TOX.hot : TOX.mid;
+      const col = rt < 0.3 ? this.style.core : rt < 0.6 ? this.style.hot : this.style.mid;
       const n = Math.ceil(rr * 6);
       for (let i = 0; i < n; i++) {
         const an = (i / n) * Math.PI * 2;
@@ -220,7 +259,7 @@ export class Splash implements Effect {
     }
     // The flash where the glass broke.
     if (ms < 90) {
-      for (const [dx, dy, c] of [[0, 0, TOX.core], [1, 0, TOX.core], [-1, 0, TOX.hot], [0, -1, TOX.core], [0, 1, TOX.hot], [2, 0, TOX.hot], [-2, 0, TOX.mid], [0, -2, TOX.hot]] as const) {
+      for (const [dx, dy, c] of [[0, 0, this.style.core], [1, 0, this.style.core], [-1, 0, this.style.hot], [0, -1, this.style.core], [0, 1, this.style.hot], [2, 0, this.style.hot], [-2, 0, this.style.mid], [0, -2, this.style.hot]] as const) {
         a.put(gw + dx, ah + dy - 2, c);
       }
     }
@@ -237,7 +276,7 @@ export class Splash implements Effect {
         const px = Math.cos(an) * reach * easeOut(k);
         const py = Math.sin(an) * reach * SQUASH * easeOut(k) - up * 4 * k * (1 - k);
         const shard = i % 4 === 0;
-        const col = shard ? (k < 0.5 ? 0xeaffff : 0x8fc0c8) : k < 0.35 ? TOX.hot : TOX.mid;
+        const col = shard ? (k < 0.5 ? 0xeaffff : 0x8fc0c8) : k < 0.35 ? this.style.hot : this.style.mid;
         a.put(Math.round(gw + px), Math.round(ah + py - 2), col, 1 - k * 0.5);
       }
     }
@@ -247,7 +286,7 @@ export class Splash implements Effect {
         const life = ((ms / 700 + hash(i, 5, seed)) % 1);
         const px = (hash(i, 6, seed) - 0.5) * pr * 1.2 + Math.sin(life * 6 + i) * 1.2;
         const py = -life * 10;
-        a.put(Math.round(gw + px), Math.round(ah + py - 1), life < 0.5 ? TOX.hot : TOX.mid, 0.8 * (1 - life));
+        a.put(Math.round(gw + px), Math.round(ah + py - 1), life < 0.5 ? this.style.hot : this.style.mid, 0.8 * (1 - life));
       }
     }
     g.flush();
@@ -311,13 +350,14 @@ export class Bog implements Effect {
     private duration: number,
     private tick: number,
     private bite: (inside: Hurtbox[]) => void,
+    private style: ToxStyle = PLAGUE_TOX,
   ) {
     this.hw = Math.ceil(radius) + 3;
     this.hh = Math.ceil(radius * SQUASH) + 3;
     this.layer = new PixelLayer(world, this.hw * 2, this.hh * 2);
     this.layer.image.setPosition(x - this.hw, y - this.hh).setDepth(GROUND_DEPTH);
-    this.glow = world.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(TOX.mid).setScale(radius / 10, (radius * SQUASH) / 10).setDepth(GROUND_DEPTH + 1).setAlpha(0);
-    this.light = world.lights.addLight(x, y - 8, radius * 3.4, TOX_LIGHT, 0);
+    this.glow = world.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(this.style.mid).setScale(radius / 10, (radius * SQUASH) / 10).setDepth(GROUND_DEPTH + 1).setAlpha(0);
+    this.light = world.lights.addLight(x, y - 8, radius * 3.4, this.style.light, 0);
     this.biteIn = tick * 0.4;
     for (let i = 0; i < 9; i++) this.bubbles.push(this.newBubble(i * 180));
     this.draw();
@@ -358,7 +398,7 @@ export class Bog implements Effect {
       const d = Math.sqrt(Math.random()) * this.radius * 0.8 * grow;
       const x = this.x + Math.cos(an) * d;
       const y = this.y + Math.sin(an) * d * SQUASH;
-      const img = this.world.add.image(Math.round(x), Math.round(y), 'fume', `f${Math.floor(Math.random() * 3)}`).setAlpha(0).setDepth(y + 18);
+      const img = this.world.add.image(Math.round(x), Math.round(y), `fume${this.style.suffix}`, `f${Math.floor(Math.random() * 3)}`).setAlpha(0).setDepth(y + 18);
       this.fumes.push({ img, age: 0, life: 1300 + Math.random() * 700, vx: (Math.random() - 0.5) * 6, rise: 12 + Math.random() * 10, y0: y, scale: 0.6 + Math.random() * 0.35 });
     }
     for (const f of this.fumes) {
@@ -376,7 +416,7 @@ export class Bog implements Effect {
     for (let i = 0; i < this.bubbles.length; i++) {
       const b = this.bubbles[i];
       if (this.age > b.at + 120) {
-        if (Math.random() < 0.35) this.world.debris(TOX_TINTS, Math.round(this.x + b.x), Math.round(this.y + b.y) - 1, 2, this.y + 10, 'trail');
+        if (Math.random() < 0.35) this.world.debris(this.style.tints, Math.round(this.x + b.x), Math.round(this.y + b.y) - 1, 2, this.y + 10, 'trail');
         this.bubbles[i] = this.newBubble(this.age + Math.random() * 200);
       }
     }
@@ -406,14 +446,14 @@ export class Bog implements Effect {
         let alpha = 0.72 * fade;
         if (d > 0.88) {
           // A bright scum at the rim.
-          col = hash(x, y, seed + churn) > 0.3 ? TOX.mid : TOX.hot;
+          col = hash(x, y, seed + churn) > 0.3 ? this.style.mid : this.style.hot;
           alpha = 0.85 * fade;
         } else if (d > 0.7) {
-          col = TOX.deep;
+          col = this.style.deep;
         } else {
           // Slow swirls in the murk.
           const sw = Math.sin((x + y * 1.7) * 0.5 + this.age * 0.003 + d * 6);
-          col = sw > 0.75 ? TOX.mid : sw > 0.1 ? TOX.deep : TOX.murk;
+          col = sw > 0.75 ? this.style.mid : sw > 0.1 ? this.style.deep : this.style.murk;
         }
         b.put(hw + x, hh + y, col, alpha);
       }
@@ -426,13 +466,13 @@ export class Bog implements Effect {
       const cy = Math.round(hh + bb.y);
       if (t < 1) {
         const r = t * bb.size;
-        if (r < 0.7) b.put(cx, cy, TOX.hot, fade);
+        if (r < 0.7) b.put(cx, cy, this.style.hot, fade);
         else {
-          for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) b.put(cx + dx * Math.round(r), cy + dy * Math.round(r), TOX.hot, fade);
-          b.put(cx - 1, cy - 1, TOX.core, fade);
+          for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) b.put(cx + dx * Math.round(r), cy + dy * Math.round(r), this.style.hot, fade);
+          b.put(cx - 1, cy - 1, this.style.core, fade);
         }
       } else {
-        for (const [dx, dy] of [[-2, 0], [2, 0], [0, -1], [0, 1], [-1, -1], [1, 1]]) b.put(cx + dx, cy + dy, TOX.core, fade * 0.9);
+        for (const [dx, dy] of [[-2, 0], [2, 0], [0, -1], [0, 1], [-1, -1], [1, 1]]) b.put(cx + dx, cy + dy, this.style.core, fade * 0.9);
       }
     }
     b.flush();
@@ -466,7 +506,10 @@ export class Venom {
   static readonly MAX_STACKS = 3;
   private doses = new Map<Hurtbox, Dose>();
 
-  constructor(private world: WorldScene) {}
+  constructor(
+    private world: WorldScene,
+    private style: ToxStyle = PLAGUE_TOX,
+  ) {}
 
   dose(h: Hurtbox, time: number, stacks = 1): void {
     const d = this.doses.get(h);
@@ -491,8 +534,8 @@ export class Venom {
       if (d.tickIn <= 0) {
         d.tickIn += Venom.TICK;
         const by = h.y - h.bodyY;
-        h.hurt({ damage: Venom.DAMAGE * d.stacks, heavy: false, knock: 0, fromX: h.x, fromY: by, poison: true });
-        this.world.debris(TOX_TINTS, Math.round(h.x), Math.round(by), 2 + d.stacks, h.y + 12, 'spores');
+        h.hurt({ damage: Venom.DAMAGE * d.stacks, heavy: false, knock: 0, fromX: h.x, fromY: by, poison: this.style.numbers });
+        this.world.debris(this.style.tints, Math.round(h.x), Math.round(by), 2 + d.stacks, h.y + 12, 'spores');
         if (bitten++ === 0) firstX = h.x;
       }
       if (d.left <= 0) this.doses.delete(h);
