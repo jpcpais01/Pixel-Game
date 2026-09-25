@@ -146,7 +146,7 @@ export class UIScene extends Phaser.Scene {
       const bp = this.buttonPos;
       const mp = this.beamPos;
       const tr = this.toggleRect;
-      if (Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width + 8 * D, tr.height + 8 * D), p.x, p.y)) {
+      if (daynight.enabled && Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width + 8 * D, tr.height + 8 * D), p.x, p.y)) {
         // Tap a side to pick it; tapping the active side flips it.
         const onSun = p.x < tr.centerX;
         daynight.set(onSun === (daynight.target < 0.5) ? onSun : !onSun);
@@ -289,7 +289,10 @@ export class UIScene extends Phaser.Scene {
     const tr = this.toggleRect;
     const seg = tr.width / 2;
     const d = daynight.daylight;
-    const tg = this.redraw(this.toggle, `${d} ${tr.x} ${tr.y} ${tr.width} ${tr.height}`);
+    // Arenas without day and night have no toggle.
+    const on = daynight.enabled;
+    for (const o of [this.toggle, this.sun, this.moon]) o.setVisible(on);
+    const tg = on ? this.redraw(this.toggle, `${d} ${tr.x} ${tr.y} ${tr.width} ${tr.height}`) : null;
     if (tg) {
       tg.fillStyle(0x0a0c1c, 0.55);
       tg.fillRoundedRect(tr.x, tr.y, tr.width, tr.height, tr.height / 2);
@@ -371,7 +374,7 @@ export class UIScene extends Phaser.Scene {
     const list = heroBuffs.active;
     const size = Math.round(tr.height * 0.9);
     const gap = Math.round(6 * D);
-    const y = Math.round(tr.bottom + 10 * D);
+    const y = Math.round(daynight.enabled ? tr.bottom + 10 * D : tr.y);
     const iconScale = Math.max(1, Math.floor((size - 6 * D) / 16));
     while (this.buffIcons.length < list.length) this.buffIcons.push(this.add.image(0, 0, '__DEFAULT'));
     this.buffIcons.forEach((icon, i) => {
