@@ -9,8 +9,11 @@
 // posed in the fighter's own terms (forward, out to the side, height) and
 // placed for each view, so one set of keyframes serves every direction.
 
-import { PixelCanvas, cyl, sphere, type RGB, type Vec3 } from './pixel';
-import { BLACK_BELT, CHI_CORE, CHI_HOT, CHI_MID, EYE, FIGHTER_HAIR, GI, GI_TROUSER, GLOVE, HEADBAND, SKIN, WRAP } from './palette';
+import { PixelCanvas, cyl, sphere, type Material, type RGB, type Vec3 } from './pixel';
+import {
+  BLACK_BELT, BRONZE, CHI_CORE, CHI_HOT, CHI_MID, EYE, FIGHTER_HAIR, GI, GI_TROUSER, GLOVE, HEADBAND, MONK_BROW, MONK_ROBE, MONK_SASH,
+  MONK_TROUSER, MONK_WRAP, PRAYER_BEAD, QI_CORE, QI_HOT, QI_MID, SKIN, WRAP,
+} from './palette';
 import { DIRS, type Dir } from './wizard';
 
 export const FIGHTER_W = 48;
@@ -57,6 +60,36 @@ const GUARD_A = F(2.2, 3.0, 1.0);
 const GUARD_B = F(1.4, 3.3, 2.2);
 
 const FLAT_DOWN: Vec3 = { x: 0, y: -0.3, z: 0.95 };
+
+/**
+ * One of the fighter's styles: what he wears and which moves he knows. The
+ * brawler is the default; the iron monk is a heavier fighter with his own
+ * palm strikes and leap (see Fighter.ts), drawn on the same rig.
+ */
+export interface FighterLook {
+  /** Texture key and animation prefix, e.g. "fighter" or "fighter_monk". */
+  key: string;
+  /** Shaved head, prayer beads and a sash over the shoulder, in place of the spiky hair and headband. */
+  monk?: boolean;
+  gi: Material;
+  trouser: Material;
+  belt: Material;
+  band: Material;
+  /** The hand: a red glove on the brawler, a bare palm on the monk. */
+  glove: Material;
+  /** Forearm tape, or bracers. */
+  wrap: Material;
+  feet: Material;
+  hair: Material;
+  /** Light-only colours round the hands: core, hot, mid. */
+  chi: RGB[];
+  /** Hand size. */
+  hand: number;
+  anims: FighterAnimDef[];
+}
+
+/** The style being drawn (set per frame by drawFighterFrame). */
+let LK: FighterLook;
 
 type View = 'down' | 'up' | 'side';
 
@@ -121,16 +154,17 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   c.part();
   c.capsule(ex, ey, fx, fy, 1.4, 1.2, SKIN, { bias });
   c.part();
-  c.capsule(ex + (fx - ex) * 0.45, ey + (fy - ey) * 0.45, fx, fy, 1.3, 1.3, WRAP, { bias });
+  const band = LK.monk ? 1.5 : 1.3;
+  c.capsule(ex + (fx - ex) * 0.45, ey + (fy - ey) * 0.45, fx, fy, band, band, LK.wrap, { bias });
   c.part();
-  c.ellipse(fx, fy, 1.9 * p.scale, 1.75 * p.scale, GLOVE, { bias });
+  c.ellipse(fx, fy, LK.hand * p.scale, LK.hand * 0.92 * p.scale, LK.glove, { bias });
   chiGlow(c, fx, fy, chi * (bias < 0 ? 0.6 : 1));
 }
 
 /** Chi flickering round a fist, in the emissive layer. */
 function chiGlow(c: PixelCanvas, x: number, y: number, k: number): void {
   if (k <= 0) return;
-  const cols: RGB[] = [CHI_CORE, CHI_HOT, CHI_MID];
+  const cols = LK.chi;
   for (let i = 0; i < 10; i++) {
     const a = (i / 10) * Math.PI * 2 + x * 0.7;
     const r = 2.4 + (i % 3) * 0.6;
@@ -141,32 +175,32 @@ function chiGlow(c: PixelCanvas, x: number, y: number, k: number): void {
 
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
   c.part();
-  c.capsule(hx, hy, fx, fy, 1.8, 1.45, GI_TROUSER, { bias });
+  c.capsule(hx, hy, fx, fy, 1.8, 1.45, LK.trouser, { bias });
 }
 
 /** A taped foot. */
 function foot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
   c.part();
-  if (side) c.ellipse(x, y, 2.2, 1.15, WRAP, { flatten: 0.8, bias });
-  else c.ellipse(x, y, 1.7, 1.2, WRAP, { flatten: 0.8, bias });
+  if (side) c.ellipse(x, y, 2.2, 1.15, LK.feet, { flatten: 0.8, bias });
+  else c.ellipse(x, y, 1.7, 1.2, LK.feet, { flatten: 0.8, bias });
 }
 
-/** Bare shoulder: the gi has no sleeves. */
-function deltoid(c: PixelCanvas, x: number, y: number, rx = 2.1): void {
+/** Bare shoulder: the gi has no sleeves. The monk's sash covers one of his. */
+function deltoid(c: PixelCanvas, x: number, y: number, rx = 2.1, m: Material = SKIN): void {
   c.part();
-  c.ellipse(x, y, rx, 1.8, SKIN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
+  c.ellipse(x, y, rx, 1.8, m, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
 }
 
 function tail(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
   c.part();
-  c.capsule(x0, y0, x1, y1, 0.75, 0.55, HEADBAND);
+  c.capsule(x0, y0, x1, y1, 0.75, 0.55, LK.band);
 }
 
 function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
   c.part();
   for (const [x, y] of pts) {
     // Heavy brows over a hard stare.
-    c.px(x, y - 1, FIGHTER_HAIR, FLAT_DOWN);
+    c.px(x, y - 1, LK.hair, FLAT_DOWN);
     if (blink) c.px(x, y, SKIN, FLAT_DOWN, { bias: -1 });
     else c.px(x, y, EYE);
   }
@@ -175,8 +209,34 @@ function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefine
 /** Spiky hair on top of the head: tufts along row `y0 - 1`, taller ones on row `y0 - 2`. */
 function spikes(c: PixelCanvas, low: number[], high: number[], y0: number): void {
   c.part();
-  for (const x of low) c.px(x, y0 - 1, FIGHTER_HAIR, sphere(0, -0.8));
-  for (const x of high) c.px(x, y0 - 2, FIGHTER_HAIR, sphere(-0.2, -0.9), { bias: 1 });
+  for (const x of low) c.px(x, y0 - 1, LK.hair, sphere(0, -0.8));
+  for (const x of high) c.px(x, y0 - 2, LK.hair, sphere(-0.2, -0.9), { bias: 1 });
+}
+
+/** The monk's string of prayer beads, and the bronze disc hanging from it. */
+function beads(c: PixelCanvas, pts: [number, number][], pendant?: [number, number]): void {
+  c.part();
+  pts.forEach(([x, y], i) => c.px(x, y, PRAYER_BEAD, sphere(i % 2 ? 0.3 : -0.3, -0.6)));
+  if (pendant) {
+    c.part();
+    c.px(pendant[0], pendant[1], BRONZE, sphere(-0.3, -0.5), { bias: 1 });
+  }
+}
+
+/**
+ * The monk's sash slung across the torso: a band whose centre runs from x0 at
+ * the top row to x1 at the bottom, clipped to the body's edges.
+ */
+function sash(c: PixelCanvas, top: number, bottom: number, x0: number, x1: number, half: number, edges: (y: number) => [number, number]): void {
+  c.part();
+  c.shape(top, bottom, (y) => {
+    const k = (y - top) / Math.max(1, bottom - top);
+    const m = x0 + (x1 - x0) * k;
+    const [el, er] = edges(y);
+    const l = Math.max(el, m - half);
+    const r = Math.min(er, m + half);
+    return r - l < 0.5 ? null : [l, r];
+  }, MONK_SASH, (_x, _y, t, u) => sphere(t * 0.7 - 0.1, (u - 0.4) * 0.9, 1));
 }
 
 // ---------------------------------------------------------------------------
@@ -198,8 +258,10 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const armB = () => arm(c, shB.x, shB.y, fb, REACH_FRONT, [0.3, 1], p.chi, fb.behind ? -1 : 0);
 
   // Headband tails, knotted behind the head, flying out past it.
-  tail(c, 14.6, 10.2 + U, 17.4 + p.tails, 11.8 + U - p.tails * 0.4);
-  tail(c, 14.6, 10.6 + U, 16.8 + p.tails * 0.6, 13.8 + U);
+  if (!LK.monk) {
+    tail(c, 14.6, 10.2 + U, 17.4 + p.tails, 11.8 + U - p.tails * 0.4);
+    tail(c, 14.6, 10.6 + U, 16.8 + p.tails * 0.6, 13.8 + U);
+  }
   if (fa.behind) armA();
   if (fb.behind) armB();
 
@@ -209,40 +271,47 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   foot(c, 9, 29.6 - p.footA);
   foot(c, 15, 29.6 - p.footB);
   c.part();
-  c.shape(22 + U, 24 + L, () => [cx - 4.2, cx + 4.2], GI_TROUSER, (_x, _y, t) => cyl(t, 0.1));
+  c.shape(22 + U, 24 + L, () => [cx - 4.2, cx + 4.2], LK.trouser, (_x, _y, t) => cyl(t, 0.1));
 
   // The gi: broad through the chest, a V of skin at the neck, the flap crossing down to the belt.
   const top = 15 + U;
   const waist = 22 + U;
-  c.part();
-  c.shape(top, waist - 1, (y) => {
+  const torso = (y: number): [number, number] => {
     const u = (y + 0.5 - top) / (waist - top);
     const hw = 4.9 - 1.1 * u * u;
     return [cx - hw, cx + hw];
-  }, GI, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
+  };
+  c.part();
+  c.shape(top, waist - 1, torso, LK.gi, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
   c.part();
   c.shape(top, top + 3, (y) => {
     const hw = 2.1 - (y - top) * 0.6;
     return hw < 0.4 ? null : [cx - hw, cx + hw];
   }, SKIN, (_x, _y, t, u) => sphere(t * 0.7, u * 0.5 - 0.2, 1));
-  for (let y = top + 3; y < waist; y++) c.shade(Math.round(cx - 0.5 + (y - top - 3) * 0.45), y, -1);
+  if (LK.monk) {
+    // The sash from his left shoulder down across to the right hip, the beads over it.
+    sash(c, top, waist - 1, 15.4, 8.8, 1.15, torso);
+    beads(c, [[9, top], [9, top + 1], [10, top + 2], [11, top + 3], [12, top + 3], [13, top + 2], [14, top + 1], [14, top]], [12, top + 4]);
+  } else {
+    for (let y = top + 3; y < waist; y++) c.shade(Math.round(cx - 0.5 + (y - top - 3) * 0.45), y, -1);
+  }
   // The jacket's skirt below the belt, split at the front.
   c.part();
-  c.shape(waist + 1, waist + 2, () => [cx - 4.4, cx + 4.4], GI, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
+  c.shape(waist + 1, waist + 2, () => [cx - 4.4, cx + 4.4], LK.gi, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
   c.shade(cx, waist + 1, -1);
   c.shade(cx, waist + 2, -1);
   // Black belt, knotted at the front, its ends hanging.
   c.part();
-  c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], BLACK_BELT, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LK.belt, (_x, _y, t) => cyl(t, 0));
   c.part();
-  c.px(cx - 1, waist, BLACK_BELT, sphere(-0.3, -0.3), { bias: 1 });
-  c.px(cx, waist, BLACK_BELT, sphere(0.2, -0.3), { bias: 1 });
+  c.px(cx - 1, waist, LK.belt, sphere(-0.3, -0.3), { bias: 1 });
+  c.px(cx, waist, LK.belt, sphere(0.2, -0.3), { bias: 1 });
   c.part();
-  c.capsule(cx - 1, waist + 1, cx - 1.6 + p.tails * 0.25, waist + 3.2, 0.55, 0.5, BLACK_BELT);
-  c.capsule(cx + 0.4, waist + 1, cx + 0.9 + p.tails * 0.25, waist + 3.6, 0.55, 0.5, BLACK_BELT);
+  c.capsule(cx - 1, waist + 1, cx - 1.6 + p.tails * 0.25, waist + 3.2, 0.55, 0.5, LK.belt);
+  c.capsule(cx + 0.4, waist + 1, cx + 0.9 + p.tails * 0.25, waist + 3.6, 0.55, 0.5, LK.belt);
 
   deltoid(c, 7.1, 16.8 + U);
-  deltoid(c, 16.9, 16.8 + U);
+  deltoid(c, 16.9, 16.8 + U, 2.1, LK.monk ? MONK_SASH : SKIN);
 
   // Head: a square jaw, spiky hair, the headband across the brow.
   c.part();
@@ -252,15 +321,26 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   c.px(12, 13 + U, SKIN, sphere(0.35, -0.2));
   c.shade(11, 14 + U, -1);
   c.shade(12, 14 + U, -1);
-  c.part();
-  const widths = [2.8, 3.7, 4.0];
-  c.shape(7 + U, 9 + U, (y) => [cx - widths[y - 7 - U], cx + widths[y - 7 - U]], FIGHTER_HAIR, (_x, _y, t, u) => sphere(t * 0.9, u * 1.2 - 0.9, 1));
-  spikes(c, [9, 11, 12, 14], [10, 13], 7 + U);
-  c.part();
-  c.shape(10 + U, 10 + U, () => [cx - 3.6, cx + 3.6], HEADBAND, (_x, _y, t) => cyl(t, 0.2));
-  c.part();
-  c.px(8, 11 + U, FIGHTER_HAIR, cyl(-0.8, 0));
-  c.px(15, 11 + U, FIGHTER_HAIR, cyl(0.8, 0));
+  if (LK.monk) {
+    // A shaved dome catching the light, and ears.
+    c.part();
+    const dome = [2.7, 3.5];
+    c.shape(8 + U, 9 + U, (y) => [cx - dome[y - 8 - U], cx + dome[y - 8 - U]], SKIN, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.9, 1));
+    c.shade(cx - 2, 9 + U, 1);
+    c.part();
+    c.px(8, 12 + U, SKIN, cyl(-0.8, 0));
+    c.px(15, 12 + U, SKIN, cyl(0.8, 0));
+  } else {
+    c.part();
+    const widths = [2.8, 3.7, 4.0];
+    c.shape(7 + U, 9 + U, (y) => [cx - widths[y - 7 - U], cx + widths[y - 7 - U]], LK.hair, (_x, _y, t, u) => sphere(t * 0.9, u * 1.2 - 0.9, 1));
+    spikes(c, [9, 11, 12, 14], [10, 13], 7 + U);
+    c.part();
+    c.shape(10 + U, 10 + U, () => [cx - 3.6, cx + 3.6], LK.band, (_x, _y, t) => cyl(t, 0.2));
+    c.part();
+    c.px(8, 11 + U, LK.hair, cyl(-0.8, 0));
+    c.px(15, 11 + U, LK.hair, cyl(0.8, 0));
+  }
   eyes(c, [[10, 12 + U], [13, 12 + U]], p.blink);
 
   if (!fa.behind) armA();
@@ -286,41 +366,56 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   foot(c, 9, 29.6 - p.footB);
   foot(c, 15, 29.6 - p.footA);
   c.part();
-  c.shape(22 + U, 24 + L, () => [cx - 4.2, cx + 4.2], GI_TROUSER, (_x, _y, t) => cyl(t, 0.1));
+  c.shape(22 + U, 24 + L, () => [cx - 4.2, cx + 4.2], LK.trouser, (_x, _y, t) => cyl(t, 0.1));
 
   // The gi from behind, a crease down the spine.
   const top = 15 + U;
   const waist = 22 + U;
-  c.part();
-  c.shape(top, waist - 1, (y) => {
+  const torso = (y: number): [number, number] => {
     const u = (y + 0.5 - top) / (waist - top);
     const hw = 4.9 - 1.1 * u * u;
     return [cx - hw, cx + hw];
-  }, GI, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
+  };
+  c.part();
+  c.shape(top, waist - 1, torso, LK.gi, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
   for (let y = top + 2; y < waist; y++) c.shade(cx, y, -1);
+  // The sash across his back, from the left shoulder (screen left from behind) down to the right hip.
+  if (LK.monk) sash(c, top, waist - 1, 8.6, 15.2, 1.15, torso);
   c.part();
-  c.shape(waist + 1, waist + 2, () => [cx - 4.4, cx + 4.4], GI, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
+  c.shape(waist + 1, waist + 2, () => [cx - 4.4, cx + 4.4], LK.gi, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
   c.part();
-  c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], BLACK_BELT, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LK.belt, (_x, _y, t) => cyl(t, 0));
 
-  deltoid(c, 7.1, 16.8 + U);
+  deltoid(c, 7.1, 16.8 + U, 2.1, LK.monk ? MONK_SASH : SKIN);
   deltoid(c, 16.9, 16.8 + U);
   if (!fa.behind) armA();
   if (!fb.behind) armB();
 
+  if (LK.monk) {
+    // The shaved back of the head, and the beads round the neck below it.
+    beads(c, [[9, top], [10, top], [11, top], [13, top], [14, top], [15, top]]);
+    c.part();
+    c.ellipse(cx, 11.6 + U, 3.5, 3.4, SKIN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
+    c.shade(cx - 1, 9 + U, 1);
+    c.part();
+    c.px(8, 12 + U, SKIN, cyl(-0.8, 0));
+    c.px(16, 12 + U, SKIN, cyl(0.8, 0));
+    return;
+  }
+
   // The back of the head, the headband round it, knotted with its tails hanging.
   c.part();
-  c.ellipse(cx, 11.2 + U, 3.9, 3.8, FIGHTER_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
+  c.ellipse(cx, 11.2 + U, 3.9, 3.8, LK.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
   c.shade(cx - 1, 8 + U, 1);
   spikes(c, [9, 11, 13, 15], [10, 14], 8 + U);
   c.part();
-  c.shape(10 + U, 10 + U, () => [cx - 3.9, cx + 3.9], HEADBAND, (_x, _y, t) => cyl(t, 0.2));
+  c.shape(10 + U, 10 + U, () => [cx - 3.9, cx + 3.9], LK.band, (_x, _y, t) => cyl(t, 0.2));
   c.part();
-  c.px(cx, 10 + U, HEADBAND, sphere(0, -0.5), { bias: 1 });
+  c.px(cx, 10 + U, LK.band, sphere(0, -0.5), { bias: 1 });
   c.part();
   // The tails fly out beside the head rather than down its back, where they'd read as a face.
-  c.capsule(cx - 3.6, 10.4 + U, cx - 5.2 - p.tails * 0.6, 11.6 + U + p.tails * 0.3, 0.55, 0.45, HEADBAND);
-  c.capsule(cx + 3.6, 10.6 + U, cx + 5.0 + p.tails * 0.4, 12.2 + U, 0.55, 0.45, HEADBAND);
+  c.capsule(cx - 3.6, 10.4 + U, cx - 5.2 - p.tails * 0.6, 11.6 + U + p.tails * 0.3, 0.55, 0.45, LK.band);
+  c.capsule(cx + 3.6, 10.6 + U, cx + 5.0 + p.tails * 0.4, 12.2 + U, 0.55, 0.45, LK.band);
 }
 
 /** Facing left. Right-facing frames are mirrored from these. */
@@ -336,8 +431,10 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   arm(c, hx + 1.4, 16.6 + U, fb, REACH_SIDE, [0.3, 1], p.chi, -1);
 
   // Headband tails streaming back.
-  tail(c, hx + 3, 10.2 + U, hx + 6.6 + p.tails, 10.8 + U + (p.tails > 1 ? 0 : 1));
-  tail(c, hx + 3, 10.6 + U, hx + 5.8 + p.tails * 0.8, 13 + U);
+  if (!LK.monk) {
+    tail(c, hx + 3, 10.2 + U, hx + 6.6 + p.tails, 10.8 + U + (p.tails > 1 ? 0 : 1));
+    tail(c, hx + 3, 10.6 + U, hx + 5.8 + p.tails * 0.8, 13 + U);
+  }
 
   // Legs: back leg in shade first, then the front leg.
   const lift = (f: number) => Math.max(0, f) * 0.35;
@@ -346,22 +443,27 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   leg(c, cx - 0.3, 23.5 + L, cx - p.footA, 28.3 - lift(p.footA));
   foot(c, cx - 0.9 - p.footA, 29.7 - lift(p.footA), true);
   c.part();
-  c.shape(22 + U, 24 + L, () => [cx - 2.8, cx + 3.0], GI_TROUSER, (_x, _y, t) => cyl(t * 0.9 - 0.1, 0.1));
+  c.shape(22 + U, 24 + L, () => [cx - 2.8, cx + 3.0], LK.trouser, (_x, _y, t) => cyl(t * 0.9 - 0.1, 0.1));
 
   // The gi in profile, the chest pushing forward, skin at the collar.
   const top = 15 + U;
   const waist = 22 + U;
   c.part();
-  c.shape(top, waist - 1, (y) => [hx - 3.0 - (y >= top + 1 && y <= top + 3 ? 0.5 : 0), hx + 2.8], GI, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
+  c.shape(top, waist - 1, (y) => [hx - 3.0 - (y >= top + 1 && y <= top + 3 ? 0.5 : 0), hx + 2.8], LK.gi, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
   c.part();
   c.shape(top, top + 1, (y) => [hx - 3.0, hx - 1.2 - (y - top)], SKIN, (_x, _y, t) => sphere(t * 0.6 - 0.4, -0.2, 1));
+  if (LK.monk) {
+    // The sash runs from the near shoulder back to the far hip; the beads hang at the collar.
+    sash(c, top, waist - 1, hx + 0.2, hx + 1.8, 1.1, (y) => [hx - 3.0 - (y >= top + 1 && y <= top + 3 ? 0.5 : 0), hx + 2.8]);
+    beads(c, [[hx - 1, top], [hx - 2, top + 1], [hx - 3, top + 2], [hx - 3, top + 3]], [hx - 3, top + 4]);
+  }
   c.part();
-  c.shape(waist + 1, waist + 2, () => [hx - 3.2, hx + 3.0], GI, (_x, _y, t) => cyl(t * 0.9 - 0.1, -0.1), { bias: -1 });
+  c.shape(waist + 1, waist + 2, () => [hx - 3.2, hx + 3.0], LK.gi, (_x, _y, t) => cyl(t * 0.9 - 0.1, -0.1), { bias: -1 });
   c.part();
-  c.shape(waist, waist, () => [hx - 3.2, hx + 3.0], BLACK_BELT, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist, () => [hx - 3.2, hx + 3.0], LK.belt, (_x, _y, t) => cyl(t, 0));
   c.part();
-  c.px(Math.round(hx - 3.2), waist, BLACK_BELT, sphere(-0.4, -0.3), { bias: 1 });
-  c.capsule(hx - 3.3, waist + 1, hx - 3.8 + p.tails * 0.4, waist + 3.4, 0.55, 0.5, BLACK_BELT);
+  c.px(Math.round(hx - 3.2), waist, LK.belt, sphere(-0.4, -0.3), { bias: 1 });
+  c.capsule(hx - 3.3, waist + 1, hx - 3.8 + p.tails * 0.4, waist + 3.4, 0.55, 0.5, LK.belt);
 
   // Head in profile.
   c.part();
@@ -369,6 +471,27 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   c.part();
   c.px(hx - 5, 13 + U, SKIN, sphere(-0.6, -0.2), { bias: 1 });
   c.shade(hx - 4, 14 + U, -1);
+  if (LK.monk) {
+    // A shaved crown and the back of the skull, an ear, heavy brows.
+    c.part();
+    const skull: [number, number][] = [
+      [-3.0, 2.6],
+      [-3.8, 3.1],
+      [-4.0, 3.3],
+      [0.0, 3.2],
+      [0.4, 3.0],
+      [0.8, 2.4],
+    ];
+    c.shape(8 + U, 13 + U, (y) => [hx + skull[y - 8 - U][0], hx + skull[y - 8 - U][1]], SKIN, (_x, _y, t, u) => sphere(t * 0.9, u * 1.3 - 0.8, 1));
+    c.shade(Math.round(hx - 1), 9 + U, 1);
+    c.part();
+    c.px(hx + 1, 12 + U, SKIN, sphere(0.4, 0), { bias: 1 });
+    c.shade(hx + 1, 13 + U, -1);
+    eyes(c, [[hx - 3, 12 + U]], p.blink);
+    deltoid(c, hx + 0.2, 17 + U, 1.9, MONK_SASH);
+    arm(c, hx + 0.2, 17 + U, fa, REACH_SIDE, [0.3, 1], p.chi);
+    return;
+  }
   c.part();
   const rows: [number, number][] = [
     [-2.6, 2.4],
@@ -382,13 +505,13 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   c.shape(7 + U, 13 + U, (y) => {
     const [l, r] = rows[y - 7 - U];
     return l === r ? null : [hx + l, hx + r];
-  }, FIGHTER_HAIR, (_x, _y, t, u) => sphere(t * 0.9, u * 1.4 - 0.9, 1));
+  }, LK.hair, (_x, _y, t, u) => sphere(t * 0.9, u * 1.4 - 0.9, 1));
   spikes(c, [Math.round(hx - 2), Math.round(hx), Math.round(hx + 2)], [Math.round(hx + 1), Math.round(hx + 3)], 7 + U);
-  c.px(hx + 3.5, 7 + U, FIGHTER_HAIR, sphere(0.4, -0.6));
+  c.px(hx + 3.5, 7 + U, LK.hair, sphere(0.4, -0.6));
   c.part();
-  c.shape(10 + U, 10 + U, () => [hx - 4.1, hx + 3.3], HEADBAND, (_x, _y, t) => cyl(t * 0.9, 0.2));
+  c.shape(10 + U, 10 + U, () => [hx - 4.1, hx + 3.3], LK.band, (_x, _y, t) => cyl(t * 0.9, 0.2));
   c.part();
-  c.ellipse(hx + 3.2, 10.5 + U, 1.1, 1.0, HEADBAND);
+  c.ellipse(hx + 3.2, 10.5 + U, 1.1, 1.0, LK.band);
   eyes(c, [[hx - 3, 12 + U]], p.blink);
 
   // Near shoulder and arm.
@@ -399,14 +522,19 @@ function drawSide(c: PixelCanvas, p: Pose): void {
 // ---------------------------------------------------------------------------
 // Animations
 
-const base = (view: View): Pose => ({
+type Guard = [Fist, Fist];
+const BRAWL_GUARD: Guard = [GUARD_A, GUARD_B];
+/** The monk's stance: the lead palm open and low in front, the other upright at his chest. */
+const MONK_GUARD: Guard = [F(4, 2.0, 0.6), F(0.8, 1.2, 2.6)];
+
+const base = (view: View, guard: Guard = BRAWL_GUARD): Pose => ({
   lift: 0,
   breath: 0,
   footA: view === 'side' ? 1 : 0,
   footB: view === 'side' ? -1 : 0,
   lean: 0,
-  a: { ...GUARD_A },
-  b: { ...GUARD_B },
+  a: { ...guard[0] },
+  b: { ...guard[1] },
   tails: 0,
   chi: 0,
 });
@@ -430,13 +558,15 @@ function idle(view: View): Pose[] {
   return frames;
 }
 
-function walk(view: View): Pose[] {
+const walk = (view: View): Pose[] => walkIn(view, BRAWL_GUARD);
+
+function walkIn(view: View, guard: Guard): Pose[] {
   const frames: Pose[] = [];
   const N = 6;
   for (let f = 0; f < N; f++) {
     const ph = ((f + 0.5) / N) * Math.PI * 2;
     const s = Math.sin(ph);
-    const p = base(view);
+    const p = base(view, guard);
     p.lift = Math.abs(s) < 0.6 ? 1 : 0;
     p.tails = 1 + Math.cos(ph * 2) * 0.6;
     if (view === 'side') {
@@ -465,13 +595,15 @@ interface Key {
   lift?: number;
   step?: number;
   chi?: number;
+  /** Both feet drawn up off the ground (the monk's leap). */
+  tuck?: number;
 }
 
 /** A blow as keyframes; anything left out stays at the guard. `step` plants the front foot forward. */
-function blow(keys: Key[]) {
+function blow(keys: Key[], guard: Guard = BRAWL_GUARD) {
   return (view: View): Pose[] =>
     keys.map((k, i) => {
-      const p = base(view);
+      const p = base(view, guard);
       if (k.a) p.a = { ...k.a };
       if (k.b) p.b = { ...k.b };
       p.breath = k.breath ?? 0;
@@ -484,6 +616,10 @@ function blow(keys: Key[]) {
         p.footB = -1 - Math.round(step * 0.5);
       } else {
         p.footA = step > 0 ? 1 : 0;
+      }
+      if (k.tuck) {
+        p.footA = view === 'side' ? 1 + k.tuck : k.tuck;
+        p.footB = view === 'side' ? k.tuck - 1 : k.tuck;
       }
       // The tails whip back as he throws his weight.
       p.tails = 0.4 + Math.max(0, k.lean ?? 0) * 0.5 + (i % 2) * 0.4;
@@ -543,13 +679,87 @@ function barrage(view: View): Pose[] {
   });
 }
 
+// ---------------------------------------------------------------------------
+// The iron monk's moves
+
+/** Standing still and rooted, breathing slowly. */
+function monkIdle(view: View): Pose[] {
+  const frames: Pose[] = [];
+  const N = 6;
+  for (let f = 0; f < N; f++) {
+    const ph = (f / N) * Math.PI * 2;
+    const p = base(view, MONK_GUARD);
+    p.breath = Math.sin(ph) > 0.5 ? 1 : 0;
+    p.a.h += Math.sin(ph + 0.6) * 0.4;
+    p.b.f += Math.sin(ph) * 0.3;
+    p.blink = f === 3;
+    frames.push(p);
+  }
+  return frames;
+}
+
+const monkWalk = (view: View): Pose[] => walkIn(view, MONK_GUARD);
+
+/** Lead palm: a short, heavy heel-of-the-hand strike. */
+const palm = blow(
+  [
+    { a: F(1.5, 2.6, 1.2), breath: 1 },
+    { a: F(9.5, 0.8, 1.8), b: F(0.6, 1.2, 2.6), lean: 1, step: 1, chi: 0.5 },
+    { a: F(9, 0.9, 1.7), lean: 1, step: 1, chi: 0.3 },
+    { a: F(5, 1.8, 1), step: 1 },
+  ],
+  MONK_GUARD,
+);
+
+/** Rear palm, the hips turning behind it. */
+const palm2 = blow(
+  [
+    { b: F(-0.5, 3.2, 2), a: F(3, 2.2, 0.8), lean: -1 },
+    { b: F(10, 0.4, 2.2), a: F(0.6, 2.8, 1.4), lean: 2, step: 2, chi: 0.5 },
+    { b: F(9.4, 0.5, 2.1), a: F(0.6, 2.8, 1.4), lean: 2, step: 2, chi: 0.3 },
+    { b: F(3, 1.5, 2.2), lean: 1, step: 1 },
+  ],
+  MONK_GUARD,
+);
+
+/** The finisher: both hands drawn in to the chest, then driven out together in a wall of force. */
+const thrust = blow(
+  [
+    { a: F(-1, 3.2, 1.2), b: F(-1, 3.2, 2.2), breath: 1, lean: -1, chi: 0.6 },
+    { a: F(-1.5, 3.4, 1.2), b: F(-1.5, 3.4, 2.2), breath: 2, lean: -1, chi: 0.9 },
+    { a: F(11, 1.8, 1.2), b: F(11, 1.8, 2.6), lean: 3, step: 2, chi: 1 },
+    { a: F(10.5, 1.9, 1.2), b: F(10.5, 1.9, 2.6), lean: 3, step: 2, chi: 0.7 },
+    { a: F(4, 2, 1), b: F(2, 1.5, 2.2), lean: 1, step: 1, chi: 0.2 },
+  ],
+  MONK_GUARD,
+);
+
+/**
+ * The special: he crouches, springs up with his palms joined overhead, and
+ * comes down driving both of them into the earth. Fighter.ts carries him
+ * through the air between the spring and the landing.
+ */
+const leap = blow(
+  [
+    { a: F(0, 4, -2.5), b: F(0, 4, -2.5), breath: 2, chi: 0.3 },
+    { a: F(1, 2.6, 10), b: F(1, 2.6, 10), lift: 1, tuck: 1, chi: 0.5 },
+    { a: F(0.5, 1.6, 13), b: F(0.5, 1.6, 13), lift: 2, tuck: 2, chi: 0.8 },
+    { a: F(0.5, 1.6, 13), b: F(0.5, 1.6, 13), lift: 2, tuck: 2, chi: 1 },
+    { a: F(4, 1.4, 4), b: F(4, 1.4, 4), lift: 1, tuck: 1, chi: 1 },
+    { a: F(6, 2.4, -5), b: F(6, 2.4, -5), breath: 3, lean: 2, step: 1, chi: 1 },
+    { a: F(5, 2.4, -4), b: F(5, 2.4, -4), breath: 2, lean: 1, step: 1, chi: 0.6 },
+    { a: F(3, 2.2, 0), breath: 1, chi: 0.2 },
+  ],
+  MONK_GUARD,
+);
+
 /** Screen angle (0 = right, 90 = down) he faces in each direction. */
 export const FACING_DEG: Record<Dir, number> = { right: 0, down: 90, left: 180, up: 270 };
 
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type FighterAnim = 'idle' | 'walk' | 'jab' | 'cross' | 'hook' | 'upper' | 'smash' | 'barrage';
+export type FighterAnim = 'idle' | 'walk' | 'jab' | 'cross' | 'hook' | 'upper' | 'smash' | 'barrage' | 'palm' | 'palm2' | 'thrust' | 'leap';
 
 export interface FighterAnimDef {
   name: FighterAnim;
@@ -569,8 +779,54 @@ export const FIGHTER_ANIMS: FighterAnimDef[] = [
   { name: 'barrage', fps: 24, loop: true, poses: barrage },
 ];
 
-/** Frame index at which each blow lands. */
-export const HIT_FRAME = { jab: 1, cross: 1, hook: 1, upper: 1, smash: 2 } as const;
+export const MONK_ANIMS: FighterAnimDef[] = [
+  { name: 'idle', fps: 5, loop: true, poses: monkIdle },
+  { name: 'walk', fps: 9, loop: true, poses: monkWalk },
+  { name: 'palm', fps: 16, loop: false, poses: palm },
+  { name: 'palm2', fps: 16, loop: false, poses: palm2 },
+  { name: 'thrust', fps: 13, loop: false, poses: thrust },
+  { name: 'leap', fps: 12, loop: false, poses: leap },
+];
+
+/** Frame index at which each blow lands (the leap: where he meets the ground). */
+export const HIT_FRAME: Partial<Record<FighterAnim, number>> = { jab: 1, cross: 1, hook: 1, upper: 1, smash: 2, palm: 1, palm2: 1, thrust: 2, leap: 5 };
+/** The leap's frames in the air: from the spring (frame 1) to the landing. */
+export const LEAP_AIR = { from: 1, to: 5, fps: 12 } as const;
+
+/** The brawler: gi, black belt, red gloves and headband. */
+export const BRAWLER_LOOK: FighterLook = {
+  key: 'fighter',
+  gi: GI,
+  trouser: GI_TROUSER,
+  belt: BLACK_BELT,
+  band: HEADBAND,
+  glove: GLOVE,
+  wrap: WRAP,
+  feet: WRAP,
+  hair: FIGHTER_HAIR,
+  chi: [CHI_CORE, CHI_HOT, CHI_MID],
+  hand: 1.9,
+  anims: FIGHTER_ANIMS,
+};
+
+/** The iron monk: saffron robe and crimson sash, bronze bracers, bare palms of golden qi. */
+export const MONK_LOOK: FighterLook = {
+  key: 'fighter_monk',
+  monk: true,
+  gi: MONK_ROBE,
+  trouser: MONK_TROUSER,
+  belt: MONK_SASH,
+  band: MONK_SASH,
+  glove: SKIN,
+  wrap: BRONZE,
+  feet: MONK_WRAP,
+  hair: MONK_BROW,
+  chi: [QI_CORE, QI_HOT, QI_MID],
+  hand: 1.7,
+  anims: MONK_ANIMS,
+};
+
+export const FIGHTER_LOOKS = [BRAWLER_LOOK, MONK_LOOK];
 
 export interface FighterFrame {
   key: string; // e.g. "walk_left_3"
@@ -579,7 +835,8 @@ export interface FighterFrame {
   canvas: PixelCanvas;
 }
 
-function drawFighterFrame(dir: Dir, pose: Pose): PixelCanvas {
+function drawFighterFrame(look: FighterLook, dir: Dir, pose: Pose): PixelCanvas {
+  LK = look;
   const c = new PixelCanvas(FIGHTER_W, FIGHTER_H).offset(BODY_X, BODY_Y);
   if (dir === 'down') drawDown(c, pose);
   else if (dir === 'up') drawUp(c, pose);
@@ -587,13 +844,13 @@ function drawFighterFrame(dir: Dir, pose: Pose): PixelCanvas {
   return dir === 'right' ? c.mirrored() : c;
 }
 
-export function buildFighterFrames(): FighterFrame[] {
+export function buildFighterFrames(look: FighterLook = BRAWLER_LOOK): FighterFrame[] {
   const out: FighterFrame[] = [];
-  for (const a of FIGHTER_ANIMS) {
+  for (const a of look.anims) {
     for (const dir of DIRS) {
       const view: View = dir === 'left' || dir === 'right' ? 'side' : dir;
       a.poses(view).forEach((pose, index) => {
-        out.push({ key: `${a.name}_${dir}_${index}`, anim: a.name, dir, canvas: drawFighterFrame(dir, pose) });
+        out.push({ key: `${a.name}_${dir}_${index}`, anim: a.name, dir, canvas: drawFighterFrame(look, dir, pose) });
       });
     }
   }
