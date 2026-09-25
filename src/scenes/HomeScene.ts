@@ -1,57 +1,31 @@
 import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
 import { LOGO_FRAMES, everlandsLogo, sparkleBitmap } from '../art/logo';
-import { hex } from '../art/pixel';
-import type { Bitmap } from '../art/bitmap';
-import {
-  STRIP_W,
-  STRIP_H,
-  HORIZON,
-  farMountains,
-  ridge,
-  midForest,
-  nearForest,
-  foreground,
-  mist,
-  clouds,
-  sunRays,
-  paintSky,
-  leafSheet,
-} from '../art/forest';
+import { paintHall } from '../art/hall';
 import { BUTTON_GOLD, PixelButton, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
 
-interface Strip {
-  sprite: Phaser.GameObjects.TileSprite;
-  /** Art px per second. */
-  speed: number;
-  /** Shift down from the bottom-anchored position, in art px. */
-  drop: number;
-}
-
-const SUN_R = 11;
 /** How often the glint sweeps the title, and how long each of its frames shows. */
 const SHIMMER_EVERY = 5200;
 const SHIMMER_FRAME = 45;
 
 /**
- * The home screen: a forest at dusk scrolling past in parallax layers, the
- * title and a Start Game button. The forest keeps running behind the
- * character select, which opens over it.
+ * The home screen: the Hall of Legends at midday, with sunlight streaming
+ * through its windows and dust drifting in the beams, the title and a Start
+ * Game button. The hall stays behind the character select, which opens over it.
  */
 export class HomeScene extends Phaser.Scene {
   private z = 2;
   private vw = 0;
   private vh = 0;
   private elapsed = 0;
-  private skyKey = '';
-  private sky!: Phaser.GameObjects.Image;
-  private sunGlow!: Phaser.GameObjects.Image;
-  private rays: Phaser.GameObjects.Image[] = [];
-  private strips: Strip[] = [];
-  private starZone = new Phaser.Geom.Rectangle(0, 0, 1, 1);
-  private leafZone = new Phaser.Geom.Rectangle(0, 0, 1, 1);
-  private fireflyZone = new Phaser.Geom.Rectangle(0, 0, 1, 1);
+  private hallKey = '';
+  private hall!: Phaser.GameObjects.Image;
+  private sun!: Phaser.GameObjects.Image;
+  private shafts: Phaser.GameObjects.Image[] = [];
+  private windowGlows: Phaser.GameObjects.Image[] = [];
+  /** Light rays (x0, y0, x1, y1) that dust is scattered along. */
+  private rays: Float32Array = new Float32Array(0);
   private menu!: Phaser.GameObjects.Container;
   private title!: Phaser.GameObjects.Image;
   private titleGlow!: Phaser.GameObjects.Image;
@@ -70,60 +44,48 @@ export class HomeScene extends Phaser.Scene {
 
   create(): void {
     // The scene object is reused when the game returns here from the pause menu.
-    this.strips = [];
-    this.skyKey = '';
+    this.hallKey = '';
+    this.windowGlows = [];
     this.menuOpen = true;
     this.titleFrame = 0;
     this.buildTextures();
     this.sparkleSpots = this.registry.get('logoSparkles');
     this.cameras.main.setOrigin(0, 0);
-    this.cameras.main.postFX.addVignette(0.5, 0.5, 0.95, 0.3);
+    this.cameras.main.postFX.addVignette(0.5, 0.5, 0.9, 0.35);
 
-    this.sky = this.add.image(0, 0, '__DEFAULT').setOrigin(0);
-    this.sunGlow = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffa060).setScale(6).setAlpha(0.35);
-    this.add.particles(0, 0, 'forest_dot', {
-      emitZone: { type: 'random', source: this.starZone } as Phaser.Types.GameObjects.Particles.EmitZoneData,
-      lifespan: { min: 1800, max: 3600 },
-      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * Math.PI) },
-      tint: [0xffffff, 0xd8dcff, 0xffe9c4],
-      frequency: 260,
-    });
-
-    this.strip('forest_clouds', 1.2);
-    this.strip('forest_far', 2.5);
-    this.strip('forest_ridge', 5);
-    this.rays = ['forest_rays0', 'forest_rays1'].map((k) => this.add.image(0, 0, k).setBlendMode(Phaser.BlendModes.ADD));
-    this.strip('forest_mid', 10);
-    this.strip('forest_mist0', 14).sprite.setAlpha(0.9);
-    this.strip('forest_near', 20);
-    this.add.particles(0, 0, 'forest_leaf', {
-      frame: ['l0', 'l1', 'l2'],
-      emitZone: { type: 'random', source: this.leafZone } as Phaser.Types.GameObjects.Particles.EmitZoneData,
-      lifespan: 16000,
-      speedX: { min: -30, max: -12 },
-      speedY: { min: 7, max: 15 },
-      // Flutter: the leaf flips as it tumbles.
-      scaleY: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => (Math.sin(t * 90) > 0 ? 1 : -1) },
-      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.min(1, t * 10, (1 - t) * 10) },
-      frequency: 850,
-    });
-    this.strip('forest_mist1', 28, 20).sprite.setAlpha(0.55);
-    this.strip('forest_fg', 36);
-    this.add.particles(0, 0, 'forest_dot', {
-      emitZone: { type: 'random', source: this.fireflyZone } as Phaser.Types.GameObjects.Particles.EmitZoneData,
-      lifespan: { min: 3000, max: 6000 },
-      speedX: { min: -16, max: -3 },
-      speedY: { min: -5, max: 3 },
-      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.max(0, Math.sin(t * Math.PI * 5)) * Math.sin(t * Math.PI) },
-      tint: [0xffe9a0, 0xfff6c8, 0xd8ff9a],
+    this.hall = this.add.image(0, 0, '__DEFAULT').setOrigin(0);
+    this.sun = this.add.image(0, 0, '__DEFAULT').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD);
+    this.shafts = [0, 1].map(() => this.add.image(0, 0, '__DEFAULT').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD));
+    // Dust motes, only ever seen where they drift through the light.
+    const dust: Phaser.Types.GameObjects.Particles.RandomZoneSource = {
+      getRandomPoint: (p: Phaser.Types.Math.Vector2Like) => {
+        const n = this.rays.length / 4;
+        if (!n) return p;
+        const i = Math.floor(Math.random() * n) * 4;
+        const t = 0.08 + Math.random() * 0.85;
+        p.x = this.rays[i] + (this.rays[i + 2] - this.rays[i]) * t;
+        p.y = this.rays[i + 1] + (this.rays[i + 3] - this.rays[i + 1]) * t;
+        return p;
+      },
+    };
+    this.add.particles(0, 0, 'home_dot', {
+      emitZone: { type: 'random', source: dust } as Phaser.Types.GameObjects.Particles.EmitZoneData,
+      lifespan: { min: 3500, max: 8000 },
+      speedX: { min: -2, max: 4 },
+      speedY: { min: -3, max: 2.5 },
+      alpha: {
+        onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) =>
+          Math.sin(t * Math.PI) * (0.55 + 0.45 * Math.max(0, Math.sin(t * Math.PI * 4))),
+      },
+      tint: [0xfff2cc, 0xffe2a8, 0xffffff],
       blendMode: Phaser.BlendModes.ADD,
-      frequency: 170,
+      frequency: 35,
     });
 
     this.menu = this.add.container(0, 0);
     this.titleGlow = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffb050);
-    this.title = this.add.image(0, 0, 'forest_title', 0).setOrigin(0);
-    this.sparkles = this.sparkleSpots.map(() => this.add.image(0, 0, 'forest_sparkle').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0));
+    this.title = this.add.image(0, 0, 'home_title', 0).setOrigin(0);
+    this.sparkles = this.sparkleSpots.map(() => this.add.image(0, 0, 'home_sparkle').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0));
     this.start = new PixelButton(this, 'Start Game', 84, 22, BUTTON_GOLD, 'start', () => this.openSelect());
     this.arrows = [pixelText(this, 0, 0, '>', 0xf4cf6a), pixelText(this, 0, 0, '<', 0xf4cf6a)];
     this.menu.add([this.titleGlow, this.title, ...this.sparkles, this.start, ...this.arrows]);
@@ -157,33 +119,14 @@ export class HomeScene extends Phaser.Scene {
     this.scene.launch('select');
   }
 
-  private strip(key: string, speed: number, drop = 0): Strip {
-    const s = { sprite: this.add.tileSprite(0, 0, 1, STRIP_H, key).setOrigin(0), speed, drop };
-    this.strips.push(s);
-    return s;
-  }
-
   private buildTextures(): void {
-    if (this.textures.exists('forest_far')) return;
-    const add = (key: string, b: Bitmap) => this.textures.addCanvas(key, b.toCanvas())!;
-    add('forest_clouds', clouds());
-    add('forest_far', farMountains());
-    add('forest_ridge', ridge());
-    add('forest_mid', midForest());
-    add('forest_near', nearForest());
-    add('forest_fg', foreground());
-    add('forest_mist0', mist(81));
-    add('forest_mist1', mist(91, hex('#c98aa6')));
-    add('forest_rays0', sunRays(3));
-    add('forest_rays1', sunRays(9));
+    if (this.textures.exists('home_title')) return;
     const logo = everlandsLogo();
-    const title = add('forest_title', logo.sheet);
+    const title = this.textures.addCanvas('home_title', logo.sheet.toCanvas())!;
     for (let i = 0; i < LOGO_FRAMES; i++) title.add(i, 0, 0, i * logo.frameH, logo.frameW, logo.frameH);
     this.registry.set('logoSparkles', logo.sparkles);
-    add('forest_sparkle', sparkleBitmap());
-    const leaves = add('forest_leaf', leafSheet());
-    for (let i = 0; i < 3; i++) leaves.add(`l${i}`, 0, i * 3, 0, 3, 2);
-    const dot = this.textures.createCanvas('forest_dot', 1, 1)!;
+    this.textures.addCanvas('home_sparkle', sparkleBitmap().toCanvas());
+    const dot = this.textures.createCanvas('home_dot', 1, 1)!;
     dot.context.fillStyle = '#fff';
     dot.context.fillRect(0, 0, 1, 1);
     dot.refresh();
@@ -200,24 +143,32 @@ export class HomeScene extends Phaser.Scene {
     const vw = this.vw;
     const vh = this.vh;
 
-    const sunX = Math.round(vw * 0.64);
-    const sunY = Math.round(vh - HORIZON - 26);
     const w = Math.ceil(vw);
     const h = Math.ceil(vh);
-    const key = `forest_sky_${w}x${h}`;
-    if (key !== this.skyKey) {
-      if (!this.textures.exists(key)) this.textures.addCanvas(key, paintSky(w, h, sunX, sunY, SUN_R).toCanvas());
-      this.sky.setTexture(key);
-      if (this.skyKey) this.textures.remove(this.skyKey);
-      this.skyKey = key;
+    const key = `hall_${w}x${h}`;
+    if (key !== this.hallKey) {
+      const art = paintHall(w, h);
+      const layers = [art.base, art.sun, ...art.shafts];
+      const images = [this.hall, this.sun, ...this.shafts];
+      layers.forEach((b, i) => {
+        const k = `${key}_${i}`;
+        if (!this.textures.exists(k)) this.textures.addCanvas(k, b.toCanvas());
+        images[i].setTexture(k);
+        if (this.hallKey) this.textures.remove(`${this.hallKey}_${i}`);
+      });
+      this.hallKey = key;
+      this.rays = art.rays;
+      for (const g of this.windowGlows) g.destroy();
+      this.windowGlows = art.windows.map((r) =>
+        this.add
+          .image(r.x + r.w / 2, r.y + r.h * 0.55, 'glow')
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setTint(0xffd9a0)
+          .setScale((r.w * 2.6) / 32, (r.h * 1.5) / 32),
+      );
+      // Behind the menu, over the hall.
+      for (const g of this.windowGlows) this.children.moveAbove(g, this.shafts[1]);
     }
-    this.sunGlow.setPosition(sunX, sunY);
-    for (const r of this.rays) r.setPosition(sunX, sunY);
-    for (const s of this.strips) s.sprite.setPosition(0, vh - STRIP_H + s.drop).setSize(w + 1, STRIP_H);
-
-    this.starZone.setTo(0, 0, vw, Math.max(1, vh - HORIZON - 100));
-    this.leafZone.setTo(0, -4, vw + 40, vh * 0.6);
-    this.fireflyZone.setTo(0, vh - 70, vw + 20, 62);
 
     // Title: 2x when it fits with a margin; kept clear of the FPS counter.
     const ts = vw >= this.title.width * 2 + 16 ? 2 : 1;
@@ -233,13 +184,14 @@ export class HomeScene extends Phaser.Scene {
 
   update(time: number, dt: number): void {
     this.elapsed += dt;
-    const z = this.z;
     const t = this.elapsed / 1000;
-    for (const s of this.strips) s.sprite.tilePositionX = Math.round(((t * s.speed) % STRIP_W) * z) / z;
-
-    this.rays[0].setAlpha(0.6 + 0.25 * Math.sin(time * 0.0007));
-    this.rays[1].setAlpha(0.6 - 0.25 * Math.sin(time * 0.0007));
-    this.sunGlow.setAlpha(0.3 + 0.05 * Math.sin(time * 0.0011));
+    // Clouds drift over the sun now and then, and the shafts shimmer.
+    const cloud = 0.86 + 0.14 * (0.5 + 0.5 * (0.6 * Math.sin(t * 0.21) + 0.4 * Math.sin(t * 0.53 + 1.7)));
+    const shimmer = 0.3 * Math.sin(time * 0.0006);
+    this.sun.setAlpha(cloud);
+    this.shafts[0].setAlpha(cloud * (0.7 + shimmer));
+    this.shafts[1].setAlpha(cloud * (0.7 - shimmer));
+    for (const g of this.windowGlows) g.setAlpha(0.22 * cloud);
 
     if (this.menu.visible) {
       const ty = this.titleY + Math.round(Math.sin(time * 0.0016) * 1.5);
