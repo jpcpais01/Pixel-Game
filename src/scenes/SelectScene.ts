@@ -453,7 +453,6 @@ export class SelectScene extends Phaser.Scene {
   private typeName!: Phaser.GameObjects.BitmapText;
   private typeRole!: Phaser.GameObjects.BitmapText;
   private skinName!: Phaser.GameObjects.BitmapText;
-  private skinNote!: Phaser.GameObjects.BitmapText;
   private pips!: Phaser.GameObjects.Graphics;
   private abilities: Phaser.GameObjects.BitmapText[] = [];
   private icons: { attack: Phaser.GameObjects.Sprite; special: Phaser.GameObjects.Image } | null = null;
@@ -523,14 +522,11 @@ export class SelectScene extends Phaser.Scene {
     const rule = this.add.graphics();
     rule.fillStyle(0x0b0818, 0.8).fillRect(PAD, RULE_Y, INFO_W - PAD * 2, 1);
     rule.fillStyle(0x6b5aa6, 0.6).fillRect(PAD, RULE_Y + 1, INFO_W - PAD * 2, 1);
-    const typeLabel = pixelText(this, PAD, TYPE_Y + 4, 'Type', DIM);
-    const typeHint = pixelText(this, PAD, TYPE_Y + 14, 'Plays', 0x5a4e8a);
-    const skinLabel = pixelText(this, PAD, SKIN_Y + 4, 'Skin', DIM);
-    const skinHint = pixelText(this, PAD, SKIN_Y + 14, 'Looks', 0x5a4e8a);
+    const typeLabel = pixelText(this, PAD, TYPE_Y + 14, 'Type', LAVENDER);
+    const skinLabel = pixelText(this, PAD, SKIN_Y + 14, 'Skin', LAVENDER);
     this.typeName = pixelText(this, 0, 0, '');
     this.typeRole = pixelText(this, 0, 0, '', LAVENDER);
     this.skinName = pixelText(this, 0, 0, '');
-    this.skinNote = pixelText(this, 0, 0, '', 0x5a4e8a);
     this.pips = this.add.graphics();
     const labels = ['Power', 'Speed', 'Range'].map((l, i) => pixelText(this, PAD, STATS_Y + 3 + i * LINE_H, l, DIM));
     const abX = PAD + 82;
@@ -547,7 +543,7 @@ export class SelectScene extends Phaser.Scene {
       attack: this.add.sprite(iconX, STATS_Y + ICON_BOX / 2, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD),
       special: this.add.image(iconX, STATS_Y + ICON_BOX + 2 + ICON_BOX / 2, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD),
     };
-    this.info = this.add.container(0, 0, [bg, rule, this.nameText, this.blurb, typeLabel, typeHint, skinLabel, skinHint, this.typeName, this.typeRole, this.skinName, this.skinNote, this.pips, ...labels, boxes, ...this.abilities, this.icons.attack, this.icons.special]);
+    this.info = this.add.container(0, 0, [bg, rule, this.nameText, this.blurb, typeLabel, skinLabel, this.typeName, this.typeRole, this.skinName, this.pips, ...labels, boxes, ...this.abilities, this.icons.attack, this.icons.special]);
   }
 
   /** Show the current class in its current type and skin. `pose` plays the hero's picked animation. */
@@ -616,11 +612,7 @@ export class SelectScene extends Phaser.Scene {
     const skinX = this.besideTiles(looks.length);
     const skinW = INFO_W - PAD - skinX;
     this.skinName.setText(fitLine(this.probe, look.skin?.name ?? look.type.lookName ?? 'Classic', skinW)).setTint(def.accent);
-    const more = looks.length - 1;
-    this.skinNote.setText(fitLine(this.probe, more > 0 ? `${looks.findIndex((l) => l.skin === look.skin) + 1} of ${looks.length}` : 'More to come', skinW));
-    const skinTop = Math.round(SKIN_Y + (TILE_H - 17) / 2);
-    this.skinName.setPosition(skinX, skinTop);
-    this.skinNote.setPosition(skinX, skinTop + 10);
+    this.skinName.setPosition(skinX, Math.round(SKIN_Y + (TILE_H - this.skinName.height) / 2));
   }
 
   /** Keep `count` tiles in the info panel's row at `y`, making or removing tiles as needed. */
