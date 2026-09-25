@@ -1,5 +1,5 @@
 // The gear on the HUD: a chest button beside the pause button with the count
-// found, the bag it opens (every piece in a 5x4 grid, the missing ones as
+// found, the bag it opens (every piece in an 8-wide grid, the missing ones as
 // shadows, the tapped or hovered piece's stats and the totals) and a banner
 // that slides in when a piece is picked up. Drawn in device pixels by the UI
 // scene; Graphics are only rebuilt when what they show changes.
@@ -8,8 +8,8 @@ import Phaser from 'phaser';
 import { DPR as D } from '../game/display';
 import { GEAR, RARITY, gear, statLines, type GearDef } from '../game/gear';
 
-const COLS = 5;
-const ROWS = 4;
+const COLS = 8;
+const ROWS = Math.ceil(GEAR.length / COLS);
 /** Banner: slide in, hold, fade out (ms). */
 const BANNER_IN = 180;
 const BANNER_TIME = 2800;
@@ -82,9 +82,11 @@ export class GearHud {
   /** The bag's layout: cell size, text scale, and where the grid and text sit. */
   private get layout() {
     const { width, height } = this.scene.scale;
-    const c = Math.round(Phaser.Math.Clamp(Math.min(width, height) * 0.1, 34 * D, 64 * D));
     const g = Math.round(4 * D);
     const pad = Math.round(10 * D);
+    // Cells shrink so the grid and its seven text lines (each at most 10/36 of a cell) fit the screen.
+    const fit = Math.min((width - pad * 2 - (COLS - 1) * g) / COLS, (height - pad * 4 - (ROWS - 1) * g) / (ROWS + 70 / 36));
+    const c = Math.round(Phaser.Math.Clamp(Math.min(Math.min(width, height) * 0.1, fit), 26 * D, 64 * D));
     const ts = Math.max(1, Math.floor(c / 36));
     const lineH = 10 * ts;
     const w = COLS * c + (COLS - 1) * g + pad * 2;
