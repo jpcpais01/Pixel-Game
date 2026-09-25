@@ -4,26 +4,35 @@
 // they log into. Changes save a moment later, so a burst of pickups is one
 // write.
 
-import { itemInfo } from './itemInfo';
+import { gearById, SLOTS } from './gear';
 import { account, cloudReady, loadSave, onAccount, writeSave, type SaveData } from './cloud';
 
-export const EQUIP_SLOTS = 6;
+/** One slot per gear type, in the order of SLOTS: equipped[i] holds a SLOTS[i] piece. */
+export const EQUIP_SLOTS = SLOTS.length;
 const LOCAL_PREFIX = 'pixel-battle.save.';
 const SAVE_DELAY = 1500;
 
 const empty = (): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null) });
 
-/** Tidy a save from storage: whole positive counts, six slots, nothing equipped that isn't owned or twice. */
+/** The equip slot a gear id belongs in, or -1 for anything that isn't gear. */
+export function slotIndex(id: string): number {
+  const g = gearById(id);
+  return g ? SLOTS.indexOf(g.slot) : -1;
+}
+
+/**
+ * Tidy a save from storage: whole positive counts, and six slots each holding
+ * an owned piece of its own type. Saves from before gear had types kept any
+ * six pieces in any order; each goes to its type's slot, and when two share a
+ * type the first stays on and the other is simply back in the bag.
+ */
 function clean(d: Partial<SaveData> | null | undefined): SaveData {
   const out = empty();
   for (const [id, n] of Object.entries(d?.items ?? {})) if (n > 0) out.items[id] = Math.floor(n);
-  const seen = new Set<string>();
-  (d?.equipped ?? []).slice(0, EQUIP_SLOTS).forEach((id, i) => {
-    if (id && out.items[id] && !seen.has(id)) {
-      out.equipped[i] = id;
-      seen.add(id);
-    }
-  });
+  for (const id of d?.equipped ?? []) {
+    const i = id ? slotIndex(id) : -1;
+    if (i >= 0 && out.items[id!] && !out.equipped[i]) out.equipped[i] = id;
+  }
   return out;
 }
 
@@ -91,15 +100,12 @@ class Collection {
     return this.data.equipped.includes(id);
   }
 
-  /** Put `id` in slot `slot`, or the first empty one. Returns false when it can't be. */
-  equip(id: string, slot?: number): boolean {
-    if (!this.count(id) || !itemInfo(id).equippable) return false;
-    const eq = this.data.equipped;
-    const i = slot ?? eq.indexOf(null);
-    if (i < 0 || i >= EQUIP_SLOTS) return false;
-    const was = eq.indexOf(id);
-    if (was >= 0) eq[was] = null;
-    eq[i] = id;
+  /** Put gear `id` on, in its type's slot, swapping out whatever was there. Returns false when it can't be. */
+  equip(id: string): boolean {
+    const i = slotIndex(id);
+    if (i < 0 || !this.count(id)) return false;
+    if (this.data.equipped[i] === id) return true;
+    this.data.equipped[i] = id;
     this.changed();
     return true;
   }
@@ -163,7 +169,7 @@ class Collection {
       if (guest) {
         for (const [id, n] of Object.entries(guest.items)) merged.items[id] = (merged.items[id] ?? 0) + n;
         guest.equipped.forEach((id, i) => {
-          if (id && !merged.equipped[i] && !merged.equipped.includes(id)) merged.equipped[i] = id;
+          if (id && !merged.equipped[i]) merged.equipped[i] = id;
         });
         writeLocal('guest', null);
       }

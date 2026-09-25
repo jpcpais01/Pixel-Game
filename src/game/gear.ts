@@ -2,15 +2,33 @@
 // a potion: walking over a piece picks it up, and its stats count from then
 // on, for the rest of the run. Each piece is found once per run; the bag
 // shows every piece found, and the ones still missing as shadows. A new piece
-// is one entry in GEAR plus its painter in art/gear.ts.
+// is one entry in GEAR (with its slot type) plus its painter in art/gear.ts.
 
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+/** Rarities from least to most rare; `tint` colours names, frames and icon backgrounds. */
+export const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 export const RARITY: Record<Rarity, { name: string; tint: number; weight: number }> = {
-  common: { name: 'Common', tint: 0xd8dde8, weight: 52 },
-  rare: { name: 'Rare', tint: 0x5fb4ff, weight: 30 },
-  epic: { name: 'Epic', tint: 0xc084ff, weight: 14 },
-  legendary: { name: 'Legendary', tint: 0xffc84a, weight: 4 },
+  common: { name: 'Common', tint: 0x5fa8ff, weight: 44 },
+  uncommon: { name: 'Uncommon', tint: 0x62e07a, weight: 28 },
+  rare: { name: 'Rare', tint: 0xffd84a, weight: 17 },
+  epic: { name: 'Epic', tint: 0xc084ff, weight: 8 },
+  legendary: { name: 'Legendary', tint: 0xfff8ec, weight: 3 },
+};
+
+/** The six kinds of gear; the hero wears one of each, in this order. */
+export type Slot = 'headwear' | 'chest' | 'boots' | 'accessory' | 'weapon' | 'defence';
+
+export const SLOTS: Slot[] = ['headwear', 'chest', 'boots', 'weapon', 'defence', 'accessory'];
+
+export const SLOT_NAME: Record<Slot, string> = {
+  headwear: 'Headwear',
+  chest: 'Chest',
+  boots: 'Boots',
+  accessory: 'Accessory',
+  weapon: 'Weapon',
+  defence: 'Defence',
 };
 
 export interface GearStats {
@@ -32,35 +50,37 @@ export interface GearDef {
   id: string;
   name: string;
   rarity: Rarity;
+  /** Which of the six equip slots it goes in. */
+  slot: Slot;
   stats: GearStats;
   /** 32x32 icon, and the 16x16 sprite lying on the ground. */
   icon: string;
   drop: string;
 }
 
-const piece = (id: string, name: string, rarity: Rarity, stats: GearStats): GearDef => ({ id, name, rarity, stats, icon: `gear_${id}`, drop: `gdrop_${id}` });
+const piece = (id: string, name: string, rarity: Rarity, slot: Slot, stats: GearStats): GearDef => ({ id, name, rarity, slot, stats, icon: `gear_${id}`, drop: `gdrop_${id}` });
 
 export const GEAR: GearDef[] = [
-  piece('iron_sword', 'Iron Sword', 'common', { power: 0.1 }),
-  piece('leather_boots', 'Leather Boots', 'common', { speed: 0.08 }),
-  piece('oak_shield', 'Oak Shield', 'common', { armor: 0.08 }),
-  piece('iron_helm', 'Iron Helm', 'common', { hp: 15 }),
-  piece('ruby_amulet', 'Ruby Amulet', 'common', { hp: 20 }),
-  piece('battle_axe', 'Battle Axe', 'rare', { power: 0.18 }),
-  piece('frost_spear', 'Frost Spear', 'rare', { power: 0.12, speed: 0.06 }),
-  piece('bloodfang', 'Bloodfang', 'rare', { power: 0.06, leech: 0.05 }),
-  piece('knight_plate', 'Knight Plate', 'rare', { hp: 25, armor: 0.1 }),
-  piece('winged_boots', 'Winged Boots', 'rare', { speed: 0.18 }),
-  piece('gauntlets', 'Gauntlets of Might', 'rare', { power: 0.1, armor: 0.06 }),
-  piece('emerald_ring', 'Emerald Ring', 'rare', { regen: 1.5 }),
-  piece('arcane_staff', 'Arcane Staff', 'rare', { power: 0.15 }),
-  piece('thunder_hammer', 'Thunder Hammer', 'epic', { power: 0.25, hp: 10 }),
-  piece('emberbrand', 'Emberbrand', 'epic', { power: 0.22, leech: 0.04 }),
-  piece('tome_of_embers', 'Tome of Embers', 'epic', { power: 0.18, regen: 1 }),
-  piece('moonstone_orb', 'Moonstone Orb', 'epic', { regen: 2, armor: 0.1 }),
-  piece('dragonfang', 'Dragonfang', 'legendary', { power: 0.35, hp: 20 }),
-  piece('golden_aegis', 'Golden Aegis', 'legendary', { armor: 0.2, hp: 40 }),
-  piece('phoenix_feather', 'Phoenix Feather', 'legendary', { regen: 3, speed: 0.12, hp: 20 }),
+  piece('iron_sword', 'Iron Sword', 'common', 'weapon', { power: 0.1 }),
+  piece('leather_boots', 'Leather Boots', 'common', 'boots', { speed: 0.08 }),
+  piece('oak_shield', 'Oak Shield', 'common', 'defence', { armor: 0.08 }),
+  piece('iron_helm', 'Iron Helm', 'common', 'headwear', { hp: 15 }),
+  piece('ruby_amulet', 'Ruby Amulet', 'common', 'accessory', { hp: 20 }),
+  piece('battle_axe', 'Battle Axe', 'rare', 'weapon', { power: 0.18 }),
+  piece('frost_spear', 'Frost Spear', 'uncommon', 'weapon', { power: 0.12, speed: 0.06 }),
+  piece('bloodfang', 'Bloodfang', 'uncommon', 'weapon', { power: 0.06, leech: 0.05 }),
+  piece('knight_plate', 'Knight Plate', 'rare', 'chest', { hp: 25, armor: 0.1 }),
+  piece('winged_boots', 'Winged Boots', 'rare', 'boots', { speed: 0.18 }),
+  piece('gauntlets', 'Gauntlets of Might', 'uncommon', 'defence', { power: 0.1, armor: 0.06 }),
+  piece('emerald_ring', 'Emerald Ring', 'uncommon', 'accessory', { regen: 1.5 }),
+  piece('arcane_staff', 'Arcane Staff', 'rare', 'weapon', { power: 0.15 }),
+  piece('thunder_hammer', 'Thunder Hammer', 'epic', 'weapon', { power: 0.25, hp: 10 }),
+  piece('emberbrand', 'Emberbrand', 'epic', 'weapon', { power: 0.22, leech: 0.04 }),
+  piece('tome_of_embers', 'Tome of Embers', 'epic', 'accessory', { power: 0.18, regen: 1 }),
+  piece('moonstone_orb', 'Moonstone Orb', 'epic', 'defence', { regen: 2, armor: 0.1 }),
+  piece('dragonfang', 'Dragonfang', 'legendary', 'weapon', { power: 0.35, hp: 20 }),
+  piece('golden_aegis', 'Golden Aegis', 'legendary', 'defence', { armor: 0.2, hp: 40 }),
+  piece('phoenix_feather', 'Phoenix Feather', 'legendary', 'headwear', { regen: 3, speed: 0.12, hp: 20 }),
 ];
 
 export const gearById = (id: string): GearDef | undefined => GEAR.find((g) => g.id === id);
