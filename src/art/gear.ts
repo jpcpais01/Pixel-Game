@@ -1,4 +1,4 @@
-// Gear art: a 32x32 icon for each of the twenty pieces of gear, painted in
+// Gear art: a 32x32 icon for each of the forty pieces of gear, painted in
 // code and lit from the top left like the potions. Shapes are shaded from
 // five-step ramps (darkest first), then ringed in an outline tinted by what it
 // wraps. Each icon also gives the 16x16 sprite that lies on the ground when a
@@ -839,6 +839,593 @@ function phoenixFeather(p: Paint): () => void {
   };
 }
 
+// ---- The second twenty -------------------------------------------------------
+
+const MOSS: Ramp = ['#14200f', '#243a1a', '#3a5a28', '#5a7e3a', '#86a858'];
+const LINEN: Ramp = ['#4a3624', '#7a5e40', '#a88a62', '#d0b48a', '#f0dcb4'];
+const SHADOW: Ramp = ['#0c0814', '#1c1228', '#2e1e40', '#48305e', '#6e5088'];
+const DRAGON: Ramp = ['#0a2426', '#124a44', '#1f7a64', '#3fb08a', '#a8f0c8'];
+const BASALT: Ramp = ['#140c10', '#2a1a1c', '#44282a', '#664038', '#8a5a48'];
+const FUR: Ramp = ['#6a625a', '#9a9088', '#c8c0b4', '#e8e2d8', '#ffffff'];
+const HAT: Ramp = ['#140a30', '#2a1660', '#4a2a9a', '#7a52d0', '#b8a0f4'];
+const VOID: Ramp = ['#0a0418', '#240c44', '#4a1a84', '#8a4ae0', '#e0c8ff'];
+const EBONY: Ramp = ['#0c0a10', '#1c1822', '#2e2836', '#46404e', '#645c6c'];
+const GLASS: Ramp = ['#1c3a2c', '#2a5a40', '#4a8a64', '#8ac8a0', '#d8f4e0'];
+const HOLLOW: Ramp = ['#050308', '#0e0a12', '#1a1420', '#261c2a', '#322434'];
+
+type Pt = [number, number];
+
+/** A point on the quadratic curve from a through c to b. */
+function quad(a: Pt, c: Pt, b: Pt, t: number): Pt {
+  const u = 1 - t;
+  return [u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]];
+}
+
+/** A quadratic curve from a through c to b (or its t0..t1 stretch), drawn as short bands `width(t)` wide. */
+function curve(p: Paint, a: Pt, c: Pt, b: Pt, width: (t: number) => number, ramp: Ramp, bias = 0, t0 = 0, t1 = 1, steps = 14): void {
+  for (let i = 0; i < steps; i++) {
+    const s0 = t0 + ((t1 - t0) * i) / steps;
+    const s1 = t0 + ((t1 - t0) * (i + 1)) / steps;
+    const [x0, y0] = quad(a, c, b, s0);
+    const [x1, y1] = quad(a, c, b, s1);
+    // Each piece reaches a little past its end so the joints never gap.
+    const ex = (x1 - x0) * 0.25;
+    const ey = (y1 - y0) * 0.25;
+    p.band(x0 - ex, y0 - ey, x1 + ex, y1 + ey, (u) => width(s0 + (s1 - s0) * u), ramp, 'round', bias);
+  }
+}
+
+/** True where a shape's pixel is within `d` steps of its outside. */
+function nearEdge(inside: (x: number, y: number) => boolean, x: number, y: number, d: number): boolean {
+  for (let oy = -d; oy <= d; oy++) for (let ox = -d; ox <= d; ox++) if (Math.abs(ox) + Math.abs(oy) <= d && !inside(x + ox, y + oy)) return true;
+  return false;
+}
+
+/** Paints `c` only over what is already painted: cracks, stitches and trim. */
+function mark(p: Paint, x: number, y: number, c: string): void {
+  if (p.filled(Math.floor(x), Math.floor(y))) p.put(x, y, c);
+}
+
+/** A shirt's outline: sloped shoulders, sleeves angled down and out, a V neck and a flared hem. */
+function tunicShape(sleeve: number): (x: number, y: number) => boolean {
+  return (x, y) => {
+    if (y < 5 || y > 29.5) return false;
+    const ax = Math.abs(x - 16);
+    if (ax <= 3.5 - (y - 5) * 0.58) return false;
+    const hw = y < 8 ? 6.5 + (y - 5) : y < 20 ? 9.5 : 9.5 + (y - 20) * 0.12;
+    if (ax <= hw) return true;
+    const top = 6.5 + (ax - 9) * 0.8;
+    return ax <= 9 + sleeve && y >= top && y <= top + 8;
+  };
+}
+
+function leatherHood(p: Paint): void {
+  const hw = (y: number) => (y < 17 ? 10.5 * Math.sqrt(Math.max(0, (y - 3) / 14)) : 10.5 + (y - 17) * 0.22);
+  const inside = (x: number, y: number) => y >= 3 && y <= 29.5 && Math.abs(x - 16) <= hw(y);
+  p.fill(MOSS, (x, y) => {
+    if (!inside(x, y)) return null;
+    const k = (x - 16) / Math.max(1, hw(y));
+    let l = 0.58 - 0.38 * k - (y - 14) / 70;
+    // The hood's rim rolls out around the face and catches the light.
+    if (((x - 16) / 7.4) ** 2 + ((y - 17) / 8.4) ** 2 <= 1) l += 0.2;
+    if (y > 28.5) l -= 0.25;
+    return l;
+  });
+  // The face lost in shadow, deepest under the brow.
+  p.fill(HOLLOW, (x, y) => (((x - 16) / 5.6) ** 2 + ((y - 17.5) / 6.6) ** 2 <= 1 ? clamp01((y - 12) / 12) : null));
+  // A seam over the crown, and drawstrings with bronze tips.
+  for (let y = 4; y <= 10; y++) mark(p, 16, y, MOSS[1]);
+  p.line(14, 24, 13, 28, LINEN[3]);
+  p.line(18, 24, 19, 28, LINEN[2]);
+  p.put(13, 29, BRONZE[3]);
+  p.put(19, 29, BRONZE[2]);
+}
+
+function wizardHat(p: Paint): () => void {
+  const brim = (x: number, y: number) => ((x - 16) / 13.5) ** 2 + ((y - 24.5) / 4.2) ** 2;
+  const brimTone = (x: number, y: number) => (brim(x, y) > 0.72 && y > 25.5 ? 0.22 : 0.52 - (x - 16) / 45 + (y < 23.5 ? 0.12 : 0));
+  p.fill(HAT, (x, y) => (brim(x, y) <= 1 ? brimTone(x, y) : null));
+  // The cone, its tip flopping over to the right.
+  p.band(16, 23.5, 19.5, 9, (t) => 7.6 * (1 - t) + 1.9, HAT);
+  p.band(19.5, 9.8, 26.5, 5.5, (t) => 2.1 * (1 - t) + 0.35, HAT, 'round', 0.06);
+  // A gold band round the base with a buckle.
+  for (const y of [20, 21]) {
+    const t = (23.5 - y - 0.5) / 14.5;
+    const ax = 16 + t * 3.5;
+    const hw = 7.6 * (1 - t) + 1.9;
+    for (let x = Math.ceil(ax - hw); x <= ax + hw; x++) mark(p, x, y, x < ax - hw + 1.5 ? GOLD[4] : x < ax ? GOLD[3] : GOLD[2]);
+  }
+  p.map(15, 19, ['yyy', 'y.y', 'yyy'], { y: GOLD[4] });
+  p.put(16, 20, HAT[0]);
+  // The front of the brim sits over the cone.
+  p.fill(HAT, (x, y) => (brim(x, y) <= 1 && y >= 24.5 ? brimTone(x, y) : null));
+  // Stars and a moon sewn on.
+  for (const [x, y] of [[13, 15], [19, 13]]) {
+    p.put(x, y, GOLD[4]);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) mark(p, x + dx, y + dy, GOLD[2]);
+  }
+  mark(p, 17, 17, PLUME[4]);
+  mark(p, 18, 18, PLUME[3]);
+  mark(p, 18, 16, PLUME[3]);
+  return () => {
+    p.twinkle(28, 5, GOLD[4], 2);
+    p.twinkle(5, 17, HAT[4], 1);
+  };
+}
+
+function hornedHelm(p: Paint): void {
+  // Horns sweep out and up from behind the dome.
+  curve(p, [9, 15], [1.5, 14], [4, 3], (t) => 2.5 * (1 - t) + 0.35, BONE, 0.05);
+  curve(p, [23, 15], [30.5, 14], [28, 3], (t) => 2.5 * (1 - t) + 0.35, BONE, -0.12);
+  for (const t of [0.3, 0.5]) {
+    const [lx, ly] = quad([9, 15], [1.5, 14], [4, 3], t);
+    const [rx, ry] = quad([23, 15], [30.5, 14], [28, 3], t);
+    for (let d = -2; d <= 2; d++) {
+      mark(p, lx + d * 0.7, ly - d * 0.5, BONE[1]);
+      mark(p, rx - d * 0.7, ry - d * 0.5, BONE[1]);
+    }
+  }
+  p.fill(STEEL, (x, y) => {
+    const nx = (x - 16) / 9.6;
+    const ny = (y - 17) / 10;
+    const d = nx * nx + ny * ny;
+    if (d > 1 || y > 26.5) return null;
+    return 0.1 + 0.8 * clamp01(nx * L3[0] + ny * L3[1] + Math.sqrt(1 - d) * L3[2]);
+  });
+  // A bronze brow band with rivets, and the rim.
+  for (let x = 5; x <= 27; x++) {
+    mark(p, x, 14, BRONZE[3]);
+    mark(p, x, 15, BRONZE[1]);
+    if (x % 3 === 1) mark(p, x, 14, BRONZE[4]);
+    mark(p, x, 25, BRONZE[2]);
+    mark(p, x, 26, BRONZE[0]);
+  }
+  // Spectacle guards round the eyes, a nose guard between them, and a ridge over the top.
+  p.fill(HOLLOW, (x, y) => (Math.hypot((Math.abs(x - 16) - 3.6) / 2.7, (y - 19) / 1.9) <= 1 ? (y < 19 ? 0.2 : 0.5) : null));
+  for (let x = 8; x <= 24; x++) if (x < 15 || x > 16) mark(p, x, 17, IRON[3]);
+  for (let y = 14; y <= 23; y++) {
+    p.put(15, y, y === 14 ? BRONZE[4] : STEEL[3]);
+    p.put(16, y, STEEL[1]);
+  }
+  for (let y = 8; y <= 13; y++) {
+    mark(p, 15, y, STEEL[4]);
+    mark(p, 16, y, STEEL[2]);
+  }
+}
+
+function jeweledCrown(p: Paint): () => void {
+  // Red velvet inside, then five gold points.
+  p.ball(16, 16, 9.5, 8, RED_LEATHER, -0.1);
+  const points: [number, number][] = [[6, 10.5], [11, 8], [16, 5], [21, 8], [26, 10.5]];
+  for (const [cx, top] of points) {
+    p.fill(GOLD, (x, y) => {
+      if (y < top || y > 19) return null;
+      if (Math.abs(x - cx) > 2.7 * ((y - top) / (18.5 - top)) + 0.3) return null;
+      return 0.64 - (0.3 * (x - cx)) / 2.7 - (x - 16) / 60;
+    });
+  }
+  // The band: a gold cylinder, lips top and bottom.
+  p.fill(GOLD, (x, y) => {
+    if (x < 4.5 || x > 27.5 || y < 18 || y > 26) return null;
+    const k = (x - 16) / 11.5;
+    if (y < 19 || y > 25) return 0.84 - 0.34 * k;
+    return 0.56 - 0.36 * k;
+  });
+  for (const [cx, top] of points) p.ball(cx, top - 0.6, cx === 16 ? 1.8 : 1.35, cx === 16 ? 1.8 : 1.35, cx === 16 ? RUBY : PLUME);
+  // Gems set round the band.
+  p.ball(16, 22, 2.3, 2.5, RUBY, 0.05);
+  p.ball(10.5, 22, 1.7, 1.7, EMERALD);
+  p.ball(21.5, 22, 1.7, 1.7, ROYAL, 0.1);
+  for (const x of [6.5, 25.5]) p.ball(x, 22, 1.1, 1.1, PLUME);
+  return () => {
+    p.halo(GOLD[3], 2, 55);
+    p.twinkle(8, 5, '#ffffff', 2);
+    p.twinkle(25, 18, GOLD[4], 1);
+  };
+}
+
+function valkyrieHelm(p: Paint): () => void {
+  // White wings behind the helm, the shaded one on the right.
+  p.band(9, 17, 1, 4, (t) => 2.1 * (1 - t) + 0.3, PLUME, 'round', 0.12);
+  p.band(9, 18.5, 0.5, 10, (t) => 1.9 * (1 - t) + 0.3, PLUME, 'round', 0.02);
+  p.band(9, 20, 1.5, 15.5, (t) => 1.6 * (1 - t) + 0.3, PLUME, 'round', -0.1);
+  p.band(23, 17, 31, 4, (t) => 2.1 * (1 - t) + 0.3, PLUME, 'round', -0.02);
+  p.band(23, 18.5, 31.5, 10, (t) => 1.9 * (1 - t) + 0.3, PLUME, 'round', -0.12);
+  p.band(23, 20, 30.5, 15.5, (t) => 1.6 * (1 - t) + 0.3, PLUME, 'round', -0.22);
+  p.fill(STEEL, (x, y) => {
+    const nx = (x - 16) / 8.8;
+    const ny = (y - 16) / 10;
+    const d = nx * nx + ny * ny;
+    if (d > 1 || y > 25.5) return null;
+    return 0.12 + 0.82 * clamp01(nx * L3[0] + ny * L3[1] + Math.sqrt(1 - d) * L3[2]);
+  });
+  // Gold: the rim, a T over brow and nose, and a crest over the top.
+  for (let x = 6; x <= 26; x++) {
+    mark(p, x, 24, x < 16 ? GOLD[3] : GOLD[2]);
+    mark(p, x, 25, GOLD[1]);
+    mark(p, x, 14, x < 16 ? GOLD[4] : GOLD[3]);
+    mark(p, x, 15, GOLD[1]);
+  }
+  for (let x = 9; x <= 23; x++) {
+    if (x > 13 && x < 18) continue;
+    mark(p, x, 17, '#0c0a16');
+    mark(p, x, 18, x < 16 ? '#1c1a2c' : '#0c0a16');
+  }
+  for (let y = 14; y <= 22; y++) {
+    p.put(15, y, GOLD[3]);
+    p.put(16, y, GOLD[1]);
+  }
+  for (let y = 6; y <= 12; y++) {
+    mark(p, 15, y, GOLD[4]);
+    mark(p, 16, y, GOLD[2]);
+  }
+  p.ball(16, 12, 1.4, 1.4, ROYAL, 0.15);
+  return () => {
+    p.halo('#fff4bf', 2, 70);
+    p.twinkle(3, 2, '#ffffff', 2);
+    p.twinkle(27, 25, GOLD[4], 1);
+  };
+}
+
+function paddedTunic(p: Paint): void {
+  const inside = tunicShape(4.5);
+  p.fill(LINEN, (x, y) => {
+    if (!inside(x, y)) return null;
+    const ax = Math.abs(x - 16);
+    let l = 0.6 - (0.35 * (x - 16)) / 10;
+    // Quilted diamonds, and the seams where the sleeves join.
+    if (Math.floor(x + y) % 5 === 0 || Math.floor(x - y + 40) % 5 === 0) l -= 0.18;
+    if (ax > 9 && ax < 10 && y > 7) l -= 0.2;
+    if (y > 29) l -= 0.25;
+    return l;
+  });
+  // The neckline's rolled collar.
+  for (let y = 5; y <= 11; y++) {
+    const e = 3.5 - (y - 5) * 0.58;
+    mark(p, 16 - e - 0.5, y, LINEN[4]);
+    mark(p, 16 + e + 0.5, y, LINEN[1]);
+  }
+  // A belt with a bronze buckle.
+  for (let x = 0; x < 32; x++) {
+    mark(p, x, 21, LEATHER[3]);
+    mark(p, x, 22, LEATHER[1]);
+  }
+  p.map(14, 20, ['yyy', 'yLy', 'yyy'], { y: BRONZE[4], L: LEATHER[0] });
+}
+
+function chainmail(p: Paint): void {
+  const inside = tunicShape(3);
+  p.fill(STEEL, (x, y) => {
+    if (!inside(x, y)) return null;
+    // Rows of rings: each ring's top catches the light.
+    const ring = Math.floor(x) + Math.floor(y);
+    return 0.52 - (0.32 * (x - 16)) / 10 + (ring % 2 ? 0.16 : -0.14);
+  });
+  // Bronze rings along the hem and cuffs, and a leather collar.
+  p.fill(BRONZE, (x, y) => {
+    if (!inside(x, y)) return null;
+    const ax = Math.abs(x - 16);
+    const cuff = ax > 10.3;
+    if (y < 27.5 && !cuff) return null;
+    return 0.55 - (0.3 * (x - 16)) / 10 + ((Math.floor(x) + Math.floor(y)) % 2 ? 0.15 : -0.12);
+  });
+  for (let y = 5; y <= 11; y++) {
+    const e = 3.5 - (y - 5) * 0.58;
+    mark(p, 16 - e - 0.5, y, LEATHER[3]);
+    mark(p, 16 - e - 1.5, y, LEATHER[2]);
+    mark(p, 16 + e + 0.5, y, LEATHER[1]);
+    mark(p, 16 + e + 1.5, y, LEATHER[1]);
+  }
+  for (let x = 0; x < 32; x++) {
+    mark(p, x, 20, LEATHER[3]);
+    mark(p, x, 21, LEATHER[1]);
+  }
+  p.map(14, 19, ['yyy', 'yLy', 'yyy'], { y: GOLD[3], L: LEATHER[0] });
+}
+
+function shadowCloak(p: Paint): () => void {
+  const bottom = (x: number) => 28.5 + 1.3 * Math.sin(x * 1.1);
+  const hw = (y: number) => 6.5 + (y - 9) * 0.33;
+  p.fill(SHADOW, (x, y) => {
+    const head = ((x - 16) / 6.2) ** 2 + ((y - 9) / 6) ** 2 <= 1;
+    const body = y >= 9 && y <= bottom(x) && Math.abs(x - 16) <= hw(y);
+    if (!head && !body) return null;
+    // Soft folds falling down the cloak, lit from the left.
+    let l = 0.55 - (0.32 * (x - 16)) / hw(Math.max(9, y)) + (body ? 0.13 * Math.sin((x - 16) * 1.1 + y * 0.1) : 0.05);
+    if (body && y > bottom(x) - 1.2) l -= 0.15;
+    return l;
+  });
+  // The empty hood with two eyes glinting in it, and the parting down the front.
+  p.fill(HOLLOW, (x, y) => (((x - 16) / 3.7) ** 2 + ((y - 10) / 3.9) ** 2 <= 1 ? clamp01((y - 7) / 10) : null));
+  p.put(14, 10, '#c8a0ff');
+  p.put(18, 10, '#a880f0');
+  for (let y = 16; y <= 30; y++) mark(p, 16, y, SHADOW[0]);
+  // A silver clasp at the throat.
+  p.ball(16, 14.5, 1.5, 1.5, STEEL, 0.1);
+  mark(p, 13, 14, STEEL[2]);
+  mark(p, 19, 14, STEEL[1]);
+  return () => {
+    const r = rng(31);
+    for (let i = 0; i < 10; i++) p.glow(Math.round(7 + r() * 18), Math.round(26 + r() * 5), r() < 0.5 ? SHADOW[4] : '#8a6ac0', 70 + r() * 90);
+    p.twinkle(26, 6, '#c8a0ff', 1);
+  };
+}
+
+function dragonscaleMail(p: Paint): () => void {
+  // The knight plate's outline.
+  const hw = (y: number) => (y < 12 ? 9.4 : y < 20 ? 9.4 - (y - 12) * 0.28 : 7.2 - (y - 20) * 0.1);
+  const inside = (x: number, y: number) => {
+    if (y < 6 || y > 28 || Math.abs(x - 16) > hw(y)) return false;
+    return ((x - 16) / 4.4) ** 2 + ((y - 6.5) / 4) ** 2 > 1;
+  };
+  p.fill(DRAGON, (x, y) => {
+    if (!inside(x, y)) return null;
+    // Overlapping scales, a row every three pixels, each row shifted half a scale.
+    const row = Math.floor((y - 6) / 3);
+    const off = row % 2 ? 2 : 0;
+    const cx = Math.floor((x + off) / 4) * 4 - off + 2;
+    const dy = y - 6 - row * 3;
+    let s = dy < 1 ? 0.8 : dy < 2 ? 0.58 : 0.36;
+    if (Math.abs(x - cx) > 1.4 && dy >= 1) s -= 0.2;
+    return s - (0.3 * (x - 16)) / hw(y);
+  });
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) if (inside(x + 0.5, y + 0.5) && nearEdge(inside, x + 0.5, y + 0.5, 1)) p.put(x, y, x < 16 ? GOLD[3] : GOLD[2]);
+  // An amber stone on the chest, and spiked pauldrons.
+  p.ball(16, 16, 2.2, 2.4, FIRE, 0.05);
+  for (const cx of [6.5, 25.5]) {
+    p.band(cx + (cx < 16 ? -1 : 1), 8, cx + (cx < 16 ? -3 : 3), 3, (t) => 1.3 * (1 - t) + 0.2, BONE, 'round', cx < 16 ? 0.05 : -0.1);
+    p.ball(cx, 10, 4.3, 3.9, DRAGON, cx < 16 ? 0.05 : -0.05);
+    p.ring(cx, 10, 4.3, 3.9, 0.72, GOLD);
+  }
+  return () => {
+    p.halo(DRAGON[3], 2, 45);
+    p.twinkle(14, 14, '#fff0a0', 1);
+    p.twinkle(28, 20, DRAGON[4], 1);
+  };
+}
+
+function furBoots(p: Paint): void {
+  boot(p, 6, 9, LEATHER, FUR, -0.18);
+  boot(p, 12, 6, LEATHER, FUR, 0.04);
+  // Fluffy fur rolled over each top.
+  for (const [ox, oy, bias] of [[6, 9, -0.12], [12, 6, 0.05]]) for (let i = 0; i < 5; i++) p.ball(ox - 0.4 + i * 2.4, oy + 1.4 + (i % 2) * 0.7, 1.8, 2, FUR, bias);
+}
+
+function ironGreaves(p: Paint): void {
+  boot(p, 6, 9, STEEL, BRONZE, -0.2);
+  boot(p, 12, 6, STEEL, BRONZE, 0.02);
+  // Seams between the plates, with rivets.
+  for (const [ox, oy] of [[6, 9], [12, 6]]) {
+    for (const dy of [5, 11]) for (let x = ox; x <= ox + 8; x++) mark(p, x, oy + dy, IRON[1]);
+    mark(p, ox + 1, oy + 4, STEEL[4]);
+    mark(p, ox + 7, oy + 4, STEEL[3]);
+    mark(p, ox + 1, oy + 10, STEEL[4]);
+    mark(p, ox + 7, oy + 10, STEEL[3]);
+    for (let x = ox + 9; x <= ox + 12; x++) mark(p, x, oy + 13, IRON[1]);
+  }
+}
+
+function lavaStriders(p: Paint): () => void {
+  boot(p, 6, 9, BASALT, FIRE, -0.08);
+  boot(p, 12, 6, BASALT, FIRE, 0.06);
+  // Glowing cracks through the stone.
+  const crack = (pts: Pt[]) => {
+    for (let i = 1; i < pts.length; i++) {
+      const [x0, y0] = pts[i - 1];
+      const [x1, y1] = pts[i];
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+      for (let j = 0; j <= n; j++) mark(p, Math.round(x0 + ((x1 - x0) * j) / n), Math.round(y0 + ((y1 - y0) * j) / n), j % 3 ? FIRE[3] : FIRE[4]);
+    }
+  };
+  for (const [ox, oy] of [[6, 9], [12, 6]]) {
+    crack([[ox + 2, oy + 4], [ox + 4, oy + 7], [ox + 3, oy + 10], [ox + 6, oy + 13], [ox + 10, oy + 15]]);
+    crack([[ox + 6, oy + 5], [ox + 5, oy + 7]]);
+  }
+  return () => {
+    const r = rng(41);
+    for (const [ox, oy] of [[6, 9], [12, 6]]) for (let x = ox; x <= ox + 12; x++) if (p.filled(x, oy + 17) || p.filled(x, oy + 18)) p.glow(x, oy + 19, x % 2 ? FIRE[2] : FIRE[3], 150 + r() * 80);
+    for (let i = 0; i < 8; i++) p.glow(Math.round(4 + r() * 22), Math.round(2 + r() * 8), r() < 0.5 ? FIRE[3] : FIRE[2], 120 + r() * 120);
+    p.twinkle(27, 3, FIRE[4], 1);
+  };
+}
+
+function leatherBracers(p: Paint): void {
+  for (const [cx, top, bias] of [[10.5, 5, 0.04], [21.5, 8, -0.12]]) {
+    p.band(cx, top, cx, top + 20, (t) => 4.4 - t * 0.9, LEATHER, 'round', bias);
+    // Rolled bronze-studded edges.
+    for (let x = cx - 5; x <= cx + 5; x++) {
+      mark(p, x, top, LEATHER[4]);
+      mark(p, x, top + 1, LEATHER[1]);
+      mark(p, x, top + 19, LEATHER[3]);
+      mark(p, x, top + 20, LEATHER[0]);
+    }
+    for (const dx of [-2.5, 0, 2.5]) {
+      mark(p, cx + dx, top + 3, BRONZE[4]);
+      mark(p, cx + dx, top + 17, BRONZE[3]);
+    }
+    // Laces criss-crossing up the front.
+    for (let j = 0; j < 3; j++) {
+      const y0 = top + 6 + j * 3.5;
+      p.line(Math.round(cx - 1.5), Math.round(y0), Math.round(cx + 1.5), Math.round(y0 + 2), BONE[3]);
+      p.line(Math.round(cx + 1.5), Math.round(y0), Math.round(cx - 1.5), Math.round(y0 + 2), BONE[2]);
+    }
+  }
+}
+
+function spikedBuckler(p: Paint): void {
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    p.band(16 + Math.cos(a) * 10, 16 + Math.sin(a) * 10, 16 + Math.cos(a) * 14.8, 16 + Math.sin(a) * 14.8, (t) => 1.7 * (1 - t) + 0.2, STEEL, 'bevel');
+  }
+  p.fill(IRON, (x, y) => {
+    const d = Math.hypot(x - 16, y - 16);
+    if (d > 11) return null;
+    return 0.58 - ((x - 16) + (y - 16)) / 34 + (Math.floor(d) % 3 === 0 ? 0.06 : 0);
+  });
+  p.ring(16, 16, 11, 11, 0.84, BRONZE);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    p.put(Math.round(16 + Math.cos(a) * 7.6 - 0.5), Math.round(16 + Math.sin(a) * 7.6 - 0.5), BRONZE[4]);
+  }
+  // The boss rises to a point: a cone lit on its upper left.
+  p.ring(16, 16, 5, 5, 0.78, BRONZE);
+  p.fill(STEEL, (x, y) => {
+    const dx = x - 16;
+    const dy = y - 16;
+    const r = Math.hypot(dx, dy);
+    if (r > 4) return null;
+    if (r < 0.9) return 1;
+    return 0.5 - (0.45 * (dx + dy)) / (r * Math.SQRT2);
+  });
+}
+
+function towerShield(p: Paint): void {
+  const inside = (x: number, y: number) => Math.abs(x - 16) <= 9.5 && y <= 29.5 && y >= 3.5 + ((x - 16) / 9.5) ** 2 * 3;
+  p.fill(RED_LEATHER, (x, y) => (inside(x, y) ? 0.62 - (0.36 * (x - 16)) / 9.5 - (y - 16) / 60 : null));
+  p.fill(STEEL, (x, y) => {
+    if (!inside(x, y) || !nearEdge(inside, x, y, 2)) return null;
+    return (nearEdge(inside, x, y, 1) ? 0.72 : 0.45) - (0.34 * (x - 16)) / 9.5;
+  });
+  // Iron bands across, riveted, and a boss in the middle.
+  for (const y of [10, 22]) {
+    for (let x = 0; x < 32; x++) {
+      if (!inside(x + 0.5, y + 0.5)) continue;
+      p.put(x, y, x < 16 ? IRON[3] : IRON[2]);
+      p.put(x, y + 1, IRON[1]);
+      if (x % 3 === 0) p.put(x, y, STEEL[4]);
+    }
+  }
+  p.ring(16, 16.5, 3.9, 3.9, 0.7, BRONZE);
+  p.ball(16, 16.5, 2.8, 2.8, STEEL);
+}
+
+function frostguard(p: Paint): () => void {
+  const hw = (y: number) => (y <= 11 ? 11 : 11 * Math.pow(Math.max(0, 1 - (y - 11) / 19), 0.85));
+  const inside = (x: number, y: number) => y <= 30 && Math.abs(x - 16) <= hw(y) && y >= 3.5 + ((x - 16) / 11) ** 2 * 1.5;
+  p.fill(ICE, (x, y) => {
+    if (!inside(x, y)) return null;
+    // Crystal facets fanning out from the middle.
+    const a = Math.atan2(y - 15, x - 16);
+    const facet = ((Math.floor(((a + Math.PI) / (Math.PI * 2)) * 6 + 0.5) % 6) + 6) % 6;
+    return 0.42 - ((x - 16) + (y - 16)) / 32 + (facet % 2 ? 0.1 : -0.04);
+  });
+  p.fill(STEEL, (x, y) => {
+    if (!inside(x, y) || !nearEdge(inside, x, y, 2)) return null;
+    return (nearEdge(inside, x, y, 1) ? 0.85 : 0.55) - ((x - 16) + (y - 16)) / 36;
+  });
+  // A snowflake: three strokes through the middle, with little branches.
+  for (const a of [Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6]) {
+    const dx = Math.cos(a);
+    const dy = Math.sin(a);
+    p.line(Math.round(16 - dx * 5.5 - 0.5), Math.round(15 - dy * 5.5 - 0.5), Math.round(16 + dx * 5.5 - 0.5), Math.round(15 + dy * 5.5 - 0.5), '#ffffff');
+    for (const s of [-1, 1]) {
+      const bx = 16 + s * dx * 3.6 - 0.5;
+      const by = 15 + s * dy * 3.6 - 0.5;
+      p.put(bx - dy, by + dx, ICE[4]);
+      p.put(bx + dy, by - dx, ICE[4]);
+    }
+  }
+  p.put(15, 14, ICE[2]);
+  return () => {
+    p.halo(ICE[3], 2, 60);
+    p.twinkle(5, 4, '#ffffff', 2);
+    p.twinkle(26, 22, ICE[4], 1);
+    p.glow(28, 12, ICE[4], 180);
+    p.glow(3, 20, ICE[3], 160);
+  };
+}
+
+function wolfTooth(p: Paint): void {
+  const left: [Pt, Pt, Pt] = [[5, 2], [7, 19], [16, 20]];
+  const right: [Pt, Pt, Pt] = [[27, 2], [25, 19], [16, 20]];
+  curve(p, ...left, () => 0.65, LEATHER, 0.1);
+  curve(p, ...right, () => 0.65, LEATHER, -0.05);
+  // Fangs hanging from the cord, the biggest in the middle.
+  p.band(12.2, 19, 10.8, 26.5, (t) => 1.5 * (1 - t) + 0.25, BONE, 'round', 0.05);
+  p.band(19.8, 19, 21.2, 26.5, (t) => 1.5 * (1 - t) + 0.25, BONE, 'round', -0.05);
+  p.band(16, 20, 16.6, 30, (t) => 2 * (1 - t) + 0.25, BONE, 'round', 0.08);
+  for (const x of [11, 12, 15, 16, 17, 20, 21]) mark(p, x, x === 15 || x === 16 || x === 17 ? 21 : 20, LEATHER[1]);
+  // Wooden beads.
+  for (const t of [0.5, 0.78]) {
+    const [lx, ly] = quad(...left, t);
+    const [rx, ry] = quad(...right, t);
+    p.ball(lx, ly, 1.4, 1.4, WOOD, 0.05);
+    p.ball(rx, ry, 1.4, 1.4, WOOD, -0.05);
+  }
+}
+
+function cloverCharm(p: Paint): () => void {
+  p.ring(16, 5.5, 2.1, 2.1, 0.35, GOLD);
+  p.fill(GLASS, (x, y) => {
+    const d = Math.hypot(x - 16, y - 17);
+    return d > 9 ? null : 0.62 - ((x - 16) + (y - 17)) / 30;
+  });
+  p.ring(16, 17, 10, 10, 0.8, GOLD);
+  // A four-leaf clover pressed under the glass.
+  p.band(16.5, 18, 20, 25, 0.6, EMERALD, 'round', -0.1);
+  for (const [dx, dy, b] of [[-1, -1, 0.12], [1, -1, 0.02], [-1, 1, 0], [1, 1, -0.12]]) p.ball(16 + dx * 2.5, 17 + dy * 2.5, 2.8, 2.8, EMERALD, b, false);
+  for (let i = -4; i <= 4; i++) {
+    mark(p, 16 + i, 17, EMERALD[1]);
+    mark(p, 16, 17 + i, EMERALD[1]);
+  }
+  p.put(16, 17, EMERALD[3]);
+  return () => {
+    p.twinkle(12, 12, '#ffffff', 1);
+    p.halo(EMERALD[3], 2, 40);
+    p.twinkle(26, 26, GLASS[4], 1);
+  };
+}
+
+function hunterLongbow(p: Paint): () => void {
+  const a: Pt = [9, 3];
+  const c: Pt = [9.1, 22.9];
+  const b: Pt = [29, 23];
+  p.line(a[0], a[1], b[0], b[1], PLUME[2]);
+  curve(p, a, c, b, (t) => 0.55 + 1.05 * Math.sin(Math.PI * t), WOOD, 0, 0, 1, 18);
+  curve(p, a, c, b, (t) => 0.65 + 1.05 * Math.sin(Math.PI * t), LEATHER, 0.05, 0.42, 0.58, 4);
+  p.ball(a[0], a[1], 1.1, 1.1, BRONZE);
+  p.ball(b[0], b[1], 1.1, 1.1, BRONZE);
+  // An arrow resting across it: red fletching, a steel head.
+  p.band(6, 26, 25, 7, 0.55, WOOD, 'round', 0.15);
+  p.band(12.6, 21.1, 9.1, 24.6, (t) => 0.9 - t * 0.25, RUBY);
+  p.band(10.9, 19.4, 7.4, 22.9, (t) => 0.9 - t * 0.25, RUBY, 'round', 0.1);
+  p.band(24, 8, 29, 3, (t) => 1.9 * (1 - t) + 0.2, STEEL, 'bevel');
+  return () => {
+    p.twinkle(28, 2, '#ffffff', 1);
+  };
+}
+
+function voidScythe(p: Paint): () => void {
+  p.band(11, 5, 20, 30.5, 1.1, EBONY);
+  for (const t of [0.55, 0.58, 0.61, 0.64]) p.put(11 + 9 * t + 0.4, 5 + 25.5 * t + 0.2, t === 0.58 ? VOID[4] : VOID[3]);
+  p.band(19.8, 30, 20.8, 32, 0.6, VOID, 'round', 0.1);
+  // The blade: a crescent, broad by the shaft and fining to a point, its edge shining.
+  p.fill(VOID, (x, y) => {
+    const dO = Math.hypot(x - 12, y - 18.5);
+    const dI = Math.hypot(x - 14.5, y - 21);
+    if (dO > 13.5 || dI <= 10.6) return null;
+    const a = Math.atan2(y - 18.5, x - 12);
+    if (a < -1.72 || a > 0.45) return null;
+    const e = 13.5 - dO;
+    if (e < 1.1) return 0.95;
+    if (e < 2.1) return 0.74;
+    // The flat of the blade, darkening toward its inner curve.
+    return dI < 11.6 ? 0.3 : 0.5 - ((x - 16) + (y - 16)) / 60;
+  });
+  p.ball(11.6, 6.4, 2, 2, ARCANE, 0.12);
+  return () => {
+    p.halo(VOID[3], 2, 75);
+    const r = rng(53);
+    for (let i = 0; i < 8; i++) {
+      const a = -1.6 + r() * 1.8;
+      const d = 14 + r() * 2.5;
+      p.glow(Math.round(12 + Math.cos(a) * d), Math.round(18.5 + Math.sin(a) * d), r() < 0.5 ? VOID[3] : VOID[4], 120 + r() * 110);
+    }
+    p.twinkle(26, 22, VOID[4], 1);
+    p.twinkle(6, 3, '#ffffff', 1);
+  };
+}
+
 /** Every piece's painter, by gear id. Returns a finishing pass for glows and sparks, drawn after the outline. */
 const PAINTERS: Record<string, (p: Paint) => void | (() => void)> = {
   iron_sword: ironSword,
@@ -861,6 +1448,26 @@ const PAINTERS: Record<string, (p: Paint) => void | (() => void)> = {
   tome_of_embers: tomeOfEmbers,
   moonstone_orb: moonstoneOrb,
   phoenix_feather: phoenixFeather,
+  leather_hood: leatherHood,
+  wizard_hat: wizardHat,
+  horned_helm: hornedHelm,
+  jeweled_crown: jeweledCrown,
+  valkyrie_helm: valkyrieHelm,
+  padded_tunic: paddedTunic,
+  chainmail: chainmail,
+  shadow_cloak: shadowCloak,
+  dragonscale_mail: dragonscaleMail,
+  fur_boots: furBoots,
+  iron_greaves: ironGreaves,
+  lava_striders: lavaStriders,
+  leather_bracers: leatherBracers,
+  spiked_buckler: spikedBuckler,
+  tower_shield: towerShield,
+  frostguard: frostguard,
+  wolf_tooth: wolfTooth,
+  clover_charm: cloverCharm,
+  hunter_longbow: hunterLongbow,
+  void_scythe: voidScythe,
 };
 
 export const GEAR_ART_IDS = Object.keys(PAINTERS);

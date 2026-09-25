@@ -1,13 +1,17 @@
-// Gear: twenty pieces of equipment that monsters drop. Gear is not used like
+// Gear: forty pieces of equipment that monsters drop. Gear is not used like
 // a potion: walking over a piece picks it up, and its stats count from then
 // on, for the rest of the run. Each piece is found once per run; the bag
 // shows every piece found, and the ones still missing as shadows. A new piece
 // is one entry in GEAR plus its painter in art/gear.ts.
 
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+/** Where a piece is worn. */
+export type Slot = 'headwear' | 'chest' | 'boots' | 'accessory' | 'weapon' | 'defence';
 
 export const RARITY: Record<Rarity, { name: string; tint: number; weight: number }> = {
   common: { name: 'Common', tint: 0xd8dde8, weight: 52 },
+  uncommon: { name: 'Uncommon', tint: 0x7ee08a, weight: 40 },
   rare: { name: 'Rare', tint: 0x5fb4ff, weight: 30 },
   epic: { name: 'Epic', tint: 0xc084ff, weight: 14 },
   legendary: { name: 'Legendary', tint: 0xffc84a, weight: 4 },
@@ -32,13 +36,14 @@ export interface GearDef {
   id: string;
   name: string;
   rarity: Rarity;
+  slot?: Slot;
   stats: GearStats;
   /** 32x32 icon, and the 16x16 sprite lying on the ground. */
   icon: string;
   drop: string;
 }
 
-const piece = (id: string, name: string, rarity: Rarity, stats: GearStats): GearDef => ({ id, name, rarity, stats, icon: `gear_${id}`, drop: `gdrop_${id}` });
+const piece = (id: string, name: string, rarity: Rarity, stats: GearStats, slot?: Slot): GearDef => ({ id, name, rarity, slot, stats, icon: `gear_${id}`, drop: `gdrop_${id}` });
 
 export const GEAR: GearDef[] = [
   piece('iron_sword', 'Iron Sword', 'common', { power: 0.1 }),
@@ -61,6 +66,27 @@ export const GEAR: GearDef[] = [
   piece('dragonfang', 'Dragonfang', 'legendary', { power: 0.35, hp: 20 }),
   piece('golden_aegis', 'Golden Aegis', 'legendary', { armor: 0.2, hp: 40 }),
   piece('phoenix_feather', 'Phoenix Feather', 'legendary', { regen: 3, speed: 0.12, hp: 20 }),
+  // The second twenty, weighted toward what the first twenty had least of: helms, body armour, boots and shields.
+  piece('leather_hood', 'Ranger Hood', 'common', { hp: 8, speed: 0.04 }, 'headwear'),
+  piece('wizard_hat', 'Starry Hat', 'uncommon', { power: 0.08, regen: 0.5 }, 'headwear'),
+  piece('horned_helm', 'Horned Helm', 'rare', { hp: 20, power: 0.06 }, 'headwear'),
+  piece('jeweled_crown', 'Jeweled Crown', 'epic', { hp: 25, regen: 1.5 }, 'headwear'),
+  piece('valkyrie_helm', 'Valkyrie Helm', 'legendary', { armor: 0.12, hp: 30, speed: 0.06 }, 'headwear'),
+  piece('padded_tunic', 'Padded Tunic', 'common', { hp: 12, armor: 0.03 }, 'chest'),
+  piece('chainmail', 'Chainmail', 'uncommon', { armor: 0.08, hp: 10 }, 'chest'),
+  piece('shadow_cloak', 'Shadow Cloak', 'rare', { speed: 0.1, leech: 0.03 }, 'chest'),
+  piece('dragonscale_mail', 'Dragonscale Mail', 'epic', { armor: 0.14, hp: 30 }, 'chest'),
+  piece('fur_boots', 'Fur Boots', 'common', { speed: 0.04, regen: 0.3 }, 'boots'),
+  piece('iron_greaves', 'Iron Greaves', 'uncommon', { armor: 0.06, speed: 0.04 }, 'boots'),
+  piece('lava_striders', 'Lava Striders', 'epic', { speed: 0.16, power: 0.08 }, 'boots'),
+  piece('leather_bracers', 'Leather Bracers', 'common', { armor: 0.05 }, 'defence'),
+  piece('spiked_buckler', 'Spiked Buckler', 'uncommon', { armor: 0.05, power: 0.05 }, 'defence'),
+  piece('tower_shield', 'Tower Shield', 'rare', { armor: 0.14, hp: 10 }, 'defence'),
+  piece('frostguard', 'Frostguard', 'epic', { armor: 0.14, regen: 1 }, 'defence'),
+  piece('wolf_tooth', 'Wolf Tooth Charm', 'common', { power: 0.06 }, 'accessory'),
+  piece('clover_charm', 'Clover Locket', 'uncommon', { regen: 0.8, speed: 0.04 }, 'accessory'),
+  piece('hunter_longbow', 'Hunter Longbow', 'rare', { power: 0.14, speed: 0.04 }, 'weapon'),
+  piece('void_scythe', 'Void Scythe', 'legendary', { power: 0.3, leech: 0.08 }, 'weapon'),
 ];
 
 export const gearById = (id: string): GearDef | undefined => GEAR.find((g) => g.id === id);
