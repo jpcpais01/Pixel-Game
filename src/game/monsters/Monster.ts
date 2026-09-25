@@ -124,6 +124,8 @@ export abstract class Monster implements Hurtbox {
   /** `target` is the player to hunt, or null when there is none (the hero is down). */
   update(dt: number, target: Target | null, daylight: number): void {
     if (this.dead) return;
+    const px = this.x;
+    const py = this.y;
     this.daylight = daylight;
     this.timer -= dt;
     this.cooldown = Math.max(0, this.cooldown - dt);
@@ -191,6 +193,15 @@ export abstract class Monster implements Hurtbox {
       const b = this.world.monsterBounds;
       this.x = Phaser.Math.Clamp(this.x, b.left, b.right);
       this.y = Phaser.Math.Clamp(this.y, b.top, b.bottom);
+      // Trees and the forest's edge stop them too; they slide along.
+      if (!this.world.walkable(this.x, this.y) && this.world.walkable(px, py)) {
+        if (this.world.walkable(this.x, py)) this.y = py;
+        else if (this.world.walkable(px, this.y)) this.x = px;
+        else {
+          this.x = px;
+          this.y = py;
+        }
+      }
       this.sync(dt);
     }
   }
