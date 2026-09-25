@@ -801,7 +801,8 @@ export class WorldScene extends Phaser.Scene {
   /** Unit vector from the hero's chest towards the mouse, in the world. */
   private mouseAim(): Aim | null {
     const p = this.input.mousePointer;
-    if (!p) return null;
+    // No mouse event yet (time 0): the pointer sits at the corner, not where the player is looking.
+    if (!p || p.time === 0) return null;
     const w = p.positionToCamera(this.cameras.main, this.mouseWorld) as Phaser.Math.Vector2;
     const dx = w.x - this.hero.x;
     const dy = w.y - (this.hero.y - 14);
