@@ -49,6 +49,9 @@ import { heroBuffs, type BuffDef } from '../game/buffs';
 import { Pickup } from '../game/Pickup';
 import { gear, RARITY, type GearDef } from '../game/gear';
 import { collection, slotIndex } from '../game/collection';
+import { energy, energyFor } from '../game/energy';
+import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
+import type { MonsterStats } from '../game/monsters/Monster';
 
 interface Flicker {
   light: Phaser.GameObjects.Light;
@@ -101,6 +104,10 @@ const LOOK_LINGER = 450;
 
 export class WorldScene extends Phaser.Scene {
   private hero!: Hero;
+  /** Casts the hero's Special (see game/ultimate). */
+  private ult!: UltCaster;
+  /** The way the hero last walked, for a Special cast with nothing aimed. */
+  private facing = { x: 0, y: 1 };
   private arena!: ArenaDef;
   /** The arena's own living parts, when it is the Sunken Garden. */
   private garden: Garden | null = null;
@@ -310,7 +317,13 @@ export class WorldScene extends Phaser.Scene {
 
     this.spawnX = arena.spawn.x;
     this.spawnY = arena.spawn.y;
-    this.hero = characterById(data?.character).spawn(this, this.spawnX, this.spawnY);
+    const ch = characterById(data?.character);
+    this.hero = ch.spawn(this, this.spawnX, this.spawnY);
+    ensureUltIcons(this);
+    this.ult = new UltCaster(this, this.hero, ch);
+    this.facing = { x: 0, y: 1 };
+    // Energy starts empty each run.
+    energy.reset(this.ult.cost);
     this.heroBar = new HealthBar(this);
     this.aimLine = this.add.graphics().setDepth(15000).setVisible(false);
     this.aimShown = false;
@@ -363,7 +376,7 @@ export class WorldScene extends Phaser.Scene {
       addBuff: (def) => heroBuffs.add(def),
       pop: (text, tint) => this.popNumber(snap(this.hero.x), snap(this.hero.y) - 38, text, tint),
     };
-    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N,C') as Record<string, Phaser.Input.Keyboard.Key>;
   }
 
   castEnergyBall(x: number, y: number, dx: number, dy: number, style?: SpellStyle, kind?: BallKind): void {
@@ -502,6 +515,7 @@ export class WorldScene extends Phaser.Scene {
     this.downT = DOWN_TIME;
     this.pushX = this.pushY = 0;
     heroBuffs.clear();
+    this.ult.cancel();
     this.debris([0xffffff, 0xdff8ff, 0xb0c8ff], snap(h.x), snap(h.y) - 12, 20, h.y + 20, 'spores');
     this.fallen = this.add.bitmapText(Math.round(h.x), Math.round(h.y) - 40, 'pixel', 'FALLEN').setLetterSpacing(-1).setOrigin(0.5, 1).setTint(0xffb0a0).setDepth(10002).setAlpha(0);
     sound.fall();
@@ -560,8 +574,13 @@ export class WorldScene extends Phaser.Scene {
     this.heroBar.update(dt, snap(h.x), snap(h.y) - 34, this.downT > 0 ? 0 : v.hp, v.max, v.barrier);
   }
 
-  /** A monster fell at (x, y): sometimes it leaves a potion or a piece of gear, popping out of its body. */
-  monsterSlain(kind: string, x: number, y: number, bodyY: number): void {
+  /**
+   * A monster fell at (x, y): its energy flies to the hero for the Special
+   * (a boss's a great deal of it), and sometimes it leaves a potion or a piece
+   * of gear, popping out of its body.
+   */
+  monsterSlain(kind: string, x: number, y: number, bodyY: number, stats?: Pick<MonsterStats, 'hp' | 'rank'>): void {
+    if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank), this.ult.ult.pal));
     const id = rollDrop(kind);
     if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
     // Only pieces the player doesn't own yet drop, and not one already lying here.
@@ -1086,7 +1105,7 @@ export class WorldScene extends Phaser.Scene {
   /** A dotted line with an arrowhead from the hero the way a touch button is dragged; hidden when not aiming. */
   private drawAimLine(): void {
     const a = controls.aiming;
-    const u = a && !controls.mouse && this.downT <= 0 && !a.cancel ? (a.special ? controls.beamAim : controls.attackAim) : null;
+    const u = a && !controls.mouse && this.downT <= 0 && !a.cancel ? (a.ult ? controls.ultAim : a.special ? controls.beamAim : controls.attackAim) : null;
     if (!u) {
       if (this.aimShown) this.aimLine.clear().setVisible(false);
       this.aimShown = false;
@@ -1094,7 +1113,7 @@ export class WorldScene extends Phaser.Scene {
     }
     this.aimShown = true;
     const g = this.aimLine.clear().setVisible(true);
-    const col = a!.special ? 0xffd66b : 0x9ff6ff;
+    const col = a!.ult ? this.ult.ult.pal.hot : a!.special ? 0xffd66b : 0x9ff6ff;
     const cx = snap(this.hero.x);
     const cy = snap(this.hero.y) - 12;
     const len = 52;
@@ -1124,9 +1143,19 @@ export class WorldScene extends Phaser.Scene {
       mx = kx / l;
       my = ky / l;
     }
-    // On a computer: WASD to walk, left click to attack, Space for the special.
+    if (mx || my) {
+      const l = Math.hypot(mx, my);
+      if (l > 0.18) this.facing = { x: mx / l, y: my / l };
+    }
+    // On a computer: WASD to walk, left click to attack, Space for the special, C for the Special.
     let attack = controls.attack || controls.attackTap || controls.click || k.J.isDown;
     let special = controls.beam || controls.beamTap || k.SPACE.isDown || k.K.isDown || k.SHIFT.isDown;
+    const ultPressed = controls.ultTap || Phaser.Input.Keyboard.JustDown(k.C);
+    controls.ultTap = false;
+    if (ultPressed && this.downT <= 0) this.ult.request(controls.mouse ? this.mouseAim() : this.touchAim(controls.ultAim), this.facing);
+    // Gathering power for the Special: other abilities wait, and the feet stay planted.
+    if (this.ult.holding) attack = special = false;
+    if (this.ult.rooted) mx = my = 0;
     if (this.downT > 0) {
       mx = my = 0;
       attack = special = false;
@@ -1138,7 +1167,9 @@ export class WorldScene extends Phaser.Scene {
     freeBox(this.walkable, this.hero.x, this.hero.y, 14, hb);
     const x0 = this.hero.x;
     const y0 = this.hero.y;
-    this.hero.update(dt, mx, my, attack, special, hb, this.heroAim(dt, attack, special));
+    this.hero.update(dt, mx, my, attack, special, hb, this.ult.rooted ? null : this.heroAim(dt, attack, special));
+    this.ult.update(dt);
+    energy.update(dt);
     // Taps press for one frame.
     controls.attackTap = controls.beamTap = false;
     this.drawAimLine();

@@ -239,6 +239,7 @@ export class Queen extends Monster {
       barY: 90,
       debris: QUEEN_TINTS,
       noBar: true,
+      rank: 'legend',
     });
     this.hover = HOVER;
     this.cooldown = 1400;

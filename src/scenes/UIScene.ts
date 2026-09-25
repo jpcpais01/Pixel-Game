@@ -6,6 +6,9 @@ import { characterById } from '../game/characters';
 import { HOTBAR_SIZE, inventory } from '../game/items';
 import { heroBuffs } from '../game/buffs';
 import { GearHud } from '../ui/gearHud';
+import { energy } from '../game/energy';
+import { ensureUltIcons, ultFor } from '../game/ultimate';
+import type { Pal } from '../game/ultimate/ink';
 
 /**
  * Touch controls: a floating joystick on the left half of the screen, an
@@ -53,6 +56,12 @@ export class UIScene extends Phaser.Scene {
   private beamPad: Pad = UIScene.pad();
   /** The special is held to charge (see CharacterDef.chargeSpecial). */
   private chargeSpecial = false;
+  /** The Special's button: its energy ring fills as foes fall, and glows once there's enough. */
+  private ultButton!: Phaser.GameObjects.Graphics;
+  private ultIcon!: Phaser.GameObjects.Image;
+  private ultKey!: Phaser.GameObjects.BitmapText;
+  private ultPad: Pad = UIScene.pad();
+  private ultPal!: Pal;
   private clickPointer: number | null = null;
   private base = new Phaser.Math.Vector2();
   private knob = new Phaser.Math.Vector2();
@@ -116,13 +125,13 @@ export class UIScene extends Phaser.Scene {
     return controls.mouse ? 0.42 : 1;
   }
 
-  /** With a mouse: the two indicators side by side, centred just above the hotbar. */
-  private get indicatorPos(): { attack: Phaser.Math.Vector2; special: Phaser.Math.Vector2 } {
+  /** With a mouse: the three indicators side by side, centred just above the hotbar. */
+  private get indicatorPos(): { attack: Phaser.Math.Vector2; special: Phaser.Math.Vector2; ult: Phaser.Math.Vector2 } {
     const r = this.R * this.padScale;
     const { x, y, s, gap } = this.hotbar;
     const cx = x + (s * HOTBAR_SIZE + gap * (HOTBAR_SIZE - 1)) / 2;
     const cy = y - r - 10 * D;
-    return { attack: new Phaser.Math.Vector2(cx - r * 1.25, cy), special: new Phaser.Math.Vector2(cx + r * 1.25, cy) };
+    return { attack: new Phaser.Math.Vector2(cx - r * 2.5, cy), special: new Phaser.Math.Vector2(cx, cy), ult: new Phaser.Math.Vector2(cx + r * 2.5, cy) };
   }
 
   private get buttonPos(): Phaser.Math.Vector2 {
@@ -135,6 +144,14 @@ export class UIScene extends Phaser.Scene {
     const R = this.R;
     const bp = this.padPos;
     return new Phaser.Math.Vector2(bp.x + R * 0.55, bp.y - R * 1.95);
+  }
+
+  /** The Special's button sits up and to the left of the attack button, clear of the hotbar. */
+  private get ultPos(): Phaser.Math.Vector2 {
+    if (controls.mouse) return this.indicatorPos.ult;
+    const R = this.R;
+    const bp = this.padPos;
+    return new Phaser.Math.Vector2(bp.x - R * 1.8, bp.y - R * 1.2);
   }
 
   /**
@@ -172,6 +189,7 @@ export class UIScene extends Phaser.Scene {
     this.stickPointer = this.clickPointer = null;
     this.attackPad = UIScene.pad();
     this.beamPad = UIScene.pad();
+    this.ultPad = UIScene.pad();
     this.chargeSpecial = !!hero.chargeSpecial;
     this.stick = this.add.graphics();
     this.button = this.add.graphics();
@@ -180,6 +198,12 @@ export class UIScene extends Phaser.Scene {
     if (attack.anim) this.icon.play(attack.anim);
     this.beamButton = this.add.graphics();
     this.beamIcon = this.add.image(0, 0, special.texture).setBlendMode(Phaser.BlendModes.ADD);
+    ensureUltIcons(this);
+    const ult = ultFor(hero);
+    this.ultPal = ult.pal;
+    this.ultButton = this.add.graphics();
+    this.ultIcon = this.add.image(0, 0, ult.icon).setBlendMode(Phaser.BlendModes.ADD);
+    this.ultKey = this.add.bitmapText(0, 0, 'pixel', 'C').setLetterSpacing(-1).setOrigin(0.5, 0).setTint(0xdfe6ff);
     this.toggle = this.add.graphics();
     this.sun = this.add.image(0, 0, 'icon_sun');
     this.moon = this.add.image(0, 0, 'icon_moon');
@@ -203,6 +227,7 @@ export class UIScene extends Phaser.Scene {
       controls.mouse = !p.wasTouch;
       const bp = this.buttonPos;
       const mp = this.beamPos;
+      const up = this.ultPos;
       const tr = this.toggleRect;
       if (this.gearHud.pointerDown(p)) {
         // The bag's button, or a tap while the bag is open.
@@ -210,6 +235,9 @@ export class UIScene extends Phaser.Scene {
         // Tap a side to pick it; tapping the active side flips it.
         const onSun = p.x < tr.centerX;
         daynight.set(onSun === (daynight.target < 0.5) ? onSun : !onSun);
+      } else if (p.wasTouch && this.ultPad.pointer === null && Phaser.Math.Distance.Between(p.x, p.y, up.x, up.y) < this.R * 0.85) {
+        this.ultPad = UIScene.pad(p.id, this.time.now);
+        controls.ultAim = null;
       } else if (p.wasTouch && this.beamPad.pointer === null && Phaser.Math.Distance.Between(p.x, p.y, mp.x, mp.y) < this.R * 0.95) {
         this.beamPad = UIScene.pad(p.id, this.time.now);
         controls.beamAim = null;
@@ -235,6 +263,7 @@ export class UIScene extends Phaser.Scene {
       this.gearHud.pointerMove(p);
       if (p.id === this.attackPad.pointer) this.dragPad(this.attackPad, p, false);
       if (p.id === this.beamPad.pointer) this.dragPad(this.beamPad, p, true);
+      if (p.id === this.ultPad.pointer) this.dragUlt(p);
       if (p.id !== this.stickPointer) return;
       const R = this.R;
       const v = new Phaser.Math.Vector2(p.x - this.base.x, p.y - this.base.y);
@@ -271,6 +300,14 @@ export class UIScene extends Phaser.Scene {
         controls.beam = false;
         if (controls.aiming?.special) controls.aiming = null;
       }
+      if (p.id === this.ultPad.pointer) {
+        const pad = this.ultPad;
+        // Cast where it was dragged (or at the nearest foe for a tap), unless pulled back to the centre.
+        if (!(pad.out && Math.hypot(pad.dx, pad.dy) < this.deadZone)) controls.ultTap = true;
+        this.ultPad = UIScene.pad();
+        controls.ultAim = null;
+        if (controls.aiming?.ult) controls.aiming = null;
+      }
       if (p.id === this.clickPointer) {
         this.clickPointer = null;
         controls.click = false;
@@ -298,7 +335,19 @@ export class UIScene extends Phaser.Scene {
     if (special) controls.beamAim = aim;
     else controls.attackAim = aim;
     // The aim line in the world; the special's wins when both are dragged.
-    if (pad.out && (special || !controls.aiming?.special)) controls.aiming = { special, cancel: inside && special && !this.chargeSpecial };
+    if (pad.out && !controls.aiming?.ult && (special || !controls.aiming?.special)) controls.aiming = { special, cancel: inside && special && !this.chargeSpecial };
+  }
+
+  /** The finger on the Special's button moved: aim it the way it is dragged; its aim line wins over the others. */
+  private dragUlt(p: Phaser.Input.Pointer): void {
+    const pad = this.ultPad;
+    pad.dx = p.x - p.downX;
+    pad.dy = p.y - p.downY;
+    const l = Math.hypot(pad.dx, pad.dy);
+    const inside = l < this.deadZone;
+    if (!inside) pad.out = true;
+    controls.ultAim = inside ? null : { x: pad.dx / l, y: pad.dy / l };
+    if (pad.out) controls.aiming = { special: false, ult: true, cancel: inside };
   }
 
   /**
@@ -324,6 +373,9 @@ export class UIScene extends Phaser.Scene {
     this.stickPointer = this.clickPointer = null;
     this.attackPad = UIScene.pad();
     this.beamPad = UIScene.pad();
+    this.ultPad = UIScene.pad();
+    controls.ultAim = null;
+    controls.ultTap = false;
     controls.moveX = controls.moveY = 0;
     controls.attack = controls.beam = controls.click = false;
     controls.attackTap = controls.beamTap = false;
@@ -394,6 +446,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     this.drawBeamButton(R * k, u);
+    this.drawUltButton(R * k, u);
 
     const tr = this.toggleRect;
     const seg = tr.width / 2;
@@ -516,6 +569,87 @@ export class UIScene extends Phaser.Scene {
       g.fillRect(x, y + size + 3 * D, Math.round(size * k), bh);
     });
   }
+  /**
+   * The Special's button: dark and dim while energy gathers, its ring filling
+   * clockwise in the Special's colour; once there is enough, the icon lights,
+   * the ring burns white-hot and pulses, and a burst rolls off it.
+   */
+  private drawUltButton(R: number, u: number): void {
+    const up = this.ultPos;
+    const pad = this.ultPad;
+    const pressed = pad.pointer !== null;
+    const cancel = pad.out && Math.hypot(pad.dx, pad.dy) < this.deadZone;
+    const ready = energy.ready;
+    const fill = Math.min(1, energy.value / energy.cost);
+    const t = this.time.now;
+    const p = this.ultPal;
+    const br = R * (pressed ? 0.62 : 0.68);
+    const knob = this.knobOffset(pad, br);
+    const scale = Math.max(controls.mouse ? 1 : 2, Math.round(R / 16));
+    const pulse = ready ? 0.5 + 0.5 * Math.sin(t * 0.008) : 0;
+    this.ultIcon
+      .setPosition(Math.round(up.x + knob.x), Math.round(up.y + knob.y))
+      .setScale(scale * (pressed ? 0.9 : 1) * (ready ? 1 + 0.06 * pulse : 1))
+      .setAlpha(ready ? 1 : 0.35 + 0.35 * fill);
+    this.ultKey
+      .setVisible(controls.mouse)
+      .setPosition(Math.round(up.x + br * 0.8), Math.round(up.y - br * 1.35))
+      .setScale(Math.max(1, Math.round(D)))
+      .setAlpha(ready ? 0.95 : 0.55);
+
+    // Animate with time only while there's something moving: the ready pulse, the burst, a flash of arriving energy.
+    const age = energy.readyAge;
+    const busy = ready || energy.flash > 0;
+    const g = this.redraw(this.ultButton, `${pressed} ${Math.round(fill * 200)} ${ready} ${up.x} ${up.y} ${R} ${busy ? t : 0} ${knob.x} ${knob.y} ${cancel}`);
+    if (!g) return;
+    g.fillStyle(cancel ? 0x3a0c14 : ready ? 0x1c1440 : 0x0c1433, pressed ? 0.8 : ready ? 0.7 : 0.55);
+    g.fillCircle(up.x, up.y, br);
+    g.lineStyle(2 * D, cancel ? 0xff6b6b : ready ? p.hot : p.deep, ready ? 0.7 + 0.3 * pulse : 0.55);
+    g.strokeCircle(up.x, up.y, br);
+    this.drawKnob(g, up.x, up.y, knob, br, p.hot);
+
+    const rr = br + 5 * D * u;
+    const top = -Math.PI / 2;
+    const w = 4 * D * u;
+    g.lineStyle(w, 0x0a0c1c, 0.5);
+    g.strokeCircle(up.x, up.y, rr);
+    if (fill > 0) {
+      g.lineStyle(w, ready ? p.core : p.mid, ready ? 0.8 + 0.2 * pulse : 0.9);
+      g.beginPath();
+      g.arc(up.x, up.y, rr, top, top + Math.PI * 2 * fill, false);
+      g.strokePath();
+      // A bright bead at the head of the filling ring, flaring as energy arrives.
+      if (!ready) {
+        const a = top + Math.PI * 2 * fill;
+        g.fillStyle(p.core, 0.6 + 0.4 * energy.flash);
+        g.fillCircle(up.x + Math.cos(a) * rr, up.y + Math.sin(a) * rr, w * (0.6 + 0.5 * energy.flash));
+      }
+    }
+    if (energy.flash > 0 && !ready) {
+      g.lineStyle(2 * D, p.hot, 0.5 * energy.flash);
+      g.strokeCircle(up.x, up.y, rr + 4 * D * u);
+    }
+    if (ready) {
+      // Rays turning round the ring, and a soft outer halo.
+      g.lineStyle(1.5 * D, p.hot, 0.3 + 0.3 * pulse);
+      g.strokeCircle(up.x, up.y, rr + 6 * D * u);
+      const n = 8;
+      g.lineStyle(2 * D, p.core, 0.55 + 0.35 * pulse);
+      for (let i = 0; i < n; i++) {
+        const a = t * 0.0012 + (i / n) * Math.PI * 2;
+        const r0 = rr + 8 * D * u;
+        const r1 = r0 + (4 + 3 * pulse) * D * u;
+        g.lineBetween(up.x + Math.cos(a) * r0, up.y + Math.sin(a) * r0, up.x + Math.cos(a) * r1, up.y + Math.sin(a) * r1);
+      }
+      // The moment it becomes ready, a ring bursts off the button.
+      if (age >= 0 && age < 700) {
+        const k = age / 700;
+        g.lineStyle(3 * D * (1 - k), p.core, 1 - k);
+        g.strokeCircle(up.x, up.y, rr + (6 + 30 * k) * D * u);
+      }
+    }
+  }
+
   /** Where the knob of a dragged button sits against its centre (zero when not dragged out). */
   private knobOffset(pad: Pad, br: number): { x: number; y: number } {
     if (pad.pointer === null || !pad.out) return { x: 0, y: 0 };

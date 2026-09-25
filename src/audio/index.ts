@@ -466,6 +466,27 @@ class GameSound {
    * chittering, a volley of arrows landing), so the same sound can't restart
    * within a few milliseconds and only so many new sounds start per moment.
    */
+  /** A Special gathering power for `seconds`. */
+  ultCharge(seconds: number): void {
+    const t = this.slot('ultCharge');
+    if (t !== null) this.sfx!.ultCharge(t, seconds);
+  }
+
+  ultRelease(pan = 0): void {
+    const t = this.slot('ultRelease');
+    if (t !== null) this.sfx!.ultRelease(t, pan);
+  }
+
+  energy(pan = 0): void {
+    const t = this.slot('energy');
+    if (t !== null) this.sfx!.energy(t, pan);
+  }
+
+  ultReady(): void {
+    const t = this.slot('ultReady');
+    if (t !== null) this.sfx!.ultReady(t);
+  }
+
   private slot(name: string): number | null {
     if (!this.live()) return null;
     const now = this.ctx!.currentTime;
