@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { controls } from '../game/controls';
 import { sunShadow, SUN_SHADOW_ALPHA } from '../game/Wizard';
-import { EnergyBall } from '../game/EnergyBall';
+import { EnergyBall, type BallKind } from '../game/EnergyBall';
 import { Beam } from '../game/Beam';
 import type { SpellStyle } from '../game/spells';
 import { daynight } from '../game/daynight';
@@ -316,8 +316,8 @@ export class WorldScene extends Phaser.Scene {
     this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N') as Record<string, Phaser.Input.Keyboard.Key>;
   }
 
-  castEnergyBall(x: number, y: number, dx: number, dy: number, style?: SpellStyle): void {
-    this.balls.push(new EnergyBall(this, x, y, dx, dy, style));
+  castEnergyBall(x: number, y: number, dx: number, dy: number, style?: SpellStyle, kind?: BallKind): void {
+    this.balls.push(new EnergyBall(this, x, y, dx, dy, style, kind));
     sound.cast(this.pan(x));
   }
 
@@ -942,7 +942,10 @@ export class WorldScene extends Phaser.Scene {
     for (const b of this.balls) {
       this.struck = false;
       b.update(dt, this.hitTest, this.bounds);
-      if (b.dead) sound.impact(this.pan(b.x), this.struck);
+      if (b.dead) {
+        sound.impact(this.pan(b.x), this.struck);
+        b.onBurst?.(b.x, b.y);
+      }
     }
     sound.setFire(this.fireNearby());
     this.balls = this.balls.filter((b) => !b.dead);

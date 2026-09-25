@@ -60,3 +60,20 @@ export const VOID_STYLE: SpellStyle = {
   orb: { texture: 'orb_void_e', anim: 'orb_void_spin' },
   burst: { texture: 'burst_void_e', anim: 'burst_void_pop' },
 };
+
+export const PYRO_STYLE: SpellStyle = {
+  core: 0xfff8e0,
+  hot: 0xffd66b,
+  mid: 0xff9a2e,
+  deep: 0xd9432b,
+  accent: 0xffeeaa,
+  sparks: [0xffd66b, 0xff9a2e, 0xd9432b, 0xfff8e0],
+  glow: 0xff7a24,
+  light: 0xff9a40,
+  flash: 0xffd890,
+  unstable: 0xff4a2a,
+  fizzle: 0x8a6a60,
+  fizzleSparks: [0x8a6a60, 0xff9a2e, 0xd9432b],
+  orb: { texture: 'orb_pyro_e', anim: 'orb_pyro_spin' },
+  burst: { texture: 'burst_pyro_e', anim: 'burst_pyro_pop' },
+};
