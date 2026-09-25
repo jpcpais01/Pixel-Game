@@ -162,7 +162,7 @@ export class CosmosArena {
     }).setDepth(9999);
 
     this.offQuality = settings.watch((s) => {
-      const k = s.quality === 'fast' ? 2 : 1;
+      const k = s.quality !== 'full' ? 2 : 1;
       this.motes.frequency = 45 * k;
       this.dust.frequency = 130 * k;
     });
@@ -237,7 +237,7 @@ export class CosmosArena {
 
   /** Shafts of starlight fall at random spots, glow a while, and fade. */
   private updateRays(dt: number): void {
-    const max = settings.values.quality === 'fast' ? 3 : 4;
+    const max = settings.values.quality !== 'full' ? 3 : 4;
     this.nextRay -= dt;
     if (this.nextRay <= 0 && this.rays.length < max) {
       this.nextRay = 1100 + Math.random() * 1900;

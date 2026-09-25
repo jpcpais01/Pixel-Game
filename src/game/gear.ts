@@ -63,6 +63,8 @@ export const GEAR: GearDef[] = [
   piece('phoenix_feather', 'Phoenix Feather', 'legendary', { regen: 3, speed: 0.12, hp: 20 }),
 ];
 
+export const gearById = (id: string): GearDef | undefined => GEAR.find((g) => g.id === id);
+
 /** Stat totals stop here, so a full bag never makes the hero untouchable or uncontrollably fast. */
 const MAX_ARMOR = 0.6;
 const MAX_SPEED = 0.5;
@@ -91,8 +93,9 @@ export class GearBag {
   /** Totals of every owned piece's stats. */
   totals: Required<GearStats> = { power: 0, armor: 0, speed: 0, hp: 0, regen: 0, leech: 0 };
 
-  reset(): void {
-    this.owned = [];
+  /** Empty the bag for a new run, starting with the `start` pieces (the player's equipped gear). */
+  reset(start: GearDef[] = []): void {
+    this.owned = [...start];
     this.news = [];
     this.sum();
   }

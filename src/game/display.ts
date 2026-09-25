@@ -7,27 +7,34 @@
 // The device's pixel ratio is read afresh with every size: a phone's web
 // view can report a different one once the page has settled.
 const deviceDpr = () => Math.max(1, Math.min(4, window.devicePixelRatio || 1));
-let fastRender = false;
+export type RenderQuality = 'full' | 'fast' | 'low';
+let quality: RenderQuality = 'full';
 
 /**
  * Canvas pixels per CSS pixel. At full quality that is one canvas pixel per
  * device pixel. Fast quality makes each canvas pixel a whole square of
  * device pixels (2x2 on most phones), so the browser still scales the canvas
  * up evenly and the art stays crisp, with a quarter of the pixels to draw.
+ * Low quality makes each canvas pixel one art pixel (4x4 device pixels on
+ * most phones): the whole game draws at art resolution, a quarter of Fast's
+ * pixels again, with the same framing; moving things then step by whole art
+ * pixels.
  */
 export let DPR = deviceDpr();
-/** Device pixels per canvas pixel: 1 at full quality, usually 2 on Fast. */
+/** Device pixels per canvas pixel: 1 at full quality, usually 2 on Fast and 4 on Low. */
 let devicePerCanvas = 1;
 
-function updateDpr(): void {
+/** `cssShort` is the view's short side in CSS pixels, which Low quality needs. */
+function updateDpr(cssShort = Math.min(window.innerWidth, window.innerHeight)): void {
   const d = deviceDpr();
-  devicePerCanvas = fastRender ? Math.ceil(d / 1.5) : 1;
+  if (quality === 'low') devicePerCanvas = Math.max(1, Math.round((cssShort * d) / 250));
+  else devicePerCanvas = quality === 'fast' ? Math.ceil(d / 1.5) : 1;
   DPR = d / devicePerCanvas;
 }
 
 /** Pick the render resolution; call `viewSize` afterwards for the new canvas size. */
-export function setFastRender(fast: boolean): void {
-  fastRender = fast;
+export function setRenderQuality(q: RenderQuality): void {
+  quality = q;
   updateDpr();
 }
 
@@ -54,11 +61,11 @@ export const artZoom = (width: number, height: number): number => {
  * the pixel ratio and sets the world zoom for that size.
  */
 export const viewSize = () => {
-  updateDpr();
   const app = document.getElementById('app');
   const rect = app?.getBoundingClientRect();
   const cssW = rect && rect.width > 0 ? rect.width : window.innerWidth;
   const cssH = rect && rect.height > 0 ? rect.height : window.innerHeight;
+  updateDpr(Math.min(cssW, cssH));
   const width = Math.round(cssW * DPR);
   const height = Math.round(cssH * DPR);
   pixelGrid.zoom = artZoom(width, height);

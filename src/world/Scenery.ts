@@ -151,7 +151,7 @@ export class Scenery {
       .setDepth(OVERHEAD - 2);
 
     const offQuality = settings.watch((s) => {
-      const k = s.quality === 'fast' ? 2 : 1;
+      const k = s.quality !== 'full' ? 2 : 1;
       this.leaves.frequency = drift.frequency * k;
       this.motes.frequency = 110 * k;
     });
