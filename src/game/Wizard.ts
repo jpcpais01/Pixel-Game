@@ -6,7 +6,7 @@ import { BeamCharge, CHARGE_TIME, HOLD_TIME, beamSpec } from './Beam';
 import { beamHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
-import type { Hero } from './characters';
+import type { Aim, Hero } from './characters';
 import { ARCANE_STYLE, VOID_STYLE, type SpellStyle } from './spells';
 
 export const MAX_HP = 80;
@@ -59,6 +59,8 @@ export class Wizard implements Hero {
   private released = false;
   private castDir = new Phaser.Math.Vector2(0, 1);
   private lastMove = new Phaser.Math.Vector2(0, 1);
+  /** Towards the mouse on a computer (see Hero). */
+  private aim: Aim | null = null;
   private cooldown = 0;
   private hooks: WizardHooks;
   private charge: BeamCharge;
@@ -113,7 +115,8 @@ export class Wizard implements Hero {
     return this.state !== 'free';
   }
 
-  update(dt: number, mx: number, my: number, attack: boolean, beam: boolean, bounds: Phaser.Geom.Rectangle): void {
+  update(dt: number, mx: number, my: number, attack: boolean, beam: boolean, bounds: Phaser.Geom.Rectangle, aim: Aim | null = null): void {
+    this.aim = aim;
     const len = Math.hypot(mx, my);
     const moving = len > 0.18;
     if (moving) this.lastMove.set(mx / len, my / len);
@@ -167,15 +170,15 @@ export class Wizard implements Hero {
     this.state = 'charge';
     this.charged = 0;
     this.held = 0;
-    this.castDir.copy(this.lastMove);
+    this.castDir.copy(this.aim ?? this.lastMove);
     this.dir = dirOf(this.castDir.x, this.castDir.y);
     this.body.play(`${this.key}_aim_${this.dir}`).chain(`${this.key}_charge_${this.dir}`);
   }
 
   private updateCharge(dt: number, moving: boolean, beam: boolean): void {
-    // Aim follows the stick while gathering; the body turns to face it.
-    if (moving) {
-      this.castDir.copy(this.lastMove);
+    // Aim follows the mouse (or else the stick) while gathering; the body turns to face it.
+    if (this.aim || moving) {
+      this.castDir.copy(this.aim ?? this.lastMove);
       const d = dirOf(this.castDir.x, this.castDir.y);
       if (d !== this.dir) {
         this.dir = d;
@@ -231,7 +234,7 @@ export class Wizard implements Hero {
   private startCast(): void {
     this.state = 'cast';
     this.released = false;
-    this.castDir.copy(this.lastMove);
+    this.castDir.copy(this.aim ?? this.lastMove);
     this.dir = dirOf(this.castDir.x, this.castDir.y);
     this.body.play(`${this.key}_cast_${this.dir}`);
     sound.charge();

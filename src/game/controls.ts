@@ -1,5 +1,5 @@
-// Shared input state: the UI scene (touch) and keyboard both write here,
-// the world scene reads it.
+// Shared input state: the UI scene (touch and mouse) and keyboard both write
+// here, the world scene reads it.
 export const controls = {
   /** Joystick vector, length 0..1. */
   moveX: 0,
@@ -8,6 +8,10 @@ export const controls = {
   attack: false,
   /** Special button held (the wizard's beam). */
   beam: false,
+  /** A mouse is in use (it moved or clicked since the last touch): abilities aim at it. */
+  mouse: false,
+  /** Left mouse button held on the game world (the attack on a computer). */
+  click: false,
 };
 
 // Beam state written by the wizard, read by the UI to draw the button's charge ring.

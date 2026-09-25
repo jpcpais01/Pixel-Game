@@ -10,7 +10,7 @@ import { sky } from '../game/LitPipeline';
 import { pixelGrid, snap } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
 import { skyState } from '../game/SkyPipeline';
-import { characterById, type Hero } from '../game/characters';
+import { characterById, type Aim, type Hero } from '../game/characters';
 import { areaOrigin, reaches, type Harm, type Hit, type Hurtbox, type MeleeArea, type Strike } from '../game/combat';
 import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
@@ -100,6 +100,7 @@ export class WorldScene extends Phaser.Scene {
   private flickers: Flicker[] = [];
   private dummies: Dummy[] = [];
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
+  private mouseWorld = new Phaser.Math.Vector2();
   private struck = false;
   private bounds = new Phaser.Geom.Rectangle(28, 40, WORLD_W - 56, WORLD_H - 64);
   /** Where monsters may roam (the same walkable area as the hero's). */
@@ -644,6 +645,17 @@ export class WorldScene extends Phaser.Scene {
     return 0.12 + 0.88 * k * k;
   }
 
+  /** Unit vector from the hero's chest towards the mouse, in the world. */
+  private mouseAim(): Aim | null {
+    const p = this.input.mousePointer;
+    if (!p) return null;
+    const w = p.positionToCamera(this.cameras.main, this.mouseWorld) as Phaser.Math.Vector2;
+    const dx = w.x - this.hero.x;
+    const dy = w.y - (this.hero.y - 14);
+    const l = Math.hypot(dx, dy);
+    return l < 1 ? null : { x: dx / l, y: dy / l };
+  }
+
   update(time: number, dt: number): void {
     const k = this.keys;
     let mx = controls.moveX;
@@ -655,14 +667,15 @@ export class WorldScene extends Phaser.Scene {
       mx = kx / l;
       my = ky / l;
     }
-    let attack = controls.attack || k.SPACE.isDown || k.J.isDown;
-    let special = controls.beam || k.K.isDown || k.SHIFT.isDown;
+    // On a computer: WASD to walk, left click to attack, Space for the special.
+    let attack = controls.attack || controls.click || k.J.isDown;
+    let special = controls.beam || k.SPACE.isDown || k.K.isDown || k.SHIFT.isDown;
     if (this.downT > 0) {
       mx = my = 0;
       attack = special = false;
     }
     this.hero.daylight = daynight.daylight;
-    this.hero.update(dt, mx, my, attack, special, this.bounds);
+    this.hero.update(dt, mx, my, attack, special, this.bounds, controls.mouse ? this.mouseAim() : null);
     this.updateHeroLife(dt);
 
     const target = this.downT > 0 ? null : this.hero;
