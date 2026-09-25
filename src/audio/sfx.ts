@@ -445,6 +445,14 @@ export class Sfx {
     this.sparkle(out, c + 0.1, 3, 0.05);
   }
 
+  /** Picking up gear: a rising chord of bells, with a sparkle and a longer run for the rarest. */
+  gear(t: number, rare: boolean): void {
+    const out = this.out(0, 0.5, 0.45);
+    const notes = rare ? [523, 659, 784, 1047, 1319] : [587, 740, 880];
+    notes.forEach((f, i) => this.bell(out, t + i * 0.06, f, 0.045, 0.9));
+    this.sparkle(out, t + 0.12, rare ? 6 : 3, 0.05);
+  }
+
   /** Picking an item up: a bright double blip. */
   pickup(t: number, pan: number): void {
     const out = this.out(pan, 0.45, 0.3);

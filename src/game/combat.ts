@@ -61,10 +61,16 @@ export class Vitals {
   barrier = 0;
 
   constructor(
-    readonly max: number,
+    public max: number,
     readonly barrierMax = 0,
   ) {
     this.hp = max;
+  }
+
+  /** Raises (or lowers) max health, and health with it: gear worn or lost. */
+  grow(amount: number): void {
+    this.max += amount;
+    this.hp = Math.max(1, Math.min(this.max, this.hp + amount));
   }
 
   get alive(): boolean {
