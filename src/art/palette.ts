@@ -579,6 +579,58 @@ export const HEX_HOT = hex('#ff9cf2');
 export const HEX_MID = hex('#d64ce0');
 
 // ---------------------------------------------------------------------------
+// Chemtech (the alchemist's gameplay subtype): an undercity chem-tinker in a
+// charcoal rubber coat and leather apron, rusted copper pauldrons, a steel
+// helmet over a black gas mask with twin filters and round acid lenses, a
+// pressure tank on the back and canisters of glowing chartreuse chem.
+
+export const CHEM_COAT: Material = {
+  ramp: ramp('#14171a', '#23292b', '#343d3e', '#4b5756', '#687673'),
+  outline: hex('#06070a'),
+  outlineLit: hex('#15171c'),
+};
+
+/** Rusted copper pauldrons. */
+export const CHEM_COPPER: Material = {
+  ramp: ramp('#26110b', '#4a2314', '#76391d', '#a2582b', '#cc8446'),
+  outline: hex('#120805'),
+  shine: true,
+};
+
+/** Helmet, tank and canisters: dark gunmetal. */
+export const CHEM_STEEL: Material = {
+  ramp: ramp('#121419', '#23272f', '#373d48', '#535b69', '#7d8796'),
+  outline: hex('#07080b'),
+  outlineLit: hex('#1a1d24'),
+  shine: true,
+};
+
+/** The gas mask's black rubber. */
+export const CHEM_RUBBER: Material = {
+  ramp: ramp('#101114', '#1e2024', '#2f3238', '#454a52'),
+  outline: hex('#030304'),
+};
+
+/** Round lenses lit by the chem. */
+export const CHEM_LENS: Material = {
+  ramp: ramp('#5f6e0c', '#9cba16', '#d2ec34', '#f2ff86'),
+  outline: hex('#121606'),
+  emissive: 0.6,
+  noAO: true,
+};
+
+export const CHEM_BREW: Material = {
+  ramp: ramp('#46660a', '#82ac12', '#c2e21e', '#eeff5c'),
+  outline: hex('#101806'),
+  emissive: 0.8,
+  noAO: true,
+};
+
+export const CHEM_CORE = hex('#fbffd6');
+export const CHEM_HOT = hex('#e2ff4a');
+export const CHEM_MID = hex('#a6d80e');
+
+// ---------------------------------------------------------------------------
 // The archer: a ranger in a forest-green hooded cloak over a moss tunic and a
 // tan leather jerkin, auburn hair under the hood, a yew longbow and a quiver
 // of red-fletched arrows on the back.

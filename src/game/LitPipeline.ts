@@ -60,6 +60,13 @@ void main ()
         color = texel;
     }
 
+    // Empty texels (half of a tree's quad) add nothing: skip the lighting.
+    if (color.a == 0.0)
+    {
+        gl_FragColor = vec4(0.0);
+        return;
+    }
+
     vec3 normalMap = texture2D(uNormSampler, outTexCoord).rgb;
     vec3 normal = normalize(uInverseRotationMatrix * vec3(normalMap * 2.0 - 1.0));
     vec2 res = vec2(min(uResolution.x, uResolution.y)) * uCamera.w;
@@ -72,19 +79,20 @@ void main ()
     float sun = dot(normal, uSunDir);
     finalColor += uSunColor * clamp(sun * 0.8 + 0.2, 0.0, 1.0);
 
+    vec2 frag = (gl_FragCoord.xy * uFragScale - vec2(0.0, uFragShiftY)) / res;
     for (int index = 0; index < kMaxLights; ++index)
     {
-        if (index < uLightCount)
-        {
-            Light light = uLights[index];
-            vec3 lightDir = vec3((light.position.xy / res) - ((gl_FragCoord.xy * uFragScale - vec2(0.0, uFragShiftY)) / res), 0.1);
-            vec3 lightNormal = normalize(lightDir);
-            float distToSurf = length(lightDir) * uCamera.w;
-            float diffuseFactor = max(dot(normal, lightNormal), 0.0);
-            float radius = (light.radius / res.x * uCamera.w) * uCamera.w;
-            float attenuation = clamp(1.0 - distToSurf * distToSurf / (radius * radius), 0.0, 1.0);
-            finalColor += (attenuation * light.color * diffuseFactor) * light.intensity;
-        }
+        // Only the lights in use, and only those that reach this fragment.
+        if (index >= uLightCount) break;
+        Light light = uLights[index];
+        vec3 lightDir = vec3(light.position.xy / res - frag, 0.1);
+        float distToSurf = length(lightDir) * uCamera.w;
+        float radius = (light.radius / res.x * uCamera.w) * uCamera.w;
+        if (distToSurf >= radius) continue;
+        vec3 lightNormal = lightDir / length(lightDir);
+        float diffuseFactor = max(dot(normal, lightNormal), 0.0);
+        float attenuation = 1.0 - distToSurf * distToSurf / (radius * radius);
+        finalColor += (attenuation * light.color * diffuseFactor) * light.intensity;
     }
 
     gl_FragColor = color * vec4(finalColor, 1.0);
