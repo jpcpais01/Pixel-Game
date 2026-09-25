@@ -1,9 +1,9 @@
-// The home screen's EVERLANDS logo: tall hand-drawn serif capitals in a
-// polished gold (bright crown, a darker horizon line, a warm lower sheen), a
-// bronze extruded base and a dark outline, over a leafy vine with an emerald
-// gem at its heart. It comes as a strip of frames: frame 0 is the resting
-// logo and the rest sweep a glint across it, so the scene can shimmer the
-// title by switching frames.
+// The home screen's MYTHS AND LEGENDS logo: two lines of tall hand-drawn
+// serif capitals in a polished gold (bright crown, a darker horizon line, a
+// warm lower sheen) with a bronze extruded base and a dark outline. Between
+// them a small italic "and" sits on a gold rule that ends in emeralds. It
+// comes as a strip of frames: frame 0 is the resting logo and the rest sweep
+// a glint across it, so the scene can shimmer the title by switching frames.
 
 import { Bitmap, mix } from './bitmap';
 import { hex, type RGB } from './pixel';
@@ -12,6 +12,81 @@ const GLYPH_H = 13;
 
 // '#' is letter. Thick 2px stems, thin 1px bars, small serifs.
 const GLYPHS: Record<string, string[]> = {
+  M: [
+    '###.......###',
+    '.###.....###.',
+    '.####...####.',
+    '.##.##.##.##.',
+    '.##.##.##.##.',
+    '.##..###..##.',
+    '.##..###..##.',
+    '.##...#...##.',
+    '.##.......##.',
+    '.##.......##.',
+    '.##.......##.',
+    '.##.......##.',
+    '####.....####',
+  ],
+  Y: [
+    '####...####',
+    '.##.....##.',
+    '..##...##..',
+    '..##...##..',
+    '...##.##...',
+    '...##.##...',
+    '....###....',
+    '....##.....',
+    '....##.....',
+    '....##.....',
+    '....##.....',
+    '....##.....',
+    '...####....',
+  ],
+  T: [
+    '##########',
+    '##..##..##',
+    '#...##...#',
+    '....##....',
+    '....##....',
+    '....##....',
+    '....##....',
+    '....##....',
+    '....##....',
+    '....##....',
+    '....##....',
+    '....##....',
+    '...####...',
+  ],
+  H: [
+    '####...####',
+    '.##.....##.',
+    '.##.....##.',
+    '.##.....##.',
+    '.##.....##.',
+    '.##.....##.',
+    '.#########.',
+    '.##.....##.',
+    '.##.....##.',
+    '.##.....##.',
+    '.##.....##.',
+    '.##.....##.',
+    '####...####',
+  ],
+  G: [
+    '...#####.#',
+    '..##...###',
+    '.##.....##',
+    '##.......#',
+    '##........',
+    '##........',
+    '##...#####',
+    '##.....##.',
+    '##.....##.',
+    '.##....##.',
+    '.##....##.',
+    '..##..###.',
+    '...####.#.',
+  ],
   E: [
     '#########',
     '.##....##',
@@ -134,14 +209,20 @@ const GLYPHS: Record<string, string[]> = {
   ],
 };
 
+// The small italic "and": 7 rows, sheared as it is drawn.
+const SMALL: Record<string, string[]> = {
+  a: ['....', '....', '.##.', '...#', '.###', '#..#', '.###'],
+  n: ['....', '....', '###.', '#..#', '#..#', '#..#', '#..#'],
+  d: ['...#', '...#', '.###', '#..#', '#..#', '#..#', '.###'],
+};
+const SMALL_H = 7;
+
 const GAP = 2;
 const DEPTH = 3;
 /** Room around the art for the soft shadow. */
 const PAD = 4;
-/** Vine band under the letters: its centre line sits this far below them. */
-const VINE_DROP = 9;
-const VINE_H = 5;
-
+/** Rows between a line of capitals (plus its extrusion) and the "and" band. */
+const BAND_GAP = 2;
 /** Frames in the strip: the resting logo, then the glint's sweep. */
 export const LOGO_FRAMES = 14;
 
@@ -152,9 +233,7 @@ const RIM = hex('#4a1f14');
 const EXTRUDE = [hex('#8a4a24'), hex('#62301c'), hex('#3e1c18')];
 const INK = hex('#120e1f');
 const WHITE: RGB = [255, 255, 255];
-const STEM = hex('#3f7a3c');
-const LEAF = hex('#5fae4e');
-const LEAF_LIT = hex('#a6e07a');
+const RULE = [hex('#fff0b0'), hex('#e8a73e'), hex('#b56628')];
 const GEM = [hex('#d8fff0'), hex('#5fe0a0'), hex('#2fae78'), hex('#1b7452')];
 
 export interface Logo {
@@ -166,27 +245,41 @@ export interface Logo {
   sparkles: { x: number; y: number }[];
 }
 
-export function everlandsLogo(text = 'EVERLANDS'): Logo {
-  const chars = [...text.toUpperCase()].filter((c) => GLYPHS[c]);
-  const textW = chars.reduce((w, c) => w + GLYPHS[c][0].length + GAP, -GAP);
+const lineW = (text: string) => [...text].reduce((w, c) => w + GLYPHS[c][0].length + GAP, -GAP);
+
+export function mythsLogo(): Logo {
+  const top = 'MYTHS';
+  const bottom = 'LEGENDS';
+  const textW = Math.max(lineW(top), lineW(bottom));
   const W = textW + 2 + PAD * 2;
   const tx = PAD + 1;
   const ty = PAD + 1;
-  const vineY = ty + GLYPH_H + VINE_DROP;
-  const H = vineY + VINE_H + PAD;
+  const bandY = ty + GLYPH_H + DEPTH + BAND_GAP;
+  const ty2 = bandY + SMALL_H + BAND_GAP;
+  const H = ty2 + GLYPH_H + DEPTH + PAD;
   const idx = (x: number, y: number) => y * W + x;
   const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H;
 
-  // Letter mask.
+  // Letter mask, and each lit pixel's row within its glyph (for the gold ramp).
   const fill = new Uint8Array(W * H);
-  let x0 = tx;
-  let apexA = { x: tx, y: ty };
-  for (const c of chars) {
-    const g = GLYPHS[c];
-    g.forEach((row, y) => [...row].forEach((p, x) => p === '#' && (fill[idx(x0 + x, ty + y)] = 1)));
-    if (c === 'A') apexA = { x: x0 + 5, y: ty };
-    x0 += g[0].length + GAP;
-  }
+  const rowOf = new Int8Array(W * H);
+  const lay = (text: string, y0: number) => {
+    let x0 = tx + Math.floor((textW - lineW(text)) / 2);
+    for (const c of text) {
+      const g = GLYPHS[c];
+      g.forEach((row, y) =>
+        [...row].forEach((p, x) => {
+          if (p !== '#') return;
+          fill[idx(x0 + x, y0 + y)] = 1;
+          rowOf[idx(x0 + x, y0 + y)] = y;
+        }),
+      );
+      x0 += g[0].length + GAP;
+    }
+    return x0 - GAP;
+  };
+  const topEnd = lay(top, ty);
+  lay(bottom, ty2);
   const on = (a: Uint8Array, x: number, y: number) => inside(x, y) && a[idx(x, y)] > 0;
 
   // Colour per pixel (null = empty) and which pixels the glint may brighten.
@@ -202,7 +295,7 @@ export function everlandsLogo(text = 'EVERLANDS'): Logo {
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       if (!on(fill, x, y)) continue;
-      let c = RAMP[y - ty];
+      let c = RAMP[rowOf[idx(x, y)]];
       if (!on(fill, x, y - 1)) c = mix(c, WHITE, 0.55);
       else if (!on(fill, x + 1, y)) c = mix(c, RIM, 0.28);
       put(x, y, c, true);
@@ -221,41 +314,46 @@ export function everlandsLogo(text = 'EVERLANDS'): Logo {
     }
   }
 
-  // The vine: a gently waving stem, mirrored about the centre, with leaves
-  // leaning outward and a curl at each tip.
+  // The "and": small italic letters in the middle of a gold rule.
   const cx = Math.floor(W / 2);
-  const half = Math.round(textW * 0.4);
-  const stemY = (d: number) => vineY + Math.round(1.3 * Math.sin(d * 0.3));
-  for (let d = 4; d <= half; d++) {
-    for (const s of [-1, 1]) {
-      const x = cx + s * d;
-      const y = stemY(d);
-      put(x, y, STEM);
-      if (d % 7 === 3) {
-        // Leaves alternate above and below the stem.
-        const up = (Math.floor(d / 7) & 1) === 0 ? -1 : 1;
-        put(x + s, y + up, LEAF);
-        put(x + 2 * s, y + up, up < 0 ? LEAF_LIT : LEAF);
-        put(x + s, y + 2 * up, LEAF);
-        put(x + 2 * s, y + 2 * up, LEAF);
-        put(x + 3 * s, y + 2 * up, LEAF_LIT);
-      }
-    }
+  const andW = 3 * 4 + 2 * 2 + 1;
+  const ax = cx - Math.floor(andW / 2);
+  let x0 = ax;
+  for (const c of 'and') {
+    SMALL[c].forEach((row, y) =>
+      [...row].forEach((p, x) => {
+        if (p !== '#') return;
+        const shear = y < 3 ? 1 : 0;
+        put(x0 + x + shear, bandY + y, y < 3 ? RAMP[1] : y < 5 ? RAMP[4] : RAMP[8], true);
+      }),
+    );
+    x0 += 6;
   }
+  // The rule runs out from the "and" on both sides and ends in an emerald.
+  const ruleY = bandY + 4;
+  const reach = Math.round(textW * 0.42);
   for (const s of [-1, 1]) {
-    const x = cx + s * half;
-    const y = stemY(half);
-    put(x + s, y - 1, STEM);
-    put(x + s, y - 2, STEM);
-    put(x, y - 3, LEAF_LIT);
-  }
-  // Emerald at the heart of the vine: a small cut diamond.
-  for (let dy = -3; dy <= 3; dy++) {
-    for (let dx = -3; dx <= 3; dx++) {
-      const m = Math.abs(dx) + Math.abs(dy);
-      if (m > 3) continue;
-      const shade = m === 3 ? RIM : dx + dy < -1 ? GEM[0] : dy < 0 || (dy === 0 && dx < 0) ? GEM[1] : dx + dy > 1 ? GEM[3] : GEM[2];
-      put(cx + dx, vineY + dy, shade, m < 3);
+    const start = s < 0 ? ax - 4 : ax + andW + 4;
+    const end = cx + s * reach;
+    for (let x = start; s < 0 ? x >= end : x <= end; x += s) {
+      const k = Math.abs(x - start) / Math.abs(end - start);
+      put(x, ruleY - 1, RULE[0], k < 0.7);
+      put(x, ruleY, RULE[k < 0.5 ? 1 : 2]);
+    }
+    // A tiny diamond right beside the "and".
+    put(start - s * 2, ruleY - 1, RULE[0], true);
+    put(start - s * 2, ruleY, RULE[1]);
+    put(start - s * 1, ruleY - 1, RULE[1]);
+    put(start - s * 3, ruleY - 1, RULE[1]);
+    put(start - s * 2, ruleY - 2, WHITE, true);
+    // Emerald at the end: a small cut diamond.
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const m = Math.abs(dx) + Math.abs(dy);
+        if (m > 2) continue;
+        const shade = m === 2 ? RIM : dx + dy < 0 ? GEM[0] : dx + dy === 0 ? GEM[1] : GEM[3];
+        put(end + s * 2 + dx, ruleY + dy, shade, m < 2);
+      }
     }
   }
 
@@ -309,10 +407,12 @@ export function everlandsLogo(text = 'EVERLANDS'): Logo {
     frameW: W,
     frameH: H,
     sparkles: [
-      { x: tx + 1, y: ty },
-      apexA,
-      { x: tx + textW - 2, y: ty + GLYPH_H - 1 },
-      { x: cx, y: vineY - 3 },
+      { x: tx + Math.floor((textW - lineW(top)) / 2) + 1, y: ty },
+      { x: topEnd - 1, y: ty + GLYPH_H - 1 },
+      { x: tx + 1, y: ty2 + 1 },
+      { x: tx + textW - 2, y: ty2 + GLYPH_H - 1 },
+      { x: cx - reach - 2, y: ruleY - 2 },
+      { x: cx + reach + 2, y: ruleY - 2 },
     ],
   };
 }

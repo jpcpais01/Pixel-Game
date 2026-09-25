@@ -13,10 +13,13 @@ export interface SpellColors {
   accent: RGB;
   /** A hollow orb: a bright ring around a dim heart (the void look). */
   hollow?: boolean;
+  /** Fire: ragged, licking edges instead of a smooth ball (the pyromancer). */
+  flame?: boolean;
 }
 
 export const ARCANE_SPELL: SpellColors = { core: MAGIC_CORE, hot: MAGIC_HOT, mid: MAGIC_MID, deep: MAGIC_DEEP, accent: MAGIC_VIOLET };
 export const VOID_SPELL: SpellColors = { core: VOID_CORE, hot: VOID_HOT, mid: VOID_MID, deep: VOID_DEEP, accent: VOID_TEAL, hollow: true };
+export const PYRO_SPELL: SpellColors = { core: EMBER_CORE, hot: EMBER_HOT, mid: EMBER_MID, deep: EMBER_DEEP, accent: [255, 238, 170], flame: true };
 
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
@@ -38,7 +41,9 @@ export function orbFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanvas 
   const pulse = f % 2 === 0 ? 0 : 0.35;
   for (let y = 0; y < ORB_SIZE; y++) {
     for (let x = 0; x < ORB_SIZE; x++) {
-      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+      let d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+      // Fire: the rim licks in and out, differently every frame.
+      if (k.flame && d > 2.2) d -= (hash(Math.floor((Math.atan2(y + 0.5 - cy, x + 0.5 - cx) + Math.PI) * 2.4), f, 5) - 0.4) * 1.8;
       if (k.hollow && d <= 1.6) c.spark(x, y, k.deep, 0.7);
       else if (d <= 1.6) c.spark(x, y, k.core, 1);
       else if (d <= 2.9) c.spark(x, y, k.hollow ? k.core : k.hot, 1);
@@ -70,6 +75,14 @@ export function burstFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanva
   for (let y = 0; y < BURST_SIZE; y++) {
     for (let x = 0; x < BURST_SIZE; x++) {
       const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+      if (k.flame && f <= 3) {
+        // A ball of flame swelling and burning out inside the ring.
+        const rag = d - (hash(Math.floor((Math.atan2(y + 0.5 - cy, x + 0.5 - cx) + Math.PI) * 2.6), f, 7) - 0.4) * 2;
+        const fr = 3 + f * 1.6;
+        if (rag <= fr * 0.35 && f <= 1) c.spark(x, y, k.core, 1);
+        else if (rag <= fr * 0.65) c.spark(x, y, f <= 1 ? k.hot : k.mid, 1 - f * 0.15);
+        else if (rag <= fr) c.spark(x, y, f <= 2 ? k.mid : k.deep, 0.85 - f * 0.15);
+      }
       if (f <= 1 && d <= 3.6 - f * 1.2) c.spark(x, y, k.core, 1);
       else if (f <= 2 && d <= 5 - f) c.spark(x, y, k.hot, 0.7);
       if (Math.abs(d - r) <= thick / 2 && hash(x, y, f) > t * 0.55) c.spark(x, y, ringCol, 1 - t * 0.6);
@@ -281,6 +294,132 @@ export function beamIcon(k: SpellColors = ARCANE_SPELL): Uint8ClampedArray {
     put(sx, sy + i, c);
   }
   for (const [dx, dy] of [[-1, -1], [1, 1], [-1, 1], [1, -1]]) put(sx + dx, sy + dy, cols[2]);
+  return px;
+}
+
+/** 16x16 icon for the meteor button: a flaming star plunging to the lower left, drawn additively. */
+export function meteorIcon(k: SpellColors = PYRO_SPELL): Uint8ClampedArray {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: RGB) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const i = (y * S + x) * 4;
+    if (px[i] + px[i + 1] + px[i + 2] >= c[0] + c[1] + c[2]) return;
+    px[i] = c[0];
+    px[i + 1] = c[1];
+    px[i + 2] = c[2];
+    px[i + 3] = 255;
+  };
+  // Head at the lower left, the tail streaming back up to the right and widening.
+  const hx = 5;
+  const hy = 11;
+  const ux = Math.SQRT1_2;
+  const uy = -Math.SQRT1_2;
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const rx = x + 0.5 - hx;
+      const ry = y + 0.5 - hy;
+      const d = Math.hypot(rx, ry);
+      if (d <= 1.5) put(x, y, k.core);
+      else if (d <= 2.6) put(x, y, k.hot);
+      else if (d <= 3.4) put(x, y, k.mid);
+      const along = rx * ux + ry * uy;
+      const side = Math.abs(rx * uy - ry * ux);
+      if (along < 1 || along > 13) continue;
+      const w = 1.2 + along * 0.2 + (hash(Math.round(along), 3) - 0.5) * 0.8;
+      const s = side / w;
+      const fade = along / 13;
+      if (s <= 0.35 && fade < 0.45) put(x, y, k.hot);
+      else if (s <= 0.7 && fade < 0.75) put(x, y, k.mid);
+      else if (s <= 1 && hash(x, y, 8) > fade * 0.7) put(x, y, k.deep);
+    }
+  }
+  // Sparks flung off the tail.
+  for (const [x, y] of [[12, 2], [14, 6], [9, 1], [13, 9]]) put(x, y, k.hot);
+  return px;
+}
+
+export const PYRO_METEOR_W = 16;
+export const PYRO_METEOR_H = 40;
+/** Where the rock's centre sits in the meteor frame (the tail streams up from it). */
+export const PYRO_METEOR_HEAD = 32;
+
+/**
+ * The pyromancer's meteor, falling: a molten rock wrapped in flame with a long
+ * tail streaming up behind it. Drawn with normal blending, so the dark rock
+ * shows; the flames are light-coloured and a glow sprite adds the bloom.
+ * Frames flicker the flames.
+ */
+export function pyroMeteor(f: number): Uint8ClampedArray {
+  const W = PYRO_METEOR_W;
+  const H = PYRO_METEOR_H;
+  const px = new Uint8ClampedArray(W * H * 4);
+  const put = (x: number, y: number, c: string, a = 1) => {
+    if (x < 0 || y < 0 || x >= W || y >= H) return;
+    const n = parseInt(c.slice(1), 16);
+    const i = (y * W + x) * 4;
+    px[i] = n >> 16;
+    px[i + 1] = (n >> 8) & 255;
+    px[i + 2] = n & 255;
+    px[i + 3] = Math.round(a * 255);
+  };
+  const cx = W / 2;
+  const cy = PYRO_METEOR_HEAD;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      const d = Math.hypot(dx, dy);
+      // The tail: a flame that narrows as it rises, ragged at the edges.
+      if (dy < 0) {
+        const u = -dy / (cy - 1);
+        const hw = 5.2 * (1 - u) ** 0.8 + (hash(y, f, 2) - 0.5) * 1.6 * (1 - u);
+        const s = Math.abs(dx + Math.sin(y * 0.7 + f * 1.7) * 0.6 * u) / Math.max(0.1, hw);
+        if (s <= 1 && hash(x, y, f + 20) > u * 0.55) {
+          if (s < 0.3 && u < 0.35) put(x, y, '#fff6d8');
+          else if (s < 0.6 && u < 0.6) put(x, y, '#ffd05a');
+          else if (u < 0.8) put(x, y, '#ff8a2a', 0.95);
+          else put(x, y, '#d8401e', 0.8);
+        }
+      }
+      // Flame hugging the rock.
+      const rag = d - (hash(Math.floor((Math.atan2(dy, dx) + Math.PI) * 2.2), f, 9) - 0.3) * 1.6;
+      if (rag <= 6.2 && d > 3.9) put(x, y, rag <= 5 ? '#ffd05a' : '#ff8a2a');
+      // The rock: dark, lit from above by its own fire, glowing cracks.
+      if (d <= 4.2) {
+        const lit = -dy * 0.5 - dx * 0.25;
+        let c = lit > 1.4 ? '#8a4a2a' : lit > 0 ? '#5a2c1e' : lit > -1.4 ? '#3a1a14' : '#24100c';
+        if (hash(x, y, 31) > 0.72 && d < 3.6) c = hash(x, y, f + 40) > 0.5 ? '#ffb040' : '#ff7a24';
+        if (d > 3.5) c = '#1a0a08';
+        put(x, y, c);
+      }
+    }
+  }
+  return px;
+}
+
+/** A charred scorch on the ground: dark ash with a glowing, broken rim. `w` x `h`. */
+export function scorchCanvas(w: number, h: number): Uint8ClampedArray {
+  const px = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const dx = (x + 0.5 - w / 2) / (w / 2);
+      const dy = (y + 0.5 - h / 2) / (h / 2);
+      const d = Math.hypot(dx, dy) + (hash(x, y, 13) - 0.5) * 0.14;
+      if (d > 1) continue;
+      const i = (y * w + x) * 4;
+      if (d > 0.84) {
+        // Embers along the rim.
+        if (hash(x, y, 14) < 0.55) continue;
+        const hot = hash(x, y, 15) > 0.6;
+        px.set(hot ? [255, 170, 64, 255] : [216, 72, 30, 230], i);
+      } else {
+        const a = d < 0.55 ? 200 : 150;
+        const c = hash(x, y, 16) > 0.93 ? [120, 40, 18] : d < 0.5 ? [22, 12, 12] : [40, 22, 18];
+        px.set([c[0], c[1], c[2], a], i);
+      }
+    }
+  }
   return px;
 }
 
