@@ -6,6 +6,6 @@
 // device only.
 
 export const FIREBASE_CONFIG = {
-  apiKey: '',
-  projectId: '',
+  apiKey: 'AIzaSyA_eEpkMwECDlrk94FxE8BZ7temtIExfiI',
+  projectId: 'myths-and-legends-c20b5',
 };
