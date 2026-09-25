@@ -7,7 +7,7 @@ import type { WorldScene } from '../scenes/WorldScene';
 import { ARCANE_SKIN, VOID_SKIN, Wizard } from './Wizard';
 import { JADE_SKIN, KNIGHT_SKIN, Warrior } from './Warrior';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
-import { Paladin } from './Paladin';
+import { CRUSADER_KIT, HOLY_KIT, Paladin } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
@@ -77,7 +77,7 @@ export interface CharacterDef {
     attack: { texture: string; frame?: string; anim?: string };
     special: { texture: string };
   };
-  /** Alternate looks, same gameplay; the first is the default (see skins.ts). */
+  /** Alternate looks or gameplay subtypes; the first is the default (see skins.ts). */
   skins?: SkinDef[];
   /** `skin` is the id of the worn skin, for characters that have skins. */
   spawn(world: WorldScene, x: number, y: number, skin?: string): Hero;
@@ -172,7 +172,25 @@ export const CHARACTERS: CharacterDef[] = [
       attack: { texture: 'icon_mace' },
       special: { texture: 'icon_sanctuary' },
     },
-    spawn: (world, x, y) => new Paladin(world, x, y),
+    skins: [
+      { id: 'holy', name: 'Paladin' },
+      {
+        // A gameplay subtype: harder, slower hammer blows and a burst of sunfire instead of healing ground.
+        id: 'crusader',
+        name: 'Crusader',
+        role: 'Hammer and sunfire',
+        accent: 0xff8a3a,
+        stats: { power: 5, speed: 3, range: 2 },
+        attack: 'Sunhammer',
+        special: 'Sunfall',
+        preview: { texture: 'paladin_crusader', glow: 'paladin_crusader_e', idle: 'paladin_crusader_idle_down', chosen: 'paladin_crusader_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
+        buttons: {
+          attack: { texture: 'icon_hammer' },
+          special: { texture: 'icon_sunfall' },
+        },
+      },
+    ],
+    spawn: (world, x, y, skin) => new Paladin(world, x, y, skin === 'crusader' ? CRUSADER_KIT : HOLY_KIT),
   },
   {
     id: 'jedi',

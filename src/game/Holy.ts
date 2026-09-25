@@ -9,6 +9,8 @@ import type { Effect, Scheme } from './Slash';
 
 /** White-gold light with an azure edge. */
 export const HOLY_FX: Scheme = { core: 0xfffdf0, hot: 0xfff0a8, mid: 0xffd35c, deep: 0x5aa0ff };
+/** The Crusader's sunfire: white-gold burning down to orange and red. */
+export const SUNFIRE_FX: Scheme = { core: 0xfff8e0, hot: 0xffd66b, mid: 0xff9a2e, deep: 0xd9432b };
 const HOLY_TINTS = [0xfffdf0, 0xfff0a8, 0xffd35c, 0x8cc8ff];
 
 /** Rings on the ground seen at an angle: squash them vertically. */
@@ -30,23 +32,30 @@ export class SmiteBurst implements Effect {
   private glow: Phaser.GameObjects.Image;
   private light: Phaser.GameObjects.Light;
   private age = 0;
+  private redrawIn = 0;
   private readonly duration: number;
   private readonly W: number;
   private readonly H: number;
+  private readonly pillar: number;
 
-  /** (x, y) is the spot on the ground; `big` for the consecration's slam. */
-  constructor(scene: Phaser.Scene, x: number, y: number, private big = false) {
+  /**
+   * (x, y) is the spot on the ground; `big` for the consecration's slam.
+   * `ring` widens the ring to that radius, for the Crusader's Sunfall.
+   */
+  constructor(scene: Phaser.Scene, x: number, y: number, private big = false, private fx: Scheme = HOLY_FX, ring?: number) {
     this.scene = scene;
     x = Math.round(x);
     y = Math.round(y);
-    this.duration = big ? 520 : 380;
-    this.W = big ? 44 : 32;
-    this.H = big ? 60 : 42;
+    this.duration = ring ? 640 : big ? 520 : 380;
+    this.W = ring ? Math.round(ring) * 2 + 4 : big ? 44 : 32;
+    this.pillar = ring ? 70 : big ? 52 : 34;
+    this.H = this.W / 2 + this.pillar + 8;
     this.layer = new PixelLayer(scene, this.W, this.H);
     // The ring's centre sits `W / 2` above the layer's bottom edge.
     this.layer.image.setPosition(x - this.W / 2, y - (this.H - this.W / 2)).setDepth(y + 0.5);
-    this.glow = scene.add.image(x, y - 4, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(HOLY_FX.mid).setScale(big ? 1.8 : 1.1).setDepth(y + 0.6);
-    this.light = scene.lights.addLight(x, y - 6, big ? 110 : 70, 0xffe6a0, big ? 3 : 2);
+    const glowScale = ring ? ring / 16 : big ? 1.8 : 1.1;
+    this.glow = scene.add.image(x, y - 4, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(fx.mid).setScale(glowScale, glowScale * SQUASH).setDepth(y + 0.6);
+    this.light = scene.lights.addLight(x, y - 6, ring ? ring * 3 : big ? 110 : 70, fx === HOLY_FX ? 0xffe6a0 : 0xffb070, big || ring ? 3 : 2);
     this.draw();
   }
 
@@ -57,12 +66,17 @@ export class SmiteBurst implements Effect {
       this.destroy();
       return;
     }
-    this.draw();
+    // Redrawn at a steady pixel-art pace rather than every frame.
+    this.redrawIn -= dt;
+    if (this.redrawIn <= 0) {
+      this.redrawIn = 33;
+      this.draw();
+    }
   }
 
   private draw(): void {
     const t = this.age / this.duration;
-    const { W, H, big } = this;
+    const { W, H, big, fx } = this;
     const cx = W / 2;
     const cy = H - W / 2;
     const maxR = W / 2 - 2;
@@ -78,31 +92,31 @@ export class SmiteBurst implements Effect {
         const d = r - Math.hypot(ex, ey);
         if (d < -0.6 || d > th) continue;
         if (hash(px, py, frame) < t * 0.7) continue; // breaks up as it spreads
-        const col = t < 0.25 ? HOLY_FX.core : d < th * 0.5 ? HOLY_FX.hot : HOLY_FX.mid;
-        b.put(px, py, t > 0.6 && d > th * 0.5 ? HOLY_FX.deep : col, 1 - t * 0.5);
+        const col = t < 0.25 ? fx.core : d < th * 0.5 ? fx.hot : fx.mid;
+        b.put(px, py, t > 0.6 && d > th * 0.5 ? fx.deep : col, 1 - t * 0.5);
       }
     }
     // The pillar: a column of light shooting up, thinning as it goes.
     const pt = t / 0.65;
     if (pt < 1) {
-      const h = (big ? 52 : 34) * easeOut(pt * 2.5);
-      const w = (big ? 2.6 : 1.7) * (1 - pt);
+      const h = this.pillar * easeOut(pt * 2.5);
+      const w = (this.pillar > 60 ? 4 : big ? 2.6 : 1.7) * (1 - pt);
       for (let dy = 0; dy < h; dy++) {
         const py = Math.round(cy) - dy;
         const k = dy / h;
         for (let dx = -Math.ceil(w); dx <= Math.ceil(w); dx++) {
           const a = Math.abs(dx + 0.5 - (cx - Math.floor(cx)));
           if (a > w + 0.3) continue;
-          const col = a < w * 0.45 ? HOLY_FX.core : a < w * 0.8 ? HOLY_FX.hot : HOLY_FX.mid;
+          const col = a < w * 0.45 ? fx.core : a < w * 0.8 ? fx.hot : fx.mid;
           b.put(Math.floor(cx) + dx, py, col, (1 - k * 0.7) * (1 - pt * 0.4));
         }
       }
     }
     // A star at the point of impact.
     if (t < 0.35) {
-      const ray = Math.round((big ? 7 : 5) * Math.sin((t / 0.35) * Math.PI));
+      const ray = Math.round((this.pillar > 60 ? 10 : big ? 7 : 5) * Math.sin((t / 0.35) * Math.PI));
       for (let i = -ray; i <= ray; i++) {
-        const col = Math.abs(i) < ray * 0.4 ? HOLY_FX.core : HOLY_FX.hot;
+        const col = Math.abs(i) < ray * 0.4 ? fx.core : fx.hot;
         b.put(Math.floor(cx) + i, Math.round(cy), col);
         b.put(Math.floor(cx), Math.round(cy) + Math.round(i * SQUASH), col);
       }
@@ -110,7 +124,7 @@ export class SmiteBurst implements Effect {
     b.flush();
     const fade = 1 - t;
     this.glow.setAlpha(0.55 * fade);
-    this.light.intensity = (big ? 3 : 2) * fade;
+    this.light.intensity = (big || this.pillar > 60 ? 3 : 2) * fade;
   }
 
   destroy(): void {
@@ -272,10 +286,11 @@ export class Aegis {
   static readonly W = 30;
   static readonly H = 38;
 
-  constructor(scene: Phaser.Scene) {
+  /** `fx` colours the shell; its `deep` is ignored in favour of `edge`, the shaded rim. */
+  constructor(scene: Phaser.Scene, fx: Scheme = HOLY_FX, edge = 0x8cc8ff, facet = 0xbfe0ff) {
     const { W, H } = Aegis;
     this.layer = new PixelLayer(scene, W, H);
-    this.glow = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x8cc8ff).setScale(1.1, 1.4);
+    this.glow = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(edge).setScale(1.1, 1.4);
     // Drawn once: an egg of light with a bright rim at the top left, facets inside.
     const cx = W / 2;
     const cy = H / 2;
@@ -286,9 +301,9 @@ export class Aegis {
         const q = Math.hypot(dx, dy);
         if (q > 1) continue;
         const lit = dx + dy < -0.5;
-        if (q > 0.9) this.layer.put(x, y, lit ? HOLY_FX.core : 0x8cc8ff, lit ? 0.9 : 0.6);
-        else if (q > 0.8 && lit) this.layer.put(x, y, HOLY_FX.hot, 0.45);
-        else if (q > 0.35 && (mod(x - y, 7) === 0 || mod(x + y, 7) === 0) && hash(x, y) > 0.5) this.layer.put(x, y, 0xbfe0ff, 0.18);
+        if (q > 0.9) this.layer.put(x, y, lit ? fx.core : edge, lit ? 0.9 : 0.6);
+        else if (q > 0.8 && lit) this.layer.put(x, y, fx.hot, 0.45);
+        else if (q > 0.35 && (mod(x - y, 7) === 0 || mod(x + y, 7) === 0) && hash(x, y) > 0.5) this.layer.put(x, y, facet, 0.18);
       }
     }
     this.layer.flush();
