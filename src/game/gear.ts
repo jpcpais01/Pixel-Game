@@ -1,8 +1,9 @@
-// Gear: forty pieces of equipment that monsters drop. Gear is not used like
-// a potion: walking over a piece picks it up, and its stats count from then
-// on, for the rest of the run. Each piece is found once per run; the bag
-// shows every piece found, and the ones still missing as shadows. A new piece
-// is one entry in GEAR (with its slot type) plus its painter in art/gear.ts.
+// Gear: forty pieces of equipment that monsters drop. Walking over a piece picks it up and
+// keeps it for good (see collection.ts). Each piece has one of six slot
+// types, and the hero wears one piece per type: only worn pieces count. A
+// piece goes on by itself when its slot is empty; otherwise the player swaps
+// it in from the Inventory page or the bag in a run. A new piece is one
+// entry in GEAR (with its slot type) plus its painter in art/gear.ts.
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
@@ -106,59 +107,76 @@ export const GEAR: GearDef[] = [
 
 export const gearById = (id: string): GearDef | undefined => GEAR.find((g) => g.id === id);
 
-/** Stat totals stop here, so a full bag never makes the hero untouchable or uncontrollably fast. */
-const MAX_ARMOR = 0.6;
-const MAX_SPEED = 0.5;
+
+/** The stats in the order they're listed, with short names and how to show a value. */
+export const STAT_KEYS = ['power', 'armor', 'speed', 'hp', 'regen', 'leech'] as const;
+export const STAT_LABEL: Record<keyof GearStats, string> = { power: 'DMG', armor: 'ARMOR', speed: 'SPEED', hp: 'HP', regen: 'REGEN', leech: 'LEECH' };
+
+/** A stat value as shown: "+10%", "+15", "+1.5/S". */
+export function statValue(k: keyof GearStats, v: number): string {
+  const sign = v < 0 ? '-' : '+';
+  const a = Math.abs(v);
+  if (k === 'hp') return `${sign}${Math.round(a)}`;
+  if (k === 'regen') return `${sign}${Math.round(a * 10) / 10}/S`;
+  return `${sign}${Math.round(a * 100)}%`;
+}
+
+/** Where a total stops counting, so no set of gear makes the hero untouchable or uncontrollably fast. */
+export const STAT_CAP: Partial<Record<keyof GearStats, number>> = { armor: 0.6, speed: 0.5 };
 
 /** Short lines for a stat block, in the HUD's pixel font: "+10% DMG", "+15 HP". */
 export function statLines(s: GearStats): string[] {
-  const pct = (v: number) => `${Math.round(v * 100)}%`;
-  const out: string[] = [];
-  if (s.power) out.push(`+${pct(s.power)} DMG`);
-  if (s.armor) out.push(`+${pct(s.armor)} ARMOR`);
-  if (s.speed) out.push(`+${pct(s.speed)} SPEED`);
-  if (s.hp) out.push(`+${s.hp} HP`);
-  if (s.regen) out.push(`+${s.regen} HP/S`);
-  if (s.leech) out.push(`${pct(s.leech)} LIFESTEAL`);
-  return out;
+  return STAT_KEYS.filter((k) => s[k]).map((k) => `${statValue(k, s[k]!)} ${STAT_LABEL[k]}`);
+}
+
+/** The stats of several pieces added up. */
+export function sumStats(defs: GearDef[]): Required<GearStats> {
+  const t = { power: 0, armor: 0, speed: 0, hp: 0, regen: 0, leech: 0 };
+  for (const g of defs) for (const k of STAT_KEYS) t[k] += g.stats[k] ?? 0;
+  t.regen = Math.round(t.regen * 10) / 10;
+  return t;
 }
 
 /** Chance a slain monster drops a piece, by kind; others use the default. The Warden always does. */
 const GEAR_CHANCE: Record<string, number> = { beetle: 0.22, barkling: 0.14, warden: 1 };
 const DEFAULT_GEAR_CHANCE = 0.08;
 
+/** A piece picked up this run, for the HUD's banner; `worn` if it went straight into an empty slot. */
+export interface GearNews {
+  def: GearDef;
+  worn: boolean;
+}
+
 export class GearBag {
-  owned: GearDef[] = [];
+  /** What the hero wears this run: the equip slots on the Inventory page, changeable from the bag. */
+  worn: GearDef[] = [];
+  /** Pieces picked up this run; they won't drop again until the next. */
+  found = new Set<string>();
   /** Pieces just picked up, for the HUD's banner; it takes them off the front. */
-  news: GearDef[] = [];
-  /** Totals of every owned piece's stats. */
-  totals: Required<GearStats> = { power: 0, armor: 0, speed: 0, hp: 0, regen: 0, leech: 0 };
+  news: GearNews[] = [];
+  /** Totals of every worn piece's stats: these are what count. */
+  totals: Required<GearStats> = sumStats([]);
 
-  /** Empty the bag for a new run, starting with the `start` pieces (the player's equipped gear). */
-  reset(start: GearDef[] = []): void {
-    this.owned = [...start];
+  /** A new run: nothing found yet. Call `wear` with the equipped pieces next. */
+  reset(): void {
+    this.worn = [];
+    this.found.clear();
     this.news = [];
-    this.sum();
+    this.totals = sumStats([]);
   }
 
-  has(id: string): boolean {
-    return this.owned.some((g) => g.id === id);
+  /** Wear these pieces; returns how much max health changed, for the hero's vitals. */
+  wear(defs: GearDef[]): number {
+    const before = this.totals.hp;
+    this.worn = defs;
+    this.totals = sumStats(defs);
+    return this.totals.hp - before;
   }
 
-  /** Adds a piece; returns false if it was already owned. */
-  add(def: GearDef): boolean {
-    if (this.has(def.id)) return false;
-    this.owned.push(def);
-    this.news.push(def);
-    this.sum();
-    return true;
-  }
-
-  private sum(): void {
-    const t = { power: 0, armor: 0, speed: 0, hp: 0, regen: 0, leech: 0 };
-    for (const g of this.owned) for (const k of Object.keys(t) as (keyof GearStats)[]) t[k] += g.stats[k] ?? 0;
-    t.regen = Math.round(t.regen * 10) / 10;
-    this.totals = t;
+  /** A piece was picked up this run. */
+  pick(def: GearDef, worn: boolean): void {
+    this.found.add(def.id);
+    this.news.push({ def, worn });
   }
 
   /** Multiplier on damage dealt. */
@@ -168,22 +186,23 @@ export class GearBag {
 
   /** Multiplier on damage taken. */
   get guard(): number {
-    return 1 - Math.min(MAX_ARMOR, this.totals.armor);
+    return 1 - Math.min(STAT_CAP.armor!, this.totals.armor);
   }
 
   /** Multiplier on walking speed. */
   get speed(): number {
-    return 1 + Math.min(MAX_SPEED, this.totals.speed);
+    return 1 + Math.min(STAT_CAP.speed!, this.totals.speed);
   }
 
   /**
    * Maybe a piece for a slain monster of `kind`: a rarity by weight among those
-   * with pieces still to find, then one of them. Pieces owned or already lying
-   * on the ground (`away`) never drop again. The Warden drops epics and up.
+   * with pieces still to find, then one of them. Pieces found this run, or in
+   * `skip` (already owned, or lying on the ground), never drop. The Warden
+   * drops epics and up.
    */
-  roll(kind: string, away: Set<string>): GearDef | null {
+  roll(kind: string, skip: Set<string>): GearDef | null {
     if (Math.random() >= (GEAR_CHANCE[kind] ?? DEFAULT_GEAR_CHANCE)) return null;
-    const left = GEAR.filter((g) => !this.has(g.id) && !away.has(g.id));
+    const left = GEAR.filter((g) => !this.found.has(g.id) && !skip.has(g.id));
     const boss = kind === 'warden';
     let pool = boss ? left.filter((g) => g.rarity === 'epic' || g.rarity === 'legendary') : left;
     if (!pool.length) pool = left;

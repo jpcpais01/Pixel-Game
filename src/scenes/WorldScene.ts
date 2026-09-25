@@ -46,8 +46,8 @@ import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
 import { heroBuffs, type BuffDef } from '../game/buffs';
 import { Pickup } from '../game/Pickup';
-import { gear, gearById, RARITY, type GearDef } from '../game/gear';
-import { collection } from '../game/collection';
+import { gear, RARITY, type GearDef } from '../game/gear';
+import { collection, slotIndex } from '../game/collection';
 
 interface Flicker {
   light: Phaser.GameObjects.Light;
@@ -333,9 +333,12 @@ export class WorldScene extends Phaser.Scene {
     // A fresh hotbar and no buffs each run.
     inventory.reset(STARTING_ITEMS);
     heroBuffs.clear();
-    // The six pieces kept equipped on the Inventory page count from the start of every run.
-    gear.reset(collection.equippedIds().map(gearById).filter((g): g is GearDef => !!g));
-    if (gear.totals.hp) this.hero.vitals.grow(gear.totals.hp);
+    // The six pieces worn on the Inventory page count from the start of every
+    // run, and swapping them in the bag mid-run applies at once.
+    gear.reset();
+    this.rewear();
+    const unwatchGear = collection.watch(() => this.rewear());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unwatchGear);
     controls.items.length = 0;
     this.itemCtx = {
       hero: this.hero,
@@ -549,17 +552,28 @@ export class WorldScene extends Phaser.Scene {
   monsterSlain(kind: string, x: number, y: number, bodyY: number): void {
     const id = rollDrop(kind);
     if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
-    const away = new Set<string>();
-    for (const p of this.pickups) if (p.loot.kind === 'gear') away.add(p.loot.def.id);
-    const def = gear.roll(kind, away);
+    // Only pieces the player doesn't own yet drop, and not one already lying here.
+    const skip = new Set(collection.ownedGear());
+    for (const p of this.pickups) if (p.loot.kind === 'gear') skip.add(p.loot.def.id);
+    const def = gear.roll(kind, skip);
     if (def) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'gear', def }));
   }
 
-  /** A piece of gear was picked up: it counts from now on. */
+  /** Put on what the collection has equipped; max health follows the gear's. */
+  private rewear(): void {
+    const d = gear.wear(collection.equippedGear());
+    if (!d) return;
+    const v = this.hero.vitals;
+    if (v.alive) v.grow(d);
+    else v.max += d;
+  }
+
+  /** A piece of gear was picked up: it's kept for good, and worn straight away if its slot is empty. */
   private gainGear(def: GearDef): void {
-    if (!gear.add(def)) return;
+    const slot = slotIndex(def.id);
+    const worn = !collection.data.equipped[slot] && collection.equip(def.id);
+    gear.pick(def, worn);
     const h = this.hero;
-    if (def.stats.hp) h.vitals.grow(def.stats.hp);
     const tint = RARITY[def.rarity].tint;
     this.popNumber(snap(h.x), snap(h.y) - 40, def.name.toUpperCase(), tint);
     this.debris([0xffffff, tint], snap(h.x), snap(h.y) - 12, def.rarity === 'legendary' ? 26 : 16, h.y + 20, 'burst');
@@ -591,7 +605,7 @@ export class WorldScene extends Phaser.Scene {
     const down = this.downT > 0;
     for (const p of this.pickups) {
       const loot = p.loot;
-      const room = loot.kind === 'item' ? inventory.canTake(loot.id) : !gear.has(loot.def.id);
+      const room = loot.kind === 'item' ? inventory.canTake(loot.id) : !gear.found.has(loot.def.id);
       if (!p.update(dt, down ? null : h.x, down ? null : h.y, room, this.daylight)) continue;
       collection.add(loot.kind === 'item' ? loot.id : loot.def.id);
       if (loot.kind === 'item') {
