@@ -177,7 +177,7 @@ export class InventoryScene extends Phaser.Scene {
     if (!itemInfo(id).equippable) return this.showInfo();
     const at = collection.data.equipped.indexOf(id);
     if (at >= 0) collection.unequip(at);
-    else if (!collection.equip(id)) return this.showInfo('All 6 slots full: tap one to empty it');
+    else collection.equip(id);
   }
 
   private tapSlot(i: number): void {
