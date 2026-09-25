@@ -819,6 +819,72 @@ export const HEX_BREW_COLORS: BrewColors = {
   fume: ['#ffd0fa', '#e880f0', '#b048c8', '#6a2488'],
 };
 
+export const CHEM_BREW_COLORS: BrewColors = {
+  ramp: ['#f4ff9a', '#d4f030', '#96c010', '#4a6a08'],
+  surface: '#e2ff4a',
+  glint: '#fbffd6',
+  bone: ['#f4f6e0', '#b0b89a', '#141a08'],
+  ink: '#0c0f06',
+  fume: ['#f0ffb0', '#cce850', '#8cb020', '#4e6a14'],
+};
+
+/**
+ * Paints a chem canister into a 16x16 icon: a steel cylinder centred on
+ * (cx, cy) along angle `ang`, `len` half-long and `r` thick, with brass caps
+ * and a window of glowing chem, lit from the top left.
+ */
+function paintCanister(put: (x: number, y: number, c: string) => void, b: BrewColors, cx: number, cy: number, ang: number, len: number, r: number): void {
+  const ux = Math.cos(ang);
+  const uy = Math.sin(ang);
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      const u = dx * ux + dy * uy;
+      const v = -dx * uy + dy * ux;
+      if (Math.abs(u) > len || Math.abs(v) > r) continue;
+      // Which side of the axis faces the light (up and to the left).
+      // The surface normal across the cylinder, against the light from the top left.
+      const k = (v / r) * (uy - ux) * Math.SQRT1_2 * 1.4;
+      if (Math.abs(u) > len - 1.2) put(x, y, k > 0.3 ? '#eee0a0' : k > -0.3 ? '#c9ab5e' : '#977636');
+      else if (Math.abs(u) < len * 0.45 && Math.abs(v) < r * 0.62) put(x, y, k > 0.2 ? b.ramp[0] : k > -0.3 ? b.ramp[1] : b.ramp[2]);
+      else put(x, y, k > 0.45 ? '#7d8796' : k > -0.1 ? '#535b69' : k > -0.6 ? '#373d48' : '#23272f');
+    }
+  }
+}
+
+/** 16x16 icon for Chemtech's attack: a canister of glowing chem, tilted to throw, vapour hissing off the valve. */
+export function canisterIcon(b: BrewColors = CHEM_BREW_COLORS): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  paintCanister(put, b, 7.5, 9, -Math.PI / 3, 5.6, 2.7);
+  // The valve at the top end.
+  put(10, 3, '#c9ab5e');
+  put(11, 2, '#eee0a0');
+  outline(b.ink);
+  put(12, 0, b.surface);
+  put(13, 2, b.ramp[1]);
+  put(14, 0, b.ramp[1]);
+  return px;
+}
+
+/** 16x16 icon for Chemtech's special: three canisters fanning out over a splash of chem. */
+export function chemBarrageIcon(b: BrewColors = CHEM_BREW_COLORS): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  // The splash underneath.
+  for (let x = 1; x <= 14; x++) {
+    const h = Math.round(1.6 - Math.abs(x - 7.5) * 0.2);
+    for (let y = 15 - Math.max(0, h); y <= 15; y++) put(x, y, y === 15 - h ? b.surface : b.ramp[2]);
+  }
+  paintCanister(put, b, 3.5, 6.5, -Math.PI * 0.62, 3.4, 1.7);
+  paintCanister(put, b, 12.5, 6.5, -Math.PI * 0.38, 3.4, 1.7);
+  paintCanister(put, b, 8, 5.5, -Math.PI / 2, 4, 2.1);
+  outline(b.ink);
+  put(8, 0, b.surface);
+  put(2, 1, b.ramp[1]);
+  put(14, 1, b.ramp[1]);
+  return px;
+}
+
 /** 16x16 icon for the alchemist's attack: a round flask of glowing poison, corked, bubbles rising off it. */
 export function flaskIcon(b: BrewColors = PLAGUE_BREW): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();

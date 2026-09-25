@@ -52,6 +52,18 @@ export const HEX_TOX: ToxStyle = {
   suffix: '_witch',
 };
 
+export const CHEM_TOX: ToxStyle = {
+  core: 0xfbffd6,
+  hot: 0xe2ff4a,
+  mid: 0xa6d80e,
+  deep: 0x4a6e0a,
+  murk: 0x222e0a,
+  tints: [0xfbffd6, 0xe2ff4a, 0xa6d80e],
+  light: 0xd0ff30,
+  numbers: 0xe8ff50,
+  suffix: '_chem',
+};
+
 /** Splashes are circles on the ground seen at an angle: squash them vertically. */
 const SQUASH = 0.58;
 /** Ground effects: under every standing thing, over the ground's shadows. */
@@ -175,7 +187,7 @@ export class Splash implements Effect {
   private ground: PixelLayer;
   private air: PixelLayer;
   private glow: Phaser.GameObjects.Image;
-  private light: Phaser.GameObjects.Light;
+  private light: Phaser.GameObjects.Light | null;
   private age = 0;
   private redrawIn = 0;
   private readonly duration: number;
@@ -190,6 +202,8 @@ export class Splash implements Effect {
     y: number,
     private radius: number,
     private style: ToxStyle = PLAGUE_TOX,
+    /** False for splashes that go off beside a lit one, to keep the lights few. */
+    lit = true,
   ) {
     this.duration = 700 + radius * 20;
     this.gw = Math.ceil(radius) + 4;
@@ -201,7 +215,7 @@ export class Splash implements Effect {
     this.air = new PixelLayer(scene, this.gw * 2, this.ah + this.gh);
     this.air.image.setPosition(x - this.gw, y - this.ah).setDepth(y + 14);
     this.glow = scene.add.image(x, y - 2, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(this.style.mid).setScale(radius / 10, (radius * SQUASH) / 10).setDepth(y + 13);
-    this.light = scene.lights.addLight(x, y - 4, radius * 5, this.style.light, 2.6);
+    this.light = lit ? scene.lights.addLight(x, y - 4, radius * 5, this.style.light, 2.6) : null;
     this.draw();
   }
 
@@ -214,7 +228,7 @@ export class Splash implements Effect {
     }
     const t = this.age / this.duration;
     this.glow.setAlpha(0.9 * Math.max(0, 1 - t * 2.5));
-    this.light.intensity = 2.6 * Math.max(0, 1 - t * 2);
+    if (this.light) this.light.intensity = 2.6 * Math.max(0, 1 - t * 2);
     this.redrawIn -= dt;
     if (this.redrawIn <= 0) {
       this.redrawIn = 33;
@@ -299,7 +313,7 @@ export class Splash implements Effect {
     this.ground.destroy();
     this.air.destroy();
     this.glow.destroy();
-    this.scene.lights.removeLight(this.light);
+    if (this.light) this.scene.lights.removeLight(this.light);
   }
 }
 
@@ -327,11 +341,19 @@ interface Bubble {
  * swelling and popping in it, and a pall of green fumes rising off it. Every
  * `tick` ms it hands `bite` whatever stands in it.
  */
+export interface BogOptions {
+  /** ms between fume puffs at full strength. */
+  fumeEvery?: number;
+  /** False for bogs beside a lit one, to keep the lights few. */
+  lit?: boolean;
+}
+
 export class Bog implements Effect {
   dead = false;
   private layer: PixelLayer;
   private glow: Phaser.GameObjects.Image;
-  private light: Phaser.GameObjects.Light;
+  private light: Phaser.GameObjects.Light | null;
+  private readonly fumeEvery: number;
   private fumes: Fume[] = [];
   private bubbles: Bubble[] = [];
   private age = 0;
@@ -351,15 +373,17 @@ export class Bog implements Effect {
     private tick: number,
     private bite: (inside: Hurtbox[]) => void,
     private style: ToxStyle = PLAGUE_TOX,
+    opts: BogOptions = {},
   ) {
+    this.fumeEvery = opts.fumeEvery ?? 130;
     this.hw = Math.ceil(radius) + 3;
     this.hh = Math.ceil(radius * SQUASH) + 3;
     this.layer = new PixelLayer(world, this.hw * 2, this.hh * 2);
     this.layer.image.setPosition(x - this.hw, y - this.hh).setDepth(GROUND_DEPTH);
     this.glow = world.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(this.style.mid).setScale(radius / 10, (radius * SQUASH) / 10).setDepth(GROUND_DEPTH + 1).setAlpha(0);
-    this.light = world.lights.addLight(x, y - 8, radius * 3.4, this.style.light, 0);
+    this.light = opts.lit === false ? null : world.lights.addLight(x, y - 8, radius * 3.4, this.style.light, 0);
     this.biteIn = tick * 0.4;
-    for (let i = 0; i < 9; i++) this.bubbles.push(this.newBubble(i * 180));
+    for (let i = 0, n = Math.max(4, Math.round(radius * 0.28)); i < n; i++) this.bubbles.push(this.newBubble(i * 180));
     this.draw();
   }
 
@@ -381,7 +405,7 @@ export class Bog implements Effect {
     const fade = Math.min(1, (this.duration - this.age) / 700);
     const breathe = 0.9 + Math.sin(this.age * 0.005) * 0.1;
     this.glow.setAlpha(0.3 * breathe * grow * fade);
-    this.light.intensity = 1.5 * breathe * grow * fade;
+    if (this.light) this.light.intensity = 1.5 * breathe * grow * fade;
 
     this.biteIn -= dt;
     if (this.biteIn <= 0 && fade > 0.3) {
@@ -393,7 +417,7 @@ export class Bog implements Effect {
     // Fumes: soft puffs drifting up off the pool, fewer as it dies away.
     this.fumeIn -= dt;
     if (this.fumeIn <= 0 && fade > 0.2) {
-      this.fumeIn = 130 / Math.max(0.3, fade);
+      this.fumeIn = this.fumeEvery / Math.max(0.3, fade);
       const an = Math.random() * Math.PI * 2;
       const d = Math.sqrt(Math.random()) * this.radius * 0.8 * grow;
       const x = this.x + Math.cos(an) * d;
@@ -483,7 +507,7 @@ export class Bog implements Effect {
     this.dead = true;
     this.layer.destroy();
     this.glow.destroy();
-    this.world.lights.removeLight(this.light);
+    if (this.light) this.world.lights.removeLight(this.light);
     for (const f of this.fumes) f.img.destroy();
     this.fumes = [];
   }
@@ -498,26 +522,26 @@ interface Dose {
 /**
  * Poison working in the monsters it touched: every TICK ms each one takes
  * DAMAGE per stack, a puff of green rising off it, until it wears off.
- * Fresh doses stack up to MAX_STACKS and renew the time.
+ * Fresh doses stack up to `maxStacks` and renew the time.
  */
 export class Venom {
   static readonly TICK = 500;
   static readonly DAMAGE = 2;
-  static readonly MAX_STACKS = 3;
   private doses = new Map<Hurtbox, Dose>();
 
   constructor(
     private world: WorldScene,
     private style: ToxStyle = PLAGUE_TOX,
+    private maxStacks = 3,
   ) {}
 
   dose(h: Hurtbox, time: number, stacks = 1): void {
     const d = this.doses.get(h);
     if (d) {
       d.left = Math.max(d.left, time);
-      d.stacks = Math.min(Venom.MAX_STACKS, d.stacks + stacks);
+      d.stacks = Math.min(this.maxStacks, d.stacks + stacks);
     } else {
-      this.doses.set(h, { left: time, tickIn: Venom.TICK, stacks: Math.min(Venom.MAX_STACKS, stacks) });
+      this.doses.set(h, { left: time, tickIn: Venom.TICK, stacks: Math.min(this.maxStacks, stacks) });
     }
   }
 
@@ -535,7 +559,7 @@ export class Venom {
         d.tickIn += Venom.TICK;
         const by = h.y - h.bodyY;
         h.hurt({ damage: Venom.DAMAGE * d.stacks, heavy: false, knock: 0, fromX: h.x, fromY: by, poison: this.style.numbers });
-        this.world.debris(this.style.tints, Math.round(h.x), Math.round(by), 2 + d.stacks, h.y + 12, 'spores');
+        this.world.debris(this.style.tints, Math.round(h.x), Math.round(by), 2 + Math.min(3, d.stacks), h.y + 12, 'spores');
         if (bitten++ === 0) firstX = h.x;
       }
       if (d.left <= 0) this.doses.delete(h);

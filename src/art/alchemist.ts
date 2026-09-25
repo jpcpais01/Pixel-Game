@@ -14,9 +14,15 @@
 // The hex witch is his other look on the same rig: a crooked pointed hat, a
 // pale green face with a hooked nose and long silver hair, a tattered teal
 // robe under an aubergine shawl, bony green hands and a violet brew.
+//
+// Chemtech is his gameplay subtype on the same rig: a steel helmet with a
+// brass brow band and a glass chem tube on top, a black gas mask with round
+// acid lenses, a respirator snout and twin filters, rusted copper pauldrons,
+// a charcoal rubber coat under a leather apron, a pressure tank on the back
+// and chartreuse chem in metal canisters instead of glass flasks.
 
 import { PixelCanvas, cyl, sphere, type Material, type RGB } from './pixel';
-import { BEAK, BOOT, GLASS, GOLD, HEX_BREW, HEX_CORE, HEX_EYE, HEX_HOT, HEX_MID, LEATHER, LENS, MANTLE, PLAGUE_COAT, PLAGUE_HAT, TOXIN, TOX_CORE, TOX_HOT, TOX_MID, TROUSER, WITCH_HAIR, WITCH_ROBE, WITCH_SHAWL, WITCH_SKIN, WOOD } from './palette';
+import { BEAK, BOOT, BRASS, CHEM_BREW, CHEM_COAT, CHEM_COPPER, CHEM_CORE, CHEM_HOT, CHEM_LENS, CHEM_MID, CHEM_RUBBER, CHEM_STEEL, GLASS, GOLD, HEX_BREW, HEX_CORE, HEX_EYE, HEX_HOT, HEX_MID, LEATHER, LENS, MANTLE, PLAGUE_COAT, PLAGUE_HAT, TOXIN, TOX_CORE, TOX_HOT, TOX_MID, TROUSER, WITCH_HAIR, WITCH_ROBE, WITCH_SHAWL, WITCH_SKIN, WOOD } from './palette';
 import { DIRS, type Dir } from './wizard';
 
 export const ALCH_W = 48;
@@ -79,6 +85,10 @@ export interface AlchemistLook {
   /** The hex witch: pointed hat, face and nose, long hair, tattered hem. */
   witch: boolean;
   hair?: Material;
+  /** Chemtech: helmet, gas mask, pressure tank, apron and canisters. */
+  chem?: boolean;
+  /** Animation speeds that differ from the usual ones. */
+  fps?: Partial<Record<AlchemistAnim, number>>;
 }
 
 export const PLAGUE_LOOK: AlchemistLook = {
@@ -114,7 +124,26 @@ export const WITCH_LOOK: AlchemistLook = {
   hair: WITCH_HAIR,
 };
 
-export const ALCHEMIST_LOOKS = [PLAGUE_LOOK, WITCH_LOOK];
+export const CHEM_LOOK: AlchemistLook = {
+  key: 'alchemist_chem',
+  coat: CHEM_COAT,
+  mantle: CHEM_COPPER,
+  hat: CHEM_STEEL,
+  face: CHEM_RUBBER,
+  eye: CHEM_LENS,
+  gloves: BOOT,
+  band: BRASS,
+  brew: CHEM_BREW,
+  core: CHEM_CORE,
+  hot: CHEM_HOT,
+  mid: CHEM_MID,
+  witch: false,
+  chem: true,
+  // A quicker, flatter lob: canisters fly more often.
+  fps: { throw: 23 },
+};
+
+export const ALCHEMIST_LOOKS = [PLAGUE_LOOK, WITCH_LOOK, CHEM_LOOK];
 
 /** The look being drawn; set by buildAlchemistFrames. */
 let S: AlchemistLook = PLAGUE_LOOK;
@@ -148,6 +177,10 @@ function place(view: View, arm: 'a' | 'b', q: Hand, U: number, hx: number): Plac
 
 /** A flask of poison held at (x, y): a round glass belly of glowing green, a neck and a cork. */
 function heldFlask(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: number, bias: number, seed: number): void {
+  if (S.chem) {
+    heldCanister(c, x, y, size, boil, bias, seed);
+    return;
+  }
   const r = size === 2 ? 2.4 : 1.75;
   const by = y - r + 0.2;
   c.part();
@@ -169,6 +202,33 @@ function heldFlask(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: numb
     for (let i = 0; i < 3; i++) {
       const up = ((seed * 3 + i * 5) % 7) + 1;
       c.spark(x + ((i + seed) % 3) - 1, neckTop - 1 - up * boil, i === 0 ? S.core : S.hot, 0.55 * boil);
+    }
+  }
+}
+
+/** A chem canister held at (x, y): a steel cylinder with brass caps, a valve, and a window of glowing chem. */
+function heldCanister(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: number, bias: number, seed: number): void {
+  const hw = size === 2 ? 2.1 : 1.4;
+  const bot = Math.round(y);
+  const top = bot - (size === 2 ? 6 : 4);
+  c.part();
+  c.shape(top, bot, () => [x - hw, x + hw], S.hat, (_x, _y, t) => cyl(t, 0.1), { bias });
+  c.part();
+  c.shape(top + 1, bot - 1, () => [x - hw * 0.5, x + hw * 0.5], S.brew, (_x, _y, t) => cyl(t, 0), { bias: bias + (boil > 0.6 ? 1 : 0) });
+  c.part();
+  c.shape(top, top, () => [x - hw, x + hw], BRASS, (_x, _y, t) => cyl(t, -0.5), { bias });
+  c.shape(bot, bot, () => [x - hw, x + hw], BRASS, (_x, _y, t) => cyl(t, 0.5), { bias });
+  c.px(x, top - 1, BRASS, sphere(-0.2, -0.7));
+  // The chem's light through the window, and vapour hissing off the valve as it boils.
+  const k = 0.3 + boil * 0.5;
+  const my = (top + bot) / 2;
+  c.spark(x, my, S.hot, k * 0.6);
+  c.spark(x - hw - 0.5, my, S.mid, k * 0.3);
+  c.spark(x + hw + 0.5, my, S.mid, k * 0.3);
+  if (boil > 0) {
+    for (let i = 0; i < 3; i++) {
+      const up = ((seed * 3 + i * 5) % 7) + 1;
+      c.spark(x + ((i + seed) % 3) - 1, top - 1 - up * boil, i === 0 ? S.core : S.hot, 0.55 * boil);
     }
   }
 }
@@ -247,6 +307,10 @@ function lenses(c: PixelCanvas, pts: [number, number][], blink: boolean | undefi
  * buckle. The witch's crown rises to a tall point that bends over backwards.
  */
 function hat(c: PixelCanvas, cx: number, U: number, view: View): void {
+  if (S.chem) {
+    helmet(c, cx, U, view);
+    return;
+  }
   const brimY = 9.4 + U;
   c.part();
   if (view === 'side') {
@@ -286,6 +350,62 @@ function hat(c: PixelCanvas, cx: number, U: number, view: View): void {
   if (view === 'side') c.px(cx - 2, 8 + U, GOLD, sphere(-0.4, -0.3));
 }
 
+/** Chemtech's steel helmet: a riveted dome, a brass brow band, and a glass tube of chem standing on top. */
+function helmet(c: PixelCanvas, cx: number, U: number, view: View): void {
+  const x = cx + (view === 'side' ? 0.6 : 0);
+  c.part();
+  c.ellipse(x, 8 + U, 3.9, 2.9, S.hat, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.35, 1) });
+  // Rivets round the dome, and a seam over the crown.
+  for (const [dx, dy] of [[-3, 8], [3, 8]] as const) c.shade(Math.round(x + dx), dy + U, 1);
+  if (view !== 'side') for (let y = 6; y <= 9; y++) c.shade(Math.round(x), y + U, view === 'up' ? -1 : 1);
+  c.part();
+  c.shape(10 + U, 10 + U, () => [x - 3.9, x + 3.9], S.band, (_x, _y, t) => cyl(t, 0.1));
+  // From the side, a short visor juts over the lenses.
+  if (view === 'side') c.px(Math.round(x - 4.4), 10 + U, S.band, sphere(-0.7, 0.2));
+  // The chem tube: a cap, glass and glowing chem, set to one side of the crown.
+  c.part();
+  const tx = Math.round(x + (view === 'side' ? 1.6 : 2));
+  c.px(tx, 3 + U, S.band, sphere(0, -0.7));
+  c.px(tx, 4 + U, GLASS, sphere(-0.3, -0.5));
+  c.px(tx, 5 + U, S.brew, sphere(0, 0.1));
+  c.spark(tx, 5 + U, S.mid, 0.45);
+  c.spark(tx, 4 + U, S.hot, 0.2);
+}
+
+/** Chemtech from the front: a black gas mask, big round acid lenses, a respirator snout and a filter on each cheek. */
+function chemMask(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+  c.part();
+  c.ellipse(cx, 12 + U, 3.0, 2.4, S.face);
+  // Twin filters, jutting out past the cheeks.
+  c.part();
+  c.ellipse(cx - 3.3, 14.2 + U, 1.3, 1.25, S.mantle);
+  c.ellipse(cx + 3.3, 14.2 + U, 1.3, 1.25, S.mantle, { bias: -1 });
+  c.px(cx - 4, 14 + U, S.band, sphere(-0.3, 0));
+  c.px(cx + 3, 14 + U, S.band, sphere(0.3, 0));
+  // The respirator snout, with a brass grille.
+  c.part();
+  c.ellipse(cx, 14 + U, 1.6, 1.3, S.face, { bias: 1 });
+  c.px(cx - 1, 14 + U, S.band, sphere(-0.3, 0.3));
+  c.px(cx, 14 + U, S.band, sphere(0.3, 0.3), { bias: -1 });
+  lenses(c, [[9, 11 + U], [10, 11 + U], [9, 12 + U], [10, 12 + U], [13, 11 + U], [14, 11 + U], [13, 12 + U], [14, 12 + U]], blink);
+}
+
+/** Chemtech's pressure tank, from behind: a steel cylinder with brass caps and a window of chem down the middle. */
+function tankBack(c: PixelCanvas, cx: number, U: number): void {
+  c.part();
+  c.shape(15 + U, 22 + U, () => [cx - 2.6, cx + 2.6], S.hat, (_x, _y, t, u) => sphere(t * 0.95, u * 0.5 - 0.3, 1));
+  c.part();
+  c.shape(16 + U, 21 + U, () => [cx - 1, cx + 1], S.brew, (_x, _y, t) => cyl(t, 0));
+  c.spark(cx, 18 + U, S.hot, 0.45);
+  c.part();
+  c.shape(14 + U, 14 + U, () => [cx - 2.1, cx + 2.1], S.band, (_x, _y, t) => cyl(t, -0.5));
+  c.shape(23 + U, 23 + U, () => [cx - 2.1, cx + 2.1], S.band, (_x, _y, t) => cyl(t, 0.5));
+  // Hoses from the valve up over the shoulders to the mask.
+  c.part();
+  c.capsule(cx - 1.4, 14.2 + U, cx - 3.8, 12.6 + U, 0.55, 0.5, S.face);
+  c.capsule(cx + 1.4, 14.2 + U, cx + 3.8, 12.6 + U, 0.55, 0.5, S.face);
+}
+
 /** A ragged hem: every other pixel of the bottom row torn away. */
 function tatter(c: PixelCanvas, y: number, x0: number, x1: number): void {
   for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) if ((x & 1) === 0 && c.filled(x, y) && c.filled(x, y - 1)) c.erase(x, y);
@@ -310,6 +430,12 @@ function mantle(c: PixelCanvas, cx: number, U: number, l: number, r: number): vo
     const k = Math.sqrt(u) * 0.8 + 0.2;
     return [cx - l * k, cx + r * k];
   }, S.mantle, (_x, _y, t, u) => sphere(t * 0.95, u - 0.6, 1));
+  if (S.chem) {
+    // Pauldron rivets, and the plates' lower rim in shadow.
+    c.px(Math.round(cx - l * 0.7), top + 2, S.band, sphere(-0.4, -0.4));
+    c.px(Math.round(cx + r * 0.7) - 1, top + 2, S.band, sphere(0.4, -0.4));
+    for (let x = Math.floor(cx - l); x <= Math.ceil(cx + r); x++) if (c.filled(x, top + 4)) c.shade(x, top + 4, -1);
+  }
   if (S.witch) {
     // The shawl's ragged edge.
     const y = top + 4;
@@ -386,9 +512,21 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
   for (let y = waist + 1; y <= hem; y++) c.shade(cx + Math.round(((y - waist) / (hem - waist)) * p.sway), y, -2);
   for (let y = top + 2; y < waist; y++) c.shade(cx, y, -1);
   if (S.witch) tatter(c, hem, cx - 6, cx + 6);
+  if (S.chem) {
+    // A heavy leather apron down the front, riveted at the corners.
+    c.part();
+    c.shape(top + 3, hem, (y) => {
+      const u = (y - top - 3) / (hem - top - 3);
+      const hw = 2.2 + u * 0.9;
+      const sw = y > waist ? ((y - waist) / (hem - waist)) * p.sway : 0;
+      return [cx - hw + sw, cx + hw + sw];
+    }, LEATHER, (_x, _y, t, u) => sphere(t * 0.8, u * 0.4 - 0.15, 1));
+    c.px(cx - 3, hem - 1, S.band, sphere(-0.3, 0));
+    c.px(cx + 2, hem - 1, S.band, sphere(0.3, 0));
+  }
   // Brass buttons down the front, where the beak doesn't cover them.
   c.part();
-  if (!S.witch) for (const y of [19, 21]) c.px(cx - 2, y + U, GOLD, sphere(-0.3, -0.4));
+  if (!S.witch && !S.chem) for (const y of [19, 21]) c.px(cx - 2, y + U, GOLD, sphere(-0.3, -0.4));
   // Belt and buckle.
   c.part();
   c.shape(waist, waist, () => [cx - 4.3, cx + 4.3], LEATHER, (_x, _y, t) => cyl(t, 0));
@@ -410,6 +548,14 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
     c.px(cx, 19 + U, S.brew, sphere(0.2, 0.2));
     c.spark(cx, 19 + U, S.mid, 0.35);
     witchFace(c, cx, U, p.blink);
+    hat(c, cx, U, 'down');
+    if (!fa.behind) armA();
+    if (!fb.behind) armB();
+    return;
+  }
+
+  if (S.chem) {
+    chemMask(c, cx, U, p.blink);
     hat(c, cx, U, 'down');
     if (!fa.behind) armA();
     if (!fb.behind) armB();
@@ -481,6 +627,12 @@ function drawUp(c: PixelCanvas, p: Pose, seed: number): void {
     hair(c, 12 + U, 19 + U, (u) => cx - 3.3 + u * 0.5, (u) => cx + 3.3 - u * 0.5);
     tatter(c, 19 + U, cx - 3, cx + 3);
     for (const x of [cx - 1, cx + 1]) for (let y = 13; y <= 18; y++) c.shade(x, y + U, -1);
+  } else if (S.chem) {
+    // The back of the mask's rubber hood, its straps, and the tank over it all.
+    c.part();
+    c.ellipse(cx, 12 + U, 3.2, 2.6, S.face, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+    for (let x = cx - 3; x <= cx + 2; x++) c.shade(x, 12 + U, 1);
+    tankBack(c, cx, U);
   } else {
     // The hood behind the mask, then the hat over it.
     c.part();
@@ -510,6 +662,18 @@ function drawSide(c: PixelCanvas, p: Pose, seed: number): void {
   boot(c, cx + 0.4 - p.footB, 29.7 - lift(p.footB), true, -1);
   leg(c, cx - 0.6, 25.5 + L, cx - 0.4 - p.footA, 28.4 - lift(p.footA));
   boot(c, cx - 1.2 - p.footA, 29.7 - lift(p.footA), true);
+
+  if (S.chem) {
+    // The pressure tank on his back, peeking out behind the coat.
+    c.part();
+    c.shape(14 + U, 22 + U, () => [hx + 2.2, hx + 6.2], S.hat, (_x, _y, t, u) => sphere(t * 0.9, u * 0.5 - 0.3, 1), { bias: -1 });
+    c.part();
+    for (let y = 16; y <= 20; y++) c.px(Math.round(hx + 5), y + U, S.brew, sphere(0.5, 0));
+    c.spark(hx + 5, 18 + U, S.hot, 0.35);
+    c.part();
+    c.shape(13 + U, 13 + U, () => [hx + 2.6, hx + 5.8], S.band, (_x, _y, t) => cyl(t, -0.5));
+    c.shape(23 + U, 23 + U, () => [hx + 2.6, hx + 5.8], S.band, (_x, _y, t) => cyl(t, 0.5));
+  }
 
   // The greatcoat in profile, its tails swinging out behind.
   const top = 15 + U;
@@ -552,6 +716,32 @@ function drawSide(c: PixelCanvas, p: Pose, seed: number): void {
     c.shade(hx - 3, 12 + U, 1);
     c.shade(hx - 2, 13 + U, -2);
     lenses(c, [[hx - 2, 11 + U]], p.blink);
+    hat(c, hx, U, 'side');
+    arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.3, 1], { size: p.flask, boil: p.boil, seed });
+    return;
+  }
+
+  if (S.chem) {
+    // A leather apron over the front of the coat.
+    c.part();
+    c.shape(waist + 1, hem, (y) => {
+      const u = (y - waist) / (hem - waist);
+      const x0 = hx + (cx - hx) * u - 3.4;
+      return [x0, x0 + 2];
+    }, LEATHER, (_x, _y, t) => sphere(t * 0.8 - 0.2, 0.1, 1));
+    // The mask in profile: a rubber hood, the snout thrust forward with a
+    // filter on its end, and a hose from under it back to the tank.
+    c.part();
+    c.ellipse(hx - 0.2, 12 + U, 2.8, 2.4, S.face);
+    c.part();
+    c.capsule(hx - 2.2, 13.4 + U, hx - 3.9, 14.1 + U, 1.35, 1.1, S.face, { bias: 1 });
+    c.part();
+    c.ellipse(hx - 4.8, 14.2 + U, 1.1, 1.45, S.mantle);
+    c.px(Math.round(hx - 5.2), 14 + U, S.band, sphere(-0.6, 0));
+    c.part();
+    c.capsule(hx - 3.2, 15.4 + U, hx - 0.4, 16.4 + U, 0.55, 0.55, S.face);
+    c.capsule(hx - 0.4, 16.4 + U, hx + 2.8, 14.4 + U, 0.55, 0.55, S.face);
+    lenses(c, [[hx - 2, 11 + U], [hx - 2, 12 + U], [hx - 1, 11 + U]], p.blink);
     hat(c, hx, U, 'side');
     arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.3, 1], { size: p.flask, boil: p.boil, seed });
     return;
@@ -755,6 +945,7 @@ export const BIG_FLASK_SIZE = 15;
 
 /** A flask tumbling end over end: frame `i` of FLASK_FRAMES, turned i/FLASK_FRAMES of a circle. */
 export function flaskFrame(i: number, big: boolean, look: AlchemistLook = PLAGUE_LOOK): PixelCanvas {
+  if (look.chem) return canisterFrame(i, big, look);
   const S = big ? BIG_FLASK_SIZE : FLASK_SIZE;
   const c = new PixelCanvas(S, S);
   const a = (i / FLASK_FRAMES) * Math.PI * 2 - Math.PI / 2;
@@ -781,6 +972,34 @@ export function flaskFrame(i: number, big: boolean, look: AlchemistLook = PLAGUE
     for (let k = 0; k < 6; k++) {
       const t = (k / 6) * Math.PI * 2 + i * 0.6;
       c.spark(bx + Math.cos(t) * (r + 1.2), by + Math.sin(t) * (r + 1.2), cols[k % 2], 0.4);
+    }
+  }
+  return c;
+}
+
+/** A chem canister tumbling end over end: steel, brass caps, a glowing band of chem round its middle. */
+function canisterFrame(i: number, big: boolean, look: AlchemistLook): PixelCanvas {
+  const S = big ? BIG_FLASK_SIZE : FLASK_SIZE;
+  const c = new PixelCanvas(S, S);
+  const a = (i / FLASK_FRAMES) * Math.PI * 2 - Math.PI / 2;
+  const ux = Math.cos(a);
+  const uy = Math.sin(a);
+  const len = big ? 3.3 : 2.4;
+  const r = big ? 2.0 : 1.45;
+  const m = S / 2;
+  c.part();
+  c.capsule(m - ux * len, m - uy * len, m + ux * len, m + uy * len, r, r, look.hat);
+  c.part();
+  c.capsule(m - ux * len * 0.4, m - uy * len * 0.4, m + ux * len * 0.4, m + uy * len * 0.4, r * 0.75, r * 0.75, look.brew);
+  c.part();
+  c.px(m + ux * (len + r * 0.6), m + uy * (len + r * 0.6), look.band, sphere(ux * 0.6, uy * 0.6 - 0.3));
+  c.px(m - ux * (len + r * 0.5), m - uy * (len + r * 0.5), look.band, sphere(-ux * 0.6, -uy * 0.6 - 0.3));
+  c.spark(m, m, look.hot, big ? 0.7 : 0.5);
+  if (big) {
+    const cols: RGB[] = [look.hot, look.mid];
+    for (let k = 0; k < 6; k++) {
+      const t = (k / 6) * Math.PI * 2 + i * 0.6;
+      c.spark(m + Math.cos(t) * (r + 2), m + Math.sin(t) * (r + 2), cols[k % 2], 0.35);
     }
   }
   return c;

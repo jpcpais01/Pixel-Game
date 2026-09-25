@@ -5,7 +5,7 @@
 import Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, WIZARD_LOOKS, type FrameMeta } from './wizard';
-import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, PYRO_SPELL, PYRO_METEOR_H, PYRO_METEOR_W, meteorIcon, pyroMeteor, scorchCanvas, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, fistIcon, barrageIcon, flaskIcon, bogIcon, fumeCanvas, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
+import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, PYRO_SPELL, PYRO_METEOR_H, PYRO_METEOR_W, meteorIcon, pyroMeteor, scorchCanvas, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, saberIcon, forceIcon, fistIcon, barrageIcon, flaskIcon, bogIcon, canisterIcon, chemBarrageIcon, fumeCanvas, CHEM_BREW_COLORS, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
 import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FRAMES, twirlStart, TWIRL_FPS, type JediMeta } from './jedi';
 import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, buildAlchemistFrames, flaskFrame } from './alchemist';
 import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE, arrowFrame, buildArcherFrames, stuckArrowFrame } from './archer';
@@ -225,7 +225,8 @@ export function buildAllTextures(scene: Phaser.Scene): void {
 
   // Alchemist once per look, and the flasks each throws (tumbling frames r0..r7),
   // plus the fumes of each bog: 'alchemist'/'flask'/'fume' for the plague
-  // doctor, with a '_witch' suffix for the hex witch.
+  // doctor, with a '_witch' suffix for the hex witch and '_chem' for Chemtech
+  // (whose flasks are canisters).
   for (const look of ALCHEMIST_LOOKS) {
     const sfx = look.key.slice('alchemist'.length);
     const af = buildAlchemistFrames(look);
@@ -235,7 +236,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
         scene.anims.create({
           key: `${look.key}_${a.name}_${d}`,
           frames: af.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
+          frameRate: look.fps?.[a.name] ?? a.fps,
           repeat: a.loop ? -1 : 0,
         });
       }
@@ -243,11 +244,11 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     for (const [key, big, size] of [[`flask${sfx}`, false, FLASK_SIZE], [`flask_big${sfx}`, true, BIG_FLASK_SIZE]] as const) {
       register(scene, key, pack(frameList(Array.from({ length: FLASK_FRAMES }, (_, i) => flaskFrame(i, big, look)), 'r'), size, size), size, size);
     }
-    const brew = look.witch ? HEX_BREW_COLORS : PLAGUE_BREW;
+    const brew = look.chem ? CHEM_BREW_COLORS : look.witch ? HEX_BREW_COLORS : PLAGUE_BREW;
     const fumes = scene.textures.addCanvas(`fume${sfx}`, toCanvas(18 * 3, 18, sideBySide(18, 18, [0, 1, 2].map((v) => fumeCanvas(18, v, brew)))))!;
     [0, 1, 2].forEach((v) => fumes.add(`f${v}`, 0, v * 18, 0, 18, 18));
-    scene.textures.addCanvas(`icon_flask${sfx}`, toCanvas(16, 16, flaskIcon(brew)));
-    scene.textures.addCanvas(`icon_bog${sfx}`, toCanvas(16, 16, bogIcon(brew)));
+    scene.textures.addCanvas(`icon_flask${sfx}`, toCanvas(16, 16, look.chem ? canisterIcon(brew) : flaskIcon(brew)));
+    scene.textures.addCanvas(`icon_bog${sfx}`, toCanvas(16, 16, look.chem ? chemBarrageIcon(brew) : bogIcon(brew)));
   }
 
   // Archer once per look, and the arrows each looses: 'arrow' frames r0..r15
