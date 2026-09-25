@@ -4,16 +4,15 @@ import {
   CLOUD_LAYERS,
   CLOUD_W,
   HORIZON,
-  RAYS_H,
-  RAYS_W,
   birdSheet,
   cloudStrip,
+  godRays,
   paintIsland,
   paintIslet,
   paintSky,
   petalSheet,
+  rainbow,
   sunAt,
-  sunRays,
   waterfall,
 } from '../art/skyArena';
 
@@ -155,7 +154,10 @@ class SkyBackdrop implements Backdrop {
   private vh = 0;
   private sky: Phaser.GameObjects.Image;
   private sunGlow: Phaser.GameObjects.Image;
-  private rays: Phaser.GameObjects.Image[];
+  private rays: Phaser.GameObjects.Image;
+  private bloom: Phaser.GameObjects.Image;
+  private rainbow: Phaser.GameObjects.Image;
+  private mists: Phaser.GameObjects.Image[] = [];
   private strips: Strip[] = [];
   private islets: Floater[] = [];
   private birds: Bird[] = [];
@@ -173,8 +175,7 @@ class SkyBackdrop implements Backdrop {
     const L = this.layer;
     this.sky = scene.add.image(0, 0, '__DEFAULT').setOrigin(0);
     this.sunGlow = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe2a8).setScale(7);
-    this.rays = ['sky_rays0', 'sky_rays1'].map((k) => scene.add.image(0, 0, k).setBlendMode(Phaser.BlendModes.ADD));
-    L.add([this.sky, this.sunGlow, ...this.rays]);
+    L.add([this.sky, this.sunGlow]);
     this.birds = [0, 1, 2, 3].map((i) => {
       const img = scene.add.image(0, 0, 'sky_bird', 0);
       L.add(img);
@@ -194,6 +195,11 @@ class SkyBackdrop implements Backdrop {
       return { img, fx: d.fx, fy: d.fy, phase: i * 1.3 };
     });
     this.strips.push(this.strip('sky_cloud1', 4, 0.74, 1));
+    // Sunbeams fall across the far clouds and haze, and a wide bloom
+    // washes out everything near the sun.
+    this.rays = scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD);
+    this.bloom = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffd79a);
+    L.add([this.rays, this.bloom]);
     this.island = scene.add.image(0, 0, '__DEFAULT').setOrigin(0);
     L.add(this.island);
     const petals = scene.add.particles(0, 0, 'sky_petal', {
@@ -207,17 +213,21 @@ class SkyBackdrop implements Backdrop {
       frequency: 420,
     });
     L.add(petals);
-    this.falls = [0, 1].map(() => scene.add.tileSprite(0, 0, 6, 1, 'sky_fall').setOrigin(0));
+    this.falls = [0, 1, 2].map(() => scene.add.tileSprite(0, 0, 8, 1, 'sky_fall').setOrigin(0));
     L.add(this.falls);
-    this.strips.push(this.strip('sky_cloud2', 9, 1.02, 2));
+    // A rainbow in the falls' spray; mist glows where they meet the clouds.
+    this.rainbow = scene.add.image(0, 0, 'sky_rainbow').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD);
+    L.add(this.rainbow);
+    this.strips.push(this.strip('sky_cloud2', 9, 1.06, 2));
+    this.mists = this.falls.map(() => scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xf4f8ff).setScale(2.2, 1.2));
+    L.add(this.mists);
   }
 
   private static textures(scene: Phaser.Scene): void {
     const tex = scene.textures;
     if (tex.exists('sky_cloud0')) return;
     CLOUD_LAYERS.forEach((l, i) => tex.addCanvas(`sky_cloud${i}`, cloudStrip(l).toCanvas()));
-    tex.addCanvas('sky_rays0', sunRays(3).toCanvas());
-    tex.addCanvas('sky_rays1', sunRays(11).toCanvas());
+    tex.addCanvas('sky_rainbow', rainbow(34).toCanvas());
     tex.addCanvas('sky_fall', waterfall().toCanvas());
     const bird = tex.addCanvas('sky_bird', birdSheet().toCanvas())!;
     bird.add(0, 0, 0, 0, 5, 3);
@@ -242,18 +252,25 @@ class SkyBackdrop implements Backdrop {
     const tex = this.scene.textures;
     const key = `sky_bg_${w}x${h}`;
     if (key !== this.skyKey) {
-      if (!tex.exists(key)) tex.addCanvas(key, paintSky(w, h).toCanvas());
+      if (!tex.exists(key)) {
+        tex.addCanvas(key, paintSky(w, h).toCanvas());
+        tex.addCanvas(`${key}_rays`, godRays(w, h, 61).toCanvas());
+      }
       this.sky.setTexture(key);
-      if (this.skyKey) tex.remove(this.skyKey);
+      this.rays.setTexture(`${key}_rays`);
+      if (this.skyKey) {
+        tex.remove(this.skyKey);
+        tex.remove(`${this.skyKey}_rays`);
+      }
       this.skyKey = key;
     }
     const sun = sunAt(w, h);
     this.sunGlow.setPosition(sun.x, sun.y);
-    for (const r of this.rays) r.setPosition(sun.x, sun.y).setScale(Math.max(1, (vw * 0.9) / RAYS_W), Math.max(1, (vh * 0.9) / RAYS_H));
+    this.bloom.setPosition(sun.x, sun.y).setScale(vw / 32, vh / 40);
     for (const s of this.strips) s.sprite.setPosition(0, Math.round(vh * s.at) - s.base).setSize(w + 1, s.sprite.height);
 
     // The island: sized to the view, centred, floating in the clouds.
-    const rx = Math.round(Math.min(vw * 0.25, vh * 0.54));
+    const rx = Math.round(Math.min(vw * 0.25, vh * 0.5));
     if (rx !== this.islandRx) {
       const art = paintIsland(rx);
       const k = `sky_island_${rx}`;
@@ -267,13 +284,16 @@ class SkyBackdrop implements Backdrop {
       this.islandY = -art.cy;
     }
     const ix = Math.round(vw / 2) + this.islandX;
-    const iy = Math.round(vh * 0.63) + this.islandY;
+    const iy = Math.round(vh * 0.67) + this.islandY;
     this.island.setData('home', { x: ix, y: iy });
     this.canopy.setTo(ix + this.canopyLocal.x, iy + this.canopyLocal.y, this.canopyLocal.w, this.canopyLocal.h);
     this.falls.forEach((f, i) => {
       const s = this.fallSpots[i];
-      f.setSize(6, Math.max(8, Math.ceil(vh - (iy + s.y)) + 4));
+      f.setSize(8, Math.max(8, Math.ceil(vh - (iy + s.y)) + 4));
+      this.mists[i].setPosition(ix + s.x + 4, Math.round(vh * 0.97));
     });
+    const rf = this.fallSpots[2];
+    this.rainbow.setPosition(ix + rf.x + 14, Math.round(vh * 0.92));
   }
 
   update(time: number, t: number): void {
@@ -300,8 +320,10 @@ class SkyBackdrop implements Backdrop {
       const y = this.vh * b.y + Math.sin(t * 0.7 + b.phase) * 3;
       b.img.setPosition(snap(x, z), snap(y, z)).setFrame(Math.floor(time / 160 + b.phase * 3) % 2);
     }
-    this.rays[0].setAlpha(0.55 + 0.25 * Math.sin(time * 0.0006));
-    this.rays[1].setAlpha(0.55 - 0.25 * Math.sin(time * 0.0006));
-    this.sunGlow.setAlpha(0.4 + 0.05 * Math.sin(time * 0.0011));
+    this.rays.setAlpha(0.8 + 0.2 * Math.sin(time * 0.0005));
+    this.sunGlow.setAlpha(0.45 + 0.05 * Math.sin(time * 0.0011));
+    this.bloom.setAlpha(0.2 + 0.04 * Math.sin(time * 0.0007));
+    this.rainbow.setAlpha(0.75 + 0.25 * Math.sin(t * 0.4));
+    for (const [i, m] of this.mists.entries()) m.setAlpha(0.3 + 0.08 * Math.sin(t * 1.3 + i));
   }
 }
