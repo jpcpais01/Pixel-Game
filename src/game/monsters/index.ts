@@ -6,6 +6,8 @@ import { Glowmoth } from './Glowmoth';
 import type { Monster, Target } from './Monster';
 import { Puffcap } from './Puffcap';
 import { Warden } from './Warden';
+import { Banshee, Shade, Wisp } from './Spirits';
+import { Queen } from './Queen';
 
 export { Monster, type Target } from './Monster';
 
@@ -17,6 +19,10 @@ export const MONSTERS = {
   barkling: (world: WorldScene, x: number, y: number) => new Barkling(world, x, y),
   glowmoth: (world: WorldScene, x: number, y: number) => new Glowmoth(world, x, y),
   warden: (world: WorldScene, x: number, y: number) => new Warden(world, x, y),
+  wisp: (world: WorldScene, x: number, y: number) => new Wisp(world, x, y),
+  shade: (world: WorldScene, x: number, y: number) => new Shade(world, x, y),
+  banshee: (world: WorldScene, x: number, y: number) => new Banshee(world, x, y),
+  queen: (world: WorldScene, x: number, y: number) => new Queen(world, x, y),
 } satisfies Record<string, (world: WorldScene, x: number, y: number) => Monster>;
 
 export type MonsterKind = keyof typeof MONSTERS;
@@ -26,6 +32,8 @@ export interface SpawnSpot {
   kind: MonsterKind;
   x: number;
   y: number;
+  /** ms before this spot's monster returns, instead of the region's. */
+  respawn?: number;
 }
 
 /**
@@ -56,7 +64,7 @@ export class Spawner {
         s.monster.update(dt, target, daylight);
         if (s.monster.dead) {
           s.monster = null;
-          s.wait = this.respawn;
+          s.wait = s.spot.respawn ?? this.respawn;
         }
       } else {
         s.wait -= dt;

@@ -50,6 +50,10 @@ export const MONSTER_FRAME = {
   barkling: { w: 28, h: 32, ox: 14, oy: 30 },
   glowmoth: { w: 26, h: 22, ox: 13, oy: 21 },
   warden: { w: 96, h: 116, ox: 48, oy: 113 },
+  wisp: { w: 20, h: 24, ox: 10, oy: 22 },
+  shade: { w: 30, h: 36, ox: 14, oy: 34 },
+  banshee: { w: 28, h: 38, ox: 14, oy: 36 },
+  queen: { w: 72, h: 84, ox: 36, oy: 81 },
 };
 export type FrameBox = (typeof MONSTER_FRAME)[keyof typeof MONSTER_FRAME];
 

@@ -69,6 +69,8 @@ export abstract class Monster implements Hurtbox {
   protected cooldown = 0;
   /** Height off the ground, for hops and flight: lifts the sprite, not the shadow. */
   protected hover = 0;
+  /** How solid it looks, 0..1: spirits are drawn a little see-through, and flicker. */
+  protected fade = 1;
   private glowLayer: Phaser.GameObjects.Sprite;
   private flash: Phaser.GameObjects.Sprite;
   private shadow: Phaser.GameObjects.Image;
@@ -355,13 +357,14 @@ export abstract class Monster implements Hurtbox {
       alpha = t;
       scale = 0.6 + t * 0.4;
     }
-    this.body.setPosition(rx, hy).setDepth(ry).setAlpha(alpha).setScale(scale);
-    this.glowLayer.setPosition(rx, hy).setDepth(ry + 0.1).setFrame(frame).setAlpha(alpha).setScale(scale);
+    // A spirit's body thins; its glow keeps burning.
+    this.body.setPosition(rx, hy).setDepth(ry).setAlpha(alpha * this.fade).setScale(scale);
+    this.glowLayer.setPosition(rx, hy).setDepth(ry + 0.1).setFrame(frame).setAlpha(alpha * Math.min(1, this.fade / 0.75)).setScale(scale);
     const f = this.flashT > 0;
     this.flash.setVisible(f);
     if (f) this.flash.setPosition(rx, hy).setDepth(ry + 0.2).setFrame(frame).setScale(scale).setAlpha(this.state === 'dying' ? alpha : Math.min(1, this.flashT / FLASH_TIME) * 0.85);
     const lift = Math.min(1, this.hover / 10);
-    this.shadow.setPosition(rx, ry - 1).setAlpha(alpha * (1 - lift * 0.4));
+    this.shadow.setPosition(rx, ry - 1).setAlpha(alpha * this.fade * (1 - lift * 0.4));
     this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * alpha);
     if (!this.stats.noBar) this.bar.update(dt, rx, ry - this.stats.barY, this.state === 'dying' ? 0 : this.hp, this.stats.hp, 0);
   }

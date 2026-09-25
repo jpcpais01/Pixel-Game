@@ -13,7 +13,8 @@ import type { Drift } from './Scenery';
 import { CLEARING_GROUND, CLEARING_SPAWN, CLEARING_SPAWNS, PLAZA_CX, PLAZA_CY, PLAZA_Y, clearingScenery, clearingWalkable, plazaProps } from './clearing';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
-import { warmCosmos, warmIsland } from '../art/textures';
+import { warmCosmos, warmIsland, warmSpirit } from '../art/textures';
+import { QUEEN_HOME, SPIRIT_H, SPIRIT_SPAWN, SPIRIT_SPAWNS, SPIRIT_W, spiritWalkable } from './spiritLayout';
 import { COLUMN_BASE, COLUMN_H, ISLAND_X, ISLAND_Y } from '../art/island';
 import { COLUMNS, ISLE_H, ISLE_SPAWN, ISLE_W, RING_CX, RING_CY, islandScenery, islandWalkable } from './islandLayout';
 import { GARDEN_GROUND, GARDEN_SPAWN, GARDEN_SPAWNS, POOL, gardenLayout, gardenScenery, gardenWalkable } from './sunken';
@@ -173,6 +174,40 @@ export const ARENAS: ArenaDef[] = [
       sprites: () => [
         { texture: 'warden', frame: 'idle0_r', glow: 'warden_e', x: COSMOS_CX, y: COSMOS_CY - 2, originY: 113 / 116 },
         ...OBELISKS.map((o) => ({ texture: 'cosmos_obelisk', frame: 'o0', glow: 'cosmos_obelisk_e', x: o.x, y: o.y, originY: 47 / 50 })),
+      ],
+    },
+  },
+  {
+    id: 'spirit',
+    name: 'Spirit Dungeon',
+    blurb: 'Where the restless dead wait',
+    accent: 0x6af4dc,
+    ground: {
+      painted: true,
+      w: SPIRIT_W,
+      h: SPIRIT_H,
+      warm: warmSpirit,
+      layers: [
+        { key: 'sd_floor', x: 0, y: 0 },
+        { key: 'sd_floor_e', x: 0, y: 0, glow: true },
+      ],
+    },
+    spawn: SPIRIT_SPAWN,
+    // Deeper chambers hold more and darker spirits, and they return sooner;
+    // the Hollow Queen waits at the end (see spiritLayout.ts).
+    monsters: SPIRIT_SPAWNS,
+    scenery: () => ({ trees: [], props: [], rays: [], colliders: [] }),
+    walkable: spiritWalkable,
+    drift: { tints: [0xffffff], frequency: 100000, where: () => false },
+    // Underground: no day or night, the dungeon lights itself.
+    daylight: 0,
+    preview: {
+      x: QUEEN_HOME.x,
+      y: QUEEN_HOME.y - 40,
+      sprites: () => [
+        { texture: 'queen', frame: 'idle0_r', glow: 'queen_e', x: QUEEN_HOME.x, y: QUEEN_HOME.y - 1, originY: 81 / 84 },
+        { texture: 'wisp', frame: 'idle1_r', glow: 'wisp_e', x: QUEEN_HOME.x - 52, y: QUEEN_HOME.y - 12, originY: 22 / 24 },
+        { texture: 'wisp', frame: 'idle3_l', glow: 'wisp_e', x: QUEEN_HOME.x + 56, y: QUEEN_HOME.y - 24, originY: 22 / 24 },
       ],
     },
   },
