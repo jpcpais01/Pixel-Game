@@ -104,12 +104,12 @@ export class Pyromancy implements Effect {
     const p = meteorSpot(this.caster.x, this.caster.y, dx, dy, level, dist);
     const r = meteorRadius(level);
     const pulse = 0.5 + Math.sin(this.t * 0.012) * 0.15;
-    this.mark.setVisible(true).setPosition(snap(p.x), snap(p.y)).setScale(r / 22, (r * 0.58) / 12).setAlpha(0.45 + level * 0.4);
+    this.mark.setVisible(true).setPosition(snap(p.x), snap(p.y)).setScale(r / 22, (r * 0.58) / 12).setAlpha(0.7 + level * 0.3);
     this.markFill
       .setVisible(true)
       .setPosition(snap(p.x), snap(p.y))
       .setScale((r / 22) * level, ((r * 0.58) / 12) * level)
-      .setAlpha(pulse * 0.6);
+      .setAlpha(pulse);
   }
 
   untarget(): void {
