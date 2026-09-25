@@ -17,8 +17,10 @@ import { InventoryScene } from './scenes/InventoryScene';
 import { settings } from './game/settings';
 import { sound } from './audio';
 import { setupApp } from './pwa';
+import { streamVertexBuffers } from './game/streamBuffers';
 
 setupApp();
+streamVertexBuffers();
 sound.init();
 settings.watch((s) => sound.setVolumes(s.music, s.sfx));
 setRenderQuality(settings.values.quality);
@@ -37,7 +39,9 @@ const game = new Phaser.Game({
     ...initial,
     zoom: 1 / DPR,
   },
-  render: { maxLights: 16, powerPreference: 'high-performance' },
+  // Small vertex buffers: a batch is rarely more than a few quads, and each
+  // flush gives its buffer fresh storage (see streamBuffers.ts).
+  render: { maxLights: 16, powerPreference: 'high-performance', batchSize: 512 },
   pipeline: { Lit: LitPipeline, Pixel: PixelPipeline, Sky: SkyPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
   input: { activePointers: 3 },
   // Later scenes draw on top.
