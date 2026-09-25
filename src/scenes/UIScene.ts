@@ -20,7 +20,8 @@ import { GearHud } from '../ui/gearHud';
  * Along the bottom, between the joystick and the buttons, the hotbar: nine
  * item slots, tapped or pressed 1 to 9. Active buffs show as badges under the
  * day/night toggle, draining as they run out. Gear found has a chest button
- * by the pause button (or I / G) that opens the bag (see ui/gearHud.ts).
+ * by the pause button (or I / G) opens the bag, where worn gear can be
+ * swapped (see ui/gearHud.ts).
  */
 /**
  * A touch ability button's press: where the finger went down and how far it
@@ -196,7 +197,7 @@ export class UIScene extends Phaser.Scene {
     }
     this.buffBadges = this.add.graphics();
     this.buffIcons = [];
-    this.gearHud = new GearHud(this);
+    this.gearHud = new GearHud(this, () => this.releaseAll());
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       controls.mouse = !p.wasTouch;
@@ -246,6 +247,7 @@ export class UIScene extends Phaser.Scene {
       controls.moveY = v.y / R * s;
     });
     const release = (p: Phaser.Input.Pointer) => {
+      this.gearHud.pointerUp(p);
       if (p.id === this.stickPointer) {
         this.stickPointer = null;
         controls.moveX = 0;

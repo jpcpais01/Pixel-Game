@@ -4,7 +4,7 @@
 // they log into. Changes save a moment later, so a burst of pickups is one
 // write.
 
-import { gearById, SLOTS } from './gear';
+import { gearById, SLOTS, type GearDef } from './gear';
 import { account, cloudReady, loadSave, onAccount, writeSave, type SaveData } from './cloud';
 
 /** One slot per gear type, in the order of SLOTS: equipped[i] holds a SLOTS[i] piece. */
@@ -94,6 +94,18 @@ class Collection {
   /** Ids of the items in the equip slots, skipping empty ones. */
   equippedIds(): string[] {
     return this.data.equipped.filter((id): id is string => !!id);
+  }
+
+  /** The worn gear, one piece per filled slot. */
+  equippedGear(): GearDef[] {
+    return this.equippedIds()
+      .map(gearById)
+      .filter((g): g is GearDef => !!g);
+  }
+
+  /** Gear ids the player owns. */
+  ownedGear(): string[] {
+    return this.owned().filter((id) => slotIndex(id) >= 0);
   }
 
   isEquipped(id: string): boolean {

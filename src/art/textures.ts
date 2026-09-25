@@ -17,6 +17,7 @@ import { hex } from './pixel';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
 import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
 import { GEAR } from '../game/gear';
+import { registerInventoryArt } from './invTiles';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_LOOKS, PALADIN_W, type PaladinMeta } from './paladin';
 import { buildWarriorFrames, JADE_LOOK, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, type WarriorMeta } from './warrior';
 import { WIND_DEEP } from './palette';
@@ -400,6 +401,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     scene.textures.addCanvas(g.drop, toCanvas(GEAR_DROP, GEAR_DROP, art.drop));
   }
   scene.textures.addCanvas('icon_chest', toCanvas(16, 16, chestIcon()));
+  registerInventoryArt(scene);
 
   register(scene, 'brazier', pack(frameList([0, 1, 2, 3].map(brazierFrame), 'f'), 16, 26), 16, 26);
   scene.anims.create({ key: 'brazier_burn', frames: scene.anims.generateFrameNames('brazier_e', { prefix: 'f', start: 0, end: 3 }), frameRate: 9, repeat: -1 });

@@ -1,74 +1,90 @@
-// The gear on the HUD: a chest button beside the pause button with the count
-// found, the bag it opens (every piece in a 5x4 grid, the missing ones as
-// shadows, the tapped or hovered piece's stats and the totals) and a banner
-// that slides in when a piece is picked up. Drawn in device pixels by the UI
-// scene; Graphics are only rebuilt when what they show changes.
+// The gear on the HUD: a chest button beside the pause button, the bag it
+// opens (the same inventory as the Inventory page, so pieces can be swapped
+// mid-run; see ui/inventoryView.ts), and a banner that slides in when a piece
+// is picked up. The button and banner are drawn in device pixels; the bag is
+// drawn in art pixels and scaled up to the menus' size.
 
 import Phaser from 'phaser';
-import { DPR as D } from '../game/display';
-import { GEAR, RARITY, gear, statLines, type GearDef } from '../game/gear';
+import { DPR as D, menuZoom } from '../game/display';
+import { GEAR, RARITY, gear, statLines, type GearNews } from '../game/gear';
+import { tileKey } from '../art/invTiles';
+import { InventoryView } from './inventoryView';
+import { PANEL, panelTexture, pixelText } from './widgets';
 
-const COLS = 5;
-const ROWS = 4;
 /** Banner: slide in, hold, fade out (ms). */
 const BANNER_IN = 180;
-const BANNER_TIME = 2800;
+const BANNER_TIME = 3200;
 const BANNER_OUT = 400;
+/** The bag's frame around the view, art pixels. */
+const PAD = 6;
+const TITLE_H = 16;
+const CLOSE = 13;
 
 const text = (scene: Phaser.Scene) => scene.add.bitmapText(0, 0, 'pixel', '').setLetterSpacing(-1);
 
-/** Packs stat strings into lines no wider than `max` characters. */
-function wrap(parts: string[], max: number): string[] {
-  const lines: string[] = [];
-  let cur = '';
-  for (const p of parts) {
-    if (cur && cur.length + 2 + p.length > max) {
-      lines.push(cur);
-      cur = p;
-    } else cur = cur ? `${cur}  ${p}` : p;
-  }
-  if (cur) lines.push(cur);
-  return lines;
-}
-
 export class GearHud {
   open = false;
-  private selected = -1;
   private button: Phaser.GameObjects.Graphics;
   private chest: Phaser.GameObjects.Image;
   private count: Phaser.GameObjects.BitmapText;
-  private panel: Phaser.GameObjects.Graphics;
+  /** Pieces picked up since the bag was last opened: a gold dot on the button. */
+  private unseen = 0;
+  private root: Phaser.GameObjects.Container;
+  private frame: Phaser.GameObjects.Image;
   private title: Phaser.GameObjects.BitmapText;
-  private icons: Phaser.GameObjects.Image[];
-  private lines: Phaser.GameObjects.BitmapText[] = [];
-  private drawn = '';
+  private closeBg: Phaser.GameObjects.Image;
+  private closeX: Phaser.GameObjects.BitmapText;
+  private view: InventoryView;
+  private sized = '';
   private banner: Phaser.GameObjects.Container;
   private bannerBg: Phaser.GameObjects.Graphics;
+  private bannerTile: Phaser.GameObjects.Image;
   private bannerIcon: Phaser.GameObjects.Image;
   private bannerName: Phaser.GameObjects.BitmapText;
   private bannerStats: Phaser.GameObjects.BitmapText;
-  private showing: GearDef | null = null;
+  private bannerNote: Phaser.GameObjects.BitmapText;
+  private showing: GearNews | null = null;
   private bannerT = 0;
 
-  constructor(private scene: Phaser.Scene) {
+  /** `onOpen` lets go of the controls held when the bag opens. */
+  constructor(
+    private scene: Phaser.Scene,
+    private onOpen: () => void,
+  ) {
     this.button = scene.add.graphics();
     this.chest = scene.add.image(0, 0, 'icon_chest');
     this.count = text(scene).setOrigin(1, 1).setTint(0xfff4d8);
-    this.panel = scene.add.graphics().setVisible(false);
-    this.title = text(scene).setVisible(false);
-    this.icons = GEAR.map((g) => scene.add.image(0, 0, g.icon).setVisible(false));
     this.bannerBg = scene.add.graphics();
+    this.bannerTile = scene.add.image(0, 0, tileKey('common'), 0);
     this.bannerIcon = scene.add.image(0, 0, GEAR[0].icon);
     this.bannerName = text(scene).setOrigin(0, 0);
     this.bannerStats = text(scene).setOrigin(0, 0).setTint(0xdfe6ff);
-    this.banner = scene.add.container(0, 0, [this.bannerBg, this.bannerIcon, this.bannerName, this.bannerStats]).setVisible(false);
+    this.bannerNote = text(scene).setOrigin(0, 0);
+    this.banner = scene.add.container(0, 0, [this.bannerBg, this.bannerTile, this.bannerIcon, this.bannerName, this.bannerStats, this.bannerNote]).setVisible(false);
+
+    this.frame = scene.add.image(0, 0, '__DEFAULT').setOrigin(0);
+    this.title = pixelText(scene, PAD, 5, 'Inventory', 0xf4cf6a);
+    this.closeBg = scene.add.image(0, 3, '__DEFAULT').setOrigin(0);
+    this.closeX = pixelText(scene, 0, 5, 'X', 0xfff4d6);
+    this.view = new InventoryView(scene, { potions: false, maxCols: 6 });
+    this.view.setPosition(PAD, TITLE_H);
+    this.root = scene.add.container(0, 0, [this.frame, this.title, this.closeBg, this.closeX, this.view]).setVisible(false).setDepth(50);
+
     scene.input.keyboard?.on('keydown-I', () => this.toggle());
     scene.input.keyboard?.on('keydown-G', () => this.toggle());
+    scene.input.on(Phaser.Input.Events.POINTER_WHEEL, (_p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
+      if (this.open) this.view.wheel(dy);
+    });
   }
 
   toggle(): void {
     this.open = !this.open;
-    if (!this.open) this.selected = -1;
+    this.root.setVisible(this.open);
+    if (this.open) {
+      this.unseen = 0;
+      this.sized = '';
+      this.onOpen();
+    }
   }
 
   /** The chest button: the pause button's size, just left of it. */
@@ -79,27 +95,29 @@ export class GearHud {
     return new Phaser.Geom.Rectangle(width - s * 3 - pad - 20 * D, pad, s, s);
   }
 
-  /** The bag's layout: cell size, text scale, and where the grid and text sit. */
-  private get layout() {
+  /** Size the bag to the screen: art pixels at the menus' zoom, centred. */
+  private place(): void {
     const { width, height } = this.scene.scale;
-    const c = Math.round(Phaser.Math.Clamp(Math.min(width, height) * 0.1, 34 * D, 64 * D));
-    const g = Math.round(4 * D);
-    const pad = Math.round(10 * D);
-    const ts = Math.max(1, Math.floor(c / 36));
-    const lineH = 10 * ts;
-    const w = COLS * c + (COLS - 1) * g + pad * 2;
-    const gridH = ROWS * c + (ROWS - 1) * g;
-    const h = pad + lineH + pad / 2 + gridH + pad + lineH * 6 + pad;
-    const x = Math.round((width - w) / 2);
-    const y = Math.round(Math.max(pad, (height - h) / 2));
-    return { c, g, pad, ts, lineH, w, h, x, y, gridX: x + pad, gridY: y + pad + lineH + Math.round(pad / 2), chars: Math.floor((w - pad * 2) / (6 * ts)) };
+    const key = `${width} ${height}`;
+    if (key === this.sized) return;
+    this.sized = key;
+    const z = menuZoom(width, height);
+    const vw = Math.floor(width / z);
+    const vh = Math.floor(height / z);
+    const h = Math.min(vh - 12, 232);
+    this.view.resize(Math.min(vw - 12, 560) - PAD * 2, h - TITLE_H - PAD);
+    const w = this.view.usedW + PAD * 2;
+    this.frame.setTexture(panelTexture(this.scene, 'bag', w, h, PANEL));
+    this.closeBg.setTexture(panelTexture(this.scene, 'bag_close', CLOSE, CLOSE, PANEL)).setX(w - PAD - CLOSE + 2);
+    this.closeX.setX(this.closeBg.x + Math.round((CLOSE - this.closeX.width) / 2));
+    this.root.setScale(z).setPosition(Math.round((width - w * z) / 2), Math.round((height - h * z) / 2));
+    this.root.setData('size', [w, h]);
   }
 
-  private cellAt(px: number, py: number): number {
-    const { c, g, gridX, gridY } = this.layout;
-    const i = Math.floor((px - gridX + g / 2) / (c + g));
-    const j = Math.floor((py - gridY + g / 2) / (c + g));
-    return i >= 0 && i < COLS && j >= 0 && j < ROWS ? j * COLS + i : -1;
+  /** A pointer in the bag's art pixels. */
+  private local(p: Phaser.Input.Pointer): [number, number] {
+    const z = this.root.scaleX;
+    return [(p.x - this.root.x) / z, (p.y - this.root.y) / z];
   }
 
   /** Handles a press; returns true if the gear took it. */
@@ -111,29 +129,39 @@ export class GearHud {
       return true;
     }
     if (!this.open) return false;
-    const i = this.cellAt(p.x, p.y);
-    const { x, y, w, h } = this.layout;
-    if (i >= 0) this.selected = i;
-    else if (!Phaser.Geom.Rectangle.Contains(new Phaser.Geom.Rectangle(x, y, w, h), p.x, p.y)) this.toggle();
+    const [x, y] = this.local(p);
+    const [w, h] = this.root.getData('size') as [number, number];
+    const c = this.closeBg;
+    // A tap outside the bag, or on its X, closes it.
+    if (x < 0 || y < 0 || x >= w || y >= h || (x >= c.x - 2 && y <= c.y + CLOSE + 2)) this.toggle();
+    else this.view.pointerDown(x - this.view.x, y - this.view.y);
     return true;
   }
 
-  /** A mouse over a cell picks it, like a tap. */
   pointerMove(p: Phaser.Input.Pointer): void {
-    if (!this.open || p.wasTouch) return;
-    const i = this.cellAt(p.x, p.y);
-    if (i >= 0) this.selected = i;
+    if (!this.open || !p.isDown) return;
+    const [x, y] = this.local(p);
+    this.view.pointerMove(x - this.view.x, y - this.view.y);
+  }
+
+  pointerUp(p: Phaser.Input.Pointer): void {
+    if (!this.open) return;
+    const [x, y] = this.local(p);
+    this.view.pointerUp(x - this.view.x, y - this.view.y);
   }
 
   update(dt: number): void {
     this.drawButton();
-    this.drawBag();
+    if (this.open) {
+      this.place();
+      this.view.update(dt);
+    }
     this.drawBanner(dt);
   }
 
   private drawButton(): void {
     const r = this.buttonRect;
-    const state = `${r.x} ${r.y} ${r.width} ${this.open} ${gear.owned.length}`;
+    const state = `${r.x} ${r.y} ${r.width} ${this.open} ${gear.found.size} ${this.unseen > 0}`;
     if (this.button.getData('s') === state) return;
     this.button.setData('s', state);
     const g = this.button.clear();
@@ -141,76 +169,18 @@ export class GearHud {
     g.fillRoundedRect(r.x, r.y, r.width, r.height, r.width * 0.22);
     g.lineStyle(2 * D, this.open ? 0xffd66b : 0xb8c4ff, 0.45);
     g.strokeRoundedRect(r.x, r.y, r.width, r.height, r.width * 0.22);
+    if (this.unseen > 0 && !this.open) {
+      // New pieces to look at.
+      g.fillStyle(0x0a0c1c, 1);
+      g.fillCircle(r.right - 2 * D, r.y + 2 * D, 5 * D);
+      g.fillStyle(0xffd66b, 1);
+      g.fillCircle(r.right - 2 * D, r.y + 2 * D, 3.5 * D);
+    }
     this.chest.setPosition(Math.round(r.centerX), Math.round(r.centerY)).setScale(Math.max(1, Math.floor((r.width - 6 * D) / 16)));
     this.count
-      .setText(gear.owned.length ? `${gear.owned.length}` : '')
+      .setText(gear.found.size ? `${gear.found.size}` : '')
       .setScale(Math.max(1, Math.floor(r.width / 34)))
       .setPosition(Math.round(r.right + 2 * D), Math.round(r.bottom + 3 * D));
-  }
-
-  private drawBag(): void {
-    const open = this.open;
-    this.panel.setVisible(open);
-    this.title.setVisible(open);
-    for (const l of this.lines) l.setVisible(open);
-    if (!open) {
-      for (const icon of this.icons) icon.setVisible(false);
-      this.drawn = '';
-      return;
-    }
-    const L = this.layout;
-    const state = `${L.x} ${L.y} ${L.c} ${gear.owned.length} ${this.selected}`;
-    if (state === this.drawn) return;
-    this.drawn = state;
-
-    const g = this.panel.clear();
-    const r = Math.round(6 * D);
-    g.fillGradientStyle(0x2a2150, 0x2a2150, 0x140f2a, 0x140f2a, 0.94);
-    g.fillRoundedRect(L.x, L.y, L.w, L.h, r);
-    g.lineStyle(Math.round(2 * D), 0x6b5aa6, 0.9);
-    g.strokeRoundedRect(L.x, L.y, L.w, L.h, r);
-    this.title
-      .setText(`GEAR  ${gear.owned.length}/${GEAR.length}`)
-      .setScale(L.ts)
-      .setTint(0xffe08a)
-      .setPosition(L.gridX, L.y + L.pad);
-
-    const scale = Math.max(1, Math.floor((L.c - 4 * D) / 32));
-    GEAR.forEach((def, i) => {
-      const cx = L.gridX + (i % COLS) * (L.c + L.g);
-      const cy = L.gridY + Math.floor(i / COLS) * (L.c + L.g);
-      const owned = gear.has(def.id);
-      const tint = RARITY[def.rarity].tint;
-      g.fillStyle(0x0a0c1c, owned ? 0.7 : 0.45);
-      g.fillRoundedRect(cx, cy, L.c, L.c, Math.round(4 * D));
-      g.lineStyle(Math.round((i === this.selected ? 2 : 1.5) * D), i === this.selected ? 0xffffff : tint, i === this.selected ? 0.95 : owned ? 0.6 : 0.14);
-      g.strokeRoundedRect(cx, cy, L.c, L.c, Math.round(4 * D));
-      const icon = this.icons[i].setVisible(true).setPosition(Math.round(cx + L.c / 2), Math.round(cy + L.c / 2)).setScale(scale);
-      // Pieces not found yet show as dark shapes, a hint of what is out there.
-      if (owned) icon.clearTint().setAlpha(1);
-      else icon.setTint(0x000000).setAlpha(0.4);
-    });
-
-    // Below the grid: the chosen piece (name in its rarity's colour, and stats), then the totals.
-    const rows: [string, number][] = [];
-    const def = GEAR[this.selected];
-    if (def) {
-      const owned = gear.has(def.id);
-      rows.push([owned ? def.name.toUpperCase() : '???', owned ? RARITY[def.rarity].tint : 0x8a90a8]);
-      rows.push([owned ? statLines(def.stats).join('  ') : `${RARITY[def.rarity].name.toUpperCase()} - NOT FOUND YET`, 0xdfe6ff]);
-    } else {
-      rows.push([gear.owned.length ? 'TAP A PIECE' : 'SLAY MONSTERS TO FIND GEAR', 0x8a90a8]);
-      rows.push(['', 0]);
-    }
-    const totals = statLines(gear.totals);
-    rows.push([totals.length ? 'TOTAL' : '', 0xffe08a]);
-    for (const line of wrap(totals, L.chars).slice(0, 3)) rows.push([line, 0x9dff9a]);
-    while (this.lines.length < rows.length) this.lines.push(text(this.scene));
-    const ty = L.gridY + ROWS * L.c + (ROWS - 1) * L.g + L.pad;
-    this.lines.forEach((l, i) => {
-      const row = rows[i];
-      l.setVisible(!!row).setText(row?.[0] ?? '').setScale(L.ts).setTint(row?.[1] ?? 0xffffff).setPosition(L.gridX, ty + i * L.lineH);
-    });
   }
 
   /** Takes the next piece picked up and shows it under the buttons for a moment. */
@@ -218,6 +188,7 @@ export class GearHud {
     if (!this.showing && gear.news.length) {
       this.showing = gear.news.shift()!;
       this.bannerT = 0;
+      if (!this.open) this.unseen++;
       this.layoutBanner(this.showing);
     }
     if (!this.showing) return;
@@ -233,17 +204,23 @@ export class GearHud {
     this.banner.setVisible(true).setAlpha(k).setY(Math.round((1 - k) * -8 * D));
   }
 
-  private layoutBanner(def: GearDef): void {
+  private layoutBanner(news: GearNews): void {
+    const def = news.def;
     const { width } = this.scene.scale;
     const btn = this.buttonRect;
     const ts = Math.max(1, Math.floor(btn.height / 24));
     const scale = Math.max(1, Math.floor((btn.height * 1.1) / 32));
-    const icon = 32 * scale;
+    const icon = 36 * scale;
     const pad = Math.round(6 * D);
     const tint = RARITY[def.rarity].tint;
     this.bannerName.setText(def.name.toUpperCase()).setScale(ts).setTint(tint);
     this.bannerStats.setText(statLines(def.stats).join('  ')).setScale(ts);
-    const tw = Math.max(this.bannerName.width, this.bannerStats.width);
+    const touch = !this.scene.input.activePointer.wasTouch ? 'PRESS I' : 'TAP THE CHEST';
+    this.bannerNote
+      .setText(news.worn ? 'EQUIPPED' : `IN YOUR BAG: ${touch} TO SWAP`)
+      .setScale(ts)
+      .setTint(news.worn ? 0x8dff8a : 0xb8c4ff);
+    const tw = Math.max(this.bannerName.width, this.bannerStats.width, this.bannerNote.width);
     const w = pad * 3 + icon + tw;
     const h = pad * 2 + icon;
     const x = Math.round((width - w) / 2);
@@ -253,10 +230,13 @@ export class GearHud {
     g.fillRoundedRect(x, y, w, h, Math.round(6 * D));
     g.lineStyle(Math.round(2 * D), tint, 0.7);
     g.strokeRoundedRect(x, y, w, h, Math.round(6 * D));
-    this.bannerIcon.setTexture(def.icon).setScale(scale).setPosition(x + pad + icon / 2, y + h / 2);
+    const cx = x + pad + icon / 2;
+    this.bannerTile.setTexture(tileKey(def.rarity), 0).setScale(scale).setPosition(cx, y + h / 2);
+    this.bannerIcon.setTexture(def.icon).setScale(scale).setPosition(cx, y + h / 2);
     const lineH = 10 * ts;
-    const top = Math.round(y + h / 2 - lineH);
+    const top = Math.round(y + h / 2 - lineH * 1.5 - D);
     this.bannerName.setPosition(x + pad * 2 + icon, top);
-    this.bannerStats.setPosition(x + pad * 2 + icon, top + lineH + Math.round(2 * D));
+    this.bannerStats.setPosition(x + pad * 2 + icon, top + lineH + Math.round(D));
+    this.bannerNote.setPosition(x + pad * 2 + icon, top + lineH * 2 + Math.round(2 * D));
   }
 }
