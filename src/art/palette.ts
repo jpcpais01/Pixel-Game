@@ -452,3 +452,50 @@ export const TOX_CORE = hex('#f2ffd2');
 export const TOX_HOT = hex('#b8ff5c');
 export const TOX_MID = hex('#52d62e');
 export const TOX_DEEP = hex('#1c7a3a');
+
+// ---------------------------------------------------------------------------
+// The hex witch (the alchemist's other look): a crooked pointed hat, long
+// silver hair round a pale green face, a tattered robe of deep swamp teal
+// under an aubergine shawl, and a brew that glows violet.
+
+export const WITCH_ROBE: Material = {
+  ramp: ramp('#0a171c', '#132a33', '#1c404a', '#285a62', '#3c7a7a'),
+  outline: hex('#04090c'),
+  outlineLit: hex('#0c1c22'),
+};
+
+export const WITCH_SHAWL: Material = {
+  ramp: ramp('#1a0d1a', '#2e182e', '#472744', '#61395c'),
+  outline: hex('#0a040c'),
+};
+
+export const WITCH_SKIN: Material = {
+  ramp: ramp('#2c4634', '#517652', '#80a474', '#b2cc9c', '#dcebc4'),
+  outline: hex('#0c180e'),
+  outlineLit: hex('#1e3222'),
+};
+
+export const WITCH_HAIR: Material = {
+  ramp: ramp('#433d58', '#716a8c', '#a7a0c2', '#dcd8ee'),
+  outline: hex('#161222'),
+  outlineLit: hex('#2c2640'),
+};
+
+/** Her eyes, lit from within like the brew. */
+export const HEX_EYE: Material = {
+  ramp: ramp('#861c9c', '#cc3cdc', '#f56cf0', '#ffb2fa'),
+  outline: hex('#1a0620'),
+  emissive: 0.6,
+  noAO: true,
+};
+
+export const HEX_BREW: Material = {
+  ramp: ramp('#581a76', '#9a30b6', '#d24ee0', '#ff92f4'),
+  outline: hex('#1a0620'),
+  emissive: 0.75,
+  noAO: true,
+};
+
+export const HEX_CORE = hex('#fff0fe');
+export const HEX_HOT = hex('#ff9cf2');
+export const HEX_MID = hex('#d64ce0');

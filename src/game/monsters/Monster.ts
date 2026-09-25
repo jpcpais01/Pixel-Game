@@ -210,7 +210,7 @@ export abstract class Monster implements Hurtbox {
     if (!this.alive) return;
     this.hp -= hit.damage;
     this.flashT = FLASH_TIME;
-    this.world.popNumber(snap(this.x), snap(this.y) - this.stats.barY - 3, `${Math.round(hit.damage)}`, hit.poison ? 0x9dff5a : hit.heavy ? 0xffe28a : 0xffffff);
+    this.world.popNumber(snap(this.x), snap(this.y) - this.stats.barY - 3, `${Math.round(hit.damage)}`, hit.poison ?? (hit.heavy ? 0xffe28a : 0xffffff));
     const dx = this.x - hit.fromX;
     const dy = this.y - this.stats.bodyY - hit.fromY;
     const l = Math.hypot(dx, dy) || 1;

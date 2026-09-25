@@ -6,7 +6,7 @@ import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals, type Hurtbox } from './combat';
-import { Bog, Flask, onGround, Splash, Venom } from './Toxins';
+import { Bog, Flask, HEX_TOX, onGround, PLAGUE_TOX, Splash, Venom, type ToxStyle } from './Toxins';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 
@@ -34,6 +34,15 @@ const BOG_DAMAGE = 3;
 const FOOTFALLS = new Set([1, 4]);
 
 type State = 'free' | 'throw' | 'brew';
+
+/** How an alchemist look plays: its texture key and the colours of its poison. */
+export interface AlchemistStyle {
+  key: string;
+  tox: ToxStyle;
+}
+
+export const PLAGUE_STYLE: AlchemistStyle = { key: 'alchemist', tox: PLAGUE_TOX };
+export const WITCH_STYLE: AlchemistStyle = { key: 'alchemist_witch', tox: HEX_TOX };
 
 /**
  * The alchemist: lobs flasks of poison on the attack button that burst where
@@ -67,34 +76,37 @@ export class Alchemist implements Hero {
   private cooldown = 0;
   private specialCd = 0;
   private venom: Venom;
+  private style: AlchemistStyle;
 
   /** The body sprite (see Hero). */
   get sprite(): Phaser.GameObjects.Sprite {
     return this.body;
   }
 
-  constructor(world: WorldScene, x: number, y: number) {
+  constructor(world: WorldScene, x: number, y: number, style: AlchemistStyle = PLAGUE_STYLE) {
     this.world = world;
+    this.style = style;
+    const k = style.key;
     this.x = x;
     this.y = y;
-    this.venom = new Venom(world);
+    this.venom = new Venom(world, style.tox);
     const ox = ALCH_ORIGIN_X / ALCH_W;
     const oy = ALCH_ORIGIN_Y / ALCH_H;
     this.shadow = world.add.image(x, y, 'shadow').setDepth(1);
-    this.castShadow = sunShadow(world.add.sprite(x, y, 'alchemist_s', 'idle_down_0').setOrigin(ox, oy));
-    this.body = world.add.sprite(x, y, 'alchemist', 'idle_down_0').setOrigin(ox, oy).setPipeline('Lit');
-    this.glowLayer = world.add.sprite(x, y, 'alchemist_e', 'idle_down_0').setOrigin(ox, oy).setBlendMode(Phaser.BlendModes.ADD);
-    this.body.play('alchemist_idle_down');
+    this.castShadow = sunShadow(world.add.sprite(x, y, `${k}_s`, 'idle_down_0').setOrigin(ox, oy));
+    this.body = world.add.sprite(x, y, k, 'idle_down_0').setOrigin(ox, oy).setPipeline('Lit');
+    this.glowLayer = world.add.sprite(x, y, `${k}_e`, 'idle_down_0').setOrigin(ox, oy).setBlendMode(Phaser.BlendModes.ADD);
+    this.body.play(`${k}_idle_down`);
 
     this.body.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (anim: Phaser.Animations.Animation) => {
-      if ((this.state === 'throw' && anim.key.startsWith('alchemist_throw_')) || (this.state === 'brew' && anim.key.startsWith('alchemist_brew_'))) {
+      if ((this.state === 'throw' && anim.key.startsWith(`${k}_throw_`)) || (this.state === 'brew' && anim.key.startsWith(`${k}_brew_`))) {
         this.state = 'free';
         this.cooldown = THROW_REST;
-        this.body.play(`alchemist_idle_${this.dir}`);
+        this.body.play(`${k}_idle_${this.dir}`);
       }
     });
     this.body.on(Phaser.Animations.Events.ANIMATION_UPDATE, (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
-      if (anim.key.startsWith('alchemist_walk') && FOOTFALLS.has(frame.index - 1)) sound.step();
+      if (anim.key.startsWith(`${k}_walk`) && FOOTFALLS.has(frame.index - 1)) sound.step();
     });
     // Shared HUD state: don't leave the special lit on the next hero's button.
     world.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -123,7 +135,7 @@ export class Alchemist implements Hero {
 
     if (this.state === 'free') {
       if (moving) this.dir = dirOf(mx, my);
-      const key = `alchemist_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = `${this.style.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else {
       // Until it leaves the hand, the flask follows the mouse.
@@ -144,7 +156,7 @@ export class Alchemist implements Hero {
     this.state = kind;
     this.released = false;
     this.takeAim();
-    this.body.play(`alchemist_${kind}_${this.dir}`);
+    this.body.play(`${this.style.key}_${kind}_${this.dir}`);
     if (kind === 'brew') sound.brew();
   }
 
@@ -159,7 +171,7 @@ export class Alchemist implements Hero {
       // Turn mid-throw without restarting it.
       const cur = this.body.anims.currentAnim;
       const frame = this.body.anims.currentFrame;
-      if (cur && frame && this.state !== 'free') this.body.play({ key: `alchemist_${this.state}_${dir}`, startFrame: frame.index - 1 });
+      if (cur && frame && this.state !== 'free') this.body.play({ key: `${this.style.key}_${this.state}_${dir}`, startFrame: frame.index - 1 });
     }
   }
 
@@ -174,12 +186,12 @@ export class Alchemist implements Hero {
     const hy = this.y + u.y * 3;
     sound.toss(this.world.pan(this.x), big);
     if (big) this.specialCd = SPECIAL_COOLDOWN;
-    this.world.addEffect(new Flask(this.world, hx, hy, RELEASE_H, tx, ty, big, (x, y) => (big ? this.bog(x, y) : this.splash(x, y))));
+    this.world.addEffect(new Flask(this.world, hx, hy, RELEASE_H, tx, ty, big, (x, y) => (big ? this.bog(x, y) : this.splash(x, y)), this.style.tox));
   }
 
   /** A flask bursting: everything in the splash takes a hit and a dose of poison. */
   private splash(x: number, y: number): void {
-    this.world.addEffect(new Splash(this.world, x, y, SPLASH_R));
+    this.world.addEffect(new Splash(this.world, x, y, SPLASH_R, this.style.tox));
     sound.shatter(this.world.pan(x), false);
     const hits = this.world.hurtboxesWhere((h) => h.alive && onGround(h, x, y, SPLASH_R));
     for (const h of hits) {
@@ -191,7 +203,7 @@ export class Alchemist implements Hero {
 
   /** The great flask bursting: a heavy splash, then the bog. */
   private bog(x: number, y: number): void {
-    this.world.addEffect(new Splash(this.world, x, y, BOG_R * 0.8));
+    this.world.addEffect(new Splash(this.world, x, y, BOG_R * 0.8, this.style.tox));
     sound.shatter(this.world.pan(x), true);
     sound.bog(this.world.pan(x));
     this.world.cameras.main.shake(140, 0.0006);
@@ -202,10 +214,10 @@ export class Alchemist implements Hero {
     this.world.addEffect(
       new Bog(this.world, x, y, BOG_R, BOG_TIME, BOG_TICK, (inside: Hurtbox[]) => {
         for (const h of inside) {
-          h.hurt({ damage: BOG_DAMAGE, heavy: false, knock: 0, fromX: h.x, fromY: h.y, poison: true });
+          h.hurt({ damage: BOG_DAMAGE, heavy: false, knock: 0, fromX: h.x, fromY: h.y, poison: this.style.tox.numbers });
           this.venom.dose(h, 2000);
         }
-      }),
+      }, this.style.tox),
     );
   }
 

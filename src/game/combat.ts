@@ -19,8 +19,8 @@ export interface Strike {
   /** Where the blow comes from, for the knockback direction. Defaults to the area's origin. */
   fromX?: number;
   fromY?: number;
-  /** Poison: numbers pop up green. */
-  poison?: boolean;
+  /** Poison: numbers pop up in this colour (the poison's own). */
+  poison?: number;
 }
 
 /** A blow as it lands on one target. */
@@ -30,7 +30,7 @@ export interface Hit {
   knock: number;
   fromX: number;
   fromY: number;
-  poison?: boolean;
+  poison?: number;
 }
 
 /** Anything the heroes can strike. (x, y) are the feet. */
