@@ -237,5 +237,6 @@ function releaseControls(): void {
   controls.moveY = 0;
   controls.attack = false;
   controls.beam = false;
+  controls.click = false;
   sound.beamChargeEnd();
 }

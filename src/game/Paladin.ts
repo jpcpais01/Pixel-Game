@@ -8,7 +8,7 @@ import { sound } from '../audio';
 import { Vitals } from './combat';
 import { HitSpark, type Effect } from './Slash';
 import { Aegis, HealPop, HOLY_FX, Sanctuary, SmiteBurst } from './Holy';
-import type { Hero } from './characters';
+import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 
 const SPEED = 54; // world px / second: plate is heavy
@@ -66,6 +66,8 @@ export class Paladin implements Hero {
   private aegis: Aegis;
   private state: State = 'free';
   private lastMove = new Phaser.Math.Vector2(0, 1);
+  /** Towards the mouse on a computer (see Hero). */
+  private aim: Aim | null = null;
   private cooldown = 0;
   private specialCd = 0;
   private struck = false;
@@ -116,7 +118,8 @@ export class Paladin implements Hero {
     world.events.once(Phaser.Scenes.Events.SHUTDOWN, () => (beamHud.firing = false));
   }
 
-  update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle): void {
+  update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle, aim: Aim | null = null): void {
+    this.aim = aim;
     const len = Math.hypot(mx, my);
     const moving = len > 0.18;
     if (moving) this.lastMove.set(mx / len, my / len);
@@ -167,7 +170,7 @@ export class Paladin implements Hero {
   private startSmite(): void {
     this.state = 'smite';
     this.struck = false;
-    this.dir = dirOf(this.lastMove.x, this.lastMove.y);
+    this.dir = this.aimDir();
     this.body.play(`paladin_smite_${this.dir}`);
     sound.swing(3, this.world.pan(this.x));
   }
@@ -188,7 +191,7 @@ export class Paladin implements Hero {
   private startConsecrate(): void {
     this.state = 'consecrate';
     this.struck = false;
-    this.dir = dirOf(this.lastMove.x, this.lastMove.y);
+    this.dir = this.aimDir();
     this.body.play(`paladin_consecrate_${this.dir}`);
     sound.hallow();
   }
@@ -229,6 +232,12 @@ export class Paladin implements Hero {
     } else {
       this.vitals.barrier = Math.max(0, this.vitals.barrier - (BARRIER_DECAY * dt) / 1000);
     }
+  }
+
+  /** Which way an ability goes: at the mouse on a computer, else the way he last walked. */
+  private aimDir(): Dir {
+    const a = this.aim ?? this.lastMove;
+    return dirOf(a.x, a.y);
   }
 
   private updateHud(): void {

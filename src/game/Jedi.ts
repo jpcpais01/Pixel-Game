@@ -9,7 +9,7 @@ import { sound } from '../audio';
 import { Vitals } from './combat';
 import { HitSpark, SlashArc, type Effect, type Scheme } from './Slash';
 import { ForceWave } from './Force';
-import type { Hero } from './characters';
+import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 
 export const MAX_HP = 95;
@@ -79,6 +79,10 @@ export class Jedi implements Hero {
   private bladeLight: Phaser.GameObjects.Light;
   private state: State = 'free';
   private lastMove = new Phaser.Math.Vector2(0, 1);
+  /** Towards the mouse on a computer (see Hero). */
+  private aim: Aim | null = null;
+  /** Where the Force push goes: straight at the mouse when aimed, else his facing. */
+  private pushDir: Aim = { x: 0, y: 1 };
   private clock = 0;
   private cooldown = 0;
   private specialCd = 0;
@@ -133,7 +137,8 @@ export class Jedi implements Hero {
     world.events.once(Phaser.Scenes.Events.SHUTDOWN, () => (beamHud.firing = false));
   }
 
-  update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle): void {
+  update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle, aim: Aim | null = null): void {
+    this.aim = aim;
     this.clock += dt;
     const len = Math.hypot(mx, my);
     const moving = len > 0.18;
@@ -190,7 +195,7 @@ export class Jedi implements Hero {
     this.buffered = false;
     this.struck = false;
     this.state = 'swing';
-    this.dir = dirOf(this.lastMove.x, this.lastMove.y);
+    this.dir = this.aimDir();
     this.body.play(`${this.style.key}_${this.swing}_${this.dir}`);
     sound.saberSwing(this.step, this.world.pan(this.x));
     const u = this.facing();
@@ -230,15 +235,16 @@ export class Jedi implements Hero {
     this.state = 'push';
     this.step = 0;
     this.struck = false;
-    this.dir = dirOf(this.lastMove.x, this.lastMove.y);
+    this.dir = this.aimDir();
     this.body.play(`${this.style.key}_push_${this.dir}`);
+    this.pushDir = this.aim ? { x: this.aim.x, y: this.aim.y } : this.facing();
     this.specialCd = SPECIAL_COOLDOWN;
     sound.forceGather();
   }
 
   /** The palm drives forward: a wave of the Force rolls out and blasts whatever is in front. */
   private release(): void {
-    const u = this.facing();
+    const u = this.pushDir;
     const x = snap(this.x) + u.x * 6;
     const y = snap(this.y) - CHEST_Y + 1 + u.y * 4;
     this.fx.push(new ForceWave(this.world, x, y, u.x, u.y, PUSH_REACH, this.style.force, snap(this.y), this.style.dark));
@@ -248,6 +254,12 @@ export class Jedi implements Hero {
     this.world.cameras.main.shake(180, 0.0006);
     // Recoil: the push shoves him back a step.
     this.dash = { vx: -u.x * 50, vy: -u.y * 50, t: 90 };
+  }
+
+  /** Which way an ability goes: at the mouse on a computer, else the way he last walked. */
+  private aimDir(): Dir {
+    const a = this.aim ?? this.lastMove;
+    return dirOf(a.x, a.y);
   }
 
   private facing(): { x: number; y: number } {

@@ -14,6 +14,12 @@ import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { wear, type SkinDef } from './skins';
 import type { Vitals } from './combat';
 
+/** A unit direction. */
+export interface Aim {
+  x: number;
+  y: number;
+}
+
 /** What the world needs from the player's character each frame. */
 export interface Hero {
   x: number;
@@ -26,8 +32,12 @@ export interface Hero {
   readonly sprite: Phaser.GameObjects.Sprite;
   /** 0..1: the world fades the whole figure through this (falling, rising); the hero applies it to its sprites each frame. */
   alpha: number;
-  /** `attack` and `special` are the two ability buttons (held = true). */
-  update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle): void;
+  /**
+   * `attack` and `special` are the two ability buttons (held = true). `aim` is
+   * a unit vector towards the mouse on a computer; abilities go that way
+   * instead of the way the hero last walked.
+   */
+  update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle, aim?: Aim | null): void;
 }
 
 export interface CharacterDef {

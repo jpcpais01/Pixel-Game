@@ -9,6 +9,9 @@ import { characterById } from '../game/characters';
  * attack button on the right and, above it, the special button (the wizard's
  * beam: hold to charge). Icons come from the chosen character. Rendered at
  * screen resolution over the world.
+ *
+ * With a mouse, a left click anywhere else on the world is the attack (the
+ * world aims it at the cursor) and the joystick hides; the keyboard walks.
  */
 export class UIScene extends Phaser.Scene {
   private stick!: Phaser.GameObjects.Graphics;
@@ -19,6 +22,7 @@ export class UIScene extends Phaser.Scene {
   private beamButton!: Phaser.GameObjects.Graphics;
   private beamIcon!: Phaser.GameObjects.Image;
   private beamPointer: number | null = null;
+  private clickPointer: number | null = null;
   private base = new Phaser.Math.Vector2();
   private knob = new Phaser.Math.Vector2();
   private toggle!: Phaser.GameObjects.Graphics;
@@ -74,7 +78,7 @@ export class UIScene extends Phaser.Scene {
 
   create(data: { character?: string }): void {
     const hero = characterById(data?.character);
-    this.stickPointer = this.buttonPointer = this.beamPointer = null;
+    this.stickPointer = this.buttonPointer = this.beamPointer = this.clickPointer = null;
     this.stick = this.add.graphics();
     this.button = this.add.graphics();
     const { attack, special } = hero.buttons;
@@ -89,6 +93,7 @@ export class UIScene extends Phaser.Scene {
     this.knob.copy(this.restPos);
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
+      controls.mouse = !p.wasTouch;
       const bp = this.buttonPos;
       const mp = this.beamPos;
       const tr = this.toggleRect;
@@ -102,6 +107,12 @@ export class UIScene extends Phaser.Scene {
       } else if (Phaser.Math.Distance.Between(p.x, p.y, bp.x, bp.y) < this.R * 1.1) {
         this.buttonPointer = p.id;
         controls.attack = true;
+      } else if (!p.wasTouch) {
+        // Clicks on the pause and sound buttons never get here: their scenes sit on top and take them.
+        if (p.leftButtonDown()) {
+          this.clickPointer = p.id;
+          controls.click = true;
+        }
       } else if (p.x < this.scale.width * 0.55 && this.stickPointer === null) {
         this.stickPointer = p.id;
         this.base.set(p.x, p.y);
@@ -109,6 +120,7 @@ export class UIScene extends Phaser.Scene {
       }
     });
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
+      if (!p.wasTouch) controls.mouse = true;
       if (p.id !== this.stickPointer) return;
       const R = this.R;
       const v = new Phaser.Math.Vector2(p.x - this.base.x, p.y - this.base.y);
@@ -136,6 +148,10 @@ export class UIScene extends Phaser.Scene {
         this.beamPointer = null;
         controls.beam = false;
       }
+      if (p.id === this.clickPointer) {
+        this.clickPointer = null;
+        controls.click = false;
+      }
     };
     this.input.on(Phaser.Input.Events.POINTER_UP, release);
     this.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, release);
@@ -156,9 +172,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   private releaseAll(): void {
-    this.stickPointer = this.buttonPointer = this.beamPointer = null;
+    this.stickPointer = this.buttonPointer = this.beamPointer = this.clickPointer = null;
     controls.moveX = controls.moveY = 0;
-    controls.attack = controls.beam = false;
+    controls.attack = controls.beam = controls.click = false;
     this.base.copy(this.restPos);
     this.knob.copy(this.restPos);
   }
@@ -166,6 +182,7 @@ export class UIScene extends Phaser.Scene {
   update(): void {
     const R = this.R;
     const active = this.stickPointer !== null;
+    this.stick.setVisible(active || !controls.mouse);
     const g = this.redraw(this.stick, `${active} ${this.base.x} ${this.base.y} ${this.knob.x} ${this.knob.y} ${R}`);
     if (g) {
       g.fillStyle(0x0a0c1c, active ? 0.45 : 0.28);

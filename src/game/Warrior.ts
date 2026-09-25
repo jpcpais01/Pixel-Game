@@ -7,7 +7,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
 import { GOLD_FX, HitSpark, JADE_FX, JADE_STEEL_FX, STEEL_FX, Shockwave, SlashArc, Tempest, ThrustStreak, type Effect, type Scheme } from './Slash';
-import type { Hero } from './characters';
+import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 
 export const MAX_HP = 110;
@@ -64,6 +64,8 @@ export class Warrior implements Hero {
   private aura: Phaser.GameObjects.Light;
   private state: State = 'free';
   private lastMove = new Phaser.Math.Vector2(0, 1);
+  /** Towards the mouse on a computer (see Hero). */
+  private aim: Aim | null = null;
   private clock = 0;
   private cooldown = 0;
   private specialCd = 0;
@@ -124,7 +126,8 @@ export class Warrior implements Hero {
     });
   }
 
-  update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle): void {
+  update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle, aim: Aim | null = null): void {
+    this.aim = aim;
     this.clock += dt;
     const len = Math.hypot(mx, my);
     const moving = len > 0.18;
@@ -183,7 +186,7 @@ export class Warrior implements Hero {
     this.buffered = false;
     this.struck = false;
     this.state = 'swing';
-    this.dir = dirOf(this.lastMove.x, this.lastMove.y);
+    this.dir = this.aimDir();
     this.body.play(`${this.skin.key}_${this.swing}_${this.dir}`);
     sound.swing(this.step, this.world.pan(this.x));
     if (this.swing !== 'thrust') {
@@ -225,7 +228,7 @@ export class Warrior implements Hero {
   private startRise(): void {
     this.state = 'rise';
     this.step = 0;
-    this.dir = dirOf(this.lastMove.x, this.lastMove.y);
+    this.dir = this.aimDir();
     this.body.play(`${this.skin.key}_rise_${this.dir}`);
     sound.rise();
   }
@@ -277,6 +280,12 @@ export class Warrior implements Hero {
     this.state = 'settle';
     this.specialCd = SPECIAL_COOLDOWN;
     this.body.play(`${this.skin.key}_settle_${this.dir}`);
+  }
+
+  /** Which way an ability goes: at the mouse on a computer, else the way he last walked. */
+  private aimDir(): Dir {
+    const a = this.aim ?? this.lastMove;
+    return dirOf(a.x, a.y);
   }
 
   private facing(): { x: number; y: number } {
