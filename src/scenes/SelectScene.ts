@@ -15,6 +15,13 @@ const ARROW_INSET = 3;
 // Portrait's left edge: nudged right to make room for the arrows on cards that have skins.
 const PORTRAIT_X = 5;
 const PORTRAIT_X_SKINS = ARROW_INSET + ARROW_W + 1;
+// Scrolling: how far (in art pixels) a press may travel and still count as a tap,
+// and how quickly a flung row slows down (fraction of speed kept per second).
+const TAP_SLOP = 5;
+const FLING_KEEP = 0.004;
+
+/** True when a released pointer moved too far from where it went down to be a tap. */
+const dragged = (scene: Phaser.Scene, p: Phaser.Input.Pointer): boolean => p.getDistance() / scene.cameras.main.zoom > TAP_SLOP;
 
 /** A tall, thin arrow tab on the side of a card that steps through skins. */
 class SkinArrow extends Phaser.GameObjects.Container {
@@ -32,11 +39,13 @@ class SkinArrow extends Phaser.GameObjects.Container {
     const reach = ARROW_INSET + GAP / 2;
     const hit = scene.add.zone(dir < 0 ? -reach : -2, -ARROW_INSET, ARROW_W + reach + 2, CARD_H).setOrigin(0);
     hit.setInteractive({ useHandCursor: true });
-    hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, () => {
-      this.draw(true);
-      onStep();
+    // Steps on release, so a swipe that starts on an arrow scrolls instead.
+    hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, () => this.draw(true));
+    hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, (p: Phaser.Input.Pointer) => {
+      const wasDown = this.down;
+      this.draw(false);
+      if (wasDown && !dragged(scene, p)) onStep();
     });
-    hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => this.draw(false));
     hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OUT, () => this.draw(false));
     this.add([this.g, hit]);
     this.draw(false);
@@ -90,7 +99,16 @@ class Card extends Phaser.GameObjects.Container {
     const def = this.def;
     this.keys = [panelTexture(scene, 'card', CARD_W, CARD_H, PANEL), panelTexture(scene, 'card_picked', CARD_W, CARD_H, PANEL_PICKED)];
     this.bg = scene.add.image(0, 0, this.keys[0]).setOrigin(0);
-    this.bg.setInteractive({ useHandCursor: true }).on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, onTap);
+    // Picks on release, and only if the press wasn't a swipe.
+    let pressed = false;
+    this.bg.setInteractive({ useHandCursor: true });
+    this.bg.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, () => (pressed = true));
+    this.bg.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, (p: Phaser.Input.Pointer) => {
+      if (pressed && !dragged(scene, p)) onTap();
+      pressed = false;
+    });
+    scene.input.on(Phaser.Input.Events.POINTER_UP, () => (pressed = false));
+    scene.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, () => (pressed = false));
 
     // Portrait: the character at 2x on a lit pedestal.
     const inset = scene.add.image(this.px, 5, panelTexture(scene, 'portrait', 54, 82, PANEL_INSET)).setOrigin(0);
@@ -198,6 +216,19 @@ export class SelectScene extends Phaser.Scene {
   private back!: PixelButton;
   private play!: PixelButton;
   private leaving = false;
+  /** The cards, laid out in a grid when they fit, else in one row that scrolls sideways. */
+  private strip!: Phaser.GameObjects.Container;
+  private hints: Phaser.GameObjects.Graphics[] = [];
+  private scroll = 0;
+  private maxScroll = 0;
+  /** Where the row sits when unscrolled, and how wide the visible part is (art pixels). */
+  private stripX = 0;
+  private viewW = 0;
+  /** Scroll speed in art pixels per second, left over from a fling or a nudge. */
+  private velocity = 0;
+  /** Scroll position being eased to (keyboard, hint taps), or null. */
+  private target: number | null = null;
+  private drag: { x: number; scroll: number; t: number; last: number } | null = null;
 
   constructor() {
     super('select');
@@ -211,15 +242,22 @@ export class SelectScene extends Phaser.Scene {
     this.shade = this.add.rectangle(0, 0, 1, 1, 0x0b0818, 0.45).setOrigin(0);
     this.header = pixelText(this, 0, 0, '* Choose your hero *', 0xf4cf6a);
     // Tapping a card only picks it; the game starts from the Play button (or Enter).
-    this.cards = CHARACTERS.map((def, i) => new Card(this, def, () => this.pick(i)));
+    this.cards = CHARACTERS.map((def, i) => new Card(this, def, () => this.pick(i, true)));
+    this.strip = this.add.container(0, 0, this.cards);
+    this.hints = [-1, 1].map((dir) => this.scrollHint(dir as -1 | 1));
+    this.scroll = 0;
+    this.velocity = 0;
+    this.target = null;
+    this.drag = null;
+    this.bindScrolling();
     this.back = new PixelButton(this, 'Back', 48, 18, BUTTON_PLAIN, 'back', () => this.goBack());
     this.play = new PixelButton(this, 'Play', 64, 20, BUTTON_GOLD, 'play', () => this.startGame());
     this.picked = 0;
     this.cards[0].setPicked(true);
 
     const kb = this.input.keyboard;
-    kb?.on('keydown-LEFT', () => this.pick((this.picked + this.cards.length - 1) % this.cards.length));
-    kb?.on('keydown-RIGHT', () => this.pick((this.picked + 1) % this.cards.length));
+    kb?.on('keydown-LEFT', () => this.pick((this.picked + this.cards.length - 1) % this.cards.length, true));
+    kb?.on('keydown-RIGHT', () => this.pick((this.picked + 1) % this.cards.length, true));
     kb?.on('keydown-UP', () => this.cards[this.picked].stepSkin(-1, () => {}));
     kb?.on('keydown-DOWN', () => this.cards[this.picked].stepSkin(1, () => {}));
     kb?.on('keydown-ENTER', () => this.startGame());
@@ -231,15 +269,109 @@ export class SelectScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this));
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
     for (const c of this.cards) c.sync();
+    if (this.drag || this.maxScroll <= 0) return;
+    const dt = delta / 1000;
+    if (this.target !== null) {
+      // Ease towards the target, snapping once within half a pixel.
+      const next = this.scroll + (this.target - this.scroll) * Math.min(1, dt * 12);
+      this.setScroll(Math.abs(this.target - next) < 0.5 ? this.target : next);
+      if (this.scroll === this.target) this.target = null;
+    } else if (this.velocity !== 0) {
+      this.velocity *= Math.pow(FLING_KEEP, dt);
+      if (Math.abs(this.velocity) < 8) this.velocity = 0;
+      const before = this.scroll;
+      this.setScroll(this.scroll + this.velocity * dt);
+      if (this.scroll === before) this.velocity = 0;
+    }
   }
 
-  private pick(i: number): void {
+  private pick(i: number, reveal = false): void {
     if (this.leaving || i === this.picked) return;
     this.cards[this.picked].setPicked(false);
     this.picked = i;
     this.cards[i].setPicked(true);
+    if (reveal) this.reveal(i);
+  }
+
+  /** Drag or swipe the row, fling it on release, and scroll it with the mouse wheel. */
+  private bindScrolling(): void {
+    const toArt = (px: number) => px / this.cameras.main.zoom;
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
+      // Only a press on the row of cards (or the gaps around it) drags it.
+      const y = p.y / this.cameras.main.zoom - this.strip.y;
+      if (this.maxScroll <= 0 || y < -GAP || y > CARD_H + GAP) return;
+      this.drag = { x: p.x, scroll: this.scroll, t: p.time, last: this.scroll };
+      this.velocity = 0;
+      this.target = null;
+    });
+    this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
+      const d = this.drag;
+      if (!d || !p.isDown) return;
+      const next = d.scroll - toArt(p.x - d.x);
+      // Track speed over the last few frames for the fling.
+      const dt = Math.max(1, p.time - d.t) / 1000;
+      this.velocity = Phaser.Math.Linear(this.velocity, (next - d.last) / dt, 0.5);
+      d.t = p.time;
+      d.last = next;
+      this.setScroll(next);
+    });
+    const release = (p: Phaser.Input.Pointer) => {
+      if (!this.drag) return;
+      // A press that barely moved, or a pause before letting go, doesn't fling.
+      if (!dragged(this, p) || p.time - this.drag.t > 80) this.velocity = 0;
+      this.drag = null;
+    };
+    this.input.on(Phaser.Input.Events.POINTER_UP, release);
+    this.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, release);
+    this.input.on(Phaser.Input.Events.POINTER_WHEEL, (_p: Phaser.Input.Pointer, _over: unknown, dx: number, dy: number) => {
+      if (this.maxScroll <= 0 || this.drag) return;
+      const step = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+      this.target = Phaser.Math.Clamp((this.target ?? this.scroll) + toArt(step), 0, this.maxScroll);
+      this.velocity = 0;
+    });
+  }
+
+  /** A chevron at the screen's edge that shows there are more heroes that way; tap it to scroll. */
+  private scrollHint(dir: -1 | 1): Phaser.GameObjects.Graphics {
+    const g = this.add.graphics();
+    for (let i = 0; i < 4; i++) {
+      const x = dir < 0 ? 3 - i : i;
+      g.fillStyle(0x0b0818, 0.8).fillRect(x - 1, i - 1, 3, 13 - i * 2);
+    }
+    for (let i = 0; i < 4; i++) {
+      const x = dir < 0 ? 3 - i : i;
+      g.fillStyle(0xf4cf6a).fillRect(x, i, 1, 11 - i * 2);
+    }
+    g.setInteractive(new Phaser.Geom.Rectangle(dir < 0 ? -4 : -6, -12, 14, 35), Phaser.Geom.Rectangle.Contains);
+    g.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, (p: Phaser.Input.Pointer) => {
+      if (dragged(this, p)) return;
+      this.target = Phaser.Math.Clamp((this.target ?? this.scroll) + dir * (CARD_W + GAP), 0, this.maxScroll);
+      this.velocity = 0;
+    });
+    return g;
+  }
+
+  private setScroll(value: number): void {
+    this.scroll = Phaser.Math.Clamp(value, 0, Math.max(0, this.maxScroll));
+    this.strip.x = Math.round(this.stripX - this.scroll);
+    const [left, right] = this.hints;
+    const on = this.maxScroll > 0;
+    left.setAlpha(on && this.scroll > 1 ? 1 : 0);
+    right.setAlpha(on && this.scroll < this.maxScroll - 1 ? 1 : 0);
+    // A hidden hint mustn't swallow taps meant for the card under it.
+    for (const h of this.hints) if (h.input) h.input.enabled = h.alpha > 0;
+  }
+
+  /** Scroll just enough to show the whole of card i. */
+  private reveal(i: number): void {
+    if (this.maxScroll <= 0) return;
+    const x = this.cards[i].x;
+    const from = this.target ?? this.scroll;
+    const to = Math.min(Math.max(from, x + CARD_W - this.viewW), x);
+    this.target = Phaser.Math.Clamp(to, 0, this.maxScroll);
+    this.velocity = 0;
   }
 
   private goBack(): void {
@@ -279,18 +411,38 @@ export class SelectScene extends Phaser.Scene {
     this.play.place((vw - this.play.boxW) / 2, buttonsY);
     this.back.place(8, buttonsY + 1);
 
-    // Cards in rows, centred in the space between the header and the buttons.
+    // Cards in rows, centred in the space between the header and the buttons. When the
+    // rows don't fit, they become one row that scrolls sideways.
     const n = this.cards.length;
-    const perRow = Math.max(1, Math.min(n, Math.floor((vw - 16 + GAP) / (CARD_W + GAP))));
-    const rows = Math.ceil(n / perRow);
-    const blockH = rows * CARD_H + (rows - 1) * GAP;
+    const margin = 8;
     const areaTop = top + this.header.height + 6;
-    const y0 = Math.max(areaTop, Math.round(areaTop + (buttonsY - 6 - areaTop - blockH) / 2));
+    const areaH = buttonsY - 6 - areaTop;
+    let perRow = Math.max(1, Math.min(n, Math.floor((vw - margin * 2 + GAP) / (CARD_W + GAP))));
+    let rows = Math.ceil(n / perRow);
+    if (rows * CARD_H + (rows - 1) * GAP > areaH) {
+      perRow = n;
+      rows = 1;
+    }
+    const blockH = rows * CARD_H + (rows - 1) * GAP;
+    const y0 = Math.max(areaTop, Math.round(areaTop + (areaH - blockH) / 2));
+    const fullW = perRow * CARD_W + (perRow - 1) * GAP;
     this.cards.forEach((c, i) => {
       const r = Math.floor(i / perRow);
       const inRow = Math.min(perRow, n - r * perRow);
       const rowW = inRow * CARD_W + (inRow - 1) * GAP;
-      c.setPosition(Math.round((vw - rowW) / 2) + (i % perRow) * (CARD_W + GAP), y0 + r * (CARD_H + GAP));
+      c.setPosition(Math.round((fullW - rowW) / 2) + (i % perRow) * (CARD_W + GAP), r * (CARD_H + GAP));
     });
+
+    this.viewW = vw - margin * 2;
+    this.maxScroll = Math.max(0, fullW - this.viewW);
+    this.stripX = this.maxScroll > 0 ? margin : Math.round((vw - fullW) / 2);
+    this.strip.y = y0;
+    const hintY = Math.round(y0 + CARD_H / 2 - 5);
+    this.hints[0].setPosition(2, hintY);
+    this.hints[1].setPosition(Math.floor(vw) - 6, hintY);
+    this.target = null;
+    this.velocity = 0;
+    this.setScroll(this.scroll);
+    this.reveal(this.picked);
   }
 }
