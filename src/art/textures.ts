@@ -10,6 +10,7 @@ import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FRAMES, 
 import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, buildAlchemistFrames, flaskFrame } from './alchemist';
 import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE, arrowFrame, buildArcherFrames, stuckArrowFrame } from './archer';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
+import { buildRogueFrames, daggersIcon, DANCER_DAGGERS, ROGUE_ANIMS, ROGUE_DAGGERS, ROGUE_H, ROGUE_LOOKS, ROGUE_W, shadowstepIcon, smokeCanvas } from './rogue';
 import { hex } from './pixel';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
 import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
@@ -282,6 +283,29 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     const q = look.storm ? STORM_QUIVER : RANGER_QUIVER;
     scene.textures.addCanvas(`icon_bow${sfx}`, toCanvas(16, 16, bowIcon(q)));
     scene.textures.addCanvas(`icon_rain${sfx}`, toCanvas(16, 16, rainIcon(q, look.storm)));
+  }
+
+  // Rogue once per look ('rogue', and 'rogue_dancer' for the shadow dancer),
+  // with a flash layer for the echoes he leaves, his smoke and his icons.
+  for (const look of ROGUE_LOOKS) {
+    const dance = look.key !== 'rogue';
+    const rf = buildRogueFrames(look);
+    register(scene, look.key, pack(rf.map((f) => ({ name: f.key, r: f.canvas.render() })), ROGUE_W, ROGUE_H), ROGUE_W, ROGUE_H, true, true);
+    for (const a of ROGUE_ANIMS) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: rf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
+    }
+    const tones: [number, number, number][] = dance ? [hex('#8a6ad8'), hex('#4a2c90'), hex('#24124e')] : [hex('#8a8898'), hex('#57546a'), hex('#34323f')];
+    scene.textures.addCanvas(`${look.key}_smoke`, toCanvas(16, 16, smokeCanvas(16, tones)));
+    const k = dance ? DANCER_DAGGERS : ROGUE_DAGGERS;
+    scene.textures.addCanvas(`icon_daggers${dance ? '_dancer' : ''}`, toCanvas(16, 16, daggersIcon(k)));
+    scene.textures.addCanvas(`icon_shadowstep${dance ? '_dancer' : ''}`, toCanvas(16, 16, shadowstepIcon(k, dance)));
   }
 
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
