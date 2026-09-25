@@ -280,6 +280,39 @@ export const HOLY_MID = hex('#ffd35c');
 export const HOLY_SKY = hex('#8cc8ff');
 
 // ---------------------------------------------------------------------------
+// The Crusader, the paladin's gameplay subtype: blackened steel, a crimson
+// cape and shield, an ivory tabard with a crimson cross, a great helm with a
+// plume, a warhammer, and sunfire instead of pale holy light.
+
+const CRUSADER_INK = hex('#0c0a12');
+
+export const BLACK_PLATE: Material = {
+  ramp: ramp('#1b1922', '#322e3b', '#544d5c', '#8a7f8e', '#d4c8cc'),
+  outline: CRUSADER_INK,
+  outlineLit: hex('#262230'),
+  shine: true,
+};
+
+export const BLACK_PLATE_DARK: Material = {
+  ramp: ramp('#16141c', '#29252f', '#433d4b', '#686071'),
+  outline: CRUSADER_INK,
+};
+
+/** Sunfire: the Crusader's burning light, in his shield's cross and his hammer when it kindles. */
+export const SUNFIRE: Material = {
+  ramp: ramp('#a8321a', '#e0602a', '#ff9a3a', '#ffd070'),
+  outline: hex('#3a140a'),
+  emissive: 0.75,
+  shine: true,
+  noAO: true,
+};
+
+// Sunfire colours (light-only pixels).
+export const SUN_CORE = hex('#fff8e0');
+export const SUN_HOT = hex('#ffd66b');
+export const SUN_MID = hex('#ff9a2e');
+
+// ---------------------------------------------------------------------------
 // The Jade warrior skin: black lacquered plate laced in brass, a jade
 // surcoat and headband, a gold crescent crest, a katana, and jade wind.
 
