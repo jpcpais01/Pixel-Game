@@ -5,7 +5,7 @@ import { settings } from '../game/settings';
 import { pixelText } from '../ui/widgets';
 
 /** Device pixels per font pixel for the counter. */
-const fpsScale = () => Math.max(2, Math.round(DPR * 1.5));
+const fpsScale = () => Math.max(1, Math.round(DPR * 1.5));
 const fpsTop = () => Math.round(6 * DPR);
 
 /** Bottom edge of the counter in device pixels, so menus can keep clear of it. */
