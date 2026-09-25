@@ -382,6 +382,14 @@ export class WorldScene extends Phaser.Scene {
     return this.hurtboxes().filter(test);
   }
 
+  /** The first live body that passes `test`, or null. Builds no lists, for checks run many times a frame (arrows in flight). */
+  firstHurtbox(test: (h: Hurtbox) => boolean): Hurtbox | null {
+    for (const d of this.dummies) if (d.alive && test(d)) return d;
+    if (this.garden) for (const f of this.garden.allHurtboxes) if (f.alive && test(f)) return f;
+    for (const sp of this.spawners) for (const m of sp.monsters) if (m.alive && test(m)) return m;
+    return null;
+  }
+
   /** A monster's blow lands on the hero if its reach (a circle at (x, y)) touches the hero's body. */
   hurtHeroAt(x: number, y: number, radius: number, harm: Harm): boolean {
     if (this.downT > 0) return false;
