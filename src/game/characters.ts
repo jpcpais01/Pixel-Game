@@ -13,6 +13,8 @@ import { Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { Fighter } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
+import { Alchemist } from './Alchemist';
+import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
 import { wear, type SkinDef } from './skins';
 import type { Vitals } from './combat';
 
@@ -20,6 +22,8 @@ import type { Vitals } from './combat';
 export interface Aim {
   x: number;
   y: number;
+  /** How far away the mouse is, in world px, for abilities that land at a spot. */
+  dist?: number;
 }
 
 /** What the world needs from the player's character each frame. */
@@ -212,6 +216,21 @@ export const CHARACTERS: CharacterDef[] = [
       special: { texture: 'icon_barrage' },
     },
     spawn: (world, x, y) => new Fighter(world, x, y),
+  },
+  {
+    id: 'alchemist',
+    name: 'Alchemist',
+    role: 'Poisons and potions',
+    accent: 0x8cff5a,
+    stats: { power: 3, speed: 3, range: 4 },
+    attack: 'Poison flask',
+    special: 'Plague bog',
+    preview: { texture: 'alchemist', glow: 'alchemist_e', idle: 'alchemist_idle_down', chosen: 'alchemist_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
+    buttons: {
+      attack: { texture: 'icon_flask' },
+      special: { texture: 'icon_bog' },
+    },
+    spawn: (world, x, y) => new Alchemist(world, x, y),
   },
 ];
 

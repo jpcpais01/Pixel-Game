@@ -1,7 +1,7 @@
 // Magic effects: the energy ball, its impact burst, and small helper sprites.
 // These are pure light, so they only produce emissive pixels.
 
-import { PixelCanvas, type RGB } from './pixel';
+import { PixelCanvas, hex, type RGB } from './pixel';
 import { EMBER_CORE, EMBER_DEEP, EMBER_HOT, EMBER_MID, MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID, MAGIC_VIOLET, HOLY_CORE, HOLY_HOT, HOLY_MID, HOLY_SKY, VOID_CORE, VOID_DEEP, VOID_HOT, VOID_MID, VOID_TEAL } from './palette';
 
 /** Colours of a spell, brightest first; `accent` is the contrasting fleck. */
@@ -616,6 +616,157 @@ export function barrageIcon(cols: IconColors): Uint8ClampedArray {
         if (d <= r) put(x, y, dx > r * 0.3 ? cols[0] : d < r * 0.6 ? cols[1] : cols[2]);
         else if (dx < 0 && -dx < len && Math.abs(dy) < r * (1 + dx / len) + 0.2) put(x, y, -dx < len * 0.4 ? cols[2] : cols[3]);
       }
+    }
+  }
+  return px;
+}
+
+/** Paints 16x16 icons from a hex colour per pixel, then rings the shape in a dark outline. */
+function iconPainter(): { px: Uint8ClampedArray; put: (x: number, y: number, c: string) => void; outline: (c: string) => void } {
+  const S = 16;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: string) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const n = parseInt(c.slice(1), 16);
+    const i = (y * S + x) * 4;
+    px[i] = n >> 16;
+    px[i + 1] = (n >> 8) & 255;
+    px[i + 2] = n & 255;
+    px[i + 3] = 255;
+  };
+  const outline = (c: string) => {
+    const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < S && y < S && px[(y * S + x) * 4 + 3] === 255;
+    const out: [number, number][] = [];
+    for (let y = 0; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        if (filled(x, y)) continue;
+        if (filled(x + 1, y) || filled(x - 1, y) || filled(x, y + 1) || filled(x, y - 1)) out.push([x, y]);
+      }
+    }
+    for (const [x, y] of out) put(x, y, c);
+  };
+  return { px, put, outline };
+}
+
+/** 16x16 icon for the alchemist's attack: a round flask of glowing poison, corked, bubbles rising off it. */
+export function flaskIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  const cx = 7.5;
+  const cy = 10;
+  const r = 4.6;
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      const d = Math.hypot(dx, dy);
+      if (d > r) continue;
+      // Glass above the liquid line, poison below it, shaded from the top left.
+      if (dy < -1.6) put(x, y, dx + dy < -4 ? '#d8f6f4' : '#8fc0c8');
+      else {
+        const k = dx + dy * 0.6;
+        put(x, y, d > r - 1 && k > 1 ? '#1e6a1a' : k < -2.2 ? '#c8ff7a' : k < 0.6 ? '#6ee03a' : '#3fae2a');
+      }
+    }
+  }
+  // The liquid's surface, a glint on the glass and a bubble inside.
+  for (let x = 4; x <= 11; x++) if (Math.hypot(x + 0.5 - cx, 8.5 - cy) <= r) put(x, 8, '#b8ff5c');
+  put(5, 8, '#f2ffd2');
+  put(5, 7, '#ffffff');
+  put(9, 11, '#c8ff7a');
+  // Neck and cork.
+  for (let y = 3; y <= 5; y++) {
+    put(7, y, '#8fc0c8');
+    put(8, y, '#4d7886');
+  }
+  put(6, 2, '#a9774c');
+  put(7, 2, '#a9774c');
+  put(8, 2, '#7d4f33');
+  put(9, 2, '#523023');
+  put(7, 1, '#7d4f33');
+  put(8, 1, '#523023');
+  outline('#0a1410');
+  // Fumes curling up off the cork, outside the outline.
+  put(11, 3, '#b8ff5c');
+  put(12, 1, '#6ee03a');
+  put(13, 4, '#6ee03a');
+  return px;
+}
+
+/** 16x16 icon for the plague bog: a toxic cloud with a skull in it, bubbles popping underneath. */
+export function bogIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  // Three round puffs make the cloud; the lit side is up and to the left.
+  const puffs: [number, number, number][] = [
+    [5, 8, 4],
+    [10.5, 7, 4.6],
+    [8, 10.5, 4.4],
+  ];
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      let inside = false;
+      let lit = -Infinity;
+      for (const [px0, py0, r] of puffs) {
+        const dx = x + 0.5 - px0;
+        const dy = y + 0.5 - py0;
+        if (Math.hypot(dx, dy) <= r) {
+          inside = true;
+          lit = Math.max(lit, -(dx + dy) / r);
+        }
+      }
+      if (!inside || y > 14) continue;
+      put(x, y, lit > 0.8 ? '#b8ff5c' : lit > 0.1 ? '#6ee03a' : lit > -0.6 ? '#3fae2a' : '#1e6a1a');
+    }
+  }
+  // The skull.
+  const bone = '#e8f2d8';
+  const shade = '#a9b89a';
+  for (const [x, y] of [[7, 5], [8, 5], [9, 5], [6, 6], [7, 6], [8, 6], [9, 6], [10, 6], [6, 7], [8, 7], [10, 7], [6, 8], [7, 8], [8, 8], [9, 8], [10, 8], [7, 9], [9, 9]] as const) put(x, y, x >= 9 && y >= 7 ? shade : bone);
+  put(7, 7, '#10200c');
+  put(9, 7, '#10200c');
+  put(8, 9, '#10200c');
+  put(7, 10, bone);
+  put(8, 10, shade);
+  put(9, 10, shade);
+  outline('#0a1410');
+  // Bubbles bursting below.
+  put(3, 14, '#b8ff5c');
+  put(12, 13, '#b8ff5c');
+  put(13, 15, '#6ee03a');
+  return px;
+}
+
+/** A soft pixel puff of poison fumes, `size` across, dithered at the edge. Variant `v` shifts the shape. */
+export function fumeCanvas(size: number, v: number): Uint8ClampedArray {
+  const px = new Uint8ClampedArray(size * size * 4);
+  const m = size / 2;
+  const lobes: [number, number, number][] = [
+    [m - size * 0.16, m + size * 0.05, size * 0.3],
+    [m + size * 0.14, m - size * 0.04, size * 0.33],
+    [m + (hash(v, 1) - 0.5) * size * 0.2, m - size * 0.16, size * 0.26],
+  ];
+  const cols = [hex('#d2ff9a'), hex('#8ee85a'), hex('#4fb83a'), hex('#2a7a34')];
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      let best = 0;
+      let lit = 0;
+      for (const [lx, ly, r] of lobes) {
+        const dx = x + 0.5 - lx;
+        const dy = y + 0.5 - ly;
+        const k = 1 - Math.hypot(dx, dy) / r;
+        if (k > best) {
+          best = k;
+          lit = -(dx + dy) / r;
+        }
+      }
+      if (best <= 0) continue;
+      // Ragged edge: the outermost ring is only half there.
+      if (best < 0.18 && hash(x, y, v) > 0.5) continue;
+      const c = cols[lit > 0.45 ? 0 : lit > 0 ? 1 : lit > -0.45 ? 2 : 3];
+      const i = (y * size + x) * 4;
+      px[i] = c[0];
+      px[i + 1] = c[1];
+      px[i + 2] = c[2];
+      px[i + 3] = best < 0.18 ? 150 : 255;
     }
   }
   return px;

@@ -804,6 +804,66 @@ export class Sfx {
     o.stop(t + dur + 0.15);
   }
 
+  /** A flask lobbed: a soft swish of the coat and the glass clinking as it leaves the hand. */
+  toss(t: number, pan: number, big: boolean): void {
+    const out = this.out(pan, big ? 0.75 : 0.55, 0.2);
+    this.burstNoise(out, t, 'bandpass', big ? 1400 : 2000, big ? 500 : 800, 1.4, big ? 0.4 : 0.3, big ? 0.22 : 0.13);
+    this.bell(out, t + 0.01, big ? 1760 : 2350, 0.03, 0.18);
+    // The poison sloshing inside.
+    this.chirp(filter(this.m.ctx, 'lowpass', 900, 2, out), t + 0.03, 'sine', big ? 300 : 420, big ? 520 : 700, 0.12, 0.08);
+  }
+
+  /** A flask bursting: glass breaking, a wet splat and the fizz of the poison eating into the ground. */
+  shatter(t: number, pan: number, big: boolean): void {
+    const out = this.out(pan, big ? 1 : 0.7, big ? 0.45 : 0.3);
+    // Glass: bright, dense ticks and a couple of ringing shards.
+    for (let i = 0; i < (big ? 7 : 5); i++) this.burstNoise(out, t + i * rand(0.008, 0.018), 'bandpass', rand(4200, 7200), rand(3000, 5000), 5, 0.3, 0.03);
+    this.bell(out, t, rand(2900, 3300), big ? 0.05 : 0.035, 0.35);
+    this.bell(out, t + 0.03, rand(3900, 4400), 0.025, 0.25);
+    // The splash.
+    this.burstNoise(out, t, 'lowpass', big ? 1600 : 2200, 350, 0.9, big ? 0.6 : 0.4, big ? 0.28 : 0.16, true);
+    if (big) this.chirp(out, t, 'sine', 140, 45, 0.55, 0.25);
+    // The fizz.
+    this.burstNoise(out, t + 0.05, 'highpass', 5200, 6800, 0.7, big ? 0.16 : 0.1, big ? 0.9 : 0.45);
+  }
+
+  /** The great flask brought to the boil: quick bubbles rising in pitch and a cork straining. */
+  brew(t: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.6, 0.35);
+    const lp = filter(ctx, 'lowpass', 1600, 1.5, out);
+    for (let i = 0; i < 9; i++) {
+      const at = t + i * 0.055 * rand(0.8, 1.2);
+      const f = 260 + i * 45 + rand(-30, 30);
+      this.chirp(lp, at, 'sine', f, f * 1.9, 0.22, 0.05);
+    }
+    this.burstNoise(out, t, 'bandpass', 500, 1400, 1.2, 0.18, 0.5, true);
+  }
+
+  /** The bog spreading: a deep glug and a long seething hiss. */
+  bog(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.8, 0.55);
+    this.chirp(filter(ctx, 'lowpass', 600, 3, out), t, 'sawtooth', 80, 55, 0.35, 0.45);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.18, t + 0.15);
+    g.gain.setTargetAtTime(0, t + 0.5, 0.5);
+    const bp = filter(ctx, 'bandpass', 3000, 0.8, g);
+    sweep(bp.frequency, t, 1800, 4200, 1.2);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, 2.2);
+  }
+
+  /** Poison biting: a tiny acid sizzle and one wet bubble. */
+  sizzle(t: number, pan: number): void {
+    const out = this.out(pan, 0.35, 0.15);
+    this.burstNoise(out, t, 'highpass', 4800, 6400, 0.8, 0.22, 0.12);
+    const f = rand(380, 520);
+    this.chirp(filter(this.m.ctx, 'lowpass', 1200, 1, out), t + 0.02, 'sine', f, f * 1.8, 0.12, 0.05);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {
