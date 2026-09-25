@@ -23,6 +23,10 @@ import { buildWarriorFrames, JADE_LOOK, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS,
 import { WIND_DEEP } from './palette';
 import { buildBarklingSheet, buildBeetleSheet, buildFrogSheet, buildGlowmothSheet, buildPuffcapSheet, ringCanvas, thornFrame, THORN_H, THORN_W, venomGlob, type MonsterSheet } from './monsters';
 import { buildWardenSheet } from './warden';
+import { buildBansheeSheet, buildShadeSheet, buildWispSheet } from './ghosts';
+import { HAND_FRAMES, HAND_H, HAND_W, buildQueenSheet, graspHand } from './queen';
+import { BRAZIER_FRAMES, BRAZIER_H, BRAZIER_W, CANDLE_FRAMES, CANDLE_H, CANDLE_W, LANE_H, LANE_W, ORB_PX, PILLAR_H as SD_PILLAR_H, PILLAR_W as SD_PILLAR_W, STATUE_H, STATUE_W, TOMB_H, TOMB_W, laneCanvas, mistPuff, spiritArt, spiritBrazier, spiritCandles, spiritOrb, spiritPillar, spiritStatue, spiritTomb } from './spirit';
+import { SPIRIT_H, SPIRIT_W } from '../world/spiritLayout';
 import { FLOAT_ROCK_H, FLOAT_ROCK_W, HOLE_SIZE, METEOR_H, METEOR_W, OBELISK_H, OBELISK_W, PLATFORM_H, PLATFORM_W, RAY_H as COSMIC_RAY_H, RAY_W as COSMIC_RAY_W, cosmicRay, floatingRock, lightPool, meteor, obelisk, platformArt, shockRing, singularity, spaceCanvas, streak } from './cosmos';
 import { COSMOS_H, COSMOS_W } from '../world/cosmosLayout';
 import { COLUMN_H, COLUMN_W, ISLAND_H, ISLAND_W, ISLETS, column, fallStrip, foam, islandArt, islet, skyCanvas, wisp } from './island';
@@ -432,6 +436,10 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   registerMonster(scene, 'barkling', buildBarklingSheet());
   registerMonster(scene, 'glowmoth', buildGlowmothSheet());
   registerMonster(scene, 'warden', buildWardenSheet());
+  registerMonster(scene, 'wisp', buildWispSheet());
+  registerMonster(scene, 'shade', buildShadeSheet());
+  registerMonster(scene, 'banshee', buildBansheeSheet());
+  registerMonster(scene, 'queen', buildQueenSheet());
   register(scene, 'thorns', pack(frameList([0, 1, 2].map(thornFrame), 't'), THORN_W, THORN_H), THORN_W, THORN_H, false);
   scene.textures.addCanvas('venom', toCanvas(7, 7, venomGlob()));
   const ring = ringCanvas(22, 12);
@@ -533,4 +541,50 @@ function* islandTextures(scene: Phaser.Scene): Generator<void, void, void> {
   const bird = scene.textures.addCanvas('isle_bird', birdSheet().toCanvas())!;
   bird.add('b0', 0, 0, 0, 5, 3);
   bird.add('b1', 0, 5, 0, 5, 3);
+}
+
+/** The Spirit Dungeon's textures being built, a little per call. */
+const spiritJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
+
+/**
+ * Build the Spirit Dungeon's floor plan, props and spell textures, spending
+ * at most `budget` ms (as warmCosmos). Returns true when they are all there.
+ */
+export function warmSpirit(scene: Phaser.Scene, budget = Infinity): boolean {
+  if (scene.textures.exists('sd_lane')) return true;
+  let job = spiritJobs.get(scene);
+  if (!job) {
+    job = spiritTextures(scene);
+    spiritJobs.set(scene, job);
+  }
+  const start = performance.now();
+  while (performance.now() - start < budget) {
+    if (job.next().done) {
+      spiritJobs.delete(scene);
+      return true;
+    }
+  }
+  return false;
+}
+
+function* spiritTextures(scene: Phaser.Scene): Generator<void, void, void> {
+  const art = yield* spiritArt();
+  scene.textures.addCanvas('sd_floor', toCanvas(SPIRIT_W, SPIRIT_H, art.diffuse))!.setDataSource(toCanvas(SPIRIT_W, SPIRIT_H, art.normal));
+  scene.textures.addCanvas('sd_floor_e', toCanvas(SPIRIT_W, SPIRIT_H, art.emissive));
+  yield;
+  register(scene, 'sd_brazier', pack(frameList(Array.from({ length: BRAZIER_FRAMES }, (_, f) => spiritBrazier(f)), 'f'), BRAZIER_W, BRAZIER_H), BRAZIER_W, BRAZIER_H);
+  scene.anims.create({ key: 'sd_brazier_burn', frames: scene.anims.generateFrameNames('sd_brazier_e', { prefix: 'f', start: 0, end: BRAZIER_FRAMES - 1 }), frameRate: 8, repeat: -1 });
+  register(scene, 'sd_candles', pack(frameList(Array.from({ length: CANDLE_FRAMES }, (_, f) => spiritCandles(f)), 'f'), CANDLE_W, CANDLE_H), CANDLE_W, CANDLE_H);
+  scene.anims.create({ key: 'sd_candles_burn', frames: scene.anims.generateFrameNames('sd_candles_e', { prefix: 'f', start: 0, end: CANDLE_FRAMES - 1 }), frameRate: 6, repeat: -1 });
+  yield;
+  register(scene, 'sd_pillar', pack(frameList([spiritPillar(false), spiritPillar(true)], 'p'), SD_PILLAR_W, SD_PILLAR_H), SD_PILLAR_W, SD_PILLAR_H);
+  register(scene, 'sd_tomb', pack(frameList([spiritTomb()], 't'), TOMB_W, TOMB_H), TOMB_W, TOMB_H);
+  register(scene, 'sd_statue', pack(frameList([spiritStatue()], 's'), STATUE_W, STATUE_H), STATUE_W, STATUE_H);
+  yield;
+  register(scene, 'sd_hand', pack(frameList(Array.from({ length: HAND_FRAMES }, (_, f) => graspHand(f)), 'h'), HAND_W, HAND_H), HAND_W, HAND_H);
+  scene.anims.create({ key: 'sd_hand_grasp', frames: scene.anims.generateFrameNames('sd_hand_e', { prefix: 'h', start: 0, end: HAND_FRAMES - 1 }), frameRate: 10, repeat: 0 });
+  [0, 1, 2].forEach((k) => scene.textures.addCanvas(`sd_mist${k}`, toCanvas(72, 30, mistPuff(72, 30, 300 + k * 23))));
+  scene.textures.addCanvas('sd_orb', toCanvas(ORB_PX, ORB_PX, spiritOrb()));
+  // Last: its presence means everything above is built.
+  scene.textures.addCanvas('sd_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
 }

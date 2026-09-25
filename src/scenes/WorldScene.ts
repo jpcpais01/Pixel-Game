@@ -24,6 +24,7 @@ import { PLAZA_H, PLAZA_Y, plazaProps } from '../world/clearing';
 import { Garden } from '../world/Garden';
 import { CosmosArena } from '../world/Cosmos';
 import { FloatingIsland } from '../world/Island';
+import { SpiritDungeon } from '../world/Spirit';
 import { isPainted } from '../world/arenas';
 
 type V3 = [number, number, number];
@@ -114,6 +115,12 @@ export class WorldScene extends Phaser.Scene {
   private cosmos: CosmosArena | null = null;
   /** The arena's own living parts, when it is the Floating Island. */
   private island: FloatingIsland | null = null;
+  /** The arena's own living parts, when it is the Spirit Dungeon. */
+  private spirit: SpiritDungeon | null = null;
+  /** The Wraithbound set's spectral form about the hero, while the whole set is worn. */
+  /** Set once the run has begun (after the gear worn from the start is on). */
+  private running = false;
+  private wraith: { halo: Phaser.GameObjects.Image; motes: Phaser.GameObjects.Particles.ParticleEmitter } | null = null;
   /** How far the camera leans off the hero, toward a boss towering over the fight. */
   private lean = { x: 0, y: 0 };
   /** The light this frame: 0 night .. 1 day (fixed in arenas without day and night). */
@@ -209,6 +216,9 @@ export class WorldScene extends Phaser.Scene {
     this.garden = null;
     this.cosmos = null;
     this.island = null;
+    this.spirit = null;
+    this.wraith = null;
+    this.running = false;
     this.lean.x = this.lean.y = 0;
     this.shafts = null;
     this.regenAcc = this.regenShown = this.regenT = this.auraT = 0;
@@ -245,8 +255,9 @@ export class WorldScene extends Phaser.Scene {
 
     // The ground streams in strips as the hero walks (see GroundStreamer).
     this.ground = isPainted(arena.ground) ? null : new GroundStreamer(this, arena.ground, (img) => ground(img) as Phaser.GameObjects.Image);
-    sound.setOutdoors(arena.id !== 'cosmos');
+    sound.setOutdoors(arena.id !== 'cosmos' && arena.id !== 'spirit');
     if (arena.id === 'cosmos') this.cosmos = new CosmosArena(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
+    if (arena.id === 'spirit') this.spirit = new SpiritDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'island') {
       this.island = new FloatingIsland(this, ground, this.view);
       this.shadows.push(...this.island.shadows);
@@ -350,6 +361,7 @@ export class WorldScene extends Phaser.Scene {
     // run, and swapping them in the bag mid-run applies at once.
     gear.reset();
     this.rewear();
+    this.running = true;
     const unwatchGear = collection.watch(() => this.rewear());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, unwatchGear);
     controls.items.length = 0;
@@ -581,10 +593,56 @@ export class WorldScene extends Phaser.Scene {
   /** Put on what the collection has equipped; max health follows the gear's. */
   private rewear(): void {
     const d = gear.wear(collection.equippedGear());
+    this.spectralForm(gear.sets.includes('wraith'));
     if (!d) return;
     const v = this.hero.vitals;
     if (v.alive) v.grow(d);
     else v.max += d;
+  }
+
+  /**
+   * The whole Wraithbound set worn: the hero takes on a spectral form, a cold
+   * glow at their feet and soul-light rising off them (its stats come with
+   * the gear's totals).
+   */
+  private spectralForm(on: boolean): void {
+    if (on === !!this.wraith) return;
+    if (!on) {
+      this.wraith!.halo.destroy();
+      this.wraith!.motes.destroy();
+      this.wraith = null;
+      return;
+    }
+    const halo = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x6af4dc).setScale(1.1, 0.55).setAlpha(0.3);
+    const motes = this.add.particles(0, 0, 'spark', {
+      emitZone: { type: 'random', source: new Phaser.Geom.Rectangle(-7, -26, 14, 26) } as Phaser.Types.GameObjects.Particles.EmitZoneData,
+      lifespan: { min: 700, max: 1300 },
+      speedY: { min: -24, max: -8 },
+      speedX: { min: -4, max: 4 },
+      scale: 0.5,
+      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * Math.PI) * 0.85 },
+      tint: [0xeafffa, 0x6af4dc, 0x8ac8ff],
+      blendMode: Phaser.BlendModes.ADD,
+      frequency: 95,
+    });
+    this.wraith = { halo, motes };
+    // Put on mid-run: say so.
+    if (this.running) {
+      const h = this.hero;
+      this.popNumber(snap(h.x), snap(h.y) - 40, 'SPECTRAL FORM', 0x9ffff0);
+      this.debris([0xeafffa, 0x6af4dc, 0x8ac8ff], snap(h.x), snap(h.y) - 12, 26, h.y + 20, 'spores');
+    }
+  }
+
+  /** The spectral form's glow and motes follow the hero. */
+  private updateSpectralForm(time: number): void {
+    const w = this.wraith;
+    if (!w) return;
+    const h = this.hero;
+    const down = this.downT > 0;
+    w.halo.setPosition(snap(h.x), snap(h.y) - 3).setDepth(h.y - 0.5).setAlpha(down ? 0 : 0.26 + Math.sin(time * 0.004) * 0.08);
+    w.motes.setPosition(snap(h.x), snap(h.y)).setDepth(h.y + 1);
+    w.motes.emitting = !down;
   }
 
   /** A piece of gear was picked up: it's kept for good, and worn straight away if its slot is empty. */
@@ -928,9 +986,9 @@ export class WorldScene extends Phaser.Scene {
     this.shafts?.setAlpha(d * (0.1 + Math.sin(time * 0.0007) * 0.03));
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
     this.setVignette(0.32 - d * 0.14);
-    // Out in the void there is neither pollen nor fireflies (the arena has its own stardust).
-    this.pollen.emitting = !this.cosmos && d > 0.5;
-    this.fireflies.emitting = !this.cosmos && d < 0.5;
+    // Out in the void and down in the dungeon there is neither pollen nor fireflies (they have their own motes).
+    this.pollen.emitting = !this.cosmos && !this.spirit && d > 0.5;
+    this.fireflies.emitting = !this.cosmos && !this.spirit && d < 0.5;
     sound.setDaylight(d);
     return d;
   }
@@ -1119,6 +1177,7 @@ export class WorldScene extends Phaser.Scene {
     if (fast !== 1 && this.downT <= 0) this.stretchStep(x0, y0, fast - 1, hb);
     this.updateHeroLife(dt);
     this.updateItems(dt);
+    this.updateSpectralForm(time);
 
     const target = this.downT > 0 ? null : this.hero;
     const monsters: Monster[] = [];
@@ -1152,6 +1211,7 @@ export class WorldScene extends Phaser.Scene {
     // After the day/night light: the cosmos lights itself.
     this.cosmos?.update(time, dt);
     this.island?.update(time, dt);
+    this.spirit?.update(time, dt);
     this.updateBanner();
     for (const f of this.flickers) {
       const k = 1 + (f.day - 1) * d;

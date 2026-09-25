@@ -1,4 +1,4 @@
-// Gear: forty pieces of equipment that monsters drop. Walking over a piece picks it up and
+// Gear: forty-six pieces of equipment that monsters drop. Walking over a piece picks it up and
 // keeps it for good (see collection.ts). Each piece has one of six slot
 // types, and the hero wears one piece per type: only worn pieces count. A
 // piece goes on by itself when its slot is empty; otherwise the player swaps
@@ -47,6 +47,23 @@ export interface GearStats {
   leech?: number;
 }
 
+/** Sets of gear that grant more when every piece is worn together. */
+export type SetId = 'wraith';
+
+export interface GearSet {
+  name: string;
+  /** Colour of the set's name and marks. */
+  tint: number;
+  /** Stats added on top of the pieces' own while all of them are worn. */
+  bonus: GearStats;
+  /** What else the full set does, in a few words. */
+  effect: string;
+}
+
+export const GEAR_SETS: Record<SetId, GearSet> = {
+  wraith: { name: 'Wraithbound', tint: 0x6af4dc, bonus: { power: 0.15, speed: 0.1, leech: 0.05 }, effect: 'Spectral form: a ghostly aura follows you' },
+};
+
 export interface GearDef {
   id: string;
   name: string;
@@ -54,12 +71,14 @@ export interface GearDef {
   /** Which of the six equip slots it goes in. */
   slot: Slot;
   stats: GearStats;
+  /** The set it belongs to, if any. */
+  set?: SetId;
   /** 32x32 icon, and the 16x16 sprite lying on the ground. */
   icon: string;
   drop: string;
 }
 
-const piece = (id: string, name: string, rarity: Rarity, slot: Slot, stats: GearStats): GearDef => ({ id, name, rarity, slot, stats, icon: `gear_${id}`, drop: `gdrop_${id}` });
+const piece = (id: string, name: string, rarity: Rarity, slot: Slot, stats: GearStats, set?: SetId): GearDef => ({ id, name, rarity, slot, stats, set, icon: `gear_${id}`, drop: `gdrop_${id}` });
 
 export const GEAR: GearDef[] = [
   piece('iron_sword', 'Iron Sword', 'common', 'weapon', { power: 0.1 }),
@@ -103,7 +122,27 @@ export const GEAR: GearDef[] = [
   piece('clover_charm', 'Clover Locket', 'uncommon', 'accessory', { regen: 0.8, speed: 0.04 }),
   piece('hunter_longbow', 'Hunter Longbow', 'rare', 'weapon', { power: 0.14, speed: 0.04 }),
   piece('void_scythe', 'Void Scythe', 'legendary', 'weapon', { power: 0.3, leech: 0.08 }),
+  // The Wraithbound set: one legendary for each slot, dropped only by the Hollow Queen in the Spirit Dungeon.
+  piece('wraith_crown', 'Wraith Crown', 'legendary', 'headwear', { hp: 30, regen: 2 }, 'wraith'),
+  piece('wraith_shroud', 'Shroud of the Hollow', 'legendary', 'chest', { armor: 0.14, hp: 30 }, 'wraith'),
+  piece('wraith_treads', 'Ghoststep Treads', 'legendary', 'boots', { speed: 0.16, armor: 0.04 }, 'wraith'),
+  piece('soulreaver', 'Soulreaver', 'legendary', 'weapon', { power: 0.3, leech: 0.06 }, 'wraith'),
+  piece('phantom_ward', 'Phantom Ward', 'legendary', 'defence', { armor: 0.16, regen: 1.5 }, 'wraith'),
+  piece('soul_lantern', 'Lantern of Souls', 'legendary', 'accessory', { power: 0.12, regen: 2, hp: 15 }, 'wraith'),
 ];
+
+/** How many pieces of `set` are among `defs`, out of how many there are. */
+export function setCount(defs: GearDef[], set: SetId): { worn: number; of: number } {
+  return { worn: defs.filter((g) => g.set === set).length, of: GEAR.filter((g) => g.set === set).length };
+}
+
+/** The sets worn whole among `defs`. */
+export function fullSets(defs: GearDef[]): SetId[] {
+  return (Object.keys(GEAR_SETS) as SetId[]).filter((k) => {
+    const c = setCount(defs, k);
+    return c.worn === c.of;
+  });
+}
 
 export const gearById = (id: string): GearDef | undefined => GEAR.find((g) => g.id === id);
 
@@ -137,8 +176,18 @@ export function sumStats(defs: GearDef[]): Required<GearStats> {
   return t;
 }
 
-/** Chance a slain monster drops a piece, by kind; others use the default. The Warden always does. */
-const GEAR_CHANCE: Record<string, number> = { beetle: 0.22, barkling: 0.14, warden: 1 };
+/** What the worn pieces add up to, with the bonus of every set worn whole. */
+export function wornStats(defs: GearDef[]): Required<GearStats> {
+  const t = sumStats(defs);
+  for (const k of fullSets(defs)) for (const s of STAT_KEYS) t[s] += GEAR_SETS[k].bonus[s] ?? 0;
+  t.regen = Math.round(t.regen * 10) / 10;
+  return t;
+}
+
+/** Chance a slain monster drops a piece, by kind; others use the default. The bosses always do. */
+const GEAR_CHANCE: Record<string, number> = { beetle: 0.22, barkling: 0.14, warden: 1, queen: 1 };
+/** Sets only their own boss drops. */
+const SET_BOSS: Record<string, SetId> = { queen: 'wraith' };
 const DEFAULT_GEAR_CHANCE = 0.08;
 
 /** A piece picked up this run, for the HUD's banner; `worn` if it went straight into an empty slot. */
@@ -154,8 +203,10 @@ export class GearBag {
   found = new Set<string>();
   /** Pieces just picked up, for the HUD's banner; it takes them off the front. */
   news: GearNews[] = [];
-  /** Totals of every worn piece's stats: these are what count. */
+  /** Totals of every worn piece's stats, with set bonuses: these are what count. */
   totals: Required<GearStats> = sumStats([]);
+  /** Sets worn whole right now. */
+  sets: SetId[] = [];
 
   /** A new run: nothing found yet. Call `wear` with the equipped pieces next. */
   reset(): void {
@@ -163,13 +214,15 @@ export class GearBag {
     this.found.clear();
     this.news = [];
     this.totals = sumStats([]);
+    this.sets = [];
   }
 
   /** Wear these pieces; returns how much max health changed, for the hero's vitals. */
   wear(defs: GearDef[]): number {
     const before = this.totals.hp;
     this.worn = defs;
-    this.totals = sumStats(defs);
+    this.totals = wornStats(defs);
+    this.sets = fullSets(defs);
     return this.totals.hp - before;
   }
 
@@ -197,13 +250,19 @@ export class GearBag {
   /**
    * Maybe a piece for a slain monster of `kind`: a rarity by weight among those
    * with pieces still to find, then one of them. Pieces found this run, or in
-   * `skip` (already owned, or lying on the ground), never drop. The Warden
-   * drops epics and up.
+   * `skip` (already owned, or lying on the ground), never drop. Bosses drop
+   * epics and up, and set pieces drop only from their own boss.
    */
   roll(kind: string, skip: Set<string>): GearDef | null {
     if (Math.random() >= (GEAR_CHANCE[kind] ?? DEFAULT_GEAR_CHANCE)) return null;
-    const left = GEAR.filter((g) => !this.found.has(g.id) && !skip.has(g.id));
-    const boss = kind === 'warden';
+    // A set's boss drops a piece of its set the player doesn't have yet; once they have them all, it drops like the other bosses.
+    const set = SET_BOSS[kind];
+    if (set) {
+      const missing = GEAR.filter((g) => g.set === set && !this.found.has(g.id) && !skip.has(g.id));
+      if (missing.length) return missing[Math.floor(Math.random() * missing.length)];
+    }
+    const left = GEAR.filter((g) => !g.set && !this.found.has(g.id) && !skip.has(g.id));
+    const boss = kind in GEAR_CHANCE && GEAR_CHANCE[kind] >= 1;
     let pool = boss ? left.filter((g) => g.rarity === 'epic' || g.rarity === 'legendary') : left;
     if (!pool.length) pool = left;
     if (!pool.length) return null;

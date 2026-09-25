@@ -1,4 +1,4 @@
-// Gear art: a 32x32 icon for each of the forty pieces of gear, painted in
+// Gear art: a 32x32 icon for each piece of gear, painted in
 // code and lit from the top left like the potions. Shapes are shaded from
 // five-step ramps (darkest first), then ringed in an outline tinted by what it
 // wraps. Each icon also gives the 16x16 sprite that lies on the ground when a
@@ -1426,6 +1426,190 @@ function voidScythe(p: Paint): () => void {
   };
 }
 
+// ---- The Wraithbound set ---------------------------------------------------
+// Six legendaries the Hollow Queen drops: pale ghost-steel and spectral
+// cloth, cold teal light, wisps trailing off them, and the set's mark (a
+// little soul-flame) glowing in each icon's top-left corner.
+
+const SPECTRAL: Ramp = ['#1c3440', '#2e5864', '#4a8c94', '#86ccc8', '#d4fff4'];
+const GHOST_STEEL: Ramp = ['#161c2c', '#2a3650', '#4c607e', '#8aa2bc', '#dceaf4'];
+const SHROUD: Ramp = ['#0c1220', '#162238', '#243854', '#385474', '#5c809e'];
+const SOUL: Ramp = ['#1a7a78', '#34c0b4', '#7af4dc', '#c4fff2', '#ffffff'];
+const WRAITH_BONE: Ramp = ['#4a5058', '#7a8490', '#aab4bc', '#d8e0e4', '#f6fcfc'];
+
+/** The set's mark: a small soul-flame in the top-left corner. */
+function wraithMark(p: Paint): void {
+  p.map(1, 1, ['..a.', '.ab.', 'abcb', 'bcdb', '.bb.'], { a: SOUL[1], b: SOUL[2], c: SOUL[3], d: SOUL[4] });
+}
+
+/** Wisps of soul-light trailing off a piece, from around (x, y) drifting the way (dx, dy). */
+function wraithWisps(p: Paint, seed: number, pts: Pt[], dx: number, dy: number): void {
+  const r = rng(seed);
+  for (const [x, y] of pts) {
+    for (let i = 0; i < 4; i++) {
+      const k = i / 4;
+      p.glow(Math.round(x + dx * i * 1.3 + (r() - 0.5) * 1.5), Math.round(y + dy * i * 1.3 + (r() - 0.5) * 1.5), i < 2 ? SOUL[3] : SOUL[2], 200 * (1 - k) + 30);
+    }
+  }
+}
+
+function wraithCrown(p: Paint): () => void {
+  // Five spires of pale bone rising from a ghost-steel circlet.
+  const spires: [number, number, number][] = [
+    [8.5, 11, 1.7],
+    [12, 7, 1.9],
+    [16, 4, 2.2],
+    [20, 7, 1.9],
+    [23.5, 11, 1.7],
+  ];
+  for (const [x, top, w] of spires) p.band(x, 21, x + (x - 16) * 0.12, top, (t) => w * (1 - t) + 0.35, WRAITH_BONE, 'round', (16 - x) / 60);
+  // The circlet: a band curving round, lit on its upper edge.
+  p.fill(GHOST_STEEL, (x, y) => {
+    const c = 22 + ((x - 16) / 11) ** 2 * 2.5;
+    if (Math.abs(x - 16) > 11 || y < c - 2.2 || y > c + 2.2) return null;
+    return (y < c - 1 ? 0.85 : y > c + 1 ? 0.3 : 0.58) - (x - 16) / 50;
+  });
+  for (let x = 6; x <= 26; x += 4) mark(p, x, Math.round(22 + ((x - 16) / 11) ** 2 * 2.5), SOUL[3]);
+  p.ball(16, 22, 2.2, 2, SOUL, 0.1);
+  return () => {
+    // Cold flames atop each spire, and wisps drifting down from the circlet.
+    for (const [x, top] of spires) {
+      const fx = Math.round(x + (x - 16) * 0.12);
+      p.glow(fx, Math.round(top) - 1, SOUL[4], 255);
+      p.glow(fx, Math.round(top) - 2, SOUL[3], 220);
+      p.glow(fx + (x < 16 ? -1 : 1), Math.round(top) - 3, SOUL[2], 150);
+    }
+    wraithWisps(p, 61, [[8, 25], [16, 26], [24, 25]], 0, 1);
+    p.halo(SOUL[2], 2, 55);
+    wraithMark(p);
+  };
+}
+
+function wraithShroud(p: Paint): () => void {
+  // A hooded shroud, its hem torn into tatters.
+  const bottom = (x: number) => 27 + 2.2 * Math.abs(Math.sin(x * 0.9)) + (x % 4 === 0 ? 1.5 : 0);
+  const hw = (y: number) => 6.2 + (y - 10) * 0.36;
+  p.fill(SHROUD, (x, y) => {
+    const head = ((x - 16) / 6.2) ** 2 + ((y - 10) / 6.2) ** 2 <= 1;
+    const body = y >= 10 && y <= bottom(x) && Math.abs(x - 16) <= hw(y);
+    if (!head && !body) return null;
+    let l = 0.55 - (0.3 * (x - 16)) / hw(Math.max(10, y)) + (body ? 0.12 * Math.sin((x - 16) * 1.2 + y * 0.12) : 0.05);
+    if (body && y > bottom(x) - 1.5) l += 0.15;
+    return l;
+  });
+  // A pale spectral lining showing down the front, and the empty hood.
+  p.fill(SPECTRAL, (x, y) => (y >= 15 && y <= bottom(x) - 1 && Math.abs(x - 16) <= 1 + (y - 15) * 0.18 ? 0.55 + (y - 15) / 40 : null));
+  p.fill(HOLLOW, (x, y) => (((x - 16) / 3.8) ** 2 + ((y - 11) / 4) ** 2 <= 1 ? clamp01((y - 8) / 10) : null));
+  p.put(14, 11, SOUL[4]);
+  p.put(18, 11, SOUL[3]);
+  // A clasp of ghost-steel with a soul gem.
+  p.ball(16, 15.5, 1.6, 1.6, SOUL, 0.1);
+  mark(p, 13, 15, GHOST_STEEL[3]);
+  mark(p, 19, 15, GHOST_STEEL[2]);
+  return () => {
+    // The tatters dissolve into light.
+    const r = rng(67);
+    for (let x = 6; x <= 26; x++) {
+      const b = Math.ceil(bottom(x));
+      if (!p.filled(x, b - 1) && !p.filled(x, b)) continue;
+      if (r() < 0.55) p.glow(x, b + 1, SOUL[2], 140 + r() * 80);
+      if (r() < 0.25) p.glow(x, b + 2, SOUL[3], 110);
+    }
+    p.halo(SOUL[1], 1, 60);
+    wraithMark(p);
+  };
+}
+
+function wraithTreads(p: Paint): () => void {
+  boot(p, 6, 9, GHOST_STEEL, SPECTRAL, -0.16);
+  boot(p, 12, 6, GHOST_STEEL, SPECTRAL, 0.04);
+  // Soul-light seeping from the seams.
+  for (const [ox, oy] of [[6, 9], [12, 6]]) {
+    for (let y = oy + 4; y <= oy + 14; y += 5) for (let x = ox + 1; x <= ox + 7; x++) mark(p, x, y, x % 2 ? SOUL[1] : SOUL[2]);
+    mark(p, ox + 4, oy + 1, SOUL[4]);
+  }
+  return () => {
+    // The soles fade into mist: they step without a sound.
+    const r = rng(71);
+    for (const [ox, oy] of [[6, 9], [12, 6]]) {
+      for (let x = ox - 1; x <= ox + 13; x++) if (p.filled(x, oy + 17) || p.filled(x, oy + 18)) p.glow(x, oy + 19, x % 2 ? SOUL[2] : SOUL[3], 140 + r() * 90);
+    }
+    wraithWisps(p, 73, [[5, 20], [11, 17]], -1, 0.4);
+    wraithMark(p);
+  };
+}
+
+function soulreaver(p: Paint): () => void {
+  sword(p, { guard: [10.5, 21.5], tip: [28, 4], width: 2.4, taper: 0.32, blade: SPECTRAL, hilt: GHOST_STEEL, grip: SHROUD, guardHalf: 5.6, gripLen: 5, pommel: SOUL, pommelR: 1.9, fuller: SOUL[4] });
+  // Wings of bone swept back from the guard.
+  p.band(6.5, 17.5, 4.5, 13.5, (t) => 1 * (1 - t) + 0.3, WRAITH_BONE, 'round', 0.1);
+  p.band(14.5, 25.5, 18.5, 27.5, (t) => 1 * (1 - t) + 0.3, WRAITH_BONE, 'round', -0.1);
+  p.ball(10.5, 21.5, 1.5, 1.5, SOUL, 0.1);
+  return () => {
+    // Soul-light streaming off the edge of the blade.
+    const r = rng(79);
+    for (let i = 0; i < 26; i++) {
+      const t = 0.15 + r() * 0.85;
+      const x = Math.round(10.5 + (28 - 10.5) * t + 1 + r() * 3);
+      const y = Math.round(21.5 + (4 - 21.5) * t + 1 + r() * 3);
+      p.glow(x, y, r() < 0.5 ? SOUL[3] : SOUL[2], 90 + r() * 120);
+    }
+    p.halo(SOUL[2], 2, 60);
+    p.twinkle(27, 4, SOUL[4], 1);
+    wraithMark(p);
+  };
+}
+
+function phantomWard(p: Paint): () => void {
+  // A kite shield of ghost-steel, a weeping spirit's face on its field.
+  const hw = (y: number) => (y <= 12 ? 10.5 : 10.5 * Math.sqrt(Math.max(0, 1 - ((y - 12) / 17.5) ** 2)));
+  const inside = (x: number, y: number) => y >= 5 && y <= 29.5 && Math.abs(x - 16.5) <= hw(y) && !(y < 6.5 && Math.abs(x - 16.5) > hw(y) - 1.5);
+  p.fill(SHROUD, (x, y) => (inside(x, y) ? 0.62 - ((x - 16) + (y - 16)) / 30 : null));
+  p.fill(GHOST_STEEL, (x, y) => {
+    if (!inside(x, y) || !nearEdge(inside, x, y, 2)) return null;
+    return (nearEdge(inside, x, y, 1) ? 0.78 : 0.5) - ((x - 16) + (y - 16)) / 34;
+  });
+  // The face: a pale oval, hollow eyes, and a mouth open in a silent wail.
+  p.fill(SPECTRAL, (x, y) => (((x - 16.5) / 5) ** 2 + ((y - 16.5) / 6.4) ** 2 <= 1 ? 0.72 - ((x - 16.5) + (y - 16.5)) / 20 : null));
+  for (const [x, y] of [[14, 15], [14, 16], [18, 15], [18, 16], [16, 19], [16, 20], [17, 19], [17, 20]]) p.put(x, y, HOLLOW[0]);
+  p.put(14, 15, SOUL[4]);
+  p.put(18, 15, SOUL[3]);
+  // Tears of light running down from the eyes.
+  for (const [x, y] of [[14, 17], [14, 18], [18, 17], [18, 18], [18, 19]]) mark(p, x, y, SOUL[3]);
+  return () => {
+    p.halo(SOUL[2], 2, 65);
+    wraithWisps(p, 83, [[10, 27], [16, 30], [22, 27]], 0, 1);
+    p.twinkle(26, 6, SOUL[4], 1);
+    wraithMark(p);
+  };
+}
+
+function soulLantern(p: Paint): () => void {
+  // The ring it hangs from, and a short chain.
+  p.ring(17, 5.5, 3, 2.6, 0.45, GHOST_STEEL);
+  for (let y = 8; y <= 9; y++) p.put(17, y, GHOST_STEEL[y % 2 ? 2 : 3]);
+  // A peaked cap and a flared base, with the cage of bars between them.
+  p.fill(GHOST_STEEL, (x, y) => (y >= 10 && y <= 13 && Math.abs(x - 17) <= (y - 9.5) * 1.8 + 1 ? 0.7 - (x - 17) / 14 - (y - 10) / 12 : null));
+  p.fill(GHOST_STEEL, (x, y) => (y >= 25 && y <= 28 && Math.abs(x - 17) <= 7 - (y - 25) * 0.6 ? 0.6 - (x - 17) / 16 - (y - 25) / 10 : null));
+  // The soul inside: a pale flame with two dark eyes, glowing through the glass.
+  p.fill(SOUL, (x, y) => {
+    if (y < 14 || y > 24 || Math.abs(x - 17) > 5.5) return null;
+    const fx = (x - 17) / (1.2 + (y - 13) * 0.4);
+    const fy = (y - 24) / 10;
+    const inFlame = fx * fx + fy * fy <= 1 && y > 14.5;
+    return inFlame ? 0.92 - Math.abs(x - 17) / 12 : 0.1 + (x < 17 ? 0.08 : 0);
+  });
+  for (const [x, y] of [[16, 20], [18, 20]]) p.put(x, y, SHROUD[0]);
+  for (const x of [11, 14, 20, 23]) for (let y = 14; y <= 24; y++) if (Math.abs(x - 17) <= 6) p.put(x, y, x < 17 ? GHOST_STEEL[3] : GHOST_STEEL[1]);
+  for (let x = 11; x <= 23; x++) p.put(x, 14, GHOST_STEEL[x < 17 ? 3 : 2]);
+  return () => {
+    p.halo(SOUL[2], 3, 70);
+    wraithWisps(p, 89, [[12, 12], [22, 12]], 0, -1);
+    p.twinkle(26, 26, SOUL[4], 1);
+    wraithMark(p);
+  };
+}
+
 /** Every piece's painter, by gear id. Returns a finishing pass for glows and sparks, drawn after the outline. */
 const PAINTERS: Record<string, (p: Paint) => void | (() => void)> = {
   iron_sword: ironSword,
@@ -1468,6 +1652,12 @@ const PAINTERS: Record<string, (p: Paint) => void | (() => void)> = {
   clover_charm: cloverCharm,
   hunter_longbow: hunterLongbow,
   void_scythe: voidScythe,
+  wraith_crown: wraithCrown,
+  wraith_shroud: wraithShroud,
+  wraith_treads: wraithTreads,
+  soulreaver: soulreaver,
+  phantom_ward: phantomWard,
+  soul_lantern: soulLantern,
 };
 
 export const GEAR_ART_IDS = Object.keys(PAINTERS);

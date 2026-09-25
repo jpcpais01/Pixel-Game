@@ -22,6 +22,7 @@ import Phaser from 'phaser';
 import { collection, EQUIP_SLOTS, slotIndex } from '../game/collection';
 import {
   GEAR,
+  GEAR_SETS,
   RARITIES,
   RARITY,
   SLOTS,
@@ -30,8 +31,10 @@ import {
   STAT_KEYS,
   STAT_LABEL,
   gearById,
+  setCount,
+  statLines,
   statValue,
-  sumStats,
+  wornStats,
   type GearDef,
   type GearStats,
   type Slot,
@@ -490,7 +493,14 @@ export class InventoryView extends Phaser.GameObjects.Container {
   }
 
   private drawTotals(): void {
-    const t = sumStats(collection.equippedGear());
+    const worn = collection.equippedGear();
+    const t = wornStats(worn);
+    // Wearing pieces of a set: say how many, in the set's colour (bright once it's whole).
+    const set = worn.find((g) => g.set)?.set;
+    if (set) {
+      const c = setCount(worn, set);
+      this.setLabel.setText(`${GEAR_SETS[set].name} ${c.worn}/${c.of}`.toUpperCase()).setTint(c.worn === c.of ? GEAR_SETS[set].tint : DIM);
+    } else this.setLabel.setText('SET BONUS').setTint(DIM);
     STAT_KEYS.forEach((k, i) => {
       const row = this.setRows[i % 3];
       const [lab, val] = i < 3 ? [row[0], row[1]] : [row[2], row[3]];
@@ -590,11 +600,23 @@ export class InventoryView extends Phaser.GameObjects.Container {
           diff.setPosition(Math.round(x + w - pad - diff.width), y);
           y += LINE;
         }
+        if (g.set) {
+          // The set it belongs to, how much of it is worn, and what the whole set gives.
+          const set = GEAR_SETS[g.set];
+          const c = setCount(collection.equippedGear(), g.set);
+          y += 3;
+          line(`${set.name} ${c.worn}/${c.of}`, c.worn === c.of ? set.tint : DIM, x + pad, y);
+          y += LINE;
+          for (const s of wrap(`All ${c.of}: ${statLines(set.bonus).join(' ')}`, chars)) {
+            line(s, c.worn === c.of ? GOOD : SOFT, x + pad, y);
+            y += LINE;
+          }
+        }
         const btnH = 18;
         this.button.setVisible(true).set(isWorn ? 'Unequip' : worn ? 'Swap in' : 'Equip', w - pad * 2, btnH, !isWorn);
         this.button.setPosition(x + pad, Math.max(y + 6, Math.min(top + this.det.h - pad - btnH, y + 40)));
       } else if (g) {
-        for (const s of wrap('Not found yet. Monsters drop it.', chars)) {
+        for (const s of wrap(g.set ? `Not found yet. Only the Hollow Queen drops the ${GEAR_SETS[g.set].name} set.` : 'Not found yet. Monsters drop it.', chars)) {
           line(s, SOFT, x + pad, y);
           y += LINE;
         }
