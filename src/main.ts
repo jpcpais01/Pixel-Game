@@ -13,6 +13,7 @@ import { ArenaScene } from './scenes/ArenaScene';
 import { FpsScene } from './scenes/FpsScene';
 import { ShadeScene } from './scenes/ShadeScene';
 import { PauseScene } from './scenes/PauseScene';
+import { InventoryScene } from './scenes/InventoryScene';
 import { settings } from './game/settings';
 import { sound } from './audio';
 import { setupApp } from './pwa';
@@ -40,7 +41,7 @@ const game = new Phaser.Game({
   pipeline: { Lit: LitPipeline, Pixel: PixelPipeline, Sky: SkyPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
   input: { activePointers: 3 },
   // Later scenes draw on top.
-  scene: [BootScene, HomeScene, SelectScene, ArenaScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
+  scene: [BootScene, HomeScene, SelectScene, InventoryScene, ArenaScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
 });
 
 // Fit the canvas to the window once per frame at most, and only when the

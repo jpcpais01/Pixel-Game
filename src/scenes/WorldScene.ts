@@ -45,7 +45,8 @@ import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
 import { heroBuffs, type BuffDef } from '../game/buffs';
 import { Pickup } from '../game/Pickup';
-import { gear, RARITY, type GearDef } from '../game/gear';
+import { gear, gearById, RARITY, type GearDef } from '../game/gear';
+import { collection } from '../game/collection';
 
 interface Flicker {
   light: Phaser.GameObjects.Light;
@@ -306,7 +307,9 @@ export class WorldScene extends Phaser.Scene {
     // A fresh hotbar and no buffs each run.
     inventory.reset(STARTING_ITEMS);
     heroBuffs.clear();
-    gear.reset();
+    // The six pieces kept equipped on the Inventory page count from the start of every run.
+    gear.reset(collection.equippedIds().map(gearById).filter((g): g is GearDef => !!g));
+    if (gear.totals.hp) this.hero.vitals.grow(gear.totals.hp);
     controls.items.length = 0;
     this.itemCtx = {
       hero: this.hero,
@@ -559,6 +562,7 @@ export class WorldScene extends Phaser.Scene {
       const loot = p.loot;
       const room = loot.kind === 'item' ? inventory.canTake(loot.id) : !gear.has(loot.def.id);
       if (!p.update(dt, down ? null : h.x, down ? null : h.y, room, this.daylight)) continue;
+      collection.add(loot.kind === 'item' ? loot.id : loot.def.id);
       if (loot.kind === 'item') {
         inventory.add(loot.id);
         sound.pickup(this.pan(p.x));
