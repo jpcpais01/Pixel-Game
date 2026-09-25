@@ -51,7 +51,7 @@ export class Pickup {
     const h = gear ? GEAR_DROP : DROP_H;
     this.magnet = gear ? GEAR_MAGNET : MAGNET;
     this.life = gear ? LIFE * 2 : LIFE;
-    this.shine = gear ? { common: 0.8, rare: 1, epic: 1.25, legendary: 1.5 }[gear.rarity] : 0.75;
+    this.shine = gear ? { common: 0.8, uncommon: 0.9, rare: 1, epic: 1.25, legendary: 1.5 }[gear.rarity] : 0.75;
     this.fromX = x;
     this.fromY = y;
     // Lands a short hop away from where it fell.
