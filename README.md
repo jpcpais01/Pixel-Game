@@ -1,4 +1,4 @@
-# Everlands
+# Myths and Legends
 
 A mobile-first, top-down pixel-art PvE game: walk with the joystick on the left, cast with the buttons on the right. Built with Phaser 3, TypeScript and Vite, so it deploys to Vercel as a static site.
 
