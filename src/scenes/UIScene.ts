@@ -3,6 +3,8 @@ import { controls, beamHud, comboHud } from '../game/controls';
 import { daynight } from '../game/daynight';
 import { DPR as D } from '../game/display';
 import { characterById } from '../game/characters';
+import { HOTBAR_SIZE, inventory } from '../game/items';
+import { heroBuffs } from '../game/buffs';
 
 /**
  * Touch controls: a floating joystick on the left half of the screen, an
@@ -12,6 +14,10 @@ import { characterById } from '../game/characters';
  *
  * With a mouse, a left click anywhere else on the world is the attack (the
  * world aims it at the cursor) and the joystick hides; the keyboard walks.
+ *
+ * Along the bottom, between the joystick and the buttons, the hotbar: nine
+ * item slots, tapped or pressed 1 to 9. Active buffs show as badges under the
+ * day/night toggle, draining as they run out.
  */
 export class UIScene extends Phaser.Scene {
   private stick!: Phaser.GameObjects.Graphics;
@@ -28,6 +34,12 @@ export class UIScene extends Phaser.Scene {
   private toggle!: Phaser.GameObjects.Graphics;
   private sun!: Phaser.GameObjects.Image;
   private moon!: Phaser.GameObjects.Image;
+  private bar!: Phaser.GameObjects.Graphics;
+  private slotIcons: Phaser.GameObjects.Image[] = [];
+  private slotKeys: Phaser.GameObjects.BitmapText[] = [];
+  private slotCounts: Phaser.GameObjects.BitmapText[] = [];
+  private buffBadges!: Phaser.GameObjects.Graphics;
+  private buffIcons: Phaser.GameObjects.Image[] = [];
 
   /** Day/night toggle: a two-segment pill in the top-left corner. */
   private get toggleRect(): Phaser.Geom.Rectangle {
@@ -70,6 +82,30 @@ export class UIScene extends Phaser.Scene {
     return new Phaser.Math.Vector2(bp.x + R * 0.55, bp.y - R * 1.95);
   }
 
+  /**
+   * The hotbar's slots: square, side by side, centred in the room between the
+   * joystick's resting spot and the attack button, along the bottom edge.
+   */
+  private get hotbar(): { x: number; y: number; s: number; gap: number } {
+    const R = this.R;
+    const left = this.restPos.x + R * 1.1;
+    const right = this.buttonPos.x - R * 1.2;
+    const gap = Math.round(3 * D);
+    const fit = Math.floor((right - left - gap * (HOTBAR_SIZE - 1)) / HOTBAR_SIZE);
+    const s = Math.max(Math.round(20 * D), Math.min(fit, Math.round(Phaser.Math.Clamp(Math.min(this.scale.width, this.scale.height) * 0.085, 30 * D, 46 * D))));
+    const w = s * HOTBAR_SIZE + gap * (HOTBAR_SIZE - 1);
+    const cx = Phaser.Math.Clamp((left + right) / 2, w / 2 + 8 * D, this.scale.width - w / 2 - 8 * D);
+    return { x: Math.round(cx - w / 2), y: Math.round(this.scale.height - s - 10 * D), s, gap };
+  }
+
+  /** The hotbar slot under (x, y), or -1. */
+  private slotAt(x: number, y: number): number {
+    const { x: bx, y: by, s, gap } = this.hotbar;
+    if (y < by - gap || y > by + s + gap) return -1;
+    const i = Math.floor((x - bx + gap / 2) / (s + gap));
+    return i >= 0 && i < HOTBAR_SIZE ? i : -1;
+  }
+
   private get restPos(): Phaser.Math.Vector2 {
     const R = this.R;
     // Inset from the edge by 70% of the joystick's diameter beyond the original spot.
@@ -92,6 +128,18 @@ export class UIScene extends Phaser.Scene {
     this.base.copy(this.restPos);
     this.knob.copy(this.restPos);
 
+    this.bar = this.add.graphics();
+    this.slotIcons = [];
+    this.slotKeys = [];
+    this.slotCounts = [];
+    for (let i = 0; i < HOTBAR_SIZE; i++) {
+      this.slotIcons.push(this.add.image(0, 0, '__DEFAULT').setVisible(false));
+      this.slotKeys.push(this.add.bitmapText(0, 0, 'pixel', `${i + 1}`).setLetterSpacing(-1).setOrigin(0, 0).setTint(0xb8c4ff));
+      this.slotCounts.push(this.add.bitmapText(0, 0, 'pixel', '').setLetterSpacing(-1).setOrigin(1, 1).setTint(0xfff4d8));
+    }
+    this.buffBadges = this.add.graphics();
+    this.buffIcons = [];
+
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       controls.mouse = !p.wasTouch;
       const bp = this.buttonPos;
@@ -107,6 +155,8 @@ export class UIScene extends Phaser.Scene {
       } else if (Phaser.Math.Distance.Between(p.x, p.y, bp.x, bp.y) < this.R * 1.1) {
         this.buttonPointer = p.id;
         controls.attack = true;
+      } else if (this.slotAt(p.x, p.y) >= 0) {
+        controls.items.push(this.slotAt(p.x, p.y));
       } else if (!p.wasTouch) {
         // Clicks on the pause and sound buttons never get here: their scenes sit on top and take them.
         if (p.leftButtonDown()) {
@@ -258,8 +308,98 @@ export class UIScene extends Phaser.Scene {
       .setPosition(tr.x + seg * 1.5, tr.centerY)
       .setScale(iconScale)
       .setAlpha(1 - d * 0.45);
-    // Under the toggle, clear of the FPS counter at the top centre.
+    this.drawBuffs(tr);
+    this.drawHotbar();
+  }
 
+  /** Nine slots: an item's icon and count, its key in the corner, a dark wipe while it cools down. */
+  private drawHotbar(): void {
+    const { x: bx, y: by, s, gap } = this.hotbar;
+    const iconScale = Math.max(1, Math.floor((s - 6 * D) / 16));
+    const textScale = Math.max(1, Math.floor(s / 30));
+    const keyScale = Math.max(1, Math.floor(s / 44));
+    const inset = Math.round(3 * D);
+    let state = `${bx} ${by} ${s}`;
+    for (let i = 0; i < HOTBAR_SIZE; i++) {
+      const slot = inventory.slots[i];
+      state += `|${slot?.item.id ?? ''}${slot?.count ?? ''} ${Math.ceil(inventory.cooldown(i) * 24)} ${Math.ceil(inventory.flash[i] / 30)}`;
+      const x = bx + i * (s + gap);
+      const icon = this.slotIcons[i];
+      if (slot) {
+        if (icon.texture.key !== slot.item.icon) icon.setTexture(slot.item.icon);
+        icon.setVisible(true).setPosition(Math.round(x + s / 2), Math.round(by + s / 2)).setScale(iconScale).setAlpha(inventory.cooldown(i) > 0 ? 0.55 : 1);
+      } else icon.setVisible(false);
+      this.slotKeys[i].setPosition(x + inset, by + inset).setScale(keyScale).setAlpha(slot ? 0.8 : 0.35);
+      this.slotCounts[i]
+        .setText(slot && slot.count > 1 ? `${slot.count}` : '')
+        .setPosition(x + s - inset + D, by + s - inset + D)
+        .setScale(textScale);
+    }
+    const g = this.redraw(this.bar, state);
+    if (!g) return;
+    const r = Math.round(4 * D);
+    for (let i = 0; i < HOTBAR_SIZE; i++) {
+      const slot = inventory.slots[i];
+      const x = bx + i * (s + gap);
+      g.fillStyle(0x0a0c1c, slot ? 0.62 : 0.34);
+      g.fillRoundedRect(x, by, s, s, r);
+      // A faint inner bevel: light along the top, as the buttons have.
+      g.fillStyle(0xffffff, slot ? 0.06 : 0.03);
+      g.fillRect(x + r, by + D, s - r * 2, Math.round(2 * D));
+      const cd = inventory.cooldown(i);
+      if (cd > 0) {
+        // The dark part shrinks upward as the cooldown runs out.
+        g.fillStyle(0x000000, 0.45);
+        g.fillRect(x + D, by + D + (s - 2 * D) * (1 - cd), s - 2 * D, (s - 2 * D) * cd);
+      }
+      const f = inventory.flash[i] / 300;
+      const tint = slot ? slot.item.tint : 0xdfe6ff;
+      g.lineStyle(Math.round(1.5 * D), f > 0 ? 0xffffff : tint, slot ? 0.35 + f * 0.6 : 0.16);
+      g.strokeRoundedRect(x, by, s, s, r);
+      if (f > 0) {
+        g.lineStyle(Math.round(2 * D), tint, f * 0.7);
+        g.strokeRoundedRect(x - 2 * D, by - 2 * D, s + 4 * D, s + 4 * D, r + 2 * D);
+      }
+    }
+  }
+
+  /** A badge per active buff under the day/night toggle: its icon, ringed by a bar draining with the time left. */
+  private drawBuffs(tr: Phaser.Geom.Rectangle): void {
+    const list = heroBuffs.active;
+    const size = Math.round(tr.height * 0.9);
+    const gap = Math.round(6 * D);
+    const y = Math.round(tr.bottom + 10 * D);
+    const iconScale = Math.max(1, Math.floor((size - 6 * D) / 16));
+    while (this.buffIcons.length < list.length) this.buffIcons.push(this.add.image(0, 0, '__DEFAULT'));
+    this.buffIcons.forEach((icon, i) => {
+      const b = list[i];
+      if (!b) {
+        icon.setVisible(false);
+        return;
+      }
+      if (icon.texture.key !== b.def.icon) icon.setTexture(b.def.icon);
+      // Blinks through its last two seconds.
+      const blink = b.left < 2000 && Math.sin(this.time.now * 0.018) < 0 ? 0.45 : 1;
+      icon.setVisible(true).setPosition(tr.x + i * (size + gap) + size / 2, y + size / 2).setScale(iconScale).setAlpha(blink);
+    });
+    const state = list.map((b) => `${b.def.id} ${Math.ceil((b.left / b.def.duration) * 60)}`).join('|') + ` ${tr.x} ${y} ${size}`;
+    const g = this.redraw(this.buffBadges, state);
+    if (!g) return;
+    list.forEach((b, i) => {
+      const x = tr.x + i * (size + gap);
+      const r = Math.round(5 * D);
+      g.fillStyle(0x0a0c1c, 0.6);
+      g.fillRoundedRect(x, y, size, size, r);
+      g.lineStyle(Math.round(1.5 * D), b.def.tint, 0.35);
+      g.strokeRoundedRect(x, y, size, size, r);
+      // Time left: a bar under the badge.
+      const k = Math.max(0, b.left / b.def.duration);
+      const bh = Math.round(3 * D);
+      g.fillStyle(0x0a0c1c, 0.6);
+      g.fillRect(x, y + size + 3 * D, size, bh);
+      g.fillStyle(b.def.tint, 0.95);
+      g.fillRect(x, y + size + 3 * D, Math.round(size * k), bh);
+    });
   }
   /** The beam button, ringed by its charge: filling cyan, white-hot when full, draining violet when held too long. */
   private drawBeamButton(R: number): void {

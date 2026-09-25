@@ -38,6 +38,9 @@ const DAY = {
 };
 const mix3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 import { sound } from '../audio';
+import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
+import { heroBuffs } from '../game/buffs';
+import { Pickup } from '../game/Pickup';
 
 export { WORLD_W, WORLD_H } from '../world/layout';
 
@@ -128,6 +131,12 @@ export class WorldScene extends Phaser.Scene {
   private banner: Phaser.GameObjects.BitmapText | null = null;
   private spawners: Spawner[] = [];
   private effects: Effect[] = [];
+  /** Items lying on the ground. */
+  private pickups: Pickup[] = [];
+  /** Time until the next speck of the speed trail. */
+  private trailT = 0;
+  /** What items may do to the world when used. */
+  private itemCtx!: ItemContext;
   private debrisEmitters = new Map<string, Phaser.GameObjects.Particles.ParticleEmitter>();
   private heroBar!: HealthBar;
   private spawnX = 0;
@@ -163,6 +172,7 @@ export class WorldScene extends Phaser.Scene {
     this.shadows = [];
     this.spawners = [];
     this.effects = [];
+    this.pickups = [];
     this.debrisEmitters = new Map();
     this.downT = this.grace = this.hurtTint = this.pushX = this.pushY = 0;
     this.fallen = null;
@@ -284,6 +294,27 @@ export class WorldScene extends Phaser.Scene {
 
     const kb = this.input.keyboard!;
     kb.on('keydown-N', () => daynight.toggle());
+    // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
+    kb.on('keydown', (e: KeyboardEvent) => {
+      const n = e.key.length === 1 ? e.key.charCodeAt(0) - 49 : -1;
+      if (n >= 0 && n < HOTBAR_SIZE) controls.items.push(n);
+    });
+
+    // A fresh hotbar and no buffs each run.
+    inventory.reset(STARTING_ITEMS);
+    heroBuffs.clear();
+    controls.items.length = 0;
+    this.itemCtx = {
+      hero: this.hero,
+      heal: (n) => {
+        const got = this.hero.vitals.heal(n);
+        const h = this.hero;
+        this.debris([0xffffff, 0xffb0b8, 0xff5a6a], snap(h.x), snap(h.y) - 12, 16, h.y + 20, 'spores');
+        return got;
+      },
+      addBuff: (def) => heroBuffs.add(def),
+      pop: (text, tint) => this.popNumber(snap(this.hero.x), snap(this.hero.y) - 38, text, tint),
+    };
     this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N') as Record<string, Phaser.Input.Keyboard.Key>;
   }
 
@@ -391,6 +422,7 @@ export class WorldScene extends Phaser.Scene {
     const h = this.hero;
     this.downT = DOWN_TIME;
     this.pushX = this.pushY = 0;
+    heroBuffs.clear();
     this.debris([0xffffff, 0xdff8ff, 0xb0c8ff], snap(h.x), snap(h.y) - 12, 20, h.y + 20, 'spores');
     this.fallen = this.add.bitmapText(Math.round(h.x), Math.round(h.y) - 40, 'pixel', 'FALLEN').setLetterSpacing(-1).setOrigin(0.5, 1).setTint(0xffb0a0).setDepth(10002).setAlpha(0);
     sound.fall();
@@ -447,6 +479,60 @@ export class WorldScene extends Phaser.Scene {
     }
     const v = h.vitals;
     this.heroBar.update(dt, snap(h.x), snap(h.y) - 34, this.downT > 0 ? 0 : v.hp, v.max, v.barrier);
+  }
+
+  /** A monster fell at (x, y): sometimes it leaves a potion, popping out of its body. */
+  monsterSlain(kind: string, x: number, y: number, bodyY: number): void {
+    const id = rollDrop(kind);
+    if (id) this.pickups.push(new Pickup(this, x, y - bodyY, id));
+  }
+
+  /** Use the items asked for this frame, then tick cooldowns, buffs and what lies on the ground. */
+  private updateItems(dt: number): void {
+    const h = this.hero;
+    for (const i of controls.items) {
+      if (this.downT > 0) break;
+      const used = inventory.use(i, this.itemCtx);
+      if (!used) continue;
+      const swift = used.id === 'speed';
+      sound.drink(swift);
+      if (swift) this.debris([0xffffff, 0x9cecff, 0x36c2f2], snap(h.x), snap(h.y) - 12, 18, h.y + 20, 'burst');
+    }
+    controls.items.length = 0;
+    inventory.update(dt);
+    heroBuffs.update(dt);
+
+    const down = this.downT > 0;
+    for (const p of this.pickups) {
+      if (!p.update(dt, down ? null : h.x, down ? null : h.y, inventory.canTake(p.id), daynight.daylight)) continue;
+      inventory.add(p.id);
+      sound.pickup(this.pan(p.x));
+      this.debris([0xffffff, 0xfff0a8], snap(p.x), snap(p.y) - 6, 8, p.y + 20, 'spores');
+      p.destroy();
+    }
+    this.pickups = this.pickups.filter((p) => !p.dead);
+
+    // Swiftness leaves a faint trail of blue specks at the hero's heels while they move.
+    const buff = heroBuffs.active.find((b) => b.def.mods.speed);
+    if (buff && !down) {
+      this.trailT -= dt;
+      if (this.trailT <= 0) {
+        this.trailT = 55;
+        this.debris([0xffffff, 0x9cecff, 0x36c2f2], snap(h.x), snap(h.y) - 4 - Math.random() * 10, 1, h.y - 1, 'trail');
+      }
+    }
+  }
+
+  /**
+   * Stretch the step the hero just took by `extra` of itself (speed buffs),
+   * within the room around them and never into a tree.
+   */
+  private stretchStep(x0: number, y0: number, extra: number, room: Phaser.Geom.Rectangle): void {
+    const h = this.hero;
+    const nx = Phaser.Math.Clamp(h.x + (h.x - x0) * extra, room.left, room.right);
+    const ny = Phaser.Math.Clamp(h.y + (h.y - y0) * extra, room.top, room.bottom);
+    if (walkable(nx, h.y)) h.x = nx;
+    if (walkable(h.x, ny)) h.y = ny;
   }
 
   /** A number (or word) that floats up and fades: damage dealt and taken. */
@@ -749,8 +835,13 @@ export class WorldScene extends Phaser.Scene {
     // they slide along trees and the forest's edge.
     const hb = this.heroBox;
     freeBox(this.hero.x, this.hero.y, 14, hb);
+    const x0 = this.hero.x;
+    const y0 = this.hero.y;
     this.hero.update(dt, mx, my, attack, special, hb, controls.mouse ? this.mouseAim() : null);
+    const fast = heroBuffs.mod('speed');
+    if (fast !== 1 && this.downT <= 0) this.stretchStep(x0, y0, fast - 1, hb);
     this.updateHeroLife(dt);
+    this.updateItems(dt);
 
     const target = this.downT > 0 ? null : this.hero;
     const monsters: Monster[] = [];
