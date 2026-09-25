@@ -38,8 +38,8 @@ const RAMPS: RGB[][] = [
   ramp('#3a0e1c', '#62182a', '#8e2434', '#bc3a3c', '#e0624a', '#ff9a6a'),
 ];
 
-const CLOUD = ramp('#7d78b4', '#978ec4', '#b4a6d2', '#d2bddc', '#ecd2dc', '#fbe3d6', '#fff0e2', '#fffaf2');
-const SKY = ramp('#3d63b8', '#4f78c6', '#6690d2', '#82a8de', '#a2c0e6', '#c4d4ea', '#e6dde6', '#fbe3d4', '#ffeccf', '#fff5e2');
+const CLOUD = ramp('#66679f', '#7f7fb8', '#9d98cb', '#bfb0d8', '#dec5dc', '#f5d9d6', '#ffe8d8', '#fff5e8', '#ffffff');
+const SKY = ramp('#2c55ad', '#3d63b8', '#4f78c6', '#6690d2', '#82a8de', '#a2c0e6', '#c4d4ea', '#e6dde6', '#fbe3d4', '#ffeccf', '#fff5e2');
 /** Where the cloud sea meets the sky, as a fraction of the view height. */
 export const HORIZON = 0.6;
 
@@ -66,13 +66,67 @@ const pick = (rp: RGB[], l: number, x: number, y: number): RGB =>
 /** The sun's place in the view. */
 export const sunAt = (w: number, h: number) => ({ x: Math.round(w * 0.2), y: Math.round(h * 0.3) });
 
-/** The sky for a `w` x `h` view: a clear morning gradient and the sun low on the left. */
+/** A far floating island, hazed into the sky; `temple` crowns it with a domed shrine. */
+function farIsland(w: number, h: number, fx: number, fy: number, fs: number, seed: number, temple: boolean) {
+  const cx = Math.round(w * fx);
+  const cy = Math.round(h * fy);
+  const s = Math.max(8, Math.round(w * fs));
+  const haze = 0.62;
+  const rock = [hex('#9a8cb8'), hex('#7c6f9e'), hex('#62587f')];
+  const grass = hex('#8fae98');
+  const stone = hex('#e4dcea');
+  /** Colour at (x, y) or null; `sky` is the colour behind. */
+  return (x: number, y: number, sky: RGB): RGB | null => {
+    const u = (x + 0.5 - cx) / s;
+    if (Math.abs(u) > 1.2) return null;
+    const au = Math.abs(u);
+    if (au <= 1) {
+      const topY = cy - s * 0.08 * Math.sqrt(1 - u * u) - (noise(x / 3, seed) > 0.55 ? noise(x / 2, seed + 1) * s * 0.12 : 0);
+      const botY = cy + s * 0.75 * (1 - au ** 1.3) ** 1.2 * (0.7 + 0.3 * noise(u * 5, seed + 2));
+      if (y >= topY && y <= botY) {
+        const c = y < cy + 1 ? grass : rock[u < -0.3 ? 0 : u < 0.3 ? 1 : 2];
+        return mix(c, sky, haze);
+      }
+      // A thin waterfall from its underside.
+      if (Math.abs(u - 0.25) < 0.5 / s && y > botY && y < botY + s * 0.6) return mix(hex('#ffffff'), sky, 0.5 + 0.5 * ((y - botY) / (s * 0.6)));
+    }
+    if (!temple) return null;
+    // The shrine: a colonnade under a dome and a gold spire.
+    const tw = s * 0.34;
+    const base = cy - s * 0.08;
+    const colTop = base - s * 0.22;
+    if (Math.abs(x + 0.5 - cx) <= tw && y < base && y >= colTop) {
+      const k = Math.floor((x - (cx - tw)) / 2);
+      if (y < colTop + 2 || k % 2 === 0) return mix(stone, sky, haze * 0.8);
+      return null;
+    }
+    const dr = tw * 0.8;
+    const dd = Math.hypot(x + 0.5 - cx, (y + 0.5 - colTop) * 1.3);
+    if (y < colTop && dd <= dr) return mix(x < cx ? stone : hex('#c4b8d4'), sky, haze * 0.8);
+    if (Math.abs(x + 0.5 - cx) < 1 && y < colTop - dr / 1.3 && y > colTop - dr / 1.3 - s * 0.14) return mix(hex('#ffe08a'), sky, 0.3);
+    return null;
+  };
+}
+
+/**
+ * The sky for a `w` x `h` view: a deep morning blue warming to gold at the
+ * horizon, wisps of high cirrus, far floating islands in the haze and the sun
+ * low on the left, blooming out over everything near it.
+ */
 export function paintSky(w: number, h: number): Bitmap {
   const out = new Bitmap(w, h);
   const hy = Math.round(h * HORIZON);
   const sun = sunAt(w, h);
   const R = 9;
   const n = SKY.length - 1;
+  const cirrus = [0.1, 0.2, 0.33].map((f, i) => ({ y: h * f, th: 2 + i, seed: 80 + i }));
+  const islands = [
+    farIsland(w, h, 0.74, 0.44, 0.085, 91, true),
+    farIsland(w, h, 0.05, 0.5, 0.035, 92, false),
+    farIsland(w, h, 0.95, 0.53, 0.028, 93, false),
+    farIsland(w, h, 0.36, 0.54, 0.022, 94, false),
+  ];
+  const warm = hex('#fff2d2');
   for (let y = 0; y < h; y++) {
     const t = clamp01(1 - (hy - y) / (hy * 0.95));
     for (let x = 0; x < w; x++) {
@@ -83,15 +137,82 @@ export function paintSky(w: number, h: number): Bitmap {
         const i = Math.floor(f);
         const fr = clamp01((f - i - 0.5) * 2.6 + 0.5);
         c = SKY[Math.min(n, i + (fr > bayer(x, y) ? 1 : 0))];
+        for (const ci of cirrus) {
+          const yy = ci.y + x * 0.04 + (noise(x / 50, ci.seed) - 0.5) * 10;
+          const band = Math.exp(-(((y - yy) / ci.th) ** 2));
+          const k = band * clamp01((noise(x / 38, ci.seed + 5) * noise(x / 7 + y * 0.5, ci.seed + 6) - 0.2) * 2.2);
+          const q = Math.floor(k * 3 + bayer(x, y)) / 3;
+          if (q > 0) c = mix(c, hex('#f4f0ff'), q * 0.45);
+        }
+        // The horizon glows brightest under the sun.
+        const hg = Math.exp(-(((x - sun.x) / (w * 0.3)) ** 2)) * clamp01(1 - (hy - y) / (h * 0.22));
+        const hq = Math.floor(hg * 4 + bayer(x, y)) / 4;
+        if (hq > 0) c = mix(c, warm, hq * 0.6);
+        for (const isl of islands) {
+          const ic = isl(x, y, c);
+          if (ic) {
+            c = ic;
+            break;
+          }
+        }
       }
       const d = Math.hypot(x + 0.5 - sun.x, y + 0.5 - sun.y);
-      if (d <= R) c = d > R - 1 ? hex('#fff4d0') : hex('#fffdf4');
+      if (d <= R) c = d > R - 1 ? hex('#fff4d0') : hex('#ffffff');
       else {
-        const g = clamp01(1 - (d - R) / (R * 6)) ** 1.6;
+        const g = clamp01(1 - (d - R) / (R * 7)) ** 1.5;
         const q = Math.floor(g * 6 + bayer(x, y)) / 6;
-        if (q > 0) c = mix(c, hex('#fff2d2'), q * 0.9);
+        if (q > 0) c = mix(c, warm, q * 0.95);
       }
       out.set(x, y, c);
+    }
+  }
+  return out;
+}
+
+/**
+ * Crepuscular rays fanning out from the sun across the whole view, for
+ * additive blending over the sky and clouds.
+ */
+export function godRays(w: number, h: number, seed: number): Bitmap {
+  const out = new Bitmap(w, h);
+  const s = sunAt(w, h);
+  const col = hex('#fff0c8');
+  const reach = Math.hypot(w, h) * 0.8;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const dx = x + 0.5 - s.x;
+      const dy = y + 0.5 - s.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 8) continue;
+      const a = Math.atan2(dy, dx) / (Math.PI * 2) + 0.5;
+      const n = noise(a * 72, seed, 72) * 0.65 + noise(a * 18, seed + 1, 18) * 0.35;
+      const ray = clamp01((n - 0.5) / 0.22);
+      const fall = clamp01(1 - d / reach) ** 1.6 * clamp01((d - 8) / 24);
+      // Rays reaching down across the scene read strongest.
+      const dir = 0.45 + 0.55 * Math.max(0, dy / d);
+      const q = Math.floor(ray * fall * dir * 5 + bayer(x, y)) / 5;
+      if (q > 0) out.set(x, y, mix([0, 0, 0], col, q * 0.32));
+    }
+  }
+  return out;
+}
+
+/** A faint rainbow arc of radius `r`, for additive blending in waterfall mist. */
+export function rainbow(r: number): Bitmap {
+  const bands = ramp('#ff5a5a', '#ffa04a', '#ffe45a', '#6ade6a', '#5aa8ff', '#9a6aff');
+  const W = r * 2 + 2;
+  const H = r + 2;
+  const out = new Bitmap(W, H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const d = Math.hypot(x + 0.5 - W / 2, y + 0.5 - H);
+      const k = Math.floor(r - d);
+      if (k < 0 || k >= bands.length) continue;
+      // Fades toward both feet.
+      const up = clamp01((H - y) / (r * 0.8));
+      const a = 0.28 * up;
+      const q = Math.floor(a * 6 + bayer(x, y) * 0.9) / 6;
+      if (q > 0) out.set(x, y, mix([0, 0, 0], bands[k], q));
     }
   }
   return out;
@@ -178,43 +299,19 @@ export function cloudStrip(L: CloudLayer): Bitmap {
   return out;
 }
 
-/** A tileable 6 x 32 strip of falling water. */
+/** A tileable 8 x 32 strip of falling water. */
 export function waterfall(): Bitmap {
-  const W = 6;
+  const W = 8;
   const H = 32;
   const out = new Bitmap(W, H);
   const cols = ramp('#8cc4e8', '#c8ecf8', '#ffffff');
+  // Brighter and denser down the middle of the fall.
   for (let x = 0; x < W; x++) {
     const edge = x === 0 || x === W - 1;
     for (let y = 0; y < H; y++) {
-      const n = noise(y / 4 + x * 7.3, 40 + x, 8);
+      const n = noise(y / 4 + x * 7.3, 40 + x, 8) + (x > 1 && x < W - 2 ? 0.12 : 0);
       const i = n > 0.62 ? 2 : n > 0.35 ? 1 : 0;
       out.set(x, y, cols[edge ? Math.max(0, i - 1) : i], edge ? 150 : 235);
-    }
-  }
-  return out;
-}
-
-export const RAYS_W = 360;
-export const RAYS_H = 240;
-
-/** Soft rays fanning out from the centre, for additive blending. */
-export function sunRays(seed: number): Bitmap {
-  const out = new Bitmap(RAYS_W, RAYS_H);
-  const ox = RAYS_W / 2;
-  const oy = RAYS_H / 2;
-  const col = hex('#fff0c8');
-  for (let y = 0; y < RAYS_H; y++) {
-    for (let x = 0; x < RAYS_W; x++) {
-      const dx = x + 0.5 - ox;
-      const dy = y + 0.5 - oy;
-      const d = Math.hypot(dx, dy);
-      const a = (Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2);
-      const n = noise(a * 40, seed, 40) * 0.7 + noise(a * 10, seed + 1, 10) * 0.3;
-      const ray = clamp01((n - 0.5) / 0.25);
-      const fall = clamp01(1 - d / (RAYS_H * 0.7)) ** 1.3 * clamp01((d - 8) / 12);
-      const q = Math.floor(ray * fall * 4 + bayer(x, y)) / 4;
-      out.set(x, y, mix([0, 0, 0], col, q * 0.4));
     }
   }
   return out;
@@ -397,12 +494,12 @@ export function paintIsland(rx: number): IslandArt {
   }
   // Springs where the waterfalls leave the rock.
   const falls: { x: number; y: number }[] = [];
-  for (const u of [-0.46, 0.3]) {
+  for (const u of [-0.5, 0.02, 0.4]) {
     const x = Math.round(cx + u * rx);
     const y = Math.round(front(x) + thick + lip + 1);
-    for (let dx = -3; dx <= 3; dx++) for (let dy = -1; dy <= 1; dy++) if (Math.abs(dx) + Math.abs(dy) * 2 < 4) p.put(x + dx, y + dy, ROCK, 0.08);
-    for (let dx = -2; dx <= 3; dx++) p.put(x + dx, y + 1, WATER, 0.6 + (dx === 0 ? 0.3 : 0));
-    falls.push({ x: x - 2, y: y + 2 });
+    for (let dx = -5; dx <= 5; dx++) for (let dy = -2; dy <= 1; dy++) if (Math.abs(dx) + Math.abs(dy) * 2 < 6) p.put(x + dx, y + dy, ROCK, 0.08);
+    for (let dx = -3; dx <= 4; dx++) p.put(x + dx, y + 1, WATER, 0.6 + (dx === 0 || dx === 1 ? 0.3 : 0));
+    falls.push({ x: x - 3, y: y + 2 });
   }
 
   // --- Arena floor. -----------------------------------------------------
@@ -425,7 +522,9 @@ export function paintIsland(rx: number): IslandArt {
       floor[y * W + x] = 1;
       const dist = (rr - 1) / grad(u, v, rr);
       let m = MARBLE;
-      let l = 0.78 + (hash(segAt(x, y) + 7, 28) - 0.5) * 0.05 - v * 0.04;
+      // Polished marble: the sun's reflection blooms on the far left of the floor.
+      const glint = Math.exp(-(((u + 0.42) / 0.38) ** 2) - ((v + 0.3) / 0.45) ** 2);
+      let l = 0.76 + (hash(segAt(x, y) + 7, 28) - 0.5) * 0.05 - v * 0.04 + glint * 0.16;
       if (dist > -2) l = 0.92;
       else if (dist > -3) l = 0.5;
       else if (Math.abs(rr - 0.62) < 0.018 || Math.abs(rr - 0.34) < 0.016) {
@@ -456,12 +555,14 @@ export function paintIsland(rx: number): IslandArt {
   };
 
   // Columns around the rim, leaving the front open; some broken.
-  const angles = [150, 176, 202, 228, 254, 280, 332, 358, 24];
+  const angles = [150, 176, 202, 228, 250, 290, 332, 358, 24];
+  /** The two columns at the back carry a lintel: a gateway facing us. */
+  const GATE = [4, 5];
   const cols = angles.map((deg, k) => {
     const a = (deg * Math.PI) / 180;
     const s = 0.85 + 0.15 * Math.sin(a);
-    const hc = Math.round(rx * 0.28 * s * (hash(k, 29) < 0.3 ? 0.45 + hash(k, 30) * 0.2 : 1));
-    return { x: Math.round(cx + Math.cos(a) * rx * 0.9), y: Math.round(cy + Math.sin(a) * ry * 0.9), hc, cw: Math.max(3, Math.round(rx * 0.05 * s)) | 1, broken: hc < rx * 0.2 };
+    const hc = Math.round(rx * 0.28 * s * (!GATE.includes(k) && hash(k, 29) < 0.3 ? 0.45 + hash(k, 30) * 0.2 : 1));
+    return { k, x: Math.round(cx + Math.cos(a) * rx * 0.9), y: Math.round(cy + Math.sin(a) * ry * 0.9), hc, cw: Math.max(3, Math.round(rx * 0.05 * s)) | 1, broken: hc < rx * 0.2 };
   });
   for (const c of cols) {
     const L = c.hc * 1.15;
@@ -519,7 +620,7 @@ export function paintIsland(rx: number): IslandArt {
     }
     for (let i = -4; i <= 4; i++) if (r() < 0.8) p.put(tx + i, ty + 1 - (r() < 0.4 ? 1 : 0), GRASS, 0.55);
   };
-  const byDepth = [...cols.map((c) => ({ ...c, tree: false })), { ...tree, hc: 0, cw: 0, broken: false, tree: true }].sort((a, b) => a.y - b.y);
+  const byDepth = [...cols.map((c) => ({ ...c, tree: false })), { ...tree, k: -1, hc: 0, cw: 0, broken: false, tree: true }].sort((a, b) => a.y - b.y);
   for (const c of byDepth) {
     if (c.tree) {
       drawTree();
@@ -544,6 +645,38 @@ export function paintIsland(rx: number): IslandArt {
     }
     // A tuft of grass at the foot.
     for (let i = -hw - 2; i <= hw + 2; i++) if (r() < 0.45) p.put(c.x + i, c.y + 1, GRASS, 0.6);
+    // Once both gate columns stand, lay the lintel across their capitals.
+    if (c.k === GATE[1] || (c.k === GATE[0] && cols[GATE[1]].y < c.y)) {
+      const a = cols[GATE[0]];
+      const b = cols[GATE[1]];
+      const ly = Math.min(a.y - a.hc, b.y - b.hc);
+      const lx0 = Math.min(a.x, b.x) - Math.floor(a.cw / 2) - 3;
+      const lx1 = Math.max(a.x, b.x) + Math.floor(b.cw / 2) + 3;
+      for (let y = ly - 5; y < ly; y++) {
+        for (let x = lx0; x <= lx1; x++) {
+          const k = y - (ly - 5);
+          if (k === 3) p.put(x, y, GOLD, 0.72 - ((x - lx0) / (lx1 - lx0)) * 0.3);
+          else p.put(x, y, MARBLE, (k === 0 ? 0.95 : k === 4 ? 0.5 : 0.8) - ((x - lx0) / (lx1 - lx0)) * 0.25);
+        }
+      }
+      // A gold crest in the middle.
+      const mx = Math.round((lx0 + lx1) / 2);
+      for (let k = 0; k < 4; k++) for (let dx = -k; dx <= k; dx++) p.put(mx + dx, ly - 9 + k, GOLD, 0.75 - k * 0.08 + (dx < 0 ? 0.1 : 0));
+    }
+  }
+
+  // Wildflowers along the inside of the rim.
+  const petals = [BLOSSOM, GOLD, CLOTH, MARBLE];
+  for (let i = 0; i < rx * 1.6; i++) {
+    const a = r() * Math.PI * 2;
+    if (Math.sin(a) > 0.5 && Math.abs(Math.cos(a)) < 0.6) continue;
+    const k = 0.86 + r() * 0.06;
+    const x = Math.round(cx + Math.cos(a) * rx * k);
+    const y = Math.round(cy + Math.sin(a) * ry * k);
+    if (p.at(x, y) !== MARBLE || !floor[y * W + x]) continue;
+    p.put(x, y, GRASS, 0.55);
+    if (r() < 0.55) p.put(x, y - 1, petals[Math.floor(r() * petals.length)], 0.85);
+    else p.put(x + (r() < 0.5 ? -1 : 1), y, GRASS, 0.7);
   }
 
   // Banners flanking the open front.
