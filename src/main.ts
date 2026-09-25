@@ -9,6 +9,7 @@ import { DPR, setFastRender, viewSize } from './game/display';
 import { SoundScene } from './scenes/SoundScene';
 import { HomeScene } from './scenes/HomeScene';
 import { SelectScene } from './scenes/SelectScene';
+import { ArenaScene } from './scenes/ArenaScene';
 import { FpsScene } from './scenes/FpsScene';
 import { ShadeScene } from './scenes/ShadeScene';
 import { PauseScene } from './scenes/PauseScene';
@@ -39,7 +40,7 @@ const game = new Phaser.Game({
   pipeline: { Lit: LitPipeline, Pixel: PixelPipeline, Sky: SkyPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
   input: { activePointers: 3 },
   // Later scenes draw on top.
-  scene: [BootScene, HomeScene, SelectScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
+  scene: [BootScene, HomeScene, SelectScene, ArenaScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
 });
 
 // Fit the canvas to the window once per frame at most, and only when the

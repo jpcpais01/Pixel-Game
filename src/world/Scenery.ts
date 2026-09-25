@@ -1,13 +1,12 @@
 import Phaser from 'phaser';
-import { BOUGH_H, BOUGH_W, PROP_BASE_Y, PROP_H, RAY_FOOT_X, RAY_H, RAY_W, TREE_BASE_Y, TREE_H } from '../art/trees';
+import { PROP_BASE_Y, PROP_H, RAY_FOOT_X, RAY_H, RAY_W, TREE_BASE_Y, TREE_H } from '../art/trees';
 import { settings } from '../game/settings';
-import { PLAZA_Y, TREE_SHAPE, forestLayout, smoothstep, type TreeKind } from './layout';
+import { TREE_SHAPE, type SceneryLayout, type TreeKind } from './common';
 
-// Everything that stands in the forest: trees, undergrowth, shafts of light
-// and the boughs overhead. Only what is near the view is drawn (the rest is
-// hidden, which Phaser skips entirely), trees fade when a hero walks behind
-// them, and the boughs drift a little faster than the ground, as if they
-// hung between the camera and the path.
+// What stands along an arena's roof: trees, undergrowth and shafts of light,
+// plus leaves (or petals) drifting down. Only what is near the view is drawn
+// (the rest is hidden, which Phaser skips entirely), and trees fade when a
+// hero walks behind them.
 
 type Img = Phaser.GameObjects.Image;
 
@@ -34,32 +33,32 @@ interface Ray {
   seed: number;
 }
 
-interface Bough {
-  img: Img;
-  x: number;
-  y: number;
-  seed: number;
-}
-
-/** How far the boughs drift relative to the ground: 0.3 = 30% faster. */
-const PARALLAX = 0.3;
-/** Boughs and falling leaves sit over the world, under damage numbers and the sky. */
+/** Falling leaves sit over the world, under damage numbers and the sky. */
 const OVERHEAD = 9990;
 
-export class Forest {
+export interface Drift {
+  /** Leaf (or petal) colours. */
+  tints: number[];
+  /** ms between specks. */
+  frequency: number;
+  /** Whether any fall where the camera is looking. */
+  where(view: Phaser.Geom.Rectangle): boolean;
+}
+
+export class Scenery {
   private placed: Placed[] = [];
   private trees: Tree[] = [];
   private glows: { halo: Img; x: number; y: number; seed: number }[] = [];
   private rays: Ray[] = [];
-  private boughs: Bough[] = [];
   private leaves: Phaser.GameObjects.Particles.ParticleEmitter;
   private motes: Phaser.GameObjects.Particles.ParticleEmitter;
   private view = new Phaser.Geom.Rectangle();
-  /** 0 on the plaza, 1 under the trees: for the world's lighting and sounds. */
-  depth = 0;
 
-  constructor(scene: Phaser.Scene) {
-    const layout = forestLayout();
+  constructor(
+    scene: Phaser.Scene,
+    layout: SceneryLayout,
+    private drift: Drift,
+  ) {
     const add = scene.add;
 
     for (const t of layout.trees) {
@@ -98,16 +97,7 @@ export class Forest {
       this.rays.push({ img, x: r.x, y: r.y, seed: r.seed });
     }
 
-    for (const b of layout.boughs) {
-      const img = add
-        .image(b.x, b.y, 'bough', `b${b.v}`)
-        .setOrigin(b.flip ? 1 : 0, 0.5)
-        .setFlipX(b.flip)
-        .setDepth(OVERHEAD);
-      this.boughs.push({ img, x: b.x, y: b.y, seed: b.v * 1.7 + b.y * 0.01 });
-    }
-
-    // Leaves drifting down from the canopy, over the whole view.
+    // Leaves drifting down over the whole view.
     const view = this.view;
     const zone = {
       getRandomPoint: (p: Phaser.Types.Math.Vector2Like) => {
@@ -124,8 +114,8 @@ export class Forest {
         speedY: { min: 7, max: 15 },
         rotate: { start: 0, end: 540, random: true } as unknown as Phaser.Types.GameObjects.Particles.EmitterOpOnEmitType,
         alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.min(1, t * 6, (1 - t) * 4) },
-        tint: [0x5f9a4b, 0x80b35a, 0x3b753c, 0xd49e34, 0xb8873a],
-        frequency: 420,
+        tint: drift.tints,
+        frequency: drift.frequency,
       })
       .setDepth(OVERHEAD - 1);
 
@@ -162,7 +152,7 @@ export class Forest {
 
     const offQuality = settings.watch((s) => {
       const k = s.quality === 'fast' ? 2 : 1;
-      this.leaves.frequency = 420 * k;
+      this.leaves.frequency = drift.frequency * k;
       this.motes.frequency = 110 * k;
     });
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, offQuality);
@@ -171,7 +161,6 @@ export class Forest {
   /** `hero` is where the player stands; `view` the camera's world view. */
   update(time: number, dt: number, daylight: number, hero: { x: number; y: number }, view: Phaser.Geom.Rectangle): void {
     this.view.setTo(view.x, view.y, view.width, view.height);
-    this.depth = smoothstep(PLAZA_Y + 70, PLAZA_Y - 110, hero.y);
     const vx0 = view.x - 16;
     const vx1 = view.right + 16;
     const vy0 = view.y - 16;
@@ -210,19 +199,6 @@ export class Forest {
       if (g.halo.visible) g.halo.setAlpha((1 - daylight) * (0.45 + Math.sin(time * 0.0017 + g.seed) * 0.12));
     }
 
-    // Boughs overhead: parallax, a slow sway, dark against the sky.
-    const cx = view.centerX;
-    const cy = view.centerY;
-    const tint = Phaser.Display.Color.GetColor(Math.round(88 + 162 * daylight), Math.round(98 + 157 * daylight), Math.round(128 + 122 * daylight));
-    for (const b of this.boughs) {
-      const x = b.x + (b.x - cx) * PARALLAX;
-      const y = b.y + (b.y - cy) * PARALLAX;
-      const on = x + BOUGH_W > view.x && x - BOUGH_W < view.right && y + BOUGH_H > view.y && y - BOUGH_H < view.bottom;
-      b.img.setVisible(on);
-      if (!on) continue;
-      b.img.setPosition(x, y).setAngle(Math.sin(time * 0.0006 + b.seed) * 1.6).setTint(tint);
-    }
-
-    this.leaves.emitting = this.depth > 0.3;
+    this.leaves.emitting = this.drift.where(view);
   }
 }

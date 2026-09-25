@@ -14,6 +14,8 @@ function load(): number {
 }
 
 export const daynight = {
+  /** Whether the arena being played has day and night at all; set by the world. Off, the toggles hide. */
+  enabled: true,
   /** 1 = day, 0 = night. */
   target: load(),
   /** Current blend, eased toward `target`. */

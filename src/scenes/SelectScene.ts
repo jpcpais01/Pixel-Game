@@ -20,6 +20,9 @@ const PORTRAIT_X_SKINS = ARROW_INSET + ARROW_W + 1;
 const TAP_SLOP = 5;
 const FLING_KEEP = 0.004;
 
+/** The hero picked last, kept while the game runs. */
+let lastPicked = 0;
+
 /** True when a released pointer moved too far from where it went down to be a tap. */
 const dragged = (scene: Phaser.Scene, p: Phaser.Input.Pointer): boolean => p.getDistance() / scene.cameras.main.zoom > TAP_SLOP;
 
@@ -252,9 +255,10 @@ export class SelectScene extends Phaser.Scene {
     this.drag = null;
     this.bindScrolling();
     this.back = new PixelButton(this, 'Back', 48, 18, BUTTON_PLAIN, 'back', () => this.goBack());
-    this.play = new PixelButton(this, 'Play', 64, 20, BUTTON_GOLD, 'play', () => this.startGame());
-    this.picked = 0;
-    this.cards[0].setPicked(true);
+    this.play = new PixelButton(this, 'Next', 64, 20, BUTTON_GOLD, 'play', () => this.startGame());
+    // Coming back from the arena select keeps the hero picked before.
+    this.picked = Math.min(lastPicked, this.cards.length - 1);
+    this.cards[this.picked].setPicked(true);
 
     const kb = this.input.keyboard;
     kb?.on('keydown-LEFT', () => this.pick((this.picked + this.cards.length - 1) % this.cards.length, true));
@@ -291,7 +295,7 @@ export class SelectScene extends Phaser.Scene {
   private pick(i: number, reveal = false): void {
     if (this.leaving || i === this.picked) return;
     this.cards[this.picked].setPicked(false);
-    this.picked = i;
+    this.picked = lastPicked = i;
     this.cards[i].setPicked(true);
     if (reveal) this.reveal(i);
   }
@@ -382,19 +386,13 @@ export class SelectScene extends Phaser.Scene {
     this.tweens.add({ targets: this.cameras.main, alpha: 0, duration: 200, onComplete: () => this.scene.stop() });
   }
 
+  /** On to the arena select, with this hero. */
   private startGame(): void {
     if (this.leaving) return;
     this.leaving = true;
     const character = this.cards[this.picked].def.id;
-    const fade = [this.scene.get('home').cameras.main, this.cameras.main];
-    for (const cam of fade) cam.fadeOut(450, 7, 8, 13);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.stop('home');
-      this.scene.launch('shade');
-      this.scene.launch('ui', { character });
-      this.scene.launch('pause');
-      this.scene.start('world', { character });
-    });
+    this.scene.launch('arena', { character });
+    this.tweens.add({ targets: this.cameras.main, alpha: 0, duration: 200, onComplete: () => this.scene.stop() });
   }
 
   private layout(): void {
