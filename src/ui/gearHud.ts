@@ -101,12 +101,14 @@ export class GearHud {
     const key = `${width} ${height}`;
     if (key === this.sized) return;
     this.sized = key;
-    const z = menuZoom(width, height);
+    // One whole step smaller than the menus, so it sits over the run rather
+    // than covering it; the layout gets the same room as before and stays crisp.
+    const menu = menuZoom(width, height);
+    const z = menu >= 3 ? menu - 1 : menu;
     const vw = Math.floor(width / z);
     const vh = Math.floor(height / z);
-    // About four fifths of the screen, so the run stays in view around it.
-    const h = Math.min(Math.round(vh * 0.8), 210);
-    this.view.resize(Math.min(Math.round(vw * 0.8), 460) - PAD * 2, h - TITLE_H - PAD);
+    const h = Math.min(vh - 12, 232);
+    this.view.resize(Math.min(vw - 12, 560) - PAD * 2, h - TITLE_H - PAD);
     const w = this.view.usedW + PAD * 2;
     this.frame.setTexture(panelTexture(this.scene, 'bag', w, h, PANEL));
     this.closeBg.setTexture(panelTexture(this.scene, 'bag_close', CLOSE, CLOSE, PANEL)).setX(w - PAD - CLOSE + 2);
