@@ -80,7 +80,8 @@ export function filter(ctx: BaseAudioContext, type: BiquadFilterType, freq: numb
 
 export function panner(ctx: BaseAudioContext, pan: number, dest: AudioNode): StereoPannerNode {
   const p = ctx.createStereoPanner();
-  p.pan.value = Math.max(-1, Math.min(1, pan));
+  // A position that isn't a number (a body mid-teleport, a camera not yet sized) plays centred.
+  p.pan.value = Number.isFinite(pan) ? Math.max(-1, Math.min(1, pan)) : 0;
   p.connect(dest);
   return p;
 }

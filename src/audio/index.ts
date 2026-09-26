@@ -2,13 +2,15 @@ import { Ambience } from './ambience';
 import { Mixer } from './mixer';
 import { Music } from './music';
 import { Sfx, type BeamHum } from './sfx';
+import { note } from '../diagnostics';
 
 const MUTE_KEY = 'pixel-game:muted';
 const LOOKAHEAD = 0.4; // seconds of music/ambience scheduled ahead of the clock
 const TICK_MS = 100;
 const SAME_SOUND_GAP = 0.04; // seconds before the same one-shot may play again
 const BUSY_WINDOW = 0.25; // seconds
-const BUSY_LIMIT = 12; // new one-shots allowed per window
+/** New one-shots allowed per window: fewer on phones, whose audio thread chokes sooner. */
+const BUSY_LIMIT = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 8 : 12;
 
 type Listener = () => void;
 
@@ -81,7 +83,7 @@ class GameSound {
   /** Player volume per bus, 0..1 (sound effects include the ambience). */
   setVolumes(music: number, sfx: number): void {
     this.volume = { music, sfx };
-    if (this.ctx && this.mixer) this.applyVolumes(this.mixer, this.ctx.currentTime);
+    if (this.ctx && this.mixer) safely('volumes', () => this.applyVolumes(this.mixer!, this.ctx!.currentTime));
   }
 
   private applyVolumes(m: Mixer, t: number): void {
@@ -95,19 +97,19 @@ class GameSound {
   /** 0 = night, 1 = day; crossfades the ambience. */
   setDaylight(d: number): void {
     this.daylight = d;
-    if (this.ctx) this.ambience?.setDaylight(d, this.ctx.currentTime);
+    if (this.ctx) safely('daylight', () => this.ambience?.setDaylight(d, this.ctx!.currentTime));
   }
 
   /** Wind, birds and crickets: on in the world's arenas, off out in space. */
   setOutdoors(on: boolean): void {
     this.outdoors = on;
-    if (this.ctx) this.ambience?.setOutdoors(on, this.ctx.currentTime);
+    if (this.ctx) safely('outdoors', () => this.ambience?.setOutdoors(on, this.ctx!.currentTime));
   }
 
   /** 0..1, how close the player is to a fire. */
   setFire(level: number): void {
     this.fire = level;
-    if (this.ctx) this.ambience?.setFire(level, this.ctx.currentTime);
+    if (this.ctx) safely('fire', () => this.ambience?.setFire(level, this.ctx!.currentTime));
   }
 
   charge(): void {
@@ -130,12 +132,13 @@ class GameSound {
     if (!this.live()) return;
     const t = this.ctx!.currentTime;
     if (!this.hum) this.hum = this.sfx!.beamHum(t);
-    this.hum.set(level, over, t);
+    safely('beamHum', () => this.hum?.set(level, over, t));
   }
 
   /** The charge ended: fired, fizzled or cancelled. */
   beamChargeEnd(): void {
-    if (this.hum && this.ctx) this.hum.stop(this.ctx.currentTime);
+    const hum = this.hum;
+    if (hum && this.ctx) safely('beamHum', () => hum.stop(this.ctx!.currentTime));
     this.hum = null;
   }
 
@@ -658,7 +661,7 @@ class GameSound {
       this.ctx.addEventListener('statechange', () => this.emit());
       this.build(this.ctx);
     }
-    if (!this._muted && !document.hidden && this.ctx.state !== 'running') void this.ctx.resume();
+    if (!this._muted && !document.hidden && this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
     this.emit();
   }
 
@@ -668,7 +671,7 @@ class GameSound {
     this.applyVolumes(m, 0);
     this.music = new Music(m);
     this.ambience = new Ambience(m);
-    this.sfx = new Sfx(m);
+    this.sfx = guarded(new Sfx(m));
     this.ambience.setDaylight(this.daylight, 0);
     this.ambience.setOutdoors(this.outdoors, 0);
     this.ambience.setFire(this.fire, 0);
@@ -681,15 +684,16 @@ class GameSound {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;
     const now = ctx.currentTime;
-    this.music!.tick(now, now + LOOKAHEAD);
-    this.ambience!.tick(now, now + LOOKAHEAD);
+    safely('music', () => this.music!.tick(now, now + LOOKAHEAD));
+    safely('ambience', () => this.ambience!.tick(now, now + LOOKAHEAD));
   }
 
   private syncSuspend(): void {
     const ctx = this.ctx;
     if (!ctx || ctx.state === 'closed') return;
-    if (document.hidden || this._muted) void ctx.suspend();
-    else void ctx.resume();
+    // Refused (an iPhone mid-call, say): it is tried again on the next tap.
+    if (document.hidden || this._muted) ctx.suspend().catch(() => {});
+    else ctx.resume().catch(() => {});
   }
 
   private emit(): void {
@@ -710,6 +714,41 @@ function readMuted(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Run a piece of audio work so it can never stop the game. Sounds are played
+ * from inside the game's update, where an uncaught error freezes everything,
+ * and Web Audio throws on some inputs (a non-finite number, a state the phone
+ * put the audio in). A sound that fails is just not heard; the first failure
+ * of each kind is logged and put on the crash report's action list.
+ */
+const failed = new Set<string>();
+function safely(name: string, fn: () => void): void {
+  try {
+    fn();
+  } catch (err) {
+    if (failed.has(name)) return;
+    failed.add(name);
+    console.warn(`Sound "${name}" failed`, err);
+    note(`sound ${name} failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
+/** The sound effects, every call made safe (see safely). */
+function guarded(sfx: Sfx): Sfx {
+  return new Proxy(sfx, {
+    get(target, key, receiver) {
+      const v = Reflect.get(target, key, receiver);
+      if (typeof v !== 'function') return v;
+      const name = String(key);
+      return (...args: unknown[]) => {
+        let out: unknown;
+        safely(name, () => (out = v.apply(target, args)));
+        return out;
+      };
+    },
+  });
 }
 
 export const sound = new GameSound();
