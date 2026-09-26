@@ -26,6 +26,8 @@ import { CosmosArena } from '../world/Cosmos';
 import { FloatingIsland } from '../world/Island';
 import { SpiritDungeon } from '../world/Spirit';
 import { TempleDungeon } from '../world/Temple';
+import { RuneTemple } from '../world/Sanctum';
+import { INSIDE_SPOT, OUTSIDE_SPOT, roomRect } from '../world/sanctumLayout';
 import { isPainted } from '../world/arenas';
 
 type V3 = [number, number, number];
@@ -104,6 +106,8 @@ class Dummy implements Hurtbox {
 const AUTO_AIM_RANGE = 150;
 /** How long the hero keeps facing the aim after an ability, in ms. */
 const LOOK_LINGER = 450;
+/** The light inside the Rune Temple, as a time of day: lamplit dusk. */
+const INDOOR_LIGHT = 0.4;
 
 /** How each gear set worn whole shows on the hero. */
 const SET_AURA: Record<SetId, { name: string; text: number; tint: number; motes: number[]; life: { min: number; max: number }; rise: { min: number; max: number }; scale: number; every: number }> = {
@@ -131,6 +135,14 @@ export class WorldScene extends Phaser.Scene {
   private spirit: SpiritDungeon | null = null;
   /** The arena's own living parts, when it is the Elementinho Temple. */
   private temple: TempleDungeon | null = null;
+  /** The Rune Temple, when this is the Runestone Clearing. */
+  private sanctum: RuneTemple | null = null;
+  /** The hero is inside the Rune Temple (the camera keeps to its room). */
+  private inside = false;
+  /** Passing through the temple's door: the screen fades out and in. */
+  private doorBusy = false;
+  /** Where the camera may look: the arena's ground, or the temple's room while inside it. */
+  private camRect = new Phaser.Geom.Rectangle();
   /** Set once the run has begun (after the gear worn from the start is on). */
   private running = false;
   /** The aura of each gear set worn whole about the hero: a glow at their feet and motes rising off them. */
@@ -232,15 +244,20 @@ export class WorldScene extends Phaser.Scene {
     this.island = null;
     this.spirit = null;
     this.temple = null;
+    this.sanctum = null;
+    this.inside = false;
+    this.doorBusy = false;
     this.auras.clear();
     this.running = false;
     this.lean.x = this.lean.y = 0;
     this.shafts = null;
     this.regenAcc = this.regenShown = this.regenT = this.auraT = 0;
     const arena = (this.arena = arenaById(data?.arena));
-    const W = arena.ground.w;
-    const H = arena.ground.h;
+    // Some arenas reach past their ground (the Rune Temple's room lies east of the clearing).
+    const W = arena.world?.w ?? arena.ground.w;
+    const H = arena.world?.h ?? arena.ground.h;
     this.worldRect.setTo(0, 0, W, H);
+    this.camRect.setTo(0, 0, arena.ground.w, arena.ground.h);
     this.bounds.setTo(8, 10, W - 16, H - 24);
     daynight.enabled = !!arena.dayNight;
     this.daylight = arena.dayNight ? daynight.daylight : (arena.daylight ?? 1);
@@ -327,6 +344,8 @@ export class WorldScene extends Phaser.Scene {
         this.shadows.push(sunShadow(this.add.image(r.x, r.y, 'rock_s', r.frame).setOrigin(0.5, 12 / 14)));
       }
       for (const d of p.dummies) this.dummy(d.x, d.y);
+      this.sanctum = new RuneTemple(this, (img) => ground(img) as Phaser.GameObjects.Image);
+      this.shadows.push(...this.sanctum.shadows);
     } else if (arena.id === 'garden') {
       this.garden = new Garden(this);
     }
@@ -369,6 +388,7 @@ export class WorldScene extends Phaser.Scene {
 
     const kb = this.input.keyboard!;
     kb.on('keydown-N', () => daynight.enabled && daynight.toggle());
+    kb.on('keydown-E', () => this.inside && this.sanctum?.talk(this.hero.x, this.hero.y));
     // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
       const n = e.key.length === 1 ? e.key.charCodeAt(0) - 49 : -1;
@@ -650,10 +670,10 @@ export class WorldScene extends Phaser.Scene {
     if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank), this.ult.ult.pal));
     const id = rollDrop(kind);
     if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
-    // Only pieces the player doesn't own yet drop, and not one already lying here.
-    const skip = new Set(collection.ownedGear());
-    for (const p of this.pickups) if (p.loot.kind === 'gear') skip.add(p.loot.def.id);
-    for (const def of gear.roll(kind, skip)) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'gear', def }));
+    // New pieces first, spares once a rarity is complete, and never one already lying here.
+    const lying = new Set<string>();
+    for (const p of this.pickups) if (p.loot.kind === 'gear') lying.add(p.loot.def.id);
+    for (const def of gear.roll(kind, new Set(collection.ownedGear()), lying)) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'gear', def }));
   }
 
   /** Put on what the collection has equipped; max health follows the gear's. */
@@ -715,11 +735,11 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** A piece of gear was picked up: it's kept for good, and worn straight away if its slot is empty. */
+  /** A piece of gear was picked up: it's kept for good (a spare if they had one), and worn straight away if its slot is empty. */
   private gainGear(def: GearDef): void {
     const slot = slotIndex(def.id);
     const worn = !collection.data.equipped[slot] && collection.equip(def.id);
-    gear.pick(def, worn);
+    gear.pick(def, worn, collection.count(def.id) > 1);
     const h = this.hero;
     const tint = RARITY[def.rarity].tint;
     this.popNumber(snap(h.x), snap(h.y) - 40, def.name.toUpperCase(), tint);
@@ -752,7 +772,7 @@ export class WorldScene extends Phaser.Scene {
     const down = this.downT > 0;
     for (const p of this.pickups) {
       const loot = p.loot;
-      const room = loot.kind === 'item' ? inventory.canTake(loot.id) : !gear.found.has(loot.def.id);
+      const room = loot.kind === 'item' ? inventory.canTake(loot.id) : true;
       if (!p.update(dt, down ? null : h.x, down ? null : h.y, room, this.daylight)) continue;
       collection.add(loot.kind === 'item' ? loot.id : loot.def.id);
       if (loot.kind === 'item') {
@@ -893,10 +913,11 @@ export class WorldScene extends Phaser.Scene {
     const viewW = cam.width / z;
     const viewH = cam.height / z;
     // Scroll is measured to the unzoomed viewport's top-left; zoom pivots on its centre.
-    const minX = viewW / 2 - halfW;
-    const maxX = this.worldRect.width - viewW / 2 - halfW;
-    const minY = viewH / 2 - halfH;
-    const maxY = this.worldRect.height - viewH / 2 - halfH;
+    const r = this.camRect;
+    const minX = r.x + viewW / 2 - halfW;
+    const maxX = r.right - viewW / 2 - halfW;
+    const minY = r.y + viewH / 2 - halfH;
+    const maxY = r.bottom - viewH / 2 - halfH;
     const tx = this.hero.x + this.lean.x - halfW;
     const ty = this.hero.y - 12 + this.lean.y - halfH;
     const sx = maxX < minX ? (minX + maxX) / 2 : Phaser.Math.Clamp(tx, minX, maxX);
@@ -985,7 +1006,7 @@ export class WorldScene extends Phaser.Scene {
     skyState.vignette = strength;
   }
 
-  private brazier(x: number, y: number): void {
+  brazier(x: number, y: number): void {
     x = Math.round(x);
     y = Math.round(y);
     this.add.image(x, y, 'shadow_big').setDepth(1).setAlpha(0.8);
@@ -1037,6 +1058,32 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** Through the Rune Temple's door: fade out, step in (or out), fade back in with the camera on the new side. */
+  private passDoor(enter: boolean): void {
+    this.doorBusy = true;
+    const cam = this.cameras.main;
+    sound.gear(false);
+    cam.fadeOut(200, 7, 8, 13);
+    cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      const spot = enter ? INSIDE_SPOT : OUTSIDE_SPOT;
+      this.hero.x = spot.x;
+      this.hero.y = spot.y;
+      this.facing = { x: 0, y: enter ? -1 : 1 };
+      this.inside = enter;
+      if (enter) this.camRect.setTo(roomRect.x, roomRect.y, roomRect.w, roomRect.h);
+      else this.camRect.setTo(0, 0, this.arena.ground.w, this.arena.ground.h);
+      sound.setOutdoors(!enter);
+      this.followHero();
+      this.ground?.prime(this.view);
+      if (enter) this.showBanner('Rune Temple');
+      cam.fadeIn(280, 7, 8, 13);
+      cam.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => {
+        cam.fadeEffect.reset();
+        this.doorBusy = false;
+      });
+    });
+  }
+
   /** Ease toward the chosen time of day and push it into every layer. */
   private updateDaylight(time: number, dt: number): number {
     if (this.arena.dayNight) {
@@ -1044,7 +1091,8 @@ export class WorldScene extends Phaser.Scene {
       daynight.daylight += Phaser.Math.Clamp(daynight.target - daynight.daylight, -step, step);
       this.daylight = daynight.daylight;
     }
-    const d = Phaser.Math.Easing.Sine.InOut(this.daylight);
+    // Inside the Rune Temple it is always the same lamplit dusk.
+    const d = this.inside ? INDOOR_LIGHT : Phaser.Math.Easing.Sine.InOut(this.daylight);
 
     sky.sunDir = mix3(NIGHT.sunDir, DAY.sunDir, d);
     sky.sunColor = mix3(NIGHT.sun, DAY.sun, d);
@@ -1052,15 +1100,16 @@ export class WorldScene extends Phaser.Scene {
     sky.bounce = mix3(NIGHT.bounce, DAY.bounce, d);
 
     this.ground?.setLight(d, 0.9 - d * 0.6);
-    skyState.clouds = d;
+    skyState.clouds = this.inside ? 0 : d;
     skyState.tileX = time * 0.004;
     skyState.tileY = time * 0.0022;
     this.shafts?.setAlpha(d * (0.1 + Math.sin(time * 0.0007) * 0.03));
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
     this.setVignette(0.32 - d * 0.14);
     // Out in the void and down in the dungeon there is neither pollen nor fireflies (they have their own motes).
-    this.pollen.emitting = !this.cosmos && !this.spirit && !this.temple && d > 0.5;
-    this.fireflies.emitting = !this.cosmos && !this.spirit && !this.temple && d < 0.5;
+    const open = !this.cosmos && !this.spirit && !this.temple && !this.inside;
+    this.pollen.emitting = open && d > 0.5;
+    this.fireflies.emitting = open && d < 0.5;
     sound.setDaylight(d);
     return d;
   }
@@ -1276,6 +1325,10 @@ export class WorldScene extends Phaser.Scene {
     this.leanToBoss(dt, monsters);
     for (const e of this.effects) e.update(dt);
     this.effects = this.effects.filter((e) => !e.dead);
+    if (this.sanctum && !this.doorBusy) {
+      const go = this.sanctum.update(this.hero.x, this.hero.y, this.inside, this.view);
+      if (go) this.passDoor(go === 'enter');
+    }
     this.followHero();
 
     for (const b of this.balls) {

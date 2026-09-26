@@ -23,6 +23,7 @@ import { collection, EQUIP_SLOTS, slotIndex } from '../game/collection';
 import {
   GEAR,
   GEAR_SETS,
+  MAX_LEVEL,
   RARITIES,
   RARITY,
   SLOTS,
@@ -30,6 +31,7 @@ import {
   STAT_CAP,
   STAT_KEYS,
   STAT_LABEL,
+  canUpgrade,
   gearById,
   setCount,
   statLines,
@@ -79,7 +81,7 @@ const DOLL: Record<Slot, [number, number]> = {
 const rarityRank = (d: GearDef) => RARITIES.indexOf(d.rarity);
 
 /** Pack words into lines of at most `max` characters. */
-function wrap(text: string, max: number): string[] {
+export function wrap(text: string, max: number): string[] {
   const lines: string[] = [];
   let cur = '';
   for (const w of text.split(' ')) {
@@ -93,7 +95,7 @@ function wrap(text: string, max: number): string[] {
 }
 
 /** One square: a rarity tile, an icon, and what goes on top (ring, worn tick, count, a slot glyph when empty). */
-class Tile extends Phaser.GameObjects.Container {
+export class Tile extends Phaser.GameObjects.Container {
   id: string | null = null;
   private bg: Phaser.GameObjects.Image;
   private glyph: Phaser.GameObjects.Image;
@@ -118,7 +120,7 @@ class Tile extends Phaser.GameObjects.Container {
    * Show item `id` (null: an empty slot showing `slot`'s glyph). `known` false
    * draws it as a dark shape on an empty tile: not found yet.
    */
-  show(id: string | null, o: { count?: number; worn?: boolean; picked?: boolean; known?: boolean; slot?: Slot } = {}): this {
+  show(id: string | null, o: { count?: number; level?: number; worn?: boolean; picked?: boolean; known?: boolean; slot?: Slot } = {}): this {
     this.id = id;
     const g = id ? gearById(id) : undefined;
     const known = o.known ?? true;
@@ -140,8 +142,10 @@ class Tile extends Phaser.GameObjects.Container {
     if (o.slot) this.glyph.setTexture(glyphKey(o.slot));
     this.ring.setVisible(!!o.picked);
     this.tick.setVisible(!!o.worn);
+    // How many there are, or else the level an upgraded piece has reached.
     const n = o.count ?? 0;
-    this.num.setText(n > 1 ? `X${n}` : '');
+    const lv = o.level ?? 1;
+    this.num.setText(n > 1 ? `X${n}` : lv > 1 ? `LV${lv}` : '').setTint(n > 1 ? CREAM : lv >= MAX_LEVEL ? 0xfff0a0 : GOLD);
     this.num.setPosition(TILE - 3 - this.num.width, TILE - 2 - this.num.height);
     return this;
   }
@@ -155,13 +159,15 @@ class Tile extends Phaser.GameObjects.Container {
 }
 
 /** A flat button drawn from panel textures; the view hit-tests it itself. */
-class Button extends Phaser.GameObjects.Container {
+export class Button extends Phaser.GameObjects.Container {
   private bg: Phaser.GameObjects.Image;
   private label: Phaser.GameObjects.BitmapText;
   private keys: [string, string] = ['', ''];
   private bw = 0;
   private bh = 0;
   down = false;
+  /** Greyed out: it can't be used right now. */
+  dimmed = false;
 
   constructor(scene: Phaser.Scene) {
     super(scene, 0, 0);
@@ -184,8 +190,13 @@ class Button extends Phaser.GameObjects.Container {
     this.down = down;
     this.bg.setTexture(this.keys[down ? 1 : 0]);
     this.label.setPosition(Math.round((this.bw - this.label.width) / 2), Math.round((this.bh - this.label.height) / 2) + (down ? 1 : 0));
-    this.label.setTint(down ? 0xd8c8a0 : CREAM);
+    this.label.setTint(this.dimmed ? SOFT : down ? 0xd8c8a0 : CREAM);
     return this;
+  }
+
+  dim(on: boolean): this {
+    this.dimmed = on;
+    return this.press(this.down);
   }
 
   hit(x: number, y: number): boolean {
@@ -206,6 +217,9 @@ export class InventoryView extends Phaser.GameObjects.Container {
   usedH = 0;
   private opts: InventoryViewOptions;
   private equipLabel: Phaser.GameObjects.BitmapText;
+  /** Dust to spend at the Rune Temple, at the right of the equipped column's heading. */
+  private dustIcon: Phaser.GameObjects.Image;
+  private dustText: Phaser.GameObjects.BitmapText;
   private setLabel: Phaser.GameObjects.BitmapText;
   private setRows: Phaser.GameObjects.BitmapText[][] = [];
   private slots: Tile[];
@@ -238,7 +252,9 @@ export class InventoryView extends Phaser.GameObjects.Container {
     this.setLabel = pixelText(scene, 0, 0, 'Set bonus', DIM);
     this.itemsLabel = pixelText(scene, 0, 0, '', DIM);
     this.emptyNote = pixelText(scene, 0, 0, '', SOFT);
-    this.add([this.equipLabel, this.setLabel, this.itemsLabel, this.emptyNote]);
+    this.dustIcon = scene.add.image(0, 0, 'dust_icon').setOrigin(0);
+    this.dustText = pixelText(scene, 0, 0, '', 0xd8b0ff);
+    this.add([this.equipLabel, this.setLabel, this.itemsLabel, this.emptyNote, this.dustIcon, this.dustText]);
     for (let i = 0; i < 3; i++) {
       const row = [0, 1, 2, 3].map(() => pixelText(scene, 0, 0, ''));
       this.setRows.push(row);
@@ -286,6 +302,7 @@ export class InventoryView extends Phaser.GameObjects.Container {
     const gap = tall ? DOLL_GAP : 2;
     const dollW = 3 * TILE + 2 * gap;
     this.equipLabel.setPosition(x0, 0);
+    this.dustText.setData('right', x0 + LEFT_W).setY(0);
     SLOTS.forEach((s, i) => {
       const [c, r] = DOLL[s];
       this.slots[i].setPosition(x0 + Math.floor((LEFT_W - dollW) / 2) + c * (TILE + gap), LABEL_H + r * (TILE + gap));
@@ -323,6 +340,9 @@ export class InventoryView extends Phaser.GameObjects.Container {
       const id = eq[i];
       this.slots[i].show(id, { slot: s, picked: !!id && id === this.picked });
     });
+    this.dustText.setText(`${collection.dust}`);
+    this.dustText.setX(Math.round(this.dustText.getData('right') - this.dustText.width));
+    this.dustIcon.setPosition(this.dustText.x - 13, -2);
     this.drawTotals();
     this.drawTabs();
     this.entries = this.items();
@@ -482,6 +502,7 @@ export class InventoryView extends Phaser.GameObjects.Container {
       t.show(item.id, {
         known: item.known,
         count: item.known ? collection.count(item.id) : 0,
+        level: item.known ? collection.level(item.id) : 1,
         worn: item.known && collection.isEquipped(item.id),
         picked: item.id === this.picked,
       });
@@ -545,7 +566,8 @@ export class InventoryView extends Phaser.GameObjects.Container {
 
     const id = this.picked;
     const known = !!id && collection.count(id) > 0;
-    const g = id ? gearById(id) : undefined;
+    // Owned pieces with the points of their levels.
+    const g = id ? collection.gear(id) : undefined;
     let y = top + pad;
     if (!id) {
       line('Details', GOLD, x + pad, y);
@@ -561,7 +583,7 @@ export class InventoryView extends Phaser.GameObjects.Container {
       }
     } else {
       // The item's tile, and beside it its name, rarity and type.
-      this.cardTile.setVisible(true).setPosition(x + pad, y).show(id, { known, worn: known && collection.isEquipped(id) });
+      this.cardTile.setVisible(true).setPosition(x + pad, y).show(id, { known, worn: known && collection.isEquipped(id), level: known ? collection.level(id) : 1 });
       const tx = x + pad + TILE + 5;
       const nameChars = Math.floor((x + w - pad - tx) / CH);
       const info = itemInfo(id);
@@ -574,13 +596,13 @@ export class InventoryView extends Phaser.GameObjects.Container {
       }
       if (g) {
         line(RARITY[g.rarity].name, RARITY[g.rarity].tint, tx, ty);
-        line(SLOT_NAME[g.slot], DIM, tx, ty + LINE);
+        line(known && canUpgrade(g) ? `${SLOT_NAME[g.slot]}  Lv${collection.level(id)}` : SLOT_NAME[g.slot], DIM, tx, ty + LINE);
       } else line(known ? `Potion x${collection.count(id)}` : '', DIM, tx, ty);
       y += TILE + 6;
 
       if (g && known) {
         // Stats, and how each would change the set against what is worn in that slot now.
-        const worn = gearById(collection.data.equipped[SLOTS.indexOf(g.slot)] ?? '');
+        const worn = collection.gear(collection.data.equipped[SLOTS.indexOf(g.slot)] ?? '');
         const isWorn = worn?.id === g.id;
         const base: GearStats = isWorn ? {} : (worn?.stats ?? {});
         const keys = STAT_KEYS.filter((k) => g.stats[k] || base[k]);

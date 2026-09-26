@@ -196,6 +196,48 @@ export function wornStats(defs: GearDef[]): Required<GearStats> {
   return t;
 }
 
+// ---------------------------------------------------------------------------
+// Dust and upgrades. Any piece can be disenchanted into dust at the Rune
+// Temple; dust takes an epic or legendary piece from level 1 up to 10, and
+// each level gained puts one point into a stat of the player's choice.
+
+export type StatKey = keyof GearStats;
+
+/** Dust a piece breaks down into, by rarity. */
+export const DUST_VALUE: Record<Rarity, number> = { common: 1, uncommon: 2, rare: 5, epic: 15, legendary: 40 };
+
+export const MAX_LEVEL = 10;
+
+/** Share of the dust spent upgrading a piece that comes back when it is disenchanted. */
+export const UPGRADE_REFUND = 0.5;
+
+/** One point of each stat, as a level adds it: small enough that the caps still hold. */
+export const STAT_STEP: Required<GearStats> = { power: 0.02, armor: 0.015, speed: 0.015, hp: 5, regen: 0.3, leech: 0.01 };
+
+/** Only epic and legendary pieces can be upgraded. */
+export const canUpgrade = (d: GearDef): boolean => d.rarity === 'epic' || d.rarity === 'legendary';
+
+/** Dust to take a piece from `level` to the next: 10, 20, 40... for a legendary, half that for an epic. */
+export function upgradeCost(d: GearDef, level: number): number {
+  const legendary = 10 * 2 ** (level - 1);
+  return d.rarity === 'legendary' ? legendary : legendary / 2;
+}
+
+/** All the dust spent taking a piece from level 1 to `level`. */
+export function dustSpent(d: GearDef, level: number): number {
+  let n = 0;
+  for (let l = 1; l < level; l++) n += upgradeCost(d, l);
+  return n;
+}
+
+/** A piece with the points of its levels added (the same def when it has none). */
+export function levelled(def: GearDef, picks: readonly StatKey[]): GearDef {
+  if (!picks.length) return def;
+  const stats: GearStats = { ...def.stats };
+  for (const k of picks) stats[k] = Math.round(((stats[k] ?? 0) + STAT_STEP[k]) * 1e4) / 1e4;
+  return { ...def, stats };
+}
+
 /** Sets only their own boss drops. */
 const SET_BOSS: Record<string, SetId> = { queen: 'wraith', elementinho: 'ember' };
 
@@ -203,12 +245,14 @@ const SET_BOSS: Record<string, SetId> = { queen: 'wraith', elementinho: 'ember' 
 export interface GearNews {
   def: GearDef;
   worn: boolean;
+  /** The player had one already: it's a spare, for dust. */
+  dupe?: boolean;
 }
 
 export class GearBag {
   /** What the hero wears this run: the equip slots on the Inventory page, changeable from the bag. */
   worn: GearDef[] = [];
-  /** Pieces picked up this run; they won't drop again until the next. */
+  /** Pieces picked up this run; they drop again only as duplicates. */
   found = new Set<string>();
   /** Pieces just picked up, for the HUD's banner; it takes them off the front. */
   news: GearNews[] = [];
@@ -236,9 +280,9 @@ export class GearBag {
   }
 
   /** A piece was picked up this run. */
-  pick(def: GearDef, worn: boolean): void {
+  pick(def: GearDef, worn: boolean, dupe = false): void {
     this.found.add(def.id);
-    this.news.push({ def, worn });
+    this.news.push({ def, worn, dupe });
   }
 
   /** Multiplier on damage dealt. */
@@ -259,27 +303,28 @@ export class GearBag {
   /**
    * What a slain monster of `kind` drops, by its tier (tiers.ts): one roll for
    * a regular piece of some rarity, and for a Legend or Myth with an item set,
-   * its own roll for a piece of that set. Pieces found this run, or in `skip`
-   * (already owned, or lying on the ground), never drop; when every piece of
-   * the rolled rarity is taken, that roll drops nothing.
+   * its own roll for a piece of that set. Pieces the player doesn't have yet
+   * (not `owned`, not found this run) come first; once every piece of the
+   * rolled rarity is had, it drops one again as a duplicate, to disenchant
+   * into dust. Pieces `lying` on the ground never drop twice.
    */
-  roll(kind: string, skip: Set<string>): GearDef[] {
+  roll(kind: string, owned: Set<string>, lying: Set<string>): GearDef[] {
     const tier = tierOf(kind);
     const out: GearDef[] = [];
-    const free = (g: GearDef) => !this.found.has(g.id) && !skip.has(g.id);
     const any = (of: GearDef[]) => of[Math.floor(Math.random() * of.length)];
+    const pick = (of: GearDef[]) => {
+      const free = of.filter((g) => !lying.has(g.id));
+      const fresh = free.filter((g) => !owned.has(g.id) && !this.found.has(g.id));
+      if (free.length) out.push(any(fresh.length ? fresh : free));
+    };
     const set = SET_BOSS[kind];
-    if (set && Math.random() < TIER_SET_CHANCE[tier]) {
-      const missing = GEAR.filter((g) => g.set === set && free(g));
-      if (missing.length) out.push(any(missing));
-    }
+    if (set && Math.random() < TIER_SET_CHANCE[tier]) pick(GEAR.filter((g) => g.set === set));
     const odds = TIER_DROPS[tier];
     let r = Math.random();
     for (const k of RARITIES) {
       r -= odds[k];
       if (r >= 0) continue;
-      const of = GEAR.filter((g) => !g.set && g.rarity === k && free(g));
-      if (of.length) out.push(any(of));
+      pick(GEAR.filter((g) => !g.set && g.rarity === k));
       break;
     }
     return out;

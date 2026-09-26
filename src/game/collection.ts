@@ -4,7 +4,7 @@
 // they log into. Changes save a moment later, so a burst of pickups is one
 // write.
 
-import { gearById, SLOTS, type GearDef } from './gear';
+import { DUST_VALUE, MAX_LEVEL, STAT_KEYS, SLOTS, UPGRADE_REFUND, canUpgrade, dustSpent, gearById, levelled, upgradeCost, type GearDef, type StatKey } from './gear';
 import { account, cloudReady, loadSave, onAccount, writeSave, type SaveData } from './cloud';
 
 /** One slot per gear type, in the order of SLOTS: equipped[i] holds a SLOTS[i] piece. */
@@ -12,7 +12,7 @@ export const EQUIP_SLOTS = SLOTS.length;
 const LOCAL_PREFIX = 'pixel-battle.save.';
 const SAVE_DELAY = 1500;
 
-const empty = (): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null) });
+const empty = (): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {} });
 
 /** The equip slot a gear id belongs in, or -1 for anything that isn't gear. */
 export function slotIndex(id: string): number {
@@ -32,6 +32,14 @@ function clean(d: Partial<SaveData> | null | undefined): SaveData {
   for (const id of d?.equipped ?? []) {
     const i = id ? slotIndex(id) : -1;
     if (i >= 0 && out.items[id!] && !out.equipped[i]) out.equipped[i] = id;
+  }
+  out.dust = Math.max(0, Math.floor(Number(d?.dust) || 0));
+  // Levels only on owned pieces that can have them, each a real stat.
+  for (const [id, picks] of Object.entries(d?.upgrades ?? {})) {
+    const g = gearById(id);
+    if (!g || !canUpgrade(g) || !out.items[id] || !Array.isArray(picks)) continue;
+    const ok = picks.filter((k) => (STAT_KEYS as readonly string[]).includes(k)).slice(0, MAX_LEVEL - 1);
+    if (ok.length) out.upgrades[id] = ok;
   }
   return out;
 }
@@ -91,6 +99,72 @@ class Collection {
     this.changed();
   }
 
+  /** Dust to spend at the Rune Temple. */
+  get dust(): number {
+    return this.data.dust;
+  }
+
+  /** A piece's level, 1 to MAX_LEVEL. */
+  level(id: string): number {
+    return 1 + (this.data.upgrades[id]?.length ?? 0);
+  }
+
+  /** The stat each of a piece's levels went into, in order. */
+  picks(id: string): readonly StatKey[] {
+    return this.data.upgrades[id] ?? [];
+  }
+
+  /** A piece as the player has it: its stats with the points of its levels. */
+  gear(id: string): GearDef | undefined {
+    const g = gearById(id);
+    return g && levelled(g, this.picks(id));
+  }
+
+  /**
+   * What disenchanting one `id` gives: its rarity's dust, and when it is the
+   * last one, part of the dust spent upgrading it. Null when it can't be: none
+   * owned, or the only one is being worn.
+   */
+  disenchantValue(id: string): number | null {
+    const g = gearById(id);
+    const n = this.count(id);
+    if (!g || !n || (n === 1 && this.isEquipped(id))) return null;
+    const refund = n === 1 ? Math.floor(dustSpent(g, this.level(id)) * UPGRADE_REFUND) : 0;
+    return DUST_VALUE[g.rarity] + refund;
+  }
+
+  /** Break one `id` down into dust; returns the dust gained, 0 if it couldn't be. */
+  disenchant(id: string): number {
+    const got = this.disenchantValue(id);
+    if (got === null) return 0;
+    const n = this.count(id) - 1;
+    if (n > 0) this.data.items[id] = n;
+    else {
+      delete this.data.items[id];
+      delete this.data.upgrades[id];
+    }
+    this.data.dust += got;
+    this.changed();
+    return got;
+  }
+
+  /** Dust to take `id` to its next level, or null at the top (or if it can't be upgraded). */
+  nextCost(id: string): number | null {
+    const g = gearById(id);
+    const lv = this.level(id);
+    return g && canUpgrade(g) && lv < MAX_LEVEL ? upgradeCost(g, lv) : null;
+  }
+
+  /** Spend dust to raise `id` a level, its point going into `stat`. False when it can't be done. */
+  upgrade(id: string, stat: StatKey): boolean {
+    const cost = this.nextCost(id);
+    if (cost === null || !this.count(id) || this.data.dust < cost) return false;
+    this.data.dust -= cost;
+    this.data.upgrades[id] = [...this.picks(id), stat];
+    this.changed();
+    return true;
+  }
+
   /** Ids of the items in the equip slots, skipping empty ones. */
   equippedIds(): string[] {
     return this.data.equipped.filter((id): id is string => !!id);
@@ -99,7 +173,7 @@ class Collection {
   /** The worn gear, one piece per filled slot. */
   equippedGear(): GearDef[] {
     return this.equippedIds()
-      .map(gearById)
+      .map((id) => this.gear(id))
       .filter((g): g is GearDef => !!g);
   }
 
@@ -178,8 +252,12 @@ class Collection {
       const merged = clean(remote);
       for (const [id, n] of Object.entries(local.items)) merged.items[id] = Math.max(n, merged.items[id] ?? 0);
       if (!remote) merged.equipped = local.equipped;
+      merged.dust = Math.max(local.dust, merged.dust);
+      for (const [id, picks] of Object.entries(local.upgrades)) if (picks.length > (merged.upgrades[id]?.length ?? 0)) merged.upgrades[id] = picks;
       if (guest) {
         for (const [id, n] of Object.entries(guest.items)) merged.items[id] = (merged.items[id] ?? 0) + n;
+        merged.dust += guest.dust;
+        for (const [id, picks] of Object.entries(guest.upgrades)) if (picks.length > (merged.upgrades[id]?.length ?? 0)) merged.upgrades[id] = picks;
         guest.equipped.forEach((id, i) => {
           if (id && !merged.equipped[i]) merged.equipped[i] = id;
         });
@@ -206,7 +284,7 @@ class Collection {
       return;
     }
     // Logging in from a guest game brings its pickups along.
-    void this.pull(guest && Object.keys(guest.items).length ? guest : undefined);
+    void this.pull(guest && (Object.keys(guest.items).length || guest.dust) ? guest : undefined);
   }
 }
 

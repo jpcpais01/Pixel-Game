@@ -21,6 +21,8 @@ import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items'
 import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
 import { GEAR } from '../game/gear';
 import { registerInventoryArt } from './invTiles';
+import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, CRYSTAL_FRAMES, CRYSTAL_H as RS_CRYSTAL_H, CRYSTAL_W as RS_CRYSTAL_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, PILLAR_H as RS_PILLAR_H, PILLAR_W as RS_PILLAR_W, STATION_FRAMES, TEMPLE_ART_H, TEMPLE_ART_W, dustCrucible, runeAnvil, runeCrystal, runesmith, sanctumArt, sanctumExterior, sanctumPillar, unmaker } from './sanctum';
+import { ROOM_H, ROOM_W } from '../world/sanctumLayout';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_LOOKS, PALADIN_W, type PaladinMeta } from './paladin';
 import { buildWarriorFrames, JADE_LOOK, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, type WarriorMeta } from './warrior';
 import { WIND_DEEP } from './palette';
@@ -739,4 +741,39 @@ function* templeTextures(scene: Phaser.Scene): Generator<void, void, void> {
   scene.anims.create({ key: 'et_blaze_burn', frames: scene.anims.generateFrameNames('et_blaze', { prefix: 'b', start: 0, end: BLAZE_FRAMES - 1 }), frameRate: 10, repeat: -1 });
   // Last: its presence means everything above is built.
   scene.textures.addCanvas('et_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
+}
+
+/**
+ * Build the Rune Temple's textures (the temple outside, the room inside, its
+ * props and keepers) the first time the clearing is entered.
+ */
+export function warmSanctum(scene: Phaser.Scene): void {
+  if (scene.textures.exists('rs_room')) return;
+  const job = sanctumArt();
+  let step = job.next();
+  while (!step.done) step = job.next();
+  const art = step.value;
+  register(scene, 'rs_temple', pack(frameList([sanctumExterior()], 't'), TEMPLE_ART_W, TEMPLE_ART_H), TEMPLE_ART_W, TEMPLE_ART_H);
+  const loop = (key: string, n: number, fps: number) =>
+    scene.anims.create({ key: `${key}_loop`, frames: scene.anims.generateFrameNames(key, { prefix: 'f', start: 0, end: n - 1 }), frameRate: fps, repeat: -1 });
+  const glowLoop = (key: string, n: number, fps: number) =>
+    scene.anims.create({ key: `${key}_e_loop`, frames: scene.anims.generateFrameNames(`${key}_e`, { prefix: 'f', start: 0, end: n - 1 }), frameRate: fps, repeat: -1 });
+  register(scene, 'rs_crystal', pack(frameList(Array.from({ length: CRYSTAL_FRAMES }, (_, f) => runeCrystal(f)), 'f'), RS_CRYSTAL_W, RS_CRYSTAL_H), RS_CRYSTAL_W, RS_CRYSTAL_H);
+  register(scene, 'rs_pillar', pack(frameList([sanctumPillar()], 'p'), RS_PILLAR_W, RS_PILLAR_H), RS_PILLAR_W, RS_PILLAR_H);
+  register(scene, 'rs_crucible', pack(frameList(Array.from({ length: STATION_FRAMES }, (_, f) => dustCrucible(f)), 'f'), CRUCIBLE_W, CRUCIBLE_H), CRUCIBLE_W, CRUCIBLE_H);
+  register(scene, 'rs_anvil', pack(frameList(Array.from({ length: STATION_FRAMES }, (_, f) => runeAnvil(f)), 'f'), ANVIL_W, ANVIL_H), ANVIL_W, ANVIL_H);
+  register(scene, 'rs_nyx', pack(frameList(Array.from({ length: KEEPER_FRAMES }, (_, f) => unmaker(f)), 'f'), KEEPER_W, KEEPER_H), KEEPER_W, KEEPER_H);
+  register(scene, 'rs_tharn', pack(frameList(Array.from({ length: KEEPER_FRAMES }, (_, f) => runesmith(f)), 'f'), KEEPER_W, KEEPER_H), KEEPER_W, KEEPER_H);
+  for (const [key, n, fps] of [
+    ['rs_crystal', CRYSTAL_FRAMES, 6],
+    ['rs_crucible', STATION_FRAMES, 8],
+    ['rs_anvil', STATION_FRAMES, 6],
+    ['rs_nyx', KEEPER_FRAMES, 5],
+    ['rs_tharn', KEEPER_FRAMES, 4],
+  ] as [string, number, number][]) {
+    loop(key, n, fps);
+    glowLoop(key, n, fps);
+  }
+  scene.textures.addCanvas('rs_room', toCanvas(ROOM_W, ROOM_H, art.diffuse))!.setDataSource(toCanvas(ROOM_W, ROOM_H, art.normal));
+  scene.textures.addCanvas('rs_room_e', toCanvas(ROOM_W, ROOM_H, art.emissive));
 }

@@ -6,6 +6,7 @@
 // Firestore document, `players/{uid}`, that only they can read or write.
 
 import { FIREBASE_CONFIG } from '../firebaseConfig';
+import type { StatKey } from './gear';
 
 const SESSION_KEY = 'pixel-battle.account';
 const EMAIL_DOMAIN = 'players.myths-and-legends.game';
@@ -24,6 +25,10 @@ export interface SaveData {
   items: Record<string, number>;
   /** Their six always-equipped items (item ids), empty slots as null. */
   equipped: (string | null)[];
+  /** Dust from disenchanted items, spent on upgrades at the Rune Temple. */
+  dust: number;
+  /** The stat each level past the first went into, per upgraded item id. */
+  upgrades: Record<string, StatKey[]>;
 }
 
 interface Session extends Account {
@@ -192,7 +197,11 @@ export async function loadSave(): Promise<(SaveData & { username?: string }) | n
   const list = f.equipped && 'arrayValue' in f.equipped ? (f.equipped.arrayValue.values ?? []) : [];
   const equipped = list.map((v) => ('stringValue' in v ? v.stringValue : null));
   const username = f.username && 'stringValue' in f.username ? f.username.stringValue : undefined;
-  return { items, equipped, username };
+  const dust = f.dust && 'integerValue' in f.dust ? Number(f.dust.integerValue) : 0;
+  const upgrades: Record<string, StatKey[]> = {};
+  const ups = f.upgrades && 'mapValue' in f.upgrades ? (f.upgrades.mapValue.fields ?? {}) : {};
+  for (const [id, v] of Object.entries(ups)) if ('stringValue' in v && v.stringValue) upgrades[id] = v.stringValue.split(',') as StatKey[];
+  return { items, equipped, dust, upgrades, username };
 }
 
 /** Overwrite the logged-in player's save. */
@@ -205,6 +214,9 @@ export async function writeSave(data: SaveData): Promise<void> {
     username: { stringValue: s.username },
     items: { mapValue: { fields: items } },
     equipped: { arrayValue: { values: data.equipped.map((id) => (id ? { stringValue: id } : { nullValue: null })) } },
+    dust: { integerValue: String(Math.floor(data.dust)) },
+    // Each item's levels as its chosen stats in order, "power,hp,hp".
+    upgrades: { mapValue: { fields: Object.fromEntries(Object.entries(data.upgrades).map(([id, picks]) => [id, { stringValue: picks.join(',') }])) } },
     updated: { timestampValue: new Date().toISOString() },
   };
   const res = await fetch(docUrl(s.uid), {

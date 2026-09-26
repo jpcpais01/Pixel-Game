@@ -220,9 +220,9 @@ export class GearHud {
     this.bannerStats.setText(statLines(def.stats).join('  ')).setScale(ts);
     const touch = !this.scene.input.activePointer.wasTouch ? 'PRESS I' : 'TAP THE CHEST';
     this.bannerNote
-      .setText(news.worn ? 'EQUIPPED' : `IN YOUR BAG: ${touch} TO SWAP`)
+      .setText(news.worn ? 'EQUIPPED' : news.dupe ? 'A SPARE: DISENCHANT IT FOR DUST' : `IN YOUR BAG: ${touch} TO SWAP`)
       .setScale(ts)
-      .setTint(news.worn ? 0x8dff8a : 0xb8c4ff);
+      .setTint(news.worn ? 0x8dff8a : news.dupe ? 0xd8b0ff : 0xb8c4ff);
     const tw = Math.max(this.bannerName.width, this.bannerStats.width, this.bannerNote.width);
     const w = pad * 3 + icon + tw;
     const h = pad * 2 + icon;

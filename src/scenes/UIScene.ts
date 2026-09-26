@@ -6,6 +6,7 @@ import { characterById } from '../game/characters';
 import { HOTBAR_SIZE, inventory } from '../game/items';
 import { heroBuffs } from '../game/buffs';
 import { GearHud } from '../ui/gearHud';
+import { KeeperHud } from '../ui/keeperHud';
 import { energy } from '../game/energy';
 import { ensureUltIcons, ultFor } from '../game/ultimate';
 import type { Pal } from '../game/ultimate/ink';
@@ -75,6 +76,8 @@ export class UIScene extends Phaser.Scene {
   private buffBadges!: Phaser.GameObjects.Graphics;
   private buffIcons: Phaser.GameObjects.Image[] = [];
   private gearHud!: GearHud;
+  /** A Rune Temple keeper's counter, when the hero talks to one. */
+  private keeperHud!: KeeperHud;
 
   /** Day/night toggle: a two-segment pill in the top-left corner. */
   private get toggleRect(): Phaser.Geom.Rectangle {
@@ -222,6 +225,7 @@ export class UIScene extends Phaser.Scene {
     this.buffBadges = this.add.graphics();
     this.buffIcons = [];
     this.gearHud = new GearHud(this, () => this.releaseAll());
+    this.keeperHud = new KeeperHud(this, () => this.releaseAll());
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       controls.mouse = !p.wasTouch;
@@ -229,7 +233,9 @@ export class UIScene extends Phaser.Scene {
       const mp = this.beamPos;
       const up = this.ultPos;
       const tr = this.toggleRect;
-      if (this.gearHud.pointerDown(p)) {
+      if (this.keeperHud.pointerDown(p)) {
+        // A keeper's counter is open: it takes every press.
+      } else if (this.gearHud.pointerDown(p)) {
         // The bag's button, or a tap while the bag is open.
       } else if (daynight.enabled && Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width + 8 * D, tr.height + 8 * D), p.x, p.y)) {
         // Tap a side to pick it; tapping the active side flips it.
@@ -261,6 +267,7 @@ export class UIScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
       if (!p.wasTouch) controls.mouse = true;
       this.gearHud.pointerMove(p);
+      this.keeperHud.pointerMove(p);
       if (p.id === this.attackPad.pointer) this.dragPad(this.attackPad, p, false);
       if (p.id === this.beamPad.pointer) this.dragPad(this.beamPad, p, true);
       if (p.id === this.ultPad.pointer) this.dragUlt(p);
@@ -277,6 +284,7 @@ export class UIScene extends Phaser.Scene {
     });
     const release = (p: Phaser.Input.Pointer) => {
       this.gearHud.pointerUp(p);
+      this.keeperHud.pointerUp(p);
       if (p.id === this.stickPointer) {
         this.stickPointer = null;
         controls.moveX = 0;
@@ -387,6 +395,7 @@ export class UIScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     this.gearHud.update(delta);
+    this.keeperHud.update(delta);
     this.holdPads();
     const R = this.R;
     const active = this.stickPointer !== null;
