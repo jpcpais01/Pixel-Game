@@ -7,7 +7,8 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
 import { heroBuffs } from './buffs';
-import { DRUM_PAL, HASTE, Note, RHYTHM, Shockwave, SONG_PAL, SongBurst, type NoteKind } from './Songs';
+import { DRUM_PAL, HASTE, Note, RHYTHM, Shockwave, SongBurst, TROUBADOUR_SONG, WILD_HASTE, WILD_SONG, type NoteKind, type SongLook } from './Songs';
+import type { BuffDef } from './buffs';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 
@@ -44,6 +45,9 @@ export interface BardKit {
   /** Health the song gives back at once, on top of its healing over time. */
   songHeal: number;
   specialCooldown: number;
+  /** How the minstrel's music looks, and the song's buff as it shows (the same buff in each look). */
+  song: SongLook;
+  haste: BuffDef;
 }
 
 /**
@@ -62,7 +66,12 @@ export const MINSTREL_KIT: BardKit = {
   comboWindow: 0,
   songHeal: 10,
   specialCooldown: 14000,
+  song: TROUBADOUR_SONG,
+  haste: HASTE,
 };
+
+/** The minstrel in his wildsong skin: the same bard, in moss and forest light. */
+export const WILD_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_wild', song: WILD_SONG, haste: WILD_HASTE };
 
 /**
  * The war drummer: tougher and slower, beating waves of sound out of his drum
@@ -81,6 +90,8 @@ export const DRUMMER_KIT: BardKit = {
   comboWindow: 700,
   songHeal: 0,
   specialCooldown: 15000,
+  song: TROUBADOUR_SONG,
+  haste: HASTE,
 };
 
 const CHAIN: Act[] = ['beat', 'beat2', 'boom'];
@@ -252,17 +263,17 @@ export class Bard implements Hero {
   private strumNote(): void {
     const u = this.line;
     sound.lutePluck(this.world.pan(this.x));
-    this.world.addEffect(new Note(this.world, this.x + u.x * 6, this.y + u.y * 3 + 1, u.x, u.y, this.kit.note));
+    this.world.addEffect(new Note(this.world, this.x + u.x * 6, this.y + u.y * 3 + 1, u.x, u.y, this.kit.note, null, this.kit.song));
   }
 
   /** The song of haste: quicker feet and a heal, a ring of music rolling out from him. */
   private songOfHaste(): void {
     this.specialCd = this.kit.specialCooldown;
-    heroBuffs.add(HASTE);
-    this.world.buffGained(HASTE);
+    heroBuffs.add(this.kit.haste);
+    this.world.buffGained(this.kit.haste);
     const got = this.vitals.heal(this.kit.songHeal);
     if (got > 0) this.world.popNumber(snap(this.x), snap(this.y) - 30, `+${got}`, 0x9dff9a);
-    this.world.addEffect(new SongBurst(this.world, this.x, this.y, SONG_PAL));
+    this.world.addEffect(new SongBurst(this.world, this.x, this.y, this.kit.song.pal, this.kit.song.tex));
   }
 
   /** A blow on the drum: a wave of sound rolls out the way he faces and throws back everything it meets. */

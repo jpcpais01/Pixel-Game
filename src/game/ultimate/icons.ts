@@ -205,6 +205,37 @@ export const thunderIcon: IconPainter = (put, p) => {
   disc(put, 13, 2, 1.2, p.core);
 };
 
+export const timeStopIcon: IconPainter = (put, p) => {
+  // A clock face, its hands stopped at the stroke, frozen sparks round it.
+  ellipse(put, 8, 8, 6.4, 6.4, 0.1, p.hot);
+  ellipse(put, 8, 8, 5.2, 5.2, 0.06, p.deep);
+  for (let h = 0; h < 12; h++) {
+    const a = (h / 12) * Math.PI * 2;
+    put(Math.round(7.5 + Math.cos(a) * 4.4), Math.round(7.5 + Math.sin(a) * 4.4), h % 3 === 0 ? p.core : p.mid);
+  }
+  seg(put, 8, 8, 8, 3, p.core);
+  seg(put, 8, 8, 11, 8, p.hot);
+  put(8, 8, p.core);
+  for (const [x, y] of [[1, 2], [14, 1], [15, 13], [0, 12]]) put(x, y, p.core);
+};
+
+export const legionIcon: IconPainter = (put, p) => {
+  // Hooded figures side by side: himself in front, his echoes fading behind.
+  const figure = (cx: number, c: number, e: number) => {
+    disc(put, cx, 5, 2.2, c);
+    for (let y = 7; y < 15; y++) {
+      const w = 1.6 + (y - 7) * 0.35;
+      for (let x = Math.round(cx - w); x <= Math.round(cx + w - 1); x++) put(x, y, c);
+    }
+    put(Math.round(cx - 1), 5, e);
+    put(Math.round(cx), 5, e);
+  };
+  figure(3.5, p.deep, p.mid);
+  figure(12.5, p.deep, p.mid);
+  figure(8, p.mid, p.core);
+  for (let y = 7; y < 15; y++) put(8, y, p.hot);
+};
+
 export const finaleIcon: IconPainter = (put, p) => {
   // A giant puppet's sword coming down on a ring, strings running up out of the frame.
   ellipse(put, 8, 12.5, 6.5, 2.4, 0.2, p.mid);

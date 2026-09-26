@@ -1337,6 +1337,91 @@ export class Sfx {
     }
   }
 
+  /** A clockwork tick: a dry click and a tiny ring of brass. */
+  private tick(out: AudioNode, t: number, level: number, f = 2600): void {
+    this.burstNoise(out, t, 'highpass', 5200, 3800, 1.2, level, 0.018);
+    this.bell(out, t + 0.002, f, level * 0.12, 0.12);
+  }
+
+  /** A second hand loosed: two ticks and a glassy rise; the paradox's shards ring higher and thinner. */
+  chronoCast(t: number, pan: number, rift: boolean): void {
+    const out = this.out(pan, 0.55, 0.4);
+    this.tick(out, t, 0.28, rift ? 3400 : 2400);
+    this.tick(out, t + 0.06, 0.2, rift ? 4200 : 3000);
+    this.chirp(out, t, 'triangle', rift ? 900 : 620, rift ? 2400 : 1500, 0.07, 0.14);
+  }
+
+  /** A foe caught in slowed time: a soft bell that bends downward, as if the moment stretched. */
+  chronoHit(t: number, pan: number, rift: boolean): void {
+    const out = this.out(pan, 0.55, 0.45);
+    this.chirp(out, t, 'sine', rift ? 1760 : 1320, rift ? 1100 : 780, 0.08, 0.3);
+    this.bell(out, t, rift ? 1480 : 988, 0.035, 0.5);
+  }
+
+  /** The stasis clock set on the ground: a deep bell, and ticking that slows as it winds down. */
+  stasis(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.6);
+    this.bell(out, t, 196, 0.07, 2.2);
+    this.bell(out, t + 0.02, 294, 0.04, 1.8);
+    let at = t + 0.18;
+    for (let i = 0; i < 9; i++) {
+      this.tick(out, at, 0.18 * (1 - i / 12));
+      at += 0.16 + i * 0.035;
+    }
+  }
+
+  /** The hour strikes: a clock's chime, three bells over a low gong. */
+  hourStrike(t: number, pan: number): void {
+    const out = this.out(pan, 0.8, 0.7);
+    this.bell(out, t, 131, 0.09, 2.4);
+    [523, 659, 784].forEach((f, i) => this.bell(out, t + i * 0.11, f, 0.05, 1.2));
+    this.burstNoise(out, t, 'lowpass', 1400, 200, 0.8, 0.25, 0.25);
+  }
+
+  /** Time running backwards: a swell that rises out of nothing and snaps off, over ticks falling the wrong way. */
+  rewind(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.7, 0.6);
+    const g = gain(ctx, 0, filter(ctx, 'bandpass', 900, 0.9, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.35, t + 0.32);
+    g.gain.linearRampToValueAtTime(0, t + 0.36);
+    const n = this.m.noiseSource();
+    n.connect(g);
+    this.m.startNoise(n, t, 0.4);
+    this.chirp(out, t, 'sawtooth', 220, 1760, 0.05, 0.36);
+    for (let i = 0; i < 6; i++) this.tick(out, t + 0.3 - i * 0.05, 0.16, 3600 - i * 280);
+    this.bell(out, t + 0.36, 1319, 0.05, 0.9);
+  }
+
+  /** Time stops: everything falls to a hush under one long, bright tone and a slow, heavy tick. */
+  timeStop(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.85, 0.8);
+    this.chirp(out, t, 'sine', 1400, 180, 0.14, 0.6);
+    this.burstNoise(out, t, 'bandpass', 5000, 400, 1, 0.3, 0.55);
+    const pad = gain(ctx, 0, filter(ctx, 'lowpass', 2600, 0.7, out));
+    pad.gain.setValueAtTime(0, t + 0.4);
+    pad.gain.linearRampToValueAtTime(0.05, t + 0.9);
+    pad.gain.linearRampToValueAtTime(0, t + 3.8);
+    for (const f of [587, 880, 1175]) {
+      const o = osc(ctx, 'sine', f * rand(0.998, 1.002), pad);
+      o.start(t + 0.4);
+      o.stop(t + 3.9);
+    }
+    for (let i = 0; i < 4; i++) this.tick(out, t + 0.7 + i * 0.8, 0.3, 1800);
+  }
+
+  /** Echoes stepping out of other moments: a chord smeared across time, each voice a little late. */
+  echoes(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.8);
+    [74, 78, 81, 86, 90].forEach((m, i) => {
+      this.bell(out, t + i * 0.07, mtof(m), 0.04, 1.1);
+      this.bell(out, t + i * 0.07 + 0.19, mtof(m), 0.02, 0.9);
+    });
+    this.burstNoise(out, t, 'bandpass', 600, 3000, 1.2, 0.2, 0.4);
+  }
+
   /** The puppet's blow: a hollow wooden knock and a tin blade's swish; the chop lands with a thump. */
   clack(t: number, pan: number, heavy: boolean): void {
     const out = this.out(pan, heavy ? 0.85 : 0.7, heavy ? 0.4 : 0.25);

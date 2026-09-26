@@ -46,6 +46,8 @@ const NOTICE_TIME = 380;
 const STAGGER_TIME = 260;
 const DEATH_TIME = 380;
 const FLASH_TIME = 110;
+/** A slowed monster's colour, fully frozen. */
+const FROST = [0.62, 0.8, 1];
 
 /**
  * A monster's body and its simple mind. The shared states (spawning,
@@ -84,6 +86,11 @@ export abstract class Monster implements Hurtbox {
   private goalX = 0;
   private goalY = 0;
   private daylight = 0;
+  /** Its pace while time is slowed round it (a chronomancer's work), how long that lasts, and the clock ticking over its head. */
+  private pace = 1;
+  private paceT = 0;
+  private clock: Phaser.GameObjects.Image | null = null;
+  private clockTint = 0xffffff;
   /** Held helpless on a puppeteer's strings for this long, lifted this far off the ground. */
   private heldT = 0;
   private heldLift = 0;
@@ -129,6 +136,44 @@ export abstract class Monster implements Hurtbox {
 
   get radius(): number {
     return this.stats.radius;
+  }
+
+  /** Its pace: 1, or less while time is slowed round it. */
+  get tempo(): number {
+    return this.pace;
+  }
+
+  /**
+   * Slow its time to `k` of its pace (0 stands it still) for `ms`. The
+   * deepest slow wins and the longest lasts; a boss shrugs off half of it.
+   */
+  slow(k: number, ms: number, tint = 0xbfe0ff): void {
+    if (!this.alive) return;
+    if (this.boss) k = 1 - (1 - k) * 0.5;
+    this.pace = this.paceT > 0 ? Math.min(this.pace, k) : k;
+    this.paceT = Math.max(this.paceT, ms);
+    this.clockTint = tint;
+    this.clock ??= this.world.add.image(this.x, this.y, 'chrono_mark_e', 'm0').setBlendMode(Phaser.BlendModes.ADD);
+  }
+
+  /** How much of a moment `dt` long it lives through (the spawner runs its update on this). */
+  warp(dt: number): number {
+    if (this.paceT <= 0) return dt;
+    this.paceT -= dt;
+    if (this.paceT <= 0) {
+      this.unslow();
+      return dt;
+    }
+    this.body.anims.timeScale = Math.max(0.001, this.pace);
+    return dt * this.pace;
+  }
+
+  private unslow(): void {
+    this.pace = 1;
+    this.paceT = 0;
+    this.body.anims.timeScale = 1;
+    this.body.clearTint();
+    this.clock?.setVisible(false);
   }
 
   /** Is it airborne or charging, so it shouldn't be shoved around by its neighbours? */
@@ -358,6 +403,7 @@ export abstract class Monster implements Hurtbox {
   }
 
   private die(): void {
+    this.unslow();
     this.onInterrupted();
     this.hp = 0;
     this.enter('dying', DEATH_TIME);
@@ -399,6 +445,25 @@ export abstract class Monster implements Hurtbox {
     this.shadow.setPosition(rx, ry - 1).setAlpha(alpha * this.fade * (1 - up * 0.4));
     this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * alpha);
     if (!this.stats.noBar) this.bar.update(dt, rx, ry - this.stats.barY - Math.round(this.lift), this.state === 'dying' ? 0 : this.hp, this.stats.hp, 0);
+    if (this.paceT > 0) this.syncClock(rx, hy);
+  }
+
+  /** Slowed: the body pales towards frost, and a little clock ticks over its head, its hand crawling (or stopped). */
+  private syncClock(rx: number, hy: number): void {
+    const k = 1 - this.pace;
+    const ch = (i: number) => Math.round(255 * (1 - k * (1 - FROST[i])));
+    this.body.setTint((ch(0) << 16) | (ch(1) << 8) | ch(2));
+    // The hand moves one notch each tick, slower the slower its time.
+    const now = this.world.time.now;
+    const notch = this.pace < 0.05 ? 0 : Math.floor((now * this.pace) / 160) % 8;
+    const fade = Math.min(1, this.paceT / 250);
+    this.clock!
+      .setVisible(true)
+      .setFrame(`m${notch}`)
+      .setTint(this.clockTint)
+      .setPosition(rx, hy - this.stats.barY - 6)
+      .setDepth(hy + 0.3)
+      .setAlpha((0.55 + 0.45 * k) * fade * this.fade);
   }
 
   destroy(): void {
@@ -406,6 +471,7 @@ export abstract class Monster implements Hurtbox {
     this.dead = true;
     this.onInterrupted();
     for (const o of [this.body, this.glowLayer, this.flash, this.shadow, this.castShadow]) o.destroy();
+    this.clock?.destroy();
     this.bar.destroy();
   }
 }

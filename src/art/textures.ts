@@ -11,7 +11,8 @@ import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK
 import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE, arrowFrame, buildArcherFrames, stuckArrowFrame } from './archer';
 import { BLOOD_SPELL, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W, SOUL_SPELL, bloodLanceIcon, buildNecroFrames, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
-import { BARD_H, BARD_LOOKS, BARD_W, MINSTREL_LOOK, NOTE_FRAMES, NOTE_SIZE, bardAnims, buildBardFrames, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
+import { AEON_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CHRONO_H, CHRONO_LOOKS, CHRONO_W, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, buildChronoFrames, chronoAnims, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
+import { BARD_H, BARD_LOOKS, BARD_W, MINSTREL_LOOK, NOTE_FRAMES, WILD_LOOK, NOTE_SIZE, bardAnims, buildBardFrames, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
 import { PUPPETEER_H, PUPPETEER_LOOKS, PUPPETEER_W, PUPPET_LOOKS, buildPuppetSheet, buildPuppeteerFrames, marionetteIcon, pirouetteIcon, puppeteerAnims, puppetStrikeIcon, threadIcon } from './puppeteer';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
 import { buildRogueFrames, daggersIcon, DANCER_DAGGERS, ROGUE_ANIMS, ROGUE_DAGGERS, ROGUE_H, ROGUE_LOOKS, ROGUE_W, shadowstepIcon, smokeCanvas } from './rogue';
@@ -343,9 +344,10 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_lance', toCanvas(16, 16, bloodLanceIcon()));
   scene.textures.addCanvas('icon_nova', toCanvas(16, 16, novaIcon()));
 
-  // Bard once per type: 'bard' (the minstrel) and 'bard_drum' (the war
-  // drummer), the minstrel's glowing notes ('note_e', frames n0 and n1), and
-  // the icons, which the songs' buffs wear too.
+  // Bard once per look: 'bard' (the minstrel), 'bard_drum' (the war drummer)
+  // and 'bard_wild' (the minstrel's wildsong skin), the minstrel's glowing
+  // notes ('note_e', frames n0 and n1; the wildsong's leaf notes and wisps in
+  // 'note_wild_e'), and the icons, which the songs' buffs wear too.
   for (const look of BARD_LOOKS) {
     const bf = buildBardFrames(look);
     register(scene, look.key, pack(bf.map((f) => ({ name: f.key, r: f.canvas.render() })), BARD_W, BARD_H), BARD_W, BARD_H);
@@ -361,8 +363,11 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     }
   }
   register(scene, 'note', pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, MINSTREL_LOOK)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
+  register(scene, 'note_wild', pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, WILD_LOOK)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
   scene.textures.addCanvas('icon_lute', toCanvas(16, 16, luteIcon()));
   scene.textures.addCanvas('icon_song', toCanvas(16, 16, songIcon()));
+  scene.textures.addCanvas('icon_lute_wild', toCanvas(16, 16, luteIcon(true)));
+  scene.textures.addCanvas('icon_song_wild', toCanvas(16, 16, songIcon(true)));
   scene.textures.addCanvas('icon_drum', toCanvas(16, 16, drumIcon()));
   scene.textures.addCanvas('icon_rhythm', toCanvas(16, 16, rhythmIcon()));
 
@@ -393,6 +398,35 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_marionette', toCanvas(16, 16, marionetteIcon('#fbf4ff', '#dcc0ff', '#a878ff')));
   scene.textures.addCanvas('icon_thread_crimson', toCanvas(16, 16, threadIcon('#fff0f0', '#ff9aa0', '#ff3a4a')));
   scene.textures.addCanvas('icon_marionette_crimson', toCanvas(16, 16, marionetteIcon('#fff0f0', '#ff9aa0', '#ff3a4a')));
+
+  // Chronomancer once per look: 'chrono' (the timekeeper), 'chrono_moon',
+  // 'chrono_rift' (the paradox) and 'chrono_aeon', each with its own bolts
+  // ('<key>_bolt_e', frames b0-b3); the clock over a slowed foe
+  // ('chrono_mark_e', m0-m7, tinted in game); and the icons.
+  for (const look of CHRONO_LOOKS) {
+    const cf = buildChronoFrames(look);
+    register(scene, look.key, pack(cf.map((f) => ({ name: f.key, r: f.canvas.render() })), CHRONO_W, CHRONO_H), CHRONO_W, CHRONO_H);
+    for (const a of chronoAnims(look)) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: cf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
+    }
+    register(scene, `${look.key}_bolt`, pack(frameList(Array.from({ length: BOLT_FRAMES }, (_, i) => boltFrame(i, look)), 'b'), BOLT_SIZE, BOLT_SIZE), BOLT_SIZE, BOLT_SIZE);
+  }
+  register(scene, 'chrono_mark', pack(frameList(Array.from({ length: MARK_FRAMES }, (_, i) => markFrame(i)), 'm'), MARK_SIZE, MARK_SIZE), MARK_SIZE, MARK_SIZE);
+  for (const [suffix, k] of [['', BRASS_ICON], ['_moon', MOON_ICON]] as const) {
+    scene.textures.addCanvas(`icon_hand${suffix}`, toCanvas(16, 16, handIcon(k)));
+    scene.textures.addCanvas(`icon_stasis${suffix}`, toCanvas(16, 16, stasisIcon(k)));
+  }
+  for (const [suffix, k] of [['', RIFT_ICON], ['_aeon', AEON_ICON]] as const) {
+    scene.textures.addCanvas(`icon_shards${suffix}`, toCanvas(16, 16, shardsIcon(k)));
+    scene.textures.addCanvas(`icon_rewind${suffix}`, toCanvas(16, 16, rewindIcon(k)));
+  }
 
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
   for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL]] as const) {

@@ -481,6 +481,41 @@ class GameSound {
     if (t !== null) this.sfx!.drumRoll(t, pan);
   }
 
+  chronoCast(pan = 0, rift = false): void {
+    const t = this.slot('chronoCast');
+    if (t !== null) this.sfx!.chronoCast(t, pan, rift);
+  }
+
+  chronoHit(pan = 0, rift = false): void {
+    const t = this.slot('chronoHit');
+    if (t !== null) this.sfx!.chronoHit(t, pan, rift);
+  }
+
+  stasis(pan = 0): void {
+    const t = this.slot('stasis');
+    if (t !== null) this.sfx!.stasis(t, pan);
+  }
+
+  hourStrike(pan = 0): void {
+    const t = this.slot('hourStrike');
+    if (t !== null) this.sfx!.hourStrike(t, pan);
+  }
+
+  rewind(pan = 0): void {
+    const t = this.slot('rewind');
+    if (t !== null) this.sfx!.rewind(t, pan);
+  }
+
+  timeStop(pan = 0): void {
+    const t = this.slot('timeStop');
+    if (t !== null) this.sfx!.timeStop(t, pan);
+  }
+
+  echoes(pan = 0): void {
+    const t = this.slot('echoes');
+    if (t !== null) this.sfx!.echoes(t, pan);
+  }
+
   clack(pan = 0, heavy = false): void {
     const t = this.slot('clack');
     if (t !== null) this.sfx!.clack(t, pan, heavy);
