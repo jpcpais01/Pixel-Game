@@ -653,8 +653,7 @@ export class WorldScene extends Phaser.Scene {
     // Only pieces the player doesn't own yet drop, and not one already lying here.
     const skip = new Set(collection.ownedGear());
     for (const p of this.pickups) if (p.loot.kind === 'gear') skip.add(p.loot.def.id);
-    const def = gear.roll(kind, skip);
-    if (def) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'gear', def }));
+    for (const def of gear.roll(kind, skip)) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'gear', def }));
   }
 
   /** Put on what the collection has equipped; max health follows the gear's. */

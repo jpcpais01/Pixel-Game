@@ -5,17 +5,19 @@
 // it in from the Inventory page or the bag in a run. A new piece is one
 // entry in GEAR (with its slot type) plus its painter in art/gear.ts.
 
+import { TIER_DROPS, TIER_SET_CHANCE, tierOf } from './tiers';
+
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
 /** Rarities from least to most rare; `tint` colours names, frames and icon backgrounds. */
 export const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
-export const RARITY: Record<Rarity, { name: string; tint: number; weight: number }> = {
-  common: { name: 'Common', tint: 0x5fa8ff, weight: 44 },
-  uncommon: { name: 'Uncommon', tint: 0x62e07a, weight: 28 },
-  rare: { name: 'Rare', tint: 0xffd84a, weight: 17 },
-  epic: { name: 'Epic', tint: 0xc084ff, weight: 8 },
-  legendary: { name: 'Legendary', tint: 0xfff8ec, weight: 3 },
+export const RARITY: Record<Rarity, { name: string; tint: number }> = {
+  common: { name: 'Common', tint: 0x5fa8ff },
+  uncommon: { name: 'Uncommon', tint: 0x62e07a },
+  rare: { name: 'Rare', tint: 0xffd84a },
+  epic: { name: 'Epic', tint: 0xc084ff },
+  legendary: { name: 'Legendary', tint: 0xfff8ec },
 };
 
 /** The six kinds of gear; the hero wears one of each, in this order. */
@@ -194,11 +196,8 @@ export function wornStats(defs: GearDef[]): Required<GearStats> {
   return t;
 }
 
-/** Chance a slain monster drops a piece, by kind; others use the default. The bosses always do. */
-const GEAR_CHANCE: Record<string, number> = { beetle: 0.22, barkling: 0.14, golem: 0.2, warden: 1, queen: 1, elementinho: 1 };
 /** Sets only their own boss drops. */
 const SET_BOSS: Record<string, SetId> = { queen: 'wraith', elementinho: 'ember' };
-const DEFAULT_GEAR_CHANCE = 0.08;
 
 /** A piece picked up this run, for the HUD's banner; `worn` if it went straight into an empty slot. */
 export interface GearNews {
@@ -258,36 +257,32 @@ export class GearBag {
   }
 
   /**
-   * Maybe a piece for a slain monster of `kind`: a rarity by weight among those
-   * with pieces still to find, then one of them. Pieces found this run, or in
-   * `skip` (already owned, or lying on the ground), never drop. Bosses drop
-   * epics and up, and set pieces drop only from their own boss.
+   * What a slain monster of `kind` drops, by its tier (tiers.ts): one roll for
+   * a regular piece of some rarity, and for a Legend or Myth with an item set,
+   * its own roll for a piece of that set. Pieces found this run, or in `skip`
+   * (already owned, or lying on the ground), never drop; when every piece of
+   * the rolled rarity is taken, that roll drops nothing.
    */
-  roll(kind: string, skip: Set<string>): GearDef | null {
-    if (Math.random() >= (GEAR_CHANCE[kind] ?? DEFAULT_GEAR_CHANCE)) return null;
-    // A set's boss drops a piece of its set the player doesn't have yet; once they have them all, it drops like the other bosses.
+  roll(kind: string, skip: Set<string>): GearDef[] {
+    const tier = tierOf(kind);
+    const out: GearDef[] = [];
+    const free = (g: GearDef) => !this.found.has(g.id) && !skip.has(g.id);
+    const any = (of: GearDef[]) => of[Math.floor(Math.random() * of.length)];
     const set = SET_BOSS[kind];
-    if (set) {
-      const missing = GEAR.filter((g) => g.set === set && !this.found.has(g.id) && !skip.has(g.id));
-      if (missing.length) return missing[Math.floor(Math.random() * missing.length)];
+    if (set && Math.random() < TIER_SET_CHANCE[tier]) {
+      const missing = GEAR.filter((g) => g.set === set && free(g));
+      if (missing.length) out.push(any(missing));
     }
-    const left = GEAR.filter((g) => !g.set && !this.found.has(g.id) && !skip.has(g.id));
-    const boss = kind in GEAR_CHANCE && GEAR_CHANCE[kind] >= 1;
-    let pool = boss ? left.filter((g) => g.rarity === 'epic' || g.rarity === 'legendary') : left;
-    if (!pool.length) pool = left;
-    if (!pool.length) return null;
-    const rarities = [...new Set(pool.map((g) => g.rarity))];
-    let r = Math.random() * rarities.reduce((s, k) => s + RARITY[k].weight, 0);
-    let pick = rarities[0];
-    for (const k of rarities) {
-      r -= RARITY[k].weight;
-      if (r < 0) {
-        pick = k;
-        break;
-      }
+    const odds = TIER_DROPS[tier];
+    let r = Math.random();
+    for (const k of RARITIES) {
+      r -= odds[k];
+      if (r >= 0) continue;
+      const of = GEAR.filter((g) => !g.set && g.rarity === k && free(g));
+      if (of.length) out.push(any(of));
+      break;
     }
-    const of = pool.filter((g) => g.rarity === pick);
-    return of[Math.floor(Math.random() * of.length)];
+    return out;
   }
 }
 
