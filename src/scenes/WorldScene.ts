@@ -58,6 +58,7 @@ import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
 import type { MonsterStats } from '../game/monsters/Monster';
 import { NetPlay } from '../net/NetPlay';
 import { session } from '../net/session';
+import { diag, note } from '../diagnostics';
 
 interface Flicker {
   light: Phaser.GameObjects.Light;
@@ -359,6 +360,12 @@ export class WorldScene extends Phaser.Scene {
     this.spawnY = arena.spawn.y;
     const ch = characterById(data?.character);
     this.hero = ch.spawn(this, this.spawnX, this.spawnY);
+    diag.hero = `${ch.id} / ${ch.type.id} / ${ch.skin?.id ?? 'no skin'}`;
+    diag.arena = arena.id;
+    diag.online = session.active ? `online ${session.room?.mode}, ${session.isHost ? 'host' : 'guest'}, ${session.peers.size + 1} players` : 'solo';
+    diag.started = performance.now();
+    diag.trail.length = 0;
+    note(`start ${ch.look} in ${arena.id}`);
     ensureUltIcons(this);
     this.ult = new UltCaster(this, this.hero, ch);
     this.facing = { x: 0, y: 1 };
@@ -1206,6 +1213,17 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Unit vector from the hero's chest towards the mouse, in the world. */
+  private held = { attack: false, special: false };
+
+  /** Crash reports list what was pressed last (see diagnostics): each press as it starts, not every frame it is held. */
+  private noteInputs(attack: boolean, special: boolean, ult: boolean): void {
+    if (attack && !this.held.attack) note(`attack${controls.mouse ? '' : ' (touch)'}`);
+    if (special && !this.held.special) note(`ability${controls.mouse ? '' : ' (touch)'}`);
+    if (ult) note(`special${energy.ready ? '' : ' (not enough energy)'}`);
+    this.held.attack = attack;
+    this.held.special = special;
+  }
+
   private mouseAim(): Aim | null {
     const p = this.input.mousePointer;
     // No mouse event yet (time 0): the pointer sits at the corner, not where the player is looking.
@@ -1312,6 +1330,7 @@ export class WorldScene extends Phaser.Scene {
       mx = my = 0;
       attack = special = ultPressed = false;
     }
+    this.noteInputs(attack, special, ultPressed);
     if (ultPressed && this.downT <= 0) this.ult.request(controls.mouse ? this.mouseAim() : this.touchAim(controls.ultAim), this.facing);
     // Gathering power for the Special: other abilities wait, and the feet stay planted.
     if (this.ult.holding) attack = special = false;

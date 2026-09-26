@@ -18,7 +18,9 @@ import { settings } from './game/settings';
 import { sound } from './audio';
 import { setupApp } from './pwa';
 import { streamVertexBuffers } from './game/streamBuffers';
+import { installCrashReports, watchCanvas } from './diagnostics';
 
+installCrashReports();
 setupApp();
 streamVertexBuffers();
 sound.init();
@@ -48,6 +50,7 @@ const game = new Phaser.Game({
   // Later scenes draw on top.
   scene: [BootScene, HomeScene, SelectScene, InventoryScene, ArenaScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
 });
+game.events.once(Phaser.Core.Events.READY, () => watchCanvas(game.canvas));
 
 // Fit the canvas to the window once per frame at most, and only when the
 // size or resolution really changed: every resize makes each scene lay itself
