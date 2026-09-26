@@ -107,7 +107,9 @@ const AUTO_AIM_RANGE = 150;
 /** How long the hero keeps facing the aim after an ability, in ms. */
 const LOOK_LINGER = 450;
 /** The light inside the Rune Temple, as a time of day: lamplit dusk. */
-const INDOOR_LIGHT = 0.4;
+/** How light it is inside the Rune Temple at night, and how much more the day outside adds. */
+const INDOOR_DUSK = 0.18;
+const INDOOR_DAY = 0.34;
 
 /** How each gear set worn whole shows on the hero. */
 const SET_AURA: Record<SetId, { name: string; text: number; tint: number; motes: number[]; life: { min: number; max: number }; rise: { min: number; max: number }; scale: number; every: number }> = {
@@ -1091,8 +1093,9 @@ export class WorldScene extends Phaser.Scene {
       daynight.daylight += Phaser.Math.Clamp(daynight.target - daynight.daylight, -step, step);
       this.daylight = daynight.daylight;
     }
-    // Inside the Rune Temple it is always the same lamplit dusk.
-    const d = this.inside ? INDOOR_LIGHT : Phaser.Math.Easing.Sine.InOut(this.daylight);
+    // Inside the Rune Temple the lamps hold a dusk, lifted a little by the day outside.
+    const outside = Phaser.Math.Easing.Sine.InOut(this.daylight);
+    const d = this.inside ? INDOOR_DUSK + outside * INDOOR_DAY : outside;
 
     sky.sunDir = mix3(NIGHT.sunDir, DAY.sunDir, d);
     sky.sunColor = mix3(NIGHT.sun, DAY.sun, d);
@@ -1326,7 +1329,7 @@ export class WorldScene extends Phaser.Scene {
     for (const e of this.effects) e.update(dt);
     this.effects = this.effects.filter((e) => !e.dead);
     if (this.sanctum && !this.doorBusy) {
-      const go = this.sanctum.update(this.hero.x, this.hero.y, this.inside, this.view);
+      const go = this.sanctum.update(this.hero.x, this.hero.y, this.inside, this.view, Phaser.Math.Easing.Sine.InOut(this.daylight));
       if (go) this.passDoor(go === 'enter');
     }
     this.followHero();
