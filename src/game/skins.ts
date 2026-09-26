@@ -108,3 +108,6 @@ export const lastHero = (): string | null => {
 };
 
 export const rememberHero = (id: string): void => save(HERO_KEY, id);
+
+/** The type and skin a look id names within a class (another player's hero, online), if any. */
+export const lookById = find;

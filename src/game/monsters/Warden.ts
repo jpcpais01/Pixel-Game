@@ -5,7 +5,6 @@ import { snap } from '../display';
 import { sound } from '../../audio';
 import { BossBar } from '../BossBar';
 import type { Effect } from '../Slash';
-import type { Hit } from '../combat';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { COSMOS_CX, COSMOS_CY, COSMOS_RX, COSMOS_RY, cosmosSpot } from '../../world/cosmosLayout';
 import { Monster, type Target } from './Monster';
@@ -382,8 +381,7 @@ export class Warden extends Monster {
     this.cooldown = (this.enraged ? 900 : 1500) + Math.random() * 800;
   }
 
-  hurt(hit: Hit): void {
-    super.hurt(hit);
+  protected afterHit(): void {
     if (!this.enraged && this.alive && this.hp < this.stats.hp / 2) {
       this.enraged = true;
       this.heart.setTint(0xff4aa8);

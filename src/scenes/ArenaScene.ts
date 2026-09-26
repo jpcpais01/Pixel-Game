@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { STRIP_H } from '../art/ground';
 import { menuZoom } from '../game/display';
-import { ARENAS, isPainted, lastArena, rememberArena, type ArenaDef, type PreviewSprite } from '../world/arenas';
+import { ARENAS, arenaById, isPainted, lastArena, rememberArena, type ArenaDef, type PreviewSprite } from '../world/arenas';
 import { GroundStreamer } from '../world/GroundStreamer';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PANEL_PICKED, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
+import { openOnlineForm } from '../ui/onlineForm';
 
 const CARD_W = 168;
 const CARD_H = 128;
@@ -140,6 +141,9 @@ export class ArenaScene extends Phaser.Scene {
   private header!: Phaser.GameObjects.BitmapText;
   private back!: PixelButton;
   private play!: PixelButton;
+  private online!: PixelButton;
+  /** The online panel is open over the page. */
+  private panel = false;
   private leaving = false;
 
   constructor() {
@@ -157,6 +161,8 @@ export class ArenaScene extends Phaser.Scene {
     this.cards = ARENAS.map((a, i) => new ArenaCard(this, a, () => this.pick(i)));
     this.back = new PixelButton(this, 'Back', 48, 18, BUTTON_PLAIN, 'back', () => this.goBack());
     this.play = new PixelButton(this, 'Play', 64, 20, BUTTON_GOLD, 'play', () => this.startGame());
+    this.online = new PixelButton(this, 'Online', 56, 18, BUTTON_PLAIN, 'online', () => this.openOnline());
+    this.panel = false;
     this.picked = Math.max(0, ARENAS.findIndex((a) => a.id === lastArena()));
     this.cards[this.picked].setPicked(true);
 
@@ -166,6 +172,7 @@ export class ArenaScene extends Phaser.Scene {
     kb?.on('keydown-ENTER', () => this.startGame());
     kb?.on('keydown-SPACE', () => this.startGame());
     kb?.on('keydown-ESC', () => this.goBack());
+    kb?.on('keydown-O', () => this.openOnline());
 
     this.layout();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
@@ -189,18 +196,39 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private goBack(): void {
-    if (this.leaving) return;
+    if (this.leaving || this.panel) return;
     this.leaving = true;
     this.scene.launch('select');
     this.tweens.add({ targets: this.cameras.main, alpha: 0, duration: 200, onComplete: () => this.scene.stop() });
   }
 
-  private startGame(): void {
-    if (this.leaving) return;
+  /** Play online: create or join a room, then into its arena. */
+  private openOnline(): void {
+    if (this.leaving || this.panel) return;
+    this.panel = true;
+    this.input.enabled = false;
+    openOnlineForm(
+      this.cards[this.picked].arena,
+      this.character,
+      (room) => {
+        this.panel = false;
+        this.input.enabled = true;
+        this.startGame(arenaById(room.arena).id);
+      },
+      () => {
+        this.panel = false;
+        this.input.enabled = true;
+      },
+    );
+  }
+
+  /** `arenaId`: a room's arena, online; else the one picked. */
+  private startGame(arenaId?: string): void {
+    if (this.leaving || (this.panel && !arenaId)) return;
     this.leaving = true;
     const character = this.character;
-    const arena = this.cards[this.picked].arena.id;
-    rememberArena(arena);
+    const arena = arenaId ?? this.cards[this.picked].arena.id;
+    if (!arenaId) rememberArena(arena);
     const fade = [this.scene.get('home').cameras.main, this.cameras.main];
     for (const cam of fade) cam.fadeOut(450, 7, 8, 13);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
@@ -236,6 +264,7 @@ export class ArenaScene extends Phaser.Scene {
     this.shade.setSize(Math.ceil(vw) + 1, Math.ceil(vh) + 1);
     this.header.setPosition(Math.round((vw - this.header.width) / 2), area.headerY);
     this.play.place((vw - this.play.boxW) / 2, area.buttonsY);
+    this.online.place(Math.round((vw + this.play.boxW) / 2) + 8, area.buttonsY + 1);
     this.back.place(8, area.buttonsY + 1);
 
     const y0 = Math.max(area.top, Math.round(area.top + (area.h - blockH) / 2));

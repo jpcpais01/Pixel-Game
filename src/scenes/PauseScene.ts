@@ -4,6 +4,7 @@ import { beamHud, comboHud, controls } from '../game/controls';
 import { daynight } from '../game/daynight';
 import { DPR as D, menuZoom } from '../game/display';
 import { settings } from '../game/settings';
+import { session } from '../net/session';
 import { PixelSlider } from '../ui/slider';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
@@ -152,12 +153,17 @@ export class PauseScene extends Phaser.Scene {
   private setOpen(open: boolean): void {
     if (open === this.open || this.leaving) return;
     this.open = open;
+    // Online the fight goes on for the others: the world keeps running and the hero just stands.
+    const online = session.active;
+    session.paused = open && online;
     if (open) {
-      this.scene.pause('world');
-      this.scene.pause('ui');
+      if (!online) {
+        this.scene.pause('world');
+        this.scene.pause('ui');
+      }
       releaseControls();
       this.syncToggles();
-    } else {
+    } else if (!online) {
       this.scene.resume('world');
       this.scene.resume('ui');
     }
@@ -183,6 +189,7 @@ export class PauseScene extends Phaser.Scene {
       // The home screen starts from a quiet dusk, as on first launch.
       sound.setFire(0);
       sound.setDaylight(0);
+      session.paused = false;
       for (const k of ['world', 'shade', 'ui']) this.scene.stop(k);
       this.scene.start('home');
     });
