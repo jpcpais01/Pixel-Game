@@ -12,6 +12,7 @@ import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE,
 import { BLOOD_SPELL, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W, SOUL_SPELL, bloodLanceIcon, buildNecroFrames, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
 import { BARD_H, BARD_LOOKS, BARD_W, MINSTREL_LOOK, NOTE_FRAMES, NOTE_SIZE, bardAnims, buildBardFrames, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
+import { AEON_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CHRONO_H, CHRONO_LOOKS, CHRONO_W, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, buildChronoFrames, chronoAnims, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
 import { buildRogueFrames, daggersIcon, DANCER_DAGGERS, ROGUE_ANIMS, ROGUE_DAGGERS, ROGUE_H, ROGUE_LOOKS, ROGUE_W, shadowstepIcon, smokeCanvas } from './rogue';
 import { hex } from './pixel';
@@ -364,6 +365,35 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_song', toCanvas(16, 16, songIcon()));
   scene.textures.addCanvas('icon_drum', toCanvas(16, 16, drumIcon()));
   scene.textures.addCanvas('icon_rhythm', toCanvas(16, 16, rhythmIcon()));
+
+  // Chronomancer once per look: 'chrono' (the timekeeper), 'chrono_moon',
+  // 'chrono_rift' (the paradox) and 'chrono_aeon', each with its own bolts
+  // ('<key>_bolt_e', frames b0-b3); the clock over a slowed foe
+  // ('chrono_mark_e', m0-m7, tinted in game); and the icons.
+  for (const look of CHRONO_LOOKS) {
+    const cf = buildChronoFrames(look);
+    register(scene, look.key, pack(cf.map((f) => ({ name: f.key, r: f.canvas.render() })), CHRONO_W, CHRONO_H), CHRONO_W, CHRONO_H);
+    for (const a of chronoAnims(look)) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: cf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
+    }
+    register(scene, `${look.key}_bolt`, pack(frameList(Array.from({ length: BOLT_FRAMES }, (_, i) => boltFrame(i, look)), 'b'), BOLT_SIZE, BOLT_SIZE), BOLT_SIZE, BOLT_SIZE);
+  }
+  register(scene, 'chrono_mark', pack(frameList(Array.from({ length: MARK_FRAMES }, (_, i) => markFrame(i)), 'm'), MARK_SIZE, MARK_SIZE), MARK_SIZE, MARK_SIZE);
+  for (const [suffix, k] of [['', BRASS_ICON], ['_moon', MOON_ICON]] as const) {
+    scene.textures.addCanvas(`icon_hand${suffix}`, toCanvas(16, 16, handIcon(k)));
+    scene.textures.addCanvas(`icon_stasis${suffix}`, toCanvas(16, 16, stasisIcon(k)));
+  }
+  for (const [suffix, k] of [['', RIFT_ICON], ['_aeon', AEON_ICON]] as const) {
+    scene.textures.addCanvas(`icon_shards${suffix}`, toCanvas(16, 16, shardsIcon(k)));
+    scene.textures.addCanvas(`icon_rewind${suffix}`, toCanvas(16, 16, rewindIcon(k)));
+  }
 
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
   for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL]] as const) {

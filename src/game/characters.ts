@@ -31,6 +31,8 @@ import { BLOOD_KIT, NECRO_KIT, Necromancer } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, MINSTREL_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
+import { AEON_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT } from './Chrono';
+import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -610,6 +612,79 @@ export const CLASSES: ClassDef[] = [
       },
     ],
     spawn: (world, x, y, look) => new Bard(world, x, y, look === 'drummer' ? DRUMMER_KIT : MINSTREL_KIT),
+  },
+  {
+    id: 'chronomancer',
+    name: 'Chronomancer',
+    blurb: 'Time bends to his will',
+    types: [
+      {
+        // Second hands that slow what they strike, and a clock on the ground that all but stops time.
+        id: 'keeper',
+        name: 'Timekeeper',
+        role: 'Slows and stops time',
+        accent: 0xffc860,
+        stats: { power: 3, speed: 3, range: 4 },
+        attack: 'Second hand',
+        special: 'Stasis clock',
+        preview: { texture: 'chrono', glow: 'chrono_e', idle: 'chrono_idle_down', chosen: 'chrono_field_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+        buttons: {
+          attack: { texture: 'icon_hand' },
+          special: { texture: 'icon_stasis' },
+        },
+        lookName: 'Brass',
+        skins: [
+          {
+            id: 'moon',
+            name: 'Moonclock',
+            role: 'Keeper of the night hours',
+            accent: 0x9ccaff,
+            attack: 'Moon hand',
+            special: 'Moon dial',
+            preview: { texture: 'chrono_moon', glow: 'chrono_moon_e', idle: 'chrono_moon_idle_down', chosen: 'chrono_moon_field_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+            buttons: {
+              attack: { texture: 'icon_hand_moon' },
+              special: { texture: 'icon_stasis_moon' },
+            },
+          },
+        ],
+      },
+      {
+        // Quicker and tougher: shards thrown again by his echo a moment behind him, and a rewind that undoes his wounds.
+        id: 'paradox',
+        name: 'Paradox',
+        role: 'Echoes and rewinds',
+        accent: 0xb890ff,
+        stats: { power: 4, speed: 4, range: 3 },
+        attack: 'Echo shards',
+        special: 'Rewind',
+        preview: { texture: 'chrono_rift', glow: 'chrono_rift_e', idle: 'chrono_rift_idle_down', chosen: 'chrono_rift_rewind_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+        buttons: {
+          attack: { texture: 'icon_shards' },
+          special: { texture: 'icon_rewind' },
+        },
+        lookName: 'Rift',
+        skins: [
+          {
+            id: 'aeon',
+            name: 'Aeon',
+            role: 'Echoes of a green age',
+            accent: 0x6ff0c0,
+            attack: 'Aeon shards',
+            special: 'Aeon rewind',
+            preview: { texture: 'chrono_aeon', glow: 'chrono_aeon_e', idle: 'chrono_aeon_idle_down', chosen: 'chrono_aeon_rewind_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+            buttons: {
+              attack: { texture: 'icon_shards_aeon' },
+              special: { texture: 'icon_rewind_aeon' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT }[look] ?? KEEPER_KIT;
+      return new Chrono(world, x, y, kit);
+    },
   },
 ];
 

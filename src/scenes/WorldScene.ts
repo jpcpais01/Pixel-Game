@@ -768,6 +768,8 @@ export class WorldScene extends Phaser.Scene {
    */
   private stretchStep(x0: number, y0: number, extra: number, room: Phaser.Geom.Rectangle): void {
     const h = this.hero;
+    // A blink or a rewind is no step to stretch.
+    if (Math.hypot(h.x - x0, h.y - y0) > 8) return;
     const nx = Phaser.Math.Clamp(h.x + (h.x - x0) * extra, room.left, room.right);
     const ny = Phaser.Math.Clamp(h.y + (h.y - y0) * extra, room.top, room.bottom);
     if (this.walkable(nx, h.y)) h.x = nx;

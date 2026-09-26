@@ -65,7 +65,8 @@ export class Spawner {
   update(dt: number, target: Target | null, daylight: number): void {
     for (const s of this.slots) {
       if (s.monster) {
-        s.monster.update(dt, target, daylight);
+        // A slowed monster lives through less of each moment.
+        s.monster.update(s.monster.warp(dt), target, daylight);
         if (s.monster.dead) {
           s.monster = null;
           s.wait = s.spot.respawn ?? this.respawn;

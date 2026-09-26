@@ -43,4 +43,6 @@ export interface UltDef {
 export interface UltSkin {
   name: string;
   pal: Pal;
+  /** The type it belongs to, when that isn't the class's base type. */
+  type?: string;
 }
