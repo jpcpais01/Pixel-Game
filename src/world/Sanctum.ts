@@ -21,7 +21,7 @@ import { KEEPERS, keeperCall, type Keeper } from '../game/keepers';
 import { settings } from '../game/settings';
 import { sunShadow } from '../game/Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
-import { CIRCLE, DAIS, PILLARS, ROOM_BRAZIERS, ROOM_H, ROOM_W, ROOM_X, ROOM_Y, RUNESTONES, TEMPLE_X, TEMPLE_Y, WINDOW, atRoomExit, atTempleDoor } from './sanctumLayout';
+import { DAIS, PILLARS, ROOM_BRAZIERS, ROOM_H, ROOM_W, ROOM_X, ROOM_Y, RUNESTONES, TEMPLE_X, TEMPLE_Y, WINDOW, atRoomExit, atTempleDoor } from './sanctumLayout';
 
 type Img = Phaser.GameObjects.Image;
 type Emitter = Phaser.GameObjects.Particles.ParticleEmitter;
@@ -49,8 +49,7 @@ const lerpColor = (a: number, b: number, t: number): number => {
  * The Rune Temple at the top of the Runestone Clearing and the room inside
  * it: the old stone chapel with its lamplit doorway and two runestones, and
  * inside, the painted room (drawn by the ground camera), its pillars, braziers
- * and lights, the two keepers at their stations, and a crystal turning over
- * the rune circle. Light comes in through the windows as the world outside
+ * and lights, the two keepers at their stations,  Light comes in through the windows as the world outside
  * has it: shafts of gold by day, calm moonbeams by night. It says when the
  * hero passes through the door either way, and calls a keeper's counter up
  * when the hero walks up to them.
@@ -162,8 +161,7 @@ export class RuneTemple {
       this.keepers.push({ id, x, y, label });
     }
 
-    // A crystal turning over the rune circle, and dust drifting in the lamplight.
-    this.crystal(ROOM_X + CIRCLE.x, ROOM_Y + CIRCLE.y - 8, ROOM_Y + CIRCLE.y, 130);
+    // Dust drifting in the lamplight.
     this.roomMotes = add.particles(0, 0, 'spark', {
       x: { min: ROOM_X + 40, max: ROOM_X + ROOM_W - 40 },
       y: { min: ROOM_Y + 60, max: ROOM_Y + ROOM_H - 40 },
@@ -225,15 +223,6 @@ export class RuneTemple {
       this.offQuality();
       keeperCall.want = null;
     });
-  }
-
-  /** A crystal hovering at (x, y), bobbing, with a light under it. */
-  private crystal(x: number, y: number, depth: number, radius: number): void {
-    const add = this.scene.add;
-    const lit = add.sprite(x, y, 'rs_crystal', 'f0').setOrigin(0.5, 1).setPipeline('Lit').setDepth(depth).play('rs_crystal_loop');
-    const glow = add.sprite(x, y, 'rs_crystal_e', 'f0').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1).play('rs_crystal_e_loop');
-    this.scene.tweens.add({ targets: [lit, glow], y: y - 3, duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-    this.scene.glowLight(x, y - 10, radius, 0xb088ff, 1.5, 0.6, 0xa070ff, 1.4);
   }
 
   /**

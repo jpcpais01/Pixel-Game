@@ -22,7 +22,7 @@ import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
 import { GEAR } from '../game/gear';
 import { ARROW, BEAM_H, BEAM_W, LRAY_H, LRAY_W, LRING_H, LRING_W, RUNE_H, RUNE_W, TWINKLE, lootArrow, lootBeam, lootRay, lootRing, lootRunes, lootTwinkle } from './loot';
 import { registerInventoryArt } from './invTiles';
-import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, CRYSTAL_FRAMES, CRYSTAL_H as RS_CRYSTAL_H, CRYSTAL_W as RS_CRYSTAL_W, GODRAY_H, GODRAY_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, PILLAR_H as RS_PILLAR_H, PILLAR_W as RS_PILLAR_W, RUNESTONE_H, RUNESTONE_W, STATION_FRAMES, TEMPLE_ART_H, TEMPLE_ART_W, dustCrucible, godRay, runeAnvil, runeCrystal, runesmith, runestone, sanctumArt, sanctumExterior, sanctumPillar, unmaker } from './sanctum';
+import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, GODRAY_H, GODRAY_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, PILLAR_H as RS_PILLAR_H, PILLAR_W as RS_PILLAR_W, RUNESTONE_H, RUNESTONE_W, STATION_FRAMES, TEMPLE_ART_H, TEMPLE_ART_W, dustCrucible, godRay, runeAnvil, runesmith, runestone, sanctumArt, sanctumExterior, sanctumPillar, unmaker } from './sanctum';
 import { ROOM_H, ROOM_W } from '../world/sanctumLayout';
 import { chapelArt, chapelExterior } from './chapel';
 import { CH_EXT_H, CH_EXT_W, CH_H, CH_W } from '../world/chapelLayout';
@@ -772,14 +772,12 @@ export function warmSanctum(scene: Phaser.Scene): void {
     scene.anims.create({ key: `${key}_loop`, frames: scene.anims.generateFrameNames(key, { prefix: 'f', start: 0, end: n - 1 }), frameRate: fps, repeat: -1 });
   const glowLoop = (key: string, n: number, fps: number) =>
     scene.anims.create({ key: `${key}_e_loop`, frames: scene.anims.generateFrameNames(`${key}_e`, { prefix: 'f', start: 0, end: n - 1 }), frameRate: fps, repeat: -1 });
-  register(scene, 'rs_crystal', pack(frameList(Array.from({ length: CRYSTAL_FRAMES }, (_, f) => runeCrystal(f)), 'f'), RS_CRYSTAL_W, RS_CRYSTAL_H), RS_CRYSTAL_W, RS_CRYSTAL_H);
   register(scene, 'rs_pillar', pack(frameList([sanctumPillar()], 'p'), RS_PILLAR_W, RS_PILLAR_H), RS_PILLAR_W, RS_PILLAR_H);
   register(scene, 'rs_crucible', pack(frameList(Array.from({ length: STATION_FRAMES }, (_, f) => dustCrucible(f)), 'f'), CRUCIBLE_W, CRUCIBLE_H), CRUCIBLE_W, CRUCIBLE_H);
   register(scene, 'rs_anvil', pack(frameList(Array.from({ length: STATION_FRAMES }, (_, f) => runeAnvil(f)), 'f'), ANVIL_W, ANVIL_H), ANVIL_W, ANVIL_H);
   register(scene, 'rs_nyx', pack(frameList(Array.from({ length: KEEPER_FRAMES }, (_, f) => unmaker(f)), 'f'), KEEPER_W, KEEPER_H), KEEPER_W, KEEPER_H);
   register(scene, 'rs_tharn', pack(frameList(Array.from({ length: KEEPER_FRAMES }, (_, f) => runesmith(f)), 'f'), KEEPER_W, KEEPER_H), KEEPER_W, KEEPER_H);
   for (const [key, n, fps] of [
-    ['rs_crystal', CRYSTAL_FRAMES, 6],
     ['rs_crucible', STATION_FRAMES, 8],
     ['rs_anvil', STATION_FRAMES, 6],
     ['rs_nyx', KEEPER_FRAMES, 5],
