@@ -201,6 +201,16 @@ class GameSound {
     if (t !== null) this.sfx!.gear(t, rare);
   }
 
+  lootFall(pan = 0): void {
+    const t = this.slot('lootFall');
+    if (t !== null) this.sfx!.lootFall(t, pan);
+  }
+
+  lootLand(grade: number, pan = 0): void {
+    const t = this.slot('lootLand');
+    if (t !== null) this.sfx!.lootLand(t, pan, grade);
+  }
+
   pickup(pan = 0): void {
     const t = this.slot('pickup');
     if (t !== null) this.sfx!.pickup(t, pan);

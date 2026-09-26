@@ -20,6 +20,7 @@ import { hex } from './pixel';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
 import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
 import { GEAR } from '../game/gear';
+import { ARROW, BEAM_H, BEAM_W, LRAY_H, LRAY_W, LRING_H, LRING_W, RUNE_H, RUNE_W, TWINKLE, lootArrow, lootBeam, lootRay, lootRing, lootRunes, lootTwinkle } from './loot';
 import { registerInventoryArt } from './invTiles';
 import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, CRYSTAL_FRAMES, CRYSTAL_H as RS_CRYSTAL_H, CRYSTAL_W as RS_CRYSTAL_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, PILLAR_H as RS_PILLAR_H, PILLAR_W as RS_PILLAR_W, STATION_FRAMES, TEMPLE_ART_H, TEMPLE_ART_W, dustCrucible, runeAnvil, runeCrystal, runesmith, sanctumArt, sanctumExterior, sanctumPillar, unmaker } from './sanctum';
 import { ROOM_H, ROOM_W } from '../world/sanctumLayout';
@@ -446,6 +447,13 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('shadow_big', toCanvas(24, 8, shadowCanvas(24, 8)));
   const spark = new Uint8ClampedArray(4 * 4).fill(255);
   scene.textures.addCanvas('spark', toCanvas(2, 2, spark));
+  // Light for great finds lying on the ground (see game/Pickup.ts).
+  scene.textures.addCanvas('loot_beam', toCanvas(BEAM_W, BEAM_H, lootBeam()));
+  scene.textures.addCanvas('loot_ray', toCanvas(LRAY_W, LRAY_H, lootRay()));
+  scene.textures.addCanvas('loot_ring', toCanvas(LRING_W, LRING_H, lootRing()));
+  scene.textures.addCanvas('loot_runes', toCanvas(RUNE_W, RUNE_H, lootRunes()));
+  scene.textures.addCanvas('loot_twinkle', toCanvas(TWINKLE, TWINKLE, lootTwinkle()));
+  scene.textures.addCanvas('loot_arrow', toCanvas(ARROW, ARROW, lootArrow()));
 
   // Environment. The ground itself streams in as the heroes walk (see world/GroundStreamer.ts).
   register(scene, 'tree', pack(TREE_FRAMES.map((f) => ({ name: f.name, r: f.draw().render() })), TREE_W, TREE_H, 9), TREE_W, TREE_H, false);
