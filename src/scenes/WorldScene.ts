@@ -351,8 +351,6 @@ export class WorldScene extends Phaser.Scene {
       for (const d of p.dummies) this.dummy(d.x, d.y);
       this.sanctum = new RuneTemple(this, (img) => ground(img) as Phaser.GameObjects.Image);
       this.shadows.push(...this.sanctum.shadows);
-      this.chapel = new Chapel(this, (img) => ground(img) as Phaser.GameObjects.Image);
-      this.shadows.push(...this.chapel.shadows);
     } else if (arena.id === 'garden') {
       this.garden = new Garden(this);
     }

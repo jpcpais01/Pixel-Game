@@ -7,7 +7,6 @@ import { DAY_GROUND, NIGHT_GROUND, hash2, rng, valueNoise } from '../art/env';
 import { K, flagstone, nightify, ramp, runeCircle, smoothstep, stone, type Cell, type GroundSpec, type Look, type StripFields } from '../art/ground';
 import { ColliderGrid, TREE_SHAPE, edgeScenery, type RaySpot, type SceneryLayout } from './common';
 import { TEMPLE_X, TEMPLE_Y, roomWalkable, templeBlocks } from './sanctumLayout';
-import { CH_FOOT, CH_TOP, CH_X, chapelBlocks, inChapel } from './chapelLayout';
 
 export const CLEARING_W = 640;
 export const PLAZA_H = 448;
@@ -53,11 +52,10 @@ export function plazaProps(): PlazaProps {
     [0.78, -0.62],
     [-0.78, 0.62],
     [0.78, 0.62],
-    // The east pair stands a little in, clear of the chapel.
-  ].map(([ax, ay]) => ({ x: Math.round(cx + (ax > 0 ? 0.68 : ax) * RING), y: Math.round(cy + ay * RING * 0.87) }));
+  ].map(([ax, ay]) => ({ x: Math.round(cx + ax * RING), y: Math.round(cy + ay * RING * 0.87) }));
   const crystals = [
     { x: cx - RING - 40, y: cy - 30, frame: 'c0' },
-    { x: cx - 124, y: PLAZA_Y + 70, frame: 'c0' },
+    { x: cx + RING + 46, y: cy + 22, frame: 'c1' },
     { x: cx + 124, y: PLAZA_Y + 70, frame: 'c1' },
   ];
   const rocks: PlazaProps['rocks'] = [];
@@ -71,8 +69,6 @@ export function plazaProps(): PlazaProps {
     if (x < 16 || x > CLEARING_W - 16 || y > CLEARING_H - 8 || roofDepth(x, y) > -24) continue;
     // Nor in front of or behind the Rune Temple.
     if (Math.abs(x - TEMPLE_X) < 100 && y > TEMPLE_Y - 160 && y < TEMPLE_Y + 24) continue;
-    // Nor over the chapel on the east.
-    if (nearChapel(x, y)) continue;
     rocks.push({ x, y, frame: `r${i % 3}` });
   }
   const dummies = [
@@ -82,9 +78,6 @@ export function plazaProps(): PlazaProps {
   props = { braziers, crystals, rocks, dummies };
   return props;
 }
-
-/** The ground the chapel stands on, with room around it. */
-const nearChapel = (x: number, y: number) => x > CH_X - 24 && y > CH_TOP - 40 && y < CH_FOOT + 20;
 
 export const CLEARING_SPAWN = { x: PLAZA_CX, y: PLAZA_CY + 20 };
 
@@ -103,7 +96,7 @@ export function clearingScenery(): SceneryLayout {
     seed: 2024,
     roofDepth,
     trees: true,
-    keepClear: (x, y) => near(x, y, p.crystals, 26) || near(x, y, p.braziers, 30) || (Math.abs(x - TEMPLE_X) < 104 && y > TEMPLE_Y - 170 && y < TEMPLE_Y + 20) || nearChapel(x, y),
+    keepClear: (x, y) => near(x, y, p.crystals, 26) || near(x, y, p.braziers, 30) || (Math.abs(x - TEMPLE_X) < 104 && y > TEMPLE_Y - 170 && y < TEMPLE_Y + 20),
   });
   // A few shafts of sunlight slant through the treeline onto the grass.
   const rays: RaySpot[] = [];
@@ -129,9 +122,7 @@ const WALLS = { left: 28, right: CLEARING_W - 28, bottom: CLEARING_H - 24 };
 export function clearingWalkable(x: number, y: number): boolean {
   // The Rune Temple's room, east past the clearing's edge.
   if (x >= CLEARING_W) return roomWalkable(x, y);
-  // The chapel's hall reaches past the lawn's east wall.
-  if (inChapel(x, y)) return !chapelBlocks(x, y);
-  if (templeBlocks(x, y) || chapelBlocks(x, y)) return false;
+  if (templeBlocks(x, y)) return false;
   if (y < 10 || y > WALLS.bottom || x < WALLS.left || x > WALLS.right) return false;
   if (roofDepth(x, y) > -9) return false;
   grid ??= new ColliderGrid(clearingScenery().colliders);
