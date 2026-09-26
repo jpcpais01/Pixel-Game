@@ -3,16 +3,19 @@ import { Bitmap, bayer, clamp01, mix } from '../art/bitmap';
 import { hex, type RGB } from '../art/pixel';
 import { menuZoom } from '../game/display';
 import { CLASSES, type ClassDef, type Preview } from '../game/characters';
-import { lastHero, lastLookOf, lookOf, rememberHero, setLook, setType, worn, type Look } from '../game/skins';
+import { lastHero, lookOf, rememberHero, setLook, setType, worn } from '../game/skins';
+import { ensureUltIcons, ultFor } from '../game/ultimate';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PANEL_PICKED, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
 import type { HomeScene } from './HomeScene';
 
-// The hero select: a lit stage showing the hero big on a pedestal, a panel
-// beside it with the class, its types (how it plays) and the chosen type's
-// skins (how it looks), and a roster of every class along the bottom.
+// The hero select: a lit stage showing the hero big on a pedestal, with the
+// chosen type's skins (how it looks) stepped through under it; a panel beside
+// it with the class, a tab for each of its types (how it plays) and that
+// type's stats, abilities and Special; and a roster of every class along the
+// bottom.
 
-/** Roster, type and skin tiles: a small window onto the hero at 1x. */
+/** Roster tiles: a small window onto the hero at 1x. */
 const TILE_W = 28;
 const TILE_H = 36;
 const TILE_GAP = 3;
@@ -24,17 +27,24 @@ const PAD = 7;
 /** Rows in the info panel, from its top. */
 const NAME_Y = 6;
 const BLURB_Y = 24;
-const RULE_Y = 34;
-const TYPE_Y = 39;
-const STATS_Y = TYPE_Y + TILE_H + 5;
-const SKIN_Y = STATS_Y + 39;
-const INFO_H = SKIN_Y + TILE_H + 6;
-/** Where the tiles start in their rows, after the TYPE / SKIN label. */
-const LABEL_W = 34;
-const LINE_H = 9;
+/** Type tabs, and the body under them that shows the picked type. */
+const TABS_Y = 35;
+const TAB_H = 15;
+const TAB_GAP = 2;
+const BODY_Y = TABS_Y + TAB_H;
+const ROLE_Y = BODY_Y + 6;
+const STATS_Y = BODY_Y + 21;
+const STAT_ROW = 12;
+const SEG_W = 9;
+const ABIL_X = PAD + 104;
+const ABIL_Y = BODY_Y + 19;
 const ICON_BOX = 18;
-/** Stage: feet this far above its bottom, leaving room for the look's name under the pedestal. */
-const STAGE_FEET = 30;
+/** The Special: a gold strip across the bottom of the body. */
+const SPECIAL_Y = BODY_Y + 61;
+const SPECIAL_H = 24;
+const INFO_H = SPECIAL_Y + SPECIAL_H + 9;
+/** Stage: feet this far above its bottom, leaving room for the skin picker under the pedestal. */
+const STAGE_FEET = 34;
 const MOTES = 7;
 /** Buttons and margins. */
 const MARGIN = 8;
@@ -50,28 +60,9 @@ let lastPicked: number | null = null;
 
 const INK = 0xfff4d6;
 const LAVENDER = 0xb8a8e8;
-const DIM = 0x8a7cc0;
+const SOFT = 0x9a8cd0;
 const GOLD = 0xf4cf6a;
 const DIMMED = 0x8a84a8;
-
-/** Word-wrap `text` into lines no wider than `maxW` at the pixel font's size, at most `maxLines`. */
-function wrapText(probe: Phaser.GameObjects.BitmapText, text: string, maxW: number, maxLines: number): string[] {
-  const fits = (t: string) => probe.setText(t).width <= maxW;
-  const lines: string[] = [];
-  let line = '';
-  for (const word of text.toUpperCase().split(/\s+/)) {
-    const next = line ? `${line} ${word}` : word;
-    if (!line || fits(next)) line = next;
-    else {
-      lines.push(line);
-      line = word;
-    }
-  }
-  if (line) lines.push(line);
-  // Too many lines: fold the rest into the last one, which then gets trimmed.
-  if (lines.length > maxLines) lines.splice(maxLines - 1, lines.length, lines.slice(maxLines - 1).join(' '));
-  return lines.map((l) => fitLine(probe, l, maxW));
-}
 
 /** Trim a single line to `maxW`, ending in a dot, as a last resort for text too long to fit. */
 function fitLine(probe: Phaser.GameObjects.BitmapText, text: string, maxW: number): string {
@@ -325,7 +316,14 @@ class Tile extends Phaser.GameObjects.Container {
   }
 }
 
-/** The hero shown big, on a lit pedestal, with sparks drifting up through the light. */
+/** Which skin is worn, out of how many, for the picker under the pedestal. */
+interface SkinPick {
+  name: string;
+  index: number;
+  count: number;
+}
+
+/** The hero shown big, on a lit pedestal, with sparks drifting up through the light, and its skins stepped through underneath. */
 class Stage extends Phaser.GameObjects.Container {
   readonly boxW: number;
   readonly boxH: number;
@@ -334,21 +332,24 @@ class Stage extends Phaser.GameObjects.Container {
   private runes: Phaser.GameObjects.Image;
   private sprite: Phaser.GameObjects.Sprite;
   private glow: Phaser.GameObjects.Sprite;
-  private caption: Phaser.GameObjects.BitmapText;
+  private skinName: Phaser.GameObjects.BitmapText;
+  /** Arrows either side of the skin name and a dot per skin under it. */
+  private picker: Phaser.GameObjects.Graphics;
+  private stepZones: Phaser.GameObjects.Zone[];
   private motes: { img: Phaser.GameObjects.Image; t: number; life: number; x: number; rise: number }[] = [];
   private scale3: number;
   private feetX: number;
   private feetY: number;
   private preview?: Preview;
 
-  constructor(scene: Phaser.Scene, w: number, h: number, tap: () => void, swipe: (dir: -1 | 1) => void) {
+  constructor(scene: Phaser.Scene, w: number, h: number, tap: () => void, swipe: (dir: -1 | 1) => void, stepSkin: (dir: -1 | 1) => void) {
     super(scene, 0, 0);
     this.boxW = w;
     this.boxH = h;
     this.feetX = Math.round(w / 2);
     this.feetY = h - STAGE_FEET;
-    // Three times size when there's room for it, else twice.
-    this.scale3 = this.feetY - 8 >= 100 ? 3 : 2;
+    // Three times size when there's room for a hero's full height, else twice.
+    this.scale3 = this.feetY - 4 >= 96 ? 3 : 2;
     const bg = scene.add.image(0, 0, stageTexture(scene, w, h)).setOrigin(0);
     this.beam = scene.add.image(this.feetX, 2, beamTexture(scene, this.feetY + 2)).setOrigin(0.5, 0).setBlendMode(Phaser.BlendModes.ADD);
     this.pool = scene.add.image(this.feetX, this.feetY + 2, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(2.6, 0.8);
@@ -358,7 +359,8 @@ class Stage extends Phaser.GameObjects.Container {
     const shadow = scene.add.image(this.feetX, this.feetY, 'shadow').setScale(this.scale3);
     this.sprite = scene.add.sprite(this.feetX, this.feetY, '__DEFAULT').setScale(this.scale3);
     this.glow = scene.add.sprite(this.feetX, this.feetY, '__DEFAULT').setScale(this.scale3).setBlendMode(Phaser.BlendModes.ADD);
-    this.caption = pixelText(scene, 0, h - 13, '');
+    this.skinName = pixelText(scene, 0, h - 18, '');
+    this.picker = scene.add.graphics();
     const mote = moteTexture(scene);
     for (let i = 0; i < MOTES; i++) {
       const img = scene.add.image(0, 0, mote).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
@@ -378,12 +380,19 @@ class Stage extends Phaser.GameObjects.Container {
       if (Math.abs(dx) >= SWIPE && Math.abs(dx) > Math.abs(dy)) swipe(dx < 0 ? 1 : -1);
       else if (!dragged(scene, p)) tap();
     });
-    this.add([bg, this.beam, this.pool, pedestal, this.runes, shadow, ...this.motes.map((m) => m.img), this.sprite, this.glow, this.caption, hit]);
+    // The skin picker: the left and right halves of the strip under the pedestal step back and forward.
+    const stripY = this.feetY + 12;
+    this.stepZones = ([-1, 1] as const).map((dir) => {
+      const z = scene.add.zone(dir < 0 ? 0 : w / 2, stripY, w / 2, h - stripY).setOrigin(0);
+      onTap(scene, z, () => stepSkin(dir));
+      return z;
+    });
+    this.add([bg, this.beam, this.pool, pedestal, this.runes, shadow, ...this.motes.map((m) => m.img), this.sprite, this.glow, this.skinName, this.picker, hit, ...this.stepZones]);
     for (const m of this.motes) this.spawnMote(m, true);
   }
 
   /** Show a look; `pose` plays its picked animation first. `fresh` fades the hero in (a new class or look). */
-  show(preview: Preview, accent: number, caption: string, pose: boolean, fresh: boolean): void {
+  show(preview: Preview, accent: number, skin: SkinPick, pose: boolean, fresh: boolean): void {
     if (this.preview !== preview) {
       this.preview = preview;
       const oy = preview.originY ?? 31 / 32;
@@ -400,8 +409,7 @@ class Stage extends Phaser.GameObjects.Container {
     this.pool.setTint(accent).setAlpha(0.7);
     this.runes.setTint(accent);
     for (const m of this.motes) m.img.setTint(accent);
-    this.caption.setText(caption.toUpperCase()).setTint(accent);
-    this.caption.setX(Math.round((this.boxW - this.caption.width) / 2));
+    this.drawPicker(skin, accent);
     if (pose) this.pose();
     else this.sprite.play(preview.idle, true);
     if (fresh) {
@@ -409,6 +417,37 @@ class Stage extends Phaser.GameObjects.Container {
       this.sprite.setAlpha(0).setY(this.feetY + 3);
       this.glow.setAlpha(0).setY(this.feetY + 3);
       this.scene.tweens.add({ targets: [this.sprite, this.glow], alpha: 1, y: this.feetY, duration: 160, ease: 'Quad.easeOut' });
+    }
+  }
+
+  /** The skin's name, with arrows either side and a dot per skin when there's more than one. */
+  private drawPicker(skin: SkinPick, accent: number): void {
+    const { boxW: w, boxH: h } = this;
+    const many = skin.count > 1;
+    const nameY = many ? h - 18 : h - 14;
+    this.skinName.setText(skin.name.toUpperCase()).setTint(accent);
+    this.skinName.setPosition(Math.round((w - this.skinName.width) / 2), nameY);
+    for (const z of this.stepZones) if (z.input) z.input.enabled = many;
+    const g = this.picker.clear();
+    if (!many) return;
+    // Chevrons 4 wide and 7 tall, pointing out, with a dark outline.
+    // Column i is 7 - 2i tall, so the widest column sits nearest the name and the tip points away.
+    for (const dir of [-1, 1]) {
+      const col = (i: number) => (dir < 0 ? 11 - i : w - 12 + i);
+      for (let i = 0; i < 4; i++) g.fillStyle(0x0b0818, 0.8).fillRect(col(i) - 1, nameY + i - 1, 3, 9 - i * 2);
+      for (let i = 0; i < 4; i++) g.fillStyle(accent).fillRect(col(i), nameY + i, 1, 7 - i * 2);
+    }
+    // A dot per skin, the worn one lit.
+    const step = 7;
+    const x0 = Math.round(w / 2 - ((skin.count - 1) * step) / 2) - 1;
+    const y = h - 8;
+    for (let i = 0; i < skin.count; i++) {
+      const x = x0 + i * step;
+      g.fillStyle(0x0b0818).fillRect(x - 1, y - 1, 5, 5);
+      if (i === skin.index) {
+        g.fillStyle(accent).fillRect(x, y, 3, 3);
+        g.fillStyle(0xffffff, 0.6).fillRect(x, y, 3, 1);
+      } else g.fillStyle(0x43356e).fillRect(x, y, 3, 3);
     }
   }
 
@@ -450,14 +489,16 @@ export class SelectScene extends Phaser.Scene {
   private probe!: Phaser.GameObjects.BitmapText;
   private nameText!: Phaser.GameObjects.BitmapText;
   private blurb!: Phaser.GameObjects.BitmapText;
-  private typeName!: Phaser.GameObjects.BitmapText;
-  private typeRole!: Phaser.GameObjects.BitmapText;
-  private skinName!: Phaser.GameObjects.BitmapText;
-  private pips!: Phaser.GameObjects.Graphics;
+  /** The type tabs and the body under them, redrawn for each class and type. */
+  private frame!: Phaser.GameObjects.Graphics;
+  private tabs: { label: Phaser.GameObjects.BitmapText; zone: Phaser.GameObjects.Zone }[] = [];
+  private role!: Phaser.GameObjects.BitmapText;
+  private bars!: Phaser.GameObjects.Graphics;
   private abilities: Phaser.GameObjects.BitmapText[] = [];
-  private icons: { attack: Phaser.GameObjects.Sprite; special: Phaser.GameObjects.Image } | null = null;
-  private typeTiles: Tile[] = [];
-  private skinTiles: Tile[] = [];
+  private icons!: { attack: Phaser.GameObjects.Sprite; special: Phaser.GameObjects.Image; ult: Phaser.GameObjects.Image };
+  private ultName!: Phaser.GameObjects.BitmapText;
+  private ultCost!: Phaser.GameObjects.BitmapText;
+  private bolt!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super('select');
@@ -472,15 +513,15 @@ export class SelectScene extends Phaser.Scene {
     const cam = this.cameras.main.setOrigin(0, 0).setAlpha(0);
     this.tweens.add({ targets: cam, alpha: 1, duration: 260 });
     const saved = CLASSES.findIndex((c) => c.id === lastHero());
-    this.cls = lastPicked ?? Math.max(0, saved);
+    this.cls = Math.min(lastPicked ?? Math.max(0, saved), CLASSES.length - 1);
+    ensureUltIcons(this);
 
     this.shade = this.add.rectangle(0, 0, 1, 1, 0x0b0818, 0.45).setOrigin(0);
     this.header = pixelText(this, 0, 0, '* Choose your hero *', GOLD);
     this.probe = pixelText(this, 0, 0, '').setVisible(false);
     this.roster = CLASSES.map((_c, i) => new Tile(this, () => this.pickClass(i)));
     for (const t of this.roster) this.add.existing(t);
-    this.typeTiles = [];
-    this.skinTiles = [];
+    this.tabs = [];
     this.buildInfo();
     this.stage = new Stage(
       this,
@@ -488,6 +529,7 @@ export class SelectScene extends Phaser.Scene {
       INFO_H,
       () => this.stage.pose(),
       (dir) => this.pickClass((this.cls + dir + CLASSES.length) % CLASSES.length),
+      (dir) => this.stepSkin(dir),
     );
     this.add.existing(this.stage);
     this.back = new PixelButton(this, 'Back', BACK_W, BUTTON_H - 2, BUTTON_PLAIN, 'back', () => this.goBack());
@@ -514,36 +556,70 @@ export class SelectScene extends Phaser.Scene {
     this.stage.update(Math.min(0.1, delta / 1000));
   }
 
-  /** The panel beside the stage: the class, then its types, stats and abilities, then the type's skins. */
+  /** The panel beside the stage: the class, then a tab per type over the picked type's stats, abilities and Special. */
   private buildInfo(): void {
     const bg = this.add.image(0, 0, panelTexture(this, 'sel_info', INFO_W, INFO_H, PANEL)).setOrigin(0);
     this.nameText = pixelText(this, PAD, NAME_Y, '', INK, 2);
     this.blurb = pixelText(this, PAD, BLURB_Y, '', LAVENDER);
-    const rule = this.add.graphics();
-    rule.fillStyle(0x0b0818, 0.8).fillRect(PAD, RULE_Y, INFO_W - PAD * 2, 1);
-    rule.fillStyle(0x6b5aa6, 0.6).fillRect(PAD, RULE_Y + 1, INFO_W - PAD * 2, 1);
-    const typeLabel = pixelText(this, PAD, TYPE_Y + 14, 'Type', LAVENDER);
-    const skinLabel = pixelText(this, PAD, SKIN_Y + 14, 'Skin', LAVENDER);
-    this.typeName = pixelText(this, 0, 0, '');
-    this.typeRole = pixelText(this, 0, 0, '', LAVENDER);
-    this.skinName = pixelText(this, 0, 0, '');
-    this.pips = this.add.graphics();
-    const labels = ['Power', 'Speed', 'Range'].map((l, i) => pixelText(this, PAD, STATS_Y + 3 + i * LINE_H, l, DIM));
-    const abX = PAD + 82;
+    this.frame = this.add.graphics();
+    this.role = pixelText(this, 0, ROLE_Y, '', LAVENDER);
+    this.bars = this.add.graphics();
+    const labels = ['Power', 'Speed', 'Range'].map((l, i) => pixelText(this, PAD + 6, STATS_Y + i * STAT_ROW, l, SOFT));
+
+    // Attack and ability: an icon in a recessed box, and its name.
     const boxes = this.add.graphics();
-    this.abilities = [0, 1].map((i) => {
-      const y = STATS_Y + i * (ICON_BOX + 2);
-      boxes.fillStyle(0x0b0818).fillRect(abX, y, ICON_BOX, ICON_BOX);
-      boxes.fillStyle(0x1a1434).fillRect(abX + 1, y + 1, ICON_BOX - 2, ICON_BOX - 2);
-      boxes.fillStyle(0x43356e).fillRect(abX + 1, y + ICON_BOX - 2, ICON_BOX - 2, 1);
-      return pixelText(this, abX + ICON_BOX + 5, y + 6, '');
-    });
-    const iconX = abX + ICON_BOX / 2;
-    this.icons = {
-      attack: this.add.sprite(iconX, STATS_Y + ICON_BOX / 2, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD),
-      special: this.add.image(iconX, STATS_Y + ICON_BOX + 2 + ICON_BOX / 2, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD),
+    const box = (x: number, y: number, size: number, rim: number) => {
+      boxes.fillStyle(0x0b0818).fillRect(x, y, size, size);
+      boxes.fillStyle(0x140f2a).fillRect(x + 1, y + 1, size - 2, size - 2);
+      boxes.fillStyle(rim).fillRect(x + 1, y + size - 2, size - 2, 1);
     };
-    this.info = this.add.container(0, 0, [bg, rule, this.nameText, this.blurb, typeLabel, skinLabel, this.typeName, this.typeRole, this.skinName, this.pips, ...labels, boxes, ...this.abilities, this.icons.attack, this.icons.special]);
+    this.abilities = [0, 1].map((i) => {
+      const y = ABIL_Y + i * (ICON_BOX + 2);
+      box(ABIL_X, y, ICON_BOX, 0x43356e);
+      return pixelText(this, ABIL_X + ICON_BOX + 5, y + 6, '');
+    });
+    const iconX = ABIL_X + ICON_BOX / 2;
+
+    // The Special: a gold-rimmed strip with its icon, its name and what it costs in energy.
+    const sx = PAD + 5;
+    const sw = INFO_W - PAD * 2 - 10;
+    const strip = this.add.graphics();
+    strip.fillStyle(0x0b0818).fillRect(sx, SPECIAL_Y, sw, SPECIAL_H);
+    strip.fillStyle(0xb8742c).fillRect(sx + 1, SPECIAL_Y + 1, sw - 2, SPECIAL_H - 2);
+    strip.fillStyle(0x1c1538).fillRect(sx + 2, SPECIAL_Y + 2, sw - 4, SPECIAL_H - 4);
+    strip.fillStyle(0xffe08a, 0.7).fillRect(sx + 2, SPECIAL_Y + 1, sw - 4, 1);
+    strip.fillStyle(0xffe08a, 0.08).fillRect(sx + 2, SPECIAL_Y + 2, sw - 4, 6);
+    const ultBox = sx + 3;
+    box(ultBox, SPECIAL_Y + 3, ICON_BOX, 0x8a4e22);
+    const ultLabel = pixelText(this, ultBox + ICON_BOX + 5, SPECIAL_Y + 4, 'Special', GOLD);
+    this.ultName = pixelText(this, ultBox + ICON_BOX + 5, SPECIAL_Y + 14, '');
+    this.ultCost = pixelText(this, 0, SPECIAL_Y + 9, '', GOLD);
+    this.bolt = this.add.graphics();
+
+    this.icons = {
+      attack: this.add.sprite(iconX, ABIL_Y + ICON_BOX / 2, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD),
+      special: this.add.image(iconX, ABIL_Y + ICON_BOX + 2 + ICON_BOX / 2, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD),
+      ult: this.add.image(ultBox + ICON_BOX / 2, SPECIAL_Y + 3 + ICON_BOX / 2, '__DEFAULT'),
+    };
+    this.info = this.add.container(0, 0, [
+      bg,
+      this.nameText,
+      this.blurb,
+      this.frame,
+      this.role,
+      this.bars,
+      ...labels,
+      boxes,
+      ...this.abilities,
+      strip,
+      ultLabel,
+      this.ultName,
+      this.ultCost,
+      this.bolt,
+      this.icons.attack,
+      this.icons.special,
+      this.icons.ult,
+    ]);
   }
 
   /** Show the current class in its current type and skin. `pose` plays the hero's picked animation. */
@@ -552,11 +628,17 @@ export class SelectScene extends Phaser.Scene {
     const look = lookOf(cls);
     const def = worn(cls, look);
     this.roster.forEach((t, i) => {
-      const c = CLASSES[i];
-      const d = worn(c);
+      const d = worn(CLASSES[i]);
       t.show(d.preview, d.accent).setPicked(i === this.cls);
     });
-    this.stage.show(def.preview, def.accent, look.type.name, pose, fresh);
+    const skins = look.type.skins ?? [];
+    this.stage.show(
+      def.preview,
+      def.accent,
+      { name: look.skin?.name ?? look.type.lookName ?? 'Classic', index: look.skin ? skins.indexOf(look.skin) + 1 : 0, count: skins.length + 1 },
+      pose,
+      fresh,
+    );
 
     // Class name, big when it fits.
     const textW = INFO_W - PAD * 2;
@@ -565,72 +647,98 @@ export class SelectScene extends Phaser.Scene {
     else this.nameText.setY(NAME_Y);
     this.blurb.setText(fitLine(this.probe, cls.blurb, textW));
 
-    // Types: a tile for each, with the picked one's name and how it plays beside them.
-    this.typeTiles = this.syncTiles(this.typeTiles, cls.types.length, TYPE_Y, (i) => this.pickType(i));
-    cls.types.forEach((type, i) => {
-      const d = worn(cls, type === look.type ? look : lastLookOf(cls, type));
-      this.typeTiles[i].show(d.preview, d.accent).setPicked(type === look.type);
-    });
-    const typeX = this.besideTiles(cls.types.length);
-    const typeW = INFO_W - PAD - typeX;
-    this.typeName.setText(fitLine(this.probe, look.type.name, typeW)).setTint(look.type.accent);
-    this.typeRole.setText(wrapText(this.probe, look.type.role, typeW, 2).join('\n'));
-    const typeBlock = this.typeName.height + 3 + this.typeRole.height;
-    const typeTop = Math.round(TYPE_Y + (TILE_H - typeBlock) / 2);
-    this.typeName.setPosition(typeX, typeTop);
-    this.typeRole.setPosition(typeX, typeTop + this.typeName.height + 3);
+    this.drawTabs(cls, cls.types.indexOf(look.type), def.accent);
+    this.role.setText(fitLine(this.probe, def.role, textW - 12));
+    this.role.setX(Math.round((INFO_W - this.role.width) / 2));
 
-    // Stats (the type's) and abilities (named for the look).
-    const pips = this.pips.clear();
-    const px = PAD + 36;
+    // Stats: a five-segment gauge each, in the look's colour.
+    const g = this.bars.clear();
+    const bx = PAD + 42;
     [def.stats.power, def.stats.speed, def.stats.range].forEach((value, i) => {
-      const y = STATS_Y + 3 + i * LINE_H;
-      for (let p = 0; p < 5; p++) {
-        pips.fillStyle(0x0b0818).fillRect(px + p * 7, y, 7, 7);
-        pips.fillStyle(p < value ? def.accent : 0x2a2150).fillRect(px + 1 + p * 7, y + 1, 5, 5);
-        if (p < value) pips.fillStyle(0xffffff, 0.45).fillRect(px + 1 + p * 7, y + 1, 5, 1);
+      const y = STATS_Y + i * STAT_ROW;
+      g.fillStyle(0x0b0818).fillRect(bx - 1, y - 1, 5 * (SEG_W + 1) + 1, 9);
+      for (let s = 0; s < 5; s++) {
+        const x = bx + s * (SEG_W + 1);
+        if (s < value) {
+          g.fillStyle(def.accent).fillRect(x, y, SEG_W, 7);
+          g.fillStyle(0xffffff, 0.45).fillRect(x, y, SEG_W, 1);
+          g.fillStyle(0x000000, 0.25).fillRect(x, y + 5, SEG_W, 2);
+        } else g.fillStyle(0x221a44).fillRect(x, y, SEG_W, 7);
       }
     });
-    const abW = INFO_W - PAD - this.abilities[0].x;
+
+    // Attack and ability, named for the look.
+    const abW = INFO_W - PAD - 4 - this.abilities[0].x;
     this.abilities[0].setText(fitLine(this.probe, def.attack, abW));
     this.abilities[1].setText(fitLine(this.probe, def.special, abW));
-    if (this.icons) {
-      const { attack, special } = def.buttons;
-      this.icons.attack.stop();
-      this.icons.attack.setTexture(attack.texture, attack.frame);
-      if (attack.anim) this.icons.attack.play(attack.anim);
-      this.icons.special.setTexture(special.texture);
-    }
+    const { attack, special } = def.buttons;
+    this.icons.attack.stop();
+    this.icons.attack.setTexture(attack.texture, attack.frame);
+    if (attack.anim) this.icons.attack.play(attack.anim);
+    this.icons.special.setTexture(special.texture);
 
-    // Skins of the picked type: its own look first.
-    const looks: Look[] = [{ type: look.type, skin: null }, ...(look.type.skins ?? []).map((skin) => ({ type: look.type, skin }))];
-    this.skinTiles = this.syncTiles(this.skinTiles, looks.length, SKIN_Y, (i) => this.pickSkin(i));
-    looks.forEach((l, i) => {
-      const d = worn(cls, l);
-      this.skinTiles[i].show(d.preview, d.accent).setPicked(l.skin === look.skin);
+    // The Special, and its energy cost at the right with a bolt.
+    const ult = ultFor(def);
+    if (this.textures.exists(ult.icon)) this.icons.ult.setTexture(ult.icon).setVisible(true);
+    else this.icons.ult.setVisible(false);
+    const right = INFO_W - PAD - 10;
+    this.ultCost.setText(`${ult.def.cost}`);
+    this.ultCost.setX(right - this.ultCost.width);
+    const boltX = this.ultCost.x - 7;
+    const b = this.bolt.clear();
+    const BOLT = ['..##', '.##.', '####', '.##.', '##..'];
+    BOLT.forEach((row, y) => [...row].forEach((c, x) => c === '#' && b.fillStyle(0xffe08a).fillRect(boltX + x, SPECIAL_Y + 10 + y, 1, 1)));
+    this.ultName.setText(fitLine(this.probe, ult.name, boltX - 4 - this.ultName.x));
+  }
+
+  /**
+   * A tab per type across the panel, sharing its width, over a body that
+   * holds the picked type; the picked tab opens into the body.
+   */
+  private drawTabs(cls: ClassDef, picked: number, accent: number): void {
+    const n = cls.types.length;
+    if (this.tabs.length !== n) {
+      for (const t of this.tabs) {
+        t.label.destroy();
+        t.zone.destroy();
+      }
+      this.tabs = cls.types.map((_t, i) => {
+        const label = pixelText(this, 0, 0, '');
+        const zone = this.add.zone(0, TABS_Y, 1, TAB_H).setOrigin(0);
+        onTap(this, zone, () => this.pickType(i));
+        this.info.add([label, zone]);
+        return { label, zone };
+      });
+    }
+    const x0 = PAD;
+    const total = INFO_W - PAD * 2;
+    const tabW = Math.floor((total - (n - 1) * TAB_GAP) / n);
+    const g = this.frame.clear();
+    const body = 0x2b2258;
+    const bodyBottom = INFO_H - 5;
+    // The body: outlined, a lit inner edge, open where the picked tab meets it.
+    g.fillStyle(0x0b0818).fillRect(x0, BODY_Y - 1, total, bodyBottom - BODY_Y + 1);
+    g.fillStyle(body).fillRect(x0 + 1, BODY_Y, total - 2, bodyBottom - BODY_Y - 1);
+    g.fillStyle(0x43356e).fillRect(x0 + 1, bodyBottom - 2, total - 2, 1);
+    cls.types.forEach((type, i) => {
+      const x = x0 + i * (tabW + TAB_GAP);
+      const w = i === n - 1 ? total - (x - x0) : tabW;
+      const on = i === picked;
+      const top = on ? TABS_Y : TABS_Y + 2;
+      g.fillStyle(0x0b0818).fillRect(x, top, w, BODY_Y - top);
+      if (on) {
+        g.fillStyle(body).fillRect(x + 1, top + 1, w - 2, BODY_Y - top);
+        g.fillStyle(accent).fillRect(x + 1, top + 1, w - 2, 2);
+        g.fillStyle(0xffffff, 0.35).fillRect(x + 1, top + 1, w - 2, 1);
+      } else {
+        g.fillStyle(0x17122f).fillRect(x + 1, top + 1, w - 2, BODY_Y - top - 2);
+        g.fillStyle(0x2a2150).fillRect(x + 1, top + 1, w - 2, 1);
+      }
+      const { label, zone } = this.tabs[i];
+      label.setText(fitLine(this.probe, type.name, w - 8)).setTint(on ? INK : SOFT);
+      label.setPosition(Math.round(x + (w - label.width) / 2), top + (on ? 5 : 4));
+      zone.setPosition(x, TABS_Y).setSize(w, TAB_H);
     });
-    const skinX = this.besideTiles(looks.length);
-    const skinW = INFO_W - PAD - skinX;
-    this.skinName.setText(fitLine(this.probe, look.skin?.name ?? look.type.lookName ?? 'Classic', skinW)).setTint(def.accent);
-    this.skinName.setPosition(skinX, Math.round(SKIN_Y + (TILE_H - this.skinName.height) / 2));
-  }
-
-  /** Keep `count` tiles in the info panel's row at `y`, making or removing tiles as needed. */
-  private syncTiles(tiles: Tile[], count: number, y: number, pick: (i: number) => void): Tile[] {
-    while (tiles.length > count) tiles.pop()!.destroy();
-    while (tiles.length < count) {
-      const i = tiles.length;
-      const t = new Tile(this, () => pick(i));
-      this.info.add(t);
-      tiles.push(t);
-    }
-    tiles.forEach((t, i) => t.setPosition(PAD + LABEL_W + i * (TILE_W + TILE_GAP), y));
-    return tiles;
-  }
-
-  /** Where text beside a row of `n` tiles starts. */
-  private besideTiles(n: number): number {
-    return PAD + LABEL_W + n * (TILE_W + TILE_GAP) + 4;
   }
 
   private pickClass(i: number): void {
