@@ -45,6 +45,8 @@ const game = new Phaser.Game({
   render: { maxLights: 16, powerPreference: 'high-performance', batchSize: 512 },
   pipeline: { Lit: LitPipeline, Pixel: PixelPipeline, Sky: SkyPipeline } as unknown as Phaser.Types.Core.PipelineConfig,
   input: { activePointers: 3 },
+  // Right click is the normal ability on a computer, so no browser menu over the game.
+  disableContextMenu: true,
   // Later scenes draw on top.
   scene: [BootScene, HomeScene, SelectScene, InventoryScene, ArenaScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
 });
