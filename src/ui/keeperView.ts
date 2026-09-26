@@ -61,6 +61,10 @@ const BAD = 0xff7a6a;
 const DUSTY = 0xd8b0ff;
 
 const rank = (d: GearDef) => RARITIES.indexOf(d.rarity);
+const CHIP_H = 12;
+
+/** Nyx's list: rarest last or first, and whether pieces only worn (not spare) are left out. Kept while the game runs. */
+const unmaking = { highFirst: false, hideWorn: true };
 
 export class KeeperView extends Phaser.GameObjects.Container {
   usedW = 0;
@@ -87,6 +91,9 @@ export class KeeperView extends Phaser.GameObjects.Container {
   /** "+15 DUST" or "LEVEL 3!" rising off the card after it's done. */
   private flash: Phaser.GameObjects.BitmapText;
   private button: Button;
+  /** Nyx's list controls: the rarity order, and leaving out worn pieces. */
+  private sortChip: Button;
+  private wornChip: Button;
   private picked: string | null = null;
   private stat: StatKey | null = null;
   /** Nyx asks once more before unmaking anything rare or upgraded. */
@@ -121,6 +128,8 @@ export class KeeperView extends Phaser.GameObjects.Container {
     this.bigDust = pixelText(scene, 0, 0, '', DUSTY, 2);
     this.button = new Button(scene);
     this.flash = pixelText(scene, 0, 0, '', GOLD, 2).setAlpha(0);
+    this.sortChip = new Button(scene).setVisible(keeper === 'disenchant');
+    this.wornChip = new Button(scene).setVisible(keeper === 'disenchant');
     this.add([this.alcove, this.portrait, this.portraitGlow, this.title, this.dustBox, this.dustIcon, this.dustText, this.gridLabel, this.card, this.cardTile, this.pips, this.bigIcon, this.bigDust]);
     for (const key of STAT_KEYS) {
       const bg = scene.add.image(0, 0, '__DEFAULT').setOrigin(0);
@@ -128,7 +137,7 @@ export class KeeperView extends Phaser.GameObjects.Container {
       this.rows.push({ bg, texts, key, y: 0 });
       this.add([bg, ...texts]);
     }
-    this.add([this.button, this.flash]);
+    this.add([this.sortChip, this.wornChip, this.button, this.flash]);
     this.unwatch = collection.watch(() => this.refresh());
     this.once(Phaser.GameObjects.Events.DESTROY, () => this.unwatch());
     scene.add.existing(this);
@@ -240,6 +249,14 @@ export class KeeperView extends Phaser.GameObjects.Container {
   }
 
   private tap(x: number, y: number): void {
+    if (this.sortChip.hit(x, y) || this.wornChip.hit(x, y)) {
+      if (this.sortChip.hit(x, y)) unmaking.highFirst = !unmaking.highFirst;
+      else unmaking.hideWorn = !unmaking.hideWorn;
+      sound.gear(false);
+      this.scrollRow = 0;
+      this.refresh();
+      return;
+    }
     if (this.inGrid(x, y)) {
       const g = this.grid;
       const c = Math.floor((x - g.x) / PITCH);
@@ -281,8 +298,15 @@ export class KeeperView extends Phaser.GameObjects.Container {
         return;
       }
       this.confirm = false;
+      // Where it sits in the list, so the next piece can take its place when this one is gone.
+      const at = this.entries.indexOf(id);
       const got = collection.disenchant(id);
       if (!got) return;
+      if (!this.entries.includes(id)) {
+        this.picked = this.entries[Math.min(at, this.entries.length - 1)] ?? null;
+        this.keepInView();
+        this.refresh();
+      }
       sound.shatter(0, rank(g) >= RARITIES.indexOf('epic'));
       this.pop(`+${got}`, DUSTY);
     } else {
@@ -291,6 +315,15 @@ export class KeeperView extends Phaser.GameObjects.Container {
       sound.gear(true);
       this.pop(`LV ${collection.level(id)}!`, GOLD);
     }
+  }
+
+  /** Scroll so the picked piece is on screen. */
+  private keepInView(): void {
+    const i = this.picked ? this.entries.indexOf(this.picked) : -1;
+    if (i < 0) return;
+    const row = Math.floor(i / this.grid.cols);
+    if (row < this.scrollRow) this.scrollRow = row;
+    else if (row >= this.scrollRow + this.grid.rows) this.scrollRow = row - this.grid.rows + 1;
   }
 
   /** Words rising off the card for a moment. */
@@ -310,9 +343,12 @@ export class KeeperView extends Phaser.GameObjects.Container {
   private items(): string[] {
     const owned = GEAR.filter((g) => collection.count(g.id) > 0);
     if (this.keeper === 'disenchant') {
-      // Spares and the least precious first: what is most likely to be unmade.
-      const spare = (g: GearDef) => (collection.count(g.id) > 1 ? 0 : collection.isEquipped(g.id) ? 2 : 1);
-      return owned.sort((a, b) => spare(a) - spare(b) || rank(a) - rank(b) || a.name.localeCompare(b.name)).map((g) => g.id);
+      // By rarity, whichever way round the player chose; pieces they are wearing their only copy of left out unless asked for.
+      const dir = unmaking.highFirst ? -1 : 1;
+      return owned
+        .filter((g) => !unmaking.hideWorn || !collection.isEquipped(g.id) || collection.count(g.id) > 1)
+        .sort((a, b) => (rank(a) - rank(b)) * dir || a.name.localeCompare(b.name))
+        .map((g) => g.id);
     }
     // Worn pieces first, then the finest.
     return owned
@@ -340,11 +376,21 @@ export class KeeperView extends Phaser.GameObjects.Container {
       t.show(id, { count: collection.count(id), level: collection.level(id), worn: collection.isEquipped(id), picked: id === this.picked });
     });
     const more = (this.scrollRow + g.rows) * g.cols < this.entries.length;
-    this.gridLabel.setText(`${this.keeper === 'disenchant' ? 'YOUR GEAR' : 'EPIC AND LEGENDARY'}  ${this.entries.length}${more ? '  +MORE' : ''}`);
+    if (this.keeper === 'disenchant') {
+      // The two controls sit at the right of the label row, the count at its left if it fits.
+      const gridW = g.cols * PITCH - GAP;
+      const sortText = unmaking.highFirst ? 'HI-LOW' : 'LOW-HI';
+      const sw = sortText.length * CH + 10;
+      const ww = 7 * CH + 10;
+      this.wornChip.set('NO WORN', ww, CHIP_H, unmaking.hideWorn).setPosition(gridW - ww, g.y - LABEL_H - 1);
+      this.sortChip.set(sortText, sw, CHIP_H, true).setPosition(gridW - ww - 3 - sw, g.y - LABEL_H - 1);
+      const label = `GEAR ${this.entries.length}${more ? '+' : ''}`;
+      this.gridLabel.setText(label.length * CH + 4 <= gridW - ww - sw - 3 ? label : '');
+    } else this.gridLabel.setText(`EPIC AND LEGENDARY  ${this.entries.length}${more ? '  +MORE' : ''}`);
     for (const t of this.emptyNote) t.destroy();
     this.emptyNote = [];
     if (!this.entries.length) {
-      const msg = this.keeper === 'disenchant' ? 'NOTHING TO UNMAKE YET. MONSTERS DROP GEAR.' : 'NO EPIC OR LEGENDARY GEAR YET. BOSSES DROP THEM.';
+      const msg = this.keeper === 'disenchant' ? (unmaking.hideWorn && collection.ownedGear().length ? 'ONLY WORN PIECES. TAP NO WORN TO SHOW THEM.' : 'NOTHING TO UNMAKE YET. MONSTERS DROP GEAR.') : 'NO EPIC OR LEGENDARY GEAR YET. BOSSES DROP THEM.';
       this.emptyNote = wrap(msg, Math.floor((g.cols * PITCH) / CH)).map((s, i) => pixelText(this.scene, g.x, g.y + 4 + i * LINE, s, SOFT));
       this.add(this.emptyNote);
     }
