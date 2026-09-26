@@ -5,7 +5,7 @@ import { menuZoom } from '../game/display';
 import { CLASSES, type ClassDef, type Preview } from '../game/characters';
 import { lastHero, lookOf, rememberHero, setLook, setType, worn } from '../game/skins';
 import { ensureUltIcons, ultFor } from '../game/ultimate';
-import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PANEL_PICKED, PixelButton, panelTexture, pixelText } from '../ui/widgets';
+import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
 import type { HomeScene } from './HomeScene';
 
@@ -113,7 +113,6 @@ function stageTexture(scene: Phaser.Scene, w: number, h: number): string {
   if (scene.textures.exists(key)) return key;
   const b = new Bitmap(w, h);
   const floorY = h - STAGE_FEET - 12;
-  const grey = (v: number): RGB => [v, v, v];
   const outer = grey(14);
   const rim = grey(105);
   const rimLit = grey(170);
@@ -276,25 +275,55 @@ function moteTexture(scene: Phaser.Scene): string {
 // ---- Pieces of the page. ----
 
 /** A small framed window onto a hero at 1x: the class roster and the type and skin pickers. */
+/** The shade a hero's colour gives the halls behind it: the stage, and its card in the roster. */
+function hallShade(accent: number): number {
+  const c = Phaser.Display.Color.Interpolate.ColorWithColor(Phaser.Display.Color.ValueToColor(accent), Phaser.Display.Color.ValueToColor(0xb8a8e8), 100, 15);
+  return Phaser.Display.Color.GetColor(c.r, c.g, c.b);
+}
+
+const grey = (v: number): RGB => [v, v, v];
+/** A roster card's panel, in greys so it can take its hero's shade. */
+const TILE_PANEL = { top: grey(30), bottom: grey(78), alpha: 0.95, border: grey(58), borderLit: grey(36), outer: grey(12) };
+
+/** The gold rim laid over the picked roster card, clear inside. */
+function tileRimTexture(scene: Phaser.Scene): string {
+  const key = 'sel_tile_rim';
+  if (scene.textures.exists(key)) return key;
+  const b = new Bitmap(TILE_W, TILE_H);
+  const lit = hex('#ffe08a');
+  const dark = hex('#b8742c');
+  for (let y = 0; y < TILE_H; y++) {
+    for (let x = 0; x < TILE_W; x++) {
+      const ex = Math.min(x, TILE_W - 1 - x);
+      const ey = Math.min(y, TILE_H - 1 - y);
+      if (ex + ey <= 1) continue;
+      if (ex === 1 || ey === 1) b.set(x, y, y === 1 || x === 1 ? lit : dark);
+    }
+  }
+  scene.textures.addCanvas(key, b.toCanvas());
+  return key;
+}
+
 class Tile extends Phaser.GameObjects.Container {
   private bg: Phaser.GameObjects.Image;
-  private keys: [string, string];
+  private rim: Phaser.GameObjects.Image;
   private glow: Phaser.GameObjects.Image;
   private sprite: Phaser.GameObjects.Sprite;
   private preview?: Preview;
+  private shade = 0xffffff;
   private picked = false;
 
   constructor(scene: Phaser.Scene, tap: () => void) {
     super(scene, 0, 0);
-    this.keys = [panelTexture(scene, 'sel_tile', TILE_W, TILE_H, PANEL_INSET), panelTexture(scene, 'sel_tile_picked', TILE_W, TILE_H, { ...PANEL_PICKED, alpha: 0.95 })];
-    this.bg = scene.add.image(0, 0, this.keys[0]).setOrigin(0);
+    this.bg = scene.add.image(0, 0, panelTexture(scene, 'sel_tile_grey', TILE_W, TILE_H, TILE_PANEL)).setOrigin(0);
     onTap(scene, this.bg, tap);
+    this.rim = scene.add.image(0, 0, tileRimTexture(scene)).setOrigin(0);
     const fx = TILE_W / 2;
     const fy = TILE_H - 4;
     this.glow = scene.add.image(fx, fy - 1, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(0.8, 0.3);
     const shadow = scene.add.image(fx, fy, 'shadow');
     this.sprite = scene.add.sprite(fx, fy, '__DEFAULT');
-    this.add([this.bg, this.glow, shadow, this.sprite]);
+    this.add([this.bg, this.glow, shadow, this.sprite, this.rim]);
   }
 
   show(preview: Preview, accent: number): this {
@@ -305,16 +334,26 @@ class Tile extends Phaser.GameObjects.Container {
       this.sprite.play(preview.idle);
     }
     this.glow.setTint(accent);
+    this.shade = hallShade(accent);
+    this.tintBg();
     return this;
   }
 
   setPicked(on: boolean): this {
     this.picked = on;
-    this.bg.setTexture(this.keys[on ? 1 : 0]);
+    this.rim.setVisible(on);
     this.glow.setAlpha(on ? 0.8 : 0);
     if (on) this.sprite.clearTint();
     else this.sprite.setTint(DIMMED);
+    this.tintBg();
     return this;
+  }
+
+  /** The card's hall in its hero's shade, dimmer when not picked. */
+  private tintBg(): void {
+    const c = Phaser.Display.Color.IntegerToColor(this.shade);
+    const k = this.picked ? 1 : 0.7;
+    this.bg.setTint(Phaser.Display.Color.GetColor(Math.round(c.red * k), Math.round(c.green * k), Math.round(c.blue * k)));
   }
 
   get isPicked(): boolean {
@@ -711,9 +750,7 @@ export class SelectScene extends Phaser.Scene {
    * with a shade of the hero's colour, easing from the last one.
    */
   private shadeTo(accent: number): void {
-    const lavender = Phaser.Display.Color.ValueToColor(0xb8a8e8);
-    const hall = Phaser.Display.Color.Interpolate.ColorWithColor(Phaser.Display.Color.ValueToColor(accent), lavender, 100, 15);
-    const target = Phaser.Display.Color.GetColor(hall.r, hall.g, hall.b);
+    const target = hallShade(accent);
     if (target === this.tint) return;
     const from = Phaser.Display.Color.ValueToColor(this.tint < 0 ? target : this.tint);
     const to = Phaser.Display.Color.ValueToColor(target);
