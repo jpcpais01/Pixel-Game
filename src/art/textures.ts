@@ -13,6 +13,7 @@ import { BLOOD_SPELL, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W, SOUL_SPELL, bl
 import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CHRONO_H, CHRONO_LOOKS, CHRONO_W, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, buildChronoFrames, chronoAnims, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
 import { BARD_H, BARD_LOOKS, BARD_W, MINSTREL_LOOK, NOTE_FRAMES, WILD_LOOK, NOTE_SIZE, bardAnims, buildBardFrames, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
+import { SAMURAI_ANIMS, SAMURAI_H, SAMURAI_LOOKS, SAMURAI_W, SPIN_FPS, SPIN_FRAMES, buildSamuraiFrames, crossIcon, cutMark, dashIcon, katanaIcon, spinStart, type SamuraiMeta } from './samurai';
 import { PUPPETEER_H, PUPPETEER_LOOKS, PUPPETEER_W, PUPPET_LOOKS, buildPuppetSheet, buildPuppeteerFrames, marionetteIcon, pirouetteIcon, puppeteerAnims, puppetStrikeIcon, threadIcon } from './puppeteer';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
 import { buildRogueFrames, daggersIcon, DANCER_DAGGERS, ROGUE_ANIMS, ROGUE_DAGGERS, ROGUE_H, ROGUE_LOOKS, ROGUE_W, shadowstepIcon, smokeCanvas } from './rogue';
@@ -156,6 +157,7 @@ export const wizardMeta = new Map<string, FrameMeta>();
 export const warriorMeta = new Map<string, WarriorMeta>();
 export const paladinMeta = new Map<string, PaladinMeta>();
 export const jediMeta = new Map<string, JediMeta>();
+export const samuraiMeta = new Map<string, SamuraiMeta>();
 
 export function buildAllTextures(scene: Phaser.Scene): void {
   // Wizard, once per look. Every look shares the rig, so the crystal meta is the same for all.
@@ -436,6 +438,47 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     scene.textures.addCanvas(`icon_shards${suffix}`, toCanvas(16, 16, shardsIcon(k)));
     scene.textures.addCanvas(`icon_rewind${suffix}`, toCanvas(16, 16, rewindIcon(k)));
   }
+
+  // Samurai once per look: 'samurai' (the bladewind), 'samurai_oni', 'ronin'
+  // and 'ronin_sakura'; they share the rig, so the blade meta is the same for
+  // all. The spin plays a whole turn starting from whichever way he faces.
+  // The ronin's cuts over a marked foe are 'samurai_mark_e' (m1-m3, tinted in game).
+  for (const look of SAMURAI_LOOKS) {
+    const sf = buildSamuraiFrames(look);
+    if (!samuraiMeta.size) sf.forEach((f) => samuraiMeta.set(f.key, f.meta));
+    register(scene, look.key, pack(sf.map((f) => ({ name: f.key, r: f.canvas.render() })), SAMURAI_W, SAMURAI_H), SAMURAI_W, SAMURAI_H);
+    for (const d of DIRS) {
+      for (const a of SAMURAI_ANIMS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: sf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
+      const k0 = spinStart(d);
+      scene.anims.create({
+        key: `${look.key}_spin_${d}`,
+        frames: Array.from({ length: SPIN_FRAMES + 1 }, (_, i) => ({ key: look.key, frame: `spin_${(k0 + i) % SPIN_FRAMES}` })),
+        frameRate: SPIN_FPS,
+        repeat: 0,
+      });
+    }
+  }
+  const marks = document.createElement('canvas');
+  marks.width = 33;
+  marks.height = 7;
+  for (let n = 1; n <= 3; n++) marks.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(cutMark(n)), 11, 7), (n - 1) * 11, 0);
+  const markTex = scene.textures.addCanvas('samurai_mark_e', marks)!;
+  for (let n = 1; n <= 3; n++) markTex.add(`m${n}`, 0, (n - 1) * 11, 0, 11, 7);
+  scene.textures.addCanvas('icon_katana', toCanvas(16, 16, katanaIcon('#f0f6ff', '#8e9ab4', ['#f4ffff', '#bff4ff', '#6fd4f0', '#2a86b8'])));
+  scene.textures.addCanvas('icon_windblade', toCanvas(16, 16, dashIcon(['#f4ffff', '#bff4ff', '#6fd4f0', '#2a86b8'], '#f0f6ff')));
+  scene.textures.addCanvas('icon_katana_oni', toCanvas(16, 16, katanaIcon('#ff9a8a', '#565060', ['#fff0ec', '#ff9a8a', '#f0283a', '#7a0a1a'])));
+  scene.textures.addCanvas('icon_windblade_oni', toCanvas(16, 16, dashIcon(['#fff0ec', '#ff9a8a', '#f0283a', '#7a0a1a'], '#ff9a8a')));
+  scene.textures.addCanvas('icon_iai', toCanvas(16, 16, katanaIcon('#f0f6ff', '#8e9ab4', null)));
+  scene.textures.addCanvas('icon_cross', toCanvas(16, 16, crossIcon(['#fffbe8', '#ffe08a', '#f0b040', '#a0601e'])));
+  scene.textures.addCanvas('icon_iai_sakura', toCanvas(16, 16, katanaIcon('#ffd6e2', '#c2b8c0', null)));
+  scene.textures.addCanvas('icon_cross_sakura', toCanvas(16, 16, crossIcon(['#fff4f8', '#ffc0d4', '#ff7aa6', '#b03a6a'])));
 
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
   for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL]] as const) {

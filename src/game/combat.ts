@@ -48,6 +48,8 @@ export interface Hurtbox {
   slow?(k: number, ms: number, tint?: number): void;
   /** Its pace right now: 1, or less while slowed. */
   readonly tempo?: number;
+  /** Up in the air (knocked up, or hoisted on strings); only monsters can be. */
+  readonly airborne?: boolean;
 }
 
 /** What a monster's attack carries into the player. */

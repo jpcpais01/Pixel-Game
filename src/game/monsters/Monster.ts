@@ -385,6 +385,11 @@ export abstract class Monster implements Hurtbox {
     return this.heldT > 0;
   }
 
+  /** Up in the air right now: knocked up (a samurai's wind) or hoisted on strings. */
+  get airborne(): boolean {
+    return this.heldT > 0 && this.heldLift >= 8;
+  }
+
   /** Can a heavy blow interrupt it right now? */
   protected staggers(): boolean {
     return this.state !== 'attack';
