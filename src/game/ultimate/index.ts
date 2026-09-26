@@ -5,7 +5,7 @@ import { energy } from '../energy';
 import { CHEM_TOX, HEX_TOX, PLAGUE_TOX, type ToxStyle } from '../Toxins';
 import type { Aim, CharacterDef, Hero } from '../characters';
 import type { WorldScene } from '../../scenes/WorldScene';
-import { bloom, bump, easeOut, flare, Fx, Ink, pal, ring, rune, type Pal } from './ink';
+import { bloom, easeOut, flare, Fx, Ink, pal, ring, rune, type Pal } from './ink';
 import { Inferno, Singularity } from './arcane';
 import { DragonRush, MountainWrath, SaberCyclone, Skybreaker } from './martial';
 import { HeavensLight, SunWrath } from './holy';
@@ -543,14 +543,70 @@ class Shock extends Fx {
   }
 }
 
+/** A mote's two twinkle frames in a palette: a small plus, and a fuller glint with a white heart. */
+function moteTextures(scene: Phaser.Scene, p: Pal): [string, string] {
+  const keys: [string, string] = [`emote_${p.hot}_0`, `emote_${p.hot}_1`];
+  if (scene.textures.exists(keys[1])) return keys;
+  const hex = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
+  const shapes: [number, number, number][][] = [
+    // Small: a white heart and four hot arms.
+    [[2, 2, p.core], [1, 2, p.hot], [3, 2, p.hot], [2, 1, p.hot], [2, 3, p.hot]],
+    // Full: longer arms fading to the mid tone, a hot ring round the heart.
+    [
+      [2, 2, 0xffffff], [1, 2, p.core], [3, 2, p.core], [2, 1, p.core], [2, 3, p.core],
+      [0, 2, p.mid], [4, 2, p.mid], [2, 0, p.mid], [2, 4, p.mid],
+      [1, 1, p.hot], [3, 1, p.hot], [1, 3, p.hot], [3, 3, p.hot],
+    ],
+  ];
+  shapes.forEach((px, i) => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 5;
+    const g = c.getContext('2d')!;
+    for (const [x, y, col] of px) {
+      g.fillStyle = hex(col);
+      g.fillRect(x, y, 1, 1);
+    }
+    scene.textures.addCanvas(keys[i], c);
+  });
+  return keys;
+}
+
+interface Mote {
+  img: Phaser.GameObjects.Image;
+  glow: Phaser.GameObjects.Image;
+  tail: Phaser.GameObjects.Image[];
+  /** Tail points, easing after the mote. */
+  tx: number[];
+  ty: number[];
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  /** When it stops drifting and heads for the hero, and where from. */
+  at: number;
+  fx: number;
+  fy: number;
+  /** Which way its flight bows, and how long the flight takes. */
+  side: number;
+  dur: number;
+  gone: boolean;
+}
+
 /**
- * Energy leaving a slain foe: motes of light burst from the body, then home
- * in on the hero and are soaked up, filling the Special's ring.
+ * Energy leaving a slain foe: little glints of light pop out of the body,
+ * hang in the air for a breath, then one after another curve in to the
+ * hero, each soaked up with a soft chime a step higher than the last, and
+ * the Special's ring fills with them.
  */
 export class EnergyMotes extends Fx {
-  private motes: { img: Phaser.GameObjects.Image; x: number; y: number; vx: number; vy: number; gone: boolean }[] = [];
+  private motes: Mote[] = [];
   private share: number;
   private left: number;
+  private keys: [string, string];
+  /** A soft glow on the hero that swells each time a mote arrives. */
+  private aura: Phaser.GameObjects.Image;
+  private auraK = 0;
+  private soaked = 0;
 
   constructor(
     world: WorldScene,
@@ -560,15 +616,40 @@ export class EnergyMotes extends Fx {
     amount: number,
     private p: Pal,
   ) {
-    super(world, 2200);
-    const n = Math.max(3, Math.min(10, Math.round(amount / 3)));
+    super(world, 2600);
+    const n = Math.max(3, Math.min(8, Math.round(amount / 3)));
     this.share = amount / n;
     this.left = n;
+    this.keys = moteTextures(world, p);
+    this.aura = this.own(world.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(p.hot).setAlpha(0).setDepth(9499));
+    // A small soft pop where the foe fell.
+    bloom(world, x, y, p.hot, 0.9, 260, 9499, 0.7);
+    const spin = Math.random() * Math.PI * 2;
     for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2 + Math.random() * 0.6;
-      const s = 50 + Math.random() * 40;
-      const img = this.own(world.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(i % 2 ? p.hot : p.core).setScale(0.22).setDepth(9500));
-      this.motes.push({ img, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 20, gone: false });
+      // Fanned out and mostly upwards, like sparks thrown off the body.
+      const a = spin + (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const s = 38 + Math.random() * 26;
+      const img = this.own(world.add.image(x, y, this.keys[1]).setDepth(9501));
+      const glow = this.own(world.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(p.hot).setScale(0.2).setAlpha(0.75).setDepth(9500));
+      const tail = [0, 1].map((j) => this.own(world.add.image(x, y, this.keys[0]).setAlpha(j ? 0.3 : 0.55).setDepth(9500)));
+      this.motes.push({
+        img,
+        glow,
+        tail,
+        tx: [x, x],
+        ty: [y, y],
+        x,
+        y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s * 0.7 - 34,
+        // They set off one after another, so they land in a quick ripple.
+        at: 300 + i * 70 + Math.random() * 20,
+        fx: x,
+        fy: y,
+        side: i % 2 ? 1 : -1,
+        dur: 0,
+        gone: false,
+      });
     }
   }
 
@@ -576,39 +657,67 @@ export class EnergyMotes extends Fx {
     const s = dt / 1000;
     const hx = this.hero.x;
     const hy = this.hero.y - 14;
-    const pull = Math.min(1, this.t / 350);
-    for (const m of this.motes) {
+    const follow = 1 - Math.exp(-dt / 22);
+    for (const [i, m] of this.motes.entries()) {
       if (m.gone) continue;
-      const dx = hx - m.x;
-      const dy = hy - m.y;
-      const d = Math.hypot(dx, dy) || 1;
-      // Drift apart at first, then fall in faster and faster.
-      const acc = 900 * pull;
-      m.vx += (dx / d) * acc * s;
-      m.vy += (dy / d) * acc * s;
-      const drag = Math.exp(-dt / (pull < 1 ? 180 : 400));
-      m.vx *= drag;
-      m.vy *= drag;
-      m.x += m.vx * s;
-      m.y += m.vy * s;
-      m.img.setPosition(Math.round(m.x), Math.round(m.y)).setScale(0.18 + 0.06 * bump((this.t % 300) / 300));
-      if (Math.floor(this.t / 40) !== Math.floor((this.t - dt) / 40)) this.world.debris([this.p.hot, this.p.mid], m.x, m.y, 1, 9500, 'trail');
-      if (d < 7 || this.t > 1800) this.soak(m);
+      if (this.t < m.at) {
+        // Thrown out, slowing to a hang with a gentle bob.
+        const drag = Math.exp(-dt / 110);
+        m.vx *= drag;
+        m.vy *= drag;
+        m.x += m.vx * s;
+        m.y += m.vy * s + Math.sin(this.t * 0.012 + i) * 0.08;
+        m.fx = m.x;
+        m.fy = m.y;
+        m.dur = Math.max(260, Math.min(620, 200 + Math.hypot(hx - m.x, hy - m.y) * 2.2));
+      } else {
+        // Then an accelerating curve into the hero, bowed to one side.
+        const k = Math.min(1, (this.t - m.at) / m.dur);
+        const e = k * k * (1.6 - 0.6 * k);
+        const dx = hx - m.fx;
+        const dy = hy - m.fy;
+        const bow = Math.min(26, Math.hypot(dx, dy) * 0.35) * m.side * Math.sin(k * Math.PI) * (1 - k * 0.4);
+        const d = Math.hypot(dx, dy) || 1;
+        m.x = m.fx + dx * e - (dy / d) * bow;
+        m.y = m.fy + dy * e + (dx / d) * bow;
+        if (k >= 1) {
+          this.soak(m);
+          continue;
+        }
+      }
+      if (this.t > 2300) {
+        this.soak(m);
+        continue;
+      }
+      m.tx[0] += (m.x - m.tx[0]) * follow;
+      m.ty[0] += (m.y - m.ty[0]) * follow;
+      m.tx[1] += (m.tx[0] - m.tx[1]) * follow;
+      m.ty[1] += (m.ty[0] - m.ty[1]) * follow;
+      const twinkle = Math.floor((this.t + i * 53) / 90) % 3 === 0;
+      m.img.setTexture(this.keys[twinkle ? 0 : 1]).setPosition(Math.round(m.x), Math.round(m.y));
+      m.glow.setPosition(Math.round(m.x), Math.round(m.y));
+      m.tail.forEach((t, j) => t.setPosition(Math.round(m.tx[j]), Math.round(m.ty[j])));
     }
-    if (this.left <= 0) this.destroy();
+    this.auraK = Math.max(0, this.auraK - dt / 260);
+    this.aura.setPosition(Math.round(hx), Math.round(hy)).setScale(0.55 + 0.35 * this.auraK).setAlpha(0.55 * this.auraK);
+    if (this.left <= 0 && this.auraK <= 0) this.destroy();
   }
 
-  private soak(m: { img: Phaser.GameObjects.Image; gone: boolean }): void {
+  private soak(m: Mote): void {
     m.gone = true;
-    m.img.setVisible(false);
+    for (const o of [m.img, m.glow, ...m.tail]) o.setVisible(false);
     this.left--;
     const h = this.hero;
-    this.world.debris([this.p.core, this.p.hot], h.x, h.y - 14, 2, h.y + 20, 'gather');
-    sound.energy(this.world.pan(h.x));
+    this.auraK = 1;
+    this.world.debris([this.p.core, this.p.hot], h.x, h.y - 14, 1, h.y + 20, 'gather');
+    sound.energy(this.world.pan(h.x), this.soaked++);
     if (energy.gain(this.share)) {
       this.world.popNumber(Math.round(h.x), Math.round(h.y) - 42, 'SPECIAL READY', this.p.hot);
-      this.world.debris(this.p.tints, h.x, h.y - 14, 18, h.y + 20, 'burst');
+      this.world.debris(this.p.tints, h.x, h.y - 14, 14, h.y + 20, 'burst');
       sound.ultReady();
+    } else if (this.left === 0) {
+      // The last one lands with a soft swell of light.
+      bloom(this.world, h.x, h.y - 14, this.p.hot, 1.3, 300, h.y + 20, 0.6);
     }
   }
 }

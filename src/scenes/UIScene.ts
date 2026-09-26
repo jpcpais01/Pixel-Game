@@ -63,6 +63,8 @@ export class UIScene extends Phaser.Scene {
   private ultKey!: Phaser.GameObjects.BitmapText;
   private ultPad: Pad = UIScene.pad();
   private ultPal!: Pal;
+  /** The Special ring's drawn fill, sweeping up after the real one as energy arrives. */
+  private ultShown = 0;
   private clickPointer: number | null = null;
   private base = new Phaser.Math.Vector2();
   private knob = new Phaser.Math.Vector2();
@@ -590,6 +592,10 @@ export class UIScene extends Phaser.Scene {
     const cancel = pad.out && Math.hypot(pad.dx, pad.dy) < this.deadZone;
     const ready = energy.ready;
     const fill = Math.min(1, energy.value / energy.cost);
+    // The ring sweeps up to new energy rather than jumping; spending drops it at once.
+    this.ultShown = fill < this.ultShown ? fill : this.ultShown + (fill - this.ultShown) * (1 - Math.exp(-this.game.loop.delta / 90));
+    if (fill - this.ultShown < 0.002) this.ultShown = fill;
+    const shown = this.ultShown;
     const t = this.time.now;
     const p = this.ultPal;
     const br = R * (pressed ? 0.62 : 0.68);
@@ -599,7 +605,7 @@ export class UIScene extends Phaser.Scene {
     this.ultIcon
       .setPosition(Math.round(up.x + knob.x), Math.round(up.y + knob.y))
       .setScale(scale * (pressed ? 0.9 : 1) * (ready ? 1 + 0.06 * pulse : 1))
-      .setAlpha(ready ? 1 : 0.35 + 0.35 * fill);
+      .setAlpha(ready ? 1 : 0.35 + 0.35 * shown);
     this.ultKey
       .setVisible(controls.mouse)
       .setPosition(Math.round(up.x + br * 0.8), Math.round(up.y - br * 1.35))
@@ -608,8 +614,8 @@ export class UIScene extends Phaser.Scene {
 
     // Animate with time only while there's something moving: the ready pulse, the burst, a flash of arriving energy.
     const age = energy.readyAge;
-    const busy = ready || energy.flash > 0;
-    const g = this.redraw(this.ultButton, `${pressed} ${Math.round(fill * 200)} ${ready} ${up.x} ${up.y} ${R} ${busy ? t : 0} ${knob.x} ${knob.y} ${cancel}`);
+    const busy = ready || energy.flash > 0 || shown < fill;
+    const g = this.redraw(this.ultButton, `${pressed} ${Math.round(fill * 200)} ${Math.round(shown * 400)} ${ready} ${up.x} ${up.y} ${R} ${busy ? t : 0} ${knob.x} ${knob.y} ${cancel}`);
     if (!g) return;
     g.fillStyle(cancel ? 0x3a0c14 : ready ? 0x1c1440 : 0x0c1433, pressed ? 0.8 : ready ? 0.7 : 0.55);
     g.fillCircle(up.x, up.y, br);
@@ -623,13 +629,20 @@ export class UIScene extends Phaser.Scene {
     g.lineStyle(w, 0x0a0c1c, 0.5);
     g.strokeCircle(up.x, up.y, rr);
     if (fill > 0) {
+      // Energy just gained shows first as a pale band the ring then sweeps into.
+      if (shown < fill && !ready) {
+        g.lineStyle(w, p.core, 0.45 + 0.35 * energy.flash);
+        g.beginPath();
+        g.arc(up.x, up.y, rr, top + Math.PI * 2 * shown, top + Math.PI * 2 * fill, false);
+        g.strokePath();
+      }
       g.lineStyle(w, ready ? p.core : p.mid, ready ? 0.8 + 0.2 * pulse : 0.9);
       g.beginPath();
-      g.arc(up.x, up.y, rr, top, top + Math.PI * 2 * fill, false);
+      g.arc(up.x, up.y, rr, top, top + Math.PI * 2 * (ready ? fill : shown), false);
       g.strokePath();
       // A bright bead at the head of the filling ring, flaring as energy arrives.
-      if (!ready) {
-        const a = top + Math.PI * 2 * fill;
+      if (!ready && shown > 0) {
+        const a = top + Math.PI * 2 * shown;
         g.fillStyle(p.core, 0.6 + 0.4 * energy.flash);
         g.fillCircle(up.x + Math.cos(a) * rr, up.y + Math.sin(a) * rr, w * (0.6 + 0.5 * energy.flash));
       }
