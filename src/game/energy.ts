@@ -2,6 +2,8 @@
 // bosses (a lot), spent all at once when the Special is cast. The world
 // fills it and spends it; the HUD reads it to draw the Special button's ring.
 
+import { ghost } from '../net/ghost';
+
 /** The most energy a hero can hold. */
 export const ENERGY_MAX = 100;
 
@@ -22,6 +24,8 @@ export const energy = {
   readyAge: -1,
 
   get ready(): boolean {
+    // Another player's hero casting its Special paid for it in its own game.
+    if (ghost.active) return true;
     return this.value >= this.cost;
   },
 
@@ -34,6 +38,7 @@ export const energy = {
 
   /** Adds energy; returns true when this made the Special ready. */
   gain(n: number): boolean {
+    if (ghost.active) return false;
     const was = this.ready;
     this.value = Math.min(ENERGY_MAX, this.value + n);
     this.flash = 1;
@@ -45,6 +50,7 @@ export const energy = {
   },
 
   spend(): boolean {
+    if (ghost.active) return true;
     if (!this.ready) return false;
     this.value -= this.cost;
     this.readyAge = -1;

@@ -15,7 +15,7 @@ import { areaOrigin, reaches, type Harm, type Hit, type Hurtbox, type MeleeArea,
 import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
 import type { Effect } from '../game/Slash';
-import { separate, Spawner, type Monster } from '../game/monsters';
+import { separate, Spawner, type Monster, type Target } from '../game/monsters';
 import { freeBox } from '../world/common';
 import { GroundStreamer } from '../world/GroundStreamer';
 import { Scenery } from '../world/Scenery';
@@ -52,6 +52,8 @@ import { collection, slotIndex } from '../game/collection';
 import { energy, energyFor } from '../game/energy';
 import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
 import type { MonsterStats } from '../game/monsters/Monster';
+import { NetPlay } from '../net/NetPlay';
+import { session } from '../net/session';
 
 interface Flicker {
   light: Phaser.GameObjects.Light;
@@ -104,6 +106,8 @@ const LOOK_LINGER = 450;
 
 export class WorldScene extends Phaser.Scene {
   private hero!: Hero;
+  /** Online play: the other players, and what is shared with them (null alone). */
+  private net: NetPlay | null = null;
   /** Casts the hero's Special (see game/ultimate). */
   private ult!: UltCaster;
   /** The way the hero last walked, for a Special cast with nothing aimed. */
@@ -331,6 +335,11 @@ export class WorldScene extends Phaser.Scene {
     this.lastAim = null;
     this.spawners.push(new Spawner(this, arena.monsters, arena.respawn));
     this.scenery = new Scenery(this, arena.scenery(), arena.drift);
+    this.net = session.active ? new NetPlay(this) : null;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.net?.destroy();
+      this.net = null;
+    });
 
     // Screen-fixed; it covers the ground camera's image too, as it draws first.
     this.skyLayer = this.add.image(0, 0, 'clouds').setScrollFactor(0).setDepth(20000).setPipeline('Sky');
@@ -380,7 +389,10 @@ export class WorldScene extends Phaser.Scene {
   }
 
   castEnergyBall(x: number, y: number, dx: number, dy: number, style?: SpellStyle, kind?: BallKind): void {
-    this.balls.push(new EnergyBall(this, x, y, dx, dy, style, kind));
+    const ball = new EnergyBall(this, x, y, dx, dy, style, kind);
+    // Cast by another player's hero online, this is a hit test that strikes nothing (see net/Remote.ts).
+    ball.hit = this.hitTest;
+    this.balls.push(ball);
     sound.cast(this.pan(x));
   }
 
@@ -393,10 +405,51 @@ export class WorldScene extends Phaser.Scene {
 
   /** Everything the heroes can strike right now. */
   private hurtboxes(): Hurtbox[] {
+    const out = this.allHurtboxes();
+    if (this.net) out.push(...this.net.foes());
+    return out;
+  }
+
+  /** The monsters, dummies and flowers standing (not other players). */
+  allHurtboxes(): Hurtbox[] {
     const out: Hurtbox[] = [...this.dummies];
     if (this.garden) out.push(...this.garden.hurtboxes());
     for (const sp of this.spawners) for (const m of sp.monsters) if (m.alive) out.push(m);
     return out;
+  }
+
+  /** The player's own hero. */
+  get player(): Hero {
+    return this.hero;
+  }
+
+  /** The player's hero has fallen and not yet risen. */
+  get heroDown(): boolean {
+    return this.downT > 0;
+  }
+
+  get spawnerList(): Spawner[] {
+    return this.spawners;
+  }
+
+  get ultCaster(): UltCaster {
+    return this.ult;
+  }
+
+  /** Where the hero starts and rises after falling. */
+  get spawnPoint(): { x: number; y: number } {
+    return { x: this.spawnX, y: this.spawnY };
+  }
+
+  /** Start (and rise) somewhere else: online, each player on their own spot. */
+  setSpawn(x: number, y: number): void {
+    this.spawnX = this.hero.x = x;
+    this.spawnY = this.hero.y = y;
+  }
+
+  /** A word across the screen, as the arena's name is shown. */
+  announce(text: string): void {
+    this.showBanner(text);
   }
 
   /**
@@ -446,6 +499,7 @@ export class WorldScene extends Phaser.Scene {
     for (const d of this.dummies) if (d.alive && test(d)) return d;
     if (this.garden) for (const f of this.garden.allHurtboxes) if (f.alive && test(f)) return f;
     for (const sp of this.spawners) for (const m of sp.monsters) if (m.alive && test(m)) return m;
+    if (this.net) for (const f of this.net.foes()) if (test(f)) return f;
     return null;
   }
 
@@ -497,6 +551,7 @@ export class WorldScene extends Phaser.Scene {
     this.grace = HURT_GRACE;
     this.rising = false;
     this.popNumber(snap(h.x), snap(h.y) - 38, `-${damage}`, lost > 0 ? 0xff8a78 : 0xffd35c);
+    this.net?.hurtShown(damage, lost > 0 ? 0xff8a78 : 0xffd35c);
     h.sprite.setTint(0xff8070);
     this.hurtTint = 140;
     const dx = h.x - harm.fromX;
@@ -1085,6 +1140,7 @@ export class WorldScene extends Phaser.Scene {
     };
     for (const sp of this.spawners) for (const m of sp.monsters) consider(m);
     for (const d of this.dummies) consider(d);
+    if (this.net) for (const f of this.net.foes()) consider(f);
     const t = best as Hurtbox | null;
     if (!t || bestD < 1) return null;
     return { x: (t.x - cx) / bestD, y: (t.y - t.bodyY - cy) / bestD, dist: bestD };
@@ -1152,8 +1208,13 @@ export class WorldScene extends Phaser.Scene {
     // On a computer: WASD to walk, left click to attack, Space for the special, C for the Special.
     let attack = controls.attack || controls.attackTap || controls.click || k.J.isDown;
     let special = controls.beam || controls.beamTap || k.SPACE.isDown || k.K.isDown || k.SHIFT.isDown;
-    const ultPressed = controls.ultTap || Phaser.Input.Keyboard.JustDown(k.C);
+    let ultPressed = controls.ultTap || Phaser.Input.Keyboard.JustDown(k.C);
     controls.ultTap = false;
+    // Online the world keeps going while the menu is open; the hero just stands.
+    if (session.paused) {
+      mx = my = 0;
+      attack = special = ultPressed = false;
+    }
     if (ultPressed && this.downT <= 0) this.ult.request(controls.mouse ? this.mouseAim() : this.touchAim(controls.ultAim), this.facing);
     // Gathering power for the Special: other abilities wait, and the feet stay planted.
     if (this.ult.holding) attack = special = false;
@@ -1169,7 +1230,9 @@ export class WorldScene extends Phaser.Scene {
     freeBox(this.walkable, this.hero.x, this.hero.y, 14, hb);
     const x0 = this.hero.x;
     const y0 = this.hero.y;
-    this.hero.update(dt, mx, my, attack, special, hb, this.ult.rooted ? null : this.heroAim(dt, attack, special));
+    const aim = this.ult.rooted ? null : this.heroAim(dt, attack, special);
+    this.hero.update(dt, mx, my, attack, special, hb, aim);
+    this.net?.record(mx, my, attack, special, aim);
     this.ult.update(dt);
     energy.update(dt);
     // Taps press for one frame.
@@ -1182,12 +1245,19 @@ export class WorldScene extends Phaser.Scene {
     this.updateSpectralForm(time);
 
     const target = this.downT > 0 ? null : this.hero;
+    // Monsters hunt whichever player is nearest.
+    const targets: Target[] = target ? [target] : [];
+    if (this.net) {
+      targets.push(...this.net.targets());
+      this.net.follow(dt);
+    }
     const monsters: Monster[] = [];
     for (const sp of this.spawners) {
-      sp.update(dt, target, this.daylight);
+      sp.update(dt, targets, this.daylight);
       monsters.push(...sp.monsters);
     }
-    separate(monsters, target, HERO_RADIUS);
+    separate(monsters, targets, HERO_RADIUS);
+    this.net?.update(dt, this.daylight);
     this.leanToBoss(dt, monsters);
     for (const e of this.effects) e.update(dt);
     this.effects = this.effects.filter((e) => !e.dead);
@@ -1195,7 +1265,7 @@ export class WorldScene extends Phaser.Scene {
 
     for (const b of this.balls) {
       this.struck = false;
-      b.update(dt, this.hitTest, this.bounds);
+      b.update(dt, b.hit ?? this.hitTest, this.bounds);
       if (b.dead) {
         sound.impact(this.pan(b.x), this.struck);
         b.onBurst?.(b.x, b.y);

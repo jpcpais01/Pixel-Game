@@ -302,6 +302,8 @@ export class UltCaster {
   private title: Phaser.GameObjects.BitmapText | null = null;
   private moteT = 0;
   private nagT = 0;
+  /** Told each time the Special is cast (online, so the other players see it too). */
+  onCast: ((aim: Aim | null, facing: { x: number; y: number }) => void) | null = null;
 
   constructor(
     private world: WorldScene,
@@ -403,6 +405,7 @@ export class UltCaster {
 
   private start(aim: Aim | null, facing: { x: number; y: number }): void {
     if (!energy.spend()) return;
+    this.onCast?.(aim, facing);
     const def = this.ult.def;
     const h = this.hero;
     let dx = aim?.x ?? facing.x;

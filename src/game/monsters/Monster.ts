@@ -39,6 +39,17 @@ export interface MonsterStats {
   rank?: 'legend' | 'myth';
 }
 
+/**
+ * Online play (see net/NetPlay.ts): what this player's blows, slows and
+ * strings do to a monster is sent to the other players, who do the same to
+ * their copy of it. Null when playing alone.
+ */
+export interface MonsterNet {
+  hit(m: Monster, hit: Hit, damage: number): void;
+  slow(m: Monster, k: number, ms: number, tint: number): void;
+  bind(m: Monster, ms: number, lift: number): void;
+}
+
 export type MonsterState = 'spawn' | 'idle' | 'wander' | 'notice' | 'chase' | 'windup' | 'attack' | 'recover' | 'hurt' | 'return' | 'dying';
 
 const SPAWN_TIME = 700;
@@ -57,6 +68,14 @@ const FROST = [0.62, 0.8, 1];
  * states. `move` walks; the frog overrides it to hop.
  */
 export abstract class Monster implements Hurtbox {
+  static net: MonsterNet | null = null;
+  /** Set while applying what another player did to it, so it isn't sent back out. */
+  private static relaying = false;
+  /** Its place in the spawner, and how many monsters that place has had: together they name it for every player. */
+  slot = -1;
+  gen = 0;
+  /** When a blow last landed on it (world time), so a stale health from the host doesn't undo it. */
+  lastHitAt = -Infinity;
   x: number;
   y: number;
   hp: number;
@@ -149,6 +168,7 @@ export abstract class Monster implements Hurtbox {
    */
   slow(k: number, ms: number, tint = 0xbfe0ff): void {
     if (!this.alive) return;
+    if (Monster.net && !Monster.relaying) Monster.net.slow(this, k, ms, tint);
     if (this.boss) k = 1 - (1 - k) * 0.5;
     this.pace = this.paceT > 0 ? Math.min(this.pace, k) : k;
     this.paceT = Math.max(this.paceT, ms);
@@ -272,10 +292,53 @@ export abstract class Monster implements Hurtbox {
   }
 
   hurt(hit: Hit): void {
-    if (!this.alive) return;
+    if (!this.alive || this.intangible) return;
     // Buffs like Might make every blow land harder.
     const damage = hit.damage * this.world.might;
     this.world.leech(Math.min(damage, Math.max(0, this.hp)));
+    Monster.net?.hit(this, hit, damage);
+    this.takeHit(hit, damage);
+  }
+
+  /** Another player's blow, `damage` already counting their buffs and gear. */
+  netHurt(hit: Hit, damage: number): void {
+    if (this.alive && !this.intangible) this.takeHit(hit, damage);
+  }
+
+  /** Blows pass through it right now (a boss that has vanished). */
+  protected get intangible(): boolean {
+    return false;
+  }
+
+  /** A blow has just landed (from any player); a boss may grow enraged. */
+  protected afterHit(): void {}
+
+  /** Another player slowed it, or strung it up. */
+  netSlow(k: number, ms: number, tint: number): void {
+    Monster.relaying = true;
+    this.slow(k, ms, tint);
+    Monster.relaying = false;
+  }
+
+  netBind(ms: number, lift: number): void {
+    Monster.relaying = true;
+    this.bind(ms, lift);
+    Monster.relaying = false;
+  }
+
+  /**
+   * The host says it has fallen: it dies here too (with its drops and energy
+   * for this player), or, when it died long ago as far as this player could
+   * see, it simply goes.
+   */
+  netKill(quiet: boolean): void {
+    if (this.dead) return;
+    if (quiet || this.state === 'spawn') this.destroy();
+    else if (this.state !== 'dying') this.die();
+  }
+
+  private takeHit(hit: Hit, damage: number): void {
+    this.lastHitAt = this.world.time.now;
     this.hp -= damage;
     this.flashT = FLASH_TIME;
     this.world.popNumber(snap(this.x), snap(this.y) - this.stats.barY - 3, `${Math.round(damage)}`, hit.poison ?? (hit.heavy ? 0xffe28a : 0xffffff));
@@ -287,6 +350,7 @@ export abstract class Monster implements Hurtbox {
     this.kvy += (dy / l) * push * 0.8;
     if (this.hp <= 0) {
       this.die();
+      this.afterHit();
       return;
     }
     // Struck from afar: it comes for whoever hit it, without the wind-up.
@@ -296,6 +360,7 @@ export abstract class Monster implements Hurtbox {
       this.enter('hurt', STAGGER_TIME);
       this.play('idle');
     }
+    this.afterHit();
   }
 
   /**
@@ -304,6 +369,7 @@ export abstract class Monster implements Hurtbox {
    */
   bind(ms: number, lift = 0): boolean {
     if (!this.alive || this.boss || this.stats.rank) return false;
+    if (Monster.net && !Monster.relaying) Monster.net.bind(this, ms, lift);
     if (this.state !== 'hurt') {
       this.onInterrupted();
       this.enter('hurt', ms);

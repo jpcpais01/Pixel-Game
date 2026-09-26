@@ -5,6 +5,8 @@
 // the active ones with their time left. Adding a buff that is already active
 // refreshes its time.
 
+import { ghost } from '../net/ghost';
+
 export interface BuffMods {
   /** Multiplies walking speed. */
   speed?: number;
@@ -38,6 +40,8 @@ export class Buffs {
   active: ActiveBuff[] = [];
 
   add(def: BuffDef): void {
+    // Another player's hero buffing itself: not this player's buff.
+    if (ghost.active && this === heroBuffs) return;
     const had = this.active.find((b) => b.def.id === def.id);
     if (had) had.left = def.duration;
     else this.active.push({ def, left: def.duration });
