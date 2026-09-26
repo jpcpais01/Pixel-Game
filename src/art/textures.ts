@@ -790,7 +790,11 @@ export function warmSanctum(scene: Phaser.Scene): void {
   }
   scene.textures.addCanvas('rs_room', toCanvas(ROOM_W, ROOM_H, art.diffuse))!.setDataSource(toCanvas(ROOM_W, ROOM_H, art.normal));
   scene.textures.addCanvas('rs_room_e', toCanvas(ROOM_W, ROOM_H, art.emissive));
-  // The walk-in chapel: its hall, and the roof and front that hide it.
+}
+
+/** The walk-in chapel's art (its hall, and the roof and front that hide it), made the first time one is built. */
+export function warmChapel(scene: Phaser.Scene): void {
+  if (scene.textures.exists('ch_hall')) return;
   const cjob = chapelArt();
   let cstep = cjob.next();
   while (!cstep.done) cstep = cjob.next();

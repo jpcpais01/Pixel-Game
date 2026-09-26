@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ANVIL_H, ANVIL_OY, CRUCIBLE_H, CRUCIBLE_OY, GODRAY_W, KEEPER_H, KEEPER_OX, KEEPER_OY, KEEPER_W } from '../art/sanctum';
+import { warmChapel } from '../art/textures';
 import { KEEPERS, keeperCall, type Keeper } from '../game/keepers';
 import { sunShadow } from '../game/Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
@@ -25,6 +26,13 @@ const lerpColor = (a: number, b: number, t: number): number => {
  * the hero in it, Nyx and Tharn at their stations and the window's light on
  * the floor; stepping back out brings the roof back. Walking up to a keeper
  * calls their counter, as in the Rune Temple.
+ *
+ * This is the pattern for every lesser walk-in building (João's rule: only
+ * important places like the Rune Temple open a new area). Nothing builds this
+ * one right now; to place a building, construct it in WorldScene's arena
+ * setup (like the Rune Temple, with `ground`), push its shadows, and route the
+ * arena's walkable test through its `inChapel`/`chapelBlocks` (see
+ * chapelLayout.ts); WorldScene already updates `this.chapel` and passes it E.
  */
 export class Chapel {
   /** Sun shadows, for the world to fade with the light. */
@@ -48,6 +56,7 @@ export class Chapel {
     private scene: WorldScene,
     ground: (img: Img) => Img,
   ) {
+    warmChapel(scene);
     const add = scene.add;
 
     // The hall, on the ground.
