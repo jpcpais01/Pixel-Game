@@ -541,6 +541,56 @@ class GameSound {
     if (t !== null) this.sfx!.whirr(t, pan);
   }
 
+  katana(pan = 0, heavy = false): void {
+    const t = this.slot('katana');
+    if (t !== null) this.sfx!.katana(t, pan, heavy);
+  }
+
+  katanaHit(pan = 0, heavy = false): void {
+    const t = this.slot('katanaHit');
+    if (t !== null) this.sfx!.katanaHit(t, pan, heavy);
+  }
+
+  gust(pan = 0): void {
+    const t = this.slot('gust');
+    if (t !== null) this.sfx!.gust(t, pan);
+  }
+
+  windCharge(pan = 0): void {
+    const t = this.slot('windCharge');
+    if (t !== null) this.sfx!.windCharge(t, pan);
+  }
+
+  windDash(pan = 0): void {
+    const t = this.slot('windDash');
+    if (t !== null) this.sfx!.windDash(t, pan);
+  }
+
+  sheathe(pan = 0): void {
+    const t = this.slot('sheathe');
+    if (t !== null) this.sfx!.sheathe(t, pan);
+  }
+
+  sever(pan = 0, n = 1): void {
+    const t = this.slot('sever');
+    if (t !== null) this.sfx!.sever(t, pan, n);
+  }
+
+  skyQuake(pan = 0): void {
+    const t = this.slot('skyQuake');
+    if (t !== null) this.sfx!.skyQuake(t, pan);
+  }
+
+  quakeSlam(pan = 0): void {
+    const t = this.slot('quakeSlam');
+    if (t !== null) this.sfx!.quakeSlam(t, pan);
+  }
+
+  hundredCuts(pan = 0): void {
+    const t = this.slot('hundredCuts');
+    if (t !== null) this.sfx!.hundredCuts(t, pan);
+  }
+
   strings(pan = 0): void {
     const t = this.slot('strings');
     if (t !== null) this.sfx!.strings(t, pan);

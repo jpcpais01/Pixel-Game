@@ -35,6 +35,8 @@ import { CRIMSON_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, WEAVER_KIT } fro
 import { PUPPETEER_H, PUPPETEER_ORIGIN_Y } from '../art/puppeteer';
 import { AEON_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
+import { BLADEWIND_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai } from './Samurai';
+import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -775,6 +777,79 @@ export const CLASSES: ClassDef[] = [
     spawn(world, x, y, look) {
       const kit = look === 'porcelain' ? PORCELAIN_KIT : look === 'weaver' ? WEAVER_KIT : look === 'crimson' ? CRIMSON_KIT : MARIONETTE_KIT;
       return new Puppeteer(world, x, y, kit);
+    },
+  },
+  {
+    id: 'samurai',
+    name: 'Samurai',
+    blurb: 'The way of the blade',
+    types: [
+      {
+        // Quick stabs that charge the blade, a tornado that throws foes into the air, a dash through a foe and a spin.
+        id: 'bladewind',
+        name: 'Bladewind',
+        role: 'Rides the wind',
+        accent: 0x8ad8ff,
+        stats: { power: 4, speed: 5, range: 2 },
+        attack: 'Steel tempest',
+        special: 'Sweeping blade',
+        preview: { texture: 'samurai', glow: 'samurai_e', idle: 'samurai_idle_down', chosen: 'samurai_slash1_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
+        buttons: {
+          attack: { texture: 'icon_katana' },
+          special: { texture: 'icon_windblade' },
+        },
+        lookName: 'Gale',
+        skins: [
+          {
+            id: 'oni',
+            name: 'Oni',
+            role: 'A demon of the blood-red wind',
+            accent: 0xff5a4a,
+            attack: 'Oni tempest',
+            special: 'Demon step',
+            preview: { texture: 'samurai_oni', glow: 'samurai_oni_e', idle: 'samurai_oni_idle_down', chosen: 'samurai_oni_slash1_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
+            buttons: {
+              attack: { texture: 'icon_katana_oni' },
+              special: { texture: 'icon_windblade_oni' },
+            },
+          },
+        ],
+      },
+      {
+        // Heavier cuts that leave marks, a crossing cut in a flash, and every cut bursting open when he sheathes.
+        id: 'ronin',
+        name: 'Ronin',
+        role: 'Cuts that open later',
+        accent: 0xffd070,
+        stats: { power: 5, speed: 3, range: 2 },
+        attack: 'Iai cut',
+        special: 'Crossing cut',
+        preview: { texture: 'ronin', glow: 'ronin_e', idle: 'ronin_idle_down', chosen: 'ronin_slash2_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
+        buttons: {
+          attack: { texture: 'icon_iai' },
+          special: { texture: 'icon_cross' },
+        },
+        lookName: 'Wanderer',
+        skins: [
+          {
+            id: 'sakura',
+            name: 'Sakura',
+            role: 'Blossoms on the blade',
+            accent: 0xff9ac0,
+            attack: 'Blossom cut',
+            special: 'Petal crossing',
+            preview: { texture: 'ronin_sakura', glow: 'ronin_sakura_e', idle: 'ronin_sakura_idle_down', chosen: 'ronin_sakura_slash2_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
+            buttons: {
+              attack: { texture: 'icon_iai_sakura' },
+              special: { texture: 'icon_cross_sakura' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      const kit = { bladewind: BLADEWIND_KIT, oni: ONI_KIT, ronin: RONIN_KIT, sakura: SAKURA_KIT }[look] ?? BLADEWIND_KIT;
+      return new Samurai(world, x, y, kit);
     },
   },
 ];

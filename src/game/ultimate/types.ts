@@ -37,6 +37,12 @@ export interface UltDef {
   pal: Pal;
   cast(c: Cast): void;
   icon: IconPainter;
+  /**
+   * Some Specials need something to act on (the Sky Quake, a foe in the air):
+   * returns why it can't be cast now, or null to let it through (it may act
+   * already, holding its targets while the hero gathers power).
+   */
+  gate?(world: WorldScene, hero: Hero): string | null;
 }
 
 /** A skin's take on its type's Special: the same power in its own colours and name. */

@@ -15,6 +15,9 @@ import { Encore, ThunderOfWar } from './bard';
 import { GrandFinale, PuppetMaster } from './puppeteer';
 import { FATE_STRINGS, GOLD_STRINGS, ICE_STRINGS, SILK_STRINGS } from '../Strings';
 import { Legion, TimeStop } from './chrono';
+import { HundredCuts, quakeGate, SkyQuake } from './samurai';
+import { BLADEWIND_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT } from '../Samurai';
+import { schemePal } from '../Blades';
 import { AEON_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
@@ -225,6 +228,27 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.puppetMasterIcon,
     cast: (c) => c.world.addEffect(new PuppetMaster(c.world, c)),
   },
+  'samurai:bladewind': {
+    name: 'Sky Quake',
+    cost: 60,
+    windup: 220,
+    hold: 250,
+    aim: 'self',
+    pal: schemePal(BLADEWIND_KIT.wind),
+    icon: icons.skyQuakeIcon,
+    gate: quakeGate,
+    cast: (c) => c.world.addEffect(new SkyQuake(c.world, c)),
+  },
+  'samurai:ronin': {
+    name: 'Hundred Cuts',
+    cost: 65,
+    windup: 400,
+    hold: 800,
+    aim: 'self',
+    pal: schemePal(RONIN_KIT.wind),
+    icon: icons.hundredCutsIcon,
+    cast: (c) => c.world.addEffect(new HundredCuts(c.world, c)),
+  },
 };
 
 /** Skins' takes on their type's Special, by `class:skin`. */
@@ -239,6 +263,8 @@ const SKINS: Record<string, UltSkin> = {
   'bard:wildsong': { name: 'Chorus of the Wild', pal: pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070) },
   'puppeteer:porcelain': { name: 'Shattered Finale', pal: ICE_STRINGS },
   'puppeteer:crimson': { name: 'Strings of Fate', pal: FATE_STRINGS, type: 'weaver' },
+  'samurai:oni': { name: "Oni's Downpour", pal: schemePal(ONI_KIT.wind) },
+  'samurai:sakura': { name: 'Falling Petals', pal: schemePal(SAKURA_KIT.wind), type: 'ronin' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */
@@ -338,6 +364,17 @@ export class UltCaster {
       if (this.nagT <= 0) {
         this.nagT = 900;
         this.world.popNumber(Math.round(this.hero.x), Math.round(this.hero.y) - 40, 'NEED ENERGY', 0x9aa4c8);
+      }
+      return;
+    }
+    // A Special that needs a target refuses here, before any energy is spent (another player's is taken as cast).
+    const gate = this.ult.def.gate;
+    const ghost = (this.world as unknown as { __ghost?: boolean }).__ghost;
+    const refused = gate && !ghost ? gate(this.world, this.hero) : null;
+    if (refused) {
+      if (this.nagT <= 0) {
+        this.nagT = 900;
+        this.world.popNumber(Math.round(this.hero.x), Math.round(this.hero.y) - 40, refused, 0x9aa4c8);
       }
       return;
     }

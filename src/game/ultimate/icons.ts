@@ -273,3 +273,22 @@ export function paintIcon(icon: IconPainter, p: Pal): Uint8ClampedArray {
   }, p);
   return px;
 }
+
+export const skyQuakeIcon: IconPainter = (put, p) => {
+  // A storm cloud pouring blades of rain on a foe thrown into the air.
+  for (let y = 0; y < 4; y++) for (let x = 2; x < 14; x++) if (Math.hypot((x + 0.5 - 8) / 6, (y + 0.5 - 2) / 2.2) <= 1) put(x, y, y === 3 ? p.mid : p.deep);
+  for (const x of [3, 6, 9, 12]) for (let y = 5; y < 5 + (x % 2 ? 5 : 7); y++) put(x, y, y > 7 ? p.hot : p.mid);
+  seg(put, 10, 3, 8, 7, p.core);
+  seg(put, 8, 7, 10, 8, p.core);
+  seg(put, 10, 8, 8, 12, p.core);
+  ellipse(put, 8, 14, 5, 1.4, 0.3, p.hot);
+};
+
+export const hundredCutsIcon: IconPainter = (put, p) => {
+  // Streaks crossing and crossing again.
+  seg(put, 1, 12, 14, 3, p.hot);
+  seg(put, 2, 3, 13, 13, p.mid);
+  seg(put, 0, 8, 15, 7, p.core);
+  seg(put, 6, 0, 9, 15, p.deep);
+  disc(put, 8, 7.5, 1.3, p.core);
+};

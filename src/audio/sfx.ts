@@ -1518,6 +1518,113 @@ export class Sfx {
     this.chirp(out, t + 0.3, 'sine', 180, 90, 0.2, 0.3);
   }
 
+  /** A katana cut: a thin steel shing over a fast breath of air; the heavy one sweeps wider. */
+  katana(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.75 : 0.6, 0.25);
+    this.burstNoise(out, t, 'bandpass', heavy ? 700 : 1100, heavy ? 3600 : 5200, 1.6, heavy ? 0.4 : 0.3, heavy ? 0.2 : 0.11);
+    this.chirp(out, t + 0.01, 'sine', rand(5200, 5600), rand(4300, 4600), 0.025, heavy ? 0.22 : 0.14);
+    this.chirp(out, t + 0.01, 'triangle', rand(2600, 2800), 2200, 0.02, 0.1);
+  }
+
+  /** The katana biting: a dry slice and a low thud. */
+  katanaHit(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.85 : 0.7, 0.25);
+    this.burstNoise(out, t, 'highpass', 3200, 1800, 0.8, heavy ? 0.45 : 0.32, heavy ? 0.12 : 0.07);
+    this.chirp(out, t, 'sine', heavy ? 170 : 210, 60, heavy ? 0.32 : 0.2, 0.12);
+    this.chirp(out, t + 0.004, 'triangle', 3100, 2500, 0.03, 0.08);
+  }
+
+  /** A gust leaving the blade: a howl of wind that swirls up and away. */
+  gust(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.75, 0.45);
+    const dur = 0.55;
+    const g = gain(ctx, 0, out);
+    hit(g.gain, t, 0.5, 0.05, dur);
+    const bp = filter(ctx, 'bandpass', 500, 3, g);
+    sweep(bp.frequency, t, 380, 1500, dur);
+    const lfo = osc(ctx, 'sine', 11, gain(ctx, 260, bp.frequency));
+    lfo.start(t);
+    lfo.stop(t + dur + 0.1);
+    const src = this.m.noiseSource(true);
+    src.connect(bp);
+    this.m.startNoise(src, t, dur + 0.1);
+    this.chirp(out, t, 'sine', 320, 760, 0.06, dur * 0.8);
+  }
+
+  /** The blade charged with wind: a soft rising whistle. */
+  windCharge(t: number, pan: number): void {
+    const out = this.out(pan, 0.5, 0.5);
+    this.chirp(out, t, 'sine', 900, 1800, 0.06, 0.25);
+    this.chirp(out, t + 0.06, 'sine', 1350, 2700, 0.04, 0.22);
+    this.burstNoise(out, t, 'bandpass', 1200, 4200, 2, 0.15, 0.25);
+  }
+
+  /** A dash on the wind: a short rushing whoosh. */
+  windDash(t: number, pan: number): void {
+    const out = this.out(pan, 0.6, 0.3);
+    this.burstNoise(out, t, 'bandpass', 600, 3000, 1.1, 0.4, 0.16, true);
+    this.burstNoise(out, t + 0.03, 'highpass', 4000, 6000, 0.8, 0.12, 0.1);
+  }
+
+  /** The blade slid home: a scrape of steel and the click of the guard. */
+  sheathe(t: number, pan: number): void {
+    const out = this.out(pan, 0.6, 0.35);
+    this.burstNoise(out, t, 'bandpass', 4800, 2600, 3, 0.18, 0.16);
+    this.chirp(out, t, 'sine', 4200, 3600, 0.02, 0.16);
+    this.tick(out, t + 0.17, 0.4, 1900);
+  }
+
+  /** Cuts opening all at once: a volley of slices and a deep cleave. */
+  sever(t: number, pan: number, n: number): void {
+    const out = this.out(pan, 0.8, 0.35);
+    const k = Math.min(6, Math.max(2, n + 1));
+    for (let i = 0; i < k; i++) this.burstNoise(out, t + i * 0.025, 'highpass', 3600 - i * 200, 1600, 0.9, 0.3, 0.07);
+    this.chirp(out, t, 'sine', 140, 45, 0.4, 0.25);
+    this.chirp(out, t + 0.01, 'sine', 5000, 3800, 0.03, 0.2);
+  }
+
+  /** The sky breaking open: a thunderclap, a deep rolling rumble and a hard rush of rain. */
+  skyQuake(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.9, 0.7);
+    this.burstNoise(out, t, 'lowpass', 3000, 200, 0.7, 0.8, 0.5, true);
+    this.chirp(out, t, 'sine', 90, 34, 0.5, 1.2);
+    const dur = 2;
+    const rain = gain(ctx, 0, out);
+    rain.gain.setValueAtTime(0, t);
+    rain.gain.linearRampToValueAtTime(0.35, t + 0.15);
+    rain.gain.setValueAtTime(0.35, t + dur - 0.3);
+    rain.gain.linearRampToValueAtTime(0, t + dur);
+    const hp = filter(ctx, 'highpass', 2400, 0.6, rain);
+    const src = this.m.noiseSource();
+    src.connect(hp);
+    this.m.startNoise(src, t, dur + 0.1);
+    const rumble = gain(ctx, 0, out);
+    rumble.gain.setValueAtTime(0, t);
+    rumble.gain.linearRampToValueAtTime(0.4, t + 0.3);
+    rumble.gain.linearRampToValueAtTime(0, t + dur);
+    const lp = filter(ctx, 'lowpass', 160, 0.8, rumble);
+    const r = this.m.noiseSource(true);
+    r.connect(lp);
+    this.m.startNoise(r, t, dur + 0.1);
+  }
+
+  /** The quake's end: everything slammed down at once. */
+  quakeSlam(t: number, pan: number): void {
+    const out = this.out(pan, 1, 0.6);
+    this.chirp(out, t, 'sine', 120, 30, 0.7, 0.5);
+    this.burstNoise(out, t, 'lowpass', 2400, 120, 0.8, 0.7, 0.45, true);
+    this.burstNoise(out, t + 0.02, 'highpass', 3000, 1400, 0.7, 0.3, 0.15);
+  }
+
+  /** The hundred cuts: a hiss of steel as he vanishes. */
+  hundredCuts(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.4);
+    this.burstNoise(out, t, 'bandpass', 2000, 7000, 1.4, 0.35, 0.25);
+    for (let i = 0; i < 4; i++) this.chirp(out, t + i * 0.05, 'sine', 5400 - i * 300, 4200, 0.02, 0.12);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {
