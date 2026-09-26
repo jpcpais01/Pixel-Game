@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Effect, Scheme } from './Slash';
-import type { Hurtbox } from './combat';
+import { inFlight, type Hurtbox } from './combat';
 import { BOLT_H } from '../art/necromancer';
 import { SKELETON_BODY_Y, SKELETON_FRAME, SKELETON_STRIKE_FRAME } from '../art/skeleton';
 import { snap } from './display';
@@ -34,7 +34,7 @@ export interface BoltKind {
 
 /** Is a body standing at (x, y) close enough to the ground point (gx, gy) for a bolt passing over it to strike it? */
 function inPath(h: Hurtbox, gx: number, gy: number): boolean {
-  return Math.abs(h.x - gx) <= h.radius + 2 && Math.abs(h.y - gy) <= h.radius * 0.6 + 3.5;
+  return inFlight(h, gx, gy, BOLT_H);
 }
 
 /** Foes a seeking bolt will turn for: this far ahead of it, and within this cone. */

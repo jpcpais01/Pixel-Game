@@ -20,9 +20,12 @@ import { hex } from './pixel';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
 import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
 import { GEAR } from '../game/gear';
+import { ARROW, BEAM_H, BEAM_W, LRAY_H, LRAY_W, LRING_H, LRING_W, RUNE_H, RUNE_W, TWINKLE, lootArrow, lootBeam, lootRay, lootRing, lootRunes, lootTwinkle } from './loot';
 import { registerInventoryArt } from './invTiles';
-import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, CRYSTAL_FRAMES, CRYSTAL_H as RS_CRYSTAL_H, CRYSTAL_W as RS_CRYSTAL_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, PILLAR_H as RS_PILLAR_H, PILLAR_W as RS_PILLAR_W, STATION_FRAMES, TEMPLE_ART_H, TEMPLE_ART_W, dustCrucible, runeAnvil, runeCrystal, runesmith, sanctumArt, sanctumExterior, sanctumPillar, unmaker } from './sanctum';
+import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, GODRAY_H, GODRAY_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, PILLAR_H as RS_PILLAR_H, PILLAR_W as RS_PILLAR_W, RUNESTONE_H, RUNESTONE_W, STATION_FRAMES, TEMPLE_ART_H, TEMPLE_ART_W, dustCrucible, godRay, runeAnvil, runesmith, runestone, sanctumArt, sanctumExterior, sanctumPillar, unmaker } from './sanctum';
 import { ROOM_H, ROOM_W } from '../world/sanctumLayout';
+import { chapelArt, chapelExterior } from './chapel';
+import { CH_EXT_H, CH_EXT_W, CH_H, CH_W } from '../world/chapelLayout';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_LOOKS, PALADIN_W, type PaladinMeta } from './paladin';
 import { buildWarriorFrames, JADE_LOOK, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, type WarriorMeta } from './warrior';
 import { WIND_DEEP } from './palette';
@@ -446,6 +449,13 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('shadow_big', toCanvas(24, 8, shadowCanvas(24, 8)));
   const spark = new Uint8ClampedArray(4 * 4).fill(255);
   scene.textures.addCanvas('spark', toCanvas(2, 2, spark));
+  // Light for great finds lying on the ground (see game/Pickup.ts).
+  scene.textures.addCanvas('loot_beam', toCanvas(BEAM_W, BEAM_H, lootBeam()));
+  scene.textures.addCanvas('loot_ray', toCanvas(LRAY_W, LRAY_H, lootRay()));
+  scene.textures.addCanvas('loot_ring', toCanvas(LRING_W, LRING_H, lootRing()));
+  scene.textures.addCanvas('loot_runes', toCanvas(RUNE_W, RUNE_H, lootRunes()));
+  scene.textures.addCanvas('loot_twinkle', toCanvas(TWINKLE, TWINKLE, lootTwinkle()));
+  scene.textures.addCanvas('loot_arrow', toCanvas(ARROW, ARROW, lootArrow()));
 
   // Environment. The ground itself streams in as the heroes walk (see world/GroundStreamer.ts).
   register(scene, 'tree', pack(TREE_FRAMES.map((f) => ({ name: f.name, r: f.draw().render() })), TREE_W, TREE_H, 9), TREE_W, TREE_H, false);
@@ -754,18 +764,20 @@ export function warmSanctum(scene: Phaser.Scene): void {
   while (!step.done) step = job.next();
   const art = step.value;
   register(scene, 'rs_temple', pack(frameList([sanctumExterior()], 't'), TEMPLE_ART_W, TEMPLE_ART_H), TEMPLE_ART_W, TEMPLE_ART_H);
+  register(scene, 'rs_runestone', pack(frameList([runestone(0), runestone(1)], 'r'), RUNESTONE_W, RUNESTONE_H), RUNESTONE_W, RUNESTONE_H);
+  const rays = scene.textures.addCanvas('rs_ray', toCanvas(GODRAY_W * 2, GODRAY_H, sideBySide(GODRAY_W, GODRAY_H, [godRay(3), godRay(8)])))!;
+  rays.add('g0', 0, 0, 0, GODRAY_W, GODRAY_H);
+  rays.add('g1', 0, GODRAY_W, 0, GODRAY_W, GODRAY_H);
   const loop = (key: string, n: number, fps: number) =>
     scene.anims.create({ key: `${key}_loop`, frames: scene.anims.generateFrameNames(key, { prefix: 'f', start: 0, end: n - 1 }), frameRate: fps, repeat: -1 });
   const glowLoop = (key: string, n: number, fps: number) =>
     scene.anims.create({ key: `${key}_e_loop`, frames: scene.anims.generateFrameNames(`${key}_e`, { prefix: 'f', start: 0, end: n - 1 }), frameRate: fps, repeat: -1 });
-  register(scene, 'rs_crystal', pack(frameList(Array.from({ length: CRYSTAL_FRAMES }, (_, f) => runeCrystal(f)), 'f'), RS_CRYSTAL_W, RS_CRYSTAL_H), RS_CRYSTAL_W, RS_CRYSTAL_H);
   register(scene, 'rs_pillar', pack(frameList([sanctumPillar()], 'p'), RS_PILLAR_W, RS_PILLAR_H), RS_PILLAR_W, RS_PILLAR_H);
   register(scene, 'rs_crucible', pack(frameList(Array.from({ length: STATION_FRAMES }, (_, f) => dustCrucible(f)), 'f'), CRUCIBLE_W, CRUCIBLE_H), CRUCIBLE_W, CRUCIBLE_H);
   register(scene, 'rs_anvil', pack(frameList(Array.from({ length: STATION_FRAMES }, (_, f) => runeAnvil(f)), 'f'), ANVIL_W, ANVIL_H), ANVIL_W, ANVIL_H);
   register(scene, 'rs_nyx', pack(frameList(Array.from({ length: KEEPER_FRAMES }, (_, f) => unmaker(f)), 'f'), KEEPER_W, KEEPER_H), KEEPER_W, KEEPER_H);
   register(scene, 'rs_tharn', pack(frameList(Array.from({ length: KEEPER_FRAMES }, (_, f) => runesmith(f)), 'f'), KEEPER_W, KEEPER_H), KEEPER_W, KEEPER_H);
   for (const [key, n, fps] of [
-    ['rs_crystal', CRYSTAL_FRAMES, 6],
     ['rs_crucible', STATION_FRAMES, 8],
     ['rs_anvil', STATION_FRAMES, 6],
     ['rs_nyx', KEEPER_FRAMES, 5],
@@ -776,4 +788,16 @@ export function warmSanctum(scene: Phaser.Scene): void {
   }
   scene.textures.addCanvas('rs_room', toCanvas(ROOM_W, ROOM_H, art.diffuse))!.setDataSource(toCanvas(ROOM_W, ROOM_H, art.normal));
   scene.textures.addCanvas('rs_room_e', toCanvas(ROOM_W, ROOM_H, art.emissive));
+}
+
+/** The walk-in chapel's art (its hall, and the roof and front that hide it), made the first time one is built. */
+export function warmChapel(scene: Phaser.Scene): void {
+  if (scene.textures.exists('ch_hall')) return;
+  const cjob = chapelArt();
+  let cstep = cjob.next();
+  while (!cstep.done) cstep = cjob.next();
+  const hall = cstep.value;
+  scene.textures.addCanvas('ch_hall', toCanvas(CH_W, CH_H, hall.diffuse))!.setDataSource(toCanvas(CH_W, CH_H, hall.normal));
+  scene.textures.addCanvas('ch_hall_e', toCanvas(CH_W, CH_H, hall.emissive));
+  register(scene, 'ch_out', pack(frameList([chapelExterior()], 't'), CH_EXT_W, CH_EXT_H), CH_EXT_W, CH_EXT_H);
 }

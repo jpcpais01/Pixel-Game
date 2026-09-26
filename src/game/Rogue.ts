@@ -5,7 +5,7 @@ import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
-import { reaches, Vitals, type Hurtbox, type MeleeArea } from './combat';
+import { reachesBody, Vitals, type Hurtbox, type MeleeArea } from './combat';
 import { HitSpark, SlashArc, ThrustStreak, type Effect, type Scheme } from './Slash';
 import { Afterimage, Bleed, SmokePuff, type ShadowStyle } from './Shadows';
 import type { Aim, Hero } from './characters';
@@ -327,7 +327,7 @@ export class Rogue implements Hero {
   private strike(area: MeleeArea, damage: number, heavy: boolean, bleed: number, eviscerate: boolean, fromX: number, fromY: number): number {
     const ambush = this.hidden > 0;
     this.hidden = 0;
-    const targets = this.world.hurtboxesWhere((h) => h.alive && reaches(area, h.x, h.y - h.bodyY, h.radius));
+    const targets = this.world.hurtboxesWhere((h) => h.alive && reachesBody(area, h) !== null);
     for (const h of targets) {
       let d = damage;
       // The finisher rips the wound open.

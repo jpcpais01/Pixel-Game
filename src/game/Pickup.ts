@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { ITEMS, type ItemId } from './items';
-import { RARITY, type GearDef } from './gear';
+import { GEAR_SETS, RARITY, type GearDef, type Rarity } from './gear';
 import { DROP_H } from '../art/items';
 import { GEAR_DROP } from '../art/gear';
+import type { Effect } from './Slash';
 
 /** What lies on the ground: a potion for the hotbar, or a piece of gear. */
 export type Loot = { kind: 'item'; id: ItemId } | { kind: 'gear'; def: GearDef };
@@ -16,15 +17,71 @@ const REACH = 7;
 const LIFE = 60000;
 const BLINK = 5000;
 const POP_TIME = 420;
+/** A legendary doesn't hop out: light marks the spot, then it falls from the sky like a star. */
+const OMEN = 380;
+const FALL = 520;
+const FALL_FROM = 130;
+/** Loot lights at once, over everything else lit in the scene (render.maxLights is 16). */
+const MAX_LOOT_LIGHTS = 3;
+/** Above the world, under the aim line and the sky. */
+const ARROW_DEPTH = 14000;
+
+/**
+ * How a rarity announces itself on the ground. Rare finds get a short pillar
+ * of light; epics a tall one over a rune circle, with a ring as they land,
+ * twinkling stars and an arrow when off screen; legendaries fall from the
+ * sky, strike the ground with a flash and two rings, and lie in a full
+ * pillar with slowly turning god rays and their own light.
+ */
+interface Show {
+  /** Height of the pillar, as a share of the texture. */
+  beam: number;
+  /** Its width. */
+  width: number;
+  rays: number;
+  twinkles: number;
+  motes: number;
+  runes: boolean;
+  rings: number;
+  arrow: boolean;
+  light: boolean;
+  star: boolean;
+  /** The pillar's outer colour and its hot core. */
+  accent: number;
+  core: number;
+}
+
+const SHOWS: Partial<Record<Rarity, Show>> = {
+  rare: { beam: 0.3, width: 0.8, rays: 0, twinkles: 0, motes: 1, runes: false, rings: 1, arrow: false, light: false, star: false, accent: 0xffc93a, core: 0xfff4c0 },
+  epic: { beam: 0.62, width: 1, rays: 0, twinkles: 2, motes: 2, runes: true, rings: 1, arrow: true, light: false, star: false, accent: 0xa860ff, core: 0xeedcff },
+  legendary: { beam: 1, width: 1.25, rays: 8, twinkles: 3, motes: 3, runes: true, rings: 2, arrow: true, light: true, star: true, accent: 0xffcf6a, core: 0xfffbef },
+};
+
+/** How grand a find is: 0 for potions and common gear, up to 4 for a legendary. */
+export function grade(loot: Loot): number {
+  if (loot.kind === 'item') return 0;
+  return { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 }[loot.def.rarity];
+}
+
+/** Loot lights alive now, so a boss's pile of legendaries can't starve the rest of the scene. */
+const lit = new Set<Pickup>();
+
+interface Ring {
+  img: Phaser.GameObjects.Image;
+  t: number;
+}
 
 /**
  * An item lying on the ground: it hops out of a slain monster, bobs over a
  * soft glow and a shadow, drifts to the hero once they come near and is
  * picked up on touch (a potion only when the hotbar has room). Gear glows in
- * its rarity's colour, brighter the rarer it is.
+ * its rarity's colour, brighter the rarer it is, and rare, epic and
+ * legendary gear make a show of it (see Show).
  */
 export class Pickup {
   dead = false;
+  /** When it has come to rest; `onLand` runs once, then. */
+  onLand: ((p: Pickup) => void) | null = null;
   private sprite: Phaser.GameObjects.Image;
   private glow: Phaser.GameObjects.Image;
   private shadow: Phaser.GameObjects.Image;
@@ -39,9 +96,26 @@ export class Pickup {
   private shine: number;
   /** Gear floats a little higher, being bigger. */
   private lift: number;
+  private popTime: number;
+  private landed = false;
+
+  // The show, for rare gear and better.
+  private show: Show | null = null;
+  private beamOuter: Phaser.GameObjects.Image | null = null;
+  private beamInner: Phaser.GameObjects.Image | null = null;
+  private runes: Phaser.GameObjects.Image | null = null;
+  private arrow: Phaser.GameObjects.Image | null = null;
+  private trail: Phaser.GameObjects.Image | null = null;
+  private flash: Phaser.GameObjects.Image | null = null;
+  private rays: Phaser.GameObjects.Image[] = [];
+  private twinkles: Phaser.GameObjects.Image[] = [];
+  private motes: Phaser.GameObjects.Image[] = [];
+  private rings: Ring[] = [];
+  private light: Phaser.GameObjects.Light | null = null;
+  private landT = 0;
 
   constructor(
-    scene: Phaser.Scene,
+    private scene: Phaser.Scene,
     public x: number,
     public y: number,
     readonly loot: Loot,
@@ -62,21 +136,60 @@ export class Pickup {
     this.glow = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(look.tint).setScale(this.shine).setAlpha(0);
     this.sprite = scene.add.image(x, y, look.texture).setOrigin(0.5, (h - 1) / h);
     this.lift = gear ? 3 : 0;
+    this.popTime = POP_TIME;
+
+    const base = gear && SHOWS[gear.rarity];
+    if (!base) return;
+    // A set piece shines in its set's colour.
+    const show: Show = { ...base, accent: gear.set ? GEAR_SETS[gear.set].tint : base.accent };
+    this.show = show;
+    const add = (key: string, tint: number) => scene.add.image(this.x, this.y, key).setBlendMode(Phaser.BlendModes.ADD).setTint(tint).setAlpha(0);
+    this.beamOuter = add('loot_beam', show.accent).setOrigin(0.5, 1);
+    this.beamInner = add('loot_beam', show.core).setOrigin(0.5, 1);
+    if (show.runes) this.runes = add('loot_runes', show.accent).setDepth(1.2);
+    for (let i = 0; i < show.rays; i++) this.rays.push(add('loot_ray', i % 2 ? show.core : show.accent).setOrigin(0.5, 1));
+    for (let i = 0; i < show.twinkles; i++) this.twinkles.push(add('loot_twinkle', show.core));
+    for (let i = 0; i < show.motes; i++) this.motes.push(add('spark', i % 2 ? show.accent : show.core));
+    if (show.arrow) this.arrow = scene.add.image(0, 0, 'loot_arrow').setTint(show.accent).setDepth(ARROW_DEPTH).setVisible(false);
+    if (show.star) {
+      // Falls straight down onto where it will lie, a comet's tail of light above it.
+      this.popTime = OMEN + FALL;
+      this.fromX = this.x;
+      this.fromY = this.y;
+      this.sprite.setVisible(false);
+      this.trail = add('loot_beam', show.core).setOrigin(0.5, 1);
+      this.flash = add('glow', show.core);
+    }
+  }
+
+  /** How grand this find is (see grade). */
+  get grade(): number {
+    return grade(this.loot);
   }
 
   /** `hx, hy` are the hero's feet, or null when they can't pick things up. Returns true once touched. */
   update(dt: number, hx: number | null, hy: number | null, room: boolean, daylight: number): boolean {
+    if (this.dead) return false;
     this.age += dt;
     let x: number;
     let y: number;
     let lift: number;
-    if (this.age < POP_TIME) {
-      // The hop out: an arc from the monster's body to the ground.
-      const t = this.age / POP_TIME;
-      x = this.fromX + (this.x - this.fromX) * t;
-      y = this.fromY + (this.y - this.fromY) * t;
-      lift = Math.sin(t * Math.PI) * 14 + (1 - t) * 6;
+    if (this.age < this.popTime) {
+      if (this.show?.star) {
+        // The omen, then the fall: slow at first, striking fast.
+        const t = Math.max(0, (this.age - OMEN) / FALL);
+        x = this.x;
+        y = this.y;
+        lift = FALL_FROM * (1 - t * t) + 2 + this.lift;
+      } else {
+        // The hop out: an arc from the monster's body to the ground.
+        const t = this.age / this.popTime;
+        x = this.fromX + (this.x - this.fromX) * t;
+        y = this.fromY + (this.y - this.fromY) * t;
+        lift = Math.sin(t * Math.PI) * 14 + (1 - t) * 6;
+      }
     } else {
+      if (!this.landed) this.land();
       if (hx !== null && hy !== null && room) {
         const dx = hx - this.x;
         const dy = hy - this.y;
@@ -105,12 +218,194 @@ export class Pickup {
     this.sprite.setPosition(rx, Math.round(ry - lift)).setDepth(ry).setAlpha(blink).setTint(Phaser.Display.Color.GetColor(shade, shade, Math.min(255, shade + 20)));
     this.glow.setPosition(rx, Math.round(ry - lift - 4 - this.lift * 1.5)).setDepth(ry - 0.1).setAlpha((0.35 + 0.15 * Math.sin(this.age * 0.006 + this.seed)) * (1.3 - daylight * 0.5) * blink);
     this.shadow.setPosition(rx, ry).setAlpha(0.6 * blink);
+    if (this.show) this.updateShow(dt, rx, ry, lift, blink);
     return false;
+  }
+
+  /** Come to rest: the rings go out, and the world gets to cheer (sound, sparks, a shake). */
+  private land(): void {
+    this.landed = true;
+    const show = this.show;
+    if (show) {
+      for (let i = 0; i < show.rings; i++) {
+        const img = this.scene.add.image(this.x, this.y, 'loot_ring').setBlendMode(Phaser.BlendModes.ADD).setTint(i ? show.core : show.accent).setDepth(1.3).setAlpha(0);
+        this.rings.push({ img, t: -i * 120 });
+      }
+      if (show.light && this.scene.lights?.active) {
+        for (const p of lit) if (p.dead || p.scene !== this.scene) lit.delete(p);
+        if (lit.size < MAX_LOOT_LIGHTS) {
+          this.light = this.scene.lights.addLight(this.x, this.y - 8, 70, show.accent, 1.6);
+          lit.add(this);
+        }
+      }
+    }
+    this.onLand?.(this);
+  }
+
+  private updateShow(dt: number, rx: number, ry: number, lift: number, blink: number): void {
+    const show = this.show!;
+    const cy = Math.round(ry - lift - 5);
+
+    if (!this.landed) {
+      // Legendary only: a thin shaft marks the spot, then the star comes down it.
+      const omen = Math.min(1, this.age / OMEN);
+      this.beamInner!.setPosition(rx, ry + 1).setDepth(ry - 0.3).setScale(0.35, show.beam * (0.4 + 0.6 * omen)).setAlpha(0.5 * omen);
+      this.runes?.setPosition(rx, ry).setAlpha(0.6 * omen);
+      this.shadow.setScale(0.3 + 0.5 * omen, 0.8);
+      if (this.age >= OMEN) {
+        this.sprite.setVisible(true);
+        const t = (this.age - OMEN) / FALL;
+        this.trail!.setPosition(rx, cy + 4).setDepth(ry + 0.2).setScale(0.9, 0.25 + 0.35 * (1 - t)).setAlpha(0.9);
+        this.flash!.setPosition(rx, cy).setDepth(ry + 0.1).setScale(1.2 + t * 0.6).setAlpha(0.9);
+      }
+      return;
+    }
+
+    this.landT += dt;
+    // The pillar rises out of the ground as it lands, then breathes.
+    const rise = Math.min(1, this.landT / 350);
+    const riseE = 1 - Math.pow(1 - rise, 3);
+    const breathe = Math.sin(this.age * 0.003 + this.seed);
+    const tall = show.beam * riseE * (1 + 0.04 * breathe);
+    this.beamOuter!.setPosition(rx, ry + 1).setDepth(ry - 0.3).setScale(show.width * 1.9, tall).setAlpha((0.42 + 0.1 * breathe) * blink);
+    this.beamInner!.setPosition(rx, ry + 1).setDepth(ry - 0.25).setScale(show.width * 0.6, tall * 0.92).setAlpha((0.7 + 0.1 * breathe) * blink);
+    this.runes?.setPosition(rx, ry).setAlpha((0.55 + 0.25 * Math.sin(this.age * 0.004)) * blink);
+
+    // God rays, slowly turning, long and short in turn.
+    const n = this.rays.length;
+    for (let i = 0; i < n; i++) {
+      const long = i % 2 ? 0.62 : 1;
+      const pulse = 0.85 + 0.15 * Math.sin(this.age * 0.005 + i * 1.7);
+      this.rays[i]
+        .setPosition(rx, cy)
+        .setDepth(ry - 0.28)
+        .setRotation((i / n) * Math.PI * 2 + this.age * 0.00035)
+        .setScale(1, long * pulse * riseE)
+        .setAlpha((i % 2 ? 0.55 : 0.4) * blink);
+    }
+
+    // Stars circling it, passing behind and in front.
+    const m = this.twinkles.length;
+    for (let i = 0; i < m; i++) {
+      const a = this.age * 0.0022 + (i / m) * Math.PI * 2;
+      const s = Math.sin(this.age * 0.009 + i * 2.1);
+      this.twinkles[i]
+        .setPosition(Math.round(rx + Math.cos(a) * 10), Math.round(cy + Math.sin(a) * 4))
+        .setDepth(ry + (Math.sin(a) > 0 ? 0.2 : -0.2))
+        .setScale(s > 0.3 ? 1 : 0.6)
+        .setAlpha((0.5 + 0.5 * Math.max(0, s)) * riseE * blink);
+    }
+
+    // Specks of light drifting up the pillar.
+    const k = this.motes.length;
+    const high = 120 * show.beam * 0.7;
+    for (let i = 0; i < k; i++) {
+      const u = ((this.age / 1700 + i / k + this.seed) % 1 + 1) % 1;
+      this.motes[i]
+        .setPosition(Math.round(rx + Math.sin(u * 9 + i * 2) * 1.5), Math.round(ry - 2 - u * high))
+        .setDepth(ry - 0.2)
+        .setAlpha(Math.sin(u * Math.PI) * riseE * blink);
+    }
+
+    for (const r of this.rings) {
+      r.t += dt;
+      if (r.t < 0) continue;
+      const e = Math.min(1, r.t / 620);
+      const grow = 1 - Math.pow(1 - e, 2);
+      r.img.setPosition(rx, ry).setScale(0.2 + grow * (show.star ? 2.1 : 1.3)).setAlpha(e >= 1 ? 0 : 0.9 * (1 - e));
+    }
+
+    if (this.trail) {
+      // The star has struck: its tail snaps away and a flash of light fades.
+      const f = Math.min(1, this.landT / 380);
+      this.trail.setAlpha(0);
+      this.flash!.setPosition(rx, cy).setDepth(ry + 0.3).setScale(1.8 + f * 3.2).setAlpha(0.95 * (1 - f));
+    }
+
+    if (this.light) {
+      this.light.setPosition(rx, ry - 8);
+      this.light.intensity = (1.2 + 0.35 * breathe) * riseE * blink;
+    }
+
+    if (this.arrow) this.point(rx, cy);
+  }
+
+  /** Off screen, an arrow at the screen's edge points the way to it. */
+  private point(x: number, y: number): void {
+    const arrow = this.arrow!;
+    const view = this.scene.cameras.main.worldView;
+    const m = 7;
+    if (view.width <= 0 || (x > view.x && x < view.right && y > view.y && y < view.bottom)) {
+      arrow.setVisible(false);
+      return;
+    }
+    const ax = Phaser.Math.Clamp(x, view.x + m, view.right - m);
+    const ay = Phaser.Math.Clamp(y, view.y + m, view.bottom - m);
+    // Nudged back and forth towards the find.
+    const a = Math.atan2(y - view.centerY, x - view.centerX);
+    const nudge = Math.sin(this.age * 0.008) * 1.5;
+    arrow
+      .setVisible(true)
+      .setPosition(Math.round(ax + Math.cos(a) * nudge), Math.round(ay + Math.sin(a) * nudge))
+      .setRotation(a)
+      .setAlpha(0.75 + 0.25 * Math.sin(this.age * 0.008));
   }
 
   destroy(): void {
     if (this.dead) return;
     this.dead = true;
-    for (const o of [this.sprite, this.glow, this.shadow]) o.destroy();
+    const all = [this.sprite, this.glow, this.shadow, this.beamOuter, this.beamInner, this.runes, this.arrow, this.trail, this.flash, ...this.rays, ...this.twinkles, ...this.motes, ...this.rings.map((r) => r.img)];
+    for (const o of all) o?.destroy();
+    if (this.light) {
+      this.scene.lights?.removeLight(this.light);
+      this.light = null;
+    }
+    lit.delete(this);
+  }
+}
+
+/**
+ * Picking up an epic or a legendary: the pillar flashes up around the hero
+ * and a ring of its light goes out. Lives a moment, then cleans itself up.
+ */
+export class LootFlare implements Effect {
+  dead = false;
+  private age = 0;
+  private beam: Phaser.GameObjects.Image;
+  private ring: Phaser.GameObjects.Image;
+  private glow: Phaser.GameObjects.Image;
+  private big: boolean;
+
+  constructor(
+    scene: Phaser.Scene,
+    private x: number,
+    private y: number,
+    def: GearDef,
+  ) {
+    this.big = def.rarity === 'legendary';
+    const show = SHOWS[def.rarity];
+    const accent = def.set ? GEAR_SETS[def.set].tint : show?.accent ?? RARITY[def.rarity].tint;
+    const core = show?.core ?? 0xffffff;
+    const add = (key: string, tint: number) => scene.add.image(x, y, key).setBlendMode(Phaser.BlendModes.ADD).setTint(tint).setAlpha(0);
+    this.beam = add('loot_beam', core).setOrigin(0.5, 1).setDepth(y + 0.5);
+    this.ring = add('loot_ring', accent).setDepth(1.3);
+    this.glow = add('glow', accent).setDepth(y + 0.4);
+  }
+
+  update(dt: number): void {
+    if (this.dead) return;
+    this.age += dt;
+    const t = Math.min(1, this.age / 600);
+    const fade = 1 - t;
+    this.beam.setPosition(this.x, this.y + 1).setScale((this.big ? 2.2 : 1.6) * (1 - t * 0.7), (this.big ? 0.9 : 0.6) * (0.6 + t * 0.4)).setAlpha(0.85 * fade);
+    this.ring.setPosition(this.x, this.y).setScale(0.3 + (1 - fade * fade) * (this.big ? 2 : 1.4)).setAlpha(0.9 * fade);
+    this.glow.setPosition(this.x, this.y - 12).setScale((this.big ? 3 : 2) * (0.6 + t)).setAlpha(0.8 * fade);
+    if (t >= 1) this.destroy();
+  }
+
+  destroy(): void {
+    if (this.dead) return;
+    this.dead = true;
+    for (const o of [this.beam, this.ring, this.glow]) o.destroy();
   }
 }

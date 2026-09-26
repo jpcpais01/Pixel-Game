@@ -4,12 +4,15 @@ import {
   ANVIL_OY,
   CRUCIBLE_H,
   CRUCIBLE_OY,
+  GODRAY_W,
   KEEPER_H,
   KEEPER_OX,
   KEEPER_OY,
   KEEPER_W,
   PILLAR_H,
   PILLAR_OY,
+  RUNESTONE_H,
+  RUNESTONE_OY,
   TEMPLE_ART_H,
   TEMPLE_ART_OY,
 } from '../art/sanctum';
@@ -18,7 +21,7 @@ import { KEEPERS, keeperCall, type Keeper } from '../game/keepers';
 import { settings } from '../game/settings';
 import { sunShadow } from '../game/Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
-import { CIRCLE, DAIS, PILLARS, ROOM_BRAZIERS, ROOM_H, ROOM_W, ROOM_X, ROOM_Y, TEMPLE_X, TEMPLE_Y, WINDOW, atRoomExit, atTempleDoor } from './sanctumLayout';
+import { DAIS, PILLARS, ROOM_BRAZIERS, ROOM_H, ROOM_W, ROOM_X, ROOM_Y, RUNESTONES, TEMPLE_X, TEMPLE_Y, WINDOW, atRoomExit, atTempleDoor } from './sanctumLayout';
 
 type Img = Phaser.GameObjects.Image;
 type Emitter = Phaser.GameObjects.Particles.ParticleEmitter;
@@ -27,19 +30,43 @@ type Emitter = Phaser.GameObjects.Particles.ParticleEmitter;
 const TALK_R = 24;
 const REARM = 10;
 
+/** Where the light comes in: the rose window and the two lancets, in room pixels, and how big each shaft is. */
+const SHAFTS = [
+  { x: WINDOW.x, y: WINDOW.y - 6, sx: 1.7, sy: 0.92, frame: 'g0' },
+  { x: 150, y: 58, sx: 0.8, sy: 0.74, frame: 'g1' },
+  { x: 298, y: 58, sx: 0.8, sy: 0.74, frame: 'g0' },
+];
+/** Day and night inside: the light through the glass, gold by day, moon blue by night. */
+const SUN = { ray: 0xffe2a8, light: 0xffd49a, pool: 0xffc870 };
+const MOON = { ray: 0x9ab4ff, light: 0x7088ff, pool: 0x6a80e8 };
+
+const lerpColor = (a: number, b: number, t: number): number => {
+  const ch = (s: number) => Math.round(((a >> s) & 255) + (((b >> s) & 255) - ((a >> s) & 255)) * t);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+};
+
 /**
- * The Rune Temple on the Runestone Clearing and the room inside it: the
- * temple with its floating crystal and its doorway of violet light, and inside,
- * the painted room (drawn by the ground camera), its pillars, braziers and
- * lights, the two keepers at their stations, and a crystal turning over the
- * rune circle. It says when the hero passes through the door either way, and
- * calls a keeper's counter up when the hero walks up to them.
+ * The Rune Temple at the top of the Runestone Clearing and the room inside
+ * it: the old stone chapel with its lamplit doorway and two runestones, and
+ * inside, the painted room (drawn by the ground camera), its pillars, braziers
+ * and lights, the two keepers at their stations,  Light comes in through the windows as the world outside
+ * has it: shafts of gold by day, calm moonbeams by night. It says when the
+ * hero passes through the door either way, and calls a keeper's counter up
+ * when the hero walks up to them.
  */
 export class RuneTemple {
   /** Sun shadows, for the world to fade with the light. */
   readonly shadows: Img[] = [];
   private doorMotes: Emitter;
   private roomMotes: Emitter;
+  private sunMotes: Emitter;
+  private moonMotes: Emitter;
+  private rays: Img[] = [];
+  private pools: Img[] = [];
+  private roseGlow: Img;
+  private windowLights: Phaser.GameObjects.Light[] = [];
+  /** Lantern and runestone halos outside, brighter as night falls. */
+  private nightHalos: { img: Img; base: number }[] = [];
   private keepers: { id: Keeper; x: number; y: number; label: Phaser.GameObjects.BitmapText }[] = [];
   /** The keeper the hero is standing by, whose counter has been called up. */
   private near: Keeper | null = null;
@@ -52,34 +79,54 @@ export class RuneTemple {
     warmSanctum(scene);
     const add = scene.add;
 
-    // Outside: the temple, its glow, and its shadow on the grass.
+    // Outside: the chapel and its shadow on the grass.
     const oy = TEMPLE_ART_OY / TEMPLE_ART_H;
     const depth = TEMPLE_Y - 14;
     add.image(TEMPLE_X, TEMPLE_Y, 'rs_temple', 't0').setOrigin(0.5, oy).setPipeline('Lit').setDepth(depth);
     add.image(TEMPLE_X, TEMPLE_Y, 'rs_temple_e', 't0').setOrigin(0.5, oy).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1);
     this.shadows.push(sunShadow(add.image(TEMPLE_X, TEMPLE_Y, 'rs_temple_s', 't0').setOrigin(0.5, oy)));
-    // The crystal above the spire, and the doorway's light.
-    this.crystal(TEMPLE_X, TEMPLE_Y - TEMPLE_ART_OY + 1, depth + 0.2, 90);
-    scene.glowLight(TEMPLE_X, TEMPLE_Y - 30, 120, 0xa070ff, 1.7, 0.55, 0x9a60ff, 2);
+    // The lamplit hall through the open doors, and the lanterns either side.
+    scene.glowLight(TEMPLE_X, TEMPLE_Y - 16, 70, 0xffa050, 1.1, 0.3, 0xff9a40, 0.9);
+    const halo = (x: number, y: number, tint: number, scale: number, base: number) =>
+      this.nightHalos.push({ img: add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(tint).setScale(scale).setDepth(y + 40), base });
+    for (const sx of [-1, 1]) halo(TEMPLE_X + sx * 22, TEMPLE_Y - 48, 0xffa850, 0.7, 0.75);
+    // Two runestones flanking the steps, their runes faintly violet.
+    RUNESTONES.forEach((r, k) => {
+      const ro = RUNESTONE_OY / RUNESTONE_H;
+      add.image(r.x, r.y, 'shadow').setDepth(1).setAlpha(0.6);
+      add.image(r.x, r.y, 'rs_runestone', `r${k}`).setOrigin(0.5, ro).setPipeline('Lit').setDepth(r.y);
+      add.image(r.x, r.y, 'rs_runestone_e', `r${k}`).setOrigin(0.5, ro).setBlendMode(Phaser.BlendModes.ADD).setDepth(r.y + 0.1);
+      this.shadows.push(sunShadow(add.image(r.x, r.y, 'rs_runestone_s', `r${k}`).setOrigin(0.5, ro)));
+      halo(r.x, r.y - 20, 0x9a70ff, 0.9, 0.4);
+    });
     this.doorMotes = add.particles(0, 0, 'spark', {
-      x: { min: TEMPLE_X - 9, max: TEMPLE_X + 9 },
-      y: { min: TEMPLE_Y - 40, max: TEMPLE_Y - 16 },
-      lifespan: { min: 1200, max: 2200 },
-      speedY: { min: -14, max: -5 },
+      // A few specks of lamplit dust drifting out over the sill.
+      x: { min: TEMPLE_X - 7, max: TEMPLE_X + 7 },
+      y: { min: TEMPLE_Y - 20, max: TEMPLE_Y - 14 },
+      lifespan: { min: 1800, max: 2800 },
+      speedY: { min: -4, max: 1 },
       speedX: { min: -3, max: 3 },
-      scale: 0.5,
-      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * Math.PI) * 0.9 },
-      tint: [0xd8b8ff, 0xa070ff, 0xffffff],
+      scale: 0.4,
+      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * Math.PI) * 0.5 },
+      tint: [0xffd890, 0xffb060],
       blendMode: Phaser.BlendModes.ADD,
-      frequency: 150,
+      frequency: 420,
     }).setDepth(depth + 1);
 
     // Inside: the room itself.
     ground(add.image(ROOM_X, ROOM_Y, 'rs_room').setOrigin(0).setPipeline('Lit').setDepth(0));
     ground(add.image(ROOM_X, ROOM_Y, 'rs_room_e').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(2));
-    // The rose window's light falling across the floor.
-    add.image(ROOM_X + WINDOW.x, ROOM_Y + WINDOW.y + 70, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x7a8cff).setScale(5, 3.6).setAlpha(0.14).setDepth(3);
-    scene.glowLight(ROOM_X + WINDOW.x, ROOM_Y + WINDOW.y + 40, 230, 0xa8b8ff, 1.3, 1, 0x9aa8ff, 2.6);
+    // Light through the windows: a shaft from each, pooling where it lands,
+    // and the glass itself shining with what is outside.
+    this.roseGlow = add.image(ROOM_X + WINDOW.x, ROOM_Y + WINDOW.y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(2.6).setDepth(4);
+    for (const w of SHAFTS) {
+      const ray = add.image(ROOM_X + w.x, ROOM_Y + w.y, 'rs_ray', w.frame).setOrigin(18 / GODRAY_W, 0).setScale(w.sx, w.sy).setBlendMode(Phaser.BlendModes.ADD).setDepth(9990);
+      this.rays.push(ray);
+      const fx = ROOM_X + w.x + (GODRAY_W * 0.37) * w.sx;
+      const fy = ROOM_Y + w.y + 150 * w.sy;
+      this.pools.push(add.image(fx, fy, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(2.6 * w.sx, 1.1 * w.sx).setDepth(3));
+      this.windowLights.push(scene.lights.addLight(fx - 6 * w.sx, fy - 30 * w.sy, 150 * w.sx, SUN.light, 1));
+    }
 
     for (const p of PILLARS) {
       const x = ROOM_X + p.x;
@@ -115,8 +162,7 @@ export class RuneTemple {
       this.keepers.push({ id, x, y, label });
     }
 
-    // A crystal turning over the rune circle, and dust drifting in the lamplight.
-    this.crystal(ROOM_X + CIRCLE.x, ROOM_Y + CIRCLE.y - 8, ROOM_Y + CIRCLE.y, 130);
+    // Dust drifting in the lamplight.
     this.roomMotes = add.particles(0, 0, 'spark', {
       x: { min: ROOM_X + 40, max: ROOM_X + ROOM_W - 40 },
       y: { min: ROOM_Y + 60, max: ROOM_Y + ROOM_H - 40 },
@@ -130,12 +176,49 @@ export class RuneTemple {
       frequency: 200,
     }).setDepth(9999);
     this.roomMotes.emitting = false;
+    // Dust turning in the sunbeams by day; by night a few slow blue specks rising.
+    const beamZone = {
+      getRandomPoint: (p: Phaser.Types.Math.Vector2Like) => {
+        const w = SHAFTS[Math.random() < 0.5 ? 0 : 1 + Math.floor(Math.random() * 2)];
+        const u = Math.random();
+        p.x = ROOM_X + w.x + (Math.random() - 0.5) * (12 + u * 20) * w.sx + u * GODRAY_W * 0.37 * w.sx;
+        p.y = ROOM_Y + w.y + 10 + u * 140 * w.sy;
+        return p;
+      },
+    };
+    const zone = { type: 'random', source: beamZone } as unknown as Phaser.Types.GameObjects.Particles.EmitZoneData;
+    this.sunMotes = add.particles(0, 0, 'spark', {
+      emitZone: zone,
+      lifespan: { min: 2600, max: 4200 },
+      speedY: { min: 1, max: 5 },
+      speedX: { min: -2, max: 4 },
+      scale: { min: 0.3, max: 0.5 },
+      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * Math.PI) * 0.8 },
+      tint: [0xfff0c0, 0xffd890, 0xffffff],
+      blendMode: Phaser.BlendModes.ADD,
+      frequency: 90,
+      emitting: false,
+    }).setDepth(9991);
+    this.moonMotes = add.particles(0, 0, 'spark', {
+      emitZone: zone,
+      lifespan: { min: 4000, max: 6500 },
+      speedY: { min: -4, max: -1 },
+      speedX: { min: -1.5, max: 1.5 },
+      scale: 0.4,
+      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * Math.PI) * 0.6 },
+      tint: [0xb8c8ff, 0x8aa0ff, 0xe8f0ff],
+      blendMode: Phaser.BlendModes.ADD,
+      frequency: 260,
+      emitting: false,
+    }).setDepth(9991);
 
     // Half the motes on Fast graphics.
     this.offQuality = settings.watch((s) => {
       const k = s.quality !== 'full' ? 2 : 1;
-      this.doorMotes.frequency = 150 * k;
+      this.doorMotes.frequency = 420 * k;
       this.roomMotes.frequency = 200 * k;
+      this.sunMotes.frequency = 90 * k;
+      this.moonMotes.frequency = 260 * k;
     });
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.offQuality();
@@ -143,22 +226,14 @@ export class RuneTemple {
     });
   }
 
-  /** A crystal hovering at (x, y), bobbing, with a light under it. */
-  private crystal(x: number, y: number, depth: number, radius: number): void {
-    const add = this.scene.add;
-    const lit = add.sprite(x, y, 'rs_crystal', 'f0').setOrigin(0.5, 1).setPipeline('Lit').setDepth(depth).play('rs_crystal_loop');
-    const glow = add.sprite(x, y, 'rs_crystal_e', 'f0').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1).play('rs_crystal_e_loop');
-    this.scene.tweens.add({ targets: [lit, glow], y: y - 3, duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-    this.scene.glowLight(x, y - 10, radius, 0xb088ff, 1.5, 0.6, 0xa070ff, 1.4);
-  }
-
   /**
    * After the hero moves: 'enter' or 'exit' when they walk through the door,
    * and a keeper's counter called up when they walk up to one.
    */
-  update(x: number, y: number, inside: boolean, view: Phaser.Geom.Rectangle): 'enter' | 'exit' | null {
+  update(x: number, y: number, inside: boolean, view: Phaser.Geom.Rectangle, daylight: number): 'enter' | 'exit' | null {
     this.doorMotes.emitting = !inside && view.right > TEMPLE_X - 40 && view.left < TEMPLE_X + 40;
     this.roomMotes.emitting = inside;
+    this.light(inside, daylight);
     if (!inside) {
       this.near = null;
       return atTempleDoor(x, y) ? 'enter' : null;
@@ -169,7 +244,32 @@ export class RuneTemple {
       this.near = k;
       keeperCall.want = k;
     } else if (this.near && !this.keeperAt(x, y, TALK_R + REARM)) this.near = null;
+    // Walking away from the keeper whose counter is open closes it.
+    if (keeperCall.open && this.keeperAt(x, y, TALK_R + REARM + 6) !== keeperCall.open) keeperCall.leave = true;
     return null;
+  }
+
+  /** The windows let in the world's light: gold shafts that shimmer by day, still blue moonbeams by night. */
+  private light(inside: boolean, d: number): void {
+    const night = 1 - d;
+    for (const h of this.nightHalos) h.img.setAlpha(h.base * (0.15 + night * 0.85));
+    this.sunMotes.emitting = inside && d > 0.45;
+    this.moonMotes.emitting = inside && d <= 0.45;
+    if (!inside) return;
+    const t = this.scene.time.now;
+    const ray = lerpColor(MOON.ray, SUN.ray, d);
+    const pool = lerpColor(MOON.pool, SUN.pool, d);
+    const lamp = lerpColor(MOON.light, SUN.light, d);
+    this.rays.forEach((r, k) => {
+      // By day the shafts breathe as clouds pass; by night they hold still.
+      const shimmer = 1 + (Math.sin(t * 0.0009 + k * 2.1) * 0.12 + Math.sin(t * 0.0023 + k) * 0.06) * d;
+      r.setTint(ray).setAlpha((0.34 + d * 0.5) * shimmer);
+      this.pools[k].setTint(pool).setAlpha((0.14 + d * 0.3) * shimmer);
+      const l = this.windowLights[k];
+      l.setColor(lamp);
+      l.intensity = (0.7 + d * 1.3) * shimmer * (k === 0 ? 1 : 0.7);
+    });
+    this.roseGlow.setTint(lerpColor(0x6a80ff, 0xffe8b8, d)).setAlpha(0.28 + d * 0.22);
   }
 
   /** Talk to the keeper the hero stands by, if any (the E key). */

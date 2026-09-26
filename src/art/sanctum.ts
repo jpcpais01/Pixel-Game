@@ -2,18 +2,16 @@
 // inside it (painted in one piece, lit, with a normal map and a glow layer),
 // the things that stand in the room, and its two keepers.
 //
-// Outside: a small temple of pale lavender marble on three broad steps, four
-// fluted columns with gold capitals, violet banners between them, a frieze of
-// glowing runes, and over it all a deep blue dome ribbed in gold with a gold
-// spire. A crystal floats above the spire, and the arched doorway is a swirl
-// of violet light.
+// Outside: an old chapel of the plaza's own weathered stone under a mossy
+// slate roof, oak doors open on a lamplit hall, two runestones by its steps.
 //
 // Inside: a marble north wall with a great rose window of stained glass, two
 // tall lancet windows and a band of runes; the keepers' banners hang on it,
 // violet for the Unmaker, crimson for the Runesmith. The floor is polished
-// indigo stone laid in a checker, veined, with the window's light pooling on
-// it; a gold and violet rune circle lies in the middle, a crimson runner leads
-// in from the door, and each keeper has a round dais ringed in their colour.
+// indigo stone laid in diamonds, veined, with gold stars where the corners
+// meet; a rosette of twelve petals inside a gold and violet rune circle lies
+// in the middle, a crimson runner leads in from the door, and each keeper has
+// a round dais ringed in their colour.
 //
 // Nyx the Unmaker, who breaks gear down into dust: tall and slender in a
 // starry violet robe, long silver hair, glowing eyes, a crescent staff in one
@@ -37,36 +35,30 @@ const UP: N3 = [0, 0, 1];
 
 // ---------------------------------------------------------------- Palette
 
-const WALL = ramp('#110e1a', '#1a1628', '#241e36', '#2f2846', '#3c3458', '#4b426c', '#5c5282', '#71669a');
-const CAPS = ramp('#0d0b15', '#15121f', '#1e1a2c', '#28223a', '#332c4a', '#3f375a');
-const TILE_A = ramp('#0b0a14', '#110f1f', '#17142a', '#1e1a36', '#262142', '#2f2950', '#39325f');
-const TILE_B = ramp('#0e0a16', '#150f22', '#1c142e', '#241a3a', '#2d2148', '#372856', '#433068');
-const DAIS_ST = ramp('#14111e', '#1d1a2c', '#27233a', '#322d4a', '#3e385c', '#4b446e', '#5a5282');
-const GOLDS = ramp('#3a2008', '#6a3e12', '#9e6420', '#d69a3a', '#f4cf6a', '#fff4bf');
-const RUNNER = ramp('#16040b', '#2a0814', '#420e20', '#5c142c', '#781c3a', '#94284a');
-const MASS: RGB = hex('#06050b');
-const INK_R: RGB = hex('#050409');
-const VIOLET: RGB = [176, 120, 255];
-const GOLDEN: RGB = [255, 196, 96];
-const PALE: RGB = [236, 224, 255];
+export const WALL = ramp('#110e1a', '#1a1628', '#241e36', '#2f2846', '#3c3458', '#4b426c', '#5c5282', '#71669a');
+export const CAPS = ramp('#0d0b15', '#15121f', '#1e1a2c', '#28223a', '#332c4a', '#3f375a');
+export const TILE_A = ramp('#0b0a14', '#110f1f', '#17142a', '#1e1a36', '#262142', '#2f2950', '#39325f');
+export const TILE_B = ramp('#0e0a16', '#150f22', '#1c142e', '#241a3a', '#2d2148', '#372856', '#433068');
+export const PETAL_V = ramp('#140a26', '#20103a', '#2e1852', '#3e226c', '#523088', '#6a42a6', '#8458c4');
+export const PETAL_R = ramp('#1a0c1c', '#28122a', '#3a1a3c', '#4e2450', '#643066', '#7c407e');
+export const DAIS_ST = ramp('#14111e', '#1d1a2c', '#27233a', '#322d4a', '#3e385c', '#4b446e', '#5a5282');
+export const GOLDS = ramp('#3a2008', '#6a3e12', '#9e6420', '#d69a3a', '#f4cf6a', '#fff4bf');
+export const RUNNER = ramp('#16040b', '#2a0814', '#420e20', '#5c142c', '#781c3a', '#94284a');
+export const MASS: RGB = hex('#06050b');
+export const INK_R: RGB = hex('#050409');
+export const VIOLET: RGB = [176, 120, 255];
+export const GOLDEN: RGB = [255, 196, 96];
+export const PALE: RGB = [236, 224, 255];
 /** The rose window's glass, from the middle out: gold, then violet and rose petals, then blue and teal. */
-const GLASS: Record<string, RGB> = { gold: hex('#ffcc5a'), violet: hex('#9a5aff'), rose: hex('#ff6aa8'), blue: hex('#4a8aff'), teal: hex('#4ae0d4') };
+export const GLASS: Record<string, RGB> = { gold: hex('#ffcc5a'), violet: hex('#9a5aff'), rose: hex('#ff6aa8'), blue: hex('#4a8aff'), teal: hex('#4ae0d4') };
 /** Each keeper's colour: their dais ring and banner. */
 export const KEEPER_TINT = { disenchant: 0xb078ff, upgrade: 0xffc060 } as const;
-const KEEPER_RGB: Record<'disenchant' | 'upgrade', RGB> = { disenchant: VIOLET, upgrade: GOLDEN };
+export const KEEPER_RGB: Record<'disenchant' | 'upgrade', RGB> = { disenchant: VIOLET, upgrade: GOLDEN };
 
 export interface SanctumArt {
   diffuse: Uint8ClampedArray;
   normal: Uint8ClampedArray;
   emissive: Uint8ClampedArray;
-}
-
-/** Distance from (px, py) to the segment (ax, ay)-(bx, by). */
-function segDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
-  const vx = bx - ax;
-  const vy = by - ay;
-  const t = Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / (vx * vx + vy * vy || 1)));
-  return Math.hypot(px - ax - vx * t, py - ay - vy * t);
 }
 
 /** The room inside the temple, painted in one piece: ROOM_W x ROOM_H. */
@@ -101,16 +93,6 @@ export function* sanctumArt(): Generator<void, SanctumArt, void> {
   const shadeOf = (n: N3) => (n[0] * L.x + n[1] * L.y + n[2] * L.z) / ((Math.hypot(n[0], n[1], n[2]) || 1) * Ll);
   const pick = (r: RGB[], idx: number) => r[Math.max(0, Math.min(r.length - 1, Math.round(idx)))];
   const faceN: N3 = [0, -0.5, 0.86];
-
-  // The rune circle's star: two triangles inside its inner ring.
-  const star: [number, number, number, number][] = [];
-  for (const rot of [-Math.PI / 2, Math.PI / 2]) {
-    const pts = [0, 1, 2].map((k) => {
-      const a = rot + (k * Math.PI * 2) / 3;
-      return [CIRCLE.x + Math.cos(a) * CIRCLE.rx * 0.72, CIRCLE.y + Math.sin(a) * CIRCLE.ry * 0.72] as const;
-    });
-    for (let k = 0; k < 3; k++) star.push([pts[k][0], pts[k][1], pts[(k + 1) % 3][0], pts[(k + 1) % 3][1]]);
-  }
 
   for (let y = 0; y < H; y++) {
     if (y % 12 === 0) yield;
@@ -301,24 +283,47 @@ export function* sanctumArt(): Generator<void, SanctumArt, void> {
         }
         if (done) continue;
 
-        // Polished stone laid in a checker: bevelled edges, pale veins.
-        const tx = Math.floor(x / 16);
-        const ty = Math.floor(fy / 12);
-        const lx = x % 16;
-        const ly = fy % 12;
-        const base = (tx + ty) % 2 ? TILE_A : TILE_B;
-        if (lx === 0 || ly === 0) {
-          put(i, pick(base, 0), UP);
-          continue;
-        }
+        // Polished stone laid on the diagonal: diamonds in two shades, bevelled,
+        // pale veins, a fine inlaid line in every other one and a gold star
+        // where four corners meet.
+        const dp = (x + 0.5 - CIRCLE.x) / 22 + (fy + 0.5) / 16;
+        const dq = (x + 0.5 - CIRCLE.x) / 22 - (fy + 0.5) / 16;
+        const ip = Math.floor(dp);
+        const iq = Math.floor(dq);
+        const fp = dp - ip;
+        const fq = dq - iq;
+        const odd = (ip + iq) & 1;
+        const base = odd ? TILE_A : TILE_B;
+        const ep = Math.min(fp, 1 - fp);
+        const eq = Math.min(fq, 1 - fq);
         let n: N3 = UP;
-        let idx = 3.2 + (hash2(tx, ty, 351) - 0.5) * 0.8;
-        if (lx === 1 || ly === 1) {
-          n = [-0.25, 0.3, 0.9];
-          idx += 0.8;
-        } else if (lx === 15 || ly === 11) {
-          n = [0.25, -0.3, 0.9];
-          idx -= 0.7;
+        let idx = 3.2 + (hash2(ip, iq, 351) - 0.5) * 0.7;
+        let glow: RGB | undefined;
+        let gk = 0;
+        let gold = false;
+        let grout = false;
+        if (ep + eq < 0.1) gold = true;
+        else if (ep < 0.035 || eq < 0.035) grout = true;
+        else {
+          if (fp < 0.08) {
+            n = [-0.25, 0.3, 0.9];
+            idx += 0.7;
+          } else if (fp > 0.93) {
+            n = [0.25, -0.3, 0.9];
+            idx -= 0.6;
+          } else if (fq < 0.08) {
+            n = [-0.25, -0.3, 0.9];
+            idx += 0.3;
+          } else if (fq > 0.93) {
+            n = [0.25, 0.3, 0.9];
+            idx -= 0.3;
+          }
+          // The inlaid diamond inside every other tile.
+          if (!odd && Math.abs(Math.max(Math.abs(fp - 0.5), Math.abs(fq - 0.5)) - 0.27) < 0.02) {
+            idx += 1;
+            glow = GOLDEN;
+            gk = 0.03;
+          }
         }
         const vein = Math.abs(fbm(x, y * 1.3, 18, 353, 3) - 0.5);
         if (vein < 0.012) idx += 1.6;
@@ -329,14 +334,13 @@ export function* sanctumArt(): Generator<void, SanctumArt, void> {
         if (fy < 8) idx -= (8 - fy) / 3.2;
         const side = Math.min(x - IN_L, IN_R - 1 - x, FLOOR_BOT - 1 - y);
         if (side < 10) idx -= (10 - side) / 5;
-        let glow: RGB | undefined;
-        let gk = 0;
-        if (pool > 0.1) {
+        if (pool > 0.1 && !glow) {
           glow = mix(GLASS.violet, GLASS.blue, 0.5);
           gk = pool * 0.12 * (0.7 + hash2(x >> 1, y >> 1, 355) * 0.3);
         }
 
-        // The rune circle: a gold ring, a band of runes, a violet ring and a star inside.
+        // The rune circle: a gold ring, a band of runes, a violet ring, and a
+        // rosette of twelve petals in two layers inside, outlined in gold.
         const cu = (x + 0.5 - CIRCLE.x) / CIRCLE.rx;
         const cv = (y + 0.5 - CIRCLE.y) / CIRCLE.ry;
         const cr = Math.hypot(cu, cv);
@@ -358,18 +362,43 @@ export function* sanctumArt(): Generator<void, SanctumArt, void> {
             else put(i, pick(TILE_A, 1.5), UP);
             continue;
           }
-          const onStar = star.some(([ax, ay, bx, by]) => segDist(x + 0.5, y + 0.5, ax, ay, bx, by) < 0.7);
-          if (onStar) {
-            put(i, mix(pick(TILE_A, 2), PALE, 0.4), UP, VIOLET, 0.35);
-            continue;
+          const r = cr / 0.8;
+          const a = Math.atan2(cv, cu);
+          const co = Math.abs(Math.cos(6 * a));
+          const si = Math.abs(Math.sin(6 * a));
+          const outer = 0.97 * (0.46 + 0.54 * co ** 0.7);
+          const inner = 0.66 * (0.5 + 0.5 * si ** 0.7);
+          const lw = 0.04;
+          const shine = 0.5 + pool * 0.2;
+          if (r < 0.13) {
+            // The boss in the middle: a domed gold stud.
+            const nn: N3 = [cu * 3, -cv * 3, 0.8];
+            put(i, pick(GOLDS, 3 + shadeOf(nn) * 1.5), nn, GOLDEN, 0.5);
+          } else if (r < 0.19) put(i, r < 0.16 ? pick(TILE_A, 1) : pick(GOLDS, 3), UP, GOLDEN, r < 0.16 ? 0 : 0.35);
+          else if (Math.abs(r - inner) < lw || Math.abs(r - outer) < lw) put(i, pick(GOLDS, 2.6 + (r < inner ? 0.6 : 0)), UP, GOLDEN, 0.16);
+          else if (r < inner) {
+            // Inner petals, rose over pale stone, a vein down the middle.
+            const rib = co < 0.06 && r > 0.24;
+            const c = mix(pick(PETAL_R, 2 + (inner - r) * 3 + (rib ? 1.4 : 0)), PALE, rib ? 0.15 : 0);
+            put(i, c, UP, GLASS.rose, (0.1 + (rib ? 0.12 : 0)) * shine);
+          } else if (r < outer) {
+            // Outer petals, violet, darker toward their tips.
+            const rib = si < 0.06;
+            put(i, pick(PETAL_V, 2.8 - (r - inner) * 2.6 + (rib ? 1.3 : 0)), UP, VIOLET, (0.1 + (rib ? 0.14 : 0)) * shine);
+          } else {
+            // Between the petals: deep stone, flecked with tiny stars.
+            const fleck = hash2(x, y, 359) > 0.97;
+            put(i, fleck ? mix(pick(TILE_A, 2), PALE, 0.6) : pick(TILE_A, 1.2), UP, fleck ? PALE : VIOLET, fleck ? 0.5 : 0.05);
           }
-          if (cr < 0.2 && cr > 0.14) {
-            put(i, pick(GOLDS, 4), UP, GOLDEN, 0.45);
-            continue;
-          }
-          idx -= 0.4;
-          glow = VIOLET;
-          gk = Math.max(gk, (1 - cr) * 0.08);
+          continue;
+        }
+        if (gold) {
+          put(i, pick(GOLDS, ep + eq < 0.05 ? 3.6 : 2.4), UP, GOLDEN, 0.1);
+          continue;
+        }
+        if (grout) {
+          put(i, pick(base, 0.2 + pool * 0.6), UP);
+          continue;
         }
         put(i, pick(base, idx + shadeOf(n) * 0.5), n, glow, gk);
         continue;
@@ -414,15 +443,11 @@ export function* sanctumArt(): Generator<void, SanctumArt, void> {
 
 const INK = hex('#120e1f');
 const MARBLE: Material = { ramp: ramp('#2a2440', '#3c3458', '#544a74', '#6e6492', '#8c82b0', '#aca3cc', '#cec7e6', '#ece8f8'), outline: INK, outlineLit: hex('#3a3258') };
-const MARBLE_DK: Material = { ramp: ramp('#1c1830', '#282244', '#383058', '#4a4270', '#5c5488'), outline: INK };
-const DOME: Material = { ramp: ramp('#120e2c', '#1c1644', '#28205e', '#352c7c', '#463c9c', '#5a52bc', '#7470d8'), outline: hex('#0a0818'), shine: true };
 const PORTAL: Material = { ramp: ramp('#3a1a80', '#5a30c0', '#8a60f0', '#c0a0ff', '#f4ecff'), outline: hex('#1a0a40'), emissive: 0.9, noAO: true, noOutline: true };
 const GEM_V: Material = { ramp: ramp('#2a1060', '#5a2ab0', '#9a6af0', '#dcc8ff', '#ffffff'), outline: hex('#140828'), emissive: 0.7, shine: true, noAO: true };
 const GEM_G: Material = { ramp: ramp('#5a2a08', '#a0580e', '#e09a28', '#ffd870', '#fff8d8'), outline: hex('#2a1004'), emissive: 0.8, shine: true, noAO: true };
-const CLOTH_V: Material = { ramp: ramp('#1a0e32', '#2a1650', '#3e2272', '#563096', '#7044bc'), outline: INK };
-const MOSS_M: Material = { ramp: ramp('#14240e', '#1e3614', '#2c4e1c', '#3e6a26', '#58883a'), outline: hex('#0a1406') };
 const STONE_DK: Material = { ramp: ramp('#0e0c14', '#18141f', '#221d2c', '#2e273a', '#3a3248', '#474058'), outline: hex('#06050a'), outlineLit: hex('#1e1a28') };
-const IRON: Material = { ramp: ramp('#0c0c12', '#16161f', '#22222e', '#30303e', '#444454', '#5c5c70', '#8a8aa0'), outline: hex('#040408'), shine: true };
+export const IRON: Material = { ramp: ramp('#0c0c12', '#16161f', '#22222e', '#30303e', '#444454', '#5c5c70', '#8a8aa0'), outline: hex('#040408'), shine: true };
 const DUST: Material = { ramp: ramp('#2a1060', '#4a22a0', '#7a48e0', '#b08cff', '#e8dcff'), outline: hex('#140828'), emissive: 0.85, noAO: true, noOutline: true };
 const EMBERS: Material = { ramp: ramp('#5a1a04', '#a0400a', '#e08a20', '#ffc860', '#fff4c0'), outline: hex('#2a0a02'), emissive: 0.9, noAO: true, noOutline: true };
 
@@ -431,168 +456,319 @@ const top = (t = 0): Vec3 => ({ x: t * 0.2, y: 0.75, z: 0.65 });
 
 // ---------------------------------------------------------------- The temple, outside
 
-export const TEMPLE_ART_W = 144;
-export const TEMPLE_ART_H = 138;
-/** Feet row: the bottom of the lowest step. */
-export const TEMPLE_ART_OY = 134;
+export const FIELDSTONE: Material = { ramp: ramp('#2a262c', '#3a353c', '#4a444c', '#5c5560', '#726a72', '#8a8286', '#a49a96', '#bdb2a6'), outline: hex('#141018'), outlineLit: hex('#3a3238') };
+export const ROOF_SLATE: Material = { ramp: ramp('#12151e', '#1a1f2c', '#232a3a', '#2d3648', '#384358', '#45526a', '#56657e'), outline: hex('#08090e'), outlineLit: hex('#1e2432') };
+export const ROOF_MOSS: Material = { ramp: ramp('#15291a', '#1f3a20', '#2c4f26', '#3b652c', '#4f7e34', '#68993e', '#86b24c'), outline: hex('#0a160a') };
+export const BUSH: Material = { ramp: ramp('#10240f', '#1a3616', '#264c1e', '#346428', '#467e32', '#5e9a3e'), outline: hex('#081206') };
+export const OAK: Material = { ramp: ramp('#1c110b', '#2c1b11', '#402818', '#553722', '#6c472d'), outline: hex('#0c0604') };
+export const HEARTH: Material = { ramp: ramp('#6a2a08', '#a8501a', '#e08a34', '#ffc466', '#fff0c4'), outline: hex('#2a0c02'), emissive: 0.85, noAO: true, noOutline: true };
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
+/** The dim hall seen through an open door. */
+export const HALL_DARK: Material = { ramp: ramp('#07050a', '#0e0a0e', '#161012', '#201614', '#2c1e16', '#3a2818'), outline: hex('#050306'), noAO: true, noOutline: true };
+
+/**
+ * One pixel of the hall seen through an open doorway: dark deep inside, the
+ * lamplight within falling warm on its floor and fading up into the dark,
+ * dithered so it reads as depth rather than bands. `k` runs 0 at the arch's
+ * top to 1 at the sill, `side` is the distance from the doorway's middle,
+ * `fromSill` how many rows above the sill.
+ */
+export function doorway(c: PixelCanvas, x: number, y: number, side: number, k: number, fromSill: number): void {
+  const n: Vec3 = { x: 0, y: 0, z: 1 };
+  const warm = Math.max(0, (k - 0.5) / 0.5) ** 1.8 * (1 - side / 14);
+  // Ordered dither, so the light fades in an even pattern rather than speckle.
+  const d = (BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16;
+  // The hall's floor: a few rows of warm-lit flagstones running in.
+  if (fromSill < 4) {
+    const lit = d < 0.25 + warm * 0.6;
+    c.px(x, y, lit ? HEARTH : HALL_DARK, n, lit ? { bias: -2 + (fromSill < 1 ? 1 : 0), glow: 0.25 + warm * 0.3 } : { bias: 5 });
+    return;
+  }
+  if (d < warm * 0.55) c.px(x, y, HEARTH, n, { bias: -2, glow: 0.2 + warm * 0.2 });
+  else c.px(x, y, HALL_DARK, n, { bias: Math.floor(k * 3.4 - side / 7 + d) });
+}
+
+export const RUNE_GLASS: Material = { ramp: ramp('#2a1060', '#4a2aa0', '#7a50e0', '#b096ff', '#eee4ff'), outline: hex('#140828'), emissive: 0.7, noAO: true };
+
+export const TEMPLE_ART_W = 176;
+export const TEMPLE_ART_H = 156;
+/** Feet row: the bottom of the lowest step. */
+export const TEMPLE_ART_OY = 152;
+
+/**
+ * The Rune Temple: an old chapel of the plaza's own weathered stone at the
+ * forest's edge. A steep roof of dark slate, thick with moss, a stone gable
+ * over the door with a small rose of rune glass, oak doors standing open on a
+ * warm lamplit hall, two arched windows glowing over flower boxes, iron
+ * lanterns, ivy up the corners and bushes at its feet.
+ */
 export function sanctumExterior(): PixelCanvas {
   const c = new PixelCanvas(TEMPLE_ART_W, TEMPLE_ART_H);
-  const cx = 72;
+  const cx = 88;
+  const wallTop = 82;
+  const front = 138;
+  const wl = 14;
+  const wr = 162;
+  const wallN: Vec3 = { x: 0, y: -0.45, z: 0.88 };
 
-  // The dome on its drum, ribbed in gold, and the spire.
+  /** Rough-cut stone courses: each block its own tone, mortar dark, top edges catching the light. */
+  const masonry = (x0: number, x1: number, y0: number, y1: number, rowH: number, seed: number, keep?: (x: number, y: number) => boolean) => {
+    for (let y = y0; y < y1; y++) {
+      const row = Math.floor((y - y0) / rowH);
+      const ly = (y - y0) % rowH;
+      const off = Math.floor(hash2(row, 0, seed) * 14);
+      for (let x = x0; x < x1; x++) {
+        if (keep && !keep(x, y)) continue;
+        const bw = 10 + Math.floor(hash2(Math.floor((x + off) / 12), row, seed + 1) * 3) * 2;
+        const lx = (x + off) % bw;
+        const block = hash2(Math.floor((x + off) / bw), row, seed + 2);
+        let bias = Math.round((block - 0.5) * 2.2 + (fbm(x, y, 5, seed + 3, 2) - 0.5) * 1.2);
+        if (ly === rowH - 1 || lx === 0) bias = -3;
+        else if (ly === 0) bias += 1;
+        const mossy = fbm(x, y, 9, seed + 4, 2) > 0.66 && (ly === rowH - 1 || lx === 0 || y > y1 - 8);
+        if (mossy) c.px(x, y, BUSH, wallN, { bias: -1 });
+        else c.px(x, y, FIELDSTONE, wallN, { bias });
+      }
+    }
+  };
+
+  // The roof: slate shingles in rows, moss creeping over them, the ridge capped in stone.
+  const ridge = 22;
+  const eaves = wallTop + 2;
+  const roofHw = (y: number) => 58 + ((y - ridge) / (eaves - ridge)) * 28;
   c.part();
-  c.shape(42, 53, () => [cx - 30, cx + 30], MARBLE, (_x, _y, t) => cyl(t, 0.1));
-  for (const wx of [cx - 18, cx, cx + 18]) {
-    c.part();
-    c.ellipse(wx, 47.5, 2.3, 2.6, PORTAL, { glow: 0.8 });
-  }
-  c.part();
-  const dcy = 44;
-  c.shape(14, 44, (y) => {
-    const v = (y + 0.5 - dcy) / 30;
-    const hw = 28 * Math.sqrt(Math.max(0, 1 - v * v));
-    return hw > 0.5 ? [cx - hw, cx + hw] : null;
-  }, DOME, (_x, y, t) => sphere(t * 0.95, (dcy - y) / 32, 1));
-  c.part();
-  for (const k of [-0.75, -0.38, 0, 0.38, 0.75]) {
-    for (let y = 16; y <= 43; y++) {
-      const v = (y + 0.5 - dcy) / 30;
-      const hw = 28 * Math.sqrt(Math.max(0, 1 - v * v));
-      const x = cx + k * hw;
-      c.px(x, y, GOLD, sphere(k * 0.9, (dcy - y) / 32, 1));
+  for (let y = ridge; y <= eaves; y++) {
+    const hw = roofHw(y);
+    const row = Math.floor((y - ridge) / 5);
+    const ly = (y - ridge) % 5;
+    for (let x = Math.round(cx - hw); x < Math.round(cx + hw); x++) {
+      const t = (x + 0.5 - cx) / hw;
+      const n: Vec3 = { x: t * 0.25, y: 0.2, z: 0.95 };
+      const off = row % 2 ? 4 : 0;
+      const col = Math.floor((x + off) / 8);
+      const lx = (x + off) % 8;
+      const moss = fbm(x, y, 11, 401, 3) + (y - ridge) / 160 + Math.abs(t) * 0.12;
+      if (moss > 0.66) {
+        c.px(x, y, ROOF_MOSS, n, { bias: Math.round((fbm(x, y, 3, 403, 2) - 0.5) * 3) + (ly === 4 ? -1 : 0) });
+        continue;
+      }
+      let bias = Math.round((hash2(col, row, 405) - 0.5) * 2);
+      if (ly === 4) bias = -2;
+      else if (ly === 0) bias += 1;
+      if (lx === 0) bias -= 1;
+      c.px(x, y, ROOF_SLATE, n, { bias });
     }
   }
+  // Tufts of grass along the eaves.
+  for (let x = cx - 84; x < cx + 84; x++) if (hash2(x, 1, 407) > 0.55) c.px(x, eaves - 1 - Math.floor(hash2(x, 2, 407) * 2), ROOF_MOSS, { x: 0, y: 0.5, z: 0.85 }, { bias: 2 });
   c.part();
-  c.capsule(cx, 6, cx, 16, 1.2, 2.2, GOLD);
-  c.part();
-  c.ellipse(cx, 5, 1.6, 1.6, GEM_V, { glow: 0.9 });
+  for (let x = cx - 58; x <= cx + 58; x += 5) c.ellipse(x, ridge - 1, 3, 2.4, FIELDSTONE, { bias: 1 });
 
-  // The roof's terrace, seen from above, with a gold finial at each corner.
+  // The walls, and heavier quoins at the corners.
   c.part();
-  c.shape(53, 58, (y) => [20 + (58 - y) * 0.4, 124 - (58 - y) * 0.4], MARBLE, (_x, _y, t) => top(t), { bias: 1 });
-  for (const fx of [24, 120]) {
-    c.part();
-    c.capsule(fx, 51, fx, 56, 1.8, 1.4, GOLD);
-    c.part();
-    c.ellipse(fx, 49.5, 1.4, 1.6, GEM_V, { glow: 0.8 });
-  }
-
-  // The frieze, with its row of glowing runes.
+  masonry(wl, wr, wallTop, front, 8, 411);
   c.part();
-  c.shape(58, 66, () => [18, 126], MARBLE, (_x, y, t) => (y === 58 ? top(t) : front(t)));
-  c.part();
-  for (let x = 22; x < 122; x++) {
-    const k = x % 6;
-    if (k === 0 || k === 5) continue;
-    for (let y = 61; y <= 63; y++) if (hash2(Math.floor(x / 6), y * 7 + k, 371) > 0.5) c.px(x, y, PORTAL, front(0), { glow: 0.75 });
-  }
-  for (let x = 18; x < 126; x++) c.shade(x, 65, -1);
-
-  // The wall behind the columns: courses of darker marble.
-  c.part();
-  c.shape(66, 120, () => [24, 120], MARBLE_DK, (_x, _y, t) => front(t * 0.4));
-  for (let y = 66; y <= 120; y++) {
-    if ((y - 66) % 7 === 6) for (let x = 24; x < 120; x++) c.shade(x, y, -1);
-  }
-
-  // Banners between the outer columns: violet, gold-edged, a gem in the middle.
-  for (const bx of [41, 103]) {
-    c.part();
-    c.shape(71, 96, (y) => {
-      const hw = y > 92 ? 4 - (y - 92) : 4;
-      return hw > 0 ? [bx - hw, bx + hw] : null;
-    }, CLOTH_V, (_x, _y, t) => ({ x: Math.sin(t * 3) * 0.3, y: -0.3, z: 0.9 }));
-    for (let y = 71; y <= 93; y++) {
-      c.px(bx - 4, y, GOLD, front(-0.6));
-      c.px(bx + 3, y, GOLD, front(0.6));
-    }
-    c.part();
-    c.ellipse(bx - 0.5, 82, 1.8, 2.4, GEM_V, { glow: 0.9 });
-    c.part();
-    c.capsule(bx - 6, 70.5, bx + 5, 70.5, 0.7, 0.7, GOLD);
-  }
-
-  // Four fluted columns with gold capitals.
-  for (const px of [31, 51, 93, 113]) {
-    c.part();
-    c.shape(68, 115, () => [px - 3.6, px + 3.6], MARBLE, (_x, _y, t) => cyl(t, 0.15));
-    for (let y = 70; y < 115; y++) c.shade(px - 1, y, -1);
-    for (let y = 70; y < 115; y++) c.shade(px + 2, y, -1);
-    c.part();
-    c.shape(65, 69, (y) => {
-      const hw = y < 67 ? 5.2 : 4.4;
-      return [px - hw, px + hw];
-    }, GOLD, (_x, y, t) => (y === 65 ? top(t) : cyl(t, 0.2)));
-    c.part();
-    c.shape(114, 119, (y) => {
-      const hw = y > 116 ? 5 : 4.4;
-      return [px - hw, px + hw];
-    }, MARBLE, (_x, _y, t) => cyl(t, 0.2), { bias: 1 });
-  }
-  // Ivy climbing the outer columns.
-  c.part();
-  for (let y = 84; y < 118; y++) {
-    const w = Math.sin(y * 0.7) * 1.2;
-    if (hash2(y, 0, 373) > 0.25) c.px(28 + w, y, MOSS_M, sphere(-0.5, 0.2));
-    if (y > 96 && hash2(y, 1, 373) > 0.35) c.px(116 + w, y, MOSS_M, sphere(0.4, 0.2));
-  }
-
-  // The doorway: a gold arch round a swirl of violet light, a gem at its crown.
-  const dx0 = cx;
-  const dy0 = 86;
-  const inArch = (x: number, y: number, r: number) => (y >= dy0 ? Math.abs(x + 0.5 - dx0) < r : Math.hypot(x + 0.5 - dx0, y + 0.5 - dy0) < r);
-  c.part();
-  for (let y = dy0 - 14; y < 120; y++) {
-    for (let x = dx0 - 14; x < dx0 + 14; x++) {
-      if (!inArch(x, y, 13.5) || inArch(x, y, 11)) continue;
-      const t = (x + 0.5 - dx0) / 13.5;
-      c.px(x, y, GOLD, y < dy0 ? sphere(t, (dy0 - y) / 14, 1) : cyl(t, 0.1));
-    }
-  }
-  c.part();
-  for (let y = dy0 - 11; y < 120; y++) {
-    for (let x = dx0 - 11; x < dx0 + 11; x++) {
-      if (!inArch(x, y, 11)) continue;
-      const ax = x + 0.5 - dx0;
-      const ay = y + 0.5 - (dy0 + 8);
-      const r = Math.hypot(ax, ay * 0.7);
-      const a = Math.atan2(ay, ax);
-      const swirl = Math.sin(a * 3 + r * 0.55) * 0.5 + 0.5;
-      const bias = Math.round(swirl * 2 - r / 9);
-      c.px(x, y, PORTAL, { x: 0, y: 0, z: 1 }, { bias, glow: 0.55 + swirl * 0.4 - r / 40 });
-    }
-  }
-  c.part();
-  c.ellipse(dx0, dy0 - 13, 2, 2.2, GEM_V, { glow: 1 });
-  // Lanterns either side of the door.
-  for (const lx of [cx - 18, cx + 18]) {
-    c.part();
-    c.capsule(lx, 88, lx, 93, 1.6, 1.8, GOLD);
-    c.part();
-    c.ellipse(lx, 91, 1.1, 1.8, GEM_G, { glow: 1 });
-  }
-
-  // Three broad steps.
-  const steps: [number, number, number][] = [
-    [120, 124, 50],
-    [124, 129, 56],
-    [129, 134, 62],
-  ];
-  for (const [y0, y1, hw] of steps) {
-    c.part();
-    c.shape(y0, y1, () => [cx - hw, cx + hw], MARBLE, (_x, y, t) => (y - y0 < 2 ? top(t) : front(t)), { bias: 1 });
-    for (let x = cx - hw; x < cx + hw; x++) if (hash2(x, y0, 375) > 0.93) c.shade(x, y0 + 3, -1);
-  }
-  // Moss at the steps' ends.
-  for (const [mx, my] of [
-    [16, 131],
-    [128, 132],
-    [24, 124],
+  for (const [x0, x1] of [
+    [wl, wl + 10],
+    [wr - 10, wr],
   ]) {
-    c.part();
-    c.ellipse(mx, my, 3.2, 1.6, MOSS_M, { flatten: 0.7 });
+    for (let y = wallTop; y < front; y++) {
+      const row = Math.floor((y - wallTop) / 9);
+      const wide = row % 2 === 0;
+      const xa = x0 === wl ? x0 : wide ? x0 : x0 + 3;
+      const xb = x0 === wl ? (wide ? x1 : x1 - 3) : x1;
+      for (let x = xa; x < xb; x++) {
+        const ly = (y - wallTop) % 9;
+        c.px(x, y, FIELDSTONE, wallN, { bias: ly === 8 ? -3 : ly === 0 ? 2 : 1 });
+      }
+    }
   }
+  // The eaves' shadow on the wall.
+  for (let y = wallTop; y < wallTop + 4; y++) for (let x = wl; x < wr; x++) c.shade(x, y, y < wallTop + 2 ? -2 : -1);
+
+  // The doorway: a ring of wedge stones with a rune on its keystone, oak doors open on a warm hall.
+  const spring = 116;
+  const dr = 13;
+  const inArch = (x: number, y: number, r: number) => (y >= spring ? Math.abs(x + 0.5 - cx) < r : Math.hypot(x + 0.5 - cx, y + 0.5 - spring) < r);
+  c.part();
+  for (let y = spring - dr - 5; y < front; y++) {
+    for (let x = cx - dr - 5; x < cx + dr + 5; x++) {
+      if (!inArch(x, y, dr + 4) || inArch(x, y, dr)) continue;
+      const a = Math.atan2(y + 0.5 - spring, x + 0.5 - cx);
+      const seam = y < spring ? Math.abs(((a / Math.PI) * 9) % 1) < 0.12 : (y - spring) % 7 === 6;
+      c.px(x, y, FIELDSTONE, wallN, { bias: seam ? -2 : 2 });
+    }
+  }
+  c.part();
+  for (let y = 0; y < front; y++) {
+    for (let x = cx - dr; x < cx + dr; x++) {
+      if (!inArch(x, y, dr)) continue;
+      const side = Math.abs(x + 0.5 - cx);
+      if (side > dr - 4) {
+        // A door leaf swung open: oak planks, iron studs.
+        const plank = (x - (cx - dr)) % 2 === 0;
+        const stud = (y - spring) % 6 === 0 && side > dr - 2.5;
+        if (stud) c.px(x, y, IRON, wallN, { bias: 1 });
+        else c.px(x, y, OAK, { x: x < cx ? 0.5 : -0.5, y: -0.2, z: 0.84 }, { bias: plank ? 0 : -1 });
+        continue;
+      }
+      doorway(c, x, y, side, (y - (spring - dr)) / (front - (spring - dr)), front - 1 - y);
+    }
+  }
+  c.part();
+  c.shape(spring - dr - 6, spring - dr - 1, () => [cx - 3, cx + 3], FIELDSTONE, (_x, _y, t) => cyl(t, 0.2), { bias: 2 });
+  c.part();
+  c.px(cx, spring - dr - 4, RUNE_GLASS, wallN, { glow: 0.9 });
+  c.px(cx - 1, spring - dr - 3, RUNE_GLASS, wallN, { glow: 0.7 });
+  c.px(cx + 1, spring - dr - 3, RUNE_GLASS, wallN, { glow: 0.7 });
+  c.px(cx, spring - dr - 2, RUNE_GLASS, wallN, { glow: 0.9 });
+
+  // Two arched windows, warm light behind oak mullions, flower boxes under them.
+  for (const wx of [cx - 44, cx + 44]) {
+    const ws = 105;
+    const wr2 = 7;
+    const inWin = (x: number, y: number, r: number) => (y >= ws ? Math.abs(x + 0.5 - wx) < r && y < 121 : Math.hypot(x + 0.5 - wx, y + 0.5 - ws) < r);
+    c.part();
+    for (let y = ws - wr2 - 2; y < 122; y++) {
+      for (let x = wx - wr2 - 2; x < wx + wr2 + 2; x++) {
+        if (!inWin(x, y, wr2 + 2)) continue;
+        if (!inWin(x, y, wr2)) {
+          c.px(x, y, FIELDSTONE, wallN, { bias: 2 });
+          continue;
+        }
+        const mullion = Math.abs(x + 0.5 - wx) < 1 || y === 112;
+        if (mullion) c.px(x, y, OAK, wallN, { bias: 1 });
+        else c.px(x, y, HEARTH, { x: 0, y: 0, z: 1 }, { bias: Math.round((y - ws) / 8), glow: 0.55 });
+      }
+    }
+    c.part();
+    c.shape(121, 125, () => [wx - 9, wx + 9], OAK, (_x, y, t) => (y === 121 ? top(t) : { x: t * 0.3, y: -0.4, z: 0.85 }));
+    c.part();
+    for (let x = wx - 8; x <= wx + 8; x++) {
+      const k = hash2(x, 5, 413);
+      c.px(x, 120, BUSH, sphere(0, 0.4), { bias: 2 });
+      if (k > 0.45) c.px(x, 119, k > 0.8 ? GEM_FLOWER_PINK : k > 0.62 ? GEM_FLOWER_GOLD : BUSH, sphere(0, 0.5), { bias: 2 });
+    }
+  }
+
+  // Iron lanterns either side of the door.
+  for (const lx of [cx - 22, cx + 22]) {
+    c.part();
+    c.line(lx, 98, lx + (lx < cx ? 2 : -2), 98, IRON);
+    c.part();
+    c.capsule(lx, 100, lx, 106, 2, 2.3, IRON);
+    c.part();
+    c.ellipse(lx, 103.5, 1.2, 1.9, HEARTH, { glow: 1 });
+  }
+
+  // The gable over the door: stone, slate-edged, a small rose of rune glass.
+  const gTop = 44;
+  const gBase = wallTop + 4;
+  c.part();
+  const gHw = (y: number) => ((y - gTop) / (gBase - gTop)) * 30;
+  masonry(cx - 30, cx + 30, gTop + 2, gBase, 7, 421, (x, y) => Math.abs(x + 0.5 - cx) < gHw(y) - 2);
+  c.part();
+  for (let y = gTop; y <= gBase; y++) {
+    const hw = gHw(y);
+    for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) c.px(cx + sx * (hw - k) - (sx > 0 ? 1 : 0), y, ROOF_SLATE, { x: sx * 0.4, y: 0.4, z: 0.8 }, { bias: k === 0 ? -1 : 1 });
+  }
+  c.part();
+  c.ellipse(cx, gTop - 1, 2.2, 2.2, FIELDSTONE, { bias: 2 });
+  const rx = cx;
+  const ry = 68;
+  c.part();
+  for (let y = ry - 9; y <= ry + 9; y++) {
+    for (let x = rx - 9; x <= rx + 9; x++) {
+      const d = Math.hypot(x + 0.5 - rx, y + 0.5 - ry);
+      if (d > 8.5) continue;
+      if (d > 6.5) c.px(x, y, FIELDSTONE, wallN, { bias: 2 });
+      else {
+        const a = Math.atan2(y + 0.5 - ry, x + 0.5 - rx);
+        const lead = d > 2 && Math.abs(((a / Math.PI) * 4 + 8) % 1 - 0.5) > 0.4;
+        if (lead) c.px(x, y, OAK, wallN, { bias: -1 });
+        else c.px(x, y, RUNE_GLASS, wallN, { bias: d < 2 ? 2 : Math.round(1 - d / 4), glow: 0.5 + (6.5 - d) / 13 });
+      }
+    }
+  }
+
+  // Ivy up the corners and over the gable's edge.
+  const ivy = (x0: number, y0: number, y1: number, sway: number, seed: number) => {
+    c.part();
+    for (let y = y1; y >= y0; y--) {
+      const x = x0 + Math.sin(y * 0.35 + seed) * sway;
+      c.px(x, y, BUSH, sphere(0, 0.3), { bias: 0 });
+      if (hash2(y, seed, 415) > 0.45) c.ellipse(x + (hash2(y, seed, 417) > 0.5 ? 1.5 : -1.5), y, 1.3, 1, BUSH, { bias: 1 });
+    }
+  };
+  ivy(wl + 3, wallTop + 2, front - 2, 2.5, 1);
+  ivy(wr - 4, wallTop + 10, front - 2, 2, 4);
+  ivy(cx - 24, gBase - 8, front - 30, 1.5, 7);
+
+  // Two broad steps, moss in their cracks.
+  for (const [y0, y1, hw] of [
+    [front, front + 7, 40],
+    [front + 7, front + 14, 46],
+  ] as [number, number, number][]) {
+    c.part();
+    c.shape(y0, y1 - 1, () => [cx - hw, cx + hw], FIELDSTONE, (_x, y, t) => (y - y0 < 2 ? top(t) : { x: t * 0.3, y: -0.4, z: 0.85 }), { bias: 1 });
+    for (let x = cx - hw; x < cx + hw; x++) {
+      if ((x - cx + 200) % 13 === 0) for (let y = y0; y < y1; y++) c.shade(x, y, -2);
+      if (fbm(x, y0, 6, 419, 2) > 0.64) c.px(x, y0 + 2, BUSH, top(0), { bias: 1 });
+    }
+  }
+
+  // Bushes and ferns at its feet.
+  for (const [bx, by, r] of [
+    [wl - 2, front + 2, 9],
+    [wr + 2, front + 1, 8],
+    [wl + 12, front + 6, 6],
+    [wr - 12, front + 6, 5],
+  ] as [number, number, number][]) {
+    c.part();
+    c.ellipse(bx, by - r * 0.5, r, r * 0.75, BUSH, { normal: (_x, _y, dx, dy) => sphere(dx, dy, 1) });
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2;
+      if (hash2(bx, k, 421) > 0.4) c.px(bx + Math.cos(a) * r * 0.55, by - r * 0.5 + Math.sin(a) * r * 0.4 - 1, k % 2 ? GEM_FLOWER_PINK : GEM_FLOWER_GOLD, sphere(0, 0.5), { bias: 2 });
+    }
+  }
+  return c;
+}
+
+export const GEM_FLOWER_PINK: Material = { ramp: ramp('#7a2a4a', '#c04a7a', '#f07aa8', '#ffc0d8'), outline: hex('#2a0a18') };
+export const GEM_FLOWER_GOLD: Material = { ramp: ramp('#7a5a10', '#c09a20', '#f0d050', '#fff4b0'), outline: hex('#2a1a04') };
+
+export const RUNESTONE_W = 16;
+export const RUNESTONE_H = 44;
+export const RUNESTONE_OY = 41;
+
+/** A standing runestone: a tall rough stone, lichen and moss on it, violet runes glowing down its face. */
+export function runestone(seed: number): PixelCanvas {
+  const c = new PixelCanvas(RUNESTONE_W, RUNESTONE_H);
+  const cx = 8;
+  const topY = 4 + (seed % 2);
+  c.part();
+  c.shape(topY, 41, (y) => {
+    const u = (y - topY) / (41 - topY);
+    const hw = u < 0.12 ? 2.5 + (u / 0.12) * 2.5 : 5 + u * 1.4;
+    const lean = (1 - u) * (seed % 2 ? 0.8 : -0.8);
+    return [cx - hw + lean, cx + hw + lean];
+  }, FIELDSTONE, (x, y, t) => {
+    const n = cyl(t, 0.1);
+    return { x: n.x, y: n.y + (fbm(x, y, 3, 431 + seed, 2) - 0.5) * 0.5, z: n.z };
+  });
+  for (let y = topY; y <= 41; y++) for (let x = 0; x < RUNESTONE_W; x++) if (fbm(x, y, 4, 433 + seed, 2) > 0.68) c.shade(x, y, 1);
+  c.part();
+  for (let y = topY + 5; y < 37; y++) {
+    const k = y % 5;
+    if (k === 4) continue;
+    const g = hash2(Math.floor(y / 5), k, 435 + seed);
+    if (g > 0.3) c.px(cx + (k === 1 ? (g > 0.6 ? 1 : -1) : 0), y, RUNE_GLASS, { x: 0, y: -0.2, z: 0.95 }, { glow: 0.75 });
+  }
+  c.part();
+  c.ellipse(cx, 40, 7, 2.2, BUSH, { flatten: 0.7 });
+  c.part();
+  c.ellipse(cx + (seed % 2 ? -2 : 2), topY + 1.5, 2.6, 1.4, ROOF_MOSS, { bias: 1 });
   return c;
 }
 
@@ -982,4 +1158,43 @@ export function runesmith(f: number): PixelCanvas {
   }
   c.shade(cx, 12.6 + U, -1);
   return c;
+}
+
+// ---------------------------------------------------------------- Light through the windows
+
+export const GODRAY_W = 60;
+export const GODRAY_H = 168;
+/** Where a shaft meets the floor, in its frame. */
+export const GODRAY_FOOT_X = 40;
+
+/**
+ * A shaft of light falling from a high window (top left of the frame) to
+ * the floor (bottom), widening as it goes. White and premultiplied, for
+ * additive blending and tinting: gold by day, pale blue by moonlight. The
+ * brightness falls off in a few flat steps, so it reads as pixel art.
+ */
+export function godRay(seed: number): Uint8ClampedArray {
+  const px = new Uint8ClampedArray(GODRAY_W * GODRAY_H * 4);
+  const strands = [0, 1, 2, 3].map((k) => ({ at: (hash2(k, seed, 451) - 0.5) * 1.4, w: 0.18 + hash2(k, seed, 453) * 0.25, a: 0.3 + hash2(k, seed, 457) * 0.5 }));
+  for (let y = 0; y < GODRAY_H; y++) {
+    const u = y / GODRAY_H;
+    const cx = 18 + (GODRAY_FOOT_X - 18) * u;
+    const hw = 6 + u * 11;
+    // Faint where it leaves the glass, full through the air, softer where it lands.
+    const along = Math.min(1, 0.35 + u / 0.3) * (u > 0.84 ? 1 - ((u - 0.84) / 0.16) * 0.75 : 1);
+    for (let x = 0; x < GODRAY_W; x++) {
+      const t = (x + 0.5 - cx) / hw;
+      if (Math.abs(t) > 1.5) continue;
+      let a = Math.max(0, 1 - (t * t) / 2.25) ** 1.5 * 0.5;
+      for (const s of strands) {
+        const d = (t - s.at) / s.w;
+        if (Math.abs(d) < 1) a += (1 - d * d) * s.a * 0.5;
+      }
+      a = Math.round(Math.min(1, a * along) * 8) / 8;
+      const i = (y * GODRAY_W + x) * 4;
+      px[i] = px[i + 1] = px[i + 2] = Math.round(255 * a * 0.6);
+      px[i + 3] = 255;
+    }
+  }
+  return px;
 }

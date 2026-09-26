@@ -11,7 +11,7 @@ import { pixelGrid, snap } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { characterById, type Aim, type Hero } from '../game/characters';
-import { areaOrigin, reaches, type Harm, type Hit, type Hurtbox, type MeleeArea, type Strike } from '../game/combat';
+import { areaOrigin, reachesBody, type Harm, type Hit, type Hurtbox, type MeleeArea, type Strike } from '../game/combat';
 import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
 import type { Effect } from '../game/Slash';
@@ -27,6 +27,7 @@ import { FloatingIsland } from '../world/Island';
 import { SpiritDungeon } from '../world/Spirit';
 import { TempleDungeon } from '../world/Temple';
 import { RuneTemple } from '../world/Sanctum';
+import { Chapel } from '../world/Chapel';
 import { INSIDE_SPOT, OUTSIDE_SPOT, roomRect } from '../world/sanctumLayout';
 import { isPainted } from '../world/arenas';
 
@@ -49,8 +50,8 @@ const mix3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + 
 import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
 import { heroBuffs, type BuffDef } from '../game/buffs';
-import { Pickup } from '../game/Pickup';
-import { gear, RARITY, type GearDef, type SetId } from '../game/gear';
+import { LootFlare, Pickup } from '../game/Pickup';
+import { gear, GEAR_SETS, RARITY, type GearDef, type SetId } from '../game/gear';
 import { collection, slotIndex } from '../game/collection';
 import { energy, energyFor } from '../game/energy';
 import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
@@ -107,7 +108,9 @@ const AUTO_AIM_RANGE = 150;
 /** How long the hero keeps facing the aim after an ability, in ms. */
 const LOOK_LINGER = 450;
 /** The light inside the Rune Temple, as a time of day: lamplit dusk. */
-const INDOOR_LIGHT = 0.4;
+/** How light it is inside the Rune Temple at night, and how much more the day outside adds. */
+const INDOOR_DUSK = 0.18;
+const INDOOR_DAY = 0.34;
 
 /** How each gear set worn whole shows on the hero. */
 const SET_AURA: Record<SetId, { name: string; text: number; tint: number; motes: number[]; life: { min: number; max: number }; rise: { min: number; max: number }; scale: number; every: number }> = {
@@ -137,6 +140,7 @@ export class WorldScene extends Phaser.Scene {
   private temple: TempleDungeon | null = null;
   /** The Rune Temple, when this is the Runestone Clearing. */
   private sanctum: RuneTemple | null = null;
+  private chapel: Chapel | null = null;
   /** The hero is inside the Rune Temple (the camera keeps to its room). */
   private inside = false;
   /** Passing through the temple's door: the screen fades out and in. */
@@ -245,6 +249,7 @@ export class WorldScene extends Phaser.Scene {
     this.spirit = null;
     this.temple = null;
     this.sanctum = null;
+    this.chapel = null;
     this.inside = false;
     this.doorBusy = false;
     this.auras.clear();
@@ -388,7 +393,10 @@ export class WorldScene extends Phaser.Scene {
 
     const kb = this.input.keyboard!;
     kb.on('keydown-N', () => daynight.enabled && daynight.toggle());
-    kb.on('keydown-E', () => this.inside && this.sanctum?.talk(this.hero.x, this.hero.y));
+    kb.on('keydown-E', () => {
+      if (this.inside) this.sanctum?.talk(this.hero.x, this.hero.y);
+      else this.chapel?.talk(this.hero.x, this.hero.y);
+    });
     // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
       const n = e.key.length === 1 ? e.key.charCodeAt(0) - 49 : -1;
@@ -495,9 +503,9 @@ export class WorldScene extends Phaser.Scene {
     const hit = this.toHit(s, o.x, o.y);
     const hits: { x: number; y: number }[] = [];
     for (const h of this.hurtboxes()) {
-      const bx = h.x;
-      const by = h.y - h.bodyY;
-      if (!reaches(area, bx, by, h.radius)) continue;
+      const at = reachesBody(area, h);
+      if (!at) continue;
+      const { x: bx, y: by } = at;
       h.hurt(hit);
       const l = Math.hypot(o.x - bx, o.y - by) || 1;
       hits.push({ x: bx + ((o.x - bx) / l) * (h.radius - 1), y: by + ((o.y - by) / l) * (h.radius - 2) });
@@ -670,10 +678,32 @@ export class WorldScene extends Phaser.Scene {
     if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank), this.ult.ult.pal));
     const id = rollDrop(kind);
     if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
-    // New pieces first, spares once a rarity is complete, and never one already lying here.
-    const lying = new Set<string>();
-    for (const p of this.pickups) if (p.loot.kind === 'gear') lying.add(p.loot.def.id);
-    for (const def of gear.roll(kind, new Set(collection.ownedGear()), lying)) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'gear', def }));
+    for (const def of gear.roll(kind)) this.dropGear(def, x, y - bodyY);
+  }
+
+  /**
+   * A piece of gear falls: rare and better ones make a show of landing (see
+   * Pickup), and the world answers with sound, sparks and, for a legendary,
+   * a jolt and its name.
+   */
+  private dropGear(def: GearDef, x: number, y: number): void {
+    const p = new Pickup(this, x, y, { kind: 'gear', def });
+    this.pickups.push(p);
+    const g = p.grade;
+    if (g < 2) return;
+    if (g >= 4) sound.lootFall(this.pan(p.x));
+    const tint = RARITY[def.rarity].tint;
+    p.onLand = (at) => {
+      sound.lootLand(g, this.pan(at.x));
+      if (g < 3) return;
+      const accent = def.set ? GEAR_SETS[def.set].tint : tint;
+      this.debris([0xffffff, accent], snap(at.x), snap(at.y) - 6, g >= 4 ? 28 : 14, at.y + 20, 'burst');
+      this.debris([0xffffff, accent], snap(at.x), snap(at.y) - 4, g >= 4 ? 14 : 8, at.y + 20, 'spores');
+      if (g >= 4) {
+        this.cameras.main.shake(160, 0.0014);
+        this.popNumber(snap(at.x), snap(at.y) - 30, 'LEGENDARY', accent);
+      }
+    };
   }
 
   /** Put on what the collection has equipped; max health follows the gear's. */
@@ -744,6 +774,8 @@ export class WorldScene extends Phaser.Scene {
     const tint = RARITY[def.rarity].tint;
     this.popNumber(snap(h.x), snap(h.y) - 40, def.name.toUpperCase(), tint);
     this.debris([0xffffff, tint], snap(h.x), snap(h.y) - 12, def.rarity === 'legendary' ? 26 : 16, h.y + 20, 'burst');
+    if (def.rarity === 'epic' || def.rarity === 'legendary') this.addEffect(new LootFlare(this, snap(h.x), snap(h.y), def));
+    if (def.rarity === 'legendary') this.cameras.main.shake(90, 0.0008);
     sound.gear(def.rarity === 'legendary' || def.rarity === 'epic');
   }
 
@@ -1091,8 +1123,9 @@ export class WorldScene extends Phaser.Scene {
       daynight.daylight += Phaser.Math.Clamp(daynight.target - daynight.daylight, -step, step);
       this.daylight = daynight.daylight;
     }
-    // Inside the Rune Temple it is always the same lamplit dusk.
-    const d = this.inside ? INDOOR_LIGHT : Phaser.Math.Easing.Sine.InOut(this.daylight);
+    // Inside the Rune Temple the lamps hold a dusk, lifted a little by the day outside.
+    const outside = Phaser.Math.Easing.Sine.InOut(this.daylight);
+    const d = this.inside ? INDOOR_DUSK + outside * INDOOR_DAY : outside;
 
     sky.sunDir = mix3(NIGHT.sunDir, DAY.sunDir, d);
     sky.sunColor = mix3(NIGHT.sun, DAY.sun, d);
@@ -1326,9 +1359,10 @@ export class WorldScene extends Phaser.Scene {
     for (const e of this.effects) e.update(dt);
     this.effects = this.effects.filter((e) => !e.dead);
     if (this.sanctum && !this.doorBusy) {
-      const go = this.sanctum.update(this.hero.x, this.hero.y, this.inside, this.view);
+      const go = this.sanctum.update(this.hero.x, this.hero.y, this.inside, this.view, Phaser.Math.Easing.Sine.InOut(this.daylight));
       if (go) this.passDoor(go === 'enter');
     }
+    this.chapel?.update(this.hero.x, this.hero.y, dt, Phaser.Math.Easing.Sine.InOut(this.daylight));
     this.followHero();
 
     for (const b of this.balls) {

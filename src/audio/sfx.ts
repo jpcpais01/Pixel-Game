@@ -456,6 +456,67 @@ export class Sfx {
     this.sparkle(out, t + 0.12, rare ? 6 : 3, 0.05);
   }
 
+  /** A legendary on its way: a breath of air swelling as its light marks the spot, then the whistle of its fall. */
+  lootFall(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.5, 0.5);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.16, t + 0.85);
+    g.gain.linearRampToValueAtTime(0, t + 0.95);
+    const f = filter(ctx, 'bandpass', 500, 3, g);
+    sweep(f.frequency, t, 500, 5200, 0.9);
+    const src = this.m.noiseSource();
+    src.connect(f);
+    this.m.startNoise(src, t, 1);
+    this.chirp(out, t + 0.38, 'sine', 2600, 700, 0.07, 0.52);
+    this.sparkle(out, t + 0.1, 4, 0.08);
+  }
+
+  /**
+   * Gear landing, by how grand it is: a rare chimes, an epic lands with a soft
+   * thump and a shimmering chord, and a legendary strikes like a falling star,
+   * a boom and a swelling choir of bells.
+   */
+  lootLand(t: number, pan: number, grade: number): void {
+    const ctx = this.m.ctx;
+    if (grade <= 2) {
+      const out = this.out(pan, 0.4, 0.45);
+      [1047, 1568].forEach((f, i) => this.bell(out, t + i * 0.07, f, 0.04, 0.7));
+      this.sparkle(out, t + 0.05, 2, 0.05);
+      return;
+    }
+    const big = grade >= 4;
+    const out = this.out(pan, big ? 0.9 : 0.6, 0.6);
+    // The thump (a boom for a legendary).
+    const b = gain(ctx, 0, out);
+    hit(b.gain, t, big ? 0.7 : 0.35, 0.004, big ? 0.7 : 0.35);
+    const lo = osc(ctx, 'sine', big ? 130 : 95, b);
+    sweep(lo.frequency, t, big ? 130 : 95, big ? 30 : 45, big ? 0.6 : 0.3);
+    lo.start(t);
+    lo.stop(t + (big ? 0.8 : 0.45));
+    this.burstNoise(out, t, 'lowpass', big ? 3500 : 2200, 250, 0.8, big ? 0.35 : 0.14, big ? 0.55 : 0.3, true);
+    if (big) {
+      // A choir: pairs of soft detuned saws through a warm filter, swelling and dying slowly.
+      const choir = gain(ctx, 0, out);
+      choir.gain.setValueAtTime(0, t + 0.05);
+      choir.gain.linearRampToValueAtTime(0.06, t + 0.35);
+      choir.gain.setTargetAtTime(0, t + 0.6, 0.55);
+      const lp = filter(ctx, 'lowpass', 1600, 0.6, choir);
+      sweep(lp.frequency, t + 0.05, 900, 2400, 0.5);
+      for (const f of [262, 392, 523, 659, 784]) {
+        for (const d of [0.996, 1.004]) {
+          const o = osc(ctx, 'sawtooth', f * d, lp);
+          o.start(t + 0.05);
+          o.stop(t + 3);
+        }
+      }
+    }
+    const bells = big ? [1047, 1319, 1568, 2093, 2637] : [587, 880, 1175, 1760];
+    bells.forEach((f, i) => this.bell(out, t + 0.06 + i * (big ? 0.09 : 0.06), f, big ? 0.045 : 0.04, big ? 1.6 : 1));
+    this.sparkle(out, t + 0.15, big ? 10 : 5, big ? 0.07 : 0.05);
+  }
+
   /** Picking an item up: a bright double blip. */
   pickup(t: number, pan: number): void {
     const out = this.out(pan, 0.45, 0.3);
@@ -1239,10 +1300,12 @@ export class Sfx {
   }
 
   /** Energy soaked up from a fallen foe: a soft, rising blip. */
-  energy(t: number, pan: number): void {
-    const out = this.out(pan, 0.35, 0.3);
-    this.chirp(out, t, 'sine', 880, 1760, 0.12, 0.12);
-    this.chirp(out, t + 0.03, 'triangle', 1320, 2640, 0.05, 0.1);
+  energy(t: number, pan: number, step = 0): void {
+    const out = this.out(pan, 0.35, 0.35);
+    // Up a major pentatonic, so a kill's motes land as a little rising run.
+    const f = 1047 * Math.pow(2, [0, 2, 4, 7, 9, 12, 14, 16][Math.min(step, 7)] / 12);
+    this.bell(out, t, f, 0.05, 0.28);
+    this.chirp(out, t, 'sine', f * 0.5, f, 0.05, 0.05);
   }
 
   /** The Special is ready: a quick, bright fanfare. */

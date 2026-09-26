@@ -83,14 +83,19 @@ export class KeeperHud {
     return [(p.x - r.x) / r.scaleX, (p.y - r.y) / r.scaleX];
   }
 
-  /** Handles a press; returns true while a counter is open (it takes every press). */
+  /** Handles a press; returns true when the counter took it. */
   pointerDown(p: Phaser.Input.Pointer): boolean {
     if (!this.root || !this.view || !this.closeBg) return false;
     const [x, y] = this.local(p);
     const [w, h] = (this.root.getData('size') as [number, number]) ?? [0, 0];
     const c = this.closeBg;
     const onClose = x >= c.x - 2 && x < c.x + CLOSE + 2 && y >= c.y - 2 && y < c.y + CLOSE + 2;
-    if (x < 0 || y < 0 || x >= w || y >= h || onClose) this.close();
+    // A press outside closes it and goes on to the controls, so a drag there walks away.
+    if (x < 0 || y < 0 || x >= w || y >= h) {
+      this.close();
+      return false;
+    }
+    if (onClose) this.close();
     else this.view.pointerDown(x - this.view.x, y - this.view.y);
     return true;
   }
@@ -109,6 +114,10 @@ export class KeeperHud {
 
   update(dt: number): void {
     // The world called a keeper up.
+    if (keeperCall.leave) {
+      keeperCall.leave = false;
+      this.close();
+    }
     if (keeperCall.want) {
       const k = keeperCall.want;
       keeperCall.want = null;

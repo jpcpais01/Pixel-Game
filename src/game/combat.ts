@@ -119,6 +119,37 @@ export function reaches(area: MeleeArea, bx: number, by: number, r: number): boo
   return Math.hypot(bx - (area.x0 + vx * t), by - (area.y0 + vy * t)) <= area.radius + r;
 }
 
+/**
+ * Does `area` reach the whole body of `h`, not just its middle? The body is a
+ * pillar of its radius from the feet up to the top of the sprite (2 x bodyY);
+ * returns the point on it nearest the blow, or null when out of reach.
+ */
+export function reachesBody(area: MeleeArea, h: Hurtbox): { x: number; y: number } | null {
+  const c = h.y - h.bodyY;
+  const half = Math.max(0, h.bodyY - h.radius);
+  let oy: number;
+  if (area.kind === 'line') {
+    const vx = area.x1 - area.x0;
+    const vy = area.y1 - area.y0;
+    const t = Math.max(0, Math.min(1, ((h.x - area.x0) * vx + (c - area.y0) * vy) / (vx * vx + vy * vy || 1)));
+    oy = area.y0 + vy * t;
+  } else oy = area.y;
+  const by = Math.max(c - half, Math.min(c + half, oy));
+  return reaches(area, h.x, by, h.radius) ? { x: h.x, y: by } : null;
+}
+
+/**
+ * Does a projectile flying `fly` px above the ground point (gx, gy) touch `h`?
+ * It does when its shadow crosses the feet, or when the projectile itself
+ * passes through the sprite, anywhere from the feet to the head.
+ */
+export function inFlight(h: Hurtbox, gx: number, gy: number, fly: number, pad = 2): boolean {
+  if (Math.abs(h.x - gx) > h.radius + pad) return false;
+  if (Math.abs(h.y - gy) <= h.radius * 0.6 + 3.5) return true;
+  const py = gy - fly;
+  return py <= h.y + 1 && py >= h.y - h.bodyY * 2 - 2;
+}
+
 /** The point a knockback pushes away from. */
 export function areaOrigin(area: MeleeArea): { x: number; y: number } {
   return area.kind === 'line' ? { x: area.x0, y: area.y0 } : { x: area.x, y: area.y };

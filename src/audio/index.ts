@@ -201,6 +201,16 @@ class GameSound {
     if (t !== null) this.sfx!.gear(t, rare);
   }
 
+  lootFall(pan = 0): void {
+    const t = this.slot('lootFall');
+    if (t !== null) this.sfx!.lootFall(t, pan);
+  }
+
+  lootLand(grade: number, pan = 0): void {
+    const t = this.slot('lootLand');
+    if (t !== null) this.sfx!.lootLand(t, pan, grade);
+  }
+
   pickup(pan = 0): void {
     const t = this.slot('pickup');
     if (t !== null) this.sfx!.pickup(t, pan);
@@ -562,9 +572,10 @@ class GameSound {
     if (t !== null) this.sfx!.ultRelease(t, pan);
   }
 
-  energy(pan = 0): void {
+  /** Energy soaking into the hero; `step` counts the motes of one kill, so each chimes a note higher. */
+  energy(pan = 0, step = 0): void {
     const t = this.slot('energy');
-    if (t !== null) this.sfx!.energy(t, pan);
+    if (t !== null) this.sfx!.energy(t, pan, step);
   }
 
   ultReady(): void {
