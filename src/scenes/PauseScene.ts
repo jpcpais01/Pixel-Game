@@ -163,6 +163,9 @@ export class PauseScene extends Phaser.Scene {
       }
       releaseControls();
       this.syncToggles();
+      // Online, the room's code heads the menu, for sharing with friends.
+      this.title.setText((session.room ? `Room ${session.room.code}` : 'Paused').toUpperCase());
+      this.layout();
     } else if (!online) {
       this.scene.resume('world');
       this.scene.resume('ui');

@@ -44,18 +44,12 @@ export class NetPlay {
   private specialHeld = false;
   private input: { mx: number; my: number; aim: Aim | null } = { mx: 0, my: 0, aim: null };
   private wasDown = false;
-  private badge: HTMLDivElement;
   private score = { me: 0, them: 0 };
   private ended = false;
 
   constructor(private world: WorldScene) {
     const room = session.room!;
     this.duel = room.mode === 'duel';
-    this.badge = document.createElement('div');
-    this.badge.className = 'chrome';
-    this.badge.style.cssText =
-      'position:fixed;top:calc(max(6px,env(safe-area-inset-top)) + 22px);left:50%;transform:translateX(-50%);z-index:3;pointer-events:none;padding:3px 8px;font:bold 11px/1.3 ui-monospace,Menlo,monospace;letter-spacing:1px;color:#fff4d6;background:rgba(20,15,42,.72);box-shadow:inset 0 0 0 1px #43356e;text-transform:uppercase;white-space:nowrap';
-    document.body.append(this.badge);
     this.off = session.on((m) => this.receive(m));
     for (const p of session.peers.values()) this.addPeer(p);
     this.lead();
@@ -82,7 +76,6 @@ export class NetPlay {
       if (world.walkable(x, s.y)) world.setSpawn(x, s.y);
     }
 
-    this.showBadge();
   }
 
   /** The other players standing, for monsters to hunt. */
@@ -118,8 +111,7 @@ export class NetPlay {
     const down = this.world.heroDown;
     if (this.duel && down && !this.wasDown) {
       this.score.them++;
-      this.world.announce('Defeated');
-      this.showBadge();
+      this.world.announce(`Defeated ${this.score.me}-${this.score.them}`);
     }
     this.wasDown = down;
 
@@ -167,13 +159,11 @@ export class NetPlay {
     if (this.remotes.has(p.id)) return;
     const s = this.world.spawnPoint;
     this.remotes.set(p.id, new RemotePlayer(this.world, p, s.x, s.y, () => this.bodiesFor(this.remotes.get(p.id)!), (rp, hit) => this.strike(rp, hit)));
-    this.showBadge();
   }
 
   private removePeer(id: number): void {
     this.remotes.get(id)?.destroy();
     this.remotes.delete(id);
-    this.showBadge();
   }
 
   /** The host keeps the monsters; everyone else follows. */
@@ -248,8 +238,7 @@ export class NetPlay {
         r.apply(m as unknown as HeroState, now);
         if (this.duel && r.down && !wasDown && !this.world.heroDown) {
           this.score.me++;
-          this.world.announce('Victory');
-          this.showBadge();
+          this.world.announce(`Victory ${this.score.me}-${this.score.them}`);
         }
         break;
       }
@@ -300,19 +289,7 @@ export class NetPlay {
     Monster.net = null;
     for (const sp of this.world.spawnerList) sp.follower = false;
     this.world.announce('Connection lost');
-    this.badge.textContent = 'Offline';
     this.ended = true;
-  }
-
-  private showBadge(): void {
-    const room = session.room;
-    if (!room) return;
-    const n = this.remotes.size + 1;
-    const cap = this.duel ? 2 : 4;
-    const who = n < cap ? ` · ${n}/${cap}` : '';
-    const score = this.duel && this.remotes.size ? ` · ${this.score.me} - ${this.score.them}` : '';
-    const waiting = this.duel && !this.remotes.size ? ' · waiting for a rival' : '';
-    this.badge.textContent = `Room ${room.code}${who}${waiting}${score}`;
   }
 
   /** The world is closing: leave the room. */
@@ -322,7 +299,6 @@ export class NetPlay {
     this.remotes.clear();
     if (Monster.net) Monster.net = null;
     this.world.ultCaster.onCast = null;
-    this.badge.remove();
     session.close();
   }
 }
