@@ -1239,10 +1239,12 @@ export class Sfx {
   }
 
   /** Energy soaked up from a fallen foe: a soft, rising blip. */
-  energy(t: number, pan: number): void {
-    const out = this.out(pan, 0.35, 0.3);
-    this.chirp(out, t, 'sine', 880, 1760, 0.12, 0.12);
-    this.chirp(out, t + 0.03, 'triangle', 1320, 2640, 0.05, 0.1);
+  energy(t: number, pan: number, step = 0): void {
+    const out = this.out(pan, 0.35, 0.35);
+    // Up a major pentatonic, so a kill's motes land as a little rising run.
+    const f = 1047 * Math.pow(2, [0, 2, 4, 7, 9, 12, 14, 16][Math.min(step, 7)] / 12);
+    this.bell(out, t, f, 0.05, 0.28);
+    this.chirp(out, t, 'sine', f * 0.5, f, 0.05, 0.05);
   }
 
   /** The Special is ready: a quick, bright fanfare. */
