@@ -42,6 +42,7 @@ import {
   TILE_B,
   VIOLET,
   WALL,
+  doorway,
   type SanctumArt,
 } from './sanctum';
 import { CH_EXT_H, CH_EXT_W, CH_H, CH_W, C_BANNERS, C_CAP, C_CIRCLE, C_DAIS, C_DOOR_HW, C_FLOOR, C_FRONT, C_LANCETS, C_SIDE, C_WINDOW } from '../world/chapelLayout';
@@ -523,8 +524,7 @@ export function chapelExterior(): PixelCanvas {
         else c.px(x, y, OAK, { x: x < cx ? 0.5 : -0.5, y: -0.2, z: 0.84 }, { bias: (x - (cx - dr)) % 2 === 0 ? 0 : -1 });
         continue;
       }
-      const k = (y - (spring - dr)) / (H - (spring - dr));
-      c.px(x, y, HEARTH, { x: 0, y: 0, z: 1 }, { bias: Math.round(k * 2.5 - 1.5 - side / 6), glow: 0.35 + k * 0.5 });
+      doorway(c, x, y, side, (y - (spring - dr)) / (H - (spring - dr)), H - 1 - y);
     }
   }
   c.part();
