@@ -34,6 +34,10 @@ export interface SpawnSpot {
   y: number;
   /** ms before this spot's monster returns, instead of the region's. */
   respawn?: number;
+  /** How many times this spot's monster returns before it stays dead; unlimited when unset. */
+  lives?: number;
+  /** How far the player must be before it returns, in px (default 90). */
+  keepAway?: number;
 }
 
 /**
@@ -42,14 +46,14 @@ export interface SpawnSpot {
  * table; the world updates every spawner and keeps them from overlapping.
  */
 export class Spawner {
-  private slots: { spot: SpawnSpot; monster: Monster | null; wait: number }[];
+  private slots: { spot: SpawnSpot; monster: Monster | null; wait: number; lives: number }[];
 
   constructor(
     private world: WorldScene,
     spots: SpawnSpot[],
     private respawn = 9000,
   ) {
-    this.slots = spots.map((spot) => ({ spot, monster: MONSTERS[spot.kind](world, spot.x, spot.y), wait: 0 }));
+    this.slots = spots.map((spot) => ({ spot, monster: MONSTERS[spot.kind](world, spot.x, spot.y), wait: 0, lives: spot.lives ?? Infinity }));
   }
 
   get monsters(): Monster[] {
@@ -66,11 +70,15 @@ export class Spawner {
           s.monster = null;
           s.wait = s.spot.respawn ?? this.respawn;
         }
-      } else {
+      } else if (s.lives > 0) {
         s.wait -= dt;
         // Don't pop in right next to the player.
-        const near = target && Math.hypot(target.x - s.spot.x, target.y - s.spot.y) < 90;
-        if (s.wait <= 0 && !near) s.monster = MONSTERS[s.spot.kind](this.world, s.spot.x, s.spot.y);
+        const away = s.spot.keepAway ?? 90;
+        const near = target && Math.hypot(target.x - s.spot.x, target.y - s.spot.y) < away;
+        if (s.wait <= 0 && !near) {
+          s.monster = MONSTERS[s.spot.kind](this.world, s.spot.x, s.spot.y);
+          s.lives--;
+        }
       }
     }
   }

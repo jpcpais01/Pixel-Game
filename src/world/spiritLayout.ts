@@ -25,10 +25,12 @@ export const CRYPT: Rect = { x0: 110, y0: 900, x1: 450, y1: 1080 };
 export const OSSUARY: Rect = { x0: 80, y0: 560, x1: 480, y1: 780 };
 /** The Sanctum is round: its centre and radii. */
 export const SANCTUM = { cx: 280, cy: 262, rx: 196, ry: 168 };
+// Each corridor reaches well into the chambers it joins, so the floor stays
+// continuous once the walkable margin is taken off every rect.
 const CORRIDORS: Rect[] = [
-  { x0: 252, y0: 1076, x1: 308, y1: 1184 },
-  { x0: 374, y0: 776, x1: 430, y1: 904 },
-  { x0: 244, y0: 400, x1: 316, y1: 564 },
+  { x0: 252, y0: 1064, x1: 308, y1: 1196 },
+  { x0: 374, y0: 764, x1: 430, y1: 916 },
+  { x0: 244, y0: 400, x1: 316, y1: 576 },
 ];
 
 /** The spirit pool in the ossuary: glowing water no one can walk on. */
@@ -135,38 +137,41 @@ export function spiritWalkable(x: number, y: number): boolean {
   return true;
 }
 
-// Deeper chambers hold more spirits, of darker kinds, and they return faster.
-const HALL_RESPAWN = 14000;
-const CRYPT_RESPAWN = 11000;
-const OSSUARY_RESPAWN = 8500;
-const APPROACH_RESPAWN = 12000;
-/** The Hollow Queen returns long after she falls. */
+// Deeper chambers hold more spirits, of darker kinds. A fallen spirit rises
+// again a second later, wherever the hero stands, but each spot only has a
+// few returns in it, so every chamber can be cleared for good.
+const RETURN = 1000;
+const HALL_LIVES = 1;
+const CRYPT_LIVES = 2;
+const OSSUARY_LIVES = 2;
+const APPROACH_LIVES = 1;
+/** The Hollow Queen returns long after she falls, and never on top of the hero. */
 export const QUEEN_RESPAWN = 45000;
 
-const spot = (kind: SpawnSpot['kind'], x: number, y: number, respawn: number): SpawnSpot => ({ kind, x, y, respawn });
+const spot = (kind: SpawnSpot['kind'], x: number, y: number, lives: number): SpawnSpot => ({ kind, x, y, respawn: RETURN, lives, keepAway: 0 });
 
 export const SPIRIT_SPAWNS: SpawnSpot[] = [
   // Hall of Whispers: a few lost wisps.
-  spot('wisp', 230, 1236, HALL_RESPAWN),
-  spot('wisp', 332, 1284, HALL_RESPAWN),
-  spot('wisp', 280, 1212, HALL_RESPAWN),
+  spot('wisp', 230, 1236, HALL_LIVES),
+  spot('wisp', 332, 1284, HALL_LIVES),
+  spot('wisp', 280, 1212, HALL_LIVES),
   // Crypt: wisps and the first shades.
-  spot('wisp', 150, 990, CRYPT_RESPAWN),
-  spot('wisp', 410, 990, CRYPT_RESPAWN),
-  spot('wisp', 280, 1054, CRYPT_RESPAWN),
-  spot('shade', 280, 960, CRYPT_RESPAWN),
-  spot('shade', 270, 1020, CRYPT_RESPAWN),
+  spot('wisp', 150, 990, CRYPT_LIVES),
+  spot('wisp', 410, 990, CRYPT_LIVES),
+  spot('wisp', 280, 1054, CRYPT_LIVES),
+  spot('shade', 280, 960, CRYPT_LIVES),
+  spot('shade', 270, 1020, CRYPT_LIVES),
   // Ossuary: shades and wailing banshees round the pool.
-  spot('shade', 180, 676, OSSUARY_RESPAWN),
-  spot('shade', 380, 676, OSSUARY_RESPAWN),
-  spot('shade', 280, 740, OSSUARY_RESPAWN),
-  spot('banshee', 200, 600, OSSUARY_RESPAWN),
-  spot('banshee', 360, 600, OSSUARY_RESPAWN),
-  spot('wisp', 120, 620, OSSUARY_RESPAWN),
-  spot('wisp', 440, 740, OSSUARY_RESPAWN),
+  spot('shade', 180, 676, OSSUARY_LIVES),
+  spot('shade', 380, 676, OSSUARY_LIVES),
+  spot('shade', 280, 740, OSSUARY_LIVES),
+  spot('banshee', 200, 600, OSSUARY_LIVES),
+  spot('banshee', 360, 600, OSSUARY_LIVES),
+  spot('wisp', 120, 620, OSSUARY_LIVES),
+  spot('wisp', 440, 740, OSSUARY_LIVES),
   // The approach: banshees keep the stair, shades at their side.
-  spot('banshee', 280, 452, APPROACH_RESPAWN),
-  spot('shade', 280, 510, APPROACH_RESPAWN),
+  spot('banshee', 280, 452, APPROACH_LIVES),
+  spot('shade', 280, 510, APPROACH_LIVES),
   // The Sanctum.
-  spot('queen', QUEEN_HOME.x, QUEEN_HOME.y, QUEEN_RESPAWN),
+  { kind: 'queen', x: QUEEN_HOME.x, y: QUEEN_HOME.y, respawn: QUEEN_RESPAWN },
 ];
