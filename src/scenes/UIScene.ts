@@ -18,7 +18,7 @@ import type { Pal } from '../game/ultimate/ink';
  * screen resolution over the world.
  *
  * With a mouse, a left click on the world is the attack (the world aims it
- * at the cursor), Space the special and the keyboard walks, so the joystick
+ * at the cursor), a right click the special, Space the Special and the keyboard walks, so the joystick
  * hides and the ability buttons shrink to indicators above the hotbar.
  *
  * Along the bottom, between the joystick and the buttons, the hotbar: nine
@@ -66,6 +66,7 @@ export class UIScene extends Phaser.Scene {
   /** The Special ring's drawn fill, sweeping up after the real one as energy arrives. */
   private ultShown = 0;
   private clickPointer: number | null = null;
+  private rightPointer: number | null = null;
   private base = new Phaser.Math.Vector2();
   private knob = new Phaser.Math.Vector2();
   private toggle!: Phaser.GameObjects.Graphics;
@@ -191,7 +192,7 @@ export class UIScene extends Phaser.Scene {
 
   create(data: { character?: string }): void {
     const hero = characterById(data?.character);
-    this.stickPointer = this.clickPointer = null;
+    this.stickPointer = this.clickPointer = this.rightPointer = null;
     this.attackPad = UIScene.pad();
     this.beamPad = UIScene.pad();
     this.ultPad = UIScene.pad();
@@ -208,7 +209,7 @@ export class UIScene extends Phaser.Scene {
     this.ultPal = ult.pal;
     this.ultButton = this.add.graphics();
     this.ultIcon = this.add.image(0, 0, ult.icon).setBlendMode(Phaser.BlendModes.ADD);
-    this.ultKey = this.add.bitmapText(0, 0, 'pixel', 'C').setLetterSpacing(-1).setOrigin(0.5, 0).setTint(0xdfe6ff);
+    this.ultKey = this.add.bitmapText(0, 0, 'pixel', 'SPACE').setLetterSpacing(-1).setOrigin(0.5, 0).setTint(0xdfe6ff);
     this.toggle = this.add.graphics();
     this.sun = this.add.image(0, 0, 'icon_sun');
     this.moon = this.add.image(0, 0, 'icon_moon');
@@ -259,6 +260,10 @@ export class UIScene extends Phaser.Scene {
         if (p.leftButtonDown()) {
           this.clickPointer = p.id;
           controls.click = true;
+        }
+        if (p.rightButtonDown()) {
+          this.rightPointer = p.id;
+          controls.rightClick = true;
         }
       } else if (p.x < this.scale.width * 0.55 && this.stickPointer === null) {
         this.stickPointer = p.id;
@@ -318,9 +323,14 @@ export class UIScene extends Phaser.Scene {
         controls.ultAim = null;
         if (controls.aiming?.ult) controls.aiming = null;
       }
-      if (p.id === this.clickPointer) {
+      // One mouse, two buttons: let go of whichever is no longer held.
+      if (p.id === this.clickPointer && !p.leftButtonDown()) {
         this.clickPointer = null;
         controls.click = false;
+      }
+      if (p.id === this.rightPointer && !p.rightButtonDown()) {
+        this.rightPointer = null;
+        controls.rightClick = false;
       }
     };
     this.input.on(Phaser.Input.Events.POINTER_UP, release);
@@ -380,14 +390,14 @@ export class UIScene extends Phaser.Scene {
   }
 
   private releaseAll(): void {
-    this.stickPointer = this.clickPointer = null;
+    this.stickPointer = this.clickPointer = this.rightPointer = null;
     this.attackPad = UIScene.pad();
     this.beamPad = UIScene.pad();
     this.ultPad = UIScene.pad();
     controls.ultAim = null;
     controls.ultTap = false;
     controls.moveX = controls.moveY = 0;
-    controls.attack = controls.beam = controls.click = false;
+    controls.attack = controls.beam = controls.click = controls.rightClick = false;
     controls.attackTap = controls.beamTap = false;
     controls.attackAim = controls.beamAim = null;
     controls.aiming = null;
@@ -414,7 +424,7 @@ export class UIScene extends Phaser.Scene {
       g.strokeCircle(this.knob.x, this.knob.y, R * 0.42);
     }
 
-    // With a mouse the abilities are the click and Space, so the buttons become
+    // With a mouse the abilities are the left and right clicks, so the buttons become
     // small indicators above the hotbar: same combo pips and cooldown rings.
     const k = this.padScale;
     const u = controls.mouse ? 0.6 : 1; // pip and ring spacing
@@ -608,7 +618,7 @@ export class UIScene extends Phaser.Scene {
       .setAlpha(ready ? 1 : 0.35 + 0.35 * shown);
     this.ultKey
       .setVisible(controls.mouse)
-      .setPosition(Math.round(up.x + br * 0.8), Math.round(up.y - br * 1.35))
+      .setPosition(Math.round(up.x), Math.round(up.y - br * 1.35))
       .setScale(Math.max(1, Math.round(D)))
       .setAlpha(ready ? 0.95 : 0.55);
 
@@ -692,7 +702,7 @@ export class UIScene extends Phaser.Scene {
   /** The beam button, ringed by its charge: filling cyan, white-hot when full, draining violet when held too long. */
   private drawBeamButton(R: number, u: number): void {
     const mp = this.beamPos;
-    const pressed = this.beamPad.pointer !== null;
+    const pressed = this.beamPad.pointer !== null || (controls.mouse && controls.rightClick);
     const pad = this.beamPad;
     // Pulled back to the centre after aiming: letting go now cancels the special.
     const cancel = !this.chargeSpecial && pad.out && Math.hypot(pad.dx, pad.dy) < this.deadZone;

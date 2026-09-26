@@ -425,7 +425,7 @@ export class WorldScene extends Phaser.Scene {
       addBuff: (def) => heroBuffs.add(def),
       pop: (text, tint) => this.popNumber(snap(this.hero.x), snap(this.hero.y) - 38, text, tint),
     };
-    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N,C') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N') as Record<string, Phaser.Input.Keyboard.Key>;
   }
 
   castEnergyBall(x: number, y: number, dx: number, dy: number, style?: SpellStyle, kind?: BallKind): void {
@@ -1302,10 +1302,10 @@ export class WorldScene extends Phaser.Scene {
       const l = Math.hypot(mx, my);
       if (l > 0.18) this.facing = { x: mx / l, y: my / l };
     }
-    // On a computer: WASD to walk, left click to attack, Space for the special, C for the Special.
+    // On a computer: WASD to walk, left click to attack, right click for the special, Space for the Special.
     let attack = controls.attack || controls.attackTap || controls.click || k.J.isDown;
-    let special = controls.beam || controls.beamTap || k.SPACE.isDown || k.K.isDown || k.SHIFT.isDown;
-    let ultPressed = controls.ultTap || Phaser.Input.Keyboard.JustDown(k.C);
+    let special = controls.beam || controls.beamTap || controls.rightClick || k.K.isDown || k.SHIFT.isDown;
+    let ultPressed = controls.ultTap || Phaser.Input.Keyboard.JustDown(k.SPACE);
     controls.ultTap = false;
     // Online the world keeps going while the menu is open; the hero just stands.
     if (session.paused) {

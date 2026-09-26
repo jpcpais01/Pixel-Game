@@ -15,6 +15,8 @@ export const controls = {
   mouse: typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches,
   /** Left mouse button held on the game world (the attack on a computer). */
   click: false,
+  /** Right mouse button held on the game world (the normal ability on a computer). */
+  rightClick: false,
   /**
    * Touch aim: the way an ability button is dragged (a unit vector), or null
    * while it isn't dragged out of its centre, which aims at the nearest enemy.
@@ -23,7 +25,7 @@ export const controls = {
   beamAim: null as { x: number; y: number } | null,
   /** The Special's touch button dragged this way (see attackAim). */
   ultAim: null as { x: number; y: number } | null,
-  /** The Special's touch button let go (or C pressed): cast it once, if there is energy for it. */
+  /** The Special's touch button let go (or Space pressed): cast it once, if there is energy for it. */
   ultTap: false,
   /**
    * One-shot presses from the touch buttons (a tap, or letting go after
