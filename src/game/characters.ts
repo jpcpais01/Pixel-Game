@@ -31,6 +31,8 @@ import { BLOOD_KIT, NECRO_KIT, Necromancer } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, MINSTREL_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
+import { CRIMSON_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, WEAVER_KIT } from './Puppeteer';
+import { PUPPETEER_H, PUPPETEER_ORIGIN_Y } from '../art/puppeteer';
 import { AEON_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
 import { worn } from './skins';
@@ -700,6 +702,79 @@ export const CLASSES: ClassDef[] = [
     spawn(world, x, y, look) {
       const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT }[look] ?? KEEPER_KIT;
       return new Chrono(world, x, y, kit);
+    },
+  },
+  {
+    id: 'puppeteer',
+    name: 'Puppeteer',
+    blurb: 'Pulls every string',
+    types: [
+      {
+        // Fights through his puppet: it lunges out to cut and chop, and pirouettes among his foes.
+        id: 'marionette',
+        name: 'Marionettist',
+        role: 'His puppet fights',
+        accent: 0xffc25a,
+        stats: { power: 4, speed: 3, range: 3 },
+        attack: 'Puppet strike',
+        special: 'Pirouette',
+        preview: { texture: 'puppeteer', glow: 'puppeteer_e', idle: 'puppeteer_idle_down', chosen: 'puppeteer_twirl_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
+        buttons: {
+          attack: { texture: 'icon_puppet' },
+          special: { texture: 'icon_pirouette' },
+        },
+        lookName: 'Carnival',
+        skins: [
+          {
+            id: 'porcelain',
+            name: 'Porcelain',
+            role: 'A doll of cracked porcelain',
+            accent: 0x8ad0ff,
+            attack: 'Doll strike',
+            special: 'Porcelain spin',
+            preview: { texture: 'puppeteer_porcelain', glow: 'puppeteer_porcelain_e', idle: 'puppeteer_porcelain_idle_down', chosen: 'puppeteer_porcelain_twirl_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
+            buttons: {
+              attack: { texture: 'icon_puppet_porcelain' },
+              special: { texture: 'icon_pirouette_porcelain' },
+            },
+          },
+        ],
+      },
+      {
+        // No puppet: her threads cut, snag and reel foes in, and her strings hold whole crowds helpless.
+        id: 'weaver',
+        name: 'Stringweaver',
+        role: 'Strings up her foes',
+        accent: 0xc08cff,
+        stats: { power: 3, speed: 4, range: 4 },
+        attack: 'Razor thread',
+        special: 'Marionette',
+        preview: { texture: 'weaver', glow: 'weaver_e', idle: 'weaver_idle_down', chosen: 'weaver_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
+        buttons: {
+          attack: { texture: 'icon_thread' },
+          special: { texture: 'icon_marionette' },
+        },
+        lookName: 'Silk',
+        skins: [
+          {
+            id: 'crimson',
+            name: 'Red thread',
+            role: 'Threads of fate',
+            accent: 0xff4a5a,
+            attack: 'Fate thread',
+            special: 'Bound by fate',
+            preview: { texture: 'weaver_crimson', glow: 'weaver_crimson_e', idle: 'weaver_crimson_idle_down', chosen: 'weaver_crimson_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
+            buttons: {
+              attack: { texture: 'icon_thread_crimson' },
+              special: { texture: 'icon_marionette_crimson' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      const kit = look === 'porcelain' ? PORCELAIN_KIT : look === 'weaver' ? WEAVER_KIT : look === 'crimson' ? CRIMSON_KIT : MARIONETTE_KIT;
+      return new Puppeteer(world, x, y, kit);
     },
   },
 ];

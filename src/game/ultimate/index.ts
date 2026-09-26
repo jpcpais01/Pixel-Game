@@ -12,6 +12,8 @@ import { HeavensLight, SunWrath } from './holy';
 import { BloodMoon, Eclipse, FanOfKnives, SoulStorm } from './shadow';
 import { ChemBomb, GreatArrow, Pestilence } from './nature';
 import { Encore, ThunderOfWar } from './bard';
+import { GrandFinale, PuppetMaster } from './puppeteer';
+import { FATE_STRINGS, GOLD_STRINGS, ICE_STRINGS, SILK_STRINGS } from '../Strings';
 import { Legion, TimeStop } from './chrono';
 import { AEON_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
 import * as icons from './icons';
@@ -204,6 +206,25 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.legionIcon,
     cast: (c) => c.world.addEffect(new Legion(c.world, c)),
   },
+  'puppeteer:marionette': {
+    name: 'Grand Finale',
+    cost: 70,
+    windup: 550,
+    aim: 'spot',
+    range: 110,
+    pal: GOLD_STRINGS,
+    icon: icons.finaleIcon,
+    cast: (c) => c.world.addEffect(new GrandFinale(c.world, c)),
+  },
+  'puppeteer:weaver': {
+    name: 'Puppet Master',
+    cost: 75,
+    windup: 600,
+    aim: 'self',
+    pal: SILK_STRINGS,
+    icon: icons.puppetMasterIcon,
+    cast: (c) => c.world.addEffect(new PuppetMaster(c.world, c)),
+  },
 };
 
 /** Skins' takes on their type's Special, by `class:skin`. */
@@ -216,6 +237,8 @@ const SKINS: Record<string, UltSkin> = {
   'chronomancer:moon': { name: 'Moonstill', pal: MOON_PAL },
   'chronomancer:aeon': { name: 'Aeon Legion', pal: AEON_PAL, type: 'paradox' },
   'bard:wildsong': { name: 'Chorus of the Wild', pal: pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070) },
+  'puppeteer:porcelain': { name: 'Shattered Finale', pal: ICE_STRINGS },
+  'puppeteer:crimson': { name: 'Strings of Fate', pal: FATE_STRINGS, type: 'weaver' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

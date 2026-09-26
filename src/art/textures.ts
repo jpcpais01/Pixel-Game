@@ -13,6 +13,7 @@ import { BLOOD_SPELL, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W, SOUL_SPELL, bl
 import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CHRONO_H, CHRONO_LOOKS, CHRONO_W, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, buildChronoFrames, chronoAnims, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
 import { BARD_H, BARD_LOOKS, BARD_W, MINSTREL_LOOK, NOTE_FRAMES, WILD_LOOK, NOTE_SIZE, bardAnims, buildBardFrames, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
+import { PUPPETEER_H, PUPPETEER_LOOKS, PUPPETEER_W, PUPPET_LOOKS, buildPuppetSheet, buildPuppeteerFrames, marionetteIcon, pirouetteIcon, puppeteerAnims, puppetStrikeIcon, threadIcon } from './puppeteer';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
 import { buildRogueFrames, daggersIcon, DANCER_DAGGERS, ROGUE_ANIMS, ROGUE_DAGGERS, ROGUE_H, ROGUE_LOOKS, ROGUE_W, shadowstepIcon, smokeCanvas } from './rogue';
 import { hex } from './pixel';
@@ -369,6 +370,34 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_song_wild', toCanvas(16, 16, songIcon(true)));
   scene.textures.addCanvas('icon_drum', toCanvas(16, 16, drumIcon()));
   scene.textures.addCanvas('icon_rhythm', toCanvas(16, 16, rhythmIcon()));
+
+  // Puppeteer once per look: 'puppeteer' and 'puppeteer_porcelain' (the
+  // marionettist), 'weaver' and 'weaver_crimson' (the stringweaver); the
+  // marionettist's puppet like a monster ('puppet', 'puppet_porcelain'), and
+  // the icons.
+  for (const look of PUPPETEER_LOOKS) {
+    const pf = buildPuppeteerFrames(look);
+    register(scene, look.key, pack(pf.map((f) => ({ name: f.key, r: f.canvas.render() })), PUPPETEER_W, PUPPETEER_H), PUPPETEER_W, PUPPETEER_H);
+    for (const a of puppeteerAnims(look)) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${a.name}_${d}`,
+          frames: pf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
+    }
+  }
+  for (const look of PUPPET_LOOKS) registerMonster(scene, look.key, buildPuppetSheet(look));
+  scene.textures.addCanvas('icon_puppet', toCanvas(16, 16, puppetStrikeIcon(false)));
+  scene.textures.addCanvas('icon_pirouette', toCanvas(16, 16, pirouetteIcon(false)));
+  scene.textures.addCanvas('icon_puppet_porcelain', toCanvas(16, 16, puppetStrikeIcon(true)));
+  scene.textures.addCanvas('icon_pirouette_porcelain', toCanvas(16, 16, pirouetteIcon(true)));
+  scene.textures.addCanvas('icon_thread', toCanvas(16, 16, threadIcon('#fbf4ff', '#dcc0ff', '#a878ff')));
+  scene.textures.addCanvas('icon_marionette', toCanvas(16, 16, marionetteIcon('#fbf4ff', '#dcc0ff', '#a878ff')));
+  scene.textures.addCanvas('icon_thread_crimson', toCanvas(16, 16, threadIcon('#fff0f0', '#ff9aa0', '#ff3a4a')));
+  scene.textures.addCanvas('icon_marionette_crimson', toCanvas(16, 16, marionetteIcon('#fff0f0', '#ff9aa0', '#ff3a4a')));
 
   // Chronomancer once per look: 'chrono' (the timekeeper), 'chrono_moon',
   // 'chrono_rift' (the paradox) and 'chrono_aeon', each with its own bolts

@@ -91,6 +91,10 @@ export abstract class Monster implements Hurtbox {
   private paceT = 0;
   private clock: Phaser.GameObjects.Image | null = null;
   private clockTint = 0xffffff;
+  /** Held helpless on a puppeteer's strings for this long, lifted this far off the ground. */
+  private heldT = 0;
+  private heldLift = 0;
+  private lift = 0;
 
   constructor(
     world: WorldScene,
@@ -122,7 +126,7 @@ export abstract class Monster implements Hurtbox {
   }
 
   get bodyY(): number {
-    return this.stats.bodyY + this.hover;
+    return this.stats.bodyY + this.hover + this.lift;
   }
 
   /** A boss: the camera leans toward it while it fights. */
@@ -186,6 +190,11 @@ export abstract class Monster implements Hurtbox {
     this.timer -= dt;
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.flashT = Math.max(0, this.flashT - dt);
+    // Strung up: it hangs where the strings hold it, then drops back down.
+    if (this.heldT > 0) this.heldT = Math.max(0, this.heldT - dt);
+    const lift = this.heldT > 0 ? this.heldLift : 0;
+    this.lift += (lift - this.lift) * Math.min(1, dt / (lift > this.lift ? 140 : 60));
+    if (this.lift < 0.2 && lift === 0) this.lift = 0;
 
     // Knockback slides and dies away quickly.
     if (this.kvx || this.kvy) {
@@ -234,7 +243,7 @@ export abstract class Monster implements Hurtbox {
         break;
       case 'hurt':
         this.stand(dt);
-        if (this.timer <= 0) this.enter('chase', 0);
+        if (this.timer <= 0 && this.heldT <= 0) this.enter('chase', 0);
         break;
       case 'windup':
       case 'attack':
@@ -287,6 +296,27 @@ export abstract class Monster implements Hurtbox {
       this.enter('hurt', STAGGER_TIME);
       this.play('idle');
     }
+  }
+
+  /**
+   * Strings (a puppeteer's): held helpless for `ms`, whatever it was doing,
+   * lifted `lift` px off the ground. A boss shrugs them off. Returns whether it took hold.
+   */
+  bind(ms: number, lift = 0): boolean {
+    if (!this.alive || this.boss || this.stats.rank) return false;
+    if (this.state !== 'hurt') {
+      this.onInterrupted();
+      this.enter('hurt', ms);
+    }
+    this.play('idle');
+    this.heldT = Math.max(this.heldT, ms);
+    this.heldLift = lift;
+    return true;
+  }
+
+  /** Held on strings right now. */
+  get held(): boolean {
+    return this.heldT > 0;
   }
 
   /** Can a heavy blow interrupt it right now? */
@@ -395,7 +425,7 @@ export abstract class Monster implements Hurtbox {
   private sync(dt: number): void {
     const rx = snap(this.x);
     const ry = snap(this.y);
-    const hy = snap(ry - this.hover);
+    const hy = snap(ry - this.hover - this.lift);
     const frame = this.body.frame.name;
     let alpha = 1;
     let scale = 1;
@@ -411,10 +441,10 @@ export abstract class Monster implements Hurtbox {
     const f = this.flashT > 0;
     this.flash.setVisible(f);
     if (f) this.flash.setPosition(rx, hy).setDepth(ry + 0.2).setFrame(frame).setScale(scale).setAlpha(this.state === 'dying' ? alpha : Math.min(1, this.flashT / FLASH_TIME) * 0.85);
-    const lift = Math.min(1, this.hover / 10);
-    this.shadow.setPosition(rx, ry - 1).setAlpha(alpha * this.fade * (1 - lift * 0.4));
+    const up = Math.min(1, (this.hover + this.lift) / 10);
+    this.shadow.setPosition(rx, ry - 1).setAlpha(alpha * this.fade * (1 - up * 0.4));
     this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * alpha);
-    if (!this.stats.noBar) this.bar.update(dt, rx, ry - this.stats.barY, this.state === 'dying' ? 0 : this.hp, this.stats.hp, 0);
+    if (!this.stats.noBar) this.bar.update(dt, rx, ry - this.stats.barY - Math.round(this.lift), this.state === 'dying' ? 0 : this.hp, this.stats.hp, 0);
     if (this.paceT > 0) this.syncClock(rx, hy);
   }
 
