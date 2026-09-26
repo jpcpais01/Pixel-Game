@@ -13,7 +13,7 @@ import type { WorldScene } from '../scenes/WorldScene';
 import { classById, type Aim, type CharacterDef, type Hero } from '../game/characters';
 import { lookById, worn } from '../game/skins';
 import { UltCaster } from '../game/ultimate';
-import { areaOrigin, reaches, type Hit, type Hurtbox, type MeleeArea } from '../game/combat';
+import { areaOrigin, reachesBody, type Hit, type Hurtbox, type MeleeArea } from '../game/combat';
 import type { Effect } from '../game/Slash';
 import { HealthBar } from '../game/HealthBar';
 import { beamHud, comboHud } from '../game/controls';
@@ -319,9 +319,9 @@ export class RemotePlayer implements Hurtbox {
         const o = areaOrigin(area);
         const hits: { x: number; y: number }[] = [];
         for (const h of bodies()) {
-          const bx = h.x;
-          const by = h.y - h.bodyY;
-          if (!h.alive || !reaches(area, bx, by, h.radius)) continue;
+          const at = h.alive ? reachesBody(area, h) : null;
+          if (!at) continue;
+          const { x: bx, y: by } = at;
           const l = Math.hypot(o.x - bx, o.y - by) || 1;
           hits.push({ x: bx + ((o.x - bx) / l) * (h.radius - 1), y: by + ((o.y - by) / l) * (h.radius - 2) });
         }

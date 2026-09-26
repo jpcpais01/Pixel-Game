@@ -11,7 +11,7 @@ import { pixelGrid, snap } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { characterById, type Aim, type Hero } from '../game/characters';
-import { areaOrigin, reaches, type Harm, type Hit, type Hurtbox, type MeleeArea, type Strike } from '../game/combat';
+import { areaOrigin, reachesBody, type Harm, type Hit, type Hurtbox, type MeleeArea, type Strike } from '../game/combat';
 import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
 import type { Effect } from '../game/Slash';
@@ -503,9 +503,9 @@ export class WorldScene extends Phaser.Scene {
     const hit = this.toHit(s, o.x, o.y);
     const hits: { x: number; y: number }[] = [];
     for (const h of this.hurtboxes()) {
-      const bx = h.x;
-      const by = h.y - h.bodyY;
-      if (!reaches(area, bx, by, h.radius)) continue;
+      const at = reachesBody(area, h);
+      if (!at) continue;
+      const { x: bx, y: by } = at;
       h.hurt(hit);
       const l = Math.hypot(o.x - bx, o.y - by) || 1;
       hits.push({ x: bx + ((o.x - bx) / l) * (h.radius - 1), y: by + ((o.y - by) / l) * (h.radius - 2) });

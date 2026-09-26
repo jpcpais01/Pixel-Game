@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { BOLT_H } from '../art/chrono';
 import { snap } from './display';
 import { sound } from '../audio';
-import type { Hurtbox } from './combat';
+import { inFlight, type Hurtbox } from './combat';
 import type { Effect } from './Slash';
 import type { WorldScene } from '../scenes/WorldScene';
 import { onGround } from './Toxins';
@@ -43,7 +43,7 @@ export interface BoltKind {
 
 /** Is a body standing at (x, y) close enough to the ground point (gx, gy) for a bolt passing over it to strike it? */
 function inPath(h: Hurtbox, gx: number, gy: number): boolean {
-  return Math.abs(h.x - gx) <= h.radius + 2 && Math.abs(h.y - gy) <= h.radius * 0.6 + 3.5;
+  return inFlight(h, gx, gy, BOLT_H);
 }
 
 /**

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { PixelLayer } from './Beam';
 import type { Effect } from './Slash';
-import type { Hurtbox } from './combat';
+import { inFlight, type Hurtbox } from './combat';
 import { ARROW_DIRS, ARROW_H, stuckFrameFor } from '../art/archer';
 import { snap } from './display';
 import { sound } from '../audio';
@@ -67,7 +67,7 @@ export function headingFrame(ux: number, uy: number): string {
 
 /** Is a body standing at (x, y) close enough to the ground point (gx, gy) for an arrow passing over it to strike it? */
 function inPath(h: Hurtbox, gx: number, gy: number): boolean {
-  return Math.abs(h.x - gx) <= h.radius + 1.5 && Math.abs(h.y - gy) <= h.radius * 0.6 + 3;
+  return inFlight(h, gx, gy, ARROW_H, 1.5);
 }
 
 /**
