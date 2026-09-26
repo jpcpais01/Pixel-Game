@@ -5,7 +5,6 @@ import { LANE_W } from '../../art/spirit';
 import { snap } from '../display';
 import { sound } from '../../audio';
 import { BossBar } from '../BossBar';
-import type { Hit } from '../combat';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { ELEMENTINHO_HOME, HEART, inHeart } from '../../world/templeLayout';
 import { Blaze, Lob } from './Elementals';
@@ -344,8 +343,7 @@ export class Elementinho extends Monster {
     this.cooldown = (this.enraged ? 800 : 1300) + Math.random() * 700;
   }
 
-  hurt(hit: Hit): void {
-    super.hurt(hit);
+  protected afterHit(): void {
     if (!this.enraged && this.alive && this.hp < this.stats.hp / 2) {
       this.enraged = true;
       this.halo.setTint(0xffd070);
