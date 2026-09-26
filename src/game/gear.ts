@@ -1,4 +1,4 @@
-// Gear: forty-six pieces of equipment that monsters drop. Walking over a piece picks it up and
+// Gear: fifty-two pieces of equipment that monsters drop. Walking over a piece picks it up and
 // keeps it for good (see collection.ts). Each piece has one of six slot
 // types, and the hero wears one piece per type: only worn pieces count. A
 // piece goes on by itself when its slot is empty; otherwise the player swaps
@@ -48,7 +48,7 @@ export interface GearStats {
 }
 
 /** Sets of gear that grant more when every piece is worn together. */
-export type SetId = 'wraith';
+export type SetId = 'wraith' | 'ember';
 
 export interface GearSet {
   name: string;
@@ -58,10 +58,13 @@ export interface GearSet {
   bonus: GearStats;
   /** What else the full set does, in a few words. */
   effect: string;
+  /** The only foe that drops it, as the Inventory names it. */
+  boss: string;
 }
 
 export const GEAR_SETS: Record<SetId, GearSet> = {
-  wraith: { name: 'Wraithbound', tint: 0x6af4dc, bonus: { power: 0.15, speed: 0.1, leech: 0.05 }, effect: 'Spectral form: a ghostly aura follows you' },
+  wraith: { name: 'Wraithbound', tint: 0x6af4dc, bonus: { power: 0.15, speed: 0.1, leech: 0.05 }, effect: 'Spectral form: a ghostly aura follows you', boss: 'the Hollow Queen' },
+  ember: { name: 'Emberborn', tint: 0xffa040, bonus: { power: 0.2, speed: 0.08, regen: 1 }, effect: 'Living flame: fire wreathes you', boss: 'the Elementinho' },
 };
 
 export interface GearDef {
@@ -129,6 +132,13 @@ export const GEAR: GearDef[] = [
   piece('soulreaver', 'Soulreaver', 'legendary', 'weapon', { power: 0.3, leech: 0.06 }, 'wraith'),
   piece('phantom_ward', 'Phantom Ward', 'legendary', 'defence', { armor: 0.16, regen: 1.5 }, 'wraith'),
   piece('soul_lantern', 'Lantern of Souls', 'legendary', 'accessory', { power: 0.12, regen: 2, hp: 15 }, 'wraith'),
+  // The Emberborn set: one legendary for each slot, dropped only by the Elementinho in its temple.
+  piece('flame_crown', 'Crown of Living Flame', 'legendary', 'headwear', { power: 0.1, hp: 25 }, 'ember'),
+  piece('ember_mail', 'Emberheart Mail', 'legendary', 'chest', { armor: 0.12, hp: 30, power: 0.05 }, 'ember'),
+  piece('cinder_boots', 'Cinderstep Boots', 'legendary', 'boots', { speed: 0.18, power: 0.05 }, 'ember'),
+  piece('surgefire', 'Blazing Surge', 'legendary', 'weapon', { power: 0.34, hp: 10 }, 'ember'),
+  piece('ember_aegis', 'Aegis of Ember Rain', 'legendary', 'defence', { armor: 0.15, hp: 20 }, 'ember'),
+  piece('flame_heart', 'Heart of Elementinho', 'legendary', 'accessory', { power: 0.12, regen: 2, hp: 15 }, 'ember'),
 ];
 
 /** How many pieces of `set` are among `defs`, out of how many there are. */
@@ -187,7 +197,7 @@ export function wornStats(defs: GearDef[]): Required<GearStats> {
 /** Chance a slain monster drops a piece, by kind; others use the default. The bosses always do. */
 const GEAR_CHANCE: Record<string, number> = { beetle: 0.22, barkling: 0.14, golem: 0.2, warden: 1, queen: 1, elementinho: 1 };
 /** Sets only their own boss drops. */
-const SET_BOSS: Record<string, SetId> = { queen: 'wraith' };
+const SET_BOSS: Record<string, SetId> = { queen: 'wraith', elementinho: 'ember' };
 const DEFAULT_GEAR_CHANCE = 0.08;
 
 /** A piece picked up this run, for the HUD's banner; `worn` if it went straight into an empty slot. */

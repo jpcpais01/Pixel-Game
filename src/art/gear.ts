@@ -1610,6 +1610,247 @@ function soulLantern(p: Paint): () => void {
   };
 }
 
+// ---- The Emberborn set -----------------------------------------------------
+// Six legendaries the Elementinho drops: charred cinder-iron veined with
+// lava, warm gold, and living flames shaped like the Elementinho itself (a
+// drop of fire, round below and pointed on top). The set's mark, a little
+// fire-drop, glows in each icon's top-left corner.
+
+const CINDER: Ramp = ['#0e080c', '#1e1418', '#32222a', '#4c3236', '#74504a'];
+const BLAZE: Ramp = ['#c0300c', '#f06a1a', '#ffb030', '#fff0a0', '#ffffff'];
+
+/** The set's mark: a small drop of fire in the top-left corner. */
+function emberMark(p: Paint): void {
+  p.map(1, 1, ['.a..', '.ab.', 'abcb', 'bcdc', 'bddc', '.cc.'], { a: FIRE[1], b: FIRE[2], c: FIRE[3], d: FIRE[4] });
+}
+
+/**
+ * A drop of living fire: round below around (cx, cy) with radius r, drawn up
+ * to a point 2.3 radii above, the tip leaning `lean` pixels. Its heart burns
+ * white-hot and it cools to deep red at the rim.
+ */
+function fireDrop(p: Paint, cx: number, cy: number, r: number, lean = 0, ramp: Ramp = FIRE): void {
+  const top = cy - r * 2.3;
+  p.fill(ramp, (x, y) => {
+    if (y > cy + r || y < top) return null;
+    if (y >= cy) {
+      if ((x - cx) ** 2 + (y - cy) ** 2 > r * r) return null;
+    } else {
+      const t = (y - top) / (cy - top);
+      if (Math.abs(x - (cx + lean * (1 - t) ** 2)) > r * Math.pow(t, 0.8)) return null;
+    }
+    const d = Math.hypot((x - cx) / r, (y - cy - r * 0.2) / (r * 1.8));
+    return 1.05 - d - (x - cx) / (r * 8);
+  });
+}
+
+/** Cracks of lava through dark metal, point to point. */
+function lavaCrack(p: Paint, pts: Pt[]): void {
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1];
+    const [x1, y1] = pts[i];
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let j = 0; j <= n; j++) mark(p, Math.round(x0 + ((x1 - x0) * j) / n), Math.round(y0 + ((y1 - y0) * j) / n), j % 3 ? FIRE[3] : FIRE[4]);
+  }
+}
+
+/** Embers rising off a piece from around each point, drifting up and a little sideways. */
+function emberSparks(p: Paint, seed: number, pts: Pt[], drift = 0): void {
+  const r = rng(seed);
+  for (const [x, y] of pts) {
+    for (let i = 0; i < 4; i++) {
+      const k = i / 4;
+      p.glow(Math.round(x + drift * i + (r() - 0.5) * 2), Math.round(y - i * 1.4 + (r() - 0.5)), i < 1 ? FIRE[4] : i < 3 ? FIRE[3] : FIRE[2], 210 * (1 - k) + 30);
+    }
+  }
+}
+
+function flameCrown(p: Paint): () => void {
+  // Five drops of living flame rise from the circlet, the middle one tallest.
+  const flames: [number, number, number, number][] = [
+    [7.5, 17, 2.1, -1],
+    [11.5, 15, 2.5, -0.6],
+    [16, 13, 3.1, 0],
+    [20.5, 15, 2.5, 0.6],
+    [24.5, 17, 2.1, 1],
+  ];
+  for (const [x, y, r, lean] of flames) fireDrop(p, x, y, r, lean);
+  // The circlet: cinder-iron curving round, gold at its lips.
+  p.fill(CINDER, (x, y) => {
+    const c = 22 + ((x - 16) / 11) ** 2 * 2.5;
+    if (Math.abs(x - 16) > 11.5 || y < c - 2.6 || y > c + 2.6) return null;
+    return (y < c - 1.2 ? 0.9 : y > c + 1.2 ? 0.35 : 0.6) - (x - 16) / 45;
+  });
+  for (let x = 5; x <= 27; x++) {
+    const c = 22 + ((x - 16) / 11) ** 2 * 2.5;
+    mark(p, x, Math.round(c - 2.1), x < 16 ? GOLD[4] : GOLD[3]);
+    mark(p, x, Math.round(c + 2), GOLD[1]);
+  }
+  lavaCrack(p, [[8, 23], [10, 22], [12, 23]]);
+  lavaCrack(p, [[20, 23], [22, 22], [24, 23]]);
+  // A white-hot stone at the brow.
+  p.ball(16, 22, 2.3, 2.3, BLAZE, 0.05);
+  return () => {
+    emberSparks(p, 101, [[16, 5], [11, 9], [21, 9]], 0);
+    p.halo(FIRE[2], 2, 60);
+    p.twinkle(27, 7, FIRE[4], 1);
+    emberMark(p);
+  };
+}
+
+function emberMail(p: Paint): () => void {
+  // A breastplate of cinder-iron, as the dragonscale mail is cut.
+  const hw = (y: number) => (y < 12 ? 9.4 : y < 20 ? 9.4 - (y - 12) * 0.28 : 7.2 - (y - 20) * 0.1);
+  const inside = (x: number, y: number) => {
+    if (y < 6 || y > 28 || Math.abs(x - 16) > hw(y)) return false;
+    return ((x - 16) / 4.4) ** 2 + ((y - 6.5) / 4) ** 2 > 1;
+  };
+  p.fill(CINDER, (x, y) => {
+    if (!inside(x, y)) return null;
+    // Two plates meeting at a ridge down the middle, lit from the left.
+    const ridge = Math.abs(x - 16) < 0.8 ? 0.2 : 0;
+    return 0.62 - (0.4 * (x - 16)) / hw(y) + ridge - (y - 16) / 60;
+  });
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) if (inside(x + 0.5, y + 0.5) && nearEdge(inside, x + 0.5, y + 0.5, 1)) p.put(x, y, x < 16 ? GOLD[3] : GOLD[2]);
+  // Lava veins running out from the heart.
+  lavaCrack(p, [[14, 18], [11, 20], [10, 24], [12, 27]]);
+  lavaCrack(p, [[18, 18], [21, 21], [21, 25]]);
+  lavaCrack(p, [[13, 13], [10, 12], [8, 14]]);
+  lavaCrack(p, [[19, 13], [22, 12], [24, 14]]);
+  // The ember heart: a drop of fire burning in a gold setting.
+  p.ring(16, 16.5, 3.8, 3.8, 0.7, GOLD);
+  fireDrop(p, 16, 17.2, 2.4, 0, BLAZE);
+  // Pauldrons, each crowned with a small flame.
+  for (const cx of [6.5, 25.5]) {
+    fireDrop(p, cx + (cx < 16 ? -1 : 1), 7, 1.6, cx < 16 ? -1 : 1);
+    p.ball(cx, 10, 4.3, 3.9, CINDER, cx < 16 ? 0.1 : -0.05);
+    p.ring(cx, 10, 4.3, 3.9, 0.72, GOLD);
+  }
+  return () => {
+    p.halo(FIRE[2], 2, 50);
+    emberSparks(p, 107, [[5, 2], [27, 2]], 0);
+    p.twinkle(28, 22, FIRE[4], 1);
+    emberMark(p);
+  };
+}
+
+function cinderBoots(p: Paint): () => void {
+  boot(p, 6, 9, CINDER, GOLD, 0);
+  boot(p, 12, 6, CINDER, GOLD, 0.1);
+  for (const [ox, oy] of [[6, 9], [12, 6]]) {
+    lavaCrack(p, [[ox + 1, oy + 5], [ox + 3, oy + 6], [ox + 2, oy + 11], [ox + 5, oy + 14], [ox + 9, oy + 15]]);
+    // A fire-drop emblem on the shaft.
+    fireDrop(p, ox + 5, oy + 11, 1.4, 0, BLAZE);
+  }
+  return () => {
+    // Flames stream back off the heels, and the soles leave smouldering steps.
+    const r = rng(113);
+    for (const [ox, oy] of [[6, 9], [12, 6]]) {
+      for (let i = 0; i < 12; i++) {
+        const y = oy + 4 + r() * 13;
+        let x = ox - 1;
+        while (x > 0 && !p.filled(x + 1, Math.floor(y))) x++;
+        p.glow(Math.round(x - 1 - r() * 3), Math.round(y - r() * 2), r() < 0.45 ? FIRE[3] : FIRE[2], 110 + r() * 120);
+      }
+      for (let x = ox; x <= ox + 12; x++) if (p.filled(x, oy + 18)) p.glow(x, oy + 19, x % 2 ? FIRE[2] : FIRE[3], 140 + r() * 80);
+    }
+    p.twinkle(27, 4, FIRE[4], 1);
+    emberMark(p);
+  };
+}
+
+function surgefire(p: Paint): () => void {
+  // A flamberge: its blade waves like a tongue of fire, white-hot down the middle.
+  const gx = 10.5;
+  const gy = 21.5;
+  const tx = 28;
+  const ty = 4;
+  p.band(gx, gy, tx, ty, (t) => (t < 0.72 ? 2.3 + 0.7 * Math.sin(t * 22) : 2.3 * ((1 - t) / 0.28) + 0.15), BLAZE, 'bevel', -0.05);
+  p.line(13, 19, 22, 10, (i) => (i % 3 ? FIRE[4] : '#ffffff'));
+  // The hilt, as `sword` makes one: a crossguard square to the blade, a wrapped grip and a pommel.
+  const len = Math.hypot(tx - gx, ty - gy);
+  const ux = (tx - gx) / len;
+  const uy = (ty - gy) / len;
+  p.band(gx + uy * 5.8, gy - ux * 5.8, gx - uy * 5.8, gy + ux * 5.8, 1.3, CINDER);
+  p.band(gx - ux, gy - uy, gx - ux * 5, gy - uy * 5, 1.05, RED_LEATHER);
+  for (let i = 2; i < 5; i += 2) p.put(gx - ux * i + 0.5, gy - uy * i + 0.5, RED_LEATHER[0]);
+  p.ball(gx - ux * 6.3, gy - uy * 6.3, 1.9, 1.9, CINDER, 0.1);
+  // Flames for the guard's quillons, curling up, and a drop of fire as its jewel.
+  fireDrop(p, gx - 4, gy - 3.4, 1.4, -1);
+  fireDrop(p, gx + 3.6, gy + 3.2, 1.4, 1);
+  p.ball(gx, gy, 1.6, 1.6, BLAZE, 0.05);
+  p.ball(gx - ux * 6.3, gy - uy * 6.3, 0.9, 0.9, BLAZE, 0.1);
+  return () => {
+    // Flames surge off the blade, thicker toward the tip.
+    const r = rng(127);
+    for (let i = 0; i < 56; i++) {
+      const t = 0.12 + Math.sqrt(r()) * 0.88;
+      const x = Math.round(gx + (tx - gx) * t + (r() - 0.35) * 6);
+      const y = Math.round(gy + (ty - gy) * t + (r() - 0.65) * 6);
+      p.glow(x, y, r() < 0.4 ? FIRE[3] : r() < 0.7 ? FIRE[2] : FIRE[1], 90 + r() * 130);
+    }
+    p.twinkle(27, 3, '#ffffff', 1);
+    emberMark(p);
+  };
+}
+
+function emberAegis(p: Paint): () => void {
+  // A round shield of cinder-iron with a gold rim.
+  p.ball(16.5, 17, 12, 12, CINDER, 0.05, false);
+  p.ring(16.5, 17, 12, 12, 0.86, GOLD);
+  // Ember rain: small drops of fire falling across the field.
+  const r = rng(131);
+  for (const [x, y] of [[10, 11], [23, 10], [8, 19], [25, 18], [12, 25], [21, 25], [16, 8]] as Pt[]) {
+    const s = 0.9 + r() * 0.4;
+    fireDrop(p, x, y, s, 0.4);
+  }
+  lavaCrack(p, [[6, 15], [9, 15], [10, 13]]);
+  lavaCrack(p, [[27, 21], [24, 22], [23, 24]]);
+  // In the middle, the Elementinho's own shape, blazing in a gold boss.
+  p.ring(16.5, 18.5, 5.4, 5.4, 0.78, GOLD);
+  fireDrop(p, 16.5, 19.5, 3.4, 0.3, BLAZE);
+  return () => {
+    p.halo(FIRE[2], 2, 60);
+    emberSparks(p, 137, [[11, 3], [22, 3]], 0);
+    p.twinkle(27, 28, FIRE[4], 1);
+    emberMark(p);
+  };
+}
+
+function flameHeart(p: Paint): () => void {
+  // A chain of gold links meeting at the bail.
+  for (const side of [-1, 1]) {
+    let prev: Pt | null = null;
+    let n = 0;
+    for (let t = 0; t <= 1; t += 0.02) {
+      const x = 16 + side * ((1 - t) * (1 - t) * 11 + 2 * (1 - t) * t * 10.5 + t * t * 1.2);
+      const y = (1 - t) * (1 - t) * 2 + 2 * (1 - t) * t * 10 + t * t * 10.5;
+      const q: Pt = [Math.round(x - 0.5), Math.round(y - 0.5)];
+      if (prev && prev[0] === q[0] && prev[1] === q[1]) continue;
+      prev = q;
+      p.put(q[0], q[1], n++ % 2 ? GOLD[1] : GOLD[3]);
+    }
+  }
+  p.ring(16, 11.5, 1.8, 1.8, 0.2, GOLD);
+  // A drop-shaped locket of glass and gold, a living flame burning inside it.
+  fireDrop(p, 16, 23, 6.4, 0, GOLD);
+  fireDrop(p, 16, 23, 5, 0, CINDER);
+  fireDrop(p, 16, 23.6, 4, 0, FIRE);
+  // The little flame's fierce face: two white-hot eyes under angry brows.
+  for (const [x, y] of [[14, 23], [18, 23]]) p.put(x, y, '#ffffff');
+  for (const [x, y] of [[13, 21], [14, 22], [19, 21], [18, 22]]) p.put(x, y, CINDER[0]);
+  p.put(15, 26, CINDER[1]);
+  p.put(16, 26, CINDER[1]);
+  p.put(17, 25, CINDER[1]);
+  return () => {
+    p.halo(FIRE[2], 3, 70);
+    emberSparks(p, 149, [[16, 8]], 0);
+    p.twinkle(12, 17, '#ffffff', 1);
+    p.twinkle(26, 27, FIRE[4], 1);
+    emberMark(p);
+  };
+}
+
 /** Every piece's painter, by gear id. Returns a finishing pass for glows and sparks, drawn after the outline. */
 const PAINTERS: Record<string, (p: Paint) => void | (() => void)> = {
   iron_sword: ironSword,
@@ -1658,6 +1899,12 @@ const PAINTERS: Record<string, (p: Paint) => void | (() => void)> = {
   soulreaver: soulreaver,
   phantom_ward: phantomWard,
   soul_lantern: soulLantern,
+  flame_crown: flameCrown,
+  ember_mail: emberMail,
+  cinder_boots: cinderBoots,
+  surgefire: surgefire,
+  ember_aegis: emberAegis,
+  flame_heart: flameHeart,
 };
 
 export const GEAR_ART_IDS = Object.keys(PAINTERS);
