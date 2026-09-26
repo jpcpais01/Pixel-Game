@@ -193,6 +193,7 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:sith': { name: 'Crimson Cyclone', pal: pal(0xfff6f2, 0xff7a70, 0xf0283a, 0x8a1020, 0xff4a4a) },
   'alchemist:witch': { name: 'Hex Storm', pal: toxPal(HEX_TOX) },
   'archer:storm': { name: 'Thunder Arrow', pal: pal(0xf2fbff, 0xa8e4ff, 0x5ec8ff, 0x3a6ad8, 0x8ad8ff) },
+  'bard:wildsong': { name: 'Chorus of the Wild', pal: pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070) },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

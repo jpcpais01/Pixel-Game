@@ -11,7 +11,7 @@ import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK
 import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE, arrowFrame, buildArcherFrames, stuckArrowFrame } from './archer';
 import { BLOOD_SPELL, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W, SOUL_SPELL, bloodLanceIcon, buildNecroFrames, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
-import { BARD_H, BARD_LOOKS, BARD_W, MINSTREL_LOOK, NOTE_FRAMES, NOTE_SIZE, bardAnims, buildBardFrames, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
+import { BARD_H, BARD_LOOKS, BARD_W, MINSTREL_LOOK, NOTE_FRAMES, WILD_LOOK, NOTE_SIZE, bardAnims, buildBardFrames, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
 import { buildRogueFrames, daggersIcon, DANCER_DAGGERS, ROGUE_ANIMS, ROGUE_DAGGERS, ROGUE_H, ROGUE_LOOKS, ROGUE_W, shadowstepIcon, smokeCanvas } from './rogue';
 import { hex } from './pixel';
@@ -342,9 +342,10 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_lance', toCanvas(16, 16, bloodLanceIcon()));
   scene.textures.addCanvas('icon_nova', toCanvas(16, 16, novaIcon()));
 
-  // Bard once per type: 'bard' (the minstrel) and 'bard_drum' (the war
-  // drummer), the minstrel's glowing notes ('note_e', frames n0 and n1), and
-  // the icons, which the songs' buffs wear too.
+  // Bard once per look: 'bard' (the minstrel), 'bard_drum' (the war drummer)
+  // and 'bard_wild' (the minstrel's wildsong skin), the minstrel's glowing
+  // notes ('note_e', frames n0 and n1; the wildsong's leaf notes and wisps in
+  // 'note_wild_e'), and the icons, which the songs' buffs wear too.
   for (const look of BARD_LOOKS) {
     const bf = buildBardFrames(look);
     register(scene, look.key, pack(bf.map((f) => ({ name: f.key, r: f.canvas.render() })), BARD_W, BARD_H), BARD_W, BARD_H);
@@ -360,8 +361,11 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     }
   }
   register(scene, 'note', pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, MINSTREL_LOOK)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
+  register(scene, 'note_wild', pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, WILD_LOOK)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
   scene.textures.addCanvas('icon_lute', toCanvas(16, 16, luteIcon()));
   scene.textures.addCanvas('icon_song', toCanvas(16, 16, songIcon()));
+  scene.textures.addCanvas('icon_lute_wild', toCanvas(16, 16, luteIcon(true)));
+  scene.textures.addCanvas('icon_song_wild', toCanvas(16, 16, songIcon(true)));
   scene.textures.addCanvas('icon_drum', toCanvas(16, 16, drumIcon()));
   scene.textures.addCanvas('icon_rhythm', toCanvas(16, 16, rhythmIcon()));
 

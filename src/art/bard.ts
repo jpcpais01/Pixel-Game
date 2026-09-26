@@ -13,6 +13,13 @@
 // at his belly from a strap, red-lacquered with bronze rims and rope lacing,
 // and he beats it with two padded mallets; each blow lights the drum's head.
 //
+// The wildsong minstrel is a skin of the minstrel: a wanderer out of the deep
+// wood, face lost in a moss-green hood with two lamps of light for eyes, twigs
+// sprouting from its crown, a bark-brown tunic under a full cloak whose hem
+// is cut like leaves, a vine belt hung with little brass chimes, and a lute
+// grown rather than carved, pale living wood with leaves budding at its head.
+// Two wisps of forest light drift round him wherever he goes.
+//
 // The body keeps to the 24x32 box; frames are larger so the mallets can be
 // raised overhead and the plume can stream back. Hands are posed in the
 // bard's own terms (forward, out to the side, height) and placed per view.
@@ -63,11 +70,45 @@ const ROPE: Material = { ramp: ramp('#8a7a5a', '#c8b88e', '#ece0bc'), outline: h
 const MALLET: Material = { ramp: ramp('#5a1a14', '#8a2a1e', '#b8482e', '#d8704a'), outline: hex('#1e0806') };
 const HANDLE: Material = { ramp: ramp('#2a1810', '#4a2e1c', '#6e4a2c', '#906a42'), outline: hex('#140a06') };
 
+// The wildsong minstrel.
+const MOSS: Material = { ramp: ramp('#0a1a10', '#14301c', '#22482a', '#34663a', '#50884a'), outline: hex('#08120a'), outlineLit: hex('#0e2414') };
+const BARK: Material = { ramp: ramp('#1c120c', '#322218', '#4a3422', '#664a30', '#846442'), outline: INK };
+const LEAF: Material = { ramp: ramp('#2a5222', '#447e30', '#6aac44', '#9ed866'), outline: hex('#10200c') };
+const ROOT: Material = { ramp: ramp('#160e0a', '#281c12', '#3c2c1c', '#524028'), outline: INK };
+const SAGE: Material = { ramp: ramp('#34443a', '#566c5a', '#7e9a7c', '#aac4a0'), outline: hex('#121a14'), outlineLit: hex('#22302a') };
+const BIRCH: Material = { ramp: ramp('#3a2c16', '#6a542c', '#9a7e48', '#c8ac6c', '#ecdc9e'), outline: hex('#1a1208'), shine: true };
+const BRANCH: Material = { ramp: ramp('#120e08', '#241c10', '#382c1a', '#4e4026'), outline: hex('#080604') };
+/** The dark inside the hood. */
+const HOOD_DARK: Material = { ramp: ramp('#040806', '#08100c'), outline: hex('#040806'), noAO: true, noOutline: true };
+
+/** What the minstrel wears, by part. */
+interface Dress {
+  /** Doublet or tunic. */
+  coat: Material;
+  /** Sleeve puffs, cape (or cloak) and cap (or hood). */
+  cloak: Material;
+  /** Cuffs and collar (the wildsong's leaf trim). */
+  cuff: Material;
+  hose: Material;
+  boot: Material;
+  hand: Material;
+  /** The lute's belly and its neck. */
+  lute: Material;
+  neck: Material;
+}
+
+const TROUBADOUR: Dress = { coat: DOUBLET, cloak: WINE, cuff: SHIRT, hose: HOSE, boot: TALL_BOOT, hand: SKIN, lute: LUTE, neck: ROSEWOOD };
+const WILDWOOD: Dress = { coat: BARK, cloak: MOSS, cuff: LEAF, hose: ROOT, boot: ROOT, hand: SAGE, lute: BIRCH, neck: BRANCH };
+
 /** One look for the bard: its texture key, its instrument, and the light of its music. */
 export interface BardLook {
   key: string;
   /** The war drummer, with his drum and mallets, rather than the minstrel with his lute. */
   drum: boolean;
+  /** The minstrel's clothes. */
+  dress: Dress;
+  /** The wildsong: hooded, cloaked in moss, wisps drifting round him. */
+  wild?: boolean;
   /** Light of the music, brightest first. */
   light: [RGB, RGB, RGB, RGB];
 }
@@ -75,19 +116,32 @@ export interface BardLook {
 export const MINSTREL_LOOK: BardLook = {
   key: 'bard',
   drum: false,
+  dress: TROUBADOUR,
   light: [hex('#f4fffc'), hex('#a8fff0'), hex('#3fd8c8'), hex('#1a7a8a')],
+};
+
+/** The minstrel's wildsong skin: firefly light, gold-green. */
+export const WILD_LOOK: BardLook = {
+  key: 'bard_wild',
+  drum: false,
+  dress: WILDWOOD,
+  wild: true,
+  light: [hex('#fffde6'), hex('#eaffa0'), hex('#9ee85a'), hex('#2e7a3e')],
 };
 
 export const DRUMMER_LOOK: BardLook = {
   key: 'bard_drum',
   drum: true,
+  dress: TROUBADOUR,
   light: [hex('#fffbe8'), hex('#ffd98a'), hex('#ff9a3a'), hex('#b8401e')],
 };
 
-export const BARD_LOOKS = [MINSTREL_LOOK, DRUMMER_LOOK];
+export const BARD_LOOKS = [MINSTREL_LOOK, DRUMMER_LOOK, WILD_LOOK];
 
 /** The look being drawn; set by buildBardFrames. */
 let S: BardLook = MINSTREL_LOOK;
+/** Its clothes. */
+let D: Dress = TROUBADOUR;
 
 // ---------------------------------------------------------------------------
 // The rig
@@ -181,22 +235,24 @@ function elbow(sx: number, sy: number, fx: number, fy: number, reach: number, hi
   return [ex, ey];
 }
 
-/** The minstrel's arm: a puffed, slashed wine sleeve, a teal forearm, a cream cuff and the hand. */
+/** The minstrel's arm: a puffed, slashed wine sleeve, a teal forearm, a cream cuff and the hand (in his dress's colours). */
 function sleevedArm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, hint: [number, number], bias = 0): void {
   const [ex, ey] = elbow(sx, sy, p.x, p.y, reach, hint);
   c.part();
-  c.capsule(sx, sy, ex, ey, 2.0, 1.6, WINE, { bias });
-  // A teal slash down the puff.
-  c.part();
-  c.px((sx + ex) / 2, (sy + ey) / 2, DOUBLET, sphere(0, -0.2), { bias: bias + 1 });
+  c.capsule(sx, sy, ex, ey, 2.0, 1.6, D.cloak, { bias });
+  // A slash of the doublet down the puff (the wildsong's is all cloak).
+  if (!S.wild) {
+    c.part();
+    c.px((sx + ex) / 2, (sy + ey) / 2, D.coat, sphere(0, -0.2), { bias: bias + 1 });
+  }
   c.part();
   const wx = ex + (p.x - ex) * 0.8;
   const wy = ey + (p.y - ey) * 0.8;
-  c.capsule(ex, ey, wx, wy, 1.35, 1.2, DOUBLET, { bias });
+  c.capsule(ex, ey, wx, wy, 1.35, 1.2, D.coat, { bias });
   c.part();
-  c.ellipse(wx, wy, 1.25, 1.1, SHIRT, { bias });
+  c.ellipse(wx, wy, 1.25, 1.1, D.cuff, { bias });
   c.part();
-  c.ellipse(p.x, p.y, 1.15, 1.1, SKIN, { bias });
+  c.ellipse(p.x, p.y, 1.15, 1.1, D.hand, { bias });
 }
 
 /** The drummer's arm: bare and heavy, a leather bracer on the forearm, a mallet in the fist. */
@@ -238,14 +294,14 @@ function mallet(c: PixelCanvas, view: View, arm: 'a' | 'b', p: Placed, k: number
 /** Legs in hose (or dark wraps) from the hip to the ankle. */
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
   c.part();
-  c.capsule(hx, hy, fx, fy, 1.55, 1.3, S.drum ? KILT : HOSE, { bias });
+  c.capsule(hx, hy, fx, fy, 1.55, 1.3, S.drum ? KILT : D.hose, { bias });
 }
 
 /** The minstrel's tall boot with a turned cuff; the drummer's boot wrapped in fur. */
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
   c.part();
-  if (side) c.ellipse(x, y, 2.2, 1.2, S.drum ? BOOT : TALL_BOOT, { flatten: 0.8, bias });
-  else c.ellipse(x, y, 1.6, 1.3, S.drum ? BOOT : TALL_BOOT, { flatten: 0.8, bias });
+  if (side) c.ellipse(x, y, 2.2, 1.2, S.drum ? BOOT : D.boot, { flatten: 0.8, bias });
+  else c.ellipse(x, y, 1.6, 1.3, S.drum ? BOOT : D.boot, { flatten: 0.8, bias });
   c.part();
   const w = side ? 1.6 : 1.8;
   const top = Math.round(y - 2.4);
@@ -254,7 +310,7 @@ function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): voi
     c.shape(top, top + 1, () => [x - w - 0.2, x + w + 0.2], FUR, (_x, _y, t, u) => sphere(t * 0.8, u - 0.6, 1), { bias: bias + 1 });
     c.shade(x - 1, top + 1, -1);
   } else {
-    c.shape(top - 1, top, () => [x - w, x + w], TALL_BOOT, (_x, _y, t) => cyl(t, 0.3), { bias: bias + 1 });
+    c.shape(top - 1, top, () => [x - w, x + w], D.boot, (_x, _y, t) => cyl(t, 0.3), { bias: bias + 1 });
   }
 }
 
@@ -288,7 +344,7 @@ function drawLute(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, b
   const n0 = 3.2;
   const n1 = 10.5;
   c.part();
-  c.capsule(bx + ux * n0, by + uy * n0, bx + ux * n1, by + uy * n1, 0.8, 0.7, ROSEWOOD, { bias });
+  c.capsule(bx + ux * n0, by + uy * n0, bx + ux * n1, by + uy * n1, 0.8, 0.7, D.neck, { bias });
   // The pegbox bends back from the neck, two gold pegs at its sides.
   const ex = bx + ux * n1;
   const ey = by + uy * n1;
@@ -296,10 +352,19 @@ function drawLute(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, b
   const px = ux * 0.35 + vx * 0.94 * bend;
   const py = uy * 0.35 + vy * 0.94 * bend;
   c.part();
-  c.capsule(ex, ey, ex + px * 2.6, ey + py * 2.6, 0.85, 0.7, ROSEWOOD, { bias });
+  c.capsule(ex, ey, ex + px * 2.6, ey + py * 2.6, 0.85, 0.7, D.neck, { bias });
   c.part();
-  c.px(ex + px * 1.2 - ux * 1.1, ey + py * 1.2 - uy * 1.1, GOLD, sphere(0, -0.4), { bias });
-  c.px(ex + px * 2.2 + ux * 1.1, ey + py * 2.2 + uy * 1.1, GOLD, sphere(0, -0.4), { bias });
+  if (S.wild) {
+    // The wildsong's lute is still growing: leaves bud where the pegs would be, and a bud of light at its tip.
+    c.px(ex + px * 1.2 - ux * 1.2, ey + py * 1.2 - uy * 1.2, LEAF, sphere(-0.3, -0.5), { bias });
+    c.px(ex + px * 1.2 - ux * 2.1, ey + py * 1.2 - uy * 2.1, LEAF, sphere(-0.5, -0.2), { bias });
+    c.px(ex + px * 2.2 + ux * 1.2, ey + py * 2.2 + uy * 1.2, LEAF, sphere(0.3, -0.5), { bias });
+    c.px(ex + px * 3.2 + ux * 0.4, ey + py * 3.2 + uy * 0.4, LEAF, sphere(0, -0.6), { bias });
+    c.spark(ex + px * 3.4 + ux * 0.4, ey + py * 3.4 + uy * 0.4, S.light[1], 0.55 + p.glow * 0.45);
+  } else {
+    c.px(ex + px * 1.2 - ux * 1.1, ey + py * 1.2 - uy * 1.1, GOLD, sphere(0, -0.4), { bias });
+    c.px(ex + px * 2.2 + ux * 1.1, ey + py * 2.2 + uy * 1.1, GOLD, sphere(0, -0.4), { bias });
+  }
 
   // The belly: a round bowl with a narrower shoulder towards the neck.
   c.part();
@@ -311,7 +376,7 @@ function drawLute(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, b
       const v = dx * vx + dy * vy;
       const bowl = (u * u) / (3.8 * 3.8) + (v * v) / (3.3 * 3.3) <= 1;
       const shoulder = ((u - 2.4) * (u - 2.4)) / (2.6 * 2.6) + (v * v) / (2.2 * 2.2) <= 1;
-      if (bowl || shoulder) c.px(x, y, LUTE, sphere(dx / 4, dy / 3.7, 1), { bias });
+      if (bowl || shoulder) c.px(x, y, D.lute, sphere(dx / 4, dy / 3.7, 1), { bias });
     }
   }
   // The rosette, the bridge, and the strings between them.
@@ -323,7 +388,15 @@ function drawLute(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, b
   c.px(hx, hy, HOLE);
   c.px(hx + vx * 0.9, hy + vy * 0.9, HOLE);
   c.part();
-  c.px(bx - ux * 2.4 + vx * 0.5, by - uy * 2.4 + vy * 0.5, ROSEWOOD, sphere(0, -0.3), { bias });
+  c.px(bx - ux * 2.4 + vx * 0.5, by - uy * 2.4 + vy * 0.5, D.neck, sphere(0, -0.3), { bias });
+  if (S.wild) {
+    // The rosette glows softly from within, and a vine curls round the bowl.
+    c.spark(hx, hy, S.light[2], 0.35 + p.glow * 0.4);
+    c.part();
+    for (const [du, dv] of [[-3.2, -1.4], [-2.2, -2.6], [-0.8, -3.2], [2.2, 2.4]] as const) {
+      c.px(bx + ux * du + vx * dv, by + uy * du + vy * dv, LEAF, sphere(dv * 0.2, -0.4), { bias });
+    }
+  }
   if (p.glow > 0) {
     // Light off the strings, brightest where they're struck.
     glowAt(c, bx - ux * 0.6, by - uy * 0.6, p.glow);
@@ -425,6 +498,168 @@ function helmDown(c: PixelCanvas, cx: number, U: number): void {
   for (const x of [cx - 3, cx + 2]) c.shade(x, 10 + U, 2);
 }
 
+
+// ---------------------------------------------------------------------------
+// The wildsong
+
+/** A leaf-cut hem under row `y`: scallops hanging off every filled pixel, a lighter leaf tip on some. */
+function leafHem(c: PixelCanvas, x0: number, x1: number, y: number, bias = 0): void {
+  c.part();
+  for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) {
+    if (!c.filled(x, y)) continue;
+    const k = ((x % 3) + 3) % 3;
+    if (k !== 2) c.px(x, y + 1, MOSS, sphere(0, 0.6), { bias });
+    if (k === 1) c.px(x, y + 2, LEAF, sphere(0, 0.5), { bias: bias - 1 });
+  }
+}
+
+/** A twig sprouting from the hood's crown, forked, a leaf at each tip; `s` is the side it leans to. */
+function twig(c: PixelCanvas, x: number, y: number, s: number, bias = 0): void {
+  c.part();
+  c.line(x, y, x + s * 1.6, y - 3.4, BRANCH, () => sphere(s * 0.3, -0.5), { bias });
+  c.line(x + s * 0.9, y - 1.7, x + s * 2.5, y - 2.3, BRANCH, () => sphere(s * 0.3, -0.5), { bias });
+  c.part();
+  c.px(x + s * 1.9, y - 4.4, LEAF, sphere(s * 0.3, -0.7), { bias });
+  c.px(x + s * 3.2, y - 2.8, LEAF, sphere(s * 0.5, -0.4), { bias });
+}
+
+/** Brass chimes hanging from the belt, each catching the light in turn. */
+function chimes(c: PixelCanvas, xs: number[], y: number, tick: number): void {
+  c.part();
+  xs.forEach((x, i) => {
+    const len = i % 2 ? 3 : 2;
+    for (let j = 0; j < len; j++) c.px(x, y + j, GOLD, sphere(0, -0.3 + j * 0.3), { bias: 1 });
+    c.spark(x, y + len - 1, S.light[0], (tick + i * 2) % 3 === 0 ? 0.55 : 0.15);
+  });
+}
+
+/** Two lamps of light in the dark of the hood (dark for a blink). */
+function hoodEyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
+  if (blink) return;
+  const [core, hot] = S.light;
+  for (const [x, y] of pts) {
+    c.spark(x, y, core, 1);
+    c.spark(x, y + 1, hot, 0.25);
+  }
+}
+
+/** The hood from the front: falling onto the shoulders, peaked at the crown, twigs sprouting, the face lost in its dark. */
+function hoodDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  c.part();
+  c.capsule(cx - 3.4, 12 + U, cx - 4.0, 15.6 + U, 1.5, 1.1, MOSS);
+  c.capsule(cx + 3.4, 12 + U, cx + 4.0, 15.6 + U, 1.5, 1.1, MOSS);
+  hoodCrown(c, cx, U, 0);
+  twig(c, cx - 2.2, 8.4 + U, -1);
+  twig(c, cx + 2.4, 8.2 + U, 1);
+  c.part();
+  c.ellipse(cx - 0.2, 12.7 + U, 3.0, 2.7, LEAF, { normal: (_x, _y, dx, dy) => sphere(dx * 0.6, dy * 0.6 - 0.3, 1) });
+  c.part();
+  c.ellipse(cx - 0.2, 13.0 + U, 2.3, 2.1, HOOD_DARK);
+  // The rim's lower edge falls into shadow.
+  for (let x = cx - 2; x <= cx + 1; x++) c.shade(x, 15 + U, -1);
+  hoodEyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+}
+
+/** The hood's round, with a soft peak at the crown. */
+function hoodCrown(c: PixelCanvas, cx: number, U: number, lean: number): void {
+  c.part();
+  c.ellipse(cx, 11.4 + U, 4.5, 4.2, MOSS, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + lean, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.shape(Math.round(6 + U), Math.round(7 + U), (y) => {
+    const hw = y === Math.round(6 + U) ? 0.8 : 1.9;
+    return [cx - hw + 0.4, cx + hw + 0.4];
+  }, MOSS, (_x, _y, t) => sphere(t * 0.8, -0.8, 1));
+}
+
+/** The full cloak seen from the front: behind him on both sides, down to a leaf-cut hem. */
+function wildCloakBehind(c: PixelCanvas, cx: number, U: number, L: number, sway: number): void {
+  const top = 15 + U;
+  const hem = 26 + L;
+  c.part();
+  c.shape(top, hem, (y) => {
+    const u = (y - top) / (hem - top);
+    return [cx - 5.4 - u * 1.2 + u * sway, cx + 5.4 + u * 1.2 + u * sway];
+  }, MOSS, (_x, _y, t, u) => sphere(t * 0.9, u * 0.4, 1), { bias: -1 });
+  leafHem(c, cx - 8, cx + 8, hem, -1);
+}
+
+/** The wildsong from the front: a bark tunic, a vine belt with chimes, the cloak over his shoulders, the hood. */
+function wildDown(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 24.5 + L;
+  c.part();
+  c.shape(top, Math.round(hem), (y) => {
+    const hw = y <= waist ? 4.5 - 0.5 * ((y + 0.5 - top) / (waist - top)) ** 2 : 4.1 + (y - waist) * 0.55;
+    return [cx - hw, cx + hw];
+  }, BARK, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1));
+  for (let y = waist + 1; y <= hem; y++) {
+    c.shade(cx - 2, y, -1);
+    c.shade(cx + 2, y, -1);
+  }
+  // A fold down the front, the vine belt and its seed of light, the chimes.
+  for (let y = top + 3; y < waist; y++) c.shade(cx, y, -1);
+  c.part();
+  c.shape(waist, waist, () => [cx - 4.1, cx + 4.1], LEAF, (_x, _y, t) => cyl(t, 0));
+  c.spark(cx, waist, S.light[1], 0.6 + p.glow * 0.4);
+  chimes(c, [cx - 3, cx - 2, cx + 3], waist + 1, p.tick);
+  // The cloak over both shoulders, closed at the throat with a leaf.
+  c.part();
+  c.ellipse(cx, 16.2 + U, 5.4, 1.9, MOSS, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 - 0.4, 1) });
+  c.part();
+  c.px(cx, 17 + U, LEAF, sphere(0, -0.5));
+  c.px(cx - 1, 17 + U, LEAF, sphere(-0.4, -0.3));
+  hoodDown(c, cx, U, p);
+}
+
+/** The wildsong from behind: the cloak covering his back, the hood's tail trailing down it. */
+function wildUp(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const hem = 26 + L;
+  const top = 14.5 + U;
+  c.part();
+  c.shape(top, hem, (y) => {
+    const u = (y - top) / (hem - top);
+    return [cx - 5.2 - u * 0.8 + u * p.sway * 0.5, cx + 5.2 + u * (1 + p.sway)];
+  }, MOSS, (_x, _y, t, u) => sphere(t * 0.9, u * 0.6 - 0.3, 1));
+  for (let y = 18 + U; y <= hem; y++) {
+    const u = (y - top) / (hem - top);
+    c.shade(Math.round(cx - 2 + u * p.sway * 0.5), y, -1);
+    c.shade(Math.round(cx + 2 + u * p.sway), y, -1);
+  }
+  leafHem(c, cx - 8, cx + 9, hem);
+  hoodCrown(c, cx, U, 0);
+  c.part();
+  c.capsule(cx + 0.4, 13 + U, cx + 1 + p.sway * 0.3, 18.6 + U, 1.3, 0.6, MOSS);
+  c.part();
+  c.px(cx + 1 + p.sway * 0.3, 19.6 + U, LEAF, sphere(0, 0.4));
+  for (let y = 9 + U; y <= 13 + U; y++) c.shade(cx, y, -1);
+  twig(c, cx - 2.2, 8.4 + U, -1);
+  twig(c, cx + 2.4, 8.2 + U, 1);
+}
+
+/** Two wisps of forest light drifting round him, passing behind him and in front. */
+function wisps(c: PixelCanvas, U: number, tick: number): void {
+  const [core, hot, mid, deep] = S.light;
+  for (let i = 0; i < 2; i++) {
+    // Half a turn per six frames, so the two wisps trade places and the loops run on seamlessly.
+    const a = (tick / 6) * Math.PI + i * Math.PI;
+    const x = 12 + Math.cos(a) * 10.5;
+    const y = 12 + U + Math.sin(a) * 2.2 - Math.sin(a * 2) * 1.2;
+    const behind = Math.sin(a) < 0;
+    const put = (px: number, py: number, col: RGB, k: number) => {
+      if (behind && c.filled(Math.floor(px), Math.floor(py))) return;
+      c.spark(px, py, col, k);
+    };
+    put(x, y, core, 1);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) put(x + dx, y + dy, hot, 0.45);
+    // A tail of light behind it along the orbit.
+    const tx = Math.sin(a);
+    const ty = -Math.cos(a) * 0.3;
+    put(x + tx * 2, y + ty * 2, mid, 0.45);
+    put(x + tx * 3.2, y + ty * 3.2, deep, 0.35);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Views
 
@@ -442,7 +677,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const armB = () => (drum ? bareArm : sleevedArm)(c, 16.8, 16.3 + U, fb, REACH_FRONT, [0.6, 1], fb.behind ? -1 : 0);
   const sticks = (arm: 'a' | 'b') => drum && mallet(c, 'down', arm, arm === 'a' ? fa : fb, arm === 'a' ? p.stickA : p.stickB, p.glow, (arm === 'a' ? fa : fb).behind ? -1 : 0);
 
-  if (!drum) {
+  if (S.wild) wildCloakBehind(c, cx, U, L, p.sway);
+  else if (!drum) {
     // The half-cape hangs from his left shoulder, showing behind him on that side.
     c.part();
     c.shape(15 + U, 25 + L, (y) => {
@@ -510,6 +746,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
     beardDown(c, cx, U);
     helmDown(c, cx, U);
+  } else if (S.wild) {
+    wildDown(c, cx, U, L, p);
   } else {
     // The doublet, a short skirt flaring below the belt.
     c.part();
@@ -572,6 +810,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
       c.shade(cx + s * 5, 17 + U, -1);
     }
   }
+  if (S.wild) wisps(c, U, p.tick);
 }
 
 /** The fur mantle: a ruff of tufts along the shoulders. */
@@ -658,6 +897,8 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     c.shape(Math.round(11 + U), Math.round(13 + U), () => [cx - 3, cx + 3], GINGER, (_x, _y, t) => sphere(t * 0.9, 0.2, 1));
     c.shade(cx - 1, 12 + U, -1);
     c.shade(cx + 1, 12 + U, -1);
+  } else if (S.wild) {
+    wildUp(c, cx, U, L, p);
   } else {
     c.part();
     c.shape(top, Math.round(24.5 + L), (y) => {
@@ -698,6 +939,7 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     armA();
     sticks('a');
   }
+  if (S.wild) wisps(c, U, p.tick);
 }
 
 /** Facing left. Right-facing frames are mirrored from these. */
@@ -712,7 +954,20 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const top = 15 + U;
   const waist = 22 + U;
 
-  if (!drum) {
+  if (S.wild) {
+    // The cloak streaming behind him, its hem cut like leaves.
+    const hem = 26 + L;
+    c.part();
+    c.shape(top - 0.5, hem, (y) => {
+      const u = (y - top + 0.5) / (hem - top + 0.5);
+      return [hx + 0.2 - u * 0.4, hx + 4.2 + u * (1.8 + p.sway)];
+    }, MOSS, (_x, _y, t, u) => sphere(t * 0.9 + 0.1, u * 0.5 - 0.2, 1), { bias: -1 });
+    for (let y = Math.round(top + 3); y <= hem; y++) {
+      const u = (y - top + 0.5) / (hem - top + 0.5);
+      c.shade(Math.round(hx + 2.6 + u * (1 + p.sway)), y, -1);
+    }
+    leafHem(c, hx - 2, hx + 9, hem, -1);
+  } else if (!drum) {
     // The cape streaming behind him.
     const hem = 25 + L;
     c.part();
@@ -789,6 +1044,8 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     }, IRON, (_x, _y, t, u) => sphere(t * 0.9, u * 0.7 - 0.6, 1));
     c.part();
     c.shape(Math.round(10 + U), Math.round(10 + U), () => [hx - 3.9, hx + 3.2], BRONZE, (_x, _y, t) => cyl(t, 0.3));
+  } else if (S.wild) {
+    wildSide(c, cx, hx, U, L, p);
   } else {
     c.part();
     c.shape(top, Math.round(24.5 + L), (y) => {
@@ -834,6 +1091,43 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   // The near arm last.
   (drum ? bareArm : sleevedArm)(c, hx + 0.2, 16.7 + U, fb, REACH_SIDE, [0.4, 1], 0);
   if (drum) mallet(c, 'side', 'b', fb, p.stickB, p.glow);
+  if (S.wild) wisps(c, U, p.tick);
+}
+
+/** The wildsong in profile, facing left: tunic and vine belt, the cloak on his shoulder, the hood's tail streaming back. */
+function wildSide(c: PixelCanvas, cx: number, hx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  c.part();
+  c.shape(top, Math.round(24.5 + L), (y) => {
+    const u = y <= waist ? 0 : (y - waist) / 2.5;
+    const shift = y <= waist ? hx : hx + (cx - hx) * u;
+    const hw = y <= waist ? 3.2 - 0.4 * ((y + 0.5 - top) / (waist - top)) ** 2 : 2.9 + (y - waist) * 0.5;
+    return [shift - hw - 0.2, shift + hw + 0.2];
+  }, BARK, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1));
+  c.part();
+  c.shape(waist, waist, () => [hx - 3.1, hx + 3.1], LEAF, (_x, _y, t) => cyl(t, 0));
+  c.spark(hx - 3, waist, S.light[1], 0.6 + p.glow * 0.4);
+  chimes(c, [hx, hx + 1], waist + 1, p.tick);
+  // The cloak over his shoulder.
+  c.part();
+  c.ellipse(hx + 0.6, 16.2 + U, 3.4, 1.8, MOSS, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + 0.1, dy * 0.6 - 0.4, 1) });
+  // The hood: its tail streaming back, its fall on the shoulder, the far twig behind.
+  twig(c, hx + 1.8, 8.2 + U, 1, -1);
+  c.part();
+  c.capsule(hx + 2.6, 9.4 + U, hx + 5.4 + p.sway * 0.4, 12.2 + U, 1.4, 0.6, MOSS);
+  c.part();
+  c.px(hx + 6 + p.sway * 0.4, 12.8 + U, LEAF, sphere(0.4, 0.3));
+  c.part();
+  c.capsule(hx + 1.6, 12.5 + U, hx + 2.2 + p.sway * 0.3, 15.8 + U, 1.5, 1.0, MOSS);
+  hoodCrown(c, hx + 0.2, U, 0.2);
+  twig(c, hx - 0.6, 8.4 + U, -1);
+  // The opening at the front, trimmed in leaves, dark within but for one eye.
+  c.part();
+  c.ellipse(hx - 2.3, 12.7 + U, 1.9, 2.5, LEAF, { normal: (_x, _y, dx, dy) => sphere(dx * 0.6 - 0.3, dy * 0.6 - 0.3, 1) });
+  c.part();
+  c.ellipse(hx - 2.6, 13.0 + U, 1.4, 2.0, HOOD_DARK);
+  hoodEyes(c, [[hx - 3, 12 + U]], p.blink);
 }
 
 // ---------------------------------------------------------------------------
@@ -1089,6 +1383,7 @@ function drawBardFrame(dir: Dir, pose: Pose): PixelCanvas {
 
 export function buildBardFrames(look: BardLook = MINSTREL_LOOK): BardFrame[] {
   S = look;
+  D = look.dress;
   const out: BardFrame[] = [];
   for (const a of bardAnims(look)) {
     for (const dir of DIRS) {
@@ -1099,6 +1394,7 @@ export function buildBardFrames(look: BardLook = MINSTREL_LOOK): BardFrame[] {
     }
   }
   S = MINSTREL_LOOK;
+  D = TROUBADOUR;
   return out;
 }
 
@@ -1128,6 +1424,25 @@ export function noteFrame(i: number, look: BardLook = MINSTREL_LOOK): PixelCanva
       lit(x + 1, y, deep, 0.5);
     }
   };
+  if (look.wild) {
+    if (i === 0) {
+      // A note whose flag is a leaf.
+      head(4, 8);
+      stem(5, 1, 7);
+      for (const [x, y, col] of [[6, 1, hot], [7, 1, mid], [6, 2, core], [7, 2, hot], [8, 2, mid], [7, 3, core], [8, 3, hot], [9, 3, mid], [8, 4, mid], [9, 4, deep]] as const) lit(x, y, col);
+    } else {
+      // A wisp: a round little spirit with two dark eyes, a sprout on its head and a curl of a tail.
+      for (let y = 2; y <= 8; y++) {
+        for (let x = 2; x <= 9; x++) {
+          const d = Math.hypot((x + 0.5 - 6) / 2.7, (y + 0.5 - 5.5) / 2.4);
+          if (d > 1.1 || ((x === 5 || x === 7) && y === 5)) continue;
+          lit(x, y, d < 0.5 ? core : d < 0.85 ? hot : mid, d < 0.85 ? 1 : 0.8);
+        }
+      }
+      for (const [x, y, col] of [[6, 2, hot], [7, 1, mid], [8, 0, mid], [3, 8, mid], [2, 9, mid], [2, 10, deep], [3, 10, deep]] as const) lit(x, y, col);
+    }
+    return c;
+  }
   if (i === 0) {
     head(4, 8);
     stem(5, 1, 7);
@@ -1151,53 +1466,64 @@ export function noteFrame(i: number, look: BardLook = MINSTREL_LOOK): PixelCanva
 // ---------------------------------------------------------------------------
 // Ability icons (16x16)
 
-/** The lute: a honey-wood belly with its dark rosette, the neck running up to a bent pegbox. */
-export function luteIcon(): Uint8ClampedArray {
+/** The lute: a honey-wood belly with its dark rosette, the neck running up to a bent pegbox (the wildsong's grown of pale wood, budding leaves). */
+export function luteIcon(wild = false): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
+  const neck = wild ? ['#382c1a', '#4e4026'] : ['#4a2418', '#663424'];
+  const belly = wild ? ['#ecdc9e', '#c8ac6c', '#8a6e3c'] : ['#f0c474', '#cc9244', '#9c5e26'];
+  const peg = wild ? '#6aac44' : '#f4cf6a';
   // Neck from the belly up to the top right.
   for (let i = 0; i < 7; i++) {
-    put(8 + i, 7 - i, '#4a2418');
-    put(9 + i, 7 - i, '#663424');
+    put(8 + i, 7 - i, neck[0]);
+    put(9 + i, 7 - i, neck[1]);
   }
   put(14, 0, '#2e1610');
   put(15, 1, '#2e1610');
-  put(13, 0, '#f4cf6a');
-  put(15, 2, '#f4cf6a');
+  put(13, 0, peg);
+  put(15, 2, peg);
   for (let y = 0; y < 16; y++) {
     for (let x = 0; x < 16; x++) {
       const d = Math.hypot(x + 0.5 - 6, y + 0.5 - 10);
       const d2 = Math.hypot(x + 0.5 - 8.2, y + 0.5 - 7.8);
-      if (d <= 4.6 || d2 <= 2.9) put(x, y, d < 2.6 ? '#f0c474' : x + y < 15 ? '#cc9244' : '#9c5e26');
+      if (d <= 4.6 || d2 <= 2.9) put(x, y, d < 2.6 ? belly[0] : x + y < 15 ? belly[1] : belly[2]);
     }
   }
-  outline('#1a0c06');
-  put(7, 9, '#140806');
-  put(7, 10, '#140806');
-  put(6, 9, '#140806');
+  outline(wild ? '#10180a' : '#1a0c06');
+  const hole = wild ? '#9ee85a' : '#140806';
+  put(7, 9, hole);
+  put(7, 10, hole);
+  put(6, 9, hole);
   // Strings, and a glint of light off them.
   for (let i = 0; i < 5; i++) put(5 + i, 12 - i, '#f4ecd8');
-  put(3, 13, '#4a2418');
-  put(12, 3, '#a8fff0');
+  put(3, 13, neck[0]);
+  put(12, 3, wild ? '#eaffa0' : '#a8fff0');
+  if (wild) {
+    // A vine of leaves round the bowl, and a leaf at the pegbox.
+    for (const [x, y] of [[1, 9], [1, 10], [2, 13], [3, 14], [9, 13], [10, 12], [12, 1]]) put(x, y, '#6aac44');
+    for (const [x, y] of [[0, 10], [2, 14], [10, 13]]) put(x, y, '#9ed866');
+  }
   return px;
 }
 
-/** The song: two beamed notes with sparks of light round them. */
-export function songIcon(): Uint8ClampedArray {
+/** The song: two beamed notes with sparks of light round them (the wildsong's in firefly green, a leaf on the beam). */
+export function songIcon(wild = false): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
+  const [core, hot, mid] = wild ? ['#fffde6', '#eaffa0', '#9ee85a'] : ['#f4fffc', '#a8fff0', '#3fd8c8'];
   const head = (cx: number, cy: number) => {
-    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.hypot((x + 0.5 - cx) / 2.3, (y + 0.5 - cy) / 1.7) <= 1) put(x, y, x + 0.5 < cx && y + 0.5 < cy ? '#f4fffc' : '#3fd8c8');
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.hypot((x + 0.5 - cx) / 2.3, (y + 0.5 - cy) / 1.7) <= 1) put(x, y, x + 0.5 < cx && y + 0.5 < cy ? core : mid);
   };
   head(4.5, 12.5);
   head(11.5, 11);
-  for (let y = 3; y <= 12; y++) put(6, y, '#a8fff0');
-  for (let y = 2; y <= 10; y++) put(13, y, '#a8fff0');
+  for (let y = 3; y <= 12; y++) put(6, y, hot);
+  for (let y = 2; y <= 10; y++) put(13, y, hot);
   for (let x = 6; x <= 13; x++) {
     const y = Math.round(3 - (x - 6) * 0.15);
-    put(x, y, '#f4fffc');
-    put(x, y + 1, '#3fd8c8');
+    put(x, y, core);
+    put(x, y + 1, mid);
   }
-  outline('#0a2a2e');
-  for (const [x, y] of [[1, 3], [2, 6], [9, 6], [14, 14]]) put(x, y, '#ffe89a');
+  if (wild) for (const [x, y] of [[8, 0], [9, 0], [9, 1], [10, 0]]) put(x, y, '#6aac44');
+  outline(wild ? '#0c2410' : '#0a2a2e');
+  for (const [x, y] of [[1, 3], [2, 6], [9, 6], [14, 14]]) put(x, y, wild ? '#eaffa0' : '#ffe89a');
   return px;
 }
 
