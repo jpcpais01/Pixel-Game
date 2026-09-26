@@ -34,7 +34,7 @@ export function makeBackdrop(scene: Phaser.Scene): Backdrop {
 const snap = (v: number, z: number) => Math.round(v * z) / z;
 
 /**
- * The Hall of Legends at midday, with sunlight streaming through its windows
+ * The Hall of Legends in the late afternoon, with golden sunlight streaming through its windows
  * and dust drifting in the beams.
  */
 class HallBackdrop implements Backdrop {
@@ -106,7 +106,7 @@ class HallBackdrop implements Backdrop {
       this.scene.add
         .image(r.x + r.w / 2, r.y + r.h * 0.55, 'glow')
         .setBlendMode(Phaser.BlendModes.ADD)
-        .setTint(0xffd9a0)
+        .setTint(0xffb878)
         .setScale((r.w * 2.6) / 32, (r.h * 1.5) / 32),
     );
     this.layer.add(this.glows);
@@ -145,7 +145,7 @@ interface Bird {
 
 /**
  * The Sky Arena: a marble arena on a floating island above a sea of clouds
- * on a golden morning, with waterfalls spilling off its edge, blossom
+ * at golden sunset, with waterfalls spilling off its edge, blossom
  * drifting from its tree, small islets bobbing about and birds far off.
  */
 class SkyBackdrop implements Backdrop {
@@ -212,7 +212,7 @@ class SkyBackdrop implements Backdrop {
     this.rainbow = scene.add.image(0, 0, 'sky_rainbow').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD);
     L.add(this.rainbow);
     this.strips.push(this.strip('sky_cloud2', 9, 1.06, 2));
-    this.mists = this.falls.map(() => scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xf4f8ff).setScale(2.2, 1.2));
+    this.mists = this.falls.map(() => scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffc8a0).setScale(2.2, 1.2));
     L.add(this.mists);
   }
 
@@ -304,7 +304,7 @@ class SkyBackdrop implements Backdrop {
       const y = this.vh * b.y + Math.sin(t * 0.7 + b.phase) * 3;
       b.img.setPosition(snap(x, z), snap(y, z)).setFrame(Math.floor(time / 160 + b.phase * 3) % 2);
     }
-    this.rainbow.setAlpha(0.75 + 0.25 * Math.sin(t * 0.4));
+    this.rainbow.setAlpha(0.45 + 0.15 * Math.sin(t * 0.4));
     for (const [i, m] of this.mists.entries()) m.setAlpha(0.3 + 0.08 * Math.sin(t * 1.3 + i));
   }
 }
