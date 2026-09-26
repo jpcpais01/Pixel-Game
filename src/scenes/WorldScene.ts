@@ -672,10 +672,7 @@ export class WorldScene extends Phaser.Scene {
     if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank), this.ult.ult.pal));
     const id = rollDrop(kind);
     if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
-    // New pieces first, spares once a rarity is complete, and never one already lying here.
-    const lying = new Set<string>();
-    for (const p of this.pickups) if (p.loot.kind === 'gear') lying.add(p.loot.def.id);
-    for (const def of gear.roll(kind, new Set(collection.ownedGear()), lying)) this.dropGear(def, x, y - bodyY);
+    for (const def of gear.roll(kind)) this.dropGear(def, x, y - bodyY);
   }
 
   /**

@@ -303,19 +303,15 @@ export class GearBag {
   /**
    * What a slain monster of `kind` drops, by its tier (tiers.ts): one roll for
    * a regular piece of some rarity, and for a Legend or Myth with an item set,
-   * its own roll for a piece of that set. Pieces the player doesn't have yet
-   * (not `owned`, not found this run) come first; once every piece of the
-   * rolled rarity is had, it drops one again as a duplicate, to disenchant
-   * into dust. Pieces `lying` on the ground never drop twice.
+   * its own roll for a piece of that set. Every piece of the rolled rarity
+   * is as likely as any other: what the player already has makes no
+   * difference, and a piece they own drops again as a spare, for dust.
    */
-  roll(kind: string, owned: Set<string>, lying: Set<string>): GearDef[] {
+  roll(kind: string): GearDef[] {
     const tier = tierOf(kind);
     const out: GearDef[] = [];
-    const any = (of: GearDef[]) => of[Math.floor(Math.random() * of.length)];
     const pick = (of: GearDef[]) => {
-      const free = of.filter((g) => !lying.has(g.id));
-      const fresh = free.filter((g) => !owned.has(g.id) && !this.found.has(g.id));
-      if (free.length) out.push(any(fresh.length ? fresh : free));
+      if (of.length) out.push(of[Math.floor(Math.random() * of.length)]);
     };
     const set = SET_BOSS[kind];
     if (set && Math.random() < TIER_SET_CHANCE[tier]) pick(GEAR.filter((g) => g.set === set));
