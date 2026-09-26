@@ -10,7 +10,8 @@ import type { GroundSpec } from '../art/ground';
 import type { SpawnSpot } from '../game/monsters';
 import type { SceneryLayout } from './common';
 import type { Drift } from './Scenery';
-import { CLEARING_GROUND, CLEARING_SPAWN, CLEARING_SPAWNS, PLAZA_CX, PLAZA_CY, PLAZA_Y, clearingScenery, clearingWalkable, plazaProps } from './clearing';
+import { CLEARING_GROUND, CLEARING_H, CLEARING_SPAWN, CLEARING_W, PLAZA_CX, PLAZA_CY, PLAZA_Y, clearingScenery, clearingWalkable, plazaProps } from './clearing';
+import { SANCTUM_WORLD_W } from './sanctumLayout';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
 import { warmCosmos, warmIsland, warmSpirit, warmTemple } from '../art/textures';
@@ -56,6 +57,8 @@ export interface ArenaDef {
   /** Card highlight colour. */
   accent: number;
   ground: GroundSpec | PaintedGround;
+  /** The whole world, when it reaches past the ground (the clearing's temple room). */
+  world?: { w: number; h: number };
   /** Where the hero starts, and rises after falling. */
   spawn: { x: number; y: number };
   monsters: SpawnSpot[];
@@ -84,17 +87,19 @@ export const ARENAS: ArenaDef[] = [
   {
     id: 'clearing',
     name: 'Runestone Clearing',
-    blurb: 'A plaza lit by braziers',
+    blurb: 'Home, and the Rune Temple',
     accent: 0xffb45a,
     ground: CLEARING_GROUND,
+    world: { w: SANCTUM_WORLD_W, h: CLEARING_H },
     spawn: CLEARING_SPAWN,
-    monsters: CLEARING_SPAWNS,
+    // A home arena: no monsters, just the temple and the training dummies.
+    monsters: [],
     scenery: clearingScenery,
     walkable: clearingWalkable,
     drift: {
       tints: [0x5f9a4b, 0x80b35a, 0x3b753c, 0xd49e34, 0xb8873a],
       frequency: 520,
-      where: (view: Phaser.Geom.Rectangle) => view.top < PLAZA_Y + 120,
+      where: (view: Phaser.Geom.Rectangle) => view.top < PLAZA_Y + 120 && view.left < CLEARING_W,
     },
     dayNight: true,
     preview: {

@@ -144,6 +144,12 @@ function tick(): Bitmap {
   return fromPattern(pat, { '#': hex('#2f9a4a'), w: WHITE, '.': null }, true);
 }
 
+/** Dust: a sparkle over a little heap of violet dust, the Rune Temple's currency. */
+function dustIcon(): Bitmap {
+  const pat = ['....w....', '...wbw...', '....w..w.', '.w.......', '...bbb...', '..bcccb..', '.bcccccb.', 'bcccccccb'];
+  return fromPattern(pat, { w: hex('#fbf2ff'), b: hex('#c79cff'), c: hex('#7a4ad0'), '.': null });
+}
+
 /** Glyphs for the six slot types, "all" and potions: 9x9, drawn white with a dark outline so they can be tinted. */
 const GLYPHS: Record<string, string[]> = {
   headwear: ['..#####..', '.#######.', '#########', '#########', '##.....##', '##.#.#.##', '##.....##', '.#.....#.', '.........'],
@@ -190,5 +196,6 @@ export function registerInventoryArt(scene: Phaser.Scene): void {
   scene.textures.addCanvas('rtile_empty', emptyTile().toCanvas());
   scene.textures.addCanvas('inv_ring', selectRing().toCanvas());
   scene.textures.addCanvas('inv_tick', tick().toCanvas());
+  scene.textures.addCanvas('dust_icon', dustIcon().toCanvas());
   for (const [k, rows] of Object.entries(GLYPHS)) scene.textures.addCanvas(glyphKey(k), fromPattern(rows, { '#': WHITE, '.': null }).toCanvas());
 }
