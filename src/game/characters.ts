@@ -29,7 +29,7 @@ import { DANCER_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
-import { Bard, DRUMMER_KIT, MINSTREL_KIT } from './Bard';
+import { Bard, DRUMMER_KIT, MINSTREL_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
 import { worn } from './skins';
 import type { Vitals } from './combat';
@@ -591,6 +591,22 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_song' },
         },
         lookName: 'Troubadour',
+        skins: [
+          {
+            // A hooded wanderer out of the deep wood, wisps of light drifting round him.
+            id: 'wildsong',
+            name: 'Wildsong',
+            role: 'Songs of the deep wood',
+            accent: 0x9ee85a,
+            attack: 'Wisp notes',
+            special: 'Song of the grove',
+            preview: { texture: 'bard_wild', glow: 'bard_wild_e', idle: 'bard_wild_idle_down', chosen: 'bard_wild_song_down', originY: BARD_ORIGIN_Y / BARD_H },
+            buttons: {
+              attack: { texture: 'icon_lute_wild' },
+              special: { texture: 'icon_song_wild' },
+            },
+          },
+        ],
       },
       {
         // Tougher and slower: drum blows that throw foes back, and a rhythm that makes every blow hit harder.
@@ -609,7 +625,7 @@ export const CLASSES: ClassDef[] = [
         lookName: 'Warband',
       },
     ],
-    spawn: (world, x, y, look) => new Bard(world, x, y, look === 'drummer' ? DRUMMER_KIT : MINSTREL_KIT),
+    spawn: (world, x, y, look) => new Bard(world, x, y, look === 'drummer' ? DRUMMER_KIT : look === 'wildsong' ? WILD_KIT : MINSTREL_KIT),
   },
 ];
 

@@ -3,7 +3,7 @@ import { sound } from '../../audio';
 import { heroBuffs } from '../buffs';
 import { snap } from '../display';
 import { NOTE_H } from '../../art/bard';
-import { HASTE, Note, RHYTHM, type NoteKind } from '../Songs';
+import { HASTE, Note, RHYTHM, TROUBADOUR_SONG, WILD_HASTE, WILD_SONG, type NoteKind } from '../Songs';
 import type { Hurtbox } from '../combat';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { clamp01, easeOut, flare, Fx, ring, rune, strikeGround, type Ink } from './ink';
@@ -25,19 +25,24 @@ export class Encore extends Fx {
   private nextShot = 250;
   private fired = 0;
   private beatT = 0;
+  /** The wildsong's notes are leaves and wisps. */
+  private song = TROUBADOUR_SONG;
 
   constructor(
     world: WorldScene,
     private c: Cast,
   ) {
     super(world, ENCORE_TIME);
+    const wild = c.look === 'wildsong';
+    this.song = { tex: wild ? WILD_SONG.tex : TROUBADOUR_SONG.tex, pal: c.pal };
     this.ground = this.ink(96, 60);
-    for (let i = 0; i < 6; i++) this.notes.push(this.own(world.add.image(c.x, c.y, 'note_e', i % 2 ? 'n1' : 'n0').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0)));
+    for (let i = 0; i < 6; i++) this.notes.push(this.own(world.add.image(c.x, c.y, this.song.tex, i % 2 ? 'n1' : 'n0').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0)));
     const v = c.hero.vitals;
     const got = v.heal(Math.round(v.max * 0.2));
     if (got > 0) world.popNumber(snap(c.hero.x), snap(c.hero.y) - 38, `+${got}`, 0x9dff9a);
-    heroBuffs.add(HASTE);
-    world.buffGained(HASTE);
+    const haste = wild ? WILD_HASTE : HASTE;
+    heroBuffs.add(haste);
+    world.buffGained(haste);
     world.debris(c.pal.tints, snap(c.x), snap(c.y) - 14, 20, c.y + 20, 'spores');
     flare(world, c.x, c.y - 14, 140, c.pal.light, 3, 800);
     sound.encore(world.pan(c.x));
@@ -70,7 +75,7 @@ export class Encore extends Fx {
       const dx = foe.x - x;
       const dy = foe.y - gy;
       const l = Math.hypot(dx, dy) || 1;
-      world.addEffect(new Note(world, x, gy, dx / l, dy / l, ENCORE_NOTE, foe));
+      world.addEffect(new Note(world, x, gy, dx / l, dy / l, ENCORE_NOTE, foe, this.song));
       sound.lutePluck(world.pan(x));
     }
     // Rings of music pulse out over the ground on the beat.
