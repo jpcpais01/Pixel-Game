@@ -49,8 +49,8 @@ const mix3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + 
 import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
 import { heroBuffs, type BuffDef } from '../game/buffs';
-import { Pickup } from '../game/Pickup';
-import { gear, RARITY, type GearDef, type SetId } from '../game/gear';
+import { LootFlare, Pickup } from '../game/Pickup';
+import { gear, GEAR_SETS, RARITY, type GearDef, type SetId } from '../game/gear';
 import { collection, slotIndex } from '../game/collection';
 import { energy, energyFor } from '../game/energy';
 import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
@@ -675,7 +675,32 @@ export class WorldScene extends Phaser.Scene {
     // New pieces first, spares once a rarity is complete, and never one already lying here.
     const lying = new Set<string>();
     for (const p of this.pickups) if (p.loot.kind === 'gear') lying.add(p.loot.def.id);
-    for (const def of gear.roll(kind, new Set(collection.ownedGear()), lying)) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'gear', def }));
+    for (const def of gear.roll(kind, new Set(collection.ownedGear()), lying)) this.dropGear(def, x, y - bodyY);
+  }
+
+  /**
+   * A piece of gear falls: rare and better ones make a show of landing (see
+   * Pickup), and the world answers with sound, sparks and, for a legendary,
+   * a jolt and its name.
+   */
+  private dropGear(def: GearDef, x: number, y: number): void {
+    const p = new Pickup(this, x, y, { kind: 'gear', def });
+    this.pickups.push(p);
+    const g = p.grade;
+    if (g < 2) return;
+    if (g >= 4) sound.lootFall(this.pan(p.x));
+    const tint = RARITY[def.rarity].tint;
+    p.onLand = (at) => {
+      sound.lootLand(g, this.pan(at.x));
+      if (g < 3) return;
+      const accent = def.set ? GEAR_SETS[def.set].tint : tint;
+      this.debris([0xffffff, accent], snap(at.x), snap(at.y) - 6, g >= 4 ? 28 : 14, at.y + 20, 'burst');
+      this.debris([0xffffff, accent], snap(at.x), snap(at.y) - 4, g >= 4 ? 14 : 8, at.y + 20, 'spores');
+      if (g >= 4) {
+        this.cameras.main.shake(160, 0.0014);
+        this.popNumber(snap(at.x), snap(at.y) - 30, 'LEGENDARY', accent);
+      }
+    };
   }
 
   /** Put on what the collection has equipped; max health follows the gear's. */
@@ -746,6 +771,8 @@ export class WorldScene extends Phaser.Scene {
     const tint = RARITY[def.rarity].tint;
     this.popNumber(snap(h.x), snap(h.y) - 40, def.name.toUpperCase(), tint);
     this.debris([0xffffff, tint], snap(h.x), snap(h.y) - 12, def.rarity === 'legendary' ? 26 : 16, h.y + 20, 'burst');
+    if (def.rarity === 'epic' || def.rarity === 'legendary') this.addEffect(new LootFlare(this, snap(h.x), snap(h.y), def));
+    if (def.rarity === 'legendary') this.cameras.main.shake(90, 0.0008);
     sound.gear(def.rarity === 'legendary' || def.rarity === 'epic');
   }
 
