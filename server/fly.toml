@@ -1,0 +1,21 @@
+# Fly.io, as an alternative to Render (see README.md): from this folder,
+# `fly launch --copy-config --no-deploy` once, then `fly deploy`.
+app = "myths-and-legends-server"
+primary_region = "cdg"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  method = "GET"
+  path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

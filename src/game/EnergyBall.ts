@@ -15,6 +15,8 @@ export interface BallKind {
 
 /** The wizard's first attack: a crackling ball of light with a sparkling trail. */
 export class EnergyBall {
+  /** Its own hit test, when it isn't the world's (another player's ball online, which only shows where it lands). */
+  hit: ((x: number, y: number) => boolean) | null = null;
   x: number;
   y: number;
   dead = false;

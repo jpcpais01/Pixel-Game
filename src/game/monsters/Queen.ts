@@ -5,7 +5,6 @@ import { snap } from '../display';
 import { sound } from '../../audio';
 import { BossBar } from '../BossBar';
 import type { Effect } from '../Slash';
-import type { Hit } from '../combat';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { QUEEN_HOME, SANCTUM, spiritFloor } from '../../world/spiritLayout';
 import { Monster, type Target } from './Monster';
@@ -461,9 +460,11 @@ export class Queen extends Monster {
     this.cooldown = (this.enraged ? 800 : 1400) + Math.random() * 800;
   }
 
-  hurt(hit: Hit): void {
-    if (this.vanished) return;
-    super.hurt(hit);
+  protected get intangible(): boolean {
+    return this.vanished;
+  }
+
+  protected afterHit(): void {
     if (!this.enraged && this.alive && this.hp < this.stats.hp / 2) {
       this.enraged = true;
       this.locket.setTint(0xb89cff);
