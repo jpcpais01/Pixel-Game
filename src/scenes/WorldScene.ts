@@ -27,6 +27,7 @@ import { FloatingIsland } from '../world/Island';
 import { SpiritDungeon } from '../world/Spirit';
 import { TempleDungeon } from '../world/Temple';
 import { RuneTemple } from '../world/Sanctum';
+import { Chapel } from '../world/Chapel';
 import { INSIDE_SPOT, OUTSIDE_SPOT, roomRect } from '../world/sanctumLayout';
 import { isPainted } from '../world/arenas';
 
@@ -139,6 +140,7 @@ export class WorldScene extends Phaser.Scene {
   private temple: TempleDungeon | null = null;
   /** The Rune Temple, when this is the Runestone Clearing. */
   private sanctum: RuneTemple | null = null;
+  private chapel: Chapel | null = null;
   /** The hero is inside the Rune Temple (the camera keeps to its room). */
   private inside = false;
   /** Passing through the temple's door: the screen fades out and in. */
@@ -247,6 +249,7 @@ export class WorldScene extends Phaser.Scene {
     this.spirit = null;
     this.temple = null;
     this.sanctum = null;
+    this.chapel = null;
     this.inside = false;
     this.doorBusy = false;
     this.auras.clear();
@@ -348,6 +351,8 @@ export class WorldScene extends Phaser.Scene {
       for (const d of p.dummies) this.dummy(d.x, d.y);
       this.sanctum = new RuneTemple(this, (img) => ground(img) as Phaser.GameObjects.Image);
       this.shadows.push(...this.sanctum.shadows);
+      this.chapel = new Chapel(this, (img) => ground(img) as Phaser.GameObjects.Image);
+      this.shadows.push(...this.chapel.shadows);
     } else if (arena.id === 'garden') {
       this.garden = new Garden(this);
     }
@@ -390,7 +395,10 @@ export class WorldScene extends Phaser.Scene {
 
     const kb = this.input.keyboard!;
     kb.on('keydown-N', () => daynight.enabled && daynight.toggle());
-    kb.on('keydown-E', () => this.inside && this.sanctum?.talk(this.hero.x, this.hero.y));
+    kb.on('keydown-E', () => {
+      if (this.inside) this.sanctum?.talk(this.hero.x, this.hero.y);
+      else this.chapel?.talk(this.hero.x, this.hero.y);
+    });
     // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
       const n = e.key.length === 1 ? e.key.charCodeAt(0) - 49 : -1;
@@ -1356,6 +1364,7 @@ export class WorldScene extends Phaser.Scene {
       const go = this.sanctum.update(this.hero.x, this.hero.y, this.inside, this.view, Phaser.Math.Easing.Sine.InOut(this.daylight));
       if (go) this.passDoor(go === 'enter');
     }
+    this.chapel?.update(this.hero.x, this.hero.y, dt, Phaser.Math.Easing.Sine.InOut(this.daylight));
     this.followHero();
 
     for (const b of this.balls) {

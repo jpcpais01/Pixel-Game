@@ -35,25 +35,25 @@ const UP: N3 = [0, 0, 1];
 
 // ---------------------------------------------------------------- Palette
 
-const WALL = ramp('#110e1a', '#1a1628', '#241e36', '#2f2846', '#3c3458', '#4b426c', '#5c5282', '#71669a');
-const CAPS = ramp('#0d0b15', '#15121f', '#1e1a2c', '#28223a', '#332c4a', '#3f375a');
-const TILE_A = ramp('#0b0a14', '#110f1f', '#17142a', '#1e1a36', '#262142', '#2f2950', '#39325f');
-const TILE_B = ramp('#0e0a16', '#150f22', '#1c142e', '#241a3a', '#2d2148', '#372856', '#433068');
-const PETAL_V = ramp('#140a26', '#20103a', '#2e1852', '#3e226c', '#523088', '#6a42a6', '#8458c4');
-const PETAL_R = ramp('#1a0c1c', '#28122a', '#3a1a3c', '#4e2450', '#643066', '#7c407e');
-const DAIS_ST = ramp('#14111e', '#1d1a2c', '#27233a', '#322d4a', '#3e385c', '#4b446e', '#5a5282');
-const GOLDS = ramp('#3a2008', '#6a3e12', '#9e6420', '#d69a3a', '#f4cf6a', '#fff4bf');
-const RUNNER = ramp('#16040b', '#2a0814', '#420e20', '#5c142c', '#781c3a', '#94284a');
-const MASS: RGB = hex('#06050b');
-const INK_R: RGB = hex('#050409');
-const VIOLET: RGB = [176, 120, 255];
-const GOLDEN: RGB = [255, 196, 96];
-const PALE: RGB = [236, 224, 255];
+export const WALL = ramp('#110e1a', '#1a1628', '#241e36', '#2f2846', '#3c3458', '#4b426c', '#5c5282', '#71669a');
+export const CAPS = ramp('#0d0b15', '#15121f', '#1e1a2c', '#28223a', '#332c4a', '#3f375a');
+export const TILE_A = ramp('#0b0a14', '#110f1f', '#17142a', '#1e1a36', '#262142', '#2f2950', '#39325f');
+export const TILE_B = ramp('#0e0a16', '#150f22', '#1c142e', '#241a3a', '#2d2148', '#372856', '#433068');
+export const PETAL_V = ramp('#140a26', '#20103a', '#2e1852', '#3e226c', '#523088', '#6a42a6', '#8458c4');
+export const PETAL_R = ramp('#1a0c1c', '#28122a', '#3a1a3c', '#4e2450', '#643066', '#7c407e');
+export const DAIS_ST = ramp('#14111e', '#1d1a2c', '#27233a', '#322d4a', '#3e385c', '#4b446e', '#5a5282');
+export const GOLDS = ramp('#3a2008', '#6a3e12', '#9e6420', '#d69a3a', '#f4cf6a', '#fff4bf');
+export const RUNNER = ramp('#16040b', '#2a0814', '#420e20', '#5c142c', '#781c3a', '#94284a');
+export const MASS: RGB = hex('#06050b');
+export const INK_R: RGB = hex('#050409');
+export const VIOLET: RGB = [176, 120, 255];
+export const GOLDEN: RGB = [255, 196, 96];
+export const PALE: RGB = [236, 224, 255];
 /** The rose window's glass, from the middle out: gold, then violet and rose petals, then blue and teal. */
-const GLASS: Record<string, RGB> = { gold: hex('#ffcc5a'), violet: hex('#9a5aff'), rose: hex('#ff6aa8'), blue: hex('#4a8aff'), teal: hex('#4ae0d4') };
+export const GLASS: Record<string, RGB> = { gold: hex('#ffcc5a'), violet: hex('#9a5aff'), rose: hex('#ff6aa8'), blue: hex('#4a8aff'), teal: hex('#4ae0d4') };
 /** Each keeper's colour: their dais ring and banner. */
 export const KEEPER_TINT = { disenchant: 0xb078ff, upgrade: 0xffc060 } as const;
-const KEEPER_RGB: Record<'disenchant' | 'upgrade', RGB> = { disenchant: VIOLET, upgrade: GOLDEN };
+export const KEEPER_RGB: Record<'disenchant' | 'upgrade', RGB> = { disenchant: VIOLET, upgrade: GOLDEN };
 
 export interface SanctumArt {
   diffuse: Uint8ClampedArray;
@@ -447,7 +447,7 @@ const PORTAL: Material = { ramp: ramp('#3a1a80', '#5a30c0', '#8a60f0', '#c0a0ff'
 const GEM_V: Material = { ramp: ramp('#2a1060', '#5a2ab0', '#9a6af0', '#dcc8ff', '#ffffff'), outline: hex('#140828'), emissive: 0.7, shine: true, noAO: true };
 const GEM_G: Material = { ramp: ramp('#5a2a08', '#a0580e', '#e09a28', '#ffd870', '#fff8d8'), outline: hex('#2a1004'), emissive: 0.8, shine: true, noAO: true };
 const STONE_DK: Material = { ramp: ramp('#0e0c14', '#18141f', '#221d2c', '#2e273a', '#3a3248', '#474058'), outline: hex('#06050a'), outlineLit: hex('#1e1a28') };
-const IRON: Material = { ramp: ramp('#0c0c12', '#16161f', '#22222e', '#30303e', '#444454', '#5c5c70', '#8a8aa0'), outline: hex('#040408'), shine: true };
+export const IRON: Material = { ramp: ramp('#0c0c12', '#16161f', '#22222e', '#30303e', '#444454', '#5c5c70', '#8a8aa0'), outline: hex('#040408'), shine: true };
 const DUST: Material = { ramp: ramp('#2a1060', '#4a22a0', '#7a48e0', '#b08cff', '#e8dcff'), outline: hex('#140828'), emissive: 0.85, noAO: true, noOutline: true };
 const EMBERS: Material = { ramp: ramp('#5a1a04', '#a0400a', '#e08a20', '#ffc860', '#fff4c0'), outline: hex('#2a0a02'), emissive: 0.9, noAO: true, noOutline: true };
 
@@ -456,13 +456,13 @@ const top = (t = 0): Vec3 => ({ x: t * 0.2, y: 0.75, z: 0.65 });
 
 // ---------------------------------------------------------------- The temple, outside
 
-const FIELDSTONE: Material = { ramp: ramp('#2a262c', '#3a353c', '#4a444c', '#5c5560', '#726a72', '#8a8286', '#a49a96', '#bdb2a6'), outline: hex('#141018'), outlineLit: hex('#3a3238') };
-const ROOF_SLATE: Material = { ramp: ramp('#12151e', '#1a1f2c', '#232a3a', '#2d3648', '#384358', '#45526a', '#56657e'), outline: hex('#08090e'), outlineLit: hex('#1e2432') };
-const ROOF_MOSS: Material = { ramp: ramp('#15291a', '#1f3a20', '#2c4f26', '#3b652c', '#4f7e34', '#68993e', '#86b24c'), outline: hex('#0a160a') };
-const BUSH: Material = { ramp: ramp('#10240f', '#1a3616', '#264c1e', '#346428', '#467e32', '#5e9a3e'), outline: hex('#081206') };
-const OAK: Material = { ramp: ramp('#1c110b', '#2c1b11', '#402818', '#553722', '#6c472d'), outline: hex('#0c0604') };
-const HEARTH: Material = { ramp: ramp('#6a2a08', '#a8501a', '#e08a34', '#ffc466', '#fff0c4'), outline: hex('#2a0c02'), emissive: 0.85, noAO: true, noOutline: true };
-const RUNE_GLASS: Material = { ramp: ramp('#2a1060', '#4a2aa0', '#7a50e0', '#b096ff', '#eee4ff'), outline: hex('#140828'), emissive: 0.7, noAO: true };
+export const FIELDSTONE: Material = { ramp: ramp('#2a262c', '#3a353c', '#4a444c', '#5c5560', '#726a72', '#8a8286', '#a49a96', '#bdb2a6'), outline: hex('#141018'), outlineLit: hex('#3a3238') };
+export const ROOF_SLATE: Material = { ramp: ramp('#12151e', '#1a1f2c', '#232a3a', '#2d3648', '#384358', '#45526a', '#56657e'), outline: hex('#08090e'), outlineLit: hex('#1e2432') };
+export const ROOF_MOSS: Material = { ramp: ramp('#15291a', '#1f3a20', '#2c4f26', '#3b652c', '#4f7e34', '#68993e', '#86b24c'), outline: hex('#0a160a') };
+export const BUSH: Material = { ramp: ramp('#10240f', '#1a3616', '#264c1e', '#346428', '#467e32', '#5e9a3e'), outline: hex('#081206') };
+export const OAK: Material = { ramp: ramp('#1c110b', '#2c1b11', '#402818', '#553722', '#6c472d'), outline: hex('#0c0604') };
+export const HEARTH: Material = { ramp: ramp('#6a2a08', '#a8501a', '#e08a34', '#ffc466', '#fff0c4'), outline: hex('#2a0c02'), emissive: 0.85, noAO: true, noOutline: true };
+export const RUNE_GLASS: Material = { ramp: ramp('#2a1060', '#4a2aa0', '#7a50e0', '#b096ff', '#eee4ff'), outline: hex('#140828'), emissive: 0.7, noAO: true };
 
 export const TEMPLE_ART_W = 176;
 export const TEMPLE_ART_H = 156;
@@ -710,8 +710,8 @@ export function sanctumExterior(): PixelCanvas {
   return c;
 }
 
-const GEM_FLOWER_PINK: Material = { ramp: ramp('#7a2a4a', '#c04a7a', '#f07aa8', '#ffc0d8'), outline: hex('#2a0a18') };
-const GEM_FLOWER_GOLD: Material = { ramp: ramp('#7a5a10', '#c09a20', '#f0d050', '#fff4b0'), outline: hex('#2a1a04') };
+export const GEM_FLOWER_PINK: Material = { ramp: ramp('#7a2a4a', '#c04a7a', '#f07aa8', '#ffc0d8'), outline: hex('#2a0a18') };
+export const GEM_FLOWER_GOLD: Material = { ramp: ramp('#7a5a10', '#c09a20', '#f0d050', '#fff4b0'), outline: hex('#2a1a04') };
 
 export const RUNESTONE_W = 16;
 export const RUNESTONE_H = 44;

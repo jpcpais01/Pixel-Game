@@ -24,6 +24,8 @@ import { ARROW, BEAM_H, BEAM_W, LRAY_H, LRAY_W, LRING_H, LRING_W, RUNE_H, RUNE_W
 import { registerInventoryArt } from './invTiles';
 import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, CRYSTAL_FRAMES, CRYSTAL_H as RS_CRYSTAL_H, CRYSTAL_W as RS_CRYSTAL_W, GODRAY_H, GODRAY_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, PILLAR_H as RS_PILLAR_H, PILLAR_W as RS_PILLAR_W, RUNESTONE_H, RUNESTONE_W, STATION_FRAMES, TEMPLE_ART_H, TEMPLE_ART_W, dustCrucible, godRay, runeAnvil, runeCrystal, runesmith, runestone, sanctumArt, sanctumExterior, sanctumPillar, unmaker } from './sanctum';
 import { ROOM_H, ROOM_W } from '../world/sanctumLayout';
+import { chapelArt, chapelExterior } from './chapel';
+import { CH_EXT_H, CH_EXT_W, CH_H, CH_W } from '../world/chapelLayout';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_LOOKS, PALADIN_W, type PaladinMeta } from './paladin';
 import { buildWarriorFrames, JADE_LOOK, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, type WarriorMeta } from './warrior';
 import { WIND_DEEP } from './palette';
@@ -788,4 +790,12 @@ export function warmSanctum(scene: Phaser.Scene): void {
   }
   scene.textures.addCanvas('rs_room', toCanvas(ROOM_W, ROOM_H, art.diffuse))!.setDataSource(toCanvas(ROOM_W, ROOM_H, art.normal));
   scene.textures.addCanvas('rs_room_e', toCanvas(ROOM_W, ROOM_H, art.emissive));
+  // The walk-in chapel: its hall, and the roof and front that hide it.
+  const cjob = chapelArt();
+  let cstep = cjob.next();
+  while (!cstep.done) cstep = cjob.next();
+  const hall = cstep.value;
+  scene.textures.addCanvas('ch_hall', toCanvas(CH_W, CH_H, hall.diffuse))!.setDataSource(toCanvas(CH_W, CH_H, hall.normal));
+  scene.textures.addCanvas('ch_hall_e', toCanvas(CH_W, CH_H, hall.emissive));
+  register(scene, 'ch_out', pack(frameList([chapelExterior()], 't'), CH_EXT_W, CH_EXT_H), CH_EXT_W, CH_EXT_H);
 }
