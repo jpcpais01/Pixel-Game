@@ -101,24 +101,30 @@ function cropToWindow(s: Phaser.GameObjects.Sprite, preview: Preview, w: number,
 
 // ---- Art for the stage, painted once per size and cached. ----
 
-const OUTER = hex('#0b0818');
 const RIM = hex('#43356e');
-const RIM_LIT = hex('#6b5aa6');
 
-/** The stage's backdrop: a dim hall with two pillars, and a tiled floor that runs back to the wall. */
+/**
+ * The stage's backdrop: a dim hall with two pillars, and a tiled floor that
+ * runs back to the wall. Painted in greys, so tinting it gives the hall the
+ * shade of the hero on show.
+ */
 function stageTexture(scene: Phaser.Scene, w: number, h: number): string {
   const key = `sel_stage_${w}x${h}`;
   if (scene.textures.exists(key)) return key;
   const b = new Bitmap(w, h);
   const floorY = h - STAGE_FEET - 12;
-  const wallTop = hex('#0a0719');
-  const wallLow = hex('#1f1845');
-  const pillar = hex('#2c2360');
-  const pillarLit = hex('#46398a');
-  const floorFar = hex('#2a2154');
-  const floorNear = hex('#171131');
-  const mortar = hex('#0f0b22');
-  const black: RGB = [6, 4, 14];
+  const grey = (v: number): RGB => [v, v, v];
+  const outer = grey(14);
+  const rim = grey(105);
+  const rimLit = grey(170);
+  const wallTop = grey(14);
+  const wallLow = grey(74);
+  const pillar = grey(96);
+  const pillarLit = grey(128);
+  const floorFar = grey(96);
+  const floorNear = grey(52);
+  const mortar = grey(24);
+  const black = grey(8);
   const cx = w / 2;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -126,11 +132,11 @@ function stageTexture(scene: Phaser.Scene, w: number, h: number): string {
       const ey = Math.min(y, h - 1 - y);
       if (ex + ey === 0) continue;
       if (ex === 0 || ey === 0) {
-        b.set(x, y, OUTER);
+        b.set(x, y, outer);
         continue;
       }
       if (ex === 1 || ey === 1) {
-        b.set(x, y, y === 1 || x === 1 ? RIM_LIT : RIM);
+        b.set(x, y, y === 1 || x === 1 ? rimLit : rim);
         continue;
       }
       let c: RGB;
@@ -327,6 +333,8 @@ interface SkinPick {
 class Stage extends Phaser.GameObjects.Container {
   readonly boxW: number;
   readonly boxH: number;
+  /** The hall behind the hero, tinted with the hero's shade. */
+  readonly bg: Phaser.GameObjects.Image;
   private beam: Phaser.GameObjects.Image;
   private pool: Phaser.GameObjects.Image;
   private runes: Phaser.GameObjects.Image;
@@ -350,7 +358,7 @@ class Stage extends Phaser.GameObjects.Container {
     this.feetY = h - STAGE_FEET;
     // Three times size when there's room for a hero's full height, else twice.
     this.scale3 = this.feetY - 4 >= 96 ? 3 : 2;
-    const bg = scene.add.image(0, 0, stageTexture(scene, w, h)).setOrigin(0);
+    this.bg = scene.add.image(0, 0, stageTexture(scene, w, h)).setOrigin(0);
     this.beam = scene.add.image(this.feetX, 2, beamTexture(scene, this.feetY + 2)).setOrigin(0.5, 0).setBlendMode(Phaser.BlendModes.ADD);
     this.pool = scene.add.image(this.feetX, this.feetY + 2, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(2.6, 0.8);
     const pedestal = scene.add.image(this.feetX, this.feetY, pedestalTexture(scene)).setOrigin(0.5, PED_CY / PED_H);
@@ -387,7 +395,7 @@ class Stage extends Phaser.GameObjects.Container {
       onTap(scene, z, () => stepSkin(dir));
       return z;
     });
-    this.add([bg, this.beam, this.pool, pedestal, this.runes, shadow, ...this.motes.map((m) => m.img), this.sprite, this.glow, this.skinName, this.picker, hit, ...this.stepZones]);
+    this.add([this.bg, this.beam, this.pool, pedestal, this.runes, shadow, ...this.motes.map((m) => m.img), this.sprite, this.glow, this.skinName, this.picker, hit, ...this.stepZones]);
     for (const m of this.motes) this.spawnMote(m, true);
   }
 
@@ -504,6 +512,10 @@ export class SelectScene extends Phaser.Scene {
     super('select');
   }
 
+  /** The shade the stage and the screen behind it are tinted with, and its tween. */
+  private tint = -1;
+  private tintTween?: Phaser.Tweens.Tween;
+
   private get current(): ClassDef {
     return CLASSES[this.cls];
   }
@@ -522,6 +534,8 @@ export class SelectScene extends Phaser.Scene {
     this.roster = CLASSES.map((_c, i) => new Tile(this, () => this.pickClass(i)));
     for (const t of this.roster) this.add.existing(t);
     this.tabs = [];
+    this.tint = -1;
+    this.tintTween = undefined;
     this.buildInfo();
     this.stage = new Stage(
       this,
@@ -632,6 +646,7 @@ export class SelectScene extends Phaser.Scene {
       t.show(d.preview, d.accent).setPicked(i === this.cls);
     });
     const skins = look.type.skins ?? [];
+    this.shadeTo(def.accent);
     this.stage.show(
       def.preview,
       def.accent,
@@ -689,6 +704,31 @@ export class SelectScene extends Phaser.Scene {
     const BOLT = ['..##', '.##.', '####', '.##.', '##..'];
     BOLT.forEach((row, y) => [...row].forEach((c, x) => c === '#' && b.fillStyle(0xffe08a).fillRect(boltX + x, SPECIAL_Y + 10 + y, 1, 1)));
     this.ultName.setText(fitLine(this.probe, ult.name, boltX - 4 - this.ultName.x));
+  }
+
+  /**
+   * Tint the stage's hall and the dim veil over the home screen with a shade
+   * of the hero's colour, easing from the last one.
+   */
+  private shadeTo(accent: number): void {
+    const lavender = Phaser.Display.Color.ValueToColor(0xb8a8e8);
+    const hall = Phaser.Display.Color.Interpolate.ColorWithColor(Phaser.Display.Color.ValueToColor(accent), lavender, 100, 15);
+    const target = Phaser.Display.Color.GetColor(hall.r, hall.g, hall.b);
+    if (target === this.tint) return;
+    const from = Phaser.Display.Color.ValueToColor(this.tint < 0 ? target : this.tint);
+    const to = Phaser.Display.Color.ValueToColor(target);
+    const night = Phaser.Display.Color.ValueToColor(0x0b0818);
+    this.tint = target;
+    this.tintTween?.stop();
+    const apply = (t: number) => {
+      const c = Phaser.Display.Color.Interpolate.ColorWithColor(from, to, 100, t * 100);
+      this.stage.bg.setTint(Phaser.Display.Color.GetColor(c.r, c.g, c.b));
+      // The veil over the home screen takes a faint wash of the same shade.
+      const v = Phaser.Display.Color.Interpolate.ColorWithColor(night, Phaser.Display.Color.ValueToColor(Phaser.Display.Color.GetColor(c.r, c.g, c.b)), 100, 34);
+      this.shade.setFillStyle(Phaser.Display.Color.GetColor(v.r, v.g, v.b), 0.5);
+    };
+    apply(0);
+    this.tintTween = this.tweens.addCounter({ from: 0, to: 1, duration: 280, ease: 'Sine.easeOut', onUpdate: (tw) => apply(tw.getValue() ?? 1) });
   }
 
   /**
