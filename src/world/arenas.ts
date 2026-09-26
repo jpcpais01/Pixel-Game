@@ -13,7 +13,8 @@ import type { Drift } from './Scenery';
 import { CLEARING_GROUND, CLEARING_SPAWN, CLEARING_SPAWNS, PLAZA_CX, PLAZA_CY, PLAZA_Y, clearingScenery, clearingWalkable, plazaProps } from './clearing';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
-import { warmCosmos, warmIsland, warmSpirit } from '../art/textures';
+import { warmCosmos, warmIsland, warmSpirit, warmTemple } from '../art/textures';
+import { ELEMENTINHO_HOME, TEMPLE_H, TEMPLE_SPAWN, TEMPLE_SPAWNS, TEMPLE_W, templeWalkable } from './templeLayout';
 import { QUEEN_HOME, SPIRIT_H, SPIRIT_SPAWN, SPIRIT_SPAWNS, SPIRIT_W, spiritWalkable } from './spiritLayout';
 import { COLUMN_BASE, COLUMN_H, ISLAND_X, ISLAND_Y } from '../art/island';
 import { COLUMNS, ISLE_H, ISLE_SPAWN, ISLE_W, RING_CX, RING_CY, islandScenery, islandWalkable } from './islandLayout';
@@ -208,6 +209,42 @@ export const ARENAS: ArenaDef[] = [
         { texture: 'queen', frame: 'idle0_r', glow: 'queen_e', x: QUEEN_HOME.x, y: QUEEN_HOME.y - 1, originY: 81 / 84 },
         { texture: 'wisp', frame: 'idle1_r', glow: 'wisp_e', x: QUEEN_HOME.x - 52, y: QUEEN_HOME.y - 12, originY: 22 / 24 },
         { texture: 'wisp', frame: 'idle3_l', glow: 'wisp_e', x: QUEEN_HOME.x + 56, y: QUEEN_HOME.y - 24, originY: 22 / 24 },
+      ],
+    },
+  },
+  {
+    id: 'temple',
+    name: 'Elementinho Temple',
+    blurb: 'Four elements, and a drop of fire',
+    accent: 0xff8a2a,
+    ground: {
+      painted: true,
+      w: TEMPLE_W,
+      h: TEMPLE_H,
+      warm: warmTemple,
+      layers: [
+        { key: 'et_floor', x: 0, y: 0 },
+        { key: 'et_floor_e', x: 0, y: 0, glow: true },
+      ],
+    },
+    spawn: TEMPLE_SPAWN,
+    // A hall for each element, their creatures tougher deeper in; Elementinho
+    // burns in the Heart at the end (see templeLayout.ts).
+    monsters: TEMPLE_SPAWNS,
+    scenery: () => ({ trees: [], props: [], rays: [], colliders: [] }),
+    walkable: templeWalkable,
+    drift: { tints: [0xffffff], frequency: 100000, where: () => false },
+    // Indoors: no day or night, the temple lights itself.
+    daylight: 0,
+    preview: {
+      x: ELEMENTINHO_HOME.x,
+      y: ELEMENTINHO_HOME.y - 44,
+      sprites: () => [
+        { texture: 'et_obelisk', frame: 'o0', glow: 'et_obelisk_e', x: 168, y: 116, originY: 54 / 58 },
+        { texture: 'et_obelisk', frame: 'o2', glow: 'et_obelisk_e', x: 432, y: 116, originY: 54 / 58 },
+        { texture: 'elementinho', frame: 'idle0_r', glow: 'elementinho_e', x: ELEMENTINHO_HOME.x, y: ELEMENTINHO_HOME.y - 6, originY: 96 / 100 },
+        { texture: 'blob_water', frame: 'idle1_r', glow: 'blob_water_e', x: ELEMENTINHO_HOME.x - 62, y: ELEMENTINHO_HOME.y + 6, originY: 19 / 22 },
+        { texture: 'blob_fire', frame: 'idle2_l', glow: 'blob_fire_e', x: ELEMENTINHO_HOME.x + 60, y: ELEMENTINHO_HOME.y + 2, originY: 19 / 22 },
       ],
     },
   },
