@@ -1,8 +1,9 @@
 // The home screen's Sky Arena: a marble arena on a floating island above a
-// sea of clouds, on a bright golden morning. The sun hangs low on the left,
-// so the arena's columns and blossom tree throw long shadows across the
-// floor, clouds glow on their sunward sides, and waterfalls spill off the
-// island's edge into the cloud sea.
+// sea of clouds, at golden sunset. The sun sinks low on the left over a
+// range of far peaks, so the arena's columns and blossom tree throw long
+// shadows across the warm stone, clouds burn gold and rose on their sunward
+// sides and sink into violet shade, and waterfalls spill off the island's
+// edge into the cloud sea.
 //
 // Pieces are painted separately so the home scene can move them: a sky for
 // the view size, three cloud strips that tile horizontally (far, middle and a
@@ -27,19 +28,19 @@ const CLOTH = 9;
 
 const RAMPS: RGB[][] = [
   [],
-  ramp('#3b3552', '#57506e', '#7a7290', '#9e96ad', '#c3bccb', '#e2dbe2', '#f6f0ee', '#fffcf8'),
+  ramp('#3a2436', '#57374a', '#7a4e58', '#a06a66', '#c48c78', '#e0ae8e', '#f4cea6', '#ffe8c4'),
   ramp('#4a2a14', '#7a4a1c', '#a87028', '#d49a38', '#f0c452', '#ffe08a', '#fff4c8'),
   ramp('#241c2e', '#35283c', '#4a3646', '#62464e', '#7e5a58', '#9c7466', '#bf9478', '#e0b892'),
-  ramp('#1c3a34', '#24503a', '#2f6a3e', '#44863f', '#64a444', '#8cc050', '#bcd96a', '#e8f09a'),
+  ramp('#1e3228', '#27482e', '#356232', '#4f7e34', '#72983a', '#9cb044', '#c8c458', '#f0dc7c'),
   ramp('#6e3a5c', '#9a4f72', '#c2708c', '#e095a8', '#f4b9c4', '#ffd9de', '#fff0f0'),
   ramp('#2a1a20', '#3e2628', '#5a3830', '#7a4e3a', '#9c6848', '#be8a5e'),
   ramp('#1c3a6a', '#2a64a0', '#44a0d0', '#7ad6ec', '#c4f4ff', '#ffffff'),
-  ramp('#3a6aa8', '#5a94cc', '#8cc4e8', '#c8ecf8', '#ffffff'),
+  ramp('#4a5a98', '#7a86b8', '#d0a8b0', '#f8d4b8', '#fff0dc'),
   ramp('#3a0e1c', '#62182a', '#8e2434', '#bc3a3c', '#e0624a', '#ff9a6a'),
 ];
 
-const CLOUD = ramp('#66679f', '#7f7fb8', '#9d98cb', '#bfb0d8', '#dec5dc', '#f5d9d6', '#ffe8d8', '#fff5e8', '#ffffff');
-const SKY = ramp('#2c55ad', '#3d63b8', '#4f78c6', '#6690d2', '#82a8de', '#a2c0e6', '#c4d4ea', '#e6dde6', '#fbe3d4', '#ffeccf', '#fff5e2');
+const CLOUD = ramp('#3e2a5a', '#553566', '#6e4270', '#8a5276', '#a86478', '#c87c78', '#e49a7a', '#f6b880', '#ffd49a', '#ffeabc');
+const SKY = ramp('#1e1a4a', '#2c2260', '#442a72', '#62307a', '#86387c', '#a8467a', '#c85a72', '#e27468', '#f29060', '#fbb060', '#ffd07a', '#ffe8a8');
 /** Where the cloud sea meets the sky, as a fraction of the view height. */
 export const HORIZON = 0.6;
 
@@ -64,17 +65,17 @@ const pick = (rp: RGB[], l: number, x: number, y: number): RGB =>
   rp[Math.max(0, Math.min(rp.length - 1, Math.floor(l * (rp.length - 1) + bayer(x, y) * 0.55 + 0.22)))];
 
 /** The sun's place in the view. */
-export const sunAt = (w: number, h: number) => ({ x: Math.round(w * 0.2), y: Math.round(h * 0.3) });
+export const sunAt = (w: number, h: number) => ({ x: Math.round(w * 0.22), y: Math.round(h * 0.4) });
 
 /** A far floating island, hazed into the sky; `temple` crowns it with a domed shrine. */
 function farIsland(w: number, h: number, fx: number, fy: number, fs: number, seed: number, temple: boolean) {
   const cx = Math.round(w * fx);
   const cy = Math.round(h * fy);
   const s = Math.max(8, Math.round(w * fs));
-  const haze = 0.62;
-  const rock = [hex('#9a8cb8'), hex('#7c6f9e'), hex('#62587f')];
-  const grass = hex('#8fae98');
-  const stone = hex('#e4dcea');
+  const haze = 0.55;
+  const rock = [hex('#9a6a86'), hex('#7a5074'), hex('#5e3c62')];
+  const grass = hex('#b0a060');
+  const stone = hex('#ffd8b8');
   /** Colour at (x, y) or null; `sky` is the colour behind. */
   return (x: number, y: number, sky: RGB): RGB | null => {
     const u = (x + 0.5 - cx) / s;
@@ -88,7 +89,7 @@ function farIsland(w: number, h: number, fx: number, fy: number, fs: number, see
         return mix(c, sky, haze);
       }
       // A thin waterfall from its underside.
-      if (Math.abs(u - 0.25) < 0.5 / s && y > botY && y < botY + s * 0.6) return mix(hex('#ffffff'), sky, 0.5 + 0.5 * ((y - botY) / (s * 0.6)));
+      if (Math.abs(u - 0.25) < 0.5 / s && y > botY && y < botY + s * 0.6) return mix(hex('#ffe4c4'), sky, 0.5 + 0.5 * ((y - botY) / (s * 0.6)));
     }
     if (!temple) return null;
     // The shrine: a colonnade under a dome and a gold spire.
@@ -102,66 +103,127 @@ function farIsland(w: number, h: number, fx: number, fy: number, fs: number, see
     }
     const dr = tw * 0.8;
     const dd = Math.hypot(x + 0.5 - cx, (y + 0.5 - colTop) * 1.3);
-    if (y < colTop && dd <= dr) return mix(x < cx ? stone : hex('#c4b8d4'), sky, haze * 0.8);
+    if (y < colTop && dd <= dr) return mix(x < cx ? stone : hex('#c49aa8'), sky, haze * 0.8);
     if (Math.abs(x + 0.5 - cx) < 1 && y < colTop - dr / 1.3 && y > colTop - dr / 1.3 - s * 0.14) return mix(hex('#ffe08a'), sky, 0.3);
     return null;
   };
 }
 
+/** Ridged noise: sharp crests where smooth noise crosses its middle. */
+const ridged = (x: number, s: number) => 1 - Math.abs(noise(x, s) * 2 - 1);
+
+interface Range {
+  /** Height above the horizon per column. */
+  top: Float32Array;
+  /** Height where snow starts. */
+  snow: number;
+  shadow: RGB;
+  lit: RGB;
+  snowShadow: RGB;
+  snowLit: RGB;
+  /** How far it fades into the sky. */
+  haze: number;
+}
+
+/** A mountain range along the horizon, `amp` px tall at its highest. */
+function range(w: number, amp: number, seed: number, cols: string[], haze: number): Range {
+  const top = new Float32Array(w + 2);
+  for (let x = -1; x <= w; x++) {
+    const env = 0.35 + 0.65 * noise(x / (w * 0.22), seed);
+    const ridge = 0.6 * ridged(x / (w * 0.07), seed + 1) + 0.28 * ridged(x / (w * 0.028), seed + 2) + 0.12 * ridged(x / 5, seed + 3);
+    top[x + 1] = amp * env * ridge;
+  }
+  const [shadow, lit, snowShadow, snowLit] = cols.map(hex);
+  return { top, snow: amp * 0.55, shadow, lit, snowShadow, snowLit, haze };
+}
+
 /**
- * The sky for a `w` x `h` view: a deep morning blue warming to gold at the
- * horizon, wisps of high cirrus, far floating islands in the haze and the sun
- * low on the left, blooming out over everything near it.
+ * The sky for a `w` x `h` view at sunset: deep violet overhead burning to
+ * rose, orange and gold at the horizon, high cirrus lit pink from below, far
+ * snowy peaks with their sunward faces aflame, floating islands in the haze
+ * and the sun sinking toward the peaks on the left, blooming out over
+ * everything near it.
  */
 export function paintSky(w: number, h: number): Bitmap {
   const out = new Bitmap(w, h);
   const hy = Math.round(h * HORIZON);
   const sun = sunAt(w, h);
-  const R = 9;
+  const R = 11;
   const n = SKY.length - 1;
-  const cirrus = [0.1, 0.2, 0.33].map((f, i) => ({ y: h * f, th: 2 + i, seed: 80 + i }));
+  const cirrus = [0.08, 0.17, 0.28].map((f, i) => ({ y: h * f, th: 2 + i, seed: 80 + i }));
   const islands = [
-    farIsland(w, h, 0.74, 0.44, 0.085, 91, true),
-    farIsland(w, h, 0.05, 0.5, 0.035, 92, false),
-    farIsland(w, h, 0.95, 0.53, 0.028, 93, false),
-    farIsland(w, h, 0.36, 0.54, 0.022, 94, false),
+    farIsland(w, h, 0.74, 0.42, 0.085, 91, true),
+    farIsland(w, h, 0.05, 0.47, 0.035, 92, false),
+    farIsland(w, h, 0.95, 0.5, 0.028, 93, false),
+    farIsland(w, h, 0.4, 0.49, 0.022, 94, false),
   ];
-  const warm = hex('#fff2d2');
+  const ranges = [
+    range(w, h * 0.25, 70, ['#8a4a7a', '#e8889a', '#c48aa8', '#ffe0c0'], 0.4),
+    range(w, h * 0.15, 74, ['#4e2c5c', '#b45a72', '#8a5a82', '#ffc8a0'], 0.12),
+  ];
+  const warm = hex('#ffd890');
+  const pink = hex('#ff8a86');
+  const gold = hex('#ffd08a');
   for (let y = 0; y < h; y++) {
     const t = clamp01(1 - (hy - y) / (hy * 0.95));
     for (let x = 0; x < w; x++) {
       let c: RGB;
+      let solid = false;
       if (y >= hy) c = CLOUD[4];
       else {
-        const f = t * t * n;
+        const f = t ** 1.5 * n;
         const i = Math.floor(f);
         const fr = clamp01((f - i - 0.5) * 2.6 + 0.5);
         c = SKY[Math.min(n, i + (fr > bayer(x, y) ? 1 : 0))];
+        const nearSun = Math.exp(-(((x - sun.x) / (w * 0.35)) ** 2));
         for (const ci of cirrus) {
           const yy = ci.y + x * 0.04 + (noise(x / 50, ci.seed) - 0.5) * 10;
           const band = Math.exp(-(((y - yy) / ci.th) ** 2));
           const k = band * clamp01((noise(x / 38, ci.seed + 5) * noise(x / 7 + y * 0.5, ci.seed + 6) - 0.2) * 2.2);
           const q = Math.floor(k * 3 + bayer(x, y)) / 3;
-          if (q > 0) c = mix(c, hex('#f4f0ff'), q * 0.45);
+          if (q > 0) c = mix(c, mix(pink, gold, nearSun), q * 0.6);
         }
-        // The horizon glows brightest under the sun.
-        const hg = Math.exp(-(((x - sun.x) / (w * 0.3)) ** 2)) * clamp01(1 - (hy - y) / (h * 0.22));
+        // The horizon burns brightest under the sun.
+        const hg = Math.exp(-(((x - sun.x) / (w * 0.35)) ** 2)) * clamp01(1 - (hy - y) / (h * 0.25));
         const hq = Math.floor(hg * 4 + bayer(x, y)) / 4;
         if (hq > 0) c = mix(c, warm, hq * 0.6);
+        const sky = c;
+        // Peaks, far range first; the nearer one covers it.
+        for (const rg of ranges) {
+          const H = rg.top[x + 1];
+          const top = hy - H;
+          if (y < top) continue;
+          solid = true;
+          // Faces rising toward the right look back at the sun on the left.
+          const slope = rg.top[x + 2] - rg.top[x];
+          const litK = clamp01(slope * 0.8 + 0.5 + (noise(x / 3 + y / 4, 77) - 0.5) * 0.5);
+          const lq = Math.floor(litK * 3 + bayer(x, y)) / 3;
+          const snowLine = hy - rg.snow - (noise(x / 4, 78) - 0.5) * 4;
+          const snowy = y < snowLine;
+          let m = mix(snowy ? rg.snowShadow : rg.shadow, snowy ? rg.snowLit : rg.lit, lq);
+          // The crest catches a rim of sunlight.
+          if (y - top < 1 && slope > -0.3) m = mix(m, warm, 0.5);
+          // Mist gathers at the feet.
+          const mist = clamp01((y - top) / Math.max(4, H) - 0.35) * 0.9;
+          c = mix(mix(m, sky, rg.haze), sky, Math.floor(mist * 4 + bayer(x, y)) / 4 * 0.7);
+        }
         for (const isl of islands) {
           const ic = isl(x, y, c);
           if (ic) {
             c = ic;
+            solid = true;
             break;
           }
         }
       }
       const d = Math.hypot(x + 0.5 - sun.x, y + 0.5 - sun.y);
-      if (d <= R) c = d > R - 1 ? hex('#fff4d0') : hex('#ffffff');
-      else {
-        const g = clamp01(1 - (d - R) / (R * 7)) ** 1.5;
+      if (d <= R) {
+        // The sun sits behind the peaks.
+        if (!solid) c = d > R - 1 ? hex('#ffe0a0') : d > R - 3 ? hex('#fff2c8') : hex('#fffbe8');
+      } else {
+        const g = clamp01(1 - (d - R) / (R * 6)) ** 1.5;
         const q = Math.floor(g * 6 + bayer(x, y)) / 6;
-        if (q > 0) c = mix(c, warm, q * 0.95);
+        if (q > 0) c = mix(c, hex('#ffc070'), q * (solid ? 0.5 : 0.9));
       }
       out.set(x, y, c);
     }
@@ -180,13 +242,13 @@ export function paintSky(w: number, h: number): Bitmap {
     }
   }
   const rays = godRays(w, h, 61);
-  const bloom = hex('#ffd79a');
+  const bloom = hex('#ff9c50');
   const bw = w * 0.55;
   const bh = h * 0.5;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
-      const g = clamp01(1 - Math.hypot((x + 0.5 - sun.x) / bw, (y + 0.5 - sun.y) / bh)) ** 2 * 0.22;
+      const g = clamp01(1 - Math.hypot((x + 0.5 - sun.x) / bw, (y + 0.5 - sun.y) / bh)) ** 2 * 0.24;
       const q = Math.floor(g * 8 + bayer(x, y)) / 8;
       for (let k = 0; k < 3; k++) out.data[i + k] = Math.min(255, out.data[i + k] + rays.data[i + k] + bloom[k] * q);
     }
@@ -201,7 +263,7 @@ export function paintSky(w: number, h: number): Bitmap {
 export function godRays(w: number, h: number, seed: number): Bitmap {
   const out = new Bitmap(w, h);
   const s = sunAt(w, h);
-  const col = hex('#fff0c8');
+  const col = hex('#ffc890');
   const reach = Math.hypot(w, h) * 0.8;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -216,7 +278,7 @@ export function godRays(w: number, h: number, seed: number): Bitmap {
       // Rays reaching down across the scene read strongest.
       const dir = 0.45 + 0.55 * Math.max(0, dy / d);
       const q = Math.floor(ray * fall * dir * 5 + bayer(x, y)) / 5;
-      if (q > 0) out.set(x, y, mix([0, 0, 0], col, q * 0.32));
+      if (q > 0) out.set(x, y, mix([0, 0, 0], col, q * 0.28));
     }
   }
   return out;
@@ -287,10 +349,10 @@ export function cloudStrip(L: CloudLayer): Bitmap {
     x += n * mr * 0.62 + r() * mr * 0.6;
   }
   puffs.sort((a, b) => a.y - b.y);
-  const lx = -0.6;
-  const ly = -0.65;
+  const lx = -0.78;
+  const ly = -0.42;
   const lz = 0.46;
-  const horizon = hex('#fbe3d4');
+  const horizon = hex('#f0a07e');
   const cell = new Float32Array(CLOUD_W * L.h).fill(-1);
   for (const p of puffs) {
     for (let y = Math.floor(p.y - p.r); y <= p.y + p.r; y++) {
@@ -314,7 +376,7 @@ export function cloudStrip(L: CloudLayer): Bitmap {
       const sea = L.base + (noise((x / CLOUD_W) * 32, L.seed + 1, 32) - 0.5) * 4;
       if (l < 0) {
         if (y < sea) continue;
-        l = 0.36 - (y - sea) * 0.003 + (noise((x / CLOUD_W) * 64 + y * 0.3, L.seed + 2, 64) - 0.5) * 0.08;
+        l = 0.34 - (y - sea) * 0.0045 + (noise((x / CLOUD_W) * 64 + y * 0.3, L.seed + 2, 64) - 0.5) * 0.08;
       }
       let c = pick(CLOUD, l, x, y);
       if (L.haze) c = mix(c, horizon, L.haze);
@@ -329,7 +391,7 @@ export function waterfall(): Bitmap {
   const W = 8;
   const H = 32;
   const out = new Bitmap(W, H);
-  const cols = ramp('#8cc4e8', '#c8ecf8', '#ffffff');
+  const cols = ramp('#8a88b8', '#f0c8b0', '#fff0dc');
   // Brighter and denser down the middle of the fall.
   for (let x = 0; x < W; x++) {
     const edge = x === 0 || x === W - 1;
@@ -345,7 +407,7 @@ export function waterfall(): Bitmap {
 /** A distant bird: two 5 x 3 frames, wings up then down. */
 export function birdSheet(): Bitmap {
   const b = new Bitmap(10, 3);
-  const c = hex('#4a4a78');
+  const c = hex('#2a1a3a');
   for (const [x, y] of [[0, 0], [4, 0], [1, 1], [3, 1], [2, 2]]) b.set(x, y, c);
   for (const [x, y] of [[0, 1], [1, 1], [3, 1], [4, 1], [2, 2]]) b.set(5 + x, y, c);
   return b;
@@ -493,7 +555,7 @@ export function paintIsland(rx: number): IslandArt {
     }
   }
   // Roots and vines dangling from under the lip.
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < 16; i++) {
     const u = (r() - 0.5) * 1.6;
     let x = Math.round(cx + u * rx);
     const y0 = Math.round(front(x) + thick + lip);
@@ -615,6 +677,19 @@ export function paintIsland(rx: number): IslandArt {
       }
     }
     for (let k = 0; k < th; k++) for (let dx = -1; dx <= 1; dx++) shadow(tx + dx + k * SX, ty + k * SY);
+  }
+
+  // Shrubs crowding the back of the rim, between the columns.
+  for (let i = 0; i < 14; i++) {
+    const deg = 192 + r() * 156;
+    if (angles.some((a) => Math.abs(((a - deg + 540) % 360) - 180) < 7)) continue;
+    const a = (deg * Math.PI) / 180;
+    const br = rx * (0.022 + r() * 0.018);
+    const bx = cx + Math.cos(a) * rx * 0.95;
+    const by = cy + Math.sin(a) * ry * 0.95 - br * 0.4;
+    // A few small leafy clumps rather than one ball.
+    for (let j = 0; j < 3; j++) clump(p, GRASS, bx + (j - 1) * br * 0.9, by + (j === 1 ? -br * 0.4 : 0) + r() * br * 0.3, br * (j === 1 ? 1 : 0.75), 0.12);
+    if (r() < 0.35) p.put(bx - br * 0.3, by - br, BLOSSOM, 0.9);
   }
 
   // Columns, back to front.

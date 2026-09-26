@@ -1,4 +1,4 @@
-// The home screen's Hall of Legends: a grand stone hall at midday. Sunlight
+// The home screen's Hall of Legends: a grand stone hall in the late afternoon. Sunlight
 // pours through tall arched windows in the back wall, lands on the arena floor
 // in bright window-shaped patches (with the mullions' and ivy's shadows in
 // them) and bounces back up to warm the walls. Between the windows stand
@@ -31,11 +31,11 @@ const ramp = (...c: string[]) => c.map(hex);
 const RAMPS: RGB[][] = [
   [],
   ramp('#140f1c', '#221a2c', '#33273a', '#4a3844', '#6a4e52', '#946c5e', '#c99c78', '#f3d3a2', '#fff4dc'),
-  ramp('#1a1928', '#2a2a3e', '#403f56', '#5d5a70', '#857f91', '#b2a8b0', '#dccfc4', '#f7eadb', '#fffaf2'),
+  ramp('#1c1622', '#2e2432', '#463846', '#645058', '#8a706c', '#b49484', '#d8b8a0', '#f2d8bc', '#fff2e0'),
   ramp('#2a170f', '#472812', '#6e3f16', '#9a5e1e', '#c7872c', '#e9b347', '#fad775', '#fff0b4', '#fffbe6'),
   ramp('#241a1f', '#382a2c', '#533f38', '#775a46', '#a27a58', '#c99e6c', '#ecc68c', '#fde3b0', '#fff6e0'),
   ramp('#18131f', '#262030', '#393040', '#524450', '#735e62', '#9c7f74', '#c9a78e', '#f0d4b0', '#fff4e0'),
-  ramp('#7fb6e0', '#98c8ea', '#b4d8f0', '#d0e6f2', '#eaf0ec', '#fbf1dc', '#fff7ea', '#fffcf6', '#ffffff'),
+  ramp('#4a3a7a', '#6a4a8e', '#8e5a98', '#b46a98', '#d88090', '#f09a80', '#fbb878', '#ffd490', '#fff0c8'),
   ramp('#07050b', '#0d0a14', '#15101e', '#1f1829', '#2b2135', '#3a2d42', '#57414f', '#86655e', '#c09a7a'),
   ramp('#16060d', '#290b17', '#431221', '#641a2c', '#8c2634', '#b53c3c', '#dd6446', '#f79a66', '#ffd3a0'),
   ramp('#0d1614', '#15241f', '#1f3629', '#2c4d33', '#3f683b', '#5c8a45', '#86ad55', '#bcd27a', '#eaf0b4'),
@@ -46,7 +46,7 @@ const SLANT = 0.38;
 /** How much the light spreads as it travels (perspective). */
 const SPREAD = 1.0;
 /** What the direct sun adds to a lit floor pixel's light level. */
-const SUN = 0.5;
+const SUN = 0.36;
 
 function hash(i: number, s: number): number {
   let h = (i * 374761393 + s * 668265263) | 0;
@@ -322,7 +322,7 @@ export function paintHall(w: number, h: number): HallArt {
           continue;
         }
         const t = (y - win.top) / (win.bottom - win.top);
-        // The sky: pale blue overhead, warm and blown out toward the horizon, brightest on the sun's side.
+        // The sky: a late-afternoon violet overhead, burning gold toward the horizon, brightest on the sun's side.
         let l = 0.2 + t * 0.55 + (1 - win.cx / w) * 0.12;
         const cloud = noise(x / 9, 5) * 0.6 + noise(x / 4 + y / 3, 6) * 0.4;
         if (cloud > 0.62 && t < 0.6) l += 0.22;
@@ -602,7 +602,7 @@ export function paintHall(w: number, h: number): HallArt {
   }
   const shaft = (seed: number): Bitmap => {
     const out = new Bitmap(w, h);
-    const warm = hex('#ffdca8');
+    const warm = hex('#ffc488');
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const i = y * w + x;
