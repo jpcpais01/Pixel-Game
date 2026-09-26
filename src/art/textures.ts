@@ -30,6 +30,10 @@ import { buildBansheeSheet, buildShadeSheet, buildWispSheet } from './ghosts';
 import { HAND_FRAMES, HAND_H, HAND_W, buildQueenSheet, graspHand } from './queen';
 import { BRAZIER_FRAMES, BRAZIER_H, BRAZIER_W, CANDLE_FRAMES, CANDLE_H, CANDLE_W, LANE_H, LANE_W, ORB_PX, PILLAR_H as SD_PILLAR_H, PILLAR_W as SD_PILLAR_W, STATUE_H, STATUE_W, TOMB_H, TOMB_W, laneCanvas, mistPuff, spiritArt, spiritBrazier, spiritCandles, spiritOrb, spiritPillar, spiritStatue, spiritTomb } from './spirit';
 import { SPIRIT_H, SPIRIT_W } from '../world/spiritLayout';
+import { BOULDER_H, BOULDER_W, CRYSTAL_H, CRYSTAL_W, ELEMENTS, FIREBOWL_FRAMES, FIREBOWL_H, FIREBOWL_W, OBELISK_H as T_OBELISK_H, OBELISK_W as T_OBELISK_W, TPILLAR_H, TPILLAR_W, boulder, elementCrystal, fireBowl, obelisk as templeObelisk, templeArt, templePillar } from './temple';
+import { ROCK_PX, TORB_PX, buildBlobSheet, buildGaleSheet, buildGolemSheet, buildSalamanderSheet, buildUndineSheet, thrownRock, waterOrb } from './elementals';
+import { BLAZE_FRAMES, BLAZE_H, BLAZE_W, EMBER_H, EMBER_W, blazeFrame, buildElementinhoSheet, emberDrop } from './elementinho';
+import { TEMPLE_H, TEMPLE_W } from '../world/templeLayout';
 import { FLOAT_ROCK_H, FLOAT_ROCK_W, HOLE_SIZE, METEOR_H, METEOR_W, OBELISK_H, OBELISK_W, PLATFORM_H, PLATFORM_W, RAY_H as COSMIC_RAY_H, RAY_W as COSMIC_RAY_W, cosmicRay, floatingRock, lightPool, meteor, obelisk, platformArt, shockRing, singularity, spaceCanvas, streak } from './cosmos';
 import { COSMOS_H, COSMOS_W } from '../world/cosmosLayout';
 import { COLUMN_H, COLUMN_W, ISLAND_H, ISLAND_W, ISLETS, column, fallStrip, foam, islandArt, islet, skyCanvas, wisp } from './island';
@@ -674,4 +678,65 @@ function* spiritTextures(scene: Phaser.Scene): Generator<void, void, void> {
   scene.textures.addCanvas('sd_orb', toCanvas(ORB_PX, ORB_PX, spiritOrb()));
   // Last: its presence means everything above is built.
   scene.textures.addCanvas('sd_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
+}
+
+/** The Elementinho Temple's textures being built, a little per call. */
+const templeJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
+
+/**
+ * Build the Elementinho Temple's floor plan, props, creatures and spell
+ * textures, spending at most `budget` ms (as warmCosmos). Returns true when
+ * they are all there.
+ */
+export function warmTemple(scene: Phaser.Scene, budget = Infinity): boolean {
+  if (scene.textures.exists('et_lane')) return true;
+  let job = templeJobs.get(scene);
+  if (!job) {
+    job = templeTextures(scene);
+    templeJobs.set(scene, job);
+  }
+  const start = performance.now();
+  while (performance.now() - start < budget) {
+    if (job.next().done) {
+      templeJobs.delete(scene);
+      return true;
+    }
+  }
+  return false;
+}
+
+function* templeTextures(scene: Phaser.Scene): Generator<void, void, void> {
+  const art = yield* templeArt();
+  scene.textures.addCanvas('et_floor', toCanvas(TEMPLE_W, TEMPLE_H, art.diffuse))!.setDataSource(toCanvas(TEMPLE_W, TEMPLE_H, art.normal));
+  scene.textures.addCanvas('et_floor_e', toCanvas(TEMPLE_W, TEMPLE_H, art.emissive));
+  yield;
+  // Props: frames in ELEMENTS order (water, earth, air, fire).
+  register(scene, 'et_pillar', pack(frameList(ELEMENTS.map(templePillar), 'p'), TPILLAR_W, TPILLAR_H), TPILLAR_W, TPILLAR_H);
+  register(scene, 'et_bowl', pack(frameList(Array.from({ length: FIREBOWL_FRAMES }, (_, f) => fireBowl(f)), 'f'), FIREBOWL_W, FIREBOWL_H), FIREBOWL_W, FIREBOWL_H);
+  scene.anims.create({ key: 'et_bowl_burn', frames: scene.anims.generateFrameNames('et_bowl_e', { prefix: 'f', start: 0, end: FIREBOWL_FRAMES - 1 }), frameRate: 9, repeat: -1 });
+  yield;
+  register(scene, 'et_boulder', pack(frameList([boulder(0), boulder(1)], 'b'), BOULDER_W, BOULDER_H), BOULDER_W, BOULDER_H);
+  register(scene, 'et_crystal', pack(frameList(ELEMENTS.map(elementCrystal), 'c'), CRYSTAL_W, CRYSTAL_H), CRYSTAL_W, CRYSTAL_H);
+  register(scene, 'et_obelisk', pack(frameList(ELEMENTS.map(templeObelisk), 'o'), T_OBELISK_W, T_OBELISK_H), T_OBELISK_W, T_OBELISK_H);
+  yield;
+  // The temple's creatures, and its Legend.
+  for (const el of ELEMENTS) registerMonster(scene, `blob_${el}`, buildBlobSheet(el));
+  yield;
+  registerMonster(scene, 'golem', buildGolemSheet());
+  registerMonster(scene, 'undine', buildUndineSheet());
+  yield;
+  registerMonster(scene, 'gale', buildGaleSheet());
+  registerMonster(scene, 'salamander', buildSalamanderSheet());
+  yield;
+  registerMonster(scene, 'elementinho', buildElementinhoSheet());
+  yield;
+  // Spells.
+  scene.textures.addCanvas('et_orb', toCanvas(TORB_PX, TORB_PX, waterOrb()));
+  register(scene, 'et_rock', pack(frameList([thrownRock()], 'r'), ROCK_PX, ROCK_PX), ROCK_PX, ROCK_PX, false);
+  scene.textures.addCanvas('et_ember', toCanvas(EMBER_W, EMBER_H, emberDrop()));
+  const blaze = scene.textures.addCanvas('et_blaze', toCanvas(BLAZE_W * BLAZE_FRAMES, BLAZE_H, sideBySide(BLAZE_W, BLAZE_H, Array.from({ length: BLAZE_FRAMES }, (_, f) => blazeFrame(f)))))!;
+  for (let f = 0; f < BLAZE_FRAMES; f++) blaze.add(`b${f}`, 0, f * BLAZE_W, 0, BLAZE_W, BLAZE_H);
+  scene.anims.create({ key: 'et_blaze_burn', frames: scene.anims.generateFrameNames('et_blaze', { prefix: 'b', start: 0, end: BLAZE_FRAMES - 1 }), frameRate: 10, repeat: -1 });
+  // Last: its presence means everything above is built.
+  scene.textures.addCanvas('et_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
 }

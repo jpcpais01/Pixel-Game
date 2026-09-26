@@ -8,6 +8,8 @@ import { Puffcap } from './Puffcap';
 import { Warden } from './Warden';
 import { Banshee, Shade, Wisp } from './Spirits';
 import { Queen } from './Queen';
+import { Blob, Gale, Golem, Salamander, Undine } from './Elementals';
+import { Elementinho } from './Elementinho';
 
 export { Monster, type Target } from './Monster';
 
@@ -23,6 +25,15 @@ export const MONSTERS = {
   shade: (world: WorldScene, x: number, y: number) => new Shade(world, x, y),
   banshee: (world: WorldScene, x: number, y: number) => new Banshee(world, x, y),
   queen: (world: WorldScene, x: number, y: number) => new Queen(world, x, y),
+  blob_water: (world: WorldScene, x: number, y: number) => new Blob(world, x, y, 'water'),
+  blob_earth: (world: WorldScene, x: number, y: number) => new Blob(world, x, y, 'earth'),
+  blob_air: (world: WorldScene, x: number, y: number) => new Blob(world, x, y, 'air'),
+  blob_fire: (world: WorldScene, x: number, y: number) => new Blob(world, x, y, 'fire'),
+  golem: (world: WorldScene, x: number, y: number) => new Golem(world, x, y),
+  undine: (world: WorldScene, x: number, y: number) => new Undine(world, x, y),
+  gale: (world: WorldScene, x: number, y: number) => new Gale(world, x, y),
+  salamander: (world: WorldScene, x: number, y: number) => new Salamander(world, x, y),
+  elementinho: (world: WorldScene, x: number, y: number) => new Elementinho(world, x, y),
 } satisfies Record<string, (world: WorldScene, x: number, y: number) => Monster>;
 
 export type MonsterKind = keyof typeof MONSTERS;

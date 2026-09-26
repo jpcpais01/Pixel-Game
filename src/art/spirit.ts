@@ -17,7 +17,7 @@ import { POOL, SANCTUM, SPIRIT_H, SPIRIT_PROPS, SPIRIT_W, WALL_H, spiritFloor } 
 
 const ramp = (...c: string[]): RGB[] => c.map(hex);
 
-function fbm(x: number, y: number, scale: number, seed: number, octaves = 3): number {
+export function fbm(x: number, y: number, scale: number, seed: number, octaves = 3): number {
   let v = 0;
   let amp = 0.5;
   let s = scale;
@@ -64,7 +64,7 @@ const UP: N3 = [0, 0, 1];
  * Distance from every pixel to the nearest set pixel of `mask`, up to `max`
  * (a two-pass chamfer: close enough to round).
  */
-function* distanceTo(mask: Uint8Array, W: number, H: number, max: number): Generator<void, Float32Array, void> {
+export function* distanceTo(mask: Uint8Array, W: number, H: number, max: number): Generator<void, Float32Array, void> {
   const d = new Float32Array(W * H).fill(max);
   for (let i = 0; i < W * H; i++) if (mask[i]) d[i] = 0;
   const D = Math.SQRT2;

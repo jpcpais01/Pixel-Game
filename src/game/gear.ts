@@ -185,7 +185,7 @@ export function wornStats(defs: GearDef[]): Required<GearStats> {
 }
 
 /** Chance a slain monster drops a piece, by kind; others use the default. The bosses always do. */
-const GEAR_CHANCE: Record<string, number> = { beetle: 0.22, barkling: 0.14, warden: 1, queen: 1 };
+const GEAR_CHANCE: Record<string, number> = { beetle: 0.22, barkling: 0.14, golem: 0.2, warden: 1, queen: 1, elementinho: 1 };
 /** Sets only their own boss drops. */
 const SET_BOSS: Record<string, SetId> = { queen: 'wraith' };
 const DEFAULT_GEAR_CHANCE = 0.08;

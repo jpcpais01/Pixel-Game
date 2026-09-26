@@ -25,6 +25,7 @@ import { Garden } from '../world/Garden';
 import { CosmosArena } from '../world/Cosmos';
 import { FloatingIsland } from '../world/Island';
 import { SpiritDungeon } from '../world/Spirit';
+import { TempleDungeon } from '../world/Temple';
 import { isPainted } from '../world/arenas';
 
 type V3 = [number, number, number];
@@ -121,6 +122,8 @@ export class WorldScene extends Phaser.Scene {
   private island: FloatingIsland | null = null;
   /** The arena's own living parts, when it is the Spirit Dungeon. */
   private spirit: SpiritDungeon | null = null;
+  /** The arena's own living parts, when it is the Elementinho Temple. */
+  private temple: TempleDungeon | null = null;
   /** The Wraithbound set's spectral form about the hero, while the whole set is worn. */
   /** Set once the run has begun (after the gear worn from the start is on). */
   private running = false;
@@ -221,6 +224,7 @@ export class WorldScene extends Phaser.Scene {
     this.cosmos = null;
     this.island = null;
     this.spirit = null;
+    this.temple = null;
     this.wraith = null;
     this.running = false;
     this.lean.x = this.lean.y = 0;
@@ -259,9 +263,10 @@ export class WorldScene extends Phaser.Scene {
 
     // The ground streams in strips as the hero walks (see GroundStreamer).
     this.ground = isPainted(arena.ground) ? null : new GroundStreamer(this, arena.ground, (img) => ground(img) as Phaser.GameObjects.Image);
-    sound.setOutdoors(arena.id !== 'cosmos' && arena.id !== 'spirit');
+    sound.setOutdoors(arena.id !== 'cosmos' && arena.id !== 'spirit' && arena.id !== 'temple');
     if (arena.id === 'cosmos') this.cosmos = new CosmosArena(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'spirit') this.spirit = new SpiritDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
+    if (arena.id === 'temple') this.temple = new TempleDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'island') {
       this.island = new FloatingIsland(this, ground, this.view);
       this.shadows.push(...this.island.shadows);
@@ -1044,8 +1049,8 @@ export class WorldScene extends Phaser.Scene {
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
     this.setVignette(0.32 - d * 0.14);
     // Out in the void and down in the dungeon there is neither pollen nor fireflies (they have their own motes).
-    this.pollen.emitting = !this.cosmos && !this.spirit && d > 0.5;
-    this.fireflies.emitting = !this.cosmos && !this.spirit && d < 0.5;
+    this.pollen.emitting = !this.cosmos && !this.spirit && !this.temple && d > 0.5;
+    this.fireflies.emitting = !this.cosmos && !this.spirit && !this.temple && d < 0.5;
     sound.setDaylight(d);
     return d;
   }
@@ -1284,6 +1289,7 @@ export class WorldScene extends Phaser.Scene {
     this.cosmos?.update(time, dt);
     this.island?.update(time, dt);
     this.spirit?.update(time, dt);
+    this.temple?.update(time);
     this.updateBanner();
     for (const f of this.flickers) {
       const k = 1 + (f.day - 1) * d;

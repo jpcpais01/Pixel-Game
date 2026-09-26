@@ -54,6 +54,15 @@ export const MONSTER_FRAME = {
   shade: { w: 30, h: 36, ox: 14, oy: 34 },
   banshee: { w: 28, h: 38, ox: 14, oy: 36 },
   queen: { w: 72, h: 84, ox: 36, oy: 81 },
+  blob_water: { w: 20, h: 22, ox: 10, oy: 19 },
+  blob_earth: { w: 20, h: 22, ox: 10, oy: 19 },
+  blob_air: { w: 20, h: 22, ox: 10, oy: 19 },
+  blob_fire: { w: 20, h: 22, ox: 10, oy: 19 },
+  golem: { w: 46, h: 48, ox: 22, oy: 45 },
+  undine: { w: 30, h: 40, ox: 14, oy: 37 },
+  gale: { w: 28, h: 34, ox: 14, oy: 31 },
+  salamander: { w: 38, h: 26, ox: 18, oy: 23 },
+  elementinho: { w: 80, h: 100, ox: 40, oy: 96 },
 };
 export type FrameBox = (typeof MONSTER_FRAME)[keyof typeof MONSTER_FRAME];
 
