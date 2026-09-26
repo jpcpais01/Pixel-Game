@@ -10,6 +10,7 @@ import { SmiteBurst } from './Holy';
 import { BLOOD_FX, Risen, SOUL_FX, SoulBolt, type BoltKind, type RisenStats } from './Souls';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { turnMidMove } from './anims';
 
 /** The raised dead come up at the mouse, within these; ahead the way he last walked on touch. */
 const MIN_RANGE = 16;
@@ -198,8 +199,7 @@ export class Necromancer implements Hero {
     const dir = dirOf(a.x, a.y);
     if (dir !== this.dir) {
       this.dir = dir;
-      const frame = this.body.anims.currentFrame;
-      if (frame && this.state !== 'free') this.body.play({ key: `${this.kit.key}_${this.state}_${dir}`, startFrame: frame.index - 1 });
+      if (this.state !== 'free') turnMidMove(this.body, `${this.kit.key}_${this.state}_${dir}`);
     }
   }
 

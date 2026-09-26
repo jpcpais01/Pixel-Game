@@ -10,6 +10,7 @@ import { Arrow, ArrowRain, RANGER_ARROW, STORM_ARROW, type ArrowStyle } from './
 import { onGround } from './Toxins';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { turnMidMove } from './anims';
 
 export const MAX_HP = 90;
 const SPEED = 64; // world px / second
@@ -166,8 +167,7 @@ export class Archer implements Hero {
     if (dir !== this.dir) {
       this.dir = dir;
       // Turn mid-draw without starting over.
-      const frame = this.body.anims.currentFrame;
-      if (frame && this.state !== 'free') this.body.play({ key: `${this.style.key}_${this.state}_${dir}`, startFrame: frame.index - 1 });
+      if (this.state !== 'free') turnMidMove(this.body, `${this.style.key}_${this.state}_${dir}`);
     }
   }
 

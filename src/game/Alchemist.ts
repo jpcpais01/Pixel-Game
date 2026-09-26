@@ -9,6 +9,7 @@ import { Vitals, type Hurtbox } from './combat';
 import { Bog, CHEM_TOX, Flask, HEX_TOX, onGround, PLAGUE_TOX, Splash, Venom, type ToxStyle } from './Toxins';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { turnMidMove } from './anims';
 
 /** How an alchemist plays: his numbers, his throw and his special. */
 export interface AlchemistKit {
@@ -223,9 +224,7 @@ export class Alchemist implements Hero {
     if (dir !== this.dir) {
       this.dir = dir;
       // Turn mid-throw without restarting it.
-      const cur = this.body.anims.currentAnim;
-      const frame = this.body.anims.currentFrame;
-      if (cur && frame && this.state !== 'free') this.body.play({ key: `${this.style.key}_${this.state}_${dir}`, startFrame: frame.index - 1 });
+      if (this.state !== 'free') turnMidMove(this.body, `${this.style.key}_${this.state}_${dir}`);
     }
   }
 

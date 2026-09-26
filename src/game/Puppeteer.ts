@@ -10,6 +10,7 @@ import { FATE_STRINGS, GOLD_STRINGS, ICE_STRINGS, Marionette, Puppet, SILK_STRIN
 import type { Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { turnMidMove } from './anims';
 
 // Walk frames where a foot lands.
 const FOOTFALLS = new Set([1, 4]);
@@ -228,8 +229,7 @@ export class Puppeteer implements Hero {
     const dir = dirOf(a.x, a.y);
     if (dir !== this.dir) {
       this.dir = dir;
-      const frame = this.body.anims.currentFrame;
-      if (frame && this.state !== 'free') this.body.play({ key: `${this.kit.key}_${this.state}_${dir}`, startFrame: frame.index - 1 });
+      if (this.state !== 'free') turnMidMove(this.body, `${this.kit.key}_${this.state}_${dir}`);
     }
   }
 
