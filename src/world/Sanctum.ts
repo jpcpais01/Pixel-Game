@@ -86,7 +86,7 @@ export class RuneTemple {
     add.image(TEMPLE_X, TEMPLE_Y, 'rs_temple_e', 't0').setOrigin(0.5, oy).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1);
     this.shadows.push(sunShadow(add.image(TEMPLE_X, TEMPLE_Y, 'rs_temple_s', 't0').setOrigin(0.5, oy)));
     // The lamplit hall through the open doors, and the lanterns either side.
-    scene.glowLight(TEMPLE_X, TEMPLE_Y - 24, 90, 0xffa050, 1.6, 0.35, 0xff9a40, 1.3);
+    scene.glowLight(TEMPLE_X, TEMPLE_Y - 16, 70, 0xffa050, 1.1, 0.3, 0xff9a40, 0.9);
     const halo = (x: number, y: number, tint: number, scale: number, base: number) =>
       this.nightHalos.push({ img: add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(tint).setScale(scale).setDepth(y + 40), base });
     for (const sx of [-1, 1]) halo(TEMPLE_X + sx * 22, TEMPLE_Y - 48, 0xffa850, 0.7, 0.75);
@@ -100,16 +100,17 @@ export class RuneTemple {
       halo(r.x, r.y - 20, 0x9a70ff, 0.9, 0.4);
     });
     this.doorMotes = add.particles(0, 0, 'spark', {
-      x: { min: TEMPLE_X - 8, max: TEMPLE_X + 8 },
-      y: { min: TEMPLE_Y - 40, max: TEMPLE_Y - 18 },
-      lifespan: { min: 1400, max: 2400 },
-      speedY: { min: -10, max: -3 },
+      // A few specks of lamplit dust drifting out over the sill.
+      x: { min: TEMPLE_X - 7, max: TEMPLE_X + 7 },
+      y: { min: TEMPLE_Y - 20, max: TEMPLE_Y - 14 },
+      lifespan: { min: 1800, max: 2800 },
+      speedY: { min: -4, max: 1 },
       speedX: { min: -3, max: 3 },
-      scale: 0.5,
-      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * Math.PI) * 0.7 },
-      tint: [0xffe0a0, 0xffa050, 0xfff4d8],
+      scale: 0.4,
+      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * Math.PI) * 0.5 },
+      tint: [0xffd890, 0xffb060],
       blendMode: Phaser.BlendModes.ADD,
-      frequency: 260,
+      frequency: 420,
     }).setDepth(depth + 1);
 
     // Inside: the room itself.
@@ -214,7 +215,7 @@ export class RuneTemple {
     // Half the motes on Fast graphics.
     this.offQuality = settings.watch((s) => {
       const k = s.quality !== 'full' ? 2 : 1;
-      this.doorMotes.frequency = 260 * k;
+      this.doorMotes.frequency = 420 * k;
       this.roomMotes.frequency = 200 * k;
       this.sunMotes.frequency = 90 * k;
       this.moonMotes.frequency = 260 * k;

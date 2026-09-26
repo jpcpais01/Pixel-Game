@@ -462,6 +462,33 @@ export const ROOF_MOSS: Material = { ramp: ramp('#15291a', '#1f3a20', '#2c4f26',
 export const BUSH: Material = { ramp: ramp('#10240f', '#1a3616', '#264c1e', '#346428', '#467e32', '#5e9a3e'), outline: hex('#081206') };
 export const OAK: Material = { ramp: ramp('#1c110b', '#2c1b11', '#402818', '#553722', '#6c472d'), outline: hex('#0c0604') };
 export const HEARTH: Material = { ramp: ramp('#6a2a08', '#a8501a', '#e08a34', '#ffc466', '#fff0c4'), outline: hex('#2a0c02'), emissive: 0.85, noAO: true, noOutline: true };
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+
+/** The dim hall seen through an open door. */
+export const HALL_DARK: Material = { ramp: ramp('#07050a', '#0e0a0e', '#161012', '#201614', '#2c1e16', '#3a2818'), outline: hex('#050306'), noAO: true, noOutline: true };
+
+/**
+ * One pixel of the hall seen through an open doorway: dark deep inside, the
+ * lamplight within falling warm on its floor and fading up into the dark,
+ * dithered so it reads as depth rather than bands. `k` runs 0 at the arch's
+ * top to 1 at the sill, `side` is the distance from the doorway's middle,
+ * `fromSill` how many rows above the sill.
+ */
+export function doorway(c: PixelCanvas, x: number, y: number, side: number, k: number, fromSill: number): void {
+  const n: Vec3 = { x: 0, y: 0, z: 1 };
+  const warm = Math.max(0, (k - 0.5) / 0.5) ** 1.8 * (1 - side / 14);
+  // Ordered dither, so the light fades in an even pattern rather than speckle.
+  const d = (BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16;
+  // The hall's floor: a few rows of warm-lit flagstones running in.
+  if (fromSill < 4) {
+    const lit = d < 0.25 + warm * 0.6;
+    c.px(x, y, lit ? HEARTH : HALL_DARK, n, lit ? { bias: -2 + (fromSill < 1 ? 1 : 0), glow: 0.25 + warm * 0.3 } : { bias: 5 });
+    return;
+  }
+  if (d < warm * 0.55) c.px(x, y, HEARTH, n, { bias: -2, glow: 0.2 + warm * 0.2 });
+  else c.px(x, y, HALL_DARK, n, { bias: Math.floor(k * 3.4 - side / 7 + d) });
+}
+
 export const RUNE_GLASS: Material = { ramp: ramp('#2a1060', '#4a2aa0', '#7a50e0', '#b096ff', '#eee4ff'), outline: hex('#140828'), emissive: 0.7, noAO: true };
 
 export const TEMPLE_ART_W = 176;
@@ -586,9 +613,7 @@ export function sanctumExterior(): PixelCanvas {
         else c.px(x, y, OAK, { x: x < cx ? 0.5 : -0.5, y: -0.2, z: 0.84 }, { bias: plank ? 0 : -1 });
         continue;
       }
-      // The hall beyond, lamplit, brighter toward the floor.
-      const k = (y - (spring - dr)) / (front - (spring - dr));
-      c.px(x, y, HEARTH, { x: 0, y: 0, z: 1 }, { bias: Math.round(k * 2.5 - 1.5 - side / 8), glow: 0.35 + k * 0.5 });
+      doorway(c, x, y, side, (y - (spring - dr)) / (front - (spring - dr)), front - 1 - y);
     }
   }
   c.part();
