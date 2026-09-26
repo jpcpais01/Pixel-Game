@@ -215,6 +215,7 @@ const SKINS: Record<string, UltSkin> = {
   'archer:storm': { name: 'Thunder Arrow', pal: pal(0xf2fbff, 0xa8e4ff, 0x5ec8ff, 0x3a6ad8, 0x8ad8ff) },
   'chronomancer:moon': { name: 'Moonstill', pal: MOON_PAL },
   'chronomancer:aeon': { name: 'Aeon Legion', pal: AEON_PAL, type: 'paradox' },
+  'bard:wildsong': { name: 'Chorus of the Wild', pal: pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070) },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

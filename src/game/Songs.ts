@@ -14,6 +14,8 @@ import { bloom, dither, easeOut, flare, Fx, type Ink, pal, ring, shade, type Pal
 
 /** The minstrel's music: white-teal light. */
 export const SONG_PAL: Pal = pal(0xf4fffc, 0xa8fff0, 0x3fd8c8, 0x1a7a8a, 0x6fe8d8);
+/** The minstrel's wildsong skin: firefly light, gold-green. */
+export const WILD_PAL: Pal = pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070);
 /** The drummer's: amber fire. */
 export const DRUM_PAL: Pal = pal(0xfffbe8, 0xffd98a, 0xff9a3a, 0xb8401e, 0xffa850);
 
@@ -26,6 +28,19 @@ export const HASTE: BuffDef = {
   duration: 8000,
   mods: { speed: 1.3, regen: 4 },
 };
+
+/** The same song in the wildsong's voice. */
+export const WILD_HASTE: BuffDef = { ...HASTE, name: 'Song of the grove', icon: 'icon_song_wild', tint: 0xb8f070 };
+
+/** How the minstrel's music looks: the notes' texture (frames n0 and n1) and their colours. */
+export interface SongLook {
+  tex: string;
+  pal: Pal;
+}
+
+export const TROUBADOUR_SONG: SongLook = { tex: 'note_e', pal: SONG_PAL };
+/** Leaf-flagged notes and little wisps. */
+export const WILD_SONG: SongLook = { tex: 'note_wild_e', pal: WILD_PAL };
 
 /** The drummer's rhythm: every blow lands harder. */
 export const RHYTHM: BuffDef = {
@@ -90,12 +105,13 @@ export class Note implements Effect {
     private uy: number,
     private kind: NoteKind,
     private target: Hurtbox | null = null,
+    private look: SongLook = TROUBADOUR_SONG,
   ) {
     this.t = Math.random() * 1000;
-    this.img = world.add.image(x, y - NOTE_H, 'note_e', Math.random() < 0.5 ? 'n0' : 'n1').setBlendMode(Phaser.BlendModes.ADD);
-    this.halo = world.add.image(x, y - NOTE_H, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(SONG_PAL.mid).setAlpha(0.5).setScale(0.6);
+    this.img = world.add.image(x, y - NOTE_H, look.tex, Math.random() < 0.5 ? 'n0' : 'n1').setBlendMode(Phaser.BlendModes.ADD);
+    this.halo = world.add.image(x, y - NOTE_H, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(look.pal.mid).setAlpha(0.5).setScale(0.6);
     this.shadow = world.add.image(x, y, 'shadow').setDepth(1).setScale(0.35, 0.3).setAlpha(0.25);
-    this.light = kind.lit ? world.lights.addLight(x, y - NOTE_H, 60, SONG_PAL.light, 1.4) : null;
+    this.light = kind.lit ? world.lights.addLight(x, y - NOTE_H, 60, look.pal.light, 1.4) : null;
     this.place();
   }
 
@@ -127,7 +143,7 @@ export class Note implements Effect {
     this.trailT -= dt;
     if (this.trailT <= 0) {
       this.trailT = 40;
-      this.world.debris(SONG_PAL.tints, snap(this.x - this.ux * 4), snap(this.y - NOTE_H - this.uy * 4), 1, this.y - 0.2, 'trail');
+      this.world.debris(this.look.pal.tints, snap(this.x - this.ux * 4), snap(this.y - NOTE_H - this.uy * 4), 1, this.y - 0.2, 'trail');
     }
   }
 
@@ -186,7 +202,7 @@ export class Note implements Effect {
     this.struck.add(h);
     const damage = Math.max(1, Math.round(this.kind.damage * Math.pow(this.kind.falloff, this.hops)));
     h.hurt({ damage, heavy: false, knock: 40, fromX: h.x - this.ux * 8, fromY: h.y - h.bodyY - this.uy * 8 });
-    this.world.debris(SONG_PAL.tints, snap(h.x - this.ux * (h.radius - 1)), snap(h.y - h.bodyY), 6, h.y + 20);
+    this.world.debris(this.look.pal.tints, snap(h.x - this.ux * (h.radius - 1)), snap(h.y - h.bodyY), 6, h.y + 20);
     sound.noteHit(this.world.pan(h.x), this.hops);
     this.hops++;
     const next = this.hops <= this.kind.bounces ? this.nextFrom(h) : null;
@@ -218,8 +234,8 @@ export class Note implements Effect {
 
   /** It ends in a soft flash of its colour. */
   private pop(size: number): void {
-    bloom(this.world, this.x, this.y - NOTE_H, SONG_PAL.hot, 0.5 + size * 0.5, 260, this.y + 20, 0.7);
-    this.world.debris(SONG_PAL.tints, snap(this.x), snap(this.y - NOTE_H), Math.round(3 + size * 4), this.y + 20);
+    bloom(this.world, this.x, this.y - NOTE_H, this.look.pal.hot, 0.5 + size * 0.5, 260, this.y + 20, 0.7);
+    this.world.debris(this.look.pal.tints, snap(this.x), snap(this.y - NOTE_H), Math.round(3 + size * 4), this.y + 20);
     this.destroy();
   }
 
@@ -297,6 +313,7 @@ export class SongBurst extends Fx {
     private x: number,
     private y: number,
     private p: Pal,
+    tex = 'note_e',
   ) {
     // Long enough for the last note's drift to finish before it's cleared away.
     super(world, 1150);
@@ -305,7 +322,7 @@ export class SongBurst extends Fx {
       const a = (i / 6) * Math.PI * 2 + 0.3;
       const note = this.own(
         world.add
-          .image(Math.round(x + Math.cos(a) * 8), Math.round(y - 12 + Math.sin(a) * 4), 'note_e', i % 2 ? 'n1' : 'n0')
+          .image(Math.round(x + Math.cos(a) * 8), Math.round(y - 12 + Math.sin(a) * 4), tex, i % 2 ? 'n1' : 'n0')
           .setBlendMode(Phaser.BlendModes.ADD)
           .setDepth(y + 40)
           .setAlpha(0),
