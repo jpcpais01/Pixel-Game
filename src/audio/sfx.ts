@@ -1337,6 +1337,39 @@ export class Sfx {
     }
   }
 
+  /** The puppet's blow: a hollow wooden knock and a tin blade's swish; the chop lands with a thump. */
+  clack(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.85 : 0.7, heavy ? 0.4 : 0.25);
+    this.burstNoise(out, t, 'highpass', 2600, 6000, 0.7, 0.22, 0.07);
+    this.chirp(out, t + 0.02, 'triangle', heavy ? 520 : 760, heavy ? 240 : 380, 0.32, 0.06);
+    this.burstNoise(out, t + 0.02, 'bandpass', 1500, 1100, 6, 0.45, 0.05);
+    this.bell(out, t + 0.03, heavy ? 1180 : 1560, 0.025, 0.25);
+    if (heavy) this.chirp(out, t + 0.02, 'sine', 140, 48, 0.6, 0.3);
+  }
+
+  /** A taut string plucked hard: a bright twang and a whip of air; the snag's is lower, with a ratchet reeling in. */
+  twang(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, 0.6, 0.35);
+    this.pluck(out, t, mtof(heavy ? 57 : 71), heavy ? 0.16 : 0.12, heavy ? 0.5 : 0.3);
+    this.burstNoise(out, t, 'bandpass', 3000, 900, 2, 0.16, 0.1);
+    if (heavy) for (let i = 0; i < 4; i++) this.burstNoise(out, t + 0.08 + i * 0.045, 'bandpass', 2400, 2000, 8, 0.12, 0.02);
+  }
+
+  /** A pirouette: a blade whirring round, a quick swell of air. */
+  whirr(t: number, pan: number): void {
+    const out = this.out(pan, 0.5, 0.2);
+    this.burstNoise(out, t, 'bandpass', 700, 2600, 3, 0.2, 0.16);
+    this.chirp(out, t, 'triangle', 330, 520, 0.05, 0.14);
+  }
+
+  /** Strings dropping from above: a tense harp run falling in a minor key, and a shimmer. */
+  strings(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.6);
+    [86, 82, 79, 75, 74, 70, 67, 63].forEach((m, i) => this.pluck(out, t + i * 0.04, mtof(m), 0.1, 0.6, false));
+    this.sparkle(out, t + 0.1, 4, 0.05);
+    this.chirp(out, t + 0.3, 'sine', 180, 90, 0.2, 0.3);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {

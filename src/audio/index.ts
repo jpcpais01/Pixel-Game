@@ -481,6 +481,26 @@ class GameSound {
     if (t !== null) this.sfx!.drumRoll(t, pan);
   }
 
+  clack(pan = 0, heavy = false): void {
+    const t = this.slot('clack');
+    if (t !== null) this.sfx!.clack(t, pan, heavy);
+  }
+
+  twang(pan = 0, heavy = false): void {
+    const t = this.slot('twang');
+    if (t !== null) this.sfx!.twang(t, pan, heavy);
+  }
+
+  whirr(pan = 0): void {
+    const t = this.slot('whirr');
+    if (t !== null) this.sfx!.whirr(t, pan);
+  }
+
+  strings(pan = 0): void {
+    const t = this.slot('strings');
+    if (t !== null) this.sfx!.strings(t, pan);
+  }
+
   step(): void {
     const t = this.slot('step');
     if (t !== null) this.sfx!.step(t);

@@ -205,6 +205,30 @@ export const thunderIcon: IconPainter = (put, p) => {
   disc(put, 13, 2, 1.2, p.core);
 };
 
+export const finaleIcon: IconPainter = (put, p) => {
+  // A giant puppet's sword coming down on a ring, strings running up out of the frame.
+  ellipse(put, 8, 12.5, 6.5, 2.4, 0.2, p.mid);
+  ellipse(put, 8, 12.5, 3.6, 1.2, 0.3, p.deep);
+  seg(put, 8, 1, 8, 11, p.core);
+  seg(put, 9, 1, 9, 10, p.hot);
+  seg(put, 5, 3, 12, 3, p.hot);
+  for (const x of [2, 14]) for (let y = 0; y < 7; y += 2) put(x, y, p.mid);
+  for (const [x, y] of [[4, 9], [12, 9], [3, 13], [13, 13]]) put(x, y, p.core);
+};
+
+export const puppetMasterIcon: IconPainter = (put, p) => {
+  // A cross of light, strings from it down to two foes pulled together.
+  seg(put, 3, 2, 13, 2, p.core);
+  seg(put, 8, 0, 8, 4, p.hot);
+  seg(put, 4, 3, 4, 9, p.mid);
+  seg(put, 12, 3, 12, 9, p.mid);
+  disc(put, 4.5, 11.5, 2.6, p.hot);
+  disc(put, 11.5, 11.5, 2.6, p.hot);
+  put(4, 11, p.core);
+  put(11, 11, p.core);
+  for (const [x, y] of [[8, 9], [8, 12], [7, 11], [9, 11]]) put(x, y, p.core);
+};
+
 /** Paint an icon into RGBA pixels (the colours of `p`). */
 export function paintIcon(icon: IconPainter, p: Pal): Uint8ClampedArray {
   const px = new Uint8ClampedArray(16 * 16 * 4);
