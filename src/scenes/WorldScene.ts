@@ -48,7 +48,7 @@ import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
 import { heroBuffs, type BuffDef } from '../game/buffs';
 import { Pickup } from '../game/Pickup';
-import { gear, RARITY, type GearDef } from '../game/gear';
+import { gear, RARITY, type GearDef, type SetId } from '../game/gear';
 import { collection, slotIndex } from '../game/collection';
 import { energy, energyFor } from '../game/energy';
 import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
@@ -105,6 +105,13 @@ const AUTO_AIM_RANGE = 150;
 /** How long the hero keeps facing the aim after an ability, in ms. */
 const LOOK_LINGER = 450;
 
+/** How each gear set worn whole shows on the hero. */
+const SET_AURA: Record<SetId, { name: string; text: number; tint: number; motes: number[]; life: { min: number; max: number }; rise: { min: number; max: number }; scale: number; every: number }> = {
+  wraith: { name: 'SPECTRAL FORM', text: 0x9ffff0, tint: 0x6af4dc, motes: [0xeafffa, 0x6af4dc, 0x8ac8ff], life: { min: 700, max: 1300 }, rise: { min: -24, max: -8 }, scale: 0.5, every: 95 },
+  // Quicker, brighter sparks that leap higher: the hero burns like the Elementinho.
+  ember: { name: 'LIVING FLAME', text: 0xffc060, tint: 0xff8a2a, motes: [0xfff0a0, 0xffb030, 0xf06a1a], life: { min: 450, max: 850 }, rise: { min: -40, max: -16 }, scale: 0.55, every: 70 },
+};
+
 export class WorldScene extends Phaser.Scene {
   private hero!: Hero;
   /** Online play: the other players, and what is shared with them (null alone). */
@@ -124,10 +131,10 @@ export class WorldScene extends Phaser.Scene {
   private spirit: SpiritDungeon | null = null;
   /** The arena's own living parts, when it is the Elementinho Temple. */
   private temple: TempleDungeon | null = null;
-  /** The Wraithbound set's spectral form about the hero, while the whole set is worn. */
   /** Set once the run has begun (after the gear worn from the start is on). */
   private running = false;
-  private wraith: { halo: Phaser.GameObjects.Image; motes: Phaser.GameObjects.Particles.ParticleEmitter } | null = null;
+  /** The aura of each gear set worn whole about the hero: a glow at their feet and motes rising off them. */
+  private auras = new Map<SetId, { halo: Phaser.GameObjects.Image; motes: Phaser.GameObjects.Particles.ParticleEmitter }>();
   /** How far the camera leans off the hero, toward a boss towering over the fight. */
   private lean = { x: 0, y: 0 };
   /** The light this frame: 0 night .. 1 day (fixed in arenas without day and night). */
@@ -225,7 +232,7 @@ export class WorldScene extends Phaser.Scene {
     this.island = null;
     this.spirit = null;
     this.temple = null;
-    this.wraith = null;
+    this.auras.clear();
     this.running = false;
     this.lean.x = this.lean.y = 0;
     this.shafts = null;
@@ -653,7 +660,7 @@ export class WorldScene extends Phaser.Scene {
   /** Put on what the collection has equipped; max health follows the gear's. */
   private rewear(): void {
     const d = gear.wear(collection.equippedGear());
-    this.spectralForm(gear.sets.includes('wraith'));
+    for (const k of Object.keys(SET_AURA) as SetId[]) this.setAura(k, gear.sets.includes(k));
     if (!d) return;
     const v = this.hero.vitals;
     if (v.alive) v.grow(d);
@@ -661,48 +668,52 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * The whole Wraithbound set worn: the hero takes on a spectral form, a cold
-   * glow at their feet and soul-light rising off them (its stats come with
-   * the gear's totals).
+   * A whole set worn: the hero takes on its form (the Wraithbound's spectral
+   * glow and soul-light, the Emberborn's living flame). Its stats come with
+   * the gear's totals.
    */
-  private spectralForm(on: boolean): void {
-    if (on === !!this.wraith) return;
-    if (!on) {
-      this.wraith!.halo.destroy();
-      this.wraith!.motes.destroy();
-      this.wraith = null;
+  private setAura(set: SetId, on: boolean): void {
+    const had = this.auras.get(set);
+    if (on === !!had) return;
+    if (had) {
+      had.halo.destroy();
+      had.motes.destroy();
+      this.auras.delete(set);
       return;
     }
-    const halo = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x6af4dc).setScale(1.1, 0.55).setAlpha(0.3);
+    const a = SET_AURA[set];
+    const halo = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(a.tint).setScale(1.1, 0.55).setAlpha(0.3);
     const motes = this.add.particles(0, 0, 'spark', {
       emitZone: { type: 'random', source: new Phaser.Geom.Rectangle(-7, -26, 14, 26) } as Phaser.Types.GameObjects.Particles.EmitZoneData,
-      lifespan: { min: 700, max: 1300 },
-      speedY: { min: -24, max: -8 },
+      lifespan: a.life,
+      speedY: a.rise,
       speedX: { min: -4, max: 4 },
-      scale: 0.5,
+      scale: a.scale,
       alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * Math.PI) * 0.85 },
-      tint: [0xeafffa, 0x6af4dc, 0x8ac8ff],
+      tint: a.motes,
       blendMode: Phaser.BlendModes.ADD,
-      frequency: 95,
+      frequency: a.every,
     });
-    this.wraith = { halo, motes };
+    this.auras.set(set, { halo, motes });
     // Put on mid-run: say so.
     if (this.running) {
       const h = this.hero;
-      this.popNumber(snap(h.x), snap(h.y) - 40, 'SPECTRAL FORM', 0x9ffff0);
-      this.debris([0xeafffa, 0x6af4dc, 0x8ac8ff], snap(h.x), snap(h.y) - 12, 26, h.y + 20, 'spores');
+      this.popNumber(snap(h.x), snap(h.y) - 40, a.name, a.text);
+      this.debris(a.motes, snap(h.x), snap(h.y) - 12, 26, h.y + 20, 'spores');
     }
   }
 
-  /** The spectral form's glow and motes follow the hero. */
-  private updateSpectralForm(time: number): void {
-    const w = this.wraith;
-    if (!w) return;
+  /** The set auras' glow and motes follow the hero; the flame flickers, the spectral glow breathes. */
+  private updateSetAuras(time: number): void {
+    if (!this.auras.size) return;
     const h = this.hero;
     const down = this.downT > 0;
-    w.halo.setPosition(snap(h.x), snap(h.y) - 3).setDepth(h.y - 0.5).setAlpha(down ? 0 : 0.26 + Math.sin(time * 0.004) * 0.08);
-    w.motes.setPosition(snap(h.x), snap(h.y)).setDepth(h.y + 1);
-    w.motes.emitting = !down;
+    for (const [k, w] of this.auras) {
+      const pulse = k === 'ember' ? Math.sin(time * 0.013) * 0.05 + Math.sin(time * 0.031) * 0.04 : Math.sin(time * 0.004) * 0.08;
+      w.halo.setPosition(snap(h.x), snap(h.y) - 3).setDepth(h.y - 0.5).setAlpha(down ? 0 : 0.26 + pulse);
+      w.motes.setPosition(snap(h.x), snap(h.y)).setDepth(h.y + 1);
+      w.motes.emitting = !down;
+    }
   }
 
   /** A piece of gear was picked up: it's kept for good, and worn straight away if its slot is empty. */
@@ -1247,7 +1258,7 @@ export class WorldScene extends Phaser.Scene {
     if (fast !== 1 && this.downT <= 0) this.stretchStep(x0, y0, fast - 1, hb);
     this.updateHeroLife(dt);
     this.updateItems(dt);
-    this.updateSpectralForm(time);
+    this.updateSetAuras(time);
 
     const target = this.downT > 0 ? null : this.hero;
     // Monsters hunt whichever player is nearest.

@@ -616,7 +616,7 @@ export class InventoryView extends Phaser.GameObjects.Container {
         this.button.setVisible(true).set(isWorn ? 'Unequip' : worn ? 'Swap in' : 'Equip', w - pad * 2, btnH, !isWorn);
         this.button.setPosition(x + pad, Math.max(y + 6, Math.min(top + this.det.h - pad - btnH, y + 40)));
       } else if (g) {
-        for (const s of wrap(g.set ? `Not found yet. Only the Hollow Queen drops the ${GEAR_SETS[g.set].name} set.` : 'Not found yet. Monsters drop it.', chars)) {
+        for (const s of wrap(g.set ? `Not found yet. Only ${GEAR_SETS[g.set].boss} drops the ${GEAR_SETS[g.set].name} set.` : 'Not found yet. Monsters drop it.', chars)) {
           line(s, SOFT, x + pad, y);
           y += LINE;
         }
