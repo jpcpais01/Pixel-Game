@@ -179,6 +179,32 @@ export const bloodMoonIcon: IconPainter = (put, p) => {
   }
 };
 
+export const encoreIcon: IconPainter = (put, p) => {
+  // Two beamed notes, a ring of light turning round them.
+  ellipse(put, 8, 8, 7, 5.5, 0.08, p.deep);
+  disc(put, 5, 11, 1.8, p.hot);
+  disc(put, 10.5, 10, 1.8, p.hot);
+  put(4, 10, p.core);
+  put(10, 9, p.core);
+  seg(put, 6, 4, 6, 11, p.mid);
+  seg(put, 12, 3, 12, 10, p.mid);
+  seg(put, 6, 4, 12, 3, p.core);
+  seg(put, 6, 5, 12, 4, p.hot);
+  for (const [x, y] of [[1, 8], [15, 7], [8, 1], [8, 14]]) put(x, y, p.core);
+};
+
+export const thunderIcon: IconPainter = (put, p) => {
+  // A drum's lit head, rings of sound rolling out round it.
+  ellipse(put, 8, 10, 3.2, 1.6, 0.35, p.core);
+  disc(put, 8, 10, 1.4, p.hot);
+  ellipse(put, 8, 10, 5.4, 3.2, 0.12, p.mid);
+  ellipse(put, 8, 10, 7.4, 4.6, 0.08, p.deep);
+  seg(put, 3, 2, 7, 8, p.hot);
+  seg(put, 13, 2, 9, 8, p.hot);
+  disc(put, 3, 2, 1.2, p.core);
+  disc(put, 13, 2, 1.2, p.core);
+};
+
 /** Paint an icon into RGBA pixels (the colours of `p`). */
 export function paintIcon(icon: IconPainter, p: Pal): Uint8ClampedArray {
   const px = new Uint8ClampedArray(16 * 16 * 4);

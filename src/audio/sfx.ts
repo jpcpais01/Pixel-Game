@@ -1,11 +1,14 @@
-import { Mixer, filter, gain, hit, osc, panner, pick, rand, sweep } from './mixer';
+import { Mixer, filter, gain, hit, mtof, osc, panner, pick, rand, sweep } from './mixer';
 
 const SPARKLE = [2093, 2349, 2637, 3136, 3520, 4186]; // C major pentatonic, high
+/** The minstrel's tune, one note per strum (MIDI, D dorian): his attacks play it through. */
+const LUTE_TUNE = [62, 65, 69, 67, 65, 64, 62, 57, 62, 69, 67, 72, 69, 65, 67, 62];
 
 /** One-shot game sounds. `pan` is -1 (left) .. 1 (right) on screen. */
 export class Sfx {
   private m: Mixer;
   private foot = 0;
+  private tune = 0;
 
   constructor(m: Mixer) {
     this.m = m;
@@ -1247,6 +1250,91 @@ export class Sfx {
     const out = this.out(0, 0.55, 0.6);
     [659, 784, 988, 1319].forEach((f, i) => this.bell(out, t + i * 0.06, f, 0.05, 0.9));
     this.sparkle(out, t + 0.22, 4, 0.04);
+  }
+
+  /** A plucked gut string: a bright twang that mellows as it rings, and the pick's tick. */
+  private pluck(dest: AudioNode, t: number, f: number, level: number, decay: number, click = true): void {
+    const ctx = this.m.ctx;
+    const g = gain(ctx, 0, dest);
+    hit(g.gain, t, level, 0.002, decay);
+    const lp = filter(ctx, 'lowpass', f * 8, 0.9, g);
+    lp.frequency.setValueAtTime(f * 8, t);
+    lp.frequency.setTargetAtTime(f * 1.6, t + 0.005, decay * 0.2);
+    const o = osc(ctx, 'triangle', f, lp);
+    const b = osc(ctx, 'sawtooth', f * rand(0.998, 1.002), gain(ctx, 0.22, lp));
+    for (const x of [o, b]) {
+      x.start(t);
+      x.stop(t + decay + 0.1);
+    }
+    if (click) this.burstNoise(dest, t, 'bandpass', 3200, 2200, 1.5, level * 0.35, 0.02);
+  }
+
+  /** A strum across the lute: a low string and the tune's next note on top, a hair apart. */
+  lutePluck(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.4);
+    const top = LUTE_TUNE[this.tune++ % LUTE_TUNE.length];
+    this.pluck(out, t, mtof(top - 12), 0.12, 0.45);
+    this.pluck(out, t + 0.028, mtof(top), 0.2, 0.7, false);
+  }
+
+  /** A note striking: a bell that rings a step higher with every foe it leaps to. */
+  noteHit(t: number, pan: number, leap: number): void {
+    const out = this.out(pan, 0.6, 0.4);
+    this.bell(out, t, mtof(81 + [0, 4, 7, 12, 16][Math.min(4, leap)]), 0.045, 0.4);
+    this.burstNoise(out, t, 'highpass', 5000, 7000, 0.8, 0.08, 0.05);
+  }
+
+  /** The song of haste: a quick, bright run up the lute over a warm swell of strings. */
+  song(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.75, 0.55);
+    [62, 66, 69, 74, 78, 74, 81, 86].forEach((m, i) => this.pluck(out, t + i * 0.085, mtof(m), 0.16, 0.6, i % 2 === 0));
+    const pad = gain(ctx, 0, filter(ctx, 'lowpass', 1800, 0.7, out));
+    pad.gain.setValueAtTime(0, t);
+    pad.gain.linearRampToValueAtTime(0.07, t + 0.4);
+    pad.gain.linearRampToValueAtTime(0, t + 1.3);
+    for (const m of [50, 57, 62, 66]) {
+      const o = osc(ctx, 'sawtooth', mtof(m) * rand(0.997, 1.003), pad);
+      o.start(t);
+      o.stop(t + 1.35);
+    }
+    this.sparkle(out, t + 0.6, 4, 0.05);
+  }
+
+  /** The encore: a harp-like sweep up two octaves and a ringing chord. */
+  encore(t: number, pan: number): void {
+    const out = this.out(pan, 0.8, 0.7);
+    [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86].forEach((m, i) => this.pluck(out, t + i * 0.035, mtof(m), 0.12, 0.8, false));
+    [74, 78, 81, 86].forEach((m) => this.bell(out, t + 0.4, mtof(m), 0.035, 1.4));
+  }
+
+  /** A war drum struck: the hide's slap and a deep, falling boom; heavier blows roll on under the ground. */
+  drumBeat(t: number, pan: number, heavy: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, heavy ? 1 : 0.85, heavy ? 0.55 : 0.35);
+    this.chirp(out, t, 'sine', heavy ? 125 : 165, heavy ? 36 : 55, heavy ? 0.95 : 0.8, heavy ? 0.7 : 0.35);
+    this.chirp(out, t, 'triangle', heavy ? 190 : 240, heavy ? 80 : 110, 0.22, 0.1);
+    this.burstNoise(out, t, 'lowpass', 2200, 300, 0.8, heavy ? 0.5 : 0.4, 0.09);
+    if (!heavy) return;
+    const r = gain(ctx, 0, out);
+    r.gain.setValueAtTime(0, t);
+    r.gain.linearRampToValueAtTime(0.3, t + 0.05);
+    r.gain.setTargetAtTime(0, t + 0.1, 0.25);
+    const lp = filter(ctx, 'lowpass', 380, 1, r);
+    const src = this.m.noiseSource(true);
+    src.connect(lp);
+    this.m.startNoise(src, t, 0.9);
+  }
+
+  /** A drum roll building fast and loud, stroke after stroke. */
+  drumRoll(t: number, pan: number): void {
+    const out = this.out(pan, 0.8, 0.4);
+    for (let i = 0; i < 6; i++) {
+      const at = t + i * 0.071;
+      const k = 0.35 + i * 0.1;
+      this.chirp(out, at, 'sine', 210, 90, k * 0.6, 0.12);
+      this.burstNoise(out, at, 'bandpass', 1400, 600, 1.2, k * 0.35, 0.05);
+    }
   }
 
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {

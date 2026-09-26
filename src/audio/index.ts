@@ -451,6 +451,36 @@ class GameSound {
     if (t !== null) this.sfx!.bloodNova(t, pan);
   }
 
+  lutePluck(pan = 0): void {
+    const t = this.slot('lutePluck');
+    if (t !== null) this.sfx!.lutePluck(t, pan);
+  }
+
+  noteHit(pan = 0, leap = 0): void {
+    const t = this.slot('noteHit');
+    if (t !== null) this.sfx!.noteHit(t, pan, leap);
+  }
+
+  song(pan = 0): void {
+    const t = this.slot('song');
+    if (t !== null) this.sfx!.song(t, pan);
+  }
+
+  encore(pan = 0): void {
+    const t = this.slot('encore');
+    if (t !== null) this.sfx!.encore(t, pan);
+  }
+
+  drumBeat(pan = 0, heavy = false): void {
+    const t = this.slot('drumBeat');
+    if (t !== null) this.sfx!.drumBeat(t, pan, heavy);
+  }
+
+  drumRoll(pan = 0): void {
+    const t = this.slot('drumRoll');
+    if (t !== null) this.sfx!.drumRoll(t, pan);
+  }
+
   step(): void {
     const t = this.slot('step');
     if (t !== null) this.sfx!.step(t);
