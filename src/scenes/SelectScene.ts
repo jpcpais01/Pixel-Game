@@ -707,8 +707,8 @@ export class SelectScene extends Phaser.Scene {
   }
 
   /**
-   * Tint the stage's hall and the dim veil over the home screen with a shade
-   * of the hero's colour, easing from the last one.
+   * Tint the stage's hall (only; the screen behind keeps its own colours)
+   * with a shade of the hero's colour, easing from the last one.
    */
   private shadeTo(accent: number): void {
     const lavender = Phaser.Display.Color.ValueToColor(0xb8a8e8);
@@ -717,15 +717,11 @@ export class SelectScene extends Phaser.Scene {
     if (target === this.tint) return;
     const from = Phaser.Display.Color.ValueToColor(this.tint < 0 ? target : this.tint);
     const to = Phaser.Display.Color.ValueToColor(target);
-    const night = Phaser.Display.Color.ValueToColor(0x0b0818);
     this.tint = target;
     this.tintTween?.stop();
     const apply = (t: number) => {
       const c = Phaser.Display.Color.Interpolate.ColorWithColor(from, to, 100, t * 100);
       this.stage.bg.setTint(Phaser.Display.Color.GetColor(c.r, c.g, c.b));
-      // The veil over the home screen takes a faint wash of the same shade.
-      const v = Phaser.Display.Color.Interpolate.ColorWithColor(night, Phaser.Display.Color.ValueToColor(Phaser.Display.Color.GetColor(c.r, c.g, c.b)), 100, 34);
-      this.shade.setFillStyle(Phaser.Display.Color.GetColor(v.r, v.g, v.b), 0.5);
     };
     apply(0);
     this.tintTween = this.tweens.addCounter({ from: 0, to: 1, duration: 280, ease: 'Sine.easeOut', onUpdate: (tw) => apply(tw.getValue() ?? 1) });
