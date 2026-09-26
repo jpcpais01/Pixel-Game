@@ -1,26 +1,32 @@
-// The Rune Temple in the Runestone Clearing: where it stands on the plaza's
-// west side, and the room inside it. The room lies in the same world, off to
-// the east past the clearing's edge, in the dark; the camera keeps to it while
-// the hero is inside, so walking through the door is a step into the temple.
+// The Rune Temple in the Runestone Clearing: where it stands, at the top of
+// the plaza with the forest behind it, and the room inside it. The room lies
+// in the same world, off to the east past the clearing's edge, in the dark;
+// the camera keeps to it while the hero is inside, so walking through the door
+// is a step into the temple.
 //
-// Inside: the north wall with its rose window, a rune circle in the middle of
-// the floor, and a dais on each side for the two keepers: Nyx the Unmaker on
-// the west, who breaks gear down into dust, and Tharn the Runesmith on the
+// Inside: the north wall with its rose window, an inlaid rosette in the middle
+// of the floor, and a dais on each side for the two keepers: Nyx the Unmaker
+// on the west, who breaks gear down into dust, and Tharn the Runesmith on the
 // east, who spends dust raising a piece's level. The way out is the doorway in
 // the middle of the south wall.
 
 /** The temple's front: the middle of its doorway, and the bottom edge of its lowest step (feet row). */
-export const TEMPLE_X = 104;
-export const TEMPLE_Y = 356;
-/** Half the building's width, and how deep its body runs back from the steps. */
-const BODY_HW = 60;
-const BODY_D = 58;
-/** The steps in front, and the walkable way up them to the door. */
+export const TEMPLE_X = 320;
+export const TEMPLE_Y = 206;
+/** Half the walls' width, and how deep they run back from the steps. */
+const BODY_HW = 74;
+const BODY_D = 44;
+/** The two steps in front, all of them walkable. */
 const STEPS_D = 14;
-const STAIR_HW = 15;
+const STEPS_HW = 46;
 /** Walking into the doorway on the top step goes in. */
-const DOOR_HW = 9;
+const DOOR_HW = 11;
 const DOOR_Y = TEMPLE_Y - STEPS_D + 1;
+/** The two runestones standing either side of the steps. */
+export const RUNESTONES = [
+  { x: TEMPLE_X - 60, y: TEMPLE_Y + 4 },
+  { x: TEMPLE_X + 60, y: TEMPLE_Y + 4 },
+];
 
 /** The room, in world coordinates. */
 export const ROOM_X = 720;
@@ -71,13 +77,13 @@ export const SANCTUM_WORLD_W = ROOM_X + ROOM_W + 16;
 /** The room in world coordinates, for the camera to keep to. */
 export const roomRect = { x: ROOM_X, y: ROOM_Y, w: ROOM_W, h: ROOM_H };
 
-/** Is (x, y) outside, blocked by the temple's walls or the steps' sides? */
+/** Is (x, y) outside, blocked by the temple's walls, its runestones or past the steps' ends? */
 export function templeBlocks(x: number, y: number): boolean {
+  if (RUNESTONES.some((r) => Math.hypot(x - r.x, (y - r.y) * 1.5) < 6)) return true;
   const dx = Math.abs(x - TEMPLE_X);
   if (dx > BODY_HW) return false;
   const front = TEMPLE_Y - STEPS_D;
-  // The steps: only their middle leads up.
-  if (y > front && y <= TEMPLE_Y) return dx > STAIR_HW;
+  if (y > front && y <= TEMPLE_Y) return dx > STEPS_HW && y < TEMPLE_Y - 3;
   // The walls, but for a little way into the doorway.
   return y > front - BODY_D && y <= front && !(dx < DOOR_HW && y > front - 5);
 }

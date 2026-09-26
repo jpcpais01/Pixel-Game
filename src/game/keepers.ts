@@ -26,4 +26,6 @@ export const keeperCall = {
   want: null as Keeper | null,
   /** The counter open now, if any. */
   open: null as Keeper | null,
+  /** The hero walked away from the keeper: the HUD closes their counter. */
+  leave: false,
 };

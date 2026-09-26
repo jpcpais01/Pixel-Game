@@ -54,9 +54,9 @@ export function plazaProps(): PlazaProps {
     [0.78, 0.62],
   ].map(([ax, ay]) => ({ x: Math.round(cx + ax * RING), y: Math.round(cy + ay * RING * 0.87) }));
   const crystals = [
-    { x: 58, y: cy + 88, frame: 'c0' },
+    { x: cx - RING - 40, y: cy - 30, frame: 'c0' },
     { x: cx + RING + 46, y: cy + 22, frame: 'c1' },
-    { x: cx + 50, y: PLAZA_Y + 46, frame: 'c1' },
+    { x: cx + 124, y: PLAZA_Y + 70, frame: 'c1' },
   ];
   const rocks: PlazaProps['rocks'] = [];
   const R = rng(4242);
@@ -68,7 +68,7 @@ export function plazaProps(): PlazaProps {
     // Keep the lawn's edge and the treeline clear.
     if (x < 16 || x > CLEARING_W - 16 || y > CLEARING_H - 8 || roofDepth(x, y) > -24) continue;
     // Nor in front of or behind the Rune Temple.
-    if (Math.abs(x - TEMPLE_X) < 76 && y > TEMPLE_Y - 150 && y < TEMPLE_Y + 24) continue;
+    if (Math.abs(x - TEMPLE_X) < 100 && y > TEMPLE_Y - 160 && y < TEMPLE_Y + 24) continue;
     rocks.push({ x, y, frame: `r${i % 3}` });
   }
   const dummies = [
@@ -96,7 +96,7 @@ export function clearingScenery(): SceneryLayout {
     seed: 2024,
     roofDepth,
     trees: true,
-    keepClear: (x, y) => near(x, y, p.crystals, 26) || near(x, y, p.braziers, 30) || (Math.abs(x - TEMPLE_X) < 80 && y > TEMPLE_Y - 150 && y < TEMPLE_Y + 20),
+    keepClear: (x, y) => near(x, y, p.crystals, 26) || near(x, y, p.braziers, 30) || (Math.abs(x - TEMPLE_X) < 104 && y > TEMPLE_Y - 170 && y < TEMPLE_Y + 20),
   });
   // A few shafts of sunlight slant through the treeline onto the grass.
   const rays: RaySpot[] = [];

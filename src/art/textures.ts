@@ -21,7 +21,7 @@ import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items'
 import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
 import { GEAR } from '../game/gear';
 import { registerInventoryArt } from './invTiles';
-import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, CRYSTAL_FRAMES, CRYSTAL_H as RS_CRYSTAL_H, CRYSTAL_W as RS_CRYSTAL_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, PILLAR_H as RS_PILLAR_H, PILLAR_W as RS_PILLAR_W, STATION_FRAMES, TEMPLE_ART_H, TEMPLE_ART_W, dustCrucible, runeAnvil, runeCrystal, runesmith, sanctumArt, sanctumExterior, sanctumPillar, unmaker } from './sanctum';
+import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, CRYSTAL_FRAMES, CRYSTAL_H as RS_CRYSTAL_H, CRYSTAL_W as RS_CRYSTAL_W, GODRAY_H, GODRAY_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, PILLAR_H as RS_PILLAR_H, PILLAR_W as RS_PILLAR_W, RUNESTONE_H, RUNESTONE_W, STATION_FRAMES, TEMPLE_ART_H, TEMPLE_ART_W, dustCrucible, godRay, runeAnvil, runeCrystal, runesmith, runestone, sanctumArt, sanctumExterior, sanctumPillar, unmaker } from './sanctum';
 import { ROOM_H, ROOM_W } from '../world/sanctumLayout';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_LOOKS, PALADIN_W, type PaladinMeta } from './paladin';
 import { buildWarriorFrames, JADE_LOOK, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, type WarriorMeta } from './warrior';
@@ -754,6 +754,10 @@ export function warmSanctum(scene: Phaser.Scene): void {
   while (!step.done) step = job.next();
   const art = step.value;
   register(scene, 'rs_temple', pack(frameList([sanctumExterior()], 't'), TEMPLE_ART_W, TEMPLE_ART_H), TEMPLE_ART_W, TEMPLE_ART_H);
+  register(scene, 'rs_runestone', pack(frameList([runestone(0), runestone(1)], 'r'), RUNESTONE_W, RUNESTONE_H), RUNESTONE_W, RUNESTONE_H);
+  const rays = scene.textures.addCanvas('rs_ray', toCanvas(GODRAY_W * 2, GODRAY_H, sideBySide(GODRAY_W, GODRAY_H, [godRay(3), godRay(8)])))!;
+  rays.add('g0', 0, 0, 0, GODRAY_W, GODRAY_H);
+  rays.add('g1', 0, GODRAY_W, 0, GODRAY_W, GODRAY_H);
   const loop = (key: string, n: number, fps: number) =>
     scene.anims.create({ key: `${key}_loop`, frames: scene.anims.generateFrameNames(key, { prefix: 'f', start: 0, end: n - 1 }), frameRate: fps, repeat: -1 });
   const glowLoop = (key: string, n: number, fps: number) =>
