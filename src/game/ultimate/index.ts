@@ -12,6 +12,8 @@ import { HeavensLight, SunWrath } from './holy';
 import { BloodMoon, Eclipse, FanOfKnives, SoulStorm } from './shadow';
 import { ChemBomb, GreatArrow, Pestilence } from './nature';
 import { Encore, ThunderOfWar } from './bard';
+import { Legion, TimeStop } from './chrono';
+import { AEON_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 
@@ -184,6 +186,24 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.thunderIcon,
     cast: (c) => c.world.addEffect(new ThunderOfWar(c.world, c)),
   },
+  'chronomancer:keeper': {
+    name: 'Time Stop',
+    cost: 75,
+    windup: 650,
+    aim: 'self',
+    pal: KEEPER_PAL,
+    icon: icons.timeStopIcon,
+    cast: (c) => c.world.addEffect(new TimeStop(c.world, c)),
+  },
+  'chronomancer:paradox': {
+    name: 'Legion of Echoes',
+    cost: 70,
+    windup: 550,
+    aim: 'self',
+    pal: RIFT_PAL,
+    icon: icons.legionIcon,
+    cast: (c) => c.world.addEffect(new Legion(c.world, c)),
+  },
 };
 
 /** Skins' takes on their type's Special, by `class:skin`. */
@@ -193,6 +213,8 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:sith': { name: 'Crimson Cyclone', pal: pal(0xfff6f2, 0xff7a70, 0xf0283a, 0x8a1020, 0xff4a4a) },
   'alchemist:witch': { name: 'Hex Storm', pal: toxPal(HEX_TOX) },
   'archer:storm': { name: 'Thunder Arrow', pal: pal(0xf2fbff, 0xa8e4ff, 0x5ec8ff, 0x3a6ad8, 0x8ad8ff) },
+  'chronomancer:moon': { name: 'Moonstill', pal: MOON_PAL },
+  'chronomancer:aeon': { name: 'Aeon Legion', pal: AEON_PAL, type: 'paradox' },
   'bard:wildsong': { name: 'Chorus of the Wild', pal: pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070) },
 };
 
@@ -230,8 +252,8 @@ export function ensureUltIcons(scene: Phaser.Scene): void {
   }
   for (const [k, skin] of Object.entries(SKINS)) {
     const [cls, id] = k.split(':');
-    const def = Object.entries(ULTS).find(([u]) => u.startsWith(`${cls}:`))?.[1];
-    // A skin belongs to its class's base type (the only type with skins so far).
+    // A skin belongs to its class's base type unless it names another.
+    const def = skin.type ? ULTS[`${cls}:${skin.type}`] : Object.entries(ULTS).find(([u]) => u.startsWith(`${cls}:`))?.[1];
     if (def) add(iconKey(cls, id), def, skin.pal);
   }
 }

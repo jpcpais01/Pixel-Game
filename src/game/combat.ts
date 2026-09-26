@@ -44,6 +44,10 @@ export interface Hurtbox {
   /** False while it can't be struck (dying, spawning). */
   readonly alive: boolean;
   hurt(hit: Hit): void;
+  /** Time around it runs at `k` of its pace (0 stands still) for `ms`; only monsters feel it. */
+  slow?(k: number, ms: number, tint?: number): void;
+  /** Its pace right now: 1, or less while slowed. */
+  readonly tempo?: number;
 }
 
 /** What a monster's attack carries into the player. */
