@@ -11,6 +11,7 @@ import { DragonRush, MountainWrath, SaberCyclone, Skybreaker } from './martial';
 import { HeavensLight, SunWrath } from './holy';
 import { BloodMoon, Eclipse, FanOfKnives, SoulStorm } from './shadow';
 import { ChemBomb, GreatArrow, Pestilence } from './nature';
+import { Encore, ThunderOfWar } from './bard';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 
@@ -164,6 +165,24 @@ const ULTS: Record<string, UltDef> = {
     pal: pal(0xfff0f0, 0xff8a8a, 0xff3a4a, 0x8a0f1f, 0xff4a5a),
     icon: icons.bloodMoonIcon,
     cast: (c) => c.world.addEffect(new BloodMoon(c.world, c.tx, c.ty, c)),
+  },
+  'bard:minstrel': {
+    name: 'Encore',
+    cost: 65,
+    windup: 550,
+    aim: 'self',
+    pal: pal(0xf4fffc, 0xa8fff0, 0x3fd8c8, 0x1a7a8a, 0x6fe8d8),
+    icon: icons.encoreIcon,
+    cast: (c) => c.world.addEffect(new Encore(c.world, c)),
+  },
+  'bard:drummer': {
+    name: 'Thunder of War',
+    cost: 70,
+    windup: 600,
+    aim: 'self',
+    pal: pal(0xfffbe8, 0xffd98a, 0xff9a3a, 0xb8401e, 0xffa850),
+    icon: icons.thunderIcon,
+    cast: (c) => c.world.addEffect(new ThunderOfWar(c.world, c)),
   },
 };
 

@@ -29,6 +29,8 @@ import { DANCER_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
+import { Bard, DRUMMER_KIT, MINSTREL_KIT } from './Bard';
+import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -568,6 +570,46 @@ export const CLASSES: ClassDef[] = [
       },
     ],
     spawn: (world, x, y, look) => new Necromancer(world, x, y, look === 'blood' ? BLOOD_KIT : NECRO_KIT),
+  },
+  {
+    id: 'bard',
+    name: 'Bard',
+    blurb: 'Songs that win battles',
+    types: [
+      {
+        // Notes that leap from foe to foe, and a song that quickens and heals.
+        id: 'minstrel',
+        name: 'Minstrel',
+        role: 'Lute and song',
+        accent: 0x5ee8d6,
+        stats: { power: 3, speed: 4, range: 4 },
+        attack: 'Leaping notes',
+        special: 'Song of haste',
+        preview: { texture: 'bard', glow: 'bard_e', idle: 'bard_idle_down', chosen: 'bard_song_down', originY: BARD_ORIGIN_Y / BARD_H },
+        buttons: {
+          attack: { texture: 'icon_lute' },
+          special: { texture: 'icon_song' },
+        },
+        lookName: 'Troubadour',
+      },
+      {
+        // Tougher and slower: drum blows that throw foes back, and a rhythm that makes every blow hit harder.
+        id: 'drummer',
+        name: 'War drummer',
+        role: 'Drums of war',
+        accent: 0xffa040,
+        stats: { power: 5, speed: 3, range: 2 },
+        attack: 'Drum blows',
+        special: 'Battle rhythm',
+        preview: { texture: 'bard_drum', glow: 'bard_drum_e', idle: 'bard_drum_idle_down', chosen: 'bard_drum_boom_down', originY: BARD_ORIGIN_Y / BARD_H },
+        buttons: {
+          attack: { texture: 'icon_drum' },
+          special: { texture: 'icon_rhythm' },
+        },
+        lookName: 'Warband',
+      },
+    ],
+    spawn: (world, x, y, look) => new Bard(world, x, y, look === 'drummer' ? DRUMMER_KIT : MINSTREL_KIT),
   },
 ];
 
