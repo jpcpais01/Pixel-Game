@@ -413,10 +413,19 @@ export class Fighter implements Hero {
     this.dir = dirOf(this.line.x, this.line.y);
     const dist = Phaser.Math.Clamp(this.aim?.dist ?? LEAP_MAX * 0.75, LEAP_MIN, LEAP_MAX);
     this.leapFrom = { x: this.x, y: this.y };
-    this.leapTo = {
+    const want = {
       x: Phaser.Math.Clamp(this.x + this.line.x * dist, bounds.left, bounds.right),
       y: Phaser.Math.Clamp(this.y + this.line.y * dist, bounds.top, bounds.bottom),
     };
+    // He comes down on the last open ground along the way, never over a wall or into a tree.
+    this.leapTo = { x: this.x, y: this.y };
+    const steps = Math.ceil(Math.hypot(want.x - this.x, want.y - this.y) / 4);
+    for (let i = 1; i <= steps; i++) {
+      const x = this.x + ((want.x - this.x) * i) / steps;
+      const y = this.y + ((want.y - this.y) * i) / steps;
+      if (!this.world.walkable(x, y)) break;
+      this.leapTo = { x, y };
+    }
     this.leapT = 0;
     this.struck = false;
     this.specialCd = this.style.specialCooldown;
