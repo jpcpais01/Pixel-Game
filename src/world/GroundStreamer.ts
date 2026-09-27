@@ -76,11 +76,11 @@ export class GroundStreamer {
    * once they are all built.
    */
   static warm(scene: Phaser.Scene, spec: GroundSpec, top: number, bottom: number, budget: number): boolean {
-    let w = warming.get(scene);
-    if (!w || w.spec !== spec) {
-      w = { spec, job: null };
-      warming.set(scene, w);
-    }
+    // One job per ground, so two menus warming different arenas don't undo each other's work.
+    let all = warming.get(scene.textures);
+    if (!all) warming.set(scene.textures, (all = new Map()));
+    let w = all.get(spec.key);
+    if (!w) all.set(spec.key, (w = { spec, job: null }));
     const first = Math.max(0, Math.floor(top / STRIP_H));
     const last = Math.min(stripCount(spec) - 1, Math.floor(bottom / STRIP_H));
     const start = performance.now();
@@ -214,7 +214,7 @@ export class GroundStreamer {
 }
 
 /** A menu's strip being built a little at a time, per scene. */
-const warming = new WeakMap<Phaser.Scene, { spec: GroundSpec; job: { index: number; gen: Generator<void, GroundStrip, void> } | null }>();
+const warming = new WeakMap<Phaser.Textures.TextureManager, Map<string, { spec: GroundSpec; job: { index: number; gen: Generator<void, GroundStrip, void> } | null }>>();
 
 /** Turn a built strip into textures: night and day, each with its normal map, and its glow. */
 function install(scene: Phaser.Scene, spec: GroundSpec, s: GroundStrip): void {

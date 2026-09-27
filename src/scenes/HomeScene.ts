@@ -4,6 +4,7 @@ import { LOGO_FRAMES, mythsLogo, sparkleBitmap } from '../art/logo';
 import { type Backdrop, makeBackdrop } from './homeBackdrops';
 import { BUTTON_GEM, BUTTON_GOLD, BUTTON_PLAIN, PANEL_PICKED, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { collection } from '../game/collection';
+import { warmArenasInBackground } from '../world/arenas';
 import { sound } from '../audio';
 import { account, cloudReady, logOut, onAccount } from '../game/cloud';
 import { openAccountForm } from '../ui/accountForm';
@@ -12,6 +13,12 @@ import { fpsBottom } from './FpsScene';
 /** How often the glint sweeps the title, and how long each of its frames shows. */
 const SHIMMER_EVERY = 5200;
 const SHIMMER_FRAME = 45;
+/**
+ * ms a frame spent building the arenas while the player is on the menus (the
+ * home screen keeps running under the hero, arena, shop and inventory pages),
+ * so the arena select opens with them ready.
+ */
+const WARM_MS = 4;
 /** How long the daily gift's banner stays up. */
 const GIFT_TIME = 3600;
 
@@ -46,6 +53,7 @@ export class HomeScene extends Phaser.Scene {
   private arrows: Phaser.GameObjects.BitmapText[] = [];
   private titleY = 0;
   private menuOpen = true;
+  private arenasWarm = false;
 
   constructor() {
     super('home');
@@ -260,6 +268,7 @@ export class HomeScene extends Phaser.Scene {
 
   update(time: number, dt: number): void {
     this.elapsed += dt;
+    if (!this.arenasWarm) this.arenasWarm = warmArenasInBackground(this, WARM_MS);
     const t = this.elapsed / 1000;
     this.backdrop.update(time, t);
 
