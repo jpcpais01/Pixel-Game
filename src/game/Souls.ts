@@ -16,6 +16,10 @@ import type { WorldScene } from '../scenes/WorldScene';
 export const SOUL_FX: Scheme = { core: 0xf0fff8, hot: 0x9dffd4, mid: 0x3fe0a0, deep: 0x127a62, light: 0x60f0b0 };
 /** Blood light: white-hot pink down to dark crimson. */
 export const BLOOD_FX: Scheme = { core: 0xfff0f0, hot: 0xff8a96, mid: 0xe8243c, deep: 0x7a0a1e, light: 0xff4050 };
+/** The tomb king's soul fire: lapis blue. */
+export const TOMB_FX: Scheme = { core: 0xf4fbff, hot: 0xa8dcff, mid: 0x3c94f0, deep: 0x1a3894, light: 0x5aa8ff };
+/** The wyrmblood's: molten, white-gold to ember. */
+export const WYRM_FX: Scheme = { core: 0xfff8e0, hot: 0xffc860, mid: 0xff6a1a, deep: 0x8a1e0a, light: 0xff8a30 };
 
 /** How a bolt flies and what it does. */
 export interface BoltKind {
@@ -199,6 +203,8 @@ export interface RisenStats {
   rest: number;
   /** It only goes after foes this close to its master. */
   leash: number;
+  /** The soul fire it rises and falls in (soul green unless given). */
+  fx?: Scheme;
 }
 
 /** Something to follow: where the necromancer stands. */
@@ -349,7 +355,8 @@ export class Risen implements Effect {
     if (!t || !t.alive) return;
     if (Math.abs(t.x - this.x) > t.radius + 9 || Math.abs(t.y - this.y) > 8) return;
     t.hurt({ damage: this.stats.damage, heavy: false, knock: 35, fromX: this.x, fromY: this.y - SKELETON_BODY_Y });
-    this.world.debris([0xf0fff8, 0x9dffd4, 0xdcd4b4], snap(t.x + (this.x < t.x ? -t.radius : t.radius)), snap(t.y - t.bodyY), 5, t.y + 20);
+    const fx = this.stats.fx ?? SOUL_FX;
+    this.world.debris([fx.core, fx.hot, 0xdcd4b4], snap(t.x + (this.x < t.x ? -t.radius : t.radius)), snap(t.y - t.bodyY), 5, t.y + 20);
     sound.boneHit(this.world.pan(this.x));
   }
 
@@ -358,7 +365,8 @@ export class Risen implements Effect {
     if (this.state === 'fall' || this.dead) return;
     this.state = 'fall';
     this.play('fall');
-    this.world.debris([0xf0fff8, 0x9dffd4, 0x3fe0a0], snap(this.x), snap(this.y) - 10, 8, this.y + 20, 'spores');
+    const fx = this.stats.fx ?? SOUL_FX;
+    this.world.debris([fx.core, fx.hot, fx.mid], snap(this.x), snap(this.y) - 10, 8, this.y + 20, 'spores');
     sound.boneCrumble(this.world.pan(this.x));
   }
 

@@ -3,7 +3,7 @@ import { sound } from '../../audio';
 import { heroBuffs } from '../buffs';
 import { snap } from '../display';
 import { NOTE_H } from '../../art/bard';
-import { HASTE, Note, RHYTHM, TROUBADOUR_SONG, WILD_HASTE, WILD_SONG, type NoteKind } from '../Songs';
+import { HARLEQUIN_HASTE, HARLEQUIN_SONG, HASTE, HOWL_RHYTHM, Note, RHYTHM, TROUBADOUR_SONG, WILD_HASTE, WILD_SONG, type NoteKind } from '../Songs';
 import type { Hurtbox } from '../combat';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { clamp01, easeOut, flare, Fx, ring, rune, strikeGround, type Ink } from './ink';
@@ -25,7 +25,7 @@ export class Encore extends Fx {
   private nextShot = 250;
   private fired = 0;
   private beatT = 0;
-  /** The wildsong's notes are leaves and wisps. */
+  /** The skin's notes: the wildsong's leaves and wisps, the harlequin's diamonds. */
   private song = TROUBADOUR_SONG;
 
   constructor(
@@ -33,14 +33,13 @@ export class Encore extends Fx {
     private c: Cast,
   ) {
     super(world, ENCORE_TIME);
-    const wild = c.look === 'wildsong';
-    this.song = { tex: wild ? WILD_SONG.tex : TROUBADOUR_SONG.tex, pal: c.pal };
+    const { song, haste } = c.look === 'wildsong' ? { song: WILD_SONG, haste: WILD_HASTE } : c.look === 'harlequin' ? { song: HARLEQUIN_SONG, haste: HARLEQUIN_HASTE } : { song: TROUBADOUR_SONG, haste: HASTE };
+    this.song = { tex: song.tex, pal: c.pal };
     this.ground = this.ink(96, 60);
     for (let i = 0; i < 6; i++) this.notes.push(this.own(world.add.image(c.x, c.y, this.song.tex, i % 2 ? 'n1' : 'n0').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0)));
     const v = c.hero.vitals;
     const got = v.heal(Math.round(v.max * 0.2));
     if (got > 0) world.popNumber(snap(c.hero.x), snap(c.hero.y) - 38, `+${got}`, 0x9dff9a);
-    const haste = wild ? WILD_HASTE : HASTE;
     heroBuffs.add(haste);
     world.buffGained(haste);
     world.debris(c.pal.tints, snap(c.x), snap(c.y) - 14, 20, c.y + 20, 'spores');
@@ -116,8 +115,9 @@ export class ThunderOfWar extends Fx {
   ) {
     super(world, 2200);
     this.ground = this.ink(260, 170);
-    heroBuffs.add(RHYTHM);
-    world.buffGained(RHYTHM);
+    const rhythm = c.look === 'howl' ? HOWL_RHYTHM : RHYTHM;
+    heroBuffs.add(rhythm);
+    world.buffGained(rhythm);
   }
 
   protected step(): void {

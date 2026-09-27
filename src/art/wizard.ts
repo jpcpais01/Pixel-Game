@@ -44,6 +44,29 @@ import {
   VOID_ROBE,
   WOOD,
 } from './palette';
+import {
+  DEMON_SKIN,
+  FEL_CORE,
+  FEL_CRYSTAL,
+  FEL_DEEP,
+  FEL_EYE,
+  FEL_HOT,
+  FEL_MID,
+  FEL_TRIM,
+  HELL_HAIR,
+  HELL_LINING,
+  HELL_ROBE,
+  HORN,
+  STARWOOD,
+  STAR_CORE,
+  STAR_CRYSTAL,
+  STAR_DEEP,
+  STAR_HAIR,
+  STAR_HOT,
+  STAR_LINING,
+  STAR_MID,
+  STAR_ROBE,
+} from './heroSkins';
 
 // ---------------------------------------------------------------------------
 // Looks (skins). Every look shares the rig, poses and staff geometry, so the
@@ -71,6 +94,17 @@ export interface WizardLook {
   beard?: Material;
   /** The emblem on the hat: a star, or a flame. */
   sigil?: 'star' | 'flame';
+  /**
+   * A bare head in place of the hat or the cowl:
+   * 'astral': long silver hair under a gold circlet, a tall fan collar and a
+   * crown of stars; a starwood staff ringed like an armillary sphere.
+   * 'fiend': a horned, crimson-skinned warlock with a goatee and green eyes,
+   * bone spikes on a shoulder mantle, a ragged hem smouldering with fel fire,
+   * and a black staff crowned with horns round the flame.
+   */
+  head?: 'astral' | 'fiend';
+  /** Hair of the bare heads. */
+  hair?: Material;
 }
 
 export const ARCANE_LOOK: WizardLook = {
@@ -118,7 +152,41 @@ export const PYRO_LOOK: WizardLook = {
   sigil: 'flame',
 };
 
-export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK];
+/** The Arcanist's Astral skin: a reader of the stars. */
+export const ASTRAL_LOOK: WizardLook = {
+  key: 'wizard_astral',
+  robe: STAR_ROBE,
+  inner: STAR_LINING,
+  trim: GOLD,
+  belt: STAR_LINING,
+  boot: BOOT,
+  skin: SKIN,
+  shaft: STARWOOD,
+  crystal: STAR_CRYSTAL,
+  magic: { core: STAR_CORE, hot: STAR_HOT, mid: STAR_MID, deep: STAR_DEEP },
+  hooded: false,
+  head: 'astral',
+  hair: STAR_HAIR,
+};
+
+/** The Pyromancer's Hellfire skin: a horned warlock of green fire. */
+export const HELL_LOOK: WizardLook = {
+  key: 'wizard_hell',
+  robe: HELL_ROBE,
+  inner: HELL_LINING,
+  trim: FEL_TRIM,
+  belt: HELL_LINING,
+  boot: BOOT,
+  skin: DEMON_SKIN,
+  shaft: OBSIDIAN,
+  crystal: FEL_CRYSTAL,
+  magic: { core: FEL_CORE, hot: FEL_HOT, mid: FEL_MID, deep: FEL_DEEP },
+  hooded: false,
+  head: 'fiend',
+  hair: HELL_HAIR,
+};
+
+export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let S: WizardLook = ARCANE_LOOK;
@@ -215,6 +283,38 @@ function drawStaff(c: PixelCanvas, s: Staff, glow: number): { x: number; y: numb
       const oy = -g.dy * Math.cos(th) + g.dx * Math.sin(th);
       c.px(Math.floor(cx + ox * r), Math.floor(cy + oy * r), S.trim, { x: ox * 0.6, y: -oy * 0.6, z: 0.8 });
     }
+  } else if (S.head === 'astral') {
+    // An armillary ring round the star: a gold hoop seen at a tilt, a finial above it.
+    c.part();
+    const px = -g.dy;
+    const py = g.dx;
+    for (let a = 0; a < 360; a += 12) {
+      const th = a * RAD;
+      const ox = px * Math.cos(th) * 3.1 + g.dx * Math.sin(th) * 1.3;
+      const oy = py * Math.cos(th) * 3.1 + g.dy * Math.sin(th) * 1.3;
+      c.px(Math.floor(g.gem.x + ox), Math.floor(g.gem.y + oy), S.trim, { x: Math.cos(th) * 0.5 - 0.2, y: Math.sin(th) * 0.4 + 0.2, z: 0.8 }, { bias: Math.sin(th) > 0 ? 1 : 0 });
+    }
+    // The shaft's collar where the ring is mounted.
+    c.px(Math.round(g.top.x - 0.5), Math.round(g.top.y - 0.5), S.trim, { x: -0.4, y: 0.3, z: 0.85 }, { bias: 1 });
+  } else if (S.head === 'fiend') {
+    // Two horns rise from the head of the staff and curl in round the flame, over a small skull.
+    const px = -g.dy;
+    const py = g.dx;
+    const at = (side: number, up: number) => ({ x: g.top.x + px * side + g.dx * up, y: g.top.y + py * side + g.dy * up });
+    for (const k of [-1, 1]) {
+      c.part();
+      const a0 = at(k * 1.0, 0.2);
+      const a1 = at(k * 2.6, 1.8);
+      const a2 = at(k * 2.2, 3.8);
+      const a3 = at(k * 1.1, 4.6);
+      c.capsule(a0.x, a0.y, a1.x, a1.y, 0.75, 0.62, HORN, { bias: 1 });
+      c.capsule(a1.x, a1.y, a2.x, a2.y, 0.62, 0.48, HORN);
+      c.capsule(a2.x, a2.y, a3.x, a3.y, 0.48, 0.3, HORN, { bias: 1 });
+    }
+    c.part();
+    const sk = at(0, -0.4);
+    c.ellipse(sk.x, sk.y, 1.35, 1.2, HORN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.2, 1) });
+    c.px(Math.floor(sk.x - 0.6), Math.floor(sk.y), FEL_EYE, { x: 0, y: 0, z: 1 });
   } else if (s.float > 0) {
     // Fork cradling the crystal.
     const px = -g.dy;
@@ -325,7 +425,7 @@ function robeBody(c: PixelCanvas, cx: number, top: number, hem: number, sway: nu
 /** Gold trim along the hem, or for the hooded look a ragged, notched hem. */
 function hemTrim(c: PixelCanvas, edges: (y: number) => [number, number], hem: number, sway: number): void {
   const [l, r] = edges(hem);
-  if (!S.hooded) {
+  if (!S.hooded && S.head !== 'fiend') {
     c.part();
     c.shape(hem, hem, () => [l, r], S.trim, (_x, _y, t) => cyl(t, -0.1));
     return;
@@ -339,6 +439,8 @@ function hemTrim(c: PixelCanvas, edges: (y: number) => [number, number], hem: nu
     const k = (((x - Math.round(sway)) % 3) + 3) % 3;
     if (k === 0) c.px(x, hem + 1, S.robe, cyl(0, -0.3), { bias: -1 });
     else if (k === 1) c.shade(x, hem, -1);
+    // The warlock's rags smoulder: fel embers along the torn edge.
+    if (S.head === 'fiend' && k !== 0) c.spark(x, hem, (x + hem) % 2 ? S.magic.mid : S.magic.deep, 0.55);
   }
 }
 
@@ -621,6 +723,349 @@ function hoodSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
 }
 
 // ---------------------------------------------------------------------------
+// Heads: the Astral's silver hair, circlet, fan collar and crown of stars
+
+const hash = (a: number, b: number, c = 0) => {
+  let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+};
+
+/** Five small stars in an arc over the head, each twinkling on its own beat. */
+function starCrown(c: PixelCanvas, cx: number, y: number, p: Pose, spread = 1): void {
+  for (let i = 0; i < 5; i++) {
+    const a = (-64 + i * 32) * RAD;
+    const x = cx + Math.sin(a) * 5.4 * spread;
+    const yy = y - Math.cos(a) * 3.0;
+    const k = 0.7 + 0.3 * (0.5 + 0.5 * Math.sin(p.glow * 9 + p.staff.float * 2 + i * 2.1));
+    c.spark(x, yy, S.magic.core, k);
+    if (i === 2) {
+      // The middle star is the brightest: four short rays.
+      for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(x + ox, yy + oy, S.magic.hot, k * 0.65);
+    } else c.spark(x, yy + 1, S.magic.deep, k * 0.4);
+  }
+}
+
+/** The standing fan collar behind the head: its face (lining) toward us, gold along its points. */
+function fanCollar(c: PixelCanvas, cx: number, U: number, m: Material): void {
+  const top = 9 + U;
+  const bottom = 16 + U;
+  const edges = (y: number): [number, number] => {
+    const u = (y - top) / (bottom - top);
+    const hw = 6.3 - 2.1 * u;
+    return [cx - hw, cx + hw];
+  };
+  c.part();
+  c.shape(top, bottom, edges, m, (_x, _y, t, u) => sphere(t * 0.7, 0.55 - u * 0.5, 1));
+  // Gold edging and four points along the top.
+  c.part();
+  const [l, r] = edges(top);
+  for (let x = Math.round(l); x < Math.round(r); x++) c.px(x, top, S.trim, cyl((x + 0.5 - cx) / 6.3, 0.5));
+  for (const x of [6, 9, 14, 17]) c.px(x, top - 1, S.trim, { x: (x - 11.5) * 0.08, y: 0.6, z: 0.8 }, { bias: 1 });
+  for (let y = top + 1; y <= top + 3; y++) {
+    const [el, er] = edges(y);
+    c.px(Math.round(el), y, S.trim, { x: -0.6, y: 0.3, z: 0.75 });
+    c.px(Math.round(er) - 1, y, S.trim, { x: 0.6, y: 0.3, z: 0.75 });
+  }
+}
+
+function astralHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  fanCollar(c, cx, U, S.inner);
+  // Long hair behind the face, falling past the shoulders.
+  c.part();
+  c.shape(10 + U, 18 + U, (y) => {
+    const u = (y - 10 - U) / 8;
+    const hw = 4.3 - Math.max(0, u - 0.5) * 1.6;
+    return [cx - hw, cx + hw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.3, 0.9));
+  c.shade(8, 17 + U, -1);
+  c.shade(15, 17 + U, -1);
+  // Face.
+  c.part();
+  c.ellipse(cx, 13.4 + U, 3.1, 2.7, S.skin);
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
+  c.shade(12, 15 + U, -1);
+  c.part();
+  if (p.blink) {
+    c.px(10, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(13, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+  } else {
+    c.px(10, 13 + U, EYE);
+    c.px(13, 13 + U, EYE);
+  }
+  // Crown of the head and the fringe, parted in the middle, locks framing the face.
+  c.part();
+  c.ellipse(cx, 10.6 + U, 3.9, 2.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.5, 1) });
+  c.shade(cx, 9 + U, -1);
+  for (let y = 12; y <= 17; y++) {
+    c.px(8, y + U, hair, cyl(-0.7, 0.1), { bias: y > 15 ? -1 : 0 });
+    c.px(15, y + U, hair, cyl(0.7, 0.1), { bias: y > 15 ? -1 : 0 });
+  }
+  // The circlet, a star-gem at the brow.
+  c.part();
+  c.shape(11 + U, 11 + U, () => [cx - 3.6, cx + 3.6], S.trim, (_x, _y, t) => cyl(t, 0.15));
+  c.part();
+  c.px(11, 11 + U, S.crystal, { x: -0.3, y: 0.4, z: 0.86 });
+  c.spark(11, 11 + U, S.magic.hot, 0.5 + p.glow * 0.3);
+  starCrown(c, cx - 0.5, 8 + U, p);
+}
+
+function astralHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  fanCollar(c, cx, U, S.robe);
+  c.part();
+  c.ellipse(cx, 11.8 + U, 4.0, 3.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 0.9) });
+  // Long hair down the back, parting into strands.
+  c.part();
+  c.shape(13 + U, 20 + U, (y) => {
+    const u = (y - 13 - U) / 7;
+    const hw = 3.9 - u * 1.6;
+    const x = cx - p.hem * u * 0.5;
+    return [x - hw, x + hw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.85, u * 0.7, 0.9));
+  for (let y = 13; y <= 20; y++) {
+    c.shade(cx - 2, y + U, -1);
+    c.shade(cx + 1, y + U, -1);
+  }
+  c.part();
+  c.shape(11 + U, 11 + U, () => [cx - 4.0, cx + 4.0], S.trim, (_x, _y, t) => cyl(t, 0.1));
+  starCrown(c, cx - 0.5, 8 + U, p);
+}
+
+/** Facing left, like drawSide. */
+function astralHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  // The collar stands up behind the neck, gold along its edge.
+  c.part();
+  c.shape(9 + U, 16 + U, (y) => {
+    const u = (y - 9 - U) / 7;
+    return [cx + 0.6 + u * 0.4, cx + 4.2 - u * 1.4];
+  }, S.inner, (_x, _y, t, u) => cyl(t * 0.7 - 0.2, 0.5 - u * 0.4));
+  c.part();
+  for (let y = 9; y <= 16; y++) c.px(Math.round(cx + 4.2 - ((y - 9) / 7) * 1.4) - 1, y + U, S.trim, { x: 0.5, y: 0.3, z: 0.8 });
+  c.px(cx + 3, 8 + U, S.trim, { x: 0.2, y: 0.6, z: 0.8 }, { bias: 1 });
+  // Hair behind, falling long down the back.
+  c.part();
+  c.ellipse(cx + 0.8, 12.4 + U, 3.4, 3.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9) });
+  c.part();
+  c.shape(13 + U, 19 + U, (y) => {
+    const u = (y - 13 - U) / 6;
+    return [cx - 0.4 + u * 0.8 + p.hem * u * 0.4, cx + 3.4 - u * 0.6 + p.hem * u * 0.6];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.8 + 0.1, u * 0.7, 0.9));
+  c.shade(cx + 1, 16 + U, -1);
+  c.shade(cx + 2, 18 + U, -1);
+  // Face in profile.
+  c.part();
+  c.ellipse(cx - 1.3, 13.5 + U, 2.8, 2.5, S.skin);
+  c.part();
+  c.px(cx - 5, 13 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(cx - 5, 14 + U, S.skin, sphere(-0.5, 0.3));
+  c.part();
+  if (p.blink) c.px(cx - 3, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+  else c.px(cx - 3, 13 + U, EYE);
+  // Crown of the head and fringe, then the circlet with its gem at the brow.
+  c.part();
+  c.shape(9 + U, 10 + U, (y) => (y === 9 + U ? [cx - 3.2, cx + 2.8] : [cx - 4.4, cx + 3.6]), hair, (_x, _y, t, u) => sphere(t * 0.9, u - 0.8, 1));
+  c.px(cx - 5, 11 + U, hair, cyl(-0.7, 0.2));
+  c.part();
+  c.shape(11 + U, 11 + U, () => [cx - 4.4, cx + 2.4], S.trim, (_x, _y, t) => cyl(t * 0.9 - 0.1, 0.15));
+  c.part();
+  c.px(cx - 4, 11 + U, S.crystal, { x: -0.5, y: 0.4, z: 0.77 });
+  c.spark(cx - 4, 11 + U, S.magic.hot, 0.5 + p.glow * 0.3);
+  starCrown(c, cx - 0.2, 8 + U, p, 0.75);
+}
+
+/** A strewing of stars over the robe: fixed to the cloth, so they ride along with it. */
+function starfield(c: PixelCanvas, U: number): void {
+  for (let y = 14; y < FRAME_H; y++) {
+    for (let x = 0; x < FRAME_W; x++) {
+      const m = c.materialAt(x, y);
+      if (m !== S.robe && m !== S.inner) continue;
+      const h = hash(x, y - U, 11);
+      if (h > 0.955) c.spark(x, y, S.magic.core, 0.55);
+      else if (h > 0.92) c.spark(x, y, S.magic.mid, 0.3);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Heads: the Hellfire warlock's horns, demon face and bone-spiked mantle
+
+/** A ram's horn along a chain of points, ridged as it tapers. */
+function ramHorn(c: PixelCanvas, pts: [number, number][], r0 = 1.25, r1 = 0.45): void {
+  c.part();
+  for (let i = 0; i < pts.length - 1; i++) {
+    const ra = r0 + ((r1 - r0) * i) / (pts.length - 1);
+    const rb = r0 + ((r1 - r0) * (i + 1)) / (pts.length - 1);
+    c.capsule(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], ra, rb, HORN, { bias: i % 2 ? 0 : -1 });
+  }
+}
+
+function boneSpike(c: PixelCanvas, x: number, y: number, dx: number, dy: number): void {
+  c.part();
+  c.capsule(x, y, x + dx, y + dy, 0.95, 0.3, HORN, { bias: 1 });
+}
+
+function fiendEyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
+  c.part();
+  for (const [x, y] of pts) {
+    if (blink) {
+      c.px(x, y, S.skin, FLAT_DOWN, { bias: -1 });
+      continue;
+    }
+    c.px(x, y, FEL_EYE, { x: 0, y: 0, z: 1 });
+    c.spark(x, y, S.magic.hot, 0.4);
+  }
+}
+
+function fiendHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  mantle(c, cx - 5.0, cx + 5.0, U, 1.1, p.hem);
+  boneSpike(c, cx - 4.3, 15.8 + U, -1.6, -3.0);
+  boneSpike(c, cx + 4.3, 15.8 + U, 1.6, -3.0);
+  // A fel clasp at the throat.
+  c.part();
+  c.px(cx - 1, 16 + U, S.trim, { x: -0.3, y: 0.4, z: 0.86 });
+  c.px(cx, 16 + U, S.trim, { x: 0.3, y: 0.4, z: 0.86 });
+  // Face, pointed ears, slicked black hair with a widow's peak.
+  c.part();
+  c.ellipse(cx, 13.1 + U, 3.2, 2.8, S.skin);
+  c.part();
+  c.px(8, 13 + U, S.skin, sphere(-0.7, 0), { bias: -1 });
+  c.px(7, 12 + U, S.skin, sphere(-0.6, -0.4));
+  c.px(15, 13 + U, S.skin, sphere(0.7, 0), { bias: -1 });
+  c.px(16, 12 + U, S.skin, sphere(0.6, -0.4), { bias: -1 });
+  c.part();
+  c.shape(9 + U, 11 + U, (y) => {
+    const hw = [2.4, 3.3, 3.5][y - 9 - U];
+    return [cx - hw, cx + hw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.9, u - 0.7, 1));
+  c.px(11, 12 + U, hair, FLAT_DOWN);
+  c.px(12, 12 + U, hair, FLAT_DOWN);
+  // Nose and cheekbones.
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.shade(9, 14 + U, -1);
+  c.shade(14, 14 + U, -1);
+  fiendEyes(c, [[10, 13 + U], [13, 13 + U]], p.blink);
+  // A pointed black goatee.
+  c.part();
+  c.shape(15 + U, 17 + U, (y) => {
+    const hw = [1.8, 1.0, 0.6][y - 15 - U];
+    return [cx - hw, cx + hw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
+  // The horns sweep out from the temples and curl down at their tips.
+  for (const k of [-1, 1]) {
+    ramHorn(c, [
+      [cx + k * 2.8, 10.2 + U],
+      [cx + k * 4.9, 8.8 + U],
+      [cx + k * 6.4, 6.8 + U],
+      [cx + k * 7.0, 4.6 + U],
+      [cx + k * 6.5, 2.8 + U],
+    ], 1.35, 0.35);
+  }
+}
+
+function fiendHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  mantle(c, cx - 5.0, cx + 5.0, U, 1.1, -p.hem);
+  boneSpike(c, cx - 4.3, 15.8 + U, -1.6, -3.0);
+  boneSpike(c, cx + 4.3, 15.8 + U, 1.6, -3.0);
+  c.part();
+  c.px(7, 12 + U, S.skin, sphere(-0.6, -0.4), { bias: -1 });
+  c.px(16, 12 + U, S.skin, sphere(0.6, -0.4), { bias: -1 });
+  c.part();
+  c.ellipse(cx, 12.2 + U, 3.7, 3.3, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.shade(cx - 1, 10 + U, 1);
+  c.shade(cx, 13 + U, -1);
+  c.shade(cx, 14 + U, -1);
+  for (const k of [-1, 1]) {
+    ramHorn(c, [
+      [cx + k * 2.8, 10.2 + U],
+      [cx + k * 4.9, 8.8 + U],
+      [cx + k * 6.4, 6.8 + U],
+      [cx + k * 7.0, 4.6 + U],
+      [cx + k * 6.5, 2.8 + U],
+    ], 1.35, 0.35);
+  }
+}
+
+/** Facing left, like drawSide. */
+function fiendHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  mantle(c, cx - 3.8, cx + 3.6, U, 1.0, p.hem);
+  boneSpike(c, cx + 0.6, 15.8 + U, 1.4, -3.0);
+  // The far horn, peeking over the head.
+  ramHorn(c, [
+    [cx + 1.4, 9.6 + U],
+    [cx + 2.8, 7.4 + U],
+    [cx + 4.4, 6.6 + U],
+  ], 0.9, 0.5);
+  c.part();
+  c.ellipse(cx + 0.9, 12.3 + U, 3.0, 2.9, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.ellipse(cx - 1.4, 13.3 + U, 2.8, 2.6, S.skin);
+  c.part();
+  c.px(cx - 5, 13 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.shade(cx - 3, 14 + U, -1);
+  // Hairline sweeping back from the brow.
+  c.part();
+  c.shape(10 + U, 11 + U, (y) => (y === 10 + U ? [cx - 3.6, cx + 2.4] : [cx - 2.4, cx + 2.8]), hair, (_x, _y, t, u) => sphere(t * 0.9, u - 0.7, 1));
+  fiendEyes(c, [[cx - 3, 13 + U]], p.blink);
+  // Goatee jutting from the chin.
+  c.part();
+  c.px(cx - 4, 15 + U, hair, sphere(-0.3, 0.2));
+  c.px(cx - 3, 15 + U, hair, sphere(0.2, 0.2), { bias: -1 });
+  c.px(cx - 4, 16 + U, hair, sphere(-0.2, 0.4));
+  c.px(cx - 5, 17 + U, hair, sphere(-0.4, 0.6), { bias: 1 });
+  // The near horn curls back round the pointed ear.
+  c.part();
+  c.px(cx + 1, 13 + U, S.skin, sphere(0.3, -0.2));
+  c.px(cx + 2, 12 + U, S.skin, sphere(0.5, -0.5), { bias: -1 });
+  ramHorn(c, [
+    [cx - 0.2, 10.4 + U],
+    [cx + 1.8, 8.2 + U],
+    [cx + 4.0, 7.8 + U],
+    [cx + 5.4, 9.6 + U],
+    [cx + 4.8, 11.8 + U],
+    [cx + 3.2, 12.4 + U],
+  ]);
+}
+
+/** Fel runes smouldering down the open front of the warlock's robe. */
+function felRunes(c: PixelCanvas, x: (y: number) => number, y0: number, y1: number): void {
+  for (let y = y0; y <= y1; y++) {
+    const k = (y - y0) % 3;
+    if (k === 2) continue;
+    c.spark(Math.round(x(y)) + (k === 0 ? 0 : -1), y, k === 0 ? S.magic.hot : S.magic.mid, 0.5);
+  }
+}
+
+function headDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  if (S.head === 'astral') astralHeadDown(c, cx, U, p);
+  else if (S.head === 'fiend') fiendHeadDown(c, cx, U, p);
+  else if (S.hooded) hoodDown(c, cx, U, p);
+  else beardedHeadDown(c, cx, U, p);
+}
+
+function headUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  if (S.head === 'astral') astralHeadUp(c, cx, U, p);
+  else if (S.head === 'fiend') fiendHeadUp(c, cx, U, p);
+  else if (S.hooded) hoodUp(c, cx, U, p);
+  else beardedHeadUp(c, cx, U, p);
+}
+
+function headSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  if (S.head === 'astral') astralHeadSide(c, cx, U, p);
+  else if (S.head === 'fiend') fiendHeadSide(c, cx, U, p);
+  else if (S.hooded) hoodSide(c, cx, U, p);
+  else beardedHeadSide(c, cx, U, p);
+}
+
+// ---------------------------------------------------------------------------
 // Directions
 
 function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
@@ -646,6 +1091,7 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
     const x = cx + p.hem * Math.pow((y + 0.5 - top) / (hem + 1 - top), 2);
     return [x - 0.5 - u * 0.6, x + 0.5 + u * 0.6];
   }, S.inner, (_x, _y, t) => cyl(t * 0.5, 0.1));
+  if (S.head === 'fiend') felRunes(c, (y) => cx + p.hem * Math.pow((y + 0.5 - top) / (hem + 1 - top), 2), belt + 2, hem - 1);
 
   // Belt with buckle.
   const [bl, br] = edges(belt);
@@ -659,14 +1105,14 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   sleeve(c, 15.8, 17.2 + U, 17.6, 21.6 + U + p.arm);
   hand(c, 17.9, 22.4 + U + p.arm);
 
-  if (S.hooded) hoodDown(c, cx, U, p);
-  else beardedHeadDown(c, cx, U, p);
+  headDown(c, cx, U, p);
 
   // Staff hand.
   if (!p.staffBehind) tip = drawStaff(c, p.staff, p.glow);
   sleeve(c, 8.2, 17.2 + U, p.staff.hx + 0.4, p.staff.hy - 0.3);
   hand(c, p.staff.hx, p.staff.hy);
 
+  if (S.head === 'astral') starfield(c, U);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -697,13 +1143,13 @@ function drawUp(c: PixelCanvas, p: Pose): FrameMeta {
   sleeve(c, 8.2, 17.2 + U, 6.4, 21.6 + U + p.arm);
   hand(c, 6.1, 22.4 + U + p.arm);
 
-  if (S.hooded) hoodUp(c, cx, U, p);
-  else beardedHeadUp(c, cx, U, p);
+  headUp(c, cx, U, p);
 
   if (!p.staffBehind) tip = drawStaff(c, p.staff, p.glow);
   sleeve(c, 15.8, 17.2 + U, p.staff.hx - 0.4, p.staff.hy - 0.3);
   hand(c, p.staff.hx, p.staff.hy);
 
+  if (S.head === 'astral') starfield(c, U);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -750,12 +1196,12 @@ function drawSide(c: PixelCanvas, p: Pose): FrameMeta {
   sleeve(c, cx + 0.8, 17.4 + U, p.staff.hx + 0.6, p.staff.hy - 0.4);
   hand(c, p.staff.hx, p.staff.hy);
 
-  if (S.hooded) hoodSide(c, cx, U, p);
-  else beardedHeadSide(c, cx, U, p);
+  headSide(c, cx, U, p);
 
   if (!p.staffBehind) tip = drawStaff(c, p.staff, p.glow);
   hand(c, p.staff.hx, p.staff.hy);
 
+  if (S.head === 'astral') starfield(c, U);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -767,6 +1213,22 @@ function finishMagic(c: PixelCanvas, p: Pose, tip: { x: number; y: number }): vo
   if (p.flash) drawFlash(c, tip.x, tip.y, p.flash);
   // A single bright glint at the heart of the crystal.
   c.spark(tip.x - 0.4, tip.y - 0.6, S.magic.core, 0.35 + p.glow * 0.5);
+  if (S.head === 'fiend') {
+    // The crystal is a green flame: its tongue licks up, flickering with the pose.
+    const lean = p.hat + (p.staff.float % 2 ? 1 : 0);
+    c.spark(tip.x - 0.4, tip.y - 3, S.magic.hot, 0.45 + p.glow * 0.3);
+    c.spark(tip.x - 0.4 + (lean % 2 ? 1 : -1), tip.y - 4, S.magic.mid, 0.35 + p.glow * 0.25);
+  } else if (S.head === 'astral') {
+    // The star at the staff's head throws out four long rays.
+    const r = 2 + Math.round(p.glow * 1.5);
+    for (let i = 2; i <= r + 1; i++) {
+      const a = (0.5 + p.glow * 0.3) * (1 - (i - 1) / (r + 1));
+      c.spark(tip.x + i, tip.y, S.magic.hot, a);
+      c.spark(tip.x - i, tip.y, S.magic.hot, a);
+      c.spark(tip.x, tip.y + i, S.magic.hot, a);
+      c.spark(tip.x, tip.y - i, S.magic.hot, a);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

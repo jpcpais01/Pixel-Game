@@ -18,7 +18,7 @@ import { Legion, TimeStop } from './chrono';
 import { HundredCuts, quakeGate, SkyQuake } from './samurai';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT } from '../Samurai';
 import { schemePal } from '../Blades';
-import { AEON_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
+import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 
@@ -268,12 +268,24 @@ const SKINS: Record<string, UltSkin> = {
   'chronomancer:moon': { name: 'Moonstill', pal: MOON_PAL },
   'chronomancer:aeon': { name: 'Aeon Legion', pal: AEON_PAL, type: 'paradox' },
   'bard:wildsong': { name: 'Chorus of the Wild', pal: pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070) },
+  'necromancer:tomb': { name: 'Sandstorm of Souls', pal: pal(0xf4fbff, 0xa8dcff, 0x3c94f0, 0x1a3894, 0x5aa8ff) },
+  'necromancer:wyrm': { name: 'Wyrmfire Moon', pal: pal(0xfff8e0, 0xffc860, 0xff6a1a, 0x8a1e0a, 0xff8a30), type: 'blood' },
+  'bard:harlequin': { name: 'Grand Masquerade', pal: pal(0xfff4fb, 0xffb0e8, 0xff4ab8, 0x8a1a6a, 0xff6ac8) },
+  'bard:howl': { name: 'Thunder of the Pack', pal: pal(0xf2f4ff, 0xbcc8ff, 0x6c7cff, 0x2c2a9a, 0x8a9aff), type: 'drummer' },
+  'chronomancer:clockwork': { name: 'Mainspring Halt', pal: CLOCKWORK_PAL },
+  'chronomancer:anomaly': { name: 'Legion of Errors', pal: ANOMALY_PAL, type: 'paradox' },
   'puppeteer:porcelain': { name: 'Shattered Finale', pal: ICE_STRINGS },
   'puppeteer:crimson': { name: 'Strings of Fate', pal: FATE_STRINGS, type: 'weaver' },
   'puppeteer:toymaker': { name: 'Midnight Parade', pal: TOY_STRINGS },
   'puppeteer:arachne': { name: 'Broodmother', pal: VENOM_STRINGS, type: 'weaver' },
   'samurai:oni': { name: "Oni's Downpour", pal: schemePal(ONI_KIT.wind) },
   'samurai:sakura': { name: 'Falling Petals', pal: schemePal(SAKURA_KIT.wind), type: 'ronin' },
+  'wizard:astral': { name: 'Supernova', pal: pal(0xfffdf2, 0xfff0a8, 0xffc860, 0x6a5ae0, 0xffe08a) },
+  'wizard:hellfire': { name: 'Hellstorm', pal: pal(0xf4ffe8, 0xc8ff7a, 0x5ee83a, 0x1a8a3a, 0x7aff5a), type: 'pyro' },
+  'warrior:spartan': { name: 'Wrath of Ares', pal: pal(0xfff0e8, 0xff9a80, 0xf03a3a, 0x8a0a1a, 0xff6a50) },
+  'paladin:seraph': { name: 'Choir of Angels', pal: pal(0xffffff, 0xfff0d0, 0xffc890, 0xff8ab8, 0xffd8b0) },
+  'paladin:oathbreaker': { name: 'Black Sun', pal: pal(0xf6eeff, 0xd8b0ff, 0xa060ff, 0x4a1a8a, 0xb070ff), type: 'crusader' },
+  'jedi:guard': { name: 'Sentinel Storm', pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
   'samurai:kitsune': { name: 'Nine-Tailed Descent', pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { name: 'Thousand Moons', pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
 };
