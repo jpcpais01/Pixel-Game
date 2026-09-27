@@ -5,7 +5,7 @@
 // (BODY_X, BODY_Y) inside a WARRIOR_W x WARRIOR_H frame, and every drawing
 // function works in body-box coordinates.
 
-import { PixelCanvas, cyl, sphere, type Material, type RGB, type Vec3 } from './pixel';
+import { PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
 import {
   BLADE,
   BOOT,
@@ -30,6 +30,7 @@ import {
   WIND_HOT,
   WIND_MID,
 } from './palette';
+import { BRONZE, PTERUGES, SPARTAN_RED, TAN_SKIN } from './heroSkins';
 import { DIRS, type Dir } from './wizard';
 
 // ---------------------------------------------------------------------------
@@ -63,6 +64,14 @@ export interface WarriorLook {
    * tails, square laced shoulder plates and a long-gripped katana.
    */
   samurai: boolean;
+  /**
+   * A Corinthian helm with a tall crest arcing over it, a bronze muscle
+   * cuirass, bare arms and legs with bronze greaves, a skirt of leather
+   * strips, a round bronze shield on the free arm and a leaf-bladed sword.
+   */
+  spartan?: boolean;
+  /** Arms (default: the mail). */
+  arms?: Material;
 }
 
 export const KNIGHT_LOOK: WarriorLook = {
@@ -103,7 +112,29 @@ export const JADE_LOOK: WarriorLook = {
   samurai: true,
 };
 
-export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK];
+/** The Knight's Spartan skin: bronze, crimson and a round shield. */
+export const SPARTAN_LOOK: WarriorLook = {
+  key: 'warrior_spartan',
+  plate: BRONZE,
+  mail: PTERUGES,
+  cloth: SPARTAN_RED,
+  plume: SPARTAN_RED,
+  trim: BRONZE,
+  belt: LEATHER,
+  glove: TAN_SKIN,
+  boot: LEATHER,
+  trouser: TAN_SKIN,
+  skin: TAN_SKIN,
+  blade: BLADE,
+  grip: LEATHER,
+  guard: BRONZE,
+  glow: { core: hex('#fff0e8'), hot: hex('#ff9a80'), mid: hex('#f03a3a') },
+  samurai: false,
+  spartan: true,
+  arms: TAN_SKIN,
+};
+
+export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let LK: WarriorLook = KNIGHT_LOOK;
@@ -209,13 +240,18 @@ function drawSword(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
   box((x, y, along, side) => {
     if (along < BLADE_START - 0.2 || along > end) return;
     const rest = end - along;
-    const hw = LK.samurai ? (rest < 1.8 ? 0.2 + rest * 0.4 : 0.8) : rest < 2.4 ? 0.25 + rest * 0.33 : 0.98;
+    const u = (along - BLADE_START) / Math.max(1, s.len);
+    const hw = LK.samurai
+      ? rest < 1.8 ? 0.2 + rest * 0.4 : 0.8
+      : LK.spartan
+        ? rest < 1.6 ? 0.2 + rest * 0.5 : 0.7 + 0.55 * Math.sin(Math.min(1, u / 0.8) * Math.PI * 0.85)
+        : rest < 2.4 ? 0.25 + rest * 0.33 : 0.98;
     if (Math.abs(side) > hw) return;
     const k = side >= 0 ? 1 : -1;
     c.px(x, y, LK.blade, facing(px * k * 0.7, py * k * 0.7, 0.72), { glow: glow * 0.85 });
   });
   // Crossguard, or the katana's small round tsuba.
-  const guardW = LK.samurai ? 1.6 : 2.5;
+  const guardW = LK.samurai ? 1.6 : LK.spartan ? 1.7 : 2.5;
   c.part();
   box((x, y, along, side) => {
     if (Math.abs(along - 1.6) < 0.62 && Math.abs(side) < guardW) c.px(x, y, LK.guard, facing(px * side * 0.25 - 0.25, py * side * 0.25 - 0.35, 0.85));
@@ -239,7 +275,12 @@ function arm(c: PixelCanvas, sx: number, sy: number, hx: number, hy: number, bia
   const vx = hx - sx;
   const vy = hy - sy;
   const l = Math.hypot(vx, vy) || 1;
-  c.capsule(sx, sy, hx - (vx / l) * 1.0, hy - (vy / l) * 1.0, 1.3, 1.1, LK.mail, { bias });
+  c.capsule(sx, sy, hx - (vx / l) * 1.0, hy - (vy / l) * 1.0, 1.3, 1.1, LK.arms ?? LK.mail, { bias });
+  if (LK.spartan) {
+    // A bronze bracer on the forearm.
+    c.part();
+    c.capsule(sx + vx * 0.55, sy + vy * 0.55, hx - (vx / l) * 1.2, hy - (vy / l) * 1.2, 1.2, 1.15, LK.plate, { bias });
+  }
 }
 
 function glove(c: PixelCanvas, x: number, y: number): void {
@@ -250,6 +291,12 @@ function glove(c: PixelCanvas, x: number, y: number): void {
 function pauldron(c: PixelCanvas, x: number, y: number, rx = 2.3, ry = 1.75): void {
   if (LK.samurai) {
     sode(c, x, y, rx, ry);
+    return;
+  }
+  if (LK.spartan) {
+    // No pauldron: a bare, sunburnt shoulder.
+    c.part();
+    c.ellipse(x, y + 0.2, rx * 0.72, ry * 0.9, LK.arms ?? LK.skin, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
     return;
   }
   c.part();
@@ -281,6 +328,11 @@ function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): voi
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
   c.part();
   c.capsule(hx, hy, fx, fy, 1.4, 1.2, LK.trouser, { bias });
+  if (LK.spartan) {
+    // Bronze greaves over the shins.
+    c.part();
+    c.capsule(hx + (fx - hx) * 0.5, hy + (fy - hy) * 0.5, fx, fy - 0.2, 1.4, 1.25, LK.plate, { bias });
+  }
 }
 
 /** A strip of cloth (tabard panel) between rows, `edges` per row, trimmed in gold at the bottom. */
@@ -345,6 +397,137 @@ function crest(c: PixelCanvas, cx: number, y: number, view: 'front' | 'back' | '
 const FLAT_DOWN: Vec3 = { x: 0, y: -0.3, z: 0.95 };
 
 // ---------------------------------------------------------------------------
+// The Spartan: Corinthian helm, crest, muscle cuirass and round shield
+
+/** Dark of the helm's openings. */
+const SLIT: Material = { ramp: [hex('#0a0604'), hex('#140a06')], outline: hex('#050302'), noAO: true };
+
+/** The crest seen head-on: a tall narrow brush of horsehair above the helm. */
+function crestFront(c: PixelCanvas, cx: number, U: number, sway: number): void {
+  const top = 0 + U;
+  const bottom = 6 + U;
+  c.part();
+  c.shape(top, bottom, (y) => {
+    const u = (y - top) / (bottom - top);
+    const hw = 1.0 + 0.5 * Math.sin(Math.min(1, u * 1.4) * Math.PI * 0.5);
+    const x = cx + sway * (1 - u) * 0.5;
+    return [x - hw, x + hw];
+  }, LK.plume, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.5, 1), { bias: 1 });
+  for (let y = top + 1; y < bottom; y += 2) c.shade(cx, y, -1);
+}
+
+/** The crest in profile (facing left): a great arc of horsehair from brow to nape. */
+function crestSide(c: PixelCanvas, hx: number, U: number, sway: number): void {
+  const ox = hx + 0.4;
+  const oy = 9.6 + U;
+  c.part();
+  for (let y = Math.floor(oy - 9); y <= Math.ceil(oy + 1); y++) {
+    for (let x = Math.floor(ox - 7); x <= Math.ceil(ox + 8); x++) {
+      const dx = x + 0.5 - ox;
+      const dy = y + 0.5 - oy;
+      // The back of the arc sweeps further out and down, and sways with the run.
+      const back = dx > 0 ? 1 + 0.18 + sway * 0.06 : 1;
+      const outer = Math.hypot(dx / (6.0 * back), dy / 8.4);
+      const inner = Math.hypot(dx / (4.7 * back), dy / 4.9);
+      if (outer > 1 || inner < 1 || dy > 0.5) continue;
+      if (dx < -4.8) continue;
+      const a = Math.atan2(dy, dx);
+      const strand = Math.floor(a * 7) % 2 === 0;
+      c.px(x, y, LK.plume, sphere(dx / 7, dy / 8.4, 1), { bias: strand ? 0 : -1 });
+    }
+  }
+}
+
+/** The helm from the front: one bronze bowl down to the chin, the eyes and mouth a dark T. */
+function corinthianFront(c: PixelCanvas, cx: number, U: number): void {
+  const widths = [2.4, 3.6, 4.2, 4.5, 4.7, 4.7, 4.6, 4.4, 4.1, 3.5, 2.7];
+  c.part();
+  c.shape(5 + U, 15 + U, (y) => {
+    const hw = widths[y - 5 - U];
+    return [cx - hw, cx + hw];
+  }, LK.plate, (_x, _y, t, u) => sphere(t * 0.95, u * 1.3 - 0.75, 1));
+  // A raised brow over the eyes.
+  for (let x = 8; x <= 15; x++) c.shade(x, 10 + U, 1);
+  c.part();
+  for (const x of [9, 10, 13, 14]) c.px(x, 11 + U, SLIT, FLAT_DOWN);
+  c.px(10, 12 + U, SLIT, FLAT_DOWN);
+  c.px(13, 12 + U, SLIT, FLAT_DOWN);
+  for (let y = 13; y <= 15; y++) {
+    c.px(11, y + U, SLIT, FLAT_DOWN);
+    c.px(12, y + U, SLIT, FLAT_DOWN);
+  }
+  // The cheek plates curve back from the mouth.
+  c.shade(9, 14 + U, -1);
+  c.shade(14, 14 + U, -1);
+}
+
+/** The helm in profile, facing left: a jutting face plate, the eye hole, the flare over the nape. */
+function corinthianSide(c: PixelCanvas, hx: number, U: number): void {
+  c.part();
+  c.shape(5 + U, 15 + U, (y) => {
+    const r = y - 5 - U;
+    const front = r < 4 ? hx - [1.8, 3.4, 4.2, 4.6][r] : r > 8 ? hx - 4.9 : hx - 4.6;
+    const back = r < 3 ? hx + [1.8, 3.2, 3.8][r] : r > 7 ? hx + 3.8 + (r - 7) * 0.5 : hx + 4.0;
+    return [front, back];
+  }, LK.plate, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, u * 1.3 - 0.75, 1));
+  for (let x = Math.round(hx - 4); x <= Math.round(hx + 1); x++) c.shade(x, 10 + U, 1);
+  c.part();
+  c.px(hx - 4, 11 + U, SLIT, FLAT_DOWN);
+  c.px(hx - 3, 11 + U, SLIT, FLAT_DOWN);
+  c.px(hx - 3, 12 + U, SLIT, FLAT_DOWN);
+  for (let y = 13; y <= 14; y++) c.px(hx - 5, y + U, SLIT, FLAT_DOWN);
+  // The cheek plate's back edge.
+  for (let y = 11; y <= 14; y++) c.shade(hx, y + U, -1);
+}
+
+/** The round shield, its bronze face toward us with a crimson lambda, or its leather back. */
+function aspis(c: PixelCanvas, x: number, y: number, face: boolean, rx = 3.7, ry = 4.1): void {
+  c.part();
+  c.ellipse(x, y, rx, ry, LK.plate, {
+    normal: (_x, _y, dx, dy) => {
+      const q = Math.hypot(dx, dy);
+      // A rolled rim round a shallow dome.
+      return q > 0.78 ? sphere(dx * 0.95, dy * 0.95 - 0.1, 0.8) : sphere(dx * 0.45, dy * 0.45 - 0.15, 1);
+    },
+    bias: face ? 0 : -1,
+  });
+  if (!face) {
+    c.part();
+    c.ellipse(x, y, rx - 1, ry - 1, LK.mail, { normal: (_x, _y, dx, dy) => sphere(-dx * 0.4, -dy * 0.4, 1), bias: -1 });
+    c.part();
+    c.shape(Math.round(y), Math.round(y), () => [x - rx + 1.5, x + rx - 1.5], LEATHER, (_x, _y, t) => cyl(t, 0.1));
+    return;
+  }
+  // The lambda.
+  c.part();
+  const ax = Math.floor(x);
+  const ay = Math.floor(y) - 2;
+  c.px(ax, ay, LK.cloth, { x: -0.1, y: 0.5, z: 0.85 }, { bias: 1 });
+  for (let i = 1; i <= 4; i++) {
+    const d = Math.round(i * 0.55);
+    c.px(ax - d, ay + i, LK.cloth, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
+    c.px(ax + d, ay + i, LK.cloth, { x: 0.3, y: 0.3, z: 0.9 });
+  }
+}
+
+/** The shield edge-on in profile (facing left), held up before the chest. */
+function aspisSide(c: PixelCanvas, x: number, y: number): void {
+  c.part();
+  c.ellipse(x, y, 1.6, 4.3, LK.plate, { normal: (_x, _y, dx, dy) => sphere(-0.6 + dx * 0.3, dy * 0.9, 0.8) });
+  c.part();
+  for (let yy = Math.round(y - 3); yy <= Math.round(y + 3); yy++) c.px(Math.floor(x - 1.2), yy, LK.plate, { x: -0.8, y: (y - yy) * 0.1, z: 0.6 }, { bias: 1 });
+}
+
+/** The muscle cuirass: a groove down the sternum, the line under the chest and the belly. */
+function musclesFront(c: PixelCanvas, top: number): void {
+  for (let y = top + 1; y <= top + 5; y++) c.shade(12, y, -1);
+  for (const x of [9, 10, 13, 14]) c.shade(x, top + 3, -1);
+  for (const x of [10, 14]) c.shade(x, top + 5, -1);
+  c.shade(9, top + 1, 1);
+  c.shade(13, top + 1, 1);
+}
+
+// ---------------------------------------------------------------------------
 // Directions
 
 function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
@@ -384,6 +567,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     const hw = 4.5 - 0.9 * u * u;
     return [cx - hw, cx + hw];
   }, LK.plate, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
+  if (LK.spartan) musclesFront(c, top);
 
   // Mail skirt, then the tabard falling over chest and skirt.
   const hem = 26 + L;
@@ -394,8 +578,11 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     const x = cx + p.cape * 0.3 * u;
     return [x - hw, x + hw];
   }, LK.mail, (_x, _y, t, u) => cyl(t, 0.1 - u * 0.2));
-  for (let y = waist + 1; y <= hem; y += 2) c.shade(cx - 3, y, -1);
-  cloth(c, top + 2, hem, (y) => {
+  if (LK.spartan) {
+    // A skirt of leather strips: a dark seam between each.
+    for (let y = waist + 1; y <= hem; y++) for (let x = cx - 5; x <= cx + 5; x += 2) c.shade(x, y, -1);
+  } else for (let y = waist + 1; y <= hem; y += 2) c.shade(cx - 3, y, -1);
+  if (!LK.spartan) cloth(c, top + 2, hem, (y) => {
     const u = Math.max(0, (y - waist) / (hem - waist));
     const hw = 1.7 + u * 0.4;
     const x = cx + p.cape * 0.4 * u * u;
@@ -408,60 +595,67 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   c.px(11, waist, LK.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
   c.px(12, waist, LK.trim, { x: 0.2, y: 0.3, z: 0.9 });
   // Crest on the tabard: a small gold chevron.
-  c.part();
-  c.px(11, 18 + U, LK.trim, { x: -0.4, y: 0.4, z: 0.8 }, { bias: 1 });
-  c.px(12, 18 + U, LK.trim, { x: 0.3, y: 0.4, z: 0.85 });
-  c.px(11, 19 + U, LK.trim, FLAT_DOWN, { bias: -1 });
-  c.px(12, 19 + U, LK.trim, FLAT_DOWN, { bias: -1 });
+  if (!LK.spartan) {
+    c.part();
+    c.px(11, 18 + U, LK.trim, { x: -0.4, y: 0.4, z: 0.8 }, { bias: 1 });
+    c.px(12, 18 + U, LK.trim, { x: 0.3, y: 0.4, z: 0.85 });
+    c.px(11, 19 + U, LK.trim, FLAT_DOWN, { bias: -1 });
+    c.px(12, 19 + U, LK.trim, FLAT_DOWN, { bias: -1 });
+  }
 
   // Free arm (character's left, screen right).
   const fh = p.free ? { x: p.free.x, y: p.free.y + U } : { x: 17.6, y: 22.2 + U + p.arm };
   arm(c, 16.6, 16.8 + U, fh.x, fh.y);
   glove(c, fh.x, fh.y);
   pauldron(c, 16.9, 16.3 + U);
+  if (LK.spartan) aspis(c, fh.x + 0.6, fh.y - 2.2, true);
 
-  // Mail gorget between chin and breastplate.
+  // Mail gorget between chin and breastplate (a bare neck under the Spartan's helm).
   c.part();
-  c.shape(15 + U, 15 + U, () => [cx - 2.4, cx + 2.4], LK.mail, (_x, _y, t) => cyl(t, 0.2));
-
-  // Head: face framed by the helmet's cheek guards, a plume on top.
-  c.part();
-  c.ellipse(cx, 12.6 + U, 3.2, 2.8, LK.skin);
-  c.part();
-  c.px(11, 13 + U, LK.skin, sphere(-0.4, -0.3), { bias: 1 });
-  c.px(12, 13 + U, LK.skin, sphere(0.35, -0.2));
-  c.shade(11, 14 + U, -1);
-  c.shade(12, 14 + U, -1);
-  c.part();
-  if (p.blink) {
-    c.px(10, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
-    c.px(13, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
+  c.shape(15 + U, 15 + U, () => [cx - 2.4, cx + 2.4], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
+  if (LK.spartan) {
+    crestFront(c, cx, U, p.plume);
+    corinthianFront(c, cx, U);
   } else {
-    c.px(10, 12 + U, EYE);
-    c.px(13, 12 + U, EYE);
-  }
-  if (!LK.samurai) {
-    plume(c, [
-      [cx, 6 + U],
-      [cx + p.plume * 0.4, 3.4 + U],
-      [cx + p.plume, 1.8 + U],
-    ], 1.7, 1.15);
-  }
-  dome(c, cx, 5 + U, 10 + U, 4.7);
-  c.part();
-  if (LK.samurai) {
-    // Shikoro: lames flaring out and down past the cheeks.
-    const flare = [0.2, 0.7, 1.2, 1.7];
-    const guard = [1.6, 1.6, 1.5, 1.3];
-    c.shape(11 + U, 14 + U, (y) => [7.6 - flare[y - 11 - U], 7.6 - flare[y - 11 - U] + guard[y - 11 - U]], LK.plate, (_x, _y, t) => cyl(t * 0.4 - 0.6, 0.1));
-    c.shape(11 + U, 14 + U, (y) => [16.4 + flare[y - 11 - U] - guard[y - 11 - U], 16.4 + flare[y - 11 - U]], LK.plate, (_x, _y, t) => cyl(t * 0.4 + 0.6, 0.1));
-    c.shade(6, 13 + U, -1);
-    c.shade(18, 13 + U, -1);
-    crest(c, cx, 5.4 + U, 'front');
-  } else {
-    const guard = [1.9, 1.7, 1.3, 0.8];
-    c.shape(11 + U, 14 + U, (y) => [7.6, 7.6 + guard[y - 11 - U]], LK.plate, (_x, _y, t) => cyl(t * 0.4 - 0.6, 0.1));
-    c.shape(11 + U, 14 + U, (y) => [16.4 - guard[y - 11 - U], 16.4], LK.plate, (_x, _y, t) => cyl(t * 0.4 + 0.6, 0.1));
+    // Head: face framed by the helmet's cheek guards, a plume on top.
+    c.part();
+    c.ellipse(cx, 12.6 + U, 3.2, 2.8, LK.skin);
+    c.part();
+    c.px(11, 13 + U, LK.skin, sphere(-0.4, -0.3), { bias: 1 });
+    c.px(12, 13 + U, LK.skin, sphere(0.35, -0.2));
+    c.shade(11, 14 + U, -1);
+    c.shade(12, 14 + U, -1);
+    c.part();
+    if (p.blink) {
+      c.px(10, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
+      c.px(13, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
+    } else {
+      c.px(10, 12 + U, EYE);
+      c.px(13, 12 + U, EYE);
+    }
+    if (!LK.samurai) {
+      plume(c, [
+        [cx, 6 + U],
+        [cx + p.plume * 0.4, 3.4 + U],
+        [cx + p.plume, 1.8 + U],
+      ], 1.7, 1.15);
+    }
+    dome(c, cx, 5 + U, 10 + U, 4.7);
+    c.part();
+    if (LK.samurai) {
+      // Shikoro: lames flaring out and down past the cheeks.
+      const flare = [0.2, 0.7, 1.2, 1.7];
+      const guard = [1.6, 1.6, 1.5, 1.3];
+      c.shape(11 + U, 14 + U, (y) => [7.6 - flare[y - 11 - U], 7.6 - flare[y - 11 - U] + guard[y - 11 - U]], LK.plate, (_x, _y, t) => cyl(t * 0.4 - 0.6, 0.1));
+      c.shape(11 + U, 14 + U, (y) => [16.4 + flare[y - 11 - U] - guard[y - 11 - U], 16.4 + flare[y - 11 - U]], LK.plate, (_x, _y, t) => cyl(t * 0.4 + 0.6, 0.1));
+      c.shade(6, 13 + U, -1);
+      c.shade(18, 13 + U, -1);
+      crest(c, cx, 5.4 + U, 'front');
+    } else {
+      const guard = [1.9, 1.7, 1.3, 0.8];
+      c.shape(11 + U, 14 + U, (y) => [7.6, 7.6 + guard[y - 11 - U]], LK.plate, (_x, _y, t) => cyl(t * 0.4 - 0.6, 0.1));
+      c.shape(11 + U, 14 + U, (y) => [16.4 - guard[y - 11 - U], 16.4], LK.plate, (_x, _y, t) => cyl(t * 0.4 + 0.6, 0.1));
+    }
   }
 
   // Sword arm (character's right, screen left).
@@ -486,6 +680,10 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
     glove(c, p.sword.hx, p.sword.hy);
   }
 
+  // The Spartan's shield, held out before him, shows its back past his side.
+  const fh = p.free ? { x: 24 - p.free.x, y: p.free.y + U } : { x: 6.4, y: 22.2 + U + p.arm };
+  if (LK.spartan) aspis(c, fh.x - 0.6, fh.y - 2.2, false);
+
   leg(c, 9.9, 24 + L, 9.8, 28.4 - p.footB);
   leg(c, 14.1, 24 + L, 14.2, 28.4 - p.footA);
   boot(c, 9.6, 29.7 - p.footB);
@@ -509,7 +707,6 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
   }, LK.mail, (_x, _y, t, u) => cyl(t, 0.1 - u * 0.2));
 
   // Free arm (character's left, now screen left), under the cape's edge.
-  const fh = p.free ? { x: 24 - p.free.x, y: p.free.y + U } : { x: 6.4, y: 22.2 + U + p.arm };
   arm(c, 7.4, 16.8 + U, fh.x, fh.y);
   glove(c, fh.x, fh.y);
 
@@ -531,11 +728,27 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
 
   // Helmet from behind, with a mail neck guard; the plume runs down its back.
   c.part();
-  c.shape(13 + U, 15 + U, () => [cx - 3.4, cx + 3.4], LK.mail, (_x, _y, t) => cyl(t, 0));
+  c.shape(13 + U, 15 + U, () => [cx - 3.4, cx + 3.4], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0));
   if (LK.samurai) crest(c, cx, 5.8 + U, 'back'); // behind the helmet: only the horns show
   c.part();
   c.ellipse(cx, 10.2 + U, 4.7, 4.5, LK.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.15, 1) });
-  if (LK.samurai) {
+  if (LK.spartan) {
+    // The bowl flares over the nape; the crest runs from the brow down the back.
+    c.part();
+    c.shape(13 + U, 14 + U, (y) => {
+      const f = (y - 13 - U) * 0.5;
+      return [cx - 4.4 - f, cx + 4.4 + f];
+    }, LK.plate, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.4));
+    crestFront(c, cx, U, p.plume);
+    c.part();
+    c.shape(6 + U, 12 + U, (y) => {
+      const u = (y - 6 - U) / 6;
+      const hw = 1.5 - u * 0.6;
+      const x = cx + p.plume * u * 0.4;
+      return [x - hw, x + hw];
+    }, LK.plume, (_x, _y, t, u) => sphere(t * 0.9, u * 0.6 - 0.1, 1), { bias: 1 });
+    for (let y = 7; y <= 12; y += 2) c.shade(cx, y + U, -1);
+  } else if (LK.samurai) {
     // Flared neck guard, then the headband's knot and two tails.
     c.part();
     c.shape(12 + U, 14 + U, (y) => {
@@ -628,53 +841,69 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
   };
   c.part();
   c.shape(waist, hem, skirt, LK.mail, (_x, _y, t, u) => cyl(t * 0.9 - 0.1, 0.1 - u * 0.2));
-  // Tabard front edge down chest and skirt.
-  cloth(c, top + 2, hem, (y) => {
-    const [l] = y < waist ? torso(y) : skirt(y);
-    return [l, l + 1.6];
-  }, LK.cloth, true);
+  if (LK.spartan) {
+    // Leather strips, and the cuirass's chest and belly.
+    for (let y = waist + 1; y <= hem; y++) for (let x = cx - 4; x <= cx + 4; x += 2) c.shade(x, y, -1);
+    c.shade(Math.round(hx - 2), top + 3, -1);
+    c.shade(Math.round(hx - 1), top + 3, -1);
+    c.shade(Math.round(hx - 2), top + 5, -1);
+  } else {
+    // Tabard front edge down chest and skirt.
+    cloth(c, top + 2, hem, (y) => {
+      const [l] = y < waist ? torso(y) : skirt(y);
+      return [l, l + 1.6];
+    }, LK.cloth, true);
+  }
   c.part();
   const [bl, br] = torso(waist - 1);
   c.shape(waist, waist, () => [bl - 0.1, br + 0.2], LK.belt, (_x, _y, t) => cyl(t, 0));
   c.part();
   c.px(Math.round(bl), waist, LK.trim, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
 
+  // The Spartan's shield, up before his chest.
+  if (LK.spartan) aspisSide(c, hx - 4.4, 19.2 + U);
+
   // Head: profile face under the helmet, cheek guard, plume streaming back.
   c.part();
-  c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.6], LK.mail, (_x, _y, t) => cyl(t, 0.2));
-  c.part();
-  c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, LK.skin);
-  c.part();
-  c.px(hx - 5, 13 + U, LK.skin, sphere(-0.6, -0.2), { bias: 1 });
-  c.shade(hx - 4, 14 + U, -1);
-  c.part();
-  if (p.blink) c.px(hx - 3, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
-  else c.px(hx - 3, 12 + U, EYE);
-  if (LK.samurai) {
-    plume(c, [
-      [hx + 3.2, 9.4 + U],
-      [hx + 5.4 + p.plume * 0.4, 10.2 + U],
-      [hx + 7.2 + p.plume, 12.4 + U],
-    ], 0.8, 0.55);
+  c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.6], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
+  if (LK.spartan) {
+    crestSide(c, hx, U, p.plume);
+    corinthianSide(c, hx, U);
   } else {
-    plume(c, [
-      [hx + 0.6, 5.4 + U],
-      [hx + 3.4 + p.plume * 0.3, 5.2 + U],
-      [hx + 5.6 + p.plume * 0.7, 7.6 + U],
-      [hx + 6.4 + p.plume, 10.6 + U],
-    ], 1.35, 0.8);
-  }
-  dome(c, hx - 0.2, 5 + U, 10 + U, 4.5, 0.6);
-  c.part();
-  // Back of the helmet over the nape, and the cheek guard.
-  c.shape(11 + U, 14 + U, (y) => [hx + 0.8, hx + 4.4 - (y - 11 - U) * 0.35], LK.plate, (_x, _y, t, u) => sphere(t * 0.7 + 0.2, u * 0.8, 1));
-  c.shape(11 + U, 13 + U, (y) => [hx - 0.6 + (y - 11 - U) * 0.3, hx + 0.9], LK.plate, (_x, _y, t) => cyl(t * 0.5, 0.1), { bias: 1 });
-  c.px(hx - 5, 10 + U, LK.plate, { x: -0.3, y: 0.2, z: 0.93 }); // brow lip
-  if (LK.samurai) {
-    // The neck guard flares further back, and the crest rises from the brow.
-    c.shape(13 + U, 14 + U, (y) => [hx + 2, hx + 5 + (y - 13 - U) * 0.8], LK.plate, (_x, _y, t, u) => cyl(t * 0.6 + 0.3, 0.2 - u * 0.4));
-    c.shade(Math.round(hx + 4), 14 + U, -1);
-    crest(c, hx - 2.8, 6 + U, 'side');
+    c.part();
+    c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, LK.skin);
+    c.part();
+    c.px(hx - 5, 13 + U, LK.skin, sphere(-0.6, -0.2), { bias: 1 });
+    c.shade(hx - 4, 14 + U, -1);
+    c.part();
+    if (p.blink) c.px(hx - 3, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
+    else c.px(hx - 3, 12 + U, EYE);
+    if (LK.samurai) {
+      plume(c, [
+        [hx + 3.2, 9.4 + U],
+        [hx + 5.4 + p.plume * 0.4, 10.2 + U],
+        [hx + 7.2 + p.plume, 12.4 + U],
+      ], 0.8, 0.55);
+    } else {
+      plume(c, [
+        [hx + 0.6, 5.4 + U],
+        [hx + 3.4 + p.plume * 0.3, 5.2 + U],
+        [hx + 5.6 + p.plume * 0.7, 7.6 + U],
+        [hx + 6.4 + p.plume, 10.6 + U],
+      ], 1.35, 0.8);
+    }
+    dome(c, hx - 0.2, 5 + U, 10 + U, 4.5, 0.6);
+    c.part();
+    // Back of the helmet over the nape, and the cheek guard.
+    c.shape(11 + U, 14 + U, (y) => [hx + 0.8, hx + 4.4 - (y - 11 - U) * 0.35], LK.plate, (_x, _y, t, u) => sphere(t * 0.7 + 0.2, u * 0.8, 1));
+    c.shape(11 + U, 13 + U, (y) => [hx - 0.6 + (y - 11 - U) * 0.3, hx + 0.9], LK.plate, (_x, _y, t) => cyl(t * 0.5, 0.1), { bias: 1 });
+    c.px(hx - 5, 10 + U, LK.plate, { x: -0.3, y: 0.2, z: 0.93 }); // brow lip
+    if (LK.samurai) {
+      // The neck guard flares further back, and the crest rises from the brow.
+      c.shape(13 + U, 14 + U, (y) => [hx + 2, hx + 5 + (y - 13 - U) * 0.8], LK.plate, (_x, _y, t, u) => cyl(t * 0.6 + 0.3, 0.2 - u * 0.4));
+      c.shade(Math.round(hx + 4), 14 + U, -1);
+      crest(c, hx - 2.8, 6 + U, 'side');
+    }
   }
 
   // Near arm and sword.

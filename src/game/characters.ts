@@ -11,13 +11,13 @@
 
 import type Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
-import { ARCANE_SKIN, VOID_SKIN, Wizard } from './Wizard';
-import { PYRO_SKIN, Pyromancy } from './Pyro';
-import { JADE_SKIN, KNIGHT_SKIN, Warrior } from './Warrior';
+import { ARCANE_SKIN, ASTRAL_SKIN, VOID_SKIN, Wizard } from './Wizard';
+import { EMBER_FIRE, HELL_FIRE, HELL_SKIN, PYRO_SKIN, Pyromancy } from './Pyro';
+import { JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
-import { CRUSADER_KIT, HOLY_KIT, Paladin } from './Paladin';
+import { CRUSADER_KIT, HOLY_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
-import { Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
+import { GUARD_STYLE, Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { BRAWLER_STYLE, Fighter, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
@@ -31,11 +31,11 @@ import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necroma
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
-import { CRIMSON_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, WEAVER_KIT } from './Puppeteer';
+import { ARACHNE_KIT, CRIMSON_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, TOYMAKER_KIT, WEAVER_KIT } from './Puppeteer';
 import { PUPPETEER_H, PUPPETEER_ORIGIN_Y } from '../art/puppeteer';
 import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
-import { BLADEWIND_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai } from './Samurai';
+import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT } from './Samurai';
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { worn } from './skins';
 import type { Vitals } from './combat';
@@ -200,6 +200,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_beam_void' },
             },
           },
+          {
+            // A reader of the stars: silver hair under a gold circlet, a crown of stars, a robe strewn with them.
+            id: 'astral',
+            name: 'Astral',
+            role: 'Reader of the stars',
+            accent: 0xffe08a,
+            attack: 'Star orb',
+            special: 'Starlight beam',
+            preview: { texture: 'wizard_astral', glow: 'wizard_astral_e', idle: 'wizard_astral_idle_down', chosen: 'wizard_astral_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_astral_e', frame: 'o0', anim: 'orb_astral_spin' },
+              special: { texture: 'icon_beam_astral' },
+            },
+          },
         ],
       },
       {
@@ -216,12 +230,29 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_meteor' },
         },
         lookName: 'Ember',
+        skins: [
+          {
+            // A horned, crimson-skinned warlock in black and blood red, burning with green hellfire.
+            id: 'hellfire',
+            name: 'Hellfire',
+            role: 'Horned warlock',
+            accent: 0x7aff5a,
+            attack: 'Hellfire bolt',
+            special: 'Doom meteor',
+            preview: { texture: 'wizard_hell', glow: 'wizard_hell_e', idle: 'wizard_hell_idle_down', chosen: 'wizard_hell_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_hell_e', frame: 'o0', anim: 'orb_hell_spin' },
+              special: { texture: 'icon_meteor_hell' },
+            },
+          },
+        ],
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'pyro') {
+      if (look === 'pyro' || look === 'hellfire') {
         // Fireballs that blast and burn; a charged meteor called down where it's aimed.
-        const fire = new Pyromancy(world);
+        const hell = look === 'hellfire';
+        const fire = new Pyromancy(world, hell ? HELL_FIRE : EMBER_FIRE);
         const w = new Wizard(
           world,
           x,
@@ -232,13 +263,13 @@ export const CLASSES: ClassDef[] = [
             target: (dx, dy, level, dist) => fire.target(dx, dy, level, dist),
             untarget: () => fire.untarget(),
           },
-          PYRO_SKIN,
+          hell ? HELL_SKIN : PYRO_SKIN,
         );
         fire.caster = w;
         world.addEffect(fire);
         return w;
       }
-      const skin = look === 'void' ? VOID_SKIN : ARCANE_SKIN;
+      const skin = look === 'void' ? VOID_SKIN : look === 'astral' ? ASTRAL_SKIN : ARCANE_SKIN;
       const w: Wizard = new Wizard(
         world,
         x,
@@ -285,10 +316,24 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_whirl_jade' },
             },
           },
+          {
+            // Bronze and crimson: a crested Corinthian helm, a round shield and a leaf-bladed sword.
+            id: 'spartan',
+            name: 'Spartan',
+            role: 'Bronze of the phalanx',
+            accent: 0xf0a050,
+            attack: 'Xiphos combo',
+            special: 'Bronze whirlwind',
+            preview: { texture: 'warrior_spartan', glow: 'warrior_spartan_e', idle: 'warrior_spartan_idle_down', chosen: 'warrior_spartan_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_sword_spartan' },
+              special: { texture: 'icon_whirl_spartan' },
+            },
+          },
         ],
       },
     ],
-    spawn: (world, x, y, look) => new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : KNIGHT_SKIN),
+    spawn: (world, x, y, look) => new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : KNIGHT_SKIN),
   },
   {
     id: 'paladin',
@@ -309,6 +354,22 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_sanctuary' },
         },
         lookName: 'Holy',
+        skins: [
+          {
+            // A winged guardian in pearl plate, a halo over golden hair, light the colour of dawn.
+            id: 'seraph',
+            name: 'Seraph',
+            role: 'Winged guardian',
+            accent: 0xffc8a8,
+            attack: 'Dawn smite',
+            special: 'Sacred ground',
+            preview: { texture: 'paladin_seraph', glow: 'paladin_seraph_e', idle: 'paladin_seraph_idle_down', chosen: 'paladin_seraph_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
+            buttons: {
+              attack: { texture: 'icon_mace_seraph' },
+              special: { texture: 'icon_sanctuary_seraph' },
+            },
+          },
+        ],
       },
       {
         // Harder, slower hammer blows and a burst of sunfire instead of healing ground.
@@ -325,9 +386,28 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_sunfall' },
         },
         lookName: 'Sunforged',
+        skins: [
+          {
+            // A fallen crusader: horned helm, spiked black-violet plate, a torn cloak and an eclipse for a sun.
+            id: 'oathbreaker',
+            name: 'Oathbreaker',
+            role: 'Hammer of the eclipse',
+            accent: 0xb070ff,
+            attack: 'Dusk hammer',
+            special: 'Eclipse fall',
+            preview: { texture: 'paladin_oath', glow: 'paladin_oath_e', idle: 'paladin_oath_idle_down', chosen: 'paladin_oath_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
+            buttons: {
+              attack: { texture: 'icon_hammer_oath' },
+              special: { texture: 'icon_sunfall_oath' },
+            },
+          },
+        ],
       },
     ],
-    spawn: (world, x, y, look) => new Paladin(world, x, y, look === 'crusader' ? CRUSADER_KIT : HOLY_KIT),
+    spawn(world, x, y, look) {
+      const kit = { holy: HOLY_KIT, seraph: SERAPH_KIT, crusader: CRUSADER_KIT, oathbreaker: OATH_KIT }[look] ?? HOLY_KIT;
+      return new Paladin(world, x, y, kit);
+    },
   },
   {
     id: 'jedi',
@@ -361,10 +441,24 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_force_sith' },
             },
           },
+          {
+            // A masked sentinel of the temple in cream and gold, with a long-hilted golden saber.
+            id: 'guard',
+            name: 'Temple guard',
+            role: 'Sentinel of the temple',
+            accent: 0xffd04a,
+            attack: 'Sentinel flurry',
+            special: 'Force repulse',
+            preview: { texture: 'jedi_guard', glow: 'jedi_guard_e', idle: 'jedi_guard_idle_down', chosen: 'jedi_guard_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
+            buttons: {
+              attack: { texture: 'icon_saber_guard' },
+              special: { texture: 'icon_force_guard' },
+            },
+          },
         ],
       },
     ],
-    spawn: (world, x, y, look) => new Jedi(world, x, y, look === 'sith' ? SITH_STYLE : JEDI_STYLE),
+    spawn: (world, x, y, look) => new Jedi(world, x, y, look === 'sith' ? SITH_STYLE : look === 'guard' ? GUARD_STYLE : JEDI_STYLE),
   },
   {
     id: 'fighter',
@@ -836,6 +930,19 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_pirouette_porcelain' },
             },
           },
+          {
+            id: 'toymaker',
+            name: 'Toymaker',
+            role: 'Works a nutcracker soldier',
+            accent: 0xff5a4a,
+            attack: 'Nutcracker strike',
+            special: 'Toy soldier spin',
+            preview: { texture: 'puppeteer_toymaker', glow: 'puppeteer_toymaker_e', idle: 'puppeteer_toymaker_idle_down', chosen: 'puppeteer_toymaker_twirl_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
+            buttons: {
+              attack: { texture: 'icon_puppet_toymaker' },
+              special: { texture: 'icon_pirouette_toymaker' },
+            },
+          },
         ],
       },
       {
@@ -867,11 +974,24 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_marionette_crimson' },
             },
           },
+          {
+            id: 'arachne',
+            name: 'Arachne',
+            role: 'A spider queen and her silk',
+            accent: 0xa8e040,
+            attack: 'Venom silk',
+            special: 'Web of Arachne',
+            preview: { texture: 'weaver_arachne', glow: 'weaver_arachne_e', idle: 'weaver_arachne_idle_down', chosen: 'weaver_arachne_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
+            buttons: {
+              attack: { texture: 'icon_thread_arachne' },
+              special: { texture: 'icon_marionette_arachne' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = look === 'porcelain' ? PORCELAIN_KIT : look === 'weaver' ? WEAVER_KIT : look === 'crimson' ? CRIMSON_KIT : MARIONETTE_KIT;
+      const kit = { porcelain: PORCELAIN_KIT, toymaker: TOYMAKER_KIT, weaver: WEAVER_KIT, crimson: CRIMSON_KIT, arachne: ARACHNE_KIT }[look] ?? MARIONETTE_KIT;
       return new Puppeteer(world, x, y, kit);
     },
   },
@@ -909,6 +1029,19 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_windblade_oni' },
             },
           },
+          {
+            id: 'kitsune',
+            name: 'Kitsune',
+            role: 'A fox spirit burning with foxfire',
+            accent: 0x40e8b0,
+            attack: 'Foxfire tempest',
+            special: 'Fox step',
+            preview: { texture: 'samurai_kitsune', glow: 'samurai_kitsune_e', idle: 'samurai_kitsune_idle_down', chosen: 'samurai_kitsune_slash1_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
+            buttons: {
+              attack: { texture: 'icon_katana_kitsune' },
+              special: { texture: 'icon_windblade_kitsune' },
+            },
+          },
         ],
       },
       {
@@ -940,11 +1073,24 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_cross_sakura' },
             },
           },
+          {
+            id: 'shogun',
+            name: 'Shogun',
+            role: 'A warlord under the crescent moon',
+            accent: 0xa89cff,
+            attack: 'Crescent cut',
+            special: 'Warlord crossing',
+            preview: { texture: 'ronin_shogun', glow: 'ronin_shogun_e', idle: 'ronin_shogun_idle_down', chosen: 'ronin_shogun_slash2_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
+            buttons: {
+              attack: { texture: 'icon_iai_shogun' },
+              special: { texture: 'icon_cross_shogun' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { bladewind: BLADEWIND_KIT, oni: ONI_KIT, ronin: RONIN_KIT, sakura: SAKURA_KIT }[look] ?? BLADEWIND_KIT;
+      const kit = { bladewind: BLADEWIND_KIT, oni: ONI_KIT, kitsune: KITSUNE_KIT, ronin: RONIN_KIT, sakura: SAKURA_KIT, shogun: SHOGUN_KIT }[look] ?? BLADEWIND_KIT;
       return new Samurai(world, x, y, kit);
     },
   },

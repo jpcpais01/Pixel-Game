@@ -6,7 +6,7 @@ import { beamHud, comboHud } from './controls';
 import { snap } from './display';
 import { sound } from '../audio';
 import { Vitals, type Hurtbox } from './combat';
-import { FATE_STRINGS, GOLD_STRINGS, ICE_STRINGS, Marionette, Puppet, SILK_STRINGS, ThreadLash, type LashKind, type PuppetKit } from './Strings';
+import { FATE_STRINGS, GOLD_STRINGS, ICE_STRINGS, Marionette, Puppet, SILK_STRINGS, ThreadLash, TOY_STRINGS, VENOM_STRINGS, type LashKind, type PuppetKit } from './Strings';
 import type { Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
@@ -93,6 +93,15 @@ export const WEAVER_KIT: PuppeteerKit = {
 };
 
 export const CRIMSON_KIT: PuppeteerKit = { ...WEAVER_KIT, key: 'weaver_crimson', strings: FATE_STRINGS };
+
+export const TOYMAKER_KIT: PuppeteerKit = {
+  ...MARIONETTE_KIT,
+  key: 'puppeteer_toymaker',
+  strings: TOY_STRINGS,
+  puppet: { ...GALLANT, key: 'puppet_nutcracker', strings: TOY_STRINGS },
+};
+
+export const ARACHNE_KIT: PuppeteerKit = { ...WEAVER_KIT, key: 'weaver_arachne', strings: VENOM_STRINGS };
 
 /**
  * The puppeteer: works on the attack button towards the aim (the mouse on a

@@ -153,6 +153,15 @@ export class PixelCanvas {
     this.mat[y * this.w + x] = -1;
   }
 
+  /** The material drawn at a pixel, or null where nothing is. */
+  materialAt(x: number, y: number): Material | null {
+    x = Math.floor(x) + this.ox;
+    y = Math.floor(y) + this.oy;
+    if (x < 0 || y < 0 || x >= this.w || y >= this.h) return null;
+    const i = this.mat[y * this.w + x];
+    return i >= 0 ? this.materials[i] : null;
+  }
+
   filled(x: number, y: number): boolean {
     x += this.ox;
     y += this.oy;

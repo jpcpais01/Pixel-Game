@@ -32,6 +32,7 @@ import {
   SKIN,
   TROUSER,
 } from './palette';
+import { GUARD_GLOVE, GUARD_GOLD, GUARD_ROBE, GUARD_TUNIC, MASK, SABER_GOLD, SABER_GOLD_GLOW } from './heroSkins';
 import { DIRS, type Dir } from './wizard';
 
 export const JEDI_W = 48;
@@ -60,6 +61,11 @@ export interface JediLook {
   bladeGlow: RGB;
   /** Force light gathered in the open palm: core, hot, mid. */
   force: [RGB, RGB, RGB];
+  /**
+   * The temple guard: a taller, pointed hood over a white mask with a dark
+   * visor, gold edging down the robe and a long, gold-banded saber hilt.
+   */
+  guard?: boolean;
 }
 
 export const JEDI_LOOK: JediLook = {
@@ -88,7 +94,22 @@ export const SITH_LOOK: JediLook = {
   force: [hex('#fff0f4'), hex('#ff8a9a'), hex('#d0304a')],
 };
 
-export const JEDI_LOOKS = [JEDI_LOOK, SITH_LOOK];
+/** The Jedi knight's Temple guard skin. */
+export const GUARD_LOOK: JediLook = {
+  key: 'jedi_guard',
+  robe: GUARD_ROBE,
+  tunic: GUARD_TUNIC,
+  sash: GUARD_GOLD,
+  skin: GUARD_GLOVE,
+  hair: GUARD_ROBE,
+  hooded: true,
+  blade: SABER_GOLD,
+  bladeGlow: SABER_GOLD_GLOW,
+  force: [hex('#fffbe8'), hex('#ffe08a'), hex('#f0b030')],
+  guard: true,
+};
+
+export const JEDI_LOOKS = [JEDI_LOOK, SITH_LOOK, GUARD_LOOK];
 
 /** The look being drawn; set by buildJediFrames. */
 let S: JediLook = JEDI_LOOK;
@@ -181,10 +202,13 @@ function drawSaber(c: PixelCanvas, s: Saber): { x: number; y: number } {
   });
   // Hilt: chrome with a dark grip, a brighter emitter shroud.
   c.part();
+  const butt = S.guard ? -4.6 : -2.2;
   box((x, y, along, side) => {
-    if (along < -2.2 || along > EMITTER || Math.abs(side) > 0.62) return;
+    if (along < butt || along > EMITTER || Math.abs(side) > 0.62) return;
     const n = facing(px * side - 0.3, py * side + 0.3, 0.8);
-    if (along > -1.1 && along < 0.9) c.px(x, y, HILT_DARK, n);
+    // The guard's long hilt is banded in gold.
+    if (S.guard && along < -1.1) c.px(x, y, Math.round(along) % 2 ? GUARD_GOLD : HILT_DARK, n);
+    else if (along > -1.1 && along < 0.9) c.px(x, y, HILT_DARK, n);
     else c.px(x, y, SILVER, n, { bias: along > 0 ? 1 : 0 });
   });
   return { x: s.hx + dx * end, y: s.hy + dy * end };
@@ -233,6 +257,7 @@ function shoulder(c: PixelCanvas, x: number, y: number, rx = 2.2, ry = 1.6): voi
 }
 
 function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
+  if (S.guard) return;
   c.part();
   for (const [x, y] of pts) {
     if (S.hooded) {
@@ -325,8 +350,13 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   c.shape(rt, rb, panel(1), S.robe, (_x, _y, t, u) => cyl(t * 0.6 + 0.35, 0.25 - u * 0.35));
   // Light along the inner edges, where the cloth turns.
   for (let y = rt + 1; y <= rb; y++) {
-    c.shade(Math.round(panel(-1)(y)[1]) - 1, y, 1);
-    c.shade(Math.round(panel(1)(y)[0]), y, 1);
+    if (S.guard) {
+      c.px(Math.round(panel(-1)(y)[1]) - 1, y, GUARD_GOLD, cyl(0.3, 0.2));
+      c.px(Math.round(panel(1)(y)[0]), y, GUARD_GOLD, cyl(-0.3, 0.2), { bias: -1 });
+    } else {
+      c.shade(Math.round(panel(-1)(y)[1]) - 1, y, 1);
+      c.shade(Math.round(panel(1)(y)[0]), y, 1);
+    }
   }
 
   // Free arm (character's left, screen right).
@@ -376,7 +406,7 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
 
 /** The raised hood from the front: a cowl round a shadow where the eyes glow. */
 function cowlFront(c: PixelCanvas, cx: number, U: number): void {
-  const top = 5 + U;
+  const top = (S.guard ? 2 : 5) + U;
   const bottom = 16 + U;
   c.part();
   c.shape(top, bottom, (y) => {
@@ -388,6 +418,18 @@ function cowlFront(c: PixelCanvas, cx: number, U: number): void {
   c.shade(cx + 1, 7 + U, -1);
   c.part();
   c.ellipse(cx, 12.8 + U, 3.1, 3.3, HOOD_SHADOW, { normal: () => FLAT_DOWN });
+  if (S.guard) {
+    // A white mask fills the hood: a dark visor across the eyes, a ridge down the middle.
+    c.part();
+    c.ellipse(cx, 12.9 + U, 2.6, 3.0, MASK, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.7 - 0.1, 1) });
+    c.part();
+    for (let x = 10; x <= 13; x++) c.px(x, 12 + U, HILT_DARK, FLAT_DOWN);
+    c.spark(10, 12 + U, S.force[2], 0.35);
+    c.spark(13, 12 + U, S.force[2], 0.35);
+    for (let y = 13; y <= 15; y++) c.shade(12, y + U, -1);
+    c.shade(11, 10 + U, 1);
+    return;
+  }
   // The chin, just caught by the light below the shadow.
   c.part();
   c.shape(15 + U, 15 + U, () => [cx - 1.6, cx + 1.6], S.skin, (_x, _y, t) => cyl(t, -0.3), { bias: -1 });
@@ -448,7 +490,7 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
   if (S.hooded) {
     // The raised hood from behind, its point drooping down the back.
     c.part();
-    const top = 5 + U;
+    const top = (S.guard ? 2 : 5) + U;
     const bottom = 17 + U;
     c.shape(top, bottom, (y) => {
       const u = (y + 0.5 - top) / (bottom + 1 - top);
@@ -554,7 +596,7 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   c.shade(hx - 4, 14 + U, -1);
   if (S.hooded) {
     // The cowl, its point flopping back, the face in shadow at the front.
-    const top = 5 + U;
+    const top = (S.guard ? 2 : 5) + U;
     const bottom = 16 + U;
     c.part();
     c.shape(top, bottom, (y) => {
@@ -567,8 +609,18 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
     c.shade(hx + 2, 12 + U, -1);
     c.part();
     c.ellipse(hx - 3.4, 12.9 + U, 1.6, 2.7, HOOD_SHADOW, { normal: () => FLAT_DOWN });
-    c.part();
-    c.px(hx - 4, 15 + U, S.skin, { x: -0.5, y: -0.2, z: 0.8 }, { bias: -1 });
+    if (S.guard) {
+      // The mask in profile, its visor a dark notch.
+      c.part();
+      c.ellipse(hx - 3.6, 13 + U, 1.3, 2.6, MASK, { normal: (_x, _y, dx, dy) => sphere(-0.5 + dx * 0.4, dy * 0.7, 0.9) });
+      c.part();
+      c.px(hx - 4, 12 + U, HILT_DARK, FLAT_DOWN);
+      c.px(hx - 5, 12 + U, HILT_DARK, FLAT_DOWN);
+      c.spark(hx - 4, 12 + U, S.force[2], 0.35);
+    } else {
+      c.part();
+      c.px(hx - 4, 15 + U, S.skin, { x: -0.5, y: -0.2, z: 0.8 }, { bias: -1 });
+    }
     eyes(c, [[hx - 4, 12 + U]], p.blink);
   } else {
     c.part();

@@ -4,7 +4,9 @@
 // hakama, a curved katana with a guard (tsuba) and a wrapped grip. Looks
 // swap the cloth and add parts: the Bladewind wears a lacquered shoulder
 // guard and a long high ponytail; the Oni a red demon face guard; the Ronin a
-// straw kasa hat over a worn haori jacket with a crest on its back.
+// straw kasa hat over a worn haori jacket with a crest on its back; the
+// Kitsune fox ears, a fox mask and a great tail tipped in foxfire; the Shogun
+// laced black armour and a helmet crowned with a golden crescent.
 //
 // The body keeps to the 24x32 box; frames are larger so the blade can reach
 // past it. Drawing functions work in body-box coordinates.
@@ -58,6 +60,14 @@ export interface SamuraiLook {
   grip: Material;
   /** A faint light along the edge in the emissive layer. */
   bladeGlow: RGB;
+  /** A fox spirit's ears, a white fox mask over the face and a great brush of a tail tipped in foxfire. */
+  fox?: { fur: Material; fire: Material; mask: Material; paint: Material };
+  /**
+   * A warlord's armour: a lacquered cuirass, a plated skirt and great shoulder
+   * guards, all laced in bands; a helmet with a flaring neck guard and a
+   * crescent moon crest over the brow.
+   */
+  armor?: { plate: Material; lace: Material; crest: Material };
 }
 
 const TABI = mat('#0d0b12', '#1d1a24', '#34303e', '#4e4858', '#6c6476');
@@ -152,7 +162,62 @@ export const SAKURA_LOOK: SamuraiLook = {
   bladeGlow: hex('#ff9ac0'),
 };
 
-export const SAMURAI_LOOKS = [BLADEWIND_LOOK, ONI_LOOK, RONIN_LOOK, SAKURA_LOOK];
+/**
+ * The Kitsune skin: a fox spirit in a shrine's white and vermilion, silver
+ * hair between fox ears, a white fox mask painted in red, and a great white
+ * tail whose tip burns with ghostly green foxfire, as does the blade's edge.
+ */
+export const KITSUNE_LOOK: SamuraiLook = {
+  ...BLADEWIND_LOOK,
+  key: 'samurai_kitsune',
+  gi: mat('#4a4050', '#9a90a0', '#d0c8d4', '#eee8f0', '#fdfaff'),
+  collar: mat('#3a0a0a', '#8a1a14', '#c8321e', '#f0603a'),
+  hakama: mat('#2a0604', '#5e120a', '#921e12', '#c42e1c', '#ea4a2a'),
+  obi: { ...mat('#1e1008', '#5b3418', '#9a6424', '#d6a044', '#f6d88a'), shine: true },
+  hair: mat('#2a2436', '#5a5070', '#8e84a8', '#c0b8d6', '#ece6fa'),
+  pad: null,
+  ponytail: false,
+  eye: { ramp: ramp('#40f0c0', '#d0fff0'), outline: hex('#030205'), emissive: 1, noAO: true },
+  edge: { ...mat('#062a24', '#1a9a80', '#50e8c0', '#b0ffe8', '#f0fffa'), shine: true },
+  grip: mat('#1a0406', '#4a0a0c', '#86161a', '#b82a24'),
+  bladeGlow: hex('#40f0c0'),
+  fox: {
+    fur: mat('#3a2e3e', '#8a7e90', '#c8bece', '#ece6f0', '#ffffff'),
+    fire: { ramp: ramp('#0e6a5a', '#2ac8a0', '#7affd8', '#d0fff4'), outline: hex('#063a30'), emissive: 0.85, noAO: true },
+    mask: { ...mat('#4a4658', '#a8a4b8', '#dcdae6', '#f6f4fa', '#ffffff'), shine: true },
+    paint: { ramp: ramp('#b01e18', '#e8402a'), outline: hex('#4a0a08'), noOutline: true, noAO: true },
+  },
+};
+
+/**
+ * The Shogun skin: a warlord in black lacquered armour laced in indigo, great
+ * shoulder guards and a plated skirt over the hakama, a black face guard, and
+ * a helmet crowned with a golden crescent moon; his blade is tempered in
+ * moonlight.
+ */
+export const SHOGUN_LOOK: SamuraiLook = {
+  ...RONIN_LOOK,
+  key: 'ronin_shogun',
+  gi: mat('#0a0a18', '#161a34', '#242a50', '#343c6c', '#48528a'),
+  hakama: mat('#08070c', '#15121c', '#221d2c', '#322a40', '#443a56'),
+  obi: mat('#0e0a2a', '#262070', '#3c34a8', '#5a52d0'),
+  foot: TABI,
+  haori: null,
+  trim: { ...mat('#1e1008', '#5b3418', '#9a6424', '#d6a044', '#f6d88a'), shine: true },
+  hat: null,
+  mask: { ...mat('#030305', '#0c0c12', '#1a1a24', '#2a2a38', '#3e3e52'), shine: true },
+  pad: { ...mat('#050508', '#12121c', '#20202e', '#323246', '#4a4a64'), shine: true },
+  edge: { ...mat('#1a1640', '#8a8ad0', '#c8c8f4', '#f4f2ff', '#ffffff'), shine: true },
+  tsuba: GOLD_TSUBA,
+  bladeGlow: hex('#b8b0ff'),
+  armor: {
+    plate: { ...mat('#050508', '#12121c', '#20202e', '#323246', '#4a4a64'), shine: true },
+    lace: mat('#0e0a2a', '#241e66', '#34309a', '#4c46c0'),
+    crest: { ...mat('#1e1008', '#7a4a18', '#c08a2a', '#ecc050', '#fff0a0'), shine: true, emissive: 0.25 },
+  },
+};
+
+export const SAMURAI_LOOKS = [BLADEWIND_LOOK, ONI_LOOK, KITSUNE_LOOK, RONIN_LOOK, SAKURA_LOOK, SHOGUN_LOOK];
 
 /** The look being drawn; set by buildSamuraiFrames. */
 let S: SamuraiLook = BLADEWIND_LOOK;
@@ -303,7 +368,7 @@ function pad(c: PixelCanvas, x: number, y: number, rx = 2.7, ry = 2.2): void {
 function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
   c.part();
   for (const [x, y] of pts) {
-    if (blink) c.px(x, y, S.skin, FLAT_DOWN, { bias: -1 });
+    if (blink) c.px(x, y, S.fox ? S.fox.mask : S.skin, FLAT_DOWN, { bias: -1 });
     else c.px(x, y, S.eye);
   }
 }
@@ -334,6 +399,148 @@ function menpo(c: PixelCanvas, x0: number, x1: number, y: number, teeth: number[
   c.shape(y, y + 2, (row) => (row === y + 2 ? [x0 + 0.8, x1 - 0.8] : [x0, x1]), S.mask, (_x, _y, t, u) => sphere(t * 0.8, u - 0.4, 1));
   c.part();
   for (const tx of teeth) c.px(tx, y + 1, S.collar, { x: 0, y: 0.2, z: 0.95 }, { bias: 2 });
+}
+
+/**
+ * The fox's tail: a great brush from the small of the back along a curve
+ * (start, bend, end), fattest two-thirds along, its tip burning with foxfire.
+ */
+function foxTail(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, sway: number, bias = 0): void {
+  if (!S.fox) return;
+  const at = (t: number) => ({
+    x: (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * x1 + t * t * x2,
+    y: (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * y1 + t * t * y2,
+  });
+  const N = 12;
+  c.part();
+  for (let i = 0; i < N; i++) {
+    const t0 = i / N;
+    const t1 = (i + 1) / N;
+    const a = at(t0);
+    const b = at(t1);
+    const r = (t: number) => 0.8 + 1.9 * Math.sin(Math.PI * Math.pow(t, 0.7));
+    c.capsule(a.x, a.y, b.x, b.y, r(t0), r(t1), t1 > 0.9 ? S.fox.fire : S.fox.fur, { bias });
+  }
+  // Fur tufts along the outer edge, and the flame licking off the tip.
+  for (const t of [0.35, 0.55, 0.7]) {
+    const p = at(t);
+    c.shade(Math.round(p.x), Math.round(p.y), 1);
+  }
+  const tip = at(1);
+  const lick = [0, 1, 0, -1][((sway % 4) + 4) % 4];
+  c.spark(tip.x + lick * 0.5, tip.y - 2, S.fox.fire.ramp[2], 0.7);
+  c.spark(tip.x, tip.y - 3, S.fox.fire.ramp[3], 0.45);
+}
+
+/** A pointed fox ear rising from the head, its tip at (x, top); the inside darker from the front. */
+function foxEar(c: PixelCanvas, x: number, top: number, inner: boolean, bias = 0): void {
+  if (!S.fox) return;
+  c.part();
+  c.shape(top, top + 3, (y) => {
+    const hw = 0.5 + (y - top) * 0.5;
+    return [x - hw, x + hw];
+  }, S.fox.fur, (_x, _y, t, u) => sphere(t * 0.8, u - 0.6, 1), { bias });
+  if (inner) {
+    c.shade(x, top + 2, -2);
+    c.shade(x, top + 3, -2);
+  }
+}
+
+/** The warlord's crescent crest: a thin golden moon over the brow, horns up. */
+function crescent(c: PixelCanvas, cx: number, y: number, half: number): void {
+  if (!S.armor) return;
+  c.part();
+  const n = Math.ceil(half * 4);
+  for (let i = 0; i <= n; i++) {
+    const t = (i / n) * 2 - 1;
+    const x = cx + t * half;
+    const yy = y - Math.pow(Math.abs(t), 1.6) * 4.2;
+    const nrm = sphere(t * 0.6, -0.5, 1);
+    c.px(x, yy, S.armor.crest, nrm);
+    if (Math.abs(t) < 0.55) c.px(x, yy + 1, S.armor.crest, sphere(t * 0.6, 0.3, 1), { bias: -1 });
+  }
+}
+
+/** Lacquered plates in `rows`, laced across every other row with dots of cord. */
+function laced(c: PixelCanvas, y0: number, y1: number, edges: (y: number) => [number, number], normal: (t: number, u: number) => Vec3, start = 1): void {
+  if (!S.armor) return;
+  const A = S.armor;
+  c.part();
+  c.shape(y0, y1, edges, A.plate, (_x, _y, t, u) => normal(t, u));
+  c.part();
+  for (let y = y0 + start; y <= y1; y += 3) {
+    const [l, r] = edges(y);
+    for (let x = Math.round(l); x < Math.round(r); x++) if (((x + y) & 1) === 0 && c.filled(x, y)) c.px(x, y, A.lace, cyl(((x + 0.5 - l) / (r - l)) * 2 - 1, 0.1));
+  }
+}
+
+const NOSE = mat('#050408', '#141019', '#241c2a');
+
+/** The fox mask from the front: a white face narrowing to a snout, red paint at the eyes, a black nose. */
+function foxMaskFront(c: PixelCanvas, cx: number, U: number): void {
+  if (!S.fox) return;
+  const F = S.fox;
+  const rows = [[-3.2, 3.2], [-3.2, 3.2], [-2.2, 2.2], [-1.2, 1.2]];
+  c.part();
+  c.shape(11 + U, 14 + U, (y) => [cx + rows[y - 11 - U][0], cx + rows[y - 11 - U][1]], F.mask, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.3, 1));
+  c.part();
+  c.px(cx - 3, 11 + U, F.paint);
+  c.px(cx + 2, 11 + U, F.paint);
+  c.px(cx - 1, 11 + U, F.paint, FLAT_DOWN, { bias: -1 });
+  c.px(cx, 11 + U, F.paint, FLAT_DOWN, { bias: -1 });
+  c.px(cx - 1, 14 + U, NOSE);
+  c.px(cx, 14 + U, NOSE);
+}
+
+/** The fox mask in profile (facing left): the snout jutting forward past the face. */
+function foxMaskSide(c: PixelCanvas, hx: number, U: number): void {
+  if (!S.fox) return;
+  const F = S.fox;
+  const rows = [[-4.4, -0.4], [-4.8, -0.4], [-5.9, -1.0], [-4.6, -1.8]];
+  c.part();
+  c.shape(11 + U, 14 + U, (y) => [hx + rows[y - 11 - U][0], hx + rows[y - 11 - U][1]], F.mask, (_x, _y, t, u) => sphere(t * 0.8 - 0.3, u * 0.9 - 0.3, 1));
+  c.part();
+  c.px(hx - 2, 11 + U, F.paint);
+  c.px(hx - 4, 11 + U, F.paint, FLAT_DOWN, { bias: -1 });
+  c.px(hx - 6, 13 + U, NOSE);
+}
+
+/** The warlord's helmet: a ridged black bowl, the neck guard flaring out in laced plates, the golden crescent. */
+function kabuto(c: PixelCanvas, view: 'front' | 'back' | 'side', cx: number, U: number): void {
+  if (!S.armor) return;
+  const A = S.armor;
+  if (view === 'back') crescent(c, cx, 8.8 + U, 5.6);
+  c.part();
+  if (view === 'side') {
+    const w = [[-2.2, 2.4], [-3.4, 3.2], [-3.9, 3.5], [-4.1, 3.6], [-4.4, 3.6]];
+    c.shape(6 + U, 10 + U, (y) => [cx + w[y - 6 - U][0], cx + w[y - 6 - U][1]], A.plate, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, u * 1.2 - 0.9, 1));
+    c.px(cx - 5, 10 + U, A.plate, sphere(-0.6, 0.2), { bias: 1 });
+    for (let y = 7; y <= 9; y++) c.shade(cx, y + U, 1);
+    laced(c, 10 + U, 14 + U, (y) => [cx - 0.2 + (y - 10 - U) * 0.2, cx + 3.6 + (y - 10 - U) * 0.8], (t, u) => cyl(t * 0.8 + 0.2, 0.3 - u * 0.3), 0);
+    c.part();
+    c.px(cx - 0.4, 10 + U, A.crest, sphere(-0.3, -0.4));
+    // The crescent seen edge on: one golden horn curving up over the brow.
+    c.part();
+    for (const [x, y] of [[-3, 9], [-3, 8], [-4, 7], [-4, 6], [-5, 5], [-5, 4]]) c.px(cx + x, y + U, A.crest, sphere(-0.4, -0.3));
+    return;
+  }
+  const w = [2.4, 3.4, 3.9, 4.1, 4.2];
+  c.shape(6 + U, 10 + U, (y) => [cx - w[y - 6 - U], cx + w[y - 6 - U]], A.plate, (_x, _y, t, u) => sphere(t * 0.9, u * 1.2 - 0.9, 1));
+  for (let y = 7; y <= 9; y++) {
+    c.shade(cx - 2, y + U, 1);
+    c.shade(cx + 1, y + U, 1);
+  }
+  if (view === 'back') {
+    laced(c, 10 + U, 14 + U, (y) => [cx - 4.2 - (y - 10 - U) * 0.55, cx + 4.2 + (y - 10 - U) * 0.55], (t, u) => cyl(t * 0.9, 0.3 - u * 0.3), 0);
+    return;
+  }
+  // From the front the guard flares out only at the sides, the face open between.
+  laced(c, 10 + U, 14 + U, (y) => [cx - 4.2 - (y - 10 - U) * 0.7, cx - 2.8], (t, u) => cyl(t * 0.6 - 0.4, 0.3 - u * 0.3), 0);
+  laced(c, 10 + U, 14 + U, (y) => [cx + 2.8, cx + 4.2 + (y - 10 - U) * 0.7], (t, u) => cyl(t * 0.6 + 0.4, 0.3 - u * 0.3), 0);
+  c.part();
+  c.px(cx - 4, 10 + U, A.crest, sphere(-0.5, -0.4));
+  c.px(cx + 3, 10 + U, A.crest, sphere(0.5, -0.4));
+  crescent(c, cx, 8.8 + U, 5.6);
 }
 
 // ---------------------------------------------------------------------------
@@ -376,6 +583,8 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     sleeve(c, sh.x, sh.y, p.blade.hx, p.blade.hy, p.bladeBehind ? -1 : 0);
     hand(c, p.blade.hx, p.blade.hy);
   };
+  // The fox's tail sweeping out and up behind him.
+  foxTail(c, 14.5, 23 + U, 21 + p.sway, 24 + U, 19.5 + p.sway * 0.5, 13.5 + U, p.sway, -1);
   if (p.bladeBehind) swordArm();
 
   // The ponytail swinging behind the head, peeking out at the side.
@@ -412,6 +621,28 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   c.part();
   c.px(cx + 2, waist, S.obi, sphere(0.3, 0.2), { bias: 1 });
   c.px(cx + 2, waist + 1, S.obi, sphere(0.3, 0.6));
+
+  if (S.armor) {
+    // The cuirass in laced bands with a gold crest, and the plated skirt over the hakama.
+    laced(c, top + 1, waist, (y) => {
+      const u = (y + 0.5 - top) / (waist - top);
+      const hw = 4.6 - 0.5 * u * u;
+      return [cx - hw, cx + hw];
+    }, (t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
+    c.part();
+    c.px(cx - 1, top + 3, S.armor.crest, sphere(-0.2, -0.3));
+    c.px(cx, top + 3, S.armor.crest, sphere(0.2, -0.3));
+    laced(c, waist + 1, waist + 4, (y) => {
+      const u = (y - waist - 1) / 3;
+      const x = cx + p.sway * 0.3 * u;
+      const hw = 4.8 + 0.8 * u;
+      return [x - hw, x + hw];
+    }, (t, u) => cyl(t * 0.8, 0.2 - u * 0.3));
+    for (let y = waist + 1; y <= waist + 4; y++) {
+      c.shade(cx - 2, y, -2);
+      c.shade(cx + 1, y, -2);
+    }
+  }
 
   // The haori: open panels from the shoulders to the hips.
   if (S.haori) {
@@ -453,6 +684,8 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     kasa(c, cx, U);
     // The brim's shadow across the brow.
     for (let x = 9; x <= 14; x++) c.shade(x, 11 + U, -2);
+  } else if (S.armor) {
+    kabuto(c, 'front', cx, U);
   } else {
     // Hair swept back to the knot, one loose lock over the brow.
     c.part();
@@ -466,15 +699,23 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     c.px(10, 11 + U, S.hair, sphere(-0.2, 0.4));
     c.px(10, 12 + U, S.hair, sphere(-0.2, 0.6), { bias: -1 });
     c.shade(13, 8 + U, 1);
-    // The knot on top.
-    c.part();
-    c.ellipse(cx + 0.5, 6.6 + U, 1.4, 1.1, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx, dy - 0.3) });
+    if (S.fox) {
+      // Fox ears instead of a knot, and the mask.
+      foxEar(c, 9.5, 5 + U, true);
+      foxEar(c, 14.5, 5 + U, true);
+      foxMaskFront(c, cx, U);
+    } else {
+      // The knot on top.
+      c.part();
+      c.ellipse(cx + 0.5, 6.6 + U, 1.4, 1.1, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx, dy - 0.3) });
+    }
   }
   eyes(c, [[10, 12 + U], [13, 12 + U]], p.blink);
   menpo(c, cx - 2.6, cx + 2.6, 13 + U, [11, 12]);
 
   if (!p.bladeBehind) swordArm();
   shoulder(c, 7.2, 16.2 + U);
+  if (S.armor) pad(c, 6.7, 16.4 + U);
   return { tip, hand: { x: p.blade.hx, y: p.blade.hy } };
 }
 
@@ -519,6 +760,26 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
     const u = (y - waist) / 2;
     return [cx - 2.4 + u * 0.4, cx + 2.4 - u * 0.4];
   }, S.hakama, (_x, _y, t) => cyl(t * 0.7, 0.3), { bias: 1 });
+  if (S.armor) {
+    // The back plate in laced bands, a great knotted cord between the shoulders, and the plated skirt.
+    const t0 = Math.ceil(top);
+    laced(c, t0, waist, (y) => {
+      const u = (y + 0.5 - t0) / (waist + 1 - t0);
+      return [cx - 4.5 + 0.4 * u, cx + 4.5 - 0.4 * u];
+    }, (t, u) => cyl(t * 0.9, 0.3 - u * 0.4));
+    c.part();
+    for (const [x, y] of [[10, 17], [13, 17], [11, 18], [12, 18], [10, 19], [13, 19], [10, 20], [13, 20]]) c.px(x, y + U, S.armor.lace, sphere((x - 11.5) * 0.3, 0), { bias: 1 });
+    laced(c, waist + 1, waist + 4, (y) => {
+      const u = (y - waist - 1) / 3;
+      const x = cx + p.sway * 0.3 * u;
+      const hw = 4.8 + 0.8 * u;
+      return [x - hw, x + hw];
+    }, (t, u) => cyl(t * 0.8, 0.2 - u * 0.3));
+    for (let y = waist + 1; y <= waist + 4; y++) {
+      c.shade(cx - 2, y, -2);
+      c.shade(cx + 1, y, -2);
+    }
+  }
   if (S.haori) {
     const rb = 24 + L;
     c.part();
@@ -533,6 +794,8 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
     for (const [x, y] of [[11, 16], [12, 16], [10, 17], [13, 17], [10, 18], [13, 18], [11, 19], [12, 19]]) c.px(x, y + U, S.trim, { x: 0, y: 0.3, z: 0.95 });
     c.px(11, 17.5 + U, S.trim, { x: 0, y: 0.3, z: 0.95 }, { bias: 1 });
   }
+  // The fox's tail over the hakama, curling up to one side.
+  foxTail(c, 12.5, 22.5 + U, 19 + p.sway, 26 + U, 18.5 + p.sway * 0.6, 15 + U, p.sway);
 
   if (!ahead) {
     sleeve(c, 7.6, 16.8 + U, fh.x, fh.y);
@@ -544,12 +807,17 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
     c.part();
     c.ellipse(cx, 12 + U, 3.4, 3, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
     kasa(c, cx, U);
+  } else if (S.armor) {
+    kabuto(c, 'back', cx, U);
   } else {
     c.part();
     c.ellipse(cx, 11 + U, 3.9, 3.9, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
     c.shade(cx - 1, 8 + U, 1);
     c.part();
-    c.ellipse(cx, 7.2 + U, 1.4, 1.1, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx, dy - 0.3) });
+    if (S.fox) {
+      foxEar(c, 9.5, 5 + U, false);
+      foxEar(c, 14.5, 5 + U, false);
+    } else c.ellipse(cx, 7.2 + U, 1.4, 1.1, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx, dy - 0.3) });
     if (S.ponytail) {
       // The tail down the back, swinging.
       c.part();
@@ -562,6 +830,7 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
   shoulder(c, 7.2, 16.2 + U);
   shoulder(c, 16.8, 16.2 + U);
   pad(c, 6.7, 16.4 + U);
+  if (S.armor) pad(c, 17.3, 16.4 + U);
   return { tip, hand: { x: p.blade.hx, y: p.blade.hy } };
 }
 
@@ -574,6 +843,8 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   const hx = cx + Sx; // upper body centre
   let tip = { x: 0, y: 0 };
   const sh = { x: hx + 0.6, y: 17.4 + U };
+  // The fox's tail streaming out behind and curling up.
+  foxTail(c, hx + 2.8, 22 + U, hx + 9.5 + p.sway, 23.5 + U, hx + 8.5 + p.sway * 0.5, 13 + U, p.sway, -1);
   if (p.bladeBehind) tip = drawKatana(c, p.blade);
 
   // The ponytail streaming behind.
@@ -620,6 +891,16 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   c.px(Math.round(hx - 2.4), top, S.skin, cyl(-0.6, 0));
   c.part();
   c.shape(waist - 1, waist, () => [hx - 3.1, hx + 2.7], S.obi, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.4));
+  if (S.armor) {
+    laced(c, top + 1, waist, () => [hx - 3.2, hx + 2.9], (t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
+    c.part();
+    c.px(hx - 3, top + 3, S.armor.crest, sphere(-0.6, -0.3));
+    laced(c, waist + 1, waist + 4, (y) => {
+      const u = (y - waist - 1) / 3;
+      return [cx - 3.2 - u * 1.0 + Sx * 0.3, cx + 3.4 + u * 1.2 + p.sway * 0.4 * u];
+    }, (t, u) => cyl(t * 0.8 - 0.1, 0.2 - u * 0.3));
+    for (let y = waist + 1; y <= waist + 4; y++) c.shade(cx, y, -2);
+  }
   if (S.haori) {
     const rt = 15 + U;
     const rb = 24 + L;
@@ -643,6 +924,8 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   if (S.hat) {
     kasa(c, hx - 0.6, U, 6.6);
     for (let x = Math.floor(hx - 5); x <= hx + 1; x++) c.shade(x, 11 + U, -2);
+  } else if (S.armor) {
+    kabuto(c, 'side', hx, U);
   } else {
     c.part();
     const rows: [number, number][] = [
@@ -658,8 +941,14 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
       return [hx + l, hx + r];
     }, S.hair, (_x, _y, t, u) => sphere(t * 0.9, u * 1.4 - 0.9, 1));
     c.px(hx - 4, 11 + U, S.hair, sphere(-0.3, 0.4), { bias: -1 });
-    c.part();
-    c.ellipse(hx + 0.6, 6.8 + U, 1.4, 1.1, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx, dy - 0.3) });
+    if (S.fox) {
+      foxEar(c, hx + 1.9, 5 + U, false, -1);
+      foxEar(c, hx - 0.6, 5 + U, true);
+      foxMaskSide(c, hx, U);
+    } else {
+      c.part();
+      c.ellipse(hx + 0.6, 6.8 + U, 1.4, 1.1, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx, dy - 0.3) });
+    }
   }
   eyes(c, [[hx - 3, 12 + U]], p.blink);
   menpo(c, hx - 5.2, hx - 1.4, 13 + U, [hx - 4]);
@@ -669,6 +958,7 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   sleeve(c, sh.x, sh.y, p.blade.hx, p.blade.hy);
   hand(c, p.blade.hx, p.blade.hy);
   shoulder(c, hx + 0.8, 16.8 + U, 2.1, 1.6);
+  if (S.armor) pad(c, hx + 1, 17.2 + U, 2.3, 2.5);
   return { tip, hand: { x: p.blade.hx, y: p.blade.hy } };
 }
 

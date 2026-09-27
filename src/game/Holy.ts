@@ -156,7 +156,8 @@ export class Sanctuary {
   private readonly hw: number;
   private readonly hh: number;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, readonly radius: number, private duration: number) {
+  /** `fx` colours the light; `edge` is the deep rim that keeps the ring readable on bright ground. */
+  constructor(scene: Phaser.Scene, x: number, y: number, readonly radius: number, private duration: number, private fx: Scheme = HOLY_FX, private edge = 0xc98a2a) {
     this.scene = scene;
     this.x = x = Math.round(x);
     this.y = y = Math.round(y);
@@ -165,8 +166,8 @@ export class Sanctuary {
     this.layer = new PixelLayer(scene, this.hw * 2, this.hh * 2);
     // On the ground: under every standing thing, over the ground's shadows.
     this.layer.image.setPosition(x - this.hw, y - this.hh).setDepth(3);
-    this.glow = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffd35c).setScale(radius / 11, (radius * SQUASH) / 11).setDepth(4).setAlpha(0);
-    this.light = scene.lights.addLight(x, y - 6, radius * 3.2, 0xffe2a0, 0);
+    this.glow = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(fx.mid).setScale(radius / 11, (radius * SQUASH) / 11).setDepth(4).setAlpha(0);
+    this.light = scene.lights.addLight(x, y - 6, radius * 3.2, fx.light ?? 0xffe2a0, 0);
     const zone = new Phaser.Geom.Ellipse(0, 0, radius * 1.8, radius * SQUASH * 1.8);
     this.motes = scene.add
       .particles(x, y, 'spark', {
@@ -176,7 +177,7 @@ export class Sanctuary {
         speedX: { min: -2, max: 2 },
         scale: 0.5,
         alpha: { start: 1, end: 0 },
-        tint: HOLY_TINTS,
+        tint: fx === HOLY_FX ? HOLY_TINTS : [fx.core, fx.hot, fx.mid, fx.deep],
         blendMode: Phaser.BlendModes.ADD,
         frequency: 70,
       })
@@ -236,24 +237,24 @@ export class Sanctuary {
         const deg = (Math.atan2(ey, ex) * 180) / Math.PI;
         if (q > R + 0.4) {
           // A deep gold edge, so the ring still reads on sunlit stone.
-          b.put(px, py, 0xc98a2a, 0.75 * a);
+          b.put(px, py, this.edge, 0.75 * a);
         } else if (Math.abs(q - R + 0.6) < 1.0) {
           // The bright outer ring, glinting where it faces the viewer.
-          b.put(px, py, ey > 0 ? HOLY_FX.core : HOLY_FX.hot, 0.95 * a);
+          b.put(px, py, ey > 0 ? this.fx.core : this.fx.hot, 0.95 * a);
         } else if (Math.abs(q - (R - 3)) < 0.5) {
           // A dashed inner ring turning slowly.
-          if (mod(deg + spin, 24) < 14) b.put(px, py, HOLY_FX.mid, 0.9 * a);
+          if (mod(deg + spin, 24) < 14) b.put(px, py, this.fx.mid, 0.9 * a);
         } else if (Math.abs(q - (R - 1.6)) < 0.5 && hash(px, py, frame) > 0.75) {
-          b.put(px, py, HOLY_FX.deep, 0.6 * a);
+          b.put(px, py, this.fx.deep, 0.6 * a);
         } else if (q > 5 && q < R - 4.5) {
           // Spokes of light flowing outward, and a faint wash between them.
           const spoke = Math.abs(mod(deg - spin * 0.5 + 22.5, 45) - 22.5) * (Math.PI / 180) * q;
-          if (spoke < 0.55 && mod(q - age * 0.012, 6) < 3.2) b.put(px, py, HOLY_FX.mid, 0.6 * a);
-          else if (hash(px, py, frame) > 0.96) b.put(px, py, HOLY_FX.hot, 0.6 * a);
+          if (spoke < 0.55 && mod(q - age * 0.012, 6) < 3.2) b.put(px, py, this.fx.mid, 0.6 * a);
+          else if (hash(px, py, frame) > 0.96) b.put(px, py, this.fx.hot, 0.6 * a);
         }
         // A faint golden wash over the whole circle.
-        b.put(px, py, HOLY_FX.mid, 0.14 * a);
-        if (Math.abs(q - pr) < 0.9) b.put(px, py, HOLY_FX.core, 0.85 * pa * a);
+        b.put(px, py, this.fx.mid, 0.14 * a);
+        if (Math.abs(q - pr) < 0.9) b.put(px, py, this.fx.core, 0.85 * pa * a);
       }
     }
     // Six small sun crosses riding the ring.
@@ -261,8 +262,8 @@ export class Sanctuary {
       const ang = ((k * 60 - spin) * Math.PI) / 180;
       const mx = Math.floor(hw + Math.cos(ang) * (R - 3));
       const my = Math.floor(hh + Math.sin(ang) * (R - 3) * SQUASH);
-      b.put(mx, my, HOLY_FX.core, a);
-      for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) b.put(mx + ox, my + oy, HOLY_FX.hot, 0.95 * a);
+      b.put(mx, my, this.fx.core, a);
+      for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) b.put(mx + ox, my + oy, this.fx.hot, 0.95 * a);
     }
     b.flush();
   }

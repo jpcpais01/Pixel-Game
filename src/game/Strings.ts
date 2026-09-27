@@ -20,6 +20,10 @@ export const ICE_STRINGS: Pal = pal(0xf2fbff, 0xb8ecff, 0x5ec8ff, 0x2a6ad8);
 export const SILK_STRINGS: Pal = pal(0xfbf4ff, 0xdcc0ff, 0xa878ff, 0x5a3ab0);
 /** The red threads of fate. */
 export const FATE_STRINGS: Pal = pal(0xfff0f0, 0xff9aa0, 0xff3a4a, 0x8a0f1f);
+/** The toymaker's: candle gold running into ribbon red. */
+export const TOY_STRINGS: Pal = pal(0xfffaf0, 0xffd890, 0xff5a4a, 0x9a1a28);
+/** Arachne's silk: acid green. */
+export const VENOM_STRINGS: Pal = pal(0xfbffe8, 0xe0ff9a, 0xa8e040, 0x4a7a10);
 
 /** Something strings can hold: the monsters (bosses shrug them off). */
 type Bindable = Hurtbox & { bind(ms: number, lift?: number): boolean; readonly held?: boolean };
@@ -60,7 +64,7 @@ export function strand(ink: Ink, x0: number, y0: number, x1: number, y1: number,
 
 /** How the marionettist's puppet fights. */
 export interface PuppetKit {
-  /** Its texture: 'puppet' or 'puppet_porcelain'. */
+  /** Its texture: 'puppet', 'puppet_porcelain' or 'puppet_nutcracker'. */
   key: string;
   strings: Pal;
   /** How far from the hand it can go, in px. */
@@ -383,7 +387,7 @@ export class Puppet {
 
   /** Three strings from the cross's ends to its head and hands (or, held by a Special, up out of sight). */
   private drawStrings(rx: number, hy: number, frame: string, a: number): void {
-    const ties = (PUPPET_TIES.get(frame) ?? []).map(([x, y]) => [rx + x * this.scale, hy + y * this.scale] as [number, number]).sort((p, q) => p[0] - q[0]);
+    const ties = (PUPPET_TIES.get(`${this.kit.key}:${frame}`) ?? []).map(([x, y]) => [rx + x * this.scale, hy + y * this.scale] as [number, number]).sort((p, q) => p[0] - q[0]);
     const p = this.kit.strings;
     if (this.stringsUp) {
       const g = this.ink.begin(rx, hy - 40 * this.scale, this.y + 30);
