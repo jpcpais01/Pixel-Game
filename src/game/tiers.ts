@@ -65,3 +65,19 @@ export const MOB_TIER: Record<string, Tier> = {
 };
 
 export const tierOf = (kind: string): Tier => MOB_TIER[kind] ?? 'normal';
+
+/** Each tier's chance, per kill, of dropping gems, and how many (each count in the range equally likely). */
+export const TIER_GEMS: Record<Tier, { chance: number; min: number; max: number }> = {
+  weak: { chance: 0.001, min: 1, max: 1 },
+  normal: { chance: 0.005, min: 1, max: 2 },
+  strong: { chance: 0.01, min: 1, max: 3 },
+  legend: { chance: 0.05, min: 2, max: 5 },
+  myth: { chance: 1, min: 5, max: 20 },
+};
+
+/** How many gems a slain monster of `kind` drops: usually none. */
+export function rollGems(kind: string): number {
+  const g = TIER_GEMS[tierOf(kind)];
+  if (Math.random() >= g.chance) return 0;
+  return g.min + Math.floor(Math.random() * (g.max - g.min + 1));
+}

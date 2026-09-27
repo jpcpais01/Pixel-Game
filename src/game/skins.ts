@@ -5,6 +5,7 @@
 // remembers its last skin, so switching types and back keeps the look.
 
 import type { CharacterDef, ClassDef, SkinDef, TypeDef } from './characters';
+import { collection } from './collection';
 
 const KEY = 'pixel-battle.skins';
 const TYPE_SKINS_KEY = 'pixel-battle.typeSkins';
@@ -50,15 +51,21 @@ function find(cls: ClassDef, look: string | undefined): Look | null {
   return null;
 }
 
+/** Skins are won from wishes in the shop (see gacha.ts); a type's own look is always there. */
+export const ownsSkin = (cls: ClassDef, skin: SkinDef | null): boolean => !skin || collection.hasSkin(`${cls.id}:${skin.id}`);
+
+/** A look as the player may wear it: a skin they don't own falls back to its type's own look. */
+const owned = (cls: ClassDef, look: Look): Look => (ownsSkin(cls, look.skin) ? look : { type: look.type, skin: null });
+
 /** The type and skin a class is played in (its base type's own look unless another was picked). */
 export function lookOf(cls: ClassDef): Look {
-  return find(cls, chosen[cls.id]) ?? { type: cls.types[0], skin: null };
+  return owned(cls, find(cls, chosen[cls.id]) ?? { type: cls.types[0], skin: null });
 }
 
 /** The look a type was last worn in within this class. */
 export function lastLookOf(cls: ClassDef, type: TypeDef): Look {
   const found = find(cls, typeLooks[`${cls.id}.${type.id}`]);
-  return found && found.type === type ? found : { type, skin: null };
+  return owned(cls, found && found.type === type ? found : { type, skin: null });
 }
 
 /** Play the class as `type`, in the skin that type was last worn in. */

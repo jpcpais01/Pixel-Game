@@ -11,8 +11,32 @@ import { account, cloudReady, loadSave, onAccount, writeSave, type SaveData } fr
 export const EQUIP_SLOTS = SLOTS.length;
 const LOCAL_PREFIX = 'pixel-battle.save.';
 const SAVE_DELAY = 1500;
+/** Every player starts with this many gems, and is given DAILY_GEMS more on each new day they play. */
+export const START_GEMS = 200;
+export const DAILY_GEMS = 5;
+/** Accounts (by username, lower case) that own every skin. */
+const ADMINS = ['kel'];
+/** Set once this device has given a guest the welcome gems, so a fresh guest game can't be made again and again for more. */
+const WELCOMED_KEY = 'pixel-battle.welcomed';
 
-const empty = (): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {} });
+const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0 });
+
+/** The welcome gems for a new guest game: the first on this device only. */
+function welcomeGems(): number {
+  try {
+    if (localStorage.getItem(WELCOMED_KEY)) return 0;
+    localStorage.setItem(WELCOMED_KEY, '1');
+  } catch {
+    // No storage: nothing to farm either.
+  }
+  return START_GEMS;
+}
+
+/** Today on the player's own calendar, as YYYY-MM-DD. */
+function today(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 /** The equip slot a gear id belongs in, or -1 for anything that isn't gear. */
 export function slotIndex(id: string): number {
@@ -28,6 +52,11 @@ export function slotIndex(id: string): number {
  */
 function clean(d: Partial<SaveData> | null | undefined): SaveData {
   const out = empty();
+  // A save from before gems existed (or none at all) starts with the welcome gems.
+  out.gems = d?.gems === undefined ? START_GEMS : Math.max(0, Math.floor(Number(d.gems) || 0));
+  out.skins = [...new Set((Array.isArray(d?.skins) ? d.skins : []).filter((s): s is string => typeof s === 'string' && s.includes(':')))];
+  out.daily = typeof d?.daily === 'string' ? d.daily : '';
+  out.pity = Math.max(0, Math.floor(Number(d?.pity) || 0));
   for (const [id, n] of Object.entries(d?.items ?? {})) if (n > 0) out.items[id] = Math.floor(n);
   for (const id of d?.equipped ?? []) {
     const i = id ? slotIndex(id) : -1;
@@ -75,7 +104,7 @@ class Collection {
   constructor() {
     const a = account();
     this.key = a ? a.uid : 'guest';
-    this.data = readLocal(this.key) ?? empty();
+    this.data = readLocal(this.key) ?? empty(a ? 0 : welcomeGems());
     if (a) void this.pull();
     onAccount((acc) => this.switchTo(acc?.uid ?? 'guest'));
     // Leaving or backgrounding the app saves right away.
@@ -163,6 +192,76 @@ class Collection {
     this.data.upgrades[id] = [...this.picks(id), stat];
     this.changed();
     return true;
+  }
+
+  // ---- Gems and skins ----
+
+  get gems(): number {
+    return this.data.gems;
+  }
+
+  /** Gems found (a monster's drop, a duplicate skin's refund, the daily gift). */
+  addGems(n: number): void {
+    if (n <= 0) return;
+    this.data.gems += Math.floor(n);
+    this.changed();
+  }
+
+  /** Spend `n` gems; false (and nothing spent) when there aren't enough. */
+  spendGems(n: number): boolean {
+    if (this.data.gems < n) return false;
+    this.data.gems -= n;
+    this.changed();
+    return true;
+  }
+
+  /** Does the player own skin `id` ("class:skin")? Admins own them all. */
+  hasSkin(id: string): boolean {
+    return this.isAdmin || this.data.skins.includes(id);
+  }
+
+  /** Logged in as one of the game's admins. */
+  get isAdmin(): boolean {
+    const a = account();
+    return !!a && ADMINS.includes(a.username.toLowerCase());
+  }
+
+  /** How many skins the player owns. */
+  get skinCount(): number {
+    return this.data.skins.length;
+  }
+
+  /** Give the player skin `id`; false when they had it already. */
+  unlockSkin(id: string): boolean {
+    if (this.hasSkin(id)) return false;
+    this.data.skins.push(id);
+    this.changed();
+    return true;
+  }
+
+  /** Wishes since the last legendary skin. */
+  get pity(): number {
+    return this.data.pity;
+  }
+
+  set pity(n: number) {
+    this.data.pity = n;
+    this.changed();
+  }
+
+  /**
+   * The daily gems, once per calendar day: returns how many were given (0 if
+   * today's are already in, or while the cloud save is still loading, so they
+   * aren't given twice).
+   */
+  claimDaily(): number {
+    if (this.status === 'loading') return 0;
+    const d = today();
+    if (this.data.daily === d) return 0;
+    this.data.daily = d;
+    this.data.gems += DAILY_GEMS;
+    this.changed();
+    return DAILY_GEMS;
   }
 
   /** Ids of the items in the equip slots, skipping empty ones. */
@@ -254,9 +353,18 @@ class Collection {
       if (!remote) merged.equipped = local.equipped;
       merged.dust = Math.max(local.dust, merged.dust);
       for (const [id, picks] of Object.entries(local.upgrades)) if (picks.length > (merged.upgrades[id]?.length ?? 0)) merged.upgrades[id] = picks;
+      // Gems like dust: the higher count wins, so gems found offline aren't lost. Skins are never taken away.
+      merged.gems = Math.max(local.gems, merged.gems);
+      merged.skins = [...new Set([...merged.skins, ...local.skins])];
+      if (local.daily > merged.daily) merged.daily = local.daily;
+      merged.pity = Math.max(local.pity, merged.pity);
       if (guest) {
         for (const [id, n] of Object.entries(guest.items)) merged.items[id] = (merged.items[id] ?? 0) + n;
         merged.dust += guest.dust;
+        // A guest game's skins come along; its gems only if it has more, so a guest's welcome gems aren't counted twice.
+        merged.skins = [...new Set([...merged.skins, ...guest.skins])];
+        merged.gems = Math.max(merged.gems, guest.gems);
+        if (guest.daily > merged.daily) merged.daily = guest.daily;
         for (const [id, picks] of Object.entries(guest.upgrades)) if (picks.length > (merged.upgrades[id]?.length ?? 0)) merged.upgrades[id] = picks;
         guest.equipped.forEach((id, i) => {
           if (id && !merged.equipped[i]) merged.equipped[i] = id;
@@ -277,14 +385,14 @@ class Collection {
     this.flush();
     const guest = this.key === 'guest' ? this.data : null;
     this.key = key;
-    this.data = readLocal(key) ?? empty();
+    this.data = readLocal(key) ?? empty(key === 'guest' ? welcomeGems() : 0);
     if (key === 'guest') {
       this.status = 'idle';
       this.emit();
       return;
     }
     // Logging in from a guest game brings its pickups along.
-    void this.pull(guest && (Object.keys(guest.items).length || guest.dust) ? guest : undefined);
+    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length) ? guest : undefined);
   }
 }
 
