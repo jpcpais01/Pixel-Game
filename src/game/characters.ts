@@ -631,8 +631,8 @@ export const CLASSES: ClassDef[] = [
           {
             // A fox spirit: ears and a mask, three great tails and blades of blue foxfire.
             id: 'kitsune',
-            name: 'Kitsune',
-            role: 'Fox spirit of foxfire',
+            name: 'Fox-mask thief',
+            role: 'Masked trickster of the festival night',
             accent: 0x6ab0ff,
             attack: 'Foxfire cuts',
             special: 'Fox dance',
