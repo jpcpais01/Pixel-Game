@@ -1,0 +1,132 @@
+// Wishes: the shop's gacha. Every skin (a type's own look is free) is won
+// from the Wish Crystal with gems. Each skin has a rarity; a wish rolls a
+// rarity by its odds, then any skin of that rarity, owned or not. A skin
+// already owned evaporates into gems: half what a wish costs. Ten wishes at once always
+// hold an epic or better, and a legendary is guaranteed within PITY wishes.
+
+import { CLASSES, type ClassDef, type SkinDef, type TypeDef } from './characters';
+import { worn } from './skins';
+import { collection } from './collection';
+
+export type SkinRarity = 'rare' | 'epic' | 'legendary';
+
+export const WISH_COST = 20;
+export const WISH10_COST = 180;
+/** A legendary is certain by this many wishes since the last one. */
+export const PITY = 40;
+/** A skin already owned evaporates into this many gems. */
+export const DUPE_GEMS = WISH_COST / 2;
+
+export const SKIN_RARITIES: SkinRarity[] = ['rare', 'epic', 'legendary'];
+
+/** How each rarity looks: its chance per wish, its colours and its stars. */
+export const RARITY_INFO: Record<SkinRarity, { name: string; odds: number; tint: number; core: number; deep: number; stars: number }> = {
+  rare: { name: 'Rare', odds: 0.7, tint: 0x5fb4ff, core: 0xe8f6ff, deep: 0x2a4aa8, stars: 3 },
+  epic: { name: 'Epic', odds: 0.25, tint: 0xc084ff, core: 0xf6e8ff, deep: 0x5a2aa8, stars: 4 },
+  legendary: { name: 'Legendary', odds: 0.05, tint: 0xffc84a, core: 0xfffbe8, deep: 0xa85a18, stars: 5 },
+};
+
+/** Every skin's rarity, by "class:skin"; any not listed is rare. */
+const RARITY_OF: Record<string, SkinRarity> = {
+  'wizard:hellfire': 'legendary',
+  'paladin:seraph': 'legendary',
+  'jedi:sith': 'legendary',
+  'necromancer:wyrm': 'legendary',
+  'chronomancer:anomaly': 'legendary',
+  'puppeteer:arachne': 'legendary',
+  'samurai:kitsune': 'legendary',
+  'wizard:astral': 'epic',
+  'warrior:spartan': 'epic',
+  'paladin:oathbreaker': 'epic',
+  'fighter:guardian': 'epic',
+  'alchemist:shaman': 'epic',
+  'archer:hunt': 'epic',
+  'rogue:kitsune': 'epic',
+  'necromancer:tomb': 'epic',
+  'bard:harlequin': 'epic',
+  'chronomancer:clockwork': 'epic',
+  'puppeteer:toymaker': 'epic',
+  'samurai:shogun': 'epic',
+};
+
+/** One skin as the shop knows it. */
+export interface SkinEntry {
+  /** "class:skin". */
+  id: string;
+  cls: ClassDef;
+  type: TypeDef;
+  skin: SkinDef;
+  rarity: SkinRarity;
+}
+
+export const ALL_SKINS: SkinEntry[] = CLASSES.flatMap((cls) =>
+  cls.types.flatMap((type) =>
+    (type.skins ?? []).map((skin) => {
+      const id = `${cls.id}:${skin.id}`;
+      return { id, cls, type, skin, rarity: RARITY_OF[id] ?? 'rare' };
+    }),
+  ),
+);
+
+export const skinId = (cls: ClassDef, skin: SkinDef): string => `${cls.id}:${skin.id}`;
+
+/** A skin's rarity, by class and skin. */
+export const rarityOf = (cls: ClassDef, skin: SkinDef): SkinRarity => RARITY_OF[skinId(cls, skin)] ?? 'rare';
+
+/** How many skins the player owns, out of all of them. */
+export function ownedSkins(): { owned: number; of: number } {
+  return { owned: ALL_SKINS.filter((s) => collection.hasSkin(s.id)).length, of: ALL_SKINS.length };
+}
+
+/** The skin as it plays, for previews: the class in that type and skin. */
+export const wornSkin = (e: SkinEntry) => worn(e.cls, { type: e.type, skin: e.skin });
+
+/** What one wish gave. */
+export interface WishResult {
+  entry: SkinEntry;
+  /** First time the player has it. */
+  fresh: boolean;
+  /** Gems given back for a skin already owned. */
+  refund: number;
+}
+
+function rollRarity(): SkinRarity {
+  let r = Math.random();
+  for (const k of ['legendary', 'epic'] as const) {
+    r -= RARITY_INFO[k].odds;
+    if (r < 0) return k;
+  }
+  return 'rare';
+}
+
+const pick = <T>(of: T[]): T => of[Math.floor(Math.random() * of.length)];
+
+/**
+ * Make `count` wishes (1 or 10): spend the gems, roll the skins, give them
+ * (or their gems, for ones owned) and return what came out, in order. Null
+ * when there aren't gems enough.
+ */
+export function wish(count: 1 | 10): WishResult[] | null {
+  if (!collection.spendGems(count === 10 ? WISH10_COST : WISH_COST)) return null;
+  const rarities: SkinRarity[] = [];
+  let pity = collection.pity;
+  for (let i = 0; i < count; i++) {
+    let r = rollRarity();
+    if (pity + 1 >= PITY) r = 'legendary';
+    // Ten at once: the last is at least epic if nothing else was.
+    if (count === 10 && i === count - 1 && r === 'rare' && !rarities.some((x) => x !== 'rare')) r = 'epic';
+    pity = r === 'legendary' ? 0 : pity + 1;
+    rarities.push(r);
+  }
+  collection.pity = pity;
+  let refund = 0;
+  const out = rarities.map((r) => {
+    const entry = pick(ALL_SKINS.filter((s) => s.rarity === r));
+    const fresh = collection.unlockSkin(entry.id);
+    const back = fresh ? 0 : DUPE_GEMS;
+    refund += back;
+    return { entry, fresh, refund: back };
+  });
+  collection.addGems(refund);
+  return out;
+}

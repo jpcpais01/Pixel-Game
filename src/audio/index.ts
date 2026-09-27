@@ -214,6 +214,42 @@ class GameSound {
     if (t !== null) this.sfx!.lootLand(t, pan, grade);
   }
 
+  gemLand(n: number, pan = 0): void {
+    const t = this.slot('gemLand');
+    if (t !== null) this.sfx!.gemLand(t, pan, n);
+  }
+
+  gemPickup(n: number): void {
+    const t = this.slot('gemPickup');
+    if (t !== null) this.sfx!.gemPickup(t, n);
+  }
+
+  gemSpend(): void {
+    const t = this.slot('gemSpend');
+    if (t !== null) this.sfx!.gemSpend(t);
+  }
+
+  gemTick(): void {
+    const t = this.slot('gemTick');
+    if (t !== null) this.sfx!.gemTick(t);
+  }
+
+  /** `tier`: the best rarity inside, 0 rare .. 2 legendary; `seconds` of charging. */
+  wishCharge(seconds: number, tier: number): void {
+    const t = this.slot('wishCharge');
+    if (t !== null) this.sfx!.wishCharge(t, seconds, tier);
+  }
+
+  wishBurst(tier: number): void {
+    const t = this.slot('wishBurst');
+    if (t !== null) this.sfx!.wishBurst(t, tier);
+  }
+
+  cardFlip(tier: number): void {
+    const t = this.slot('cardFlip');
+    if (t !== null) this.sfx!.cardFlip(t, tier);
+  }
+
   pickup(pan = 0): void {
     const t = this.slot('pickup');
     if (t !== null) this.sfx!.pickup(t, pan);

@@ -17,8 +17,8 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 
 **Startup and scenes** (`src/main.ts`, `src/scenes/`)
 - `main.ts` makes the Phaser game, fits the canvas, and drops the graphics level if the world runs below 30 FPS for 5 s.
-- Flow: `BootScene` (builds every texture) → `HomeScene` → `SelectScene` (hero) → `ArenaScene` (arena, and online rooms) → `WorldScene`.
-- Overlays while playing: `UIScene` (joystick, ability buttons, hotbar, buffs, gear HUD), `PauseScene`, `ShadeScene` (brightness), `SoundScene` (mute), `FpsScene`. `InventoryScene` opens from Home.
+- Flow: `BootScene` (builds every texture) → `HomeScene` → `SelectScene` (hero) → `ArenaScene` (arena, and online rooms) → `WorldScene`. `ShopScene` (the Wishing Sanctum) and `InventoryScene` open over Home.
+- Overlays while playing: `UIScene` (joystick, ability buttons, hotbar, buffs, gear HUD), `PauseScene`, `ShadeScene` (brightness), `SoundScene` (mute), `FpsScene`.
 - `src/diagnostics.ts`: crash reports (copyable overlay, heartbeat for killed tabs). `src/pwa.ts` + `scripts/pwa.ts`: install, fullscreen, service worker, icons.
 
 **The world** (`src/scenes/WorldScene.ts`)
@@ -46,6 +46,13 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - `items.ts`: potions and the 9-slot hotbar. `buffs.ts`: timed buffs. `Pickup.ts`: items on the ground and the rare/epic/legendary drop shows.
 - `gear.ts`: 64 pieces, 6 slots, 5 rarities, 4 boss sets (`GEAR_SETS`, `SET_BOSS`), stat caps, dust and upgrades. `collection.ts`: what the player owns and wears, saved locally and to the cloud. `cloud.ts`: Firebase auth and Firestore over REST. `keepers.ts`: Nyx (disenchant) and Tharn (upgrade) in the Rune Temple, UI in `src/ui/keeper*.ts`.
 
+**Gems, wishes and skins** (`src/game/`)
+- Skins are locked until won; a type's own look is free. `skins.ts` falls back to the type's look for a skin not owned; the account `kel` (admin, `ADMINS` in `collection.ts`) owns every skin.
+- `collection.ts` holds gems (200 to start, +5 a day via `claimDaily`, shown on Home), owned skins, and the pity count, all saved to the cloud (`cloud.ts`).
+- `gacha.ts`: skin rarities (`RARITY_OF`, rare if unlisted), odds, costs (20 / 180 for ten), ten-wish epic guarantee, legendary pity, duplicates give back half a wish (`DUPE_GEMS`). New skins need a rarity there if not rare.
+- Gem drops: `TIER_GEMS` / `rollGems` in `tiers.ts`; the drop show scales with the count (`gemShow` in `Pickup.ts`, `dropGems`/`gainGems` in `WorldScene`).
+- Art in `art/shop.ts` (gems, piles, crystal, altar, hall, cards); sounds `gem*`, `wish*`, `cardFlip` in `audio/sfx.ts`.
+
 **Online play** (`src/net/`, `server/`)
 - `server/server.js`: a WebSocket relay on Render with 4-letter room codes (co-op up to 4, duel 2). It runs no game logic.
 - `session.ts`: the connection and room. `NetPlay.ts`: sends hero state every 50 ms; the host sends monsters every 100 ms; hits, slows and binds on monsters are relayed. `Remote.ts`: other players' heroes, run from their inputs through a "ghost" world whose blows hurt nothing. `ghost.ts`: keeps remote heroes from touching this player's buffs and energy.
@@ -68,6 +75,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 3. A style or kit in `src/game/<Class>.ts` with its effect colours, and pick it in the class's `spawn` in `characters.ts`.
 4. A `SkinDef` in `characters.ts` (id unique within the class, name, role, accent, ability names, preview, buttons).
 5. A renamed, recoloured Special in `SKINS` in `src/game/ultimate/index.ts` (with `type` if the skin isn't on the base type).
+6. Its rarity in `RARITY_OF` in `src/game/gacha.ts` if it isn't rare. It joins the wish pool by itself.
 
 **Add a monster:** a class in `src/game/monsters/` extending `Monster`, its sheet in `src/art/` registered with `registerMonster` in `textures.ts`, an entry in `MONSTERS`, a tier in `MOB_TIER` (`tiers.ts`), and spawn spots in an arena's layout.
 

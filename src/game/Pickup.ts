@@ -3,10 +3,11 @@ import { ITEMS, type ItemId } from './items';
 import { GEAR_SETS, RARITY, type GearDef, type Rarity } from './gear';
 import { DROP_H } from '../art/items';
 import { GEAR_DROP } from '../art/gear';
+import { GEM_DROPS, gemDropFor } from '../art/shop';
 import type { Effect } from './Slash';
 
-/** What lies on the ground: a potion for the hotbar, or a piece of gear. */
-export type Loot = { kind: 'item'; id: ItemId } | { kind: 'gear'; def: GearDef };
+/** What lies on the ground: a potion for the hotbar, a piece of gear, or gems (`n` of them, in one pile). */
+export type Loot = { kind: 'item'; id: ItemId } | { kind: 'gear'; def: GearDef } | { kind: 'gems'; n: number };
 
 /** Pulled towards the hero from this close, and picked up at this distance. */
 const MAGNET = 30;
@@ -49,6 +50,10 @@ interface Show {
   /** The pillar's outer colour and its hot core. */
   accent: number;
   core: number;
+  /** A second colour for every other god ray (a gem hoard's prism). */
+  prism?: number;
+  /** How far the landing rings spread, times the usual. */
+  spread?: number;
 }
 
 const SHOWS: Partial<Record<Rarity, Show>> = {
@@ -57,9 +62,22 @@ const SHOWS: Partial<Record<Rarity, Show>> = {
   legendary: { beam: 1, width: 1.25, rays: 8, twinkles: 3, motes: 3, runes: true, rings: 2, arrow: true, light: true, star: true, accent: 0xffcf6a, core: 0xfffbef },
 };
 
-/** How grand a find is: 0 for potions and common gear, up to 4 for a legendary. */
+/** Gems: cyan crystal light, grander the more of them fell, up to a hoard's prism of rays. */
+const GEM_ACCENT = 0x5ae8ff;
+const GEM_CORE = 0xeaffff;
+const GEM_PRISM = 0xff7ae6;
+function gemShow(n: number): Show {
+  const base = { accent: GEM_ACCENT, core: GEM_CORE };
+  if (n >= 10) return { ...base, beam: 1, width: 1.7, rays: 12, twinkles: 5, motes: 6, runes: true, rings: 3, arrow: true, light: true, star: true, prism: GEM_PRISM, spread: 1.5 };
+  if (n >= 5) return { ...base, beam: 1, width: 1.3, rays: 8, twinkles: 3, motes: 4, runes: true, rings: 2, arrow: true, light: true, star: true, prism: GEM_PRISM };
+  if (n >= 2) return { ...base, beam: 0.65, width: 1, rays: 0, twinkles: 2, motes: 2, runes: true, rings: 1, arrow: true, light: false, star: false };
+  return { ...base, beam: 0.38, width: 0.8, rays: 0, twinkles: 1, motes: 1, runes: false, rings: 1, arrow: false, light: false, star: false };
+}
+
+/** How grand a find is: 0 for potions and common gear, up to 4 for a legendary (or a pile of five gems or more). */
 export function grade(loot: Loot): number {
   if (loot.kind === 'item') return 0;
+  if (loot.kind === 'gems') return loot.n >= 5 ? 4 : loot.n >= 2 ? 3 : 2;
   return { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 }[loot.def.rarity];
 }
 
@@ -121,11 +139,14 @@ export class Pickup {
     readonly loot: Loot,
   ) {
     const gear = loot.kind === 'gear' ? loot.def : null;
-    const look = loot.kind === 'gear' ? { tint: RARITY[loot.def.rarity].tint, texture: loot.def.drop } : { tint: ITEMS[loot.id].tint, texture: ITEMS[loot.id].drop };
-    const h = gear ? GEAR_DROP : DROP_H;
-    this.magnet = gear ? GEAR_MAGNET : MAGNET;
-    this.life = gear ? LIFE * 2 : LIFE;
-    this.shine = gear ? { common: 0.8, uncommon: 0.9, rare: 1, epic: 1.25, legendary: 1.5 }[gear.rarity] : 0.75;
+    const gems = loot.kind === 'gems' ? loot.n : 0;
+    const pile = gemDropFor(gems);
+    const look =
+      loot.kind === 'gear' ? { tint: RARITY[loot.def.rarity].tint, texture: loot.def.drop } : loot.kind === 'gems' ? { tint: GEM_ACCENT, texture: `gem_drop_${pile}` } : { tint: ITEMS[loot.id].tint, texture: ITEMS[loot.id].drop };
+    const h = gear ? GEAR_DROP : gems ? GEM_DROPS[pile].h : DROP_H;
+    this.magnet = gear || gems ? GEAR_MAGNET : MAGNET;
+    this.life = gear || gems ? LIFE * 2 : LIFE;
+    this.shine = gear ? { common: 0.8, uncommon: 0.9, rare: 1, epic: 1.25, legendary: 1.5 }[gear.rarity] : gems ? { one: 0.9, few: 1.15, heap: 1.5, hoard: 1.9 }[pile] : 0.75;
     this.fromX = x;
     this.fromY = y;
     // Lands a short hop away from where it fell.
@@ -135,19 +156,19 @@ export class Pickup {
     this.shadow = scene.add.image(x, y, 'shadow').setScale(gear ? 0.8 : 0.55, 0.8).setDepth(1).setAlpha(0.7);
     this.glow = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(look.tint).setScale(this.shine).setAlpha(0);
     this.sprite = scene.add.image(x, y, look.texture).setOrigin(0.5, (h - 1) / h);
-    this.lift = gear ? 3 : 0;
+    this.lift = gear || gems ? 3 : 0;
     this.popTime = POP_TIME;
 
-    const base = gear && SHOWS[gear.rarity];
+    const base = gems ? gemShow(gems) : gear && SHOWS[gear.rarity];
     if (!base) return;
     // A set piece shines in its set's colour.
-    const show: Show = { ...base, accent: gear.set ? GEAR_SETS[gear.set].tint : base.accent };
+    const show: Show = { ...base, accent: gear?.set ? GEAR_SETS[gear.set].tint : base.accent };
     this.show = show;
     const add = (key: string, tint: number) => scene.add.image(this.x, this.y, key).setBlendMode(Phaser.BlendModes.ADD).setTint(tint).setAlpha(0);
     this.beamOuter = add('loot_beam', show.accent).setOrigin(0.5, 1);
     this.beamInner = add('loot_beam', show.core).setOrigin(0.5, 1);
     if (show.runes) this.runes = add('loot_runes', show.accent).setDepth(1.2);
-    for (let i = 0; i < show.rays; i++) this.rays.push(add('loot_ray', i % 2 ? show.core : show.accent).setOrigin(0.5, 1));
+    for (let i = 0; i < show.rays; i++) this.rays.push(add('loot_ray', i % 2 ? (show.prism ?? show.core) : show.accent).setOrigin(0.5, 1));
     for (let i = 0; i < show.twinkles; i++) this.twinkles.push(add('loot_twinkle', show.core));
     for (let i = 0; i < show.motes; i++) this.motes.push(add('spark', i % 2 ? show.accent : show.core));
     if (show.arrow) this.arrow = scene.add.image(0, 0, 'loot_arrow').setTint(show.accent).setDepth(ARROW_DEPTH).setVisible(false);
@@ -315,7 +336,7 @@ export class Pickup {
       if (r.t < 0) continue;
       const e = Math.min(1, r.t / 620);
       const grow = 1 - Math.pow(1 - e, 2);
-      r.img.setPosition(rx, ry).setScale(0.2 + grow * (show.star ? 2.1 : 1.3)).setAlpha(e >= 1 ? 0 : 0.9 * (1 - e));
+      r.img.setPosition(rx, ry).setScale(0.2 + grow * (show.star ? 2.1 : 1.3) * (show.spread ?? 1)).setAlpha(e >= 1 ? 0 : 0.9 * (1 - e));
     }
 
     if (this.trail) {
@@ -383,12 +404,16 @@ export class LootFlare implements Effect {
     scene: Phaser.Scene,
     private x: number,
     private y: number,
-    def: GearDef,
+    /** The piece picked up; null for gems, which pass their size and colours instead. */
+    def: GearDef | null,
+    big = false,
+    accentTint = 0xffffff,
+    coreTint = 0xffffff,
   ) {
-    this.big = def.rarity === 'legendary';
-    const show = SHOWS[def.rarity];
-    const accent = def.set ? GEAR_SETS[def.set].tint : show?.accent ?? RARITY[def.rarity].tint;
-    const core = show?.core ?? 0xffffff;
+    this.big = def ? def.rarity === 'legendary' : big;
+    const show = def ? SHOWS[def.rarity] : undefined;
+    const accent = def ? (def.set ? GEAR_SETS[def.set].tint : show?.accent ?? RARITY[def.rarity].tint) : accentTint;
+    const core = def ? (show?.core ?? 0xffffff) : coreTint;
     const add = (key: string, tint: number) => scene.add.image(x, y, key).setBlendMode(Phaser.BlendModes.ADD).setTint(tint).setAlpha(0);
     this.beam = add('loot_beam', core).setOrigin(0.5, 1).setDepth(y + 0.5);
     this.ring = add('loot_ring', accent).setDepth(1.3);

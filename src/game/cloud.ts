@@ -29,6 +29,14 @@ export interface SaveData {
   dust: number;
   /** The stat each level past the first went into, per upgraded item id. */
   upgrades: Record<string, StatKey[]>;
+  /** Gems to spend on wishes in the shop. */
+  gems: number;
+  /** Skins won from wishes, as "class:skin" ids. */
+  skins: string[];
+  /** The last day (YYYY-MM-DD, local) the daily gems were given. */
+  daily: string;
+  /** Wishes since the last legendary skin, for the guarantee. */
+  pity: number;
 }
 
 interface Session extends Account {
@@ -108,7 +116,7 @@ async function post(url: string, body: object): Promise<Record<string, string>> 
 const emailFor = (username: string) => `${username.toLowerCase()}@${EMAIL_DOMAIN}`;
 
 /** Create an account (`create`) or log into one. Resolves with the player's save, if they have one. */
-export async function logIn(username: string, password: string, create: boolean): Promise<SaveData | null> {
+export async function logIn(username: string, password: string, create: boolean): Promise<LoadedSave | null> {
   if (!cloudReady()) throw new CloudError('Accounts are not set up yet.');
   if (!USERNAME_RULE.test(username)) throw new CloudError('Names are 3 to 16 letters, numbers or _.');
   if (password.length < MIN_PASSWORD) throw new CloudError(`Password needs at least ${MIN_PASSWORD} characters.`);
@@ -178,7 +186,10 @@ type FsValue =
   | { arrayValue: { values?: FsValue[] } };
 
 /** Load the logged-in player's save; null if they haven't got one yet. */
-export async function loadSave(): Promise<(SaveData & { username?: string }) | null> {
+/** A save as stored: one from before gems existed has none. */
+export type LoadedSave = Omit<SaveData, 'gems'> & { gems?: number; username?: string };
+
+export async function loadSave(): Promise<LoadedSave | null> {
   const s = session;
   if (!s) return null;
   let res: Response;
@@ -201,7 +212,12 @@ export async function loadSave(): Promise<(SaveData & { username?: string }) | n
   const upgrades: Record<string, StatKey[]> = {};
   const ups = f.upgrades && 'mapValue' in f.upgrades ? (f.upgrades.mapValue.fields ?? {}) : {};
   for (const [id, v] of Object.entries(ups)) if ('stringValue' in v && v.stringValue) upgrades[id] = v.stringValue.split(',') as StatKey[];
-  return { items, equipped, dust, upgrades, username };
+  // A save from before gems existed has none: the player is given the welcome gems.
+  const gems = f.gems && 'integerValue' in f.gems ? Number(f.gems.integerValue) : undefined;
+  const skins = f.skins && 'stringValue' in f.skins && f.skins.stringValue ? f.skins.stringValue.split(',') : [];
+  const daily = f.daily && 'stringValue' in f.daily ? f.daily.stringValue : '';
+  const pity = f.pity && 'integerValue' in f.pity ? Number(f.pity.integerValue) : 0;
+  return { items, equipped, dust, upgrades, gems, skins, daily, pity, username };
 }
 
 /** Overwrite the logged-in player's save. */
@@ -217,6 +233,10 @@ export async function writeSave(data: SaveData): Promise<void> {
     dust: { integerValue: String(Math.floor(data.dust)) },
     // Each item's levels as its chosen stats in order, "power,hp,hp".
     upgrades: { mapValue: { fields: Object.fromEntries(Object.entries(data.upgrades).map(([id, picks]) => [id, { stringValue: picks.join(',') }])) } },
+    gems: { integerValue: String(Math.floor(data.gems)) },
+    skins: { stringValue: data.skins.join(',') },
+    daily: { stringValue: data.daily },
+    pity: { integerValue: String(Math.floor(data.pity)) },
     updated: { timestampValue: new Date().toISOString() },
   };
   const res = await fetch(docUrl(s.uid), {

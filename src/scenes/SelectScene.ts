@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import { Bitmap, bayer, clamp01, mix } from '../art/bitmap';
 import { hex, type RGB } from '../art/pixel';
 import { menuZoom } from '../game/display';
-import { CLASSES, type ClassDef, type Preview } from '../game/characters';
-import { lastHero, lookOf, rememberHero, setLook, setType, worn } from '../game/skins';
+import { CLASSES, type ClassDef, type Preview, type SkinDef } from '../game/characters';
+import { lastHero, lookOf, ownsSkin, rememberHero, setLook, setType, worn } from '../game/skins';
+import { RARITY_INFO, rarityOf } from '../game/gacha';
 import { ensureUltIcons, ultFor } from '../game/ultimate';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
@@ -65,7 +66,7 @@ const GOLD = 0xf4cf6a;
 const DIMMED = 0x8a84a8;
 
 /** Trim a single line to `maxW`, ending in a dot, as a last resort for text too long to fit. */
-function fitLine(probe: Phaser.GameObjects.BitmapText, text: string, maxW: number): string {
+export function fitLine(probe: Phaser.GameObjects.BitmapText, text: string, maxW: number): string {
   let t = text.toUpperCase();
   while (t.length > 1 && probe.setText(t).width > maxW) t = t.slice(0, -2).trimEnd() + '.';
   return t;
@@ -87,7 +88,7 @@ function onTap(scene: Phaser.Scene, target: Phaser.GameObjects.GameObject, tap: 
 }
 
 /** Crop a sprite (in frame pixels) to a window `w` x `up` above its feet and `down` below, drawn at `scale`. */
-function cropToWindow(s: Phaser.GameObjects.Sprite, preview: Preview, w: number, up: number, down: number, scale: number): void {
+export function cropToWindow(s: Phaser.GameObjects.Sprite, preview: Preview, w: number, up: number, down: number, scale: number): void {
   // Every frame of a look's animations is the same size; measure the first idle frame.
   const frame = s.scene.anims.get(preview.idle)?.frames[0]?.frame ?? s.scene.textures.getFrame(preview.texture);
   const fw = frame.width;
@@ -366,6 +367,12 @@ interface SkinPick {
   name: string;
   index: number;
   count: number;
+  /** A skin not yet won, being looked at: shown dimmed, with a lock. */
+  locked: boolean;
+  /** Which of the type's looks the player owns, in picker order. */
+  owned: boolean[];
+  /** The rarity's colour for a skin, or null for the type's own look. */
+  rarity: number | null;
 }
 
 /** The hero shown big, on a lit pedestal, with sparks drifting up through the light, and its skins stepped through underneath. */
@@ -380,6 +387,8 @@ class Stage extends Phaser.GameObjects.Container {
   private sprite: Phaser.GameObjects.Sprite;
   private glow: Phaser.GameObjects.Sprite;
   private skinName: Phaser.GameObjects.BitmapText;
+  private lock: Phaser.GameObjects.Image;
+  private locked = false;
   /** Arrows either side of the skin name and a dot per skin under it. */
   private picker: Phaser.GameObjects.Graphics;
   private stepZones: Phaser.GameObjects.Zone[];
@@ -407,6 +416,7 @@ class Stage extends Phaser.GameObjects.Container {
     this.sprite = scene.add.sprite(this.feetX, this.feetY, '__DEFAULT').setScale(this.scale3);
     this.glow = scene.add.sprite(this.feetX, this.feetY, '__DEFAULT').setScale(this.scale3).setBlendMode(Phaser.BlendModes.ADD);
     this.skinName = pixelText(scene, 0, h - 18, '');
+    this.lock = scene.add.image(0, 0, 'icon_lock').setOrigin(0).setVisible(false);
     this.picker = scene.add.graphics();
     const mote = moteTexture(scene);
     for (let i = 0; i < MOTES; i++) {
@@ -434,7 +444,7 @@ class Stage extends Phaser.GameObjects.Container {
       onTap(scene, z, () => stepSkin(dir));
       return z;
     });
-    this.add([this.bg, this.beam, this.pool, pedestal, this.runes, shadow, ...this.motes.map((m) => m.img), this.sprite, this.glow, this.skinName, this.picker, hit, ...this.stepZones]);
+    this.add([this.bg, this.beam, this.pool, pedestal, this.runes, shadow, ...this.motes.map((m) => m.img), this.sprite, this.glow, this.skinName, this.lock, this.picker, hit, ...this.stepZones]);
     for (const m of this.motes) this.spawnMote(m, true);
   }
 
@@ -457,13 +467,23 @@ class Stage extends Phaser.GameObjects.Container {
     this.runes.setTint(accent);
     for (const m of this.motes) m.img.setTint(accent);
     this.drawPicker(skin, accent);
-    if (pose) this.pose();
+    // A skin not yet won stands in shadow.
+    this.locked = skin.locked;
+    if (skin.locked) {
+      this.sprite.setTint(0x4a4468);
+      this.glow.setAlpha(0.25);
+    } else {
+      this.sprite.clearTint();
+      if (!fresh) this.glow.setAlpha(1);
+    }
+    if (pose && !skin.locked) this.pose();
     else this.sprite.play(preview.idle, true);
     if (fresh) {
       this.scene.tweens.killTweensOf([this.sprite, this.glow]);
       this.sprite.setAlpha(0).setY(this.feetY + 3);
       this.glow.setAlpha(0).setY(this.feetY + 3);
-      this.scene.tweens.add({ targets: [this.sprite, this.glow], alpha: 1, y: this.feetY, duration: 160, ease: 'Quad.easeOut' });
+      this.scene.tweens.add({ targets: this.sprite, alpha: 1, y: this.feetY, duration: 160, ease: 'Quad.easeOut' });
+      this.scene.tweens.add({ targets: this.glow, alpha: this.locked ? 0.25 : 1, y: this.feetY, duration: 160, ease: 'Quad.easeOut' });
     }
   }
 
@@ -472,8 +492,10 @@ class Stage extends Phaser.GameObjects.Container {
     const { boxW: w, boxH: h } = this;
     const many = skin.count > 1;
     const nameY = many ? h - 18 : h - 14;
-    this.skinName.setText(skin.name.toUpperCase()).setTint(accent);
-    this.skinName.setPosition(Math.round((w - this.skinName.width) / 2), nameY);
+    this.skinName.setText(skin.name.toUpperCase()).setTint(skin.locked ? 0x8a84a8 : (skin.rarity ?? accent));
+    const lockW = skin.locked ? this.lock.width + 2 : 0;
+    this.skinName.setPosition(Math.round((w - this.skinName.width + lockW) / 2), nameY);
+    this.lock.setVisible(skin.locked).setPosition(this.skinName.x - lockW, nameY);
     for (const z of this.stepZones) if (z.input) z.input.enabled = many;
     const g = this.picker.clear();
     if (!many) return;
@@ -491,15 +513,26 @@ class Stage extends Phaser.GameObjects.Container {
     for (let i = 0; i < skin.count; i++) {
       const x = x0 + i * step;
       g.fillStyle(0x0b0818).fillRect(x - 1, y - 1, 5, 5);
+      // Skins not yet won are hollow.
       if (i === skin.index) {
-        g.fillStyle(accent).fillRect(x, y, 3, 3);
+        g.fillStyle(skin.owned[i] ? accent : 0x8a84a8).fillRect(x, y, 3, 3);
         g.fillStyle(0xffffff, 0.6).fillRect(x, y, 3, 1);
-      } else g.fillStyle(0x43356e).fillRect(x, y, 3, 3);
+      } else if (skin.owned[i]) g.fillStyle(0x43356e).fillRect(x, y, 3, 3);
+      else {
+        g.fillStyle(0x43356e).fillRect(x, y, 3, 3);
+        g.fillStyle(0x0b0818).fillRect(x + 1, y + 1, 1, 1);
+      }
     }
   }
 
   pose(): void {
-    if (this.preview) this.sprite.play(this.preview.chosen).chain(this.preview.idle);
+    if (this.preview && !this.locked) this.sprite.play(this.preview.chosen).chain(this.preview.idle);
+  }
+
+  /** Tried to play a locked skin: the lock shakes. */
+  rattle(): void {
+    const x = this.lock.x;
+    this.scene.tweens.add({ targets: this.lock, x: { from: x - 2, to: x }, duration: 60, repeat: 3, yoyo: true, onComplete: () => this.lock.setX(x) });
   }
 
   update(dt: number): void {
@@ -531,6 +564,8 @@ export class SelectScene extends Phaser.Scene {
   private back!: PixelButton;
   private next!: PixelButton;
   private stage!: Stage;
+  /** A skin not yet won that the player is looking at (the look worn stays the one they own). */
+  private peek: SkinDef | null = null;
   private roster: Tile[] = [];
   private info!: Phaser.GameObjects.Container;
   private probe!: Phaser.GameObjects.BitmapText;
@@ -561,6 +596,7 @@ export class SelectScene extends Phaser.Scene {
 
   create(): void {
     this.leaving = false;
+    this.peek = null;
     const cam = this.cameras.main.setOrigin(0, 0).setAlpha(0);
     this.tweens.add({ targets: cam, alpha: 1, duration: 260 });
     const saved = CLASSES.findIndex((c) => c.id === lastHero());
@@ -678,7 +714,8 @@ export class SelectScene extends Phaser.Scene {
   /** Show the current class in its current type and skin. `pose` plays the hero's picked animation. */
   private refresh(pose: boolean, fresh: boolean): void {
     const cls = this.current;
-    const look = lookOf(cls);
+    const own = lookOf(cls);
+    const look = this.peek ? { type: own.type, skin: this.peek } : own;
     const def = worn(cls, look);
     this.roster.forEach((t, i) => {
       const d = worn(CLASSES[i]);
@@ -689,7 +726,14 @@ export class SelectScene extends Phaser.Scene {
     this.stage.show(
       def.preview,
       def.accent,
-      { name: look.skin?.name ?? look.type.lookName ?? 'Classic', index: look.skin ? skins.indexOf(look.skin) + 1 : 0, count: skins.length + 1 },
+      {
+        name: look.skin?.name ?? look.type.lookName ?? 'Classic',
+        index: look.skin ? skins.indexOf(look.skin) + 1 : 0,
+        count: skins.length + 1,
+        locked: !!this.peek,
+        owned: [true, ...skins.map((s) => ownsSkin(cls, s))],
+        rarity: look.skin ? RARITY_INFO[rarityOf(cls, look.skin)].tint : null,
+      },
       pose,
       fresh,
     );
@@ -817,6 +861,7 @@ export class SelectScene extends Phaser.Scene {
   private pickClass(i: number): void {
     if (this.leaving || i === this.cls) return;
     this.cls = lastPicked = i;
+    this.peek = null;
     this.refresh(true, true);
   }
 
@@ -824,6 +869,7 @@ export class SelectScene extends Phaser.Scene {
     const cls = this.current;
     const type = cls.types[i];
     if (this.leaving || !type || type === lookOf(cls).type) return;
+    this.peek = null;
     setType(cls, type);
     this.refresh(true, true);
   }
@@ -832,8 +878,13 @@ export class SelectScene extends Phaser.Scene {
     const cls = this.current;
     const { type, skin } = lookOf(cls);
     const next = i === 0 ? null : (type.skins?.[i - 1] ?? skin);
-    if (this.leaving || next === skin) return;
-    setLook(cls, type, next);
+    if (this.leaving || next === (this.peek ?? skin)) return;
+    // A skin not yet won can be looked at, not worn.
+    if (!ownsSkin(cls, next)) this.peek = next;
+    else {
+      this.peek = null;
+      setLook(cls, type, next);
+    }
     this.refresh(true, true);
   }
 
@@ -845,7 +896,8 @@ export class SelectScene extends Phaser.Scene {
   }
 
   private stepSkin(step: -1 | 1): void {
-    const { type, skin } = lookOf(this.current);
+    const { type, skin: wornSkin } = lookOf(this.current);
+    const skin = this.peek ?? wornSkin;
     const n = 1 + (type.skins?.length ?? 0);
     if (n < 2) return;
     const at = skin ? type.skins!.indexOf(skin) + 1 : 0;
@@ -862,6 +914,17 @@ export class SelectScene extends Phaser.Scene {
   /** On to the arena select, with this hero. */
   private startGame(): void {
     if (this.leaving) return;
+    if (this.peek) {
+      // Not theirs yet: the lock rattles, and the header says where to get it.
+      this.stage.rattle();
+      this.header.setText('* Win this skin in the Shop *'.toUpperCase()).setTint(0x9ff6ff);
+      this.layout();
+      this.time.delayedCall(1800, () => {
+        this.header.setText('* Choose your hero *'.toUpperCase()).setTint(GOLD);
+        this.layout();
+      });
+      return;
+    }
     this.leaving = true;
     const character = this.current.id;
     lastPicked = this.cls;

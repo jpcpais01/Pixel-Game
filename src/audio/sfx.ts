@@ -524,6 +524,98 @@ export class Sfx {
     this.chirp(out, t + 0.07, 'triangle', 1319, 1760, 0.18, 0.09);
   }
 
+  // ------------------------------------------------------------ Gems and wishes
+
+  /** Gems landing: a crystal chime, a longer glittering run the more of them, and a legendary's boom for a hoard. */
+  gemLand(t: number, pan: number, n: number): void {
+    if (n >= 5) this.lootLand(t, pan, 4);
+    const out = this.out(pan, 0.5, 0.6);
+    const run = [1568, 1760, 2093, 2349, 2637, 3136, 3520];
+    const k = Math.min(run.length, 2 + Math.ceil(n / 2));
+    for (let i = 0; i < k; i++) this.bell(out, t + 0.04 + i * 0.045, run[i], 0.035, 0.8);
+    this.sparkle(out, t + 0.08, Math.min(12, 2 + n), 0.04);
+  }
+
+  /** Gems picked up: an arpeggio climbing higher the more there were, glass clinking under it. */
+  gemPickup(t: number, n: number): void {
+    const out = this.out(0, 0.5, 0.45);
+    const notes = [1319, 1568, 1976, 2349, 2637, 3136];
+    const k = Math.min(notes.length, 2 + Math.floor(Math.log2(n + 1)));
+    for (let i = 0; i < k; i++) this.chirp(out, t + i * 0.05, 'triangle', notes[i], notes[i] * 1.5, 0.12, 0.08);
+    this.bell(out, t + k * 0.05, notes[k - 1] * 2, 0.03, 0.9);
+    this.sparkle(out, t + 0.05, Math.min(10, 2 + n), 0.035);
+  }
+
+  /** Gems spent: a quick falling tinkle as they pour into the crystal. */
+  gemSpend(t: number): void {
+    const out = this.out(0, 0.4, 0.4);
+    [2637, 2349, 2093, 1760].forEach((f, i) => this.bell(out, t + i * 0.04, f, 0.03, 0.4));
+  }
+
+  /** One gem out of a dissolving duplicate, reaching the counter. */
+  gemTick(t: number): void {
+    const out = this.out(0, 0.3, 0.2);
+    this.bell(out, t, pick([2349, 2637, 3136]), 0.03, 0.25);
+  }
+
+  /**
+   * The Wish Crystal charging for `dur` seconds: a swell of air and a rising
+   * shimmer, climbing as high as the best rarity inside (0 rare, 1 epic, 2
+   * legendary) will take it.
+   */
+  wishCharge(t: number, dur: number, tier: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.6, 0.7);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.14 + tier * 0.05, t + dur);
+    g.gain.linearRampToValueAtTime(0, t + dur + 0.05);
+    const f = filter(ctx, 'bandpass', 400, 2.5, g);
+    sweep(f.frequency, t, 400, 3000 + tier * 1800, dur);
+    const src = this.m.noiseSource();
+    src.connect(f);
+    this.m.startNoise(src, t, dur + 0.1);
+    // A rising tone under the air, higher for better luck.
+    this.chirp(out, t, 'sine', 180, 520 + tier * 260, 0.08, dur);
+    const steps = [523, 659, 784, 1047, 1319, 1568, 2093];
+    const k = 3 + tier * 2;
+    for (let i = 0; i < k; i++) this.bell(out, t + (dur * i) / k, steps[i], 0.025, 0.5);
+  }
+
+  /** The crystal bursting open: a boom, a flash of noise, and a chord that is grander the rarer the best skin inside. */
+  wishBurst(t: number, tier: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.9, 0.8);
+    const b = gain(ctx, 0, out);
+    hit(b.gain, t, 0.5 + tier * 0.15, 0.004, 0.8);
+    const lo = osc(ctx, 'sine', 140, b);
+    sweep(lo.frequency, t, 140, 32, 0.7);
+    lo.start(t);
+    lo.stop(t + 0.9);
+    this.burstNoise(out, t, 'lowpass', 5000, 300, 0.8, 0.3, 0.6, true);
+    const chords = [
+      [523, 659, 784],
+      [523, 659, 784, 988, 1175],
+      [523, 659, 784, 1047, 1319, 1568, 2093],
+    ];
+    chords[tier].forEach((f, i) => this.bell(out, t + 0.03 + i * 0.05, f, 0.045, 1.2 + tier * 0.4));
+    this.sparkle(out, t + 0.1, 4 + tier * 4, 0.05);
+    if (tier === 2) this.lootLand(t, 0, 4);
+  }
+
+  /** A card turning over: a soft swish, then a chime in its rarity's key. */
+  cardFlip(t: number, tier: number): void {
+    const out = this.out(0, 0.45, 0.5);
+    this.burstNoise(out, t, 'bandpass', 1800, 4200, 1.2, 0.08, 0.12);
+    const bells = [
+      [1175, 1568],
+      [1319, 1760, 2093],
+      [1047, 1319, 1568, 2093, 2637],
+    ];
+    bells[tier].forEach((f, i) => this.bell(out, t + 0.08 + i * 0.06, f, 0.04, 0.9 + tier * 0.3));
+    if (tier >= 1) this.sparkle(out, t + 0.12, 2 + tier * 3, 0.045);
+  }
+
   heal(t: number, pan: number): void {
     const out = this.out(pan, 0.45, 0.5);
     const i = Math.floor(Math.random() * 3);

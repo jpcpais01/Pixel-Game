@@ -23,6 +23,11 @@ export const BUTTON_GOLD: [PanelStyle, PanelStyle] = [
   { top: hex('#5a50c8'), bottom: hex('#2a2270'), alpha: 1, border: hex('#c07f30'), borderLit: hex('#ffe89a'), outer: hex('#120e1f') },
   { top: hex('#231c5e'), bottom: hex('#3a31a0'), alpha: 1, border: hex('#8a4e22'), borderLit: hex('#d69a3a'), outer: hex('#120e1f') },
 ];
+/** Jewel-toned, for the shop: teal glass with a rose-gold rim. */
+export const BUTTON_GEM: [PanelStyle, PanelStyle] = [
+  { top: hex('#1a8aa8'), bottom: hex('#1a2a78'), alpha: 1, border: hex('#b8468a'), borderLit: hex('#ffb0ec'), outer: hex('#120e1f') },
+  { top: hex('#142060'), bottom: hex('#1a6a90'), alpha: 1, border: hex('#7a2a5a'), borderLit: hex('#c86aa8'), outer: hex('#120e1f') },
+];
 export const BUTTON_PLAIN: [PanelStyle, PanelStyle] = [
   { top: hex('#2e2658'), bottom: hex('#191434'), alpha: 0.95, border: hex('#4a3a78'), borderLit: hex('#8a78c8'), outer: OUTER },
   { top: hex('#15102c'), bottom: hex('#221a46'), alpha: 0.95, border: hex('#33285a'), borderLit: hex('#5a4a90'), outer: OUTER },
@@ -66,6 +71,8 @@ export class PixelButton extends Phaser.GameObjects.Container {
   private label: Phaser.GameObjects.BitmapText;
   private keys: [string, string];
   private down = false;
+  /** A small picture before the label (a gem on the shop's buttons). */
+  private icon: Phaser.GameObjects.Image | null = null;
 
   constructor(scene: Phaser.Scene, text: string, w: number, h: number, styles: [PanelStyle, PanelStyle], name: string, onClick: () => void) {
     super(scene, 0, 0);
@@ -86,6 +93,15 @@ export class PixelButton extends Phaser.GameObjects.Container {
       this.press(false);
       onClick();
     });
+  }
+
+  /** Put a picture before the label (null takes it away). */
+  setIcon(texture: string | null): this {
+    this.icon?.destroy();
+    this.icon = texture ? this.scene.add.image(0, 0, texture).setOrigin(0) : null;
+    if (this.icon) this.add(this.icon);
+    this.layoutLabel();
+    return this;
   }
 
   setText(text: string): this {
@@ -112,7 +128,11 @@ export class PixelButton extends Phaser.GameObjects.Container {
   }
 
   private layoutLabel(): void {
-    this.label.setPosition(Math.round((this.boxW - this.label.width) / 2), Math.round((this.boxH - this.label.height) / 2) + (this.down ? 1 : 0));
+    const iw = this.icon ? this.icon.width + 2 : 0;
+    const x = Math.round((this.boxW - this.label.width - iw) / 2);
+    const push = this.down ? 1 : 0;
+    this.icon?.setPosition(x, Math.round((this.boxH - this.icon.height) / 2) + push);
+    this.label.setPosition(x + iw, Math.round((this.boxH - this.label.height) / 2) + push);
     this.label.setTint(this.down ? 0xd8c8a0 : 0xfff4d6);
   }
 }

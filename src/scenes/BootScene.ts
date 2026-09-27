@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { buildAllTextures } from '../art/textures';
 import { buildPixelFont } from '../art/font';
+import { registerGemArt } from '../art/shop';
 import { GroundStreamer } from '../world/GroundStreamer';
 import { CLEARING_GROUND } from '../world/clearing';
 
@@ -13,6 +14,7 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     buildPixelFont(this);
     buildAllTextures(this);
+    registerGemArt(this);
     // The first arena's ground; the arena select warms up the others while the player picks.
     GroundStreamer.prebuild(this, CLEARING_GROUND, 0, CLEARING_GROUND.h);
     this.scene.start('home');

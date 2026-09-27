@@ -2,7 +2,9 @@ import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
 import { LOGO_FRAMES, mythsLogo, sparkleBitmap } from '../art/logo';
 import { type Backdrop, makeBackdrop } from './homeBackdrops';
-import { BUTTON_GOLD, BUTTON_PLAIN, PixelButton, pixelText } from '../ui/widgets';
+import { BUTTON_GEM, BUTTON_GOLD, BUTTON_PLAIN, PANEL_PICKED, PixelButton, panelTexture, pixelText } from '../ui/widgets';
+import { collection } from '../game/collection';
+import { sound } from '../audio';
 import { account, cloudReady, logOut, onAccount } from '../game/cloud';
 import { openAccountForm } from '../ui/accountForm';
 import { fpsBottom } from './FpsScene';
@@ -10,6 +12,8 @@ import { fpsBottom } from './FpsScene';
 /** How often the glint sweeps the title, and how long each of its frames shows. */
 const SHIMMER_EVERY = 5200;
 const SHIMMER_FRAME = 45;
+/** How long the daily gift's banner stays up. */
+const GIFT_TIME = 3600;
 
 /**
  * The home screen: a painted backdrop (the Sky Arena, now and then the Hall
@@ -31,6 +35,12 @@ export class HomeScene extends Phaser.Scene {
   private titleFrame = 0;
   private start!: PixelButton;
   private inventory!: PixelButton;
+  private shop!: PixelButton;
+  /** The player's gems, beside the Shop button. */
+  private gemIcon!: Phaser.GameObjects.Image;
+  private gemText!: Phaser.GameObjects.BitmapText;
+  /** The daily gift's banner, while it shows. */
+  private gift: Phaser.GameObjects.Container | null = null;
   private accountBtn!: PixelButton;
   private who!: Phaser.GameObjects.BitmapText;
   private arrows: Phaser.GameObjects.BitmapText[] = [];
@@ -57,14 +67,27 @@ export class HomeScene extends Phaser.Scene {
     this.sparkles = this.sparkleSpots.map(() => this.add.image(0, 0, 'home_sparkle').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0));
     this.start = new PixelButton(this, 'Start Game', 84, 22, BUTTON_GOLD, 'start', () => this.openSelect());
     this.inventory = new PixelButton(this, 'Inventory', 84, 18, BUTTON_PLAIN, 'inventory', () => this.openInventory());
+    this.shop = new PixelButton(this, 'Shop', 84, 18, BUTTON_GEM, 'shop', () => this.openShop()).setIcon('gem_s');
+    this.gemIcon = this.add.image(0, 0, 'gem_s').setOrigin(0);
+    this.gemText = pixelText(this, 0, 0, '', 0x9ff6ff);
     this.accountBtn = new PixelButton(this, 'Log in', 84, 18, BUTTON_PLAIN, 'account', () => this.tapAccount());
     this.accountBtn.setVisible(cloudReady());
     this.who = pixelText(this, 0, 0, '', 0x9a90c8);
     this.arrows = [pixelText(this, 0, 0, '>', 0xf4cf6a), pixelText(this, 0, 0, '<', 0xf4cf6a)];
-    this.menu.add([this.titleGlow, this.title, ...this.sparkles, this.start, this.inventory, this.accountBtn, this.who, ...this.arrows]);
+    this.menu.add([this.titleGlow, this.title, ...this.sparkles, this.start, this.inventory, this.shop, this.gemIcon, this.gemText, this.accountBtn, this.who, ...this.arrows]);
     this.showAccount();
     const unAccount = onAccount(() => this.showAccount());
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unAccount);
+    // The gem count keeps up with the save, and the daily gift waits for a cloud save to finish loading.
+    const unGems = collection.watch(() => {
+      this.showGems();
+      this.giveDaily();
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unAccount();
+      unGems();
+      this.gift = null;
+    });
+    this.showGems();
 
     const kb = this.input.keyboard;
     kb?.on('keydown-ENTER', () => this.openSelect());
@@ -73,6 +96,63 @@ export class HomeScene extends Phaser.Scene {
     this.layout();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this));
+    this.time.delayedCall(600, () => this.giveDaily());
+  }
+
+  private showGems(): void {
+    this.gemText.setText(`${collection.gems}`);
+    if (this.vw) this.layout();
+  }
+
+  /**
+   * Once a day the player is given gems: a banner drops in from the top with
+   * the gem glittering, a burst of shards and a chime, then rises away.
+   */
+  private giveDaily(): void {
+    if (this.gift) return;
+    const n = collection.claimDaily();
+    if (!n) return;
+    const w = 112;
+    const h = 30;
+    const bg = this.add.image(0, 0, panelTexture(this, 'home_gift', w, h, PANEL_PICKED)).setOrigin(0);
+    const glow = this.add.image(18, h / 2, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x5ae8ff).setScale(1.3);
+    const gem = this.add.image(18, h / 2, 'gem_l');
+    const title = pixelText(this, 34, 5, 'Daily gift', 0xf4cf6a);
+    const amount = pixelText(this, 34, 16, `+${n} gems`, 0x9ff6ff);
+    const shards = this.add.particles(18, h / 2, 'spark', {
+      speed: { min: 20, max: 60 },
+      lifespan: { min: 400, max: 900 },
+      scale: { start: 1, end: 0 },
+      tint: [0xffffff, 0x9ff6ff, 0x5ae8ff, 0xff7ae6],
+      blendMode: Phaser.BlendModes.ADD,
+      emitting: false,
+    });
+    const box = this.add.container(0, 0, [bg, glow, shards, gem, title, amount]).setDepth(50);
+    this.gift = box;
+    const x = Math.round((this.vw - w) / 2);
+    box.setPosition(x, -h - 4);
+    this.tweens.add({ targets: glow, alpha: { from: 0.4, to: 0.95 }, scale: { from: 1.1, to: 1.6 }, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: gem, y: h / 2 - 1, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.chain({
+      targets: box,
+      tweens: [
+        {
+          y: Math.round(this.vh * 0.04) + 4,
+          duration: 420,
+          ease: 'Back.easeOut',
+          onComplete: () => {
+            shards.explode(24);
+            sound.gemPickup(n);
+          },
+        },
+        { y: Math.round(this.vh * 0.04) + 4, duration: GIFT_TIME },
+        { y: -h - 4, alpha: 0, duration: 380, ease: 'Sine.easeIn' },
+      ],
+      onComplete: () => {
+        box.destroy();
+        if (this.gift === box) this.gift = null;
+      },
+    });
   }
 
   /** Show or hide the title and button (hidden while the character select is open). */
@@ -80,6 +160,7 @@ export class HomeScene extends Phaser.Scene {
     this.menuOpen = open;
     this.start.setEnabled(open);
     this.inventory.setEnabled(open);
+    this.shop.setEnabled(open);
     this.accountBtn.setEnabled(open);
     this.tweens.killTweensOf(this.menu);
     if (open) this.menu.setVisible(true);
@@ -95,6 +176,12 @@ export class HomeScene extends Phaser.Scene {
     if (!this.menuOpen) return;
     this.showMenu(false);
     this.scene.launch('select');
+  }
+
+  private openShop(): void {
+    if (!this.menuOpen) return;
+    this.showMenu(false);
+    this.scene.launch('shop');
   }
 
   private openInventory(): void {
@@ -155,7 +242,10 @@ export class HomeScene extends Phaser.Scene {
     const by = Math.max(this.titleY + this.title.displayHeight + 14, Math.round(vh * 0.52));
     this.start.place((vw - this.start.boxW) / 2, by);
     this.inventory.place((vw - this.inventory.boxW) / 2, by + this.start.boxH + 6);
-    this.accountBtn.place((vw - this.accountBtn.boxW) / 2, this.inventory.y + this.inventory.boxH + 5);
+    this.shop.place((vw - this.shop.boxW) / 2, this.inventory.y + this.inventory.boxH + 5);
+    this.gemIcon.setPosition(this.shop.x + this.shop.boxW + 6, this.shop.y + Math.round((this.shop.boxH - this.gemIcon.height) / 2));
+    this.gemText.setPosition(this.gemIcon.x + this.gemIcon.width + 2, this.shop.y + Math.round((this.shop.boxH - this.gemText.height) / 2));
+    this.accountBtn.place((vw - this.accountBtn.boxW) / 2, this.shop.y + this.shop.boxH + 5);
     this.who.setPosition(Math.round((vw - this.who.width) / 2), this.accountBtn.y + this.accountBtn.boxH + 4);
   }
 

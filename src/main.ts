@@ -14,6 +14,7 @@ import { FpsScene } from './scenes/FpsScene';
 import { ShadeScene } from './scenes/ShadeScene';
 import { PauseScene } from './scenes/PauseScene';
 import { InventoryScene } from './scenes/InventoryScene';
+import { ShopScene } from './scenes/ShopScene';
 import { settings } from './game/settings';
 import { sound } from './audio';
 import { setupApp } from './pwa';
@@ -50,7 +51,7 @@ const game = new Phaser.Game({
   // Right click is the normal ability on a computer, so no browser menu over the game.
   disableContextMenu: true,
   // Later scenes draw on top.
-  scene: [BootScene, HomeScene, SelectScene, InventoryScene, ArenaScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
+  scene: [BootScene, HomeScene, SelectScene, InventoryScene, ShopScene, ArenaScene, WorldScene, ShadeScene, UIScene, PauseScene, SoundScene, FpsScene],
 });
 game.events.once(Phaser.Core.Events.READY, () => watchCanvas(game.canvas));
 

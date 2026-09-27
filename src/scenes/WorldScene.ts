@@ -53,6 +53,7 @@ import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } fr
 import { heroBuffs, type BuffDef } from '../game/buffs';
 import { LootFlare, Pickup } from '../game/Pickup';
 import { gear, GEAR_SETS, RARITY, type GearDef, type SetId } from '../game/gear';
+import { rollGems } from '../game/tiers';
 import { collection, slotIndex } from '../game/collection';
 import { energy, energyFor } from '../game/energy';
 import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
@@ -694,6 +695,45 @@ export class WorldScene extends Phaser.Scene {
     const id = rollDrop(kind);
     if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
     for (const def of gear.roll(kind)) this.dropGear(def, x, y - bodyY);
+    const gems = rollGems(kind);
+    if (gems) this.dropGems(gems, x, y - bodyY);
+  }
+
+  /**
+   * Gems fall: one glints down with a chime; a few rise in a pillar of cyan
+   * light; five or more fall like a star, and a hoard of ten or more strikes
+   * with a prism of rays, rings racing out and the ground shaking.
+   */
+  private dropGems(n: number, x: number, y: number): void {
+    const p = new Pickup(this, x, y, { kind: 'gems', n });
+    this.pickups.push(p);
+    if (n >= 5) sound.lootFall(this.pan(p.x));
+    p.onLand = (at) => {
+      sound.gemLand(n, this.pan(at.x));
+      const shards = [0xffffff, 0x9ff6ff, 0x5ae8ff, 0xff7ae6];
+      this.debris(shards, snap(at.x), snap(at.y) - 6, Math.min(60, 8 + n * 3), at.y + 20, 'burst');
+      if (n < 2) return;
+      this.debris(shards, snap(at.x), snap(at.y) - 4, Math.min(30, 4 + n * 2), at.y + 20, 'spores');
+      if (n >= 5) {
+        this.cameras.main.shake(n >= 10 ? 260 : 160, n >= 10 ? 0.0022 : 0.0014);
+        this.popNumber(snap(at.x), snap(at.y) - 30, n >= 10 ? 'GEM HOARD!' : 'GEMS!', 0x9ff6ff);
+      }
+    };
+  }
+
+  /** Gems were picked up: they're the player's for good, and burst about the hero in a shower of light, bigger the more there were. */
+  private gainGems(n: number): void {
+    collection.addGems(n);
+    const h = this.hero;
+    const hx = snap(h.x);
+    const hy = snap(h.y);
+    this.popNumber(hx, hy - 40, `+${n} ${n === 1 ? 'GEM' : 'GEMS'}`, 0x9ff6ff);
+    const shards = [0xffffff, 0x9ff6ff, 0x5ae8ff, 0xff7ae6];
+    this.debris(shards, hx, hy - 12, Math.min(70, 12 + n * 4), h.y + 20, 'burst');
+    this.debris(shards, hx, hy - 10, Math.min(40, 6 + n * 2), h.y + 20, 'spores');
+    if (n >= 2) this.addEffect(new LootFlare(this, hx, hy, null, n >= 5, 0x5ae8ff, 0xeaffff));
+    if (n >= 10) this.cameras.main.shake(140, 0.001);
+    sound.gemPickup(n);
   }
 
   /**
@@ -821,6 +861,11 @@ export class WorldScene extends Phaser.Scene {
       const loot = p.loot;
       const room = loot.kind === 'item' ? inventory.canTake(loot.id) : true;
       if (!p.update(dt, down ? null : h.x, down ? null : h.y, room, this.daylight)) continue;
+      if (loot.kind === 'gems') {
+        this.gainGems(loot.n);
+        p.destroy();
+        continue;
+      }
       collection.add(loot.kind === 'item' ? loot.id : loot.def.id);
       if (loot.kind === 'item') {
         inventory.add(loot.id);
