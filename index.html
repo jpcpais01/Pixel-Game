@@ -35,10 +35,212 @@
       #rotate b { font-size: 16px; color: #f2ffff; }
       #rotate small { color: #7c82b8; }
       @keyframes tilt { 0%, 45% { transform: rotate(0deg); } 50%, 95% { transform: rotate(90deg); } }
+
+      /* The loading screen: up from the first paint until the home screen has drawn. Only
+         transforms and opacity move, which the browser animates on its own even while the
+         game is busy building its art. */
+      #boot {
+        position: fixed; inset: 0; z-index: 4; overflow: hidden;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: min(3.2vh, 22px);
+        background: radial-gradient(ellipse 70% 60% at 50% 42%, #2c1a58 0%, #150e33 42%, #07080d 78%);
+        transition: opacity 0.6s ease;
+      }
+      #boot.done { opacity: 0; pointer-events: none; }
+      #boot .sky, #boot .embers { position: absolute; inset: 0; pointer-events: none; }
+      #boot .sky i { position: absolute; width: 2px; height: 2px; background: #cfd8ff; opacity: 0.2; animation: twinkle 3s ease-in-out infinite; }
+      #boot .sky i.big { width: 3px; height: 3px; background: #fff4d0; }
+      #boot .embers b { position: absolute; bottom: -8px; width: 3px; height: 3px; opacity: 0; animation: rise 7s linear infinite; }
+      #boot .emblem { position: relative; width: var(--e); height: var(--e); transition: transform 0.6s ease; }
+      #boot.done .emblem { transform: scale(1.25); }
+      #boot .halo {
+        position: absolute; inset: -35%;
+        background: radial-gradient(circle, rgba(140, 110, 255, 0.55) 0%, rgba(90, 232, 255, 0.18) 38%, rgba(0, 0, 0, 0) 68%);
+        animation: pulse 2.8s ease-in-out infinite;
+      }
+      #boot svg { position: absolute; inset: 0; width: 100%; height: 100%; shape-rendering: crispEdges; }
+      #boot .r1 { animation: spin 16s linear infinite; }
+      #boot .r2 { animation: spin 10s linear infinite reverse; }
+      #boot .orbit { position: absolute; inset: 0; animation: spin 3.6s linear infinite; }
+      #boot .orbit s { position: absolute; left: 50%; top: -3px; width: 6px; height: 6px; margin-left: -3px; background: #fff; transform: rotate(45deg); box-shadow: 0 0 8px 2px rgba(159, 246, 255, 0.9); }
+      #boot .orbit s:nth-child(2) { top: auto; bottom: -3px; background: #ffe08a; box-shadow: 0 0 8px 2px rgba(255, 200, 74, 0.9); }
+      #boot .icon {
+        position: absolute; left: 14%; top: 14%; width: 72%; height: 72%;
+        image-rendering: pixelated; animation: float 2.6s ease-in-out infinite;
+        filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+      }
+      #boot .logo {
+        width: calc(var(--lw) * var(--s)); height: calc(var(--lh) * var(--s));
+        background-repeat: no-repeat; background-size: calc(var(--lw) * var(--s)) calc(var(--lh) * var(--lf) * var(--s));
+        image-rendering: pixelated;
+        /* The logo's own glint (its frames 1 to 13), every few seconds. */
+        animation: glint 5.2s steps(13, end) infinite;
+        filter: drop-shadow(0 0 10px rgba(255, 176, 80, 0.35));
+      }
+      #boot .bar {
+        position: relative; width: var(--bw); height: 12px;
+        background: #0e0a22;
+        box-shadow: 0 0 0 2px #0b0818, 0 0 0 4px #b8742c, 0 0 0 5px #ffe08a, 0 0 0 7px #0b0818, 0 0 24px 6px rgba(120, 90, 255, 0.25);
+      }
+      #boot .fill {
+        position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(0);
+        background: linear-gradient(90deg, #3a5ce0, #39c6f0 45%, #c084ff 80%, #ffe08a);
+      }
+      #boot .fill::after {
+        content: ''; position: absolute; inset: 0;
+        background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0 6px, rgba(255, 255, 255, 0) 6px 12px);
+        animation: stripes 0.8s linear infinite;
+      }
+      #boot .fill::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(255, 255, 255, 0.45); }
+      #boot .head {
+        position: absolute; left: -5px; top: -4px; width: 10px; height: 20px;
+        background: radial-gradient(ellipse, #ffffff 0%, rgba(159, 246, 255, 0.8) 35%, rgba(159, 246, 255, 0) 70%);
+        animation: flicker 0.3s steps(2) infinite;
+      }
+      #boot canvas { image-rendering: pixelated; }
+      @keyframes twinkle { 0%, 100% { opacity: 0.12; } 50% { opacity: 1; } }
+      @keyframes rise { 0% { opacity: 0; transform: translateY(0); } 10% { opacity: 1; } 80% { opacity: 0.7; } 100% { opacity: 0; transform: translateY(-75vh) translateX(var(--dx)); } }
+      @keyframes pulse { 0%, 100% { opacity: 0.65; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1.08); } }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes float { 0%, 100% { transform: translateY(-3%); } 50% { transform: translateY(3%); } }
+      @keyframes glint { 0% { background-position: 0 calc(var(--lh) * var(--s) * -1); } 13% { background-position: 0 calc(var(--lh) * var(--s) * -14); } 13.01%, 100% { background-position: 0 0; } }
+      @keyframes stripes { to { background-position: 12px 0; } }
+      @keyframes flicker { 50% { opacity: 0.6; } }
+      @media (prefers-reduced-motion: reduce) {
+        #boot *, #boot *::after { animation: none !important; }
+      }
     </style>
   </head>
   <body>
     <div id="app"></div>
+    <div id="boot" aria-label="Loading">
+      <div class="sky"></div>
+      <div class="embers"></div>
+      <div class="emblem">
+        <div class="halo"></div>
+        <svg class="r1" viewBox="0 0 132 132"><circle cx="66" cy="66" r="62" fill="none" stroke="#d69a3a" stroke-width="2" stroke-dasharray="7 5" /><circle cx="66" cy="66" r="57" fill="none" stroke="#6b5aa6" stroke-width="1" stroke-dasharray="2 4" /></svg>
+        <svg class="r2" viewBox="0 0 132 132"><circle cx="66" cy="66" r="51" fill="none" stroke="#5ae8ff" stroke-width="2" stroke-dasharray="3 9" opacity="0.8" /></svg>
+        <div class="orbit"><s></s><s></s></div>
+        <img class="icon" src="icons/icon-192.png" alt="" />
+      </div>
+      <div class="logo"></div>
+      <div class="bar"><div class="fill"></div><div class="head"></div></div>
+      <canvas class="status" width="1" height="1"></canvas>
+    </div>
+    <script>
+      // The loading screen's life: stars and embers scattered at random, the
+      // logo sized to the screen, and a bar and a line of pixel text that
+      // follow the boot (window.bootLoader, called by the game). Words are
+      // spelt with the game's own font (window.__BOOT, from scripts/pwa.ts).
+      (function () {
+        var el = document.getElementById('boot');
+        var boot = window.__BOOT || {};
+        var W = innerWidth, H = innerHeight;
+        var frag = document.createDocumentFragment(), i, n;
+        for (i = 0; i < 56; i++) {
+          n = document.createElement('i');
+          if (Math.random() < 0.15) n.className = 'big';
+          n.style.cssText = 'left:' + (Math.random() * 100).toFixed(1) + '%;top:' + (Math.random() * 100).toFixed(1) + '%;animation-duration:' + (2 + Math.random() * 3).toFixed(2) + 's;animation-delay:-' + (Math.random() * 5).toFixed(2) + 's';
+          frag.appendChild(n);
+        }
+        el.querySelector('.sky').appendChild(frag);
+        var tints = ['#ffe08a', '#9ff6ff', '#c084ff', '#ffb050', '#ffffff'];
+        for (i = 0; i < 18; i++) {
+          n = document.createElement('b');
+          n.style.cssText = 'left:' + (Math.random() * 100).toFixed(1) + '%;background:' + tints[i % tints.length] + ';box-shadow:0 0 6px ' + tints[i % tints.length] + ';--dx:' + ((Math.random() - 0.5) * 60).toFixed(0) + 'px;animation-duration:' + (5 + Math.random() * 5).toFixed(2) + 's;animation-delay:-' + (Math.random() * 9).toFixed(2) + 's';
+          frag.appendChild(n);
+        }
+        el.querySelector('.embers').appendChild(frag);
+
+        // Sizes: the emblem, the logo at a whole-number scale, the bar.
+        var short = Math.min(W, H);
+        var logo = boot.logo;
+        var st = el.style;
+        st.setProperty('--e', Math.round(Math.min(150, short * 0.3)) + 'px');
+        st.setProperty('--bw', Math.round(Math.min(300, W * 0.6)) + 'px');
+        var logoEl = el.querySelector('.logo');
+        if (logo) {
+          var s = Math.max(1, Math.min(4, Math.floor(Math.min((W * 0.82) / logo.w, (H * 0.4) / logo.h))));
+          st.setProperty('--lw', logo.w + 'px');
+          st.setProperty('--lh', logo.h + 'px');
+          st.setProperty('--lf', logo.frames);
+          st.setProperty('--s', s);
+          logoEl.style.backgroundImage = 'url(' + logo.src + ')';
+        } else logoEl.remove();
+
+        // A line of text in the pixel font: white letters with a dark outline, tinted.
+        var canvas = el.querySelector('.status');
+        var glyphs = boot.glyphs || {};
+        function spell(text, colors) {
+          var cells = text.length * 6 + 1, h = 9;
+          canvas.width = cells;
+          canvas.height = h;
+          var scale = Math.max(1, Math.round(Math.min(3, short / 180)));
+          canvas.style.width = cells * scale + 'px';
+          canvas.style.height = h * scale + 'px';
+          var ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, cells, h);
+          for (var pass = 0; pass < 2; pass++) {
+            for (var c = 0; c < text.length; c++) {
+              var g = glyphs[text[c]];
+              if (!g) continue;
+              var rows = g.split(' ');
+              ctx.fillStyle = pass ? colors[c] : '#0b0818';
+              for (var y = 0; y < 7; y++) for (var x = 0; x < 5; x++) {
+                if (rows[y][x] !== '#') continue;
+                if (pass) ctx.fillRect(c * 6 + 1 + x, 1 + y, 1, 1);
+                else ctx.fillRect(c * 6 + x, y, 3, 3);
+              }
+            }
+          }
+        }
+        var WORDS = [[0.14, 'WAKING THE REALM'], [0.34, 'FORGING HEROES'], [0.54, 'WEAVING SPELLS'], [0.74, 'SUMMONING MONSTERS'], [0.93, 'PAINTING THE SKY'], [0.999, 'LIGHTING THE TORCHES'], [2, 'READY']];
+        var fill = el.querySelector('.fill'), head = el.querySelector('.head');
+        var target = 0, shown = 0, said = '', dots = 0, last = 0, gone = false;
+        function words(p) {
+          for (var k = 0; k < WORDS.length; k++) if (p < WORDS[k][0]) return WORDS[k][1];
+          return 'READY';
+        }
+        function frame(t) {
+          if (gone) return;
+          // The bar eases toward the real progress, and creeps on a little while the game builds.
+          shown += (target - shown) * 0.18;
+          if (target < 1) shown = Math.min(target + 0.02, shown + 0.0006);
+          var p = Math.min(1, shown);
+          fill.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+          head.style.transform = 'translateX(' + (p * parseFloat(st.getPropertyValue('--bw'))).toFixed(1) + 'px)';
+          if (t - last > 380) {
+            last = t;
+            dots = (dots + 1) % 4;
+          }
+          var w = words(p), pct = Math.floor(p * 100) + '%';
+          var line = w === 'READY' ? w : w + '...'.slice(0, dots) + '   '.slice(dots) + ' ' + pct;
+          if (line !== said) {
+            said = line;
+            var colors = [];
+            for (var c = 0; c < line.length; c++) colors.push(c > w.length + 3 ? '#f4cf6a' : w === 'READY' ? '#9ff6ff' : '#b8a8e8');
+            spell(line, colors);
+          }
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+
+        window.bootLoader = {
+          progress: function (p) {
+            target = Math.max(target, Math.min(1, p));
+          },
+          done: function () {
+            target = shown = 1;
+            el.classList.add('done');
+            window.bootLoader = undefined;
+            setTimeout(function () {
+              gone = true;
+              el.remove();
+            }, 700);
+          },
+        };
+      })();
+    </script>
     <button id="install" class="chrome" hidden>Install</button>
     <div id="rotate" class="chrome" hidden>
       <img src="icons/icon-192.png" alt="" />

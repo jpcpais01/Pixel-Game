@@ -166,9 +166,16 @@ export const paladinMeta = new Map<string, PaladinMeta>();
 export const jediMeta = new Map<string, JediMeta>();
 export const samuraiMeta = new Map<string, SamuraiMeta>();
 
-export function buildAllTextures(scene: Phaser.Scene): void {
+/**
+ * Build every texture and animation, a piece at a time: it yields between
+ * pieces, so the boot can spread the work over frames and show how far
+ * along it is (see BootScene). Each hero look is one piece.
+ */
+export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> {
+  yield;
   // Wizard, once per look. Every look shares the rig, so the crystal meta is the same for all.
   for (const look of WIZARD_LOOKS) {
+    yield;
     const wf = buildWizardFrames(look);
     if (!wizardMeta.size) wf.forEach((f) => wizardMeta.set(f.key, f.meta));
     register(scene, look.key, pack(wf.map((f) => ({ name: f.key, r: f.canvas.render() })), FRAME_W, FRAME_H), FRAME_W, FRAME_H);
@@ -185,8 +192,10 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     }
   }
 
+  yield;
   // Warrior, once per look. Spin frames have no animation: the whirlwind picks them by angle.
   for (const look of WARRIOR_LOOKS) {
+    yield;
     const hf = buildWarriorFrames(look);
     if (!warriorMeta.size) hf.forEach((f) => warriorMeta.set(f.key, f.meta));
     register(scene, look.key, pack(hf.map((f) => ({ name: f.key, r: f.canvas.render() })), WARRIOR_W, WARRIOR_H), WARRIOR_W, WARRIOR_H);
@@ -202,9 +211,11 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     }
   }
 
+  yield;
   // Effects (pure light).
   // Paladin, once per subtype look ('paladin' and 'paladin_crusader'); they share the rig.
   for (const look of PALADIN_LOOKS) {
+    yield;
     const pf = buildPaladinFrames(look);
     if (!paladinMeta.size) pf.forEach((f) => paladinMeta.set(f.key, f.meta));
     register(scene, look.key, pack(pf.map((f) => ({ name: f.key, r: f.canvas.render() })), PALADIN_W, PALADIN_H), PALADIN_W, PALADIN_H);
@@ -220,9 +231,11 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     }
   }
 
+  yield;
   // Jedi, once per look; the looks share the rig, so the blade meta is the same for all.
   // The twirl plays a whole turn starting from whichever way he faces.
   for (const look of JEDI_LOOKS) {
+    yield;
     const jf = buildJediFrames(look);
     if (!jediMeta.size) jf.forEach((f) => jediMeta.set(f.key, f.meta));
     register(scene, look.key, pack(jf.map((f) => ({ name: f.key, r: f.canvas.render() })), JEDI_W, JEDI_H), JEDI_W, JEDI_H);
@@ -245,8 +258,10 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     }
   }
 
+  yield;
   // Fighter once per style: 'fighter' for the brawler, 'fighter_monk' for the iron monk.
   for (const look of FIGHTER_LOOKS) {
+    yield;
     const ff = buildFighterFrames(look);
     register(scene, look.key, pack(ff.map((f) => ({ name: f.key, r: f.canvas.render() })), FIGHTER_W, FIGHTER_H), FIGHTER_W, FIGHTER_H);
     for (const a of look.anims) {
@@ -261,11 +276,13 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     }
   }
 
+  yield;
   // Alchemist once per look, and the flasks each throws (tumbling frames r0..r7),
   // plus the fumes of each bog: 'alchemist'/'flask'/'fume' for the plague
   // doctor, with a '_witch' suffix for the hex witch and '_chem' for Chemtech
   // (whose flasks are canisters).
   for (const look of ALCHEMIST_LOOKS) {
+    yield;
     const sfx = look.key.slice('alchemist'.length);
     const af = buildAlchemistFrames(look);
     register(scene, look.key, pack(af.map((f) => ({ name: f.key, r: f.canvas.render() })), ALCH_W, ALCH_H), ALCH_W, ALCH_H);
@@ -289,10 +306,12 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     scene.textures.addCanvas(`icon_bog${sfx}`, toCanvas(16, 16, look.chem ? chemBarrageIcon(brew) : bogIcon(brew)));
   }
 
+  yield;
   // Archer once per look, and the arrows each looses: 'arrow' frames r0..r15
   // (sixteen headings in flight) and k0..k2 (stuck in the ground), with a
   // '_storm' suffix for the storm archer.
   for (const look of ARCHER_LOOKS) {
+    yield;
     const sfx = look.key.slice('archer'.length);
     const rf = buildArcherFrames(look);
     register(scene, look.key, pack(rf.map((f) => ({ name: f.key, r: f.canvas.render() })), ARCHER_W, ARCHER_H), ARCHER_W, ARCHER_H);
@@ -316,10 +335,12 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     scene.textures.addCanvas(`icon_rain${sfx}`, toCanvas(16, 16, rainIcon(q, look.storm)));
   }
 
+  yield;
   // Rogue once per look ('rogue', 'rogue_dancer' for the shadow dancer, and
   // the skins' '_corsair' and '_kitsune'), with a flash layer for the echoes he
   // leaves, his smoke and his icons.
   for (const look of ROGUE_LOOKS) {
+    yield;
     const sfx = look.key.slice('rogue'.length);
     const icons = ROGUE_ICONS[look.key];
     const rf = buildRogueFrames(look);
@@ -341,10 +362,12 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     scene.textures.addCanvas(`icon_shadowstep${sfx}`, toCanvas(16, 16, shadowstepIcon(icons.daggers, icons.dance)));
   }
 
+  yield;
   // Necromancer once per look: 'necro' and 'necro_blood' for the blood mage.
   // Their bolts use the spell orbs below ('orb_soul', 'orb_blood'); the dead
   // they raise are 'skeleton', registered like a monster.
   for (const look of NECRO_LOOKS) {
+    yield;
     const nf = buildNecroFrames(look);
     register(scene, look.key, pack(nf.map((f) => ({ name: f.key, r: f.canvas.render() })), NECRO_W, NECRO_H), NECRO_W, NECRO_H);
     for (const a of NECRO_ANIMS) {
@@ -368,11 +391,13 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_lance_wyrm', toCanvas(16, 16, bloodLanceIcon(WYRM_ICON)));
   scene.textures.addCanvas('icon_nova_wyrm', toCanvas(16, 16, novaIcon(WYRM_ICON)));
 
+  yield;
   // Bard once per look: 'bard' (the minstrel), 'bard_drum' (the war drummer)
   // and 'bard_wild' (the minstrel's wildsong skin), the minstrel's glowing
   // notes ('note_e', frames n0 and n1; the wildsong's leaf notes and wisps in
   // 'note_wild_e'), and the icons, which the songs' buffs wear too.
   for (const look of BARD_LOOKS) {
+    yield;
     const bf = buildBardFrames(look);
     register(scene, look.key, pack(bf.map((f) => ({ name: f.key, r: f.canvas.render() })), BARD_W, BARD_H), BARD_W, BARD_H);
     for (const a of bardAnims(look)) {
@@ -400,11 +425,13 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_drum_howl', toCanvas(16, 16, drumIcon(HOWL_DRUM_ICON)));
   scene.textures.addCanvas('icon_rhythm_howl', toCanvas(16, 16, rhythmIcon(HOWL_DRUM_ICON)));
 
+  yield;
   // Puppeteer once per look: 'puppeteer' and 'puppeteer_porcelain' (the
   // marionettist), 'weaver' and 'weaver_crimson' (the stringweaver); the
   // marionettist's puppet like a monster ('puppet', 'puppet_porcelain'), and
   // the icons.
   for (const look of PUPPETEER_LOOKS) {
+    yield;
     const pf = buildPuppeteerFrames(look);
     register(scene, look.key, pack(pf.map((f) => ({ name: f.key, r: f.canvas.render() })), PUPPETEER_W, PUPPETEER_H), PUPPETEER_W, PUPPETEER_H);
     for (const a of puppeteerAnims(look)) {
@@ -432,11 +459,13 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_thread_arachne', toCanvas(16, 16, threadIcon('#fbffe8', '#e0ff9a', '#a8e040')));
   scene.textures.addCanvas('icon_marionette_arachne', toCanvas(16, 16, marionetteIcon('#fbffe8', '#e0ff9a', '#a8e040')));
 
+  yield;
   // Chronomancer once per look: 'chrono' (the timekeeper), 'chrono_moon',
   // 'chrono_rift' (the paradox) and 'chrono_aeon', each with its own bolts
   // ('<key>_bolt_e', frames b0-b3); the clock over a slowed foe
   // ('chrono_mark_e', m0-m7, tinted in game); and the icons.
   for (const look of CHRONO_LOOKS) {
+    yield;
     const cf = buildChronoFrames(look);
     register(scene, look.key, pack(cf.map((f) => ({ name: f.key, r: f.canvas.render() })), CHRONO_W, CHRONO_H), CHRONO_W, CHRONO_H);
     for (const a of chronoAnims(look)) {
@@ -461,11 +490,13 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     scene.textures.addCanvas(`icon_rewind${suffix}`, toCanvas(16, 16, rewindIcon(k)));
   }
 
+  yield;
   // Samurai once per look: 'samurai' (the bladewind), 'samurai_oni', 'ronin'
   // and 'ronin_sakura'; they share the rig, so the blade meta is the same for
   // all. The spin plays a whole turn starting from whichever way he faces.
   // The ronin's cuts over a marked foe are 'samurai_mark_e' (m1-m3, tinted in game).
   for (const look of SAMURAI_LOOKS) {
+    yield;
     const sf = buildSamuraiFrames(look);
     if (!samuraiMeta.size) sf.forEach((f) => samuraiMeta.set(f.key, f.meta));
     register(scene, look.key, pack(sf.map((f) => ({ name: f.key, r: f.canvas.render() })), SAMURAI_W, SAMURAI_H), SAMURAI_W, SAMURAI_H);
@@ -506,6 +537,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_iai_shogun', toCanvas(16, 16, katanaIcon('#f4f2ff', '#565060', null)));
   scene.textures.addCanvas('icon_cross_shogun', toCanvas(16, 16, crossIcon(['#fffcf0', '#fff0b8', '#a89cff', '#3a2e9a'])));
 
+  yield;
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
   for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL]] as const) {
     register(scene, `orb${suffix}`, pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i, k)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
@@ -518,6 +550,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('shadow_big', toCanvas(24, 8, shadowCanvas(24, 8)));
   const spark = new Uint8ClampedArray(4 * 4).fill(255);
   scene.textures.addCanvas('spark', toCanvas(2, 2, spark));
+  yield;
   // Light for great finds lying on the ground (see game/Pickup.ts).
   scene.textures.addCanvas('loot_beam', toCanvas(BEAM_W, BEAM_H, lootBeam()));
   scene.textures.addCanvas('loot_ray', toCanvas(LRAY_W, LRAY_H, lootRay()));
@@ -526,6 +559,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('loot_twinkle', toCanvas(TWINKLE, TWINKLE, lootTwinkle()));
   scene.textures.addCanvas('loot_arrow', toCanvas(ARROW, ARROW, lootArrow()));
 
+  yield;
   // Environment. The ground itself streams in as the heroes walk (see world/GroundStreamer.ts).
   register(scene, 'tree', pack(TREE_FRAMES.map((f) => ({ name: f.name, r: f.draw().render() })), TREE_W, TREE_H, 9), TREE_W, TREE_H, false);
   register(scene, 'flora', pack(PROP_FRAMES.map((f) => ({ name: f.name, r: f.draw().render() })), PROP_W, PROP_H, 10), PROP_W, PROP_H);
@@ -534,6 +568,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   rays.add('ray1', 0, RAY_W, 0, RAY_W, RAY_H);
   scene.textures.addCanvas('leafbit', toCanvas(3, 2, leafBit()));
 
+  yield;
   // Sky.
   scene.textures.addCanvas('clouds', toCanvas(256, 256, cloudShadowCanvas(256)));
   scene.textures.addCanvas('shafts', toCanvas(256, 256, sunShaftCanvas(256, 256)));
@@ -541,6 +576,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_moon', toCanvas(12, 12, skyIcon('moon')));
   scene.textures.addCanvas('icon_beam', toCanvas(16, 16, beamIcon()));
   scene.textures.addCanvas('icon_beam_void', toCanvas(16, 16, beamIcon(VOID_SPELL)));
+  yield;
   // The pyromancer's meteor: its button, three flickering frames of the falling rock, and its scorch.
   scene.textures.addCanvas('icon_meteor', toCanvas(16, 16, meteorIcon()));
   const meteors = scene.textures.addCanvas('pyro_meteor', toCanvas(PYRO_METEOR_W * 3, PYRO_METEOR_H, sideBySide(PYRO_METEOR_W, PYRO_METEOR_H, [0, 1, 2].map((f) => pyroMeteor(f)))))!;
@@ -563,6 +599,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     scene.textures.addCanvas(`icon_force${suffix}`, toCanvas(16, 16, forceIcon(force)));
   }
 
+  yield;
   // Skins: the Astral's beam, the Hellfire's meteor and scorch, and the
   // Spartan's, Seraph's, Oathbreaker's and Temple guard's buttons.
   scene.textures.addCanvas('icon_beam_astral', toCanvas(16, 16, beamIcon(ASTRAL_SPELL)));
@@ -585,11 +622,13 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_barrage', toCanvas(16, 16, barrageIcon([hex('#fffbe8'), hex('#ffd66b'), hex('#ff8a36'), hex('#d8402a')])));
   registerMoreSkinIcons((key, px) => scene.textures.addCanvas(key, toCanvas(16, 16, px)));
 
+  yield;
   // Items: hotbar icons and the bottles monsters drop.
   for (const kind of ['health', 'speed'] as const) {
     scene.textures.addCanvas(`item_${kind}`, toCanvas(ITEM_ICON_SIZE, ITEM_ICON_SIZE, potionIcon(kind)));
     scene.textures.addCanvas(`drop_${kind}`, toCanvas(DROP_W, DROP_H, potionDrop(kind)));
   }
+  yield;
   // Gear: 32x32 icons for the bag, 16x16 sprites for the ground, and the bag's chest button.
   for (const g of GEAR) {
     const art = gearArt(g.id);
@@ -603,6 +642,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.anims.create({ key: 'brazier_burn', frames: scene.anims.generateFrameNames('brazier_e', { prefix: 'f', start: 0, end: 3 }), frameRate: 9, repeat: -1 });
   register(scene, 'crystals', pack(frameList([crystalCluster(3), crystalCluster(8)], 'c'), 20, 22), 20, 22);
   register(scene, 'rock', pack(frameList([rock(1), rock(2), rock(5)], 'r'), 18, 14), 18, 14, false);
+  yield;
   // Monsters.
   // The Sunken Garden: ruins, the fountain, thornblooms, blooms and their seeds, and the buffs' icons.
   register(scene, 'ruin_h', pack(frameList([0, 1, 2].map(ruinH), 'h'), RUIN_H_W, RUIN_H_H), RUIN_H_W, RUIN_H_H, false);

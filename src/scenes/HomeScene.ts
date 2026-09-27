@@ -96,6 +96,8 @@ export class HomeScene extends Phaser.Scene {
     this.layout();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this));
+    // The loading screen fades away once the home screen has drawn under it.
+    this.time.delayedCall(80, () => window.bootLoader?.done());
     this.time.delayedCall(600, () => this.giveDaily());
   }
 
