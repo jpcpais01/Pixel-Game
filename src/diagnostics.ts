@@ -10,6 +10,14 @@
 
 declare const __BUILD__: string;
 
+/**
+ * The crash reports' on switch. Off, nothing below runs: no errors are
+ * caught, no report screen shows, no heartbeat is kept (the game just stops
+ * on an error, as any page would). Set it to true to have them back while
+ * hunting a crash.
+ */
+const CRASH_REPORTS = false;
+
 const REPORT_KEY = 'pixel-battle.crash';
 const BEAT_KEY = 'pixel-battle.heartbeat';
 const BEAT_MS = 2000;
@@ -129,6 +137,15 @@ function describe(err: unknown): string {
 
 /** Start catching crashes. Call before the game is made. */
 export function installCrashReports(): void {
+  if (!CRASH_REPORTS) {
+    // Switched off: forget any heartbeat left from when they were on, so turning them back on doesn't report a stale "crash".
+    try {
+      localStorage.removeItem(BEAT_KEY);
+    } catch {
+      // No storage: nothing to forget.
+    }
+    return;
+  }
   window.addEventListener('error', (e) => {
     // A script or image that failed to load reaches here without an error; ignore it.
     if (!e.error && !e.message) return;
@@ -182,6 +199,7 @@ export function installCrashReports(): void {
 
 /** Report a lost WebGL context: the screen goes black and nothing draws again. */
 export function watchCanvas(canvas: HTMLCanvasElement): void {
+  if (!CRASH_REPORTS) return;
   canvas.addEventListener('webglcontextlost', () => crash('WebGL context lost', 'The graphics driver dropped the game (often the GPU running out of memory).'));
 }
 

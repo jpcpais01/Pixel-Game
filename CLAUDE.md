@@ -19,7 +19,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - `main.ts` makes the Phaser game, fits the canvas, and drops the graphics level if the world runs below 30 FPS for 5 s.
 - Flow: `BootScene` (builds every texture) → `HomeScene` → `SelectScene` (hero) → `ArenaScene` (arena, and online rooms) → `WorldScene`. `ShopScene` (the Wishing Sanctum) and `InventoryScene` open over Home.
 - Overlays while playing: `UIScene` (joystick, ability buttons, hotbar, buffs, gear HUD), `PauseScene`, `ShadeScene` (brightness), `SoundScene` (mute), `FpsScene`.
-- `src/diagnostics.ts`: crash reports (copyable overlay, heartbeat for killed tabs). `src/pwa.ts` + `scripts/pwa.ts`: install, fullscreen, service worker, icons.
+- `src/diagnostics.ts`: crash reports (copyable overlay, heartbeat for killed tabs), switched off: set `CRASH_REPORTS` to true to use them again. `src/pwa.ts` + `scripts/pwa.ts`: install, fullscreen, service worker, icons.
 
 **The world** (`src/scenes/WorldScene.ts`)
 - Owns the hero, spawners, effects, pickups, lights, day/night, camera, and the combat API: `melee(area, strike)`, `strikeAt(x, y, strike)`, `firstHurtbox`, `hurtboxesWhere`, `hurtHero(harm)`, `popNumber`, `debris`, `addEffect`.
