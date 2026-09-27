@@ -5,6 +5,8 @@
 // monster drops it: the unoutlined painting halved, then outlined again, so
 // the drop always matches its icon.
 
+import { GEAR_SETS, gearById, type SetId } from '../game/gear';
+
 export const GEAR_ICON = 32;
 export const GEAR_DROP = 16;
 
@@ -2265,6 +2267,196 @@ function heartgeode(p: Paint): () => void {
   };
 }
 
+
+// ---- The Starborn set ------------------------------------------------------
+// Six legendaries the Astral Warden drops: starlight-blue steel, cloth dyed
+// with a nebula, pale celestial gold, stars caught in every piece, and the
+// set's mark (a little four-point star) in each icon's top-left corner.
+
+const STARLIGHT: Ramp = ['#2a3470', '#4a5cb0', '#7a94e8', '#b8ccff', '#f4f8ff'];
+const NEBULA: Ramp = ['#140a30', '#2a1260', '#4a1e8a', '#7a34b0', '#b060d0'];
+const VOID_BLUE: Ramp = ['#060818', '#0e1434', '#1a2458', '#2a3a80', '#4458b0'];
+const CELESTIAL: Ramp = ['#5a4418', '#9a7a2c', '#d8b44a', '#f4e08a', '#fffbe0'];
+
+/** The set's mark: a small four-point star in the top-left corner. */
+function starMark(p: Paint): void {
+  p.map(1, 1, ['..a..', '..b..', 'abcba', '..b..', '..a..'], { a: STARLIGHT[2], b: STARLIGHT[3], c: '#ffffff' });
+}
+
+/** Stars caught in a piece: a pixel or a tiny cross, only over what is painted. */
+function starDust(p: Paint, seed: number, n: number, inside: (x: number, y: number) => boolean): void {
+  const r = rng(seed);
+  for (let k = 0; k < n * 6 && n > 0; k++) {
+    const x = Math.floor(r() * 32);
+    const y = Math.floor(r() * 32);
+    if (!inside(x + 0.5, y + 0.5)) continue;
+    n--;
+    const c = r() < 0.3 ? CELESTIAL[4] : r() < 0.6 ? STARLIGHT[4] : STARLIGHT[3];
+    mark(p, x, y, c);
+    if (r() < 0.25) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) mark(p, x + dx, y + dy, STARLIGHT[2]);
+  }
+}
+
+function starDiadem(p: Paint): () => void {
+  // A circlet of celestial gold, star points rising from it, tallest in the middle.
+  const points: [number, number, number][] = [[7, 14, 1.3], [11.5, 10, 1.6], [16, 5, 2], [20.5, 10, 1.6], [25, 14, 1.3]];
+  for (const [x, top, w] of points) p.band(x, 21, x, top, (t) => w * (1 - t) + 0.3, x === 16 ? STARLIGHT : CELESTIAL, 'bevel', x < 16 ? 0.05 : -0.05);
+  p.fill(CELESTIAL, (x, y) => {
+    const c = 22 + ((x - 16) / 11) ** 2 * 2.5;
+    if (Math.abs(x - 16) > 11.5 || y < c - 2.4 || y > c + 2.4) return null;
+    return (y < c - 1 ? 0.92 : y > c + 1 ? 0.35 : 0.62) - (x - 16) / 45;
+  });
+  for (let x = 5; x <= 27; x += 3) mark(p, x, Math.round(22 + ((x - 16) / 11) ** 2 * 2.5), VOID_BLUE[3]);
+  // A star sapphire at the brow.
+  p.ball(16, 22, 2.6, 2.6, STARLIGHT, 0.1);
+  return () => {
+    p.halo(STARLIGHT[3], 2, 60);
+    for (const [x, top] of points) p.twinkle(Math.round(x), Math.round(top) - 1, x === 16 ? '#ffffff' : CELESTIAL[4], x === 16 ? 2 : 1);
+    p.twinkle(16, 21, '#ffffff', 1);
+    starMark(p);
+  };
+}
+
+function nebulaVestments(p: Paint): () => void {
+  // A robe dyed with the night: deep violet swirling into magenta, stars caught in its weave.
+  const inside = tunicShape(3);
+  p.fill(NEBULA, (x, y) => {
+    if (!inside(x, y)) return null;
+    const swirl = Math.sin(x * 0.45 + y * 0.3) * 0.18 + Math.sin(y * 0.6 - x * 0.2) * 0.12;
+    return 0.5 - (x - 16) / 34 + swirl;
+  });
+  // Celestial gold down the neck and along the hem.
+  for (let y = 5; y < 32; y++) {
+    for (let x = 0; x < 32; x++) {
+      if (!inside(x + 0.5, y + 0.5)) continue;
+      const neck = !inside(x + 0.5, y - 0.5) && Math.abs(x + 0.5 - 16) < 7;
+      if (neck || y >= 28) p.put(x, y, x < 16 ? CELESTIAL[3] : CELESTIAL[2]);
+    }
+  }
+  starDust(p, 311, 12, inside);
+  // A clasp: a star in a ring.
+  p.ring(16, 13, 2.4, 2.4, 0.4, CELESTIAL);
+  return () => {
+    p.halo(NEBULA[4], 2, 50);
+    p.twinkle(16, 13, '#ffffff', 1);
+    p.twinkle(11, 19, STARLIGHT[4], 1);
+    starMark(p);
+  };
+}
+
+function cometTreads(p: Paint): () => void {
+  // A boot of midnight blue with a starlight cuff, a comet's tail streaming from its heel.
+  for (let i = 0; i < 9; i++) {
+    const k = i / 9;
+    p.band(8 - i * 0.9, 24 - i * 0.4, 8 - (i + 1) * 0.9, 24 - (i + 1) * 0.4, 2.4 * (1 - k) + 0.4, i < 3 ? STARLIGHT : NEBULA, 'round', 0.2 - k * 0.3);
+  }
+  boot(p, 8, 8, VOID_BLUE, STARLIGHT, 0.05);
+  starDust(p, 317, 5, (x, y) => x > 8 && y > 10);
+  return () => {
+    p.halo(STARLIGHT[3], 2, 55);
+    p.twinkle(3, 21, '#ffffff', 1);
+    p.twinkle(22, 25, STARLIGHT[4], 1);
+    starMark(p);
+  };
+}
+
+function starfall(p: Paint): () => void {
+  sword(p, { guard: [10.5, 21.5], tip: [27.5, 4.5], width: 2.2, taper: 0.22, blade: STARLIGHT, hilt: CELESTIAL, grip: VOID_BLUE, guardHalf: 5, gripLen: 5, pommel: STARLIGHT, pommelR: 1.9, fuller: NEBULA[3] });
+  return () => {
+    p.halo(STARLIGHT[3], 2, 70);
+    // Stars caught along the blade, and one at its point.
+    for (const [x, y] of [[15, 16], [19, 12], [23, 8]]) p.twinkle(x, y, STARLIGHT[4], 1);
+    p.twinkle(28, 4, '#ffffff', 2);
+    starMark(p);
+  };
+}
+
+function orreryAegis(p: Paint): () => void {
+  // A round shield of the night sky, rimmed in gold, worlds turning on their rings round a sun.
+  p.ball(16.5, 17, 12.5, 12, VOID_BLUE, 0.1);
+  p.ring(16.5, 17, 12.5, 12, 0.84, CELESTIAL);
+  p.ring(16.5, 17, 9, 6, 0.9, STARLIGHT, -0.05);
+  p.ring(16.5, 17, 5.6, 3.8, 0.86, STARLIGHT, -0.1);
+  p.ball(16.5, 17, 2.4, 2.4, CELESTIAL, 0.25);
+  p.ball(8.2, 18.5, 1.4, 1.4, NEBULA, 0.2);
+  p.ball(21.5, 14.2, 1.1, 1.1, STARLIGHT, 0.2);
+  starDust(p, 331, 8, (x, y) => ((x - 16.5) / 11) ** 2 + ((y - 17) / 10.5) ** 2 < 1);
+  return () => {
+    p.halo(STARLIGHT[2], 2, 55);
+    p.twinkle(16, 17, '#ffffff', 2);
+    starMark(p);
+  };
+}
+
+function wardenEye(p: Paint): () => void {
+  // A gold chain to a setting that holds the Warden's eye: a starlit iris round a star for a pupil.
+  for (const side of [-1, 1]) {
+    let prev: [number, number] | null = null;
+    let n = 0;
+    for (let t = 0; t <= 1; t += 0.02) {
+      const x = 16 + side * ((1 - t) * (1 - t) * 11 + 2 * (1 - t) * t * 10.5 + t * t * 1.2);
+      const y = (1 - t) * (1 - t) * 2 + 2 * (1 - t) * t * 12 + t * t * 13;
+      const q: [number, number] = [Math.round(x - 0.5), Math.round(y - 0.5)];
+      if (prev && prev[0] === q[0] && prev[1] === q[1]) continue;
+      prev = q;
+      p.put(q[0], q[1], n++ % 2 ? CELESTIAL[1] : CELESTIAL[3]);
+    }
+  }
+  p.ring(16, 14, 1.8, 1.8, 0.2, CELESTIAL);
+  // The setting: gold rays behind, an almond eye within.
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    p.band(16, 22, 16 + Math.cos(a) * (i % 2 ? 7 : 9), 22 + Math.sin(a) * (i % 2 ? 7 : 9), (t) => 1.2 * (1 - t) + 0.2, CELESTIAL, 'round', 0.1);
+  }
+  p.fill(NEBULA, (x, y) => {
+    const dx = (x - 16) / 6.4;
+    const dy = (y - 22) / (3.8 * (1 - dx * dx * 0.55));
+    return dx * dx + dy * dy <= 1 ? 0.7 - (x - 16) / 30 : null;
+  });
+  p.ball(16, 22, 3, 3, STARLIGHT, 0.1);
+  p.ball(16, 22, 1.3, 1.3, VOID_BLUE, -0.2, false);
+  return () => {
+    p.halo(STARLIGHT[3], 2, 55);
+    p.twinkle(16, 22, '#ffffff', 1);
+    p.twinkle(14, 20, STARLIGHT[4], 1);
+    starMark(p);
+  };
+}
+
+// ---- Set patterns ----------------------------------------------------------
+// Behind every set piece, a thin shape in its set's colour: a circle for the
+// Wraithbound, a diamond for the Emberborn, a hexagon for the Sporeveil, an
+// octagon for the Wyrmshard and an eight-point star for the Starborn, with a
+// fainter dotted echo inside. It lies under the piece and never on its drop.
+
+/** Each set's shape, as its radius at angle `a` (13 is the icon's reach). */
+const SET_SHAPE: Record<SetId, (a: number) => number> = {
+  wraith: () => 13.5,
+  ember: (a) => 14 / (Math.abs(Math.cos(a)) + Math.abs(Math.sin(a))),
+  spore: (a) => (13.5 * Math.cos(Math.PI / 6)) / Math.cos((((a % (Math.PI / 3)) + Math.PI / 3) % (Math.PI / 3)) - Math.PI / 6),
+  geode: (a) => (13.5 * Math.cos(Math.PI / 8)) / Math.cos(((((a + Math.PI / 8) % (Math.PI / 4)) + Math.PI / 4) % (Math.PI / 4)) - Math.PI / 8),
+  astral: (a) => 7 + 7.5 * Math.pow(Math.abs(Math.cos(a * 4)), 3),
+};
+
+function setPattern(p: Paint, set: SetId, tint: number): void {
+  const c = `#${tint.toString(16).padStart(6, '0')}`;
+  const R = SET_SHAPE[set];
+  const inside = (x: number, y: number, k: number) => {
+    const dx = x - 16;
+    const dy = y - 16;
+    return Math.hypot(dx, dy) < R(Math.atan2(dy, dx)) * k;
+  };
+  for (let y = 0; y < 32; y++) {
+    for (let x = 0; x < 32; x++) {
+      const cx = x + 0.5;
+      const cy = y + 0.5;
+      const edge = (k: number) => inside(cx, cy, k) && (!inside(cx + 1, cy, k) || !inside(cx - 1, cy, k) || !inside(cx, cy + 1, k) || !inside(cx, cy - 1, k));
+      if (edge(1)) p.put(x, y, c, 150);
+      else if (edge(0.7) && (x + y) % 2 === 0) p.put(x, y, c, 70);
+    }
+  }
+}
+
 /** Every piece's painter, by gear id. Returns a finishing pass for glows and sparks, drawn after the outline. */
 const PAINTERS: Record<string, (p: Paint) => void | (() => void)> = {
   iron_sword: ironSword,
@@ -2331,6 +2523,12 @@ const PAINTERS: Record<string, (p: Paint) => void | (() => void)> = {
   amethrax_fang: fangOfAmethrax,
   geode_aegis: geodeAegis,
   heartgeode: heartgeode,
+  star_diadem: starDiadem,
+  nebula_vestments: nebulaVestments,
+  comet_treads: cometTreads,
+  starfall: starfall,
+  orrery_aegis: orreryAegis,
+  warden_eye: wardenEye,
 };
 
 export const GEAR_ART_IDS = Object.keys(PAINTERS);
@@ -2338,6 +2536,9 @@ export const GEAR_ART_IDS = Object.keys(PAINTERS);
 /** A piece's 32x32 icon and its 16x16 ground sprite. */
 export function gearArt(id: string): { icon: Uint8ClampedArray; drop: Uint8ClampedArray } {
   const p = new Paint();
+  // A set piece stands on its set's pattern.
+  const set = gearById(id)?.set;
+  if (set) setPattern(p, set, GEAR_SETS[set].tint);
   const finish = PAINTERS[id](p);
   const drop = halve(p.solid());
   drop.outline();

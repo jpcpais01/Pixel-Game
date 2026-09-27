@@ -80,6 +80,23 @@ const DOLL: Record<Slot, [number, number]> = {
 
 const rarityRank = (d: GearDef) => RARITIES.indexOf(d.rarity);
 
+/** Whether the item grid is ordered rarest first (else by slot), remembered on this device. On unless turned off. */
+const SORT_KEY = 'pixel-battle.sortRarity';
+function loadSortRarity(): boolean {
+  try {
+    return localStorage.getItem(SORT_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
+function saveSortRarity(on: boolean): void {
+  try {
+    localStorage.setItem(SORT_KEY, on ? 'on' : 'off');
+  } catch {
+    // Not remembered; it still applies for this visit.
+  }
+}
+
 /** Pack words into lines of at most `max` characters. */
 export function wrap(text: string, max: number): string[] {
   const lines: string[] = [];
@@ -233,6 +250,10 @@ export class InventoryView extends Phaser.GameObjects.Container {
   private cardRows: Phaser.GameObjects.BitmapText[][] = [];
   private button: Button;
   private filter: Filter = 'all';
+  /** The toggle at the end of the tabs: order the grid by rarity (a star) or by slot. */
+  private sortBg!: Phaser.GameObjects.Image;
+  private sortGlyph!: Phaser.GameObjects.Image;
+  private byRarity = loadSortRarity();
   private picked: string | null = null;
   /** Grid placement and scroll, in rows. */
   private grid = { x: 0, y: 0, cols: 1, rows: 1 };
@@ -269,6 +290,9 @@ export class InventoryView extends Phaser.GameObjects.Container {
       this.tabs.push({ f, bg, glyph });
       this.add([bg, glyph]);
     }
+    this.sortBg = scene.add.image(0, 0, '__DEFAULT').setOrigin(0);
+    this.sortGlyph = scene.add.image(0, 0, 'icon_star').setOrigin(0);
+    this.add([this.sortBg, this.sortGlyph]);
     this.card = scene.add.image(0, 0, '__DEFAULT').setOrigin(0);
     this.cardTile = new Tile(scene);
     this.add([this.card, this.cardTile]);
@@ -322,6 +346,8 @@ export class InventoryView extends Phaser.GameObjects.Container {
     const gx = x0 + LEFT_W + COL_GAP;
     this.itemsLabel.setPosition(gx, 0);
     this.tabs.forEach((t, i) => t.bg.setPosition(gx + i * (TAB + 2), LABEL_H));
+    // The rarity toggle at the grid's right edge (or after the tabs, if they reach that far).
+    this.sortBg.setPosition(Math.max(gx + this.tabs.length * (TAB + 2) + 2, gx + gridW - TAB), LABEL_H);
     const gy = LABEL_H + TAB + 5;
     this.grid = { x: gx, y: gy, cols, rows: Math.max(1, Math.floor((h - gy + GAP) / PITCH)) };
     this.emptyNote.setPosition(gx, gy + 4);
@@ -421,6 +447,14 @@ export class InventoryView extends Phaser.GameObjects.Container {
       this.refresh();
       return;
     }
+    const sb = this.sortBg;
+    if (x >= sb.x && y >= sb.y && x < sb.x + TAB && y < sb.y + TAB) {
+      this.byRarity = !this.byRarity;
+      saveSortRarity(this.byRarity);
+      this.scrollRow = 0;
+      this.refresh();
+      return;
+    }
     for (const t of this.tabs) {
       if (x < t.bg.x || y < t.bg.y || x >= t.bg.x + TAB || y >= t.bg.y + TAB) continue;
       if (this.filter !== t.f) {
@@ -461,7 +495,11 @@ export class InventoryView extends Phaser.GameObjects.Container {
   /** What the grid lists under the current filter: owned gear, gear not found yet, then potions. */
   private items(): { id: string; known: boolean }[] {
     const f = this.filter;
-    const sort = (a: GearDef, b: GearDef) => SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot) || rarityRank(b) - rarityRank(a) || a.name.localeCompare(b.name);
+    // Rarest first (a set's pieces together, then by slot), or by slot with the rarest first in each.
+    const bySlot = (a: GearDef, b: GearDef) => SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot);
+    const sort = this.byRarity
+      ? (a: GearDef, b: GearDef) => rarityRank(b) - rarityRank(a) || (a.set ?? '').localeCompare(b.set ?? '') || bySlot(a, b) || a.name.localeCompare(b.name)
+      : (a: GearDef, b: GearDef) => bySlot(a, b) || rarityRank(b) - rarityRank(a) || a.name.localeCompare(b.name);
     const out: { id: string; known: boolean }[] = [];
     if (f !== 'potion') {
       const gear = GEAR.filter((g) => f === 'all' || g.slot === f).sort(sort);
@@ -480,6 +518,9 @@ export class InventoryView extends Phaser.GameObjects.Container {
       t.bg.setTexture(panelTexture(this.scene, on ? 'inv_tab_on' : 'inv_tab', TAB, TAB, on ? BUTTON_GOLD[0] : PANEL_INSET));
       t.glyph.setPosition(t.bg.x + 1, t.bg.y + 1).setTint(on ? 0xfff4d6 : 0x8a80c0);
     });
+    const on = this.byRarity;
+    this.sortBg.setTexture(panelTexture(this.scene, on ? 'inv_tab_on' : 'inv_tab', TAB, TAB, on ? BUTTON_GOLD[0] : PANEL_INSET));
+    this.sortGlyph.setPosition(this.sortBg.x + 3, this.sortBg.y + 3).setTint(on ? 0xfff4d6 : 0x8a80c0);
   }
 
   private drawGrid(): void {
