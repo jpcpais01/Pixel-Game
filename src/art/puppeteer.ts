@@ -12,9 +12,12 @@
 // glowing in its shadow. A cradle of shining thread runs between her
 // fingers, and a spool of it hangs at her hip.
 //
-// Each type has a skin: the marionettist's Porcelain (black and white, a
-// porcelain mask with a blue tear, ice-blue strings) and the stringweaver's
-// Red thread (a black robe lined in crimson, red threads of fate).
+// Each type has skins: the marionettist's Porcelain (black and white, a
+// porcelain mask with a blue tear, ice-blue strings) and Toymaker (an old
+// toymaker in a green frock coat, a tricorne and an eyepatch, working a
+// nutcracker soldier); the stringweaver's Red thread (a black robe lined in
+// crimson, red threads of fate) and Arachne (a spider queen in black chitin,
+// four spider legs arching from her back, many eyes, acid-green silk).
 //
 // Also here: the marionettist's puppet, a wooden knight marionette with a
 // tin helm, a red plume, a painted smile and a tin sword (or a cracked
@@ -59,6 +62,10 @@ export interface PuppeteerLook {
   plume: Material;
   /** A painted tear under the mask's eye, if any. */
   tear?: Material;
+  /** A tricorne hat instead of the top hat, an eyepatch instead of the half-mask, and a white moustache and queue. */
+  toymaker?: boolean;
+  /** Four spider legs arching from her back, extra eyes, and an hourglass on her back instead of the web. */
+  spider?: { leg: Material; mark: Material };
   /** The strings' light, brightest first. */
   light: [RGB, RGB, RGB, RGB];
 }
@@ -130,7 +137,42 @@ export const CRIMSON_LOOK: PuppeteerLook = {
   light: [hex('#fff0f0'), hex('#ff9aa0'), hex('#ff3a4a'), hex('#8a0f1f')],
 };
 
-export const PUPPETEER_LOOKS = [CARNIVAL_LOOK, PORCELAIN_LOOK, SILK_LOOK, CRIMSON_LOOK];
+export const TOYMAKER_LOOK: PuppeteerLook = {
+  key: 'puppeteer_toymaker',
+  weaver: false,
+  coat: { ramp: ramp('#0a1a10', '#143020', '#1e4a30', '#2c6a44', '#428e5c'), outline: hex('#06100a'), outlineLit: hex('#0a1a10') },
+  trim: GOLD,
+  under: { ramp: ramp('#3a0a10', '#6a1420', '#a02230', '#d04048'), outline: hex('#1a0408') },
+  stripe: { ramp: ramp('#4a0a14', '#7a1422'), outline: hex('#1a0408'), noOutline: true },
+  pants: { ramp: ramp('#140e0a', '#241a14', '#3a2a20', '#523c2e'), outline: hex('#0a0604') },
+  hair: { ramp: ramp('#6a6878', '#a8a6b6', '#dcdae6', '#fbfaff'), outline: hex('#2a2834') },
+  mask: { ramp: ramp('#050408', '#100c14', '#1e1824'), outline: hex('#050408') },
+  hat: { ramp: ramp('#0a0806', '#16120e', '#241e18', '#342c24', '#4a3e32'), outline: hex('#050403'), shine: true },
+  plume: { ramp: ramp('#4a0a12', '#7a1420', '#b8243a', '#e84a5a'), outline: hex('#24040a') },
+  light: [hex('#fffaf0'), hex('#ffd890'), hex('#ff5a4a'), hex('#9a1a28')],
+  toymaker: true,
+};
+
+export const ARACHNE_LOOK: PuppeteerLook = {
+  key: 'weaver_arachne',
+  weaver: true,
+  coat: { ramp: ramp('#08070a', '#141118', '#221c26', '#322a38', '#463c4e'), outline: hex('#030204'), outlineLit: hex('#0c0a10') },
+  trim: { ramp: ramp('#1a2a06', '#3e6a10', '#6aa81e', '#a8e040', '#e0ff8a'), outline: hex('#0a1402'), shine: true },
+  under: { ramp: ramp('#0a1a0a', '#14301a', '#1e4a28', '#2c6a38'), outline: hex('#040a04') },
+  stripe: { ramp: ramp('#4a7a10', '#a8e040', '#e0ff9a'), outline: hex('#0a1402') },
+  pants: { ramp: ramp('#08070a', '#141118', '#221c26', '#322a38'), outline: hex('#030204') },
+  hair: { ramp: ramp('#5a5448', '#8e8672', '#c0b89c', '#ece4c8'), outline: hex('#1e1a14') },
+  mask: PALE,
+  hat: SPOOL,
+  plume: { ramp: ramp('#4a7a10', '#a8e040', '#e0ff9a'), outline: hex('#1a2a06'), noOutline: true },
+  light: [hex('#fbffe8'), hex('#e0ff9a'), hex('#a8e040'), hex('#4a7a10')],
+  spider: {
+    leg: { ramp: ramp('#060508', '#141018', '#2a2230', '#44384e', '#5e5070'), outline: hex('#020203'), shine: true },
+    mark: { ramp: ramp('#6a0a10', '#c81e28', '#ff4a4a'), outline: hex('#2a0206'), emissive: 0.4 },
+  },
+};
+
+export const PUPPETEER_LOOKS = [CARNIVAL_LOOK, PORCELAIN_LOOK, SILK_LOOK, CRIMSON_LOOK, TOYMAKER_LOOK, ARACHNE_LOOK];
 
 /** The look being drawn; set by buildPuppeteerFrames. */
 let S: PuppeteerLook = CARNIVAL_LOOK;
@@ -358,6 +400,11 @@ function showmanHead(c: PixelCanvas, cx: number, U: number, p: Pose, back: boole
   if (!back) {
     c.part();
     c.ellipse(cx - 0.1, 12.9 + U, 2.6, 2.5, SKIN);
+    if (S.toymaker) {
+      toymakerFace(c, cx, U, p);
+      topHat(c, cx, U, p.tick, 'front');
+      return;
+    }
     // The half-mask: a white band over the eyes, peaked at the brow.
     c.part();
     c.shape(Math.round(11 + U), Math.round(12 + U), () => [cx - 3.1, cx + 3.1], S.mask, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.4, 1));
@@ -376,12 +423,83 @@ function showmanHead(c: PixelCanvas, cx: number, U: number, p: Pose, back: boole
     c.shade(cx - 1, 14 + U, -1);
     c.shade(cx, 14 + U, -1);
     c.shade(cx + 1, 14 + U, -2);
+  } else if (S.toymaker) {
+    // The queue: white hair tied back with a red ribbon.
+    c.part();
+    c.capsule(cx, 13 + U, cx + 0.3, 17 + U, 1.1, 0.6, S.hair);
+    c.part();
+    c.px(cx - 1, 14 + U, S.plume, sphere(-0.4, 0));
+    c.px(cx, 14 + U, S.plume, sphere(0.4, 0));
   }
   topHat(c, cx, U, p.tick, 'front');
 }
 
+/** The toymaker's face from the front: an eyepatch on its strap, one bright eye, bushy white brows and moustache. */
+function toymakerFace(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  eyes(c, [[cx + 1, 12 + U]], p.blink);
+  c.part();
+  c.px(cx - 3, 12 + U, S.mask, sphere(-0.4, 0));
+  c.px(cx - 2, 12 + U, S.mask, sphere(0.2, 0));
+  c.px(cx - 2, 13 + U, S.mask, sphere(0, 0.5), { bias: -1 });
+  for (let x = cx - 1; x <= cx + 2; x++) c.px(x, 11 + U - (x > cx ? 0 : 0), S.mask, sphere(0, -0.3), { bias: -1 });
+  c.part();
+  c.px(cx + 1, 11 + U, S.hair, sphere(0, -0.6));
+  c.px(cx + 2, 11 + U, S.hair, sphere(0.4, -0.6));
+  // A white moustache, curled at the ends.
+  c.part();
+  for (let x = cx - 2; x <= cx + 1; x++) c.px(x, 14 + U, S.hair, sphere((x - cx + 0.5) * 0.4, 0.2));
+  c.px(cx - 3, 13 + U, S.hair, sphere(-0.6, -0.3));
+  c.px(cx + 2, 13 + U, S.hair, sphere(0.6, -0.3));
+}
+
+/**
+ * A black tricorne: a low crown and a brim turned up on three sides, gold
+ * lace along its edge, one corner pointing forward and a red cockade.
+ */
+function tricorne(c: PixelCanvas, cx: number, U: number, view: 'front' | 'side'): void {
+  c.part();
+  c.shape(Math.round(5 + U), Math.round(8 + U), () => [cx - 2.6, cx + 2.6], S.hat, (_x, _y, t) => cyl(t, 0.1));
+  c.part();
+  if (view === 'front') {
+    const rows: [number, number][][] = [
+      [[-4.9, -3.1], [3.1, 4.9]],
+      [[-5.1, 5.1]],
+      [[-4.5, 4.5]],
+      [[-2.3, 2.3]],
+    ];
+    rows.forEach((segs, i) => {
+      const y = Math.round(7 + U) + i;
+      for (const [l, r] of segs) c.shape(y, y, () => [cx + l, cx + r], S.hat, (_x, _y, t) => sphere(t * 0.9, -0.4 + i * 0.3, 1));
+    });
+    c.part();
+    for (const [x, y] of [[-5, 1], [-4, 0], [4, 0], [4, 1], [-4, 2], [3, 2], [-2, 3], [-1, 3], [0, 3], [1, 3]]) c.px(cx + x, Math.round(7 + U) + y, S.trim, sphere(x * 0.1, 0.3));
+    c.part();
+    c.px(cx - 3, Math.round(8 + U), S.plume, sphere(-0.3, -0.3));
+    c.px(cx - 2, Math.round(8 + U), S.plume, sphere(0.2, -0.3));
+    return;
+  }
+  // In profile: the front corner jutting forward, the back one up behind.
+  const rows: [number, number][][] = [
+    [[-4.9, -3.3], [3.1, 4.7]],
+    [[-5.0, 4.8]],
+    [[-4.2, 2.6]],
+  ];
+  rows.forEach((segs, i) => {
+    const y = Math.round(7 + U) + i;
+    for (const [l, r] of segs) c.shape(y, y, () => [cx + l, cx + r], S.hat, (_x, _y, t) => sphere(t * 0.9 - 0.2, -0.4 + i * 0.3, 1));
+  });
+  c.part();
+  for (const [x, y] of [[-5, 1], [-5, 0], [4, 0], [4, 1], [-4, 2], [-3, 2], [2, 2]]) c.px(cx + x, Math.round(7 + U) + y, S.trim, sphere(x * 0.1, 0.3));
+  c.part();
+  c.px(cx + 1, Math.round(7 + U), S.plume, sphere(0.3, -0.3));
+}
+
 /** A tall top hat: a wide brim, the crown, a band and a feather tucked into it. */
 function topHat(c: PixelCanvas, cx: number, U: number, t: number, view: 'front' | 'side'): void {
+  if (S.toymaker) {
+    tricorne(c, cx, U, view);
+    return;
+  }
   const side = view === 'side';
   c.part();
   c.ellipse(cx + (side ? 0.3 : 0), 9.6 + U, side ? 4.4 : 4.7, 1.3, S.hat, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.4 - 0.7, 1) });
@@ -424,10 +542,34 @@ function hoodDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.shape(Math.round(11 + U), Math.round(11 + U), () => [cx - 2.6, cx + 2.6], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.4, 1));
   c.capsule(cx - 2.6, 12 + U, cx - 3.0, 17.6 + U, 0.9, 0.7, S.hair);
   c.capsule(cx + 2.6, 12 + U, cx + 3.0, 17.6 + U, 0.9, 0.7, S.hair);
-  eyes(c, [[cx - 1, 13 + U], [cx + 1, 13 + U]], p.blink, true);
+  eyes(c, S.spider ? [[cx - 1, 13 + U], [cx + 1, 13 + U], [cx - 2, 12 + U], [cx + 2, 12 + U]] : [[cx - 1, 13 + U], [cx + 1, 13 + U]], p.blink, true);
   // The hood's rim, stitched in silver.
   c.part();
   for (const [x, y] of [[cx - 3, 10], [cx - 1, 9], [cx + 1, 9], [cx + 2, 10]]) c.px(x, y + U, S.trim, sphere(0, -0.5));
+}
+
+/**
+ * Arachne's spider legs: two jointed pairs arching up from her back and down
+ * to sharp points, twitching with `tick`. `side` draws one side's pair (-1
+ * left, 1 right); `far` draws them a touch behind and darker.
+ */
+function spiderLegs(c: PixelCanvas, x0: number, y0: number, side: number, tick: number, bias = 0): void {
+  if (!S.spider) return;
+  const L = S.spider.leg;
+  const tw = [0, -0.5, 0, 0.5][tick % 4];
+  const pairs: [number, number, number, number][] = [
+    [5.2, -9.6 + tw, 8.6, -3.4],
+    [8.0, -3.4 - tw, 10.2, 4.8],
+  ];
+  c.part();
+  for (const [kx, ky, tx, ty] of pairs) {
+    const ex = x0 + side * kx;
+    const ey = y0 + ky;
+    c.capsule(x0 + side * 1.2, y0, ex, ey, 0.9, 0.75, L, { bias });
+    c.capsule(ex, ey, x0 + side * tx, y0 + ty, 0.75, 0.35, L, { bias });
+  }
+  c.part();
+  for (const [kx, ky] of pairs) c.px(x0 + side * kx, y0 + ky, S.trim, sphere(side * 0.4, -0.5), { bias });
 }
 
 // ---------------------------------------------------------------------------
@@ -459,6 +601,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   }
   if (fa.behind) armA();
   if (fb.behind) armB();
+  spiderLegs(c, cx - 1, 17 + U, -1, p.tick, -1);
+  spiderLegs(c, cx + 1, 17 + U, 1, p.tick, -1);
 
   legs(c, 'down', L, p);
 
@@ -565,14 +709,16 @@ function drawUp(c: PixelCanvas, p: Pose): void {
       return [cx - hw + s, cx + hw + s];
     }, S.coat, (_x, _y, t, u) => sphere(t * 0.9, u * 0.6 - 0.3, 1));
     for (let x = cx - 5; x <= cx + 6; x++) if (c.filled(x, hem)) c.px(x, hem, S.trim, sphere(0, 0.4));
-    // A web stitched in silver across her back.
+    // A web stitched in silver across her back (Arachne: a red hourglass).
     c.part();
     const wy = 19.5 + U;
-    for (let k = 0; k < 6; k++) {
+    if (S.spider) {
+      for (const [y, x0, x1] of [[0, 10, 13], [1, 11, 12], [2, 11, 12], [3, 10, 13]]) for (let x = x0; x <= x1; x++) c.px(x, Math.round(18 + U) + y, S.spider.mark, sphere(0, 0));
+    } else for (let k = 0; k < 6; k++) {
       const a = (k / 6) * Math.PI * 2 + 0.26;
       for (let r = 1; r <= 3.4; r += 0.7) c.px(Math.round(cx + Math.cos(a) * r), Math.round(wy + Math.sin(a) * r * 0.8), S.under, sphere(0, 0));
     }
-    for (const r of [1.8, 3.2]) {
+    if (!S.spider) for (const r of [1.8, 3.2]) {
       for (let k = 0; k < 12; k++) {
         const a = (k / 12) * Math.PI * 2;
         if (k % 2 === 0) c.px(Math.round(cx + Math.cos(a) * r), Math.round(wy + Math.sin(a) * r * 0.8), S.trim, sphere(0, 0), { bias: -1 });
@@ -590,6 +736,8 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     c.part();
     c.capsule(cx - 3.6, 13 + U, cx - 3.8, 17 + U, 0.7, 0.5, S.hair);
     c.capsule(cx + 3.6, 13 + U, cx + 3.8, 17 + U, 0.7, 0.5, S.hair);
+    spiderLegs(c, cx - 1, 17 + U, -1, p.tick);
+    spiderLegs(c, cx + 1, 17 + U, 1, p.tick);
   } else {
     c.part();
     c.shape(top, Math.round(27.5 + L), (y) => {
@@ -634,6 +782,8 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   // The far arm first.
   const armB = (bias: number) => arm(c, hx + 1.2, 16.4 + U, fb, REACH_SIDE, [0.3, 1], bias);
   if (fb.behind) armB(-1);
+  spiderLegs(c, hx + 1.2, 16.5 + U, 1, p.tick + 1, -2);
+  spiderLegs(c, hx + 2.2, 17 + U, 1, p.tick, -1);
   if (w) cradle(c, fa, fb, p.cradle * 0.8, p.tick);
 
   if (!w) {
@@ -681,7 +831,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     c.ellipse(hx - 2.2, 13.4 + U, 1.4, 2.0, PALE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 - 0.2, dy * 0.6 + 0.2, 1), bias: -1 });
     c.part();
     c.capsule(hx - 1.2, 12 + U, hx - 1.6, 17.4 + U, 0.9, 0.7, S.hair);
-    eyes(c, [[hx - 3, 13 + U]], p.blink, true);
+    eyes(c, S.spider ? [[hx - 3, 13 + U], [hx - 2, 12 + U]] : [[hx - 3, 13 + U]], p.blink, true);
     c.part();
     c.px(hx - 4, 10 + U, S.trim, sphere(-0.5, -0.4));
     c.px(hx - 3, 9 + U, S.trim, sphere(-0.3, -0.5));
@@ -705,15 +855,31 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     c.ellipse(hx - 1.2, 12.9 + U, 2.2, 2.4, SKIN);
     c.part();
     c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+    if (S.toymaker) {
+      // The patch on its strap, the queue and ribbon behind, the moustache.
+      c.part();
+      c.capsule(hx + 1.8, 12.6 + U, hx + 3.6, 16.4 + U, 1.0, 0.6, S.hair);
+      c.part();
+      c.px(hx + 2, 13 + U, S.plume, sphere(0.4, 0));
+      c.part();
+      c.px(hx - 3, 12 + U, S.mask, sphere(-0.3, 0));
+      c.px(hx - 3, 13 + U, S.mask, sphere(-0.3, 0.4), { bias: -1 });
+      for (let x = hx - 2; x <= hx + 0; x++) c.px(x, 11 + U, S.mask, sphere(0, -0.3), { bias: -1 });
+      c.part();
+      c.px(hx - 4, 14 + U, S.hair, sphere(-0.5, 0.2));
+      c.px(hx - 3, 14 + U, S.hair, sphere(0, 0.2));
+      c.px(hx - 5, 13 + U, S.hair, sphere(-0.7, -0.3));
+    } else {
     c.part();
     c.shape(Math.round(11 + U), Math.round(12 + U), () => [hx - 3.8, hx], S.mask, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, u * 0.8 - 0.4, 1));
     c.px(hx - 4, 11 + U, S.mask, sphere(-0.7, -0.3));
     eyes(c, [[hx - 3, 12 + U]], p.blink);
+    }
     if (S.tear) {
       c.part();
       c.px(hx - 3, 13 + U, S.tear, sphere(0, 0.2));
     }
-    c.shade(hx - 3, 14 + U, -1);
+    if (!S.toymaker) c.shade(hx - 3, 14 + U, -1);
     topHat(c, hx, U, p.tick, 'side');
   }
 
@@ -1011,6 +1177,8 @@ export interface PuppetLook {
   cracks: boolean;
   /** The blade's edge glows faintly in this colour. */
   edge: RGB;
+  /** The nutcracker: a tall shako with a plume instead of the helm, a white beard, and its own legs' colour. */
+  shako?: { beard: Material; legs: Material };
 }
 
 const BIRCH: Material = { ramp: ramp('#5a3a22', '#8a5e38', '#b8864e', '#dcae6e', '#f0cc90'), outline: hex('#24140a'), shine: true };
@@ -1053,7 +1221,28 @@ export const PORCELAIN_DOLL_LOOK: PuppetLook = {
   edge: hex('#b8ecff'),
 };
 
-export const PUPPET_LOOKS = [GALLANT_LOOK, PORCELAIN_DOLL_LOOK];
+/** The Toymaker's nutcracker: a soldier in a red coat and white breeches, a black shako, a white beard and a gilt sabre. */
+export const NUTCRACKER_LOOK: PuppetLook = {
+  key: 'puppet_nutcracker',
+  head: { ramp: ramp('#6a3a2a', '#a8684a', '#dc9a78', '#f6c8a4'), outline: hex('#2a140a'), shine: true },
+  wood: { ramp: ramp('#3a0a10', '#6a1420', '#a02230', '#d04048', '#ee6a6a'), outline: hex('#1a0408'), shine: true },
+  joint: GOLD,
+  helm: { ramp: ramp('#050408', '#100c14', '#1e1824', '#2e2638', '#443a52'), outline: hex('#020203'), shine: true },
+  plume: { ramp: ramp('#8a8698', '#c8c4d0', '#ece8f0', '#ffffff'), outline: hex('#2a2634') },
+  tabard: { ramp: ramp('#3a0a10', '#6a1420', '#a02230', '#d04048', '#ee6a6a'), outline: hex('#1a0408') },
+  trim: GOLD,
+  blade: { ramp: ramp('#5b3418', '#9a6424', '#d6a044', '#f6d88a', '#fff6d0'), outline: hex('#1e1008'), shine: true },
+  cheek: ROUGE,
+  eye: PAINT,
+  cracks: false,
+  edge: hex('#ffd890'),
+  shako: {
+    beard: { ramp: ramp('#8a8698', '#c8c4d0', '#ece8f0', '#ffffff'), outline: hex('#2a2634') },
+    legs: { ramp: ramp('#8a8698', '#c8c4d0', '#e8e4ec', '#fbfaff'), outline: hex('#2a2634') },
+  },
+};
+
+export const PUPPET_LOOKS = [GALLANT_LOOK, PORCELAIN_DOLL_LOOK, NUTCRACKER_LOOK];
 
 let P: PuppetLook = GALLANT_LOOK;
 
@@ -1078,7 +1267,7 @@ interface PuppetPose {
   loll?: number;
 }
 
-/** Where its strings tie on, per frame, from its feet: the head's top and the two hands. */
+/** Where its strings tie on, per `<look key>:<frame>`, from its feet: the head's top and the two hands. */
 export const PUPPET_TIES = new Map<string, [number, number][]>();
 
 function puppet(p: PuppetPose, name: string): PixelCanvas {
@@ -1111,9 +1300,12 @@ function puppet(p: PuppetPose, name: string): PixelCanvas {
     const ky = hipY + 4.2 - tuck * 1.6;
     const fx = hx + swing * 3.2 - tuck * swing;
     const fy = 36.4 + L - tuck * 3;
-    limb(hx, hipY + 0.5, kx, ky, 1.1, 1.0, bias);
+    const legMat = P.shako?.legs ?? P.wood;
+    c.part();
+    c.capsule(hx, hipY + 0.5, kx, ky, 1.1, 1.0, legMat, { bias });
     jointBall(kx, ky, 0.9, bias);
-    limb(kx, ky, fx, fy - 0.8, 1.0, 0.9, bias);
+    c.part();
+    c.capsule(kx, ky, fx, fy - 0.8, 1.0, 0.9, legMat, { bias });
     c.part();
     // A little painted boot.
     c.ellipse(fx + (view === 'side' ? 0.7 : 0), fy, view === 'side' ? 1.7 : 1.3, 1.05, BOOT, { bias });
@@ -1259,6 +1451,23 @@ function puppet(p: PuppetPose, name: string): PixelCanvas {
     c.px(headX + 2.4, headY + 1.8, P.cheek);
     for (let x = -1; x <= 1; x++) c.px(headX + x, headY + 2.6 + (x === 0 ? 0.6 : 0), P.eye);
   }
+  if (P.shako) {
+    // The nutcracker's great white beard and the dark line of its jaw.
+    c.part();
+    if (view === 'side') {
+      c.shape(Math.round(headY + 2), Math.round(headY + 4), (y) => [headX - 1 + (y - headY - 2) * 0.6, headX + 3.8 - (y - headY - 2) * 0.5], P.shako.beard, (_x, _y, t, u) => sphere(t * 0.8, u - 0.2, 1));
+      c.part();
+      c.px(headX + 2, headY + 2, P.eye);
+      c.px(headX + 3, headY + 2, P.eye);
+    } else if (view === 'front') {
+      c.shape(Math.round(headY + 2), Math.round(headY + 4), (y) => {
+        const hw = 3.6 - (y - headY - 2) * 0.8;
+        return [headX - hw, headX + hw];
+      }, P.shako.beard, (_x, _y, t, u) => sphere(t * 0.9, u - 0.2, 1));
+      c.part();
+      for (let x = -1; x <= 1; x++) c.px(headX + x, headY + 2, P.eye);
+    }
+  }
   if (P.cracks) {
     // Fine cracks in the glaze.
     c.shade(headX - 1, headY - 2, -2);
@@ -1266,6 +1475,29 @@ function puppet(p: PuppetPose, name: string): PixelCanvas {
     c.shade(headX - 2, headY, -1);
     c.shade(cx + 2, chestY + 3, -2);
   }
+  if (P.shako) {
+    // A tall black shako with a gold plate and chinstrap trim, a white pompom on top.
+    c.part();
+    c.shape(Math.round(headY - 6.6), Math.round(headY - 1.6), (y) => {
+      const u = (y - (headY - 6.6)) / 5;
+      const hw = 3.1 - u * 0.5;
+      return [headX - hw, headX + hw];
+    }, P.helm, (_x, _y, t) => cyl(t, 0.1));
+    c.part();
+    c.shape(Math.round(headY - 1.4), Math.round(headY - 1.4), () => [headX - 3.4 + (view === 'side' ? 0 : 0), headX + (view === 'side' ? 4.4 : 3.4)], P.helm, (_x, _y, t) => cyl(t, 0.3), { bias: 1 });
+    c.part();
+    for (let x = Math.round(headX - 3); x <= Math.round(headX + 2); x++) if (c.filled(x, Math.round(headY - 6.6))) c.px(x, Math.round(headY - 6.6), P.trim, sphere(0, -0.5));
+    if (view !== 'back') {
+      const gx = headX + (view === 'side' ? 1.4 : -0.5);
+      c.px(gx, headY - 4, P.trim, sphere(0, -0.3));
+      c.px(gx + 1, headY - 4, P.trim, sphere(0.3, -0.3));
+      c.px(gx, headY - 3, P.trim, sphere(0, 0.2));
+      c.px(gx + 1, headY - 3, P.trim, sphere(0.3, 0.2));
+    }
+    c.part();
+    c.ellipse(headX - 0.3, headY - 7.6, 1.4, 1.2, P.plume, { normal: (_x, _y, dx, dy) => sphere(dx, dy - 0.2, 1) });
+    ties.push([headX, headY - 8.6]);
+  } else {
   // The tin helm: a round cap with a brim, a red plume standing up and back.
   c.part();
   c.shape(Math.round(headY - 4.2), Math.round(headY - 1.6), (y) => {
@@ -1286,6 +1518,7 @@ function puppet(p: PuppetPose, name: string): PixelCanvas {
     if (k > 0.3 && k < 0.85) c.px(px + back, py + 1, P.plume, sphere(0, 0.5), { bias: -1 });
   }
   ties.push([headX, headY - 4.5]);
+  }
 
   // Near limbs last.
   if (view === 'side') {
@@ -1298,8 +1531,8 @@ function puppet(p: PuppetPose, name: string): PixelCanvas {
     drawShieldArm(0);
   }
   ties.push([swx, swy], [shx, shy]);
-  PUPPET_TIES.set(`${name}_r`, ties.map(([x, y]) => [x - PUPPET_FRAME.ox, y - PUPPET_FRAME.oy]));
-  PUPPET_TIES.set(`${name}_l`, ties.map(([x, y]) => [PUPPET_FRAME.ox - x - 1, y - PUPPET_FRAME.oy]));
+  PUPPET_TIES.set(`${P.key}:${name}_r`, ties.map(([x, y]) => [x - PUPPET_FRAME.ox, y - PUPPET_FRAME.oy]));
+  PUPPET_TIES.set(`${P.key}:${name}_l`, ties.map(([x, y]) => [PUPPET_FRAME.ox - x - 1, y - PUPPET_FRAME.oy]));
   return c;
 }
 
@@ -1354,20 +1587,20 @@ export const PUPPET_STRIKE_FRAME = 2;
 // Ability icons (16x16)
 
 /** The puppet strike: a little tin sword on a string, from a cross above. */
-export function puppetStrikeIcon(dark: boolean): Uint8ClampedArray {
+export function puppetStrikeIcon(dark: boolean, toy = false): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
   const wood = dark ? ['#dcdcec', '#8a8a9a'] : ['#b87030', '#5a2c10'];
-  const str = dark ? '#b8ecff' : '#ffe08a';
+  const str = toy ? '#ff7a5a' : dark ? '#b8ecff' : '#ffe08a';
   for (let x = 3; x <= 12; x++) put(x, 2, wood[0]);
   for (let y = 0; y <= 4; y++) put(8, y, wood[1]);
   for (let y = 3; y <= 8; y++) put(4, y, str);
   for (let y = 3; y <= 6; y++) put(12, y, str);
   // The blade, slanting down from the hilt.
   for (let i = 0; i < 8; i++) {
-    put(5 + i, 15 - i, dark ? '#d8f0ff' : '#eef2fa');
-    put(6 + i, 15 - i, dark ? '#4a7ab8' : '#7e8498');
+    put(5 + i, 15 - i, toy ? '#fff6d0' : dark ? '#d8f0ff' : '#eef2fa');
+    put(6 + i, 15 - i, toy ? '#d6a044' : dark ? '#4a7ab8' : '#7e8498');
   }
-  for (const [x, y] of [[3, 11], [4, 12], [6, 14], [7, 15]]) put(x, y, dark ? '#c4cadf' : '#f4cf6a');
+  for (const [x, y] of [[3, 11], [4, 12], [6, 14], [7, 15]]) put(x, y, toy ? '#d04048' : dark ? '#c4cadf' : '#f4cf6a');
   put(4, 9, '#f8f2da');
   put(12, 7, '#f8f2da');
   outline('#140a06');
@@ -1375,10 +1608,10 @@ export function puppetStrikeIcon(dark: boolean): Uint8ClampedArray {
 }
 
 /** The pirouette: a spinning puppet's blade sweeping a circle. */
-export function pirouetteIcon(dark: boolean): Uint8ClampedArray {
+export function pirouetteIcon(dark: boolean, toy = false): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
-  const hot = dark ? '#b8ecff' : '#ffe08a';
-  const mid = dark ? '#5ec8ff' : '#ffb040';
+  const hot = toy ? '#ffd890' : dark ? '#b8ecff' : '#ffe08a';
+  const mid = toy ? '#ff5a4a' : dark ? '#5ec8ff' : '#ffb040';
   for (let a = 0; a < 40; a++) {
     const t = (a / 40) * Math.PI * 2;
     const r = 6.2;
@@ -1390,8 +1623,9 @@ export function pirouetteIcon(dark: boolean): Uint8ClampedArray {
   put(7, 9, dark ? '#4a86c8' : '#a02230');
   put(9, 9, dark ? '#4a86c8' : '#a02230');
   put(8, 12, '#33242a');
-  put(8, 3, dark ? '#c4cadf' : '#b8bece');
-  put(8, 2, dark ? '#3a8ad8' : '#d04048');
+  put(8, 3, toy ? '#1e1824' : dark ? '#c4cadf' : '#b8bece');
+  put(8, 2, toy ? '#ffffff' : dark ? '#3a8ad8' : '#d04048');
+  if (toy) for (const [x, y] of [[7, 3], [9, 3], [7, 4], [8, 4], [9, 4]]) put(x, y, '#1e1824');
   outline('#140a06');
   return px;
 }
