@@ -74,6 +74,8 @@ export class Wizard implements Hero {
   readonly vitals: Vitals;
   /** 0..1, fades the whole figure (see Hero). */
   alpha = 1;
+  /** 0..1: hides the figure while a spell stands in for it (the Shapeshifter's pounce, as a spirit wolf). */
+  veil = 0;
   private state: State = 'free';
   private released = false;
   private castDir = new Phaser.Math.Vector2(0, 1);
@@ -286,16 +288,17 @@ export class Wizard implements Hero {
   private sync(): void {
     const rx = snap(this.x);
     const ry = snap(this.y);
-    this.body.setPosition(rx, ry).setDepth(ry).setAlpha(this.alpha);
-    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(this.body.frame.name).setAlpha(this.alpha);
-    this.shadow.setPosition(rx, ry - 1).setAlpha(this.alpha);
-    this.castShadow.setPosition(rx, ry - 1).setFrame(this.body.frame.name).setAlpha(SUN_SHADOW_ALPHA * this.daylight * this.alpha);
+    const alpha = this.alpha * (1 - this.veil);
+    this.body.setPosition(rx, ry).setDepth(ry).setAlpha(alpha);
+    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(this.body.frame.name).setAlpha(alpha);
+    this.shadow.setPosition(rx, ry - 1).setAlpha(alpha);
+    this.castShadow.setPosition(rx, ry - 1).setFrame(this.body.frame.name).setAlpha(SUN_SHADOW_ALPHA * this.daylight * alpha);
     const t = this.tip();
     const flicker = 0.92 + Math.random() * 0.08;
     this.staffLight.setPosition(t.x, t.y);
-    this.staffLight.intensity = (0.55 + t.glow * 0.9) * flicker * (this.busy ? 1.35 : 1) * (1 - this.daylight * 0.45);
+    this.staffLight.intensity = (0.55 + t.glow * 0.9) * flicker * (this.busy ? 1.35 : 1) * (1 - this.daylight * 0.45) * (1 - this.veil);
     this.staffLight.radius = this.busy ? 80 : 58;
-    this.halo.setPosition(t.x, t.y).setDepth(ry + 0.2).setAlpha((0.35 + t.glow * 0.4) * (1 - this.daylight * 0.5) * this.alpha).setScale(this.busy ? 0.75 : 0.5);
+    this.halo.setPosition(t.x, t.y).setDepth(ry + 0.2).setAlpha((0.35 + t.glow * 0.4) * (1 - this.daylight * 0.5) * alpha).setScale(this.busy ? 0.75 : 0.5);
   }
 }
 

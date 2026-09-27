@@ -292,3 +292,71 @@ export const hundredCutsIcon: IconPainter = (put, p) => {
   seg(put, 6, 0, 9, 15, p.deep);
   disc(put, 8, 7.5, 1.3, p.core);
 };
+
+export const wrathIcon: IconPainter = (put, p) => {
+  ellipse(put, 8, 13.5, 7, 2, 0.24, p.deep);
+  // Three roots bursting up and curling out, thorns along them.
+  const root = (x0: number, lean: number, h: number) => {
+    for (let i = 0; i <= h; i++) {
+      const f = i / h;
+      const x = x0 + lean * f * f * 4 + Math.sin(f * 5) * 0.6;
+      const w = f < 0.5 ? 1 : 0;
+      for (let dx = -w; dx <= w; dx++) put(Math.round(x + dx), 14 - i, f > 0.85 ? p.core : dx < 0 || w === 0 ? p.hot : p.mid);
+      if (i % 3 === 1 && i < h - 1) put(Math.round(x + (i % 2 ? 2 : -2)), 13 - i, p.deep);
+    }
+  };
+  root(4, -0.8, 8);
+  root(12, 0.8, 9);
+  root(8, 0.4, 13);
+};
+
+export const stampedeIcon: IconPainter = (put, p) => {
+  // A spirit stag charging, streaks of speed behind it.
+  seg(put, 0, 6, 4, 6, p.deep);
+  seg(put, 0, 9, 5, 9, p.mid);
+  seg(put, 0, 12, 4, 12, p.deep);
+  disc(put, 7.5, 12, 2.4, p.mid);
+  seg(put, 7, 11, 10, 9, p.mid);
+  disc(put, 11, 9, 2.2, p.hot);
+  seg(put, 12, 10, 15, 11, p.hot);
+  seg(put, 12, 11, 14, 12, p.mid);
+  put(12, 8, p.core);
+  seg(put, 10, 7, 8, 2, p.core);
+  seg(put, 9, 4, 6, 3, p.hot);
+  seg(put, 11, 7, 13, 2, p.core);
+  seg(put, 12, 4, 15, 3, p.hot);
+};
+
+export const odinIcon: IconPainter = (put, p) => {
+  ellipse(put, 8, 13.5, 6.5, 2, 0.25, p.mid);
+  for (let y = 0; y <= 6; y++) {
+    put(7, y, p.hot);
+    put(8, y, p.mid);
+  }
+  // Wings spread from the socket.
+  seg(put, 6, 7, 2, 4, p.hot);
+  seg(put, 6, 8, 3, 6, p.mid);
+  seg(put, 9, 7, 13, 4, p.hot);
+  seg(put, 9, 8, 12, 6, p.mid);
+  // The head, point down into the ground.
+  for (let y = 7; y <= 14; y++) {
+    const hw = y < 11 ? 0.6 + (y - 7) * 0.45 : (14 - y) * 0.6;
+    for (let x = 0; x < 16; x++) {
+      const dx = x + 0.5 - 8;
+      if (Math.abs(dx) <= hw + 0.1) put(x, y, Math.abs(dx) < 0.6 ? p.core : p.hot);
+    }
+  }
+};
+
+export const asgardIcon: IconPainter = (put, p) => {
+  ellipse(put, 8, 12.5, 7, 2.6, 0.2, p.mid);
+  const zig = (pts: [number, number][], c: number) => {
+    for (let i = 0; i < pts.length - 1; i++) seg(put, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], c);
+  };
+  zig([[5, 0], [3, 4], [6, 5], [4, 11]], p.core);
+  zig([[6, 0], [4, 4], [7, 5], [5, 10]], p.hot);
+  zig([[12, 1], [10, 5], [13, 6], [11, 11]], p.hot);
+  zig([[13, 1], [11, 5], [14, 6], [12, 10]], p.deep);
+  put(4, 11, p.core);
+  put(11, 11, p.core);
+};

@@ -933,22 +933,34 @@ export class SelectScene extends Phaser.Scene {
     this.tweens.add({ targets: this.cameras.main, alpha: 0, duration: 200, onComplete: () => this.scene.stop() });
   }
 
+  /**
+   * How the roster fits a view `vw` x `vh`: in one row if it can, else in two
+   * (or three); between Back and Next when there's room, else on its own
+   * above them. Null when the view is too small for it all.
+   */
+  private rosterPlan(vw: number, vh: number): { inline: boolean; cols: number; rows: number } | null {
+    const n = CLASSES.length;
+    const top = this.headerY(vh) + this.header.height + 5;
+    if (vw < STAGE_W + MAIN_GAP + INFO_W + MARGIN * 2) return null;
+    for (let rows = 1; rows <= 3; rows++) {
+      const cols = Math.ceil(n / rows);
+      const w = cols * TILE_W + (cols - 1) * TILE_GAP;
+      const h = rows * TILE_H + (rows - 1) * TILE_GAP;
+      for (const inline of [true, false]) {
+        const wide = inline ? MARGIN * 2 + BACK_W + NEXT_W + w + 16 : w + MARGIN * 2;
+        const bottom = inline ? h : h + 6 + BUTTON_H;
+        if (vw >= wide && top + INFO_H + 6 + bottom + 6 <= vh) return { inline, cols, rows };
+      }
+    }
+    return null;
+  }
+
   private layout(): void {
     const { width, height } = this.scale;
     const n = CLASSES.length;
-    const rosterW = n * TILE_W + (n - 1) * TILE_GAP;
-    // The roster sits between Back and Next when there's room, else on its own row above them.
-    const inlineW = MARGIN * 2 + BACK_W + NEXT_W + rosterW + 16;
-    const mainW = STAGE_W + MAIN_GAP + INFO_W + MARGIN * 2;
-    const fits = (vw: number, vh: number) => {
-      const top = this.headerY(vh) + this.header.height + 5;
-      const inline = vw >= inlineW;
-      const bottom = inline ? TILE_H : TILE_H + 6 + BUTTON_H;
-      return vw >= mainW && vw >= rosterW + MARGIN * 2 && top + INFO_H + 6 + bottom + 6 <= vh;
-    };
     // Zoom out a whole step at a time (keeping the pixels crisp) until it all fits.
     let z = menuZoom(width, height);
-    while (z > 1 && !fits(width / z, height / z)) z--;
+    while (z > 1 && !this.rosterPlan(width / z, height / z)) z--;
     this.cameras.main.setZoom(z);
     const vw = width / z;
     const vh = height / z;
@@ -956,12 +968,21 @@ export class SelectScene extends Phaser.Scene {
     const headerY = this.headerY(vh);
     this.header.setPosition(Math.round((vw - this.header.width) / 2), headerY);
 
-    const inline = vw >= inlineW;
+    const fit = Math.max(1, Math.floor((vw - MARGIN * 2 + TILE_GAP) / (TILE_W + TILE_GAP)));
+    const plan = this.rosterPlan(vw, vh) ?? { inline: false, cols: Math.min(n, fit), rows: Math.ceil(n / Math.min(n, fit)) };
+    const { inline, cols, rows } = plan;
+    const rosterH = rows * TILE_H + (rows - 1) * TILE_GAP;
     const buttonsY = Math.round(vh - 6 - BUTTON_H);
-    const rosterY = inline ? Math.round(vh - 6 - TILE_H) : buttonsY - 6 - TILE_H;
-    const rosterX = Math.round((vw - rosterW) / 2);
-    this.roster.forEach((t, i) => t.setPosition(rosterX + i * (TILE_W + TILE_GAP), rosterY));
-    const buttonY = inline ? Math.round(rosterY + (TILE_H - BUTTON_H) / 2) : buttonsY;
+    const rosterY = inline ? Math.round(vh - 6 - rosterH) : buttonsY - 6 - rosterH;
+    // Row by row, each centred (the last may be shorter).
+    this.roster.forEach((t, i) => {
+      const row = Math.floor(i / cols);
+      const inRow = Math.min(cols, n - row * cols);
+      const rowW = inRow * TILE_W + (inRow - 1) * TILE_GAP;
+      const x = Math.round((vw - rowW) / 2) + (i % cols) * (TILE_W + TILE_GAP);
+      t.setPosition(x, rosterY + row * (TILE_H + TILE_GAP));
+    });
+    const buttonY = inline ? Math.round(rosterY + (rosterH - BUTTON_H) / 2) : buttonsY;
     this.back.place(MARGIN, buttonY + 1);
     this.next.place(vw - MARGIN - NEXT_W, buttonY);
 

@@ -113,3 +113,39 @@ export const HELL_STYLE: SpellStyle = {
   orb: { texture: 'orb_hell_e', anim: 'orb_hell_spin' },
   burst: { texture: 'burst_hell_e', anim: 'burst_hell_pop' },
 };
+
+/** The Druid's Grovekeeper: sunlit green deepening to forest, flecked with gold. */
+export const GROVE_STYLE: SpellStyle = {
+  core: 0xf6ffe0,
+  hot: 0xd8ff8a,
+  mid: 0x7ee05a,
+  deep: 0x2e8a4a,
+  accent: 0xffd66b,
+  sparks: [0xd8ff8a, 0x7ee05a, 0x2e8a4a, 0xffd66b],
+  glow: 0x5ed84a,
+  light: 0x9aff6a,
+  flash: 0xe0ffb0,
+  unstable: 0xffd66b,
+  fizzle: 0x8a9a6a,
+  fizzleSparks: [0x8a9a6a, 0x7ee05a, 0x2e8a4a],
+  orb: { texture: 'orb_grove_e', anim: 'orb_grove_spin' },
+  burst: { texture: 'burst_grove_e', anim: 'burst_grove_pop' },
+};
+
+/** The Druid's Shapeshifter: amber spirit light burning down to russet. */
+export const WILD_STYLE: SpellStyle = {
+  core: 0xfff6e0,
+  hot: 0xffd27a,
+  mid: 0xf09a3a,
+  deep: 0x8a3a1e,
+  accent: 0xfff0c0,
+  sparks: [0xffd27a, 0xf09a3a, 0x8a3a1e, 0xfff0c0],
+  glow: 0xf08a30,
+  light: 0xffb050,
+  flash: 0xffe0a0,
+  unstable: 0xff6a2a,
+  fizzle: 0x8a7060,
+  fizzleSparks: [0x8a7060, 0xf09a3a, 0x8a3a1e],
+  orb: { texture: 'orb_wild_e', anim: 'orb_wild_spin' },
+  burst: { texture: 'burst_wild_e', anim: 'burst_wild_pop' },
+};

@@ -19,6 +19,10 @@ import { HundredCuts, quakeGate, SkyQuake } from './samurai';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT } from '../Samurai';
 import { schemePal } from '../Blades';
 import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
+import { PrimalStampede, WildWrath } from './druid';
+import { AsgardThunder, OdinSpear } from './valkyrie';
+import { GROVE_PAL, WILD_PAL } from '../Druid';
+import { SPEAR_KIT, STORM_KIT } from '../Valkyrie';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 
@@ -248,6 +252,44 @@ const ULTS: Record<string, UltDef> = {
     pal: schemePal(RONIN_KIT.wind),
     icon: icons.hundredCutsIcon,
     cast: (c) => c.world.addEffect(new HundredCuts(c.world, c)),
+  },
+  'druid:grove': {
+    name: 'Wrath of the Wild',
+    cost: 70,
+    windup: 600,
+    aim: 'spot',
+    range: 110,
+    pal: GROVE_PAL,
+    icon: icons.wrathIcon,
+    cast: (c) => c.world.addEffect(new WildWrath(c.world, c.tx, c.ty, c.pal)),
+  },
+  'druid:wild': {
+    name: 'Primal Stampede',
+    cost: 65,
+    windup: 500,
+    aim: 'dir',
+    pal: WILD_PAL,
+    icon: icons.stampedeIcon,
+    cast: (c) => c.world.addEffect(new PrimalStampede(c.world, c)),
+  },
+  'valkyrie:spear': {
+    name: 'Spear of Odin',
+    cost: 65,
+    windup: 550,
+    aim: 'spot',
+    range: 105,
+    pal: SPEAR_KIT.pal,
+    icon: icons.odinIcon,
+    cast: (c) => c.world.addEffect(new OdinSpear(c.world, c.tx, c.ty, c.pal)),
+  },
+  'valkyrie:storm': {
+    name: 'Thunder of Asgard',
+    cost: 75,
+    windup: 600,
+    aim: 'self',
+    pal: STORM_KIT.pal,
+    icon: icons.asgardIcon,
+    cast: (c) => c.world.addEffect(new AsgardThunder(c.world, c)),
   },
 };
 

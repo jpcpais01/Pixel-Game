@@ -67,6 +67,7 @@ import {
   STAR_MID,
   STAR_ROBE,
 } from './heroSkins';
+import { ANTLER, AMBER, AUBURN, BARK, FANG, HIDE, LEAF, LIVEWOOD, MOSS, MUZZLE, PELT, SEED, TUNIC, WOAD, WOLF_EYE, WOLF_NOSE, GROVE_CORE, GROVE_DEEP, GROVE_HOT, GROVE_MID, WILD_CORE, WILD_DEEP, WILD_HOT, WILD_MID } from './druid';
 
 // ---------------------------------------------------------------------------
 // Looks (skins). Every look shares the rig, poses and staff geometry, so the
@@ -101,8 +102,14 @@ export interface WizardLook {
    * 'fiend': a horned, crimson-skinned warlock with a goatee and green eyes,
    * bone spikes on a shoulder mantle, a ragged hem smouldering with fel fire,
    * and a black staff crowned with horns round the flame.
+   * 'grove': the Druid's Grovekeeper, a hood of moss with antlers growing
+   * through it, a mantle and hem of leaves, fireflies about the robe, and a
+   * living staff whose twigs cradle a glowing seed.
+   * 'wild': the Druid's Shapeshifter, a wolf's pelt worn as a hood (its head
+   * over her brow, its eyes still burning), a fur mantle, woad on the cheeks,
+   * a ragged hide robe and a staff hung with fangs round a lump of amber.
    */
-  head?: 'astral' | 'fiend';
+  head?: 'astral' | 'fiend' | 'grove' | 'wild';
   /** Hair of the bare heads. */
   hair?: Material;
 }
@@ -186,7 +193,42 @@ export const HELL_LOOK: WizardLook = {
   hair: HELL_HAIR,
 };
 
-export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK];
+/** The Druid's Grovekeeper: moss, leaves and antlers, and the light of a sunlit glade. */
+export const GROVE_LOOK: WizardLook = {
+  key: 'druid',
+  robe: MOSS,
+  inner: BARK,
+  trim: LEAF,
+  belt: LEATHER,
+  boot: BOOT,
+  skin: SKIN,
+  shaft: LIVEWOOD,
+  crystal: SEED,
+  magic: { core: GROVE_CORE, hot: GROVE_HOT, mid: GROVE_MID, deep: GROVE_DEEP },
+  hooded: false,
+  head: 'grove',
+  hair: ANTLER,
+};
+
+/** The Druid's Shapeshifter: a wolf's pelt, hide and fangs, and amber spirit light. */
+export const WILD_LOOK: WizardLook = {
+  key: 'druid_wild',
+  robe: HIDE,
+  inner: TUNIC,
+  trim: FANG,
+  belt: LEATHER,
+  boot: BOOT,
+  skin: SKIN,
+  shaft: WOOD,
+  crystal: AMBER,
+  magic: { core: WILD_CORE, hot: WILD_HOT, mid: WILD_MID, deep: WILD_DEEP },
+  hooded: false,
+  head: 'wild',
+  hair: PELT,
+  beard: AUBURN,
+};
+
+export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let S: WizardLook = ARCANE_LOOK;
@@ -315,6 +357,42 @@ function drawStaff(c: PixelCanvas, s: Staff, glow: number): { x: number; y: numb
     const sk = at(0, -0.4);
     c.ellipse(sk.x, sk.y, 1.35, 1.2, HORN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.2, 1) });
     c.px(Math.floor(sk.x - 0.6), Math.floor(sk.y), FEL_EYE, { x: 0, y: 0, z: 1 });
+  } else if (S.head === 'grove') {
+    // Twigs curl up round the seed from the staff's head, a leaf budding on each.
+    const px = -g.dy;
+    const py = g.dx;
+    const at = (side: number, up: number) => ({ x: g.top.x + px * side + g.dx * up, y: g.top.y + py * side + g.dy * up });
+    for (const k of [-1, 1]) {
+      c.part();
+      const a0 = at(k * 0.6, 0);
+      const a1 = at(k * 2.3, 1.7);
+      const a2 = at(k * 1.8, 3.8);
+      const a3 = at(k * 0.5, 4.6);
+      c.capsule(a0.x, a0.y, a1.x, a1.y, 0.6, 0.5, S.shaft, { bias: 1 });
+      c.capsule(a1.x, a1.y, a2.x, a2.y, 0.5, 0.38, S.shaft);
+      c.capsule(a2.x, a2.y, a3.x, a3.y, 0.38, 0.25, S.shaft, { bias: 1 });
+      c.part();
+      const leaf = at(k * 3.3, 1.2);
+      c.px(leaf.x, leaf.y, S.trim, { x: k * 0.5 - 0.2, y: 0.4, z: 0.8 }, { bias: 1 });
+    }
+  } else if (S.head === 'wild') {
+    // Two fangs curve up either side of the amber; a feather hangs from a thong below it.
+    const px = -g.dy;
+    const py = g.dx;
+    const at = (side: number, up: number) => ({ x: g.top.x + px * side + g.dx * up, y: g.top.y + py * side + g.dy * up });
+    for (const k of [-1, 1]) {
+      c.part();
+      const a0 = at(k * 0.8, 0.2);
+      const a1 = at(k * 2.3, 1.8);
+      const a2 = at(k * 1.7, 3.9);
+      c.capsule(a0.x, a0.y, a1.x, a1.y, 0.62, 0.5, S.trim, { bias: 1 });
+      c.capsule(a1.x, a1.y, a2.x, a2.y, 0.5, 0.25, S.trim);
+    }
+    c.part();
+    const f0 = at(1.3, -0.8);
+    const f1 = at(1.9, -3.6);
+    c.line(f0.x, f0.y, f1.x, f1.y, S.inner, () => ({ x: 0.3, y: 0.2, z: 0.93 }));
+    c.px(f1.x, f1.y, S.trim, { x: 0.2, y: -0.2, z: 0.95 });
   } else if (s.float > 0) {
     // Fork cradling the crystal.
     const px = -g.dy;
@@ -425,7 +503,18 @@ function robeBody(c: PixelCanvas, cx: number, top: number, hem: number, sway: nu
 /** Gold trim along the hem, or for the hooded look a ragged, notched hem. */
 function hemTrim(c: PixelCanvas, edges: (y: number) => [number, number], hem: number, sway: number): void {
   const [l, r] = edges(hem);
-  if (!S.hooded && S.head !== 'fiend') {
+  if (S.head === 'grove') {
+    // A hem of leaves: a band, and leaf tips hanging below it that stir with the sway.
+    c.part();
+    c.shape(hem, hem, () => [l, r], S.trim, (_x, _y, t) => cyl(t, -0.1));
+    for (let x = Math.round(l) + 1; x <= Math.round(r) - 2; x++) {
+      const k = (((x - Math.round(sway)) % 3) + 3) % 3;
+      if (k === 0) c.px(x, hem + 1, S.trim, cyl(0, -0.3));
+      else if (k === 2) c.shade(x, hem, -1);
+    }
+    return;
+  }
+  if (!S.hooded && S.head !== 'fiend' && S.head !== 'wild') {
     c.part();
     c.shape(hem, hem, () => [l, r], S.trim, (_x, _y, t) => cyl(t, -0.1));
     return;
@@ -1044,9 +1133,331 @@ function felRunes(c: PixelCanvas, x: (y: number) => number, y0: number, y1: numb
   }
 }
 
+// ---------------------------------------------------------------------------
+// Heads: the Grovekeeper's hood of moss, antlers and mantle of leaves
+
+/** A mantle over the shoulders, its lower edge a row of leaf points. */
+function leafMantle(c: PixelCanvas, l: number, r: number, U: number, flare: number, sway: number): void {
+  const top = 15 + U;
+  const bottom = 18 + U;
+  const edges = (y: number): [number, number] => {
+    const u = (y - top) / (bottom - top);
+    return [l - flare * u, r + flare * u];
+  };
+  c.part();
+  c.shape(top, bottom, edges, S.robe, (_x, _y, t, u) => cyl(t, 0.55 - u * 0.4));
+  // Leaves along the edge: a lit tip hanging below, a lighter leaf on the edge beside it.
+  c.part();
+  const [bl, br] = edges(bottom);
+  for (let x = Math.round(bl); x < Math.round(br); x++) {
+    const k = (((x - Math.round(sway)) % 3) + 3) % 3;
+    const t = (x + 0.5 - (bl + br) / 2) / ((br - bl) / 2);
+    if (k === 0) c.px(x, bottom + 1, S.trim, cyl(t, -0.3));
+    else if (k === 1) c.px(x, bottom, S.trim, cyl(t, 0.2), { bias: 1 });
+  }
+  c.shade(Math.round(l), top, 1);
+  c.shade(Math.round(r) - 1, top, 1);
+}
+
+/**
+ * An antler rooted at (x, y): a beam curving up and out, an inner tine and an
+ * outer one. `k` is the way it spreads (-1 left); `s` narrows it (seen from the side).
+ */
+function antler(c: PixelCanvas, x: number, y: number, k: number, s = 1, bias = 0): void {
+  const bone = S.hair ?? ANTLER;
+  const at = (dx: number, dy: number) => ({ x: x + k * dx * s, y: y + dy });
+  const a = at(0, 0);
+  const b = at(1.8, -3.2);
+  const tip = at(2.6, -6.2);
+  c.part();
+  c.capsule(a.x, a.y, b.x, b.y, 0.8, 0.65, bone, { bias });
+  c.capsule(b.x, b.y, tip.x, tip.y, 0.65, 0.4, bone, { bias });
+  const m = at(1.4, -2.6);
+  const inner = at(0.1, -5.3);
+  c.capsule(m.x, m.y, inner.x, inner.y, 0.55, 0.35, bone, { bias });
+  const o0 = at(2.2, -4.4);
+  const o1 = at(4.4, -5.6);
+  c.capsule(o0.x, o0.y, o1.x, o1.y, 0.5, 0.35, bone, { bias: bias + 1 });
+}
+
+/** A blossom glowing at an antler's tip, breathing with the staff. */
+function blossom(c: PixelCanvas, x: number, y: number, p: Pose): void {
+  const k = 0.45 + p.glow * 0.4;
+  c.spark(x, y, S.magic.core, k);
+  c.spark(x + 1, y, S.magic.hot, k * 0.5);
+  c.spark(x - 1, y, S.magic.hot, k * 0.5);
+  c.spark(x, y - 1, S.magic.mid, k * 0.4);
+}
+
+/** The Grovekeeper's hood: round and close, falling to the shoulders. */
+function mossHood(c: PixelCanvas, cx: number, U: number, lean: number): void {
+  const top = 5 + U;
+  const bottom = 16 + U;
+  c.part();
+  c.shape(top, bottom, (y) => {
+    const u = (y + 0.5 - top) / (bottom + 1 - top);
+    const hw = cowlHW(u, 5.2) - (u > 0.9 ? 0.4 : 0);
+    const x = cx + lean * Math.pow(1 - u, 2.2);
+    return [x - hw, x + hw];
+  }, S.robe, (_x, _y, t, u) => cyl(t, 0.5 - u * 0.4));
+  // Tufts of moss catching the light, and a hollow or two.
+  c.shade(cx - 3, 8 + U, 1);
+  c.shade(cx + 2, 7 + U, 1);
+  c.shade(cx - 1, 6 + U, -1);
+  c.shade(cx + 3, 11 + U, -1);
+}
+
+function groveHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  leafMantle(c, cx - 5.0, cx + 5.0, U, 1.2, p.hem);
+  antler(c, cx - 2.6, 8 + U, -1);
+  antler(c, cx + 2.6, 8 + U, 1);
+  mossHood(c, cx, U, 0);
+  // The opening lined with bark, the face within.
+  c.part();
+  c.ellipse(cx, 12.8 + U, 3.5, 3.4, S.inner, { normal: (_x, _y, dx, dy) => ({ x: -dx * 0.55, y: dy * 0.45, z: 0.75 }) });
+  c.part();
+  c.ellipse(cx, 13.4 + U, 2.8, 2.6, S.skin);
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
+  c.shade(12, 15 + U, -1);
+  c.part();
+  if (p.blink) {
+    c.px(10, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(13, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+  } else {
+    c.px(10, 13 + U, EYE);
+    c.px(13, 13 + U, EYE);
+  }
+  // A band of young leaves across the brow.
+  c.part();
+  for (let x = cx - 3; x <= cx + 2; x++) c.px(x, 10 + U, S.trim, cyl((x + 0.5 - cx) / 3.5, 0.4), { bias: x & 1 ? 1 : 0 });
+  blossom(c, cx + 7, 2 + U, p);
+}
+
+function groveHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  leafMantle(c, cx - 5.0, cx + 5.0, U, 1.2, -p.hem);
+  antler(c, cx - 2.6, 8 + U, -1);
+  antler(c, cx + 2.6, 8 + U, 1);
+  mossHood(c, cx, U, 0);
+  // A seam down the back of the hood, and leaves trailing from its point.
+  for (let y = 8 + U; y <= 15 + U; y++) c.shade(cx, y, -1);
+  c.part();
+  c.px(cx - 1, 16 + U, S.trim, cyl(-0.4, 0.2), { bias: 1 });
+  c.px(cx, 17 + U, S.trim, cyl(0.2, 0));
+  c.px(cx + 1, 16 + U, S.trim, cyl(0.5, 0.2));
+  blossom(c, cx - 7, 2 + U, p);
+}
+
+/** Facing left, like drawSide. */
+function groveHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  leafMantle(c, cx - 3.8, cx + 3.6, U, 1.0, p.hem);
+  // The far antler, peeking up behind the near one.
+  antler(c, cx + 1.6, 8 + U, 1, 0.8, -1);
+  const top = 5 + U;
+  const bottom = 16 + U;
+  c.part();
+  c.shape(top, bottom, (y) => {
+    const u = (y + 0.5 - top) / (bottom + 1 - top);
+    const s = Math.sin(Math.min(1, u / 0.62) * (Math.PI / 2));
+    const x = 1.2 * Math.pow(1 - u, 2.2);
+    return [cx + x - 0.4 - 4.2 * s, cx + x + 0.4 + 3.8 * s];
+  }, S.robe, (_x, _y, t, u) => cyl(t * 0.9 + 0.1, 0.5 - u * 0.4));
+  c.shade(cx + 1, 8 + U, 1);
+  c.shade(cx + 2, 12 + U, -1);
+  antler(c, cx - 0.6, 8 + U, 1, 0.9);
+  // Bark round the opening, the face in profile within.
+  c.part();
+  c.ellipse(cx - 3.0, 12.8 + U, 2.0, 3.2, S.inner, { normal: (_x, _y, dx, dy) => ({ x: -dx * 0.5, y: dy * 0.45, z: 0.75 }) });
+  c.part();
+  c.ellipse(cx - 3.4, 13.4 + U, 1.6, 2.4, S.skin);
+  c.px(cx - 5, 13 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.part();
+  if (p.blink) c.px(cx - 4, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+  else c.px(cx - 4, 13 + U, EYE);
+  c.part();
+  for (let x = cx - 4; x <= cx - 1; x++) c.px(x, 10 + U, S.trim, cyl((x + 0.5 - cx + 2.5) / 2.5, 0.4), { bias: x & 1 ? 1 : 0 });
+  blossom(c, cx + 3, 2 + U, p);
+}
+
+/** Leaves caught on the robe near the hem, and fireflies drifting round the Grovekeeper. */
+function groveFlecks(c: PixelCanvas, U: number, p: Pose): void {
+  for (let y = 22; y < FRAME_H; y++) {
+    for (let x = 0; x < FRAME_W; x++) {
+      if (c.materialAt(x, y) !== S.robe) continue;
+      const h = hash(x, y - U, 23);
+      if (h > 0.9 + (28 - y) * 0.012) c.px(x, y, S.trim, cyl(0, 0.2), { bias: h > 0.97 ? 1 : 0 });
+    }
+  }
+  const ph = p.glow * 7 + p.staff.float * 3 + p.breath * 1.3 + p.hem;
+  const spots: [number, number][] = [[3.5, 19], [20, 15], [6, 27], [19, 25]];
+  spots.forEach(([x, y], i) => {
+    const fx = x + Math.sin(ph + i * 2.1) * 1.5;
+    const fy = y + Math.cos(ph * 1.3 + i) * 1.5;
+    const on = 0.5 + 0.5 * Math.sin(ph * 2 + i * 1.7);
+    c.spark(fx, fy, S.magic.hot, 0.35 + on * 0.45);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Heads: the Shapeshifter's wolf pelt, fur mantle and woad
+
+/** A mantle of grey fur, its lower edge ragged with tufts. */
+function furMantle(c: PixelCanvas, l: number, r: number, U: number, flare: number, sway: number): void {
+  const pelt = S.hair ?? HAIR;
+  const top = 14 + U;
+  const bottom = 18 + U;
+  const edges = (y: number): [number, number] => {
+    const u = (y - top) / (bottom - top);
+    return [l - flare * u, r + flare * u];
+  };
+  c.part();
+  c.shape(top, bottom, edges, pelt, (_x, _y, t, u) => cyl(t, 0.55 - u * 0.4));
+  const [bl, br] = edges(bottom);
+  for (let x = Math.round(bl); x < Math.round(br); x++) {
+    const k = (((x - Math.round(sway)) % 3) + 3) % 3;
+    if (k === 0) c.px(x, bottom + 1, pelt, cyl(0, -0.3), { bias: -1 });
+    if (k === 2) {
+      c.shade(x, bottom, -1);
+      c.shade(x, bottom - 1, -1);
+    }
+  }
+  c.shade(Math.round(l), top, 1);
+  c.shade(Math.round(r) - 1, top, 1);
+}
+
+/** The pelt's ears, standing up either side of its skull. */
+function wolfEar(c: PixelCanvas, x: number, U: number): void {
+  const pelt = S.hair ?? HAIR;
+  c.part();
+  c.shape(5 + U, 8 + U, (y) => {
+    const u = (y - 5 - U) / 3;
+    const hw = 0.45 + 1.15 * u;
+    return [x - hw, x + hw];
+  }, pelt, (_x, _y, t, u) => cyl(t * 0.8, 0.5 - u * 0.3));
+  c.part();
+  c.px(x - 0.5, 7 + U, S.inner, { x: 0, y: -0.2, z: 0.98 });
+}
+
+function wolfEyes(c: PixelCanvas, pts: [number, number][], p: Pose): void {
+  c.part();
+  for (const [x, y] of pts) {
+    c.px(x, y, WOLF_EYE, { x: 0, y: 0, z: 1 });
+    c.spark(x, y, S.magic.hot, 0.35 + p.glow * 0.3);
+  }
+}
+
+function wildHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const pelt = S.hair ?? HAIR;
+  const hair = S.beard ?? HAIR;
+  furMantle(c, cx - 5.2, cx + 5.2, U, 1.3, p.hem);
+  // Her hair, falling either side of the face.
+  c.part();
+  c.shape(11 + U, 17 + U, (y) => {
+    const u = (y - 11 - U) / 6;
+    const hw = 4.2 - Math.max(0, u - 0.6) * 1.5;
+    return [cx - hw, cx + hw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.3, 0.9));
+  c.shade(8, 16 + U, -1);
+  c.shade(15, 16 + U, -1);
+  // The face, woad striped under the eyes.
+  c.part();
+  c.ellipse(cx, 13.7 + U, 2.9, 2.5, S.skin);
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
+  c.shade(12, 15 + U, -1);
+  c.px(9, 14 + U, WOAD, FLAT_DOWN);
+  c.px(14, 14 + U, WOAD, FLAT_DOWN);
+  c.part();
+  if (p.blink) {
+    c.px(10, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(13, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+  } else {
+    c.px(10, 13 + U, EYE);
+    c.px(13, 13 + U, EYE);
+  }
+  // The wolf's head over her brow: its skull, ears, and the muzzle resting on her forehead.
+  wolfEar(c, cx - 3.3, U);
+  wolfEar(c, cx + 3.3, U);
+  c.part();
+  c.ellipse(cx, 9.3 + U, 4.6, 2.9, pelt, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.4, 1) });
+  c.shade(cx - 1, 7 + U, 1);
+  c.shade(cx, 8 + U, -1);
+  c.part();
+  c.ellipse(cx, 11.2 + U, 2.2, 1.3, MUZZLE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.7 - 0.2, 1) });
+  c.part();
+  c.px(11, 12 + U, WOLF_NOSE, FLAT_DOWN);
+  c.px(12, 12 + U, WOLF_NOSE, FLAT_DOWN);
+  wolfEyes(c, [[9, 9 + U], [14, 9 + U]], p);
+}
+
+function wildHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const pelt = S.hair ?? HAIR;
+  const hair = S.beard ?? HAIR;
+  furMantle(c, cx - 5.2, cx + 5.2, U, 1.3, -p.hem);
+  c.part();
+  c.shape(12 + U, 18 + U, (y) => {
+    const u = (y - 12 - U) / 6;
+    return [cx - 4.0 + u * 0.8, cx + 4.0 - u * 0.8];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.85, u * 0.7, 0.9));
+  wolfEar(c, cx - 3.3, U);
+  wolfEar(c, cx + 3.3, U);
+  c.part();
+  c.ellipse(cx, 10.2 + U, 4.6, 3.3, pelt, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  // The hide runs down her back to the tail, a darker stripe along its spine.
+  const top = 12 + U;
+  const tail = 23 + U;
+  c.part();
+  c.shape(top, tail, (y) => {
+    const u = (y - top) / (tail - top);
+    const hw = 3.6 - u * 2.6;
+    const x = cx - p.hem * u * 0.6;
+    return [x - hw, x + hw];
+  }, pelt, (_x, _y, t, u) => cyl(t, 0.3 - u * 0.4));
+  for (let y = 9 + U; y < tail; y++) c.shade(Math.round(cx - p.hem * Math.max(0, (y - top) / (tail - top)) * 0.6), y, -1);
+  c.part();
+  c.px(cx - Math.round(p.hem * 0.6), tail + 1, MUZZLE, cyl(0, -0.2));
+}
+
+/** Facing left, like drawSide. */
+function wildHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const pelt = S.hair ?? HAIR;
+  const hair = S.beard ?? HAIR;
+  furMantle(c, cx - 3.9, cx + 3.8, U, 1.1, p.hem);
+  // The hide trailing down her back.
+  c.part();
+  c.shape(11 + U, 21 + U, (y) => {
+    const u = (y - 11 - U) / 10;
+    return [cx + 0.6 + u * 0.8 + p.hem * u * 0.5, cx + 4.2 - u * 1.4 + p.hem * u * 0.7];
+  }, pelt, (_x, _y, t, u) => cyl(t * 0.8 + 0.1, 0.3 - u * 0.4));
+  c.part();
+  c.ellipse(cx + 0.9, 13.6 + U, 2.8, 2.8, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 0.9) });
+  // The face in profile, woad on the cheek.
+  c.part();
+  c.ellipse(cx - 1.3, 13.9 + U, 2.8, 2.4, S.skin);
+  c.part();
+  c.px(cx - 5, 14 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(cx - 2, 14 + U, WOAD, FLAT_DOWN);
+  c.part();
+  if (p.blink) c.px(cx - 3, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+  else c.px(cx - 3, 13 + U, EYE);
+  // The wolf's head in profile, its muzzle jutting out over her brow.
+  wolfEar(c, cx + 1.6, U);
+  c.part();
+  c.ellipse(cx + 0.2, 9.6 + U, 4.0, 2.7, pelt, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 - 0.1, dy * 0.8 - 0.3, 1) });
+  c.part();
+  c.capsule(cx - 3, 10.6 + U, cx - 6.0, 11.2 + U, 1.35, 0.95, MUZZLE);
+  c.part();
+  c.px(cx - 7, 11 + U, WOLF_NOSE, FLAT_DOWN);
+  wolfEyes(c, [[cx - 2, 9 + U]], p);
+}
+
 function headDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   if (S.head === 'astral') astralHeadDown(c, cx, U, p);
   else if (S.head === 'fiend') fiendHeadDown(c, cx, U, p);
+  else if (S.head === 'grove') groveHeadDown(c, cx, U, p);
+  else if (S.head === 'wild') wildHeadDown(c, cx, U, p);
   else if (S.hooded) hoodDown(c, cx, U, p);
   else beardedHeadDown(c, cx, U, p);
 }
@@ -1054,6 +1465,8 @@ function headDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
 function headUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   if (S.head === 'astral') astralHeadUp(c, cx, U, p);
   else if (S.head === 'fiend') fiendHeadUp(c, cx, U, p);
+  else if (S.head === 'grove') groveHeadUp(c, cx, U, p);
+  else if (S.head === 'wild') wildHeadUp(c, cx, U, p);
   else if (S.hooded) hoodUp(c, cx, U, p);
   else beardedHeadUp(c, cx, U, p);
 }
@@ -1061,6 +1474,8 @@ function headUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
 function headSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   if (S.head === 'astral') astralHeadSide(c, cx, U, p);
   else if (S.head === 'fiend') fiendHeadSide(c, cx, U, p);
+  else if (S.head === 'grove') groveHeadSide(c, cx, U, p);
+  else if (S.head === 'wild') wildHeadSide(c, cx, U, p);
   else if (S.hooded) hoodSide(c, cx, U, p);
   else beardedHeadSide(c, cx, U, p);
 }
@@ -1113,6 +1528,7 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   hand(c, p.staff.hx, p.staff.hy);
 
   if (S.head === 'astral') starfield(c, U);
+  if (S.head === 'grove') groveFlecks(c, U, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -1150,6 +1566,7 @@ function drawUp(c: PixelCanvas, p: Pose): FrameMeta {
   hand(c, p.staff.hx, p.staff.hy);
 
   if (S.head === 'astral') starfield(c, U);
+  if (S.head === 'grove') groveFlecks(c, U, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -1202,6 +1619,7 @@ function drawSide(c: PixelCanvas, p: Pose): FrameMeta {
   hand(c, p.staff.hx, p.staff.hy);
 
   if (S.head === 'astral') starfield(c, U);
+  if (S.head === 'grove') groveFlecks(c, U, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
