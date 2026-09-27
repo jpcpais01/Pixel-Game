@@ -13,7 +13,9 @@ import { skinFace } from './skinCard';
 import { pixelText } from './widgets';
 
 const CARD_W = 60;
+/** Cards are this tall when there's room; shorter (and compact) so at least MIN_ROWS rows always show. */
 const CARD_H = 92;
+const MIN_ROWS = 2;
 const GAP = 6;
 const HEAD_H = 14;
 /** A drag this far (art px) moves the grid by a row. */
@@ -46,6 +48,8 @@ export class SkinGallery extends Phaser.GameObjects.Container {
   private sparks: Phaser.GameObjects.Particles.ParticleEmitter;
   private press: { x: number; y: number; row: number; moved: boolean } | null = null;
   private owned = '';
+  /** The cards' height now, and whether they're compact (see skinFace). */
+  private cardH = CARD_H;
 
   constructor(scene: Phaser.Scene) {
     super(scene, 0, 0);
@@ -80,10 +84,11 @@ export class SkinGallery extends Phaser.GameObjects.Container {
       for (const c of this.cards) c.box.destroy();
       const classOrder = (e: SkinEntry) => CLASSES.indexOf(e.cls);
       owned.sort((a, b) => ORDER[a.rarity] - ORDER[b.rarity] || classOrder(a) - classOrder(b));
+      const h = this.cardH;
       this.cards = owned.map((entry) => {
-        const face = skinFace(this.scene, entry, CARD_W, CARD_H, 2, { text: entry.cls.name, tint: 0x8a80b8 });
+        const face = skinFace(this.scene, entry, CARD_W, h, 2, { text: entry.cls.name, tint: 0x8a80b8 }, h < CARD_H);
         const badge = pixelText(this.scene, 0, 0, 'Worn', GOLD);
-        badge.setPosition(Math.round(CARD_W / 2 - badge.width - 1), Math.round(-CARD_H / 2 - 5));
+        badge.setPosition(Math.round(CARD_W / 2 - badge.width - 1), Math.round(-h / 2 - 5));
         const box = this.scene.add.container(0, 0, [...face.parts, badge]);
         this.addAt(box, 3);
         return { entry, box, sprite: face.sprite, glow: face.glow, badge };
@@ -98,7 +103,14 @@ export class SkinGallery extends Phaser.GameObjects.Container {
   resize(w: number, h: number): void {
     this.boxW = w;
     this.boxH = h;
-    this.layout();
+    // Short enough that MIN_ROWS rows fit under the heading; the cards are remade at a new height.
+    const fit = Math.floor((h - HEAD_H - 8 - (MIN_ROWS - 1) * GAP) / MIN_ROWS);
+    const cardH = Math.max(60, Math.min(CARD_H, fit));
+    if (cardH !== this.cardH) {
+      this.cardH = cardH;
+      this.owned = '';
+      this.refresh();
+    } else this.layout();
   }
 
   private layout(): void {
@@ -108,16 +120,16 @@ export class SkinGallery extends Phaser.GameObjects.Container {
     this.hint.setPosition(Math.round(w - this.hint.width), 0).setVisible(this.cards.length > 0 && w - this.hint.width > this.title.width + 8);
     this.empty.setPosition(Math.round(w / 2), Math.round(h / 2 - 20));
     this.cols = Math.max(1, Math.floor((w - 6 + GAP) / (CARD_W + GAP)));
-    this.rowsShown = Math.max(1, Math.floor((h - HEAD_H - 2 + GAP) / (CARD_H + GAP)));
+    this.rowsShown = Math.max(1, Math.floor((h - HEAD_H - 2 + GAP) / (this.cardH + GAP)));
     this.scrollRow = Phaser.Math.Clamp(this.scrollRow, 0, this.maxRow);
     const gridW = this.cols * CARD_W + (this.cols - 1) * GAP;
     const x0 = Math.round((w - 6 - gridW) / 2 + CARD_W / 2);
-    const y0 = HEAD_H + 6 + CARD_H / 2;
+    const y0 = HEAD_H + 6 + this.cardH / 2;
     this.cards.forEach((c, i) => {
       const row = Math.floor(i / this.cols) - this.scrollRow;
       const on = row >= 0 && row < this.rowsShown;
       c.box.setVisible(on);
-      if (on) c.box.setPosition(x0 + (i % this.cols) * (CARD_W + GAP), y0 + row * (CARD_H + GAP));
+      if (on) c.box.setPosition(x0 + (i % this.cols) * (CARD_W + GAP), y0 + row * (this.cardH + GAP));
     });
     this.markWorn();
   }
@@ -134,9 +146,9 @@ export class SkinGallery extends Phaser.GameObjects.Container {
       c.badge.setVisible(on);
       if (!on || !c.box.visible) continue;
       const x = c.box.x - CARD_W / 2 - 2;
-      const y = c.box.y - CARD_H / 2 - 2;
-      g.lineStyle(1, GOLD, 1).strokeRect(x + 0.5, y + 0.5, CARD_W + 3, CARD_H + 3);
-      g.lineStyle(1, 0xfff0a8, 0.5).strokeRect(x - 0.5, y - 0.5, CARD_W + 5, CARD_H + 5);
+      const y = c.box.y - this.cardH / 2 - 2;
+      g.lineStyle(1, GOLD, 1).strokeRect(x + 0.5, y + 0.5, CARD_W + 3, this.cardH + 3);
+      g.lineStyle(1, 0xfff0a8, 0.5).strokeRect(x - 0.5, y - 0.5, CARD_W + 5, this.cardH + 5);
     }
     const max = this.maxRow;
     if (max > 0) {
@@ -178,7 +190,7 @@ export class SkinGallery extends Phaser.GameObjects.Container {
     const p = this.press;
     this.press = null;
     if (!p || p.moved) return;
-    const card = this.cards.find((c) => c.box.visible && Math.abs(x - c.box.x) <= CARD_W / 2 && Math.abs(y - c.box.y) <= CARD_H / 2);
+    const card = this.cards.find((c) => c.box.visible && Math.abs(x - c.box.x) <= CARD_W / 2 && Math.abs(y - c.box.y) <= this.cardH / 2);
     if (card) this.wear(card);
   }
 

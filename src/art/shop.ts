@@ -464,14 +464,14 @@ export function shopHall(w: number, h: number, floorY: number): Bitmap {
 
 // ---- Wish cards ----
 
-/** The front of a card of a rarity: a jewelled frame round a dark window lit from where the hero will stand, and a plate for its name. */
-export function cardFront(w: number, h: number, tint: number, deep: number, legendary: boolean): Bitmap {
+/** The front of a card of a rarity: a jewelled frame round a dark window lit from where the hero will stand, and a plate `plate` tall for its name. */
+export function cardFront(w: number, h: number, tint: number, deep: number, legendary: boolean, plate = 22): Bitmap {
   const b = new Bitmap(w, h);
   const col = hex(`#${tint.toString(16).padStart(6, '0')}`);
   const dark = hex(`#${deep.toString(16).padStart(6, '0')}`);
   const lit = mix(col, [255, 255, 255], 0.55);
   const out = hex('#0b0818');
-  const plateY = h - 22;
+  const plateY = h - plate;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const ex = Math.min(x, w - 1 - x);
