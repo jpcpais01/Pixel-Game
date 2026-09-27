@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
 import { collection } from '../game/collection';
 import { ALL_SKINS, DUPE_GEMS, PITY, RARITY_INFO, SKIN_RARITIES, WISH10_COST, WISH_COST, ownedSkins, wish, wornSkin, type SkinEntry, type SkinRarity, type WishResult } from '../game/gacha';
-import { ALTAR_H, ALTAR_TOP, CRYSTAL_H, addBitmap, cardBack, cardFront, registerShopArt, shopHall } from '../art/shop';
+import { ALTAR_H, ALTAR_TOP, CRYSTAL_FRAMES, CRYSTAL_H, addBitmap, cardBack, cardFront, registerShopArt, shopHall } from '../art/shop';
 import { BUTTON_GEM, BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { sound } from '../audio';
 import { fpsBottom } from './FpsScene';
@@ -34,6 +34,9 @@ const FLIP_EVERY = 280;
 const LEGEND_PAUSE = 520;
 /** The violet the crystal glows before any wish. */
 const IDLE_TINT = 0xa070ff;
+/** How fast the crystal turns (radians per ms): slowly at rest, whirling at the height of a wish. */
+const IDLE_SPIN = 0.0007;
+const CHARGED_SPIN = 0.022;
 const GEM_CYAN = 0x9ff6ff;
 const GOLD = 0xf4cf6a;
 const LAVENDER = 0xb8a8e8;
@@ -202,13 +205,14 @@ export class ShopScene extends Phaser.Scene {
   private crystalY = 0;
   private crystal!: Phaser.GameObjects.Image;
   private crystalLight!: Phaser.GameObjects.Image;
+  private crystalFrame = -1;
   private crystalGlow!: Phaser.GameObjects.Image;
   private orbit: Phaser.GameObjects.Image[] = [];
   private gather!: Phaser.GameObjects.Particles.ParticleEmitter;
   private shards!: Phaser.GameObjects.Particles.ParticleEmitter;
   /** Spin, lift and brightness of the crystal, and its glow's colour; tweened by the wish. */
   private spin = 0;
-  private spinSpeed = 0.0012;
+  private spinSpeed = IDLE_SPIN;
   private lift = 0;
   private charge = 0;
   private tint = IDLE_TINT;
@@ -261,7 +265,7 @@ export class ShopScene extends Phaser.Scene {
     this.lamps = [];
     this.hallKey = '';
     this.spin = 0;
-    this.spinSpeed = 0.0012;
+    this.spinSpeed = IDLE_SPIN;
     this.lift = this.charge = 0;
     this.tint = IDLE_TINT;
     this.crystalShown = 1;
@@ -322,8 +326,9 @@ export class ShopScene extends Phaser.Scene {
 
   private buildCrystal(): void {
     this.crystalGlow = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(IDLE_TINT).setDepth(9);
-    this.crystal = this.add.image(0, 0, 'shop_crystal').setDepth(10);
-    this.crystalLight = this.add.image(0, 0, 'shop_crystal_w').setBlendMode(Phaser.BlendModes.ADD).setTint(IDLE_TINT).setDepth(10.5);
+    this.crystalFrame = -1;
+    this.crystal = this.add.image(0, 0, 'shop_crystal', 0).setDepth(10);
+    this.crystalLight = this.add.image(0, 0, 'shop_crystal_w', 0).setBlendMode(Phaser.BlendModes.ADD).setTint(IDLE_TINT).setDepth(10.5);
     for (let i = 0; i < 6; i++) this.orbit.push(this.add.image(0, 0, 'loot_twinkle').setBlendMode(Phaser.BlendModes.ADD).setTint(i % 2 ? 0xffffff : 0x9ff6ff));
     // Light drawn in from all round as the crystal charges.
     this.gather = this.add.particles(0, 0, 'spark', {
@@ -599,7 +604,7 @@ export class ShopScene extends Phaser.Scene {
     sound.wishCharge(dur / 1000, best);
     this.gather.start();
     this.tweens.add({ targets: this, lift: 12, duration: dur, ease: 'Sine.easeInOut' });
-    this.tweens.add({ targets: this, spinSpeed: 0.03, charge: 1, duration: dur, ease: 'Quad.easeIn' });
+    this.tweens.add({ targets: this, spinSpeed: CHARGED_SPIN, charge: 1, duration: dur, ease: 'Quad.easeIn' });
     this.tweens.add({ targets: this.dim, fillAlpha: best === 2 ? 0.7 : 0.45, duration: dur });
     const colors = [RARITY_INFO.rare.tint, RARITY_INFO.epic.tint, RARITY_INFO.legendary.tint];
     this.shiftTint(colors[0], 300);
@@ -805,7 +810,7 @@ export class ShopScene extends Phaser.Scene {
     this.cards = [];
     this.tweens.add({ targets: this.dim, fillAlpha: 0, duration: 400 });
     this.lift = 0;
-    this.spinSpeed = 0.0012;
+    this.spinSpeed = IDLE_SPIN;
     this.charge = 0;
     this.shiftTint(IDLE_TINT, 500);
     // The crystal forms again from light.
@@ -853,13 +858,20 @@ export class ShopScene extends Phaser.Scene {
     const cy = this.crystalY - this.lift + Math.round(Math.sin(t * 0.0018) * 2);
 
     // The crystal turns (seen as its width breathing), its light brightening with the charge.
+    // The crystal turns through its rendered frames; a facet flashes as it swings into the light.
     this.spin += this.spinSpeed * dt;
-    const turn = Math.cos(this.spin);
+    const f = Math.floor((this.spin / (Math.PI / 3)) * CRYSTAL_FRAMES) % CRYSTAL_FRAMES;
+    if (f !== this.crystalFrame) {
+      this.crystalFrame = f;
+      this.crystal.setFrame(f);
+      this.crystalLight.setFrame(f);
+    }
+    const turn = Math.cos(this.spin * 6);
     const shown = this.crystalShown;
-    this.crystal.setPosition(cx, cy).setScale((0.72 + 0.28 * Math.abs(turn)) * shown, shown).setAlpha(shown);
+    this.crystal.setPosition(cx, cy).setScale(shown).setAlpha(shown);
     this.crystalLight
       .setPosition(cx, cy)
-      .setScale(this.crystal.scaleX, shown)
+      .setScale(shown)
       .setTint(this.tint)
       .setAlpha((0.25 + 0.2 * (1 - Math.abs(turn)) + 0.6 * this.charge) * shown);
     this.crystalGlow
