@@ -393,6 +393,8 @@ export class WorldScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.net?.destroy();
       this.net = null;
+      // Left mid-charge: nothing will release it, so the hum stops with the world.
+      sound.beamChargeEnd();
     });
 
     // Screen-fixed; it covers the ground camera's image too, as it draws first.
@@ -629,6 +631,8 @@ export class WorldScene extends Phaser.Scene {
     this.pushX = this.pushY = 0;
     heroBuffs.clear();
     this.ult.cancel();
+    // Struck down mid-charge: the charge never releases, so its hum is stopped here.
+    sound.beamChargeEnd();
     this.debris([0xffffff, 0xdff8ff, 0xb0c8ff], snap(h.x), snap(h.y) - 12, 20, h.y + 20, 'spores');
     this.fallen = this.add.bitmapText(Math.round(h.x), Math.round(h.y) - 40, 'pixel', 'FALLEN').setLetterSpacing(-1).setOrigin(0.5, 1).setTint(0xffb0a0).setDepth(10002).setAlpha(0);
     sound.fall();

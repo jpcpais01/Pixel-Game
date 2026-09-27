@@ -242,6 +242,8 @@ export class Wizard implements Hero {
 
   private fireBeam(): void {
     const power = Math.max(MIN_POWER, this.charged / CHARGE_TIME);
+    // The hum stops here, on release: not every special fires the beam (whose sound would end it).
+    sound.beamChargeEnd();
     this.charge.hide();
     this.state = 'beam';
     this.firing = this.kit.fireTime(power);
