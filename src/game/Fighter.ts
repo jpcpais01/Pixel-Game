@@ -7,7 +7,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals, type MeleeArea } from './combat';
 import { HitSpark, Shockwave, type Effect, type Scheme } from './Slash';
-import { AIR_FX, CHI_FX, Fissure, Flurry, PALM_FX, PunchBlast, QI_FX } from './Fists';
+import { AIR_FX, CHI_FX, Fissure, Flurry, LUCHA_AIR_FX, LUCHA_FX, MAGMA_FX, PALM_FX, PunchBlast, QI_FX, STONE_FX } from './Fists';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 
@@ -67,6 +67,8 @@ export interface FighterStyle {
   /** Shock of ordinary blows, and of the finisher and the special. */
   air: Scheme;
   chi: Scheme;
+  /** What glows in the cracks the earthshaker leaves, when not golden qi. */
+  fire?: Scheme;
 }
 
 export const BRAWLER_STYLE: FighterStyle = {
@@ -92,6 +94,12 @@ export const MONK_STYLE: FighterStyle = {
   air: PALM_FX,
   chi: QI_FX,
 };
+
+/** The luchador: the brawler's moves under a mask, in gold and pink. */
+export const LUCHA_STYLE: FighterStyle = { ...BRAWLER_STYLE, key: 'fighter_lucha', air: LUCHA_AIR_FX, chi: LUCHA_FX };
+
+/** The stone guardian: the monk's moves in stone, fire welling up where he strikes. */
+export const GUARDIAN_STYLE: FighterStyle = { ...MONK_STYLE, key: 'fighter_guardian', air: STONE_FX, chi: MAGMA_FX, fire: MAGMA_FX };
 
 /** The earthshaker: how far he can leap, how high he rises, and the ring he strikes when he lands. */
 const LEAP_MAX = 64;
@@ -337,7 +345,7 @@ export class Fighter implements Hero {
     this.lastMove.set(this.line.x, this.line.y);
     this.dir = dirOf(this.line.x, this.line.y);
     this.body.play(`${this.key}_barrage_${this.dir}`);
-    this.flurry = new Flurry(this.world, BARRAGE_REACH);
+    this.flurry = new Flurry(this.world, BARRAGE_REACH, this.style.chi);
     this.barrageLeft = BARRAGE_TIME;
     this.throwT = 0;
     this.hitT = HIT_EVERY * 0.5;
@@ -372,7 +380,7 @@ export class Fighter implements Hero {
         { kind: 'line', x0: cx + u.x * 4, y0: cy + u.y * 4, x1: cx + u.x * BARRAGE_REACH, y1: cy + u.y * BARRAGE_REACH, radius: 8 },
         { damage: 3, knock: 45, fromX: cx, fromY: cy },
       );
-      hits.slice(0, 3).forEach((h) => this.fx.push(new HitSpark(this.world, h.x, h.y, CHI_FX, h.y + 13, false)));
+      hits.slice(0, 3).forEach((h) => this.fx.push(new HitSpark(this.world, h.x, h.y, this.style.chi, h.y + 13, false)));
       if (hits.length) {
         sound.punchHit(this.world.pan(hits[0].x), false);
         this.world.cameras.main.shake(40, 0.0002);
@@ -443,7 +451,7 @@ export class Fighter implements Hero {
     const x = snap(this.x);
     const y = snap(this.y);
     const scheme = this.style.chi;
-    this.fx.push(new Fissure(this.world, x, y, QUAKE_RADIUS * 0.8));
+    this.fx.push(new Fissure(this.world, x, y, QUAKE_RADIUS * 0.8, this.style.fire));
     this.fx.push(new Shockwave(this.world, x, y - 1, QUAKE_RADIUS, scheme));
     const hits = this.world.melee({ kind: 'circle', x, y: y - 4, radius: QUAKE_RADIUS }, { damage: QUAKE_DAMAGE, heavy: true, knock: QUAKE_KNOCK, fromX: x, fromY: y - 4 });
     hits.slice(0, 4).forEach((h) => this.fx.push(new HitSpark(this.world, h.x, h.y, scheme, h.y + 13, true)));

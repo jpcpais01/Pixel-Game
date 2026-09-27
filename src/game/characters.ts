@@ -19,13 +19,13 @@ import { CRUSADER_KIT, HOLY_KIT, Paladin } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
-import { BRAWLER_STYLE, Fighter, MONK_STYLE } from './Fighter';
+import { BRAWLER_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
-import { Alchemist, CHEM_STYLE, PLAGUE_STYLE, WITCH_STYLE } from './Alchemist';
+import { Alchemist, CHEM_STYLE, CRYO_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
-import { Archer, RANGER_STYLE, STORM_STYLE } from './Archer';
+import { Archer, HUNT_STYLE, RANGER_STYLE, STORM_STYLE } from './Archer';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
-import { DANCER_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
+import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
@@ -385,6 +385,22 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_barrage' },
         },
         lookName: 'Street',
+        skins: [
+          {
+            // A masked showman of the ring: a crimson cape, a gold title belt and boots to the knee.
+            id: 'lucha',
+            name: 'Luchador',
+            role: 'Masked fists of the ring',
+            accent: 0xff4fa0,
+            attack: 'Lucha combo',
+            special: 'Ring barrage',
+            preview: { texture: 'fighter_lucha', glow: 'fighter_lucha_e', idle: 'fighter_lucha_idle_down', chosen: 'fighter_lucha_smash_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
+            buttons: {
+              attack: { texture: 'icon_fist_lucha' },
+              special: { texture: 'icon_barrage_lucha' },
+            },
+          },
+        ],
       },
       {
         id: 'monk',
@@ -400,9 +416,26 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_quake' },
         },
         lookName: 'Temple',
+        skins: [
+          {
+            // A temple statue woken to fight: basalt cracked with fire, and a carved ring at its back.
+            id: 'guardian',
+            name: 'Stone guardian',
+            role: 'Palms of living stone',
+            accent: 0xff7a2a,
+            attack: 'Basalt palm',
+            special: 'Magma quake',
+            preview: { texture: 'fighter_guardian', glow: 'fighter_guardian_e', idle: 'fighter_guardian_idle_down', chosen: 'fighter_guardian_leap_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
+            buttons: {
+              attack: { texture: 'icon_palm_guardian' },
+              special: { texture: 'icon_quake_guardian' },
+            },
+          },
+        ],
       },
     ],
-    spawn: (world, x, y, look) => new Fighter(world, x, y, look === 'monk' ? MONK_STYLE : BRAWLER_STYLE),
+    spawn: (world, x, y, look) =>
+      new Fighter(world, x, y, look === 'monk' ? MONK_STYLE : look === 'guardian' ? GUARDIAN_STYLE : look === 'lucha' ? LUCHA_STYLE : BRAWLER_STYLE),
   },
   {
     id: 'alchemist',
@@ -437,6 +470,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_bog_witch' },
             },
           },
+          {
+            // A ram's skull for a mask, a crown of raven feathers, and gourds of spirit-fire.
+            id: 'shaman',
+            name: 'Bone shaman',
+            role: 'Juju and spirit-fire',
+            accent: 0x2ad8a8,
+            attack: 'Juju gourd',
+            special: 'Spirit mire',
+            preview: { texture: 'alchemist_shaman', glow: 'alchemist_shaman_e', idle: 'alchemist_shaman_idle_down', chosen: 'alchemist_shaman_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
+            buttons: {
+              attack: { texture: 'icon_flask_shaman' },
+              special: { texture: 'icon_bog_shaman' },
+            },
+          },
         ],
       },
       {
@@ -455,9 +502,26 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_bog_chem' },
         },
         lookName: 'Hazmat',
+        skins: [
+          {
+            // A bubble helmet, an insulated suit and canisters that freeze.
+            id: 'cryo',
+            name: 'Cryotech',
+            role: 'Cryo canisters',
+            accent: 0x6ab8ff,
+            attack: 'Cryo canister',
+            special: 'Cryo barrage',
+            preview: { texture: 'alchemist_cryo', glow: 'alchemist_cryo_e', idle: 'alchemist_cryo_idle_down', chosen: 'alchemist_cryo_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
+            buttons: {
+              attack: { texture: 'icon_flask_cryo' },
+              special: { texture: 'icon_bog_cryo' },
+            },
+          },
+        ],
       },
     ],
-    spawn: (world, x, y, look) => new Alchemist(world, x, y, look === 'chem' ? CHEM_STYLE : look === 'witch' ? WITCH_STYLE : PLAGUE_STYLE),
+    spawn: (world, x, y, look) =>
+      new Alchemist(world, x, y, look === 'chem' ? CHEM_STYLE : look === 'cryo' ? CRYO_STYLE : look === 'witch' ? WITCH_STYLE : look === 'shaman' ? SHAMAN_STYLE : PLAGUE_STYLE),
   },
   {
     id: 'archer',
@@ -492,10 +556,24 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_rain_storm' },
             },
           },
+          {
+            // A stag's skull and antlers for a hood, a bow of bone, and arrows of moonlight.
+            id: 'hunt',
+            name: 'Wild hunt',
+            role: 'Hunter under the moon',
+            accent: 0xb8a0ff,
+            attack: 'Moon shot',
+            special: 'Moonfall',
+            preview: { texture: 'archer_hunt', glow: 'archer_hunt_e', idle: 'archer_hunt_idle_down', chosen: 'archer_hunt_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+            buttons: {
+              attack: { texture: 'icon_bow_hunt' },
+              special: { texture: 'icon_rain_hunt' },
+            },
+          },
         ],
       },
     ],
-    spawn: (world, x, y, look) => new Archer(world, x, y, look === 'storm' ? STORM_STYLE : RANGER_STYLE),
+    spawn: (world, x, y, look) => new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : RANGER_STYLE),
   },
   {
     id: 'rogue',
@@ -516,6 +594,22 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_shadowstep' },
         },
         lookName: 'Crimson',
+        skins: [
+          {
+            // A captain of the high seas: tricorn, eyepatch, a navy coat and gold.
+            id: 'corsair',
+            name: 'Corsair',
+            role: 'Daggers and plunder',
+            accent: 0xf0b040,
+            attack: 'Boarding stabs',
+            special: 'Powder step',
+            preview: { texture: 'rogue_corsair', glow: 'rogue_corsair_e', idle: 'rogue_corsair_idle_down', chosen: 'rogue_corsair_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
+            buttons: {
+              attack: { texture: 'icon_daggers_corsair' },
+              special: { texture: 'icon_shadowstep_corsair' },
+            },
+          },
+        ],
       },
       {
         // A lighter, wider four-cut chain ending in a spin, and a dance that
@@ -533,9 +627,26 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_shadowstep_dancer' },
         },
         lookName: 'Dusk',
+        skins: [
+          {
+            // A fox spirit: ears and a mask, three great tails and blades of blue foxfire.
+            id: 'kitsune',
+            name: 'Kitsune',
+            role: 'Fox spirit of foxfire',
+            accent: 0x6ab0ff,
+            attack: 'Foxfire cuts',
+            special: 'Fox dance',
+            preview: { texture: 'rogue_kitsune', glow: 'rogue_kitsune_e', idle: 'rogue_kitsune_idle_down', chosen: 'rogue_kitsune_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
+            buttons: {
+              attack: { texture: 'icon_daggers_kitsune' },
+              special: { texture: 'icon_shadowstep_kitsune' },
+            },
+          },
+        ],
       },
     ],
-    spawn: (world, x, y, look) => new Rogue(world, x, y, look === 'dancer' ? DANCER_STYLE : ROGUE_STYLE),
+    spawn: (world, x, y, look) =>
+      new Rogue(world, x, y, look === 'dancer' ? DANCER_STYLE : look === 'kitsune' ? KITSUNE_STYLE : look === 'corsair' ? CORSAIR_STYLE : ROGUE_STYLE),
   },
   {
     id: 'necromancer',

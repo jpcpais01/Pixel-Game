@@ -14,6 +14,16 @@
 // The shadow dancer is his other look on the same rig: a midnight-violet hood,
 // a pale porcelain mask with eyes lit violet, a silver sash, long scarf tails,
 // and blades of living shadow that glow.
+//
+// The corsair is the cutthroat's skin: a black tricorn with a skull on it over
+// a red bandana, long black hair, an eyepatch and a goatee, a navy captain's
+// coat with gold buttons and epaulettes, its tails to the knee, a ruffled
+// linen shirt and a red sash.
+//
+// The kitsune is the shadow dancer's skin: a white hood with fox ears standing
+// up out of it, a white fox mask with red markings and eyes of blue foxfire, a
+// crimson kimono top under a gold obi, three great fox tails tipped with
+// foxfire, and blades of it.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
 import { BLADE, BOOT, CRIMSON, EYE, GOLD, SKIN, STEEL } from './palette';
@@ -57,6 +67,25 @@ const SHADOW_BLADE: Material = {
 };
 const DANCER_HILT: Material = { ramp: ramp('#0e0a18', '#1a1428', '#2a2240', '#3c3258'), outline: hex('#07040f') };
 
+// The corsair's.
+const TRICORN: Material = { ramp: ramp('#0c0a0e', '#18151c', '#26222c', '#383240', '#4e465a'), outline: hex('#050407'), outlineLit: hex('#16121c') };
+const NAVY_COAT: Material = { ramp: ramp('#0a0e22', '#141e3c', '#20305e', '#324686', '#4c62ac'), outline: hex('#050716'), outlineLit: hex('#111a36') };
+const LINEN: Material = { ramp: ramp('#686052', '#a69c8a', '#dad2be', '#f4eee0', '#ffffff'), outline: hex('#1c1812'), outlineLit: hex('#34302a') };
+const PIRATE_HAIR: Material = { ramp: ramp('#0a0808', '#161212', '#241e1c', '#38302c'), outline: hex('#040303') };
+const PATCH: Material = { ramp: ramp('#060508', '#100e14', '#1a1820', '#26242e'), outline: hex('#020203') };
+const BONE_WHITE: Material = { ramp: ramp('#8a8474', '#c4bca8', '#ece6d6', '#ffffff'), outline: hex('#1c1812') };
+
+// The kitsune's.
+const FOX_HOOD: Material = { ramp: ramp('#48425a', '#86809a', '#c4c0d4', '#ecE8f4', '#ffffff'), outline: hex('#141020'), outlineLit: hex('#2a2438') };
+const FOX_RED: Material = { ramp: ramp('#360610', '#660e1c', '#a4182a', '#d63040', '#ff6a70'), outline: hex('#16030a'), outlineLit: hex('#2e0812') };
+const FOX_UNDER: Material = { ramp: ramp('#0c0a10', '#16141c', '#22202a', '#32303c'), outline: hex('#050408') };
+const OBI: Material = { ramp: ramp('#4a2e08', '#8a5a14', '#c8902a', '#f0c050', '#fff0a0'), outline: hex('#1e1204'), shine: true };
+const FOX_MASK: Material = { ramp: ramp('#6a6478', '#a8a4b8', '#dcdae6', '#f6f6fb', '#ffffff'), outline: hex('#18141f'), outlineLit: hex('#2e2a3a') };
+const FOX_TAIL: Material = { ramp: ramp('#584e60', '#9a90a2', '#d4ccd8', '#f2eef6', '#ffffff'), outline: hex('#1a141e'), outlineLit: hex('#302838') };
+const FOXFIRE: Material = { ramp: ramp('#1a3aa0', '#3a70e8', '#7ab8ff', '#c8e8ff', '#f4fbff'), outline: hex('#0a1440'), emissive: 0.9, noAO: true };
+const FOX_BLADE: Material = { ramp: ramp('#1a3a90', '#3a6ad8', '#7ab0ff', '#cce6ff', '#f4fbff'), outline: hex('#081030'), emissive: 0.7, shine: true, noAO: true };
+const FOX_HILT: Material = { ramp: ramp('#1a0608', '#2e0c10', '#44141a', '#5e1e26'), outline: hex('#0a0204') };
+
 /** One look for the rogue: its texture key, its cloth and its blades. */
 export interface RogueLook {
   key: string;
@@ -75,6 +104,13 @@ export interface RogueLook {
   tails: number;
   /** Eyes lit from within, and light along the edges of the blades. */
   lit?: RGB;
+  /** The upper arm and forearm, when not the shirt's sleeve and wraps. */
+  sleeve?: Material;
+  forearm?: Material;
+  /** The corsair: a tricorn over a bandana, an eyepatch, a captain's coat with tails and epaulettes. */
+  corsair?: boolean;
+  /** The kitsune: fox ears on the hood, a fox mask, and fox tails in place of the scarf's. */
+  kitsune?: boolean;
 }
 
 export const ROGUE_LOOK: RogueLook = {
@@ -106,7 +142,41 @@ export const DANCER_LOOK: RogueLook = {
   lit: hex('#c49cff'),
 };
 
-export const ROGUE_LOOKS = [ROGUE_LOOK, DANCER_LOOK];
+export const CORSAIR_LOOK: RogueLook = {
+  key: 'rogue_corsair',
+  hood: TRICORN,
+  shirt: LINEN,
+  vest: NAVY_COAT,
+  scarf: CRIMSON,
+  sash: CRIMSON,
+  blade: BLADE,
+  hilt: HILT,
+  metal: GOLD,
+  mask: false,
+  tails: 3,
+  sleeve: NAVY_COAT,
+  forearm: NAVY_COAT,
+  corsair: true,
+};
+
+export const KITSUNE_LOOK: RogueLook = {
+  key: 'rogue_kitsune',
+  hood: FOX_HOOD,
+  shirt: FOX_UNDER,
+  vest: FOX_RED,
+  scarf: FOX_RED,
+  sash: OBI,
+  blade: FOX_BLADE,
+  hilt: FOX_HILT,
+  metal: GOLD,
+  mask: false,
+  tails: 0,
+  lit: hex('#8ac8ff'),
+  sleeve: FOX_RED,
+  kitsune: true,
+};
+
+export const ROGUE_LOOKS = [ROGUE_LOOK, DANCER_LOOK, CORSAIR_LOOK, KITSUNE_LOOK];
 
 /** The look being drawn; set by buildRogueFrames. */
 let S: RogueLook = ROGUE_LOOK;
@@ -244,9 +314,15 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
     }
   }
   c.part();
-  c.capsule(sx, sy, ex, ey, 1.45, 1.25, S.shirt, { bias });
+  c.capsule(sx, sy, ex, ey, 1.45, 1.25, S.sleeve ?? S.shirt, { bias });
   c.part();
-  c.capsule(ex, ey, fx, fy, 1.25, 1.1, WRAPS, { bias });
+  c.capsule(ex, ey, fx, fy, 1.25, 1.1, S.forearm ?? WRAPS, { bias });
+  if (S.corsair) {
+    // A turned-back gold-edged cuff, and linen frilled at the wrist.
+    c.part();
+    c.capsule(ex + (fx - ex) * 0.55, ey + (fy - ey) * 0.55, ex + (fx - ex) * 0.75, ey + (fy - ey) * 0.75, 1.45, 1.45, S.metal, { bias });
+    c.px(ex + (fx - ex) * 0.88, ey + (fy - ey) * 0.88, LINEN, sphere(0, -0.3), { bias });
+  }
   c.part();
   c.ellipse(fx, fy, 1.15, 1.1, GLOVE, { bias });
 }
@@ -309,7 +385,7 @@ function tails(c: PixelCanvas, x: number, y: number, dir: number, stream: number
 function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
   c.part();
   for (const [x, y] of pts) {
-    if (blink) c.px(x, y, S.mask ? MASK : SKIN, sphere(0, -0.3), { bias: -1 });
+    if (blink) c.px(x, y, S.kitsune ? FOX_MASK : S.mask ? MASK : SKIN, sphere(0, -0.3), { bias: -1 });
     else if (S.lit) {
       c.px(x, y, EYE);
       c.spark(x, y, S.lit, 0.9);
@@ -317,6 +393,124 @@ function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefine
   }
 }
 
+/**
+ * The corsair's tricorn from the front or behind: a low crown, the brim
+ * cocked up at both sides with a corner pointing at the viewer, gold at the
+ * corners, and a small white skull on its front.
+ */
+function tricorn(c: PixelCanvas, cx: number, U: number, front: boolean): void {
+  c.part();
+  const crown = [2.2, 2.8, 3.0];
+  c.shape(6 + U, 8 + U, (y) => [cx - crown[y - 6 - U], cx + crown[y - 6 - U]], TRICORN, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.8, 1));
+  c.part();
+  c.shape(8 + U, 9 + U, (y) => (y === 8 + U ? [cx - 5, cx + 5] : [cx - 4.3, cx + 4.3]), TRICORN, (_x, y, t) => sphere(t * 0.7, y === 8 + U ? -0.6 : 0.3, 1), { bias: front ? 0 : -1 });
+  c.shape(10 + U, 10 + U, () => [cx - 1.2, cx + 1.2], TRICORN, (_x, _y, t) => sphere(t * 0.7, 0.5, 1));
+  // The wings cocked up at either side.
+  c.px(cx - 5, 7 + U, TRICORN, sphere(-0.6, -0.6), { bias: 1 });
+  c.px(cx + 4, 7 + U, TRICORN, sphere(0.6, -0.6));
+  // Gold at each corner.
+  c.part();
+  c.px(cx - 5, 6 + U, S.metal, sphere(-0.4, -0.6));
+  c.px(cx + 4, 6 + U, S.metal, sphere(0.4, -0.6));
+  c.px(cx - 1, 10 + U, S.metal, sphere(-0.3, 0.4));
+  c.px(cx, 10 + U, S.metal, sphere(0.3, 0.4), { bias: -1 });
+  if (front) {
+    c.part();
+    c.px(cx - 1, 7 + U, BONE_WHITE, sphere(-0.2, -0.3));
+    c.px(cx, 7 + U, BONE_WHITE, sphere(0.2, -0.3));
+    c.shade(cx - 1, 8 + U, 1);
+  }
+}
+
+/** The corsair's face: a red bandana under the hat, long black hair, a patch over his left eye, and a goatee. */
+function corsairFace(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+  c.part();
+  c.shape(10 + U, 16 + U, (y) => [cx - 3.5 - (y - 10 - U) * 0.1, cx - 2.3], PIRATE_HAIR, (x, _y, t, u) => sphere(t * 0.8, u * 0.4 - 0.3 + (x & 1 ? 0.15 : -0.15), 1));
+  c.shape(10 + U, 16 + U, (y) => [cx + 2.3, cx + 3.5 + (y - 10 - U) * 0.1], PIRATE_HAIR, (x, _y, t, u) => sphere(t * 0.8, u * 0.4 - 0.3 + (x & 1 ? 0.15 : -0.15), 1));
+  c.part();
+  c.ellipse(cx, 12.7 + U, 2.5, 2.3, SKIN);
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 2.7, cx + 2.7], S.scarf, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+  c.part();
+  c.px(cx - 1, 15 + U, PIRATE_HAIR, sphere(-0.2, 0.3));
+  c.px(cx, 15 + U, PIRATE_HAIR, sphere(0.2, 0.3), { bias: -1 });
+  c.shade(cx - 1, 14 + U, -1);
+  c.shade(cx, 14 + U, -1);
+  // The patch and its strap.
+  c.part();
+  c.px(cx + 1, 12 + U, PATCH, sphere(0.2, 0));
+  c.px(cx + 2, 11 + U, PATCH, sphere(0.4, -0.2));
+  c.px(cx, 11 + U, PATCH, sphere(-0.2, -0.2));
+  eyes(c, [[cx - 2, 12 + U]], blink);
+}
+
+/** Gold epaulettes on the shoulders, their fringe hanging. */
+function epaulettes(c: PixelCanvas, pts: [number, number][]): void {
+  for (const [x, y] of pts) {
+    c.part();
+    c.ellipse(x, y, 1.9, 1.1, S.metal, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.4, 1) });
+    for (let dx = -1; dx <= 1; dx++) c.px(x + dx, y + 1.4, S.metal, sphere(dx * 0.3, 0.4), { bias: -1 });
+  }
+}
+
+/** A tall pointed fox ear from its base at (x, y) to the tip, white outside, red within. */
+function ear(c: PixelCanvas, x: number, y: number, tx: number, ty: number, bias = 0): void {
+  const top = Math.round(ty);
+  const bot = Math.round(y);
+  c.part();
+  c.shape(top, bot, (py) => {
+    const u = (py - top) / Math.max(1, bot - top);
+    const mx = tx + (x - tx) * u;
+    const hw = 0.35 + u * 1.25;
+    return [mx - hw, mx + hw];
+  }, S.hood, (_x, _y, t, u) => sphere(t * 0.9, u * 0.5 - 0.6, 1), { bias });
+  c.part();
+  for (let py = top + 1; py < bot; py++) {
+    const u = (py - top) / Math.max(1, bot - top);
+    c.px(tx + (x - tx) * u, py, S.vest, sphere(0, 0.2), { bias: bias - 1 });
+  }
+}
+
+/**
+ * Three great fox tails from the small of the back, fanned out and swaying,
+ * each tipped with a flame of foxfire. `tips` are where they end.
+ */
+function foxTails(c: PixelCanvas, x: number, y: number, tips: [number, number][], bias = 0): void {
+  tips.forEach(([tx, ty], i) => {
+    // A curve: up out of the back, then bending towards the tip.
+    const mx = x + (tx - x) * 0.35;
+    const my = y + (ty - y) * 0.75;
+    c.part();
+    c.capsule(x, y, mx, my, 1.1, 1.75, FOX_TAIL, { bias: bias + (i === 1 ? -1 : 0) });
+    c.capsule(mx, my, tx, ty, 1.75, 1.2, FOX_TAIL, { bias: bias + (i === 1 ? -1 : 0) });
+    c.part();
+    const fx = tx + (tx - mx) * 0.18;
+    const fy = ty + (ty - my) * 0.18;
+    c.ellipse(fx, fy, 1.2, 1.2, FOXFIRE);
+    c.spark(fx, fy, S.lit ?? [255, 255, 255], 0.5);
+  });
+}
+
+/** The kitsune's mask from the front: white, a pointed snout with a black nose, red marks at the eyes and brow. */
+function foxMask(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+  c.part();
+  c.ellipse(cx, 12.3 + U, 2.6, 2.2, FOX_MASK);
+  c.part();
+  c.shape(13 + U, 15 + U, (y) => {
+    const hw = [1.6, 1.1, 0.7][y - 13 - U];
+    return [cx - hw, cx + hw];
+  }, FOX_MASK, (_x, _y, t, u) => sphere(t * 0.8, 0.2 + u * 0.4, 1));
+  c.part();
+  c.px(cx - 1, 15 + U, PATCH, sphere(-0.2, 0.2));
+  c.px(cx, 15 + U, PATCH, sphere(0.2, 0.2));
+  // Red flicks sweeping up from the eyes, and a mark on the brow.
+  c.part();
+  for (const [x, y] of [[cx - 3, 11], [cx + 2, 11], [cx - 2, 13], [cx + 1, 13]] as const) c.px(x, y + U, S.vest, sphere(0, -0.2));
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], blink);
+}
+
+// ---------------------------------------------------------------------------
+// Directions
 // ---------------------------------------------------------------------------
 // Directions
 
@@ -349,8 +543,18 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     if (tby >= fb.y - 1) dagger(c, fb, tbx, tby, p.gleam, bias);
   };
 
-  // The scarf's tails, flicking out past his shoulder.
-  tails(c, cx + 2.5, 13.5 + U, 1, Math.max(0.35, p.stream), p.sway, -1);
+  // The scarf's tails, flicking out past his shoulder (the corsair's bandana knot sits higher, under his hat).
+  tails(c, cx + 2.5, (S.corsair ? 10.8 : 13.5) + U, 1, Math.max(0.35, p.stream), p.sway, -1);
+  if (S.kitsune) foxTails(c, cx + 0.5, 21 + U, [[cx - 6.4 + p.sway * 0.4, 15.5 + U], [cx + 7.6 + p.sway * 0.4, 21.5 + U], [cx + 6.4 + p.sway * 0.4, 15 + U]], -1);
+  if (S.corsair) {
+    // The coat's tails, hanging behind his legs to the knee.
+    c.part();
+    c.shape(22 + U, 26 + L, (y) => {
+      const u = (y - 22 - U) / Math.max(1, 4 + L - U);
+      const hw = 4.3 + u * 1.0;
+      return [cx - hw + p.sway * u * 0.4, cx + hw + p.sway * u * 0.4];
+    }, S.vest, (_x, _y, t, u) => sphere(t * 0.9, u * 0.4, 1), { bias: -1 });
+  }
   if (fa.behind) armA(-1);
   if (fb.behind) armB(-1);
 
@@ -377,6 +581,15 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     for (let x = Math.round(cx - v); x < Math.round(cx + v); x++) c.erase(x, y);
   }
   for (let y = top + 3; y <= waist + 1; y++) c.shade(cx, y, -1);
+  if (S.corsair) {
+    // A frill of linen down the open front, and gold buttons either side of it.
+    c.part();
+    for (const [x, y] of [[cx - 1, top], [cx, top], [cx - 1, top + 1], [cx, top + 2], [cx - 1, top + 3]] as const) c.px(x, y, LINEN, sphere(x < cx ? -0.3 : 0.3, -0.2), { bias: 1 });
+    for (const y of [top + 3, top + 5]) {
+      c.px(cx - 3, y, S.metal, sphere(-0.3, -0.4));
+      c.px(cx + 2, y, S.metal, sphere(0.3, -0.4), { bias: -1 });
+    }
+  }
   // The sash, knotted at his left hip, a short tail hanging from the knot.
   c.part();
   c.shape(waist, waist + 1, () => [cx - 4.1, cx + 4.1], S.sash, (_x, y, t) => cyl(t, y === waist ? 0.3 : -0.2));
@@ -390,7 +603,29 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   c.ellipse(9, 22.6 + U, 1.2, 1, S.hilt);
   c.px(9, 22 + U, S.metal, sphere(-0.3, -0.5));
 
+  if (S.corsair) {
+    epaulettes(c, [[7.4, 15.6 + U], [16.6, 15.6 + U]]);
+    corsairFace(c, cx, U, p.blink);
+    tricorn(c, cx, U, true);
+    if (!fb.behind) armB(0);
+    if (!fa.behind) armA(0);
+    return;
+  }
   mantle(c, cx, U, 5.4, 5.4);
+
+  if (S.kitsune) {
+    // The hood with a fox's ears standing up out of it, the mask under its brim.
+    c.part();
+    c.ellipse(cx, 11.3 + U, 3.9, 3.7, S.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+    ear(c, cx - 2.4, 9 + U, cx - 3.9, 4 + U);
+    ear(c, cx + 2.4, 9 + U, cx + 3.9, 4 + U, -1);
+    foxMask(c, cx, U, p.blink);
+    c.part();
+    c.shape(10 + U, 10 + U, () => [cx - 2.6, cx + 2.6], S.hood, (_x, _y, t) => sphere(t * 0.8, -0.5, 1));
+    if (!fb.behind) armB(0);
+    if (!fa.behind) armA(0);
+    return;
+  }
 
   // Head: the hood, the face in its shadow, the scarf pulled up over the nose (or the mask).
   c.part();
@@ -449,6 +684,33 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   // The vest's back, the sash round it, the knot's tail at his left hip.
   const top = 15 + U;
   const waist = 22 + U;
+  if (S.corsair) {
+    // The captain's coat from behind, down to the knee with a vent up the back,
+    // the epaulettes, his hair tied back, the bandana's ends and the tricorn.
+    const hem = 26 + L;
+    c.part();
+    c.shape(top, hem, (y) => {
+      const u = (y - top) / (hem - top);
+      const hw = y <= waist ? torsoWidth(y, top, waist, 4.3) : 4.2 + (y - waist) * 0.3;
+      return [cx - hw + p.sway * u * 0.3, cx + hw + p.sway * u * 0.3];
+    }, S.vest, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.3 : 0.25, 1));
+    for (let y = top + 2; y <= hem; y++) c.shade(cx + (y > waist + 1 ? Math.round(p.sway * 0.3) : 0), y, y > waist + 1 ? -2 : -1);
+    c.part();
+    for (const x of [cx - 2, cx + 1]) c.px(x, waist, S.metal, sphere(0, -0.3));
+    epaulettes(c, [[7.4, 15.6 + U], [16.6, 15.6 + U]]);
+    c.part();
+    c.ellipse(cx, 11.8 + U, 3.3, 3.0, PIRATE_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+    c.part();
+    c.capsule(cx - 0.5, 13 + U, cx - 0.5 + p.sway * 0.2, 18 + U, 1.3, 0.9, PIRATE_HAIR);
+    c.part();
+    c.px(cx - 1, 14 + U, S.scarf, sphere(-0.3, 0));
+    c.px(cx, 14 + U, S.scarf, sphere(0.3, 0));
+    tails(c, cx + 0.6, 11 + U, p.sway >= 0 ? 1 : -1, p.stream * 0.3, p.sway);
+    tricorn(c, cx, U, false);
+    if (!fb.behind) armB(0);
+    if (!fa.behind) armA(0);
+    return;
+  }
   c.part();
   c.shape(top, waist + 1, (y) => {
     const hw = torsoWidth(y, top, waist, 4.2) + 0.1;
@@ -473,10 +735,17 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     return hw < 0.3 ? null : [cx - hw, cx + hw];
   }, S.hood, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
   c.shade(cx, 9 + U, 1);
-  // The scarf knotted at the nape, its tails down his back.
-  c.part();
-  c.ellipse(cx, 14.2 + U, 1.3, 0.9, S.scarf);
-  tails(c, cx - 0.4, 14.6 + U, p.sway >= 0 ? 1 : -1, p.stream * 0.3, p.sway);
+  if (S.kitsune) {
+    // Ears up out of the hood, and the three tails fanned over his back.
+    ear(c, cx - 2.4, 9 + U, cx - 3.9, 4 + U);
+    ear(c, cx + 2.4, 9 + U, cx + 3.9, 4 + U);
+    foxTails(c, cx, 21 + U, [[cx - 6 + p.sway * 0.4, 14.5 + U], [cx + 0.6 + p.sway * 0.4, 15 + U], [cx + 6 + p.sway * 0.4, 14.5 + U]]);
+  } else {
+    // The scarf knotted at the nape, its tails down his back.
+    c.part();
+    c.ellipse(cx, 14.2 + U, 1.3, 0.9, S.scarf);
+    tails(c, cx - 0.4, 14.6 + U, p.sway >= 0 ? 1 : -1, p.stream * 0.3, p.sway);
+  }
 
   if (!fb.behind) armB(0);
   if (!fa.behind) armA(0);
@@ -493,8 +762,20 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const [tax, tay] = bladeTip('side', 'a', p.a, p.da, U, hx, fa);
   const [tbx, tby] = bladeTip('side', 'b', p.b, p.db, U, hx, fb);
 
-  // The scarf's tails behind his head, streaming as he runs.
-  tails(c, hx + 2.6, 13.4 + U, 1, p.stream, 0, -1);
+  // The scarf's tails behind his head, streaming as he runs (the fox's tails from the small of the back).
+  tails(c, hx + 2.6, (S.corsair ? 10.8 : 13.4) + U, 1, p.stream, 0, -1);
+  if (S.kitsune) {
+    const k = p.stream;
+    foxTails(c, hx + 2.4, 21 + U, [[hx + 6.4 + k * 1.2, 11.8 + U + k * 1.5], [hx + 8.4 + k * 1.4, 15 + U + k * 1.2], [hx + 7.6 + k * 1.2, 19.5 + U]], -1);
+  }
+  if (S.corsair) {
+    // The coat's tails behind his legs, flaring as he runs.
+    c.part();
+    c.shape(22 + U, 26 + L, (y) => {
+      const u = (y - 22 - U) / Math.max(1, 4 + L - U);
+      return [hx + 0.2 + (cx - hx) * u * 0.5, hx + 3.4 + u * (1 + p.stream * 1.6)];
+    }, S.vest, (_x, _y, t, u) => sphere(t * 0.9 + 0.1, u * 0.4, 1), { bias: -1 });
+  }
 
   // Far arm and its dagger behind everything.
   dagger(c, fb, tbx, tby, p.gleam, -1);
@@ -528,7 +809,68 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   c.part();
   c.capsule(hx + 1.8, 15.4 + U, hx - 2.3, 21.4 + U, 0.5, 0.5, HILT);
 
+  if (S.corsair) {
+    // A frill of linen at the open front, an epaulette, and his head: hair
+    // down his back, the bandana, the patch and its strap, a goatee, then the
+    // tricorn in profile, cocked up fore and aft.
+    c.part();
+    for (const y of [ttop, ttop + 1, ttop + 2]) c.px(Math.round(hx - 3.4 + ((y - ttop) & 1) * 0.6), y, LINEN, sphere(-0.5, -0.2), { bias: 1 });
+    epaulettes(c, [[hx + 0.4, 15.6 + U]]);
+    c.part();
+    c.ellipse(hx + 1, 12 + U, 2.6, 3.0, PIRATE_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8, 1) });
+    c.capsule(hx + 2.2, 13 + U, hx + 3 + p.stream * 0.8, 18 + U, 1.2, 0.8, PIRATE_HAIR);
+    c.part();
+    c.ellipse(hx - 1.4, 12.8 + U, 2.2, 2.2, SKIN);
+    c.part();
+    c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+    c.part();
+    c.shape(10 + U, 10 + U, () => [hx - 3.6, hx + 1.4], S.scarf, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+    c.px(hx - 3, 15 + U, PIRATE_HAIR, sphere(-0.3, 0.3));
+    c.px(hx - 2, 15 + U, PIRATE_HAIR, sphere(0.2, 0.3), { bias: -1 });
+    c.shade(hx - 3, 14 + U, -1);
+    c.part();
+    c.px(hx - 3, 12 + U, PATCH, sphere(-0.2, 0));
+    for (const [dx, y] of [[-2, 11], [-1, 11], [0, 11], [1, 11]] as const) c.px(hx + dx, y + U, PATCH, sphere(0, -0.2));
+    c.part();
+    c.shape(6 + U, 8 + U, (y) => [hx - [1.8, 2.4, 2.6][y - 6 - U], hx + [2.2, 2.8, 3.0][y - 6 - U]], TRICORN, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.8, 1));
+    c.shape(9 + U, 9 + U, () => [hx - 4.6, hx + 4.4], TRICORN, (_x, _y, t) => sphere(t * 0.7, 0.2, 1));
+    c.px(hx - 5, 8 + U, TRICORN, sphere(-0.6, -0.6), { bias: 1 });
+    c.px(hx + 4, 8 + U, TRICORN, sphere(0.6, -0.6));
+    c.part();
+    c.px(hx - 5, 7 + U, S.metal, sphere(-0.4, -0.6));
+    c.px(hx + 4, 7 + U, S.metal, sphere(0.4, -0.6));
+    const back = tax > fa.x + 1;
+    if (back) dagger(c, fa, tax, tay, p.gleam);
+    arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1]);
+    if (!back) dagger(c, fa, tax, tay, p.gleam);
+    return;
+  }
   mantle(c, hx, U, 4, 4.2);
+
+  if (S.kitsune) {
+    // The hood, the far ear and the near one, the fox mask in profile with its
+    // snout thrust forward, and the brim over it.
+    c.part();
+    c.ellipse(hx + 0.4, 11.4 + U, 3.4, 3.6, S.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
+    ear(c, hx + 2, 9 + U, hx + 2.4, 4.4 + U, -1);
+    ear(c, hx + 0.2, 9 + U, hx - 0.8, 3.8 + U);
+    c.part();
+    c.ellipse(hx - 1.4, 12.6 + U, 2.2, 2.1, FOX_MASK);
+    c.part();
+    c.capsule(hx - 2.6, 13.2 + U, hx - 5.2, 14.2 + U, 1.1, 0.6, FOX_MASK);
+    c.part();
+    c.px(hx - 6, 14 + U, PATCH, sphere(-0.4, 0.2));
+    c.px(hx - 2, 11 + U, S.vest, sphere(0, -0.2));
+    c.px(hx - 3, 13 + U, S.vest, sphere(0, 0.2));
+    c.part();
+    c.shape(8 + U, 9 + U, (y) => [hx - 3.6 + (9 + U - y) * 0.8, hx + 3], S.hood, (_x, _y, t, u) => sphere(t * 0.9, u - 0.7, 1));
+    eyes(c, [[hx - 3, 12 + U]], p.blink);
+    const back = tax > fa.x + 1;
+    if (back) dagger(c, fa, tax, tay, p.gleam);
+    arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1]);
+    if (!back) dagger(c, fa, tax, tay, p.gleam);
+    return;
+  }
 
   // Head: the hood in profile, the face peeking out, the scarf over the nose.
   c.part();
@@ -796,6 +1138,32 @@ export const DANCER_DAGGERS: DaggerColors = {
   smoke: ['#a47cff', '#5a34a8', '#2a1658'],
   glint: '#e8d8ff',
   ink: '#07040f',
+};
+
+export const CORSAIR_DAGGERS: DaggerColors = {
+  blade: ['#f4f8ff', '#cbd7ec', '#6f7fa0'],
+  hilt: ['#2c1c1c', '#140c0c'],
+  guard: '#f4cf6a',
+  smoke: ['#b0a48e', '#6e6452', '#3a3428'],
+  glint: '#ffe08a',
+  ink: '#0b0910',
+};
+
+export const KITSUNE_DAGGERS: DaggerColors = {
+  blade: ['#f4fbff', '#9ad0ff', '#3a6ad8'],
+  hilt: ['#5e1e26', '#2e0c10'],
+  guard: '#f4cf6a',
+  smoke: ['#8ac8ff', '#3a6ad8', '#1a2a70'],
+  glint: '#e0f4ff',
+  ink: '#050a1c',
+};
+
+/** Each look's icons: its dagger colours, and whether its special is the dance (a blink) or the shadowstep. */
+export const ROGUE_ICONS: Record<string, { daggers: DaggerColors; dance: boolean }> = {
+  rogue: { daggers: ROGUE_DAGGERS, dance: false },
+  rogue_dancer: { daggers: DANCER_DAGGERS, dance: true },
+  rogue_corsair: { daggers: CORSAIR_DAGGERS, dance: false },
+  rogue_kitsune: { daggers: KITSUNE_DAGGERS, dance: true },
 };
 
 function painter(): { px: Uint8ClampedArray; put: (x: number, y: number, c: string) => void; outline: (c: string) => void } {

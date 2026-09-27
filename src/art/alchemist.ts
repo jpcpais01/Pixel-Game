@@ -20,8 +20,17 @@
 // acid lenses, a respirator snout and twin filters, rusted copper pauldrons,
 // a charcoal rubber coat under a leather apron, a pressure tank on the back
 // and chartreuse chem in metal canisters instead of glass flasks.
+//
+// The bone shaman is the plague doctor's other skin: a ram's skull for a mask
+// with spirit-fire in its sockets, great curled horns, a crown of raven
+// feathers, black braids, a hide robe under a feather mantle, a necklace of
+// teeth, and gourds of glowing teal juju instead of flasks.
+//
+// Cryotech is Chemtech's skin: a white insulated suit, a glass bubble helmet
+// over a hood and a glowing ice visor, frosted steel pauldrons and tank, a
+// quilted blue front and canisters of freezing blue.
 
-import { PixelCanvas, cyl, sphere, type Material, type RGB } from './pixel';
+import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
 import { BEAK, BOOT, BRASS, CHEM_BREW, CHEM_COAT, CHEM_COPPER, CHEM_CORE, CHEM_HOT, CHEM_LENS, CHEM_MID, CHEM_RUBBER, CHEM_STEEL, GLASS, GOLD, HEX_BREW, HEX_CORE, HEX_EYE, HEX_HOT, HEX_MID, LEATHER, LENS, MANTLE, PLAGUE_COAT, PLAGUE_HAT, TOXIN, TOX_CORE, TOX_HOT, TOX_MID, TROUSER, WITCH_HAIR, WITCH_ROBE, WITCH_SHAWL, WITCH_SKIN, WOOD } from './palette';
 import { DIRS, type Dir } from './wizard';
 
@@ -87,6 +96,12 @@ export interface AlchemistLook {
   hair?: Material;
   /** Chemtech: helmet, gas mask, pressure tank, apron and canisters. */
   chem?: boolean;
+  /** The bone shaman: a horned skull, a feather crown, braids, teeth and gourds (drawn on the plague rig). */
+  shaman?: boolean;
+  /** Cryotech: a glass bubble helmet over a hood and visor, and an insulated front (drawn on the chem rig). */
+  cryo?: boolean;
+  /** Chemtech's apron, when not leather. */
+  apron?: Material;
   /** Animation speeds that differ from the usual ones. */
   fps?: Partial<Record<AlchemistAnim, number>>;
 }
@@ -143,7 +158,66 @@ export const CHEM_LOOK: AlchemistLook = {
   fps: { throw: 23 },
 };
 
-export const ALCHEMIST_LOOKS = [PLAGUE_LOOK, WITCH_LOOK, CHEM_LOOK];
+const ramp = (...c: string[]): RGB[] => c.map(hex);
+
+// The bone shaman's materials.
+const BONE: Material = { ramp: ramp('#56483a', '#928066', '#ccba96', '#eee4ca', '#fffaee'), outline: hex('#1c140c'), outlineLit: hex('#34281c') };
+const HORN: Material = { ramp: ramp('#20180f', '#403024', '#665040', '#927c64', '#bcaa8e'), outline: hex('#0c0806') };
+const HIDE: Material = { ramp: ramp('#221308', '#3e2413', '#623c20', '#885832', '#ae7c4e'), outline: hex('#0e0804'), outlineLit: hex('#1e1008') };
+const RAVEN: Material = { ramp: ramp('#08080e', '#141828', '#222a44', '#364668', '#5a7494'), outline: hex('#030308'), outlineLit: hex('#10121e'), shine: true };
+const RED_FEATHER: Material = { ramp: ramp('#420808', '#80140e', '#c02a1a', '#ee5a36'), outline: hex('#180404') };
+const SHAMAN_SKIN: Material = { ramp: ramp('#2a140c', '#4a2616', '#6e3e24', '#945e3a', '#b8845a'), outline: hex('#120804') };
+const BRAID: Material = { ramp: ramp('#08070a', '#141218', '#221e28', '#363040'), outline: hex('#030204') };
+const SPIRIT_EYE: Material = { ramp: ramp('#0c4a3e', '#1a9a7e', '#5af0c8', '#d8fff0'), outline: hex('#04140f'), emissive: 0.9, noAO: true };
+const SPIRIT_BREW: Material = { ramp: ramp('#0a5a4a', '#1ab090', '#5af0c8', '#e0fff4'), outline: hex('#04180f'), emissive: 0.8, noAO: true };
+const GOURD: Material = { ramp: ramp('#4a2a0e', '#7e4c1a', '#b07a2e', '#d8a852', '#f0d08a'), outline: hex('#1c0e04'), shine: true };
+
+// Cryotech's.
+const ICE_SUIT: Material = { ramp: ramp('#46566e', '#7688a6', '#b0c0d8', '#e0ecf6', '#ffffff'), outline: hex('#141c2c'), outlineLit: hex('#26324a') };
+const ICE_PANEL: Material = { ramp: ramp('#10264a', '#1c4078', '#2c5ea8', '#4884d0', '#80b4f0'), outline: hex('#08142a') };
+const FROST_STEEL: Material = { ramp: ramp('#2a3850', '#4a6282', '#7894b6', '#aec6de', '#e8f4ff'), outline: hex('#0e1422'), shine: true };
+const SILVER_BAND: Material = { ramp: ramp('#384050', '#687284', '#a2acbc', '#dae2ec', '#ffffff'), outline: hex('#141820'), shine: true };
+const HOOD: Material = { ramp: ramp('#363c46', '#5e6674', '#949caa', '#c8ced8'), outline: hex('#12161c') };
+const CRYO_LENS: Material = { ramp: ramp('#1c4a8a', '#3a8ae0', '#8ad0ff', '#e0f6ff'), outline: hex('#0a1a30'), emissive: 0.9, noAO: true };
+const CRYO_BREW: Material = { ramp: ramp('#1c4aa0', '#3a88e8', '#8ad4ff', '#e6faff'), outline: hex('#0a1a36'), emissive: 0.8, noAO: true };
+const DOME: Material = { ramp: ramp('#56789a', '#86acca', '#c0dcf0', '#f2fcff'), outline: hex('#1a2a3a'), emissive: 0.12, shine: true, noAO: true };
+
+export const SHAMAN_LOOK: AlchemistLook = {
+  key: 'alchemist_shaman',
+  coat: HIDE,
+  mantle: RAVEN,
+  hat: RAVEN,
+  face: BONE,
+  eye: SPIRIT_EYE,
+  gloves: SHAMAN_SKIN,
+  band: HORN,
+  brew: SPIRIT_BREW,
+  core: hex('#e0fff4'),
+  hot: hex('#8affd8'),
+  mid: hex('#2ad8a8'),
+  witch: false,
+  hair: BRAID,
+  shaman: true,
+};
+
+export const CRYO_LOOK: AlchemistLook = {
+  ...CHEM_LOOK,
+  key: 'alchemist_cryo',
+  coat: ICE_SUIT,
+  mantle: FROST_STEEL,
+  hat: FROST_STEEL,
+  face: HOOD,
+  eye: CRYO_LENS,
+  band: SILVER_BAND,
+  brew: CRYO_BREW,
+  core: hex('#e6faff'),
+  hot: hex('#9ad8ff'),
+  mid: hex('#4aa8f0'),
+  cryo: true,
+  apron: ICE_PANEL,
+};
+
+export const ALCHEMIST_LOOKS = [PLAGUE_LOOK, WITCH_LOOK, CHEM_LOOK, SHAMAN_LOOK, CRYO_LOOK];
 
 /** The look being drawn; set by buildAlchemistFrames. */
 let S: AlchemistLook = PLAGUE_LOOK;
@@ -181,6 +255,10 @@ function heldFlask(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: numb
     heldCanister(c, x, y, size, boil, bias, seed);
     return;
   }
+  if (S.shaman) {
+    heldGourd(c, x, y, size, boil, bias, seed);
+    return;
+  }
   const r = size === 2 ? 2.4 : 1.75;
   const by = y - r + 0.2;
   c.part();
@@ -202,6 +280,39 @@ function heldFlask(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: numb
     for (let i = 0; i < 3; i++) {
       const up = ((seed * 3 + i * 5) % 7) + 1;
       c.spark(x + ((i + seed) % 3) - 1, neckTop - 1 - up * boil, i === 0 ? S.core : S.hot, 0.55 * boil);
+    }
+  }
+}
+
+/** The shaman's gourd held at (x, y): a fat belly and a small head, a glyph of juju glowing on it, a feather in its stopper. */
+function heldGourd(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: number, bias: number, seed: number): void {
+  const r = size === 2 ? 2.3 : 1.65;
+  const by = y - r + 0.2;
+  const hy = by - r * 1.05;
+  c.part();
+  c.ellipse(x, by, r, r * 0.95, GOURD, { bias });
+  c.part();
+  c.ellipse(x, hy, r * 0.55, r * 0.55, GOURD, { bias: bias + 1 });
+  c.part();
+  const top = Math.round(hy - r * 0.55) - 1;
+  c.px(x, top, RED_FEATHER, sphere(-0.2, -0.6));
+  if (size === 2) c.px(x + 1, top - 1, RED_FEATHER, sphere(0.3, -0.6));
+  // The glyph painted round its belly, glowing with what's inside.
+  c.part();
+  c.px(x, by, S.brew, sphere(0, 0), { bias });
+  if (size === 2) {
+    c.px(x - 1, by + 1, S.brew, sphere(-0.3, 0.2), { bias });
+    c.px(x + 1, by + 1, S.brew, sphere(0.3, 0.2), { bias });
+  }
+  const k = 0.3 + boil * 0.5;
+  c.spark(x, by, S.hot, k * 0.7);
+  c.spark(x - r, by, S.mid, k * 0.25);
+  c.spark(x + r, by, S.mid, k * 0.25);
+  if (boil > 0) {
+    // Wisps of spirit curling up off the stopper.
+    for (let i = 0; i < 3; i++) {
+      const up = ((seed * 3 + i * 5) % 7) + 1;
+      c.spark(x + ((i + seed) % 3) - 1, top - 1 - up * boil, i === 0 ? S.core : S.hot, 0.55 * boil);
     }
   }
 }
@@ -266,7 +377,7 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   c.capsule(ex, ey, fx, fy, 1.5, 1.35, S.coat, { bias });
   if (hold.size) heldFlask(c, fx, fy - 0.6, hold.size, hold.boil, bias, hold.seed);
   c.part();
-  if (S.witch) c.ellipse(fx, fy, 1.15, 1.1, S.gloves, { bias });
+  if (S.witch || S.shaman) c.ellipse(fx, fy, 1.15, 1.1, S.gloves, { bias });
   else c.ellipse(fx, fy, 1.35, 1.25, S.gloves, { bias: bias + 1 });
 }
 
@@ -311,6 +422,10 @@ function hat(c: PixelCanvas, cx: number, U: number, view: View): void {
     helmet(c, cx, U, view);
     return;
   }
+  if (S.shaman) {
+    horns(c, cx, U, view);
+    return;
+  }
   const brimY = 9.4 + U;
   c.part();
   if (view === 'side') {
@@ -352,6 +467,10 @@ function hat(c: PixelCanvas, cx: number, U: number, view: View): void {
 
 /** Chemtech's steel helmet: a riveted dome, a brass brow band, and a glass tube of chem standing on top. */
 function helmet(c: PixelCanvas, cx: number, U: number, view: View): void {
+  if (S.cryo) {
+    dome(c, cx, U, view);
+    return;
+  }
   const x = cx + (view === 'side' ? 0.6 : 0);
   c.part();
   c.ellipse(x, 8 + U, 3.9, 2.9, S.hat, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.35, 1) });
@@ -435,8 +554,13 @@ function mantle(c: PixelCanvas, cx: number, U: number, l: number, r: number): vo
     c.px(Math.round(cx - l * 0.7), top + 2, S.band, sphere(-0.4, -0.4));
     c.px(Math.round(cx + r * 0.7) - 1, top + 2, S.band, sphere(0.4, -0.4));
     for (let x = Math.floor(cx - l); x <= Math.ceil(cx + r); x++) if (c.filled(x, top + 4)) c.shade(x, top + 4, -1);
+    if (S.cryo) {
+      // Frost crusted on the plates.
+      c.part();
+      for (const [x, y] of [[cx - l * 0.55, top + 1], [cx - l * 0.8, top + 3], [cx + r * 0.55 - 1, top + 1], [cx + r * 0.8 - 1, top + 3]] as const) c.px(Math.round(x), y, DOME, sphere(0, -0.5), { glow: 0.3 });
+    }
   }
-  if (S.witch) {
+  if (S.witch || S.shaman) {
     // The shawl's ragged edge.
     const y = top + 4;
     for (let x = Math.floor(cx - l); x <= Math.ceil(cx + r); x++) if ((x & 1) === 1 && c.filled(x, y)) c.shade(x, y, -1);
@@ -463,6 +587,139 @@ function witchFace(c: PixelCanvas, cx: number, U: number, blink: boolean | undef
   lenses(c, [[10, 11 + U], [13, 11 + U]], blink);
 }
 
+/**
+ * The shaman's crown of raven feathers fanning up behind his head, the middle
+ * ones tipped red. From the side they sweep back.
+ */
+function feathers(c: PixelCanvas, cx: number, U: number, view: View): void {
+  const quills: [number, number, number, number, Material][] =
+    view === 'side'
+      ? [
+          [cx + 0.4, 9, cx - 0.6, 3.4, RED_FEATHER],
+          [cx + 1.2, 9, cx + 1.8, 3, RAVEN],
+          [cx + 1.8, 9.4, cx + 4, 4, RED_FEATHER],
+          [cx + 2.2, 10, cx + 5.4, 5.8, RAVEN],
+        ]
+      : [
+          [cx - 2.2, 9.6, cx - 5, 5.2, RAVEN],
+          [cx - 1.2, 9.2, cx - 2.8, 3.4, RED_FEATHER],
+          [cx, 9, cx, 2.6, RAVEN],
+          [cx + 1.2, 9.2, cx + 2.8, 3.4, RED_FEATHER],
+          [cx + 2.2, 9.6, cx + 5, 5.2, RAVEN],
+        ];
+  for (const [x0, y0, x1, y1, tip] of quills) {
+    c.part();
+    c.capsule(x0, y0 + U, x1, y1 + U, 0.55, 0.85, RAVEN, { bias: view === 'up' ? 0 : -1 });
+    c.part();
+    c.px(x1, y1 + U - 0.4, tip, sphere(0, -0.7), { bias: 1 });
+  }
+}
+
+/** Great ram's horns curling out of the skull's temples, ridged along their length. */
+function horns(c: PixelCanvas, cx: number, U: number, view: View): void {
+  const curl = (pts: [number, number][], bias = 0) => {
+    for (let i = 0; i < pts.length - 1; i++) {
+      const r0 = 1.3 - (i / (pts.length - 1)) * 0.8;
+      const r1 = 1.3 - ((i + 1) / (pts.length - 1)) * 0.8;
+      c.part();
+      c.capsule(pts[i][0], pts[i][1] + U, pts[i + 1][0], pts[i + 1][1] + U, r0, r1, HORN, { bias });
+      if (i > 0) c.shade(pts[i][0], pts[i][1] + U, -1);
+    }
+  };
+  if (view === 'side') {
+    curl([[cx - 0.6, 9.8], [cx + 1.8, 9.2], [cx + 3.2, 10.8], [cx + 2.9, 13], [cx + 1.6, 13.6], [cx + 0.9, 12.6]]);
+    return;
+  }
+  const side = (k: number): [number, number][] => [
+    [cx + k * 2.4, 10.2],
+    [cx + k * 4.4, 9.2],
+    [cx + k * 5.9, 10.4],
+    [cx + k * 5.9, 12.5],
+    [cx + k * 4.7, 13.3],
+  ];
+  curl(side(-1));
+  curl(side(1), view === 'down' ? -1 : 0);
+}
+
+/** A braid of black hair from y0 down to y1, drifting `dx` sideways, a bone bead tied at its end. */
+function braid(c: PixelCanvas, x: number, y0: number, y1: number, dx: number): void {
+  c.part();
+  c.capsule(x, y0, x + dx, y1, 0.75, 0.6, BRAID);
+  for (let y = Math.ceil(y0) + 1; y < y1; y += 2) c.shade(x + dx * ((y - y0) / (y1 - y0)), y, -1);
+  c.part();
+  c.px(x + dx, y1 + 1, BONE, sphere(0, 0.2));
+}
+
+/** The shaman from the front: braids to the chest, a ram's skull over his face with spirit-fire in its sockets. */
+function shamanFace(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+  braid(c, cx - 3.2, 12 + U, 18 + U, -0.6);
+  braid(c, cx + 3.2, 12 + U, 18 + U, 0.6);
+  c.part();
+  c.ellipse(cx, 11.6 + U, 3.0, 2.6, BONE);
+  // The snout, narrowing down over the collar, and its teeth.
+  c.part();
+  c.shape(13 + U, 16 + U, (y) => {
+    const hw = [2.0, 1.75, 1.45, 1.05][y - 13 - U];
+    return [cx - hw, cx + hw];
+  }, BONE, (_x, _y, t, u) => sphere(t * 0.8, 0.3 + u * 0.4, 1));
+  c.shade(cx - 1, 14 + U, -2);
+  c.shade(cx, 14 + U, -2);
+  c.shade(cx - 1, 16 + U, -1);
+  c.shade(cx + 1, 16 + U, -1);
+  // A crack over the brow.
+  c.shade(cx + 1, 9 + U, -1);
+  c.shade(cx + 2, 10 + U, -1);
+  // Deep sockets, and the fire burning in them.
+  for (const [x, y] of [[9, 11], [10, 12], [13, 12], [14, 11]] as const) c.shade(x, y + U, -2);
+  lenses(c, [[10, 11 + U], [13, 11 + U]], blink);
+}
+
+/** A necklace of teeth hanging below the mantle. */
+function necklace(c: PixelCanvas, pts: [number, number][]): void {
+  c.part();
+  pts.forEach(([x, y], i) => c.px(x, y, BONE, sphere(i % 2 ? 0.3 : -0.3, 0.2), { bias: i % 2 ? -1 : 1 }));
+}
+
+/**
+ * Cryotech's bubble helmet: a ring of glass round the head, the light
+ * glinting on it, seated in a steel collar with a valve on the crown.
+ */
+function dome(c: PixelCanvas, cx: number, U: number, view: View): void {
+  const x = cx + (view === 'side' ? -0.4 : 0);
+  const y = 11.4 + U;
+  const r = 4.3;
+  c.part();
+  for (let py = Math.floor(y - r - 1); py <= Math.floor(y + 3.4); py++) {
+    for (let px = Math.floor(x - r - 1); px <= Math.ceil(x + r + 1); px++) {
+      const dx = px + 0.5 - x;
+      const dy = py + 0.5 - y;
+      const d = Math.hypot(dx, dy);
+      if (d < r - 0.5 || d > r + 0.5) continue;
+      c.px(px, py, DOME, sphere((dx / d) * 0.8, (dy / d) * 0.8, 1), { bias: dx + dy < -2 ? 1 : 0 });
+    }
+  }
+  c.part();
+  const hw = view === 'side' ? 3.2 : 3.6;
+  c.shape(15 + U, 15 + U, () => [x - hw, x + hw], S.band, (_x, _y, t) => cyl(t, 0.3));
+  c.px(x, Math.round(y - r - 1), S.band, sphere(0, -0.7));
+  // Light on the glass.
+  c.spark(x - 2.2, y - 2.6, [255, 255, 255], 0.55);
+  c.spark(x - 3.0, y - 1.4, [220, 244, 255], 0.35);
+  if (view !== 'up') c.spark(x + 2.6, y + 1.8, S.mid, 0.25);
+}
+
+/** Cryotech from the front, inside the bubble: an insulated hood, a band of glowing ice visor, a small respirator. */
+function cryoFace(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+  c.part();
+  c.ellipse(cx, 12 + U, 2.9, 2.6, S.face);
+  c.part();
+  c.shape(13 + U, 14 + U, () => [cx - 1.2, cx + 1.2], S.mantle, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
+  c.px(cx - 1, 14 + U, S.band, sphere(-0.3, 0.3));
+  lenses(c, [[9, 11 + U], [10, 11 + U], [11, 11 + U], [12, 11 + U], [13, 11 + U], [14, 11 + U]], blink);
+}
+
+// ---------------------------------------------------------------------------
+// Directions
 // ---------------------------------------------------------------------------
 // Directions
 
@@ -511,7 +768,7 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
   }, S.coat, (_x, y, t) => sphere(t * 0.9, y <= waist ? (y - top) / (waist - top) * 0.8 - 0.35 : 0.2, 1));
   for (let y = waist + 1; y <= hem; y++) c.shade(cx + Math.round(((y - waist) / (hem - waist)) * p.sway), y, -2);
   for (let y = top + 2; y < waist; y++) c.shade(cx, y, -1);
-  if (S.witch) tatter(c, hem, cx - 6, cx + 6);
+  if (S.witch || S.shaman) tatter(c, hem, cx - 6, cx + 6);
   if (S.chem) {
     // A heavy leather apron down the front, riveted at the corners.
     c.part();
@@ -520,13 +777,15 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
       const hw = 2.2 + u * 0.9;
       const sw = y > waist ? ((y - waist) / (hem - waist)) * p.sway : 0;
       return [cx - hw + sw, cx + hw + sw];
-    }, LEATHER, (_x, _y, t, u) => sphere(t * 0.8, u * 0.4 - 0.15, 1));
+    }, S.apron ?? LEATHER, (_x, _y, t, u) => sphere(t * 0.8, u * 0.4 - 0.15, 1));
     c.px(cx - 3, hem - 1, S.band, sphere(-0.3, 0));
     c.px(cx + 2, hem - 1, S.band, sphere(0.3, 0));
+    // Cryotech's front is quilted: a seam down it and across it every few rows.
+    if (S.cryo) for (let y = top + 4; y < hem - 1; y++) for (let x = cx - 2; x <= cx + 1; x++) if ((y - top) % 3 === 0 || x === cx) c.shade(x, y, -1);
   }
   // Brass buttons down the front, where the beak doesn't cover them.
   c.part();
-  if (!S.witch && !S.chem) for (const y of [19, 21]) c.px(cx - 2, y + U, GOLD, sphere(-0.3, -0.4));
+  if (!S.witch && !S.chem && !S.shaman) for (const y of [19, 21]) c.px(cx - 2, y + U, GOLD, sphere(-0.3, -0.4));
   // Belt and buckle.
   c.part();
   c.shape(waist, waist, () => [cx - 4.3, cx + 4.3], LEATHER, (_x, _y, t) => cyl(t, 0));
@@ -554,8 +813,19 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
     return;
   }
 
+  if (S.shaman) {
+    necklace(c, [[8, 17 + U], [9, 18 + U], [10, 18 + U], [11, 19 + U], [12, 19 + U], [13, 18 + U], [14, 18 + U], [15, 17 + U], [10, 19 + U], [13, 19 + U]]);
+    feathers(c, cx, U, 'down');
+    shamanFace(c, cx, U, p.blink);
+    hat(c, cx, U, 'down');
+    if (!fa.behind) armA();
+    if (!fb.behind) armB();
+    return;
+  }
+
   if (S.chem) {
-    chemMask(c, cx, U, p.blink);
+    if (S.cryo) cryoFace(c, cx, U, p.blink);
+    else chemMask(c, cx, U, p.blink);
     hat(c, cx, U, 'down');
     if (!fa.behind) armA();
     if (!fb.behind) armB();
@@ -607,7 +877,7 @@ function drawUp(c: PixelCanvas, p: Pose, seed: number): void {
     return [cx - hw + sw, cx + hw + sw];
   }, S.coat, (_x, y, t) => sphere(t * 0.9, y <= waist ? (y - top) / (waist - top) * 0.8 - 0.35 : 0.2, 1));
   for (let y = top + 3; y <= hem; y++) c.shade(cx + (y > waist ? Math.round(((y - waist) / (hem - waist)) * p.sway) : 0), y, y > hem - 3 ? -2 : -1);
-  if (S.witch) tatter(c, hem, cx - 6, cx + 6);
+  if (S.witch || S.shaman) tatter(c, hem, cx - 6, cx + 6);
   c.part();
   c.shape(waist, waist, () => [cx - 4.3, cx + 4.3], LEATHER, (_x, _y, t) => cyl(t, 0));
   // The bandolier crossing the back, and a satchel at the hip.
@@ -627,6 +897,14 @@ function drawUp(c: PixelCanvas, p: Pose, seed: number): void {
     hair(c, 12 + U, 19 + U, (u) => cx - 3.3 + u * 0.5, (u) => cx + 3.3 - u * 0.5);
     tatter(c, 19 + U, cx - 3, cx + 3);
     for (const x of [cx - 1, cx + 1]) for (let y = 13; y <= 18; y++) c.shade(x, y + U, -1);
+  } else if (S.shaman) {
+    // Black hair bound in braids down his back, the skull's thong across it, then the feathers and horns.
+    c.part();
+    c.ellipse(cx, 12 + U, 3.2, 2.6, BRAID, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+    for (let x = cx - 3; x <= cx + 2; x++) c.px(x, 11 + U, HIDE, sphere(0, -0.2), { bias: x === cx - 3 || x === cx + 2 ? -1 : 0 });
+    braid(c, cx - 1.6, 13 + U, 20 + U, -0.4);
+    braid(c, cx + 1.6, 13 + U, 20 + U, 0.4);
+    feathers(c, cx, U, 'up');
   } else if (S.chem) {
     // The back of the mask's rubber hood, its straps, and the tank over it all.
     c.part();
@@ -688,7 +966,7 @@ function drawSide(c: PixelCanvas, p: Pose, seed: number): void {
   }, S.coat, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? (y - top) / (waist - top) * 0.8 - 0.35 : 0.2, 1));
   // The fold where the front panel meets the side.
   for (let y = waist + 1; y <= hem; y++) c.shade(Math.round(hx + (cx - hx) * ((y - waist) / (hem - waist)) - 1.5), y, -1);
-  if (S.witch) tatter(c, hem, cx - 5, cx + 6);
+  if (S.witch || S.shaman) tatter(c, hem, cx - 5, cx + 6);
   c.part();
   c.shape(waist, waist, () => [hx - 3.1, hx + 3.2], LEATHER, (_x, _y, t) => cyl(t, 0));
   c.part();
@@ -721,6 +999,28 @@ function drawSide(c: PixelCanvas, p: Pose, seed: number): void {
     return;
   }
 
+  if (S.shaman) {
+    // The feathers sweeping back, braids down his back, then the skull in
+    // profile: a blunt snout, fire in the socket, and a horn curled round his ear.
+    feathers(c, hx, U, 'side');
+    braid(c, hx + 2.4, 12 + U, 19 + U, 0.8 + p.sway * 0.4);
+    c.part();
+    c.ellipse(hx + 1.3, 12 + U, 1.9, 2.3, BRAID, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8, 1) });
+    c.part();
+    c.ellipse(hx - 0.4, 11.8 + U, 2.6, 2.4, BONE);
+    c.part();
+    c.capsule(hx - 2.2, 12.6 + U, hx - 4.8, 14.0 + U, 1.35, 0.95, BONE);
+    c.shade(hx - 4, 13 + U, -2);
+    c.shade(hx - 4, 15 + U, -1);
+    c.shade(hx - 3, 15 + U, -1);
+    c.shade(hx - 3, 11 + U, -2);
+    necklace(c, [[hx - 3, 17 + U], [hx - 3, 18 + U], [hx - 2, 18 + U], [hx - 1, 18 + U]]);
+    lenses(c, [[hx - 2, 11 + U]], p.blink);
+    hat(c, hx, U, 'side');
+    arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.3, 1], { size: p.flask, boil: p.boil, seed });
+    return;
+  }
+
   if (S.chem) {
     // A leather apron over the front of the coat.
     c.part();
@@ -728,7 +1028,23 @@ function drawSide(c: PixelCanvas, p: Pose, seed: number): void {
       const u = (y - waist) / (hem - waist);
       const x0 = hx + (cx - hx) * u - 3.4;
       return [x0, x0 + 2];
-    }, LEATHER, (_x, _y, t) => sphere(t * 0.8 - 0.2, 0.1, 1));
+    }, S.apron ?? LEATHER, (_x, _y, t) => sphere(t * 0.8 - 0.2, 0.1, 1));
+    if (S.cryo) {
+      // Inside the bubble: the hood, a band of ice visor, a small respirator
+      // and its hose back to the tank.
+      c.part();
+      c.ellipse(hx - 0.2, 12 + U, 2.8, 2.5, S.face);
+      c.part();
+      c.px(hx - 3, 14 + U, S.mantle, sphere(-0.5, 0.3));
+      c.px(hx - 2, 14 + U, S.mantle, sphere(0, 0.3));
+      c.part();
+      c.capsule(hx - 2.2, 15.2 + U, hx + 0.4, 16.2 + U, 0.55, 0.55, S.face);
+      c.capsule(hx + 0.4, 16.2 + U, hx + 2.8, 14.4 + U, 0.55, 0.55, S.face);
+      lenses(c, [[hx - 3, 11 + U], [hx - 2, 11 + U], [hx - 1, 11 + U]], p.blink);
+      hat(c, hx, U, 'side');
+      arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.3, 1], { size: p.flask, boil: p.boil, seed });
+      return;
+    }
     // The mask in profile: a rubber hood, the snout thrust forward with a
     // filter on its end, and a hose from under it back to the tank.
     c.part();
@@ -946,6 +1262,7 @@ export const BIG_FLASK_SIZE = 15;
 /** A flask tumbling end over end: frame `i` of FLASK_FRAMES, turned i/FLASK_FRAMES of a circle. */
 export function flaskFrame(i: number, big: boolean, look: AlchemistLook = PLAGUE_LOOK): PixelCanvas {
   if (look.chem) return canisterFrame(i, big, look);
+  if (look.shaman) return gourdFrame(i, big, look);
   const S = big ? BIG_FLASK_SIZE : FLASK_SIZE;
   const c = new PixelCanvas(S, S);
   const a = (i / FLASK_FRAMES) * Math.PI * 2 - Math.PI / 2;
@@ -1000,6 +1317,40 @@ function canisterFrame(i: number, big: boolean, look: AlchemistLook): PixelCanva
     for (let k = 0; k < 6; k++) {
       const t = (k / 6) * Math.PI * 2 + i * 0.6;
       c.spark(m + Math.cos(t) * (r + 2), m + Math.sin(t) * (r + 2), cols[k % 2], 0.35);
+    }
+  }
+  return c;
+}
+
+/** The shaman's gourd tumbling: a fat belly and a small head, its glyph glowing, a red feather in the stopper. */
+function gourdFrame(i: number, big: boolean, look: AlchemistLook): PixelCanvas {
+  const S = big ? BIG_FLASK_SIZE : FLASK_SIZE;
+  const c = new PixelCanvas(S, S);
+  const a = (i / FLASK_FRAMES) * Math.PI * 2 - Math.PI / 2;
+  const ux = Math.cos(a);
+  const uy = Math.sin(a);
+  const r = big ? 2.8 : 1.9;
+  const m = S / 2;
+  const bx = m - ux * r * 0.45;
+  const by = m - uy * r * 0.45;
+  c.part();
+  c.ellipse(bx, by, r, r, GOURD);
+  c.part();
+  c.ellipse(bx + ux * r * 1.3, by + uy * r * 1.3, r * 0.58, r * 0.58, GOURD);
+  c.part();
+  c.px(bx + ux * r * 2.1, by + uy * r * 2.1, RED_FEATHER, sphere(ux * 0.5, uy * 0.5 - 0.3));
+  c.part();
+  c.px(bx, by, look.brew, sphere(0, 0));
+  if (big) {
+    c.px(bx - uy, by + ux, look.brew, sphere(0, 0));
+    c.px(bx + uy, by - ux, look.brew, sphere(0, 0));
+  }
+  c.spark(bx, by, look.hot, big ? 0.7 : 0.5);
+  if (big) {
+    const cols: RGB[] = [look.hot, look.mid];
+    for (let k = 0; k < 6; k++) {
+      const t = (k / 6) * Math.PI * 2 + i * 0.6;
+      c.spark(bx + Math.cos(t) * (r + 1.2), by + Math.sin(t) * (r + 1.2), cols[k % 2], 0.4);
     }
   }
   return c;

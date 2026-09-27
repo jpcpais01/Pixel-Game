@@ -14,6 +14,14 @@ export const CHI_FX: Scheme = { core: 0xfffbe8, hot: 0xffd66b, mid: 0xff8a36, de
 export const PALM_FX: Scheme = { core: 0xfffbea, hot: 0xfff0c0, mid: 0xe8c47a, deep: 0x9a7448 };
 /** The monk's double palm and earthshaker: golden qi. */
 export const QI_FX: Scheme = { core: 0xfffbea, hot: 0xffe7a0, mid: 0xe0b050, deep: 0x8a5a2a, light: 0xffd080 };
+/** The luchador's punches: pale air with a flash of pink showbiz in it. */
+export const LUCHA_AIR_FX: Scheme = { core: 0xffffff, hot: 0xfff0f8, mid: 0xffa8d4, deep: 0xc04a8a };
+/** The luchador's finisher and barrage: gold and hot pink, like the lights over the ring. */
+export const LUCHA_FX: Scheme = { core: 0xfff8e8, hot: 0xffd35c, mid: 0xff4fa0, deep: 0x9a1c6a, light: 0xff80b8 };
+/** The stone guardian's palms: grit and stone dust. */
+export const STONE_FX: Scheme = { core: 0xfff4e0, hot: 0xe8d8b8, mid: 0xb09878, deep: 0x5e4c3e };
+/** The stone guardian's double palm and earthshaker: fire from the cracks in him. */
+export const MAGMA_FX: Scheme = { core: 0xfff4d0, hot: 0xffc050, mid: 0xff6a1a, deep: 0xa02a10, light: 0xff8a30 };
 
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
@@ -286,7 +294,9 @@ export class Fissure implements Effect {
   private age = 0;
   private readonly duration = 1600;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, radius: number) {
+  /** `fire`: what glows up out of the cracks, when not golden qi (the guardian's magma). */
+  constructor(scene: Phaser.Scene, x: number, y: number, radius: number, fire?: Scheme) {
+    const glow = fire ? [fire.hot, fire.mid, fire.core] : [0xffe7a0, 0xc07a30, 0xfffbea];
     const W = Math.ceil(radius * 2) + 4;
     const H = Math.ceil(radius * 1.3) + 4;
     this.layer = new PixelLayer(scene, W, H);
@@ -310,7 +320,7 @@ export class Fissure implements Effect {
         const k = s / len;
         const ix = Math.floor(px);
         const iy = Math.floor(py);
-        b.put(ix, iy, k < 0.35 ? 0xffe7a0 : k < 0.6 ? 0xc07a30 : 0x2a1a10, k < 0.35 ? 1 : 0.9 - k * 0.4);
+        b.put(ix, iy, k < 0.35 ? glow[0] : k < 0.6 ? glow[1] : 0x2a1a10, k < 0.35 ? 1 : 0.9 - k * 0.4);
         // A lip of broken ground beside the crack near its root.
         if (k < 0.5) b.put(ix, iy + 1, 0x1a100a, 0.7);
         // Now and then it forks.
@@ -321,7 +331,7 @@ export class Fissure implements Effect {
       }
     }
     // The crater's heart.
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -3; dx <= 3; dx++) if (Math.hypot(dx, dy * 1.5) < 3.2) b.put(Math.floor(cx + dx), Math.floor(cy + dy), Math.hypot(dx, dy * 1.5) < 1.6 ? 0xfffbea : 0x3a2414, 0.9);
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -3; dx <= 3; dx++) if (Math.hypot(dx, dy * 1.5) < 3.2) b.put(Math.floor(cx + dx), Math.floor(cy + dy), Math.hypot(dx, dy * 1.5) < 1.6 ? glow[2] : 0x3a2414, 0.9);
     b.flush();
   }
 

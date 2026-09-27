@@ -25,6 +25,8 @@ export interface ArrowStyle {
   suffix: string;
   /** Lightning: crackling trails, arcs on impact, bolts in the rain. */
   storm: boolean;
+  /** Spirit light (the wild hunt's): the arrows glow as they fly and leave trails of it. */
+  spirit?: boolean;
 }
 
 export const RANGER_ARROW: ArrowStyle = {
@@ -45,6 +47,17 @@ export const STORM_ARROW: ArrowStyle = {
   light: 0x7cc8ff,
   suffix: '_storm',
   storm: true,
+};
+
+export const HUNT_ARROW: ArrowStyle = {
+  core: 0xfbf8ff,
+  hot: 0xd8c8ff,
+  mid: 0x9a80f0,
+  deep: 0x4a3a9a,
+  light: 0xb8a0ff,
+  suffix: '_hunt',
+  storm: false,
+  spirit: true,
 };
 
 /** Rings on the ground seen at an angle: squash them vertically. */
@@ -105,7 +118,7 @@ export class Arrow implements Effect {
     this.sprite = world.add.sprite(x, y - ARROW_H, this.key, frame).setPipeline('Lit');
     this.glowLayer = world.add.sprite(x, y - ARROW_H, `${this.key}_e`, frame).setBlendMode(Phaser.BlendModes.ADD);
     this.shadow = world.add.image(x, y, 'shadow').setDepth(1).setScale(0.45, 0.35).setAlpha(0.35);
-    if (style.storm) this.light = world.lights.addLight(x, y - ARROW_H, 46, style.light, 1.3);
+    if (style.storm || style.spirit) this.light = world.lights.addLight(x, y - ARROW_H, 46, style.light, 1.3);
     this.place();
   }
 
@@ -145,9 +158,9 @@ export class Arrow implements Effect {
     this.place();
     this.trailT -= dt;
     if (this.trailT <= 0) {
-      this.trailT = this.style.storm ? 22 : 40;
+      this.trailT = this.style.storm || this.style.spirit ? 22 : 40;
       const s = this.style;
-      this.world.debris(s.storm ? [s.core, s.hot, s.mid] : [s.hot, s.mid], snap(this.x - this.ux * 5), snap(this.y - ARROW_H - this.uy * 5), 1, this.y - 0.2, 'trail');
+      this.world.debris(s.storm || s.spirit ? [s.core, s.hot, s.mid] : [s.hot, s.mid], snap(this.x - this.ux * 5), snap(this.y - ARROW_H - this.uy * 5), 1, this.y - 0.2, 'trail');
     }
   }
 
@@ -166,7 +179,7 @@ export class Arrow implements Effect {
     const bx = h.x - this.ux * (h.radius - 1);
     const by = h.y - h.bodyY;
     const s = this.style;
-    this.world.debris([s.core, s.hot, s.mid], snap(bx), snap(by), s.storm ? 12 : 7, h.y + 20);
+    this.world.debris([s.core, s.hot, s.mid], snap(bx), snap(by), s.storm ? 12 : s.spirit ? 10 : 7, h.y + 20);
     if (s.storm) this.world.addEffect(new Zap(this.world, bx, by, h.y + 20, s));
     sound.arrowHit(this.world.pan(bx), s.storm);
     this.onHit(h, this.x, this.y);
