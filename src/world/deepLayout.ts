@@ -103,6 +103,22 @@ const COLUMNS: { cx: number; cy: number; r: number }[] = [
   { cx: 600, cy: 250, r: 20 },
 ];
 
+/**
+ * Openings in the cave's roof, where daylight falls in: over the way in, the
+ * Glowcap Forest, the Moonwell's pool, the river crossing, the crystal
+ * gallery and the old camp. Never over the bosses' chambers, which keep
+ * their own light. `slant` tilts the shafts (radians, toward the east when
+ * positive); `size` scales the pool and the shafts.
+ */
+export const SKYLIGHTS: { x: number; y: number; size: number; slant: number; look: number }[] = [
+  { x: 250, y: 1440, size: 0.85, slant: 0.1, look: 0 },
+  { x: 590, y: 1250, size: 1.1, slant: -0.12, look: 1 },
+  { x: 400, y: 1026, size: 0.9, slant: 0.08, look: 0 },
+  { x: 1060, y: 1300, size: 1, slant: -0.08, look: 1 },
+  { x: 760, y: 830, size: 1.05, slant: 0.12, look: 0 },
+  { x: 190, y: 270, size: 0.8, slant: -0.1, look: 1 },
+];
+
 /** Liquids nobody can walk on: the underground river, the Moonwell's pool, and the chasm. */
 export type Liquid = 'water' | 'chasm';
 

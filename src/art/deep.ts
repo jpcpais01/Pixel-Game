@@ -843,11 +843,29 @@ const WHITE = hex('#ffffff');
 export const SHROOM_W = 46;
 export const SHROOM_H = 66;
 export const SHROOM_OY = 63;
+/** Frames in each prop's idle loop (see textures.ts, which plays them). */
+export const SHROOM_FRAMES = 8;
+export const CAPS_FRAMES = 8;
+export const STALAG_FRAMES = 6;
+export const CRYS_FRAMES = 10;
+export const SPIRE_FRAMES = 12;
 
-/** A giant glowing mushroom: a pale stem with a ring, a broad cap with glowing spots, its gills alight underneath. */
-export function giantShroom(v: number): PixelCanvas {
+/** Where frame `f` of `n` falls in its loop, as an angle. */
+const phase = (f: number, n: number) => (f / n) * Math.PI * 2;
+
+/**
+ * A giant glowing mushroom: a pale stem with a ring, a broad cap with glowing
+ * spots, its gills alight underneath. Frame `f` of its idle loop: the cap
+ * sways and settles on its stem, and its spots and gills breathe light.
+ */
+export function giantShroom(v: number, f = 0): PixelCanvas {
   const c = new PixelCanvas(SHROOM_W, SHROOM_H);
   const S = CAPS[v % 2];
+  const a = phase(f, SHROOM_FRAMES) + v * 1.7;
+  // The cap's sway (px, carried down the stem) and its bob as it settles.
+  const sway = Math.sin(a) * 1.1;
+  const bob = (1 - Math.cos(a * 2)) * 0.35;
+  const pulse = 0.5 + 0.5 * Math.sin(a);
   const cx = 23;
   const R = rng(v * 131 + 17);
   // Roots spreading at the foot.
@@ -858,21 +876,29 @@ export function giantShroom(v: number): PixelCanvas {
   }
   // The stem, leaning a little and thickening at the foot.
   c.part();
-  const lean = v % 2 ? 1.5 : -1.5;
-  c.shape(24, 62, (y) => {
+  const lean0 = v % 2 ? 1.5 : -1.5;
+  // The sway bends the stem most at the top, not at all at the foot.
+  const stemX = (y: number) => {
+    const u = (y - 24) / 38;
+    return cx + lean0 * (1 - u) + sway * (1 - u) * (1 - u);
+  };
+  c.shape(Math.round(24 + bob), 62, (y) => {
     const u = (y - 24) / 38;
     const hw = 3.6 + u * u * 2.6;
-    const x = cx + lean * (1 - u);
+    const x = stemX(y);
     return [x - hw, x + hw];
   }, STEM, (_x, _y, t) => cyl(t, 0.1));
-  for (let y = 30; y < 60; y += 3) c.shade(cx + lean * (1 - (y - 24) / 38) + (R() - 0.5) * 4, y, -1);
+  for (let y = 30; y < 60; y += 3) c.shade(stemX(y) + (R() - 0.5) * 4, y, -1);
   // The ring, a skirt round the stem.
   c.part();
   c.shape(34, 37, (y) => {
     const hw = 5.4 + (y - 34) * 0.6;
-    const x = cx + lean * 0.65;
+    const x = stemX(35);
     return [x - hw, x + hw];
   }, STEM, (_x, _y, t, u) => cyl(t, 0.5 - u));
+  // The cap rides the top of the stem.
+  const lean = lean0 + sway;
+  c.offset(0, Math.round(bob));
   // Gills: the underside of the cap, glowing between dark ribs.
   c.part();
   c.shape(20, 26, (y) => {
@@ -880,7 +906,7 @@ export function giantShroom(v: number): PixelCanvas {
     const hw = 20 - u * 11;
     return [cx + lean - hw, cx + lean + hw];
   }, GILL(v % 2 ? '#c048b0' : '#3aa0d0'), (x) => ((x - cx) % 3 === 0 ? { x: 0, y: -0.2, z: 0.6 } : { x: 0, y: -0.6, z: 0.8 }));
-  for (let x = -18; x <= 18; x += 3) for (let y = 21; y < 25; y++) c.spark(cx + lean + x + (y - 21) * Math.sign(x) * -0.6, y, S.glow, 0.35);
+  for (let x = -18; x <= 18; x += 3) for (let y = 21; y < 25; y++) c.spark(cx + lean + x + (y - 21) * Math.sign(x) * -0.6, y, S.glow, 0.25 + 0.2 * pulse);
   // The cap: a broad dome.
   c.part();
   c.shape(2, 22, (y) => {
@@ -893,8 +919,15 @@ export function giantShroom(v: number): PixelCanvas {
   // Spots glowing on the cap.
   c.part();
   const spots: [number, number, number][] = [[-9, 9, 2.2], [6, 7, 2.6], [-2, 4, 1.6], [13, 14, 1.8], [-15, 16, 1.5], [1, 14, 2], [-7, 17, 1.3], [9, 18, 1.2]];
-  for (const [dx, y, r] of spots) c.ellipse(cx + lean + dx, y, r, r * 0.8, S.spot);
-  c.spark(cx + lean - 8, 5, WHITE, 0.5);
+  // Each spot brightens in turn, a slow wave across the cap.
+  spots.forEach(([dx, y, r], k) => {
+    c.ellipse(cx + lean + dx, y, r, r * 0.8, S.spot);
+    const glow = 0.5 + 0.5 * Math.sin(a - k * 0.8);
+    c.spark(cx + lean + dx, y, S.glow, 0.15 + 0.5 * glow);
+    if (glow > 0.85 && r > 1.5) c.spark(cx + lean + dx - 0.5, y - 0.5, WHITE, 0.6);
+  });
+  c.spark(cx + lean - 8, 5, WHITE, 0.3 + 0.4 * pulse);
+  c.offset(0, 0);
   return c;
 }
 
@@ -902,15 +935,19 @@ export const CAPS_W = 20;
 export const CAPS_H = 18;
 export const CAPS_OY = 16;
 
-/** A cluster of little glowing mushrooms. */
-export function capCluster(v: number): PixelCanvas {
+/** A cluster of little glowing mushrooms; in frame `f` of its loop each cap nods and glows in its turn. */
+export function capCluster(v: number, f = 0): PixelCanvas {
   const c = new PixelCanvas(CAPS_W, CAPS_H);
   const S = CAPS[v % 2];
   const R = rng(v * 71 + 5);
+  const a = phase(f, CAPS_FRAMES) + v;
   const caps: [number, number, number][] = [[6, 16, 3.4], [11, 16, 4.6], [15, 16, 2.6], [3, 16, 2], [9, 16, 2.4]];
-  caps.forEach(([x, foot, r], k) => {
+  caps.forEach(([x0, foot, r], k) => {
     const h = 4 + r * 1.3 + R() * 2;
-    const top = foot - h;
+    const nod = Math.sin(a - k * 1.25);
+    // The smaller the cap, the more it nods.
+    const x = x0 + nod * (0.9 - r * 0.1);
+    const top = foot - h + Math.max(0, -nod) * 0.8;
     c.part();
     c.shape(Math.round(top + r * 0.5), foot, () => [x - 0.9, x + 0.9], STEM, (_x, _y, t) => cyl(t));
     c.part();
@@ -920,7 +957,8 @@ export function capCluster(v: number): PixelCanvas {
       return [x - hw, x + hw];
     }, S.cap, (_x, y, t) => sphere(t, (y - top) / r, 0.9));
     if (r > 3) c.px(x - 1, top - 1, S.spot);
-    c.spark(x, top + r * 0.5 + 1, S.glow, 0.5);
+    c.spark(x, top + r * 0.5 + 1, S.glow, 0.3 + 0.35 * (0.5 + 0.5 * nod));
+    if (nod > 0.7) c.spark(x - 0.5, top - r * 0.3, WHITE, 0.45);
     if (k === 1) c.px(x + 1, top, S.spot);
   });
   return c;
@@ -930,8 +968,8 @@ export const STALAG_W = 22;
 export const STALAG_H = 42;
 export const STALAG_OY = 39;
 
-/** A stalagmite of cave rock, ringed where it grew, glowworms at its foot. */
-export function stalagmite(v: number): PixelCanvas {
+/** A stalagmite of cave rock, ringed where it grew, glowworms at its foot twinkling through frame `f` of its loop. */
+export function stalagmite(v: number, f = 0): PixelCanvas {
   const c = new PixelCanvas(STALAG_W, STALAG_H);
   const R = rng(v * 37 + 11);
   const spike = (cx: number, top: number, base: number, hw: number) => {
@@ -949,7 +987,13 @@ export function stalagmite(v: number): PixelCanvas {
   } else spike(11, 3, 39, 8);
   c.part();
   c.ellipse(11, 38.5, 9, 2.2, ROCK, { flatten: 0.4 });
-  for (let k = 0; k < 4; k++) c.spark(4 + R() * 14, 33 + R() * 5, WORM, 0.5 + R() * 0.4);
+  const a = phase(f, STALAG_FRAMES);
+  for (let k = 0; k < 6; k++) {
+    const wx = 4 + R() * 14;
+    const wy = 30 + R() * 8;
+    const tw = 0.5 + 0.5 * Math.sin(a + R() * 6.28);
+    c.spark(wx, wy, WORM, 0.2 + 0.7 * tw * tw);
+  }
   return c;
 }
 
@@ -957,8 +1001,8 @@ export const CRYS_W = 26;
 export const CRYS_H = 32;
 export const CRYS_OY = 29;
 
-/** A cluster of amethyst growing out of a rock. */
-export function amethystCluster(v: number): PixelCanvas {
+/** A cluster of amethyst growing out of a rock; in frame `f` of its loop a glint climbs its largest shard. */
+export function amethystCluster(v: number, f = 0): PixelCanvas {
   const c = new PixelCanvas(CRYS_W, CRYS_H);
   c.part();
   c.ellipse(13, 26, 9, 4.5, ROCK);
@@ -973,8 +1017,19 @@ export function amethystCluster(v: number): PixelCanvas {
       const x = tx + (bx - tx) * u;
       return [x - hw, x + hw];
     }, k === 0 ? CRYSTAL_M : k % 2 ? CRYSTAL_DARK : CRYSTAL_M, (_x, _y, t) => ({ x: t < 0 ? -0.6 : 0.5, y: 0.3, z: 0.7 }));
-    c.spark(tx, ty + 1, AMETHYST_HOT, 0.7);
+    c.spark(tx, ty + 1, AMETHYST_HOT, 0.45 + 0.3 * Math.sin(phase(f, CRYS_FRAMES) + k * 1.4));
   });
+  // The glint: up the largest shard's lit face over the first half of the loop, resting the other half.
+  const g = f / (CRYS_FRAMES / 2);
+  if (g < 1) {
+    const [bx, by, tx, ty] = shards[0];
+    const u = 1 - g;
+    const gx = tx + (bx - tx) * u - 1;
+    const gy = ty + (by - ty) * u;
+    c.spark(gx, gy, WHITE, 1);
+    c.spark(gx, gy - 1, AMETHYST_HOT, 0.7);
+    c.spark(gx, gy + 1, AMETHYST_HOT, 0.7);
+  }
   return c;
 }
 
@@ -982,8 +1037,12 @@ export const SPIRE_W = 32;
 export const SPIRE_H = 72;
 export const SPIRE_OY = 68;
 
-/** A great spire of amethyst, a six-sided column coming to a point, lesser crystals at its foot. */
-export function amethystSpire(v: number): PixelCanvas {
+/**
+ * A great spire of amethyst, a six-sided column coming to a point, lesser
+ * crystals at its foot. In frame `f` of its loop a glint races up its lit
+ * edge and flares at the tip, then the spire rests.
+ */
+export function amethystSpire(v: number, f = 0): PixelCanvas {
   const c = new PixelCanvas(SPIRE_W, SPIRE_H);
   const cx = 16 + (v % 2 ? 1 : -1);
   c.part();
@@ -1008,8 +1067,17 @@ export function amethystSpire(v: number): PixelCanvas {
     c.spark(x - 2, y, AMETHYST_HOT, 0.25);
     c.spark(x + 2, y, AMETHYST, 0.2);
   }
-  c.spark(cx + lean, 5, WHITE, 1);
+  const rise = f / (SPIRE_FRAMES * 0.5);
+  if (rise < 1) {
+    const y = 64 - rise * 58;
+    const x = cx + lean * (1 - (y - 4) / 62) - 2;
+    for (let d = 0; d < 4; d++) c.spark(x, y + d, d ? AMETHYST_HOT : WHITE, 1 - d * 0.25);
+  }
+  // The tip flares as the glint reaches it, and glimmers after.
+  const flare = rise >= 1 && rise < 1.35 ? 1 : 0.55 + 0.25 * Math.sin(phase(f, SPIRE_FRAMES));
+  c.spark(cx + lean, 5, WHITE, flare);
   c.spark(cx + lean, 6, AMETHYST_HOT, 0.8);
+  if (flare === 1) for (const [dx, dy] of [[-1, 5], [1, 5], [0, 4], [0, 7]]) c.spark(cx + lean + dx, dy, AMETHYST_HOT, 0.8);
   // Lesser crystals at its foot.
   for (const [bx, tx, ty, r] of [[9, 4, 50, 2.4], [23, 28, 53, 2.2], [12, 10, 56, 1.8], [21, 22, 57, 1.6]] as const) {
     c.part();
@@ -1063,4 +1131,232 @@ export function lanternPost(f: number): PixelCanvas {
   }, FLAME, () => FLAT);
   c.spark(11, 15, HOT, 0.9);
   return c;
+}
+
+// ---------------------------------------------------------------- Footings
+
+export const FOOT_W = 72;
+export const FOOT_H = 30;
+/** The prop's feet, in a footing's frame. */
+export const FOOT_CX = 36;
+export const FOOT_CY = 15;
+
+/** Ground materials: flat to the eye, no outlines, so they melt into the floor. */
+const flat = (m: Material): Material => ({ ...m, noOutline: true, noAO: true });
+const SOIL = flat({ ramp: ramp('#0c0a12', '#14111c', '#1c1826', '#262032'), outline: INK });
+const MOSS_M = flat({ ramp: ramp('#081612', '#0e241c', '#153428', '#1d4634', '#2a5c42'), outline: INK });
+const LICHEN_M = flat({ ramp: ramp('#1a3a3a', '#2a5a58', '#3e8078'), outline: INK });
+const PEBBLE_M: Material = { ramp: ramp('#161b22', '#232a33', '#323b46', '#434e5a', '#566270'), outline: hex('#0a0810') };
+const WET = flat({ ramp: ramp('#040a10', '#081620', '#0c2230'), outline: INK, shine: true });
+const RUBBLE: Material = { ramp: ramp('#100e18', '#1a1726', '#262236', '#332e48', '#433c5a'), outline: hex('#0a0810') };
+
+/** How far out a footing reaches, per kind, as (rx, ry). */
+const FOOT_SIZE: Record<'shroom' | 'caps' | 'stalag' | 'crystal' | 'spire' | 'lantern', [number, number]> = {
+  shroom: [30, 12],
+  caps: [16, 7],
+  stalag: [18, 8],
+  crystal: [20, 9],
+  spire: [26, 11],
+  lantern: [10, 5],
+};
+
+/**
+ * The ground a prop stands on, so it grows out of the cave floor rather than
+ * sitting on it: a ragged patch that thins into the floor at its edge, and
+ * what gathers there. Mushrooms stand in moss laced with glowing mycelium,
+ * a few newborn caps pushing up; crystals in rubble and fallen shards, their
+ * light spilling over it; stalagmites in pebbles, a wet ring and glowworms;
+ * the lanterns on trodden earth and a few stones.
+ */
+export function propFooting(kind: keyof typeof FOOT_SIZE, v: number): PixelCanvas {
+  const c = new PixelCanvas(FOOT_W, FOOT_H);
+  const [rx, ry] = FOOT_SIZE[kind];
+  const R = rng(v * 977 + kind.length * 131 + 3);
+  const seed = v * 57 + kind.length * 11;
+  const cx = FOOT_CX;
+  const cy = FOOT_CY;
+  const shroomy = kind === 'shroom' || kind === 'caps';
+  const crystal = kind === 'crystal' || kind === 'spire';
+  const S = CAPS[v % 2];
+  // The patch: a ragged oval of soil, its edge breaking into specks, with a
+  // band of moss, lichen or grit on it.
+  c.part();
+  for (let y = 0; y < FOOT_H; y++) {
+    for (let x = 0; x < FOOT_W; x++) {
+      const dx = (x + 0.5 - cx) / rx;
+      const dy = (y + 0.5 - cy) / ry;
+      const a = Math.atan2(dy, dx);
+      const rag = 0.8 + 0.35 * valueNoise(Math.cos(a) * 20 + 40, Math.sin(a) * 20 + 40, 6, seed);
+      const d = Math.hypot(dx, dy) / rag;
+      if (d > 1) continue;
+      // The outer third thins out in scattered specks, so there's no line where the patch stops.
+      const keep = d < 0.65 || hash2(x, y, seed) < Math.pow((1 - d) / 0.35, 1.5);
+      if (!keep) continue;
+      const n = valueNoise(x, y, 4, seed + 5);
+      let m: Material = SOIL;
+      if (shroomy) m = n > 0.55 ? MOSS_M : n > 0.35 ? LICHEN_M : SOIL;
+      else if (kind === 'stalag') m = d < 0.45 ? WET : n > 0.6 ? MOSS_M : SOIL;
+      else if (crystal) m = n > 0.65 ? LICHEN_M : SOIL;
+      else m = SOIL;
+      c.px(x, y, m, FLAT, { bias: d < 0.4 ? -1 : d > 0.8 ? 1 : 0 });
+    }
+  }
+  const inPatch = (x: number, y: number) => Math.hypot((x - cx) / rx, (y - cy) / ry) < 0.85;
+  if (shroomy) {
+    // Mycelium: threads of light wandering out from the foot.
+    const threads = kind === 'shroom' ? 9 : 5;
+    for (let k = 0; k < threads; k++) {
+      let a = (k / threads) * Math.PI * 2 + R() * 0.5;
+      let x = cx + Math.cos(a) * 2;
+      let y = cy + Math.sin(a) * 1;
+      const len = (kind === 'shroom' ? 18 : 10) + R() * 10;
+      for (let s = 0; s < len; s++) {
+        a += (R() - 0.5) * 0.7;
+        x += Math.cos(a);
+        y += Math.sin(a) * 0.45;
+        if (!inPatch(x, y)) break;
+        c.spark(x, y, S.glow, 0.5 * (1 - s / len) + 0.1);
+      }
+    }
+    // Newborn caps pushing up at the patch's edge.
+    const babies = kind === 'shroom' ? 4 : 2;
+    for (let k = 0; k < babies; k++) {
+      const a = R() * Math.PI * 2;
+      const bx = cx + Math.cos(a) * rx * (0.45 + R() * 0.3);
+      const by = cy + Math.sin(a) * ry * (0.45 + R() * 0.3) + 1;
+      c.part();
+      c.px(bx, by, STEM);
+      c.px(bx, by - 1, STEM);
+      c.part();
+      c.px(bx - 1, by - 2, S.cap, { x: -0.5, y: 0.5, z: 0.7 });
+      c.px(bx, by - 2, S.cap, { x: 0, y: 0.7, z: 0.7 });
+      c.px(bx + 1, by - 2, S.cap, { x: 0.5, y: 0.5, z: 0.7 });
+      c.spark(bx, by - 2, S.glow, 0.6);
+    }
+  }
+  if (crystal || kind === 'stalag' || kind === 'lantern') {
+    // Pebbles and rubble strewn about the foot, thicker close in.
+    const n = kind === 'spire' ? 14 : kind === 'lantern' ? 5 : 10;
+    for (let k = 0; k < n; k++) {
+      const a = R() * Math.PI * 2;
+      const r = 0.35 + R() * 0.55;
+      const px = cx + Math.cos(a) * rx * r;
+      const py = cy + Math.sin(a) * ry * r + 1;
+      c.part();
+      const big = R() < 0.35;
+      c.ellipse(px, py, big ? 1.6 : 1, big ? 1.1 : 0.7, crystal ? RUBBLE : PEBBLE_M);
+    }
+  }
+  if (crystal) {
+    // Shards broken off and lying in the rubble, and the crystal's light spilling over the ground.
+    for (let k = 0; k < (kind === 'spire' ? 5 : 3); k++) {
+      const a = R() * Math.PI * 2;
+      const px = cx + Math.cos(a) * rx * (0.4 + R() * 0.4);
+      const py = cy + Math.sin(a) * ry * (0.4 + R() * 0.4);
+      c.part();
+      const len = 2 + Math.floor(R() * 2);
+      const dir = R() < 0.5 ? -1 : 1;
+      for (let i = 0; i < len; i++) c.px(px + i * dir, py - i * 0.5, i === len - 1 ? CRYSTAL_M : CRYSTAL_DARK, { x: 0, y: 0.5, z: 0.8 });
+      c.spark(px + (len - 1) * dir, py - (len - 1) * 0.5, AMETHYST_HOT, 0.6);
+    }
+    for (let y = 0; y < FOOT_H; y++) {
+      for (let x = 0; x < FOOT_W; x++) {
+        const d = Math.hypot((x + 0.5 - cx) / (rx * 0.9), (y + 0.5 - cy) / (ry * 0.9));
+        if (d < 1 && hash2(x, y, seed + 9) < (1 - d) * 0.5) c.spark(x, y, AMETHYST, 0.18 * (1 - d));
+      }
+    }
+  }
+  if (kind === 'stalag') {
+    for (let k = 0; k < 5; k++) c.spark(cx + (R() - 0.5) * rx * 1.4, cy + (R() - 0.5) * ry * 1.2, WORM, 0.35 + R() * 0.4);
+  }
+  return c;
+}
+
+// ---------------------------------------------------------------- Skylights
+
+/** The pool of daylight a skylight throws on the floor. */
+export const SKYPOOL_W = 128;
+export const SKYPOOL_H = 60;
+/** Frames of the leaves' shadows swaying across it (the scene crossfades between them). */
+export const SKYPOOL_FRAMES = 4;
+/** One shaft of light, standing on its foot at the bottom middle. */
+export const SHAFT_W = 40;
+export const SHAFT_H = 260;
+
+/** Brightness in flat steps, so light stays pixel art. */
+const stepv = (v: number, n = 7) => Math.round(Math.max(0, Math.min(1, v)) * n) / n;
+
+function lightPx(w: number, h: number): Uint8ClampedArray {
+  const px = new Uint8ClampedArray(w * h * 4);
+  for (let i = 3; i < px.length; i += 4) px[i] = 255;
+  return px;
+}
+function putLight(px: Uint8ClampedArray, w: number, x: number, y: number, v: number): void {
+  const i = (y * w + x) * 4;
+  px[i] = px[i + 1] = px[i + 2] = Math.round(255 * v);
+}
+
+/**
+ * Daylight on the cave floor under an opening in the roof: a ragged oval,
+ * brightest in the middle, dappled with the shadows of the leaves and roots
+ * hanging over the opening, which sway a little from frame `f` to the next.
+ * White on black, for ADD blending and a warm tint.
+ */
+export function skylightPool(f: number, seed: number): Uint8ClampedArray {
+  const W = SKYPOOL_W;
+  const H = SKYPOOL_H;
+  const px = lightPx(W, H);
+  const sway = Math.sin((f / SKYPOOL_FRAMES) * Math.PI * 2) * 2.2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = (x + 0.5 - W / 2) / (W / 2);
+      const dy = (y + 0.5 - H / 2) / (H / 2);
+      const a = Math.atan2(dy, dx);
+      // The opening's ragged outline, thrown onto the floor.
+      const rag = 0.82 + 0.18 * valueNoise(Math.cos(a) * 30 + 50, Math.sin(a) * 30 + 50, 7, seed);
+      const d = Math.hypot(dx, dy) / rag;
+      if (d > 1) continue;
+      let v = Math.pow(1 - d, 0.7);
+      // Leaves' shadows: blotches that drift with the sway, thicker toward the rim.
+      const leaf = valueNoise(x + sway * (1 - d), y + sway * 0.4, 5, seed + 17);
+      const roots = valueNoise(x * 0.35 + sway * 0.5, y * 1.6, 4, seed + 29);
+      if (leaf > 0.66 - d * 0.18) v *= 0.35;
+      else if (roots > 0.78) v *= 0.55;
+      // A faint rim of light where the edge of the opening catches the sun.
+      if (d > 0.86) v = Math.max(v, 0.28);
+      // Dithered at the faintest, so the pool fades out in pixels, not a smear.
+      const q = stepv(v * 0.95);
+      if (q <= 1 / 7 && hash2(x, y, f) > v * 5) continue;
+      putLight(px, W, x, y, q);
+    }
+  }
+  return px;
+}
+
+/**
+ * One shaft of daylight falling from the opening to the floor: soft at its
+ * sides, streaked where the leaves break the light, full at its foot and
+ * fading as it rises toward the roof. White on black, for ADD blending.
+ */
+export function skylightShaft(seed: number): Uint8ClampedArray {
+  const W = SHAFT_W;
+  const H = SHAFT_H;
+  const px = lightPx(W, H);
+  // Streaks: each column its own strength, slowly wandering up the shaft.
+  for (let y = 0; y < H; y++) {
+    const up = 1 - y / (H - 1);
+    const along = up < 0.1 ? 0.75 + up * 2.5 : Math.pow(1 - (up - 0.1) / 0.9, 1.35);
+    for (let x = 0; x < W; x++) {
+      const across = (x + 0.5) / W;
+      const edge = Math.min(across, 1 - across) * 2;
+      const soft = Math.pow(Math.min(1, edge * 1.6), 1.4);
+      const streak = 0.45 + 0.55 * valueNoise(x * 3, y * 0.08, 3, seed);
+      const v = along * soft * streak;
+      const q = stepv(v * 0.85, 8);
+      if (q <= 0) continue;
+      if (q <= 1 / 8 && hash2(x, y, seed) > 0.5) continue;
+      putLight(px, W, x, y, q);
+    }
+  }
+  return px;
 }
