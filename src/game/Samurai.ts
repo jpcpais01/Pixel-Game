@@ -45,6 +45,13 @@ export const ONI_KIT: SamuraiKit = {
   wind: { core: 0xfff0ec, hot: 0xff9a8a, mid: 0xf0283a, deep: 0x7a0a1a, light: 0xff4a4a },
 };
 
+export const KITSUNE_KIT: SamuraiKit = {
+  ...BLADEWIND_KIT,
+  key: 'samurai_kitsune',
+  steel: { core: 0xffffff, hot: 0xf0fffa, mid: 0xa8f0dc, deep: 0x2a8a78 },
+  wind: { core: 0xf0fff8, hot: 0xb0ffe0, mid: 0x40e8b0, deep: 0x107a6a, light: 0x60f0c0 },
+};
+
 export const RONIN_KIT: SamuraiKit = {
   key: 'ronin',
   ronin: true,
@@ -59,6 +66,13 @@ export const SAKURA_KIT: SamuraiKit = {
   key: 'ronin_sakura',
   steel: { core: 0xffffff, hot: 0xfff0f4, mid: 0xf4b8cc, deep: 0xb0607e },
   wind: { core: 0xfff4f8, hot: 0xffc0d4, mid: 0xff7aa6, deep: 0xb03a6a, light: 0xff9ac0 },
+};
+
+export const SHOGUN_KIT: SamuraiKit = {
+  ...RONIN_KIT,
+  key: 'ronin_shogun',
+  steel: { core: 0xffffff, hot: 0xf4f2ff, mid: 0xc0c0ec, deep: 0x5a5aa0 },
+  wind: { core: 0xfffcf0, hot: 0xfff0b8, mid: 0xa89cff, deep: 0x3a2e9a, light: 0xc8b8ff },
 };
 
 // The Bladewind.

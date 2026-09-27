@@ -13,10 +13,10 @@ import { BloodMoon, Eclipse, FanOfKnives, SoulStorm } from './shadow';
 import { ChemBomb, GreatArrow, Pestilence } from './nature';
 import { Encore, ThunderOfWar } from './bard';
 import { GrandFinale, PuppetMaster } from './puppeteer';
-import { FATE_STRINGS, GOLD_STRINGS, ICE_STRINGS, SILK_STRINGS } from '../Strings';
+import { FATE_STRINGS, GOLD_STRINGS, ICE_STRINGS, SILK_STRINGS, TOY_STRINGS, VENOM_STRINGS } from '../Strings';
 import { Legion, TimeStop } from './chrono';
 import { HundredCuts, quakeGate, SkyQuake } from './samurai';
-import { BLADEWIND_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT } from '../Samurai';
+import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT } from '../Samurai';
 import { schemePal } from '../Blades';
 import { AEON_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
 import * as icons from './icons';
@@ -270,8 +270,12 @@ const SKINS: Record<string, UltSkin> = {
   'bard:wildsong': { name: 'Chorus of the Wild', pal: pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070) },
   'puppeteer:porcelain': { name: 'Shattered Finale', pal: ICE_STRINGS },
   'puppeteer:crimson': { name: 'Strings of Fate', pal: FATE_STRINGS, type: 'weaver' },
+  'puppeteer:toymaker': { name: 'Midnight Parade', pal: TOY_STRINGS },
+  'puppeteer:arachne': { name: 'Broodmother', pal: VENOM_STRINGS, type: 'weaver' },
   'samurai:oni': { name: "Oni's Downpour", pal: schemePal(ONI_KIT.wind) },
   'samurai:sakura': { name: 'Falling Petals', pal: schemePal(SAKURA_KIT.wind), type: 'ronin' },
+  'samurai:kitsune': { name: 'Nine-Tailed Descent', pal: schemePal(KITSUNE_KIT.wind) },
+  'samurai:shogun': { name: 'Thousand Moons', pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

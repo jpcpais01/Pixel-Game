@@ -31,11 +31,11 @@ import { BLOOD_KIT, NECRO_KIT, Necromancer } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, MINSTREL_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
-import { CRIMSON_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, WEAVER_KIT } from './Puppeteer';
+import { ARACHNE_KIT, CRIMSON_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, TOYMAKER_KIT, WEAVER_KIT } from './Puppeteer';
 import { PUPPETEER_H, PUPPETEER_ORIGIN_Y } from '../art/puppeteer';
 import { AEON_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
-import { BLADEWIND_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai } from './Samurai';
+import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT } from './Samurai';
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { worn } from './skins';
 import type { Vitals } from './combat';
@@ -851,6 +851,19 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_pirouette_porcelain' },
             },
           },
+          {
+            id: 'toymaker',
+            name: 'Toymaker',
+            role: 'Works a nutcracker soldier',
+            accent: 0xff5a4a,
+            attack: 'Nutcracker strike',
+            special: 'Toy soldier spin',
+            preview: { texture: 'puppeteer_toymaker', glow: 'puppeteer_toymaker_e', idle: 'puppeteer_toymaker_idle_down', chosen: 'puppeteer_toymaker_twirl_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
+            buttons: {
+              attack: { texture: 'icon_puppet_toymaker' },
+              special: { texture: 'icon_pirouette_toymaker' },
+            },
+          },
         ],
       },
       {
@@ -882,11 +895,24 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_marionette_crimson' },
             },
           },
+          {
+            id: 'arachne',
+            name: 'Arachne',
+            role: 'A spider queen and her silk',
+            accent: 0xa8e040,
+            attack: 'Venom silk',
+            special: 'Web of Arachne',
+            preview: { texture: 'weaver_arachne', glow: 'weaver_arachne_e', idle: 'weaver_arachne_idle_down', chosen: 'weaver_arachne_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
+            buttons: {
+              attack: { texture: 'icon_thread_arachne' },
+              special: { texture: 'icon_marionette_arachne' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = look === 'porcelain' ? PORCELAIN_KIT : look === 'weaver' ? WEAVER_KIT : look === 'crimson' ? CRIMSON_KIT : MARIONETTE_KIT;
+      const kit = { porcelain: PORCELAIN_KIT, toymaker: TOYMAKER_KIT, weaver: WEAVER_KIT, crimson: CRIMSON_KIT, arachne: ARACHNE_KIT }[look] ?? MARIONETTE_KIT;
       return new Puppeteer(world, x, y, kit);
     },
   },
@@ -924,6 +950,19 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_windblade_oni' },
             },
           },
+          {
+            id: 'kitsune',
+            name: 'Kitsune',
+            role: 'A fox spirit burning with foxfire',
+            accent: 0x40e8b0,
+            attack: 'Foxfire tempest',
+            special: 'Fox step',
+            preview: { texture: 'samurai_kitsune', glow: 'samurai_kitsune_e', idle: 'samurai_kitsune_idle_down', chosen: 'samurai_kitsune_slash1_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
+            buttons: {
+              attack: { texture: 'icon_katana_kitsune' },
+              special: { texture: 'icon_windblade_kitsune' },
+            },
+          },
         ],
       },
       {
@@ -955,11 +994,24 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_cross_sakura' },
             },
           },
+          {
+            id: 'shogun',
+            name: 'Shogun',
+            role: 'A warlord under the crescent moon',
+            accent: 0xa89cff,
+            attack: 'Crescent cut',
+            special: 'Warlord crossing',
+            preview: { texture: 'ronin_shogun', glow: 'ronin_shogun_e', idle: 'ronin_shogun_idle_down', chosen: 'ronin_shogun_slash2_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
+            buttons: {
+              attack: { texture: 'icon_iai_shogun' },
+              special: { texture: 'icon_cross_shogun' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { bladewind: BLADEWIND_KIT, oni: ONI_KIT, ronin: RONIN_KIT, sakura: SAKURA_KIT }[look] ?? BLADEWIND_KIT;
+      const kit = { bladewind: BLADEWIND_KIT, oni: ONI_KIT, kitsune: KITSUNE_KIT, ronin: RONIN_KIT, sakura: SAKURA_KIT, shogun: SHOGUN_KIT }[look] ?? BLADEWIND_KIT;
       return new Samurai(world, x, y, kit);
     },
   },
