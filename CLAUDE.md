@@ -18,7 +18,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 **Startup and scenes** (`src/main.ts`, `src/scenes/`)
 - `main.ts` makes the Phaser game, fits the canvas, and drops the graphics level if the world runs below 30 FPS for 5 s.
 - Flow: `BootScene` (builds every texture) → `HomeScene` → `SelectScene` (hero) → `ArenaScene` (arena, and online rooms) → `WorldScene`. `ShopScene` (the Wishing Sanctum) and `InventoryScene` open over Home.
-- Overlays while playing: `UIScene` (joystick, ability buttons, hotbar, buffs, gear HUD), `PauseScene`, `ShadeScene` (brightness), `SoundScene` (mute), `FpsScene`.
+- Overlays while playing: `UIScene` (joystick, ability buttons, hotbar, buffs, gear HUD), `RiftScene` (the Rift's wave HUD, blessing cards and results), `PauseScene`, `ShadeScene` (brightness), `SoundScene` (mute), `FpsScene`.
 - `src/diagnostics.ts`: crash reports (copyable overlay, heartbeat for killed tabs), switched off: set `CRASH_REPORTS` to true to use them again. `src/pwa.ts` + `scripts/pwa.ts`: install, fullscreen, service worker, icons.
 
 **The world** (`src/scenes/WorldScene.ts`)
@@ -38,9 +38,10 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - Bosses use `BossBar` and `noBar: true` and have a `rank` (`legend` or `myth`). `game/tiers.ts` gives every kind a tier, which sets its drops.
 
 **Arenas** (`src/world/`)
-- `arenas.ts`: `ARENAS` (clearing, garden, cosmos, spirit, temple, deep, island). Each has a ground, spawn, monsters, `walkable`, scenery and a select-card preview.
+- `arenas.ts`: `ARENAS` (clearing, garden, cosmos, spirit, temple, deep, rift, island). Each has a ground, spawn, monsters, `walkable`, scenery and a select-card preview; `solo: true` greys out Online for it.
 - `*Layout.ts` files hold positions and walkability; the class files (`Garden.ts`, `Deep.ts`, `Sanctum.ts` for the Rune Temple...) build the arena's living parts.
 - `GroundStreamer.ts` streams the ground in strips; painted arenas warm their textures in `art/textures.ts` (`warmCosmos`, `warmDeep`...).
+- The Endless Rift (solo): `riftLayout.ts`, `art/rift.ts`, `world/Rift.ts` (tears, shards, violet light) and `game/rift.ts` (`RiftWaves`, a `Spawner` that builds each wave from a budget of Temple, Deep and garden monsters, a "Riftborn" champion every 5th wave, blessings picked between waves into `riftMods`, best wave per class in `collection.riftBest`). Monsters scale by `toughness`, `size` and `hunter` on `Monster`. Its warm job also warms the Temple and the Deep for their monster sheets.
 - Arenas are built ahead: the home screen warms them a few ms a frame (`warmArenasInBackground` in `arenas.ts`); build jobs are keyed by the texture manager, so the arena select and the world carry on the same job. Arena cards save a picture of their window (`pixel-battle.thumb.<id>`, per build) to show at once on later launches.
 
 **Loot and progression** (`src/game/`)
@@ -53,6 +54,11 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - `gacha.ts`: skin rarities (`RARITY_OF`, rare if unlisted), odds, costs (20 / 180 for ten), ten-wish epic guarantee, legendary pity, duplicates give back half a wish (`DUPE_GEMS`). New skins need a rarity there if not rare.
 - Gem drops: `TIER_GEMS` / `rollGems` in `tiers.ts`; the drop show scales with the count (`gemShow` in `Pickup.ts`, `dropGems`/`gainGems` in `WorldScene`).
 - Art in `art/shop.ts` (gems, piles, crystal, altar, hall, cards); sounds `gem*`, `wish*`, `cardFlip` in `audio/sfx.ts`.
+
+**Companions** (`src/game/pets.ts`, `src/game/Companion.ts`)
+- `PETS`: 8 companions (rare/epic/legendary) with a perk in `mods`, a gait, and the wyrmling's `fights` and the phoenix's `rebirth`. Won from the Shop's second banner, the Wishing Nest (`petWish`, own pity `collection.petPity`, same odds and prices as skins); worn one is `collection.pet`, chosen on the Inventory's Companions tab (`ui/petGallery.ts`).
+- `wearPet` fills `petMods`, which WorldScene multiplies in beside gear and `riftMods` (damage, speed, guard, regen, energy, and luck in `rollGems`). `Companion` follows the hero in the world.
+- Art: `art/pets.ts` (24x24, 4 frames, facing right; the Nest's egg and cracks), registered as `pets` with `pet_<id>` anims; cards by `ui/petCard.ts`. The Nest mode in `ShopScene` (`setMode`) swaps the crystal for the egg, warms the hall and moves the shop music into its `nest` mood (`sound.setShopMood`).
 
 **Online play** (`src/net/`, `server/`)
 - `server/server.js`: a WebSocket relay on Render with 4-letter room codes (co-op up to 4, duel 2). It runs no game logic.
@@ -81,5 +87,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 **Add a monster:** a class in `src/game/monsters/` extending `Monster`, its sheet in `src/art/` registered with `registerMonster` in `textures.ts`, an entry in `MONSTERS`, a tier in `MOB_TIER` (`tiers.ts`), and spawn spots in an arena's layout.
 
 **Add an arena:** an `ArenaDef` in `src/world/arenas.ts`, a layout file, and any living parts built by id in `WorldScene.create`.
+
+**Add a companion:** a drawing in `PET_ART` (`src/art/pets.ts`) and a `PetDef` in `PETS` (`src/game/pets.ts`); keep its name to 8 letters and its perk to about 14 so they fit the cards.
 
 **Add gear:** a `piece(...)` in `GEAR` (`src/game/gear.ts`) and its painter in `src/art/gear.ts`.

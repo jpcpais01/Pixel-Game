@@ -7,7 +7,10 @@ import { BUTTON_GEM, BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture
 import { sound } from '../audio';
 import { fpsBottom } from './FpsScene';
 import { cropToWindow, fitLine } from './SelectScene';
-import { PLATE, skinFace } from '../ui/skinCard';
+import { PLATE, skinFace, type SkinFace } from '../ui/skinCard';
+import { petFace } from '../ui/petCard';
+import { PETS, ownedPets, petWish, type PetDef } from '../game/pets';
+import { EGG_H, PET_H, PET_OX, PET_OY, PET_W } from '../art/pets';
 import type { HomeScene } from './HomeScene';
 
 // The shop: the Wish Sanctum. A crystal floats over a rune altar under a
@@ -16,6 +19,11 @@ import type { HomeScene } from './HomeScene';
 // hints at what it holds (blue, then violet, then gold for a legendary),
 // bursts in a flash, and the cards are dealt and flipped. A skin already
 // owned dissolves into gems that fly back to the counter.
+//
+// A second banner, the Wishing Nest, wishes for companions the same way, but
+// the hall turns warm for it: an egg sits where the crystal floated, the
+// light goes gold and green, fireflies drift, the music moves up a key with
+// birds in the rafters, and a wish rocks the egg until it cracks and hatches.
 
 const MARGIN = 8;
 const SIDE_W = 96;
@@ -44,6 +52,40 @@ const GOLD = 0xf4cf6a;
 const LAVENDER = 0xb8a8e8;
 
 type Phase = 'idle' | 'charge' | 'reveal' | 'done';
+/** Which banner is up: the skins' Wishing Sanctum, or the companions' Wishing Nest. */
+type Mode = 'skins' | 'pets';
+
+/** What one wish turned up, skin or companion, as its card needs it. */
+interface Pull {
+  rarity: SkinRarity;
+  /** First time the player has it. */
+  fresh: boolean;
+  /** Its face, `w` x `h`; `big` for a single wish's card. */
+  face(scene: Phaser.Scene, w: number, h: number, big: boolean): SkinFace;
+}
+
+const skinPull = (r: WishResult): Pull => ({
+  rarity: r.entry.rarity,
+  fresh: r.fresh,
+  face: (scene, w, h, big) => skinFace(scene, r.entry, w, h, big ? BIG_SCALE : CARD_SCALE, big ? { text: `${r.entry.cls.name} * ${r.entry.type.name}`, tint: LAVENDER } : undefined),
+});
+
+const petPull = (pet: PetDef, fresh: boolean): Pull => ({
+  rarity: pet.rarity,
+  fresh,
+  face: (scene, w, h, big) => petFace(scene, pet, w, h, big ? PET_BIG_SCALE : PET_SCALE, big),
+});
+
+/** How big a companion is drawn on a card: they are small creatures. */
+const PET_SCALE = 2;
+const PET_BIG_SCALE = 4;
+/** The Wishing Nest's warm glow, its fireflies' colours, and its light through the hall. */
+const NEST_TINT = 0xffc860;
+const NEST_LEAF = 0x9ee85a;
+/** What the hall is tinted in the Nest: its violet warmed towards amber. */
+const NEST_HALL = 0xffd4a0;
+/** The egg sits this far into the altar's top, so it rests on it rather than floating. */
+const EGG_REST = 3;
 
 const TIER: Record<SkinRarity, number> = { rare: 0, epic: 1, legendary: 2 };
 
@@ -57,7 +99,7 @@ function lerpColor(a: number, b: number, t: number): number {
 
 /** A card a wish turns over: face down at first, a skin on its face. */
 class WishCard extends Phaser.GameObjects.Container {
-  readonly result: WishResult;
+  readonly pull: Pull;
   readonly w: number;
   readonly h: number;
   flipped = false;
@@ -70,31 +112,30 @@ class WishCard extends Phaser.GameObjects.Container {
   private halo: Phaser.GameObjects.Image;
   private rays: Phaser.GameObjects.Image[] = [];
 
-  constructor(scene: Phaser.Scene, result: WishResult, big: boolean) {
+  constructor(scene: Phaser.Scene, pull: Pull, big: boolean) {
     super(scene, 0, 0);
-    this.result = result;
+    this.pull = pull;
     const w = (this.w = big ? BIG_W : CARD_W);
     const h = (this.h = big ? BIG_H : CARD_H);
-    const info = RARITY_INFO[result.entry.rarity];
-    const legendary = result.entry.rarity === 'legendary';
+    const info = RARITY_INFO[pull.rarity];
+    const legendary = pull.rarity === 'legendary';
     const backKey = addBitmap(scene, `wish_back_${w}x${h}`, cardBack(w, h));
 
     // Behind the card, in the scene (not the card), so it can spin and spread past the card's edges.
     this.halo = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(info.tint).setAlpha(0).setDepth(29);
-    const nRays = legendary ? 16 : result.entry.rarity === 'epic' ? 10 : 0;
+    const nRays = legendary ? 16 : pull.rarity === 'epic' ? 10 : 0;
     for (let i = 0; i < nRays; i++) {
       this.rays.push(scene.add.image(0, 0, 'loot_ray').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setTint(i % 2 ? info.core : info.tint).setAlpha(0).setDepth(29));
     }
 
     this.back = scene.add.image(0, 0, backKey);
-    const title = big ? { text: `${result.entry.cls.name} * ${result.entry.type.name}`, tint: LAVENDER } : undefined;
-    const face = skinFace(scene, result.entry, w, h, big ? BIG_SCALE : CARD_SCALE, title);
+    const face = pull.face(scene, w, h, big);
     this.sprite = face.sprite;
     this.glow = face.glow;
     const parts = face.parts;
     this.face = scene.add.container(0, 0, parts).setVisible(false);
     // New or a duplicate, over the top corner.
-    this.badge = pixelText(scene, 0, 0, result.fresh ? 'New!' : 'Owned', result.fresh ? GOLD : LAVENDER).setVisible(false);
+    this.badge = pixelText(scene, 0, 0, pull.fresh ? 'New!' : 'Owned', pull.fresh ? GOLD : LAVENDER).setVisible(false);
     this.badge.setPosition(Math.round(w / 2 - this.badge.width - 1), Math.round(-h / 2 - 5));
     this.add([this.back, this.face, this.badge]);
     scene.add.existing(this);
@@ -102,7 +143,7 @@ class WishCard extends Phaser.GameObjects.Container {
   }
 
   get rarity(): SkinRarity {
-    return this.result.entry.rarity;
+    return this.pull.rarity;
   }
 
   /** Turn the card over: it narrows to an edge, shows its face, and widens again with a flash of its colour. */
@@ -120,7 +161,7 @@ class WishCard extends Phaser.GameObjects.Container {
         this.face.setVisible(true);
         this.badge.setVisible(true);
         this.scene.tweens.add({ targets: this, scaleX: s, duration: 160, ease: 'Back.easeOut' });
-        if (this.result.fresh) this.scene.tweens.add({ targets: this.badge, y: this.badge.y - 3, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        if (this.pull.fresh) this.scene.tweens.add({ targets: this.badge, y: this.badge.y - 3, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         onTurned();
       },
     });
@@ -223,6 +264,20 @@ export class ShopScene extends Phaser.Scene {
   private sides = true;
   private ui: Phaser.GameObjects.GameObject[] = [];
 
+  // The two banners: the skins' Sanctum and the companions' Nest.
+  private mode: Mode = 'skins';
+  /** 0 the Sanctum .. 1 the Nest: everything that differs between them eases along this. */
+  private nestK = 0;
+  private tabs!: Record<Mode, [PixelButton, PixelButton]>;
+  private egg!: Phaser.GameObjects.Image;
+  private eggGlow!: Phaser.GameObjects.Image;
+  private cracks: Phaser.GameObjects.Image[] = [];
+  /** The Nest's warm light over the hall, and its fireflies. */
+  private nestLight!: Phaser.GameObjects.Rectangle;
+  private fireflies!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private featuredPets: PetDef[] = [];
+  private modeTween: Phaser.Tweens.Tween | null = null;
+
   // A wish in progress.
   private cards: WishCard[] = [];
   private flipTimer: Phaser.Time.TimerEvent | null = null;
@@ -248,9 +303,14 @@ export class ShopScene extends Phaser.Scene {
     this.crystalShown = 1;
     this.shake = { t: 0, ms: 0, px: 0 };
     this.shownGems = collection.gems;
+    this.mode = 'skins';
+    this.nestK = 0;
+    this.modeTween = null;
+    this.cracks = [];
     registerShopArt(this);
     // The Sanctum has its own music, fading in over the game's.
     sound.setTrack('shop');
+    sound.setShopMood('sanctum');
     const cam = this.cameras.main.setOrigin(0, 0).setAlpha(0);
     this.tweens.add({ targets: cam, alpha: 1, duration: 260 });
 
@@ -301,6 +361,18 @@ export class ShopScene extends Phaser.Scene {
       blendMode: Phaser.BlendModes.ADD,
       frequency: 90,
     }).setDepth(3);
+    // The Nest: a warm wash of light over the hall, and fireflies drifting through it.
+    this.nestLight = this.add.rectangle(0, 0, 1, 1, 0x5a4012, 1).setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0).setDepth(0.5);
+    this.fireflies = this.add.particles(0, 0, 'spark', {
+      lifespan: { min: 2600, max: 4600 },
+      speed: { min: 3, max: 10 },
+      scale: { min: 0.6, max: 1.1 },
+      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.max(0, Math.sin(t * Math.PI * 3)) * 0.9 },
+      tint: [0xd8ff7a, 0xf6ffb0, 0xffe08a, NEST_LEAF],
+      blendMode: Phaser.BlendModes.ADD,
+      frequency: 45,
+      emitting: false,
+    }).setDepth(3);
     this.altar = this.add.image(0, 0, 'shop_altar').setOrigin(0.5, ALTAR_TOP / ALTAR_H).setDepth(4);
     this.runes = this.add.image(0, 0, 'shop_altar_runes').setBlendMode(Phaser.BlendModes.ADD).setTint(0x9ff6ff).setDepth(4.5);
   }
@@ -310,6 +382,10 @@ export class ShopScene extends Phaser.Scene {
     this.crystalFrame = -1;
     this.crystal = this.add.image(0, 0, 'shop_crystal', 0).setDepth(10);
     this.crystalLight = this.add.image(0, 0, 'shop_crystal_w', 0).setBlendMode(Phaser.BlendModes.ADD).setTint(IDLE_TINT).setDepth(10.5);
+    // The Nest's egg, in the crystal's place, with the cracks that spread as it hatches.
+    this.egg = this.add.image(0, 0, 'nest_egg').setOrigin(0.5, 1).setDepth(10).setAlpha(0);
+    this.eggGlow = this.add.image(0, 0, 'nest_egg_e').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(10.2).setAlpha(0);
+    for (const k of [1, 2, 3]) this.cracks.push(this.add.image(0, 0, `nest_crack${k}`).setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(10.4).setAlpha(0));
     for (let i = 0; i < 6; i++) this.orbit.push(this.add.image(0, 0, 'loot_twinkle').setBlendMode(Phaser.BlendModes.ADD).setTint(i % 2 ? 0xffffff : 0x9ff6ff));
     // Light drawn in from all round as the crystal charges.
     this.gather = this.add.particles(0, 0, 'spark', {
@@ -344,6 +420,12 @@ export class ShopScene extends Phaser.Scene {
     this.counterText = pixelText(this, 0, 0, '', GEM_CYAN).setDepth(41);
 
     this.back = new PixelButton(this, 'Back', 48, 18, BUTTON_PLAIN, 'shop_back', () => this.goBack()).setDepth(40);
+    // The two banners, as tabs under the heading: the open one lit.
+    const tab = (m: Mode, label: string, w: number): [PixelButton, PixelButton] => [
+      new PixelButton(this, label, w, 14, BUTTON_GOLD, `shop_tab_${m}_on`, () => {}).setDepth(40),
+      new PixelButton(this, label, w, 14, BUTTON_PLAIN, `shop_tab_${m}`, () => this.setMode(m)).setDepth(40),
+    ];
+    this.tabs = { skins: tab('skins', 'Skins', 48), pets: tab('pets', 'Companions', 72) };
     this.wish1 = new PixelButton(this, 'Wish x1', 72, 20, BUTTON_GEM, 'shop_wish1', () => this.makeWish(1)).setDepth(40);
     this.wish10 = new PixelButton(this, 'Wish x10', 80, 22, BUTTON_GOLD, 'shop_wish10', () => this.makeWish(10)).setDepth(40);
     this.cost1 = this.costTag(WISH_COST);
@@ -374,6 +456,7 @@ export class ShopScene extends Phaser.Scene {
 
     // The showcase: every legendary skin in turn, in a legendary card.
     this.legendaries = ALL_SKINS.filter((s) => s.rarity === 'legendary');
+    this.featuredPets = PETS.filter((p) => p.rarity === 'legendary');
     const sw = SIDE_W;
     const sh = 126;
     const info = RARITY_INFO.legendary;
@@ -394,7 +477,8 @@ export class ShopScene extends Phaser.Scene {
     this.showAt = Math.floor(Math.random() * this.legendaries.length);
     this.showSkin(false);
 
-    this.ui = [this.header, this.back, this.wish1, this.wish10, this.cost1, this.cost10, this.hint, this.rates, this.showcase];
+    this.ui = [this.header, this.back, this.wish1, this.wish10, this.cost1, this.cost10, this.hint, this.rates, this.showcase, ...this.tabs.skins, ...this.tabs.pets];
+    this.syncTabs();
   }
 
   /** A gem and a price, under a wish button. */
@@ -404,8 +488,9 @@ export class ShopScene extends Phaser.Scene {
     return this.add.container(0, 0, [gem, text]).setDepth(40).setSize(gem.width + 2 + text.width, 9);
   }
 
-  /** Put the next legendary in the showcase. */
+  /** Put the next legendary skin (or, in the Nest, the next legendary companion) in the showcase. */
   private showSkin(fade: boolean): void {
+    if (this.mode === 'pets') return this.showPet(fade);
     const e = this.legendaries[this.showAt % this.legendaries.length];
     if (!e) return;
     const p = wornSkin(e).preview;
@@ -426,13 +511,86 @@ export class ShopScene extends Phaser.Scene {
     const lockW = owned ? 0 : this.showLock.width + 2;
     this.showName.setX(Math.round((SIDE_W - this.showName.width + lockW) / 2));
     this.showLock.setVisible(!owned).setPosition(this.showName.x - lockW, this.showName.y);
-    this.showClass.setX(Math.round((SIDE_W - this.showClass.width) / 2));
-    if (fade) {
-      for (const o of [this.showSprite, this.showGlow]) {
-        o.setAlpha(0);
-        this.tweens.add({ targets: o, alpha: 1, duration: 300 });
-      }
+    this.showClass.setX(Math.round((SIDE_W - this.showClass.width) / 2)).setTint(LAVENDER);
+    if (fade) this.fadeShowIn();
+  }
+
+  /** A featured companion in the showcase: drawn big, what it does written under it. */
+  private showPet(fade: boolean): void {
+    const pet = this.featuredPets[this.showAt % this.featuredPets.length];
+    if (!pet) return;
+    const owned = collection.hasPet(pet.id);
+    const y = 18 + 88 - PLATE - 5;
+    for (const o of [this.showSprite, this.showGlow]) {
+      o.setCrop().setOrigin(PET_OX / PET_W, PET_OY / PET_H).setScale(PET_SCALE).setY(y);
     }
+    this.showSprite.setTexture('pets', `${pet.id}_0`).play(`pet_${pet.id}`);
+    this.showGlow.setTexture('pets_e', `${pet.id}_0`).setVisible(true);
+    const probe = pixelText(this, 0, 0, '').setVisible(false);
+    this.showName.setText(fitLine(probe, pet.name, 56));
+    this.showClass.setText(fitLine(probe, pet.perk, SIDE_W - 12));
+    probe.destroy();
+    const lockW = owned ? 0 : this.showLock.width + 2;
+    this.showName.setX(Math.round((SIDE_W - this.showName.width + lockW) / 2));
+    this.showLock.setVisible(!owned).setPosition(this.showName.x - lockW, this.showName.y);
+    this.showClass.setX(Math.round((SIDE_W - this.showClass.width) / 2)).setTint(pet.tint);
+    if (fade) this.fadeShowIn();
+  }
+
+  private fadeShowIn(): void {
+    for (const o of [this.showSprite, this.showGlow]) {
+      o.setAlpha(0);
+      this.tweens.add({ targets: o, alpha: 1, duration: 300 });
+    }
+  }
+
+  // ---- The two banners ----
+
+  /** The crystal's resting glow: violet in the Sanctum, warm gold in the Nest. */
+  private get idleTint(): number {
+    return this.mode === 'pets' ? NEST_TINT : IDLE_TINT;
+  }
+
+  /** The open banner's tab lit, the other plain. */
+  private syncTabs(): void {
+    for (const m of ['skins', 'pets'] as const) {
+      const [on, off] = this.tabs[m];
+      const open = m === this.mode;
+      on.setVisible(open).setEnabled(open);
+      off.setVisible(!open).setEnabled(!open);
+    }
+  }
+
+  /**
+   * Turn the hall to the other banner: a soft flash, and over half a second
+   * the crystal gives way to the egg (or back), the light warms or cools, the
+   * fireflies come or go and the music changes key; the side panels show the
+   * banner's own rates, count and featured picks.
+   */
+  private setMode(m: Mode): void {
+    if (this.phase !== 'idle' || this.leaving || m === this.mode) return;
+    this.mode = m;
+    const pets = m === 'pets';
+    this.modeTween?.stop();
+    this.modeTween = this.tweens.add({ targets: this, nestK: pets ? 1 : 0, duration: 600, ease: 'Sine.easeInOut' });
+    this.flash.setFillStyle(pets ? 0xfff0c0 : 0xd8c8ff).setAlpha(0.35);
+    this.tweens.add({ targets: this.flash, alpha: 0, duration: 420 });
+    this.shards.setParticleTint(pets ? NEST_LEAF : 0x9ff6ff);
+    this.shards.explode(14, this.crystalX, this.coreY);
+    this.header.setText((pets ? '* Wishing Nest *' : '* Wishing Sanctum *').toUpperCase());
+    this.header.setX(Math.round((this.vw - this.header.width) / 2));
+    this.shiftTint(this.idleTint, 500);
+    sound.setShopMood(pets ? 'nest' : 'sanctum');
+    sound.cardFlip(0);
+    if (pets) this.fireflies.start();
+    else this.fireflies.stop();
+    this.hint.setText((pets ? 'Companions follow you on every run' : 'Gems drop from monsters * +5 every day').toUpperCase());
+    this.hint.setX(Math.round((this.vw - this.hint.width) / 2));
+    this.showAt = Math.floor(Math.random() * 100);
+    this.showT = 0;
+    this.showSkin(true);
+    this.refreshInfo();
+    this.syncTabs();
   }
 
   // ---- Layout ----
@@ -464,10 +622,19 @@ export class ShopScene extends Phaser.Scene {
     this.crystalY = this.floorY - Math.round(CRYSTAL_H / 2) - 14;
     this.shaft.setPosition(cx, this.floorY + 2).setScale(5, (this.floorY + 4) / 120);
     const archHalf = Math.min(vw * 0.62, 300) / 2;
-    this.lamps.forEach((l, i) => l.setPosition(cx + (i ? archHalf - 4 : -archHalf + 4), this.floorY - 24).setScale(1.6));
+    this.lamps.forEach((l, i) => l.setPosition(cx + (i ? archHalf - 4 : -archHalf + 4), this.floorY - 24));
 
     const top = Math.ceil(fpsBottom() / z) + 4;
     this.header.setPosition(Math.round((vw - this.header.width) / 2), top);
+    // The banner tabs, side by side under the heading.
+    const tabGap = 4;
+    const tabsW = this.tabs.skins[0].boxW + tabGap + this.tabs.pets[0].boxW;
+    const tx = Math.round((vw - tabsW) / 2);
+    for (const b of this.tabs.skins) b.place(tx, top + 10);
+    for (const b of this.tabs.pets) b.place(tx + this.tabs.skins[0].boxW + tabGap, top + 10);
+    this.nestLight.setSize(W + 1, H + 1);
+    for (const zone of [...this.fireflies.emitZones]) this.fireflies.removeEmitZone(zone);
+    this.fireflies.addEmitZone({ type: 'random', source: new Phaser.Geom.Rectangle(0, H * 0.25, W, this.floorY - H * 0.1) } as Phaser.Types.GameObjects.Particles.EmitZoneData);
     this.counterBg.setPosition(Math.round(vw - MARGIN - 62 - 30), top - 4);
     this.placeCounter();
 
@@ -488,7 +655,7 @@ export class ShopScene extends Phaser.Scene {
 
     // Side panels when there's room either side of the arch.
     this.sides = vw >= SIDE_W * 2 + MARGIN * 2 + 180;
-    const panelY = Math.round(Math.max(top + 14, (this.floorY - 126) / 2 + 12));
+    const panelY = Math.round(Math.max(top + 28, (this.floorY - 126) / 2 + 12));
     this.rates.setPosition(MARGIN, panelY).setVisible(this.sides && this.phase === 'idle');
     this.showcase.setPosition(Math.round(vw - MARGIN - SIDE_W), panelY).setVisible(this.sides && this.phase === 'idle');
   }
@@ -502,6 +669,11 @@ export class ShopScene extends Phaser.Scene {
     this.counterText.setPosition(x + this.counterGem.width + 3, bg.y + 4);
   }
 
+  /** The heart of the wish: the crystal's middle, or the egg's as the Nest takes its place. */
+  private get coreY(): number {
+    return Phaser.Math.Linear(this.crystalY, this.floorY - EGG_REST - EGG_H / 2, this.nestK);
+  }
+
   /** Where gems fly to and from on the counter. */
   private get counterAt(): { x: number; y: number } {
     return { x: this.counterGem.x + this.counterGem.width / 2, y: this.counterGem.y + this.counterGem.height / 2 };
@@ -510,10 +682,11 @@ export class ShopScene extends Phaser.Scene {
   private refreshInfo(): void {
     if (this.phase === 'idle') this.shownGems = collection.gems;
     this.placeCounter();
-    const left = PITY - collection.pity;
-    this.ratesText.pity.setText(`${left} ${left === 1 ? 'wish' : 'wishes'}`);
-    const o = ownedSkins();
-    this.ratesText.owned.setText(`Skins ${o.owned}/${o.of}`);
+    const pets = this.mode === 'pets';
+    const left = PITY - (pets ? collection.petPity : collection.pity);
+    this.ratesText.pity.setText(`${left} ${left === 1 ? 'wish' : 'wishes'}`.toUpperCase());
+    const o = pets ? ownedPets() : ownedSkins();
+    this.ratesText.owned.setText(`${pets ? 'Companions' : 'Skins'} ${o.owned}/${o.of}`.toUpperCase());
     const can1 = collection.gems >= WISH_COST;
     const can10 = collection.gems >= WISH10_COST;
     this.cost1.setAlpha(can1 ? 1 : 0.5);
@@ -526,10 +699,10 @@ export class ShopScene extends Phaser.Scene {
     if (this.phase !== 'idle' || this.leaving) return;
     const cost = count === 10 ? WISH10_COST : WISH_COST;
     const before = collection.gems;
-    const results = wish(count);
+    const results = this.mode === 'pets' ? petWish(count)?.map((r) => petPull(r.pet, r.fresh)) : wish(count)?.map(skinPull);
     if (!results) return this.notEnough(count === 10 ? this.cost10 : this.cost1);
     this.phase = 'charge';
-    const best = Math.max(...results.map((r) => TIER[r.entry.rarity]));
+    const best = Math.max(...results.map((r) => TIER[r.rarity]));
     this.shownGems = before;
     this.placeCounter();
 
@@ -553,8 +726,8 @@ export class ShopScene extends Phaser.Scene {
     const from = this.counterAt;
     for (let i = 0; i < n; i++) {
       const g = this.add.image(from.x, from.y, 'gem_s').setDepth(45);
-      const mid = { x: (from.x + this.crystalX) / 2 + Phaser.Math.Between(-30, 30), y: Math.min(from.y, this.crystalY) - Phaser.Math.Between(10, 40) };
-      const path = new Phaser.Curves.QuadraticBezier(new Phaser.Math.Vector2(from.x, from.y), new Phaser.Math.Vector2(mid.x, mid.y), new Phaser.Math.Vector2(this.crystalX, this.crystalY));
+      const mid = { x: (from.x + this.crystalX) / 2 + Phaser.Math.Between(-30, 30), y: Math.min(from.y, this.coreY) - Phaser.Math.Between(10, 40) };
+      const path = new Phaser.Curves.QuadraticBezier(new Phaser.Math.Vector2(from.x, from.y), new Phaser.Math.Vector2(mid.x, mid.y), new Phaser.Math.Vector2(this.crystalX, this.coreY));
       this.tweens.addCounter({
         from: 0,
         to: 1,
@@ -569,7 +742,7 @@ export class ShopScene extends Phaser.Scene {
         onComplete: () => {
           g.destroy();
           this.shards.setParticleTint(0x9ff6ff);
-          this.shards.explode(3, this.crystalX, this.crystalY);
+          this.shards.explode(3, this.crystalX, this.coreY);
           this.charge = Math.min(1, this.charge + 0.04);
         },
       });
@@ -581,7 +754,7 @@ export class ShopScene extends Phaser.Scene {
    * blue; violet partway if it holds an epic, gold near the end if a
    * legendary (the hall going dark for it). Then it bursts.
    */
-  private chargeCrystal(dur: number, best: number, results: WishResult[]): void {
+  private chargeCrystal(dur: number, best: number, results: Pull[]): void {
     sound.wishCharge(dur / 1000, best);
     this.gather.start();
     this.tweens.add({ targets: this, lift: 12, duration: dur, ease: 'Sine.easeInOut' });
@@ -621,12 +794,12 @@ export class ShopScene extends Phaser.Scene {
 
   /** A ring of light racing out from the crystal. */
   private ring(color: number, scale: number, delay: number): void {
-    const r = this.add.image(this.crystalX, this.crystalY + 6, 'loot_ring').setBlendMode(Phaser.BlendModes.ADD).setTint(color).setDepth(54).setScale(0.2).setAlpha(0);
+    const r = this.add.image(this.crystalX, this.coreY + 6, 'loot_ring').setBlendMode(Phaser.BlendModes.ADD).setTint(color).setDepth(54).setScale(0.2).setAlpha(0);
     this.tweens.add({ targets: r, scale, alpha: { from: 1, to: 0 }, delay, duration: 700, ease: 'Quad.easeOut', onComplete: () => r.destroy() });
   }
 
   /** The crystal bursts: a white flash, shards and rings in the best rarity's colour, and the cards come out. */
-  private burst(best: number, results: WishResult[]): void {
+  private burst(best: number, results: Pull[]): void {
     const color = [RARITY_INFO.rare.tint, RARITY_INFO.epic.tint, RARITY_INFO.legendary.tint][best];
     this.gather.stop();
     sound.wishBurst(best);
@@ -634,18 +807,26 @@ export class ShopScene extends Phaser.Scene {
     this.tweens.add({ targets: this.flash, alpha: 0, duration: 700, ease: 'Quad.easeIn' });
     this.jolt(best === 2 ? 420 : 240, best === 2 ? 3 : 2);
     this.shards.setParticleTint(color);
-    this.shards.explode(best === 2 ? 90 : 55, this.crystalX, this.crystalY);
-    this.shards.setParticleTint(0xffffff);
-    this.shards.explode(30, this.crystalX, this.crystalY);
+    this.shards.explode(best === 2 ? 90 : 55, this.crystalX, this.coreY);
+    // The egg's shell flies apart in cream and gold; the crystal's in white.
+    if (this.mode === 'pets') {
+      this.shards.setParticleTint(0xfff4d6);
+      this.shards.explode(26, this.crystalX, this.coreY);
+      this.shards.setParticleTint(GOLD);
+      this.shards.explode(14, this.crystalX, this.coreY);
+    } else {
+      this.shards.setParticleTint(0xffffff);
+      this.shards.explode(30, this.crystalX, this.coreY);
+    }
     for (let i = 0; i <= best + 1; i++) this.ring(i % 2 ? 0xffffff : color, 2.5 + i, i * 110);
-    // The crystal is spent; it forms again when the player carries on.
+    // The crystal (or the egg) is spent; it forms again when the player carries on.
     this.crystalShown = 0;
     this.phase = 'reveal';
     this.deal(results);
   }
 
   /** Lay the cards out, face down, flying out of where the crystal was, then turn them one by one. */
-  private deal(results: WishResult[]): void {
+  private deal(results: Pull[]): void {
     const big = results.length === 1;
     this.cards = results.map((r) => new WishCard(this, r, big));
     const vw = this.vw;
@@ -671,7 +852,7 @@ export class ShopScene extends Phaser.Scene {
       });
     }
     this.cards.forEach((c, i) => {
-      c.setPosition(this.crystalX, this.crystalY).setScale(0.15 * scale).setAlpha(0).setAngle(Phaser.Math.Between(-40, 40));
+      c.setPosition(this.crystalX, this.coreY).setScale(0.15 * scale).setAlpha(0).setAngle(Phaser.Math.Between(-40, 40));
       this.tweens.add({
         targets: c,
         x: spots[i].x,
@@ -743,7 +924,7 @@ export class ShopScene extends Phaser.Scene {
   private revealed(): void {
     if (this.phase !== 'reveal') return;
     this.phase = 'done';
-    const dupes = this.cards.filter((c) => !c.result.fresh);
+    const dupes = this.cards.filter((c) => !c.pull.fresh);
     dupes.forEach((c, i) => this.time.delayedCall(700 + i * 260, () => this.evaporate(c)));
     const after = 700 + dupes.length * 260 + (dupes.length ? 900 : 0);
     this.time.delayedCall(after, () => {
@@ -802,11 +983,11 @@ export class ShopScene extends Phaser.Scene {
     this.lift = 0;
     this.spinSpeed = IDLE_SPIN;
     this.charge = 0;
-    this.shiftTint(IDLE_TINT, 500);
-    // The crystal forms again from light.
+    this.shiftTint(this.idleTint, 500);
+    // The crystal (or a new egg) forms again from light.
     this.tweens.add({ targets: this, crystalShown: 1, duration: 600, ease: 'Sine.easeOut' });
-    this.shards.setParticleTint(0x9ff6ff);
-    this.shards.explode(20, this.crystalX, this.crystalY);
+    this.shards.setParticleTint(this.mode === 'pets' ? NEST_TINT : 0x9ff6ff);
+    this.shards.explode(20, this.crystalX, this.coreY);
     this.shownGems = collection.gems;
     this.refreshInfo();
     for (const o of this.ui) {
@@ -819,6 +1000,7 @@ export class ShopScene extends Phaser.Scene {
     this.wish1.setEnabled(true);
     this.wish10.setEnabled(true);
     this.back.setEnabled(true);
+    this.syncTabs();
     this.showSkin(false);
   }
 
@@ -866,26 +1048,32 @@ export class ShopScene extends Phaser.Scene {
     }
     const turn = Math.cos(this.spin * 6);
     const shown = this.crystalShown;
-    this.crystal.setPosition(cx, cy).setScale(shown).setAlpha(shown);
+    const nest = this.nestK;
+    const gem = shown * (1 - nest);
+    this.crystal.setPosition(cx, cy).setScale(shown).setAlpha(gem).setVisible(gem > 0.01);
     this.crystalLight
       .setPosition(cx, cy)
       .setScale(shown)
       .setTint(this.tint)
-      .setAlpha((0.25 + 0.2 * (1 - Math.abs(turn)) + 0.6 * this.charge) * shown);
+      .setAlpha((0.25 + 0.2 * (1 - Math.abs(turn)) + 0.6 * this.charge) * gem)
+      .setVisible(gem > 0.01);
+    this.updateEgg(t, shown * nest);
+    // The glow, the stars and the rays centre on whichever holds the wish.
+    const hy = Phaser.Math.Linear(cy, this.coreY - this.lift * 0.4, nest);
     this.crystalGlow
-      .setPosition(cx, cy + 2)
+      .setPosition(cx, hy + 2)
       .setTint(this.tint)
       .setScale(2.6 + 2.4 * this.charge + 0.15 * Math.sin(t * 0.003))
       .setAlpha((0.45 + 0.4 * this.charge) * Math.max(0.35, shown));
-    this.gather.setPosition(cx, cy);
+    this.gather.setPosition(cx, hy);
 
     // Stars circling it, passing behind and in front.
     this.orbit.forEach((o, i) => {
       const a = t * (0.0012 + this.spinSpeed * 0.3) + (i / this.orbit.length) * Math.PI * 2;
       const front = Math.sin(a) > 0;
-      o.setPosition(Math.round(cx + Math.cos(a) * 24), Math.round(cy + 6 + Math.sin(a) * 7))
+      o.setPosition(Math.round(cx + Math.cos(a) * 24), Math.round(hy + 6 + Math.sin(a) * 7))
         .setDepth(front ? 10.8 : 9.5)
-        .setAlpha((0.4 + 0.6 * Math.max(0, Math.sin(t * 0.006 + i * 1.3))) * Math.max(0.3, shown))
+        .setAlpha((0.4 + 0.6 * Math.max(0, Math.sin(t * 0.006 + i * 1.3))) * Math.max(0.3, shown) * (1 - nest * 0.6))
         .setTint(i % 2 ? 0xffffff : this.tint);
     });
 
@@ -893,16 +1081,23 @@ export class ShopScene extends Phaser.Scene {
     const breathe = Math.sin(t * 0.0014);
     this.shaft.setAlpha(0.18 + 0.05 * breathe + 0.25 * this.charge).setTint(this.tint);
     const n = this.rays.length;
+    const rayTint = lerpColor(0x5ae8ff, NEST_LEAF, nest);
     this.rays.forEach((r, i) => {
       const long = i % 2 ? 0.6 : 1;
-      r.setPosition(cx, cy)
+      r.setPosition(cx, hy)
         .setRotation((i / n) * Math.PI * 2 + t * (0.00012 + this.spinSpeed * 0.05))
         .setScale(1.8, (2.4 + 2 * this.charge) * long * (0.9 + 0.1 * Math.sin(t * 0.002 + i)))
         .setAlpha((0.08 + 0.1 * this.charge) * (i % 2 ? 1 : 0.7))
-        .setTint(i % 2 ? 0x5ae8ff : this.tint);
+        .setTint(i % 2 ? rayTint : this.tint);
     });
     this.runes.setAlpha(0.45 + 0.3 * Math.sin(t * 0.003) + 0.25 * this.charge).setTint(this.tint);
-    this.lamps.forEach((l, i) => l.setAlpha(0.3 + 0.06 * Math.sin(t * 0.011 + i * 3) + 0.04 * Math.sin(t * 0.027 + i)));
+    // In the Nest the lamps burn bigger and greener-gold, and a warm light fills the hall.
+    const lampTint = lerpColor(0xffa84a, 0xe8d860, nest);
+    this.lamps.forEach((l, i) => l.setAlpha(0.3 + 0.12 * nest + 0.06 * Math.sin(t * 0.011 + i * 3) + 0.04 * Math.sin(t * 0.027 + i)).setTint(lampTint).setScale(1.6 + nest * 0.8));
+    this.nestLight.setAlpha(nest * (0.32 + 0.04 * breathe)).setVisible(nest > 0.01);
+    // The hall itself warms from violet night towards amber dusk.
+    this.hall.setTint(lerpColor(0xffffff, NEST_HALL, nest));
+    this.altar.setTint(lerpColor(0xffffff, NEST_HALL, nest * 0.6));
 
     // The showcase moves on every few seconds.
     if (this.phase === 'idle' && this.sides) {
@@ -915,5 +1110,30 @@ export class ShopScene extends Phaser.Scene {
       if (this.showGlow.visible) this.showGlow.setFrame(this.showSprite.frame.name);
     }
     for (const c of this.cards) if (c.active) c.tick(time);
+  }
+
+  /**
+   * The Nest's egg, `k` of the way shown: it sits on the altar, rocking now
+   * and then with a little hop; a wish sets it rocking harder and harder, and
+   * the cracks spread, glowing, until it bursts.
+   */
+  private updateEgg(t: number, k: number): void {
+    const show = k > 0.01;
+    for (const o of [this.egg, this.eggGlow, ...this.cracks]) o.setVisible(show);
+    if (!show) return;
+    const c = this.charge;
+    const x = this.crystalX;
+    // Resting, it hops a little every few seconds; charging, it trembles and jumps.
+    const cycle = (t % 3400) / 3400;
+    const hop = cycle > 0.88 ? Math.sin(((cycle - 0.88) / 0.12) * Math.PI) * 3 : 0;
+    const bottom = Math.round(this.floorY - EGG_REST - this.lift * 0.4 - hop * (1 - c) - (c > 0.5 ? Math.abs(Math.sin(t * 0.03)) * 3 * c : 0));
+    const rock = Math.sin(t * (0.004 + c * 0.03)) * (0.04 + c * 0.22) + (cycle > 0.88 ? Math.sin(t * 0.05) * 0.06 : 0);
+    const scale = 0.6 + 0.4 * k;
+    for (const o of [this.egg, this.eggGlow, ...this.cracks]) o.setPosition(x, bottom).setRotation(rock).setScale(scale);
+    this.egg.setAlpha(k);
+    this.eggGlow.setAlpha(k * (0.6 + 0.4 * Math.sin(t * 0.004) + c * 0.6));
+    // The cracks open with the charge, glowing in the colour the wish holds.
+    const at = [0.3, 0.6, 0.85];
+    this.cracks.forEach((cr, i) => cr.setAlpha(c >= at[i] ? k * (0.8 + 0.2 * Math.sin(t * 0.02 + i)) : 0).setTint(this.tint));
   }
 }

@@ -21,7 +21,7 @@ const GRANTS: { id: string; user: string; gems: number }[] = [{ id: 'kel-100k', 
 /** Set once this device has given a guest the welcome gems, so a fresh guest game can't be made again and again for more. */
 const WELCOMED_KEY = 'pixel-battle.welcomed';
 
-const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [] });
+const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, pets: [], pet: '', petPity: 0 });
 
 /** The welcome gems for a new guest game: the first on this device only. */
 function welcomeGems(): number {
@@ -60,6 +60,10 @@ function clean(d: Partial<SaveData> | null | undefined): SaveData {
   out.daily = typeof d?.daily === 'string' ? d.daily : '';
   out.pity = Math.max(0, Math.floor(Number(d?.pity) || 0));
   out.grants = [...new Set((Array.isArray(d?.grants) ? d.grants : []).filter((g): g is string => typeof g === 'string' && !!g))];
+  for (const [cls, n] of Object.entries(d?.rift ?? {})) if (Number(n) > 0) out.rift[cls] = Math.floor(Number(n));
+  out.pets = [...new Set((Array.isArray(d?.pets) ? d.pets : []).filter((p): p is string => typeof p === 'string' && !!p))];
+  out.pet = typeof d?.pet === 'string' ? d.pet : '';
+  out.petPity = Math.max(0, Math.floor(Number(d?.petPity) || 0));
   for (const [id, n] of Object.entries(d?.items ?? {})) if (n > 0) out.items[id] = Math.floor(n);
   for (const id of d?.equipped ?? []) {
     const i = id ? slotIndex(id) : -1;
@@ -242,6 +246,57 @@ class Collection {
     return true;
   }
 
+  /** The furthest wave reached in the Endless Rift with class `cls` (0 if never), or with any class. */
+  riftBest(cls?: string): number {
+    if (cls) return this.data.rift[cls] ?? 0;
+    return Math.max(0, ...Object.values(this.data.rift));
+  }
+
+  /** A Rift run with class `cls` reached `wave`: true when that's a new best for the class. */
+  recordRift(cls: string, wave: number): boolean {
+    if (wave <= (this.data.rift[cls] ?? 0)) return false;
+    this.data.rift[cls] = wave;
+    this.changed();
+    return true;
+  }
+
+  /** Does the player own companion `id`? Admins own them all. */
+  hasPet(id: string): boolean {
+    return this.isAdmin || this.data.pets.includes(id);
+  }
+
+  get petCount(): number {
+    return this.data.pets.length;
+  }
+
+  /** Give the player companion `id`; false when they had it already. */
+  unlockPet(id: string): boolean {
+    if (this.hasPet(id)) return false;
+    this.data.pets.push(id);
+    this.changed();
+    return true;
+  }
+
+  /** The companion following the player ('' for none). */
+  get pet(): string {
+    return this.data.pet && this.hasPet(this.data.pet) ? this.data.pet : '';
+  }
+
+  set pet(id: string) {
+    this.data.pet = id && this.hasPet(id) ? id : '';
+    this.changed();
+  }
+
+  /** Companion wishes since the last legendary companion. */
+  get petPity(): number {
+    return this.data.petPity;
+  }
+
+  set petPity(n: number) {
+    this.data.petPity = n;
+    this.changed();
+  }
+
   /** Wishes since the last legendary skin. */
   get pity(): number {
     return this.data.pity;
@@ -373,11 +428,17 @@ class Collection {
       if (local.daily > merged.daily) merged.daily = local.daily;
       merged.pity = Math.max(local.pity, merged.pity);
       merged.grants = [...new Set([...merged.grants, ...local.grants])];
+      for (const [cls, n] of Object.entries(local.rift)) merged.rift[cls] = Math.max(n, merged.rift[cls] ?? 0);
+      merged.pets = [...new Set([...merged.pets, ...local.pets])];
+      if (!merged.pet) merged.pet = local.pet;
+      merged.petPity = Math.max(local.petPity, merged.petPity);
       if (guest) {
         for (const [id, n] of Object.entries(guest.items)) merged.items[id] = (merged.items[id] ?? 0) + n;
         merged.dust += guest.dust;
         // A guest game's skins come along; its gems only if it has more, so a guest's welcome gems aren't counted twice.
         merged.skins = [...new Set([...merged.skins, ...guest.skins])];
+        merged.pets = [...new Set([...merged.pets, ...guest.pets])];
+        for (const [cls, n] of Object.entries(guest.rift)) merged.rift[cls] = Math.max(n, merged.rift[cls] ?? 0);
         merged.gems = Math.max(merged.gems, guest.gems);
         if (guest.daily > merged.daily) merged.daily = guest.daily;
         for (const [id, picks] of Object.entries(guest.upgrades)) if (picks.length > (merged.upgrades[id]?.length ?? 0)) merged.upgrades[id] = picks;
@@ -408,7 +469,7 @@ class Collection {
       return;
     }
     // Logging in from a guest game brings its pickups along.
-    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length) ? guest : undefined);
+    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length || guest.pets.length) ? guest : undefined);
   }
 }
 

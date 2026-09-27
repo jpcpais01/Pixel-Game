@@ -23,6 +23,10 @@ import { arenaById, type ArenaDef } from '../world/arenas';
 import { PLAZA_H, PLAZA_Y, plazaProps } from '../world/clearing';
 import { Garden } from '../world/Garden';
 import { CosmosArena } from '../world/Cosmos';
+import { RiftArena } from '../world/Rift';
+import { RiftWaves, resetRift, riftMods } from '../game/rift';
+import { Companion } from '../game/Companion';
+import { petById, petMods, wearPet } from '../game/pets';
 import { FloatingIsland } from '../world/Island';
 import { SpiritDungeon } from '../world/Spirit';
 import { TempleDungeon } from '../world/Temple';
@@ -145,6 +149,11 @@ export class WorldScene extends Phaser.Scene {
   private garden: Garden | null = null;
   /** The arena's own living parts, when it is the Cosmos Arena. */
   private cosmos: CosmosArena | null = null;
+  /** The Endless Rift: its arena, and the waves standing in for its spawner. */
+  private rift: RiftArena | null = null;
+  /** The companion following the hero, if one is worn. */
+  private companion: Companion | null = null;
+  private riftWaves: RiftWaves | null = null;
   /** The arena's own living parts, when it is the Floating Island. */
   private island: FloatingIsland | null = null;
   /** The arena's own living parts, when it is the Spirit Dungeon. */
@@ -262,6 +271,9 @@ export class WorldScene extends Phaser.Scene {
     this.banner = null;
     this.garden = null;
     this.cosmos = null;
+    this.rift = null;
+    this.riftWaves = null;
+    resetRift();
     this.island = null;
     this.spirit = null;
     this.temple = null;
@@ -310,7 +322,8 @@ export class WorldScene extends Phaser.Scene {
 
     // The ground streams in strips as the hero walks (see GroundStreamer).
     this.ground = isPainted(arena.ground) ? null : new GroundStreamer(this, arena.ground, (img) => ground(img) as Phaser.GameObjects.Image);
-    sound.setOutdoors(arena.id !== 'cosmos' && arena.id !== 'spirit' && arena.id !== 'temple' && arena.id !== 'deep');
+    sound.setOutdoors(arena.id !== 'cosmos' && arena.id !== 'spirit' && arena.id !== 'temple' && arena.id !== 'deep' && arena.id !== 'rift');
+    if (arena.id === 'rift') this.rift = new RiftArena(this, (img) => ground(img) as Phaser.GameObjects.Image);
     if (arena.id === 'cosmos') this.cosmos = new CosmosArena(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'spirit') this.spirit = new SpiritDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'temple') this.temple = new TempleDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
@@ -394,7 +407,25 @@ export class WorldScene extends Phaser.Scene {
     this.aimShown = false;
     this.lookT = 0;
     this.lastAim = null;
-    this.spawners.push(new Spawner(this, arena.monsters, arena.respawn));
+    // The worn companion comes along, its perk with it.
+    const pet = petById(collection.pet);
+    wearPet(pet);
+    this.companion = pet ? new Companion(this, pet, this.hero.x, this.hero.y) : null;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.companion?.destroy();
+      this.companion = null;
+      wearPet(undefined);
+    });
+    if (this.rift) {
+      // The Rift's waves stand in for a spawner, and its overlay shows them.
+      this.riftWaves = new RiftWaves(this, this.rift, { hero: () => this.hero, dropGems: (n, x, y) => this.dropGems(n, x, y) }, ch.id, ch.name);
+      this.spawners.push(this.riftWaves);
+      this.scene.launch('rift');
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        resetRift();
+        this.scene.stop('rift');
+      });
+    } else this.spawners.push(new Spawner(this, arena.monsters, arena.respawn));
     this.scenery = new Scenery(this, arena.scenery(), arena.drift);
     this.net = session.active ? new NetPlay(this) : null;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -613,7 +644,7 @@ export class WorldScene extends Phaser.Scene {
     const h = this.hero;
     if (this.downT > 0 || this.grace > 0) return;
     // A ward takes the edge off every blow.
-    const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard') * gear.guard));
+    const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard') * gear.guard * riftMods.guard * petMods.guard * riftMods.fury));
     const lost = h.vitals.damage(damage);
     this.grace = HURT_GRACE;
     this.rising = false;
@@ -629,7 +660,14 @@ export class WorldScene extends Phaser.Scene {
     this.pushY = (dy / l) * k;
     this.cameras.main.shake(120, 0.0006);
     sound.hurt();
-    if (!h.vitals.alive) this.fall();
+    if (!h.vitals.alive) {
+      // The phoenix chick, once a run, lifts the hero back up at half health instead.
+      if (this.companion?.rekindle(h.x, h.y)) {
+        h.vitals.heal(Math.ceil(h.vitals.max / 2));
+        this.grace = RISE_GRACE;
+        this.rising = true;
+      } else this.fall();
+    }
   }
 
   private fall(): void {
@@ -638,6 +676,8 @@ export class WorldScene extends Phaser.Scene {
     this.pushX = this.pushY = 0;
     heroBuffs.clear();
     this.ult.cancel();
+    // In the Rift, falling ends the run.
+    this.riftWaves?.end();
     // Struck down mid-charge: the charge never releases, so its hum is stopped here.
     sound.beamChargeEnd();
     this.debris([0xffffff, 0xdff8ff, 0xb0c8ff], snap(h.x), snap(h.y) - 12, 20, h.y + 20, 'spores');
@@ -672,8 +712,12 @@ export class WorldScene extends Phaser.Scene {
       h.alpha = Math.max(0, 1 - t / 700);
       this.fallen?.setAlpha(Phaser.Math.Clamp((t - 300) / 400, 0, 1)).setPosition(Math.round(h.x), Math.round(h.y) - 40 - Math.min(6, t / 250));
       if (this.downT <= 0) {
-        this.downT = 0;
-        this.rise();
+        // No rising in the Rift: the run is over, and the hero lies where they fell.
+        if (this.riftWaves) this.downT = 1;
+        else {
+          this.downT = 0;
+          this.rise();
+        }
       }
     } else if (this.rising && this.grace > 0) {
       // Blinks while the grace after rising lasts.
@@ -704,11 +748,11 @@ export class WorldScene extends Phaser.Scene {
    * of gear, popping out of its body.
    */
   monsterSlain(kind: string, x: number, y: number, bodyY: number, stats?: Pick<MonsterStats, 'hp' | 'rank'>): void {
-    if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank), this.ult.ult.pal));
+    if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank) * riftMods.energy * petMods.energy, this.ult.ult.pal));
     const id = rollDrop(kind);
     if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
     for (const def of gear.roll(kind)) this.dropGear(def, x, y - bodyY);
-    const gems = rollGems(kind);
+    const gems = rollGems(kind, petMods.luck);
     if (gems) this.dropGems(gems, x, y - bodyY);
   }
 
@@ -717,7 +761,7 @@ export class WorldScene extends Phaser.Scene {
    * light; five or more fall like a star, and a hoard of ten or more strikes
    * with a prism of rays, rings racing out and the ground shaking.
    */
-  private dropGems(n: number, x: number, y: number): void {
+  dropGems(n: number, x: number, y: number): void {
     const p = new Pickup(this, x, y, { kind: 'gems', n });
     this.pickups.push(p);
     if (n >= 5) sound.lootFall(this.pan(p.x));
@@ -737,6 +781,7 @@ export class WorldScene extends Phaser.Scene {
   /** Gems were picked up: they're the player's for good, and burst about the hero in a shower of light, bigger the more there were. */
   private gainGems(n: number): void {
     collection.addGems(n);
+    this.companion?.cheer();
     const h = this.hero;
     const hx = snap(h.x);
     const hy = snap(h.y);
@@ -849,7 +894,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** The hero's blow dealt `damage`: lifesteal from gear heals a share of it. */
   leech(damage: number): void {
-    const k = gear.totals.leech;
+    const k = gear.totals.leech + riftMods.leech;
     if (k <= 0 || this.downT > 0) return;
     this.regenAcc += damage * k;
   }
@@ -911,7 +956,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     // Renew, gear and lifesteal: healing a little at a time, counted up above the head once a second.
-    const regen = heroBuffs.regen + gear.totals.regen;
+    const regen = heroBuffs.regen + gear.totals.regen + riftMods.regen + petMods.regen;
     if (down || h.vitals.hp >= h.vitals.max) this.regenAcc = 0;
     else {
       this.regenAcc += (regen * dt) / 1000;
@@ -931,7 +976,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** How hard the hero's blows land: more under Might, and with gear. */
   get might(): number {
-    return heroBuffs.mod('damage') * gear.power;
+    return heroBuffs.mod('damage') * gear.power * riftMods.damage * petMods.damage;
   }
 
   /** A buff was just picked up: its name over the hero, and a burst of its colour. */
@@ -1256,7 +1301,7 @@ export class WorldScene extends Phaser.Scene {
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
     this.setVignette(0.32 - d * 0.14);
     // Out in the void and down in the dungeon there is neither pollen nor fireflies (they have their own motes).
-    const open = !this.cosmos && !this.spirit && !this.temple && !this.deep && !this.inside;
+    const open = !this.cosmos && !this.rift && !this.spirit && !this.temple && !this.deep && !this.inside;
     this.pollen.emitting = open && d > 0.5;
     this.fireflies.emitting = open && d < 0.5;
     sound.setDaylight(d);
@@ -1466,7 +1511,7 @@ export class WorldScene extends Phaser.Scene {
     // Taps press for one frame.
     controls.attackTap = controls.beamTap = false;
     this.drawAimLine();
-    const fast = heroBuffs.mod('speed') * gear.speed;
+    const fast = heroBuffs.mod('speed') * gear.speed * riftMods.speed * petMods.speed;
     if (fast !== 1 && this.downT <= 0) this.stretchStep(x0, y0, fast - 1, hb);
     this.updateHeroLife(dt);
     this.updateItems(dt);
@@ -1515,6 +1560,8 @@ export class WorldScene extends Phaser.Scene {
     this.garden?.update(time, dt, target, d, this.view);
     // After the day/night light: the cosmos lights itself.
     this.cosmos?.update(time, dt);
+    this.rift?.update(time, dt);
+    this.companion?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight);
     this.island?.update(time, dt);
     this.spirit?.update(time, dt);
     this.temple?.update(time);
