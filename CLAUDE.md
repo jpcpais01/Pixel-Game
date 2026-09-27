@@ -27,7 +27,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 
 **Heroes** (`src/game/`)
 - `characters.ts`: `CLASSES` → types → skins. The world spawns a hero by look id (a type's id or a skin's id). `skins.ts` remembers the chosen look.
-- One file per class: `Wizard.ts` (+ `Pyro.ts`), `Warrior.ts`, `Paladin.ts`, `Jedi.ts`, `Fighter.ts`, `Alchemist.ts`, `Archer.ts`, `Rogue.ts`, `Necromancer.ts`, `Bard.ts`, `Chrono.ts`, `Puppeteer.ts`, `Samurai.ts`. Each implements `Hero` (`update(dt, mx, my, attack, special, bounds, aim)`) and takes a style/kit/skin object for its look.
+- One file per class: `Wizard.ts` (+ `Pyro.ts`, and `Druid.ts`, whose Grovekeeper and Shapeshifter play through the wizard's cast and charge), `Warrior.ts` (+ `Valkyrie.ts`, its own hero on the warrior's rig), `Paladin.ts`, `Jedi.ts`, `Fighter.ts`, `Alchemist.ts`, `Archer.ts`, `Rogue.ts`, `Necromancer.ts`, `Bard.ts`, `Chrono.ts`, `Puppeteer.ts`, `Samurai.ts`. Each implements `Hero` (`update(dt, mx, my, attack, special, bounds, aim)`) and takes a style/kit/skin object for its look.
 - Shared effects: `Slash.ts` (`Effect` interface, blade FX, `Scheme` colours), `Beam.ts` (`PixelLayer`), `EnergyBall.ts`, `Arrows.ts`, `Toxins.ts`, `Souls.ts`, `Songs.ts`, `Strings.ts`, `Chronos.ts`, `Blades.ts`, `Fists.ts`, `Force.ts`, `Holy.ts`, `Shadows.ts`.
 - Specials: `game/ultimate/index.ts` holds `ULTS` (by `class:type`) and `SKINS` (by `class:skin`, renamed and recoloured). `UltCaster` does the windup and spends energy (`energy.ts`). Effects live in `ultimate/*.ts`, icons in `ultimate/icons.ts`.
 - `combat.ts`: `MeleeArea`, `Strike`, `Hit`, `Hurtbox`, `Harm`, `Vitals` (hp + barrier).
@@ -60,7 +60,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 
 **Art** (`src/art/`)
 - `pixel.ts`: the engine. Shapes carry a material and a surface normal; `render()` gives diffuse, normal map and emissive layers.
-- One file per hero (`wizard.ts`, `fighter.ts`...) with its looks (`*_LOOKS`) and animations; monster sheets in `monsters.ts`, `ghosts.ts`, `deepMonsters.ts`, boss files; arenas in `garden.ts`, `deep.ts`, `sanctum.ts`...
+- One file per hero (`wizard.ts`, `fighter.ts`...) with its looks (`*_LOOKS`) and animations; the Druid is drawn by `wizard.ts` (heads `grove`, `wild`) and the Valkyrie by `warrior.ts` (the `valkyrie` flag: wings, winged helm, braids, spear), with their materials and button icons in `druid.ts` and `valkyrie.ts`; monster sheets in `monsters.ts`, `ghosts.ts`, `deepMonsters.ts`, boss files; arenas in `garden.ts`, `deep.ts`, `sanctum.ts`...
 - `textures.ts`: `buildAllTextures` packs and registers everything, and creates animations named `<key>_<anim>_<dir>`. Every lit texture has `_e` (emissive), `_s` (shadow) and, for monsters, `_w` (hit flash) companions.
 - Icons: `effects.ts`, `heroSkins.ts`, `moreSkinIcons.ts`; gear icons in `gear.ts`.
 

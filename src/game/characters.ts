@@ -37,6 +37,8 @@ import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PAR
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT } from './Samurai';
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
+import { GROVE_SKIN, Grovecraft, WILD_SKIN, Wildcraft } from './Druid';
+import { SPEAR_KIT, STORM_KIT, Valkyrie } from './Valkyrie';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -1204,6 +1206,122 @@ export const CLASSES: ClassDef[] = [
       const kit = { bladewind: BLADEWIND_KIT, oni: ONI_KIT, kitsune: KITSUNE_KIT, ronin: RONIN_KIT, sakura: SAKURA_KIT, shogun: SHOGUN_KIT }[look] ?? BLADEWIND_KIT;
       return new Samurai(world, x, y, kit);
     },
+  },
+  {
+    id: 'druid',
+    name: 'Druid',
+    blurb: 'Keeper of the wild',
+    chargeSpecial: true,
+    types: [
+      {
+        // Thorn seeds that slow what they prick, and a grove that seizes foes, wears them down and heals her.
+        id: 'grove',
+        name: 'Grovekeeper',
+        role: 'Thorns and green growth',
+        accent: 0x8ee05a,
+        stats: { power: 3, speed: 3, range: 4 },
+        attack: 'Thorn seed',
+        special: 'Wild grove',
+        preview: { texture: 'druid', glow: 'druid_e', idle: 'druid_idle_down', chosen: 'druid_cast_down' },
+        buttons: {
+          attack: { texture: 'icon_thorn' },
+          special: { texture: 'icon_grove' },
+        },
+        lookName: 'Greenwood',
+      },
+      {
+        // Tougher and quicker: spirit claws up close, and a pounce as a spirit wolf.
+        id: 'wild',
+        name: 'Shapeshifter',
+        role: 'Claw and fang',
+        accent: 0xffa040,
+        stats: { power: 4, speed: 4, range: 2 },
+        attack: 'Spirit claws',
+        special: 'Pounce',
+        preview: { texture: 'druid_wild', glow: 'druid_wild_e', idle: 'druid_wild_idle_down', chosen: 'druid_wild_cast_down' },
+        buttons: {
+          attack: { texture: 'icon_claws' },
+          special: { texture: 'icon_pounce' },
+        },
+        lookName: 'Wolfpelt',
+      },
+    ],
+    spawn(world, x, y, look) {
+      if (look === 'wild') {
+        const craft = new Wildcraft(world);
+        const w = new Wizard(
+          world,
+          x,
+          y,
+          {
+            cast: (_x, _y, dx, dy) => craft.claws(dx, dy),
+            beam: (_x, _y, dx, dy, power, dist) => craft.pounce(dx, dy, power, dist),
+            target: (dx, dy, level, dist) => craft.target(dx, dy, level, dist),
+            untarget: () => craft.untarget(),
+          },
+          WILD_SKIN,
+        );
+        craft.caster = w;
+        world.addEffect(craft);
+        return w;
+      }
+      const craft = new Grovecraft(world);
+      const w = new Wizard(
+        world,
+        x,
+        y,
+        {
+          cast: (x, y, dx, dy) => craft.seed(x, y, dx, dy),
+          beam: (_x, _y, dx, dy, power, dist) => craft.grove(dx, dy, power, dist),
+          target: (dx, dy, level, dist) => craft.target(dx, dy, level, dist),
+          untarget: () => craft.untarget(),
+        },
+        GROVE_SKIN,
+      );
+      craft.caster = w;
+      world.addEffect(craft);
+      return w;
+    },
+  },
+  {
+    id: 'valkyrie',
+    name: 'Valkyrie',
+    blurb: 'Wings over the battlefield',
+    types: [
+      {
+        // A spear chain that reaches past a sword's, and a spear of light that pierces and flies back.
+        id: 'spear',
+        name: 'Spearmaiden',
+        role: 'Spear and wing',
+        accent: 0xffd070,
+        stats: { power: 4, speed: 4, range: 3 },
+        attack: 'Spear chain',
+        special: 'Spear of light',
+        preview: { texture: 'valkyrie', glow: 'valkyrie_e', idle: 'valkyrie_idle_down', chosen: 'valkyrie_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+        buttons: {
+          attack: { texture: 'icon_spear' },
+          special: { texture: 'icon_spearthrow' },
+        },
+        lookName: 'Swan',
+      },
+      {
+        // Blows that arc lightning on to nearby foes, and a dive from the sky that lands with a thunderbolt.
+        id: 'storm',
+        name: 'Stormwing',
+        role: 'Lightning from above',
+        accent: 0x7ad0ff,
+        stats: { power: 5, speed: 4, range: 2 },
+        attack: 'Thunder spear',
+        special: 'Valkyrie dive',
+        preview: { texture: 'valkyrie_storm', glow: 'valkyrie_storm_e', idle: 'valkyrie_storm_idle_down', chosen: 'valkyrie_storm_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+        buttons: {
+          attack: { texture: 'icon_spear_storm' },
+          special: { texture: 'icon_dive' },
+        },
+        lookName: 'Tempest',
+      },
+    ],
+    spawn: (world, x, y, look) => new Valkyrie(world, x, y, look === 'storm' ? STORM_KIT : SPEAR_KIT),
   },
 ];
 

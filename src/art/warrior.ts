@@ -23,6 +23,7 @@ import {
   LACQUER_DARK,
   LEATHER,
   MAIL,
+  SILVER,
   SKIN,
   STEEL,
   TROUSER,
@@ -32,6 +33,7 @@ import {
 } from './palette';
 import { BRONZE, PTERUGES, SPARTAN_RED, TAN_SKIN } from './heroSkins';
 import { DIRS, type Dir } from './wizard';
+import { ASH, BLONDE, SKY_CLOTH, SLATE_WING, STORM_ASH, STORM_CLOTH, STORM_STEEL, SWAN, WHITE_HAIR } from './valkyrie';
 
 // ---------------------------------------------------------------------------
 // Looks (skins). Every look shares the rig and poses, so the blade sits on the
@@ -72,6 +74,16 @@ export interface WarriorLook {
   spartan?: boolean;
   /** Arms (default: the mail). */
   arms?: Material;
+  /**
+   * The Valkyrie: great feathered wings at her back instead of the cape, a
+   * helm with little wings at its sides instead of the plume, two long braids,
+   * and a spear (grip is its shaft, guard its bands, blade its head).
+   */
+  valkyrie?: boolean;
+  wing?: Material;
+  hair?: Material;
+  /** The Stormwing: lightning crackles along her feathers. */
+  storm?: boolean;
 }
 
 export const KNIGHT_LOOK: WarriorLook = {
@@ -134,7 +146,54 @@ export const SPARTAN_LOOK: WarriorLook = {
   arms: TAN_SKIN,
 };
 
-export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK];
+/** The Valkyrie's Spearmaiden: bright steel and gold, swan wings, golden braids. */
+export const SPEAR_LOOK: WarriorLook = {
+  key: 'valkyrie',
+  plate: STEEL,
+  mail: MAIL,
+  cloth: SKY_CLOTH,
+  plume: SKY_CLOTH,
+  trim: GOLD,
+  belt: LEATHER,
+  glove: LEATHER,
+  boot: BOOT,
+  trouser: TROUSER,
+  skin: SKIN,
+  blade: BLADE,
+  grip: ASH,
+  guard: GOLD,
+  glow: { core: hex('#fffdf2'), hot: hex('#ffe6a0'), mid: hex('#f4c050') },
+  samurai: false,
+  valkyrie: true,
+  wing: SWAN,
+  hair: BLONDE,
+};
+
+/** The Valkyrie's Stormwing: blackened steel, slate wings crackling with lightning, white braids. */
+export const STORM_LOOK: WarriorLook = {
+  key: 'valkyrie_storm',
+  plate: STORM_STEEL,
+  mail: MAIL,
+  cloth: STORM_CLOTH,
+  plume: STORM_CLOTH,
+  trim: SILVER,
+  belt: LEATHER,
+  glove: LEATHER,
+  boot: BOOT,
+  trouser: TROUSER,
+  skin: SKIN,
+  blade: BLADE,
+  grip: STORM_ASH,
+  guard: SILVER,
+  glow: { core: hex('#f2fbff'), hot: hex('#a8e4ff'), mid: hex('#5ec8ff') },
+  samurai: false,
+  valkyrie: true,
+  wing: SLATE_WING,
+  hair: WHITE_HAIR,
+  storm: true,
+};
+
+export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK, SPEAR_LOOK, STORM_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let LK: WarriorLook = KNIGHT_LOOK;
@@ -204,6 +263,7 @@ function each(x0: number, y0: number, x1: number, y1: number, fn: (x: number, y:
 }
 
 function drawSword(c: PixelCanvas, s: Sword, glow: number): { x: number; y: number } {
+  if (LK.valkyrie) return drawSpear(c, s, glow);
   const a = s.angle * RAD;
   const dx = Math.sin(a);
   const dy = -Math.cos(a);
@@ -268,6 +328,160 @@ function drawSword(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
     c.spark(tip.x, tip.y, LK.glow.core, glow);
   }
   return tip;
+}
+
+/** How far a spear's point reaches past a sword's, and its butt behind the hand. */
+const SPEAR_REACH = 1.8;
+const SPEAR_BUTT = -5.5;
+const SPEAR_HEAD = 4.4;
+
+/** The Valkyrie's spear, held at the same grip as the sword: an ash shaft, gold bands, a leaf-shaped head. */
+function drawSpear(c: PixelCanvas, s: Sword, glow: number): { x: number; y: number } {
+  const a = s.angle * RAD;
+  const dx = Math.sin(a);
+  const dy = -Math.cos(a);
+  const px = -dy;
+  const py = dx;
+  const end = BLADE_START + s.len + SPEAR_REACH;
+  const neck = end - SPEAR_HEAD;
+  const tip = { x: s.hx + dx * end, y: s.hy + dy * end };
+  const reach = Math.max(end, -SPEAR_BUTT) + 1;
+  const box = (fn: (x: number, y: number, along: number, side: number) => void) =>
+    each(s.hx - reach, s.hy - reach, s.hx + reach, s.hy + reach, (x, y) => {
+      const rx = x + 0.5 - s.hx;
+      const ry = y + 0.5 - s.hy;
+      fn(x, y, rx * dx + ry * dy, rx * px + ry * py);
+    });
+  const facing = (sx: number, sy: number, z: number): Vec3 => {
+    const l = Math.hypot(sx, sy, z) || 1;
+    return { x: sx / l, y: -sy / l, z: z / l };
+  };
+  // The shaft, from the butt to the head's socket.
+  c.part();
+  box((x, y, along, side) => {
+    if (along > SPEAR_BUTT && along < neck + 0.3 && Math.abs(side) < 0.56) c.px(x, y, LK.grip, facing(px * side - 0.3, py * side + 0.3, 0.8));
+  });
+  // A band at the butt and the socket where the head is bound on.
+  c.part();
+  box((x, y, along, side) => {
+    const band = (along > SPEAR_BUTT && along < SPEAR_BUTT + 1) || Math.abs(along - neck) < 0.6;
+    if (band && Math.abs(side) < 0.9) c.px(x, y, LK.guard, facing(px * side * 0.3 - 0.25, py * side * 0.3 - 0.3, 0.85));
+  });
+  // The head: a leaf, widest a third of the way up, with a ridge down its middle.
+  c.part();
+  box((x, y, along, side) => {
+    if (along < neck + 0.2 || along > end) return;
+    const u = (along - neck) / SPEAR_HEAD;
+    const hw = u < 0.35 ? 0.55 + (u / 0.35) * 0.8 : 0.15 + (1.2 * (1 - u)) / 0.65;
+    if (Math.abs(side) > hw) return;
+    const k = side >= 0 ? 1 : -1;
+    c.px(x, y, LK.blade, facing(px * k * 0.7, py * k * 0.7, 0.72), { glow: glow * 0.85 });
+  });
+  if (glow > 0) {
+    // Light running up the head, and sparks off the shaft.
+    for (let t = neck; t < end; t += 1.2) {
+      c.spark(s.hx + dx * t + px * 1.6, s.hy + dy * t + py * 1.6, LK.glow.hot, glow * 0.5);
+      c.spark(s.hx + dx * t - px * 1.6, s.hy + dy * t - py * 1.6, LK.glow.mid, glow * 0.45);
+    }
+    for (let t = SPEAR_BUTT + 2; t < neck; t += 3) c.spark(s.hx + dx * t + px * (t % 2 ? 1.2 : -1.2), s.hy + dy * t + py * (t % 2 ? 1.2 : -1.2), LK.glow.mid, glow * 0.35);
+    c.spark(tip.x, tip.y, LK.glow.core, glow);
+  }
+  return tip;
+}
+
+// ---------------------------------------------------------------------------
+// The Valkyrie: wings, the winged helm and braids
+
+/**
+ * A great wing rooted at (rx, ry): a leading edge sweeping out and up to the
+ * wrist, and six long feathers fanning from it, from hanging down by the body
+ * to reaching out past the wrist. `k` is the side it spreads to (-1 left),
+ * `flap` raises it, `size` shrinks the far wing seen from the side.
+ */
+function wing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, size = 1, bias = 0): void {
+  const m = LK.wing ?? LK.cloth;
+  size *= 0.85;
+  const wx = rx + k * (5.4 - flap * 0.3) * size;
+  const wy = ry - (7.6 + flap * 1.6) * size;
+  const n = 6;
+  const bases: { x: number; y: number }[] = [];
+  const tips: { x: number; y: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const bx = rx + (wx - rx) * t;
+    const by = ry + (wy - ry) * t;
+    // From hanging down (0) round to reaching out and a little up (~95 degrees).
+    const a = (6 + t * (82 + flap * 6)) * RAD;
+    const len = (6.4 + t * 4.2) * size;
+    bases.push({ x: bx, y: by });
+    tips.push({ x: bx + k * Math.sin(a) * len, y: by + Math.cos(a) * len });
+  }
+  // The web of the wing under the feathers, in shade, so it reads as one wing and not a comb.
+  c.part();
+  for (let i = 0; i < n - 1; i++) {
+    const q = [bases[i], tips[i], tips[i + 1], bases[i + 1]];
+    fillQuad(c, q, m, { x: k * 0.3, y: -0.2, z: 0.93 }, bias - 1);
+  }
+  // Then the long feathers over it, each a lighter ridge.
+  for (let i = 0; i < n; i++) {
+    c.part();
+    c.capsule(bases[i].x, bases[i].y, tips[i].x, tips[i].y, 1.1 * size, 0.5, m, { bias: bias + (i % 2 ? 1 : 0) });
+  }
+  // Coverts over the feathers' roots, lit along the leading edge.
+  c.part();
+  c.capsule(rx, ry, wx, wy, 1.7 * size, 1.1 * size, m, { bias: bias + 1 });
+  c.capsule(rx + (wx - rx) * 0.2, ry + (wy - ry) * 0.2 + 1.2, rx + (wx - rx) * 0.75, ry + (wy - ry) * 0.75 + 1.4, 1.3 * size, 0.9 * size, m, { bias });
+  if (LK.storm) {
+    // Lightning playing along the feather tips and the leading edge.
+    tips.forEach((p, i) => c.spark(p.x, p.y, i % 2 ? LK.glow.hot : LK.glow.mid, 0.55));
+    for (let t = 0.15; t < 1; t += 0.3) c.spark(rx + (wx - rx) * t, ry + (wy - ry) * t - 1.2, LK.glow.core, 0.4);
+  }
+}
+
+/** Fill a four-cornered shape (corners in order), pixel centres inside it. */
+function fillQuad(c: PixelCanvas, q: { x: number; y: number }[], m: Material, n: Vec3, bias: number): void {
+  const inTri = (px: number, py: number, a: { x: number; y: number }, b: { x: number; y: number }, d: { x: number; y: number }) => {
+    const s1 = (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x);
+    const s2 = (d.x - b.x) * (py - b.y) - (d.y - b.y) * (px - b.x);
+    const s3 = (a.x - d.x) * (py - d.y) - (a.y - d.y) * (px - d.x);
+    return (s1 >= 0 && s2 >= 0 && s3 >= 0) || (s1 <= 0 && s2 <= 0 && s3 <= 0);
+  };
+  const xs = q.map((p) => p.x);
+  const ys = q.map((p) => p.y);
+  each(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys), (x, y) => {
+    const px = x + 0.5;
+    const py = y + 0.5;
+    if (inTri(px, py, q[0], q[1], q[2]) || inTri(px, py, q[0], q[2], q[3])) c.px(x, y, m, n, { bias });
+  });
+}
+
+/** How far the wings are raised: up while the spear kindles, beating as she walks, swept back in a lunge. */
+function flapOf(p: Pose): number {
+  return (p.glow >= 0.3 ? 2 : 0) + p.lift - (p.lean > 0 ? 1 : 0) - p.breath * 0.5;
+}
+
+/** A little wing on the helm, three feathers rising from (x, y) to the side `k`. */
+function helmWing(c: PixelCanvas, x: number, y: number, k: number, size = 1, bias = 0): void {
+  const m = LK.wing ?? LK.plate;
+  c.part();
+  for (const [ox, oy, r] of [[2.8, -5.2, 0.7], [3.4, -3.4, 0.65], [3.2, -1.6, 0.6]] as const) {
+    c.capsule(x, y, x + k * ox * size, y + oy * size, r + 0.2, 0.35, m, { bias: bias + 1 });
+  }
+}
+
+/** A braid of hair from (x, y0) down to y1, its plaits shaded in turn, bound in gold at the end. */
+function braid(c: PixelCanvas, x: number, y0: number, y1: number, sway = 0): void {
+  const m = LK.hair ?? LK.plume;
+  c.part();
+  for (let y = Math.round(y0); y <= Math.round(y1); y++) {
+    const u = (y - y0) / Math.max(1, y1 - y0);
+    const bx = x + sway * u * u;
+    const k = (y & 1) ? 1 : -1;
+    c.px(bx - (k > 0 ? 1 : 0), y, m, cyl(k * 0.5, 0.2), { bias: k > 0 ? 1 : 0 });
+    if (u < 0.8) c.px(bx - (k > 0 ? 0 : 1), y, m, cyl(-k * 0.3, 0.1), { bias: -1 });
+  }
+  c.part();
+  c.px(x + sway - 0.5, Math.round(y1) + 1, LK.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
 }
 
 function arm(c: PixelCanvas, sx: number, sy: number, hx: number, hy: number, bias = 0): void {
@@ -542,16 +756,23 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     glove(c, p.sword.hx, p.sword.hy);
   }
 
-  // Cape lining, seen behind the shoulders and legs.
-  const ct = 15 + U;
-  const cb = 28 + L;
-  c.part();
-  c.shape(ct, cb, (y) => {
-    const u = (y + 0.5 - ct) / (cb + 1 - ct);
-    const hw = 4.8 + 1.8 * u;
-    const x = cx + p.cape * u * u;
-    return [x - hw, x + hw];
-  }, LK.cloth, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.3), { bias: -2 });
+  if (LK.valkyrie) {
+    // Her wings, spread behind her either side.
+    const flap = flapOf(p);
+    wing(c, cx - 3.2, 17.5 + U, -1, flap, 1, -1);
+    wing(c, cx + 3.2, 17.5 + U, 1, flap, 1, -1);
+  } else {
+    // Cape lining, seen behind the shoulders and legs.
+    const ct = 15 + U;
+    const cb = 28 + L;
+    c.part();
+    c.shape(ct, cb, (y) => {
+      const u = (y + 0.5 - ct) / (cb + 1 - ct);
+      const hw = 4.8 + 1.8 * u;
+      const x = cx + p.cape * u * u;
+      return [x - hw, x + hw];
+    }, LK.cloth, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.3), { bias: -2 });
+  }
 
   leg(c, 9.9, 24 + L, 9.8, 28.4 - p.footA);
   leg(c, 14.1, 24 + L, 14.2, 28.4 - p.footB);
@@ -633,7 +854,10 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
       c.px(10, 12 + U, EYE);
       c.px(13, 12 + U, EYE);
     }
-    if (!LK.samurai) {
+    if (LK.valkyrie) {
+      helmWing(c, cx - 4.2, 8.6 + U, -1);
+      helmWing(c, cx + 4.2, 8.6 + U, 1);
+    } else if (!LK.samurai) {
       plume(c, [
         [cx, 6 + U],
         [cx + p.plume * 0.4, 3.4 + U],
@@ -665,6 +889,11 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     glove(c, p.sword.hx, p.sword.hy);
   }
   pauldron(c, 7.1, 16.3 + U);
+  if (LK.valkyrie) {
+    // Her braids, falling from under the helm over her shoulders.
+    braid(c, cx - 3, 13 + U, 19 + U, p.cape * 0.5);
+    braid(c, cx + 4, 13 + U, 19 + U, p.cape * 0.5);
+  }
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
 
@@ -719,11 +948,18 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
     const x = cx + p.cape * u * u;
     return [x - hw, x + hw];
   };
-  cloth(c, ct, cb, capeEdges, LK.cloth, true);
-  for (let y = Math.round(ct + 5); y <= cb; y++) {
-    const [l, r] = capeEdges(y);
-    c.shade(Math.round(l + (r - l) * 0.3), y, -1);
-    c.shade(Math.round(l + (r - l) * 0.68), y, -1);
+  if (LK.valkyrie) {
+    // No cape: her wings spread from her shoulder blades, toward us.
+    const flap = flapOf(p);
+    wing(c, cx - 2.6, 17.5 + U, -1, flap);
+    wing(c, cx + 2.6, 17.5 + U, 1, flap);
+  } else {
+    cloth(c, ct, cb, capeEdges, LK.cloth, true);
+    for (let y = Math.round(ct + 5); y <= cb; y++) {
+      const [l, r] = capeEdges(y);
+      c.shade(Math.round(l + (r - l) * 0.3), y, -1);
+      c.shade(Math.round(l + (r - l) * 0.68), y, -1);
+    }
   }
 
   // Helmet from behind, with a mail neck guard; the plume runs down its back.
@@ -767,6 +1003,11 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
       [cx + 1.4 + p.plume * 0.5, 12.6 + U],
       [cx + 2.2 + p.plume, 15 + U],
     ], 0.8, 0.55);
+  } else if (LK.valkyrie) {
+    // The helm's wings, and one long braid down her back.
+    helmWing(c, cx - 4.2, 8.6 + U, -1);
+    helmWing(c, cx + 4.2, 8.6 + U, 1);
+    braid(c, cx, 13 + U, 22 + U, p.cape * 0.6);
   } else {
     plume(c, [
       [cx, 5.2 + U],
@@ -797,20 +1038,27 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
   const sh = { x: hx + 0.6, y: 17.4 + U };
   if (p.swordBehind) tip = drawSword(c, p.sword, p.glow);
 
-  // Cape streaming behind.
-  const ct = 15 + U;
-  const cb = 28 + L;
-  c.part();
-  c.shape(ct, cb, (y) => {
-    const u = Math.max(0, (y + 0.5 - ct) / (cb + 1 - ct));
-    const l = hx + 1 - 1.6 * u - S * u;
-    const r = hx + 3.4 + 2.6 * Math.pow(u, 1.2) + p.cape * u * u - S * u;
-    return [l, r];
-  }, LK.cloth, (_x, _y, t, u) => cyl(t * 0.8 + 0.15, 0.25 - u * 0.3), { bias: -1 });
-  c.part();
-  {
-    const u = 1;
-    c.shape(cb + 1, cb + 1, () => [hx + 1 - 1.6 * u - S, hx + 3.4 + 2.6 + p.cape - S], LK.trim, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
+  if (LK.valkyrie) {
+    // Her wings sweep back from her shoulders, the far one a little higher and smaller.
+    const flap = flapOf(p);
+    wing(c, hx + 1.4, 16.6 + U, 1, flap + 0.6, 0.8, -2);
+    wing(c, hx + 2.4, 17.6 + U, 1, flap, 1, -1);
+  } else {
+    // Cape streaming behind.
+    const ct = 15 + U;
+    const cb = 28 + L;
+    c.part();
+    c.shape(ct, cb, (y) => {
+      const u = Math.max(0, (y + 0.5 - ct) / (cb + 1 - ct));
+      const l = hx + 1 - 1.6 * u - S * u;
+      const r = hx + 3.4 + 2.6 * Math.pow(u, 1.2) + p.cape * u * u - S * u;
+      return [l, r];
+    }, LK.cloth, (_x, _y, t, u) => cyl(t * 0.8 + 0.15, 0.25 - u * 0.3), { bias: -1 });
+    c.part();
+    {
+      const u = 1;
+      c.shape(cb + 1, cb + 1, () => [hx + 1 - 1.6 * u - S, hx + 3.4 + 2.6 + p.cape - S], LK.trim, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
+    }
   }
 
   // Far arm, mostly hidden behind the body.
@@ -878,7 +1126,11 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     c.part();
     if (p.blink) c.px(hx - 3, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
     else c.px(hx - 3, 12 + U, EYE);
-    if (LK.samurai) {
+    if (LK.valkyrie) {
+      // The braid behind her neck, and the far wing of the helm peeking over it.
+      braid(c, hx + 2, 13 + U, 21 + U, p.cape * 0.5);
+      helmWing(c, hx + 1.6, 7.6 + U, 1, 0.75, -1);
+    } else if (LK.samurai) {
       plume(c, [
         [hx + 3.2, 9.4 + U],
         [hx + 5.4 + p.plume * 0.4, 10.2 + U],
@@ -904,6 +1156,7 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
       c.shade(Math.round(hx + 4), 14 + U, -1);
       crest(c, hx - 2.8, 6 + U, 'side');
     }
+    if (LK.valkyrie) helmWing(c, hx + 0.4, 8.8 + U, 1);
   }
 
   // Near arm and sword.
