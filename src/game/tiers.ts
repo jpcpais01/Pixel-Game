@@ -54,6 +54,14 @@ export const MOB_TIER: Record<string, Tier> = {
   elementinho: 'legend',
   // Cosmos Arena.
   warden: 'myth',
+  // The Glimmerdeep.
+  sporeling: 'weak',
+  glimbat: 'weak',
+  shardling: 'normal',
+  myconid: 'normal',
+  geodeback: 'strong',
+  sporemother: 'legend',
+  wyrm: 'myth',
 };
 
 export const tierOf = (kind: string): Tier => MOB_TIER[kind] ?? 'normal';

@@ -1851,6 +1851,420 @@ function flameHeart(p: Paint): () => void {
   };
 }
 
+// ---- The Sporeveil set -----------------------------------------------------
+// Six legendaries the Sporemother drops: glowing mushroom caps in pink and
+// cyan, pale stalk, lace veils and dark mycelium cloth threaded with light,
+// spores drifting off each one, and the set's mark (a little glowing
+// mushroom) in each icon's top-left corner.
+
+const CAP_PINK: Ramp = ['#3a0c3a', '#7a1a6e', '#c03aa8', '#ff6ad8', '#ffd0f4'];
+const CAP_CYAN: Ramp = ['#0c2a44', '#16507a', '#2a8ac0', '#5ae4ff', '#d8fcff'];
+const STALK: Ramp = ['#4a4058', '#7a7088', '#b0a8bc', '#dcd6e4', '#fbf8ff'];
+const LACE: Ramp = ['#5a4a68', '#8a7a9c', '#c0b4d0', '#e6def0', '#ffffff'];
+const MYCEL: Ramp = ['#0c1016', '#18202a', '#26343e', '#3a4e58', '#567478'];
+const ROOTBARK: Ramp = ['#1a1016', '#33222a', '#4e3640', '#6e4e58', '#94707a'];
+
+/** The set's mark: a small glowing mushroom in the top-left corner. */
+function sporeMark(p: Paint): void {
+  p.map(1, 1, ['.ab.', 'abcb', 'aaaa', '.dd.', '.dd.'], { a: CAP_PINK[2], b: CAP_PINK[3], c: CAP_PINK[4], d: STALK[3] });
+}
+
+/** Spores drifting off a piece, pink and cyan, from around each point. */
+function sporeDrift(p: Paint, seed: number, pts: Pt[], spread = 3): void {
+  const r = rng(seed);
+  for (const [x, y] of pts) {
+    for (let i = 0; i < 3; i++) {
+      const cyan = r() < 0.45;
+      p.glow(Math.round(x + (r() - 0.5) * spread * 2), Math.round(y - i * 1.6 - r() * spread), cyan ? CAP_CYAN[3] : CAP_PINK[3], 230 - i * 50);
+    }
+  }
+}
+
+/** A mushroom cap (a dome over its rim) at (cx, rimY), `r` wide, `h` tall, honeycombed with pits. */
+function cap(p: Paint, cx: number, rimY: number, r: number, h: number, ramp: Ramp, pits = true): void {
+  p.fill(ramp, (x, y) => {
+    const nx = (x - cx) / r;
+    const ny = (y - rimY) / h;
+    if (ny > 0.25 || nx * nx + ny * ny > 1) return null;
+    const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+    const l = nx * L3[0] + ny * L3[1] + nz * L3[2];
+    return ny > 0.05 ? 0.3 : 0.15 + 0.8 * clamp01(l);
+  });
+  if (!pits) return;
+  for (let y = Math.ceil(rimY - h + 2); y < rimY - 1; y += 2) {
+    for (let x = Math.ceil(cx - r + 1) + (y % 4 === 0 ? 1 : 0); x < cx + r - 1; x += 3) {
+      if (((x - cx) / r) ** 2 + ((y - rimY) / h) ** 2 < 0.7) mark(p, x, y, ramp[1]);
+    }
+  }
+}
+
+function veilcapHood(p: Paint): () => void {
+  // The lace veil falling from under the cap, narrowing to the shoulders and
+  // ending in scallops: a net of pale thread with a hem of solid lace.
+  const vw = (y: number) => 11.5 - (y - 15) * 0.22;
+  const hem = (x: number) => 27.5 + 1.4 * Math.abs(Math.sin((x - 16) * 0.8));
+  p.fill(LACE, (x, y) => {
+    if (y < 15 || y > hem(x) || Math.abs(x - 16) > vw(y)) return null;
+    const edge = Math.abs(x - 16) > vw(y) - 1 || y > hem(x) - 1.6;
+    const net = (Math.round(x) + Math.round(y)) % 4 === 0 || (Math.round(x) - Math.round(y) + 40) % 4 === 0;
+    if (!edge && !net) return null;
+    return 0.62 - (x - 16) / 30 - (y - 16) / 60 + (edge ? 0.1 : 0);
+  });
+  // The face in shadow under the cap, two cyan eyes glinting.
+  p.fill(HOLLOW, (x, y) => (((x - 16) / 5.4) ** 2 + ((y - 18.5) / 5.2) ** 2 <= 1 ? clamp01((y - 14) / 10) : null));
+  p.put(14, 18, CAP_CYAN[4]);
+  p.put(18, 18, CAP_CYAN[3]);
+  // The cap: a great pink dome with a paler gilled rim.
+  cap(p, 16, 15, 14, 12, CAP_PINK);
+  for (let x = 3; x <= 29; x++) if (p.filled(x, 15)) p.put(x, 15, x % 2 ? CAP_PINK[4] : CAP_PINK[3]);
+  return () => {
+    sporeDrift(p, 211, [[8, 4], [16, 2], [24, 4]]);
+    p.halo(CAP_PINK[3], 2, 55);
+    p.twinkle(27, 8, CAP_CYAN[4], 1);
+    sporeMark(p);
+  };
+}
+
+function myceliumMantle(p: Paint): () => void {
+  const inside = tunicShape(3);
+  p.fill(MYCEL, (x, y) => {
+    if (!inside(x, y)) return null;
+    return 0.58 - (x - 16) / 26 + 0.1 * Math.sin((x - 16) * 1.3 + y * 0.2) - (y - 16) / 60;
+  });
+  // Threads of glowing mycelium branching over the cloth.
+  const threads: Pt[][] = [
+    [[16, 12], [13, 16], [12, 21], [9, 26]],
+    [[16, 12], [19, 17], [21, 22], [23, 27]],
+    [[13, 16], [9, 15], [7, 11]],
+    [[19, 17], [23, 15], [25, 11]],
+    [[12, 21], [15, 25], [16, 29]],
+  ];
+  for (const t of threads) {
+    for (let i = 1; i < t.length; i++) {
+      const [x0, y0] = t[i - 1];
+      const [x1, y1] = t[i];
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+      for (let j = 0; j <= n; j++) mark(p, Math.round(x0 + ((x1 - x0) * j) / n), Math.round(y0 + ((y1 - y0) * j) / n), j % 3 ? CAP_CYAN[3] : CAP_CYAN[4]);
+    }
+  }
+  // Caps growing on the shoulders like pauldrons, and a pink one at the throat.
+  cap(p, 7.5, 10, 5, 4.5, CAP_PINK);
+  cap(p, 24.5, 10, 5, 4.5, CAP_PINK);
+  p.ball(16, 11.5, 1.6, 1.6, CAP_CYAN, 0.1);
+  // Little caps sprouting at the hem.
+  cap(p, 9, 29, 2.2, 2.4, CAP_CYAN, false);
+  cap(p, 22, 29.5, 2, 2.2, CAP_PINK, false);
+  return () => {
+    sporeDrift(p, 223, [[7, 4], [25, 4]]);
+    p.halo(CAP_CYAN[2], 1, 55);
+    p.twinkle(28, 20, CAP_CYAN[4], 1);
+    sporeMark(p);
+  };
+}
+
+function rootwalkers(p: Paint): () => void {
+  boot(p, 6, 9, ROOTBARK, MYCEL, -0.1);
+  boot(p, 12, 6, ROOTBARK, MYCEL, 0.08);
+  for (const [ox, oy] of [[6, 9], [12, 6]]) {
+    // Glowing grain down the bark, and a little cap growing on each shaft.
+    for (let y = oy + 4; y <= oy + 14; y += 2) mark(p, ox + 2 + ((y >> 1) % 3), y, CAP_CYAN[2]);
+    cap(p, ox + 6, oy + 6, 2.4, 2.4, CAP_PINK, false);
+    p.put(ox + 6, oy + 7, STALK[3]);
+  }
+  return () => {
+    // Roots of light spreading from the soles.
+    const r = rng(229);
+    for (const [ox, oy] of [[6, 9], [12, 6]]) {
+      for (let x = ox - 1; x <= ox + 13; x++) if (p.filled(x, oy + 17) || p.filled(x, oy + 18)) p.glow(x, oy + 19, r() < 0.5 ? CAP_CYAN[3] : CAP_CYAN[2], 130 + r() * 100);
+      p.glow(ox - 1, oy + 20, CAP_CYAN[2], 120);
+      p.glow(ox + 13, oy + 20, CAP_CYAN[2], 120);
+    }
+    sporeDrift(p, 233, [[10, 11], [18, 8]], 2);
+    sporeMark(p);
+  };
+}
+
+function bloomreaper(p: Paint): () => void {
+  // A scythe: its snath a pale stalk, its blade a curved pink gill, lit at the edge.
+  p.band(10, 5, 20, 30.5, 1.15, STALK, 'round', -0.05);
+  for (const t of [0.5, 0.56, 0.62]) p.put(10 + 10 * t + 0.4, 5 + 25.5 * t + 0.2, MYCEL[2]);
+  p.fill(CAP_PINK, (x, y) => {
+    const dO = Math.hypot(x - 11, y - 18.5);
+    const dI = Math.hypot(x - 14.6, y - 22.4);
+    if (dO > 13.5 || dI <= 9.8) return null;
+    const a = Math.atan2(y - 18.5, x - 11);
+    if (a < -1.7 || a > 0.4) return null;
+    const e = 13.5 - dO;
+    if (e < 1.1) return 0.95;
+    // Gills fanning across the blade.
+    const gill = Math.round(a * 9) % 2 === 0 ? 0.12 : 0;
+    return (dI < 10.8 ? 0.3 : 0.52) + gill - ((x - 16) + (y - 16)) / 70;
+  });
+  // A cyan cap crowning the snath, where the blade is bound.
+  cap(p, 10.5, 7, 4, 3.6, CAP_CYAN, false);
+  p.put(10, 6, CAP_CYAN[4]);
+  return () => {
+    const r = rng(239);
+    for (let i = 0; i < 14; i++) {
+      const a = -1.6 + r() * 1.9;
+      const d = 14 + r() * 2.2;
+      p.glow(Math.round(11 + Math.cos(a) * d), Math.round(18.5 + Math.sin(a) * d), r() < 0.5 ? CAP_PINK[3] : CAP_PINK[4], 110 + r() * 110);
+    }
+    p.halo(CAP_PINK[2], 2, 60);
+    sporeDrift(p, 241, [[10, 3]], 2);
+    sporeMark(p);
+  };
+}
+
+function puffballBulwark(p: Paint): () => void {
+  // A round shield grown from a giant puffball, a rim of twisted roots round it.
+  p.ball(16.5, 17, 12, 11.5, LACE, 0.02);
+  p.ring(16.5, 17, 12, 11.5, 0.84, ROOTBARK);
+  // Warts and spots over the puffball's skin, and a glowing pore at its heart.
+  const r = rng(251);
+  for (let i = 0; i < 16; i++) {
+    const a = r() * Math.PI * 2;
+    const d = Math.sqrt(r()) * 8.5;
+    const x = Math.round(16.5 + Math.cos(a) * d);
+    const y = Math.round(17 + Math.sin(a) * d);
+    mark(p, x, y, r() < 0.5 ? LACE[1] : LACE[4]);
+  }
+  p.ring(16.5, 17.5, 4.2, 4, 0.55, CAP_PINK);
+  p.ball(16.5, 17.5, 2.3, 2.2, CAP_PINK, 0.25);
+  // Caps sprouting from the rim.
+  cap(p, 7, 8.5, 3, 3, CAP_CYAN, false);
+  cap(p, 26, 11, 2.4, 2.4, CAP_PINK, false);
+  cap(p, 9, 27.5, 2.2, 2.2, CAP_PINK, false);
+  return () => {
+    sporeDrift(p, 257, [[16, 5], [24, 7]], 3);
+    p.halo(CAP_PINK[2], 2, 45);
+    p.twinkle(27, 26, CAP_CYAN[4], 1);
+    sporeMark(p);
+  };
+}
+
+function sporeHeart(p: Paint): () => void {
+  // A chain of pale thread meeting at the bail.
+  for (const side of [-1, 1]) {
+    let prev: Pt | null = null;
+    let n = 0;
+    for (let t = 0; t <= 1; t += 0.02) {
+      const x = 16 + side * ((1 - t) * (1 - t) * 11 + 2 * (1 - t) * t * 10.5 + t * t * 1.2);
+      const y = (1 - t) * (1 - t) * 2 + 2 * (1 - t) * t * 10 + t * t * 10.5;
+      const q: Pt = [Math.round(x - 0.5), Math.round(y - 0.5)];
+      if (prev && prev[0] === q[0] && prev[1] === q[1]) continue;
+      prev = q;
+      p.put(q[0], q[1], n++ % 2 ? LACE[1] : LACE[3]);
+    }
+  }
+  p.ring(16, 11.5, 1.8, 1.8, 0.2, LACE);
+  // A heart-shaped pod held in a lace cage, its honeycomb glowing from within.
+  const heart = (x: number, y: number) => {
+    const u = (x - 16) / 7.5;
+    const v = (21.5 - y) / 7.5;
+    return (u * u + v * v - 1) ** 3 - u * u * v * v * v <= 0;
+  };
+  p.fill(CAP_PINK, (x, y) => (heart(x, y) ? 0.75 - (x - 16) / 18 - (y - 20) / 22 : null));
+  for (let y = 16; y <= 27; y += 2) for (let x = 11 + (y % 4 === 0 ? 1 : 0); x <= 21; x += 3) if (heart(x + 0.5, y + 0.5)) mark(p, x, y, CAP_PINK[1]);
+  for (let y = 14; y <= 28; y++) for (let x = 7; x <= 25; x++) if (heart(x + 0.5, y + 0.5) && (!heart(x + 1.5, y + 0.5) || !heart(x - 0.5, y + 0.5) || !heart(x + 0.5, y + 1.5))) p.put(x, y, x < 16 ? LACE[3] : LACE[2]);
+  p.ball(16, 21, 2.2, 2.2, CAP_CYAN, 0.3);
+  return () => {
+    p.halo(CAP_PINK[3], 3, 70);
+    sporeDrift(p, 263, [[10, 14], [22, 14]], 2);
+    p.twinkle(25, 27, CAP_CYAN[4], 1);
+    sporeMark(p);
+  };
+}
+
+// ---- The Wyrmshard set -----------------------------------------------------
+// Six legendaries Amethrax drops: its dark violet hide and pale belly-scales,
+// amethyst grown out of every piece, geodes split open to their glittering
+// hearts, and the set's mark (a little crystal) in each icon's top-left corner.
+
+const AMETH: Ramp = ['#2a1450', '#4a2484', '#7240bc', '#9c68e8', '#c8a0ff'];
+const AMETH_HOT: Ramp = ['#7240bc', '#9c68e8', '#c8a0ff', '#ead8ff', '#ffffff'];
+const WYRM_HIDE: Ramp = ['#0c0816', '#1c1430', '#2c2148', '#4a3872', '#6a5a96'];
+const GEODE_ROCK: Ramp = ['#1a1726', '#2c2840', '#433c5a', '#5f5878', '#8a84a0'];
+const WYRM_BELLY: Ramp = ['#382e4c', '#504468', '#6a5c86', '#8a7aa6', '#b8aad0'];
+
+/** The set's mark: a small amethyst crystal in the top-left corner. */
+function geodeMark(p: Paint): void {
+  p.map(1, 1, ['.a..', '.ba.', 'abca', 'bcdb', '.bb.'], { a: AMETH[2], b: AMETH[3], c: AMETH[4], d: '#ffffff' });
+}
+
+/** An amethyst point from its base (bx, by) to its tip (tx, ty), `r` wide, cut in two facets. */
+function crystal(p: Paint, bx: number, by: number, tx: number, ty: number, r: number, ramp: Ramp = AMETH): void {
+  p.band(bx, by, tx, ty, (t) => (t < 0.62 ? r : r * ((1 - t) / 0.38)) + 0.12, ramp, 'bevel', 0.05);
+}
+
+/** Glints off a piece's crystals. */
+function geodeGlints(p: Paint, seed: number, pts: Pt[]): void {
+  const r = rng(seed);
+  for (const [x, y] of pts) {
+    p.glow(x, y, '#ffffff', 240);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) p.glow(x + dx, y + dy, AMETH_HOT[2], 140 + r() * 60);
+  }
+}
+
+/** A geode split open: a rock rind, a pale band, and amethyst teeth pointing in to a bright heart. */
+function geode(p: Paint, cx: number, cy: number, rx: number, ry: number): void {
+  p.ball(cx, cy, rx, ry, GEODE_ROCK, 0);
+  p.ring(cx, cy, rx * 0.82, ry * 0.82, 0.7, WYRM_BELLY, 0.1);
+  p.ball(cx, cy, rx * 0.62, ry * 0.62, AMETH, -0.05, false);
+  const n = 9;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + 0.3;
+    crystal(p, cx + Math.cos(a) * rx * 0.6, cy + Math.sin(a) * ry * 0.6, cx + Math.cos(a) * rx * 0.2, cy + Math.sin(a) * ry * 0.2, 1, i % 2 ? AMETH_HOT : AMETH);
+  }
+  p.ball(cx, cy, Math.max(1, rx * 0.18), Math.max(1, ry * 0.18), AMETH_HOT, 0.3);
+}
+
+function amethraxCrown(p: Paint): () => void {
+  // Two great horns sweeping back and out, crystals rising between them.
+  curve(p, [9, 21], [3, 14], [5, 4], (t) => 2.2 * (1 - t) + 0.4, AMETH, 0.05);
+  curve(p, [23, 21], [29, 14], [27, 4], (t) => 2.2 * (1 - t) + 0.4, AMETH, -0.05);
+  crystal(p, 12, 20, 11, 10, 1.6);
+  crystal(p, 16, 20, 16, 5, 2.1, AMETH_HOT);
+  crystal(p, 20, 20, 21, 10, 1.6);
+  // The circlet: wyrm hide rimmed in pale scale.
+  p.fill(WYRM_HIDE, (x, y) => {
+    const c = 22 + ((x - 16) / 11) ** 2 * 2.5;
+    if (Math.abs(x - 16) > 11.5 || y < c - 2.6 || y > c + 2.6) return null;
+    return (y < c - 1.2 ? 0.9 : y > c + 1.2 ? 0.35 : 0.6) - (x - 16) / 45;
+  });
+  for (let x = 5; x <= 27; x++) {
+    const c = 22 + ((x - 16) / 11) ** 2 * 2.5;
+    mark(p, x, Math.round(c - 2.1), x < 16 ? WYRM_BELLY[4] : WYRM_BELLY[3]);
+    mark(p, x, Math.round(c + 2), WYRM_BELLY[1]);
+    if (x % 3 === 0) mark(p, x, Math.round(c), WYRM_HIDE[4]);
+  }
+  // Its brow-stone: a piece of the wyrm's heart.
+  p.ball(16, 22, 2.4, 2.4, AMETH_HOT, 0.15);
+  return () => {
+    p.halo(AMETH[3], 2, 60);
+    geodeGlints(p, 271, [[16, 4], [5, 3], [27, 3]]);
+    geodeMark(p);
+  };
+}
+
+function geodeplate(p: Paint): () => void {
+  // A breastplate of geode rind, as the dragonscale mail is cut.
+  const hw = (y: number) => (y < 12 ? 9.4 : y < 20 ? 9.4 - (y - 12) * 0.28 : 7.2 - (y - 20) * 0.1);
+  const inside = (x: number, y: number) => {
+    if (y < 6 || y > 28 || Math.abs(x - 16) > hw(y)) return false;
+    return ((x - 16) / 4.4) ** 2 + ((y - 6.5) / 4) ** 2 > 1;
+  };
+  p.fill(WYRM_HIDE, (x, y) => {
+    if (!inside(x, y)) return null;
+    // Rows of scales, lit from the left.
+    const row = Math.floor(y / 3);
+    const s = ((x + (row % 2) * 1.5) % 3) / 3;
+    return 0.62 - (0.4 * (x - 16)) / hw(y) - (y - 16) / 60 + (s < 0.34 ? 0.12 : 0);
+  });
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) if (inside(x + 0.5, y + 0.5) && nearEdge(inside, x + 0.5, y + 0.5, 1)) p.put(x, y, x < 16 ? WYRM_BELLY[4] : WYRM_BELLY[2]);
+  // The breast split open to a geode.
+  geode(p, 16, 18, 5.6, 6);
+  // Pauldrons of crystal clusters.
+  for (const side of [-1, 1]) {
+    const cx = 16 + side * 9.5;
+    p.ball(cx, 10, 4.2, 3.6, GEODE_ROCK, side < 0 ? 0.1 : -0.05);
+    crystal(p, cx, 9, cx + side * 3, 3, 1.4);
+    crystal(p, cx - side * 1.5, 9, cx - side * 1, 4.5, 1.1, AMETH_HOT);
+  }
+  return () => {
+    p.halo(AMETH[2], 2, 50);
+    geodeGlints(p, 277, [[16, 18], [28, 3]]);
+    geodeMark(p);
+  };
+}
+
+function wyrmscaleGreaves(p: Paint): () => void {
+  boot(p, 6, 9, WYRM_HIDE, WYRM_BELLY, -0.05);
+  boot(p, 12, 6, WYRM_HIDE, WYRM_BELLY, 0.12);
+  for (const [ox, oy] of [[6, 9], [12, 6]]) {
+    // Scales down the shaft, and a crystal spur at the back of the heel.
+    for (let y = oy + 4; y <= oy + 15; y += 2) for (let x = ox + 1 + ((y >> 1) % 2); x <= ox + 7; x += 2) mark(p, x, y, WYRM_HIDE[4]);
+    crystal(p, ox + 1, oy + 12, ox - 3, oy + 9, 1.1);
+    crystal(p, ox + 4, oy + 3, ox + 3, oy - 2, 1, AMETH_HOT);
+  }
+  return () => {
+    geodeGlints(p, 283, [[15, 3], [9, 6]]);
+    const r = rng(287);
+    for (const [ox, oy] of [[6, 9], [12, 6]]) for (let x = ox; x <= ox + 12; x++) if (p.filled(x, oy + 18) && r() < 0.6) p.glow(x, oy + 19, AMETH[3], 120 + r() * 90);
+    geodeMark(p);
+  };
+}
+
+function fangOfAmethrax(p: Paint): () => void {
+  // A blade of pure amethyst, curved like a fang, with a hilt of wyrm hide.
+  sword(p, { guard: [10.5, 21.5], tip: [28, 4], width: 2.5, taper: 0.4, blade: AMETH_HOT, hilt: WYRM_HIDE, grip: WYRM_BELLY, guardHalf: 5.4, gripLen: 5, pommel: AMETH, pommelR: 2, fuller: '#ffffff' });
+  // Crystal quillons jutting from the guard, and a shard at the pommel.
+  crystal(p, 7, 18, 4, 14.5, 1.1);
+  crystal(p, 14, 25, 17.5, 28, 1.1);
+  p.ball(10.5, 21.5, 1.6, 1.6, AMETH, 0.2);
+  return () => {
+    const r = rng(293);
+    for (let i = 0; i < 18; i++) {
+      const t = 0.2 + r() * 0.8;
+      p.glow(Math.round(10.5 + 17.5 * t + (r() - 0.5) * 5), Math.round(21.5 - 17.5 * t + (r() - 0.5) * 5), r() < 0.5 ? AMETH[3] : AMETH_HOT[3], 80 + r() * 120);
+    }
+    p.halo(AMETH[3], 2, 60);
+    p.twinkle(27, 4, '#ffffff', 2);
+    geodeMark(p);
+  };
+}
+
+function geodeAegis(p: Paint): () => void {
+  // A round shield cut from one great geode: the rind outside, the crystal heart laid bare.
+  geode(p, 16.5, 17, 12.5, 12);
+  // Cracks running out through the rind.
+  for (const [a, b] of [[0.6, 1], [2.4, 0.8], [4.1, 1]] as Pt[]) {
+    for (let d = 8; d <= 12; d++) mark(p, Math.round(16.5 + Math.cos(a) * d), Math.round(17 + Math.sin(a) * d * b), GEODE_ROCK[0]);
+  }
+  return () => {
+    p.halo(AMETH[2], 2, 55);
+    geodeGlints(p, 297, [[16, 17], [21, 13]]);
+    p.twinkle(6, 27, AMETH_HOT[3], 1);
+    geodeMark(p);
+  };
+}
+
+function heartgeode(p: Paint): () => void {
+  // A chain of dark links meeting at the bail.
+  for (const side of [-1, 1]) {
+    let prev: Pt | null = null;
+    let n = 0;
+    for (let t = 0; t <= 1; t += 0.02) {
+      const x = 16 + side * ((1 - t) * (1 - t) * 11 + 2 * (1 - t) * t * 10.5 + t * t * 1.2);
+      const y = (1 - t) * (1 - t) * 2 + 2 * (1 - t) * t * 10 + t * t * 10.5;
+      const q: Pt = [Math.round(x - 0.5), Math.round(y - 0.5)];
+      if (prev && prev[0] === q[0] && prev[1] === q[1]) continue;
+      prev = q;
+      p.put(q[0], q[1], n++ % 2 ? WYRM_HIDE[2] : WYRM_BELLY[3]);
+    }
+  }
+  p.ring(16, 11.5, 1.8, 1.8, 0.2, WYRM_BELLY);
+  // The wyrm's heart: a great faceted amethyst, burning white at its core.
+  p.fill(AMETH_HOT, (x, y) => {
+    const u = x - 16;
+    const v = y - 21.5;
+    if (Math.abs(u) + Math.abs(v) * 0.8 > 7.5) return null;
+    // Facets: each quarter lit its own way.
+    const face = (u < 0 ? 0 : 1) + (v < 0 ? 0 : 2);
+    return [0.85, 0.55, 0.45, 0.2][face] + (Math.abs(u) + Math.abs(v) < 3 ? 0.25 : 0);
+  });
+  for (let v = -6; v <= 6; v++) mark(p, 16, Math.round(21.5 + v), AMETH[2]);
+  for (let u = -6; u <= 6; u++) mark(p, 16 + u, 21, AMETH[3]);
+  // Claws of hide gripping it.
+  for (const [bx, by, tx, ty] of [[10, 17, 12, 21], [22, 17, 20, 21], [11, 27, 13, 24], [21, 27, 19, 24]]) p.band(bx, by, tx, ty, (t) => 1.2 * (1 - t) + 0.3, WYRM_HIDE, 'round', 0.1);
+  return () => {
+    p.halo(AMETH[3], 3, 70);
+    geodeGlints(p, 307, [[16, 21], [19, 18]]);
+    p.twinkle(26, 26, AMETH_HOT[3], 1);
+    geodeMark(p);
+  };
+}
+
 /** Every piece's painter, by gear id. Returns a finishing pass for glows and sparks, drawn after the outline. */
 const PAINTERS: Record<string, (p: Paint) => void | (() => void)> = {
   iron_sword: ironSword,
@@ -1905,6 +2319,18 @@ const PAINTERS: Record<string, (p: Paint) => void | (() => void)> = {
   surgefire: surgefire,
   ember_aegis: emberAegis,
   flame_heart: flameHeart,
+  veilcap: veilcapHood,
+  mycelium_mantle: myceliumMantle,
+  rootwalkers: rootwalkers,
+  bloomreaper: bloomreaper,
+  puffball_bulwark: puffballBulwark,
+  spore_heart: sporeHeart,
+  amethrax_crown: amethraxCrown,
+  geodeplate: geodeplate,
+  wyrmscale_greaves: wyrmscaleGreaves,
+  amethrax_fang: fangOfAmethrax,
+  geode_aegis: geodeAegis,
+  heartgeode: heartgeode,
 };
 
 export const GEAR_ART_IDS = Object.keys(PAINTERS);

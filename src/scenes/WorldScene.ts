@@ -26,6 +26,7 @@ import { CosmosArena } from '../world/Cosmos';
 import { FloatingIsland } from '../world/Island';
 import { SpiritDungeon } from '../world/Spirit';
 import { TempleDungeon } from '../world/Temple';
+import { GlimmerDeep } from '../world/Deep';
 import { RuneTemple } from '../world/Sanctum';
 import { Chapel } from '../world/Chapel';
 import { INSIDE_SPOT, OUTSIDE_SPOT, roomRect } from '../world/sanctumLayout';
@@ -118,6 +119,10 @@ const SET_AURA: Record<SetId, { name: string; text: number; tint: number; motes:
   wraith: { name: 'SPECTRAL FORM', text: 0x9ffff0, tint: 0x6af4dc, motes: [0xeafffa, 0x6af4dc, 0x8ac8ff], life: { min: 700, max: 1300 }, rise: { min: -24, max: -8 }, scale: 0.5, every: 95 },
   // Quicker, brighter sparks that leap higher: the hero burns like the Elementinho.
   ember: { name: 'LIVING FLAME', text: 0xffc060, tint: 0xff8a2a, motes: [0xfff0a0, 0xffb030, 0xf06a1a], life: { min: 450, max: 850 }, rise: { min: -40, max: -16 }, scale: 0.55, every: 70 },
+  // Slow, long-lived spores drifting lazily about: the hero blooms like the Sporemother.
+  spore: { name: 'SPORE VEIL', text: 0xffb0ec, tint: 0xff6ad8, motes: [0xff6ad8, 0xffd0f4, 0x5ae4ff, 0xe8fffa], life: { min: 1400, max: 2400 }, rise: { min: -10, max: -3 }, scale: 0.5, every: 110 },
+  // Sharp glints that flash and rise: amethyst grown from the hero like the wyrm's spines.
+  geode: { name: 'CRYSTAL FORM', text: 0xead8ff, tint: 0xb37aff, motes: [0xffffff, 0xead8ff, 0xb37aff, 0x9c68e8], life: { min: 600, max: 1100 }, rise: { min: -30, max: -12 }, scale: 0.5, every: 85 },
 };
 
 export class WorldScene extends Phaser.Scene {
@@ -139,6 +144,8 @@ export class WorldScene extends Phaser.Scene {
   private spirit: SpiritDungeon | null = null;
   /** The arena's own living parts, when it is the Elementinho Temple. */
   private temple: TempleDungeon | null = null;
+  /** The arena's own living parts, when it is the Glimmerdeep. */
+  private deep: GlimmerDeep | null = null;
   /** The Rune Temple, when this is the Runestone Clearing. */
   private sanctum: RuneTemple | null = null;
   private chapel: Chapel | null = null;
@@ -249,6 +256,7 @@ export class WorldScene extends Phaser.Scene {
     this.island = null;
     this.spirit = null;
     this.temple = null;
+    this.deep = null;
     this.sanctum = null;
     this.chapel = null;
     this.inside = false;
@@ -293,10 +301,11 @@ export class WorldScene extends Phaser.Scene {
 
     // The ground streams in strips as the hero walks (see GroundStreamer).
     this.ground = isPainted(arena.ground) ? null : new GroundStreamer(this, arena.ground, (img) => ground(img) as Phaser.GameObjects.Image);
-    sound.setOutdoors(arena.id !== 'cosmos' && arena.id !== 'spirit' && arena.id !== 'temple');
+    sound.setOutdoors(arena.id !== 'cosmos' && arena.id !== 'spirit' && arena.id !== 'temple' && arena.id !== 'deep');
     if (arena.id === 'cosmos') this.cosmos = new CosmosArena(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'spirit') this.spirit = new SpiritDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'temple') this.temple = new TempleDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
+    if (arena.id === 'deep') this.deep = new GlimmerDeep(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'island') {
       this.island = new FloatingIsland(this, ground, this.view);
       this.shadows.push(...this.island.shadows);
@@ -1147,7 +1156,7 @@ export class WorldScene extends Phaser.Scene {
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
     this.setVignette(0.32 - d * 0.14);
     // Out in the void and down in the dungeon there is neither pollen nor fireflies (they have their own motes).
-    const open = !this.cosmos && !this.spirit && !this.temple && !this.inside;
+    const open = !this.cosmos && !this.spirit && !this.temple && !this.deep && !this.inside;
     this.pollen.emitting = open && d > 0.5;
     this.fireflies.emitting = open && d < 0.5;
     sound.setDaylight(d);
@@ -1406,6 +1415,7 @@ export class WorldScene extends Phaser.Scene {
     this.island?.update(time, dt);
     this.spirit?.update(time, dt);
     this.temple?.update(time);
+    this.deep?.update(time);
     this.updateBanner();
     for (const f of this.flickers) {
       const k = 1 + (f.day - 1) * d;
