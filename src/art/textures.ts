@@ -414,6 +414,10 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_marionette', toCanvas(16, 16, marionetteIcon('#fbf4ff', '#dcc0ff', '#a878ff')));
   scene.textures.addCanvas('icon_thread_crimson', toCanvas(16, 16, threadIcon('#fff0f0', '#ff9aa0', '#ff3a4a')));
   scene.textures.addCanvas('icon_marionette_crimson', toCanvas(16, 16, marionetteIcon('#fff0f0', '#ff9aa0', '#ff3a4a')));
+  scene.textures.addCanvas('icon_puppet_toymaker', toCanvas(16, 16, puppetStrikeIcon(false, true)));
+  scene.textures.addCanvas('icon_pirouette_toymaker', toCanvas(16, 16, pirouetteIcon(false, true)));
+  scene.textures.addCanvas('icon_thread_arachne', toCanvas(16, 16, threadIcon('#fbffe8', '#e0ff9a', '#a8e040')));
+  scene.textures.addCanvas('icon_marionette_arachne', toCanvas(16, 16, marionetteIcon('#fbffe8', '#e0ff9a', '#a8e040')));
 
   // Chronomancer once per look: 'chrono' (the timekeeper), 'chrono_moon',
   // 'chrono_rift' (the paradox) and 'chrono_aeon', each with its own bolts
@@ -484,6 +488,10 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_cross', toCanvas(16, 16, crossIcon(['#fffbe8', '#ffe08a', '#f0b040', '#a0601e'])));
   scene.textures.addCanvas('icon_iai_sakura', toCanvas(16, 16, katanaIcon('#ffd6e2', '#c2b8c0', null)));
   scene.textures.addCanvas('icon_cross_sakura', toCanvas(16, 16, crossIcon(['#fff4f8', '#ffc0d4', '#ff7aa6', '#b03a6a'])));
+  scene.textures.addCanvas('icon_katana_kitsune', toCanvas(16, 16, katanaIcon('#b0ffe8', '#8e9ab4', ['#f0fff8', '#b0ffe0', '#40e8b0', '#107a6a'])));
+  scene.textures.addCanvas('icon_windblade_kitsune', toCanvas(16, 16, dashIcon(['#f0fff8', '#b0ffe0', '#40e8b0', '#107a6a'], '#b0ffe8')));
+  scene.textures.addCanvas('icon_iai_shogun', toCanvas(16, 16, katanaIcon('#f4f2ff', '#565060', null)));
+  scene.textures.addCanvas('icon_cross_shogun', toCanvas(16, 16, crossIcon(['#fffcf0', '#fff0b8', '#a89cff', '#3a2e9a'])));
 
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
   for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL]] as const) {
