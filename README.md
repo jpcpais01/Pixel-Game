@@ -1,8 +1,22 @@
 # Myths and Legends
 
-A mobile-first, top-down pixel-art PvE game: walk with the joystick on the left, cast with the buttons on the right. Built with Phaser 3, TypeScript and Vite, so it deploys to Vercel as a static site.
+A mobile-first, top-down pixel-art PvE game: walk with the joystick on the left, fight with the buttons on the right. Built with Phaser 3, TypeScript and Vite, so it deploys to Vercel as a static site. Every sprite and every sound is made in code.
 
 ![Gameplay](docs/gameplay.gif)
+
+## Heroes
+
+Thirteen classes: Wizard, Warrior, Paladin, Jedi, Fighter, Alchemist, Archer, Rogue, Necromancer, Bard, Chronomancer, Puppeteer and Samurai. A class comes in one or more types (the Wizard is an Arcanist or a Pyromancer), each with its own stats and abilities, and every type has skins that change its looks. Each hero has an attack, an ability and a Special, paid for with energy gathered by slaying monsters.
+
+## Arenas
+
+- **Runestone Clearing**: home, with training dummies and the Rune Temple, where Nyx turns spare gear into dust and Tharn spends dust upgrading epic and legendary pieces
+- **Sunken Garden**: ruins under giant flowers whose blooms grant buffs
+- **Spirit Dungeon**, **Elementinho Temple** and **the Glimmerdeep**: dungeons ending in bosses that drop their own gear sets
+- **Cosmos Arena**: the Astral Warden, alone
+- **Floating Island**: a ring for 1v1 duels
+
+Monsters drop potions and gear (64 pieces in six slots). Logging in keeps what you find on every device. Online, up to four friends play together by room code, or two duel.
 
 ## Day and night
 
@@ -59,7 +73,7 @@ npm run sheet    # write zoomed sprite sheets to sheets/ for reviewing the art
 npm run icons    # write every app icon to sheets/icons/ for reviewing
 ```
 
-Controls: on a touch screen, use the left joystick and the right button. On desktop, use WASD or the arrow keys, and Space or J to cast.
+Controls: on a touch screen, use the left joystick and the buttons on the right (drag a button to aim it; a tap aims at the nearest enemy). On desktop: WASD or the arrow keys to walk, left click or J to attack, right click, K or Shift for the ability, Space for the Special, 1 to 9 for the hotbar, N to switch day and night, and Esc to pause.
 
 ## Deploying
 
