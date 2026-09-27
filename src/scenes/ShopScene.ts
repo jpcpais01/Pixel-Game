@@ -19,10 +19,13 @@ import type { HomeScene } from './HomeScene';
 const MARGIN = 8;
 const SIDE_W = 96;
 /** Cards: small ones for ten wishes, a big one for a single wish. */
-const CARD_W = 56;
-const CARD_H = 78;
-const BIG_W = 100;
-const BIG_H = 136;
+const CARD_W = 60;
+const CARD_H = 92;
+const BIG_W = 120;
+const BIG_H = 160;
+/** How big the hero is drawn on each: large enough to fill the card's window. */
+const CARD_SCALE = 2;
+const BIG_SCALE = 3;
 const CARD_GAP = 6;
 /** The name plate along a card's bottom (see art/shop.ts cardFront). */
 const PLATE = 22;
@@ -88,18 +91,18 @@ class WishCard extends Phaser.GameObjects.Container {
     this.back = scene.add.image(0, 0, backKey);
     const front = scene.add.image(0, 0, frontKey);
     // The hero stands in the window, feet a little above the name plate.
-    const scale = big ? 2 : 1;
+    const scale = big ? BIG_SCALE : CARD_SCALE;
     const skin = wornSkin(result.entry);
     const p = skin.preview;
-    const feet = h / 2 - PLATE - 3;
+    const feet = h / 2 - PLATE - 2;
     const oy = p.originY ?? 31 / 32;
     this.sprite = scene.add.sprite(0, feet, p.texture).setOrigin(0.5, oy).setScale(scale);
     this.sprite.play(p.idle);
-    cropToWindow(this.sprite, p, w - 10, h - PLATE - 10, 2, scale);
+    cropToWindow(this.sprite, p, w - 8, h - PLATE - 8, 2, scale);
     const parts: Phaser.GameObjects.GameObject[] = [front, this.sprite];
     if (p.glow) {
       this.glow = scene.add.sprite(0, feet, p.glow).setOrigin(0.5, oy).setScale(scale).setBlendMode(Phaser.BlendModes.ADD);
-      cropToWindow(this.glow, p, w - 10, h - PLATE - 10, 2, scale);
+      cropToWindow(this.glow, p, w - 8, h - PLATE - 8, 2, scale);
       parts.push(this.glow);
     }
     const probe = pixelText(scene, 0, 0, '').setVisible(false);
@@ -430,13 +433,13 @@ export class ShopScene extends Phaser.Scene {
     const p = wornSkin(e).preview;
     const oy = p.originY ?? 31 / 32;
     const owned = collection.hasSkin(e.id);
-    const room = 88 - PLATE - 8;
-    this.showSprite.setTexture(p.texture).setOrigin(0.5, oy).play(p.idle);
-    cropToWindow(this.showSprite, p, 58, room, 2, 1);
+    const room = 88 - PLATE - 6;
+    this.showSprite.setTexture(p.texture).setOrigin(0.5, oy).setScale(2).play(p.idle);
+    cropToWindow(this.showSprite, p, 58, room, 2, 2);
     this.showGlow.setVisible(!!p.glow);
     if (p.glow) {
-      this.showGlow.setTexture(p.glow).setOrigin(0.5, oy);
-      cropToWindow(this.showGlow, p, 58, room, 2, 1);
+      this.showGlow.setTexture(p.glow).setOrigin(0.5, oy).setScale(2);
+      cropToWindow(this.showGlow, p, 58, room, 2, 2);
     }
     const probe = pixelText(this, 0, 0, '').setVisible(false);
     this.showName.setText(fitLine(probe, e.skin.name, 56));
