@@ -51,23 +51,33 @@
       #boot .sky i { position: absolute; width: 2px; height: 2px; background: #cfd8ff; opacity: 0.2; animation: twinkle 3s ease-in-out infinite; }
       #boot .sky i.big { width: 3px; height: 3px; background: #fff4d0; }
       #boot .embers b { position: absolute; bottom: -8px; width: 3px; height: 3px; opacity: 0; animation: rise 7s linear infinite; }
-      #boot .emblem { position: relative; width: var(--e); height: var(--e); transition: transform 0.6s ease; }
-      #boot.done .emblem { transform: scale(1.25); }
-      #boot .halo {
-        position: absolute; inset: -35%;
-        background: radial-gradient(circle, rgba(140, 110, 255, 0.55) 0%, rgba(90, 232, 255, 0.18) 38%, rgba(0, 0, 0, 0) 68%);
-        animation: pulse 2.8s ease-in-out infinite;
+      /* The title's stage: turning rays, a breathing aura and rings of light behind it, stars popping over it. */
+      #boot .stage { position: relative; display: flex; align-items: center; justify-content: center; transition: transform 0.6s ease; animation: float 3.2s ease-in-out infinite; }
+      #boot.done .stage { transform: scale(1.12); }
+      #boot .rays {
+        position: absolute; left: 50%; top: 50%; width: 560px; height: 560px; margin: -280px 0 0 -280px;
+        background: repeating-conic-gradient(from 0deg, rgba(255, 214, 140, 0.16) 0deg 5deg, rgba(255, 214, 140, 0) 5deg 15deg);
+        -webkit-mask-image: radial-gradient(circle, #000 12%, rgba(0, 0, 0, 0.5) 32%, transparent 62%);
+        mask-image: radial-gradient(circle, #000 12%, rgba(0, 0, 0, 0.5) 32%, transparent 62%);
+        animation: spin 48s linear infinite;
       }
-      #boot svg { position: absolute; inset: 0; width: 100%; height: 100%; shape-rendering: crispEdges; }
-      #boot .r1 { animation: spin 16s linear infinite; }
-      #boot .r2 { animation: spin 10s linear infinite reverse; }
-      #boot .orbit { position: absolute; inset: 0; animation: spin 3.6s linear infinite; }
-      #boot .orbit s { position: absolute; left: 50%; top: -3px; width: 6px; height: 6px; margin-left: -3px; background: #fff; transform: rotate(45deg); box-shadow: 0 0 8px 2px rgba(159, 246, 255, 0.9); }
-      #boot .orbit s:nth-child(2) { top: auto; bottom: -3px; background: #ffe08a; box-shadow: 0 0 8px 2px rgba(255, 200, 74, 0.9); }
-      #boot .icon {
-        position: absolute; left: 14%; top: 14%; width: 72%; height: 72%;
-        image-rendering: pixelated; animation: float 2.6s ease-in-out infinite;
-        filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+      #boot .rays.b { background: repeating-conic-gradient(from 7deg, rgba(160, 130, 255, 0.12) 0deg 3deg, rgba(160, 130, 255, 0) 3deg 22deg); animation-duration: 70s; animation-direction: reverse; }
+      #boot .aura {
+        position: absolute; left: 50%; top: 50%; width: 460px; height: 260px; margin: -130px 0 0 -230px;
+        background: radial-gradient(ellipse, rgba(255, 190, 90, 0.34) 0%, rgba(150, 100, 255, 0.22) 38%, rgba(0, 0, 0, 0) 70%);
+        animation: pulse 3.4s ease-in-out infinite;
+      }
+      #boot .ring {
+        position: absolute; left: 50%; top: 50%; width: 220px; height: 120px; margin: -60px 0 0 -110px;
+        border: 2px solid rgba(255, 224, 138, 0.7); border-radius: 50%; opacity: 0;
+        animation: ripple 3.6s ease-out infinite;
+      }
+      #boot .ring.b { border-color: rgba(159, 246, 255, 0.6); animation-delay: -1.8s; }
+      #boot .stage em {
+        position: absolute; width: 11px; height: 11px; margin: -5px 0 0 -5px; opacity: 0;
+        background: #fffbe8; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+        filter: drop-shadow(0 0 4px #ffd060);
+        animation: sparkle 2.6s ease-in-out infinite;
       }
       #boot .logo {
         width: calc(var(--lw) * var(--s)); height: calc(var(--lh) * var(--s));
@@ -75,7 +85,8 @@
         image-rendering: pixelated;
         /* The logo's own glint (its frames 1 to 13), every few seconds. */
         animation: glint 5.2s steps(13, end) infinite;
-        filter: drop-shadow(0 0 10px rgba(255, 176, 80, 0.35));
+        position: relative;
+        filter: drop-shadow(0 0 10px rgba(255, 176, 80, 0.45)) drop-shadow(0 0 22px rgba(150, 100, 255, 0.35));
       }
       #boot .bar {
         position: relative; width: var(--bw); height: 12px;
@@ -102,7 +113,9 @@
       @keyframes rise { 0% { opacity: 0; transform: translateY(0); } 10% { opacity: 1; } 80% { opacity: 0.7; } 100% { opacity: 0; transform: translateY(-75vh) translateX(var(--dx)); } }
       @keyframes pulse { 0%, 100% { opacity: 0.65; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1.08); } }
       @keyframes spin { to { transform: rotate(360deg); } }
-      @keyframes float { 0%, 100% { transform: translateY(-3%); } 50% { transform: translateY(3%); } }
+      @keyframes float { 0%, 100% { transform: translateY(-4px); } 50% { transform: translateY(4px); } }
+      @keyframes ripple { 0% { opacity: 0; transform: scale(0.55); } 15% { opacity: 0.8; } 100% { opacity: 0; transform: scale(2.2); } }
+      @keyframes sparkle { 0%, 70%, 100% { opacity: 0; transform: scale(0.2) rotate(0deg); } 80% { opacity: 1; transform: scale(1) rotate(45deg); } 90% { opacity: 0.6; transform: scale(0.6) rotate(90deg); } }
       @keyframes glint { 0% { background-position: 0 calc(var(--lh) * var(--s) * -1); } 13% { background-position: 0 calc(var(--lh) * var(--s) * -14); } 13.01%, 100% { background-position: 0 0; } }
       @keyframes stripes { to { background-position: 12px 0; } }
       @keyframes flicker { 50% { opacity: 0.6; } }
@@ -116,14 +129,14 @@
     <div id="boot" aria-label="Loading">
       <div class="sky"></div>
       <div class="embers"></div>
-      <div class="emblem">
-        <div class="halo"></div>
-        <svg class="r1" viewBox="0 0 132 132"><circle cx="66" cy="66" r="62" fill="none" stroke="#d69a3a" stroke-width="2" stroke-dasharray="7 5" /><circle cx="66" cy="66" r="57" fill="none" stroke="#6b5aa6" stroke-width="1" stroke-dasharray="2 4" /></svg>
-        <svg class="r2" viewBox="0 0 132 132"><circle cx="66" cy="66" r="51" fill="none" stroke="#5ae8ff" stroke-width="2" stroke-dasharray="3 9" opacity="0.8" /></svg>
-        <div class="orbit"><s></s><s></s></div>
-        <img class="icon" src="icons/icon-192.png" alt="" />
+      <div class="stage">
+        <div class="rays"></div>
+        <div class="rays b"></div>
+        <div class="aura"></div>
+        <div class="ring"></div>
+        <div class="ring b"></div>
+        <div class="logo"></div>
       </div>
-      <div class="logo"></div>
       <div class="bar"><div class="fill"></div><div class="head"></div></div>
       <canvas class="status" width="1" height="1"></canvas>
     </div>
@@ -152,20 +165,26 @@
         }
         el.querySelector('.embers').appendChild(frag);
 
-        // Sizes: the emblem, the logo at a whole-number scale, the bar.
+        // Sizes: the logo at a whole-number scale, and the bar.
         var short = Math.min(W, H);
         var logo = boot.logo;
         var st = el.style;
-        st.setProperty('--e', Math.round(Math.min(150, short * 0.3)) + 'px');
         st.setProperty('--bw', Math.round(Math.min(300, W * 0.6)) + 'px');
         var logoEl = el.querySelector('.logo');
         if (logo) {
-          var s = Math.max(1, Math.min(4, Math.floor(Math.min((W * 0.82) / logo.w, (H * 0.4) / logo.h))));
+          var s = Math.max(1, Math.min(5, Math.floor(Math.min((W * 0.82) / logo.w, (H * 0.5) / logo.h))));
           st.setProperty('--lw', logo.w + 'px');
           st.setProperty('--lh', logo.h + 'px');
           st.setProperty('--lf', logo.frames);
           st.setProperty('--s', s);
           logoEl.style.backgroundImage = 'url(' + logo.src + ')';
+          // Stars popping here and there over the title, each on its own beat.
+          var stage = el.querySelector('.stage');
+          for (i = 0; i < 9; i++) {
+            n = document.createElement('em');
+            n.style.cssText = 'left:' + (8 + Math.random() * 84).toFixed(1) + '%;top:' + (10 + Math.random() * 80).toFixed(1) + '%;animation-delay:-' + (Math.random() * 2.6).toFixed(2) + 's;animation-duration:' + (2 + Math.random() * 1.6).toFixed(2) + 's';
+            stage.appendChild(n);
+          }
         } else logoEl.remove();
 
         // A line of text in the pixel font: white letters with a dark outline, tinted.
