@@ -109,7 +109,6 @@ class Dummy implements Hurtbox {
 const AUTO_AIM_RANGE = 150;
 /** How long the hero keeps facing the aim after an ability, in ms. */
 const LOOK_LINGER = 450;
-/** The light inside the Rune Temple, as a time of day: lamplit dusk. */
 /** How light it is inside the Rune Temple at night, and how much more the day outside adds. */
 const INDOOR_DUSK = 0.18;
 const INDOOR_DAY = 0.34;
@@ -1221,7 +1220,7 @@ export class WorldScene extends Phaser.Scene {
     this.lean.y += (gy - this.lean.y) * k;
   }
 
-  /** Unit vector from the hero's chest towards the mouse, in the world. */
+  /** The ability buttons held last frame, so a press is noted once as it starts. */
   private held = { attack: false, special: false };
 
   /** Crash reports list what was pressed last (see diagnostics): each press as it starts, not every frame it is held. */
@@ -1233,6 +1232,7 @@ export class WorldScene extends Phaser.Scene {
     this.held.special = special;
   }
 
+  /** Unit vector from the hero's chest towards the mouse, in the world. */
   private mouseAim(): Aim | null {
     const p = this.input.mousePointer;
     // No mouse event yet (time 0): the pointer sits at the corner, not where the player is looking.

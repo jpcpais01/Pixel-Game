@@ -23,7 +23,7 @@ import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 
 // The Special: each type's most powerful ability, paid for with energy (see
-// energy.ts) and cast with C or the Special button. The hero plants their
+// energy.ts) and cast with Space or the Special button. The hero plants their
 // feet and gathers power for a moment, glowing, with a rune turning under
 // them and the Special's name rising overhead; then it is unleashed. A skin
 // casts its type's Special in its own colours and under its own name.

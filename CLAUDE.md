@@ -1,6 +1,6 @@
 # Myths and Legends
 
-Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vite. All art and sound are generated in code: there are no image or audio files. It is a PWA and deploys to Vercel from `main`. See README.md for the player-facing overview (partly out of date: it only describes the wizard).
+Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vite. All art and sound are generated in code: there are no image or audio files. It is a PWA and deploys to Vercel from `main`. See README.md for the player-facing overview.
 
 ## Working rules
 
