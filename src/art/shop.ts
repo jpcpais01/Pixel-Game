@@ -131,59 +131,158 @@ export function starBitmap(): Bitmap {
 
 // ---- The Wish Crystal and its altar ----
 
-export const CRYSTAL_W = 29;
-export const CRYSTAL_H = 46;
+export const CRYSTAL_W = 35;
+export const CRYSTAL_H = 58;
+/** Frames in one turn of the crystal: a hexagon looks the same every 60 degrees, so they cover a sixth of a turn and loop. */
+export const CRYSTAL_FRAMES = 24;
+
+type V3 = [number, number, number];
+const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const dot = (a: V3, b: V3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const unit = (a: V3): V3 => {
+  const l = Math.hypot(a[0], a[1], a[2]) || 1;
+  return [a[0] / l, a[1] / l, a[2] / l];
+};
 
 /**
- * The Wish Crystal: a long bipyramid of cut crystal, violet deep in its
- * heart and cyan at its edges. `light` paints only its lit facets in white,
- * the layer that is added over it in a rarity's colour as a wish charges.
+ * The Wish Crystal's shape: a quartz shard, a six-sided prism with a tall
+ * point above and a longer one below, in model units (y up, z toward the
+ * viewer). Returns its faces, each a convex polygon wound either way.
  */
-export function wishCrystal(light = false): Bitmap {
+function crystalFaces(): V3[][] {
+  const r = 10.5;
+  const ringTop = 7;
+  const ringBottom = -6;
+  const apexTop: V3 = [0, 27, 0];
+  const apexBottom: V3 = [0, -28, 0];
+  const ring = (y: number): V3[] => Array.from({ length: 6 }, (_, i) => [r * Math.cos((i * Math.PI) / 3), y, r * Math.sin((i * Math.PI) / 3)] as V3);
+  const top = ring(ringTop);
+  const bottom = ring(ringBottom);
+  const faces: V3[][] = [];
+  for (let i = 0; i < 6; i++) {
+    const j = (i + 1) % 6;
+    faces.push([apexTop, top[i], top[j]]);
+    faces.push([top[i], top[j], bottom[j], bottom[i]]);
+    faces.push([bottom[i], bottom[j], apexBottom]);
+  }
+  return faces;
+}
+
+/** Deep violet to cyan-white: the crystal's colours from its darkest facet to its brightest. */
+const CRYSTAL_RAMP = ['#12083a', '#2a1470', '#4a24b0', '#7040e0', '#8a78f8', '#7ec8ff', '#b8ecff', '#f2fdff'].map(hex);
+
+/**
+ * One frame of the Wish Crystal turned `angle` radians about its axis, seen
+ * from a little above. Each facet is lit from the top left (with a rim of
+ * light where it turns away from the eye and a glint where it catches the
+ * light), the edges between facets shine, and a heart of light glows
+ * through from inside. With `light`, only the brightness in white: the layer
+ * added over it in a rarity's colour as a wish charges.
+ */
+export function wishCrystalFrame(angle: number, light = false): Bitmap {
   const W = CRYSTAL_W;
   const H = CRYSTAL_H;
-  const b = new Bitmap(W, H);
   const cx = W / 2;
-  const girdle = Math.round(H * 0.4);
-  const deep = hex('#3a1a8a');
-  const mid = hex('#7a4ae8');
-  const lit = hex('#a8e8ff');
-  const edge = hex('#e8fbff');
-  const shade = hex('#241060');
-  for (let y = 1; y < H - 1; y++) {
-    const up = y <= girdle;
-    const hw = up ? (cx - 1.5) * (y / girdle) : (cx - 1.5) * (1 - (y - girdle) / (H - 2 - girdle));
+  const cy = H / 2 + 0.5;
+  const tilt = 0.32;
+  const L = unit([-0.55, 0.65, 0.55]);
+  const V: V3 = [0, 0, 1];
+  const Hv = unit([L[0] + V[0], L[1] + V[1], L[2] + V[2]]);
+  const ca = Math.cos(angle);
+  const sa = Math.sin(angle);
+  const ct = Math.cos(tilt);
+  const st = Math.sin(tilt);
+  // Turn about the upright axis, then tip the top toward the viewer.
+  const view = (p: V3): V3 => {
+    const x = p[0] * ca + p[2] * sa;
+    const z0 = -p[0] * sa + p[2] * ca;
+    return [x, p[1] * ct - z0 * st, p[1] * st + z0 * ct];
+  };
+  const face = new Int8Array(W * H).fill(-1);
+  const bright = new Float32Array(W * H);
+  const glint = new Uint8Array(W * H);
+  crystalFaces().forEach((poly, fi) => {
+    const v = poly.map(view);
+    let n = unit(cross(sub(v[1], v[0]), sub(v[2], v[0])));
+    // Outward: away from the crystal's centre.
+    const mid = v.reduce<V3>((a, p) => [a[0] + p[0] / v.length, a[1] + p[1] / v.length, a[2] + p[2] / v.length], [0, 0, 0]);
+    if (dot(n, mid) < 0) n = [-n[0], -n[1], -n[2]];
+    // A convex shape: only the facets turned toward the eye show, and never overlap.
+    if (n[2] <= 0.02) return;
+    const diff = Math.max(0, dot(n, L));
+    const spec = Math.pow(Math.max(0, dot(n, Hv)), 28);
+    const rim = Math.pow(1 - n[2], 1.6);
+    const pts = v.map((p) => [cx + p[0], cy - p[1]]);
+    const minX = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[0]))));
+    const maxX = Math.min(W - 1, Math.ceil(Math.max(...pts.map((p) => p[0]))));
+    const minY = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[1]))));
+    const maxY = Math.min(H - 1, Math.ceil(Math.max(...pts.map((p) => p[1]))));
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const px = x + 0.5;
+        const py = y + 0.5;
+        let pos = 0;
+        let neg = 0;
+        for (let k = 0; k < pts.length; k++) {
+          const a = pts[k];
+          const b = pts[(k + 1) % pts.length];
+          const c = (b[0] - a[0]) * (py - a[1]) - (b[1] - a[1]) * (px - a[0]);
+          if (c > 1e-6) pos++;
+          else if (c < -1e-6) neg++;
+        }
+        if (pos && neg) continue;
+        const i = y * W + x;
+        face[i] = fi;
+        // Upper facets catch more of the sky; the lower point sinks into violet.
+        const height = 1 - py / H;
+        bright[i] = 0.14 + 0.58 * diff + 0.32 * rim + 0.12 * height;
+        if (spec > 0.55) glint[i] = 1;
+      }
+    }
+  });
+
+  const b = new Bitmap(W, H);
+  const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && face[y * W + x] >= 0;
+  for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
-      const dx = x + 0.5 - cx;
-      if (Math.abs(dx) > hw + 0.25) continue;
-      const t = dx / Math.max(0.5, hw); // -1 left .. 1 right
-      // Three facets on each face: a lit left, a centre, a shaded right.
-      const face = t < -0.33 ? 0 : t < 0.33 ? 1 : 2;
-      let k = up ? [0.85, 0.6, 0.3][face] : [0.55, 0.38, 0.15][face];
-      // Brighter near the girdle, where the light gathers.
-      k += 0.2 * (1 - Math.abs(y - girdle) / girdle);
-      const edgeLine = Math.abs(Math.abs(t) - 0.33) < 0.09 || y === girdle;
+      const i = y * W + x;
+      if (face[i] < 0) continue;
+      let k = bright[i];
+      // The heart of light, seen through the crystal: brightest a little above the middle.
+      const hd = Math.hypot((x + 0.5 - cx) / 6.5, (y + 0.5 - (cy - 4)) / 11);
+      if (hd < 1) k += 0.34 * (1 - hd) * (bayer(x, y) < 1 - hd * 0.8 ? 1 : 0.35);
+      // Where two facets meet, the edge shines.
+      const f = face[i];
+      const edge = (inside(x + 1, y) && face[i + 1] !== f) || (inside(x, y + 1) && face[i + W] !== f);
+      if (edge) k += 0.26;
+      const silhouette = !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1);
       if (light) {
-        const v = edgeLine ? 1 : clamp01((k - 0.35) * 1.6);
-        if (v > 0.05) b.set(x, y, [255, 255, 255], Math.round(255 * v * (0.5 + 0.5 * bayer(x, y))));
+        const v = glint[i] ? 1 : clamp01((k - 0.35) * 1.5);
+        if (v > 0.04) b.set(x, y, [255, 255, 255], Math.round(255 * v * (0.55 + 0.45 * bayer(x, y))));
         continue;
       }
-      let c = k > 0.7 ? lit : k > 0.45 ? mix(mid, lit, (k - 0.45) * 3) : k > 0.25 ? mix(deep, mid, (k - 0.25) * 5) : mix(shade, deep, k * 4);
-      if (edgeLine) c = mix(c, edge, 0.55);
-      // A dithered heart of light, a little above the girdle.
-      const hd = Math.hypot(dx / 5, (y - girdle + 3) / 7);
-      if (hd < 1 && bayer(x, y) < 1 - hd) c = mix(c, edge, 0.6);
+      const step = clamp01(k) * (CRYSTAL_RAMP.length - 1) + (bayer(x, y) - 0.5) * 0.7;
+      let c = CRYSTAL_RAMP[Math.max(0, Math.min(CRYSTAL_RAMP.length - 1, Math.round(step)))];
+      if (glint[i]) c = G_SPEC;
+      // A thin dark outline where the crystal meets the air, a lit one on its upper left.
+      if (silhouette) c = (x < cx && y < cy) || !inside(x, y - 1) ? mix(c, CRYSTAL_RAMP[6], 0.35) : hex('#12082a');
       b.set(x, y, c);
     }
   }
-  if (!light) {
-    outline(b, hex('#12082a'));
-    // Glints on the upper left facets.
-    b.set(Math.round(cx - 3), 8, G_SPEC);
-    b.set(Math.round(cx - 4), 10, G_SPEC);
-    b.set(Math.round(cx - 6), girdle - 3, G_SPEC);
-  }
+  if (!light) outline(b, hex('#0b0620'));
   return b;
+}
+
+/** Every frame of the crystal's turn side by side, one sheet: the crystal itself, or its light layer. */
+export function wishCrystalSheet(light = false): Bitmap {
+  const W = CRYSTAL_W;
+  const sheet = new Bitmap(W * CRYSTAL_FRAMES, CRYSTAL_H);
+  for (let f = 0; f < CRYSTAL_FRAMES; f++) {
+    const fr = wishCrystalFrame((f / CRYSTAL_FRAMES) * (Math.PI / 3), light);
+    for (let y = 0; y < CRYSTAL_H; y++) sheet.data.set(fr.data.subarray(y * W * 4, (y + 1) * W * 4), (y * sheet.w + f * W) * 4);
+  }
+  return sheet;
 }
 
 export const ALTAR_W = 72;
@@ -481,8 +580,11 @@ export function registerGemArt(scene: Phaser.Scene): void {
 
 /** The shop's own art, made the first time it opens. */
 export function registerShopArt(scene: Phaser.Scene): void {
-  addBitmap(scene, 'shop_crystal', wishCrystal());
-  addBitmap(scene, 'shop_crystal_w', wishCrystal(true));
+  for (const [key, light] of [['shop_crystal', false], ['shop_crystal_w', true]] as const) {
+    if (scene.textures.exists(key)) continue;
+    const tex = scene.textures.addCanvas(key, wishCrystalSheet(light).toCanvas())!;
+    for (let f = 0; f < CRYSTAL_FRAMES; f++) tex.add(f, 0, f * CRYSTAL_W, 0, CRYSTAL_W, CRYSTAL_H);
+  }
   addBitmap(scene, 'shop_altar', altar());
   addBitmap(scene, 'shop_altar_runes', altarRunes());
 }
