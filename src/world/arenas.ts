@@ -15,6 +15,7 @@ import { SANCTUM_WORLD_W } from './sanctumLayout';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
 import { warmCosmos, warmDeep, warmIsland, warmSpirit, warmTemple } from '../art/textures';
+import { GroundStreamer } from './GroundStreamer';
 import { DEEP_H, DEEP_SPAWN, DEEP_SPAWNS, DEEP_W, WYRM_HOME, deepWalkable } from './deepLayout';
 import { ELEMENTINHO_HOME, TEMPLE_H, TEMPLE_SPAWN, TEMPLE_SPAWNS, TEMPLE_W, templeWalkable } from './templeLayout';
 import { QUEEN_HOME, SPIRIT_H, SPIRIT_SPAWN, SPIRIT_SPAWNS, SPIRIT_W, spiritWalkable } from './spiritLayout';
@@ -321,6 +322,36 @@ export const ARENAS: ArenaDef[] = [
     },
   },
 ];
+
+/** Height of the window onto an arena on its select card, in world pixels. */
+export const PREVIEW_H = 84;
+
+/**
+ * Build what an arena's select card shows (for a painted arena, everything
+ * it has; for a streamed one, the strips in its window), at most `budget` ms
+ * per call. True once it's all there.
+ */
+export function warmArena(scene: Phaser.Scene, arena: ArenaDef, budget: number): boolean {
+  const { preview, ground } = arena;
+  if (isPainted(ground)) return ground.warm(scene, budget);
+  const top = Math.floor(preview.y - PREVIEW_H / 2);
+  return GroundStreamer.warm(scene, ground, top, top + PREVIEW_H, budget);
+}
+
+/**
+ * Warm the arenas while the player is still on the menus, a few ms a frame,
+ * the one they chose last time first; so the arena select opens with them
+ * ready (and a run starts sooner). The work is shared: the arena select and
+ * the world carry on whatever this has begun. True once they're all ready.
+ */
+export function warmArenasInBackground(scene: Phaser.Scene, budget: number): boolean {
+  const last = lastArena();
+  const order = [...ARENAS].sort((a, b) => (a.id === last ? -1 : b.id === last ? 1 : 0));
+  const next = order.find((a) => !warmArena(scene, a, 0));
+  if (!next) return true;
+  warmArena(scene, next, budget);
+  return false;
+}
 
 export function arenaById(id: string | undefined): ArenaDef {
   return ARENAS.find((a) => a.id === id) ?? ARENAS[0];

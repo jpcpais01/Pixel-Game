@@ -41,6 +41,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - `arenas.ts`: `ARENAS` (clearing, garden, cosmos, spirit, temple, deep, island). Each has a ground, spawn, monsters, `walkable`, scenery and a select-card preview.
 - `*Layout.ts` files hold positions and walkability; the class files (`Garden.ts`, `Deep.ts`, `Sanctum.ts` for the Rune Temple...) build the arena's living parts.
 - `GroundStreamer.ts` streams the ground in strips; painted arenas warm their textures in `art/textures.ts` (`warmCosmos`, `warmDeep`...).
+- Arenas are built ahead: the home screen warms them a few ms a frame (`warmArenasInBackground` in `arenas.ts`); build jobs are keyed by the texture manager, so the arena select and the world carry on the same job. Arena cards save a picture of their window (`pixel-battle.thumb.<id>`, per build) to show at once on later launches.
 
 **Loot and progression** (`src/game/`)
 - `items.ts`: potions and the 9-slot hotbar. `buffs.ts`: timed buffs. `Pickup.ts`: items on the ground and the rare/epic/legendary drop shows.

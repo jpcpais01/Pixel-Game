@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { STRIP_H } from '../art/ground';
 import { menuZoom } from '../game/display';
-import { ARENAS, arenaById, isPainted, lastArena, rememberArena, type ArenaDef, type PreviewSprite } from '../world/arenas';
+import { ARENAS, PREVIEW_H, arenaById, isPainted, lastArena, rememberArena, warmArena, type ArenaDef, type PreviewSprite } from '../world/arenas';
 import { GroundStreamer } from '../world/GroundStreamer';
+import { buildId } from '../diagnostics';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PANEL_PICKED, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
 import { openOnlineForm } from '../ui/onlineForm';
@@ -14,9 +15,29 @@ const GAP = 8;
 const WIN_X = 5;
 const WIN_Y = 5;
 const WIN_W = CARD_W - 10;
-const WIN_H = 84;
-/** ms per frame spent building an arena's ground for its window. */
-const WARM_BUDGET = 6;
+const WIN_H = PREVIEW_H;
+/** ms per frame spent building an arena for its window (the home screen has usually built them already). */
+const WARM_BUDGET = 10;
+/** Each window, saved once drawn, so it shows at once on later visits (until the next build changes the art). */
+const THUMB_KEY = 'pixel-battle.thumb.';
+
+function savedThumb(id: string): string | null {
+  try {
+    const raw = localStorage.getItem(THUMB_KEY + id);
+    const t = raw ? (JSON.parse(raw) as { b: string; u: string }) : null;
+    return t && t.b === buildId ? t.u : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveThumb(id: string, url: string): void {
+  try {
+    localStorage.setItem(THUMB_KEY + id, JSON.stringify({ b: buildId, u: url }));
+  } catch {
+    // Storage full or blocked: it's drawn live next time.
+  }
+}
 
 /** Animations to play on a preview sprite's glow layer. */
 const GLOW_ANIMS: Record<string, string> = { brazier_e: 'brazier_burn', fountain_e: 'fountain_flow' };
@@ -29,6 +50,9 @@ class ArenaCard extends Phaser.GameObjects.Container {
   private loading: Phaser.GameObjects.BitmapText;
   private built = false;
   private title: Phaser.GameObjects.BitmapText;
+  /** The saved picture of the window, shown until the live one is built. */
+  private thumb: Phaser.GameObjects.Image | null = null;
+  private picked = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -57,16 +81,38 @@ class ArenaCard extends Phaser.GameObjects.Container {
     this.add([this.bg, inset, this.view, this.loading, this.title, blurb]);
     scene.add.existing(this);
     this.setPicked(false);
+    this.showSaved();
   }
 
-  /** Build the arena's ground for the window a little at a time; show it once it's all there. */
+  /** A picture of the window saved on an earlier visit: shown at once, while the live window is built. */
+  private showSaved(): void {
+    const key = `arena_thumb_${this.arena.id}`;
+    const show = () => {
+      if (!this.active || this.built || this.thumb) return;
+      this.thumb = this.scene.add.image(0, 0, key).setOrigin(0);
+      this.view.add(this.thumb);
+      this.loading.setVisible(false);
+      this.setPicked(this.picked);
+    };
+    if (this.scene.textures.exists(key)) return show();
+    const url = savedThumb(this.arena.id);
+    if (!url) return;
+    const img = new Image();
+    img.onload = () => {
+      if (!this.scene.textures.exists(key)) this.scene.textures.addImage(key, img);
+      show();
+    };
+    img.src = url;
+  }
+
+  /** Build the arena for the window a little at a time; show it live once it's all there. */
   warm(): void {
     if (this.built) return;
-    const { preview, ground } = this.arena;
-    const top = Math.floor(preview.y - WIN_H / 2);
-    if (isPainted(ground) ? !ground.warm(this.scene, WARM_BUDGET) : !GroundStreamer.warm(this.scene, ground, top, top + WIN_H, WARM_BUDGET)) return;
+    if (!warmArena(this.scene, this.arena, WARM_BUDGET)) return;
     this.built = true;
     this.loading.setVisible(false);
+    this.thumb?.destroy();
+    this.thumb = null;
     this.buildView();
   }
 
@@ -121,11 +167,28 @@ class ArenaCard extends Phaser.GameObjects.Container {
       if (clip(glow, x, y) && GLOW_ANIMS[s.glow]) glow.play(GLOW_ANIMS[s.glow]);
     }
     this.view.add(objs);
+    if (!savedThumb(this.arena.id)) this.save(objs);
     this.view.setAlpha(0);
     scene.tweens.add({ targets: this.view, alpha: 1, duration: 240 });
   }
 
+  /** Keep a picture of the window, to show at once next time. */
+  private save(objs: Phaser.GameObjects.GameObject[]): void {
+    const rt = this.scene.make.renderTexture({ width: WIN_W, height: WIN_H }, false);
+    rt.draw(objs);
+    rt.snapshot((snap) => {
+      rt.destroy();
+      if (!(snap instanceof HTMLImageElement)) return;
+      const c = document.createElement('canvas');
+      c.width = WIN_W;
+      c.height = WIN_H;
+      c.getContext('2d')!.drawImage(snap, 0, 0);
+      saveThumb(this.arena.id, c.toDataURL('image/png'));
+    });
+  }
+
   setPicked(on: boolean): void {
+    this.picked = on;
     this.bg.setTexture(this.keys[on ? 1 : 0]);
     this.title.setTint(on ? this.arena.accent : 0xfff4d6);
     this.view.list.forEach((o) => (o as Phaser.GameObjects.Image).setTint(on ? 0xffffff : 0x9a94b8));

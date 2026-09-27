@@ -678,7 +678,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
 }
 
 /** The Cosmos Arena's textures being built, a little per call. */
-const cosmosJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
+const cosmosJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
 
 /**
  * Build the Cosmos Arena's backdrop, platform, props and spell textures,
@@ -688,15 +688,15 @@ const cosmosJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
  */
 export function warmCosmos(scene: Phaser.Scene, budget = Infinity): boolean {
   if (scene.textures.exists('cosmos_streak')) return true;
-  let job = cosmosJobs.get(scene);
+  let job = cosmosJobs.get(scene.textures);
   if (!job) {
     job = cosmosTextures(scene);
-    cosmosJobs.set(scene, job);
+    cosmosJobs.set(scene.textures, job);
   }
   const start = performance.now();
   while (performance.now() - start < budget) {
     if (job.next().done) {
-      cosmosJobs.delete(scene);
+      cosmosJobs.delete(scene.textures);
       return true;
     }
   }
@@ -728,7 +728,7 @@ function* cosmosTextures(scene: Phaser.Scene): Generator<void, void, void> {
 }
 
 /** The Floating Island's textures being built, a little per call. */
-const islandJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
+const islandJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
 
 /**
  * Build the Floating Island's sky, island, columns and the sky's moving
@@ -737,15 +737,15 @@ const islandJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
  */
 export function warmIsland(scene: Phaser.Scene, budget = Infinity): boolean {
   if (scene.textures.exists('isle_bird')) return true;
-  let job = islandJobs.get(scene);
+  let job = islandJobs.get(scene.textures);
   if (!job) {
     job = islandTextures(scene);
-    islandJobs.set(scene, job);
+    islandJobs.set(scene.textures, job);
   }
   const start = performance.now();
   while (performance.now() - start < budget) {
     if (job.next().done) {
-      islandJobs.delete(scene);
+      islandJobs.delete(scene.textures);
       return true;
     }
   }
@@ -773,7 +773,7 @@ function* islandTextures(scene: Phaser.Scene): Generator<void, void, void> {
 }
 
 /** The Spirit Dungeon's textures being built, a little per call. */
-const spiritJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
+const spiritJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
 
 /**
  * Build the Spirit Dungeon's floor plan, props and spell textures, spending
@@ -781,15 +781,15 @@ const spiritJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
  */
 export function warmSpirit(scene: Phaser.Scene, budget = Infinity): boolean {
   if (scene.textures.exists('sd_lane')) return true;
-  let job = spiritJobs.get(scene);
+  let job = spiritJobs.get(scene.textures);
   if (!job) {
     job = spiritTextures(scene);
-    spiritJobs.set(scene, job);
+    spiritJobs.set(scene.textures, job);
   }
   const start = performance.now();
   while (performance.now() - start < budget) {
     if (job.next().done) {
-      spiritJobs.delete(scene);
+      spiritJobs.delete(scene.textures);
       return true;
     }
   }
@@ -819,7 +819,7 @@ function* spiritTextures(scene: Phaser.Scene): Generator<void, void, void> {
 }
 
 /** The Elementinho Temple's textures being built, a little per call. */
-const templeJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
+const templeJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
 
 /**
  * Build the Elementinho Temple's floor plan, props, creatures and spell
@@ -828,15 +828,15 @@ const templeJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
  */
 export function warmTemple(scene: Phaser.Scene, budget = Infinity): boolean {
   if (scene.textures.exists('et_lane')) return true;
-  let job = templeJobs.get(scene);
+  let job = templeJobs.get(scene.textures);
   if (!job) {
     job = templeTextures(scene);
-    templeJobs.set(scene, job);
+    templeJobs.set(scene.textures, job);
   }
   const start = performance.now();
   while (performance.now() - start < budget) {
     if (job.next().done) {
-      templeJobs.delete(scene);
+      templeJobs.delete(scene.textures);
       return true;
     }
   }
@@ -880,7 +880,7 @@ function* templeTextures(scene: Phaser.Scene): Generator<void, void, void> {
 }
 
 /** The Glimmerdeep's textures being built, a little per call. */
-const deepJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
+const deepJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
 
 /**
  * Build the Glimmerdeep's cave, props, creatures, its two bosses and their
@@ -888,15 +888,15 @@ const deepJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
  */
 export function warmDeep(scene: Phaser.Scene, budget = Infinity): boolean {
   if (scene.textures.exists('gd_lane')) return true;
-  let job = deepJobs.get(scene);
+  let job = deepJobs.get(scene.textures);
   if (!job) {
     job = deepTextures(scene);
-    deepJobs.set(scene, job);
+    deepJobs.set(scene.textures, job);
   }
   const start = performance.now();
   while (performance.now() - start < budget) {
     if (job.next().done) {
-      deepJobs.delete(scene);
+      deepJobs.delete(scene.textures);
       return true;
     }
   }
