@@ -13,11 +13,28 @@
 // loose like moments coming undone. White hair spills from under the hood and
 // the eyes burn in its shadow. A pocket watch on a chain glows in one hand.
 //
+// The clockwork is a skin of the timekeeper: no man at all but an automaton
+// built like a clock. His head is an alarm clock, a cream dial for a face with
+// two radium-green hours for eyes and hands that turn as he stands there, two
+// brass bells on top and a hammer between them that rings when he casts. His
+// chest is a copper barrel with a porthole where a gear turns, his arms are
+// jointed copper pipes, and his lower half is a grandfather clock's case with
+// a pendulum swinging behind its glass. A wind-up key turns in his back, and
+// his staff is crowned with a turning cog round a radium lamp.
+//
+// The anomaly is a skin of the paradox: something that should not exist, a
+// glitch in time wearing a man's shape. A long white coat seamed with cyan
+// light, black gloves and boots, a high split collar, and for a face a smooth
+// black visor with one slit of light scanning across it. Shards of him orbit
+// his head, a tesseract of light turns in his hand, and every so often a band
+// of him tears sideways, fringed in cyan and magenta, and snaps back.
+//
 // The body keeps to the 24x32 box; frames are larger so the staff and the
 // halo fit. Hands are posed in the chronomancer's own terms (forward, out to
 // the side, height) and placed per view.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
+import { shiftRow } from './shapes';
 import { BOOT, EYE, GOLD, SKIN } from './palette';
 import { iconPainter } from './effects';
 import { DIRS, type Dir } from './wizard';
@@ -53,6 +70,10 @@ export interface ChronoLook {
   hair: Material;
   /** Light of the magic, brightest first. */
   light: [RGB, RGB, RGB, RGB];
+  /** A skin that changes the cut, not just the cloth: the clockwork (a timekeeper) or the anomaly (a paradox). */
+  style?: 'clockwork' | 'anomaly';
+  /** Hands, when not bare. */
+  hand?: Material;
 }
 
 const WHITE_HAIR: Material = { ramp: ramp('#6a6878', '#a4a2b0', '#d8d6e0', '#f8f8fc'), outline: hex('#24222e'), outlineLit: hex('#3a3846') };
@@ -101,7 +122,45 @@ export const AEON_LOOK: ChronoLook = {
   light: [hex('#eafff6'), hex('#9affd8'), hex('#2ee0a0'), hex('#127a6a')],
 };
 
-export const CHRONO_LOOKS = [KEEPER_LOOK, MOON_LOOK, PARADOX_LOOK, AEON_LOOK];
+const COPPER: Material = { ramp: ramp('#2a1208', '#4e2210', '#7a3a1a', '#a85a2a', '#d4884a', '#f0b070'), outline: hex('#140804'), outlineLit: hex('#241008'), shine: true };
+const DIAL: Material = { ramp: ramp('#6a6252', '#b0a88e', '#e0d8c0', '#fcf6e4'), outline: hex('#2a2418'), noAO: true };
+const IRON: Material = { ramp: ramp('#141418', '#24242c', '#3a3a46', '#56566a', '#7a7a90'), outline: hex('#060608'), shine: true };
+const CASE_GLASS: Material = { ramp: ramp('#06100a', '#0c1a12', '#14261a'), outline: hex('#040a06'), noAO: true };
+const DIAL_INK: Material = { ramp: ramp('#1a1410', '#2e241c'), outline: hex('#1a1410'), noOutline: true, noAO: true };
+const WHITE_COAT: Material = { ramp: ramp('#4a4e5a', '#7e8494', '#b0b6c4', '#dce0ea', '#f8faff'), outline: hex('#14161e'), outlineLit: hex('#2a2e3a') };
+const VOID_BLACK: Material = { ramp: ramp('#040408', '#0a0a12', '#12121c', '#1c1c28'), outline: hex('#020204') };
+const VISOR: Material = { ramp: ramp('#040408', '#0c0c16', '#1a1a2a', '#2e2e44', '#5a5a7a'), outline: hex('#020204'), shine: true };
+
+/** The timekeeper's clockwork skin: copper and brass, radium-green light. */
+export const CLOCKWORK_LOOK: ChronoLook = {
+  key: 'chrono_clockwork',
+  rift: false,
+  robe: COPPER,
+  inner: DIAL,
+  trim: BRASS,
+  hair: IRON,
+  hand: IRON,
+  style: 'clockwork',
+  light: [hex('#f6ffe8'), hex('#d8ffa0'), hex('#8ef040'), hex('#2e8a2a')],
+};
+
+/** The paradox's anomaly skin: white and void, cyan light torn with magenta. */
+export const ANOMALY_LOOK: ChronoLook = {
+  key: 'chrono_anomaly',
+  rift: true,
+  robe: WHITE_COAT,
+  inner: VOID_BLACK,
+  trim: { ramp: ramp('#0a6a8a', '#18a8d0', '#40e0ff', '#b0f8ff'), outline: hex('#04202c'), emissive: 0.6, noAO: true },
+  hair: WHITE_COAT,
+  hand: VOID_BLACK,
+  style: 'anomaly',
+  light: [hex('#f0ffff'), hex('#a0faff'), hex('#20d8f0'), hex('#1a4aa0')],
+};
+
+/** The anomaly's other light, where it tears. */
+const MAGENTA: RGB = hex('#ff38c8');
+
+export const CHRONO_LOOKS = [KEEPER_LOOK, MOON_LOOK, PARADOX_LOOK, AEON_LOOK, CLOCKWORK_LOOK, ANOMALY_LOOK];
 
 /** The look being drawn; set by buildChronoFrames. */
 let S: ChronoLook = KEEPER_LOOK;
@@ -207,6 +266,19 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   const [ex, ey] = elbow(sx, sy, p.x, p.y, reach, hint);
   const wx = ex + (p.x - ex) * 0.72;
   const wy = ey + (p.y - ey) * 0.72;
+  if (S.style === 'clockwork') {
+    // Jointed pipes: copper upper arm and forearm, brass balls at the shoulder and elbow, an iron hand.
+    c.part();
+    c.capsule(sx, sy, ex, ey, 1.2, 1.1, S.robe, { bias });
+    c.part();
+    c.capsule(ex, ey, wx, wy, 1.1, 1.2, S.robe, { bias });
+    c.part();
+    c.ellipse(ex, ey, 1.1, 1.1, S.trim, { bias });
+    c.ellipse(wx, wy, 1.2, 0.9, S.trim, { bias });
+    c.part();
+    c.ellipse(p.x, p.y, 1.2, 1.1, IRON, { bias });
+    return;
+  }
   c.part();
   c.capsule(sx, sy, ex, ey, 1.8, 1.55, S.robe, { bias });
   c.part();
@@ -215,7 +287,7 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   c.part();
   c.ellipse(wx, wy, S.rift ? 1.1 : 1.5, S.rift ? 1.0 : 1.2, S.trim, { bias });
   c.part();
-  c.ellipse(p.x, p.y, 1.15, 1.1, SKIN, { bias });
+  c.ellipse(p.x, p.y, 1.15, 1.1, S.hand ?? SKIN, { bias });
 }
 
 /** Small dark boots under the hem. */
@@ -424,6 +496,339 @@ function hoodDown(c: PixelCanvas, cx: number, U: number, blink: boolean | undefi
 }
 
 // ---------------------------------------------------------------------------
+// The clockwork
+
+/** A gear of `teeth` teeth round (x, y), turned by `turn` of a tooth, in `m`; its hub left open for a light. */
+function gear(c: PixelCanvas, x: number, y: number, r: number, teeth: number, turn: number, m: Material, bias = 0): void {
+  c.part();
+  for (let yy = Math.floor(y - r - 1); yy <= Math.ceil(y + r + 1); yy++) {
+    for (let xx = Math.floor(x - r - 1); xx <= Math.ceil(x + r + 1); xx++) {
+      const dx = xx + 0.5 - x;
+      const dy = yy + 0.5 - y;
+      const d = Math.hypot(dx, dy);
+      const a = Math.atan2(dy, dx);
+      const tooth = Math.cos(a * teeth - turn * Math.PI * 2) > 0.2;
+      if (d > r + (tooth ? 0.9 : 0) || d < r * 0.4) continue;
+      c.px(xx, yy, m, sphere((dx / (r + 1)) * 0.8, (dy / (r + 1)) * 0.8 - 0.2, 1), { bias });
+    }
+  }
+}
+
+/** The clockwork's staff: an iron rod, a brass cog turning at its head round a radium lamp. */
+function drawCogStaff(c: PixelCanvas, p: Placed, ux: number, uy: number, glow: number, tick: number, bias = 0): void {
+  const below = 10;
+  const above = 11.5;
+  const vx = -uy;
+  const vy = ux;
+  c.part();
+  c.line(p.x - ux * below, p.y - uy * below, p.x + ux * above, p.y + uy * above, IRON, () => sphere(vx * 0.6, vy * 0.6 - 0.2), { bias });
+  c.part();
+  c.px(p.x - ux * below, p.y - uy * below, S.trim, sphere(0, 0.3), { bias });
+  c.px(p.x + ux * 4, p.y + uy * 4, S.trim, sphere(0, -0.3), { bias });
+  const hx = p.x + ux * (above + 2.8);
+  const hy = p.y + uy * (above + 2.8);
+  gear(c, hx, hy, 2.3, 8, tick / 8, S.trim, bias);
+  const [core, hot, mid] = S.light;
+  const k = 0.45 + 0.55 * glow;
+  c.spark(hx, hy, core, k);
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(hx + dx, hy + dy, hot, 0.5 * k);
+  if (glow > 0.5) glowAt(c, hx, hy, (glow - 0.5) * 1.6);
+  else c.spark(hx + 1, hy + 1, mid, 0.3);
+}
+
+/** The alarm clock's bells on his head, the hammer between them shaking (and ringing) when `ring`. */
+function bells(c: PixelCanvas, cx: number, top: number, ring: number, tick: number, side = false): void {
+  const shake = ring > 0.5 ? (tick % 4 < 2 ? -1 : 1) * 0.6 : 0;
+  c.part();
+  for (const s of side ? [1, -1] : [-1, 1]) {
+    const x = cx + s * (side ? 1.2 : 2.5);
+    c.px(x - s * 0.6, top + 1.4, S.trim, sphere(0, 0), { bias: side && s > 0 ? -1 : 0 });
+    c.ellipse(x, top, 1.7, 1.35, S.trim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.7 - 0.3, 1), bias: side && s > 0 ? -1 : 0 });
+  }
+  c.part();
+  c.px(cx + shake, top - 0.2, IRON, sphere(0, -0.4));
+  c.px(cx + shake, top - 1.2, S.trim, sphere(0, -0.7));
+  if (ring > 0.5) {
+    const [core, hot] = S.light;
+    c.spark(cx - 3.6, top - 1.6, hot, ring * 0.6);
+    c.spark(cx + 3.6, top - 1.6, hot, ring * 0.6);
+    c.spark(cx + shake, top - 2.2, core, ring * 0.5);
+  }
+}
+
+/** The clock face from the front: a cream dial in a copper rim, radium hours for eyes, hands that turn with `tick`. */
+function clockHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  bells(c, cx, 7.6 + U, p.glow, p.tick);
+  c.part();
+  c.ellipse(cx, 11.4 + U, 3.5, 3.4, S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.ellipse(cx, 11.5 + U, 2.6, 2.5, DIAL, { normal: (_x, _y, dx, dy) => sphere(dx * 0.5, dy * 0.5 - 0.1, 1) });
+  // Hour marks at twelve, three, six and nine.
+  c.part();
+  for (const [x, y] of [[cx, 9.4], [cx + 2, 11.5], [cx, 13.6], [cx - 2.4, 11.5]] as const) c.px(x, y + U, DIAL_INK);
+  // The hands, from the middle: a long one turning round, a short one.
+  const a = (p.tick / 12) * Math.PI * 2 - Math.PI / 2;
+  c.px(cx + Math.round(Math.cos(a) * 1.6), 11.5 + U + Math.round(Math.sin(a) * 1.6), DIAL_INK);
+  c.px(cx + Math.round(Math.cos(a) * 0.9), 11.5 + U + Math.round(Math.sin(a) * 0.9), DIAL_INK);
+  c.px(cx, 11.5 + U, S.trim, sphere(0, -0.3));
+  // Two radium hours for eyes.
+  if (!p.blink) {
+    const [core, hot] = S.light;
+    for (const x of [cx - 1.6, cx + 1.4]) {
+      c.spark(x, 10.4 + U, core, 0.95);
+      c.spark(x, 11.4 + U, hot, 0.25);
+    }
+  }
+}
+
+/** The copper barrel of his chest, a porthole with a gear turning inside it (front), or the key in his back. */
+function clockChest(c: PixelCanvas, cx: number, U: number, tick: number, back: boolean): void {
+  const top = 15 + U;
+  const waist = 21 + U;
+  c.part();
+  c.shape(top, waist, (y) => {
+    const u = (y + 0.5 - top) / (waist - top);
+    const hw = 4.2 + Math.sin(u * Math.PI) * 0.6;
+    return [cx - hw, cx + hw];
+  }, S.robe, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.4, 1));
+  // Rivets down the seams.
+  for (let y = top + 1; y < waist; y += 2) {
+    c.shade(cx - 4, y, 2);
+    c.shade(cx + 3, y, 2);
+  }
+  // Brass bands at the top and bottom of the barrel.
+  c.part();
+  c.shape(top, top, () => [cx - 4.1, cx + 4.1], S.trim, (_x, _y, t) => cyl(t, 0.2));
+  c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], S.trim, (_x, _y, t) => cyl(t, 0));
+  if (back) return;
+  c.part();
+  c.ellipse(cx, 18 + U, 2.3, 2.1, CASE_GLASS);
+  gear(c, cx - 0.3, 18.2 + U, 1.3, 6, tick / 6, S.trim);
+  c.spark(cx - 0.3, 18.2 + U, S.light[1], 0.6);
+  c.part();
+  for (let a = 0; a < 12; a++) {
+    const t = (a / 12) * Math.PI * 2;
+    c.px(cx + Math.cos(t) * 2.5, 18 + U + Math.sin(t) * 2.3, S.trim, sphere(Math.cos(t) * 0.6, Math.sin(t) * 0.6));
+  }
+}
+
+/** Brass pauldrons like cogs on each shoulder. */
+function cogShoulders(c: PixelCanvas, cx: number, U: number, span: number, tick: number): void {
+  for (const s of [-1, 1]) gear(c, cx + s * span, 15.8 + U, 1.4, 6, (tick + (s > 0 ? 3 : 0)) / 12, S.trim);
+}
+
+/** The grandfather clock's case that is his lower half: a copper box on a moulded base, a pendulum swinging behind the glass at the front. */
+function clockCase(c: PixelCanvas, cx: number, U: number, L: number, tick: number, back: boolean): void {
+  const top = 21 + U;
+  const hem = 29 + L;
+  c.part();
+  c.shape(top + 1, hem, (y) => {
+    const base = y >= hem - 1 ? 0.7 : 0;
+    const hw = 3.7 + (y - top) * 0.08 + base;
+    return [cx - hw, cx + hw];
+  }, S.robe, (_x, y, t) => sphere(t * 0.9, y >= hem - 1 ? 0.4 : 0.1, 1));
+  c.part();
+  c.shape(hem, hem, () => [cx - 4.8, cx + 4.8], S.trim, (_x, _y, t) => cyl(t, 0.4));
+  if (back) {
+    for (let y = top + 2; y < hem - 1; y++) c.shade(cx, y, -1);
+    return;
+  }
+  // The window, the pendulum's rod and bob swinging across it.
+  c.part();
+  c.shape(Math.round(top + 2), Math.round(hem - 2), () => [cx - 1.9, cx + 1.9], CASE_GLASS, () => sphere(0, 0, 1));
+  const sw = Math.sin((tick / 12) * Math.PI * 2) * 1.1;
+  c.part();
+  c.line(cx, top + 2, cx + sw * 0.7, hem - 3.4, S.trim, () => sphere(0, 0));
+  c.ellipse(cx + sw, hem - 2.8, 0.9, 0.9, S.trim);
+  c.spark(cx + sw, hem - 2.8, S.light[2], 0.35);
+  // A brass frame round the glass.
+  for (let y = Math.round(top + 2); y <= Math.round(hem - 2); y++) {
+    c.shade(cx - 2, y, 1);
+    c.shade(cx + 1, y, 1);
+  }
+}
+
+/** The wind-up key in his back, turning: `w` from edge-on (0) to broadside (1). */
+function windKey(c: PixelCanvas, x: number, y: number, tick: number, side: boolean): void {
+  const w = Math.abs(Math.cos((tick / 8) * Math.PI));
+  c.part();
+  if (side) {
+    // Seen from the side it sticks out behind him.
+    c.line(x, y, x + 2, y, S.trim, () => sphere(0, -0.4));
+    c.ellipse(x + 3, y, 0.8, 0.8 + w * 1.6, S.trim);
+    return;
+  }
+  c.px(x, y + 0.6, S.trim, sphere(0, -0.3));
+  for (const s of [-1, 1]) c.ellipse(x + s * (0.6 + w * 1.4), y, 0.5 + w * 0.9, 1.3, S.trim, { bias: w < 0.4 ? -1 : 0 });
+}
+
+/** The clockwork in profile, facing left: the case and the barrel, the key sticking out behind, the clock head turned, its dial edge-on. */
+function clockSide(c: PixelCanvas, cx: number, hx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 21 + U;
+  const hem = 29 + L;
+  windKey(c, hx + 3.6, 18 + U, p.tick, true);
+  c.part();
+  c.shape(waist + 1, hem, (y) => {
+    const base = y >= hem - 1 ? 0.7 : 0;
+    const shift = hx + (cx - hx) * ((y - waist) / (hem - waist));
+    const hw = 3.2 + base;
+    return [shift - hw, shift + hw];
+  }, S.robe, (_x, y, t) => sphere(t * 0.9 - 0.1, y >= hem - 1 ? 0.4 : 0.1, 1));
+  c.part();
+  c.shape(hem, hem, () => [cx - 4.2, cx + 4.2], S.trim, (_x, _y, t) => cyl(t, 0.4));
+  for (let y = waist + 2; y < hem - 1; y++) c.shade(Math.round(hx - 2 + ((y - waist) / (hem - waist)) * (cx - hx)), y, 1);
+  c.part();
+  c.shape(top, waist, (y) => {
+    const u = (y + 0.5 - top) / (waist - top);
+    const hw = 3.2 + Math.sin(u * Math.PI) * 0.5;
+    return [hx - hw - 0.2, hx + hw];
+  }, S.robe, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, u * 0.8 - 0.4, 1));
+  c.part();
+  c.shape(top, top, () => [hx - 3.3, hx + 3.2], S.trim, (_x, _y, t) => cyl(t, 0.2));
+  c.shape(waist, waist, () => [hx - 3.4, hx + 3.2], S.trim, (_x, _y, t) => cyl(t, 0));
+  // The porthole's rim on his front.
+  for (let y = 17; y <= 19; y++) c.px(Math.round(hx - 3.6), y + U, S.trim, sphere(-0.6, 0));
+  c.spark(hx - 3, 18 + U, S.light[2], 0.3);
+  gear(c, hx - 0.2, 15.8 + U, 1.4, 6, p.tick / 12, S.trim);
+  bells(c, hx - 0.2, 7.6 + U, p.glow, p.tick, true);
+  c.part();
+  c.ellipse(hx - 0.2, 11.4 + U, 3.2, 3.4, S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  // The dial, seen edge-on on the front of the clock.
+  c.part();
+  c.ellipse(hx - 2.4, 11.5 + U, 1.1, 2.4, DIAL, { normal: (_x, _y, dx, dy) => sphere(-0.5 + dx * 0.3, dy * 0.5, 1) });
+  c.px(hx - 3, 11.5 + U, DIAL_INK);
+  if (!p.blink) {
+    c.spark(hx - 3, 10.4 + U, S.light[0], 0.95);
+    c.spark(hx - 3, 11.4 + U, S.light[1], 0.25);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The anomaly
+
+/** Shards of him orbiting his head, passing behind it and in front. */
+function orbiters(c: PixelCanvas, cx: number, cy: number, tick: number): void {
+  const [core, hot] = S.light;
+  for (let i = 0; i < 3; i++) {
+    const a = (tick / 12) * Math.PI * 2 + (i / 3) * Math.PI * 2;
+    const x = cx + Math.cos(a) * 5.2;
+    const y = cy + Math.sin(a) * 1.3;
+    const behind = Math.sin(a) < 0;
+    if (behind && c.filled(Math.floor(x), Math.floor(y))) continue;
+    c.part();
+    c.px(x, y, S.robe, sphere(0, -0.3), { bias: behind ? -1 : 1 });
+    c.spark(x, y - 1, i === 1 ? MAGENTA : hot, 0.5);
+    c.spark(x + 1, y, core, 0.25);
+  }
+}
+
+/** The visor from the front: a smooth black head in a high split collar, one slit of light scanning across it. */
+function visorDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(cx, 11.2 + U, 3.2, 3.4, VISOR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.25, 1) });
+  // The collar standing up round his jaw, split at the front, lined with light.
+  c.part();
+  for (const s of [-1, 1]) {
+    c.shape(Math.round(13 + U), Math.round(16 + U), (y) => {
+      const u = (y - 13 - U) / 3;
+      const inner = 2.4 - u * 1.2;
+      const outer = 3.8 - u * 0.2;
+      return s < 0 ? [cx - outer, cx - inner] : [cx + inner, cx + outer];
+    }, S.robe, (_x, _y, t, u) => sphere(t * 0.6 + s * 0.3, u * 0.6 - 0.2, 1));
+  }
+  c.part();
+  for (let y = 13; y <= 15; y++) {
+    const u = (y - 13) / 3;
+    c.px(Math.round(cx - 2.4 + u * 1.2), y + U, S.trim, sphere(0.3, 0));
+    c.px(Math.round(cx + 2.4 - u * 1.2) - 1, y + U, S.trim, sphere(-0.3, 0));
+  }
+  visorSlit(c, cx - 2, cx + 1, 11 + U, p);
+}
+
+/** The visor in profile, facing left: the black head in its collar, the slit of light at its front. */
+function visorSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(hx - 0.8, 11.2 + U, 3.0, 3.4, VISOR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 - 0.1, dy * 0.8 - 0.25, 1) });
+  c.part();
+  c.shape(Math.round(13 + U), Math.round(16 + U), (y) => {
+    const u = (y - 13 - U) / 3;
+    return [hx - 0.6 - u * 1.8, hx + 3.0 - u * 0.4];
+  }, S.robe, (_x, _y, t, u) => sphere(t * 0.8 + 0.2, u * 0.6 - 0.2, 1));
+  c.part();
+  for (let y = 13; y <= 15; y++) c.px(Math.round(hx - 0.6 - ((y - 13) / 3) * 1.8), y + U, S.trim, sphere(-0.4, 0));
+  visorSlit(c, Math.round(hx - 3.6), Math.round(hx - 2), 11 + U, p);
+  orbiters(c, hx, 7.4 + U, p.tick);
+}
+
+/** The slit of light across the visor, from x0 to x1 on row y, a brighter point scanning along it (dark for a blink). */
+function visorSlit(c: PixelCanvas, x0: number, x1: number, y: number, p: Pose): void {
+  if (p.blink) return;
+  const [core, hot, mid] = S.light;
+  const scan = x0 + ((p.tick >> 1) % (x1 - x0 + 1));
+  c.part();
+  for (let x = x0; x <= x1; x++) {
+    c.px(x, y, S.trim, sphere(0, 0));
+    c.spark(x, y, x === scan ? core : hot, x === scan ? 1 : 0.5);
+  }
+  c.spark(x0 - 1, y, mid, 0.4);
+  c.spark(x1 + 1, y, MAGENTA, 0.4);
+}
+
+/** A tesseract of light turning in his hand: two squares, one inside the other, their corners joined. */
+function drawCube(c: PixelCanvas, p: Placed, glow: number, tick: number): void {
+  const [core, hot, mid] = S.light;
+  const x = p.x + 0.4;
+  const y = p.y - 1.6;
+  const k = 0.5 + 0.5 * glow;
+  const t = (tick / 8) * Math.PI;
+  const outer = 2.2;
+  for (let i = 0; i < 4; i++) {
+    const a = t + (i / 4) * Math.PI * 2;
+    const b = t + ((i + 1) / 4) * Math.PI * 2;
+    const ax = x + Math.cos(a) * outer;
+    const ay = y + Math.sin(a) * outer * 0.8;
+    const bx = x + Math.cos(b) * outer;
+    const by = y + Math.sin(b) * outer * 0.8;
+    for (let j = 0; j <= 3; j++) c.spark(ax + ((bx - ax) * j) / 3, ay + ((by - ay) * j) / 3, i === 0 ? MAGENTA : mid, 0.6 * k);
+    // The inner square's corner, and the strut to it.
+    const ix = x + Math.cos(a - t * 2) * 0.9;
+    const iy = y + Math.sin(a - t * 2) * 0.9;
+    c.spark(ix, iy, hot, 0.8 * k);
+  }
+  c.spark(x, y, core, k);
+  if (glow > 0.4) glowAt(c, x, y, (glow - 0.4) * 1.5);
+}
+
+/**
+ * The glitch: on some frames a band of rows tears a pixel or two sideways,
+ * cyan light fringing its left edge and magenta its right. Picked from the
+ * frame's tick and view, so each frame always tears the same way.
+ */
+function glitch(c: PixelCanvas, tick: number, view: View): void {
+  const h = (tick * 5 + (view === 'down' ? 0 : view === 'up' ? 3 : 6)) % 7;
+  if (h > 2) return;
+  const y0 = BODY_Y + 8 + ((tick * 7 + h * 5) % 17);
+  const dx = (tick + h) % 2 ? 1 : -1;
+  const rows = h === 0 ? 2 : 1;
+  const [, hot] = S.light;
+  for (let y = y0; y < y0 + rows; y++) {
+    shiftRow(c, y, dx * (h === 1 ? 2 : 1));
+    let l = -1;
+    let r = -1;
+    for (let x = 0; x < c.w; x++) {
+      if (c.mat[y * c.w + x] < 0) continue;
+      if (l < 0) l = x;
+      r = x;
+    }
+    if (l < 0) continue;
+    // Spark takes figure coordinates; undo the frame's offset.
+    c.spark(l - 1 - BODY_X, y - BODY_Y, hot, 0.8);
+    c.spark(r + 1 - BODY_X, y - BODY_Y, MAGENTA, 0.8);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Bodies
 
 /** The timekeeper's robe from the front or back: brass-hemmed, the stole down its front, a clock for a buckle. */
@@ -559,15 +964,16 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const armA = () => arm(c, 7.4, 16.3 + U, fa, REACH_FRONT, [-0.6, 1], fa.behind ? -1 : 0);
   const armB = () => arm(c, 16.6, 16.3 + U, fb, REACH_FRONT, [0.6, 1], fb.behind ? -1 : 0);
   const [sx, sy] = staffUp('down', p.tilt);
+  const staff = S.style === 'clockwork' ? drawCogStaff : drawStaff;
 
-  if (S.rift) {
+  if (S.rift && S.style !== 'anomaly') {
     // The hood's back drapes behind the shoulders.
     c.part();
     c.ellipse(cx, 16 + U, 4.8, 2.2, S.robe, { bias: -1 });
   }
   if (fa.behind) {
     armA();
-    if (!S.rift) drawStaff(c, fa, sx, sy, p.glow, p.tick, -1);
+    if (!S.rift) staff(c, fa, sx, sy, p.glow, p.tick, -1);
   }
   if (fb.behind) armB();
 
@@ -578,7 +984,15 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     c.capsule(10.2, 26 + L, 10, 29 - p.footA, 1.3, 1.2, S.inner);
     c.capsule(13.8, 26 + L, 14, 29 - p.footB, 1.3, 1.2, S.inner);
     coatFront(c, cx, U, L, p.sway, p.tick, false);
-    hoodDown(c, cx, U, p.blink);
+    if (S.style === 'anomaly') {
+      visorDown(c, cx, U, p);
+      orbiters(c, cx, 7.4 + U, p.tick);
+    } else hoodDown(c, cx, U, p.blink);
+  } else if (S.style === 'clockwork') {
+    clockCase(c, cx, U, L, p.tick, false);
+    clockChest(c, cx, U, p.tick, false);
+    cogShoulders(c, cx, U, 4.6, p.tick);
+    clockHeadDown(c, cx, U, p);
   } else {
     robeFront(c, cx, U, L, p.sway, false);
     sageDown(c, cx, U, p.blink);
@@ -587,8 +1001,9 @@ function drawDown(c: PixelCanvas, p: Pose): void {
 
   if (!fb.behind) armB();
   if (!fa.behind) armA();
-  if (S.rift) drawWatch(c, fa, [CHAIN_AT[0] - 5, CHAIN_AT[1] + U], p.glow, p.tick);
-  else if (!fa.behind) drawStaff(c, fa, sx, sy, p.glow, p.tick);
+  if (S.style === 'anomaly') drawCube(c, fa, p.glow, p.tick);
+  else if (S.rift) drawWatch(c, fa, [CHAIN_AT[0] - 5, CHAIN_AT[1] + U], p.glow, p.tick);
+  else if (!fa.behind) staff(c, fa, sx, sy, p.glow, p.tick);
   glowAt(c, fb.x, fb.y, p.cast);
 }
 
@@ -603,7 +1018,7 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   const [sx, sy] = staffUp('up', p.tilt);
 
   // What he holds is in front of him, hidden but for what rises past.
-  if (!S.rift) drawStaff(c, fa, sx, sy, p.glow, p.tick, -1);
+  if (!S.rift) (S.style === 'clockwork' ? drawCogStaff : drawStaff)(c, fa, sx, sy, p.glow, p.tick, -1);
   if (fa.behind) armA();
   if (fb.behind) armB();
 
@@ -614,6 +1029,20 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     c.capsule(10.2, 26 + L, 10, 29 - p.footB, 1.3, 1.2, S.inner);
     c.capsule(13.8, 26 + L, 14, 29 - p.footA, 1.3, 1.2, S.inner);
     coatFront(c, cx, U, L, p.sway, p.tick, true);
+    if (S.style === 'anomaly') {
+      // The back of the visor, the collar standing up behind it, a seam of light down its middle.
+      c.part();
+      c.ellipse(cx, 11.2 + U, 3.2, 3.4, VISOR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+      c.part();
+      c.shape(Math.round(13 + U), Math.round(16 + U), (y) => {
+        const u = (y - 13 - U) / 3;
+        const hw = 3.9 - u * 0.4;
+        return [cx - hw, cx + hw];
+      }, S.robe, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6 - 0.3, 1));
+      c.part();
+      for (let y = 13; y <= 16; y++) c.px(cx, y + U, S.trim, sphere(0, 0));
+      orbiters(c, cx, 7.4 + U, p.tick);
+    } else {
     // The hood from behind, a seam of light down its crown to a point at the nape.
     c.part();
     c.shape(Math.round(7 + U), Math.round(16 + U), (y) => {
@@ -627,6 +1056,18 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     c.part();
     c.px(cx - 4, 14 + U, S.hair, sphere(-0.5, 0.2));
     c.px(cx - 4, 15 + U, S.hair, sphere(-0.5, 0.4));
+    }
+  } else if (S.style === 'clockwork') {
+    clockCase(c, cx, U, L, p.tick, true);
+    clockChest(c, cx, U, p.tick, true);
+    windKey(c, cx, 18 + U, p.tick, false);
+    cogShoulders(c, cx, U, 4.6, p.tick);
+    // The back of the clock, and its bells.
+    bells(c, cx, 7.6 + U, p.glow, p.tick);
+    c.part();
+    c.ellipse(cx, 11.4 + U, 3.5, 3.4, S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+    c.shade(cx - 1, 10 + U, 1);
+    c.shade(cx, 12 + U, -1);
   } else {
     robeFront(c, cx, U, L, p.sway, true);
     // The back of the head: the bald crown, the fringe of white hair round it.
@@ -658,12 +1099,13 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const top = 15 + U;
   const waist = 21 + U;
   const [sx, sy] = staffUp('side', p.tilt);
+  const staff = S.style === 'clockwork' ? drawCogStaff : drawStaff;
 
   // The far arm behind everything, unless it reaches out in front.
   const armA = (bias: number) => arm(c, hx + 1.2, 16.4 + U, fa, REACH_SIDE, [0.3, 1], bias);
   if (fa.behind) {
     armA(-1);
-    if (!S.rift) drawStaff(c, fa, sx, sy, p.glow, p.tick, -1);
+    if (!S.rift) staff(c, fa, sx, sy, p.glow, p.tick, -1);
   }
 
   // Feet: the back one in shade first.
@@ -677,6 +1119,9 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   boot(c, cx - 1.2 - p.footA, 30.4 - lift(p.footA), true);
 
   const hem = (S.rift ? 28 : 30) + L;
+  if (S.style === 'clockwork') {
+    clockSide(c, cx, hx, U, L, p);
+  } else {
   // The robe or coat in profile, trailing back as he moves.
   c.part();
   c.shape(top, hem, (y) => {
@@ -698,6 +1143,9 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     c.part();
     c.shape(waist, waist, () => [hx - 3.1, hx + 3.1], S.inner, (_x, _y, t) => cyl(t, 0));
     fractures(c, cx + 0.5, hem, p.sway, p.tick, 3);
+    if (S.style === 'anomaly') {
+      visorSide(c, hx, U, p);
+    } else {
     // The hood in profile, its cowl forward over the face.
     c.part();
     c.shape(Math.round(7 + U), Math.round(16 + U), (y) => {
@@ -720,6 +1168,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     if (!p.blink) {
       c.spark(hx - 4, 13 + U, S.light[0], 0.9);
       c.spark(hx - 5, 13 + U, S.light[1], 0.35);
+    }
     }
   } else {
     // The stole over the shoulder, the belt, the brass hem.
@@ -755,14 +1204,16 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     for (let y = 15; y <= 19; y++) c.shade(hx - 3 + ((y & 1) === 0 ? 0 : -1), y + U, -1);
     halo(c, hx + 2.4, 10.2 + U, 1.5, 5.4, p.tick, false);
   }
+  }
 
   if (!fa.behind) {
     armA(0);
-    if (!S.rift) drawStaff(c, fa, sx, sy, p.glow, p.tick);
+    if (!S.rift) staff(c, fa, sx, sy, p.glow, p.tick);
   }
   // The near arm last.
   arm(c, hx + 0.2, 16.7 + U, fb, REACH_SIDE, [0.4, 1], 0);
-  if (S.rift) drawWatch(c, fa.behind ? fb : fa, [hx - 1.5, waist], p.glow, p.tick, fa.behind ? 0 : 0);
+  if (S.style === 'anomaly') drawCube(c, fa.behind ? fb : fa, p.glow, p.tick);
+  else if (S.rift) drawWatch(c, fa.behind ? fb : fa, [hx - 1.5, waist], p.glow, p.tick, fa.behind ? 0 : 0);
   glowAt(c, fb.x - 0.5, fb.y, p.cast);
 }
 
@@ -959,6 +1410,7 @@ function drawChronoFrame(dir: Dir, pose: Pose): PixelCanvas {
   if (dir === 'down') drawDown(c, pose);
   else if (dir === 'up') drawUp(c, pose);
   else drawSide(c, pose);
+  if (S.style === 'anomaly') glitch(c, pose.tick, dir === 'down' || dir === 'up' ? dir : 'side');
   return dir === 'right' ? c.mirrored() : c;
 }
 
@@ -992,6 +1444,40 @@ export function boltFrame(i: number, look: ChronoLook): PixelCanvas {
   const c = new PixelCanvas(BOLT_SIZE, BOLT_SIZE);
   const [core, hot, mid, deep] = look.light;
   const o = 5;
+  if (look.style === 'clockwork') {
+    // A cog of light, eight teeth, turning an eighth of a turn a frame.
+    const turn = (i / BOLT_FRAMES) * (Math.PI / 4);
+    for (let y = 0; y < BOLT_SIZE; y++) {
+      for (let x = 0; x < BOLT_SIZE; x++) {
+        const dx = x - o;
+        const dy = y - o;
+        const d = Math.hypot(dx, dy);
+        const a = Math.atan2(dy, dx) - turn;
+        const tooth = Math.cos(a * 8) > 0.2;
+        if (d > (tooth ? 4.6 : 3.4) || d < 1.1) continue;
+        c.spark(x, y, d > 3.4 ? mid : d > 2.4 ? hot : core, d > 3.4 ? 0.85 : 1);
+      }
+    }
+    c.spark(o, o, deep, 0.7);
+    return c;
+  }
+  if (look.style === 'anomaly') {
+    // A broken square of light that will not hold still: its body jumps a
+    // pixel frame to frame, and a magenta ghost of it lags a step behind.
+    const jx = [0, 1, -1, 0][i];
+    const jy = [0, 0, 1, -1][i];
+    const block = (x0: number, y0: number, w: number, h: number, col: RGB, a: number) => {
+      for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) c.spark(x, y, col, a);
+    };
+    block(2 - jx, 3 - jy, 5, 5, MAGENTA, 0.55);
+    block(3 + jx, 3 + jy, 5, 5, mid, 0.9);
+    block(4 + jx, 4 + jy, 3, 3, hot, 1);
+    c.spark(5 + jx, 5 + jy, core);
+    // A torn scanline sliding off one side.
+    const ty = 3 + ((i * 2) % 5) + jy;
+    for (let x = 0; x < 4; x++) c.spark(8 + jx + x - (i % 2) * 5, ty, x === 0 ? core : hot, 0.9 - x * 0.2);
+    return c;
+  }
   if (!look.rift) {
     for (let a = 0; a < 24; a++) {
       const t = (a / 24) * Math.PI * 2;
@@ -1057,6 +1543,8 @@ export const BRASS_ICON: ChronoIconColors = { metal: ['#6a4418', '#a8742a', '#f0
 export const MOON_ICON: ChronoIconColors = { metal: ['#4e5466', '#8a92a8', '#dfe4ee'], light: ['#f4fbff', '#c4e4ff', '#7ab8ff', '#2a5aa8'], outline: '#0c0e18' };
 export const RIFT_ICON: ChronoIconColors = { metal: ['#2b203c', '#56406e', '#8a70a8'], light: ['#f6eeff', '#d4b0ff', '#9a5cff', '#4a2a9a'], outline: '#0c0614' };
 export const AEON_ICON: ChronoIconColors = { metal: ['#142c27', '#2c5850', '#5a8a80'], light: ['#eafff6', '#9affd8', '#2ee0a0', '#127a6a'], outline: '#03100c' };
+export const CLOCKWORK_ICON: ChronoIconColors = { metal: ['#5a2c14', '#a85a2a', '#f0a060'], light: ['#f6ffe8', '#d8ffa0', '#8ef040', '#2e8a2a'], outline: '#140804' };
+export const ANOMALY_ICON: ChronoIconColors = { metal: ['#1a1c24', '#e8eef4', '#ffffff'], light: ['#f0ffff', '#a0faff', '#20d8f0', '#1a4aa0'], outline: '#04060c' };
 
 /** The second hand: a clock's long hand of light, loosed and flying, a ring of ticks behind it. */
 export function handIcon(k: ChronoIconColors): Uint8ClampedArray {

@@ -9,10 +9,10 @@ import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, A
 import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FRAMES, twirlStart, TWIRL_FPS, type JediMeta } from './jedi';
 import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, buildAlchemistFrames, flaskFrame } from './alchemist';
 import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE, arrowFrame, buildArcherFrames, stuckArrowFrame } from './archer';
-import { BLOOD_SPELL, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W, SOUL_SPELL, bloodLanceIcon, buildNecroFrames, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
+import { BLOOD_SPELL, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, buildNecroFrames, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
-import { AEON_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CHRONO_H, CHRONO_LOOKS, CHRONO_W, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, buildChronoFrames, chronoAnims, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
-import { BARD_H, BARD_LOOKS, BARD_W, MINSTREL_LOOK, NOTE_FRAMES, WILD_LOOK, NOTE_SIZE, bardAnims, buildBardFrames, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
+import { AEON_ICON, ANOMALY_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CHRONO_H, CLOCKWORK_ICON, CHRONO_LOOKS, CHRONO_W, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, buildChronoFrames, chronoAnims, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
+import { BARD_H, BARD_LOOKS, BARD_W, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, WILD_LOOK, NOTE_SIZE, bardAnims, buildBardFrames, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
 import { SAMURAI_ANIMS, SAMURAI_H, SAMURAI_LOOKS, SAMURAI_W, SPIN_FPS, SPIN_FRAMES, buildSamuraiFrames, crossIcon, cutMark, dashIcon, katanaIcon, spinStart, type SamuraiMeta } from './samurai';
 import { PUPPETEER_H, PUPPETEER_LOOKS, PUPPETEER_W, PUPPET_LOOKS, buildPuppetSheet, buildPuppeteerFrames, marionetteIcon, pirouetteIcon, puppeteerAnims, puppetStrikeIcon, threadIcon } from './puppeteer';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
@@ -359,6 +359,10 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_raise', toCanvas(16, 16, raiseIcon()));
   scene.textures.addCanvas('icon_lance', toCanvas(16, 16, bloodLanceIcon()));
   scene.textures.addCanvas('icon_nova', toCanvas(16, 16, novaIcon()));
+  scene.textures.addCanvas('icon_soul_tomb', toCanvas(16, 16, ankhBoltIcon()));
+  scene.textures.addCanvas('icon_raise_tomb', toCanvas(16, 16, tombRaiseIcon()));
+  scene.textures.addCanvas('icon_lance_wyrm', toCanvas(16, 16, bloodLanceIcon(WYRM_ICON)));
+  scene.textures.addCanvas('icon_nova_wyrm', toCanvas(16, 16, novaIcon(WYRM_ICON)));
 
   // Bard once per look: 'bard' (the minstrel), 'bard_drum' (the war drummer)
   // and 'bard_wild' (the minstrel's wildsong skin), the minstrel's glowing
@@ -380,12 +384,17 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   }
   register(scene, 'note', pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, MINSTREL_LOOK)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
   register(scene, 'note_wild', pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, WILD_LOOK)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
+  register(scene, 'note_harlequin', pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, HARLEQUIN_LOOK)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
   scene.textures.addCanvas('icon_lute', toCanvas(16, 16, luteIcon()));
   scene.textures.addCanvas('icon_song', toCanvas(16, 16, songIcon()));
-  scene.textures.addCanvas('icon_lute_wild', toCanvas(16, 16, luteIcon(true)));
-  scene.textures.addCanvas('icon_song_wild', toCanvas(16, 16, songIcon(true)));
+  scene.textures.addCanvas('icon_lute_wild', toCanvas(16, 16, luteIcon('wild')));
+  scene.textures.addCanvas('icon_song_wild', toCanvas(16, 16, songIcon('wild')));
+  scene.textures.addCanvas('icon_lute_harlequin', toCanvas(16, 16, luteIcon('harlequin')));
+  scene.textures.addCanvas('icon_song_harlequin', toCanvas(16, 16, songIcon('harlequin')));
   scene.textures.addCanvas('icon_drum', toCanvas(16, 16, drumIcon()));
   scene.textures.addCanvas('icon_rhythm', toCanvas(16, 16, rhythmIcon()));
+  scene.textures.addCanvas('icon_drum_howl', toCanvas(16, 16, drumIcon(HOWL_DRUM_ICON)));
+  scene.textures.addCanvas('icon_rhythm_howl', toCanvas(16, 16, rhythmIcon(HOWL_DRUM_ICON)));
 
   // Puppeteer once per look: 'puppeteer' and 'puppeteer_porcelain' (the
   // marionettist), 'weaver' and 'weaver_crimson' (the stringweaver); the
@@ -435,11 +444,11 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     register(scene, `${look.key}_bolt`, pack(frameList(Array.from({ length: BOLT_FRAMES }, (_, i) => boltFrame(i, look)), 'b'), BOLT_SIZE, BOLT_SIZE), BOLT_SIZE, BOLT_SIZE);
   }
   register(scene, 'chrono_mark', pack(frameList(Array.from({ length: MARK_FRAMES }, (_, i) => markFrame(i)), 'm'), MARK_SIZE, MARK_SIZE), MARK_SIZE, MARK_SIZE);
-  for (const [suffix, k] of [['', BRASS_ICON], ['_moon', MOON_ICON]] as const) {
+  for (const [suffix, k] of [['', BRASS_ICON], ['_moon', MOON_ICON], ['_clockwork', CLOCKWORK_ICON]] as const) {
     scene.textures.addCanvas(`icon_hand${suffix}`, toCanvas(16, 16, handIcon(k)));
     scene.textures.addCanvas(`icon_stasis${suffix}`, toCanvas(16, 16, stasisIcon(k)));
   }
-  for (const [suffix, k] of [['', RIFT_ICON], ['_aeon', AEON_ICON]] as const) {
+  for (const [suffix, k] of [['', RIFT_ICON], ['_aeon', AEON_ICON], ['_anomaly', ANOMALY_ICON]] as const) {
     scene.textures.addCanvas(`icon_shards${suffix}`, toCanvas(16, 16, shardsIcon(k)));
     scene.textures.addCanvas(`icon_rewind${suffix}`, toCanvas(16, 16, rewindIcon(k)));
   }
@@ -486,7 +495,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_cross_sakura', toCanvas(16, 16, crossIcon(['#fff4f8', '#ffc0d4', '#ff7aa6', '#b03a6a'])));
 
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
-  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL]] as const) {
+  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL]] as const) {
     register(scene, `orb${suffix}`, pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i, k)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
     register(scene, `burst${suffix}`, pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i, k)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
     scene.anims.create({ key: `orb${suffix}_spin`, frames: scene.anims.generateFrameNames(`orb${suffix}_e`, { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });

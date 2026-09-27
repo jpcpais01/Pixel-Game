@@ -7,7 +7,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
 import { SmiteBurst } from './Holy';
-import { BLOOD_FX, Risen, SOUL_FX, SoulBolt, type BoltKind, type RisenStats } from './Souls';
+import { BLOOD_FX, Risen, SOUL_FX, SoulBolt, TOMB_FX, WYRM_FX, type BoltKind, type RisenStats } from './Souls';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
@@ -75,6 +75,17 @@ export const BLOOD_KIT: NecroKit = {
   specialCooldown: 8000,
   special: { kind: 'nova', radius: 44, damage: 16, cost: 10, healPerFoe: 4 },
 };
+
+/** The bonecaller as the tomb king: the same dead, raised in lapis soul fire. */
+export const TOMB_KIT: NecroKit = {
+  ...NECRO_KIT,
+  key: 'necro_tomb',
+  bolt: { ...NECRO_KIT.bolt, suffix: '_tomb', fx: TOMB_FX },
+  special: { kind: 'raise', risen: { ...(NECRO_KIT.special as { risen: RisenStats }).risen, fx: TOMB_FX } },
+};
+
+/** The blood mage as the wyrmblood: the same lances and nova, molten. */
+export const WYRM_KIT: NecroKit = { ...BLOOD_KIT, key: 'necro_wyrm', bolt: { ...BLOOD_KIT.bolt, suffix: '_wyrm', fx: WYRM_FX } };
 
 /**
  * The necromancer: casts on the attack button, a bolt from his open palm (at
@@ -207,13 +218,14 @@ export class Necromancer implements Hero {
   private bolt(): void {
     const u = this.line;
     const kind = this.kit.bolt;
+    const fx = kind.fx;
     sound.soulCast(this.world.pan(this.x), kind.blood);
     this.world.addEffect(
       new SoulBolt(this.world, this.x + u.x * 6, this.y + u.y * 3, u.x, u.y, kind, (h, ux, uy) => {
         h.hurt({ damage: kind.damage, heavy: false, knock: kind.blood ? 45 : 60, fromX: h.x - ux * 8, fromY: h.y - h.bodyY - uy * 8 });
         if (this.kit.boltHeal > 0 && this.vitals.hp < this.vitals.max) {
           this.vitals.heal(this.kit.boltHeal);
-          this.world.debris([0xff8a96, 0xe8243c], snap(this.x), snap(this.y) - 14, 2, this.y + 20, 'spores');
+          this.world.debris([fx.hot, fx.mid], snap(this.x), snap(this.y) - 14, 2, this.y + 20, 'spores');
         }
       }),
     );
@@ -244,8 +256,8 @@ export class Necromancer implements Hero {
         x = this.x + g.x * 0.6;
         y = this.y + g.y * 0.6 + 6;
       }
-      this.world.addEffect(new SmiteBurst(this.world, x, y, false, SOUL_FX));
-      this.world.debris([0x8a6646, 0x6a4a34, 0x9dffd4], snap(x), snap(y) - 2, 8, y + 1);
+      this.world.addEffect(new SmiteBurst(this.world, x, y, false, stats.fx ?? SOUL_FX));
+      this.world.debris([0x8a6646, 0x6a4a34, (stats.fx ?? SOUL_FX).hot], snap(x), snap(y) - 2, 8, y + 1);
       const r = new Risen(this.world, x, y, this, SLOTS[i], stats);
       this.risen.push(r);
       this.world.addEffect(r);
@@ -261,15 +273,16 @@ export class Necromancer implements Hero {
       this.vitals.hp -= paid;
       this.world.popNumber(snap(x), snap(y) - 34, `-${paid}`, 0xff4a5a);
     }
-    this.world.addEffect(new SmiteBurst(this.world, x, y, true, BLOOD_FX, radius));
-    this.world.debris([0xfff0f0, 0xff8a96, 0xe8243c, 0x7a0a1e], snap(x), snap(y) - 10, 22, y + 20);
+    const fx = this.kit.bolt.fx ?? BLOOD_FX;
+    this.world.addEffect(new SmiteBurst(this.world, x, y, true, fx, radius));
+    this.world.debris([fx.core, fx.hot, fx.mid, fx.deep], snap(x), snap(y) - 10, 22, y + 20);
     sound.bloodNova(this.world.pan(x));
     this.world.cameras.main.shake(120, 0.0006);
     const hits = this.world.melee({ kind: 'circle', x, y: y - 6, radius }, { damage, heavy: true, knock: 110, fromX: x, fromY: y - 6 });
     if (hits.length) {
       const got = this.vitals.heal(hits.length * healPerFoe);
       if (got > 0) this.world.popNumber(snap(x), snap(y) - 40, `+${got}`, 0x7dff8a);
-      for (const h of hits) this.world.debris([0xff8a96, 0xe8243c], snap(h.x), snap(h.y), 4, h.y + 20, 'spores');
+      for (const h of hits) this.world.debris([fx.hot, fx.mid], snap(h.x), snap(h.y), 4, h.y + 20, 'spores');
     }
   }
 

@@ -18,6 +18,10 @@ export const SONG_PAL: Pal = pal(0xf4fffc, 0xa8fff0, 0x3fd8c8, 0x1a7a8a, 0x6fe8d
 export const WILD_PAL: Pal = pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070);
 /** The drummer's: amber fire. */
 export const DRUM_PAL: Pal = pal(0xfffbe8, 0xffd98a, 0xff9a3a, 0xb8401e, 0xffa850);
+/** The minstrel's harlequin skin: rose and gold. */
+export const HARLEQUIN_PAL: Pal = pal(0xfff4fb, 0xffb0e8, 0xff4ab8, 0x8a1a6a, 0xff70c8);
+/** The drummer's moonhowl skin: pale spirit indigo. */
+export const HOWL_PAL: Pal = pal(0xf2f4ff, 0xbcc8ff, 0x6c7cff, 0x2c2a9a, 0x8a9aff);
 
 /** The minstrel's song: quicker feet and wounds closing, for everyone who hears it. */
 export const HASTE: BuffDef = {
@@ -31,6 +35,8 @@ export const HASTE: BuffDef = {
 
 /** The same song in the wildsong's voice. */
 export const WILD_HASTE: BuffDef = { ...HASTE, name: 'Song of the grove', icon: 'icon_song_wild', tint: 0xb8f070 };
+/** And in the harlequin's. */
+export const HARLEQUIN_HASTE: BuffDef = { ...HASTE, name: 'Song of mirth', icon: 'icon_song_harlequin', tint: 0xff70c8 };
 
 /** How the minstrel's music looks: the notes' texture (frames n0 and n1) and their colours. */
 export interface SongLook {
@@ -41,6 +47,8 @@ export interface SongLook {
 export const TROUBADOUR_SONG: SongLook = { tex: 'note_e', pal: SONG_PAL };
 /** Leaf-flagged notes and little wisps. */
 export const WILD_SONG: SongLook = { tex: 'note_wild_e', pal: WILD_PAL };
+/** Diamond-headed notes and spinning diamonds. */
+export const HARLEQUIN_SONG: SongLook = { tex: 'note_harlequin_e', pal: HARLEQUIN_PAL };
 
 /** The drummer's rhythm: every blow lands harder. */
 export const RHYTHM: BuffDef = {
@@ -51,6 +59,9 @@ export const RHYTHM: BuffDef = {
   duration: 8000,
   mods: { damage: 1.35 },
 };
+
+/** The same rhythm in the moonhowl's voice. */
+export const HOWL_RHYTHM: BuffDef = { ...RHYTHM, name: 'Pack rhythm', icon: 'icon_rhythm_howl', tint: 0x8a9aff };
 
 /** How a note flies and what it does. */
 export interface NoteKind {

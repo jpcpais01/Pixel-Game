@@ -11,11 +11,28 @@
 // hood thrown back from a bone-white mane, a high black collar, eyes like
 // embers, and a blood orb caged in bone on the staff.
 //
+// The tomb king is a skin of the bonecaller: a dead pharaoh risen, wound in
+// old linen, a gold death mask for a face with kohl-dark eyes burning lapis
+// blue, a striped gold-and-lapis headdress whose flaps fall to his chest and
+// whose braid hangs down his back, a cobra rearing at the brow, a plaited
+// false beard, a broad beaded collar over the shoulders and a striped apron
+// down the front of the robe. His staff ends in a golden ankh, blue soul fire
+// burning in its loop.
+//
+// The wyrmblood is a skin of the blood mage: a sorcerer with a dragon's blood
+// in him and it shows. Black scales run over his robe, cracked through with
+// seams of molten light, two great horns sweep back from his brow, ash-dark
+// hair behind them, scales on his cheeks and eyes like forge coals, and a
+// pair of folded leathery wings rises behind his shoulders, their claws
+// above his head, flaring when he casts. A dragon's black talon grips the
+// molten orb on his staff.
+//
 // The body keeps to the 24x32 box; frames are larger so the staff can be
 // raised overhead. Hands are posed in the caster's own terms (forward, out to
 // the side, height) and placed for each view, like the archer's.
 
-import { PixelCanvas, cyl, sphere, type Material, type RGB } from './pixel';
+import { PixelCanvas, cyl, hex, sphere, type Material, type NormalFn, type RGB } from './pixel';
+import { poly } from './shapes';
 import {
   BLOOD_CORE,
   BLOOD_DEEP,
@@ -97,6 +114,10 @@ export interface NecroLook {
   eye: Material;
   /** The blood mage: hood down, a mane of hair, a high collar, a caged orb for a staff head. */
   blood: boolean;
+  /** A skin that changes more than colours: the tomb king (on the bonecaller) or the wyrmblood (on the blood mage). */
+  style?: 'tomb' | 'wyrm';
+  /** What the feet are shod in. */
+  feet?: Material;
   /** Light of the soul fire or the blood, brightest first. */
   light: [RGB, RGB, RGB, RGB];
 }
@@ -123,12 +144,70 @@ export const BLOOD_LOOK: NecroLook = {
   light: [BLOOD_CORE, BLOOD_HOT, BLOOD_MID, BLOOD_DEEP],
 };
 
-export const NECRO_LOOKS = [NECRO_LOOK, BLOOD_LOOK];
+// The tomb king and the wyrmblood.
+const ramp = (...c: string[]): RGB[] => c.map(hex);
+const LINEN: Material = { ramp: ramp('#3e3428', '#6e604a', '#a08e6e', '#cbb994', '#ebdfbe'), outline: hex('#1a140c'), outlineLit: hex('#2c2418') };
+const WRAPS: Material = { ramp: ramp('#322a20', '#5a4e3c', '#86765a', '#b0a07e'), outline: hex('#1a140c') };
+const LAPIS: Material = { ramp: ramp('#0a1236', '#14225e', '#20388e', '#3052b8', '#5078dc'), outline: hex('#050818'), outlineLit: hex('#0a1030') };
+const TURQ: Material = { ramp: ramp('#0a3a40', '#146664', '#22988a', '#48c8b0', '#8af0d8'), outline: hex('#041a1c'), shine: true };
+const KOHL: Material = { ramp: ramp('#06050a', '#100c16'), outline: hex('#06050a'), noAO: true };
+const TOMB_EYE: Material = { ramp: ramp('#3c8cff', '#b4dcff'), outline: hex('#06050a'), emissive: 0.9, noAO: true };
+const OBSIDIAN: Material = { ramp: ramp('#0c080a', '#181014', '#261a1c', '#382628', '#4e3632'), outline: hex('#050304'), outlineLit: hex('#120a0a') };
+const EMBER: Material = { ramp: ramp('#8a2a08', '#d0520e', '#ff8a24', '#ffc860'), outline: hex('#2a0a02'), emissive: 0.75, noAO: true };
+const WYRM_INNER: Material = { ramp: ramp('#1a0604', '#2e0c06', '#44140a', '#5c1e10'), outline: hex('#0a0302') };
+const ASH_SKIN: Material = { ramp: ramp('#4a3a36', '#7a6660', '#a89284', '#d2bca6'), outline: hex('#140c0a') };
+const ASH_HAIR: Material = { ramp: ramp('#0e0c0e', '#1e1a1e', '#302a2e', '#443c40'), outline: hex('#050405'), outlineLit: hex('#141014') };
+const HORN: Material = { ramp: ramp('#241c18', '#4e4238', '#7e6e5a', '#ae9a7c', '#d8c8a4'), outline: hex('#080504'), shine: true };
+const WING: Material = { ramp: ramp('#2a0808', '#4a0e0e', '#701816', '#98261e', '#bc3a26'), outline: hex('#0a0202'), outlineLit: hex('#200606') };
+const WYRM_GEM: Material = { ramp: ramp('#7a1c04', '#d04a0a', '#ff9a2a', '#ffe08a'), outline: hex('#1e0602'), emissive: 0.8, noAO: true };
+const WYRM_EYE: Material = { ramp: ramp('#ff7a1a', '#ffe0a0'), outline: hex('#140604'), emissive: 1, noAO: true };
+
+const TOMB_CORE = hex('#f4fbff');
+const TOMB_HOT = hex('#a8dcff');
+const TOMB_MID = hex('#3c94f0');
+const TOMB_DEEP = hex('#1a3894');
+const WYRM_CORE = hex('#fff8e0');
+const WYRM_HOT = hex('#ffc860');
+const WYRM_MID = hex('#ff6a1a');
+const WYRM_DEEP = hex('#8a1e0a');
+
+/** The bonecaller's tomb king skin: linen, gold and lapis, soul fire burning blue. */
+export const TOMB_LOOK: NecroLook = {
+  key: 'necro_tomb',
+  robe: LINEN,
+  inner: LAPIS,
+  trim: GOLD,
+  skin: WRAPS,
+  eye: TOMB_EYE,
+  blood: false,
+  style: 'tomb',
+  feet: WRAPS,
+  light: [TOMB_CORE, TOMB_HOT, TOMB_MID, TOMB_DEEP],
+};
+
+/** The blood mage's wyrmblood skin: black scales, molten seams, horns and wings. */
+export const WYRM_LOOK: NecroLook = {
+  key: 'necro_wyrm',
+  robe: OBSIDIAN,
+  inner: WYRM_INNER,
+  trim: EMBER,
+  skin: ASH_SKIN,
+  eye: WYRM_EYE,
+  blood: true,
+  style: 'wyrm',
+  light: [WYRM_CORE, WYRM_HOT, WYRM_MID, WYRM_DEEP],
+};
+
+export const NECRO_LOOKS = [NECRO_LOOK, BLOOD_LOOK, TOMB_LOOK, WYRM_LOOK];
 
 /** The soul bolt's orb and burst: green soul fire with bone-white flecks. */
 export const SOUL_SPELL: SpellColors = { core: SOUL_CORE, hot: SOUL_HOT, mid: SOUL_MID, deep: SOUL_DEEP, accent: [248, 242, 218], hollow: true };
 /** The blood lance's: white-hot pink to deep crimson. */
 export const BLOOD_SPELL: SpellColors = { core: BLOOD_CORE, hot: BLOOD_HOT, mid: BLOOD_MID, deep: BLOOD_DEEP, accent: [255, 200, 200] };
+/** The tomb king's: blue soul fire flecked with gold. */
+export const TOMB_SPELL: SpellColors = { core: TOMB_CORE, hot: TOMB_HOT, mid: TOMB_MID, deep: TOMB_DEEP, accent: [255, 214, 120], hollow: true };
+/** The wyrmblood's: a molten drop spitting sparks. */
+export const WYRM_SPELL: SpellColors = { core: WYRM_CORE, hot: WYRM_HOT, mid: WYRM_MID, deep: WYRM_DEEP, accent: [255, 240, 180], flame: true };
 
 /** The look being drawn; set by buildNecroFrames. */
 let S: NecroLook = NECRO_LOOK;
@@ -195,11 +274,25 @@ function drawStaff(c: PixelCanvas, view: View, p: Pose, fb: Placed, bias = 0): v
   const top = 13;
   const bot = 9.5;
   c.part();
-  c.capsule(fb.x - ux * bot, fb.y - uy * bot, fb.x + ux * top, fb.y + uy * top, 0.7, 0.8, GRAVE_WOOD, { bias });
-  // Knots along the shaft.
-  for (const t of [-5, 5.5, 9]) c.shade(fb.x + ux * t + 0.5, fb.y + uy * t, 1);
+  c.capsule(fb.x - ux * bot, fb.y - uy * bot, fb.x + ux * top, fb.y + uy * top, 0.7, 0.8, S.style === 'tomb' ? LAPIS : GRAVE_WOOD, { bias });
+  if (S.style === 'tomb') {
+    // Gold bands round a lapis shaft.
+    c.part();
+    for (const t of [-5, 5.5, 9]) c.px(fb.x + ux * t, fb.y + uy * t, GOLD, sphere(0, -0.3), { bias });
+  } else {
+    // Knots along the shaft.
+    for (const t of [-5, 5.5, 9]) c.shade(fb.x + ux * t + 0.5, fb.y + uy * t, 1);
+  }
   const [hx, hy] = staffHead(view, p, fb);
   const glow = 0.35 + p.flare * 0.65;
+  if (S.style === 'tomb') {
+    ankh(c, hx, hy, ux, uy, p, bias);
+    return;
+  }
+  if (S.style === 'wyrm') {
+    talonOrb(c, hx, hy, ux, uy, p, bias);
+    return;
+  }
   if (S.blood) {
     // Bone prongs curling up round the orb.
     c.part();
@@ -240,6 +333,77 @@ function drawStaff(c: PixelCanvas, view: View, p: Pose, fb: Placed, bias = 0): v
     if (i < tall - 2) c.spark(x + (i & 1 ? 1 : -1), y + 0.5, mid, 0.35 * glow);
   }
   flareAt(c, hx, hy - 1, p.flare);
+}
+
+/** Soul fire licking up from (x, y), flickering with the frame, taller as the staff flares. */
+function soulFlame(c: PixelCanvas, x0: number, y0: number, p: Pose, glow: number): void {
+  const [core, hot, mid, deep] = S.light;
+  const flick = [0, 1, 0, -1, 1, 0][p.tick % 6];
+  const tall = 3 + Math.round(p.flare * 2);
+  for (let i = 0; i < tall; i++) {
+    const y = y0 - i;
+    const x = x0 + (i > 0 ? (((i + p.tick) & 1) === 0 ? flick * 0.6 : 0) : 0);
+    const col = i === 0 ? core : i < tall - 2 ? hot : i < tall - 1 ? mid : deep;
+    c.spark(x, y, col, (1 - i / (tall + 1)) * (0.6 + glow * 0.4));
+    if (i < tall - 2) c.spark(x + (i & 1 ? 1 : -1), y + 0.5, mid, 0.35 * glow);
+  }
+}
+
+/** The tomb king's ankh: a gold cross with a loop for a head, blue soul fire burning inside the loop and licking up from it. */
+function ankh(c: PixelCanvas, hx: number, hy: number, ux: number, uy: number, p: Pose, bias: number): void {
+  const vx = -uy;
+  const vy = ux;
+  const glow = 0.35 + p.flare * 0.65;
+  // The stem up from the shaft, and the crossbar.
+  c.part();
+  c.capsule(hx - ux * 1.8, hy - uy * 1.8, hx, hy, 0.65, 0.65, GOLD, { bias });
+  c.part();
+  c.capsule(hx - vx * 2.3, hy - vy * 2.3, hx + vx * 2.3, hy + vy * 2.3, 0.6, 0.6, GOLD, { bias });
+  // The loop: a ring of gold, open in the middle.
+  const lx = hx + ux * 2.3;
+  const ly = hy + uy * 2.3;
+  c.part();
+  for (let y = Math.floor(ly - 3); y <= Math.ceil(ly + 3); y++) {
+    for (let x = Math.floor(lx - 3); x <= Math.ceil(lx + 3); x++) {
+      const dx = x + 0.5 - lx;
+      const dy = y + 0.5 - ly;
+      const along = dx * ux + dy * uy;
+      const across = dx * vx + dy * vy;
+      const d = Math.hypot(across / 1.75, along / 2.1);
+      if (d > 0.52 && d <= 1) c.px(x, y, GOLD, sphere(across / 1.75, -along / 2.1), { bias });
+    }
+  }
+  // Fire in the loop, and rising from its top.
+  const [core, hot] = S.light;
+  c.spark(lx, ly, core, 0.55 + glow * 0.45);
+  c.spark(lx + ux * 0.8, ly + uy * 0.8, hot, 0.5 * glow);
+  soulFlame(c, lx + ux * 2.4, ly + uy * 2.4 - 0.2, p, glow);
+  flareAt(c, lx, ly, p.flare);
+}
+
+/** The wyrmblood's staff head: black talons curling up round a molten orb, a drop of it spitting now and then. */
+function talonOrb(c: PixelCanvas, hx: number, hy: number, ux: number, uy: number, p: Pose, bias: number): void {
+  const vx = -uy;
+  const vy = ux;
+  const at = (a: number, b: number): [number, number] => [hx + ux * a + vx * b, hy + uy * a + vy * b];
+  c.part();
+  for (const s of [-1, 1]) {
+    const knuckle = at(-1.6, s * 1.4);
+    const mid = at(-0.2, s * 2.3);
+    const up = at(1.3, s * 2.1);
+    const tip = at(2.3, s * 1.0);
+    c.capsule(knuckle[0], knuckle[1], mid[0], mid[1], 0.75, 0.6, HORN, { bias });
+    c.capsule(mid[0], mid[1], up[0], up[1], 0.6, 0.5, HORN, { bias });
+    c.px(tip[0], tip[1], HORN, sphere(s * 0.3, -0.7), { bias: bias + 1 });
+  }
+  c.part();
+  c.ellipse(hx, hy, 1.75, 1.75, WYRM_GEM, { glow: 0.6 + p.flare * 0.4 });
+  const glow = 0.35 + p.flare * 0.65;
+  c.spark(hx - 0.6, hy - 0.6, S.light[0], 0.6 * glow);
+  // A molten drop falls, or a spark leaps, now and then.
+  if (p.tick % 3 === 1) c.spark(hx, hy + 2.4, S.light[2], 0.7);
+  if (p.tick % 4 === 2) c.spark(hx + 1, hy - 2.6, S.light[1], 0.6);
+  flareAt(c, hx, hy, p.flare);
 }
 
 // ---------------------------------------------------------------------------
@@ -300,8 +464,9 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
 /** A pointed shoe peeking out from under the hem. */
 function foot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
   c.part();
-  if (side) c.ellipse(x - 0.4, y, 2.1, 1.1, BOOT, { flatten: 0.8, bias });
-  else c.ellipse(x, y, 1.5, 1.2, BOOT, { flatten: 0.8, bias });
+  const m = S.feet ?? BOOT;
+  if (side) c.ellipse(x - 0.4, y, 2.1, 1.1, m, { flatten: 0.8, bias });
+  else c.ellipse(x, y, 1.5, 1.2, m, { flatten: 0.8, bias });
 }
 
 /** The robe's outline: narrow at the shoulders, flaring to the hem. */
@@ -368,6 +533,319 @@ function cowl(c: PixelCanvas, cx: number, U: number, l: number, r: number): void
   }, S.robe, (_x, _y, t, u) => sphere(t * 0.95, u - 0.6, 1));
 }
 
+/** The stone at the belt's clasp: bone, the blood gem, a turquoise scarab or a molten stone. */
+function clasp(): Material {
+  if (S.style === 'wyrm') return WYRM_GEM;
+  if (S.style === 'tomb') return TURQ;
+  return S.blood ? BLOOD_GEM : BONE;
+}
+
+/**
+ * The cloth's own texture over rows y0..y1: the tomb king's linen wound
+ * round him in faint diagonal wraps, the wyrmblood's robe laid with scales.
+ */
+function robeTexture(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number): void {
+  if (S.style === 'tomb') {
+    for (let y = Math.floor(y0); y <= y1; y++) {
+      for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) {
+        if (!c.filled(x, y)) continue;
+        const k = (((x + y * 2) % 5) + 5) % 5;
+        if (k === 0) c.shade(x, y, -1);
+        else if (k === 1 && ((x + y) & 3) === 0) c.shade(x, y, 1);
+      }
+    }
+  } else if (S.style === 'wyrm') {
+    // Rows of scales, each a small dark arc, every other row set half a scale over.
+    for (let sy = Math.floor(y0); sy <= y1; sy += 3) {
+      const shift = ((sy - Math.floor(y0)) / 3) & 1 ? 2 : 0;
+      for (let sx = Math.floor(x0) + shift; sx <= x1; sx += 4) {
+        if (!c.filled(sx, sy)) continue;
+        c.shade(sx - 1, sy, -1);
+        c.shade(sx + 1, sy, -1);
+        c.shade(sx, sy + 1, -1);
+        c.shade(sx, sy - 1, 1);
+      }
+    }
+  }
+}
+
+/** Fill rows y0..y1 between `edges`, the material changing every row: stripes of `a` and `b`. */
+function striped(c: PixelCanvas, y0: number, y1: number, edges: (y: number) => [number, number] | null, a: Material, b: Material, normal: NormalFn, bias = 0): void {
+  for (let y = Math.round(y0); y <= Math.round(y1); y++) c.shape(y, y, edges, (y & 1) === 0 ? a : b, normal, { bias });
+}
+
+/** The tomb king's apron down the front of the robe: bands of gold and lapis, widening to the hem. */
+function apron(c: PixelCanvas, cx: number, waist: number, hem: number, sway: number): void {
+  c.part();
+  const edges = (y: number): [number, number] => {
+    const u = (y - waist) / Math.max(1, hem - waist);
+    const w = 1.5 + u * 1.5;
+    const s = u * u * sway;
+    return [cx - w + s, cx + w + s];
+  };
+  striped(c, waist + 1, hem - 1, edges, GOLD, LAPIS, (_x, _y, t) => cyl(t, 0.2));
+}
+
+/** The broad collar over his shoulders: rings of gold, lapis-and-turquoise beads, and gold, hanging from the throat. */
+function usekh(c: PixelCanvas, cx: number, cy: number): void {
+  c.part();
+  for (let y = Math.floor(cy); y <= Math.ceil(cy + 5.2); y++) {
+    for (let x = Math.floor(cx - 6.4); x <= Math.ceil(cx + 6.4); x++) {
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      if (dy < 0) continue;
+      const d = Math.hypot(dx, dy / 0.8);
+      if (d < 2.6 || d > 6.2) continue;
+      const ring = Math.min(2, Math.floor((d - 2.6) / 1.2));
+      const m = ring === 1 ? (((x + y) & 1) === 0 ? LAPIS : TURQ) : GOLD;
+      c.px(x, y, m, sphere((dx / 6.2) * 0.8, (dy / 5) * 0.6 - 0.35, 1));
+    }
+  }
+}
+
+/** A cobra rearing from the brow: a turquoise head on a gold hood. */
+function uraeus(c: PixelCanvas, x: number, y: number): void {
+  c.part();
+  c.px(x, y + 1, GOLD, sphere(0, -0.5), { bias: 1 });
+  c.px(x, y, TURQ, sphere(0, -0.6), { bias: 1 });
+  c.spark(x, y, S.light[1], 0.35);
+}
+
+/** The tomb king from the front: the striped headdress with its flaps falling to his chest, the gold death mask, kohl-rimmed burning eyes, the plaited beard. */
+function headTombDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const nrm: NormalFn = (_x, _y, t, u) => sphere(t * 0.85, u * 0.7 - 0.35, 1);
+  // The cloth spreading wide behind the face, and the flaps falling in front of the shoulders.
+  c.part();
+  striped(c, 9 + U, 12.5 + U, () => [cx - 5.2, cx + 5.2], GOLD, LAPIS, nrm);
+  c.part();
+  for (const sd of [-1, 1]) {
+    striped(c, 12.5 + U, 17.6 + U, (y) => {
+      const u = (y - 12.5 - U) / 5;
+      const inner = cx + sd * (2.3 + u * 0.3);
+      const outer = cx + sd * (5.2 - u * 0.9);
+      return sd < 0 ? [outer, inner] : [inner, outer];
+    }, GOLD, LAPIS, (_x, _y, t, u) => sphere(t * 0.6, u * 0.5 - 0.1, 1));
+  }
+  // The crown of the headdress, rounded over the brow.
+  c.part();
+  striped(c, 6.6 + U, 9.6 + U, (y) => {
+    const u = (y - 6.6 - U) / 3;
+    const hw = 2.4 + Math.sqrt(Math.max(0, u)) * 2.4;
+    return [cx - hw, cx + hw];
+  }, LAPIS, GOLD, nrm);
+  // The mask.
+  c.part();
+  c.ellipse(cx - 0.2, 12.7 + U, 2.6, 2.7, GOLD, { normal: (_x, _y, dx, dy) => sphere(dx * 0.85, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => [cx - 3.4, cx + 3.2], GOLD, (_x, _y, t) => cyl(t, 0.3), { bias: 1 });
+  // Kohl sweeping out from the eyes, a thin mouth.
+  c.part();
+  c.px(cx - 3, 12 + U, KOHL);
+  c.px(cx + 2, 12 + U, KOHL);
+  c.shade(cx - 1, 14 + U, -1);
+  c.shade(cx, 14 + U, -1);
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  // The plaited beard, banded.
+  c.part();
+  striped(c, 15 + U, 17 + U, (y) => (y < 16.5 + U ? [cx - 1.4, cx + 0.8] : [cx - 1, cx + 0.4]), LAPIS, GOLD, (_x, _y, t) => cyl(t, 0.2));
+  uraeus(c, cx - 0.4, 8 + U);
+}
+
+/** The tomb king from behind: the headdress gathered into a banded braid down his back. */
+function headTombUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const nrm: NormalFn = (_x, _y, t, u) => sphere(t * 0.85, u * 0.7 - 0.3, 1);
+  c.part();
+  striped(c, 6.6 + U, 12.6 + U, (y) => {
+    const u = (y - 6.6 - U) / 6;
+    const hw = 2.4 + Math.sqrt(Math.max(0, u)) * 2.9;
+    return [cx - hw, cx + hw];
+  }, LAPIS, GOLD, nrm);
+  // The flaps' edges show past his shoulders.
+  c.part();
+  for (const sd of [-1, 1]) striped(c, 13 + U, 15 + U, () => (sd < 0 ? [cx - 5.2, cx - 3.6] : [cx + 3.6, cx + 5.2]), GOLD, LAPIS, nrm);
+  // The braid.
+  c.part();
+  c.capsule(cx, 12 + U, cx + p.sway * 0.4, 18.4 + U, 1.35, 0.7, LAPIS);
+  c.part();
+  for (const y of [13, 15, 17]) c.shape(Math.round(y + U), Math.round(y + U), () => [cx - 1.3 + (y - 12) * 0.06, cx + 1.3 - (y - 12) * 0.12], GOLD, (_x, _y, t) => cyl(t, 0.2));
+}
+
+/** The tomb king in profile, facing left: the headdress flaring back, a flap over his shoulder, the mask, the beard jutting. */
+function headTombSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const nrm: NormalFn = (_x, _y, t, u) => sphere(t * 0.85 + 0.15, u * 0.7 - 0.35, 1);
+  // The braid behind, then the cloth.
+  c.part();
+  c.capsule(hx + 2.8, 12 + U, hx + 3.6 + p.sway * 0.4, 17.4 + U, 1.2, 0.6, LAPIS);
+  c.part();
+  for (const y of [14, 16]) c.px(hx + 3.2 + (y - 12) * 0.1 + p.sway * 0.2, y + U, GOLD, sphere(0.3, 0));
+  c.part();
+  striped(c, 6.6 + U, 12.6 + U, (y) => {
+    const u = (y - 6.6 - U) / 6;
+    return [hx - 3.4 + Math.max(0, 0.6 - u) * 1.4, hx + 2.4 + u * 1.8];
+  }, LAPIS, GOLD, nrm);
+  // The mask turned to the left, the gold band across the brow.
+  c.part();
+  c.ellipse(hx - 1.8, 12.8 + U, 2.0, 2.4, GOLD, { normal: (_x, _y, dx, dy) => sphere(dx * 0.85 - 0.2, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.px(hx - 4, 12.6 + U, GOLD, sphere(-0.7, -0.1), { bias: 1 });
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => [hx - 3.9, hx + 1.2], GOLD, (_x, _y, t) => cyl(t, 0.3), { bias: 1 });
+  c.part();
+  c.px(hx - 2, 12 + U, KOHL);
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  c.shade(hx - 3, 14 + U, -1);
+  // The flap falling over his shoulder, behind the jaw.
+  c.part();
+  striped(c, 11 + U, 17.4 + U, (y) => {
+    const u = (y - 11 - U) / 6.4;
+    return [hx - 0.6 + u * 0.2, hx + 1.4 - u * 0.2];
+  }, GOLD, LAPIS, (_x, _y, t) => sphere(t * 0.6, 0.1, 1));
+  // The beard, jutting down and forward.
+  c.part();
+  striped(c, 15 + U, 17 + U, (y) => {
+    const k = y - 15 - U;
+    return [hx - 3.6 - k * 0.3, hx - 2.2 - k * 0.3];
+  }, LAPIS, GOLD, (_x, _y, t) => cyl(t, 0.2));
+  uraeus(c, hx - 3.4, 8 + U);
+}
+
+/**
+ * The wyrmblood's folded wings: a bone arm from the shoulder up to a clawed
+ * wrist above the head, dark membrane falling from it to a scalloped edge,
+ * a finger bone or two through it; `spread` opens them as he casts.
+ */
+function wings(c: PixelCanvas, view: View, cx: number, U: number, L: number, flare: number): void {
+  const spread = flare * 1.4;
+  const one = (root: [number, number], wrist: [number, number], ends: [number, number][], s: number, bias: number) => {
+    // The membrane, the edge between two finger tips pulled up into a scallop.
+    const edge: [number, number][] = [root, wrist];
+    ends.forEach((e, i) => {
+      edge.push(e);
+      const n = ends[i + 1];
+      if (n) edge.push([(e[0] + n[0]) / 2, (e[1] + n[1]) / 2 - 2]);
+    });
+    c.part();
+    poly(c, edge, WING, (_x, _y, t, u) => sphere(t * 0.5 * s, u * 0.6 - 0.35, 1), { bias });
+    // Ember veins, faintly alight.
+    for (const e of ends.slice(0, -1)) {
+      for (let k = 0.25; k < 0.9; k += 0.2) c.spark(wrist[0] + (e[0] - wrist[0]) * k + s * 0.6, wrist[1] + (e[1] - wrist[1]) * k, S.light[3], 0.3);
+    }
+    // The finger bones, the arm and the claw.
+    c.part();
+    for (const e of ends.slice(0, -1)) c.line(wrist[0], wrist[1], e[0], e[1], HORN, () => sphere(s * 0.3, -0.2), { bias });
+    c.part();
+    c.capsule(root[0], root[1], wrist[0], wrist[1], 0.9, 0.65, HORN, { bias });
+    c.part();
+    c.px(wrist[0] + s * 0.4, wrist[1] - 1.3, HORN, sphere(s * 0.3, -0.8), { bias: bias + 1 });
+  };
+  if (view === 'down') {
+    for (const s of [-1, 1]) {
+      one(
+        [cx + s * 3.2, 16 + U],
+        [cx + s * (7.4 + spread), 10.4 + U - spread * 0.8],
+        [[cx + s * (8.6 + spread), 21 + L], [cx + s * (6.9 + spread * 0.6), 24.4 + L], [cx + s * 4.8, 25.4 + L]],
+        s,
+        -1,
+      );
+    }
+  } else if (view === 'up') {
+    for (const s of [-1, 1]) {
+      one(
+        [cx + s * 1.4, 15.6 + U],
+        [cx + s * (7.0 + spread), 10.2 + U - spread * 0.8],
+        [[cx + s * (7.8 + spread), 21.4 + L], [cx + s * (5.2 + spread * 0.5), 25 + L], [cx + s * 1.2, 25.6 + L]],
+        s,
+        0,
+      );
+    }
+  } else {
+    // Facing left: the far wing a little higher and in shade, the near one against his back.
+    const hx = cx;
+    one([hx + 0.4, 15 + U], [hx + 3.8 + spread, 9 + U - spread], [[hx + 5.6 + spread, 19.6 + L], [hx + 4.2, 23 + L], [hx + 1.2, 23.6 + L]], 1, -2);
+    one([hx + 1.6, 15.5 + U], [hx + 5.4 + spread, 10 + U - spread * 0.8], [[hx + 7.0 + spread, 21 + L], [hx + 5.6 + spread * 0.5, 24.4 + L], [hx + 2.2, 25 + L]], 1, -1);
+  }
+}
+
+/** A horn from the temple at (x, y), sweeping up and out to a glowing tip; `s` is the side, `back` sweeps it backwards (profile). */
+function horn(c: PixelCanvas, x: number, y: number, s: number, back = false): void {
+  const pts: [number, number, number][] = back
+    ? [[x, y, 1.0], [x + 2.6, y - 2.4, 0.8], [x + 5.0, y - 2.8, 0.55], [x + 6.4, y - 1.6, 0.3]]
+    : [[x, y, 1.1], [x + s * 2.2, y - 2.4, 0.9], [x + s * 2.6, y - 4.8, 0.6], [x + s * 1.8, y - 6.2, 0.35]];
+  c.part();
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0, r0] = pts[i];
+    const [x1, y1, r1] = pts[i + 1];
+    c.capsule(x0, y0, x1, y1, r0, r1, HORN);
+  }
+  // Ridges along it, and embers at the tip.
+  for (let i = 1; i < pts.length - 1; i++) c.shade(pts[i][0], pts[i][1], -1);
+  const [tx, ty] = pts[pts.length - 1];
+  c.spark(tx, ty, S.light[1], 0.5);
+  c.spark(tx - (back ? 1 : s), ty + 1, S.light[2], 0.3);
+}
+
+/** The wyrmblood from the front: ash-dark hair swept back, scaled cheeks, coal eyes, horns rising from his brow. */
+function headWyrmDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(cx, 11.3 + U, 3.8, 3.7, ASH_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.capsule(cx - 3.3, 12 + U, cx - 3.7, 15.6 + U, 1.2, 0.8, ASH_HAIR);
+  c.capsule(cx + 2.9, 12 + U, cx + 3.3, 15.6 + U, 1.2, 0.8, ASH_HAIR);
+  c.part();
+  c.ellipse(cx - 0.3, 12.8 + U, 2.5, 2.4, S.skin);
+  // A widow's peak, swept back.
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => [cx - 3, cx + 2.4], ASH_HAIR, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+  c.px(cx - 1, 11 + U, ASH_HAIR, sphere(0, 0.1));
+  // Scales along the cheekbones, a hard mouth.
+  c.part();
+  c.px(cx - 3, 13 + U, OBSIDIAN, sphere(-0.6, 0.1));
+  c.px(cx + 2, 13 + U, OBSIDIAN, sphere(0.6, 0.1));
+  c.px(cx - 3, 14 + U, OBSIDIAN, sphere(-0.5, 0.4), { bias: -1 });
+  c.spark(cx - 3, 13 + U, S.light[3], 0.35);
+  c.shade(cx - 1, 14 + U, -1);
+  c.shade(cx, 14 + U, -1);
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  horn(c, cx - 2.8, 9.8 + U, -1);
+  horn(c, cx + 2.4, 9.8 + U, 1);
+}
+
+/** The wyrmblood from behind: his hair over the nape, the horns sweeping up. */
+function headWyrmUp(c: PixelCanvas, cx: number, U: number): void {
+  c.part();
+  c.ellipse(cx, 11.3 + U, 3.8, 3.7, ASH_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.shape(13 + U, 16 + U, (y) => {
+    const hw = 2.8 - (y - 13 - U) * 0.5;
+    return [cx - hw, cx + hw];
+  }, ASH_HAIR, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
+  for (let y = 12 + U; y <= 15 + U; y++) c.shade(cx - 1 + ((y & 1) === 0 ? 0 : 2), y, -1);
+  horn(c, cx - 2.6, 9.8 + U, -1);
+  horn(c, cx + 2.6, 9.8 + U, 1);
+}
+
+/** The wyrmblood in profile, facing left: the horn sweeping back over his hair. */
+function headWyrmSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(hx + 0.5, 11.4 + U, 3.4, 3.6, ASH_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.capsule(hx + 2.2, 12.5 + U, hx + 2.8 + p.sway * 0.3, 16 + U, 1.4, 0.8, ASH_HAIR);
+  c.part();
+  c.ellipse(hx - 1.4, 12.9 + U, 2.2, 2.3, S.skin);
+  c.part();
+  c.px(hx - 4, 12.6 + U, S.skin, sphere(-0.7, -0.1), { bias: 1 });
+  c.shade(hx - 2, 14 + U, -1);
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => [hx - 3.4, hx + 1], ASH_HAIR, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+  c.px(hx - 0.4, 11 + U, ASH_HAIR, sphere(0.3, 0.2));
+  c.part();
+  c.px(hx - 1, 13 + U, OBSIDIAN, sphere(0.2, 0.1));
+  c.px(hx, 14 + U, OBSIDIAN, sphere(0.3, 0.3), { bias: -1 });
+  c.spark(hx - 1, 13 + U, S.light[3], 0.35);
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  horn(c, hx - 1.2, 9.8 + U, 1, true);
+}
+
 // ---------------------------------------------------------------------------
 // Directions
 
@@ -382,7 +860,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const fb = place('down', 'b', p.b, U, cx);
   const armA = () => arm(c, 7.5, 16.2 + U, fa, REACH_FRONT, [-0.6, 1], p.palm, fa.behind ? -1 : 0);
   const armB = () => arm(c, 16.5, 16.2 + U, fb, REACH_FRONT, [0.6, 1], 0, fb.behind ? -1 : 0);
-  if (S.blood) highCollar(c, cx, U, 5.6, 5.6);
+  if (S.style === 'wyrm') wings(c, 'down', cx, U, L, p.flare);
+  else if (S.blood) highCollar(c, cx, U, 5.6, 5.6);
   if (fa.behind) armA();
   if (fb.behind) {
     drawStaff(c, 'down', p, fb, -1);
@@ -409,16 +888,27 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     c.shade(Math.round(cx - 3 + u * u * p.sway - u), y, -1);
     c.shade(Math.round(cx + 3 + u * u * p.sway + u), y, -1);
   }
-  opening(c, cx, waist, hem, p.sway);
+  robeTexture(c, cx - 8, cx + 8, top + 1, hem);
+  if (S.style === 'tomb') apron(c, cx, waist, hem, p.sway);
+  else opening(c, cx, waist, hem, p.sway);
   hemTrim(c, hem, cx - 8, cx + 8);
   // The belt, and its clasp.
   c.part();
-  c.shape(waist, waist, () => [cx - 4.4, cx + 4.4], S.inner, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist, () => [cx - 4.4, cx + 4.4], S.style === 'tomb' ? GOLD : S.inner, (_x, _y, t) => cyl(t, 0));
   c.part();
-  if (S.blood) c.px(cx, waist, BLOOD_GEM, sphere(0, -0.3));
-  else c.px(cx, waist, BONE, sphere(0, -0.3));
+  c.px(cx, waist, clasp(), sphere(0, -0.3));
 
-  if (S.blood) {
+  if (S.style === 'wyrm') {
+    // Black scales over the shoulders, a molten stone at the throat.
+    cowl(c, cx, U, 5.4, 5.4);
+    c.part();
+    c.ellipse(cx, 16.3 + U, 1.15, 1.05, WYRM_GEM);
+    headWyrmDown(c, cx, U, p);
+  } else if (S.style === 'tomb') {
+    cowl(c, cx, U, 5.3, 5.3);
+    usekh(c, cx, 14.6 + U);
+    headTombDown(c, cx, U, p);
+  } else if (S.blood) {
     // Crimson over the shoulders, the gem clasp at the throat.
     cowl(c, cx, U, 5.4, 5.4);
     c.part();
@@ -523,11 +1013,20 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     const u = (y - top) / (hem - top);
     c.shade(Math.round(cx + u * u * p.sway), y, -1);
   }
+  robeTexture(c, cx - 8, cx + 8, top + 1, hem);
   hemTrim(c, hem, cx - 8, cx + 8);
   c.part();
-  c.shape(waist, waist, () => [cx - 4.4, cx + 4.4], S.inner, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist, () => [cx - 4.4, cx + 4.4], S.style === 'tomb' ? GOLD : S.inner, (_x, _y, t) => cyl(t, 0));
 
-  if (S.blood) {
+  if (S.style === 'wyrm') {
+    cowl(c, cx, U, 5.4, 5.4);
+    // The wings folded down his back, then the back of his head and his horns.
+    wings(c, 'up', cx, U, L, p.flare);
+    headWyrmUp(c, cx, U);
+  } else if (S.style === 'tomb') {
+    cowl(c, cx, U, 5.3, 5.3);
+    headTombUp(c, cx, U, p);
+  } else if (S.blood) {
     cowl(c, cx, U, 5.4, 5.4);
     // The mane down the back, over the collar's rim.
     highCollar(c, cx, U, 5.6, 5.6);
@@ -574,7 +1073,8 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const fa = place('side', 'a', p.a, U, hx);
   const fb = place('side', 'b', p.b, U, hx);
 
-  if (S.blood) {
+  if (S.style === 'wyrm') wings(c, 'side', hx, U, L, p.flare);
+  else if (S.blood) {
     // The collar standing up behind the head, and the mane streaming back.
     c.part();
     c.shape(11 + U, 16 + U, (y) => [hx + 0.6, hx + 3.6 - (y - 11 - U) * 0.3], BLOOD_INNER, (_x, _y, t, u) => sphere(t * 0.8 + 0.2, u * 0.6 - 0.1, 1));
@@ -609,13 +1109,28 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     if (c.filled(x + 1, y)) c.px(x + 1, y, S.inner, sphere(-0.3, 0.2), { bias: -1 });
   }
   for (let y = waist + 2; y <= hem; y++) c.shade(Math.round(hx + 1.5 + (y - waist) * 0.2), y, -1);
+  robeTexture(c, cx - 8, cx + 8, top + 1, hem);
   hemTrim(c, hem, cx - 8, cx + 8);
   c.part();
-  c.shape(waist, waist, () => [hx - 3.3, hx + 3.3], S.inner, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist, () => [hx - 3.3, hx + 3.3], S.style === 'tomb' ? GOLD : S.inner, (_x, _y, t) => cyl(t, 0));
   c.part();
-  c.px(Math.round(hx - 3.3), waist, S.blood ? BLOOD_GEM : BONE, sphere(-0.5, -0.3));
+  c.px(Math.round(hx - 3.3), waist, clasp(), sphere(-0.5, -0.3));
 
-  if (S.blood) {
+  if (S.style === 'wyrm') {
+    cowl(c, hx, U, 4.0, 4.2);
+    c.part();
+    c.px(Math.round(hx - 3), 16 + U, WYRM_GEM, sphere(-0.5, -0.2));
+    headWyrmSide(c, hx, U, p);
+  } else if (S.style === 'tomb') {
+    cowl(c, hx, U, 4.2, 4.4);
+    // The broad collar's edge on his chest.
+    c.part();
+    for (let y = 16; y <= 18; y++) {
+      c.px(Math.round(hx - 3.6 + (y - 16) * 0.2), y + U, y === 17 ? ((y & 1) ? TURQ : LAPIS) : GOLD, sphere(-0.5, 0));
+      c.px(Math.round(hx - 2.6 + (y - 16) * 0.2), y + U, y === 17 ? LAPIS : GOLD, sphere(-0.3, 0));
+    }
+    headTombSide(c, hx, U, p);
+  } else if (S.blood) {
     cowl(c, hx, U, 4.0, 4.2);
     c.part();
     c.px(Math.round(hx - 3), 16 + U, BLOOD_GEM, sphere(-0.5, -0.2));
@@ -917,43 +1432,108 @@ export function raiseIcon(): Uint8ClampedArray {
   return px;
 }
 
+/** The tomb king's bolt: an ankh of blue soul fire, a trail of sand blowing off behind it. */
+export function ankhBoltIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  // The sand trail, streaming down to the lower left.
+  for (const [x, y, c] of [[3, 13, '#c8a060'], [2, 14, '#8a6a3a'], [4, 11, '#e8c880'], [1, 12, '#8a6a3a'], [5, 13, '#c8a060'], [3, 10, '#8a6a3a']] as const) put(x, y, c);
+  // The loop.
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const d = Math.hypot((x + 0.5 - 9.5) / 2.6, (y + 0.5 - 4) / 3.2);
+      if (d <= 1 && d >= 0.45) put(x, y, d < 0.7 ? '#f4fbff' : '#a8dcff');
+    }
+  }
+  // The crossbar and the stem, gold edged.
+  for (let x = 5; x <= 14; x++) {
+    put(x, 8, x === 5 || x === 14 ? '#3c94f0' : '#a8dcff');
+    put(x, 9, '#3c94f0');
+  }
+  for (let y = 10; y <= 15; y++) {
+    put(9, y, '#f4fbff');
+    put(10, y, '#a8dcff');
+  }
+  outline('#08142e');
+  for (const [x, y] of [[9, 7], [10, 7], [11, 9]]) put(x, y, '#ffd678');
+  return px;
+}
+
+/** Tomb guard: a mummy's wrapped arm clawing up out of the sand, blue fire rising round it. */
+export function tombRaiseIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  for (let y = 11; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const q = Math.hypot((x + 0.5 - 8) / 7.5, (y + 0.5 - 15.5) / 4);
+      if (q <= 1) put(x, y, q < 0.5 ? '#c8a060' : y < 13 ? '#e8c880' : '#8a6a3a');
+    }
+  }
+  const wrap = ['#f0e6cc', '#cbbd98', '#8a7c5a'];
+  for (let y = 6; y <= 12; y++) {
+    put(7, y, (y % 2 === 0) ? wrap[1] : wrap[2]);
+    put(8, y, (y % 2 === 0) ? wrap[0] : wrap[1]);
+  }
+  for (const [x, y] of [[6, 5], [7, 5], [8, 5], [9, 5]]) put(x, y, wrap[0]);
+  for (const [x0, len, lean] of [[5, 3, -1], [7, 4, 0], [9, 3, 0], [10, 2, 1]] as const) {
+    for (let i = 1; i <= len; i++) put(x0 + (i === len ? lean : 0), 5 - i, i === len ? wrap[1] : wrap[0]);
+  }
+  // A loose strip of linen hanging off the wrist.
+  put(9, 8, wrap[1]);
+  put(10, 9, wrap[1]);
+  put(10, 10, wrap[2]);
+  // A gold bracelet.
+  put(7, 9, '#f4cf6a');
+  put(8, 9, '#ffe89a');
+  outline('#1a140a');
+  for (const [x, y, c] of [[2, 4, '#3c94f0'], [3, 2, '#a8dcff'], [13, 5, '#3c94f0'], [12, 3, '#a8dcff'], [13, 1, '#3c94f0'], [1, 9, '#1a3894'], [14, 9, '#1a3894']] as const) put(x, y, c);
+  return px;
+}
+
+/** Colours the blood mage's icons are painted in, brightest first, and the outline. */
+export interface BloodIconColors {
+  light: [string, string, string, string, string];
+  outline: string;
+}
+export const BLOOD_ICON: BloodIconColors = { light: ['#fff0f0', '#ff8a96', '#e8243c', '#a8102a', '#7a0a1e'], outline: '#1e0208' };
+/** The wyrmblood's: molten, running from white-gold to cinder. */
+export const WYRM_ICON: BloodIconColors = { light: ['#fff8e0', '#ffc860', '#ff6a1a', '#b82a0a', '#5a1206'], outline: '#1a0602' };
+
 /** The blood lance: a crimson spear of blood with drops flung off it. */
-export function bloodLanceIcon(): Uint8ClampedArray {
+export function bloodLanceIcon(k: BloodIconColors = BLOOD_ICON): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
   for (let i = 0; i < 12; i++) {
     const x = 2 + i;
     const y = 13 - i;
     const tip = i >= 9;
-    put(x, y, tip ? '#fff0f0' : '#ff8a96');
+    put(x, y, tip ? k.light[0] : k.light[1]);
     if (!tip) {
-      put(x + 1, y, '#e8243c');
-      put(x, y + 1, '#a8102a');
+      put(x + 1, y, k.light[2]);
+      put(x, y + 1, k.light[3]);
     }
-    if (i < 5) put(x - 1, y + 1, '#7a0a1e');
+    if (i < 5) put(x - 1, y + 1, k.light[4]);
   }
-  put(14, 1, '#fff0f0');
-  put(13, 1, '#ff8a96');
-  put(14, 2, '#ff8a96');
-  outline('#1e0208');
-  for (const [x, y] of [[3, 7], [6, 3], [10, 13], [12, 9]]) put(x, y, '#e8243c');
+  put(14, 1, k.light[0]);
+  put(13, 1, k.light[1]);
+  put(14, 2, k.light[1]);
+  outline(k.outline);
+  for (const [x, y] of [[3, 7], [6, 3], [10, 13], [12, 9]]) put(x, y, k.light[2]);
   return px;
 }
 
 /** The crimson nova: a ring of blood bursting out from a heart of light. */
-export function novaIcon(): Uint8ClampedArray {
+export function novaIcon(k: BloodIconColors = BLOOD_ICON): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
   for (let y = 0; y < 16; y++) {
     for (let x = 0; x < 16; x++) {
       const d = Math.hypot(x + 0.5 - 8, y + 0.5 - 8);
       const a = Math.atan2(y + 0.5 - 8, x + 0.5 - 8);
       const jag = Math.sin(a * 6) * 0.5;
-      if (d <= 1.8) put(x, y, '#fff0f0');
-      else if (d <= 2.8) put(x, y, '#ff8a96');
-      else if (Math.abs(d - (6 + jag)) <= 0.9) put(x, y, d < 6 + jag ? '#ff8a96' : '#e8243c');
+      if (d <= 1.8) put(x, y, k.light[0]);
+      else if (d <= 2.8) put(x, y, k.light[1]);
+      else if (Math.abs(d - (6 + jag)) <= 0.9) put(x, y, d < 6 + jag ? k.light[1] : k.light[2]);
     }
   }
-  outline('#1e0208');
+  outline(k.outline);
   // Drops flung between the heart and the ring.
-  for (const [x, y] of [[8, 4], [12, 8], [8, 12], [4, 8]]) put(x, y, '#a8102a');
+  for (const [x, y] of [[8, 4], [12, 8], [8, 12], [4, 8]]) put(x, y, k.light[3]);
   return px;
 }
