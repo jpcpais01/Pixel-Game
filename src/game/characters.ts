@@ -27,13 +27,13 @@ import { Archer, RANGER_STYLE, STORM_STYLE } from './Archer';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
 import { DANCER_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
-import { BLOOD_KIT, NECRO_KIT, Necromancer } from './Necromancer';
+import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
-import { Bard, DRUMMER_KIT, MINSTREL_KIT, WILD_KIT } from './Bard';
+import { Bard, DRUMMER_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
 import { ARACHNE_KIT, CRIMSON_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, TOYMAKER_KIT, WEAVER_KIT } from './Puppeteer';
 import { PUPPETEER_H, PUPPETEER_ORIGIN_Y } from '../art/puppeteer';
-import { AEON_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT } from './Chrono';
+import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT } from './Samurai';
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
@@ -650,6 +650,22 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_raise' },
         },
         lookName: 'Grave',
+        skins: [
+          {
+            // A pharaoh risen from his tomb: nemes and gold mask, a lapis ankh staff, mummies at his call.
+            id: 'tomb',
+            name: 'Tomb King',
+            role: 'Pharaoh of the risen dead',
+            accent: 0x5aa8ff,
+            attack: 'Ankh bolt',
+            special: 'Tomb guard',
+            preview: { texture: 'necro_tomb', glow: 'necro_tomb_e', idle: 'necro_tomb_idle_down', chosen: 'necro_tomb_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
+            buttons: {
+              attack: { texture: 'icon_soul_tomb' },
+              special: { texture: 'icon_raise_tomb' },
+            },
+          },
+        ],
       },
       {
         // Tougher, with fast lances that pierce and heal, and a nova paid for
@@ -667,9 +683,28 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_nova' },
         },
         lookName: 'Sanguine',
+        skins: [
+          {
+            // A dragon-blooded sorcerer: ivory horns, crimson wings, obsidian scales cracked with fire.
+            id: 'wyrm',
+            name: 'Wyrmblood',
+            role: 'Dragon blood, molten and old',
+            accent: 0xff7a2a,
+            attack: 'Magma lance',
+            special: 'Wyrmfire nova',
+            preview: { texture: 'necro_wyrm', glow: 'necro_wyrm_e', idle: 'necro_wyrm_idle_down', chosen: 'necro_wyrm_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
+            buttons: {
+              attack: { texture: 'icon_lance_wyrm' },
+              special: { texture: 'icon_nova_wyrm' },
+            },
+          },
+        ],
       },
     ],
-    spawn: (world, x, y, look) => new Necromancer(world, x, y, look === 'blood' ? BLOOD_KIT : NECRO_KIT),
+    spawn(world, x, y, look) {
+      const kit = { necro: NECRO_KIT, tomb: TOMB_KIT, blood: BLOOD_KIT, wyrm: WYRM_KIT }[look] ?? NECRO_KIT;
+      return new Necromancer(world, x, y, kit);
+    },
   },
   {
     id: 'bard',
@@ -706,6 +741,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_song_wild' },
             },
           },
+          {
+            // A masked jester in rose and black motley, bells on his cap, diamonds for notes.
+            id: 'harlequin',
+            name: 'Harlequin',
+            role: 'A song and a smile',
+            accent: 0xff5ab8,
+            attack: 'Diamond notes',
+            special: 'Song of mirth',
+            preview: { texture: 'bard_harlequin', glow: 'bard_harlequin_e', idle: 'bard_harlequin_idle_down', chosen: 'bard_harlequin_song_down', originY: BARD_ORIGIN_Y / BARD_H },
+            buttons: {
+              attack: { texture: 'icon_lute_harlequin' },
+              special: { texture: 'icon_song_harlequin' },
+            },
+          },
         ],
       },
       {
@@ -723,9 +772,28 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_rhythm' },
         },
         lookName: 'Warband',
+        skins: [
+          {
+            // A wolf-pelt shaman painted in woad, beating a black spirit drum for the pack.
+            id: 'howl',
+            name: 'Moonhowl',
+            role: 'Drums of the wolf spirit',
+            accent: 0x8a9aff,
+            attack: 'Spirit drum',
+            special: 'Pack rhythm',
+            preview: { texture: 'bard_howl', glow: 'bard_howl_e', idle: 'bard_howl_idle_down', chosen: 'bard_howl_boom_down', originY: BARD_ORIGIN_Y / BARD_H },
+            buttons: {
+              attack: { texture: 'icon_drum_howl' },
+              special: { texture: 'icon_rhythm_howl' },
+            },
+          },
+        ],
       },
     ],
-    spawn: (world, x, y, look) => new Bard(world, x, y, look === 'drummer' ? DRUMMER_KIT : look === 'wildsong' ? WILD_KIT : MINSTREL_KIT),
+    spawn(world, x, y, look) {
+      const kit = { minstrel: MINSTREL_KIT, wildsong: WILD_KIT, harlequin: HARLEQUIN_KIT, drummer: DRUMMER_KIT, howl: HOWL_KIT }[look] ?? MINSTREL_KIT;
+      return new Bard(world, x, y, kit);
+    },
   },
   {
     id: 'chronomancer',
@@ -761,6 +829,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_stasis_moon' },
             },
           },
+          {
+            // A wind-up automaton: an alarm clock for a head, a pendulum swinging in a glass case, a key turning in his back.
+            id: 'clockwork',
+            name: 'Clockwork',
+            role: 'Wound up and ticking',
+            accent: 0xa8f060,
+            attack: 'Cog hand',
+            special: 'Stasis engine',
+            preview: { texture: 'chrono_clockwork', glow: 'chrono_clockwork_e', idle: 'chrono_clockwork_idle_down', chosen: 'chrono_clockwork_field_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+            buttons: {
+              attack: { texture: 'icon_hand_clockwork' },
+              special: { texture: 'icon_stasis_clockwork' },
+            },
+          },
         ],
       },
       {
@@ -792,11 +874,25 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_rewind_aeon' },
             },
           },
+          {
+            // A traveller from a future that went wrong: white coat, a black visor, a tesseract in hand, and the picture tearing round him.
+            id: 'anomaly',
+            name: 'Anomaly',
+            role: 'An error in time',
+            accent: 0x40e0ff,
+            attack: 'Glitch shards',
+            special: 'Rollback',
+            preview: { texture: 'chrono_anomaly', glow: 'chrono_anomaly_e', idle: 'chrono_anomaly_idle_down', chosen: 'chrono_anomaly_rewind_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+            buttons: {
+              attack: { texture: 'icon_shards_anomaly' },
+              special: { texture: 'icon_rewind_anomaly' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT }[look] ?? KEEPER_KIT;
+      const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, clockwork: CLOCKWORK_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT, anomaly: ANOMALY_KIT }[look] ?? KEEPER_KIT;
       return new Chrono(world, x, y, kit);
     },
   },

@@ -7,7 +7,8 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
 import { heroBuffs } from './buffs';
-import { DRUM_PAL, HASTE, Note, RHYTHM, Shockwave, SongBurst, TROUBADOUR_SONG, WILD_HASTE, WILD_SONG, type NoteKind, type SongLook } from './Songs';
+import { DRUM_PAL, HARLEQUIN_HASTE, HARLEQUIN_SONG, HASTE, HOWL_PAL, HOWL_RHYTHM, Note, RHYTHM, Shockwave, SongBurst, TROUBADOUR_SONG, WILD_HASTE, WILD_SONG, type NoteKind, type SongLook } from './Songs';
+import type { Pal } from './ultimate/ink';
 import type { BuffDef } from './buffs';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
@@ -49,6 +50,9 @@ export interface BardKit {
   /** How the minstrel's music looks, and the song's buff as it shows (the same buff in each look). */
   song: SongLook;
   haste: BuffDef;
+  /** The colours of the drummer's blows, and his rhythm's buff as it shows (the same buff in each look). */
+  drumPal: Pal;
+  rhythm: BuffDef;
 }
 
 /**
@@ -69,10 +73,15 @@ export const MINSTREL_KIT: BardKit = {
   specialCooldown: 14000,
   song: TROUBADOUR_SONG,
   haste: HASTE,
+  drumPal: DRUM_PAL,
+  rhythm: RHYTHM,
 };
 
 /** The minstrel in his wildsong skin: the same bard, in moss and forest light. */
 export const WILD_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_wild', song: WILD_SONG, haste: WILD_HASTE };
+
+/** The minstrel in his harlequin skin: the same bard in motley, rose and gold. */
+export const HARLEQUIN_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_harlequin', song: HARLEQUIN_SONG, haste: HARLEQUIN_HASTE };
 
 /**
  * The war drummer: tougher and slower, beating waves of sound out of his drum
@@ -93,7 +102,12 @@ export const DRUMMER_KIT: BardKit = {
   specialCooldown: 15000,
   song: TROUBADOUR_SONG,
   haste: HASTE,
+  drumPal: DRUM_PAL,
+  rhythm: RHYTHM,
 };
+
+/** The war drummer in his moonhowl skin: the same drums, beaten in spirit light. */
+export const HOWL_KIT: BardKit = { ...DRUMMER_KIT, key: 'bard_howl', drumPal: HOWL_PAL, rhythm: HOWL_RHYTHM };
 
 const CHAIN: Act[] = ['beat', 'beat2', 'boom'];
 
@@ -283,19 +297,19 @@ export class Bard implements Hero {
     const oy = this.y - 8;
     const angle = Math.atan2(u.y, u.x);
     sound.drumBeat(this.world.pan(ox), big);
-    this.world.addEffect(new Shockwave(this.world, ox + u.x * 4, this.y - 6 + u.y * 3, angle, b.spread, b.radius + 4, DRUM_PAL, big ? 340 : 260));
+    this.world.addEffect(new Shockwave(this.world, ox + u.x * 4, this.y - 6 + u.y * 3, angle, b.spread, b.radius + 4, this.kit.drumPal, big ? 340 : 260));
     const hits = this.world.melee({ kind: 'arc', x: ox, y: oy, radius: b.radius, angle, spread: b.spread }, { damage: b.damage, heavy: big, knock: b.knock, fromX: ox, fromY: oy });
-    for (const h of hits) this.world.debris(DRUM_PAL.tints, snap(h.x), snap(h.y), big ? 6 : 4, h.y + 20);
+    for (const h of hits) this.world.debris(this.kit.drumPal.tints, snap(h.x), snap(h.y), big ? 6 : 4, h.y + 20);
     if (big) this.world.cameras.main.shake(90, 0.0012);
   }
 
   /** The battle rhythm: the roll ends in a great beat that shoves foes off him, and every blow lands harder for a while. */
   private battleRhythm(): void {
     this.specialCd = this.kit.specialCooldown;
-    heroBuffs.add(RHYTHM);
-    this.world.buffGained(RHYTHM);
+    heroBuffs.add(this.kit.rhythm);
+    this.world.buffGained(this.kit.rhythm);
     sound.drumBeat(this.world.pan(this.x), true);
-    this.world.addEffect(new Shockwave(this.world, this.x, this.y - 4, 0, Math.PI, 40, DRUM_PAL, 420));
+    this.world.addEffect(new Shockwave(this.world, this.x, this.y - 4, 0, Math.PI, 40, this.kit.drumPal, 420));
     this.world.melee({ kind: 'circle', x: this.x, y: this.y - 6, radius: 32 }, { damage: 6, heavy: false, knock: 200, fromX: this.x, fromY: this.y - 6 });
     this.world.cameras.main.shake(120, 0.0015);
   }

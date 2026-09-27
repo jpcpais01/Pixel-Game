@@ -6,7 +6,7 @@ import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
-import { AEON_PAL, Ghost, KEEPER_PAL, MOON_PAL, RIFT_PAL, StasisClock, TimeBolt, type BoltKind } from './Chronos';
+import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, Ghost, KEEPER_PAL, MOON_PAL, RIFT_PAL, StasisClock, TimeBolt, type BoltKind } from './Chronos';
 import { Shockwave } from './Songs';
 import { bloom, flare, strikeGround, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
@@ -56,6 +56,7 @@ export const KEEPER_KIT: ChronoKit = {
 };
 
 export const MOON_KIT: ChronoKit = { ...KEEPER_KIT, key: 'chrono_moon', pal: MOON_PAL, bolt: keeperBolt('chrono_moon', MOON_PAL) };
+export const CLOCKWORK_KIT: ChronoKit = { ...KEEPER_KIT, key: 'chrono_clockwork', pal: CLOCKWORK_PAL, bolt: keeperBolt('chrono_clockwork', CLOCKWORK_PAL) };
 
 /**
  * The paradox: quicker and tougher, throwing shards that his own echo, a
@@ -75,6 +76,7 @@ export const PARADOX_KIT: ChronoKit = {
 };
 
 export const AEON_KIT: ChronoKit = { ...PARADOX_KIT, key: 'chrono_aeon', pal: AEON_PAL, bolt: riftShard('chrono_aeon', AEON_PAL) };
+export const ANOMALY_KIT: ChronoKit = { ...PARADOX_KIT, key: 'chrono_anomaly', pal: ANOMALY_PAL, bolt: riftShard('chrono_anomaly', ANOMALY_PAL) };
 
 /** How far back his echo stands, and how long after his throw it throws. */
 const ECHO_BACK = 800;

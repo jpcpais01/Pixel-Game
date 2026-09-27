@@ -21,6 +21,10 @@ export const MOON_PAL: Pal = pal(0xf4fbff, 0xc4e4ff, 0x7ab8ff, 0x2a5aa8, 0x9ccaf
 export const RIFT_PAL: Pal = pal(0xf6eeff, 0xd4b0ff, 0x9a5cff, 0x4a2a9a, 0xb890ff);
 /** The aeon's: sea-green. */
 export const AEON_PAL: Pal = pal(0xeafff6, 0x9affd8, 0x2ee0a0, 0x127a6a, 0x6ff0c0);
+/** The clockwork's: radium green. */
+export const CLOCKWORK_PAL: Pal = pal(0xf6ffe8, 0xd8ffa0, 0x8ef040, 0x2e8a2a, 0xa8f060);
+/** The anomaly's: error cyan. */
+export const ANOMALY_PAL: Pal = pal(0xf0ffff, 0xa0faff, 0x20d8f0, 0x1a4aa0, 0x40e0ff);
 
 /** How a bolt (or a shard) flies and what it does. */
 export interface BoltKind {

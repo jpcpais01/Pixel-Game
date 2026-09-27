@@ -24,7 +24,8 @@
 // raised overhead and the plume can stream back. Hands are posed in the
 // bard's own terms (forward, out to the side, height) and placed per view.
 
-import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
+import { PixelCanvas, cyl, hex, sphere, type Material, type NormalFn, type RGB } from './pixel';
+import { poly } from './shapes';
 import { BONE, BOOT, EYE, GOLD, LEATHER, SKIN } from './palette';
 import { iconPainter } from './effects';
 import { DIRS, type Dir } from './wizard';
@@ -100,6 +101,52 @@ interface Dress {
 const TROUBADOUR: Dress = { coat: DOUBLET, cloak: WINE, cuff: SHIRT, hose: HOSE, boot: TALL_BOOT, hand: SKIN, lute: LUTE, neck: ROSEWOOD };
 const WILDWOOD: Dress = { coat: BARK, cloak: MOSS, cuff: LEAF, hose: ROOT, boot: ROOT, hand: SAGE, lute: BIRCH, neck: BRANCH };
 
+// The harlequin.
+const MOTLEY_A: Material = { ramp: ramp('#3a0624', '#620c3c', '#921a5a', '#c02c7a', '#e85a9e'), outline: INK, outlineLit: hex('#2a0418') };
+const MOTLEY_B: Material = { ramp: ramp('#0c0a12', '#18141e', '#26202e', '#362e40', '#4a4056'), outline: hex('#050408'), outlineLit: hex('#100c16') };
+const RUFF: Material = { ramp: ramp('#8a8494', '#c0bcc8', '#e6e2ec', '#ffffff'), outline: hex('#2a2632') };
+const MASK: Material = { ramp: ramp('#8a8494', '#c4c0cc', '#ece8f0', '#ffffff'), outline: hex('#24202c'), outlineLit: hex('#3a3642') };
+const LIP: Material = { ramp: ramp('#5a0a1e', '#a8183a', '#e0305a'), outline: hex('#2a0410'), noOutline: true };
+const LACQ_BLACK: Material = { ramp: ramp('#08060a', '#141018', '#221c26', '#342a38', '#5a4a60'), outline: hex('#040306'), shine: true };
+const IVORY: Material = { ramp: ramp('#6a6252', '#a89e86', '#d8d0b8', '#f4eedc'), outline: hex('#1a160e') };
+const MOTLEY: Dress = { coat: MOTLEY_A, cloak: MOTLEY_B, cuff: RUFF, hose: MOTLEY_A, boot: MOTLEY_B, hand: MASK, lute: LACQ_BLACK, neck: IVORY };
+
+// The moonhowl.
+const WOLF: Material = { ramp: ramp('#24262e', '#3e424e', '#626876', '#8e94a2', '#c0c6d0'), outline: hex('#0c0d12'), outlineLit: hex('#1a1c24') };
+const WOAD: Material = { ramp: ramp('#1a2a78', '#2c46b0', '#5a7ae8'), outline: hex('#0a1030'), noOutline: true, emissive: 0.35 };
+const BLACK_BEARD: Material = { ramp: ramp('#0c0a0c', '#1c181c', '#302a2e', '#463e42'), outline: hex('#050405'), outlineLit: hex('#141014') };
+const HIDE_KILT: Material = { ramp: ramp('#2a1c12', '#46301e', '#664a2e', '#86683e'), outline: INK };
+const SPIRIT_SHELL: Material = { ramp: ramp('#080a26', '#121848', '#1e286c', '#2e3c94', '#4658bc'), outline: hex('#04050e'), shine: true };
+const SINEW: Material = { ramp: ramp('#6a6252', '#a89c80', '#d8ccaa'), outline: hex('#2a2418'), noOutline: true };
+const PALE_HIDE: Material = { ramp: ramp('#8a8474', '#b8b09a', '#dcd4bc', '#f2ecd8'), outline: hex('#3a3428') };
+const FEATHER: Material = { ramp: ramp('#2a2a30', '#5a5a64', '#9a9aa4', '#e0e0e6'), outline: hex('#0e0e12'), noAO: true };
+const NOSE: Material = { ramp: ramp('#060608', '#18181c'), outline: hex('#060608'), shine: true };
+
+/** What the war drummer wears and beats, by part. */
+interface Gear {
+  /** The mantle and the ruffs at his ankles. */
+  fur: Material;
+  /** The vest, and the bracers on his forearms. */
+  vest: Material;
+  paint: Material;
+  beard: Material;
+  /** The bead binding the beard's braid. */
+  bead: Material;
+  kilt: Material;
+  /** The drum: its shell, rims, lacing and head. */
+  shell: Material;
+  rim: Material;
+  rope: Material;
+  hide: Material;
+  /** The mallets' handles and heads. */
+  handle: Material;
+  knob: Material;
+}
+
+const WARBAND: Gear = { fur: FUR, vest: VEST, paint: WARPAINT, beard: GINGER, bead: BRONZE, kilt: KILT, shell: LACQUER, rim: BRONZE, rope: ROPE, hide: HIDE, handle: HANDLE, knob: MALLET };
+const DARKWOOD: Material = { ramp: ramp('#140e0a', '#2a1e14', '#44321e', '#5e4a2c'), outline: hex('#080504'), shine: true };
+const PACK: Gear = { fur: WOLF, vest: WOLF, paint: WOAD, beard: BLACK_BEARD, bead: BONE, kilt: HIDE_KILT, shell: SPIRIT_SHELL, rim: DARKWOOD, rope: SINEW, hide: PALE_HIDE, handle: BONE, knob: WOLF };
+
 /** One look for the bard: its texture key, its instrument, and the light of its music. */
 export interface BardLook {
   key: string;
@@ -109,6 +156,10 @@ export interface BardLook {
   dress: Dress;
   /** The wildsong: hooded, cloaked in moss, wisps drifting round him. */
   wild?: boolean;
+  /** A skin that changes the cut, not just the cloth: the harlequin (a minstrel) or the moonhowl (a drummer). */
+  style?: 'harlequin' | 'howl';
+  /** The drummer's kit. */
+  gear?: Gear;
   /** Light of the music, brightest first. */
   light: [RGB, RGB, RGB, RGB];
 }
@@ -136,12 +187,33 @@ export const DRUMMER_LOOK: BardLook = {
   light: [hex('#fffbe8'), hex('#ffd98a'), hex('#ff9a3a'), hex('#b8401e')],
 };
 
-export const BARD_LOOKS = [MINSTREL_LOOK, DRUMMER_LOOK, WILD_LOOK];
+/** The minstrel's harlequin skin: rose and gold. */
+export const HARLEQUIN_LOOK: BardLook = {
+  key: 'bard_harlequin',
+  drum: false,
+  dress: MOTLEY,
+  style: 'harlequin',
+  light: [hex('#fff4fb'), hex('#ffb0e8'), hex('#ff4ab8'), hex('#8a1a6a')],
+};
+
+/** The war drummer's moonhowl skin: spirit light, pale indigo. */
+export const HOWL_LOOK: BardLook = {
+  key: 'bard_howl',
+  drum: true,
+  dress: TROUBADOUR,
+  style: 'howl',
+  gear: PACK,
+  light: [hex('#f2f4ff'), hex('#bcc8ff'), hex('#6c7cff'), hex('#2c2a9a')],
+};
+
+export const BARD_LOOKS = [MINSTREL_LOOK, DRUMMER_LOOK, WILD_LOOK, HARLEQUIN_LOOK, HOWL_LOOK];
 
 /** The look being drawn; set by buildBardFrames. */
 let S: BardLook = MINSTREL_LOOK;
 /** Its clothes. */
 let D: Dress = TROUBADOUR;
+/** The drummer's kit. */
+let G: Gear = WARBAND;
 
 // ---------------------------------------------------------------------------
 // The rig
@@ -236,19 +308,22 @@ function elbow(sx: number, sy: number, fx: number, fy: number, reach: number, hi
 }
 
 /** The minstrel's arm: a puffed, slashed wine sleeve, a teal forearm, a cream cuff and the hand (in his dress's colours). */
-function sleevedArm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, hint: [number, number], bias = 0): void {
+function sleevedArm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, hint: [number, number], bias = 0, swap = false): void {
   const [ex, ey] = elbow(sx, sy, p.x, p.y, reach, hint);
+  // The harlequin's sleeves are motley: each arm the other way round.
+  const puff = swap ? D.coat : D.cloak;
+  const fore = swap ? D.cloak : D.coat;
   c.part();
-  c.capsule(sx, sy, ex, ey, 2.0, 1.6, D.cloak, { bias });
+  c.capsule(sx, sy, ex, ey, 2.0, 1.6, puff, { bias });
   // A slash of the doublet down the puff (the wildsong's is all cloak).
   if (!S.wild) {
     c.part();
-    c.px((sx + ex) / 2, (sy + ey) / 2, D.coat, sphere(0, -0.2), { bias: bias + 1 });
+    c.px((sx + ex) / 2, (sy + ey) / 2, fore, sphere(0, -0.2), { bias: bias + 1 });
   }
   c.part();
   const wx = ex + (p.x - ex) * 0.8;
   const wy = ey + (p.y - ey) * 0.8;
-  c.capsule(ex, ey, wx, wy, 1.35, 1.2, D.coat, { bias });
+  c.capsule(ex, ey, wx, wy, 1.35, 1.2, fore, { bias });
   c.part();
   c.ellipse(wx, wy, 1.25, 1.1, D.cuff, { bias });
   c.part();
@@ -261,7 +336,12 @@ function bareArm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: numbe
   c.part();
   c.capsule(sx, sy, ex, ey, 1.9, 1.5, SKIN, { bias });
   c.part();
-  c.capsule(ex + (p.x - ex) * 0.3, ey + (p.y - ey) * 0.3, p.x, p.y, 1.45, 1.35, VEST, { bias });
+  c.capsule(ex + (p.x - ex) * 0.3, ey + (p.y - ey) * 0.3, p.x, p.y, 1.45, 1.35, G.vest, { bias });
+  if (S.style === 'howl') {
+    // A band of woad round the upper arm.
+    c.part();
+    c.px((sx + ex * 2) / 3, (sy + ey * 2) / 3, G.paint, sphere(0, 0), { bias });
+  }
   c.part();
   c.ellipse(p.x, p.y, 1.25, 1.2, SKIN, { bias });
 }
@@ -283,18 +363,18 @@ function mallet(c: PixelCanvas, view: View, arm: 'a' | 'b', p: Placed, k: number
   const [ux, uy] = stickDir(view, arm, k);
   const len = 5.2;
   c.part();
-  c.line(p.x - ux * 0.8, p.y - uy * 0.8, p.x + ux * len, p.y + uy * len, HANDLE, () => sphere(-uy * 0.5, ux * 0.5 - 0.3), { bias });
+  c.line(p.x - ux * 0.8, p.y - uy * 0.8, p.x + ux * len, p.y + uy * len, G.handle, () => sphere(-uy * 0.5, ux * 0.5 - 0.3), { bias });
   c.part();
   const hx = p.x + ux * (len + 0.6);
   const hy = p.y + uy * (len + 0.6);
-  c.ellipse(hx, hy, 1.35, 1.3, MALLET, { bias });
+  c.ellipse(hx, hy, 1.35, 1.3, G.knob, { bias });
   if (glow > 0 && k < 0.35) glowAt(c, hx, hy, glow * 0.7);
 }
 
 /** Legs in hose (or dark wraps) from the hip to the ankle. */
-function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
+function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0, m?: Material): void {
   c.part();
-  c.capsule(hx, hy, fx, fy, 1.55, 1.3, S.drum ? KILT : D.hose, { bias });
+  c.capsule(hx, hy, fx, fy, 1.55, 1.3, m ?? (S.drum ? G.kilt : D.hose), { bias });
 }
 
 /** The minstrel's tall boot with a turned cuff; the drummer's boot wrapped in fur. */
@@ -307,7 +387,7 @@ function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): voi
   const top = Math.round(y - 2.4);
   if (S.drum) {
     // A ruff of fur round the ankle.
-    c.shape(top, top + 1, () => [x - w - 0.2, x + w + 0.2], FUR, (_x, _y, t, u) => sphere(t * 0.8, u - 0.6, 1), { bias: bias + 1 });
+    c.shape(top, top + 1, () => [x - w - 0.2, x + w + 0.2], G.fur, (_x, _y, t, u) => sphere(t * 0.8, u - 0.6, 1), { bias: bias + 1 });
     c.shade(x - 1, top + 1, -1);
   } else {
     c.shape(top - 1, top, () => [x - w, x + w], D.boot, (_x, _y, t) => cyl(t, 0.3), { bias: bias + 1 });
@@ -389,6 +469,12 @@ function drawLute(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, b
   c.px(hx + vx * 0.9, hy + vy * 0.9, HOLE);
   c.part();
   c.px(bx - ux * 2.4 + vx * 0.5, by - uy * 2.4 + vy * 0.5, D.neck, sphere(0, -0.3), { bias });
+  if (S.style === 'harlequin') {
+    // Gold inlaid round the rosette, and a gold diamond by the bridge.
+    c.part();
+    for (const [du, dv] of [[0, -1.5], [0, 1.9], [-1.3, 0.4], [1.4, 0.4]] as const) c.px(hx + ux * du + vx * dv, hy + uy * du + vy * dv, GOLD, sphere(dv * 0.2, -0.4), { bias });
+    c.spark(bx - ux * 1.6 - vx * 1.6, by - uy * 1.6 - vy * 1.6, S.light[1], 0.35 + p.glow * 0.4);
+  }
   if (S.wild) {
     // The rosette glows softly from within, and a vine curls round the bowl.
     c.spark(hx, hy, S.light[2], 0.35 + p.glow * 0.4);
@@ -415,25 +501,25 @@ function drawLute(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, b
 function drawDrum(c: PixelCanvas, cx: number, top: number, rx: number, glow: number, bias = 0): void {
   const bot = top + 4.4;
   c.part();
-  c.shape(Math.round(top), Math.round(bot), () => [cx - rx, cx + rx], LACQUER, (_x, _y, t) => cyl(t, 0.1), { bias });
+  c.shape(Math.round(top), Math.round(bot), () => [cx - rx, cx + rx], G.shell, (_x, _y, t) => cyl(t, 0.1), { bias });
   // The bottom rim, curving with the shell.
   c.part();
   for (let x = Math.floor(cx - rx); x < Math.ceil(cx + rx); x++) {
     const t = (x + 0.5 - cx) / rx;
     if (Math.abs(t) > 1) continue;
-    c.px(x, Math.round(bot) + Math.round((1 - t * t) * 0.9), BRONZE, cyl(t, 0.4), { bias });
+    c.px(x, Math.round(bot) + Math.round((1 - t * t) * 0.9), G.rim, cyl(t, 0.4), { bias });
   }
   // Rope laced in a zigzag round the shell.
   c.part();
   for (let x = Math.floor(cx - rx) + 1; x < Math.ceil(cx + rx) - 1; x++) {
     const k = Math.abs((((x - Math.floor(cx - rx)) % 4) + 4) % 4 - 2);
-    c.px(x, Math.round(top) + 1 + k, ROPE, sphere((x + 0.5 - cx) / rx, 0), { bias });
+    c.px(x, Math.round(top) + 1 + k, G.rope, sphere((x + 0.5 - cx) / rx, 0), { bias });
   }
   // The head: a bronze hoop round a pale hide.
   c.part();
-  c.ellipse(cx, top, rx + 0.4, 1.9, BRONZE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.6, dy * 0.3 - 0.8, 1), bias });
+  c.ellipse(cx, top, rx + 0.4, 1.9, G.rim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.6, dy * 0.3 - 0.8, 1), bias });
   c.part();
-  c.ellipse(cx, top - 0.1, rx - 0.7, 1.25, HIDE, { normal: (_x, _y, dx) => sphere(dx * 0.3, -0.9, 1), bias });
+  c.ellipse(cx, top - 0.1, rx - 0.7, 1.25, G.hide, { normal: (_x, _y, dx) => sphere(dx * 0.3, -0.9, 1), bias });
   if (glow > 0) {
     const [core, hot, mid] = S.light;
     c.spark(cx, top, core, glow);
@@ -661,6 +747,276 @@ function wisps(c: PixelCanvas, U: number, tick: number): void {
 }
 
 // ---------------------------------------------------------------------------
+// The harlequin
+
+/** Fill rows between `edges` in the harlequin's diamonds, `a` and `b` in turn. */
+function motley(c: PixelCanvas, y0: number, y1: number, edges: (y: number) => [number, number] | null, a: Material, b: Material, normal: NormalFn, bias = 0): void {
+  for (let y = Math.round(y0); y <= Math.round(y1); y++) {
+    const e = edges(y);
+    if (!e) continue;
+    const [l, r] = e;
+    for (let x = Math.round(l); x <= Math.round(r) - 1; x++) {
+      const t = r - l > 0.001 ? ((x + 0.5 - l) / (r - l)) * 2 - 1 : 0;
+      const k = (Math.floor((x + y) / 3) + Math.floor((x - y + 300) / 3)) & 1;
+      c.px(x, y, k ? b : a, normal(x, y, t, (y - y0) / Math.max(1, y1 - y0)), { bias });
+    }
+  }
+}
+
+/** The hem cut into points below row `y`, rose and black in turn, a little gold bell on every other one. */
+function dags(c: PixelCanvas, x0: number, x1: number, y: number, tick: number, bias = 0): void {
+  c.part();
+  for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) {
+    if (!c.filled(x, y)) continue;
+    const k = ((x % 4) + 4) % 4;
+    const g = Math.floor(x / 4) & 1;
+    const m = g ? MOTLEY_B : MOTLEY_A;
+    if (k === 1 || k === 2) c.px(x, y + 1, m, sphere(0, 0.6), { bias });
+    if (k === 1 && g) {
+      c.px(x, y + 2, GOLD, sphere(0, 0.2), { bias: bias + 1 });
+      if ((tick + x) % 3 === 0) c.spark(x, y + 2, S.light[0], 0.4);
+    }
+  }
+}
+
+/** A white ruff, pleated round its rim. */
+function ruff(c: PixelCanvas, x: number, y: number, rx: number, ry: number): void {
+  c.part();
+  c.ellipse(x, y, rx, ry, RUFF, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 - 0.2, 1) });
+  for (let xx = Math.floor(x - rx); xx <= Math.ceil(x + rx); xx++) {
+    if ((((xx % 2) + 2) % 2) !== 0) continue;
+    c.shade(xx, Math.round(y + ry - 0.6), -1);
+    c.shade(xx, Math.round(y - ry + 0.4), -1);
+  }
+}
+
+/** A chain of capsules through `pts` ([x, y, radius] each). */
+function chain(c: PixelCanvas, pts: [number, number, number][], m: Material, bias = 0): void {
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0, r0] = pts[i];
+    const [x1, y1, r1] = pts[i + 1];
+    c.capsule(x0, y0, x1, y1, r0, r1, m, { bias });
+  }
+}
+
+/** One of the cap's floppy points, drooping to a gold bell that swings as he moves. */
+function capPoint(c: PixelCanvas, pts: [number, number][], m: Material, tick: number, s: number, bias = 0): void {
+  const flick = [0, 0.3, 0.5, 0.3, 0, -0.2][tick % 6];
+  const r = [1.3, 1.05, 0.8, 0.6, 0.45];
+  const n = pts.length;
+  const swung = pts.map(([x, y], i): [number, number, number] => {
+    const k = i / (n - 1);
+    return [x + s * flick * k * 0.5, y + flick * k * k, r[Math.min(i, r.length - 1)]];
+  });
+  c.part();
+  chain(c, swung, m, bias);
+  const [tx, ty] = swung[n - 1];
+  c.part();
+  c.ellipse(tx, ty + 1.2, 0.95, 0.95, GOLD, { bias });
+  c.spark(tx - 0.3, ty + 0.9, S.light[0], 0.45);
+}
+
+/**
+ * The jester's cap: a crown split rose and black over a gold band, two long
+ * points flopping out to either side, a bell at each tip. From behind the
+ * colours are the other way round; from the side one point falls forward
+ * and one back.
+ */
+function jesterCap(c: PixelCanvas, cx: number, U: number, tick: number, view: View): void {
+  const left = view === 'up' ? MOTLEY_B : MOTLEY_A;
+  const right = view === 'up' ? MOTLEY_A : MOTLEY_B;
+  if (view === 'side') {
+    capPoint(c, [[cx + 1.6, 8.2 + U], [cx + 4.2, 5.4 + U], [cx + 6.4, 6.2 + U], [cx + 7.4, 8.6 + U], [cx + 7.6, 10.6 + U]], MOTLEY_B, tick, 1, -1);
+  } else {
+    capPoint(c, [[cx - 1.6, 8.2 + U], [cx - 3.9, 5.2 + U], [cx - 6.1, 5.6 + U], [cx - 7.1, 8.0 + U], [cx - 7.3, 10.2 + U]], left, tick, -1);
+    capPoint(c, [[cx + 1.6, 8.2 + U], [cx + 3.9, 5.2 + U], [cx + 6.1, 5.6 + U], [cx + 7.1, 8.0 + U], [cx + 7.3, 10.2 + U]], right, tick, 1);
+  }
+  // The crown, cut off flat at the band.
+  const ox = view === 'side' ? cx + 0.2 : cx;
+  const rx = view === 'side' ? 3.5 : 3.9;
+  const oy = 9.6 + U;
+  c.part();
+  for (let y = Math.floor(oy - 2.6); y <= Math.round(10 + U); y++) {
+    for (let x = Math.floor(ox - rx); x <= Math.ceil(ox + rx); x++) {
+      const dx = (x + 0.5 - ox) / rx;
+      const dy = (y + 0.5 - oy) / 2.6;
+      if (dx * dx + dy * dy > 1) continue;
+      const m = view === 'side' ? (x + 0.5 < ox - 0.4 ? MOTLEY_A : MOTLEY_B) : x + 0.5 < ox ? left : right;
+      c.px(x, y, m, sphere(dx * 0.9, dy * 0.8 - 0.2, 1));
+    }
+  }
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => (view === 'side' ? [ox - 3.8, ox + 3.2] : [ox - 3.9, ox + 3.9]), GOLD, (_x, _y, t) => cyl(t, 0.2));
+  if (view === 'side') capPoint(c, [[cx - 1.2, 8.0 + U], [cx - 3.2, 5.0 + U], [cx - 5.2, 5.6 + U], [cx - 6.0, 8.0 + U], [cx - 6.0, 9.8 + U]], MOTLEY_A, tick, -1);
+}
+
+/** The porcelain mask from the front: dark eyes, a rose diamond through one and a black tear under the other, a small red smile. */
+function maskDown(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+  c.part();
+  c.ellipse(cx - 0.2, 12.8 + U, 2.6, 2.5, MASK, { normal: (_x, _y, dx, dy) => sphere(dx * 0.85, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.px(cx - 2, 11 + U, MOTLEY_A, sphere(0, -0.3));
+  c.px(cx - 2, 13 + U, MOTLEY_A, sphere(0, 0.2));
+  c.px(cx + 1, 14 + U, MOTLEY_B, sphere(0, 0.2));
+  c.px(cx - 1, 14 + U, LIP, sphere(0, 0.3));
+  c.px(cx, 14 + U, LIP, sphere(0, 0.3));
+  c.part();
+  for (const x of [cx - 2, cx + 1]) c.px(x, 12 + U, blink ? MASK : EYE, sphere(0, -0.3), { bias: blink ? -1 : 0 });
+}
+
+/** The harlequin's doublet from the front or back: diamonds of rose and black, the hem cut into belled points, a black belt. */
+function harlequinBody(c: PixelCanvas, cx: number, U: number, L: number, tick: number, back: boolean): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 24.5 + L;
+  c.part();
+  motley(c, top, hem, (y) => {
+    const hw = y <= waist ? 4.5 - 0.5 * ((y + 0.5 - top) / (waist - top)) ** 2 : 4.1 + (y - waist) * 0.55;
+    return [cx - hw, cx + hw];
+  }, back ? MOTLEY_B : MOTLEY_A, back ? MOTLEY_A : MOTLEY_B, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1));
+  dags(c, cx - 6, cx + 6, Math.round(hem), tick);
+  c.part();
+  c.shape(waist, waist, () => [cx - 4.1, cx + 4.1], MOTLEY_B, (_x, _y, t) => cyl(t, 0));
+  if (!back) {
+    c.part();
+    c.px(cx, waist, GOLD, sphere(0, -0.3));
+    // Gold buttons, each on a diamond's point.
+    for (const y of [top + 2, top + 5]) c.px(cx, y, GOLD, sphere(0, -0.4));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The moonhowl
+
+/** The wolf's pricked ears, from the front or the back. */
+function wolfEars(c: PixelCanvas, cx: number, U: number): void {
+  c.part();
+  for (const s of [-1, 1]) {
+    poly(c, [[cx + s * 1.2, 8.6 + U], [cx + s * 3.4, 4.0 + U], [cx + s * 4.4, 8.8 + U]], G.fur, (_x, _y, t, u) => sphere(t * 0.6, u * 0.6 - 0.5, 1));
+    c.shade(cx + s * 3.1 - (s < 0 ? 1 : 0), 6.6 + U, -2);
+    c.shade(cx + s * 3.1 - (s < 0 ? 1 : 0), 7.6 + U, -2);
+  }
+}
+
+/** The wolf's head worn as a hood, from the front: ears up, its snout over his brow, its glinting eyes, the pelt falling to his shoulders. */
+function wolfHoodDown(c: PixelCanvas, cx: number, U: number, tick: number): void {
+  c.part();
+  c.capsule(cx - 3.6, 11 + U, cx - 4.6, 15.6 + U, 1.5, 1.2, G.fur);
+  c.capsule(cx + 3.6, 11 + U, cx + 4.6, 15.6 + U, 1.5, 1.2, G.fur);
+  wolfEars(c, cx, U);
+  c.part();
+  c.ellipse(cx, 9.3 + U, 4.0, 2.7, G.fur, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 1) });
+  // Fur ruffling along the brow.
+  for (const x of [cx - 3, cx - 1, cx + 2]) c.shade(x, 11 + U, -1);
+  c.part();
+  c.ellipse(cx - 0.2, 10.4 + U, 1.9, 1.3, G.fur, { bias: 1 });
+  c.part();
+  c.px(cx - 1, 10 + U, NOSE, sphere(-0.2, -0.4));
+  c.px(cx, 10 + U, NOSE, sphere(0.2, -0.4));
+  // The wolf's eyes, and its fangs over his brow.
+  c.part();
+  c.px(cx - 2, 8 + U, NOSE);
+  c.px(cx + 1, 8 + U, NOSE);
+  const k = tick % 6 === 3 ? 0.9 : 0.55;
+  c.spark(cx - 2, 8 + U, S.light[1], k);
+  c.spark(cx + 1, 8 + U, S.light[1], k);
+  c.px(cx - 2, 11 + U, BONE, sphere(0, 0.3), { bias: 1 });
+  c.px(cx + 1, 11 + U, BONE, sphere(0, 0.3), { bias: 1 });
+}
+
+/** The wolf's head from behind, its pelt down his back to the tail. */
+function wolfHoodUp(c: PixelCanvas, cx: number, U: number, L: number, sway: number): void {
+  c.part();
+  c.shape(Math.round(11 + U), Math.round(24 + L), (y) => {
+    const u = (y - 11 - U) / (13 + L - U);
+    const hw = 3.9 - u * 1.4 + Math.sin(u * 9) * 0.2;
+    const s = u * u * sway;
+    return [cx - hw + s, cx + hw + s];
+  }, G.fur, (_x, _y, t, u) => sphere(t * 0.85, u * 0.5 - 0.3, 1));
+  // Strands of fur down it.
+  for (let y = Math.round(13 + U); y <= 23 + L; y += 2) {
+    c.shade(cx - 2 + ((y >> 1) & 1), y, -1);
+    c.shade(cx + 2 - ((y >> 1) & 1), y, -1);
+  }
+  c.part();
+  c.capsule(cx + sway * 0.6, 23.5 + L, cx + sway * 1.2, 27.5 + L, 1.5, 0.6, G.fur);
+  c.part();
+  c.px(cx + sway * 1.2, 28 + L, G.fur, sphere(0, 0.4), { bias: 2 });
+  wolfEars(c, cx, U);
+  c.part();
+  c.ellipse(cx, 9.4 + U, 4.0, 2.8, G.fur, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.shade(cx, 8 + U, 1);
+}
+
+/** The wolf's head in profile, facing left: an ear up, the long snout out over his brow, the pelt hanging behind. */
+function wolfHoodSide(c: PixelCanvas, hx: number, U: number, sway: number, tick: number): void {
+  c.part();
+  c.capsule(hx + 2.4, 11 + U, hx + 3.6 + sway * 0.3, 18.4 + U, 1.8, 1.2, G.fur);
+  c.part();
+  poly(c, [[hx - 0.2, 8.6 + U], [hx + 1.0, 4.2 + U], [hx + 2.8, 8.4 + U]], G.fur, (_x, _y, t, u) => sphere(t * 0.6 + 0.2, u * 0.6 - 0.5, 1));
+  c.shade(hx + 1, 7 + U, -2);
+  c.part();
+  c.ellipse(hx + 0.4, 9.5 + U, 3.4, 2.5, G.fur, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 1) });
+  c.part();
+  c.capsule(hx - 2.0, 10 + U, hx - 5.2, 10.7 + U, 1.35, 0.9, G.fur, { bias: 1 });
+  c.part();
+  c.px(hx - 6, 10.4 + U, NOSE, sphere(-0.5, -0.3));
+  c.px(hx - 5, 11.4 + U, BONE, sphere(0, 0.4), { bias: 1 });
+  c.px(hx - 3, 11.4 + U, BONE, sphere(0, 0.4), { bias: 1 });
+  c.px(hx - 2, 9 + U, NOSE);
+  c.spark(hx - 2, 9 + U, S.light[1], tick % 6 === 3 ? 0.9 : 0.55);
+}
+
+/** A string of wolf's teeth hanging across his chest. */
+function toothNecklace(c: PixelCanvas, cx: number, y0: number, span: number): void {
+  c.part();
+  for (let x = Math.floor(cx - span); x <= Math.ceil(cx + span); x++) {
+    const k = (x + 0.5 - cx) / span;
+    if (Math.abs(k) > 1) continue;
+    const y = y0 + (1 - k * k) * 1.6;
+    c.px(x, y, SINEW, sphere(k * 0.5, -0.2));
+    if ((x & 1) === 0 && Math.abs(k) < 0.85) c.px(x, y + 1, BONE, sphere(k * 0.4, 0.3), { bias: 1 });
+  }
+}
+
+/** Woad on his chest: a ring for the moon on one side, three claw marks on the other. */
+function woadChest(c: PixelCanvas, cx: number, top: number): void {
+  c.part();
+  for (const [x, y] of [[cx - 3, top + 3], [cx - 2, top + 2], [cx - 2, top + 4], [cx - 1, top + 3]]) c.px(x, y, G.paint, sphere(0, 0));
+  for (let i = 0; i < 3; i++) {
+    c.px(cx + 1 + i, top + 3 + (i & 1), G.paint, sphere(0, 0));
+    c.px(cx + 1 + i, top + 4 + (i & 1), G.paint, sphere(0, 0));
+  }
+}
+
+/** The wolf's forelegs, tied across his chest to hold the pelt on. */
+function peltPaws(c: PixelCanvas, cx: number, U: number): void {
+  c.part();
+  c.capsule(cx - 4.6, 15.8 + U, cx - 1, 17.8 + U, 1.1, 0.8, G.fur);
+  c.capsule(cx + 4.6, 15.8 + U, cx + 1, 17.8 + U, 1.1, 0.8, G.fur);
+  c.part();
+  c.px(cx - 1, 18 + U, SINEW, sphere(0, -0.3));
+  c.px(cx, 18 + U, SINEW, sphere(0, -0.3));
+}
+
+/** A fringe of hide strips below row `y`. */
+function fringe(c: PixelCanvas, x0: number, x1: number, y: number): void {
+  c.part();
+  for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) {
+    if (!c.filled(x, y) || (x & 1)) continue;
+    c.px(x, y + 1, G.kilt, sphere(0, 0.6), { bias: -1 });
+  }
+}
+
+/** Feathers hanging from the drum's rim at `x`, stirring. */
+function feathers(c: PixelCanvas, x: number, y: number, tick: number): void {
+  c.part();
+  const drift = [0, 0, 1, 1, 0, 0][tick % 6] * 0.5;
+  for (let i = 0; i < 4; i++) c.px(x + (i > 1 ? drift : 0), y + i, FEATHER, sphere(0, -0.2 + i * 0.2), { bias: i === 3 ? 1 : 0 });
+  c.spark(x + drift, y + 3, S.light[2], 0.3);
+}
+
+// ---------------------------------------------------------------------------
 // Views
 
 const REACH_FRONT = 4.5;
@@ -674,11 +1030,11 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const fb = place('down', 'b', p.b, U, cx);
   const drum = S.drum;
   const armA = () => (drum ? bareArm : sleevedArm)(c, 7.2, 16.3 + U, fa, REACH_FRONT, [-0.6, 1], fa.behind ? -1 : 0);
-  const armB = () => (drum ? bareArm : sleevedArm)(c, 16.8, 16.3 + U, fb, REACH_FRONT, [0.6, 1], fb.behind ? -1 : 0);
+  const armB = () => (drum ? bareArm(c, 16.8, 16.3 + U, fb, REACH_FRONT, [0.6, 1], fb.behind ? -1 : 0) : sleevedArm(c, 16.8, 16.3 + U, fb, REACH_FRONT, [0.6, 1], fb.behind ? -1 : 0, S.style === 'harlequin'));
   const sticks = (arm: 'a' | 'b') => drum && mallet(c, 'down', arm, arm === 'a' ? fa : fb, arm === 'a' ? p.stickA : p.stickB, p.glow, (arm === 'a' ? fa : fb).behind ? -1 : 0);
 
   if (S.wild) wildCloakBehind(c, cx, U, L, p.sway);
-  else if (!drum) {
+  else if (!drum && !S.style) {
     // The half-cape hangs from his left shoulder, showing behind him on that side.
     c.part();
     c.shape(15 + U, 25 + L, (y) => {
@@ -695,39 +1051,47 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     sticks('b');
   }
 
-  leg(c, 10.2, 24.5 + L, 10, 28.4 - p.footA);
-  leg(c, 13.8, 24.5 + L, 14, 28.4 - p.footB);
+  const harl = S.style === 'harlequin';
+  leg(c, 10.2, 24.5 + L, 10, 28.4 - p.footA, 0, harl ? MOTLEY_A : undefined);
+  leg(c, 13.8, 24.5 + L, 14, 28.4 - p.footB, 0, harl ? MOTLEY_B : undefined);
   boot(c, 10, 29.6 - p.footA);
   boot(c, 14, 29.6 - p.footB);
 
   const top = 15 + U;
   const waist = 22 + U;
   const hem = (drum ? 26 : 24.5) + L;
+  const howl = S.style === 'howl';
   if (drum) {
     // A kilt of leather strips, then the bare chest under an open vest.
     c.part();
     c.shape(waist, Math.round(hem), (y) => {
       const hw = 4.6 + (y - waist) * 0.35;
       return [cx - hw + (y - waist) * 0.1 * p.sway, cx + hw + (y - waist) * 0.1 * p.sway];
-    }, KILT, (_x, _y, t) => sphere(t * 0.9, 0.25, 1));
+    }, G.kilt, (_x, _y, t) => sphere(t * 0.9, 0.25, 1));
     for (let y = waist + 1; y <= hem; y++) for (const x of [cx - 3, cx - 1, cx + 1, cx + 3]) c.shade(x, y, -1);
+    if (howl) fringe(c, cx - 6, cx + 6, Math.round(hem));
     c.part();
     c.shape(top, waist - 1, (y) => {
       const u = (y + 0.5 - top) / (waist - top);
       const hw = 5.1 - 0.7 * u * u;
       return [cx - hw, cx + hw];
     }, SKIN, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.35, 1));
-    // Pecs, and the vest's open sides.
+    // Pecs, and the vest's open sides (the moonhowl's chest is bare, painted and hung with teeth).
     c.shade(cx - 2, top + 3, -1);
     c.shade(cx + 1, top + 3, -1);
     c.shade(cx - 1, top + 4, -1);
     c.shade(cx, top + 4, -1);
-    c.part();
-    for (let y = top; y < waist; y++) {
-      const u = (y + 0.5 - top) / (waist - top);
-      const hw = 5.1 - 0.7 * u * u;
-      c.shape(y, y, () => [cx - hw, cx - hw + 2 - u * 0.4], VEST, (_x, _y, t) => sphere(t * 0.5 - 0.6, 0, 1));
-      c.shape(y, y, () => [cx + hw - 2 + u * 0.4, cx + hw], VEST, (_x, _y, t) => sphere(t * 0.5 + 0.6, 0, 1));
+    if (howl) {
+      woadChest(c, cx, top);
+      toothNecklace(c, cx, top + 0.6, 3.6);
+    } else {
+      c.part();
+      for (let y = top; y < waist; y++) {
+        const u = (y + 0.5 - top) / (waist - top);
+        const hw = 5.1 - 0.7 * u * u;
+        c.shape(y, y, () => [cx - hw, cx - hw + 2 - u * 0.4], G.vest, (_x, _y, t) => sphere(t * 0.5 - 0.6, 0, 1));
+        c.shape(y, y, () => [cx + hw - 2 + u * 0.4, cx + hw], G.vest, (_x, _y, t) => sphere(t * 0.5 + 0.6, 0, 1));
+      }
     }
     // The belt, the drum's strap across the chest, and the fur mantle.
     c.part();
@@ -735,17 +1099,33 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     c.part();
     c.capsule(15.8, 15.4 + U, 8.6, 21.2 + U, 0.6, 0.6, LEATHER);
     mantle(c, cx, U, 5.6);
+    if (howl) peltPaws(c, cx, U);
     drawDrum(c, cx, 21 + U, 4.6, p.glow);
+    if (howl) {
+      feathers(c, cx - 5, 22 + U, p.tick);
+      feathers(c, cx + 5, 22 + U, p.tick + 2);
+    }
     // The head: a broad face, war paint across the eyes, a braided beard.
     c.part();
     c.ellipse(cx, 12.2 + U, 3.0, 2.9, SKIN);
     c.part();
-    c.shape(Math.round(12 + U), Math.round(12 + U), () => [cx - 3, cx + 3], WARPAINT, () => sphere(0, 0, 1));
-    c.px(cx - 3, 11 + U, WARPAINT, sphere(0, 0, 1));
-    c.px(cx + 2, 11 + U, WARPAINT, sphere(0, 0, 1));
+    c.shape(Math.round(12 + U), Math.round(12 + U), () => [cx - 3, cx + 3], G.paint, () => sphere(0, 0, 1));
+    c.px(cx - 3, 11 + U, G.paint, sphere(0, 0, 1));
+    c.px(cx + 2, 11 + U, G.paint, sphere(0, 0, 1));
+    if (howl) {
+      // Woad running down his cheeks like claw marks.
+      c.px(cx - 3, 13 + U, G.paint, sphere(0, 0, 1));
+      c.px(cx + 2, 13 + U, G.paint, sphere(0, 0, 1));
+    }
     eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
     beardDown(c, cx, U);
-    helmDown(c, cx, U);
+    if (howl) wolfHoodDown(c, cx, U, p.tick);
+    else helmDown(c, cx, U);
+  } else if (S.style === 'harlequin') {
+    harlequinBody(c, cx, U, L, p.tick, false);
+    ruff(c, cx, 15.4 + U, 4.3, 1.5);
+    maskDown(c, cx, U, p.blink);
+    jesterCap(c, cx, U, p.tick, 'down');
   } else if (S.wild) {
     wildDown(c, cx, U, L, p);
   } else {
@@ -806,7 +1186,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     // Fur spilling over the tops of his shoulders, over the arms.
     c.part();
     for (const s of [-1, 1]) {
-      c.ellipse(cx + s * 5.2, 15.6 + U, 1.9, 1.5, FUR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + s * 0.3, dy * 0.8 - 0.3, 1) });
+      c.ellipse(cx + s * 5.2, 15.6 + U, 1.9, 1.5, G.fur, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + s * 0.3, dy * 0.8 - 0.3, 1) });
       c.shade(cx + s * 5, 17 + U, -1);
     }
   }
@@ -821,19 +1201,19 @@ function mantle(c: PixelCanvas, cx: number, U: number, span: number): void {
     const k = (i / (n - 1)) * 2 - 1;
     const x = cx + k * span;
     const y = 15.4 + U - (1 - k * k) * 0.6;
-    c.ellipse(x, y, 1.4, 1.3, FUR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + k * 0.3, dy * 0.8 - 0.2, 1) });
+    c.ellipse(x, y, 1.4, 1.3, G.fur, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + k * 0.3, dy * 0.8 - 0.2, 1) });
   }
 }
 
 /** A braided ginger beard falling from the chin, bound near its end. */
 function beardDown(c: PixelCanvas, cx: number, U: number): void {
   c.part();
-  c.shape(Math.round(14 + U), Math.round(15 + U), (y) => (y === Math.round(14 + U) ? [cx - 2.8, cx + 2.8] : [cx - 2.2, cx + 2.2]), GINGER, (_x, _y, t) => sphere(t * 0.8, 0.2, 1));
+  c.shape(Math.round(14 + U), Math.round(15 + U), (y) => (y === Math.round(14 + U) ? [cx - 2.8, cx + 2.8] : [cx - 2.2, cx + 2.2]), G.beard, (_x, _y, t) => sphere(t * 0.8, 0.2, 1));
   c.part();
-  c.capsule(cx - 0.4, 15.5 + U, cx - 0.4, 18.6 + U, 1.1, 0.8, GINGER);
+  c.capsule(cx - 0.4, 15.5 + U, cx - 0.4, 18.6 + U, 1.1, 0.8, G.beard);
   for (let y = 16; y <= 18; y++) c.shade(cx - 1 + ((y & 1) === 0 ? 0 : 1), y + U, -1);
   c.part();
-  c.px(cx - 1, 18 + U, BRONZE, sphere(0, -0.3));
+  c.px(cx - 1, 18 + U, G.bead, sphere(0, -0.3));
   // A moustache over the mouth.
   c.shade(cx - 2, 14 + U, -1);
   c.shade(cx + 1, 14 + U, -1);
@@ -846,7 +1226,7 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   const fa = place('up', 'a', p.a, U, cx);
   const fb = place('up', 'b', p.b, U, cx);
   const drum = S.drum;
-  const armA = () => (drum ? bareArm : sleevedArm)(c, 7.2, 16.3 + U, fa, REACH_FRONT, [-0.6, 0.8], fa.behind ? -1 : 0);
+  const armA = () => (drum ? bareArm(c, 7.2, 16.3 + U, fa, REACH_FRONT, [-0.6, 0.8], fa.behind ? -1 : 0) : sleevedArm(c, 7.2, 16.3 + U, fa, REACH_FRONT, [-0.6, 0.8], fa.behind ? -1 : 0, S.style === 'harlequin'));
   const armB = () => (drum ? bareArm : sleevedArm)(c, 16.8, 16.3 + U, fb, REACH_FRONT, [0.6, 0.8], fb.behind ? -1 : 0);
   const sticks = (arm: 'a' | 'b') => drum && mallet(c, 'up', arm, arm === 'a' ? fa : fb, arm === 'a' ? p.stickA : p.stickB, 0, (arm === 'a' ? fa : fb).behind ? -1 : 0);
 
@@ -862,27 +1242,30 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     sticks('b');
   }
 
-  leg(c, 10.2, 24.5 + L, 10, 28.4 - p.footB);
-  leg(c, 13.8, 24.5 + L, 14, 28.4 - p.footA);
+  const harl = S.style === 'harlequin';
+  leg(c, 10.2, 24.5 + L, 10, 28.4 - p.footB, 0, harl ? MOTLEY_B : undefined);
+  leg(c, 13.8, 24.5 + L, 14, 28.4 - p.footA, 0, harl ? MOTLEY_A : undefined);
   boot(c, 10, 29.6 - p.footB);
   boot(c, 14, 29.6 - p.footA);
 
   const top = 15 + U;
   const waist = 22 + U;
+  const howl = S.style === 'howl';
   if (drum) {
     c.part();
     c.shape(waist, 26 + L, (y) => {
       const hw = 4.6 + (y - waist) * 0.35;
       return [cx - hw, cx + hw];
-    }, KILT, (_x, _y, t) => sphere(t * 0.9, 0.25, 1));
+    }, G.kilt, (_x, _y, t) => sphere(t * 0.9, 0.25, 1));
     for (let y = waist + 1; y <= 26 + L; y++) for (const x of [cx - 3, cx - 1, cx + 1, cx + 3]) c.shade(x, y, -1);
-    // The vest covers his back; the strap crosses it.
+    if (howl) fringe(c, cx - 6, cx + 6, 26 + L);
+    // The vest covers his back (the moonhowl's is bare); the strap crosses it.
     c.part();
     c.shape(top, waist - 1, (y) => {
       const u = (y + 0.5 - top) / (waist - top);
       const hw = 5.1 - 0.7 * u * u;
       return [cx - hw, cx + hw];
-    }, VEST, (_x, _y, t, u) => sphere(t * 0.9, u * 0.6 - 0.3, 1));
+    }, howl ? SKIN : G.vest, (_x, _y, t, u) => sphere(t * 0.9, u * 0.6 - 0.3, 1));
     for (let y = top + 1; y < waist; y++) c.shade(cx, y, -1);
     c.part();
     c.shape(waist, waist, () => [cx - 4.6, cx + 4.6], LEATHER, (_x, _y, t) => cyl(t, 0));
@@ -892,11 +1275,32 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     // The back of the head under the helm, the beard's braid just showing.
     c.part();
     c.ellipse(cx, 12.2 + U, 3.0, 2.8, SKIN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8, 1) });
-    helmDown(c, cx, U);
+    if (howl) {
+      // His black hair, then the wolf's head and its pelt down his back to the tail.
+      c.part();
+      c.shape(Math.round(11 + U), Math.round(14 + U), () => [cx - 3, cx + 3], G.beard, (_x, _y, t) => sphere(t * 0.9, 0.2, 1));
+      wolfHoodUp(c, cx, U, L, p.sway);
+    } else {
+      helmDown(c, cx, U);
+      c.part();
+      c.shape(Math.round(11 + U), Math.round(13 + U), () => [cx - 3, cx + 3], G.beard, (_x, _y, t) => sphere(t * 0.9, 0.2, 1));
+      c.shade(cx - 1, 12 + U, -1);
+      c.shade(cx + 1, 12 + U, -1);
+    }
+  } else if (S.style === 'harlequin') {
+    harlequinBody(c, cx, U, L, p.tick, true);
+    ruff(c, cx, 15.4 + U, 4.3, 1.5);
+    // The cap's hood over the back of his head, split like the rest of him.
     c.part();
-    c.shape(Math.round(11 + U), Math.round(13 + U), () => [cx - 3, cx + 3], GINGER, (_x, _y, t) => sphere(t * 0.9, 0.2, 1));
-    c.shade(cx - 1, 12 + U, -1);
-    c.shade(cx + 1, 12 + U, -1);
+    for (let y = Math.round(9 + U); y <= Math.round(14.6 + U); y++) {
+      for (let x = cx - 4; x <= cx + 4; x++) {
+        const dx = (x + 0.5 - cx) / 3.7;
+        const dy = (y + 0.5 - 11.6 - U) / 3.3;
+        if (dx * dx + dy * dy > 1) continue;
+        c.px(x, y, x + 0.5 < cx ? MOTLEY_B : MOTLEY_A, sphere(dx * 0.9, dy * 0.8 - 0.1, 1));
+      }
+    }
+    jesterCap(c, cx, U, p.tick, 'up');
   } else if (S.wild) {
     wildUp(c, cx, U, L, p);
   } else {
@@ -967,7 +1371,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
       c.shade(Math.round(hx + 2.6 + u * (1 + p.sway)), y, -1);
     }
     leafHem(c, hx - 2, hx + 9, hem, -1);
-  } else if (!drum) {
+  } else if (!drum && !S.style) {
     // The cape streaming behind him.
     const hem = 25 + L;
     c.part();
@@ -989,9 +1393,11 @@ function drawSide(c: PixelCanvas, p: Pose): void {
 
   // Legs: the back leg in shade first.
   const lift = (f: number) => Math.max(0, f) * 0.35;
-  leg(c, cx + 0.8, 24.5 + L, cx + 1 - p.footB, 28.4 - lift(p.footB), -1);
+  const harl = S.style === 'harlequin';
+  const howl = S.style === 'howl';
+  leg(c, cx + 0.8, 24.5 + L, cx + 1 - p.footB, 28.4 - lift(p.footB), -1, harl ? MOTLEY_B : undefined);
   boot(c, cx + 0.4 - p.footB, 29.7 - lift(p.footB), true, -1);
-  leg(c, cx - 0.6, 24.5 + L, cx - 0.4 - p.footA, 28.4 - lift(p.footA));
+  leg(c, cx - 0.6, 24.5 + L, cx - 0.4 - p.footA, 28.4 - lift(p.footA), 0, harl ? MOTLEY_A : undefined);
   boot(c, cx - 1.2 - p.footA, 29.7 - lift(p.footA), true);
 
   if (drum) {
@@ -1001,49 +1407,93 @@ function drawSide(c: PixelCanvas, p: Pose): void {
       const shift = hx + (cx - hx) * u;
       const hw = 3.4 + (y - waist) * 0.3;
       return [shift - hw, shift + hw + u * p.sway * 0.5];
-    }, KILT, (_x, _y, t) => sphere(t * 0.9 - 0.1, 0.25, 1));
+    }, G.kilt, (_x, _y, t) => sphere(t * 0.9 - 0.1, 0.25, 1));
     for (let y = waist + 1; y <= 26 + L; y++) for (const x of [hx - 2, hx, hx + 2]) c.shade(x, y, -1);
+    if (howl) fringe(c, cx - 6, cx + 6, 26 + L);
     c.part();
     c.shape(top, waist - 1, (y) => {
       const u = (y + 0.5 - top) / (waist - top);
       const hw = 3.6 - 0.5 * u * u;
       return [hx - hw - 0.4, hx + hw];
     }, SKIN, (_x, y, t) => sphere(t * 0.9 - 0.1, ((y - top) / (waist - top)) * 0.8 - 0.35, 1));
-    c.part();
-    c.shape(top, waist - 1, (y) => {
-      const u = (y + 0.5 - top) / (waist - top);
-      const hw = 3.6 - 0.5 * u * u;
-      return [hx - hw + 1.6, hx + hw];
-    }, VEST, (_x, _y, t) => sphere(t * 0.8 + 0.1, 0, 1));
+    if (howl) {
+      // Woad claw marks and the teeth on their cord, seen from the side.
+      c.part();
+      for (const [x, y] of [[hx - 2, top + 3], [hx - 1, top + 4], [hx - 2, top + 5], [hx - 1, top + 6]]) c.px(x, y, G.paint, sphere(0, 0));
+      for (let i = 0; i < 4; i++) {
+        c.px(hx - 3.6 + i * 0.9, top + 1 + i * 0.3, SINEW, sphere(-0.3, -0.2));
+        if (i % 2 === 0) c.px(hx - 3.6 + i * 0.9, top + 2 + i * 0.3, BONE, sphere(-0.3, 0.3), { bias: 1 });
+      }
+    } else {
+      c.part();
+      c.shape(top, waist - 1, (y) => {
+        const u = (y + 0.5 - top) / (waist - top);
+        const hw = 3.6 - 0.5 * u * u;
+        return [hx - hw + 1.6, hx + hw];
+      }, G.vest, (_x, _y, t) => sphere(t * 0.8 + 0.1, 0, 1));
+    }
     c.part();
     c.shape(waist, waist, () => [hx - 3.4, hx + 3.4], LEATHER, (_x, _y, t) => cyl(t, 0));
     c.part();
     c.capsule(hx + 1.6, 15.2 + U, hx - 2.2, 21 + U, 0.6, 0.6, LEATHER);
     mantle(c, hx - 0.4, U, 3.6);
     // The head in profile: helm and horn, war paint, the braid of beard.
-    c.part();
-    c.capsule(hx + 1.0, 9.6 + U, hx + 2.6, 7.2 + U, 0.95, 0.6, BONE);
-    c.part();
-    c.capsule(hx + 2.6, 7.2 + U, hx + 2.2, 5.6 + U, 0.6, 0.4, BONE);
+    if (!howl) {
+      c.part();
+      c.capsule(hx + 1.0, 9.6 + U, hx + 2.6, 7.2 + U, 0.95, 0.6, BONE);
+      c.part();
+      c.capsule(hx + 2.6, 7.2 + U, hx + 2.2, 5.6 + U, 0.6, 0.4, BONE);
+    }
     c.part();
     c.ellipse(hx - 1.2, 12.6 + U, 2.5, 2.5, SKIN);
     c.part();
     c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
     c.part();
-    c.shape(Math.round(12 + U), Math.round(12 + U), () => [hx - 3.8, hx], WARPAINT, () => sphere(0, 0, 1));
+    c.shape(Math.round(12 + U), Math.round(12 + U), () => [hx - 3.8, hx], G.paint, () => sphere(0, 0, 1));
     eyes(c, [[hx - 3, 12 + U]], p.blink);
     c.part();
-    c.shape(Math.round(14 + U), Math.round(15 + U), () => [hx - 3.6, hx + 0.4], GINGER, (_x, _y, t) => sphere(t * 0.8, 0.2, 1));
+    c.shape(Math.round(14 + U), Math.round(15 + U), () => [hx - 3.6, hx + 0.4], G.beard, (_x, _y, t) => sphere(t * 0.8, 0.2, 1));
     c.part();
-    c.capsule(hx - 2.4, 15.6 + U, hx - 2.8, 18.4 + U, 1.0, 0.7, GINGER);
-    c.px(hx - 3, 18 + U, BRONZE, sphere(0, -0.3));
+    c.capsule(hx - 2.4, 15.6 + U, hx - 2.8, 18.4 + U, 1.0, 0.7, G.beard);
+    c.px(hx - 3, 18 + U, G.bead, sphere(0, -0.3));
+    if (howl) {
+      c.px(hx - 3, 13 + U, G.paint, sphere(0, 0, 1));
+      wolfHoodSide(c, hx, U, p.sway, p.tick);
+    } else {
+      c.part();
+      c.shape(Math.round(7 + U), Math.round(9 + U), (y) => {
+        const u = (y - 7 - U) / 2;
+        return [hx - 3 - u * 0.9, hx + 2.4 + u * 0.8];
+      }, IRON, (_x, _y, t, u) => sphere(t * 0.9, u * 0.7 - 0.6, 1));
+      c.part();
+      c.shape(Math.round(10 + U), Math.round(10 + U), () => [hx - 3.9, hx + 3.2], BRONZE, (_x, _y, t) => cyl(t, 0.3));
+    }
+  } else if (harl) {
     c.part();
-    c.shape(Math.round(7 + U), Math.round(9 + U), (y) => {
-      const u = (y - 7 - U) / 2;
-      return [hx - 3 - u * 0.9, hx + 2.4 + u * 0.8];
-    }, IRON, (_x, _y, t, u) => sphere(t * 0.9, u * 0.7 - 0.6, 1));
+    motley(c, top, Math.round(24.5 + L), (y) => {
+      const u = y <= waist ? 0 : (y - waist) / 2.5;
+      const shift = y <= waist ? hx : hx + (cx - hx) * u;
+      const hw = y <= waist ? 3.2 - 0.4 * ((y + 0.5 - top) / (waist - top)) ** 2 : 2.9 + (y - waist) * 0.5;
+      return [shift - hw - 0.2, shift + hw + 0.2];
+    }, MOTLEY_A, MOTLEY_B, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1));
+    dags(c, cx - 6, cx + 6, Math.round(24.5 + L), p.tick);
     c.part();
-    c.shape(Math.round(10 + U), Math.round(10 + U), () => [hx - 3.9, hx + 3.2], BRONZE, (_x, _y, t) => cyl(t, 0.3));
+    c.shape(waist, waist, () => [hx - 3.1, hx + 3.1], MOTLEY_B, (_x, _y, t) => cyl(t, 0));
+    c.part();
+    c.px(Math.round(hx - 3.1), waist, GOLD, sphere(-0.5, -0.3));
+    ruff(c, hx - 0.4, 15.3 + U, 3.2, 1.4);
+    // The mask in profile: a white face, a dark eye with its rose diamond, a red mouth.
+    c.part();
+    c.ellipse(hx - 1.2, 12.3 + U, 2.6, 2.6, MOTLEY_B, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
+    c.part();
+    c.ellipse(hx - 1.6, 12.9 + U, 2.1, 2.3, MASK);
+    c.part();
+    c.px(hx - 4, 12.6 + U, MASK, sphere(-0.7, -0.1), { bias: 1 });
+    c.px(hx - 3, 11 + U, MOTLEY_A, sphere(-0.3, -0.3));
+    c.px(hx - 3, 13 + U, MOTLEY_A, sphere(-0.3, 0.2));
+    c.px(hx - 3, 14 + U, LIP, sphere(-0.3, 0.3));
+    c.px(hx - 3, 12 + U, p.blink ? MASK : EYE, sphere(0, -0.3), { bias: p.blink ? -1 : 0 });
+    jesterCap(c, hx, U, p.tick, 'side');
   } else if (S.wild) {
     wildSide(c, cx, hx, U, L, p);
   } else {
@@ -1084,12 +1534,14 @@ function drawSide(c: PixelCanvas, p: Pose): void {
 
   if (drum) drawDrum(c, hx - 3.6, 21 + U, 3.4, p.glow);
   else drawLute(c, 'side', p, fa, fb);
+  if (S.style === 'howl') feathers(c, hx - 7.2, 22 + U, p.tick);
   if (!fa.behind) {
     armA(0);
     if (drum) mallet(c, 'side', 'a', fa, p.stickA, p.glow);
   }
   // The near arm last.
-  (drum ? bareArm : sleevedArm)(c, hx + 0.2, 16.7 + U, fb, REACH_SIDE, [0.4, 1], 0);
+  if (drum) bareArm(c, hx + 0.2, 16.7 + U, fb, REACH_SIDE, [0.4, 1], 0);
+  else sleevedArm(c, hx + 0.2, 16.7 + U, fb, REACH_SIDE, [0.4, 1], 0, S.style === 'harlequin');
   if (drum) mallet(c, 'side', 'b', fb, p.stickB, p.glow);
   if (S.wild) wisps(c, U, p.tick);
 }
@@ -1384,6 +1836,7 @@ function drawBardFrame(dir: Dir, pose: Pose): PixelCanvas {
 export function buildBardFrames(look: BardLook = MINSTREL_LOOK): BardFrame[] {
   S = look;
   D = look.dress;
+  G = look.gear ?? WARBAND;
   const out: BardFrame[] = [];
   for (const a of bardAnims(look)) {
     for (const dir of DIRS) {
@@ -1395,6 +1848,7 @@ export function buildBardFrames(look: BardLook = MINSTREL_LOOK): BardFrame[] {
   }
   S = MINSTREL_LOOK;
   D = TROUBADOUR;
+  G = WARBAND;
   return out;
 }
 
@@ -1424,6 +1878,34 @@ export function noteFrame(i: number, look: BardLook = MINSTREL_LOOK): PixelCanva
       lit(x + 1, y, deep, 0.5);
     }
   };
+  if (look.style === 'harlequin') {
+    if (i === 0) {
+      // A note with a diamond for a head and a pennant for a flag.
+      for (let y = -2; y <= 2; y++) {
+        for (let x = -3; x <= 3; x++) {
+          const d = Math.abs(x) / 3.2 + Math.abs(y) / 2.3;
+          if (d > 1) continue;
+          lit(4 + x, 8 + y, d < 0.4 ? core : d < 0.75 ? hot : mid, d < 0.75 ? 1 : 0.85);
+        }
+      }
+      stem(6, 1, 7);
+      for (const [x, y, col] of [[7, 1, core], [8, 1, hot], [9, 1, mid], [7, 2, hot], [8, 2, mid], [7, 3, mid], [8, 3, deep]] as const) lit(x, y, col);
+    } else {
+      // A spinning diamond of the motley, lit down one half and dim down the other, with a glint.
+      for (let y = 0; y < NOTE_SIZE; y++) {
+        for (let x = 0; x < NOTE_SIZE; x++) {
+          const dx = x - 5;
+          const dy = y - 5;
+          const d = Math.abs(dx) / 3.2 + Math.abs(dy) / 4.8;
+          if (d > 1) continue;
+          const bright = dx < 0 === dy < 0;
+          lit(x, y, d > 0.8 ? deep : bright ? (d < 0.45 ? core : hot) : mid, d > 0.8 ? 0.8 : 1);
+        }
+      }
+      for (const [x, y] of [[9, 1], [10, 1], [9, 0], [9, 2], [8, 1]]) lit(x, y, core, x === 9 && y === 1 ? 1 : 0.6);
+    }
+    return c;
+  }
   if (look.wild) {
     if (i === 0) {
       // A note whose flag is a leaf.
@@ -1467,10 +1949,12 @@ export function noteFrame(i: number, look: BardLook = MINSTREL_LOOK): PixelCanva
 // Ability icons (16x16)
 
 /** The lute: a honey-wood belly with its dark rosette, the neck running up to a bent pegbox (the wildsong's grown of pale wood, budding leaves). */
-export function luteIcon(wild = false): Uint8ClampedArray {
+export function luteIcon(style: 'wild' | 'harlequin' | false = false): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
-  const neck = wild ? ['#382c1a', '#4e4026'] : ['#4a2418', '#663424'];
-  const belly = wild ? ['#ecdc9e', '#c8ac6c', '#8a6e3c'] : ['#f0c474', '#cc9244', '#9c5e26'];
+  const wild = style === 'wild';
+  const harl = style === 'harlequin';
+  const neck = wild ? ['#382c1a', '#4e4026'] : harl ? ['#d8ccc0', '#f4ece4'] : ['#4a2418', '#663424'];
+  const belly = wild ? ['#ecdc9e', '#c8ac6c', '#8a6e3c'] : harl ? ['#4a3c50', '#2a2030', '#160e1a'] : ['#f0c474', '#cc9244', '#9c5e26'];
   const peg = wild ? '#6aac44' : '#f4cf6a';
   // Neck from the belly up to the top right.
   for (let i = 0; i < 7; i++) {
@@ -1488,15 +1972,21 @@ export function luteIcon(wild = false): Uint8ClampedArray {
       if (d <= 4.6 || d2 <= 2.9) put(x, y, d < 2.6 ? belly[0] : x + y < 15 ? belly[1] : belly[2]);
     }
   }
-  outline(wild ? '#10180a' : '#1a0c06');
-  const hole = wild ? '#9ee85a' : '#140806';
+  outline(wild ? '#10180a' : harl ? '#08040a' : '#1a0c06');
+  const hole = wild ? '#9ee85a' : harl ? '#ff4ab8' : '#140806';
   put(7, 9, hole);
   put(7, 10, hole);
   put(6, 9, hole);
   // Strings, and a glint of light off them.
   for (let i = 0; i < 5; i++) put(5 + i, 12 - i, '#f4ecd8');
   put(3, 13, neck[0]);
-  put(12, 3, wild ? '#eaffa0' : '#a8fff0');
+  put(12, 3, wild ? '#eaffa0' : harl ? '#ffb0e8' : '#a8fff0');
+  if (harl) {
+    // Rose diamonds inlaid round the black lacquer, gold at their points.
+    for (const [x, y] of [[3, 8], [2, 9], [3, 10], [4, 9], [8, 12], [9, 11], [9, 13], [10, 12]]) put(x, y, '#ff5ab8');
+    for (const [x, y] of [[3, 9], [9, 12]]) put(x, y, '#ffd0ee');
+    put(4, 13, '#f4cf6a');
+  }
   if (wild) {
     // A vine of leaves round the bowl, and a leaf at the pegbox.
     for (const [x, y] of [[1, 9], [1, 10], [2, 13], [3, 14], [9, 13], [10, 12], [12, 1]]) put(x, y, '#6aac44');
@@ -1506,11 +1996,20 @@ export function luteIcon(wild = false): Uint8ClampedArray {
 }
 
 /** The song: two beamed notes with sparks of light round them (the wildsong's in firefly green, a leaf on the beam). */
-export function songIcon(wild = false): Uint8ClampedArray {
+export function songIcon(style: 'wild' | 'harlequin' | false = false): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
-  const [core, hot, mid] = wild ? ['#fffde6', '#eaffa0', '#9ee85a'] : ['#f4fffc', '#a8fff0', '#3fd8c8'];
+  const wild = style === 'wild';
+  const harl = style === 'harlequin';
+  const [core, hot, mid] = wild ? ['#fffde6', '#eaffa0', '#9ee85a'] : harl ? ['#fff4fb', '#ffb0e8', '#ff4ab8'] : ['#f4fffc', '#a8fff0', '#3fd8c8'];
+  // The harlequin's note heads are diamonds.
   const head = (cx: number, cy: number) => {
-    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.hypot((x + 0.5 - cx) / 2.3, (y + 0.5 - cy) / 1.7) <= 1) put(x, y, x + 0.5 < cx && y + 0.5 < cy ? core : mid);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const dx = (x + 0.5 - cx) / (harl ? 2.8 : 2.3);
+        const dy = (y + 0.5 - cy) / (harl ? 2.2 : 1.7);
+        if ((harl ? Math.abs(dx) + Math.abs(dy) : Math.hypot(dx, dy)) <= 1) put(x, y, x + 0.5 < cx && y + 0.5 < cy ? core : mid);
+      }
+    }
   };
   head(4.5, 12.5);
   head(11.5, 11);
@@ -1522,47 +2021,73 @@ export function songIcon(wild = false): Uint8ClampedArray {
     put(x, y + 1, mid);
   }
   if (wild) for (const [x, y] of [[8, 0], [9, 0], [9, 1], [10, 0]]) put(x, y, '#6aac44');
-  outline(wild ? '#0c2410' : '#0a2a2e');
+  if (harl) for (const [x, y] of [[14, 1], [14, 2], [15, 2], [15, 1]]) put(x, y, '#f4cf6a');
+  outline(wild ? '#0c2410' : harl ? '#2a0620' : '#0a2a2e');
   for (const [x, y] of [[1, 3], [2, 6], [9, 6], [14, 14]]) put(x, y, wild ? '#eaffa0' : '#ffe89a');
   return px;
 }
 
+/** Colours a drum icon is painted in. */
+export interface DrumIconColors {
+  shell: [string, string, string];
+  rim: string;
+  lace: string;
+  head: string;
+  handle: string;
+  knob: string;
+  /** The rhythm's light, brightest first, and its outline. */
+  light: [string, string, string, string];
+  outline: string;
+}
+
+export const WAR_DRUM_ICON: DrumIconColors = { shell: ['#c8402e', '#a42420', '#7a1618'], rim: '#d4984a', lace: '#ece0bc', head: '#f4e6c4', handle: '#906a42', knob: '#d8704a', light: ['#fffbe8', '#ffd98a', '#ff9a3a', '#b8401e'], outline: '#140204' };
+/** The moonhowl's: a black spirit drum painted with woad, bone mallets, a moon-pale head. */
+export const HOWL_DRUM_ICON: DrumIconColors = { shell: ['#3c3a58', '#2a2840', '#1a1828'], rim: '#5a4430', lace: '#6c7cff', head: '#e4e8f4', handle: '#e8e0cc', knob: '#bcc8ff', light: ['#f2f4ff', '#bcc8ff', '#6c7cff', '#2c2a9a'], outline: '#06060e' };
+
 /** The war drum: a red shell laced with rope under a pale head, two mallets crossed over it. */
-export function drumIcon(): Uint8ClampedArray {
+export function drumIcon(k: DrumIconColors = WAR_DRUM_ICON): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
-  for (let y = 7; y < 14; y++) for (let x = 2; x < 14; x++) put(x, y, x < 6 ? '#c8402e' : x < 10 ? '#a42420' : '#7a1618');
+  for (let y = 7; y < 14; y++) for (let x = 2; x < 14; x++) put(x, y, x < 6 ? k.shell[0] : x < 10 ? k.shell[1] : k.shell[2]);
   for (let x = 2; x < 14; x++) {
-    put(x, 13, '#d4984a');
-    const k = Math.abs(((x - 2) % 4) - 2);
-    put(x, 9 + k, '#ece0bc');
+    put(x, 13, k.rim);
+    const z = Math.abs(((x - 2) % 4) - 2);
+    put(x, 9 + z, k.lace);
   }
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
     const d = Math.hypot((x + 0.5 - 8) / 6.2, (y + 0.5 - 7) / 2.2);
-    if (d <= 1) put(x, y, d > 0.8 ? '#d4984a' : '#f4e6c4');
+    if (d <= 1) put(x, y, d > 0.8 ? k.rim : k.head);
+  }
+  if (k === HOWL_DRUM_ICON) {
+    // A wolf's paw painted on the head in woad.
+    for (const [x, y] of [[7, 7], [8, 7], [9, 7], [8, 8], [6, 6], [8, 5], [10, 6]]) put(x, y, k.light[2]);
   }
   // Mallets crossed above.
   for (let i = 0; i < 6; i++) {
-    put(3 + i, 1 + i * 0.5 | 0, '#906a42');
-    put(12 - i, 1 + i * 0.5 | 0, '#906a42');
+    put(3 + i, 1 + i * 0.5 | 0, k.handle);
+    put(12 - i, 1 + i * 0.5 | 0, k.handle);
   }
-  for (const [x, y] of [[2, 0], [3, 0], [2, 1], [12, 0], [13, 0], [13, 1]]) put(x, y, '#d8704a');
-  outline('#140204');
+  for (const [x, y] of [[2, 0], [3, 0], [2, 1], [12, 0], [13, 0], [13, 1]]) put(x, y, k.knob);
+  outline(k.outline);
   return px;
 }
 
 /** The battle rhythm: the drum's head lit in the middle, waves of sound rolling out from it. */
-export function rhythmIcon(): Uint8ClampedArray {
+export function rhythmIcon(k: DrumIconColors = WAR_DRUM_ICON): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
   for (let y = 0; y < 16; y++) {
     for (let x = 0; x < 16; x++) {
       const d = Math.hypot((x + 0.5 - 8) / 1.0, (y + 0.5 - 9) / 0.7);
-      if (d <= 3.2) put(x, y, d < 1.6 ? '#fffbe8' : '#ffd98a');
-      else if (Math.abs(d - 5.6) <= 0.6 && y < 13) put(x, y, '#ff9a3a');
-      else if (Math.abs(d - 7.8) <= 0.6 && y < 12) put(x, y, '#b8401e');
+      if (d <= 3.2) put(x, y, d < 1.6 ? k.light[0] : k.light[1]);
+      else if (Math.abs(d - 5.6) <= 0.6 && y < 13) put(x, y, k.light[2]);
+      else if (Math.abs(d - 7.8) <= 0.6 && y < 12) put(x, y, k.light[3]);
     }
   }
-  for (let x = 5; x <= 11; x++) put(x, 13, '#7a1618');
-  for (let x = 6; x <= 10; x++) put(x, 14, '#7a1618');
-  outline('#1e0806');
+  for (let x = 5; x <= 11; x++) put(x, 13, k.shell[2]);
+  for (let x = 6; x <= 10; x++) put(x, 14, k.shell[2]);
+  if (k === HOWL_DRUM_ICON) {
+    // The moon the pack howls at, over the waves.
+    for (const [x, y] of [[13, 0], [14, 0], [15, 1], [15, 2], [14, 3], [13, 3], [14, 1], [14, 2]]) put(x, y, x === 14 && (y === 1 || y === 2) ? '#6c7cff' : k.light[0]);
+  }
+  outline(k === HOWL_DRUM_ICON ? '#06060e' : '#1e0806');
   return px;
 }
