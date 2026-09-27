@@ -144,6 +144,95 @@ export const WILD_DEEP = hex('#8a3a1e');
 export const WILD_SPELL: SpellColors = { core: WILD_CORE, hot: WILD_HOT, mid: WILD_MID, deep: WILD_DEEP, accent: hex('#fff0c0') };
 
 // ---------------------------------------------------------------------------
+// The Grovekeeper's Autumn Warden skin: a hood of russet leaves, bare antlers,
+// a hem of falling leaves, and a staff holding an ember of a seed.
+
+export const AUTUMN_ROBE: Material = {
+  ramp: ramp('#2a120c', '#46200f', '#6a3214', '#8e4a1c', '#b0662a'),
+  outline: hex('#120604'),
+  outlineLit: hex('#2a120c'),
+};
+
+export const AUTUMN_LEAF: Material = {
+  ramp: ramp('#6a2a0a', '#b0501a', '#e08a2a', '#ffc85a'),
+  outline: hex('#240c04'),
+  outlineLit: hex('#3a1406'),
+};
+
+export const BARE_ANTLER: Material = {
+  ramp: ramp('#3a2c20', '#5e4a36', '#86705a', '#b09a80'),
+  outline: hex('#140e08'),
+  shine: true,
+};
+
+export const EMBER_SEED: Material = {
+  ramp: ramp('#8a2a0a', '#e0701e', '#ffb84a', '#fff0c0'),
+  outline: hex('#2a0a04'),
+  emissive: 0.9,
+  shine: true,
+  noAO: true,
+};
+
+export const AUTUMN_CORE = hex('#fff4e0');
+export const AUTUMN_HOT = hex('#ffc870');
+export const AUTUMN_MID = hex('#f0803a');
+export const AUTUMN_DEEP = hex('#9a3a1a');
+
+export const AUTUMN_SPELL: SpellColors = { core: AUTUMN_CORE, hot: AUTUMN_HOT, mid: AUTUMN_MID, deep: AUTUMN_DEEP, accent: hex('#ffe08a') };
+
+// ---------------------------------------------------------------------------
+// The Shapeshifter's Frostfang skin: a white wolf's pelt with eyes of ice, a
+// hide bleached by winter, silver hair and a staff of pale wood round a shard of ice.
+
+export const FROST_HIDE: Material = {
+  ramp: ramp('#1e2430', '#323c4c', '#4c5a6e', '#6a7a90', '#8e9eb4'),
+  outline: hex('#0a0c12'),
+  outlineLit: hex('#1e2430'),
+};
+
+export const FROST_TUNIC: Material = {
+  ramp: ramp('#0c1424', '#16223a', '#223452', '#30486c'),
+  outline: hex('#04080e'),
+};
+
+export const ICE_FANG: Material = {
+  ramp: ramp('#6a8aa8', '#a0c0dc', '#d4ecff', '#f6fcff'),
+  outline: hex('#141e2a'),
+  shine: true,
+};
+
+export const SNOW_PELT: Material = {
+  ramp: ramp('#6a7282', '#9aa2b4', '#c8d0de', '#e8eef6', '#fafcff'),
+  outline: hex('#1c2230'),
+  outlineLit: hex('#2c3444'),
+};
+
+export const FROST_WOOD: Material = {
+  ramp: ramp('#2a2e38', '#464c5a', '#6a7282', '#9098a8'),
+  outline: hex('#0c0e14'),
+};
+
+export const ICE: Material = {
+  ramp: ramp('#1a5aa8', '#4aa0f0', '#a8e0ff', '#ffffff'),
+  outline: hex('#081830'),
+  emissive: 0.9,
+  shine: true,
+  noAO: true,
+};
+
+export const FROST_HAIR: Material = {
+  ramp: ramp('#5a6070', '#8a92a6', '#c0c8d8', '#eef2fa'),
+  outline: hex('#161a24'),
+};
+
+export const FROST_CORE = hex('#f0faff');
+export const FROST_HOT = hex('#b8e8ff');
+export const FROST_MID = hex('#5ab8f0');
+export const FROST_DEEP = hex('#2a5aa8');
+
+export const FROST_SPELL: SpellColors = { core: FROST_CORE, hot: FROST_HOT, mid: FROST_MID, deep: FROST_DEEP, accent: hex('#e0f6ff') };
+
+// ---------------------------------------------------------------------------
 // Button icons: 16x16, drawn additively on the buttons, so black is empty and
 // where shapes overlap the brighter colour stays.
 
@@ -179,6 +268,8 @@ export type Tones = [RGB, RGB, RGB, RGB];
 
 export const GROVE_TONES: Tones = [GROVE_CORE, GROVE_HOT, GROVE_MID, GROVE_DEEP];
 export const WILD_TONES: Tones = [WILD_CORE, WILD_HOT, WILD_MID, WILD_DEEP];
+export const AUTUMN_TONES: Tones = [AUTUMN_CORE, AUTUMN_HOT, AUTUMN_MID, AUTUMN_DEEP];
+export const FROST_TONES: Tones = [FROST_CORE, FROST_HOT, FROST_MID, FROST_DEEP];
 
 /** The thorn seed: a glowing seed bristling with thorns, a leaf sprouting from its top. */
 export function thornSeedIcon(k: Tones = GROVE_TONES): Uint8ClampedArray {

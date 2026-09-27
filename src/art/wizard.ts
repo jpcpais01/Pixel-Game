@@ -67,7 +67,7 @@ import {
   STAR_MID,
   STAR_ROBE,
 } from './heroSkins';
-import { ANTLER, AMBER, AUBURN, BARK, FANG, HIDE, LEAF, LIVEWOOD, MOSS, MUZZLE, PELT, SEED, TUNIC, WOAD, WOLF_EYE, WOLF_NOSE, GROVE_CORE, GROVE_DEEP, GROVE_HOT, GROVE_MID, WILD_CORE, WILD_DEEP, WILD_HOT, WILD_MID } from './druid';
+import { ANTLER, AMBER, AUBURN, AUTUMN_LEAF, AUTUMN_ROBE, BARE_ANTLER, BARK, EMBER_SEED, FANG, FROST_HAIR, FROST_HIDE, FROST_TUNIC, FROST_WOOD, HIDE, ICE, ICE_FANG, LEAF, LIVEWOOD, MOSS, MUZZLE, PELT, SEED, SNOW_PELT, TUNIC, WOAD, WOLF_NOSE, AUTUMN_CORE, AUTUMN_DEEP, AUTUMN_HOT, AUTUMN_MID, FROST_CORE, FROST_DEEP, FROST_HOT, FROST_MID, GROVE_CORE, GROVE_DEEP, GROVE_HOT, GROVE_MID, WILD_CORE, WILD_DEEP, WILD_HOT, WILD_MID } from './druid';
 
 // ---------------------------------------------------------------------------
 // Looks (skins). Every look shares the rig, poses and staff geometry, so the
@@ -228,7 +228,32 @@ export const WILD_LOOK: WizardLook = {
   beard: AUBURN,
 };
 
-export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK];
+/** The Grovekeeper's Autumn Warden skin: russet leaves, bare antlers and an ember of a seed. */
+export const AUTUMN_LOOK: WizardLook = {
+  ...GROVE_LOOK,
+  key: 'druid_autumn',
+  robe: AUTUMN_ROBE,
+  trim: AUTUMN_LEAF,
+  crystal: EMBER_SEED,
+  hair: BARE_ANTLER,
+  magic: { core: AUTUMN_CORE, hot: AUTUMN_HOT, mid: AUTUMN_MID, deep: AUTUMN_DEEP },
+};
+
+/** The Shapeshifter's Frostfang skin: a white wolf's pelt with eyes of ice, and a shard of ice on the staff. */
+export const FROST_LOOK: WizardLook = {
+  ...WILD_LOOK,
+  key: 'druid_frost',
+  robe: FROST_HIDE,
+  inner: FROST_TUNIC,
+  trim: ICE_FANG,
+  shaft: FROST_WOOD,
+  crystal: ICE,
+  hair: SNOW_PELT,
+  beard: FROST_HAIR,
+  magic: { core: FROST_CORE, hot: FROST_HOT, mid: FROST_MID, deep: FROST_DEEP },
+};
+
+export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK, AUTUMN_LOOK, FROST_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let S: WizardLook = ARCANE_LOOK;
@@ -1339,10 +1364,11 @@ function wolfEar(c: PixelCanvas, x: number, U: number): void {
   c.px(x - 0.5, 7 + U, S.inner, { x: 0, y: -0.2, z: 0.98 });
 }
 
+/** The pelt's eyes, still burning in the colour of the staff's stone. */
 function wolfEyes(c: PixelCanvas, pts: [number, number][], p: Pose): void {
   c.part();
   for (const [x, y] of pts) {
-    c.px(x, y, WOLF_EYE, { x: 0, y: 0, z: 1 });
+    c.px(x, y, S.crystal, { x: 0, y: 0, z: 1 });
     c.spark(x, y, S.magic.hot, 0.35 + p.glow * 0.3);
   }
 }

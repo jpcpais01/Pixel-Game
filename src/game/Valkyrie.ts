@@ -103,6 +103,26 @@ export const STORM_KIT: ValkyrieKit = {
   specialCooldown: 4800,
 };
 
+/** The Spearmaiden's Sunshield skin: gold and ember light. */
+export const SUN_KIT: ValkyrieKit = {
+  ...SPEAR_KIT,
+  key: 'valkyrie_sun',
+  swing: { core: 0xffffff, hot: 0xfff0d0, mid: 0xffc070, deep: 0xc0602a },
+  heavy: { core: 0xfffbf0, hot: 0xffd890, mid: 0xff8a4a, deep: 0xa82a1a, light: 0xffb060 },
+  pal: pal(0xfffbf0, 0xffd890, 0xff8a4a, 0xa82a1a, 0xffb060),
+  aura: 0xffd8a8,
+};
+
+/** The Stormwing's Raven Queen skin: violet lightning. */
+export const RAVEN_KIT: ValkyrieKit = {
+  ...STORM_KIT,
+  key: 'valkyrie_raven',
+  swing: { core: 0xffffff, hot: 0xf0e0ff, mid: 0xc8a0f7, deep: 0x6a3ac8 },
+  heavy: { core: 0xf8f0ff, hot: 0xd8b0ff, mid: 0xa060ff, deep: 0x4a1a8a, light: 0xb880ff },
+  pal: pal(0xf8f0ff, 0xd8b0ff, 0xa060ff, 0x4a1a8a, 0xb880ff),
+  aura: 0xd8c0ff,
+};
+
 export class Valkyrie implements Hero {
   x: number;
   y: number;

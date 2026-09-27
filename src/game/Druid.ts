@@ -6,7 +6,7 @@ import { HitSpark, Shockwave, type Effect, type Scheme } from './Slash';
 import { onGround } from './Toxins';
 import { bindFoe } from './Strings';
 import { bloom, clamp01, dither, easeOut, Fx, GROUND, hash, pal, pool, ring, shade, type Ink, type Pal } from './ultimate/ink';
-import { GROVE_STYLE, WILD_STYLE } from './spells';
+import { AUTUMN_STYLE, FROST_STYLE, GROVE_STYLE, WILD_STYLE, type SpellStyle } from './spells';
 import type { Wizard, WizardKit, WizardSkin } from './Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
 
@@ -42,17 +42,42 @@ export const WILD_KIT: WizardKit = {
 
 export const GROVE_SKIN: WizardSkin = { key: 'druid', style: GROVE_STYLE, kit: GROVE_KIT };
 export const WILD_SKIN: WizardSkin = { key: 'druid_wild', style: WILD_STYLE, kit: WILD_KIT };
+/** The Grovekeeper's Autumn Warden skin, and the Shapeshifter's Frostfang. */
+export const AUTUMN_SKIN: WizardSkin = { key: 'druid_autumn', style: AUTUMN_STYLE, kit: GROVE_KIT };
+export const FROST_SKIN: WizardSkin = { key: 'druid_frost', style: FROST_STYLE, kit: WILD_KIT };
 
-export const GROVE_PAL: Pal = pal(0xf6ffe0, 0xd8ff8a, 0x7ee05a, 0x2e8a4a, 0x9aff6a);
-export const WILD_PAL: Pal = pal(0xfff6e0, 0xffd27a, 0xf09a3a, 0x8a3a1e, 0xffb050);
-const GROVE_FX: Scheme = { core: 0xf6ffe0, hot: 0xd8ff8a, mid: 0x7ee05a, deep: 0x2e8a4a, light: 0x9aff6a };
-const WILD_FX: Scheme = { core: 0xfff6e0, hot: 0xffd27a, mid: 0xf09a3a, deep: 0x8a3a1e, light: 0xffb050 };
-/** The tint on a foe slowed by thorns or the grove. */
-const GROVE_TINT = 0xa8ff7a;
+/** A druid look's magic: its spells and light, the charge's mark, and (for the grove) its moss, flowers and the tint of what it slows. */
+export interface DruidMagic {
+  style: SpellStyle;
+  pal: Pal;
+  fx: Scheme;
+  /** The target ring and its fill. */
+  mark: [number, number];
+  /** On a foe slowed by thorns or the grove, and the grove's numbers. */
+  tint: number;
+  /** The grove's floor, darker and lighter. */
+  moss: [number, number];
+  flowers: number[];
+}
+
+const magic = (style: SpellStyle, light: number, rest: Omit<DruidMagic, 'style' | 'pal' | 'fx'>): DruidMagic => ({
+  style,
+  pal: pal(style.core, style.hot, style.mid, style.deep, light),
+  fx: { core: style.core, hot: style.hot, mid: style.mid, deep: style.deep, light },
+  ...rest,
+});
+
+export const GROVE_MAGIC = magic(GROVE_STYLE, 0x9aff6a, { mark: [0x4ec83a, 0xb8ff6a], tint: 0xa8ff7a, moss: [0x2e6a2a, 0x3e8a34], flowers: [0xffd66b, 0xfff6e8, 0xffa8c8] });
+/** Autumn: russet leaves on the ground, and ember-bright light. */
+export const AUTUMN_MAGIC = magic(AUTUMN_STYLE, 0xffa050, { mark: [0xd86a1e, 0xffc060], tint: 0xffb060, moss: [0x5a2a14, 0x7a3a18], flowers: [0xffd66b, 0xff8a3a, 0xd83a2a] });
+export const WILD_MAGIC = magic(WILD_STYLE, 0xffb050, { mark: [0xd8801e, 0xffc860], tint: 0xffc070, moss: [0x3a2a1a, 0x4a3a24], flowers: [] });
+/** Frostfang: the spirit wolf in ice. */
+export const FROST_MAGIC = magic(FROST_STYLE, 0x8ad0ff, { mark: [0x3a8ad8, 0xa8e0ff], tint: 0xa8e0ff, moss: [0x2a3a5a, 0x3a4a6a], flowers: [] });
+
+export const GROVE_PAL = GROVE_MAGIC.pal;
+export const WILD_PAL = WILD_MAGIC.pal;
 /** Bark, darkest first: the roots and the thorns' stems. */
 const BARK = [0x2c1e14, 0x4a3220, 0x6e4c30];
-/** Flowers in the grove: gold, white and wild rose. */
-const FLOWERS = [0xffd66b, 0xfff6e8, 0xffa8c8];
 const HEAL_TINT = 0x9dff9a;
 
 // Thorn seeds.
@@ -143,13 +168,16 @@ export class Grovecraft implements Effect {
   caster: Wizard | null = null;
   private mark: Mark;
 
-  constructor(private world: WorldScene) {
-    this.mark = new Mark(world, [0x4ec83a, 0xb8ff6a]);
+  constructor(
+    private world: WorldScene,
+    private m: DruidMagic = GROVE_MAGIC,
+  ) {
+    this.mark = new Mark(world, m.mark);
   }
 
   /** A thorn seed from the staff. */
   seed(x: number, y: number, dx: number, dy: number): void {
-    this.world.castEnergyBall(x, y, dx, dy, GROVE_STYLE, { speed: SEED_SPEED, lifetime: SEED_LIFETIME, onBurst: (bx, by) => this.thorns(bx, by) });
+    this.world.castEnergyBall(x, y, dx, dy, this.m.style, { speed: SEED_SPEED, lifetime: SEED_LIFETIME, onBurst: (bx, by) => this.thorns(bx, by) });
   }
 
   /** The seed bursts: thorns spring up round it, pricking and slowing all close by. The seed flies at chest height, so the ground is below it. */
@@ -157,9 +185,9 @@ export class Grovecraft implements Effect {
     const gy = y + 10;
     for (const h of this.world.hurtboxesWhere((b) => b.alive && onGround(b, x, gy, THORN_R))) {
       h.hurt({ damage: THORN_DAMAGE, heavy: false, knock: 20, fromX: x, fromY: gy });
-      h.slow?.(THORN_SLOW, THORN_SLOW_MS, GROVE_TINT);
+      h.slow?.(THORN_SLOW, THORN_SLOW_MS, this.m.tint);
     }
-    this.world.addEffect(new ThornBurst(this.world, x, gy, THORN_R, GROVE_PAL));
+    this.world.addEffect(new ThornBurst(this.world, x, gy, THORN_R, this.m.pal));
     sound.puff(this.world.pan(x));
   }
 
@@ -179,7 +207,7 @@ export class Grovecraft implements Effect {
     const c = this.caster;
     if (!c) return;
     const p = spotAt(c.x, c.y, dx, dy, power, dist, GROVE_MIN, GROVE_MAX, groveTouch);
-    this.world.addEffect(new Grove(this.world, p.x, p.y, power, c));
+    this.world.addEffect(new Grove(this.world, p.x, p.y, power, c, this.m));
     sound.bog(this.world.pan(p.x));
     sound.swell(this.world.pan(p.x));
   }
@@ -256,11 +284,12 @@ class Grove extends Fx {
     private y: number,
     private power: number,
     private hero: Wizard,
+    private m: DruidMagic,
   ) {
     super(world, groveLife(power));
     const r = (this.r = groveRadius(power));
     this.g = this.ink(Math.ceil(r * 2 + 12), Math.ceil(r * GROUND * 2 + 28));
-    this.lamp = this.light(x, y - 6, r * 3, GROVE_PAL.light, 0);
+    this.lamp = this.light(x, y - 6, r * 3, this.m.pal.light, 0);
     const seed = Math.floor(Math.random() * 1000);
     const n = Math.round(8 + r * 0.5);
     for (let i = 0; i < n; i++) {
@@ -270,7 +299,7 @@ class Grove extends Fx {
         x: x + Math.cos(a) * d * r,
         y: y + Math.sin(a) * d * r * GROUND,
         h: 2 + Math.floor(hash(i, seed, 3) * 4),
-        flower: hash(i, seed, 4) < 0.35 ? -1 : FLOWERS[i % FLOWERS.length],
+        flower: hash(i, seed, 4) < 0.35 || !m.flowers.length ? -1 : m.flowers[i % m.flowers.length],
         seed: i,
         d,
       });
@@ -285,25 +314,25 @@ class Grove extends Fx {
     const ms = rootMs(power);
     for (const h of world.hurtboxesWhere((b) => b.alive && onGround(b, x, y, r))) {
       h.hurt({ damage: rootDamage(power), heavy: false, knock: 0, fromX: x, fromY: y });
-      world.addEffect(new HitSpark(world, h.x, h.y - h.bodyY, GROVE_FX, h.y + 13, false));
-      if (bindFoe(h, ms)) world.addEffect(new Roots(world, h, ms, GROVE_PAL));
+      world.addEffect(new HitSpark(world, h.x, h.y - h.bodyY, this.m.fx, h.y + 13, false));
+      if (bindFoe(h, ms)) world.addEffect(new Roots(world, h, ms, this.m.pal));
     }
-    world.debris(GROVE_PAL.tints, x, y - 2, 14 + Math.round(power * 10), y + 20, 'spores');
-    bloom(world, x, y - 4, GROVE_PAL.hot, 1 + power, 360, y + 20, 0.6);
+    world.debris(this.m.pal.tints, x, y - 2, 14 + Math.round(power * 10), y + 20, 'spores');
+    bloom(world, x, y - 4, this.m.pal.hot, 1 + power, 360, y + 20, 0.6);
   }
 
   private tick(): void {
     const { world, x, y, r } = this;
     for (const h of world.hurtboxesWhere((b) => b.alive && onGround(b, x, y, r))) {
-      h.hurt({ damage: GROVE_TICK_DAMAGE, heavy: false, knock: 0, fromX: x, fromY: y, poison: GROVE_TINT });
-      h.slow?.(0.6, GROVE_TICK + 150, GROVE_TINT);
+      h.hurt({ damage: GROVE_TICK_DAMAGE, heavy: false, knock: 0, fromX: x, fromY: y, poison: this.m.tint });
+      h.slow?.(0.6, GROVE_TICK + 150, this.m.tint);
     }
     const hero = this.hero;
     if (hero.vitals.alive && Math.hypot((hero.x - x) / r, (hero.y - y) / (r * GROUND)) <= 1) {
       const got = hero.vitals.heal(GROVE_HEAL);
       if (got > 0) {
         this.healed += got;
-        world.debris([GROVE_PAL.core, GROVE_PAL.hot, HEAL_TINT], hero.x, hero.y - 6, 2, hero.y + 20, 'gather');
+        world.debris([this.m.pal.core, this.m.pal.hot, HEAL_TINT], hero.x, hero.y - 6, 2, hero.y + 20, 'gather');
       }
     }
   }
@@ -332,12 +361,12 @@ class Grove extends Fx {
     if (a > 0.5 && Math.floor(t / 170) !== Math.floor((t - dt) / 170)) {
       const q = Math.random() * Math.PI * 2;
       const d = Math.random() * r * 0.8;
-      world.debris([GROVE_PAL.core, GROVE_PAL.hot, FLOWERS[0]], x + Math.cos(q) * d, y + Math.sin(q) * d * GROUND - 2, 1, y + 20, 'spores');
+      world.debris([this.m.pal.core, this.m.pal.hot, this.m.flowers[0] ?? this.m.pal.core], x + Math.cos(q) * d, y + Math.sin(q) * d * GROUND - 2, 1, y + 20, 'spores');
     }
 
     const R = r * grow;
     const g = this.g.begin(x, y, 2.4, 0.5, (this.g.h - r * GROUND - 5) / this.g.h);
-    pool(g, x, y, R, 0x2e6a2a, 0x3e8a34, a, GROUND, 0.6);
+    pool(g, x, y, R, this.m.moss[0], this.m.moss[1], a, GROUND, 0.6);
     // Leaves round the rim, stirring as it lives.
     const n = Math.max(12, Math.round(R * 1.3));
     for (let k = 0; k < n; k++) {
@@ -345,8 +374,8 @@ class Grove extends Fx {
       const lx = x + Math.cos(q) * R;
       const ly = y + Math.sin(q) * R * GROUND;
       if (dither(Math.round(lx), Math.round(ly)) >= a) continue;
-      g.put(lx, ly, k % 3 === 0 ? GROVE_PAL.hot : GROVE_PAL.mid);
-      if (k % 2 === 0) g.put(lx, ly - 1, k % 4 === 0 ? GROVE_PAL.core : GROVE_PAL.hot);
+      g.put(lx, ly, k % 3 === 0 ? this.m.pal.hot : this.m.pal.mid);
+      if (k % 2 === 0) g.put(lx, ly - 1, k % 4 === 0 ? this.m.pal.core : this.m.pal.hot);
     }
     // Shoots springing up one after another, flowers opening on some.
     this.plants.forEach((pl, i) => {
@@ -355,8 +384,8 @@ class Grove extends Fx {
       const hh = Math.round(pl.h * up);
       if (hh <= 0) return;
       const sway = hh >= 3 ? Math.round(Math.sin(t * 0.004 + pl.seed) * 0.7) : 0;
-      for (let j = 0; j < hh; j++) g.put(pl.x + (j === hh - 1 ? sway : 0), pl.y - j, j === hh - 1 ? GROVE_PAL.hot : GROVE_PAL.mid);
-      if (hh >= 2) g.put(pl.x + (pl.seed % 2 ? 1 : -1), pl.y - 1, GROVE_PAL.mid);
+      for (let j = 0; j < hh; j++) g.put(pl.x + (j === hh - 1 ? sway : 0), pl.y - j, j === hh - 1 ? this.m.pal.hot : this.m.pal.mid);
+      if (hh >= 2) g.put(pl.x + (pl.seed % 2 ? 1 : -1), pl.y - 1, this.m.pal.mid);
       if (pl.flower >= 0 && up > 0.85) {
         const fx = pl.x + sway;
         const fy = pl.y - hh;
@@ -424,8 +453,11 @@ export class Wildcraft implements Effect {
   private lastRake = -Infinity;
   private chain = 0;
 
-  constructor(private world: WorldScene) {
-    this.mark = new Mark(world, [0xd8801e, 0xffc860]);
+  constructor(
+    private world: WorldScene,
+    private m: DruidMagic = WILD_MAGIC,
+  ) {
+    this.mark = new Mark(world, m.mark);
   }
 
   /** A rake of spirit claws the way she casts; every third in a quick chain is a heavier maul. */
@@ -441,11 +473,11 @@ export class Wildcraft implements Effect {
     const reach = maul ? MAUL_REACH : RAKE_REACH;
     const side = this.chain % 2 ? 1 : -1;
     const w = this.world;
-    w.addEffect(new ClawRake(w, cx, cy, angle, reach, side, maul, WILD_PAL, c.y + (dy < -0.5 ? -0.5 : 1)));
+    w.addEffect(new ClawRake(w, cx, cy, angle, reach, side, maul, this.m.pal, c.y + (dy < -0.5 ? -0.5 : 1)));
     sound.knife(w.pan(cx), this.chain, maul);
     const hits = w.melee({ kind: 'arc', x: cx, y: cy, radius: reach, angle, spread: RAKE_SPREAD }, { damage: maul ? MAUL_DAMAGE : RAKE_DAMAGE, heavy: maul, knock: maul ? 150 : 50 });
     for (const h of hits) {
-      w.addEffect(new HitSpark(w, h.x, h.y, WILD_FX, h.y + 13, maul));
+      w.addEffect(new HitSpark(w, h.x, h.y, this.m.fx, h.y + 13, maul));
       sound.punchHit(w.pan(h.x), maul);
     }
     if (hits.length) w.cameras.main.shake(maul ? 110 : 60, maul ? 0.0005 : 0.0003);
@@ -466,7 +498,7 @@ export class Wildcraft implements Effect {
     const p = this.landing(dx, dy, power, dist);
     if (!c || !p) return;
     this.world.evade(leapTime(power) + 80);
-    this.world.addEffect(new Pounce(this.world, c, p.x, p.y, power));
+    this.world.addEffect(new Pounce(this.world, c, p.x, p.y, power, this.m));
     sound.windDash(this.world.pan(c.x));
   }
 
@@ -626,6 +658,7 @@ class Pounce extends Fx {
     private tx: number,
     private ty: number,
     private power: number,
+    private m: DruidMagic,
   ) {
     const time = leapTime(power);
     super(world, time + 600);
@@ -637,8 +670,8 @@ class Pounce extends Fx {
     this.scratch = this.ink(Math.ceil(slamRadius(power) * 2 + 12), Math.ceil(slamRadius(power) * 2 * GROUND + 12));
     this.shadow = this.own(world.add.image(hero.x, hero.y, 'shadow').setDepth(1.5).setAlpha(0.7));
     hero.veil = 1;
-    world.debris(WILD_PAL.tints, hero.x, hero.y - 10, 12, hero.y + 20, 'burst');
-    bloom(world, hero.x, hero.y - 10, WILD_PAL.hot, 1.2, 260, hero.y + 20);
+    world.debris(this.m.pal.tints, hero.x, hero.y - 10, 12, hero.y + 20, 'burst');
+    bloom(world, hero.x, hero.y - 10, this.m.pal.hot, 1.2, 260, hero.y + 20);
   }
 
   protected step(dt: number): void {
@@ -653,10 +686,10 @@ class Pounce extends Fx {
       const by = snap(hero.y) - 7 - lift;
       const g = this.g.begin(bx, by, snap(hero.y) + 0.5);
       // Crouched to spring, stretched in the air, gathering to land.
-      spiritBeast(g, bx, by, this.dir, 'wolf', k < 0.15 ? 0.2 : k > 0.85 ? 0.4 : 1, WILD_PAL);
+      spiritBeast(g, bx, by, this.dir, 'wolf', k < 0.15 ? 0.2 : k > 0.85 ? 0.4 : 1, this.m.pal);
       g.end();
       this.shadow.setPosition(snap(hero.x), snap(hero.y)).setScale(1 - lift / 60);
-      if (Math.floor(t / 30) !== Math.floor((t - dt) / 30)) world.debris([WILD_PAL.hot, WILD_PAL.mid], bx - this.dir * 8, by, 1, snap(hero.y) + 20, 'trail');
+      if (Math.floor(t / 30) !== Math.floor((t - dt) / 30)) world.debris([this.m.pal.hot, this.m.pal.mid], bx - this.dir * 8, by, 1, snap(hero.y) + 20, 'trail');
       if (k >= 1) this.land();
       return;
     }
@@ -668,7 +701,7 @@ class Pounce extends Fx {
       for (let i = -r * 0.6; i <= r * 0.6; i++) {
         const u = Math.abs(i) / (r * 0.6);
         if (dither(Math.round(this.tx + i), Math.round(this.ty + n * 3)) >= a * (1 - u * u)) continue;
-        g.put(this.tx + i, this.ty + n * 3 + i * 0.25, u < 0.4 ? WILD_PAL.hot : WILD_PAL.mid);
+        g.put(this.tx + i, this.ty + n * 3 + i * 0.25, u < 0.4 ? this.m.pal.hot : this.m.pal.mid);
       }
     }
     g.end();
@@ -685,10 +718,10 @@ class Pounce extends Fx {
     this.shadow.setVisible(false);
     const r = slamRadius(power);
     const hits = world.melee({ kind: 'circle', x: tx, y: ty - 6, radius: r }, { damage: slamDamage(power), heavy: true, knock: 150, fromX: tx, fromY: ty });
-    for (const h of hits) world.addEffect(new HitSpark(world, h.x, h.y, WILD_FX, h.y + 13, true));
-    world.addEffect(new Shockwave(world, tx, ty - 1, r + 8, WILD_FX));
-    world.debris(WILD_PAL.tints, tx, ty - 4, 16 + Math.round(power * 10), ty + 20, 'burst');
-    world.debris([0x8a7a60, 0x5a4a38, WILD_PAL.mid], tx, ty - 2, 10, ty + 20, 'spores');
+    for (const h of hits) world.addEffect(new HitSpark(world, h.x, h.y, this.m.fx, h.y + 13, true));
+    world.addEffect(new Shockwave(world, tx, ty - 1, r + 8, this.m.fx));
+    world.debris(this.m.pal.tints, tx, ty - 4, 16 + Math.round(power * 10), ty + 20, 'burst');
+    world.debris([0x8a7a60, 0x5a4a38, this.m.pal.mid], tx, ty - 2, 10, ty + 20, 'spores');
     world.cameras.main.shake(140 + 60 * power, 0.0007 + 0.0005 * power);
     sound.slam(world.pan(tx));
     if (hits.length) sound.punchHit(world.pan(tx), true);
