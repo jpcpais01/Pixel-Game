@@ -247,6 +247,9 @@ export class Pickup {
     const cy = Math.round(ry - lift - 5);
 
     if (!this.landed) {
+      // Rare and epic finds are still hopping out: their pillar rises as they land.
+      // (Only a falling star has a trail and a flash; the hop outlasts OMEN.)
+      if (!show.star) return;
       // Legendary only: a thin shaft marks the spot, then the star comes down it.
       const omen = Math.min(1, this.age / OMEN);
       this.beamInner!.setPosition(rx, ry + 1).setDepth(ry - 0.3).setScale(0.35, show.beam * (0.4 + 0.6 * omen)).setAlpha(0.5 * omen);
