@@ -1,7 +1,7 @@
 import { Ambience } from './ambience';
 import { Mixer, gain } from './mixer';
 import { Music } from './music';
-import { ShopMusic } from './shopMusic';
+import { ShopMusic, type ShopMood } from './shopMusic';
 import { Sfx, type BeamHum } from './sfx';
 import { note } from '../diagnostics';
 
@@ -29,6 +29,7 @@ class GameSound {
   private mixer: Mixer | null = null;
   private music: Music | null = null;
   private shopMusic: ShopMusic | null = null;
+  private shopMood: ShopMood = 'sanctum';
   /** Each track's own level on the music bus, crossfaded by setTrack. */
   private tracks: Record<Track, GainNode> | null = null;
   private track: Track = 'main';
@@ -91,7 +92,12 @@ class GameSound {
     this.emit();
   }
 
-  /** Player volume per bus, 0..1 (sound effects include the ambience). */
+  /** The shop's banner: the Sanctum's waltz, or the Nest's warmer one. */
+  setShopMood(mood: ShopMood): void {
+    this.shopMood = mood;
+    this.shopMusic?.setMood(mood);
+  }
+
   /** Fade from the music playing into another track. */
   setTrack(track: Track): void {
     if (track === this.track) return;
@@ -735,6 +741,7 @@ class GameSound {
     this.tracks = { main: gain(ctx, this.track === 'main' ? 1 : 0, m.music), shop: gain(ctx, this.track === 'shop' ? 1 : 0, m.music) };
     this.music = new Music(m, this.tracks.main);
     this.shopMusic = new ShopMusic(m, this.tracks.shop);
+    this.shopMusic.setMood(this.shopMood);
     this.ambience = new Ambience(m);
     this.sfx = guarded(new Sfx(m));
     this.ambience.setDaylight(this.daylight, 0);

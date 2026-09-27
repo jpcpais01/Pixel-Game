@@ -39,6 +39,14 @@ export interface SaveData {
   pity: number;
   /** One-off gifts already given to this account (see GRANTS in collection.ts), so each is given once. */
   grants: string[];
+  /** The furthest wave reached in the Endless Rift, by class id. */
+  rift: Record<string, number>;
+  /** Companions won from the companion wishes, by id. */
+  pets: string[];
+  /** The companion that follows the player, or '' for none. */
+  pet: string;
+  /** Companion wishes since the last legendary companion, for its own guarantee. */
+  petPity: number;
 }
 
 interface Session extends Account {
@@ -220,7 +228,18 @@ export async function loadSave(): Promise<LoadedSave | null> {
   const daily = f.daily && 'stringValue' in f.daily ? f.daily.stringValue : '';
   const pity = f.pity && 'integerValue' in f.pity ? Number(f.pity.integerValue) : 0;
   const grants = f.grants && 'stringValue' in f.grants && f.grants.stringValue ? f.grants.stringValue.split(',') : [];
-  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, username };
+  // The Rift's best waves as "wizard:12,valkyrie:7".
+  const rift: Record<string, number> = {};
+  if (f.rift && 'stringValue' in f.rift && f.rift.stringValue) {
+    for (const pair of f.rift.stringValue.split(',')) {
+      const [cls, n] = pair.split(':');
+      if (cls && Number(n) > 0) rift[cls] = Number(n);
+    }
+  }
+  const pets = f.pets && 'stringValue' in f.pets && f.pets.stringValue ? f.pets.stringValue.split(',') : [];
+  const pet = f.pet && 'stringValue' in f.pet ? f.pet.stringValue : '';
+  const petPity = f.petPity && 'integerValue' in f.petPity ? Number(f.petPity.integerValue) : 0;
+  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, pets, pet, petPity, username };
 }
 
 /** Overwrite the logged-in player's save. */
@@ -241,6 +260,10 @@ export async function writeSave(data: SaveData): Promise<void> {
     daily: { stringValue: data.daily },
     pity: { integerValue: String(Math.floor(data.pity)) },
     grants: { stringValue: data.grants.join(',') },
+    rift: { stringValue: Object.entries(data.rift).map(([cls, n]) => `${cls}:${Math.floor(n)}`).join(',') },
+    pets: { stringValue: data.pets.join(',') },
+    pet: { stringValue: data.pet },
+    petPity: { integerValue: String(Math.floor(data.petPity)) },
     updated: { timestampValue: new Date().toISOString() },
   };
   const res = await fetch(docUrl(s.uid), {

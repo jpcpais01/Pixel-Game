@@ -76,6 +76,14 @@ export abstract class Monster implements Hurtbox {
   gen = 0;
   /** When a blow last landed on it (world time), so a stale health from the host doesn't undo it. */
   lastHitAt = -Infinity;
+  /**
+   * The Endless Rift's monsters: it hunts whoever is nearest from anywhere
+   * and never gives up the chase; it has `toughness` times its health; and a
+   * champion is drawn `size` times bigger, its body growing with it.
+   */
+  hunter = false;
+  toughness = 1;
+  size = 1;
   x: number;
   y: number;
   hp: number;
@@ -145,7 +153,12 @@ export abstract class Monster implements Hurtbox {
   }
 
   get bodyY(): number {
-    return this.stats.bodyY + this.hover + this.lift;
+    return this.stats.bodyY * this.size + this.hover + this.lift;
+  }
+
+  /** Its full health (more for a Rift monster: see toughness). */
+  get maxHp(): number {
+    return this.stats.hp * this.toughness;
   }
 
   /** A boss: the camera leans toward it while it fights. */
@@ -154,7 +167,7 @@ export abstract class Monster implements Hurtbox {
   }
 
   get radius(): number {
-    return this.stats.radius;
+    return this.stats.radius * this.size;
   }
 
   /** Its pace: 1, or less while time is slowed round it. */
@@ -233,7 +246,7 @@ export abstract class Monster implements Hurtbox {
         break;
       case 'idle':
         this.stand(dt);
-        if (dist < this.stats.sight) this.notice(target!);
+        if (dist < this.stats.sight || (this.hunter && target)) this.notice(target!);
         else if (this.timer <= 0) {
           const a = Math.random() * Math.PI * 2;
           const r = 12 + Math.random() * 30;
@@ -243,7 +256,7 @@ export abstract class Monster implements Hurtbox {
         }
         break;
       case 'wander':
-        if (dist < this.stats.sight) this.notice(target!);
+        if (dist < this.stats.sight || (this.hunter && target)) this.notice(target!);
         else if (this.walkTo(dt, this.goalX, this.goalY, this.stats.speed * 0.45) || this.timer <= 0) this.enter('idle', 900 + Math.random() * 1800);
         break;
       case 'notice':
@@ -257,7 +270,7 @@ export abstract class Monster implements Hurtbox {
         break;
       case 'return':
         if (this.walkTo(dt, this.homeX, this.homeY, this.stats.speed * 0.8)) {
-          this.hp = this.stats.hp;
+          this.hp = this.maxHp;
           this.enter('idle', 800);
         }
         break;
@@ -420,6 +433,7 @@ export abstract class Monster implements Hurtbox {
   }
 
   private tooFar(target: Target, dist: number): boolean {
+    if (this.hunter) return false;
     return dist > this.stats.sight * 2 || Math.hypot(target.x - this.homeX, target.y - this.homeY) > this.stats.leash;
   }
 
@@ -499,12 +513,12 @@ export abstract class Monster implements Hurtbox {
     const hy = snap(ry - this.hover - this.lift);
     const frame = this.body.frame.name;
     let alpha = 1;
-    let scale = 1;
+    let scale = this.size;
     if (this.state === 'spawn') alpha = Phaser.Math.Clamp(1 - this.timer / SPAWN_TIME, 0, 1);
     if (this.state === 'dying') {
       const t = Phaser.Math.Clamp(this.timer / DEATH_TIME, 0, 1);
       alpha = t;
-      scale = 0.6 + t * 0.4;
+      scale = (0.6 + t * 0.4) * this.size;
     }
     // A spirit's body thins; its glow keeps burning.
     this.body.setPosition(rx, hy).setDepth(ry).setAlpha(alpha * this.fade).setScale(scale);
@@ -513,9 +527,9 @@ export abstract class Monster implements Hurtbox {
     this.flash.setVisible(f);
     if (f) this.flash.setPosition(rx, hy).setDepth(ry + 0.2).setFrame(frame).setScale(scale).setAlpha(this.state === 'dying' ? alpha : Math.min(1, this.flashT / FLASH_TIME) * 0.85);
     const up = Math.min(1, (this.hover + this.lift) / 10);
-    this.shadow.setPosition(rx, ry - 1).setAlpha(alpha * this.fade * (1 - up * 0.4));
+    this.shadow.setPosition(rx, ry - 1).setAlpha(alpha * this.fade * (1 - up * 0.4)).setScale((this.stats.radius / 7) * this.size, this.size);
     this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * alpha);
-    if (!this.stats.noBar) this.bar.update(dt, rx, ry - this.stats.barY - Math.round(this.lift), this.state === 'dying' ? 0 : this.hp, this.stats.hp, 0);
+    if (!this.stats.noBar) this.bar.update(dt, rx, ry - Math.round(this.stats.barY * this.size) - Math.round(this.lift), this.state === 'dying' ? 0 : this.hp, this.maxHp, 0);
     if (this.paceT > 0) this.syncClock(rx, hy);
   }
 

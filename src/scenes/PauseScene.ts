@@ -253,7 +253,7 @@ export class PauseScene extends Phaser.Scene {
 }
 
 /** Let go of every held control, so nothing stays pressed across a pause. */
-function releaseControls(): void {
+export function releaseControls(): void {
   controls.moveX = 0;
   controls.moveY = 0;
   controls.attack = false;

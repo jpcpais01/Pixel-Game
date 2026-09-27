@@ -14,7 +14,9 @@ import { CLEARING_GROUND, CLEARING_H, CLEARING_SPAWN, CLEARING_W, PLAZA_CX, PLAZ
 import { SANCTUM_WORLD_W } from './sanctumLayout';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
-import { warmCosmos, warmDeep, warmIsland, warmSpirit, warmTemple } from '../art/textures';
+import { warmCosmos, warmDeep, warmIsland, warmRift, warmSpirit, warmTemple } from '../art/textures';
+import { RIFT_CX, RIFT_CY, RIFT_H, RIFT_SPAWN, RIFT_W, SHARDS, TEARS, riftWalkable } from './riftLayout';
+import { RIFT_PLATFORM_X, RIFT_PLATFORM_Y, SHARD_H, SHARD_OY } from '../art/rift';
 import { GroundStreamer } from './GroundStreamer';
 import { DEEP_H, DEEP_SPAWN, DEEP_SPAWNS, DEEP_W, WYRM_HOME, deepWalkable } from './deepLayout';
 import { ELEMENTINHO_HOME, TEMPLE_H, TEMPLE_SPAWN, TEMPLE_SPAWNS, TEMPLE_W, templeWalkable } from './templeLayout';
@@ -81,6 +83,8 @@ export interface ArenaDef {
   duel?: boolean;
   /** ms before a slain monster is replaced (9 s by default). */
   respawn?: number;
+  /** Played alone for now: no online rooms (the Endless Rift's waves aren't shared yet). */
+  solo?: boolean;
   /** The select card's window onto the arena: its centre, and what stands in view. */
   preview: { x: number; y: number; sprites(): PreviewSprite[] };
 }
@@ -289,6 +293,44 @@ export const ARENAS: ArenaDef[] = [
         { texture: 'wyrm', frame: 'idle0_r', glow: 'wyrm_e', x: WYRM_HOME.x, y: WYRM_HOME.y, originY: 130 / 136 },
         { texture: 'shardling', frame: 'idle0_l', glow: 'shardling_e', x: WYRM_HOME.x + 74, y: WYRM_HOME.y + 18, originY: 18 / 20 },
         { texture: 'glimbat', frame: 'fly2_r', glow: 'glimbat_e', x: WYRM_HOME.x - 76, y: WYRM_HOME.y - 44, originY: 24 / 26 },
+      ],
+    },
+  },
+  {
+    id: 'rift',
+    name: 'The Endless Rift',
+    blurb: 'Wave after wave: how far can you go?',
+    accent: 0xff5ac0,
+    ground: {
+      painted: true,
+      w: RIFT_W,
+      h: RIFT_H,
+      // Its waves call on the Rune Temple's and the Deep's monsters, whose sheets those arenas build.
+      warm: (scene, budget) => warmTemple(scene, budget) && warmDeep(scene, budget) && warmRift(scene, budget),
+      layers: [
+        { key: 'rift_void', x: 0, y: 0 },
+        { key: 'rift_platform', x: RIFT_PLATFORM_X, y: RIFT_PLATFORM_Y },
+        { key: 'rift_platform_e', x: RIFT_PLATFORM_X, y: RIFT_PLATFORM_Y, glow: true },
+      ],
+    },
+    spawn: RIFT_SPAWN,
+    // Its waves come from game/rift.ts, not a spawn table.
+    monsters: [],
+    solo: true,
+    scenery: () => ({ trees: [], props: [], rays: [], colliders: [] }),
+    walkable: riftWalkable,
+    drift: { tints: [0xffffff], frequency: 100000, where: () => false },
+    // Adrift in the void: no day or night, the rift lights itself.
+    daylight: 0,
+    preview: {
+      x: RIFT_CX,
+      y: RIFT_CY - 34,
+      sprites: () => [
+        ...TEARS.filter((t) => t.y < RIFT_CY).map((t, i) => ({ texture: 'rift_tear', frame: `t${i % 4}`, x: t.x, y: t.y + 2 })),
+        ...SHARDS.filter((s) => s.y < RIFT_CY).map((s) => ({ texture: 'rift_shard', frame: `s${s.v}`, glow: 'rift_shard_e', x: s.x, y: s.y, originY: SHARD_OY / SHARD_H })),
+        { texture: 'golem', frame: 'idle0_r', glow: 'golem_e', x: RIFT_CX + 30, y: RIFT_CY - 16 },
+        { texture: 'wisp', frame: 'idle1_l', glow: 'wisp_e', x: RIFT_CX - 44, y: RIFT_CY - 26, originY: 22 / 24 },
+        { texture: 'blob_fire', frame: 'idle2_r', glow: 'blob_fire_e', x: RIFT_CX - 18, y: RIFT_CY - 8, originY: 19 / 22 },
       ],
     },
   },

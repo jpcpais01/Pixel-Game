@@ -76,8 +76,9 @@ export const TIER_GEMS: Record<Tier, { chance: number; min: number; max: number 
 };
 
 /** How many gems a slain monster of `kind` drops: usually none. */
-export function rollGems(kind: string): number {
+export function rollGems(kind: string, luck = 1): number {
   const g = TIER_GEMS[tierOf(kind)];
-  if (Math.random() >= g.chance) return 0;
+  // Luck (a companion's) makes gems likelier, never more at once.
+  if (Math.random() >= Math.min(1, g.chance * luck)) return 0;
   return g.min + Math.floor(Math.random() * (g.max - g.min + 1));
 }

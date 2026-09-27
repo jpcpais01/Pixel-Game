@@ -3,6 +3,8 @@ import { Mixer, filter, gain, hit, mtof, osc, pick, rand } from './mixer';
 // The Wishing Sanctum's music: a slow, dreamy waltz in E-flat. A music box
 // turns arpeggios over the chords, soft pads swell under them, a sparse
 // melody sings above, and glass chimes ring out now and then into the reverb.
+// In the Wishing Nest (the companions' banner) the same waltz turns warm: up
+// into G, the box brighter, and birdsong in place of the chimes.
 
 const BPM = 84;
 const EIGHTH = 30 / BPM;
@@ -28,6 +30,10 @@ const ARP = [0, 1, 2, 3, 4, 3, 1, 2, 3, 4, 5, 4];
 const SONG = [75, 77, 79, 82, 84, 87, 89];
 /** The chimes' notes, higher still. */
 const CHIMES = [87, 89, 91, 94, 96, 99];
+/** The Nest plays everything this many semitones up: E-flat to G. */
+const NEST_UP = 4;
+
+export type ShopMood = 'sanctum' | 'nest';
 
 export class ShopMusic {
   private m: Mixer;
@@ -38,6 +44,10 @@ export class ShopMusic {
   private next = 0;
   private chimeAt = 0;
   private sing = 2;
+  private mood: ShopMood = 'sanctum';
+  /** Semitones up from E-flat for the chord now playing. */
+  private up = 0;
+  private boxTone: BiquadFilterNode;
 
   /** `out`: this track's own level on the music bus (see GameSound.setTrack). */
   constructor(m: Mixer, out: AudioNode) {
@@ -50,7 +60,8 @@ export class ShopMusic {
     this.pad = filter(ctx, 'lowpass', 900, 0.4, padOut);
     osc(ctx, 'sine', 0.05, gain(ctx, 300, this.pad.frequency)).start();
     // The music box, with a soft echo a dotted eighth behind.
-    this.box = gain(ctx, 1, out);
+    this.boxTone = filter(ctx, 'lowpass', 5200, 0.5, out);
+    this.box = gain(ctx, 1, this.boxTone);
     this.box.connect(gain(ctx, 0.9, m.reverb));
     const delay = ctx.createDelay(2);
     delay.delayTime.value = EIGHTH * 1.5;
@@ -58,6 +69,13 @@ export class ShopMusic {
     delay.connect(filter(ctx, 'lowpass', 3000, 0.5, fb));
     delay.connect(gain(ctx, 0.35, out));
     this.box.connect(delay);
+  }
+
+  /** The Sanctum or the Nest: the key moves at the next chord, the box's tone at once (gently). */
+  setMood(mood: ShopMood): void {
+    this.mood = mood;
+    const t = this.m.ctx.currentTime;
+    this.boxTone.frequency.setTargetAtTime(mood === 'nest' ? 9000 : 5200, t, 0.4);
   }
 
   /** Schedule everything that starts before `until`. */
@@ -74,15 +92,19 @@ export class ShopMusic {
       this.step++;
     }
     if (this.chimeAt < until) {
-      this.chime(Math.max(now, this.chimeAt));
-      this.chimeAt += rand(3.5, 7);
+      if (this.mood === 'nest') this.chirp(Math.max(now, this.chimeAt));
+      else this.chime(Math.max(now, this.chimeAt));
+      this.chimeAt += this.mood === 'nest' ? rand(2.5, 5.5) : rand(3.5, 7);
     }
   }
 
   private play(step: number, t: number): void {
     const s = step % STEPS;
     const ci = Math.floor(step / STEPS) % PROG.length;
-    const chord = PROG[ci];
+    // The key is chosen at each chord's start, so a mood change never lands mid-chord.
+    if (s === 0) this.up = this.mood === 'nest' ? NEST_UP : 0;
+    const base = PROG[ci];
+    const chord = { bass: base.bass + this.up, pad: base.pad.map((n) => n + this.up) };
     if (s === 0) {
       this.chord(chord, t, EIGHTH * STEPS);
       this.bass(chord.bass, t, EIGHTH * STEPS);
@@ -97,8 +119,8 @@ export class ShopMusic {
     if (s % 6 === 0 && Math.random() < 0.55) {
       this.sing = Math.max(0, Math.min(SONG.length - 1, this.sing + pick([-2, -1, 1, 2])));
       const pcs = new Set(chord.pad.map((n) => n % 12));
-      let note = SONG[this.sing];
-      if (!pcs.has(note % 12)) note = SONG.find((n) => pcs.has(n % 12) && Math.abs(n - note) <= 3) ?? note;
+      let note = SONG[this.sing] + this.up;
+      if (!pcs.has(note % 12)) note = SONG.map((n) => n + this.up).find((n) => pcs.has(n % 12) && Math.abs(n - note) <= 3) ?? note;
       this.bell(note, t + EIGHTH * 0.02, 0.06, 2.4);
     }
   }
@@ -181,5 +203,25 @@ export class ShopMusic {
   private chime(t: number): void {
     const k = 2 + Math.floor(Math.random() * 2);
     for (let i = 0; i < k; i++) this.bell(pick(CHIMES), t + i * rand(0.09, 0.16), 0.022, 3);
+  }
+
+  /** A small bird in the rafters: two to four quick whistles, each swooping up or down. */
+  private chirp(t: number): void {
+    const ctx = this.m.ctx;
+    const k = 2 + Math.floor(Math.random() * 3);
+    const f0 = rand(2600, 3600);
+    const rise = Math.random() < 0.6;
+    for (let i = 0; i < k; i++) {
+      const at = t + i * rand(0.07, 0.11);
+      const len = rand(0.05, 0.08);
+      const g = gain(ctx, 0, this.box);
+      hit(g.gain, at, 0.02, 0.006, len * 0.6);
+      const o = osc(ctx, 'sine', f0, g);
+      const f = f0 * (1 + i * 0.04);
+      o.frequency.setValueAtTime(rise ? f * 0.8 : f * 1.15, at);
+      o.frequency.exponentialRampToValueAtTime(rise ? f * 1.2 : f * 0.85, at + len);
+      o.start(at);
+      o.stop(at + len + 0.1);
+    }
   }
 }

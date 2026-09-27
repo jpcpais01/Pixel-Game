@@ -20,6 +20,9 @@ import { buildRogueFrames, daggersIcon, ROGUE_ANIMS, ROGUE_H, ROGUE_ICONS, ROGUE
 import { gourdIcon, registerMoreSkinIcons, SKIN_BREWS, SKIN_QUIVERS } from './moreSkinIcons';
 import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, eclipseFallIcon, oathHammerIcon, pikeSaberIcon, seraphMaceIcon } from './heroSkins';
 import { hex } from './pixel';
+import { EGG_H, EGG_W, PET_ART, PET_FRAMES, PET_H, PET_W, eggCracks, petFrames, wishEgg } from './pets';
+import { RIFT_PLATFORM_H, RIFT_PLATFORM_W, SHARD_H, SHARD_W, TEAR_FRAMES, TEAR_H, TEAR_W, blessingIcon, riftPlatformArt, riftShard, riftTear, riftVoidCanvas, type BlessingIcon } from './rift';
+import { RIFT_H, RIFT_W } from '../world/riftLayout';
 import { AUTUMN_SPELL, AUTUMN_TONES, FROST_SPELL, FROST_TONES, GROVE_SPELL, WILD_SPELL, clawsIcon, groveIcon, pounceIcon, thornSeedIcon } from './druid';
 import { RAVEN_INK, RAVEN_TONES, SUN_INK, SUN_TONES, diveIcon, spearIcon, spearThrowIcon } from './valkyrie';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
@@ -624,6 +627,21 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_barrage', toCanvas(16, 16, barrageIcon([hex('#fffbe8'), hex('#ffd66b'), hex('#ff8a36'), hex('#d8402a')])));
   registerMoreSkinIcons((key, px) => scene.textures.addCanvas(key, toCanvas(16, 16, px)));
   // The Druid's and the Valkyrie's buttons (their figures are wizard and warrior looks, built above).
+  // Companions: one sheet of every frame ('pets', lit), a looping animation each ('pet_<id>'),
+  // and the Wishing Nest's egg with the cracks that spread across it.
+  register(scene, 'pets', pack(petFrames().map((f) => ({ name: f.name, r: f.canvas.render() })), PET_W, PET_H), PET_W, PET_H);
+  for (const id of Object.keys(PET_ART)) {
+    scene.anims.create({
+      key: `pet_${id}`,
+      frames: Array.from({ length: PET_FRAMES }, (_, f) => ({ key: 'pets', frame: `${id}_${f}` })),
+      frameRate: 7,
+      repeat: -1,
+    });
+  }
+  const egg = wishEgg().render();
+  scene.textures.addCanvas('nest_egg', toCanvas(EGG_W, EGG_H, egg.diffuse));
+  scene.textures.addCanvas('nest_egg_e', toCanvas(EGG_W, EGG_H, egg.emissive));
+  for (const k of [1, 2, 3]) scene.textures.addCanvas(`nest_crack${k}`, toCanvas(EGG_W, EGG_H, eggCracks(k)));
   scene.textures.addCanvas('icon_thorn', toCanvas(16, 16, thornSeedIcon()));
   scene.textures.addCanvas('icon_grove', toCanvas(16, 16, groveIcon()));
   scene.textures.addCanvas('icon_claws', toCanvas(16, 16, clawsIcon()));
@@ -789,6 +807,49 @@ function* islandTextures(scene: Phaser.Scene): Generator<void, void, void> {
   const bird = scene.textures.addCanvas('isle_bird', birdSheet().toCanvas())!;
   bird.add('b0', 0, 0, 0, 5, 3);
   bird.add('b1', 0, 5, 0, 5, 3);
+}
+
+/** The Endless Rift's textures being built, a little per call. */
+const riftJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
+
+/**
+ * Build the Endless Rift's textures (the void, the platform, the tears, the
+ * shards, drifting rocks and the blessings' icons), spending at most
+ * `budget` ms (as warmCosmos). Returns true when they are all there.
+ */
+export function warmRift(scene: Phaser.Scene, budget = Infinity): boolean {
+  if (scene.textures.exists('blessing_fortune')) return true;
+  let job = riftJobs.get(scene.textures);
+  if (!job) {
+    job = riftTextures(scene);
+    riftJobs.set(scene.textures, job);
+  }
+  const start = performance.now();
+  while (performance.now() - start < budget) {
+    if (job.next().done) {
+      riftJobs.delete(scene.textures);
+      return true;
+    }
+  }
+  return false;
+}
+
+function* riftTextures(scene: Phaser.Scene): Generator<void, void, void> {
+  const sky = yield* riftVoidCanvas();
+  scene.textures.addCanvas('rift_void', toCanvas(RIFT_W, RIFT_H, sky));
+  const plat = yield* riftPlatformArt();
+  scene.textures.addCanvas('rift_platform', toCanvas(RIFT_PLATFORM_W, RIFT_PLATFORM_H, plat.diffuse))!.setDataSource(toCanvas(RIFT_PLATFORM_W, RIFT_PLATFORM_H, plat.normal));
+  scene.textures.addCanvas('rift_platform_e', toCanvas(RIFT_PLATFORM_W, RIFT_PLATFORM_H, plat.emissive));
+  yield;
+  const tears = scene.textures.addCanvas('rift_tear', toCanvas(TEAR_W * TEAR_FRAMES, TEAR_H, sideBySide(TEAR_W, TEAR_H, Array.from({ length: TEAR_FRAMES }, (_, f) => riftTear(f)))))!;
+  for (let f = 0; f < TEAR_FRAMES; f++) tears.add(`t${f}`, 0, f * TEAR_W, 0, TEAR_W, TEAR_H);
+  if (!scene.anims.exists('rift_tear_flicker')) scene.anims.create({ key: 'rift_tear_flicker', frames: scene.anims.generateFrameNames('rift_tear', { prefix: 't', start: 0, end: TEAR_FRAMES - 1 }), frameRate: 9, repeat: -1 });
+  yield;
+  register(scene, 'rift_shard', pack(frameList([0, 1, 2, 3].map(riftShard), 's'), SHARD_W, SHARD_H), SHARD_W, SHARD_H);
+  register(scene, 'rift_rock', pack(frameList([4, 9, 13].map(floatingRock), 'r'), FLOAT_ROCK_W, FLOAT_ROCK_H), FLOAT_ROCK_W, FLOAT_ROCK_H, false);
+  yield;
+  // Last: its presence means everything above is built.
+  for (const kind of ['might', 'swift', 'vigor', 'fang', 'ward', 'renew', 'surge', 'fortune'] as BlessingIcon[]) scene.textures.addCanvas(`blessing_${kind}`, toCanvas(16, 16, blessingIcon(kind)));
 }
 
 /** The Spirit Dungeon's textures being built, a little per call. */

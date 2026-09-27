@@ -228,6 +228,7 @@ export class ArenaScene extends Phaser.Scene {
     this.panel = false;
     this.picked = Math.max(0, ARENAS.findIndex((a) => a.id === lastArena()));
     this.cards[this.picked].setPicked(true);
+    this.syncOnline();
 
     const kb = this.input.keyboard;
     kb?.on('keydown-LEFT', () => this.pick((this.picked + this.cards.length - 1) % this.cards.length));
@@ -256,6 +257,13 @@ export class ArenaScene extends Phaser.Scene {
     this.cards[this.picked].setPicked(false);
     this.picked = i;
     this.cards[i].setPicked(true);
+    this.syncOnline();
+  }
+
+  /** An arena played alone (the Endless Rift) has no online rooms: the button dims. */
+  private syncOnline(): void {
+    const solo = !!this.cards[this.picked].arena.solo;
+    this.online.setEnabled(!solo).setAlpha(solo ? 0.4 : 1);
   }
 
   private goBack(): void {
@@ -267,7 +275,7 @@ export class ArenaScene extends Phaser.Scene {
 
   /** Play online: create or join a room, then into its arena. */
   private openOnline(): void {
-    if (this.leaving || this.panel) return;
+    if (this.leaving || this.panel || this.cards[this.picked].arena.solo) return;
     this.panel = true;
     this.input.enabled = false;
     openOnlineForm(
