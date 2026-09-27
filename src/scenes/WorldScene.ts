@@ -83,6 +83,11 @@ const RISE_GRACE = 2200;
 /** The hero's body, for monster hits: centre height above the feet, and radius. */
 const HERO_BODY_Y = 11;
 const HERO_RADIUS = 6;
+/** A step into a wall is turned this much at a time, up to the most, to find ground to glide along (radians). */
+const SLIDE_TURN_STEP = Math.PI / 24;
+const SLIDE_MAX_TURN = (80 * Math.PI) / 180;
+/** Steps longer than this (a blink, a dash) aren't turned, only held to the room around the hero. */
+const SLIDE_MAX_STEP = 8;
 
 /** A straw training dummy: struck like a monster, but never falls. */
 class Dummy implements Hurtbox {
@@ -193,6 +198,8 @@ export class WorldScene extends Phaser.Scene {
   private bounds = new Phaser.Geom.Rectangle();
   /** How far the hero may step this frame before bumping into something. */
   private heroBox = new Phaser.Geom.Rectangle();
+  /** Which way the hero last glanced off a wall (see settleStep). */
+  private slideSide = 1;
   /** Where monsters may roam: the world's edge, and `walkable` within it. */
   get monsterBounds(): Phaser.Geom.Rectangle {
     return this.bounds;
@@ -951,6 +958,49 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
+   * The hero stepped from (x0, y0) to where they stand now. A step into a
+   * wall, a tree or water glances off it: it is turned a little at a time,
+   * either way, until it finds ground, keeping only the part of it along the
+   * new way. So they glide along a jagged or curving edge, slowing the more
+   * squarely they walk into it, instead of catching on every corner of its
+   * pixels. A long jump (a blink, a dash) is held to the room around them.
+   */
+  private settleStep(x0: number, y0: number, room: Phaser.Geom.Rectangle): void {
+    const h = this.hero;
+    const dx = h.x - x0;
+    const dy = h.y - y0;
+    const len = Math.hypot(dx, dy);
+    // Clear ground at the end and halfway (so a quick dash can't slip through a thin wall).
+    const clear = (x: number, y: number) => this.walkable(x, y) && (len <= 3 || this.walkable((x0 + x) / 2, (y0 + y) / 2));
+    // A clear step, or already stuck inside something: let them walk (out).
+    if (len === 0 || clear(h.x, h.y) || !this.walkable(x0, y0)) return;
+    if (len <= SLIDE_MAX_STEP) {
+      const a = Math.atan2(dy, dx);
+      for (let turn = SLIDE_TURN_STEP; turn <= SLIDE_MAX_TURN; turn += SLIDE_TURN_STEP) {
+        const k = len * Math.cos(turn);
+        // The way it slid last is tried first, so it doesn't flicker between the two at a corner.
+        for (const side of [this.slideSide, -this.slideSide]) {
+          const b = a + side * turn;
+          const nx = x0 + Math.cos(b) * k;
+          const ny = y0 + Math.sin(b) * k;
+          if (!clear(nx, ny)) continue;
+          h.x = nx;
+          h.y = ny;
+          this.slideSide = side;
+          return;
+        }
+      }
+    }
+    // Walked square into it, or jumped: as far as the room allows, one way at a time.
+    const nx = Phaser.Math.Clamp(h.x, room.left, room.right);
+    const ny = Phaser.Math.Clamp(h.y, room.top, room.bottom);
+    h.x = x0;
+    h.y = y0;
+    if (this.walkable(nx, y0)) h.x = nx;
+    if (this.walkable(h.x, ny)) h.y = ny;
+  }
+
+  /**
    * Stretch the step the hero just took by `extra` of itself (speed buffs),
    * within the room around them and never into a tree.
    */
@@ -1400,14 +1450,16 @@ export class WorldScene extends Phaser.Scene {
       attack = special = false;
     }
     this.hero.daylight = this.daylight;
-    // The heroes clamp their step to a box; make it the room around them, so
-    // they slide along trees and the forest's edge.
+    // The room around the hero, straight out each way: a blink or a dash that
+    // ends in a tree is held to it (see settleStep). Walking steps within the
+    // world's edge and glances off whatever it meets.
     const hb = this.heroBox;
     freeBox(this.walkable, this.hero.x, this.hero.y, 14, hb);
     const x0 = this.hero.x;
     const y0 = this.hero.y;
     const aim = this.ult.rooted ? null : this.heroAim(dt, attack, special);
-    this.hero.update(dt, mx, my, attack, special, hb, aim);
+    this.hero.update(dt, mx, my, attack, special, this.bounds, aim);
+    this.settleStep(x0, y0, hb);
     this.net?.record(mx, my, attack, special, aim);
     this.ult.update(dt);
     energy.update(dt);
