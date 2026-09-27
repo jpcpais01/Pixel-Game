@@ -220,6 +220,8 @@ export class ShopScene extends Phaser.Scene {
   private charge = 0;
   private tint = IDLE_TINT;
   private crystalShown = 1;
+  /** The shop's own shake: whole art pixels, so the picture stays crisp, easing off over its time. */
+  private shake = { t: 0, ms: 0, px: 0 };
 
   // The menus.
   private header!: Phaser.GameObjects.BitmapText;
@@ -272,6 +274,7 @@ export class ShopScene extends Phaser.Scene {
     this.lift = this.charge = 0;
     this.tint = IDLE_TINT;
     this.crystalShown = 1;
+    this.shake = { t: 0, ms: 0, px: 0 };
     this.shownGems = collection.gems;
     registerShopArt(this);
     const cam = this.cameras.main.setOrigin(0, 0).setAlpha(0);
@@ -626,10 +629,19 @@ export class ShopScene extends Phaser.Scene {
   private hintRarity(color: number, tier: number): void {
     this.shiftTint(color, 180);
     this.ring(color, tier === 2 ? 3 : 2, 0);
-    this.cameras.main.shake(tier === 2 ? 320 : 180, tier === 2 ? 0.006 : 0.003);
+    this.jolt(tier === 2 ? 300 : 160, tier === 2 ? 2 : 1);
     this.gather.setParticleTint(color);
     this.flash.setFillStyle(color).setAlpha(tier === 2 ? 0.35 : 0.2);
     this.tweens.add({ targets: this.flash, alpha: 0, duration: 260 });
+  }
+
+  /**
+   * Shake the view for `ms`, up to `px` art pixels, easing off. (Phaser's own
+   * shake moves a zoomed camera by fractions of a pixel, which smears the
+   * pixel art, and scales with the screen's size.)
+   */
+  private jolt(ms: number, px: number): void {
+    if (px >= this.shake.px * (this.shake.t / Math.max(1, this.shake.ms))) this.shake = { t: ms, ms, px };
   }
 
   /** A ring of light racing out from the crystal. */
@@ -645,7 +657,7 @@ export class ShopScene extends Phaser.Scene {
     sound.wishBurst(best);
     this.flash.setFillStyle(0xffffff).setAlpha(1);
     this.tweens.add({ targets: this.flash, alpha: 0, duration: 700, ease: 'Quad.easeIn' });
-    this.cameras.main.shake(best === 2 ? 500 : 280, best === 2 ? 0.01 : 0.005);
+    this.jolt(best === 2 ? 420 : 240, best === 2 ? 3 : 2);
     this.shards.setParticleTint(color);
     this.shards.explode(best === 2 ? 90 : 55, this.crystalX, this.crystalY);
     this.shards.setParticleTint(0xffffff);
@@ -730,7 +742,7 @@ export class ShopScene extends Phaser.Scene {
       this.shards.explode(r === 'legendary' ? 40 : r === 'epic' ? 22 : 10, card.x, card.y);
       if (r !== 'rare') {
         this.ring(info.tint, r === 'legendary' ? 3 : 2, 0);
-        this.cameras.main.shake(r === 'legendary' ? 260 : 120, r === 'legendary' ? 0.006 : 0.002);
+        if (r === 'legendary') this.jolt(220, 2);
       }
       if (r === 'legendary') {
         this.flash.setFillStyle(info.tint).setAlpha(0.45);
@@ -856,6 +868,14 @@ export class ShopScene extends Phaser.Scene {
 
   update(time: number, dt: number): void {
     this.elapsed += dt;
+    const sh = this.shake;
+    const cam = this.cameras.main;
+    if (sh.t > 0) {
+      sh.t = Math.max(0, sh.t - dt);
+      // A new offset every other frame or so reads as a shudder rather than a blur.
+      const amp = Math.round(sh.px * (sh.t / sh.ms));
+      cam.setScroll(Phaser.Math.Between(-amp, amp), Phaser.Math.Between(-amp, amp));
+    } else if (cam.scrollX || cam.scrollY) cam.setScroll(0, 0);
     const t = this.elapsed;
     const cx = this.crystalX;
     const cy = this.crystalY - this.lift + Math.round(Math.sin(t * 0.0018) * 2);
