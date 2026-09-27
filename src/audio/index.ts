@@ -1,18 +1,23 @@
 import { Ambience } from './ambience';
-import { Mixer } from './mixer';
+import { Mixer, gain } from './mixer';
 import { Music } from './music';
+import { ShopMusic } from './shopMusic';
 import { Sfx, type BeamHum } from './sfx';
 import { note } from '../diagnostics';
 
 const MUTE_KEY = 'pixel-game:muted';
 const LOOKAHEAD = 0.4; // seconds of music/ambience scheduled ahead of the clock
 const TICK_MS = 100;
+/** How long one track takes to fade into another, in seconds. */
+const TRACK_FADE = 2.4;
 const SAME_SOUND_GAP = 0.04; // seconds before the same one-shot may play again
 const BUSY_WINDOW = 0.25; // seconds
 /** New one-shots allowed per window: fewer on phones, whose audio thread chokes sooner. */
 const BUSY_LIMIT = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 8 : 12;
 
 type Listener = () => void;
+/** The music playing: the game's own, or the shop's. */
+export type Track = 'main' | 'shop';
 
 /**
  * The game's whole soundscape, generated live with Web Audio. Browsers only
@@ -23,6 +28,12 @@ class GameSound {
   private ctx: AudioContext | null = null;
   private mixer: Mixer | null = null;
   private music: Music | null = null;
+  private shopMusic: ShopMusic | null = null;
+  /** Each track's own level on the music bus, crossfaded by setTrack. */
+  private tracks: Record<Track, GainNode> | null = null;
+  private track: Track = 'main';
+  /** Until when the track faded out is still heard (and so still played). */
+  private fadeUntil = 0;
   private ambience: Ambience | null = null;
   private sfx: Sfx | null = null;
   private hum: BeamHum | null = null;
@@ -81,6 +92,22 @@ class GameSound {
   }
 
   /** Player volume per bus, 0..1 (sound effects include the ambience). */
+  /** Fade from the music playing into another track. */
+  setTrack(track: Track): void {
+    if (track === this.track) return;
+    this.track = track;
+    const ctx = this.ctx;
+    if (!ctx || !this.tracks) return;
+    const now = ctx.currentTime;
+    for (const k of ['main', 'shop'] as const) {
+      const g = this.tracks[k].gain;
+      g.cancelScheduledValues(now);
+      g.setValueAtTime(g.value, now);
+      g.linearRampToValueAtTime(k === track ? 1 : 0, now + TRACK_FADE);
+    }
+    this.fadeUntil = now + TRACK_FADE + 0.2;
+  }
+
   setVolumes(music: number, sfx: number): void {
     this.volume = { music, sfx };
     if (this.ctx && this.mixer) safely('volumes', () => this.applyVolumes(this.mixer!, this.ctx!.currentTime));
@@ -705,7 +732,9 @@ class GameSound {
     const m = (this.mixer = new Mixer(ctx));
     if (this._muted) m.master.gain.value = 0;
     this.applyVolumes(m, 0);
-    this.music = new Music(m);
+    this.tracks = { main: gain(ctx, this.track === 'main' ? 1 : 0, m.music), shop: gain(ctx, this.track === 'shop' ? 1 : 0, m.music) };
+    this.music = new Music(m, this.tracks.main);
+    this.shopMusic = new ShopMusic(m, this.tracks.shop);
     this.ambience = new Ambience(m);
     this.sfx = guarded(new Sfx(m));
     this.ambience.setDaylight(this.daylight, 0);
@@ -720,7 +749,10 @@ class GameSound {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;
     const now = ctx.currentTime;
-    safely('music', () => this.music!.tick(now, now + LOOKAHEAD));
+    // Only the track playing (and, while it fades out, the one before it) is written.
+    const fading = now < this.fadeUntil;
+    if (this.track === 'main' || fading) safely('music', () => this.music!.tick(now, now + LOOKAHEAD));
+    if (this.track === 'shop' || fading) safely('shop music', () => this.shopMusic!.tick(now, now + LOOKAHEAD));
     safely('ambience', () => this.ambience!.tick(now, now + LOOKAHEAD));
   }
 
