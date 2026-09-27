@@ -149,3 +149,39 @@ export const WILD_STYLE: SpellStyle = {
   orb: { texture: 'orb_wild_e', anim: 'orb_wild_spin' },
   burst: { texture: 'burst_wild_e', anim: 'burst_wild_pop' },
 };
+
+/** The Grovekeeper's Autumn Warden skin: ember orange and gold, deepening to rust. */
+export const AUTUMN_STYLE: SpellStyle = {
+  core: 0xfff4e0,
+  hot: 0xffc870,
+  mid: 0xf0803a,
+  deep: 0x9a3a1a,
+  accent: 0xffe08a,
+  sparks: [0xffc870, 0xf0803a, 0x9a3a1a, 0xffe08a],
+  glow: 0xf07a2a,
+  light: 0xffa050,
+  flash: 0xffdca0,
+  unstable: 0xd8401e,
+  fizzle: 0x8a6a58,
+  fizzleSparks: [0x8a6a58, 0xf0803a, 0x9a3a1a],
+  orb: { texture: 'orb_autumn_e', anim: 'orb_autumn_spin' },
+  burst: { texture: 'burst_autumn_e', anim: 'burst_autumn_pop' },
+};
+
+/** The Shapeshifter's Frostfang skin: ice, white and pale blue, deepening to a winter night. */
+export const FROST_STYLE: SpellStyle = {
+  core: 0xf0faff,
+  hot: 0xb8e8ff,
+  mid: 0x5ab8f0,
+  deep: 0x2a5aa8,
+  accent: 0xe0f6ff,
+  sparks: [0xb8e8ff, 0x5ab8f0, 0x2a5aa8, 0xf0faff],
+  glow: 0x4aa8f0,
+  light: 0x8ad0ff,
+  flash: 0xd8f2ff,
+  unstable: 0x7a6aff,
+  fizzle: 0x6a7a90,
+  fizzleSparks: [0x6a7a90, 0x5ab8f0, 0x2a5aa8],
+  orb: { texture: 'orb_frost_e', anim: 'orb_frost_spin' },
+  burst: { texture: 'burst_frost_e', anim: 'burst_frost_pop' },
+};

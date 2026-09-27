@@ -21,8 +21,8 @@ import { schemePal } from '../Blades';
 import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
 import { PrimalStampede, WildWrath } from './druid';
 import { AsgardThunder, OdinSpear } from './valkyrie';
-import { GROVE_PAL, WILD_PAL } from '../Druid';
-import { SPEAR_KIT, STORM_KIT } from '../Valkyrie';
+import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
+import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT } from '../Valkyrie';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 
@@ -330,6 +330,10 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:guard': { name: 'Sentinel Storm', pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
   'samurai:kitsune': { name: 'Nine-Tailed Descent', pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { name: 'Thousand Moons', pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
+  'druid:autumn': { name: 'Wrath of the Fall', pal: AUTUMN_MAGIC.pal },
+  'druid:frostfang': { name: 'Winter Stampede', pal: FROST_MAGIC.pal, type: 'wild' },
+  'valkyrie:sunshield': { name: 'Spear of the Sun', pal: SUN_KIT.pal },
+  'valkyrie:raven': { name: 'Wrath of the Raven', pal: RAVEN_KIT.pal, type: 'storm' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

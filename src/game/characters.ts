@@ -37,8 +37,8 @@ import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PAR
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT } from './Samurai';
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
-import { GROVE_SKIN, Grovecraft, WILD_SKIN, Wildcraft } from './Druid';
-import { SPEAR_KIT, STORM_KIT, Valkyrie } from './Valkyrie';
+import { AUTUMN_MAGIC, AUTUMN_SKIN, FROST_MAGIC, FROST_SKIN, GROVE_MAGIC, GROVE_SKIN, Grovecraft, WILD_MAGIC, WILD_SKIN, Wildcraft } from './Druid';
+import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, Valkyrie } from './Valkyrie';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -1228,6 +1228,22 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_grove' },
         },
         lookName: 'Greenwood',
+        skins: [
+          {
+            // Russet leaves and bare antlers, and seeds that burn like embers.
+            id: 'autumn',
+            name: 'Autumn Warden',
+            role: 'Keeper of the falling leaves',
+            accent: 0xff9a40,
+            attack: 'Ember seed',
+            special: 'Grove of the fall',
+            preview: { texture: 'druid_autumn', glow: 'druid_autumn_e', idle: 'druid_autumn_idle_down', chosen: 'druid_autumn_cast_down' },
+            buttons: {
+              attack: { texture: 'icon_thorn_autumn' },
+              special: { texture: 'icon_grove_autumn' },
+            },
+          },
+        ],
       },
       {
         // Tougher and quicker: spirit claws up close, and a pounce as a spirit wolf.
@@ -1244,11 +1260,28 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_pounce' },
         },
         lookName: 'Wolfpelt',
+        skins: [
+          {
+            // A white wolf's pelt with eyes of ice, and a spirit wolf of winter.
+            id: 'frostfang',
+            name: 'Frostfang',
+            role: 'The white wolf of winter',
+            accent: 0x8ad0ff,
+            attack: 'Frost claws',
+            special: 'Winter pounce',
+            preview: { texture: 'druid_frost', glow: 'druid_frost_e', idle: 'druid_frost_idle_down', chosen: 'druid_frost_cast_down' },
+            buttons: {
+              attack: { texture: 'icon_claws_frost' },
+              special: { texture: 'icon_pounce_frost' },
+            },
+          },
+        ],
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'wild') {
-        const craft = new Wildcraft(world);
+      if (look === 'wild' || look === 'frostfang') {
+        const frost = look === 'frostfang';
+        const craft = new Wildcraft(world, frost ? FROST_MAGIC : WILD_MAGIC);
         const w = new Wizard(
           world,
           x,
@@ -1259,13 +1292,14 @@ export const CLASSES: ClassDef[] = [
             target: (dx, dy, level, dist) => craft.target(dx, dy, level, dist),
             untarget: () => craft.untarget(),
           },
-          WILD_SKIN,
+          frost ? FROST_SKIN : WILD_SKIN,
         );
         craft.caster = w;
         world.addEffect(craft);
         return w;
       }
-      const craft = new Grovecraft(world);
+      const autumn = look === 'autumn';
+      const craft = new Grovecraft(world, autumn ? AUTUMN_MAGIC : GROVE_MAGIC);
       const w = new Wizard(
         world,
         x,
@@ -1276,7 +1310,7 @@ export const CLASSES: ClassDef[] = [
           target: (dx, dy, level, dist) => craft.target(dx, dy, level, dist),
           untarget: () => craft.untarget(),
         },
-        GROVE_SKIN,
+        autumn ? AUTUMN_SKIN : GROVE_SKIN,
       );
       craft.caster = w;
       world.addEffect(craft);
@@ -1303,6 +1337,22 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_spearthrow' },
         },
         lookName: 'Swan',
+        skins: [
+          {
+            // Gilded plate, a crimson tabard, rose-gold wings and a halo of the sun.
+            id: 'sunshield',
+            name: 'Sunshield',
+            role: 'Spear of the morning sun',
+            accent: 0xffb060,
+            attack: 'Sunlit chain',
+            special: 'Spear of dawn',
+            preview: { texture: 'valkyrie_sun', glow: 'valkyrie_sun_e', idle: 'valkyrie_sun_idle_down', chosen: 'valkyrie_sun_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_spear_sun' },
+              special: { texture: 'icon_spearthrow_sun' },
+            },
+          },
+        ],
       },
       {
         // Blows that arc lightning on to nearby foes, and a dive from the sky that lands with a thunderbolt.
@@ -1319,9 +1369,28 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_dive' },
         },
         lookName: 'Tempest',
+        skins: [
+          {
+            // Black steel, raven wings and violet lightning.
+            id: 'raven',
+            name: 'Raven Queen',
+            role: 'Queen of the black storm',
+            accent: 0xb880ff,
+            attack: 'Raven spear',
+            special: 'Raven dive',
+            preview: { texture: 'valkyrie_raven', glow: 'valkyrie_raven_e', idle: 'valkyrie_raven_idle_down', chosen: 'valkyrie_raven_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_spear_raven' },
+              special: { texture: 'icon_dive_raven' },
+            },
+          },
+        ],
       },
     ],
-    spawn: (world, x, y, look) => new Valkyrie(world, x, y, look === 'storm' ? STORM_KIT : SPEAR_KIT),
+    spawn(world, x, y, look) {
+      const kit = { spear: SPEAR_KIT, sunshield: SUN_KIT, storm: STORM_KIT, raven: RAVEN_KIT }[look] ?? SPEAR_KIT;
+      return new Valkyrie(world, x, y, kit);
+    },
   },
 ];
 

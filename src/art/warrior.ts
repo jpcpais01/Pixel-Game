@@ -33,7 +33,7 @@ import {
 } from './palette';
 import { BRONZE, PTERUGES, SPARTAN_RED, TAN_SKIN } from './heroSkins';
 import { DIRS, type Dir } from './wizard';
-import { ASH, BLONDE, SKY_CLOTH, SLATE_WING, STORM_ASH, STORM_CLOTH, STORM_STEEL, SWAN, WHITE_HAIR } from './valkyrie';
+import { ASH, BLONDE, COPPER, GILT, RAVEN_CLOTH, RAVEN_HAIR, RAVEN_STEEL, RAVEN_WING, ROSE_WING, SKY_CLOTH, SLATE_WING, STORM_ASH, STORM_CLOTH, STORM_STEEL, SUN_WOOD, SWAN, WHITE_HAIR } from './valkyrie';
 
 // ---------------------------------------------------------------------------
 // Looks (skins). Every look shares the rig and poses, so the blade sits on the
@@ -82,8 +82,16 @@ export interface WarriorLook {
   valkyrie?: boolean;
   wing?: Material;
   hair?: Material;
-  /** The Stormwing: lightning crackles along her feathers. */
+  /**
+   * The Stormwing's shape instead of the Spearmaiden's: a helm with a crest of
+   * lightning and a nose guard instead of little wings, a loose mane instead
+   * of braids, great wings raised high in a V, spiked shoulders, a bare
+   * breastplate with a rune of lightning instead of the tabard, and a jagged
+   * bolt of a spearhead. Lightning crackles along her feathers.
+   */
   storm?: boolean;
+  /** A ring of sunlight behind her head (the Spearmaiden's Sunshield skin). */
+  sun?: boolean;
 }
 
 export const KNIGHT_LOOK: WarriorLook = {
@@ -193,7 +201,37 @@ export const STORM_LOOK: WarriorLook = {
   storm: true,
 };
 
-export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK, SPEAR_LOOK, STORM_LOOK];
+/** The Spearmaiden's Sunshield skin: gilded plate, a crimson tabard, rose-gold wings, copper braids and a halo of the sun. */
+export const SUN_LOOK: WarriorLook = {
+  ...SPEAR_LOOK,
+  key: 'valkyrie_sun',
+  plate: GILT,
+  cloth: CRIMSON,
+  plume: CRIMSON,
+  trim: GOLD,
+  grip: SUN_WOOD,
+  guard: GOLD,
+  wing: ROSE_WING,
+  hair: COPPER,
+  glow: { core: hex('#fffbf0'), hot: hex('#ffd890'), mid: hex('#ff8a4a') },
+  sun: true,
+};
+
+/** The Stormwing's Raven Queen skin: black steel with a violet sheen, raven wings, black hair and violet lightning. */
+export const RAVEN_LOOK: WarriorLook = {
+  ...STORM_LOOK,
+  key: 'valkyrie_raven',
+  plate: RAVEN_STEEL,
+  cloth: RAVEN_CLOTH,
+  plume: RAVEN_CLOTH,
+  trim: SILVER,
+  grip: STORM_ASH,
+  wing: RAVEN_WING,
+  hair: RAVEN_HAIR,
+  glow: { core: hex('#f8f0ff'), hot: hex('#d8b0ff'), mid: hex('#a060ff') },
+};
+
+export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK, SPEAR_LOOK, STORM_LOOK, SUN_LOOK, RAVEN_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let LK: WarriorLook = KNIGHT_LOOK;
@@ -367,16 +405,24 @@ function drawSpear(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
     const band = (along > SPEAR_BUTT && along < SPEAR_BUTT + 1) || Math.abs(along - neck) < 0.6;
     if (band && Math.abs(side) < 0.9) c.px(x, y, LK.guard, facing(px * side * 0.3 - 0.25, py * side * 0.3 - 0.3, 0.85));
   });
-  // The head: a leaf, widest a third of the way up, with a ridge down its middle.
+  // The head: a leaf, widest a third of the way up, with a ridge down its
+  // middle; or the Stormwing's, a jagged bolt that zigzags to its point and
+  // always glows a little.
   c.part();
   box((x, y, along, side) => {
     if (along < neck + 0.2 || along > end) return;
     const u = (along - neck) / SPEAR_HEAD;
-    const hw = u < 0.35 ? 0.55 + (u / 0.35) * 0.8 : 0.15 + (1.2 * (1 - u)) / 0.65;
-    if (Math.abs(side) > hw) return;
-    const k = side >= 0 ? 1 : -1;
-    c.px(x, y, LK.blade, facing(px * k * 0.7, py * k * 0.7, 0.72), { glow: glow * 0.85 });
+    let off = 0;
+    let hw: number;
+    if (LK.storm) {
+      off = (Math.floor(u * 3.2) % 2 ? 0.75 : -0.75) * (1 - u);
+      hw = u < 0.12 ? 0.5 + u * 3 : 0.3 + 0.75 * (1 - u);
+    } else hw = u < 0.35 ? 0.55 + (u / 0.35) * 0.8 : 0.15 + (1.2 * (1 - u)) / 0.65;
+    if (Math.abs(side - off) > hw) return;
+    const k = side - off >= 0 ? 1 : -1;
+    c.px(x, y, LK.blade, facing(px * k * 0.7, py * k * 0.7, 0.72), { glow: LK.storm ? Math.max(0.3, glow * 0.85) : glow * 0.85 });
   });
+  if (LK.storm) c.spark(tip.x, tip.y, LK.glow.hot, 0.5);
   if (glow > 0) {
     // Light running up the head, and sparks off the shaft.
     for (let t = neck; t < end; t += 1.2) {
@@ -401,18 +447,22 @@ function drawSpear(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
 function wing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, size = 1, bias = 0): void {
   const m = LK.wing ?? LK.cloth;
   size *= 0.85;
-  const wx = rx + k * (5.4 - flap * 0.3) * size;
-  const wy = ry - (7.6 + flap * 1.6) * size;
-  const n = 6;
+  // The swan's wings spread wide and level; the Stormwing's are raised high in
+  // a V, fewer and longer feathers sweeping up to sharp points.
+  const storm = !!LK.storm;
+  const wx = rx + k * (storm ? 3.2 - flap * 0.2 : 5.4 - flap * 0.3) * size;
+  const wy = ry - (storm ? 10.5 + flap * 1.2 : 7.6 + flap * 1.6) * size;
+  const n = storm ? 5 : 6;
   const bases: { x: number; y: number }[] = [];
   const tips: { x: number; y: number }[] = [];
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1);
     const bx = rx + (wx - rx) * t;
     const by = ry + (wy - ry) * t;
-    // From hanging down (0) round to reaching out and a little up (~95 degrees).
-    const a = (6 + t * (82 + flap * 6)) * RAD;
-    const len = (6.4 + t * 4.2) * size;
+    // From hanging down (0) round to reaching out and a little up (~95
+    // degrees); the storm's from out and down round to high overhead.
+    const a = (storm ? 28 + t * (120 + flap * 5) : 6 + t * (82 + flap * 6)) * RAD;
+    const len = (storm ? 7 + t * 5.5 : 6.4 + t * 4.2) * size;
     bases.push({ x: bx, y: by });
     tips.push({ x: bx + k * Math.sin(a) * len, y: by + Math.cos(a) * len });
   }
@@ -425,7 +475,7 @@ function wing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, s
   // Then the long feathers over it, each a lighter ridge.
   for (let i = 0; i < n; i++) {
     c.part();
-    c.capsule(bases[i].x, bases[i].y, tips[i].x, tips[i].y, 1.1 * size, 0.5, m, { bias: bias + (i % 2 ? 1 : 0) });
+    c.capsule(bases[i].x, bases[i].y, tips[i].x, tips[i].y, 1.1 * size, storm ? 0.3 : 0.5, m, { bias: bias + (i % 2 ? 1 : 0) });
   }
   // Coverts over the feathers' roots, lit along the leading edge.
   c.part();
@@ -466,6 +516,45 @@ function helmWing(c: PixelCanvas, x: number, y: number, k: number, size = 1, bia
   c.part();
   for (const [ox, oy, r] of [[2.8, -5.2, 0.7], [3.4, -3.4, 0.65], [3.2, -1.6, 0.6]] as const) {
     c.capsule(x, y, x + k * ox * size, y + oy * size, r + 0.2, 0.35, m, { bias: bias + 1 });
+  }
+}
+
+/**
+ * The Stormwing's crest: a bolt of lightning standing up along the helm. Seen
+ * from the front or back it rises from the crown; from the side (facing left)
+ * it lies along the helm from brow to nape.
+ */
+function stormCrest(c: PixelCanvas, x: number, U: number, side: boolean): void {
+  const pts: [number, number][] = side
+    ? [[x - 3.4, 5.6], [x - 1.4, 3.2], [x + 0.2, 4.6], [x + 2.4, 2.2], [x + 4.4, 4.2]]
+    : [[x, 5.8], [x + 1.3, 3.9], [x - 0.7, 2.7], [x + 0.8, 0.8]];
+  c.part();
+  for (let i = 0; i < pts.length - 1; i++) {
+    const r0 = 0.95 - (i / pts.length) * 0.4;
+    c.capsule(pts[i][0], pts[i][1] + U, pts[i + 1][0], pts[i + 1][1] + U, r0, r0 - 0.15, LK.trim, { bias: 1, glow: 0.25 });
+  }
+  const [tx, ty] = pts[pts.length - 1];
+  c.spark(tx, ty + U, LK.glow.core, 0.8);
+  pts.forEach(([px, py], i) => i > 0 && c.spark(px, py + U, LK.glow.hot, 0.45));
+}
+
+/** A loose mane of hair falling from under the helm, rows y0..y1 between `edges`, strands shaded through it. */
+function mane(c: PixelCanvas, y0: number, y1: number, edges: (u: number) => [number, number]): void {
+  const m = LK.hair ?? LK.plume;
+  c.part();
+  c.shape(Math.round(y0), Math.round(y1), (y) => edges((y - y0) / Math.max(1, y1 - y0)), m, (_x, _y, t, u) => cyl(t * 0.9, 0.3 - u * 0.4));
+  for (let y = Math.round(y0) + 1; y <= Math.round(y1); y++) {
+    const [l, r] = edges((y - y0) / Math.max(1, y1 - y0));
+    for (let x = Math.round(l) + 1; x < Math.round(r) - 1; x += 2) c.shade(x + (y & 1), y, -1);
+  }
+}
+
+/** A ring of sunlight behind the head (x, y), with short rays. */
+function sunHalo(c: PixelCanvas, x: number, y: number): void {
+  for (let i = 0; i < 28; i++) {
+    const a = (i / 28) * Math.PI * 2;
+    c.spark(x + Math.cos(a) * 6.8, y + Math.sin(a) * 6.8, i % 2 ? LK.glow.hot : LK.glow.mid, 0.55);
+    if (i % 4 === 0) c.spark(x + Math.cos(a) * 8.3, y + Math.sin(a) * 8.3, LK.glow.core, 0.5);
   }
 }
 
@@ -515,6 +604,12 @@ function pauldron(c: PixelCanvas, x: number, y: number, rx = 2.3, ry = 1.75): vo
   }
   c.part();
   c.ellipse(x, y, rx, ry, LK.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.25, 0.95) });
+  if (LK.storm) {
+    // A spike sweeping up and out from the shoulder.
+    const k = x < 12 ? -1 : 1;
+    c.part();
+    c.capsule(x + k * 0.4, y - 0.6, x + k * 2.2, y - 3.6, 0.75, 0.25, LK.trim, { bias: 1 });
+  }
 }
 
 /** Samurai shoulder plate: a squarer stack of lacquered lames, laced in brass. */
@@ -803,7 +898,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     // A skirt of leather strips: a dark seam between each.
     for (let y = waist + 1; y <= hem; y++) for (let x = cx - 5; x <= cx + 5; x += 2) c.shade(x, y, -1);
   } else for (let y = waist + 1; y <= hem; y += 2) c.shade(cx - 3, y, -1);
-  if (!LK.spartan) cloth(c, top + 2, hem, (y) => {
+  if (!LK.spartan && !LK.storm) cloth(c, top + 2, hem, (y) => {
     const u = Math.max(0, (y - waist) / (hem - waist));
     const hw = 1.7 + u * 0.4;
     const x = cx + p.cape * 0.4 * u * u;
@@ -815,8 +910,12 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   c.part();
   c.px(11, waist, LK.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
   c.px(12, waist, LK.trim, { x: 0.2, y: 0.3, z: 0.9 });
+  if (LK.storm) {
+    // A rune of lightning burning on the bare breastplate.
+    for (const [x, y, k] of [[12, 1, 1], [11, 2, 0.8], [12, 3, 1], [11, 4, 0.8], [12, 5, 0.6]] as const) c.spark(x, top + y, k > 0.9 ? LK.glow.core : LK.glow.hot, k * 0.8);
+  }
   // Crest on the tabard: a small gold chevron.
-  if (!LK.spartan) {
+  if (!LK.spartan && !LK.storm) {
     c.part();
     c.px(11, 18 + U, LK.trim, { x: -0.4, y: 0.4, z: 0.8 }, { bias: 1 });
     c.px(12, 18 + U, LK.trim, { x: 0.3, y: 0.4, z: 0.85 });
@@ -839,6 +938,12 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     corinthianFront(c, cx, U);
   } else {
     // Head: face framed by the helmet's cheek guards, a plume on top.
+    if (LK.valkyrie && LK.storm) {
+      // Her mane falls either side of the face, over the shoulders.
+      mane(c, 11 + U, 19 + U, (u) => [cx - 4.9 + u * 0.4 + p.cape * u * 0.4, cx - 2.2 - u * 0.2 + p.cape * u * 0.4]);
+      mane(c, 11 + U, 19 + U, (u) => [cx + 2.2 + u * 0.2 + p.cape * u * 0.4, cx + 4.9 - u * 0.4 + p.cape * u * 0.4]);
+    }
+    if (LK.sun) sunHalo(c, cx, 8 + U);
     c.part();
     c.ellipse(cx, 12.6 + U, 3.2, 2.8, LK.skin);
     c.part();
@@ -854,10 +959,10 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
       c.px(10, 12 + U, EYE);
       c.px(13, 12 + U, EYE);
     }
-    if (LK.valkyrie) {
+    if (LK.valkyrie && !LK.storm) {
       helmWing(c, cx - 4.2, 8.6 + U, -1);
       helmWing(c, cx + 4.2, 8.6 + U, 1);
-    } else if (!LK.samurai) {
+    } else if (!LK.samurai && !LK.valkyrie) {
       plume(c, [
         [cx, 6 + U],
         [cx + p.plume * 0.4, 3.4 + U],
@@ -865,6 +970,12 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
       ], 1.7, 1.15);
     }
     dome(c, cx, 5 + U, 10 + U, 4.7);
+    if (LK.valkyrie && LK.storm) {
+      stormCrest(c, cx, U, false);
+      // A nose guard down between the eyes.
+      c.part();
+      for (const [x, y] of [[11, 10], [12, 10], [11, 11], [12, 11], [11, 12]]) c.px(x, y + U, LK.plate, { x: x === 11 ? -0.3 : 0.3, y: 0.2, z: 0.93 }, { bias: 1 });
+    }
     c.part();
     if (LK.samurai) {
       // Shikoro: lames flaring out and down past the cheeks.
@@ -889,7 +1000,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     glove(c, p.sword.hx, p.sword.hy);
   }
   pauldron(c, 7.1, 16.3 + U);
-  if (LK.valkyrie) {
+  if (LK.valkyrie && !LK.storm) {
     // Her braids, falling from under the helm over her shoulders.
     braid(c, cx - 3, 13 + U, 19 + U, p.cape * 0.5);
     braid(c, cx + 4, 13 + U, 19 + U, p.cape * 0.5);
@@ -1003,11 +1114,16 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
       [cx + 1.4 + p.plume * 0.5, 12.6 + U],
       [cx + 2.2 + p.plume, 15 + U],
     ], 0.8, 0.55);
+  } else if (LK.valkyrie && LK.storm) {
+    // The crest of lightning, and her mane loose down her back.
+    stormCrest(c, cx, U, false);
+    mane(c, 12 + U, 23 + U, (u) => [cx - 3.8 + u * 2.2 + p.cape * u * 0.6, cx + 3.8 - u * 2.2 + p.cape * u * 0.6]);
   } else if (LK.valkyrie) {
     // The helm's wings, and one long braid down her back.
     helmWing(c, cx - 4.2, 8.6 + U, -1);
     helmWing(c, cx + 4.2, 8.6 + U, 1);
     braid(c, cx, 13 + U, 22 + U, p.cape * 0.6);
+    if (LK.sun) sunHalo(c, cx, 9 + U);
   } else {
     plume(c, [
       [cx, 5.2 + U],
@@ -1095,6 +1211,10 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     c.shade(Math.round(hx - 2), top + 3, -1);
     c.shade(Math.round(hx - 1), top + 3, -1);
     c.shade(Math.round(hx - 2), top + 5, -1);
+  } else if (LK.storm) {
+    c.spark(Math.round(hx - 2), top + 2, LK.glow.hot, 0.7);
+    c.spark(Math.round(hx - 1), top + 3, LK.glow.core, 0.7);
+    c.spark(Math.round(hx - 2), top + 4, LK.glow.hot, 0.6);
   } else {
     // Tabard front edge down chest and skirt.
     cloth(c, top + 2, hem, (y) => {
@@ -1126,8 +1246,12 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     c.part();
     if (p.blink) c.px(hx - 3, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
     else c.px(hx - 3, 12 + U, EYE);
-    if (LK.valkyrie) {
+    if (LK.valkyrie && LK.storm) {
+      // Her mane streaming back behind her.
+      mane(c, 11 + U, 20 + U, (u) => [hx + 0.4 + u * 0.5, hx + 4.6 + u * 1.6 + p.cape * u * 1.2]);
+    } else if (LK.valkyrie) {
       // The braid behind her neck, and the far wing of the helm peeking over it.
+      if (LK.sun) sunHalo(c, hx + 0.5, 8 + U);
       braid(c, hx + 2, 13 + U, 21 + U, p.cape * 0.5);
       helmWing(c, hx + 1.6, 7.6 + U, 1, 0.75, -1);
     } else if (LK.samurai) {
@@ -1156,7 +1280,12 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
       c.shade(Math.round(hx + 4), 14 + U, -1);
       crest(c, hx - 2.8, 6 + U, 'side');
     }
-    if (LK.valkyrie) helmWing(c, hx + 0.4, 8.8 + U, 1);
+    if (LK.valkyrie && LK.storm) {
+      stormCrest(c, hx - 0.2, U, true);
+      c.part();
+      c.px(hx - 5, 11 + U, LK.plate, { x: -0.5, y: 0.2, z: 0.84 }, { bias: 1 });
+      c.px(hx - 5, 12 + U, LK.plate, { x: -0.5, y: 0.1, z: 0.86 });
+    } else if (LK.valkyrie) helmWing(c, hx + 0.4, 8.8 + U, 1);
   }
 
   // Near arm and sword.

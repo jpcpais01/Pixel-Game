@@ -71,13 +71,69 @@ export const STORM_ASH: Material = {
 };
 
 // ---------------------------------------------------------------------------
+// The Spearmaiden's Sunshield skin: gilded plate, a crimson tabard, rose-gold
+// wings, copper braids and a halo of the sun behind her head.
+
+export const GILT: Material = {
+  ramp: ramp('#4a2410', '#8a4e1c', '#c8862e', '#f0c052', '#fff0b0'),
+  outline: hex('#1e0e06'),
+  outlineLit: hex('#3a1c0a'),
+  shine: true,
+};
+
+export const ROSE_WING: Material = {
+  ramp: ramp('#7a4a4a', '#c08a78', '#f0c8a8', '#fff2e0'),
+  outline: hex('#2a1614'),
+  outlineLit: hex('#3e2220'),
+};
+
+export const COPPER: Material = {
+  ramp: ramp('#4a1a0c', '#8a3a18', '#c8622a', '#f09a4a'),
+  outline: hex('#1c0804'),
+};
+
+export const SUN_WOOD: Material = {
+  ramp: ramp('#2a100c', '#4a1e16', '#6e3222', '#944a30'),
+  outline: hex('#100604'),
+};
+
+// ---------------------------------------------------------------------------
+// The Stormwing's Raven Queen skin: black steel with a violet sheen, raven
+// wings, black hair, violet lightning.
+
+export const RAVEN_STEEL: Material = {
+  ramp: ramp('#0a0810', '#18142a', '#2a2244', '#443a66', '#6e62a0'),
+  outline: hex('#040306'),
+  outlineLit: hex('#120e1e'),
+  shine: true,
+};
+
+export const RAVEN_CLOTH: Material = {
+  ramp: ramp('#10061a', '#1e0c30', '#30144a', '#46206a'),
+  outline: hex('#06020a'),
+};
+
+export const RAVEN_WING: Material = {
+  ramp: ramp('#16142a', '#2a2848', '#48446e', '#7470a6'),
+  outline: hex('#030306'),
+  outlineLit: hex('#0e0e18'),
+};
+
+export const RAVEN_HAIR: Material = {
+  ramp: ramp('#0a080e', '#16121e', '#262032', '#3a324c'),
+  outline: hex('#030204'),
+};
+
+// ---------------------------------------------------------------------------
 // Button icons (additive, see druid.ts icon16).
 
 export const SPEAR_TONES: Tones = [hex('#fffdf2'), hex('#ffe6a0'), hex('#f4c050'), hex('#a06a1e')];
 export const STORM_TONES: Tones = [hex('#f2fbff'), hex('#a8e4ff'), hex('#5ec8ff'), hex('#3a6ad8')];
+export const SUN_TONES: Tones = [hex('#fffbf0'), hex('#ffd890'), hex('#ff8a4a'), hex('#a82a1a')];
+export const RAVEN_TONES: Tones = [hex('#f8f0ff'), hex('#d8b0ff'), hex('#a060ff'), hex('#4a1a8a')];
 
 /** Shaft and head colours for a spear drawn on an icon. */
-interface SpearInk {
+export interface SpearInk {
   head: RGB;
   headLit: RGB;
   shaft: RGB;
@@ -85,8 +141,10 @@ interface SpearInk {
   band: RGB;
 }
 
-const SPEAR_INK: SpearInk = { head: hex('#aebcd8'), headLit: hex('#f4f8ff'), shaft: hex('#6a4c30'), shaftLit: hex('#a88a5e'), band: hex('#f4cf6a') };
-const STORM_INK: SpearInk = { head: hex('#8ea2c8'), headLit: hex('#e8f4ff'), shaft: hex('#3e3a4c'), shaftLit: hex('#646078'), band: hex('#c4cadf') };
+export const SPEAR_INK: SpearInk = { head: hex('#aebcd8'), headLit: hex('#f4f8ff'), shaft: hex('#6a4c30'), shaftLit: hex('#a88a5e'), band: hex('#f4cf6a') };
+export const STORM_INK: SpearInk = { head: hex('#8ea2c8'), headLit: hex('#e8f4ff'), shaft: hex('#3e3a4c'), shaftLit: hex('#646078'), band: hex('#c4cadf') };
+export const SUN_INK: SpearInk = { head: hex('#f0c052'), headLit: hex('#fff4c8'), shaft: hex('#6e3222'), shaftLit: hex('#a0583a'), band: hex('#ffd890') };
+export const RAVEN_INK: SpearInk = { head: hex('#8a7ab8'), headLit: hex('#e8dcff'), shaft: hex('#262032'), shaftLit: hex('#443a5c'), band: hex('#c4cadf') };
 
 /** A spear from (x0, y0) (the butt) to its point at (x1, y1). */
 function spear(put: (x: number, y: number, c: RGB) => void, x0: number, y0: number, x1: number, y1: number, k: SpearInk): void {
@@ -113,10 +171,8 @@ function spear(put: (x: number, y: number, c: RGB) => void, x0: number, y0: numb
   }
 }
 
-/** The Spearmaiden's combo: a spear raised to strike, a glint at its point. */
-export function spearIcon(storm = false): Uint8ClampedArray {
-  const k = storm ? STORM_INK : SPEAR_INK;
-  const t = storm ? STORM_TONES : SPEAR_TONES;
+/** The Valkyrie's combo: a spear raised to strike, a glint at its point; the Stormwing's crackling with lightning. */
+export function spearIcon(storm = false, k: SpearInk = storm ? STORM_INK : SPEAR_INK, t: Tones = storm ? STORM_TONES : SPEAR_TONES): Uint8ClampedArray {
   return icon16((put) => {
     spear(put, 1.5, 14.5, 13.5, 2.5, k);
     put(14, 2, t[0]);
