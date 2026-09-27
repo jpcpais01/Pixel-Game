@@ -16,7 +16,8 @@ import { BARD_H, BARD_LOOKS, BARD_W, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LO
 import { SAMURAI_ANIMS, SAMURAI_H, SAMURAI_LOOKS, SAMURAI_W, SPIN_FPS, SPIN_FRAMES, buildSamuraiFrames, crossIcon, cutMark, dashIcon, katanaIcon, spinStart, type SamuraiMeta } from './samurai';
 import { PUPPETEER_H, PUPPETEER_LOOKS, PUPPETEER_W, PUPPET_LOOKS, buildPuppetSheet, buildPuppeteerFrames, marionetteIcon, pirouetteIcon, puppeteerAnims, puppetStrikeIcon, threadIcon } from './puppeteer';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
-import { buildRogueFrames, daggersIcon, DANCER_DAGGERS, ROGUE_ANIMS, ROGUE_DAGGERS, ROGUE_H, ROGUE_LOOKS, ROGUE_W, shadowstepIcon, smokeCanvas } from './rogue';
+import { buildRogueFrames, daggersIcon, ROGUE_ANIMS, ROGUE_H, ROGUE_ICONS, ROGUE_LOOKS, ROGUE_W, shadowstepIcon, smokeCanvas } from './rogue';
+import { gourdIcon, registerMoreSkinIcons, SKIN_BREWS, SKIN_QUIVERS } from './moreSkinIcons';
 import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, eclipseFallIcon, oathHammerIcon, pikeSaberIcon, seraphMaceIcon } from './heroSkins';
 import { hex } from './pixel';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
@@ -281,10 +282,10 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     for (const [key, big, size] of [[`flask${sfx}`, false, FLASK_SIZE], [`flask_big${sfx}`, true, BIG_FLASK_SIZE]] as const) {
       register(scene, key, pack(frameList(Array.from({ length: FLASK_FRAMES }, (_, i) => flaskFrame(i, big, look)), 'r'), size, size), size, size);
     }
-    const brew = look.chem ? CHEM_BREW_COLORS : look.witch ? HEX_BREW_COLORS : PLAGUE_BREW;
+    const brew = SKIN_BREWS[look.key] ?? (look.chem ? CHEM_BREW_COLORS : look.witch ? HEX_BREW_COLORS : PLAGUE_BREW);
     const fumes = scene.textures.addCanvas(`fume${sfx}`, toCanvas(18 * 3, 18, sideBySide(18, 18, [0, 1, 2].map((v) => fumeCanvas(18, v, brew)))))!;
     [0, 1, 2].forEach((v) => fumes.add(`f${v}`, 0, v * 18, 0, 18, 18));
-    scene.textures.addCanvas(`icon_flask${sfx}`, toCanvas(16, 16, look.chem ? canisterIcon(brew) : flaskIcon(brew)));
+    scene.textures.addCanvas(`icon_flask${sfx}`, toCanvas(16, 16, look.chem ? canisterIcon(brew) : look.shaman ? gourdIcon(brew) : flaskIcon(brew)));
     scene.textures.addCanvas(`icon_bog${sfx}`, toCanvas(16, 16, look.chem ? chemBarrageIcon(brew) : bogIcon(brew)));
   }
 
@@ -310,15 +311,17 @@ export function buildAllTextures(scene: Phaser.Scene): void {
       ...frameList([0, 1, 2].map((k) => stuckArrowFrame(k, look)), 'k'),
     ];
     register(scene, `arrow${sfx}`, pack(arrows, ARROW_SIZE, ARROW_SIZE), ARROW_SIZE, ARROW_SIZE);
-    const q = look.storm ? STORM_QUIVER : RANGER_QUIVER;
+    const q = SKIN_QUIVERS[look.key] ?? (look.storm ? STORM_QUIVER : RANGER_QUIVER);
     scene.textures.addCanvas(`icon_bow${sfx}`, toCanvas(16, 16, bowIcon(q)));
     scene.textures.addCanvas(`icon_rain${sfx}`, toCanvas(16, 16, rainIcon(q, look.storm)));
   }
 
-  // Rogue once per look ('rogue', and 'rogue_dancer' for the shadow dancer),
-  // with a flash layer for the echoes he leaves, his smoke and his icons.
+  // Rogue once per look ('rogue', 'rogue_dancer' for the shadow dancer, and
+  // the skins' '_corsair' and '_kitsune'), with a flash layer for the echoes he
+  // leaves, his smoke and his icons.
   for (const look of ROGUE_LOOKS) {
-    const dance = look.key !== 'rogue';
+    const sfx = look.key.slice('rogue'.length);
+    const icons = ROGUE_ICONS[look.key];
     const rf = buildRogueFrames(look);
     register(scene, look.key, pack(rf.map((f) => ({ name: f.key, r: f.canvas.render() })), ROGUE_W, ROGUE_H), ROGUE_W, ROGUE_H, true, true);
     for (const a of ROGUE_ANIMS) {
@@ -331,11 +334,11 @@ export function buildAllTextures(scene: Phaser.Scene): void {
         });
       }
     }
-    const tones: [number, number, number][] = dance ? [hex('#8a6ad8'), hex('#4a2c90'), hex('#24124e')] : [hex('#8a8898'), hex('#57546a'), hex('#34323f')];
+    const tones: [number, number, number][] =
+      look.key === 'rogue' ? [hex('#8a8898'), hex('#57546a'), hex('#34323f')] : look.key === 'rogue_dancer' ? [hex('#8a6ad8'), hex('#4a2c90'), hex('#24124e')] : icons.daggers.smoke.map(hex);
     scene.textures.addCanvas(`${look.key}_smoke`, toCanvas(16, 16, smokeCanvas(16, tones)));
-    const k = dance ? DANCER_DAGGERS : ROGUE_DAGGERS;
-    scene.textures.addCanvas(`icon_daggers${dance ? '_dancer' : ''}`, toCanvas(16, 16, daggersIcon(k)));
-    scene.textures.addCanvas(`icon_shadowstep${dance ? '_dancer' : ''}`, toCanvas(16, 16, shadowstepIcon(k, dance)));
+    scene.textures.addCanvas(`icon_daggers${sfx}`, toCanvas(16, 16, daggersIcon(icons.daggers)));
+    scene.textures.addCanvas(`icon_shadowstep${sfx}`, toCanvas(16, 16, shadowstepIcon(icons.daggers, icons.dance)));
   }
 
   // Necromancer once per look: 'necro' and 'necro_blood' for the blood mage.
@@ -580,6 +583,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_palm', toCanvas(16, 16, palmIcon()));
   scene.textures.addCanvas('icon_quake', toCanvas(16, 16, quakeIcon()));
   scene.textures.addCanvas('icon_barrage', toCanvas(16, 16, barrageIcon([hex('#fffbe8'), hex('#ffd66b'), hex('#ff8a36'), hex('#d8402a')])));
+  registerMoreSkinIcons((key, px) => scene.textures.addCanvas(key, toCanvas(16, 16, px)));
 
   // Items: hotbar icons and the bottles monsters drop.
   for (const kind of ['health', 'speed'] as const) {

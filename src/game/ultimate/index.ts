@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { sound } from '../../audio';
 import { dirOf } from '../Wizard';
 import { energy } from '../energy';
-import { CHEM_TOX, HEX_TOX, PLAGUE_TOX, type ToxStyle } from '../Toxins';
+import { CHEM_TOX, CRYO_TOX, HEX_TOX, PLAGUE_TOX, SPIRIT_TOX, type ToxStyle } from '../Toxins';
 import type { Aim, CharacterDef, Hero } from '../characters';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { bloom, easeOut, flare, Fx, Ink, pal, ring, rune, type Pal } from './ink';
@@ -115,7 +115,7 @@ const ULTS: Record<string, UltDef> = {
     range: 110,
     pal: toxPal(PLAGUE_TOX),
     icon: icons.pestilenceIcon,
-    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : PLAGUE_TOX)),
+    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : c.look === 'shaman' ? SPIRIT_TOX : PLAGUE_TOX)),
   },
   'alchemist:chem': {
     name: 'Chem Bomb',
@@ -125,7 +125,7 @@ const ULTS: Record<string, UltDef> = {
     range: 120,
     pal: toxPal(CHEM_TOX),
     icon: icons.chemBombIcon,
-    cast: (c) => c.world.addEffect(new ChemBomb(c.world, c, CHEM_TOX)),
+    cast: (c) => c.world.addEffect(new ChemBomb(c.world, c, c.look === 'cryo' ? CRYO_TOX : CHEM_TOX)),
   },
   'archer:ranger': {
     name: 'Great Arrow',
@@ -257,6 +257,13 @@ const SKINS: Record<string, UltSkin> = {
   'warrior:jade': { name: 'Jade Heavensblade', pal: pal(0xf6fff0, 0xb6ffb0, 0x3fd98a, 0x16806a, 0x70f0b0) },
   'jedi:sith': { name: 'Crimson Cyclone', pal: pal(0xfff6f2, 0xff7a70, 0xf0283a, 0x8a1020, 0xff4a4a) },
   'alchemist:witch': { name: 'Hex Storm', pal: toxPal(HEX_TOX) },
+  'fighter:lucha': { name: 'Flying Tiger', pal: pal(0xfff8e8, 0xffd35c, 0xff4fa0, 0x9a1c6a, 0xff80b8) },
+  'fighter:guardian': { name: 'Wrath of Stone', pal: pal(0xfff4d0, 0xffc050, 0xff6a1a, 0xa02a10, 0xff8a30), type: 'monk' },
+  'alchemist:shaman': { name: 'Spirit Plague', pal: toxPal(SPIRIT_TOX) },
+  'alchemist:cryo': { name: 'Absolute Zero', pal: toxPal(CRYO_TOX), type: 'chem' },
+  'archer:hunt': { name: 'Moonpiercer', pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
+  'rogue:corsair': { name: 'Broadside', pal: pal(0xfffbe0, 0xffe08a, 0xe0a030, 0x8a5018, 0xffc050) },
+  'rogue:kitsune': { name: 'Nine-Tail Eclipse', pal: pal(0xf4fbff, 0xa8e0ff, 0x4a9cff, 0x1a3aa0, 0x70b0ff), type: 'dancer' },
   'archer:storm': { name: 'Thunder Arrow', pal: pal(0xf2fbff, 0xa8e4ff, 0x5ec8ff, 0x3a6ad8, 0x8ad8ff) },
   'chronomancer:moon': { name: 'Moonstill', pal: MOON_PAL },
   'chronomancer:aeon': { name: 'Aeon Legion', pal: AEON_PAL, type: 'paradox' },

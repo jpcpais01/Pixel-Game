@@ -6,7 +6,7 @@ import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals, type Hurtbox } from './combat';
-import { Bog, CHEM_TOX, Flask, HEX_TOX, onGround, PLAGUE_TOX, Splash, Venom, type ToxStyle } from './Toxins';
+import { Bog, CHEM_TOX, CRYO_TOX, Flask, HEX_TOX, onGround, PLAGUE_TOX, SPIRIT_TOX, Splash, Venom, type ToxStyle } from './Toxins';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
@@ -88,6 +88,8 @@ export interface AlchemistStyle {
 export const PLAGUE_STYLE: AlchemistStyle = { key: 'alchemist', tox: PLAGUE_TOX, kit: PLAGUE_KIT };
 export const WITCH_STYLE: AlchemistStyle = { key: 'alchemist_witch', tox: HEX_TOX, kit: PLAGUE_KIT };
 export const CHEM_STYLE: AlchemistStyle = { key: 'alchemist_chem', tox: CHEM_TOX, kit: CHEM_KIT };
+export const SHAMAN_STYLE: AlchemistStyle = { key: 'alchemist_shaman', tox: SPIRIT_TOX, kit: PLAGUE_KIT };
+export const CRYO_STYLE: AlchemistStyle = { key: 'alchemist_cryo', tox: CRYO_TOX, kit: CHEM_KIT };
 
 /**
  * The alchemist: lobs flasks of poison on the attack button that burst where

@@ -64,6 +64,32 @@ export const CHEM_TOX: ToxStyle = {
   suffix: '_chem',
 };
 
+/** The bone shaman's juju: teal spirit-fire. */
+export const SPIRIT_TOX: ToxStyle = {
+  core: 0xe0fff4,
+  hot: 0x8affd8,
+  mid: 0x2ad8a8,
+  deep: 0x0e7a64,
+  murk: 0x0a3a32,
+  tints: [0xe0fff4, 0x8affd8, 0x2ad8a8],
+  light: 0x4af0c0,
+  numbers: 0x7af8d0,
+  suffix: '_shaman',
+};
+
+/** Cryotech's chem: a freezing blue. */
+export const CRYO_TOX: ToxStyle = {
+  core: 0xf0fbff,
+  hot: 0x9ad8ff,
+  mid: 0x4aa8f0,
+  deep: 0x1c4aa0,
+  murk: 0x0e2248,
+  tints: [0xf0fbff, 0x9ad8ff, 0x4aa8f0],
+  light: 0x70c0ff,
+  numbers: 0x9ad8ff,
+  suffix: '_cryo',
+};
+
 /** Splashes are circles on the ground seen at an angle: squash them vertically. */
 const SQUASH = 0.58;
 /** Ground effects: under every standing thing, over the ground's shadows. */

@@ -8,8 +8,14 @@
 // reach past it. Drawing functions work in body-box coordinates. Fists are
 // posed in the fighter's own terms (forward, out to the side, height) and
 // placed for each view, so one set of keyframes serves every direction.
+//
+// Two skins share the rig. The luchador (the brawler's) is a masked wrestler:
+// a blue mask with white flames round the eyes and a gold crest, a bare
+// chest, a gold title belt, a crimson cape and tall boots. The stone guardian
+// (the iron monk's) is a temple statue come to life: basalt skin cracked with
+// fire, a moss-dark robe and ember sash, and a carved ring behind the head.
 
-import { PixelCanvas, cyl, sphere, type Material, type RGB, type Vec3 } from './pixel';
+import { FLAT, PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
 import {
   BLACK_BELT, BRONZE, CHI_CORE, CHI_HOT, CHI_MID, EYE, FIGHTER_HAIR, GI, GI_TROUSER, GLOVE, HEADBAND, MONK_BROW, MONK_ROBE, MONK_SASH,
   MONK_TROUSER, MONK_WRAP, PRAYER_BEAD, QI_CORE, QI_HOT, QI_MID, SKIN, WRAP,
@@ -86,6 +92,15 @@ export interface FighterLook {
   /** Hand size. */
   hand: number;
   anims: FighterAnimDef[];
+  /** Bare skin (the guardian's is stone), the eyes, the monk's sash and his beads. */
+  skin: Material;
+  eye: Material;
+  sash: Material;
+  bead: Material;
+  /** The luchador: a masked wrestler with a cape, bare chest, a title belt and boots. */
+  lucha?: { mask: Material; trim: Material; white: Material; cape: Material; jewel: Material };
+  /** The stone guardian: a carved ring hovering behind the head, and veins of fire through the stone. */
+  guardian?: { ring: Material; vein: Material };
 }
 
 /** The style being drawn (set per frame by drawFighterFrame). */
@@ -150,14 +165,20 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
     }
   }
   c.part();
-  c.capsule(sx, sy, ex, ey, 1.65, 1.35, SKIN, { bias });
+  c.capsule(sx, sy, ex, ey, 1.65, 1.35, LK.skin, { bias });
   c.part();
-  c.capsule(ex, ey, fx, fy, 1.4, 1.2, SKIN, { bias });
+  c.capsule(ex, ey, fx, fy, 1.4, 1.2, LK.skin, { bias });
   c.part();
   const band = LK.monk ? 1.5 : 1.3;
   c.capsule(ex + (fx - ex) * 0.45, ey + (fy - ey) * 0.45, fx, fy, band, band, LK.wrap, { bias });
   c.part();
   c.ellipse(fx, fy, LK.hand * p.scale, LK.hand * 0.92 * p.scale, LK.glove, { bias });
+  if (LK.guardian) {
+    // A crack of fire down the stone arm, from the shoulder to the elbow and on towards the bracer.
+    const v = LK.guardian.vein;
+    c.px(sx + (ex - sx) * 0.45, sy + (ey - sy) * 0.45, v, FLAT, { glow: bias < 0 ? 0.45 : 0.8 });
+    c.px(ex + (fx - ex) * 0.2, ey + (fy - ey) * 0.2, v, FLAT, { glow: bias < 0 ? 0.45 : 0.8 });
+  }
   chiGlow(c, fx, fy, chi * (bias < 0 ? 0.6 : 1));
 }
 
@@ -176,6 +197,13 @@ function chiGlow(c: PixelCanvas, x: number, y: number, k: number): void {
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
   c.part();
   c.capsule(hx, hy, fx, fy, 1.8, 1.45, LK.trouser, { bias });
+  if (LK.lucha) {
+    // Tall laced wrestling boots up the shin, a white band round the top.
+    c.part();
+    c.capsule(hx + (fx - hx) * 0.5, hy + (fy - hy) * 0.5, fx, fy, 1.85, 1.6, LK.feet, { bias });
+    c.part();
+    c.px(hx + (fx - hx) * 0.5, hy + (fy - hy) * 0.5, LK.lucha.white, FLAT_DOWN, { bias });
+  }
 }
 
 /** A taped foot. */
@@ -186,7 +214,7 @@ function foot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): voi
 }
 
 /** Bare shoulder: the gi has no sleeves. The monk's sash covers one of his. */
-function deltoid(c: PixelCanvas, x: number, y: number, rx = 2.1, m: Material = SKIN): void {
+function deltoid(c: PixelCanvas, x: number, y: number, rx = 2.1, m: Material = LK.skin): void {
   c.part();
   c.ellipse(x, y, rx, 1.8, m, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
 }
@@ -201,8 +229,8 @@ function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefine
   for (const [x, y] of pts) {
     // Heavy brows over a hard stare.
     c.px(x, y - 1, LK.hair, FLAT_DOWN);
-    if (blink) c.px(x, y, SKIN, FLAT_DOWN, { bias: -1 });
-    else c.px(x, y, EYE);
+    if (blink) c.px(x, y, LK.skin, FLAT_DOWN, { bias: -1 });
+    else c.px(x, y, LK.eye);
   }
 }
 
@@ -216,10 +244,10 @@ function spikes(c: PixelCanvas, low: number[], high: number[], y0: number): void
 /** The monk's string of prayer beads, and the bronze disc hanging from it. */
 function beads(c: PixelCanvas, pts: [number, number][], pendant?: [number, number]): void {
   c.part();
-  pts.forEach(([x, y], i) => c.px(x, y, PRAYER_BEAD, sphere(i % 2 ? 0.3 : -0.3, -0.6)));
+  pts.forEach(([x, y], i) => c.px(x, y, LK.bead, sphere(i % 2 ? 0.3 : -0.3, -0.6)));
   if (pendant) {
     c.part();
-    c.px(pendant[0], pendant[1], BRONZE, sphere(-0.3, -0.5), { bias: 1 });
+    c.px(pendant[0], pendant[1], LK.guardian?.vein ?? BRONZE, sphere(-0.3, -0.5), { bias: 1 });
   }
 }
 
@@ -236,7 +264,207 @@ function sash(c: PixelCanvas, top: number, bottom: number, x0: number, x1: numbe
     const l = Math.max(el, m - half);
     const r = Math.min(er, m + half);
     return r - l < 0.5 ? null : [l, r];
-  }, MONK_SASH, (_x, _y, t, u) => sphere(t * 0.7 - 0.1, (u - 0.4) * 0.9, 1));
+  }, LK.sash, (_x, _y, t, u) => sphere(t * 0.7 - 0.1, (u - 0.4) * 0.9, 1));
+}
+
+/**
+ * The guardian's carved ring, hovering behind (or, seen from behind, in front
+ * of) his head, with a rune of fire every eighth of the way round. Seen from
+ * the side it is edge-on: a thin upright slab behind the head.
+ */
+function halo(c: PixelCanvas, x: number, y: number, r: number, edge = false): void {
+  const g = LK.guardian;
+  if (!g) return;
+  c.part();
+  if (edge) {
+    c.ellipse(x, y, 1.05, r, g.ring, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8, 1) });
+    for (const dy of [-r * 0.55, 0, r * 0.55]) c.px(x, y + dy, g.vein, FLAT, { glow: 0.8 });
+    return;
+  }
+  for (let py = Math.floor(y - r - 1); py <= Math.ceil(y + r + 1); py++) {
+    for (let px = Math.floor(x - r - 1); px <= Math.ceil(x + r + 1); px++) {
+      const dx = px + 0.5 - x;
+      const dy = py + 0.5 - y;
+      const d = Math.hypot(dx, dy);
+      if (d < r - 0.55 || d > r + 0.55) continue;
+      const a = Math.atan2(dy, dx) / (Math.PI / 4) + 0.5;
+      const rune = Math.abs(a - Math.round(a)) < 0.13;
+      if (rune) c.px(px, py, g.vein, FLAT, { glow: 0.85 });
+      else c.px(px, py, g.ring, sphere((dx / d) * 0.7, (dy / d) * 0.7, 1));
+    }
+  }
+}
+
+/**
+ * The luchador's cape seen from the front, hanging behind him from the
+ * shoulders to the knees and flaring out past his arms, a gold hem at its foot.
+ */
+function capeFront(c: PixelCanvas, cx: number, top: number, bottom: number, sway: number): void {
+  const k = LK.lucha!;
+  const edge = (y: number): [number, number] => {
+    const u = (y - top) / (bottom - top);
+    const hw = 5.4 + 1.7 * u;
+    const s = sway * u * 0.7;
+    return [cx - hw + s, cx + hw + s];
+  };
+  c.part();
+  c.shape(top, bottom - 1, edge, k.cape, (_x, _y, t, u) => sphere(t * 0.8, (u - 0.2) * 0.5, 1), { bias: -1 });
+  c.part();
+  c.shape(bottom, bottom, edge, k.trim, (_x, _y, t) => cyl(t, -0.2));
+}
+
+/** The cape from behind: it covers his back to the knees, folds running down it, his crest in gold between the shoulders. */
+function capeBack(c: PixelCanvas, cx: number, top: number, bottom: number, sway: number): void {
+  const k = LK.lucha!;
+  const edge = (y: number): [number, number] => {
+    const u = (y - top) / (bottom - top);
+    const hw = 4.9 + 1.5 * u;
+    const s = sway * u * 0.5;
+    return [cx - hw + s, cx + hw + s];
+  };
+  c.part();
+  c.shape(top, bottom - 1, edge, k.cape, (_x, _y, t, u) => sphere(t * 0.85, (u - 0.25) * 0.6, 1));
+  for (let y = top + 3; y < bottom; y++) {
+    const u = (y - top) / (bottom - top);
+    for (const f of [-3.2, 0, 3.2]) c.shade(Math.round(cx - 0.5 + f * (1 + u * 0.3) + sway * u * 0.5), y, -1);
+  }
+  c.part();
+  c.shape(bottom, bottom, edge, k.trim, (_x, _y, t) => cyl(t, -0.2));
+  // The collar clasped across the shoulders, and a gold crest between them.
+  c.part();
+  c.shape(top, top, () => [cx - 4.2, cx + 4.2], k.trim, (_x, _y, t) => cyl(t, 0.3));
+  c.part();
+  for (const [x, y] of [[cx - 2, top + 3], [cx + 1, top + 3], [cx - 1, top + 4], [cx, top + 4], [cx - 1, top + 5], [cx, top + 5], [cx - 1, top + 2], [cx, top + 2]] as const) {
+    c.px(x, y, k.trim, sphere(0, -0.4), { bias: y === top + 2 ? 1 : 0 });
+  }
+}
+
+/** The cape in profile, streaming back from his shoulders, further the harder he moves. */
+function capeSide(c: PixelCanvas, hx: number, top: number, bottom: number, sway: number): void {
+  const k = LK.lucha!;
+  const edge = (y: number): [number, number] => {
+    const u = (y - top) / (bottom - top);
+    return [hx + 0.2, hx + 3.1 + u * (2.2 + Math.max(0, sway) * 1.3)];
+  };
+  c.part();
+  c.shape(top, bottom - 1, edge, k.cape, (_x, _y, t, u) => sphere(t * 0.7 + 0.2, (u - 0.2) * 0.5, 1), { bias: -1 });
+  c.part();
+  c.shape(bottom, bottom, edge, k.trim, (_x, _y, t) => cyl(t, -0.2));
+}
+
+/** A wrestler's bare chest from the front: the line under each pec, a breastbone, and the abs below. */
+function muscles(c: PixelCanvas, cx: number, top: number, waist: number): void {
+  for (const x of [cx - 4, cx - 3, cx - 2, cx + 1, cx + 2, cx + 3]) c.shade(x, top + 3, -1);
+  c.shade(cx - 1, top + 2, -1);
+  c.shade(cx, top + 2, -1);
+  for (let y = top + 4; y < waist; y++) c.shade(y % 2 ? cx - 1 : cx, y, -1);
+  c.shade(cx - 2, top + 5, -1);
+  c.shade(cx + 1, top + 5, -1);
+  // Light catching the top of each pec.
+  c.shade(cx - 3, top + 1, 1);
+  c.shade(cx + 2, top + 1, 1);
+}
+
+/** The championship belt: a gold strap two rows deep with a great plate at `plate` and a ruby set in it. */
+function titleBelt(c: PixelCanvas, l: number, r: number, waist: number, plate: number): void {
+  const k = LK.lucha!;
+  c.part();
+  c.shape(waist - 1, waist, () => [l, r], k.trim, (_x, _y, t) => cyl(t, 0), { bias: -1 });
+  c.part();
+  c.shape(waist - 2, waist + 1, (y) => (y === waist - 2 || y === waist + 1 ? [plate - 1.5, plate + 1.5] : [plate - 2.2, plate + 2.2]), k.trim, (_x, _y, t, u) => sphere(t * 0.8, (u - 0.5) * 0.9, 1));
+  c.part();
+  c.px(plate - 0.5, waist - 1, k.jewel, sphere(-0.3, -0.4));
+  c.px(plate - 0.5, waist, k.jewel, sphere(-0.2, 0.3), { bias: -1 });
+}
+
+/**
+ * The luchador's mask from the front: it covers his whole head but for the
+ * mouth and chin, white flames licking up round the eyes, a gold stripe from
+ * the brow over the crown into a short crest.
+ */
+function maskFront(c: PixelCanvas, cx: number, U: number, blink?: boolean): void {
+  const k = LK.lucha!;
+  c.part();
+  c.ellipse(cx, 12.4 + U, 3.2, 2.95, k.mask);
+  c.part();
+  const dome = [2.3, 3.3];
+  c.shape(8 + U, 9 + U, (y) => [cx - dome[y - 8 - U], cx + dome[y - 8 - U]], k.mask, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.9, 1));
+  c.part();
+  c.px(11, 13 + U, k.mask, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 13 + U, k.mask, sphere(0.35, -0.2));
+  // The mouth and chin, bare.
+  c.part();
+  c.shape(14 + U, 14 + U, () => [cx - 1.8, cx + 1.8], LK.skin, (_x, _y, t) => sphere(t * 0.8, 0.3, 1));
+  c.shade(11, 14 + U, -1);
+  c.shade(12, 14 + U, -1);
+  // The stripe and crest.
+  c.part();
+  for (let y = 6; y <= 10; y++) {
+    if (y === 6) {
+      c.px(11, y + U, k.trim, sphere(-0.3, -0.8), { bias: 1 });
+      c.px(12, y + U, k.trim, sphere(0.3, -0.8));
+    } else {
+      c.px(11, y + U, k.trim, sphere(-0.3, -0.4), { bias: y < 8 ? 1 : 0 });
+      c.px(12, y + U, k.trim, sphere(0.3, -0.4), { bias: y < 8 ? 0 : -1 });
+    }
+  }
+  // White flames round the eyes, the eyes dark within them.
+  c.part();
+  for (const [x, y] of [[10, 10], [9, 11], [10, 11], [9, 12], [13, 10], [14, 11], [13, 11], [14, 12]] as const) c.px(x, y + U, k.white, sphere(x < 12 ? -0.3 : 0.3, -0.3));
+  for (const x of [10, 13]) {
+    if (blink) c.px(x, 12 + U, k.white, FLAT_DOWN, { bias: -1 });
+    else c.px(x, 12 + U, LK.eye);
+  }
+}
+
+/** The mask from behind: the crest running down over the crown and the laces up the back of the head. */
+function maskBack(c: PixelCanvas, cx: number, U: number): void {
+  const k = LK.lucha!;
+  c.part();
+  c.ellipse(cx, 11.4 + U, 3.6, 3.5, k.mask, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
+  c.shade(cx - 2, 9 + U, 1);
+  c.part();
+  for (let y = 7; y <= 10; y++) {
+    c.px(11, y + U, k.trim, sphere(-0.3, -0.5), { bias: y < 8 ? 1 : 0 });
+    c.px(12, y + U, k.trim, sphere(0.3, -0.5), { bias: y < 8 ? 0 : -1 });
+  }
+  // The laces, criss-crossing.
+  c.part();
+  for (const [x, y] of [[11, 12], [12, 13], [11, 14], [12, 12], [11, 13], [12, 14]] as const) c.px(x, y + U, (x + y) % 2 ? k.white : k.mask, sphere(0, -0.2), { bias: (x + y) % 2 ? 0 : -1 });
+}
+
+/** The mask in profile: the crest sweeping back, a white flame round the eye, lace ends fluttering behind. */
+function maskSide(c: PixelCanvas, hx: number, U: number, sway: number, blink?: boolean): void {
+  const k = LK.lucha!;
+  // The lace ends, behind the head.
+  c.part();
+  c.capsule(hx + 2.4, 12.8 + U, hx + 4.4 + sway * 0.5, 14.2 + U, 0.5, 0.45, k.white);
+  c.capsule(hx + 2.4, 13.2 + U, hx + 3.8 + sway * 0.3, 15.2 + U, 0.5, 0.45, k.white);
+  c.part();
+  c.ellipse(hx - 1.1, 12.6 + U, 2.9, 2.8, k.mask);
+  c.part();
+  const skull: [number, number][] = [
+    [-2.6, 2.0],
+    [-3.6, 2.8],
+    [-4.0, 3.1],
+    [0.0, 3.1],
+    [0.3, 2.9],
+    [0.6, 2.3],
+  ];
+  c.shape(8 + U, 13 + U, (y) => [hx + skull[y - 8 - U][0], hx + skull[y - 8 - U][1]], k.mask, (_x, _y, t, u) => sphere(t * 0.9, u * 1.3 - 0.8, 1));
+  c.part();
+  c.px(hx - 5, 13 + U, k.mask, sphere(-0.6, -0.2), { bias: 1 });
+  c.part();
+  c.shape(14 + U, 14 + U, () => [hx - 4.4, hx - 1.6], LK.skin, (_x, _y, t) => sphere(t * 0.8 - 0.3, 0.3, 1));
+  c.shade(hx - 4, 14 + U, -1);
+  // The crest, a gold fin from the brow back over the crown.
+  c.part();
+  for (const [dx, y] of [[-3, 8], [-2, 7], [-1, 7], [0, 7], [1, 7], [-1, 6], [0, 6], [2, 8]] as const) c.px(hx + dx, y + U, k.trim, sphere(0.1 * dx, -0.8), { bias: y === 6 ? 1 : 0 });
+  // The white flame round the eye, sweeping back.
+  c.part();
+  for (const [dx, y] of [[-4, 11], [-3, 11], [-2, 11], [-2, 12], [-1, 12], [-1, 11], [0, 12]] as const) c.px(hx + dx, y + U, k.white, sphere(-0.3, -0.3));
+  if (blink) c.px(hx - 3, 12 + U, k.white, FLAT_DOWN, { bias: -1 });
+  else c.px(hx - 3, 12 + U, LK.eye);
 }
 
 // ---------------------------------------------------------------------------
@@ -258,10 +486,12 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const armB = () => arm(c, shB.x, shB.y, fb, REACH_FRONT, [0.3, 1], p.chi, fb.behind ? -1 : 0);
 
   // Headband tails, knotted behind the head, flying out past it.
-  if (!LK.monk) {
+  if (!LK.monk && !LK.lucha) {
     tail(c, 14.6, 10.2 + U, 17.4 + p.tails, 11.8 + U - p.tails * 0.4);
     tail(c, 14.6, 10.6 + U, 16.8 + p.tails * 0.6, 13.8 + U);
   }
+  halo(c, cx, 11.4 + U, 5.8);
+  if (LK.lucha) capeFront(c, cx, 15 + U, 26 + L, p.tails);
   if (fa.behind) armA();
   if (fb.behind) armB();
 
@@ -287,13 +517,30 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   c.shape(top, top + 3, (y) => {
     const hw = 2.1 - (y - top) * 0.6;
     return hw < 0.4 ? null : [cx - hw, cx + hw];
-  }, SKIN, (_x, _y, t, u) => sphere(t * 0.7, u * 0.5 - 0.2, 1));
+  }, LK.skin, (_x, _y, t, u) => sphere(t * 0.7, u * 0.5 - 0.2, 1));
   if (LK.monk) {
     // The sash from his left shoulder down across to the right hip, the beads over it.
     sash(c, top, waist - 1, 15.4, 8.8, 1.15, torso);
     beads(c, [[9, top], [9, top + 1], [10, top + 2], [11, top + 3], [12, top + 3], [13, top + 2], [14, top + 1], [14, top]], [12, top + 4]);
+    // A seam of fire showing through the stone at his collar.
+    if (LK.guardian) c.px(cx - 1, top + 1, LK.guardian.vein, FLAT, { glow: 0.8 });
+  } else if (LK.lucha) {
+    muscles(c, cx, top, waist);
   } else {
     for (let y = top + 3; y < waist; y++) c.shade(Math.round(cx - 0.5 + (y - top - 3) * 0.45), y, -1);
+  }
+  if (LK.lucha) {
+    titleBelt(c, cx - 4.2, cx + 4.2, waist, cx);
+    deltoid(c, 7.1, 16.8 + U);
+    deltoid(c, 16.9, 16.8 + U);
+    // The cape's cord round his neck, clasped in gold at the collarbones.
+    c.part();
+    c.px(9, top, LK.lucha.trim, sphere(-0.3, -0.5), { bias: 1 });
+    c.px(14, top, LK.lucha.trim, sphere(0.3, -0.5));
+    maskFront(c, cx, U, p.blink);
+    if (!fa.behind) armA();
+    if (!fb.behind) armB();
+    return;
   }
   // The jacket's skirt below the belt, split at the front.
   c.part();
@@ -311,25 +558,32 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   c.capsule(cx + 0.4, waist + 1, cx + 0.9 + p.tails * 0.25, waist + 3.6, 0.55, 0.5, LK.belt);
 
   deltoid(c, 7.1, 16.8 + U);
-  deltoid(c, 16.9, 16.8 + U, 2.1, LK.monk ? MONK_SASH : SKIN);
+  deltoid(c, 16.9, 16.8 + U, 2.1, LK.monk ? LK.sash : LK.skin);
 
   // Head: a square jaw, spiky hair, the headband across the brow.
   c.part();
-  c.ellipse(cx, 12.4 + U, 3.2, 2.95, SKIN);
+  c.ellipse(cx, 12.4 + U, 3.2, 2.95, LK.skin);
   c.part();
-  c.px(11, 13 + U, SKIN, sphere(-0.4, -0.3), { bias: 1 });
-  c.px(12, 13 + U, SKIN, sphere(0.35, -0.2));
+  c.px(11, 13 + U, LK.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 13 + U, LK.skin, sphere(0.35, -0.2));
   c.shade(11, 14 + U, -1);
   c.shade(12, 14 + U, -1);
   if (LK.monk) {
     // A shaved dome catching the light, and ears.
     c.part();
     const dome = [2.7, 3.5];
-    c.shape(8 + U, 9 + U, (y) => [cx - dome[y - 8 - U], cx + dome[y - 8 - U]], SKIN, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.9, 1));
+    c.shape(8 + U, 9 + U, (y) => [cx - dome[y - 8 - U], cx + dome[y - 8 - U]], LK.skin, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.9, 1));
     c.shade(cx - 2, 9 + U, 1);
     c.part();
-    c.px(8, 12 + U, SKIN, cyl(-0.8, 0));
-    c.px(15, 12 + U, SKIN, cyl(0.8, 0));
+    c.px(8, 12 + U, LK.skin, cyl(-0.8, 0));
+    c.px(15, 12 + U, LK.skin, cyl(0.8, 0));
+    if (LK.guardian) {
+      // A crack of fire running down the crown to the brow.
+      const v = LK.guardian.vein;
+      c.px(13, 8 + U, v, FLAT, { glow: 0.7 });
+      c.px(13, 9 + U, v, FLAT, { glow: 0.8 });
+      c.px(12, 10 + U, v, FLAT, { glow: 0.7 });
+    }
   } else {
     c.part();
     const widths = [2.8, 3.7, 4.0];
@@ -386,20 +640,33 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   c.part();
   c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LK.belt, (_x, _y, t) => cyl(t, 0));
 
-  deltoid(c, 7.1, 16.8 + U, 2.1, LK.monk ? MONK_SASH : SKIN);
+  deltoid(c, 7.1, 16.8 + U, 2.1, LK.monk ? LK.sash : LK.skin);
   deltoid(c, 16.9, 16.8 + U);
+  if (LK.lucha) capeBack(c, cx, top, 26 + L, -p.tails);
   if (!fa.behind) armA();
   if (!fb.behind) armB();
 
+  if (LK.lucha) {
+    maskBack(c, cx, U);
+    return;
+  }
   if (LK.monk) {
     // The shaved back of the head, and the beads round the neck below it.
     beads(c, [[9, top], [10, top], [11, top], [13, top], [14, top], [15, top]]);
     c.part();
-    c.ellipse(cx, 11.6 + U, 3.5, 3.4, SKIN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
+    c.ellipse(cx, 11.6 + U, 3.5, 3.4, LK.skin, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
     c.shade(cx - 1, 9 + U, 1);
     c.part();
-    c.px(8, 12 + U, SKIN, cyl(-0.8, 0));
-    c.px(16, 12 + U, SKIN, cyl(0.8, 0));
+    c.px(8, 12 + U, LK.skin, cyl(-0.8, 0));
+    c.px(16, 12 + U, LK.skin, cyl(0.8, 0));
+    if (LK.guardian) {
+      // Fire through a crack down the back of the skull, and the ring hovering behind it.
+      const v = LK.guardian.vein;
+      c.px(11, 10 + U, v, FLAT, { glow: 0.7 });
+      c.px(10, 11 + U, v, FLAT, { glow: 0.8 });
+      c.px(10, 12 + U, v, FLAT, { glow: 0.6 });
+      halo(c, cx, 11.4 + U, 5.8);
+    }
     return;
   }
 
@@ -427,11 +694,13 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const fa = place('side', 'a', p.a, U, hx);
   const fb = place('side', 'b', p.b, U, hx);
 
+  halo(c, hx + 4.4, 11.4 + U, 5.8, true);
+  if (LK.lucha) capeSide(c, hx, 15 + U, 26 + L, p.tails);
   // Far arm, behind everything.
   arm(c, hx + 1.4, 16.6 + U, fb, REACH_SIDE, [0.3, 1], p.chi, -1);
 
   // Headband tails streaming back.
-  if (!LK.monk) {
+  if (!LK.monk && !LK.lucha) {
     tail(c, hx + 3, 10.2 + U, hx + 6.6 + p.tails, 10.8 + U + (p.tails > 1 ? 0 : 1));
     tail(c, hx + 3, 10.6 + U, hx + 5.8 + p.tails * 0.8, 13 + U);
   }
@@ -451,11 +720,21 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   c.part();
   c.shape(top, waist - 1, (y) => [hx - 3.0 - (y >= top + 1 && y <= top + 3 ? 0.5 : 0), hx + 2.8], LK.gi, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
   c.part();
-  c.shape(top, top + 1, (y) => [hx - 3.0, hx - 1.2 - (y - top)], SKIN, (_x, _y, t) => sphere(t * 0.6 - 0.4, -0.2, 1));
+  c.shape(top, top + 1, (y) => [hx - 3.0, hx - 1.2 - (y - top)], LK.skin, (_x, _y, t) => sphere(t * 0.6 - 0.4, -0.2, 1));
   if (LK.monk) {
     // The sash runs from the near shoulder back to the far hip; the beads hang at the collar.
     sash(c, top, waist - 1, hx + 0.2, hx + 1.8, 1.1, (y) => [hx - 3.0 - (y >= top + 1 && y <= top + 3 ? 0.5 : 0), hx + 2.8]);
     beads(c, [[hx - 1, top], [hx - 2, top + 1], [hx - 3, top + 2], [hx - 3, top + 3]], [hx - 3, top + 4]);
+  }
+  if (LK.lucha) {
+    // A chest thrown out, the line of the pec under it, and the title belt's plate at the front.
+    for (let x = Math.round(hx - 3); x <= Math.round(hx - 1); x++) c.shade(x, top + 3, -1);
+    c.shade(Math.round(hx - 2), top + 5, -1);
+    titleBelt(c, hx - 3.2, hx + 3.0, waist, hx - 2.2);
+    maskSide(c, hx, U, p.tails, p.blink);
+    deltoid(c, hx + 0.2, 17 + U, 1.9);
+    arm(c, hx + 0.2, 17 + U, fa, REACH_SIDE, [0.3, 1], p.chi);
+    return;
   }
   c.part();
   c.shape(waist + 1, waist + 2, () => [hx - 3.2, hx + 3.0], LK.gi, (_x, _y, t) => cyl(t * 0.9 - 0.1, -0.1), { bias: -1 });
@@ -467,9 +746,9 @@ function drawSide(c: PixelCanvas, p: Pose): void {
 
   // Head in profile.
   c.part();
-  c.ellipse(hx - 1.1, 12.6 + U, 2.9, 2.8, SKIN);
+  c.ellipse(hx - 1.1, 12.6 + U, 2.9, 2.8, LK.skin);
   c.part();
-  c.px(hx - 5, 13 + U, SKIN, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(hx - 5, 13 + U, LK.skin, sphere(-0.6, -0.2), { bias: 1 });
   c.shade(hx - 4, 14 + U, -1);
   if (LK.monk) {
     // A shaved crown and the back of the skull, an ear, heavy brows.
@@ -482,13 +761,19 @@ function drawSide(c: PixelCanvas, p: Pose): void {
       [0.4, 3.0],
       [0.8, 2.4],
     ];
-    c.shape(8 + U, 13 + U, (y) => [hx + skull[y - 8 - U][0], hx + skull[y - 8 - U][1]], SKIN, (_x, _y, t, u) => sphere(t * 0.9, u * 1.3 - 0.8, 1));
+    c.shape(8 + U, 13 + U, (y) => [hx + skull[y - 8 - U][0], hx + skull[y - 8 - U][1]], LK.skin, (_x, _y, t, u) => sphere(t * 0.9, u * 1.3 - 0.8, 1));
     c.shade(Math.round(hx - 1), 9 + U, 1);
     c.part();
-    c.px(hx + 1, 12 + U, SKIN, sphere(0.4, 0), { bias: 1 });
+    c.px(hx + 1, 12 + U, LK.skin, sphere(0.4, 0), { bias: 1 });
     c.shade(hx + 1, 13 + U, -1);
+    if (LK.guardian) {
+      const v = LK.guardian.vein;
+      c.px(hx - 1, 8 + U, v, FLAT, { glow: 0.7 });
+      c.px(hx, 9 + U, v, FLAT, { glow: 0.8 });
+      c.px(hx + 2, 15 + U, v, FLAT, { glow: 0.6 });
+    }
     eyes(c, [[hx - 3, 12 + U]], p.blink);
-    deltoid(c, hx + 0.2, 17 + U, 1.9, MONK_SASH);
+    deltoid(c, hx + 0.2, 17 + U, 1.9, LK.sash);
     arm(c, hx + 0.2, 17 + U, fa, REACH_SIDE, [0.3, 1], p.chi);
     return;
   }
@@ -807,6 +1092,10 @@ export const BRAWLER_LOOK: FighterLook = {
   chi: [CHI_CORE, CHI_HOT, CHI_MID],
   hand: 1.9,
   anims: FIGHTER_ANIMS,
+  skin: SKIN,
+  eye: EYE,
+  sash: MONK_SASH,
+  bead: PRAYER_BEAD,
 };
 
 /** The iron monk: saffron robe and crimson sash, bronze bracers, bare palms of golden qi. */
@@ -824,9 +1113,69 @@ export const MONK_LOOK: FighterLook = {
   chi: [QI_CORE, QI_HOT, QI_MID],
   hand: 1.7,
   anims: MONK_ANIMS,
+  skin: SKIN,
+  eye: EYE,
+  sash: MONK_SASH,
+  bead: PRAYER_BEAD,
 };
 
-export const FIGHTER_LOOKS = [BRAWLER_LOOK, MONK_LOOK];
+const ramp = (...c: string[]): RGB[] => c.map(hex);
+
+// The luchador's colours: a royal blue mask and tights, a crimson cape, gold for his crest, belt and bands.
+const LUCHA_MASK: Material = { ramp: ramp('#0c1248', '#18267e', '#2a44bc', '#4a74ec', '#9cc0ff'), outline: hex('#060820'), outlineLit: hex('#141c50'), shine: true };
+const LUCHA_TIGHTS: Material = { ramp: ramp('#0a0c30', '#141c5a', '#22348e', '#3a58c0'), outline: hex('#06081c') };
+const LUCHA_TRIM: Material = { ramp: ramp('#4e2c06', '#8e5a12', '#d09a28', '#ffd458', '#fff6c0'), outline: hex('#241404'), shine: true };
+const LUCHA_WHITE: Material = { ramp: ramp('#5e5e7c', '#a2a2c0', '#e0e0ee', '#ffffff'), outline: hex('#181828'), outlineLit: hex('#2c2c44') };
+const LUCHA_CAPE: Material = { ramp: ramp('#34041a', '#6a0c28', '#a8163e', '#dc2e5c', '#ff7aa0'), outline: hex('#180410'), outlineLit: hex('#2e0a1c'), shine: true };
+const LUCHA_BOOT: Material = { ramp: ramp('#34041a', '#6a0c28', '#a8163e', '#dc2e5c', '#ff9ab8'), outline: hex('#180410'), shine: true };
+const LUCHA_RUBY: Material = { ramp: ramp('#5a0414', '#b0102c', '#ff3050', '#ffb0c0'), outline: hex('#240208'), emissive: 0.55, shine: true };
+
+// The stone guardian's: basalt skin, a moss-dark robe and an ember sash, a sandstone ring, and fire in the cracks.
+const BASALT: Material = { ramp: ramp('#14121a', '#26222e', '#3e3848', '#5e5668', '#8c8296'), outline: hex('#060509'), outlineLit: hex('#18141e') };
+const BASALT_BROW: Material = { ramp: ramp('#0a080e', '#16121c', '#241e2c', '#342c3e'), outline: hex('#040306') };
+const MOSS_ROBE: Material = { ramp: ramp('#10200f', '#1e381c', '#305430', '#4c7444', '#7ea062'), outline: hex('#060d06'), outlineLit: hex('#122012') };
+const MOSS_TROUSER: Material = { ramp: ramp('#121410', '#1e221a', '#2e3426', '#444c36'), outline: hex('#070806') };
+const EMBER_SASH: Material = { ramp: ramp('#360e04', '#68200c', '#a23810', '#d8601c', '#ffa050'), outline: hex('#180602'), outlineLit: hex('#2e0e06') };
+const SANDSTONE: Material = { ramp: ramp('#34281e', '#56463a', '#80705a', '#ac9a7e', '#d8c8a8'), outline: hex('#120c08'), outlineLit: hex('#2a2018') };
+const MAGMA: Material = { ramp: ramp('#8a1a06', '#d8400c', '#ff7a1a', '#ffc050', '#fff0b0'), outline: hex('#3a0a02'), emissive: 0.9, noAO: true };
+
+/** Luchador, the brawler's skin: a masked showman of the ring with a crimson cape and a gold title belt. */
+export const LUCHA_LOOK: FighterLook = {
+  ...BRAWLER_LOOK,
+  key: 'fighter_lucha',
+  gi: SKIN,
+  trouser: LUCHA_TIGHTS,
+  belt: LUCHA_TRIM,
+  band: LUCHA_CAPE,
+  glove: LUCHA_WHITE,
+  wrap: LUCHA_TRIM,
+  feet: LUCHA_BOOT,
+  hair: LUCHA_MASK,
+  chi: [hex('#fff4fa'), hex('#ffd35c'), hex('#ff4fa0')],
+  lucha: { mask: LUCHA_MASK, trim: LUCHA_TRIM, white: LUCHA_WHITE, cape: LUCHA_CAPE, jewel: LUCHA_RUBY },
+};
+
+/** Stone guardian, the iron monk's skin: a temple statue woken to fight, fire in its cracks and a carved ring at its back. */
+export const GUARDIAN_LOOK: FighterLook = {
+  ...MONK_LOOK,
+  key: 'fighter_guardian',
+  gi: MOSS_ROBE,
+  trouser: MOSS_TROUSER,
+  belt: EMBER_SASH,
+  band: EMBER_SASH,
+  glove: BASALT,
+  wrap: SANDSTONE,
+  feet: BASALT,
+  hair: BASALT_BROW,
+  chi: [hex('#fff4d0'), hex('#ffc050'), hex('#ff6a1a')],
+  skin: BASALT,
+  eye: MAGMA,
+  sash: EMBER_SASH,
+  bead: SANDSTONE,
+  guardian: { ring: SANDSTONE, vein: MAGMA },
+};
+
+export const FIGHTER_LOOKS = [BRAWLER_LOOK, MONK_LOOK, LUCHA_LOOK, GUARDIAN_LOOK];
 
 export interface FighterFrame {
   key: string; // e.g. "walk_left_3"

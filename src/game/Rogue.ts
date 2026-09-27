@@ -108,6 +108,24 @@ export const DANCER_STYLE: RogueStyle = {
   bleeds: false,
 };
 
+/** The corsair: the cutthroat's blades in gunpowder and gold. */
+export const CORSAIR_STYLE: RogueStyle = {
+  ...ROGUE_STYLE,
+  key: 'rogue_corsair',
+  steel: { core: 0xffffff, hot: 0xfff6dc, mid: 0xe0c070, deep: 0x8a6a30 },
+  shade: { core: 0xfffbe0, hot: 0xffe08a, mid: 0xe0a030, deep: 0x8a5018, light: 0xffc050 },
+  shadow: { smoke: 'rogue_corsair_smoke', echo: 0x2a2418, glow: false },
+};
+
+/** The kitsune: the shadow dancer's blades in blue foxfire. */
+export const KITSUNE_STYLE: RogueStyle = {
+  ...DANCER_STYLE,
+  key: 'rogue_kitsune',
+  steel: { core: 0xffffff, hot: 0xd8f0ff, mid: 0x7ab8ff, deep: 0x2a5ad0, light: 0x8ac8ff },
+  shade: { core: 0xf4fbff, hot: 0xa8e0ff, mid: 0x4a9cff, deep: 0x1a3aa0, light: 0x70b0ff },
+  shadow: { smoke: 'rogue_kitsune_smoke', echo: 0x3a70e8, glow: true },
+};
+
 type State = 'free' | 'strike' | 'step' | 'dance';
 
 /**

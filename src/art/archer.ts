@@ -15,8 +15,13 @@
 // The storm archer is his other look on the same rig: a thunderhead-indigo
 // hood and cloak edged in silver, silver hair, eyes lit blue, a bow of dark
 // steel strung with lightning and arrows fletched with it.
+//
+// The wild hunt is the ranger's other skin: no hood, but a stag's skull worn
+// over the face with great antlers branching out of it and moonlight burning
+// in its sockets, long black hair, a wolf-fur cloak and ruff, a bow of bone
+// strung with a thread of spirit light, and raven-fletched arrows tipped with it.
 
-import { PixelCanvas, cyl, sphere, type Material, type RGB } from './pixel';
+import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
 import {
   ARC,
   ARC_FLETCH,
@@ -112,6 +117,12 @@ export interface ArcherLook {
   light: [RGB, RGB, RGB];
   /** The storm archer: the string and arrows crackle. */
   storm: boolean;
+  /** Light living in the string, the eyes and the arrowheads (the storm's lightning, the hunt's moonlight), brightest first. */
+  crackle?: [RGB, RGB, RGB];
+  /** The bow's grip and the quiver, when not plain leather. */
+  wrap?: Material;
+  /** The wild hunt: a stag's skull and antlers for a hood, long hair and a fur ruff. */
+  hunt?: { skull: Material; antler: Material };
 }
 
 export const RANGER_LOOK: ArcherLook = {
@@ -147,9 +158,45 @@ export const STORM_LOOK: ArcherLook = {
   trim: STORM_TRIM,
   light: [BOLT_CORE, BOLT_HOT, BOLT_MID],
   storm: true,
+  crackle: [BOLT_CORE, BOLT_HOT, BOLT_MID],
+  wrap: STORM_JERKIN,
 };
 
-export const ARCHER_LOOKS = [RANGER_LOOK, STORM_LOOK];
+const ramp = (...c: string[]): RGB[] => c.map(hex);
+
+// The wild hunt's materials.
+const FUR: Material = { ramp: ramp('#181412', '#2c2622', '#463c36', '#685a50', '#928476'), outline: hex('#0a0806'), outlineLit: hex('#1a1612') };
+const HUNT_TUNIC: Material = { ramp: ramp('#120e16', '#201a26', '#322838', '#483c52'), outline: hex('#070509') };
+const HUNT_JERKIN: Material = { ramp: ramp('#1c130c', '#322218', '#4e3626', '#6c4e36', '#8c6a4a'), outline: hex('#0c0805') };
+const HUNT_HAIR: Material = { ramp: ramp('#0c0a10', '#1a1620', '#2c2634', '#423a4c'), outline: hex('#050407') };
+const STAG_SKULL: Material = { ramp: ramp('#56483a', '#928066', '#ccba96', '#eee4ca', '#fffaee'), outline: hex('#1c140c'), outlineLit: hex('#34281c') };
+const ANTLER: Material = { ramp: ramp('#34281c', '#62503c', '#96826a', '#c6b494', '#ece0c6'), outline: hex('#120c07') };
+const MOON_EYE: Material = { ramp: ramp('#3a2a8a', '#6a50d8', '#b0a0ff', '#f0e8ff'), outline: hex('#140c30'), emissive: 0.9, noAO: true };
+const MOON_STRING: Material = { ramp: ramp('#6a50d8', '#b0a0ff', '#e4dcff', '#fbf8ff'), outline: hex('#1c1040'), emissive: 0.9, noAO: true };
+const RAVEN_FLETCH: Material = { ramp: ramp('#08080e', '#141828', '#2a3050', '#48547a'), outline: hex('#030308') };
+const MOON_LIGHT: [RGB, RGB, RGB] = [hex('#f8f0ff'), hex('#d4c4ff'), hex('#9a80f0')];
+
+export const HUNT_LOOK: ArcherLook = {
+  key: 'archer_hunt',
+  cloak: FUR,
+  tunic: HUNT_TUNIC,
+  jerkin: HUNT_JERKIN,
+  hair: HUNT_HAIR,
+  eye: MOON_EYE,
+  bow: STAG_SKULL,
+  string: MOON_STRING,
+  fletch: RAVEN_FLETCH,
+  head: MOON_EYE,
+  shaft: HUNT_JERKIN,
+  metal: STAG_SKULL,
+  light: MOON_LIGHT,
+  storm: false,
+  crackle: MOON_LIGHT,
+  wrap: FUR,
+  hunt: { skull: STAG_SKULL, antler: ANTLER },
+};
+
+export const ARCHER_LOOKS = [RANGER_LOOK, STORM_LOOK, HUNT_LOOK];
 
 /** The look being drawn; set by buildArcherFrames. */
 let S: ArcherLook = RANGER_LOOK;
@@ -243,23 +290,23 @@ function drawBow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, bi
   const [tx0, ty0] = at(-1);
   const [tx1, ty1] = at(1);
   c.part();
-  c.capsule(f.x - f.ax * 1.4, f.y - f.ay * 1.4, f.x + f.ax * 1.4, f.y + f.ay * 1.4, 1.05, 1.05, S.storm ? STORM_JERKIN : LEATHER, { bias });
+  c.capsule(f.x - f.ax * 1.4, f.y - f.ay * 1.4, f.x + f.ax * 1.4, f.y + f.ay * 1.4, 1.05, 1.05, S.wrap ?? LEATHER, { bias });
 
   // The string, from tip to tip, pulled back to the hand while an arrow is on it.
   c.part();
-  const glow = S.storm ? { glow: 0.9 } : {};
+  const glow = S.crackle ? { glow: 0.9 } : {};
   if (p.nock) {
     c.line(tx0, ty0, fa.x, fa.y, S.string, () => sphere(0, -0.2), glow);
     c.line(fa.x, fa.y, tx1, ty1, S.string, () => sphere(0, -0.2), glow);
   } else {
     c.line(tx0, ty0, tx1, ty1, S.string, () => sphere(0, -0.2), glow);
   }
-  if (S.storm) {
-    // Lightning living in the string: sparks along it.
+  if (S.crackle) {
+    // Lightning (or moonlight) living in the string: sparks along it.
     for (let k = 0; k < 3; k++) {
       const u = (k + 0.5) / 3;
       const [sx, sy] = p.nock ? (u < 0.5 ? [tx0 + (fa.x - tx0) * u * 2, ty0 + (fa.y - ty0) * u * 2] : [fa.x + (tx1 - fa.x) * (u - 0.5) * 2, fa.y + (ty1 - fa.y) * (u - 0.5) * 2]) : [tx0 + (tx1 - tx0) * u, ty0 + (ty1 - ty0) * u];
-      c.spark(sx, sy, BOLT_HOT, 0.35);
+      c.spark(sx, sy, S.crackle[1], 0.35);
     }
   }
   if (p.nock) arrowOnString(c, fa.x, fa.y, f.nx, f.ny, p.glint);
@@ -281,9 +328,9 @@ function arrowOnString(c: PixelCanvas, x: number, y: number, nx: number, ny: num
   c.part();
   c.px(hx - nx * 0.6, hy - ny * 0.6, S.head, sphere(-0.3, -0.4));
   c.px(hx, hy, S.head, sphere(-0.5, -0.5), { bias: 1 });
-  if (S.storm) {
-    c.spark(hx, hy, BOLT_CORE, 0.5 + glint * 0.5);
-    c.spark(hx + nx, hy + ny, BOLT_HOT, 0.3 + glint * 0.4);
+  if (S.crackle) {
+    c.spark(hx, hy, S.crackle[0], 0.5 + glint * 0.5);
+    c.spark(hx + nx, hy + ny, S.crackle[1], 0.3 + glint * 0.4);
   }
   if (glint > 0) {
     // Light gathering at the head: a small cross of it, the arms growing with the glint.
@@ -360,9 +407,9 @@ function fletchings(c: PixelCanvas, x: number, y: number, lean: number): void {
     c.px(x + dx + lean * 2, y + dy - 1, S.fletch, sphere(dx * 0.4 - 0.2, -0.6));
     c.px(x + dx + lean, y + dy, S.fletch, sphere(dx * 0.4, -0.2));
   }
-  if (S.storm) {
-    c.spark(x + lean * 2, y - 2, BOLT_HOT, 0.35);
-    c.spark(x - 1 + lean, y, BOLT_MID, 0.25);
+  if (S.crackle) {
+    c.spark(x + lean * 2, y - 2, S.crackle[1], 0.35);
+    c.spark(x - 1 + lean, y, S.crackle[2], 0.25);
   }
 }
 
@@ -370,7 +417,7 @@ function fletchings(c: PixelCanvas, x: number, y: number, lean: number): void {
 function quiver(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, bias = 0): void {
   fletchings(c, x0, y0 - 1, (x0 - x1) / Math.max(1, y1 - y0) * 1.2);
   c.part();
-  c.capsule(x0, y0, x1, y1, 1.7, 1.45, S.storm ? STORM_JERKIN : LEATHER, { bias });
+  c.capsule(x0, y0, x1, y1, 1.7, 1.45, S.wrap ?? LEATHER, { bias });
   c.part();
   // A rim at the mouth and a band round the middle.
   c.capsule(x0 - 0.1, y0, x0 + (x1 - x0) * 0.08, y0 + (y1 - y0) * 0.08, 1.8, 1.8, S.jerkin, { bias: bias + 1 });
@@ -391,10 +438,69 @@ function cowl(c: PixelCanvas, cx: number, U: number, l: number, r: number): void
   for (let x = Math.floor(cx - l); x <= Math.ceil(cx + r); x++) {
     if (!c.filled(x, y)) continue;
     if (S.trim) c.px(x, y, S.trim, sphere(0, 0.3));
-    else if ((x & 1) === 0) c.shade(x, y, -1);
+    else if (S.hunt) {
+      // A shaggy fur ruff: tufts hanging below the edge.
+      if ((x & 1) === 0 && !c.filled(x, y + 1)) c.px(x, y + 1, S.cloak, sphere(0, 0.5), { bias: -1 });
+      else c.shade(x, y, -1);
+    } else if ((x & 1) === 0) c.shade(x, y, -1);
   }
 }
 
+/** One antler: a beam from (x0, y0) through (x1, y1) to (x2, y2), with tines off it at the given points. */
+function antler(c: PixelCanvas, pts: [number, number][], tines: [number, number, number, number][], bias = 0): void {
+  const m = S.hunt!.antler;
+  c.part();
+  for (let i = 0; i < pts.length - 1; i++) {
+    const r0 = 0.8 - (i / (pts.length - 1)) * 0.35;
+    const r1 = 0.8 - ((i + 1) / (pts.length - 1)) * 0.35;
+    c.capsule(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], r0, r1, m, { bias });
+  }
+  for (const [x0, y0, x1, y1] of tines) c.capsule(x0, y0, x1, y1, 0.5, 0.4, m, { bias });
+  // A pale glint at each tip.
+  const [tx, ty] = pts[pts.length - 1];
+  c.px(tx, ty, m, sphere(-0.3, -0.7), { bias: bias + 1 });
+}
+
+/** Both antlers from the front or the back, branching up and out from the skull's crown. */
+function antlers(c: PixelCanvas, cx: number, U: number): void {
+  for (const k of [-1, 1]) {
+    antler(
+      c,
+      [[cx + k * 1.8, 9 + U], [cx + k * 3.6, 6.4 + U], [cx + k * 4.6, 3.6 + U], [cx + k * 4.4, 1.2 + U]],
+      [
+        [cx + k * 3.2, 7 + U, cx + k * 5.8, 6.4 + U],
+        [cx + k * 4.2, 4.8 + U, cx + k * 6.4, 3.2 + U],
+        [cx + k * 4.5, 3.4 + U, cx + k * 3.2, 1.8 + U],
+      ],
+    );
+  }
+}
+
+/** The stag's skull from the front: a pale brow over the eyes, sockets with moonlight in them, and the long snout down the face. */
+function skullFront(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+  const k = S.hunt!;
+  // Long black hair falling either side of the skull.
+  c.part();
+  c.shape(10 + U, 17 + U, (y) => [cx - 3.9 - (y - 10 - U) * 0.1, cx - 2.2], S.hair, (x, _y, t, u) => sphere(t * 0.8, u * 0.5 - 0.3 + (x & 1 ? 0.15 : -0.15), 1));
+  c.shape(10 + U, 17 + U, (y) => [cx + 2.2, cx + 3.9 + (y - 10 - U) * 0.1], S.hair, (x, _y, t, u) => sphere(t * 0.8, u * 0.5 - 0.3 + (x & 1 ? 0.15 : -0.15), 1));
+  c.part();
+  c.ellipse(cx, 12.7 + U, 2.5, 2.3, SKIN, { bias: -1 });
+  c.part();
+  c.ellipse(cx, 10.6 + U, 3.2, 2.4, k.skull);
+  c.part();
+  c.shape(12 + U, 15 + U, (y) => {
+    const hw = [1.6, 1.3, 1.0, 0.8][y - 12 - U];
+    return [cx - hw, cx + hw];
+  }, k.skull, (_x, _y, t, u) => sphere(t * 0.8, 0.2 + u * 0.4, 1));
+  c.shade(cx - 1, 15 + U, -1);
+  c.shade(cx, 15 + U, -1);
+  // The sockets, dark round the eyes that burn in them.
+  for (const [x, y] of [[cx - 3, 11], [cx - 2, 11], [cx + 1, 11], [cx + 2, 11]] as const) c.shade(x, y + U, -2);
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], blink);
+}
+
+// ---------------------------------------------------------------------------
+// Directions
 // ---------------------------------------------------------------------------
 // Directions
 
@@ -422,7 +528,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   // The quiver's fletchings peek over his right shoulder.
   fletchings(c, 7.4, 12.6 + U, -0.4);
   c.part();
-  c.capsule(6.9, 13.8 + U, 8.2, 13.8 + U, 0.8, 0.8, S.storm ? STORM_JERKIN : LEATHER);
+  c.capsule(6.9, 13.8 + U, 8.2, 13.8 + U, 0.8, 0.8, S.wrap ?? LEATHER);
   // The cloak hangs behind him, showing at his sides.
   c.part();
   c.shape(15 + U, 26 + L, (y) => {
@@ -475,6 +581,17 @@ function drawDown(c: PixelCanvas, p: Pose): void {
 
   cowl(c, cx, U, 5.8, 5.8);
 
+  if (S.hunt) {
+    antlers(c, cx, U);
+    skullFront(c, cx, U, p.blink);
+    if (!fb.behind) {
+      armB();
+      drawBow(c, 'down', p, fa, fb);
+    }
+    if (!fa.behind) armA();
+    return;
+  }
+
   // Head: the hood, a face in its shadow, a fringe of hair under its edge.
   c.part();
   c.ellipse(cx, 11.3 + U, 3.9, 3.7, S.cloak, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
@@ -508,7 +625,7 @@ function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefine
     if (blink) c.px(x, y, SKIN, sphere(0, -0.3), { bias: -1 });
     else {
       c.px(x, y, S.eye);
-      if (S.storm) c.spark(x, y, BOLT_HOT, 0.5);
+      if (S.crackle) c.spark(x, y, S.crackle[1], 0.5);
     }
   }
 }
@@ -565,6 +682,26 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   quiver(c, 16.2, 13.4 + U, 10.8, 22 + U);
 
   cowl(c, cx, U, 5.8, 5.8);
+  if (S.hunt) {
+    // Long hair down his back over the ruff, the skull's crown above it, the antlers over all.
+    c.part();
+    c.ellipse(cx, 11.6 + U, 3.6, 3.4, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+    c.part();
+    c.shape(14 + U, 19 + U, (y) => {
+      const hw = 2.6 - (y - 14 - U) * 0.3;
+      return [cx - hw, cx + hw];
+    }, S.hair, (x, _y, t, u) => sphere(t * 0.8, u * 0.5 - 0.2 + (x & 1 ? 0.15 : -0.15), 1));
+    for (let y = 15; y <= 19; y++) c.shade(cx - 1 + (y & 1), y + U, -1);
+    c.part();
+    c.ellipse(cx, 9.6 + U, 3.0, 1.7, S.hunt.skull, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.4, 1) });
+    antlers(c, cx, U);
+    if (!fb.behind) {
+      armB();
+      drawBow(c, 'up', p, fa, fb);
+    }
+    if (!fa.behind) armA();
+    return;
+  }
   // The back of the hood, drawn to a point.
   c.part();
   c.ellipse(cx, 11.4 + U, 3.9, 3.7, S.cloak, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
@@ -641,6 +778,37 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   c.capsule(hx + 1.8, 15.2 + U, hx - 2.4, 21.6 + U, 0.55, 0.55, LEATHER);
 
   cowl(c, hx, U, 4.2, 4.4);
+
+  if (S.hunt) {
+    // The far antler, then his hair streaming back, his face, the skull over
+    // it with its snout thrust forward, and the near antler.
+    const k = S.hunt;
+    const beam = (dx: number): [number, number][] => [[hx + dx - 0.4, 9 + U], [hx + dx + 0.6, 6 + U], [hx + dx + 2.2, 3.4 + U], [hx + dx + 4, 1.8 + U]];
+    const tines = (dx: number): [number, number, number, number][] => [
+      [hx + dx + 0.3, 7 + U, hx + dx - 1.8, 5.4 + U],
+      [hx + dx + 1.4, 4.4 + U, hx + dx + 0.2, 2 + U],
+      [hx + dx + 2.6, 3 + U, hx + dx + 3, 0.8 + U],
+    ];
+    antler(c, beam(1.6), tines(1.6), -1);
+    c.part();
+    c.ellipse(hx + 1, 12 + U, 2.8, 3.1, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8, 1) });
+    c.part();
+    c.capsule(hx + 2.4, 12.5 + U, hx + 3.6 + p.sway * 0.4, 18 + U, 1.4, 0.8, S.hair);
+    c.part();
+    c.ellipse(hx - 1.4, 12.8 + U, 2.2, 2.2, SKIN, { bias: -1 });
+    c.part();
+    c.ellipse(hx - 0.6, 10.6 + U, 2.9, 1.9, k.skull);
+    c.part();
+    c.capsule(hx - 2.4, 11.4 + U, hx - 5.2, 12.8 + U, 1.3, 0.75, k.skull);
+    c.shade(hx - 5, 13 + U, -1);
+    c.shade(hx - 3, 11 + U, -2);
+    c.shade(hx - 2, 11 + U, -2);
+    eyes(c, [[hx - 3, 12 + U]], p.blink);
+    antler(c, beam(0), tines(0));
+    drawBow(c, 'side', p, fa, fb);
+    arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1], false);
+    return;
+  }
 
   // Head: the hood in profile, the face peeking out of it.
   c.part();
@@ -890,12 +1058,12 @@ export function arrowFrame(i: number, look: ArcherLook = RANGER_LOOK): PixelCanv
   const [bx, by] = px(4.6);
   c.px(bx, by, look.head, sphere(-0.3, -0.3));
   c.px(hx, hy, look.head, sphere(-0.5, -0.5), { bias: 1 });
-  if (look.storm) {
-    c.spark(hx, hy, BOLT_CORE, 0.8);
+  if (look.crackle) {
+    c.spark(hx, hy, look.crackle[0], 0.8);
     const [sx, sy] = px(6.6);
-    c.spark(sx, sy, BOLT_HOT, 0.5);
+    c.spark(sx, sy, look.crackle[1], 0.5);
     const [fx, fy] = px(-4.6);
-    c.spark(fx, fy, BOLT_MID, 0.4);
+    c.spark(fx, fy, look.crackle[2], 0.4);
   }
   return c;
 }
@@ -916,7 +1084,7 @@ export function stuckArrowFrame(k: number, look: ArcherLook = RANGER_LOOK): Pixe
     c.px(x - 1, y + 0.5, look.fletch, sphere(-0.5, 0));
     c.px(x + 1, y + 0.5, look.fletch, sphere(0.5, 0));
   }
-  if (look.storm) c.spark(x0, y0, BOLT_HOT, 0.6);
+  if (look.crackle) c.spark(x0, y0, look.crackle[1], 0.6);
   return c;
 }
 

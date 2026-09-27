@@ -825,8 +825,20 @@ export function forceIcon(cols: IconColors): Uint8ClampedArray {
   return px;
 }
 
+/** A fist icon's colours: the glove lightest first, a highlight, the wrist's three tones, and the speed lines. */
+export interface FistColors {
+  glove: [string, string, string, string];
+  shine: string;
+  wrist: [string, string, string];
+  lines: [string, string];
+}
+
+const RED_GLOVE: FistColors = { glove: ['#ff8c66', '#ea4838', '#bd262c', '#7a1420'], shine: '#ffd6c0', wrist: ['#f2eef4', '#cfc9d8', '#968fa8'], lines: ['#fff2dc', '#ffc49a'] };
+/** The luchador's: a white-taped fist, a gold wristband, pink streaks. */
+export const LUCHA_FIST: FistColors = { glove: ['#ffffff', '#e0e0ee', '#a2a2c0', '#5e5e7c'], shine: '#ffffff', wrist: ['#fff6c0', '#ffd458', '#8e5a12'], lines: ['#fff0f8', '#ff80b8'] };
+
 /** 16x16 red glove for the fighter's attack button: a clenched fist over a taped wrist, speed lines behind it. */
-export function fistIcon(): Uint8ClampedArray {
+export function fistIcon(k: FistColors = RED_GLOVE): Uint8ClampedArray {
   const S = 16;
   const px = new Uint8ClampedArray(S * S * 4);
   const put = (x: number, y: number, c: string) => {
@@ -838,13 +850,13 @@ export function fistIcon(): Uint8ClampedArray {
     px[i + 2] = n & 255;
     px[i + 3] = 255;
   };
-  const glove = (dx: number, dy: number) => (dx + dy < -4.2 ? '#ff8c66' : dx + dy < -1.2 ? '#ea4838' : dx + dy < 2.4 ? '#bd262c' : '#7a1420');
+  const glove = (dx: number, dy: number) => (dx + dy < -4.2 ? k.glove[0] : dx + dy < -1.2 ? k.glove[1] : dx + dy < 2.4 ? k.glove[2] : k.glove[3]);
   // Tape round the wrist, lower left.
   for (let y = 10; y <= 14; y++) {
     for (let x = 3; x <= 8; x++) {
       const d = x - 3 + (14 - y);
       if (d < 2 || d > 7) continue;
-      put(x, y, (x + y) % 3 === 0 ? '#968fa8' : x < 5 ? '#f2eef4' : '#cfc9d8');
+      put(x, y, (x + y) % 3 === 0 ? k.wrist[2] : x < 5 ? k.wrist[0] : k.wrist[1]);
     }
   }
   // The fist: a rounded block of knuckles leaning up to the right.
@@ -856,13 +868,13 @@ export function fistIcon(): Uint8ClampedArray {
     }
   }
   // Finger creases across the knuckles, and the thumb folded over them.
-  for (const x of [8, 10, 12]) for (let y = 3; y <= 6; y++) put(x + (y > 4 ? 1 : 0), y, '#7a1420');
-  for (let x = 6; x <= 10; x++) put(x, 8, x < 8 ? '#ff8c66' : '#ea4838');
-  for (let x = 6; x <= 10; x++) put(x, 9, '#7a1420');
-  put(12, 3, '#ffd6c0');
-  put(7, 3, '#ffd6c0');
+  for (const x of [8, 10, 12]) for (let y = 3; y <= 6; y++) put(x + (y > 4 ? 1 : 0), y, k.glove[3]);
+  for (let x = 6; x <= 10; x++) put(x, 8, x < 8 ? k.glove[0] : k.glove[1]);
+  for (let x = 6; x <= 10; x++) put(x, 9, k.glove[3]);
+  put(12, 3, k.shine);
+  put(7, 3, k.shine);
   // Speed lines behind it.
-  for (const [x0, y, n] of [[0, 4, 3], [1, 7, 2], [0, 10, 2]]) for (let i = 0; i < n; i++) put(x0 + i, y, i === n - 1 ? '#fff2dc' : '#ffc49a');
+  for (const [x0, y, n] of [[0, 4, 3], [1, 7, 2], [0, 10, 2]]) for (let i = 0; i < n; i++) put(x0 + i, y, i === n - 1 ? k.lines[0] : k.lines[1]);
   const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < S && y < S && px[(y * S + x) * 4 + 3] === 255;
   const out: [number, number][] = [];
   for (let y = 0; y < S; y++) {
@@ -1248,12 +1260,31 @@ export function rainIcon(k: QuiverColors = RANGER_QUIVER, bolt = false): Uint8Cl
   return px;
 }
 
-const MONK_SKIN = ['#f7c9a3', '#e09a78', '#a85f50'] as const;
-const MONK_BRONZE = ['#fff0b0', '#dcaa52', '#a8702e', '#6e4220'] as const;
-const QI = ['#fffbea', '#ffe7a0', '#e0b050'] as const;
+/** A palm icon's colours: the hand lightest first, the bracer lightest first, and the qi. */
+export interface PalmColors {
+  skin: readonly [string, string, string];
+  bracer: readonly [string, string, string, string];
+  qi: readonly [string, string, string];
+  outline: string;
+}
+
+const MONK_PALM: PalmColors = {
+  skin: ['#f7c9a3', '#e09a78', '#a85f50'],
+  bracer: ['#fff0b0', '#dcaa52', '#a8702e', '#6e4220'],
+  qi: ['#fffbea', '#ffe7a0', '#e0b050'],
+  outline: '#1a0e08',
+};
+/** The stone guardian's: a basalt hand, a sandstone bracer, fire in place of qi. */
+export const GUARDIAN_PALM: PalmColors = {
+  skin: ['#8c8296', '#5e5668', '#3e3848'],
+  bracer: ['#d8c8a8', '#ac9a7e', '#80705a', '#56463a'],
+  qi: ['#fff4d0', '#ffc050', '#ff6a1a'],
+  outline: '#07060a',
+};
 
 /** 16x16 icon for the monk's palm strikes: an open hand held up, a bronze bracer at the wrist, qi rising off it. */
-export function palmIcon(): Uint8ClampedArray {
+export function palmIcon(k: PalmColors = MONK_PALM): Uint8ClampedArray {
+  const { skin: MONK_SKIN, bracer: MONK_BRONZE, qi: QI } = k;
   const { px, put, outline } = iconPainter();
   const skin = (x: number, y: number) => (x + y * 0.4 < 7.5 ? MONK_SKIN[0] : x + y * 0.4 < 11.5 ? MONK_SKIN[1] : MONK_SKIN[2]);
   // Four fingers, the middle two longest, a darker seam down the right of each.
@@ -1272,14 +1303,15 @@ export function palmIcon(): Uint8ClampedArray {
   put(8, 10, MONK_SKIN[2]);
   // Bronze bracer.
   for (let y = 12; y <= 14; y++) for (let x = 5; x <= 10; x++) put(x, y, y === 12 ? MONK_BRONZE[3] : x < 7 ? MONK_BRONZE[0] : x < 9 ? MONK_BRONZE[1] : MONK_BRONZE[2]);
-  outline('#1a0e08');
+  outline(k.outline);
   // Qi flickering up off the fingertips.
   for (const [x, y, c] of [[5, 0, 1], [8, 0, 0], [11, 1, 1], [13, 4, 2], [1, 3, 2], [14, 7, 1]] as const) put(x, y, QI[c]);
   return px;
 }
 
 /** 16x16 icon for the monk's earthshaker: a palm driven down into cracked ground, force rolling out along it. */
-export function quakeIcon(): Uint8ClampedArray {
+export function quakeIcon(k: PalmColors = MONK_PALM): Uint8ClampedArray {
+  const { skin: MONK_SKIN, bracer: MONK_BRONZE, qi: QI } = k;
   const { px, put, outline } = iconPainter();
   // Bracer at the top, the hand coming down, fingers pointing at the ground.
   for (let y = 0; y <= 2; y++) for (let x = 6; x <= 9; x++) put(x, y, y === 2 ? MONK_BRONZE[3] : x < 8 ? MONK_BRONZE[0] : MONK_BRONZE[2]);
@@ -1289,7 +1321,7 @@ export function quakeIcon(): Uint8ClampedArray {
   put(4, 5, MONK_SKIN[1]);
   // The ground, split where the palm struck.
   for (let y = 11; y <= 15; y++) for (let x = 0; x < 16; x++) put(x, y, y === 11 ? '#96643a' : (x + y) % 5 === 0 ? '#3e2216' : '#6a3e24');
-  outline('#1a0e08');
+  outline(k.outline);
   for (const [x, y] of [[7, 12], [6, 13], [5, 14], [4, 15], [9, 12], [10, 13], [11, 13], [12, 14], [13, 15], [8, 14], [8, 15]] as const) put(x, y, '#1c0e0a');
   // Qi flaring out of the cracks and rolling along the ground.
   for (const [x, y] of [[7, 11], [8, 11], [9, 11]] as const) put(x, y, QI[0]);
