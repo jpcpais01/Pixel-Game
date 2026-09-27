@@ -16,10 +16,12 @@ export const START_GEMS = 200;
 export const DAILY_GEMS = 5;
 /** Accounts (by username, lower case) that own every skin. */
 const ADMINS = ['kel'];
+/** One-off gifts of gems to an account (by username, lower case), each given once and remembered in its save by id. */
+const GRANTS: { id: string; user: string; gems: number }[] = [{ id: 'kel-100k', user: 'kel', gems: 100000 }];
 /** Set once this device has given a guest the welcome gems, so a fresh guest game can't be made again and again for more. */
 const WELCOMED_KEY = 'pixel-battle.welcomed';
 
-const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0 });
+const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [] });
 
 /** The welcome gems for a new guest game: the first on this device only. */
 function welcomeGems(): number {
@@ -57,6 +59,7 @@ function clean(d: Partial<SaveData> | null | undefined): SaveData {
   out.skins = [...new Set((Array.isArray(d?.skins) ? d.skins : []).filter((s): s is string => typeof s === 'string' && s.includes(':')))];
   out.daily = typeof d?.daily === 'string' ? d.daily : '';
   out.pity = Math.max(0, Math.floor(Number(d?.pity) || 0));
+  out.grants = [...new Set((Array.isArray(d?.grants) ? d.grants : []).filter((g): g is string => typeof g === 'string' && !!g))];
   for (const [id, n] of Object.entries(d?.items ?? {})) if (n > 0) out.items[id] = Math.floor(n);
   for (const id of d?.equipped ?? []) {
     const i = id ? slotIndex(id) : -1;
@@ -264,6 +267,17 @@ class Collection {
     return DAILY_GEMS;
   }
 
+  /** Give the logged-in account any gift meant for it that it hasn't had yet (only once its cloud save has loaded, so it is never given twice). */
+  private giveGrants(): void {
+    const a = account();
+    if (!a) return;
+    for (const g of GRANTS) {
+      if (g.user !== a.username.toLowerCase() || this.data.grants.includes(g.id)) continue;
+      this.data.grants.push(g.id);
+      this.data.gems += g.gems;
+    }
+  }
+
   /** Ids of the items in the equip slots, skipping empty ones. */
   equippedIds(): string[] {
     return this.data.equipped.filter((id): id is string => !!id);
@@ -358,6 +372,7 @@ class Collection {
       merged.skins = [...new Set([...merged.skins, ...local.skins])];
       if (local.daily > merged.daily) merged.daily = local.daily;
       merged.pity = Math.max(local.pity, merged.pity);
+      merged.grants = [...new Set([...merged.grants, ...local.grants])];
       if (guest) {
         for (const [id, n] of Object.entries(guest.items)) merged.items[id] = (merged.items[id] ?? 0) + n;
         merged.dust += guest.dust;
@@ -373,6 +388,7 @@ class Collection {
       }
       this.data = clean(merged);
       this.status = 'idle';
+      this.giveGrants();
       this.changed();
     } catch {
       if (key === this.key) this.status = 'error';
