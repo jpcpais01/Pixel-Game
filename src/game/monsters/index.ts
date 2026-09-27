@@ -10,6 +10,9 @@ import { Banshee, Shade, Wisp } from './Spirits';
 import { Queen } from './Queen';
 import { Blob, Gale, Golem, Salamander, Undine } from './Elementals';
 import { Elementinho } from './Elementinho';
+import { Geodeback, Glimbat, Myconid, Shardling, Sporeling } from './Deep';
+import { Sporemother } from './Sporemother';
+import { Wyrm } from './Wyrm';
 
 export { Monster, type Target } from './Monster';
 
@@ -34,6 +37,13 @@ export const MONSTERS = {
   gale: (world: WorldScene, x: number, y: number) => new Gale(world, x, y),
   salamander: (world: WorldScene, x: number, y: number) => new Salamander(world, x, y),
   elementinho: (world: WorldScene, x: number, y: number) => new Elementinho(world, x, y),
+  sporeling: (world: WorldScene, x: number, y: number) => new Sporeling(world, x, y),
+  glimbat: (world: WorldScene, x: number, y: number) => new Glimbat(world, x, y),
+  myconid: (world: WorldScene, x: number, y: number) => new Myconid(world, x, y),
+  shardling: (world: WorldScene, x: number, y: number) => new Shardling(world, x, y),
+  geodeback: (world: WorldScene, x: number, y: number) => new Geodeback(world, x, y),
+  sporemother: (world: WorldScene, x: number, y: number) => new Sporemother(world, x, y),
+  wyrm: (world: WorldScene, x: number, y: number) => new Wyrm(world, x, y),
 } satisfies Record<string, (world: WorldScene, x: number, y: number) => Monster>;
 
 export type MonsterKind = keyof typeof MONSTERS;

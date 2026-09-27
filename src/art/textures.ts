@@ -40,6 +40,11 @@ import { BOULDER_H, BOULDER_W, CRYSTAL_H, CRYSTAL_W, ELEMENTS, FIREBOWL_FRAMES, 
 import { ROCK_PX, TORB_PX, buildBlobSheet, buildGaleSheet, buildGolemSheet, buildSalamanderSheet, buildUndineSheet, thrownRock, waterOrb } from './elementals';
 import { BLAZE_FRAMES, BLAZE_H, BLAZE_W, EMBER_H, EMBER_W, blazeFrame, buildElementinhoSheet, emberDrop } from './elementinho';
 import { TEMPLE_H, TEMPLE_W } from '../world/templeLayout';
+import { CAPS_H, CAPS_W, CRYS_H, CRYS_W, LANTERN_FRAMES, LANTERN_H, LANTERN_W, SHROOM_H, SHROOM_W, SPIRE_H, SPIRE_W, STALAG_H, STALAG_W, amethystCluster, amethystSpire, capCluster, deepArt, giantShroom, lanternPost, stalagmite } from './deep';
+import { PUFF_FRAMES, PUFF_H, PUFF_W, SPIKE_H, SPIKE_W, buildGeodebackSheet, buildGlimbatSheet, buildMyconidSheet, buildShardlingSheet, buildSporelingSheet, crystalSpike, puffball } from './deepMonsters';
+import { buildSporemotherSheet } from './sporemother';
+import { BREATH_SHARD, breathShard, buildWyrmSheet } from './wyrm';
+import { DEEP_H, DEEP_W } from '../world/deepLayout';
 import { FLOAT_ROCK_H, FLOAT_ROCK_W, HOLE_SIZE, METEOR_H, METEOR_W, OBELISK_H, OBELISK_W, PLATFORM_H, PLATFORM_W, RAY_H as COSMIC_RAY_H, RAY_W as COSMIC_RAY_W, cosmicRay, floatingRock, lightPool, meteor, obelisk, platformArt, shockRing, singularity, spaceCanvas, streak } from './cosmos';
 import { COSMOS_H, COSMOS_W } from '../world/cosmosLayout';
 import { COLUMN_H, COLUMN_W, ISLAND_H, ISLAND_W, ISLETS, column, fallStrip, foam, islandArt, islet, skyCanvas, wisp } from './island';
@@ -794,6 +799,67 @@ function* templeTextures(scene: Phaser.Scene): Generator<void, void, void> {
   scene.anims.create({ key: 'et_blaze_burn', frames: scene.anims.generateFrameNames('et_blaze', { prefix: 'b', start: 0, end: BLAZE_FRAMES - 1 }), frameRate: 10, repeat: -1 });
   // Last: its presence means everything above is built.
   scene.textures.addCanvas('et_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
+}
+
+/** The Glimmerdeep's textures being built, a little per call. */
+const deepJobs = new WeakMap<Phaser.Scene, Generator<void, void, void>>();
+
+/**
+ * Build the Glimmerdeep's cave, props, creatures, its two bosses and their
+ * spells, at most `budget` ms at a time; true once everything is there.
+ */
+export function warmDeep(scene: Phaser.Scene, budget = Infinity): boolean {
+  if (scene.textures.exists('gd_lane')) return true;
+  let job = deepJobs.get(scene);
+  if (!job) {
+    job = deepTextures(scene);
+    deepJobs.set(scene, job);
+  }
+  const start = performance.now();
+  while (performance.now() - start < budget) {
+    if (job.next().done) {
+      deepJobs.delete(scene);
+      return true;
+    }
+  }
+  return false;
+}
+
+function* deepTextures(scene: Phaser.Scene): Generator<void, void, void> {
+  const art = yield* deepArt();
+  scene.textures.addCanvas('gd_floor', toCanvas(DEEP_W, DEEP_H, art.diffuse))!.setDataSource(toCanvas(DEEP_W, DEEP_H, art.normal));
+  yield;
+  scene.textures.addCanvas('gd_floor_e', toCanvas(DEEP_W, DEEP_H, art.emissive));
+  yield;
+  // Props.
+  register(scene, 'gd_shroom', pack(frameList([giantShroom(0), giantShroom(1)], 's'), SHROOM_W, SHROOM_H), SHROOM_W, SHROOM_H);
+  register(scene, 'gd_caps', pack(frameList([capCluster(0), capCluster(1)], 'c'), CAPS_W, CAPS_H), CAPS_W, CAPS_H);
+  yield;
+  register(scene, 'gd_stalag', pack(frameList([stalagmite(0), stalagmite(1)], 't'), STALAG_W, STALAG_H), STALAG_W, STALAG_H);
+  register(scene, 'gd_crystal', pack(frameList([amethystCluster(0), amethystCluster(1)], 'c'), CRYS_W, CRYS_H), CRYS_W, CRYS_H);
+  register(scene, 'gd_spire', pack(frameList([amethystSpire(0), amethystSpire(1)], 'p'), SPIRE_W, SPIRE_H), SPIRE_W, SPIRE_H);
+  register(scene, 'gd_lantern', pack(frameList(Array.from({ length: LANTERN_FRAMES }, (_, f) => lanternPost(f)), 'f'), LANTERN_W, LANTERN_H), LANTERN_W, LANTERN_H);
+  scene.anims.create({ key: 'gd_lantern_burn', frames: scene.anims.generateFrameNames('gd_lantern_e', { prefix: 'f', start: 0, end: LANTERN_FRAMES - 1 }), frameRate: 7, repeat: -1 });
+  yield;
+  // The cave's creatures, and its Legend and Myth.
+  registerMonster(scene, 'sporeling', buildSporelingSheet());
+  registerMonster(scene, 'glimbat', buildGlimbatSheet());
+  yield;
+  registerMonster(scene, 'myconid', buildMyconidSheet());
+  registerMonster(scene, 'shardling', buildShardlingSheet());
+  yield;
+  registerMonster(scene, 'geodeback', buildGeodebackSheet());
+  yield;
+  registerMonster(scene, 'sporemother', buildSporemotherSheet());
+  yield;
+  registerMonster(scene, 'wyrm', buildWyrmSheet());
+  yield;
+  // Spells.
+  register(scene, 'gd_puff', pack(frameList(Array.from({ length: PUFF_FRAMES }, (_, f) => puffball(f)), 'p'), PUFF_W, PUFF_H), PUFF_W, PUFF_H);
+  register(scene, 'gd_spike', pack(frameList([crystalSpike(0), crystalSpike(1), crystalSpike(2)], 'k'), SPIKE_W, SPIKE_H), SPIKE_W, SPIKE_H);
+  register(scene, 'gd_shard', pack(frameList([breathShard()], 's'), BREATH_SHARD, BREATH_SHARD), BREATH_SHARD, BREATH_SHARD);
+  // Last: its presence means everything above is built.
+  scene.textures.addCanvas('gd_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
 }
 
 /**

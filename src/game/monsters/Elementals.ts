@@ -73,6 +73,8 @@ export interface LobSpec {
   /** Arc height at the top of its flight. */
   arc: number;
   texture: string;
+  /** Its frame, when the texture holds several. */
+  frame?: string;
   /** A lit texture (a boulder) rather than pure light (an ember). */
   lit?: boolean;
   /** What it strikes where it lands. */
@@ -104,7 +106,7 @@ export class Lob implements Effect {
     private s: LobSpec,
   ) {
     const add = world.add;
-    this.body = add.image(s.sx, s.sy - s.lift, s.texture).setVisible(false);
+    this.body = add.image(s.sx, s.sy - s.lift, s.texture, s.frame).setVisible(false);
     if (s.lit) this.body.setPipeline('Lit');
     else {
       this.body.setBlendMode(Phaser.BlendModes.ADD);

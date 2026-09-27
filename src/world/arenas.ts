@@ -14,7 +14,8 @@ import { CLEARING_GROUND, CLEARING_H, CLEARING_SPAWN, CLEARING_W, PLAZA_CX, PLAZ
 import { SANCTUM_WORLD_W } from './sanctumLayout';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
-import { warmCosmos, warmIsland, warmSpirit, warmTemple } from '../art/textures';
+import { warmCosmos, warmDeep, warmIsland, warmSpirit, warmTemple } from '../art/textures';
+import { DEEP_H, DEEP_SPAWN, DEEP_SPAWNS, DEEP_W, WYRM_HOME, deepWalkable } from './deepLayout';
 import { ELEMENTINHO_HOME, TEMPLE_H, TEMPLE_SPAWN, TEMPLE_SPAWNS, TEMPLE_W, templeWalkable } from './templeLayout';
 import { QUEEN_HOME, SPIRIT_H, SPIRIT_SPAWN, SPIRIT_SPAWNS, SPIRIT_W, spiritWalkable } from './spiritLayout';
 import { COLUMN_BASE, COLUMN_H, ISLAND_X, ISLAND_Y } from '../art/island';
@@ -250,6 +251,43 @@ export const ARENAS: ArenaDef[] = [
         { texture: 'elementinho', frame: 'idle0_r', glow: 'elementinho_e', x: ELEMENTINHO_HOME.x, y: ELEMENTINHO_HOME.y - 6, originY: 96 / 100 },
         { texture: 'blob_water', frame: 'idle1_r', glow: 'blob_water_e', x: ELEMENTINHO_HOME.x - 62, y: ELEMENTINHO_HOME.y + 6, originY: 19 / 22 },
         { texture: 'blob_fire', frame: 'idle2_l', glow: 'blob_fire_e', x: ELEMENTINHO_HOME.x + 60, y: ELEMENTINHO_HOME.y + 2, originY: 19 / 22 },
+      ],
+    },
+  },
+  {
+    id: 'deep',
+    name: 'The Glimmerdeep',
+    blurb: 'A cave lit by living light',
+    accent: 0xb37aff,
+    ground: {
+      painted: true,
+      w: DEEP_W,
+      h: DEEP_H,
+      warm: warmDeep,
+      layers: [
+        { key: 'gd_floor', x: 0, y: 0 },
+        { key: 'gd_floor_e', x: 0, y: 0, glow: true },
+      ],
+    },
+    spawn: DEEP_SPAWN,
+    // Winding caverns, their creatures tougher the deeper they lie; the
+    // Sporemother waits in her Hollow partway, and Amethrax, the Geode Wyrm,
+    // lies coiled in the Geode Heart at the very end (see deepLayout.ts).
+    monsters: DEEP_SPAWNS,
+    scenery: () => ({ trees: [], props: [], rays: [], colliders: [] }),
+    walkable: deepWalkable,
+    drift: { tints: [0xffffff], frequency: 100000, where: () => false },
+    // Deep underground: no day or night, the cave lights itself.
+    daylight: 0,
+    preview: {
+      x: WYRM_HOME.x,
+      y: WYRM_HOME.y - 56,
+      sprites: () => [
+        { texture: 'gd_spire', frame: 'p0', glow: 'gd_spire_e', x: WYRM_HOME.x - 118, y: WYRM_HOME.y - 20, originY: 68 / 72 },
+        { texture: 'gd_spire', frame: 'p1', glow: 'gd_spire_e', x: WYRM_HOME.x + 124, y: WYRM_HOME.y - 12, originY: 68 / 72 },
+        { texture: 'wyrm', frame: 'idle0_r', glow: 'wyrm_e', x: WYRM_HOME.x, y: WYRM_HOME.y, originY: 130 / 136 },
+        { texture: 'shardling', frame: 'idle0_l', glow: 'shardling_e', x: WYRM_HOME.x + 74, y: WYRM_HOME.y + 18, originY: 18 / 20 },
+        { texture: 'glimbat', frame: 'fly2_r', glow: 'glimbat_e', x: WYRM_HOME.x - 76, y: WYRM_HOME.y - 44, originY: 24 / 26 },
       ],
     },
   },

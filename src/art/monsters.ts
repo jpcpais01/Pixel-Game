@@ -63,6 +63,13 @@ export const MONSTER_FRAME = {
   gale: { w: 28, h: 34, ox: 14, oy: 31 },
   salamander: { w: 38, h: 26, ox: 18, oy: 23 },
   elementinho: { w: 80, h: 100, ox: 40, oy: 96 },
+  sporeling: { w: 20, h: 22, ox: 10, oy: 20 },
+  glimbat: { w: 34, h: 26, ox: 16, oy: 24 },
+  myconid: { w: 32, h: 42, ox: 15, oy: 39 },
+  shardling: { w: 30, h: 20, ox: 12, oy: 18 },
+  geodeback: { w: 56, h: 42, ox: 25, oy: 39 },
+  sporemother: { w: 84, h: 96, ox: 42, oy: 93 },
+  wyrm: { w: 128, h: 136, ox: 60, oy: 130 },
 };
 export type FrameBox = (typeof MONSTER_FRAME)[keyof typeof MONSTER_FRAME];
 
