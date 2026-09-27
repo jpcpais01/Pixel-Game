@@ -1,10 +1,6 @@
 // App shell behaviour: offline service worker, fullscreen landscape on
 // phones, an install button, and a nudge to turn the phone sideways.
 
-const standalone = () =>
-  matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches ||
-  (navigator as Navigator & { standalone?: boolean }).standalone === true;
-
 const touch = () => matchMedia('(pointer: coarse)').matches;
 
 function registerServiceWorker(): void {
@@ -15,12 +11,16 @@ function registerServiceWorker(): void {
 }
 
 /**
- * In a phone browser tab, the first touch goes fullscreen and locks to
- * landscape (Android). Installed, the manifest already does both.
+ * On a phone, the first touch goes fullscreen and locks to landscape
+ * (Android). Installed apps too: the manifest's fullscreen hides the bars,
+ * but Chrome only lets the page draw round the camera cutout (the black
+ * strip down the notch side in landscape) in the Fullscreen API's own
+ * fullscreen, with viewport-fit=cover (index.html). Leaving it (the app sent
+ * to the background, say) goes back in on the next touch.
  */
 function fullscreenOnFirstTouch(): void {
   const go = () => {
-    if (standalone() || !touch() || document.fullscreenElement) return;
+    if (!touch() || document.fullscreenElement) return;
     const el = document.documentElement;
     if (!el.requestFullscreen) return; // iPhone Safari: add to Home Screen instead.
     el.requestFullscreen({ navigationUI: 'hide' })
