@@ -5,7 +5,7 @@ import { sound } from '../audio';
 import type { Hurtbox } from './combat';
 import type { Effect } from './Slash';
 import { onGround, Venom, type ToxStyle } from './Toxins';
-import { PYRO_STYLE } from './spells';
+import { HELL_STYLE, PYRO_STYLE, type SpellStyle } from './spells';
 import type { WizardKit, WizardSkin } from './Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
 
@@ -23,6 +23,8 @@ export const PYRO_KIT: WizardKit = {
 };
 
 export const PYRO_SKIN: WizardSkin = { key: 'wizard_pyro', style: PYRO_STYLE, kit: PYRO_KIT };
+/** The Hellfire skin: the same pyromancer, burning with fel fire. */
+export const HELL_SKIN: WizardSkin = { key: 'wizard_hell', style: HELL_STYLE, kit: PYRO_KIT };
 
 /** Burning: stacks and ticks like poison, in fire colours. */
 const BURN: ToxStyle = {
@@ -35,6 +37,57 @@ const BURN: ToxStyle = {
   light: 0xff8a30,
   numbers: 0xffa040,
   suffix: '_pyro',
+};
+
+/** How a look's fire looks: its spells, its burning, its meteor and the marks it leaves. */
+export interface PyroFire {
+  spell: SpellStyle;
+  burn: ToxStyle;
+  /** The meteor's target ring and its fill. */
+  mark: [number, number];
+  /** Halo, light and landing flash of the meteor. */
+  halo: number;
+  light: number;
+  flash: number;
+  /** Rock chips and ash thrown up where it lands. */
+  chips: number[];
+  /** Texture keys: the falling meteor (frames m0..m2) and its scorch. */
+  meteor: string;
+  scorch: string;
+}
+
+export const EMBER_FIRE: PyroFire = {
+  spell: PYRO_STYLE,
+  burn: BURN,
+  mark: [0xff8a2a, 0xffc060],
+  halo: 0xff8a30,
+  light: 0xff8a40,
+  flash: 0xffb050,
+  chips: [0xffd66b, 0xff6a24, 0x6a3a2a],
+  meteor: 'pyro_meteor',
+  scorch: 'scorch',
+};
+
+export const HELL_FIRE: PyroFire = {
+  spell: HELL_STYLE,
+  burn: {
+    core: 0xf4ffe8,
+    hot: 0xc8ff7a,
+    mid: 0x5ee83a,
+    deep: 0x1a8a3a,
+    murk: 0x0e2a14,
+    tints: [0xeaffb0, 0x8aff5a, 0x2ec83a],
+    light: 0x6aff4a,
+    numbers: 0x8aff5a,
+    suffix: '_hell',
+  },
+  mark: [0x46d83a, 0xb8ff6a],
+  halo: 0x46d83a,
+  light: 0x6aff4a,
+  flash: 0xb8ff7a,
+  chips: [0xc8ff7a, 0x2ec83a, 0x26232c],
+  meteor: 'pyro_meteor_hell',
+  scorch: 'scorch_hell',
 };
 
 const BALL_SPEED = 140;
@@ -78,15 +131,18 @@ export class Pyromancy implements Effect {
   /** The pyromancer casting, for where the meteor is aimed from. */
   caster: { x: number; y: number } = { x: 0, y: 0 };
 
-  constructor(private world: WorldScene) {
-    this.burn = new Venom(world, BURN);
-    this.mark = world.add.image(0, 0, 'danger_ring').setTint(0xff8a2a).setDepth(2).setVisible(false);
-    this.markFill = world.add.image(0, 0, 'danger_ring').setTint(0xffc060).setBlendMode(Phaser.BlendModes.ADD).setDepth(2).setVisible(false);
+  constructor(
+    private world: WorldScene,
+    private fire: PyroFire = EMBER_FIRE,
+  ) {
+    this.burn = new Venom(world, fire.burn);
+    this.mark = world.add.image(0, 0, 'danger_ring').setTint(fire.mark[0]).setDepth(2).setVisible(false);
+    this.markFill = world.add.image(0, 0, 'danger_ring').setTint(fire.mark[1]).setBlendMode(Phaser.BlendModes.ADD).setDepth(2).setVisible(false);
   }
 
   /** Cast a fireball from the crystal. */
   fireball(x: number, y: number, dx: number, dy: number): void {
-    this.world.castEnergyBall(x, y, dx, dy, PYRO_STYLE, { speed: BALL_SPEED, lifetime: BALL_LIFETIME, onBurst: (bx, by) => this.blast(bx, by) });
+    this.world.castEnergyBall(x, y, dx, dy, this.fire.spell, { speed: BALL_SPEED, lifetime: BALL_LIFETIME, onBurst: (bx, by) => this.blast(bx, by) });
   }
 
   /** A fireball bursting: everything close takes a scorch and catches fire. The ball flies at chest height, so the ground is below it. */
@@ -96,7 +152,7 @@ export class Pyromancy implements Effect {
       h.hurt({ damage: BLAST_DAMAGE, heavy: false, knock: 30, fromX: x, fromY: y });
       this.burn.dose(h, BLAST_BURN);
     }
-    this.world.debris(BURN.tints, Math.round(x), Math.round(y), 8, y + 20, 'spores');
+    this.world.debris(this.fire.burn.tints, Math.round(x), Math.round(y), 8, y + 20, 'spores');
   }
 
   /** Show where the meteor will land while it charges. */
@@ -121,7 +177,7 @@ export class Pyromancy implements Effect {
   meteor(dx: number, dy: number, power: number, dist?: number): void {
     const { x, y } = meteorSpot(this.caster.x, this.caster.y, dx, dy, power, dist);
     sound.starcall(this.world.pan(x));
-    this.world.addEffect(new Meteor(this.world, x, y, power, (inside) => this.strike(inside, x, y, power)));
+    this.world.addEffect(new Meteor(this.world, x, y, power, this.fire, (inside) => this.strike(inside, x, y, power)));
   }
 
   private strike(inside: Hurtbox[], x: number, y: number, power: number): void {
@@ -163,19 +219,20 @@ class Meteor implements Effect {
     private x: number,
     private y: number,
     private power: number,
+    private fire: PyroFire,
     private onLand: (inside: Hurtbox[]) => void,
   ) {
     this.r = meteorRadius(power);
     const s = 0.8 + power * 0.45;
     this.rock = world.add
-      .image(x, y - FALL_H, 'pyro_meteor', 'm0')
+      .image(x, y - FALL_H, fire.meteor, 'm0')
       .setOrigin(0.5, (PYRO_METEOR_HEAD + 0.5) / PYRO_METEOR_H)
       .setAngle(-14)
       .setScale(s)
       .setDepth(9001);
-    this.halo = world.add.image(x, y - FALL_H, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff8a30).setScale(1.2 * s).setDepth(9000);
+    this.halo = world.add.image(x, y - FALL_H, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(fire.halo).setScale(1.2 * s).setDepth(9000);
     this.shadow = world.add.image(snap(x), snap(y), 'shadow_big').setDepth(1.5).setAlpha(0).setScale(0.3);
-    this.light = world.lights.addLight(x, y - FALL_H, 90, 0xff8a40, 1.5);
+    this.light = world.lights.addLight(x, y - FALL_H, 90, fire.light, 1.5);
   }
 
   update(dt: number): void {
@@ -191,7 +248,7 @@ class Meteor implements Effect {
       this.light.setPosition(rx, ry);
       // The shadow darkens and grows as it nears the ground.
       this.shadow.setAlpha(f * 0.8).setScale(((0.4 + f * 0.9) * this.r) / 16, 0.4 + f * 0.9);
-      if (Math.floor(t / 40) !== Math.floor((t - dt) / 40)) this.world.debris(BURN.tints, rx, ry, 2, ry + 200, 'trail');
+      if (Math.floor(t / 40) !== Math.floor((t - dt) / 40)) this.world.debris(this.fire.burn.tints, rx, ry, 2, ry + 200, 'trail');
       if (f >= 1) this.land();
       return;
     }
@@ -211,15 +268,16 @@ class Meteor implements Effect {
 
     const sx = snap(x);
     const sy = snap(y);
-    this.scorch = world.add.image(sx, sy, 'scorch').setDepth(1.6).setScale(r / 22, (r * 0.58) / 11);
-    this.flash = world.add.image(sx, sy - 4, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffb050).setDepth(y + 20);
-    this.burst = world.add.sprite(sx, sy - 3, 'burst_pyro_e', 'b0').setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 21).setScale(0.9 + this.power * 0.8).play('burst_pyro_pop');
+    this.scorch = world.add.image(sx, sy, this.fire.scorch).setDepth(1.6).setScale(r / 22, (r * 0.58) / 11);
+    this.flash = world.add.image(sx, sy - 4, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(this.fire.flash).setDepth(y + 20);
+    const burst = this.fire.spell.burst;
+    this.burst = world.add.sprite(sx, sy - 3, burst.texture, 'b0').setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 21).setScale(0.9 + this.power * 0.8).play(burst.anim);
     this.burst.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       this.burst?.destroy();
       this.burst = null;
     });
-    world.debris(BURN.tints, sx, sy - 3, 14 + Math.round(this.power * 12), y + 20, 'burst');
-    world.debris([0xffd66b, 0xff6a24, 0x6a3a2a], sx, sy - 2, 8, y + 20, 'spores');
+    world.debris(this.fire.burn.tints, sx, sy - 3, 14 + Math.round(this.power * 12), y + 20, 'burst');
+    world.debris(this.fire.chips, sx, sy - 2, 8, y + 20, 'spores');
     world.cameras.main.shake(120 + 80 * this.power, 0.0008 + 0.0008 * this.power);
     sound.starImpact(world.pan(x));
     const light = this.light;

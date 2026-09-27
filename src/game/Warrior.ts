@@ -40,6 +40,13 @@ export interface WarriorSkin {
 
 export const KNIGHT_SKIN: WarriorSkin = { key: 'warrior', swing: STEEL_FX, heavy: GOLD_FX, aura: 0xffd2a0 };
 export const JADE_SKIN: WarriorSkin = { key: 'warrior_jade', swing: JADE_STEEL_FX, heavy: JADE_FX, aura: 0xc8ffe0 };
+/** The Spartan: bronze-lit cuts, and crimson for the thrust and the whirlwind. */
+export const SPARTAN_SKIN: WarriorSkin = {
+  key: 'warrior_spartan',
+  swing: { core: 0xffffff, hot: 0xfff0d8, mid: 0xf0c080, deep: 0xb86a2a },
+  heavy: { core: 0xfff0e8, hot: 0xff9a80, mid: 0xf03a3a, deep: 0x8a0a1a, light: 0xff6a50 },
+  aura: 0xffc8a0,
+};
 
 /**
  * The warrior: a three-hit sword combo on the attack button (slash, backhand,

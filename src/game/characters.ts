@@ -11,13 +11,13 @@
 
 import type Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
-import { ARCANE_SKIN, VOID_SKIN, Wizard } from './Wizard';
-import { PYRO_SKIN, Pyromancy } from './Pyro';
-import { JADE_SKIN, KNIGHT_SKIN, Warrior } from './Warrior';
+import { ARCANE_SKIN, ASTRAL_SKIN, VOID_SKIN, Wizard } from './Wizard';
+import { EMBER_FIRE, HELL_FIRE, HELL_SKIN, PYRO_SKIN, Pyromancy } from './Pyro';
+import { JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
-import { CRUSADER_KIT, HOLY_KIT, Paladin } from './Paladin';
+import { CRUSADER_KIT, HOLY_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
-import { Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
+import { GUARD_STYLE, Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { BRAWLER_STYLE, Fighter, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
@@ -200,6 +200,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_beam_void' },
             },
           },
+          {
+            // A reader of the stars: silver hair under a gold circlet, a crown of stars, a robe strewn with them.
+            id: 'astral',
+            name: 'Astral',
+            role: 'Reader of the stars',
+            accent: 0xffe08a,
+            attack: 'Star orb',
+            special: 'Starlight beam',
+            preview: { texture: 'wizard_astral', glow: 'wizard_astral_e', idle: 'wizard_astral_idle_down', chosen: 'wizard_astral_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_astral_e', frame: 'o0', anim: 'orb_astral_spin' },
+              special: { texture: 'icon_beam_astral' },
+            },
+          },
         ],
       },
       {
@@ -216,12 +230,29 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_meteor' },
         },
         lookName: 'Ember',
+        skins: [
+          {
+            // A horned, crimson-skinned warlock in black and blood red, burning with green hellfire.
+            id: 'hellfire',
+            name: 'Hellfire',
+            role: 'Horned warlock',
+            accent: 0x7aff5a,
+            attack: 'Hellfire bolt',
+            special: 'Doom meteor',
+            preview: { texture: 'wizard_hell', glow: 'wizard_hell_e', idle: 'wizard_hell_idle_down', chosen: 'wizard_hell_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_hell_e', frame: 'o0', anim: 'orb_hell_spin' },
+              special: { texture: 'icon_meteor_hell' },
+            },
+          },
+        ],
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'pyro') {
+      if (look === 'pyro' || look === 'hellfire') {
         // Fireballs that blast and burn; a charged meteor called down where it's aimed.
-        const fire = new Pyromancy(world);
+        const hell = look === 'hellfire';
+        const fire = new Pyromancy(world, hell ? HELL_FIRE : EMBER_FIRE);
         const w = new Wizard(
           world,
           x,
@@ -232,13 +263,13 @@ export const CLASSES: ClassDef[] = [
             target: (dx, dy, level, dist) => fire.target(dx, dy, level, dist),
             untarget: () => fire.untarget(),
           },
-          PYRO_SKIN,
+          hell ? HELL_SKIN : PYRO_SKIN,
         );
         fire.caster = w;
         world.addEffect(fire);
         return w;
       }
-      const skin = look === 'void' ? VOID_SKIN : ARCANE_SKIN;
+      const skin = look === 'void' ? VOID_SKIN : look === 'astral' ? ASTRAL_SKIN : ARCANE_SKIN;
       const w: Wizard = new Wizard(
         world,
         x,
@@ -285,10 +316,24 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_whirl_jade' },
             },
           },
+          {
+            // Bronze and crimson: a crested Corinthian helm, a round shield and a leaf-bladed sword.
+            id: 'spartan',
+            name: 'Spartan',
+            role: 'Bronze of the phalanx',
+            accent: 0xf0a050,
+            attack: 'Xiphos combo',
+            special: 'Bronze whirlwind',
+            preview: { texture: 'warrior_spartan', glow: 'warrior_spartan_e', idle: 'warrior_spartan_idle_down', chosen: 'warrior_spartan_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_sword_spartan' },
+              special: { texture: 'icon_whirl_spartan' },
+            },
+          },
         ],
       },
     ],
-    spawn: (world, x, y, look) => new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : KNIGHT_SKIN),
+    spawn: (world, x, y, look) => new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : KNIGHT_SKIN),
   },
   {
     id: 'paladin',
@@ -309,6 +354,22 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_sanctuary' },
         },
         lookName: 'Holy',
+        skins: [
+          {
+            // A winged guardian in pearl plate, a halo over golden hair, light the colour of dawn.
+            id: 'seraph',
+            name: 'Seraph',
+            role: 'Winged guardian',
+            accent: 0xffc8a8,
+            attack: 'Dawn smite',
+            special: 'Sacred ground',
+            preview: { texture: 'paladin_seraph', glow: 'paladin_seraph_e', idle: 'paladin_seraph_idle_down', chosen: 'paladin_seraph_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
+            buttons: {
+              attack: { texture: 'icon_mace_seraph' },
+              special: { texture: 'icon_sanctuary_seraph' },
+            },
+          },
+        ],
       },
       {
         // Harder, slower hammer blows and a burst of sunfire instead of healing ground.
@@ -325,9 +386,28 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_sunfall' },
         },
         lookName: 'Sunforged',
+        skins: [
+          {
+            // A fallen crusader: horned helm, spiked black-violet plate, a torn cloak and an eclipse for a sun.
+            id: 'oathbreaker',
+            name: 'Oathbreaker',
+            role: 'Hammer of the eclipse',
+            accent: 0xb070ff,
+            attack: 'Dusk hammer',
+            special: 'Eclipse fall',
+            preview: { texture: 'paladin_oath', glow: 'paladin_oath_e', idle: 'paladin_oath_idle_down', chosen: 'paladin_oath_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
+            buttons: {
+              attack: { texture: 'icon_hammer_oath' },
+              special: { texture: 'icon_sunfall_oath' },
+            },
+          },
+        ],
       },
     ],
-    spawn: (world, x, y, look) => new Paladin(world, x, y, look === 'crusader' ? CRUSADER_KIT : HOLY_KIT),
+    spawn(world, x, y, look) {
+      const kit = { holy: HOLY_KIT, seraph: SERAPH_KIT, crusader: CRUSADER_KIT, oathbreaker: OATH_KIT }[look] ?? HOLY_KIT;
+      return new Paladin(world, x, y, kit);
+    },
   },
   {
     id: 'jedi',
@@ -361,10 +441,24 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_force_sith' },
             },
           },
+          {
+            // A masked sentinel of the temple in cream and gold, with a long-hilted golden saber.
+            id: 'guard',
+            name: 'Temple guard',
+            role: 'Sentinel of the temple',
+            accent: 0xffd04a,
+            attack: 'Sentinel flurry',
+            special: 'Force repulse',
+            preview: { texture: 'jedi_guard', glow: 'jedi_guard_e', idle: 'jedi_guard_idle_down', chosen: 'jedi_guard_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
+            buttons: {
+              attack: { texture: 'icon_saber_guard' },
+              special: { texture: 'icon_force_guard' },
+            },
+          },
         ],
       },
     ],
-    spawn: (world, x, y, look) => new Jedi(world, x, y, look === 'sith' ? SITH_STYLE : JEDI_STYLE),
+    spawn: (world, x, y, look) => new Jedi(world, x, y, look === 'sith' ? SITH_STYLE : look === 'guard' ? GUARD_STYLE : JEDI_STYLE),
   },
   {
     id: 'fighter',

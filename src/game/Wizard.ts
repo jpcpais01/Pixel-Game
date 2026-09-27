@@ -7,7 +7,7 @@ import { beamHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
 import type { Aim, Hero } from './characters';
-import { ARCANE_STYLE, VOID_STYLE, type SpellStyle } from './spells';
+import { ARCANE_STYLE, ASTRAL_STYLE, VOID_STYLE, type SpellStyle } from './spells';
 
 export const MAX_HP = 80;
 const SPEED = 58; // world px / second
@@ -55,6 +55,7 @@ export interface WizardSkin {
 
 export const ARCANE_SKIN: WizardSkin = { key: 'wizard', style: ARCANE_STYLE };
 export const VOID_SKIN: WizardSkin = { key: 'wizard_void', style: VOID_STYLE };
+export const ASTRAL_SKIN: WizardSkin = { key: 'wizard_astral', style: ASTRAL_STYLE };
 
 type State = 'free' | 'cast' | 'charge' | 'beam';
 

@@ -140,7 +140,10 @@ export class Inferno extends Fx {
     private c: Cast,
   ) {
     super(world, ERUPTIONS * ERUPT_EVERY + 4200);
-    this.burn = new Venom(world, BURN, 4);
+    // The Hellfire skin's flames burn green.
+    const p = c.pal;
+    const burn = c.look === 'hellfire' ? { ...BURN, core: p.core, hot: p.hot, mid: p.mid, deep: p.deep, murk: 0x0e2a14, tints: [p.core, p.hot, p.mid], light: p.light, numbers: p.hot } : BURN;
+    this.burn = new Venom(world, burn, 4);
     sound.ignite();
   }
 

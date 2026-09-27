@@ -17,6 +17,7 @@ import { SAMURAI_ANIMS, SAMURAI_H, SAMURAI_LOOKS, SAMURAI_W, SPIN_FPS, SPIN_FRAM
 import { PUPPETEER_H, PUPPETEER_LOOKS, PUPPETEER_W, PUPPET_LOOKS, buildPuppetSheet, buildPuppeteerFrames, marionetteIcon, pirouetteIcon, puppeteerAnims, puppetStrikeIcon, threadIcon } from './puppeteer';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
 import { buildRogueFrames, daggersIcon, DANCER_DAGGERS, ROGUE_ANIMS, ROGUE_DAGGERS, ROGUE_H, ROGUE_LOOKS, ROGUE_W, shadowstepIcon, smokeCanvas } from './rogue';
+import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, eclipseFallIcon, oathHammerIcon, pikeSaberIcon, seraphMaceIcon } from './heroSkins';
 import { hex } from './pixel';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
 import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
@@ -494,7 +495,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_cross_shogun', toCanvas(16, 16, crossIcon(['#fffcf0', '#fff0b8', '#a89cff', '#3a2e9a'])));
 
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
-  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL]] as const) {
+  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL]] as const) {
     register(scene, `orb${suffix}`, pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i, k)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
     register(scene, `burst${suffix}`, pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i, k)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
     scene.anims.create({ key: `orb${suffix}_spin`, frames: scene.anims.generateFrameNames(`orb${suffix}_e`, { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });
@@ -530,7 +531,7 @@ export function buildAllTextures(scene: Phaser.Scene): void {
   scene.textures.addCanvas('icon_beam_void', toCanvas(16, 16, beamIcon(VOID_SPELL)));
   // The pyromancer's meteor: its button, three flickering frames of the falling rock, and its scorch.
   scene.textures.addCanvas('icon_meteor', toCanvas(16, 16, meteorIcon()));
-  const meteors = scene.textures.addCanvas('pyro_meteor', toCanvas(PYRO_METEOR_W * 3, PYRO_METEOR_H, sideBySide(PYRO_METEOR_W, PYRO_METEOR_H, [0, 1, 2].map(pyroMeteor))))!;
+  const meteors = scene.textures.addCanvas('pyro_meteor', toCanvas(PYRO_METEOR_W * 3, PYRO_METEOR_H, sideBySide(PYRO_METEOR_W, PYRO_METEOR_H, [0, 1, 2].map((f) => pyroMeteor(f)))))!;
   for (let i = 0; i < 3; i++) meteors.add(`m${i}`, 0, i * PYRO_METEOR_W, 0, PYRO_METEOR_W, PYRO_METEOR_H);
   scene.textures.addCanvas('scorch', toCanvas(48, 24, scorchCanvas(48, 24)));
   scene.textures.addCanvas('icon_sword', toCanvas(16, 16, swordIcon()));
@@ -549,6 +550,22 @@ export function buildAllTextures(scene: Phaser.Scene): void {
     scene.textures.addCanvas(`icon_saber${suffix}`, toCanvas(16, 16, saberIcon(saber)));
     scene.textures.addCanvas(`icon_force${suffix}`, toCanvas(16, 16, forceIcon(force)));
   }
+
+  // Skins: the Astral's beam, the Hellfire's meteor and scorch, and the
+  // Spartan's, Seraph's, Oathbreaker's and Temple guard's buttons.
+  scene.textures.addCanvas('icon_beam_astral', toCanvas(16, 16, beamIcon(ASTRAL_SPELL)));
+  scene.textures.addCanvas('icon_meteor_hell', toCanvas(16, 16, meteorIcon(HELL_SPELL)));
+  const hellMeteors = scene.textures.addCanvas('pyro_meteor_hell', toCanvas(PYRO_METEOR_W * 3, PYRO_METEOR_H, sideBySide(PYRO_METEOR_W, PYRO_METEOR_H, [0, 1, 2].map((f) => pyroMeteor(f, HELL_METEOR)))))!;
+  for (let i = 0; i < 3; i++) hellMeteors.add(`m${i}`, 0, i * PYRO_METEOR_W, 0, PYRO_METEOR_W, PYRO_METEOR_H);
+  scene.textures.addCanvas('scorch_hell', toCanvas(48, 24, scorchCanvas(48, 24, FEL_EMBERS)));
+  scene.textures.addCanvas('icon_sword_spartan', toCanvas(16, 16, swordIcon({ blade: '#dfe8f7', bladeDark: '#8d9dbd', tip: '#f4f8ff', guard: '#cc8c3e', guardLit: '#f4d08a', guardDark: '#955a24', grip: '#6e3a20', ink: '#140904' })));
+  scene.textures.addCanvas('icon_whirl_spartan', toCanvas(16, 16, whirlIcon([hex('#fff0e8'), hex('#ff9a80'), hex('#f03a3a'), hex('#8a0a1a')])));
+  scene.textures.addCanvas('icon_mace_seraph', toCanvas(16, 16, seraphMaceIcon()));
+  scene.textures.addCanvas('icon_sanctuary_seraph', toCanvas(16, 16, dawnGroundIcon()));
+  scene.textures.addCanvas('icon_hammer_oath', toCanvas(16, 16, oathHammerIcon()));
+  scene.textures.addCanvas('icon_sunfall_oath', toCanvas(16, 16, eclipseFallIcon()));
+  scene.textures.addCanvas('icon_saber_guard', toCanvas(16, 16, pikeSaberIcon()));
+  scene.textures.addCanvas('icon_force_guard', toCanvas(16, 16, forceIcon([hex('#fffbe8'), hex('#ffe08a'), hex('#f0b030'), hex('#8a5a18')])));
 
   scene.textures.addCanvas('icon_fist', toCanvas(16, 16, fistIcon()));
   scene.textures.addCanvas('icon_palm', toCanvas(16, 16, palmIcon()));
