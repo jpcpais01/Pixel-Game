@@ -37,6 +37,8 @@ export interface SaveData {
   daily: string;
   /** Wishes since the last legendary skin, for the guarantee. */
   pity: number;
+  /** One-off gifts already given to this account (see GRANTS in collection.ts), so each is given once. */
+  grants: string[];
 }
 
 interface Session extends Account {
@@ -217,7 +219,8 @@ export async function loadSave(): Promise<LoadedSave | null> {
   const skins = f.skins && 'stringValue' in f.skins && f.skins.stringValue ? f.skins.stringValue.split(',') : [];
   const daily = f.daily && 'stringValue' in f.daily ? f.daily.stringValue : '';
   const pity = f.pity && 'integerValue' in f.pity ? Number(f.pity.integerValue) : 0;
-  return { items, equipped, dust, upgrades, gems, skins, daily, pity, username };
+  const grants = f.grants && 'stringValue' in f.grants && f.grants.stringValue ? f.grants.stringValue.split(',') : [];
+  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, username };
 }
 
 /** Overwrite the logged-in player's save. */
@@ -237,6 +240,7 @@ export async function writeSave(data: SaveData): Promise<void> {
     skins: { stringValue: data.skins.join(',') },
     daily: { stringValue: data.daily },
     pity: { integerValue: String(Math.floor(data.pity)) },
+    grants: { stringValue: data.grants.join(',') },
     updated: { timestampValue: new Date().toISOString() },
   };
   const res = await fetch(docUrl(s.uid), {

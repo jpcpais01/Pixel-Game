@@ -6,7 +6,11 @@
 // - A small service worker precaches every file in the build, so the game
 //   loads offline and starts instantly on later launches.
 //
-// In dev the icons and manifest are served from memory; the service worker is
+// - The loading screen (inline in index.html) gets the game's title logo as
+//   a PNG and the pixel font's letters, so it can show both before the game
+//   itself has loaded.
+//
+// In dev the icons, logo and manifest are served from memory; the service worker is
 // only registered in production builds.
 
 import { createHash } from 'node:crypto';
@@ -14,6 +18,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Plugin, ResolvedConfig } from 'vite';
 import { ICONS, renderIcon } from '../src/art/icon';
+import { LOGO_FRAMES, mythsLogo } from '../src/art/logo';
+import { GLYPHS } from '../src/art/glyphs';
 import { encodePNG } from './png';
 
 const BG = '#07080d';
@@ -47,7 +53,11 @@ function manifest() {
   };
 }
 
+/** The title logo's frames, stacked top to bottom, for the loading screen. */
+const LOGO_FILE = 'loader/logo.png';
+
 const HEAD_TAGS = [
+  { tag: 'link', attrs: { rel: 'preload', as: 'image', href: LOGO_FILE } },
   { tag: 'link', attrs: { rel: 'manifest', href: 'manifest.webmanifest' } },
   { tag: 'link', attrs: { rel: 'icon', type: 'image/png', sizes: '32x32', href: 'icons/favicon-32.png' } },
   { tag: 'link', attrs: { rel: 'apple-touch-icon', sizes: '180x180', href: 'icons/apple-touch-icon.png' } },
@@ -94,6 +104,14 @@ self.addEventListener('fetch', (e) => {
 export function pwa(): Plugin {
   let config: ResolvedConfig;
   const icons = new Map<string, Buffer>();
+  let logo: { png: Buffer; w: number; h: number } | null = null;
+  const logoPNG = () => {
+    if (!logo) {
+      const l = mythsLogo();
+      logo = { png: encodePNG(l.sheet.w, l.sheet.h, l.sheet.data), w: l.frameW, h: l.frameH };
+    }
+    return logo;
+  };
   const iconPNG = (name: string) => {
     let png = icons.get(name);
     if (!png) {
@@ -111,7 +129,10 @@ export function pwa(): Plugin {
       config = c;
     },
     transformIndexHtml() {
-      return HEAD_TAGS.map((t) => ({ ...t, injectTo: 'head' as const }));
+      // What the loading screen needs before the game has loaded: the logo's size and the font's letters.
+      const { w, h } = logoPNG();
+      const boot = `window.__BOOT=${JSON.stringify({ logo: { src: LOGO_FILE, w, h, frames: LOGO_FRAMES }, glyphs: GLYPHS })};`;
+      return [{ tag: 'script', children: boot, injectTo: 'head-prepend' as const }, ...HEAD_TAGS.map((t) => ({ ...t, injectTo: 'head' as const }))];
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
@@ -119,6 +140,11 @@ export function pwa(): Plugin {
         if (url.endsWith('/manifest.webmanifest')) {
           res.setHeader('Content-Type', 'application/manifest+json');
           res.end(JSON.stringify(manifest(), null, 2));
+          return;
+        }
+        if (url.endsWith(`/${LOGO_FILE}`)) {
+          res.setHeader('Content-Type', 'image/png');
+          res.end(logoPNG().png);
           return;
         }
         const icon = url.match(/\/icons\/([\w-]+\.png)$/);
@@ -139,6 +165,7 @@ export function pwa(): Plugin {
     },
     generateBundle() {
       for (const spec of ICONS) this.emitFile({ type: 'asset', fileName: `icons/${spec.name}`, source: iconPNG(spec.name)! });
+      this.emitFile({ type: 'asset', fileName: LOGO_FILE, source: logoPNG().png });
       for (const s of SCREENSHOTS) this.emitFile({ type: 'asset', fileName: s.out, source: readFileSync(resolve(config.root, s.src)) });
       this.emitFile({ type: 'asset', fileName: 'manifest.webmanifest', source: JSON.stringify(manifest(), null, 2) });
     },
