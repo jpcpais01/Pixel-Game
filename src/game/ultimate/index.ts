@@ -265,6 +265,12 @@ const SKINS: Record<string, UltSkin> = {
   'puppeteer:crimson': { name: 'Strings of Fate', pal: FATE_STRINGS, type: 'weaver' },
   'samurai:oni': { name: "Oni's Downpour", pal: schemePal(ONI_KIT.wind) },
   'samurai:sakura': { name: 'Falling Petals', pal: schemePal(SAKURA_KIT.wind), type: 'ronin' },
+  'wizard:astral': { name: 'Supernova', pal: pal(0xfffdf2, 0xfff0a8, 0xffc860, 0x6a5ae0, 0xffe08a) },
+  'wizard:hellfire': { name: 'Hellstorm', pal: pal(0xf4ffe8, 0xc8ff7a, 0x5ee83a, 0x1a8a3a, 0x7aff5a), type: 'pyro' },
+  'warrior:spartan': { name: 'Wrath of Ares', pal: pal(0xfff0e8, 0xff9a80, 0xf03a3a, 0x8a0a1a, 0xff6a50) },
+  'paladin:seraph': { name: 'Choir of Angels', pal: pal(0xffffff, 0xfff0d0, 0xffc890, 0xff8ab8, 0xffd8b0) },
+  'paladin:oathbreaker': { name: 'Black Sun', pal: pal(0xf6eeff, 0xd8b0ff, 0xa060ff, 0x4a1a8a, 0xb070ff), type: 'crusader' },
+  'jedi:guard': { name: 'Sentinel Storm', pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

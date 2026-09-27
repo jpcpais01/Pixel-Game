@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
-import { CONSECRATE_HIT, CRUSADER_LOOK, HOLY_LOOK, PALADIN_H, PALADIN_ORIGIN_X, PALADIN_ORIGIN_Y, PALADIN_W, SMITE_HIT, type PaladinLook } from '../art/paladin';
+import { CONSECRATE_HIT, CRUSADER_LOOK, HOLY_LOOK, OATH_LOOK, SERAPH_LOOK, PALADIN_H, PALADIN_ORIGIN_X, PALADIN_ORIGIN_Y, PALADIN_W, SMITE_HIT, type PaladinLook } from '../art/paladin';
 import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
@@ -32,6 +32,8 @@ export interface PaladinKit {
   motes: number[];
   aura: number;
   aegis: [number, number];
+  /** The consecrated ground's deep rim. */
+  groundEdge?: number;
 }
 
 export const HOLY_KIT: PaladinKit = {
@@ -60,6 +62,30 @@ export const CRUSADER_KIT: PaladinKit = {
   motes: [0xfff8e0, 0xffd66b, 0xff9a2e],
   aura: 0xffc890,
   aegis: [0xff9a2e, 0xffc890],
+};
+
+/** The Templar's Seraph skin: dawn light, white-gold warming to rose. */
+const DAWN_FX: Scheme = { core: 0xfffaf4, hot: 0xfff0d0, mid: 0xffc890, deep: 0xff8ab8, light: 0xffd8b0 };
+/** The Crusader's Oathbreaker skin: violet flame, an eclipse instead of the sun. */
+const ECLIPSE_FX: Scheme = { core: 0xf6eeff, hot: 0xd8b0ff, mid: 0xa060ff, deep: 0x4a1a8a, light: 0xb070ff };
+
+export const SERAPH_KIT: PaladinKit = {
+  ...HOLY_KIT,
+  look: SERAPH_LOOK,
+  fx: DAWN_FX,
+  motes: [0xfffaf4, 0xffc890, 0xff8ab8],
+  aura: 0xffe0c8,
+  aegis: [0xff9ac0, 0xffe0d0],
+  groundEdge: 0xc0507a,
+};
+
+export const OATH_KIT: PaladinKit = {
+  ...CRUSADER_KIT,
+  look: OATH_LOOK,
+  fx: ECLIPSE_FX,
+  motes: [0xf6eeff, 0xb07aff, 0x7a3ad8],
+  aura: 0xc8a0ff,
+  aegis: [0x8a4ae0, 0xd0b0ff],
 };
 
 /** Barrier lost per second once he leaves the consecrated ground (or his Zeal ends). */
@@ -279,11 +305,11 @@ export class Paladin implements Hero {
     const y = snap(this.y);
     const r = REACH[this.dir];
     this.sanctuary?.destroy();
-    this.sanctuary = new Sanctuary(this.world, x, y, SANCTUARY_RADIUS, SANCTUARY_TIME);
+    this.sanctuary = new Sanctuary(this.world, x, y, SANCTUARY_RADIUS, SANCTUARY_TIME, this.kit.fx, this.kit.groundEdge);
     this.pulseIn = PULSE_EVERY * 0.6;
-    this.fx.push(new SmiteBurst(this.world, x + r.x * 0.6, y + r.y * 0.6, true));
+    this.fx.push(new SmiteBurst(this.world, x + r.x * 0.6, y + r.y * 0.6, true, this.kit.fx));
     const hits = this.world.melee({ kind: 'circle', x, y: y - 6, radius: SANCTUARY_RADIUS }, { damage: 12, heavy: true, knock: 150 });
-    for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, HOLY_FX, h.y + 13, true));
+    for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, this.kit.fx, h.y + 13, true));
     sound.consecrate(this.world.pan(x));
     this.world.cameras.main.shake(200, 0.0006);
     this.specialCd = this.kit.specialCooldown;
@@ -298,10 +324,10 @@ export class Paladin implements Hero {
     const x = snap(this.x);
     const y = snap(this.y);
     const r = REACH[this.dir];
-    this.fx.push(new SmiteBurst(this.world, x, y, true, SUNFIRE_FX, SUNFALL_RADIUS));
-    this.fx.push(new SmiteBurst(this.world, x + r.x * 0.6, y + r.y * 0.6, true, SUNFIRE_FX));
+    this.fx.push(new SmiteBurst(this.world, x, y, true, this.kit.fx, SUNFALL_RADIUS));
+    this.fx.push(new SmiteBurst(this.world, x + r.x * 0.6, y + r.y * 0.6, true, this.kit.fx));
     const hits = this.world.melee({ kind: 'circle', x, y: y - 6, radius: SUNFALL_RADIUS }, { damage: SUNFALL_DAMAGE, heavy: true, knock: 240, fromX: x, fromY: y - 6 });
-    for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, SUNFIRE_FX, h.y + 13, true));
+    for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, this.kit.fx, h.y + 13, true));
     const shield = SUNFALL_BARRIER + SUNFALL_BARRIER_PER_FOE * hits.length;
     this.vitals.barrier = Math.min(this.vitals.barrierMax, this.vitals.barrier + shield);
     this.fx.push(new HealPop(this.world, x, y - 35, `+${shield}`, BARRIER_TINT));
@@ -333,7 +359,7 @@ export class Paladin implements Hero {
         s.pulse();
         // Foes inside burn; the paladin (and, later, his allies) are healed.
         const hits = this.world.melee({ kind: 'circle', x: s.x, y: s.y - 6, radius: s.radius - 4 }, { damage: 4, knock: 0 });
-        for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, HOLY_FX, h.y + 13));
+        for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, this.kit.fx, h.y + 13));
         if (s.contains(this.x, this.y)) {
           this.heal(PULSE_HEAL);
           sound.heal(this.world.pan(this.x));

@@ -77,3 +77,39 @@ export const PYRO_STYLE: SpellStyle = {
   orb: { texture: 'orb_pyro_e', anim: 'orb_pyro_spin' },
   burst: { texture: 'burst_pyro_e', anim: 'burst_pyro_pop' },
 };
+
+/** The Arcanist's Astral skin: starlight, white and gold with an indigo edge and rose motes. */
+export const ASTRAL_STYLE: SpellStyle = {
+  core: 0xfffdf2,
+  hot: 0xfff0a8,
+  mid: 0xffc860,
+  deep: 0x6a5ae0,
+  accent: 0xff9ad8,
+  sparks: [0xfff0a8, 0xffc860, 0x6a5ae0, 0xff9ad8],
+  glow: 0xffc860,
+  light: 0xffe08a,
+  flash: 0xfff4c8,
+  unstable: 0x8a7aff,
+  fizzle: 0x9a8ae0,
+  fizzleSparks: [0x9a8ae0, 0x6a5ae0, 0xfffdf2],
+  orb: { texture: 'orb_astral_e', anim: 'orb_astral_spin' },
+  burst: { texture: 'burst_astral_e', anim: 'burst_astral_pop' },
+};
+
+/** The Pyromancer's Hellfire skin: fel fire, green burning down to deep green. */
+export const HELL_STYLE: SpellStyle = {
+  core: 0xf4ffe8,
+  hot: 0xc8ff7a,
+  mid: 0x5ee83a,
+  deep: 0x1a8a3a,
+  accent: 0xeaffb0,
+  sparks: [0xc8ff7a, 0x5ee83a, 0x1a8a3a, 0xf4ffe8],
+  glow: 0x46d83a,
+  light: 0x7aff5a,
+  flash: 0xd8ffa0,
+  unstable: 0x2ab83a,
+  fizzle: 0x5a6a58,
+  fizzleSparks: [0x5a6a58, 0x5ee83a, 0x1a8a3a],
+  orb: { texture: 'orb_hell_e', anim: 'orb_hell_spin' },
+  burst: { texture: 'burst_hell_e', anim: 'burst_hell_pop' },
+};

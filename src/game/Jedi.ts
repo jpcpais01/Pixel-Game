@@ -53,6 +53,15 @@ export const SITH_STYLE: JediStyle = {
   dark: true,
 };
 
+/** The Temple guard: a gold blade and a golden Force. */
+export const GUARD_STYLE: JediStyle = {
+  key: 'jedi_guard',
+  saber: { core: 0xfffdf2, hot: 0xffe680, mid: 0xf2c630, deep: 0xa86a10 },
+  force: { core: 0xfffbe8, hot: 0xffe08a, mid: 0xf0b030, deep: 0x8a5a18 },
+  light: 0xffd04a,
+  dark: false,
+};
+
 type State = 'free' | 'swing' | 'push';
 
 /**

@@ -11,6 +11,7 @@
 
 import { PixelCanvas, cyl, sphere, type Material, type RGB, type Vec3 } from './pixel';
 import { AZURE, BLACK_PLATE, BLACK_PLATE_DARK, CRIMSON, EYE, GOLD, HALLOW, HOLY_CORE, HOLY_HOT, HOLY_MID, IVORY, LEATHER, PLATE, PLATE_DARK, SKIN, SUNFIRE, SUN_CORE, SUN_HOT, SUN_MID, WOOD } from './palette';
+import { DAWN, DAWN_CORE, DAWN_HOT, DAWN_MID, ECLIPSE_CORE, ECLIPSE_HOT, ECLIPSE_MID, FEATHER, HALO, HORN, OATH_CLOTH, OATH_PLATE, OATH_PLATE_DARK, PEARL, PEARL_DARK, SERAPH_HAIR, TARNISH, VOIDFIRE } from './heroSkins';
 import { DIRS, type Dir } from './wizard';
 
 export const PALADIN_W = 48;
@@ -36,6 +37,13 @@ export interface PaladinLook {
   light: [RGB, RGB, RGB];
   /** Closed great helm with a plume, a cross on the tabard and a warhammer. */
   crusader: boolean;
+  /** Trim: rims, bands, the crest and the emblems. */
+  trim: Material;
+  tabard: Material;
+  /** Bare golden head under a floating halo, and great white wings (the Templar's Seraph skin). */
+  seraph?: boolean;
+  /** Horns on the great helm, spiked pauldrons, a tattered cloak and an eclipse on the shield (the Crusader's Oathbreaker skin). */
+  oath?: boolean;
 }
 
 export const HOLY_LOOK: PaladinLook = {
@@ -46,6 +54,8 @@ export const HOLY_LOOK: PaladinLook = {
   emblem: HALLOW,
   light: [HOLY_CORE, HOLY_HOT, HOLY_MID],
   crusader: false,
+  trim: GOLD,
+  tabard: IVORY,
 };
 
 export const CRUSADER_LOOK: PaladinLook = {
@@ -56,9 +66,39 @@ export const CRUSADER_LOOK: PaladinLook = {
   emblem: SUNFIRE,
   light: [SUN_CORE, SUN_HOT, SUN_MID],
   crusader: true,
+  trim: GOLD,
+  tabard: IVORY,
 };
 
-export const PALADIN_LOOKS = [HOLY_LOOK, CRUSADER_LOOK];
+/** The Templar's Seraph skin: pearl plate, a dawn-rose cape, a halo and wings. */
+export const SERAPH_LOOK: PaladinLook = {
+  key: 'paladin_seraph',
+  plate: PEARL,
+  plateDark: PEARL_DARK,
+  cape: DAWN,
+  emblem: HALLOW,
+  light: [DAWN_CORE, DAWN_HOT, DAWN_MID],
+  crusader: false,
+  trim: GOLD,
+  tabard: IVORY,
+  seraph: true,
+};
+
+/** The Crusader's Oathbreaker skin: black-violet plate, horns, tatters and violet flame. */
+export const OATH_LOOK: PaladinLook = {
+  key: 'paladin_oath',
+  plate: OATH_PLATE,
+  plateDark: OATH_PLATE_DARK,
+  cape: OATH_CLOTH,
+  emblem: VOIDFIRE,
+  light: [ECLIPSE_CORE, ECLIPSE_HOT, ECLIPSE_MID],
+  crusader: true,
+  trim: TARNISH,
+  tabard: OATH_CLOTH,
+  oath: true,
+};
+
+export const PALADIN_LOOKS = [HOLY_LOOK, CRUSADER_LOOK, SERAPH_LOOK, OATH_LOOK];
 
 /** The look being drawn; set by buildPaladinFrames. */
 let S: PaladinLook = HOLY_LOOK;
@@ -135,14 +175,14 @@ function drawMace(c: PixelCanvas, m: Mace, glow: number): { x: number; y: number
   // Pommel, grip, haft.
   c.part();
   box((x, y, along, side) => {
-    if (Math.hypot(along + 2.2, side) < 0.8) c.px(x, y, GOLD, sphere(-0.4, -0.4), { bias: 1 });
+    if (Math.hypot(along + 2.2, side) < 0.8) c.px(x, y, S.trim, sphere(-0.4, -0.4), { bias: 1 });
   });
   c.part();
   box((x, y, along, side) => {
     if (along < -1.7 || along > m.len - 1.2 || Math.abs(side) > 0.6) return;
     const n = facing(px * side - 0.3, py * side + 0.3, 0.8);
     if (along < 1.1) c.px(x, y, LEATHER, n);
-    else if (Math.abs(along - (m.len - 2)) < 0.55) c.px(x, y, GOLD, n);
+    else if (Math.abs(along - (m.len - 2)) < 0.55) c.px(x, y, S.trim, n);
     else c.px(x, y, WOOD, n, { bias: 1 });
   });
   // Flanges across the head and a spike on top, then the head over them.
@@ -150,7 +190,7 @@ function drawMace(c: PixelCanvas, m: Mace, glow: number): { x: number; y: number
   box((x, y, along, side) => {
     const flange = Math.abs(along - m.len) < 0.6 && Math.abs(side) < 2.7;
     const spike = along > m.len && along < m.len + 3 && Math.abs(side) < 0.6;
-    if (flange || spike) c.px(x, y, glow > 0.5 ? S.emblem : GOLD, facing(px * side * 0.4 - 0.2, py * side * 0.4 - 0.3, 0.85), { glow: glow * 0.9 });
+    if (flange || spike) c.px(x, y, glow > 0.5 ? S.emblem : S.trim, facing(px * side * 0.4 - 0.2, py * side * 0.4 - 0.3, 0.85), { glow: glow * 0.9 });
   });
   c.part();
   c.ellipse(head.x, head.y, 1.8, 1.8, glow > 0.5 ? S.emblem : S.plate, { glow: glow * 0.9 });
@@ -191,7 +231,7 @@ function drawHammer(c: PixelCanvas, m: Mace, glow: number): { x: number; y: numb
   // Pommel, grip, haft.
   c.part();
   box((x, y, along, side) => {
-    if (Math.hypot(along + 2.2, side) < 0.8) c.px(x, y, GOLD, sphere(-0.4, -0.4), { bias: 1 });
+    if (Math.hypot(along + 2.2, side) < 0.8) c.px(x, y, S.trim, sphere(-0.4, -0.4), { bias: 1 });
   });
   c.part();
   box((x, y, along, side) => {
@@ -203,7 +243,7 @@ function drawHammer(c: PixelCanvas, m: Mace, glow: number): { x: number; y: numb
   // The spike, then the head across the haft: steel faces with gold bands at each end.
   c.part();
   box((x, y, along, side) => {
-    if (along > m.len + 1.9 && along < m.len + 4.0 && Math.abs(side) < 0.6) c.px(x, y, lit ? S.emblem : GOLD, facing(-0.2, -0.3, 0.9), { glow: glow * 0.9 });
+    if (along > m.len + 1.9 && along < m.len + 4.0 && Math.abs(side) < 0.6) c.px(x, y, lit ? S.emblem : S.trim, facing(-0.2, -0.3, 0.9), { glow: glow * 0.9 });
   });
   c.part();
   box((x, y, along, side) => {
@@ -211,7 +251,7 @@ function drawHammer(c: PixelCanvas, m: Mace, glow: number): { x: number; y: numb
     if (Math.abs(u) > 2.0 || Math.abs(side) > 3.7) return;
     const n = facing(px * side * 0.3 - 0.2 + dx * u * 0.3, py * side * 0.3 - 0.3 + dy * u * 0.3, 0.85);
     const band = Math.abs(side) > 2.7 || Math.abs(u) < 0.5;
-    const mat = lit ? S.emblem : band ? GOLD : S.plate;
+    const mat = lit ? S.emblem : band ? S.trim : S.plate;
     c.px(x, y, mat, n, { glow: lit ? glow * 0.9 : 0, bias: u > 1 ? 1 : u < -1 ? -1 : 0 });
   });
 
@@ -245,7 +285,13 @@ function pauldron(c: PixelCanvas, x: number, y: number, rx = 2.8, ry = 2.0): voi
   c.ellipse(x, y, rx, ry, S.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
   // A gold lip on the lower edge.
   c.part();
-  c.shape(Math.round(y + ry - 0.5), Math.round(y + ry - 0.5), () => [x - rx + 0.7, x + rx - 0.7], GOLD, (_x, _y, t) => cyl(t, -0.2));
+  c.shape(Math.round(y + ry - 0.5), Math.round(y + ry - 0.5), () => [x - rx + 0.7, x + rx - 0.7], S.trim, (_x, _y, t) => cyl(t, -0.2));
+  if (S.oath) {
+    // A spike jutting up and out from each pauldron.
+    const k = x < 12 ? -1 : 1;
+    c.part();
+    c.capsule(x + k * 0.4, y - ry + 0.8, x + k * 1.6, y - ry - 2.4, 0.9, 0.3, S.plate, { bias: 1 });
+  }
 }
 
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
@@ -281,7 +327,7 @@ function shieldFront(c: PixelCanvas, cx: number, cy: number, hw: number, glow: n
   };
   const bulge = (_x: number, _y: number, t: number, u: number) => cyl(t * 0.7, 0.35 - u * 0.5);
   c.part();
-  c.shape(y0, y1, at(rim), GOLD, bulge);
+  c.shape(y0, y1, at(rim), S.trim, bulge);
   c.part();
   c.shape(y0 + 1, y1 - 1, at(field), S.cape, bulge);
   // The sun: a cross with a bright boss, glowing faintly even at rest.
@@ -290,6 +336,12 @@ function shieldFront(c: PixelCanvas, cx: number, cy: number, hw: number, glow: n
   const sx = Math.floor(cx);
   const g = { glow: 0.3 + glow * 0.7 };
   const arm = hw > 2.5 ? 2 : 1;
+  if (S.oath) {
+    // An eclipse: a ring of violet fire round a black heart.
+    for (const [ox, oy] of [[0, -2], [1, -2], [-1, -1], [2, -1], [-1, 0], [2, 0], [0, 1], [1, 1]]) c.px(sx + ox - (arm === 1 ? 0 : 0), sy + oy, S.emblem, { x: (ox - 0.5) * 0.3, y: -(oy + 0.5) * 0.3, z: 0.9 }, g);
+    if (glow > 0) c.spark(sx, sy - 1, S.light[1], glow * 0.6);
+    return;
+  }
   for (let i = -2; i <= 2; i++) c.px(sx, sy + i + (i > 0 ? 1 : 0), S.emblem, { x: -0.2, y: 0.2 - i * 0.1, z: 0.95 }, g);
   for (let i = -arm; i <= arm; i++) if (i) c.px(sx + i, sy, S.emblem, { x: i * 0.2 - 0.2, y: 0.25, z: 0.95 }, g);
   c.px(sx, sy, S.emblem, { x: -0.3, y: 0.4, z: 0.86 }, { glow: 0.5 + glow * 0.5, bias: 1 });
@@ -331,7 +383,7 @@ function dome(c: PixelCanvas, cx: number, y0: number, y1: number, hw: number, ba
     (_x, _y, t, u) => sphere(t * 0.95, u * 1.25 - 0.95, 1),
   );
   c.part();
-  c.shape(y1, y1, () => [cx - hw - 0.3, cx + hw + 0.3 + back], GOLD, (_x, _y, t) => cyl(t, -0.2));
+  c.shape(y1, y1, () => [cx - hw - 0.3, cx + hw + 0.3 + back], S.trim, (_x, _y, t) => cyl(t, -0.2));
 }
 
 /** A small white wing on the helm, from its root sweeping up and out by (sx, sy). */
@@ -346,25 +398,26 @@ function wing(c: PixelCanvas, x: number, y: number, sx: number, sy: number): voi
 /** Gold crest along the top of the helm. */
 function crest(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
   c.part();
-  c.capsule(x0, y0, x1, y1, 1.0, 0.8, GOLD, { bias: 1 });
+  c.capsule(x0, y0, x1, y1, 1.0, 0.8, S.trim, { bias: 1 });
 }
 
 /** The Crusader's crimson plume: full at its root on the helm, tapering to its tip. */
 function plume(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
+  if (S.oath) return;
   c.part();
   c.capsule(x0, y0, x1, y1, 1.5, 0.9, CRIMSON, { bias: 1 });
 }
 
 /** A small gold sun on the tabard or the cape, centred on row `y`. */
 function sun(c: PixelCanvas, y: number): void {
-  c.px(11, y - 1, GOLD, { x: -0.3, y: 0.5, z: 0.8 }, { bias: 1 });
-  c.px(12, y - 1, GOLD, { x: 0.2, y: 0.5, z: 0.84 });
-  c.px(10, y, GOLD, { x: -0.4, y: 0.1, z: 0.9 });
-  c.px(11, y, GOLD, FLAT_DOWN, { bias: 1 });
-  c.px(12, y, GOLD, FLAT_DOWN, { bias: 1 });
-  c.px(13, y, GOLD, { x: 0.4, y: 0.1, z: 0.9 });
-  c.px(11, y + 1, GOLD, FLAT_DOWN, { bias: -1 });
-  c.px(12, y + 1, GOLD, FLAT_DOWN, { bias: -1 });
+  c.px(11, y - 1, S.trim, { x: -0.3, y: 0.5, z: 0.8 }, { bias: 1 });
+  c.px(12, y - 1, S.trim, { x: 0.2, y: 0.5, z: 0.84 });
+  c.px(10, y, S.trim, { x: -0.4, y: 0.1, z: 0.9 });
+  c.px(11, y, S.trim, FLAT_DOWN, { bias: 1 });
+  c.px(12, y, S.trim, FLAT_DOWN, { bias: 1 });
+  c.px(13, y, S.trim, { x: 0.4, y: 0.1, z: 0.9 });
+  c.px(11, y + 1, S.trim, FLAT_DOWN, { bias: -1 });
+  c.px(12, y + 1, S.trim, FLAT_DOWN, { bias: -1 });
 }
 
 /** A two-pixel-wide cross whose arms meet on row `y`. */
@@ -390,7 +443,7 @@ function greatHelmFront(c: PixelCanvas, cx: number, U: number, blink: boolean): 
     return [cx - hw, cx + hw];
   }, S.plate, (_x, y, t) => cyl(t * 0.95, y === y0 ? 0.75 : y < y0 + 3 ? 0.3 : 0));
   c.part();
-  c.shape(10 + U, 10 + U, () => [cx - 4.4, cx + 4.4], GOLD, (_x, _y, t) => cyl(t, 0.2));
+  c.shape(10 + U, 10 + U, () => [cx - 4.4, cx + 4.4], S.trim, (_x, _y, t) => cyl(t, 0.2));
   // Eye slit either side of the nasal bar.
   c.part();
   for (const x of [8, 9, 10, 13, 14, 15]) c.px(x, 11 + U, EYE);
@@ -400,11 +453,12 @@ function greatHelmFront(c: PixelCanvas, cx: number, U: number, blink: boolean): 
   }
   c.part();
   for (let y = 11 + U; y <= y1; y++) {
-    c.px(11, y, GOLD, { x: -0.3, y: 0.1, z: 0.95 }, { bias: 1 });
-    c.px(12, y, GOLD, { x: 0.3, y: 0.1, z: 0.95 });
+    c.px(11, y, S.trim, { x: -0.3, y: 0.1, z: 0.95 }, { bias: 1 });
+    c.px(12, y, S.trim, { x: 0.3, y: 0.1, z: 0.95 });
   }
   for (const [x, y] of [[9, 13], [14, 13], [9, 14], [14, 14]]) c.shade(x, y + U, -2);
-  plume(c, cx, 2.6 + U, cx, 5.6 + U);
+  if (S.oath) helmHorns(c, cx, U);
+  else plume(c, cx, 2.6 + U, cx, 5.6 + U);
 }
 
 /** The great helm in profile, facing left: slit and breathing holes at the front, the plume sweeping back. */
@@ -418,17 +472,167 @@ function greatHelmSide(c: PixelCanvas, hx: number, U: number, blink: boolean): v
     return [front, y === y0 ? back - 0.6 : back];
   }, S.plate, (_x, y, t) => cyl(t * 0.9 - 0.1, y === y0 ? 0.75 : y < y0 + 3 ? 0.3 : 0));
   c.part();
-  c.shape(10 + U, 10 + U, () => [hx - 4.6, back], GOLD, (_x, _y, t) => cyl(t, 0.2));
+  c.shape(10 + U, 10 + U, () => [hx - 4.6, back], S.trim, (_x, _y, t) => cyl(t, 0.2));
   c.part();
   for (const x of [hx - 5, hx - 4, hx - 3]) c.px(x, 11 + U, EYE);
   if (!blink) c.spark(hx - 4, 11 + U, S.light[2], 0.8);
   c.part();
-  for (let y = 11 + U; y <= y1; y++) c.px(hx - 5, y, GOLD, { x: -0.6, y: 0.1, z: 0.8 }, { bias: 1 });
+  for (let y = 11 + U; y <= y1; y++) c.px(hx - 5, y, S.trim, { x: -0.6, y: 0.1, z: 0.8 }, { bias: 1 });
   for (const y of [13, 14]) c.shade(hx - 3, y + U, -2);
-  plume(c, hx - 1, 3.4 + U, hx + 4.8, 8.4 + U);
+  if (S.oath) helmHornsSide(c, hx, U);
+  else plume(c, hx - 1, 3.4 + U, hx + 4.8, 8.4 + U);
 }
 
 const FLAT_DOWN: Vec3 = { x: 0, y: -0.3, z: 0.95 };
+
+// ---------------------------------------------------------------------------
+// The Seraph and the Oathbreaker
+
+/** A great feathered wing from the back, `k` = -1 to the screen left, 1 to the right; (rx, ry) is its root. */
+function bigWing(c: PixelCanvas, rx: number, ry: number, k: number, lift: number, reach = 1): void {
+  // Feathers from the lowest up, each overlapping the one below; then the leading edge.
+  const tips: [number, number][] = [
+    [6.8, 8.6],
+    [8.6, 6.0],
+    [9.8, 2.4],
+    [10.2, -1.6],
+    [9.4, -5.0],
+  ];
+  tips.forEach(([tx, ty], i) => {
+    c.part();
+    c.capsule(rx + k * 1.2, ry + i * 0.2 - 1, rx + k * tx * reach, ry + ty - lift * (i / 4), 1.7, 0.75, FEATHER, { bias: i % 2 ? 0 : -1 });
+  });
+  c.part();
+  const ex = rx + k * 5.4 * reach;
+  const ey = ry - 5.2 - lift;
+  c.capsule(rx, ry, ex, ey, 1.5, 1.2, FEATHER, { bias: 1 });
+  c.capsule(ex, ey, rx + k * 9.4 * reach, ry - 5.4 - lift, 1.2, 0.8, FEATHER, { bias: 1 });
+}
+
+/** The halo: a ring of light floating over the head, seen at a tilt. */
+function halo(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number): void {
+  c.part();
+  for (let y = Math.floor(cy - ry - 1); y <= Math.ceil(cy + ry + 1); y++) {
+    for (let x = Math.floor(cx - rx - 1); x <= Math.ceil(cx + rx + 1); x++) {
+      const q = Math.hypot((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry);
+      if (q > 1.05 || q < 0.55) continue;
+      c.px(x, y, HALO, { x: 0, y: 0.3, z: 0.95 }, { bias: y + 0.5 > cy ? 1 : 0 });
+      c.spark(x, y, S.light[1], 0.35);
+    }
+  }
+}
+
+function seraphHeadFront(c: PixelCanvas, cx: number, U: number, blink: boolean): void {
+  c.part();
+  c.ellipse(cx, 12.6 + U, 3.2, 2.8, SKIN);
+  c.part();
+  c.px(11, 13 + U, SKIN, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 13 + U, SKIN, sphere(0.35, -0.2));
+  c.shade(12, 14 + U, -1);
+  c.part();
+  if (blink) {
+    c.px(10, 12 + U, SKIN, FLAT_DOWN, { bias: -1 });
+    c.px(13, 12 + U, SKIN, FLAT_DOWN, { bias: -1 });
+  } else {
+    c.px(10, 12 + U, EYE);
+    c.px(13, 12 + U, EYE);
+  }
+  // Golden curls over the brow and down to the jaw.
+  c.part();
+  const widths = [2.6, 3.7, 4.2, 4.4];
+  c.shape(7 + U, 10 + U, (y) => [cx - widths[y - 7 - U], cx + widths[y - 7 - U]], SERAPH_HAIR, (_x, _y, t, u) => sphere(t * 0.9, u * 1.2 - 0.9, 1));
+  for (let y = 11; y <= 14; y++) {
+    c.px(8, y + U, SERAPH_HAIR, cyl(-0.8, 0), { bias: y % 2 ? 0 : -1 });
+    c.px(15, y + U, SERAPH_HAIR, cyl(0.8, 0), { bias: y % 2 ? 0 : -1 });
+  }
+  c.px(7, 12 + U, SERAPH_HAIR, cyl(-0.9, 0), { bias: -1 });
+  c.px(16, 12 + U, SERAPH_HAIR, cyl(0.9, 0), { bias: -1 });
+  c.shade(10, 9 + U, -1);
+  c.shade(13, 8 + U, -1);
+  c.px(11, 10 + U, SKIN, sphere(-0.1, -0.8));
+  halo(c, cx, 4.8 + U, 3.6, 1.3);
+}
+
+function seraphHeadBack(c: PixelCanvas, cx: number, U: number): void {
+  c.part();
+  c.ellipse(cx, 10.8 + U, 4.3, 4.0, SERAPH_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
+  c.part();
+  c.shape(13 + U, 15 + U, (y) => {
+    const hw = [3.6, 3.0, 2.0][y - 13 - U];
+    return [cx - hw, cx + hw];
+  }, SERAPH_HAIR, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
+  for (const [x, y] of [[10, 9], [13, 10], [11, 12], [14, 13], [9, 13]]) c.shade(x, y + U, -1);
+  halo(c, cx, 4.8 + U, 3.6, 1.3);
+}
+
+/** Facing left. */
+function seraphHeadSide(c: PixelCanvas, hx: number, U: number, blink: boolean): void {
+  c.part();
+  c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, SKIN);
+  c.part();
+  c.px(hx - 5, 13 + U, SKIN, sphere(-0.6, -0.2), { bias: 1 });
+  c.shade(hx - 4, 14 + U, -1);
+  c.part();
+  if (blink) c.px(hx - 3, 12 + U, SKIN, FLAT_DOWN, { bias: -1 });
+  else c.px(hx - 3, 12 + U, EYE);
+  c.part();
+  const rows: [number, number][] = [
+    [-2.9, 2.2],
+    [-3.8, 2.9],
+    [-4.2, 3.3],
+    [-4.2, 3.4],
+    [0.2, 3.4],
+    [0.4, 3.3],
+    [0.8, 3.0],
+    [1.2, 2.4],
+  ];
+  c.shape(7 + U, 14 + U, (y) => {
+    const [l, r] = rows[y - 7 - U];
+    return [hx + l, hx + r];
+  }, SERAPH_HAIR, (_x, _y, t, u) => sphere(t * 0.9, u * 1.4 - 0.9, 1));
+  c.erase(hx - 5, 10 + U);
+  for (const [x, y] of [[1, 9], [2, 11], [1, 13]]) c.shade(hx + x, y + U, -1);
+  halo(c, hx - 0.4, 4.8 + U, 2.8, 1.2);
+}
+
+/** Two short horns on the great helm, curving up and out (front and back views). */
+function helmHorns(c: PixelCanvas, cx: number, U: number): void {
+  for (const k of [-1, 1]) {
+    c.part();
+    c.capsule(cx + k * 3.6, 7 + U, cx + k * 5.8, 5.4 + U, 1.2, 0.9, HORN, { bias: -1 });
+    c.capsule(cx + k * 5.8, 5.4 + U, cx + k * 6.6, 3.0 + U, 0.9, 0.6, HORN);
+    c.capsule(cx + k * 6.6, 3.0 + U, cx + k * 6.0, 1.0 + U, 0.6, 0.3, HORN, { bias: 1 });
+  }
+}
+
+/** The horns in profile, facing left: the near one sweeping forward, the far one peeking over. */
+function helmHornsSide(c: PixelCanvas, hx: number, U: number): void {
+  c.part();
+  c.capsule(hx + 1, 6.4 + U, hx - 0.8, 3.8 + U, 1.0, 0.6, HORN, { bias: -1 });
+  c.capsule(hx - 0.8, 3.8 + U, hx - 1.2, 1.8 + U, 0.6, 0.3, HORN, { bias: -1 });
+  c.part();
+  c.capsule(hx - 0.6, 6.6 + U, hx - 3.4, 4.8 + U, 1.2, 0.9, HORN);
+  c.capsule(hx - 3.4, 4.8 + U, hx - 4.4, 2.4 + U, 0.9, 0.55, HORN);
+  c.capsule(hx - 4.4, 2.4 + U, hx - 3.8, 0.6 + U, 0.55, 0.3, HORN, { bias: 1 });
+}
+
+/** An eclipse on the tabard or cloak: a ring of violet fire round a black heart, on row `y`. */
+function eclipse(c: PixelCanvas, y: number): void {
+  for (const [x, yy] of [[11, y - 2], [12, y - 2], [10, y - 1], [13, y - 1], [10, y], [13, y], [11, y + 1], [12, y + 1]]) {
+    c.px(x, yy, S.emblem, { x: (x - 11.5) * 0.25, y: -(yy - y + 0.5) * 0.25, z: 0.9 }, { glow: 0.7 });
+  }
+  for (const [x, yy] of [[11, y - 1], [12, y - 1], [11, y], [12, y]]) c.shade(x, yy, -2);
+}
+
+/** A torn hem: points of cloth hanging below row `y`, notches between them. */
+function tatters(c: PixelCanvas, l: number, r: number, y: number, m: Material): void {
+  c.part();
+  for (let x = Math.round(l); x < Math.round(r); x++) {
+    const k = ((x % 3) + 3) % 3;
+    if (k === 0) c.px(x, y + 1, m, cyl(0, -0.3), { bias: -1 });
+    else if (k === 1) c.erase(x, y);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Directions
@@ -444,6 +648,10 @@ function drawDown(c: PixelCanvas, p: Pose): PaladinMeta {
     limb(c, sh.x, sh.y, p.mace.hx, p.mace.hy, p.maceBehind ? -1 : 0);
     gauntlet(c, p.mace.hx, p.mace.hy);
   };
+  if (S.seraph) {
+    bigWing(c, cx - 2.6, 17.2 + U, -1, p.breath + p.cape * 0.3);
+    bigWing(c, cx + 2.6, 17.2 + U, 1, p.breath - p.cape * 0.3);
+  }
   if (p.maceBehind) macing();
 
   // Cape lining behind the legs.
@@ -491,17 +699,18 @@ function drawDown(c: PixelCanvas, p: Pose): PaladinMeta {
     const x = cx + p.cape * 0.4 * u * u;
     return [x - hw, x + hw];
   };
-  c.shape(top + 2, hem, tab, IVORY, (_x, _y, t, u) => cyl(t * 0.6, 0.2 - u * 0.3));
+  c.shape(top + 2, hem, tab, S.tabard, (_x, _y, t, u) => cyl(t * 0.6, 0.2 - u * 0.3));
   c.part();
   const te = tab(hem + 1);
-  c.shape(hem + 1, hem + 1, () => te, GOLD, (_x, _y, t) => cyl(t, -0.1));
+  c.shape(hem + 1, hem + 1, () => te, S.trim, (_x, _y, t) => cyl(t, -0.1));
   c.part();
   c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LEATHER, (_x, _y, t) => cyl(t, 0));
   c.part();
-  c.px(11, waist, GOLD, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
-  c.px(12, waist, GOLD, { x: 0.2, y: 0.3, z: 0.9 });
+  c.px(11, waist, S.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
+  c.px(12, waist, S.trim, { x: 0.2, y: 0.3, z: 0.9 });
   c.part();
-  if (S.crusader) cross(c, 18 + U, CRIMSON);
+  if (S.oath) eclipse(c, 18 + U);
+  else if (S.crusader) cross(c, 18 + U, CRIMSON);
   else sun(c, 18 + U);
 
   // Gorget between chin and breastplate.
@@ -511,6 +720,7 @@ function drawDown(c: PixelCanvas, p: Pose): PaladinMeta {
   // Head: face in an open helm with cheek guards, a gold crest and little wings,
   // or the Crusader's great helm.
   if (S.crusader) greatHelmFront(c, cx, U, !!p.blink);
+  else if (S.seraph) seraphHeadFront(c, cx, U, !!p.blink);
   else {
   c.part();
   c.ellipse(cx, 12.6 + U, 3.2, 2.8, SKIN);
@@ -602,9 +812,12 @@ function drawUp(c: PixelCanvas, p: Pose): PaladinMeta {
   };
   c.part();
   c.shape(ct, cb, capeEdges, S.cape, (_x, _y, t, u) => cyl(t * 0.6, 0.2 - u * 0.3));
-  c.part();
   const ce = capeEdges(cb + 1);
-  c.shape(cb + 1, cb + 1, () => ce, GOLD, (_x, _y, t) => cyl(t, -0.1));
+  if (S.oath) tatters(c, ce[0], ce[1], cb, S.cape);
+  else {
+    c.part();
+    c.shape(cb + 1, cb + 1, () => ce, S.trim, (_x, _y, t) => cyl(t, -0.1));
+  }
   for (let y = Math.round(ct + 5); y <= cb; y++) {
     const [l, r] = capeEdges(y);
     c.shade(Math.round(l + (r - l) * 0.3), y, -1);
@@ -613,20 +826,30 @@ function drawUp(c: PixelCanvas, p: Pose): PaladinMeta {
   // A gold sun (a gold cross for the Crusader) on the cape's back.
   c.part();
   const sy = Math.round(19 + U);
-  if (S.crusader) cross(c, sy, GOLD);
+  if (S.oath) eclipse(c, sy);
+  else if (S.crusader) cross(c, sy, S.trim);
   else sun(c, sy);
+  // The Seraph's wings spread from the shoulder blades, over the cape.
+  if (S.seraph) {
+    bigWing(c, cx - 2.2, 17.6 + U, -1, p.breath - p.cape * 0.3);
+    bigWing(c, cx + 2.2, 17.6 + U, 1, p.breath + p.cape * 0.3);
+  }
 
   // Helm from behind: plate over the nape, the crest running down its back.
   c.part();
   c.shape(13 + U, 15 + U, () => [cx - 3.4, cx + 3.4], S.plateDark, (_x, _y, t) => cyl(t, 0));
-  c.part();
-  c.ellipse(cx, 10.2 + U, 4.8, 4.5, S.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.15, 1) });
-  c.part();
-  c.shape(Math.round(13 + U), Math.round(13 + U), () => [cx - 3.6, cx + 3.6], GOLD, (_x, _y, t) => cyl(t, -0.2));
-  if (S.crusader) plume(c, cx, 3.4 + U, cx, 7.5 + U);
-  else crest(c, cx, 5.4 + U, cx, 12 + U);
-  wing(c, cx - 4.3, 8.6 + U, -2.6, -4.2);
-  wing(c, cx + 4.3, 8.6 + U, 2.6, -4.2);
+  if (S.seraph) seraphHeadBack(c, cx, U);
+  else {
+    c.part();
+    c.ellipse(cx, 10.2 + U, 4.8, 4.5, S.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.15, 1) });
+    c.part();
+    c.shape(Math.round(13 + U), Math.round(13 + U), () => [cx - 3.6, cx + 3.6], S.trim, (_x, _y, t) => cyl(t, -0.2));
+    if (S.oath) helmHorns(c, cx, U);
+    else if (S.crusader) plume(c, cx, 3.4 + U, cx, 7.5 + U);
+    else crest(c, cx, 5.4 + U, cx, 12 + U);
+    wing(c, cx - 4.3, 8.6 + U, -2.6, -4.2);
+    wing(c, cx + 4.3, 8.6 + U, 2.6, -4.2);
+  }
 
   pauldron(c, 6.9, 16.1 + U);
   pauldron(c, 17.1, 16.1 + U);
@@ -647,6 +870,8 @@ function drawSide(c: PixelCanvas, p: Pose): PaladinMeta {
   const head = drawMace(c, m, p.glow);
   limb(c, hx + 1.8, 17 + U, m.hx, m.hy, -1);
   gauntlet(c, m.hx, m.hy);
+  // The Seraph's near wing, folded half open behind the back.
+  if (S.seraph) bigWing(c, hx + 2.2, 17.4 + U, 1, p.breath + p.cape * 0.3, 0.72);
 
   // Cape streaming behind.
   const ct = 15 + U;
@@ -659,9 +884,12 @@ function drawSide(c: PixelCanvas, p: Pose): PaladinMeta {
   };
   c.part();
   c.shape(ct, cb, capeEdge, S.cape, (_x, _y, t, u) => cyl(t * 0.8 + 0.15, 0.25 - u * 0.3), { bias: -1 });
-  c.part();
   const ce = capeEdge(cb);
-  c.shape(cb + 1, cb + 1, () => ce, GOLD, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
+  if (S.oath) tatters(c, ce[0], ce[1], cb, S.cape);
+  else {
+    c.part();
+    c.shape(cb + 1, cb + 1, () => ce, S.trim, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
+  }
 
   // Legs: back leg in shade first, then the front leg.
   const lift = (f: number) => Math.max(0, f) * 0.35;
@@ -693,20 +921,21 @@ function drawSide(c: PixelCanvas, p: Pose): PaladinMeta {
     const [l] = y < waist ? torso(y) : skirt(y);
     return [l, l + 1.7];
   };
-  c.shape(top + 2, hem, tab, IVORY, (_x, _y, t, u) => cyl(t * 0.6 - 0.2, 0.2 - u * 0.3));
+  c.shape(top + 2, hem, tab, S.tabard, (_x, _y, t, u) => cyl(t * 0.6 - 0.2, 0.2 - u * 0.3));
   c.part();
   const te = tab(hem);
-  c.shape(hem + 1, hem + 1, () => te, GOLD, (_x, _y, t) => cyl(t, -0.1));
+  c.shape(hem + 1, hem + 1, () => te, S.trim, (_x, _y, t) => cyl(t, -0.1));
   c.part();
   const [bl, br] = torso(waist - 1);
   c.shape(waist, waist, () => [bl - 0.1, br + 0.2], LEATHER, (_x, _y, t) => cyl(t, 0));
   c.part();
-  c.px(Math.round(bl), waist, GOLD, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
+  c.px(Math.round(bl), waist, S.trim, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
 
   // Head: profile face under the helm, cheek guard, crest and wing.
   c.part();
   c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.8], S.plateDark, (_x, _y, t) => cyl(t, 0.2));
   if (S.crusader) greatHelmSide(c, hx, U, !!p.blink);
+  else if (S.seraph) seraphHeadSide(c, hx, U, !!p.blink);
   else {
   c.part();
   c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, SKIN);
