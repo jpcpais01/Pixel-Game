@@ -40,12 +40,15 @@ export class Music {
   private next = 0;
   private phrases: (number | null)[][] = [];
   private melIdx = 3;
+  /** Where this track plays into: its own level on the music bus, so it can fade out while another fades in. */
+  private out: AudioNode;
 
-  constructor(m: Mixer) {
+  constructor(m: Mixer, out: AudioNode = m.music) {
     this.m = m;
+    this.out = out;
     const ctx = m.ctx;
 
-    const padOut = gain(ctx, 1, m.music);
+    const padOut = gain(ctx, 1, out);
     padOut.connect(m.reverb);
     this.pad = filter(ctx, 'lowpass', 1100, 0.4, padOut);
     // The filter drifts open and closed over half a minute.
@@ -55,7 +58,7 @@ export class Music {
     this.wobble = gain(ctx, 5);
     osc(ctx, 'sine', 0.45, this.wobble).start();
 
-    this.lead = gain(ctx, 1, m.music);
+    this.lead = gain(ctx, 1, out);
     const rv = gain(ctx, 0.7, m.reverb);
     this.lead.connect(rv);
     // Dotted-quarter echo, darker on every repeat.
@@ -64,7 +67,7 @@ export class Music {
     const fb = gain(ctx, 0.34, delay);
     const tone = filter(ctx, 'lowpass', 2200, 0.5, fb);
     delay.connect(tone);
-    delay.connect(gain(ctx, 0.3, m.music));
+    delay.connect(gain(ctx, 0.3, out));
     this.lead.connect(delay);
   }
 
@@ -178,7 +181,7 @@ export class Music {
 
   private bass(n: number, t: number, len: number, level: number): void {
     const ctx = this.m.ctx;
-    const env = gain(ctx, 0, this.m.music);
+    const env = gain(ctx, 0, this.out);
     env.gain.setValueAtTime(0, t);
     env.gain.linearRampToValueAtTime(0.16 * level, t + 0.12);
     env.gain.setTargetAtTime(0.09 * level, t + 0.12, 0.8);

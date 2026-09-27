@@ -7,6 +7,7 @@ import { BUTTON_GEM, BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture
 import { sound } from '../audio';
 import { fpsBottom } from './FpsScene';
 import { cropToWindow, fitLine } from './SelectScene';
+import { PLATE, skinFace } from '../ui/skinCard';
 import type { HomeScene } from './HomeScene';
 
 // The shop: the Wish Sanctum. A crystal floats over a rune altar under a
@@ -27,8 +28,6 @@ const BIG_H = 160;
 const CARD_SCALE = 2;
 const BIG_SCALE = 3;
 const CARD_GAP = 6;
-/** The name plate along a card's bottom (see art/shop.ts cardFront). */
-const PLATE = 22;
 /** How long the crystal charges: longer when it holds a legendary. */
 const CHARGE_MS = 1700;
 const CHARGE_LEGEND_MS = 2400;
@@ -78,7 +77,6 @@ class WishCard extends Phaser.GameObjects.Container {
     const h = (this.h = big ? BIG_H : CARD_H);
     const info = RARITY_INFO[result.entry.rarity];
     const legendary = result.entry.rarity === 'legendary';
-    const frontKey = addBitmap(scene, `wish_card_${result.entry.rarity}_${w}x${h}`, cardFront(w, h, info.tint, info.deep, legendary));
     const backKey = addBitmap(scene, `wish_back_${w}x${h}`, cardBack(w, h));
 
     // Behind the card, in the scene (not the card), so it can spin and spread past the card's edges.
@@ -89,37 +87,11 @@ class WishCard extends Phaser.GameObjects.Container {
     }
 
     this.back = scene.add.image(0, 0, backKey);
-    const front = scene.add.image(0, 0, frontKey);
-    // The hero stands in the window, feet a little above the name plate.
-    const scale = big ? BIG_SCALE : CARD_SCALE;
-    const skin = wornSkin(result.entry);
-    const p = skin.preview;
-    const feet = h / 2 - PLATE - 2;
-    const oy = p.originY ?? 31 / 32;
-    this.sprite = scene.add.sprite(0, feet, p.texture).setOrigin(0.5, oy).setScale(scale);
-    this.sprite.play(p.idle);
-    cropToWindow(this.sprite, p, w - 8, h - PLATE - 8, 2, scale);
-    const parts: Phaser.GameObjects.GameObject[] = [front, this.sprite];
-    if (p.glow) {
-      this.glow = scene.add.sprite(0, feet, p.glow).setOrigin(0.5, oy).setScale(scale).setBlendMode(Phaser.BlendModes.ADD);
-      cropToWindow(this.glow, p, w - 8, h - PLATE - 8, 2, scale);
-      parts.push(this.glow);
-    }
-    const probe = pixelText(scene, 0, 0, '').setVisible(false);
-    const name = pixelText(scene, 0, 0, fitLine(probe, result.entry.skin.name, w - 8), info.core);
-    name.setPosition(Math.round(-name.width / 2), Math.round(h / 2 - PLATE + 3));
-    probe.destroy();
-    parts.push(name);
-    // The rarity's stars under the name.
-    const starW = 6;
-    const sx = Math.round(-(info.stars * starW) / 2);
-    for (let i = 0; i < info.stars; i++) parts.push(scene.add.image(sx + i * starW, h / 2 - 8, 'icon_star').setOrigin(0).setTint(info.tint));
-    if (big) {
-      const cls = pixelText(scene, 0, 0, `${result.entry.cls.name} * ${result.entry.type.name}`, LAVENDER);
-      cls.setPosition(Math.round(-cls.width / 2), Math.round(-h / 2 + 7));
-      if (cls.width <= w - 10) parts.push(cls);
-      else cls.destroy();
-    }
+    const title = big ? { text: `${result.entry.cls.name} * ${result.entry.type.name}`, tint: LAVENDER } : undefined;
+    const face = skinFace(scene, result.entry, w, h, big ? BIG_SCALE : CARD_SCALE, title);
+    this.sprite = face.sprite;
+    this.glow = face.glow;
+    const parts = face.parts;
     this.face = scene.add.container(0, 0, parts).setVisible(false);
     // New or a duplicate, over the top corner.
     this.badge = pixelText(scene, 0, 0, result.fresh ? 'New!' : 'Owned', result.fresh ? GOLD : LAVENDER).setVisible(false);
@@ -277,6 +249,8 @@ export class ShopScene extends Phaser.Scene {
     this.shake = { t: 0, ms: 0, px: 0 };
     this.shownGems = collection.gems;
     registerShopArt(this);
+    // The Sanctum has its own music, fading in over the game's.
+    sound.setTrack('shop');
     const cam = this.cameras.main.setOrigin(0, 0).setAlpha(0);
     this.tweens.add({ targets: cam, alpha: 1, duration: 260 });
 
@@ -297,6 +271,7 @@ export class ShopScene extends Phaser.Scene {
     const unwatch = collection.watch(() => this.refreshInfo());
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      sound.setTrack('main');
       unwatch();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
     });
