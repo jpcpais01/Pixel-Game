@@ -42,7 +42,7 @@ import { BOULDER_H, BOULDER_W, CRYSTAL_H, CRYSTAL_W, ELEMENTS, FIREBOWL_FRAMES, 
 import { ROCK_PX, TORB_PX, buildBlobSheet, buildGaleSheet, buildGolemSheet, buildSalamanderSheet, buildUndineSheet, thrownRock, waterOrb } from './elementals';
 import { BLAZE_FRAMES, BLAZE_H, BLAZE_W, EMBER_H, EMBER_W, blazeFrame, buildElementinhoSheet, emberDrop } from './elementinho';
 import { TEMPLE_H, TEMPLE_W } from '../world/templeLayout';
-import { CAPS_H, CAPS_W, CRYS_H, CRYS_W, LANTERN_FRAMES, LANTERN_H, LANTERN_W, SHROOM_H, SHROOM_W, SPIRE_H, SPIRE_W, STALAG_H, STALAG_W, amethystCluster, amethystSpire, capCluster, deepArt, giantShroom, lanternPost, stalagmite } from './deep';
+import { CAPS_FRAMES, CAPS_H, CAPS_W, CRYS_FRAMES, FOOT_H, FOOT_W, SHAFT_H, SHAFT_W, SHROOM_FRAMES, SKYPOOL_FRAMES, SKYPOOL_H, SKYPOOL_W, SPIRE_FRAMES, STALAG_FRAMES, propFooting, skylightPool, skylightShaft, CRYS_H, CRYS_W, LANTERN_FRAMES, LANTERN_H, LANTERN_W, SHROOM_H, SHROOM_W, SPIRE_H, SPIRE_W, STALAG_H, STALAG_W, amethystCluster, amethystSpire, capCluster, deepArt, giantShroom, lanternPost, stalagmite } from './deep';
 import { PUFF_FRAMES, PUFF_H, PUFF_W, SPIKE_H, SPIKE_W, buildGeodebackSheet, buildGlimbatSheet, buildMyconidSheet, buildShardlingSheet, buildSporelingSheet, crystalSpike, puffball } from './deepMonsters';
 import { buildSporemotherSheet } from './sporemother';
 import { BREATH_SHARD, breathShard, buildWyrmSheet } from './wyrm';
@@ -909,13 +909,41 @@ function* deepTextures(scene: Phaser.Scene): Generator<void, void, void> {
   yield;
   scene.textures.addCanvas('gd_floor_e', toCanvas(DEEP_W, DEEP_H, art.emissive));
   yield;
-  // Props.
-  register(scene, 'gd_shroom', pack(frameList([giantShroom(0), giantShroom(1)], 's'), SHROOM_W, SHROOM_H), SHROOM_W, SHROOM_H);
-  register(scene, 'gd_caps', pack(frameList([capCluster(0), capCluster(1)], 'c'), CAPS_W, CAPS_H), CAPS_W, CAPS_H);
+  // Props, each look with its idle loop: frames '<prefix><look>' (the first,
+  // so a still image can use the old name) and '<prefix><look>_<n>', played
+  // by 'gd_<kind><look>' on the body and 'gd_<kind><look>_e' on its glow.
+  const loop = (key: string, prefix: string, paint: (v: number, f: number) => PixelCanvas, frames: number, w: number, h: number, fps: number) => {
+    const list: { name: string; r: RenderedFrame }[] = [];
+    for (const v of [0, 1]) for (let f = 0; f < frames; f++) list.push({ name: f ? `${prefix}${v}_${f}` : `${prefix}${v}`, r: paint(v, f).render() });
+    register(scene, key, pack(list, w, h), w, h);
+    for (const v of [0, 1]) {
+      for (const layer of [key, `${key}_e`]) {
+        const names = Array.from({ length: frames }, (_, f) => ({ key: layer, frame: f ? `${prefix}${v}_${f}` : `${prefix}${v}` }));
+        scene.anims.create({ key: `${layer === key ? key : `${key}_e`}${v}`, frames: names, frameRate: fps, repeat: -1 });
+      }
+    }
+  };
+  loop('gd_shroom', 's', giantShroom, SHROOM_FRAMES, SHROOM_W, SHROOM_H, 5);
   yield;
-  register(scene, 'gd_stalag', pack(frameList([stalagmite(0), stalagmite(1)], 't'), STALAG_W, STALAG_H), STALAG_W, STALAG_H);
-  register(scene, 'gd_crystal', pack(frameList([amethystCluster(0), amethystCluster(1)], 'c'), CRYS_W, CRYS_H), CRYS_W, CRYS_H);
-  register(scene, 'gd_spire', pack(frameList([amethystSpire(0), amethystSpire(1)], 'p'), SPIRE_W, SPIRE_H), SPIRE_W, SPIRE_H);
+  loop('gd_caps', 'c', capCluster, CAPS_FRAMES, CAPS_W, CAPS_H, 6);
+  yield;
+  loop('gd_stalag', 't', stalagmite, STALAG_FRAMES, STALAG_W, STALAG_H, 5);
+  loop('gd_crystal', 'c', amethystCluster, CRYS_FRAMES, CRYS_W, CRYS_H, 8);
+  yield;
+  loop('gd_spire', 'p', amethystSpire, SPIRE_FRAMES, SPIRE_W, SPIRE_H, 9);
+  yield;
+  // Their footings: frames '<kind><look>'.
+  const feet: { name: string; r: RenderedFrame }[] = [];
+  for (const kind of ['shroom', 'caps', 'stalag', 'crystal', 'spire', 'lantern'] as const) for (const v of [0, 1]) feet.push({ name: `${kind}${v}`, r: propFooting(kind, v).render() });
+  register(scene, 'gd_foot', pack(feet, FOOT_W, FOOT_H, 4), FOOT_W, FOOT_H);
+  yield;
+  // Skylights: the pool of daylight (four frames of leaf shadows, per look) and two shafts.
+  for (const v of [0, 1]) {
+    const pool = scene.textures.addCanvas(`gd_skypool${v}`, toCanvas(SKYPOOL_W * SKYPOOL_FRAMES, SKYPOOL_H, sideBySide(SKYPOOL_W, SKYPOOL_H, Array.from({ length: SKYPOOL_FRAMES }, (_, f) => skylightPool(f, 40 + v * 13)))))!;
+    for (let f = 0; f < SKYPOOL_FRAMES; f++) pool.add(f, 0, f * SKYPOOL_W, 0, SKYPOOL_W, SKYPOOL_H);
+    scene.textures.addCanvas(`gd_shaft${v}`, toCanvas(SHAFT_W, SHAFT_H, skylightShaft(70 + v * 31)));
+  }
+  yield;
   register(scene, 'gd_lantern', pack(frameList(Array.from({ length: LANTERN_FRAMES }, (_, f) => lanternPost(f)), 'f'), LANTERN_W, LANTERN_H), LANTERN_W, LANTERN_H);
   scene.anims.create({ key: 'gd_lantern_burn', frames: scene.anims.generateFrameNames('gd_lantern_e', { prefix: 'f', start: 0, end: LANTERN_FRAMES - 1 }), frameRate: 7, repeat: -1 });
   yield;
