@@ -122,6 +122,8 @@ const SET_AURA: Record<SetId, { name: string; text: number; tint: number; motes:
   // Slow, long-lived spores drifting lazily about: the hero blooms like the Sporemother.
   spore: { name: 'SPORE VEIL', text: 0xffb0ec, tint: 0xff6ad8, motes: [0xff6ad8, 0xffd0f4, 0x5ae4ff, 0xe8fffa], life: { min: 1400, max: 2400 }, rise: { min: -10, max: -3 }, scale: 0.5, every: 110 },
   // Sharp glints that flash and rise: amethyst grown from the hero like the wyrm's spines.
+  // Stars wheeling slowly about the hero, white and blue with a glint of gold: the Warden's own light.
+  astral: { name: 'STARBORN', text: 0xd8e0ff, tint: 0x8aa0ff, motes: [0xffffff, 0xd8e0ff, 0x8aa0ff, 0xffe08a], life: { min: 700, max: 1300 }, rise: { min: -22, max: -8 }, scale: 0.5, every: 80 },
   geode: { name: 'CRYSTAL FORM', text: 0xead8ff, tint: 0xb37aff, motes: [0xffffff, 0xead8ff, 0xb37aff, 0x9c68e8], life: { min: 600, max: 1100 }, rise: { min: -30, max: -12 }, scale: 0.5, every: 85 },
 };
 

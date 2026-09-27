@@ -1,4 +1,4 @@
-// Gear: sixty-four pieces of equipment that monsters drop. Walking over a piece picks it up and
+// Gear: seventy pieces of equipment that monsters drop. Walking over a piece picks it up and
 // keeps it for good (see collection.ts). Each piece has one of six slot
 // types, and the hero wears one piece per type: only worn pieces count. A
 // piece goes on by itself when its slot is empty; otherwise the player swaps
@@ -50,7 +50,7 @@ export interface GearStats {
 }
 
 /** Sets of gear that grant more when every piece is worn together. */
-export type SetId = 'wraith' | 'ember' | 'spore' | 'geode';
+export type SetId = 'wraith' | 'ember' | 'spore' | 'geode' | 'astral';
 
 export interface GearSet {
   name: string;
@@ -69,6 +69,7 @@ export const GEAR_SETS: Record<SetId, GearSet> = {
   ember: { name: 'Emberborn', tint: 0xffa040, bonus: { power: 0.2, speed: 0.08, regen: 1 }, effect: 'Living flame: fire wreathes you', boss: 'the Elementinho' },
   spore: { name: 'Sporeveil', tint: 0xff78e0, bonus: { regen: 2, leech: 0.06, hp: 40 }, effect: 'Spore veil: glowing spores drift about you', boss: 'the Sporemother' },
   geode: { name: 'Wyrmshard', tint: 0xc49cff, bonus: { power: 0.25, armor: 0.08, speed: 0.08 }, effect: 'Crystal form: amethyst glitters about you', boss: 'Amethrax' },
+  astral: { name: 'Starborn', tint: 0x9ab4ff, bonus: { power: 0.22, speed: 0.12, regen: 1.5 }, effect: 'Starborn: starlight wheels about you', boss: 'the Astral Warden' },
 };
 
 export interface GearDef {
@@ -157,6 +158,13 @@ export const GEAR: GearDef[] = [
   piece('amethrax_fang', 'Fang of Amethrax', 'legendary', 'weapon', { power: 0.38, leech: 0.04 }, 'geode'),
   piece('geode_aegis', 'Geode Aegis', 'legendary', 'defence', { armor: 0.18, hp: 30 }, 'geode'),
   piece('heartgeode', 'Heartgeode', 'legendary', 'accessory', { power: 0.14, regen: 2, hp: 20 }, 'geode'),
+  // The Starborn set: one legendary for each slot, dropped only by the Astral Warden in the Cosmos Arena.
+  piece('star_diadem', 'Diadem of the Warden', 'legendary', 'headwear', { hp: 30, power: 0.1, armor: 0.04 }, 'astral'),
+  piece('nebula_vestments', 'Nebula Vestments', 'legendary', 'chest', { armor: 0.14, hp: 35, regen: 1 }, 'astral'),
+  piece('comet_treads', 'Comet Treads', 'legendary', 'boots', { speed: 0.2, armor: 0.04 }, 'astral'),
+  piece('starfall', 'Starfall', 'legendary', 'weapon', { power: 0.36, leech: 0.04 }, 'astral'),
+  piece('orrery_aegis', 'Orrery Aegis', 'legendary', 'defence', { armor: 0.17, hp: 25 }, 'astral'),
+  piece('warden_eye', 'Eye of the Warden', 'legendary', 'accessory', { power: 0.14, regen: 2, hp: 15 }, 'astral'),
 ];
 
 /** How many pieces of `set` are among `defs`, out of how many there are. */
@@ -255,7 +263,7 @@ export function levelled(def: GearDef, picks: readonly StatKey[]): GearDef {
 }
 
 /** Sets only their own boss drops. */
-const SET_BOSS: Record<string, SetId> = { queen: 'wraith', elementinho: 'ember', sporemother: 'spore', wyrm: 'geode' };
+const SET_BOSS: Record<string, SetId> = { queen: 'wraith', elementinho: 'ember', sporemother: 'spore', wyrm: 'geode', warden: 'astral' };
 
 /** A piece picked up this run, for the HUD's banner; `worn` if it went straight into an empty slot. */
 export interface GearNews {
