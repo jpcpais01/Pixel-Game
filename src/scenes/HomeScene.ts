@@ -231,15 +231,22 @@ export class HomeScene extends Phaser.Scene {
 
     this.backdrop.layout(vw, vh, this.z);
 
-    // Title: 2x when it fits with a margin; kept clear of the FPS counter.
-    const ts = vw >= this.title.width * 2 + 16 ? 2 : 1;
+    // The buttons and the account line under them, top to bottom.
+    const stack = this.start.boxH + 6 + this.inventory.boxH + 5 + this.shop.boxH + 5 + this.accountBtn.boxH + (this.who.text ? 4 + this.who.height : 0);
+    const bottom = vh - 6;
+    // Title: 2x when it fits across with a margin and the buttons still fit under it; kept clear of the FPS counter.
+    const top = Math.ceil(fpsBottom() / this.z) + 6;
+    this.titleY = Math.max(top, Math.round(vh * 0.1));
+    const fits = (ts: number) => vw >= this.title.width * ts + 16 && this.titleY + this.title.height * ts + 14 + stack <= bottom;
+    const ts = fits(2) ? 2 : 1;
     this.titleScale = ts;
     this.title.setScale(ts);
     this.titleGlow.setScale((this.title.width * ts * 1.15) / 32, (this.title.height * ts * 1.3) / 32);
-    const top = Math.ceil(fpsBottom() / this.z) + 6;
-    this.titleY = Math.max(top, Math.round(vh * 0.1));
+    // Still too tall at 1x (a very short window): the title rises to the top.
+    if (this.titleY + this.title.displayHeight + 14 + stack > bottom) this.titleY = Math.max(4, Math.min(this.titleY, bottom - stack - 14 - this.title.displayHeight));
     this.title.setPosition(Math.round((vw - this.title.displayWidth) / 2), this.titleY);
-    const by = Math.max(this.titleY + this.title.displayHeight + 14, Math.round(vh * 0.52));
+    // Buttons from about halfway down, but never so low the account line leaves the screen.
+    const by = Math.max(this.titleY + this.title.displayHeight + 10, Math.min(Math.round(vh * 0.52), bottom - stack));
     this.start.place((vw - this.start.boxW) / 2, by);
     this.inventory.place((vw - this.inventory.boxW) / 2, by + this.start.boxH + 6);
     this.shop.place((vw - this.shop.boxW) / 2, this.inventory.y + this.inventory.boxH + 5);
