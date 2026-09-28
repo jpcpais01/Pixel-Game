@@ -39,6 +39,10 @@ import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SH
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { AUTUMN_MAGIC, AUTUMN_SKIN, FROST_MAGIC, FROST_SKIN, GROVE_MAGIC, GROVE_SKIN, Grovecraft, WILD_MAGIC, WILD_SKIN, Wildcraft } from './Druid';
 import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, Valkyrie } from './Valkyrie';
+import { MECH_KIT, Mech, SCRAP_KIT } from './Mech';
+import { HIVE_KIT, SYNTH_KIT, Synth } from './Synth';
+import { MECH_H, MECH_ORIGIN_Y } from '../art/mech';
+import { SYNTH_H, SYNTH_ORIGIN_Y } from '../art/synth';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -1390,6 +1394,84 @@ export const CLASSES: ClassDef[] = [
     spawn(world, x, y, look) {
       const kit = { spear: SPEAR_KIT, sunshield: SUN_KIT, storm: STORM_KIT, raven: RAVEN_KIT }[look] ?? SPEAR_KIT;
       return new Valkyrie(world, x, y, kit);
+    },
+  },
+  {
+    id: 'automaton',
+    name: 'Automaton',
+    blurb: 'Steel, steam and a heat gauge',
+    // The mech's salvo is held to paint targets and fires on release.
+    chargeSpecial: true,
+    types: [
+      {
+        // Two cannons firing in turn, and a salvo of homing missiles on everything it paints.
+        id: 'mech',
+        name: 'Siege Mech',
+        role: 'Heavy guns, hot barrels',
+        accent: 0xffb040,
+        stats: { power: 4, speed: 2, range: 4 },
+        attack: 'Twin cannons',
+        special: 'Lock-on salvo',
+        preview: { texture: 'mech', glow: 'mech_e', idle: 'mech_idle_down', chosen: 'mech_deploy_down', originY: MECH_ORIGIN_Y / MECH_H },
+        buttons: {
+          attack: { texture: 'icon_cannon' },
+          special: { texture: 'icon_salvo' },
+        },
+        lookName: 'Hazard',
+        skins: [
+          {
+            // A junkyard mech: an oil-barrel body with a goblin in goggles at the porthole, a cone for a hat, a claw and a drill.
+            id: 'scrap',
+            name: 'Scrap Titan',
+            role: 'Held together with hope',
+            accent: 0xe8783a,
+            attack: 'Nail guns',
+            special: 'Bottle rockets',
+            preview: { texture: 'mech_scrap', glow: 'mech_scrap_e', idle: 'mech_scrap_idle_down', chosen: 'mech_scrap_deploy_down', originY: MECH_ORIGIN_Y / MECH_H },
+            buttons: {
+              attack: { texture: 'icon_cannon_scrap' },
+              special: { texture: 'icon_salvo_scrap' },
+            },
+          },
+        ],
+      },
+      {
+        // Three drones that dart out and zap, and a grid of lasers strung between them.
+        id: 'synth',
+        name: 'Synth',
+        role: 'Drones and lasers',
+        accent: 0x5ae8ff,
+        stats: { power: 3, speed: 4, range: 4 },
+        attack: 'Drone strike',
+        special: 'Laser grid',
+        preview: { texture: 'synth', glow: 'synth_e', idle: 'synth_idle_down', chosen: 'synth_open_down', originY: SYNTH_ORIGIN_Y / SYNTH_H },
+        buttons: {
+          attack: { texture: 'icon_drone' },
+          special: { texture: 'icon_grid' },
+        },
+        lookName: 'Halo',
+        skins: [
+          {
+            // A bee queen of gold and chitin: compound eyes, a tiara, wings, and bee-bots for drones.
+            id: 'hive',
+            name: 'Hive Queen',
+            role: 'Queen of the golden swarm',
+            accent: 0xffb03a,
+            attack: 'Bee-bot sting',
+            special: 'Honeycomb wall',
+            preview: { texture: 'synth_hive', glow: 'synth_hive_e', idle: 'synth_hive_idle_down', chosen: 'synth_hive_open_down', originY: SYNTH_ORIGIN_Y / SYNTH_H },
+            buttons: {
+              attack: { texture: 'icon_drone_hive' },
+              special: { texture: 'icon_grid_hive' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      if (look === 'synth') return new Synth(world, x, y, SYNTH_KIT);
+      if (look === 'hive') return new Synth(world, x, y, HIVE_KIT);
+      return new Mech(world, x, y, look === 'scrap' ? SCRAP_KIT : MECH_KIT);
     },
   },
 ];

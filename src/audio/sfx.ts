@@ -1717,6 +1717,78 @@ export class Sfx {
     for (let i = 0; i < 4; i++) this.chirp(out, t + i * 0.05, 'sine', 5400 - i * 300, 4200, 0.02, 0.12);
   }
 
+  // ------------------------------------------------------------ The Automaton
+
+  /** A mech cannon: a hard, low bark and a metal clank as the breech kicks; the scrap's nail gun is a flat pneumatic thwack. */
+  cannon(t: number, pan: number, scrap: boolean): void {
+    const out = this.out(pan, scrap ? 0.6 : 0.75, 0.2);
+    if (scrap) {
+      this.burstNoise(out, t, 'bandpass', 2400, 900, 2, 0.4, 0.05);
+      this.chirp(out, t, 'square', 320, 140, 0.12, 0.04);
+      return;
+    }
+    this.chirp(out, t, 'sine', 170, 45, 0.6, 0.12);
+    this.burstNoise(out, t, 'lowpass', 2600, 300, 0.9, 0.5, 0.09, true);
+    this.chirp(out, t + 0.05, 'square', rand(900, 1100), 700, 0.05, 0.03);
+  }
+
+  /** A missile (or a bottle rocket) leaving its pod: a rushing whoosh that climbs. */
+  missile(t: number, pan: number, scrap: boolean): void {
+    const out = this.out(pan, 0.5, 0.25);
+    this.burstNoise(out, t, 'bandpass', 700, scrap ? 5200 : 2600, 1.4, 0.35, 0.35);
+    if (scrap) this.chirp(out, t, 'sine', 1400, 3200, 0.1, 0.3);
+  }
+
+  /** A target painted: a short electronic blip, higher with each mark. */
+  lockOn(t: number, n: number): void {
+    const out = this.out(0, 0.35, 0.05);
+    const f = 900 * Math.pow(2, Math.min(n, 8) / 12);
+    this.chirp(out, t, 'square', f, f, 0.1, 0.05);
+    this.chirp(out, t + 0.06, 'square', f * 1.5, f * 1.5, 0.08, 0.05);
+  }
+
+  /** A missile going off: a thump and a crackle. */
+  blast(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.35);
+    this.chirp(out, t, 'sine', 140, 38, 0.55, 0.22);
+    this.burstNoise(out, t, 'lowpass', 3400, 250, 0.8, 0.5, 0.25, true);
+  }
+
+  /** Overheating: a klaxon's two notes, a clank, and steam hissing out. */
+  vent(t: number): void {
+    const out = this.out(0, 0.7, 0.3);
+    this.chirp(out, t, 'sawtooth', 620, 620, 0.08, 0.14);
+    this.chirp(out, t + 0.16, 'sawtooth', 460, 460, 0.08, 0.14);
+    this.chirp(out, t + 0.02, 'square', 180, 90, 0.2, 0.06);
+    this.burstNoise(out, t + 0.05, 'highpass', 3000, 5000, 0.7, 0.4, 0.9);
+  }
+
+  /** A drone's zap: a bright, buzzing crack of static. */
+  droneZap(t: number, pan: number, hive: boolean): void {
+    const out = this.out(pan, 0.45, 0.15);
+    if (hive) {
+      this.chirp(out, t, 'sawtooth', 240, 180, 0.12, 0.09);
+      this.burstNoise(out, t, 'bandpass', 3000, 1800, 4, 0.2, 0.05);
+      return;
+    }
+    this.zap(out, t, 0.2, 0.08);
+    this.chirp(out, t, 'square', 1800, 600, 0.06, 0.06);
+  }
+
+  /** Servos whirring: the drones flying to their posts, or the siege legs coming down. */
+  servo(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.4, 0.1);
+    const g = gain(ctx, 0, filter(ctx, 'bandpass', 1200, 2, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.25, t + 0.04);
+    g.gain.setTargetAtTime(0, t + 0.3, 0.05);
+    const o = osc(ctx, 'sawtooth', 260, g);
+    sweep(o.frequency, t, 260, 520, 0.3);
+    o.start(t);
+    o.stop(t + 0.5);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {
