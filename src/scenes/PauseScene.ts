@@ -10,7 +10,7 @@ import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText 
 import { fpsBottom } from './FpsScene';
 
 const PANEL_W = 172;
-const PANEL_H = 182;
+const PANEL_H = 198;
 const ROW_H = 16;
 const CONTROL_X = 86;
 const CONTROL_W = 76;
@@ -42,6 +42,7 @@ export class PauseScene extends Phaser.Scene {
   private fpsButton!: PixelButton;
   private qualityButton!: PixelButton;
   private zoomButton!: PixelButton;
+  private shakeButton!: PixelButton;
   private resume!: PixelButton;
   private home!: PixelButton;
 
@@ -117,6 +118,7 @@ export class PauseScene extends Phaser.Scene {
       const z = settings.values.zoom;
       settings.set('zoom', z === 'far' ? 'normal' : z === 'normal' ? 'close' : 'far');
     });
+    this.shakeButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => settings.set('shake', !settings.values.shake));
     const rows: [string, PixelSlider | PixelButton][] = [
       ['Brightness', slider(0xffe08a, v.brightness, 'brightness')],
       ['Music', slider(0x6fe4ff, v.music, 'music')],
@@ -125,6 +127,7 @@ export class PauseScene extends Phaser.Scene {
       ['FPS counter', this.fpsButton],
       ['Graphics', this.qualityButton],
       ['Zoom', this.zoomButton],
+      ['Screen shake', this.shakeButton],
     ];
     this.labels = rows.map(([text]) => pixelText(this, 0, 0, text, 0xb8a8e8));
     this.controlsRow = rows.map(([, c]) => c);
@@ -148,6 +151,7 @@ export class PauseScene extends Phaser.Scene {
     this.fpsButton.setText(!settings.values.showFps ? 'Hidden' : settings.values.profiler ? 'Details' : 'Shown');
     this.qualityButton.setText({ full: 'Full', fast: 'Fast', low: 'Low' }[settings.values.quality]);
     this.zoomButton.setText({ far: 'Far', normal: 'Normal', close: 'Close' }[settings.values.zoom]);
+    this.shakeButton.setText(settings.values.shake ? 'On' : 'Off');
   }
 
   private setOpen(open: boolean): void {
@@ -171,7 +175,7 @@ export class PauseScene extends Phaser.Scene {
       this.scene.resume('ui');
     }
     this.hud.setVisible(!open);
-    for (const b of [this.dayButton, this.fpsButton, this.qualityButton, this.zoomButton, this.resume, this.home]) b.setEnabled(open);
+    for (const b of [this.dayButton, this.fpsButton, this.qualityButton, this.zoomButton, this.shakeButton, this.resume, this.home]) b.setEnabled(open);
     this.tweens.killTweensOf(this.menu);
     if (open) this.menu.setVisible(true);
     this.tweens.add({ targets: this.menu, alpha: open ? 1 : 0, duration: 140, onComplete: () => this.menu.setVisible(open) });

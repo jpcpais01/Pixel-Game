@@ -15,11 +15,13 @@ export interface Settings {
   quality: 'full' | 'fast' | 'low';
   /** How much of the world fits on screen: Far shows the most. */
   zoom: 'far' | 'normal' | 'close';
+  /** Screen shakes (hits, slams, gem hoards, the shop's wishes); off keeps the view still. */
+  shake: boolean;
 }
 
 // Phones and tablets start on Fast; they have dense screens and small GPUs.
 const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true, profiler: false, quality: touch ? 'fast' : 'full', zoom: 'far' };
+const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true, profiler: false, quality: touch ? 'fast' : 'full', zoom: 'far', shake: true };
 
 type Listener = (s: Settings) => void;
 

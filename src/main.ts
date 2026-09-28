@@ -32,6 +32,13 @@ setViewZoom(settings.values.zoom);
 
 const initial = viewSize();
 
+// Every screen shake in the game goes through a camera's shake, so the Screen
+// shake setting (in the pause menu) stills them all here.
+const cameraShake = Phaser.Cameras.Scene2D.Camera.prototype.shake;
+Phaser.Cameras.Scene2D.Camera.prototype.shake = function (this: Phaser.Cameras.Scene2D.Camera, ...args: Parameters<typeof cameraShake>) {
+  return settings.values.shake ? cameraShake.apply(this, args) : this;
+};
+
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
   parent: 'app',

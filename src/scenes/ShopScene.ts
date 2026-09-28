@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
+import { settings } from '../game/settings';
 import { collection } from '../game/collection';
 import { ALL_SKINS, DUPE_GEMS, PITY, RARITY_INFO, SKIN_RARITIES, WISH10_COST, WISH_COST, ownedSkins, wish, wornSkin, type SkinEntry, type SkinRarity, type WishResult } from '../game/gacha';
 import { ALTAR_H, ALTAR_TOP, CRYSTAL_FRAMES, CRYSTAL_H, addBitmap, cardBack, cardFront, registerShopArt, shopHall } from '../art/shop';
@@ -789,6 +790,7 @@ export class ShopScene extends Phaser.Scene {
    * pixel art, and scales with the screen's size.)
    */
   private jolt(ms: number, px: number): void {
+    if (!settings.values.shake) return;
     if (px >= this.shake.px * (this.shake.t / Math.max(1, this.shake.ms))) this.shake = { t: ms, ms, px };
   }
 
