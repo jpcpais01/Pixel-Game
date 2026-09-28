@@ -23,6 +23,9 @@ import { PrimalStampede, WildWrath } from './druid';
 import { AsgardThunder, OdinSpear } from './valkyrie';
 import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
 import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT } from '../Valkyrie';
+import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
+import { HIVE_KIT, SYNTH_KIT } from '../Synth';
+import { SIEGE_MS, SwarmProtocol } from './robot';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 
@@ -291,6 +294,25 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.asgardIcon,
     cast: (c) => c.world.addEffect(new AsgardThunder(c.world, c)),
   },
+  'automaton:mech': {
+    name: 'Siege Mode',
+    cost: 70,
+    windup: 500,
+    aim: 'self',
+    pal: MECH_KIT.boom,
+    icon: icons.siegeIcon,
+    // The mech plants itself and does the firing (see Mech.siege).
+    cast: (c) => (c.hero as Partial<Mech>).siege?.(SIEGE_MS),
+  },
+  'automaton:synth': {
+    name: 'Swarm Protocol',
+    cost: 75,
+    windup: 600,
+    aim: 'self',
+    pal: SYNTH_KIT.pal,
+    icon: icons.swarmIcon,
+    cast: (c) => c.world.addEffect(new SwarmProtocol(c.world, c)),
+  },
 };
 
 /** Skins' takes on their type's Special, by `class:skin`. */
@@ -334,6 +356,8 @@ const SKINS: Record<string, UltSkin> = {
   'druid:frostfang': { name: 'Winter Stampede', pal: FROST_MAGIC.pal, type: 'wild' },
   'valkyrie:sunshield': { name: 'Spear of the Sun', pal: SUN_KIT.pal },
   'valkyrie:raven': { name: 'Wrath of the Raven', pal: RAVEN_KIT.pal, type: 'storm' },
+  'automaton:scrap': { name: 'Grand Opening', pal: SCRAP_KIT.boom },
+  'automaton:hive': { name: 'The Golden Swarm', pal: HIVE_KIT.pal, type: 'synth' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

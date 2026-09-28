@@ -360,3 +360,27 @@ export const asgardIcon: IconPainter = (put, p) => {
   put(4, 11, p.core);
   put(11, 11, p.core);
 };
+
+/** Siege Mode: a planted turret on splayed legs, a fan of fire from its guns. */
+export const siegeIcon: IconPainter = (put, p) => {
+  for (let x = 5; x <= 10; x++) for (let y = 6; y <= 9; y++) put(x, y, y === 6 ? p.hot : p.mid);
+  seg(put, 6, 10, 2, 14, p.deep);
+  seg(put, 9, 10, 13, 14, p.deep);
+  seg(put, 7, 10, 7, 14, p.deep);
+  for (const [dx, dy] of [[1, -0.45], [1, 0], [1, 0.45]]) {
+    for (let k = 1; k <= 4; k++) put(Math.round(10 + dx * k), Math.round(7.5 + dy * k * 3), k === 1 ? p.core : k < 3 ? p.hot : p.mid);
+  }
+  put(4, 5, p.deep);
+  put(4, 4, p.mid);
+};
+
+/** Swarm Protocol: an open core and a cloud of tiny drones pouring out of it. */
+export const swarmIcon: IconPainter = (put, p) => {
+  disc(put, 8, 9, 2.4, p.core);
+  ellipse(put, 8, 9, 3.6, 3.6, 0.22, p.mid);
+  const pts: [number, number][] = [[3, 3], [6, 2], [11, 2], [13, 5], [2, 7], [14, 9], [3, 12], [12, 13], [7, 14], [10, 4], [5, 5]];
+  for (const [x, y] of pts) {
+    put(x, y, p.hot);
+    put(x + 1, y, p.deep);
+  }
+};

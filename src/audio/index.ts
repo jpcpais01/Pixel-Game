@@ -458,6 +458,41 @@ class GameSound {
     if (t !== null) this.sfx!.bowDraw(t, big);
   }
 
+  cannon(pan = 0, scrap = false): void {
+    const t = this.slot('cannon');
+    if (t !== null) this.sfx!.cannon(t, pan, scrap);
+  }
+
+  missile(pan = 0, scrap = false): void {
+    const t = this.slot('missile');
+    if (t !== null) this.sfx!.missile(t, pan, scrap);
+  }
+
+  lockOn(n: number): void {
+    const t = this.slot('lockOn');
+    if (t !== null) this.sfx!.lockOn(t, n);
+  }
+
+  blast(pan = 0): void {
+    const t = this.slot('blast');
+    if (t !== null) this.sfx!.blast(t, pan);
+  }
+
+  vent(): void {
+    const t = this.slot('vent');
+    if (t !== null) this.sfx!.vent(t);
+  }
+
+  droneZap(pan = 0, hive = false): void {
+    const t = this.slot('droneZap');
+    if (t !== null) this.sfx!.droneZap(t, pan, hive);
+  }
+
+  servo(pan = 0): void {
+    const t = this.slot('servo');
+    if (t !== null) this.sfx!.servo(t, pan);
+  }
+
   bowShot(pan = 0, storm = false): void {
     const t = this.slot('bowShot');
     if (t !== null) this.sfx!.bowShot(t, pan, storm);
