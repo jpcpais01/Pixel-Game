@@ -37,6 +37,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'samurai:kitsune': 'legendary',
   'valkyrie:raven': 'legendary',
   'automaton:hive': 'legendary',
+  'phantom:cala': 'legendary',
   'wizard:astral': 'epic',
   'warrior:spartan': 'epic',
   'paladin:oathbreaker': 'epic',
@@ -52,6 +53,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'druid:autumn': 'epic',
   'druid:frostfang': 'epic',
   'automaton:scrap': 'epic',
+  'phantom:tea': 'epic',
 };
 
 /** One skin as the shop knows it. */

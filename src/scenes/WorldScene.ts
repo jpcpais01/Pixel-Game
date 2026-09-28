@@ -643,6 +643,8 @@ export class WorldScene extends Phaser.Scene {
   hurtHero(harm: Harm): void {
     const h = this.hero;
     if (this.downT > 0 || this.grace > 0) return;
+    // A ghost may slip through the blow entirely.
+    if (h.dodge?.()) return;
     // A ward takes the edge off every blow.
     const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard') * gear.guard * riftMods.guard * petMods.guard * riftMods.fury));
     const lost = h.vitals.damage(damage);

@@ -58,6 +58,8 @@ import { COLUMN_H, COLUMN_W, ISLAND_H, ISLAND_W, ISLETS, column, fallStrip, foam
 import { ISLE_H, ISLE_W } from '../world/islandLayout';
 import { birdSheet } from './skyArena';
 import { BOLT_DIRS, MECH_ANIMS, MECH_BOLT_SIZE, MECH_H, MECH_LOOKS, MECH_W, boltFrame as mechBolt, buildMechFrames, cannonIcon, reticle, salvoIcon } from './mech';
+import { HAUNT_KINDS, HAUNT_SIZE, POLTER_ANIMS, POLTER_H, POLTER_LOOKS, POLTER_W, buildPolterFrames, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
+import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, WRAITH_ANIMS, WRAITH_H, WRAITH_LOOKS, WRAITH_W, buildWraithFrames, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_ANIMS, SYNTH_H, SYNTH_LOOKS, SYNTH_W, buildSynthFrames, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, leafBit, rayCanvas } from './trees';
@@ -702,6 +704,57 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   const bolts = (['shell', 'nail', 'missile', 'rocket'] as const).flatMap((k) => frameList(Array.from({ length: BOLT_DIRS }, (_, i) => mechBolt(k, i)), `${k}_`));
   register(scene, 'mech_bolt', pack(bolts, MECH_BOLT_SIZE, MECH_BOLT_SIZE), MECH_BOLT_SIZE, MECH_BOLT_SIZE);
   scene.textures.addCanvas('mech_reticle', toCanvas(13, 13, reticle()));
+  // The Phantom: the Poltergeist ('polter', and 'polter_tea' for the Tea
+  // Party) and the Lantern Wraith ('wraith', 'wraith_cala' for the Calavera);
+  // the haunted things thrown ('haunt', by kind), the wisps ('soulwisp' and
+  // 'soulwisp_petal', flickering on a loop), the possession marks, the Dead of
+  // Night's dark, and the icons.
+  for (const look of POLTER_LOOKS) {
+    yield;
+    const pf = buildPolterFrames(look);
+    register(scene, look.key, pack(pf.map((f) => ({ name: f.key, r: f.canvas.render() })), POLTER_W, POLTER_H), POLTER_W, POLTER_H);
+    for (const an of POLTER_ANIMS) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${an.name}_${d}`,
+          frames: pf.filter((f) => f.anim === an.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: an.fps,
+          repeat: an.loop ? -1 : 0,
+        });
+      }
+    }
+  }
+  for (const look of WRAITH_LOOKS) {
+    yield;
+    const wf = buildWraithFrames(look);
+    register(scene, look.key, pack(wf.map((f) => ({ name: f.key, r: f.canvas.render() })), WRAITH_W, WRAITH_H), WRAITH_W, WRAITH_H);
+    for (const an of WRAITH_ANIMS) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${an.name}_${d}`,
+          frames: wf.filter((f) => f.anim === an.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: an.fps,
+          repeat: an.loop ? -1 : 0,
+        });
+      }
+    }
+  }
+  register(scene, 'haunt', pack(HAUNT_KINDS.map((k) => ({ name: k, r: hauntFrame(k).render() })), HAUNT_SIZE, HAUNT_SIZE), HAUNT_SIZE, HAUNT_SIZE);
+  for (const [key, petal] of [['soulwisp', false], ['soulwisp_petal', true]] as const) {
+    register(scene, key, pack(frameList(Array.from({ length: WISP_FRAMES }, (_, f) => wispFrame(f, petal)), 'w'), WISP_SIZE, WISP_SIZE), WISP_SIZE, WISP_SIZE);
+    scene.anims.create({ key: `${key}_flicker`, frames: Array.from({ length: WISP_FRAMES }, (_, f) => ({ key, frame: `w${f}` })), frameRate: petal ? 8 : 12, repeat: -1 });
+  }
+  register(scene, 'possess_mark', pack([{ name: 'w', r: possessMark(false).render() }, { name: 'c', r: possessMark(true).render() }], POSSESS_MARK, POSSESS_MARK), POSSESS_MARK, POSSESS_MARK);
+  scene.textures.addCanvas('night_hole', toCanvas(128, 128, nightHole()));
+  scene.textures.addCanvas('icon_hurl', toCanvas(16, 16, hurlIcon()));
+  scene.textures.addCanvas('icon_rattle', toCanvas(16, 16, rattleIcon()));
+  scene.textures.addCanvas('icon_hurl_tea', toCanvas(16, 16, hurlIcon(true)));
+  scene.textures.addCanvas('icon_rattle_tea', toCanvas(16, 16, rattleIcon(true)));
+  scene.textures.addCanvas('icon_lantern', toCanvas(16, 16, lanternIcon()));
+  scene.textures.addCanvas('icon_possess', toCanvas(16, 16, possessIcon()));
+  scene.textures.addCanvas('icon_lantern_cala', toCanvas(16, 16, lanternIcon(true)));
+  scene.textures.addCanvas('icon_possess_cala', toCanvas(16, 16, possessIcon(true)));
+
   scene.textures.addCanvas('icon_cannon', toCanvas(16, 16, cannonIcon()));
   scene.textures.addCanvas('icon_salvo', toCanvas(16, 16, salvoIcon()));
   scene.textures.addCanvas('icon_cannon_scrap', toCanvas(16, 16, cannonIcon(true)));

@@ -384,3 +384,30 @@ export const swarmIcon: IconPainter = (put, p) => {
     put(x + 1, y, p.deep);
   }
 };
+
+/** Haunted House: a crooked house of ghost-light, its windows lit. */
+export const hauntIcon: IconPainter = (put, p) => {
+  seg(put, 3, 14, 3, 7, p.hot);
+  seg(put, 13, 14, 13, 7, p.hot);
+  seg(put, 3, 14, 13, 14, p.mid);
+  seg(put, 2, 7, 8, 1, p.hot);
+  seg(put, 14, 7, 8, 1, p.hot);
+  seg(put, 11, 4, 11, 1, p.mid);
+  for (const [x, y] of [[5, 9], [10, 9]]) for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) put(x + dx, y + dy, p.core);
+  seg(put, 7, 14, 7, 11, p.deep);
+  seg(put, 9, 14, 9, 11, p.deep);
+  put(8, 11, p.deep);
+};
+
+/** Dead of Night: a crescent moon over a lantern's glow. */
+export const nightIcon: IconPainter = (put, p) => {
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const inMoon = Math.hypot(x - 5, y - 5) <= 4.2 && Math.hypot(x - 7, y - 3.8) > 3.6;
+      if (inMoon) put(x, y, p.mid);
+    }
+  }
+  seg(put, 11, 6, 11, 8, p.deep);
+  for (let y = 9; y <= 13; y++) for (let x = 9; x <= 13; x++) put(x, y, x === 9 || x === 13 || y === 9 || y === 13 ? p.deep : p.core);
+  put(11, 11, 0xffffff);
+};
