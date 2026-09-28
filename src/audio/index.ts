@@ -458,6 +458,16 @@ class GameSound {
     if (t !== null) this.sfx!.bowDraw(t, big);
   }
 
+  wail(pan = 0): void {
+    const t = this.slot('wail');
+    if (t !== null) this.sfx!.wail(t, pan);
+  }
+
+  creak(pan = 0): void {
+    const t = this.slot('creak');
+    if (t !== null) this.sfx!.creak(t, pan);
+  }
+
   cannon(pan = 0, scrap = false): void {
     const t = this.slot('cannon');
     if (t !== null) this.sfx!.cannon(t, pan, scrap);

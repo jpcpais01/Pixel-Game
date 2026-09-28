@@ -43,6 +43,10 @@ import { MECH_KIT, Mech, SCRAP_KIT } from './Mech';
 import { HIVE_KIT, SYNTH_KIT, Synth } from './Synth';
 import { MECH_H, MECH_ORIGIN_Y } from '../art/mech';
 import { SYNTH_H, SYNTH_ORIGIN_Y } from '../art/synth';
+import { POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
+import { CALA_KIT, WRAITH_KIT, Wraith } from './Wraith';
+import { POLTER_H, POLTER_ORIGIN_Y } from '../art/poltergeist';
+import { WRAITH_H, WRAITH_ORIGIN_Y } from '../art/wraith';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -75,6 +79,8 @@ export interface Hero {
    * that way instead of the way the hero last walked. Null: no aim.
    */
   update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle, aim?: Aim | null): void;
+  /** A blow is about to land: returning true, the hero slips through it unharmed (a ghost's phasing). */
+  dodge?(): boolean;
 }
 
 type Stats = { power: number; speed: number; range: number };
@@ -1472,6 +1478,82 @@ export const CLASSES: ClassDef[] = [
       if (look === 'synth') return new Synth(world, x, y, SYNTH_KIT);
       if (look === 'hive') return new Synth(world, x, y, HIVE_KIT);
       return new Mech(world, x, y, look === 'scrap' ? SCRAP_KIT : MECH_KIT);
+    },
+  },
+  {
+    id: 'phantom',
+    name: 'Phantom',
+    blurb: 'Only half here: blows pass through',
+    types: [
+      {
+        // Haunted things hurled with its mind, and a rattle that flings foes into the air.
+        id: 'poltergeist',
+        name: 'Poltergeist',
+        role: 'Mischief and flying furniture',
+        accent: 0x8af0c8,
+        stats: { power: 3, speed: 4, range: 4 },
+        attack: 'Hurl',
+        special: 'Rattle',
+        preview: { texture: 'polter', glow: 'polter_e', idle: 'polter_idle_down', chosen: 'polter_cast_down', originY: POLTER_ORIGIN_Y / POLTER_H },
+        buttons: {
+          attack: { texture: 'icon_hurl' },
+          special: { texture: 'icon_rattle' },
+        },
+        lookName: 'Sheet',
+        skins: [
+          {
+            // A Victorian ghost girl: a bonnet and bow, ringlets, lace skirts fading to mist, a parasol, and the tea set.
+            id: 'tea',
+            name: 'Tea Party',
+            role: 'More tea, dearie?',
+            accent: 0xd0b0ff,
+            attack: 'Flying teacups',
+            special: 'Tablecloth trick',
+            preview: { texture: 'polter_tea', glow: 'polter_tea_e', idle: 'polter_tea_idle_down', chosen: 'polter_tea_cast_down', originY: POLTER_ORIGIN_Y / POLTER_H },
+            buttons: {
+              attack: { texture: 'icon_hurl_tea' },
+              special: { texture: 'icon_rattle_tea' },
+            },
+          },
+        ],
+      },
+      {
+        // A lantern that leaves burning wisps, and a dive into a foe to ride it against the others.
+        id: 'wraith',
+        name: 'Lantern Wraith',
+        role: 'Soul-flame and possession',
+        accent: 0x6af0b8,
+        stats: { power: 4, speed: 3, range: 3 },
+        attack: 'Lantern swing',
+        special: 'Possess',
+        preview: { texture: 'wraith', glow: 'wraith_e', idle: 'wraith_idle_down', chosen: 'wraith_cast_down', originY: WRAITH_ORIGIN_Y / WRAITH_H },
+        buttons: {
+          attack: { texture: 'icon_lantern' },
+          special: { texture: 'icon_possess' },
+        },
+        lookName: 'Hooded',
+        skins: [
+          {
+            // A Día de Muertos spirit: a painted sugar skull, a marigold crown, a lace veil and a paper lantern.
+            id: 'cala',
+            name: 'Calavera',
+            role: 'Marigolds for the departed',
+            accent: 0xffb030,
+            attack: 'Marigold lantern',
+            special: 'Sugar-skull possession',
+            preview: { texture: 'wraith_cala', glow: 'wraith_cala_e', idle: 'wraith_cala_idle_down', chosen: 'wraith_cala_cast_down', originY: WRAITH_ORIGIN_Y / WRAITH_H },
+            buttons: {
+              attack: { texture: 'icon_lantern_cala' },
+              special: { texture: 'icon_possess_cala' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      if (look === 'wraith') return new Wraith(world, x, y, WRAITH_KIT);
+      if (look === 'cala') return new Wraith(world, x, y, CALA_KIT);
+      return new Poltergeist(world, x, y, look === 'tea' ? TEA_KIT : POLTER_KIT);
     },
   },
 ];

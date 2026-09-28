@@ -1717,6 +1717,37 @@ export class Sfx {
     for (let i = 0; i < 4; i++) this.chirp(out, t + i * 0.05, 'sine', 5400 - i * 300, 4200, 0.02, 0.12);
   }
 
+  // ------------------------------------------------------------ The Phantom
+
+  /** A ghost's wail: a hollow "oooo" sliding down, wavering. */
+  wail(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.45, 0.6);
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 1400, 1, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.22, t + 0.12);
+    g.gain.setTargetAtTime(0, t + 0.5, 0.15);
+    // A slow waver on the pitch.
+    const depth = gain(ctx, 14);
+    const vib = osc(ctx, 'sine', 6, depth);
+    for (const [f, type] of [[520, 'sine'], [780, 'triangle']] as const) {
+      const o = osc(ctx, type, f, g);
+      depth.connect(o.frequency);
+      sweep(o.frequency, t, f, f * 0.62, 0.8);
+      o.start(t);
+      o.stop(t + 1.1);
+    }
+    vib.start(t);
+    vib.stop(t + 1.1);
+  }
+
+  /** Old wood creaking and things rattling: the poltergeist's doing. */
+  creak(t: number, pan: number): void {
+    const out = this.out(pan, 0.6, 0.3);
+    this.chirp(out, t, 'sawtooth', 90, 140, 0.12, 0.25);
+    for (let i = 0; i < 5; i++) this.burstNoise(out, t + i * 0.045, 'bandpass', rand(1800, 3200), 1200, 5, 0.25, 0.03);
+  }
+
   // ------------------------------------------------------------ The Automaton
 
   /** A mech cannon: a hard, low bark and a metal clank as the breech kicks; the scrap's nail gun is a flat pneumatic thwack. */

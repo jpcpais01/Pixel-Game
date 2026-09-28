@@ -26,6 +26,9 @@ import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT } from '../Valkyrie';
 import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
 import { HIVE_KIT, SYNTH_KIT } from '../Synth';
 import { SIEGE_MS, SwarmProtocol } from './robot';
+import { DeadOfNight, HauntedHouse } from './phantom';
+import { POLTER_KIT, TEA_KIT } from '../Poltergeist';
+import { CALA_KIT, WRAITH_KIT } from '../Wraith';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 
@@ -313,6 +316,25 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.swarmIcon,
     cast: (c) => c.world.addEffect(new SwarmProtocol(c.world, c)),
   },
+  'phantom:poltergeist': {
+    name: 'Haunted House',
+    cost: 70,
+    windup: 550,
+    aim: 'spot',
+    range: 110,
+    pal: POLTER_KIT.pal,
+    icon: icons.hauntIcon,
+    cast: (c) => c.world.addEffect(new HauntedHouse(c.world, c)),
+  },
+  'phantom:wraith': {
+    name: 'Dead of Night',
+    cost: 75,
+    windup: 600,
+    aim: 'self',
+    pal: WRAITH_KIT.pal,
+    icon: icons.nightIcon,
+    cast: (c) => c.world.addEffect(new DeadOfNight(c.world, c)),
+  },
 };
 
 /** Skins' takes on their type's Special, by `class:skin`. */
@@ -358,6 +380,8 @@ const SKINS: Record<string, UltSkin> = {
   'valkyrie:raven': { name: 'Wrath of the Raven', pal: RAVEN_KIT.pal, type: 'storm' },
   'automaton:scrap': { name: 'Grand Opening', pal: SCRAP_KIT.boom },
   'automaton:hive': { name: 'The Golden Swarm', pal: HIVE_KIT.pal, type: 'synth' },
+  'phantom:tea': { name: 'Endless Tea Party', pal: TEA_KIT.pal },
+  'phantom:cala': { name: 'Candlelit Procession', pal: CALA_KIT.pal, type: 'wraith' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */
