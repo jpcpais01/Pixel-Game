@@ -5,6 +5,7 @@ import { sound } from '../../audio';
 import type { Effect } from '../Slash';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 // The Spirit Dungeon's restless dead. They float (bobbing on the air, a
 // little see-through, their light flickering), and each fights its own way:
@@ -22,7 +23,7 @@ function drift(phase: number, base: number, amp: number): number {
 const WISP_WINDUP = 520;
 const WISP_SPEED = 215;
 const WISP_RECOVER = 700;
-const WISP_DAMAGE = 8;
+const WISP_DAMAGE = mobHit('wisp');
 
 /**
  * The lost wisp: a small soul-flame that circles its target, flares, then
@@ -40,7 +41,7 @@ export class Wisp extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'wisp',
-      hp: 26,
+      hp: mobHp('wisp'),
       radius: 5,
       bodyY: 8,
       speed: 56,
@@ -144,7 +145,7 @@ const SHADE_WINDUP = 540;
 const SHADE_SWING = 220;
 const SHADE_RECOVER = 620;
 const SHADE_REACH = 15;
-const SHADE_DAMAGE = 14;
+const SHADE_DAMAGE = mobHit('shade', 1.25);
 /** How long it takes to slip through the dark: gone, then back. */
 const BLINK_OUT = 380;
 const BLINK_IN = 380;
@@ -164,7 +165,7 @@ export class Shade extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'shade',
-      hp: 72,
+      hp: mobHp('shade'),
       radius: 7,
       bodyY: 12,
       speed: 40,
@@ -315,7 +316,7 @@ export class Banshee extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'banshee',
-      hp: 52,
+      hp: mobHp('banshee'),
       radius: 6,
       bodyY: 12,
       speed: 36,
@@ -399,7 +400,7 @@ export class Banshee extends Monster {
 
 const BOLT_SPEED = 84;
 const BOLT_RANGE = 170;
-const BOLT_DAMAGE = 9;
+const BOLT_DAMAGE = mobHit('banshee', 0.8);
 
 /** A bolt of the banshee's wail: an orb of cold light that flies straight and bursts on the hero. */
 export class SpiritBolt implements Effect {

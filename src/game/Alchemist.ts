@@ -10,6 +10,7 @@ import { Bog, CHEM_TOX, CRYO_TOX, Flask, HEX_TOX, onGround, PLAGUE_TOX, SPIRIT_T
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
+import { HERO_STATS } from './stats';
 
 /** How an alchemist plays: his numbers, his throw and his special. */
 export interface AlchemistKit {
@@ -38,8 +39,8 @@ export interface AlchemistKit {
 
 /** The plague doctor and the hex witch: one great flask and a wide, lasting bog. */
 export const PLAGUE_KIT: AlchemistKit = {
-  hp: 95,
-  speed: 60,
+  hp: HERO_STATS['alchemist.plague'].hp,
+  speed: HERO_STATS['alchemist.plague'].speed,
   throwRest: 70,
   specialCooldown: 10000,
   minRange: 18,
@@ -59,8 +60,8 @@ export const PLAGUE_KIT: AlchemistKit = {
  * The special hurls three canisters in a fan, each leaving a small chem pool.
  */
 export const CHEM_KIT: AlchemistKit = {
-  hp: 88,
-  speed: 66,
+  hp: HERO_STATS['alchemist.chem'].hp,
+  speed: HERO_STATS['alchemist.chem'].speed,
   throwRest: 40,
   specialCooldown: 11000,
   minRange: 16,

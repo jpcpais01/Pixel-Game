@@ -10,6 +10,7 @@ import { Heat } from './heat';
 import { bolt, clamp01, Fx, line, pal, segDist, type Ink, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
 // The Synth (the Automaton's second type): a slim android with three drones
 // circling it.
@@ -69,8 +70,8 @@ export interface SynthKit {
 export const SYNTH_KIT: SynthKit = {
   key: 'synth',
   hive: false,
-  maxHp: 90,
-  speed: 66,
+  maxHp: HERO_STATS['automaton.synth'].hp,
+  speed: HERO_STATS['automaton.synth'].speed,
   drone: 'drone',
   pal: pal(0xf2ffff, 0x9ff6ff, 0x3ad6ff, 0x1a86b0, 0x6fe4ff),
   aura: 0xc8f4ff,

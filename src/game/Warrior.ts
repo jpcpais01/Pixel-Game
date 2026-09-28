@@ -9,9 +9,10 @@ import { Vitals } from './combat';
 import { GOLD_FX, HitSpark, JADE_FX, JADE_STEEL_FX, STEEL_FX, Shockwave, SlashArc, Tempest, ThrustStreak, type Effect, type Scheme } from './Slash';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
-export const MAX_HP = 110;
-const SPEED = 60; // world px / second
+export const MAX_HP = HERO_STATS['warrior.knight'].hp;
+const SPEED = HERO_STATS['warrior.knight'].speed; // world px / second
 /** A swing chains into the next hit of the combo if it starts within this long of the previous one. */
 const COMBO_WINDOW = 2000;
 const SPECIAL_COOLDOWN = 5000;

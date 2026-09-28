@@ -8,6 +8,7 @@ import type { Effect } from '../Slash';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { QUEEN_HOME, SANCTUM, spiritFloor } from '../../world/spiritLayout';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 /** The soul-locket's height above her feet, in the frame (before hovering). */
 const LOCKET_Y = 53;
@@ -228,7 +229,7 @@ export class Queen extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'queen',
-      hp: 1150,
+      hp: mobHp('queen'),
       radius: 15,
       bodyY: 26,
       speed: 20,
@@ -383,7 +384,7 @@ export class Queen extends Monster {
     const n = this.enraged ? 3 : 2;
     const base = Math.atan2((target.y - this.y) / 0.8, target.x - this.x);
     const offs = n === 3 ? [0, -0.42, 0.42] : [0, (Math.random() < 0.5 ? -1 : 1) * 0.36];
-    const dmg = this.enraged ? 18 : 15;
+    const dmg = mobHit('queen', this.enraged ? 0.9 : 0.75);
     offs.forEach((o, i) => {
       const line = new GraspLine(this.world, this.x, this.y, Math.cos(base + o), Math.sin(base + o), dmg, HAND_MARK + i * 120);
       this.lines.push(line);
@@ -434,7 +435,7 @@ export class Queen extends Monster {
   private sendEchoes(target: Target): void {
     const n = this.enraged ? 4 : 3;
     const a0 = Math.random() * Math.PI * 2;
-    const dmg = this.enraged ? 22 : 18;
+    const dmg = mobHit('queen', this.enraged ? 1.1 : 0.9);
     for (let i = 0; i < n; i++) {
       let a = a0 + (i * Math.PI * 2) / n;
       let sx = 0;

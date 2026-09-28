@@ -11,6 +11,7 @@ import { pixelGrid, snap } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { characterById, type Aim, type Hero } from '../game/characters';
+import { damageScale, defenseFactor, heroStats, type HeroStats } from '../game/stats';
 import { areaOrigin, reachesBody, type Harm, type Hit, type Hurtbox, type MeleeArea, type Strike } from '../game/combat';
 import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
@@ -138,6 +139,8 @@ const SET_AURA: Record<SetId, { name: string; text: number; tint: number; motes:
 
 export class WorldScene extends Phaser.Scene {
   private hero!: Hero;
+  /** The hero's base stats (its type's; gear adds to them). */
+  private stats!: HeroStats;
   /** Online play: the other players, and what is shared with them (null alone). */
   private net: NetPlay | null = null;
   /** Casts the hero's Special (see game/ultimate). */
@@ -391,6 +394,7 @@ export class WorldScene extends Phaser.Scene {
     this.spawnY = arena.spawn.y;
     const ch = characterById(data?.character);
     this.hero = ch.spawn(this, this.spawnX, this.spawnY);
+    this.stats = heroStats(ch.id, ch.type.id);
     diag.hero = `${ch.id} / ${ch.type.id} / ${ch.skin?.id ?? 'no skin'}`;
     diag.arena = arena.id;
     diag.online = session.active ? `online ${session.room?.mode}, ${session.isHost ? 'host' : 'guest'}, ${session.peers.size + 1} players` : 'solo';
@@ -646,7 +650,7 @@ export class WorldScene extends Phaser.Scene {
     // A ghost may slip through the blow entirely.
     if (h.dodge?.()) return;
     // A ward takes the edge off every blow.
-    const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard') * gear.guard * riftMods.guard * petMods.guard * riftMods.fury));
+    const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard') * defenseFactor(this.stats.defense + gear.totals.armor) * riftMods.guard * petMods.guard * riftMods.fury));
     const lost = h.vitals.damage(damage);
     this.grace = HURT_GRACE;
     this.rising = false;
@@ -958,7 +962,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     // Renew, gear and lifesteal: healing a little at a time, counted up above the head once a second.
-    const regen = heroBuffs.regen + gear.totals.regen + riftMods.regen + petMods.regen;
+    const regen = this.stats.regen + heroBuffs.regen + gear.totals.regen + riftMods.regen + petMods.regen;
     if (down || h.vitals.hp >= h.vitals.max) this.regenAcc = 0;
     else {
       this.regenAcc += (regen * dt) / 1000;
@@ -971,14 +975,18 @@ export class WorldScene extends Phaser.Scene {
     this.regenT -= dt;
     if (this.regenT <= 0) {
       this.regenT = 1000;
-      if (this.regenShown > 0) this.popNumber(snap(h.x), snap(h.y) - 38, `+${this.regenShown}`, 0x9dff9a);
+      // A hero's own slow mending (a point now and then) goes unannounced; more than that is counted up.
+      if (this.regenShown > 1) this.popNumber(snap(h.x), snap(h.y) - 38, `+${this.regenShown}`, 0x9dff9a);
       this.regenShown = 0;
     }
   }
 
-  /** How hard the hero's blows land: more under Might, and with gear. */
+  /**
+   * How hard the hero's blows land: its Damage (every blow in its code is
+   * scaled so its basic attack deals exactly that), more under Might, and with gear.
+   */
   get might(): number {
-    return heroBuffs.mod('damage') * gear.power * riftMods.damage * petMods.damage;
+    return damageScale(this.stats) * heroBuffs.mod('damage') * gear.power * riftMods.damage * petMods.damage;
   }
 
   /** A buff was just picked up: its name over the hero, and a burst of its colour. */

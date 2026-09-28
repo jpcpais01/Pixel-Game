@@ -3,6 +3,7 @@ import { Bitmap, bayer, clamp01, mix } from '../art/bitmap';
 import { hex, type RGB } from '../art/pixel';
 import { menuZoom } from '../game/display';
 import { CLASSES, type ClassDef, type Preview, type SkinDef } from '../game/characters';
+import { heroStats, type HeroStats } from '../game/stats';
 import { lastHero, lookOf, ownsSkin, rememberHero, setLook, setType, worn } from '../game/skins';
 import { RARITY_INFO, rarityOf } from '../game/gacha';
 import { ensureUltIcons, ultFor } from '../game/ultimate';
@@ -36,7 +37,24 @@ const BODY_Y = TABS_Y + TAB_H;
 const ROLE_Y = BODY_Y + 6;
 const STATS_Y = BODY_Y + 21;
 const STAT_ROW = 12;
-const SEG_W = 9;
+/** Stats on the select screen, two to a row: a short name, and how its value reads (ATK/S: attacks a second; REGEN: HP a second). */
+const STAT_GRID: [string, (s: HeroStats) => string][][] = [
+  [
+    ['HP', (s) => `${s.hp}`],
+    ['DEF', (s) => `${s.defense}`],
+  ],
+  [
+    ['DMG', (s) => `${s.damage}`],
+    ['ATK/S', (s) => s.rate.toFixed(1)],
+  ],
+  [
+    ['MOVE', (s) => `${s.speed}`],
+    ['REGEN', (s) => `${s.regen}`],
+  ],
+];
+const STAT_COL = 46;
+/** Where each column's value starts, after its longest name. */
+const STAT_VALUE_X = [26, 32];
 const ABIL_X = PAD + 104;
 const ABIL_Y = BODY_Y + 19;
 const ICON_BOX = 18;
@@ -576,6 +594,7 @@ export class SelectScene extends Phaser.Scene {
   private tabs: { label: Phaser.GameObjects.BitmapText; zone: Phaser.GameObjects.Zone }[] = [];
   private role!: Phaser.GameObjects.BitmapText;
   private bars!: Phaser.GameObjects.Graphics;
+  private statValues: Phaser.GameObjects.BitmapText[] = [];
   private abilities: Phaser.GameObjects.BitmapText[] = [];
   private icons!: { attack: Phaser.GameObjects.Sprite; special: Phaser.GameObjects.Image; ult: Phaser.GameObjects.Image };
   private ultName!: Phaser.GameObjects.BitmapText;
@@ -653,7 +672,9 @@ export class SelectScene extends Phaser.Scene {
     this.frame = this.add.graphics();
     this.role = pixelText(this, 0, ROLE_Y, '', LAVENDER);
     this.bars = this.add.graphics();
-    const labels = ['Power', 'Speed', 'Range'].map((l, i) => pixelText(this, PAD + 6, STATS_Y + i * STAT_ROW, l, SOFT));
+    // The type's stats, two to a row: a name, and its value in the look's colour.
+    const labels = STAT_GRID.flatMap((row, i) => row.map(([name], j) => pixelText(this, PAD + 4 + j * STAT_COL, STATS_Y + i * STAT_ROW, name, SOFT)));
+    this.statValues = STAT_GRID.flatMap((row, i) => row.map((_, j) => pixelText(this, PAD + 4 + j * STAT_COL + STAT_VALUE_X[j], STATS_Y + i * STAT_ROW, '')));
 
     // Attack and ability: an icon in a recessed box, and its name.
     const boxes = this.add.graphics();
@@ -698,6 +719,7 @@ export class SelectScene extends Phaser.Scene {
       this.role,
       this.bars,
       ...labels,
+      ...this.statValues,
       boxes,
       ...this.abilities,
       strip,
@@ -749,21 +771,10 @@ export class SelectScene extends Phaser.Scene {
     this.role.setText(fitLine(this.probe, def.role, textW - 12));
     this.role.setX(Math.round((INFO_W - this.role.width) / 2));
 
-    // Stats: a five-segment gauge each, in the look's colour.
-    const g = this.bars.clear();
-    const bx = PAD + 42;
-    [def.stats.power, def.stats.speed, def.stats.range].forEach((value, i) => {
-      const y = STATS_Y + i * STAT_ROW;
-      g.fillStyle(0x0b0818).fillRect(bx - 1, y - 1, 5 * (SEG_W + 1) + 1, 9);
-      for (let s = 0; s < 5; s++) {
-        const x = bx + s * (SEG_W + 1);
-        if (s < value) {
-          g.fillStyle(def.accent).fillRect(x, y, SEG_W, 7);
-          g.fillStyle(0xffffff, 0.45).fillRect(x, y, SEG_W, 1);
-          g.fillStyle(0x000000, 0.25).fillRect(x, y + 5, SEG_W, 2);
-        } else g.fillStyle(0x221a44).fillRect(x, y, SEG_W, 7);
-      }
-    });
+    // Stats: the type's own numbers (skins never change them).
+    this.bars.clear();
+    const st = heroStats(cls.id, look.type.id);
+    STAT_GRID.flat().forEach(([, value], i) => this.statValues[i].setText(value(st)).setTint(def.accent));
 
     // Attack and ability, named for the look.
     const abW = INFO_W - PAD - 4 - this.abilities[0].x;

@@ -8,9 +8,10 @@ import { sound } from '../audio';
 import { Vitals } from './combat';
 import type { Aim, Hero } from './characters';
 import { ARCANE_STYLE, ASTRAL_STYLE, VOID_STYLE, type SpellStyle } from './spells';
+import { HERO_STATS } from './stats';
 
-export const MAX_HP = 80;
-const SPEED = 58; // world px / second
+export const MAX_HP = HERO_STATS['wizard.arcane'].hp;
+const SPEED = HERO_STATS['wizard.arcane'].speed; // world px / second
 const CAST_COOLDOWN = 180; // ms after a cast ends before the next can start
 const BEAM_COOLDOWN = 380; // ms after a beam (or a fizzle) before the next attack
 const MIN_POWER = 0.12; // a tap still fires a thin beam

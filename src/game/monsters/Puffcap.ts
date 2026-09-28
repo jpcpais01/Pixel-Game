@@ -4,13 +4,14 @@ import { snap } from '../display';
 import { sound } from '../../audio';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 const WINDUP = 720;
 const RECOVER = 650;
 /** The burst's reach, an ellipse on the ground (matches the danger_ring texture). */
 const REACH_X = 22;
 const REACH_Y = 12;
-const DAMAGE = 12;
+const DAMAGE = mobHit('puffcap', 1.2);
 
 /**
  * The puffcap: a little glowing mushroom that waddles up to the player and
@@ -24,7 +25,7 @@ export class Puffcap extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'puffcap',
-      hp: 40,
+      hp: mobHp('puffcap'),
       radius: 6,
       bodyY: 8,
       speed: 36,

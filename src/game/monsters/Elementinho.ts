@@ -9,6 +9,7 @@ import type { WorldScene } from '../../scenes/WorldScene';
 import { ELEMENTINHO_HOME, HEART, inHeart } from '../../world/templeLayout';
 import { Blaze, Lob } from './Elementals';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 const HOVER = 6;
 /** Its white-hot heart's height above its feet, in the frame (before hovering). */
@@ -68,7 +69,7 @@ export class Elementinho extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'elementinho',
-      hp: 1300,
+      hp: mobHp('elementinho'),
       radius: 16,
       bodyY: 30,
       speed: 22,
@@ -238,7 +239,7 @@ export class Elementinho extends Monster {
   private rain(target: Target): void {
     const w = this.world;
     const n = this.enraged ? 9 : 6;
-    const damage = this.enraged ? 16 : 14;
+    const damage = mobHit('elementinho', this.enraged ? 0.8 : 0.7);
     const sx = this.x;
     const sy = this.y;
     let placed = 0;
@@ -306,7 +307,7 @@ export class Elementinho extends Monster {
       const w = this.world;
       if (!this.struck) {
         this.struck = w.hurtHeroInEllipse(this.x, this.y, SURGE_RX, SURGE_RY, {
-          damage: this.enraged ? 28 : 24,
+          damage: mobHit('elementinho', this.enraged ? 1.4 : 1.2),
           fromX: this.x - this.ux * 20,
           fromY: this.y - this.uy * 20,
           knock: 260,

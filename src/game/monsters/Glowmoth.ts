@@ -4,6 +4,7 @@ import { snap } from '../display';
 import { sound } from '../../audio';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 /** How high it flutters, and how high it climbs before a dive. */
 const CRUISE = 11;
@@ -11,7 +12,7 @@ const CLIMB = 7;
 const WINDUP = 640;
 const DIVE_SPEED = 200;
 const RECOVER = 820;
-const DAMAGE = 10;
+const DAMAGE = mobHit('glowmoth', 1.1);
 /** It circles its target at about this distance. */
 const ORBIT = 54;
 
@@ -32,7 +33,7 @@ export class Glowmoth extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'glowmoth',
-      hp: 32,
+      hp: mobHp('glowmoth'),
       radius: 6,
       bodyY: 7,
       speed: 50,

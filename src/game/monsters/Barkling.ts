@@ -5,6 +5,7 @@ import { sound } from '../../audio';
 import type { Effect } from '../Slash';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 const WINDUP = 1050;
 /** The thorns' spot follows the target for this much of the windup, then stays put. */
@@ -13,7 +14,7 @@ const RECOVER = 760;
 /** The thorns' reach: an ellipse on the ground (the danger ring, scaled). */
 const REACH_X = 17;
 const REACH_Y = 9;
-const DAMAGE = 15;
+const DAMAGE = mobHit('barkling');
 /** Keeps about this far from its target, where its roots can reach. */
 const RANGE = 96;
 const NEAR = 38;
@@ -32,7 +33,7 @@ export class Barkling extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'barkling',
-      hp: 130,
+      hp: mobHp('barkling'),
       radius: 8,
       bodyY: 12,
       speed: 20,

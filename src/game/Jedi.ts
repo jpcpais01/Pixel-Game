@@ -11,9 +11,10 @@ import { HitSpark, SlashArc, type Effect, type Scheme } from './Slash';
 import { ForceWave } from './Force';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
-export const MAX_HP = 95;
-const SPEED = 64; // world px / second: light on his feet
+export const MAX_HP = HERO_STATS['jedi.knight'].hp;
+const SPEED = HERO_STATS['jedi.knight'].speed; // world px / second: light on his feet
 /** A swing chains into the next if it starts within this long of the previous one. */
 const COMBO_WINDOW = 1500;
 const SPECIAL_COOLDOWN = 6000;

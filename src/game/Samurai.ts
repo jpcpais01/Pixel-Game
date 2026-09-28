@@ -12,6 +12,7 @@ import { CutBurst, Gust, schemePal, WindRing } from './Blades';
 import { Ink, segDist, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
 // Walk frames where a foot lands.
 const FOOTFALLS = new Set([1, 4]);
@@ -32,8 +33,8 @@ export interface SamuraiKit {
 export const BLADEWIND_KIT: SamuraiKit = {
   key: 'samurai',
   ronin: false,
-  maxHp: 90,
-  speed: 66,
+  maxHp: HERO_STATS['samurai.bladewind'].hp,
+  speed: HERO_STATS['samurai.bladewind'].speed,
   steel: { core: 0xffffff, hot: 0xe6f4ff, mid: 0x9fc8f0, deep: 0x4a78b8 },
   wind: { core: 0xf4ffff, hot: 0xbff4ff, mid: 0x6fd4f0, deep: 0x2a86b8, light: 0x8ae0ff },
 };
@@ -55,8 +56,8 @@ export const KITSUNE_KIT: SamuraiKit = {
 export const RONIN_KIT: SamuraiKit = {
   key: 'ronin',
   ronin: true,
-  maxHp: 100,
-  speed: 60,
+  maxHp: HERO_STATS['samurai.ronin'].hp,
+  speed: HERO_STATS['samurai.ronin'].speed,
   steel: { core: 0xffffff, hot: 0xf0f4ff, mid: 0xb8c4dc, deep: 0x6a7894 },
   wind: { core: 0xfffbe8, hot: 0xffe08a, mid: 0xf0b040, deep: 0xa0601e, light: 0xffc860 },
 };

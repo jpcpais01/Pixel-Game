@@ -10,6 +10,7 @@ import { HitSpark, Shockwave, SlashArc, ThrustStreak, type Effect, type Scheme }
 import { bloom, bolt, clamp01, easeOut, flare, Fx, GROUND, pal, ring, segDist, shade, type Ink, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
 // The Valkyrie: the warrior's rig in looks of its own (art/warrior.ts, the
 // `valkyrie` flag), with swan wings, a winged helm and a spear. The attack is
@@ -81,8 +82,8 @@ export interface ValkyrieKit {
 
 export const SPEAR_KIT: ValkyrieKit = {
   key: 'valkyrie',
-  maxHp: 100,
-  speed: 62,
+  maxHp: HERO_STATS['valkyrie.spear'].hp,
+  speed: HERO_STATS['valkyrie.spear'].speed,
   swing: { core: 0xffffff, hot: 0xfff4d8, mid: 0xf4d890, deep: 0xb88a3a },
   heavy: { core: 0xfffdf2, hot: 0xffe6a0, mid: 0xf4c050, deep: 0xa06a1e, light: 0xffe08a },
   pal: pal(0xfffdf2, 0xffe6a0, 0xf4c050, 0xa06a1e, 0xffe08a),
@@ -93,8 +94,8 @@ export const SPEAR_KIT: ValkyrieKit = {
 
 export const STORM_KIT: ValkyrieKit = {
   key: 'valkyrie_storm',
-  maxHp: 95,
-  speed: 64,
+  maxHp: HERO_STATS['valkyrie.storm'].hp,
+  speed: HERO_STATS['valkyrie.storm'].speed,
   swing: { core: 0xffffff, hot: 0xe6f6ff, mid: 0x9fd4f7, deep: 0x4a72c8 },
   heavy: { core: 0xf2fbff, hot: 0xa8e4ff, mid: 0x5ec8ff, deep: 0x3a6ad8, light: 0x8ad8ff },
   pal: pal(0xf2fbff, 0xa8e4ff, 0x5ec8ff, 0x3a6ad8, 0x8ad8ff),

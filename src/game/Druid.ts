@@ -9,6 +9,7 @@ import { bloom, clamp01, dither, easeOut, Fx, GROUND, hash, pal, pool, ring, sha
 import { AUTUMN_STYLE, FROST_STYLE, GROVE_STYLE, WILD_STYLE, type SpellStyle } from './spells';
 import type { Wizard, WizardKit, WizardSkin } from './Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
 // The Druid: the wizard's rig in two looks of its own (art/wizard.ts, heads
 // 'grove' and 'wild'), played through the wizard's cast and charged special
@@ -23,8 +24,8 @@ import type { WorldScene } from '../scenes/WorldScene';
 //    feet, but her claws only reach so far.
 
 export const GROVE_KIT: WizardKit = {
-  maxHp: 85,
-  speed: 58,
+  maxHp: HERO_STATS['druid.grove'].hp,
+  speed: HERO_STATS['druid.grove'].speed,
   castCooldown: 240,
   // Arms raised while the grove springs up.
   fireTime: (p) => 380 + 160 * p,
@@ -33,8 +34,8 @@ export const GROVE_KIT: WizardKit = {
 const leapTime = (p: number) => 280 + 90 * p;
 
 export const WILD_KIT: WizardKit = {
-  maxHp: 105,
-  speed: 64,
+  maxHp: HERO_STATS['druid.wild'].hp,
+  speed: HERO_STATS['druid.wild'].speed,
   castCooldown: 40,
   // Held for the whole leap (as the wolf), and a breath after landing.
   fireTime: (p) => leapTime(p) + 140,

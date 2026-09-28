@@ -10,6 +10,7 @@ import { HitSpark, Shockwave, type Effect, type Scheme } from './Slash';
 import { AIR_FX, CHI_FX, Fissure, Flurry, LUCHA_AIR_FX, LUCHA_FX, MAGMA_FX, PALM_FX, PunchBlast, QI_FX, STONE_FX } from './Fists';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
 const BARRAGE_TIME = 5000;
 /** How far the barrage's fists fly, well past his arms. */
@@ -73,8 +74,8 @@ export interface FighterStyle {
 
 export const BRAWLER_STYLE: FighterStyle = {
   key: 'fighter',
-  maxHp: 110,
-  speed: 62,
+  maxHp: HERO_STATS['fighter.brawler'].hp,
+  speed: HERO_STATS['fighter.brawler'].speed,
   combo: ['jab', 'cross', 'hook', 'upper', 'smash'],
   comboWindow: 1200,
   special: 'barrage',
@@ -85,8 +86,8 @@ export const BRAWLER_STYLE: FighterStyle = {
 
 export const MONK_STYLE: FighterStyle = {
   key: 'fighter_monk',
-  maxHp: 140,
-  speed: 53,
+  maxHp: HERO_STATS['fighter.monk'].hp,
+  speed: HERO_STATS['fighter.monk'].speed,
   combo: ['palm', 'palm2', 'thrust'],
   comboWindow: 1300,
   special: 'quake',
