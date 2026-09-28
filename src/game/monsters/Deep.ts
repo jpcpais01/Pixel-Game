@@ -7,6 +7,7 @@ import type { Effect } from '../Slash';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { Lob } from './Elementals';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 /** The deep's two living lights, as tints. */
 export const CYAN = 0x5ae4ff;
@@ -253,7 +254,7 @@ export class Sporeling extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'sporeling',
-      hp: 24,
+      hp: mobHp('sporeling'),
       radius: 5,
       bodyY: 7,
       speed: 44,
@@ -287,7 +288,7 @@ export class Sporeling extends Monster {
         this.clear();
         this.pose('burst');
         this.enter('attack', 260);
-        w.hurtHeroInEllipse(this.x, this.y, PUFF_RX, PUFF_RY, { damage: 9, fromX: this.x, fromY: this.y, knock: 120 });
+        w.hurtHeroInEllipse(this.x, this.y, PUFF_RX, PUFF_RY, { damage: mobHit('sporeling'), fromX: this.x, fromY: this.y, knock: 120 });
         w.debris(SPORE_TINTS, snap(this.x), snap(this.y) - 6, 14, this.y + 2);
         w.addEffect(new SporeCloud(w, this.x, this.y, 1500, 16, 2, CYAN));
         sound.puff(w.pan(this.x));
@@ -340,7 +341,7 @@ export class Glimbat extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'glimbat',
-      hp: 22,
+      hp: mobHp('glimbat'),
       radius: 5,
       bodyY: 10,
       speed: 62,
@@ -414,7 +415,7 @@ export class Glimbat extends Monster {
       this.y += this.uy * s;
       this.lane?.setAlpha(Math.max(0, this.timer / this.dive) * 0.6);
       if (Math.random() < dt / 30) this.world.debris(GLIMBAT_TINTS, this.x, this.y - this.bodyY, 1, this.y - 1, 'trail');
-      if (!this.struck) this.struck = this.world.hurtHeroAt(this.x, this.y - 8, this.radius + 3, { damage: 8, fromX: this.x - this.ux * 12, fromY: this.y - this.uy * 12, knock: 170 });
+      if (!this.struck) this.struck = this.world.hurtHeroAt(this.x, this.y - 8, this.radius + 3, { damage: mobHit('glimbat'), fromX: this.x - this.ux * 12, fromY: this.y - this.uy * 12, knock: 170 });
       if (this.timer <= 0) {
         this.clearLane();
         this.enter('recover', 600);
@@ -461,7 +462,7 @@ export class Myconid extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'myconid',
-      hp: 62,
+      hp: mobHp('myconid'),
       radius: 7,
       bodyY: 14,
       speed: 32,
@@ -552,7 +553,7 @@ export class Myconid extends Monster {
         frame: 'p3',
         rx: 15,
         ry: 9,
-        damage: 11,
+        damage: mobHit('myconid'),
         knock: 100,
         tints: SPORE_TINTS,
         ringTint: 0xff6ad8,
@@ -593,7 +594,7 @@ export class Shardling extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'shardling',
-      hp: 50,
+      hp: mobHp('shardling'),
       radius: 7,
       bodyY: 6,
       speed: 58,
@@ -649,7 +650,7 @@ export class Shardling extends Monster {
       if (!this.struck) {
         const cx = this.x + this.ux * 9;
         const cy = this.y + this.uy * 5;
-        this.struck = this.world.hurtHeroInEllipse(cx, cy, 10, 7, { damage: 11, fromX: this.x, fromY: this.y, knock: 150 });
+        this.struck = this.world.hurtHeroInEllipse(cx, cy, 10, 7, { damage: mobHit('shardling'), fromX: this.x, fromY: this.y, knock: 150 });
         if (this.struck) this.world.debris(SHARD_TINTS, cx, cy - 4, 5, cy + 2);
       }
       if (this.timer <= 0) {
@@ -693,7 +694,7 @@ export class Geodeback extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'geodeback',
-      hp: 250,
+      hp: mobHp('geodeback'),
       radius: 12,
       bodyY: 14,
       speed: 24,
@@ -774,7 +775,7 @@ export class Geodeback extends Monster {
       this.y += this.uy * s;
       this.gone += s;
       this.lane?.setAlpha(0.6 * (1 - this.gone / this.len));
-      if (!this.struck) this.struck = this.world.hurtHeroInEllipse(this.x + this.ux * 10, this.y, 14, 9, { damage: 20, fromX: this.x - this.ux * 20, fromY: this.y - this.uy * 20, knock: 260 });
+      if (!this.struck) this.struck = this.world.hurtHeroInEllipse(this.x + this.ux * 10, this.y, 14, 9, { damage: mobHit('geodeback', 1.2), fromX: this.x - this.ux * 20, fromY: this.y - this.uy * 20, knock: 260 });
       if (Math.random() < dt / 40) this.world.debris(GEODE_TINTS, this.x - this.ux * 12, this.y, 1, this.y + 1, 'spores');
       if (this.gone >= this.len - 0.5) {
         this.clear();
@@ -792,7 +793,7 @@ export class Geodeback extends Monster {
   private quake(): void {
     const w = this.world;
     this.clear();
-    w.hurtHeroInEllipse(this.x, this.y, QUAKE_RX, QUAKE_RY, { damage: 16, fromX: this.x, fromY: this.y, knock: 200 });
+    w.hurtHeroInEllipse(this.x, this.y, QUAKE_RX, QUAKE_RY, { damage: mobHit('geodeback', 0.95), fromX: this.x, fromY: this.y, knock: 200 });
     w.debris(GEODE_TINTS, snap(this.x), snap(this.y) - 2, 18, this.y + 2);
     this.spikeRing(0);
     w.cameras.main.shake(160, 0.0025);

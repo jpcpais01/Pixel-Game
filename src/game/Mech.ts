@@ -10,6 +10,7 @@ import { Heat } from './heat';
 import { bloom, flare, Fx, pal, ring, type Ink, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
 // The Siege Mech (the Automaton's first type): a walker that stomps about
 // with a cannon on each arm.
@@ -72,8 +73,8 @@ export interface MechKit {
 export const MECH_KIT: MechKit = {
   key: 'mech',
   scrap: false,
-  maxHp: 120,
-  speed: 50,
+  maxHp: HERO_STATS['automaton.mech'].hp,
+  speed: HERO_STATS['automaton.mech'].speed,
   shot: 'shell',
   missile: 'missile',
   boom: pal(0xfffbe8, 0xffd860, 0xff8a2a, 0xc83a10, 0xffb040),

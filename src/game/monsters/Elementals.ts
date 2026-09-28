@@ -7,6 +7,7 @@ import type { Effect } from '../Slash';
 import type { WorldScene } from '../../scenes/WorldScene';
 import type { Element } from '../../world/templeLayout';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 // The Elementinho Temple's creatures. Blobs of all four elements bounce
 // about and pounce; the stone golem is slow and hard to kill, slamming the
@@ -172,7 +173,7 @@ export class TideBolt implements Effect {
     private y: number,
     private ux: number,
     private uy: number,
-    private damage = 8,
+    private damage = mobHit('undine', 0.75),
     private speed = 100,
     private range = 185,
   ) {
@@ -235,11 +236,11 @@ const BLOB_WINDUP = 440;
 const BLOB_RECOVER = 600;
 const HOP = 520;
 
-const BLOB_STATS: Record<Element, { hp: number; damage: number; speed: number; mass: number; reach: number }> = {
-  water: { hp: 30, damage: 8, speed: 46, mass: 0.6, reach: 1 },
-  fire: { hp: 26, damage: 7, speed: 48, mass: 0.6, reach: 1 },
-  earth: { hp: 46, damage: 10, speed: 36, mass: 1.3, reach: 0.85 },
-  air: { hp: 22, damage: 7, speed: 60, mass: 0.4, reach: 1.35 },
+const BLOB_STATS: Record<Element, { damage: number; speed: number; mass: number; reach: number }> = {
+  water: { damage: mobHit('blob_water'), speed: 46, mass: 0.6, reach: 1 },
+  fire: { damage: mobHit('blob_fire', 0.9), speed: 48, mass: 0.6, reach: 1 },
+  earth: { damage: mobHit('blob_earth', 1.25), speed: 36, mass: 1.3, reach: 0.85 },
+  air: { damage: mobHit('blob_air', 0.9), speed: 60, mass: 0.4, reach: 1.35 },
 };
 
 /**
@@ -266,7 +267,7 @@ export class Blob extends Monster {
     const k = BLOB_STATS[el];
     super(world, x, y, {
       key: `blob_${el}`,
-      hp: k.hp,
+      hp: mobHp(`blob_${el}`),
       radius: 5,
       bodyY: 5,
       speed: k.speed,
@@ -385,7 +386,7 @@ export class Blob extends Monster {
 const SLAM_WINDUP = 900;
 const SLAM_RX = 34;
 const SLAM_RY = 20;
-const SLAM_DAMAGE = 22;
+const SLAM_DAMAGE = mobHit('golem', 1.3);
 const HURL_WINDUP = 820;
 const HURL_FLIGHT = 900;
 
@@ -406,7 +407,7 @@ export class Golem extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'golem',
-      hp: 240,
+      hp: mobHp('golem'),
       radius: 11,
       bodyY: 16,
       speed: 24,
@@ -521,7 +522,7 @@ export class Golem extends Monster {
         lit: true,
         rx: 14,
         ry: 9,
-        damage: 16,
+        damage: mobHit('golem', 0.95),
         knock: 160,
         tints: GOLEM_TINTS,
         ringTint: 0x9ad84a,
@@ -570,7 +571,7 @@ export class Undine extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'undine',
-      hp: 56,
+      hp: mobHp('undine'),
       radius: 6,
       bodyY: 12,
       speed: 38,
@@ -669,7 +670,7 @@ export class Undine extends Monster {
 
 const GALE_WINDUP = 520;
 const GALE_SPEED = 250;
-const GALE_DAMAGE = 9;
+const GALE_DAMAGE = mobHit('gale', 0.8);
 
 /**
  * A living whirlwind of the Gale Gallery. It circles its prey, fast and
@@ -688,7 +689,7 @@ export class Gale extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'gale',
-      hp: 44,
+      hp: mobHp('gale'),
       radius: 6,
       bodyY: 12,
       speed: 64,
@@ -798,7 +799,7 @@ export class Gale extends Monster {
 const BREATH_WINDUP = 680;
 const BREATH_TIME = 520;
 const BREATH_LEN = 54;
-const BREATH_DAMAGE = 13;
+const BREATH_DAMAGE = mobHit('salamander', 1.2);
 
 /**
  * A salamander of the Ember Forge: a basalt lizard with lava in its belly.
@@ -816,7 +817,7 @@ export class Salamander extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'salamander',
-      hp: 78,
+      hp: mobHp('salamander'),
       radius: 7,
       bodyY: 7,
       speed: 40,

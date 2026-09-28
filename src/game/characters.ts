@@ -83,8 +83,6 @@ export interface Hero {
   dodge?(): boolean;
 }
 
-type Stats = { power: number; speed: number; range: number };
-
 /** The animated portrait on the select screen. */
 export interface Preview {
   texture: string;
@@ -125,8 +123,6 @@ export interface TypeDef {
   role: string;
   /** Highlight colour. */
   accent: number;
-  /** 1..5 pips each on the select screen. */
-  stats: Stats;
   /** Ability names. */
   attack: string;
   special: string;
@@ -168,7 +164,6 @@ export interface CharacterDef {
   look: string;
   role: string;
   accent: number;
-  stats: Stats;
   attack: string;
   special: string;
   preview: Preview;
@@ -189,7 +184,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Arcanist',
         role: 'Arcane caster',
         accent: 0x6fe4ff,
-        stats: { power: 4, speed: 3, range: 5 },
         attack: 'Energy ball',
         special: 'Charged beam',
         preview: { texture: 'wizard', glow: 'wizard_e', idle: 'wizard_idle_down', chosen: 'wizard_cast_down' },
@@ -233,7 +227,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Pyromancer',
         role: 'Fire and fury',
         accent: 0xff8a30,
-        stats: { power: 5, speed: 3, range: 4 },
         attack: 'Fireball',
         special: 'Meteor',
         preview: { texture: 'wizard_pyro', glow: 'wizard_pyro_e', idle: 'wizard_pyro_idle_down', chosen: 'wizard_pyro_cast_down' },
@@ -305,7 +298,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Knight',
         role: 'Sword and steel',
         accent: 0xffb54a,
-        stats: { power: 5, speed: 4, range: 2 },
         attack: 'Three-hit combo',
         special: 'Whirlwind',
         preview: { texture: 'warrior', glow: 'warrior_e', idle: 'warrior_idle_down', chosen: 'warrior_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
@@ -357,7 +349,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Templar',
         role: 'Tank and healer',
         accent: 0x7fb2ff,
-        stats: { power: 3, speed: 2, range: 2 },
         attack: 'Smite',
         special: 'Consecration',
         preview: { texture: 'paladin', glow: 'paladin_e', idle: 'paladin_idle_down', chosen: 'paladin_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
@@ -389,7 +380,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Crusader',
         role: 'Hammer and sunfire',
         accent: 0xff8a3a,
-        stats: { power: 5, speed: 3, range: 2 },
         attack: 'Sunhammer',
         special: 'Sunfall',
         preview: { texture: 'paladin_crusader', glow: 'paladin_crusader_e', idle: 'paladin_crusader_idle_down', chosen: 'paladin_crusader_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
@@ -431,7 +421,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Jedi knight',
         role: 'Saber and Force',
         accent: 0x5fb4ff,
-        stats: { power: 4, speed: 5, range: 3 },
         attack: 'Saber flurry',
         special: 'Force push',
         preview: { texture: 'jedi', glow: 'jedi_e', idle: 'jedi_idle_down', chosen: 'jedi_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
@@ -482,7 +471,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Brawler',
         role: 'Fists of fury',
         accent: 0xff6a4a,
-        stats: { power: 4, speed: 4, range: 2 },
         attack: 'Five-hit combo',
         special: 'Barrage',
         preview: { texture: 'fighter', glow: 'fighter_e', idle: 'fighter_idle_down', chosen: 'fighter_smash_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
@@ -513,7 +501,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Iron monk',
         role: 'Palms of stone',
         accent: 0xf0a63a,
-        stats: { power: 5, speed: 2, range: 3 },
         attack: 'Iron palm',
         special: 'Earthshaker',
         preview: { texture: 'fighter_monk', glow: 'fighter_monk_e', idle: 'fighter_monk_idle_down', chosen: 'fighter_monk_leap_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
@@ -553,7 +540,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Plague doctor',
         role: 'Poisons and potions',
         accent: 0x8cff5a,
-        stats: { power: 3, speed: 3, range: 4 },
         attack: 'Poison flask',
         special: 'Plague bog',
         preview: { texture: 'alchemist', glow: 'alchemist_e', idle: 'alchemist_idle_down', chosen: 'alchemist_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
@@ -599,7 +585,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Chemtech',
         role: 'Chem canisters',
         accent: 0xd4f030,
-        stats: { power: 3, speed: 4, range: 3 },
         attack: 'Chem canister',
         special: 'Chem barrage',
         preview: { texture: 'alchemist_chem', glow: 'alchemist_chem_e', idle: 'alchemist_chem_idle_down', chosen: 'alchemist_chem_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
@@ -639,7 +624,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Ranger',
         role: 'Bow and arrow',
         accent: 0x9ad65a,
-        stats: { power: 3, speed: 4, range: 5 },
         attack: 'Quick shot',
         special: 'Arrow rain',
         preview: { texture: 'archer', glow: 'archer_e', idle: 'archer_idle_down', chosen: 'archer_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
@@ -691,7 +675,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Cutthroat',
         role: 'Daggers and shadows',
         accent: 0xe8505a,
-        stats: { power: 4, speed: 5, range: 2 },
         attack: 'Bleeding stabs',
         special: 'Shadowstep',
         preview: { texture: 'rogue', glow: 'rogue_e', idle: 'rogue_idle_down', chosen: 'rogue_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
@@ -724,7 +707,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Shadow dancer',
         role: 'Blades in the dark',
         accent: 0xa878ff,
-        stats: { power: 3, speed: 5, range: 3 },
         attack: 'Shadow cuts',
         special: 'Shadow dance',
         preview: { texture: 'rogue_dancer', glow: 'rogue_dancer_e', idle: 'rogue_dancer_idle_down', chosen: 'rogue_dancer_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
@@ -764,7 +746,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Bonecaller',
         role: 'Bone and soul',
         accent: 0x5cf0b0,
-        stats: { power: 3, speed: 3, range: 4 },
         attack: 'Soul bolt',
         special: 'Raise dead',
         preview: { texture: 'necro', glow: 'necro_e', idle: 'necro_idle_down', chosen: 'necro_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
@@ -797,7 +778,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Blood mage',
         role: 'Blood and sacrifice',
         accent: 0xff3a4a,
-        stats: { power: 5, speed: 3, range: 3 },
         attack: 'Blood lance',
         special: 'Crimson nova',
         preview: { texture: 'necro_blood', glow: 'necro_blood_e', idle: 'necro_blood_idle_down', chosen: 'necro_blood_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
@@ -840,7 +820,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Minstrel',
         role: 'Lute and song',
         accent: 0x5ee8d6,
-        stats: { power: 3, speed: 4, range: 4 },
         attack: 'Leaping notes',
         special: 'Song of haste',
         preview: { texture: 'bard', glow: 'bard_e', idle: 'bard_idle_down', chosen: 'bard_song_down', originY: BARD_ORIGIN_Y / BARD_H },
@@ -886,7 +865,6 @@ export const CLASSES: ClassDef[] = [
         name: 'War drummer',
         role: 'Drums of war',
         accent: 0xffa040,
-        stats: { power: 5, speed: 3, range: 2 },
         attack: 'Drum blows',
         special: 'Battle rhythm',
         preview: { texture: 'bard_drum', glow: 'bard_drum_e', idle: 'bard_drum_idle_down', chosen: 'bard_drum_boom_down', originY: BARD_ORIGIN_Y / BARD_H },
@@ -929,7 +907,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Timekeeper',
         role: 'Slows and stops time',
         accent: 0xffc860,
-        stats: { power: 3, speed: 3, range: 4 },
         attack: 'Second hand',
         special: 'Stasis clock',
         preview: { texture: 'chrono', glow: 'chrono_e', idle: 'chrono_idle_down', chosen: 'chrono_field_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
@@ -974,7 +951,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Paradox',
         role: 'Echoes and rewinds',
         accent: 0xb890ff,
-        stats: { power: 4, speed: 4, range: 3 },
         attack: 'Echo shards',
         special: 'Rewind',
         preview: { texture: 'chrono_rift', glow: 'chrono_rift_e', idle: 'chrono_rift_idle_down', chosen: 'chrono_rift_rewind_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
@@ -1030,7 +1006,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Marionettist',
         role: 'His puppet fights',
         accent: 0xffc25a,
-        stats: { power: 4, speed: 3, range: 3 },
         attack: 'Puppet strike',
         special: 'Pirouette',
         preview: { texture: 'puppeteer', glow: 'puppeteer_e', idle: 'puppeteer_idle_down', chosen: 'puppeteer_twirl_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
@@ -1074,7 +1049,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Stringweaver',
         role: 'Strings up her foes',
         accent: 0xc08cff,
-        stats: { power: 3, speed: 4, range: 4 },
         attack: 'Razor thread',
         special: 'Marionette',
         preview: { texture: 'weaver', glow: 'weaver_e', idle: 'weaver_idle_down', chosen: 'weaver_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
@@ -1129,7 +1103,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Bladewind',
         role: 'Rides the wind',
         accent: 0x8ad8ff,
-        stats: { power: 4, speed: 5, range: 2 },
         attack: 'Steel tempest',
         special: 'Sweeping blade',
         preview: { texture: 'samurai', glow: 'samurai_e', idle: 'samurai_idle_down', chosen: 'samurai_slash1_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
@@ -1173,7 +1146,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Ronin',
         role: 'Cuts that open later',
         accent: 0xffd070,
-        stats: { power: 5, speed: 3, range: 2 },
         attack: 'Iai cut',
         special: 'Crossing cut',
         preview: { texture: 'ronin', glow: 'ronin_e', idle: 'ronin_idle_down', chosen: 'ronin_slash2_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
@@ -1229,7 +1201,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Grovekeeper',
         role: 'Thorns and green growth',
         accent: 0x8ee05a,
-        stats: { power: 3, speed: 3, range: 4 },
         attack: 'Thorn seed',
         special: 'Wild grove',
         preview: { texture: 'druid', glow: 'druid_e', idle: 'druid_idle_down', chosen: 'druid_cast_down' },
@@ -1261,7 +1232,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Shapeshifter',
         role: 'Claw and fang',
         accent: 0xffa040,
-        stats: { power: 4, speed: 4, range: 2 },
         attack: 'Spirit claws',
         special: 'Pounce',
         preview: { texture: 'druid_wild', glow: 'druid_wild_e', idle: 'druid_wild_idle_down', chosen: 'druid_wild_cast_down' },
@@ -1338,7 +1308,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Spearmaiden',
         role: 'Spear and wing',
         accent: 0xffd070,
-        stats: { power: 4, speed: 4, range: 3 },
         attack: 'Spear chain',
         special: 'Spear of light',
         preview: { texture: 'valkyrie', glow: 'valkyrie_e', idle: 'valkyrie_idle_down', chosen: 'valkyrie_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
@@ -1370,7 +1339,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Stormwing',
         role: 'Lightning from above',
         accent: 0x7ad0ff,
-        stats: { power: 5, speed: 4, range: 2 },
         attack: 'Thunder spear',
         special: 'Valkyrie dive',
         preview: { texture: 'valkyrie_storm', glow: 'valkyrie_storm_e', idle: 'valkyrie_storm_idle_down', chosen: 'valkyrie_storm_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
@@ -1415,7 +1383,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Siege Mech',
         role: 'Heavy guns, hot barrels',
         accent: 0xffb040,
-        stats: { power: 4, speed: 2, range: 4 },
         attack: 'Twin cannons',
         special: 'Lock-on salvo',
         preview: { texture: 'mech', glow: 'mech_e', idle: 'mech_idle_down', chosen: 'mech_deploy_down', originY: MECH_ORIGIN_Y / MECH_H },
@@ -1447,7 +1414,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Synth',
         role: 'Drones and lasers',
         accent: 0x5ae8ff,
-        stats: { power: 3, speed: 4, range: 4 },
         attack: 'Drone strike',
         special: 'Laser grid',
         preview: { texture: 'synth', glow: 'synth_e', idle: 'synth_idle_down', chosen: 'synth_open_down', originY: SYNTH_ORIGIN_Y / SYNTH_H },
@@ -1491,7 +1457,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Poltergeist',
         role: 'Mischief and flying furniture',
         accent: 0x8af0c8,
-        stats: { power: 3, speed: 4, range: 4 },
         attack: 'Hurl',
         special: 'Rattle',
         preview: { texture: 'polter', glow: 'polter_e', idle: 'polter_idle_down', chosen: 'polter_cast_down', originY: POLTER_ORIGIN_Y / POLTER_H },
@@ -1523,7 +1488,6 @@ export const CLASSES: ClassDef[] = [
         name: 'Lantern Wraith',
         role: 'Soul-flame and possession',
         accent: 0x6af0b8,
-        stats: { power: 4, speed: 3, range: 3 },
         attack: 'Lantern swing',
         special: 'Possess',
         preview: { texture: 'wraith', glow: 'wraith_e', idle: 'wraith_idle_down', chosen: 'wraith_cast_down', originY: WRAITH_ORIGIN_Y / WRAITH_H },

@@ -10,6 +10,7 @@ import { HitSpark, type Effect, type Scheme } from './Slash';
 import { Aegis, HealPop, HOLY_FX, Sanctuary, SmiteBurst, SUNFIRE_FX } from './Holy';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
 /**
  * A paladin subtype: its look and the numbers and special it fights with.
@@ -38,8 +39,8 @@ export interface PaladinKit {
 
 export const HOLY_KIT: PaladinKit = {
   look: HOLY_LOOK,
-  speed: 54,
-  maxHp: 120,
+  speed: HERO_STATS['paladin.holy'].speed,
+  maxHp: HERO_STATS['paladin.holy'].hp,
   barrierMax: 60,
   smite: { damage: 15, radius: 11, heal: 4, recover: 110 },
   special: 'consecrate',
@@ -52,8 +53,8 @@ export const HOLY_KIT: PaladinKit = {
 
 export const CRUSADER_KIT: PaladinKit = {
   look: CRUSADER_LOOK,
-  speed: 60,
-  maxHp: 105,
+  speed: HERO_STATS['paladin.crusader'].speed,
+  maxHp: HERO_STATS['paladin.crusader'].hp,
   barrierMax: 45,
   smite: { damage: 20, radius: 13, knock: 190, heal: 2, recover: 200 },
   special: 'sunfall',

@@ -8,6 +8,7 @@ import type { Effect } from '../Slash';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { COSMOS_CX, COSMOS_CY, COSMOS_RX, COSMOS_RY, cosmosSpot } from '../../world/cosmosLayout';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 /** The heart's height above the feet, in the frame (before hovering). */
 const HEART_Y = 56;
@@ -140,7 +141,7 @@ export class Warden extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'warden',
-      hp: 1600,
+      hp: mobHp('warden'),
       radius: 26,
       bodyY: 30,
       speed: 16,
@@ -329,7 +330,7 @@ export class Warden extends Monster {
   private rain(target: Target): void {
     const n = this.enraged ? 7 : 5;
     const mark = this.enraged ? 850 : MARK_TIME;
-    const dmg = this.enraged ? 20 : 16;
+    const dmg = mobHit('warden', this.enraged ? 0.75 : 0.6);
     for (let i = 0; i < n; i++) {
       let p: { x: number; y: number };
       if (i === 0) p = { x: target.x, y: target.y };
@@ -364,7 +365,7 @@ export class Warden extends Monster {
     this.enter('attack', NOVA_TIME);
     this.play('nova', true);
     const w = this.world;
-    w.hurtHeroInEllipse(this.x, this.y, NOVA_RX, NOVA_RY, { damage: this.enraged ? 40 : 34, fromX: this.x, fromY: this.y - 20, knock: 280 });
+    w.hurtHeroInEllipse(this.x, this.y, NOVA_RX, NOVA_RY, { damage: mobHit('warden', this.enraged ? 1.55 : 1.3), fromX: this.x, fromY: this.y - 20, knock: 280 });
     this.wave = w.add.image(snap(this.x), snap(this.y), 'cosmos_wave').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffc8ec).setDepth(this.y + 30);
     this.waveAge = 0;
     w.debris(WARDEN_TINTS, snap(this.heartX), snap(this.heartY), 40, this.y + 40);

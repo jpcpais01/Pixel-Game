@@ -3,6 +3,7 @@ import { snap } from '../display';
 import { sound } from '../../audio';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 const GOLD_TINTS = [0xfff3b0, 0xf0c650, 0xc0862a, 0xffb050];
 const WINDUP = 900;
@@ -10,7 +11,7 @@ const SHORT_WINDUP = 520;
 /** The aim follows the target for this much of the windup, then locks. */
 const AIM_LOCK = 0.7;
 const CHARGE_SPEED = 210;
-const CHARGE_DAMAGE = 16;
+const CHARGE_DAMAGE = mobHit('beetle');
 const DAZED = 950;
 const DAZED_WALL = 1500;
 const DOTS = 7;
@@ -32,7 +33,7 @@ export class Beetle extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'beetle',
-      hp: 110,
+      hp: mobHp('beetle'),
       radius: 9,
       bodyY: 7,
       speed: 26,

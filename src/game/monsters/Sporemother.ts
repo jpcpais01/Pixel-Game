@@ -9,6 +9,7 @@ import type { WorldScene } from '../../scenes/WorldScene';
 import { HOLLOW, SPOREMOTHER_HOME } from '../../world/deepLayout';
 import { MAGENTA, Puffball, SporeCloud } from './Deep';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 /** The glowing heart under her cap, above her feet. */
 const HEART_Y = 58;
@@ -153,7 +154,7 @@ export class Sporemother extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'sporemother',
-      hp: 1400,
+      hp: mobHp('sporemother'),
       radius: 16,
       bodyY: 34,
       speed: 18,
@@ -292,7 +293,7 @@ export class Sporemother extends Monster {
         new Puffball(w, x, y, {
           delay: placed * 90,
           grow: this.enraged ? 800 : BLOOM_GROW,
-          damage: this.enraged ? 16 : 14,
+          damage: mobHit('sporemother', this.enraged ? 0.8 : 0.7),
           rx: 17,
           ry: 10,
           cloud: this.enraged ? 2800 : 2300,
@@ -315,7 +316,7 @@ export class Sporemother extends Monster {
       const a = aim + (k - (n - 1) / 2) * 0.55;
       const sx = this.x + Math.cos(a) * 20;
       const sy = this.y + Math.sin(a) * 12;
-      w.addEffect(new Runner(w, sx, sy, a, this.enraged ? 19 : 16, RUNNER_LIFE + (k % 2) * 250, () => this.prey));
+      w.addEffect(new Runner(w, sx, sy, a, mobHit('sporemother', this.enraged ? 0.95 : 0.8), RUNNER_LIFE + (k % 2) * 250, () => this.prey));
     }
     w.debris(SPORE_TINTS, snap(this.x), snap(this.y) - 2, 20, this.y + 2, 'spores');
     w.cameras.main.shake(160, 0.0018);

@@ -9,6 +9,7 @@ import type { WorldScene } from '../../scenes/WorldScene';
 import { HEART, WYRM_HOME } from '../../world/deepLayout';
 import { CrystalSpike, clearRun, laneMark } from './Deep';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 /** Its geode heart, in its chest, above its feet. */
 const HEART_Y = 58;
@@ -135,7 +136,7 @@ export class Wyrm extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'wyrm',
-      hp: 2600,
+      hp: mobHp('wyrm'),
       radius: 26,
       bodyY: 40,
       speed: 16,
@@ -309,7 +310,7 @@ export class Wyrm extends Monster {
         this.shardT += this.enraged ? 42 : 55;
         const spread = (Math.random() - 0.5) * 0.36;
         const a = Math.atan2(this.uy, this.ux) + spread;
-        this.world.addEffect(new BreathShard(this.world, m.x, m.y, Math.cos(a), Math.sin(a), this.len, this.enraged ? 11 : 9));
+        this.world.addEffect(new BreathShard(this.world, m.x, m.y, Math.cos(a), Math.sin(a), this.len, mobHit('wyrm', this.enraged ? 0.42 : 0.35)));
       }
       if (this.timer <= 0) {
         // Crystals burst up along the path it breathed.
@@ -353,7 +354,7 @@ export class Wyrm extends Monster {
     const w = this.world;
     const cx = this.x + (this.facing === 'r' ? SLAM_X : -SLAM_X) * 0.5;
     const cy = this.y + 6;
-    w.hurtHeroInEllipse(cx, cy, 40, 24, { damage: 20, fromX: cx, fromY: cy, knock: 260 });
+    w.hurtHeroInEllipse(cx, cy, 40, 24, { damage: mobHit('wyrm', 0.75), fromX: cx, fromY: cy, knock: 260 });
     w.debris(WYRM_TINTS, snap(cx), snap(cy) - 4, 30, cy + 2);
     w.cameras.main.shake(260, 0.004);
     sound.slam(w.pan(this.x));
@@ -435,7 +436,7 @@ export class Wyrm extends Monster {
     this.clear();
     this.pose('slam');
     this.enter('attack', 600);
-    w.hurtHeroInEllipse(this.x, this.y, RISE_RX, RISE_RY, { damage: this.enraged ? 30 : 26, fromX: this.x, fromY: this.y, knock: 300 });
+    w.hurtHeroInEllipse(this.x, this.y, RISE_RX, RISE_RY, { damage: mobHit('wyrm', this.enraged ? 1.15 : 1), fromX: this.x, fromY: this.y, knock: 300 });
     w.debris(WYRM_TINTS, snap(this.x), snap(this.y) - 10, 36, this.y + 2);
     w.cameras.main.shake(300, 0.005);
     sound.slam(w.pan(this.x));

@@ -5,6 +5,8 @@ import { sunShadow, SUN_SHADOW_ALPHA } from '../Wizard';
 import { HealthBar } from '../HealthBar';
 import { sound } from '../../audio';
 import type { Hit, Hurtbox } from '../combat';
+import { defenseFactor } from '../stats';
+import { mobDefense } from '../tiers';
 import type { WorldScene } from '../../scenes/WorldScene';
 
 /** Who a monster hunts: the hero, or later any player. Feet position. */
@@ -306,8 +308,8 @@ export abstract class Monster implements Hurtbox {
 
   hurt(hit: Hit): void {
     if (!this.alive || this.intangible) return;
-    // Buffs like Might make every blow land harder.
-    const damage = hit.damage * this.world.might;
+    // Buffs like Might make every blow land harder; its tier's Defense takes the edge off.
+    const damage = hit.damage * this.world.might * defenseFactor(mobDefense(this.stats.key));
     this.world.leech(Math.min(damage, Math.max(0, this.hp)));
     Monster.net?.hit(this, hit, damage);
     this.takeHit(hit, damage);

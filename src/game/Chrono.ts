@@ -12,6 +12,7 @@ import { bloom, flare, strikeGround, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
+import { HERO_STATS } from './stats';
 
 // Walk frames where a foot lands.
 const FOOTFALLS = new Set([1, 4]);
@@ -47,8 +48,8 @@ export const KEEPER_KIT: ChronoKit = {
   key: 'chrono',
   rift: false,
   pal: KEEPER_PAL,
-  maxHp: 82,
-  speed: 60,
+  maxHp: HERO_STATS['chronomancer.keeper'].hp,
+  speed: HERO_STATS['chronomancer.keeper'].speed,
   rest: 150,
   bolt: keeperBolt('chrono', KEEPER_PAL),
   specialDamage: 20,
@@ -67,8 +68,8 @@ export const PARADOX_KIT: ChronoKit = {
   key: 'chrono_rift',
   rift: true,
   pal: RIFT_PAL,
-  maxHp: 92,
-  speed: 66,
+  maxHp: HERO_STATS['chronomancer.paradox'].hp,
+  speed: HERO_STATS['chronomancer.paradox'].speed,
   rest: 110,
   bolt: riftShard('chrono_rift', RIFT_PAL),
   specialDamage: 16,

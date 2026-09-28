@@ -10,6 +10,7 @@ import { Phase, PHASE_SPEED } from './phase';
 import { bloom, Fx, pal, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
 // The Lantern Wraith (the Phantom's second type): a hooded wraith carrying an
 // old iron lantern on a chain.
@@ -73,8 +74,8 @@ export interface WraithKit {
 export const WRAITH_KIT: WraithKit = {
   key: 'wraith',
   cala: false,
-  maxHp: 100,
-  speed: 58,
+  maxHp: HERO_STATS['phantom.wraith'].hp,
+  speed: HERO_STATS['phantom.wraith'].speed,
   wisp: 'soulwisp',
   mark: 'w',
   pal: pal(0xe0fff4, 0x7af0c0, 0x2ab888, 0x0e4a3a, 0x6af0b8),

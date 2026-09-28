@@ -11,9 +11,10 @@ import { onGround } from './Toxins';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
+import { HERO_STATS } from './stats';
 
-export const MAX_HP = 90;
-const SPEED = 64; // world px / second
+export const MAX_HP = HERO_STATS['archer.ranger'].hp;
+const SPEED = HERO_STATS['archer.ranger'].speed; // world px / second
 /** A breath between shots once the string hand is back. */
 const SHOT_REST = 50;
 const ARROW_RANGE = 170;

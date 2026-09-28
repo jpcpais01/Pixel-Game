@@ -66,6 +66,63 @@ export const MOB_TIER: Record<string, Tier> = {
 
 export const tierOf = (kind: string): Tier => MOB_TIER[kind] ?? 'normal';
 
+/**
+ * Each tier's numbers, set against an average hero (Damage 10, 100 HP): `hp`
+ * and `defense` decide how many blows it takes (weak 3, normal 6, strong 15,
+ * a Legend about 130, a Myth about 240), `hit` how hard its main attack lands
+ * before the hero's own Defense. Defense works as on heroes: damage taken is
+ * multiplied by 100 / (100 + Defense).
+ */
+export const TIER_STATS: Record<Tier, { hp: number; hit: number; defense: number }> = {
+  weak: { hp: 30, hit: 8, defense: 0 },
+  normal: { hp: 55, hit: 11, defense: 5 },
+  strong: { hp: 140, hit: 17, defense: 10 },
+  legend: { hp: 1150, hit: 20, defense: 15 },
+  myth: { hp: 2000, hit: 26, defense: 20 },
+};
+
+/**
+ * A monster's size within its tier: its health is the tier's times this
+ * (0.75 to 1.3, like a hero's budget allows some spread). One left out is 1.
+ */
+export const MOB_BULK: Record<string, number> = {
+  frog: 1.1,
+  puffcap: 1.3,
+  glowmoth: 1.05,
+  wisp: 0.9,
+  blob_water: 1,
+  blob_fire: 0.9,
+  blob_earth: 1.3,
+  blob_air: 0.75,
+  sporeling: 0.8,
+  glimbat: 0.75,
+  banshee: 0.95,
+  shade: 1.3,
+  gale: 0.8,
+  undine: 1,
+  salamander: 1.3,
+  shardling: 0.9,
+  myconid: 1.1,
+  beetle: 0.8,
+  barkling: 0.95,
+  golem: 1.3,
+  geodeback: 1.3,
+  queen: 1,
+  elementinho: 1.1,
+  sporemother: 1.2,
+  warden: 0.9,
+  wyrm: 1.3,
+};
+
+/** A monster's full health: its tier's, times its bulk. */
+export const mobHp = (kind: string): number => Math.round(TIER_STATS[tierOf(kind)].hp * (MOB_BULK[kind] ?? 1));
+
+/** What one of its attacks deals: its tier's hit times `k` (1 for its main attack). */
+export const mobHit = (kind: string, k = 1): number => Math.round(TIER_STATS[tierOf(kind)].hit * k);
+
+/** A monster's Defense, from its tier. */
+export const mobDefense = (kind: string): number => TIER_STATS[tierOf(kind)].defense;
+
 /** Each tier's chance, per kill, of dropping gems, and how many (each count in the range equally likely). */
 export const TIER_GEMS: Record<Tier, { chance: number; min: number; max: number }> = {
   weak: { chance: 0.001, min: 1, max: 1 },

@@ -11,6 +11,7 @@ import { BLOOD_FX, Risen, SOUL_FX, SoulBolt, TOMB_FX, WYRM_FX, type BoltKind, ty
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
+import { HERO_STATS } from './stats';
 
 /** The raised dead come up at the mouse, within these; ahead the way he last walked on touch. */
 const MIN_RANGE = 16;
@@ -51,8 +52,8 @@ export interface NecroKit {
 /** Soul bolts that curve into foes; three skeletons raised to fight for 12 s. */
 export const NECRO_KIT: NecroKit = {
   key: 'necro',
-  maxHp: 80,
-  speed: 60,
+  maxHp: HERO_STATS['necromancer.necro'].hp,
+  speed: HERO_STATS['necromancer.necro'].speed,
   castRest: 110,
   bolt: { suffix: '_soul', fx: SOUL_FX, speed: 150, range: 165, damage: 7, seek: 5, pierce: 0, blood: false },
   boltHeal: 0,
@@ -67,8 +68,8 @@ export const NECRO_KIT: NecroKit = {
  */
 export const BLOOD_KIT: NecroKit = {
   key: 'necro_blood',
-  maxHp: 100,
-  speed: 62,
+  maxHp: HERO_STATS['necromancer.blood'].hp,
+  speed: HERO_STATS['necromancer.blood'].speed,
   castRest: 80,
   bolt: { suffix: '_blood', fx: BLOOD_FX, speed: 240, range: 115, damage: 6, seek: 0, pierce: 2, blood: true },
   boltHeal: 1,

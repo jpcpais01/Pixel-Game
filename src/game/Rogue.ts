@@ -10,6 +10,7 @@ import { HitSpark, SlashArc, ThrustStreak, type Effect, type Scheme } from './Sl
 import { Afterimage, Bleed, SmokePuff, type ShadowStyle } from './Shadows';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
 /** How long a strike may follow the last one and still chain. */
 const COMBO_WINDOW = 900;
@@ -71,8 +72,8 @@ export interface RogueStyle {
 
 export const ROGUE_STYLE: RogueStyle = {
   key: 'rogue',
-  maxHp: 80,
-  speed: 70,
+  maxHp: HERO_STATS['rogue.rogue'].hp,
+  speed: HERO_STATS['rogue.rogue'].speed,
   chain: [
     { anim: 'stab1', shape: 'stab', damage: 6, reach: 17, bleed: 1, lunge: 60 },
     { anim: 'stab2', shape: 'stab', damage: 6, reach: 17, bleed: 1, lunge: 60 },
@@ -90,8 +91,8 @@ export const ROGUE_STYLE: RogueStyle = {
 
 export const DANCER_STYLE: RogueStyle = {
   key: 'rogue_dancer',
-  maxHp: 72,
-  speed: 74,
+  maxHp: HERO_STATS['rogue.dancer'].hp,
+  speed: HERO_STATS['rogue.dancer'].speed,
   chain: [
     { anim: 'stab1', shape: 'cut', damage: 5, reach: 22, lunge: 50 },
     { anim: 'stab2', shape: 'cut', damage: 5, reach: 22, lunge: 50 },

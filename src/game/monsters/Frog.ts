@@ -4,6 +4,7 @@ import { sound } from '../../audio';
 import type { Effect } from '../Slash';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { Monster, type Target } from './Monster';
+import { mobHit, mobHp } from '../tiers';
 
 const VENOM_TINTS = [0xf4fff0, 0xb6ffa0, 0x4fe08a, 0xdff8ff];
 const HOP_TIME = 360;
@@ -33,7 +34,7 @@ export class Frog extends Monster {
   constructor(world: WorldScene, x: number, y: number) {
     super(world, x, y, {
       key: 'frog',
-      hp: 34,
+      hp: mobHp('frog'),
       radius: 6,
       bodyY: 6,
       speed: 62,
@@ -169,7 +170,7 @@ export class Frog extends Monster {
 
 const VENOM_SPEED = 100;
 const VENOM_RANGE = 150;
-const VENOM_DAMAGE = 9;
+const VENOM_DAMAGE = mobHit('frog');
 
 /** A glob of sparkly venom: flies straight, bursts on the player or when it runs out. */
 export class Venom implements Effect {

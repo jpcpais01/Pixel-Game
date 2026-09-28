@@ -11,6 +11,7 @@ import type { Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
+import { HERO_STATS } from './stats';
 
 // Walk frames where a foot lands.
 const FOOTFALLS = new Set([1, 4]);
@@ -56,8 +57,8 @@ const GALLANT: PuppetKit = {
 export const MARIONETTE_KIT: PuppeteerKit = {
   key: 'puppeteer',
   weaver: false,
-  maxHp: 95,
-  speed: 60,
+  maxHp: HERO_STATS['puppeteer.marionette'].hp,
+  speed: HERO_STATS['puppeteer.marionette'].speed,
   rest: 90,
   comboWindow: 900,
   specialCooldown: 10000,
@@ -81,8 +82,8 @@ export const PORCELAIN_KIT: PuppeteerKit = {
 export const WEAVER_KIT: PuppeteerKit = {
   key: 'weaver',
   weaver: true,
-  maxHp: 80,
-  speed: 66,
+  maxHp: HERO_STATS['puppeteer.weaver'].hp,
+  speed: HERO_STATS['puppeteer.weaver'].speed,
   rest: 80,
   comboWindow: 800,
   specialCooldown: 11000,

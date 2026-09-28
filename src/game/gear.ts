@@ -34,10 +34,14 @@ export const SLOT_NAME: Record<Slot, string> = {
   defence: 'Defence',
 };
 
+/**
+ * What gear adds to the hero's stats (see stats.ts). The keys keep their old
+ * names so saved upgrades still load: `power` is Damage and `armor` Defense.
+ */
 export interface GearStats {
-  /** Damage dealt, +share (0.1 = +10%). */
+  /** Damage, +share (0.1 = +10%): a share, so it lifts every hero alike. */
   power?: number;
-  /** Damage taken, -share. */
+  /** Defense, added to the hero's own. */
   armor?: number;
   /** Walking speed, +share. */
   speed?: number;
@@ -48,6 +52,35 @@ export interface GearStats {
   /** Share of damage dealt healed back. */
   leech?: number;
 }
+
+// The item budget. Every piece has points to spend by its rarity, and what
+// a point buys is the same for every piece; a piece only says how it splits
+// its points between stats. Set pieces have a little more, and a whole set
+// worn together adds its own bonus on top.
+
+/** What one point buys of each stat: 1% Damage, 1 Defense, 1% move speed, 3 HP, 0.1 regen, 0.5% lifesteal. */
+export const POINT: Required<GearStats> = { power: 0.01, armor: 1, speed: 0.01, hp: 3, regen: 0.1, leech: 0.005 };
+
+/** Points a piece spends, by rarity. */
+export const RARITY_POINTS: Record<Rarity, number> = { common: 6, uncommon: 11, rare: 16, epic: 24, legendary: 34 };
+
+/** Points of a piece of a boss's set (all legendary). */
+export const SET_PIECE_POINTS = 30;
+
+/** Points a whole set adds when all six pieces are worn. */
+export const SET_BONUS_POINTS = 36;
+
+/** `points` spent by `split`, rounded to what the HUD shows. */
+function spend(points: number, split: GearStats): GearStats {
+  const out: GearStats = {};
+  for (const k of Object.keys(split) as (keyof GearStats)[]) {
+    const v = points * split[k]! * POINT[k];
+    out[k] = k === 'hp' || k === 'armor' ? Math.round(v) : k === 'regen' ? Math.round(v * 10) / 10 : Math.round(v * 100) / 100;
+  }
+  return out;
+}
+
+const setBonus = (split: GearStats): GearStats => spend(SET_BONUS_POINTS, split);
 
 /** Sets of gear that grant more when every piece is worn together. */
 export type SetId = 'wraith' | 'ember' | 'spore' | 'geode' | 'astral';
@@ -65,11 +98,11 @@ export interface GearSet {
 }
 
 export const GEAR_SETS: Record<SetId, GearSet> = {
-  wraith: { name: 'Wraithbound', tint: 0x6af4dc, bonus: { power: 0.15, speed: 0.1, leech: 0.05 }, effect: 'Spectral form: a ghostly aura follows you', boss: 'the Hollow Queen' },
-  ember: { name: 'Emberborn', tint: 0xffa040, bonus: { power: 0.2, speed: 0.08, regen: 1 }, effect: 'Living flame: fire wreathes you', boss: 'the Elementinho' },
-  spore: { name: 'Sporeveil', tint: 0xff78e0, bonus: { regen: 2, leech: 0.06, hp: 40 }, effect: 'Spore veil: glowing spores drift about you', boss: 'the Sporemother' },
-  geode: { name: 'Wyrmshard', tint: 0xc49cff, bonus: { power: 0.25, armor: 0.08, speed: 0.08 }, effect: 'Crystal form: amethyst glitters about you', boss: 'Amethrax' },
-  astral: { name: 'Starborn', tint: 0x9ab4ff, bonus: { power: 0.22, speed: 0.12, regen: 1.5 }, effect: 'Starborn: starlight wheels about you', boss: 'the Astral Warden' },
+  wraith: { name: 'Wraithbound', tint: 0x6af4dc, bonus: setBonus({ power: 0.4, speed: 0.3, leech: 0.3 }), effect: 'Spectral form: a ghostly aura follows you', boss: 'the Hollow Queen' },
+  ember: { name: 'Emberborn', tint: 0xffa040, bonus: setBonus({ power: 0.5, speed: 0.2, regen: 0.3 }), effect: 'Living flame: fire wreathes you', boss: 'the Elementinho' },
+  spore: { name: 'Sporeveil', tint: 0xff78e0, bonus: setBonus({ regen: 0.4, leech: 0.3, hp: 0.3 }), effect: 'Spore veil: glowing spores drift about you', boss: 'the Sporemother' },
+  geode: { name: 'Wyrmshard', tint: 0xc49cff, bonus: setBonus({ power: 0.6, armor: 0.2, speed: 0.2 }), effect: 'Crystal form: amethyst glitters about you', boss: 'Amethrax' },
+  astral: { name: 'Starborn', tint: 0x9ab4ff, bonus: setBonus({ power: 0.5, speed: 0.2, regen: 0.3 }), effect: 'Starborn: starlight wheels about you', boss: 'the Astral Warden' },
 };
 
 export interface GearDef {
@@ -86,85 +119,95 @@ export interface GearDef {
   drop: string;
 }
 
-const piece = (id: string, name: string, rarity: Rarity, slot: Slot, stats: GearStats, set?: SetId): GearDef => ({ id, name, rarity, slot, stats, set, icon: `gear_${id}`, drop: `gdrop_${id}` });
+/** A piece: `split` says what share of its rarity's points goes into each stat (shares add up to 1). */
+const piece = (id: string, name: string, rarity: Rarity, slot: Slot, split: GearStats, set?: SetId): GearDef => ({
+  id,
+  name,
+  rarity,
+  slot,
+  stats: spend(set ? SET_PIECE_POINTS : RARITY_POINTS[rarity], split),
+  set,
+  icon: `gear_${id}`,
+  drop: `gdrop_${id}`,
+});
 
 export const GEAR: GearDef[] = [
-  piece('iron_sword', 'Iron Sword', 'common', 'weapon', { power: 0.1 }),
-  piece('leather_boots', 'Leather Boots', 'common', 'boots', { speed: 0.08 }),
-  piece('oak_shield', 'Oak Shield', 'common', 'defence', { armor: 0.08 }),
-  piece('iron_helm', 'Iron Helm', 'common', 'headwear', { hp: 15 }),
-  piece('ruby_amulet', 'Ruby Amulet', 'common', 'accessory', { hp: 20 }),
-  piece('battle_axe', 'Battle Axe', 'rare', 'weapon', { power: 0.18 }),
-  piece('frost_spear', 'Frost Spear', 'uncommon', 'weapon', { power: 0.12, speed: 0.06 }),
-  piece('bloodfang', 'Bloodfang', 'uncommon', 'weapon', { power: 0.06, leech: 0.05 }),
-  piece('knight_plate', 'Knight Plate', 'rare', 'chest', { hp: 25, armor: 0.1 }),
-  piece('winged_boots', 'Winged Boots', 'rare', 'boots', { speed: 0.18 }),
-  piece('gauntlets', 'Gauntlets of Might', 'uncommon', 'defence', { power: 0.1, armor: 0.06 }),
-  piece('emerald_ring', 'Emerald Ring', 'uncommon', 'accessory', { regen: 1.5 }),
-  piece('arcane_staff', 'Arcane Staff', 'rare', 'weapon', { power: 0.15 }),
-  piece('thunder_hammer', 'Thunder Hammer', 'epic', 'weapon', { power: 0.25, hp: 10 }),
-  piece('emberbrand', 'Emberbrand', 'epic', 'weapon', { power: 0.22, leech: 0.04 }),
-  piece('tome_of_embers', 'Tome of Embers', 'epic', 'accessory', { power: 0.18, regen: 1 }),
-  piece('moonstone_orb', 'Moonstone Orb', 'epic', 'defence', { regen: 2, armor: 0.1 }),
-  piece('dragonfang', 'Dragonfang', 'legendary', 'weapon', { power: 0.35, hp: 20 }),
-  piece('golden_aegis', 'Golden Aegis', 'legendary', 'defence', { armor: 0.2, hp: 40 }),
-  piece('phoenix_feather', 'Phoenix Feather', 'legendary', 'headwear', { regen: 3, speed: 0.12, hp: 20 }),
+  piece('iron_sword', 'Iron Sword', 'common', 'weapon', { power: 1 }),
+  piece('leather_boots', 'Leather Boots', 'common', 'boots', { speed: 1 }),
+  piece('oak_shield', 'Oak Shield', 'common', 'defence', { armor: 1 }),
+  piece('iron_helm', 'Iron Helm', 'common', 'headwear', { hp: 1 }),
+  piece('ruby_amulet', 'Ruby Amulet', 'common', 'accessory', { hp: 1 }),
+  piece('battle_axe', 'Battle Axe', 'rare', 'weapon', { power: 1 }),
+  piece('frost_spear', 'Frost Spear', 'uncommon', 'weapon', { power: 0.7, speed: 0.3 }),
+  piece('bloodfang', 'Bloodfang', 'uncommon', 'weapon', { power: 0.4, leech: 0.6 }),
+  piece('knight_plate', 'Knight Plate', 'rare', 'chest', { hp: 0.4, armor: 0.6 }),
+  piece('winged_boots', 'Winged Boots', 'rare', 'boots', { speed: 1 }),
+  piece('gauntlets', 'Gauntlets of Might', 'uncommon', 'defence', { power: 0.6, armor: 0.4 }),
+  piece('emerald_ring', 'Emerald Ring', 'uncommon', 'accessory', { regen: 1 }),
+  piece('arcane_staff', 'Arcane Staff', 'rare', 'weapon', { power: 1 }),
+  piece('thunder_hammer', 'Thunder Hammer', 'epic', 'weapon', { power: 0.9, hp: 0.1 }),
+  piece('emberbrand', 'Emberbrand', 'epic', 'weapon', { power: 0.7, leech: 0.3 }),
+  piece('tome_of_embers', 'Tome of Embers', 'epic', 'accessory', { power: 0.6, regen: 0.4 }),
+  piece('moonstone_orb', 'Moonstone Orb', 'epic', 'defence', { regen: 0.6, armor: 0.4 }),
+  piece('dragonfang', 'Dragonfang', 'legendary', 'weapon', { power: 0.8, hp: 0.2 }),
+  piece('golden_aegis', 'Golden Aegis', 'legendary', 'defence', { armor: 0.7, hp: 0.3 }),
+  piece('phoenix_feather', 'Phoenix Feather', 'legendary', 'headwear', { regen: 0.7, speed: 0.2, hp: 0.1 }),
   // The second twenty, weighted toward what the first twenty had least of: helms, body armour, boots and shields.
-  piece('leather_hood', 'Ranger Hood', 'common', 'headwear', { hp: 8, speed: 0.04 }),
-  piece('wizard_hat', 'Starry Hat', 'uncommon', 'headwear', { power: 0.08, regen: 0.5 }),
-  piece('horned_helm', 'Horned Helm', 'rare', 'headwear', { hp: 20, power: 0.06 }),
-  piece('jeweled_crown', 'Jeweled Crown', 'epic', 'headwear', { hp: 25, regen: 1.5 }),
-  piece('valkyrie_helm', 'Valkyrie Helm', 'legendary', 'headwear', { armor: 0.12, hp: 30, speed: 0.06 }),
-  piece('padded_tunic', 'Padded Tunic', 'common', 'chest', { hp: 12, armor: 0.03 }),
-  piece('chainmail', 'Chainmail', 'uncommon', 'chest', { armor: 0.08, hp: 10 }),
-  piece('shadow_cloak', 'Shadow Cloak', 'rare', 'chest', { speed: 0.1, leech: 0.03 }),
-  piece('dragonscale_mail', 'Dragonscale Mail', 'epic', 'chest', { armor: 0.14, hp: 30 }),
-  piece('fur_boots', 'Fur Boots', 'common', 'boots', { speed: 0.04, regen: 0.3 }),
-  piece('iron_greaves', 'Iron Greaves', 'uncommon', 'boots', { armor: 0.06, speed: 0.04 }),
-  piece('lava_striders', 'Lava Striders', 'epic', 'boots', { speed: 0.16, power: 0.08 }),
-  piece('leather_bracers', 'Leather Bracers', 'common', 'defence', { armor: 0.05 }),
-  piece('spiked_buckler', 'Spiked Buckler', 'uncommon', 'defence', { armor: 0.05, power: 0.05 }),
-  piece('tower_shield', 'Tower Shield', 'rare', 'defence', { armor: 0.14, hp: 10 }),
-  piece('frostguard', 'Frostguard', 'epic', 'defence', { armor: 0.14, regen: 1 }),
-  piece('wolf_tooth', 'Wolf Tooth Charm', 'common', 'accessory', { power: 0.06 }),
-  piece('clover_charm', 'Clover Locket', 'uncommon', 'accessory', { regen: 0.8, speed: 0.04 }),
-  piece('hunter_longbow', 'Hunter Longbow', 'rare', 'weapon', { power: 0.14, speed: 0.04 }),
-  piece('void_scythe', 'Void Scythe', 'legendary', 'weapon', { power: 0.3, leech: 0.08 }),
+  piece('leather_hood', 'Ranger Hood', 'common', 'headwear', { hp: 0.4, speed: 0.6 }),
+  piece('wizard_hat', 'Starry Hat', 'uncommon', 'headwear', { power: 0.6, regen: 0.4 }),
+  piece('horned_helm', 'Horned Helm', 'rare', 'headwear', { hp: 0.5, power: 0.5 }),
+  piece('jeweled_crown', 'Jeweled Crown', 'epic', 'headwear', { hp: 0.4, regen: 0.6 }),
+  piece('valkyrie_helm', 'Valkyrie Helm', 'legendary', 'headwear', { armor: 0.5, hp: 0.3, speed: 0.2 }),
+  piece('padded_tunic', 'Padded Tunic', 'common', 'chest', { hp: 0.6, armor: 0.4 }),
+  piece('chainmail', 'Chainmail', 'uncommon', 'chest', { armor: 0.7, hp: 0.3 }),
+  piece('shadow_cloak', 'Shadow Cloak', 'rare', 'chest', { speed: 0.6, leech: 0.4 }),
+  piece('dragonscale_mail', 'Dragonscale Mail', 'epic', 'chest', { armor: 0.6, hp: 0.4 }),
+  piece('fur_boots', 'Fur Boots', 'common', 'boots', { speed: 0.6, regen: 0.4 }),
+  piece('iron_greaves', 'Iron Greaves', 'uncommon', 'boots', { armor: 0.6, speed: 0.4 }),
+  piece('lava_striders', 'Lava Striders', 'epic', 'boots', { speed: 0.7, power: 0.3 }),
+  piece('leather_bracers', 'Leather Bracers', 'common', 'defence', { armor: 1 }),
+  piece('spiked_buckler', 'Spiked Buckler', 'uncommon', 'defence', { armor: 0.5, power: 0.5 }),
+  piece('tower_shield', 'Tower Shield', 'rare', 'defence', { armor: 0.8, hp: 0.2 }),
+  piece('frostguard', 'Frostguard', 'epic', 'defence', { armor: 0.6, regen: 0.4 }),
+  piece('wolf_tooth', 'Wolf Tooth Charm', 'common', 'accessory', { power: 1 }),
+  piece('clover_charm', 'Clover Locket', 'uncommon', 'accessory', { regen: 0.7, speed: 0.3 }),
+  piece('hunter_longbow', 'Hunter Longbow', 'rare', 'weapon', { power: 0.8, speed: 0.2 }),
+  piece('void_scythe', 'Void Scythe', 'legendary', 'weapon', { power: 0.7, leech: 0.3 }),
   // The Wraithbound set: one legendary for each slot, dropped only by the Hollow Queen in the Spirit Dungeon.
-  piece('wraith_crown', 'Wraith Crown', 'legendary', 'headwear', { hp: 30, regen: 2 }, 'wraith'),
-  piece('wraith_shroud', 'Shroud of the Hollow', 'legendary', 'chest', { armor: 0.14, hp: 30 }, 'wraith'),
-  piece('wraith_treads', 'Ghoststep Treads', 'legendary', 'boots', { speed: 0.16, armor: 0.04 }, 'wraith'),
-  piece('soulreaver', 'Soulreaver', 'legendary', 'weapon', { power: 0.3, leech: 0.06 }, 'wraith'),
-  piece('phantom_ward', 'Phantom Ward', 'legendary', 'defence', { armor: 0.16, regen: 1.5 }, 'wraith'),
-  piece('soul_lantern', 'Lantern of Souls', 'legendary', 'accessory', { power: 0.12, regen: 2, hp: 15 }, 'wraith'),
+  piece('wraith_crown', 'Wraith Crown', 'legendary', 'headwear', { hp: 0.3, regen: 0.7 }, 'wraith'),
+  piece('wraith_shroud', 'Shroud of the Hollow', 'legendary', 'chest', { armor: 0.6, hp: 0.4 }, 'wraith'),
+  piece('wraith_treads', 'Ghoststep Treads', 'legendary', 'boots', { speed: 0.8, armor: 0.2 }, 'wraith'),
+  piece('soulreaver', 'Soulreaver', 'legendary', 'weapon', { power: 0.7, leech: 0.3 }, 'wraith'),
+  piece('phantom_ward', 'Phantom Ward', 'legendary', 'defence', { armor: 0.6, regen: 0.4 }, 'wraith'),
+  piece('soul_lantern', 'Lantern of Souls', 'legendary', 'accessory', { power: 0.3, regen: 0.6, hp: 0.1 }, 'wraith'),
   // The Emberborn set: one legendary for each slot, dropped only by the Elementinho in its temple.
-  piece('flame_crown', 'Crown of Living Flame', 'legendary', 'headwear', { power: 0.1, hp: 25 }, 'ember'),
-  piece('ember_mail', 'Emberheart Mail', 'legendary', 'chest', { armor: 0.12, hp: 30, power: 0.05 }, 'ember'),
-  piece('cinder_boots', 'Cinderstep Boots', 'legendary', 'boots', { speed: 0.18, power: 0.05 }, 'ember'),
-  piece('surgefire', 'Blazing Surge', 'legendary', 'weapon', { power: 0.34, hp: 10 }, 'ember'),
-  piece('ember_aegis', 'Aegis of Ember Rain', 'legendary', 'defence', { armor: 0.15, hp: 20 }, 'ember'),
-  piece('flame_heart', 'Heart of Elementinho', 'legendary', 'accessory', { power: 0.12, regen: 2, hp: 15 }, 'ember'),
+  piece('flame_crown', 'Crown of Living Flame', 'legendary', 'headwear', { power: 0.5, hp: 0.5 }, 'ember'),
+  piece('ember_mail', 'Emberheart Mail', 'legendary', 'chest', { armor: 0.5, hp: 0.3, power: 0.2 }, 'ember'),
+  piece('cinder_boots', 'Cinderstep Boots', 'legendary', 'boots', { speed: 0.8, power: 0.2 }, 'ember'),
+  piece('surgefire', 'Blazing Surge', 'legendary', 'weapon', { power: 0.9, hp: 0.1 }, 'ember'),
+  piece('ember_aegis', 'Aegis of Ember Rain', 'legendary', 'defence', { armor: 0.7, hp: 0.3 }, 'ember'),
+  piece('flame_heart', 'Heart of Elementinho', 'legendary', 'accessory', { power: 0.3, regen: 0.6, hp: 0.1 }, 'ember'),
   // The Sporeveil set: one legendary for each slot, dropped only by the Sporemother in the Glimmerdeep.
-  piece('veilcap', 'Veilcap Hood', 'legendary', 'headwear', { hp: 30, regen: 2 }, 'spore'),
-  piece('mycelium_mantle', 'Mycelium Mantle', 'legendary', 'chest', { armor: 0.12, hp: 30, regen: 1 }, 'spore'),
-  piece('rootwalkers', 'Rootwalkers', 'legendary', 'boots', { speed: 0.16, regen: 1 }, 'spore'),
-  piece('bloomreaper', 'Bloomreaper', 'legendary', 'weapon', { power: 0.28, leech: 0.06 }, 'spore'),
-  piece('puffball_bulwark', 'Puffball Bulwark', 'legendary', 'defence', { armor: 0.15, hp: 25 }, 'spore'),
-  piece('spore_heart', 'Heart of the Sporemother', 'legendary', 'accessory', { regen: 3, hp: 20, leech: 0.03 }, 'spore'),
+  piece('veilcap', 'Veilcap Hood', 'legendary', 'headwear', { hp: 0.3, regen: 0.7 }, 'spore'),
+  piece('mycelium_mantle', 'Mycelium Mantle', 'legendary', 'chest', { armor: 0.4, hp: 0.3, regen: 0.3 }, 'spore'),
+  piece('rootwalkers', 'Rootwalkers', 'legendary', 'boots', { speed: 0.6, regen: 0.4 }, 'spore'),
+  piece('bloomreaper', 'Bloomreaper', 'legendary', 'weapon', { power: 0.7, leech: 0.3 }, 'spore'),
+  piece('puffball_bulwark', 'Puffball Bulwark', 'legendary', 'defence', { armor: 0.7, hp: 0.3 }, 'spore'),
+  piece('spore_heart', 'Heart of the Sporemother', 'legendary', 'accessory', { regen: 0.7, hp: 0.2, leech: 0.1 }, 'spore'),
   // The Wyrmshard set: one legendary for each slot, dropped only by Amethrax at the bottom of the Glimmerdeep.
-  piece('amethrax_crown', 'Crown of Amethrax', 'legendary', 'headwear', { power: 0.12, hp: 30, armor: 0.04 }, 'geode'),
-  piece('geodeplate', 'Geodeplate', 'legendary', 'chest', { armor: 0.16, hp: 40 }, 'geode'),
-  piece('wyrmscale_greaves', 'Wyrmscale Greaves', 'legendary', 'boots', { speed: 0.18, armor: 0.05 }, 'geode'),
-  piece('amethrax_fang', 'Fang of Amethrax', 'legendary', 'weapon', { power: 0.38, leech: 0.04 }, 'geode'),
-  piece('geode_aegis', 'Geode Aegis', 'legendary', 'defence', { armor: 0.18, hp: 30 }, 'geode'),
-  piece('heartgeode', 'Heartgeode', 'legendary', 'accessory', { power: 0.14, regen: 2, hp: 20 }, 'geode'),
+  piece('amethrax_crown', 'Crown of Amethrax', 'legendary', 'headwear', { power: 0.4, hp: 0.4, armor: 0.2 }, 'geode'),
+  piece('geodeplate', 'Geodeplate', 'legendary', 'chest', { armor: 0.6, hp: 0.4 }, 'geode'),
+  piece('wyrmscale_greaves', 'Wyrmscale Greaves', 'legendary', 'boots', { speed: 0.8, armor: 0.2 }, 'geode'),
+  piece('amethrax_fang', 'Fang of Amethrax', 'legendary', 'weapon', { power: 0.8, leech: 0.2 }, 'geode'),
+  piece('geode_aegis', 'Geode Aegis', 'legendary', 'defence', { armor: 0.7, hp: 0.3 }, 'geode'),
+  piece('heartgeode', 'Heartgeode', 'legendary', 'accessory', { power: 0.3, regen: 0.5, hp: 0.2 }, 'geode'),
   // The Starborn set: one legendary for each slot, dropped only by the Astral Warden in the Cosmos Arena.
-  piece('star_diadem', 'Diadem of the Warden', 'legendary', 'headwear', { hp: 30, power: 0.1, armor: 0.04 }, 'astral'),
-  piece('nebula_vestments', 'Nebula Vestments', 'legendary', 'chest', { armor: 0.14, hp: 35, regen: 1 }, 'astral'),
-  piece('comet_treads', 'Comet Treads', 'legendary', 'boots', { speed: 0.2, armor: 0.04 }, 'astral'),
-  piece('starfall', 'Starfall', 'legendary', 'weapon', { power: 0.36, leech: 0.04 }, 'astral'),
-  piece('orrery_aegis', 'Orrery Aegis', 'legendary', 'defence', { armor: 0.17, hp: 25 }, 'astral'),
-  piece('warden_eye', 'Eye of the Warden', 'legendary', 'accessory', { power: 0.14, regen: 2, hp: 15 }, 'astral'),
+  piece('star_diadem', 'Diadem of the Warden', 'legendary', 'headwear', { hp: 0.4, power: 0.4, armor: 0.2 }, 'astral'),
+  piece('nebula_vestments', 'Nebula Vestments', 'legendary', 'chest', { armor: 0.4, hp: 0.3, regen: 0.3 }, 'astral'),
+  piece('comet_treads', 'Comet Treads', 'legendary', 'boots', { speed: 0.8, armor: 0.2 }, 'astral'),
+  piece('starfall', 'Starfall', 'legendary', 'weapon', { power: 0.8, leech: 0.2 }, 'astral'),
+  piece('orrery_aegis', 'Orrery Aegis', 'legendary', 'defence', { armor: 0.7, hp: 0.3 }, 'astral'),
+  piece('warden_eye', 'Eye of the Warden', 'legendary', 'accessory', { power: 0.4, regen: 0.5, hp: 0.1 }, 'astral'),
 ];
 
 /** How many pieces of `set` are among `defs`, out of how many there are. */
@@ -185,19 +228,19 @@ export const gearById = (id: string): GearDef | undefined => GEAR.find((g) => g.
 
 /** The stats in the order they're listed, with short names and how to show a value. */
 export const STAT_KEYS = ['power', 'armor', 'speed', 'hp', 'regen', 'leech'] as const;
-export const STAT_LABEL: Record<keyof GearStats, string> = { power: 'DMG', armor: 'ARMOR', speed: 'SPEED', hp: 'HP', regen: 'REGEN', leech: 'LEECH' };
+export const STAT_LABEL: Record<keyof GearStats, string> = { power: 'DMG', armor: 'DEF', speed: 'SPEED', hp: 'HP', regen: 'REGEN', leech: 'LEECH' };
 
 /** A stat value as shown: "+10%", "+15", "+1.5/S". */
 export function statValue(k: keyof GearStats, v: number): string {
   const sign = v < 0 ? '-' : '+';
   const a = Math.abs(v);
-  if (k === 'hp') return `${sign}${Math.round(a)}`;
+  if (k === 'hp' || k === 'armor') return `${sign}${Math.round(a)}`;
   if (k === 'regen') return `${sign}${Math.round(a * 10) / 10}/S`;
   return `${sign}${Math.round(a * 100)}%`;
 }
 
-/** Where a total stops counting, so no set of gear makes the hero untouchable or uncontrollably fast. */
-export const STAT_CAP: Partial<Record<keyof GearStats, number>> = { armor: 0.6, speed: 0.5 };
+/** Where a total stops counting, so no set of gear makes the hero uncontrollably fast. (Defense needs no cap: it never makes anyone immune.) */
+export const STAT_CAP: Partial<Record<keyof GearStats, number>> = { speed: 0.5 };
 
 /** Short lines for a stat block, in the HUD's pixel font: "+10% DMG", "+15 HP". */
 export function statLines(s: GearStats): string[] {
@@ -235,8 +278,8 @@ export const MAX_LEVEL = 10;
 /** Share of the dust spent upgrading a piece that comes back when it is disenchanted. */
 export const UPGRADE_REFUND = 0.5;
 
-/** One point of each stat, as a level adds it: small enough that the caps still hold. */
-export const STAT_STEP: Required<GearStats> = { power: 0.02, armor: 0.015, speed: 0.015, hp: 5, regen: 0.3, leech: 0.01 };
+/** What a level adds to the stat picked: two points' worth (see POINT). */
+export const STAT_STEP: Required<GearStats> = { power: 0.02, armor: 2, speed: 0.02, hp: 6, regen: 0.2, leech: 0.01 };
 
 /** Only epic and legendary pieces can be upgraded. */
 export const canUpgrade = (d: GearDef): boolean => d.rarity === 'epic' || d.rarity === 'legendary';
@@ -312,11 +355,6 @@ export class GearBag {
   /** Multiplier on damage dealt. */
   get power(): number {
     return 1 + this.totals.power;
-  }
-
-  /** Multiplier on damage taken. */
-  get guard(): number {
-    return 1 - Math.min(STAT_CAP.armor!, this.totals.armor);
   }
 
   /** Multiplier on walking speed. */

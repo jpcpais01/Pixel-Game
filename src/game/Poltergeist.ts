@@ -10,6 +10,7 @@ import { Phase, PHASE_SPEED } from './phase';
 import { bloom, Fx, pal, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
 // The Poltergeist (the Phantom's first type): a mischievous sheet-ghost.
 //  - Attack (held): it hurls haunted household things with its mind, a
@@ -54,8 +55,8 @@ export interface PolterKit {
 export const POLTER_KIT: PolterKit = {
   key: 'polter',
   tea: false,
-  maxHp: 95,
-  speed: 64,
+  maxHp: HERO_STATS['phantom.poltergeist'].hp,
+  speed: HERO_STATS['phantom.poltergeist'].speed,
   things: ['chair', 'book', 'candle', 'pot'],
   big: 'trunk',
   pal: pal(0xeefff8, 0x9ff0d4, 0x4ac8a0, 0x1a6a5a, 0x8af0c8),

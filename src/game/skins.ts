@@ -95,7 +95,6 @@ export function worn(cls: ClassDef, look: Look = lookOf(cls)): CharacterDef {
     look: id,
     role: skin?.role ?? type.role,
     accent: skin?.accent ?? type.accent,
-    stats: type.stats,
     attack: skin?.attack ?? type.attack,
     special: skin?.special ?? type.special,
     preview: skin?.preview ?? type.preview,

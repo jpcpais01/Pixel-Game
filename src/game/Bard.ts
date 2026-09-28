@@ -13,6 +13,7 @@ import type { BuffDef } from './buffs';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
+import { HERO_STATS } from './stats';
 
 // Walk frames where a foot lands.
 const FOOTFALLS = new Set([1, 4]);
@@ -62,8 +63,8 @@ export interface BardKit {
 export const MINSTREL_KIT: BardKit = {
   key: 'bard',
   drum: false,
-  maxHp: 85,
-  speed: 64,
+  maxHp: HERO_STATS['bard.minstrel'].hp,
+  speed: HERO_STATS['bard.minstrel'].speed,
   rest: 120,
   note: { damage: 7, bounces: 3, falloff: 0.8, speed: 175, range: 160, seek: 4, lit: true },
   beat: { damage: 0, radius: 0, spread: 0, knock: 0 },
@@ -91,8 +92,8 @@ export const HARLEQUIN_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_harlequin', 
 export const DRUMMER_KIT: BardKit = {
   key: 'bard_drum',
   drum: true,
-  maxHp: 115,
-  speed: 58,
+  maxHp: HERO_STATS['bard.drummer'].hp,
+  speed: HERO_STATS['bard.drummer'].speed,
   rest: 70,
   note: MINSTREL_KIT.note,
   beat: { damage: 9, radius: 30, spread: 0.85, knock: 170 },

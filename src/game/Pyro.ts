@@ -8,6 +8,7 @@ import { onGround, Venom, type ToxStyle } from './Toxins';
 import { HELL_STYLE, PYRO_STYLE, type SpellStyle } from './spells';
 import type { WizardKit, WizardSkin } from './Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
+import { HERO_STATS } from './stats';
 
 // The Pyromancer: the wizard's fire subtype. Fireballs fly slower and burst in
 // a small blast that sets everything near on fire; the special gathers flame at
@@ -15,8 +16,8 @@ import type { WorldScene } from '../scenes/WorldScene';
 // A little frailer and quicker on its feet than the arcane wizard.
 
 export const PYRO_KIT: WizardKit = {
-  maxHp: 70,
-  speed: 62,
+  maxHp: HERO_STATS['wizard.pyro'].hp,
+  speed: HERO_STATS['wizard.pyro'].speed,
   castCooldown: 300,
   // Arms raised while the meteor is called down.
   fireTime: (p) => 380 + 180 * p,
