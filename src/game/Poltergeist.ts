@@ -109,7 +109,7 @@ export class Poltergeist implements Hero {
     const key = kit.key;
     const ox = POLTER_ORIGIN_X / POLTER_W;
     const oy = POLTER_ORIGIN_Y / POLTER_H;
-    this.shadow = world.add.image(x, y, 'shadow').setDepth(1).setScale(0.9, 0.8);
+    this.shadow = world.add.image(x, y, 'shadow').setDepth(1).setScale(0.8, 0.7);
     this.castShadow = sunShadow(world.add.sprite(x, y, `${key}_s`, 'idle_down_0').setOrigin(ox, oy));
     this.body = world.add.sprite(x, y, key, 'idle_down_0').setOrigin(ox, oy).setPipeline('Lit');
     this.glowLayer = world.add.sprite(x, y, `${key}_e`, 'idle_down_0').setOrigin(ox, oy).setBlendMode(Phaser.BlendModes.ADD);
@@ -273,9 +273,9 @@ export class Poltergeist implements Hero {
     this.aura.intensity = 0.7 * (1 - this.daylight) + 0.2;
     this.orbit.forEach((o, i) => {
       const q = this.clock * 0.0017 + i * Math.PI;
-      const ox = Math.cos(q) * 15;
+      const ox = Math.cos(q) * 12;
       const oy = Math.sin(q) * 6;
-      o.setPosition(snap(this.x + ox), snap(this.y - 20 + oy + Math.sin(this.clock * 0.004 + i) * 2))
+      o.setPosition(snap(this.x + ox), snap(this.y - 16 + oy + Math.sin(this.clock * 0.004 + i) * 2))
         .setDepth(this.y + (oy > 0 ? 0.2 : -0.2))
         .setRotation(Math.sin(this.clock * 0.002 + i) * 0.4)
         .setAlpha(a * 0.9);

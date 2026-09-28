@@ -15,35 +15,36 @@ import { icon16, seg, type Tones } from './druid';
 
 const ramp = (...c: string[]): RGB[] => c.map(hex);
 
-export const POLTER_W = 36;
-export const POLTER_H = 42;
-const CX = 18;
-const GROUND = 40;
-export const POLTER_ORIGIN_X = CX;
-export const POLTER_ORIGIN_Y = GROUND;
+export const POLTER_W = 48;
+export const POLTER_H = 50;
+/** Drawn in the 24x32 body box every hero uses, placed in a larger frame. */
+const BODY_X = 12;
+const BODY_Y = 12;
+export const POLTER_ORIGIN_X = BODY_X + 12;
+export const POLTER_ORIGIN_Y = BODY_Y + 31;
 /** The body's middle above the ground, where throws start. */
-export const POLTER_CHEST_Y = 18;
+export const POLTER_CHEST_Y = 14;
 
 // ---------------------------------------------------------------------------
 // Materials
 
-const SHEET: Material = { ramp: ramp('#4a7a86', '#86bcc2', '#c4ece6', '#eefff8', '#ffffff'), outline: hex('#12303a'), outlineLit: hex('#1e4450'), emissive: 0.3, noAO: true };
-const MIST: Material = { ramp: ramp('#5a8a96', '#9ad0d4', '#d8fff4'), outline: hex('#2a5a66'), emissive: 0.6, noAO: true, noOutline: true };
+const SHEET: Material = { ramp: ramp('#34525e', '#5e8a94', '#94c0be', '#c6e6de', '#eafcf4'), outline: hex('#0e2228'), outlineLit: hex('#18343c'), emissive: 0.18, noAO: true };
+const MIST: Material = { ramp: ramp('#3e6470', '#78a8ac', '#b4e0d8'), outline: hex('#1a3a42'), emissive: 0.45, noAO: true, noOutline: true };
 const VOID: Material = { ramp: ramp('#05060a', '#0e1018', '#1c2030'), outline: hex('#020204'), shine: true, noAO: true };
 const TOOTH: Material = { ramp: ramp('#b8c4c0', '#ffffff'), outline: hex('#05060a'), noAO: true };
-const PATCH: Material = { ramp: ramp('#5a6070', '#8a92a4', '#b4bccc'), outline: hex('#20242e') };
-const STITCH: Material = { ramp: ramp('#2a2e3a', '#3a3e4a'), outline: hex('#101218'), noOutline: true };
-const BLUSH: Material = { ramp: ramp('#e07a9a', '#ffa8c0'), outline: hex('#401420'), noOutline: true, noAO: true };
+const PATCH: Material = { ramp: ramp('#4a4e5e', '#707890', '#9aa2b8'), outline: hex('#1a1e28') };
+const STITCH: Material = { ramp: ramp('#1e2230', '#2c3040'), outline: hex('#0c0e14'), noOutline: true };
+const BLUSH: Material = { ramp: ramp('#c05a7a', '#f08aa8'), outline: hex('#401420'), noOutline: true, noAO: true };
 
 // The tea party.
-const PORCELAIN: Material = { ramp: ramp('#8a8aa0', '#c4c4d8', '#ececf8', '#ffffff'), outline: hex('#2a2a3e'), shine: true, emissive: 0.15 };
-const LAVENDER: Material = { ramp: ramp('#3a2a5e', '#6a54a0', '#9c86d4', '#c8b8f0', '#ece4ff'), outline: hex('#140c28'), outlineLit: hex('#221640'), emissive: 0.25 };
-const LACE: Material = { ramp: ramp('#b4aacc', '#e4dcf4', '#ffffff'), outline: hex('#3a2e5a'), emissive: 0.3, noAO: true };
-const RIBBON: Material = { ramp: ramp('#8a2a5a', '#d05a8e', '#ff9ac4'), outline: hex('#2a0818'), shine: true };
-const RINGLET: Material = { ramp: ramp('#8a8058', '#c8bc8a', '#f0e8c0', '#fffbe8'), outline: hex('#2a2616'), emissive: 0.15 };
-const DRESS_MIST: Material = { ramp: ramp('#6a5aa0', '#a896dc', '#e4dcff'), outline: hex('#3a2e5a'), emissive: 0.55, noAO: true, noOutline: true };
-const PARASOL: Material = { ramp: ramp('#a8889c', '#dcc4d4', '#fff0f8', '#ffffff'), outline: hex('#3a2434'), emissive: 0.2 };
-const STICK: Material = { ramp: ramp('#3a2a1a', '#6a4a2a', '#9a7040'), outline: hex('#140c04') };
+const PORCELAIN: Material = { ramp: ramp('#6a6a82', '#9e9eb8', '#cfcfe2', '#f2f2fa'), outline: hex('#20203a'), outlineLit: hex('#2e2e4a'), shine: true, emissive: 0.1 };
+const LAVENDER: Material = { ramp: ramp('#241a40', '#3e2e6a', '#5e4a96', '#8470be', '#aa98dc'), outline: hex('#0c0818'), outlineLit: hex('#1a1230'), emissive: 0.12 };
+const LACE: Material = { ramp: ramp('#8a80a8', '#bcb4d4', '#e8e2f6'), outline: hex('#2a2244'), emissive: 0.15 };
+const RIBBON: Material = { ramp: ramp('#6a1a44', '#b04474', '#e87aa6'), outline: hex('#24061a'), shine: true };
+const RINGLET: Material = { ramp: ramp('#6a6040', '#a89c6a', '#d8cc98', '#f4ecc8'), outline: hex('#221e10'), emissive: 0.1 };
+const DRESS_MIST: Material = { ramp: ramp('#4a3e7a', '#8070b4', '#bcb0e8'), outline: hex('#2a2244'), emissive: 0.45, noAO: true, noOutline: true };
+const PARASOL: Material = { ramp: ramp('#7a5a70', '#b494a8', '#dcc4d2', '#f6e8f0'), outline: hex('#2a1624'), emissive: 0.1 };
+const STICK: Material = { ramp: ramp('#2a1a0e', '#5a3a1e', '#8a6030'), outline: hex('#100804') };
 
 export interface PolterLook {
   key: string;
@@ -74,7 +75,7 @@ export interface PolterPose {
   handB: Pt;
   /** Leaning into its drift (side view), in px. */
   lean: number;
-  /** 0..1: eyes wide and blazing (the Special), or squeezed shut in a grin (the throw). */
+  /** 0..1: eyes wide and blazing (the Special); or squeezed shut in a grin (the throw). */
   glare: number;
   squint: boolean;
   /** Shaking (the rattle): the whole figure jitters this many px. */
@@ -84,94 +85,90 @@ export interface PolterPose {
 const base = (): PolterPose => ({ bob: 0, wave: 0, sway: 0, handA: { x: 0, y: 0 }, handB: { x: 0, y: 0 }, lean: 0, glare: 0, squint: false, shake: 0 });
 
 // ---------------------------------------------------------------------------
-// The sheet-ghost
+// The sheet-ghost (body-box coordinates: 24 wide, the ground at y 31; it floats)
 
 /** The sheet: a dome over a body that flares a little, the hem rippling. */
-function sheet(c: PixelCanvas, cx: number, top: number, bottom: number, hw: number, wave: number, view: View): void {
-  const r = hw;
-  const hem = (x: number) => bottom + 1.5 + Math.sin((x - cx) * 0.95 + wave * 1.6) * 1.4;
-  for (let y = Math.floor(top); y <= bottom + 4; y++) {
+function sheet(c: PixelCanvas, cx: number, top: number, bottom: number, r: number, wave: number, view: View): void {
+  const hem = (x: number) => bottom + 1 + Math.sin((x - cx) * 1.1 + wave * 1.6) * 1;
+  for (let y = Math.floor(top); y <= bottom + 2; y++) {
     const dy = top + r - (y + 0.5);
-    const w = dy > 0 ? Math.sqrt(Math.max(0, r * r - dy * dy)) : r + (y - top - r) * 0.08;
-    const lean = view === 'side' ? Math.max(0, y - top - r) * 0.15 : 0;
+    const w = dy > 0 ? Math.sqrt(Math.max(0, r * r - dy * dy)) : r + (y - top - r) * 0.12;
+    const lean = view === 'side' ? Math.max(0, y - top - r) * 0.2 : 0;
     for (let x = Math.floor(cx - w + lean); x < cx + w + lean; x++) {
       if (y > hem(x)) continue;
       const t = (x + 0.5 - cx - lean) / w;
-      const u = (y - top) / (bottom - top);
-      c.px(x, y, SHEET, dy > 0 ? sphere(t, dy / r, 1) : cyl(t, 0.1 - u * 0.2));
+      c.px(x, y, SHEET, dy > 0 ? sphere(t * 0.9, (dy / r) * 0.8, 1) : sphere(t * 0.9, -0.1 - ((y - top - r) / (bottom - top - r)) * 0.3, 1));
     }
+  }
+  // Folds falling from under the dome.
+  for (let y = Math.round(top + r + 1); y <= bottom; y++) {
+    c.shade(Math.round(cx - r * 0.45), y, -1);
+    if (view !== 'side') c.shade(Math.round(cx + r * 0.45), y, -1);
   }
 }
 
 /** The tail curling under the hem, down to a point. */
-function tail(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, m: Material = MIST): void {
-  c.capsule(x0, y0, (x0 + x1) / 2 + 1, (y0 + y1) / 2, 2.4, 1.6, m);
-  c.capsule((x0 + x1) / 2 + 1, (y0 + y1) / 2, x1, y1, 1.6, 0.5, m);
+function tail(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
+  c.capsule(x0, y0, (x0 + x1) / 2 + 0.6, (y0 + y1) / 2, 1.7, 1.1, MIST);
+  c.capsule((x0 + x1) / 2 + 0.6, (y0 + y1) / 2, x1, y1, 1.1, 0.4, MIST);
 }
 
 function face(c: PixelCanvas, cx: number, cy: number, p: PolterPose, side: boolean): void {
   c.part();
-  const eyes = side ? [cx - 3] : [cx - 3, cx + 3];
+  const eyes = side ? [cx - 2.6] : [cx - 2, cx + 2];
   for (const ex of eyes) {
     if (p.squint) {
-      // Squeezed shut with glee: two little arches.
-      c.px(Math.round(ex - 1), Math.round(cy), VOID);
-      c.px(Math.round(ex), Math.round(cy - 1), VOID);
-      c.px(Math.round(ex + 1), Math.round(cy), VOID);
+      c.px(Math.round(ex - 1), Math.round(cy + 0.5), VOID);
+      c.px(Math.round(ex), Math.round(cy - 0.5), VOID);
+      if (!side) c.px(Math.round(ex + 1), Math.round(cy + 0.5), VOID);
       continue;
     }
-    const ry = 2.7 + p.glare * 0.6;
-    c.ellipse(ex, cy, side ? 1.4 : 1.9, ry, VOID);
-    c.px(Math.round(ex - 0.6), Math.round(cy - 1), TOOTH, { x: -0.3, y: 0.5, z: 0.8 });
-    if (p.glare > 0) for (let d = -1; d <= 1; d++) c.spark(ex + d * 0.5, cy + 0.5, [160, 255, 220], p.glare * 0.8);
+    c.ellipse(ex, cy, side ? 0.9 : 1.1, 1.6 + p.glare * 0.4, VOID);
+    c.px(Math.round(ex - 0.5), Math.round(cy - 0.8), TOOTH, { x: -0.3, y: 0.5, z: 0.8 });
+    if (p.glare > 0) c.spark(ex, cy + 0.5, [160, 255, 220], p.glare * 0.8);
   }
   // The grin, a tooth poking down.
-  const my = cy + 4;
-  const mx0 = side ? cx - 5 : cx - 3;
-  const mx1 = side ? cx - 1 : cx + 3;
-  for (let x = Math.round(mx0); x <= mx1; x++) {
-    const k = (x + 0.5 - (mx0 + mx1) / 2) / ((mx1 - mx0) / 2 + 0.5);
-    c.px(x, Math.round(my - k * k * 1.2 + (side ? 0 : 0)), VOID, { x: 0, y: 0, z: 1 });
-  }
-  c.px(Math.round((mx0 + mx1) / 2 + 1), Math.round(my + 1), TOOTH);
+  const my = Math.round(cy + 3);
+  const mx0 = side ? cx - 4 : cx - 2;
+  const mx1 = side ? cx - 1.5 : cx + 1.5;
+  for (let x = Math.round(mx0); x <= mx1; x++) c.px(x, x === Math.round(mx0) || x === Math.round(mx1) ? my - 1 : my, VOID, { x: 0, y: 0, z: 1 });
+  c.px(Math.round((mx0 + mx1) / 2), my + 1, TOOTH);
   if (!side) {
-    c.px(Math.round(cx - 5), Math.round(cy + 3), BLUSH);
-    c.px(Math.round(cx + 5), Math.round(cy + 3), BLUSH);
+    c.px(Math.round(cx - 3.8), Math.round(cy + 2), BLUSH);
+    c.px(Math.round(cx + 3.4), Math.round(cy + 2), BLUSH);
   }
 }
 
 function sheetArm(c: PixelCanvas, sx: number, sy: number, hand: Pt): void {
-  c.capsule(sx, sy, hand.x, hand.y, 2, 1.7, SHEET);
+  c.capsule(sx, sy, hand.x, hand.y, 1.4, 1.2, SHEET);
 }
 
 function drawSheetGhost(c: PixelCanvas, p: PolterPose, view: View): void {
   const top = 9 - p.bob;
-  const bottom = 27 - p.bob;
-  const cx = CX + (view === 'side' ? -p.lean : 0);
-  // The tail, under or behind the hem.
+  const bottom = 23 - p.bob;
+  const cx = 12 - (view === 'side' ? p.lean : 0);
   c.part();
-  if (view === 'side') tail(c, cx + 4, bottom, cx + 11, bottom - 3 + p.sway);
-  else tail(c, cx, bottom + 1, cx + 3 + p.sway, bottom + 9);
-  // The far arm, in the side view.
+  if (view === 'side') tail(c, cx + 3, bottom, cx + 8, bottom - 2 + p.sway);
+  else tail(c, cx, bottom + 1, cx + 2 + p.sway * 0.6, bottom + 6);
   if (view === 'side') {
     c.part();
-    sheetArm(c, cx + 1, top + 12, { x: cx + 4 + p.handB.x, y: top + 15 + p.handB.y });
+    sheetArm(c, cx + 1, top + 9, { x: cx + 3 + p.handB.x, y: top + 11 + p.handB.y });
   }
   c.part();
-  sheet(c, cx, top, bottom, view === 'side' ? 7.5 : 8.5, p.wave, view);
-  if (view === 'down') face(c, cx, top + 8, p, false);
-  else if (view === 'side') face(c, cx, top + 8, p, true);
+  sheet(c, cx, top, bottom, view === 'side' ? 5.4 : 6.2, p.wave, view);
+  if (view === 'down') face(c, cx, top + 6, p, false);
+  else if (view === 'side') face(c, cx, top + 6, p, true);
   else {
     // A patch sewn on the back.
     c.part();
-    for (let y = Math.round(top + 10); y <= top + 14; y++) for (let x = CX - 3; x <= CX + 1; x++) c.px(x, y, PATCH, { x: 0, y: 0.1, z: 1 });
-    for (const [x, y] of [[CX - 3, top + 10], [CX + 1, top + 10], [CX - 3, top + 14], [CX + 1, top + 14], [CX - 1, top + 12]]) c.px(Math.round(x), Math.round(y), STITCH);
+    for (let y = Math.round(top + 8); y <= top + 11; y++) for (let x = 10; x <= 13; x++) c.px(x, y, PATCH, { x: 0, y: 0.1, z: 1 });
+    for (const [x, y] of [[10, top + 8], [13, top + 8], [10, top + 11], [13, top + 11]]) c.px(Math.round(x), Math.round(y), STITCH);
   }
   c.part();
-  if (view === 'side') sheetArm(c, cx - 2, top + 12, { x: cx - 5 + p.handA.x, y: top + 16 + p.handA.y });
+  if (view === 'side') sheetArm(c, cx - 1.5, top + 9, { x: cx - 4 + p.handA.x, y: top + 12 + p.handA.y });
   else {
-    sheetArm(c, cx - 7, top + 11, { x: cx - 10 + p.handA.x, y: top + 15 + p.handA.y });
-    sheetArm(c, cx + 7, top + 11, { x: cx + 10 + p.handB.x, y: top + 15 + p.handB.y });
+    sheetArm(c, cx - 5.2, top + 8.5, { x: cx - 7.2 + p.handA.x, y: top + 11.5 + p.handA.y });
+    sheetArm(c, cx + 5.2, top + 8.5, { x: cx + 7.2 + p.handB.x, y: top + 11.5 + p.handB.y });
   }
 }
 
@@ -180,62 +177,63 @@ function drawSheetGhost(c: PixelCanvas, p: PolterPose, view: View): void {
 
 function parasol(c: PixelCanvas, hx: number, hy: number, tx: number, ty: number, view: View): void {
   c.part();
-  c.line(hx, hy, tx, ty + 2, STICK);
+  c.line(hx, hy, tx, ty + 1, STICK);
   c.part();
-  const rx = view === 'side' ? 7 : 8.5;
-  const ry = 4.5;
-  for (let y = Math.floor(ty - ry); y <= ty + 1.5; y++) {
+  const rx = view === 'side' ? 5 : 5.8;
+  const ry = 3.2;
+  for (let y = Math.floor(ty - ry); y <= ty + 1; y++) {
     for (let x = Math.floor(tx - rx); x <= tx + rx; x++) {
       const dx = (x + 0.5 - tx) / rx;
       const dy = (y + 0.5 - ty) / ry;
-      // The canopy's lower edge in scallops.
-      const scallop = y + 0.5 - ty > 0 ? Math.abs(Math.sin((x - tx) * 0.8)) < 0.5 : true;
+      const scallop = y + 0.5 - ty > 0 ? Math.abs(Math.sin((x - tx) * 0.9)) < 0.55 : true;
       if (dx * dx + dy * dy > 1 || !scallop) continue;
-      const rib = Math.abs(((x + 0.5 - tx) / 2.2) % 1) < 0.18;
-      c.px(x, y, PARASOL, sphere(dx, dy, 0.8), { bias: rib ? -1 : 0 });
+      const rib = Math.abs(((x + 0.5 - tx) / 2) % 1) < 0.2;
+      c.px(x, y, PARASOL, sphere(dx * 0.9, dy * 0.8, 1), { bias: rib ? -1 : 0 });
     }
   }
-  c.px(Math.round(tx), Math.round(ty - ry - 1), STICK);
+  c.px(Math.round(tx), Math.round(ty - ry - 0.5), STICK);
 }
 
 function drawTeaGirl(c: PixelCanvas, p: PolterPose, view: View): void {
   const b = p.bob;
-  const cx = CX + (view === 'side' ? -p.lean : 0);
-  const headY = 12 - b;
-  const waist = 24 - b;
-  const hem = 33 - b;
   const side = view === 'side';
+  const cx = 12 - (side ? p.lean : 0);
+  const headY = 10.2 - b;
+  const waist = 20 - b;
+  const hem = 26 - b;
 
-  // The parasol over her shoulder, behind her (held in the back hand).
-  const phx = side ? cx + 3 + p.handB.x : cx + 7 + p.handB.x;
-  const phy = waist - 2 + p.handB.y;
-  if (view !== 'up') parasol(c, phx, phy, side ? cx + 7 : cx + 9, headY - 6, view);
+  // The parasol over her shoulder, held in the back hand.
+  const phx = side ? cx + 2.5 + p.handB.x : cx + 5.5 + p.handB.x;
+  const phy = waist - 1 + p.handB.y;
+  if (view !== 'up') parasol(c, phx, phy, side ? cx + 5 : cx + 6.5, headY - 4.5, view);
 
-  // Ringlets, behind the face.
+  // Ringlets behind the face.
   c.part();
-  if (view !== 'side') for (const s of [-1, 1]) c.capsule(cx + s * 4.8, headY + 1, cx + s * 5.5, headY + 7, 1.3, 1.1, RINGLET);
-  else c.capsule(cx + 3.5, headY + 1, cx + 4.5, headY + 7, 1.4, 1.1, RINGLET);
+  if (!side) for (const s of [-1, 1]) c.capsule(cx + s * 3.9, headY + 1, cx + s * 4.3, headY + 5, 1, 0.8, RINGLET);
+  else c.capsule(cx + 2.6, headY + 1, cx + 3.2, headY + 5, 1, 0.8, RINGLET);
 
   // The skirt, flaring, its lace frills, fading to mist at the hem.
   c.part();
   c.shape(Math.round(waist), Math.round(hem), (y) => {
-    const k = (y - waist) / (hem - waist);
-    const hw = side ? 3.5 + k * 5 : 4.5 + k * 5.5;
-    return [cx - hw + (side ? k * 1.5 : 0), cx + hw + (side ? k * 2 : 0)];
-  }, LAVENDER, (_x, _y, t, u) => cyl(t, 0.25 - u * 0.4));
+    const u = (y - waist) / (hem - waist);
+    const hw = side ? 3 + u * 3.2 : 3.4 + u * u * 3.6 + u * 0.6;
+    return [cx - hw + (side ? u : 0), cx + hw + (side ? u * 1.5 : 0)];
+  }, LAVENDER, (_x, y, t) => sphere(t * 0.9, 0.2 - ((y - waist) / (hem - waist)) * 0.3, 1));
+  for (let y = Math.round(waist + 2); y <= hem; y++) {
+    const u = (y - waist) / (hem - waist);
+    c.shade(Math.round(cx - 2 - u), y, -1);
+    if (!side) c.shade(Math.round(cx + 2 + u), y, -1);
+  }
   c.part();
-  for (const fy of [Math.round(waist + 4), Math.round(hem - 1)]) {
-    const k = (fy - waist) / (hem - waist);
-    const hw = side ? 3.5 + k * 5 : 4.5 + k * 5.5;
-    for (let x = Math.round(cx - hw); x < cx + hw + (side ? 2 : 0); x++) {
-      c.px(x, fy, LACE, { x: 0, y: 0.3, z: 0.9 });
-      if (x % 2 === 0) c.px(x, fy + 1, LACE, { x: 0, y: -0.2, z: 0.9 });
-    }
+  for (const fy of [Math.round(waist + 3), Math.round(hem)]) {
+    const u = (fy - waist) / (hem - waist);
+    const hw = side ? 3 + u * 3.2 : 3.4 + u * u * 3.6 + u * 0.6;
+    for (let x = Math.round(cx - hw); x < cx + hw + (side ? 1.5 : 0); x++) if (c.filled(x, fy) || fy === Math.round(hem)) c.px(x, fy, LACE, sphere(0, 0.3));
   }
   // Mist trailing from the hem, dithered away.
-  for (let y = Math.round(hem + 1); y <= hem + 5; y++) {
-    const k = (y - hem) / 5;
-    const hw = (side ? 7 : 8.5) * (1 - k * 0.6);
+  for (let y = Math.round(hem + 1); y <= hem + 4; y++) {
+    const k = (y - hem) / 4;
+    const hw = (side ? 5.5 : 6.8) * (1 - k * 0.55);
     for (let x = Math.round(cx - hw); x < cx + hw; x++) {
       if ((x + y + Math.round(p.wave * 2)) % (k < 0.4 ? 2 : 3) !== 0) continue;
       c.px(x, y, DRESS_MIST, { x: 0, y: 0, z: 1 });
@@ -244,67 +242,61 @@ function drawTeaGirl(c: PixelCanvas, p: PolterPose, view: View): void {
 
   // The bodice and puffed sleeves.
   c.part();
-  c.shape(Math.round(waist - 6), Math.round(waist), (y) => {
-    const k = (y - waist + 6) / 6;
-    const hw = side ? 3 : 3.8 - k * 0.8;
+  c.shape(Math.round(waist - 5), Math.round(waist), (y) => {
+    const k = (y - waist + 5) / 5;
+    const hw = side ? 2.4 : 3.1 - k * 0.6;
     return [cx - hw, cx + hw];
   }, LAVENDER, (_x, _y, t) => cyl(t, 0.3));
   c.part();
-  if (side) c.ellipse(cx, waist - 5, 2.4, 2, LAVENDER);
-  else for (const s of [-1, 1]) c.ellipse(cx + s * 4.2, waist - 5, 2.2, 2, LAVENDER);
-  // Lace at the collar.
-  for (let x = Math.round(cx - 2); x <= cx + 2; x++) c.px(x, Math.round(waist - 6), LACE);
+  if (side) c.ellipse(cx, waist - 4, 1.8, 1.5, LAVENDER);
+  else for (const s of [-1, 1]) c.ellipse(cx + s * 3.4, waist - 4, 1.7, 1.5, LAVENDER);
+  for (let x = Math.round(cx - 1.5); x <= cx + 1; x++) c.px(x, Math.round(waist - 5), LACE);
 
   // Arms: the front hand free (it throws), the back one on the parasol.
   c.part();
-  if (side) c.capsule(cx - 1, waist - 4, cx - 3 + p.handA.x, waist - 1 + p.handA.y, 1, 0.9, PORCELAIN);
+  if (side) c.capsule(cx - 0.5, waist - 3, cx - 2.5 + p.handA.x, waist - 0.5 + p.handA.y, 0.8, 0.7, PORCELAIN);
   else {
-    c.capsule(cx - 4.5, waist - 4, cx - 6 + p.handA.x, waist - 1 + p.handA.y, 1, 0.9, PORCELAIN);
-    c.capsule(cx + 4.5, waist - 4, phx, phy, 1, 0.9, PORCELAIN);
+    c.capsule(cx - 3.6, waist - 3, cx - 4.8 + p.handA.x, waist - 0.5 + p.handA.y, 0.8, 0.7, PORCELAIN);
+    c.capsule(cx + 3.6, waist - 3, phx, phy, 0.8, 0.7, PORCELAIN);
   }
 
   // The bonnet, and the face in it.
   c.part();
-  c.ellipse(cx + (side ? 1 : 0), headY - 0.5, side ? 5.5 : 6.2, 5.6, LAVENDER);
-  // The bonnet's lace brim.
+  c.ellipse(cx + (side ? 0.8 : 0), headY - 0.3, side ? 4.3 : 4.9, 4.5, LAVENDER, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
   c.part();
-  for (let i = 0; i < 16; i++) {
-    const a = Math.PI + (i / 15) * Math.PI;
+  for (let i = 0; i < 14; i++) {
+    const a = Math.PI + (i / 13) * Math.PI;
     if (side && Math.cos(a) > 0.3) continue;
-    c.px(Math.round(cx + Math.cos(a) * 5.8), Math.round(headY - 0.5 + Math.sin(a) * 5.4), LACE);
+    c.px(Math.round(cx + Math.cos(a) * 4.5), Math.round(headY - 0.3 + Math.sin(a) * 4.2), LACE, sphere(Math.cos(a) * 0.5, 0.4));
   }
   if (view !== 'up') {
     c.part();
-    c.ellipse(cx - (side ? 1.5 : 0), headY + 0.5, side ? 3 : 3.8, 3.8, PORCELAIN);
+    c.ellipse(cx - (side ? 1.2 : 0), headY + 0.6, side ? 2.4 : 3, 3, PORCELAIN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.1, 1) });
     c.part();
-    const eyes = side ? [cx - 3] : [cx - 1.6, cx + 1.6];
+    const eyes = side ? [cx - 2.4] : [cx - 1.3, cx + 1.3];
     for (const ex of eyes) {
-      if (p.squint) {
-        c.px(Math.round(ex - 0.5), Math.round(headY + 0.5), VOID);
-        c.px(Math.round(ex + 0.5), Math.round(headY + 0.5), VOID);
-      } else {
-        c.px(Math.round(ex), Math.round(headY), VOID);
-        c.px(Math.round(ex), Math.round(headY + 1), VOID);
-        if (p.glare > 0) c.spark(ex, headY + 0.5, [230, 200, 255], p.glare);
+      if (p.squint) c.px(Math.round(ex), Math.round(headY + 0.6), VOID);
+      else {
+        c.px(Math.round(ex - 0.5), Math.round(headY + 0.2), VOID);
+        c.px(Math.round(ex - 0.5), Math.round(headY + 1.2), VOID);
+        if (p.glare > 0) c.spark(ex, headY + 0.6, [230, 200, 255], p.glare);
       }
     }
     if (!side) {
-      c.px(Math.round(cx - 2.6), Math.round(headY + 2), BLUSH);
-      c.px(Math.round(cx + 2.6), Math.round(headY + 2), BLUSH);
-      c.px(Math.round(cx), Math.round(headY + 3), BLUSH);
-    } else c.px(Math.round(cx - 3.5), Math.round(headY + 3), BLUSH);
+      c.px(Math.round(cx - 2.4), Math.round(headY + 2), BLUSH);
+      c.px(Math.round(cx + 1.8), Math.round(headY + 2), BLUSH);
+    } else c.px(Math.round(cx - 3), Math.round(headY + 2), BLUSH);
     // The bow under her chin.
     c.part();
-    const bx = side ? cx - 1 : cx;
-    for (const s of side ? [1] : [-1, 1]) c.ellipse(bx + s * 1.6, headY + 5, 1.3, 0.9, RIBBON);
-    c.px(Math.round(bx), Math.round(headY + 5), RIBBON);
+    const bx = side ? cx - 0.8 : cx - 0.5;
+    for (const s of side ? [1] : [-1, 1]) c.ellipse(bx + s * 1.3, headY + 4.2, 1, 0.7, RIBBON);
+    c.px(Math.round(bx), Math.round(headY + 4), RIBBON);
   } else {
-    // From behind: the bonnet's back and its bow's long tails.
     c.part();
-    c.ellipse(cx, headY + 4.5, 1.5, 1, RIBBON);
-    c.capsule(cx - 0.5, headY + 5, cx - 1.5, headY + 10, 0.7, 0.5, RIBBON);
-    c.capsule(cx + 0.5, headY + 5, cx + 1.5, headY + 10, 0.7, 0.5, RIBBON);
-    parasol(c, phx, phy, cx + 5, headY - 4, view);
+    c.ellipse(cx - 0.5, headY + 3.6, 1.2, 0.8, RIBBON);
+    c.capsule(cx - 1, headY + 4, cx - 1.8, headY + 8, 0.6, 0.4, RIBBON);
+    c.capsule(cx, headY + 4, cx + 0.8, headY + 8, 0.6, 0.4, RIBBON);
+    parasol(c, phx, phy, cx + 4, headY - 3.5, view);
   }
 }
 
@@ -339,8 +331,8 @@ const move = (view: View): PolterPose[] =>
     p.wave = i + 0.5;
     p.sway = view === 'side' ? [2, 1, 2, 3][i] : [1, 2, 1, 0][i];
     p.lean = view === 'side' ? 1 : 0;
-    p.handA = view === 'side' ? { x: 2, y: -1 } : { x: 0, y: 1 };
-    p.handB = view === 'side' ? { x: 2, y: 0 } : { x: 0, y: 1 };
+    p.handA = view === 'side' ? { x: 1.5, y: -1 } : { x: 0, y: 1 };
+    p.handB = view === 'side' ? { x: 1.5, y: 0 } : { x: 0, y: 1 };
     return p;
   });
 
@@ -350,8 +342,8 @@ const toss = (view: View): PolterPose[] =>
     const p = base();
     p.bob = 1;
     p.squint = i >= 1 && i <= 2;
-    const back = view === 'side' ? { x: 5, y: -6 } : view === 'down' ? { x: -2, y: -8 } : { x: -2, y: -4 };
-    const fling = view === 'side' ? { x: -5, y: -3 } : view === 'down' ? { x: 1, y: 2 } : { x: 1, y: -9 };
+    const back = view === 'side' ? { x: 3.5, y: -4 } : view === 'down' ? { x: -1.5, y: -5.5 } : { x: -1.5, y: -3 };
+    const fling = view === 'side' ? { x: -3.5, y: -2 } : view === 'down' ? { x: 1, y: 1.5 } : { x: 1, y: -6 };
     p.handA = i === 0 ? back : i === 3 ? { x: 0, y: 0 } : fling;
     p.lean = view === 'side' && i >= 1 && i <= 2 ? 1 : 0;
     p.wave = i;
@@ -362,11 +354,11 @@ const toss = (view: View): PolterPose[] =>
 const rattle = (view: View): PolterPose[] =>
   [0, 1, 2, 3, 4].map((i) => {
     const p = base();
-    const up = view === 'side' ? { x: -1, y: -9 } : { x: 0, y: -9 };
+    const up = view === 'side' ? { x: -1, y: -6 } : { x: 0, y: -6 };
     p.handA = { ...up, x: up.x + (view === 'side' ? 0 : -1) };
-    p.handB = { ...up, x: up.x + (view === 'side' ? 3 : 1) };
+    p.handB = { ...up, x: up.x + (view === 'side' ? 2 : 1) };
     p.shake = i % 2 ? 1 : -1;
-    p.bob = i === 0 ? 0 : 3;
+    p.bob = i === 0 ? 0 : 2;
     p.glare = 0.5;
     p.wave = i * 1.5;
     return p;
@@ -376,10 +368,10 @@ const rattle = (view: View): PolterPose[] =>
 const cast = (view: View): PolterPose[] =>
   [0.3, 0.6, 1, 1, 1].map((k, i) => {
     const p = base();
-    p.bob = Math.round(k * 4);
+    p.bob = Math.round(k * 3);
     p.glare = k;
-    p.handA = view === 'side' ? { x: -2, y: -6 * k } : { x: -3 * k, y: -6 * k };
-    p.handB = view === 'side' ? { x: 3, y: -6 * k } : { x: 3 * k, y: -6 * k };
+    p.handA = view === 'side' ? { x: -1.5, y: -4 * k } : { x: -2 * k, y: -4 * k };
+    p.handB = view === 'side' ? { x: 2, y: -4 * k } : { x: 2 * k, y: -4 * k };
     p.wave = i;
     p.sway = i % 2;
     return p;
@@ -401,7 +393,7 @@ export interface PolterFrame {
 }
 
 function drawFrame(dir: Dir, p: PolterPose): PixelCanvas {
-  const c = new PixelCanvas(POLTER_W, POLTER_H).offset(p.shake, 0);
+  const c = new PixelCanvas(POLTER_W, POLTER_H).offset(BODY_X + p.shake, BODY_Y);
   const view: View = dir === 'left' || dir === 'right' ? 'side' : dir;
   if (L.tea) drawTeaGirl(c, p, view);
   else drawSheetGhost(c, p, view);
