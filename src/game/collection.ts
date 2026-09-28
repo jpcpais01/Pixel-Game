@@ -17,7 +17,10 @@ export const DAILY_GEMS = 5;
 /** Accounts (by username, lower case) that own every skin. */
 const ADMINS = ['kel'];
 /** One-off gifts of gems to an account (by username, lower case), each given once and remembered in its save by id. */
-const GRANTS: { id: string; user: string; gems: number }[] = [{ id: 'kel-100k', user: 'kel', gems: 100000 }];
+const GRANTS: { id: string; user: string; gems: number }[] = [
+  { id: 'kel-100k', user: 'kel', gems: 100000 },
+  { id: 'keldog-10k', user: 'keldog', gems: 10000 },
+];
 /** Set once this device has given a guest the welcome gems, so a fresh guest game can't be made again and again for more. */
 const WELCOMED_KEY = 'pixel-battle.welcomed';
 
