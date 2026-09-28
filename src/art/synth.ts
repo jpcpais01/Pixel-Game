@@ -16,30 +16,31 @@ import { icon16, seg, type Tones } from './druid';
 
 const ramp = (...c: string[]): RGB[] => c.map(hex);
 
-export const SYNTH_W = 36;
-export const SYNTH_H = 46;
-const CX = 18;
-const GROUND = 43;
-export const SYNTH_ORIGIN_X = CX;
-export const SYNTH_ORIGIN_Y = GROUND;
+export const SYNTH_W = 48;
+export const SYNTH_H = 50;
+/** Drawn in the 24x32 body box every hero uses, placed in a larger frame. */
+const BODY_X = 12;
+const BODY_Y = 12;
+export const SYNTH_ORIGIN_X = BODY_X + 12;
+export const SYNTH_ORIGIN_Y = BODY_Y + 31;
 /** The chest's height above the feet, where drones launch from and return to. */
-export const SYNTH_CHEST_Y = 20;
+export const SYNTH_CHEST_Y = 14;
 
 // ---------------------------------------------------------------------------
 // Materials
 
-const SHELL: Material = { ramp: ramp('#5e687c', '#9ea8bc', '#d2dae8', '#f2f6ff', '#ffffff'), outline: hex('#161c2a'), outlineLit: hex('#262e40'), shine: true };
-const CHROME: Material = { ramp: ramp('#1e222c', '#464e5e', '#8690a4', '#d0d8e6', '#ffffff'), outline: hex('#0a0c12'), shine: true };
-const JOINT: Material = { ramp: ramp('#0a0d14', '#161c28', '#262e3e'), outline: hex('#04050a') };
-const CYAN: Material = { ramp: ramp('#0e5a7e', '#1aa6d8', '#3ad6ff', '#8af0ff'), outline: hex('#062a3a'), emissive: 1, noAO: true };
+const SHELL: Material = { ramp: ramp('#2e3444', '#525c72', '#7e8aa2', '#aeb8cc', '#d8e0ec'), outline: hex('#0c0f18'), outlineLit: hex('#1a2030'), shine: true };
+const CHROME: Material = { ramp: ramp('#161a24', '#30384a', '#56627a', '#8e9ab0', '#c8d2e2'), outline: hex('#07080e'), shine: true };
+const JOINT: Material = { ramp: ramp('#07090e', '#10141e', '#1c2230'), outline: hex('#030406') };
+const CYAN: Material = { ramp: ramp('#0a4a66', '#1690c0', '#3ad0f8', '#9af0ff'), outline: hex('#041c28'), emissive: 1, noAO: true };
 /** The halo: pure light, no outline, so it reads as a thin ring and not a disc. */
 const HALO: Material = { ...CYAN, noOutline: true };
 
-const GOLD: Material = { ramp: ramp('#4e2a06', '#8e520e', '#d0901e', '#f4c63e', '#fff0a0'), outline: hex('#1e1002'), outlineLit: hex('#2e1a04'), shine: true };
-const CHITIN: Material = { ramp: ramp('#060509', '#12101c', '#221f32', '#3a3652', '#5c5880'), outline: hex('#020203'), shine: true };
-const EYE: Material = { ramp: ramp('#2a0802', '#6a1c06', '#b4440e', '#f08a2a', '#ffd070'), outline: hex('#0e0402'), shine: true, emissive: 0.3 };
-const AMBER: Material = { ramp: ramp('#c86a0e', '#ffb03a', '#fff0b0'), outline: hex('#3a1a02'), emissive: 1, noAO: true };
-const WING: Material = { ramp: ramp('#b89a5a', '#e8d49a', '#fff4d0'), outline: hex('#6a4a1a'), emissive: 0.35, noAO: true };
+const GOLD: Material = { ramp: ramp('#3e2206', '#74440c', '#b07818', '#dca432', '#f6d470'), outline: hex('#160c02'), outlineLit: hex('#261604'), shine: true };
+const CHITIN: Material = { ramp: ramp('#050408', '#0e0c16', '#1a1726', '#2c283e', '#443e5e'), outline: hex('#010102'), shine: true };
+const EYE: Material = { ramp: ramp('#200602', '#561604', '#963a0c', '#d87424', '#ffb850'), outline: hex('#0a0302'), shine: true, emissive: 0.3 };
+const AMBER: Material = { ramp: ramp('#b0580a', '#f0a030', '#ffe090'), outline: hex('#3a1a02'), emissive: 1, noAO: true };
+const WING: Material = { ramp: ramp('#8a7040', '#c0a868', '#e8d8a8'), outline: hex('#4a3410'), emissive: 0.3, noAO: true };
 
 export interface SynthLook {
   key: string;
@@ -81,15 +82,14 @@ export interface SynthPose {
 const base = (): SynthPose => ({ bob: 0, liftA: 0, liftB: 0, strideA: 0, strideB: 0, handA: { x: 0, y: 0 }, handB: { x: 0, y: 0 }, open: 0, float: 0, flap: 0 });
 
 // ---------------------------------------------------------------------------
-// Parts
+// Parts (in body-box coordinates: 24 wide, the feet at y 31)
 
-/** A limb: upper part, a dark joint, lower part, and the end (hand or foot). */
-function limb(c: PixelCanvas, a: Pt, b: Pt, bend: Pt, upper: Material, lower: Material, r0: number, r1: number, joint: Material = JOINT): void {
+/** A limb: upper part, a joint, lower part (the hive's chitin jointed every other pixel). */
+function limb(c: PixelCanvas, a: Pt, b: Pt, bend: Pt, upper: Material, lower: Material, r0: number, r1: number, joint: Material): void {
   const k = { x: (a.x + b.x) / 2 + bend.x, y: (a.y + b.y) / 2 + bend.y };
   c.capsule(a.x, a.y, k.x, k.y, r0, r0 * 0.9, upper);
-  c.ellipse(k.x, k.y, r1, r1, joint);
+  c.px(Math.round(k.x - 0.5), Math.round(k.y - 0.5), joint, { x: 0, y: 0.2, z: 1 });
   c.capsule(k.x, k.y, b.x, b.y, r1, r1 * 0.85, lower);
-  // The Hive Queen's chitin is jointed every couple of pixels.
   if (L.hive && lower === CHITIN) {
     const n = Math.max(1, Math.round(Math.hypot(b.x - k.x, b.y - k.y) / 2));
     for (let i = 1; i < n; i++) c.shade(Math.round(k.x + ((b.x - k.x) * i) / n), Math.round(k.y + ((b.y - k.y) * i) / n), -1);
@@ -98,61 +98,57 @@ function limb(c: PixelCanvas, a: Pt, b: Pt, bend: Pt, upper: Material, lower: Ma
 
 function leg(c: PixelCanvas, hip: Pt, foot: Pt, out: number, side: boolean): void {
   c.part();
-  limb(c, hip, { x: foot.x, y: foot.y - 2 }, { x: out, y: -0.5 }, L.hive ? CHITIN : SHELL, L.hive ? GOLD : CHROME, 1.8, 1.5);
+  limb(c, hip, { x: foot.x, y: foot.y - 1.5 }, { x: out * 0.4, y: -0.3 }, L.hive ? CHITIN : SHELL, L.hive ? GOLD : CHROME, 1.35, 1.2, JOINT);
   c.part();
-  // A small pointed foot.
-  if (side) c.shape(Math.round(foot.y - 2), Math.round(foot.y - 1), (y) => [foot.x - (y < foot.y - 1.5 ? 2 : 3.2), foot.x + 1.5], L.hive ? CHITIN : CHROME, (_x, _y, t) => cyl(t, 0.4));
-  else c.ellipse(foot.x, foot.y - 1.5, 1.8, 1.4, L.hive ? CHITIN : CHROME);
+  if (side) c.shape(Math.round(foot.y - 1), Math.round(foot.y), (y) => [foot.x - (y < foot.y - 0.5 ? 1.5 : 2.5), foot.x + 1.2], L.hive ? CHITIN : CHROME, (_x, _y, t) => cyl(t, 0.4));
+  else c.ellipse(foot.x, foot.y - 0.6, 1.5, 1.1, L.hive ? CHITIN : CHROME);
 }
 
 function arm(c: PixelCanvas, shoulder: Pt, hand: Pt, out: number): void {
   c.part();
-  c.ellipse(shoulder.x, shoulder.y, 2.1, 2, L.hive ? GOLD : SHELL);
-  limb(c, { x: shoulder.x, y: shoulder.y + 1 }, hand, { x: out, y: 0 }, L.hive ? CHITIN : SHELL, L.hive ? CHITIN : CHROME, 1.5, 1.35, L.hive ? GOLD : CHROME);
+  c.ellipse(shoulder.x, shoulder.y, 1.7, 1.6, L.hive ? GOLD : SHELL);
+  limb(c, { x: shoulder.x, y: shoulder.y + 0.8 }, hand, { x: out * 0.5, y: 0 }, L.hive ? CHITIN : SHELL, L.hive ? CHITIN : CHROME, 1.15, 1.05, L.hive ? GOLD : CHROME);
   c.part();
-  c.ellipse(hand.x, hand.y + 0.5, 1.3, 1.3, L.hive ? GOLD : CHROME);
+  c.ellipse(hand.x, hand.y + 0.4, 1, 1, L.hive ? GOLD : CHROME);
 }
 
 /** Honeycomb: dark seams along a hex grid (the Hive Queen's armour and wings). */
-function hexEdge(x: number, y: number, s = 3): boolean {
+function hexEdge(x: number, y: number, s = 2.4): boolean {
   const q = (x + 0.5) / s;
   const r = (y + 0.5) / (s * 0.866);
   const row = Math.floor(r);
   const qx = q - (row % 2 ? 0.5 : 0);
   const fx = qx - Math.floor(qx);
   const fy = r - row;
-  return fx < 0.18 || fy < 0.2;
+  return fx < 0.2 || fy < 0.22;
 }
 
-/** The chest: waist to shoulders, with its seam and core (parted for the Special). */
+/** The chest: shoulders to waist, its seam and core (parted for the Special). */
 function torso(c: PixelCanvas, cx: number, top: number, open: number, view: View): void {
-  const bottom = top + 10;
+  const bottom = top + 7;
   const m = L.hive ? GOLD : SHELL;
   const edges = (y: number): [number, number] => {
     const k = (y - top) / (bottom - top);
-    const hw = view === 'side' ? 3.6 - k * 1 : 5.6 - k * 2.6;
-    return [cx - hw, cx + hw + (view === 'side' ? 0.5 : 0)];
+    const hw = view === 'side' ? 3.2 - k * 0.6 : 4.8 - k * 1.6;
+    return [cx - hw, cx + hw];
   };
   c.shape(top, bottom, (y) => {
     const [l, r] = edges(y);
-    // The plates part down the middle when it opens.
-    return [l - (view === 'down' ? open : 0), r + (view === 'down' ? open : 0)];
-  }, m, (_x, _y, t, u) => cyl(t, 0.35 - u * 0.4));
+    const part = view === 'down' ? open * 0.8 : 0;
+    return [l - part, r + part];
+  }, m, (_x, y, t) => sphere(t * 0.9, ((y - top) / (bottom - top)) * 0.9 - 0.4, 1));
   c.part();
   if (L.hive) {
     for (let y = top; y <= bottom; y++) {
       const [l, r] = edges(y);
-      for (let x = Math.round(l); x < r; x++) if (hexEdge(x, y)) c.shade(x, y, -2);
+      for (let x = Math.round(l); x < r; x++) if (hexEdge(x, y)) c.shade(x, y, -1);
     }
   } else if (view !== 'side') {
-    // Panel seams.
-    for (let y = top + 2; y <= bottom; y++) c.shade(Math.round(cx), y, -1);
-    for (let x = Math.round(cx - 3); x <= cx + 3; x++) c.shade(x, top + 7, -1);
+    for (let y = top + 3; y <= bottom; y++) c.shade(Math.round(cx - 0.5), y, -1);
   }
   if (view === 'down') {
-    // The core: a disc of light (a hexagon for the hive), wider and brighter as the plates part.
-    const r = 1.6 + open * 1.8;
-    const coreY = top + 3.5;
+    const coreY = top + 2.6;
+    const r = 1.2 + open * 1.2;
     if (L.hive) {
       for (let y = Math.floor(coreY - r); y <= coreY + r; y++) {
         const hw = r - Math.abs(y + 0.5 - coreY) * 0.5;
@@ -160,114 +156,102 @@ function torso(c: PixelCanvas, cx: number, top: number, open: number, view: View
       }
     } else c.ellipse(cx, coreY, r, r, CYAN, { glow: 0.8 + open * 0.2 });
     if (open > 0) {
-      // Light pours out of the gap.
-      const core = L.hive ? hex('#fff0b0') : hex('#e6fcff');
-      for (let i = 1; i <= 4; i++) for (let s = -1; s <= 1; s++) c.spark(cx + s, coreY + r + i, core, open * (0.6 - i * 0.1));
+      const core: RGB = L.hive ? hex('#fff0b0') : hex('#e6fcff');
+      for (let i = 1; i <= 3; i++) for (let s = -1; s <= 1; s++) c.spark(cx + s, coreY + r + i, core, open * (0.6 - i * 0.12));
     }
   } else if (view === 'up') {
-    // A power conduit down the spine.
-    for (let y = top + 1; y <= bottom - 1; y++) c.px(Math.round(cx), y, L.hive ? AMBER : CYAN, { x: 0, y: 0, z: 1 }, { glow: 0.6 });
+    for (let y = top + 1; y <= bottom - 1; y++) c.px(Math.round(cx - 0.5), y, L.hive ? AMBER : CYAN, { x: 0, y: 0, z: 1 }, { glow: 0.5 });
   }
 }
 
 /** The Synth's head: a smooth shell with a band of light for eyes. */
 function synthHead(c: PixelCanvas, cx: number, cy: number, view: View): void {
   c.part();
-  c.ellipse(cx, cy, view === 'side' ? 4 : 4.2, 4.6, SHELL);
+  c.ellipse(cx, cy, view === 'side' ? 4.1 : 4.6, 4.3, SHELL, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.15, 1) });
   c.part();
   if (view === 'down') {
-    for (let x = Math.round(cx - 3.5); x < cx + 3.5; x++) {
-      const k = (x + 0.5 - cx) / 3.8;
-      const y = Math.round(cy + k * k * 0.8);
-      c.px(x, y, CYAN, sphere(k, 0, 1));
-      c.px(x, y - 1, CYAN, sphere(k, -0.2, 1), { glow: 0.6 });
+    for (let x = Math.round(cx - 3); x < cx + 3; x++) {
+      const k = (x + 0.5 - cx) / 3.3;
+      c.px(x, Math.round(cy + 0.4 + k * k * 0.6), CYAN, sphere(k, 0, 1));
     }
-    // The seam of the jaw.
-    for (let x = Math.round(cx - 2); x <= cx + 1; x++) c.shade(x, Math.round(cy + 3), -1);
+    for (let x = Math.round(cx - 1.5); x <= cx + 0.5; x++) c.shade(x, Math.round(cy + 3), -1);
   } else if (view === 'side') {
-    for (let x = Math.round(cx - 4); x <= cx - 1; x++) {
-      c.px(x, Math.round(cy), CYAN, { x: -0.7, y: 0, z: 0.7 });
-      c.px(x, Math.round(cy - 1), CYAN, { x: -0.7, y: 0.2, z: 0.7 }, { glow: 0.6 });
-    }
-    // An ear disc.
-    c.ellipse(cx + 1, cy, 1.4, 1.6, CHROME);
+    for (let x = Math.round(cx - 4); x <= cx - 1.5; x++) c.px(x, Math.round(cy + 0.4), CYAN, { x: -0.7, y: 0, z: 0.7 });
+    c.ellipse(cx + 1, cy + 0.3, 1.1, 1.3, CHROME);
   } else {
-    // A small light at the base of the skull.
-    c.px(Math.round(cx), Math.round(cy + 2), CYAN);
-    c.ellipse(cx - 4, cy, 0.8, 1.4, CHROME);
-    c.ellipse(cx + 4, cy, 0.8, 1.4, CHROME);
+    c.px(Math.round(cx - 0.5), Math.round(cy + 2.5), CYAN);
+    c.ellipse(cx - 4, cy + 0.3, 0.7, 1.2, CHROME);
+    c.ellipse(cx + 4, cy + 0.3, 0.7, 1.2, CHROME);
   }
 }
 
 /** The halo, a thin ring of light floating over the head. */
 function halo(c: PixelCanvas, cx: number, cy: number): void {
   c.part();
-  for (let y = Math.floor(cy - 2); y <= cy + 2; y++) {
-    for (let x = Math.floor(cx - 6); x <= cx + 6; x++) {
-      const dx = (x + 0.5 - cx) / 5.2;
-      const dy = (y + 0.5 - cy) / 1.5;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (Math.abs(d - 1) < 0.22) c.px(x, y, HALO, { x: 0, y: 1, z: 0.3 }, { glow: 0.9 });
-    }
+  const y = Math.round(cy);
+  const x0 = Math.round(cx - 3);
+  // Seen from above at a slant: a line of light front and back, closing at the ends.
+  for (let x = x0 + 1; x <= x0 + 4; x++) {
+    c.px(x, y - 1, HALO, { x: 0, y: 1, z: 0.3 }, { glow: 0.7 });
+    c.px(x, y + 1, HALO, { x: 0, y: -0.5, z: 0.8 }, { glow: 0.9 });
   }
+  c.px(x0, y, HALO, { x: -1, y: 0, z: 0.3 }, { glow: 0.9 });
+  c.px(x0 + 5, y, HALO, { x: 1, y: 0, z: 0.3 }, { glow: 0.9 });
 }
 
-/** The Hive Queen's head: great compound eyes, a gold tiara, and curled antennae with glowing tips. */
+/** The Hive Queen's head: compound eyes, a gold tiara, and curled antennae with glowing tips. */
 function beeHead(c: PixelCanvas, cx: number, cy: number, view: View, float: number): void {
-  // Antennae behind the head, curling out.
   c.part();
   const antenna = (s: number, lean = 0) => {
-    const x0 = cx + s * 1.4 + lean;
+    const x0 = cx + s * 1.2 + lean;
     const pts: Pt[] = [
-      { x: x0, y: cy - 4 },
-      { x: x0 + s * 1.5, y: cy - 7 },
-      { x: x0 + s * 3.5, y: cy - 9 - float },
-      { x: x0 + s * 5, y: cy - 8.5 - float },
+      { x: x0, y: cy - 3.5 },
+      { x: x0 + s * 1.2, y: cy - 5.5 },
+      { x: x0 + s * 2.8, y: cy - 7 - float },
     ];
     for (let i = 0; i < pts.length - 1; i++) c.line(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, CHITIN);
     const tip = pts[pts.length - 1];
-    c.ellipse(tip.x, tip.y, 1.1, 1.1, AMBER);
+    c.ellipse(tip.x + s * 0.6, tip.y, 0.9, 0.9, AMBER);
   };
   if (view === 'side') {
     antenna(-1, 1);
-    antenna(1, -2);
+    antenna(1, -1.5);
   } else {
     antenna(-1);
     antenna(1);
   }
   c.part();
-  c.ellipse(cx, cy, view === 'side' ? 4 : 4.3, 4.4, CHITIN);
+  c.ellipse(cx, cy, view === 'side' ? 3.8 : 4.2, 4, CHITIN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.15, 1) });
   c.part();
   if (view === 'down') {
     for (const s of [-1, 1]) {
-      c.ellipse(cx + s * 2.2, cy + 0.2, 2, 2.6, EYE);
-      // Facets glinting.
-      c.px(Math.round(cx + s * 2.2 - 0.5), Math.round(cy - 1), EYE, { x: -0.4, y: 0.6, z: 0.7 }, { bias: 2 });
+      c.ellipse(cx + s * 2, cy + 0.4, 1.6, 2, EYE);
+      c.px(Math.round(cx + s * 2 - 0.6), Math.round(cy - 0.6), EYE, { x: -0.4, y: 0.6, z: 0.7 }, { bias: 2 });
     }
-    // Mandibles.
-    c.px(Math.round(cx - 1), Math.round(cy + 3.5), GOLD);
-    c.px(Math.round(cx), Math.round(cy + 3.5), GOLD);
+    c.px(Math.round(cx - 1), Math.round(cy + 3), GOLD);
+    c.px(Math.round(cx), Math.round(cy + 3), GOLD);
   } else if (view === 'side') {
-    c.ellipse(cx - 1.8, cy + 0.2, 1.8, 2.6, EYE);
-    c.px(Math.round(cx - 2.5), Math.round(cy - 1), EYE, { x: -0.4, y: 0.6, z: 0.7 }, { bias: 2 });
-    c.px(Math.round(cx - 4), Math.round(cy + 3), GOLD);
+    c.ellipse(cx - 1.8, cy + 0.4, 1.5, 2, EYE);
+    c.px(Math.round(cx - 2.4), Math.round(cy - 0.6), EYE, { x: -0.4, y: 0.6, z: 0.7 }, { bias: 2 });
+    c.px(Math.round(cx - 3.6), Math.round(cy + 2.6), GOLD);
   }
   // The tiara: three gold points on the brow (a band round the back).
   c.part();
-  const ty = cy - 3.5;
+  const ty = cy - 3;
   if (view === 'up') for (let x = Math.round(cx - 3); x <= cx + 2; x++) c.px(x, Math.round(ty + 0.5), GOLD, cyl((x + 0.5 - cx) / 3.5, 0.5));
   else {
-    const x0 = view === 'side' ? cx - 3 : cx - 2.5;
-    for (let i = 0; i < 5; i++) c.px(Math.round(x0 + i * (view === 'side' ? 0.8 : 1.2)), Math.round(ty), GOLD, cyl(i / 2 - 1, 0.5));
-    for (const i of [0, 2, 4]) c.px(Math.round(x0 + i * (view === 'side' ? 0.8 : 1.2)), Math.round(ty - 1), GOLD, { x: 0, y: 0.8, z: 0.6 }, { bias: 1 });
-    c.px(Math.round(x0 + 2 * (view === 'side' ? 0.8 : 1.2)), Math.round(ty - 1), AMBER);
+    const step = view === 'side' ? 0.8 : 1.1;
+    const x0 = view === 'side' ? cx - 2.6 : cx - 2.2;
+    for (let i = 0; i < 5; i++) c.px(Math.round(x0 + i * step), Math.round(ty), GOLD, cyl(i / 2 - 1, 0.5));
+    for (const i of [0, 2, 4]) c.px(Math.round(x0 + i * step), Math.round(ty - 1), GOLD, { x: 0, y: 0.8, z: 0.6 }, { bias: 1 });
+    c.px(Math.round(x0 + 2 * step), Math.round(ty), AMBER);
   }
 }
 
 /** The striped abdomen, with its stinger. */
 function abdomen(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number, tipX: number, tipY: number): void {
   c.part();
-  c.capsule(cx, cy, tipX, tipY, 1.2, 0.4, CHITIN);
+  c.capsule(cx, cy, tipX, tipY, 0.9, 0.3, CHITIN);
   c.ellipse(cx, cy, rx, ry, GOLD);
   c.part();
   for (let y = Math.floor(cy - ry); y <= cy + ry; y++) {
@@ -275,21 +259,18 @@ function abdomen(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number,
       const dx = (x + 0.5 - cx) / rx;
       const dy = (y + 0.5 - cy) / ry;
       if (dx * dx + dy * dy > 1) continue;
-      // Stripes across its length.
       const along = rx > ry ? dx : dy;
-      if (Math.floor((along + 1) * 2.6) % 2 === 1) c.px(x, y, CHITIN, sphere(dx, dy, 1));
+      if (Math.floor((along + 1) * 2.2) % 2 === 1) c.px(x, y, CHITIN, sphere(dx, dy, 1));
     }
   }
 }
 
-/** Two wings on one side, see-through gold with honeycomb veins, swept by `flap`. */
+/** Two small wings on one side, veined with honeycomb, swept by `flap`. */
 function wings(c: PixelCanvas, root: Pt, s: number, flap: number, view: View): void {
   c.part();
-  const lift = flap * 4;
   const wing = (len: number, ang: number, w: number) => {
-    const a = ang - (s < 0 ? 0 : 0);
-    const ex = root.x + s * Math.cos(a) * len;
-    const ey = root.y - Math.sin(a) * len;
+    const ex = root.x + s * Math.cos(ang) * len;
+    const ey = root.y - Math.sin(ang) * len;
     const n = Math.ceil(len * 2);
     for (let i = 0; i <= n; i++) {
       const k = i / n;
@@ -297,19 +278,19 @@ function wings(c: PixelCanvas, root: Pt, s: number, flap: number, view: View): v
       const px = root.x + (ex - root.x) * k;
       const py = root.y + (ey - root.y) * k;
       for (let d = -hw; d <= hw; d += 0.5) {
-        const x = Math.round(px - Math.sin(a) * d * s * 0.3);
+        const x = Math.round(px);
         const y = Math.round(py + d);
         if (c.filled(x, y)) continue;
-        c.px(x, y, WING, { x: s * 0.3, y: 0.5, z: 0.8 }, { bias: hexEdge(x, y, 2.5) ? -1 : 1 });
+        c.px(x, y, WING, { x: s * 0.3, y: 0.5, z: 0.8 }, { bias: hexEdge(x, y, 2) ? -1 : 1 });
       }
     }
   };
   if (view === 'side') {
-    wing(10, 0.7 + flap * 0.5, 2.2);
-    wing(8, 0.25 + flap * 0.4, 1.8);
+    wing(7, 0.8 + flap * 0.4, 1.6);
+    wing(5.5, 0.3 + flap * 0.3, 1.3);
   } else {
-    wing(11, 0.55 + lift * 0.06, 2.4);
-    wing(8.5, 0.05 + lift * 0.05, 1.9);
+    wing(7.5, 0.6 + flap * 0.25, 1.7);
+    wing(5.5, 0.1 + flap * 0.2, 1.4);
   }
 }
 
@@ -318,63 +299,54 @@ function wings(c: PixelCanvas, root: Pt, s: number, flap: number, view: View): v
 
 function drawFigure(c: PixelCanvas, p: SynthPose, view: View): void {
   const hive = L.hive;
-  const hipY = 30 - p.bob;
-  const chest = hipY - 10;
-  const headY = chest - 6;
-  const cx = view === 'side' ? CX + 0.5 : CX;
+  const U = -p.bob;
+  const hipY = 23 + U;
+  const chest = 15 + U;
+  const headY = 10.4 + U;
+  const cx = 12;
 
-  // Behind: the hive's wings and (seen from the front) her abdomen; the Synth's halo when seen from behind.
+  // Behind: the hive's wings (and from the front, her abdomen).
   if (hive) {
-    if (view === 'side') {
-      wings(c, { x: cx + 2, y: chest + 2 }, 1, p.flap, view);
-    } else if (view === 'down') {
-      for (const s of [-1, 1]) wings(c, { x: cx + s * 2, y: chest + 2 }, s, p.flap, view);
-      abdomen(c, cx, hipY + 1.5, 4.2, 3.4, cx, hipY + 7);
+    if (view === 'side') wings(c, { x: cx + 1.5, y: chest + 1.5 }, 1, p.flap, view);
+    else if (view === 'down') {
+      for (const s of [-1, 1]) wings(c, { x: cx + s * 1.5, y: chest + 1.5 }, s, p.flap, view);
+      abdomen(c, cx, hipY + 1.4, 3.2, 2.4, cx, hipY + 5.5);
     }
   }
   if (view === 'side') {
-    // The far arm, and the far leg.
-    arm(c, { x: cx + 1, y: chest + 1 }, { x: cx + 1 + p.handB.x, y: hipY - 0.5 + p.handB.y }, 1);
-    for (let y = 0; y < SYNTH_H; y++) for (let x = 0; x < SYNTH_W; x++) if (c.filled(x, y) && c.materialAt(x, y) !== WING) c.shade(x, y, -1);
-    leg(c, { x: cx + 0.5, y: hipY }, { x: cx + 0.5 + p.strideB, y: GROUND - p.liftB }, 1, true);
+    // The far arm and leg, a shade darker.
+    arm(c, { x: cx + 0.8, y: chest + 1 }, { x: cx + 1 + p.handB.x, y: hipY - 1 + p.handB.y }, 1);
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 24; x++) if (c.filled(x, y) && c.materialAt(x, y) !== WING) c.shade(x, y, -1);
+    leg(c, { x: cx + 0.5, y: hipY }, { x: cx + 0.5 + p.strideB, y: 31 - p.liftB }, 1, true);
+  } else {
+    leg(c, { x: cx - 2, y: hipY }, { x: cx - 2.4, y: 31 - p.liftA }, -1, false);
+    leg(c, { x: cx + 2, y: hipY }, { x: cx + 2.4, y: 31 - p.liftB }, 1, false);
   }
-
-  // Legs.
-  if (view !== 'side') {
-    leg(c, { x: cx - 2.5, y: hipY }, { x: cx - 3, y: GROUND - p.liftA }, -1, false);
-    leg(c, { x: cx + 2.5, y: hipY }, { x: cx + 3, y: GROUND - p.liftB }, 1, false);
-  }
-  // The pelvis.
   c.part();
-  c.ellipse(cx, hipY, view === 'side' ? 2.8 : 3.8, 1.9, hive ? CHITIN : JOINT);
-
+  c.ellipse(cx, hipY - 0.3, view === 'side' ? 2.3 : 3, 1.4, hive ? CHITIN : JOINT);
   if (view === 'side') {
-    if (hive) abdomen(c, cx + 4.5, hipY - 0.5, 4.6, 3.4, cx + 10, hipY + 2);
-    leg(c, { x: cx - 0.5, y: hipY }, { x: cx - 0.5 + p.strideA, y: GROUND - p.liftA }, 1, true);
+    if (hive) abdomen(c, cx + 3.4, hipY - 0.6, 3.2, 2.4, cx + 7.2, hipY + 1.6);
+    leg(c, { x: cx - 0.5, y: hipY }, { x: cx - 0.5 + p.strideA, y: 31 - p.liftA }, 1, true);
   }
-  // The neck and chest.
   c.part();
-  c.capsule(cx, chest - 1, cx, chest - 2.5, 1.2, 1.2, hive ? CHITIN : JOINT);
+  c.px(Math.round(cx - 0.5), Math.round(chest - 1), hive ? CHITIN : JOINT);
   torso(c, cx, chest, p.open, view);
 
-  // The back: the abdomen hangs in full view, the wings over it.
   if (hive && view === 'up') {
-    abdomen(c, cx, hipY + 2, 5, 4.6, cx, hipY + 9);
-    for (const s of [-1, 1]) wings(c, { x: cx + s * 2, y: chest + 2 }, s, p.flap, view);
+    abdomen(c, cx, hipY + 1.4, 3.6, 3, cx, hipY + 6);
+    for (const s of [-1, 1]) wings(c, { x: cx + s * 1.5, y: chest + 1.5 }, s, p.flap, view);
   }
 
-  // Arms.
-  if (view === 'side') arm(c, { x: cx, y: chest + 1 }, { x: cx - 0.5 + p.handA.x, y: hipY - 0.5 + p.handA.y }, 1);
+  if (view === 'side') arm(c, { x: cx - 0.2, y: chest + 1 }, { x: cx - 0.6 + p.handA.x, y: hipY - 1 + p.handA.y }, 1);
   else {
-    arm(c, { x: cx - 6, y: chest + 1 }, { x: cx - 7 + p.handA.x, y: hipY - 0.5 + p.handA.y }, -1);
-    arm(c, { x: cx + 6, y: chest + 1 }, { x: cx + 7 + p.handB.x, y: hipY - 0.5 + p.handB.y }, 1);
+    arm(c, { x: cx - 5, y: chest + 1 }, { x: cx - 5.8 + p.handA.x, y: hipY - 1.5 + p.handA.y }, -1);
+    arm(c, { x: cx + 5, y: chest + 1 }, { x: cx + 5.8 + p.handB.x, y: hipY - 1.5 + p.handB.y }, 1);
   }
 
-  // The head, and over it the halo.
   if (hive) beeHead(c, cx, headY, view, p.float);
   else {
     synthHead(c, cx, headY, view);
-    halo(c, cx, headY - 8 - p.float);
+    halo(c, cx, headY - 6.4 - p.float);
   }
 }
 
@@ -406,13 +378,13 @@ const walk = (view: View): SynthPose[] =>
     const a = (i / 6) * Math.PI * 2;
     const s = Math.sin(a);
     p.bob = Math.round(Math.abs(Math.cos(a)));
-    p.liftA = Math.max(0, Math.round(s * 2));
-    p.liftB = Math.max(0, Math.round(-s * 2));
+    p.liftA = Math.max(0, Math.round(s * 1.5));
+    p.liftB = Math.max(0, Math.round(-s * 1.5));
     if (view === 'side') {
-      p.strideA = Math.round(-Math.cos(a) * 3);
-      p.strideB = Math.round(Math.cos(a) * 3);
-      p.handA = { x: Math.round(Math.cos(a) * 2), y: 0 };
-      p.handB = { x: Math.round(-Math.cos(a) * 2), y: 0 };
+      p.strideA = Math.round(-Math.cos(a) * 2.5);
+      p.strideB = Math.round(Math.cos(a) * 2.5);
+      p.handA = { x: Math.round(Math.cos(a) * 1.5), y: 0 };
+      p.handB = { x: Math.round(-Math.cos(a) * 1.5), y: 0 };
     } else {
       p.handA = { x: 0, y: Math.round(s) };
       p.handB = { x: 0, y: Math.round(-s) };
@@ -422,28 +394,28 @@ const walk = (view: View): SynthPose[] =>
     return p;
   });
 
-/** Sending a drone: the arm flung out the way it goes. */
+/** Sending a drone: an arm flung out the way it goes. */
 const command = (view: View): SynthPose[] =>
   [0.4, 1, 1, 0.5].map((k, i) => {
     const p = base();
-    const reach = view === 'side' ? { x: -7 * k, y: -6 * k } : view === 'down' ? { x: 3 * k, y: -3 * k } : { x: 3 * k, y: -7 * k };
-    p.handB = view === 'side' ? { x: 0, y: 0 } : reach;
+    const reach = view === 'side' ? { x: -5 * k, y: -4 * k } : view === 'down' ? { x: 2 * k, y: -2.5 * k } : { x: 2 * k, y: -5 * k };
     if (view === 'side') p.handA = reach;
+    else p.handB = reach;
     p.flap = i % 2;
     p.float = 1;
     return p;
   });
 
-/** Casting the grid: both arms spread wide and up. Also the pose it holds while a drone is summoned back. */
+/** Casting the grid: both arms spread wide and up. */
 const grid = (view: View): SynthPose[] =>
   [0.3, 0.7, 1, 1, 0.6].map((k, i) => {
     const p = base();
     if (view === 'side') {
-      p.handA = { x: -5 * k, y: -9 * k };
-      p.handB = { x: 3 * k, y: -9 * k };
+      p.handA = { x: -3.5 * k, y: -6 * k };
+      p.handB = { x: 2 * k, y: -6 * k };
     } else {
-      p.handA = { x: -4 * k, y: -9 * k };
-      p.handB = { x: 4 * k, y: -9 * k };
+      p.handA = { x: -3 * k, y: -6 * k };
+      p.handB = { x: 3 * k, y: -6 * k };
     }
     p.flap = i % 2;
     p.float = i % 2;
@@ -457,9 +429,9 @@ const open = (view: View): SynthPose[] =>
     const p = base();
     p.open = k;
     p.bob = 1;
-    const back = view === 'side' ? { x: 4 * k, y: -3 * k } : { x: 0, y: -5 * k };
-    p.handA = view === 'side' ? back : { x: -3 * k, y: back.y };
-    p.handB = view === 'side' ? back : { x: 3 * k, y: back.y };
+    const back = view === 'side' ? { x: 3 * k, y: -2 * k } : { x: 0, y: -3.5 * k };
+    p.handA = view === 'side' ? back : { x: -2.5 * k, y: back.y };
+    p.handB = view === 'side' ? back : { x: 2.5 * k, y: back.y };
     p.flap = i % 2;
     p.float = 1;
     return p;
@@ -481,7 +453,7 @@ export interface SynthFrame {
 }
 
 function drawFrame(dir: Dir, p: SynthPose): PixelCanvas {
-  const c = new PixelCanvas(SYNTH_W, SYNTH_H);
+  const c = new PixelCanvas(SYNTH_W, SYNTH_H).offset(BODY_X, BODY_Y);
   drawFigure(c, p, dir === 'left' || dir === 'right' ? 'side' : dir);
   return dir === 'right' ? c.mirrored() : c;
 }

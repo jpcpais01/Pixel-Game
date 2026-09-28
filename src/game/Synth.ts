@@ -26,8 +26,8 @@ import type { WorldScene } from '../scenes/WorldScene';
 // grid is a wall of honeycomb; she plays the same.
 
 const DRONES = 3;
-const ORBIT_R = 14;
-const ORBIT_H = 22;
+const ORBIT_R = 12;
+const ORBIT_H = 17;
 const DRONE_SPEED = 300;
 const DRONE_RANGE = 120;
 const DRONE_CONE = Math.cos((60 * Math.PI) / 180);
@@ -51,7 +51,7 @@ const GRID_HEAT = 18;
 const GRID_COOLDOWN = 7000;
 /** From a post, the grid's drones zap foes within this reach. */
 const POST_REACH = 90;
-const POST_H = 12;
+const POST_H = 10;
 
 const FOOTFALLS = new Set([1, 4]);
 

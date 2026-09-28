@@ -225,7 +225,7 @@ export class Wraith implements Hero {
     const hits = w.melee({ kind: 'arc', x: cx, y: cy, radius: SWING_REACH, angle: Math.atan2(u.y, u.x), spread: Math.PI / 3 }, { damage: SWING_DAMAGE, knock: 60 });
     for (const h of hits) w.debris(this.kit.pal.tints, h.x, h.y, 4, h.y + 12, 'burst');
     if (hits.length) sound.impact(w.pan(cx), true);
-    const lx = this.x + (this.dir === 'left' ? -6 : this.dir === 'right' ? 6 : 7) + u.x * 6;
+    const lx = this.x + (this.dir === 'left' ? -4.5 : this.dir === 'right' ? 4.5 : 5.5) + u.x * 4;
     const ly = this.y - WRAITH_LANTERN_Y + u.y * 4;
     for (let i = 0; i < WISPS_PER_SWING && wispsAlive < WISPS_MAX; i++) {
       w.addEffect(new Wisp(w, lx + (i ? 4 : -4), ly - i * 3, this.kit, this));
@@ -410,7 +410,7 @@ export class Wraith implements Hero {
       this.aura.intensity = 1.2;
       if (Math.floor(this.clock / 120) !== Math.floor((this.clock - 16) / 120)) this.world.debris(this.kit.pal.tints, h.x + (Math.random() - 0.5) * 10, hy - 4, 1, h.y + 10, 'spores');
     } else {
-      this.aura.setPosition(rx + (this.dir === 'left' ? -6 : 6), ry - WRAITH_LANTERN_Y);
+      this.aura.setPosition(rx + (this.dir === 'left' ? -4.5 : 4.5), ry - WRAITH_LANTERN_Y);
       this.aura.intensity = 0.9 * (1 - this.daylight) + 0.3;
     }
   }

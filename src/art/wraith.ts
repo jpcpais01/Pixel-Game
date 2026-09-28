@@ -16,43 +16,44 @@ import { icon16, seg, type Tones } from './druid';
 
 const ramp = (...c: string[]): RGB[] => c.map(hex);
 
-export const WRAITH_W = 40;
+export const WRAITH_W = 48;
 export const WRAITH_H = 50;
-const CX = 20;
-const GROUND = 47;
-export const WRAITH_ORIGIN_X = CX;
-export const WRAITH_ORIGIN_Y = GROUND;
+/** Drawn in the 24x32 body box every hero uses, placed in a larger frame. */
+const BODY_X = 12;
+const BODY_Y = 12;
+export const WRAITH_ORIGIN_X = BODY_X + 12;
+export const WRAITH_ORIGIN_Y = BODY_Y + 31;
 /** The lantern's height above the ground at rest, where wisps are left. */
-export const WRAITH_LANTERN_Y = 10;
-export const WRAITH_CHEST_Y = 24;
+export const WRAITH_LANTERN_Y = 8;
+export const WRAITH_CHEST_Y = 14;
 
 // ---------------------------------------------------------------------------
 // Materials
 
-const ROBE: Material = { ramp: ramp('#07090e', '#10161e', '#1c2632', '#2c3a48', '#445668'), outline: hex('#020306'), outlineLit: hex('#0a0e14') };
-const ROBE_EDGE: Material = { ramp: ramp('#0e1a1e', '#1e3a3c', '#2e5a58'), outline: hex('#020306'), emissive: 0.2 };
+const ROBE: Material = { ramp: ramp('#0a0e14', '#141c26', '#202c38', '#2e3e4c', '#425664'), outline: hex('#030406'), outlineLit: hex('#0c1218') };
+const ROBE_EDGE: Material = { ramp: ramp('#0c2a28', '#17504a', '#2a7a6c', '#46a890'), outline: hex('#041412'), emissive: 0.25 };
 const HOOD_DARK: Material = { ramp: ramp('#000000', '#030406', '#07090c'), outline: hex('#000000'), noAO: true, noOutline: true };
 const SOUL: Material = { ramp: ramp('#1a8a6a', '#4af0b0', '#c8fff0'), outline: hex('#063a2a'), emissive: 1, noAO: true, noOutline: true };
-const BONE: Material = { ramp: ramp('#6a6450', '#a8a088', '#dcd6c0', '#fffbec'), outline: hex('#1e1a10'), shine: true };
-const IRON: Material = { ramp: ramp('#0e0f14', '#1e2028', '#34384a', '#545a70'), outline: hex('#030305'), shine: true };
-const GREEN_FLAME: Material = { ramp: ramp('#1a8a5a', '#4af0a0', '#d0ffe8', '#ffffff'), outline: hex('#063a22'), emissive: 1, noAO: true, noOutline: true };
-const MIST: Material = { ramp: ramp('#1e3a3c', '#3a6a66', '#6aa8a0'), outline: hex('#0a1a1c'), emissive: 0.4, noAO: true, noOutline: true };
+const BONE: Material = { ramp: ramp('#4a4a4e', '#7e7a6c', '#b0a98e', '#dcd4b4'), outline: hex('#1a1814'), shine: true };
+const IRON: Material = { ramp: ramp('#0c0d12', '#1a1c24', '#2e3240', '#4a5064'), outline: hex('#030305'), shine: true };
+const GREEN_FLAME: Material = { ramp: ramp('#1a7a52', '#3ad890', '#b0ffd8', '#ffffff'), outline: hex('#063a22'), emissive: 1, noAO: true, noOutline: true };
+const MIST: Material = { ramp: ramp('#16302e', '#2a5450', '#4a8880'), outline: hex('#081614'), emissive: 0.3, noAO: true, noOutline: true };
 
 // The Calavera.
-const SKULL: Material = { ramp: ramp('#9a948a', '#d4d0c8', '#f4f2ee', '#ffffff'), outline: hex('#2a2420'), shine: true, emissive: 0.1 };
+const SKULL: Material = { ramp: ramp('#7e786c', '#b4ae9c', '#dcd8cc', '#f6f4ec'), outline: hex('#221c18'), shine: true, emissive: 0.08 };
 const INK: Material = { ramp: ramp('#07050a', '#140e1c', '#221a2e'), outline: hex('#020104'), noAO: true };
-const PETAL_PINK: Material = { ramp: ramp('#b02a6a', '#ff5aa8', '#ffb0d8'), outline: hex('#3a0a20'), noOutline: true, noAO: true, emissive: 0.3 };
-const PETAL_TEAL: Material = { ramp: ramp('#0a8a8a', '#3ae0d8', '#b0fff8'), outline: hex('#063a3a'), noOutline: true, noAO: true, emissive: 0.3 };
-const MARIGOLD: Material = { ramp: ramp('#a0400a', '#f07a14', '#ffb030', '#ffe070'), outline: hex('#3a1402'), shine: true, emissive: 0.15 };
+const PETAL_PINK: Material = { ramp: ramp('#901c56', '#e0448e', '#ff90c4'), outline: hex('#3a0a20'), noOutline: true, noAO: true, emissive: 0.25 };
+const PETAL_TEAL: Material = { ramp: ramp('#0a6e6e', '#2ac0b8', '#90f0e8'), outline: hex('#063a3a'), noOutline: true, noAO: true, emissive: 0.25 };
+const MARIGOLD: Material = { ramp: ramp('#8a3406', '#d8680e', '#f4a024', '#ffd460'), outline: hex('#2e1002'), shine: true, emissive: 0.12 };
 const LACE_BLACK: Material = { ramp: ramp('#07060a', '#141220', '#221e30'), outline: hex('#020104'), noAO: true };
-const GOWN: Material = { ramp: ramp('#2a040e', '#5a0a1e', '#8e1a32', '#c02e4a', '#e85a6e'), outline: hex('#100206'), outlineLit: hex('#1e040c') };
-const GOWN_MIST: Material = { ramp: ramp('#5a1a2a', '#a04a5a', '#e0909a'), outline: hex('#2a0a10'), emissive: 0.5, noAO: true, noOutline: true };
+const GOWN: Material = { ramp: ramp('#22040c', '#4a0818', '#761428', '#a2243e', '#c84a5e'), outline: hex('#0c0204'), outlineLit: hex('#1a040a') };
+const GOWN_MIST: Material = { ramp: ramp('#4a1422', '#8a3e4e', '#c47e88'), outline: hex('#2a0a10'), emissive: 0.4, noAO: true, noOutline: true };
 const EMBROIDERY: Material[] = [
-  { ramp: ramp('#c06a0a', '#ffc040'), outline: hex('#3a1a02'), noOutline: true, noAO: true },
-  { ramp: ramp('#0a8a8a', '#40e0d0'), outline: hex('#063a3a'), noOutline: true, noAO: true },
-  { ramp: ramp('#b02a8a', '#ff7ad0'), outline: hex('#3a0a2a'), noOutline: true, noAO: true },
+  { ramp: ramp('#a8580a', '#f0b030'), outline: hex('#3a1a02'), noOutline: true, noAO: true },
+  { ramp: ramp('#0a7474', '#34ccbc'), outline: hex('#063a3a'), noOutline: true, noAO: true },
+  { ramp: ramp('#901c70', '#e864b8'), outline: hex('#3a0a2a'), noOutline: true, noAO: true },
 ];
-const PAPER: Material = { ramp: ramp('#8a0e4a', '#d0287a', '#ff62a8', '#ffa0cc'), outline: hex('#2a0418'), emissive: 0.25 };
+const PAPER: Material = { ramp: ramp('#6a0a38', '#b01e64', '#e04a8e', '#ff86b8'), outline: hex('#240414'), emissive: 0.2 };
 const GOLD_LIGHT: Material = { ramp: ramp('#ff9a2a', '#ffd860', '#fffbd0'), outline: hex('#5a2a06'), emissive: 1, noAO: true, noOutline: true };
 
 export interface WraithLook {
@@ -73,11 +74,11 @@ export interface WraithPose {
   /** The ragged hem's stream (side view: how far behind), and its flutter phase. */
   trail: number;
   flutter: number;
-  /** The lantern: where it hangs from the hand (offset), and how bright it burns 0..1. */
+  /** The lantern: sideways from the hand, raised, and how bright it burns 0..1. */
   swing: number;
   lift: number;
   blaze: number;
-  /** Upper body pitched forward (a dive), in px. */
+  /** Pitched forward (a dive), in px. */
   lean: number;
   /** 0..1: stretched thin (possessing). */
   stretch: number;
@@ -86,38 +87,43 @@ export interface WraithPose {
 const base = (): WraithPose => ({ bob: 0, trail: 0, flutter: 0, swing: 0, lift: 0, blaze: 0.4, lean: 0, stretch: 0 });
 
 // ---------------------------------------------------------------------------
-// The body
+// The body (body-box coordinates: 24 wide, the ground at y 31; it floats)
 
-/** The robe (or gown): from the shoulders down to a hem of ragged strips (or ruffles fading to mist). */
+/** The robe (or gown): shoulders to a hem of ragged strips (or ruffles fading to mist). */
 function robe(c: PixelCanvas, cx: number, top: number, hem: number, p: WraithPose, view: View): void {
   const side = view === 'side';
   const cala = L.calavera;
   const m = cala ? GOWN : ROBE;
-  const edge = (y: number) => {
-    const k = (y - top) / (hem - top);
-    const hw = (side ? 4.5 : 5) + k * (side ? 3.5 : 3.5);
-    // The side view streams back (to +x) the lower it goes.
-    const back = side ? k * k * (2 + p.trail) : 0;
-    return [cx - hw + back * 0.4, cx + hw + back] as [number, number];
+  const edge = (y: number): [number, number] => {
+    const u = (y - top) / (hem - top);
+    const hw = (side ? 3.4 : 4.3) + u * u * (side ? 2.2 : 2.4);
+    const back = side ? u * u * (1 + p.trail) : 0;
+    return [cx - hw + back * 0.3, cx + hw + back];
   };
-  c.shape(Math.round(top), Math.round(hem), (y) => edge(y), m, (_x, _y, t, u) => cyl(t, 0.25 - u * 0.45));
+  c.shape(Math.round(top), Math.round(hem), edge, m, (_x, y, t) => sphere(t * 0.9, 0.3 - ((y - top) / (hem - top)) * 0.6, 1));
+  // Folds falling down it.
+  for (let y = Math.round(top + 3); y <= hem; y++) {
+    const u = (y - top) / (hem - top);
+    c.shade(Math.round(cx - 2.2 - u), y, -1);
+    if (!side) c.shade(Math.round(cx + 2.2 + u), y, -1);
+  }
   // The hem: ragged strips, or mist.
   c.part();
   const [l, r] = edge(hem);
   for (let x = Math.round(l); x < r; x++) {
-    const n = cala ? 4 : 2 + (((x * 7 + 3) % 5) + ((x + Math.round(p.flutter)) % 3));
+    const n = cala ? 3 : 1 + (((x * 7 + 3) % 3) + ((x + Math.round(p.flutter)) % 2));
     for (let i = 1; i <= n; i++) {
       const y = Math.round(hem + i);
-      const drift = side ? Math.round((i / n) * (1 + p.trail * 0.5)) : Math.round(Math.sin(x * 0.7 + p.flutter) * (i / n));
+      const drift = side ? Math.round((i / n) * (0.5 + p.trail * 0.4)) : Math.round(Math.sin(x * 0.8 + p.flutter) * (i / n) * 0.8);
       if (cala) {
         if ((x + y + Math.round(p.flutter)) % (i < 2 ? 2 : 3) === 0) c.px(x + drift, y, GOWN_MIST, { x: 0, y: 0, z: 1 });
-      } else if (i < n || x % 2 === 0) c.px(x + drift, y, i > n - 2 ? MIST : ROBE, cyl(0, -0.3));
+      } else if (i < n || x % 2 === 0) c.px(x + drift, y, i === n ? MIST : ROBE, sphere(0, -0.3));
     }
   }
   c.part();
   if (cala) {
-    // Embroidered flowers down the gown, and black lace ruffles.
-    for (let y = Math.round(top + 3); y < hem; y += 3) {
+    // Embroidered flowers, and black lace ruffles.
+    for (let y = Math.round(top + 2); y < hem; y += 3) {
       const [a, b] = edge(y);
       for (let x = Math.round(a + 1); x < b - 1; x += 3) {
         const k = (x * 5 + y * 3) % 7;
@@ -125,136 +131,120 @@ function robe(c: PixelCanvas, cx: number, top: number, hem: number, p: WraithPos
         c.px(x + ((y / 3) % 2), y, EMBROIDERY[k], { x: 0, y: 0, z: 1 });
       }
     }
-    for (const fy of [Math.round(top + (hem - top) * 0.55), Math.round(hem - 1)]) {
+    for (const fy of [Math.round(top + (hem - top) * 0.6), Math.round(hem)]) {
       const [a, b] = edge(fy);
-      for (let x = Math.round(a); x < b; x++) c.px(x, fy, LACE_BLACK, { x: 0, y: 0.3, z: 0.9 }, { bias: x % 2 });
+      for (let x = Math.round(a); x < b; x++) if (c.filled(x, fy)) c.px(x, fy, LACE_BLACK, sphere(0, 0.3), { bias: x % 2 });
     }
-  } else if (!side) {
-    // A frayed, faintly glowing hem-line and a seam down the front.
-    for (let y = Math.round(top + 4); y < hem; y++) c.shade(Math.round(cx), y, -1);
-    for (let x = Math.round(l); x < r; x++) if (x % 3 === 0) c.px(x, Math.round(hem), ROBE_EDGE, { x: 0, y: 0.3, z: 0.9 });
+  } else {
+    // A faintly glowing trim along the hem, and down the front.
+    for (let x = Math.round(l); x < r; x++) if (c.filled(x, Math.round(hem))) c.px(x, Math.round(hem), ROBE_EDGE, sphere(0, 0.4));
+    if (!side) for (let y = Math.round(top + 4); y < hem; y++) c.px(Math.round(cx - 0.5), y, ROBE_EDGE, { x: 0, y: 0.1, z: 1 }, { bias: -1 });
   }
 }
 
 /** A wide sleeve from the shoulder to the hand, a bony hand at its end. */
 function sleeve(c: PixelCanvas, sx: number, sy: number, hx: number, hy: number): void {
-  const m = L.calavera ? GOWN : ROBE;
-  c.capsule(sx, sy, hx, hy - 1, 1.8, L.calavera ? 1.6 : 2.8, m);
-  if (L.calavera) for (let a = -1; a <= 1; a++) c.px(Math.round(hx + a), Math.round(hy - 0.5), LACE_BLACK, { x: 0, y: -0.3, z: 0.9 });
-  c.ellipse(hx, hy + 0.5, 1.1, 1.2, BONE);
+  c.capsule(sx, sy, hx, hy - 0.8, 1.4, L.calavera ? 1.2 : 1.9, L.calavera ? GOWN : ROBE);
+  if (L.calavera) for (let a = -1; a <= 0; a++) c.px(Math.round(hx + a), Math.round(hy - 0.5), LACE_BLACK, { x: 0, y: -0.3, z: 0.9 });
+  c.ellipse(hx, hy + 0.3, 0.9, 0.9, BONE);
 }
 
 /** The lantern hanging from the hand: an iron one with a soul-flame, or a paper one glowing gold. */
-function lantern(c: PixelCanvas, hx: number, hy: number, p: WraithPose): { x: number; y: number } {
+function lantern(c: PixelCanvas, hx: number, hy: number, p: WraithPose): void {
   const lx = hx + p.swing;
-  const ly = hy + 4 - p.lift;
+  const ly = hy + 1.5 - p.lift;
   c.part();
-  // The chain (or string), link by link.
-  const n = Math.max(1, Math.round(Math.hypot(lx - hx, ly - hy)));
-  for (let i = 0; i <= n; i++) c.px(Math.round(hx + ((lx - hx) * i) / n), Math.round(hy + ((ly - hy) * i) / n), L.calavera ? INK : IRON, { x: 0, y: 0, z: 1 }, { bias: i % 2 });
+  c.line(hx, hy, lx, ly, L.calavera ? INK : IRON);
   c.part();
   const glow = 0.5 + p.blaze * 0.5;
   if (L.calavera) {
-    // A round paper lantern, ribbed, the light showing through its cut-outs.
-    c.ellipse(lx, ly + 4, 3.4, 3.6, PAPER);
+    c.ellipse(lx, ly + 2.6, 2.2, 2.4, PAPER);
     c.part();
-    for (const dy of [-2, 0, 2]) for (let x = Math.round(lx - 3); x <= lx + 2; x++) if ((x + dy) % 2 === 0) c.px(x, Math.round(ly + 4 + dy), GOLD_LIGHT, { x: 0, y: 0, z: 1 }, { glow });
-    c.ellipse(lx, ly + 0.5, 1.6, 0.8, INK, { flatten: 0.5 });
-    c.ellipse(lx, ly + 7.8, 1.4, 0.7, INK, { flatten: 0.5 });
-    c.line(lx, ly + 8, lx, ly + 10, PETAL_PINK);
+    for (const dy of [-1, 1]) for (let x = Math.round(lx - 2); x <= lx + 1; x++) if ((x + dy) % 2 === 0) c.px(x, Math.round(ly + 2.6 + dy), GOLD_LIGHT, { x: 0, y: 0, z: 1 }, { glow });
+    c.px(Math.round(lx - 0.5), Math.round(ly + 0.3), INK);
+    c.px(Math.round(lx - 0.5), Math.round(ly + 5), PETAL_PINK);
   } else {
-    // An iron frame with a cap and a ring, a soul-flame in its panes.
-    c.shape(Math.round(ly + 1), Math.round(ly + 7), () => [lx - 2.5, lx + 2.5], IRON, (_x, _y, t) => cyl(t, 0.2));
+    c.shape(Math.round(ly + 1), Math.round(ly + 4), () => [lx - 1.6, lx + 1.6], IRON, (_x, _y, t) => cyl(t, 0.2));
     c.part();
-    for (let y = Math.round(ly + 2); y <= ly + 6; y++) for (let x = Math.round(lx - 1.5); x <= lx + 1; x++) c.px(x, y, GREEN_FLAME, sphere((x + 0.5 - lx) / 2, (y - ly - 4) / 3), { glow, bias: y < ly + 3.5 ? 1 : 0 });
-    c.px(Math.round(lx - 0.5), Math.round(ly + 4), IRON);
-    c.ellipse(lx, ly + 0.5, 3, 1, IRON, { flatten: 0.5 });
-    c.ellipse(lx, ly + 7.5, 3, 0.9, IRON, { flatten: 0.5 });
+    for (let y = Math.round(ly + 1.5); y <= ly + 3.5; y++) c.px(Math.round(lx - 0.5), y, GREEN_FLAME, { x: 0, y: 0, z: 1 }, { glow, bias: y < ly + 2.5 ? 1 : 0 });
+    c.ellipse(lx, ly + 0.6, 2, 0.7, IRON, { flatten: 0.5 });
+    c.ellipse(lx, ly + 4.6, 2, 0.6, IRON, { flatten: 0.5 });
   }
-  // The flame's light on the air around it.
   const col: RGB = L.calavera ? [255, 210, 110] : [110, 255, 190];
-  for (let a = 0; a < 12; a++) {
-    const q = (a / 12) * Math.PI * 2;
-    c.spark(lx + Math.cos(q) * 4.5, ly + 4 + Math.sin(q) * 4.5, col, 0.12 + p.blaze * 0.2);
+  for (let a = 0; a < 10; a++) {
+    const q = (a / 10) * Math.PI * 2;
+    c.spark(lx + Math.cos(q) * 3.2, ly + 2.6 + Math.sin(q) * 3.2, col, 0.1 + p.blaze * 0.18);
   }
-  return { x: lx, y: ly + 4 };
 }
 
-/** The hood: a pointed peak falling back, and inside, dark, two eye-lights. */
+/** The hood: a point falling back, and inside, dark, two eye-lights. */
 function hood(c: PixelCanvas, cx: number, cy: number, view: View, p: WraithPose): void {
   c.part();
   const side = view === 'side';
-  c.ellipse(cx + (side ? 1 : 0), cy, side ? 4.8 : 5.4, 5.6, ROBE);
-  // The peak, drooping back.
-  c.capsule(cx + (side ? 2 : 0.5), cy - 4, cx + (side ? 5 : 1.5), cy - 8, 2.2, 0.6, ROBE);
+  c.ellipse(cx + (side ? 0.7 : 0), cy, side ? 3.8 : 4.2, 4.1, ROBE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.capsule(cx + (side ? 1.6 : 0.3), cy - 3, cx + (side ? 3.8 : 1.2), cy - 6, 1.7, 0.5, ROBE);
   if (view === 'up') return;
   c.part();
-  const ox = side ? cx - 2.5 : cx;
-  c.ellipse(ox, cy + 0.5, side ? 2 : 3.4, 3.8, HOOD_DARK);
-  const eyes = side ? [ox - 0.5] : [ox - 1.5, ox + 1.5];
-  for (const ex of eyes) c.px(Math.round(ex), Math.round(cy), SOUL, { x: 0, y: 0, z: 1 }, { glow: 0.7 + p.blaze * 0.3 });
-  // The hood's edge catching the light.
-  for (let i = 0; i < 10; i++) {
-    const a = Math.PI * 0.15 + (i / 9) * Math.PI * 0.7;
+  const ox = side ? cx - 2 : cx;
+  c.ellipse(ox, cy + 0.6, side ? 1.5 : 2.6, 2.8, HOOD_DARK);
+  const eyes = side ? [ox - 0.5] : [ox - 1.2, ox + 1.2];
+  for (const ex of eyes) c.px(Math.round(ex - 0.5), Math.round(cy + 0.2), SOUL, { x: 0, y: 0, z: 1 }, { glow: 0.7 + p.blaze * 0.3 });
+  for (let i = 0; i < 9; i++) {
+    const a = Math.PI * 0.12 + (i / 8) * Math.PI * 0.76;
     if (side && Math.cos(a) > 0) continue;
-    c.px(Math.round(ox + Math.cos(a + Math.PI) * (side ? 2.4 : 3.8)), Math.round(cy + 0.5 - Math.sin(a) * 4.2), ROBE_EDGE, { x: 0, y: 0.5, z: 0.8 });
+    c.px(Math.round(ox - 0.5 - Math.cos(a) * (side ? 1.8 : 2.9)), Math.round(cy + 0.6 - Math.sin(a) * 3.1), ROBE_EDGE, sphere(-Math.cos(a) * 0.5, 0.4));
   }
 }
 
-/** The Calavera's head: the painted skull, the marigold crown and the veil (behind, drawn first). */
+/** The Calavera's head: the painted skull and the marigold crown. */
 function skull(c: PixelCanvas, cx: number, cy: number, view: View, p: WraithPose): void {
   const side = view === 'side';
   c.part();
-  c.ellipse(cx + (side ? 0.5 : 0), cy + 0.2, side ? 3.8 : 4.3, 4.6, view === 'up' ? LACE_BLACK : SKULL);
+  c.ellipse(cx + (side ? 0.4 : 0), cy + 0.2, side ? 3.3 : 3.7, 3.9, view === 'up' ? LACE_BLACK : SKULL, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
   if (view !== 'up') {
     c.part();
-    const eyes = side ? [cx - 1.8] : [cx - 1.8, cx + 1.8];
+    const eyes = side ? [cx - 1.4] : [cx - 1.5, cx + 1.5];
     for (const ex of eyes) {
-      c.ellipse(ex, cy, 1.2, 1.4, INK);
-      // Petals painted round the socket, pink and teal by turns.
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2;
-        c.px(Math.round(ex + Math.cos(a) * 2.2), Math.round(cy + Math.sin(a) * 2.2), i % 2 ? PETAL_TEAL : PETAL_PINK, { x: 0, y: 0, z: 1 });
-      }
-      c.px(Math.round(ex), Math.round(cy), GOLD_LIGHT, { x: 0, y: 0, z: 1 }, { glow: 0.5 + p.blaze * 0.5 });
+      c.px(Math.round(ex - 0.5), Math.round(cy - 0.2), INK);
+      c.px(Math.round(ex - 0.5), Math.round(cy + 0.8), INK);
+      // Petals painted round the socket.
+      c.px(Math.round(ex - 1.5), Math.round(cy - 0.2), PETAL_PINK);
+      c.px(Math.round(ex + 0.5), Math.round(cy - 0.2), PETAL_TEAL);
+      c.px(Math.round(ex - 0.5), Math.round(cy - 1.2), PETAL_PINK);
+      c.spark(ex - 0.5, cy + 0.3, [255, 210, 110], 0.4 + p.blaze * 0.4);
     }
-    // A heart for a nose, and a stitched smile.
-    const nx = side ? cx - 3 : cx;
-    c.px(Math.round(nx - 0.5), Math.round(cy + 2), INK);
-    c.px(Math.round(nx + 0.5), Math.round(cy + 2), INK);
-    c.px(Math.round(nx), Math.round(cy + 3), INK);
-    const m0 = side ? cx - 3.5 : cx - 2.5;
-    const m1 = side ? cx - 0.5 : cx + 2.5;
+    const nx = side ? cx - 2.6 : cx - 0.5;
+    c.px(Math.round(nx), Math.round(cy + 1.8), INK);
+    const m0 = side ? cx - 3 : cx - 2;
+    const m1 = side ? cx - 0.5 : cx + 1;
     for (let x = Math.round(m0); x <= m1; x++) {
-      c.px(x, Math.round(cy + 4), INK);
-      if (x % 2 === 0) c.px(x, Math.round(cy + 3.5), INK, { x: 0, y: 0, z: 1 }, { bias: 1 });
+      c.px(x, Math.round(cy + 3), INK);
+      if (x % 2 === 0) c.px(x, Math.round(cy + 2.5), INK, { x: 0, y: 0, z: 1 }, { bias: 1 });
     }
   }
-  // The marigold crown: blooms across the brow.
   c.part();
-  const n = side ? 4 : 6;
+  const n = side ? 3 : 5;
   for (let i = 0; i < n; i++) {
     const k = i / (n - 1);
-    const a = Math.PI * (1.05 + k * 0.9);
-    const fx = cx + (side ? 0.8 : 0) + Math.cos(a) * (side ? 4.2 : 4.8);
-    const fy = cy - 1 + Math.sin(a) * 4.8;
-    c.ellipse(fx, fy, 1.4, 1.3, MARIGOLD);
-    c.px(Math.round(fx), Math.round(fy), MARIGOLD, { x: 0, y: 0, z: 1 }, { bias: -2 });
+    const a = Math.PI * (1.1 + k * 0.8);
+    const fx = cx + (side ? 0.6 : 0) + Math.cos(a) * (side ? 3.4 : 3.9);
+    const fy = cy - 0.6 + Math.sin(a) * 3.9;
+    c.ellipse(fx, fy, 1.1, 1, MARIGOLD);
+    c.px(Math.round(fx - 0.5), Math.round(fy - 0.5), MARIGOLD, { x: 0, y: 0, z: 1 }, { bias: -2 });
   }
 }
 
-/** The black lace veil hanging from the crown behind her, down her back. */
+/** The black lace veil hanging from the crown behind her. */
 function veil(c: PixelCanvas, cx: number, cy: number, view: View): void {
   c.part();
   const side = view === 'side';
-  const bottom = cy + (view === 'up' ? 16 : 11);
-  for (let y = Math.round(cy - 3); y <= bottom; y++) {
-    const k = (y - cy + 3) / (bottom - cy + 3);
-    const hw = 5 + k * 3;
-    const x0 = side ? cx - 1 + k * 3 : cx - hw;
-    const x1 = side ? cx + 5 + k * 4 : cx + hw;
+  const bottom = cy + (view === 'up' ? 12 : 8);
+  for (let y = Math.round(cy - 2); y <= bottom; y++) {
+    const k = (y - cy + 2) / (bottom - cy + 2);
+    const hw = 4 + k * 2.2;
+    const x0 = side ? cx - 0.5 + k * 2 : cx - hw;
+    const x1 = side ? cx + 4 + k * 3 : cx + hw;
     for (let x = Math.round(x0); x < x1; x++) {
-      // Lace: a pattern of holes, and a scalloped edge.
       const hole = (x + y) % 3 === 0 && (x - y) % 2 === 0;
       if (hole || (y === Math.round(bottom) && x % 2)) continue;
       c.px(x, y, LACE_BLACK, { x: 0, y: 0.1, z: 1 });
@@ -265,35 +255,32 @@ function veil(c: PixelCanvas, cx: number, cy: number, view: View): void {
 function drawFigure(c: PixelCanvas, p: WraithPose, view: View): void {
   const side = view === 'side';
   const cala = L.calavera;
-  const stretch = Math.round(p.stretch * 4);
-  const top = 20 - p.bob - stretch;
-  const hem = 38 - p.bob;
-  const headY = top - 7 + stretch * 0.3;
-  const cx = CX - (side ? p.lean : 0);
-  const hx = side ? cx - 6 - p.lean : cx + 7;
-  const hy = top + 10;
+  const U = -p.bob;
+  const stretch = Math.round(p.stretch * 2);
+  const top = 15 + U - stretch;
+  const hem = 26 + U;
+  const headY = 10.4 + U - stretch * 0.7;
+  const cx = 12 - (side ? p.lean : 0);
+  const hx = side ? cx - 4.5 - p.lean * 0.5 : cx + 5.5;
+  const hy = top + 5.5;
 
-  // Behind: the veil; the lantern too when seen from behind (it's carried in front).
   if (cala && view !== 'down') veil(c, cx, headY, view);
-  if (view === 'up') lantern(c, cx + 7, hy, p);
+  if (view === 'up') lantern(c, cx + 5.5, hy, p);
   if (side) {
-    // The far sleeve.
     c.part();
-    sleeve(c, cx + 1, top + 2, cx + 3, top + 9);
+    sleeve(c, cx + 0.8, top + 1.5, cx + 2.5, top + 6.5);
   }
   c.part();
-  robe(c, cx + (side ? p.lean * 0.5 : 0), top, hem, p, view);
+  robe(c, cx + (side ? p.lean * 0.4 : 0), top, hem, p, view);
   if (cala && view === 'down') {
-    // The veil's edges framing her face, falling to her shoulders.
     c.part();
-    for (const s of [-1, 1]) c.capsule(cx + s * 4.5, headY + 1, cx + s * 5.5, top + 3, 1.2, 1.6, LACE_BLACK);
+    for (const s of [-1, 1]) c.capsule(cx + s * 3.6, headY + 1, cx + s * 4.4, top + 2, 0.9, 1.3, LACE_BLACK);
   }
-  // Sleeves: the lantern hand out front and the other hanging.
   c.part();
-  if (side) sleeve(c, cx - 1, top + 2, hx, hy);
+  if (side) sleeve(c, cx - 0.8, top + 1.5, hx, hy);
   else {
-    sleeve(c, cx - 5, top + 2, cx - 6.5, top + 9);
-    sleeve(c, cx + 5, top + 2, hx, hy);
+    sleeve(c, cx - 3.9, top + 1.5, cx - 5, top + 6.5);
+    sleeve(c, cx + 3.9, top + 1.5, hx, hy);
   }
   if (cala) skull(c, cx, headY, view, p);
   else hood(c, cx, headY, view, p);
@@ -317,7 +304,7 @@ const idle = (): WraithPose[] =>
     const p = base();
     p.bob = [0, 1, 1, 0][i];
     p.flutter = i;
-    p.swing = [0, 1, 0, -1][i];
+    p.swing = [0, 1, 0, -1][i] * 0.6;
     return p;
   });
 
@@ -326,19 +313,19 @@ const move = (view: View): WraithPose[] =>
     const p = base();
     p.bob = [1, 2, 2, 1][i];
     p.flutter = i + 0.5;
-    p.trail = view === 'side' ? 2 + (i % 2) : 0;
+    p.trail = view === 'side' ? 1.5 + (i % 2) : 0;
     p.lean = view === 'side' ? 1 : 0;
-    p.swing = view === 'side' ? 2 : [1, 0, -1, 0][i];
+    p.swing = view === 'side' ? 1.5 : [1, 0, -1, 0][i];
     return p;
   });
 
 /** The lantern swung: back, up and through in an arc, flaring as it comes round. */
 const swing = (view: View): WraithPose[] =>
   [
-    [4, 0, 0.4],
-    [2, 4, 0.8],
-    [-3, 3, 1],
-    [-5, 0, 0.7],
+    [3, 0, 0.4],
+    [1.5, 3, 0.8],
+    [-2, 2, 1],
+    [-3.5, 0, 0.7],
   ].map(([s, l, b], i) => {
     const p = base();
     p.swing = view === 'side' ? -s : s;
@@ -355,10 +342,10 @@ const possess = (view: View): WraithPose[] =>
   [0.3, 0.7, 1, 1].map((k, i) => {
     const p = base();
     p.stretch = k;
-    p.lean = view === 'side' ? Math.round(k * 3) : 0;
-    p.trail = 4 * k;
+    p.lean = view === 'side' ? Math.round(k * 2) : 0;
+    p.trail = 3 * k;
     p.blaze = 1;
-    p.lift = Math.round(k * 3);
+    p.lift = Math.round(k * 2);
     p.flutter = i;
     return p;
   });
@@ -367,8 +354,8 @@ const possess = (view: View): WraithPose[] =>
 const cast = (): WraithPose[] =>
   [0.3, 0.6, 1, 1, 1].map((k, i) => {
     const p = base();
-    p.bob = Math.round(k * 3);
-    p.lift = Math.round(k * 9);
+    p.bob = Math.round(k * 2);
+    p.lift = Math.round(k * 6);
     p.blaze = k;
     p.flutter = i;
     return p;
@@ -390,7 +377,7 @@ export interface WraithFrame {
 }
 
 function drawFrame(dir: Dir, p: WraithPose): PixelCanvas {
-  const c = new PixelCanvas(WRAITH_W, WRAITH_H);
+  const c = new PixelCanvas(WRAITH_W, WRAITH_H).offset(BODY_X, BODY_Y);
   drawFigure(c, p, dir === 'left' || dir === 'right' ? 'side' : dir);
   return dir === 'right' ? c.mirrored() : c;
 }
