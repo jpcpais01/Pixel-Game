@@ -8,7 +8,8 @@
 //  - Left: the pieces this keeper works on, as tiles (with counts, levels and
 //    the worn tick), scrolled by dragging.
 //  - Right: the chosen piece. For Nyx, the dust it breaks into and the button
-//    that unmakes it (asking twice for anything rare or upgraded); for Tharn,
+//    that unmakes it (asking twice for anything rare or upgraded; held down, it
+//    unmakes piece after piece, stopping at the first that needs asking); for Tharn,
 //    its level as ten pips, the six stats to put the next point in with what
 //    each would become, and the button that pays for it.
 //
@@ -51,6 +52,11 @@ const CARD_W = 152;
 const COL_GAP = 10;
 const TAP_SLOP = 5;
 const BTN_H = 16;
+/** Holding Nyx's button: the first repeat after this long, then faster and faster down to the quickest. */
+const HOLD_START = 420;
+const HOLD_EVERY = 170;
+const HOLD_FASTEST = 55;
+const HOLD_SPEEDUP = 0.88;
 
 const DIM = 0x9a90c8;
 const SOFT = 0x7c82b8;
@@ -98,6 +104,8 @@ export class KeeperView extends Phaser.GameObjects.Container {
   private stat: StatKey | null = null;
   /** Nyx asks once more before unmaking anything rare or upgraded. */
   private confirm = false;
+  /** Nyx's button held down: time to the next unmaking, the pace, how many so far, and the dust they gave. */
+  private hold: { t: number; every: number; fired: number; dust: number } | null = null;
   private entries: string[] = [];
   private grid = { x: 0, y: 0, cols: 1, rows: 1 };
   private det = { x: 0, y: 0, w: CARD_W, h: 0 };
@@ -201,6 +209,7 @@ export class KeeperView extends Phaser.GameObjects.Container {
     }
     // The next pip blinks, waiting for its dust.
     if (this.keeper === 'upgrade' && this.picked) this.pips.setData('blink', Math.floor(this.time / 400) % 2);
+    this.updateHold(dt);
     if (this.keeper === 'upgrade' && this.pips.getData('drawn') !== `${this.picked} ${collection.level(this.picked ?? '')} ${this.pips.getData('blink')}`) this.drawPips();
   }
 
@@ -208,14 +217,20 @@ export class KeeperView extends Phaser.GameObjects.Container {
 
   pointerDown(x: number, y: number): void {
     this.press = { x, y, row: this.scrollRow, moved: false, button: this.button.visible && !this.button.dimmed && this.button.hit(x, y) };
-    if (this.press.button) this.button.press(true);
+    if (this.press.button) {
+      this.button.press(true);
+      if (this.keeper === 'disenchant') this.hold = { t: HOLD_START, every: HOLD_EVERY, fired: 0, dust: 0 };
+    }
   }
 
   pointerMove(x: number, y: number): void {
     const p = this.press;
     if (!p) return;
     if (Math.hypot(x - p.x, y - p.y) > TAP_SLOP) p.moved = true;
-    if (p.button && !this.button.hit(x, y)) this.button.press(false);
+    if (p.button && !this.button.hit(x, y)) {
+      this.button.press(false);
+      this.hold = null;
+    }
     if (!p.button && this.inGrid(p.x, p.y)) this.scrollTo(p.row - Math.round((y - p.y) / PITCH));
   }
 
@@ -224,8 +239,11 @@ export class KeeperView extends Phaser.GameObjects.Container {
     this.press = null;
     if (!p) return;
     if (p.button) {
+      // A hold that already unmade something is done; otherwise it was a tap.
+      const held = (this.hold?.fired ?? 0) > 0;
+      this.hold = null;
       this.button.press(false);
-      if (this.button.hit(x, y)) this.act();
+      if (!held && this.button.hit(x, y)) this.act();
       return;
     }
     if (!p.moved) this.tap(x, y);
@@ -284,36 +302,74 @@ export class KeeperView extends Phaser.GameObjects.Container {
     }
   }
 
+  /** Rare or better, or upgraded: Nyx asks twice, and a held button stops short of it. */
+  private careful(id: string): boolean {
+    const g = gearById(id);
+    return !g || rank(g) >= RARITIES.indexOf('rare') || collection.level(id) > 1;
+  }
+
   /** The button: unmake the piece, or raise it a level. */
   private act(): void {
     const id = this.picked;
     if (!id) return;
     if (this.keeper === 'disenchant') {
-      const g = gearById(id);
-      if (!g) return;
-      const careful = rank(g) >= RARITIES.indexOf('rare') || collection.level(id) > 1;
-      if (careful && !this.confirm) {
+      if (this.careful(id) && !this.confirm) {
         this.confirm = true;
         this.drawCard();
         return;
       }
       this.confirm = false;
-      // Where it sits in the list, so the next piece can take its place when this one is gone.
-      const at = this.entries.indexOf(id);
-      const got = collection.disenchant(id);
-      if (!got) return;
-      if (!this.entries.includes(id)) {
-        this.picked = this.entries[Math.min(at, this.entries.length - 1)] ?? null;
-        this.keepInView();
-        this.refresh();
-      }
-      sound.shatter(0, rank(g) >= RARITIES.indexOf('epic'));
-      this.pop(`+${got}`, DUSTY);
+      const got = this.unmake(id);
+      if (got) this.pop(`+${got}`, DUSTY);
     } else {
       if (!this.stat || !collection.upgrade(id, this.stat)) return;
       sound.clash(0, true);
       sound.gear(true);
       this.pop(`LV ${collection.level(id)}!`, GOLD);
+    }
+  }
+
+  /** Break `id` into dust (the next piece in the list taking its place once the last is gone); the dust it gave. */
+  private unmake(id: string): number {
+    const g = gearById(id);
+    if (!g) return 0;
+    // Where it sits in the list, so the next piece can take its place when this one is gone.
+    const at = this.entries.indexOf(id);
+    const got = collection.disenchant(id);
+    if (!got) return 0;
+    if (!this.entries.includes(id)) {
+      this.picked = this.entries[Math.min(at, this.entries.length - 1)] ?? null;
+      this.keepInView();
+      this.refresh();
+    }
+    sound.shatter(0, rank(g) >= RARITIES.indexOf('epic'));
+    return got;
+  }
+
+  /**
+   * Nyx's button held: after a moment it unmakes the picked piece, then again
+   * and again, quicker each time, moving on down the list as stacks run out,
+   * the dust counting up over the card. It stops at the first piece that
+   * would need asking twice (or one being worn), or when there's nothing left.
+   */
+  private updateHold(dt: number): void {
+    const h = this.hold;
+    if (!h) return;
+    h.t -= dt;
+    while (h.t <= 0) {
+      const id = this.picked;
+      const got = id && !this.careful(id) && collection.disenchantValue(id) !== null ? this.unmake(id) : 0;
+      if (!got) {
+        // Stopped: if nothing was unmade yet, letting go still counts as a tap (Nyx asks about a rare piece).
+        if (h.fired) h.t = Infinity;
+        else this.hold = null;
+        return;
+      }
+      h.fired++;
+      h.dust += got;
+      this.pop(`+${h.dust}`, DUSTY);
+      h.every = Math.max(HOLD_FASTEST, h.every * HOLD_SPEEDUP);
+      h.t += h.every;
     }
   }
 
@@ -437,7 +493,8 @@ export class KeeperView extends Phaser.GameObjects.Container {
       if (this.keeper === 'disenchant') {
         y = para('Pick a piece to break it down into dust.', DIM, y) + 6;
         y = para('Common 1, uncommon 2, rare 5, epic 15, legendary 40. Upgraded pieces give back half the dust spent on them.', SOFT, y) + 6;
-        para('Worn pieces must come off first.', SOFT, y);
+        y = para('Worn pieces must come off first.', SOFT, y) + 6;
+        para('Hold the button to unmake piece after piece.', SOFT, y);
       } else {
         y = para('Pick an epic or legendary piece to raise it a level, up to 10.', DIM, y) + 6;
         para('Each level adds a point to a stat of your choice. Epic pieces cost half as much dust.', SOFT, y);

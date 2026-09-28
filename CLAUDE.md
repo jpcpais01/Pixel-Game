@@ -70,7 +70,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - `textures.ts`: `buildAllTextures` packs and registers everything, and creates animations named `<key>_<anim>_<dir>`. Every lit texture has `_e` (emissive), `_s` (shadow) and, for monsters, `_w` (hit flash) companions.
 - Icons: `effects.ts`, `heroSkins.ts`, `moreSkinIcons.ts`; gear icons in `gear.ts`.
 
-**Rendering** (`src/game/`): `LitPipeline.ts` (sun or moon plus sky light on top of Light2D), `PixelPipeline.ts` (ground drawn at art resolution, then scaled up), `SkyPipeline.ts` (cloud shadows and vignette), `display.ts` (pixel ratio, zoom, `snap`), `settings.ts` (quality, zoom, volumes, brightness).
+**Rendering** (`src/game/`): `LitPipeline.ts` (sun or moon plus sky light on top of Light2D), `PixelPipeline.ts` (ground drawn at art resolution, then scaled up), `SkyPipeline.ts` (cloud shadows and vignette), `display.ts` (pixel ratio, zoom, `snap`), `settings.ts` (quality, zoom, volumes, brightness, screen shake: off stills every camera shake, patched in `main.ts`).
 
 **Audio** (`src/audio/`): everything synthesised with Web Audio: `music.ts`, `ambience.ts`, `sfx.ts`, through `mixer.ts`; `index.ts` exposes `sound`.
 
