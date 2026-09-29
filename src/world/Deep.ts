@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CAPS_H, CAPS_OY, CRYS_H, CRYS_OY, FOOT_CX, FOOT_CY, FOOT_H, FOOT_W, LANTERN_H, LANTERN_OY, SHROOM_H, SHROOM_OY, SKYPOOL_FRAMES, SPIRE_H, SPIRE_OY, STALAG_H, STALAG_OY } from '../art/deep';
-import { warmDeep } from '../art/textures';
+import { warmDeep } from '../art/arenaLoader';
 import { hash2 } from '../art/env';
 import { sky } from '../game/LitPipeline';
 import { skyState } from '../game/SkyPipeline';

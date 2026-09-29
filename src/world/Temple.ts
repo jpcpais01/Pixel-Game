@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { BOULDER_H, BOULDER_OY, CRYSTAL_H, CRYSTAL_OY, ELEMENTS, FIREBOWL_H, FIREBOWL_OY, OBELISK_H, OBELISK_OY, TPILLAR_H, TPILLAR_OY } from '../art/temple';
 import { ELEMENT_LIGHT } from '../art/elementals';
-import { warmTemple } from '../art/textures';
+import { warmTemple } from '../art/arenaLoader';
 import { hash2 } from '../art/env';
 import { sky } from '../game/LitPipeline';
 import { skyState } from '../game/SkyPipeline';

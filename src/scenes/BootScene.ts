@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
 import { textureSteps } from '../art/textures';
+import { lazyHeroSheets, warmHeroSheets } from '../art/heroLoader';
+import { CLASSES } from '../game/characters';
+import { lastHero, lastLookOf, worn } from '../game/skins';
 import { buildPixelFont } from '../art/font';
 import { registerGemArt } from '../art/shop';
 import { GroundStreamer } from '../world/GroundStreamer';
@@ -42,6 +45,15 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     buildPixelFont(this);
+    // The heroes are built by workers meanwhile, the looks each class wears
+    // first (the hero select shows them all), the last one played before those.
+    lazyHeroSheets(this);
+    const last = lastHero();
+    const classes = [...CLASSES].sort((a, b) => (a.id === last ? -1 : b.id === last ? 1 : 0));
+    warmHeroSheets(this.game, [
+      ...classes.map((c) => worn(c).preview.texture),
+      ...classes.flatMap((c) => c.types.map((t) => worn(c, lastLookOf(c, t)).preview.texture)),
+    ]);
     this.steps = textureSteps(this);
     this.done = 0;
     this.total = lastSteps();

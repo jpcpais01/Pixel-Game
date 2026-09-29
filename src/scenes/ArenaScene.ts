@@ -16,8 +16,10 @@ const WIN_X = 5;
 const WIN_Y = 5;
 const WIN_W = CARD_W - 10;
 const WIN_H = PREVIEW_H;
-/** ms per frame spent building an arena for its window (the home screen has usually built them already). */
+/** ms per frame spent building an arena for its window (most of the work is in a worker; this is uploading). */
 const WARM_BUDGET = 10;
+/** Longest Play waits for the picked arena to finish loading before the world takes over and finishes it itself. */
+const START_WAIT_MS = 8000;
 /** Each window, saved once drawn, so it shows at once on later visits (until the next build changes the art). */
 const THUMB_KEY = 'pixel-battle.thumb.';
 
@@ -52,6 +54,8 @@ class ArenaCard extends Phaser.GameObjects.Container {
   private title: Phaser.GameObjects.BitmapText;
   /** The saved picture of the window, shown until the live one is built. */
   private thumb: Phaser.GameObjects.Image | null = null;
+  /** Has a saved picture, so it needn't be built unless it's picked. */
+  private saved = false;
   private picked = false;
 
   constructor(
@@ -94,9 +98,13 @@ class ArenaCard extends Phaser.GameObjects.Container {
       this.loading.setVisible(false);
       this.setPicked(this.picked);
     };
-    if (this.scene.textures.exists(key)) return show();
+    if (this.scene.textures.exists(key)) {
+      this.saved = true;
+      return show();
+    }
     const url = savedThumb(this.arena.id);
     if (!url) return;
+    this.saved = true;
     const img = new Image();
     img.onload = () => {
       if (!this.scene.textures.exists(key)) this.scene.textures.addImage(key, img);
@@ -118,6 +126,10 @@ class ArenaCard extends Phaser.GameObjects.Container {
 
   get ready(): boolean {
     return this.built;
+  }
+
+  get pictured(): boolean {
+    return this.saved;
   }
 
   /** The window: the arena's day ground, cropped to it, with its props standing on it. */
@@ -208,6 +220,8 @@ export class ArenaScene extends Phaser.Scene {
   /** The online panel is open over the page. */
   private panel = false;
   private leaving = false;
+  /** Play was pressed before the picked arena had loaded: when that was. */
+  private waitingSince: number | null = null;
 
   constructor() {
     super('arena');
@@ -215,6 +229,7 @@ export class ArenaScene extends Phaser.Scene {
 
   create(data: { character: string }): void {
     this.leaving = false;
+    this.waitingSince = null;
     this.character = data.character;
     const cam = this.cameras.main.setOrigin(0, 0).setAlpha(0);
     this.tweens.add({ targets: cam, alpha: 1, duration: 260 });
@@ -244,11 +259,17 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   update(): void {
-    // One window at a time, the picked arena's first.
-    const next = [this.cards[this.picked], ...this.cards].find((c) => !c.ready);
+    // One window at a time: the picked arena's, then any with no saved
+    // picture yet. The rest stay pictures, and their arenas unbuilt.
+    const picked = this.cards[this.picked];
+    const next = picked.ready ? this.cards.find((c) => !c.ready && !c.pictured) : picked;
     if (next) {
       next.warm();
-      if (next.ready) next.setPicked(next === this.cards[this.picked]);
+      if (next.ready) next.setPicked(next === picked);
+    }
+    if (this.waitingSince !== null && (picked.ready || this.time.now - this.waitingSince > START_WAIT_MS)) {
+      this.waitingSince = null;
+      this.go(picked.arena.id, false);
     }
   }
 
@@ -297,9 +318,17 @@ export class ArenaScene extends Phaser.Scene {
   private startGame(arenaId?: string): void {
     if (this.leaving || (this.panel && !arenaId)) return;
     this.leaving = true;
+    const card = this.cards[this.picked];
+    if (arenaId || card.ready) return this.go(arenaId ?? card.arena.id, !!arenaId);
+    // Still loading: wait for it here, where the frame rate holds, rather
+    // than in the world's first frame.
+    this.waitingSince = this.time.now;
+    this.play.setAlpha(0.6);
+  }
+
+  private go(arena: string, online: boolean): void {
     const character = this.character;
-    const arena = arenaId ?? this.cards[this.picked].arena.id;
-    if (!arenaId) rememberArena(arena);
+    if (!online) rememberArena(arena);
     const fade = [this.scene.get('home').cameras.main, this.cameras.main];
     for (const cam of fade) cam.fadeOut(450, 7, 8, 13);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {

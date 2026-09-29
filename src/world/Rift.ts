@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { RIFT_PLATFORM_X, RIFT_PLATFORM_Y, SHARD_H, SHARD_OY, TEAR_H } from '../art/rift';
-import { warmDeep, warmRift, warmTemple } from '../art/textures';
+import { warmDeep, warmRift, warmTemple } from '../art/arenaLoader';
 import { sky } from '../game/LitPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { settings } from '../game/settings';

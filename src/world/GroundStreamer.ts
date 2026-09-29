@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { pixelCanvas } from '../art/canvas';
 import { buildStrip, stripCount, STRIP_H, type GroundSpec, type GroundStrip } from '../art/ground';
 
 // Streams the ground in and out as strips, so the world can be far larger
@@ -22,13 +23,7 @@ const KEEP = 5;
 const AHEAD = 2;
 
 
-function toCanvas(w: number, h: number, px: Uint8ClampedArray): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  c.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(px), w, h), 0, 0);
-  return c;
-}
+const toCanvas = pixelCanvas;
 
 export class GroundStreamer {
   private shown = new Map<number, Shown>();

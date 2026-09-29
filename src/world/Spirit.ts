@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BRAZIER_H, BRAZIER_OY, CANDLE_H, CANDLE_OY, PILLAR_H, PILLAR_OY, STATUE_H, STATUE_OY, TOMB_H, TOMB_OY } from '../art/spirit';
-import { warmSpirit } from '../art/textures';
+import { warmSpirit } from '../art/arenaLoader';
 import { hash2 } from '../art/env';
 import { sky } from '../game/LitPipeline';
 import { skyState } from '../game/SkyPipeline';

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { bakedCanvas } from '../../art/canvas';
 import { sound } from '../../audio';
 import { dirOf } from '../Wizard';
 import { energy } from '../energy';
@@ -411,7 +412,7 @@ export function ensureUltIcons(scene: Phaser.Scene): void {
     const img = ctx.createImageData(16, 16);
     img.data.set(icons.paintIcon(def.icon, p));
     ctx.putImageData(img, 0, 0);
-    scene.textures.addCanvas(key, c);
+    scene.textures.addCanvas(key, bakedCanvas(c));
   };
   for (const [k, def] of Object.entries(ULTS)) {
     const [cls, type] = k.split(':');
@@ -721,7 +722,7 @@ function moteTextures(scene: Phaser.Scene, p: Pal): [string, string] {
       g.fillStyle = hex(col);
       g.fillRect(x, y, 1, 1);
     }
-    scene.textures.addCanvas(keys[i], c);
+    scene.textures.addCanvas(keys[i], bakedCanvas(c));
   });
   return keys;
 }

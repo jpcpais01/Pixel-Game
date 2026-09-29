@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
 import { CHEST_Y, FACING_DEG, HIT_FRAME, SAMURAI_H, SAMURAI_ORIGIN_X, SAMURAI_ORIGIN_Y, SAMURAI_W } from '../art/samurai';
-import { samuraiMeta } from '../art/textures';
+import { samuraiMeta } from '../art/heroLoader';
 import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
