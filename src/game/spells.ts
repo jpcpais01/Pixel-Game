@@ -185,3 +185,39 @@ export const FROST_STYLE: SpellStyle = {
   orb: { texture: 'orb_frost_e', anim: 'orb_frost_spin' },
   burst: { texture: 'burst_frost_e', anim: 'burst_frost_pop' },
 };
+
+/** The Tidecaller: sea water, white foam through clear aqua down to the deep blue. */
+export const TIDE_STYLE: SpellStyle = {
+  core: 0xf0ffff,
+  hot: 0x9cf4ff,
+  mid: 0x2ec4e0,
+  deep: 0x1a5ab8,
+  accent: 0xe8fff8,
+  sparks: [0x9cf4ff, 0x2ec4e0, 0x1a5ab8, 0xf0ffff],
+  glow: 0x2ab4e0,
+  light: 0x6ae0ff,
+  flash: 0xc8faff,
+  unstable: 0x3a6ae0,
+  fizzle: 0x5a8a9a,
+  fizzleSparks: [0x5a8a9a, 0x2ec4e0, 0xf0ffff],
+  orb: { texture: 'orb_tide_e', anim: 'orb_tide_spin' },
+  burst: { texture: 'burst_tide_e', anim: 'burst_tide_pop' },
+};
+
+/** The Tidecaller's Abyssal skin: the living light of the deep, cold teal with a violet dark. */
+export const ABYSS_STYLE: SpellStyle = {
+  core: 0xf0fffc,
+  hot: 0xa8fff0,
+  mid: 0x3ae0d0,
+  deep: 0x5a2ab8,
+  accent: 0xc8a8ff,
+  sparks: [0xa8fff0, 0x3ae0d0, 0x5a2ab8, 0xc8a8ff],
+  glow: 0x2ad0c0,
+  light: 0x5af0e0,
+  flash: 0xc8fff4,
+  unstable: 0x8a4af0,
+  fizzle: 0x4a4a6a,
+  fizzleSparks: [0x4a4a6a, 0x3ae0d0, 0x5a2ab8],
+  orb: { texture: 'orb_abyss_e', anim: 'orb_abyss_spin' },
+  burst: { texture: 'burst_abyss_e', anim: 'burst_abyss_pop' },
+};
