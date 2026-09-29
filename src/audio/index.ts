@@ -643,6 +643,11 @@ class GameSound {
     if (t !== null) this.sfx!.stasis(t, pan);
   }
 
+  decree(pan = 0): void {
+    const t = this.slot('decree');
+    if (t !== null) this.sfx!.decree(t, pan);
+  }
+
   hourStrike(pan = 0): void {
     const t = this.slot('hourStrike');
     if (t !== null) this.sfx!.hourStrike(t, pan);

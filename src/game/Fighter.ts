@@ -7,7 +7,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals, type MeleeArea } from './combat';
 import { HitSpark, Shockwave, type Effect, type Scheme } from './Slash';
-import { AIR_FX, CHI_FX, Fissure, Flurry, LUCHA_AIR_FX, LUCHA_FX, MAGMA_FX, PALM_FX, PunchBlast, QI_FX, STONE_FX } from './Fists';
+import { AIR_FX, CHAMP_AIR_FX, CHAMP_FX, CHI_FX, Fissure, Flurry, LUCHA_AIR_FX, LUCHA_FX, MAGMA_FX, PALM_FX, PunchBlast, QI_FX, STONE_FX } from './Fists';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
@@ -98,6 +98,9 @@ export const MONK_STYLE: FighterStyle = {
 
 /** The luchador: the brawler's moves under a mask, in gold and pink. */
 export const LUCHA_STYLE: FighterStyle = { ...BRAWLER_STYLE, key: 'fighter_lucha', air: LUCHA_AIR_FX, chi: LUCHA_FX };
+
+/** The champ: the brawler's moves in jorts and a cap, in lime and orange. */
+export const CHAMP_STYLE: FighterStyle = { ...BRAWLER_STYLE, key: 'fighter_champ', air: CHAMP_AIR_FX, chi: CHAMP_FX };
 
 /** The stone guardian: the monk's moves in stone, fire welling up where he strikes. */
 export const GUARDIAN_STYLE: FighterStyle = { ...MONK_STYLE, key: 'fighter_guardian', air: STONE_FX, chi: MAGMA_FX, fire: MAGMA_FX };

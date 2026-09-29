@@ -298,7 +298,7 @@ export interface TurretSpec {
   dropDamage: number;
 }
 
-export const SENTRY: TurretSpec = { scale: 1, life: 12000, range: 115, fireMs: 420, damage: 4.5, rocketMs: 0, rocketDamage: 0, rocketR: 0, drop: false, dropDamage: 0 };
+export const SENTRY: TurretSpec = { scale: 1, life: 12000, range: 115, fireMs: 450, damage: 4, rocketMs: 0, rocketDamage: 0, rocketR: 0, drop: false, dropDamage: 0 };
 
 const FLY_MS = 320;
 const DROP_MS = 420;

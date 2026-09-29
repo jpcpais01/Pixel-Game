@@ -21,6 +21,8 @@ import { schemePal } from '../Blades';
 import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
 import { PrimalStampede, WildWrath } from './druid';
 import { AsgardThunder, OdinSpear } from './valkyrie';
+import { KingsCrown } from './king';
+import { AFONSO_KIT, KING_KIT } from '../King';
 import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
 import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT } from '../Valkyrie';
 import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
@@ -73,6 +75,16 @@ const ULTS: Record<string, UltDef> = {
     pal: pal(0xffffff, 0xfff4c8, 0xffd66b, 0xb8762a, 0xffe0a0),
     icon: icons.skybreakerIcon,
     cast: (c) => c.world.addEffect(new Skybreaker(c.world, c.tx, c.ty, c.pal)),
+  },
+  'warrior:king': {
+    name: 'Crown of Kings',
+    cost: 65,
+    windup: 600,
+    aim: 'spot',
+    range: 100,
+    pal: KING_KIT.pal,
+    icon: icons.kingsCrownIcon,
+    cast: (c) => c.world.addEffect(new KingsCrown(c.world, c.tx, c.ty, c.pal)),
   },
   'paladin:holy': {
     name: "Heaven's Light",
@@ -367,6 +379,7 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:sith': { name: 'Crimson Cyclone', pal: pal(0xfff6f2, 0xff7a70, 0xf0283a, 0x8a1020, 0xff4a4a) },
   'alchemist:witch': { name: 'Hex Storm', pal: toxPal(HEX_TOX) },
   'fighter:lucha': { name: 'Flying Tiger', pal: pal(0xfff8e8, 0xffd35c, 0xff4fa0, 0x9a1c6a, 0xff80b8) },
+  'fighter:champ': { name: "Can't See Me", pal: pal(0xf8ffe8, 0x9cff5a, 0xff8a2a, 0x1c7a1a, 0x8cf060) },
   'fighter:guardian': { name: 'Wrath of Stone', pal: pal(0xfff4d0, 0xffc050, 0xff6a1a, 0xa02a10, 0xff8a30), type: 'monk' },
   'alchemist:shaman': { name: 'Spirit Plague', pal: toxPal(SPIRIT_TOX) },
   'alchemist:cryo': { name: 'Absolute Zero', pal: toxPal(CRYO_TOX), type: 'chem' },
@@ -392,6 +405,7 @@ const SKINS: Record<string, UltSkin> = {
   'wizard:astral': { name: 'Supernova', pal: pal(0xfffdf2, 0xfff0a8, 0xffc860, 0x6a5ae0, 0xffe08a) },
   'wizard:hellfire': { name: 'Hellstorm', pal: pal(0xf4ffe8, 0xc8ff7a, 0x5ee83a, 0x1a8a3a, 0x7aff5a), type: 'pyro' },
   'warrior:spartan': { name: 'Wrath of Ares', pal: pal(0xfff0e8, 0xff9a80, 0xf03a3a, 0x8a0a1a, 0xff6a50) },
+  'warrior:afonso': { name: 'Miracle of Ourique', pal: AFONSO_KIT.pal, type: 'king' },
   'paladin:seraph': { name: 'Choir of Angels', pal: pal(0xffffff, 0xfff0d0, 0xffc890, 0xff8ab8, 0xffd8b0) },
   'paladin:oathbreaker': { name: 'Black Sun', pal: pal(0xf6eeff, 0xd8b0ff, 0xa060ff, 0x4a1a8a, 0xb070ff), type: 'crusader' },
   'jedi:guard': { name: 'Sentinel Storm', pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
@@ -533,7 +547,7 @@ export class UltCaster {
     if (pend) {
       pend.left -= dt;
       const key = this.hero.sprite.anims.currentAnim?.key ?? '';
-      if (/_(idle|walk)_/.test(key)) {
+      if (/_(idle|walk|move)_/.test(key)) {
         this.pending = null;
         this.start(pend.aim, pend.facing);
       } else if (pend.left <= 0) this.pending = null;

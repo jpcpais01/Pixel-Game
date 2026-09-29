@@ -367,7 +367,7 @@ export class Blob extends Monster {
       w.addEffect(new Blaze(w, x, y, 1700, 3, 0.8));
       sound.sizzle(w.pan(x));
     } else if (this.el === 'earth') {
-      if (!this.struck) w.hurtHeroInEllipse(x, y, 13, 8, { damage: 6, fromX: x, fromY: y, knock: 90 });
+      if (!this.struck) w.hurtHeroInEllipse(x, y, 13, 8, { damage: mobHit('blob_earth', 0.75), fromX: x, fromY: y, knock: 90 });
       sound.thud(w.pan(x), false);
     } else if (this.el === 'water') sound.splash(w.pan(x));
     else sound.puff(w.pan(x));
