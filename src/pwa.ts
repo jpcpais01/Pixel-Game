@@ -1,11 +1,13 @@
 // App shell behaviour: offline service worker, fullscreen landscape on
 // phones, an install button, and a nudge to turn the phone sideways.
 
+import { afterLoad } from './loaded';
+
 const touch = () => matchMedia('(pointer: coarse)').matches;
 
 function registerServiceWorker(): void {
   if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
-  window.addEventListener('load', () => {
+  afterLoad(() => {
     navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('Service worker failed to register', err));
   });
 }

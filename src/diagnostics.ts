@@ -8,6 +8,8 @@
 // heartbeat is kept while the game is on screen: if the next launch finds one
 // that never said goodbye, the last session died, and it is reported then.
 
+import { afterLoad } from './loaded';
+
 declare const __BUILD__: string;
 
 /**
@@ -161,7 +163,7 @@ export function installCrashReports(): void {
   // Open the game with #crash on the address to see the last report again.
   if (location.hash === '#crash') {
     const last = lastCrashReport();
-    window.addEventListener('load', () => show(last ?? 'No crash report saved.', 'Last crash report'));
+    afterLoad(() => show(last ?? 'No crash report saved.', 'Last crash report'));
   }
 
   // The last session died without saying goodbye while on screen.
@@ -171,7 +173,7 @@ export function installCrashReports(): void {
       localStorage.removeItem(BEAT_KEY);
       const text = `MYTHS AND LEGENDS CRASH: the last session stopped suddenly (the page was killed or froze while playing, likely out of memory)\n\nLast heartbeat:\n${beat}`;
       localStorage.setItem(REPORT_KEY, text);
-      window.addEventListener('load', () => show(text, 'The game closed unexpectedly last time. Copy this and send it to Claude.'));
+      afterLoad(() => show(text, 'The game closed unexpectedly last time. Copy this and send it to Claude.'));
     }
   } catch {
     // No storage: no heartbeat.

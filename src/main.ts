@@ -23,6 +23,7 @@ import { streamVertexBuffers } from './game/streamBuffers';
 import { bakeArtTextures } from './game/bakedTextures';
 import { cacheGraphics } from './game/graphicsCache';
 import { installCrashReports, watchCanvas } from './diagnostics';
+import { afterLoad } from './loaded';
 
 installCrashReports();
 setupApp();
@@ -98,7 +99,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('orientationchange', queueFit);
 document.addEventListener('fullscreenchange', queueFit);
 new ResizeObserver(queueFit).observe(document.getElementById('app')!);
-window.addEventListener('load', queueFit);
+afterLoad(queueFit);
 for (const ms of [250, 1000, 2500]) setTimeout(queueFit, ms);
 // The pixel ratio changes without a resize when the page is zoomed or moves
 // to another screen; a media query on the current ratio notices.
