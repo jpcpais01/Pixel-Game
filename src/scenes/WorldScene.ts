@@ -411,8 +411,10 @@ export class WorldScene extends Phaser.Scene {
     this.aimShown = false;
     this.lookT = 0;
     this.lastAim = null;
-    // The worn companion comes along, its perk with it.
-    const pet = petById(collection.pet);
+    // The worn companion comes along, its perk with it. Not in a duel: the
+    // opponent can't see it, so its blows and perk would be an unfair edge.
+    const duel = session.active && session.room?.mode === 'duel';
+    const pet = duel ? undefined : petById(collection.pet);
     wearPet(pet);
     this.companion = pet ? new Companion(this, pet, this.hero.x, this.hero.y) : null;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -426,6 +428,8 @@ export class WorldScene extends Phaser.Scene {
       this.spawners.push(this.riftWaves);
       this.scene.launch('rift');
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        // Left mid-run (Pause, Home): the waves cleared still count for a best.
+        this.riftWaves?.end();
         resetRift();
         this.scene.stop('rift');
       });
