@@ -203,6 +203,9 @@ export class DeadOfNight extends Fx {
   private tickT = 0;
   private cala: boolean;
   private flared = false;
+  /** Cast by a teammate online: their Night keeps its lamp and effects, but
+   *  doesn't black out this player's own view. */
+  private readonly ghost: boolean;
 
   constructor(
     world: WorldScene,
@@ -210,6 +213,7 @@ export class DeadOfNight extends Fx {
   ) {
     super(world, NIGHT_MS + 500);
     this.cala = c.look === 'cala';
+    this.ghost = !!(world as unknown as { __ghost?: boolean }).__ghost;
     const tint = this.cala ? 0x3a1420 : 0x000000;
     this.dark = this.own(world.add.image(c.hero.x, c.hero.y, 'night_hole').setScale(NIGHT_SCALE).setDepth(9500).setTint(tint).setAlpha(0));
     this.rim = this.own(world.add.graphics().setDepth(9500));
@@ -226,7 +230,7 @@ export class DeadOfNight extends Fx {
     const y = h.y - 12;
     const on = this.t < NIGHT_MS;
     const k = on ? clamp01(this.t / 450) : 1 - clamp01((this.t - NIGHT_MS) / 450);
-    const depth = this.cala ? 0.45 : 0.8;
+    const depth = this.ghost ? 0 : this.cala ? 0.45 : 0.8;
     this.dark.setPosition(Math.round(x), Math.round(y)).setAlpha(k * depth);
     // Past the image's edges the dark carries on, to cover the whole view.
     const half = (128 * NIGHT_SCALE) / 2;
