@@ -29,9 +29,8 @@ const INFO_W = 188;
 const MAIN_H = 150;
 const MAIN_GAP = 6;
 const PAD = 7;
-/** Stage rows, from its top: the class's line, the characters' feet, and the skin strip under them. */
-const BAND_Y = 5;
-const BAND_H = 14;
+/** Stage rows, from its top: headroom over the characters, their feet, and the skin strip under them. */
+const BAND_H = 6;
 const SKIN_H = 22;
 const SKIN_Y = MAIN_H - 3 - SKIN_H;
 const FEET_Y = SKIN_Y - 19;
@@ -516,8 +515,6 @@ class Stage extends Phaser.GameObjects.Container {
   private pool: Phaser.GameObjects.Image;
   private runes: Phaser.GameObjects.Image;
   private figures: Figure[] = [];
-  private blurb: Phaser.GameObjects.BitmapText;
-  private countText: Phaser.GameObjects.BitmapText;
   private strip: Phaser.GameObjects.Graphics;
   private skinLabel: Phaser.GameObjects.BitmapText;
   private skinName: Phaser.GameObjects.BitmapText;
@@ -548,8 +545,6 @@ class Stage extends Phaser.GameObjects.Container {
     this.runes = scene.add.image(this.lightX, FEET_Y, runesTexture(scene)).setBlendMode(Phaser.BlendModes.ADD);
     scene.tweens.add({ targets: this.runes, alpha: { from: 0.35, to: 0.9 }, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     for (let i = 0; i < MAX_FIGURES; i++) this.figures.push(new Figure(scene));
-    this.blurb = pixelText(scene, 0, BAND_Y, '', LAVENDER);
-    this.countText = pixelText(scene, 0, BAND_Y, '', GOLD);
     this.probe = pixelText(scene, 0, 0, '').setVisible(false);
     this.strip = scene.add.graphics();
     this.skinLabel = pixelText(scene, 0, 0, 'Skin', SOFT);
@@ -596,8 +591,6 @@ class Stage extends Phaser.GameObjects.Container {
       this.runes,
       ...this.motes.map((m) => m.img),
       ...this.figures,
-      this.blurb,
-      this.countText,
       this.strip,
       this.skinLabel,
       this.skinName,
@@ -610,25 +603,17 @@ class Stage extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Show a class: its line (what it is, how many characters), its characters
-   * side by side with `picked` in the light, and the picked one's skins.
+   * Show a class: its characters side by side with `picked` in the light,
+   * and the picked one's skins.
    * `jump` moves the light at once (a new class) rather than gliding it over.
    */
-  show(blurb: string, slots: Slot[], picked: number, skin: SkinPick, pose: boolean, jump: boolean): void {
+  show(slots: Slot[], picked: number, skin: SkinPick, pose: boolean, jump: boolean): void {
     this.slots = slots.slice(0, MAX_FIGURES);
     this.picked = Math.min(picked, this.slots.length - 1);
     this.skin = skin;
     this.accent = slots[this.picked].accent;
     const n = this.slots.length;
     this.setHover(-1, false);
-
-    // The class's line: what it is, then how many characters it holds.
-    const many = n > 1 ? `${n} characters` : '1 character';
-    this.countText.setText(many.toUpperCase());
-    this.blurb.setText(fitLine(this.probe, blurb, this.boxW - 20 - this.countText.width));
-    const lineW = this.blurb.width + 8 + this.countText.width;
-    this.blurb.setX(Math.round((this.boxW - lineW) / 2));
-    this.countText.setX(this.blurb.x + this.blurb.width + 8);
 
     // The characters, evenly across the stage; three times size when each has the room, else twice.
     const slotW = (this.boxW - 8) / n;
@@ -963,7 +948,6 @@ export class SelectScene extends Phaser.Scene {
     const skins = look.type.skins ?? [];
     this.shadeTo(def.accent);
     this.stage.show(
-      cls.blurb,
       slots,
       picked,
       {
