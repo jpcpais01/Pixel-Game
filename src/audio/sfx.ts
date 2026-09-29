@@ -1526,6 +1526,27 @@ export class Sfx {
   }
 
   /** The hour strikes: a clock's chime, three bells over a low gong. */
+  /** The King's decree: a short brass fanfare over a bell and a low boom. */
+  decree(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.8, 0.7);
+    // Two horns a fifth apart, rising G, C, then a held E.
+    const horn = gain(ctx, 0, filter(ctx, 'lowpass', 1900, 1.2, out));
+    horn.gain.setValueAtTime(0, t);
+    horn.gain.linearRampToValueAtTime(0.07, t + 0.03);
+    horn.gain.setValueAtTime(0.07, t + 0.5);
+    horn.gain.linearRampToValueAtTime(0, t + 0.95);
+    for (const [f, at] of [[392, 0], [523, 0.13], [659, 0.26]] as const) {
+      for (const k of [1, 1.5]) {
+        const o = osc(ctx, 'sawtooth', f * k * rand(0.997, 1.003), gain(ctx, k === 1 ? 1 : 0.45, horn));
+        o.start(t + at);
+        o.stop(at < 0.2 ? t + at + 0.14 : t + 1);
+      }
+    }
+    this.bell(out, t + 0.26, 1319, 0.04, 1.2);
+    this.burstNoise(out, t, 'lowpass', 900, 120, 0.9, 0.4, 0.3);
+  }
+
   hourStrike(t: number, pan: number): void {
     const out = this.out(pan, 0.8, 0.7);
     this.bell(out, t, 131, 0.09, 2.4);

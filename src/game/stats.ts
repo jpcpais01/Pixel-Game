@@ -52,6 +52,7 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'wizard.arcane': { role: 'caster', hp: 85, damage: 16, defense: 12, rate: 1.32, speed: 58, regen: 0.8, kit: 12 },
   'wizard.pyro': { role: 'ranged', hp: 100, damage: 6, defense: 12, rate: 4.32, speed: 62, regen: 0.6, kit: 7.1 },
   'warrior.knight': { role: 'tank', hp: 110, damage: 10, defense: 22, rate: 2.65, speed: 60, regen: 1, kit: 13.6 },
+  'warrior.king': { role: 'tank', hp: 110, damage: 12, defense: 22, rate: 2.45, speed: 56, regen: 1, kit: 15.3 },
   'paladin.holy': { role: 'tank', hp: 120, damage: 10, defense: 22, rate: 2.33, speed: 54, regen: 1, kit: 15 },
   'paladin.crusader': { role: 'melee', hp: 105, damage: 17, defense: 20, rate: 1.82, speed: 60, regen: 0.8, kit: 20 },
   'jedi.knight': { role: 'melee', hp: 95, damage: 9, defense: 20, rate: 3.32, speed: 64, regen: 0.8, kit: 10.5 },
