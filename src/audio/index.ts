@@ -498,6 +498,26 @@ class GameSound {
     if (t !== null) this.sfx!.droneZap(t, pan, hive);
   }
 
+  wrench(pan = 0, heavy = false): void {
+    const t = this.slot('wrench');
+    if (t !== null) this.sfx!.wrench(t, pan, heavy);
+  }
+
+  ratchet(pan = 0): void {
+    const t = this.slot('ratchet');
+    if (t !== null) this.sfx!.ratchet(t, pan);
+  }
+
+  turretShot(pan = 0, mega = false): void {
+    const t = this.slot('turretShot');
+    if (t !== null) this.sfx!.turretShot(t, pan, mega);
+  }
+
+  tesla(pan = 0, chain = false): void {
+    const t = this.slot('tesla');
+    if (t !== null) this.sfx!.tesla(t, pan, chain);
+  }
+
   servo(pan = 0): void {
     const t = this.slot('servo');
     if (t !== null) this.sfx!.servo(t, pan);

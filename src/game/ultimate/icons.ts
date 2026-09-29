@@ -426,3 +426,36 @@ export const nightIcon: IconPainter = (put, p) => {
   for (let y = 9; y <= 13; y++) for (let x = 9; x <= 13; x++) put(x, y, x === 9 || x === 13 || y === 9 || y === 13 ? p.deep : p.core);
   put(11, 11, 0xffffff);
 };
+
+/** Mega Sentry: a great turret on splayed legs, both barrels blazing, a rocket leaving. */
+export const megaSentryIcon: IconPainter = (put, p) => {
+  seg(put, 6, 10, 2, 15, p.deep);
+  seg(put, 9, 10, 13, 15, p.deep);
+  seg(put, 7, 10, 7, 15, p.deep);
+  for (let y = 5; y <= 10; y++) for (let x = 2; x <= 11; x++) if ((x - 6.5) ** 2 / 20 + (y - 7.5) ** 2 / 8 <= 1) put(x, y, y < 7 ? p.hot : p.mid);
+  seg(put, 11, 6, 14, 6, p.hot);
+  seg(put, 11, 8, 14, 8, p.hot);
+  put(15, 6, p.core);
+  put(15, 8, p.core);
+  put(15, 7, p.hot);
+  seg(put, 9, 3, 13, 1, p.mid);
+  put(14, 1, p.core);
+  put(8, 3, p.deep);
+};
+
+/** Chain Reaction: an atom, three orbits round a bright nucleus. */
+export const chainReactionIcon: IconPainter = (put, p) => {
+  for (let o = 0; o < 3; o++) {
+    const tilt = (o * Math.PI) / 3;
+    for (let i = 0; i < 48; i++) {
+      const a = (i / 48) * Math.PI * 2;
+      const ex = Math.cos(a) * 6.8;
+      const ey = Math.sin(a) * 2.3;
+      put(Math.round(8 + ex * Math.cos(tilt) - ey * Math.sin(tilt) - 0.5), Math.round(8 + ex * Math.sin(tilt) + ey * Math.cos(tilt) - 0.5), p.mid);
+    }
+  }
+  disc(put, 8, 8, 2, p.core);
+  put(14, 8, p.hot);
+  put(4, 3, p.hot);
+  put(5, 13, p.hot);
+};

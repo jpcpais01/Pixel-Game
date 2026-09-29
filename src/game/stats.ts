@@ -85,6 +85,8 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'automaton.synth': { role: 'ranged', hp: 95, damage: 7, defense: 12, rate: 3.65, speed: 66, regen: 0.6, skill: 10.4, kit: 7.7 },
   'phantom.poltergeist': { role: 'ranged', hp: 95, damage: 9, defense: 12, rate: 2.98, speed: 64, regen: 0.6, skill: 2.5, kit: 11.2 },
   'phantom.wraith': { role: 'melee', hp: 100, damage: 2.5, defense: 19, rate: 13.9, speed: 58, regen: 0.8, skill: 2.7, kit: 3.6 },
+  'inventor.engineer': { role: 'caster', hp: 100, damage: 9, defense: 12, rate: 2.54, speed: 56, regen: 0.6, skill: 15.2, kit: 12.3 },
+  'inventor.scientist': { role: 'caster', hp: 85, damage: 9, defense: 12, rate: 2.22, speed: 62, regen: 0.8, skill: 4.6, kit: 9 },
 };
 
 /** An even spread on the budget, for a type not in the table yet (its Damage scale is 1: its code's own numbers). */
