@@ -344,6 +344,7 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:sith': { name: 'Crimson Cyclone', pal: pal(0xfff6f2, 0xff7a70, 0xf0283a, 0x8a1020, 0xff4a4a) },
   'alchemist:witch': { name: 'Hex Storm', pal: toxPal(HEX_TOX) },
   'fighter:lucha': { name: 'Flying Tiger', pal: pal(0xfff8e8, 0xffd35c, 0xff4fa0, 0x9a1c6a, 0xff80b8) },
+  'fighter:champ': { name: "Can't See Me", pal: pal(0xf8ffe8, 0x9cff5a, 0xff8a2a, 0x1c7a1a, 0x8cf060) },
   'fighter:guardian': { name: 'Wrath of Stone', pal: pal(0xfff4d0, 0xffc050, 0xff6a1a, 0xa02a10, 0xff8a30), type: 'monk' },
   'alchemist:shaman': { name: 'Spirit Plague', pal: toxPal(SPIRIT_TOX) },
   'alchemist:cryo': { name: 'Absolute Zero', pal: toxPal(CRYO_TOX), type: 'chem' },
