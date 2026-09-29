@@ -14,6 +14,7 @@ import type { WorldScene } from '../scenes/WorldScene';
 import { ARCANE_SKIN, ASTRAL_SKIN, VOID_SKIN, Wizard } from './Wizard';
 import { EMBER_FIRE, HELL_FIRE, HELL_SKIN, PYRO_SKIN, Pyromancy } from './Pyro';
 import { JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
+import { AFONSO_KIT, King, KING_KIT } from './King';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
 import { CRUSADER_KIT, HOLY_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
@@ -336,8 +337,42 @@ export const CLASSES: ClassDef[] = [
           },
         ],
       },
+      {
+        // A crowned king with an ermine mantle and a greatsword: heavy chops, and a decree that brings his foes to their knees.
+        id: 'king',
+        name: 'King',
+        role: 'Crown and greatsword',
+        accent: 0xffcf5a,
+        attack: 'Royal blade',
+        special: 'Royal decree',
+        preview: { texture: 'warrior_king', glow: 'warrior_king_e', idle: 'warrior_king_idle_down', chosen: 'warrior_king_decree_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+        buttons: {
+          attack: { texture: 'icon_sword_king' },
+          special: { texture: 'icon_decree' },
+        },
+        lookName: 'Regal',
+        skins: [
+          {
+            // The first king of Portugal as his statue in Guimarães stands: a crowned conical helm, mail, a long beard, the blue cross on white.
+            id: 'afonso',
+            name: 'Afonso Henriques',
+            role: 'The first king of Portugal',
+            accent: 0x5a8aff,
+            attack: "Conqueror's blade",
+            special: 'Oath of Ourique',
+            preview: { texture: 'warrior_afonso', glow: 'warrior_afonso_e', idle: 'warrior_afonso_idle_down', chosen: 'warrior_afonso_decree_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_sword_afonso' },
+              special: { texture: 'icon_decree_afonso' },
+            },
+          },
+        ],
+      },
     ],
-    spawn: (world, x, y, look) => new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : KNIGHT_SKIN),
+    spawn(world, x, y, look) {
+      if (look === 'king' || look === 'afonso') return new King(world, x, y, look === 'afonso' ? AFONSO_KIT : KING_KIT);
+      return new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : KNIGHT_SKIN);
+    },
   },
   {
     id: 'paladin',
