@@ -16,7 +16,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 ## Map of the code
 
 **Startup and scenes** (`src/main.ts`, `src/scenes/`)
-- `main.ts` makes the Phaser game, fits the canvas, and drops the graphics level if the world runs below 30 FPS for 5 s.
+- `entry.ts` imports `main.ts` only after the page's load event (so the browser's loading bar ends at once). `main.ts` makes the Phaser game, fits the canvas, and drops the graphics level if the world runs below 30 FPS for 5 s.
 - Flow: `BootScene` (builds every texture) → `HomeScene` → `SelectScene` (hero) → `ArenaScene` (arena, and online rooms) → `WorldScene`. `ShopScene` (the Wishing Sanctum) and `InventoryScene` open over Home.
 - Overlays while playing: `UIScene` (joystick, ability buttons, hotbar, buffs, gear HUD), `RiftScene` (the Rift's wave HUD, blessing cards and results), `PauseScene`, `ShadeScene` (brightness), `SoundScene` (mute), `FpsScene`.
 - `src/diagnostics.ts`: crash reports (copyable overlay, heartbeat for killed tabs), switched off: set `CRASH_REPORTS` to true to use them again. `src/pwa.ts` + `scripts/pwa.ts`: install, fullscreen, service worker, icons.
