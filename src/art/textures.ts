@@ -60,6 +60,7 @@ import { birdSheet } from './skyArena';
 import { BOLT_DIRS, MECH_ANIMS, MECH_BOLT_SIZE, MECH_H, MECH_LOOKS, MECH_W, boltFrame as mechBolt, buildMechFrames, cannonIcon, reticle, salvoIcon } from './mech';
 import { HAUNT_KINDS, HAUNT_SIZE, POLTER_ANIMS, POLTER_H, POLTER_LOOKS, POLTER_W, buildPolterFrames, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
 import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, WRAITH_ANIMS, WRAITH_H, WRAITH_LOOKS, WRAITH_W, buildWraithFrames, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
+import { INV_H, INV_W, INVENTOR_LOOKS, TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, buildInventorFrames, inventorAnims, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_ANIMS, SYNTH_H, SYNTH_LOOKS, SYNTH_W, buildSynthFrames, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, leafBit, rayCanvas } from './trees';
@@ -754,6 +755,36 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_possess', toCanvas(16, 16, possessIcon()));
   scene.textures.addCanvas('icon_lantern_cala', toCanvas(16, 16, lanternIcon(true)));
   scene.textures.addCanvas('icon_possess_cala', toCanvas(16, 16, possessIcon(true)));
+  // The Inventor: the Engineer ('engineer') and the Scientist ('scientist',
+  // 'scientist_einstein' for Einstein); the Engineer's turret ('turret':
+  // unfolding 'b0'..'b4', turned 'h0'..'h7' and firing 'f0'..'f7'), and the icons.
+  for (const look of INVENTOR_LOOKS) {
+    yield;
+    const vf = buildInventorFrames(look);
+    register(scene, look.key, pack(vf.map((f) => ({ name: f.key, r: f.canvas.render() })), INV_W, INV_H), INV_W, INV_H);
+    for (const an of inventorAnims(look)) {
+      for (const d of DIRS) {
+        scene.anims.create({
+          key: `${look.key}_${an.name}_${d}`,
+          frames: vf.filter((f) => f.anim === an.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
+          frameRate: an.fps,
+          repeat: an.loop ? -1 : 0,
+        });
+      }
+    }
+  }
+  const turret = [
+    ...Array.from({ length: TURRET_BUILD }, (_, i) => ({ name: `b${i}`, r: turretFrame(2, i / (TURRET_BUILD - 1) * 0.9).render() })),
+    ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `h${i}`, r: turretFrame(i).render() })),
+    ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `f${i}`, r: turretFrame(i, 1, 1).render() })),
+  ];
+  register(scene, 'turret', pack(turret, TURRET_SIZE, TURRET_SIZE), TURRET_SIZE, TURRET_SIZE);
+  scene.textures.addCanvas('icon_wrench', toCanvas(16, 16, wrenchIcon()));
+  scene.textures.addCanvas('icon_turret', toCanvas(16, 16, turretIcon()));
+  scene.textures.addCanvas('icon_tesla', toCanvas(16, 16, teslaIcon()));
+  scene.textures.addCanvas('icon_orb', toCanvas(16, 16, orbIcon()));
+  scene.textures.addCanvas('icon_tesla_einstein', toCanvas(16, 16, teslaIcon(true)));
+  scene.textures.addCanvas('icon_orb_einstein', toCanvas(16, 16, orbIcon(true)));
 
   scene.textures.addCanvas('icon_cannon', toCanvas(16, 16, cannonIcon()));
   scene.textures.addCanvas('icon_salvo', toCanvas(16, 16, salvoIcon()));

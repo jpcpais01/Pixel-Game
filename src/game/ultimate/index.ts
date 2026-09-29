@@ -29,6 +29,9 @@ import { SIEGE_MS, SwarmProtocol } from './robot';
 import { DeadOfNight, HauntedHouse } from './phantom';
 import { POLTER_KIT, TEA_KIT } from '../Poltergeist';
 import { CALA_KIT, WRAITH_KIT } from '../Wraith';
+import { ENGINEER_KIT } from '../Engineer';
+import { EINSTEIN_KIT, SCIENTIST_KIT } from '../Scientist';
+import { chainReaction, megaSentry } from './inventor';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 
@@ -335,6 +338,26 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.nightIcon,
     cast: (c) => c.world.addEffect(new DeadOfNight(c.world, c)),
   },
+  'inventor:engineer': {
+    name: 'Mega Sentry',
+    cost: 70,
+    windup: 550,
+    aim: 'spot',
+    range: 90,
+    pal: ENGINEER_KIT.pal,
+    icon: icons.megaSentryIcon,
+    cast: megaSentry,
+  },
+  'inventor:scientist': {
+    name: 'Chain Reaction',
+    cost: 75,
+    windup: 600,
+    aim: 'spot',
+    range: 110,
+    pal: SCIENTIST_KIT.pal,
+    icon: icons.chainReactionIcon,
+    cast: chainReaction,
+  },
 };
 
 /** Skins' takes on their type's Special, by `class:skin`. */
@@ -382,6 +405,7 @@ const SKINS: Record<string, UltSkin> = {
   'automaton:hive': { name: 'The Golden Swarm', pal: HIVE_KIT.pal, type: 'synth' },
   'phantom:tea': { name: 'Endless Tea Party', pal: TEA_KIT.pal },
   'phantom:cala': { name: 'Candlelit Procession', pal: CALA_KIT.pal, type: 'wraith' },
+  'inventor:einstein': { name: 'E = mc²', pal: EINSTEIN_KIT.pal, type: 'scientist' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

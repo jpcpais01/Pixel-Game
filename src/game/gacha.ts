@@ -38,6 +38,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'valkyrie:raven': 'legendary',
   'automaton:hive': 'legendary',
   'phantom:cala': 'legendary',
+  'inventor:einstein': 'legendary',
   'wizard:astral': 'epic',
   'warrior:spartan': 'epic',
   'paladin:oathbreaker': 'epic',

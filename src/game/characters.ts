@@ -47,6 +47,9 @@ import { POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
 import { CALA_KIT, WRAITH_KIT, Wraith } from './Wraith';
 import { POLTER_H, POLTER_ORIGIN_Y } from '../art/poltergeist';
 import { WRAITH_H, WRAITH_ORIGIN_Y } from '../art/wraith';
+import { ENGINEER_KIT, Engineer } from './Engineer';
+import { EINSTEIN_KIT, SCIENTIST_KIT, Scientist } from './Scientist';
+import { INV_H, INV_ORIGIN_Y } from '../art/inventor';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -1518,6 +1521,64 @@ export const CLASSES: ClassDef[] = [
       if (look === 'wraith') return new Wraith(world, x, y, WRAITH_KIT);
       if (look === 'cala') return new Wraith(world, x, y, CALA_KIT);
       return new Poltergeist(world, x, y, look === 'tea' ? TEA_KIT : POLTER_KIT);
+    },
+  },
+  {
+    id: 'inventor',
+    name: 'Inventor',
+    blurb: 'Gadgets, gizmos and bright ideas',
+    types: [
+      {
+        // A pipe wrench up close, and sentry turrets built from a tossed crate.
+        id: 'engineer',
+        name: 'Engineer',
+        role: 'Builds turrets, swings a wrench',
+        accent: 0xf6cc3c,
+        attack: 'Pipe wrench',
+        special: 'Build sentry',
+        preview: { texture: 'engineer', glow: 'engineer_e', idle: 'engineer_idle_down', chosen: 'engineer_eureka_down', originY: INV_ORIGIN_Y / INV_H },
+        buttons: {
+          attack: { texture: 'icon_wrench' },
+          special: { texture: 'icon_turret' },
+        },
+        lookName: 'Hard hat',
+      },
+      {
+        // Lightning that leaps from foe to foe, and an orb that drags them in and bursts.
+        id: 'scientist',
+        name: 'Scientist',
+        role: 'Lightning in a bottle',
+        accent: 0x5ad8ff,
+        attack: 'Tesla arc',
+        special: 'Polarity orb',
+        preview: { texture: 'scientist', glow: 'scientist_e', idle: 'scientist_idle_down', chosen: 'scientist_eureka_down', originY: INV_ORIGIN_Y / INV_H },
+        buttons: {
+          attack: { texture: 'icon_tesla' },
+          special: { texture: 'icon_orb' },
+        },
+        lookName: 'Lab coat',
+        skins: [
+          {
+            // The wild white hair, the moustache, a baggy cardigan, and a stick of glowing chalk.
+            id: 'einstein',
+            name: 'Einstein',
+            role: 'Imagination is everything',
+            accent: 0xffd060,
+            attack: 'Photon spark',
+            special: 'Gravity well',
+            preview: { texture: 'scientist_einstein', glow: 'scientist_einstein_e', idle: 'scientist_einstein_idle_down', chosen: 'scientist_einstein_eureka_down', originY: INV_ORIGIN_Y / INV_H },
+            buttons: {
+              attack: { texture: 'icon_tesla_einstein' },
+              special: { texture: 'icon_orb_einstein' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      if (look === 'scientist') return new Scientist(world, x, y, SCIENTIST_KIT);
+      if (look === 'einstein') return new Scientist(world, x, y, EINSTEIN_KIT);
+      return new Engineer(world, x, y, ENGINEER_KIT);
     },
   },
 ];
