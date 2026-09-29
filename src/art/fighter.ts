@@ -14,6 +14,9 @@
 // chest, a gold title belt, a crimson cape and tall boots. The stone guardian
 // (the iron monk's) is a temple statue come to life: basalt skin cracked with
 // fire, a moss-dark robe and ember sash, and a carved ring behind the head.
+// The champ (also the brawler's) is a big ring hero off a merch stand: a green
+// tee with an orange print, a matching cap, jorts past the knee, sweatbands,
+// dog tags and white sneakers.
 
 import { FLAT, PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
 import {
@@ -101,6 +104,8 @@ export interface FighterLook {
   lucha?: { mask: Material; trim: Material; white: Material; cape: Material; jewel: Material };
   /** The stone guardian: a carved ring hovering behind the head, and veins of fire through the stone. */
   guardian?: { ring: Material; vein: Material };
+  /** The champ: the tee's colour is `gi`; its print, the dark in it, the cap, the jorts' frayed hem and the dog tags. */
+  champ?: { print: Material; ink: Material; cap: Material; fray: Material; chain: Material };
 }
 
 /** The style being drawn (set per frame by drawFighterFrame). */
@@ -166,6 +171,11 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   }
   c.part();
   c.capsule(sx, sy, ex, ey, 1.65, 1.35, LK.skin, { bias });
+  if (LK.champ) {
+    // The tee's short sleeve, stretched over the top of the arm.
+    c.part();
+    c.capsule(sx, sy, sx + (ex - sx) * 0.45, sy + (ey - sy) * 0.45, 1.95, 1.8, LK.gi, { bias });
+  }
   c.part();
   c.capsule(ex, ey, fx, fy, 1.4, 1.2, LK.skin, { bias });
   c.part();
@@ -195,6 +205,19 @@ function chiGlow(c: PixelCanvas, x: number, y: number, k: number): void {
 }
 
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
+  if (LK.champ) {
+    // Jorts past the knee, frayed at the hem, bare shins down to the sneakers.
+    const kx = hx + (fx - hx) * 0.62;
+    const ky = hy + (fy - hy) * 0.62;
+    c.part();
+    c.capsule(kx, ky, fx, fy, 1.3, 1.2, LK.skin, { bias });
+    c.part();
+    c.capsule(hx, hy, kx, ky, 1.95, 1.8, LK.trouser, { bias });
+    c.part();
+    c.px(kx - 1, ky + 1, LK.champ.fray, FLAT_DOWN, { bias });
+    c.px(kx + 1, ky + 1, LK.champ.fray, FLAT_DOWN, { bias: bias - 1 });
+    return;
+  }
   c.part();
   c.capsule(hx, hy, fx, fy, 1.8, 1.45, LK.trouser, { bias });
   if (LK.lucha) {
@@ -211,6 +234,11 @@ function foot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): voi
   c.part();
   if (side) c.ellipse(x, y, 2.2, 1.15, LK.feet, { flatten: 0.8, bias });
   else c.ellipse(x, y, 1.7, 1.2, LK.feet, { flatten: 0.8, bias });
+  if (LK.champ) {
+    // A green flash on the side of each sneaker.
+    c.part();
+    c.px(side ? x : x - 1, y, LK.gi, FLAT_DOWN, { bias });
+  }
 }
 
 /** Bare shoulder: the gi has no sleeves. The monk's sash covers one of his. */
@@ -467,6 +495,124 @@ function maskSide(c: PixelCanvas, hx: number, U: number, sway: number, blink?: b
   else c.px(hx - 3, 12 + U, LK.eye);
 }
 
+
+/**
+ * The cap: a crown over rows 7 to 9 and a brim along row 10 that sticks out
+ * past the head, throwing a line of shade over the brow. `x0`/`x1` bound the
+ * crown on each row (screen coordinates); `brim` bounds the brim.
+ */
+function cap(c: PixelCanvas, U: number, crown: [number, number][], brim: [number, number]): void {
+  const k = LK.champ!;
+  c.part();
+  c.shape(7 + U, 9 + U, (y) => crown[y - 7 - U], k.cap, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.8, 1));
+  c.part();
+  c.shape(10 + U, 10 + U, () => brim, k.cap, (_x, _y, t) => sphere(t * 0.6, -0.9, 0.5), { bias: 1 });
+}
+
+/** The champ from the front: an untucked tee with its print, dog tags, and the cap pulled low over a hard stare. */
+function champFront(c: PixelCanvas, cx: number, top: number, waist: number, U: number, blink?: boolean): void {
+  const k = LK.champ!;
+  // The tee hangs loose over the jorts.
+  c.part();
+  c.shape(waist, waist, () => [cx - 4.1, cx + 4.1], LK.gi, (_x, _y, t) => cyl(t, -0.3), { bias: -1 });
+  // Its print: an orange shield with a dark badge in it.
+  c.part();
+  for (const [x, y] of [[10, 3], [11, 3], [12, 3], [13, 3], [10, 4], [13, 4], [11, 5], [12, 5]] as const) c.px(x, top + y, k.print, sphere(x < 12 ? -0.3 : 0.3, -0.2));
+  c.px(11, top + 4, k.ink, FLAT_DOWN);
+  c.px(12, top + 4, k.ink, FLAT_DOWN);
+  // The chain of his dog tags, and the tags on it.
+  c.part();
+  for (const [x, y] of [[9, 0], [10, 1], [13, 1], [14, 0]] as const) c.px(x, top + y, k.chain, sphere(0, -0.5));
+  c.px(11, top + 2, k.chain, sphere(-0.3, -0.4), { bias: 1 });
+  c.px(12, top + 2, k.chain, sphere(0.3, -0.4));
+
+  deltoid(c, 7.1, 16.8 + U, 2.1, LK.gi);
+  deltoid(c, 16.9, 16.8 + U, 2.1, LK.gi);
+
+  // A square jaw, ears, and a buzz cut showing at the temples under the cap.
+  c.part();
+  c.ellipse(cx, 12.4 + U, 3.2, 2.95, LK.skin);
+  c.part();
+  c.px(11, 13 + U, LK.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 13 + U, LK.skin, sphere(0.35, -0.2));
+  c.shade(11, 14 + U, -1);
+  c.shade(12, 14 + U, -1);
+  c.part();
+  c.px(8, 12 + U, LK.skin, cyl(-0.8, 0));
+  c.px(15, 12 + U, LK.skin, cyl(0.8, 0));
+  c.px(8, 11 + U, LK.hair, cyl(-0.8, 0));
+  c.px(15, 11 + U, LK.hair, cyl(0.8, 0));
+  cap(c, U, [[cx - 2.6, cx + 2.6], [cx - 3.5, cx + 3.5], [cx - 3.8, cx + 3.8]], [cx - 4.3, cx + 4.3]);
+  // The logo on the front of the cap.
+  c.part();
+  c.px(11, 8 + U, k.print, sphere(-0.2, -0.5));
+  c.px(12, 8 + U, k.print, sphere(0.2, -0.5));
+  // The brim's shadow across his brow, then the eyes under it.
+  for (let x = 9; x <= 14; x++) c.shade(x, 11 + U, -1);
+  eyes(c, [[10, 12 + U], [13, 12 + U]], blink);
+}
+
+/** The champ from behind: the tee's back print, the cap's strap over a buzzed nape. */
+function champBack(c: PixelCanvas, cx: number, top: number, waist: number, U: number): void {
+  const k = LK.champ!;
+  c.part();
+  c.shape(waist, waist, () => [cx - 4.1, cx + 4.1], LK.gi, (_x, _y, t) => cyl(t, -0.3), { bias: -1 });
+  // A slogan across the shoulders, too small to read, in orange.
+  c.part();
+  for (let x = 9; x <= 14; x++) c.px(x, top + 2, k.print, sphere(x < 12 ? -0.3 : 0.3, -0.3), { bias: x % 2 ? 0 : -1 });
+  for (const x of [10, 11, 12, 13]) c.px(x, top + 4, k.print, sphere(0, -0.2), { bias: -1 });
+  // The chain round the back of his neck.
+  c.px(10, top, k.chain, sphere(-0.2, -0.5));
+  c.px(13, top, k.chain, sphere(0.2, -0.5));
+
+  deltoid(c, 7.1, 16.8 + U, 2.1, LK.gi);
+  deltoid(c, 16.9, 16.8 + U, 2.1, LK.gi);
+
+  // The back of a buzzed head, ears out at the sides, the cap over it.
+  c.part();
+  c.ellipse(cx, 11.6 + U, 3.5, 3.4, LK.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
+  c.part();
+  c.px(8, 12 + U, LK.skin, cyl(-0.8, 0));
+  c.px(16, 12 + U, LK.skin, cyl(0.8, 0));
+  cap(c, U, [[cx - 2.8, cx + 2.8], [cx - 3.7, cx + 3.7], [cx - 3.9, cx + 3.9]], [cx - 3.9, cx + 3.9]);
+  // The gap over the strap at the back, the hair showing through it.
+  c.part();
+  c.px(11, 10 + U, LK.hair, FLAT_DOWN, { bias: -1 });
+  c.px(12, 10 + U, LK.hair, FLAT_DOWN, { bias: -1 });
+}
+
+/** The champ in profile, facing left: tee, tags, a buzzed nape, the cap's brim jutting out over his eyes. */
+function champSide(c: PixelCanvas, hx: number, top: number, waist: number, U: number, blink?: boolean): void {
+  const k = LK.champ!;
+  c.part();
+  c.shape(waist, waist, () => [hx - 3.3, hx + 3.0], LK.gi, (_x, _y, t) => cyl(t * 0.9 - 0.1, -0.3), { bias: -1 });
+  // The front of the print, and the tags on his chest.
+  c.part();
+  c.px(hx - 2, top + 3, k.print, sphere(-0.4, -0.2));
+  c.px(hx - 2, top + 4, k.print, sphere(-0.4, -0.1));
+  c.px(hx - 1, top + 3, k.print, sphere(-0.2, -0.2));
+  c.part();
+  c.px(hx - 2, top, k.chain, sphere(-0.3, -0.5));
+  c.px(hx - 3, top + 1, k.chain, sphere(-0.5, -0.4), { bias: 1 });
+
+  // Head in profile: skin, a buzzed back and nape, an ear.
+  c.part();
+  c.ellipse(hx - 1.1, 12.6 + U, 2.9, 2.8, LK.skin);
+  c.part();
+  c.px(hx - 5, 13 + U, LK.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.shade(hx - 4, 14 + U, -1);
+  c.part();
+  c.shape(11 + U, 13 + U, (y) => [hx + 0.2, hx + (y === 13 + U ? 2.2 : 3.0)], LK.hair, (_x, _y, t, u) => sphere(t * 0.8 + 0.2, u * 0.6, 1));
+  c.part();
+  c.px(hx + 1, 12 + U, LK.skin, sphere(0.4, 0), { bias: 1 });
+  cap(c, U, [[hx - 2.6, hx + 2.4], [hx - 3.6, hx + 3.0], [hx - 4.0, hx + 3.3]], [hx - 6.3, hx + 3.3]);
+  c.part();
+  c.px(hx - 3, 8 + U, k.print, sphere(-0.5, -0.5));
+  c.shade(hx - 4, 11 + U, -1);
+  c.shade(hx - 3, 11 + U, -1);
+  eyes(c, [[hx - 3, 12 + U]], blink);
+}
+
 // ---------------------------------------------------------------------------
 // Directions
 
@@ -486,7 +632,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const armB = () => arm(c, shB.x, shB.y, fb, REACH_FRONT, [0.3, 1], p.chi, fb.behind ? -1 : 0);
 
   // Headband tails, knotted behind the head, flying out past it.
-  if (!LK.monk && !LK.lucha) {
+  if (!LK.monk && !LK.lucha && !LK.champ) {
     tail(c, 14.6, 10.2 + U, 17.4 + p.tails, 11.8 + U - p.tails * 0.4);
     tail(c, 14.6, 10.6 + U, 16.8 + p.tails * 0.6, 13.8 + U);
   }
@@ -514,7 +660,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   c.part();
   c.shape(top, waist - 1, torso, LK.gi, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
   c.part();
-  c.shape(top, top + 3, (y) => {
+  c.shape(top, top + (LK.champ ? 1 : 3), (y) => {
     const hw = 2.1 - (y - top) * 0.6;
     return hw < 0.4 ? null : [cx - hw, cx + hw];
   }, LK.skin, (_x, _y, t, u) => sphere(t * 0.7, u * 0.5 - 0.2, 1));
@@ -526,6 +672,11 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     if (LK.guardian) c.px(cx - 1, top + 1, LK.guardian.vein, FLAT, { glow: 0.8 });
   } else if (LK.lucha) {
     muscles(c, cx, top, waist);
+  } else if (LK.champ) {
+    champFront(c, cx, top, waist, U, p.blink);
+    if (!fa.behind) armA();
+    if (!fb.behind) armB();
+    return;
   } else {
     for (let y = top + 3; y < waist; y++) c.shade(Math.round(cx - 0.5 + (y - top - 3) * 0.45), y, -1);
   }
@@ -635,6 +786,12 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   for (let y = top + 2; y < waist; y++) c.shade(cx, y, -1);
   // The sash across his back, from the left shoulder (screen left from behind) down to the right hip.
   if (LK.monk) sash(c, top, waist - 1, 8.6, 15.2, 1.15, torso);
+  if (LK.champ) {
+    champBack(c, cx, top, waist, U);
+    if (!fa.behind) armA();
+    if (!fb.behind) armB();
+    return;
+  }
   c.part();
   c.shape(waist + 1, waist + 2, () => [cx - 4.4, cx + 4.4], LK.gi, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
   c.part();
@@ -700,7 +857,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   arm(c, hx + 1.4, 16.6 + U, fb, REACH_SIDE, [0.3, 1], p.chi, -1);
 
   // Headband tails streaming back.
-  if (!LK.monk && !LK.lucha) {
+  if (!LK.monk && !LK.lucha && !LK.champ) {
     tail(c, hx + 3, 10.2 + U, hx + 6.6 + p.tails, 10.8 + U + (p.tails > 1 ? 0 : 1));
     tail(c, hx + 3, 10.6 + U, hx + 5.8 + p.tails * 0.8, 13 + U);
   }
@@ -725,6 +882,12 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     // The sash runs from the near shoulder back to the far hip; the beads hang at the collar.
     sash(c, top, waist - 1, hx + 0.2, hx + 1.8, 1.1, (y) => [hx - 3.0 - (y >= top + 1 && y <= top + 3 ? 0.5 : 0), hx + 2.8]);
     beads(c, [[hx - 1, top], [hx - 2, top + 1], [hx - 3, top + 2], [hx - 3, top + 3]], [hx - 3, top + 4]);
+  }
+  if (LK.champ) {
+    champSide(c, hx, top, waist, U, p.blink);
+    deltoid(c, hx + 0.2, 17 + U, 1.9, LK.gi);
+    arm(c, hx + 0.2, 17 + U, fa, REACH_SIDE, [0.3, 1], p.chi);
+    return;
   }
   if (LK.lucha) {
     // A chest thrown out, the line of the pec under it, and the title belt's plate at the front.
@@ -1175,7 +1338,34 @@ export const GUARDIAN_LOOK: FighterLook = {
   guardian: { ring: SANDSTONE, vein: MAGMA },
 };
 
-export const FIGHTER_LOOKS = [BRAWLER_LOOK, MONK_LOOK, LUCHA_LOOK, GUARDIAN_LOOK];
+// The champ's colours: a lime-green tee and cap, an orange print, faded jorts, silver tags, white sneakers.
+const CHAMP_TEE: Material = { ramp: ramp('#0c3410', '#186418', '#2ea02a', '#5ada3e', '#b0ff86'), outline: hex('#061a08'), outlineLit: hex('#0e2c10') };
+const CHAMP_CAP: Material = { ramp: ramp('#0c3410', '#186418', '#2ea02a', '#5ada3e', '#b0ff86'), outline: hex('#061a08'), outlineLit: hex('#0e2c10'), shine: true };
+const CHAMP_PRINT: Material = { ramp: ramp('#5a1e04', '#a8400a', '#f07a1a', '#ffb050', '#ffe0a0'), outline: hex('#260c02') };
+const CHAMP_INK: Material = { ramp: ramp('#06100a', '#122014', '#20321e'), outline: hex('#040806') };
+const JORTS: Material = { ramp: ramp('#101c34', '#1e3258', '#34507e', '#5474a4', '#8aa6cc'), outline: hex('#080e1c'), outlineLit: hex('#141e36') };
+const JORTS_FRAY: Material = { ramp: ramp('#5474a4', '#8aa6cc', '#c0d2ea', '#eef4fc'), outline: hex('#141e36') };
+const SNEAKER: Material = { ramp: ramp('#5e6270', '#a4a8b8', '#e2e6ee', '#ffffff'), outline: hex('#161822'), outlineLit: hex('#2a2c38') };
+const DOG_TAG: Material = { ramp: ramp('#3a3e48', '#7a808e', '#c0c6d2', '#f4f8ff'), outline: hex('#14161c'), shine: true };
+const BUZZ_CUT: Material = { ramp: ramp('#241810', '#3a2818', '#543c26', '#705234'), outline: hex('#0e0806') };
+
+/** Champ, the brawler's skin: a ring hero in merch green, jorts and a cap, who never gives up. */
+export const CHAMP_LOOK: FighterLook = {
+  ...BRAWLER_LOOK,
+  key: 'fighter_champ',
+  gi: CHAMP_TEE,
+  trouser: JORTS,
+  belt: JORTS,
+  band: CHAMP_TEE,
+  glove: SKIN,
+  wrap: CHAMP_TEE,
+  feet: SNEAKER,
+  hair: BUZZ_CUT,
+  chi: [hex('#f4ffe8'), hex('#9cff5a'), hex('#ff8a2a')],
+  champ: { print: CHAMP_PRINT, ink: CHAMP_INK, cap: CHAMP_CAP, fray: JORTS_FRAY, chain: DOG_TAG },
+};
+
+export const FIGHTER_LOOKS = [BRAWLER_LOOK, MONK_LOOK, LUCHA_LOOK, GUARDIAN_LOOK, CHAMP_LOOK];
 
 export interface FighterFrame {
   key: string; // e.g. "walk_left_3"

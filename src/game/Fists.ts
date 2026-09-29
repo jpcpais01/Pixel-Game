@@ -18,6 +18,10 @@ export const QI_FX: Scheme = { core: 0xfffbea, hot: 0xffe7a0, mid: 0xe0b050, dee
 export const LUCHA_AIR_FX: Scheme = { core: 0xffffff, hot: 0xfff0f8, mid: 0xffa8d4, deep: 0xc04a8a };
 /** The luchador's finisher and barrage: gold and hot pink, like the lights over the ring. */
 export const LUCHA_FX: Scheme = { core: 0xfff8e8, hot: 0xffd35c, mid: 0xff4fa0, deep: 0x9a1c6a, light: 0xff80b8 };
+/** The champ's punches: pale air with a flash of lime in it. */
+export const CHAMP_AIR_FX: Scheme = { core: 0xffffff, hot: 0xf2ffe4, mid: 0xb4ff86, deep: 0x3aa02a };
+/** The champ's finisher and barrage: lime green and orange, the colours of his merch. */
+export const CHAMP_FX: Scheme = { core: 0xf8ffe8, hot: 0x9cff5a, mid: 0xff8a2a, deep: 0x1c7a1a, light: 0x8cf060 };
 /** The stone guardian's palms: grit and stone dust. */
 export const STONE_FX: Scheme = { core: 0xfff4e0, hot: 0xe8d8b8, mid: 0xb09878, deep: 0x5e4c3e };
 /** The stone guardian's double palm and earthshaker: fire from the cracks in him. */
