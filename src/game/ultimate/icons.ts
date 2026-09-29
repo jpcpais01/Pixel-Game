@@ -55,6 +55,21 @@ export const skybreakerIcon: IconPainter = (put, p) => {
   for (const [x, y] of [[3, 7], [13, 7], [2, 11], [14, 11]]) put(x, y, p.deep);
 };
 
+/** The Crown of Kings: a great crown standing on a ring of light, a pillar rising from its middle point. */
+export const kingsCrownIcon: IconPainter = (put, p) => {
+  ellipse(put, 8, 13, 7, 2.2, 0.22, p.mid);
+  for (let x = 2; x <= 13; x++) {
+    put(x, 11, p.hot);
+    put(x, 10, p.mid);
+    put(x, 9, x === 7 || x === 8 ? p.core : p.hot);
+  }
+  for (const [x, h] of [[2, 4], [5, 3], [7, 5], [8, 5], [10, 3], [13, 4]] as const) for (let i = 1; i <= h; i++) put(x, 9 - i, i === h ? p.core : p.hot);
+  for (let y = 0; y <= 2; y++) {
+    put(7, y, p.deep);
+    put(8, y, p.deep);
+  }
+};
+
 export const heavensLightIcon: IconPainter = (put, p) => {
   for (let y = 0; y <= 12; y++) for (let x = 5; x <= 10; x++) put(x, y, x === 7 || x === 8 ? p.core : x === 6 || x === 9 ? p.hot : p.mid);
   ellipse(put, 8, 12.5, 7, 2.4, 0.2, p.hot);
@@ -410,4 +425,37 @@ export const nightIcon: IconPainter = (put, p) => {
   seg(put, 11, 6, 11, 8, p.deep);
   for (let y = 9; y <= 13; y++) for (let x = 9; x <= 13; x++) put(x, y, x === 9 || x === 13 || y === 9 || y === 13 ? p.deep : p.core);
   put(11, 11, 0xffffff);
+};
+
+/** Mega Sentry: a great turret on splayed legs, both barrels blazing, a rocket leaving. */
+export const megaSentryIcon: IconPainter = (put, p) => {
+  seg(put, 6, 10, 2, 15, p.deep);
+  seg(put, 9, 10, 13, 15, p.deep);
+  seg(put, 7, 10, 7, 15, p.deep);
+  for (let y = 5; y <= 10; y++) for (let x = 2; x <= 11; x++) if ((x - 6.5) ** 2 / 20 + (y - 7.5) ** 2 / 8 <= 1) put(x, y, y < 7 ? p.hot : p.mid);
+  seg(put, 11, 6, 14, 6, p.hot);
+  seg(put, 11, 8, 14, 8, p.hot);
+  put(15, 6, p.core);
+  put(15, 8, p.core);
+  put(15, 7, p.hot);
+  seg(put, 9, 3, 13, 1, p.mid);
+  put(14, 1, p.core);
+  put(8, 3, p.deep);
+};
+
+/** Chain Reaction: an atom, three orbits round a bright nucleus. */
+export const chainReactionIcon: IconPainter = (put, p) => {
+  for (let o = 0; o < 3; o++) {
+    const tilt = (o * Math.PI) / 3;
+    for (let i = 0; i < 48; i++) {
+      const a = (i / 48) * Math.PI * 2;
+      const ex = Math.cos(a) * 6.8;
+      const ey = Math.sin(a) * 2.3;
+      put(Math.round(8 + ex * Math.cos(tilt) - ey * Math.sin(tilt) - 0.5), Math.round(8 + ex * Math.sin(tilt) + ey * Math.cos(tilt) - 0.5), p.mid);
+    }
+  }
+  disc(put, 8, 8, 2, p.core);
+  put(14, 8, p.hot);
+  put(4, 3, p.hot);
+  put(5, 13, p.hot);
 };

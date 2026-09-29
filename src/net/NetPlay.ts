@@ -174,7 +174,7 @@ export class NetPlay {
 
   /** This player's blow landed on the opponent: it's theirs to take. */
   private strike(rp: RemotePlayer, hit: Hit): void {
-    const damage = hit.damage * this.world.might;
+    const damage = hit.damage * this.world.mightOf(hit);
     session.send({ t: 'pv', d: r1(damage), k: Math.round(hit.knock), x: r1(hit.fromX), y: r1(hit.fromY) }, rp.id);
     rp.flash();
     this.world.leech(damage);

@@ -33,6 +33,7 @@ import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, GODRAY_H, GODRAY_W, KEEPER_FR
 import { ROOM_H, ROOM_W } from '../world/sanctumLayout';
 import { chapelArt, chapelExterior } from './chapel';
 import { CH_EXT_H, CH_EXT_W, CH_H, CH_W } from '../world/chapelLayout';
+import { AFONSO_TONES, decreeIcon, KING_TONES } from './king';
 import { JADE_LOOK } from './warrior';
 import { WIND_DEEP } from './palette';
 import { buildBarklingSheet, buildBeetleSheet, buildFrogSheet, buildGlowmothSheet, buildPuffcapSheet, ringCanvas, thornFrame, THORN_H, THORN_W, venomGlob, type MonsterSheet } from './monsters';
@@ -58,6 +59,7 @@ import { birdSheet } from './skyArena';
 import { BOLT_DIRS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, reticle, salvoIcon } from './mech';
 import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
 import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
+import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, leafBit, rayCanvas } from './trees';
@@ -311,6 +313,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('scorch_hell', toCanvas(48, 24, scorchCanvas(48, 24, FEL_EMBERS)));
   scene.textures.addCanvas('icon_sword_spartan', toCanvas(16, 16, swordIcon({ blade: '#dfe8f7', bladeDark: '#8d9dbd', tip: '#f4f8ff', guard: '#cc8c3e', guardLit: '#f4d08a', guardDark: '#955a24', grip: '#6e3a20', ink: '#140904' })));
   scene.textures.addCanvas('icon_whirl_spartan', toCanvas(16, 16, whirlIcon([hex('#fff0e8'), hex('#ff9a80'), hex('#f03a3a'), hex('#8a0a1a')])));
+  // The King's and Afonso Henriques's buttons.
+  scene.textures.addCanvas('icon_sword_king', toCanvas(16, 16, swordIcon({ blade: '#e4ecf8', bladeDark: '#8d9dbd', tip: '#f8fbff', guard: '#f4cf6a', guardLit: '#fff4bf', guardDark: '#9a5a26', grip: '#6c2c96', ink: '#0c0414' })));
+  scene.textures.addCanvas('icon_decree', toCanvas(16, 16, decreeIcon(KING_TONES)));
+  scene.textures.addCanvas('icon_sword_afonso', toCanvas(16, 16, swordIcon({ blade: '#d6dce8', bladeDark: '#7a869c', tip: '#f4f8ff', guard: '#5e6878', guardLit: '#98a2b4', guardDark: '#252a34', grip: '#6a3d26', ink: '#06070a' })));
+  scene.textures.addCanvas('icon_decree_afonso', toCanvas(16, 16, decreeIcon(AFONSO_TONES)));
   scene.textures.addCanvas('icon_mace_seraph', toCanvas(16, 16, seraphMaceIcon()));
   scene.textures.addCanvas('icon_sanctuary_seraph', toCanvas(16, 16, dawnGroundIcon()));
   scene.textures.addCanvas('icon_hammer_oath', toCanvas(16, 16, oathHammerIcon()));
@@ -385,6 +392,21 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_possess', toCanvas(16, 16, possessIcon()));
   scene.textures.addCanvas('icon_lantern_cala', toCanvas(16, 16, lanternIcon(true)));
   scene.textures.addCanvas('icon_possess_cala', toCanvas(16, 16, possessIcon(true)));
+  // The Inventor's turret ('turret': unfolding 'b0'..'b4', turned 'h0'..'h7'
+  // and firing 'f0'..'f7'), and its icons. The Engineer and the Scientist
+  // themselves are hero sheets (see heroSheets.ts).
+  const turret = [
+    ...Array.from({ length: TURRET_BUILD }, (_, i) => ({ name: `b${i}`, r: turretFrame(2, i / (TURRET_BUILD - 1) * 0.9).render() })),
+    ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `h${i}`, r: turretFrame(i).render() })),
+    ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `f${i}`, r: turretFrame(i, 1, 1).render() })),
+  ];
+  register(scene, 'turret', pack(turret, TURRET_SIZE, TURRET_SIZE), TURRET_SIZE, TURRET_SIZE);
+  scene.textures.addCanvas('icon_wrench', toCanvas(16, 16, wrenchIcon()));
+  scene.textures.addCanvas('icon_turret', toCanvas(16, 16, turretIcon()));
+  scene.textures.addCanvas('icon_tesla', toCanvas(16, 16, teslaIcon()));
+  scene.textures.addCanvas('icon_orb', toCanvas(16, 16, orbIcon()));
+  scene.textures.addCanvas('icon_tesla_einstein', toCanvas(16, 16, teslaIcon(true)));
+  scene.textures.addCanvas('icon_orb_einstein', toCanvas(16, 16, orbIcon(true)));
 
   scene.textures.addCanvas('icon_cannon', toCanvas(16, 16, cannonIcon()));
   scene.textures.addCanvas('icon_salvo', toCanvas(16, 16, salvoIcon()));

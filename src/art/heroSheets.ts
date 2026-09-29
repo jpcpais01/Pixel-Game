@@ -9,7 +9,7 @@
 import type { PixelCanvas } from './pixel';
 import { packAtlas, type PixelAtlas } from './atlas';
 import { buildWizardFrames, ANIMS, DIRS, FRAME_H, FRAME_W, WIZARD_LOOKS } from './wizard';
-import { buildWarriorFrames, WARRIOR_ANIMS, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W } from './warrior';
+import { buildWarriorFrames, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, warriorAnimsFor } from './warrior';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_LOOKS, PALADIN_W } from './paladin';
 import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FPS, TWIRL_FRAMES, twirlStart } from './jedi';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
@@ -25,6 +25,7 @@ import { MECH_ANIMS, MECH_H, MECH_LOOKS, MECH_W, buildMechFrames } from './mech'
 import { SYNTH_ANIMS, SYNTH_H, SYNTH_LOOKS, SYNTH_W, buildSynthFrames } from './synth';
 import { POLTER_ANIMS, POLTER_H, POLTER_LOOKS, POLTER_W, buildPolterFrames } from './poltergeist';
 import { WRAITH_ANIMS, WRAITH_H, WRAITH_LOOKS, WRAITH_W, buildWraithFrames } from './wraith';
+import { INV_H, INV_W, INVENTOR_LOOKS, buildInventorFrames, inventorAnims } from './inventor';
 
 /** The rigs whose frames carry points the game reads (a crystal, a blade tip): the same for every look of the rig. */
 export type MetaKind = 'wizard' | 'warrior' | 'paladin' | 'jedi' | 'samurai';
@@ -119,10 +120,11 @@ const turn = (key: string, name: string, count: number, fps: number, start: (d: 
     return { key: `${key}_${name}_${d}`, frames: Array.from({ length: count + 1 }, (_, i) => `${name}_${(k0 + i) % count}`), fps, loop: false };
   });
 
-// The Druid and the Valkyrie are wizard and warrior looks. Warrior spin
-// frames have no animation: the whirlwind picks them by angle.
+// The Druid and the Valkyrie are wizard and warrior looks, and the King is a
+// warrior look with his own swings. Warrior spin frames have no animation:
+// the whirlwind picks them by angle.
 rig(WIZARD_LOOKS, FRAME_W, FRAME_H, buildWizardFrames, () => ANIMS, { meta: 'wizard' });
-rig(WARRIOR_LOOKS, WARRIOR_W, WARRIOR_H, buildWarriorFrames, () => WARRIOR_ANIMS, { meta: 'warrior' });
+rig(WARRIOR_LOOKS, WARRIOR_W, WARRIOR_H, buildWarriorFrames, warriorAnimsFor, { meta: 'warrior' });
 rig(PALADIN_LOOKS, PALADIN_W, PALADIN_H, buildPaladinFrames, () => PALADIN_ANIMS, { meta: 'paladin' });
 rig(JEDI_LOOKS, JEDI_W, JEDI_H, buildJediFrames, () => JEDI_ANIMS, { meta: 'jedi', extra: (look) => turn(look.key, 'twirl', TWIRL_FRAMES, TWIRL_FPS, twirlStart) });
 rig(FIGHTER_LOOKS, FIGHTER_W, FIGHTER_H, buildFighterFrames, (look) => look.anims);
@@ -138,6 +140,7 @@ rig(MECH_LOOKS, MECH_W, MECH_H, buildMechFrames, () => MECH_ANIMS);
 rig(SYNTH_LOOKS, SYNTH_W, SYNTH_H, buildSynthFrames, () => SYNTH_ANIMS);
 rig(POLTER_LOOKS, POLTER_W, POLTER_H, buildPolterFrames, () => POLTER_ANIMS);
 rig(WRAITH_LOOKS, WRAITH_W, WRAITH_H, buildWraithFrames, () => WRAITH_ANIMS);
+rig(INVENTOR_LOOKS, INV_W, INV_H, buildInventorFrames, inventorAnims);
 
 /** Every hero sheet's key, in roster order. */
 export const HERO_SHEETS: readonly string[] = [...SHEETS.keys()];

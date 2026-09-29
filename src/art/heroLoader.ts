@@ -20,7 +20,7 @@ import type { SamuraiMeta } from './samurai';
 /** Most workers to run at once; a phone keeps a core or two for the game itself. */
 const MAX_WORKERS = 3;
 
-// Filled when the first look of each rig is built.
+// Filled as each rig's looks are built.
 export const wizardMeta = new Map<string, FrameMeta>();
 export const warriorMeta = new Map<string, WarriorMeta>();
 export const paladinMeta = new Map<string, PaladinMeta>();
@@ -50,8 +50,10 @@ function take(sheet: HeroSheet): void {
       home.anims.create({ key: a.key, frames: a.frames.map((frame) => ({ key: sheet.key, frame })), frameRate: a.fps, repeat: a.loop ? -1 : 0 });
     }
     if (sheet.meta) {
+      // Every look of a rig agrees on the frames they share, but not every
+      // look has every frame (the King has no spin), so each adds what's new.
       const map = METAS[sheet.meta.kind];
-      if (!map.size) for (const [k, m] of sheet.meta.frames) map.set(k, m);
+      for (const [k, m] of sheet.meta.frames) if (!map.has(k)) map.set(k, m);
     }
   } finally {
     building = false;

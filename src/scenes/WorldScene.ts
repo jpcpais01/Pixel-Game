@@ -112,7 +112,7 @@ class Dummy implements Hurtbox {
     this.wobble = hit.heavy ? 1.4 : 1;
     this.sprite.setFrame('d1');
     this.world.time.delayedCall(90, () => this.sprite.setFrame('d0'));
-    this.world.popNumber(this.x, this.y - 30, `${Math.round(hit.damage * this.world.might)}`, hit.poison ?? (hit.heavy ? 0xffe28a : 0xffffff));
+    this.world.popNumber(this.x, this.y - 30, `${Math.round(hit.damage * this.world.mightOf(hit))}`, hit.poison ?? (hit.heavy ? 0xffe28a : 0xffffff));
   }
 }
 
@@ -592,7 +592,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private toHit(s: Strike, x: number, y: number): Hit {
-    return { damage: s.damage, heavy: !!s.heavy, knock: s.knock ?? (s.heavy ? 130 : 60), fromX: s.fromX ?? x, fromY: s.fromY ?? y, poison: s.poison };
+    return { damage: s.damage, heavy: !!s.heavy, knock: s.knock ?? (s.heavy ? 130 : 60), fromX: s.fromX ?? x, fromY: s.fromY ?? y, poison: s.poison, companion: s.companion };
   }
 
   /** Everything strikeable that passes `test`, for heroes that hurt by other means than a single blow (poison). */
@@ -991,6 +991,11 @@ export class WorldScene extends Phaser.Scene {
    */
   get might(): number {
     return damageScale(this.stats) * heroBuffs.mod('damage') * gear.power * riftMods.damage * petMods.damage;
+  }
+
+  /** How hard `hit` lands: a companion's blows keep their own numbers, whatever the hero's Damage. */
+  mightOf(hit: Hit): number {
+    return hit.companion ? this.might / damageScale(this.stats) : this.might;
   }
 
   /** A buff was just picked up: its name over the hero, and a burst of its colour. */

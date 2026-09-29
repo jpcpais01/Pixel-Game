@@ -33,6 +33,7 @@ import {
 } from './palette';
 import { BRONZE, PTERUGES, SPARTAN_RED, TAN_SKIN } from './heroSkins';
 import { DIRS, type Dir } from './wizard';
+import { AFONSO_BEARD, CROSS_BLUE, ERMINE, ERMINE_TAIL, KING_HAIR, NORMAN_IRON, ROYAL, RUBY, SAPPHIRE, SURCOAT } from './king';
 import { ASH, BLONDE, COPPER, GILT, RAVEN_CLOTH, RAVEN_HAIR, RAVEN_STEEL, RAVEN_WING, ROSE_WING, SKY_CLOTH, SLATE_WING, STORM_ASH, STORM_CLOTH, STORM_STEEL, SUN_WOOD, SWAN, WHITE_HAIR } from './valkyrie';
 
 // ---------------------------------------------------------------------------
@@ -92,6 +93,27 @@ export interface WarriorLook {
   storm?: boolean;
   /** A ring of sunlight behind her head (the Spearmaiden's Sunshield skin). */
   sun?: boolean;
+  /**
+   * The King: a bare head under a jewelled crown, hair to the shoulders and a
+   * full beard, an ermine mantle on the shoulders instead of pauldrons, a
+   * crown on the tabard and a broad, gold-hilted greatsword. Idle, he rests on
+   * it point-down, both hands on the pommel.
+   */
+  king?: boolean;
+  beard?: Material;
+  ermine?: Material;
+  /** The crown's gems. */
+  gem?: Material;
+  /** The tabard, when it isn't the cape's cloth. */
+  surcoat?: Material;
+  /**
+   * Afonso Henriques (with `king`): the first king of Portugal as his statue
+   * stands in Guimarães. A conical helm with a nose guard, ringed by a crown,
+   * a mail coif round a long beard, a mail hauberk under a white surcoat with
+   * a blue cross, a blue cloak, and a kite shield bearing the cross; idle, one
+   * hand on his planted sword and the shield at his side.
+   */
+  afonso?: boolean;
 }
 
 export const KNIGHT_LOOK: WarriorLook = {
@@ -231,7 +253,53 @@ export const RAVEN_LOOK: WarriorLook = {
   glow: { core: hex('#f8f0ff'), hot: hex('#d8b0ff'), mid: hex('#a060ff') },
 };
 
-export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK, SPEAR_LOOK, STORM_LOOK, SUN_LOOK, RAVEN_LOOK];
+/** The King: bright steel, royal purple and gold, an ermine mantle, a jewelled crown. */
+export const KING_LOOK: WarriorLook = {
+  key: 'warrior_king',
+  plate: STEEL,
+  mail: MAIL,
+  cloth: ROYAL,
+  plume: ROYAL,
+  trim: GOLD,
+  belt: LEATHER,
+  glove: GILT,
+  boot: BOOT,
+  trouser: TROUSER,
+  skin: SKIN,
+  blade: BLADE,
+  grip: ROYAL,
+  guard: GOLD,
+  glow: { core: hex('#fffdf0'), hot: hex('#ffe8a0'), mid: hex('#f4c040') },
+  samurai: false,
+  king: true,
+  hair: KING_HAIR,
+  beard: KING_HAIR,
+  ermine: ERMINE,
+  gem: RUBY,
+};
+
+/** The King's Afonso Henriques skin: iron and mail, a white surcoat and the blue cross, a long dark beard. */
+export const AFONSO_LOOK: WarriorLook = {
+  ...KING_LOOK,
+  key: 'warrior_afonso',
+  plate: NORMAN_IRON,
+  cloth: CROSS_BLUE,
+  plume: CROSS_BLUE,
+  surcoat: SURCOAT,
+  glove: MAIL,
+  arms: MAIL,
+  trouser: MAIL,
+  boot: LEATHER,
+  grip: LEATHER,
+  guard: NORMAN_IRON,
+  hair: AFONSO_BEARD,
+  beard: AFONSO_BEARD,
+  gem: SAPPHIRE,
+  glow: { core: hex('#ffffff'), hot: hex('#d8e8ff'), mid: hex('#5a8aff') },
+  afonso: true,
+};
+
+export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK, SPEAR_LOOK, STORM_LOOK, SUN_LOOK, RAVEN_LOOK, KING_LOOK, AFONSO_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let LK: WarriorLook = KNIGHT_LOOK;
@@ -308,7 +376,8 @@ function drawSword(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
   // Perpendicular, to the blade's right.
   const px = -dy;
   const py = dx;
-  const end = BLADE_START + s.len;
+  // The King's greatsword is a pixel longer than a knight's sword.
+  const end = BLADE_START + s.len + (LK.king ? 1 : 0);
   const tip = { x: s.hx + dx * end, y: s.hy + dy * end };
   const reach = end + 1;
   const box = (fn: (x: number, y: number, along: number, side: number) => void) =>
@@ -331,7 +400,7 @@ function drawSword(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
   });
   c.part();
   box((x, y, along, side) => {
-    if (Math.hypot(along - gripEnd + 0.7, side) < (LK.samurai ? 0.7 : 0.85)) c.px(x, y, LK.guard, sphere(-0.4, -0.4), { bias: 1 });
+    if (Math.hypot(along - gripEnd + 0.7, side) < (LK.samurai ? 0.7 : LK.king ? 1.05 : 0.85)) c.px(x, y, LK.guard, sphere(-0.4, -0.4), { bias: 1 });
   });
   // Blade: two bevels either side of a ridge, one catching the light, tapering to a point.
   c.part();
@@ -343,13 +412,21 @@ function drawSword(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
       ? rest < 1.8 ? 0.2 + rest * 0.4 : 0.8
       : LK.spartan
         ? rest < 1.6 ? 0.2 + rest * 0.5 : 0.7 + 0.55 * Math.sin(Math.min(1, u / 0.8) * Math.PI * 0.85)
-        : rest < 2.4 ? 0.25 + rest * 0.33 : 0.98;
+        : LK.king
+          ? rest < 2.8 ? 0.25 + rest * 0.38 : 1.2
+          : rest < 2.4 ? 0.25 + rest * 0.33 : 0.98;
     if (Math.abs(side) > hw) return;
     const k = side >= 0 ? 1 : -1;
     c.px(x, y, LK.blade, facing(px * k * 0.7, py * k * 0.7, 0.72), { glow: glow * 0.85 });
   });
+  if (LK.king) {
+    // A fuller down the middle of the greatsword, most of its length.
+    box((x, y, along, side) => {
+      if (along > BLADE_START + 0.6 && along < end - 3 && Math.abs(side) < 0.4) c.shade(x, y, -1);
+    });
+  }
   // Crossguard, or the katana's small round tsuba.
-  const guardW = LK.samurai ? 1.6 : LK.spartan ? 1.7 : 2.5;
+  const guardW = LK.samurai ? 1.6 : LK.spartan ? 1.7 : LK.king ? 3.1 : 2.5;
   c.part();
   box((x, y, along, side) => {
     if (Math.abs(along - 1.6) < 0.62 && Math.abs(side) < guardW) c.px(x, y, LK.guard, facing(px * side * 0.25 - 0.25, py * side * 0.25 - 0.35, 0.85));
@@ -596,6 +673,19 @@ function pauldron(c: PixelCanvas, x: number, y: number, rx = 2.3, ry = 1.75): vo
     sode(c, x, y, rx, ry);
     return;
   }
+  if (LK.afonso) {
+    // No plate: the hauberk's mail over the shoulder.
+    c.part();
+    c.ellipse(x, y + 0.3, rx * 0.8, ry, LK.mail, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
+    return;
+  }
+  if (LK.king) {
+    // The ermine mantle over the shoulder.
+    c.part();
+    c.ellipse(x, y + 0.2, rx + 0.3, ry + 0.4, LK.ermine ?? LK.cloth, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.3, 1) });
+    ermineTails(c, x - rx - 0.3, y - ry, x + rx + 0.3, y + ry + 0.6);
+    return;
+  }
   if (LK.spartan) {
     // No pauldron: a bare, sunburnt shoulder.
     c.part();
@@ -837,6 +927,270 @@ function musclesFront(c: PixelCanvas, top: number): void {
 }
 
 // ---------------------------------------------------------------------------
+// The King: crown, beard, ermine; and Afonso's crowned helm, coif and kite shield
+
+/** Black tail tips dotted through whatever ermine was drawn in the box. */
+function ermineTails(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
+  if (!LK.ermine) return;
+  c.part();
+  each(x0, y0, x1, y1, (x, y) => {
+    if (c.materialAt(x, y) === LK.ermine && (((x * 3 + y * 5) % 7) + 7) % 7 === 0) c.px(x, y, ERMINE_TAIL, FLAT_DOWN);
+  });
+}
+
+/** An ermine collar across the shoulders, rows y..y+1. */
+function ermineCollar(c: PixelCanvas, l: number, r: number, y: number): void {
+  c.part();
+  c.shape(y, y + 1, () => [l, r], LK.ermine ?? LK.cloth, (_x, _y, t, u) => sphere(t * 0.8, u * 0.8 - 0.3, 1));
+  ermineTails(c, l, y, r, y + 1);
+}
+
+/**
+ * The King's crown, its band on rows by..by+1 round the head at cx: five
+ * points, the middle one tallest, each tipped with a pearl of gold, and gems
+ * set in the band's front (none are seen from behind).
+ */
+function crown(c: PixelCanvas, cx: number, by: number, view: 'front' | 'back'): void {
+  c.part();
+  c.shape(by, by + 1, () => [cx - 3.9, cx + 3.9], LK.trim, (_x, _y, t, u) => cyl(t, 0.25 - u * 0.4), { bias: 1 });
+  for (const [dx, h] of [[-4, 2], [-2, 1], [-1, 3], [0, 3], [1, 1], [3, 2]] as const) {
+    for (let i = 1; i <= h; i++) c.px(cx + dx, by - i, LK.trim, { x: dx < 0 ? -0.4 : 0.35, y: 0.4, z: 0.82 }, { bias: i === h ? 1 : 0 });
+  }
+  if (view === 'back') return;
+  const gem = LK.gem ?? LK.trim;
+  c.part();
+  c.px(cx - 1, by + 1, gem, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(cx, by + 1, gem, sphere(0.3, -0.3));
+  c.px(cx - 3, by + 1, gem, sphere(-0.5, 0));
+  c.px(cx + 2, by + 1, gem, sphere(0.5, 0), { bias: -1 });
+  c.spark(cx - 1, by + 1, LK.glow.hot, 0.25);
+}
+
+/** The crown in profile, facing left. */
+function crownSide(c: PixelCanvas, hx: number, by: number): void {
+  c.part();
+  c.shape(by, by + 1, () => [hx - 4.3, hx + 2.9], LK.trim, (_x, _y, t, u) => cyl(t * 0.9 - 0.1, 0.25 - u * 0.4), { bias: 1 });
+  for (const [dx, h] of [[-4, 2], [-2, 1], [-1, 3], [1, 1], [2, 2]] as const) {
+    for (let i = 1; i <= h; i++) c.px(hx + dx, by - i, LK.trim, { x: -0.3, y: 0.4, z: 0.85 }, { bias: i === h ? 1 : 0 });
+  }
+  c.part();
+  c.px(hx - 3, by + 1, LK.gem ?? LK.trim, sphere(-0.5, -0.3), { bias: 1 });
+  c.spark(hx - 3, by + 1, LK.glow.hot, 0.25);
+}
+
+/** A beard under the face at cx, from row y0: full and rounded, or Afonso's, long and pointed. */
+function beardFront(c: PixelCanvas, cx: number, y0: number): void {
+  const rows = LK.afonso ? [3.2, 3.1, 2.8, 2.3, 1.7, 1.0] : [3.3, 3.1, 2.5, 1.6];
+  const y1 = y0 + rows.length - 1;
+  c.part();
+  c.shape(y0, y1, (y) => [cx - rows[y - y0], cx + rows[y - y0]], LK.beard ?? LK.plume, (_x, _y, t, u) => sphere(t * 0.85, u * 0.9 - 0.25, 1));
+  // The mouth, and strands running down through it.
+  c.shade(cx - 1, y0 + 1, -2);
+  c.shade(cx, y0 + 1, -2);
+  for (let y = y0 + 2; y <= y1; y++) {
+    const hw = rows[y - y0];
+    for (let x = Math.round(cx - hw) + 1; x < cx + hw - 1; x += 2) c.shade(x + (y & 1), y, -1);
+  }
+}
+
+/** Widths of Afonso's conical helm, row by row from its point (row 3) to just above the rim. */
+const CONE = [0.7, 1.3, 2.0, 2.7, 3.3, 3.8, 4.2, 4.5];
+
+/** The conical helm seen from the front or back, centred on cx, ringed by the crown; a nose guard in front. */
+function coneHelm(c: PixelCanvas, cx: number, U: number, front: boolean): void {
+  c.part();
+  c.shape(3 + U, 9 + U, (y) => [cx - CONE[y - 3 - U], cx + CONE[y - 3 - U]], LK.plate, (_x, _y, t, u) => sphere(t * 0.95, u * 1.1 - 0.9, 1));
+  // A ridge up the middle, catching the light.
+  for (let y = 4; y <= 7; y++) c.shade(cx - 1, y + U, 1);
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 4.7, cx + 4.7], LK.plate, (_x, _y, t) => cyl(t, -0.2), { bias: 1 });
+  if (front) {
+    c.part();
+    for (let y = 11; y <= 13; y++) {
+      c.px(cx - 1, y + U, LK.plate, { x: -0.3, y: 0.2, z: 0.93 }, { bias: 1 });
+      c.px(cx, y + U, LK.plate, { x: 0.3, y: 0.2, z: 0.93 });
+    }
+  }
+  // The crown round it: a gold band, fleurons standing up from it, a sapphire in front.
+  c.part();
+  c.shape(8 + U, 9 + U, (y) => [cx - CONE[y - 3 - U] - 0.35, cx + CONE[y - 3 - U] + 0.35], LK.trim, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.4), { bias: 1 });
+  for (const x of [cx - 4, cx + 3]) c.px(x, 7 + U, LK.trim, { x: x < cx ? -0.4 : 0.4, y: 0.5, z: 0.77 }, { bias: 1 });
+  for (const x of [cx - 1, cx]) {
+    c.px(x, 7 + U, LK.trim, { x: x < cx ? -0.3 : 0.3, y: 0.4, z: 0.86 });
+    c.px(x, 6 + U, LK.trim, { x: x < cx ? -0.3 : 0.3, y: 0.5, z: 0.8 }, { bias: 1 });
+  }
+  if (!front) return;
+  c.part();
+  c.px(cx - 1, 9 + U, LK.gem ?? LK.trim, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(cx, 9 + U, LK.gem ?? LK.trim, sphere(0.3, -0.3));
+  c.spark(cx - 1, 9 + U, LK.glow.hot, 0.25);
+}
+
+function kingHeadDown(c: PixelCanvas, cx: number, U: number, blink: boolean): void {
+  const hair = LK.hair ?? LK.plume;
+  c.part();
+  if (LK.afonso) {
+    // The mail coif, round the face and down to the shoulders.
+    c.ellipse(cx, 12.8 + U, 4.5, 4.4, LK.mail, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.1, 1) });
+  } else {
+    // Hair falling to the shoulders behind the face.
+    c.shape(9 + U, 17 + U, (y) => {
+      const u = (y - 9 - U) / 8;
+      const hw = 3.9 + Math.min(1, u * 2) * 0.5 - Math.max(0, u - 0.6) * 2;
+      return [cx - hw, cx + hw];
+    }, hair, (_x, _y, t, u) => cyl(t * 0.9, 0.3 - u * 0.5), { bias: -1 });
+  }
+  c.part();
+  c.ellipse(cx, 12.6 + U, 3.2, 2.8, LK.skin);
+  c.part();
+  c.px(cx - 1, 13 + U, LK.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(cx, 13 + U, LK.skin, sphere(0.35, -0.2));
+  c.part();
+  if (blink) {
+    c.px(cx - 2, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
+    c.px(cx + 1, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
+  } else {
+    c.px(cx - 2, 12 + U, EYE);
+    c.px(cx + 1, 12 + U, EYE);
+  }
+  beardFront(c, cx, 14 + U);
+  if (LK.afonso) {
+    coneHelm(c, cx, U, true);
+    return;
+  }
+  // Hair over the brow under the crown, framing the face.
+  c.part();
+  c.shape(7 + U, 9 + U, (y) => {
+    const hw = [2.9, 3.6, 3.8][y - 7 - U];
+    return [cx - hw, cx + hw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.9, u - 0.8, 1));
+  c.shape(10 + U, 10 + U, () => [cx - 3.8, cx - 2.2], hair, (_x, _y, t) => cyl(t * 0.5 - 0.6, 0));
+  c.shape(10 + U, 10 + U, () => [cx + 2.2, cx + 3.8], hair, (_x, _y, t) => cyl(t * 0.5 + 0.6, 0));
+  crown(c, cx, 6 + U, 'front');
+}
+
+function kingHeadUp(c: PixelCanvas, cx: number, U: number, sway: number): void {
+  if (LK.afonso) {
+    c.part();
+    c.ellipse(cx, 12.4 + U, 4.5, 4.4, LK.mail, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.1, 1) });
+    coneHelm(c, cx, U, false);
+    return;
+  }
+  // His hair from behind, falling to the shoulders, and the crown's back.
+  const hair = LK.hair ?? LK.plume;
+  c.part();
+  c.ellipse(cx, 10.6 + U, 3.9, 3.9, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
+  c.shape(12 + U, 17 + U, (y) => {
+    const u = (y - 12 - U) / 5;
+    const hw = 3.9 - u * 0.9;
+    const x = cx + sway * u * 0.3;
+    return [x - hw, x + hw];
+  }, hair, (_x, _y, t, u) => cyl(t * 0.9, 0.2 - u * 0.4));
+  // Locks of hair: a few darker partings running down it.
+  for (let y = 11; y <= 17; y++) for (const x of [cx - 3, cx - 1, cx + 1]) c.shade(x + (y > 14 ? Math.round(sway * 0.3) : 0), y + U, -1);
+  crown(c, cx, 6 + U, 'back');
+}
+
+/** Facing left. */
+function kingHeadSide(c: PixelCanvas, hx: number, U: number, blink: boolean): void {
+  c.part();
+  if (LK.afonso) {
+    c.ellipse(hx - 0.4, 12.6 + U, 4.0, 4.2, LK.mail, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.1, 1) });
+  } else {
+    // Hair behind the face and down over the nape.
+    c.shape(8 + U, 16 + U, (y) => {
+      const u = (y - 8 - U) / 8;
+      return [hx - 1.5 + u, hx + 3.4 - Math.max(0, u - 0.7) * 2];
+    }, LK.hair ?? LK.plume, (_x, _y, t, u) => cyl(t * 0.8 + 0.2, 0.3 - u * 0.5));
+  }
+  c.part();
+  c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, LK.skin);
+  c.part();
+  c.px(hx - 5, 13 + U, LK.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.part();
+  if (blink) c.px(hx - 3, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
+  else c.px(hx - 3, 12 + U, EYE);
+  // The beard, jutting under the jaw.
+  const rows: [number, number][] = LK.afonso
+    ? [[-4.6, -0.2], [-4.6, -0.6], [-4.4, -1.2], [-4.0, -1.8], [-3.6, -2.4], [-3.2, -2.8]]
+    : [[-4.6, -0.2], [-4.5, -0.8], [-4.2, -1.5], [-3.7, -2.3]];
+  c.part();
+  c.shape(14 + U, 13 + U + rows.length, (y) => {
+    const [l, r] = rows[y - 14 - U];
+    return [hx + l, hx + r];
+  }, LK.beard ?? LK.plume, (_x, _y, t, u) => sphere(t * 0.8 - 0.1, u * 0.9 - 0.25, 1));
+  c.shade(hx - 4, 15 + U, -2);
+  for (let y = 16; y < 14 + rows.length; y++) c.shade(hx - 3 + (y & 1), y + U, -1);
+  if (LK.afonso) {
+    // The conical helm in profile, its nose guard down the front of the face.
+    const mid = hx - 0.6;
+    c.part();
+    c.shape(3 + U, 9 + U, (y) => [mid - CONE[y - 3 - U], mid + CONE[y - 3 - U]], LK.plate, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, u * 1.1 - 0.9, 1));
+    c.part();
+    c.shape(10 + U, 10 + U, () => [hx - 5.2, hx + 4.0], LK.plate, (_x, _y, t) => cyl(t, -0.2), { bias: 1 });
+    for (let y = 11; y <= 13; y++) c.px(hx - 5, y + U, LK.plate, { x: -0.6, y: 0.2, z: 0.77 }, { bias: 1 });
+    c.part();
+    c.shape(8 + U, 9 + U, (y) => [mid - CONE[y - 3 - U] - 0.35, mid + CONE[y - 3 - U] + 0.35], LK.trim, (_x, _y, t, u) => cyl(t * 0.9 - 0.1, 0.2 - u * 0.4), { bias: 1 });
+    for (const x of [hx - 5, hx - 2, hx + 3]) c.px(x, 7 + U, LK.trim, { x: -0.3, y: 0.5, z: 0.8 }, { bias: 1 });
+    c.px(hx - 2, 6 + U, LK.trim, { x: -0.3, y: 0.5, z: 0.8 }, { bias: 1 });
+    c.part();
+    c.px(hx - 4, 9 + U, LK.gem ?? LK.trim, sphere(-0.5, -0.3), { bias: 1 });
+    c.spark(hx - 4, 9 + U, LK.glow.hot, 0.25);
+    return;
+  }
+  // Hair over the crown of the head, then the crown.
+  c.part();
+  c.shape(7 + U, 9 + U, (y) => {
+    const [l, r] = ([[-3.2, 2.4], [-3.9, 3.0], [-4.1, 3.3]] as const)[y - 7 - U];
+    return [hx + l, hx + r];
+  }, LK.hair ?? LK.plume, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, u - 0.8, 1));
+  crownSide(c, hx, 6 + U);
+}
+
+/** A kite shield on the arm, centred at (x, y): its white face with the blue cross, or its back, rimmed in iron. */
+function kite(c: PixelCanvas, x: number, y: number, face: boolean): void {
+  const y0 = Math.round(y - 3.5);
+  const y1 = Math.round(y + 5.5);
+  const edges = (yy: number): [number, number] => {
+    const u = (yy + 0.5 - y0) / (y1 + 1 - y0);
+    const hw = u < 0.1 ? 2.9 : u < 0.45 ? 3.2 : 3.2 * (1 - (u - 0.45) / 0.55) + 0.35;
+    return [x - hw, x + hw];
+  };
+  c.part();
+  c.shape(y0, y1, edges, LK.plate, (_x, _y, t, u) => sphere(t * 0.7, u * 0.6 - 0.3, 1), { bias: face ? 0 : -1 });
+  c.part();
+  c.shape(y0 + 1, y1 - 1, (yy) => {
+    const [l, r] = edges(yy);
+    return r - l > 1.8 ? [l + 0.8, r - 0.8] : null;
+  }, face ? (LK.surcoat ?? LK.cloth) : LEATHER, (_x, _y, t, u) => sphere(t * 0.6, u * 0.5 - 0.2, 1), { bias: face ? 0 : -1 });
+  if (!face) {
+    c.part();
+    c.shape(Math.round(y), Math.round(y), () => [x - 2, x + 2], BOOT, (_x, _y, t) => cyl(t, 0.1), { bias: -1 });
+    return;
+  }
+  // The blue cross of his banner.
+  c.part();
+  const vx = Math.floor(x);
+  for (let yy = y0 + 1; yy <= y1 - 2; yy++) c.px(vx, yy, LK.cloth, { x: -0.1, y: 0.3, z: 0.95 });
+  for (let xx = vx - 2; xx <= vx + 2; xx++) c.px(xx, y0 + 3, LK.cloth, { x: 0, y: 0.3, z: 0.95 });
+}
+
+/** The kite shield edge-on in profile (facing left), held up before the chest. */
+function kiteSide(c: PixelCanvas, x: number, y: number): void {
+  const y0 = Math.round(y - 4);
+  const y1 = Math.round(y + 5);
+  c.part();
+  c.shape(y0, y1, (yy) => {
+    const u = (yy - y0) / (y1 - y0);
+    const w = u < 0.55 ? 1.9 : 1.9 * (1 - (u - 0.55) / 0.45) + 0.4;
+    return [x - w * 0.5, x + w * 0.5 + 0.3];
+  }, LK.plate, (_x, _y, t, u) => sphere(-0.6 + t * 0.3, u * 0.9 - 0.4, 0.8));
+  // A sliver of its face toward us, white, crossed in blue.
+  c.part();
+  for (let yy = y0 + 1; yy <= y1 - 3; yy++) c.px(Math.floor(x - 1), yy, yy === y0 + 3 ? LK.cloth : (LK.surcoat ?? LK.cloth), { x: -0.8, y: 0.1, z: 0.6 }, { bias: 1 });
+}
+
+// ---------------------------------------------------------------------------
 // Directions
 
 function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
@@ -882,7 +1236,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     const u = (y + 0.5 - top) / (waist - top);
     const hw = 4.5 - 0.9 * u * u;
     return [cx - hw, cx + hw];
-  }, LK.plate, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
+  }, LK.afonso ? LK.mail : LK.plate, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
   if (LK.spartan) musclesFront(c, top);
 
   // Mail skirt, then the tabard falling over chest and skirt.
@@ -898,12 +1252,22 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     // A skirt of leather strips: a dark seam between each.
     for (let y = waist + 1; y <= hem; y++) for (let x = cx - 5; x <= cx + 5; x += 2) c.shade(x, y, -1);
   } else for (let y = waist + 1; y <= hem; y += 2) c.shade(cx - 3, y, -1);
-  if (!LK.spartan && !LK.storm) cloth(c, top + 2, hem, (y) => {
+  // Afonso's surcoat is wide, over most of the hauberk.
+  if (!LK.spartan && !LK.storm) cloth(c, LK.afonso ? top + 1 : top + 2, hem, (y) => {
     const u = Math.max(0, (y - waist) / (hem - waist));
-    const hw = 1.7 + u * 0.4;
+    const hw = LK.afonso ? 3.3 + u * 0.5 : 1.7 + u * 0.4;
     const x = cx + p.cape * 0.4 * u * u;
     return [x - hw, x + hw];
-  }, LK.cloth, true);
+  }, LK.surcoat ?? LK.cloth, true);
+  if (LK.afonso) {
+    // The blue cross on his breast.
+    c.part();
+    for (let y = top + 1; y < waist; y++) {
+      c.px(cx - 1, y, LK.cloth, { x: -0.2, y: 0.2, z: 0.96 });
+      c.px(cx, y, LK.cloth, { x: 0.2, y: 0.2, z: 0.96 });
+    }
+    for (let x = cx - 3; x <= cx + 2; x++) c.px(x, top + 3, LK.cloth, { x: (x - cx + 0.5) * 0.15, y: 0.25, z: 0.95 });
+  }
   // Belt and buckle.
   c.part();
   c.shape(waist, waist, () => [cx - 3.9, cx + 3.9], LK.belt, (_x, _y, t) => cyl(t, 0));
@@ -914,8 +1278,14 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     // A rune of lightning burning on the bare breastplate.
     for (const [x, y, k] of [[12, 1, 1], [11, 2, 0.8], [12, 3, 1], [11, 4, 0.8], [12, 5, 0.6]] as const) c.spark(x, top + y, k > 0.9 ? LK.glow.core : LK.glow.hot, k * 0.8);
   }
+  if (LK.king && !LK.afonso) {
+    // A gold crown on the tabard.
+    c.part();
+    for (const x of [cx - 2, cx + 1]) c.px(x, 18 + U, LK.trim, { x: x < cx ? -0.4 : 0.3, y: 0.4, z: 0.82 }, { bias: 1 });
+    for (let x = cx - 2; x <= cx + 1; x++) c.px(x, 19 + U, LK.trim, FLAT_DOWN);
+  }
   // Crest on the tabard: a small gold chevron.
-  if (!LK.spartan && !LK.storm) {
+  if (!LK.spartan && !LK.storm && !LK.king) {
     c.part();
     c.px(11, 18 + U, LK.trim, { x: -0.4, y: 0.4, z: 0.8 }, { bias: 1 });
     c.px(12, 18 + U, LK.trim, { x: 0.3, y: 0.4, z: 0.85 });
@@ -929,13 +1299,17 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   glove(c, fh.x, fh.y);
   pauldron(c, 16.9, 16.3 + U);
   if (LK.spartan) aspis(c, fh.x + 0.6, fh.y - 2.2, true);
+  if (LK.afonso) kite(c, fh.x + 0.4, fh.y - 2.6, true);
 
   // Mail gorget between chin and breastplate (a bare neck under the Spartan's helm).
   c.part();
   c.shape(15 + U, 15 + U, () => [cx - 2.4, cx + 2.4], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
+  if (LK.king && !LK.afonso) ermineCollar(c, cx - 4.8, cx + 4.8, 15 + U);
   if (LK.spartan) {
     crestFront(c, cx, U, p.plume);
     corinthianFront(c, cx, U);
+  } else if (LK.king) {
+    kingHeadDown(c, cx, U, !!p.blink);
   } else {
     // Head: face framed by the helmet's cheek guards, a plume on top.
     if (LK.valkyrie && LK.storm) {
@@ -1023,6 +1397,7 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
   // The Spartan's shield, held out before him, shows its back past his side.
   const fh = p.free ? { x: 24 - p.free.x, y: p.free.y + U } : { x: 6.4, y: 22.2 + U + p.arm };
   if (LK.spartan) aspis(c, fh.x - 0.6, fh.y - 2.2, false);
+  if (LK.afonso) kite(c, fh.x - 0.4, fh.y - 2.6, false);
 
   leg(c, 9.9, 24 + L, 9.8, 28.4 - p.footB);
   leg(c, 14.1, 24 + L, 14.2, 28.4 - p.footA);
@@ -1038,7 +1413,7 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
     const u = (y + 0.5 - top) / (waist - top);
     const hw = 4.5 - 0.9 * u * u;
     return [cx - hw, cx + hw];
-  }, LK.plate, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
+  }, LK.afonso ? LK.mail : LK.plate, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
   c.part();
   c.shape(waist, hem, (y) => {
     const u = (y + 0.5 - waist) / (hem + 1 - waist);
@@ -1073,6 +1448,11 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
     }
   }
 
+  if (LK.king) {
+    // The ermine collar over the cape's shoulders, then his head.
+    if (!LK.afonso) ermineCollar(c, cx - 4.8, cx + 4.8, Math.round(ct));
+    kingHeadUp(c, cx, U, p.cape);
+  } else {
   // Helmet from behind, with a mail neck guard; the plume runs down its back.
   c.part();
   c.shape(13 + U, 15 + U, () => [cx - 3.4, cx + 3.4], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0));
@@ -1131,6 +1511,7 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
       [cx + p.plume * 0.7, 11.5 + U],
       [cx + p.plume, 14.5 + U],
     ], 1.3, 0.8);
+  }
   }
 
   if (!p.swordBehind) {
@@ -1198,7 +1579,7 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     return [hx - 2.9 - chest, hx + 2.8];
   };
   c.part();
-  c.shape(top, waist - 1, torso, LK.plate, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
+  c.shape(top, waist - 1, torso, LK.afonso ? LK.mail : LK.plate, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
   const skirt = (y: number): [number, number] => {
     const u = (y + 0.5 - waist) / (hem + 1 - waist);
     return [cx - 3.1 + S * 0.5 - u * 0.5, cx + 3.0 + u * 0.8];
@@ -1216,11 +1597,13 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     c.spark(Math.round(hx - 1), top + 3, LK.glow.core, 0.7);
     c.spark(Math.round(hx - 2), top + 4, LK.glow.hot, 0.6);
   } else {
-    // Tabard front edge down chest and skirt.
-    cloth(c, top + 2, hem, (y) => {
-      const [l] = y < waist ? torso(y) : skirt(y);
-      return [l, l + 1.6];
-    }, LK.cloth, true);
+    // Tabard front edge down chest and skirt (Afonso's wider surcoat, and an arm of its cross).
+    const front = (y: number) => (y < waist ? torso(y) : skirt(y))[0];
+    cloth(c, LK.afonso ? top + 1 : top + 2, hem, (y) => [front(y), front(y) + (LK.afonso ? 2.8 : 1.6)], LK.surcoat ?? LK.cloth, true);
+    if (LK.afonso) {
+      c.part();
+      for (let x = Math.round(front(top + 3)); x <= Math.round(front(top + 3)) + 2; x++) c.px(x, top + 3, LK.cloth, { x: -0.4, y: 0.2, z: 0.9 });
+    }
   }
   c.part();
   const [bl, br] = torso(waist - 1);
@@ -1230,13 +1613,17 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
 
   // The Spartan's shield, up before his chest.
   if (LK.spartan) aspisSide(c, hx - 4.4, 19.2 + U);
+  if (LK.afonso) kiteSide(c, hx - 4.4, 19.4 + U);
 
   // Head: profile face under the helmet, cheek guard, plume streaming back.
   c.part();
   c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.6], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
+  if (LK.king && !LK.afonso) ermineCollar(c, hx - 2.8, hx + 2.8, 15 + U);
   if (LK.spartan) {
     crestSide(c, hx, U, p.plume);
     corinthianSide(c, hx, U);
+  } else if (LK.king) {
+    kingHeadSide(c, hx, U, !!p.blink);
   } else {
     c.part();
     c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, LK.skin);
@@ -1322,12 +1709,29 @@ const base = (view: View): Pose => ({
   glow: 0,
 });
 
+/**
+ * The King at rest: his greatsword planted point-down before him, both hands
+ * on the pommel (Afonso keeps his shield arm at his side), as a statue stands.
+ */
+const PLANTED: Record<View, Sword & { behind?: boolean }> = {
+  down: sw(12, 20, 180, 7.5),
+  up: { ...sw(12, 20, 180, 7.5), behind: true },
+  side: sw(8, 20, 180, 7.5),
+};
+const PLANTED_FREE: Record<View, { x: number; y: number }> = { down: { x: 13.2, y: 19.6 }, up: { x: 12, y: 19.8 }, side: { x: 8.6, y: 20.2 } };
+
 function idle(view: View): Pose[] {
   const frames: Pose[] = [];
   const N = 8;
   for (let f = 0; f < N; f++) {
     const ph = (f / N) * Math.PI * 2;
     const p = base(view);
+    if (LK.king) {
+      const { behind, ...s } = PLANTED[view];
+      p.sword = s;
+      p.swordBehind = behind;
+      if (!LK.afonso) p.free = { ...PLANTED_FREE[view] };
+    }
     p.breath = Math.sin(ph - 0.6) > 0.1 ? 1 : 0;
     p.sword.hy += p.breath * 0.5;
     p.plume = Math.sin(ph - 1.4) > 0.3 ? 1 : 0;
@@ -1440,6 +1844,61 @@ function thrust(view: View): Pose[] {
   });
 }
 
+/**
+ * The King's finisher: the greatsword swung up over his head, then brought
+ * down in one great chop that strikes the ground before him.
+ */
+function smite(view: View): Pose[] {
+  const keys: Record<View, (Sword & { behind?: boolean })[]> = {
+    down: [sw(8, 12, -30), { ...sw(9.5, 10.5, 8), behind: true }, sw(11.5, 23, 180, 11), sw(11.5, 24, 180, 11), sw(11, 23.5, 178), sw(6, 21, -10)],
+    up: [sw(18.5, 12, 30), sw(15.5, 11, 172), { ...sw(13, 14, -2, 11), behind: true }, { ...sw(12.5, 13.5, 0, 11), behind: true }, { ...sw(13, 14.5, 0), behind: true }, sw(18.5, 21.5, 10)],
+    side: [sw(13, 12, 40), sw(13.5, 11.5, 75), sw(5.5, 17.5, -115, 11), sw(5, 19.5, -140, 11), sw(5.5, 20, -145), sw(9, 22, -45)],
+  };
+  return keys[view].map((s, i) => {
+    const p = base(view);
+    p.sword = { hx: s.hx, hy: s.hy, angle: s.angle, len: s.len };
+    p.swordBehind = s.behind;
+    const down = i >= 2 && i <= 4;
+    p.glow = i === 1 ? 0.35 : i === 2 ? 0.8 : i === 3 ? 0.5 : 0;
+    p.breath = down ? 1 : 0;
+    p.lift = i === 1 ? 1 : 0;
+    p.cape = i === 1 ? -1 : down ? 2 : 0;
+    p.plume = p.cape;
+    if (view === 'side') {
+      p.lean = i === 2 || i === 3 ? 1 : i === 1 ? -1 : 0;
+      p.footA = down ? 2 : 0;
+      p.footB = down ? -1 : 0;
+      p.cape = down ? 3 : 1;
+    } else {
+      if (!LK.afonso) p.free = view === 'down' ? { x: 18.4, y: 20 } : { x: 18.6, y: 20.4 };
+      if (down) p.footA = 1;
+    }
+    return p;
+  });
+}
+
+/**
+ * The King's Royal Decree: the greatsword raised high overhead, point to the
+ * sky, blazing at the top, then lowered.
+ */
+function decree(view: View): Pose[] {
+  const keys: Record<View, Sword[]> = {
+    down: [sw(5.5, 15, -25), sw(6.5, 11.5, -6), sw(6.5, 11, -3), sw(6.5, 11, -3), sw(5.5, 15, -20)],
+    up: [sw(18.5, 15, 25), sw(17.5, 11.5, 6), sw(17.5, 11, 3), sw(17.5, 11, 3), sw(18.5, 15, 20)],
+    side: [sw(14, 14, 20), sw(14.5, 11.8, 8), sw(14.5, 11.5, 6), sw(14.5, 11.5, 6), sw(14, 14, 15)],
+  };
+  return keys[view].map((s, i) => {
+    const p = base(view);
+    p.sword = { ...s };
+    p.glow = [0.3, 0.7, 1, 0.8, 0.35][i];
+    p.lift = i === 2 ? 1 : 0;
+    p.breath = i === 0 ? 1 : 0;
+    p.cape = i >= 2 && i <= 3 ? 1 : 0;
+    p.plume = -p.cape;
+    return p;
+  });
+}
+
 /** Special, part 1: crouch and draw the blade back as it kindles. */
 function rise(view: View): Pose[] {
   const keys: Record<View, Sword[]> = {
@@ -1509,13 +1968,15 @@ function spinFrame(k: number): { dir: Dir; pose: Pose } {
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type WarriorAnim = 'idle' | 'walk' | 'slash1' | 'slash2' | 'thrust' | 'rise' | 'settle';
+export type WarriorAnim = 'idle' | 'walk' | 'slash1' | 'slash2' | 'thrust' | 'rise' | 'settle' | 'smite' | 'decree';
 
 export interface WarriorAnimDef {
   name: WarriorAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => Pose[];
+  /** true: drawn only for the King's looks; false: for every look but his. */
+  king?: boolean;
 }
 
 export const WARRIOR_ANIMS: WarriorAnimDef[] = [
@@ -1523,13 +1984,18 @@ export const WARRIOR_ANIMS: WarriorAnimDef[] = [
   { name: 'walk', fps: 10, loop: true, poses: walk },
   { name: 'slash1', fps: 18, loop: false, poses: slash('slash1') },
   { name: 'slash2', fps: 18, loop: false, poses: slash('slash2') },
-  { name: 'thrust', fps: 16, loop: false, poses: thrust },
-  { name: 'rise', fps: 11, loop: false, poses: rise },
-  { name: 'settle', fps: 8, loop: false, poses: settle },
+  { name: 'thrust', fps: 16, loop: false, poses: thrust, king: false },
+  { name: 'rise', fps: 11, loop: false, poses: rise, king: false },
+  { name: 'settle', fps: 8, loop: false, poses: settle, king: false },
+  { name: 'smite', fps: 14, loop: false, poses: smite, king: true },
+  { name: 'decree', fps: 10, loop: false, poses: decree, king: true },
 ];
 
-/** Frame index at which each swing lands its blow. */
-export const HIT_FRAME: Record<'slash1' | 'slash2' | 'thrust', number> = { slash1: 1, slash2: 1, thrust: 2 };
+/** The animations a look has: the King has no thrust or whirlwind, and only he smites and decrees. */
+export const warriorAnimsFor = (look: WarriorLook): WarriorAnimDef[] => WARRIOR_ANIMS.filter((a) => a.king === undefined || a.king === !!look.king);
+
+/** Frame index at which each swing lands its blow (and the decree rings out). */
+export const HIT_FRAME: Record<'slash1' | 'slash2' | 'thrust' | 'smite' | 'decree', number> = { slash1: 1, slash2: 1, thrust: 2, smite: 2, decree: 2 };
 
 export interface WarriorFrame {
   key: string; // e.g. "walk_left_3", or "spin_5"
@@ -1553,7 +2019,9 @@ export function drawWarriorFrame(dir: Dir, pose: Pose, look: WarriorLook = KNIGH
 
 export function buildWarriorFrames(look: WarriorLook = KNIGHT_LOOK): WarriorFrame[] {
   const out: WarriorFrame[] = [];
-  for (const a of WARRIOR_ANIMS) {
+  // Poses may depend on the look (the King's idle), so it is set before they are made.
+  LK = look;
+  for (const a of warriorAnimsFor(look)) {
     for (const dir of DIRS) {
       const view: View = dir === 'left' || dir === 'right' ? 'side' : dir;
       a.poses(view).forEach((pose, index) => {
@@ -1562,7 +2030,8 @@ export function buildWarriorFrames(look: WarriorLook = KNIGHT_LOOK): WarriorFram
       });
     }
   }
-  for (let k = 0; k < SPIN_FRAMES; k++) {
+  // The whirlwind's frames (the King has none).
+  for (let k = 0; k < (look.king ? 0 : SPIN_FRAMES); k++) {
     const { dir, pose } = spinFrame(k);
     const { canvas, meta } = drawWarriorFrame(dir, pose, look);
     out.push({ key: `spin_${k}`, anim: 'spin', dir: null, canvas, meta });

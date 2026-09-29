@@ -1526,6 +1526,27 @@ export class Sfx {
   }
 
   /** The hour strikes: a clock's chime, three bells over a low gong. */
+  /** The King's decree: a short brass fanfare over a bell and a low boom. */
+  decree(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.8, 0.7);
+    // Two horns a fifth apart, rising G, C, then a held E.
+    const horn = gain(ctx, 0, filter(ctx, 'lowpass', 1900, 1.2, out));
+    horn.gain.setValueAtTime(0, t);
+    horn.gain.linearRampToValueAtTime(0.07, t + 0.03);
+    horn.gain.setValueAtTime(0.07, t + 0.5);
+    horn.gain.linearRampToValueAtTime(0, t + 0.95);
+    for (const [f, at] of [[392, 0], [523, 0.13], [659, 0.26]] as const) {
+      for (const k of [1, 1.5]) {
+        const o = osc(ctx, 'sawtooth', f * k * rand(0.997, 1.003), gain(ctx, k === 1 ? 1 : 0.45, horn));
+        o.start(t + at);
+        o.stop(at < 0.2 ? t + at + 0.14 : t + 1);
+      }
+    }
+    this.bell(out, t + 0.26, 1319, 0.04, 1.2);
+    this.burstNoise(out, t, 'lowpass', 900, 120, 0.9, 0.4, 0.3);
+  }
+
   hourStrike(t: number, pan: number): void {
     const out = this.out(pan, 0.8, 0.7);
     this.bell(out, t, 131, 0.09, 2.4);
@@ -1818,6 +1839,43 @@ export class Sfx {
     sweep(o.frequency, t, 260, 520, 0.3);
     o.start(t);
     o.stop(t + 0.5);
+  }
+
+  // ------------------------------------------------------------ The Inventor
+
+  /** The wrench on a foe: a dull metal clank; the bonk rings out like a struck pipe. */
+  wrench(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.9 : 0.7, heavy ? 0.35 : 0.2);
+    this.burstNoise(out, t, 'bandpass', heavy ? 1800 : 2400, 900, 3, 0.4, 0.05);
+    this.chirp(out, t, 'triangle', heavy ? 330 : 440, heavy ? 180 : 260, 0.35, 0.08);
+    this.bell(out, t + 0.005, heavy ? 740 : 1180, heavy ? 0.06 : 0.035, heavy ? 0.6 : 0.3);
+    if (heavy) {
+      this.bell(out, t + 0.005, 1110, 0.03, 0.5);
+      this.chirp(out, t, 'sine', 150, 50, 0.6, 0.2);
+    }
+  }
+
+  /** A sentry unfolding: a ratchet's quick clicks and a clunk as it locks. */
+  ratchet(t: number, pan: number): void {
+    const out = this.out(pan, 0.5, 0.15);
+    for (let i = 0; i < 5; i++) this.burstNoise(out, t + i * 0.045, 'highpass', 3200, 5200, 1, 0.3, 0.015);
+    this.chirp(out, t + 0.25, 'square', 220, 110, 0.18, 0.05);
+    this.burstNoise(out, t + 0.25, 'lowpass', 900, 300, 1, 0.35, 0.06, true);
+  }
+
+  /** A sentry's shot: a sharp little pop (the giant's is deeper, and comes in bursts). */
+  turretShot(t: number, pan: number, mega: boolean): void {
+    const out = this.out(pan, mega ? 0.45 : 0.4, 0.1);
+    this.burstNoise(out, t, 'bandpass', mega ? 1600 : 2600, mega ? 700 : 1400, 1.5, 0.45, 0.04);
+    this.chirp(out, t, 'square', mega ? 260 : 520, mega ? 90 : 200, 0.12, 0.03);
+  }
+
+  /** The Tesla arc: a crackling buzz; a longer, brighter one when it leaps between foes. */
+  tesla(t: number, pan: number, chain: boolean): void {
+    const out = this.out(pan, 0.5, 0.2);
+    this.zap(out, t, 0.28, chain ? 0.16 : 0.09);
+    this.chirp(out, t, 'sawtooth', chain ? 2400 : 1900, chain ? 500 : 700, 0.07, chain ? 0.14 : 0.07);
+    if (chain) this.zap(out, t + 0.08, 0.2, 0.08);
   }
 
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {

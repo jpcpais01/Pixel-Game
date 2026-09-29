@@ -14,6 +14,7 @@ import type { WorldScene } from '../scenes/WorldScene';
 import { ARCANE_SKIN, ASTRAL_SKIN, VOID_SKIN, Wizard } from './Wizard';
 import { EMBER_FIRE, HELL_FIRE, HELL_SKIN, PYRO_SKIN, Pyromancy } from './Pyro';
 import { JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
+import { AFONSO_KIT, King, KING_KIT } from './King';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
 import { CRUSADER_KIT, HOLY_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
@@ -47,6 +48,9 @@ import { POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
 import { CALA_KIT, WRAITH_KIT, Wraith } from './Wraith';
 import { POLTER_H, POLTER_ORIGIN_Y } from '../art/poltergeist';
 import { WRAITH_H, WRAITH_ORIGIN_Y } from '../art/wraith';
+import { ENGINEER_KIT, Engineer } from './Engineer';
+import { EINSTEIN_KIT, SCIENTIST_KIT, Scientist } from './Scientist';
+import { INV_H, INV_ORIGIN_Y } from '../art/inventor';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -336,8 +340,42 @@ export const CLASSES: ClassDef[] = [
           },
         ],
       },
+      {
+        // A crowned king with an ermine mantle and a greatsword: heavy chops, and a decree that brings his foes to their knees.
+        id: 'king',
+        name: 'King',
+        role: 'Crown and greatsword',
+        accent: 0xffcf5a,
+        attack: 'Royal blade',
+        special: 'Royal decree',
+        preview: { texture: 'warrior_king', glow: 'warrior_king_e', idle: 'warrior_king_idle_down', chosen: 'warrior_king_decree_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+        buttons: {
+          attack: { texture: 'icon_sword_king' },
+          special: { texture: 'icon_decree' },
+        },
+        lookName: 'Regal',
+        skins: [
+          {
+            // The first king of Portugal as his statue in Guimarães stands: a crowned conical helm, mail, a long beard, the blue cross on white.
+            id: 'afonso',
+            name: 'Afonso Henriques',
+            role: 'The first king of Portugal',
+            accent: 0x5a8aff,
+            attack: "Conqueror's blade",
+            special: 'Oath of Ourique',
+            preview: { texture: 'warrior_afonso', glow: 'warrior_afonso_e', idle: 'warrior_afonso_idle_down', chosen: 'warrior_afonso_decree_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_sword_afonso' },
+              special: { texture: 'icon_decree_afonso' },
+            },
+          },
+        ],
+      },
     ],
-    spawn: (world, x, y, look) => new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : KNIGHT_SKIN),
+    spawn(world, x, y, look) {
+      if (look === 'king' || look === 'afonso') return new King(world, x, y, look === 'afonso' ? AFONSO_KIT : KING_KIT);
+      return new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : KNIGHT_SKIN);
+    },
   },
   {
     id: 'paladin',
@@ -1532,6 +1570,64 @@ export const CLASSES: ClassDef[] = [
       if (look === 'wraith') return new Wraith(world, x, y, WRAITH_KIT);
       if (look === 'cala') return new Wraith(world, x, y, CALA_KIT);
       return new Poltergeist(world, x, y, look === 'tea' ? TEA_KIT : POLTER_KIT);
+    },
+  },
+  {
+    id: 'inventor',
+    name: 'Inventor',
+    blurb: 'Gadgets, gizmos and bright ideas',
+    types: [
+      {
+        // A pipe wrench up close, and sentry turrets built from a tossed crate.
+        id: 'engineer',
+        name: 'Engineer',
+        role: 'Builds turrets, swings a wrench',
+        accent: 0xf6cc3c,
+        attack: 'Pipe wrench',
+        special: 'Build sentry',
+        preview: { texture: 'engineer', glow: 'engineer_e', idle: 'engineer_idle_down', chosen: 'engineer_eureka_down', originY: INV_ORIGIN_Y / INV_H },
+        buttons: {
+          attack: { texture: 'icon_wrench' },
+          special: { texture: 'icon_turret' },
+        },
+        lookName: 'Hard hat',
+      },
+      {
+        // Lightning that leaps from foe to foe, and an orb that drags them in and bursts.
+        id: 'scientist',
+        name: 'Scientist',
+        role: 'Lightning in a bottle',
+        accent: 0x5ad8ff,
+        attack: 'Tesla arc',
+        special: 'Polarity orb',
+        preview: { texture: 'scientist', glow: 'scientist_e', idle: 'scientist_idle_down', chosen: 'scientist_eureka_down', originY: INV_ORIGIN_Y / INV_H },
+        buttons: {
+          attack: { texture: 'icon_tesla' },
+          special: { texture: 'icon_orb' },
+        },
+        lookName: 'Lab coat',
+        skins: [
+          {
+            // The wild white hair, the moustache, a baggy cardigan, and a stick of glowing chalk.
+            id: 'einstein',
+            name: 'Einstein',
+            role: 'Imagination is everything',
+            accent: 0xffd060,
+            attack: 'Photon spark',
+            special: 'Gravity well',
+            preview: { texture: 'scientist_einstein', glow: 'scientist_einstein_e', idle: 'scientist_einstein_idle_down', chosen: 'scientist_einstein_eureka_down', originY: INV_ORIGIN_Y / INV_H },
+            buttons: {
+              attack: { texture: 'icon_tesla_einstein' },
+              special: { texture: 'icon_orb_einstein' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      if (look === 'scientist') return new Scientist(world, x, y, SCIENTIST_KIT);
+      if (look === 'einstein') return new Scientist(world, x, y, EINSTEIN_KIT);
+      return new Engineer(world, x, y, ENGINEER_KIT);
     },
   },
 ];
