@@ -1,4 +1,5 @@
 import type { RGB } from './pixel';
+import { pixelCanvas } from './canvas';
 
 /** A plain RGBA pixel buffer for flat, unlit art (menus, UI, backdrops). */
 export class Bitmap {
@@ -28,11 +29,7 @@ export class Bitmap {
   }
 
   toCanvas(): HTMLCanvasElement {
-    const c = document.createElement('canvas');
-    c.width = this.w;
-    c.height = this.h;
-    c.getContext('2d')!.putImageData(new ImageData(this.data, this.w, this.h), 0, 0);
-    return c;
+    return pixelCanvas(this.w, this.h, this.data);
   }
 }
 

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CAST_RELEASE, type Dir } from '../art/wizard';
-import { wizardMeta } from '../art/textures';
+import { wizardMeta } from '../art/heroLoader';
 import { snap } from './display';
 import { BeamCharge, CHARGE_TIME, HOLD_TIME, beamSpec } from './Beam';
 import { beamHud } from './controls';

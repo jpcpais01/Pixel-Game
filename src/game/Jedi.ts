@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
 import { CHEST_Y, FACING_DEG, HIT_FRAME, JEDI_H, JEDI_ORIGIN_X, JEDI_ORIGIN_Y, JEDI_W } from '../art/jedi';
-import { jediMeta } from '../art/textures';
+import { jediMeta } from '../art/heroLoader';
 import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';

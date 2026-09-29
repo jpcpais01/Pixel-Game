@@ -14,7 +14,7 @@ import { CLEARING_GROUND, CLEARING_H, CLEARING_SPAWN, CLEARING_W, PLAZA_CX, PLAZ
 import { SANCTUM_WORLD_W } from './sanctumLayout';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
-import { warmCosmos, warmDeep, warmIsland, warmRift, warmSpirit, warmTemple } from '../art/textures';
+import { warmCosmos, warmDeep, warmIsland, warmRift, warmSpirit, warmTemple } from '../art/arenaLoader';
 import { RIFT_CX, RIFT_CY, RIFT_H, RIFT_SPAWN, RIFT_W, SHARDS, TEARS, riftWalkable } from './riftLayout';
 import { RIFT_PLATFORM_X, RIFT_PLATFORM_Y, SHARD_H, SHARD_OY } from '../art/rift';
 import { GroundStreamer } from './GroundStreamer';
@@ -306,7 +306,12 @@ export const ARENAS: ArenaDef[] = [
       w: RIFT_W,
       h: RIFT_H,
       // Its waves call on the Rune Temple's and the Deep's monsters, whose sheets those arenas build.
-      warm: (scene, budget) => warmTemple(scene, budget) && warmDeep(scene, budget) && warmRift(scene, budget),
+      // All three are asked for at once, so the worker builds them back to back.
+      warm: (scene, budget) => {
+        const temple = warmTemple(scene, budget);
+        const deep = warmDeep(scene, budget);
+        return warmRift(scene, budget) && temple && deep;
+      },
       layers: [
         { key: 'rift_void', x: 0, y: 0 },
         { key: 'rift_platform', x: RIFT_PLATFORM_X, y: RIFT_PLATFORM_Y },
@@ -381,18 +386,14 @@ export function warmArena(scene: Phaser.Scene, arena: ArenaDef, budget: number):
 }
 
 /**
- * Warm the arenas while the player is still on the menus, a few ms a frame,
- * the one they chose last time first; so the arena select opens with them
- * ready (and a run starts sooner). The work is shared: the arena select and
- * the world carry on whatever this has begun. True once they're all ready.
+ * Warm the arena the player chose last time while they're still on the
+ * menus, a few ms a frame, so a run there starts at once. Only that one: the
+ * arena select shows the others as saved pictures, and builds one only when
+ * it's picked. The work is shared: the arena select and the world carry on
+ * whatever this has begun. True once it's ready.
  */
 export function warmArenasInBackground(scene: Phaser.Scene, budget: number): boolean {
-  const last = lastArena();
-  const order = [...ARENAS].sort((a, b) => (a.id === last ? -1 : b.id === last ? 1 : 0));
-  const next = order.find((a) => !warmArena(scene, a, 0));
-  if (!next) return true;
-  warmArena(scene, next, budget);
-  return false;
+  return warmArena(scene, arenaById(lastArena()), budget);
 }
 
 export function arenaById(id: string | undefined): ArenaDef {

@@ -20,11 +20,15 @@ import { settings } from './game/settings';
 import { sound } from './audio';
 import { setupApp } from './pwa';
 import { streamVertexBuffers } from './game/streamBuffers';
+import { bakeArtTextures } from './game/bakedTextures';
+import { cacheGraphics } from './game/graphicsCache';
 import { installCrashReports, watchCanvas } from './diagnostics';
 
 installCrashReports();
 setupApp();
 streamVertexBuffers();
+bakeArtTextures();
+cacheGraphics();
 sound.init();
 settings.watch((s) => sound.setVolumes(s.music, s.sfx));
 setRenderQuality(settings.values.quality);

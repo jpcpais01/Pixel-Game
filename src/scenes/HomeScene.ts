@@ -14,9 +14,10 @@ import { fpsBottom } from './FpsScene';
 const SHIMMER_EVERY = 5200;
 const SHIMMER_FRAME = 45;
 /**
- * ms a frame spent building the arenas while the player is on the menus (the
- * home screen keeps running under the hero, arena, shop and inventory pages),
- * so the arena select opens with them ready.
+ * ms a frame spent loading the last arena played while the player is on the
+ * menus (the home screen keeps running under the hero, arena, shop and
+ * inventory pages), so a run there starts at once. A worker draws it; this
+ * is only turning its pixels into textures.
  */
 const WARM_MS = 4;
 /** How long the daily gift's banner stays up. */

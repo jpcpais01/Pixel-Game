@@ -67,6 +67,8 @@ export interface DrawOpts {
   glow?: number;
 }
 
+const NO_OPTS: DrawOpts = {};
+
 export class PixelCanvas {
   readonly w: number;
   readonly h: number;
@@ -123,7 +125,7 @@ export class PixelCanvas {
     return this;
   }
 
-  px(x: number, y: number, m: Material, n: Vec3 = FLAT, o: DrawOpts = {}): void {
+  px(x: number, y: number, m: Material, n: Vec3 = FLAT, o: DrawOpts = NO_OPTS): void {
     x = Math.floor(x) + this.ox;
     y = Math.floor(y) + this.oy;
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
@@ -356,11 +358,8 @@ export class PixelCanvas {
             // own edge where we sit on top of it, away from the light.
             const right = at(x + 1, y);
             const down = at(x, y + 1);
-            for (const j of [right, down]) {
-              if (j >= 0 && this.mat[j] === mi && this.layer[j] < myLayer) {
-                idx -= 1;
-                break;
-              }
+            if ((right >= 0 && this.mat[right] === mi && this.layer[right] < myLayer) || (down >= 0 && this.mat[down] === mi && this.layer[down] < myLayer)) {
+              idx -= 1;
             }
           }
           idx = Math.max(0, Math.min(k - 1, idx));
@@ -386,13 +385,9 @@ export class PixelCanvas {
           let ox = 0;
           let oy = 0;
           let litSide = false;
-          const nbrs: [number, number][] = [
-            [1, 0],
-            [-1, 0],
-            [0, 1],
-            [0, -1],
-          ];
-          for (const [ddx, ddy] of nbrs) {
+          for (let q = 0; q < 4; q++) {
+            const ddx = NBR_X[q];
+            const ddy = NBR_Y[q];
             const j = at(x + ddx, y + ddy);
             if (j < 0) continue;
             const mj = this.mat[j];
@@ -435,6 +430,10 @@ export class PixelCanvas {
     return { w, h, diffuse, normal, emissive };
   }
 }
+
+/** The 4-neighbourhood the outline pass looks at: right, left, down, up. */
+const NBR_X = [1, -1, 0, 0];
+const NBR_Y = [0, 0, 1, -1];
 
 /** Key light baked into the diffuse ramps: from the top-left, toward camera. */
 export const KEY_LIGHT: Vec3 = { x: -0.5, y: 0.55, z: 0.68 };

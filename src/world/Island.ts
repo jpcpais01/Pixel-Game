@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { COLUMN_BASE, COLUMN_H, ISLAND_X, ISLAND_Y, ISLETS, WISP_W } from '../art/island';
-import { warmIsland } from '../art/textures';
+import { warmIsland } from '../art/arenaLoader';
 import { sunShadow } from '../game/Wizard';
 import { settings } from '../game/settings';
 import { snap } from '../game/display';

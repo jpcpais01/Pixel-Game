@@ -2,24 +2,23 @@
 // normal map attached as a data source so Light2D can use it; emissive layers
 // become separate textures with matching frame names, drawn additively.
 
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
-import { buildWizardFrames, FRAME_H, FRAME_W, ANIMS, DIRS, WIZARD_LOOKS, type FrameMeta } from './wizard';
 import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, PYRO_SPELL, PYRO_METEOR_H, PYRO_METEOR_W, meteorIcon, pyroMeteor, scorchCanvas, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, hammerIcon, sunfallIcon, saberIcon, forceIcon, fistIcon, barrageIcon, palmIcon, quakeIcon, flaskIcon, bogIcon, canisterIcon, chemBarrageIcon, fumeCanvas, CHEM_BREW_COLORS, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
-import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FRAMES, twirlStart, TWIRL_FPS, type JediMeta } from './jedi';
-import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, buildAlchemistFrames, flaskFrame } from './alchemist';
-import { ARCHER_ANIMS, ARCHER_LOOKS, ARCHER_H, ARCHER_W, ARROW_DIRS, ARROW_SIZE, arrowFrame, buildArcherFrames, stuckArrowFrame } from './archer';
-import { BLOOD_SPELL, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, buildNecroFrames, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
+import { ALCHEMIST_LOOKS, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, flaskFrame } from './alchemist';
+import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, stuckArrowFrame } from './archer';
+import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
-import { AEON_ICON, ANOMALY_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CHRONO_H, CLOCKWORK_ICON, CHRONO_LOOKS, CHRONO_W, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, buildChronoFrames, chronoAnims, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
-import { BARD_H, BARD_LOOKS, BARD_W, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, WILD_LOOK, NOTE_SIZE, bardAnims, buildBardFrames, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
-import { SAMURAI_ANIMS, SAMURAI_H, SAMURAI_LOOKS, SAMURAI_W, SPIN_FPS, SPIN_FRAMES, buildSamuraiFrames, crossIcon, cutMark, dashIcon, katanaIcon, spinStart, type SamuraiMeta } from './samurai';
-import { PUPPETEER_H, PUPPETEER_LOOKS, PUPPETEER_W, PUPPET_LOOKS, buildPuppetSheet, buildPuppeteerFrames, marionetteIcon, pirouetteIcon, puppeteerAnims, puppetStrikeIcon, threadIcon } from './puppeteer';
-import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
-import { buildRogueFrames, daggersIcon, ROGUE_ANIMS, ROGUE_H, ROGUE_ICONS, ROGUE_LOOKS, ROGUE_W, shadowstepIcon, smokeCanvas } from './rogue';
+import { AEON_ICON, ANOMALY_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
+import { HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, WILD_LOOK, NOTE_SIZE, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
+import { crossIcon, cutMark, dashIcon, katanaIcon } from './samurai';
+import { PUPPET_LOOKS, buildPuppetSheet, marionetteIcon, pirouetteIcon, puppetStrikeIcon, threadIcon } from './puppeteer';
+import { daggersIcon, ROGUE_ICONS, ROGUE_LOOKS, shadowstepIcon, smokeCanvas } from './rogue';
 import { gourdIcon, registerMoreSkinIcons, SKIN_BREWS, SKIN_QUIVERS } from './moreSkinIcons';
 import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, eclipseFallIcon, oathHammerIcon, pikeSaberIcon, seraphMaceIcon } from './heroSkins';
 import { hex } from './pixel';
+import { bakedCanvas, pixelCanvas } from './canvas';
+import { packAtlas, registerAtlas, whiteOf, type PixelAtlas } from './atlas';
 import { EGG_H, EGG_W, PET_ART, PET_FRAMES, PET_H, PET_W, eggCracks, petFrames, wishEgg } from './pets';
 import { RIFT_PLATFORM_H, RIFT_PLATFORM_W, SHARD_H, SHARD_W, TEAR_FRAMES, TEAR_H, TEAR_W, blessingIcon, riftPlatformArt, riftShard, riftTear, riftVoidCanvas, type BlessingIcon } from './rift';
 import { RIFT_H, RIFT_W } from '../world/riftLayout';
@@ -34,9 +33,8 @@ import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, GODRAY_H, GODRAY_W, KEEPER_FR
 import { ROOM_H, ROOM_W } from '../world/sanctumLayout';
 import { chapelArt, chapelExterior } from './chapel';
 import { CH_EXT_H, CH_EXT_W, CH_H, CH_W } from '../world/chapelLayout';
-import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_LOOKS, PALADIN_W, type PaladinMeta } from './paladin';
 import { AFONSO_TONES, decreeIcon, KING_TONES } from './king';
-import { buildWarriorFrames, JADE_LOOK, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, warriorAnimsFor, type WarriorMeta } from './warrior';
+import { JADE_LOOK } from './warrior';
 import { WIND_DEEP } from './palette';
 import { buildBarklingSheet, buildBeetleSheet, buildFrogSheet, buildGlowmothSheet, buildPuffcapSheet, ringCanvas, thornFrame, THORN_H, THORN_W, venomGlob, type MonsterSheet } from './monsters';
 import { buildWardenSheet } from './warden';
@@ -58,87 +56,22 @@ import { COSMOS_H, COSMOS_W } from '../world/cosmosLayout';
 import { COLUMN_H, COLUMN_W, ISLAND_H, ISLAND_W, ISLETS, column, fallStrip, foam, islandArt, islet, skyCanvas, wisp } from './island';
 import { ISLE_H, ISLE_W } from '../world/islandLayout';
 import { birdSheet } from './skyArena';
-import { BOLT_DIRS, MECH_ANIMS, MECH_BOLT_SIZE, MECH_H, MECH_LOOKS, MECH_W, boltFrame as mechBolt, buildMechFrames, cannonIcon, reticle, salvoIcon } from './mech';
-import { HAUNT_KINDS, HAUNT_SIZE, POLTER_ANIMS, POLTER_H, POLTER_LOOKS, POLTER_W, buildPolterFrames, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
-import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, WRAITH_ANIMS, WRAITH_H, WRAITH_LOOKS, WRAITH_W, buildWraithFrames, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
-import { INV_H, INV_W, INVENTOR_LOOKS, TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, buildInventorFrames, inventorAnims, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
-import { DRONE_FRAMES, DRONE_SIZE, SYNTH_ANIMS, SYNTH_H, SYNTH_LOOKS, SYNTH_W, buildSynthFrames, droneFrame, droneIcon, gridIcon } from './synth';
+import { BOLT_DIRS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, reticle, salvoIcon } from './mech';
+import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
+import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
+import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
+import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, leafBit, rayCanvas } from './trees';
 import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, RIPPLE_FRAMES, RIPPLE_H, RIPPLE_W, rippleFrames, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
 
-function toCanvas(w: number, h: number, px: Uint8ClampedArray): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  c.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(px), w, h), 0, 0);
-  return c;
-}
-
-interface Packed {
-  diffuse: HTMLCanvasElement;
-  normal: HTMLCanvasElement;
-  emissive: HTMLCanvasElement;
-  /** Solid silhouette, used for sun shadows. */
-  silhouette: HTMLCanvasElement;
-  /** White silhouette, flashed over a sprite when it is struck. */
-  white: () => HTMLCanvasElement;
-  rects: { name: string; x: number; y: number }[];
-}
+const toCanvas = pixelCanvas;
 
 /** Pack equally sized frames into one atlas per layer. */
-function pack(frames: { name: string; r: RenderedFrame }[], fw: number, fh: number, cols = 16): Packed {
-  const rows = Math.ceil(frames.length / cols);
-  const W = Math.min(cols, frames.length) * fw;
-  const H = rows * fh;
-  const layers = { diffuse: new Uint8ClampedArray(W * H * 4), normal: new Uint8ClampedArray(W * H * 4), emissive: new Uint8ClampedArray(W * H * 4) };
-  const rects: Packed['rects'] = [];
-  frames.forEach((f, i) => {
-    const ox = (i % cols) * fw;
-    const oy = Math.floor(i / cols) * fh;
-    rects.push({ name: f.name, x: ox, y: oy });
-    for (const k of ['diffuse', 'normal', 'emissive'] as const) {
-      const src = f.r[k];
-      const dst = layers[k];
-      for (let y = 0; y < fh; y++) {
-        dst.set(src.subarray(y * fw * 4, (y + 1) * fw * 4), ((oy + y) * W + ox) * 4);
-      }
-    }
-  });
-  const sil = new Uint8ClampedArray(W * H * 4);
-  for (let i = 0; i < W * H; i++) {
-    sil[i * 4] = 6;
-    sil[i * 4 + 1] = 8;
-    sil[i * 4 + 2] = 22;
-    sil[i * 4 + 3] = layers.diffuse[i * 4 + 3];
-  }
-  const white = () => {
-    const px = new Uint8ClampedArray(W * H * 4).fill(255);
-    for (let i = 0; i < W * H; i++) px[i * 4 + 3] = layers.diffuse[i * 4 + 3];
-    return toCanvas(W, H, px);
-  };
-  return {
-    white,
-    silhouette: toCanvas(W, H, sil),
-    diffuse: toCanvas(W, H, layers.diffuse),
-    normal: toCanvas(W, H, layers.normal),
-    emissive: toCanvas(W, H, layers.emissive),
-    rects,
-  };
-}
+const pack = (frames: { name: string; r: RenderedFrame }[], fw: number, fh: number, cols = 16): PixelAtlas => packAtlas(frames, fw, fh, cols);
 
-function register(scene: Phaser.Scene, key: string, p: Packed, fw: number, fh: number, withEmissive = true, withFlash = false): void {
-  const tex = scene.textures.addCanvas(key, p.diffuse)!;
-  tex.setDataSource(p.normal);
-  const etex = withEmissive ? scene.textures.addCanvas(`${key}_e`, p.emissive)! : null;
-  const stex = scene.textures.addCanvas(`${key}_s`, p.silhouette)!;
-  const wtex = withFlash ? scene.textures.addCanvas(`${key}_w`, p.white())! : null;
-  for (const r of p.rects) {
-    tex.add(r.name, 0, r.x, r.y, fw, fh);
-    etex?.add(r.name, 0, r.x, r.y, fw, fh);
-    stex.add(r.name, 0, r.x, r.y, fw, fh);
-    wtex?.add(r.name, 0, r.x, r.y, fw, fh);
-  }
+function register(scene: Phaser.Scene, key: string, p: PixelAtlas, fw: number, fh: number, withEmissive = true, withFlash = false): void {
+  registerAtlas(scene, key, withFlash && !p.white ? { ...p, white: whiteOf(p) } : p, fw, fh, withEmissive);
 }
 
 /**
@@ -171,142 +104,20 @@ function sideBySide(w: number, h: number, images: Uint8ClampedArray[]): Uint8Cla
 
 const frameList = (canvases: PixelCanvas[], prefix: string) => canvases.map((c, i) => ({ name: `${prefix}${i}`, r: c.render() }));
 
-export const wizardMeta = new Map<string, FrameMeta>();
-export const warriorMeta = new Map<string, WarriorMeta>();
-export const paladinMeta = new Map<string, PaladinMeta>();
-export const jediMeta = new Map<string, JediMeta>();
-export const samuraiMeta = new Map<string, SamuraiMeta>();
-
 /**
  * Build every texture and animation, a piece at a time: it yields between
  * pieces, so the boot can spread the work over frames and show how far
- * along it is (see BootScene). Each hero look is one piece.
+ * along it is (see BootScene). The heroes' own sheets aren't among them:
+ * they're built on demand and in the background (see heroLoader.ts).
  */
 export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> {
   yield;
-  // Wizard, once per look. Every look shares the rig, so the crystal meta is the same for all.
-  for (const look of WIZARD_LOOKS) {
-    yield;
-    const wf = buildWizardFrames(look);
-    if (!wizardMeta.size) wf.forEach((f) => wizardMeta.set(f.key, f.meta));
-    register(scene, look.key, pack(wf.map((f) => ({ name: f.key, r: f.canvas.render() })), FRAME_W, FRAME_H), FRAME_W, FRAME_H);
-    for (const a of ANIMS) {
-      for (const d of DIRS) {
-        const frames = wf.filter((f) => f.anim === a.name && f.dir === d);
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: frames.map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
-  }
-
-  yield;
-  // Warrior, once per look. Spin frames have no animation: the whirlwind picks them by angle.
-  for (const look of WARRIOR_LOOKS) {
-    yield;
-    const hf = buildWarriorFrames(look);
-    if (!warriorMeta.size) hf.forEach((f) => warriorMeta.set(f.key, f.meta));
-    register(scene, look.key, pack(hf.map((f) => ({ name: f.key, r: f.canvas.render() })), WARRIOR_W, WARRIOR_H), WARRIOR_W, WARRIOR_H);
-    for (const a of warriorAnimsFor(look)) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: hf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
-  }
-
-  yield;
-  // Effects (pure light).
-  // Paladin, once per subtype look ('paladin' and 'paladin_crusader'); they share the rig.
-  for (const look of PALADIN_LOOKS) {
-    yield;
-    const pf = buildPaladinFrames(look);
-    if (!paladinMeta.size) pf.forEach((f) => paladinMeta.set(f.key, f.meta));
-    register(scene, look.key, pack(pf.map((f) => ({ name: f.key, r: f.canvas.render() })), PALADIN_W, PALADIN_H), PALADIN_W, PALADIN_H);
-    for (const a of PALADIN_ANIMS) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: pf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
-  }
-
-  yield;
-  // Jedi, once per look; the looks share the rig, so the blade meta is the same for all.
-  // The twirl plays a whole turn starting from whichever way he faces.
-  for (const look of JEDI_LOOKS) {
-    yield;
-    const jf = buildJediFrames(look);
-    if (!jediMeta.size) jf.forEach((f) => jediMeta.set(f.key, f.meta));
-    register(scene, look.key, pack(jf.map((f) => ({ name: f.key, r: f.canvas.render() })), JEDI_W, JEDI_H), JEDI_W, JEDI_H);
-    for (const d of DIRS) {
-      for (const a of JEDI_ANIMS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: jf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-      const k0 = twirlStart(d);
-      scene.anims.create({
-        key: `${look.key}_twirl_${d}`,
-        frames: Array.from({ length: TWIRL_FRAMES + 1 }, (_, i) => ({ key: look.key, frame: `twirl_${(k0 + i) % TWIRL_FRAMES}` })),
-        frameRate: TWIRL_FPS,
-        repeat: 0,
-      });
-    }
-  }
-
-  yield;
-  // Fighter once per style: 'fighter' for the brawler, 'fighter_monk' for the iron monk.
-  for (const look of FIGHTER_LOOKS) {
-    yield;
-    const ff = buildFighterFrames(look);
-    register(scene, look.key, pack(ff.map((f) => ({ name: f.key, r: f.canvas.render() })), FIGHTER_W, FIGHTER_H), FIGHTER_W, FIGHTER_H);
-    for (const a of look.anims) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: ff.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
-  }
-
-  yield;
-  // Alchemist once per look, and the flasks each throws (tumbling frames r0..r7),
+  // The flasks each alchemist look throws (tumbling frames r0..r7),
   // plus the fumes of each bog: 'alchemist'/'flask'/'fume' for the plague
   // doctor, with a '_witch' suffix for the hex witch and '_chem' for Chemtech
   // (whose flasks are canisters).
   for (const look of ALCHEMIST_LOOKS) {
-    yield;
     const sfx = look.key.slice('alchemist'.length);
-    const af = buildAlchemistFrames(look);
-    register(scene, look.key, pack(af.map((f) => ({ name: f.key, r: f.canvas.render() })), ALCH_W, ALCH_H), ALCH_W, ALCH_H);
-    for (const a of ALCHEMIST_ANIMS) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: af.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: look.fps?.[a.name] ?? a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
     for (const [key, big, size] of [[`flask${sfx}`, false, FLASK_SIZE], [`flask_big${sfx}`, true, BIG_FLASK_SIZE]] as const) {
       register(scene, key, pack(frameList(Array.from({ length: FLASK_FRAMES }, (_, i) => flaskFrame(i, big, look)), 'r'), size, size), size, size);
     }
@@ -318,24 +129,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   }
 
   yield;
-  // Archer once per look, and the arrows each looses: 'arrow' frames r0..r15
+  // The arrows each archer look looses: 'arrow' frames r0..r15
   // (sixteen headings in flight) and k0..k2 (stuck in the ground), with a
   // '_storm' suffix for the storm archer.
   for (const look of ARCHER_LOOKS) {
-    yield;
     const sfx = look.key.slice('archer'.length);
-    const rf = buildArcherFrames(look);
-    register(scene, look.key, pack(rf.map((f) => ({ name: f.key, r: f.canvas.render() })), ARCHER_W, ARCHER_H), ARCHER_W, ARCHER_H);
-    for (const a of ARCHER_ANIMS) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: rf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
     const arrows = [
       ...frameList(Array.from({ length: ARROW_DIRS }, (_, i) => arrowFrame(i, look)), 'r'),
       ...frameList([0, 1, 2].map((k) => stuckArrowFrame(k, look)), 'k'),
@@ -347,25 +145,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   }
 
   yield;
-  // Rogue once per look ('rogue', 'rogue_dancer' for the shadow dancer, and
-  // the skins' '_corsair' and '_kitsune'), with a flash layer for the echoes he
-  // leaves, his smoke and his icons.
+  // Each rogue look's smoke and icons ('rogue', 'rogue_dancer' for the shadow
+  // dancer, and the skins' '_corsair' and '_kitsune').
   for (const look of ROGUE_LOOKS) {
-    yield;
     const sfx = look.key.slice('rogue'.length);
     const icons = ROGUE_ICONS[look.key];
-    const rf = buildRogueFrames(look);
-    register(scene, look.key, pack(rf.map((f) => ({ name: f.key, r: f.canvas.render() })), ROGUE_W, ROGUE_H), ROGUE_W, ROGUE_H, true, true);
-    for (const a of ROGUE_ANIMS) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: rf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
     const tones: [number, number, number][] =
       look.key === 'rogue' ? [hex('#8a8898'), hex('#57546a'), hex('#34323f')] : look.key === 'rogue_dancer' ? [hex('#8a6ad8'), hex('#4a2c90'), hex('#24124e')] : icons.daggers.smoke.map(hex);
     scene.textures.addCanvas(`${look.key}_smoke`, toCanvas(16, 16, smokeCanvas(16, tones)));
@@ -374,24 +158,8 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   }
 
   yield;
-  // Necromancer once per look: 'necro' and 'necro_blood' for the blood mage.
-  // Their bolts use the spell orbs below ('orb_soul', 'orb_blood'); the dead
+  // The necromancers' bolts use the spell orbs below ('orb_soul', 'orb_blood'); the dead
   // they raise are 'skeleton', registered like a monster.
-  for (const look of NECRO_LOOKS) {
-    yield;
-    const nf = buildNecroFrames(look);
-    register(scene, look.key, pack(nf.map((f) => ({ name: f.key, r: f.canvas.render() })), NECRO_W, NECRO_H), NECRO_W, NECRO_H);
-    for (const a of NECRO_ANIMS) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: nf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
-  }
   registerMonster(scene, 'skeleton', buildSkeletonSheet());
   scene.textures.addCanvas('icon_soul', toCanvas(16, 16, soulBoltIcon()));
   scene.textures.addCanvas('icon_raise', toCanvas(16, 16, raiseIcon()));
@@ -403,25 +171,8 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_nova_wyrm', toCanvas(16, 16, novaIcon(WYRM_ICON)));
 
   yield;
-  // Bard once per look: 'bard' (the minstrel), 'bard_drum' (the war drummer)
-  // and 'bard_wild' (the minstrel's wildsong skin), the minstrel's glowing
-  // notes ('note_e', frames n0 and n1; the wildsong's leaf notes and wisps in
-  // 'note_wild_e'), and the icons, which the songs' buffs wear too.
-  for (const look of BARD_LOOKS) {
-    yield;
-    const bf = buildBardFrames(look);
-    register(scene, look.key, pack(bf.map((f) => ({ name: f.key, r: f.canvas.render() })), BARD_W, BARD_H), BARD_W, BARD_H);
-    for (const a of bardAnims(look)) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: bf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
-  }
+  // The bards' glowing notes (the minstrel's ('note_e', frames n0 and n1; the wildsong's leaf notes and wisps in
+  // 'note_wild_e'), and their icons, which the songs' buffs wear too.
   register(scene, 'note', pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, MINSTREL_LOOK)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
   register(scene, 'note_wild', pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, WILD_LOOK)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
   register(scene, 'note_harlequin', pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, HARLEQUIN_LOOK)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
@@ -437,25 +188,8 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_rhythm_howl', toCanvas(16, 16, rhythmIcon(HOWL_DRUM_ICON)));
 
   yield;
-  // Puppeteer once per look: 'puppeteer' and 'puppeteer_porcelain' (the
-  // marionettist), 'weaver' and 'weaver_crimson' (the stringweaver); the
-  // marionettist's puppet like a monster ('puppet', 'puppet_porcelain'), and
-  // the icons.
-  for (const look of PUPPETEER_LOOKS) {
-    yield;
-    const pf = buildPuppeteerFrames(look);
-    register(scene, look.key, pack(pf.map((f) => ({ name: f.key, r: f.canvas.render() })), PUPPETEER_W, PUPPETEER_H), PUPPETEER_W, PUPPETEER_H);
-    for (const a of puppeteerAnims(look)) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: pf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
-  }
+  // The marionettist's puppet, like a monster ('puppet', 'puppet_porcelain'),
+  // and the puppeteers' icons.
   for (const look of PUPPET_LOOKS) registerMonster(scene, look.key, buildPuppetSheet(look));
   scene.textures.addCanvas('icon_puppet', toCanvas(16, 16, puppetStrikeIcon(false)));
   scene.textures.addCanvas('icon_pirouette', toCanvas(16, 16, pirouetteIcon(false)));
@@ -471,24 +205,9 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_marionette_arachne', toCanvas(16, 16, marionetteIcon('#fbffe8', '#e0ff9a', '#a8e040')));
 
   yield;
-  // Chronomancer once per look: 'chrono' (the timekeeper), 'chrono_moon',
-  // 'chrono_rift' (the paradox) and 'chrono_aeon', each with its own bolts
-  // ('<key>_bolt_e', frames b0-b3); the clock over a slowed foe
+  // Each chronomancer look's bolts ('<key>_bolt_e', frames b0-b3); the clock over a slowed foe
   // ('chrono_mark_e', m0-m7, tinted in game); and the icons.
   for (const look of CHRONO_LOOKS) {
-    yield;
-    const cf = buildChronoFrames(look);
-    register(scene, look.key, pack(cf.map((f) => ({ name: f.key, r: f.canvas.render() })), CHRONO_W, CHRONO_H), CHRONO_W, CHRONO_H);
-    for (const a of chronoAnims(look)) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: cf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
     register(scene, `${look.key}_bolt`, pack(frameList(Array.from({ length: BOLT_FRAMES }, (_, i) => boltFrame(i, look)), 'b'), BOLT_SIZE, BOLT_SIZE), BOLT_SIZE, BOLT_SIZE);
   }
   register(scene, 'chrono_mark', pack(frameList(Array.from({ length: MARK_FRAMES }, (_, i) => markFrame(i)), 'm'), MARK_SIZE, MARK_SIZE), MARK_SIZE, MARK_SIZE);
@@ -502,38 +221,12 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   }
 
   yield;
-  // Samurai once per look: 'samurai' (the bladewind), 'samurai_oni', 'ronin'
-  // and 'ronin_sakura'; they share the rig, so the blade meta is the same for
-  // all. The spin plays a whole turn starting from whichever way he faces.
   // The ronin's cuts over a marked foe are 'samurai_mark_e' (m1-m3, tinted in game).
-  for (const look of SAMURAI_LOOKS) {
-    yield;
-    const sf = buildSamuraiFrames(look);
-    if (!samuraiMeta.size) sf.forEach((f) => samuraiMeta.set(f.key, f.meta));
-    register(scene, look.key, pack(sf.map((f) => ({ name: f.key, r: f.canvas.render() })), SAMURAI_W, SAMURAI_H), SAMURAI_W, SAMURAI_H);
-    for (const d of DIRS) {
-      for (const a of SAMURAI_ANIMS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: sf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-      const k0 = spinStart(d);
-      scene.anims.create({
-        key: `${look.key}_spin_${d}`,
-        frames: Array.from({ length: SPIN_FRAMES + 1 }, (_, i) => ({ key: look.key, frame: `spin_${(k0 + i) % SPIN_FRAMES}` })),
-        frameRate: SPIN_FPS,
-        repeat: 0,
-      });
-    }
-  }
   const marks = document.createElement('canvas');
   marks.width = 33;
   marks.height = 7;
   for (let n = 1; n <= 3; n++) marks.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(cutMark(n)), 11, 7), (n - 1) * 11, 0);
-  const markTex = scene.textures.addCanvas('samurai_mark_e', marks)!;
+  const markTex = scene.textures.addCanvas('samurai_mark_e', bakedCanvas(marks))!;
   for (let n = 1; n <= 3; n++) markTex.add(`m${n}`, 0, (n - 1) * 11, 0, 11, 7);
   scene.textures.addCanvas('icon_katana', toCanvas(16, 16, katanaIcon('#f0f6ff', '#8e9ab4', ['#f4ffff', '#bff4ff', '#6fd4f0', '#2a86b8'])));
   scene.textures.addCanvas('icon_windblade', toCanvas(16, 16, dashIcon(['#f4ffff', '#bff4ff', '#6fd4f0', '#2a86b8'], '#f0f6ff')));
@@ -637,7 +330,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_quake', toCanvas(16, 16, quakeIcon()));
   scene.textures.addCanvas('icon_barrage', toCanvas(16, 16, barrageIcon([hex('#fffbe8'), hex('#ffd66b'), hex('#ff8a36'), hex('#d8402a')])));
   registerMoreSkinIcons((key, px) => scene.textures.addCanvas(key, toCanvas(16, 16, px)));
-  // The Druid's and the Valkyrie's buttons (their figures are wizard and warrior looks, built above).
+  // The Druid's and the Valkyrie's buttons (their figures are wizard and warrior looks, see heroSheets.ts).
   // Companions: one sheet of every frame ('pets', lit), a looping animation each ('pet_<id>'),
   // and the Wishing Nest's egg with the cracks that spread across it.
   register(scene, 'pets', pack(petFrames().map((f) => ({ name: f.name, r: f.canvas.render() })), PET_W, PET_H), PET_W, PET_H);
@@ -670,39 +363,9 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_spear_raven', toCanvas(16, 16, spearIcon(true, RAVEN_INK, RAVEN_TONES)));
   scene.textures.addCanvas('icon_dive_raven', toCanvas(16, 16, diveIcon(RAVEN_TONES)));
 
-  // The Automaton: the Siege Mech ('mech', and 'mech_scrap' for the Scrap
-  // Titan) and the Synth ('synth', 'synth_hive' for the Hive Queen), each
-  // with its icons; the Synth's drones hover on a loop ('drone_spin',
+  // The Automaton's icons; the Synth's drones hover on a loop ('drone_spin',
   // 'drone_hive_spin').
-  for (const look of MECH_LOOKS) {
-    yield;
-    const mf = buildMechFrames(look);
-    register(scene, look.key, pack(mf.map((f) => ({ name: f.key, r: f.canvas.render() })), MECH_W, MECH_H), MECH_W, MECH_H);
-    for (const a of MECH_ANIMS) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: mf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
-  }
   for (const look of SYNTH_LOOKS) {
-    yield;
-    const sf = buildSynthFrames(look);
-    register(scene, look.key, pack(sf.map((f) => ({ name: f.key, r: f.canvas.render() })), SYNTH_W, SYNTH_H), SYNTH_W, SYNTH_H);
-    for (const a of SYNTH_ANIMS) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${a.name}_${d}`,
-          frames: sf.filter((f) => f.anim === a.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
-      }
-    }
     const dk = look.hive ? 'drone_hive' : 'drone';
     register(scene, dk, pack(frameList(Array.from({ length: DRONE_FRAMES }, (_, f) => droneFrame(f, look.hive)), 'd'), DRONE_SIZE, DRONE_SIZE), DRONE_SIZE, DRONE_SIZE);
     scene.anims.create({ key: `${dk}_spin`, frames: Array.from({ length: DRONE_FRAMES }, (_, f) => ({ key: dk, frame: `d${f}` })), frameRate: look.hive ? 24 : 16, repeat: -1 });
@@ -711,41 +374,9 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   const bolts = (['shell', 'nail', 'missile', 'rocket'] as const).flatMap((k) => frameList(Array.from({ length: BOLT_DIRS }, (_, i) => mechBolt(k, i)), `${k}_`));
   register(scene, 'mech_bolt', pack(bolts, MECH_BOLT_SIZE, MECH_BOLT_SIZE), MECH_BOLT_SIZE, MECH_BOLT_SIZE);
   scene.textures.addCanvas('mech_reticle', toCanvas(13, 13, reticle()));
-  // The Phantom: the Poltergeist ('polter', and 'polter_tea' for the Tea
-  // Party) and the Lantern Wraith ('wraith', 'wraith_cala' for the Calavera);
-  // the haunted things thrown ('haunt', by kind), the wisps ('soulwisp' and
+  // The Phantom's haunted things thrown ('haunt', by kind), the wisps ('soulwisp' and
   // 'soulwisp_petal', flickering on a loop), the possession marks, the Dead of
   // Night's dark, and the icons.
-  for (const look of POLTER_LOOKS) {
-    yield;
-    const pf = buildPolterFrames(look);
-    register(scene, look.key, pack(pf.map((f) => ({ name: f.key, r: f.canvas.render() })), POLTER_W, POLTER_H), POLTER_W, POLTER_H);
-    for (const an of POLTER_ANIMS) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${an.name}_${d}`,
-          frames: pf.filter((f) => f.anim === an.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: an.fps,
-          repeat: an.loop ? -1 : 0,
-        });
-      }
-    }
-  }
-  for (const look of WRAITH_LOOKS) {
-    yield;
-    const wf = buildWraithFrames(look);
-    register(scene, look.key, pack(wf.map((f) => ({ name: f.key, r: f.canvas.render() })), WRAITH_W, WRAITH_H), WRAITH_W, WRAITH_H);
-    for (const an of WRAITH_ANIMS) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${an.name}_${d}`,
-          frames: wf.filter((f) => f.anim === an.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: an.fps,
-          repeat: an.loop ? -1 : 0,
-        });
-      }
-    }
-  }
   register(scene, 'haunt', pack(HAUNT_KINDS.map((k) => ({ name: k, r: hauntFrame(k).render() })), HAUNT_SIZE, HAUNT_SIZE), HAUNT_SIZE, HAUNT_SIZE);
   for (const [key, petal] of [['soulwisp', false], ['soulwisp_petal', true]] as const) {
     register(scene, key, pack(frameList(Array.from({ length: WISP_FRAMES }, (_, f) => wispFrame(f, petal)), 'w'), WISP_SIZE, WISP_SIZE), WISP_SIZE, WISP_SIZE);
@@ -761,24 +392,9 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_possess', toCanvas(16, 16, possessIcon()));
   scene.textures.addCanvas('icon_lantern_cala', toCanvas(16, 16, lanternIcon(true)));
   scene.textures.addCanvas('icon_possess_cala', toCanvas(16, 16, possessIcon(true)));
-  // The Inventor: the Engineer ('engineer') and the Scientist ('scientist',
-  // 'scientist_einstein' for Einstein); the Engineer's turret ('turret':
-  // unfolding 'b0'..'b4', turned 'h0'..'h7' and firing 'f0'..'f7'), and the icons.
-  for (const look of INVENTOR_LOOKS) {
-    yield;
-    const vf = buildInventorFrames(look);
-    register(scene, look.key, pack(vf.map((f) => ({ name: f.key, r: f.canvas.render() })), INV_W, INV_H), INV_W, INV_H);
-    for (const an of inventorAnims(look)) {
-      for (const d of DIRS) {
-        scene.anims.create({
-          key: `${look.key}_${an.name}_${d}`,
-          frames: vf.filter((f) => f.anim === an.name && f.dir === d).map((f) => ({ key: look.key, frame: f.key })),
-          frameRate: an.fps,
-          repeat: an.loop ? -1 : 0,
-        });
-      }
-    }
-  }
+  // The Inventor's turret ('turret': unfolding 'b0'..'b4', turned 'h0'..'h7'
+  // and firing 'f0'..'f7'), and its icons. The Engineer and the Scientist
+  // themselves are hero sheets (see heroSheets.ts).
   const turret = [
     ...Array.from({ length: TURRET_BUILD }, (_, i) => ({ name: `b${i}`, r: turretFrame(2, i / (TURRET_BUILD - 1) * 0.9).render() })),
     ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `h${i}`, r: turretFrame(i).render() })),
@@ -856,32 +472,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   register(scene, 'dummy', pack(frameList([dummyFrame(false), dummyFrame(true)], 'd'), 18, 28), 18, 28, false);
 }
 
-/** The Cosmos Arena's textures being built, a little per call. */
-const cosmosJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
-
-/**
- * Build the Cosmos Arena's backdrop, platform, props and spell textures,
- * spending at most `budget` ms (the arena select warms it up a little each
- * frame; the world finishes it at once). They are kept once built. Returns
- * true when they are all there.
- */
-export function warmCosmos(scene: Phaser.Scene, budget = Infinity): boolean {
-  if (scene.textures.exists('cosmos_streak')) return true;
-  let job = cosmosJobs.get(scene.textures);
-  if (!job) {
-    job = cosmosTextures(scene);
-    cosmosJobs.set(scene.textures, job);
-  }
-  const start = performance.now();
-  while (performance.now() - start < budget) {
-    if (job.next().done) {
-      cosmosJobs.delete(scene.textures);
-      return true;
-    }
-  }
-  return false;
-}
-
+/** The Cosmos Arena: backdrop, platform, props and spells. */
 function* cosmosTextures(scene: Phaser.Scene): Generator<void, void, void> {
   const space = yield* spaceCanvas();
   scene.textures.addCanvas('cosmos_space', toCanvas(COSMOS_W, COSMOS_H, space));
@@ -906,31 +497,7 @@ function* cosmosTextures(scene: Phaser.Scene): Generator<void, void, void> {
   scene.textures.addCanvas('cosmos_streak', toCanvas(40, 3, streak(40)));
 }
 
-/** The Floating Island's textures being built, a little per call. */
-const islandJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
-
-/**
- * Build the Floating Island's sky, island, columns and the sky's moving
- * parts, spending at most `budget` ms (as warmCosmos). Returns true when
- * they are all there.
- */
-export function warmIsland(scene: Phaser.Scene, budget = Infinity): boolean {
-  if (scene.textures.exists('isle_bird')) return true;
-  let job = islandJobs.get(scene.textures);
-  if (!job) {
-    job = islandTextures(scene);
-    islandJobs.set(scene.textures, job);
-  }
-  const start = performance.now();
-  while (performance.now() - start < budget) {
-    if (job.next().done) {
-      islandJobs.delete(scene.textures);
-      return true;
-    }
-  }
-  return false;
-}
-
+/** The Floating Island: sky, island, columns and the sky's moving parts. */
 function* islandTextures(scene: Phaser.Scene): Generator<void, void, void> {
   const sky = yield* skyCanvas();
   scene.textures.addCanvas('isle_sky', toCanvas(ISLE_W, ISLE_H, sky));
@@ -951,31 +518,7 @@ function* islandTextures(scene: Phaser.Scene): Generator<void, void, void> {
   bird.add('b1', 0, 5, 0, 5, 3);
 }
 
-/** The Endless Rift's textures being built, a little per call. */
-const riftJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
-
-/**
- * Build the Endless Rift's textures (the void, the platform, the tears, the
- * shards, drifting rocks and the blessings' icons), spending at most
- * `budget` ms (as warmCosmos). Returns true when they are all there.
- */
-export function warmRift(scene: Phaser.Scene, budget = Infinity): boolean {
-  if (scene.textures.exists('blessing_fortune')) return true;
-  let job = riftJobs.get(scene.textures);
-  if (!job) {
-    job = riftTextures(scene);
-    riftJobs.set(scene.textures, job);
-  }
-  const start = performance.now();
-  while (performance.now() - start < budget) {
-    if (job.next().done) {
-      riftJobs.delete(scene.textures);
-      return true;
-    }
-  }
-  return false;
-}
-
+/** The Endless Rift: the void, the platform, tears, shards, drifting rocks and the blessings' icons. */
 function* riftTextures(scene: Phaser.Scene): Generator<void, void, void> {
   const sky = yield* riftVoidCanvas();
   scene.textures.addCanvas('rift_void', toCanvas(RIFT_W, RIFT_H, sky));
@@ -994,30 +537,7 @@ function* riftTextures(scene: Phaser.Scene): Generator<void, void, void> {
   for (const kind of ['might', 'swift', 'vigor', 'fang', 'ward', 'renew', 'surge', 'fortune'] as BlessingIcon[]) scene.textures.addCanvas(`blessing_${kind}`, toCanvas(16, 16, blessingIcon(kind)));
 }
 
-/** The Spirit Dungeon's textures being built, a little per call. */
-const spiritJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
-
-/**
- * Build the Spirit Dungeon's floor plan, props and spell textures, spending
- * at most `budget` ms (as warmCosmos). Returns true when they are all there.
- */
-export function warmSpirit(scene: Phaser.Scene, budget = Infinity): boolean {
-  if (scene.textures.exists('sd_lane')) return true;
-  let job = spiritJobs.get(scene.textures);
-  if (!job) {
-    job = spiritTextures(scene);
-    spiritJobs.set(scene.textures, job);
-  }
-  const start = performance.now();
-  while (performance.now() - start < budget) {
-    if (job.next().done) {
-      spiritJobs.delete(scene.textures);
-      return true;
-    }
-  }
-  return false;
-}
-
+/** The Spirit Dungeon: floor plan, props and spells. */
 function* spiritTextures(scene: Phaser.Scene): Generator<void, void, void> {
   const art = yield* spiritArt();
   scene.textures.addCanvas('sd_floor', toCanvas(SPIRIT_W, SPIRIT_H, art.diffuse))!.setDataSource(toCanvas(SPIRIT_W, SPIRIT_H, art.normal));
@@ -1040,31 +560,7 @@ function* spiritTextures(scene: Phaser.Scene): Generator<void, void, void> {
   scene.textures.addCanvas('sd_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
 }
 
-/** The Elementinho Temple's textures being built, a little per call. */
-const templeJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
-
-/**
- * Build the Elementinho Temple's floor plan, props, creatures and spell
- * textures, spending at most `budget` ms (as warmCosmos). Returns true when
- * they are all there.
- */
-export function warmTemple(scene: Phaser.Scene, budget = Infinity): boolean {
-  if (scene.textures.exists('et_lane')) return true;
-  let job = templeJobs.get(scene.textures);
-  if (!job) {
-    job = templeTextures(scene);
-    templeJobs.set(scene.textures, job);
-  }
-  const start = performance.now();
-  while (performance.now() - start < budget) {
-    if (job.next().done) {
-      templeJobs.delete(scene.textures);
-      return true;
-    }
-  }
-  return false;
-}
-
+/** The Elementinho Temple: floor plan, props, creatures and spells. */
 function* templeTextures(scene: Phaser.Scene): Generator<void, void, void> {
   const art = yield* templeArt();
   scene.textures.addCanvas('et_floor', toCanvas(TEMPLE_W, TEMPLE_H, art.diffuse))!.setDataSource(toCanvas(TEMPLE_W, TEMPLE_H, art.normal));
@@ -1101,30 +597,7 @@ function* templeTextures(scene: Phaser.Scene): Generator<void, void, void> {
   scene.textures.addCanvas('et_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
 }
 
-/** The Glimmerdeep's textures being built, a little per call. */
-const deepJobs = new WeakMap<Phaser.Textures.TextureManager, Generator<void, void, void>>();
-
-/**
- * Build the Glimmerdeep's cave, props, creatures, its two bosses and their
- * spells, at most `budget` ms at a time; true once everything is there.
- */
-export function warmDeep(scene: Phaser.Scene, budget = Infinity): boolean {
-  if (scene.textures.exists('gd_lane')) return true;
-  let job = deepJobs.get(scene.textures);
-  if (!job) {
-    job = deepTextures(scene);
-    deepJobs.set(scene.textures, job);
-  }
-  const start = performance.now();
-  while (performance.now() - start < budget) {
-    if (job.next().done) {
-      deepJobs.delete(scene.textures);
-      return true;
-    }
-  }
-  return false;
-}
-
+/** The Glimmerdeep: the cave, props, creatures, its two bosses and their spells. */
 function* deepTextures(scene: Phaser.Scene): Generator<void, void, void> {
   const art = yield* deepArt();
   scene.textures.addCanvas('gd_floor', toCanvas(DEEP_W, DEEP_H, art.diffuse))!.setDataSource(toCanvas(DEEP_W, DEEP_H, art.normal));
@@ -1189,6 +662,22 @@ function* deepTextures(scene: Phaser.Scene): Generator<void, void, void> {
   // Last: its presence means everything above is built.
   scene.textures.addCanvas('gd_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
 }
+
+/** The painted arenas' texture sets, each built by one job (see arenaLoader.ts). */
+export type ArenaJob = 'cosmos' | 'island' | 'rift' | 'spirit' | 'temple' | 'deep';
+
+/**
+ * Each set's steps, which yield between pieces, and the texture it makes
+ * last: once that one exists, the whole set does.
+ */
+export const ARENA_JOBS: Record<ArenaJob, { done: string; steps: (scene: Phaser.Scene) => Generator<void, void, void> }> = {
+  cosmos: { done: 'cosmos_streak', steps: cosmosTextures },
+  island: { done: 'isle_bird', steps: islandTextures },
+  rift: { done: 'blessing_fortune', steps: riftTextures },
+  spirit: { done: 'sd_lane', steps: spiritTextures },
+  temple: { done: 'et_lane', steps: templeTextures },
+  deep: { done: 'gd_lane', steps: deepTextures },
+};
 
 /**
  * Build the Rune Temple's textures (the temple outside, the room inside, its

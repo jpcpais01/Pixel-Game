@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { OBELISK_H, OBELISK_OY, PLATFORM_X, PLATFORM_Y, twinkleSpots } from '../art/cosmos';
-import { warmCosmos } from '../art/textures';
+import { warmCosmos } from '../art/arenaLoader';
 import { sky } from '../game/LitPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { settings } from '../game/settings';
