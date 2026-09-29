@@ -45,6 +45,8 @@ const WISP_LIFE = 4000;
 const POSSESS_RANGE = 75;
 const POSSESS_CONE = Math.cos((70 * Math.PI) / 180);
 const POSSESS_MS = 3500;
+/** How often the ridden foe's bind is renewed (it lasts 400 ms, so it never lapses). */
+const BIND_EVERY = 250;
 const POSSESS_DIVE = 220;
 const POSSESS_COOLDOWN = 8000;
 /** Steering the possessed foe, px/s. */
@@ -124,6 +126,8 @@ export class Wraith implements Hero {
   private dive = { x0: 0, y0: 0 };
   private insideT = 0;
   private lashT = 0;
+  /** Until the host's bind is refreshed: kept fresh every so often, not every frame, so online it isn't relayed 60 times a second. */
+  private bindT = 0;
   private mark: Phaser.GameObjects.Image;
   private hostGlow: Phaser.GameObjects.Image;
 
@@ -302,6 +306,7 @@ export class Wraith implements Hero {
     this.state = 'inside';
     this.insideT = POSSESS_MS;
     this.lashT = 0;
+    this.bindT = 0;
     this.mark.setVisible(true);
     this.hostGlow.setVisible(true);
     w.debris(this.kit.pal.tints, h.x, h.y - h.bodyY, 16, h.y + 10, 'gather');
@@ -319,7 +324,11 @@ export class Wraith implements Hero {
       return;
     }
     // Held fast (the bind is kept fresh), and steered where the player pushes.
-    h.bind?.(Math.min(400, this.insideT + 50), 0);
+    this.bindT -= dt;
+    if (this.bindT <= 0) {
+      this.bindT = BIND_EVERY;
+      h.bind?.(Math.min(400, this.insideT + 50), 0);
+    }
     if (len > 0.18 && h.shove) {
       const step = (RIDE_SPEED * Math.min(1, len) * dt) / 1000;
       const nx = h.x + (mx / len) * step;

@@ -6,6 +6,7 @@
 import { hex } from './pixel';
 import {
   barrageIcon,
+  CHAMP_FIST,
   fistIcon,
   GUARDIAN_PALM,
   iconPainter,
@@ -94,6 +95,8 @@ export function gourdIcon(b: BrewColors): Uint8ClampedArray {
 export function registerMoreSkinIcons(add: (key: string, px: Uint8ClampedArray) => void): void {
   add('icon_fist_lucha', fistIcon(LUCHA_FIST));
   add('icon_barrage_lucha', barrageIcon([hex('#fff8e8'), hex('#ffd35c'), hex('#ff4fa0'), hex('#9a1c6a')]));
+  add('icon_fist_champ', fistIcon(CHAMP_FIST));
+  add('icon_barrage_champ', barrageIcon([hex('#f8ffe8'), hex('#9cff5a'), hex('#ff8a2a'), hex('#1c7a1a')]));
   add('icon_palm_guardian', palmIcon(GUARDIAN_PALM));
   add('icon_quake_guardian', quakeIcon(GUARDIAN_PALM));
 }

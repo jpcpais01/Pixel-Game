@@ -55,6 +55,21 @@ export const skybreakerIcon: IconPainter = (put, p) => {
   for (const [x, y] of [[3, 7], [13, 7], [2, 11], [14, 11]]) put(x, y, p.deep);
 };
 
+/** The Crown of Kings: a great crown standing on a ring of light, a pillar rising from its middle point. */
+export const kingsCrownIcon: IconPainter = (put, p) => {
+  ellipse(put, 8, 13, 7, 2.2, 0.22, p.mid);
+  for (let x = 2; x <= 13; x++) {
+    put(x, 11, p.hot);
+    put(x, 10, p.mid);
+    put(x, 9, x === 7 || x === 8 ? p.core : p.hot);
+  }
+  for (const [x, h] of [[2, 4], [5, 3], [7, 5], [8, 5], [10, 3], [13, 4]] as const) for (let i = 1; i <= h; i++) put(x, 9 - i, i === h ? p.core : p.hot);
+  for (let y = 0; y <= 2; y++) {
+    put(7, y, p.deep);
+    put(8, y, p.deep);
+  }
+};
+
 export const heavensLightIcon: IconPainter = (put, p) => {
   for (let y = 0; y <= 12; y++) for (let x = 5; x <= 10; x++) put(x, y, x === 7 || x === 8 ? p.core : x === 6 || x === 9 ? p.hot : p.mid);
   ellipse(put, 8, 12.5, 7, 2.4, 0.2, p.hot);

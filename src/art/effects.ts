@@ -837,6 +837,9 @@ const RED_GLOVE: FistColors = { glove: ['#ff8c66', '#ea4838', '#bd262c', '#7a142
 /** The luchador's: a white-taped fist, a gold wristband, pink streaks. */
 export const LUCHA_FIST: FistColors = { glove: ['#ffffff', '#e0e0ee', '#a2a2c0', '#5e5e7c'], shine: '#ffffff', wrist: ['#fff6c0', '#ffd458', '#8e5a12'], lines: ['#fff0f8', '#ff80b8'] };
 
+/** The champ's: a bare fist, a lime sweatband, lime and orange streaks. */
+export const CHAMP_FIST: FistColors = { glove: ['#ffd8b0', '#eaa878', '#c07a52', '#7a4630'], shine: '#fff0e0', wrist: ['#b0ff86', '#5ada3e', '#186418'], lines: ['#f2ffe4', '#ff8a2a'] };
+
 /** 16x16 red glove for the fighter's attack button: a clenched fist over a taped wrist, speed lines behind it. */
 export function fistIcon(k: FistColors = RED_GLOVE): Uint8ClampedArray {
   const S = 16;
