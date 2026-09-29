@@ -363,6 +363,12 @@ export class Mech implements Hero {
   }
 
   private updateSiege(dt: number): void {
+    // Struck down mid-siege: the guns fall silent with it, not fire on unseen.
+    if (this.world.heroDown) {
+      this.siegeT = 0;
+      this.state = 'free';
+      return;
+    }
     this.siegeT -= dt;
     const u = this.siegeAim();
     const dir = dirOf(u.x, u.y);

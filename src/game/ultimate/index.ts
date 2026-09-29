@@ -510,7 +510,7 @@ export class UltCaster {
     if (pend) {
       pend.left -= dt;
       const key = this.hero.sprite.anims.currentAnim?.key ?? '';
-      if (/_(idle|walk)_/.test(key)) {
+      if (/_(idle|walk|move)_/.test(key)) {
         this.pending = null;
         this.start(pend.aim, pend.facing);
       } else if (pend.left <= 0) this.pending = null;

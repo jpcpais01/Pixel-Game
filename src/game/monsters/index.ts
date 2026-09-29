@@ -158,7 +158,7 @@ export class Spawner {
         return;
       }
       // Health: the host's, unless a blow landed here a moment ago and the host hasn't counted it yet.
-      if (this.world.time.now - m.lastHitAt > 450 || e[3] < m.hp) m.hp = Math.min(m.stats.hp, e[3]);
+      if (this.world.time.now - m.lastHitAt > 450 || e[3] < m.hp) m.hp = Math.min(m.maxHp, e[3]);
     });
   }
 
