@@ -21,6 +21,8 @@ import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT 
 import { schemePal } from '../Blades';
 import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
 import { PrimalStampede, WildWrath } from './druid';
+import { Maelstrom } from './tide';
+import { ABYSS_MAGIC, TIDE_MAGIC } from '../Tide';
 import { AsgardThunder, OdinSpear } from './valkyrie';
 import { KingsCrown } from './king';
 import { AFONSO_KIT, KING_KIT } from '../King';
@@ -66,6 +68,16 @@ const ULTS: Record<string, UltDef> = {
     pal: pal(0xfff8e0, 0xffd66b, 0xff9a2e, 0xd9432b, 0xff9a40),
     icon: icons.infernoIcon,
     cast: (c) => c.world.addEffect(new Inferno(c.world, c)),
+  },
+  'wizard:tide': {
+    name: 'Maelstrom',
+    cost: 70,
+    windup: 600,
+    aim: 'spot',
+    range: 115,
+    pal: TIDE_MAGIC.pal,
+    icon: icons.maelstromIcon,
+    cast: (c) => c.world.addEffect(new Maelstrom(c.world, c.tx, c.ty, c.pal)),
   },
   'warrior:knight': {
     name: 'Skybreaker',
@@ -405,6 +417,7 @@ const SKINS: Record<string, UltSkin> = {
   'samurai:sakura': { name: 'Falling Petals', pal: schemePal(SAKURA_KIT.wind), type: 'ronin' },
   'wizard:astral': { name: 'Supernova', pal: pal(0xfffdf2, 0xfff0a8, 0xffc860, 0x6a5ae0, 0xffe08a) },
   'wizard:hellfire': { name: 'Hellstorm', pal: pal(0xf4ffe8, 0xc8ff7a, 0x5ee83a, 0x1a8a3a, 0x7aff5a), type: 'pyro' },
+  'wizard:abyssal': { name: 'Call of the Deep', pal: ABYSS_MAGIC.pal, type: 'tide' },
   'warrior:spartan': { name: 'Wrath of Ares', pal: pal(0xfff0e8, 0xff9a80, 0xf03a3a, 0x8a0a1a, 0xff6a50) },
   'warrior:afonso': { name: 'Miracle of Ourique', pal: AFONSO_KIT.pal, type: 'king' },
   'paladin:seraph': { name: 'Choir of Angels', pal: pal(0xffffff, 0xfff0d0, 0xffc890, 0xff8ab8, 0xffd8b0) },

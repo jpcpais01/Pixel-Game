@@ -67,6 +67,7 @@ import {
   STAR_MID,
   STAR_ROBE,
 } from './heroSkins';
+import { ABYSS_BONE, ABYSS_DEEP, ABYSS_FIN, ABYSS_HAIR, ABYSS_HOT, ABYSS_INNER, ABYSS_MID, ABYSS_CORE, ABYSS_ROBE, ABYSS_SKIN, CORAL, DRIFTWOOD, FOAM, LURE, PEARL, SEA_HAIR, SHELL, TIDE_CORE, TIDE_DEEP, TIDE_HOT, TIDE_INNER, TIDE_MID, TIDE_ROBE } from './tide';
 import { ANTLER, AMBER, AUBURN, AUTUMN_LEAF, AUTUMN_ROBE, BARE_ANTLER, BARK, EMBER_SEED, FANG, FROST_HAIR, FROST_HIDE, FROST_TUNIC, FROST_WOOD, HIDE, ICE, ICE_FANG, LEAF, LIVEWOOD, MOSS, MUZZLE, PELT, SEED, SNOW_PELT, TUNIC, WOAD, WOLF_NOSE, AUTUMN_CORE, AUTUMN_DEEP, AUTUMN_HOT, AUTUMN_MID, FROST_CORE, FROST_DEEP, FROST_HOT, FROST_MID, GROVE_CORE, GROVE_DEEP, GROVE_HOT, GROVE_MID, WILD_CORE, WILD_DEEP, WILD_HOT, WILD_MID } from './druid';
 
 // ---------------------------------------------------------------------------
@@ -108,10 +109,20 @@ export interface WizardLook {
    * 'wild': the Druid's Shapeshifter, a wolf's pelt worn as a hood (its head
    * over her brow, its eyes still burning), a fur mantle, woad on the cheeks,
    * a ragged hide robe and a staff hung with fangs round a lump of amber.
+   * 'tide': the Tidecaller, long sea-green hair drifting as if under water, a
+   * crown of coral, a collar of scallop shells, a hem breaking in foam,
+   * bubbles rising round her, and a driftwood staff whose coral tines cradle
+   * a pearl.
    */
-  head?: 'astral' | 'fiend' | 'grove' | 'wild';
+  head?: 'astral' | 'fiend' | 'grove' | 'wild' | 'tide';
   /** Hair of the bare heads. */
   hair?: Material;
+  /** The Tidecaller's crown and staff tines. */
+  coral?: Material;
+  /** The Tidecaller's collar of shells. */
+  shell?: Material;
+  /** The Tidecaller's Abyssal skin: an anglerfish's lure in place of the crown, eyes that glow, and living light on the robe. */
+  lure?: boolean;
 }
 
 export const ARCANE_LOOK: WizardLook = {
@@ -253,7 +264,44 @@ export const FROST_LOOK: WizardLook = {
   magic: { core: FROST_CORE, hot: FROST_HOT, mid: FROST_MID, deep: FROST_DEEP },
 };
 
-export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK, AUTUMN_LOOK, FROST_LOOK];
+/** The Tidecaller: a sea sorceress in the blues of the open water, crowned with coral. */
+export const TIDE_LOOK: WizardLook = {
+  key: 'wizard_tide',
+  robe: TIDE_ROBE,
+  inner: TIDE_INNER,
+  trim: FOAM,
+  belt: TIDE_INNER,
+  boot: BOOT,
+  skin: SKIN,
+  shaft: DRIFTWOOD,
+  crystal: PEARL,
+  magic: { core: TIDE_CORE, hot: TIDE_HOT, mid: TIDE_MID, deep: TIDE_DEEP },
+  hooded: false,
+  head: 'tide',
+  hair: SEA_HAIR,
+  coral: CORAL,
+  shell: SHELL,
+};
+
+/** The Tidecaller's Abyssal skin: a witch of the trench, lit by her own lure. */
+export const ABYSS_LOOK: WizardLook = {
+  ...TIDE_LOOK,
+  key: 'wizard_abyss',
+  robe: ABYSS_ROBE,
+  inner: ABYSS_INNER,
+  trim: ABYSS_FIN,
+  belt: ABYSS_INNER,
+  skin: ABYSS_SKIN,
+  shaft: ABYSS_BONE,
+  crystal: LURE,
+  magic: { core: ABYSS_CORE, hot: ABYSS_HOT, mid: ABYSS_MID, deep: ABYSS_DEEP },
+  hair: ABYSS_HAIR,
+  coral: ABYSS_BONE,
+  shell: ABYSS_FIN,
+  lure: true,
+};
+
+export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK, AUTUMN_LOOK, FROST_LOOK, TIDE_LOOK, ABYSS_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let S: WizardLook = ARCANE_LOOK;
@@ -418,6 +466,30 @@ function drawStaff(c: PixelCanvas, s: Staff, glow: number): { x: number; y: numb
     const f1 = at(1.9, -3.6);
     c.line(f0.x, f0.y, f1.x, f1.y, S.inner, () => ({ x: 0.3, y: 0.2, z: 0.93 }));
     c.px(f1.x, f1.y, S.trim, { x: 0.2, y: -0.2, z: 0.95 });
+  } else if (S.head === 'tide') {
+    // Two coral tines curve up round the pearl, a short branch off each; the
+    // Abyssal's are bone, and a lure's bulb hangs from a thread below the orb.
+    const px = -g.dy;
+    const py = g.dx;
+    const at = (side: number, up: number) => ({ x: g.top.x + px * side + g.dx * up, y: g.top.y + py * side + g.dy * up });
+    const coral = S.coral ?? S.trim;
+    for (const k of [-1, 1]) {
+      c.part();
+      const a0 = at(k * 0.7, 0.1);
+      const a1 = at(k * 2.4, 1.6);
+      const a2 = at(k * 2.3, 3.6);
+      const a3 = at(k * 1.4, 4.9);
+      c.capsule(a0.x, a0.y, a1.x, a1.y, 0.62, 0.52, coral, { bias: 1 });
+      c.capsule(a1.x, a1.y, a2.x, a2.y, 0.52, 0.42, coral);
+      c.capsule(a2.x, a2.y, a3.x, a3.y, 0.42, 0.28, coral, { bias: 1 });
+      c.part();
+      const nub = at(k * 3.6, 2.9);
+      c.px(nub.x, nub.y, coral, { x: k * 0.5 - 0.2, y: 0.5, z: 0.75 }, { bias: 1 });
+    }
+    // A small shell bound where the tines meet the wood.
+    c.part();
+    const sh = at(0, -0.9);
+    c.ellipse(sh.x, sh.y, 1.2, 1.0, S.shell ?? S.trim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.2, 1) });
   } else if (s.float > 0) {
     // Fork cradling the crystal.
     const px = -g.dy;
@@ -536,6 +608,19 @@ function hemTrim(c: PixelCanvas, edges: (y: number) => [number, number], hem: nu
       const k = (((x - Math.round(sway)) % 3) + 3) % 3;
       if (k === 0) c.px(x, hem + 1, S.trim, cyl(0, -0.3));
       else if (k === 2) c.shade(x, hem, -1);
+    }
+    return;
+  }
+  if (S.head === 'tide') {
+    // The hem breaks in waves: a band of foam with crests curling up off it
+    // every few pixels, drifting with the sway so the water seems to roll.
+    c.part();
+    c.shape(hem, hem, () => [l, r], S.trim, (_x, _y, t) => cyl(t, -0.1));
+    for (let x = Math.round(l) + 1; x <= Math.round(r) - 2; x++) {
+      const k = (((x - Math.round(sway)) % 4) + 4) % 4;
+      if (k === 0) c.px(x, hem - 1, S.trim, cyl(0, 0.5), { bias: 1 });
+      else if (k === 1) c.px(x, hem - 1, S.trim, cyl(0, 0.2));
+      else if (k === 3) c.shade(x, hem, -1);
     }
     return;
   }
@@ -1479,11 +1564,210 @@ function wildHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   wolfEyes(c, [[cx - 2, 9 + U]], p);
 }
 
+// ---------------------------------------------------------------------------
+// Heads: the Tidecaller's drifting hair, coral crown and shell collar
+
+/** A collar of scallop shells over the shoulders, ridged, the middle two a little higher. */
+function shellCollar(c: PixelCanvas, xs: number[], U: number): void {
+  const m = S.shell ?? S.trim;
+  xs.forEach((x, i) => {
+    const mid = i > 0 && i < xs.length - 1;
+    const y = (mid ? 16.2 : 16.8) + U;
+    c.part();
+    c.ellipse(x, y, 1.7, 1.35, m, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.7 - 0.25, 1) });
+    // Ridges fanning down from the hinge.
+    c.shade(Math.floor(x), Math.floor(y) + 1, -1);
+  });
+}
+
+/** Coral branching up from a band across the brow, a pearl set at its heart; or, on the Abyssal, a lure. */
+function coralCrown(c: PixelCanvas, pts: [number, number][], band: [number, number, number], pearl: [number, number], p: Pose): void {
+  const m = S.coral ?? S.trim;
+  c.part();
+  c.shape(band[2], band[2], () => [band[0], band[1]], m, (_x, _y, t) => cyl(t, 0.2));
+  c.part();
+  for (const [x, y] of pts) c.px(x, y, m, { x: -0.3, y: 0.5, z: 0.8 }, { bias: (x + y) & 1 ? 1 : 0 });
+  c.part();
+  c.px(pearl[0], pearl[1], S.crystal, { x: -0.3, y: 0.4, z: 0.86 });
+  c.spark(pearl[0], pearl[1], S.magic.hot, 0.45 + p.glow * 0.3);
+}
+
+/** The anglerfish's lure: a stalk from the crown of the head, bent over, and a bulb of cold light swinging from it. */
+function lure(c: PixelCanvas, pts: [number, number][], bulb: [number, number], p: Pose): void {
+  c.part();
+  for (const [x, y] of pts) c.px(x, y, S.inner, { x: -0.2, y: 0.6, z: 0.77 }, { bias: 1 });
+  c.part();
+  const sw = Math.round(p.hat * 0.5);
+  c.ellipse(bulb[0] + sw, bulb[1], 1.25, 1.25, LURE);
+  const k = 0.55 + p.glow * 0.4;
+  c.spark(bulb[0] + sw - 0.5, bulb[1] - 0.5, S.magic.core, k);
+  for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(bulb[0] + sw - 0.5 + ox, bulb[1] - 0.5 + oy, S.magic.mid, k * 0.4);
+}
+
+/** Eyes: plain, or on the Abyssal a cold glow like the lure's. */
+function tideEyes(c: PixelCanvas, pts: [number, number][], p: Pose): void {
+  c.part();
+  if (p.blink) {
+    for (const [x, y] of pts) c.px(x, y, S.skin, FLAT_DOWN, { bias: -1 });
+    return;
+  }
+  for (const [x, y] of pts) {
+    if (S.lure) {
+      c.px(x, y, LURE, { x: 0, y: 0, z: 1 });
+      c.spark(x, y, S.magic.hot, 0.3);
+    } else c.px(x, y, EYE);
+  }
+}
+
+function tideHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  // Long hair behind the face, drifting outward below the shoulders as if under water.
+  c.part();
+  c.shape(10 + U, 20 + U, (y) => {
+    const u = (y - 10 - U) / 10;
+    const hw = 4.3 + Math.max(0, u - 0.45) * 2.2;
+    const x = cx + Math.sin(u * 3.2 + p.hem * 0.6) * u * 0.9;
+    return [x - hw, x + hw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.3, 0.9));
+  for (let y = 16; y <= 20; y++) {
+    c.shade(7 + ((y + Math.round(p.hem)) & 1), y + U, -1);
+    c.shade(16 - ((y + Math.round(p.hem)) & 1), y + U, -1);
+  }
+  shellCollar(c, [cx - 4.6, cx - 1.6, cx + 1.6, cx + 4.6], U);
+  // Face.
+  c.part();
+  c.ellipse(cx, 13.4 + U, 3.1, 2.7, S.skin);
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
+  c.shade(12, 15 + U, -1);
+  tideEyes(c, [[10, 13 + U], [13, 13 + U]], p);
+  // Crown of the head, the fringe swept aside, wavy locks framing the face.
+  c.part();
+  c.ellipse(cx, 10.6 + U, 3.9, 2.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.5, 1) });
+  c.shade(cx - 1, 10 + U, -1);
+  c.shade(cx, 11 + U, 1);
+  for (let y = 12; y <= 18; y++) {
+    const w = (y + Math.round(p.hem)) % 3 === 0 ? 1 : 0;
+    c.px(8 - w, y + U, hair, cyl(-0.7, 0.1), { bias: y > 15 ? -1 : 0 });
+    c.px(15 + w, y + U, hair, cyl(0.7, 0.1), { bias: y > 15 ? -1 : 0 });
+  }
+  if (S.lure) lure(c, [[12, 8 + U], [12, 7 + U], [12, 6 + U], [11, 5 + U], [10, 4 + U], [9, 4 + U], [8, 5 + U]], [8, 7 + U], p);
+  else
+    coralCrown(
+      c,
+      [[9, 9 + U], [9, 8 + U], [8, 7 + U], [10, 7 + U], [11, 9 + U], [11, 8 + U], [11, 7 + U], [11, 6 + U], [12, 9 + U], [12, 8 + U], [12, 7 + U], [12, 6 + U], [12, 5 + U], [13, 6 + U], [14, 9 + U], [14, 8 + U], [15, 7 + U]],
+      [cx - 3.4, cx + 3.4, 10 + U],
+      [11, 10 + U],
+      p,
+    );
+}
+
+function tideHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  shellCollar(c, [cx - 4.6, cx - 1.6, cx + 1.6, cx + 4.6], U);
+  c.part();
+  c.ellipse(cx, 11.8 + U, 4.0, 3.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 0.9) });
+  // The hair falls down the back and fans out, drifting.
+  c.part();
+  c.shape(13 + U, 22 + U, (y) => {
+    const u = (y - 13 - U) / 9;
+    const hw = 3.9 + Math.max(0, u - 0.4) * 1.8;
+    const x = cx - p.hem * u * 0.5 + Math.sin(u * 3.4 + p.hem * 0.6) * u * 0.9;
+    return [x - hw, x + hw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.85, u * 0.7, 0.9));
+  for (let y = 13; y <= 22; y++) {
+    const w = Math.round(Math.sin((y - 13) * 0.7 + p.hem) * 0.8);
+    c.shade(cx - 2 + w, y + U, -1);
+    c.shade(cx + 1 + w, y + U, -1);
+  }
+  if (S.lure) {
+    lure(c, [[12, 8 + U], [12, 7 + U], [12, 6 + U], [13, 5 + U], [14, 4 + U], [15, 4 + U], [16, 5 + U]], [16, 7 + U], p);
+  } else {
+    // The coral seen from behind: the same branches, the band round the back of the head.
+    const m = S.coral ?? S.trim;
+    c.part();
+    c.shape(10 + U, 10 + U, () => [cx - 3.8, cx + 3.8], m, (_x, _y, t) => cyl(t, 0.1));
+    c.part();
+    for (const [x, y] of [[9, 9], [9, 8], [8, 7], [11, 9], [11, 8], [11, 7], [11, 6], [12, 9], [12, 8], [12, 7], [12, 6], [12, 5], [10, 7], [13, 6], [14, 9], [14, 8], [15, 7]] as [number, number][]) {
+      c.px(x, y + U, m, { x: -0.3, y: 0.5, z: 0.8 }, { bias: -((x + y) & 1) });
+    }
+  }
+}
+
+/** Facing left, like drawSide. */
+function tideHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  // Hair behind, falling long down the back and drifting out behind her.
+  c.part();
+  c.ellipse(cx + 0.8, 12.4 + U, 3.4, 3.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9) });
+  c.part();
+  c.shape(13 + U, 21 + U, (y) => {
+    const u = (y - 13 - U) / 8;
+    const drift = p.hem * u * 0.5 + Math.sin(u * 3.2 + p.hem * 0.6) * u * 1.1 + u * 1.2;
+    return [cx - 0.4 + u * 0.6 + drift, cx + 3.6 + drift];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.8 + 0.1, u * 0.7, 0.9));
+  c.shade(cx + 2, 16 + U, -1);
+  c.shade(cx + 3, 19 + U, -1);
+  shellCollar(c, [cx - 1.8, cx + 1.4], U);
+  // Face in profile.
+  c.part();
+  c.ellipse(cx - 1.3, 13.5 + U, 2.8, 2.5, S.skin);
+  c.part();
+  c.px(cx - 5, 13 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(cx - 5, 14 + U, S.skin, sphere(-0.5, 0.3));
+  tideEyes(c, [[cx - 3, 13 + U]], p);
+  // Crown of the head and fringe, a lock falling by the cheek.
+  c.part();
+  c.shape(9 + U, 10 + U, (y) => (y === 9 + U ? [cx - 3.2, cx + 2.8] : [cx - 4.4, cx + 3.6]), hair, (_x, _y, t, u) => sphere(t * 0.9, u - 0.8, 1));
+  c.px(cx - 5, 11 + U, hair, cyl(-0.7, 0.2));
+  c.px(cx, 14 + U, hair, cyl(-0.2, 0), { bias: -1 });
+  c.px(cx, 15 + U, hair, cyl(-0.2, 0), { bias: -1 });
+  if (S.lure) {
+    // The stalk arches forward over the brow; the bulb hangs before her face, like the fish's.
+    lure(c, [[cx, 8 + U], [cx - 1, 7 + U], [cx - 1, 6 + U], [cx - 2, 5 + U], [cx - 3, 4 + U], [cx - 4, 4 + U], [cx - 5, 4 + U], [cx - 6, 5 + U]], [cx - 6, 7 + U], p);
+  } else {
+    coralCrown(
+      c,
+      [[cx - 3, 8 + U], [cx - 4, 7 + U], [cx - 1, 8 + U], [cx - 1, 7 + U], [cx - 1, 6 + U], [cx - 2, 5 + U], [cx, 6 + U], [cx + 1, 8 + U], [cx + 2, 7 + U]],
+      [cx - 4.4, cx + 2.2, 9 + U],
+      [cx - 4, 9 + U],
+      p,
+    );
+  }
+}
+
+/** Bubbles rising round the Tidecaller; on the Abyssal, spots of living light on the robe as well. */
+function tideFlecks(c: PixelCanvas, U: number, p: Pose): void {
+  if (S.lure) {
+    for (let y = 17; y < FRAME_H; y++) {
+      for (let x = 0; x < FRAME_W; x++) {
+        if (c.materialAt(x, y) !== S.robe) continue;
+        const h = hash(x, y - U, 31);
+        if (h > 0.955) c.spark(x, y, S.magic.hot, 0.55);
+        else if (h > 0.93) c.spark(x, y, S.magic.deep, 0.45);
+      }
+    }
+  }
+  const ph = p.glow * 5 + p.staff.float * 2 + p.breath * 1.1 + p.hem * 0.7;
+  const spots: [number, number][] = [[3, 27], [20.5, 26], [5, 20], [19, 18]];
+  spots.forEach(([x, y], i) => {
+    // Each bubble rises and wobbles, then starts again from its spot.
+    const rise = ((ph * 1.6 + i * 2.3) % 6 + 6) % 6;
+    const bx = x + Math.sin(ph * 2 + i * 1.9) * 0.8;
+    const by = y - rise * 1.4;
+    const a = 0.55 * (1 - rise / 6) + 0.15;
+    c.spark(bx, by, S.magic.hot, a);
+    if (i < 2) c.spark(bx + 1, by - 1, S.magic.core, a * 0.45);
+  });
+}
+
 function headDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   if (S.head === 'astral') astralHeadDown(c, cx, U, p);
   else if (S.head === 'fiend') fiendHeadDown(c, cx, U, p);
   else if (S.head === 'grove') groveHeadDown(c, cx, U, p);
   else if (S.head === 'wild') wildHeadDown(c, cx, U, p);
+  else if (S.head === 'tide') tideHeadDown(c, cx, U, p);
   else if (S.hooded) hoodDown(c, cx, U, p);
   else beardedHeadDown(c, cx, U, p);
 }
@@ -1493,6 +1777,7 @@ function headUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   else if (S.head === 'fiend') fiendHeadUp(c, cx, U, p);
   else if (S.head === 'grove') groveHeadUp(c, cx, U, p);
   else if (S.head === 'wild') wildHeadUp(c, cx, U, p);
+  else if (S.head === 'tide') tideHeadUp(c, cx, U, p);
   else if (S.hooded) hoodUp(c, cx, U, p);
   else beardedHeadUp(c, cx, U, p);
 }
@@ -1502,6 +1787,7 @@ function headSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   else if (S.head === 'fiend') fiendHeadSide(c, cx, U, p);
   else if (S.head === 'grove') groveHeadSide(c, cx, U, p);
   else if (S.head === 'wild') wildHeadSide(c, cx, U, p);
+  else if (S.head === 'tide') tideHeadSide(c, cx, U, p);
   else if (S.hooded) hoodSide(c, cx, U, p);
   else beardedHeadSide(c, cx, U, p);
 }
@@ -1555,6 +1841,7 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
 
   if (S.head === 'astral') starfield(c, U);
   if (S.head === 'grove') groveFlecks(c, U, p);
+  if (S.head === 'tide') tideFlecks(c, U, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -1593,6 +1880,7 @@ function drawUp(c: PixelCanvas, p: Pose): FrameMeta {
 
   if (S.head === 'astral') starfield(c, U);
   if (S.head === 'grove') groveFlecks(c, U, p);
+  if (S.head === 'tide') tideFlecks(c, U, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -1646,6 +1934,7 @@ function drawSide(c: PixelCanvas, p: Pose): FrameMeta {
 
   if (S.head === 'astral') starfield(c, U);
   if (S.head === 'grove') groveFlecks(c, U, p);
+  if (S.head === 'tide') tideFlecks(c, U, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }

@@ -13,6 +13,7 @@ import type Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
 import { ARCANE_SKIN, ASTRAL_SKIN, VOID_SKIN, Wizard } from './Wizard';
 import { EMBER_FIRE, HELL_FIRE, HELL_SKIN, PYRO_SKIN, Pyromancy } from './Pyro';
+import { ABYSS_MAGIC, ABYSS_SKIN, TIDE_MAGIC, TIDE_SKIN, Tidecraft } from './Tide';
 import { JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
 import { AFONSO_KIT, King, KING_KIT } from './King';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
@@ -256,6 +257,37 @@ export const CLASSES: ClassDef[] = [
           },
         ],
       },
+      {
+        // A sea sorceress: bolts that splash foes back, and a charged tidal wave that carries them away.
+        id: 'tide',
+        name: 'Tidecaller',
+        role: 'Waves and currents',
+        accent: 0x4ad8f0,
+        attack: 'Water bolt',
+        special: 'Tidal wave',
+        preview: { texture: 'wizard_tide', glow: 'wizard_tide_e', idle: 'wizard_tide_idle_down', chosen: 'wizard_tide_cast_down' },
+        buttons: {
+          attack: { texture: 'orb_tide_e', frame: 'o0', anim: 'orb_tide_spin' },
+          special: { texture: 'icon_wave' },
+        },
+        lookName: 'Coral',
+        skins: [
+          {
+            // A witch of the trench: black robes lit with living light, pale skin, and an anglerfish's lure over her brow.
+            id: 'abyssal',
+            name: 'Abyssal',
+            role: 'Witch of the deep',
+            accent: 0x3ae0d0,
+            attack: 'Abyss bolt',
+            special: 'Black tide',
+            preview: { texture: 'wizard_abyss', glow: 'wizard_abyss_e', idle: 'wizard_abyss_idle_down', chosen: 'wizard_abyss_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_abyss_e', frame: 'o0', anim: 'orb_abyss_spin' },
+              special: { texture: 'icon_wave_abyss' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
       if (look === 'pyro' || look === 'hellfire') {
@@ -276,6 +308,24 @@ export const CLASSES: ClassDef[] = [
         );
         fire.caster = w;
         world.addEffect(fire);
+        return w;
+      }
+      if (look === 'tide' || look === 'abyssal') {
+        // Bolts that splash and throw back; a charged tidal wave that rolls out and carries foes away.
+        const abyss = look === 'abyssal';
+        const craft = new Tidecraft(world, abyss ? ABYSS_MAGIC : TIDE_MAGIC);
+        const w = new Wizard(
+          world,
+          x,
+          y,
+          {
+            cast: (x, y, dx, dy) => craft.bolt(x, y, dx, dy),
+            beam: (_x, _y, dx, dy, power) => craft.wave(dx, dy, power),
+          },
+          abyss ? ABYSS_SKIN : TIDE_SKIN,
+        );
+        craft.caster = w;
+        world.addEffect(craft);
         return w;
       }
       const skin = look === 'void' ? VOID_SKIN : look === 'astral' ? ASTRAL_SKIN : ARCANE_SKIN;

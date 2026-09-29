@@ -459,3 +459,20 @@ export const chainReactionIcon: IconPainter = (put, p) => {
   put(4, 3, p.hot);
   put(5, 13, p.hot);
 };
+
+export const maelstromIcon: IconPainter = (put, p) => {
+  // A whirlpool seen at a slant, its arms spiralling in, and a spout bursting from its eye.
+  for (let arm = 0; arm < 3; arm++) {
+    for (let k = 0; k <= 18; k++) {
+      const f = k / 18;
+      const a = (arm * Math.PI * 2) / 3 + f * 4.2;
+      const r = 7.2 * (1 - f) + 0.8;
+      put(Math.round(8 + Math.cos(a) * r - 0.5), Math.round(12 + Math.sin(a) * r * 0.45 - 0.5), f > 0.7 ? p.hot : f > 0.35 ? p.mid : p.deep);
+    }
+  }
+  for (let y = 2; y <= 11; y++) {
+    const w = y < 5 ? 1 : 0;
+    for (let dx = -w; dx <= w + 1; dx++) put(7 + dx, y, dx === 0 || dx === 1 ? (y < 6 ? p.core : p.hot) : p.mid);
+  }
+  for (const [x, y] of [[4, 2], [11, 1], [3, 5], [12, 4]]) put(x, y, p.core);
+};
