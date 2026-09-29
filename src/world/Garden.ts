@@ -89,7 +89,7 @@ class Flower implements Hurtbox {
 
   hurt(hit: Hit): void {
     if (!this.alive) return;
-    const damage = hit.damage * this.world.might;
+    const damage = hit.damage * this.world.mightOf(hit);
     this.hp -= damage;
     this.flashT = FLASH_TIME;
     this.wobble = hit.heavy ? 1.4 : 1;
