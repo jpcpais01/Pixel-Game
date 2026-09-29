@@ -20,7 +20,7 @@ import { CRUSADER_KIT, HOLY_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { GUARD_STYLE, Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
-import { BRAWLER_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
+import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CHEM_STYLE, CRYO_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
@@ -529,6 +529,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_barrage_lucha' },
             },
           },
+          {
+            // A ring hero off the merch stand: a lime tee and cap, jorts, sweatbands and dog tags. Never gives up.
+            id: 'champ',
+            name: 'Champ',
+            role: 'Never gives up',
+            accent: 0x7ae84a,
+            attack: 'Hustle combo',
+            special: 'Knuckle shuffle',
+            preview: { texture: 'fighter_champ', glow: 'fighter_champ_e', idle: 'fighter_champ_idle_down', chosen: 'fighter_champ_smash_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
+            buttons: {
+              attack: { texture: 'icon_fist_champ' },
+              special: { texture: 'icon_barrage_champ' },
+            },
+          },
         ],
       },
       {
@@ -563,7 +577,7 @@ export const CLASSES: ClassDef[] = [
       },
     ],
     spawn: (world, x, y, look) =>
-      new Fighter(world, x, y, look === 'monk' ? MONK_STYLE : look === 'guardian' ? GUARDIAN_STYLE : look === 'lucha' ? LUCHA_STYLE : BRAWLER_STYLE),
+      new Fighter(world, x, y, look === 'monk' ? MONK_STYLE : look === 'guardian' ? GUARDIAN_STYLE : look === 'lucha' ? LUCHA_STYLE : look === 'champ' ? CHAMP_STYLE : BRAWLER_STYLE),
   },
   {
     id: 'alchemist',

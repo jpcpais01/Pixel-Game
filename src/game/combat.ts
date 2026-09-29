@@ -21,6 +21,8 @@ export interface Strike {
   fromY?: number;
   /** Poison: numbers pop up in this colour (the poison's own). */
   poison?: number;
+  /** Dealt by a companion: its own numbers, not scaled by the hero's Damage. */
+  companion?: boolean;
 }
 
 /** A blow as it lands on one target. */
@@ -31,6 +33,7 @@ export interface Hit {
   fromX: number;
   fromY: number;
   poison?: number;
+  companion?: boolean;
 }
 
 /** Anything the heroes can strike. (x, y) are the feet. */

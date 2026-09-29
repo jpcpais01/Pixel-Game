@@ -212,7 +212,7 @@ export class Companion {
       s.y += (s.vy * dt) / 1000;
       s.img.setPosition(snap(s.x), snap(s.y)).setDepth(s.y + 20).setRotation(Math.atan2(s.vy, s.vx));
       if (Math.random() < 0.5) this.world.debris(AMETHYST, snap(s.x), snap(s.y), 1, s.y + 20, 'trail');
-      if (this.world.strikeAt(s.x, s.y, { damage: SHARD_DAMAGE, knock: 40, fromX: s.x - s.vx * 0.05, fromY: s.y - s.vy * 0.05 })) {
+      if (this.world.strikeAt(s.x, s.y, { damage: SHARD_DAMAGE, companion: true, knock: 40, fromX: s.x - s.vx * 0.05, fromY: s.y - s.vy * 0.05 })) {
         this.world.debris(AMETHYST, snap(s.x), snap(s.y), 8, s.y + 20, 'burst');
         s.life = 0;
       }
