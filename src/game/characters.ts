@@ -52,6 +52,10 @@ import { WRAITH_H, WRAITH_ORIGIN_Y } from '../art/wraith';
 import { ENGINEER_KIT, Engineer } from './Engineer';
 import { EINSTEIN_KIT, SCIENTIST_KIT, Scientist } from './Scientist';
 import { INV_H, INV_ORIGIN_Y } from '../art/inventor';
+import { BENFICA_KIT, EAGLE_KIT, Eagle } from './Eagle';
+import { LION_KIT, Lion, SPORTING_KIT } from './Lion';
+import { DRAGON_KIT, Dragon, PORTO_KIT } from './Dragon';
+import { BEAST_H, BEAST_ORIGIN_Y } from '../art/beast';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -1730,6 +1734,114 @@ export const CLASSES: ClassDef[] = [
       if (look === 'scientist') return new Scientist(world, x, y, SCIENTIST_KIT);
       if (look === 'einstein') return new Scientist(world, x, y, EINSTEIN_KIT);
       return new Engineer(world, x, y, ENGINEER_KIT);
+    },
+  },
+  {
+    id: 'beast',
+    name: 'Beastkin',
+    blurb: 'Wings, claws and dragonfire',
+    types: [
+      {
+        // Razor feathers flung from either hand, and a wingbeat that hurls foes away.
+        id: 'eagle',
+        name: 'Eagle',
+        role: 'Swift hunter of the skies',
+        accent: 0x8ad8ff,
+        attack: 'Razor feathers',
+        special: 'Gale',
+        preview: { texture: 'eagle', glow: 'eagle_e', idle: 'eagle_idle_down', chosen: 'eagle_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+        buttons: {
+          attack: { texture: 'icon_feather_eagle' },
+          special: { texture: 'icon_gust_eagle' },
+        },
+        lookName: 'Skyfeather',
+        skins: [
+          {
+            // Benfica's red shirt, white shorts and red socks, gilded wings, and red feathers.
+            id: 'benfica',
+            name: 'Benfica',
+            role: 'The eagle of the Light',
+            accent: 0xff3a44,
+            attack: 'Red feathers',
+            special: 'Gale of the Luz',
+            preview: { texture: 'eagle_benfica', glow: 'eagle_benfica_e', idle: 'eagle_benfica_idle_down', chosen: 'eagle_benfica_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+            buttons: {
+              attack: { texture: 'icon_feather_eagle_benfica' },
+              special: { texture: 'icon_gust_eagle_benfica' },
+            },
+          },
+        ],
+      },
+      {
+        // Raking claws and a pounce, and a roar that cows everything near.
+        id: 'lion',
+        name: 'Lion',
+        role: 'King of the beasts',
+        accent: 0xf4b848,
+        attack: 'Claws',
+        special: 'Roar',
+        preview: { texture: 'lion', glow: 'lion_e', idle: 'lion_idle_down', chosen: 'lion_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+        buttons: {
+          attack: { texture: 'icon_claw_lion' },
+          special: { texture: 'icon_roar_lion' },
+        },
+        lookName: 'Sunmane',
+        skins: [
+          {
+            // Sporting's green and white hoops over a brighter golden coat, and a green roar.
+            id: 'sporting',
+            name: 'Sporting',
+            role: 'The pride of Alvalade',
+            accent: 0x2ed070,
+            attack: 'Lion claws',
+            special: 'Green roar',
+            preview: { texture: 'lion_sporting', glow: 'lion_sporting_e', idle: 'lion_sporting_idle_down', chosen: 'lion_sporting_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+            buttons: {
+              attack: { texture: 'icon_claw_lion_sporting' },
+              special: { texture: 'icon_roar_lion_sporting' },
+            },
+          },
+        ],
+      },
+      {
+        // Bolts of fire spat from the jaws, and a long breath of flame.
+        id: 'dragon',
+        name: 'Dragon',
+        role: 'Scales and fire',
+        accent: 0xff6a2a,
+        attack: 'Dragonfire',
+        special: 'Flame breath',
+        preview: { texture: 'dragon', glow: 'dragon_e', idle: 'dragon_idle_down', chosen: 'dragon_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+        buttons: {
+          attack: { texture: 'icon_fire_dragon' },
+          special: { texture: 'icon_breath_dragon' },
+        },
+        lookName: 'Emberscale',
+        skins: [
+          {
+            // Porto's blue and white stripes, royal blue scales, a little gold crown, and blue fire.
+            id: 'porto',
+            name: 'Porto',
+            role: 'The dragon of the Invicta',
+            accent: 0x3a8cff,
+            attack: 'Blue fire',
+            special: 'Blue breath',
+            preview: { texture: 'dragon_porto', glow: 'dragon_porto_e', idle: 'dragon_porto_idle_down', chosen: 'dragon_porto_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+            buttons: {
+              attack: { texture: 'icon_fire_dragon_porto' },
+              special: { texture: 'icon_breath_dragon_porto' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      if (look === 'benfica') return new Eagle(world, x, y, BENFICA_KIT);
+      if (look === 'lion') return new Lion(world, x, y, LION_KIT);
+      if (look === 'sporting') return new Lion(world, x, y, SPORTING_KIT);
+      if (look === 'dragon') return new Dragon(world, x, y, DRAGON_KIT);
+      if (look === 'porto') return new Dragon(world, x, y, PORTO_KIT);
+      return new Eagle(world, x, y, EAGLE_KIT);
     },
   },
 ];

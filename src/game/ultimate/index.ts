@@ -37,6 +37,10 @@ import { CALA_KIT, WRAITH_KIT } from '../Wraith';
 import { ENGINEER_KIT } from '../Engineer';
 import { EINSTEIN_KIT, SCIENTIST_KIT } from '../Scientist';
 import { chainReaction, megaSentry } from './inventor';
+import { BENFICA_KIT, EAGLE_KIT } from '../Eagle';
+import { LION_KIT, SPORTING_KIT } from '../Lion';
+import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
+import { kingsRoar, skySovereign, wyrmWrath } from './beast';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 
@@ -383,6 +387,34 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.chainReactionIcon,
     cast: chainReaction,
   },
+  'beast:eagle': {
+    name: 'Sky Sovereign',
+    cost: 70,
+    windup: 550,
+    aim: 'dir',
+    pal: EAGLE_KIT.pal,
+    icon: icons.skySovereignIcon,
+    cast: skySovereign,
+  },
+  'beast:lion': {
+    name: "King's Roar",
+    cost: 70,
+    windup: 600,
+    aim: 'self',
+    pal: LION_KIT.pal,
+    icon: icons.kingsRoarIcon,
+    cast: kingsRoar,
+  },
+  'beast:dragon': {
+    name: 'Wrath of the Wyrm',
+    cost: 75,
+    windup: 650,
+    aim: 'spot',
+    range: 110,
+    pal: DRAGON_KIT.pal,
+    icon: icons.wyrmIcon,
+    cast: wyrmWrath,
+  },
 };
 
 /** Skins' takes on their type's Special, by `class:skin`. */
@@ -437,6 +469,9 @@ const SKINS: Record<string, UltSkin> = {
   'phantom:tea': { name: 'Endless Tea Party', pal: TEA_KIT.pal },
   'phantom:cala': { name: 'Candlelit Procession', pal: CALA_KIT.pal, type: 'wraith' },
   'inventor:einstein': { name: 'E = mc²', pal: EINSTEIN_KIT.pal, type: 'scientist' },
+  'beast:benfica': { name: 'Flight of Victory', pal: BENFICA_KIT.pal, type: 'eagle' },
+  'beast:sporting': { name: 'Roar of Alvalade', pal: SPORTING_KIT.pal, type: 'lion' },
+  'beast:porto': { name: 'Fury of the Invicta', pal: PORTO_KIT.pal, type: 'dragon' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */
