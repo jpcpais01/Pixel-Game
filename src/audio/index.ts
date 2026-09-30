@@ -278,6 +278,16 @@ class GameSound {
     if (t !== null) this.sfx!.wishBurst(t, tier);
   }
 
+  netSwish(pan = 0): void {
+    const t = this.slot('netSwish');
+    if (t !== null) this.sfx!.netSwish(t, pan);
+  }
+
+  critterCatch(tier: number): void {
+    const t = this.slot('critterCatch');
+    if (t !== null) this.sfx!.critterCatch(t, tier);
+  }
+
   cardFlip(tier: number): void {
     const t = this.slot('cardFlip');
     if (t !== null) this.sfx!.cardFlip(t, tier);
