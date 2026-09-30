@@ -1114,6 +1114,63 @@ export class Sfx {
     this.m.startNoise(src, t, dur + 0.1);
   }
 
+  /**
+   * A boss shows itself for the first time: a ground-shaking boom under a
+   * growl that bends down, with a rush of air. A Myth's is deeper and longer.
+   */
+  bossRoar(t: number, pan: number, myth: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 1, 0.7);
+    const len = myth ? 1.5 : 1.1;
+    this.chirp(out, t, 'sine', myth ? 70 : 90, 26, 1, len);
+    const growl = filter(ctx, 'lowpass', 700, 2, out);
+    sweep(growl.frequency, t, 900, 240, len);
+    for (const f of myth ? [58, 58.8, 87] : [73, 73.9, 110]) this.chirp(growl, t + 0.04, 'sawtooth', f * 1.35, f * 0.8, 0.16, len);
+    this.burstNoise(out, t, 'lowpass', 2600, 160, 0.8, 0.6, len, true);
+    this.burstNoise(out, t + 0.05, 'bandpass', 500, 1400, 2, 0.12, len * 0.8, true);
+  }
+
+  /**
+   * The boss's name comes up: a brass stab of a minor chord over a timpani
+   * hit, ringing out long. A Myth's adds a low octave and a bell high above.
+   */
+  bossTitle(t: number, myth: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.9, 0.9);
+    this.chirp(out, t, 'sine', 110, 48, 0.9, 0.9);
+    this.burstNoise(out, t, 'lowpass', 1200, 200, 0.7, 0.35, 0.4, true);
+    const brass = gain(ctx, 0, filter(ctx, 'lowpass', 1500, 1.2, out));
+    hit(brass.gain, t, 0.22, 0.03, 2.6);
+    for (const f of myth ? [110, 220, 261.6, 329.6, 440] : [220, 261.6, 329.6]) {
+      for (const d of [-4, 4]) {
+        const o = osc(ctx, 'sawtooth', f, brass);
+        o.detune.value = d;
+        o.start(t);
+        o.stop(t + 2.8);
+      }
+    }
+    if (myth) this.bell(out, t + 0.04, 880, 0.05, 2.6);
+  }
+
+  /**
+   * The killing blow on a boss: a hard crack, the world dropping out under a
+   * deep boom, and a high ring hanging in the air through the slow motion.
+   */
+  finalBlow(t: number, myth: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 1, 0.85);
+    this.burstNoise(out, t, 'highpass', 5000, 1800, 0.8, 0.8, 0.12);
+    this.chirp(out, t, 'square', 1400, 180, 0.12, 0.1);
+    const b = gain(ctx, 0, out);
+    hit(b.gain, t + 0.02, 1, 0.004, myth ? 1.8 : 1.3);
+    const lo = osc(ctx, 'sine', 80, b);
+    sweep(lo.frequency, t + 0.02, 80, 22, myth ? 1.6 : 1.2);
+    lo.start(t);
+    lo.stop(t + 2);
+    this.burstNoise(out, t + 0.02, 'lowpass', 3000, 120, 0.7, 0.5, myth ? 1.6 : 1.2, true);
+    this.bell(out, t + 0.06, myth ? 1318.5 : 1568, 0.05, 3);
+  }
+
   /** The supernova: a huge boom, a roar of light and a ringing chord. */
   nova(t: number): void {
     const ctx = this.m.ctx;

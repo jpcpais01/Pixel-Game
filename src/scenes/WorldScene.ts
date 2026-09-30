@@ -12,7 +12,7 @@ import { pixelGrid, snap } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { characterById, type Aim, type Hero } from '../game/characters';
-import { damageScale, defenseFactor, specialScale, heroStats, type HeroStats } from '../game/stats';
+import { damageScale, defenseFactor, specialScale, heroStats, type HeroSheet, type HeroStats } from '../game/stats';
 import { areaOrigin, reachesBody, type Harm, type Hit, type Hurtbox, type MeleeArea, type Strike } from '../game/combat';
 import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
@@ -52,6 +52,7 @@ import { Forest } from '../world/Forest';
 import { ForestSpawner } from '../world/ForestSpawner';
 import { ForestGen, randomSeed, seedFrom, useForest } from '../world/forestGen';
 import { omenMods, resetOmens } from '../game/omens';
+import { BossIntro, FinalBlow, bossTint } from '../game/BossIntro';
 
 type V3 = [number, number, number];
 
@@ -234,6 +235,9 @@ export class WorldScene extends Phaser.Scene {
   private auras = new Map<SetId, { halo: Phaser.GameObjects.Image; motes: Phaser.GameObjects.Particles.ParticleEmitter }>();
   /** How far the camera leans off the hero, toward a boss towering over the fight. */
   private lean = { x: 0, y: 0 };
+  /** A boss's entrance the first time the hero meets it, and the slow motion of a boss's killing blow (see game/BossIntro.ts). */
+  private intro: BossIntro | null = null;
+  private finale: FinalBlow | null = null;
   /** The light this frame: 0 night .. 1 day (fixed in arenas without day and night). */
   private daylight = 1;
   /** Healing from buffs, gathered until it makes a whole point, and shown once a second. */
@@ -576,6 +580,17 @@ export class WorldScene extends Phaser.Scene {
       // Left mid-charge: nothing will release it, so the hum stops with the world.
       sound.beamChargeEnd();
     });
+    // Alone, the world holds still for a boss's entrance; online the fight goes on for the others.
+    this.intro = new BossIntro(this, !this.net);
+    this.finale = null;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.intro?.destroy();
+      this.intro = null;
+      this.finale?.destroy();
+      this.finale = null;
+      // The slow motion's clocks are shared (the animations' across every scene): set them right.
+      this.paceWorld(1);
+    });
     // Now and then something happens in the monster arenas (see world/Omens.ts); its overlay shows it.
     this.omens = OMEN_ARENAS.has(arena.id) ? new Omens(this) : null;
     if (this.omens) {
@@ -600,7 +615,12 @@ export class WorldScene extends Phaser.Scene {
     this.fitCamera();
     this.followHero();
     this.ground?.prime(this.view);
-    this.forest?.prime(this.view, () => cam.fadeIn(500, 7, 8, 13));
+    if (this.forest) {
+      this.forest.prime(this.view, () => cam.fadeIn(500, 7, 8, 13));
+      // A loading screen while the painters get the first view in (it goes by itself).
+      this.scene.launch('forestload');
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scene.stop('forestload'));
+    }
     this.showBanner(arena.name);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this));
@@ -611,7 +631,7 @@ export class WorldScene extends Phaser.Scene {
     kb.on('keydown-E', () => {
       if (!this.sanctum?.talk(this.hero.x, this.hero.y) && !this.forge?.talk(this.hero.x, this.hero.y) && !this.hallows?.talk(this.hero.x, this.hero.y) && !this.naturalist?.talk(this.hero.x, this.hero.y)) controls.netTap = true;
     });
-    // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
+    // Keys 1 to 3 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
       const n = e.key.length === 1 ? e.key.charCodeAt(0) - 49 : -1;
       if (n >= 0 && n < HOTBAR_SIZE) controls.items.push(n);
@@ -995,8 +1015,12 @@ export class WorldScene extends Phaser.Scene {
     if (this.downT <= 0) this.setPowers.slain(x, y);
     if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank) * riftMods.energy * petMods.energy * omenMods.energy, this.ult.ult.pal));
     if (summoned) return;
-    // A boss's fall is marked on the world map with a flag.
-    if (stats?.rank) realm.slay(kind);
+    // A boss's fall is marked on the world map with a flag, and its killing blow plays in slow motion.
+    if (stats?.rank) {
+      realm.slay(kind);
+      this.finale?.destroy();
+      this.finale = new FinalBlow(this, x, y - bodyY, stats.rank === 'myth', bossTint(kind));
+    }
     // The Rift's Hard and Impossible make every drop likelier (riftMods.odds is 1 elsewhere).
     const odds = riftMods.odds;
     const id = rollDrop(kind, odds);
@@ -1389,6 +1413,32 @@ export class WorldScene extends Phaser.Scene {
     return this.inSpecial ? this.might * specialScale(this.stats) : this.might;
   }
 
+  /**
+   * The hero's stats as they stand, for the HUD's stats panel: the type's own
+   * numbers with gear, the Rift's blessings, the companion's perk and the
+   * timed buffs all in, plus the same without the timed buffs (`base`) so the
+   * panel can show what a buff is lifting. Damage taken shrinking (Ward, a
+   * pet's guard) reads as the Defense that would shrink it as much.
+   */
+  heroSheet(): { now: HeroSheet; base: HeroSheet } | null {
+    const s = this.stats;
+    // Before the world has made its hero (the HUD starts first).
+    if (!s || !this.hero) return null;
+    const sheet = (buffed: boolean): HeroSheet => {
+      const b = (k: 'damage' | 'speed' | 'guard') => (buffed ? heroBuffs.mod(k) : 1);
+      const guard = b('guard') * riftMods.guard * petMods.guard;
+      return {
+        hp: this.hero.vitals.max,
+        damage: s.damage * b('damage') * gear.power * riftMods.damage * petMods.damage,
+        defense: (100 + s.defense + gear.totals.armor) / guard - 100,
+        rate: s.rate,
+        speed: s.speed * b('speed') * gear.speed * riftMods.speed * petMods.speed,
+        regen: s.regen + (buffed ? heroBuffs.regen : 0) + gear.totals.regen + riftMods.regen + petMods.regen,
+      };
+    };
+    return { now: sheet(true), base: sheet(false) };
+  }
+
   /** Run a Special's cast: its blows, and the effects it starts, count as the Special's. */
   castSpecial(cast: () => void): void {
     this.inSpecial = true;
@@ -1532,8 +1582,14 @@ export class WorldScene extends Phaser.Scene {
     const maxX = r.right - viewW / 2 - halfW;
     const minY = r.y + viewH / 2 - halfH;
     const maxY = r.bottom - viewH / 2 - halfH;
-    const tx = this.hero.x + this.lean.x - halfW;
-    const ty = this.hero.y - 12 + this.lean.y - halfH;
+    let tx = this.hero.x + this.lean.x - halfW;
+    let ty = this.hero.y - 12 + this.lean.y - halfH;
+    // A boss's entrance turns the camera to it, and back.
+    const f = this.intro?.focus;
+    if (f) {
+      tx += (f.x - halfW - tx) * f.k;
+      ty += (f.y - halfH - ty) * f.k;
+    }
     const sx = maxX < minX ? (minX + maxX) / 2 : Phaser.Math.Clamp(tx, minX, maxX);
     const sy = maxY < minY ? (minY + maxY) / 2 : Phaser.Math.Clamp(ty, minY, maxY);
     // Screen x = (worldX - scroll) * z + half * (1 - z). Choose scroll so the
@@ -1796,6 +1852,23 @@ export class WorldScene extends Phaser.Scene {
     this.lean.y += (gy - this.lean.y) * k;
   }
 
+  /** The pace the world's clocks were last set to (see paceWorld). */
+  private paced = 1;
+
+  /**
+   * Run the world's own clocks at `k` of real time (the slow motion of a
+   * boss's final blow): its animations, tweens, timers and particles. The
+   * rest runs on the frame time WorldScene.update slows itself.
+   */
+  private paceWorld(k: number): void {
+    if (k === 1 && this.paced === 1) return;
+    this.paced = k;
+    this.anims.globalTimeScale = k;
+    this.tweens.timeScale = k;
+    this.time.timeScale = k;
+    for (const o of this.children.list) if (o instanceof Phaser.GameObjects.Particles.ParticleEmitter) o.timeScale = k;
+  }
+
   /** The ability buttons held last frame, so a press is noted once as it starts. */
   private held = { attack: false, special: false };
 
@@ -1890,7 +1963,21 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  update(time: number, dt: number): void {
+  update(time: number, frameDt: number): void {
+    // A boss's entrance and its final blow keep real time; the world runs at the slow motion's pace.
+    this.intro?.update(frameDt);
+    let dt = frameDt;
+    if (this.finale) {
+      this.finale.update(frameDt);
+      const done = this.finale.done;
+      const pace = done ? 1 : this.finale.pace;
+      if (done) {
+        this.finale.destroy();
+        this.finale = null;
+      }
+      this.paceWorld(pace);
+      dt = frameDt * pace;
+    }
     const k = this.keys;
     let mx = controls.moveX;
     let my = controls.moveY;
@@ -1921,6 +2008,13 @@ export class WorldScene extends Phaser.Scene {
       mx = my = 0;
       attack = special = ultPressed = false;
     }
+    // A boss making its entrance: the hero stands and watches, and nothing can hurt them. Nor in a final blow's slow motion.
+    if (this.intro?.active) {
+      mx = my = 0;
+      attack = special = ultPressed = false;
+      this.grace = Math.max(this.grace, 400);
+    }
+    if (this.finale) this.grace = Math.max(this.grace, 300);
     this.noteInputs(attack, special, ultPressed);
     if (ultPressed && this.downT <= 0) this.ult.request(controls.mouse ? this.mouseAim() : this.touchAim(controls.ultAim), this.facing);
     // Gathering power for the Special: other abilities wait, and the feet stay planted.
@@ -1966,12 +2060,15 @@ export class WorldScene extends Phaser.Scene {
       this.net.follow(dt);
     }
     const monsters: Monster[] = [];
+    const still = this.intro?.freezes;
     for (const sp of this.spawners) {
-      // A Blood Moon quickens them.
-      sp.update(dt * omenMods.pace, targets, this.daylight);
+      // A Blood Moon quickens them. A boss's entrance holds them all still.
+      if (still) for (const m of sp.monsters) m.still(dt);
+      else sp.update(dt * omenMods.pace, targets, this.daylight);
       monsters.push(...sp.monsters);
     }
-    separate(monsters, targets, HERO_RADIUS);
+    if (!still) separate(monsters, targets, HERO_RADIUS);
+    this.intro?.check(monsters, this.hero, this.downT <= 0 && !this.finale && !this.ult.holding && !this.fishing?.active);
     this.net?.update(dt, this.daylight);
     this.leanToBoss(dt, monsters);
     for (const e of this.effects) {

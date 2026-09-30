@@ -1,4 +1,4 @@
-// Items and the hotbar. Nine slots, bound to keys 1 to 9 and tappable on the
+// Items and the hotbar. Three slots, bound to keys 1 to 3 and tappable on the
 // HUD; each holds a stack of one item. An item's `use` gets a small context
 // from the world, so items never reach into a scene directly. A new item is
 // one entry in ITEMS plus its icon and drop art (art/items.ts, built in
@@ -66,7 +66,7 @@ export const ITEMS = {
 
 export type ItemId = keyof typeof ITEMS;
 
-export const HOTBAR_SIZE = 9;
+export const HOTBAR_SIZE = 3;
 export const MAX_STACK = 9;
 
 export interface Slot {

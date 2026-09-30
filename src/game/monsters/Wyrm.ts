@@ -479,6 +479,11 @@ export class Wyrm extends Monster {
     }
   }
 
+  /** Reared up to its full height, crystal spines bristling. */
+  protected flourish(): void {
+    this.pose('rear');
+  }
+
   protected staggers(): boolean {
     return false;
   }

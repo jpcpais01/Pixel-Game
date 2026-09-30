@@ -357,6 +357,11 @@ export class Elementinho extends Monster {
     }
   }
 
+  /** The Blazing Surge's flare, burning white at the core. */
+  protected flourish(): void {
+    this.play('surge', true);
+  }
+
   protected staggers(): boolean {
     return false;
   }

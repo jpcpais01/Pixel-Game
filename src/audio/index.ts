@@ -545,6 +545,21 @@ class GameSound {
     if (t !== null) this.sfx!.gravityWell(t, seconds);
   }
 
+  bossRoar(pan = 0, myth = false): void {
+    const t = this.slot('bossRoar');
+    if (t !== null) this.sfx!.bossRoar(t, pan, myth);
+  }
+
+  bossTitle(myth = false): void {
+    const t = this.slot('bossTitle');
+    if (t !== null) this.sfx!.bossTitle(t, myth);
+  }
+
+  finalBlow(myth = false): void {
+    const t = this.slot('finalBlow');
+    if (t !== null) this.sfx!.finalBlow(t, myth);
+  }
+
   nova(): void {
     const t = this.slot('nova');
     if (t !== null) this.sfx!.nova(t);
