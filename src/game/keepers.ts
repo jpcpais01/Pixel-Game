@@ -1,8 +1,8 @@
-// The Rune Temple's two keepers, as the world and the HUD share them: the
-// world asks for a keeper's counter when the hero walks up to them, and the
-// HUD opens it (see ui/keeperHud.ts).
+// The Rune Temple's two keepers and the Forge's smith, as the world and the
+// HUD share them: the world asks for a keeper's counter when the hero walks up
+// to them, and the HUD opens it (see ui/keeperHud.ts).
 
-export type Keeper = 'disenchant' | 'upgrade';
+export type Keeper = 'disenchant' | 'upgrade' | 'forge';
 
 export const KEEPERS: Record<Keeper, { name: string; title: string; tint: number; texture: string; hello: string }> = {
   disenchant: {
@@ -18,6 +18,13 @@ export const KEEPERS: Record<Keeper, { name: string; title: string; tint: number
     tint: 0xffc86a,
     texture: 'rs_tharn',
     hello: 'Bring me dust and a fine piece, and I will beat another rune into it. Pick where its strength goes.',
+  },
+  forge: {
+    name: 'Brenna',
+    title: 'the Forgemaster',
+    tint: 0xff9a4a,
+    texture: 'fg_brenna',
+    hello: 'The great beasts leave something of themselves behind. Bring it to me with some dust, and I will forge the piece fate keeps from you.',
   },
 };
 

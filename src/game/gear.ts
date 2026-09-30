@@ -306,7 +306,7 @@ export function levelled(def: GearDef, picks: readonly StatKey[]): GearDef {
 }
 
 /** Sets only their own boss drops. */
-const SET_BOSS: Record<string, SetId> = { queen: 'wraith', elementinho: 'ember', sporemother: 'spore', wyrm: 'geode', warden: 'astral' };
+export const SET_BOSS: Record<string, SetId> = { queen: 'wraith', elementinho: 'ember', sporemother: 'spore', wyrm: 'geode', warden: 'astral' };
 
 /** A piece picked up this run, for the HUD's banner; `worn` if it went straight into an empty slot. */
 export interface GearNews {

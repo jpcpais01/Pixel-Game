@@ -34,6 +34,7 @@ import { TempleDungeon } from '../world/Temple';
 import { GlimmerDeep } from '../world/Deep';
 import { RuneTemple } from '../world/Sanctum';
 import { Chapel } from '../world/Chapel';
+import { Forge } from '../world/Forge';
 import { INSIDE_SPOT, OUTSIDE_SPOT, roomRect } from '../world/sanctumLayout';
 import { isPainted } from '../world/arenas';
 
@@ -59,6 +60,7 @@ import { heroBuffs, type BuffDef } from '../game/buffs';
 import { LootFlare, Pickup } from '../game/Pickup';
 import { gear, GEAR_SETS, RARITY, type GearDef, type SetId } from '../game/gear';
 import { rollGems } from '../game/tiers';
+import { MATERIALS, rollMats } from '../game/forge';
 import { collection, slotIndex } from '../game/collection';
 import { energy, energyFor } from '../game/energy';
 import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
@@ -168,6 +170,7 @@ export class WorldScene extends Phaser.Scene {
   /** The Rune Temple, when this is the Runestone Clearing. */
   private sanctum: RuneTemple | null = null;
   private chapel: Chapel | null = null;
+  private forge: Forge | null = null;
   /** The hero is inside the Rune Temple (the camera keeps to its room). */
   private inside = false;
   /** Passing through the temple's door: the screen fades out and in. */
@@ -283,6 +286,7 @@ export class WorldScene extends Phaser.Scene {
     this.deep = null;
     this.sanctum = null;
     this.chapel = null;
+    this.forge = null;
     this.inside = false;
     this.doorBusy = false;
     this.auras.clear();
@@ -386,6 +390,8 @@ export class WorldScene extends Phaser.Scene {
       for (const d of p.dummies) this.dummy(d.x, d.y);
       this.sanctum = new RuneTemple(this, (img) => ground(img) as Phaser.GameObjects.Image);
       this.shadows.push(...this.sanctum.shadows);
+      this.forge = new Forge(this, (img) => ground(img) as Phaser.GameObjects.Image);
+      this.shadows.push(...this.forge.shadows);
     } else if (arena.id === 'garden') {
       this.garden = new Garden(this);
     }
@@ -461,7 +467,7 @@ export class WorldScene extends Phaser.Scene {
     kb.on('keydown-N', () => daynight.enabled && daynight.toggle());
     kb.on('keydown-E', () => {
       if (this.inside) this.sanctum?.talk(this.hero.x, this.hero.y);
-      else this.chapel?.talk(this.hero.x, this.hero.y);
+      else if (!this.forge?.talk(this.hero.x, this.hero.y)) this.chapel?.talk(this.hero.x, this.hero.y);
     });
     // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
@@ -764,6 +770,29 @@ export class WorldScene extends Phaser.Scene {
     for (const def of gear.roll(kind)) this.dropGear(def, x, y - bodyY);
     const gems = rollGems(kind, petMods.luck);
     if (gems) this.dropGems(gems, x, y - bodyY);
+    const mats = rollMats(kind);
+    if (mats) this.dropMats(mats.set, mats.n, x, y - bodyY);
+  }
+
+  /** A boss's materials fall for the Forge: a pillar of its set's light, and they land with a ring of it. */
+  private dropMats(set: SetId, n: number, x: number, y: number): void {
+    const p = new Pickup(this, x, y, { kind: 'mat', set, n });
+    this.pickups.push(p);
+    const tint = MATERIALS[set].tint;
+    p.onLand = (at) => {
+      sound.lootLand(3, this.pan(at.x));
+      this.debris([0xffffff, tint], snap(at.x), snap(at.y) - 6, 16, at.y + 20, 'burst');
+    };
+  }
+
+  /** Materials picked up: the player's for the Forge, their name and count over the hero. */
+  private gainMats(set: SetId, n: number): void {
+    collection.addMats(set, n);
+    const h = this.hero;
+    const m = MATERIALS[set];
+    this.popNumber(snap(h.x), snap(h.y) - 40, `+${n} ${m.name.toUpperCase()}`, m.tint);
+    this.debris([0xffffff, m.tint], snap(h.x), snap(h.y) - 12, 18, h.y + 20, 'burst');
+    sound.gear(true);
   }
 
   /**
@@ -931,6 +960,11 @@ export class WorldScene extends Phaser.Scene {
       if (!p.update(dt, down ? null : h.x, down ? null : h.y, room, this.daylight)) continue;
       if (loot.kind === 'gems') {
         this.gainGems(loot.n);
+        p.destroy();
+        continue;
+      }
+      if (loot.kind === 'mat') {
+        this.gainMats(loot.set, loot.n);
         p.destroy();
         continue;
       }
@@ -1362,6 +1396,7 @@ export class WorldScene extends Phaser.Scene {
     for (const f of this.flickers) {
       if (f.seed >= 0) near = Math.min(near, Phaser.Math.Distance.Between(f.light.x, f.light.y, this.hero.x, this.hero.y));
     }
+    if (this.forge) near = Math.min(near, this.forge.fireDistance(this.hero.x, this.hero.y));
     // No fire in this arena: no crackle.
     if (near === Infinity) return 0;
     const k = Phaser.Math.Clamp(1 - (near - 16) / 150, 0, 1);
@@ -1558,6 +1593,7 @@ export class WorldScene extends Phaser.Scene {
       if (go) this.passDoor(go === 'enter');
     }
     this.chapel?.update(this.hero.x, this.hero.y, dt, Phaser.Math.Easing.Sine.InOut(this.daylight));
+    this.forge?.update(this.hero.x, this.hero.y, dt);
     this.followHero();
 
     for (const b of this.balls) {

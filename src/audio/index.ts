@@ -197,6 +197,18 @@ class GameSound {
     if (t !== null) this.sfx!.clash(t, pan, heavy);
   }
 
+  /** The Forge's anvil ringing under Brenna's hammer, `level` 0..1 with how near the hero is. */
+  anvil(pan = 0, level = 1): void {
+    const t = this.slot('anvil');
+    if (t !== null) this.sfx!.anvil(t, pan, level);
+  }
+
+  /** A piece forged at Brenna's counter: three blows and the ring of it done. */
+  forged(): void {
+    const t = this.slot('forged');
+    if (t !== null) this.sfx!.forged(t);
+  }
+
   rise(): void {
     const t = this.slot('rise');
     if (t !== null) this.sfx!.rise(t);
