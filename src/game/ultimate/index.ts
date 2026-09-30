@@ -702,7 +702,7 @@ export class UltCaster {
     flare(w, h.x, h.y - 14, 150, p.light, 3, 500);
     bloom(w, h.x, h.y - 14, p.hot, 2.4, 320, h.y + 20);
     w.addEffect(new Shock(w, h.x, h.y, p));
-    this.ult.def.cast(c);
+    w.castSpecial(() => this.ult.def.cast(c));
     if (this.title) {
       const title = this.title;
       this.title = null;
