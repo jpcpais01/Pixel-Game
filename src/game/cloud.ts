@@ -53,6 +53,8 @@ export interface SaveData {
   candy: Record<string, number>;
   /** Critters caught with the net, how many of each, by id. */
   critters: Record<string, number>;
+  /** Fish landed with the rod, how many of each, by id. */
+  fish: Record<string, number>;
   /** Boss materials for the Forge, by the set they forge (see game/forge.ts). */
   mats: Record<string, number>;
   /** The player's Home as they built it (see world/homeLayout.ts), '' for the starter, and when it was last changed (ms). */
@@ -282,9 +284,17 @@ export async function loadSave(): Promise<LoadedSave | null> {
       if (id && Number(n) > 0) critters[id] = Number(n);
     }
   }
+  // Fish landed, the same way: "minnow:4,koi:1".
+  const fish: Record<string, number> = {};
+  if (f.fish && 'stringValue' in f.fish && f.fish.stringValue) {
+    for (const pair of f.fish.stringValue.split(',')) {
+      const [id, n] = pair.split(':');
+      if (id && Number(n) > 0) fish[id] = Number(n);
+    }
+  }
   const home = f.home && 'stringValue' in f.home ? f.home.stringValue : '';
   const homeT = f.homeT && 'integerValue' in f.homeT ? Number(f.homeT.integerValue) : 0;
-  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, glide, pets, pet, petPity, critters, mats, candy, home, homeT, username };
+  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, glide, pets, pet, petPity, critters, fish, mats, candy, home, homeT, username };
 }
 
 /** Overwrite the logged-in player's save. */
@@ -312,6 +322,7 @@ export async function writeSave(data: SaveData): Promise<void> {
     petPity: { integerValue: String(Math.floor(data.petPity)) },
     candy: { stringValue: Object.entries(data.candy).map(([id, n]) => `${id}:${Math.floor(n)}`).join(',') },
     critters: { stringValue: Object.entries(data.critters).map(([id, n]) => `${id}:${Math.floor(n)}`).join(',') },
+    fish: { stringValue: Object.entries(data.fish).map(([id, n]) => `${id}:${Math.floor(n)}`).join(',') },
     mats: { stringValue: Object.entries(data.mats).map(([set, n]) => `${set}:${Math.floor(n)}`).join(',') },
     home: { stringValue: data.home },
     homeT: { integerValue: String(Math.floor(data.homeT)) },
