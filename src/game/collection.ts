@@ -34,7 +34,7 @@ const WELCOMED_KEY = 'pixel-battle.welcomed';
  */
 const SKIN_HEIRS: Record<string, string> = { 'jedi:warlord': 'jedi:sith' };
 
-const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, glide: {}, pets: [], pet: '', petPity: 0, critters: {}, fish: {}, mats: {}, candy: {}, home: '', homeT: 0 });
+const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, glide: {}, pets: [], pet: '', petPity: 0, critters: {}, fish: {}, mats: {}, candy: {}, home: '', homeT: 0, met: [] });
 
 /** The welcome gems for a new guest game: the first on this device only. */
 function welcomeGems(): number {
@@ -80,6 +80,7 @@ function clean(d: Partial<SaveData> | null | undefined): SaveData {
   out.pet = typeof d?.pet === 'string' ? d.pet : '';
   out.home = typeof d?.home === 'string' ? d.home : '';
   out.homeT = Number(d?.homeT) > 0 ? Number(d?.homeT) : 0;
+  out.met = [...new Set((Array.isArray(d?.met) ? d.met : []).filter((k): k is string => typeof k === 'string' && !!k))];
   out.petPity = Math.max(0, Math.floor(Number(d?.petPity) || 0));
   for (const [id, n] of Object.entries(d?.candy ?? {})) if (Number(n) > 0) out.candy[id] = Math.floor(Number(n));
   for (const [id, n] of Object.entries(d?.critters ?? {})) if (Number(n) > 0) out.critters[id] = Math.floor(Number(n));
@@ -426,6 +427,18 @@ class Collection {
     return n === 0;
   }
 
+  /** Has the player met boss `kind` before (its entrance already seen)? */
+  metBoss(kind: string): boolean {
+    return this.data.met.includes(kind);
+  }
+
+  /** Boss `kind` has made its entrance for this player: it won't again. */
+  meetBoss(kind: string): void {
+    if (this.metBoss(kind)) return;
+    this.data.met.push(kind);
+    this.changed();
+  }
+
   /** How many of fish `id` the player has landed. */
   fishCount(id: string): number {
     return this.data.fish[id] ?? 0;
@@ -587,6 +600,7 @@ class Collection {
       if (local.daily > merged.daily) merged.daily = local.daily;
       merged.pity = Math.max(local.pity, merged.pity);
       merged.grants = [...new Set([...merged.grants, ...local.grants])];
+      merged.met = [...new Set([...merged.met, ...local.met])];
       for (const [cls, n] of Object.entries(local.rift)) merged.rift[cls] = Math.max(n, merged.rift[cls] ?? 0);
       // The faster time wins.
       for (const [course, ms] of Object.entries(local.glide)) merged.glide[course] = Math.min(ms, merged.glide[course] ?? Infinity);
@@ -613,6 +627,7 @@ class Collection {
         // A guest game's skins come along; its gems only if it has more, so a guest's welcome gems aren't counted twice.
         merged.skins = [...new Set([...merged.skins, ...guest.skins])];
         merged.pets = [...new Set([...merged.pets, ...guest.pets])];
+        merged.met = [...new Set([...merged.met, ...guest.met])];
         for (const [id, n] of Object.entries(guest.critters)) merged.critters[id] = (merged.critters[id] ?? 0) + n;
         for (const [id, n] of Object.entries(guest.fish)) merged.fish[id] = (merged.fish[id] ?? 0) + n;
         for (const [cls, n] of Object.entries(guest.rift)) merged.rift[cls] = Math.max(n, merged.rift[cls] ?? 0);

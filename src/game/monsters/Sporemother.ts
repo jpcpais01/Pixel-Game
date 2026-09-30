@@ -345,6 +345,11 @@ export class Sporemother extends Monster {
     }
   }
 
+  /** Her spore cast, fronds raised. */
+  protected flourish(): void {
+    this.play('cast', true);
+  }
+
   protected staggers(): boolean {
     return false;
   }
