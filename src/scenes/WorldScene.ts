@@ -40,6 +40,9 @@ import { Chapel } from '../world/Chapel';
 import { HallowsClearing } from '../world/Hallows';
 import { EchoGraves } from '../world/Echoes';
 import { Forge } from '../world/Forge';
+import { Home } from '../world/Home';
+import { build } from '../game/build';
+import { openHomeFriends } from '../ui/homeFriends';
 import { INSIDE_SPOT, OUTSIDE_SPOT, roomRect } from '../world/sanctumLayout';
 import { isPainted } from '../world/arenas';
 import { OMEN_ARENAS, Omens } from '../world/Omens';
@@ -187,6 +190,10 @@ export class WorldScene extends Phaser.Scene {
   /** A season's dressing of the Runestone Clearing, while one runs. */
   private hallows: HallowsClearing | null = null;
   private forge: Forge | null = null;
+  /** The player's Home (or a friend's), when that's the arena. */
+  private home: Home | null = null;
+  /** The hero this run was started with, to start again with (the Home's friends panel). */
+  private character: string | undefined;
   /** The hero is inside the Rune Temple (the camera keeps to its room). */
   private inside = false;
   /** Passing through the temple's door: the screen fades out and in. */
@@ -312,6 +319,8 @@ export class WorldScene extends Phaser.Scene {
     this.chapel = null;
     this.hallows = null;
     this.forge = null;
+    this.home = null;
+    this.character = data?.character;
     this.inside = false;
     this.doorBusy = false;
     this.auras.clear();
@@ -428,6 +437,13 @@ export class WorldScene extends Phaser.Scene {
 
     this.spawnX = arena.spawn.x;
     this.spawnY = arena.spawn.y;
+    if (arena.id === 'home') {
+      const home = (this.home = new Home(this, (img) => ground(img) as Phaser.GameObjects.Image));
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => home.destroy());
+      const at = home.spawnPoint();
+      this.spawnX = at.x;
+      this.spawnY = at.y;
+    }
     const ch = characterById(data?.character);
     this.hero = ch.spawn(this, this.spawnX, this.spawnY);
     this.stats = heroStats(ch.id, ch.type.id);
@@ -466,7 +482,7 @@ export class WorldScene extends Phaser.Scene {
     // Echoes of the fallen, wherever monsters can fell a hero: not the
     // peaceful clearing, and not a duel, where the fallen fell to a friend.
     this.echoes = null;
-    if (arena.id !== 'clearing' && !duel && arena.id !== 'island') {
+    if (arena.id !== 'clearing' && !duel && arena.id !== 'island' && arena.id !== 'home') {
       const echoes = (this.echoes = new EchoGraves(this, arena.id, this.hero, ch.skin?.name ?? ch.type.name, arena.spawn));
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
         echoes.destroy();
@@ -559,6 +575,29 @@ export class WorldScene extends Phaser.Scene {
       pop: (text, tint) => this.popNumber(snap(this.hero.x), snap(this.hero.y) - 38, text, tint),
     };
     this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N') as Record<string, Phaser.Input.Keyboard.Key>;
+  }
+
+  /**
+   * The Home's friends panel: invite friends here with a code, visit a
+   * friend's Home, or go back to your own. Any of them starts the world
+   * again in the room it's now in.
+   */
+  private openFriends(): void {
+    if (session.paused) return;
+    openHomeFriends({
+      owner: this.home?.owner ?? true,
+      code: session.active ? (session.room?.code ?? null) : null,
+      character: this.character,
+      // The room this world was playing in is left before another is opened (leaving the world would close the new one).
+      leave: () => {
+        this.net?.destroy();
+        this.net = null;
+      },
+      start: (arena) => {
+        this.cameras.main.fadeOut(350, 7, 8, 13);
+        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.restart({ character: this.character, arena }));
+      },
+    });
   }
 
   castEnergyBall(x: number, y: number, dx: number, dy: number, style?: SpellStyle, kind?: BallKind): void {
@@ -1577,6 +1616,7 @@ export class WorldScene extends Phaser.Scene {
       if (f.seed >= 0) near = Math.min(near, Phaser.Math.Distance.Between(f.light.x, f.light.y, this.hero.x, this.hero.y));
     }
     if (this.forge) near = Math.min(near, this.forge.fireDistance(this.hero.x, this.hero.y));
+    if (this.home) near = Math.min(near, this.home.fireDistance(this.hero.x, this.hero.y));
     // No fire in this arena: no crackle.
     if (near === Infinity) return 0;
     const k = Phaser.Math.Clamp(1 - (near - 16) / 150, 0, 1);
@@ -1780,6 +1820,11 @@ export class WorldScene extends Phaser.Scene {
     this.chapel?.update(this.hero.x, this.hero.y, dt, Phaser.Math.Easing.Sine.InOut(this.daylight));
     this.hallows?.update(time, dt, Phaser.Math.Easing.Sine.InOut(this.daylight), this.hero.x, this.hero.y);
     this.forge?.update(this.hero.x, this.hero.y, dt);
+    this.home?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight));
+    if (build.friends) {
+      build.friends = false;
+      this.openFriends();
+    }
     this.followHero();
 
     for (const b of this.balls) {
