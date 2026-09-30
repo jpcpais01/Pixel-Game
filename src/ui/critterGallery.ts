@@ -116,7 +116,7 @@ export class CritterGallery extends Phaser.GameObjects.Container {
 
   private setHint(): void {
     const d = this.picked;
-    let text = 'Catch critters with the net';
+    let text = 'Catch critters with the net. Hazel buys spares';
     if (d) {
       const n = collection.critterCount(d.id);
       text = n ? `${d.name} x${n}: ${d.hint}` : `???: ${d.hint}`;

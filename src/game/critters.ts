@@ -52,6 +52,16 @@ export const CRITTERS: CritterDef[] = [
 
 export const critterById = (id: string): CritterDef | undefined => CRITTERS.find((c) => c.id === id);
 
+/**
+ * What Hazel the Naturalist pays in dust for each spare critter (see
+ * world/Naturalist.ts): a little for a common one, well for a rare one, and
+ * handsomely for one only an Omen brings out. The first of each kind always
+ * stays in its jar; only the ones caught after it are spares.
+ */
+export const CRITTER_PRICE: Record<CritterRarity, number> = { common: 2, rare: 10, omen: 25 };
+/** How many of each kind the player keeps: the first one caught. */
+export const CRITTER_KEEP = 1;
+
 /** Arenas with critters of their own; Omen critters turn up in any of them. */
 export const CRITTER_ARENAS = [...new Set(CRITTERS.flatMap((c) => c.arenas))];
 

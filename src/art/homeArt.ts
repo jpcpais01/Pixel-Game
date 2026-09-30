@@ -12,11 +12,11 @@ import type { PixelCanvas, RenderedFrame } from './pixel';
 import { pixelCanvas } from './canvas';
 import { floorSwatch } from './homeFloors';
 import { CHIMNEY_H, CHIMNEY_W, chimney, roofSwatch, wallFrameH, wallFrames } from './homeWalls';
-import { PROP_ART, blossomTree, bobber, emptyRodBucket } from './homeProps';
+import { PROP_ART, PROP_TURNS, blossomTree, bobber, emptyRodBucket, type PropArt } from './homeProps';
 import { TREE_SWAY_FPS, TREE_SWAY_FRAMES } from './trees';
 import { hash2 } from './env';
 import { CELL, HomeLayout, PLOT_X, PLOT_Y, type Thing } from '../world/homeLayout';
-import { FLOORS, ROOFS, WALLS, partById } from '../world/homeParts';
+import { FLOORS, ROOFS, WALLS, extent, partById } from '../world/homeParts';
 
 /** How wide the sheet is; it grows downward as frames are packed. */
 const SHEET_W = 1024;
@@ -70,6 +70,15 @@ export function warmHome(scene: Phaser.Scene): void {
       if (flip) add(`p:${id}:m${f}`, c.mirrored());
     }
   }
+  // Turned views: right, back, and left (the right one mirrored).
+  for (const [id, v] of Object.entries(PROP_TURNS)) {
+    for (let f = 0; f < v.side.frames; f++) {
+      const c = v.side.draw(f);
+      add(`p:${id}:r${f}`, c);
+      add(`p:${id}:l${f}`, c.mirrored());
+    }
+    for (let f = 0; f < v.back.frames; f++) add(`p:${id}:b${f}`, v.back.draw(f));
+  }
   // The cherry trees and their sway (the forest's trees sway from their own sheet, see game/treeSway.ts).
   for (let v = 0; v < 3; v++) for (let f = 0; f < TREE_SWAY_FRAMES; f++) add(f ? `p:blossom:${v}_${f}` : `p:blossom:${v}`, blossomTree(v, f));
   add('chimney', chimney());
@@ -90,7 +99,7 @@ export function warmHome(scene: Phaser.Scene): void {
     }
     const e = f.r.emissive;
     for (let i = 0; i < e.length && !glows; i += 4) if (e[i] > 6 || e[i + 1] > 6 || e[i + 2] > 6) glows = true;
-    if (glows) glowing.add(f.name.replace(/:m?\d+$/, ''));
+    if (glows) glowing.add(f.name.replace(/:[mrbl]?\d+$/, ''));
   }
   const sil = new Uint8ClampedArray(W * H * 4);
   for (let i = 0; i < W * H; i++) {
@@ -133,7 +142,7 @@ export function warmHome(scene: Phaser.Scene): void {
 }
 
 /** Whether a frame on the sheet has anything that glows. */
-export const glows = (frame: string): boolean => glowing.has(frame) || glowing.has(frame.replace(/:m?\d+$/, ''));
+export const glows = (frame: string): boolean => glowing.has(frame) || glowing.has(frame.replace(/:[mrbl]?\d+$/, ''));
 
 /** A wall cell's frame on the sheet. */
 export const wallFrameName = (mat: number, frame: string): string => `w:${WALLS[mat].id}:${frame}`;
@@ -173,7 +182,8 @@ const REUSED: Record<string, { key: string; prefix: string; w: number; h: number
 /** A thing's foot in the world: the middle of its footprint's south edge, a few px in. */
 export function thingFoot(t: Thing): { x: number; y: number } {
   const p = partById(t.id)!;
-  return { x: PLOT_X + (t.x + p.w / 2) * CELL, y: PLOT_Y + (t.y + p.h) * CELL - (p.w === 1 && p.h === 1 && !p.flat ? 3 : 2) };
+  const e = extent(p, t.turn);
+  return { x: PLOT_X + (t.x + e.w / 2) * CELL, y: PLOT_Y + (t.y + e.h) * CELL - (e.w === 1 && e.h === 1 && !p.flat ? 3 : 2) };
 }
 
 export function thingLook(t: Thing): ThingLook {
@@ -195,8 +205,11 @@ export function thingLook(t: Thing): ThingLook {
       oy: r.fy / r.h,
     };
   }
-  const a = PROP_ART[t.id];
-  const m = t.flip && p.flip ? 'm' : '';
+  // A turned part: its side or back view (a left turn is the right one mirrored).
+  const view = p.turns ? ['', 'r', 'b', 'l'][t.turn & 3] : '';
+  const turned = PROP_TURNS[t.id];
+  const a: PropArt = view && turned ? (view === 'b' ? turned.back : turned.side) : PROP_ART[t.id];
+  const m = view || (t.flip && p.flip ? 'm' : '');
   // The foot in the frame: the frame's corner sits at (dx, dy) from the footprint's.
   const fx = foot.x - (PLOT_X + t.x * CELL + a.dx);
   const fy = foot.y - (PLOT_Y + t.y * CELL + a.dy);

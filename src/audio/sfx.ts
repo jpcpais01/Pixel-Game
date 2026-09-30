@@ -796,6 +796,14 @@ export class Sfx {
     this.burstNoise(out, t, 'bandpass', 1200, 500, 1.4, 0.12, 0.15);
   }
 
+  /** A critter let out of its jar into the Home: the cork's soft pop, then a little chime that falls away like a sigh. */
+  critterRelease(t: number, pan: number): void {
+    const out = this.out(pan, 0.4, 0.5);
+    this.chirp(out, t, 'sine', 900, 380, 0.14, 0.07);
+    [2093, 1760, 1568].forEach((f, i) => this.bell(out, t + 0.06 + i * 0.09, f, 0.028, 0.9));
+    this.sparkle(out, t + 0.05, 4, 0.05);
+  }
+
   /** A card turning over: a soft swish, then a chime in its rarity's key. */
   cardFlip(t: number, tier: number): void {
     const out = this.out(0, 0.45, 0.5);

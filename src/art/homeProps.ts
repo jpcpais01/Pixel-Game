@@ -63,6 +63,9 @@ const ANTLER = mat('#1a140c', '#4a3e2c', '#6c5e44', '#8e7e60', '#b0a07e', '#ccbe
 const SKIN = mat('#1a0e08', '#5a3424', '#7e4c36', '#a0684a', '#be8662', '#d8a47e', '#ecc29c');
 const BREW: Material = { ...mat('#041a08', '#0c3a12', '#18642a', '#2c9a3e', '#56c85a', '#9af08a', '#dcffc8'), emissive: 0.8, noAO: true };
 const EMBERS: Material = { ...mat('#1a0602', '#4a1204', '#8a2808', '#d0501a', '#ff8a3a', '#ffc070'), emissive: 0.9, noAO: true, noOutline: true };
+const SHROOM: Material = { ...mat('#3a0e1a', '#6e1e30', '#9a2e44', '#c4445a', '#e26a72', '#f7948e', '#ffbcae', '#ffe2d4'), emissive: 0.55 };
+const SPOTS: Material = { ...mat('#5a4a3a', '#d8c8a8', '#f0e4c8', '#fff6e4', '#fffcf4'), emissive: 0.7, noOutline: true };
+const STALK = mat('#2e2418', '#6e5e48', '#9a8a6c', '#bcae90', '#d8ccb0', '#ece4cc', '#f8f2e2');
 const LAMP: Material = { ...mat('#3a2008', '#8a5a1a', '#d8a048', '#ffd488', '#fff0c8', '#fffaec'), emissive: 0.95, noAO: true };
 const SOOT = mat('#040304', '#0a0808', '#141012', '#1e1a1c', '#2a2428');
 const DIAL = mat('#2a2418', '#8a7e64', '#b8ae94', '#d8d0b8', '#eeead8', '#fcfaf0');
@@ -220,9 +223,14 @@ type Drawer = (c: PixelCanvas, g: Foot, f: number) => void;
 
 function art(id: string, pad: number, up: number, draw: Drawer, frames = 1, fps = 8): PropArt {
   const p = partById(id)!;
-  const w = p.w * CELL + pad * 2;
-  const h = up + p.h * CELL + 2;
-  const g: Foot = { x0: pad, x1: pad + p.w * CELL, y0: up, y1: up + p.h * CELL, cx: pad + (p.w * CELL) / 2, cy: up + (p.h * CELL) / 2 };
+  return sized(p.w, p.h, pad, up, draw, frames, fps);
+}
+
+/** A drawing over a footprint `fw` x `fh` cells (a turned part's is its own). */
+function sized(fw: number, fh: number, pad: number, up: number, draw: Drawer, frames = 1, fps = 8): PropArt {
+  const w = fw * CELL + pad * 2;
+  const h = up + fh * CELL + 2;
+  const g: Foot = { x0: pad, x1: pad + fw * CELL, y0: up, y1: up + fh * CELL, cx: pad + (fw * CELL) / 2, cy: up + (fh * CELL) / 2 };
   return {
     w,
     h,
@@ -1149,7 +1157,7 @@ const roundtable = art('roundtable', 2, 16, (c, g) => {
   rose(c, g.cx - 1, gy - 20, ROSE);
 });
 
-const chair = art('chair', 2, 18, (c, g) => {
+const chairSide = sized(1, 1, 2, 18, (c, g) => {
   // Seen from the side, facing east: the back on the west.
   const x0 = g.cx - 5;
   const x1 = g.cx + 4;
@@ -1806,6 +1814,50 @@ const fireflyJar = art('fairylights', 4, 14, (c, g, f) => {
   tufts(c, cx, gy + 2, 5, 422, 4);
 }, 4, 5);
 
+const mushLamp = art('mushlamp', 4, 16, (c, g, f) => {
+  // A little toadstool lamp: a glowing cap with cream spots on a stout stalk,
+  // a baby one beside it, breathing its light slowly in and out.
+  const cx = g.cx + 1;
+  const gy = g.y1 - 6;
+  const breath = [0, 1, 1, 0][f];
+  c.part();
+  c.ellipse(cx - 1, gy + 0.5, 5, 2, MOSS, { normal: () => FLOOR });
+  // The baby, behind and to the left.
+  const bx = cx - 5;
+  c.part();
+  c.shape(gy - 4, gy - 1, (y) => [bx - 0.8 - (y - gy + 4) * 0.1, bx + 0.8 + (y - gy + 4) * 0.1], STALK, (_x, _y, t) => cyl(t, 0));
+  c.part();
+  c.shape(gy - 7, gy - 3, (y) => {
+    const u = (y - gy + 7) / 4;
+    const hw = 0.8 + Math.sqrt(u) * 2;
+    return [bx - hw, bx + hw];
+  }, SHROOM, (_x, _y, t, u) => n3(t * 0.7, 0.6 - u * 0.7, 0.7), { bias: breath - 1 });
+  c.px(bx - 1, gy - 6, SPOTS, TOP, { bias: 1 });
+  // The stalk, flared at its foot, and the gills under the cap.
+  c.part();
+  c.shape(gy - 8, gy, (y) => {
+    const u = (y - gy + 8) / 8;
+    const hw = 1.6 + u * u * 0.9;
+    return [cx - hw, cx + hw];
+  }, STALK, (_x, _y, t) => cyl(t, -0.1));
+  c.part();
+  for (let x = cx - 4; x < cx + 4; x++) c.px(x, gy - 8, STALK, n3(0, -0.8, 0.4), { bias: -2 + (x & 1) });
+  // The cap: a round dome, lit from within.
+  c.part();
+  c.shape(gy - 15, gy - 8, (y) => {
+    const u = (y - gy + 15) / 7;
+    const hw = 1 + Math.sqrt(u) * 4.6;
+    return [cx - hw, cx + hw];
+  }, SHROOM, (_x, _y, t, u) => n3(t * 0.75, 0.62 - u * 0.8, 0.66), { bias: breath - 1 });
+  for (const [x, y, b] of [[-2, -13, 2], [2, -12, 1], [-3, -10, 0], [1, -14, 2], [3, -10, 0]]) c.px(cx + x, gy + y, SPOTS, TOP, { bias: b });
+  c.px(cx + 3, gy - 11, SPOTS, TOP, { bias: 0 });
+  // Two motes drifting round it.
+  c.spark(cx - 4 + f, gy - 14 - (f % 2), [255, 214, 196], 0.8);
+  c.spark(cx + 5 - (f % 2), gy - 7 - f, [255, 190, 170], 0.6);
+  halo(c, cx, gy - 10, 7, [255, 170, 150], 0.26 + breath * 0.08);
+  tufts(c, cx, gy + 2, 5, 431, 4);
+}, 4, 3);
+
 // ---------------------------------------------------------------- Wall decor
 
 /** A frame of a colour round an inner area. */
@@ -1965,6 +2017,259 @@ const wreath = decor((c) => {
   c.px(9, 15, QUILT_R, FACE, { bias: 0 });
 });
 
+// ---------------------------------------------------------------- Turned views
+//
+// Seats and beds turn to face each way (see PartDef.turns): the drawing above
+// each is its front, facing south; here are its side (facing east, mirrored
+// for west) and its back. Seen from above and the south as everything is, a
+// side view shows its pieces end on: a sofa's back is a long strip beside the
+// cushions, and a chair's back seen from behind hides its seat.
+
+/** The top of a block rounded across its depth (a sofa's rolled arm seen end on). */
+function rollTop(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, z: number, m: Material): void {
+  c.part();
+  const mid = (y0 + y1) / 2;
+  const half = (y1 - y0) / 2;
+  for (let y = y0; y < y1; y++) {
+    const t = (y + 0.5 - mid) / half;
+    for (let x = x0; x < x1; x++) c.px(x, y - z, m, n3(0, -t * 0.62, 0.78), { bias: x === x0 ? 1 : x === x1 - 1 ? -1 : 0 });
+  }
+}
+
+/** A quilt's patchwork and stitching over whatever of it shows, from screen row `top`. */
+function patchwork(c: PixelCanvas, quilt: Material, x0: number, x1: number, top: number, bottom: number): void {
+  for (let y = top; y < bottom; y++) {
+    for (let x = x0; x < x1; x++) {
+      if (c.materialAt(x, y) !== quilt) continue;
+      const px = Math.floor((x - x0) / 4);
+      const py = Math.floor((y - top) / 4);
+      if ((x - x0) % 4 === 0 || (y - top) % 4 === 0) c.shade(x, y, -1);
+      else if ((px + py) % 2 === 0) c.shade(x, y, 1);
+    }
+  }
+}
+
+const chair = art('chair', 2, 20, (c, g) => {
+  // Facing us: the back beyond the seat, spindles between two posts.
+  const x0 = g.cx - 5;
+  const x1 = g.cx + 5;
+  const y0 = g.y0 + 4;
+  const y1 = g.y1 - 4;
+  box(c, x0, x1, y0, y0 + 2, 15, 18, OAKW);
+  grain(c, x0, x1, y0 - 18, y0 - 13, 281);
+  c.part();
+  for (let x = x0 + 3; x < x1 - 2; x += 2) for (let z = 8; z < 15; z++) c.px(x, y0 + 2 - z, OAKW, FACE, { bias: z === 14 ? 0 : 1 });
+  for (const x of [x0, x1 - 2]) box(c, x, x + 2, y0, y0 + 2, 0, 19, OAKW);
+  box(c, x0, x1, y0 + 2, y1, 6, 8, OAKW, { top: QUILT_R, topBias: 1 });
+  // A tuft stitched in the middle of the cushion.
+  c.shade(g.cx, y0 + 2 - 8 + Math.floor((y1 - y0 - 2) / 2), -2);
+  for (const x of [x0, x1 - 1]) box(c, x, x + 1, y1 - 1, y1, 0, 6, OAKW);
+});
+
+const chairBack = sized(1, 1, 2, 20, (c, g) => {
+  // Its back to us: the seat beyond, glimpsed between the spindles.
+  const x0 = g.cx - 5;
+  const x1 = g.cx + 5;
+  const y0 = g.y0 + 4;
+  const y1 = g.y1 - 4;
+  for (const x of [x0, x1 - 1]) box(c, x, x + 1, y0, y0 + 1, 0, 6, OAKW);
+  box(c, x0, x1, y0, y1 - 2, 6, 8, OAKW, { top: QUILT_R, topBias: 1 });
+  box(c, x0, x1, y1 - 2, y1, 8, 9, OAKW, { bias: -1 });
+  c.part();
+  for (let x = x0 + 3; x < x1 - 2; x += 2) for (let z = 9; z < 15; z++) c.px(x, y1 - z, OAKW, FACE, { bias: 0 });
+  box(c, x0, x1, y1 - 2, y1, 15, 18, OAKW);
+  grain(c, x0, x1, y1 - 20, y1 - 15, 283);
+  for (const x of [x0, x1 - 2]) box(c, x, x + 2, y1 - 2, y1, 0, 19, OAKW, { bias: -1 });
+});
+
+const sofaSide = sized(1, 2, 2, 18, (c, g) => {
+  // Facing east: its back along the west, the rolled arms at either end.
+  const x0 = g.x0 + 2;
+  const x1 = g.x1 - 2;
+  const y0 = g.y0 + 1;
+  const y1 = g.y1 - 1;
+  box(c, x0, x1, y0, y0 + 4, 0, 11, VELVET);
+  rollTop(c, x0, x1, y0, y0 + 4, 11, VELVET);
+  box(c, x0, x0 + 5, y0 + 4, y1 - 4, 3, 16, VELVET);
+  // Piping along the back's crest, and its buttoned panels seen edge on.
+  for (let y = y0 + 4 - 16; y < y1 - 4 - 16; y++) {
+    c.shade(x0 + 4, y, -1);
+    if ((y - y0) % 5 === 0) c.shade(x0 + 2, y, -2);
+  }
+  box(c, x0 + 4, x1, y0 + 4, y1 - 4, 0, 5, VELVET, { bias: -1 });
+  const mid = Math.round((y0 + y1) / 2);
+  box(c, x0 + 5, x1, y0 + 4, mid, 5, 8, VELVET, { topBias: 1 });
+  box(c, x0 + 5, x1, mid, y1 - 4, 5, 8, VELVET, { topBias: 1 });
+  // The gold cushion leant in the far corner.
+  c.part();
+  c.ellipse(x0 + 6.5, y0 + 8 - 11, 2.4, 3, GOLD_CLOTH, { bias: 1 });
+  c.shade(x0 + 6.5, y0 + 8 - 11, -1);
+  box(c, x0, x1, y1 - 4, y1, 0, 11, VELVET);
+  rollTop(c, x0, x1, y1 - 4, y1, 11, VELVET);
+  box(c, x0, x0 + 2, y1 - 2, y1, 0, 2, DARKW);
+  box(c, x1 - 2, x1, y1 - 2, y1, 0, 2, DARKW);
+});
+
+const sofaBack = sized(2, 1, 1, 18, (c, g) => {
+  // Its back to us: tall and plain, the arms and a cushion showing over it.
+  const x0 = g.x0 + 1;
+  const x1 = g.x1 - 1;
+  const y0 = g.y0 + 2;
+  const y1 = g.y1 - 2;
+  box(c, x0, x1, y0, y1 - 4, 0, 5, VELVET, { bias: -1 });
+  box(c, x0 + 3, x1 - 3, y0, y1 - 5, 5, 8, VELVET, { topBias: 1 });
+  for (const [a, b] of [[x0, x0 + 3], [x1 - 3, x1]]) {
+    c.part();
+    for (let y = y0 - 11; y < y1 - 5; y++) {
+      for (let x = a; x < b; x++) {
+        const t = (x + 0.5 - (a + b) / 2) / 1.5;
+        c.px(x, y, VELVET, y < y0 + 2 - 11 + 2 ? n3(t * 0.6, 0.6, 0.6) : cyl(t, -0.2), { bias: 0 });
+      }
+    }
+  }
+  c.part();
+  c.ellipse(x1 - 7, y1 - 21, 3, 2.6, GOLD_CLOTH, { bias: 1 });
+  box(c, x0, x1, y1 - 5, y1, 3, 16, VELVET);
+  // Piping round its top, a welt at its foot, and seams between three panels.
+  for (let x = x0; x < x1; x++) {
+    c.shade(x, y1 - 16, 1);
+    c.shade(x, y1 - 4, -1);
+  }
+  for (const k of [1, 2]) {
+    const sx = Math.round(x0 + ((x1 - x0) * k) / 3);
+    for (let y = y1 - 15; y < y1 - 4; y++) c.shade(sx, y, -1);
+  }
+  box(c, x0, x0 + 2, y1 - 2, y1, 0, 3, DARKW);
+  box(c, x1 - 2, x1, y1 - 2, y1, 0, 3, DARKW);
+});
+
+const benchSide = sized(1, 2, 2, 17, (c, g) => {
+  // Facing east: the back along the west, the iron arms at either end.
+  const y0 = g.y0 + 2;
+  const y1 = g.y1 - 2;
+  const bx = g.x0 + 3;
+  const sx0 = bx + 2;
+  const sx1 = g.x1 - 3;
+  const arm = (y: number) => {
+    box(c, sx1 - 2, sx1, y - 1, y + 1, 0, 11, IRON);
+    c.part();
+    c.line(bx + 1, y - 13, sx1 - 1, y - 11, IRON, () => TOP, { bias: 1 });
+    c.px(sx1, y - 11, IRON, FACE, { bias: 2 });
+  };
+  box(c, bx, bx + 2, y0 + 1, y0 + 3, 0, 16, IRON);
+  arm(y0 + 2);
+  for (const [z0, z1] of [[9, 12], [13, 16]]) box(c, bx, bx + 2, y0, y1, z0, z1, PALEW);
+  grain(c, bx, bx + 2, y0 - 16, y1 - 9, 193, false);
+  box(c, sx0, sx1, y0, y1, 6, 8, PALEW);
+  // The seat's slats run its length.
+  for (let x = sx0 + 2; x < sx1; x += 3) for (let y = y0 - 8; y < y1 - 8; y++) c.shade(x, y, -2);
+  grain(c, sx0, sx1, y0 - 8, y1 - 6, 194, false);
+  box(c, bx, bx + 2, y1 - 3, y1 - 1, 0, 16, IRON);
+  arm(y1 - 2);
+});
+
+const benchBack = sized(2, 1, 1, 17, (c, g) => {
+  // Its back to us: the slats across, the seat and arms beyond.
+  const x0 = g.x0 + 2;
+  const x1 = g.x1 - 2;
+  const posts = [x0 + 1, x1 - 3];
+  for (const x of posts) box(c, x, x + 2, g.y0 + 3, g.y0 + 5, 0, 6, IRON);
+  box(c, x0, x1, g.y0 + 3, g.y1 - 6, 6, 8, PALEW);
+  for (let y = g.y0 + 3 - 8 + 2; y < g.y1 - 6 - 8; y += 3) for (let x = x0; x < x1; x++) c.shade(x, y, -2);
+  grain(c, x0, x1, g.y0 - 5, g.y1 - 12, 195);
+  c.part();
+  for (const x of posts) c.line(x + 1, g.y0 + 4 - 11, x + 1, g.y1 - 5 - 12, IRON, () => TOP, { bias: 1 });
+  for (const [z0, z1] of [[9, 12], [13, 16]]) {
+    box(c, x0, x1, g.y1 - 6, g.y1 - 5, z0, z1, PALEW, { bias: -1 });
+    grain(c, x0, x1, g.y1 - 5 - z1, g.y1 - 5 - z0, 196);
+  }
+  for (const x of posts) box(c, x, x + 2, g.y1 - 6, g.y1 - 4, 0, 16, IRON);
+});
+
+function bedSide(quilt: Material, pillows: number): Drawer {
+  return (c, g) => {
+    // Feet to the east: the headboard along the west, both ends seen end on.
+    const x0 = g.x0 + 1;
+    const x1 = g.x1 - 1;
+    const y0 = g.y0 + 1;
+    const y1 = g.y1 - 1;
+    box(c, x0, x0 + 2, y0, y0 + 2, 0, 18, DARKW);
+    box(c, x1 - 2, x1, y0, y0 + 2, 0, 10, DARKW);
+    box(c, x0, x0 + 2, y0 + 2, y1 - 2, 0, 15, OAKW);
+    grain(c, x0, x0 + 2, y0 + 2 - 15, y1 - 2 - 15, 243, false);
+    box(c, x0 + 2, x1 - 2, y0 + 1, y1 - 1, 0, 6, OAKW);
+    box(c, x0 + 2, x1 - 3, y0 + 2, y1 - 2, 6, 9, LINEN, { topBias: 1 });
+    const ph = (y1 - y0 - 4) / pillows;
+    for (let k = 0; k < pillows; k++) {
+      c.part();
+      const py = y0 + 2 + ph * (k + 0.5) - 10;
+      c.ellipse(x0 + 5.5, py, 2.6, ph / 2 - 0.3, LINEN, { bias: 1, flatten: 0.8 });
+      c.shade(x0 + 5.5, py, -1);
+    }
+    // The quilt, turned down at the pillows' end, hanging over the near side.
+    const qx0 = x0 + 10;
+    box(c, qx0, x1 - 2, y0 + 1, y1 - 1, 3, 10, quilt);
+    patchwork(c, quilt, qx0 + 2, x1 - 2, y0 + 1 - 10, y1 - 1 - 3);
+    c.part();
+    for (let y = y0 + 1 - 10; y < y1 - 1 - 3; y++) {
+      for (const x of [qx0, qx0 + 1]) {
+        if (c.materialAt(x, y) === quilt) c.px(x, y, LINEN, y < y1 - 1 - 10 ? TOP : FACE, { bias: x === qx0 ? 2 : 0 });
+      }
+    }
+    box(c, x1 - 2, x1, y0 + 2, y1 - 2, 0, 8, OAKW);
+    box(c, x0, x0 + 2, y1 - 2, y1, 0, 18, DARKW);
+    box(c, x1 - 2, x1, y1 - 2, y1, 0, 10, DARKW);
+  };
+}
+
+function bedBack(quilt: Material, pillows: number): Drawer {
+  return (c, g) => {
+    // Feet away from us: the footboard beyond, the headboard's back towards us.
+    const x0 = g.x0 + 1;
+    const x1 = g.x1 - 1;
+    box(c, x0, x1, g.y0 + 1, g.y0 + 3, 0, 8, OAKW);
+    for (const x of [x0, x1 - 2]) box(c, x, x + 2, g.y0 + 1, g.y0 + 3, 0, 10, DARKW);
+    box(c, x0, x1, g.y0 + 3, g.y1 - 2, 0, 6, OAKW);
+    box(c, x0 + 1, x1 - 1, g.y0 + 3, g.y1 - 3, 6, 9, LINEN, { topBias: 1 });
+    const qy1 = g.y1 - 12;
+    box(c, x0, x1, g.y0 + 3, qy1, 3, 10, quilt);
+    patchwork(c, quilt, x0, x1, g.y0 + 3 - 10, qy1 - 10);
+    // Its turned-down edge.
+    c.part();
+    for (let y = qy1 - 12; y < qy1 - 8; y++) {
+      for (let x = x0; x < x1; x++) if (c.materialAt(x, y) === quilt) c.px(x, y, LINEN, y < qy1 - 10 ? TOP : FACE, { bias: y === qy1 - 12 ? 2 : y === qy1 - 9 ? -1 : 0 });
+    }
+    const pw = (x1 - x0 - 4) / pillows;
+    for (let k = 0; k < pillows; k++) {
+      c.part();
+      const px = x0 + 2 + pw * (k + 0.5);
+      c.ellipse(px, g.y1 - 7 - 11, pw / 2 - 0.3, 2.6, LINEN, { bias: 1, flatten: 0.8 });
+    }
+    // The headboard from behind: plain boards on a rail, the crest along its top.
+    box(c, x0, x1, g.y1 - 3, g.y1 - 1, 0, 15, OAKW, { bias: -1 });
+    for (let x = x0 + 2; x < x1 - 2; x++) {
+      for (let y = g.y1 - 1 - 15; y < g.y1 - 1; y++) if ((x - x0) % 4 === 0) c.shade(x, y, -1);
+      c.shade(x, g.y1 - 1 - 6, -1);
+    }
+    c.part();
+    for (let x = x0 + 2; x < x1 - 2; x++) {
+      const t = (x + 0.5 - g.cx) / ((x1 - x0) / 2);
+      const rise = Math.round(Math.cos(t * Math.PI * 0.5) * 3);
+      for (let k = 1; k <= rise; k++) c.px(x, g.y1 - 3 - 15 - k, OAKW, FACE, { bias: k === rise ? 1 : -1 });
+    }
+    for (const x of [x0, x1 - 2]) box(c, x, x + 2, g.y1 - 3, g.y1 - 1, 0, 18, DARKW);
+  };
+}
+
+/** The views a turning part has besides its front: its side (facing east; west is it mirrored) and its back. */
+export const PROP_TURNS: Record<string, { side: PropArt; back: PropArt }> = {
+  chair: { side: chairSide, back: chairBack },
+  sofa: { side: sofaSide, back: sofaBack },
+  bench: { side: benchSide, back: benchBack },
+  bed: { side: sized(2, 1, 1, 20, bedSide(QUILT_R, 1)), back: sized(1, 2, 1, 20, bedBack(QUILT_R, 1)) },
+  bigbed: { side: sized(2, 2, 1, 20, bedSide(QUILT_B, 2)), back: sized(2, 2, 1, 20, bedBack(QUILT_B, 2)) },
+};
+
 // ---------------------------------------------------------------- The list
 
 /** Every part drawn here, by id. The rest (trees, bushes, ferns, stumps, brazier, crystal) reuse the forest's art. */
@@ -2018,6 +2323,7 @@ export const PROP_ART: Record<string, PropArt> = {
   campfire,
   candelabra,
   fairylights: fireflyJar,
+  mushlamp: mushLamp,
   painting,
   portrait,
   banner,
