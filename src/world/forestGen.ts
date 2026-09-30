@@ -37,6 +37,8 @@ const NS = NN + 1;
 const REGION = 560;
 const BAND = 96;
 /** Grids things are picked on. */
+/** Raises every wood's thicket threshold: thickets are small islands of treetops to walk round, never walls. */
+const THICKET_LIFT = 0.16;
 const TREE_CELL = 22;
 /** How far below a place (px) a tree's crown would still stand over it. */
 const TREE_SHADE = 96;
@@ -132,7 +134,7 @@ export const BIOMES: Biome[] = [
     roof: 2,
     ponds: -0.03,
     props: 0.1,
-    undergrowth: [['fern', 24], ['rock', 18], ['boulder', 8], ['stump', 10], ['log', 8], ['redcap', 6], ['tuft', 10]],
+    undergrowth: [['fern', 24], ['rock', 10], ['boulder', 5], ['stump', 10], ['log', 8], ['redcap', 6], ['tuft', 10]],
     monsters: [['barkling', 3], ['beetle', 2]],
     names: [['Raven', 'Wolf', 'Needle', 'Shadow', 'Cone', 'Black', 'Winter', 'Owl'], ['Pines', 'Pinewood', 'Hills', 'Firs']],
   },
@@ -400,6 +402,8 @@ export class ForestGen {
     this.startCell = { i: 0, j: 0 };
     this.nearestCell(FOREST_MID + wx, FOREST_MID + wy);
     this.startCell = { i: this.where.ci, j: this.where.cj };
+    // Its biome was cached before the start was known.
+    this.cellsAt.gx = NaN;
   }
 
   private n(x: number, y: number, scale: number, salt: number): number {
@@ -430,43 +434,49 @@ export class ForestGen {
     return 0;
   }
 
+  /** The 3x3 region cells round the last grid square asked about: their centres and biomes (asked of millions of pixels, mostly in the same square). */
+  private cellsAt = { gx: NaN, gy: NaN, px: new Float64Array(9), py: new Float64Array(9), biome: new Int8Array(9) };
+
   /** The region cell nearest the warped spot (xw, yw), into `where`. */
   private nearestCell(xw: number, yw: number): Where {
     const gx = Math.floor(xw / REGION);
     const gy = Math.floor(yw / REGION);
-    let d1 = 1e12;
-    let d2 = 1e12;
-    let i1 = 0;
-    let j1 = 0;
-    let i2 = 0;
-    let j2 = 0;
-    for (let oy = -1; oy <= 1; oy++) {
-      for (let ox = -1; ox <= 1; ox++) {
-        const i = gx + ox;
-        const j = gy + oy;
-        const px = (i + 0.18 + this.h(i, j, 23) * 0.64) * REGION;
-        const py = (j + 0.18 + this.h(i, j, 25) * 0.64) * REGION;
-        const d = Math.hypot(xw - px, yw - py);
-        if (d < d1) {
-          d2 = d1;
-          i2 = i1;
-          j2 = j1;
-          d1 = d;
-          i1 = i;
-          j1 = j;
-        } else if (d < d2) {
-          d2 = d;
-          i2 = i;
-          j2 = j;
-        }
+    const c = this.cellsAt;
+    if (c.gx !== gx || c.gy !== gy) {
+      c.gx = gx;
+      c.gy = gy;
+      for (let n = 0; n < 9; n++) {
+        const i = gx + (n % 3) - 1;
+        const j = gy + Math.floor(n / 3) - 1;
+        c.px[n] = (i + 0.18 + this.h(i, j, 23) * 0.64) * REGION;
+        c.py[n] = (j + 0.18 + this.h(i, j, 25) * 0.64) * REGION;
+        c.biome[n] = this.biomeOfCell(i, j);
+      }
+    }
+    let d1 = 1e24;
+    let d2 = 1e24;
+    let n1 = 0;
+    let n2 = 0;
+    for (let n = 0; n < 9; n++) {
+      const dx = xw - c.px[n];
+      const dy = yw - c.py[n];
+      const d = dx * dx + dy * dy;
+      if (d < d1) {
+        d2 = d1;
+        n2 = n1;
+        d1 = d;
+        n1 = n;
+      } else if (d < d2) {
+        d2 = d;
+        n2 = n;
       }
     }
     const w = this.where;
-    w.ci = i1;
-    w.cj = j1;
-    w.a = this.biomeOfCell(i1, j1);
-    w.b = this.biomeOfCell(i2, j2);
-    w.w = w.a === w.b ? 0 : 0.5 * (1 - smooth(0, BAND, d2 - d1));
+    w.ci = gx + (n1 % 3) - 1;
+    w.cj = gy + Math.floor(n1 / 3) - 1;
+    w.a = c.biome[n1];
+    w.b = c.biome[n2];
+    w.w = w.a === w.b ? 0 : 0.5 * (1 - smooth(0, BAND, Math.sqrt(d2) - Math.sqrt(d1)));
     return w;
   }
 
@@ -515,8 +525,10 @@ export class ForestGen {
     const ford = smooth(0.68, 0.74, this.n(x, y, 85, 51));
 
     // Thickets, drawn back from the trails, the water and the places.
-    const rv = this.n(x, y, 165, 53) * 0.62 + this.n(x, y, 56, 55) * 0.38;
-    let roof = (rv - mixB((b) => b.thicket)) * 120 + (this.n(x, y, 7, 57) - 0.5) * 8 + (this.n(x, y, 19, 59) - 0.5) * 14;
+    const rv = this.n(x, y, 165, 53) * 0.84 + this.n(x, y, 56, 55) * 0.16;
+    // The fine noise only bites into a thicket's edge, never adds to it: added, it left lone
+    // clumps of treetops standing in the open, which read as boulders.
+    let roof = (rv - mixB((b) => b.thicket) - THICKET_LIFT) * 170 + Math.min(0, (this.n(x, y, 7, 57) - 0.5) * 8 + (this.n(x, y, 19, 59) - 0.5) * 14);
     roof -= Math.max(0, 22 - trail) * 2.2;
     roof -= Math.max(0, 20 + Math.max(stream, pond)) * 2;
     if (pois) {

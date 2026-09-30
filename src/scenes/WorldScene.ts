@@ -613,7 +613,12 @@ export class WorldScene extends Phaser.Scene {
     this.fitCamera();
     this.followHero();
     this.ground?.prime(this.view);
-    this.forest?.prime(this.view, () => cam.fadeIn(500, 7, 8, 13));
+    if (this.forest) {
+      this.forest.prime(this.view, () => cam.fadeIn(500, 7, 8, 13));
+      // A loading screen while the painters get the first view in (it goes by itself).
+      this.scene.launch('forestload');
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scene.stop('forestload'));
+    }
     this.showBanner(arena.name);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this));
