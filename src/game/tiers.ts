@@ -62,6 +62,10 @@ export const MOB_TIER: Record<string, Tier> = {
   geodeback: 'strong',
   sporemother: 'legend',
   wyrm: 'myth',
+  // Hallow's Eve (October), in every arena.
+  gourdling: 'weak',
+  hexbat: 'weak',
+  pumpkin_king: 'legend',
   // The omens' Treasure Imp.
   imp: 'strong',
 };
@@ -114,6 +118,9 @@ export const MOB_BULK: Record<string, number> = {
   sporemother: 1.2,
   warden: 0.9,
   wyrm: 1.3,
+  gourdling: 1,
+  hexbat: 0.85,
+  pumpkin_king: 1.1,
   imp: 1.1,
 };
 

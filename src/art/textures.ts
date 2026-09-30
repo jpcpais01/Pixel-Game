@@ -25,6 +25,7 @@ import { EGG_H, EGG_W, PET_ART, PET_FRAMES, PET_H, PET_W, eggCracks, petFrames, 
 import { RIFT_PLATFORM_H, RIFT_PLATFORM_W, SHARD_H, SHARD_W, TEAR_FRAMES, TEAR_H, TEAR_W, blessingIcon, riftPlatformArt, riftShard, riftTear, riftVoidCanvas, type BlessingIcon } from './rift';
 import { RIFT_H, RIFT_W } from '../world/riftLayout';
 import { ABYSS_SPELL, ABYSS_TONES, TIDE_SPELL, waveIcon } from './tide';
+import { PUMPKIN_EMBERS, PUMPKIN_METEOR, PUMPKIN_SPELL, jackOrbFrame, pumpkinMeteorIcon } from './pumpkin';
 import { AUTUMN_SPELL, AUTUMN_TONES, FROST_SPELL, FROST_TONES, GROVE_SPELL, WILD_SPELL, clawsIcon, groveIcon, pounceIcon, thornSeedIcon } from './druid';
 import { RAVEN_INK, RAVEN_TONES, SUN_INK, SUN_TONES, diveIcon, spearIcon, spearThrowIcon } from './valkyrie';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
@@ -67,6 +68,7 @@ import { matIcon } from '../game/forge';
 import { CH_EXT_H, CH_EXT_W, CH_H, CH_W } from '../world/chapelLayout';
 import { AFONSO_TONES, decreeIcon, KING_TONES } from './king';
 import { JADE_LOOK } from './warrior';
+import { hollowSwordIcon, lanternWhirlIcon } from './headless';
 import { WIND_DEEP } from './palette';
 import { buildBarklingSheet, buildBeetleSheet, buildFrogSheet, buildGlowmothSheet, buildPuffcapSheet, ringCanvas, thornFrame, THORN_H, THORN_W, venomGlob, type MonsterSheet } from './monsters';
 import { buildWardenSheet } from './warden';
@@ -81,6 +83,7 @@ import { TEMPLE_H, TEMPLE_W } from '../world/templeLayout';
 import { CAPS_FRAMES, CAPS_H, CAPS_W, CRYS_FRAMES, FOOT_H, FOOT_W, SHAFT_H, SHAFT_W, SHROOM_FRAMES, SKYPOOL_FRAMES, SKYPOOL_H, SKYPOOL_W, SPIRE_FRAMES, STALAG_FRAMES, propFooting, skylightPool, skylightShaft, CRYS_H, CRYS_W, LANTERN_FRAMES, LANTERN_H, LANTERN_W, SHROOM_H, SHROOM_W, SPIRE_H, SPIRE_W, STALAG_H, STALAG_W, amethystCluster, amethystSpire, capCluster, deepArt, giantShroom, lanternPost, stalagmite } from './deep';
 import { PUFF_FRAMES, PUFF_H, PUFF_W, SPIKE_H, SPIKE_W, buildGeodebackSheet, buildGlimbatSheet, buildMyconidSheet, buildShardlingSheet, buildSporelingSheet, crystalSpike, puffball } from './deepMonsters';
 import { buildSporemotherSheet } from './sporemother';
+import { BOMB_FRAMES, BOMB_SIZE, FLAME_FRAMES as HW_FLAME_FRAMES, FLAME_H as HW_FLAME_H, FLAME_W as HW_FLAME_W, LASH_FRAMES, LASH_H, LASH_W, SPROUT_FRAMES, SPROUT_H, SPROUT_W, buildGourdlingSheet, buildHexbatSheet, buildPumpkinKingSheet, flameFrame, lashFrame, pumpkinBomb, sproutFrame } from './hallowsMonsters';
 import { BREATH_SHARD, breathShard, buildWyrmSheet } from './wyrm';
 import { DEEP_H, DEEP_W } from '../world/deepLayout';
 import { FLOAT_ROCK_H, FLOAT_ROCK_W, HOLE_SIZE, METEOR_H, METEOR_W, OBELISK_H, OBELISK_W, PLATFORM_H, PLATFORM_W, RAY_H as COSMIC_RAY_H, RAY_W as COSMIC_RAY_W, cosmicRay, floatingRock, lightPool, meteor, obelisk, platformArt, shockRing, singularity, spaceCanvas, streak } from './cosmos';
@@ -377,8 +380,20 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   const hellMeteors = scene.textures.addCanvas('pyro_meteor_hell', toCanvas(PYRO_METEOR_W * 3, PYRO_METEOR_H, sideBySide(PYRO_METEOR_W, PYRO_METEOR_H, [0, 1, 2].map((f) => pyroMeteor(f, HELL_METEOR)))))!;
   for (let i = 0; i < 3; i++) hellMeteors.add(`m${i}`, 0, i * PYRO_METEOR_W, 0, PYRO_METEOR_W, PYRO_METEOR_H);
   scene.textures.addCanvas('scorch_hell', toCanvas(48, 24, scorchCanvas(48, 24, FEL_EMBERS)));
+  // The Pumpkin Witch's jack-o'-bolt (a burning jack-o'-lantern), its burst, and her pumpkin meteor, button and scorch.
+  register(scene, 'orb_pumpkin', pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => jackOrbFrame(i)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
+  register(scene, 'burst_pumpkin', pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i, PUMPKIN_SPELL)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
+  scene.anims.create({ key: 'orb_pumpkin_spin', frames: scene.anims.generateFrameNames('orb_pumpkin_e', { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });
+  scene.anims.create({ key: 'burst_pumpkin_pop', frames: scene.anims.generateFrameNames('burst_pumpkin_e', { prefix: 'b', start: 0, end: BURST_FRAMES - 1 }), frameRate: 22, repeat: 0 });
+  scene.textures.addCanvas('icon_meteor_pumpkin', toCanvas(16, 16, pumpkinMeteorIcon()));
+  const pumpkinMeteors = scene.textures.addCanvas('pyro_meteor_pumpkin', toCanvas(PYRO_METEOR_W * 3, PYRO_METEOR_H, sideBySide(PYRO_METEOR_W, PYRO_METEOR_H, [0, 1, 2].map((f) => pyroMeteor(f, PUMPKIN_METEOR)))))!;
+  for (let i = 0; i < 3; i++) pumpkinMeteors.add(`m${i}`, 0, i * PYRO_METEOR_W, 0, PYRO_METEOR_W, PYRO_METEOR_H);
+  scene.textures.addCanvas('scorch_pumpkin', toCanvas(48, 24, scorchCanvas(48, 24, PUMPKIN_EMBERS)));
   scene.textures.addCanvas('icon_sword_spartan', toCanvas(16, 16, swordIcon({ blade: '#dfe8f7', bladeDark: '#8d9dbd', tip: '#f4f8ff', guard: '#cc8c3e', guardLit: '#f4d08a', guardDark: '#955a24', grip: '#6e3a20', ink: '#140904' })));
   scene.textures.addCanvas('icon_whirl_spartan', toCanvas(16, 16, whirlIcon([hex('#fff0e8'), hex('#ff9a80'), hex('#f03a3a'), hex('#8a0a1a')])));
+  // The Headless Knight's (Hallow's Eve): the notched, smouldering blade and a whirl round a jack-o'-lantern.
+  scene.textures.addCanvas('icon_sword_headless', toCanvas(16, 16, hollowSwordIcon()));
+  scene.textures.addCanvas('icon_whirl_headless', toCanvas(16, 16, lanternWhirlIcon()));
   // The King's and Afonso Henriques's buttons.
   scene.textures.addCanvas('icon_sword_king', toCanvas(16, 16, swordIcon({ blade: '#e4ecf8', bladeDark: '#8d9dbd', tip: '#f8fbff', guard: '#f4cf6a', guardLit: '#fff4bf', guardDark: '#9a5a26', grip: '#6c2c96', ink: '#0c0414' })));
   scene.textures.addCanvas('icon_decree', toCanvas(16, 16, decreeIcon(KING_TONES)));
@@ -564,6 +579,21 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('danger_ring', toCanvas(ring.w, ring.h, ring.px));
 
   register(scene, 'dummy', pack(frameList([dummyFrame(false), dummyFrame(true)], 'd'), 18, 28), 18, 28, false);
+
+  yield;
+  // Hallow's Eve: the gourdling, the hexbat and the Pumpkin King, who may
+  // turn up in any arena, so they're built with the base monsters. With the
+  // King's spells: bombs 'b0..' ('g0..' ghost-green), the vines his gourdlings
+  // sprout from, his lash's sweep and the flames bombs leave (light only).
+  registerMonster(scene, 'gourdling', buildGourdlingSheet());
+  registerMonster(scene, 'hexbat', buildHexbatSheet());
+  registerMonster(scene, 'pumpkin_king', buildPumpkinKingSheet());
+  const both = <T,>(f: (i: number, ghost: boolean) => T, n: number) => [...Array.from({ length: n }, (_, i) => f(i, false)), ...Array.from({ length: n }, (_, i) => f(i, true))];
+  const named = (canvases: PixelCanvas[], n: number) => canvases.map((c, i) => ({ name: `${i < n ? 'o' : 'g'}${i % n}`, r: c.render() }));
+  register(scene, 'hw_bomb', pack(named(both(pumpkinBomb, BOMB_FRAMES), BOMB_FRAMES), BOMB_SIZE, BOMB_SIZE), BOMB_SIZE, BOMB_SIZE);
+  register(scene, 'hw_sprout', pack(frameList(Array.from({ length: SPROUT_FRAMES }, (_, i) => sproutFrame(i)), 's'), SPROUT_W, SPROUT_H), SPROUT_W, SPROUT_H);
+  register(scene, 'hw_lash', pack(named(both(lashFrame, LASH_FRAMES), LASH_FRAMES), LASH_W, LASH_H, 8), LASH_W, LASH_H);
+  register(scene, 'hw_flame', pack(named(both(flameFrame, HW_FLAME_FRAMES), HW_FLAME_FRAMES), HW_FLAME_W, HW_FLAME_H), HW_FLAME_W, HW_FLAME_H);
 }
 
 /** The Cosmos Arena: backdrop, platform, props and spells. */

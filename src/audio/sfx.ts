@@ -587,6 +587,19 @@ export class Sfx {
     this.sparkle(out, t + 0.05, Math.min(10, 2 + n), 0.035);
   }
 
+  /**
+   * Candy picked up (a season's): the crinkle of a wrapper, then a music box
+   * in a minor key, a note more the bigger the handful.
+   */
+  candyPickup(t: number, n: number): void {
+    const out = this.out(0, 0.45, 0.45);
+    for (let i = 0; i < 3; i++) this.burstNoise(out, t + i * 0.035, 'bandpass', 3200 + i * 900, 5200, 2.5, 0.05, 0.03);
+    const notes = [1319, 1568, 1976, 2349, 2637];
+    const k = Math.min(notes.length, 2 + Math.floor(Math.log2(n + 1)));
+    for (let i = 0; i < k; i++) this.bell(out, t + 0.08 + i * 0.07, notes[i], 0.035, 0.7);
+    if (n >= 8) this.sparkle(out, t + 0.12, 8, 0.04);
+  }
+
   /** Gems spent: a quick falling tinkle as they pour into the crystal. */
   gemSpend(t: number): void {
     const out = this.out(0, 0.4, 0.4);

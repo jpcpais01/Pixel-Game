@@ -58,6 +58,11 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - Gem drops: `TIER_GEMS` / `rollGems` in `tiers.ts`; the drop show scales with the count (`gemShow` in `Pickup.ts`, `dropGems`/`gainGems` in `WorldScene`).
 - Art in `art/shop.ts` (gems, piles, crystal, altar, hall, cards); sounds `gem*`, `wish*`, `cardFlip` in `audio/sfx.ts`.
 
+**Seasons** (`src/game/season.ts`)
+- `SEASONS`: a month-long event each. Hallow's Eve (October): candy (`collection.candy`, saved to the cloud) dropped by its monsters (`gourdling`, `hexbat`, the `pumpkin_king` Legend in the Sunken Garden; `game/monsters/Hallows.ts`, art in `art/hallowsMonsters.ts`) and a little by any monster, spent at Old Wick's stall in the Clearing (`world/Hallows.ts`: lanterns, fog, stall; art in `art/hallowsDecor.ts`; counter `ui/candyView.ts`, opened as `keeperCall` 'candy').
+- `seasonalSpots` adds its monsters after an arena's own spots (so online slots match). Season skins (`SkinDef.season`) and pets (`PetDef.season`) are sold for candy and never wished for. `?season=hallows|off|auto` previews one on this device.
+- A new season: an entry in `SEASONS`, its monsters, decor, and wares.
+
 **Companions** (`src/game/pets.ts`, `src/game/Companion.ts`)
 - `PETS`: 20 companions (rare/epic/legendary) with a perk in `mods` (Scarab's `reach` widens the loot magnet in `Pickup.ts`), a gait, the wyrmling's `fights`, the phoenix's `rebirth`, and a `power` for the newer epics and legendaries: `chill` (Snowpaw), `zap` (Nimbus), `ward` (Mossback, checked in `hurtHero`), `mend` (Pixie, via `WorldScene.mendHero`), `dive` (Gryphon), `lash` (Krakling), `hoard` (Mimic, on `cheer`). Their timings are consts at the top of `Companion.ts`; their effects are in `petPowers.ts`. Won from the Shop's second banner, the Wishing Nest (`petWish`, own pity `collection.petPity`, same odds and prices as skins); worn one is `collection.pet`, chosen on the Inventory's Companions tab (`ui/petGallery.ts`).
 - `wearPet` fills `petMods`, which WorldScene multiplies in beside gear and `riftMods` (damage, speed, guard, regen, energy, and luck in `rollGems`). `Companion` follows the hero in the world.

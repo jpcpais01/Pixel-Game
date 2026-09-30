@@ -269,6 +269,11 @@ class GameSound {
     if (t !== null) this.sfx!.gemPickup(t, n);
   }
 
+  candyPickup(n: number): void {
+    const t = this.slot('candyPickup');
+    if (t !== null) this.sfx!.candyPickup(t, n);
+  }
+
   gemSpend(): void {
     const t = this.slot('gemSpend');
     if (t !== null) this.sfx!.gemSpend(t);

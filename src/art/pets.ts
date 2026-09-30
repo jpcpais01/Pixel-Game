@@ -4,6 +4,7 @@
 // world mirrors them to face left. Frames are named `<id>_<f>` on one sheet.
 
 import { FLAT, PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
+import { HALLOWS_PET_ART } from './hallowsPets';
 
 const ramp = (...c: string[]): RGB[] => c.map(hex);
 
@@ -1159,6 +1160,7 @@ export const PET_ART: Record<string, (f: number) => PixelCanvas> = {
   gryphon,
   kraken,
   mimic,
+  ...HALLOWS_PET_ART,
 };
 
 /** Every frame of every companion, for the sheet. */

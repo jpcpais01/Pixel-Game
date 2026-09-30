@@ -68,6 +68,7 @@ import {
   STAR_ROBE,
 } from './heroSkins';
 import { ABYSS_BONE, ABYSS_DEEP, ABYSS_FIN, ABYSS_HAIR, ABYSS_HOT, ABYSS_INNER, ABYSS_MID, ABYSS_CORE, ABYSS_ROBE, ABYSS_SKIN, CORAL, DRIFTWOOD, FOAM, LURE, PEARL, SEA_HAIR, SHELL, TIDE_CORE, TIDE_DEEP, TIDE_HOT, TIDE_INNER, TIDE_MID, TIDE_ROBE } from './tide';
+import { GNARLWOOD, JACK_FIRE, JACK_RIND, JACK_STEM, PUMPKIN_TRIM, WITCH_CORE, WITCH_DEEP, WITCH_EYE, WITCH_GHOST, WITCH_HAIR, WITCH_HAT, WITCH_HOT, WITCH_LINING, WITCH_MID, WITCH_RIBBON, WITCH_ROBE, WITCH_SKIN } from './pumpkin';
 import { ANTLER, AMBER, AUBURN, AUTUMN_LEAF, AUTUMN_ROBE, BARE_ANTLER, BARK, EMBER_SEED, FANG, FROST_HAIR, FROST_HIDE, FROST_TUNIC, FROST_WOOD, HIDE, ICE, ICE_FANG, LEAF, LIVEWOOD, MOSS, MUZZLE, PELT, SEED, SNOW_PELT, TUNIC, WOAD, WOLF_NOSE, AUTUMN_CORE, AUTUMN_DEEP, AUTUMN_HOT, AUTUMN_MID, FROST_CORE, FROST_DEEP, FROST_HOT, FROST_MID, GROVE_CORE, GROVE_DEEP, GROVE_HOT, GROVE_MID, WILD_CORE, WILD_DEEP, WILD_HOT, WILD_MID } from './druid';
 
 // ---------------------------------------------------------------------------
@@ -113,8 +114,13 @@ export interface WizardLook {
    * crown of coral, a collar of scallop shells, a hem breaking in foam,
    * bubbles rising round her, and a driftwood staff whose coral tines cradle
    * a pearl.
+   * 'witch': the Pyromancer's Pumpkin Witch, a tall crooked hat with a bent
+   * tip and a jack-o'-lantern charm on its band, long flame-orange hair past
+   * the shoulders, a pale green face with glowing eyes, a laced bodice, a
+   * ragged hem striped in orange, embers and ghost-motes drifting round her,
+   * and a gnarled staff cradling a carved, glowing pumpkin.
    */
-  head?: 'astral' | 'fiend' | 'grove' | 'wild' | 'tide';
+  head?: 'astral' | 'fiend' | 'grove' | 'wild' | 'tide' | 'witch';
   /** Hair of the bare heads. */
   hair?: Material;
   /** The Tidecaller's crown and staff tines. */
@@ -301,7 +307,24 @@ export const ABYSS_LOOK: WizardLook = {
   lure: true,
 };
 
-export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK, AUTUMN_LOOK, FROST_LOOK, TIDE_LOOK, ABYSS_LOOK];
+/** The Pyromancer's Pumpkin Witch (Hallow's Eve): a witch of candle-orange fire with violet at its edges. */
+export const PUMPKIN_LOOK: WizardLook = {
+  key: 'wizard_pumpkin',
+  robe: WITCH_ROBE,
+  inner: WITCH_LINING,
+  trim: PUMPKIN_TRIM,
+  belt: WITCH_LINING,
+  boot: BOOT,
+  skin: WITCH_SKIN,
+  shaft: GNARLWOOD,
+  crystal: JACK_RIND,
+  magic: { core: WITCH_CORE, hot: WITCH_HOT, mid: WITCH_MID, deep: WITCH_DEEP },
+  hooded: false,
+  head: 'witch',
+  hair: WITCH_HAIR,
+};
+
+export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK, AUTUMN_LOOK, FROST_LOOK, TIDE_LOOK, ABYSS_LOOK, PUMPKIN_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let S: WizardLook = ARCANE_LOOK;
@@ -490,6 +513,29 @@ function drawStaff(c: PixelCanvas, s: Staff, glow: number): { x: number; y: numb
     c.part();
     const sh = at(0, -0.9);
     c.ellipse(sh.x, sh.y, 1.2, 1.0, S.shell ?? S.trim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.2, 1) });
+  } else if (S.head === 'witch') {
+    // Gnarled wood: burls bulging off the shaft, and two crooked twigs curling
+    // up round the pumpkin like fingers.
+    const px = -g.dy;
+    const py = g.dx;
+    const at = (side: number, up: number) => ({ x: g.top.x + px * side + g.dx * up, y: g.top.y + py * side + g.dy * up });
+    c.part();
+    for (const [t, side] of [[0.3, 1], [0.62, -1], [0.85, 1]] as const) {
+      const bx = g.bottom.x + (g.top.x - g.bottom.x) * t + px * side * 0.9;
+      const by = g.bottom.y + (g.top.y - g.bottom.y) * t + py * side * 0.9;
+      c.px(bx, by, S.shaft, { x: side * px * 0.6 - 0.2, y: 0.4, z: 0.8 }, { bias: side < 0 ? 1 : 0 });
+    }
+    for (const k of [-1, 1]) {
+      c.part();
+      const a0 = at(k * 0.5, 0);
+      const a1 = at(k * 2.0, 0.9);
+      const a2 = at(k * 3.0, 2.8);
+      const a3 = at(k * 2.2, 4.4);
+      c.capsule(a0.x, a0.y, a1.x, a1.y, 0.6, 0.5, S.shaft, { bias: 1 });
+      c.capsule(a1.x, a1.y, a2.x, a2.y, 0.5, 0.4, S.shaft);
+      c.capsule(a2.x, a2.y, a3.x, a3.y, 0.4, 0.25, S.shaft, { bias: 1 });
+    }
+    return jackOLantern(c, g.gem.x, g.gem.y, glow);
   } else if (s.float > 0) {
     // Fork cradling the crystal.
     const px = -g.dy;
@@ -511,6 +557,38 @@ function drawStaff(c: PixelCanvas, s: Staff, glow: number): { x: number; y: numb
       return { x: fx, y: fy, z: 0.7 };
     },
   });
+  return { x: gx, y: gy };
+}
+
+/**
+ * The Pumpkin Witch's lantern, where the crystal would be: a ribbed pumpkin,
+ * lit from within, its carved eyes and grin blazing, a curl of stem on top.
+ */
+function jackOLantern(c: PixelCanvas, gx: number, gy: number, glow: number): { x: number; y: number } {
+  const cg = 0.55 + glow * 0.45;
+  c.part();
+  c.ellipse(gx, gy, 2.6, 2.1, JACK_RIND, {
+    glow: JACK_RIND.emissive! * cg,
+    normal: (_x, _y, dx, dy) => sphere(dx * 0.85, dy * 0.8 - 0.15, 1),
+  });
+  // The grooves between the lobes, a pixel either side of the middle.
+  const x0 = Math.floor(gx);
+  const y0 = Math.floor(gy);
+  for (let y = y0 - 1; y <= y0 + 1; y++) {
+    c.shade(x0 - 2, y, -1);
+    c.shade(x0 + 1, y, -1);
+  }
+  // The carving, candle-bright.
+  c.part();
+  const lit = { glow: 0.7 + glow * 0.3 };
+  c.px(x0 - 1, y0 - 1, JACK_FIRE, FLAT_DOWN, lit);
+  c.px(x0 + 1, y0 - 1, JACK_FIRE, FLAT_DOWN, lit);
+  c.px(x0 - 1, y0 + 1, JACK_FIRE, FLAT_DOWN, lit);
+  c.px(x0, y0 + 1, JACK_FIRE, FLAT_DOWN, { ...lit, bias: 1 });
+  c.px(x0 + 1, y0 + 1, JACK_FIRE, FLAT_DOWN, lit);
+  c.part();
+  c.px(x0, y0 - 2, JACK_STEM, { x: -0.3, y: 0.6, z: 0.75 }, { bias: 1 });
+  c.px(x0 + 1, y0 - 3, JACK_STEM, { x: 0.3, y: 0.5, z: 0.8 });
   return { x: gx, y: gy };
 }
 
@@ -624,7 +702,12 @@ function hemTrim(c: PixelCanvas, edges: (y: number) => [number, number], hem: nu
     }
     return;
   }
-  if (!S.hooded && S.head !== 'fiend' && S.head !== 'wild') {
+  if (S.head === 'witch') {
+    // The witch's robe: an orange stripe a pixel above the rags.
+    const [sl, sr] = edges(hem - 1);
+    c.part();
+    c.shape(hem - 1, hem - 1, () => [sl, sr], S.trim, (_x, _y, t) => cyl(t, -0.1));
+  } else if (!S.hooded && S.head !== 'fiend' && S.head !== 'wild') {
     c.part();
     c.shape(hem, hem, () => [l, r], S.trim, (_x, _y, t) => cyl(t, -0.1));
     return;
@@ -640,6 +723,8 @@ function hemTrim(c: PixelCanvas, edges: (y: number) => [number, number], hem: nu
     else if (k === 1) c.shade(x, hem, -1);
     // The warlock's rags smoulder: fel embers along the torn edge.
     if (S.head === 'fiend' && k !== 0) c.spark(x, hem, (x + hem) % 2 ? S.magic.mid : S.magic.deep, 0.55);
+    // The witch's rags smoulder faintly violet at the tips.
+    if (S.head === 'witch' && k === 0 && (x + hem) % 2) c.spark(x, hem + 1, S.magic.deep, 0.35);
   }
 }
 
@@ -1762,12 +1847,236 @@ function tideFlecks(c: PixelCanvas, U: number, p: Pose): void {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Heads: the Pumpkin Witch's crooked hat, flame-orange hair and glowing eyes
+
+interface WitchHatCfg {
+  /** Half-width of the cone at its base. */
+  hw: number;
+  /** How far the top of the cone leans over, in pixels (negative: to the left). */
+  lean: number;
+  /** The way the folded tip hangs: -1 left, 1 right. */
+  flop: number;
+  /** The brim's centre and half-width. */
+  brimX: number;
+  brimRx: number;
+  /** A plum patch sewn on the cone, and the jack-o'-lantern charm hanging off the band (top-left pixels). */
+  patch?: [number, number];
+  charm?: [number, number];
+}
+
+/**
+ * The witch's hat: a wide brim, dipping at one end and turned up at the
+ * other; a tall cone leaning over, bowed in the middle, with a crease where it
+ * bends and its tip folded down; a violet ribbon over an orange band.
+ */
+function witchHat(c: PixelCanvas, cx: number, U: number, o: WitchHatCfg): void {
+  const tipY = 1 + U;
+  const baseY = 9 + U;
+  const brimY = 10.5 + U;
+  c.part();
+  c.ellipse(o.brimX, brimY, o.brimRx, 1.7, WITCH_HAT, {
+    normal: (_x, _y, dx, dy) => {
+      const l = Math.hypot(dx * 0.55, 0.55 - dy * 0.35, 0.75);
+      return { x: (dx * 0.55) / l, y: (0.55 - dy * 0.35) / l, z: 0.75 / l };
+    },
+  });
+  const bl = Math.round(o.brimX - o.brimRx);
+  const br = Math.round(o.brimX + o.brimRx) - 1;
+  c.px(o.flop > 0 ? bl + 1 : br - 1, Math.floor(brimY) + 1, WITCH_HAT, { x: -0.3 * o.flop, y: -0.3, z: 0.9 }, { bias: -1 });
+  c.px(o.flop > 0 ? br : bl, Math.floor(brimY) - 1, WITCH_HAT, { x: 0.4 * o.flop, y: 0.6, z: 0.7 }, { bias: 1 });
+
+  // The cone.
+  const uOf = (y: number) => (y + 0.5 - tipY) / (baseY + 1 - tipY);
+  const mid = (u: number) => cx + o.lean * Math.pow(1 - u, 1.6) + o.flop * 0.8 * Math.sin(u * Math.PI);
+  const edges = (y: number): [number, number] => {
+    const u = uOf(y);
+    const hw = 0.6 + (o.hw - 0.6) * Math.pow(u, 0.85);
+    return [mid(u) - hw, mid(u) + hw];
+  };
+  c.part();
+  c.shape(tipY, baseY, edges, WITCH_HAT, (_x, _y, t, u) => cyl(t, 0.45 - u * 0.2));
+  // The crease where it bends: a fold in shadow with the lit cloth bunched above it.
+  const crease = Math.round(tipY + (baseY - tipY) * 0.42);
+  const cm = Math.round(mid(uOf(crease)));
+  c.shade(cm - 1, crease, -1);
+  c.shade(cm, crease, -1);
+  c.shade(cm - 1, crease - 1, 1);
+  // The tip, folded over and hanging.
+  c.part();
+  const tx = mid(0);
+  c.capsule(tx, tipY + 0.5, tx + o.flop * 1.6, tipY - 0.2, 0.75, 0.6, WITCH_HAT, { bias: 1 });
+  c.capsule(tx + o.flop * 1.6, tipY - 0.2, tx + o.flop * 3.0, tipY + 1.8, 0.6, 0.35, WITCH_HAT);
+  if (o.patch) {
+    // A square of plum sewn on, a stitch showing at its corner.
+    const [x, y] = o.patch;
+    c.part();
+    for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) c.px(x + dx, y + U + dy, S.robe, { x: -0.4 + dx * 0.4, y: 0.4, z: 0.82 }, { bias: 1 });
+    c.shade(x + 1, y + U, 1);
+  }
+  // Ribbon and band.
+  const [rl, rr] = edges(baseY - 1);
+  c.part();
+  c.shape(baseY - 1, baseY - 1, () => [rl, rr], WITCH_RIBBON, (_x, _y, t) => cyl(t, 0.2));
+  const [nl, nr] = edges(baseY);
+  c.part();
+  c.shape(baseY, baseY, () => [nl, nr], S.trim, (_x, _y, t) => cyl(t, 0.1));
+  if (o.charm) {
+    // A tiny jack-o'-lantern hanging from the band, glowing against the brim.
+    const [x, y] = o.charm;
+    c.part();
+    c.px(x, y + U, JACK_STEM, { x: 0, y: 0.5, z: 0.86 });
+    c.part();
+    c.px(x - 0.5, y + 1 + U, JACK_RIND, sphere(-0.5, -0.3), { bias: 1 });
+    c.px(x + 0.5, y + 1 + U, JACK_RIND, sphere(0.5, -0.3));
+    c.px(x - 0.5, y + 2 + U, JACK_RIND, sphere(-0.5, 0.4));
+    c.px(x + 0.5, y + 2 + U, JACK_RIND, sphere(0.5, 0.4), { bias: -1 });
+    c.spark(x - 0.5, y + 1.5 + U, S.magic.hot, 0.45);
+  }
+}
+
+function witchEyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
+  c.part();
+  for (const [x, y] of pts) {
+    if (blink) {
+      c.px(x, y, S.skin, FLAT_DOWN, { bias: -1 });
+      continue;
+    }
+    c.px(x, y, WITCH_EYE, { x: 0, y: 0, z: 1 });
+    c.spark(x, y, S.magic.hot, 0.4);
+  }
+}
+
+function witchHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  // Hair behind the head, then two long curtains falling over the shoulders,
+  // flaring toward their ends and swinging with the robe.
+  c.part();
+  c.ellipse(cx, 12.2 + U, 4.3, 3.2, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9) });
+  for (const k of [-1, 1]) {
+    c.part();
+    c.shape(12 + U, 22 + U, (y) => {
+      const u = (y - 12 - U) / 10;
+      const inner = 2.4 + u * 1.2;
+      const outer = 4.5 + u * 1.7;
+      const sw = p.hem * u * 0.6;
+      return k < 0 ? [cx - outer + sw, cx - inner + sw] : [cx + inner + sw, cx + outer + sw];
+    }, hair, (_x, _y, t, u) => cyl(t * 0.8 + k * 0.25, 0.3 - u * 0.3));
+    // Strands down each curtain, and ragged ends.
+    for (let y = 15; y <= 22; y++) {
+      const u = (y - 12) / 10;
+      const x = cx + k * (3.5 + u * 1.45) + p.hem * u * 0.6;
+      if ((y + (k > 0 ? 1 : 0)) % 3 !== 0) c.shade(Math.floor(x), y + U, -1);
+    }
+    c.shade(Math.floor(cx + k * (4.2 + 1.45) + p.hem * 0.6), 22 + U, -1);
+  }
+  // Face: pale green, a narrow nose, a thin smirk.
+  c.part();
+  c.ellipse(cx, 13.4 + U, 3.0, 2.6, S.skin);
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
+  c.shade(12, 15 + U, -1);
+  c.shade(13, 15 + U, -1);
+  witchEyes(c, [[10, 13 + U], [13, 13 + U]], p.blink);
+  // The fringe swept to one side under the brim.
+  c.part();
+  for (const x of [9, 10, 11, 14]) c.px(x, 12 + U, hair, { x: -0.2, y: -0.2, z: 0.95 }, { bias: x === 11 ? -1 : 0 });
+  witchHat(c, cx, U, { hw: 4.6, lean: 3.0 + p.hat, flop: 1, brimX: cx, brimRx: 9.6, patch: [9, 6], charm: [8, 9] });
+}
+
+function witchHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  c.part();
+  c.ellipse(cx, 12.0 + U, 4.2, 3.1, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 0.9) });
+  // The hair falls down her back past the shoulders, fanning out and swinging.
+  c.part();
+  c.shape(13 + U, 23 + U, (y) => {
+    const u = (y - 13 - U) / 10;
+    const hw = 3.9 + Math.max(0, u - 0.3) * 1.8;
+    const x = cx - p.hem * u * 0.6;
+    return [x - hw, x + hw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.85, u * 0.7, 0.9));
+  for (let y = 14; y <= 23; y++) {
+    const w = Math.round(-p.hem * ((y - 13) / 10) * 0.6);
+    c.shade(cx - 2 + w, y + U, -1);
+    c.shade(cx + 1 + w, y + U, -1);
+    if (y > 18) c.shade(cx - 4 + w, y + U, -1);
+  }
+  // Ragged ends.
+  for (let x = cx - 5; x <= cx + 5; x += 2) c.shade(x - Math.round(p.hem * 0.6), 23 + U, -1);
+  witchHat(c, cx, U, { hw: 4.6, lean: -3.0 - p.hat, flop: -1, brimX: cx, brimRx: 9.6 });
+}
+
+/** Facing left, like drawSide. */
+function witchHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  // Hair behind, falling long down her back and streaming out behind her.
+  c.part();
+  c.ellipse(cx + 0.8, 12.4 + U, 3.4, 3.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9) });
+  c.part();
+  c.shape(13 + U, 22 + U, (y) => {
+    const u = (y - 13 - U) / 9;
+    const drift = p.hem * u * 0.5 + u * 1.5;
+    return [cx - 0.4 + u * 0.6 + drift, cx + 3.8 + drift];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.8 + 0.1, u * 0.7, 0.9));
+  for (let y = 15; y <= 22; y++) if (y % 3) c.shade(Math.round(cx + 1.6 + ((y - 13) / 9) * (1.5 + p.hem * 0.5)), y + U, -1);
+  // Face in profile, with a witch's long, pointed nose and chin.
+  c.part();
+  c.ellipse(cx - 1.3, 13.5 + U, 2.7, 2.5, S.skin);
+  c.part();
+  c.px(cx - 5, 13 + U, S.skin, sphere(-0.6, -0.3), { bias: 1 });
+  c.px(cx - 5, 14 + U, S.skin, sphere(-0.5, 0.2));
+  c.px(cx - 6, 14 + U, S.skin, sphere(-0.8, 0.3));
+  c.px(cx - 4, 16 + U, S.skin, sphere(-0.5, 0.6), { bias: -1 });
+  c.shade(cx - 4, 15 + U, -1);
+  witchEyes(c, [[cx - 3, 13 + U]], p.blink);
+  // Fringe under the brim, and a lock by the cheek.
+  c.part();
+  for (const x of [cx - 4, cx - 3, cx - 1]) c.px(x, 12 + U, hair, { x: -0.3, y: -0.2, z: 0.93 });
+  for (let y = 13; y <= 16; y++) c.px(cx, y + U, hair, cyl(-0.2, 0), { bias: y > 14 ? -1 : 0 });
+  witchHat(c, cx + 0.6, U, { hw: 4.3, lean: 4.4 + p.hat, flop: 1, brimX: cx - 0.6, brimRx: 9.0, patch: [cx + 1, 6], charm: [cx - 4, 9] });
+}
+
+/** Embers and ghost-motes drifting up round the witch, each rising and fading, then starting again. */
+function witchFlecks(c: PixelCanvas, p: Pose): void {
+  const ph = p.glow * 5 + p.staff.float * 2 + p.breath * 1.1 + p.hem * 0.7;
+  const spots: [number, number][] = [[3, 27], [20.5, 25], [4.5, 20], [19.5, 17]];
+  spots.forEach(([x, y], i) => {
+    const rise = ((ph * 1.4 + i * 2.3) % 6 + 6) % 6;
+    const bx = x + Math.sin(ph * 1.7 + i * 2.1) * 0.9;
+    const by = y - rise * 1.5;
+    const a = 0.6 * (1 - rise / 6) + 0.15;
+    if (i % 2 === 0) {
+      // An ember: an orange heart, a dimmer spark trailing under it.
+      c.spark(bx, by, S.magic.hot, a);
+      c.spark(bx, by + 1, S.magic.mid, a * 0.5);
+    } else {
+      // A ghost-mote: pale green, with a violet haze beneath.
+      c.spark(bx, by, WITCH_GHOST, a * 0.9);
+      c.spark(bx, by + 1, S.magic.deep, a * 0.5);
+    }
+  });
+}
+
+/** The laced bodice: a dark strip down the front, crossed by two orange ties. */
+function witchLacing(c: PixelCanvas, cx: number, U: number): void {
+  c.part();
+  c.shape(17 + U, 20 + U, () => [cx - 1, cx + 1], S.inner, (_x, _y, t) => cyl(t * 0.5, 0.1));
+  c.part();
+  for (const y of [18, 20]) {
+    c.px(cx - 1, y + U, S.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
+    c.px(cx, y + U, S.trim, { x: 0.3, y: 0.3, z: 0.9 });
+  }
+}
+
 function headDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   if (S.head === 'astral') astralHeadDown(c, cx, U, p);
   else if (S.head === 'fiend') fiendHeadDown(c, cx, U, p);
   else if (S.head === 'grove') groveHeadDown(c, cx, U, p);
   else if (S.head === 'wild') wildHeadDown(c, cx, U, p);
   else if (S.head === 'tide') tideHeadDown(c, cx, U, p);
+  else if (S.head === 'witch') witchHeadDown(c, cx, U, p);
   else if (S.hooded) hoodDown(c, cx, U, p);
   else beardedHeadDown(c, cx, U, p);
 }
@@ -1778,6 +2087,7 @@ function headUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   else if (S.head === 'grove') groveHeadUp(c, cx, U, p);
   else if (S.head === 'wild') wildHeadUp(c, cx, U, p);
   else if (S.head === 'tide') tideHeadUp(c, cx, U, p);
+  else if (S.head === 'witch') witchHeadUp(c, cx, U, p);
   else if (S.hooded) hoodUp(c, cx, U, p);
   else beardedHeadUp(c, cx, U, p);
 }
@@ -1788,6 +2098,7 @@ function headSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   else if (S.head === 'grove') groveHeadSide(c, cx, U, p);
   else if (S.head === 'wild') wildHeadSide(c, cx, U, p);
   else if (S.head === 'tide') tideHeadSide(c, cx, U, p);
+  else if (S.head === 'witch') witchHeadSide(c, cx, U, p);
   else if (S.hooded) hoodSide(c, cx, U, p);
   else beardedHeadSide(c, cx, U, p);
 }
@@ -1819,6 +2130,7 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
     return [x - 0.5 - u * 0.6, x + 0.5 + u * 0.6];
   }, S.inner, (_x, _y, t) => cyl(t * 0.5, 0.1));
   if (S.head === 'fiend') felRunes(c, (y) => cx + p.hem * Math.pow((y + 0.5 - top) / (hem + 1 - top), 2), belt + 2, hem - 1);
+  if (S.head === 'witch') witchLacing(c, cx, U);
 
   // Belt with buckle.
   const [bl, br] = edges(belt);
@@ -1842,6 +2154,7 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'astral') starfield(c, U);
   if (S.head === 'grove') groveFlecks(c, U, p);
   if (S.head === 'tide') tideFlecks(c, U, p);
+  if (S.head === 'witch') witchFlecks(c, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -1881,6 +2194,7 @@ function drawUp(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'astral') starfield(c, U);
   if (S.head === 'grove') groveFlecks(c, U, p);
   if (S.head === 'tide') tideFlecks(c, U, p);
+  if (S.head === 'witch') witchFlecks(c, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -1935,6 +2249,7 @@ function drawSide(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'astral') starfield(c, U);
   if (S.head === 'grove') groveFlecks(c, U, p);
   if (S.head === 'tide') tideFlecks(c, U, p);
+  if (S.head === 'witch') witchFlecks(c, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -1951,6 +2266,11 @@ function finishMagic(c: PixelCanvas, p: Pose, tip: { x: number; y: number }): vo
     const lean = p.hat + (p.staff.float % 2 ? 1 : 0);
     c.spark(tip.x - 0.4, tip.y - 3, S.magic.hot, 0.45 + p.glow * 0.3);
     c.spark(tip.x - 0.4 + (lean % 2 ? 1 : -1), tip.y - 4, S.magic.mid, 0.35 + p.glow * 0.25);
+  } else if (S.head === 'witch') {
+    // Wisps curl up off the lantern: violet smoke, and a ghost-green fleck above it flickering side to side.
+    const lean = p.hat + (p.staff.float % 2 ? 1 : 0);
+    c.spark(tip.x - 0.4 + (lean % 2 ? 1 : 0), tip.y - 3.6, S.magic.deep, 0.5 + p.glow * 0.2);
+    c.spark(tip.x - 0.4 + (lean % 2 ? 0 : 1), tip.y - 4.8, WITCH_GHOST, 0.3 + p.glow * 0.25);
   } else if (S.head === 'astral') {
     // The star at the staff's head throws out four long rays.
     const r = 2 + Math.round(p.glow * 1.5);

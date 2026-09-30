@@ -53,9 +53,20 @@ const HUNT_QUIVER: QuiverColors = {
   ink: '#07060c',
 };
 
+/** The scarecrow's crooked branch and twine, crow fletching and ember heads trailing ghost-green. */
+const SCARECROW_QUIVER: QuiverColors = {
+  bow: ['#8a7250', '#5a4630', '#2a1e14'],
+  string: '#a8946a',
+  fletch: ['#3a4260', '#0e0f18'],
+  head: ['#fff0a0', '#ff8a2a'],
+  light: ['#fff4d0', '#9cff9a', '#ff8a2a'],
+  ink: '#0a0604',
+};
+
 /** Quiver colours by archer look, for the looks that aren't the ranger's or the storm's. */
 export const SKIN_QUIVERS: Record<string, QuiverColors> = {
   archer_hunt: HUNT_QUIVER,
+  archer_scarecrow: SCARECROW_QUIVER,
 };
 
 /** 16x16 icon for the bone shaman's attack: a gourd with a glyph of juju glowing on it, a red feather in its stopper. */

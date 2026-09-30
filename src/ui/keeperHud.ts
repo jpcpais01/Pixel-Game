@@ -5,7 +5,8 @@
 
 import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
-import { keeperCall, type Keeper } from '../game/keepers';
+import { keeperCall, type Counter } from '../game/keepers';
+import { CandyView } from './candyView';
 import { ForgeView } from './forgeView';
 import { KeeperView } from './keeperView';
 import { PANEL, panelTexture, pixelText } from './widgets';
@@ -15,7 +16,7 @@ const CLOSE = 13;
 
 export class KeeperHud {
   private root: Phaser.GameObjects.Container | null = null;
-  private view: KeeperView | ForgeView | null = null;
+  private view: KeeperView | ForgeView | CandyView | null = null;
   private frame: Phaser.GameObjects.Image | null = null;
   private closeBg: Phaser.GameObjects.Image | null = null;
   private sized = '';
@@ -36,14 +37,14 @@ export class KeeperHud {
     return !!this.root;
   }
 
-  private show(keeper: Keeper): void {
+  private show(keeper: Counter): void {
     this.close();
     const scene = this.scene;
     this.frame = scene.add.image(0, 0, '__DEFAULT').setOrigin(0);
     this.closeBg = scene.add.image(0, PAD - 3, '__DEFAULT').setOrigin(0);
     const x = pixelText(scene, 0, PAD - 1, 'X', 0xfff4d6);
     this.closeBg.setData('x', x);
-    this.view = keeper === 'forge' ? new ForgeView(scene) : new KeeperView(scene, keeper);
+    this.view = keeper === 'candy' ? new CandyView(scene) : keeper === 'forge' ? new ForgeView(scene) : new KeeperView(scene, keeper);
     this.view.setPosition(PAD, PAD);
     this.root = scene.add.container(0, 0, [this.frame, this.view, this.closeBg, x]).setDepth(51);
     this.sized = '';

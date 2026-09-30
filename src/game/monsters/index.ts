@@ -13,6 +13,7 @@ import { Elementinho } from './Elementinho';
 import { Geodeback, Glimbat, Myconid, Shardling, Sporeling } from './Deep';
 import { Sporemother } from './Sporemother';
 import { Wyrm } from './Wyrm';
+import { Gourdling, Hexbat, PumpkinKing } from './Hallows';
 import { Imp } from './Imp';
 
 export { Monster, type Target } from './Monster';
@@ -45,6 +46,9 @@ export const MONSTERS = {
   geodeback: (world: WorldScene, x: number, y: number) => new Geodeback(world, x, y),
   sporemother: (world: WorldScene, x: number, y: number) => new Sporemother(world, x, y),
   wyrm: (world: WorldScene, x: number, y: number) => new Wyrm(world, x, y),
+  gourdling: (world: WorldScene, x: number, y: number) => new Gourdling(world, x, y),
+  hexbat: (world: WorldScene, x: number, y: number) => new Hexbat(world, x, y),
+  pumpkin_king: (world: WorldScene, x: number, y: number) => new PumpkinKing(world, x, y),
   imp: (world: WorldScene, x: number, y: number) => new Imp(world, x, y),
 } satisfies Record<string, (world: WorldScene, x: number, y: number) => Monster>;
 
