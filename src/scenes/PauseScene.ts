@@ -6,6 +6,7 @@ import { DPR as D, menuZoom } from '../game/display';
 import { settings } from '../game/settings';
 import { session } from '../net/session';
 import { PixelSlider } from '../ui/slider';
+import { statsCard } from '../ui/statsHud';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
 
@@ -81,7 +82,11 @@ export class PauseScene extends Phaser.Scene {
     this.buildMenu();
 
     const kb = this.input.keyboard;
-    kb?.on('keydown-ESC', () => this.setOpen(!this.open));
+    kb?.on('keydown-ESC', () => {
+      // Esc first closes the hero's "i" card, if it is open (ui/statsHud.ts).
+      if (statsCard.open && !this.open) statsCard.close();
+      else this.setOpen(!this.open);
+    });
     kb?.on('keydown-P', () => this.setOpen(!this.open));
 
     // Leaving the app mid-fight pauses it, so nothing happens unseen.
