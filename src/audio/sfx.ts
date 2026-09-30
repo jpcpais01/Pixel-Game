@@ -2075,6 +2075,92 @@ export class Sfx {
     if (chain) this.zap(out, t + 0.08, 0.2, 0.08);
   }
 
+  // ------------------------------------------------------------ The Beastkin
+
+  /** Razor feathers leaving the eagle's hand: a quick hiss of air through a vane. */
+  feather(t: number, pan: number): void {
+    const out = this.out(pan, 0.4, 0.15);
+    this.burstNoise(out, t, 'bandpass', 3800, 1800, 2.5, 0.28, 0.1);
+    this.chirp(out, t, 'triangle', 1600, 2600, 0.05, 0.06);
+  }
+
+  /** The eagle's cry: a thin, falling scream with a rasp to it. */
+  screech(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.4, 0.5);
+    const g = gain(ctx, 0, filter(ctx, 'bandpass', 2600, 1.2, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.26, t + 0.04);
+    g.gain.setTargetAtTime(0, t + 0.3, 0.1);
+    const depth = gain(ctx, 60);
+    const vib = osc(ctx, 'sine', 32, depth);
+    for (const [f, type] of [[2900, 'sawtooth'], [3400, 'triangle']] as const) {
+      const o = osc(ctx, type, f, g);
+      depth.connect(o.frequency);
+      sweep(o.frequency, t, f, f * 0.62, 0.45);
+      o.start(t);
+      o.stop(t + 0.6);
+    }
+    vib.start(t);
+    vib.stop(t + 0.6);
+    this.burstNoise(out, t, 'highpass', 3000, 5000, 1, 0.08, 0.2);
+  }
+
+  /** A lion's roar: a deep growl swelling into a rasping bellow; the great one rolls on longer. */
+  roar(t: number, pan: number, big: boolean): void {
+    const ctx = this.m.ctx;
+    const dur = big ? 1.1 : 0.7;
+    const out = this.out(pan, big ? 0.95 : 0.8, 0.5);
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 1400, 1.2, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.4, t + dur * 0.25);
+    g.gain.setTargetAtTime(0, t + dur * 0.6, dur * 0.2);
+    const depth = gain(ctx, 18);
+    const flutter = osc(ctx, 'square', 23, depth);
+    for (const [f, type] of [[92, 'sawtooth'], [138, 'sawtooth'], [61, 'square']] as const) {
+      const o = osc(ctx, type, f, g);
+      depth.connect(o.frequency);
+      sweep(o.frequency, t, f * 0.8, f * 1.25, dur * 0.35);
+      o.start(t);
+      o.stop(t + dur + 0.3);
+    }
+    flutter.start(t);
+    flutter.stop(t + dur + 0.3);
+    const air = gain(ctx, 0, out);
+    air.gain.setValueAtTime(0, t);
+    air.gain.linearRampToValueAtTime(0.28, t + dur * 0.3);
+    air.gain.setTargetAtTime(0, t + dur * 0.6, dur * 0.2);
+    const bp = filter(ctx, 'bandpass', 600, 1.4, air);
+    sweep(bp.frequency, t, 400, 900, dur * 0.4);
+    const src = this.m.noiseSource(true);
+    src.connect(bp);
+    this.m.startNoise(src, t, dur + 0.3);
+  }
+
+  /** A claw raking a foe: a tearing rip; the pounce lands with a thump under it. */
+  rake(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.75 : 0.55, 0.15);
+    this.burstNoise(out, t, 'bandpass', 2600, 900, 1.6, 0.4, heavy ? 0.14 : 0.09);
+    this.burstNoise(out, t + 0.03, 'highpass', 3600, 2400, 1, 0.2, 0.06);
+    if (heavy) this.chirp(out, t, 'sine', 160, 50, 0.5, 0.18);
+  }
+
+  /** Dragonfire spat: a whoomp of flame and a crackle; blue fire burns higher and brighter. */
+  fireball(t: number, pan: number): void {
+    const out = this.out(pan, 0.6, 0.25);
+    this.burstNoise(out, t, 'lowpass', 900, 2600, 0.9, 0.42, 0.16, true);
+    this.chirp(out, t, 'sine', 90, 220, 0.25, 0.1);
+    this.burstNoise(out, t + 0.06, 'highpass', 4200, 5600, 0.8, 0.12, 0.1);
+  }
+
+  /** A gout of the dragon's breath: a roaring rush of flame, played again as it goes on. */
+  flame(t: number, pan: number): void {
+    const out = this.out(pan, 0.5, 0.3);
+    this.burstNoise(out, t, 'lowpass', 700, 1600, 0.7, 0.4, 0.34, true);
+    this.burstNoise(out, t + 0.02, 'bandpass', 2200, 3400, 1.2, 0.12, 0.25);
+    for (let i = 0; i < 3; i++) this.burstNoise(out, t + 0.05 + i * 0.08 + rand(0, 0.03), 'highpass', 4800, 6400, 0.8, 0.14, 0.03);
+  }
+
   /** An echo wakes at its grave: a hollow breath, and a cold, wavering chord that sighs downward. */
   echoWake(t: number, pan: number): void {
     const ctx = this.m.ctx;
