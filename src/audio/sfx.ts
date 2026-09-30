@@ -777,6 +777,65 @@ export class Sfx {
     this.sparkle(out, t + 0.3, 6, 0.07);
   }
 
+  /**
+   * An omen coming: a deep, slow gong under a chord of bells, dark (minor,
+   * falling) for a threat, bright (major, rising) for a boon, and strange
+   * (a hollow fourth, shimmering) for a wonder.
+   */
+  omen(t: number, mood: 'dark' | 'bright' | 'strange'): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.8, 0.85);
+    // The gong: two low partials beating slowly, a long tail.
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 1400, 0.7, out));
+    hit(g.gain, t, 0.5, 0.01, 2.6);
+    const root = mood === 'dark' ? 55 : mood === 'bright' ? 65.4 : 58.3;
+    for (const [f, lvl] of [
+      [root, 1],
+      [root * 2.02, 0.5],
+      [root * 2.76, 0.28],
+      [root * 4.1, 0.14],
+    ]) {
+      const o = osc(ctx, 'sine', f, gain(ctx, lvl, g));
+      o.start(t);
+      o.stop(t + 3);
+    }
+    this.burstNoise(out, t, 'lowpass', 900, 200, 0.7, 0.18, 0.5, true);
+    const chord = mood === 'dark' ? [440, 523, 659, 831] : mood === 'bright' ? [523, 659, 784, 1047] : [466, 622, 698, 932];
+    const order = mood === 'dark' ? [...chord].reverse() : chord;
+    order.forEach((f, i) => this.bell(out, t + 0.25 + i * 0.16, f, 0.04, 1.8));
+    if (mood !== 'dark') this.sparkle(out, t + 0.5, mood === 'bright' ? 7 : 4, 0.07);
+  }
+
+  /** A portal tearing open: air rushing round and in, with a rising shimmer. */
+  portal(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.6, 0.6);
+    const air = gain(ctx, 0, out);
+    air.gain.setValueAtTime(0, t);
+    air.gain.linearRampToValueAtTime(0.4, t + 0.25);
+    air.gain.linearRampToValueAtTime(0, t + 0.9);
+    const bp = filter(ctx, 'bandpass', 400, 5, air);
+    sweep(bp.frequency, t, 300, 2400, 0.8);
+    const lfo = osc(ctx, 'sine', 11, gain(ctx, 300, bp.frequency));
+    lfo.start(t);
+    lfo.stop(t + 1);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, 1);
+    this.chirp(out, t + 0.05, 'triangle', 330, 990, 0.08, 0.6);
+    this.sparkle(out, t + 0.2, 4, 0.06);
+  }
+
+  /** The Treasure Imp's cackle: a quick run of nasal, bouncing yips. */
+  cackle(t: number, pan: number): void {
+    const out = this.out(pan, 0.5, 0.3);
+    const base = pick([880, 932, 988]);
+    for (let i = 0; i < 5; i++) {
+      const f = base * (1 + (i % 2) * 0.26) * (1 - i * 0.04);
+      this.chirp(out, t + i * 0.075, 'square', f * 1.2, f * 0.8, 0.045, 0.06);
+    }
+  }
+
   /** A falling star striking the platform: a bright crack and a deep thud. */
   starImpact(t: number, pan: number): void {
     const out = this.out(pan, 0.75, 0.45);

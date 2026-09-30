@@ -143,6 +143,21 @@ class Collection {
     return this.data.dust;
   }
 
+  /** Dust found in the world (star ore, a Treasure Imp's sack). */
+  addDust(n: number): void {
+    if (n <= 0) return;
+    this.data.dust += n;
+    this.changed();
+  }
+
+  /** Spend dust (a Wandering Merchant's price); false when there isn't enough. */
+  spendDust(n: number): boolean {
+    if (n < 0 || this.data.dust < n) return false;
+    this.data.dust -= n;
+    this.changed();
+    return true;
+  }
+
   /** A piece's level, 1 to MAX_LEVEL. */
   level(id: string): number {
     return 1 + (this.data.upgrades[id]?.length ?? 0);
