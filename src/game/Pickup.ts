@@ -26,6 +26,22 @@ const POP_TIME = 420;
 const OMEN = 380;
 const FALL = 520;
 const FALL_FROM = 130;
+/**
+ * How one gem of a shower leaves its monster: where it lands (from the spot
+ * it burst out of), how long after the first it flies, and how high it arcs.
+ */
+export interface Burst {
+  dx: number;
+  dy: number;
+  delay: number;
+  height: number;
+}
+/** A gem of a shower settles with a little bounce this high, for this long. */
+const BOUNCE = 3;
+const BOUNCE_TIME = 170;
+/** ...and lies still this long before it drifts to the hero, so the shower is seen to land. */
+const SETTLE = 140;
+
 /** Loot lights at once, over everything else lit in the scene (render.maxLights is 16). */
 const MAX_LOOT_LIGHTS = 3;
 /** Above the world, under the aim line and the sky. */
@@ -162,13 +178,18 @@ export class Pickup {
   private rings: Ring[] = [];
   private light: Phaser.GameObjects.Light | null = null;
   private landT = 0;
+  /** One gem of a shower: no pillar each, just a glint now and then. */
+  private burst: Burst | null;
+  private glint: Phaser.GameObjects.Image | null = null;
 
   constructor(
     private scene: Phaser.Scene,
     public x: number,
     public y: number,
     readonly loot: Loot,
+    burst?: Burst,
   ) {
+    this.burst = burst ?? null;
     const gear = loot.kind === 'gear' ? loot.def : null;
     const gems = loot.kind === 'gems' ? loot.n : 0;
     const dust = loot.kind === 'dust' ? loot.n : 0;
@@ -196,15 +217,29 @@ export class Pickup {
     this.shine = gear ? { common: 0.8, uncommon: 0.9, rare: 1, epic: 1.25, legendary: 1.5 }[gear.rarity] : gems ? { one: 0.9, few: 1.15, heap: 1.5, hoard: 1.9 }[pile] : dust ? Math.min(1.3, 0.8 + dust * 0.05) : mat ? 1.2 : candy ? { one: 0.8, few: 1, heap: 1.7 }[bag] : 0.75;
     this.fromX = x;
     this.fromY = y;
-    // Lands a short hop away from where it fell.
-    const a = Math.random() * Math.PI * 2;
-    this.x += Math.cos(a) * 10;
-    this.y += Math.sin(a) * 6;
+    if (burst) {
+      // Flung out of the shower to its own spot, a moment after the one before.
+      this.x += burst.dx;
+      this.y += burst.dy;
+      this.age = -burst.delay;
+    } else {
+      // Lands a short hop away from where it fell.
+      const a = Math.random() * Math.PI * 2;
+      this.x += Math.cos(a) * 10;
+      this.y += Math.sin(a) * 6;
+    }
     this.shadow = scene.add.image(x, y, 'shadow').setScale(gear ? 0.8 : 0.55, 0.8).setDepth(1).setAlpha(0.7);
     this.glow = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(look.tint).setScale(this.shine).setAlpha(0);
     this.sprite = scene.add.image(x, y, look.texture).setOrigin(0.5, (h - 1) / h);
     this.lift = big ? 3 : 0;
     this.popTime = POP_TIME;
+    if (burst) {
+      // Further gems take a little longer in the air; none shows before its turn.
+      this.popTime = POP_TIME * (0.85 + Math.hypot(burst.dx, burst.dy) / 90);
+      this.glint = scene.add.image(x, y, 'loot_twinkle').setBlendMode(Phaser.BlendModes.ADD).setTint(GEM_CORE).setAlpha(0);
+      for (const o of [this.sprite, this.glow, this.shadow]) o.setVisible(false);
+      return;
+    }
 
     // Materials stand in an epic's pillar, in their set's colour.
     const base = gems ? gemShow(gems) : dust ? dustShow(dust) : mat ? SHOWS.epic : candy ? candyShow(candy) : gear && SHOWS[gear.rarity];
@@ -240,6 +275,8 @@ export class Pickup {
   update(dt: number, hx: number | null, hy: number | null, room: boolean, daylight: number): boolean {
     if (this.dead) return false;
     this.age += dt;
+    if (this.age < 0) return false;
+    if (this.burst && !this.sprite.visible) for (const o of [this.sprite, this.glow, this.shadow]) o.setVisible(true);
     let x: number;
     let y: number;
     let lift: number;
@@ -255,11 +292,12 @@ export class Pickup {
         const t = this.age / this.popTime;
         x = this.fromX + (this.x - this.fromX) * t;
         y = this.fromY + (this.y - this.fromY) * t;
-        lift = Math.sin(t * Math.PI) * 14 + (1 - t) * 6;
+        lift = Math.sin(t * Math.PI) * (this.burst?.height ?? 14) + (1 - t) * 6;
       }
     } else {
       if (!this.landed) this.land();
-      if (hx !== null && hy !== null && room) {
+      const since = this.age - this.popTime;
+      if (hx !== null && hy !== null && room && (!this.burst || since > SETTLE)) {
         const dx = hx - this.x;
         const dy = hy - this.y;
         const d = Math.hypot(dx, dy);
@@ -273,6 +311,7 @@ export class Pickup {
       x = this.x;
       y = this.y;
       lift = 2 + this.lift + Math.sin(this.age * 0.004 + this.seed) * 1.5;
+      if (this.burst && since < BOUNCE_TIME) lift += Math.sin((since / BOUNCE_TIME) * Math.PI) * BOUNCE;
     }
     const left = this.life - this.age;
     if (left <= 0) {
@@ -288,6 +327,16 @@ export class Pickup {
     this.glow.setPosition(rx, Math.round(ry - lift - 4 - this.lift * 1.5)).setDepth(ry - 0.1).setAlpha((0.35 + 0.15 * Math.sin(this.age * 0.006 + this.seed)) * (1.3 - daylight * 0.5) * blink);
     this.shadow.setPosition(rx, ry).setAlpha(0.6 * blink);
     if (this.show) this.updateShow(dt, rx, ry, lift, blink);
+    if (this.glint) {
+      // Every so often light catches a facet: a four-point star flares and fades.
+      const u = ((this.age / 1000 + this.seed) % 1.7) / 0.22;
+      const on = u < 1 ? Math.sin(u * Math.PI) : 0;
+      this.glint
+        .setPosition(rx + 2, Math.round(ry - lift - 7))
+        .setDepth(ry + 0.1)
+        .setScale(0.5 + 0.5 * on)
+        .setAlpha(on * blink);
+    }
     return false;
   }
 
@@ -426,7 +475,7 @@ export class Pickup {
   destroy(): void {
     if (this.dead) return;
     this.dead = true;
-    const all = [this.sprite, this.glow, this.shadow, this.beamOuter, this.beamInner, this.runes, this.arrow, this.trail, this.flash, ...this.rays, ...this.twinkles, ...this.motes, ...this.rings.map((r) => r.img)];
+    const all = [this.sprite, this.glow, this.shadow, this.glint, this.beamOuter, this.beamInner, this.runes, this.arrow, this.trail, this.flash, ...this.rays, ...this.twinkles, ...this.motes, ...this.rings.map((r) => r.img)];
     for (const o of all) o?.destroy();
     if (this.light) {
       this.scene.lights?.removeLight(this.light);
@@ -483,5 +532,61 @@ export class LootFlare implements Effect {
     if (this.dead) return;
     this.dead = true;
     for (const o of [this.beam, this.ring, this.glow]) o.destroy();
+  }
+}
+
+/**
+ * The count over the hero as a shower of gems is gathered: "+1 GEM", then
+ * "+2 GEMS", "+3 GEMS"... each gem kicking it up with a little hop, following
+ * the hero, and rising away once no more come for a moment.
+ */
+export class GemTally implements Effect {
+  dead = false;
+  n = 0;
+  private text: Phaser.GameObjects.BitmapText;
+  private quiet = 0;
+  private bump = 0;
+  private fade = 0;
+
+  constructor(
+    scene: Phaser.Scene,
+    private at: () => { x: number; y: number },
+  ) {
+    this.text = scene.add.bitmapText(0, 0, 'pixel', '').setLetterSpacing(-1).setOrigin(0.5, 1).setTint(0x9ff6ff).setDepth(10002);
+  }
+
+  /** Still gathering: new gems add to this count; once it has begun to fade, a new one starts. */
+  get open(): boolean {
+    return !this.dead && this.fade === 0;
+  }
+
+  add(n: number): void {
+    this.n += n;
+    this.quiet = 0;
+    this.bump = 1;
+    this.text.setText(`+${this.n} ${this.n === 1 ? 'GEM' : 'GEMS'}`);
+    // A big haul goes from cyan to the hoard's rose.
+    this.text.setTint(this.n >= 10 ? 0xffb0ec : this.n >= 5 ? 0xd8fbff : 0x9ff6ff);
+  }
+
+  update(dt: number): void {
+    if (this.dead) return;
+    this.quiet += dt;
+    this.bump = Math.max(0, this.bump - dt / 160);
+    if (this.quiet > 900) this.fade += dt;
+    const f = Math.min(1, this.fade / 500);
+    if (f >= 1) {
+      this.destroy();
+      return;
+    }
+    const p = this.at();
+    // Each gem kicks the count up a couple of pixels (whole pixels, so the letters stay crisp).
+    this.text.setPosition(Math.round(p.x), Math.round(p.y - 40 - 10 * f - 3 * this.bump * this.bump)).setAlpha(1 - f);
+  }
+
+  destroy(): void {
+    if (this.dead) return;
+    this.dead = true;
+    this.text.destroy();
   }
 }

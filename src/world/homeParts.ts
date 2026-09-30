@@ -145,9 +145,14 @@ export interface PartDef {
   chimney?: boolean;
   /** Shows this many of the owner's caught critters in their jars along its top (see game/critters.ts). */
   jars?: number;
+  /** A fishing rod: used within FISH_REACH cells of water, it starts the fishing (see world/Fishing.ts). */
+  fishing?: boolean;
   /** A critter let out here (its id in game/critters.ts): not drawn as a thing, but living round this spot. */
   critter?: string;
 }
+
+/** How many cells from a fishing rod the water may be. */
+export const FISH_REACH = 3;
 
 export const PARTS: PartDef[] = [
   // Garden
@@ -175,6 +180,7 @@ export const PARTS: PartDef[] = [
   { id: 'scarecrow', name: 'Scarecrow', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
   { id: 'haybale', name: 'Hay bale', tab: 'garden', w: 1, h: 1, block: 'full', flip: true },
   { id: 'mailbox', name: 'Mailbox', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'fishrod', name: 'Fishing rod', tab: 'garden', w: 1, h: 1, block: 'post', flip: true, fishing: true },
   { id: 'signpost', name: 'Signpost', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
 
   // Furniture

@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { sound } from '../audio';
 import { beamHud, comboHud } from '../game/controls';
 import { menuZoom } from '../game/display';
-import { riftHud, type Blessing, type RiftCall } from '../game/rift';
+import { difficultyDef, riftHud, type Blessing, type RiftCall } from '../game/rift';
+import { DIFF_STYLE, difficultyIcon } from '../ui/riftDifficulty';
 import { BLESSING_TINT, type BlessingIcon } from '../art/rift';
 import { session } from '../net/session';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText } from '../ui/widgets';
@@ -44,6 +45,11 @@ export class RiftScene extends Phaser.Scene {
   private hudPanel!: Phaser.GameObjects.Image;
   private icons: Phaser.GameObjects.Container | null = null;
   private iconsKey = '';
+  /** Hard or Impossible, on a plate under the wave (nothing on Normal). */
+  private tag: Phaser.GameObjects.Container | null = null;
+  private tagText: Phaser.GameObjects.BitmapText | null = null;
+  private tagW = 0;
+  private clock = 0;
   private champ!: Phaser.GameObjects.Container;
   private champName!: Phaser.GameObjects.BitmapText;
   private champBar!: Phaser.GameObjects.Graphics;
@@ -70,6 +76,10 @@ export class RiftScene extends Phaser.Scene {
     this.call = null;
     this.overT = 0;
     this.leaving = false;
+    this.tag = null;
+    this.tagText = null;
+    this.tagW = 0;
+    this.clock = 0;
     this.cameras.main.setOrigin(0, 0);
 
     this.hudPanel = this.add.image(0, 0, panelTexture(this, 'rift_hud', 92, 18, PANEL)).setOrigin(0);
@@ -88,6 +98,7 @@ export class RiftScene extends Phaser.Scene {
 
   update(_time: number, dt: number): void {
     if (!riftHud.active) return;
+    this.clock += dt;
     this.updateHud();
     this.updateCalls(dt);
     // The cards come with the offer and go once one is chosen.
@@ -106,6 +117,7 @@ export class RiftScene extends Phaser.Scene {
     this.waveText.setText(`WAVE ${Math.max(1, riftHud.wave)}`);
     this.leftText.setText(riftHud.phase === 'fight' || riftHud.phase === 'intro' ? `${riftHud.left} ${riftHud.left === 1 ? 'FOE' : 'FOES'}` : riftHud.phase === 'over' ? '' : 'CLEAR');
     for (const o of [this.hudPanel, this.waveText, this.leftText]) o.setVisible(!over);
+    this.updateTag(over);
     this.placeHud();
 
     // Blessings taken, one icon each with how many times.
@@ -149,9 +161,45 @@ export class RiftScene extends Phaser.Scene {
     this.hudPanel.setPosition(px, top);
     this.waveText.setPosition(px + 7, top + 5);
     this.leftText.setPosition(px + 92 - 7 - this.leftText.width, top + 5);
+    // The difficulty's plate hangs just under the wave, and the rest moves down for it.
+    const below = top + (this.tag ? 17 : 0);
+    this.tag?.setPosition(Math.round((this.vw - this.tagW) / 2), top + 17);
     const iw = (this.icons?.getData('w') as number | undefined) ?? 0;
-    this.icons?.setPosition(Math.round((this.vw - iw) / 2), top + 21);
-    this.champ.setPosition(Math.round((this.vw - CHAMP_W) / 2), top + (iw > 0 ? 40 : 22));
+    this.icons?.setPosition(Math.round((this.vw - iw) / 2), below + 21);
+    this.champ.setPosition(Math.round((this.vw - CHAMP_W) / 2), below + (iw > 0 ? 40 : 22));
+  }
+
+  /**
+   * Hard and Impossible wear a plate under the wave: its skull(s) and its
+   * name, embers glowing on Hard, and on Impossible a slow crimson heartbeat.
+   */
+  private updateTag(over: boolean): void {
+    const d = difficultyDef(riftHud.difficulty);
+    if (d.id === 'normal') return;
+    if (!this.tag) {
+      const icon = difficultyIcon(this, d.id);
+      const text = pixelText(this, 0, 0, d.name, d.tint);
+      const iconW = this.textures.get(icon).getSourceImage().width;
+      const w = iconW + 3 + text.width + 12;
+      const plate = this.add.image(0, 0, panelTexture(this, `rift_tag_${d.id}`, w, 14, DIFF_STYLE[d.id][0])).setOrigin(0);
+      const glow = this.add.image(w / 2, 7, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(d.tint).setScale(w / 18, 0.9).setAlpha(0.3);
+      const img = this.add.image(6, 3, icon).setOrigin(0);
+      text.setPosition(6 + iconW + 3, 4);
+      this.tag = this.add.container(0, 0, [glow, plate, img, text]);
+      this.tag.setData('glow', glow);
+      this.tagText = text;
+      this.tagW = w;
+    }
+    this.tag.setVisible(!over);
+    const t = this.clock / 1000;
+    const glow = this.tag.getData('glow') as Phaser.GameObjects.Image;
+    if (d.id === 'impossible') {
+      // Lub-dub: two quick throbs, then a pause.
+      const phase = t % 1.3;
+      const beat = Math.exp(-(((phase - 0.1) / 0.07) ** 2)) + 0.7 * Math.exp(-(((phase - 0.36) / 0.07) ** 2));
+      glow.setAlpha(0.2 + 0.55 * beat);
+      this.tagText!.setTint(beat > 0.5 ? 0xffb0b8 : d.tint);
+    } else glow.setAlpha(0.22 + 0.12 * Math.sin(t * 2.4));
   }
 
   // ---------------------------------------------------------------- Calls
@@ -258,11 +306,21 @@ export class RiftScene extends Phaser.Scene {
     const best = riftHud.newBest ? 'New best!' : `Best ${Math.max(riftHud.best, riftHud.wave)}`;
     const bestText = center(pixelText(this, 0, 0, `${best}  ${riftHud.className}`, riftHud.newBest ? 0x9dffb0 : LAVENDER), 44);
     const stats = center(pixelText(this, 0, 0, `${riftHud.kills} slain  ${riftHud.gems} gems`, 0xe8e0ff), 57);
+    const parts: Phaser.GameObjects.GameObject[] = [];
+    const d = difficultyDef(riftHud.difficulty);
+    if (d.id !== 'normal') {
+      // The difficulty it was played on, its mark before its name.
+      const icon = difficultyIcon(this, d.id);
+      const iconW = this.textures.get(icon).getSourceImage().width;
+      const name = pixelText(this, 0, 0, d.name, d.tint);
+      const x = Math.round((RESULT_W - iconW - 3 - name.width) / 2);
+      parts.push(this.add.image(x, 69, icon).setOrigin(0), name.setPosition(x + iconW + 3, 70));
+    }
     const again = new PixelButton(this, 'Again', 64, 20, BUTTON_GOLD, 'rift_again', () => this.leave(true));
     const home = new PixelButton(this, 'Home', 56, 20, BUTTON_PLAIN, 'rift_home', () => this.leave(false));
     home.place(Math.round((RESULT_W - 64 - 56 - 8) / 2), RESULT_H - 30);
     again.place(Math.round((RESULT_W - 64 - 56 - 8) / 2) + 64, RESULT_H - 30);
-    this.results = this.add.container(0, 0, [panel, title, wave, bestText, stats, home, again]).setAlpha(0);
+    this.results = this.add.container(0, 0, [panel, title, wave, bestText, stats, ...parts, home, again]).setAlpha(0);
     this.shade.setVisible(true).setAlpha(0);
     this.tweens.add({ targets: this.shade, alpha: 1, duration: 400 });
     this.tweens.add({ targets: this.results, alpha: 1, duration: 400 });
