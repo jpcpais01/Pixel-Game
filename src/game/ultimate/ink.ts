@@ -247,7 +247,7 @@ export function rune(ink: Ink, cx: number, cy: number, r: number, rot: number, p
 /** Strike everything standing inside a circle on the ground; returns who was struck. */
 export function strikeGround(world: WorldScene, x: number, y: number, r: number, s: Strike, skip?: Set<Hurtbox>): Hurtbox[] {
   const hit = world.hurtboxesWhere((h) => h.alive && !skip?.has(h) && onGround(h, x, y, r));
-  for (const h of hit) h.hurt({ damage: s.damage, heavy: !!s.heavy, knock: s.knock ?? (s.heavy ? 130 : 60), fromX: s.fromX ?? x, fromY: s.fromY ?? y - 4, poison: s.poison });
+  for (const h of hit) h.hurt({ damage: s.damage, heavy: !!s.heavy, knock: s.knock ?? (s.heavy ? 130 : 60), fromX: s.fromX ?? x, fromY: s.fromY ?? y - 4, poison: s.poison, companion: s.companion });
   return hit;
 }
 

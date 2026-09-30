@@ -609,6 +609,13 @@ export class WorldScene extends Phaser.Scene {
     return null;
   }
 
+  /** A companion mends the hero by `share` of their health, if they are hurt and up; returns the health restored. */
+  mendHero(share: number): number {
+    const v = this.hero.vitals;
+    if (this.downT > 0 || v.hp >= v.max) return 0;
+    return v.heal(Math.max(1, Math.round(v.max * share)));
+  }
+
   /** A monster's blow lands on the hero if its reach (a circle at (x, y)) touches the hero's body. */
   hurtHeroAt(x: number, y: number, radius: number, harm: Harm): boolean {
     if (this.downT > 0) return false;
@@ -653,6 +660,11 @@ export class WorldScene extends Phaser.Scene {
     if (this.downT > 0 || this.grace > 0) return;
     // A ghost may slip through the blow entirely.
     if (h.dodge?.()) return;
+    // The old turtle's ward turns the blow aside.
+    if (this.companion?.ward()) {
+      this.grace = HURT_GRACE;
+      return;
+    }
     // A ward takes the edge off every blow.
     const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard') * defenseFactor(this.stats.defense + gear.totals.armor) * riftMods.guard * petMods.guard * riftMods.fury));
     const lost = h.vitals.damage(damage);
