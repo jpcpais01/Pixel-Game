@@ -123,3 +123,4 @@ export const warmRift = (scene: Phaser.Scene, budget = Infinity): boolean => war
 export const warmSpirit = (scene: Phaser.Scene, budget = Infinity): boolean => warmArenaTextures(scene, 'spirit', budget);
 export const warmTemple = (scene: Phaser.Scene, budget = Infinity): boolean => warmArenaTextures(scene, 'temple', budget);
 export const warmDeep = (scene: Phaser.Scene, budget = Infinity): boolean => warmArenaTextures(scene, 'deep', budget);
+export const warmWorldMap = (scene: Phaser.Scene, budget = Infinity): boolean => warmArenaTextures(scene, 'worldmap', budget);

@@ -17,7 +17,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 
 **Startup and scenes** (`src/main.ts`, `src/scenes/`)
 - `entry.ts` imports `main.ts` only after the page's load event (so the browser's loading bar ends at once). `main.ts` makes the Phaser game, fits the canvas, and drops the graphics level if the world runs below 30 FPS for 5 s.
-- Flow: `BootScene` (builds every texture) → `HomeScene` → `SelectScene` (hero) → `ArenaScene` (arena, and online rooms) → `WorldScene`. `ShopScene` (the Wishing Sanctum) and `InventoryScene` open over Home.
+- Flow: `BootScene` (builds every texture) → `HomeScene` → `SelectScene` (hero) → `ArenaScene` (the world map of Aurendel: pan/pinch/wheel, a landmark per arena on a road the hero walks, a panel with the picked arena's window and lore, online rooms) → `WorldScene`. `ShopScene` (the Wishing Sanctum) and `InventoryScene` open over Home.
 - Overlays while playing: `UIScene` (joystick, ability buttons, hotbar, buffs, gear HUD), `RiftScene` (the Rift's wave HUD, blessing cards and results), `PauseScene`, `ShadeScene` (brightness), `SoundScene` (mute), `FpsScene`.
 - `src/diagnostics.ts`: crash reports (copyable overlay, heartbeat for killed tabs), switched off: set `CRASH_REPORTS` to true to use them again. `src/pwa.ts` + `scripts/pwa.ts`: install, fullscreen, service worker, icons.
 
@@ -38,6 +38,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - Bosses use `BossBar` and `noBar: true` and have a `rank` (`legend` or `myth`). `game/tiers.ts` gives every kind a tier, which sets its drops.
 
 **Arenas** (`src/world/`)
+- World map: `realm.ts` (places, road legs, region labels, lore, and the player's progress: visited places part their fog, bosses slain plant a flag via `realm.slay` in `WorldScene.monsterSlain`); `art/worldMap.ts` paints terrain, road, props and landmarks, built as the `worldmap` job in the arena worker and warmed on the home screen.
 - `arenas.ts`: `ARENAS` (clearing, garden, cosmos, spirit, temple, deep, rift, island). Each has a ground, spawn, monsters, `walkable`, scenery and a select-card preview; `solo: true` greys out Online for it.
 - `*Layout.ts` files hold positions and walkability; the class files (`Garden.ts`, `Deep.ts`, `Sanctum.ts` for the Rune Temple...) build the arena's living parts.
 - `GroundStreamer.ts` streams the ground in strips; painted arenas warm their textures in `art/textures.ts` (`warmCosmos`, `warmDeep`...).
@@ -86,7 +87,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 
 **Add a monster:** a class in `src/game/monsters/` extending `Monster`, its sheet in `src/art/` registered with `registerMonster` in `textures.ts`, an entry in `MONSTERS`, a tier in `MOB_TIER` (`tiers.ts`), and spawn spots in an arena's layout.
 
-**Add an arena:** an `ArenaDef` in `src/world/arenas.ts`, a layout file, and any living parts built by id in `WorldScene.create`.
+**Add an arena:** an `ArenaDef` in `src/world/arenas.ts`, a layout file, and any living parts built by id in `WorldScene.create`. For the world map: a `Place` (spot, region, lore, bosses) and a `Leg` of road in `src/world/realm.ts`, and a landmark painter in `LANDMARK_ART`/`LANDMARKS` in `src/art/worldMap.ts` (until then it stands at a spare spot with a waymarker).
 
 **Add a companion:** a drawing in `PET_ART` (`src/art/pets.ts`) and a `PetDef` in `PETS` (`src/game/pets.ts`); keep its name to 8 letters and its perk to about 14 so they fit the cards.
 

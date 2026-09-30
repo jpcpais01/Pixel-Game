@@ -2,6 +2,7 @@
 // normal map attached as a data source so Light2D can use it; emissive layers
 // become separate textures with matching frame names, drawn additively.
 
+import { worldMapTextures } from './worldMap';
 import type Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, PYRO_SPELL, PYRO_METEOR_H, PYRO_METEOR_W, meteorIcon, pyroMeteor, scorchCanvas, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, hammerIcon, sunfallIcon, saberIcon, forceIcon, fistIcon, barrageIcon, palmIcon, quakeIcon, flaskIcon, bogIcon, canisterIcon, chemBarrageIcon, fumeCanvas, CHEM_BREW_COLORS, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
@@ -668,7 +669,7 @@ function* deepTextures(scene: Phaser.Scene): Generator<void, void, void> {
 }
 
 /** The painted arenas' texture sets, each built by one job (see arenaLoader.ts). */
-export type ArenaJob = 'cosmos' | 'island' | 'rift' | 'spirit' | 'temple' | 'deep';
+export type ArenaJob = 'cosmos' | 'island' | 'rift' | 'spirit' | 'temple' | 'deep' | 'worldmap';
 
 /**
  * Each set's steps, which yield between pieces, and the texture it makes
@@ -681,6 +682,8 @@ export const ARENA_JOBS: Record<ArenaJob, { done: string; steps: (scene: Phaser.
   spirit: { done: 'sd_lane', steps: spiritTextures },
   temple: { done: 'et_lane', steps: templeTextures },
   deep: { done: 'gd_lane', steps: deepTextures },
+  // Not an arena, but built the same way: the arena select's map of the realm.
+  worldmap: { done: 'wm_bits', steps: worldMapTextures },
 };
 
 /**
