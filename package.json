@@ -12,7 +12,8 @@
     "icons": "tsx scripts/icons.ts",
     "gear": "tsx scripts/gear.ts gear.png 4",
     "trees": "tsx scripts/trees.ts trees.png 3",
-    "forest": "tsx scripts/forest.ts forest.png"
+    "forest": "tsx scripts/forest.ts forest.png",
+    "stag": "tsx scripts/stag.ts stag.png 4"
   },
   "dependencies": {
     "phaser": "3.90.0"

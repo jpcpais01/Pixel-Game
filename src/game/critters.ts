@@ -7,7 +7,7 @@
 
 import { hex, type RGB } from '../art/pixel';
 
-export type CritterRarity = 'common' | 'rare' | 'omen';
+export type CritterRarity = 'common' | 'rare' | 'omen' | 'secret';
 
 export interface CritterDef {
   id: string;
@@ -23,6 +23,8 @@ export interface CritterDef {
   tint: number;
   /** The light it gives off (its jar glows with it, like a lantern), if it glows. */
   glow?: RGB;
+  /** Never out on its own: only where something brings it out (the Moon Hare, at its hollow). */
+  secret?: boolean;
   /** Only out while this Omen runs (see setCritterOmen). */
   omen?: string;
   /** Where to find it, for its jar before it's caught. */
@@ -47,6 +49,7 @@ export const CRITTERS: CritterDef[] = [
   { id: 'sporepuff', name: 'Spore Puff', arenas: ['deep'], when: 'any', rarity: 'common', gait: 'fly', tint: 0xff9ae0, glow: hex('#6ae8f0'), hint: 'The Glimmerdeep' },
   { id: 'axolotl', name: 'Glowlotl', arenas: ['deep'], when: 'any', rarity: 'rare', gait: 'walk', tint: 0xff8ad8, glow: hex('#ff6ad8'), hint: 'The Glimmerdeep, rarely' },
   { id: 'bloodmoth', name: 'Blood Moth', arenas: [], when: 'any', rarity: 'omen', gait: 'fly', tint: 0xff4a4a, glow: hex('#ff4a4a'), omen: 'blood-moon', hint: 'Only under a Blood Moon' },
+  { id: 'moonhare', name: 'Moon Hare', arenas: ['forest'], when: 'any', rarity: 'secret', gait: 'hop', tint: 0xd8f0ff, glow: hex('#b8e0ff'), secret: true, hint: 'Where the White Stag leads' },
   { id: 'goldscarab', name: 'Gold Scarab', arenas: [], when: 'any', rarity: 'omen', gait: 'crawl', tint: 0xffe070, glow: hex('#ffd060'), omen: 'golden-hour', hint: 'Only in the Golden Hour' },
 ];
 
@@ -55,10 +58,11 @@ export const critterById = (id: string): CritterDef | undefined => CRITTERS.find
 /**
  * What Hazel the Naturalist pays in dust for each spare critter (see
  * world/Naturalist.ts): a little for a common one, well for a rare one, and
- * handsomely for one only an Omen brings out. The first of each kind always
+ * handsomely for one only an Omen brings out, and best of all for the Moon
+ * Hare, which only the White Stag leads to. The first of each kind always
  * stays in its jar; only the ones caught after it are spares.
  */
-export const CRITTER_PRICE: Record<CritterRarity, number> = { common: 2, rare: 10, omen: 25 };
+export const CRITTER_PRICE: Record<CritterRarity, number> = { common: 2, rare: 10, omen: 25, secret: 40 };
 /** How many of each kind the player keeps: the first one caught. */
 export const CRITTER_KEEP = 1;
 
@@ -79,7 +83,7 @@ export function setCritterOmen(id: string | null): void {
 export const critterOmen = (): string => omen;
 
 /** How much likelier each rarity is to be the one that comes out. */
-const WEIGHT: Record<CritterRarity, number> = { common: 10, rare: 1.6, omen: 7 };
+const WEIGHT: Record<CritterRarity, number> = { common: 10, rare: 1.6, omen: 7, secret: 0 };
 
 /**
  * The critters that can come out in `arena` now: by its time of day (0
@@ -97,7 +101,7 @@ export function critterPool(arena: string, daylight: number, dayNight: boolean):
       if (def.omen === omen) out.push({ def, weight: WEIGHT.omen });
       continue;
     }
-    if (!def.arenas.includes(arena)) continue;
+    if (!def.arenas.includes(arena) || def.secret) continue;
     if (dayNight && ((def.when === 'day' && !day) || (def.when === 'night' && !night))) continue;
     // Out of doors without day and night, the day-lovers come out when it's bright and the night ones never.
     if (!dayNight && ((def.when === 'day' && daylight < 0.5) || (def.when === 'night' && daylight >= 0.5))) continue;

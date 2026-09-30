@@ -393,6 +393,12 @@ export class ForestGen {
   private lastF: Float32Array | null = null;
   private readonly here: Here = { wx: 0, wy: 0, roof: 0, stream: 0, pond: 0, trail: 0, ford: 0, tgx: 0, tgy: 1, sgx: 0, sgy: 1 };
   private readonly where: Where = { ci: 0, cj: 0, a: 0, b: 0, w: 0 };
+  /**
+   * Glades the White Stag has opened this visit: the trees and undergrowth
+   * inside one stand aside (see Forest.part), and what was there stops no
+   * feet; its place's own `blocks` do instead.
+   */
+  private glades: { x: number; y: number; r: number; blocks: Blocker[] }[] = [];
 
   constructor(readonly seed: number) {
     this.k = (seed % 60001) * 131;
@@ -981,12 +987,21 @@ export class ForestGen {
     const water = Math.max(s.stream, s.pond);
     // Water stops feet, but for a bridge, or a ford's shallows.
     if (water > 0.5 && s.trail > 0.5 && !(s.ford > 0.5 && s.stream >= s.pond)) return false;
-    for (const b of this.blockers(Math.floor(x / CHUNK), Math.floor(y / CHUNK))) {
-      const dx = (x - b.x) / b.rx;
-      const dy = (y - b.y) / b.ry;
-      if (dx * dx + dy * dy < 1) return false;
-    }
+    const hit = (b: Blocker) => ((x - b.x) / b.rx) ** 2 + ((y - b.y) / b.ry) ** 2 < 1;
+    for (const b of this.blockers(Math.floor(x / CHUNK), Math.floor(y / CHUNK))) if (hit(b) && !(this.glades.length && this.inGlade(b.x, b.y))) return false;
+    for (const g of this.glades) for (const b of g.blocks) if (hit(b)) return false;
     return true;
+  }
+
+  /** Open a glade at (x, y), radius `r`, with its place's own `blocks`. */
+  addGlade(x: number, y: number, r: number, blocks: Blocker[]): void {
+    this.glades.push({ x, y, r, blocks });
+  }
+
+  /** Is (x, y) inside a glade the stag opened? */
+  inGlade(x: number, y: number): boolean {
+    for (const g of this.glades) if ((x - g.x) ** 2 + (y - g.y) ** 2 < g.r * g.r) return true;
+    return false;
   }
 
   /** Has chunk (cx, cy)'s layout been made? */

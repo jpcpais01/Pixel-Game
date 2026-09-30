@@ -137,6 +137,7 @@ import {
 import { FLAME_FRAMES, FLAME_H, FLAME_W, GRAVE_H, GRAVE_KINDS, GRAVE_W, WISP_PX, echoBuffIcon, graveStone, soulFlame, soulWisp } from './echoes';
 import { ELDER_H, ELDER_W, PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_SWAY_FPS, TREE_SWAY_FRAMES, TREE_VARIANTS, TREE_W, cherryTree, elderTree, leafBit, mapleTree, rayCanvas, treeFrame, willowTree } from './trees';
 import { CAMPFIRE, CHEST_H, CHEST_W, FPROP_FRAMES, FPROP_H, FPROP_W, MENHIR_H, MENHIR_LOOKS, MENHIR_W, SHRINE_FRAMES, SHRINE_H as FSHRINE_H, SHRINE_W as FSHRINE_W, chestArt, menhirArt, shrineArt } from './forest';
+import { ALTAR_H, ALTAR_W, GROVE_FRAMES, GROVE_H, GROVE_W, HOLLOW_FRAMES, HOLLOW_H, HOLLOW_W, PRINT_H, PRINT_W, SPRING_FRAMES, SPRING_H, SPRING_W, STAG_ANIMS, STAG_H, STAG_W, altarArt, groveFrame, hollowArt, hoofprint, springArt, stagBuffIcon, stagFrames } from './stag';
 import { STRIP_H, buildStrip } from './ground';
 import { CHUNK, ForestGen, PREVIEW_SEED } from '../world/forestGen';
 import { forestTile } from '../world/forestGround';
@@ -995,6 +996,33 @@ function* forestTextures(scene: Phaser.Scene): Generator<void, void, void> {
   register(scene, 'fcamp', pack(frameList(Array.from({ length: CAMPFIRE.frames }, (_, f) => CAMPFIRE.draw(f)), 'c'), CAMPFIRE.w, CAMPFIRE.h), CAMPFIRE.w, CAMPFIRE.h);
   for (const layer of ['fcamp', 'fcamp_e']) {
     scene.anims.create({ key: `${layer}_burn`, frames: scene.anims.generateFrameNames(layer, { prefix: 'c', start: 0, end: CAMPFIRE.frames - 1 }), frameRate: CAMPFIRE.fps, repeat: -1 });
+  }
+  yield;
+  // The White Stag, its hoofprints, its blessing's badge and the secret places it leads to.
+  register(scene, 'stag', pack(stagFrames().map((f) => ({ name: f.name, r: f.canvas.render() })), STAG_W, STAG_H, 8), STAG_W, STAG_H);
+  for (const a of STAG_ANIMS) {
+    for (const layer of ['stag', 'stag_e']) {
+      scene.anims.create({ key: `${layer}_${a.name}`, frames: scene.anims.generateFrameNames(layer, { prefix: a.name, start: 0, end: a.frames - 1 }), frameRate: a.fps, repeat: a.loop ? -1 : 0 });
+    }
+  }
+  scene.textures.addCanvas('stag_print', toCanvas(PRINT_W, PRINT_H, hoofprint()));
+  scene.textures.addCanvas('buff_stag', toCanvas(16, 16, stagBuffIcon()));
+  yield;
+  register(scene, 'stag_spring', pack(frameList(Array.from({ length: SPRING_FRAMES }, (_, f) => springArt(f)), 'w'), SPRING_W, SPRING_H, 4), SPRING_W, SPRING_H);
+  register(scene, 'stag_grove', pack(GROVE_FRAMES.map((n) => ({ name: n, r: groveFrame(n).render() })), GROVE_W, GROVE_H, 4), GROVE_W, GROVE_H);
+  register(scene, 'stag_altar', pack([{ name: 'full', r: altarArt(false).render() }, { name: 'spent', r: altarArt(true).render() }], ALTAR_W, ALTAR_H, 2), ALTAR_W, ALTAR_H);
+  register(scene, 'stag_hollow', pack(frameList(Array.from({ length: HOLLOW_FRAMES }, (_, f) => hollowArt(f)), 'h'), HOLLOW_W, HOLLOW_H, 3), HOLLOW_W, HOLLOW_H);
+  for (const [key, prefix, n, fps] of [
+    ['stag_spring', 'w', SPRING_FRAMES, 5],
+    ['stag_hollow', 'h', HOLLOW_FRAMES, 3],
+  ] as const) {
+    for (const layer of [key, `${key}_e`]) scene.anims.create({ key: `${layer}_loop`, frames: scene.anims.generateFrameNames(layer, { prefix, start: 0, end: n - 1 }), frameRate: fps, repeat: -1 });
+  }
+  for (const layer of ['stag_grove', 'stag_grove_e']) {
+    const f = (names: string[]) => names.map((frame) => ({ key: layer, frame }));
+    scene.anims.create({ key: `${layer}_veiled`, frames: f(['v0', 'v1']), frameRate: 2, repeat: -1 });
+    scene.anims.create({ key: `${layer}_part`, frames: f(['p0', 'p1', 'p2', 'o0']), frameRate: 6, repeat: 0 });
+    scene.anims.create({ key: `${layer}_open`, frames: f(['o0', 'o1']), frameRate: 2, repeat: -1 });
   }
   yield;
   // Last, the select card's patch of ground: its presence means everything above is built.

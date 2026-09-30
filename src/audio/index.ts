@@ -400,6 +400,11 @@ class GameSound {
     if (t !== null) this.sfx!.critterRelease(t, pan);
   }
 
+  stag(kind: 'appear' | 'reveal' | 'flee', pan = 0): void {
+    const t = this.slot(`stag_${kind}`);
+    if (t !== null) this.sfx!.stag(t, pan, kind);
+  }
+
   cardFlip(tier: number): void {
     const t = this.slot('cardFlip');
     if (t !== null) this.sfx!.cardFlip(t, tier);

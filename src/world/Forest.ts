@@ -12,7 +12,8 @@ import { SUN_SHADOW_ALPHA, sunShadow } from '../game/Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
 import { install } from './GroundStreamer';
 import { treeLeaves } from './Scenery';
-import { CAMP_SEATS, CHUNK, FOREST_WORLD, WOOD_SHAPE, ruinPieces, stonePieces, type ForestGen, type Poi, type WoodKind } from './forestGen';
+import { CAMP_SEATS, CHUNK, FOREST_WORLD, WOOD_SHAPE, ruinPieces, stonePieces, type Blocker, type ForestGen, type Poi, type WoodKind } from './forestGen';
+import { WhiteStag } from './WhiteStag';
 import { forestTile } from './forestGround';
 import type { TileAsk, TileDone } from './forestWorker';
 
@@ -25,7 +26,8 @@ import type { TileAsk, TileDone } from './forestWorker';
 // The places do something when walked up to: a campfire mends the hero and
 // becomes where they rise; a shrine grants a blessing, once; a chest opens on
 // treasure; a fairy ring gives a gift of gems. Walking into a new wood shows
-// its name.
+// its name. Now and then the White Stag comes to lead the hero somewhere
+// secret (see WhiteStag.ts).
 
 type Img = Phaser.GameObjects.Image;
 
@@ -158,6 +160,7 @@ export class Forest {
   private mendT = 0;
   private region = { ci: 0, cj: 0, shown: false, heldT: 0, nextCi: 0, nextCj: 0 };
   private view = new Phaser.Geom.Rectangle();
+  private stag: WhiteStag;
   /** Where the hero is headed: their smoothed velocity times LEAD_S, in px. */
   private lead = { x: 0, y: 0, lastX: NaN, lastY: NaN };
 
@@ -217,6 +220,7 @@ export class Forest {
         frequency: 110,
       })
       .setDepth(9988);
+    this.stag = new WhiteStag(world, this, gen);
     const offQuality = settings.watch((q) => {
       const k = q.quality !== 'full' ? 2 : 1;
       this.treeLeaves.frequency = TREE_LEAF_MS * k;
@@ -502,13 +506,15 @@ export class Forest {
     const place = (obj: Placed['obj'], x: number, y: number, hw: number, up: number) => st.placed.push({ obj, x0: x - hw, x1: x + hw, y0: y - up, y1: y + 6 });
 
     for (const t of l.trees) {
+      // Where the White Stag opened a glade, the trees stand aside.
+      if (this.gen.inGlade(t.x, t.y)) continue;
       const old = t.kind === 'oak' || t.kind === 'birch' || t.kind === 'pine';
       const obj = add.sprite(t.x, t.y, old ? 'tree' : 'ftree', `${t.kind}${t.v}`).setOrigin(0.5, TREE_BASE_Y / TREE_H).setPipeline('Lit').setDepth(t.y).setFlipX(t.flip);
       const shape = WOOD_SHAPE[t.kind];
       st.trees.push({ obj, x: t.x, y: t.y, kind: t.kind, v: t.v, anim: `${old ? 'tree' : 'ftree'}_${t.kind}${t.v}`, swaying: false, alpha: 1, r: shape.canopyR, top: shape.canopyY, glow: null });
       place(obj, t.x, t.y, 48, TREE_BASE_Y);
     }
-    for (const p of l.props) this.prop(st, place, p.kind, p.x, p.y, p.v, p.flip);
+    for (const p of l.props) if (!this.gen.inGlade(p.x, p.y)) this.prop(st, place, p.kind, p.x, p.y, p.v, p.flip);
     for (const r of l.rays) {
       const img = add.image(r.x, r.y, 'ray', `ray${r.seed % 2}`).setOrigin(RAY_FOOT_X / RAY_W, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(r.y + 1).setVisible(false);
       st.rays.push({ img, x: r.x, y: r.y, seed: r.seed });
@@ -639,6 +645,31 @@ export class Forest {
     return img;
   }
 
+  /**
+   * The forest stands aside round (x, y) for a secret place (see
+   * WhiteStag.ts): the trees and undergrowth there fade away in a glitter,
+   * stop no feet, and aren't stood up again; the place's own `blocks` do.
+   */
+  part(x: number, y: number, r: number, blocks: Blocker[]): void {
+    this.gen.addGlade(x, y, r, blocks);
+    const inside = (px: number, py: number) => (px - x) ** 2 + (py - y) ** 2 < r * r;
+    for (const st of this.stood.values()) {
+      const gone = new Set<Placed['obj']>();
+      st.placed = st.placed.filter((p) => {
+        const px = (p.x0 + p.x1) / 2;
+        const py = p.y1 - 6;
+        const key = p.obj.texture.key;
+        if (!inside(px, py) || key === 'elder' || key === 'elder_e') return true;
+        gone.add(p.obj);
+        if (key === 'ftree' || key === 'tree') this.world.debris([0xffffff, 0xd8f0ff, 0xb8ffd8], px, py - 30, 14, py + 20, 'spores');
+        this.world.tweens.add({ targets: p.obj, alpha: 0, duration: 1100, ease: 'Sine.easeIn', onComplete: () => p.obj.destroy() });
+        return false;
+      });
+      st.trees = st.trees.filter((t) => !gone.has(t.obj));
+      st.shrooms = st.shrooms.filter((g) => !gone.has(g.halo));
+    }
+  }
+
   /** Take a chunk's things down again. */
   private unstand(key: number): void {
     const st = this.stood.get(key);
@@ -730,6 +761,7 @@ export class Forest {
     this.motes.emitting = !nightRays && strength > 0.3 && raysShown;
     this.treeLeaves.emitting = leafy;
 
+    this.stag.update(time, dt, d, hero, view);
     if (hero.alive) {
       this.visit(hero, dt);
       this.updateRegion(hero, dt);
