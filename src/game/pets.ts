@@ -1,9 +1,13 @@
 // Companions: small creatures won from the Wishing Nest (the shop's second
-// banner) that follow the hero on every run. Each gives one gentle perk; the
-// two legendaries do more: the wyrmling spits crystal shards at foes near
-// the hero, and the phoenix chick rekindles the hero once a run instead of
-// letting them fall. Companions have their own wishes: the same prices,
-// rarities and odds as skins, with their own count toward a legendary.
+// banner) that follow the hero on every run. The rare ones give one gentle
+// perk. Most epics and every legendary have a power of their own, played out
+// by Companion.ts: the wyrmling spits crystal shards, the phoenix chick
+// rekindles the hero once a run, the yeti cub stamps out frost that slows
+// foes, the storm cloud zaps them, the old turtle wards off a blow, the
+// fairy mends wounds, the gryphon swoops on foes, the krakling lashes them
+// with its tentacles, and the mimic coughs up gems. Companions have their own
+// wishes: the same prices, rarities and odds as skins, with their own count
+// toward a legendary.
 
 import { collection } from './collection';
 import { DUPE_GEMS, PITY, RARITY_INFO, WISH10_COST, WISH_COST, type SkinRarity } from './gacha';
@@ -20,7 +24,16 @@ export interface PetMods {
   energy: number;
   /** Multiplies the chance of gems from kills. */
   luck: number;
+  /** Multiplies how far loot on the ground is drawn to the hero. */
+  reach: number;
 }
+
+/**
+ * What a companion does beyond its perk (see Companion.ts): stamp out a ring
+ * of frost, zap foes, ward off the next blow, mend the hero, swoop on foes,
+ * lash them with tentacles, or cough up a gem when gems are picked up.
+ */
+export type PetPower = 'chill' | 'zap' | 'ward' | 'mend' | 'dive' | 'lash' | 'hoard';
 
 export interface PetDef {
   id: string;
@@ -37,6 +50,7 @@ export interface PetDef {
   fights?: boolean;
   /** The phoenix chick: rekindles the hero once a run. */
   rebirth?: boolean;
+  power?: PetPower;
 }
 
 export const PETS: PetDef[] = [
@@ -48,11 +62,23 @@ export const PETS: PetDef[] = [
   { id: 'wisp', name: 'Starwisp', rarity: 'epic', perk: '+25% energy', mods: { energy: 1.25 }, gait: 'fly', tint: 0xffe08a },
   { id: 'wyrm', name: 'Wyrmling', rarity: 'legendary', perk: 'Fights for you', mods: { damage: 1.05 }, gait: 'fly', tint: 0xc890ff, fights: true },
   { id: 'phoenix', name: 'Phoenix', rarity: 'legendary', perk: 'Revives once', mods: { speed: 1.05 }, gait: 'fly', tint: 0xffb850, rebirth: true },
+  { id: 'crab', name: 'Snapclaw', rarity: 'rare', perk: '5% less harm', mods: { guard: 0.95 }, gait: 'walk', tint: 0xffa878 },
+  { id: 'frog', name: 'Lilyhop', rarity: 'rare', perk: '+15% energy', mods: { energy: 1.15 }, gait: 'hop', tint: 0xf69ad0 },
+  { id: 'bat', name: 'Duskwing', rarity: 'rare', perk: '+6% speed', mods: { speed: 1.06 }, gait: 'fly', tint: 0xe0b0ff },
+  { id: 'shroom', name: 'Puffcap', rarity: 'rare', perk: 'Slow healing', mods: { regen: 0.5 }, gait: 'hop', tint: 0xfff0a0 },
+  { id: 'scarab', name: 'Scarab', rarity: 'rare', perk: 'Pulls in loot', mods: { reach: 2.2, luck: 1.15 }, gait: 'walk', tint: 0xffd060 },
+  { id: 'yeti', name: 'Snowpaw', rarity: 'epic', perk: 'Chills foes', mods: {}, gait: 'walk', tint: 0x9ae4ff, power: 'chill' },
+  { id: 'cloud', name: 'Nimbus', rarity: 'epic', perk: 'Zaps foes', mods: {}, gait: 'fly', tint: 0xfff080, power: 'zap' },
+  { id: 'turtle', name: 'Mossback', rarity: 'epic', perk: 'Blocks a blow', mods: {}, gait: 'walk', tint: 0x5ae8d8, power: 'ward' },
+  { id: 'pixie', name: 'Pixie', rarity: 'epic', perk: 'Mends wounds', mods: {}, gait: 'fly', tint: 0xb8ffb0, power: 'mend' },
+  { id: 'gryphon', name: 'Gryphon', rarity: 'legendary', perk: 'Swoops on foes', mods: { damage: 1.04 }, gait: 'fly', tint: 0xffd070, power: 'dive' },
+  { id: 'kraken', name: 'Krakling', rarity: 'legendary', perk: 'Lashes foes', mods: { guard: 0.96 }, gait: 'fly', tint: 0x5ae8ff, power: 'lash' },
+  { id: 'mimic', name: 'Mimic', rarity: 'legendary', perk: 'Coughs up gems', mods: { luck: 1.4 }, gait: 'hop', tint: 0xffc030, power: 'hoard' },
 ];
 
 export const petById = (id: string): PetDef | undefined => PETS.find((p) => p.id === id);
 
-const NEUTRAL: PetMods = { damage: 1, speed: 1, guard: 1, regen: 0, energy: 1, luck: 1 };
+const NEUTRAL: PetMods = { damage: 1, speed: 1, guard: 1, regen: 0, energy: 1, luck: 1, reach: 1 };
 
 export const petMods: PetMods = { ...NEUTRAL };
 
