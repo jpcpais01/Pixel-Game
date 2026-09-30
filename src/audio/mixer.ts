@@ -6,6 +6,8 @@ export class Mixer {
   readonly music: GainNode;
   readonly ambience: GainNode;
   readonly sfx: GainNode;
+  /** Between the sfx bus and the master: eased down while many effects overlap. */
+  readonly crowd: GainNode;
   /** Reverb send: connect anything here to put it in the space. */
   readonly reverb: GainNode;
   readonly white: AudioBuffer;
@@ -13,18 +15,25 @@ export class Mixer {
 
   constructor(ctx: BaseAudioContext) {
     this.ctx = ctx;
+    // Glue and a ceiling in one node. The old gentle 3:1 with an 8 ms attack let
+    // the first hit of every sound through untouched, so a fight's pile of
+    // overlapping hits went past full scale and clipped: harsh crackle that grew
+    // with the size of the battle. A fast, steep knee keeps the sum under 0 dB.
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -16;
-    comp.knee.value = 12;
-    comp.ratio.value = 3;
-    comp.attack.value = 0.008;
-    comp.release.value = 0.25;
+    comp.threshold.value = -12;
+    comp.knee.value = 8;
+    comp.ratio.value = 12;
+    comp.attack.value = 0.002;
+    comp.release.value = 0.2;
     comp.connect(ctx.destination);
 
     this.master = gain(ctx, 0.9, comp);
     this.music = gain(ctx, 0.3, this.master);
     this.ambience = gain(ctx, 0.55, this.master);
-    this.sfx = gain(ctx, 0.75, this.master);
+    // Sound effects pass through the crowd trim, which GameSound lowers as more
+    // of them overlap, so a busy fight gets fuller rather than louder.
+    this.crowd = gain(ctx, 1, this.master);
+    this.sfx = gain(ctx, 0.75, this.crowd);
 
     const conv = ctx.createConvolver();
     // Short enough to stay cheap on phones; the tail is near silent past this anyway.
@@ -74,8 +83,23 @@ export function filter(ctx: BaseAudioContext, type: BiquadFilterType, freq: numb
   f.type = type;
   f.frequency.value = freq;
   f.Q.value = q;
+  // Chrome works out a moving filter's coefficients for every single sample (a
+  // sin, cos and pow each) whenever its frequency is swept or wobbled by an LFO,
+  // which is nearly every sound here. In a big fight that is dozens of filters
+  // at once and the audio thread misses its deadline: crackles and dropouts.
+  // Once per 128-sample block (under 3 ms) sounds the same and costs a fraction.
+  for (const p of [f.frequency, f.Q, f.detune, f.gain]) kRate(p);
   if (dest) f.connect(dest);
   return f;
+}
+
+/** Update an AudioParam once per render block rather than per sample, where the browser allows it. */
+function kRate(p: AudioParam): void {
+  try {
+    if ('automationRate' in p) p.automationRate = 'k-rate';
+  } catch {
+    // Older browsers refuse: the param just stays sample-accurate.
+  }
 }
 
 export function panner(ctx: BaseAudioContext, pan: number, dest: AudioNode): StereoPannerNode {

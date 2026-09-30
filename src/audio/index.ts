@@ -12,8 +12,17 @@ const TICK_MS = 100;
 const TRACK_FADE = 2.4;
 const SAME_SOUND_GAP = 0.04; // seconds before the same one-shot may play again
 const BUSY_WINDOW = 0.25; // seconds
+const PHONE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 /** New one-shots allowed per window: fewer on phones, whose audio thread chokes sooner. */
-const BUSY_LIMIT = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 8 : 12;
+const BUSY_LIMIT = PHONE ? 8 : 12;
+/**
+ * And per second. Most effects ring for half a second or more, so a fight that
+ * fills every short window keeps piling voices up; this caps the steady load.
+ */
+const SUSTAIN_WINDOW = 1; // seconds
+const SUSTAIN_LIMIT = PHONE ? 24 : 40;
+/** Effects in the last second before the crowd trim starts easing them down. */
+const CROWD_FREE = 4;
 
 type Listener = () => void;
 /** The music playing: the game's own, or the shop's. */
@@ -42,6 +51,7 @@ class GameSound {
   private listeners = new Set<Listener>();
   private lastPlayed = new Map<string, number>();
   private recent: number[] = [];
+  private crowdLevel = 1;
   private daylight = 0;
   private outdoors = true;
   private fire = 0;
@@ -959,12 +969,6 @@ class GameSound {
     return this.running && !this._muted;
   }
 
-  /**
-   * When a one-shot may start, or null to drop it. Phones glitch when the audio
-   * thread is handed dozens of overlapping voices at once (a swarm all
-   * chittering, a volley of arrows landing), so the same sound can't restart
-   * within a few milliseconds and only so many new sounds start per moment.
-   */
   /** A Special gathering power for `seconds`. */
   ultCharge(seconds: number): void {
     const t = this.slot('ultCharge');
@@ -987,15 +991,41 @@ class GameSound {
     if (t !== null) this.sfx!.ultReady(t);
   }
 
+  /**
+   * When a one-shot may start, or null to drop it. Phones glitch when the audio
+   * thread is handed dozens of overlapping voices at once (a swarm all
+   * chittering, a volley of arrows landing), so the same sound can't restart
+   * within a few milliseconds and only so many new sounds start per moment.
+   */
   private slot(name: string): number | null {
     if (!this.live()) return null;
     const now = this.ctx!.currentTime;
     if (now - (this.lastPlayed.get(name) ?? -1) < SAME_SOUND_GAP) return null;
-    while (this.recent.length && now - this.recent[0] > BUSY_WINDOW) this.recent.shift();
-    if (this.recent.length >= BUSY_LIMIT) return null;
+    while (this.recent.length && now - this.recent[0] > SUSTAIN_WINDOW) this.recent.shift();
+    if (this.recent.length >= SUSTAIN_LIMIT) return null;
+    let busy = 0;
+    for (let i = this.recent.length - 1; i >= 0 && now - this.recent[i] <= BUSY_WINDOW; i--) busy++;
+    if (busy >= BUSY_LIMIT) return null;
     this.recent.push(now);
     this.lastPlayed.set(name, now);
+    this.trimCrowd(now);
     return now;
+  }
+
+  /**
+   * Overlapping effects add up: twenty hits at once are twenty times one hit, and
+   * the sum slams the master into its limiter. Ease the effects bus down by the
+   * square root of how many are ringing, so a big fight sounds dense, not distorted.
+   */
+  private trimCrowd(now: number): void {
+    const m = this.mixer;
+    if (!m) return;
+    while (this.recent.length && now - this.recent[0] > SUSTAIN_WINDOW) this.recent.shift();
+    const level = 1 / Math.sqrt(1 + Math.max(0, this.recent.length - CROWD_FREE) / 6);
+    if (Math.abs(level - this.crowdLevel) < 0.02) return;
+    this.crowdLevel = level;
+    // Duck quickly as a fight swells, come back up slowly as it calms.
+    safely('crowd', () => m.crowd.gain.setTargetAtTime(level, now, level < m.crowd.gain.value ? 0.03 : 0.4));
   }
 
   private unlock(): void {
@@ -1043,6 +1073,8 @@ class GameSound {
     if (this.track === 'main' || fading) safely('music', () => this.music!.tick(now, now + LOOKAHEAD));
     if (this.track === 'shop' || fading) safely('shop music', () => this.shopMusic!.tick(now, now + LOOKAHEAD));
     safely('ambience', () => this.ambience!.tick(now, now + LOOKAHEAD));
+    // Let the effects bus come back up once a fight goes quiet.
+    this.trimCrowd(now);
   }
 
   private syncSuspend(): void {
