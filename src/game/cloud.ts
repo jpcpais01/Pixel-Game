@@ -60,6 +60,8 @@ export interface SaveData {
   /** The player's Home as they built it (see world/homeLayout.ts), '' for the starter, and when it was last changed (ms). */
   home: string;
   homeT: number;
+  /** Bosses the player has met, by monster key: each one's entrance plays only the first time. */
+  met: string[];
 }
 
 interface Session extends Account {
@@ -294,7 +296,8 @@ export async function loadSave(): Promise<LoadedSave | null> {
   }
   const home = f.home && 'stringValue' in f.home ? f.home.stringValue : '';
   const homeT = f.homeT && 'integerValue' in f.homeT ? Number(f.homeT.integerValue) : 0;
-  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, glide, pets, pet, petPity, critters, fish, mats, candy, home, homeT, username };
+  const met = f.met && 'stringValue' in f.met && f.met.stringValue ? f.met.stringValue.split(',') : [];
+  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, glide, pets, pet, petPity, critters, fish, mats, candy, home, homeT, met, username };
 }
 
 /** Overwrite the logged-in player's save. */
@@ -326,6 +329,7 @@ export async function writeSave(data: SaveData): Promise<void> {
     mats: { stringValue: Object.entries(data.mats).map(([set, n]) => `${set}:${Math.floor(n)}`).join(',') },
     home: { stringValue: data.home },
     homeT: { integerValue: String(Math.floor(data.homeT)) },
+    met: { stringValue: data.met.join(',') },
     updated: { timestampValue: new Date().toISOString() },
   };
   const res = await fetch(docUrl(s.uid), {

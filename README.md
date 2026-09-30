@@ -73,7 +73,7 @@ npm run sheet    # write zoomed sprite sheets to sheets/ for reviewing the art
 npm run icons    # write every app icon to sheets/icons/ for reviewing
 ```
 
-Controls: on a touch screen, use the left joystick and the buttons on the right (drag a button to aim it; a tap aims at the nearest enemy). On desktop: WASD or the arrow keys to walk, left click or J to attack, right click, K or Shift for the ability, Space for the Special, 1 to 9 for the hotbar, N to switch day and night, and Esc to pause.
+Controls: on a touch screen, use the left joystick and the buttons on the right (drag a button to aim it; a tap aims at the nearest enemy). On desktop: WASD or the arrow keys to walk, left click or J to attack, right click, K or Shift for the ability, Space for the Special, 1 to 3 for the hotbar, N to switch day and night, and Esc to pause.
 
 ## Deploying
 

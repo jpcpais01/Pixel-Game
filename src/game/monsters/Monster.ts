@@ -419,6 +419,23 @@ export abstract class Monster implements Hurtbox {
   /** Run the windup, attack and recover states. */
   protected abstract act(dt: number, target: Target | null, dist: number): void;
 
+  /**
+   * A boss's entrance (see game/BossIntro.ts): it turns to face the hero and
+   * shows off its signature move, for show only, while the world holds still.
+   */
+  entrance(towardX: number): void {
+    this.face(towardX - this.x);
+    this.flourish();
+  }
+
+  /** The look of its signature move, with none of the move (a boss shows its own). */
+  protected flourish(): void {}
+
+  /** Held still while a boss makes its entrance: drawn where it stands, and nothing more. */
+  still(dt: number): void {
+    if (!this.dead) this.sync(dt);
+  }
+
   /** Clean up any telegraph when an attack is cut short. */
   protected onInterrupted(): void {}
 
