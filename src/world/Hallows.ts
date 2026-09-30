@@ -25,15 +25,15 @@ import type { WorldScene } from '../scenes/WorldScene';
 
 type Img = Phaser.GameObjects.Image;
 
-/** Jack-o'-lanterns on the lawn: where, and which carving. Two flank the Rune Temple's steps. */
+/** Jack-o'-lanterns on the lawn: where, and which carving. Two stand either side of the Rune Temple's steps, beyond its runestones. */
 const LANTERNS: { x: number; y: number; kind: number }[] = [
-  { x: 52, y: 436, kind: 0 },
-  { x: 492, y: 226, kind: 1 },
-  { x: 196, y: 432, kind: 2 },
-  { x: 446, y: 438, kind: 0 },
-  { x: 318, y: 470, kind: 1 },
-  { x: 292, y: 224, kind: 2 },
-  { x: 350, y: 226, kind: 0 },
+  { x: 52, y: 500, kind: 0 },
+  { x: 500, y: 262, kind: 1 },
+  { x: 188, y: 520, kind: 2 },
+  { x: 446, y: 502, kind: 0 },
+  { x: 318, y: 534, kind: 1 },
+  { x: 250, y: 290, kind: 2 },
+  { x: 390, y: 290, kind: 0 },
 ];
 /** A lantern's candle: its light's reach and strength, and how much of it survives by day. */
 const LANTERN_R = 64;
@@ -43,7 +43,7 @@ const LANTERN_DAY = 0.35;
 const LANTERN_BLOCK = 6;
 
 /** The candy stall on the east lawn, across the plaza from the Forge, where the counter's foot meets the grass. */
-const STALL = { x: 506, y: 378 };
+const STALL = { x: 506, y: 442 };
 /** Its booth blocks the hero: half its width, and how deep it runs back from the counter's foot. */
 const STALL_HW = 34;
 const STALL_D = 22;
@@ -56,7 +56,7 @@ const NAME_FADE = 1 / 240;
 
 /** Banks of ground fog: how many, and the lawn they drift over. */
 const FOG_BANKS = 10;
-const FOG_AREA = { x0: -40, x1: 680, y0: 150, y1: 520 };
+const FOG_AREA = { x0: -40, x1: 680, y0: 150, y1: 584 };
 /** Fog is thin by day and thickens at night. */
 const FOG_DAY = 0.2;
 const FOG_NIGHT = 0.5;

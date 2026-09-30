@@ -12,7 +12,7 @@
 
 /** The smithy's footprint in the world: its left edge, the top of its back wall, its width, and its height down to the front wall's foot. */
 export const FG_X = 26;
-export const FG_TOP = 232;
+export const FG_TOP = 296;
 export const FG_W = 128;
 export const FG_H = 148;
 /** The middle of the doorway, and the front wall's foot (feet row). */

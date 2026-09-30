@@ -1,118 +1,93 @@
-// The Rune Temple in the Runestone Clearing: where it stands, at the top of
-// the plaza with the forest behind it, and the room inside it. The room lies
-// in the same world, off to the east past the clearing's edge, in the dark;
-// the camera keeps to it while the hero is inside, so walking through the door
-// is a step into the temple.
+// The Rune Temple at the head of the Runestone Clearing: a walk-in building,
+// part of the map itself like the Forge. From outside it is an old temple of
+// the plaza's fieldstone under a steep mossy slate roof, its gable to the
+// plaza with a great rose of rune glass; walk in through its doors and the
+// roof and front fade away, showing the hall with the hero in it.
 //
-// Inside: the north wall with its rose window, an inlaid rosette in the middle
-// of the floor, and a dais on each side for the two keepers: Nyx the Unmaker
-// on the west, who breaks gear down into dust, and Tharn the Runesmith on the
-// east, who spends dust raising a piece's level. The way out is the doorway in
-// the middle of the south wall.
+// The hall, from the back: the north wall's face with its rose window, two
+// lancets and the keepers' banners, two braziers before it; on the floor,
+// Nyx the Unmaker's dais on the west, where she breaks gear down into dust,
+// Tharn the Runesmith's on the east, where he spends dust raising a piece's
+// level, and a rosette in the middle with a crimson runner to the door; the
+// south wall with the doorway in its middle, and two broad steps down to the
+// plaza outside it.
 
-/** The temple's front: the middle of its doorway, and the bottom edge of its lowest step (feet row). */
-export const TEMPLE_X = 320;
-export const TEMPLE_Y = 206;
-/** Half the walls' width, and how deep they run back from the steps. */
-const BODY_HW = 74;
-const BODY_D = 44;
-/** The two steps in front, all of them walkable. */
-const STEPS_D = 14;
-const STEPS_HW = 46;
-/** Walking into the doorway on the top step goes in. */
-const DOOR_HW = 11;
-const DOOR_Y = TEMPLE_Y - STEPS_D + 1;
-/** The two runestones standing either side of the steps. */
-export const RUNESTONES = [
-  { x: TEMPLE_X - 60, y: TEMPLE_Y + 4 },
-  { x: TEMPLE_X + 60, y: TEMPLE_Y + 4 },
-];
+/** The temple's footprint in the world: its left edge, the top of its back wall, its width, and its height down to the front wall's foot. */
+export const TP_W = 208;
+export const TP_H = 196;
+export const TP_X = 320 - TP_W / 2;
+export const TP_TOP = 76;
+/** The middle of the doorway, and the front wall's foot (feet row). */
+export const TP_CX = TP_X + TP_W / 2;
+export const TP_FOOT = TP_TOP + TP_H;
 
-/** The room, in world coordinates. */
-export const ROOM_X = 720;
-export const ROOM_Y = 112;
-export const ROOM_W = 448;
-export const ROOM_H = 304;
+// The hall's plan, in its own coordinates (0,0 its top-left).
+/** Side walls' thickness, the back wall's top, where the floor starts (the back wall's face is 60 px high), and where the front wall starts. */
+export const T_SIDE = 8;
+export const T_CAP = 8;
+export const T_FLOOR = 68;
+export const T_FRONT = 184;
+/** Half the doorway's width. */
+export const T_DOOR_HW = 14;
+/** The steps down from the door, painted with the hall: their depth below the foot, and each step's half-width (upper, lower). */
+export const T_STEPS = 16;
+export const T_STEP_HW = [34, 40] as const;
+/** The hall's painted texture: the footprint and the steps under it. */
+export const TP_TEX_H = TP_H + T_STEPS;
 
-// The room's own plan, in its own coordinates (0,0 its top-left).
-/** Inner edges of the side walls, the top of the north wall's face, where the floor starts, and the south wall. */
-export const IN_L = 32;
-export const IN_R = 416;
-export const FACE_TOP = 34;
-export const FLOOR_TOP = 102;
-export const FLOOR_BOT = 272;
-/** The doorway through the south wall, and where the way down ends. */
-export const DOOR_L = 208;
-export const DOOR_R = 240;
-export const DOOR_BOT = 298;
-/** The rune circle in the floor. */
-export const CIRCLE = { x: 224, y: 196, rx: 66, ry: 46 };
-/** The rose window high in the north wall. */
-export const WINDOW = { x: 224, y: 64, r: 22 };
-/** Each keeper's dais: where they stand, their station beside them, and the banner on the wall behind. */
-export const DAIS = {
-  disenchant: { x: 108, y: 174, rx: 46, ry: 30, keeper: { x: 112, y: 166 }, station: { x: 80, y: 182 }, banner: 104 },
-  upgrade: { x: 340, y: 174, rx: 46, ry: 30, keeper: { x: 336, y: 166 }, station: { x: 370, y: 182 }, banner: 344 },
+/** The rose window, the two lancets and the banners on the north wall. */
+export const T_WINDOW = { x: 104, y: 34, r: 17 };
+export const T_LANCETS = [60, 148];
+export const T_BANNERS = { disenchant: 32, upgrade: 176 } as const;
+/** The rosette in the middle of the floor. */
+export const T_CIRCLE = { x: 104, y: 138, rx: 40, ry: 26 };
+/** Each keeper's dais: its middle and size, where the keeper stands and their station beside them. */
+export const T_DAIS = {
+  disenchant: { x: 48, y: 110, rx: 34, ry: 21, keeper: { x: 56, y: 106 }, station: { x: 30, y: 118 } },
+  upgrade: { x: 160, y: 110, rx: 34, ry: 21, keeper: { x: 152, y: 106 }, station: { x: 180, y: 118 } },
 } as const;
-export type KeeperId = keyof typeof DAIS;
-/** The room's four pillars, and the two braziers flanking the window. */
-export const PILLARS = [
-  { x: 52, y: 122 },
-  { x: 396, y: 122 },
-  { x: 52, y: 262 },
-  { x: 396, y: 262 },
-];
-export const ROOM_BRAZIERS = [
-  { x: 176, y: 116 },
-  { x: 272, y: 116 },
+export type KeeperId = keyof typeof T_DAIS;
+/** The two braziers before the north wall, either side of the rose window. */
+export const T_BRAZIERS = [
+  { x: 80, y: 82 },
+  { x: 128, y: 82 },
 ];
 
-/** Where the hero appears on the way in (just inside the door) and on the way out (on the steps' foot). */
-export const INSIDE_SPOT = { x: ROOM_X + (DOOR_L + DOOR_R) / 2, y: ROOM_Y + FLOOR_BOT - 8 };
-export const OUTSIDE_SPOT = { x: TEMPLE_X, y: TEMPLE_Y + 10 };
+/** The temple from outside: its art is a little wider than the walls (the eaves), bottom at the front wall's foot, and rises above its back wall (the roof's back gable). */
+export const TP_EXT_W = TP_W + 12;
+export const TP_EXT_RISE = 36;
+export const TP_EXT_H = TP_H + TP_EXT_RISE;
 
-/** World size once the room is added to the clearing. */
-export const SANCTUM_WORLD_W = ROOM_X + ROOM_W + 16;
+/** The two runestones standing either side of the steps, in world coordinates. */
+export const RUNESTONES = [
+  { x: TP_CX - 52, y: TP_FOOT + 13 },
+  { x: TP_CX + 52, y: TP_FOOT + 13 },
+];
 
-/** The room in world coordinates, for the camera to keep to. */
-export const roomRect = { x: ROOM_X, y: ROOM_Y, w: ROOM_W, h: ROOM_H };
+/** Round things standing in the hall (keepers, stations, braziers), in hall coordinates. */
+const BLOCKERS = [
+  ...Object.values(T_DAIS).flatMap((d) => [
+    { x: d.keeper.x, y: d.keeper.y - 1, r: 6 },
+    { x: d.station.x, y: d.station.y - 2, r: 12 },
+  ]),
+  ...T_BRAZIERS.map((b) => ({ x: b.x, y: b.y - 1, r: 7 })),
+];
 
-/** Is (x, y) outside, blocked by the temple's walls, its runestones or past the steps' ends? */
-export function templeBlocks(x: number, y: number): boolean {
-  if (RUNESTONES.some((r) => Math.hypot(x - r.x, (y - r.y) * 1.5) < 6)) return true;
-  const dx = Math.abs(x - TEMPLE_X);
-  if (dx > BODY_HW) return false;
-  const front = TEMPLE_Y - STEPS_D;
-  if (y > front && y <= TEMPLE_Y) return dx > STEPS_HW && y < TEMPLE_Y - 3;
-  // The walls, but for a little way into the doorway.
-  return y > front - BODY_D && y <= front && !(dx < DOOR_HW && y > front - 5);
+/** Is the hero at (x, y) inside the temple (the doorway counts)? */
+export function inTemple(x: number, y: number): boolean {
+  const lx = x - TP_X;
+  const ly = y - TP_TOP;
+  return lx > T_SIDE && lx < TP_W - T_SIDE && ly > T_FLOOR && ly < TP_H - 1;
 }
 
-/** Does a hero at (x, y) walk in through the temple's door? */
-export const atTempleDoor = (x: number, y: number): boolean => Math.abs(x - TEMPLE_X) < DOOR_HW && y < DOOR_Y && y > DOOR_Y - 12;
-
-/** Is (x, y) inside the room at all? */
-export const inRoom = (x: number, y: number): boolean => x >= ROOM_X && x < ROOM_X + ROOM_W && y >= ROOM_Y && y < ROOM_Y + ROOM_H;
-
-/** Does a hero at (x, y) in the room leave through the doorway? */
-export const atRoomExit = (x: number, y: number): boolean => inRoom(x, y) && y - ROOM_Y > DOOR_BOT - 12;
-
-/** Round things standing in the room (pillars, braziers, stations, keepers), as centre and radius, room coordinates. */
-const BLOCKERS: { x: number; y: number; r: number }[] = [
-  ...PILLARS.map((p) => ({ x: p.x, y: p.y - 2, r: 9 })),
-  ...ROOM_BRAZIERS.map((b) => ({ x: b.x, y: b.y - 1, r: 7 })),
-  ...Object.values(DAIS).flatMap((d) => [
-    { x: d.keeper.x, y: d.keeper.y - 1, r: 6 },
-    { x: d.station.x, y: d.station.y - 2, r: 11 },
-  ]),
-];
-
-/** Can feet stand at (x, y) in the room (world coordinates)? */
-export function roomWalkable(x: number, y: number): boolean {
-  const lx = x - ROOM_X;
-  const ly = y - ROOM_Y;
-  const floor = lx > IN_L + 6 && lx < IN_R - 6 && ly > FLOOR_TOP + 6 && ly < FLOOR_BOT - 2;
-  const door = lx > DOOR_L + 5 && lx < DOOR_R - 5 && ly >= FLOOR_BOT - 2 && ly < DOOR_BOT;
-  if (!floor && !door) return false;
-  return !BLOCKERS.some((b) => Math.hypot(lx - b.x, (ly - b.y) * 1.4) < b.r);
+/** Is (x, y) blocked by the temple: its walls and eaves, what stands in its hall, or a runestone? */
+export function templeBlocks(x: number, y: number): boolean {
+  if (RUNESTONES.some((r) => Math.hypot(x - r.x, (y - r.y) * 1.5) < 6)) return true;
+  const lx = x - TP_X;
+  const ly = y - TP_TOP;
+  if (lx < -6 || lx > TP_W + 6 || ly < -2 || ly > TP_H) return false;
+  const door = Math.abs(x - TP_CX) < T_DOOR_HW - 4 && ly >= T_FRONT - 4;
+  const floor = lx > T_SIDE + 5 && lx < TP_W - T_SIDE - 5 && ly > T_FLOOR + 5 && ly < T_FRONT - 2;
+  if (!floor && !door) return true;
+  return BLOCKERS.some((b) => Math.hypot(lx - b.x, (ly - b.y) * 1.4) < b.r);
 }
