@@ -350,6 +350,11 @@ class GameSound {
     if (t !== null) this.sfx!.critterCatch(t, tier);
   }
 
+  critterRelease(pan = 0): void {
+    const t = this.slot('critterRelease');
+    if (t !== null) this.sfx!.critterRelease(t, pan);
+  }
+
   cardFlip(tier: number): void {
     const t = this.slot('cardFlip');
     if (t !== null) this.sfx!.cardFlip(t, tier);

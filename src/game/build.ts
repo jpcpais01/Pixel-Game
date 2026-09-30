@@ -2,7 +2,9 @@
 // (ui/buildHud.ts, in UIScene) and the world that builds it (world/Home.ts).
 // The HUD writes the pick and the pointer; the world reads them each frame.
 
-import { FLOORS, PARTS, ROOFS, TABS, WALLS, WALL_ITEMS, wallKind, wallMat, type BuildTab } from '../world/homeParts';
+import { FLOORS, PARTS, ROOFS, TABS, WALLS, WALL_ITEMS, critterPart, wallKind, wallMat, type BuildTab } from '../world/homeParts';
+import { collection } from './collection';
+import { CRITTERS } from './critters';
 
 /** One thing on the palette: which layer it paints (or thing it places), its value, name and picture. */
 export interface PaletteItem {
@@ -28,6 +30,9 @@ export function palette(tab: BuildTab, partIcon: (id: string) => { key: string; 
       });
     case 'roof':
       return ROOFS.map((r, i) => ({ layer: 'roof', value: i + 1, id: r.id, name: `${r.name} roof`, icon: { key: `hs_r${i + 1}` } }));
+    case 'critters':
+      // Only the ones caught so far; letting one out doesn't use up the catch.
+      return CRITTERS.filter((c) => collection.critterCount(c.id) > 0).map((c) => ({ layer: 'thing', value: 0, id: critterPart(c.id), name: c.name, icon: { key: 'critters', frame: `${c.id}_0` } }));
     default:
       return PARTS.filter((p) => p.tab === tab).map((p) => ({ layer: 'thing', value: 0, id: p.id, name: p.name, icon: partIcon(p.id) }));
   }
@@ -45,6 +50,8 @@ export const build = {
   pick: null as PaletteItem | null,
   /** Things that can be mirrored go down mirrored. */
   flip: false,
+  /** Things that turn go down facing this way: 0 front, 1 right, 2 back, 3 left. */
+  turn: 0,
   /** The pointer building on the world, in screen pixels: down, and whether it erases (a right click). */
   pointer: { x: 0, y: 0, down: false, erase: false, over: false },
   /** Presses and releases since the world last looked. */

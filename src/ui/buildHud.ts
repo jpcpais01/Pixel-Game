@@ -1,12 +1,13 @@
 // Build mode on the HUD, in a Home (see world/Home.ts and game/build.ts): a
 // hammer button beside the bag's chest turns it on, and a friends button
 // beside that opens the invite panel. While building, a tray along the bottom
-// holds the tabs (floors, walls, roofs, garden, furniture, lights, wall decor),
-// Undo and Done, and a row of parts that scrolls sideways under a finger or
-// the mouse wheel. The first slot of every tab is the eraser.
+// holds the tabs (floors, walls, roofs, garden, furniture, lights, wall decor,
+// critters), Undo and Done, and a row of parts that scrolls sideways under a
+// finger or the mouse wheel. The first slot of every tab is the eraser.
 //
 // Drawn in device pixels like the other touch controls. Keys: B builds,
-// R flips the picked part, Ctrl+Z undoes; a right click erases.
+// R flips the picked part (or turns a seat or bed to face the next way),
+// Ctrl+Z undoes; a right click erases.
 
 import Phaser from 'phaser';
 import { DPR as D } from '../game/display';
@@ -145,7 +146,7 @@ export class BuildHud {
 
     const kb = scene.input.keyboard;
     kb?.on('keydown-B', () => this.toggle());
-    kb?.on('keydown-R', () => build.on && this.flippable() && (build.flip = !build.flip));
+    kb?.on('keydown-R', () => build.on && this.twist());
     kb?.on('keydown-Z', (e: KeyboardEvent) => build.on && (e.ctrlKey || e.metaKey) && (build.undo = true));
     scene.input.on(Phaser.Input.Events.POINTER_WHEEL, (p: Phaser.Input.Pointer, _o: unknown, dx: number, dy: number) => {
       if (build.on && this.panel.contains(p.x, p.y)) this.scrollBy(dy || dx);
@@ -162,6 +163,8 @@ export class BuildHud {
     if (build.on) stopBuilding();
     else if (build.available) {
       build.on = true;
+      // The critters caught since the tray last opened join its Critters tab.
+      this.lists.delete('critters');
       this.pick(this.picked.get(build.tab) ?? 1);
       this.onOpen();
     }
@@ -186,6 +189,17 @@ export class BuildHud {
   private flippable(): boolean {
     const p = build.pick;
     return p?.layer === 'thing' && !!partById(p.id)?.flip;
+  }
+
+  private turnable(): boolean {
+    const p = build.pick;
+    return p?.layer === 'thing' && !!partById(p.id)?.turns;
+  }
+
+  /** The pill's press: a turning part faces the next way round (front, right, back, left), anything else mirrors. */
+  private twist(): void {
+    if (this.turnable()) build.turn = (build.turn + 1) % 4;
+    else if (this.flippable()) build.flip = !build.flip;
   }
 
   private setTab(tab: BuildTab): void {
@@ -253,13 +267,13 @@ export class BuildHud {
 
     // The picked part's name over the tray, and a Flip toggle beside it for parts that mirror.
     const pick = build.pick;
-    const name = pick ? pick.name : 'Eraser';
+    const name = pick ? pick.name : build.tab === 'critters' && this.list().length < 2 ? 'Critters you catch with the net can live here' : 'Eraser';
     const hint = this.scene.input.activePointer.wasTouch ? '' : pick ? '   RIGHT CLICK ERASES' : '';
     this.nameText.setText((name + hint).toUpperCase()).setScale(ts);
     const nh = Math.round(this.nameText.height + ip * 1.4);
     this.nameRect.setTo(this.panel.x, this.panel.y - nh - Math.round(4 * D), Math.round(this.nameText.width + ip * 2), nh);
     this.nameText.setPosition(this.nameRect.x + ip, Math.round(this.nameRect.centerY - this.nameText.height / 2));
-    this.flipText.setScale(ts);
+    this.flipText.setText(this.turnable() ? 'TURN' : 'FLIP').setScale(ts);
     this.flipRect.setTo(this.nameRect.right + Math.round(4 * D), this.nameRect.y, Math.round(this.flipText.width + ip * 2), nh);
     this.flipText.setPosition(this.flipRect.x + ip, Math.round(this.flipRect.centerY - this.flipText.height / 2));
     this.scroll = this.scroll; // re-clamp for a new size
@@ -278,8 +292,8 @@ export class BuildHud {
       return true;
     }
     if (!build.on) return false;
-    if (this.flippable() && this.flipRect.contains(p.x, p.y)) {
-      build.flip = !build.flip;
+    if ((this.flippable() || this.turnable()) && this.flipRect.contains(p.x, p.y)) {
+      this.twist();
       return true;
     }
     if (!this.panel.contains(p.x, p.y)) return false;
@@ -321,15 +335,16 @@ export class BuildHud {
     this.hammer.setPosition(Math.round(this.buildRect.centerX), Math.round(this.buildRect.centerY)).setScale(bs(this.buildRect));
     this.people.setPosition(Math.round(this.friendsRect.centerX), Math.round(this.friendsRect.centerY)).setScale(bs(this.friendsRect));
     for (const t of [...this.tabTexts, this.undoText, this.doneText, this.nameText]) t.setVisible(on);
-    const flip = on && this.flippable();
-    this.flipText.setVisible(flip).setTint(build.flip ? 0x1a1206 : 0xdfe6ff);
+    const flip = on && (this.flippable() || this.turnable());
+    const lit = this.flippable() && build.flip;
+    this.flipText.setVisible(flip).setTint(lit ? 0x1a1206 : 0xdfe6ff);
     this.undoText.setAlpha(build.canUndo ? 1 : 0.4);
     this.tabTexts.forEach((t, i) => t.setTint(TABS[i].id === build.tab ? 0x1a1206 : 0xdfe6ff));
     const list = on ? this.list() : [];
     const picked = this.picked.get(build.tab) ?? 1;
     this.placeIcons(list);
 
-    const state = `${this.scene.scale.width} ${this.scene.scale.height} ${build.available} ${build.home} ${on} ${build.tab} ${picked} ${Math.round(this.scroll)} ${build.canUndo} ${flip} ${build.flip} ${this.nameRect.width}`;
+    const state = `${this.scene.scale.width} ${this.scene.scale.height} ${build.available} ${build.home} ${on} ${build.tab} ${picked} ${Math.round(this.scroll)} ${build.canUndo} ${flip} ${lit} ${this.nameRect.width}`;
     if (state === this.drawn) return;
     this.drawn = state;
     const g = this.g.clear();
@@ -360,7 +375,7 @@ export class BuildHud {
     pill(this.doneRect, true, 0x8dff8a);
     g.fillStyle(0x0a0c1c, 0.72);
     g.fillRoundedRect(this.nameRect.x, this.nameRect.y, this.nameRect.width, this.nameRect.height, round);
-    if (flip) pill(this.flipRect, build.flip);
+    if (flip) pill(this.flipRect, lit);
 
     // The parts' slots, cut off at the row's ends as they scroll.
     const row = this.row;
