@@ -8,7 +8,7 @@ import { sound } from '../audio';
 import { build, stopBuilding } from '../game/build';
 import { collection } from '../game/collection';
 import { CRITTERS, critterById } from '../game/critters';
-import { daynight } from '../game/daynight';
+import { daynight, type Phase } from '../game/daynight';
 import { SUN_SHADOW_ALPHA, sunShadow } from '../game/Wizard';
 import { session, type Msg } from '../net/session';
 import type { WorldScene } from '../scenes/WorldScene';
@@ -18,6 +18,11 @@ import { FLOORS, WALLS, partById, wallKind, wallMat, type PartDef } from './home
 
 type Img = Phaser.GameObjects.Image;
 type Sprite = Phaser.GameObjects.Sprite;
+
+/** The phase and auto together, to notice a change worth sending the room. */
+const dayKey = (): string => `${daynight.phase} ${daynight.auto}`;
+/** How much of the day ground shows: all of it from morning to day, most of it at sunset, none at night. */
+const dayGround = (d: number): number => Math.min(1, d * 1.8);
 
 /** Floors are painted in square patches this big, so an edit repaints only the patches round it. */
 const PATCH = 64;
@@ -109,7 +114,7 @@ export class Home {
   private lastCell: { x: number; y: number } | null = null;
   private inside = -1;
   private daylight = -1;
-  private lastDay = daynight.target;
+  private lastDay = dayKey();
   private sendT = 0;
   private sendSeq = 0;
   private pieces: { k: number; parts: string[] } | null = null;
@@ -210,7 +215,7 @@ export class Home {
     tex.addCanvas(keys[1], pixelCanvas(PATCH, PATCH, patch.night))!.setDataSource(pixelCanvas(PATCH, PATCH, patch.normal));
     // Night under day, as the ground's own strips are: the day fades in over it.
     const night = this.ground(this.scene.add.image(PLOT_X + px, PLOT_Y + py, keys[1]).setOrigin(0).setPipeline('Lit').setDepth(3));
-    const day = this.ground(this.scene.add.image(PLOT_X + px, PLOT_Y + py, keys[0]).setOrigin(0).setPipeline('Lit').setDepth(3.1).setAlpha(Math.max(0, this.daylight)));
+    const day = this.ground(this.scene.add.image(PLOT_X + px, PLOT_Y + py, keys[0]).setOrigin(0).setPipeline('Lit').setDepth(3.1).setAlpha(dayGround(Math.max(0, this.daylight))));
     this.patches.set(p, { day, night, keys });
   }
 
@@ -436,7 +441,7 @@ export class Home {
     const d = daylight;
     if (Math.abs(d - this.daylight) > 0.003) {
       this.daylight = d;
-      for (const p of this.patches.values()) p.day.setAlpha(d);
+      for (const p of this.patches.values()) p.day.setAlpha(dayGround(d));
       const windows = 0.15 + (1 - d) * 0.85;
       for (const w of this.walls.values()) w.glow?.setAlpha(windows);
       for (const p of this.placed.values()) p.shadow?.setAlpha(SUN_SHADOW_ALPHA * d);
@@ -725,9 +730,9 @@ export class Home {
         if (!this.pieces || this.pieces.k !== k) this.pieces = { k, parts: new Array(n).fill('') };
         this.pieces.parts[m.i as number] = String(m.d ?? '');
         if (typeof m.c === 'string') this.caught = m.c ? m.c.split(',').filter((id) => critterById(id)) : [];
-        if (typeof m.dn === 'number') {
-          daynight.target = m.dn;
-          this.lastDay = m.dn;
+        if (typeof m.dn === 'string') {
+          daynight.adopt(m.dn as Phase, !!m.da, m.dl as number);
+          this.lastDay = dayKey();
         }
         if (this.pieces.parts.some((s) => !s)) break;
         const l = HomeLayout.decode(this.pieces.parts.join(''));
@@ -738,8 +743,8 @@ export class Home {
         break;
       }
       case 'dn':
-        daynight.target = (m.v as number) > 0.5 ? 1 : 0;
-        this.lastDay = daynight.target;
+        daynight.adopt(m.v as Phase, !!m.a, m.l as number);
+        this.lastDay = dayKey();
         break;
     }
   }
@@ -755,23 +760,30 @@ export class Home {
       const m: Msg = { t: 'hl', k, i, n, d: s.slice(i * PIECE, (i + 1) * PIECE) };
       if (i === 0) {
         m.c = this.caught.join(',');
-        m.dn = daynight.target;
+        m.dn = daynight.phase;
+        m.da = daynight.auto;
+        m.dl = Math.round(daynight.left);
       }
       session.send(m, to);
     }
   }
 
-  /** The day and night are the room's: a toggle here turns it for everyone. */
+  /**
+   * The time of day is the room's: a pick here turns it for everyone. The
+   * owner keeps the clock on auto; visitors follow the phases it sends.
+   */
   private shareDay(): void {
-    if (daynight.target === this.lastDay) return;
-    this.lastDay = daynight.target;
-    if (session.active) session.send({ t: 'dn', v: daynight.target });
+    daynight.follower = session.active && !this.owner;
+    if (dayKey() === this.lastDay) return;
+    this.lastDay = dayKey();
+    if (session.active) session.send({ t: 'dn', v: daynight.phase, a: daynight.auto, l: Math.round(daynight.left) });
   }
 
   destroy(): void {
     this.netOff?.();
     this.netOff = null;
     setHomeMask(null);
+    daynight.follower = false;
     build.available = build.home = false;
     stopBuilding();
     for (const p of this.patches.values()) for (const k of p.keys) this.scene.textures.remove(k);

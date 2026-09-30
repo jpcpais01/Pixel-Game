@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { realm } from '../world/realm';
 import { controls } from '../game/controls';
-import { sunShadow, SUN_SHADOW_ALPHA } from '../game/Wizard';
+import { castSunShadows, sunShadow, SUN_SHADOW_ALPHA } from '../game/Wizard';
 import { EnergyBall, type BallKind } from '../game/EnergyBall';
 import { Beam } from '../game/Beam';
 import type { SpellStyle } from '../game/spells';
@@ -66,6 +66,20 @@ const DAY = {
   sky: [0.5, 0.58, 0.72] as V3,
   bounce: [0.4, 0.36, 0.32] as V3,
 };
+/**
+ * Lighting for each phase of a day, in `PHASES` order, where the arena has day
+ * and night. Morning and sunset hang the sun low (east at dawn, west at dusk),
+ * so it is warm and golden and shadows run long and soft; sunset's sky glows
+ * pink and violet. `ground` is how much of the day ground shows over the night one.
+ */
+const PHASE_LIGHT: { sunDir: V3; sun: V3; sky: V3; bounce: V3; ground: number; shadowAngle: number; shadowLength: number }[] = [
+  // Morning: a fresh gold sun rising in the east, a cool lilac sky still in the shade.
+  { sunDir: [0.8, 0.34, 0.5], sun: [0.9, 0.66, 0.42], sky: [0.44, 0.48, 0.66], bounce: [0.42, 0.35, 0.33], ground: 1, shadowAngle: 60, shadowLength: 0.92 },
+  { sunDir: DAY.sunDir, sun: DAY.sun, sky: DAY.sky, bounce: DAY.bounce, ground: 1, shadowAngle: -32, shadowLength: 0.46 },
+  // Sunset: a deep orange sun going down in the west under a pink and violet sky.
+  { sunDir: [-0.84, 0.26, 0.47], sun: [0.98, 0.5, 0.28], sky: [0.5, 0.34, 0.5], bounce: [0.48, 0.28, 0.3], ground: 0.9, shadowAngle: -62, shadowLength: 1.02 },
+  { sunDir: NIGHT.sunDir, sun: NIGHT.sun, sky: NIGHT.sky, bounce: NIGHT.bounce, ground: 0, shadowAngle: 32, shadowLength: 0.46 },
+];
 const mix3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
@@ -529,7 +543,7 @@ export class WorldScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this));
 
     const kb = this.input.keyboard!;
-    kb.on('keydown-N', () => daynight.enabled && daynight.toggle());
+    kb.on('keydown-N', () => daynight.enabled && daynight.next());
     // E talks to a keeper close by; anywhere else it swings the critter net.
     kb.on('keydown-E', () => {
       if (!this.sanctum?.talk(this.hero.x, this.hero.y) && !this.forge?.talk(this.hero.x, this.hero.y) && !this.hallows?.talk(this.hero.x, this.hero.y)) controls.netTap = true;
@@ -1513,19 +1527,45 @@ export class WorldScene extends Phaser.Scene {
 
   /** Ease toward the chosen time of day and push it into every layer. */
   private updateDaylight(time: number, dt: number): number {
+    let groundDay = 0;
     if (this.arena.dayNight) {
-      const step = dt / 1400;
-      daynight.daylight += Phaser.Math.Clamp(daynight.target - daynight.daylight, -step, step);
+      daynight.tick(dt);
       this.daylight = daynight.daylight;
+      // Blend the four phases' light by their weights.
+      const w = daynight.mix;
+      const sum = (pick: (l: (typeof PHASE_LIGHT)[number]) => V3): V3 => {
+        const out: V3 = [0, 0, 0];
+        PHASE_LIGHT.forEach((l, i) => {
+          const v = pick(l);
+          for (let c = 0; c < 3; c++) out[c] += v[c] * w[i];
+        });
+        return out;
+      };
+      sky.sunDir = sum((l) => l.sunDir);
+      sky.sunColor = sum((l) => l.sun);
+      sky.sky = sum((l) => l.sky);
+      sky.bounce = sum((l) => l.bounce);
+      let angle = 0;
+      let length = 0;
+      PHASE_LIGHT.forEach((l, i) => {
+        angle += l.shadowAngle * w[i];
+        length += l.shadowLength * w[i];
+        groundDay += l.ground * w[i];
+      });
+      castSunShadows(angle, length);
     }
     const d = Phaser.Math.Easing.Sine.InOut(this.daylight);
 
-    sky.sunDir = mix3(NIGHT.sunDir, DAY.sunDir, d);
-    sky.sunColor = mix3(NIGHT.sun, DAY.sun, d);
-    sky.sky = mix3(NIGHT.sky, DAY.sky, d);
-    sky.bounce = mix3(NIGHT.bounce, DAY.bounce, d);
+    if (!this.arena.dayNight) {
+      sky.sunDir = mix3(NIGHT.sunDir, DAY.sunDir, d);
+      sky.sunColor = mix3(NIGHT.sun, DAY.sun, d);
+      sky.sky = mix3(NIGHT.sky, DAY.sky, d);
+      sky.bounce = mix3(NIGHT.bounce, DAY.bounce, d);
+      castSunShadows(-32, 0.46);
+      groundDay = d;
+    }
 
-    this.ground?.setLight(d, 0.9 - d * 0.6);
+    this.ground?.setLight(groundDay, 0.9 - d * 0.6);
     skyState.clouds = d;
     skyState.tileX = time * 0.004;
     skyState.tileY = time * 0.0022;
@@ -1534,8 +1574,9 @@ export class WorldScene extends Phaser.Scene {
     this.setVignette(0.32 - d * 0.14);
     // Out in the void and down in the dungeon there is neither pollen nor fireflies (they have their own motes).
     const open = !this.cosmos && !this.rift && !this.spirit && !this.temple && !this.deep;
-    this.pollen.emitting = open && d > 0.5 && !omenMods.dark;
-    this.fireflies.emitting = open && d < 0.5 && !omenMods.dark;
+    // Pollen in the morning and by day; fireflies from sunset on.
+    this.pollen.emitting = open && d > 0.6 && !omenMods.dark;
+    this.fireflies.emitting = open && d < 0.56 && !omenMods.dark;
     sound.setDaylight(d);
     return d;
   }

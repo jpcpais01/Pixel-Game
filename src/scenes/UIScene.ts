@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { controls, beamHud, comboHud, critterHud } from '../game/controls';
-import { daynight } from '../game/daynight';
+import { daynight, PHASES } from '../game/daynight';
 import { DPR as D } from '../game/display';
 import { characterById } from '../game/characters';
 import { HOTBAR_SIZE, inventory } from '../game/items';
@@ -45,6 +45,8 @@ interface Pad {
   held: boolean;
 }
 
+/** The time of day toggle's highlight in each phase: peach, sky blue, rose, indigo. */
+const PHASE_TINT = [0xe8a878, 0x8ec9f5, 0xd87898, 0x6b74c9];
 /** A tap shorter than this fires on release; holding longer presses the button down. */
 const TAP_GRACE = 90;
 
@@ -72,8 +74,10 @@ export class UIScene extends Phaser.Scene {
   private base = new Phaser.Math.Vector2();
   private knob = new Phaser.Math.Vector2();
   private toggle!: Phaser.GameObjects.Graphics;
-  private sun!: Phaser.GameObjects.Image;
-  private moon!: Phaser.GameObjects.Image;
+  /** Morning, day, sunset and night, in `PHASES` order, one to a cell of the pill. */
+  private phaseIcons: Phaser.GameObjects.Image[] = [];
+  private autoButton!: Phaser.GameObjects.Graphics;
+  private autoIcon!: Phaser.GameObjects.Image;
   private bar!: Phaser.GameObjects.Graphics;
   private slotIcons: Phaser.GameObjects.Image[] = [];
   private slotKeys: Phaser.GameObjects.BitmapText[] = [];
@@ -96,10 +100,18 @@ export class UIScene extends Phaser.Scene {
   private netShown = 0;
   private netPressed = 0;
 
-  /** Day/night toggle: a two-segment pill in the top-left corner. */
+  /** Time of day toggle: a four-cell pill in the top-left corner (morning, day, sunset, night)... */
   private get toggleRect(): Phaser.Geom.Rectangle {
     const seg = Math.round(Math.max(48 * D, Math.min(this.scale.width, this.scale.height) * 0.13));
-    return new Phaser.Geom.Rectangle(12 * D, 12 * D, seg * 2, Math.round(seg * 0.8));
+    const h = Math.round(seg * 0.8);
+    return new Phaser.Geom.Rectangle(12 * D, 12 * D, Math.round(h * 0.8) * 4, h);
+  }
+
+  /** ...and the round auto button just right of it. */
+  private get autoCircle(): Phaser.Geom.Circle {
+    const tr = this.toggleRect;
+    const r = Math.round(tr.height * 0.43);
+    return new Phaser.Geom.Circle(tr.right + 6 * D + r, tr.centerY, r);
   }
 
   /** What each Graphics last drew, so it is only rebuilt when that changes. */
@@ -233,8 +245,9 @@ export class UIScene extends Phaser.Scene {
     this.ultIcon = this.add.image(0, 0, ult.icon).setBlendMode(Phaser.BlendModes.ADD);
     this.ultKey = this.add.bitmapText(0, 0, 'pixel', 'SPACE').setLetterSpacing(-1).setOrigin(0.5, 0).setTint(0xdfe6ff);
     this.toggle = this.add.graphics();
-    this.sun = this.add.image(0, 0, 'icon_sun');
-    this.moon = this.add.image(0, 0, 'icon_moon');
+    this.phaseIcons = ['icon_dawn', 'icon_sun', 'icon_dusk', 'icon_moon'].map((k) => this.add.image(0, 0, k));
+    this.autoButton = this.add.graphics();
+    this.autoIcon = this.add.image(0, 0, 'icon_cycle');
     this.base.copy(this.restPos);
     this.knob.copy(this.restPos);
 
@@ -270,10 +283,11 @@ export class UIScene extends Phaser.Scene {
         // The bag's button, or a tap while the bag is open.
       } else if (this.buildHud.pointerDown(p)) {
         // The build and friends buttons, or the build tray.
-      } else if (daynight.enabled && Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width + 8 * D, tr.height + 8 * D), p.x, p.y)) {
-        // Tap a side to pick it; tapping the active side flips it.
-        const onSun = p.x < tr.centerX;
-        daynight.set(onSun === (daynight.target < 0.5) ? onSun : !onSun);
+      } else if (daynight.enabled && Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width, tr.height + 8 * D), p.x, p.y)) {
+        // Tap a cell to pick its time of day (which stops auto).
+        daynight.set(PHASES[Phaser.Math.Clamp(Math.floor(((p.x - tr.x) / tr.width) * 4), 0, 3)]);
+      } else if (daynight.enabled && Phaser.Math.Distance.Between(p.x, p.y, this.autoCircle.x, this.autoCircle.y) < this.autoCircle.radius + 5 * D) {
+        daynight.setAuto(!daynight.auto);
       } else if (build.on) {
         // Building: a touch by the joystick still walks; any other press builds (a right click erases).
         if (p.wasTouch && this.stickPointer === null && Phaser.Math.Distance.Between(p.x, p.y, this.restPos.x, this.restPos.y) < this.R * 1.3) {
@@ -542,33 +556,60 @@ export class UIScene extends Phaser.Scene {
     this.drawNetButton(delta);
 
     const tr = this.toggleRect;
-    const seg = tr.width / 2;
-    const d = daynight.daylight;
+    const cell = tr.width / 4;
     // Arenas without day and night have no toggle.
     const on = daynight.enabled;
-    for (const o of [this.toggle, this.sun, this.moon]) o.setVisible(on);
-    const tg = on ? this.redraw(this.toggle, `${d} ${tr.x} ${tr.y} ${tr.width} ${tr.height}`) : null;
+    for (const o of [this.toggle, this.autoButton, this.autoIcon, ...this.phaseIcons]) o.setVisible(on);
+    const w = daynight.mix;
+    // Where the highlight sits (a weighted cell index) and its colour, both eased with the light.
+    let at = 0;
+    let rgb = [0, 0, 0];
+    w.forEach((k, i) => {
+      at += k * i;
+      const c = PHASE_TINT[i];
+      rgb = [rgb[0] + ((c >> 16) & 255) * k, rgb[1] + ((c >> 8) & 255) * k, rgb[2] + (c & 255) * k];
+    });
+    const tg = on ? this.redraw(this.toggle, `${at.toFixed(3)} ${tr.x} ${tr.y} ${tr.width} ${tr.height}`) : null;
     if (tg) {
       tg.fillStyle(0x0a0c1c, 0.55);
       tg.fillRoundedRect(tr.x, tr.y, tr.width, tr.height, tr.height / 2);
-      // Sliding highlight: warm under the sun, cool under the moon.
+      // Sliding highlight: peach at morning, sky blue by day, rose at sunset, indigo at night.
       const pad = 3 * D;
-      const hx = tr.x + pad + (1 - d) * seg;
-      const col = Phaser.Display.Color.Interpolate.ColorWithColor(Phaser.Display.Color.ValueToColor(0x6b74c9), Phaser.Display.Color.ValueToColor(0x8ec9f5), 100, Math.round(d * 100));
-      tg.fillStyle(Phaser.Display.Color.GetColor(col.r, col.g, col.b), 0.85);
-      tg.fillRoundedRect(hx, tr.y + pad, seg - pad * 2, tr.height - pad * 2, (tr.height - pad * 2) / 2);
+      const hw = cell - pad;
+      const hx = Phaser.Math.Clamp(tr.x + at * cell + pad / 2, tr.x + pad, tr.right - pad - hw);
+      tg.fillStyle(Phaser.Display.Color.GetColor(rgb[0], rgb[1], rgb[2]), 0.85);
+      tg.fillRoundedRect(hx, tr.y + pad, hw, tr.height - pad * 2, Math.min(hw, tr.height - pad * 2) / 2);
       tg.lineStyle(2 * D, 0xdfe6ff, 0.35);
       tg.strokeRoundedRect(tr.x, tr.y, tr.width, tr.height, tr.height / 2);
     }
     const iconScale = Math.max(2, Math.floor(tr.height / 16));
-    this.sun
-      .setPosition(tr.x + seg / 2, tr.centerY)
-      .setScale(iconScale)
-      .setAlpha(0.55 + d * 0.45);
-    this.moon
-      .setPosition(tr.x + seg * 1.5, tr.centerY)
-      .setScale(iconScale)
-      .setAlpha(1 - d * 0.45);
+    this.phaseIcons.forEach((icon, i) =>
+      icon
+        .setPosition(Math.round(tr.x + cell * (i + 0.5)), Math.round(tr.centerY))
+        .setScale(iconScale)
+        .setAlpha(0.5 + w[i] * 0.5),
+    );
+    // Auto: lit while on, with a ring filling up as the phase runs out.
+    const ac = this.autoCircle;
+    const auto = daynight.auto;
+    const fill = auto ? Math.round(daynight.progress * 120) / 120 : 0;
+    const ag = on ? this.redraw(this.autoButton, `${auto} ${fill} ${ac.x} ${ac.y} ${ac.radius}`) : null;
+    if (ag) {
+      ag.fillStyle(auto ? 0x2a3160 : 0x0a0c1c, auto ? 0.8 : 0.55);
+      ag.fillCircle(ac.x, ac.y, ac.radius);
+      ag.lineStyle(2 * D, 0xdfe6ff, auto ? 0.25 : 0.35);
+      ag.strokeCircle(ac.x, ac.y, ac.radius);
+      if (auto && fill > 0) {
+        ag.lineStyle(2 * D, 0xffd66b, 0.9);
+        ag.beginPath();
+        ag.arc(ac.x, ac.y, ac.radius, -Math.PI / 2, -Math.PI / 2 + fill * Math.PI * 2);
+        ag.strokePath();
+      }
+    }
+    this.autoIcon
+      .setPosition(Math.round(ac.x), Math.round(ac.y))
+      .setScale(Math.max(2, Math.floor((ac.radius * 2) / 16)))
+      .setAlpha(auto ? 1 : 0.5);
     this.drawBuffs(tr);
     this.drawHotbar();
     this.hideForBuilding();

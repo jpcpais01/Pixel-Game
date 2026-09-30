@@ -78,8 +78,9 @@ const WEIGHT: Record<CritterRarity, number> = { common: 10, rare: 1.6, omen: 7 }
  */
 export function critterPool(arena: string, daylight: number, dayNight: boolean): { def: CritterDef; weight: number }[] {
   if (!CRITTER_ARENAS.includes(arena)) return [];
-  const day = daylight > 0.55;
-  const night = daylight < 0.45;
+  // Morning counts as day; the night's critters come out from sunset on (sunset sits at 0.5).
+  const day = daylight > 0.6;
+  const night = daylight < 0.55;
   const out: { def: CritterDef; weight: number }[] = [];
   for (const def of CRITTERS) {
     if (def.omen) {

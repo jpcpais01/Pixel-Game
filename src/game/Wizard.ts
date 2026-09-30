@@ -312,11 +312,30 @@ export function dirOf(x: number, y: number): Dir {
 
 export const SUN_SHADOW_ALPHA = 0.42;
 
+/** Where sun shadows fall now: turned by `angle` degrees from straight down, stretched to `length` of the caster's height. */
+const sunCast = { angle: -32, length: 0.46 };
+/** Every sun shadow alive, so a low morning or evening sun can swing and stretch them all. */
+const sunShadows = new Set<Phaser.GameObjects.Image | Phaser.GameObjects.Sprite>();
+
 /**
  * Turn a silhouette (`<texture>_s`) into a sun shadow: a flattened silhouette laid on the
- * ground from its feet, falling away from the sun (top-left).
+ * ground from its feet, falling away from the sun (from the top-left by day).
  */
 export function sunShadow<T extends Phaser.GameObjects.Image | Phaser.GameObjects.Sprite>(obj: T): T {
-  obj.setScale(1, -0.46).setAngle(-32).setAlpha(0).setDepth(2);
+  obj.setScale(1, -sunCast.length).setAngle(sunCast.angle).setAlpha(0).setDepth(2);
+  sunShadows.add(obj);
+  obj.once(Phaser.GameObjects.Events.DESTROY, () => sunShadows.delete(obj));
   return obj;
+}
+
+/** Lay every sun shadow at a new angle and length (the world calls this as the time of day turns). */
+export function castSunShadows(angle: number, length: number): void {
+  // Most frames nothing moves: only touch the shadows while a fade runs.
+  if (Math.abs(angle - sunCast.angle) < 0.05 && Math.abs(length - sunCast.length) < 0.001) return;
+  sunCast.angle = angle;
+  sunCast.length = length;
+  for (const s of sunShadows) {
+    if (s.scene) s.setScale(s.scaleX, -length).setAngle(angle);
+    else sunShadows.delete(s);
+  }
 }
