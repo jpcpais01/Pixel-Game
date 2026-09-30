@@ -80,6 +80,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 **Critters** (`src/game/critters.ts`, `src/game/CritterField.ts`)
 - `CRITTERS`: 18 critters, each with its arenas, `when` (day/night, in day/night arenas), rarity (common/rare/omen), gait and glow. `critterPool` picks what can come out now. Omen critters (Blood Moth, Gold Scarab) come out only while their Omen runs: the Omens code calls `setCritterOmen('blood-moon' | 'golden-hour' | null)`.
 - `CritterField` (built by `WorldScene` in arenas listed in `CRITTER_ARENAS`, not in duels): a few near the hero at a time, startled by a running hero, caught with the net (touch net button in `UIScene` via `critterHud`/`controls.netTap`, or E). Caught ones are counted in `collection.critters` (saved locally and to the cloud) and shown as jars on shelves on the Inventory's Critters tab (`ui/critterGallery.ts`).
+- Hazel the Naturalist buys spares (every catch after a kind's first) for dust, `CRITTER_PRICE` by rarity in `critters.ts`, `collection.sellCritters`: her camp on the Clearing's east lawn (`NATURALIST_CAMP` in `world/clearing.ts`, runtime `world/Naturalist.ts`, art `art/naturalist.ts`), counter `ui/critterView.ts`, opened as `keeperCall` 'critters'.
 - Art in `art/critters.ts`: 16x16 frames (`critters`, anims `critter_<id>`), jars (`jars` sheet, frames `<id>_<f>` and `empty`, anims `jar_<id>`, glowing like lanterns via `jars_e`: ready for Home shelves), the net swing (`net`, `n0`..`n4`) and `icon_net`.
 
 **Online play** (`src/net/`, `server/`)

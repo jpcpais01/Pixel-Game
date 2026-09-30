@@ -1,7 +1,8 @@
 // The Rune Temple's two keepers and the Forge's smith, as the world and the
 // HUD share them: the world asks for a keeper's counter when the hero walks up
 // to them, and the HUD opens it (see ui/keeperHud.ts). A season's stall keeper
-// in the Clearing opens a counter the same way.
+// in the Clearing, and Hazel the Naturalist at her camp, open counters the
+// same way.
 
 export type Keeper = 'disenchant' | 'upgrade' | 'forge';
 
@@ -29,8 +30,17 @@ export const KEEPERS: Record<Keeper, { name: string; title: string; tint: number
   },
 };
 
-/** A counter the HUD can open: a Rune Temple keeper's, or a season's stall (see season.ts and ui/candyView.ts). */
-export type Counter = Keeper | 'candy';
+/** Hazel, who buys spare critters at her camp on the Clearing's east lawn (see world/Naturalist.ts and ui/critterView.ts). */
+export const NATURALIST = {
+  name: 'Hazel',
+  title: 'the Naturalist',
+  tint: 0x9ad870,
+  texture: 'nt_hazel',
+  hello: 'Every creature in Aurendel has a story. Keep the first of each kind in its jar and bring me your spares. I pay in dust, and handsomely for rare ones.',
+};
+
+/** A counter the HUD can open: a Rune Temple keeper's, Hazel's, or a season's stall (see season.ts and ui/candyView.ts). */
+export type Counter = Keeper | 'candy' | 'critters';
 
 export const keeperCall = {
   /** The counter the world wants open; the HUD takes it. */

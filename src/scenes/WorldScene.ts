@@ -37,6 +37,7 @@ import { TempleDungeon } from '../world/Temple';
 import { GlimmerDeep } from '../world/Deep';
 import { RuneTemple } from '../world/Sanctum';
 import { HallowsClearing } from '../world/Hallows';
+import { NaturalistCamp } from '../world/Naturalist';
 import { EchoGraves } from '../world/Echoes';
 import { Forge } from '../world/Forge';
 import { inForge } from '../world/forgeLayout';
@@ -202,6 +203,8 @@ export class WorldScene extends Phaser.Scene {
   /** A season's dressing of the Runestone Clearing, while one runs. */
   private hallows: HallowsClearing | null = null;
   private forge: Forge | null = null;
+  /** Hazel the Naturalist's camp in the Runestone Clearing, where spare critters sell for dust. */
+  private naturalist: NaturalistCamp | null = null;
   /** The player's Home (or a friend's), when that's the arena. */
   private home: Home | null = null;
   /** The hero this run was started with, to start again with (the Home's friends panel). */
@@ -254,7 +257,7 @@ export class WorldScene extends Phaser.Scene {
   }
   /** Can feet stand at (x, y)? The arena's walls, trees and water say no, and so do standing flowers. */
   walkable = (x: number, y: number): boolean =>
-    this.arena.walkable(x, y) && (!this.garden || this.garden.walkable(x, y)) && (!this.hallows || this.hallows.walkable(x, y));
+    this.arena.walkable(x, y) && (!this.garden || this.garden.walkable(x, y)) && (!this.hallows || this.hallows.walkable(x, y)) && (!this.naturalist || this.naturalist.walkable(x, y));
   /** The streamed ground, or null in an arena painted in one piece. */
   private ground: GroundStreamer | null = null;
   private scenery!: Scenery;
@@ -328,6 +331,7 @@ export class WorldScene extends Phaser.Scene {
     this.sanctum = null;
     this.hallows = null;
     this.forge = null;
+    this.naturalist = null;
     this.home = null;
     this.character = data?.character;
     this.auras.clear();
@@ -434,6 +438,8 @@ export class WorldScene extends Phaser.Scene {
       this.shadows.push(...this.sanctum.shadows);
       this.forge = new Forge(this, (img) => ground(img) as Phaser.GameObjects.Image);
       this.shadows.push(...this.forge.shadows);
+      this.naturalist = new NaturalistCamp(this);
+      this.shadows.push(...this.naturalist.shadows);
       const season = activeSeason();
       if (season) {
         this.hallows = new HallowsClearing(this, season, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
@@ -551,7 +557,7 @@ export class WorldScene extends Phaser.Scene {
     kb.on('keydown-N', () => daynight.enabled && daynight.next());
     // E talks to a keeper close by; anywhere else it swings the critter net.
     kb.on('keydown-E', () => {
-      if (!this.sanctum?.talk(this.hero.x, this.hero.y) && !this.forge?.talk(this.hero.x, this.hero.y) && !this.hallows?.talk(this.hero.x, this.hero.y)) controls.netTap = true;
+      if (!this.sanctum?.talk(this.hero.x, this.hero.y) && !this.forge?.talk(this.hero.x, this.hero.y) && !this.hallows?.talk(this.hero.x, this.hero.y) && !this.naturalist?.talk(this.hero.x, this.hero.y)) controls.netTap = true;
     });
     // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
@@ -1850,6 +1856,7 @@ export class WorldScene extends Phaser.Scene {
     this.sanctum?.update(this.hero.x, this.hero.y, dt, this.view, Phaser.Math.Easing.Sine.InOut(this.daylight));
     this.hallows?.update(time, dt, Phaser.Math.Easing.Sine.InOut(this.daylight), this.hero.x, this.hero.y);
     this.forge?.update(this.hero.x, this.hero.y, dt);
+    this.naturalist?.update(time, dt, Phaser.Math.Easing.Sine.InOut(this.daylight), this.hero.x, this.hero.y);
     this.home?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight));
     if (build.friends) {
       build.friends = false;
