@@ -65,6 +65,7 @@ import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHo
 import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
+import { FLAME_FRAMES, FLAME_H, FLAME_W, GRAVE_H, GRAVE_KINDS, GRAVE_W, WISP_PX, echoBuffIcon, graveStone, soulFlame, soulWisp } from './echoes';
 import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, leafBit, rayCanvas } from './trees';
 import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, RIPPLE_FRAMES, RIPPLE_H, RIPPLE_W, rippleFrames, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
 
@@ -477,6 +478,12 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   register(scene, 'bloom', pack(blooms, BLOOM_W, BLOOM_H, 12), BLOOM_W, BLOOM_H, true, true);
   register(scene, 'seed', pack(BLOOM_KINDS.map((k) => ({ name: k, r: bloomSeed(k).render() })), SEED_W, SEED_H), SEED_W, SEED_H);
   for (const k of ['might', 'ward', 'renew'] as const) scene.textures.addCanvas(`buff_${k}`, toCanvas(16, 16, buffIcon(k)));
+  // Echoes of the fallen: gravestones, the soul flame on their candles, the soul wisp and the blessing's badge.
+  register(scene, 'echo_grave', pack(frameList(Array.from({ length: GRAVE_KINDS }, (_, k) => graveStone(k)), 'g'), GRAVE_W, GRAVE_H), GRAVE_W, GRAVE_H);
+  register(scene, 'echo_flame', pack(frameList(Array.from({ length: FLAME_FRAMES }, (_, f) => soulFlame(f)), 'f'), FLAME_W, FLAME_H), FLAME_W, FLAME_H);
+  scene.anims.create({ key: 'echo_flame_burn', frames: scene.anims.generateFrameNames('echo_flame_e', { prefix: 'f', start: 0, end: FLAME_FRAMES - 1 }), frameRate: 10, repeat: -1 });
+  scene.textures.addCanvas('echo_wisp', toCanvas(WISP_PX, WISP_PX, soulWisp()));
+  scene.textures.addCanvas('buff_echo', toCanvas(16, 16, echoBuffIcon()));
 
   registerMonster(scene, 'frog', buildFrogSheet());
   registerMonster(scene, 'beetle', buildBeetleSheet());

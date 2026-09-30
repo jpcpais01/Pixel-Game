@@ -368,6 +368,16 @@ class GameSound {
     if (t !== null) this.sfx!.fall(t);
   }
 
+  echoWake(pan = 0): void {
+    const t = this.slot('echoWake');
+    if (t !== null) this.sfx!.echoWake(t, pan);
+  }
+
+  echoBless(): void {
+    const t = this.slot('echoBless');
+    if (t !== null) this.sfx!.echoBless(t);
+  }
+
   revive(): void {
     const t = this.slot('revive');
     if (t !== null) this.sfx!.revive(t);

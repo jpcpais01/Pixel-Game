@@ -36,6 +36,7 @@ import { TempleDungeon } from '../world/Temple';
 import { GlimmerDeep } from '../world/Deep';
 import { RuneTemple } from '../world/Sanctum';
 import { Chapel } from '../world/Chapel';
+import { EchoGraves } from '../world/Echoes';
 import { INSIDE_SPOT, OUTSIDE_SPOT, roomRect } from '../world/sanctumLayout';
 import { isPainted } from '../world/arenas';
 
@@ -248,6 +249,8 @@ export class WorldScene extends Phaser.Scene {
   private pushX = 0;
   private pushY = 0;
   private fallen: Phaser.GameObjects.BitmapText | null = null;
+  /** Gravestones of players who fell here, and the recording of this hero's last moments (see world/Echoes.ts). */
+  private echoes: EchoGraves | null = null;
   private shafts: Phaser.GameObjects.TileSprite | null = null;
   private shadows: Phaser.GameObjects.Image[] = [];
   private pollen!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -431,6 +434,16 @@ export class WorldScene extends Phaser.Scene {
       this.critters?.destroy();
       this.critters = null;
     });
+    // Echoes of the fallen, wherever monsters can fell a hero: not the
+    // peaceful clearing, and not a duel, where the fallen fell to a friend.
+    this.echoes = null;
+    if (arena.id !== 'clearing' && !duel && arena.id !== 'island') {
+      const echoes = (this.echoes = new EchoGraves(this, arena.id, this.hero, ch.skin?.name ?? ch.type.name, arena.spawn));
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        echoes.destroy();
+        if (this.echoes === echoes) this.echoes = null;
+      });
+    }
     if (this.rift) {
       // The Rift's waves stand in for a spawner, and its overlay shows them.
       this.riftWaves = new RiftWaves(this, this.rift, { hero: () => this.hero, dropGems: (n, x, y) => this.dropGems(n, x, y) }, ch.id, ch.name);
@@ -619,6 +632,13 @@ export class WorldScene extends Phaser.Scene {
     return null;
   }
 
+  /** A companion mends the hero by `share` of their health, if they are hurt and up; returns the health restored. */
+  mendHero(share: number): number {
+    const v = this.hero.vitals;
+    if (this.downT > 0 || v.hp >= v.max) return 0;
+    return v.heal(Math.max(1, Math.round(v.max * share)));
+  }
+
   /** A monster's blow lands on the hero if its reach (a circle at (x, y)) touches the hero's body. */
   hurtHeroAt(x: number, y: number, radius: number, harm: Harm): boolean {
     if (this.downT > 0) return false;
@@ -663,6 +683,11 @@ export class WorldScene extends Phaser.Scene {
     if (this.downT > 0 || this.grace > 0) return;
     // A ghost may slip through the blow entirely.
     if (h.dodge?.()) return;
+    // The old turtle's ward turns the blow aside.
+    if (this.companion?.ward()) {
+      this.grace = HURT_GRACE;
+      return;
+    }
     // A ward takes the edge off every blow.
     const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard') * defenseFactor(this.stats.defense + gear.totals.armor) * riftMods.guard * petMods.guard * riftMods.fury));
     const lost = h.vitals.damage(damage);
@@ -696,6 +721,8 @@ export class WorldScene extends Phaser.Scene {
     this.pushX = this.pushY = 0;
     heroBuffs.clear();
     this.ult.cancel();
+    // Where they fell, others will find their grave.
+    this.echoes?.heroFell(h.x, h.y);
     // In the Rift, falling ends the run.
     this.riftWaves?.end();
     // Struck down mid-charge: the charge never releases, so its hum is stopped here.
@@ -1600,6 +1627,7 @@ export class WorldScene extends Phaser.Scene {
     this.spirit?.update(time, dt);
     this.temple?.update(time);
     this.deep?.update(time);
+    this.echoes?.update(dt, time, this.downT > 0, this.hurtTint > 0, d);
     this.updateBanner();
     for (const f of this.flickers) {
       const k = 1 + (f.day - 1) * d;
