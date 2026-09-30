@@ -118,6 +118,18 @@ export const PLACES: Place[] = [
     glows: [{ dx: 9, dy: -18, r: 8, tint: 0x9ae8ff }],
   },
   {
+    id: 'forest',
+    x: 430,
+    y: 362,
+    region: 'The Everwood',
+    lore: 'A forest older than the realm, and it never ends. No two walk the same paths.',
+    note: 'Wander as far as you like',
+    glows: [
+      { dx: 12, dy: -6, r: 8, tint: 0xffa04a },
+      { dx: -1, dy: -14, r: 6, tint: 0x7ae6dc },
+    ],
+  },
+  {
     id: 'island',
     x: 574,
     y: 340,
@@ -148,6 +160,7 @@ export const LEGS: Leg[] = [
   { a: 'clearing', b: 'garden', via: [[262, 338], [236, 352]] },
   { a: 'clearing', b: 'deep', via: [[304, 288], [318, 250], [316, 214]] },
   { a: 'clearing', b: 'temple', via: [[336, 320], [376, 310], [410, 290]] },
+  { a: 'clearing', b: 'forest', via: [[334, 336], [366, 352], [396, 366]] },
   { a: 'garden', b: 'spirit', via: [[172, 334], [160, 300], [138, 268]] },
   { a: 'spirit', b: 'rift', via: [[106, 206], [118, 172], [132, 150]] },
   { a: 'deep', b: 'cosmos', via: [[312, 172], [292, 156], [272, 144], [256, 130]] },
@@ -164,6 +177,7 @@ export const LABELS: { text: string; x: number; y: number; sea?: boolean; big?: 
   { text: 'The Emberwaste', x: 452, y: 216 },
   { text: 'The Sundered Reach', x: 98, y: 156 },
   { text: 'Windward Cliffs', x: 486, y: 348 },
+  { text: 'The Everwood', x: 420, y: 398 },
   { text: 'The Glass Sea', x: 580, y: 250, sea: true, big: true },
   { text: 'The Dusk Sea', x: 44, y: 400, sea: true, big: true },
 ];

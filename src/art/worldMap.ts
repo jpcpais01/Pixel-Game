@@ -918,6 +918,11 @@ function* paintProps(l: Land): Generator<void, void, void> {
         if (r > 0.25 + g * 0.7 || fbm(x, y, 18, 173) > 0.62) continue;
         if (near(x, y, 'spirit', 44) && kind < 0.35) props.push(deadTree(x, y, ramp('#140e14', '#2a2028', '#3e3440')));
         else props.push(kind < 0.55 ? pine(x, y, TREE.gloamPine, false) : roundTree(x, y, TREE.gloam, kind > 0.85));
+      } else if (b === MEADOW && near(x, y, 'forest', 62)) {
+        // The Everwood: a thick wood of every colour round its elder, with a glade or two.
+        if (r > 0.8 || fbm(x, y, 14, 175) > 0.66) continue;
+        const pal = kind < 0.28 ? TREE.pine : kind < 0.5 ? TREE.autumn : kind < 0.62 ? TREE.blossom : TREE.green;
+        props.push(pal === TREE.pine ? pine(x, y, pal, false) : roundTree(x, y, pal, kind > 0.8));
       } else if (b === MEADOW) {
         if (g < 0.56 ? r > 0.012 : r > Math.min(0.85, (g - 0.56) * 6)) continue;
         props.push(kind < 0.2 ? pine(x, y, TREE.pine, false) : roundTree(x, y, kind > 0.975 ? TREE.autumn : TREE.green, kind > 0.8));
@@ -994,6 +999,7 @@ export const LANDMARKS: Record<string, { w: number; h: number; ax: number; ay: n
   rift: { w: 60, h: 36, ax: 30, ay: 30 },
   island: { w: 52, h: 58, ax: 26, ay: 54 },
   glide: { w: 46, h: 40, ax: 20, ay: 34 },
+  forest: { w: 64, h: 58, ax: 32, ay: 54 },
   waymark: { w: 16, h: 20, ax: 8, ay: 18 },
 };
 
@@ -1504,6 +1510,76 @@ function glideArt(): Art {
   return a;
 }
 
+/**
+ * The Everwood: an elder oak towering over a wood of every colour (green,
+ * autumn gold, blossom pink and dark pine), a trail winding in under it to a
+ * campfire at its roots, and fireflies about its crown.
+ */
+function forestArt(): Art {
+  const a = new Art(64, 58);
+  groundPatch(a, 32, 50, 30, 8, GRASS);
+  const elderLeaf = ramp('#123424', '#1c4a2c', '#2a6434', '#3e803e', '#5c9e48', '#86bc5a');
+  const bark = ramp('#241810', '#3e2a1c', '#5a3e28', '#7a563a');
+  const glow = ramp('#2a8a7a', '#5ad8c0', '#b8fff0');
+  // The wood behind: a ragged line of crowns in many colours.
+  const back = new Art(64, 58);
+  const crowns: [number, number, number, RGB[]][] = [
+    [6, 34, 5, TREE.pine], [13, 30, 6, TREE.autumn], [22, 27, 6, TREE.green], [42, 27, 6, TREE.blossom],
+    [51, 30, 6, TREE.green], [58, 34, 5, TREE.autumn], [3, 40, 4, TREE.green], [61, 41, 4, TREE.pine],
+  ];
+  for (const [x, y, r, pal] of crowns) {
+    back.oval(x, y, r, r * 0.85, (px, py, nx, ny) => tone(pal, lit(nx, ny, 0.5) + (hash2(px, py, 41) - 0.5) * 0.3, px, py));
+    back.rect(x, y + Math.round(r * 0.8), x, y + Math.round(r * 0.8) + 2, () => TRUNK[1]);
+  }
+  back.outline(hex('#0a140e'));
+  a.stamp(back, 0, 0);
+  // The elder: a thick, twisted trunk splitting into limbs, and roots gripping the ground.
+  const tree = new Art(64, 58);
+  tree.poly([[27, 50], [29, 30], [35, 30], [37, 50], [41, 52], [23, 52]], (x, y) => {
+    const u = (x - 23) / 18;
+    const seam = Math.abs(Math.sin((y + x * 0.7) * 0.5)) > 0.85;
+    return tone(bark, 0.8 - u * 0.6 - (seam ? 0.25 : 0), x, y);
+  });
+  tree.line(29, 32, 22, 22, bark[2]);
+  tree.line(35, 32, 42, 21, bark[1]);
+  tree.line(32, 31, 32, 18, bark[2]);
+  // Its runes, glowing faintly.
+  tree.set(31, 40, glow[2]);
+  tree.set(31, 42, glow[1]);
+  tree.set(32, 41, glow[1]);
+  tree.set(31, 44, glow[1]);
+  // The great crown: clumps piled into a hill of leaves.
+  const clumps: [number, number, number][] = [[32, 12, 10], [20, 18, 9], [44, 18, 9], [26, 7, 7], [39, 8, 7], [14, 24, 6], [50, 24, 6], [32, 22, 8]];
+  for (const [x, y, r] of clumps) {
+    tree.oval(x, y, r, r * 0.8, (px, py, nx, ny) => {
+      const edge = nx * nx + ny * ny > 0.66 && (nx > 0.2 || ny > 0.3);
+      return tone(elderLeaf, lit(nx, ny, 0.56) + (hash2(px, py, 43) - 0.5) * 0.28 - (edge ? 0.3 : 0) - (y - 7) * 0.012, px, py);
+    });
+  }
+  tree.outline(hex('#08120c'));
+  a.stamp(tree, 0, 0);
+  // Moss hanging from the crown's underside.
+  for (const [x, len] of [[18, 4], [23, 6], [41, 5], [46, 3], [29, 3]] as [number, number][]) for (let k = 0; k < len; k++) a.set(x, 26 + k, elderLeaf[k % 2 ? 1 : 2]);
+  // The trail winding in, and the campfire at the elder's roots.
+  for (let k = 0; k < 14; k++) {
+    const x = Math.round(44 + k * 0.9 + Math.sin(k * 0.6) * 2);
+    const y = 51 + Math.round(k * 0.4);
+    a.set(x, y, hex('#b89a6a'));
+    a.set(x + 1, y, hex('#8a6e4a'));
+  }
+  a.set(44, 50, WARM[1]);
+  a.set(43, 50, WARM[0]);
+  a.set(45, 50, WARM[0]);
+  a.set(44, 49, WARM[2]);
+  a.set(44, 48, WARM[3]);
+  // Fireflies.
+  for (const [x, y] of [[9, 20], [55, 16], [48, 6], [12, 10], [58, 26]] as [number, number][]) {
+    a.set(x, y, hex('#e8ff9a'));
+    a.set(x + 1, y, hex('#9ac84a'));
+  }
+  return a;
+}
+
 /** A waymarker for an arena that has no landmark of its own yet. */
 function waymarkArt(): Art {
   const a = new Art(16, 20);
@@ -1524,6 +1600,7 @@ const LANDMARK_ART: Record<string, () => Art> = {
   rift: riftArt,
   island: islandArt,
   glide: glideArt,
+  forest: forestArt,
   waymark: waymarkArt,
 };
 

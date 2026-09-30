@@ -68,6 +68,8 @@ export const MOB_TIER: Record<string, Tier> = {
   pumpkin_king: 'legend',
   // The omens' Treasure Imp.
   imp: 'strong',
+  // The Everwood's treasure chests, rolled like a strong monster's drop.
+  chest: 'strong',
 };
 
 export const tierOf = (kind: string): Tier => MOB_TIER[kind] ?? 'normal';

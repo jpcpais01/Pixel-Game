@@ -24,6 +24,7 @@ import { COLUMN_BASE, COLUMN_H, ISLAND_X, ISLAND_Y } from '../art/island';
 import { COLUMNS, ISLE_H, ISLE_SPAWN, ISLE_W, RING_CX, RING_CY, islandScenery, islandWalkable } from './islandLayout';
 import { HOME_ARENA } from './homeGround';
 import { GARDEN_GROUND, GARDEN_SPAWN, GARDEN_SPAWNS, POOL, gardenLayout, gardenScenery, gardenWalkable } from './sunken';
+import { FOREST_ARENA } from './forestArena';
 
 /** A sprite shown in the arena's window on its select card (world coordinates). */
 export interface PreviewSprite {
@@ -159,6 +160,7 @@ export const ARENAS: ArenaDef[] = [
       },
     },
   },
+  FOREST_ARENA,
   {
     id: 'cosmos',
     name: 'Cosmos Arena',

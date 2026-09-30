@@ -135,7 +135,11 @@ import {
   type OmenIcon,
 } from './omens';
 import { FLAME_FRAMES, FLAME_H, FLAME_W, GRAVE_H, GRAVE_KINDS, GRAVE_W, WISP_PX, echoBuffIcon, graveStone, soulFlame, soulWisp } from './echoes';
-import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_SWAY_FPS, TREE_SWAY_FRAMES, TREE_VARIANTS, TREE_W, leafBit, rayCanvas, treeFrame } from './trees';
+import { ELDER_H, ELDER_W, PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_SWAY_FPS, TREE_SWAY_FRAMES, TREE_VARIANTS, TREE_W, cherryTree, elderTree, leafBit, mapleTree, rayCanvas, treeFrame, willowTree } from './trees';
+import { CAMPFIRE, CHEST_H, CHEST_W, FPROP_FRAMES, FPROP_H, FPROP_W, MENHIR_H, MENHIR_LOOKS, MENHIR_W, SHRINE_FRAMES, SHRINE_H as FSHRINE_H, SHRINE_W as FSHRINE_W, chestArt, menhirArt, shrineArt } from './forest';
+import { STRIP_H, buildStrip } from './ground';
+import { CHUNK, ForestGen, PREVIEW_SEED } from '../world/forestGen';
+import { forestTile } from '../world/forestGround';
 import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, RIPPLE_FRAMES, RIPPLE_H, RIPPLE_W, rippleFrames, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
 
 const toCanvas = pixelCanvas;
@@ -944,8 +948,66 @@ export function* omenTextures(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('buff_unity', toCanvas(OMEN_ICON, OMEN_ICON, omenIcon('unity')));
 }
 
+/**
+ * The Everwood: its own trees (cherry, maple and willow, each swaying, and
+ * the elder), its undergrowth, the shrine, chest, standing stones and camp,
+ * and last the patch of ground its select card shows (from a fixed seed; a
+ * run grows a forest of its own, painted as it is walked).
+ */
+function* forestTextures(scene: Phaser.Scene): Generator<void, void, void> {
+  const trees: { name: string; r: RenderedFrame }[] = [];
+  const draw = { cherry: cherryTree, maple: mapleTree, willow: willowTree };
+  for (const kind of ['cherry', 'maple', 'willow'] as const) {
+    for (let v = 0; v < TREE_VARIANTS; v++) {
+      for (let f = 0; f < TREE_SWAY_FRAMES; f++) {
+        trees.push({ name: f ? `${kind}${v}_${f}` : `${kind}${v}`, r: draw[kind](v, f).render() });
+        yield;
+      }
+    }
+  }
+  register(scene, 'ftree', pack(trees, TREE_W, TREE_H, 9), TREE_W, TREE_H, false);
+  for (const kind of ['cherry', 'maple', 'willow'] as const) {
+    for (let v = 0; v < TREE_VARIANTS; v++) {
+      const key = `ftree_${kind}${v}`;
+      if (!scene.anims.exists(key)) scene.anims.create({ key, frames: Array.from({ length: TREE_SWAY_FRAMES }, (_, f) => ({ key: 'ftree', frame: f ? `${kind}${v}_${f}` : `${kind}${v}` })), frameRate: TREE_SWAY_FPS, repeat: -1 });
+    }
+  }
+  yield;
+  const elder: { name: string; r: RenderedFrame }[] = [];
+  for (let f = 0; f < TREE_SWAY_FRAMES; f++) {
+    elder.push({ name: `e${f}`, r: elderTree(f).render() });
+    yield;
+  }
+  register(scene, 'elder', pack(elder, ELDER_W, ELDER_H, 3), ELDER_W, ELDER_H);
+  for (const layer of ['elder', 'elder_e']) {
+    scene.anims.create({ key: `${layer}_sway`, frames: scene.anims.generateFrameNames(layer, { prefix: 'e', start: 0, end: TREE_SWAY_FRAMES - 1 }), frameRate: TREE_SWAY_FPS, repeat: -1 });
+  }
+  yield;
+  register(scene, 'fprop', pack(FPROP_FRAMES.map((f) => ({ name: f.name, r: f.draw().render() })), FPROP_W, FPROP_H, 8), FPROP_W, FPROP_H);
+  yield;
+  const shrine = [...Array.from({ length: SHRINE_FRAMES }, (_, f) => ({ name: `s${f}`, r: shrineArt(f).render() })), { name: 'spent', r: shrineArt(0, true).render() }];
+  register(scene, 'fshrine', pack(shrine, FSHRINE_W, FSHRINE_H, 5), FSHRINE_W, FSHRINE_H);
+  for (const layer of ['fshrine', 'fshrine_e']) {
+    scene.anims.create({ key: `${layer}_pulse`, frames: scene.anims.generateFrameNames(layer, { prefix: 's', start: 0, end: SHRINE_FRAMES - 1 }), frameRate: 4, repeat: -1 });
+  }
+  register(scene, 'fchest', pack([{ name: 'shut', r: chestArt(false).render() }, { name: 'open', r: chestArt(true).render() }], CHEST_W, CHEST_H, 2), CHEST_W, CHEST_H);
+  register(scene, 'menhir', pack(frameList(Array.from({ length: MENHIR_LOOKS }, (_, v) => menhirArt(v)), 'm'), MENHIR_W, MENHIR_H), MENHIR_W, MENHIR_H);
+  register(scene, 'fcamp', pack(frameList(Array.from({ length: CAMPFIRE.frames }, (_, f) => CAMPFIRE.draw(f)), 'c'), CAMPFIRE.w, CAMPFIRE.h), CAMPFIRE.w, CAMPFIRE.h);
+  for (const layer of ['fcamp', 'fcamp_e']) {
+    scene.anims.create({ key: `${layer}_burn`, frames: scene.anims.generateFrameNames(layer, { prefix: 'c', start: 0, end: CAMPFIRE.frames - 1 }), frameRate: CAMPFIRE.fps, repeat: -1 });
+  }
+  yield;
+  // Last, the select card's patch of ground: its presence means everything above is built.
+  const gen = new ForestGen(PREVIEW_SEED);
+  const at = gen.spawn();
+  const col = Math.floor(at.x / CHUNK);
+  const row = Math.floor(at.y / STRIP_H);
+  const strip = yield* buildStrip(forestTile(gen, col, row), row);
+  scene.textures.addCanvas('fr_preview', toCanvas(strip.w, strip.h, strip.day.diffuse));
+}
+
 /** The painted arenas' texture sets, each built by one job (see arenaLoader.ts). */
-export type ArenaJob = 'cosmos' | 'island' | 'rift' | 'spirit' | 'temple' | 'deep' | 'glide' | 'worldmap';
+export type ArenaJob = 'cosmos' | 'island' | 'rift' | 'spirit' | 'temple' | 'deep' | 'glide' | 'forest' | 'worldmap';
 
 /**
  * Each set's steps, which yield between pieces, and the texture it makes
@@ -959,6 +1021,7 @@ export const ARENA_JOBS: Record<ArenaJob, { done: string; steps: (scene: Phaser.
   temple: { done: 'et_lane', steps: templeTextures },
   deep: { done: 'gd_lane', steps: deepTextures },
   glide: { done: 'gl_arch', steps: glideTextures },
+  forest: { done: 'fr_preview', steps: forestTextures },
   // Not an arena, but built the same way: the arena select's map of the realm.
   worldmap: { done: 'wm_bits', steps: worldMapTextures },
 };

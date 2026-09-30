@@ -48,6 +48,9 @@ import { build } from '../game/build';
 import { openHomeFriends } from '../ui/homeFriends';
 import { isPainted } from '../world/arenas';
 import { OMEN_ARENAS, Omens } from '../world/Omens';
+import { Forest } from '../world/Forest';
+import { ForestSpawner } from '../world/ForestSpawner';
+import { ForestGen, randomSeed, seedFrom, useForest } from '../world/forestGen';
 import { omenMods, resetOmens } from '../game/omens';
 
 type V3 = [number, number, number];
@@ -303,6 +306,8 @@ export class WorldScene extends Phaser.Scene {
   private fallen: Phaser.GameObjects.BitmapText | null = null;
   /** Gravestones of players who fell here, and the recording of this hero's last moments (see world/Echoes.ts). */
   private echoes: EchoGraves | null = null;
+  /** The Everwood, streamed round the view, when the world is in it. */
+  private forest: Forest | null = null;
   private shafts: Phaser.GameObjects.TileSprite | null = null;
   private shadows: Phaser.GameObjects.Image[] = [];
   private pollen!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -347,6 +352,7 @@ export class WorldScene extends Phaser.Scene {
     this.naturalist = null;
     this.home = null;
     this.fishing = null;
+    this.forest = null;
     this.character = data?.character;
     this.auras.clear();
     this.setPowers = new SetPowers(this);
@@ -395,6 +401,17 @@ export class WorldScene extends Phaser.Scene {
     if (arena.id === 'spirit') this.spirit = new SpiritDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'temple') this.temple = new TempleDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'deep') this.deep = new GlimmerDeep(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
+    if (arena.id === 'forest') {
+      // A new forest each visit; online, the room's code grows it, so friends walk the same one.
+      const code = session.active ? session.room?.code : undefined;
+      const gen = new ForestGen(code ? seedFrom(code) : randomSeed());
+      useForest(gen);
+      this.forest = new Forest(this, gen, (img) => ground(img) as Phaser.GameObjects.Image);
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        useForest(null);
+        this.forest = null;
+      });
+    }
     if (arena.id === 'island') {
       this.island = new FloatingIsland(this, ground, this.view);
       this.shadows.push(...this.island.shadows);
@@ -465,6 +482,11 @@ export class WorldScene extends Phaser.Scene {
 
     this.spawnX = arena.spawn.x;
     this.spawnY = arena.spawn.y;
+    if (this.forest) {
+      const at = this.forest.gen.spawn();
+      this.spawnX = at.x;
+      this.spawnY = at.y;
+    }
     if (arena.id === 'home') {
       const home = (this.home = new Home(this, (img) => ground(img) as Phaser.GameObjects.Image));
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => home.destroy());
@@ -518,7 +540,7 @@ export class WorldScene extends Phaser.Scene {
     // Echoes of the fallen, wherever monsters can fell a hero: not the
     // peaceful clearing, and not a duel, where the fallen fell to a friend.
     this.echoes = null;
-    if (arena.id !== 'clearing' && !duel && arena.id !== 'island' && arena.id !== 'home') {
+    if (arena.id !== 'clearing' && !duel && arena.id !== 'island' && arena.id !== 'home' && arena.id !== 'forest') {
       const echoes = (this.echoes = new EchoGraves(this, arena.id, this.hero, ch.skin?.name ?? ch.type.name, arena.spawn));
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
         echoes.destroy();
@@ -536,6 +558,9 @@ export class WorldScene extends Phaser.Scene {
         resetRift();
         this.scene.stop('rift');
       });
+    } else if (this.forest) {
+      // The forest's creatures wake and sleep with the chunks round the players.
+      this.spawners.push(new ForestSpawner(this, this.forest.gen));
     } else {
       // A season's monsters (Hallow's Eve's pumpkins and bats) join the arena's own while it runs.
       const extra = arena.monsters.length ? seasonalSpots(arena.id, arena.monsters, arena.walkable) : [];
@@ -564,13 +589,16 @@ export class WorldScene extends Phaser.Scene {
     // Screen-fixed; it covers the ground camera's image too, as it draws first.
     this.skyLayer = this.add.image(0, 0, 'clouds').setScrollFactor(0).setDepth(20000).setPipeline('Sky');
     this.setVignette(0.32 - Phaser.Math.Easing.Sine.InOut(this.daylight) * 0.14);
-    cam.fadeIn(500, 7, 8, 13);
+    // The Everwood opens once its painters have the ground in view (see Forest.prime).
+    if (this.forest) cam.fadeOut(0, 7, 8, 13);
+    else cam.fadeIn(500, 7, 8, 13);
     // Phaser keeps drawing a finished fade (fully clear) over the whole screen
     // every frame until it is reset: a full-screen layer for nothing.
     cam.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => cam.fadeEffect.reset());
     this.fitCamera();
     this.followHero();
     this.ground?.prime(this.view);
+    this.forest?.prime(this.view, () => cam.fadeIn(500, 7, 8, 13));
     this.showBanner(arena.name);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this));
@@ -714,6 +742,26 @@ export class WorldScene extends Phaser.Scene {
   setSpawn(x: number, y: number): void {
     this.spawnX = this.hero.x = x;
     this.spawnY = this.hero.y = y;
+  }
+
+  /** Rise here after falling from now on, without moving the hero (a campfire rested at). */
+  setRisePoint(x: number, y: number): void {
+    this.spawnX = x;
+    this.spawnY = y;
+  }
+
+  /**
+   * A treasure chest opened at (x, y): a potion, gems, a little dust and two
+   * chances at gear, rolled as a strong monster's are.
+   */
+  openTreasure(x: number, y: number): void {
+    const odds = riftMods.odds;
+    this.pickups.push(new Pickup(this, x, y, { kind: 'item', id: Math.random() < 0.65 ? 'health' : 'speed' }));
+    for (let k = 0; k < 2; k++) for (const def of gear.roll('chest', omenMods.bump, odds)) this.dropGear(def, x, y);
+    this.dropGems(Math.max(1, rollGems('chest', petMods.luck * odds)), x, y);
+    this.dropDust(4 + Math.floor(Math.random() * 6), x, y);
+    sound.lootFall(this.pan(x));
+    this.debris([0xfff0a0, 0xffd060, 0xffffff], snap(x), snap(y), 30, y + 20, 'burst');
   }
 
   /** A word across the screen, as the arena's name is shown. */
@@ -1658,6 +1706,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     this.ground?.setLight(groundDay, 0.9 - d * 0.6);
+    this.forest?.setLight(groundDay, 0.9 - d * 0.6);
     skyState.clouds = d;
     skyState.tileX = time * 0.004;
     skyState.tileY = time * 0.0022;
@@ -1716,6 +1765,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.forge) near = Math.min(near, this.forge.fireDistance(this.hero.x, this.hero.y));
     if (this.sanctum) near = Math.min(near, this.sanctum.fireDistance(this.hero.x, this.hero.y));
     if (this.home) near = Math.min(near, this.home.fireDistance(this.hero.x, this.hero.y));
+    if (this.forest) near = Math.min(near, this.forest.fireDistance(this.hero.x, this.hero.y));
     // No fire in this arena: no crackle.
     if (near === Infinity) return 0;
     const k = Phaser.Math.Clamp(1 - (near - 16) / 150, 0, 1);
@@ -1950,6 +2000,7 @@ export class WorldScene extends Phaser.Scene {
     const d = this.updateDaylight(time, dt);
     this.ground?.update(this.view, settings.values.quality !== 'full' ? 2.5 : 4);
     this.scenery.update(time, dt, d, this.hero, this.view);
+    this.forest?.update(time, dt, d, { x: this.hero.x, y: this.hero.y, alive: this.downT <= 0 }, this.view);
     this.garden?.update(time, dt, target, d, this.view);
     // After the day/night light: the cosmos lights itself.
     this.cosmos?.update(time, dt);

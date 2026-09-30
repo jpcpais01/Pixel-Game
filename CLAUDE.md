@@ -11,7 +11,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 ## Commands
 
 - `npm run dev`: dev server. `npm run build`: `tsc --noEmit` then `vite build`. `npm run typecheck`: types only.
-- `npm run sheet` / `icons` / `gear` / `trees`: write sprite sheets, app icons, gear icons and every tree to disk for reviewing art.
+- `npm run sheet` / `icons` / `gear` / `trees`: write sprite sheets, app icons, gear icons and every tree to disk for reviewing art. `npm run forest -- [seed] [dx] [dy] [w] [h]` paints a patch of the Everwood by day to `forest.png`.
 
 ## Map of the code
 
@@ -41,6 +41,11 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - Its own mode on the arena select: jump off the Floating Island under a paraglider in the hero's colour and ride down to the goal islet through rings, updrafts and wind rivers, round, over or under floating islets. Timed, with the best time per course in `collection.glide` (and the cloud), a ghost of the best run in localStorage, and online races in a room (the host starts; `gs`/`gp`/`gf` messages).
 - `world/glideLayout.ts`: the course (rings, updrafts, lanes, islets, goal, checkpoints). `game/glide.ts`: the flight model (`stepFlight`), `glideHud`, `glideInput`, ghost recording. `art/glide.ts`: sea tile, cloud tops, islets, rings, swirls, arch, and `gliderSheet(accent)` painted in the page. Textures come from the `glide` arena job plus the island's (`warmGlide`).
 - Height is drawn the game's way: z up is drawn z px higher than the spot below, where the shadow lies; the far sea scrolls at 0.35, far islands at 0.5, wisps above at 1.35.
+
+**The Everwood** (`src/world/forest*.ts`, `Forest.ts`, `ForestSpawner.ts`)
+- An endless forest grown from a seed (new each visit; online, `seedFrom` the room code). `forestGen.ts` (`ForestGen`) is a pure function of seed and world position: fields on a 4 px lattice per 256 px chunk (roof of thickets, streams, ponds, trails), seven woods (`BIOMES`: oak, birch, pine, Sakura, meadow, autumn, hollow) on warped cells with names, and a `layout` per chunk (trees, undergrowth, sunbeams, places, monster spots). Places (`POI_WEIGHTS`): campfires (mend, and where the hero rises), shrines (a long blessing, once), chests (`WorldScene.openTreasure`), ruins, standing stones, elder trees, fairy rings (gems).
+- `forestGround.ts` is the tile's `GroundSpec` (a chunk wide, a strip tall); `forestWorker.ts` paints tiles off the main thread and hands back the fields and layouts it made (`ForestGen.adopt`). `Forest.ts` streams tiles and stands up chunks round the view, holds the world dark until the view's ground is in (`prime`), and runs the places. `ForestSpawner` wakes each chunk's creatures (Barkling, Glowmoth, beetles, puffcaps, frogs) near a player, slots named by spot id.
+- Art: `art/forest.ts` (grass, flowers, reeds, boulders, big mushrooms, shrine, chest, menhirs), and `mapleTree`, `willowTree`, `elderTree` in `art/trees.ts`, built by the `forest` arena job. `SkyPipeline` keeps its cloud origin small, as the forest's coordinates run to a million.
 
 **Arenas** (`src/world/`)
 - World map: `realm.ts` (places, road legs, region labels, lore, and the player's progress: visited places part their fog, bosses slain plant a flag via `realm.slay` in `WorldScene.monsterSlain`); `art/worldMap.ts` paints terrain, road, props and landmarks, built as the `worldmap` job in the arena worker and warmed on the home screen.
