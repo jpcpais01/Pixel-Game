@@ -104,92 +104,275 @@ export function roots(c: PixelCanvas, bx: number, by: number, spread: number, ba
   c.capsule(bx + 1, by - 3, bx + 2 + R() * 2, by + 1.5, 1.6, 0.8, bark);
 }
 
-export function oak(v: number): PixelCanvas {
+// ---------------------------------------------------------------------------
+// The trees. Each is drawn whole for every frame of a slow sway: the crown's
+// clusters lean a pixel or so with the wind, more the higher they sit, and a
+// few leaves along the top rustle, so a tree breathes without ever tearing.
+
+/** Frames in a tree's sway, and how fast they play (see textures.ts, `treeSwayTextures`). */
+export const TREE_SWAY_FRAMES = 6;
+export const TREE_SWAY_FPS = 3;
+
+/** How far the top of a crown leans on frame `f`, in px (0 on frame 0, so it matches the still tree). */
+const swayAt = (f: number, amp: number): number => Math.sin((f / TREE_SWAY_FRAMES) * Math.PI * 2) * amp;
+
+/** Which way a lean goes at height `y`: nothing at `base`, all of `lean` at `top` and above. */
+const leaner = (lean: number, base: number, top: number) => (y: number): number => lean * Math.max(0, Math.min(1, (base - y) / (base - top))) ** 1.4;
+
+interface CrownOpts {
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  /** How big the leaf clusters are (1 = an oak's). */
+  size: number;
+  /** Spacing of the clusters against their size (about 1): more is airier, with gaps. */
+  ring: number;
+  /** How many of the low inner clusters are left out, showing the boughs (0..1). */
+  gaps: number;
+  leaf: Material;
+  twig: Material;
+  /** Where the boughs leave the trunk. */
+  fork: { x: number; y: number };
+  /** The sway: the lean at height y. */
+  dx: (y: number) => number;
+  frame: number;
+  R: () => number;
+}
+
+/**
+ * A leafy crown: dark depths behind, boughs reaching up through them, then
+ * leaf clusters from the back to the front, each lit as a dome with a
+ * texture of little leaves, sunlit tips on its crest and a shaded underside.
+ * Gaps between the clusters show the boughs in the dark inside.
+ */
+function crown(c: PixelCanvas, o: CrownOpts): void {
+  const { cx, cy, rx, ry, leaf, R, dx } = o;
+  // Every random number is drawn first, so each frame of the sway gets the same tree.
+  // Clusters on a jittered grid filling the crown's oval, overlapping well, so
+  // the outline is a run of soft scallops rather than a bunch of balls.
+  const base = 9 * o.size;
+  const step = base * o.ring;
+  const clusters: { x: number; y: number; r: number }[] = [];
+  for (let gy = -ry; gy <= ry; gy += step * 0.8) {
+    const row = Math.round(gy / (step * 0.8));
+    for (let gx = -rx; gx <= rx; gx += step) {
+      const x = gx + (row % 2 ? step / 2 : 0) + (R() - 0.5) * step * 0.5;
+      const y = gy + (R() - 0.5) * step * 0.4;
+      const r = base * (0.85 + R() * 0.35);
+      const gap = R();
+      const ex = x / Math.max(1, rx - r * 0.75);
+      const ey = y / Math.max(1, ry - r * 0.7);
+      const e = ex * ex + ey * ey;
+      if (e > 1) continue;
+      // A few left out low in the crown, where the boughs show through.
+      if (gap < o.gaps && e < 0.7 && y > -ry * 0.1) continue;
+      clusters.push({ x: cx + x, y: cy + y, r: r * (1 - e * 0.22) });
+    }
+  }
+  const boughs = clusters.filter((_k, i) => i % 3 === 0).map((k) => ({ x: k.x, y: k.y + k.r * 0.3, w: 1.2 + R() * 0.9 }));
+  const tufts = clusters.map(() => Array.from({ length: 6 }, () => ({ a: -Math.PI * (0.15 + R() * 0.7), long: R() < 0.25 })));
+  const deep: Material = { ...leaf, bias: (leaf.bias ?? 0) - 2 };
+
+  // The dark inside of the crown.
+  c.part();
+  c.ellipse(cx + dx(cy), cy + ry * 0.08, rx * 0.8, ry * 0.8, deep, { flatten: 0.8 });
+  // Boughs from the fork out to the clusters, seen in the gaps.
+  c.part();
+  for (const b of boughs) c.capsule(o.fork.x, o.fork.y, b.x + dx(b.y), b.y, b.w * 1.4, b.w * 0.55, o.twig);
+
+  clusters
+    .map((k, i) => ({ ...k, i }))
+    .sort((a, b) => a.y - b.y)
+    .forEach((k) => {
+      const x = k.x + dx(k.y);
+      const y = k.y;
+      const r = k.r;
+      c.part();
+      c.ellipse(x, y, r, r * 0.84, leaf, { flatten: 0.85 });
+      // Its texture: a leaf every few pixels, catching the light on the upper left, lost in shade below.
+      for (let py = Math.floor(y - r); py <= y + r; py++) {
+        for (let px = Math.floor(x - r); px <= x + r; px++) {
+          const u = (px + 0.5 - x) / r;
+          const v = (py + 0.5 - y) / (r * 0.84);
+          const d2 = u * u + v * v;
+          if (d2 > 1) continue;
+          // In the cluster's own frame, so the leaves move with it as it sways.
+          const lx = px - Math.round(x) + 40;
+          const ly = py - Math.round(y) + 40;
+          const cell = hash2((lx / 3) | 0, (ly / 2) | 0, 211 + k.i);
+          const spot = hash2(lx, ly, 223 + k.i);
+          const lit = -u * 0.55 - v * 0.85;
+          if (lit > 0.15 && spot > 0.62 && cell > 0.35) c.shade(px, py, 1);
+          else if (lit < -0.25 && spot < 0.4) c.shade(px, py, -1);
+          else if (d2 > 0.72 && lit < -0.1) c.shade(px, py, -1);
+          if (lit > 0.55 && d2 > 0.55 && spot > 0.8) c.shade(px, py, 1);
+        }
+      }
+      // Leaves standing proud along its crest; a few change each frame, as if rustling.
+      tufts[k.i].forEach((t, j) => {
+        if (y > cy - ry * 0.2) return;
+        if (hash2(k.i * 17 + j, o.frame, 229) < 0.22) return;
+        const ex = x + Math.cos(t.a) * (r + 0.4);
+        const ey = y + Math.sin(t.a) * (r * 0.84 + 0.4);
+        const n = sphere(Math.cos(t.a) * 0.8, Math.sin(t.a) * 0.8);
+        c.px(ex, ey, leaf, n);
+        if (t.long) c.px(ex + (Math.cos(t.a) > 0 ? 1 : -1), ey, leaf, n);
+      });
+    });
+
+  // The crown as one form: the sun on its upper left, its underside in shade.
+  // Sun on the crown's upper-left rim, a step brighter.
+  for (let y = Math.floor(cy - ry - 3); y < cy + ry + 3; y++) {
+    for (let x = Math.floor(cx - rx - 4); x < cx + rx + 4; x++) {
+      if (c.materialAt(x, y) !== leaf) continue;
+      const form = -((x - cx - dx(y)) / rx) * 0.45 - ((y - cy) / ry) * 0.9;
+      if (form < -0.5 && hash2(x, y, 237) > (form < -0.75 ? 0.1 : 0.45)) c.shade(x, y, -1);
+      else if (form > 0.55 && hash2(x >> 1, y, 239) > 0.55) c.shade(x, y, 1);
+      if (!c.filled(x, y - 1) && hash2(x, y, 233) > 0.25) c.shade(x, y, 1);
+      else if (!c.filled(x - 1, y) && hash2(x, y, 235) > 0.5) c.shade(x, y, 1);
+    }
+  }
+}
+
+/** The crown's shade on the trunk just under it. */
+function shadeUnder(c: PixelCanvas, bark: Material, x0: number, x1: number, y0: number, depth: number): void {
+  for (let x = x0; x <= x1; x++) {
+    for (let y = y0; y < y0 + depth; y++) {
+      if (c.materialAt(x, y) === bark) c.shade(x, y, y < y0 + depth / 2 ? -2 : -1);
+    }
+  }
+}
+
+/** Bark: furrows running up the trunk, knots, and moss on the shaded side. */
+function bark(c: PixelCanvas, bx: number, by: number, height: number, hw: number, lean: number, R: () => number, mossy: boolean): void {
+  const at = (y: number) => bx + lean * (1 - (y - (by - height)) / height) ** 2 * 4;
+  for (let k = 0; k < height * 0.7; k++) {
+    const y = by - height + 2 + Math.floor(R() * (height - 4));
+    const x = Math.round(at(y) - hw + 1 + R() * (hw * 2 - 1));
+    const len = 2 + Math.floor(R() * 5);
+    for (let j = 0; j < len; j++) c.shade(x, y + j, -1);
+    if (R() < 0.3) c.shade(x - 1, y, 1);
+  }
+  if (mossy) {
+    c.part();
+    for (let y = by - 12; y < by - 1; y++) {
+      const x = at(y) + hw * 0.4;
+      if (hash2(0, y, 241) > 0.3) c.px(x + hash2(1, y, 243) * hw * 0.6, y, MOSS, cyl(0.6, 0.1));
+    }
+  }
+}
+
+function oakFrame(v: number, f: number): PixelCanvas {
   const c = new PixelCanvas(TREE_W, TREE_H);
   const R = rng(300 + v * 17);
   const bx = 48;
   const by = TREE_BASE_Y;
   const lean = (R() - 0.5) * 1.5;
-  trunk(c, bx, by, 50, 3.4 + v * 0.3, BARK, lean);
-  // Bark: vertical furrows.
-  for (let k = 0; k < 36; k++) {
-    const x = bx - 3 + Math.floor(R() * 7);
-    const y = by - 48 + Math.floor(R() * 44);
-    for (let j = 0; j < 2 + Math.floor(R() * 4); j++) c.shade(x, y + j, -1);
-  }
-  roots(c, bx, by, 8, BARK, R);
-  // Boughs reaching up into the crown.
+  const dx = leaner(swayAt(f, 1.3), by - 44, by - 100);
+  const hw = 3.6 + v * 0.3;
+  trunk(c, bx, by, 50, hw, BARK, lean);
+  bark(c, bx, by, 50, hw, lean, R, true);
+  roots(c, bx, by, 9, BARK, R);
+  // Boughs splitting from the trunk into the crown.
   c.part();
-  c.capsule(bx, by - 36, bx - 15 - R() * 4, by - 60, 2.4, 1.3, BARK);
-  c.capsule(bx + 1, by - 40, bx + 14 + R() * 4, by - 64, 2.2, 1.2, BARK);
-  canopy(c, bx + lean, by - 72, 33 + v * 2, 27, 11 + v, LEAF_OAK, R);
+  const top = by - 44;
+  c.capsule(bx, top + 6, bx - 16 - R() * 4 + dx(by - 64), by - 64, 2.8, 1.3, BARK);
+  c.capsule(bx + 1, top + 2, bx + 15 + R() * 4 + dx(by - 66), by - 66, 2.6, 1.2, BARK);
+  c.capsule(bx, top, bx + lean + dx(by - 80), by - 80, 2.4, 1.2, BARK);
+  crown(c, { cx: bx + lean, cy: by - 70, rx: 36 + v * 2, ry: 29, size: 1.05, ring: 0.95, gaps: 0.55, leaf: LEAF_OAK, twig: BARK, fork: { x: bx, y: top }, dx, frame: f, R });
+  shadeUnder(c, BARK, bx - 8, bx + 8, by - 46, 8);
   return c;
 }
 
-export function birch(v: number): PixelCanvas {
+function birchFrame(v: number, f: number): PixelCanvas {
   const c = new PixelCanvas(TREE_W, TREE_H);
   const R = rng(500 + v * 23);
   const bx = 48;
   const by = TREE_BASE_Y;
   const lean = (R() - 0.5) * 2.5;
-  trunk(c, bx, by, 64, 2.2, BIRCH_BARK, lean);
-  // Black marks across the white bark.
-  for (let k = 0; k < 16; k++) {
-    const y = by - 60 + Math.floor(R() * 56);
-    const x = bx - 2 + Math.floor(R() * 3) + Math.round(lean * (1 - (y - by + 64) / 64) ** 2 * 4);
+  // Birches are lighter and move more.
+  const dx = leaner(swayAt(f, 1.6), by - 40, by - 104);
+  trunk(c, bx, by, 66, 2.3, BIRCH_BARK, lean);
+  // Black lenticels across the white bark, and the dark cracked base.
+  for (let k = 0; k < 22; k++) {
+    const y = by - 62 + Math.floor(R() * 58);
+    const x = bx - 2 + Math.floor(R() * 3) + Math.round(lean * (1 - (y - by + 66) / 66) ** 2 * 4);
     const len = 1 + Math.floor(R() * 3);
     for (let j = 0; j < len; j++) c.shade(x + j, y, -3);
   }
+  for (let y = by - 8; y < by; y++) for (let x = bx - 4; x <= bx + 4; x++) if (c.materialAt(x, y) === BIRCH_BARK && hash2(x, y, 245) > 0.45) c.shade(x, y, -2);
   roots(c, bx, by, 5, BIRCH_BARK, R);
+  const fork = { x: bx + lean * 1.5, y: by - 56 };
   c.part();
-  c.capsule(bx + lean * 2, by - 50, bx - 10, by - 70, 1.4, 0.8, BIRCH_BARK);
-  canopy(c, bx + lean * 3, by - 80, 20 + v, 27, 9, LEAF_BIRCH, R, 0.8);
+  c.capsule(fork.x, fork.y, bx - 11 + dx(by - 76), by - 76, 1.5, 0.7, BIRCH_BARK);
+  c.capsule(fork.x, fork.y - 4, bx + 10 + dx(by - 84), by - 84, 1.4, 0.7, BIRCH_BARK);
+  crown(c, { cx: bx + lean * 3, cy: by - 84, rx: 21 + v, ry: 31, size: 0.8, ring: 1.05, gaps: 0.5, leaf: LEAF_BIRCH, twig: BIRCH_BARK, fork, dx, frame: f, R });
+  shadeUnder(c, BIRCH_BARK, bx - 6, bx + 6, by - 56, 7);
   return c;
 }
 
-export function pine(v: number): PixelCanvas {
+function pineFrame(v: number, f: number): PixelCanvas {
   const c = new PixelCanvas(TREE_W, TREE_H);
   const R = rng(700 + v * 29);
   const bx = 48;
   const by = TREE_BASE_Y;
-  trunk(c, bx, by, 30, 2.6, BARK, 0);
+  const dx = leaner(swayAt(f, 1.1), by - 20, by - 110);
+  trunk(c, bx, by, 34, 2.8, BARK, 0);
+  bark(c, bx, by, 34, 2.8, 0, R, false);
   roots(c, bx, by, 6, BARK, R);
-  // Tiers of boughs, top down, each lower one in front of the one above.
-  const top = by - 112 + v * 4;
-  const tiers = 5;
+  // Tiers of drooping boughs, top down, each lower one in front of the one above.
+  const top = by - 114 + v * 4;
+  const tiers = 6;
+  const tips = Array.from({ length: tiers }, (_t, k) => Array.from({ length: 3 + k }, () => R()));
   for (let k = 0; k < tiers; k++) {
-    const t0 = top + k * 16;
-    const t1 = t0 + 22 + k * 2;
-    const w = 7 + k * 5 + v;
+    const t0 = top + k * 14;
+    const t1 = t0 + 20 + k * 2;
+    const w = 6 + k * 4.6 + v;
+    const sx = dx((t0 + t1) / 2);
     c.part();
     c.shape(t0, t1, (y) => {
       const u = (y - t0) / (t1 - t0);
-      // Saw-toothed hem along the bottom of each tier.
-      const jag = u > 0.7 ? (hash2(y, k, 31 + v) - 0.5) * 3 : 0;
-      const hw = 1 + u * w + jag;
-      return [bx - hw, bx + hw];
-    }, LEAF_PINE, (_x, _y, t, u) => cyl(t, 0.55 - u * 0.4));
-    for (let x = Math.floor(bx - w); x <= bx + w; x++) {
-      if (hash2(x, k, 37 + v) > 0.55) c.px(x, t1 + 1, LEAF_PINE, cyl((x - bx) / w, -0.2), { bias: -1 });
+      // Boughs sag at the ends, so the hem curves up at the sides.
+      const hw = 1 + u ** 0.85 * w;
+      return [bx + sx - hw, bx + sx + hw];
+    }, LEAF_PINE, (_x, _y, t, u) => cyl(t, 0.6 - u * 0.5));
+    // Bough tips hanging from the hem.
+    tips[k].forEach((r, j) => {
+      const n = tips[k].length;
+      const tx = bx + sx + ((j + 0.5) / n - 0.5) * 2 * w * (0.9 + r * 0.1);
+      const out = tx < bx + sx ? -1 : 1;
+      c.capsule(tx, t1 - 3, tx + out * (1 + r), t1 + 1 + r * 1.5, 1.8, 0.6, LEAF_PINE);
+    });
+    // Needles: short strokes slanting down and out, bright on the sunny side.
+    for (let y = t0; y <= t1 + 3; y++) {
+      for (let x = Math.floor(bx + sx - w - 2); x <= bx + sx + w + 2; x++) {
+        if (c.materialAt(x, y) !== LEAF_PINE) continue;
+        const side = x < bx + sx ? 1 : -1;
+        const stroke = hash2((x + side * y) >> 1, k, 251 + v);
+        if (stroke > 0.72) c.shade(x, y, side > 0 ? 1 : 0);
+        else if (stroke < 0.18) c.shade(x, y, -1);
+        if (!c.filled(x, y - 1) && side > 0) c.shade(x, y, 1);
+      }
     }
   }
-  for (let y = top; y < by - 12; y++) {
-    for (let x = bx - 32; x < bx + 32; x++) {
-      if (!c.filled(x, y)) continue;
-      const h = hash2(x, y >> 1, 41);
-      if (h > 0.8) c.shade(x, y, 1);
-      else if (h < 0.15) c.shade(x, y, -1);
-    }
-  }
+  shadeUnder(c, BARK, bx - 5, bx + 5, top + (tiers - 1) * 14 + 30, 6);
   return c;
 }
 
+export type TreeName = 'oak' | 'birch' | 'pine';
+const TREE_DRAW: Record<TreeName, (v: number, f: number) => PixelCanvas> = { oak: oakFrame, birch: birchFrame, pine: pineFrame };
+
+/** One frame of a tree's sway. */
+export const treeFrame = (kind: TreeName, v: number, f: number): PixelCanvas => TREE_DRAW[kind](v, f);
+
+/** The still trees (frame 0 of each sway), made at boot; the sway itself is made later, in the background. */
 export const TREE_FRAMES: { name: string; draw: () => PixelCanvas }[] = [];
 for (let v = 0; v < TREE_VARIANTS; v++) {
-  TREE_FRAMES.push({ name: `oak${v}`, draw: () => oak(v) });
-  TREE_FRAMES.push({ name: `birch${v}`, draw: () => birch(v) });
-  TREE_FRAMES.push({ name: `pine${v}`, draw: () => pine(v) });
+  for (const kind of ['oak', 'birch', 'pine'] as const) TREE_FRAMES.push({ name: `${kind}${v}`, draw: () => treeFrame(kind, v, 0) });
 }
+
+export { crown, leaner, swayAt };
 
 // ---------------------------------------------------------------------------
 // Undergrowth, each drawn standing on (24, PROP_BASE_Y) of a 48x26 frame.

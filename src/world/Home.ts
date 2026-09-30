@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CHIMNEY_H, glows, thingLook, warmHome, wallFrameName } from '../art/homeArt';
 import { paintFloors } from '../art/homeFloors';
-import { paintRoof, type RoofArt } from '../art/homeWalls';
+import { EAVES, paintRoof, type RoofArt } from '../art/homeWalls';
 import { JAR_SPOTS } from '../art/homeProps';
 import { pixelCanvas } from '../art/canvas';
 import { sound } from '../audio';
@@ -10,9 +10,11 @@ import { collection } from '../game/collection';
 import { CRITTERS, critterById } from '../game/critters';
 import { daynight } from '../game/daynight';
 import { SUN_SHADOW_ALPHA, sunShadow } from '../game/Wizard';
+import { sway, treeSwayReady } from '../game/treeSway';
 import { session, type Msg } from '../net/session';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HOME_SPAWN, homeWalkable, setHomeMask } from './homeGround';
+import { treeLeaves } from './Scenery';
 import { CELL, COLS, HomeLayout, HomeMask, PLOT_H, PLOT_W, PLOT_X, PLOT_Y, ROWS, cellIndex, findHouses, inPlot, starterHome, type House, type Thing } from './homeLayout';
 import { FLOORS, WALLS, partById, wallKind, wallMat, type PartDef } from './homeParts';
 
@@ -37,6 +39,14 @@ const SEND_MS = 700;
 const PIECE = 12000;
 /** How far round the hero the build cursor must keep, px, so no wall goes down on them. */
 const HERO_R = 6;
+/** ms between leaves or petals dropping from the trees planted here. */
+const LEAF_MS = 1500;
+/** What each planted tree drops. */
+const LEAF_TINTS: Record<string, number[]> = {
+  oak: [0x3b753c, 0x528d46, 0x71a653, 0xc8a040],
+  birch: [0x8eb54c, 0xb2cd62, 0xd2e287, 0xe8c050],
+  blossom: [0xf8c0d2, 0xec9cb8, 0xffe2ec, 0xd8789c],
+};
 
 interface Placed {
   t: Thing;
@@ -59,6 +69,10 @@ interface WallPiece {
   glow: Img | null;
   /** On the south side of this house (-1 for none): cut down to a stub while the hero is inside. */
   south: number;
+  /** A south corner the side wall runs into: it stays whole, so the side wall doesn't stop short of the stubs. */
+  post: boolean;
+  /** Its sun shadow, for walls out in the open (a house's walls are in its roof's). */
+  shadow: Img | null;
   h: number;
   /** Rows cut off its top (0: whole). */
   cut: number;
@@ -117,6 +131,9 @@ export class Home {
   private hero = { x: 0, y: 0 };
   private id = uid++;
   private version = 0;
+  /** Trees planted before their sway was ready: they start swaying when it is. */
+  private stillTrees: { sprite: Sprite; anim: string }[] = [];
+  private leaves!: Phaser.GameObjects.Particles.ParticleEmitter;
 
   constructor(
     private scene: WorldScene,
@@ -138,6 +155,18 @@ export class Home {
     this.cursor = add.graphics().setDepth(9000).setVisible(false);
     this.ghost = add.image(0, 0, 'home', 'chimney').setAlpha(0.6).setDepth(9001).setVisible(false);
     this.refresh(true);
+    // Now and then a leaf, or a cherry petal, comes loose from a tree planted here.
+    this.leaves = treeLeaves(
+      scene,
+      () => {
+        const trees = [...this.placed.values()].filter((p) => LEAF_TINTS[p.t.id] && p.sprite.visible);
+        const p = trees[Math.floor(Math.random() * trees.length)];
+        if (!p) return null;
+        return { x: p.sprite.x + (Math.random() - 0.5) * 44, y: p.sprite.y - 66 + (Math.random() - 0.3) * 24, tints: LEAF_TINTS[p.t.id] };
+      },
+      LEAF_MS,
+    );
+    this.leaves.emitting = this.layout.things.some((t) => LEAF_TINTS[t.id]);
 
     if (session.active) {
       this.netOff = session.on((m) => this.receive(m));
@@ -232,14 +261,17 @@ export class Home {
         }
         const h = this.houseAt[i];
         const south = h >= 0 && (cy === ROWS - 1 || this.houseAt[i + COLS] !== h) ? h : -1;
+        const post = south >= 0 && !!(l.wallMask(cx, cy) & 1);
         const old = this.walls.get(i);
-        if (old && old.key === key) {
+        if (old && old.key === key && !!old.shadow === (h < 0)) {
           old.south = south;
+          old.post = post;
           continue;
         }
         if (old) {
           old.img.destroy();
           old.glow?.destroy();
+          old.shadow?.destroy();
           this.walls.delete(i);
         }
         if (!key) continue;
@@ -249,7 +281,8 @@ export class Home {
         const depth = PLOT_Y + cy * CELL + 11;
         const img = this.scene.add.image(x, y, 'home', key).setOrigin(0).setPipeline('Lit').setDepth(depth);
         const glow = glows(key) ? this.scene.add.image(x, y, 'home_e', key).setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1) : null;
-        this.walls.set(i, { key, img, glow, south, h: H, cut: 0 });
+        const shadow = h < 0 ? sunShadow(this.scene.add.image(x + CELL / 2, PLOT_Y + (cy + 1) * CELL, 'home_s', key).setOrigin(0.5, 1)).setAlpha(SUN_SHADOW_ALPHA * Math.max(0, this.daylight)) : null;
+        this.walls.set(i, { key, img, glow, south, post, shadow, h: H, cut: 0 });
       }
     }
   }
@@ -283,7 +316,8 @@ export class Home {
       tex.addCanvas(`${key}_s`, pixelCanvas(art.w, art.h, sil));
       const depth = PLOT_Y + (w.h.y1 + 1) * CELL + 1;
       const img = this.scene.add.image(PLOT_X + art.x, PLOT_Y + art.y, key).setOrigin(0).setPipeline('Lit').setDepth(depth);
-      const shadow = sunShadow(this.scene.add.image(PLOT_X + art.x + art.w / 2, PLOT_Y + art.y + art.h, `${key}_s`).setOrigin(0.5, 1));
+      // The roof's outline stands in for the whole house's: it falls from the foot of the front wall, not from the lifted eaves.
+      const shadow = sunShadow(this.scene.add.image(PLOT_X + art.x + art.w / 2, PLOT_Y + (w.h.y1 + 1) * CELL + EAVES, `${key}_s`).setOrigin(0.5, 1));
       keep.push({ sig: w.sig, house: w.h, art, key, img, shadow, depth, reveal: 0, alpha: 1, chimneys: [] });
     }
     this.roofs = keep;
@@ -345,6 +379,7 @@ export class Home {
     }
     for (const [k, t] of want) if (!this.placed.has(k)) this.place(k, t);
     for (const p of this.placed.values()) p.house = this.houseAt[cellIndex(p.t.x, p.t.y + p.part.h - 1)];
+    if (this.leaves) this.leaves.emitting = l.things.some((t) => LEAF_TINTS[t.id]);
     this.fillShelves();
   }
 
@@ -354,6 +389,10 @@ export class Home {
     const add = this.scene.add;
     const depth = part.wall ? PLOT_Y + t.y * CELL + 11.2 : part.flat ? 1.5 : look.y;
     const sprite = add.sprite(look.x, look.y, look.key, look.frame).setOrigin(look.ox, look.oy).setFlipX(look.flipX).setPipeline('Lit').setDepth(depth);
+    if (look.sway) {
+      if (this.scene.anims.exists(look.sway)) sway(sprite, look.sway);
+      else this.stillTrees.push({ sprite, anim: look.sway });
+    }
     let glow: Sprite | null = null;
     if (look.glow) {
       glow = add.sprite(look.x, look.y, look.glow, look.frame).setOrigin(look.ox, look.oy).setFlipX(look.flipX).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1);
@@ -438,8 +477,10 @@ export class Home {
       this.daylight = d;
       for (const p of this.patches.values()) p.day.setAlpha(d);
       const windows = 0.15 + (1 - d) * 0.85;
-      for (const w of this.walls.values()) w.glow?.setAlpha(windows);
-      for (const p of this.placed.values()) p.shadow?.setAlpha(SUN_SHADOW_ALPHA * d);
+      for (const w of this.walls.values()) {
+        w.glow?.setAlpha(windows);
+        w.shadow?.setAlpha(SUN_SHADOW_ALPHA * d);
+      }
     }
 
     // Which house the hero stands in: its roof fades, its south walls drop to stubs.
@@ -465,7 +506,7 @@ export class Home {
       }
     }
     for (const w of this.walls.values()) {
-      const stub = w.south >= 0 && (this.roofs.find((r) => r.house.id === w.south)?.reveal ?? 0) > 0.5;
+      const stub = w.south >= 0 && !w.post && (this.roofs.find((r) => r.house.id === w.south)?.reveal ?? 0) > 0.5;
       const top = stub ? w.h + 11 - STUB : 0;
       if (w.cut === top) continue;
       w.cut = top;
@@ -479,16 +520,27 @@ export class Home {
     }
 
     // Lamps: fire flickers, the day washes them out, a roof over them dims them.
+    // Things hung on a wall cut down to a stub go with it; nothing under a roof casts a sun shadow.
     const t = this.scene.time.now;
     for (const p of this.placed.values()) {
+      p.shadow?.setAlpha(p.house >= 0 ? 0 : SUN_SHADOW_ALPHA * d);
+      const hidden = !!p.part.wall && (this.walls.get(cellIndex(p.t.x, p.t.y))?.cut ?? 0) > 0;
+      if (hidden === p.sprite.visible) {
+        for (const o of [p.sprite, p.glow, p.halo]) o?.setVisible(!hidden);
+        if (p.light) p.light.visible = !hidden;
+      }
       if (p.jars.length) for (const j of p.jars) if (j.glow.visible) j.glow.setFrame(j.jar.frame.name);
-      if (!p.light) continue;
+      if (!p.light || hidden) continue;
       const L = p.part.light;
       const day = L ? L.day : 0.3;
       const k = (1 + (day - 1) * d) * (p.house >= 0 ? 0.3 + 0.7 * (this.roofs.find((r) => r.house.id === p.house)?.reveal ?? 1) : 1);
       const n = L?.flicker ? Math.sin(t * 0.011 + p.seed) * 0.5 + Math.sin(t * 0.027 + p.seed * 3) * 0.3 + Math.sin(t * 0.061 + p.seed * 7) * 0.2 : Math.sin(t * 0.002 + p.seed) * 0.6;
       p.light.intensity = p.base * (0.87 + n * 0.13) * k;
       p.halo?.setAlpha((0.32 + n * 0.06) * k);
+    }
+
+    if (this.stillTrees.length && treeSwayReady(this.scene)) {
+      for (const t of this.stillTrees.splice(0)) if (t.sprite.active) sway(t.sprite, t.anim);
     }
 
     this.buildStep();

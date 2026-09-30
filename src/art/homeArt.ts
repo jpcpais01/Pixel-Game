@@ -13,6 +13,7 @@ import { pixelCanvas } from './canvas';
 import { floorSwatch } from './homeFloors';
 import { CHIMNEY_H, CHIMNEY_W, chimney, roofSwatch, wallFrameH, wallFrames } from './homeWalls';
 import { PROP_ART, blossomTree } from './homeProps';
+import { TREE_SWAY_FPS, TREE_SWAY_FRAMES } from './trees';
 import { hash2 } from './env';
 import { CELL, HomeLayout, PLOT_X, PLOT_Y, type Thing } from '../world/homeLayout';
 import { FLOORS, ROOFS, WALLS, partById } from '../world/homeParts';
@@ -69,7 +70,8 @@ export function warmHome(scene: Phaser.Scene): void {
       if (flip) add(`p:${id}:m${f}`, c.mirrored());
     }
   }
-  for (let v = 0; v < 3; v++) add(`p:blossom:${v}`, blossomTree(v));
+  // The cherry trees and their sway (the forest's trees sway from their own sheet, see game/treeSway.ts).
+  for (let v = 0; v < 3; v++) for (let f = 0; f < TREE_SWAY_FRAMES; f++) add(f ? `p:blossom:${v}_${f}` : `p:blossom:${v}`, blossomTree(v, f));
   add('chimney', chimney());
 
   const sheet = packSheet(list);
@@ -112,6 +114,15 @@ export function warmHome(scene: Phaser.Scene): void {
     }
   }
 
+  for (let v = 0; v < 3; v++) {
+    scene.anims.create({
+      key: `home_blossom${v}`,
+      frames: Array.from({ length: TREE_SWAY_FRAMES }, (_, f) => ({ key: 'home', frame: f ? `p:blossom:${v}_${f}` : `p:blossom:${v}` })),
+      frameRate: TREE_SWAY_FPS,
+      repeat: -1,
+    });
+  }
+
   // The build palette's samples.
   FLOORS.forEach((f, i) => scene.textures.addCanvas(`hs_f${i + 1}`, pixelCanvas(16, 16, floorSwatch(f.id, 16))));
   ROOFS.forEach((_r, i) => scene.textures.addCanvas(`hs_r${i + 1}`, pixelCanvas(20, 20, roofSwatch(i + 1, 20, new HomeLayout()))));
@@ -133,6 +144,8 @@ export interface ThingLook {
   anim: string | null;
   /** Mirrored with setFlipX (the forest's sheets have no mirrored frames). */
   flipX: boolean;
+  /** A tree's sway, played on the thing itself once it exists (see game/treeSway.ts). */
+  sway: string | null;
   /** Where it stands in the world (its foot), and that point in its frame, as an origin. */
   x: number;
   y: number;
@@ -171,6 +184,7 @@ export function thingLook(t: Thing): ThingLook {
       glow: r.glow ?? null,
       anim: r.anim ?? null,
       flipX: t.flip,
+      sway: t.id === 'blossom' ? `home_blossom${v}` : r.key === 'tree' ? `tree_${r.prefix}${v}` : null,
       x: foot.x,
       y: foot.y,
       ox: r.fx / r.w,
@@ -188,6 +202,7 @@ export function thingLook(t: Thing): ThingLook {
     glow: glowing.has(`p:${t.id}`) ? 'home_e' : null,
     anim: a.frames > 1 ? `home_${t.id}${m ? '_m' : ''}` : null,
     flipX: false,
+    sway: null,
     x: foot.x,
     y: foot.y,
     ox: fx / a.w,
