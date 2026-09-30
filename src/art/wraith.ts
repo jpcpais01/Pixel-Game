@@ -26,6 +26,9 @@ export const WRAITH_ORIGIN_Y = BODY_Y + 31;
 /** The lantern's height above the ground at rest, where wisps are left. */
 export const WRAITH_LANTERN_Y = 8;
 export const WRAITH_CHEST_Y = 14;
+/** The idle moment's dissolve: how much later the top of it goes than the bottom (0 all at once), and its wisps. */
+const DISSOLVE_TOP = 0.6;
+const WISPS = 18;
 
 // ---------------------------------------------------------------------------
 // Materials
@@ -82,9 +85,14 @@ export interface WraithPose {
   lean: number;
   /** 0..1: stretched thin (possessing). */
   stretch: number;
+  /** The idle moment: the head tilted a px left (-) or right; 0..1 the body dissolved to wisps; 0..1 how far the wisps have drifted, and their swirl. */
+  tilt: number;
+  fade: number;
+  scatter: number;
+  swirl: number;
 }
 
-const base = (): WraithPose => ({ bob: 0, trail: 0, flutter: 0, swing: 0, lift: 0, blaze: 0.4, lean: 0, stretch: 0 });
+const base = (): WraithPose => ({ bob: 0, trail: 0, flutter: 0, swing: 0, lift: 0, blaze: 0.4, lean: 0, stretch: 0, tilt: 0, fade: 0, scatter: 0, swirl: 0 });
 
 // ---------------------------------------------------------------------------
 // The body (body-box coordinates: 24 wide, the ground at y 31; it floats)
@@ -182,18 +190,24 @@ function hood(c: PixelCanvas, cx: number, cy: number, view: View, p: WraithPose)
   c.part();
   const side = view === 'side';
   c.ellipse(cx + (side ? 0.7 : 0), cy, side ? 3.8 : 4.2, 4.1, ROBE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
-  c.capsule(cx + (side ? 1.6 : 0.3), cy - 3, cx + (side ? 3.8 : 1.2), cy - 6, 1.7, 0.5, ROBE);
+  // (A tilt of the head flops the hood's point over the other way.)
+  c.capsule(cx + (side ? 1.6 : 0.3), cy - 3, cx + (side ? 3.8 : 1.2 - p.tilt * 2.2), cy - 6 + Math.abs(p.tilt) * 0.8, 1.7, 0.5, ROBE);
   if (view === 'up') return;
   c.part();
   const ox = side ? cx - 2 : cx;
   c.ellipse(ox, cy + 0.6, side ? 1.5 : 2.6, 2.8, HOOD_DARK);
-  const eyes = side ? [ox - 0.5] : [ox - 1.2, ox + 1.2];
-  for (const ex of eyes) c.px(Math.round(ex - 0.5), Math.round(cy + 0.2), SOUL, { x: 0, y: 0, z: 1 }, { glow: 0.7 + p.blaze * 0.3 });
+  for (const [ex, ey] of eyeSpots(ox, cy, side, p.tilt)) c.px(ex, ey, SOUL, { x: 0, y: 0, z: 1 }, { glow: 0.7 + p.blaze * 0.3 });
   for (let i = 0; i < 9; i++) {
     const a = Math.PI * 0.12 + (i / 8) * Math.PI * 0.76;
     if (side && Math.cos(a) > 0) continue;
     c.px(Math.round(ox - 0.5 - Math.cos(a) * (side ? 1.8 : 2.9)), Math.round(cy + 0.6 - Math.sin(a) * 3.1), ROBE_EDGE, sphere(-Math.cos(a) * 0.5, 0.4));
   }
+}
+
+/** Where the hood's eye-lights are (pixels): a tilt drops the eye on the side it leans to. */
+function eyeSpots(ox: number, cy: number, side: boolean, tilt: number): [number, number][] {
+  const eyes = side ? [ox - 0.5] : [ox - 1.2, ox + 1.2];
+  return eyes.map((ex) => [Math.round(ex - 0.5), Math.round(cy + 0.2) + (!side && Math.sign(ex - ox) === Math.sign(tilt) ? 1 : 0)]);
 }
 
 /** The Calavera's head: the painted skull and the marigold crown. */
@@ -205,13 +219,15 @@ function skull(c: PixelCanvas, cx: number, cy: number, view: View, p: WraithPose
     c.part();
     const eyes = side ? [cx - 1.4] : [cx - 1.5, cx + 1.5];
     for (const ex of eyes) {
-      c.px(Math.round(ex - 0.5), Math.round(cy - 0.2), INK);
-      c.px(Math.round(ex - 0.5), Math.round(cy + 0.8), INK);
+      // A tilt of the head drops the eye on the side it leans to.
+      const ey = cy + (!side && Math.sign(ex - cx) === Math.sign(p.tilt) ? 1 : 0);
+      c.px(Math.round(ex - 0.5), Math.round(ey - 0.2), INK);
+      c.px(Math.round(ex - 0.5), Math.round(ey + 0.8), INK);
       // Petals painted round the socket.
-      c.px(Math.round(ex - 1.5), Math.round(cy - 0.2), PETAL_PINK);
-      c.px(Math.round(ex + 0.5), Math.round(cy - 0.2), PETAL_TEAL);
-      c.px(Math.round(ex - 0.5), Math.round(cy - 1.2), PETAL_PINK);
-      c.spark(ex - 0.5, cy + 0.3, [255, 210, 110], 0.4 + p.blaze * 0.4);
+      c.px(Math.round(ex - 1.5), Math.round(ey - 0.2), PETAL_PINK);
+      c.px(Math.round(ex + 0.5), Math.round(ey - 0.2), PETAL_TEAL);
+      c.px(Math.round(ex - 0.5), Math.round(ey - 1.2), PETAL_PINK);
+      c.spark(ex - 0.5, ey + 0.3, [255, 210, 110], 0.4 + p.blaze * 0.4);
     }
     const nx = side ? cx - 2.6 : cx - 0.5;
     c.px(Math.round(nx), Math.round(cy + 1.8), INK);
@@ -282,21 +298,86 @@ function drawFigure(c: PixelCanvas, p: WraithPose, view: View): void {
     sleeve(c, cx - 3.9, top + 1.5, cx - 5, top + 6.5);
     sleeve(c, cx + 3.9, top + 1.5, hx, hy);
   }
-  if (cala) skull(c, cx, headY, view, p);
-  else hood(c, cx, headY, view, p);
+  const headX = cx + p.tilt;
+  if (cala) skull(c, headX, headY, view, p);
+  else hood(c, headX, headY, view, p);
+  if (p.fade > 0) dissolve(c, cx, headY, hem, p);
   if (view !== 'up') lantern(c, hx, hy, p);
 }
+
+/**
+ * The idle moment: the body coming apart into wisps (green soul-flame, or
+ * marigold petals for the Calavera), the bottom going first, until only the
+ * eyes hang in the air by the lantern; drawn backwards it gathers again.
+ */
+function dissolve(c: PixelCanvas, cx: number, headY: number, hem: number, p: WraithPose): void {
+  const topY = headY - 7;
+  const botY = hem + 4;
+  for (let y = Math.floor(topY); y <= botY; y++) {
+    const v = (y - topY) / (botY - topY);
+    for (let x = cx - 10; x <= cx + 10; x++) {
+      if (!c.filled(x, y)) continue;
+      if (hash(x, y) + (1 - v) * DISSOLVE_TOP < p.fade * (1 + DISSOLVE_TOP)) c.erase(x, y);
+    }
+  }
+  // The wisps: each flies off its own way from somewhere in the body, more of them the further it has gone.
+  c.part();
+  const cala = L.calavera;
+  for (let i = 0; i < WISPS; i++) {
+    const r = hash(i, 91);
+    if (r > p.fade * 1.4 || (p.fade > 0.9 && r > 1.15 - p.scatter * 0.5)) continue;
+    const ox = cx - 5 + hash(i, 7) * 10;
+    const oy = topY + 4 + hash(i, 13) * (hem - topY - 2);
+    const a = p.swirl * 0.9 + i;
+    const dx = (ox - cx) * 0.8 + Math.sin(a) * 1.5;
+    const dy = -3.5 - hash(i, 29) * 4;
+    const x = Math.round(ox + dx * p.scatter);
+    const y = Math.round(oy + dy * p.scatter);
+    // Kept clear of the eyes, so they read alone.
+    if (Math.abs(x - cx - p.tilt) < 5 && Math.abs(y - headY) < 4) continue;
+    if (cala) {
+      c.px(x, y, i % 3 === 0 ? PETAL_PINK : MARIGOLD, { x: 0, y: 0.3, z: 0.9 });
+      c.spark(x, y, [255, 200, 90], 0.25);
+    } else {
+      c.px(x, y, SOUL, { x: 0, y: 0, z: 1 }, { glow: 0.55 });
+      // A faint tail of mist below each, where it came from.
+      if (p.scatter > 0.3) c.px(x - Math.round(Math.sin(a)), y + 1, MIST, { x: 0, y: 0, z: 1 });
+      c.spark(x, y, [110, 255, 190], 0.2);
+    }
+  }
+  // The eyes stay, glowing cold in the air, the last to go and the first back.
+  c.part();
+  const hx = cx + p.tilt;
+  const eyes: [number, number][] = cala
+    ? [-1.5, 1.5].map((dx) => [Math.round(hx + dx - 0.5), Math.round(headY + (Math.sign(dx) === Math.sign(p.tilt) ? 1 : 0) + 0.3)])
+    : eyeSpots(hx, headY, false, p.tilt);
+  const col: RGB = cala ? [255, 210, 110] : [110, 255, 190];
+  for (const [ex, ey] of eyes) {
+    c.px(ex, ey, cala ? GOLD_LIGHT : SOUL, { x: 0, y: 0, z: 1 }, { glow: 1, bias: 2 });
+    // With the body gone they burn a little bigger: a soft halo round each.
+    c.spark(ex, ey, col, 0.3 + p.fade * 0.5);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(ex + dx, ey + dy, col, p.fade * 0.3);
+  }
+}
+
+/** A steady 0..1 per pixel, so the same pixels go first in every frame. */
+const hash = (x: number, y: number): number => {
+  const h = Math.imul(Math.round(x) * 374761393 + Math.round(y) * 668265263, 1274126177) >>> 0;
+  return (((h ^ (h >>> 13)) >>> 0) % 1000) / 1000;
+};
 
 // ---------------------------------------------------------------------------
 // Animations
 
-export type WraithAnim = 'idle' | 'move' | 'swing' | 'possess' | 'cast';
+export type WraithAnim = 'idle' | 'move' | 'swing' | 'possess' | 'cast' | 'rest';
 
 interface AnimDef {
   name: WraithAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => WraithPose[];
+  /** Frame indices to play in order, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 const idle = (): WraithPose[] =>
@@ -361,12 +442,36 @@ const cast = (): WraithPose[] =>
     return p;
   });
 
+/**
+ * The idle moment, facing the viewer only: the hood tilts one way, then the
+ * other, curious, the eyes kindling; then the body comes apart from the hem
+ * up into drifting wisps until only the two cold eyes and the lantern hang
+ * in the air, and it gathers itself back together, bobbing up as it forms.
+ */
+const rest = (view: View): WraithPose[] => {
+  if (view !== 'down') return [];
+  const at = (o: Partial<WraithPose>): WraithPose => ({ ...base(), ...o });
+  return [
+    at({}),
+    at({ tilt: -1, blaze: 0.6, flutter: 1, swing: -0.6 }),
+    at({ tilt: -1, blaze: 0.8, flutter: 2, bob: 1, swing: -0.6 }),
+    at({ tilt: 1, blaze: 0.8, flutter: 3, bob: 1, swing: 0.6 }),
+    at({ blaze: 0.9, fade: 0.3, scatter: 0.25, flutter: 1 }),
+    at({ blaze: 1, fade: 0.65, scatter: 0.55, swirl: 1, flutter: 2 }),
+    at({ blaze: 1, fade: 1, scatter: 0.85, swirl: 2 }),
+    at({ blaze: 1, fade: 1, scatter: 1, swirl: 3, swing: 0.6 }),
+    at({ blaze: 1, bob: 1, flutter: 3 }),
+    at({ blaze: 0.6, flutter: 2 }),
+  ];
+};
+
 export const WRAITH_ANIMS: AnimDef[] = [
   { name: 'idle', fps: 5, loop: true, poses: idle },
   { name: 'move', fps: 8, loop: true, poses: move },
   { name: 'swing', fps: 16, loop: false, poses: swing },
   { name: 'possess', fps: 14, loop: false, poses: possess },
   { name: 'cast', fps: 10, loop: false, poses: cast },
+  { name: 'rest', fps: 7, loop: false, poses: rest, order: [0, 1, 2, 2, 2, 1, 0, 3, 3, 3, 0, 4, 5, 6, 7, 6, 7, 6, 7, 5, 4, 8, 8, 9, 0] },
 ];
 
 export interface WraithFrame {

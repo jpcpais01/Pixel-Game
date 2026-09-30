@@ -68,6 +68,8 @@ export interface SamuraiLook {
    * crescent moon crest over the brow.
    */
   armor?: { plate: Material; lace: Material; crest: Material };
+  /** The idle moment he plays: the Bladewind's leaf caught on the blade, or the Ronin's swig from his gourd. */
+  rest: 'leaf' | 'gourd';
 }
 
 const TABI = mat('#0d0b12', '#1d1a24', '#34303e', '#4e4858', '#6c6476');
@@ -101,6 +103,7 @@ export const BLADEWIND_LOOK: SamuraiLook = {
   tsuba: GOLD_TSUBA,
   grip: WRAP,
   bladeGlow: hex('#8ad8ff'),
+  rest: 'leaf',
 };
 
 /** The Oni skin: black and crimson, a red demon face guard, burning eyes and a blade edged in red light. */
@@ -144,6 +147,7 @@ export const RONIN_LOOK: SamuraiLook = {
   tsuba: IRON_TSUBA,
   grip: WRAP,
   bladeGlow: hex('#ffd08a'),
+  rest: 'gourd',
 };
 
 /** The Sakura skin: a white gi under a blossom-pink haori, plum hakama, a pale kasa and a pink-tempered edge. */
@@ -252,6 +256,17 @@ export interface Pose {
   /** Free hand placed here instead of hanging at the side. */
   free?: { x: number; y: number };
   blink?: boolean;
+  // The idle moment's (`rest`) extras, drawn facing the viewer only.
+  /** A falling leaf in body pixels; `turn` 0 flat, 1 turning, 2 edge on. */
+  leaf?: { x: number; y: number; turn: number };
+  /** The gourd in the free hand: `angle` 0 hangs it straight down from the hand, turning clockwise. */
+  gourd?: number;
+  /** The head tipped back (negative) or down, in pixels. */
+  headY?: number;
+  /** The free arm drawn over the head (a hand at the mouth). */
+  handFront?: boolean;
+  /** 0..1 a glint of light running off the blade's tip. */
+  glint?: number;
 }
 
 export interface SamuraiMeta {
@@ -268,6 +283,10 @@ const GUARD = 1.6;
 /** How much the blade curves back towards its spine. */
 const CURVE = 0.012;
 const FLAT_DOWN: Vec3 = { x: 0, y: -0.3, z: 0.95 };
+/** The idle moment's props: an autumn maple leaf, and the Ronin's gourd in red lacquer, with its cork. */
+const LEAF = mat('#3a0c04', '#8a2408', '#c84a12', '#f0822a', '#ffc070');
+const GOURD = { ...mat('#200604', '#5a120a', '#8e2412', '#c0421e', '#ee7a44'), shine: true };
+const GOURD_CORK = mat('#140c06', '#3a2814', '#5e4424', '#806040');
 
 // ---------------------------------------------------------------------------
 // Shared parts
@@ -543,6 +562,45 @@ function kabuto(c: PixelCanvas, view: 'front' | 'back' | 'side', cx: number, U: 
   crescent(c, cx, 8.8 + U, 5.6);
 }
 
+/** A maple leaf, turning as it falls: flat, tipped, or edge on. */
+function leaf(c: PixelCanvas, x: number, y: number, turn: number): void {
+  const shapes: [number, number][][] = [
+    [[0, -1], [-1, 0], [0, 0], [1, 0], [0, 1]],
+    [[0, -1], [0, 0], [1, 0], [-1, 1]],
+    [[-1, 0], [0, 0], [1, 0]],
+  ];
+  c.part();
+  for (const [dx, dy] of shapes[turn % 3]) c.px(x + dx, y + dy, LEAF, sphere(dx * 0.5 - 0.1, dy * 0.5 - 0.3, 1), { bias: dx + dy < 0 ? 1 : 0 });
+  // Its stem, a darker tick at the base.
+  if (turn % 3 === 0) c.px(x + 1, y + 1, LEAF, sphere(0.3, 0.5), { bias: -2 });
+}
+
+/**
+ * The Ronin's gourd: a lacquered double bulb, the small one at the top
+ * stoppered, tied at the waist where the hand holds it. `angle` 0 hangs it
+ * straight down; 180 turns it bottom up, as when he drinks.
+ */
+function gourd(c: PixelCanvas, x: number, y: number, angle: number): void {
+  const a = angle * RAD;
+  const dx = Math.sin(a);
+  const dy = Math.cos(a);
+  c.part();
+  c.ellipse(x + dx * 1.6, y + dy * 1.6, 1.8, 1.8, GOURD);
+  c.part();
+  c.ellipse(x - dx * 1.2, y - dy * 1.2, 1.2, 1.2, GOURD);
+  c.part();
+  c.px(x - dx * 2.5, y - dy * 2.5, GOURD_CORK, sphere(-0.2, -0.4));
+  // The cord tied round its waist.
+  c.part();
+  c.px(x + dx * 0.2, y + dy * 0.2, S.obi, sphere(0.2, 0.2), { bias: -1 });
+}
+
+/** Where the hand holding the gourd goes to put its stopper at the lips (lx, ly). */
+function gourdGrip(lx: number, ly: number, angle: number): { x: number; y: number } {
+  const a = angle * RAD;
+  return { x: lx + Math.sin(a) * 2.5, y: ly + Math.cos(a) * 2.5 };
+}
+
 // ---------------------------------------------------------------------------
 // Directions
 
@@ -665,14 +723,19 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     }
   }
 
-  // Free arm (the character's left, screen right).
+  // Free arm (the character's left, screen right), and anything it holds.
   const fh = p.free ? { x: p.free.x, y: p.free.y + U } : { x: 17.4, y: 22.4 + U + p.arm };
-  sleeve(c, 16.4, 16.8 + U, fh.x, fh.y);
-  hand(c, fh.x, fh.y);
+  const freeArm = () => {
+    sleeve(c, 16.4, 16.8 + U, fh.x, fh.y);
+    if (p.gourd !== undefined) gourd(c, fh.x, fh.y, p.gourd);
+    hand(c, fh.x, fh.y);
+  };
+  if (!p.handFront) freeArm();
   shoulder(c, 16.8, 16.2 + U);
   pad(c, 17.3, 16.4 + U);
 
-  // Head.
+  // Head, tipped back by the pose.
+  c.offset(BODY_X, BODY_Y + (p.headY ?? 0));
   c.part();
   c.ellipse(cx, 12.6 + U, 3.2, 2.9, S.skin);
   c.part();
@@ -712,10 +775,18 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   }
   eyes(c, [[10, 12 + U], [13, 12 + U]], p.blink);
   menpo(c, cx - 2.6, cx + 2.6, 13 + U, [11, 12]);
+  c.offset(BODY_X, BODY_Y);
+  if (p.handFront) freeArm();
 
   if (!p.bladeBehind) swordArm();
   shoulder(c, 7.2, 16.2 + U);
   if (S.armor) pad(c, 6.7, 16.4 + U);
+  if (p.glint) {
+    // A star of light off the tip as the blade snaps up.
+    c.spark(tip.x, tip.y, S.bladeGlow, p.glint);
+    for (const [gx, gy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(tip.x + gx, tip.y + gy, S.bladeGlow, p.glint * 0.45);
+  }
+  if (p.leaf) leaf(c, p.leaf.x, p.leaf.y, p.leaf.turn);
   return { tip, hand: { x: p.blade.hx, y: p.blade.hy } };
 }
 
@@ -1118,6 +1189,96 @@ function dash(view: View): Pose[] {
   });
 }
 
+// ---------------------------------------------------------------------------
+// The idle moments (`rest`): a little performance when he's left standing, drawn facing the viewer only.
+
+/** Put the free hand at (x, y) in body pixels, whatever the pose's drop. */
+function freeAt(p: Pose, x: number, y: number): Pose {
+  p.free = { x, y: y - (p.breath - p.lift) };
+  return p;
+}
+
+/**
+ * The Bladewind: a breeze lifts his hair and a maple leaf comes drifting
+ * down; he raises the blade flat beneath it and catches it on the steel,
+ * holds it there a moment in the wind, then flicks it away and lowers the
+ * blade to his guard.
+ */
+function leafCatch(): Pose[] {
+  const at = (o: Partial<Pose>, hx: number, hy: number, angle: number): Pose => ({ ...base('down'), ...o, blade: bl(hx, hy, angle) });
+  const lf = (x: number, y: number, turn: number) => ({ x, y, turn });
+  return [
+    idle('down')[0],
+    // 1-4: the breeze and the falling leaf; the blade comes up flat beneath it.
+    at({ sway: 1, leaf: lf(21, 1, 0) }, 5.5, 22, 208),
+    at({ sway: 2, leaf: lf(19.5, 4, 1) }, 6, 21.6, 176),
+    at({ sway: 2, leaf: lf(17.5, 8, 2) }, 6.5, 21, 132),
+    at({ sway: 1, leaf: lf(16, 12.5, 0) }, 7, 20.4, 95),
+    // 5: caught; the blade gives a hair under it.
+    at({ sway: 1, leaf: lf(15.5, 18.6, 0) }, 7, 20.9, 96),
+    // 6-7: held there as the wind plucks at it, eyes closing.
+    at({ sway: 2, leaf: lf(15.5, 18.6, 1), blink: true }, 7, 20.8, 96),
+    at({ sway: 1, leaf: lf(15.5, 18.6, 0) }, 7, 20.9, 96),
+    // 8: the blade dips before the flick.
+    at({ sway: 0, breath: 1, leaf: lf(15.6, 19.2, 0) }, 7, 21.5, 101),
+    // 9: the flick: the tip snaps up and the leaf is tossed off it.
+    at({ sway: 0, leaf: lf(18, 13, 2), glint: 1 }, 6.8, 20, 58),
+    // 10-12: the leaf spins away on the wind as the blade follows through and comes down.
+    at({ sway: 1, leaf: lf(22, 8, 1), glint: 0.4 }, 6.6, 19.8, 44),
+    at({ sway: 2, leaf: lf(25.5, 4, 0) }, 6.2, 20.8, 120),
+    at({ sway: 1, leaf: lf(28.5, 1, 2) }, 5.8, 21.6, 182),
+    // 13: settled into the guard, the hair a beat behind.
+    at({ sway: 1, breath: 1 }, 5.5, 22.4, 206),
+  ];
+}
+
+/**
+ * The Ronin: he unhooks a gourd from behind his hip, tips his head back and
+ * takes a long swig, wipes his mouth with the back of his hand, breathes out,
+ * and hangs it back.
+ */
+function gourdSwig(): Pose[] {
+  const at = (o: Partial<Pose>, x: number, y: number): Pose => freeAt({ ...base('down'), ...o }, x, y);
+  // Drinking, the head tipped back a pixel: the stopper sits at his lips.
+  const swig = (o: Partial<Pose>, angle: number): Pose => {
+    const g = gourdGrip(12.4, 13.6, angle);
+    return at({ headY: -1, handFront: true, gourd: angle, ...o }, g.x, g.y);
+  };
+  return [
+    idle('down')[0],
+    // 1-2: the hand goes back to the hip and comes away with the gourd.
+    at({}, 18.2, 23.4),
+    at({ gourd: -8 }, 18.4, 24),
+    // 3: up to the chest.
+    at({ gourd: 20 }, 15.8, 19.2),
+    // 4-7: to the mouth, head back, and the long swig.
+    swig({}, 140),
+    swig({}, 158),
+    swig({ sway: 1 }, 166),
+    swig({ sway: 1, breath: 1 }, 168),
+    // 8: lowered, the head coming down.
+    at({ gourd: 30 }, 15.4, 18.8),
+    // 9-10: the back of the hand wiped across the mouth, the gourd swinging from it.
+    at({ gourd: -25, handFront: true }, 11, 14.6),
+    at({ gourd: 20, handFront: true }, 14.4, 14.8),
+    // 11: a long breath out.
+    at({ gourd: 12, breath: 1, sway: 1 }, 16, 19.6),
+    // 12-13: hung back at the hip, and the hand falls to his side.
+    at({ gourd: 0 }, 18.4, 24),
+    at({ arm: 0 }, 17.8, 22.8),
+  ];
+}
+
+/** Each look's performance by its character. */
+const rest = (view: View): Pose[] => (view !== 'down' ? [] : S.rest === 'gourd' ? gourdSwig() : leafCatch());
+
+/**
+ * Both performances share one timing (the rig plays one list for every
+ * look): a lead-in, the held middle (the leaf in the wind, the swig) and the
+ * way out.
+ */
+const REST_ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 6, 7, 6, 8, 9, 10, 10, 11, 12, 13, 0] as const;
+
 /** Screen angle (0 = right, 90 = down) he faces in each direction. */
 export const FACING_DEG: Record<Dir, number> = { right: 0, down: 90, left: 180, up: 270 };
 
@@ -1152,13 +1313,15 @@ export const SPIN_FPS = 30;
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type SamuraiAnim = 'idle' | 'walk' | 'stab' | 'slash1' | 'slash2' | 'dash';
+export type SamuraiAnim = 'idle' | 'walk' | 'stab' | 'slash1' | 'slash2' | 'dash' | 'rest';
 
 export interface SamuraiAnimDef {
   name: SamuraiAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => Pose[];
+  /** Frame indices to play in sequence, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 export const SAMURAI_ANIMS: SamuraiAnimDef[] = [
@@ -1168,6 +1331,7 @@ export const SAMURAI_ANIMS: SamuraiAnimDef[] = [
   { name: 'slash1', fps: 22, loop: false, poses: slash('slash1') },
   { name: 'slash2', fps: 22, loop: false, poses: slash('slash2') },
   { name: 'dash', fps: 18, loop: true, poses: dash },
+  { name: 'rest', fps: 7, loop: false, poses: rest, order: REST_ORDER },
 ];
 
 /** Frame index at which each move lands. */

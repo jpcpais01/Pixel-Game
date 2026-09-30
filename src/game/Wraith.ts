@@ -11,6 +11,7 @@ import { bloom, Fx, pal, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
+import { stand } from './rest';
 
 // The Lantern Wraith (the Phantom's second type): a hooded wraith carrying an
 // old iron lantern on a chain.
@@ -200,7 +201,7 @@ export class Wraith implements Hero {
       if (this.state === 'free') {
         if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
         else if (moving) this.dir = dirOf(mx, my);
-        const key = `${this.kit.key}_${moving ? 'move' : 'idle'}_${this.dir}`;
+        const key = moving ? `${this.kit.key}_move_${this.dir}` : stand(this.body, `${this.kit.key}_idle_${this.dir}`);
         if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
       }
     }

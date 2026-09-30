@@ -222,6 +222,22 @@ export interface Pose {
   rearFront?: boolean;
   /** Lightning crawling off the free hand's fingers, re-struck by this seed (0: none). */
   crackle?: number;
+  // The idle moment's (`rest`) extras, drawn facing the viewer only.
+  /** 0..1 lowered into a cross-legged seat on the ground. */
+  sit?: number;
+  /** The saber let go, its blade put out, floating here in body pixels (the grip point). */
+  hilt?: { x: number; y: number; angle: number };
+  /** The head tipped this many pixels across and down. */
+  headX?: number;
+  headY?: number;
+  /** The free arm drawn over the head (a hand raised before the face). */
+  handFront?: boolean;
+  /** Lightning crackling round a clenched fist instead of light in an open palm, re-struck by this seed. */
+  fist?: number;
+  /** Motes of the Force twinkling round him, set by this seed (0: none). */
+  motes?: number;
+  /** 0..1 shining eyes flaring brighter. */
+  glare?: number;
 }
 
 export interface JediMeta {
@@ -237,6 +253,13 @@ export interface JediMeta {
 
 const RAD = Math.PI / 180;
 const EMITTER = 1.8;
+/** Sitting down cross-legged: how far the upper body sinks, and how far the robe pools out on the ground. */
+const SIT_DROP = 6;
+const SIT_POOL = 2.2;
+/** How many Force motes can hang round him as he meditates. */
+const MOTES = 7;
+/** The body's centre line. */
+const cx0 = 12;
 const FLAT_DOWN: Vec3 = { x: 0, y: -0.3, z: 0.95 };
 
 // ---------------------------------------------------------------------------
@@ -289,9 +312,9 @@ function drawBlade(c: PixelCanvas, s: Saber, back: boolean, hidden: boolean): { 
     return { x: sx / l, y: -sy / l, z: z / l };
   };
 
-  // Blade: a white core inside its colour, rounded at the tip, with a halo of light.
+  // Blade: a white core inside its colour, rounded at the tip, with a halo of light (none while put out).
   c.part();
-  box((x, y, along, side) => {
+  if (s.len > 0) box((x, y, along, side) => {
     if (along < emitter - 0.3 || along > end + 2.2) return;
     const rest = end - along;
     const d = Math.abs(side);
@@ -381,6 +404,60 @@ function palm(c: PixelCanvas, x: number, y: number, k: number, crackle = 0): voi
   }
 }
 
+/**
+ * Lightning crackling round a clenched fist: short arcs jumping off the
+ * knuckles and snapping back, now and then a longer one down the wrist.
+ */
+function fistSpark(c: PixelCanvas, x: number, y: number, k: number, seed: number): void {
+  if (k <= 0 || !seed) return;
+  const [core, hot, mid] = S.force;
+  // A dim halo hugging the fist.
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + seed;
+    c.spark(x + Math.cos(a) * 1.9, y + Math.sin(a) * 1.9, mid, 0.22 * k);
+  }
+  const arcs = k > 1 ? 6 : k > 0.9 ? 5 : k > 0.5 ? 3 : 2;
+  for (let b = 0; b < arcs; b++) {
+    let a = hash(b, seed, 7) * Math.PI * 2;
+    let lx = x + Math.cos(a) * 1.4;
+    let ly = y + Math.sin(a) * 1.4;
+    const steps = 2 + Math.floor(hash(b, seed, 9) * 3) + (k > 1 ? 1 : 0);
+    for (let st = 0; st < steps; st++) {
+      a += (hash(b, st, seed + 11) - 0.5) * 1.8;
+      lx += Math.cos(a) * 1.1;
+      ly += Math.sin(a) * 1.1;
+      c.spark(lx, ly, st === 0 ? core : st < 2 ? hot : mid, Math.min(1, k) * (0.95 - st * 0.2));
+    }
+  }
+  // The longer arc crawling down the forearm on alternate strikes.
+  if (seed % 2 === 0) {
+    let lx = x - 0.6;
+    let ly = y + 1.4;
+    for (let st = 0; st < 3; st++) {
+      lx += (hash(st, seed, 3) - 0.5) * 1.6;
+      ly += 1.1;
+      c.spark(lx, ly, st ? hot : core, Math.min(1, k) * (0.8 - st * 0.2));
+    }
+  }
+  c.spark(x, y, core, 0.25 * Math.min(1, k));
+}
+
+/** Motes of the Force hanging in the air round him, each twinkling in and out by the seed. */
+function motes(c: PixelCanvas, seed: number, L: number): void {
+  if (!seed) return;
+  const [core, hot, mid] = S.force;
+  for (let i = 0; i < MOTES; i++) {
+    const on = hash(i, seed, 5);
+    if (on < 0.35) continue;
+    // Out at his sides, clear of the face.
+    const h = hash(i, 1, 2);
+    const x = h < 0.5 ? 1 + h * 10 : 13 + h * 10;
+    // Rising slowly: each seed lifts them a little higher.
+    const y = 18 + hash(i, 2, 2) * 12 - ((seed + i) % 4) + L;
+    c.spark(x, y, on > 0.8 ? core : on > 0.6 ? hot : mid, 0.35 + on * 0.4);
+  }
+}
+
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
   c.part();
   if (side) c.ellipse(x, y, 2.2, 1.25, BOOT, { flatten: 0.8, bias });
@@ -397,14 +474,19 @@ function shoulder(c: PixelCanvas, x: number, y: number, rx = 2.2, ry = 1.6): voi
   c.ellipse(x, y, rx, ry, S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
 }
 
-function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
+function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined, glare = 0): void {
   if (S.guard) return;
   c.part();
   for (const [x, y] of pts) {
     if (S.hooded || S.horns) {
       if (blink) continue;
       c.px(x, y, SITH_EYE);
-      c.spark(x, y, S.eyeGlow ?? S.force[1], 0.3);
+      c.spark(x, y, S.eyeGlow ?? S.force[1], 0.3 + glare * 0.6);
+      // Flaring, the glow bleeds out sideways into the shadow.
+      if (glare > 0) {
+        c.spark(x - 1, y, S.eyeGlow ?? S.force[1], glare * 0.22);
+        c.spark(x + 1, y, S.eyeGlow ?? S.force[1], glare * 0.22);
+      }
     } else if (blink) c.px(x, y, S.skin, FLAT_DOWN, { bias: -1 });
     else c.px(x, y, EYE);
   }
@@ -422,11 +504,20 @@ type Meta = { tip: { x: number; y: number }; hand: { x: number; y: number }; pal
 
 function drawDown(c: PixelCanvas, p: Pose): Meta {
   const L = -p.lift;
-  const U = L + p.breath;
+  // Sitting, the upper body sinks down onto the folded legs.
+  const s = p.sit ?? 0;
+  const D = Math.round(s * SIT_DROP);
+  const U = L + p.breath + D;
   const cx = 12;
   let tip = { x: 0, y: 0 };
   const sh = { x: 7.6, y: 16.8 + U }; // saber shoulder (screen left)
   const saberArm = () => {
+    if (p.hilt) {
+      // The saber floats free: only the empty hand and its sleeve here.
+      sleeve(c, sh.x, sh.y, p.saber.hx, p.saber.hy);
+      hand(c, p.saber.hx, p.saber.hy);
+      return;
+    }
     tip = drawSaber(c, p.saber, 'main', p.saberBehind);
     sleeve(c, sh.x, sh.y, p.saber.hx, p.saber.hy, p.saberBehind ? -1 : 0);
     hand(c, p.saber.hx, p.saber.hy);
@@ -436,25 +527,30 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   if (p.saberBehind) saberArm();
 
   // The back of the robe, seen past the hips and between the legs.
+  // Seated, the robe pools out on the ground round him.
   const rt = 15 + U;
-  const rb = 28 + L;
+  const rb = 28 + L + Math.round(s * 2);
+  const pool = s * SIT_POOL;
   const robeX = (u: number) => cx + p.robe * u * u;
   c.part();
   c.shape(rt, rb, (y) => {
     const u = (y + 0.5 - rt) / (rb + 1 - rt);
-    const hw = 4.6 + 2.0 * u;
+    const hw = 4.6 + 2.0 * u + pool * u * u;
     return [robeX(u) - hw, robeX(u) + hw];
   }, S.robe, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.3), { bias: -2 });
 
-  leg(c, 10.1, 24 + L, 10, 28.4 - p.footA);
-  leg(c, 13.9, 24 + L, 14, 28.4 - p.footB);
-  boot(c, 9.7, 29.7 - p.footA);
-  boot(c, 14.3, 29.7 - p.footB);
+  if (s > 0) seatedLegs(c, s, L, D, 'thighs');
+  else {
+    leg(c, 10.1, 24 + L, 10, 28.4 - p.footA);
+    leg(c, 13.9, 24 + L, 14, 28.4 - p.footB);
+    boot(c, 9.7, 29.7 - p.footA);
+    boot(c, 14.3, 29.7 - p.footB);
+  }
 
   // Tunic: a wrapped chest and a skirt to the knee.
   const top = 15 + U;
   const waist = 22 + U;
-  const hem = 26 + L;
+  const hem = s > 0 ? Math.max(26 + L, waist + 2) : 26 + L;
   c.part();
   c.shape(top, waist - 1, (y) => {
     const u = (y + 0.5 - top) / (waist - top);
@@ -466,7 +562,7 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   c.part();
   c.shape(waist, hem, (y) => {
     const u = (y + 0.5 - waist) / (hem + 1 - waist);
-    const hw = 3.5 + 1.0 * u;
+    const hw = 3.5 + 1.0 * u + s * 2.2 * u;
     const x = cx + p.robe * 0.3 * u;
     return [x - hw, x + hw];
   }, S.tunic, (_x, _y, t, u) => cyl(t, 0.1 - u * 0.2), { bias: -1 });
@@ -482,7 +578,7 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   // The robe's front panels, open over the tunic down to the ankles.
   const panel = (side: -1 | 1) => (y: number): [number, number] => {
     const u = (y + 0.5 - rt) / (rb + 1 - rt);
-    const hw = 4.9 + 2.1 * u;
+    const hw = 4.9 + 2.1 * u + pool * u * u;
     const gap = 2.2 + 1.0 * u;
     const x = robeX(u);
     return side < 0 ? [x - hw, x - gap] : [x + gap, x + hw];
@@ -502,10 +598,23 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     }
   }
 
+  // The folded shins cross in front of the lap.
+  if (s > 0) seatedLegs(c, s, L, D, 'shins');
+
   // Free arm (character's left, screen right).
   const fh = p.free ? { x: p.free.x, y: p.free.y + U } : { x: 17.4, y: 22.4 + U + p.arm };
-  sleeve(c, 16.4, 16.8 + U, fh.x, fh.y);
-  hand(c, fh.x, fh.y);
+  const freeArm = () => {
+    sleeve(c, 16.4, 16.8 + U, fh.x, fh.y);
+    if (!p.fist) hand(c, fh.x, fh.y);
+    else {
+      // A clenched fist, bigger than an open hand, lit from within by its lightning; the knuckles along the top.
+      c.part();
+      c.ellipse(fh.x, fh.y, 1.5, 1.35, S.glove ?? S.skin, { glow: 0.12 + 0.1 * Math.min(1, p.force) });
+      for (let x = Math.round(fh.x - 1.5); x < Math.round(fh.x + 1.5); x++) c.shade(x, Math.round(fh.y - 1.35), (x & 1) === 0 ? 1 : 0);
+      c.shade(Math.round(fh.x - 0.5), Math.round(fh.y + 0.5), -1);
+    }
+  };
+  if (!p.handFront) freeArm();
   shoulder(c, 16.8, 16.2 + U);
 
   // The lowered hood, bunched round the neck.
@@ -514,7 +623,8 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     c.ellipse(cx, 15.4 + U, 4.3, 1.7, S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.35, 1) });
   }
 
-  // Head.
+  // Head, tipped aside by the pose.
+  c.offset(BODY_X + (p.headX ?? 0), BODY_Y + (p.headY ?? 0));
   c.part();
   c.ellipse(cx, 12.6 + U, 3.2, 2.9, S.skin);
   c.part();
@@ -541,13 +651,51 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     c.px(13, 10 + U, S.skin, sphere(0.4, -0.8));
     if (S.beard) beardFront(c, cx, U);
   }
-  eyes(c, [[10, 12 + U], [13, 12 + U]], p.blink);
-  palm(c, fh.x, fh.y, p.force, p.crackle);
+  eyes(c, [[10, 12 + U], [13, 12 + U]], p.blink, p.glare);
+  c.offset(BODY_X, BODY_Y);
+  if (p.handFront) freeArm();
+  if (p.fist) fistSpark(c, fh.x, fh.y, p.force, p.fist);
+  else palm(c, fh.x, fh.y, p.force, p.crackle);
 
   if (S.staff && p.rearFront) drawSaber(c, p.saber, 'rear');
   if (!p.saberBehind) saberArm();
   shoulder(c, 7.2, 16.2 + U);
+  if (p.hilt) {
+    // The saber hangs in the air before him, held by the Force in a faint glow.
+    tip = drawSaber(c, { hx: p.hilt.x, hy: p.hilt.y, angle: p.hilt.angle, len: 0 });
+    const [, hot, mid] = S.force;
+    for (let i = -3; i <= 2; i++) {
+      c.spark(p.hilt.x + i, p.hilt.y + 1, i % 2 ? mid : hot, 0.5 - Math.abs(i + 0.5) * 0.08);
+      c.spark(p.hilt.x + i, p.hilt.y - 1, mid, 0.22 - Math.abs(i + 0.5) * 0.04);
+    }
+  }
+  motes(c, p.motes ?? 0, L);
   return { tip, hand: { x: p.saber.hx, y: p.saber.hy }, palm: fh };
+}
+
+/**
+ * Legs folded cross-legged as he sits (s from 0 standing to 1 seated): the
+ * knees splay out, and past halfway the feet slide in and cross in front.
+ * The thighs go under the tunic's lap; the shins and boots over it.
+ */
+function seatedLegs(c: PixelCanvas, s: number, L: number, D: number, part: 'thighs' | 'shins'): void {
+  const hy = 24 + L + D * 0.7;
+  const t = Math.max(0, Math.min(1, (s - 0.45) / 0.55));
+  const cross = t * t * (3 - 2 * t);
+  // The screen-left leg first, so the right shin crosses over it.
+  for (const side of [-1, 1] as const) {
+    const hx = cx0 + side * 1.9;
+    const kx = cx0 + side * (2 + 4.4 * s);
+    const ky = 26.8 + L + 1.6 * s;
+    const fx = cx0 + side * 2.3 + (-side * 3.8) * cross;
+    const fy = 29.7 + L * cross;
+    if (part === 'thighs') leg(c, hx, hy, kx, ky);
+    else {
+      c.part();
+      c.capsule(kx, ky, fx, fy - 0.6, 1.3, 1.15, TROUSER);
+      boot(c, fx, fy, cross > 0.5, cross > 0.5 && side < 0 ? -1 : 0);
+    }
+  }
 }
 
 /**
@@ -1120,6 +1268,98 @@ function grip(view: View): Pose[] {
   });
 }
 
+// ---------------------------------------------------------------------------
+// The idle moment (`rest`): a little performance when he's left standing, drawn facing the viewer only.
+
+/** The upper body's drop in a pose, so hands can be placed in plain body pixels. */
+const drop = (p: Pose): number => -p.lift + p.breath + Math.round((p.sit ?? 0) * SIT_DROP);
+
+/** Put the free hand at (x, y) in body pixels, whatever the pose's drop. */
+function freeAt(p: Pose, x: number, y: number): Pose {
+  p.free = { x, y: y - drop(p) };
+  return p;
+}
+
+/**
+ * The Jedi knight meditates: he puts out his blade and sits down
+ * cross-legged, lets the hilt go to hang in the air before him, closes his
+ * eyes and rises a couple of pixels off the ground among motes of the Force,
+ * then settles, takes the hilt back, stands, and lights the blade again.
+ */
+function meditate(view: View): Pose[] {
+  if (view !== 'down') return [];
+  const stand = idle('down')[0];
+  const at = (o: Partial<Pose>): Pose => ({ ...base('down'), ...o });
+  // Hands on the hilt before his chest: the saber hand at the grip, the other beside it.
+  const holding = (sit: number, breath: number, y: number): Pose => {
+    const p = at({ sit, breath, saber: sb(10.2, y + drop(at({ sit, breath })), 90, 0) });
+    return freeAt(p, 14, y + drop(p) + 0.2);
+  };
+  // Seated with hands on the knees, the hilt floating at `hy` above the lap.
+  const seated = (o: Partial<Pose>, hy: number): Pose => {
+    const p = at({ sit: 1, blink: true, ...o });
+    const d = drop(p);
+    p.saber = sb(6.2, 27.6 - p.lift, 0, 0);
+    p.hilt = { x: 12.2, y: hy + d, angle: 90 };
+    return freeAt(p, 17.8, 27.6 - p.lift);
+  };
+  return [
+    stand,
+    // 1: the blade shrinks back into the hilt as he brings it in.
+    at({ saber: sb(6.2, 21.6, -12, 5) }),
+    // 2: blade out, both hands on the hilt; he dips, about to sit.
+    holding(0, 1, 20.4),
+    // 3-4: down into the seat, knees splaying, robe gathering.
+    holding(0.4, 0, 20.4),
+    holding(0.8, 0, 20.6),
+    // 5: seated, the body settling a pixel, hands to the knees, the hilt left hanging.
+    seated({ breath: 1, blink: false, robe: 1 }, 17.8),
+    // 6: eyes closed, the hilt drifting up.
+    seated({ motes: 1 }, 17.2),
+    // 7-9: rising off the ground among the motes, the hilt bobbing.
+    seated({ lift: 1, motes: 2 }, 16.6),
+    seated({ lift: 2, motes: 3 }, 16.2),
+    seated({ lift: 2, motes: 4, robe: -1 }, 15.9),
+    // 10: sinking back down.
+    seated({ lift: 1, motes: 5 }, 16.6),
+    // 11: eyes open, the hilt drifting home into his hands.
+    holding(1, 0, 20.6),
+  ];
+}
+
+/** The knight's order: held frames while he floats, and the sitting played back to stand again. */
+const MEDITATE_ORDER = [0, 1, 2, 3, 4, 5, 6, 6, 7, 8, 9, 8, 9, 8, 9, 10, 6, 6, 11, 4, 3, 2, 2, 1, 0] as const;
+
+/**
+ * The Sith's menace: he raises a clenched fist beside his face and Force
+ * lightning crackles between the fingers; his head cocks toward it, the eyes
+ * flare in the hood, he squeezes, and lowers it again.
+ */
+function menace(view: View): Pose[] {
+  if (view !== 'down') return [];
+  const stand = idle('down')[0];
+  const fist = (x: number, y: number, o: Partial<Pose>): Pose => freeAt({ ...base('down'), ...o }, x, y);
+  return [
+    stand,
+    // 1-2: the free hand comes up, closing, the first sparks at the knuckles.
+    fist(18.2, 20, { breath: 1 }),
+    fist(19, 17, { force: 0.35, fist: 1 }),
+    // 3: the fist raised beside his face; the head starts to tip toward it.
+    fist(19.2, 14, { force: 0.7, fist: 2, handFront: true, headX: 1 }),
+    // 4-6: the head cocked, lightning crawling round the fingers, eyes flaring.
+    fist(19.2, 13.6, { force: 1, fist: 3, handFront: true, headX: 1, headY: 1, glare: 0.3 }),
+    fist(19.5, 13.7, { force: 1, fist: 4, handFront: true, headX: 1, headY: 1, glare: 0.8, robe: -1 }),
+    fist(19.2, 13.5, { force: 1, fist: 5, handFront: true, headX: 1, headY: 1, glare: 0.5 }),
+    // 7: the squeeze: the fist shakes and the lightning bursts out of it.
+    fist(19.3, 14.2, { force: 1.25, fist: 6, handFront: true, headX: 1, headY: 1, glare: 1, robe: -1, breath: 1 }),
+    // 8-9: the hand lowers, the last sparks dying, the head straightening.
+    fist(19, 17.4, { force: 0.3, fist: 7, headX: 1 }),
+    fist(17.8, 20.6, { force: 0.1, fist: 9 }),
+  ];
+}
+
+const MENACE_ORDER = [0, 1, 2, 3, 3, 4, 5, 6, 4, 5, 6, 4, 7, 7, 5, 6, 8, 9, 9, 0] as const;
+
 /** Screen angle (0 = right, 90 = down) he faces in each direction. */
 export const FACING_DEG: Record<Dir, number> = { right: 0, down: 90, left: 180, up: 270 };
 
@@ -1182,13 +1422,15 @@ function dervishFrame(k: number): { dir: Dir; pose: Pose } {
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type JediAnim = 'idle' | 'walk' | 'slash1' | 'slash2' | 'push' | 'sweep1' | 'sweep2' | 'lightning' | 'grip';
+export type JediAnim = 'idle' | 'walk' | 'slash1' | 'slash2' | 'push' | 'sweep1' | 'sweep2' | 'lightning' | 'grip' | 'rest';
 
 export interface JediAnimDef {
   name: JediAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => Pose[];
+  /** Frame indices to play in sequence, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 export const JEDI_ANIMS: JediAnimDef[] = [
@@ -1197,6 +1439,7 @@ export const JEDI_ANIMS: JediAnimDef[] = [
   { name: 'slash1', fps: 22, loop: false, poses: slash('slash1') },
   { name: 'slash2', fps: 22, loop: false, poses: slash('slash2') },
   { name: 'push', fps: 12, loop: false, poses: push },
+  { name: 'rest', fps: 8, loop: false, poses: meditate, order: MEDITATE_ORDER },
 ];
 
 /** The Sith's: sweeps with the saberstaff, Force lightning, and the grip his Special is cast with. */
@@ -1207,6 +1450,7 @@ export const SITH_ANIMS: JediAnimDef[] = [
   { name: 'sweep2', fps: 21, loop: false, poses: slash('sweep2') },
   { name: 'lightning', fps: 11, loop: false, poses: lightning },
   { name: 'grip', fps: 8, loop: false, poses: grip },
+  { name: 'rest', fps: 8, loop: false, poses: menace, order: MENACE_ORDER },
 ];
 
 export const jediAnimsFor = (look: JediLook): JediAnimDef[] => (look.staff ? SITH_ANIMS : JEDI_ANIMS);

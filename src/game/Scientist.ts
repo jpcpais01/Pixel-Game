@@ -10,6 +10,7 @@ import { bloom, bolt, circle, clamp01, drag, flare, Fx, pal, ring, strikeGround,
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
+import { stand } from './rest';
 
 // The Scientist (the Inventor's second type): a young experimenter with a
 // Tesla gun.
@@ -150,7 +151,7 @@ export class Scientist implements Hero {
     if (!this.move) {
       if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
       else if (moving) this.dir = dirOf(mx, my);
-      const key = `${this.kit.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = moving ? `${this.kit.key}_walk_${this.dir}` : stand(this.body, `${this.kit.key}_idle_${this.dir}`);
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     }
     this.sync();

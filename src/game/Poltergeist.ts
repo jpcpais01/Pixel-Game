@@ -11,6 +11,7 @@ import { bloom, Fx, pal, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
+import { stand } from './rest';
 
 // The Poltergeist (the Phantom's first type): a mischievous sheet-ghost.
 //  - Attack (held): it hurls haunted household things with its mind, a
@@ -157,7 +158,7 @@ export class Poltergeist implements Hero {
     if (this.state === 'free') {
       if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
       else if (moving) this.dir = dirOf(mx, my);
-      const key = `${this.kit.key}_${moving ? 'move' : 'idle'}_${this.dir}`;
+      const key = moving ? `${this.kit.key}_move_${this.dir}` : stand(this.body, `${this.kit.key}_idle_${this.dir}`);
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     }
     this.sync();

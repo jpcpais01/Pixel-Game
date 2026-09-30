@@ -60,6 +60,11 @@ export interface Pose {
   /** 0..1 chi burning round the fists. */
   chi: number;
   blink?: boolean;
+  // The idle moment's (`rest`) extras, drawn facing the viewer only.
+  /** 0..1 the screen-right knee drawn up, its foot off the ground (the monk's crane stance). */
+  knee?: number;
+  /** Knuckles cracking: little pops of light round the joined fists, struck by this seed (0: none). */
+  pop?: number;
 }
 
 const F = (f: number, s: number, h: number): Fist => ({ f, s, h });
@@ -617,6 +622,8 @@ function champSide(c: PixelCanvas, hx: number, top: number, waist: number, U: nu
 // Directions
 
 const REACH_FRONT = 4.6;
+/** How high the monk's raised foot comes off the ground in the crane stance. */
+const KNEE_LIFT = 4;
 const REACH_SIDE = 5.4;
 
 function drawDown(c: PixelCanvas, p: Pose): void {
@@ -643,9 +650,12 @@ function drawDown(c: PixelCanvas, p: Pose): void {
 
   // Legs in a wide stance.
   leg(c, 10, 23.5 + L, 9.2, 28.2 - p.footA);
-  leg(c, 14, 23.5 + L, 14.8, 28.2 - p.footB);
   foot(c, 9, 29.6 - p.footA);
-  foot(c, 15, 29.6 - p.footB);
+  if (p.knee) raisedLeg(c, 14, 23.5 + L, p.knee);
+  else {
+    leg(c, 14, 23.5 + L, 14.8, 28.2 - p.footB);
+    foot(c, 15, 29.6 - p.footB);
+  }
   c.part();
   c.shape(22 + U, 24 + L, () => [cx - 4.2, cx + 4.2], LK.trouser, (_x, _y, t) => cyl(t, 0.1));
 
@@ -750,6 +760,39 @@ function drawDown(c: PixelCanvas, p: Pose): void {
 
   if (!fa.behind) armA();
   if (!fb.behind) armB();
+  if (p.pop) pops(c, (fa.x + fb.x) / 2, (fa.y + fb.y) / 2, p.pop);
+}
+
+/**
+ * A knee drawn up towards us, seen from the front: the thigh foreshortened
+ * to a round knee just under the hip, the shin hanging from it and the foot
+ * lifted clear of the ground, toes down.
+ */
+function raisedLeg(c: PixelCanvas, hx: number, hy: number, k: number): void {
+  const kx = hx + 0.7;
+  const ky = hy + 2.6 - 1.4 * k;
+  const fx = hx + 0.9;
+  const fy = 29.6 - KNEE_LIFT * k;
+  c.part();
+  c.capsule(kx, ky + 1, fx, fy - 1, 1.55, 1.35, LK.trouser);
+  c.part();
+  c.ellipse(fx, fy, 1.4, 1.2, LK.feet, { flatten: 0.8 });
+  c.part();
+  c.capsule(hx, hy, kx, ky, 1.8, 1.9 + 0.2 * k, LK.trouser, { bias: 1 });
+}
+
+/** Knuckles cracking: a few white ticks of light jumping off the joined fists. */
+function pops(c: PixelCanvas, x: number, y: number, seed: number): void {
+  const core = LK.chi[0];
+  for (let i = 0; i < 3; i++) {
+    const a = seed * 1.7 + i * 2.1;
+    const r = 2.6 + (i % 2) * 0.6;
+    const px = x + Math.cos(a) * r;
+    const py = y + Math.sin(a) * r * 0.8 - 0.5;
+    c.spark(px, py, core, 1);
+    c.spark(px + Math.cos(a), py + Math.sin(a) * 0.8, core, 0.7);
+    c.spark(px + Math.cos(a) * 2, py + Math.sin(a) * 1.6, LK.chi[1], 0.35);
+  }
 }
 
 function drawUp(c: PixelCanvas, p: Pose): void {
@@ -1201,19 +1244,92 @@ const leap = blow(
   MONK_GUARD,
 );
 
+// ---------------------------------------------------------------------------
+// The idle moments (`rest`): a little performance when he's left standing, drawn facing the viewer only.
+
+/**
+ * The brawler shadowboxes: bounces on his toes, snaps out a jab, another,
+ * then a cross with his weight behind it, laces his fists together and
+ * pushes them out to crack his knuckles, shakes his arms loose and bounces
+ * back into his guard.
+ */
+function shadowbox(view: View): Pose[] {
+  if (view !== 'down') return [];
+  const at = (o: Partial<Pose>): Pose => ({ ...base('down'), ...o });
+  return [
+    idle('down')[0],
+    // 1-2: up on the toes, and landing.
+    at({ lift: 1, tails: 0.8 }),
+    at({ breath: 1, tails: -0.4, a: F(2.2, 3.0, 0.6), b: F(1.4, 3.3, 1.8) }),
+    // 3-5: jab, back, jab, out at an opponent only he can see on his lead side.
+    at({ lift: 1, a: F(2.5, 8.2, 3.4), tails: 1 }),
+    at({ a: F(2.6, 4.2, 1.6), tails: 0.3 }),
+    at({ a: F(2.5, 8.4, 3.6), b: F(1.2, 3.3, 2.4), tails: 1.1 }),
+    // 6: the cross thrown the other way, dipping into it.
+    at({ breath: 1, b: F(2.5, 8.4, 3.2), a: F(1, 3.2, 2.2), tails: 1.4 }),
+    // 7: back to the guard off a bounce.
+    at({ lift: 1, b: F(3, 2.8, 2.2), tails: 0.9 }),
+    // 8: fists laced together before his chest.
+    at({ a: F(2.4, 0.7, 1.6), b: F(2.4, 0.7, 1.9), tails: 0.2 }),
+    // 9-10: pushed out, the knuckles cracking.
+    at({ breath: 1, a: F(6.4, 0.9, 3.4), b: F(6.4, 0.9, 3.7), pop: 1 }),
+    at({ breath: 1, a: F(6.7, 0.9, 3.5), b: F(6.7, 0.9, 3.8), pop: 2, blink: true }),
+    // 11: the arms dropped loose, shaken out.
+    at({ a: F(1.2, 4.4, -2.5), b: F(1.2, 4.4, -2.2), tails: -0.6 }),
+  ];
+}
+
+const SHADOWBOX_ORDER = [0, 1, 2, 1, 2, 3, 4, 5, 4, 6, 6, 7, 2, 8, 8, 9, 10, 9, 10, 11, 11, 1, 2, 0] as const;
+
+/**
+ * The iron monk's tai-chi: he sinks, floats both hands up before him and
+ * presses them down, then shifts his weight and rises into the golden
+ * rooster, one palm raised high and one knee drawn up, eyes closed and qi
+ * gathering; holds it, and settles back into his stance.
+ */
+function taichi(view: View): Pose[] {
+  if (view !== 'down') return [];
+  const at = (o: Partial<Pose>): Pose => ({ ...base('down', MONK_GUARD), ...o });
+  return [
+    monkIdle('down')[0],
+    // 1: sinking, the hands opening low before the belly.
+    at({ breath: 1, a: F(1.5, 3, -2.5), b: F(1.5, 3, -2.5) }),
+    // 2-3: both hands floating up to the shoulders.
+    at({ a: F(2.5, 3.2, 2), b: F(2.5, 3.2, 2), chi: 0.15 }),
+    at({ a: F(3, 3.4, 5), b: F(3, 3.4, 5), chi: 0.25 }),
+    // 4: pressed slowly down again, the knees sinking.
+    at({ breath: 1, a: F(3, 3.2, -1), b: F(3, 3.2, -1), chi: 0.2 }),
+    // 5: the weight shifts, one palm rising, the foot peeling off the ground.
+    at({ knee: 0.35, a: F(0.8, 4, -2.5), b: F(1.5, 2.2, 5), chi: 0.3 }),
+    // 6-7: the golden rooster: palm high, knee up, balanced, qi burning.
+    at({ knee: 1, a: F(0.8, 4.6, -3.5), b: F(0.5, 3.4, 11), chi: 0.5, blink: true }),
+    at({ knee: 1, breath: 1, a: F(0.8, 4.7, -3.2), b: F(0.5, 3.5, 10.7), chi: 0.75, blink: true }),
+    // 8: coming down, the palm lowering.
+    at({ knee: 0.4, a: F(1.5, 3.6, -1.5), b: F(2, 3, 5), chi: 0.3 }),
+    // 9: both hands pressed down as he breathes out.
+    at({ breath: 1, a: F(2, 3, -1.5), b: F(2, 3, -1.5), chi: 0.1 }),
+    // 10: back up into the stance.
+    at({ a: F(3.2, 2.4, 0), b: F(1.2, 1.6, 1.8) }),
+  ];
+}
+
+const TAICHI_ORDER = [0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 7, 7, 6, 7, 7, 6, 8, 9, 9, 10, 0] as const;
+
 /** Screen angle (0 = right, 90 = down) he faces in each direction. */
 export const FACING_DEG: Record<Dir, number> = { right: 0, down: 90, left: 180, up: 270 };
 
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type FighterAnim = 'idle' | 'walk' | 'jab' | 'cross' | 'hook' | 'upper' | 'smash' | 'barrage' | 'palm' | 'palm2' | 'thrust' | 'leap';
+export type FighterAnim = 'idle' | 'walk' | 'jab' | 'cross' | 'hook' | 'upper' | 'smash' | 'barrage' | 'palm' | 'palm2' | 'thrust' | 'leap' | 'rest';
 
 export interface FighterAnimDef {
   name: FighterAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => Pose[];
+  /** Frame indices to play in sequence, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 export const FIGHTER_ANIMS: FighterAnimDef[] = [
@@ -1225,6 +1341,7 @@ export const FIGHTER_ANIMS: FighterAnimDef[] = [
   { name: 'upper', fps: 20, loop: false, poses: upper },
   { name: 'smash', fps: 16, loop: false, poses: smash },
   { name: 'barrage', fps: 24, loop: true, poses: barrage },
+  { name: 'rest', fps: 9, loop: false, poses: shadowbox, order: SHADOWBOX_ORDER },
 ];
 
 export const MONK_ANIMS: FighterAnimDef[] = [
@@ -1234,6 +1351,7 @@ export const MONK_ANIMS: FighterAnimDef[] = [
   { name: 'palm2', fps: 16, loop: false, poses: palm2 },
   { name: 'thrust', fps: 13, loop: false, poses: thrust },
   { name: 'leap', fps: 12, loop: false, poses: leap },
+  { name: 'rest', fps: 6, loop: false, poses: taichi, order: TAICHI_ORDER },
 ];
 
 /** Frame index at which each blow lands (the leap: where he meets the ground). */

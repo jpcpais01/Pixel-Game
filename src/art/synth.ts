@@ -25,6 +25,8 @@ export const SYNTH_ORIGIN_X = BODY_X + 12;
 export const SYNTH_ORIGIN_Y = BODY_Y + 31;
 /** The chest's height above the feet, where drones launch from and return to. */
 export const SYNTH_CHEST_Y = 14;
+/** A hand raised this far (px, up is -) is at the side of the head, and drawn over it. */
+const RAISED = -6;
 
 // ---------------------------------------------------------------------------
 // Materials
@@ -77,9 +79,16 @@ export interface SynthPose {
   /** The halo's (or the antennae's) bob, and the wings' beat 0..1. */
   float: number;
   flap: number;
+  /** The idle moment: the head tilted a px left (-) or right; the halo spinning, a bright spot at this step of its ring (-1 still). */
+  tilt: number;
+  spin: number;
+  /** The scanning beam out of the visor (or the compound eyes): -2..2 from far left through facing the viewer (0) to far right; null off. */
+  scan: number | null;
+  /** 0..1: the visor (or eyes) flashing bright, a ping when the scan ends. */
+  ping: number;
 }
 
-const base = (): SynthPose => ({ bob: 0, liftA: 0, liftB: 0, strideA: 0, strideB: 0, handA: { x: 0, y: 0 }, handB: { x: 0, y: 0 }, open: 0, float: 0, flap: 0 });
+const base = (): SynthPose => ({ bob: 0, liftA: 0, liftB: 0, strideA: 0, strideB: 0, handA: { x: 0, y: 0 }, handB: { x: 0, y: 0 }, open: 0, float: 0, flap: 0, tilt: 0, spin: -1, scan: null, ping: 0 });
 
 // ---------------------------------------------------------------------------
 // Parts (in body-box coordinates: 24 wide, the feet at y 31)
@@ -165,15 +174,17 @@ function torso(c: PixelCanvas, cx: number, top: number, open: number, view: View
 }
 
 /** The Synth's head: a smooth shell with a band of light for eyes. */
-function synthHead(c: PixelCanvas, cx: number, cy: number, view: View): void {
+function synthHead(c: PixelCanvas, cx: number, cy: number, view: View, tilt = 0, ping = 0): void {
   c.part();
   c.ellipse(cx, cy, view === 'side' ? 4.1 : 4.6, 4.3, SHELL, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.15, 1) });
   c.part();
   if (view === 'down') {
+    // The visor's band, sloping with a tilt of the head (the side it leans to drops).
     for (let x = Math.round(cx - 3); x < cx + 3; x++) {
       const k = (x + 0.5 - cx) / 3.3;
-      c.px(x, Math.round(cy + 0.4 + k * k * 0.6), CYAN, sphere(k, 0, 1));
+      c.px(x, Math.round(cy + 0.4 + k * k * 0.6 + k * tilt * 0.9), CYAN, sphere(k, 0, 1), ping > 0 ? { bias: 1, glow: 1 } : undefined);
     }
+    if (ping > 0) for (let x = Math.round(cx - 3); x < cx + 3; x++) c.spark(x, cy - 0.5, hex('#e6fcff'), ping * 0.5);
     for (let x = Math.round(cx - 1.5); x <= cx + 0.5; x++) c.shade(x, Math.round(cy + 3), -1);
   } else if (view === 'side') {
     for (let x = Math.round(cx - 4); x <= cx - 1.5; x++) c.px(x, Math.round(cy + 0.4), CYAN, { x: -0.7, y: 0, z: 0.7 });
@@ -186,7 +197,7 @@ function synthHead(c: PixelCanvas, cx: number, cy: number, view: View): void {
 }
 
 /** The halo, a thin ring of light floating over the head. */
-function halo(c: PixelCanvas, cx: number, cy: number): void {
+function halo(c: PixelCanvas, cx: number, cy: number, spin = -1): void {
   c.part();
   const y = Math.round(cy);
   const x0 = Math.round(cx - 3);
@@ -197,17 +208,60 @@ function halo(c: PixelCanvas, cx: number, cy: number): void {
   }
   c.px(x0, y, HALO, { x: -1, y: 0, z: 0.3 }, { glow: 0.9 });
   c.px(x0 + 5, y, HALO, { x: 1, y: 0, z: 0.3 }, { glow: 0.9 });
+  if (spin < 0) return;
+  // Spinning up: a bright spot running round the ring with a fading tail behind it.
+  const ring: [number, number][] = [[1, 1], [2, 1], [3, 1], [4, 1], [5, 0], [4, -1], [3, -1], [2, -1], [1, -1], [0, 0]];
+  const hot = hex('#e6fcff');
+  for (let t = 0; t < 3; t++) {
+    const [dx, dy] = ring[(((spin - t) % ring.length) + ring.length) % ring.length];
+    if (t === 0) c.px(x0 + dx, y + dy, HALO, { x: 0, y: 0, z: 1 }, { glow: 1, bias: 2 });
+    c.spark(x0 + dx, y + dy, hot, 0.9 - t * 0.3);
+  }
+  // A glint thrown off the ring as it whirls.
+  const [gx, gy] = ring[spin % ring.length];
+  c.spark(x0 + gx + (gx > 2.5 ? 1 : gx < 2.5 ? -1 : 0), y + gy * 2, hot, 0.5);
+}
+
+/**
+ * The idle moment's scanning beam, thrown from the visor (the eyes) at
+ * (x, y): a wedge of light out to the side that shortens as it swings round
+ * to face the viewer, where it is only a flare.
+ */
+function scanBeam(c: PixelCanvas, x: number, y: number, dir: number, col: RGB): void {
+  const s = Math.sign(dir);
+  const len = Math.abs(dir) * 5.5;
+  if (s === 0) {
+    for (let a = 0; a < 8; a++) {
+      const q = (a / 8) * Math.PI * 2;
+      c.spark(x + Math.cos(q) * 2, y + 0.5 + Math.sin(q) * 1.2, col, 0.3);
+    }
+    return;
+  }
+  for (let i = 1; i <= len; i++) {
+    const k = i / len;
+    // Spreading and dipping a little as it goes, brightest at its core.
+    const hw = 0.5 + k * 2.2;
+    const cy = y + 0.5 + k * 3.5;
+    for (let d = -hw; d <= hw; d += 0.5) {
+      const core = 1 - Math.abs(d) / (hw + 0.5);
+      c.spark(x + s * (3 + i), cy + d, col, (0.9 - k * 0.45) * core);
+    }
+  }
+  // Where it lands: a bright scan line across the ground.
+  if (Math.abs(dir) > 1) for (let d = -1; d <= 1; d++) c.spark(x + s * (3 + len), y + 4.5 + d * 1.5, col, 0.9);
 }
 
 /** The Hive Queen's head: compound eyes, a gold tiara, and curled antennae with glowing tips. */
-function beeHead(c: PixelCanvas, cx: number, cy: number, view: View, float: number): void {
+function beeHead(c: PixelCanvas, cx: number, cy: number, view: View, float: number, tilt = 0, ping = 0): void {
   c.part();
   const antenna = (s: number, lean = 0) => {
     const x0 = cx + s * 1.2 + lean;
+    // A tilt of the head swings both antennae over, the lower one drooping.
+    const droop = s === Math.sign(tilt) ? 1 : 0;
     const pts: Pt[] = [
       { x: x0, y: cy - 3.5 },
-      { x: x0 + s * 1.2, y: cy - 5.5 },
-      { x: x0 + s * 2.8, y: cy - 7 - float },
+      { x: x0 + s * 1.2 + tilt * 0.5, y: cy - 5.5 + droop },
+      { x: x0 + s * 2.8 + tilt, y: cy - 7 - float + droop * 1.5 },
     ];
     for (let i = 0; i < pts.length - 1; i++) c.line(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, CHITIN);
     const tip = pts[pts.length - 1];
@@ -225,8 +279,10 @@ function beeHead(c: PixelCanvas, cx: number, cy: number, view: View, float: numb
   c.part();
   if (view === 'down') {
     for (const s of [-1, 1]) {
-      c.ellipse(cx + s * 2, cy + 0.4, 1.6, 2, EYE);
-      c.px(Math.round(cx + s * 2 - 0.6), Math.round(cy - 0.6), EYE, { x: -0.4, y: 0.6, z: 0.7 }, { bias: 2 });
+      // A tilt drops the eye on the side it leans to.
+      const ey = cy + 0.4 + (s === Math.sign(tilt) ? 0.6 : 0);
+      c.ellipse(cx + s * 2, ey, 1.6, 2, EYE, ping > 0 ? { glow: 0.3 + ping * 0.7, bias: 1 } : {});
+      c.px(Math.round(cx + s * 2 - 0.6), Math.round(ey - 1), EYE, { x: -0.4, y: 0.6, z: 0.7 }, { bias: 2 });
     }
     c.px(Math.round(cx - 1), Math.round(cy + 3), GOLD);
     c.px(Math.round(cx), Math.round(cy + 3), GOLD);
@@ -340,26 +396,32 @@ function drawFigure(c: PixelCanvas, p: SynthPose, view: View): void {
   if (view === 'side') arm(c, { x: cx - 0.2, y: chest + 1 }, { x: cx - 0.6 + p.handA.x, y: hipY - 1 + p.handA.y }, 1);
   else {
     arm(c, { x: cx - 5, y: chest + 1 }, { x: cx - 5.8 + p.handA.x, y: hipY - 1.5 + p.handA.y }, -1);
-    arm(c, { x: cx + 5, y: chest + 1 }, { x: cx + 5.8 + p.handB.x, y: hipY - 1.5 + p.handB.y }, 1);
+    // (A hand raised to the side of the head, in the idle moment, is drawn over it, after the head.)
+    if (p.handB.y > RAISED) arm(c, { x: cx + 5, y: chest + 1 }, { x: cx + 5.8 + p.handB.x, y: hipY - 1.5 + p.handB.y }, 1);
   }
 
-  if (hive) beeHead(c, cx, headY, view, p.float);
+  const hx = cx + p.tilt;
+  if (hive) beeHead(c, hx, headY, view, p.float, p.tilt, p.ping);
   else {
-    synthHead(c, cx, headY, view);
-    halo(c, cx, headY - 6.4 - p.float);
+    synthHead(c, hx, headY, view, p.tilt, p.ping);
+    halo(c, hx, headY - 6.4 - p.float, p.spin);
   }
+  if (view !== 'side' && p.handB.y <= RAISED) arm(c, { x: cx + 5, y: chest + 1 }, { x: cx + 5.8 + p.handB.x, y: hipY - 1.5 + p.handB.y }, 1);
+  if (p.scan !== null) scanBeam(c, hx - 0.5, headY + (hive ? 0.4 : 0.4), p.scan, hive ? hex('#ffc860') : hex('#7ae8ff'));
 }
 
 // ---------------------------------------------------------------------------
 // Animations
 
-export type SynthAnim = 'idle' | 'walk' | 'command' | 'grid' | 'open';
+export type SynthAnim = 'idle' | 'walk' | 'command' | 'grid' | 'open' | 'rest';
 
 interface AnimDef {
   name: SynthAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => SynthPose[];
+  /** Frame indices to play in order, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 const idle = (): SynthPose[] =>
@@ -437,12 +499,41 @@ const open = (view: View): SynthPose[] =>
     return p;
   });
 
+/**
+ * The idle moment, facing the viewer only: a hand goes up to the side of its
+ * head as the halo lifts and spins up, then it sweeps a beam of light across
+ * the ground from one side to the other, the head tilting after it; back to
+ * the middle, a ping of the visor (all clear), and it settles. The Hive
+ * Queen does the same with her antennae up and amber light from her eyes.
+ */
+const rest = (view: View): SynthPose[] => {
+  if (view !== 'down') return [];
+  const at = (o: Partial<SynthPose>): SynthPose => ({ ...base(), ...o });
+  // The hand at its temple, and on its way up and down.
+  const up = { x: 0, y: -10 };
+  const half = { x: 0.5, y: -4.5 };
+  return [
+    at({}),
+    at({ handB: half, float: 1, spin: 0, flap: 1 }),
+    at({ handB: up, float: 2, spin: 3 }),
+    at({ handB: up, float: 2, spin: 6, tilt: -1, scan: -2, flap: 1 }),
+    at({ handB: up, float: 2, spin: 9, tilt: -1, scan: -1 }),
+    at({ handB: up, float: 2, spin: 2, scan: 0, flap: 1 }),
+    at({ handB: up, float: 2, spin: 5, tilt: 1, scan: 1 }),
+    at({ handB: up, float: 2, spin: 8, tilt: 1, scan: 2, flap: 1 }),
+    at({ handB: up, float: 2, spin: 1, ping: 1 }),
+    at({ handB: half, float: 1, spin: 4, bob: 1, flap: 1 }),
+    at({ float: 1, handB: { x: 0, y: 1 } }),
+  ];
+};
+
 export const SYNTH_ANIMS: AnimDef[] = [
   { name: 'idle', fps: 5, loop: true, poses: idle },
   { name: 'walk', fps: 10, loop: true, poses: walk },
   { name: 'command', fps: 18, loop: false, poses: command },
   { name: 'grid', fps: 14, loop: false, poses: grid },
   { name: 'open', fps: 10, loop: false, poses: open },
+  { name: 'rest', fps: 9, loop: false, poses: rest, order: [0, 1, 2, 2, 3, 3, 3, 4, 5, 6, 7, 7, 7, 6, 5, 4, 3, 3, 4, 5, 5, 8, 8, 8, 2, 9, 10, 0] },
 ];
 
 export interface SynthFrame {

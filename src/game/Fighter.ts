@@ -11,6 +11,7 @@ import { AIR_FX, CHAMP_AIR_FX, CHAMP_FX, CHI_FX, Fissure, Flurry, LUCHA_AIR_FX, 
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
+import { stand } from './rest';
 
 const BARRAGE_TIME = 5000;
 /** How far the barrage's fists fly, well past his arms. */
@@ -261,7 +262,7 @@ export class Fighter implements Hero {
       // Fighting faces the aim, even walking backwards; otherwise the way of the walk.
       if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
       else if (moving) this.dir = dirOf(mx, my);
-      const key = `${this.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = moving ? `${this.key}_walk_${this.dir}` : stand(this.body, `${this.key}_idle_${this.dir}`);
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else if (this.state === 'punch') {
       const f = this.body.anims.currentFrame;

@@ -110,6 +110,7 @@ import type { MonsterStats } from '../game/monsters/Monster';
 import { NetPlay } from '../net/NetPlay';
 import { session } from '../net/session';
 import { diag, note } from '../diagnostics';
+import { rouse } from '../game/rest';
 
 interface Flicker {
   light: Phaser.GameObjects.Light;
@@ -881,6 +882,7 @@ export class WorldScene extends Phaser.Scene {
     const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard') * defenseFactor(this.stats.defense + gear.totals.armor) * riftMods.guard * petMods.guard * riftMods.fury * omenMods.fury));
     const lost = h.vitals.damage(damage);
     this.grace = HURT_GRACE;
+    rouse(h.sprite);
     this.rising = false;
     this.popNumber(snap(h.x), snap(h.y) - 38, `-${damage}`, lost > 0 ? 0xff8a78 : 0xffd35c);
     this.net?.hurtShown(damage, lost > 0 ? 0xff8a78 : 0xffd35c);
@@ -1934,6 +1936,8 @@ export class WorldScene extends Phaser.Scene {
     const x0 = this.hero.x;
     const y0 = this.hero.y;
     const aim = this.fishing?.active ? this.fishing.aim() : this.ult.rooted ? null : this.heroAim(dt, attack, special);
+    // Standing still but busy (a fight just now, a rod out, fallen, a Special): no idle moment.
+    if (attack || special || this.lookT > 0 || this.downT > 0 || this.fishing?.active || this.ult.holding || this.ult.rooted) rouse(this.hero.sprite);
     this.hero.update(dt, mx, my, attack, special, this.bounds, aim);
     this.settleStep(x0, y0, hb);
     this.net?.record(mx, my, attack, special, aim);

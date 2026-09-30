@@ -200,6 +200,19 @@ export interface Pose {
   sway: number;
   tick: number;
   blink?: boolean;
+  /** The timekeeper's pocket watch in his free hand (the idle moment). */
+  pocket?: Pocket;
+  /** Eyes turned this many pixels to the viewer's right (the paradox's idle moment). */
+  look?: number;
+  /** A time-echo of him, `dx` px aside and `k` strong, standing in its own pose (the paradox's idle moment). */
+  echo?: { pose: Pose; dx: number; k: number };
+}
+
+/** The pocket watch: its lid open or shut, a glint as it snaps, ticks rising off it when held to the ear. */
+interface Pocket {
+  open: boolean;
+  glint?: number;
+  ticks?: boolean;
 }
 
 type View = 'down' | 'up' | 'side';
@@ -372,6 +385,44 @@ function drawWatch(c: PixelCanvas, p: Placed, belt: [number, number], glow: numb
   if (glow > 0.4) glowAt(c, x, y, (glow - 0.4) * 1.5);
 }
 
+/**
+ * The timekeeper's own pocket watch, fished from his belt in the idle
+ * moment: a small case in the trim's metal on a chain back to the belt, its
+ * lid flipped up to the side when open and its face lit in the magic's light.
+ */
+function pocketWatch(c: PixelCanvas, h: Placed, belt: [number, number], w: Pocket, tick: number): void {
+  const x = h.x;
+  const y = h.y - 0.8;
+  const [core, hot, mid] = S.light;
+  c.part();
+  c.line(belt[0], belt[1], x - 0.5, y + 1.4, S.trim, () => sphere(0, -0.4));
+  c.part();
+  c.ellipse(x, y, 1.6, 1.5, S.trim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.2, 1) });
+  if (w.open) {
+    // The lid stands up off the case's far side, seen nearly edge-on.
+    c.part();
+    c.ellipse(x + 2.2, y - 1.6, 0.8, 1.4, S.trim, { normal: (_x, _y, dx, dy) => sphere(0.5 + dx * 0.4, dy * 0.6 - 0.3, 1) });
+    glowAt(c, x, y, 0.55);
+    c.spark(x - 1, y, mid, 0.45);
+    // The second hand going round the face.
+    const a = (tick % 4) * (Math.PI / 2) - Math.PI / 2;
+    c.spark(x + Math.round(Math.cos(a)), y + Math.round(Math.sin(a)), hot, 0.8);
+  } else {
+    c.part();
+    c.px(x, y - 2, S.trim, sphere(0, -0.7));
+  }
+  if (w.glint) {
+    c.spark(x - 1, y - 1, core, w.glint);
+    glowAt(c, x, y - 1, w.glint * 0.8);
+  }
+  // Ticks rising off it, away from his ear: two short marks of light, taking turns.
+  if (w.ticks) {
+    const t = tick % 2;
+    c.spark(x + 2 + t, y - 2 - t, hot, 0.75);
+    c.spark(x + 3 + t, y - 3 - t, mid, 0.4);
+  }
+}
+
 /** The belt buckle a watch chain hangs from, in body coordinates. */
 const CHAIN_AT: [number, number] = [14.5, 21];
 
@@ -464,7 +515,7 @@ function beardDown(c: PixelCanvas, cx: number, U: number): void {
 }
 
 /** The paradox's hood from the front: a deep cowl, white hair spilling out, eyes burning in the shadow. */
-function hoodDown(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+function hoodDown(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined, look = 0): void {
   c.part();
   c.shape(Math.round(7 + U), Math.round(16 + U), (y) => {
     const u = (y - 7 - U) / 9;
@@ -479,19 +530,20 @@ function hoodDown(c: PixelCanvas, cx: number, U: number, blink: boolean | undefi
   c.part();
   c.ellipse(cx - 0.3, 12.8 + U, 2.8, 3.0, S.inner);
   c.part();
-  c.ellipse(cx - 0.3, 13.2 + U, 2.2, 2.2, SKIN, { bias: -1 });
+  c.ellipse(cx - 0.3 + look * 0.5, 13.2 + U, 2.2, 2.2, SKIN, { bias: -1 });
   // White hair falling across the brow and down one side.
   c.part();
   c.shape(Math.round(10 + U), Math.round(11 + U), (y) => (y === Math.round(10 + U) ? [cx - 2.6, cx + 2] : [cx - 2.4, cx - 0.2]), S.hair, (_x, _y, t) => sphere(t * 0.7, -0.4, 1));
   c.px(cx - 3, 12 + U, S.hair, sphere(-0.6, 0));
   c.px(cx - 3, 13 + U, S.hair, sphere(-0.6, 0.3));
-  eyes(c, [[cx - 2, 13 + U], [cx + 1, 13 + U]], blink);
+  const ex = cx + look;
+  eyes(c, [[ex - 2, 13 + U], [ex + 1, 13 + U]], blink);
   if (!blink) {
     const [core, hot] = S.light;
-    c.spark(cx - 2, 13 + U, core, 0.9);
-    c.spark(cx + 1, 13 + U, core, 0.9);
-    c.spark(cx - 3, 13 + U, hot, 0.3);
-    c.spark(cx + 2, 13 + U, hot, 0.3);
+    c.spark(ex - 2, 13 + U, core, 0.9);
+    c.spark(ex + 1, 13 + U, core, 0.9);
+    c.spark(ex - 3, 13 + U, hot, 0.3);
+    c.spark(ex + 2, 13 + U, hot, 0.3);
   }
 }
 
@@ -743,7 +795,8 @@ function visorDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
     c.px(Math.round(cx - 2.4 + u * 1.2), y + U, S.trim, sphere(0.3, 0));
     c.px(Math.round(cx + 2.4 - u * 1.2) - 1, y + U, S.trim, sphere(-0.3, 0));
   }
-  visorSlit(c, cx - 2, cx + 1, 11 + U, p);
+  const look = p.look ?? 0;
+  visorSlit(c, cx - 2 + look, cx + 1 + look, 11 + U, p);
 }
 
 /** The visor in profile, facing left: the black head in its collar, the slit of light at its front. */
@@ -987,7 +1040,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     if (S.style === 'anomaly') {
       visorDown(c, cx, U, p);
       orbiters(c, cx, 7.4 + U, p.tick);
-    } else hoodDown(c, cx, U, p.blink);
+    } else hoodDown(c, cx, U, p.blink, p.look);
   } else if (S.style === 'clockwork') {
     clockCase(c, cx, U, L, p.tick, false);
     clockChest(c, cx, U, p.tick, false);
@@ -1004,6 +1057,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   if (S.style === 'anomaly') drawCube(c, fa, p.glow, p.tick);
   else if (S.rift) drawWatch(c, fa, [CHAIN_AT[0] - 5, CHAIN_AT[1] + U], p.glow, p.tick);
   else if (!fa.behind) staff(c, fa, sx, sy, p.glow, p.tick);
+  if (p.pocket) pocketWatch(c, fb, [cx + 2, 21.6 + U], p.pocket, p.tick);
   glowAt(c, fb.x, fb.y, p.cast);
 }
 
@@ -1371,9 +1425,86 @@ const rewind = action([
 ]);
 
 // ---------------------------------------------------------------------------
+// The idle moment (`rest`), facing the viewer
+
+/** A pose built from the idle's first frame, so the moment starts and ends on it exactly. */
+const still = (o: Partial<Pose> = {}): Pose => {
+  const p = idle('down')[0];
+  return { ...p, a: { ...p.a }, b: { ...p.b }, ...o };
+};
+
+/** The free hand at his belt pocket, before the beard, and up at his ear. */
+const POCKET_B = H(1.4, 2.2, -2.6);
+const READ_B = H(2.4, 3.4, 0.8);
+const EAR_B = H(0.6, 3.6, 6.0);
+
+/**
+ * The timekeeper checks the time: fishes his pocket watch from his belt,
+ * flips it open and peers at it, frowns and gives it a shake (the halo's
+ * running light stalls with it), holds it to his ear with his eyes shut until
+ * it ticks again, then snaps it shut, satisfied, and tucks it away.
+ */
+function keeperRest(): Pose[] {
+  const shut: Pocket = { open: false };
+  const open: Pocket = { open: true };
+  return [
+    still(),
+    still({ b: POCKET_B, breath: 1, sway: -0.2, tick: 1 }),
+    still({ b: H(2.4, 2.6, 0.2), pocket: shut, sway: 0, tick: 2 }),
+    still({ b: READ_B, pocket: shut, sway: 0.2, tick: 3 }),
+    still({ b: READ_B, pocket: { open: true, glint: 0.5 }, sway: 0.2, tick: 4 }),
+    still({ b: H(2.6, 3.2, 1.4), pocket: open, breath: 1, tick: 5 }),
+    still({ b: H(2.4, 4.6, 1.2), pocket: open, breath: 1, tick: 5, sway: 0.3 }),
+    still({ b: H(2.4, 2.4, 1.0), pocket: open, breath: 1, tick: 5, sway: -0.3 }),
+    still({ b: EAR_B, pocket: { open: true, ticks: true }, blink: true, sway: 0.2, tick: 6 }),
+    still({ b: EAR_B, pocket: { open: true, ticks: true }, blink: true, sway: 0.2, tick: 7 }),
+    still({ b: READ_B, pocket: open, sway: 0, tick: 8 }),
+    still({ b: READ_B, pocket: { open: false, glint: 1 }, breath: 1, tick: 9 }),
+    still({ b: POCKET_B, pocket: shut, breath: 1, sway: -0.2, tick: 10 }),
+    still(),
+  ];
+}
+const KEEPER_REST_ORDER = [0, 1, 2, 3, 4, 4, 5, 5, 5, 6, 7, 6, 7, 5, 8, 9, 8, 9, 8, 9, 10, 10, 11, 11, 12, 13];
+
+/** The paradox's watch raised to look at, and the free hand at his chin. */
+const PEEK_A = H(2.4, 2.0, 1.2);
+const CHIN_B = H(1.8, 1.0, 3.6);
+
+/**
+ * The paradox glances at his watch and it flares: a time-echo of him peels
+ * out of his side and steps away, still holding its watch up a moment behind
+ * him. He turns and looks at it; it turns and looks back; he puts a hand to
+ * his chin and, a beat late, so does the echo. He winds the watch and the
+ * echo is pulled back into him, and he sighs.
+ */
+function paradoxRest(): Pose[] {
+  const peek = still({ a: PEEK_A, glow: 1, breath: 1, tick: 2 });
+  const echo = (o: Partial<Pose>, dx: number, k: number) => ({ pose: still({ ...o }), dx, k });
+  const late = { a: PEEK_A, glow: 0.8, breath: 1 };
+  return [
+    still(),
+    still({ a: PEEK_A, glow: 0.5, breath: 1, tick: 1, sway: 0 }),
+    { ...peek, cast: 0.3, echo: echo(late, 1, 0.45) },
+    still({ a: PEEK_A, glow: 0.8, breath: 1, tick: 3, echo: echo({ ...late, footB: 1, tick: 3 }, 4, 0.75) }),
+    still({ a: H(2.2, 2.4, 0.4), glow: 0.6, tick: 4, echo: echo({ ...late, footA: 1, tick: 4, sway: -0.6 }, 7, 0.85) }),
+    still({ glow: 0.4, tick: 5, echo: echo({ ...late, tick: 5 }, 9, 0.9) }),
+    still({ glow: 0.3, look: 1, tick: 6, echo: echo({ ...late, tick: 6 }, 9, 0.9) }),
+    still({ glow: 0.3, look: 1, b: CHIN_B, tick: 7, echo: echo({ look: -1, tick: 7 }, 9, 0.9) }),
+    still({ glow: 0.3, look: 1, b: CHIN_B, tick: 8, echo: echo({ look: -1, b: CHIN_B, tick: 8 }, 9, 0.9) }),
+    still({ a: PEEK_A, glow: 1, cast: 0.6, breath: 1, tick: 9, echo: echo({ look: -1, b: CHIN_B, tick: 9, sway: 0.6 }, 4, 0.7) }),
+    still({ a: PEEK_A, glow: 0.8, cast: 0.3, lift: 1, tick: 10, echo: echo({ a: PEEK_A, tick: 10 }, 1, 0.45) }),
+    still({ glow: 0.3, blink: true, breath: 1, tick: 11 }),
+    still(),
+  ];
+}
+const PARADOX_REST_ORDER = [0, 1, 1, 2, 3, 4, 5, 5, 5, 6, 6, 6, 7, 7, 8, 8, 8, 8, 8, 9, 10, 11, 11, 12];
+
+const rest = (view: View): Pose[] => (view !== 'down' ? [] : S.rift ? paradoxRest() : keeperRest());
+
+// ---------------------------------------------------------------------------
 // Frame generation
 
-export type ChronoAnim = 'idle' | 'walk' | 'cast' | 'field' | 'rewind';
+export type ChronoAnim = 'idle' | 'walk' | 'cast' | 'field' | 'rewind' | 'rest';
 
 export interface ChronoAnimDef {
   name: ChronoAnim;
@@ -1382,6 +1513,8 @@ export interface ChronoAnimDef {
   poses: (view: View) => Pose[];
   /** Only drawn for the paradox (true) or the timekeeper (false); both when left out. */
   rift?: boolean;
+  /** Frame indices to play in order, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 export const CHRONO_ANIMS: ChronoAnimDef[] = [
@@ -1392,8 +1525,14 @@ export const CHRONO_ANIMS: ChronoAnimDef[] = [
   { name: 'rewind', fps: 12, loop: false, poses: rewind, rift: true },
 ];
 
+/** The idle moment: the same poses function for both types, each playing its own order. */
+const REST_FPS = 8;
+
 /** The anims a look has. */
-export const chronoAnims = (look: ChronoLook): ChronoAnimDef[] => CHRONO_ANIMS.filter((a) => a.rift === undefined || a.rift === look.rift);
+export const chronoAnims = (look: ChronoLook): ChronoAnimDef[] => [
+  ...CHRONO_ANIMS.filter((a) => a.rift === undefined || a.rift === look.rift),
+  { name: 'rest', fps: REST_FPS, loop: false, poses: rest, order: look.rift ? PARADOX_REST_ORDER : KEEPER_REST_ORDER },
+];
 
 /** Frame index at which each action lands. */
 export const CHRONO_RELEASE = { cast: 2, field: 4, rewind: 4 } as const;
@@ -1405,11 +1544,49 @@ export interface ChronoFrame {
   canvas: PixelCanvas;
 }
 
+/**
+ * The paradox's time-echo: his figure drawn again in another pose, then laid
+ * down `dx` px aside as light only, wherever he himself isn't. Its outline
+ * burns brightest, the seams between its parts show faintly inside, and its
+ * own lights (eyes, watch) carry over dimmed, so it reads as an afterimage
+ * of him rather than a second man. The anomaly's echo is fringed in magenta.
+ */
+function stampEcho(c: PixelCanvas, pose: Pose, dx: number, k: number): void {
+  const e = new PixelCanvas(CHRONO_W, CHRONO_H).offset(BODY_X, BODY_Y);
+  drawDown(e, pose);
+  const [, hot, mid] = S.light;
+  const { w, h } = c;
+  const add = (t: number, col: RGB, a: number) => {
+    for (let q = 0; q < 3; q++) c.light[t * 4 + q] = Math.min(255, c.light[t * 4 + q] + col[q] * a);
+    c.light[t * 4 + 3] = 1;
+  };
+  const empty = (s: number) => s < 0 || s >= w * h || e.mat[s] < 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const tx = x + dx;
+      if (tx < 0 || tx >= w) continue;
+      const s = y * w + x;
+      const t = y * w + tx;
+      if (c.mat[t] >= 0) continue;
+      if (e.mat[s] >= 0) {
+        const edge = x === 0 || x === w - 1 || empty(s - 1) || empty(s + 1) || empty(s - w) || empty(s + w);
+        if (edge) {
+          add(t, hot, 0.95 * k);
+          if (S.style === 'anomaly' && empty(s + 1)) add(t, MAGENTA, 0.45 * k);
+        } else if (e.mat[s - w] !== e.mat[s]) add(t, mid, 0.6 * k);
+        else add(t, e.glow[s] > 0 ? hot : mid, e.glow[s] > 0 ? 0.6 * k : 0.28 * k);
+      }
+      if (e.light[s * 4 + 3] > 0) add(t, [e.light[s * 4], e.light[s * 4 + 1], e.light[s * 4 + 2]], 0.8 * k);
+    }
+  }
+}
+
 function drawChronoFrame(dir: Dir, pose: Pose): PixelCanvas {
   const c = new PixelCanvas(CHRONO_W, CHRONO_H).offset(BODY_X, BODY_Y);
   if (dir === 'down') drawDown(c, pose);
   else if (dir === 'up') drawUp(c, pose);
   else drawSide(c, pose);
+  if (pose.echo) stampEcho(c, pose.echo.pose, pose.echo.dx, pose.echo.k);
   if (S.style === 'anomaly') glitch(c, pose.tick, dir === 'down' || dir === 'up' ? dir : 'side');
   return dir === 'right' ? c.mirrored() : c;
 }

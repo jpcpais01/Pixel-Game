@@ -21,6 +21,7 @@ import { snap } from '../game/display';
 import { freeBox } from '../world/common';
 import { asGhost } from './ghost';
 import type { PeerInfo } from './session';
+import { rouse } from '../game/rest';
 
 /** A player's state, sent many times a second. Aim fields are absent when nothing is aimed at. */
 export interface HeroState {
@@ -150,6 +151,7 @@ export class RemotePlayer implements Hurtbox {
   /** Flash red a moment: struck. */
   flash(): void {
     this.hero.sprite.setTint(0xff8070);
+    rouse(this.hero.sprite);
     this.tint = 140;
   }
 
@@ -198,6 +200,8 @@ export class RemotePlayer implements Hurtbox {
       mx = my = 0;
       attack = special = false;
     }
+    // Their fight, their Special or their fall: no idle moment (see game/rest.ts).
+    if (attack || special || s.al || s.dn || this.ult.holding || this.ult.rooted) rouse(h.sprite);
     h.daylight = daylight;
     freeBox(this.world.walkable, h.x, h.y, 14, this.box);
     // The hero's code may touch the HUD's own readouts; they belong to this player.

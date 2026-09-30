@@ -10,6 +10,7 @@ import type { Effect, Scheme } from './Slash';
 import { clamp01, Fx, type Ink, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
+import { stand } from './rest';
 
 // The Beastkin: beastfolk who fight with the gifts of their animal (see
 // art/beast.ts). What the three share lives here: the body and its layers,
@@ -144,7 +145,7 @@ export abstract class Beast implements Hero {
     if (!this.move) {
       if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
       else if (moving) this.dir = dirOf(mx, my);
-      const key = `${this.kit.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = moving ? `${this.kit.key}_walk_${this.dir}` : stand(this.body, `${this.kit.key}_idle_${this.dir}`);
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     }
     for (const e of this.fx) e.update(dt);

@@ -13,6 +13,7 @@ import { pal, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
+import { stand } from './rest';
 
 // The Sith: the Jedi class's dark-side type, on the Jedi's rig with a
 // saberstaff and moves of his own (art/jedi.ts, the `staff` flag).
@@ -210,7 +211,7 @@ export class Sith implements Hero {
       // Fighting faces the aim, even walking backwards; otherwise the way of the walk.
       if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
       else if (moving) this.dir = dirOf(mx, my);
-      const key = `${this.kit.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = moving ? `${this.kit.key}_walk_${this.dir}` : stand(this.body, `${this.kit.key}_idle_${this.dir}`);
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else {
       const f = this.body.anims.currentFrame;

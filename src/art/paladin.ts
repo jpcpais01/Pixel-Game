@@ -133,6 +133,17 @@ export interface Pose {
   blink?: boolean;
   /** 0..1 holy light in the mace head and the shield's sun. */
   glow: number;
+  // The idle moment's extras (see `rest`), left unset by every other move.
+  /** Down on one knee (the upper body lowered by `lift` going negative). */
+  kneel?: boolean;
+  /** The head nudged by whole pixels: bowed, lifted. */
+  head?: { x: number; y: number };
+  /** The shield set down here (its centre, in body pixels) with the hand resting on its rim, instead of held. */
+  shieldAt?: { x: number; y: number };
+  /** 0..1 a prayer's soft light: the shield's sun and the Seraph's halo brighten, the wings lift. */
+  holy?: number;
+  /** Light laid over the finished figure (glints, motes), in body pixels. */
+  fx?: (c: PixelCanvas) => void;
 }
 
 export interface PaladinMeta {
@@ -510,19 +521,19 @@ function bigWing(c: PixelCanvas, rx: number, ry: number, k: number, lift: number
 }
 
 /** The halo: a ring of light floating over the head, seen at a tilt. */
-function halo(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number): void {
+function halo(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number, bright = 0): void {
   c.part();
   for (let y = Math.floor(cy - ry - 1); y <= Math.ceil(cy + ry + 1); y++) {
     for (let x = Math.floor(cx - rx - 1); x <= Math.ceil(cx + rx + 1); x++) {
       const q = Math.hypot((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry);
       if (q > 1.05 || q < 0.55) continue;
       c.px(x, y, HALO, { x: 0, y: 0.3, z: 0.95 }, { bias: y + 0.5 > cy ? 1 : 0 });
-      c.spark(x, y, S.light[1], 0.35);
+      c.spark(x, y, S.light[1], 0.35 + bright * 0.5);
     }
   }
 }
 
-function seraphHeadFront(c: PixelCanvas, cx: number, U: number, blink: boolean): void {
+function seraphHeadFront(c: PixelCanvas, cx: number, U: number, blink: boolean, bright = 0): void {
   c.part();
   c.ellipse(cx, 12.6 + U, 3.2, 2.8, SKIN);
   c.part();
@@ -550,7 +561,7 @@ function seraphHeadFront(c: PixelCanvas, cx: number, U: number, blink: boolean):
   c.shade(10, 9 + U, -1);
   c.shade(13, 8 + U, -1);
   c.px(11, 10 + U, SKIN, sphere(-0.1, -0.8));
-  halo(c, cx, 4.8 + U, 3.6, 1.3);
+  halo(c, cx, 4.8 + U, 3.6, 1.3, bright);
 }
 
 function seraphHeadBack(c: PixelCanvas, cx: number, U: number): void {
@@ -649,8 +660,9 @@ function drawDown(c: PixelCanvas, p: Pose): PaladinMeta {
     gauntlet(c, p.mace.hx, p.mace.hy);
   };
   if (S.seraph) {
-    bigWing(c, cx - 2.6, 17.2 + U, -1, p.breath + p.cape * 0.3);
-    bigWing(c, cx + 2.6, 17.2 + U, 1, p.breath - p.cape * 0.3);
+    const rise = (p.holy ?? 0) * 2;
+    bigWing(c, cx - 2.6, 17.2 + U, -1, p.breath + p.cape * 0.3 + rise);
+    bigWing(c, cx + 2.6, 17.2 + U, 1, p.breath - p.cape * 0.3 + rise);
   }
   if (p.maceBehind) macing();
 
@@ -665,10 +677,21 @@ function drawDown(c: PixelCanvas, p: Pose): PaladinMeta {
     return [x - hw, x + hw];
   }, S.cape, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.3), { bias: -2 });
 
-  leg(c, 9.8, 24 + L, 9.7, 28.4 - p.footA);
-  leg(c, 14.2, 24 + L, 14.3, 28.4 - p.footB);
-  boot(c, 9.5, 29.7 - p.footA);
-  boot(c, 14.5, 29.7 - p.footB);
+  if (p.kneel) {
+    // Down on one knee: the right knee on the ground, its shin folded away
+    // behind; the left knee up, its foot planted forward.
+    leg(c, 9.8, 24 + L, 9.2, 29.2);
+    c.part();
+    c.ellipse(9.2, 29.6, 1.7, 1.2, S.plate, { flatten: 0.8 });
+    leg(c, 14.2, 24 + L, 14.9, 27.6);
+    leg(c, 14.9, 27.6, 15.0, 29.4);
+    boot(c, 15.1, 30.4);
+  } else {
+    leg(c, 9.8, 24 + L, 9.7, 28.4 - p.footA);
+    leg(c, 14.2, 24 + L, 14.3, 28.4 - p.footB);
+    boot(c, 9.5, 29.7 - p.footA);
+    boot(c, 14.5, 29.7 - p.footB);
+  }
 
   // Breastplate: broad and rounded, catching the light at the upper left.
   const top = 15 + U;
@@ -719,8 +742,11 @@ function drawDown(c: PixelCanvas, p: Pose): PaladinMeta {
 
   // Head: face in an open helm with cheek guards, a gold crest and little wings,
   // or the Crusader's great helm.
+  // The idle moment may nudge the head (bowed in prayer): drawn through a shifted canvas.
+  const hd = p.head;
+  if (hd) c.offset(BODY_X + hd.x, BODY_Y + hd.y);
   if (S.crusader) greatHelmFront(c, cx, U, !!p.blink);
-  else if (S.seraph) seraphHeadFront(c, cx, U, !!p.blink);
+  else if (S.seraph) seraphHeadFront(c, cx, U, !!p.blink, p.holy ?? 0);
   else {
   c.part();
   c.ellipse(cx, 12.6 + U, 3.2, 2.8, SKIN);
@@ -746,16 +772,21 @@ function drawDown(c: PixelCanvas, p: Pose): PaladinMeta {
   wing(c, cx - 4.3, 8.4 + U, -2.6, -4.2);
   wing(c, cx + 4.3, 8.4 + U, 2.6, -4.2);
   }
+  if (hd) c.offset(BODY_X, BODY_Y);
 
-  // Shield arm (character's left, screen right), then the shield before it.
+  // Shield arm (character's left, screen right), then the shield before it;
+  // or, set down, the shield first and the hand resting on its rim.
   const s = { x: p.shield.x, y: p.shield.y + U };
+  const shine = Math.max(p.glow, p.holy ?? 0);
+  if (p.shieldAt) shieldFront(c, p.shieldAt.x, p.shieldAt.y, 3.7, shine);
   limb(c, 16.8, 16.9 + U, s.x, s.y);
   gauntlet(c, s.x, s.y);
   pauldron(c, 17.1, 16.3 + U);
-  shieldFront(c, s.x + 0.5, s.y - 0.5, 3.7, p.glow);
+  if (!p.shieldAt) shieldFront(c, s.x + 0.5, s.y - 0.5, 3.7, shine);
 
   if (!p.maceBehind) macing();
   pauldron(c, 6.9, 16.3 + U);
+  p.fx?.(c);
   return { headX: head.x, headY: head.y, glow: p.glow };
 }
 
@@ -1103,13 +1134,125 @@ function consecrate(view: View): Pose[] {
   });
 }
 
-export type PaladinAnim = 'idle' | 'walk' | 'smite' | 'consecrate';
+// ---------------------------------------------------------------------------
+// The idle moment (`rest`): a short performance when the hero has stood still
+// a while, drawn facing the viewer only, starting and ending on the idle's
+// first frame. The Templar kneels behind his shield in a short prayer while
+// a soft light gathers round him; the Crusader raises his warhammer to the
+// sky, where the sun flashes on it, and shoulders it before he lets it down.
+// Both are eleven frames played to the same beat (every look shares one
+// animation list), so they share REST_ORDER.
+
+const REST_FPS = 7;
+/**
+ * Frame indices in play order: stand, three frames into it, a held pose, the
+ * light (or the glint) in three beats, a long hold, a closing beat, two
+ * frames out, stand.
+ */
+const REST_ORDER = [0, 1, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 10, 0] as const;
+
+/** A four-pointed twinkle at (x, y) in the look's light, its rays `ray` pixels long. */
+function twinkle(c: PixelCanvas, x: number, y: number, a: number, ray = 2): void {
+  c.spark(x, y, S.light[0], a);
+  for (let i = 1; i <= ray; i++) {
+    const k = a * (i === 1 ? 0.8 : i === 2 ? 0.45 : 0.25);
+    for (const [dx, dy] of [[i, 0], [-i, 0], [0, i], [0, -i]]) c.spark(x + dx, y + dy, S.light[1], k);
+  }
+  if (ray >= 2) for (const [dx, dy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) c.spark(x + dx, y + dy, S.light[2], a * 0.3);
+}
+
+/** Motes of light drifting up round him as he prays, `t` how far they have risen (0..1). */
+const MOTES: [number, number][] = [[3, 29], [21, 28], [5.5, 23], [19, 22], [1.5, 25], [22.5, 25], [8, 19], [16.5, 18]];
+function motes(c: PixelCanvas, t: number, a: number): void {
+  MOTES.forEach(([x, y], i) => {
+    const rise = (t * 6 + (i % 3) * 1.5) % 7;
+    const fade = Math.min(1, a * 1.3 * (1 - rise / 9));
+    c.spark(x + (i % 2 ? 0.5 : -0.5) * Math.sin(rise), y - rise, i % 2 ? S.light[1] : S.light[2], fade);
+  });
+}
+
+/** A copy of `from` with some things changed (the mace merged, not replaced). */
+function vary(from: Pose, patch: Partial<Omit<Pose, 'mace'>> & { mace?: Partial<Mace> } = {}): Pose {
+  const { mace, ...rest } = patch;
+  return { ...from, shield: { ...from.shield }, ...rest, mace: { ...from.mace, ...mace } };
+}
+
+/**
+ * The Templar: steps in, sinks onto one knee with his shield set before him
+ * and his mace grounded at his side, bows his head, and a soft holy light
+ * gathers (motes rising, the shield's sun and the Seraph's halo brightening,
+ * her wings lifting); then he looks up and rises.
+ */
+function templarRest(): Pose[] {
+  const stand = idle('down')[0];
+  // Kneeling lowers him four pixels; the shield stands on the ground before him.
+  const kneel = vary(stand, {
+    lift: -4,
+    kneel: true,
+    shieldAt: { x: 13.3, y: 26 },
+    shield: { x: 15.4, y: 17.3 },
+    mace: { hx: 5.3, hy: 22.3, angle: 180 },
+  });
+  const bow = vary(kneel, { head: { x: 0, y: 1 }, blink: true });
+  return [
+    stand,
+    vary(stand, { breath: 1, shield: { x: 16.6, y: 21 }, mace: { angle: 184 }, cape: -1 }),
+    vary(stand, { lift: -2, shield: { x: 15.6, y: 20.4 }, mace: { hx: 5.2, hy: 23.5, angle: 180 }, cape: 1 }),
+    kneel,
+    bow,
+    vary(bow, { holy: 0.35, fx: (c) => motes(c, 0, 0.5) }),
+    vary(bow, { holy: 0.7, fx: (c) => motes(c, 0.33, 0.75) }),
+    // At its height the sun on the shield (its boss at 13, 25) flares.
+    vary(bow, { holy: 1, fx: (c) => { motes(c, 0.66, 1); twinkle(c, 13, 25, 0.9, 2); } }),
+    vary(kneel, { holy: 0.3, fx: (c) => motes(c, 1, 0.4) }),
+    vary(stand, { lift: -2, shield: { x: 16.2, y: 20.6 }, mace: { hx: 5.2, hy: 23.5, angle: 182 }, cape: 1 }),
+    vary(stand, { breath: 1, cape: -1 }),
+  ];
+}
+
+/**
+ * The Crusader: gathers himself, raises his warhammer high to the sky where
+ * the sun flashes on it, brings it down to rest across his shoulder a while,
+ * then swings it back down to his side.
+ */
+function crusaderRest(): Pose[] {
+  const stand = idle('down')[0];
+  const high = { hx: 5, hy: 11, angle: -12 };
+  // Where the light catches: the top corner of the hammer's head, raised high.
+  const corner = () => {
+    const a = high.angle * RAD;
+    const along = LEN + 1.6;
+    return { x: high.hx + Math.sin(a) * along - Math.cos(a) * 3, y: high.hy - Math.cos(a) * along - Math.sin(a) * 3 };
+  };
+  const g = corner();
+  const shoulder = vary(stand, { mace: { hx: 9.5, hy: 20, angle: -44 } });
+  return [
+    stand,
+    vary(stand, { breath: 1, mace: { hx: 5.5, hy: 23.5, angle: 214 }, cape: -1 }),
+    vary(stand, { mace: { hx: 4.5, hy: 16, angle: -62 }, cape: -1 }),
+    vary(stand, { lift: 1, mace: high, cape: 1 }),
+    vary(stand, { lift: 1, mace: high, fx: (c) => twinkle(c, g.x, g.y, 1, 3) }),
+    vary(stand, { lift: 1, mace: high, fx: (c) => twinkle(c, g.x, g.y, 0.5, 1) }),
+    vary(stand, { mace: { hx: 7.5, hy: 16, angle: -24 }, cape: -1 }),
+    vary(shoulder, { breath: 1, mace: { hy: 20.5 }, cape: 1 }),
+    vary(shoulder, { blink: true }),
+    vary(stand, { mace: { hx: 6, hy: 20, angle: -115 }, cape: -1 }),
+    vary(stand, { breath: 1, mace: { hx: 5, hy: 23, angle: 200 }, cape: 1 }),
+  ];
+}
+
+/** The idle moment's poses, facing the viewer only; other views have none. */
+const rest = (view: View): Pose[] => (view !== 'down' ? [] : S.crusader ? crusaderRest() : templarRest());
+
+export type PaladinAnim = 'idle' | 'walk' | 'smite' | 'consecrate' | 'rest';
 
 export interface PaladinAnimDef {
   name: PaladinAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => Pose[];
+  /** Frame indices to play in order, holds repeated (the idle moment's). */
+  order?: readonly number[];
 }
 
 export const PALADIN_ANIMS: PaladinAnimDef[] = [
@@ -1117,6 +1260,7 @@ export const PALADIN_ANIMS: PaladinAnimDef[] = [
   { name: 'walk', fps: 9, loop: true, poses: walk },
   { name: 'smite', fps: 15, loop: false, poses: smite },
   { name: 'consecrate', fps: 10, loop: false, poses: consecrate },
+  { name: 'rest', fps: REST_FPS, loop: false, poses: rest, order: REST_ORDER },
 ];
 
 /** Frame index at which the smite lands. */

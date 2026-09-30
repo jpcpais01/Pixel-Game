@@ -9,6 +9,7 @@ import { Vitals } from './combat';
 import type { Aim, Hero } from './characters';
 import { ARCANE_STYLE, ASTRAL_STYLE, VOID_STYLE, type SpellStyle } from './spells';
 import { HERO_STATS } from './stats';
+import { stand } from './rest';
 
 export const MAX_HP = HERO_STATS['wizard.arcane'].hp;
 const SPEED = HERO_STATS['wizard.arcane'].speed; // world px / second
@@ -166,7 +167,7 @@ export class Wizard implements Hero {
       // Fighting faces the aim, even walking backwards; otherwise the way of the walk.
       if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
       else if (moving) this.dir = dirOf(mx, my);
-      const key = `${this.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = moving ? `${this.key}_walk_${this.dir}` : stand(this.body, `${this.key}_idle_${this.dir}`);
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else if (this.state === 'cast') {
       if (!this.released && this.body.anims.currentFrame && this.body.anims.currentFrame.index - 1 >= CAST_RELEASE) {
