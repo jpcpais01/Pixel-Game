@@ -411,7 +411,7 @@ export const HILT_DARK: Material = {
 };
 
 /** A saber blade: a white-hot core and the coloured light around it. Blades cast no outline. */
-const blade = (core: string[], edge: string[]): { core: Material; edge: Material } => ({
+export const blade = (core: string[], edge: string[]): { core: Material; edge: Material } => ({
   core: { ramp: ramp(...core), outline: INK, emissive: 1, noAO: true, noOutline: true },
   edge: { ramp: ramp(...edge), outline: INK, emissive: 1, noAO: true, noOutline: true },
 });

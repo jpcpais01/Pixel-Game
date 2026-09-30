@@ -41,6 +41,8 @@ import { BENFICA_KIT, EAGLE_KIT } from '../Eagle';
 import { LION_KIT, SPORTING_KIT } from '../Lion';
 import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
+import { DarkDominion } from './sith';
+import { SITH_KIT, WARLORD_KIT } from '../Sith';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 
@@ -129,6 +131,16 @@ const ULTS: Record<string, UltDef> = {
     pal: pal(0xffffff, 0xa8e0ff, 0x4aa6ff, 0x2a5cd0, 0x6fb8ff),
     icon: icons.saberCycloneIcon,
     cast: (c) => c.world.addEffect(new SaberCyclone(c.world, c)),
+  },
+  'jedi:sith': {
+    name: 'Dark Dominion',
+    cost: 70,
+    windup: 600,
+    aim: 'spot',
+    range: 100,
+    pal: SITH_KIT.dominion,
+    icon: icons.dominionIcon,
+    cast: (c) => c.world.addEffect(new DarkDominion(c.world, c)),
   },
   'fighter:brawler': {
     name: 'Dragon Rush',
@@ -421,7 +433,6 @@ const ULTS: Record<string, UltDef> = {
 const SKINS: Record<string, UltSkin> = {
   'wizard:void': { name: 'Event Horizon', pal: pal(0xfff0ff, 0xffa8f4, 0xd05cf0, 0x6a2fd0, 0xc47cff) },
   'warrior:jade': { name: 'Jade Heavensblade', pal: pal(0xf6fff0, 0xb6ffb0, 0x3fd98a, 0x16806a, 0x70f0b0) },
-  'jedi:sith': { name: 'Crimson Cyclone', pal: pal(0xfff6f2, 0xff7a70, 0xf0283a, 0x8a1020, 0xff4a4a) },
   'alchemist:witch': { name: 'Hex Storm', pal: toxPal(HEX_TOX) },
   'fighter:lucha': { name: 'Flying Tiger', pal: pal(0xfff8e8, 0xffd35c, 0xff4fa0, 0x9a1c6a, 0xff80b8) },
   'fighter:champ': { name: "Can't See Me", pal: pal(0xf8ffe8, 0x9cff5a, 0xff8a2a, 0x1c7a1a, 0x8cf060) },
@@ -458,6 +469,8 @@ const SKINS: Record<string, UltSkin> = {
   'paladin:seraph': { name: 'Choir of Angels', pal: pal(0xffffff, 0xfff0d0, 0xffc890, 0xff8ab8, 0xffd8b0) },
   'paladin:oathbreaker': { name: 'Black Sun', pal: pal(0xf6eeff, 0xd8b0ff, 0xa060ff, 0x4a1a8a, 0xb070ff), type: 'crusader' },
   'jedi:guard': { name: 'Sentinel Storm', pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
+  'jedi:master': { name: 'Emerald Tempest', pal: pal(0xf4fff4, 0x9af4a8, 0x2ed058, 0x0e7a32, 0x5aff7a) },
+  'jedi:warlord': { name: 'Blood Dominion', pal: WARLORD_KIT.dominion, type: 'sith' },
   'samurai:kitsune': { name: 'Nine-Tailed Descent', pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { name: 'Thousand Moons', pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
   'druid:autumn': { name: 'Wrath of the Fall', pal: AUTUMN_MAGIC.pal },
