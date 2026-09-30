@@ -26,6 +26,15 @@ const CSS = `
 #online .sep { height: 2px; background: #2a2150; margin: 2px 0; }
 `;
 
+/** The online panels' look (this one and the Home's friends panel, ui/homeFriends.ts), added to the page once. */
+export function onlineStyles(): void {
+  if (document.getElementById('online-css')) return;
+  const style = document.createElement('style');
+  style.id = 'online-css';
+  style.textContent = CSS;
+  document.head.append(style);
+}
+
 /**
  * Show the panel. `character` is the class picked on the hero select;
  * `onStart` gets the room's arena once in a room (a friend's may differ from
@@ -33,12 +42,7 @@ const CSS = `
  */
 export function openOnlineForm(arena: ArenaDef, character: string, onStart: (room: Joined) => void, onClose: () => void): void {
   if (document.getElementById('online')) return;
-  if (!document.getElementById('online-css')) {
-    const style = document.createElement('style');
-    style.id = 'online-css';
-    style.textContent = CSS;
-    document.head.append(style);
-  }
+  onlineStyles();
   const ch = characterById(character);
   const duel = !!arena.duel;
   const root = document.createElement('div');

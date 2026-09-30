@@ -10,6 +10,7 @@ import { account, cloudReady, logOut, onAccount } from '../game/cloud';
 import { openAccountForm } from '../ui/accountForm';
 import { fpsBottom } from './FpsScene';
 import { activeSeason, daysLeft } from '../game/season';
+import { lastHero } from '../game/skins';
 
 /** How often the glint sweeps the title, and how long each of its frames shows. */
 const SHIMMER_EVERY = 5200;
@@ -44,6 +45,8 @@ export class HomeScene extends Phaser.Scene {
   private titleFrame = 0;
   private start!: PixelButton;
   private inventory!: PixelButton;
+  /** The player's own place to build (see world/Home.ts). */
+  private homeBtn!: PixelButton;
   private shop!: PixelButton;
   /** The player's gems, beside the Shop button. */
   private gemIcon!: Phaser.GameObjects.Image;
@@ -80,6 +83,7 @@ export class HomeScene extends Phaser.Scene {
     this.title = this.add.image(0, 0, 'home_title', 0).setOrigin(0);
     this.sparkles = this.sparkleSpots.map(() => this.add.image(0, 0, 'home_sparkle').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0));
     this.start = new PixelButton(this, 'Start Game', 84, 22, BUTTON_GOLD, 'start', () => this.openSelect());
+    this.homeBtn = new PixelButton(this, 'Home', 84, 18, BUTTON_PLAIN, 'myhome', () => this.openHome());
     this.inventory = new PixelButton(this, 'Inventory', 84, 18, BUTTON_PLAIN, 'inventory', () => this.openInventory());
     this.shop = new PixelButton(this, 'Shop', 84, 18, BUTTON_GEM, 'shop', () => this.openShop()).setIcon('gem_s');
     this.gemIcon = this.add.image(0, 0, 'gem_s').setOrigin(0);
@@ -88,7 +92,7 @@ export class HomeScene extends Phaser.Scene {
     this.accountBtn.setVisible(cloudReady());
     this.who = pixelText(this, 0, 0, '', 0x9a90c8);
     this.arrows = [pixelText(this, 0, 0, '>', 0xf4cf6a), pixelText(this, 0, 0, '<', 0xf4cf6a)];
-    this.menu.add([this.titleGlow, this.title, ...this.sparkles, this.start, this.inventory, this.shop, this.gemIcon, this.gemText, this.accountBtn, this.who, ...this.arrows]);
+    this.menu.add([this.titleGlow, this.title, ...this.sparkles, this.start, this.homeBtn, this.inventory, this.shop, this.gemIcon, this.gemText, this.accountBtn, this.who, ...this.arrows]);
     const season = activeSeason();
     this.candyIcon = this.candyText = null;
     this.seasonText = [];
@@ -187,6 +191,7 @@ export class HomeScene extends Phaser.Scene {
   showMenu(open: boolean): void {
     this.menuOpen = open;
     this.start.setEnabled(open);
+    this.homeBtn.setEnabled(open);
     this.inventory.setEnabled(open);
     this.shop.setEnabled(open);
     this.accountBtn.setEnabled(open);
@@ -204,6 +209,21 @@ export class HomeScene extends Phaser.Scene {
     if (!this.menuOpen) return;
     this.showMenu(false);
     this.scene.launch('select');
+  }
+
+  /** Straight to the player's Home with the hero they played last: no hero or arena select on the way. */
+  private openHome(): void {
+    if (!this.menuOpen) return;
+    this.showMenu(false);
+    const character = lastHero() ?? undefined;
+    this.cameras.main.fadeOut(450, 7, 8, 13);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.stop('home');
+      this.scene.launch('shade');
+      this.scene.launch('ui', { character });
+      this.scene.launch('pause');
+      this.scene.start('world', { character, arena: 'home' });
+    });
   }
 
   private openShop(): void {
@@ -260,7 +280,7 @@ export class HomeScene extends Phaser.Scene {
     this.backdrop.layout(vw, vh, this.z);
 
     // The buttons and the account line under them, top to bottom.
-    const stack = this.start.boxH + 6 + this.inventory.boxH + 5 + this.shop.boxH + 5 + this.accountBtn.boxH + (this.who.text ? 4 + this.who.height : 0);
+    const stack = this.start.boxH + 6 + this.homeBtn.boxH + 5 + this.inventory.boxH + 5 + this.shop.boxH + 5 + this.accountBtn.boxH + (this.who.text ? 4 + this.who.height : 0);
     const bottom = vh - 6;
     // Title: 2x when it fits across with a margin and the buttons still fit under it; kept clear of the FPS counter.
     const top = Math.ceil(fpsBottom() / this.z) + 6;
@@ -276,7 +296,8 @@ export class HomeScene extends Phaser.Scene {
     // Buttons from about halfway down, but never so low the account line leaves the screen.
     const by = Math.max(this.titleY + this.title.displayHeight + 10, Math.min(Math.round(vh * 0.52), bottom - stack));
     this.start.place((vw - this.start.boxW) / 2, by);
-    this.inventory.place((vw - this.inventory.boxW) / 2, by + this.start.boxH + 6);
+    this.homeBtn.place((vw - this.homeBtn.boxW) / 2, by + this.start.boxH + 6);
+    this.inventory.place((vw - this.inventory.boxW) / 2, this.homeBtn.y + this.homeBtn.boxH + 5);
     this.shop.place((vw - this.shop.boxW) / 2, this.inventory.y + this.inventory.boxH + 5);
     this.gemIcon.setPosition(this.shop.x + this.shop.boxW + 6, this.shop.y + Math.round((this.shop.boxH - this.gemIcon.height) / 2));
     this.gemText.setPosition(this.gemIcon.x + this.gemIcon.width + 2, this.shop.y + Math.round((this.shop.boxH - this.gemText.height) / 2));

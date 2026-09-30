@@ -23,6 +23,7 @@ import { ELEMENTINHO_HOME, TEMPLE_H, TEMPLE_SPAWN, TEMPLE_SPAWNS, TEMPLE_W, temp
 import { QUEEN_HOME, SPIRIT_H, SPIRIT_SPAWN, SPIRIT_SPAWNS, SPIRIT_W, spiritWalkable } from './spiritLayout';
 import { COLUMN_BASE, COLUMN_H, ISLAND_X, ISLAND_Y } from '../art/island';
 import { COLUMNS, ISLE_H, ISLE_SPAWN, ISLE_W, RING_CX, RING_CY, islandScenery, islandWalkable } from './islandLayout';
+import { HOME_ARENA } from './homeGround';
 import { GARDEN_GROUND, GARDEN_SPAWN, GARDEN_SPAWNS, POOL, gardenLayout, gardenScenery, gardenWalkable } from './sunken';
 
 /** A sprite shown in the arena's window on its select card (world coordinates). */
@@ -437,6 +438,8 @@ export function warmArenasInBackground(scene: Phaser.Scene, budget: number): boo
 }
 
 export function arenaById(id: string | undefined): ArenaDef {
+  // The Home isn't on the select, but friends' invites and the Home button lead there.
+  if (id === HOME_ARENA.id) return HOME_ARENA;
   return ARENAS.find((a) => a.id === id) ?? ARENAS[0];
 }
 

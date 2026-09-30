@@ -7,6 +7,8 @@ import { HOTBAR_SIZE, inventory } from '../game/items';
 import { heroBuffs } from '../game/buffs';
 import { GearHud } from '../ui/gearHud';
 import { KeeperHud } from '../ui/keeperHud';
+import { BuildHud } from '../ui/buildHud';
+import { build } from '../game/build';
 import { energy } from '../game/energy';
 import { ensureUltIcons, ultFor } from '../game/ultimate';
 import type { Pal } from '../game/ultimate/ink';
@@ -81,6 +83,12 @@ export class UIScene extends Phaser.Scene {
   private gearHud!: GearHud;
   /** A Rune Temple keeper's counter, when the hero talks to one. */
   private keeperHud!: KeeperHud;
+  /** Build mode in a Home: its buttons and tray. */
+  private buildHud!: BuildHud;
+  /** The pointer building on the world, while build mode is on. */
+  private buildPointer: number | null = null;
+  /** The battle buttons and hotbar are hidden while building. */
+  private building = false;
   /** The critter net's touch button: it rises into view while a critter is in reach. */
   private netButton!: Phaser.GameObjects.Graphics;
   private netIcon!: Phaser.GameObjects.Image;
@@ -200,7 +208,8 @@ export class UIScene extends Phaser.Scene {
   private get restPos(): Phaser.Math.Vector2 {
     const R = this.R;
     // Inset from the edge by 70% of the joystick's diameter beyond the original spot.
-    return new Phaser.Math.Vector2(R * (1.6 + 0.7 * 2), this.scale.height - R * 1.45);
+    // While building, it rests above the build tray.
+    return new Phaser.Math.Vector2(R * (1.6 + 0.7 * 2), this.scale.height - R * 1.45 - (this.buildHud?.height ?? 0));
   }
 
   create(data: { character?: string }): void {
@@ -242,6 +251,9 @@ export class UIScene extends Phaser.Scene {
     this.buffIcons = [];
     this.gearHud = new GearHud(this, () => this.releaseAll());
     this.keeperHud = new KeeperHud(this, () => this.releaseAll());
+    this.buildHud = new BuildHud(this, () => this.releaseAll());
+    this.buildPointer = null;
+    this.building = false;
     this.netButton = this.add.graphics();
     this.netIcon = this.add.image(0, 0, 'icon_net').setVisible(false);
     this.netShown = this.netPressed = 0;
@@ -256,10 +268,23 @@ export class UIScene extends Phaser.Scene {
         // A keeper's counter is open: it takes every press.
       } else if (this.gearHud.pointerDown(p)) {
         // The bag's button, or a tap while the bag is open.
+      } else if (this.buildHud.pointerDown(p)) {
+        // The build and friends buttons, or the build tray.
       } else if (daynight.enabled && Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width + 8 * D, tr.height + 8 * D), p.x, p.y)) {
         // Tap a side to pick it; tapping the active side flips it.
         const onSun = p.x < tr.centerX;
         daynight.set(onSun === (daynight.target < 0.5) ? onSun : !onSun);
+      } else if (build.on) {
+        // Building: a touch by the joystick still walks; any other press builds (a right click erases).
+        if (p.wasTouch && this.stickPointer === null && Phaser.Math.Distance.Between(p.x, p.y, this.restPos.x, this.restPos.y) < this.R * 1.3) {
+          this.stickPointer = p.id;
+          this.base.set(p.x, p.y);
+          this.knob.set(p.x, p.y);
+        } else if (this.buildPointer === null) {
+          this.buildPointer = p.id;
+          Object.assign(build.pointer, { x: p.x, y: p.y, down: true, erase: !p.wasTouch && p.rightButtonDown(), over: true });
+          build.pressed = true;
+        }
       } else if (p.wasTouch && this.netShown > 0.5 && Phaser.Math.Distance.Between(p.x, p.y, this.netPos.x, this.netPos.y) < this.R * 0.7) {
         controls.netTap = true;
         this.netPressed = 1;
@@ -294,6 +319,13 @@ export class UIScene extends Phaser.Scene {
       if (!p.wasTouch) controls.mouse = true;
       this.gearHud.pointerMove(p);
       this.keeperHud.pointerMove(p);
+      this.buildHud.pointerMove(p);
+      // The build cursor follows the finger building, or the mouse hovering.
+      if (build.on && (p.id === this.buildPointer || (this.buildPointer === null && !p.wasTouch))) {
+        build.pointer.x = p.x;
+        build.pointer.y = p.y;
+        build.pointer.over = true;
+      }
       if (p.id === this.attackPad.pointer) this.dragPad(this.attackPad, p, false);
       if (p.id === this.beamPad.pointer) this.dragPad(this.beamPad, p, true);
       if (p.id === this.ultPad.pointer) this.dragUlt(p);
@@ -311,6 +343,14 @@ export class UIScene extends Phaser.Scene {
     const release = (p: Phaser.Input.Pointer) => {
       this.gearHud.pointerUp(p);
       this.keeperHud.pointerUp(p);
+      this.buildHud.pointerUp(p);
+      if (p.id === this.buildPointer) {
+        this.buildPointer = null;
+        build.pointer.down = false;
+        // A finger lifted leaves no cursor behind; the mouse still hovers.
+        build.pointer.over = !p.wasTouch;
+        build.released = true;
+      }
       if (p.id === this.stickPointer) {
         this.stickPointer = null;
         controls.moveX = 0;
@@ -410,6 +450,11 @@ export class UIScene extends Phaser.Scene {
 
   private releaseAll(): void {
     this.stickPointer = this.clickPointer = this.rightPointer = null;
+    if (this.buildPointer !== null) {
+      this.buildPointer = null;
+      build.pointer.down = false;
+      build.released = true;
+    }
     this.attackPad = UIScene.pad();
     this.beamPad = UIScene.pad();
     this.ultPad = UIScene.pad();
@@ -427,6 +472,13 @@ export class UIScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.gearHud.update(delta);
     this.keeperHud.update(delta);
+    this.buildHud.update(delta);
+    if (!build.on) this.buildPointer = null;
+    // The joystick's resting spot moves with the build tray.
+    if (this.stickPointer === null) {
+      this.base.copy(this.restPos);
+      this.knob.copy(this.restPos);
+    }
     this.holdPads();
     const R = this.R;
     const active = this.stickPointer !== null;
@@ -519,6 +571,19 @@ export class UIScene extends Phaser.Scene {
       .setAlpha(1 - d * 0.45);
     this.drawBuffs(tr);
     this.drawHotbar();
+    this.hideForBuilding();
+  }
+
+  /** While building, the battle buttons and the hotbar make way for the build tray. */
+  private hideForBuilding(): void {
+    const on = build.on;
+    if (!on && !this.building) return;
+    // These are shown by their draws each frame, so they only need hiding.
+    const drawn = [this.ultKey, this.netIcon, ...this.slotIcons];
+    const fixed = [this.button, this.icon, this.beamButton, this.beamIcon, this.ultButton, this.ultIcon, this.bar, this.netButton, ...this.slotKeys, ...this.slotCounts];
+    if (on) for (const o of [...drawn, ...fixed]) o.setVisible(false);
+    else for (const o of fixed) o.setVisible(true);
+    this.building = on;
   }
 
   /** Nine slots: an item's icon and count, its key in the corner, a dark wipe while it cools down. */
