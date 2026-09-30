@@ -30,6 +30,7 @@ import { GEAR, RARITY, gear, gearById, type GearDef, type Rarity } from '../game
 import { collection } from '../game/collection';
 import { heroBuffs } from '../game/buffs';
 import { LootFlare } from '../game/Pickup';
+import { setCritterOmen } from '../game/critters';
 import {
   IMP_TINTS,
   MERCHANT_OY,
@@ -73,6 +74,8 @@ const SNAP_EVERY = 100;
 /** A player who isn't the host ends an omen by itself this long after it should have, if the host never says. */
 const GUEST_GRACE = 8000;
 const LIGHTS_OFF = 0;
+/** Omens that bring out critters of their own (see game/critters.ts). */
+const CRITTER_OMEN: Partial<Record<OmenId, string>> = { blood: 'blood-moon', golden: 'golden-hour' };
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
 const randInt = (a: number, b: number): number => a + Math.floor(Math.random() * (b - a + 1));
@@ -259,6 +262,7 @@ export class Omens {
                     ? new Merchant(this, x, y, (m.g as string) ?? '')
                     : new ShrineOfUnity(this, x, y);
     omenHud.current = def;
+    setCritterOmen(CRITTER_OMEN[def.id] ?? null);
     if (!m.e) {
       omenHud.calls.push({ title: def.name, sub: def.line, tint: def.tint, icon: def.id });
       sound.omen(def.mood);
@@ -274,6 +278,7 @@ export class Omens {
     run.end(quiet);
     for (const b of [...this.waves.keys()]) this.dropWave(b, quiet);
     Object.assign(omenMods, NEUTRAL_OMEN);
+    setCritterOmen(null);
     Object.assign(omenHud, { current: null, trade: null, bar: 0, label: '', buy: false });
     if (this.leads) {
       this.send({ t: 'o-' });
