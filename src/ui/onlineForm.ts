@@ -99,6 +99,13 @@ export function openOnlineForm(arena: ArenaDef, character: string, onStart: (roo
     say('Connecting... the server may take a moment to wake up.');
     try {
       const room = await session.open(req, me);
+      if (room.arena === 'auto') {
+        // An Auto Battle room is joined from Auto Battle, not the arena select.
+        session.close();
+        say("That code is an Auto Battle room: join it from Auto Battle.", true);
+        setBusy(false);
+        return;
+      }
       root.remove();
       onStart(room);
     } catch (ex) {
