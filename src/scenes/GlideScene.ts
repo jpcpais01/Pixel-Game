@@ -76,8 +76,16 @@ const COUNT_MS = 750;
 const RUN_SPEED = 80;
 /** The longest step the flight takes at once (s): longer frames are split. */
 const MAX_STEP = 1 / 60;
-/** How near a ring's middle counts as through it, across and up. */
+/**
+ * How near a ring's middle the pilot's body must pass, as seen on screen, to count as through it:
+ * the hoop's hole and a little, since players aim by eye.
+ */
 const RING_TOL = { gold: 12, big: 16 };
+/** The pilot's body as drawn, from this far above the feet (the flight's x, y - z) down to this far. */
+const PILOT_TOP = 26;
+const PILOT_FOOT = 2;
+/** A ring can be caught while the glider is within this far of it down the course, before or past. */
+const RING_DEPTH = 34;
 /** Rings in a row, each within this long of the last, climb the chime. */
 const STREAK_MS = 3500;
 /** How long a fall into the clouds takes before rising at the last beacon. */
@@ -756,9 +764,6 @@ export class GlideScene extends Phaser.Scene {
     const steps = Math.ceil(dt / 1000 / MAX_STEP);
     const h = dt / 1000 / steps;
     for (let i = 0; i < steps && !this.landed && this.fallT <= 0; i++) {
-      const px = f.x;
-      const py = f.y;
-      const pz = f.z;
       for (const e of stepFlight(f, inp, h)) {
         if (e.kind === 'land') this.land();
         else if (e.kind === 'hop') {
@@ -773,7 +778,7 @@ export class GlideScene extends Phaser.Scene {
           this.sparks.emitParticleAt(f.x, f.y - f.z - 8, 8);
         }
       }
-      this.checkRings(px, py, pz, time);
+      this.checkRings(time);
     }
     this.bonkT -= dt;
 
@@ -828,18 +833,22 @@ export class GlideScene extends Phaser.Scene {
     };
   }
 
-  private checkRings(px: number, py: number, pz: number, time: number): void {
+  private checkRings(time: number): void {
     const f = this.f;
-    while (this.ringNext < this.rings.length && this.rings[this.ringNext].ring.y <= py) this.ringNext++;
+    // Screen space, not the ring's exact spot in the air: height and distance down the course
+    // look the same from above, so a pilot drawn inside the hoop has to count as through it.
+    const feet = f.y - f.z;
+    while (this.ringNext < this.rings.length && this.rings[this.ringNext].ring.y < f.y - RING_DEPTH) this.ringNext++;
     for (let i = this.ringNext; i < this.rings.length; i++) {
       const r = this.rings[i];
-      if (r.ring.y > f.y) break;
-      if (r.passed || f.y === py) continue;
-      const k = (r.ring.y - py) / (f.y - py);
-      const cx = px + (f.x - px) * k;
-      const cz = pz + (f.z - pz) * k;
+      if (r.ring.y > f.y + RING_DEPTH) break;
+      if (r.passed) continue;
       const tol = r.ring.big ? RING_TOL.big : RING_TOL.gold;
-      if (Math.abs(cx - r.ring.x) < tol && Math.abs(cz - r.ring.z) < tol) this.passRing(r, time);
+      const ry = r.ring.y - r.ring.z;
+      const dx = f.x - r.ring.x;
+      // The nearest point of the pilot's body to the ring's middle.
+      const dy = Math.max(feet - PILOT_TOP, Math.min(feet - PILOT_FOOT, ry)) - ry;
+      if (dx * dx + dy * dy < tol * tol) this.passRing(r, time);
     }
   }
 
