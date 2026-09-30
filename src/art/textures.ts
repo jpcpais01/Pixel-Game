@@ -33,9 +33,9 @@ import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
 import { GEAR } from '../game/gear';
 import { ARROW, BEAM_H, BEAM_W, LRAY_H, LRAY_W, LRING_H, LRING_W, RUNE_H, RUNE_W, TWINKLE, lootArrow, lootBeam, lootRay, lootRing, lootRunes, lootTwinkle } from './loot';
 import { registerInventoryArt } from './invTiles';
-import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, GODRAY_H, GODRAY_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, PILLAR_H as RS_PILLAR_H, PILLAR_W as RS_PILLAR_W, RUNESTONE_H, RUNESTONE_W, STATION_FRAMES, TEMPLE_ART_H, TEMPLE_ART_W, dustCrucible, godRay, runeAnvil, runesmith, runestone, sanctumArt, sanctumExterior, sanctumPillar, unmaker } from './sanctum';
-import { ROOM_H, ROOM_W } from '../world/sanctumLayout';
-import { chapelArt, chapelExterior } from './chapel';
+import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, GODRAY_H, GODRAY_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, RUNESTONE_H, RUNESTONE_W, STATION_FRAMES, dustCrucible, godRay, runeAnvil, runesmith, runestone, unmaker } from './sanctum';
+import { templeExterior, templeHall } from './runeHall';
+import { TP_EXT_H, TP_EXT_W, TP_TEX_H, TP_W } from '../world/sanctumLayout';
 import {
   BELLOWS_H,
   BELLOWS_W,
@@ -65,7 +65,6 @@ import {
 } from './forge';
 import { FG_EXT_H, FG_EXT_W, FG_H, FG_W } from '../world/forgeLayout';
 import { matIcon } from '../game/forge';
-import { CH_EXT_H, CH_EXT_W, CH_H, CH_W } from '../world/chapelLayout';
 import { AFONSO_TONES, decreeIcon, KING_TONES } from './king';
 import { JADE_LOOK } from './warrior';
 import { hollowSwordIcon, lanternWhirlIcon } from './headless';
@@ -901,16 +900,16 @@ export const ARENA_JOBS: Record<ArenaJob, { done: string; steps: (scene: Phaser.
 };
 
 /**
- * Build the Rune Temple's textures (the temple outside, the room inside, its
- * props and keepers) the first time the clearing is entered.
+ * Build the Rune Temple's textures (its hall and steps, the temple over them,
+ * the runestones, the light through its windows, the stations and keepers)
+ * the first time the clearing is entered.
  */
 export function warmSanctum(scene: Phaser.Scene): void {
-  if (scene.textures.exists('rs_room')) return;
-  const job = sanctumArt();
-  let step = job.next();
-  while (!step.done) step = job.next();
-  const art = step.value;
-  register(scene, 'rs_temple', pack(frameList([sanctumExterior()], 't'), TEMPLE_ART_W, TEMPLE_ART_H), TEMPLE_ART_W, TEMPLE_ART_H);
+  if (scene.textures.exists('rs_hall')) return;
+  const hall = templeHall();
+  scene.textures.addCanvas('rs_hall', toCanvas(TP_W, TP_TEX_H, hall.diffuse))!.setDataSource(toCanvas(TP_W, TP_TEX_H, hall.normal));
+  scene.textures.addCanvas('rs_hall_e', toCanvas(TP_W, TP_TEX_H, hall.emissive));
+  register(scene, 'rs_temple', pack(frameList([templeExterior()], 't'), TP_EXT_W, TP_EXT_H), TP_EXT_W, TP_EXT_H);
   register(scene, 'rs_runestone', pack(frameList([runestone(0), runestone(1)], 'r'), RUNESTONE_W, RUNESTONE_H), RUNESTONE_W, RUNESTONE_H);
   const rays = scene.textures.addCanvas('rs_ray', toCanvas(GODRAY_W * 2, GODRAY_H, sideBySide(GODRAY_W, GODRAY_H, [godRay(3), godRay(8)])))!;
   rays.add('g0', 0, 0, 0, GODRAY_W, GODRAY_H);
@@ -919,7 +918,6 @@ export function warmSanctum(scene: Phaser.Scene): void {
     scene.anims.create({ key: `${key}_loop`, frames: scene.anims.generateFrameNames(key, { prefix: 'f', start: 0, end: n - 1 }), frameRate: fps, repeat: -1 });
   const glowLoop = (key: string, n: number, fps: number) =>
     scene.anims.create({ key: `${key}_e_loop`, frames: scene.anims.generateFrameNames(`${key}_e`, { prefix: 'f', start: 0, end: n - 1 }), frameRate: fps, repeat: -1 });
-  register(scene, 'rs_pillar', pack(frameList([sanctumPillar()], 'p'), RS_PILLAR_W, RS_PILLAR_H), RS_PILLAR_W, RS_PILLAR_H);
   register(scene, 'rs_crucible', pack(frameList(Array.from({ length: STATION_FRAMES }, (_, f) => dustCrucible(f)), 'f'), CRUCIBLE_W, CRUCIBLE_H), CRUCIBLE_W, CRUCIBLE_H);
   register(scene, 'rs_anvil', pack(frameList(Array.from({ length: STATION_FRAMES }, (_, f) => runeAnvil(f)), 'f'), ANVIL_W, ANVIL_H), ANVIL_W, ANVIL_H);
   register(scene, 'rs_nyx', pack(frameList(Array.from({ length: KEEPER_FRAMES }, (_, f) => unmaker(f)), 'f'), KEEPER_W, KEEPER_H), KEEPER_W, KEEPER_H);
@@ -933,20 +931,6 @@ export function warmSanctum(scene: Phaser.Scene): void {
     loop(key, n, fps);
     glowLoop(key, n, fps);
   }
-  scene.textures.addCanvas('rs_room', toCanvas(ROOM_W, ROOM_H, art.diffuse))!.setDataSource(toCanvas(ROOM_W, ROOM_H, art.normal));
-  scene.textures.addCanvas('rs_room_e', toCanvas(ROOM_W, ROOM_H, art.emissive));
-}
-
-/** The walk-in chapel's art (its hall, and the roof and front that hide it), made the first time one is built. */
-export function warmChapel(scene: Phaser.Scene): void {
-  if (scene.textures.exists('ch_hall')) return;
-  const cjob = chapelArt();
-  let cstep = cjob.next();
-  while (!cstep.done) cstep = cjob.next();
-  const hall = cstep.value;
-  scene.textures.addCanvas('ch_hall', toCanvas(CH_W, CH_H, hall.diffuse))!.setDataSource(toCanvas(CH_W, CH_H, hall.normal));
-  scene.textures.addCanvas('ch_hall_e', toCanvas(CH_W, CH_H, hall.emissive));
-  register(scene, 'ch_out', pack(frameList([chapelExterior()], 't'), CH_EXT_W, CH_EXT_H), CH_EXT_W, CH_EXT_H);
 }
 
 /**

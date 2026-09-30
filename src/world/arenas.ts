@@ -10,8 +10,7 @@ import type { GroundSpec } from '../art/ground';
 import type { SpawnSpot } from '../game/monsters';
 import type { SceneryLayout } from './common';
 import type { Drift } from './Scenery';
-import { CLEARING_GROUND, CLEARING_H, CLEARING_SPAWN, CLEARING_W, PLAZA_CX, PLAZA_CY, PLAZA_Y, clearingScenery, clearingWalkable, plazaProps } from './clearing';
-import { SANCTUM_WORLD_W } from './sanctumLayout';
+import { CLEARING_GROUND, CLEARING_SPAWN, CLEARING_W, PLAZA_CX, PLAZA_CY, PLAZA_Y, clearingScenery, clearingWalkable, plazaProps } from './clearing';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
 import { warmCosmos, warmDeep, warmGlide, warmIsland, warmRift, warmSpirit, warmTemple } from '../art/arenaLoader';
@@ -61,7 +60,7 @@ export interface ArenaDef {
   /** Card highlight colour. */
   accent: number;
   ground: GroundSpec | PaintedGround;
-  /** The whole world, when it reaches past the ground (the clearing's temple room). */
+  /** The whole world, when it reaches past the ground. */
   world?: { w: number; h: number };
   /** Where the hero starts, and rises after falling. */
   spawn: { x: number; y: number };
@@ -101,7 +100,6 @@ export const ARENAS: ArenaDef[] = [
     blurb: 'Home, and the Rune Temple',
     accent: 0xffb45a,
     ground: CLEARING_GROUND,
-    world: { w: SANCTUM_WORLD_W, h: CLEARING_H },
     spawn: CLEARING_SPAWN,
     // A home arena: no monsters, just the temple and the training dummies.
     monsters: [],
@@ -115,7 +113,7 @@ export const ARENAS: ArenaDef[] = [
     dayNight: true,
     preview: {
       x: PLAZA_CX + 80,
-      y: PLAZA_CY - 80,
+      y: PLAZA_CY - 40,
       sprites: () => {
         const p = plazaProps();
         return [
