@@ -45,6 +45,16 @@ export interface HeroStats {
   kit: number;
 }
 
+/** The six stats as they stand in a fight, gear and buffs in (see WorldScene.heroSheet). */
+export interface HeroSheet {
+  hp: number;
+  damage: number;
+  defense: number;
+  rate: number;
+  speed: number;
+  regen: number;
+}
+
 /** What one point of the budget buys: 5 HP, 1.33 damage a second (basic attacks and the normal ability), 1 Defense, 3 move speed, 0.05 regen. */
 export const POINT_COST = { hp: 5, dps: 4 / 3, defense: 1, speed: 3, regen: 0.05 };
 

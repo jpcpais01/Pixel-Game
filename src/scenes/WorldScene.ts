@@ -12,7 +12,7 @@ import { pixelGrid, snap } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { characterById, type Aim, type Hero } from '../game/characters';
-import { damageScale, defenseFactor, specialScale, heroStats, type HeroStats } from '../game/stats';
+import { damageScale, defenseFactor, specialScale, heroStats, type HeroSheet, type HeroStats } from '../game/stats';
 import { areaOrigin, reachesBody, type Harm, type Hit, type Hurtbox, type MeleeArea, type Strike } from '../game/combat';
 import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
@@ -1380,6 +1380,32 @@ export class WorldScene extends Phaser.Scene {
     if (hit.wild) return 1;
     if (hit.companion) return this.might / damageScale(this.stats);
     return this.inSpecial ? this.might * specialScale(this.stats) : this.might;
+  }
+
+  /**
+   * The hero's stats as they stand, for the HUD's stats panel: the type's own
+   * numbers with gear, the Rift's blessings, the companion's perk and the
+   * timed buffs all in, plus the same without the timed buffs (`base`) so the
+   * panel can show what a buff is lifting. Damage taken shrinking (Ward, a
+   * pet's guard) reads as the Defense that would shrink it as much.
+   */
+  heroSheet(): { now: HeroSheet; base: HeroSheet } | null {
+    const s = this.stats;
+    // Before the world has made its hero (the HUD starts first).
+    if (!s || !this.hero) return null;
+    const sheet = (buffed: boolean): HeroSheet => {
+      const b = (k: 'damage' | 'speed' | 'guard') => (buffed ? heroBuffs.mod(k) : 1);
+      const guard = b('guard') * riftMods.guard * petMods.guard;
+      return {
+        hp: this.hero.vitals.max,
+        damage: s.damage * b('damage') * gear.power * riftMods.damage * petMods.damage,
+        defense: (100 + s.defense + gear.totals.armor) / guard - 100,
+        rate: s.rate,
+        speed: s.speed * b('speed') * gear.speed * riftMods.speed * petMods.speed,
+        regen: s.regen + (buffed ? heroBuffs.regen : 0) + gear.totals.regen + riftMods.regen + petMods.regen,
+      };
+    };
+    return { now: sheet(true), base: sheet(false) };
   }
 
   /** Run a Special's cast: its blows, and the effects it starts, count as the Special's. */
