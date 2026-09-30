@@ -91,6 +91,13 @@ export function openHomeFriends(o: FriendsOptions): void {
     o.leave();
     try {
       const room = await session.open(req, me);
+      if (room.arena === 'auto') {
+        // An Auto Battle room is joined from Auto Battle, not a Home.
+        session.close();
+        say("That code is an Auto Battle room: join it from Auto Battle.", true);
+        setBusy(false);
+        return;
+      }
       root.remove();
       o.start(room.arena);
     } catch (ex) {
