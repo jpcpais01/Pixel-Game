@@ -451,7 +451,14 @@ export function paintRoof(l: HomeLayout, h: House): RoofArt {
   chamfer(out, FW, FH, E + 1);
   // Height: how far in from the eaves, which sets the slopes.
   const hgt = new Float32Array(n);
-  for (let i = 0; i < n; i++) hgt[i] = out[i] <= E ? 1e9 : 0;
+  // Seeded from the eaves: the ground round the roof, and the frame's own edge
+  // (the frame is cut to the eaves, so its edge has no outside pixels beyond it).
+  for (let y = 0; y < FH; y++) {
+    for (let x = 0; x < FW; x++) {
+      const i = y * FW + x;
+      hgt[i] = out[i] > E ? 0 : x === 0 || y === 0 || x === FW - 1 || y === FH - 1 ? 1 : 1e9;
+    }
+  }
   chamfer(hgt, FW, FH, 1e6);
   let maxH = 0;
   for (let i = 0; i < n; i++) if (hgt[i] < 1e8) maxH = Math.max(maxH, hgt[i]);

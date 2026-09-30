@@ -11,7 +11,7 @@
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
 import { FIRE_COLS, hash2, rng } from './env';
-import { canopy, roots, trunk } from './trees';
+import { canopy, crown, leaner, roots, swayAt, trunk } from './trees';
 import { FIELDSTONE, IRON } from './sanctum';
 import { CELL } from '../world/homeLayout';
 import { partById } from '../world/homeParts';
@@ -259,12 +259,13 @@ function decor(draw: (c: PixelCanvas, f: number) => void, frames = 1, fps = 8): 
 
 // ---------------------------------------------------------------- Garden
 
-/** A cherry tree in bloom, on the forest trees' 96 x 128 frame, petals fallen round its roots. */
-export function blossomTree(v: number): PixelCanvas {
+/** A cherry tree in bloom, on the forest trees' 96 x 128 frame, petals fallen round its roots; frame `f` of its sway. */
+export function blossomTree(v: number, f = 0): PixelCanvas {
   const c = new PixelCanvas(96, 128);
   const R = rng(4100 + v * 37);
   const bx = 48;
   const by = 124;
+  const dx = leaner(swayAt(f, 1.3), by - 34, by - 92);
   // Fallen petals first, under everything.
   c.part();
   for (let k = 0; k < 34; k++) {
@@ -279,25 +280,18 @@ export function blossomTree(v: number): PixelCanvas {
   roots(c, bx, by, 7, CHERRY_BARK, R);
   // Crooked boughs spreading wide, as a cherry's do.
   c.part();
-  c.capsule(bx + 3, by - 30, bx - 22, by - 52, 2.2, 1, CHERRY_BARK);
-  c.capsule(bx + 4, by - 34, bx + 24, by - 50, 2, 1, CHERRY_BARK);
-  c.capsule(bx + 4, by - 36, bx + 6, by - 62, 2, 1, CHERRY_BARK);
-  canopy(c, bx + 2, by - 66, 34, 22, 12, BLOSSOM, R, 0.9);
-  // Deeper pink in the hollows and white flecks of fresh blossom on top.
+  c.capsule(bx + 3, by - 30, bx - 22 + dx(by - 52), by - 52, 2.2, 1, CHERRY_BARK);
+  c.capsule(bx + 4, by - 34, bx + 24 + dx(by - 50), by - 50, 2, 1, CHERRY_BARK);
+  c.capsule(bx + 4, by - 36, bx + 6 + dx(by - 62), by - 62, 2, 1, CHERRY_BARK);
+  crown(c, { cx: bx + 2, cy: by - 68, rx: 36, ry: 24, size: 0.9, ring: 1, gaps: 0.5, leaf: BLOSSOM, twig: CHERRY_BARK, fork: { x: bx + 4, y: by - 34 }, dx, frame: f, R });
+  // White flecks of fresh blossom on top, deeper pink in the hollows.
   for (let y = by - 96; y < by - 40; y++) {
-    for (let x = bx - 40; x < bx + 44; x++) {
-      if (!c.filled(x, y) || c.materialAt(x, y) !== BLOSSOM) continue;
-      const h = hash2(x, y, 97 + v);
+    for (let x = bx - 42; x < bx + 46; x++) {
+      if (c.materialAt(x, y) !== BLOSSOM) continue;
+      const h = hash2(x - Math.round(dx(y)), y, 97 + v);
       if (h > 0.93) c.shade(x, y, 2);
       else if (h < 0.05) c.shade(x, y, -2);
     }
-  }
-  // Dark twigs peeking through the lower edge.
-  c.part();
-  for (let k = 0; k < 5; k++) {
-    const x = bx - 24 + R() * 50;
-    const y = by - 50 + R() * 6;
-    c.line(x, y, x + (R() - 0.5) * 4, y - 3, CHERRY_BARK);
   }
   return c;
 }

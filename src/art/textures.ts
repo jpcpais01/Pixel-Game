@@ -134,7 +134,7 @@ import {
   type OmenIcon,
 } from './omens';
 import { FLAME_FRAMES, FLAME_H, FLAME_W, GRAVE_H, GRAVE_KINDS, GRAVE_W, WISP_PX, echoBuffIcon, graveStone, soulFlame, soulWisp } from './echoes';
-import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, leafBit, rayCanvas } from './trees';
+import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_SWAY_FPS, TREE_SWAY_FRAMES, TREE_VARIANTS, TREE_W, leafBit, rayCanvas, treeFrame } from './trees';
 import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, RIPPLE_FRAMES, RIPPLE_H, RIPPLE_W, rippleFrames, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
 
 const toCanvas = pixelCanvas;
@@ -842,6 +842,31 @@ function* deepTextures(scene: Phaser.Scene): Generator<void, void, void> {
   register(scene, 'gd_shard', pack(frameList([breathShard()], 's'), BREATH_SHARD, BREATH_SHARD), BREATH_SHARD, BREATH_SHARD);
   // Last: its presence means everything above is built.
   scene.textures.addCanvas('gd_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
+}
+
+/**
+ * The trees' sway (see art/trees.ts): every frame of every tree on 'tree_sway',
+ * and an animation `tree_<kind><v>` for each, starting on its still frame.
+ * Built a tree at a time in the background (see game/treeSway.ts), so the
+ * boot only pays for the still trees.
+ */
+export function* treeSwayTextures(scene: Phaser.Scene): Generator<void, void, void> {
+  const frames: { name: string; r: RenderedFrame }[] = [];
+  for (let v = 0; v < TREE_VARIANTS; v++) {
+    for (const kind of ['oak', 'birch', 'pine'] as const) {
+      for (let f = 0; f < TREE_SWAY_FRAMES; f++) frames.push({ name: `${kind}${v}_${f}`, r: treeFrame(kind, v, f).render() });
+      yield;
+    }
+  }
+  if (!scene.textures.exists('tree_sway')) register(scene, 'tree_sway', pack(frames, TREE_W, TREE_H, 9), TREE_W, TREE_H, false);
+  yield;
+  for (let v = 0; v < TREE_VARIANTS; v++) {
+    for (const kind of ['oak', 'birch', 'pine'] as const) {
+      const key = `tree_${kind}${v}`;
+      if (scene.anims.exists(key)) continue;
+      scene.anims.create({ key, frames: Array.from({ length: TREE_SWAY_FRAMES }, (_, f) => ({ key: 'tree_sway', frame: `${kind}${v}_${f}` })), frameRate: TREE_SWAY_FPS, repeat: -1 });
+    }
+  }
 }
 
 /**

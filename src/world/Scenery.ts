@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PROP_BASE_Y, PROP_H, RAY_FOOT_X, RAY_H, RAY_W, TREE_BASE_Y, TREE_H } from '../art/trees';
 import { settings } from '../game/settings';
+import { sway, treeSwayReady } from '../game/treeSway';
 import { TREE_SHAPE, type SceneryLayout, type TreeKind } from './common';
 
 // What stands along an arena's roof: trees, undergrowth and shafts of light,
@@ -20,9 +21,11 @@ interface Placed {
 }
 
 interface Tree extends Placed {
+  obj: Phaser.GameObjects.Sprite;
   x: number;
   y: number;
   kind: TreeKind;
+  v: number;
   alpha: number;
 }
 
@@ -35,6 +38,51 @@ interface Ray {
 
 /** Falling leaves sit over the world, under damage numbers and the sky. */
 const OVERHEAD = 9990;
+/** ms between leaves dropping from the trees in view (pines keep theirs). */
+const TREE_LEAF_MS = 1300;
+/** The leaves each kind drops: its greens, and a few turned yellow. */
+const LEAF_TINTS: Record<TreeKind, number[]> = {
+  oak: [0x3b753c, 0x528d46, 0x71a653, 0xc8a040],
+  birch: [0x8eb54c, 0xb2cd62, 0xd2e287, 0xe8c050],
+  pine: [],
+};
+
+/** A spot in a tree's crown a leaf can fall from, and the leaf's colours. */
+export interface LeafSource {
+  x: number;
+  y: number;
+  tints: number[];
+}
+
+/**
+ * Leaves (or petals) that now and then come loose from the trees and flutter
+ * down: `pick` chooses where the next one starts, or null for none.
+ */
+export function treeLeaves(scene: Phaser.Scene, pick: () => LeafSource | null, frequency: number): Phaser.GameObjects.Particles.ParticleEmitter {
+  let tints = [0xffffff];
+  const zone = {
+    getRandomPoint: (p: Phaser.Types.Math.Vector2Like) => {
+      const s = pick();
+      p.x = s ? s.x : -1000;
+      p.y = s ? s.y : -1000;
+      if (s) tints = s.tints;
+      return p;
+    },
+  };
+  return scene.add
+    .particles(0, 0, 'leafbit', {
+      emitZone: { type: 'random', source: zone } as unknown as Phaser.Types.GameObjects.Particles.EmitZoneData,
+      lifespan: { min: 3200, max: 5200 },
+      speedX: { min: -7, max: 7 },
+      speedY: { min: 8, max: 14 },
+      // A leaf's flutter: it tips back and forth as it drifts down (each out of step, by its lifespan).
+      rotate: { onEmit: () => 0, onUpdate: (p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.sin(t * 12 + p.life) * 55 },
+      alpha: { onUpdate: (_p: Phaser.GameObjects.Particles.Particle, _k: string, t: number) => Math.min(1, t * 8, (1 - t) * 3) },
+      tint: { onEmit: () => tints[Math.floor(Math.random() * tints.length)] },
+      frequency,
+    })
+    .setDepth(OVERHEAD - 1);
+}
 
 export interface Drift {
   /** Leaf (or petal) colours. */
@@ -51,6 +99,9 @@ export class Scenery {
   private glows: { halo: Img; x: number; y: number; seed: number }[] = [];
   private rays: Ray[] = [];
   private leaves: Phaser.GameObjects.Particles.ParticleEmitter;
+  private treeLeaves: Phaser.GameObjects.Particles.ParticleEmitter;
+  /** The trees sway once their animations are built (see game/treeSway.ts). */
+  private swaying = false;
   private motes: Phaser.GameObjects.Particles.ParticleEmitter;
   private view = new Phaser.Geom.Rectangle();
 
@@ -62,8 +113,8 @@ export class Scenery {
     const add = scene.add;
 
     for (const t of layout.trees) {
-      const obj = add.image(t.x, t.y, 'tree', `${t.kind}${t.v}`).setOrigin(0.5, TREE_BASE_Y / TREE_H).setPipeline('Lit').setDepth(t.y);
-      const tree: Tree = { obj, x: t.x, y: t.y, kind: t.kind, alpha: 1, x0: t.x - 48, x1: t.x + 48, y0: t.y - TREE_BASE_Y, y1: t.y + 4 };
+      const obj = add.sprite(t.x, t.y, 'tree', `${t.kind}${t.v}`).setOrigin(0.5, TREE_BASE_Y / TREE_H).setPipeline('Lit').setDepth(t.y);
+      const tree: Tree = { obj, x: t.x, y: t.y, kind: t.kind, v: t.v, alpha: 1, x0: t.x - 48, x1: t.x + 48, y0: t.y - TREE_BASE_Y, y1: t.y + 4 };
       this.trees.push(tree);
       this.placed.push(tree);
     }
@@ -119,6 +170,20 @@ export class Scenery {
       })
       .setDepth(OVERHEAD - 1);
 
+    // Now and then a leaf comes loose from a tree in view.
+    const leafy = this.trees.filter((t) => LEAF_TINTS[t.kind].length);
+    this.treeLeaves = treeLeaves(
+      scene,
+      () => {
+        const shown = leafy.filter((t) => t.obj.visible);
+        const t = shown[Math.floor(Math.random() * shown.length)];
+        if (!t) return null;
+        const s = TREE_SHAPE[t.kind];
+        return { x: t.x + (Math.random() - 0.5) * s.canopyR * 1.4, y: t.y - s.canopyY + (Math.random() - 0.2) * s.canopyR * 0.7, tints: LEAF_TINTS[t.kind] };
+      },
+      TREE_LEAF_MS,
+    );
+
     // Dust glittering in the shafts of light.
     const rays = this.rays;
     const rayZone = {
@@ -153,6 +218,7 @@ export class Scenery {
     const offQuality = settings.watch((s) => {
       const k = s.quality !== 'full' ? 2 : 1;
       this.leaves.frequency = drift.frequency * k;
+      this.treeLeaves.frequency = TREE_LEAF_MS * k;
       this.motes.frequency = 110 * k;
     });
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, offQuality);
@@ -166,6 +232,10 @@ export class Scenery {
     const vy0 = view.y - 16;
     const vy1 = view.bottom + 16;
     for (const p of this.placed) p.obj.setVisible(p.x1 > vx0 && p.x0 < vx1 && p.y1 > vy0 && p.y0 < vy1);
+    if (!this.swaying && this.trees.length && treeSwayReady(this.trees[0].obj.scene)) {
+      this.swaying = true;
+      for (const t of this.trees) sway(t.obj, `tree_${t.kind}${t.v}`);
+    }
 
     // A hero behind a tree sees through its crown.
     const k = Math.min(1, dt / 120);
@@ -200,5 +270,6 @@ export class Scenery {
     }
 
     this.leaves.emitting = this.drift.where(view);
+    this.treeLeaves.emitting = this.trees.some((t) => t.obj.visible && t.kind !== 'pine');
   }
 }
