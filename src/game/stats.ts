@@ -39,6 +39,8 @@ export interface HeroStats {
   regen: number;
   /** Its normal ability's damage a second, used as often as it comes back, in its code's own numbers (measured). */
   skill: number;
+  /** What its whole Special deals to one foe in its path, in its code's own numbers (read from the code); 0 when it is mostly control. */
+  ult: number;
   /** The average basic hit in the type's own code: its abilities' multipliers are measured against it. */
   kit: number;
 }
@@ -53,45 +55,45 @@ export const BUDGET = { target: 100, min: 90, max: 110 };
 
 /** Every type's base stats, by `class.type` id. */
 export const HERO_STATS: Record<string, HeroStats> = {
-  'wizard.arcane': { role: 'caster', hp: 85, damage: 15, defense: 12, rate: 1.32, speed: 58, regen: 0.8, skill: 8.6, kit: 12 },
-  'wizard.pyro': { role: 'ranged', hp: 100, damage: 6, defense: 12, rate: 4.32, speed: 62, regen: 0.6, skill: 0, kit: 7.1 },
-  'wizard.tide': { role: 'caster', hp: 95, damage: 13, defense: 12, rate: 1.2, speed: 60, regen: 0.8, skill: 6, kit: 15 },
-  'warrior.knight': { role: 'tank', hp: 110, damage: 9, defense: 20, rate: 2.65, speed: 60, regen: 1, skill: 10.2, kit: 13.6 },
-  'warrior.king': { role: 'tank', hp: 110, damage: 11, defense: 20, rate: 2.45, speed: 56, regen: 1, skill: 1.7, kit: 15.3 },
-  'paladin.holy': { role: 'tank', hp: 120, damage: 9, defense: 22, rate: 2.33, speed: 54, regen: 1, skill: 5.3, kit: 15 },
-  'paladin.crusader': { role: 'melee', hp: 105, damage: 17, defense: 20, rate: 1.82, speed: 60, regen: 0.8, skill: 4, kit: 20 },
-  'jedi.knight': { role: 'melee', hp: 95, damage: 9, defense: 20, rate: 3.32, speed: 64, regen: 0.8, skill: 1.7, kit: 10.5 },
-  'fighter.brawler': { role: 'melee', hp: 110, damage: 7, defense: 17, rate: 3.98, speed: 62, regen: 0.8, skill: 13.1, kit: 10.4 },
-  'fighter.monk': { role: 'tank', hp: 125, damage: 8, defense: 22, rate: 2.83, speed: 53, regen: 1, skill: 4, kit: 13.1 },
-  'alchemist.plague': { role: 'ranged', hp: 110, damage: 5, defense: 12, rate: 4.14, speed: 60, regen: 0.6, skill: 13.1, kit: 6 },
-  'alchemist.chem': { role: 'ranged', hp: 98, damage: 5, defense: 12, rate: 4.97, speed: 66, regen: 0.6, skill: 8.9, kit: 6 },
-  'archer.ranger': { role: 'ranged', hp: 95, damage: 9, defense: 12, rate: 2.99, speed: 64, regen: 0.6, skill: 5, kit: 8 },
-  'rogue.rogue': { role: 'melee', hp: 80, damage: 7, defense: 20, rate: 4.65, speed: 70, regen: 0.8, skill: 0, kit: 8.8 },
-  'rogue.dancer': { role: 'melee', hp: 72, damage: 8, defense: 20, rate: 3.81, speed: 74, regen: 0.8, skill: 2, kit: 6.6 },
-  'necromancer.necro': { role: 'caster', hp: 80, damage: 6, defense: 12, rate: 2.49, speed: 60, regen: 0.8, skill: 17, kit: 7 },
-  'necromancer.blood': { role: 'caster', hp: 100, damage: 8, defense: 11, rate: 2.65, speed: 62, regen: 0.8, skill: 2.7, kit: 6 },
-  'bard.minstrel': { role: 'caster', hp: 85, damage: 9, defense: 12, rate: 2.16, speed: 64, regen: 0.8, skill: 0, kit: 7 },
-  'bard.drummer': { role: 'tank', hp: 115, damage: 10, defense: 22, rate: 2.33, speed: 58, regen: 1, skill: 0.5, kit: 11 },
-  'chronomancer.keeper': { role: 'caster', hp: 82, damage: 10, defense: 12, rate: 2.15, speed: 60, regen: 0.8, skill: 1.7, kit: 8 },
-  'chronomancer.paradox': { role: 'ranged', hp: 92, damage: 6, defense: 12, rate: 4.49, speed: 66, regen: 0.6, skill: 1.3, kit: 7.1 },
-  'puppeteer.marionette': { role: 'ranged', hp: 105, damage: 12, defense: 12, rate: 2.15, speed: 60, regen: 0.6, skill: 8, kit: 13.8 },
-  'puppeteer.weaver': { role: 'caster', hp: 80, damage: 9, defense: 12, rate: 2.49, speed: 66, regen: 0.8, skill: 2.2, kit: 8 },
-  'samurai.bladewind': { role: 'melee', hp: 90, damage: 8, defense: 20, rate: 3.99, speed: 66, regen: 0.8, skill: 3, kit: 11.3 },
-  'samurai.ronin': { role: 'melee', hp: 100, damage: 10, defense: 20, rate: 2.99, speed: 60, regen: 0.8, skill: 3, kit: 11 },
-  'druid.grove': { role: 'caster', hp: 85, damage: 6, defense: 12, rate: 2.33, speed: 58, regen: 0.8, skill: 19, kit: 7.5 },
-  'druid.wild': { role: 'melee', hp: 110, damage: 12, defense: 20, rate: 1.49, speed: 64, regen: 0.8, skill: 12, kit: 11.3 },
-  'valkyrie.spear': { role: 'melee', hp: 100, damage: 12, defense: 20, rate: 2.49, speed: 62, regen: 0.8, skill: 6.2, kit: 13 },
-  'valkyrie.storm': { role: 'melee', hp: 95, damage: 12, defense: 20, rate: 2.49, speed: 64, regen: 0.8, skill: 5, kit: 13 },
-  'automaton.mech': { role: 'tank', hp: 120, damage: 5, defense: 23, rate: 4.48, speed: 50, regen: 1, skill: 3.5, kit: 6.6 },
-  'automaton.synth': { role: 'ranged', hp: 95, damage: 7, defense: 12, rate: 3.65, speed: 66, regen: 0.6, skill: 10.4, kit: 7.7 },
-  'phantom.poltergeist': { role: 'ranged', hp: 95, damage: 9, defense: 12, rate: 2.98, speed: 64, regen: 0.6, skill: 2.5, kit: 11.2 },
-  'phantom.wraith': { role: 'melee', hp: 100, damage: 2.5, defense: 19, rate: 13.9, speed: 58, regen: 0.8, skill: 2.7, kit: 3.6 },
-  'inventor.engineer': { role: 'caster', hp: 100, damage: 9, defense: 12, rate: 2.54, speed: 56, regen: 0.6, skill: 15.2, kit: 12.3 },
-  'inventor.scientist': { role: 'caster', hp: 85, damage: 9, defense: 12, rate: 2.22, speed: 62, regen: 0.8, skill: 4.6, kit: 9 },
+  'wizard.arcane': { role: 'caster', hp: 85, damage: 15, defense: 12, rate: 1.32, speed: 58, regen: 0.8, skill: 8.6, ult: 98, kit: 12 },
+  'wizard.pyro': { role: 'ranged', hp: 100, damage: 6, defense: 12, rate: 4.32, speed: 62, regen: 0.6, skill: 1, ult: 76, kit: 7.1 },
+  'wizard.tide': { role: 'caster', hp: 95, damage: 8, defense: 12, rate: 2.32, speed: 60, regen: 0.8, skill: 7.6, ult: 55, kit: 7.5 },
+  'warrior.knight': { role: 'tank', hp: 110, damage: 9, defense: 20, rate: 2.65, speed: 60, regen: 1, skill: 10.2, ult: 78, kit: 13.6 },
+  'warrior.king': { role: 'tank', hp: 110, damage: 11, defense: 20, rate: 2.45, speed: 56, regen: 1, skill: 1.7, ult: 94, kit: 15.3 },
+  'paladin.holy': { role: 'tank', hp: 120, damage: 9, defense: 22, rate: 2.33, speed: 54, regen: 1, skill: 5.3, ult: 78, kit: 15 },
+  'paladin.crusader': { role: 'melee', hp: 105, damage: 17, defense: 20, rate: 1.82, speed: 60, regen: 0.8, skill: 4, ult: 340, kit: 20 },
+  'jedi.knight': { role: 'melee', hp: 95, damage: 9, defense: 20, rate: 3.32, speed: 64, regen: 0.8, skill: 1.7, ult: 85, kit: 10.5 },
+  'fighter.brawler': { role: 'melee', hp: 110, damage: 7, defense: 17, rate: 3.98, speed: 62, regen: 0.8, skill: 13.1, ult: 74, kit: 10.4 },
+  'fighter.monk': { role: 'tank', hp: 125, damage: 8, defense: 22, rate: 2.83, speed: 53, regen: 1, skill: 4, ult: 78, kit: 13.1 },
+  'alchemist.plague': { role: 'ranged', hp: 110, damage: 5, defense: 12, rate: 4.14, speed: 60, regen: 0.6, skill: 13.1, ult: 180, kit: 6 },
+  'alchemist.chem': { role: 'ranged', hp: 98, damage: 5, defense: 12, rate: 4.97, speed: 66, regen: 0.6, skill: 9.9, ult: 124, kit: 6 },
+  'archer.ranger': { role: 'ranged', hp: 95, damage: 9, defense: 12, rate: 2.99, speed: 64, regen: 0.6, skill: 5, ult: 62, kit: 8 },
+  'rogue.rogue': { role: 'melee', hp: 80, damage: 7, defense: 20, rate: 4.65, speed: 70, regen: 0.8, skill: 0.8, ult: 120, kit: 8.8 },
+  'rogue.dancer': { role: 'melee', hp: 72, damage: 8, defense: 20, rate: 3.81, speed: 74, regen: 0.8, skill: 2, ult: 264, kit: 6.6 },
+  'necromancer.necro': { role: 'caster', hp: 80, damage: 6, defense: 12, rate: 2.49, speed: 60, regen: 0.8, skill: 17, ult: 75, kit: 7 },
+  'necromancer.blood': { role: 'caster', hp: 100, damage: 8, defense: 11, rate: 2.65, speed: 62, regen: 0.8, skill: 2.7, ult: 320, kit: 6 },
+  'bard.minstrel': { role: 'caster', hp: 85, damage: 9, defense: 12, rate: 2.16, speed: 64, regen: 0.8, skill: 0, ult: 187, kit: 7 },
+  'bard.drummer': { role: 'tank', hp: 115, damage: 10, defense: 22, rate: 2.33, speed: 58, regen: 1, skill: 0.5, ult: 90, kit: 11 },
+  'chronomancer.keeper': { role: 'caster', hp: 82, damage: 10, defense: 12, rate: 2.15, speed: 60, regen: 0.8, skill: 1.7, ult: 0, kit: 8 },
+  'chronomancer.paradox': { role: 'ranged', hp: 92, damage: 6, defense: 12, rate: 4.49, speed: 66, regen: 0.6, skill: 1.3, ult: 256, kit: 7.1 },
+  'puppeteer.marionette': { role: 'ranged', hp: 105, damage: 12, defense: 12, rate: 2.15, speed: 60, regen: 0.6, skill: 8, ult: 130, kit: 13.8 },
+  'puppeteer.weaver': { role: 'caster', hp: 80, damage: 9, defense: 12, rate: 2.49, speed: 66, regen: 0.8, skill: 3.1, ult: 0, kit: 8 },
+  'samurai.bladewind': { role: 'melee', hp: 90, damage: 8, defense: 20, rate: 3.99, speed: 66, regen: 0.8, skill: 3, ult: 70, kit: 11.3 },
+  'samurai.ronin': { role: 'melee', hp: 100, damage: 10, defense: 20, rate: 2.99, speed: 60, regen: 0.8, skill: 5.2, ult: 48, kit: 11 },
+  'druid.grove': { role: 'caster', hp: 85, damage: 6, defense: 12, rate: 2.33, speed: 58, regen: 0.8, skill: 19, ult: 44, kit: 7.5 },
+  'druid.wild': { role: 'melee', hp: 110, damage: 12, defense: 20, rate: 1.49, speed: 64, regen: 0.8, skill: 12, ult: 160, kit: 11.3 },
+  'valkyrie.spear': { role: 'melee', hp: 100, damage: 12, defense: 20, rate: 2.49, speed: 62, regen: 0.8, skill: 6.2, ult: 102, kit: 13 },
+  'valkyrie.storm': { role: 'melee', hp: 95, damage: 12, defense: 20, rate: 2.49, speed: 64, regen: 0.8, skill: 5, ult: 182, kit: 13 },
+  'automaton.mech': { role: 'tank', hp: 120, damage: 5, defense: 23, rate: 4.48, speed: 50, regen: 1, skill: 3.5, ult: 400, kit: 6.6 },
+  'automaton.synth': { role: 'ranged', hp: 95, damage: 7, defense: 12, rate: 3.65, speed: 66, regen: 0.6, skill: 10.4, ult: 470, kit: 7.7 },
+  'phantom.poltergeist': { role: 'ranged', hp: 95, damage: 9, defense: 12, rate: 2.98, speed: 64, regen: 0.6, skill: 2.5, ult: 81, kit: 11.2 },
+  'phantom.wraith': { role: 'melee', hp: 100, damage: 2.5, defense: 19, rate: 13.9, speed: 58, regen: 0.8, skill: 2.7, ult: 0, kit: 3.6 },
+  'inventor.engineer': { role: 'caster', hp: 100, damage: 9, defense: 12, rate: 2.54, speed: 56, regen: 0.6, skill: 11, ult: 344, kit: 12.3 },
+  'inventor.scientist': { role: 'caster', hp: 85, damage: 9, defense: 12, rate: 2.22, speed: 62, regen: 0.8, skill: 4.6, ult: 72, kit: 9 },
 };
 
 /** An even spread on the budget, for a type not in the table yet (its Damage scale is 1: its code's own numbers). */
-const UNLISTED: Omit<HeroStats, 'kit'> = { role: 'melee', hp: 100, damage: 10, defense: 15, rate: 3, speed: 60, regen: 0.8, skill: 0 };
+const UNLISTED: Omit<HeroStats, 'kit'> = { role: 'melee', hp: 100, damage: 10, defense: 15, rate: 3, speed: 60, regen: 0.8, skill: 0, ult: 0 };
 
 /**
  * A type's base stats. A new type needs its own line in HERO_STATS; until it
@@ -117,6 +119,25 @@ export function budget(s: HeroStats): number {
 
 /** How much of a blow gets through `defense`. */
 export const defenseFactor = (defense: number): number => 100 / (100 + Math.max(0, defense));
+
+/** A Special deals about this many seconds of its hero's damage (see dps) to one foe. */
+export const SPECIAL_SECONDS = 4;
+
+/** How far a Special's own numbers may be pulled toward SPECIAL_SECONDS. */
+const SPECIAL_CLAMP = { min: 0.4, max: 2 };
+
+/**
+ * What a Special's blows are multiplied by, on top of the Damage scale, so it
+ * deals SPECIAL_SECONDS of its hero's damage to one foe (from `ult`, read from its code).
+ * Held to 0.4..2 so a Special keeps some of its own character (a lone-foe
+ * nuke still hits a little harder than a wide one); one that is mostly
+ * control (a freeze, a bind, fear) has `ult` 0 and keeps its own numbers.
+ */
+export function specialScale(s: HeroStats): number {
+  if (!s.ult) return 1;
+  const k = (SPECIAL_SECONDS * dps(s)) / (s.ult * damageScale(s));
+  return Math.min(SPECIAL_CLAMP.max, Math.max(SPECIAL_CLAMP.min, k));
+}
 
 /** What every blow in a type's code is multiplied by, so its basic attack deals its Damage. */
 export const damageScale = (s: HeroStats): number => s.damage / s.kit;

@@ -383,7 +383,10 @@ export class Mech implements Hero {
       const m = this.muzzle(which, u);
       // A little spread, so the stream fans out.
       const a = Math.atan2(u.y, u.x) + (Math.random() - 0.5) * 0.14;
-      this.world.addEffect(new Shot(this.world, m.x, m.y, Math.cos(a), Math.sin(a), SHELL_SPEED * 1.15, SHELL_RANGE + 20, SIEGE_DAMAGE, this.kit, this.y));
+      // Fired from here rather than from the Special's cast, so mark the shells as the Special's (its damage scale).
+      this.world.castSpecial(() =>
+        this.world.addEffect(new Shot(this.world, m.x, m.y, Math.cos(a), Math.sin(a), SHELL_SPEED * 1.15, SHELL_RANGE + 20, SIEGE_DAMAGE, this.kit, this.y)),
+      );
       this.casing(which, u);
       sound.cannon(this.world.pan(m.x), this.kit.scrap);
     }

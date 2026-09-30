@@ -11,7 +11,7 @@ import { pixelGrid, snap } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { characterById, type Aim, type Hero } from '../game/characters';
-import { damageScale, defenseFactor, heroStats, type HeroStats } from '../game/stats';
+import { damageScale, defenseFactor, specialScale, heroStats, type HeroStats } from '../game/stats';
 import { areaOrigin, reachesBody, type Harm, type Hit, type Hurtbox, type MeleeArea, type Strike } from '../game/combat';
 import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
@@ -237,6 +237,10 @@ export class WorldScene extends Phaser.Scene {
   private banner: Phaser.GameObjects.BitmapText | null = null;
   private spawners: Spawner[] = [];
   private effects: Effect[] = [];
+  /** Effects a Special set going (and whatever they set going in turn): their blows land as the Special's. */
+  private specialEffects = new WeakSet<Effect>();
+  /** True while a Special's own code runs, so its blows get the Special's scale (see specialScale in stats.ts). */
+  private inSpecial = false;
   /** Items lying on the ground. */
   private pickups: Pickup[] = [];
   /** Time until the next speck of the speed trail. */
@@ -1099,7 +1103,18 @@ export class WorldScene extends Phaser.Scene {
   /** How hard `hit` lands: a companion's blows keep their own numbers, whatever the hero's Damage. */
   mightOf(hit: Hit): number {
     if (hit.wild) return 1;
-    return hit.companion ? this.might / damageScale(this.stats) : this.might;
+    if (hit.companion) return this.might / damageScale(this.stats);
+    return this.inSpecial ? this.might * specialScale(this.stats) : this.might;
+  }
+
+  /** Run a Special's cast: its blows, and the effects it starts, count as the Special's. */
+  castSpecial(cast: () => void): void {
+    this.inSpecial = true;
+    try {
+      cast();
+    } finally {
+      this.inSpecial = false;
+    }
   }
 
   /** A buff was just picked up: its name over the hero, and a burst of its colour. */
@@ -1189,6 +1204,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Let the world update an effect each frame until it is dead. */
   addEffect(e: Effect): void {
+    if (this.inSpecial) this.specialEffects.add(e);
     this.effects.push(e);
   }
 
@@ -1656,7 +1672,11 @@ export class WorldScene extends Phaser.Scene {
     separate(monsters, targets, HERO_RADIUS);
     this.net?.update(dt, this.daylight);
     this.leanToBoss(dt, monsters);
-    for (const e of this.effects) e.update(dt);
+    for (const e of this.effects) {
+      this.inSpecial = this.specialEffects.has(e);
+      e.update(dt);
+    }
+    this.inSpecial = false;
     this.effects = this.effects.filter((e) => !e.dead);
     if (this.sanctum && !this.doorBusy) {
       const go = this.sanctum.update(this.hero.x, this.hero.y, this.inside, this.view, Phaser.Math.Easing.Sine.InOut(this.daylight));
