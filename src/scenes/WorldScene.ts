@@ -200,6 +200,8 @@ export class WorldScene extends Phaser.Scene {
   private companion: Companion | null = null;
   /** The critters out near the hero, to be caught with the net (arenas that have them). */
   private critters: CritterField | null = null;
+  /** The hero swung, cast or used their Special this frame (the White Stag shies from a fight). */
+  heroFighting = false;
   private riftWaves: RiftWaves | null = null;
   /** The arena's own living parts, when it is the Floating Island. */
   private island: FloatingIsland | null = null;
@@ -706,6 +708,11 @@ export class WorldScene extends Phaser.Scene {
 
   get spawnerList(): Spawner[] {
     return this.spawners;
+  }
+
+  /** The critters out near the hero, if this arena has them. */
+  get critterField(): CritterField | null {
+    return this.critters;
   }
 
   /** The heroes standing, this player's and the others', for what hunts or blesses them. */
@@ -1925,6 +1932,7 @@ export class WorldScene extends Phaser.Scene {
       mx = my = 0;
       attack = special = false;
     }
+    this.heroFighting = attack || special || (ultPressed && this.downT <= 0);
     this.hero.daylight = this.daylight;
     // The room around the hero, straight out each way: a blink or a dash that
     // ends in a tree is held to it (see settleStep). Walking steps within the

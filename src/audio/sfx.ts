@@ -827,6 +827,24 @@ export class Sfx {
     this.sparkle(out, t + 0.05, 4, 0.05);
   }
 
+  /**
+   * The White Stag: `appear` a soft rising chime as it steps out of the
+   * trees; `reveal` a wider, slower bloom of bells as its secret place opens;
+   * `flee` a snort and bells falling away as it bolts and fades.
+   */
+  stag(t: number, pan: number, kind: 'appear' | 'reveal' | 'flee'): void {
+    const out = this.out(pan, 0.45, 0.8);
+    if (kind === 'flee') {
+      this.burstNoise(out, t, 'bandpass', 900, 400, 1.4, 0.12, 0.16);
+      [1568, 1319, 1047, 880].forEach((f, i) => this.bell(out, t + 0.12 + i * 0.08, f, 0.03, 0.8));
+      return;
+    }
+    const notes = kind === 'appear' ? [880, 1109, 1319, 1760] : [659, 880, 1109, 1319, 1760, 2217];
+    const gap = kind === 'appear' ? 0.14 : 0.18;
+    notes.forEach((f, i) => this.bell(out, t + i * gap, f, 0.035, 1.6));
+    this.sparkle(out, t + notes.length * gap * 0.6, kind === 'appear' ? 4 : 8, 0.07);
+  }
+
   /** A card turning over: a soft swish, then a chime in its rarity's key. */
   cardFlip(t: number, tier: number): void {
     const out = this.out(0, 0.45, 0.5);
