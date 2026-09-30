@@ -12,7 +12,7 @@ import type { PixelCanvas, RenderedFrame } from './pixel';
 import { pixelCanvas } from './canvas';
 import { floorSwatch } from './homeFloors';
 import { CHIMNEY_H, CHIMNEY_W, chimney, roofSwatch, wallFrameH, wallFrames } from './homeWalls';
-import { PROP_ART, PROP_TURNS, blossomTree, type PropArt } from './homeProps';
+import { PROP_ART, PROP_TURNS, blossomTree, bobber, emptyRodBucket, type PropArt } from './homeProps';
 import { TREE_SWAY_FPS, TREE_SWAY_FRAMES } from './trees';
 import { hash2 } from './env';
 import { CELL, HomeLayout, PLOT_X, PLOT_Y, type Thing } from '../world/homeLayout';
@@ -82,6 +82,10 @@ export function warmHome(scene: Phaser.Scene): void {
   // The cherry trees and their sway (the forest's trees sway from their own sheet, see game/treeSway.ts).
   for (let v = 0; v < 3; v++) for (let f = 0; f < TREE_SWAY_FRAMES; f++) add(f ? `p:blossom:${v}_${f}` : `p:blossom:${v}`, blossomTree(v, f));
   add('chimney', chimney());
+  // The fishing rod's pail with its rod out at the water, and the float (see world/Fishing.ts).
+  add('rodbucket', emptyRodBucket(false));
+  add('rodbucket_m', emptyRodBucket(true));
+  add('bobber', bobber());
 
   const sheet = packSheet(list);
   const W = sheet.w;

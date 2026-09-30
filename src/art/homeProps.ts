@@ -784,6 +784,161 @@ const mailbox = art('mailbox', 5, 19, (c, g) => {
   tufts(c, cx, gy + 1, 4, 221, 4);
 });
 
+const ROD_CORK = mat('#1a1006', '#5a3e1e', '#7e5a30', '#a07a46', '#c09a60', '#dcbc82');
+const ROD_LINE: Material = { ...mat('#0a0a10', '#8a96a8', '#c0cad8', '#eef4ff'), noAO: true, noOutline: true };
+const FLOAT_RED: Material = { ...mat('#1a0204', '#4a0608', '#7a0c10', '#a8161a', '#d02a26', '#f04a3a', '#ff7a60'), shine: true };
+const FLOAT_WHITE: Material = { ...mat('#1a1a1e', '#8a8a92', '#b8b8c0', '#dcdce2', '#f4f4f8', '#ffffff'), shine: true };
+const BAIT = mat('#1a0608', '#5a1a22', '#8a3040', '#b84a5a', '#dc7080');
+
+/**
+ * A wooden pail with an iron bail, a little water in it (and a minnow's tail
+ * flicking out), a tin of bait beside it and, unless `rod` is false (while
+ * the hero has it at the water, see world/Fishing.ts), a fishing rod standing
+ * in it: cork grip, brass reel, the line threaded up the rod and hanging from
+ * its tip with a red and white float.
+ */
+function rodBucket(c: PixelCanvas, g: Foot, rod: boolean): void {
+  const cx = g.cx;
+  const gy = g.y1 - 5;
+  const H = 10;
+  // The bait tin, behind and to the left.
+  drum(c, cx - 7, gy - 2, 2.2, 1.2, 0, 3, STEEL, SOIL, { bias: -1 });
+  c.part();
+  c.px(cx - 7, gy - 6, BAIT, TOP, { bias: 2 });
+  c.px(cx - 6, gy - 6, BAIT, TOP, { bias: 1 });
+  c.px(cx - 6, gy - 7, BAIT, TOP, { bias: 2 });
+  // The pail: staves flaring a little toward the rim, bound with two iron hoops.
+  c.part();
+  for (let z = 0; z < H; z++) {
+    const rx = 4.4 + (z / (H - 1)) * 0.9;
+    for (let x = Math.floor(cx - rx); x < Math.ceil(cx + rx); x++) {
+      const t = (x + 0.5 - cx) / rx;
+      if (Math.abs(t) > 1) continue;
+      const e = Math.sqrt(1 - t * t) * 2.4;
+      const y = Math.round(gy + e - z);
+      const stave = Math.floor((Math.asin(t) + 2) * 3.2);
+      c.px(x, y, PALEW, cyl(t, -0.2), { bias: (stave % 2 ? -1 : 0) + (z === 0 ? -1 : 0) });
+      if (Math.round(gy + e - z - 1) < y - 1) c.px(x, y - 1, PALEW, cyl(t, -0.2), { bias: stave % 2 ? -1 : 0 });
+    }
+  }
+  c.part();
+  for (const hz of [2, 7]) {
+    const rx = 4.4 + (hz / (H - 1)) * 0.9 + 0.3;
+    for (let x = Math.floor(cx - rx); x < Math.ceil(cx + rx); x++) {
+      const t = (x + 0.5 - cx) / rx;
+      if (Math.abs(t) > 1) continue;
+      c.px(x, Math.round(gy + Math.sqrt(1 - t * t) * 2.4 - hz), IRON, cyl(t, -0.1), { bias: 1 });
+    }
+  }
+  // Its rim, and the water inside with a glint on it.
+  c.part();
+  const top = gy - H;
+  for (let a = 0; a < 40; a++) {
+    const t = (a / 40) * Math.PI * 2;
+    c.px(cx + Math.cos(t) * 5.1, top + Math.sin(t) * 2.3, DARKW, TOP, { bias: Math.sin(t) > 0 ? 1 : 2 });
+  }
+  c.part();
+  c.ellipse(cx, top + 0.6, 3.9, 1.5, WATER, { normal: () => TOP, bias: 1 });
+  c.px(cx - 2, top, WATER, TOP, { bias: 4 });
+  c.px(cx - 1, top, WATER, TOP, { bias: 3 });
+  // A minnow's tail flicking up out of the water.
+  c.part();
+  const fx = rod ? cx + 1 : cx - 1;
+  c.px(fx, top - 1, STEEL, FACE, { bias: 1 });
+  c.px(fx - 1, top - 2, STEEL, FACE, { bias: 2 });
+  c.px(fx + 1, top - 2, STEEL, FACE, { bias: 0 });
+  // The bail: an iron handle arching over the back.
+  c.part();
+  for (let k = 0; k <= 14; k++) {
+    const t = k / 14;
+    const x = cx - 5.4 + t * 10.8;
+    const y = top - 1 - Math.sin(t * Math.PI) * 4.5;
+    c.px(x, y, IRON, n3(0, 0.6, 0.8), { bias: t < 0.5 ? 1 : 0 });
+  }
+  if (!rod) {
+    tufts(c, cx, gy + 2, 6, 1901, 5);
+    return;
+  }
+  // The rod: its butt in the pail, leaning out over the rim to a fine tip.
+  const bx = cx - 1.5;
+  const by = top + 1;
+  const tx = cx + 8.5;
+  const ty = 3;
+  const at = (s: number) => ({ x: bx + (tx - bx) * s, y: by + (ty - by) * s });
+  c.part();
+  for (let k = 0; k <= 44; k++) {
+    const s = k / 44;
+    const p = at(s);
+    // Thick in the hand, tapering: the lower third two pixels wide.
+    const m = s < 0.18 ? ROD_CORK : s < 0.97 ? OAKW : DARKW;
+    c.px(p.x, p.y, m, cyl(-0.3, 0.4), { bias: m === ROD_CORK ? 1 : 2 - Math.floor(s * 3) });
+    if (s < 0.34) c.px(p.x + 1, p.y, m, cyl(0.5, 0.4), { bias: -1 });
+  }
+  // Binding wraps on the cork, and the line guides along the rod.
+  for (const s of [0.05, 0.16]) {
+    const p = at(s);
+    c.px(p.x, p.y, BRASS, cyl(-0.3, 0.4), { bias: 1 });
+    c.px(p.x + 1, p.y, BRASS, cyl(0.5, 0.4));
+  }
+  c.part();
+  for (const s of [0.42, 0.62, 0.8, 0.96]) {
+    const p = at(s);
+    c.px(p.x + 1, p.y, STEEL, EAST, { bias: 2 });
+  }
+  // The reel, hung under the grip: a brass drum with its crank.
+  c.part();
+  const r = at(0.24);
+  c.ellipse(r.x - 1.2, r.y + 0.8, 2.1, 2.1, BRASS, { flatten: 0.8 });
+  c.px(r.x - 1.2, r.y + 0.8, SOOT, FACE);
+  c.part();
+  c.px(r.x - 3.4, r.y + 1.8, DARKW, FACE, { bias: 2 });
+  // The line: up the rod from the reel, through the guides, then hanging from the tip to the float.
+  c.part();
+  for (let k = 0; k <= 30; k++) {
+    const p = at(0.24 + (0.99 - 0.24) * (k / 30));
+    c.px(p.x + 1, p.y - 1, ROD_LINE, FACE, { bias: 2 });
+  }
+  const drop = 17;
+  for (let k = 1; k <= drop; k++) c.px(tx + 1 + Math.round(Math.sin((k / drop) * 2) * 0.8), ty + k, ROD_LINE, FACE, { bias: 1 });
+  // The float, then a glint of hook below it.
+  c.part();
+  const fyy = ty + drop + 1;
+  const fxx = tx + 1;
+  c.px(fxx, fyy - 1, FLOAT_RED, FACE, { bias: 1 });
+  for (const dx of [-1, 0, 1]) c.px(fxx + dx, fyy, FLOAT_RED, sphere(dx * 0.6, 0.5), { bias: dx < 0 ? 1 : 0 });
+  for (const dx of [-1, 0, 1]) c.px(fxx + dx, fyy + 1, FLOAT_WHITE, sphere(dx * 0.6, -0.2), { bias: dx < 0 ? 1 : 0 });
+  c.px(fxx, fyy + 2, FLOAT_WHITE, sphere(0, -0.6));
+  c.part();
+  c.px(fxx, fyy + 3, ROD_LINE, FACE);
+  c.px(fxx, fyy + 4, STEEL, FACE, { bias: 3 });
+  c.px(fxx - 1, fyy + 4, STEEL, FACE, { bias: 1 });
+  tufts(c, cx, gy + 2, 6, 1901, 5);
+}
+
+const fishrod = art('fishrod', 6, 32, (c, g) => rodBucket(c, g, true));
+
+/** The pail on its own, while its rod is out at the water: the same frame, so it swaps straight in. */
+export function emptyRodBucket(mirror: boolean): PixelCanvas {
+  const c = art('fishrod', 6, 32, (cv, g) => rodBucket(cv, g, false)).draw(0);
+  return mirror ? c.mirrored() : c;
+}
+
+/** The float bobbing on the water while the hero fishes: a red cap on a white body, the rest under the surface. */
+export const BOBBER_W = 7;
+export const BOBBER_H = 8;
+export function bobber(): PixelCanvas {
+  const c = new PixelCanvas(BOBBER_W, BOBBER_H);
+  c.part();
+  c.px(3, 1, DARKW, FACE, { bias: 2 });
+  c.px(3, 2, FLOAT_RED, FACE, { bias: 2 });
+  c.part();
+  for (const [x, y] of [[2, 3], [3, 3], [4, 3], [1, 4], [2, 4], [3, 4], [4, 4], [5, 4]]) c.px(x, y, FLOAT_RED, sphere((x - 3) / 2.5, 0.5), { bias: x < 3 ? 1 : 0 });
+  c.part();
+  for (let x = 1; x < 6; x++) c.px(x, 5, FLOAT_WHITE, sphere((x - 3) / 2.5, -0.1), { bias: x < 3 ? 1 : 0 });
+  for (let x = 2; x < 5; x++) c.px(x, 6, FLOAT_WHITE, sphere((x - 3) / 2, -0.6), { bias: -1 });
+  return c;
+}
+
 const signpost = art('signpost', 8, 26, (c, g) => {
   const cx = g.cx;
   const gy = g.y1 - 5;
@@ -2136,6 +2291,7 @@ export const PROP_ART: Record<string, PropArt> = {
   scarecrow,
   haybale,
   mailbox,
+  fishrod,
   signpost,
   bed,
   bigbed,

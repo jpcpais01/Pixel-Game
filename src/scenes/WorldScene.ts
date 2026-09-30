@@ -43,6 +43,7 @@ import { Forge } from '../world/Forge';
 import { inForge } from '../world/forgeLayout';
 import { inTemple } from '../world/sanctumLayout';
 import { Home } from '../world/Home';
+import { Fishing } from '../world/Fishing';
 import { build } from '../game/build';
 import { openHomeFriends } from '../ui/homeFriends';
 import { isPainted } from '../world/arenas';
@@ -207,6 +208,8 @@ export class WorldScene extends Phaser.Scene {
   private naturalist: NaturalistCamp | null = null;
   /** The player's Home (or a friend's), when that's the arena. */
   private home: Home | null = null;
+  /** The rods by the water in the Home. */
+  private fishing: Fishing | null = null;
   /** The hero this run was started with, to start again with (the Home's friends panel). */
   private character: string | undefined;
   /** Where the camera may look: the arena's ground. */
@@ -333,6 +336,7 @@ export class WorldScene extends Phaser.Scene {
     this.forge = null;
     this.naturalist = null;
     this.home = null;
+    this.fishing = null;
     this.character = data?.character;
     this.auras.clear();
     this.setPowers = new SetPowers(this);
@@ -454,6 +458,14 @@ export class WorldScene extends Phaser.Scene {
     if (arena.id === 'home') {
       const home = (this.home = new Home(this, (img) => ground(img) as Phaser.GameObjects.Image));
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => home.destroy());
+      // Its fishing rods, and the overlay for the fishing.
+      const fishing = (this.fishing = new Fishing(this, home));
+      this.scene.launch('fish');
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        fishing.destroy();
+        if (this.fishing === fishing) this.fishing = null;
+        this.scene.stop('fish');
+      });
       const at = home.spawnPoint();
       this.spawnX = at.x;
       this.spawnY = at.y;
@@ -1795,6 +1807,12 @@ export class WorldScene extends Phaser.Scene {
       mx = my = 0;
       attack = special = ultPressed = false;
     }
+    // Fishing: the hero stands at the water with the rod; walking off (keys) puts it away.
+    if (this.fishing?.active) {
+      if (kx || ky) this.fishing.stop();
+      mx = my = 0;
+      attack = special = ultPressed = false;
+    }
     this.noteInputs(attack, special, ultPressed);
     if (ultPressed && this.downT <= 0) this.ult.request(controls.mouse ? this.mouseAim() : this.touchAim(controls.ultAim), this.facing);
     // Gathering power for the Special: other abilities wait, and the feet stay planted.
@@ -1814,7 +1832,7 @@ export class WorldScene extends Phaser.Scene {
     freeBox(this.walkable, this.hero.x, this.hero.y, 14, hb);
     const x0 = this.hero.x;
     const y0 = this.hero.y;
-    const aim = this.ult.rooted ? null : this.heroAim(dt, attack, special);
+    const aim = this.fishing?.active ? this.fishing.aim() : this.ult.rooted ? null : this.heroAim(dt, attack, special);
     this.hero.update(dt, mx, my, attack, special, this.bounds, aim);
     this.settleStep(x0, y0, hb);
     this.net?.record(mx, my, attack, special, aim);
@@ -1858,6 +1876,7 @@ export class WorldScene extends Phaser.Scene {
     this.forge?.update(this.hero.x, this.hero.y, dt);
     this.naturalist?.update(time, dt, Phaser.Math.Easing.Sine.InOut(this.daylight), this.hero.x, this.hero.y);
     this.home?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight));
+    this.fishing?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight));
     if (build.friends) {
       build.friends = false;
       this.openFriends();
@@ -1887,7 +1906,7 @@ export class WorldScene extends Phaser.Scene {
     this.companion?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight);
     if (controls.netTap) {
       controls.netTap = false;
-      if (this.downT <= 0 && !session.paused) this.critters?.swingNet(this.hero.x, this.hero.y, this.facing.x);
+      if (this.downT <= 0 && !session.paused && !this.fishing?.tap()) this.critters?.swingNet(this.hero.x, this.hero.y, this.facing.x);
     }
     this.critters?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight, this.view, controls.mouse, this.indoors());
     this.island?.update(time, dt);
