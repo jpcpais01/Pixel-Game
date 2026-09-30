@@ -49,6 +49,8 @@ export interface SaveData {
   petPity: number;
   /** Critters caught with the net, how many of each, by id. */
   critters: Record<string, number>;
+  /** Boss materials for the Forge, by the set they forge (see game/forge.ts). */
+  mats: Record<string, number>;
 }
 
 interface Session extends Account {
@@ -241,6 +243,14 @@ export async function loadSave(): Promise<LoadedSave | null> {
   const pets = f.pets && 'stringValue' in f.pets && f.pets.stringValue ? f.pets.stringValue.split(',') : [];
   const pet = f.pet && 'stringValue' in f.pet ? f.pet.stringValue : '';
   const petPity = f.petPity && 'integerValue' in f.petPity ? Number(f.petPity.integerValue) : 0;
+  // Boss materials as "wraith:4,ember:9".
+  const mats: Record<string, number> = {};
+  if (f.mats && 'stringValue' in f.mats && f.mats.stringValue) {
+    for (const pair of f.mats.stringValue.split(',')) {
+      const [set, n] = pair.split(':');
+      if (set && Number(n) > 0) mats[set] = Number(n);
+    }
+  }
   // Critters caught as "firefly:3,glowfrog:1".
   const critters: Record<string, number> = {};
   if (f.critters && 'stringValue' in f.critters && f.critters.stringValue) {
@@ -249,7 +259,7 @@ export async function loadSave(): Promise<LoadedSave | null> {
       if (id && Number(n) > 0) critters[id] = Number(n);
     }
   }
-  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, pets, pet, petPity, critters, username };
+  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, pets, pet, petPity, critters, mats, username };
 }
 
 /** Overwrite the logged-in player's save. */
@@ -275,6 +285,7 @@ export async function writeSave(data: SaveData): Promise<void> {
     pet: { stringValue: data.pet },
     petPity: { integerValue: String(Math.floor(data.petPity)) },
     critters: { stringValue: Object.entries(data.critters).map(([id, n]) => `${id}:${Math.floor(n)}`).join(',') },
+    mats: { stringValue: Object.entries(data.mats).map(([set, n]) => `${set}:${Math.floor(n)}`).join(',') },
     updated: { timestampValue: new Date().toISOString() },
   };
   const res = await fetch(docUrl(s.uid), {

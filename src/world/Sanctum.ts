@@ -148,7 +148,7 @@ export class RuneTemple {
     const tharn = DAIS.upgrade;
     station('rs_crucible', ROOM_X + nyx.station.x, ROOM_Y + nyx.station.y, CRUCIBLE_OY, CRUCIBLE_H, 0xa070ff);
     station('rs_anvil', ROOM_X + tharn.station.x, ROOM_Y + tharn.station.y, ANVIL_OY, ANVIL_H, 0xffb050);
-    for (const id of ['disenchant', 'upgrade'] as Keeper[]) {
+    for (const id of ['disenchant', 'upgrade'] as const) {
       const k = KEEPERS[id];
       const x = ROOM_X + DAIS[id].keeper.x;
       const y = ROOM_Y + DAIS[id].keeper.y;

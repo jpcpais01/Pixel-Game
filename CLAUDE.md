@@ -49,6 +49,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 **Loot and progression** (`src/game/`)
 - `items.ts`: potions and the 9-slot hotbar. `buffs.ts`: timed buffs. `Pickup.ts`: items on the ground and the rare/epic/legendary drop shows.
 - `gear.ts`: 70 pieces, 6 slots, 5 rarities, 5 boss sets (`GEAR_SETS`, `SET_BOSS`; a set piece's icon stands on its set's pattern, `setPattern` in `art/gear.ts`), stat caps, dust and upgrades. `collection.ts`: what the player owns and wears, saved locally and to the cloud. `cloud.ts`: Firebase auth and Firestore over REST. `keepers.ts`: Nyx (disenchant) and Tharn (upgrade) in the Rune Temple, UI in `src/ui/keeper*.ts`.
+- The Forge (walk-in smithy on the Clearing's west, `world/forgeLayout.ts`, `world/Forge.ts`, art in `art/forge.ts`): Brenna forges a set piece the player is missing from `FORGE_COST` dust plus its boss's material (`game/forge.ts`: `MATERIALS`, `rollMats`; Legends drop 2-3, Myths 3-4, as `mat` pickups; saved as `collection.mats`). Her counter is `ui/forgeView.ts`, opened through `keeperHud.ts` as keeper `forge`. Drop tables are untouched.
 
 **Gems, wishes and skins** (`src/game/`)
 - Skins are locked until won; a type's own look is free. `skins.ts` falls back to the type's look for a skin not owned; the account `kel` (admin, `ADMINS` in `collection.ts`) owns every skin.

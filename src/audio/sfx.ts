@@ -284,6 +284,47 @@ export class Sfx {
     }
   }
 
+  /**
+   * A hammer on an anvil: a hard tick, then the anvil's ring, bright and
+   * inharmonic like struck steel, dying away over most of a second.
+   */
+  anvil(t: number, pan: number, level: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.55 * level, 0.3);
+    const k = gain(ctx, 0, out);
+    hit(k.gain, t, 0.5, 0.001, 0.04);
+    const n = this.m.noiseSource();
+    n.connect(filter(ctx, 'bandpass', rand(2600, 3200), 2, k));
+    this.m.startNoise(n, t, 0.06);
+    const ring = gain(ctx, 0, out);
+    hit(ring.gain, t, 0.22, 0.001, rand(0.5, 0.7));
+    const f0 = rand(880, 940);
+    for (const [r, a] of [
+      [1, 1],
+      [2.76, 0.5],
+      [5.4, 0.25],
+      [8.93, 0.12],
+    ]) {
+      const o = osc(ctx, 'sine', f0 * r, gain(ctx, a, ring));
+      o.start(t);
+      o.stop(t + 0.9);
+    }
+  }
+
+  /** A piece forged: three quick blows, rising, and a shimmer as it cools. */
+  forged(t: number): void {
+    for (let k = 0; k < 3; k++) this.anvil(t + k * 0.16, 0, 0.8 + k * 0.1);
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.35, 0.5);
+    for (let k = 0; k < 5; k++) {
+      const g = gain(ctx, 0, out);
+      hit(g.gain, t + 0.5 + k * 0.07, 0.25, 0.005, 0.5);
+      const o = osc(ctx, 'triangle', SPARKLE[k % SPARKLE.length], g);
+      o.start(t + 0.5 + k * 0.07);
+      o.stop(t + 1.2 + k * 0.07);
+    }
+  }
+
   /** The whirlwind kindling: a breath of fire rising in pitch. */
   rise(t: number): void {
     const ctx = this.m.ctx;

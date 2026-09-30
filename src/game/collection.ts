@@ -4,7 +4,8 @@
 // they log into. Changes save a moment later, so a burst of pickups is one
 // write.
 
-import { DUST_VALUE, MAX_LEVEL, STAT_KEYS, SLOTS, UPGRADE_REFUND, canUpgrade, dustSpent, gearById, levelled, upgradeCost, type GearDef, type StatKey } from './gear';
+import { DUST_VALUE, GEAR_SETS, MAX_LEVEL, STAT_KEYS, SLOTS, UPGRADE_REFUND, canUpgrade, dustSpent, gearById, levelled, upgradeCost, type GearDef, type SetId, type StatKey } from './gear';
+import { FORGE_COST } from './forge';
 import { account, cloudReady, loadSave, onAccount, writeSave, type SaveData } from './cloud';
 
 /** One slot per gear type, in the order of SLOTS: equipped[i] holds a SLOTS[i] piece. */
@@ -24,7 +25,7 @@ const GRANTS: { id: string; user: string; gems: number }[] = [
 /** Set once this device has given a guest the welcome gems, so a fresh guest game can't be made again and again for more. */
 const WELCOMED_KEY = 'pixel-battle.welcomed';
 
-const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, pets: [], pet: '', petPity: 0, critters: {} });
+const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, pets: [], pet: '', petPity: 0, critters: {}, mats: {} });
 
 /** The welcome gems for a new guest game: the first on this device only. */
 function welcomeGems(): number {
@@ -64,6 +65,7 @@ function clean(d: Partial<SaveData> | null | undefined): SaveData {
   out.pity = Math.max(0, Math.floor(Number(d?.pity) || 0));
   out.grants = [...new Set((Array.isArray(d?.grants) ? d.grants : []).filter((g): g is string => typeof g === 'string' && !!g))];
   for (const [cls, n] of Object.entries(d?.rift ?? {})) if (Number(n) > 0) out.rift[cls] = Math.floor(Number(n));
+  for (const [set, n] of Object.entries(d?.mats ?? {})) if (set in GEAR_SETS && Number(n) > 0) out.mats[set] = Math.floor(Number(n));
   out.pets = [...new Set((Array.isArray(d?.pets) ? d.pets : []).filter((p): p is string => typeof p === 'string' && !!p))];
   out.pet = typeof d?.pet === 'string' ? d.pet : '';
   out.petPity = Math.max(0, Math.floor(Number(d?.petPity) || 0));
@@ -216,6 +218,39 @@ class Collection {
     if (cost === null || !this.count(id) || this.data.dust < cost) return false;
     this.data.dust -= cost;
     this.data.upgrades[id] = [...this.picks(id), stat];
+    this.changed();
+    return true;
+  }
+
+  // ---- The Forge ----
+
+  /** Boss materials of `set` the player holds. */
+  mats(set: SetId): number {
+    return this.data.mats[set] ?? 0;
+  }
+
+  /** Materials found (a Legend's or Myth's drop). */
+  addMats(set: SetId, n: number): void {
+    if (n <= 0) return;
+    this.data.mats[set] = this.mats(set) + Math.floor(n);
+    this.changed();
+  }
+
+  /** Can set piece `id` be forged now: a set piece not owned, with its dust and materials in hand. */
+  canForge(id: string): boolean {
+    const g = gearById(id);
+    return !!g?.set && !this.count(id) && this.data.dust >= FORGE_COST.dust && this.mats(g.set) >= FORGE_COST.mats;
+  }
+
+  /** Spend dust and materials on set piece `id`; it's the player's, worn at once if its slot is empty. False when it can't be done. */
+  forge(id: string): boolean {
+    const g = gearById(id);
+    if (!g?.set || !this.canForge(id)) return false;
+    this.data.dust -= FORGE_COST.dust;
+    this.data.mats[g.set] = this.mats(g.set) - FORGE_COST.mats;
+    this.data.items[id] = 1;
+    const slot = slotIndex(id);
+    if (!this.data.equipped[slot]) this.data.equipped[slot] = id;
     this.changed();
     return true;
   }
@@ -464,6 +499,7 @@ class Collection {
       merged.pets = [...new Set([...merged.pets, ...local.pets])];
       if (!merged.pet) merged.pet = local.pet;
       merged.petPity = Math.max(local.petPity, merged.petPity);
+      for (const [set, n] of Object.entries(local.mats)) merged.mats[set] = Math.max(n, merged.mats[set] ?? 0);
       for (const [id, n] of Object.entries(local.critters)) merged.critters[id] = Math.max(n, merged.critters[id] ?? 0);
       if (guest) {
         for (const [id, n] of Object.entries(guest.items)) merged.items[id] = (merged.items[id] ?? 0) + n;
@@ -473,6 +509,7 @@ class Collection {
         merged.pets = [...new Set([...merged.pets, ...guest.pets])];
         for (const [id, n] of Object.entries(guest.critters)) merged.critters[id] = (merged.critters[id] ?? 0) + n;
         for (const [cls, n] of Object.entries(guest.rift)) merged.rift[cls] = Math.max(n, merged.rift[cls] ?? 0);
+        for (const [set, n] of Object.entries(guest.mats)) merged.mats[set] = (merged.mats[set] ?? 0) + n;
         merged.gems = Math.max(merged.gems, guest.gems);
         if (guest.daily > merged.daily) merged.daily = guest.daily;
         for (const [id, picks] of Object.entries(guest.upgrades)) if (picks.length > (merged.upgrades[id]?.length ?? 0)) merged.upgrades[id] = picks;
@@ -503,7 +540,7 @@ class Collection {
       return;
     }
     // Logging in from a guest game brings its pickups along.
-    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length || guest.pets.length || Object.keys(guest.critters).length) ? guest : undefined);
+    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length || guest.pets.length || Object.keys(guest.critters).length || Object.keys(guest.mats).length) ? guest : undefined);
   }
 }
 

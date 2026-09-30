@@ -35,6 +35,35 @@ import { registerInventoryArt } from './invTiles';
 import { ANVIL_H, ANVIL_W, CRUCIBLE_H, CRUCIBLE_W, GODRAY_H, GODRAY_W, KEEPER_FRAMES, KEEPER_H, KEEPER_W, PILLAR_H as RS_PILLAR_H, PILLAR_W as RS_PILLAR_W, RUNESTONE_H, RUNESTONE_W, STATION_FRAMES, TEMPLE_ART_H, TEMPLE_ART_W, dustCrucible, godRay, runeAnvil, runesmith, runestone, sanctumArt, sanctumExterior, sanctumPillar, unmaker } from './sanctum';
 import { ROOM_H, ROOM_W } from '../world/sanctumLayout';
 import { chapelArt, chapelExterior } from './chapel';
+import {
+  BELLOWS_H,
+  BELLOWS_W,
+  FIRE_FRAMES,
+  HEARTH_H,
+  HEARTH_W,
+  PORTRAIT_FRAMES,
+  PORTRAIT_H,
+  PORTRAIT_W,
+  SMITH_FRAMES,
+  SMITH_H,
+  SMITH_W,
+  TROUGH_H,
+  TROUGH_W,
+  YARD_H,
+  YARD_W,
+  barrelFrame,
+  bellowsFrame,
+  forgeExterior,
+  forgeHall,
+  grindFrame,
+  hearthFrame,
+  materialIcons,
+  smithFrame,
+  smithPortrait,
+  troughFrame,
+} from './forge';
+import { FG_EXT_H, FG_EXT_W, FG_H, FG_W } from '../world/forgeLayout';
+import { matIcon } from '../game/forge';
 import { CH_EXT_H, CH_EXT_W, CH_H, CH_W } from '../world/chapelLayout';
 import { AFONSO_TONES, decreeIcon, KING_TONES } from './king';
 import { JADE_LOOK } from './warrior';
@@ -490,6 +519,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   }
   scene.textures.addCanvas('icon_chest', toCanvas(16, 16, chestIcon()));
   registerInventoryArt(scene);
+  for (const m of materialIcons()) scene.textures.addCanvas(matIcon(m.set), m.canvas);
 
   register(scene, 'brazier', pack(frameList([0, 1, 2, 3].map(brazierFrame), 'f'), 16, 26), 16, 26);
   scene.anims.create({ key: 'brazier_burn', frames: scene.anims.generateFrameNames('brazier_e', { prefix: 'f', start: 0, end: 3 }), frameRate: 9, repeat: -1 });
@@ -850,4 +880,28 @@ export function warmChapel(scene: Phaser.Scene): void {
   scene.textures.addCanvas('ch_hall', toCanvas(CH_W, CH_H, hall.diffuse))!.setDataSource(toCanvas(CH_W, CH_H, hall.normal));
   scene.textures.addCanvas('ch_hall_e', toCanvas(CH_W, CH_H, hall.emissive));
   register(scene, 'ch_out', pack(frameList([chapelExterior()], 't'), CH_EXT_W, CH_EXT_H), CH_EXT_W, CH_EXT_H);
+}
+
+/**
+ * The Forge's art (its hall, the smithy that hides it, the hearth, bellows,
+ * trough, Brenna at her anvil and in her portrait, the barrel and the
+ * grindstone), made the first time the clearing is entered.
+ */
+export function warmForge(scene: Phaser.Scene): void {
+  if (scene.textures.exists('fg_hall')) return;
+  const hall = forgeHall();
+  scene.textures.addCanvas('fg_hall', toCanvas(FG_W, FG_H, hall.diffuse))!.setDataSource(toCanvas(FG_W, FG_H, hall.normal));
+  scene.textures.addCanvas('fg_hall_e', toCanvas(FG_W, FG_H, hall.emissive));
+  register(scene, 'fg_out', pack(frameList([forgeExterior()], 't'), FG_EXT_W, FG_EXT_H), FG_EXT_W, FG_EXT_H);
+  register(scene, 'fg_yard', pack(frameList([barrelFrame(), grindFrame()], 'y'), YARD_W, YARD_H), YARD_W, YARD_H);
+  register(scene, 'fg_trough', pack(frameList([troughFrame()], 't'), TROUGH_W, TROUGH_H), TROUGH_W, TROUGH_H);
+  const loop = (key: string, paint: (f: number) => PixelCanvas, n: number, w: number, h: number, fps: number) => {
+    register(scene, key, pack(frameList(Array.from({ length: n }, (_, f) => paint(f)), 'f'), w, h), w, h);
+    for (const k of [key, `${key}_e`]) scene.anims.create({ key: `${k}_loop`, frames: scene.anims.generateFrameNames(k, { prefix: 'f', start: 0, end: n - 1 }), frameRate: fps, repeat: -1 });
+  };
+  // The fire and the bellows keep time together; Brenna's hammer has its own.
+  loop('fg_hearth', hearthFrame, FIRE_FRAMES, HEARTH_W, HEARTH_H, 9);
+  loop('fg_bellows', bellowsFrame, FIRE_FRAMES, BELLOWS_W, BELLOWS_H, 9);
+  loop('fg_smith', smithFrame, SMITH_FRAMES, SMITH_W, SMITH_H, 9);
+  loop('fg_brenna', smithPortrait, PORTRAIT_FRAMES, PORTRAIT_W, PORTRAIT_H, 5);
 }

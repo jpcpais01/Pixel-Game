@@ -1,10 +1,12 @@
-// The Rune Temple's keepers on the HUD: when the hero walks up to Nyx or
-// Tharn, their counter opens over the room (see ui/keeperView.ts), drawn in
-// art pixels and scaled like the bag. A tap outside it, or its X, closes it.
+// The keepers on the HUD: when the hero walks up to Nyx or Tharn in the Rune
+// Temple, or Brenna at the Forge, their counter opens over the room (see
+// ui/keeperView.ts and ui/forgeView.ts), drawn in art pixels and scaled like
+// the bag. A tap outside it, or its X, closes it.
 
 import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
 import { keeperCall, type Keeper } from '../game/keepers';
+import { ForgeView } from './forgeView';
 import { KeeperView } from './keeperView';
 import { PANEL, panelTexture, pixelText } from './widgets';
 
@@ -13,7 +15,7 @@ const CLOSE = 13;
 
 export class KeeperHud {
   private root: Phaser.GameObjects.Container | null = null;
-  private view: KeeperView | null = null;
+  private view: KeeperView | ForgeView | null = null;
   private frame: Phaser.GameObjects.Image | null = null;
   private closeBg: Phaser.GameObjects.Image | null = null;
   private sized = '';
@@ -41,7 +43,7 @@ export class KeeperHud {
     this.closeBg = scene.add.image(0, PAD - 3, '__DEFAULT').setOrigin(0);
     const x = pixelText(scene, 0, PAD - 1, 'X', 0xfff4d6);
     this.closeBg.setData('x', x);
-    this.view = new KeeperView(scene, keeper);
+    this.view = keeper === 'forge' ? new ForgeView(scene) : new KeeperView(scene, keeper);
     this.view.setPosition(PAD, PAD);
     this.root = scene.add.container(0, 0, [this.frame, this.view, this.closeBg, x]).setDepth(51);
     this.sized = '';
