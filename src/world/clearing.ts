@@ -2,9 +2,9 @@
 // meadow, braziers and crystals around it, and the forest's treetops closing
 // it off to the north. The Rune Temple stands at its head, in a glade where
 // the forest draws back, its steps coming down onto the plaza; the Forge is
-// on the west lawn, a worn path from its door to the plaza. Everything here
-// is a pure function of world coordinates (see art/ground.ts for how the
-// ground is built from it).
+// on the west lawn, a worn path from its door to the plaza, and Hazel the
+// Naturalist's camp on the east lawn. Everything here is a pure function of
+// world coordinates (see art/ground.ts for how the ground is built from it).
 
 import { DAY_GROUND, NIGHT_GROUND, hash2, rng, valueNoise } from '../art/env';
 import { K, flagstone, nightify, ramp, runeCircle, smoothstep, stone, type Cell, type GroundSpec, type Look, type StripFields } from '../art/ground';
@@ -31,6 +31,12 @@ const nearForge = (x: number, y: number, pad: number) => x > FG_X - pad && x < F
 
 /** Is (x, y) on or round the Rune Temple: its walls and eaves, the steps and the paving before them? */
 const nearTemple = (x: number, y: number, pad: number) => Math.abs(x - TP_CX) < TP_W / 2 + 10 + pad && y > TP_TOP - 40 - pad && y < TP_FOOT + 24 + pad;
+
+/** Hazel the Naturalist's camp on the east lawn, across the plaza from the Forge: the middle of its table's foot (see world/Naturalist.ts). */
+export const NATURALIST_CAMP = { x: 556, y: 318 };
+
+/** Is (x, y) on or round Hazel's camp, its guy ropes and the grass before her table? */
+const nearCamp = (x: number, y: number, pad: number) => Math.abs(x - NATURALIST_CAMP.x) < 46 + pad && y > NATURALIST_CAMP.y - 72 - pad && y < NATURALIST_CAMP.y + 20 + pad;
 
 /** The worn path from the Forge's door across the west lawn to the plaza's edge. */
 const FORGE_PATH: [number, number][] = [
@@ -107,7 +113,7 @@ export function plazaProps(): PlazaProps {
     // Keep the lawn's edge and the treeline clear.
     if (x < 16 || x > CLEARING_W - 16 || y > CLEARING_H - 8 || roofDepth(x, y) > -24) continue;
     // Nor on the Rune Temple or before it, on the Forge or in its yard, or on the Forge's path.
-    if (nearTemple(x, y, 12) || nearForge(x, y, 12) || forgePathDistance(x, y) < 14) continue;
+    if (nearTemple(x, y, 12) || nearForge(x, y, 12) || nearCamp(x, y, 8) || forgePathDistance(x, y) < 14) continue;
     rocks.push({ x, y, frame: `r${i % 3}` });
   }
   const dummies = [
@@ -135,7 +141,7 @@ export function clearingScenery(): SceneryLayout {
     seed: 2024,
     roofDepth,
     trees: true,
-    keepClear: (x, y) => near(x, y, p.crystals, 26) || near(x, y, p.braziers, 30) || nearTemple(x, y, 14) || nearForge(x, y, 10) || forgePathDistance(x, y) < 12,
+    keepClear: (x, y) => near(x, y, p.crystals, 26) || near(x, y, p.braziers, 30) || nearTemple(x, y, 14) || nearForge(x, y, 10) || nearCamp(x, y, 8) || forgePathDistance(x, y) < 12,
   });
   // A few shafts of sunlight slant through the treeline onto the grass.
   const rays: RaySpot[] = [];

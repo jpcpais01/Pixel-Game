@@ -4,6 +4,7 @@
 // they log into. Changes save a moment later, so a burst of pickups is one
 // write.
 
+import { CRITTER_KEEP, CRITTER_PRICE, critterById } from './critters';
 import { DUST_VALUE, GEAR_SETS, MAX_LEVEL, STAT_KEYS, SLOTS, UPGRADE_REFUND, canUpgrade, dustSpent, gearById, levelled, upgradeCost, type GearDef, type SetId, type StatKey } from './gear';
 import { FORGE_COST } from './forge';
 import { account, cloudReady, loadSave, onAccount, writeSave, type SaveData } from './cloud';
@@ -33,7 +34,7 @@ const WELCOMED_KEY = 'pixel-battle.welcomed';
  */
 const SKIN_HEIRS: Record<string, string> = { 'jedi:warlord': 'jedi:sith' };
 
-const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, glide: {}, pets: [], pet: '', petPity: 0, critters: {}, mats: {}, candy: {}, home: '', homeT: 0 });
+const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, glide: {}, pets: [], pet: '', petPity: 0, critters: {}, fish: {}, mats: {}, candy: {}, home: '', homeT: 0 });
 
 /** The welcome gems for a new guest game: the first on this device only. */
 function welcomeGems(): number {
@@ -82,6 +83,7 @@ function clean(d: Partial<SaveData> | null | undefined): SaveData {
   out.petPity = Math.max(0, Math.floor(Number(d?.petPity) || 0));
   for (const [id, n] of Object.entries(d?.candy ?? {})) if (Number(n) > 0) out.candy[id] = Math.floor(Number(n));
   for (const [id, n] of Object.entries(d?.critters ?? {})) if (Number(n) > 0) out.critters[id] = Math.floor(Number(n));
+  for (const [id, n] of Object.entries(d?.fish ?? {})) if (Number(n) > 0) out.fish[id] = Math.floor(Number(n));
   for (const [id, n] of Object.entries(d?.items ?? {})) if (n > 0) out.items[id] = Math.floor(n);
   for (const id of d?.equipped ?? []) {
     const i = id ? slotIndex(id) : -1;
@@ -313,7 +315,7 @@ class Collection {
     return true;
   }
 
-  /** The furthest wave reached in the Endless Rift with class `cls` (0 if never), or with any class. */
+  /** The furthest wave reached in the Endless Rift with class `cls` (0 if never), or with any class. `cls` may carry a difficulty (riftKey in rift.ts). */
   riftBest(cls?: string): number {
     if (cls) return this.data.rift[cls] ?? 0;
     return Math.max(0, ...Object.values(this.data.rift));
@@ -422,6 +424,36 @@ class Collection {
     this.data.critters[id] = n + 1;
     this.changed();
     return n === 0;
+  }
+
+  /** How many of fish `id` the player has landed. */
+  fishCount(id: string): number {
+    return this.data.fish[id] ?? 0;
+  }
+
+  /** A fish landed with the rod: true when it's the first of its kind. */
+  catchFish(id: string): boolean {
+    const n = this.fishCount(id);
+    this.data.fish[id] = n + 1;
+    this.changed();
+    return n === 0;
+  }
+
+  /** Spare critters of kind `id`: every one caught after the first, which stays in its jar. */
+  critterSpares(id: string): number {
+    return Math.max(0, this.critterCount(id) - CRITTER_KEEP);
+  }
+
+  /** Sell up to `n` spare critters of kind `id` to Hazel for dust; returns the dust gained. */
+  sellCritters(id: string, n: number): number {
+    const def = critterById(id);
+    const sold = Math.min(Math.floor(n), this.critterSpares(id));
+    if (!def || sold <= 0) return 0;
+    const got = sold * CRITTER_PRICE[def.rarity];
+    this.data.critters[id] -= sold;
+    this.data.dust += got;
+    this.changed();
+    return got;
   }
 
   /** Wishes since the last legendary skin. */
@@ -563,6 +595,7 @@ class Collection {
       merged.petPity = Math.max(local.petPity, merged.petPity);
       for (const [set, n] of Object.entries(local.mats)) merged.mats[set] = Math.max(n, merged.mats[set] ?? 0);
       for (const [id, n] of Object.entries(local.critters)) merged.critters[id] = Math.max(n, merged.critters[id] ?? 0);
+      for (const [id, n] of Object.entries(local.fish)) merged.fish[id] = Math.max(n, merged.fish[id] ?? 0);
       // Candy like gems: the higher count wins, so candy picked up offline isn't lost.
       for (const [id, n] of Object.entries(local.candy)) merged.candy[id] = Math.max(n, merged.candy[id] ?? 0);
       // The Home: whichever was built on last.
@@ -581,6 +614,7 @@ class Collection {
         merged.skins = [...new Set([...merged.skins, ...guest.skins])];
         merged.pets = [...new Set([...merged.pets, ...guest.pets])];
         for (const [id, n] of Object.entries(guest.critters)) merged.critters[id] = (merged.critters[id] ?? 0) + n;
+        for (const [id, n] of Object.entries(guest.fish)) merged.fish[id] = (merged.fish[id] ?? 0) + n;
         for (const [cls, n] of Object.entries(guest.rift)) merged.rift[cls] = Math.max(n, merged.rift[cls] ?? 0);
         for (const [course, ms] of Object.entries(guest.glide)) merged.glide[course] = Math.min(ms, merged.glide[course] ?? Infinity);
         for (const [set, n] of Object.entries(guest.mats)) merged.mats[set] = (merged.mats[set] ?? 0) + n;
@@ -615,7 +649,7 @@ class Collection {
       return;
     }
     // Logging in from a guest game brings its pickups along.
-    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length || guest.pets.length || Object.keys(guest.critters).length || Object.keys(guest.mats).length || Object.keys(guest.candy).length) ? guest : undefined);
+    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length || guest.pets.length || Object.keys(guest.critters).length || Object.keys(guest.fish).length || Object.keys(guest.mats).length || Object.keys(guest.candy).length) ? guest : undefined);
   }
 }
 

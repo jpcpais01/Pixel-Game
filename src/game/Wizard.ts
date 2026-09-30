@@ -328,6 +328,11 @@ export function sunShadow<T extends Phaser.GameObjects.Image | Phaser.GameObject
   return obj;
 }
 
+/** Where sun shadows fall now, for shadows that are drawn rather than laid (a Home's houses). */
+export function sunCastNow(): { angle: number; length: number } {
+  return sunCast;
+}
+
 /** Lay every sun shadow at a new angle and length (the world calls this as the time of day turns). */
 export function castSunShadows(angle: number, length: number): void {
   // Most frames nothing moves: only touch the shadows while a fade runs.
