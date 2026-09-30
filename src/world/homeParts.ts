@@ -5,10 +5,14 @@
 // A home has four layers on its grid: floors painted over the lawn, walls
 // (with doors and windows) joining up with their neighbours, roofs over them,
 // and things placed on it: plants, furniture, lights, and decorations hung on
-// walls. The build palette lists these in order, tab by tab.
+// walls. The build palette lists these in order, tab by tab. Critters the
+// player has caught can be let out here too (see world/HomeCritters.ts): each
+// is kept as a thing at the spot it was let go, and roams round it.
+
+import { CRITTERS } from '../game/critters';
 
 /** The palette's tabs, in order; each is a layer or a kind of thing to place. */
-export type BuildTab = 'floor' | 'wall' | 'roof' | 'garden' | 'furniture' | 'light' | 'decor';
+export type BuildTab = 'floor' | 'wall' | 'roof' | 'garden' | 'furniture' | 'light' | 'decor' | 'critters';
 
 export const TABS: { id: BuildTab; name: string }[] = [
   { id: 'floor', name: 'Floors' },
@@ -18,6 +22,7 @@ export const TABS: { id: BuildTab; name: string }[] = [
   { id: 'furniture', name: 'Furniture' },
   { id: 'light', name: 'Lights' },
   { id: 'decor', name: 'Wall decor' },
+  { id: 'critters', name: 'Critters' },
 ];
 
 // ---------------------------------------------------------------- Floors
@@ -117,7 +122,7 @@ export type Block = 'none' | 'post' | 'full';
 export interface PartDef {
   id: string;
   name: string;
-  tab: 'garden' | 'furniture' | 'light' | 'decor';
+  tab: 'garden' | 'furniture' | 'light' | 'decor' | 'critters';
   /** Footprint in cells. */
   w: number;
   h: number;
@@ -136,6 +141,8 @@ export interface PartDef {
   chimney?: boolean;
   /** Shows this many of the owner's caught critters in their jars along its top (see game/critters.ts). */
   jars?: number;
+  /** A critter let out here (its id in game/critters.ts): not drawn as a thing, but living round this spot. */
+  critter?: string;
 }
 
 export const PARTS: PartDef[] = [
@@ -212,6 +219,26 @@ export const PARTS: PartDef[] = [
   { id: 'sconce', name: 'Wall sconce', tab: 'decor', w: 1, h: 1, block: 'none', wall: true, light: { color: 0xffb060, radius: 90, intensity: 1.5, day: 0.25, y: 0, flicker: true } },
   { id: 'wreath', name: 'Wreath', tab: 'decor', w: 1, h: 1, block: 'none', wall: true },
 ];
+
+/** Critters living in a Home: most at once, so a phone keeps its frame rate. */
+export const MAX_CRITTERS = 16;
+
+/** The part a critter is let out as. */
+export const critterPart = (id: string): string => `critter_${id}`;
+
+// One part a critter, on the Critters tab. Flyers can be let out over the pond, and so can the frog.
+PARTS.push(
+  ...CRITTERS.map((c): PartDef => ({
+    id: critterPart(c.id),
+    name: c.name,
+    tab: 'critters',
+    w: 1,
+    h: 1,
+    block: 'none',
+    critter: c.id,
+    water: c.gait === 'fly' || c.gait === 'hop' || c.id === 'axolotl' ? 'too' : undefined,
+  })),
+);
 
 const byId = new Map(PARTS.map((p) => [p.id, p]));
 export const partById = (id: string): PartDef | undefined => byId.get(id);
