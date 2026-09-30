@@ -1,37 +1,71 @@
 // Runestone Clearing, the first arena: a paved plaza with a rune circle in a
 // meadow, braziers and crystals around it, and the forest's treetops closing
-// it off to the north. Everything here is a pure function of world
-// coordinates (see art/ground.ts for how the ground is built from it).
+// it off to the north. The Rune Temple stands at its head, in a glade where
+// the forest draws back, its steps coming down onto the plaza; the Forge is
+// on the west lawn, a worn path from its door to the plaza. Everything here
+// is a pure function of world coordinates (see art/ground.ts for how the
+// ground is built from it).
 
 import { DAY_GROUND, NIGHT_GROUND, hash2, rng, valueNoise } from '../art/env';
 import { K, flagstone, nightify, ramp, runeCircle, smoothstep, stone, type Cell, type GroundSpec, type Look, type StripFields } from '../art/ground';
 import { ColliderGrid, TREE_SHAPE, edgeScenery, type RaySpot, type SceneryLayout } from './common';
 import { FG_FOOT, FG_TOP, FG_W, FG_X, forgeBlocks, forgeYardBlocks } from './forgeLayout';
-import { TEMPLE_X, TEMPLE_Y, roomWalkable, templeBlocks } from './sanctumLayout';
+import { TP_CX, TP_FOOT, TP_TOP, TP_W, T_STEP_HW, inTemple, templeBlocks } from './sanctumLayout';
 
 export const CLEARING_W = 640;
-export const PLAZA_H = 448;
+export const PLAZA_H = 512;
 /** Top of the plaza: the treetops above it are all that is left of the forest. */
 export const PLAZA_Y = 88;
 export const CLEARING_H = PLAZA_Y + PLAZA_H;
 
+/** The plaza's middle: below the temple, whose steps come down onto its north edge. */
 export const PLAZA_CX = CLEARING_W / 2;
-export const PLAZA_CY = PLAZA_Y + PLAZA_H / 2;
+export const PLAZA_CY = 392;
 /** Radius of the plaza's flagstones (before the 1.15 vertical squash). */
-export const PLAZA_R = Math.min(CLEARING_W, PLAZA_H) * 0.3;
+export const PLAZA_R = 134;
 /** Where the braziers and crystals stand around the plaza. */
 const RING = 192;
 
 /** Is (x, y) on or just round the Forge, on the west of the plaza (its yard and the chimney's reach included)? */
 const nearForge = (x: number, y: number, pad: number) => x > FG_X - pad && x < FG_X + FG_W + pad && y > FG_TOP - 30 - pad && y < FG_FOOT + 22 + pad;
 
+/** Is (x, y) on or round the Rune Temple: its walls and eaves, the steps and the paving before them? */
+const nearTemple = (x: number, y: number, pad: number) => Math.abs(x - TP_CX) < TP_W / 2 + 10 + pad && y > TP_TOP - 40 - pad && y < TP_FOOT + 24 + pad;
+
+/** The worn path from the Forge's door across the west lawn to the plaza's edge. */
+const FORGE_PATH: [number, number][] = [
+  [FG_X + FG_W / 2, FG_FOOT + 2],
+  [FG_X + FG_W / 2 + 14, FG_FOOT + 24],
+  [FG_X + FG_W / 2 + 56, FG_FOOT + 30],
+  [PLAZA_CX - PLAZA_R + 26, PLAZA_CY + 42],
+];
+
+/** How far (x, y) is from the Forge's path. */
+function forgePathDistance(x: number, y: number): number {
+  let best = Infinity;
+  for (let i = 1; i < FORGE_PATH.length; i++) {
+    const [ax, ay] = FORGE_PATH[i - 1];
+    const [bx, by] = FORGE_PATH[i];
+    const vx = bx - ax;
+    const vy = by - ay;
+    const t = Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy)));
+    best = Math.min(best, Math.hypot(x - ax - vx * t, y - ay - vy * t));
+  }
+  return best;
+}
+
 /** Wobble of the roof's edge, so it reads as a mass of trees rather than a line. */
 const edgeWobble = (x: number, y: number) => (valueNoise(x, y, 7, 41) - 0.5) * 10 + (valueNoise(x, y, 19, 43) - 0.5) * 16;
 
-/** The treeline: close over the plaza in the middle, bowing down toward the corners. */
+/**
+ * The treeline: close over the plaza, bowing down toward the corners, and
+ * drawn back into a glade round the Rune Temple, so the forest stands behind
+ * and beside it rather than over it.
+ */
 export function roofDepth(x: number, y: number): number {
   const u = (x - PLAZA_CX) / (CLEARING_W / 2);
-  const edge = PLAZA_Y + 16 + u * u * 52 + (valueNoise(x, 0, 60, 47) - 0.5) * 18;
+  const glade = smoothstep(0, 1, Math.min(1, Math.max(0, (210 - Math.abs(x - TP_CX)) / 90)));
+  const edge = PLAZA_Y + 16 + u * u * 52 + (valueNoise(x, 0, 60, 47) - 0.5) * 18 - glade * 34;
   return edge - y + edgeWobble(x, y);
 }
 
@@ -58,10 +92,10 @@ export function plazaProps(): PlazaProps {
     [0.78, 0.62],
   ].map(([ax, ay]) => ({ x: Math.round(cx + ax * RING), y: Math.round(cy + ay * RING * 0.87) }));
   const crystals = [
-    // The west one stands out of the Forge's way, south of it.
+    // The west one stands out of the Forge's way, south of it; one in the glade east of the temple.
     { x: cx - RING - 64, y: cy + 150, frame: 'c0' },
     { x: cx + RING + 46, y: cy + 22, frame: 'c1' },
-    { x: cx + 124, y: PLAZA_Y + 70, frame: 'c1' },
+    { x: TP_CX + TP_W / 2 + 34, y: TP_TOP + 132, frame: 'c1' },
   ];
   const rocks: PlazaProps['rocks'] = [];
   const R = rng(4242);
@@ -72,10 +106,8 @@ export function plazaProps(): PlazaProps {
     const y = Math.round(cy + Math.sin(a) * d);
     // Keep the lawn's edge and the treeline clear.
     if (x < 16 || x > CLEARING_W - 16 || y > CLEARING_H - 8 || roofDepth(x, y) > -24) continue;
-    // Nor in front of or behind the Rune Temple.
-    if (Math.abs(x - TEMPLE_X) < 100 && y > TEMPLE_Y - 160 && y < TEMPLE_Y + 24) continue;
-    // Nor on the Forge or in its yard.
-    if (nearForge(x, y, 12)) continue;
+    // Nor on the Rune Temple or before it, on the Forge or in its yard, or on the Forge's path.
+    if (nearTemple(x, y, 12) || nearForge(x, y, 12) || forgePathDistance(x, y) < 14) continue;
     rocks.push({ x, y, frame: `r${i % 3}` });
   }
   const dummies = [
@@ -103,14 +135,14 @@ export function clearingScenery(): SceneryLayout {
     seed: 2024,
     roofDepth,
     trees: true,
-    keepClear: (x, y) => near(x, y, p.crystals, 26) || near(x, y, p.braziers, 30) || (Math.abs(x - TEMPLE_X) < 104 && y > TEMPLE_Y - 170 && y < TEMPLE_Y + 20) || nearForge(x, y, 10),
+    keepClear: (x, y) => near(x, y, p.crystals, 26) || near(x, y, p.braziers, 30) || nearTemple(x, y, 14) || nearForge(x, y, 10) || forgePathDistance(x, y) < 12,
   });
   // A few shafts of sunlight slant through the treeline onto the grass.
   const rays: RaySpot[] = [];
   for (const [x, seed] of [
-    [150, 3],
-    [372, 41],
-    [520, 77],
+    [132, 3],
+    [484, 41],
+    [584, 77],
   ]) {
     let y = PLAZA_Y;
     while (roofDepth(x, y) > -22) y++;
@@ -127,10 +159,10 @@ const WALLS = { left: 28, right: CLEARING_W - 28, bottom: CLEARING_H - 24 };
 
 /** Can feet stand at (x, y)? */
 export function clearingWalkable(x: number, y: number): boolean {
-  // The Rune Temple's room, east past the clearing's edge.
-  if (x >= CLEARING_W) return roomWalkable(x, y);
-  if (templeBlocks(x, y) || forgeBlocks(x, y) || forgeYardBlocks(x, y)) return false;
   if (y < 10 || y > WALLS.bottom || x < WALLS.left || x > WALLS.right) return false;
+  if (templeBlocks(x, y) || forgeBlocks(x, y) || forgeYardBlocks(x, y)) return false;
+  // The temple's hall: its own floor, whatever the forest outside does.
+  if (inTemple(x, y)) return true;
   if (roofDepth(x, y) > -9) return false;
   grid ??= new ColliderGrid(clearingScenery().colliders);
   return !grid.hits(x, y);
@@ -182,7 +214,9 @@ const RUNE: [number, number, number] = [150, 110, 255];
 function floor(wx: number, wy: number, wall: number, c: Cell): void {
   const d = Math.hypot(wx - PLAZA_CX, (wy - PLAZA_CY) * 1.15);
   const edgeNoise = (valueNoise(wx, wy, 9, 3) - 0.5) * 22;
-  if (d < PLAZA_R + edgeNoise) {
+  // The paving runs up from the plaza to the foot of the temple's steps, a little wider than them.
+  const apron = wy > TP_FOOT - 4 && wy < PLAZA_CY && Math.abs(wx - TP_CX) < T_STEP_HW[1] + 18 + edgeNoise * 0.5 - Math.max(0, wy - TP_FOOT - 24) * 0.4;
+  if (d < PLAZA_R + edgeNoise || apron) {
     // Flagstones, mossy toward the edge.
     const mossy = valueNoise(wx, wy, 14, 5);
     flagstone(wx, wy);
@@ -198,6 +232,15 @@ function floor(wx: number, wy: number, wall: number, c: Cell): void {
         c.tone = 0;
       }
     }
+    return;
+  }
+  // The Forge's path: packed earth worn bare, pebbles in it, the grass encroaching on its edges.
+  const pd = forgePathDistance(wx, wy) + (valueNoise(wx, wy, 6, 71) - 0.5) * 5;
+  if (pd < 6) {
+    const pebble = hash2(wx, wy, 73) > 0.9 && pd < 4.5;
+    c.kind = pebble ? K.Pebble : K.Path;
+    c.height = pebble ? 0.5 : valueNoise(wx, wy, 3, 75) * 0.25 + (pd > 4.5 ? 0.15 : 0);
+    c.tone = (valueNoise(wx, wy, 5, 77) - 0.5) * 1.2;
     return;
   }
   if (valueNoise(wx, wy, 20, 21) > 0.8 && d < PLAZA_R + 40) {
@@ -225,8 +268,7 @@ function floor(wx: number, wy: number, wall: number, c: Cell): void {
 
 /** The meadow darkens toward the world's edges; under the treeline, the forest's gloom. */
 function gloom(x: number, wy: number, wall: number, look: Look): number {
-  const ly = wy - PLAZA_Y;
-  const vd = Math.hypot((x - PLAZA_CX) / (CLEARING_W / 2), (ly - PLAZA_H / 2) / (PLAZA_H / 2));
+  const vd = Math.hypot((x - PLAZA_CX) / (CLEARING_W / 2), (wy - PLAZA_CY) / (PLAZA_H / 2));
   const pd = Math.max(0, vd - 0.55) * look.ground.edgeDark;
   const fd = smoothstep(-46, 0, wall) * look.wallDark;
   const reg = smoothstep(-80, -24, wall);

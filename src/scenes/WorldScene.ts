@@ -36,14 +36,14 @@ import { SpiritDungeon } from '../world/Spirit';
 import { TempleDungeon } from '../world/Temple';
 import { GlimmerDeep } from '../world/Deep';
 import { RuneTemple } from '../world/Sanctum';
-import { Chapel } from '../world/Chapel';
 import { HallowsClearing } from '../world/Hallows';
 import { EchoGraves } from '../world/Echoes';
 import { Forge } from '../world/Forge';
+import { inForge } from '../world/forgeLayout';
+import { inTemple } from '../world/sanctumLayout';
 import { Home } from '../world/Home';
 import { build } from '../game/build';
 import { openHomeFriends } from '../ui/homeFriends';
-import { INSIDE_SPOT, OUTSIDE_SPOT, roomRect } from '../world/sanctumLayout';
 import { isPainted } from '../world/arenas';
 import { OMEN_ARENAS, Omens } from '../world/Omens';
 import { omenMods, resetOmens } from '../game/omens';
@@ -137,9 +137,6 @@ class Dummy implements Hurtbox {
 const AUTO_AIM_RANGE = 150;
 /** How long the hero keeps facing the aim after an ability, in ms. */
 const LOOK_LINGER = 450;
-/** How light it is inside the Rune Temple at night, and how much more the day outside adds. */
-const INDOOR_DUSK = 0.18;
-const INDOOR_DAY = 0.34;
 
 /** How each gear set worn whole shows on the hero. */
 const SET_AURA: Record<SetId, { name: string; text: number; tint: number; motes: number[]; life: { min: number; max: number }; rise: { min: number; max: number }; scale: number; every: number }> = {
@@ -186,7 +183,6 @@ export class WorldScene extends Phaser.Scene {
   private deep: GlimmerDeep | null = null;
   /** The Rune Temple, when this is the Runestone Clearing. */
   private sanctum: RuneTemple | null = null;
-  private chapel: Chapel | null = null;
   /** A season's dressing of the Runestone Clearing, while one runs. */
   private hallows: HallowsClearing | null = null;
   private forge: Forge | null = null;
@@ -194,11 +190,7 @@ export class WorldScene extends Phaser.Scene {
   private home: Home | null = null;
   /** The hero this run was started with, to start again with (the Home's friends panel). */
   private character: string | undefined;
-  /** The hero is inside the Rune Temple (the camera keeps to its room). */
-  private inside = false;
-  /** Passing through the temple's door: the screen fades out and in. */
-  private doorBusy = false;
-  /** Where the camera may look: the arena's ground, or the temple's room while inside it. */
+  /** Where the camera may look: the arena's ground. */
   private camRect = new Phaser.Geom.Rectangle();
   /** Set once the run has begun (after the gear worn from the start is on). */
   private running = false;
@@ -316,20 +308,17 @@ export class WorldScene extends Phaser.Scene {
     this.temple = null;
     this.deep = null;
     this.sanctum = null;
-    this.chapel = null;
     this.hallows = null;
     this.forge = null;
     this.home = null;
     this.character = data?.character;
-    this.inside = false;
-    this.doorBusy = false;
     this.auras.clear();
     this.running = false;
     this.lean.x = this.lean.y = 0;
     this.shafts = null;
     this.regenAcc = this.regenShown = this.regenT = this.auraT = 0;
     const arena = (this.arena = arenaById(data?.arena));
-    // Some arenas reach past their ground (the Rune Temple's room lies east of the clearing).
+    // Some arenas may reach past their ground.
     const W = arena.world?.w ?? arena.ground.w;
     const H = arena.world?.h ?? arena.ground.h;
     this.worldRect.setTo(0, 0, W, H);
@@ -543,8 +532,7 @@ export class WorldScene extends Phaser.Scene {
     kb.on('keydown-N', () => daynight.enabled && daynight.toggle());
     // E talks to a keeper close by; anywhere else it swings the critter net.
     kb.on('keydown-E', () => {
-      if (this.inside) this.sanctum?.talk(this.hero.x, this.hero.y);
-      else if (!this.forge?.talk(this.hero.x, this.hero.y) && !this.chapel?.talk(this.hero.x, this.hero.y) && !this.hallows?.talk(this.hero.x, this.hero.y)) controls.netTap = true;
+      if (!this.sanctum?.talk(this.hero.x, this.hero.y) && !this.forge?.talk(this.hero.x, this.hero.y) && !this.hallows?.talk(this.hero.x, this.hero.y)) controls.netTap = true;
     });
     // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
@@ -1523,32 +1511,6 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Through the Rune Temple's door: fade out, step in (or out), fade back in with the camera on the new side. */
-  private passDoor(enter: boolean): void {
-    this.doorBusy = true;
-    const cam = this.cameras.main;
-    sound.gear(false);
-    cam.fadeOut(200, 7, 8, 13);
-    cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      const spot = enter ? INSIDE_SPOT : OUTSIDE_SPOT;
-      this.hero.x = spot.x;
-      this.hero.y = spot.y;
-      this.facing = { x: 0, y: enter ? -1 : 1 };
-      this.inside = enter;
-      if (enter) this.camRect.setTo(roomRect.x, roomRect.y, roomRect.w, roomRect.h);
-      else this.camRect.setTo(0, 0, this.arena.ground.w, this.arena.ground.h);
-      sound.setOutdoors(!enter);
-      this.followHero();
-      this.ground?.prime(this.view);
-      if (enter) this.showBanner('Rune Temple');
-      cam.fadeIn(280, 7, 8, 13);
-      cam.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => {
-        cam.fadeEffect.reset();
-        this.doorBusy = false;
-      });
-    });
-  }
-
   /** Ease toward the chosen time of day and push it into every layer. */
   private updateDaylight(time: number, dt: number): number {
     if (this.arena.dayNight) {
@@ -1556,9 +1518,7 @@ export class WorldScene extends Phaser.Scene {
       daynight.daylight += Phaser.Math.Clamp(daynight.target - daynight.daylight, -step, step);
       this.daylight = daynight.daylight;
     }
-    // Inside the Rune Temple the lamps hold a dusk, lifted a little by the day outside.
-    const outside = Phaser.Math.Easing.Sine.InOut(this.daylight);
-    const d = this.inside ? INDOOR_DUSK + outside * INDOOR_DAY : outside;
+    const d = Phaser.Math.Easing.Sine.InOut(this.daylight);
 
     sky.sunDir = mix3(NIGHT.sunDir, DAY.sunDir, d);
     sky.sunColor = mix3(NIGHT.sun, DAY.sun, d);
@@ -1566,14 +1526,14 @@ export class WorldScene extends Phaser.Scene {
     sky.bounce = mix3(NIGHT.bounce, DAY.bounce, d);
 
     this.ground?.setLight(d, 0.9 - d * 0.6);
-    skyState.clouds = this.inside ? 0 : d;
+    skyState.clouds = d;
     skyState.tileX = time * 0.004;
     skyState.tileY = time * 0.0022;
     this.shafts?.setAlpha(d * (0.1 + Math.sin(time * 0.0007) * 0.03));
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
     this.setVignette(0.32 - d * 0.14);
     // Out in the void and down in the dungeon there is neither pollen nor fireflies (they have their own motes).
-    const open = !this.cosmos && !this.rift && !this.spirit && !this.temple && !this.deep && !this.inside;
+    const open = !this.cosmos && !this.rift && !this.spirit && !this.temple && !this.deep;
     this.pollen.emitting = open && d > 0.5 && !omenMods.dark;
     this.fireflies.emitting = open && d < 0.5 && !omenMods.dark;
     sound.setDaylight(d);
@@ -1603,6 +1563,11 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
+  /** Is the hero under a roof (in the Rune Temple or the Forge)? No critters come out in there. */
+  private indoors(): boolean {
+    return !!this.sanctum && (inTemple(this.hero.x, this.hero.y) || inForge(this.hero.x, this.hero.y));
+  }
+
   /** Stereo position of a world x on screen, -1..1. */
   pan(x: number): number {
     const cam = this.cameras.main;
@@ -1616,6 +1581,7 @@ export class WorldScene extends Phaser.Scene {
       if (f.seed >= 0) near = Math.min(near, Phaser.Math.Distance.Between(f.light.x, f.light.y, this.hero.x, this.hero.y));
     }
     if (this.forge) near = Math.min(near, this.forge.fireDistance(this.hero.x, this.hero.y));
+    if (this.sanctum) near = Math.min(near, this.sanctum.fireDistance(this.hero.x, this.hero.y));
     if (this.home) near = Math.min(near, this.home.fireDistance(this.hero.x, this.hero.y));
     // No fire in this arena: no crackle.
     if (near === Infinity) return 0;
@@ -1813,11 +1779,7 @@ export class WorldScene extends Phaser.Scene {
     }
     this.inSpecial = false;
     this.effects = this.effects.filter((e) => !e.dead);
-    if (this.sanctum && !this.doorBusy) {
-      const go = this.sanctum.update(this.hero.x, this.hero.y, this.inside, this.view, Phaser.Math.Easing.Sine.InOut(this.daylight));
-      if (go) this.passDoor(go === 'enter');
-    }
-    this.chapel?.update(this.hero.x, this.hero.y, dt, Phaser.Math.Easing.Sine.InOut(this.daylight));
+    this.sanctum?.update(this.hero.x, this.hero.y, dt, this.view, Phaser.Math.Easing.Sine.InOut(this.daylight));
     this.hallows?.update(time, dt, Phaser.Math.Easing.Sine.InOut(this.daylight), this.hero.x, this.hero.y);
     this.forge?.update(this.hero.x, this.hero.y, dt);
     this.home?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight));
@@ -1852,7 +1814,7 @@ export class WorldScene extends Phaser.Scene {
       controls.netTap = false;
       if (this.downT <= 0 && !session.paused) this.critters?.swingNet(this.hero.x, this.hero.y, this.facing.x);
     }
-    this.critters?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight, this.view, controls.mouse, this.inside);
+    this.critters?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight, this.view, controls.mouse, this.indoors());
     this.island?.update(time, dt);
     this.spirit?.update(time, dt);
     this.temple?.update(time);
