@@ -23,6 +23,8 @@ export interface Strike {
   poison?: number;
   /** Dealt by a companion: its own numbers, not scaled by the hero's Damage. */
   companion?: boolean;
+  /** Dealt by the world itself (a falling meteor): exactly `damage`, nothing of the hero's in it. */
+  wild?: boolean;
 }
 
 /** A blow as it lands on one target. */
@@ -34,6 +36,7 @@ export interface Hit {
   fromY: number;
   poison?: number;
   companion?: boolean;
+  wild?: boolean;
 }
 
 /** Anything the heroes can strike. (x, y) are the feet. */

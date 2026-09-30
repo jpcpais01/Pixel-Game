@@ -47,6 +47,8 @@ export interface SaveData {
   pet: string;
   /** Companion wishes since the last legendary companion, for its own guarantee. */
   petPity: number;
+  /** Critters caught with the net, how many of each, by id. */
+  critters: Record<string, number>;
   /** Boss materials for the Forge, by the set they forge (see game/forge.ts). */
   mats: Record<string, number>;
 }
@@ -249,7 +251,15 @@ export async function loadSave(): Promise<LoadedSave | null> {
       if (set && Number(n) > 0) mats[set] = Number(n);
     }
   }
-  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, pets, pet, petPity, mats, username };
+  // Critters caught as "firefly:3,glowfrog:1".
+  const critters: Record<string, number> = {};
+  if (f.critters && 'stringValue' in f.critters && f.critters.stringValue) {
+    for (const pair of f.critters.stringValue.split(',')) {
+      const [id, n] = pair.split(':');
+      if (id && Number(n) > 0) critters[id] = Number(n);
+    }
+  }
+  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, pets, pet, petPity, critters, mats, username };
 }
 
 /** Overwrite the logged-in player's save. */
@@ -274,6 +284,7 @@ export async function writeSave(data: SaveData): Promise<void> {
     pets: { stringValue: data.pets.join(',') },
     pet: { stringValue: data.pet },
     petPity: { integerValue: String(Math.floor(data.petPity)) },
+    critters: { stringValue: Object.entries(data.critters).map(([id, n]) => `${id}:${Math.floor(n)}`).join(',') },
     mats: { stringValue: Object.entries(data.mats).map(([set, n]) => `${set}:${Math.floor(n)}`).join(',') },
     updated: { timestampValue: new Date().toISOString() },
   };

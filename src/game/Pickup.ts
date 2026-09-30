@@ -5,10 +5,12 @@ import { MAT_SIZE, MATERIALS, matIcon } from './forge';
 import { DROP_H } from '../art/items';
 import { GEAR_DROP } from '../art/gear';
 import { GEM_DROPS, gemDropFor } from '../art/shop';
+import { DUST_DROP_H } from '../art/omens';
 import type { Effect } from './Slash';
+import { petMods } from './pets';
 
-/** What lies on the ground: a potion for the hotbar, a piece of gear, gems (`n` of them, in one pile) or a boss's materials for the Forge. */
-export type Loot = { kind: 'item'; id: ItemId } | { kind: 'gear'; def: GearDef } | { kind: 'gems'; n: number } | { kind: 'mat'; set: SetId; n: number };
+/** What lies on the ground: a potion for the hotbar, a piece of gear, gems or dust (`n` of them, in one pile), or a boss's materials for the Forge. */
+export type Loot = { kind: 'item'; id: ItemId } | { kind: 'gear'; def: GearDef } | { kind: 'gems'; n: number } | { kind: 'dust'; n: number } | { kind: 'mat'; set: SetId; n: number };
 
 /** Pulled towards the hero from this close, and picked up at this distance. */
 const MAGNET = 30;
@@ -75,9 +77,20 @@ function gemShow(n: number): Show {
   return { ...base, beam: 0.38, width: 0.8, rays: 0, twinkles: 1, motes: 1, runes: false, rings: 1, arrow: false, light: false, star: false };
 }
 
+/** Dust: a violet glimmer, a short pillar for a handful and an epic's for a sackful. */
+const DUST_ACCENT = 0xb07aff;
+const DUST_CORE = 0xf4ecff;
+function dustShow(n: number): Show | null {
+  const base = { accent: DUST_ACCENT, core: DUST_CORE };
+  if (n >= 8) return { ...base, beam: 0.62, width: 1, rays: 0, twinkles: 2, motes: 2, runes: true, rings: 1, arrow: true, light: false, star: false };
+  if (n >= 3) return { ...base, beam: 0.32, width: 0.8, rays: 0, twinkles: 1, motes: 1, runes: false, rings: 1, arrow: false, light: false, star: false };
+  return null;
+}
+
 /** How grand a find is: 0 for potions and common gear, up to 4 for a legendary (or a pile of five gems or more). */
 export function grade(loot: Loot): number {
   if (loot.kind === 'item') return 0;
+  if (loot.kind === 'dust') return loot.n >= 8 ? 3 : loot.n >= 3 ? 2 : 1;
   if (loot.kind === 'gems') return loot.n >= 5 ? 4 : loot.n >= 2 ? 3 : 2;
   if (loot.kind === 'mat') return 3;
   return { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 }[loot.def.rarity];
@@ -142,6 +155,7 @@ export class Pickup {
   ) {
     const gear = loot.kind === 'gear' ? loot.def : null;
     const gems = loot.kind === 'gems' ? loot.n : 0;
+    const dust = loot.kind === 'dust' ? loot.n : 0;
     const mat = loot.kind === 'mat' ? loot.set : null;
     const pile = gemDropFor(gems);
     const look =
@@ -149,14 +163,17 @@ export class Pickup {
         ? { tint: RARITY[loot.def.rarity].tint, texture: loot.def.drop }
         : loot.kind === 'gems'
           ? { tint: GEM_ACCENT, texture: `gem_drop_${pile}` }
-          : loot.kind === 'mat'
-            ? { tint: MATERIALS[loot.set].tint, texture: matIcon(loot.set) }
-            : { tint: ITEMS[loot.id].tint, texture: ITEMS[loot.id].drop };
-    const big = !!(gear || gems || mat);
-    const h = gear ? GEAR_DROP : gems ? GEM_DROPS[pile].h : mat ? MAT_SIZE : DROP_H;
-    this.magnet = big ? GEAR_MAGNET : MAGNET;
+          : loot.kind === 'dust'
+            ? { tint: DUST_ACCENT, texture: 'dust_drop' }
+            : loot.kind === 'mat'
+              ? { tint: MATERIALS[loot.set].tint, texture: matIcon(loot.set) }
+              : { tint: ITEMS[loot.id].tint, texture: ITEMS[loot.id].drop };
+    const big = !!(gear || gems || dust || mat);
+    const h = gear ? GEAR_DROP : gems ? GEM_DROPS[pile].h : dust ? DUST_DROP_H : mat ? MAT_SIZE : DROP_H;
+    // A worn scarab draws loot in from further off.
+    this.magnet = (big ? GEAR_MAGNET : MAGNET) * petMods.reach;
     this.life = big ? LIFE * 2 : LIFE;
-    this.shine = gear ? { common: 0.8, uncommon: 0.9, rare: 1, epic: 1.25, legendary: 1.5 }[gear.rarity] : gems ? { one: 0.9, few: 1.15, heap: 1.5, hoard: 1.9 }[pile] : mat ? 1.2 : 0.75;
+    this.shine = gear ? { common: 0.8, uncommon: 0.9, rare: 1, epic: 1.25, legendary: 1.5 }[gear.rarity] : gems ? { one: 0.9, few: 1.15, heap: 1.5, hoard: 1.9 }[pile] : dust ? Math.min(1.3, 0.8 + dust * 0.05) : mat ? 1.2 : 0.75;
     this.fromX = x;
     this.fromY = y;
     // Lands a short hop away from where it fell.
@@ -170,7 +187,7 @@ export class Pickup {
     this.popTime = POP_TIME;
 
     // Materials stand in an epic's pillar, in their set's colour.
-    const base = gems ? gemShow(gems) : mat ? SHOWS.epic : gear && SHOWS[gear.rarity];
+    const base = gems ? gemShow(gems) : dust ? dustShow(dust) : mat ? SHOWS.epic : gear && SHOWS[gear.rarity];
     if (!base) return;
     // A set piece shines in its set's colour.
     const show: Show = { ...base, accent: gear?.set ? GEAR_SETS[gear.set].tint : mat ? MATERIALS[mat].tint : base.accent };

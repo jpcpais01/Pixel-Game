@@ -25,7 +25,7 @@ const GRANTS: { id: string; user: string; gems: number }[] = [
 /** Set once this device has given a guest the welcome gems, so a fresh guest game can't be made again and again for more. */
 const WELCOMED_KEY = 'pixel-battle.welcomed';
 
-const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, pets: [], pet: '', petPity: 0, mats: {} });
+const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, pets: [], pet: '', petPity: 0, critters: {}, mats: {} });
 
 /** The welcome gems for a new guest game: the first on this device only. */
 function welcomeGems(): number {
@@ -69,6 +69,7 @@ function clean(d: Partial<SaveData> | null | undefined): SaveData {
   out.pets = [...new Set((Array.isArray(d?.pets) ? d.pets : []).filter((p): p is string => typeof p === 'string' && !!p))];
   out.pet = typeof d?.pet === 'string' ? d.pet : '';
   out.petPity = Math.max(0, Math.floor(Number(d?.petPity) || 0));
+  for (const [id, n] of Object.entries(d?.critters ?? {})) if (Number(n) > 0) out.critters[id] = Math.floor(Number(n));
   for (const [id, n] of Object.entries(d?.items ?? {})) if (n > 0) out.items[id] = Math.floor(n);
   for (const id of d?.equipped ?? []) {
     const i = id ? slotIndex(id) : -1;
@@ -143,6 +144,21 @@ class Collection {
   /** Dust to spend at the Rune Temple. */
   get dust(): number {
     return this.data.dust;
+  }
+
+  /** Dust found in the world (star ore, a Treasure Imp's sack). */
+  addDust(n: number): void {
+    if (n <= 0) return;
+    this.data.dust += n;
+    this.changed();
+  }
+
+  /** Spend dust (a Wandering Merchant's price); false when there isn't enough. */
+  spendDust(n: number): boolean {
+    if (n < 0 || this.data.dust < n) return false;
+    this.data.dust -= n;
+    this.changed();
+    return true;
   }
 
   /** A piece's level, 1 to MAX_LEVEL. */
@@ -335,6 +351,19 @@ class Collection {
     this.changed();
   }
 
+  /** How many of critter `id` the player has caught. */
+  critterCount(id: string): number {
+    return this.data.critters[id] ?? 0;
+  }
+
+  /** A critter caught with the net: true when it's the first of its kind. */
+  catchCritter(id: string): boolean {
+    const n = this.critterCount(id);
+    this.data.critters[id] = n + 1;
+    this.changed();
+    return n === 0;
+  }
+
   /** Wishes since the last legendary skin. */
   get pity(): number {
     return this.data.pity;
@@ -471,12 +500,14 @@ class Collection {
       if (!merged.pet) merged.pet = local.pet;
       merged.petPity = Math.max(local.petPity, merged.petPity);
       for (const [set, n] of Object.entries(local.mats)) merged.mats[set] = Math.max(n, merged.mats[set] ?? 0);
+      for (const [id, n] of Object.entries(local.critters)) merged.critters[id] = Math.max(n, merged.critters[id] ?? 0);
       if (guest) {
         for (const [id, n] of Object.entries(guest.items)) merged.items[id] = (merged.items[id] ?? 0) + n;
         merged.dust += guest.dust;
         // A guest game's skins come along; its gems only if it has more, so a guest's welcome gems aren't counted twice.
         merged.skins = [...new Set([...merged.skins, ...guest.skins])];
         merged.pets = [...new Set([...merged.pets, ...guest.pets])];
+        for (const [id, n] of Object.entries(guest.critters)) merged.critters[id] = (merged.critters[id] ?? 0) + n;
         for (const [cls, n] of Object.entries(guest.rift)) merged.rift[cls] = Math.max(n, merged.rift[cls] ?? 0);
         for (const [set, n] of Object.entries(guest.mats)) merged.mats[set] = (merged.mats[set] ?? 0) + n;
         merged.gems = Math.max(merged.gems, guest.gems);
@@ -509,7 +540,7 @@ class Collection {
       return;
     }
     // Logging in from a guest game brings its pickups along.
-    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length || guest.pets.length || Object.keys(guest.mats).length) ? guest : undefined);
+    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length || guest.pets.length || Object.keys(guest.critters).length || Object.keys(guest.mats).length) ? guest : undefined);
   }
 }
 

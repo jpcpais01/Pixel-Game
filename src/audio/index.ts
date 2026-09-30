@@ -290,6 +290,16 @@ class GameSound {
     if (t !== null) this.sfx!.wishBurst(t, tier);
   }
 
+  netSwish(pan = 0): void {
+    const t = this.slot('netSwish');
+    if (t !== null) this.sfx!.netSwish(t, pan);
+  }
+
+  critterCatch(tier: number): void {
+    const t = this.slot('critterCatch');
+    if (t !== null) this.sfx!.critterCatch(t, tier);
+  }
+
   cardFlip(tier: number): void {
     const t = this.slot('cardFlip');
     if (t !== null) this.sfx!.cardFlip(t, tier);
@@ -370,6 +380,16 @@ class GameSound {
     if (t !== null) this.sfx!.fall(t);
   }
 
+  echoWake(pan = 0): void {
+    const t = this.slot('echoWake');
+    if (t !== null) this.sfx!.echoWake(t, pan);
+  }
+
+  echoBless(): void {
+    const t = this.slot('echoBless');
+    if (t !== null) this.sfx!.echoBless(t);
+  }
+
   revive(): void {
     const t = this.slot('revive');
     if (t !== null) this.sfx!.revive(t);
@@ -393,6 +413,21 @@ class GameSound {
   starcall(pan = 0): void {
     const t = this.slot('starcall');
     if (t !== null) this.sfx!.starcall(t, pan);
+  }
+
+  omen(mood: 'dark' | 'bright' | 'strange'): void {
+    const t = this.slot('omen');
+    if (t !== null) this.sfx!.omen(t, mood);
+  }
+
+  portal(pan = 0): void {
+    const t = this.slot('portal');
+    if (t !== null) this.sfx!.portal(t, pan);
+  }
+
+  cackle(pan = 0): void {
+    const t = this.slot('cackle');
+    if (t !== null) this.sfx!.cackle(t, pan);
   }
 
   starImpact(pan = 0): void {

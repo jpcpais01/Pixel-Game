@@ -7,6 +7,7 @@ import { InventoryView } from '../ui/inventoryView';
 import { BUTTON_GOLD, BUTTON_PLAIN, PixelButton, pixelText } from '../ui/widgets';
 import { SkinGallery } from '../ui/skinGallery';
 import { PetGallery } from '../ui/petGallery';
+import { CritterGallery } from '../ui/critterGallery';
 import { fpsBottom } from './FpsScene';
 import type { HomeScene } from './HomeScene';
 
@@ -14,8 +15,8 @@ const MARGIN = 8;
 const TAB_W = 56;
 const TAB_H = 16;
 
-type Page = 'gear' | 'skins' | 'pets';
-const PAGES: Page[] = ['gear', 'skins', 'pets'];
+type Page = 'gear' | 'skins' | 'pets' | 'critters';
+const PAGES: Page[] = ['gear', 'skins', 'pets', 'critters'];
 /** The Companions tab needs more room for its word. */
 const TAB_WIDE = 70;
 
@@ -23,7 +24,8 @@ const TAB_WIDE = 70;
  * The Inventory page, in three tabs over the home screen's backdrop: Gear (the
  * shared inventory view: worn gear, set totals, every item with its stats;
  * see ui/inventoryView.ts), Skins (every skin owned, as cards; see
- * ui/skinGallery.ts) and Companions (ui/petGallery.ts), with Back and the account button along the bottom. Logging in
+ * ui/skinGallery.ts), Companions (ui/petGallery.ts) and Critters (jars on
+ * shelves; ui/critterGallery.ts), with Back and the account button along the bottom. Logging in
  * makes pickups and worn gear follow the player to other devices.
  */
 export class InventoryScene extends Phaser.Scene {
@@ -33,6 +35,7 @@ export class InventoryScene extends Phaser.Scene {
   private view!: InventoryView;
   private gallery!: SkinGallery;
   private pets!: PetGallery;
+  private critters!: CritterGallery;
   private page: Page = 'gear';
   /** Each tab as a lit button (open) and a plain one (closed). */
   private tabs!: Record<Page, [PixelButton, PixelButton]>;
@@ -57,11 +60,12 @@ export class InventoryScene extends Phaser.Scene {
     this.view = new InventoryView(this, { potions: true });
     this.gallery = new SkinGallery(this);
     this.pets = new PetGallery(this);
+    this.critters = new CritterGallery(this);
     const tab = (page: Page, label: string, w = TAB_W): [PixelButton, PixelButton] => [
       new PixelButton(this, label, w, TAB_H, BUTTON_GOLD, `inv_tab_${page}_on`, () => {}),
       new PixelButton(this, label, w, TAB_H, BUTTON_PLAIN, `inv_tab_${page}`, () => this.show(page)),
     ];
-    this.tabs = { gear: tab('gear', 'Gear'), skins: tab('skins', 'Skins'), pets: tab('pets', 'Companions', TAB_WIDE) };
+    this.tabs = { gear: tab('gear', 'Gear'), skins: tab('skins', 'Skins'), pets: tab('pets', 'Companions', TAB_WIDE), critters: tab('critters', 'Critters') };
     this.header.setVisible(false);
     this.back = new PixelButton(this, 'Back', 48, 18, BUTTON_PLAIN, 'back', () => this.goBack());
     this.accountBtn = new PixelButton(this, 'Log in', 56, 18, BUTTON_PLAIN, 'inv_account', () => this.tapAccount());
@@ -90,23 +94,26 @@ export class InventoryScene extends Phaser.Scene {
     this.view.setVisible(page === 'gear');
     this.gallery.setVisible(page === 'skins');
     this.pets.setVisible(page === 'pets');
+    this.critters.setVisible(page === 'critters');
     for (const p of PAGES) {
       this.tabs[p][0].setVisible(p === page);
       this.tabs[p][1].setVisible(p !== page).setEnabled(p !== page);
     }
     if (page === 'skins') this.gallery.refresh();
     if (page === 'pets') this.pets.refresh();
+    if (page === 'critters') this.critters.refresh();
   }
 
   /** The open tab's view; both take pointer events alike. */
-  private get active(): InventoryView | SkinGallery | PetGallery {
-    return this.page === 'gear' ? this.view : this.page === 'skins' ? this.gallery : this.pets;
+  private get active(): InventoryView | SkinGallery | PetGallery | CritterGallery {
+    return this.page === 'gear' ? this.view : this.page === 'skins' ? this.gallery : this.page === 'pets' ? this.pets : this.critters;
   }
 
   update(t: number, dt: number): void {
     if (this.page === 'gear') this.view.update(dt);
     else if (this.page === 'skins') this.gallery.update(t);
-    else this.pets.update(t);
+    else if (this.page === 'pets') this.pets.update(t);
+    else this.critters.update(t);
   }
 
   /** The account line along the bottom. */
@@ -118,6 +125,7 @@ export class InventoryScene extends Phaser.Scene {
     this.who.setText(who.toUpperCase());
     this.gallery.refresh();
     this.pets.refresh();
+    this.critters.refresh();
     this.accountBtn.setText(a ? 'Log out' : 'Log in');
     this.placeWho();
   }
@@ -185,6 +193,8 @@ export class InventoryScene extends Phaser.Scene {
     this.gallery.resize(Math.floor(vw - MARGIN * 2), buttonsY - 4 - top);
     this.pets.setPosition(MARGIN, top);
     this.pets.resize(Math.floor(vw - MARGIN * 2), buttonsY - 4 - top);
+    this.critters.setPosition(MARGIN, top);
+    this.critters.resize(Math.floor(vw - MARGIN * 2), buttonsY - 4 - top);
   }
 
   private placeWho(): void {

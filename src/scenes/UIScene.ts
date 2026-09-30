@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { controls, beamHud, comboHud } from '../game/controls';
+import { controls, beamHud, comboHud, critterHud } from '../game/controls';
 import { daynight } from '../game/daynight';
 import { DPR as D } from '../game/display';
 import { characterById } from '../game/characters';
@@ -81,6 +81,12 @@ export class UIScene extends Phaser.Scene {
   private gearHud!: GearHud;
   /** A Rune Temple keeper's counter, when the hero talks to one. */
   private keeperHud!: KeeperHud;
+  /** The critter net's touch button: it rises into view while a critter is in reach. */
+  private netButton!: Phaser.GameObjects.Graphics;
+  private netIcon!: Phaser.GameObjects.Image;
+  /** 0..1 shown, easing in and out. */
+  private netShown = 0;
+  private netPressed = 0;
 
   /** Day/night toggle: a two-segment pill in the top-left corner. */
   private get toggleRect(): Phaser.Geom.Rectangle {
@@ -150,6 +156,13 @@ export class UIScene extends Phaser.Scene {
     const R = this.R;
     const bp = this.padPos;
     return new Phaser.Math.Vector2(bp.x + R * 0.55, bp.y - R * 1.95);
+  }
+
+  /** The net's button sits above the Special's, out of the way of the thumb's fighting. */
+  private get netPos(): Phaser.Math.Vector2 {
+    const R = this.R;
+    const bp = this.padPos;
+    return new Phaser.Math.Vector2(bp.x - R * 1.45, bp.y - R * 2.75);
   }
 
   /** The Special's button sits up and to the left of the attack button, clear of the hotbar. */
@@ -229,6 +242,9 @@ export class UIScene extends Phaser.Scene {
     this.buffIcons = [];
     this.gearHud = new GearHud(this, () => this.releaseAll());
     this.keeperHud = new KeeperHud(this, () => this.releaseAll());
+    this.netButton = this.add.graphics();
+    this.netIcon = this.add.image(0, 0, 'icon_net').setVisible(false);
+    this.netShown = this.netPressed = 0;
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       controls.mouse = !p.wasTouch;
@@ -244,6 +260,9 @@ export class UIScene extends Phaser.Scene {
         // Tap a side to pick it; tapping the active side flips it.
         const onSun = p.x < tr.centerX;
         daynight.set(onSun === (daynight.target < 0.5) ? onSun : !onSun);
+      } else if (p.wasTouch && this.netShown > 0.5 && Phaser.Math.Distance.Between(p.x, p.y, this.netPos.x, this.netPos.y) < this.R * 0.7) {
+        controls.netTap = true;
+        this.netPressed = 1;
       } else if (p.wasTouch && this.ultPad.pointer === null && Phaser.Math.Distance.Between(p.x, p.y, up.x, up.y) < this.R * 0.85) {
         this.ultPad = UIScene.pad(p.id, this.time.now);
         controls.ultAim = null;
@@ -468,6 +487,7 @@ export class UIScene extends Phaser.Scene {
 
     this.drawBeamButton(R * k, u);
     this.drawUltButton(R * k, u);
+    this.drawNetButton(delta);
 
     const tr = this.toggleRect;
     const seg = tr.width / 2;
@@ -680,6 +700,27 @@ export class UIScene extends Phaser.Scene {
         g.strokeCircle(up.x, up.y, rr + (6 + 30 * k) * D * u);
       }
     }
+  }
+
+  /** The net's button: a small round button with the net on it, fading in while a critter is in reach (touch only; E with a keyboard). */
+  private drawNetButton(delta: number): void {
+    const want = critterHud.near && !controls.mouse ? 1 : 0;
+    this.netShown = Phaser.Math.Clamp(this.netShown + (want ? 1 : -1) * (delta / 160), 0, 1);
+    this.netPressed = Math.max(0, this.netPressed - delta / 180);
+    const on = this.netShown > 0;
+    this.netIcon.setVisible(on);
+    const np = this.netPos;
+    const r = Math.round(this.R * 0.5 * (0.8 + 0.2 * this.netShown) * (1 - this.netPressed * 0.12));
+    const a = this.netShown;
+    this.netIcon.setPosition(Math.round(np.x), Math.round(np.y)).setScale(Math.max(2, Math.round(this.R / 18))).setAlpha(a);
+    const g = this.redraw(this.netButton, `${on} ${np.x} ${np.y} ${r} ${Math.round(a * 20)} ${Math.round(this.netPressed * 10)}`);
+    if (!g || !on) return;
+    g.fillStyle(this.netPressed > 0 ? 0x2a2410 : 0x0c1433, 0.6 * a);
+    g.fillCircle(np.x, np.y, r);
+    g.lineStyle(2 * D, 0xffe08a, 0.75 * a);
+    g.strokeCircle(np.x, np.y, r);
+    g.lineStyle(1 * D, 0xffe08a, 0.25 * a);
+    g.strokeCircle(np.x, np.y, r + 5 * D);
   }
 
   /** Where the knob of a dragged button sits against its centre (zero when not dragged out). */

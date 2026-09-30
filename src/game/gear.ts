@@ -368,8 +368,9 @@ export class GearBag {
    * its own roll for a piece of that set. Every piece of the rolled rarity
    * is as likely as any other: what the player already has makes no
    * difference, and a piece they own drops again as a spare, for dust.
+   * `bump` raises the rarity rolled that many steps (a Blood Moon's).
    */
-  roll(kind: string): GearDef[] {
+  roll(kind: string, bump = 0): GearDef[] {
     const tier = tierOf(kind);
     const out: GearDef[] = [];
     const pick = (of: GearDef[]) => {
@@ -379,10 +380,11 @@ export class GearBag {
     if (set && Math.random() < TIER_SET_CHANCE[tier]) pick(GEAR.filter((g) => g.set === set));
     const odds = TIER_DROPS[tier];
     let r = Math.random();
-    for (const k of RARITIES) {
+    for (const [i, k] of RARITIES.entries()) {
       r -= odds[k];
       if (r >= 0) continue;
-      pick(GEAR.filter((g) => !g.set && g.rarity === k));
+      const got = RARITIES[Math.min(RARITIES.length - 1, i + bump)];
+      pick(GEAR.filter((g) => !g.set && g.rarity === got));
       break;
     }
     return out;
