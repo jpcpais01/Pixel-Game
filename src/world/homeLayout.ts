@@ -6,7 +6,7 @@
 // Everything here is plain data (no Phaser), so it can be checked anywhere.
 
 import { valueNoise } from '../art/env';
-import { FLOORS, WALLS, floorIndex, packWall, partById, wallKind, wallMat, type PartDef } from './homeParts';
+import { FLOORS, WALLS, extent, floorIndex, packWall, partById, wallKind, wallMat, type PartDef } from './homeParts';
 
 /** A cell's size in pixels, and the plot's size in cells. */
 export const CELL = 16;
@@ -28,6 +28,8 @@ export interface Thing {
   x: number;
   y: number;
   flip: boolean;
+  /** Quarter turns from facing front, for parts that turn: 0 front, 1 right, 2 back, 3 left. */
+  turn: number;
 }
 
 const N = COLS * ROWS;
@@ -77,7 +79,8 @@ export class HomeLayout {
     for (const t of this.things) {
       const p = partById(t.id);
       if (!p) continue;
-      if (cx >= t.x && cx < t.x + p.w && cy >= t.y && cy < t.y + p.h) out.push(t);
+      const e = extent(p, t.turn);
+      if (cx >= t.x && cx < t.x + e.w && cy >= t.y && cy < t.y + e.h) out.push(t);
     }
     return out.reverse().sort((a, b) => Number(!!partById(a.id)?.flat) - Number(!!partById(b.id)?.flat));
   }
@@ -88,7 +91,7 @@ export class HomeLayout {
    * water unless it floats, and not share a cell with another thing of its
    * kind (a rug can lie under a table, but not under another rug).
    */
-  canPlace(part: PartDef, cx: number, cy: number): boolean {
+  canPlace(part: PartDef, cx: number, cy: number, turn = 0): boolean {
     if (this.things.length >= MAX_THINGS) return false;
     if (part.wall) {
       const v = this.wallAt(cx, cy);
@@ -97,8 +100,9 @@ export class HomeLayout {
       if (this.wallAt(cx, cy + 1)) return false;
       return !this.things.some((t) => t.x === cx && t.y === cy && partById(t.id)?.wall);
     }
-    for (let y = cy; y < cy + part.h; y++) {
-      for (let x = cx; x < cx + part.w; x++) {
+    const { w, h } = extent(part, turn);
+    for (let y = cy; y < cy + h; y++) {
+      for (let x = cx; x < cx + w; x++) {
         if (!inPlot(x, y) || this.wallAt(x, y)) return false;
         const water = this.isWater(x, y);
         if (part.water === 'only' ? !water : water && part.water !== 'too') return false;
@@ -107,16 +111,17 @@ export class HomeLayout {
     for (const t of this.things) {
       const p = partById(t.id);
       if (!p || p.wall || !!p.flat !== !!part.flat) continue;
-      if (t.x < cx + part.w && t.x + p.w > cx && t.y < cy + part.h && t.y + p.h > cy) return false;
+      const e = extent(p, t.turn);
+      if (t.x < cx + w && t.x + e.w > cx && t.y < cy + h && t.y + e.h > cy) return false;
     }
     return true;
   }
 
   // ---- Saving
 
-  /** The whole layout as a short string: `h1|floors|walls|roofs|things`, each grid run-length coded. */
+  /** The whole layout as a short string: `h1|floors|walls|roofs|things`, each grid run-length coded; a thing is `id.x.y` and `.f` if mirrored, `.r<n>` if turned. */
   encode(): string {
-    const things = this.things.map((t) => `${t.id}.${t.x.toString(36)}.${t.y.toString(36)}${t.flip ? '.f' : ''}`).join(',');
+    const things = this.things.map((t) => `${t.id}.${t.x.toString(36)}.${t.y.toString(36)}${t.flip ? '.f' : ''}${t.turn || partById(t.id)?.sideways ? `.r${t.turn}` : ''}`).join(',');
     return `h1|${runs(this.floor)}|${runs(this.wall)}|${runs(this.roof)}|${things}`;
   }
 
@@ -133,13 +138,19 @@ export class HomeLayout {
       if (v && (wallMat(v) < 0 || wallMat(v) >= WALLS.length || (v & 3) === 3)) l.wall[i] = 0;
     }
     for (const item of parts[4] ? parts[4].split(',') : []) {
-      const [id, xs, ys, f] = item.split('.');
+      const [id, xs, ys, ...rest] = item.split('.');
       const p = partById(id);
       const x = parseInt(xs, 36);
       const y = parseInt(ys, 36);
-      if (!p || !Number.isFinite(x) || !Number.isFinite(y) || !inPlot(x, y) || !inPlot(x + p.w - 1, y + p.h - 1)) continue;
+      if (!p) continue;
+      const f = rest.includes('f');
+      const r = rest.find((k) => k[0] === 'r');
+      // Saved before it could turn: a side-on part kept its side (and a mirrored one faced left).
+      const turn = !p.turns ? 0 : r ? parseInt(r.slice(1), 10) & 3 : p.sideways ? (f ? 3 : 1) : 0;
+      const e = extent(p, turn);
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !inPlot(x, y) || !inPlot(x + e.w - 1, y + e.h - 1)) continue;
       if (l.things.length >= MAX_THINGS) break;
-      l.things.push({ id, x, y, flip: f === 'f' && !!p.flip });
+      l.things.push({ id, x, y, flip: f && !!p.flip, turn });
     }
     return l;
   }
@@ -245,8 +256,9 @@ export class HomeMask {
       if (!p || p.block === 'none' || p.wall) continue;
       const x = t.x * CELL;
       const y = t.y * CELL;
-      const w = p.w * CELL;
-      const h = p.h * CELL;
+      const e = extent(p, t.turn);
+      const w = e.w * CELL;
+      const h = e.h * CELL;
       if (p.block === 'full') fill(x + 1, y + Math.min(4, h / 4), x + w - 1, y + h - 2);
       else fill(x + w / 2 - 4, y + h - 8, x + w / 2 + 4, y + h - 2);
     }
@@ -351,9 +363,9 @@ export function starterHome(): HomeLayout {
       w(id, 'wall', x1, y);
     }
   };
-  const put = (id: string, x: number, y: number, flip = false) => {
+  const put = (id: string, x: number, y: number, flip = false, turn = 0) => {
     const p = partById(id);
-    if (p && l.canPlace(p, x, y)) l.things.push({ id, x, y, flip });
+    if (p && l.canPlace(p, x, y, turn)) l.things.push({ id, x, y, flip, turn });
   };
 
   // The cottage: timber walls under thatch, oak boards inside.
@@ -398,8 +410,8 @@ export function starterHome(): HomeLayout {
   put('bed', 29, 9);
   put('rug', 22, 11);
   put('roundtable', 20, 12);
-  put('chair', 19, 12);
-  put('chair', 21, 12, true);
+  put('chair', 19, 12, false, 1);
+  put('chair', 21, 12, false, 3);
   put('sofa', 22, 13);
   put('candelabra', 26, 12);
   put('chest', 29, 14);

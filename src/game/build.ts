@@ -45,6 +45,8 @@ export const build = {
   pick: null as PaletteItem | null,
   /** Things that can be mirrored go down mirrored. */
   flip: false,
+  /** Things that turn go down facing this way: 0 front, 1 right, 2 back, 3 left. */
+  turn: 0,
   /** The pointer building on the world, in screen pixels: down, and whether it erases (a right click). */
   pointer: { x: 0, y: 0, down: false, erase: false, over: false },
   /** Presses and releases since the world last looked. */
