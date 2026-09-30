@@ -58,6 +58,10 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'druid:frostfang': 'epic',
   'automaton:scrap': 'epic',
   'phantom:tea': 'epic',
+  // Hallow's Eve's, bought with candy rather than wished for (see game/season.ts).
+  'warrior:headless': 'legendary',
+  'wizard:pumpkin': 'epic',
+  'archer:scarecrow': 'epic',
 };
 
 /** One skin as the shop knows it. */
@@ -84,9 +88,13 @@ export const skinId = (cls: ClassDef, skin: SkinDef): string => `${cls.id}:${ski
 /** A skin's rarity, by class and skin. */
 export const rarityOf = (cls: ClassDef, skin: SkinDef): SkinRarity => RARITY_OF[skinId(cls, skin)] ?? 'rare';
 
-/** How many skins the player owns, out of all of them. */
+/** The skins a wish can give: every one but the seasons' limited skins, which only their stalls sell. */
+export const WISH_SKINS: SkinEntry[] = ALL_SKINS.filter((s) => !s.skin.season);
+
+/** How many skins the player owns, out of all of them (a season's limited skins count once owned). */
 export function ownedSkins(): { owned: number; of: number } {
-  return { owned: ALL_SKINS.filter((s) => collection.hasSkin(s.id)).length, of: ALL_SKINS.length };
+  const owned = ALL_SKINS.filter((s) => collection.hasSkin(s.id));
+  return { owned: owned.length, of: WISH_SKINS.length + owned.filter((s) => s.skin.season).length };
 }
 
 /** The skin as it plays, for previews: the class in that type and skin. */
@@ -132,7 +140,7 @@ export function wish(count: 1 | 10): WishResult[] | null {
   collection.pity = pity;
   let refund = 0;
   const out = rarities.map((r) => {
-    const entry = pick(ALL_SKINS.filter((s) => s.rarity === r));
+    const entry = pick(WISH_SKINS.filter((s) => s.rarity === r));
     const fresh = collection.unlockSkin(entry.id);
     const back = fresh ? 0 : DUPE_GEMS;
     refund += back;

@@ -38,6 +38,14 @@ export const controls = {
   aiming: null as { special: boolean; ult?: boolean; cancel: boolean } | null,
   /** Hotbar slots (0..8) asked to be used since the world last looked: taps on the HUD and keys 1 to 9. */
   items: [] as number[],
+  /** The net's touch button tapped (E on a keyboard): swing it once. */
+  netTap: false,
+};
+
+// Critters, written by the world, read by the UI: a critter is in the net's
+// reach, so the touch net button shows.
+export const critterHud = {
+  near: false,
 };
 
 // Beam state written by the wizard, read by the UI to draw the button's charge ring.

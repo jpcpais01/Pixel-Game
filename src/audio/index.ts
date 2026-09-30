@@ -198,6 +198,18 @@ class GameSound {
     if (t !== null) this.sfx!.clash(t, pan, heavy);
   }
 
+  /** The Forge's anvil ringing under Brenna's hammer, `level` 0..1 with how near the hero is. */
+  anvil(pan = 0, level = 1): void {
+    const t = this.slot('anvil');
+    if (t !== null) this.sfx!.anvil(t, pan, level);
+  }
+
+  /** A piece forged at Brenna's counter: three blows and the ring of it done. */
+  forged(): void {
+    const t = this.slot('forged');
+    if (t !== null) this.sfx!.forged(t);
+  }
+
   rise(): void {
     const t = this.slot('rise');
     if (t !== null) this.sfx!.rise(t);
@@ -256,6 +268,11 @@ class GameSound {
   gemPickup(n: number): void {
     const t = this.slot('gemPickup');
     if (t !== null) this.sfx!.gemPickup(t, n);
+  }
+
+  candyPickup(n: number): void {
+    const t = this.slot('candyPickup');
+    if (t !== null) this.sfx!.candyPickup(t, n);
   }
 
   gemSpend(): void {
@@ -321,6 +338,16 @@ class GameSound {
   wishBurst(tier: number): void {
     const t = this.slot('wishBurst');
     if (t !== null) this.sfx!.wishBurst(t, tier);
+  }
+
+  netSwish(pan = 0): void {
+    const t = this.slot('netSwish');
+    if (t !== null) this.sfx!.netSwish(t, pan);
+  }
+
+  critterCatch(tier: number): void {
+    const t = this.slot('critterCatch');
+    if (t !== null) this.sfx!.critterCatch(t, tier);
   }
 
   cardFlip(tier: number): void {
@@ -403,6 +430,16 @@ class GameSound {
     if (t !== null) this.sfx!.fall(t);
   }
 
+  echoWake(pan = 0): void {
+    const t = this.slot('echoWake');
+    if (t !== null) this.sfx!.echoWake(t, pan);
+  }
+
+  echoBless(): void {
+    const t = this.slot('echoBless');
+    if (t !== null) this.sfx!.echoBless(t);
+  }
+
   revive(): void {
     const t = this.slot('revive');
     if (t !== null) this.sfx!.revive(t);
@@ -426,6 +463,21 @@ class GameSound {
   starcall(pan = 0): void {
     const t = this.slot('starcall');
     if (t !== null) this.sfx!.starcall(t, pan);
+  }
+
+  omen(mood: 'dark' | 'bright' | 'strange'): void {
+    const t = this.slot('omen');
+    if (t !== null) this.sfx!.omen(t, mood);
+  }
+
+  portal(pan = 0): void {
+    const t = this.slot('portal');
+    if (t !== null) this.sfx!.portal(t, pan);
+  }
+
+  cackle(pan = 0): void {
+    const t = this.slot('cackle');
+    if (t !== null) this.sfx!.cackle(t, pan);
   }
 
   starImpact(pan = 0): void {

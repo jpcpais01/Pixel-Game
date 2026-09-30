@@ -5,7 +5,7 @@
 // (BODY_X, BODY_Y) inside a WARRIOR_W x WARRIOR_H frame, and every drawing
 // function works in body-box coordinates.
 
-import { PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
+import { PixelCanvas, cyl, hex, sphere, type Material, type NormalFn, type RGB, type Vec3 } from './pixel';
 import {
   BLADE,
   BOOT,
@@ -34,6 +34,7 @@ import {
 import { BRONZE, PTERUGES, SPARTAN_RED, TAN_SKIN } from './heroSkins';
 import { DIRS, type Dir } from './wizard';
 import { AFONSO_BEARD, CROSS_BLUE, ERMINE, ERMINE_TAIL, KING_HAIR, NORMAN_IRON, ROYAL, RUBY, SAPPHIRE, SURCOAT } from './king';
+import { HOLLOW_BLADE, HOLLOW_CLOAK, HOLLOW_GLOW, HOLLOW_IRON, HOLLOW_MAIL, PUMPKIN, RUST, lanternBack, lanternFront, lanternSide } from './headless';
 import { ASH, BLONDE, COPPER, GILT, RAVEN_CLOTH, RAVEN_HAIR, RAVEN_STEEL, RAVEN_WING, ROSE_WING, SKY_CLOTH, SLATE_WING, STORM_ASH, STORM_CLOTH, STORM_STEEL, SUN_WOOD, SWAN, WHITE_HAIR } from './valkyrie';
 
 // ---------------------------------------------------------------------------
@@ -114,6 +115,12 @@ export interface WarriorLook {
    * hand on his planted sword and the shield at his side.
    */
   afonso?: boolean;
+  /**
+   * The Headless Knight: no head at all, only a ragged collar with a carved
+   * jack-o'-lantern burning in it; battered plate, a tattered cloak and
+   * tabard, and a notched sword whose edge smoulders.
+   */
+  headless?: boolean;
 }
 
 export const KNIGHT_LOOK: WarriorLook = {
@@ -299,7 +306,28 @@ export const AFONSO_LOOK: WarriorLook = {
   afonso: true,
 };
 
-export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK, SPEAR_LOOK, STORM_LOOK, SUN_LOOK, RAVEN_LOOK, KING_LOOK, AFONSO_LOOK];
+/** The Knight's Headless Knight skin (Hallow's Eve): blackened iron and rust, a violet-black cloak, a jack-o'-lantern for a head. */
+export const HEADLESS_LOOK: WarriorLook = {
+  key: 'warrior_headless',
+  plate: HOLLOW_IRON,
+  mail: HOLLOW_MAIL,
+  cloth: HOLLOW_CLOAK,
+  plume: HOLLOW_CLOAK,
+  trim: RUST,
+  belt: LEATHER,
+  glove: HOLLOW_MAIL,
+  boot: HOLLOW_IRON,
+  trouser: HOLLOW_MAIL,
+  skin: PUMPKIN,
+  blade: HOLLOW_BLADE,
+  grip: LEATHER,
+  guard: RUST,
+  glow: HOLLOW_GLOW,
+  samurai: false,
+  headless: true,
+};
+
+export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK, HEADLESS_LOOK, SPEAR_LOOK, STORM_LOOK, SUN_LOOK, RAVEN_LOOK, KING_LOOK, AFONSO_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let LK: WarriorLook = KNIGHT_LOOK;
@@ -359,6 +387,9 @@ export interface WarriorMeta {
 
 const RAD = Math.PI / 180;
 const BLADE_START = 2.2;
+/** Where the Headless Knight's blade is nicked, as fractions of its length, and how brightly its edge smoulders. */
+const NICKS = [0.35, 0.7];
+const EDGE_EMBER = 0.4;
 
 // ---------------------------------------------------------------------------
 // Shared parts
@@ -417,7 +448,10 @@ function drawSword(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
           : rest < 2.4 ? 0.25 + rest * 0.33 : 0.98;
     if (Math.abs(side) > hw) return;
     const k = side >= 0 ? 1 : -1;
+    // The Headless Knight's blade is nicked along one edge, and the other smoulders.
+    if (LK.headless && k > 0 && NICKS.some((n) => Math.abs(along - BLADE_START - n * s.len) < 0.5)) return;
     c.px(x, y, LK.blade, facing(px * k * 0.7, py * k * 0.7, 0.72), { glow: glow * 0.85 });
+    if (LK.headless && k < 0) c.spark(x, y, LK.glow.mid, EDGE_EMBER);
   });
   if (LK.king) {
     // A fuller down the middle of the greatsword, most of its length.
@@ -694,6 +728,13 @@ function pauldron(c: PixelCanvas, x: number, y: number, rx = 2.3, ry = 1.75): vo
   }
   c.part();
   c.ellipse(x, y, rx, ry, LK.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.25, 0.95) });
+  if (LK.headless) {
+    // A rusted rim along the lower edge, and a dent or two.
+    c.part();
+    const rim = Math.round(y + ry - 0.9);
+    c.shape(rim, rim, () => [x - rx + 0.5, x + rx - 0.5], LK.trim, (_x, _y, t) => cyl(t * 0.9, -0.2));
+    batter(c, x - rx, y - ry, x + rx, rim - 1);
+  }
   if (LK.storm) {
     // A spike sweeping up and out from the shoulder.
     const k = x < 12 ? -1 : 1;
@@ -737,12 +778,46 @@ function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bia
 /** A strip of cloth (tabard panel) between rows, `edges` per row, trimmed in gold at the bottom. */
 function cloth(c: PixelCanvas, y0: number, y1: number, edges: (y: number) => [number, number], m: Material, trim: boolean, bias = 0): void {
   c.part();
+  if (LK.headless) {
+    // Torn to rags: no trim, the hem hanging in tongues.
+    tatter(c, y0, y1, edges, m, (_x, _y, t, u) => cyl(t * 0.6, 0.2 - u * 0.3), bias);
+    return;
+  }
   c.shape(y0, y1, edges, m, (_x, _y, t, u) => cyl(t * 0.6, 0.2 - u * 0.3), { bias });
   if (trim) {
     c.part();
     const e = edges(y1 + 1);
     c.shape(y1 + 1, y1 + 1, () => e, LK.trim, (_x, _y, t) => cyl(t, -0.1));
   }
+}
+
+/** How far each column of a torn hem is ripped up, repeating from the cloth's left edge. */
+const TATTER = [0, 2, 1, 3, 0, 1, 2, 0, 3, 1, 0, 2];
+
+/** Like `c.shape`, but the bottom rows are torn into ragged tongues that move with the cloth. */
+function tatter(c: PixelCanvas, y0: number, y1: number, edges: (y: number) => [number, number], m: Material, normal: NormalFn, bias = 0): void {
+  for (let y = y0; y <= y1; y++) {
+    const [l, r] = edges(y);
+    const u = y1 === y0 ? 0 : (y - y0) / (y1 - y0);
+    const xa = Math.round(l);
+    for (let x = xa; x <= Math.round(r) - 1; x++) {
+      if (y > y1 - TATTER[(x - xa) % TATTER.length]) continue;
+      const t = r - l > 0.001 ? ((x + 0.5 - l) / (r - l)) * 2 - 1 : 0;
+      c.px(x, y, m, normal(x, y, t, u), { bias });
+    }
+  }
+}
+
+/** Dents and rust eaten into the Headless Knight's plate, wherever plate was drawn in the box. */
+function batter(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
+  if (!LK.headless) return;
+  c.part();
+  each(x0, y0, x1, y1, (x, y) => {
+    if (c.materialAt(x, y) !== LK.plate) return;
+    const h = (((x * 13 + y * 7 + x * y * 3) % 17) + 17) % 17;
+    if (h === 0 || h === 9) c.px(x, y, LK.trim, { x: -0.2, y: 0.2, z: 0.95 }, { bias: -1 });
+    else if (h === 4) c.shade(x, y, -1);
+  });
 }
 
 /** Plume of crimson horsehair: a chain of tapering capsules through the given points. */
@@ -794,6 +869,9 @@ function crest(c: PixelCanvas, cx: number, y: number, view: 'front' | 'back' | '
 }
 
 const FLAT_DOWN: Vec3 = { x: 0, y: -0.3, z: 0.95 };
+
+/** Steps the embers rising off the Headless Knight's lantern from frame to frame. */
+const emberPhase = (p: Pose): number => p.plume * 2 + p.cape + p.breath + p.lift + Math.round(p.sword.angle / 45);
 
 // ---------------------------------------------------------------------------
 // The Spartan: Corinthian helm, crest, muscle cuirass and round shield
@@ -1214,13 +1292,15 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     // Cape lining, seen behind the shoulders and legs.
     const ct = 15 + U;
     const cb = 28 + L;
-    c.part();
-    c.shape(ct, cb, (y) => {
+    const liningEdges = (y: number): [number, number] => {
       const u = (y + 0.5 - ct) / (cb + 1 - ct);
       const hw = 4.8 + 1.8 * u;
       const x = cx + p.cape * u * u;
       return [x - hw, x + hw];
-    }, LK.cloth, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.3), { bias: -2 });
+    };
+    c.part();
+    if (LK.headless) tatter(c, ct, cb, liningEdges, LK.cloth, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.3), -2);
+    else c.shape(ct, cb, liningEdges, LK.cloth, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.3), { bias: -2 });
   }
 
   leg(c, 9.9, 24 + L, 9.8, 28.4 - p.footA);
@@ -1238,6 +1318,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     return [cx - hw, cx + hw];
   }, LK.afonso ? LK.mail : LK.plate, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
   if (LK.spartan) musclesFront(c, top);
+  batter(c, cx - 5, top, cx + 5, waist - 1);
 
   // Mail skirt, then the tabard falling over chest and skirt.
   const hem = 26 + L;
@@ -1305,7 +1386,9 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   c.part();
   c.shape(15 + U, 15 + U, () => [cx - 2.4, cx + 2.4], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
   if (LK.king && !LK.afonso) ermineCollar(c, cx - 4.8, cx + 4.8, 15 + U);
-  if (LK.spartan) {
+  if (LK.headless) {
+    lanternFront(c, cx, U, emberPhase(p));
+  } else if (LK.spartan) {
     crestFront(c, cx, U, p.plume);
     corinthianFront(c, cx, U);
   } else if (LK.king) {
@@ -1448,7 +1531,9 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
     }
   }
 
-  if (LK.king) {
+  if (LK.headless) {
+    lanternBack(c, cx, U, emberPhase(p));
+  } else if (LK.king) {
     // The ermine collar over the cape's shoulders, then his head.
     if (!LK.afonso) ermineCollar(c, cx - 4.8, cx + 4.8, Math.round(ct));
     kingHeadUp(c, cx, U, p.cape);
@@ -1544,15 +1629,17 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     // Cape streaming behind.
     const ct = 15 + U;
     const cb = 28 + L;
-    c.part();
-    c.shape(ct, cb, (y) => {
+    const streamEdges = (y: number): [number, number] => {
       const u = Math.max(0, (y + 0.5 - ct) / (cb + 1 - ct));
       const l = hx + 1 - 1.6 * u - S * u;
       const r = hx + 3.4 + 2.6 * Math.pow(u, 1.2) + p.cape * u * u - S * u;
       return [l, r];
-    }, LK.cloth, (_x, _y, t, u) => cyl(t * 0.8 + 0.15, 0.25 - u * 0.3), { bias: -1 });
+    };
     c.part();
-    {
+    if (LK.headless) tatter(c, ct, cb + 1, streamEdges, LK.cloth, (_x, _y, t, u) => cyl(t * 0.8 + 0.15, 0.25 - u * 0.3), -1);
+    else c.shape(ct, cb, streamEdges, LK.cloth, (_x, _y, t, u) => cyl(t * 0.8 + 0.15, 0.25 - u * 0.3), { bias: -1 });
+    c.part();
+    if (!LK.headless) {
       const u = 1;
       c.shape(cb + 1, cb + 1, () => [hx + 1 - 1.6 * u - S, hx + 3.4 + 2.6 + p.cape - S], LK.trim, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
     }
@@ -1580,6 +1667,7 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
   };
   c.part();
   c.shape(top, waist - 1, torso, LK.afonso ? LK.mail : LK.plate, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
+  batter(c, hx - 4, top, hx + 3, waist - 1);
   const skirt = (y: number): [number, number] => {
     const u = (y + 0.5 - waist) / (hem + 1 - waist);
     return [cx - 3.1 + S * 0.5 - u * 0.5, cx + 3.0 + u * 0.8];
@@ -1619,7 +1707,9 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
   c.part();
   c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.6], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
   if (LK.king && !LK.afonso) ermineCollar(c, hx - 2.8, hx + 2.8, 15 + U);
-  if (LK.spartan) {
+  if (LK.headless) {
+    lanternSide(c, hx, U, emberPhase(p));
+  } else if (LK.spartan) {
     crestSide(c, hx, U, p.plume);
     corinthianSide(c, hx, U);
   } else if (LK.king) {

@@ -84,6 +84,8 @@ export abstract class Monster implements Hurtbox {
    * champion is drawn `size` times bigger, its body growing with it.
    */
   hunter = false;
+  /** Called up mid-fight by a boss: it carries no loot, so the fight can't be farmed. */
+  summoned = false;
   toughness = 1;
   size = 1;
   x: number;
@@ -310,7 +312,7 @@ export abstract class Monster implements Hurtbox {
     if (!this.alive || this.intangible) return;
     // Buffs like Might make every blow land harder; its tier's Defense takes the edge off.
     const damage = hit.damage * this.world.mightOf(hit) * defenseFactor(mobDefense(this.stats.key));
-    this.world.leech(Math.min(damage, Math.max(0, this.hp)));
+    if (!hit.wild) this.world.leech(Math.min(damage, Math.max(0, this.hp)));
     Monster.net?.hit(this, hit, damage);
     this.takeHit(hit, damage);
   }
@@ -498,7 +500,7 @@ export abstract class Monster implements Hurtbox {
     this.flashT = DEATH_TIME;
     this.world.debris(this.stats.debris, snap(this.x), snap(this.y) - this.stats.bodyY, 18, this.y + 1);
     sound.monsterDie(this.world.pan(this.x), this.stats.mass);
-    this.world.monsterSlain(this.stats.key, this.x, this.y, this.stats.bodyY, this.stats);
+    this.world.monsterSlain(this.stats.key, this.x, this.y, this.stats.bodyY, this.stats, this.summoned);
     this.onDeath();
   }
 
