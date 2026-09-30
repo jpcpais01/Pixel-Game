@@ -327,7 +327,6 @@ export const ARENAS: ArenaDef[] = [
     spawn: RIFT_SPAWN,
     // Its waves come from game/rift.ts, not a spawn table.
     monsters: [],
-    solo: true,
     scenery: () => ({ trees: [], props: [], rays: [], colliders: [] }),
     walkable: riftWalkable,
     drift: { tints: [0xffffff], frequency: 100000, where: () => false },

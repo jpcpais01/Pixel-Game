@@ -13,7 +13,7 @@ import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PANEL_PICKED, PixelButto
 import { fpsBottom } from './FpsScene';
 import { openOnlineForm } from '../ui/onlineForm';
 import { DIFFICULTIES, difficultyDef, riftDifficulty, riftKey, setRiftDifficulty, type RiftDifficulty } from '../game/rift';
-import { DIFF_STYLE, difficultyIcon } from '../ui/riftDifficulty';
+import { DIFF_STYLE, difficultyIcon, partyIcon } from '../ui/riftDifficulty';
 import { sound } from '../audio';
 
 /** The window onto the picked arena, at the top of its panel. */
@@ -36,8 +36,10 @@ const MAP_MARGIN = 120;
 const TAP_SLOP = 10;
 /** Glints on the sea at a time. */
 const SPARKS = 16;
-/** The Rift's difficulty button, beside Play where Online would be. */
-const DIFF_W = 90;
+/** The Rift's row: a narrower Play, Online as a small square with two heroes on it, and the difficulty. */
+const RIFT_PLAY_W = 44;
+const RIFT_ONLINE_W = 22;
+const DIFF_W = 86;
 
 const PLATE: PanelStyle = { ...PANEL, alpha: 0.84 };
 
@@ -295,6 +297,9 @@ export class ArenaScene extends Phaser.Scene {
   private back!: PixelButton;
   private play!: PixelButton;
   private online!: PixelButton;
+  /** The Rift's own Play and Online, smaller, to make room for its difficulty. */
+  private riftPlay!: PixelButton;
+  private riftOnline!: PixelButton;
   /** The Rift's difficulty, one button per difficulty with only the chosen one shown, and a glow behind it. */
   private diffButtons = new Map<RiftDifficulty, PixelButton>();
   private diffGlow!: Phaser.GameObjects.Image;
@@ -408,7 +413,12 @@ export class ArenaScene extends Phaser.Scene {
     this.online = new PixelButton(this, 'Online', 56, 18, BUTTON_PLAIN, 'online', () => this.openOnline());
     this.play.place(7, PANEL_H - 27);
     this.online.place(PANEL_W - 7 - 56, PANEL_H - 26);
-    // The Rift, being solo, has no Online: its difficulty stands there instead, tapped round in turn.
+    // The Rift's difficulty stands on the right, tapped round in turn; Play and Online squeeze up beside it.
+    this.riftPlay = new PixelButton(this, 'Play', RIFT_PLAY_W, 20, BUTTON_GOLD, 'rift_play', () => this.startGame()).place(7, PANEL_H - 27).setVisible(false);
+    this.riftOnline = new PixelButton(this, '', RIFT_ONLINE_W, 20, BUTTON_PLAIN, 'rift_online', () => this.openOnline())
+      .setIcon(partyIcon(this))
+      .place(7 + RIFT_PLAY_W + 3, PANEL_H - 27)
+      .setVisible(false);
     const dx = PANEL_W - 7 - DIFF_W;
     const dy = PANEL_H - 27;
     this.diffGlow = this.add.image(dx + DIFF_W / 2, dy + 10, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(3.2, 1.1).setVisible(false);
@@ -417,7 +427,7 @@ export class ArenaScene extends Phaser.Scene {
       b.setIcon(difficultyIcon(this, d.id)).place(dx, dy).setVisible(false);
       this.diffButtons.set(d.id, b);
     }
-    this.panel = this.add.container(0, 0, [bg, this.windowSlot, this.region, this.title, rule, this.lore, ...this.status, this.play, this.online, this.diffGlow, ...this.diffButtons.values()]);
+    this.panel = this.add.container(0, 0, [bg, this.windowSlot, this.region, this.title, rule, this.lore, ...this.status, this.play, this.online, this.riftPlay, this.riftOnline, this.diffGlow, ...this.diffButtons.values()]);
     ui.add([this.drawing, this.header, this.back, this.zoomIn, this.zoomOut, this.panel]);
   }
 
@@ -636,10 +646,15 @@ export class ArenaScene extends Phaser.Scene {
     return [{ text: place.note ?? arena.blurb, tint: 0xb8a8e8 }];
   }
 
-  /** The Rift's difficulty button in Online's place, or Online back for every other arena. */
+  /** The Rift's row (small Play and Online, and its difficulty), or the usual Play and Online for every other arena. */
   private showDifficulty(rift: boolean): void {
     const now = riftDifficulty();
+    this.play.setVisible(!rift).setEnabled(!rift);
     this.online.setVisible(!rift);
+    // Hidden under the difficulty button, it mustn't catch its taps.
+    if (rift) this.online.setEnabled(false);
+    this.riftPlay.setVisible(rift).setEnabled(rift);
+    this.riftOnline.setVisible(rift).setEnabled(rift);
     for (const [id, b] of this.diffButtons) b.setVisible(rift && id === now).setEnabled(rift && id === now);
     this.diffGlow.setVisible(rift && now !== 'normal').setTint(difficultyDef(now).tint);
   }
@@ -1059,6 +1074,7 @@ export class ArenaScene extends Phaser.Scene {
     // than in the world's first frame.
     this.waitingSince = this.time.now;
     this.play.setAlpha(0.6);
+    this.riftPlay.setAlpha(0.6);
   }
 
   private go(arena: string, online: boolean): void {

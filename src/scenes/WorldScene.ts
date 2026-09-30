@@ -549,12 +549,22 @@ export class WorldScene extends Phaser.Scene {
     }
     if (this.rift) {
       // The Rift's waves stand in for a spawner, and its overlay shows them.
-      this.riftWaves = new RiftWaves(this, this.rift, { hero: () => this.hero, dropGems: (n, x, y) => this.dropGems(n, x, y) }, ch.id, ch.name);
+      this.riftWaves = new RiftWaves(this, this.rift, {
+          hero: () => this.hero,
+          dropGems: (n, x, y) => this.dropGems(n, x, y),
+          // Online, the fallen rise at the start when their friends beat the wave.
+          revive: () => {
+            if (this.downT <= 0) return;
+            this.downT = 0;
+            this.rise();
+          },
+        }, ch.id, ch.name);
       this.spawners.push(this.riftWaves);
       this.scene.launch('rift');
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
         // Left mid-run (Pause, Home): the waves cleared still count for a best.
         this.riftWaves?.end();
+        this.riftWaves?.detach();
         resetRift();
         this.scene.stop('rift');
       });
@@ -913,8 +923,8 @@ export class WorldScene extends Phaser.Scene {
     this.ult.cancel();
     // Where they fell, others will find their grave.
     this.echoes?.heroFell(h.x, h.y);
-    // In the Rift, falling ends the run.
-    this.riftWaves?.end();
+    // In the Rift, falling ends the run (online, once every hero is down).
+    this.riftWaves?.fell();
     // Struck down mid-charge: the charge never releases, so its hum is stopped here.
     sound.beamChargeEnd();
     this.debris([0xffffff, 0xdff8ff, 0xb0c8ff], snap(h.x), snap(h.y) - 12, 20, h.y + 20, 'spores');
@@ -949,7 +959,8 @@ export class WorldScene extends Phaser.Scene {
       h.alpha = Math.max(0, 1 - t / 700);
       this.fallen?.setAlpha(Phaser.Math.Clamp((t - 300) / 400, 0, 1)).setPosition(Math.round(h.x), Math.round(h.y) - 40 - Math.min(6, t / 250));
       if (this.downT <= 0) {
-        // No rising in the Rift: the run is over, and the hero lies where they fell.
+        // No rising in the Rift: the hero lies where they fell, till the run is
+        // over (or online, till their friends beat the wave; see RiftWaves).
         if (this.riftWaves) this.downT = 1;
         else {
           this.downT = 0;
