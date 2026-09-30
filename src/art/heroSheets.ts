@@ -68,6 +68,8 @@ interface AnimSpec {
   name: string;
   fps: number;
   loop: boolean;
+  /** Frame indices to play, in order, when some are held or repeated (the idle moment's `rest`). */
+  order?: readonly number[];
 }
 
 const SHEETS = new Map<string, SheetDef>();
@@ -92,9 +94,12 @@ function rig<L extends { key: string }>(
         const list: SheetAnim[] = [];
         for (const a of anims(look)) {
           for (const d of DIRS) {
+            const keys = frames.filter((f) => f.anim === a.name && f.dir === d).map((f) => f.key);
+            // Some moves are drawn one way only (the idle moment, `rest`, faces the viewer).
+            if (keys.length === 0) continue;
             list.push({
               key: `${look.key}_${a.name}_${d}`,
-              frames: frames.filter((f) => f.anim === a.name && f.dir === d).map((f) => f.key),
+              frames: a.order ? a.order.map((i) => keys[Math.min(i, keys.length - 1)]) : keys,
               fps: a.fps,
               loop: a.loop,
             });

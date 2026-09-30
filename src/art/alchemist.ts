@@ -43,6 +43,10 @@ export const ALCH_ORIGIN_X = BODY_X + 12;
 export const ALCH_ORIGIN_Y = BODY_Y + 31;
 /** Height above the feet a flask leaves the hand at. */
 export const RELEASE_H = 22;
+/** The idle moment's pace, and how far a puff of chem vapour drifts and rises per step. */
+const REST_FPS = 8;
+const PUFF_DRIFT = -1.6;
+const PUFF_RISE = 2.3;
 
 /** A hand, in the alchemist's terms: `f` forward, `s` out to its own side, `h` up from the chest. */
 export interface Hand {
@@ -72,6 +76,11 @@ export interface Pose {
   sway: number;
   /** Lenses dimmed for a moment. */
   blink?: boolean;
+  /** The head nudged from the body (a sniff, a nod, a cock to one side); front view only. */
+  headX?: number;
+  headY?: number;
+  /** 1..3: a puff of chem vapour escaping the canister's valve and spreading as it rises. */
+  puff?: number;
 }
 
 /** One look for the alchemist: its texture key, its cloth and its brew. */
@@ -718,8 +727,28 @@ function cryoFace(c: PixelCanvas, cx: number, U: number, blink: boolean | undefi
   lenses(c, [[9, 11 + U], [10, 11 + U], [11, 11 + U], [12, 11 + U], [13, 11 + U], [14, 11 + U]], blink);
 }
 
-// ---------------------------------------------------------------------------
-// Directions
+/**
+ * A puff of chem vapour off a canister's valve at (x, y): a knot of light
+ * that rises, drifts off to one side and thins out over `k` = 1..3.
+ */
+function puff(c: PixelCanvas, x: number, y: number, k: number): void {
+  const px = x + PUFF_DRIFT * k;
+  const py = y - PUFF_RISE * k;
+  const r = 0.6 + k * 0.55;
+  const a = 2.4 - k * 0.5;
+  for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) {
+    for (let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++) {
+      const d = Math.hypot(dx, dy * 1.2) / r;
+      if (d > 1) continue;
+      // Ragged at the edge as it spreads: every other rim pixel gone.
+      if (k > 1 && d > 0.7 && ((dx + dy + k) & 1)) continue;
+      c.spark(px + dx, py + dy, d < 0.45 ? S.core : d < 0.8 ? S.hot : S.mid, a * (1 - d * 0.55));
+    }
+  }
+  // A wisp still trailing back to the valve.
+  for (let i = 1; i < k + 1; i++) c.spark(x + (px - x) * (i / (k + 1)), y + (py - y) * (i / (k + 1)), S.hot, 0.45);
+}
+
 // ---------------------------------------------------------------------------
 // Directions
 
@@ -747,6 +776,12 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
   const hold = { size: p.flask, boil: p.boil, seed };
   const armA = () => arm(c, shA.x, shA.y, fa, REACH_FRONT, [-0.4, 1], hold, fa.behind ? -1 : 0);
   const armB = () => arm(c, shB.x, shB.y, fb, REACH_FRONT, [0.4, 1], { size: 0, boil: 0, seed }, fb.behind ? -1 : 0);
+  // Everything above the collar, drawn nudged by the pose's head offset.
+  const head = (draw: () => void) => {
+    c.offset(BODY_X + (p.headX ?? 0), BODY_Y + (p.headY ?? 0));
+    draw();
+    c.offset(BODY_X, BODY_Y);
+  };
   if (fa.behind) armA();
   if (fb.behind) armB();
 
@@ -806,8 +841,10 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
     c.px(cx - 1, 19 + U, GOLD, sphere(-0.4, 0.4));
     c.px(cx, 19 + U, S.brew, sphere(0.2, 0.2));
     c.spark(cx, 19 + U, S.mid, 0.35);
-    witchFace(c, cx, U, p.blink);
-    hat(c, cx, U, 'down');
+    head(() => {
+      witchFace(c, cx, U, p.blink);
+      hat(c, cx, U, 'down');
+    });
     if (!fa.behind) armA();
     if (!fb.behind) armB();
     return;
@@ -815,35 +852,42 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
 
   if (S.shaman) {
     necklace(c, [[8, 17 + U], [9, 18 + U], [10, 18 + U], [11, 19 + U], [12, 19 + U], [13, 18 + U], [14, 18 + U], [15, 17 + U], [10, 19 + U], [13, 19 + U]]);
-    feathers(c, cx, U, 'down');
-    shamanFace(c, cx, U, p.blink);
-    hat(c, cx, U, 'down');
+    head(() => {
+      feathers(c, cx, U, 'down');
+      shamanFace(c, cx, U, p.blink);
+      hat(c, cx, U, 'down');
+    });
     if (!fa.behind) armA();
     if (!fb.behind) armB();
     return;
   }
 
   if (S.chem) {
-    if (S.cryo) cryoFace(c, cx, U, p.blink);
-    else chemMask(c, cx, U, p.blink);
-    hat(c, cx, U, 'down');
+    head(() => {
+      if (S.cryo) cryoFace(c, cx, U, p.blink);
+      else chemMask(c, cx, U, p.blink);
+      hat(c, cx, U, 'down');
+    });
     if (!fa.behind) armA();
     if (!fb.behind) armB();
+    if (p.puff) puff(c, fa.x, Math.round(fa.y - 0.6) - 5, p.puff);
     return;
   }
 
   // The masked head under the brim; the beak juts out towards us over the collar.
-  c.part();
-  c.ellipse(cx, 12 + U, 3.0, 2.4, BEAK);
-  c.part();
-  c.shape(12 + U, 16 + U, (y) => {
-    const hw = 1.4 - (y - 12 - U) * 0.26;
-    return [cx - hw, cx + hw];
-  }, BEAK, (_x, _y, t, u) => sphere(t * 0.8, 0.5 - u * 0.6, 1));
-  c.shade(cx, 14 + U, -1);
-  c.shade(cx - 1, 13 + U, 1);
-  lenses(c, [[9, 11 + U], [10, 11 + U], [13, 11 + U], [14, 11 + U]], p.blink);
-  hat(c, cx, U, 'down');
+  head(() => {
+    c.part();
+    c.ellipse(cx, 12 + U, 3.0, 2.4, BEAK);
+    c.part();
+    c.shape(12 + U, 16 + U, (y) => {
+      const hw = 1.4 - (y - 12 - U) * 0.26;
+      return [cx - hw, cx + hw];
+    }, BEAK, (_x, _y, t, u) => sphere(t * 0.8, 0.5 - u * 0.6, 1));
+    c.shade(cx, 14 + U, -1);
+    c.shade(cx - 1, 13 + U, 1);
+    lenses(c, [[9, 11 + U], [10, 11 + U], [13, 11 + U], [14, 11 + U]], p.blink);
+    hat(c, cx, U, 'down');
+  });
 
   if (!fa.behind) armA();
   if (!fb.behind) armB();
@@ -1201,15 +1245,97 @@ const brew = action([
 ]);
 
 // ---------------------------------------------------------------------------
+// The idle moment (`rest`), facing the viewer only
+
+/** A pose from the stand (idle frame 0) with the given changes. */
+const from = (k: Partial<Pose>): Pose => ({ ...idle('down')[0], ...k });
+
+/**
+ * The plague doctor (and his witch and shaman skins): he raises the flask to
+ * the light, cocks his head at it and shakes it till it boils and glows, then
+ * brings it under the beak and wafts the fumes up with his other hand, two
+ * sniffs, and savours it with his eyes shut before settling back.
+ */
+const PLAGUE_REST: Pose[] = [
+  from({}),
+  from({ breath: 1, a: H(2.4, 3.3, -1.5), boil: 0.3, sway: -0.1 }),
+  from({ a: H(1.0, 6.4, 4.6), b: H(0.6, 4.4, -3.2), boil: 0.35, headX: -1, sway: 0.2 }),
+  from({ a: H(0.8, 5.6, 10.5), b: H(0.6, 4.4, -3.0), boil: 0.5, headX: -1, sway: 0.1 }),
+  from({ a: H(0.8, 6.4, 10), b: H(0.6, 4.4, -3.0), boil: 0.8, headX: -1, sway: -0.2 }),
+  from({ a: H(0.8, 5.0, 11), b: H(0.6, 4.4, -3.0), boil: 1, headX: -1, sway: 0.2 }),
+  from({ a: H(0.8, 5.6, 10.6), b: H(0.6, 4.4, -3.2), boil: 1, headX: -1 }),
+  from({ a: H(2.0, 3.6, 4), b: H(1.4, 3.4, -1.5), boil: 0.7, sway: -0.2 }),
+  from({ a: H(2.8, 1.6, 0.5), b: H(2.6, 1.0, 0.2), boil: 0.6, headY: 1, headX: -1 }),
+  from({ a: H(2.8, 1.6, 0.5), b: H(2.4, 0.4, 2.4), boil: 0.7, headY: 1, headX: -1, breath: 1 }),
+  from({ a: H(2.6, 2.2, 0.2), b: H(1.4, 3.2, -1.5), boil: 0.5, lift: 1, blink: true }),
+  from({ a: H(2.6, 3.4, -0.4), boil: 0.35, breath: 1, sway: 0.3 }),
+];
+
+/**
+ * Chemtech (and Cryotech): he lifts the canister and taps its window twice
+ * with a finger, it sputters and spits a puff of vapour, he flinches, watches
+ * it drift off, and gives it a satisfied nod.
+ */
+const CHEM_REST: Pose[] = [
+  from({}),
+  from({ a: H(2.4, 2.4, -2.0), b: H(1.6, 3.0, -1.8), boil: 0.25, headX: -1, headY: 1 }),
+  from({ a: H(2.4, 2.0, -2.3), b: H(2.4, 1.6, 0.9), boil: 0.1, headX: -1, headY: 1 }),
+  from({ a: H(2.4, 2.0, -2.6), b: H(2.4, 0.2, 0.2), boil: 0, headX: -1, headY: 1 }),
+  from({ a: H(2.4, 2.2, -1.6), b: H(1.8, 2.6, 0.6), boil: 1, puff: 1, headY: -1, lift: 1 }),
+  from({ a: H(2.4, 2.0, -2.0), b: H(1.4, 3.2, -1.2), boil: 0.5, puff: 2, headX: -1 }),
+  from({ a: H(2.4, 2.0, -2.2), b: H(1.0, 3.8, -2.4), boil: 0.7, puff: 3, headX: -1, headY: -1 }),
+  from({ a: H(2.4, 2.2, -2.4), b: H(0.8, 4.2, -3.2), boil: 0.6, headY: 1 }),
+  from({ a: H(2.4, 2.2, -2.2), b: H(0.6, 4.4, -3.4), boil: 0.6 }),
+  from({ a: H(2.6, 3.2, -1.2), boil: 0.4, breath: 1, sway: 0.2 }),
+  from({ a: H(2.4, 2.2, -2.2), b: H(0.6, 4.4, -3.4), boil: 0.6, blink: true }),
+];
+
+/** Which of each type's poses plays at each step: the same length, so one order serves both. */
+const PLAGUE_STEPS = [0, 1, 2, 3, 4, 5, 4, 5, 4, 5, 6, 6, 6, 7, 8, 9, 8, 9, 8, 10, 10, 10, 11, 0];
+const CHEM_STEPS = [0, 1, 1, 2, 3, 2, 3, 3, 4, 4, 5, 6, 6, 6, 7, 8, 7, 8, 8, 10, 8, 9, 9, 0];
+
+/**
+ * rig() takes one frame order per rig, but the two types move differently.
+ * So each step's frame stands for the pair of poses the types show there:
+ * steps where both repeat themselves share a frame, and each type draws its
+ * own pose for every frame.
+ */
+function mergeSteps(lines: readonly (readonly number[])[]): { order: number[]; picks: number[][] } {
+  const seen = new Map<string, number>();
+  const order: number[] = [];
+  const picks: number[][] = lines.map(() => []);
+  for (let t = 0; t < lines[0].length; t++) {
+    const k = lines.map((l) => l[t]).join(',');
+    let i = seen.get(k);
+    if (i === undefined) {
+      i = seen.size;
+      seen.set(k, i);
+      lines.forEach((l, j) => picks[j].push(l[t]));
+    }
+    order.push(i);
+  }
+  return { order, picks };
+}
+
+const REST_MERGE = mergeSteps([PLAGUE_STEPS, CHEM_STEPS]);
+
+function rest(view: View): Pose[] {
+  if (view !== 'down') return [];
+  return S.chem ? REST_MERGE.picks[1].map((i) => CHEM_REST[i]) : REST_MERGE.picks[0].map((i) => PLAGUE_REST[i]);
+}
+
+// ---------------------------------------------------------------------------
 // Frame generation
 
-export type AlchemistAnim = 'idle' | 'walk' | 'throw' | 'brew';
+export type AlchemistAnim = 'idle' | 'walk' | 'throw' | 'brew' | 'rest';
 
 export interface AlchemistAnimDef {
   name: AlchemistAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => Pose[];
+  /** Frame indices to play in sequence, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 export const ALCHEMIST_ANIMS: AlchemistAnimDef[] = [
@@ -1217,6 +1343,7 @@ export const ALCHEMIST_ANIMS: AlchemistAnimDef[] = [
   { name: 'walk', fps: 10, loop: true, poses: walk },
   { name: 'throw', fps: 18, loop: false, poses: throwing },
   { name: 'brew', fps: 12, loop: false, poses: brew },
+  { name: 'rest', fps: REST_FPS, loop: false, poses: rest, order: REST_MERGE.order },
 ];
 
 /** Frame index at which each throw lets go of its flask. */

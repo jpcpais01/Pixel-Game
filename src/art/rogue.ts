@@ -38,6 +38,17 @@ export const ROGUE_ORIGIN_X = BODY_X + 12;
 export const ROGUE_ORIGIN_Y = BODY_Y + 31;
 /** Height above the feet the blades strike at. */
 export const ROGUE_CHEST_Y = 13;
+/** A tossed dagger: how far its grip sits behind its middle, and its grip to point. */
+const TOSS_GRIP = 1.6;
+const TOSS_LEN = 4.4;
+/** How high the cutthroat flips his dagger above the hand, and how many turns it makes. */
+const TOSS_PEAK = 12.5;
+const TOSS_TURNS = 2;
+/** The idle moment's pace, and the dancer's whirl of light: its trail of sparks and the ring they ride. */
+const REST_FPS = 9;
+const SWIRL_TRAIL = 6;
+const SWIRL_RX = 8;
+const SWIRL_RY = 2.6;
 
 // ---------------------------------------------------------------------------
 // Materials
@@ -111,6 +122,8 @@ export interface RogueLook {
   corsair?: boolean;
   /** The kitsune: fox ears on the hood, a fox mask, and fox tails in place of the scarf's. */
   kitsune?: boolean;
+  /** A shadow dancer (or its skin): its idle moment is a pirouette, not a flipped knife. */
+  dance?: boolean;
 }
 
 export const ROGUE_LOOK: RogueLook = {
@@ -140,6 +153,7 @@ export const DANCER_LOOK: RogueLook = {
   mask: true,
   tails: 8,
   lit: hex('#c49cff'),
+  dance: true,
 };
 
 export const CORSAIR_LOOK: RogueLook = {
@@ -174,6 +188,7 @@ export const KITSUNE_LOOK: RogueLook = {
   lit: hex('#8ac8ff'),
   sleeve: FOX_RED,
   kitsune: true,
+  dance: true,
 };
 
 export const ROGUE_LOOKS = [ROGUE_LOOK, DANCER_LOOK, CORSAIR_LOOK, KITSUNE_LOOK];
@@ -215,6 +230,14 @@ export interface Pose {
   /** 0..1 light running along the blades (the dancer's, or a strike's gleam). */
   gleam: number;
   blink?: boolean;
+  /** The near-hand dagger tossed into the air (the idle moment): its middle on screen and the way its point faces, in radians. The hand is empty. */
+  toss?: { x: number; y: number; ang: number };
+  /** The head nudged from the body (a bow); front view only. */
+  headY?: number;
+  /** Drawn from another view though filed as facing down: the pirouette's turn. */
+  turn?: 'left' | 'up' | 'right';
+  /** 0..1 round the turn: sparks of the blades' light whirling round him. */
+  swirl?: number;
 }
 
 type View = 'down' | 'up' | 'side';
@@ -284,6 +307,17 @@ function dagger(c: PixelCanvas, p: Placed, tx: number, ty: number, gleam: number
     c.spark(tx - ux, ty - uy, [255, 255, 255], 0.6 * gleam);
     c.spark(tx, ty, [255, 250, 236], gleam);
   }
+}
+
+/** A dagger spinning through the air, its middle at (x, y) and its point facing `ang`: the grip shows where no fist covers it. */
+function tossed(c: PixelCanvas, x: number, y: number, ang: number, gleam: number): void {
+  const ux = Math.cos(ang);
+  const uy = Math.sin(ang);
+  const grip = { x: x - ux * TOSS_GRIP, y: y - uy * TOSS_GRIP, behind: false };
+  dagger(c, grip, grip.x + ux * TOSS_LEN, grip.y + uy * TOSS_LEN, gleam);
+  c.part();
+  c.px(grip.x, grip.y, S.hilt, sphere(-0.3, -0.3));
+  c.px(grip.x - ux * 0.8, grip.y - uy * 0.8, S.hilt, sphere(0, -0.3), { bias: -1 });
 }
 
 // ---------------------------------------------------------------------------
@@ -533,9 +567,19 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const [tbx, tby] = bladeTip('down', 'b', p.b, p.db, U, cx, fb);
   // A blade pointing up past the fist is behind the arm; otherwise in front of it.
   const armA = (bias: number) => {
-    if (tay < fa.y - 1) dagger(c, fa, tax, tay, p.gleam, bias);
+    if (!p.toss && tay < fa.y - 1) dagger(c, fa, tax, tay, p.gleam, bias);
     arm(c, 7.6, 16.4 + U, fa, REACH_FRONT, [-0.35, 1], bias);
-    if (tay >= fa.y - 1) dagger(c, fa, tax, tay, p.gleam, bias);
+    if (!p.toss && tay >= fa.y - 1) dagger(c, fa, tax, tay, p.gleam, bias);
+  };
+  // Everything above the collar, drawn nudged by the pose's head offset.
+  const head = (draw: () => void) => {
+    c.offset(BODY_X, BODY_Y + (p.headY ?? 0));
+    draw();
+    c.offset(BODY_X, BODY_Y);
+  };
+  // The tossed dagger flies over everything.
+  const flying = () => {
+    if (p.toss) tossed(c, p.toss.x, p.toss.y, p.toss.ang, p.gleam);
   };
   const armB = (bias: number) => {
     if (tby < fb.y - 1) dagger(c, fb, tbx, tby, p.gleam, bias);
@@ -605,56 +649,65 @@ function drawDown(c: PixelCanvas, p: Pose): void {
 
   if (S.corsair) {
     epaulettes(c, [[7.4, 15.6 + U], [16.6, 15.6 + U]]);
-    corsairFace(c, cx, U, p.blink);
-    tricorn(c, cx, U, true);
+    head(() => {
+      corsairFace(c, cx, U, p.blink);
+      tricorn(c, cx, U, true);
+    });
     if (!fb.behind) armB(0);
     if (!fa.behind) armA(0);
+    flying();
     return;
   }
   mantle(c, cx, U, 5.4, 5.4);
 
   if (S.kitsune) {
     // The hood with a fox's ears standing up out of it, the mask under its brim.
-    c.part();
-    c.ellipse(cx, 11.3 + U, 3.9, 3.7, S.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
-    ear(c, cx - 2.4, 9 + U, cx - 3.9, 4 + U);
-    ear(c, cx + 2.4, 9 + U, cx + 3.9, 4 + U, -1);
-    foxMask(c, cx, U, p.blink);
-    c.part();
-    c.shape(10 + U, 10 + U, () => [cx - 2.6, cx + 2.6], S.hood, (_x, _y, t) => sphere(t * 0.8, -0.5, 1));
+    head(() => {
+      c.part();
+      c.ellipse(cx, 11.3 + U, 3.9, 3.7, S.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+      ear(c, cx - 2.4, 9 + U, cx - 3.9, 4 + U);
+      ear(c, cx + 2.4, 9 + U, cx + 3.9, 4 + U, -1);
+      foxMask(c, cx, U, p.blink);
+      c.part();
+      c.shape(10 + U, 10 + U, () => [cx - 2.6, cx + 2.6], S.hood, (_x, _y, t) => sphere(t * 0.8, -0.5, 1));
+    });
     if (!fb.behind) armB(0);
     if (!fa.behind) armA(0);
+    flying();
     return;
   }
 
   // Head: the hood, the face in its shadow, the scarf pulled up over the nose (or the mask).
-  c.part();
-  c.ellipse(cx, 11.3 + U, 3.9, 3.7, S.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
-  c.part();
-  // The hood's peak.
-  c.px(cx - 1, 7 + U, S.hood, sphere(-0.3, -0.8));
-  c.px(cx, 7 + U, S.hood, sphere(0.1, -0.8));
-  c.part();
-  c.ellipse(cx, 12.7 + U, 2.5, 2.3, SKIN);
-  // The hood's brim low over the brow, only the eyes showing under it.
-  c.part();
-  c.shape(10 + U, 10 + U, () => [cx - 2.6, cx + 2.6], S.hood, (_x, _y, t) => sphere(t * 0.8, -0.5, 1));
-  for (let x = cx - 2; x <= cx + 1; x++) c.shade(x, 11 + U, -1);
-  c.part();
-  c.shape(13 + U, 15 + U, (y) => {
-    const hw = y === 15 + U ? 2.3 : 2.7;
-    return [cx - hw, cx + hw];
-  }, S.scarf, (_x, y, t) => sphere(t * 0.9, (y - 13 - U) * 0.35 - 0.2, 1));
-  c.shade(cx - 1, 14 + U, -1);
-  if (S.mask) {
-    // A silver half-mask across the eyes, swept up at the temples.
+  head(() => {
     c.part();
-    c.shape(11 + U, 12 + U, (y) => (y === 11 + U ? [cx - 3.2, cx + 3.2] : [cx - 2.8, cx + 2.8]), MASK, (_x, y, t) => sphere(t * 0.9, y === 11 + U ? 0.4 : -0.1, 1));
-  }
-  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+    c.ellipse(cx, 11.3 + U, 3.9, 3.7, S.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+    c.part();
+    // The hood's peak.
+    c.px(cx - 1, 7 + U, S.hood, sphere(-0.3, -0.8));
+    c.px(cx, 7 + U, S.hood, sphere(0.1, -0.8));
+    c.part();
+    c.ellipse(cx, 12.7 + U, 2.5, 2.3, SKIN);
+    // The hood's brim low over the brow, only the eyes showing under it.
+    c.part();
+    c.shape(10 + U, 10 + U, () => [cx - 2.6, cx + 2.6], S.hood, (_x, _y, t) => sphere(t * 0.8, -0.5, 1));
+    for (let x = cx - 2; x <= cx + 1; x++) c.shade(x, 11 + U, -1);
+    c.part();
+    c.shape(13 + U, 15 + U, (y) => {
+      const hw = y === 15 + U ? 2.3 : 2.7;
+      return [cx - hw, cx + hw];
+    }, S.scarf, (_x, y, t) => sphere(t * 0.9, (y - 13 - U) * 0.35 - 0.2, 1));
+    c.shade(cx - 1, 14 + U, -1);
+    if (S.mask) {
+      // A silver half-mask across the eyes, swept up at the temples.
+      c.part();
+      c.shape(11 + U, 12 + U, (y) => (y === 11 + U ? [cx - 3.2, cx + 3.2] : [cx - 2.8, cx + 2.8]), MASK, (_x, y, t) => sphere(t * 0.9, y === 11 + U ? 0.4 : -0.1, 1));
+    }
+    eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  });
 
   if (!fb.behind) armB(0);
   if (!fa.behind) armA(0);
+  flying();
 }
 
 function drawUp(c: PixelCanvas, p: Pose): void {
@@ -1055,15 +1108,128 @@ const dash = action([
 ]);
 
 // ---------------------------------------------------------------------------
+// The idle moment (`rest`), filed facing the viewer only
+
+/** A pose from the stand (idle frame 0) with the given changes. */
+const from = (k: Partial<Pose>): Pose => ({ ...idle('down')[0], ...k });
+
+/** Blade point straight up, the knife caught by its hilt. */
+const UP = H(0, 0.1, 1);
+/** Where the flip leaves the hand and where it comes down to be caught (the dagger's middle), in body pixels. */
+const FLIP_FROM: [number, number] = [9, 14.4];
+const FLIP_TO: [number, number] = [9, 15.2];
+/** The dagger in flight, `t` of the way from the hand and back. */
+const flight = (t: number, hand: Hand): Pose =>
+  from({
+    a: hand,
+    breath: 0,
+    toss: {
+      x: FLIP_FROM[0] + (FLIP_TO[0] - FLIP_FROM[0]) * t - Math.sin(t * Math.PI) * 0.6,
+      y: FLIP_FROM[1] + (FLIP_TO[1] - FLIP_FROM[1]) * t - 4 * TOSS_PEAK * t * (1 - t),
+      ang: -Math.PI / 2 + t * TOSS_TURNS * Math.PI * 2,
+    },
+  });
+
+/**
+ * The cutthroat (and the corsair): he weighs the knife in his hand, bouncing
+ * it twice, flicks it up to spin end over end above his head, snatches it
+ * out of the air by the hilt, point up with a glint, and lets it settle back
+ * into his reverse grip.
+ */
+const FLIP_HAND = H(2.2, 3.0, 1.5);
+const CUT_REST: Pose[] = [
+  from({}),
+  from({ a: H(1.6, 3.4, -2.4), da: H(0.5, 0.4, -0.6), breath: 1 }),
+  from({ a: H(1.8, 3.4, -4.2), da: H(0.6, 0.4, -0.4), breath: 1, sway: -0.3 }),
+  from({ a: FLIP_HAND, da: UP, lift: 1, gleam: 0.2, toss: { x: FLIP_FROM[0], y: FLIP_FROM[1] - 1.5, ang: -Math.PI / 2 + 0.5 } }),
+  flight(1 / 7, FLIP_HAND),
+  flight(2 / 7, H(2.2, 3.0, 1.9)),
+  flight(3 / 7, H(2.2, 3.0, 2.1)),
+  flight(4 / 7, H(2.2, 3.0, 2.1)),
+  flight(5 / 7, H(2.2, 3.0, 2.0)),
+  flight(6 / 7, H(2.2, 3.1, 1.8)),
+  from({ a: H(2.2, 3.0, 1.2), da: UP, breath: 1, gleam: 1 }),
+  from({ a: H(2.2, 3.1, 2.0), da: UP, gleam: 0.5, sway: 0.4 }),
+  from({ a: H(2.0, 3.3, -0.6), da: H(0.4, 0.3, 0.3), sway: 0.2 }),
+  from({ a: H(1.6, 3.5, -2.6), da: H(0.5, 0.45, -0.6), breath: 1 }),
+  from({ a: H(2.2, 3.1, 2.0), da: UP, gleam: 0.2, blink: true }),
+  from({ a: H(1.6, 3.4, -2.0), da: H(0.4, 0.4, -0.8) }),
+];
+
+/** Arms flung wide for the turn, blades pointing out. */
+const WIDE = H(0.6, 5.4, 1.4);
+const OUT = H(0.1, 1, 0.1);
+/** From the side the near arm leads and the far one trails. */
+const LEAD = H(3.4, 0, 1.4);
+const TRAIL = H(-2.6, 0, 1.8);
+
+/**
+ * The shadow dancer (and the kitsune): a little plié, up onto his toes with
+ * his arms opening, two turns on the spot (drawn from the front, the side,
+ * the back and the other side) with his scarf, or tails, flying and the
+ * blades' light whirling round him, a landing that lets them swing on past
+ * him, and a deep courtly bow, one hand at his chest, eyes closed.
+ */
+const DANCE_REST: Pose[] = [
+  from({}),
+  from({ lift: -1, a: H(2.2, 1.8, -0.8), b: H(2.2, 1.8, -0.8), da: H(0.4, -0.4, -0.8), db: H(0.4, -0.4, -0.8), sway: -0.2 }),
+  from({ lift: 1, a: WIDE, b: WIDE, da: OUT, db: OUT, stream: 0.4, sway: 0.4 }),
+  from({ turn: 'left', lift: 1, footA: 1, footB: -1, a: LEAD, b: TRAIL, da: H(1, 0, 0.1), db: H(-1, 0, 0.2), stream: 1, swirl: 0.25 }),
+  from({ turn: 'up', lift: 1, a: WIDE, b: WIDE, da: OUT, db: OUT, stream: 0.7, sway: 2.4, swirl: 0.5 }),
+  from({ turn: 'right', lift: 1, footA: 1, footB: -1, a: LEAD, b: TRAIL, da: H(1, 0, 0.1), db: H(-1, 0, 0.2), stream: 1, swirl: 0.75 }),
+  from({ lift: 1, a: WIDE, b: WIDE, da: OUT, db: OUT, stream: 0.6, sway: -2.4, swirl: 1 }),
+  from({ breath: 1, a: H(1, 4.8, -0.6), b: H(1, 4.8, -0.6), da: H(0.3, 0.8, -0.4), db: H(0.3, 0.8, -0.4), stream: 0.4, sway: -1.6 }),
+  from({ lift: -1, breath: 1, headY: 1, a: H(2.6, -0.8, 0.4), b: H(-0.2, 5.8, -2.6), da: H(0.3, 0.6, -0.8), db: H(0.1, 0.7, -0.7), sway: -0.4, blink: true }),
+  from({ lift: -1, breath: 1, headY: 1, a: H(2.6, -0.8, 0.4), b: H(-0.3, 6.0, -2.9), da: H(0.3, 0.6, -0.8), db: H(0.1, 0.7, -0.7), sway: 0.2, blink: true, gleam: 0.9 }),
+  from({ breath: 1, a: H(1.8, 2.4, -2.0), b: H(1.2, 4.4, -2.6), da: H(0.4, 0.4, -0.8), db: H(0.5, 0.45, -0.75), sway: 0.3 }),
+];
+
+/** Which of each type's poses plays at each step: the same length, so one order serves both. */
+const CUT_STEPS = [0, 1, 2, 1, 2, 15, 3, 4, 5, 6, 7, 8, 9, 10, 11, 11, 11, 14, 11, 11, 12, 13, 13, 0];
+const DANCE_STEPS = [0, 1, 1, 2, 3, 4, 5, 6, 3, 4, 5, 6, 7, 7, 8, 8, 8, 8, 9, 9, 9, 8, 10, 0];
+
+/**
+ * rig() takes one frame order per rig, but the two types move differently.
+ * So each step's frame stands for the pair of poses the types show there:
+ * steps where both repeat themselves share a frame, and each type draws its
+ * own pose for every frame.
+ */
+function mergeSteps(lines: readonly (readonly number[])[]): { order: number[]; picks: number[][] } {
+  const seen = new Map<string, number>();
+  const order: number[] = [];
+  const picks: number[][] = lines.map(() => []);
+  for (let t = 0; t < lines[0].length; t++) {
+    const k = lines.map((l) => l[t]).join(',');
+    let i = seen.get(k);
+    if (i === undefined) {
+      i = seen.size;
+      seen.set(k, i);
+      lines.forEach((l, j) => picks[j].push(l[t]));
+    }
+    order.push(i);
+  }
+  return { order, picks };
+}
+
+const REST_MERGE = mergeSteps([CUT_STEPS, DANCE_STEPS]);
+
+function rest(view: View): Pose[] {
+  if (view !== 'down') return [];
+  return S.dance ? REST_MERGE.picks[1].map((i) => DANCE_REST[i]) : REST_MERGE.picks[0].map((i) => CUT_REST[i]);
+}
+
+// ---------------------------------------------------------------------------
 // Frame generation
 
-export type RogueAnim = 'idle' | 'walk' | 'stab1' | 'stab2' | 'cross' | 'dash';
+export type RogueAnim = 'idle' | 'walk' | 'stab1' | 'stab2' | 'cross' | 'dash' | 'rest';
 
 export interface RogueAnimDef {
   name: RogueAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => Pose[];
+  /** Frame indices to play in sequence, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 export const ROGUE_ANIMS: RogueAnimDef[] = [
@@ -1073,6 +1239,7 @@ export const ROGUE_ANIMS: RogueAnimDef[] = [
   { name: 'stab2', fps: 20, loop: false, poses: stab2 },
   { name: 'cross', fps: 15, loop: false, poses: cross },
   { name: 'dash', fps: 14, loop: true, poses: dash },
+  { name: 'rest', fps: REST_FPS, loop: false, poses: rest, order: REST_MERGE.order },
 ];
 
 /** Frame index at which each strike lands. */
@@ -1087,11 +1254,31 @@ export interface RogueFrame {
 
 function drawRogueFrame(dir: Dir, pose: Pose): PixelCanvas {
   const c = new PixelCanvas(ROGUE_W, ROGUE_H).offset(BODY_X, BODY_Y);
-  if (dir === 'down') drawDown(c, pose);
-  else if (dir === 'up') drawUp(c, pose);
+  // The pirouette's frames are filed under `down` but drawn from wherever the turn has got to.
+  const d = pose.turn ?? dir;
+  if (d === 'down') drawDown(c, pose);
+  else if (d === 'up') drawUp(c, pose);
   else drawSide(c, pose);
-  return dir === 'right' ? c.mirrored() : c;
+  if (pose.swirl !== undefined) swirl(c, pose);
+  return d === 'right' ? c.mirrored() : c;
 }
+
+/**
+ * The blades' light whirling round the dancer as he turns: a comet of sparks
+ * on a flat ring about his chest, its head at `swirl` of the way round, the
+ * near half in front of him and the far half dimmed behind.
+ */
+function swirl(c: PixelCanvas, p: Pose): void {
+  const lit = S.lit ?? [255, 255, 255];
+  const y0 = CH - p.lift + p.breath;
+  for (let i = 0; i < SWIRL_TRAIL; i++) {
+    const t = (p.swirl! - i * 0.07) * Math.PI * 2;
+    const near = Math.sin(t) > 0;
+    const k = (1 - i / SWIRL_TRAIL) * (near ? 1 : 0.45);
+    c.spark(12 + Math.cos(t) * SWIRL_RX, y0 + Math.sin(t) * SWIRL_RY, lit, k);
+  }
+}
+
 
 export function buildRogueFrames(look: RogueLook = ROGUE_LOOK): RogueFrame[] {
   S = look;

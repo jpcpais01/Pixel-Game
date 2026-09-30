@@ -11,6 +11,7 @@ import { bolt, clamp01, Fx, line, pal, segDist, type Ink, type Pal } from './ult
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
+import { stand } from './rest';
 
 // The Synth (the Automaton's second type): a slim android with three drones
 // circling it.
@@ -210,7 +211,7 @@ export class Synth implements Hero {
     if (this.posing === 0) {
       if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
       else if (moving) this.dir = dirOf(mx, my);
-      const key = `${this.kit.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = moving ? `${this.kit.key}_walk_${this.dir}` : stand(this.body, `${this.kit.key}_idle_${this.dir}`);
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     }
     this.updateDrones(dt);

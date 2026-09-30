@@ -70,6 +70,7 @@ const WAR_RED: Material = { ramp: ramp('#2a0608', '#520c12', '#86161e', '#b8262a
 const LION_EYE: Material = { ramp: ramp('#6a3a00', '#f0a020', '#ffe070'), outline: INK, emissive: 0.4, noAO: true };
 const MOUTH: Material = { ramp: ramp('#1c0406', '#420a10', '#6e1820'), outline: hex('#0c0204'), noAO: true };
 const FANG: Material = { ramp: ramp('#8a867a', '#cfcabc', '#fbf8ee'), outline: hex('#2a2820') };
+const TONGUE: Material = { ramp: ramp('#6a1a2a', '#b83a50', '#e86a7a'), outline: hex('#2a0810') };
 
 // The dragon.
 const DRAGON_RED: Material = { ramp: ramp('#280406', '#560c10', '#8c1a1a', '#c0302a', '#e8604a'), outline: hex('#120203'), outlineLit: hex('#240406'), shine: true };
@@ -285,6 +286,24 @@ interface Pose {
   tail: number;
   tick: number;
   blink?: boolean;
+  // The idle moment's extras (front view only).
+  /** The head shifted aside (turned) and down (nodded), in pixels. */
+  turn?: number;
+  nod?: number;
+  /** The left wing on its own, when only one is lifted. */
+  wingA?: { open: number; raise: number };
+  /** 0..1 plumage or mane shaken out. */
+  fluff?: number;
+  /** The lion's mane swinging past his head as he shakes it, in pixels. */
+  maneX?: number;
+  /** 0..1 the dragon's tail curled round in front of his feet. */
+  curl?: number;
+  /** Smoke rings the dragon has puffed, from his snout: offset, radius, strength. */
+  rings?: { x: number; y: number; r: number; a: number }[];
+  /** 0..1 embers drifting up from the dragon's nostrils. */
+  embers?: number;
+  /** A loose feather drifting down, in body coordinates. */
+  down?: { x: number; y: number };
 }
 
 type View = 'down' | 'up' | 'side';
@@ -477,7 +496,7 @@ function wings(c: PixelCanvas, view: View, cx: number, U: number, p: Pose, when:
   const ry = 15.6 + U;
   if (view === 'down') {
     if (when !== 'behind') return;
-    draw(c, cx - 2.4, ry, -1, p.wing, p.raise, 0.92, -1);
+    draw(c, cx - 2.4, ry, -1, p.wingA?.open ?? p.wing, p.wingA?.raise ?? p.raise, 0.92, -1);
     draw(c, cx + 2.4, ry, 1, p.wing, p.raise, 0.92, -1);
   } else if (view === 'up') {
     if (when !== 'front') return;
@@ -496,7 +515,10 @@ function wings(c: PixelCanvas, view: View, cx: number, U: number, p: Pose, when:
  * tapering to a spade; the eagle's, a fan of white feathers. `k` is the side
  * it trails to, `(x, y)` its root.
  */
-function tail(c: PixelCanvas, x: number, y: number, k: number, swing: number, view: View, bias = 0): void {
+/** The dragon's tail curled round his feet, seen from the front: out past the right foot, round in front, the spade by the left. */
+const CURL: [number, number][] = [[0, 0], [4, 2.4], [5.6, 5.4], [4.2, 7.8], [0.6, 8.8], [-3.4, 8.6], [-6.2, 7.2], [-7.6, 5.4]];
+
+function tail(c: PixelCanvas, x: number, y: number, k: number, swing: number, view: View, bias = 0, curl = 0): void {
   if (eagle()) {
     // A fan of five white feathers from under the kilt.
     const spread = view === 'side' ? 0.45 : 1;
@@ -517,8 +539,10 @@ function tail(c: PixelCanvas, x: number, y: number, k: number, swing: number, vi
       // Out and down, then curling up at the end, flicking with the swing.
       pts.push({ x: x + k * (t * 8.5) + swing * t * t * 2, y: y + Math.sin(t * Math.PI * 0.9) * 3.4 - t * t * 3.2 });
     } else {
-      // The dragon's lies heavy on the ground, sweeping out behind.
-      pts.push({ x: x + k * (t * 9.5) + swing * t * t * 2.5, y: y + t * 5.2 - t * t * 1.4 });
+      // The dragon's lies heavy on the ground, sweeping out behind (or curled round, at rest).
+      const sx = x + k * (t * 9.5) + swing * t * t * 2.5;
+      const sy = y + t * 5.2 - t * t * 1.4;
+      pts.push({ x: sx + (x + CURL[i][0] - sx) * curl, y: sy + (y + CURL[i][1] - sy) * curl });
     }
   }
   const r0 = lion() ? 0.8 : 2.1;
@@ -667,13 +691,19 @@ function leg(c: PixelCanvas, hx: number, hy: number, ax: number, ay: number, bia
 
 /** The eagle from the front: white feathered head, fierce brows, the hooked golden beak (open as it screeches). */
 function eagleDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const f = p.fluff ?? 0;
   // The white ruff spilling onto the chest.
   c.part();
-  c.ellipse(cx, 14.8 + U, 3.7, 1.7, S.head, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.5 - 0.3, 1) });
+  c.ellipse(cx, 14.8 + U, 3.7 + f * 1.2, 1.7 + f * 0.6, S.head, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.5 - 0.3, 1) });
   c.part();
   for (const x of [cx - 3, cx - 1, cx + 1, cx + 2]) c.px(x, 16.2 + U, S.head, sphere((x + 0.5 - cx) / 4, 0.4), { bias: -1 });
   c.part();
   c.ellipse(cx, 11.2 + U, 3.4, 3.2, S.head);
+  if (f > 0) {
+    // Head feathers standing up, cheeks puffed.
+    c.part();
+    for (const [x, y] of [[-2, 7.6], [2, 7.8], [-4, 10.6], [4, 10.6], [-4.4, 13.6], [4.4, 13.6]] as const) c.px(cx + x * (1 + f * 0.12) - 0.5, y + U - f * (y < 9 ? 0.9 : 0.3), S.head, sphere(x / 4.5, -0.5), { bias: 1 });
+  }
   // Eyes under a heavy brow that dips toward the beak.
   c.part();
   for (const x of [cx - 2, cx + 1]) {
@@ -753,7 +783,7 @@ function eagleSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
 }
 
 /** The mane: a great ruff round the face, ragged at its rim, spilling onto the chest. */
-function mane(c: PixelCanvas, x: number, y: number, rx: number, ry: number, tick: number, from = 0, to = Math.PI * 2): void {
+function mane(c: PixelCanvas, x: number, y: number, rx: number, ry: number, tick: number, from = 0, to = Math.PI * 2, shag = 0): void {
   const n = (_x: number, _y: number, dx: number, dy: number) => sphere(dx * 0.9, dy * 0.85 - 0.15, 1);
   c.part();
   c.ellipse(x, y, rx, ry, S.mane, { normal: n });
@@ -762,7 +792,7 @@ function mane(c: PixelCanvas, x: number, y: number, rx: number, ry: number, tick
   const N = 14;
   for (let i = 0; i < N; i++) {
     const a = from + ((to - from) * (i + 0.5)) / N;
-    const wob = (i + tick) % 4 === 0 ? 0.6 : 0;
+    const wob = ((i + tick) % 4 === 0 ? 0.6 : 0) + ((i + tick) % 2 === 0 ? shag * 1.4 : shag * 0.5);
     const tx = x + Math.cos(a) * (rx + 0.6 + wob);
     const ty = y + Math.sin(a) * (ry + 0.5 + wob);
     c.px(tx, ty, S.mane, sphere(Math.cos(a) * 0.8, -Math.sin(a) * 0.8), { bias: i % 2 ? 1 : 0 });
@@ -776,9 +806,11 @@ function mane(c: PixelCanvas, x: number, y: number, rx: number, ry: number, tick
 
 /** The lion from the front: mane, round ears, the cream muzzle and black nose; roaring, the jaws gape round white fangs. */
 function lionDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
-  mane(c, cx, 12 + U, 5.4, 5.0, p.tick);
+  const mx = cx + (p.maneX ?? 0);
+  const shag = p.fluff ?? 0;
+  mane(c, mx, 12 + U - shag * 0.4, 5.4 + shag * 0.5, 5.0 + shag * 0.4, p.tick, 0, Math.PI * 2, shag);
   c.part();
-  c.ellipse(cx, 16.2 + U, 4.2, 1.8, S.mane, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.6, 1) });
+  c.ellipse(mx, 16.2 + U, 4.2, 1.8, S.mane, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.6, 1) });
   // Ears in the mane's top.
   c.part();
   for (const x of [cx - 3.4, cx + 3.4]) c.ellipse(x, 8.4 + U, 1.3, 1.2, S.hide);
@@ -804,13 +836,23 @@ function lionDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.px(cx - 1, 12.6 + U, S.beak, sphere(-0.3, 0.4));
   c.px(cx, 12.6 + U, S.beak, sphere(0.3, 0.4));
   if (open > 0.3) {
-    const rows = open > 0.75 ? 2 : 1;
+    // A yawn (open past 1) gapes wider still, down to the tongue.
+    const rows = open > 1.2 ? 3 : open > 0.75 ? 2 : 1;
     c.part();
-    for (let r = 0; r < rows; r++) for (const x of [cx - 1, cx]) c.px(x, 14.4 + U + r, MOUTH, sphere(0, 0));
+    for (let r = 0; r < rows; r++) for (const x of rows > 2 ? [cx - 2, cx - 1, cx, cx + 1] : [cx - 1, cx]) c.px(x, 14.4 + U + r, MOUTH, sphere(0, 0));
+    if (rows > 2) {
+      c.px(cx - 1, 16.4 + U, TONGUE, sphere(-0.3, -0.4), { bias: 1 });
+      c.px(cx, 16.4 + U, TONGUE, sphere(0.3, -0.4), { bias: 1 });
+    }
     c.part();
     c.px(cx - 2, 14.4 + U, FANG, sphere(-0.4, 0.3));
     c.px(cx + 1, 14.4 + U, FANG, sphere(0.4, 0.3));
-    if (rows > 1) {
+    if (rows > 2) {
+      c.px(cx - 2, 16.4 + U, FANG, sphere(-0.4, -0.3), { bias: -1 });
+      c.px(cx + 1, 16.4 + U, FANG, sphere(0.4, -0.3), { bias: -1 });
+      c.px(cx - 3, 15.4 + U, S.belly, sphere(-0.7, 0));
+      c.px(cx + 2, 15.4 + U, S.belly, sphere(0.7, 0));
+    } else if (rows > 1) {
       c.px(cx - 2, 15.4 + U, FANG, sphere(-0.4, -0.3), { bias: -1 });
       c.px(cx + 1, 15.4 + U, FANG, sphere(0.4, -0.3), { bias: -1 });
     }
@@ -1036,10 +1078,19 @@ function torso(c: PixelCanvas, cx: number, top: number, waist: number, half: (u:
 }
 
 /** The eagle's body: plumage, a leather strap across it with a gold clasp, the sky-blue kilt. */
-function eagleBody(c: PixelCanvas, cx: number, U: number, L: number, back: boolean): void {
+function eagleBody(c: PixelCanvas, cx: number, U: number, L: number, back: boolean, fluffed = 0): void {
   const top = 15 + U;
   const waist = 22 + U;
-  torso(c, cx, top, waist, (u) => 4.9 - 1.1 * u * u, back);
+  torso(c, cx, top, waist, (u) => 4.9 - 1.1 * u * u + fluffed * 0.7, back);
+  if (fluffed > 0) {
+    // Ruffled out: feathers standing proud along the flanks.
+    c.part();
+    for (let y = top + 1; y < waist; y += 2) {
+      const hw = 4.9 - 1.1 * ((y - top) / 8) ** 2 + fluffed * 0.7;
+      c.px(cx - hw - 0.6, y, S.kit ? S.kit.shirt : S.hide, sphere(-0.8, -0.3), { bias: 1 });
+      c.px(cx + hw - 0.4, y + 1, S.kit ? S.kit.shirt : S.hide, sphere(0.8, -0.3), { bias: 1 });
+    }
+  }
   if (!S.kit) {
     c.part();
     c.line(back ? cx + 3 : cx - 4, top + 1, back ? cx - 3 : cx + 3, waist - 1, LEATHER, () => sphere(0, -0.3));
@@ -1177,7 +1228,7 @@ function legsFront(c: PixelCanvas, L: number, fa: number, fb: number, back: bool
 }
 
 function body(c: PixelCanvas, cx: number, U: number, L: number, back: boolean, p: Pose): void {
-  if (eagle()) eagleBody(c, cx, U, L, back);
+  if (eagle()) eagleBody(c, cx, U, L, back, p.fluff ?? 0);
   else if (lion()) lionBody(c, cx, U, L, back);
   else dragonBody(c, cx, U, L, back, p.glow);
 }
@@ -1191,19 +1242,67 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const armA = () => arm(c, 7.1, 16.4 + U, fa, REACH_FRONT, [-0.6, 1], p.claws, fa.behind ? -1 : 0);
   const armB = () => arm(c, 16.9, 16.4 + U, fb, REACH_FRONT, [0.6, 1], p.claws, fb.behind ? -1 : 0);
 
+  const curl = p.curl ?? 0;
   wings(c, 'down', cx, U, p, 'behind');
-  // The tail swings out past a leg.
-  if (!eagle()) tail(c, cx + 2, 24 + L, 1, p.tail, 'down', -2);
+  // The tail swings out past a leg (or, curled round, lies in front of the feet).
+  if (!eagle() && curl <= 0.5) tail(c, cx + 2, 24 + L, 1, p.tail, 'down', -2, curl);
   if (fa.behind) armA();
   if (fb.behind) armB();
   legsFront(c, L, p.footA, p.footB, false);
+  if (dragon() && curl > 0.5) tail(c, cx + 2, 24 + L, 1, p.tail, 'down', 0, curl);
   body(c, cx, U, L, false, p);
-  if (eagle()) eagleDown(c, cx, U, p);
-  else if (lion()) lionDown(c, cx, U, p);
-  else dragonDown(c, cx, U, p);
+  const hx = cx + (p.turn ?? 0);
+  const hU = U + (p.nod ?? 0);
+  if (eagle()) eagleDown(c, hx, hU, p);
+  else if (lion()) lionDown(c, hx, hU, p);
+  else dragonDown(c, hx, hU, p);
   if (!fb.behind) armB();
   if (!fa.behind) armA();
   held(c, p, fa, fb);
+  if (p.rings) smokeRings(c, hx, 12.4 + hU, p.rings);
+  if (p.embers) embers(c, hx, 12.4 + hU, p.embers, p.tick);
+  if (p.down) looseFeather(c, p.down.x, p.down.y);
+}
+
+/** Smoke rings from the dragon's snout, glowing in his fire's colours as they rise and fade. */
+function smokeRings(c: PixelCanvas, x: number, y: number, rings: { x: number; y: number; r: number; a: number }[]): void {
+  const [core, hot, mid] = S.light;
+  for (const g of rings) {
+    const n = Math.max(8, Math.round(g.r * 6));
+    const seen = new Set<string>();
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const px = Math.round(x + g.x + Math.cos(a) * g.r);
+      // Seen from a little above, the ring is squashed a touch.
+      const py = Math.round(y + g.y + Math.sin(a) * g.r * 0.8);
+      const k = `${px},${py}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      // Lit from below by the fire: the lower rim brighter.
+      c.spark(px, py, Math.sin(a) > 0.3 ? core : Math.sin(a) < -0.3 ? mid : hot, g.a * (Math.sin(a) < -0.3 ? 0.8 : 1));
+    }
+  }
+}
+
+/** Embers flickering up from the nostrils. */
+function embers(c: PixelCanvas, x: number, y: number, k: number, tick: number): void {
+  const [core, hot, mid] = S.light;
+  const drift: [number, number][][] = [
+    [[-2, -1], [1, -2], [-3, -3]],
+    [[1, -1], [-2, -2], [2, -4]],
+    [[-2, -2], [1, -3], [-1, -5]],
+  ];
+  c.spark(x - 2, y, core, k * 0.7);
+  c.spark(x + 1, y, core, k * 0.7);
+  drift[tick % 3].forEach(([dx, dy], i) => c.spark(x + dx, y + dy, i === 0 ? hot : mid, k * (1 - i * 0.25)));
+}
+
+/** A little down feather shaken loose, drifting. */
+function looseFeather(c: PixelCanvas, x: number, y: number): void {
+  c.part();
+  c.px(x, y, S.head, sphere(-0.4, -0.5), { bias: 1 });
+  c.px(x + 1, y + 1, S.head, sphere(0.3, 0.2));
+  c.px(x + 1, y, S.head, sphere(0.2, -0.6), { bias: -1 });
 }
 
 function drawUp(c: PixelCanvas, p: Pose): void {
@@ -1549,9 +1648,109 @@ const rally = action([
 ]);
 
 // ---------------------------------------------------------------------------
+// The idle moment (`rest`), played facing us when he has stood still a while.
+// Each starts and ends on idle's first frame so it slips in and out unseen.
+
+/** Idle's first frame, with changes. */
+const still = (o: Partial<Pose> = {}): Pose => ({ ...idle('down')[0], ...o });
+
+/**
+ * The eagle preens: he lifts one wing, turns his head into it and nibbles
+ * at the coverts, then fluffs every feather out, gives a quick shake, and
+ * settles smooth again; a little down feather drifts off.
+ */
+function preen(view: View): Pose[] {
+  if (view !== 'down') return [];
+  return [
+    still(),
+    still({ turn: -1, wingA: { open: 0.12, raise: 0.8 }, tick: 1 }),
+    still({ turn: -2, nod: 1, wingA: { open: 0.22, raise: 1.6 }, tick: 2 }),
+    // Nibble, nibble.
+    still({ turn: -3, nod: 2, wingA: { open: 0.24, raise: 1.8 }, blink: true, tick: 3 }),
+    still({ turn: -3, nod: 1, wingA: { open: 0.2, raise: 1.7 }, blink: true, tick: 4 }),
+    still({ turn: -1, wingA: { open: 0.12, raise: 0.6 }, tick: 5 }),
+    // Every feather fluffed out: a dip into it, a shake each way.
+    still({ breath: 1, fluff: 0.6, wing: 0.2, raise: 0.3, tick: 6 }),
+    still({ fluff: 1, turn: -1, wing: 0.32, raise: 0.7, tail: -1, tick: 7 }),
+    still({ fluff: 1, turn: 1, wing: 0.26, raise: 0.1, tail: 1, tick: 8 }),
+    // Smoothed down; one little feather shaken loose floats away.
+    still({ fluff: 0.35, wing: 0.12, raise: -0.2, down: { x: 19, y: 11 }, tick: 9 }),
+    still({ blink: true, down: { x: 21, y: 16 }, tick: 10 }),
+    still({ down: { x: 20, y: 22 }, tick: 11 }),
+    still({ down: { x: 22, y: 27 }, tick: 12 }),
+  ];
+}
+const PREEN_ORDER = [0, 1, 2, 3, 4, 3, 4, 3, 4, 5, 6, 7, 8, 7, 8, 9, 10, 11, 12, 0];
+
+/** The lion's arms flung up and out in a stretch. */
+const STRETCH = H(0.4, 6.2, 6);
+
+/**
+ * The lion yawns: a stretch up and out, the jaws opening wider and wider on
+ * every fang, a slump as they shut; then he shakes out his mane, which
+ * swings a beat behind his head and settles.
+ */
+function yawn(view: View): Pose[] {
+  if (view !== 'down') return [];
+  return [
+    still(),
+    still({ a: H(0.8, 5.2, 0.6), b: H(0.8, 5.2, 0.6), mouth: 0.4, blink: true, tick: 1 }),
+    still({ a: H(0.5, 6, 3.6), b: H(0.5, 6, 3.6), lift: 1, nod: -1, mouth: 0.9, blink: true, tail: 0.6, tick: 2 }),
+    still({ a: STRETCH, b: STRETCH, lift: 1, nod: -1, mouth: 1.5, blink: true, tail: 1, tick: 3 }),
+    still({ a: H(0.4, 6.4, 6.3), b: H(0.4, 6.4, 6.3), lift: 1, nod: -1, mouth: 1.5, blink: true, tail: 0.8, tick: 4 }),
+    // Jaws shutting, arms dropping.
+    still({ a: H(0.8, 5.4, 1.2), b: H(0.8, 5.4, 1.2), mouth: 0.5, blink: true, tail: 0.2, tick: 5 }),
+    still({ breath: 1, tail: -0.3, tick: 6 }),
+    // The shake: the mane flies a beat behind the head.
+    still({ turn: -1, maneX: -1, fluff: 1, tail: -1, tick: 7 }),
+    still({ turn: 1, maneX: -1.5, fluff: 1, tail: 1, tick: 8 }),
+    still({ turn: 1, maneX: 1, fluff: 1, tail: 0.6, tick: 9 }),
+    still({ turn: -1, maneX: 1.5, fluff: 1, tail: -0.8, tick: 10 }),
+    still({ maneX: -0.6, fluff: 0.5, tail: -0.3, tick: 11 }),
+    still({ maneX: 0.3, fluff: 0.2, blink: true, tick: 12 }),
+  ];
+}
+const YAWN_ORDER = [0, 1, 2, 3, 4, 3, 4, 4, 5, 6, 6, 7, 8, 9, 10, 8, 9, 11, 12, 12, 0];
+
+/** The smoke rings on their way up, drifting off to the side so the face stays clear. */
+const RING = [
+  { x: 4, y: -1, r: 1.2, a: 1 },
+  { x: 7, y: -4, r: 1.7, a: 1 },
+  { x: 9, y: -8, r: 2.2, a: 0.8 },
+  { x: 10, y: -12, r: 2.6, a: 0.45 },
+];
+
+/**
+ * The dragon curls his tail round his feet like a cat, draws a slow breath
+ * that lights his belly, and puffs two smoke rings glowing in his fire's
+ * colours, then lets a few embers flicker from his nostrils and uncurls.
+ */
+function smoke(view: View): Pose[] {
+  if (view !== 'down') return [];
+  return [
+    still(),
+    still({ curl: 0.35, tail: 0.5, glow: 0.25, tick: 1 }),
+    still({ curl: 0.75, glow: 0.4, breath: 1, tick: 2 }),
+    // The breath in.
+    still({ curl: 1, lift: 1, nod: -1, glow: 0.8, tick: 3 }),
+    // Puff...
+    still({ curl: 1, nod: -1, mouth: 0.5, glow: 0.5, rings: [RING[0]], tick: 4 }),
+    still({ curl: 1, glow: 0.35, rings: [RING[1]], tick: 5 }),
+    // ...and puff.
+    still({ curl: 1, nod: -1, mouth: 0.5, glow: 0.5, rings: [RING[2], RING[0]], tick: 6 }),
+    still({ curl: 1, glow: 0.3, rings: [RING[3], RING[1]], embers: 0.6, tick: 7 }),
+    still({ curl: 1, glow: 0.3, rings: [RING[2]], embers: 0.8, blink: true, tick: 8 }),
+    still({ curl: 1, glow: 0.25, rings: [RING[3]], embers: 0.5, blink: true, tick: 9 }),
+    still({ curl: 0.55, glow: 0.2, embers: 0.3, tail: 0.4, tick: 10 }),
+    still({ curl: 0.15, tail: 0.2, tick: 11 }),
+  ];
+}
+const SMOKE_ORDER = [0, 1, 2, 3, 3, 4, 5, 6, 7, 8, 9, 8, 9, 9, 10, 11, 0];
+
+// ---------------------------------------------------------------------------
 // Frame generation
 
-export type BeastAnim = 'idle' | 'walk' | 'fling' | 'fling2' | 'gust' | 'claw' | 'claw2' | 'maul' | 'roar' | 'spit' | 'breath' | 'rally';
+export type BeastAnim = 'idle' | 'walk' | 'fling' | 'fling2' | 'gust' | 'claw' | 'claw2' | 'maul' | 'roar' | 'spit' | 'breath' | 'rally' | 'rest';
 
 interface BeastAnimDef {
   name: BeastAnim;
@@ -1560,6 +1759,8 @@ interface BeastAnimDef {
   poses: (view: View) => Pose[];
   /** Only drawn for this kind; for all when left out. */
   kind?: BeastKind;
+  /** Frames played in this order, some held or repeated. */
+  order?: readonly number[];
 }
 
 const BEAST_ANIMS: BeastAnimDef[] = [
@@ -1575,6 +1776,9 @@ const BEAST_ANIMS: BeastAnimDef[] = [
   { name: 'spit', fps: 11, loop: false, poses: spit, kind: 'dragon' },
   { name: 'breath', fps: 12, loop: true, poses: breath, kind: 'dragon' },
   { name: 'rally', fps: 10, loop: false, poses: rally },
+  { name: 'rest', fps: 8, loop: false, poses: preen, kind: 'eagle', order: PREEN_ORDER },
+  { name: 'rest', fps: 8, loop: false, poses: yawn, kind: 'lion', order: YAWN_ORDER },
+  { name: 'rest', fps: 7, loop: false, poses: smoke, kind: 'dragon', order: SMOKE_ORDER },
 ];
 
 /** The anims a look has. */

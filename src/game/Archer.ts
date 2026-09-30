@@ -12,6 +12,7 @@ import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
 import { HERO_STATS } from './stats';
+import { stand } from './rest';
 
 export const MAX_HP = HERO_STATS['archer.ranger'].hp;
 const SPEED = HERO_STATS['archer.ranger'].speed; // world px / second
@@ -136,7 +137,7 @@ export class Archer implements Hero {
       // Fighting faces the aim, even walking backwards; otherwise the way of the walk.
       if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
       else if (moving) this.dir = dirOf(mx, my);
-      const key = `${this.style.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = moving ? `${this.style.key}_walk_${this.dir}` : stand(this.body, `${this.style.key}_idle_${this.dir}`);
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else {
       // Until the arrow leaves the string, the aim follows the mouse.

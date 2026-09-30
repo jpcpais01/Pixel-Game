@@ -11,7 +11,7 @@
 // left and mirrored for right. Frames are MECH_W x MECH_H with the feet on
 // GROUND at the centre.
 
-import { PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
+import { FLAT, PixelCanvas, cyl, hex, sphere, type DrawOpts, type Material, type RGB, type Vec3 } from './pixel';
 import { DIRS, type Dir } from './wizard';
 import { icon16, seg, type Tones } from './druid';
 
@@ -27,6 +27,8 @@ export const MECH_ORIGIN_Y = GROUND;
 export const MECH_GUN_Y = 16;
 /** The cannons' distance to either side of the centre (front and back views). */
 export const MECH_GUN_X = 13;
+/** Below this power the rest's lamps and goggles are dark. */
+const POWER_OFF = 0.35;
 
 // ---------------------------------------------------------------------------
 // Materials
@@ -53,6 +55,13 @@ const GOGGLE: Material = { ramp: ramp('#ff9a1a', '#ffd860', '#fffbd0'), outline:
 const TOOTH: Material = { ramp: ramp('#b8b09a', '#fff8e0'), outline: hex('#140a04'), noAO: true };
 const WOOD: Material = { ramp: ramp('#3a220e', '#6a4420', '#9a6c38', '#c89a58'), outline: hex('#140a04') };
 const PAINT: Material = { ramp: ramp('#7a0e0e', '#c82020'), outline: hex('#2a0404'), noOutline: true, noAO: true };
+
+// The idle moment's: the lamps and goggles with the power cut, the steam it
+// lets off, and the pilot's snores.
+const LAMP_OFF: Material = { ramp: ramp('#2a2016', '#4a3a26', '#6a563a'), outline: hex('#140c04'), shine: true };
+const GOGGLE_OFF: Material = { ramp: ramp('#2a1a0a', '#4a3216', '#6a4c26'), outline: hex('#1a0e04'), shine: true };
+const STEAM: Material = { ramp: ramp('#8a96a6', '#c0cad6', '#e6ecf2', '#ffffff'), outline: hex('#4a5462'), noAO: true, noOutline: true, emissive: 0.15 };
+const SNORE: Material = { ramp: ramp('#8ad8f0', '#d8f6ff'), outline: hex('#0a2a36'), emissive: 0.8, noAO: true, noOutline: true };
 
 export interface MechLook {
   /** Texture key; animations are `${key}_${anim}_${dir}`. */
@@ -96,9 +105,18 @@ export interface MechPose {
   drill: number;
   claw: number;
   sign: boolean;
+  /** The idle moment: how lit the lamps (and goggles) are, 1 as always, 0 off, over 1 flaring as it reboots. */
+  power: number;
+  /** The pilot's (or goblin's) head nodded down, px; the arms hung lower as it slumps, px. */
+  nod: number;
+  sag: number;
+  /** Steam: the chimney's puff (a stage of PUFFS), the hiss out of the hips (a stage of JETS), a snore (0 none, 1 small z, 2 big z). */
+  puff: number;
+  jets: number;
+  snore: number;
 }
 
-const base = (): MechPose => ({ bob: 0, crouch: 0, liftA: 0, liftB: 0, strideA: 0, strideB: 0, recoilA: 0, recoilB: 0, flashA: false, flashB: false, stab: 0, pods: 0, vent: 0, drill: 0, claw: 0.3, sign: false });
+const base = (): MechPose => ({ bob: 0, crouch: 0, liftA: 0, liftB: 0, strideA: 0, strideB: 0, recoilA: 0, recoilB: 0, flashA: false, flashB: false, stab: 0, pods: 0, vent: 0, drill: 0, claw: 0.3, sign: false, power: 1, nod: 0, sag: 0, puff: 0, jets: 0, snore: 0 });
 
 // ---------------------------------------------------------------------------
 // Drawing helpers
@@ -221,7 +239,7 @@ function drawFront(c: PixelCanvas, p: MechPose, back: boolean): void {
     c.part();
     for (const s of [-1, 1]) strut(c, CX + s * 9, hb - 2, CX + s * (10 + 9 * p.stab), GROUND - (1 - p.stab) * 9);
   }
-  // The smokestack (or the bent stovepipe) behind the hull.
+  // The smokestack (or the bent stovepipe) behind the hull, and the idle moment's hiss from behind the hips.
   if (!back) chimney(c, ht, false);
   // The cannons behind, in the back view: their barrels stand up past the shoulders.
   if (back) for (const s of [-1, 1]) backGun(c, CX + s * MECH_GUN_X, ht, s < 0 ? p.recoilA : p.recoilB);
@@ -233,7 +251,7 @@ function drawFront(c: PixelCanvas, p: MechPose, back: boolean): void {
 
   // The hull.
   c.part();
-  if (scrap) barrel(c, CX - 9.5, CX + 9.5, ht - 1, hb + 1, back);
+  if (scrap) barrel(c, CX - 9.5, CX + 9.5, ht - 1, hb + 1, back, p.power, p.nod);
   else {
     slab(c, CX - 11, ht, CX + 11, hb, PLATE, 2.5);
     c.part();
@@ -248,16 +266,15 @@ function drawFront(c: PixelCanvas, p: MechPose, back: boolean): void {
       }
       slab(c, CX - 3, ht + 1, CX + 3, ht + 3, GUNMETAL, 1);
     } else {
-      // Headlamps either side of the dome.
-      c.px(CX - 8, ht + 8, LAMP);
-      c.px(CX - 7, ht + 8, LAMP);
-      c.px(CX + 7, ht + 8, LAMP);
-      c.px(CX + 8, ht + 8, LAMP);
+      // Headlamps either side of the dome (dimmed, dark or flaring in the idle moment).
+      const [lamp, lo] = lit(LAMP, LAMP_OFF, p.power);
+      for (const x of [CX - 8, CX - 7, CX + 7, CX + 8]) c.px(x, ht + 8, lamp, undefined, lo);
+      if (p.power > 1) for (const x of [CX - 7.5, CX + 7.5]) flare(c, x, ht + 8.5, p.power - 1);
       // Rivets.
       for (const [x, y] of [[CX - 9, ht + 3], [CX + 9, ht + 3], [CX - 9, hb - 5], [CX + 9, hb - 5]]) c.px(x, y, GUNMETAL, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
       dome(c, CX, ht + 5.5, 5.5, 4.2, (cc) => {
-        cc.ellipse(CX, ht + 6.5, 2.8, 2.6, HELMET);
-        for (let x = CX - 2; x <= CX + 2; x++) cc.px(x, Math.round(ht + 7), PILOT_VISOR, { x: 0, y: 0.2, z: 1 });
+        cc.ellipse(CX, ht + 6.5 + p.nod, 2.8, 2.6, HELMET);
+        for (let x = CX - 2; x <= CX + 2; x++) cc.px(x, Math.round(ht + 7 + p.nod), PILOT_VISOR, { x: 0, y: 0.2, z: 1 });
       });
     }
   }
@@ -268,11 +285,11 @@ function drawFront(c: PixelCanvas, p: MechPose, back: boolean): void {
     // Front: the claw on the left, the drill on the right; the back swaps them.
     const clawX = back ? CX + 12 : CX - 12;
     const drillX = back ? CX - 12 : CX + 12;
-    arm(c, clawX, ht + 4, back ? 1 : -1);
-    arm(c, drillX, ht + 4, back ? -1 : 1);
+    arm(c, clawX, ht + 4, back ? 1 : -1, p.sag);
+    arm(c, drillX, ht + 4, back ? -1 : 1, p.sag);
     if (!back) {
-      claw(c, clawX - 1, ht + 12 - p.recoilA, p.claw, p.flashA);
-      drill(c, drillX + 1, ht + 12 - p.recoilB, p.drill, p.flashB);
+      claw(c, clawX - 1, ht + 12 - p.recoilA + p.sag, p.claw, p.flashA);
+      drill(c, drillX + 1, ht + 12 - p.recoilB + p.sag, p.drill, p.flashB);
     } else {
       c.part();
       c.ellipse(clawX + 1, ht + 11, 2.2, 2, STEEL);
@@ -288,9 +305,10 @@ function drawFront(c: PixelCanvas, p: MechPose, back: boolean): void {
       if (p.pods > 0) pod(c, sx, ht + 1, p.pods);
       if (!back) {
         c.part();
-        slab(c, sx - 2.5, ht + 6 - recoil, sx + 2.5, ht + 13 - recoil, GUNMETAL, 1);
-        c.ellipse(sx, ht + 13.5 - recoil, 2.4, 1.4, JOINT);
-        c.px(Math.round(sx - 0.5), Math.round(ht + 13.5 - recoil), HAZARD);
+        const gy = ht - recoil + p.sag;
+        slab(c, sx - 2.5, gy + 6, sx + 2.5, gy + 13, GUNMETAL, 1);
+        c.ellipse(sx, gy + 13.5, 2.4, 1.4, JOINT);
+        c.px(Math.round(sx - 0.5), Math.round(gy + 13.5), HAZARD);
         if (flash) muzzle(c, sx, ht + 15.5 - recoil, 0, 1);
       }
     }
@@ -307,6 +325,89 @@ function drawFront(c: PixelCanvas, p: MechPose, back: boolean): void {
     }
   }
   if (p.vent > 0) steam(c, p.vent, ht, back);
+  if (p.puff > 0 && !back) puff(c, ht, p.puff);
+  if (p.jets > 0) jets(c, hb, p.jets);
+  if (p.snore > 0) snore(c, ht, p.snore);
+}
+
+/** How the rest's lamps burn at `power`: the lit material as always at 1, dimmed below, dark when off, flaring above. */
+function lit(on: Material, off: Material, power: number): [Material, DrawOpts | undefined] {
+  if (power === 1) return [on, undefined];
+  if (power < POWER_OFF) return [off, undefined];
+  return [on, { glow: Math.min(1, power) * (on.emissive ?? 1), bias: power > 1 ? 1 : power < 0.75 ? -1 : 0 }];
+}
+
+/** A lamp flaring back on: a little cross of light. */
+function flare(c: PixelCanvas, x: number, y: number, k: number): void {
+  const hot: RGB = [255, 240, 190];
+  c.spark(x, y, hot, 0.6 * k + 0.3);
+  for (let i = 1; i <= 3; i++) {
+    const a = (0.75 - i * 0.2) * Math.min(1, k * 2);
+    for (const [dx, dy] of [[i, 0], [-i, 0], [0, i], [0, -i]]) c.spark(x + dx, y + dy, hot, a);
+  }
+}
+
+/**
+ * The steam the rest lets off from its chimney, by stage: a gasp at the
+ * mouth, a column, a cloud rolling off to the side, then wisps thinning away.
+ * Offsets from the chimney's mouth: [dx, dy, radius, solid 0..1].
+ */
+const PUFFS: [number, number, number, number][][] = [
+  [],
+  [[0, -1, 1.2, 1]],
+  [[0, -1, 1.5, 1], [0.8, -3.5, 2, 1]],
+  [[0.5, -1.5, 1.3, 1], [1.8, -4, 2.3, 1], [4.2, -4.8, 2.4, 1]],
+  [[2.5, -4, 1.8, 0.6], [5.5, -5, 2.6, 0.8], [8.5, -4.2, 1.8, 0.6]],
+  [[6.5, -5, 2.2, 0.45], [10, -4.5, 2, 0.35]],
+];
+
+function puff(c: PixelCanvas, ht: number, stage: number): void {
+  // The smokestack's mouth, or the stovepipe's bent end.
+  const mx = L.scrap ? CX + 10.5 : CX + 6.5;
+  const my = L.scrap ? ht - 7.5 : ht - 6.5;
+  c.part();
+  for (const [dx, dy, r, solid] of PUFFS[stage]) {
+    const cx = mx + dx;
+    const cy = Math.max(r, my + dy);
+    for (let y = Math.floor(cy - r); y <= cy + r; y++)
+      for (let x = Math.floor(cx - r); x <= cx + r; x++) {
+        const nx = (x + 0.5 - cx) / r;
+        const ny = (y + 0.5 - cy) / r;
+        if (nx * nx + ny * ny > 1) continue;
+        // Thinning steam falls apart into a dither, from its edge in.
+        const d2 = nx * nx + ny * ny;
+        if (solid < 1 && (d2 > 0.35 + solid || ((x + y) & 1 && d2 > solid * 0.6))) continue;
+        c.px(x, y, STEAM, sphere(nx, ny, 0.9), { bias: ny < -0.3 ? 1 : 0 });
+      }
+  }
+}
+
+/** Jets of steam hissing out under the hull, low and to either side: stage 1 a burst, 2 blown out and thinning. */
+function jets(c: PixelCanvas, hb: number, stage: number): void {
+  c.part();
+  const white: RGB = [235, 240, 248];
+  for (const s of [-1, 1]) {
+    const len = stage === 1 ? 6 : 9;
+    for (let i = 0; i < len; i++) {
+      const x = CX + s * (9 + i);
+      const y = hb + 2 - i * 0.3 - (stage === 2 ? i * 0.25 : 0);
+      const w = i < 2 ? 0 : i < 5 ? 1 : 1.5;
+      for (let d = -w; d <= w; d++) {
+        if (stage === 2 && (i + d) % 2 === 0) continue;
+        c.px(x, y + d, STEAM, sphere(0, d / 2, 1), { bias: d < 0 ? 1 : 0 });
+      }
+      c.spark(x, y, white, stage === 1 ? 0.25 : 0.12);
+    }
+  }
+}
+
+/** A snore rising off the dozing pilot: a small z, then a bigger one further up. */
+function snore(c: PixelCanvas, ht: number, stage: number): void {
+  c.part();
+  const glyph = stage === 1 ? ['111', '010', '111'] : ['1111', '0010', '0100', '1111'];
+  const x0 = CX - (stage === 1 ? 7 : 10);
+  const y0 = ht - (stage === 1 ? 3 : 7);
+  glyph.forEach((row, r) => [...row].forEach((b, k) => b === '1' && c.px(x0 + k, y0 + r, SNORE, FLAT)));
 }
 
 /** The smokestack at the mech's back, or the scrap's crooked stovepipe. */
@@ -331,10 +432,10 @@ function backGun(c: PixelCanvas, sx: number, ht: number, recoil: number): void {
 }
 
 /** A copper-pipe arm from the shoulder, for the scrap. */
-function arm(c: PixelCanvas, x: number, y: number, s: number): void {
+function arm(c: PixelCanvas, x: number, y: number, s: number, sag = 0): void {
   c.part();
   c.ellipse(x, y, 3, 2.6, RUST);
-  c.capsule(x, y + 1, x + s, y + 7, 1.6, 1.6, COPPER);
+  c.capsule(x, y + 1, x + s, y + 7 + sag, 1.6, 1.6, COPPER);
 }
 
 /** The crane claw, three prongs, opened `open`. */
@@ -401,7 +502,7 @@ function steam(c: PixelCanvas, k: number, ht: number, back: boolean): void {
 }
 
 /** The oil-barrel body: ribbed and dented, rust streaking down it, a porthole with the goblin in it (front). */
-function barrel(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, back: boolean): void {
+function barrel(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, back: boolean, power = 1, nod = 0): void {
   c.shape(Math.round(y0), Math.round(y1), () => [x0, x1 + 1], RUST, (_x, _y, t) => cyl(t, 0.18));
   c.part();
   // Two raised ribs and the rolled rim at the top.
@@ -426,12 +527,16 @@ function barrel(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, 
   c.ellipse(cx, cy, 3.4, 3.2, GOBLIN);
   c.part();
   // Welding goggles over his eyes, and a grin with one tooth.
-  for (const dx of [-1.6, 1.4]) c.ellipse(cx + dx, cy - 0.6, 1.2, 1.1, GOGGLE);
-  for (let x = Math.round(cx - 2); x <= cx + 1; x++) c.px(x, Math.round(cy - 0.5), JOINT, { x: 0, y: 0, z: 1 });
-  c.px(Math.round(cx - 1.6), Math.round(cy - 0.6), GOGGLE);
-  c.px(Math.round(cx + 1.4), Math.round(cy - 0.6), GOGGLE);
-  for (let x = Math.round(cx - 1.5); x <= cx + 1.5; x++) c.px(x, Math.round(cy + 1.6), JOINT, { x: 0, y: 0, z: 1 });
-  c.px(Math.round(cx + 0.5), Math.round(cy + 1.6), TOOTH);
+  // (In the idle moment he nods off: his head drops and the goggles go dark.)
+  const [gog, go] = lit(GOGGLE, GOGGLE_OFF, power);
+  const gy = cy - 0.6 + nod;
+  for (const dx of [-1.6, 1.4]) c.ellipse(cx + dx, gy, 1.2, 1.1, gog, go);
+  for (let x = Math.round(cx - 2); x <= cx + 1; x++) c.px(x, Math.round(cy - 0.5 + nod), JOINT, { x: 0, y: 0, z: 1 });
+  c.px(Math.round(cx - 1.6), Math.round(gy), gog, undefined, go);
+  c.px(Math.round(cx + 1.4), Math.round(gy), gog, undefined, go);
+  if (power > 1) for (const dx of [-1.6, 1.4]) flare(c, cx + dx, gy + 0.5, power - 1);
+  for (let x = Math.round(cx - 1.5); x <= cx + 1.5; x++) c.px(x, Math.round(cy + 1.6 + nod), JOINT, { x: 0, y: 0, z: 1 });
+  c.px(Math.round(cx + 0.5), Math.round(cy + 1.6 + nod), TOOTH);
   // A glint on the porthole's glass.
   c.px(Math.round(cx - 2.2), Math.round(cy - 2.2), GLASS, { x: -0.5, y: 0.5, z: 0.7 }, { bias: 2 });
 }
@@ -560,13 +665,15 @@ function barrelSide(c: PixelCanvas, ht: number, hb: number): void {
 // ---------------------------------------------------------------------------
 // Animations
 
-export type MechAnim = 'idle' | 'walk' | 'fireA' | 'fireB' | 'aim' | 'launch' | 'deploy' | 'siege' | 'vent';
+export type MechAnim = 'idle' | 'walk' | 'fireA' | 'fireB' | 'aim' | 'launch' | 'deploy' | 'siege' | 'vent' | 'rest';
 
 interface AnimDef {
   name: MechAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => MechPose[];
+  /** Frame indices to play in order, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 const idle = (): MechPose[] =>
@@ -670,6 +777,35 @@ const vent = (): MechPose[] =>
     return p;
   });
 
+/**
+ * The idle moment, facing the viewer only: it rises as the pressure builds,
+ * lets off a great hiss of steam from its stack and hips, and powers down
+ * into a slump, lamps dimming out and arms hanging, the pilot nodding off
+ * with a snore. Then the lamps stutter back on, it jolts upright a touch too
+ * tall, and settles.
+ */
+const rest = (view: View): MechPose[] => {
+  if (view !== 'down') return [];
+  const at = (o: Partial<MechPose>): MechPose => ({ ...base(), ...o });
+  return [
+    at({}),
+    at({ bob: 1, puff: 1 }),
+    at({ puff: 2, jets: 1, claw: 0.5 }),
+    at({ crouch: 1, puff: 3, jets: 2, power: 0.8, claw: 0.6 }),
+    at({ crouch: 2, puff: 4, sag: 1, power: 0.5, nod: 1, claw: 0.8 }),
+    at({ crouch: 3, puff: 5, sag: 2, power: 0, nod: 1, claw: 1 }),
+    at({ crouch: 3, sag: 2, power: 0, nod: 1, claw: 1 }),
+    at({ crouch: 3, sag: 2, power: 0, nod: 1, claw: 1, snore: 1 }),
+    at({ crouch: 3, sag: 2, power: 0, nod: 1, claw: 1, snore: 2 }),
+    // Rebooting: the lamps flare, drop out, and catch.
+    at({ crouch: 3, sag: 2, power: 1.6, claw: 1 }),
+    at({ crouch: 3, sag: 1, power: 0, claw: 0.8 }),
+    at({ crouch: 2, sag: 1, power: 1.3, claw: 0.6, drill: 1 }),
+    at({ bob: 1, power: 1.1, claw: 0.2, drill: 2 }),
+    at({ crouch: 1, claw: 0.3, drill: 3 }),
+  ];
+};
+
 export const MECH_ANIMS: AnimDef[] = [
   { name: 'idle', fps: 4, loop: true, poses: idle },
   { name: 'walk', fps: 9, loop: true, poses: walk },
@@ -680,6 +816,7 @@ export const MECH_ANIMS: AnimDef[] = [
   { name: 'deploy', fps: 12, loop: false, poses: deploy },
   { name: 'siege', fps: 20, loop: true, poses: siege },
   { name: 'vent', fps: 8, loop: true, poses: vent },
+  { name: 'rest', fps: 8, loop: false, poses: rest, order: [0, 0, 1, 2, 2, 3, 4, 5, 5, 6, 6, 7, 7, 7, 6, 6, 8, 8, 8, 6, 6, 9, 10, 9, 10, 9, 11, 12, 13, 0] },
 ];
 
 export interface MechFrame {

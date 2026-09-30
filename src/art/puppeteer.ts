@@ -208,6 +208,33 @@ export interface Pose {
   sway: number;
   tick: number;
   blink?: boolean;
+  /** The little dancer hanging from the free hand's fingers (the marionettist's idle moment). */
+  mini?: Mini;
+  /** The cat's cradle strung between her hands (the weaver's idle moment). */
+  figure?: Figure;
+}
+
+/**
+ * The marionettist's pocket dancer, a doll a few pixels tall on three
+ * threads. Arms: -1 hanging, 0 out, 1 up. `kick` swings one leg out to that
+ * side; `limp` lets it dangle, head lolled, as it first comes out.
+ */
+interface Mini {
+  hop?: number;
+  armL?: number;
+  armR?: number;
+  kick?: number;
+  bow?: boolean;
+  limp?: boolean;
+}
+
+/** The cat's cradle: `shape` 0 the plain cradle, 1 the diamond, 2 the eye; or `snap` 1..2, the threads broken and flying. */
+interface Figure {
+  shape: number;
+  k: number;
+  snap?: number;
+  /** A finger picking a strand at the middle. */
+  pick?: boolean;
 }
 
 type View = 'down' | 'up' | 'side';
@@ -572,6 +599,132 @@ function spiderLegs(c: PixelCanvas, x0: number, y0: number, side: number, tick: 
   for (const [kx, ky] of pairs) c.px(x0 + side * kx, y0 + ky, S.trim, sphere(side * 0.4, -0.5), { bias });
 }
 
+
+// ---------------------------------------------------------------------------
+// The idle moment's props
+
+/** The puppet look the marionettist's own look works (so the pocket dancer matches it). */
+const miniLook = (): PuppetLook => (S.toymaker ? NUTCRACKER_LOOK : S.tear ? PORCELAIN_DOLL_LOOK : GALLANT_LOOK);
+
+/** How far below the fingers the dancer's head hangs, in pixels. */
+const MINI_DROP = 6;
+
+/**
+ * The pocket dancer, drawn pixel by pixel below the fingers at (hx, hy): a
+ * plumed helm (or the nutcracker's shako), a head, a tabard, stick arms and
+ * legs, and three shining threads from the fingers to its head and hands.
+ * It hangs clear of his coat, so its outline reads against the ground.
+ */
+function miniDancer(c: PixelCanvas, hx: number, hy: number, m: Mini): void {
+  const P = miniLook();
+  const x = Math.round(hx);
+  const top = Math.round(hy + MINI_DROP - (m.hop ?? 0));
+  const bow = m.bow ? 1 : 0;
+  const hx0 = x - 1 + (m.limp ? 1 : 0);
+  const armL = m.limp ? -1 : (m.armL ?? -1);
+  const armR = m.limp ? -1 : (m.armR ?? -1);
+  // Arms first (behind the body): hanging, out, or up, from the shoulders.
+  const armPx = (sx: number, side: number, a: number): [number, number][] =>
+    a < 0 ? [[sx, top + 4], [sx, top + 5]] : a === 0 ? [[sx + side, top + 3], [sx + side * 2, top + 3]] : [[sx, top + 2], [sx + side, top + 1]];
+  const la = armPx(x - 2, -1, bow ? -1 : armL);
+  const ra = armPx(x + 2, 1, bow ? -1 : armR);
+  c.part();
+  for (const [ax, ay] of [...la, ...ra]) c.px(ax, ay + bow, P.wood, sphere(0, -0.2));
+  // Legs, the kicking one swung out sideways.
+  const kick = m.limp ? 0 : (m.kick ?? 0);
+  const shako = P.shako;
+  c.part();
+  for (const side of [-1, 1]) {
+    const lx = x + (side < 0 ? -1 : 1);
+    const legs: [number, number][] = kick === side ? [[lx + side, top + 6], [lx + side * 2, top + 6]] : [[lx, top + 6], [lx, top + 7]];
+    for (const [ax, ay] of legs) c.px(ax, ay, shako?.legs ?? P.wood, sphere(side * 0.3, 0));
+    const [fx, fy] = legs[1];
+    c.px(fx, fy, BOOT, sphere(0, 0.3));
+  }
+  // The tabard, a trim at its belt, and the joint of the neck.
+  c.part();
+  c.shape(top + 3 + bow, top + 5, () => [x - 1, x + 2], P.tabard, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6 - 0.2, 1));
+  c.part();
+  c.px(x, top + 5, P.trim, sphere(0, 0));
+  // The head (bowed forward: a row lower, the helm tipped to show its crown).
+  c.part();
+  c.shape(top + 1 + bow, top + 2 + bow, () => [hx0, hx0 + 3], P.head, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6 - 0.3, 1));
+  c.part();
+  if (shako) {
+    c.shape(top - 1 + bow, top + bow, () => [hx0, hx0 + 3], P.helm, (_x, _y, t) => cyl(t, 0.2));
+    c.px(hx0 + 1, top - 2 + bow, P.plume, sphere(0, -0.6));
+  } else {
+    c.shape(top + bow, top + bow, () => [hx0, hx0 + 3], P.helm, (_x, _y, t) => cyl(t, 0.3));
+    c.px(hx0 + 2, top - 1 + bow, P.plume, sphere(0.5, -0.5));
+  }
+  if (!m.bow && !m.limp) c.px(hx0 + 1, top + 2, P.cheek, sphere(0, 0));
+  // The threads: fingers to the head and to each hand.
+  const [, hot, mid] = S.light;
+  thread(c, hx, hy + 1, hx0 + 1, top - (shako ? 3 : 1) + bow, 0.5, hot);
+  thread(c, hx - 1, hy + 1, la[la.length - 1][0], la[la.length - 1][1] + bow - 1, 0.35, mid);
+  thread(c, hx + 1, hy + 1, ra[ra.length - 1][0], ra[ra.length - 1][1] + bow - 1, 0.35, mid);
+}
+
+/**
+ * The cat's cradle strung between her hands, in shining thread: the plain
+ * cradle (two strands and their cross), the diamond, and the eye (two
+ * diamonds meeting in the middle). Snapped, the strands whip back into her
+ * fingers and bright bits of them fly out and fade.
+ */
+function cradleFigure(c: PixelCanvas, L: Placed, R: Placed, f: Figure): void {
+  const [core, hot, mid, deep] = S.light;
+  const mx = (L.x + R.x) / 2;
+  const my = (L.y + R.y) / 2;
+  const k = f.k;
+  const line = (pts: [number, number][], a: number, col = hot) => {
+    for (let i = 1; i < pts.length; i++) thread(c, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], a, col);
+  };
+  if (f.snap) {
+    const s = f.snap;
+    const fade = s > 1 ? 0.45 : 1;
+    // Loose ends curling back into each hand.
+    for (const [h, d] of [[L, 1], [R, -1]] as const) {
+      line([[h.x, h.y], [h.x + d * 1.5, h.y - 1.5 * s], [h.x + d * (1 + s), h.y - 2.5 * s]], 0.6 * fade, mid);
+      line([[h.x, h.y], [h.x + d * 1.5, h.y + 1.2 * s]], 0.5 * fade, mid);
+    }
+    // Bits of light flying out from where the figure was, and falling.
+    const bits: [number, number][] = [[-3, -2], [2, -3], [4, 0], [-4, 1], [0, 2], [3, 2], [-1, -3]];
+    bits.forEach(([dx, dy], i) => {
+      const r = s > 1 ? 1.7 : 1;
+      c.spark(mx + dx * r, my + dy * r + (s > 1 ? 1 : 0), i % 3 === 0 ? core : i % 3 === 1 ? hot : mid, (i % 2 ? 1 : 0.8) * fade);
+    });
+    if (s === 1) glowAt(c, mx, my, 1);
+    return;
+  }
+  const lt: [number, number] = [L.x, L.y - 1];
+  const lb: [number, number] = [L.x, L.y + 1];
+  const rt: [number, number] = [R.x, R.y - 1];
+  const rb: [number, number] = [R.x, R.y + 1];
+  if (f.shape === 0) {
+    line([lt, rt], 0.8 * k);
+    line([lb, rb], 0.8 * k);
+    line([lt, rb], 0.55 * k, mid);
+    line([lb, rt], 0.55 * k, mid);
+  } else if (f.shape === 1) {
+    line([[L.x, L.y], [mx, my - 3], [R.x, R.y], [mx, my + 3], [L.x, L.y]], 0.85 * k);
+    line([[L.x, L.y], [R.x, R.y]], 0.5 * k, mid);
+  } else {
+    line([[L.x, L.y], [mx - 2, my - 3], [mx, my], [mx + 2, my - 3], [R.x, R.y]], 0.85 * k);
+    line([[L.x, L.y], [mx - 2, my + 3], [mx, my], [mx + 2, my + 3], [R.x, R.y]], 0.85 * k);
+    line([[mx - 2, my - 3], [mx + 2, my - 3]], 0.5 * k, mid);
+    line([[mx - 2, my + 3], [mx + 2, my + 3]], 0.5 * k, mid);
+    c.spark(mx, my, core, k);
+  }
+  // Knots of light where the strands cross, and at her fingers.
+  c.spark(L.x, L.y, core, 0.6 * k);
+  c.spark(R.x, R.y, core, 0.6 * k);
+  if (f.shape < 2) c.spark(mx, my, core, 0.7 * k);
+  if (f.pick) {
+    glowAt(c, mx, my, 0.6 * k);
+    c.spark(mx, my - 1, deep, 0.5);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Views
 
@@ -669,6 +822,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   }
 
   if (w) cradle(c, fa, fb, p.cradle, p.tick);
+  if (w && p.figure) cradleFigure(c, fa, fb, p.figure);
   if (!fb.behind) armB();
   if (!fa.behind) armA();
   if (!w) controlCross(c, 'down', fa.x, fa.y - 0.6, p.tilt, p.glow, fa.behind ? -1 : 0);
@@ -677,6 +831,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     c.spark(fa.x, fa.y, S.light[0], 0.5 * p.cradle);
     c.spark(fb.x, fb.y, S.light[0], 0.5 * p.cradle);
   }
+  if (!w && p.mini) miniDancer(c, fb.x, fb.y, p.mini);
 }
 
 function drawUp(c: PixelCanvas, p: Pose): void {
@@ -1074,9 +1229,77 @@ const weave = action([
 ]);
 
 // ---------------------------------------------------------------------------
+// The idle moment (`rest`), facing the viewer
+
+/** A pose built from the idle's first frame, so the moment starts and ends on it exactly. */
+const still = (o: Partial<Pose> = {}): Pose => {
+  const p = idle('down')[0];
+  return { ...p, a: { ...p.a }, b: { ...p.b }, ...o };
+};
+
+/** His free hand in his coat, and held out to the side with the dancer hanging from it. */
+const COAT_B = H(1.6, 1.6, 1.0);
+const DANCE_B = H(1.4, 10.2, 4.6);
+const dance = (dh: number, ds = 0): Hand => H(DANCE_B.f, DANCE_B.s + ds, DANCE_B.h + dh);
+
+/**
+ * The marionettist's pocket dancer: he slips his free hand into his coat and
+ * draws out a tiny doll of his own puppet on three threads, limp at first.
+ * A twitch of the fingers and it springs up, arms high, kicks one way and
+ * the other, leaps, and lands in a bow; he bows with it, and tucks it away.
+ */
+function showmanRest(): Pose[] {
+  return [
+    still(),
+    still({ b: COAT_B, breath: 1, tick: 1 }),
+    still({ b: dance(-0.6, -1.4), mini: { limp: true }, tick: 2 }),
+    still({ b: dance(0.4), mini: { limp: true }, tick: 3 }),
+    still({ b: dance(1.2), mini: { hop: 1, armL: 1, armR: 1 }, tick: 4 }),
+    still({ b: dance(0.2, 0.4), mini: { armL: 0, armR: 1, kick: 1 }, tick: 5 }),
+    still({ b: dance(0.2, -0.4), mini: { armL: 1, armR: 0, kick: -1 }, tick: 0 }),
+    still({ b: dance(1.6), mini: { hop: 2, armL: 1, armR: 1 }, tick: 1 }),
+    still({ b: dance(0.8), mini: { bow: true }, breath: 1, tick: 2 }),
+    still({ b: COAT_B, breath: 1, tick: 3 }),
+    still(),
+  ];
+}
+const SHOWMAN_REST_ORDER = [0, 1, 2, 3, 3, 4, 4, 5, 6, 5, 6, 5, 6, 7, 7, 4, 8, 8, 8, 8, 9, 10];
+
+/** Her hands drawn apart to string the figure, twisted one up and one down to change it, and pulled wide to snap it. */
+const PAIR = (s: number, h: number, twist = 0): Pick<Pose, 'a' | 'b'> => ({ a: H(2.4, s, h + twist), b: H(2.4, s, h - twist) });
+
+/**
+ * The stringweaver plays cat's cradle: she draws her hands apart and the
+ * cradle between them becomes a plain cradle of shining thread; a twist of
+ * the hands and a pick at the middle and it is a diamond, another and it is
+ * an eye; she holds it up to admire, then pulls her hands wide and it snaps,
+ * bits of light flying, and she spins a fresh cradle between her fingers.
+ */
+function weaverRest(): Pose[] {
+  return [
+    still(),
+    still({ ...PAIR(3.6, 1.2), cradle: 0, figure: { shape: 0, k: 0.6 }, tick: 1 }),
+    still({ ...PAIR(4.0, 1.4), cradle: 0, figure: { shape: 0, k: 0.9 }, tick: 2 }),
+    still({ ...PAIR(3.8, 1.6, 0.8), cradle: 0, figure: { shape: 0, k: 0.8, pick: true }, tick: 3 }),
+    still({ ...PAIR(4.2, 1.6), cradle: 0, figure: { shape: 1, k: 0.9 }, tick: 0 }),
+    still({ ...PAIR(4.0, 1.8, -0.8), cradle: 0, figure: { shape: 1, k: 0.8, pick: true }, tick: 1 }),
+    still({ ...PAIR(4.8, 2.2), cradle: 0, figure: { shape: 2, k: 1 }, lift: 1, tick: 2 }),
+    still({ ...PAIR(4.8, 2.6), cradle: 0, figure: { shape: 2, k: 1 }, lift: 1, glow: 0.3, tick: 3 }),
+    still({ ...PAIR(6.2, 1.6), cradle: 0, figure: { shape: 2, k: 1, snap: 1 }, tick: 0 }),
+    still({ ...PAIR(5.0, 1.0), cradle: 0, figure: { shape: 2, k: 1, snap: 2 }, breath: 1, tick: 1 }),
+    still({ ...PAIR(2.8, 1.2), cradle: 0.25, tick: 2 }),
+    still(),
+  ];
+}
+const WEAVER_REST_ORDER = [0, 1, 2, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7, 7, 6, 8, 9, 9, 10, 10, 11];
+
+const REST_FPS = 8;
+const rest = (view: View): Pose[] => (view !== 'down' ? [] : S.weaver ? weaverRest() : showmanRest());
+
+// ---------------------------------------------------------------------------
 // Frame generation
 
-export type PuppeteerAnim = 'idle' | 'walk' | 'pull' | 'twirl' | 'lash' | 'snag' | 'weave';
+export type PuppeteerAnim = 'idle' | 'walk' | 'pull' | 'twirl' | 'lash' | 'snag' | 'weave' | 'rest';
 
 export interface PuppeteerAnimDef {
   name: PuppeteerAnim;
@@ -1085,6 +1308,8 @@ export interface PuppeteerAnimDef {
   poses: (view: View) => Pose[];
   /** Only drawn for the stringweaver (true) or the marionettist (false); both when left out. */
   weaver?: boolean;
+  /** Frame indices to play in order, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 export const PUPPETEER_ANIMS: PuppeteerAnimDef[] = [
@@ -1097,7 +1322,10 @@ export const PUPPETEER_ANIMS: PuppeteerAnimDef[] = [
   { name: 'weave', fps: 11, loop: false, poses: weave, weaver: true },
 ];
 
-export const puppeteerAnims = (look: PuppeteerLook): PuppeteerAnimDef[] => PUPPETEER_ANIMS.filter((a) => a.weaver === undefined || a.weaver === look.weaver);
+export const puppeteerAnims = (look: PuppeteerLook): PuppeteerAnimDef[] => [
+  ...PUPPETEER_ANIMS.filter((a) => a.weaver === undefined || a.weaver === look.weaver),
+  { name: 'rest', fps: REST_FPS, loop: false, poses: rest, order: look.weaver ? WEAVER_REST_ORDER : SHOWMAN_REST_ORDER },
+];
 
 /** Frame index at which each action lands. */
 export const PUPPETEER_RELEASE = { pull: 2, twirl: 2, lash: 2, snag: 1, weave: 4 } as const;

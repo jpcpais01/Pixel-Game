@@ -376,6 +376,19 @@ export interface Pose {
   blink?: boolean;
   /** 0..1 blade glow, for the special. */
   glow: number;
+  // The idle moment's extras (see `rest`), left unset by every other move.
+  /** Each shoulder raised (-) or dropped (+) in pixels: the sword shoulder, then the free one. */
+  shrug?: [number, number];
+  /** The whole head nudged by whole pixels: a tilt, a nod, the chin up. */
+  head?: { x: number; y: number };
+  /** Eyes raised a row (-1) to look up. */
+  look?: number;
+  /** The Valkyrie's wings stretched wide (+) or folded close (-), raised further, their feather tips shaken. */
+  spread?: number;
+  wingLift?: number;
+  ruffle?: number;
+  /** Light laid over the finished figure (glints, crackles), in body pixels. */
+  fx?: (c: PixelCanvas) => void;
 }
 
 export interface WarriorMeta {
@@ -555,14 +568,16 @@ function drawSpear(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
  * to reaching out past the wrist. `k` is the side it spreads to (-1 left),
  * `flap` raises it, `size` shrinks the far wing seen from the side.
  */
-function wing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, size = 1, bias = 0): void {
+function wing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, size = 1, bias = 0, spread = 0, ruffle = 0): void {
   const m = LK.wing ?? LK.cloth;
   size *= 0.85;
   // The swan's wings spread wide and level; the Stormwing's are raised high in
   // a V, fewer and longer feathers sweeping up to sharp points.
   const storm = !!LK.storm;
-  const wx = rx + k * (storm ? 3.2 - flap * 0.2 : 5.4 - flap * 0.3) * size;
-  const wy = ry - (storm ? 10.5 + flap * 1.2 : 7.6 + flap * 1.6) * size;
+  // `spread` (the idle moment's stretch and fold) carries the wrist out and up
+  // and opens the fan wider, or draws it in close.
+  const wx = rx + k * (storm ? 3.2 - flap * 0.2 : 5.4 - flap * 0.3 + spread * 1.4) * size;
+  const wy = ry - (storm ? 10.5 + flap * 1.2 : 7.6 + flap * 1.6 + spread * 1.2) * size;
   const n = storm ? 5 : 6;
   const bases: { x: number; y: number }[] = [];
   const tips: { x: number; y: number }[] = [];
@@ -572,10 +587,11 @@ function wing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, s
     const by = ry + (wy - ry) * t;
     // From hanging down (0) round to reaching out and a little up (~95
     // degrees); the storm's from out and down round to high overhead.
-    const a = (storm ? 28 + t * (120 + flap * 5) : 6 + t * (82 + flap * 6)) * RAD;
-    const len = (storm ? 7 + t * 5.5 : 6.4 + t * 4.2) * size;
+    const a = (storm ? 28 + t * (120 + flap * 5) : 6 + spread * 14 + t * (82 + flap * 6 + spread * 30)) * RAD;
+    const len = (storm ? 7 + t * 5.5 : 6.4 + t * 4.2) * size * (1 + spread * 0.12);
     bases.push({ x: bx, y: by });
-    tips.push({ x: bx + k * Math.sin(a) * len, y: by + Math.cos(a) * len });
+    // A ruffle shakes alternate feathers up and down.
+    tips.push({ x: bx + k * Math.sin(a) * len, y: by + Math.cos(a) * len + (i % 2 ? ruffle : -ruffle) });
   }
   // The web of the wing under the feathers, in shade, so it reads as one wing and not a comb.
   c.part();
@@ -618,7 +634,7 @@ function fillQuad(c: PixelCanvas, q: { x: number; y: number }[], m: Material, n:
 
 /** How far the wings are raised: up while the spear kindles, beating as she walks, swept back in a lunge. */
 function flapOf(p: Pose): number {
-  return (p.glow >= 0.3 ? 2 : 0) + p.lift - (p.lean > 0 ? 1 : 0) - p.breath * 0.5;
+  return (p.glow >= 0.3 ? 2 : 0) + p.lift - (p.lean > 0 ? 1 : 0) - p.breath * 0.5 + (p.wingLift ?? 0);
 }
 
 /** A little wing on the helm, three feathers rising from (x, y) to the side `k`. */
@@ -1104,7 +1120,7 @@ function coneHelm(c: PixelCanvas, cx: number, U: number, front: boolean): void {
   c.spark(cx - 1, 9 + U, LK.glow.hot, 0.25);
 }
 
-function kingHeadDown(c: PixelCanvas, cx: number, U: number, blink: boolean): void {
+function kingHeadDown(c: PixelCanvas, cx: number, U: number, blink: boolean, look = 0): void {
   const hair = LK.hair ?? LK.plume;
   c.part();
   if (LK.afonso) {
@@ -1128,8 +1144,8 @@ function kingHeadDown(c: PixelCanvas, cx: number, U: number, blink: boolean): vo
     c.px(cx - 2, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
     c.px(cx + 1, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
   } else {
-    c.px(cx - 2, 12 + U, EYE);
-    c.px(cx + 1, 12 + U, EYE);
+    c.px(cx - 2, 12 + U + look, EYE);
+    c.px(cx + 1, 12 + U + look, EYE);
   }
   beardFront(c, cx, 14 + U);
   if (LK.afonso) {
@@ -1276,7 +1292,8 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   const U = L + p.breath;
   const cx = 12;
   let tip = { x: 0, y: 0 };
-  const sh = { x: 7.4, y: 16.8 + U }; // sword shoulder (screen left)
+  const [shA, shB] = p.shrug ?? [0, 0];
+  const sh = { x: 7.4, y: 16.8 + U + shA }; // sword shoulder (screen left)
   if (p.swordBehind) {
     tip = drawSword(c, p.sword, p.glow);
     arm(c, sh.x, sh.y, p.sword.hx, p.sword.hy, -1);
@@ -1286,8 +1303,8 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   if (LK.valkyrie) {
     // Her wings, spread behind her either side.
     const flap = flapOf(p);
-    wing(c, cx - 3.2, 17.5 + U, -1, flap, 1, -1);
-    wing(c, cx + 3.2, 17.5 + U, 1, flap, 1, -1);
+    wing(c, cx - 3.2, 17.5 + U, -1, flap, 1, -1, p.spread ?? 0, p.ruffle ?? 0);
+    wing(c, cx + 3.2, 17.5 + U, 1, flap, 1, -1, p.spread ?? 0, -(p.ruffle ?? 0));
   } else {
     // Cape lining, seen behind the shoulders and legs.
     const ct = 15 + U;
@@ -1376,9 +1393,9 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
 
   // Free arm (character's left, screen right).
   const fh = p.free ? { x: p.free.x, y: p.free.y + U } : { x: 17.6, y: 22.2 + U + p.arm };
-  arm(c, 16.6, 16.8 + U, fh.x, fh.y);
+  arm(c, 16.6, 16.8 + U + shB, fh.x, fh.y);
   glove(c, fh.x, fh.y);
-  pauldron(c, 16.9, 16.3 + U);
+  pauldron(c, 16.9, 16.3 + U + shB);
   if (LK.spartan) aspis(c, fh.x + 0.6, fh.y - 2.2, true);
   if (LK.afonso) kite(c, fh.x + 0.4, fh.y - 2.6, true);
 
@@ -1386,13 +1403,16 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   c.part();
   c.shape(15 + U, 15 + U, () => [cx - 2.4, cx + 2.4], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
   if (LK.king && !LK.afonso) ermineCollar(c, cx - 4.8, cx + 4.8, 15 + U);
+  // The idle moment may nudge the head (a tilt, a nod): drawn through a shifted canvas.
+  const hd = p.head;
+  if (hd) c.offset(BODY_X + hd.x, BODY_Y + hd.y);
   if (LK.headless) {
     lanternFront(c, cx, U, emberPhase(p));
   } else if (LK.spartan) {
     crestFront(c, cx, U, p.plume);
     corinthianFront(c, cx, U);
   } else if (LK.king) {
-    kingHeadDown(c, cx, U, !!p.blink);
+    kingHeadDown(c, cx, U, !!p.blink, p.look ?? 0);
   } else {
     // Head: face framed by the helmet's cheek guards, a plume on top.
     if (LK.valkyrie && LK.storm) {
@@ -1413,8 +1433,8 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
       c.px(10, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
       c.px(13, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
     } else {
-      c.px(10, 12 + U, EYE);
-      c.px(13, 12 + U, EYE);
+      c.px(10, 12 + U + (p.look ?? 0), EYE);
+      c.px(13, 12 + U + (p.look ?? 0), EYE);
     }
     if (LK.valkyrie && !LK.storm) {
       helmWing(c, cx - 4.2, 8.6 + U, -1);
@@ -1449,6 +1469,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
       c.shape(11 + U, 14 + U, (y) => [16.4 - guard[y - 11 - U], 16.4], LK.plate, (_x, _y, t) => cyl(t * 0.4 + 0.6, 0.1));
     }
   }
+  if (hd) c.offset(BODY_X, BODY_Y);
 
   // Sword arm (character's right, screen left).
   if (!p.swordBehind) {
@@ -1456,12 +1477,15 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     arm(c, sh.x, sh.y, p.sword.hx, p.sword.hy);
     glove(c, p.sword.hx, p.sword.hy);
   }
-  pauldron(c, 7.1, 16.3 + U);
+  pauldron(c, 7.1, 16.3 + U + shA);
   if (LK.valkyrie && !LK.storm) {
     // Her braids, falling from under the helm over her shoulders.
+    if (hd) c.offset(BODY_X + hd.x, BODY_Y + hd.y);
     braid(c, cx - 3, 13 + U, 19 + U, p.cape * 0.5);
     braid(c, cx + 4, 13 + U, 19 + U, p.cape * 0.5);
+    if (hd) c.offset(BODY_X, BODY_Y);
   }
+  p.fx?.(c);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
 
@@ -2024,6 +2048,274 @@ function settle(view: View): Pose[] {
   });
 }
 
+// ---------------------------------------------------------------------------
+// The idle moment (`rest`): a short performance when the hero has stood still
+// a while, drawn facing the viewer only. It starts and ends on the idle's
+// first frame, so it swaps in and out without a pop. Each character has its
+// own: the Knight plants his sword and rolls his shoulders, the King stamps
+// his greatsword down and a glint runs up it to his crown, the Spearmaiden
+// stretches her wings and shakes them out, and the Stormwing grounds her
+// spear, looks to the sky and calls a spark down onto its point.
+
+/** Steps a second: a little slower than a swing, so every hold reads. */
+const REST_FPS = 8;
+/** A glint of sunlight on steel: a white-hot point and short gold rays. */
+const GLINT_CORE: RGB = [255, 252, 240];
+const GLINT_RAY: RGB = [255, 226, 160];
+
+/** A four-pointed twinkle at (x, y), its rays `ray` pixels long, a faint cross of diagonals between them when large. */
+function twinkle(c: PixelCanvas, x: number, y: number, a: number, ray = 2, core = GLINT_CORE, hot = GLINT_RAY): void {
+  c.spark(x, y, core, a);
+  for (let i = 1; i <= ray; i++) {
+    const k = a * (i === 1 ? 0.8 : i === 2 ? 0.45 : 0.25);
+    c.spark(x + i, y, hot, k);
+    c.spark(x - i, y, hot, k);
+    c.spark(x, y + i, hot, k);
+    c.spark(x, y - i, hot, k);
+  }
+  if (ray >= 2) for (const [dx, dy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) c.spark(x + dx, y + dy, hot, a * 0.3);
+}
+
+/** A point along a held blade or shaft, `along` pixels from the hand toward the tip. */
+function alongBlade(s: Sword, along: number): { x: number; y: number } {
+  const a = s.angle * RAD;
+  return { x: s.hx + Math.sin(a) * along, y: s.hy - Math.cos(a) * along };
+}
+
+/** Where the King's crown (or Afonso's crowned helm) wears its centre gem, in body pixels, for a head drawn at U. */
+const crownGem = (U: number): { x: number; y: number } => ({ x: 11, y: (LK.afonso ? 9 : 7) + U });
+
+type RestKind = 'knight' | 'king' | 'spear' | 'storm';
+
+const restKind = (look: WarriorLook): RestKind => (look.king ? 'king' : look.valkyrie ? (look.storm ? 'storm' : 'spear') : 'knight');
+
+interface RestPlan {
+  /** The frames drawn, by name, in the order they are keyed. */
+  frames: Record<string, Pose>;
+  /** The performance: frame names in play order, one per step. */
+  steps: string[];
+}
+
+/** A copy of `from` with some things changed (the sword merged, not replaced). */
+function vary(from: Pose, patch: Partial<Omit<Pose, 'sword'>> & { sword?: Partial<Sword> } = {}): Pose {
+  const { sword, ...rest } = patch;
+  return { ...from, free: from.free && { ...from.free }, ...rest, sword: { ...from.sword, ...sword } };
+}
+
+/**
+ * The Knight: turns his sword out and round and plants it point-down before
+ * him with a ring of steel, rests both hands on the pommel (the Spartan keeps
+ * his shield at his side), rolls one shoulder then the other, breathes out,
+ * and swings it back up to his side.
+ */
+function knightRest(): RestPlan {
+  const stand = idle('down')[0];
+  const shield = !!LK.spartan;
+  const pommel = (y = 19.6) => (shield ? undefined : { x: 13.2, y });
+  // Planted: the grip at the belt, the point in the ground just before his feet.
+  const PLANT = { hx: 12, hy: 20, angle: 180, len: 9 };
+  const planted = vary(stand, { sword: PLANT, free: pommel() });
+  const tip = alongBlade(PLANT, BLADE_START + PLANT.len + 0.5);
+  return {
+    frames: {
+      stand,
+      // A small dip, the blade turning out, then swung round point-down.
+      gather: vary(stand, { breath: 1, sword: { hx: 4.5, hy: 21, angle: -45 }, plume: -1 }),
+      turn: vary(stand, { sword: { hx: 5.5, hy: 18, angle: -112, len: 10 }, cape: -1, plume: 1 }),
+      poise: vary(stand, { sword: { hx: 10.5, hy: 18, angle: -166, len: 9.5 }, free: shield ? undefined : { x: 15.8, y: 20.6 }, plume: 1 }),
+      // It bites into the ground with a ring; the cape swings on after him.
+      plant: vary(planted, {
+        breath: 1,
+        sword: { hy: 20.5 },
+        free: pommel(19.1),
+        cape: 1,
+        plume: -1,
+        fx: (c) => {
+          twinkle(c, tip.x, tip.y + 0.5, 0.9, 1);
+          c.spark(tip.x - 2, tip.y + 1, GLINT_RAY, 0.3);
+          c.spark(tip.x + 2, tip.y + 1, GLINT_RAY, 0.3);
+        },
+      }),
+      planted,
+      // One shoulder rolled up and back, head leaning off it; then the other.
+      rollA: vary(planted, { shrug: [-1.5, 0.5], head: { x: 1, y: 0 }, sword: { hy: 19.5 }, plume: 1 }),
+      rollB: vary(planted, { shrug: [0.5, -1.5], head: { x: -1, y: 0 }, free: pommel(19.1), plume: -1 }),
+      // Both up with a breath in, then a long breath out, eyes shut.
+      inhale: vary(planted, { breath: -1, shrug: [-0.5, -0.5], sword: { hy: 19.5 }, free: pommel(20.1) }),
+      sigh: vary(planted, { breath: 1, blink: true, sword: { hy: 20.5 }, free: pommel(19.1), cape: 1 }),
+      // Pulled free and swung back out and round to his side.
+      draw: vary(stand, { sword: { hx: 11, hy: 18.5, angle: -170, len: 9.5 }, free: shield ? undefined : { x: 15.4, y: 20.8 }, plume: 1 }),
+      swing: vary(stand, { sword: { hx: 5.5, hy: 18, angle: -100, len: 10 }, cape: -1, plume: 1 }),
+      lower: vary(stand, { breath: 1, sword: { hx: 4.5, hy: 21, angle: -40 }, plume: -1 }),
+    },
+    steps: [
+      'stand', 'gather', 'turn', 'poise', 'plant', 'plant', 'planted', 'planted', 'planted', 'planted',
+      'rollA', 'rollA', 'rollA', 'inhale', 'rollB', 'rollB', 'rollB', 'planted', 'inhale', 'inhale',
+      'sigh', 'sigh', 'sigh', 'sigh', 'planted', 'planted', 'planted', 'draw', 'swing', 'lower', 'stand',
+    ],
+  };
+}
+
+/**
+ * The King: already at rest on his planted greatsword, he hefts it a hand's
+ * breadth and stamps it down again, draws himself up, and a glint of light
+ * runs up the blade from the point to the guard and on to his crown's jewel;
+ * then a slow, satisfied nod.
+ */
+function kingRest(): RestPlan {
+  const stand = idle('down')[0];
+  const S0 = stand.sword;
+  // His free hand rides with the pommel; Afonso's hangs at his side with the shield.
+  const hand = (y: number, U: number) => (LK.afonso ? undefined : { x: 13.2, y: y - 0.4 - U });
+  const at = (hy: number, U: number, patch: Partial<Pose> = {}) =>
+    vary(stand, { ...patch, sword: { hy }, free: hand(hy, U) });
+  const proud = at(S0.hy, -1, { breath: -1 });
+  const blade = (along: number) => alongBlade(S0, along);
+  const end = BLADE_START + S0.len + 1;
+  const run = (along: number, a: number) => vary(proud, { fx: (c) => twinkle(c, blade(along).x, blade(along).y, a, 3) });
+  const gem = crownGem(-1);
+  return {
+    frames: {
+      stand,
+      dip: at(S0.hy, 1, { breath: 1 }),
+      heft: at(S0.hy - 2.5, -1, { breath: -1, cape: -1, plume: -1 }),
+      stamp: at(S0.hy + 0.5, 1, {
+        breath: 1,
+        cape: 1,
+        fx: (c) => {
+          const t = blade(end);
+          twinkle(c, t.x, t.y + 0.5, 0.8, 1);
+          c.spark(t.x - 2, t.y + 1, GLINT_RAY, 0.35);
+          c.spark(t.x + 2, t.y + 1, GLINT_RAY, 0.35);
+        },
+      }),
+      proud,
+      glintTip: run(end - 1.5, 0.8),
+      glintMid: run(BLADE_START + S0.len * 0.5, 0.9),
+      glintGuard: run(1.6, 1),
+      jewel: vary(proud, { fx: (c) => twinkle(c, gem.x, gem.y, 1, 3) }),
+      nod: at(S0.hy, 0, { head: { x: 0, y: 1 }, blink: true }),
+    },
+    steps: [
+      'stand', 'dip', 'dip', 'heft', 'heft', 'stamp', 'stamp', 'proud', 'proud', 'proud',
+      'glintTip', 'glintMid', 'glintGuard', 'jewel', 'jewel', 'jewel', 'proud', 'proud', 'proud',
+      'nod', 'nod', 'nod', 'nod', 'nod', 'stand',
+    ],
+  };
+}
+
+/**
+ * The Spearmaiden: grounds her spear, rises on her toes and stretches her
+ * wings out wide and high, eyes shut, then folds them in close and shakes
+ * them out, braids swinging, and settles.
+ */
+function spearRest(): RestPlan {
+  const stand = idle('down')[0];
+  const grounded = { hx: 5.5, hy: 23, angle: -5 };
+  return {
+    frames: {
+      stand,
+      ground: vary(stand, { breath: 1, sword: grounded, spread: -0.3 }),
+      reach: vary(stand, { lift: 1, sword: { ...grounded, hy: 22 }, spread: 0.45, wingLift: 0.5, blink: true, cape: -1 }),
+      stretch: vary(stand, { lift: 1, sword: { ...grounded, hy: 22 }, spread: 1, wingLift: 1, blink: true, head: { x: 0, y: -1 }, cape: -1 }),
+      fold: vary(stand, { breath: 1, sword: { ...grounded, hy: 23.5 }, spread: -0.8, wingLift: -0.5, cape: 1 }),
+      shakeA: vary(stand, { sword: grounded, spread: -0.5, ruffle: 1, head: { x: -1, y: 0 }, cape: -1 }),
+      shakeB: vary(stand, { sword: grounded, spread: -0.5, ruffle: -1, head: { x: 1, y: 0 }, cape: 1 }),
+      settle: vary(stand, { sword: grounded, spread: -0.15, blink: true }),
+    },
+    steps: [
+      'stand', 'ground', 'ground', 'reach', 'stretch', 'stretch', 'stretch', 'stretch', 'stretch', 'stretch',
+      'reach', 'fold', 'fold', 'shakeA', 'shakeB', 'shakeA', 'shakeB', 'fold', 'settle', 'settle', 'settle', 'stand',
+    ],
+  };
+}
+
+/**
+ * The Stormwing: lifts her spear and strikes its butt on the ground, looks up
+ * at the sky, and lightning crawls up the shaft to its point, where a bolt
+ * cracks down from above and her wings flare; then it fades and she settles.
+ */
+function stormRest(): RestPlan {
+  const stand = idle('down')[0];
+  const held = { hx: 5.5, hy: 22.5, angle: -3 };
+  const S1 = { ...stand.sword, ...held };
+  const at = (t: number) => alongBlade(S1, t);
+  const end = BLADE_START + S1.len + SPEAR_REACH;
+  const gaze = vary(stand, { sword: held, look: -1, head: { x: 0, y: -1 }, wingLift: 1 });
+  // Sparks crawling along the shaft between `from` and `to`, zigzagging either side of it.
+  const crawl = (c: PixelCanvas, from: number, to: number, a: number) => {
+    for (let t = from, i = 0; t < to; t += 1.5, i++) {
+      const p = at(t);
+      c.spark(p.x + (i % 2 ? 1 : -1), p.y, i % 2 ? LK.glow.hot : LK.glow.mid, a);
+      c.spark(p.x, p.y - 0.5, LK.glow.core, a * 0.5);
+    }
+  };
+  return {
+    frames: {
+      stand,
+      heft: vary(stand, { sword: { ...held, hy: 20.5 }, wingLift: 0.5, cape: -1 }),
+      strike: vary(stand, {
+        breath: 1,
+        sword: { ...held, hy: 23 },
+        cape: 1,
+        fx: (c) => {
+          const b = at(SPEAR_BUTT + 0.5);
+          c.spark(b.x, b.y + 1, LK.glow.core, 0.8);
+          c.spark(b.x - 1, b.y + 1, LK.glow.hot, 0.5);
+          c.spark(b.x + 1, b.y + 1, LK.glow.hot, 0.5);
+          c.spark(b.x - 2, b.y, LK.glow.mid, 0.3);
+          c.spark(b.x + 2, b.y + 1, LK.glow.mid, 0.3);
+        },
+      }),
+      gaze,
+      crawl: vary(gaze, { fx: (c) => crawl(c, SPEAR_BUTT + 1, 1, 0.6) }),
+      climb: vary(gaze, { glow: 0.2, fx: (c) => crawl(c, -1, end - SPEAR_HEAD, 0.7) }),
+      // The bolt: a jagged line from the sky to the point, and the point blazing.
+      bolt: vary(gaze, {
+        glow: 0.7,
+        fx: (c) => {
+          const tp = at(end);
+          const pts = [[3, -9], [-1, -7], [2, -5], [-1, -3], [0, -1]];
+          let [px, py] = [tp.x + 1, tp.y - 11];
+          for (const [dx, dy] of pts) {
+            const nx = tp.x + dx * 0.6;
+            const ny = tp.y + dy;
+            const n = Math.max(1, Math.round(Math.hypot(nx - px, ny - py)));
+            for (let k = 0; k <= n; k++) c.spark(px + ((nx - px) * k) / n, py + ((ny - py) * k) / n, k % 2 ? LK.glow.hot : LK.glow.core, 1);
+            [px, py] = [nx, ny];
+          }
+          twinkle(c, tp.x, tp.y, 1, 3, LK.glow.core, LK.glow.hot);
+          crawl(c, SPEAR_BUTT + 1, end - SPEAR_HEAD, 0.4);
+        },
+      }),
+      fade: vary(gaze, { glow: 0.15, look: 0, head: { x: 0, y: 0 }, fx: (c) => { const tp = at(end); c.spark(tp.x, tp.y, LK.glow.hot, 0.6); } }),
+      settle: vary(stand, { breath: 1, sword: held, blink: true, wingLift: -0.5 }),
+    },
+    steps: [
+      'stand', 'heft', 'strike', 'strike', 'gaze', 'gaze', 'gaze', 'gaze', 'crawl', 'climb', 'bolt', 'bolt', 'bolt',
+      'fade', 'fade', 'fade', 'fade', 'settle', 'settle', 'settle', 'stand',
+    ],
+  };
+}
+
+const REST_PLANS: Record<RestKind, () => RestPlan> = { knight: knightRest, king: kingRest, spear: spearRest, storm: stormRest };
+
+/** The idle moment's poses, facing the viewer only; other views have none. */
+function rest(view: View): Pose[] {
+  if (view !== 'down') return [];
+  return Object.values(REST_PLANS[restKind(LK)]().frames);
+}
+
+/** The order the idle moment's frames play in, for a look (frame indices, holds repeated). */
+function restOrder(look: WarriorLook): number[] {
+  const prev = LK;
+  LK = look;
+  const plan = REST_PLANS[restKind(look)]();
+  LK = prev;
+  const names = Object.keys(plan.frames);
+  return plan.steps.map((s) => names.indexOf(s));
+}
+
 /** Screen angle (0 = right, 90 = down) the warrior faces in each direction. */
 export const FACING_DEG: Record<Dir, number> = { right: 0, down: 90, left: 180, up: 270 };
 
@@ -2058,7 +2350,7 @@ function spinFrame(k: number): { dir: Dir; pose: Pose } {
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type WarriorAnim = 'idle' | 'walk' | 'slash1' | 'slash2' | 'thrust' | 'rise' | 'settle' | 'smite' | 'decree';
+export type WarriorAnim = 'idle' | 'walk' | 'slash1' | 'slash2' | 'thrust' | 'rise' | 'settle' | 'smite' | 'decree' | 'rest';
 
 export interface WarriorAnimDef {
   name: WarriorAnim;
@@ -2067,6 +2359,8 @@ export interface WarriorAnimDef {
   poses: (view: View) => Pose[];
   /** true: drawn only for the King's looks; false: for every look but his. */
   king?: boolean;
+  /** Frame indices to play in order, holds repeated (the idle moment's). */
+  order?: readonly number[];
 }
 
 export const WARRIOR_ANIMS: WarriorAnimDef[] = [
@@ -2079,10 +2373,12 @@ export const WARRIOR_ANIMS: WarriorAnimDef[] = [
   { name: 'settle', fps: 8, loop: false, poses: settle, king: false },
   { name: 'smite', fps: 14, loop: false, poses: smite, king: true },
   { name: 'decree', fps: 10, loop: false, poses: decree, king: true },
+  { name: 'rest', fps: REST_FPS, loop: false, poses: rest },
 ];
 
 /** The animations a look has: the King has no thrust or whirlwind, and only he smites and decrees. */
-export const warriorAnimsFor = (look: WarriorLook): WarriorAnimDef[] => WARRIOR_ANIMS.filter((a) => a.king === undefined || a.king === !!look.king);
+export const warriorAnimsFor = (look: WarriorLook): WarriorAnimDef[] =>
+  WARRIOR_ANIMS.filter((a) => a.king === undefined || a.king === !!look.king).map((a) => (a.name === 'rest' ? { ...a, order: restOrder(look) } : a));
 
 /** Frame index at which each swing lands its blow (and the decree rings out). */
 export const HIT_FRAME: Record<'slash1' | 'slash2' | 'thrust' | 'smite' | 'decree', number> = { slash1: 1, slash2: 1, thrust: 2, smite: 2, decree: 2 };

@@ -101,6 +101,16 @@ export interface Pose {
   /** Cloak swinging behind (side view) or to one side, in pixels. */
   sway: number;
   blink?: boolean;
+  /** An arrow in the draw hand (the idle moment): its heading in radians on screen, and how far up the shaft from the nock the hand holds it. */
+  shaft?: number;
+  grip?: number;
+  /** The held arrow is still half in the quiver, behind him. */
+  shaftBehind?: boolean;
+  /** One eye shut, sighting down a shaft. */
+  wink?: boolean;
+  /** The head nudged from the body; front view only. */
+  headX?: number;
+  headY?: number;
 }
 
 /** One look for the archer: its texture key, its cloth and its bow. */
@@ -278,6 +288,8 @@ export const ARCHER_LOOKS = [RANGER_LOOK, STORM_LOOK, HUNT_LOOK, SCARECROW_LOOK]
 
 /** The look being drawn; set by buildArcherFrames. */
 let S: ArcherLook = RANGER_LOOK;
+/** The frame being drawn has one eye shut (the far one, screen right). */
+let winking = false;
 
 const H = (f: number, s: number, h: number): Hand => ({ f, s, h });
 
@@ -431,6 +443,13 @@ function arrowOnString(c: PixelCanvas, x: number, y: number, nx: number, ny: num
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(hx + dx, hy + dy, hot, 0.7 * glint);
     if (glint > 0.6) for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) c.spark(hx + dx, hy + dy, mid, 0.5 * glint);
   }
+}
+
+/** An arrow held in the hand at `p`, heading `ang` on screen, gripped `grip` px up the shaft from its nock. */
+function heldArrow(c: PixelCanvas, p: Placed, ang: number, grip: number): void {
+  const nx = Math.cos(ang);
+  const ny = Math.sin(ang);
+  arrowOnString(c, p.x - nx * grip, p.y - ny * grip, nx, ny, 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -750,8 +769,9 @@ function sackFront(c: PixelCanvas, cx: number, U: number, blink: boolean | undef
   // Eye holes with embers burning in them (dimmed to a smoulder on a blink).
   c.part();
   for (const x of [cx - 2, cx + 1]) {
-    c.px(x, 11 + U, S.eye, sphere(0, 0), { bias: blink ? -2 : 0, glow: blink ? 0.4 : undefined });
-    if (!blink) {
+    const shut = blink || (winking && x === cx + 1);
+    c.px(x, 11 + U, S.eye, sphere(0, 0), { bias: shut ? -2 : 0, glow: shut ? 0.4 : undefined });
+    if (!shut) {
       c.spark(x, 11 + U, S.light[1], 0.6);
       c.spark(x, 10 + U, S.light[1], 0.2);
     }
@@ -887,11 +907,23 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const cx = 12;
   const fa = place('down', 'a', p.a, U, cx);
   const fb = place('down', 'b', p.b, U, cx);
-  const armA = () => arm(c, 7.4, 16.4 + U, fa, REACH_FRONT, [-0.5, 1], false, fa.behind ? -1 : 0);
+  // An arrow in the draw hand goes under the fist.
+  const armA = () => {
+    if (p.shaft !== undefined && !p.shaftBehind) heldArrow(c, fa, p.shaft, p.grip ?? 0);
+    arm(c, 7.4, 16.4 + U, fa, REACH_FRONT, [-0.5, 1], false, fa.behind ? -1 : 0);
+  };
   const armB = () => arm(c, 16.6, 16.4 + U, fb, REACH_FRONT, [0.5, 1], true, fb.behind ? -1 : 0);
+  // Everything above the collar, drawn nudged by the pose's head offset.
+  const head = (draw: () => void) => {
+    c.offset(BODY_X + (p.headX ?? 0), BODY_Y + (p.headY ?? 0));
+    draw();
+    c.offset(BODY_X, BODY_Y);
+  };
 
   // The quiver's fletchings peek over his right shoulder.
   fletchings(c, 7.4, 12.6 + U, -0.4);
+  // An arrow being drawn from it (or slid home) rises out of the quiver, behind him.
+  if (p.shaft !== undefined && p.shaftBehind) heldArrow(c, fa, p.shaft, p.grip ?? 0);
   c.part();
   c.capsule(6.9, 13.8 + U, 8.2, 13.8 + U, 0.8, 0.8, S.wrap ?? LEATHER);
   // The cloak hangs behind him, showing at his sides.
@@ -951,9 +983,11 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   cowl(c, cx, U, 5.8, 5.8, S.scarecrow ? S.tunic : S.cloak);
 
   if (S.scarecrow) {
-    sackFront(c, cx, U, p.blink);
-    hatFront(c, cx, U - 1, 1);
-    crow(c, cx + 4.6, 7 + U, 1);
+    head(() => {
+      sackFront(c, cx, U, p.blink);
+      hatFront(c, cx, U - 1, 1);
+      crow(c, cx + 4.6, 7 + U, 1);
+    });
     if (!fb.behind) {
       armB();
       drawBow(c, 'down', p, fa, fb);
@@ -963,8 +997,10 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   }
 
   if (S.hunt) {
-    antlers(c, cx, U);
-    skullFront(c, cx, U, p.blink);
+    head(() => {
+      antlers(c, cx, U);
+      skullFront(c, cx, U, p.blink);
+    });
     if (!fb.behind) {
       armB();
       drawBow(c, 'down', p, fa, fb);
@@ -974,24 +1010,26 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   }
 
   // Head: the hood, a face in its shadow, a fringe of hair under its edge.
-  c.part();
-  c.ellipse(cx, 11.3 + U, 3.9, 3.7, S.cloak, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
-  c.part();
-  c.px(cx - 1, 7 + U, S.cloak, sphere(-0.3, -0.8));
-  if (S.trim) {
+  head(() => {
     c.part();
-    c.ellipse(cx, 12.5 + U, 2.95, 2.75, S.trim);
-  }
-  c.part();
-  c.ellipse(cx, 12.7 + U, 2.5, 2.3, SKIN);
-  c.part();
-  c.shape(10 + U, 10 + U, () => [cx - 2.5, cx + 2.5], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
-  c.px(cx - 3, 11 + U, S.hair, sphere(-0.6, 0.2));
-  c.px(cx + 1, 11 + U, S.hair, sphere(0.2, 0), { bias: -1 });
-  // The hood's shadow across the brow, the eyes under it.
-  for (let x = cx - 2; x <= cx + 1; x++) c.shade(x, 11 + U, -1);
-  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
-  c.shade(cx - 1, 14 + U, -1);
+    c.ellipse(cx, 11.3 + U, 3.9, 3.7, S.cloak, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+    c.part();
+    c.px(cx - 1, 7 + U, S.cloak, sphere(-0.3, -0.8));
+    if (S.trim) {
+      c.part();
+      c.ellipse(cx, 12.5 + U, 2.95, 2.75, S.trim);
+    }
+    c.part();
+    c.ellipse(cx, 12.7 + U, 2.5, 2.3, SKIN);
+    c.part();
+    c.shape(10 + U, 10 + U, () => [cx - 2.5, cx + 2.5], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+    c.px(cx - 3, 11 + U, S.hair, sphere(-0.6, 0.2));
+    c.px(cx + 1, 11 + U, S.hair, sphere(0.2, 0), { bias: -1 });
+    // The hood's shadow across the brow, the eyes under it.
+    for (let x = cx - 2; x <= cx + 1; x++) c.shade(x, 11 + U, -1);
+    eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+    c.shade(cx - 1, 14 + U, -1);
+  });
 
   if (!fb.behind) {
     armB();
@@ -1002,8 +1040,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
 
 function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
   c.part();
-  for (const [x, y] of pts) {
-    if (blink) c.px(x, y, SKIN, sphere(0, -0.3), { bias: -1 });
+  for (const [i, [x, y]] of pts.entries()) {
+    if (blink || (winking && i === pts.length - 1 && pts.length > 1)) c.px(x, y, SKIN, sphere(0, -0.3), { bias: -1 });
     else {
       c.px(x, y, S.eye);
       if (S.crackle) c.spark(x, y, S.crackle[1], 0.5);
@@ -1380,15 +1418,62 @@ const volley = action([
 ]);
 
 // ---------------------------------------------------------------------------
+// The idle moment (`rest`), facing the viewer only
+
+/** A pose from the stand (idle frame 0) with the given changes. */
+const from = (k: Partial<Pose>): Pose => ({ ...idle('down')[0], ...k });
+
+/** Where along the shaft the hand holds an arrow to twirl it: its middle. */
+const TWIRL_GRIP = 5.25;
+/** How far below the nock he grips an arrow drawing it from the quiver, so the fletching shows over his fist. */
+const PULL_GRIP = 3;
+/** Steps in one turn of the twirl. */
+const TWIRL_STEPS = 6;
+const twirl = (i: number, h: number): Pose =>
+  from({ a: H(2.2, 5.4 + Math.sin((i / TWIRL_STEPS) * Math.PI * 2) * 0.4, h), shaft: (i / TWIRL_STEPS) * Math.PI * 2, grip: TWIRL_GRIP });
+
+/**
+ * The ranger (and every skin of his): he reaches back over his shoulder and
+ * draws an arrow from the quiver, lifts it level under his eye and sights
+ * down the shaft with one eye shut to check it's true, gives it a turn to
+ * look again, twirls it twice through his fingers, and slides it home.
+ */
+const RANGER_REST: Pose[] = [
+  from({}),
+  from({ a: H(0.4, 4.6, 1.5), sway: -0.2 }),
+  from({ a: H(-0.6, 4.4, 5.6), sway: 0 }),
+  from({ a: H(-0.6, 4.4, 10.4), shaft: Math.PI / 2, grip: PULL_GRIP, shaftBehind: true, headX: -1 }),
+  from({ a: H(1, 5.8, 7.4), shaft: -0.6, headX: -1, sway: 0.3 }),
+  from({ a: H(1, 6.0, 4.6), shaft: -0.04, wink: true, headX: -1, breath: 1 }),
+  from({ a: H(1, 6.0, 5.0), shaft: -0.12, wink: true, headX: -1, breath: 1 }),
+  twirl(0, 0.6),
+  twirl(1, 0.8),
+  twirl(2, 0.9),
+  twirl(3, 0.8),
+  twirl(4, 0.6),
+  twirl(5, 0.5),
+  from({ a: H(-0.6, 4.4, 9.6), shaft: Math.PI / 2, grip: PULL_GRIP, shaftBehind: true, headX: -1 }),
+  from({ a: H(-0.6, 4.4, 5.4), sway: 0.3 }),
+  from({ a: H(0.4, 4.4, 0), breath: 1, sway: 0.2 }),
+];
+const RANGER_ORDER = [0, 1, 2, 3, 4, 5, 5, 5, 6, 6, 5, 7, 8, 9, 10, 11, 12, 7, 8, 9, 10, 11, 12, 7, 13, 14, 15, 0];
+
+function rest(view: View): Pose[] {
+  return view === 'down' ? RANGER_REST : [];
+}
+
+// ---------------------------------------------------------------------------
 // Frame generation
 
-export type ArcherAnim = 'idle' | 'walk' | 'shoot' | 'volley';
+export type ArcherAnim = 'idle' | 'walk' | 'shoot' | 'volley' | 'rest';
 
 export interface ArcherAnimDef {
   name: ArcherAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => Pose[];
+  /** Frame indices to play in sequence, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 export const ARCHER_ANIMS: ArcherAnimDef[] = [
@@ -1396,6 +1481,7 @@ export const ARCHER_ANIMS: ArcherAnimDef[] = [
   { name: 'walk', fps: 10, loop: true, poses: walk },
   { name: 'shoot', fps: 18, loop: false, poses: shoot },
   { name: 'volley', fps: 11, loop: false, poses: volley },
+  { name: 'rest', fps: 9, loop: false, poses: rest, order: RANGER_ORDER },
 ];
 
 /** Frame index at which each shot is loosed. */
@@ -1410,9 +1496,11 @@ export interface ArcherFrame {
 
 function drawArcherFrame(dir: Dir, pose: Pose): PixelCanvas {
   const c = new PixelCanvas(ARCHER_W, ARCHER_H).offset(BODY_X, BODY_Y);
+  winking = !!pose.wink;
   if (dir === 'down') drawDown(c, pose);
   else if (dir === 'up') drawUp(c, pose);
   else drawSide(c, pose);
+  winking = false;
   if (S.scarecrow) plaid(c);
   return dir === 'right' ? c.mirrored() : c;
 }

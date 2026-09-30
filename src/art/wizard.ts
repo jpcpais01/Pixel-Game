@@ -4,7 +4,7 @@
 // magic trail...) fed to a per-direction draw function. Animations are just
 // sequences of poses, so timing and motion stay easy to tweak.
 
-import { PixelCanvas, cyl, sphere, type Material, type RGB, type Vec3 } from './pixel';
+import { FLAT, PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
 import {
   BEARD,
   BOOT,
@@ -129,10 +129,21 @@ export interface WizardLook {
   shell?: Material;
   /** The Tidecaller's Abyssal skin: an anglerfish's lure in place of the crown, eyes that glow, and living light on the robe. */
   lure?: boolean;
+  /** The idle moment (`rest`) this look plays: its type's, so every skin of a type does the same. */
+  rest: RestAct;
 }
+
+/**
+ * The idle moments, one per type: the Arcanist lets his crystal drift round
+ * him while he strokes his beard; the Pyromancer snaps up a flame and juggles
+ * it; the Tidecaller bounces a bubble; the Grovekeeper lets a butterfly light
+ * on a finger; the Shapeshifter howls, then shakes out her pelt.
+ */
+export type RestAct = 'arcane' | 'pyro' | 'tide' | 'grove' | 'wild';
 
 export const ARCANE_LOOK: WizardLook = {
   key: 'wizard',
+  rest: 'arcane',
   robe: ROBE,
   inner: ROBE_INNER,
   trim: GOLD,
@@ -147,6 +158,7 @@ export const ARCANE_LOOK: WizardLook = {
 
 export const VOID_LOOK: WizardLook = {
   key: 'wizard_void',
+  rest: 'arcane',
   robe: VOID_ROBE,
   inner: VOID_LINING,
   trim: SILVER,
@@ -162,6 +174,7 @@ export const VOID_LOOK: WizardLook = {
 /** The Pyromancer: the classic hat and beard in fire colours, a flame on the hat. */
 export const PYRO_LOOK: WizardLook = {
   key: 'wizard_pyro',
+  rest: 'pyro',
   robe: PYRO_ROBE,
   inner: PYRO_INNER,
   trim: PYRO_TRIM,
@@ -179,6 +192,7 @@ export const PYRO_LOOK: WizardLook = {
 /** The Arcanist's Astral skin: a reader of the stars. */
 export const ASTRAL_LOOK: WizardLook = {
   key: 'wizard_astral',
+  rest: 'arcane',
   robe: STAR_ROBE,
   inner: STAR_LINING,
   trim: GOLD,
@@ -196,6 +210,7 @@ export const ASTRAL_LOOK: WizardLook = {
 /** The Pyromancer's Hellfire skin: a horned warlock of green fire. */
 export const HELL_LOOK: WizardLook = {
   key: 'wizard_hell',
+  rest: 'pyro',
   robe: HELL_ROBE,
   inner: HELL_LINING,
   trim: FEL_TRIM,
@@ -213,6 +228,7 @@ export const HELL_LOOK: WizardLook = {
 /** The Druid's Grovekeeper: moss, leaves and antlers, and the light of a sunlit glade. */
 export const GROVE_LOOK: WizardLook = {
   key: 'druid',
+  rest: 'grove',
   robe: MOSS,
   inner: BARK,
   trim: LEAF,
@@ -230,6 +246,7 @@ export const GROVE_LOOK: WizardLook = {
 /** The Druid's Shapeshifter: a wolf's pelt, hide and fangs, and amber spirit light. */
 export const WILD_LOOK: WizardLook = {
   key: 'druid_wild',
+  rest: 'wild',
   robe: HIDE,
   inner: TUNIC,
   trim: FANG,
@@ -273,6 +290,7 @@ export const FROST_LOOK: WizardLook = {
 /** The Tidecaller: a sea sorceress in the blues of the open water, crowned with coral. */
 export const TIDE_LOOK: WizardLook = {
   key: 'wizard_tide',
+  rest: 'tide',
   robe: TIDE_ROBE,
   inner: TIDE_INNER,
   trim: FOAM,
@@ -310,6 +328,7 @@ export const ABYSS_LOOK: WizardLook = {
 /** The Pyromancer's Pumpkin Witch (Hallow's Eve): a witch of candle-orange fire with violet at its edges. */
 export const PUMPKIN_LOOK: WizardLook = {
   key: 'wizard_pumpkin',
+  rest: 'pyro',
   robe: WITCH_ROBE,
   inner: WITCH_LINING,
   trim: PUMPKIN_TRIM,
@@ -372,6 +391,20 @@ export interface Pose {
   trail?: number[];
   /** Burst of light at the crystal (0..1). */
   flash?: number;
+
+  // The idle moment only (facing down); every other frame leaves these unset.
+  /** The free hand raised to here, bent at `elbow` (frame pixels, breathing added); the forearm is drawn over the head. */
+  free?: { x: number; y: number; ex: number; ey: number };
+  /** The eyes glance a pixel this way (x -1..1, y -1..0). */
+  gaze?: [number, number];
+  /** The crystal lifted off the staff, drifting free at this point; `behind` the head on the far side of its circle. */
+  gem?: { x: number; y: number; behind?: boolean };
+  /** The Shapeshifter's howl: 1 the head tipping back, 2 muzzle to the sky. */
+  howl?: number;
+  /** The Shapeshifter shaking out her pelt: its head and her hair thrown this many pixels sideways. */
+  shake?: number;
+  /** A prop or a puff of magic drawn over the figure (a flame, a bubble, a butterfly). */
+  fx?: (c: PixelCanvas) => void;
 }
 
 export interface FrameMeta {
@@ -398,7 +431,7 @@ function staffGeom(s: Staff) {
   return { dx, dy, top, bottom, gem };
 }
 
-function drawStaff(c: PixelCanvas, s: Staff, glow: number): { x: number; y: number } {
+function drawStaff(c: PixelCanvas, s: Staff, glow: number, free?: { x: number; y: number; behind?: boolean }): { x: number; y: number } {
   const g = staffGeom(s);
   c.part();
   // Wood: lit from the left, with a couple of darker knots along the shaft.
@@ -543,10 +576,15 @@ function drawStaff(c: PixelCanvas, s: Staff, glow: number): { x: number; y: numb
     c.px(Math.round(g.top.x + px * 1.2 + g.dx * 0.8 - 0.5), Math.round(g.top.y + py * 1.2 + g.dy * 0.8 - 0.5), S.shaft, { x: -0.6, y: 0.4, z: 0.7 });
     c.px(Math.round(g.top.x - px * 1.2 + g.dx * 0.8 - 0.5), Math.round(g.top.y - py * 1.2 + g.dy * 0.8 - 0.5), S.shaft, { x: 0.6, y: 0.4, z: 0.7 });
   }
-  // Crystal: a small faceted gem, brighter on its upper-left facet.
+  // The idle moment can lift the crystal off the staff to drift on its own
+  // (drawn before the body when it passes behind).
+  if (free?.behind) return free;
+  return crystal(c, free ? free.x : g.gem.x, free ? free.y : g.gem.y, glow);
+}
+
+/** The crystal: a small faceted gem, brighter on its upper-left facet. */
+function crystal(c: PixelCanvas, gx: number, gy: number, glow: number): { x: number; y: number } {
   c.part();
-  const gx = g.gem.x;
-  const gy = g.gem.y;
   const cg = 0.55 + glow * 0.45;
   c.ellipse(gx, gy, 1.55, 2.3, S.crystal, {
     glow: S.crystal.emissive! * cg,
@@ -815,12 +853,13 @@ function beardedHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
   c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
   c.part();
+  const [gx, gy] = p.gaze ?? [0, 0];
   if (p.blink) {
-    c.px(10, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
-    c.px(13, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(10 + gx, 13 + U + gy, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(13 + gx, 13 + U + gy, S.skin, FLAT_DOWN, { bias: -1 });
   } else {
-    c.px(10, 13 + U, EYE);
-    c.px(13, 13 + U, EYE);
+    c.px(10 + gx, 13 + U + gy, EYE);
+    c.px(13 + gx, 13 + U + gy, EYE);
   }
 
   // Hat.
@@ -955,7 +994,8 @@ function hoodDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   });
   c.part();
   c.ellipse(cx, 13.1 + U, 2.8, 2.9, HOOD_SHADOW, { normal: () => FLAT_DOWN });
-  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  const [gx, gy] = p.gaze ?? [0, 0];
+  eyes(c, [[cx - 2 + gx, 12 + U + gy], [cx + 1 + gx, 12 + U + gy]], p.blink);
 }
 
 function hoodUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
@@ -1073,12 +1113,13 @@ function astralHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
   c.shade(12, 15 + U, -1);
   c.part();
+  const gx = p.gaze?.[0] ?? 0;
   if (p.blink) {
-    c.px(10, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
-    c.px(13, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(10 + gx, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(13 + gx, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
   } else {
-    c.px(10, 13 + U, EYE);
-    c.px(13, 13 + U, EYE);
+    c.px(10 + gx, 13 + U, EYE);
+    c.px(13 + gx, 13 + U, EYE);
   }
   // Crown of the head and the fringe, parted in the middle, locks framing the face.
   c.part();
@@ -1234,7 +1275,8 @@ function fiendHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
   c.shade(9, 14 + U, -1);
   c.shade(14, 14 + U, -1);
-  fiendEyes(c, [[10, 13 + U], [13, 13 + U]], p.blink);
+  const [gx, gy] = p.gaze ?? [0, 0];
+  fiendEyes(c, [[10 + gx, 13 + U + gy], [13 + gx, 13 + U + gy]], p.blink);
   // A pointed black goatee.
   c.part();
   c.shape(15 + U, 17 + U, (y) => {
@@ -1417,12 +1459,13 @@ function groveHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
   c.shade(12, 15 + U, -1);
   c.part();
+  const [gx, gy] = p.gaze ?? [0, 0];
   if (p.blink) {
-    c.px(10, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
-    c.px(13, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(10 + gx, 13 + U + gy, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(13 + gx, 13 + U + gy, S.skin, FLAT_DOWN, { bias: -1 });
   } else {
-    c.px(10, 13 + U, EYE);
-    c.px(13, 13 + U, EYE);
+    c.px(10 + gx, 13 + U + gy, EYE);
+    c.px(13 + gx, 13 + U + gy, EYE);
   }
   // A band of young leaves across the brow.
   c.part();
@@ -1546,46 +1589,70 @@ function wolfEyes(c: PixelCanvas, pts: [number, number][], p: Pose): void {
 function wildHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   const pelt = S.hair ?? HAIR;
   const hair = S.beard ?? HAIR;
+  // The idle moment's howl tips her head back (V), and the wolf's head on it
+  // further (P), its muzzle turning up to the sky; a shake throws the pelt and
+  // her hair sideways. All zero on every other frame.
+  const h = p.howl ?? 0;
+  const sh = p.shake ?? 0;
+  const V = U - (h > 0 ? 1 : 0);
+  const P = U - h;
   furMantle(c, cx - 5.2, cx + 5.2, U, 1.3, p.hem);
   // Her hair, falling either side of the face.
   c.part();
   c.shape(11 + U, 17 + U, (y) => {
     const u = (y - 11 - U) / 6;
     const hw = 4.2 - Math.max(0, u - 0.6) * 1.5;
-    return [cx - hw, cx + hw];
+    return [cx - hw + sh * u, cx + hw + sh * u];
   }, hair, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.3, 0.9));
-  c.shade(8, 16 + U, -1);
-  c.shade(15, 16 + U, -1);
+  c.shade(8 + sh, 16 + U, -1);
+  c.shade(15 + sh, 16 + U, -1);
   // The face, woad striped under the eyes.
   c.part();
-  c.ellipse(cx, 13.7 + U, 2.9, 2.5, S.skin);
+  c.ellipse(cx, 13.7 + V, 2.9, 2.5, S.skin);
   c.part();
-  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
-  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
-  c.shade(12, 15 + U, -1);
-  c.px(9, 14 + U, WOAD, FLAT_DOWN);
-  c.px(14, 14 + U, WOAD, FLAT_DOWN);
+  c.px(11, 14 + V, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + V, S.skin, sphere(0.35, -0.2));
+  c.shade(12, 15 + V, -1);
+  c.px(9, 14 + V, WOAD, FLAT_DOWN);
+  c.px(14, 14 + V, WOAD, FLAT_DOWN);
   c.part();
-  if (p.blink) {
-    c.px(10, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
-    c.px(13, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+  const gx = p.gaze?.[0] ?? 0;
+  if (p.blink || h > 0) {
+    c.px(10 + gx, 13 + V, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(13 + gx, 13 + V, S.skin, FLAT_DOWN, { bias: -1 });
   } else {
-    c.px(10, 13 + U, EYE);
-    c.px(13, 13 + U, EYE);
+    c.px(10 + gx, 13 + V, EYE);
+    c.px(13 + gx, 13 + V, EYE);
+  }
+  if (h > 0) {
+    // The mouth open on the howl: a small o as the head goes back, then wide, the jaw dropped.
+    c.part();
+    c.px(11, 15 + V, HOOD_SHADOW, FLAT_DOWN);
+    if (h > 1) {
+      c.px(12, 15 + V, HOOD_SHADOW, FLAT_DOWN);
+      c.px(11, 16 + V, HOOD_SHADOW, FLAT_DOWN);
+      c.px(12, 16 + V, HOOD_SHADOW, FLAT_DOWN);
+      c.px(11, 17 + V, S.skin, sphere(-0.3, 0.7), { bias: -1 });
+      c.px(12, 17 + V, S.skin, sphere(0.3, 0.7), { bias: -1 });
+    }
   }
   // The wolf's head over her brow: its skull, ears, and the muzzle resting on her forehead.
-  wolfEar(c, cx - 3.3, U);
-  wolfEar(c, cx + 3.3, U);
+  wolfEar(c, cx - 3.3 + sh, P);
+  wolfEar(c, cx + 3.3 + sh, P);
   c.part();
-  c.ellipse(cx, 9.3 + U, 4.6, 2.9, pelt, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.4, 1) });
-  c.shade(cx - 1, 7 + U, 1);
-  c.shade(cx, 8 + U, -1);
+  c.ellipse(cx + sh, 9.3 + P, 4.6, 2.9, pelt, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.4, 1) });
+  c.shade(cx - 1 + sh, 7 + P, 1);
+  c.shade(cx + sh, 8 + P, -1);
   c.part();
-  c.ellipse(cx, 11.2 + U, 2.2, 1.3, MUZZLE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.7 - 0.2, 1) });
+  // Pointing at the sky, the snout stands up past the skull between the ears.
+  const my = h > 1 ? 6.5 + P : 11.2 + P - h;
+  c.ellipse(cx + sh, my, h > 1 ? 1.6 : 2.2, h > 1 ? 1.9 : 1.3, MUZZLE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.7 - 0.2 - h * 0.25, 1) });
   c.part();
-  c.px(11, 12 + U, WOLF_NOSE, FLAT_DOWN);
-  c.px(12, 12 + U, WOLF_NOSE, FLAT_DOWN);
-  wolfEyes(c, [[9, 9 + U], [14, 9 + U]], p);
+  // Its nose sits at the tip of the muzzle: at the bottom looking at us, on top when it points at the sky.
+  const ny = h > 1 ? Math.floor(my) - 1 : Math.floor(my) + (h > 0 ? 0 : 1);
+  c.px(11 + sh, ny, WOLF_NOSE, FLAT_DOWN);
+  c.px(12 + sh, ny, WOLF_NOSE, FLAT_DOWN);
+  wolfEyes(c, [[9 + sh, 9 + P], [14 + sh, 9 + P]], p);
 }
 
 function wildHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
@@ -1726,7 +1793,8 @@ function tideHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
   c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
   c.shade(12, 15 + U, -1);
-  tideEyes(c, [[10, 13 + U], [13, 13 + U]], p);
+  const gx = p.gaze?.[0] ?? 0;
+  tideEyes(c, [[10 + gx, 13 + U], [13 + gx, 13 + U]], p);
   // Crown of the head, the fringe swept aside, wavy locks framing the face.
   c.part();
   c.ellipse(cx, 10.6 + U, 3.9, 2.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.5, 1) });
@@ -1978,7 +2046,8 @@ function witchHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
   c.shade(12, 15 + U, -1);
   c.shade(13, 15 + U, -1);
-  witchEyes(c, [[10, 13 + U], [13, 13 + U]], p.blink);
+  const gx = p.gaze?.[0] ?? 0;
+  witchEyes(c, [[10 + gx, 13 + U], [13 + gx, 13 + U]], p.blink);
   // The fringe swept to one side under the brim.
   c.part();
   for (const x of [9, 10, 11, 14]) c.px(x, 12 + U, hair, { x: -0.2, y: -0.2, z: 0.95 }, { bias: x === 11 ? -1 : 0 });
@@ -2113,6 +2182,7 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
 
   let tip = { x: 0, y: 0 };
   if (p.staffBehind) tip = drawStaff(c, p.staff, p.glow);
+  if (p.gem?.behind) crystal(c, p.gem.x, p.gem.y, p.glow);
 
   boot(c, 9.5, 29.6 - p.footA);
   boot(c, 14.5, 29.6 - p.footB);
@@ -2140,14 +2210,25 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   c.px(11, belt, S.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
   c.px(12, belt, S.trim, { x: 0.2, y: 0.3, z: 0.9 });
 
-  // Free arm (character's left, screen right).
-  sleeve(c, 15.8, 17.2 + U, 17.6, 21.6 + U + p.arm);
-  hand(c, 17.9, 22.4 + U + p.arm);
+  // Free arm (character's left, screen right). Raised, only the upper arm is
+  // drawn here; the forearm and hand come over the head, to reach a beard or chin.
+  if (p.free) {
+    c.part();
+    c.capsule(15.8, 17.2 + U, p.free.ex, p.free.ey + U, 1.4, 1.6, S.robe);
+  } else {
+    sleeve(c, 15.8, 17.2 + U, 17.6, 21.6 + U + p.arm);
+    hand(c, 17.9, 22.4 + U + p.arm);
+  }
 
   headDown(c, cx, U, p);
 
+  if (p.free) {
+    sleeve(c, p.free.ex, p.free.ey + U, p.free.x, p.free.y + U);
+    hand(c, p.free.x, p.free.y + U);
+  }
+
   // Staff hand.
-  if (!p.staffBehind) tip = drawStaff(c, p.staff, p.glow);
+  if (!p.staffBehind) tip = drawStaff(c, p.staff, p.glow, p.gem);
   sleeve(c, 8.2, 17.2 + U, p.staff.hx + 0.4, p.staff.hy - 0.3);
   hand(c, p.staff.hx, p.staff.hy);
 
@@ -2156,6 +2237,7 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'tide') tideFlecks(c, U, p);
   if (S.head === 'witch') witchFlecks(c, p);
   finishMagic(c, p, tip);
+  p.fx?.(c);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
 
@@ -2259,6 +2341,8 @@ const FLAT_DOWN: Vec3 = { x: 0, y: -0.3, z: 0.95 };
 function finishMagic(c: PixelCanvas, p: Pose, tip: { x: number; y: number }): void {
   if (p.trail && p.trail.length > 1) drawTrail(c, p.staff, p.trail);
   if (p.flash) drawFlash(c, tip.x, tip.y, p.flash);
+  // The crystal hidden behind the head casts no light over it.
+  if (p.gem?.behind) return;
   // A single bright glint at the heart of the crystal.
   c.spark(tip.x - 0.4, tip.y - 0.6, S.magic.core, 0.35 + p.glow * 0.5);
   if (S.head === 'fiend') {
@@ -2481,16 +2565,463 @@ function fire(view: 'down' | 'up' | 'side'): Pose[] {
   });
 }
 
+
+// ---------------------------------------------------------------------------
+// The idle moment (`rest`): a little performance facing the viewer, played
+// once when the hero has stood still a while. Every act shares one timeline
+// (REST_ORDER): the stand (0), six frames easing in (1-6), a six-frame beat
+// played twice (7-12), four easing out (13-16) and the stand again (17), which
+// is idle frame 0 exactly so it swaps in and out without a pop. Props and
+// magic are drawn in the look's own colours.
+
+/** Frames in play order: holds on the anticipation, the landing and the settle; the middle beat twice. */
+const REST_ORDER: readonly number[] = [0, 1, 1, 2, 3, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 17];
+const REST_FPS = 8;
+
+/** The Arcanist's crystal circles over his head on this ellipse (centre and radii, in frame pixels). */
+const ORBIT = { x: 12, y: 7.4, rx: 7.4, ry: 2.2 };
+/** The Pyromancer's palm, where the flame sits (the flame's foot is just above it). */
+const PALM = { x: 17.5, y: 19.6 };
+/** The Grovekeeper's hand held out for the butterfly, and where it perches. */
+const PERCH = { x: 19.4, y: 17.8 };
+/** The pale breath of a howl. */
+const BREATH: RGB = [214, 224, 236];
+
+/** Wisps of smoke from a snuffed flame. */
+const SMOKE: Material = {
+  ramp: [hex('#3b3946'), hex('#5d5b68'), hex('#8b8995'), hex('#b8b6c0')],
+  outline: hex('#24222c'),
+  noAO: true,
+  noOutline: true,
+};
+
+/** The stand: idle frame 0, which every rest starts and ends on. */
+const stand = (): Pose => idle('down')[0];
+
+/** The free hand raised to (x, y); the elbow hangs below and a little out from it, the way a raised forearm falls. */
+const raise = (x: number, y: number): Pose['free'] => ({ x, y, ex: 17.2 + Math.max(0, x - 17) * 0.45, ey: Math.min(21.4, y + 2.6) });
+
+/** A small burst of light: a bright heart and four short rays. */
+function twinkle(c: PixelCanvas, x: number, y: number, k: number): void {
+  c.spark(x, y, S.magic.core, k);
+  for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(x + ox, y + oy, S.magic.hot, k * 0.6);
+  if (k > 0.7) for (const [ox, oy] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) c.spark(x + ox, y + oy, S.magic.mid, k * 0.3);
+}
+
+// --- The Arcanist: the crystal drifts off the staff and circles him while he strokes his beard.
+
+function restArcane(look: WizardLook): Pose[] {
+  const bearded = !look.hooded && !look.head;
+  // Three beats of a stroke: down the point of the beard, or rubbing a bare chin.
+  const chin: [number, number][] = bearded ? [[14.2, 17.6], [13.8, 18.8], [13.2, 19.9]] : [[13.9, 16.6], [13.6, 17.2], [13.3, 17.7]];
+  // Round his head like a small moon: behind the hat on the far side, across the hat band on the near.
+  const orbit = [210, 270, 330, 30, 90, 150].map((a) => ({ x: ORBIT.x + Math.cos(a * RAD) * ORBIT.rx, y: ORBIT.y + Math.sin(a * RAD) * ORBIT.ry, behind: Math.sin(a * RAD) < 0 }));
+  // Where the crystal is, frame by frame: seated, lifting off and bobbing, the lazy circle, back over the staff, seated.
+  const path: ({ x: number; y: number; behind?: boolean } | undefined)[] = [
+    undefined, undefined,
+    { x: 4.6, y: 3.2 }, { x: 4.6, y: 2.6 }, { x: 4.8, y: 3.0 }, { x: 5.1, y: 4.0 }, { x: 5.3, y: 5.2 },
+    ...orbit,
+    { x: 4.9, y: 5.8 }, { x: 4.6, y: 3.4 },
+    undefined, undefined,
+  ];
+  const hands = [
+    undefined, raise(18.2, 21.0), raise(16.6, 19.4), raise(...chin[0]), raise(...chin[1]), raise(...chin[2]), raise(...chin[0]),
+    raise(...chin[1]), raise(...chin[2]), raise(...chin[0]), raise(...chin[1]), raise(...chin[2]), raise(...chin[0]),
+    raise(...chin[0]), raise(16.4, 19.2), raise(17.6, 20.8), undefined,
+  ];
+  const frames: Pose[] = [stand()];
+  for (let i = 1; i <= 16; i++) {
+    const p = stand();
+    const g = path[i];
+    p.free = hands[i];
+    p.gem = g;
+    p.glow = g ? 1 : i === 1 || i === 15 ? 0.95 : 0.8;
+    // Before it lifts off the crystal rises in its fork; after, it drops back in with a click of light.
+    if (i === 1) p.staff.float = 2.4;
+    if (i === 15) p.staff.float = 2.2;
+    if (i === 2) p.flash = 0.35;
+    if (i === 15) p.flash = 0.45;
+    // His eyes follow it; the stroking nods the head, the hat tip swinging a beat late.
+    if (g) p.gaze = [g.x < 9 ? -1 : g.x > 15 ? 1 : 0, g.y < 7 ? -1 : 0];
+    else if (i === 1) p.gaze = [-1, 0];
+    const beat = i >= 3 && i <= 13 ? (i - 3) % 3 : -1;
+    if (beat === 2) {
+      p.breath = 1;
+      p.staff.hy += 0.5;
+    }
+    p.hat = beat === 0 || i === 16 || i === 2 ? 1 : 0;
+    p.fx = (c) => {
+      if (!g || g.behind) return;
+      // A fading ribbon behind it where it has just been, and a mote of light dripping from it.
+      const a = path[i - 1];
+      const b = path[i - 2];
+      if (a) c.spark(a.x - 0.4, a.y - 0.4, S.magic.mid, 0.55);
+      if (a && b) c.spark((a.x + b.x) / 2 - 0.4, (a.y + b.y) / 2 - 0.4, S.magic.deep, 0.4);
+      c.spark(g.x - 0.4 + (i % 2 ? 1 : -1), g.y + 2.6 + (i % 3), S.magic.hot, 0.35);
+    };
+    frames.push(p);
+  }
+  frames.push(stand());
+  return frames;
+}
+
+// --- The Pyromancer: a snap, a flame on the palm, a toss and a catch, then a fist and a puff of smoke.
+
+const FIRES = new Map<WizardLook, Material>();
+
+/** Flame with a body: the look's magic as a lit, glowing material, so it holds its shape against the robe. */
+function fireMat(): Material {
+  let m = FIRES.get(S);
+  if (!m) {
+    const k = S.magic;
+    m = { ramp: [k.deep, k.mid, k.hot, k.core], outline: k.deep.map((v) => Math.round(v * 0.35)) as RGB, emissive: 0.85, noAO: true };
+    FIRES.set(S, m);
+  }
+  return m;
+}
+
+/** Flame pixels [dx, dy, heat] round (x, y); heat 0 at the edges up to 3 at the white heart. */
+function burn(c: PixelCanvas, x: number, y: number, px: [number, number, number][]): void {
+  const m = fireMat();
+  c.part();
+  for (const [dx, dy, h] of px) c.px(x + dx, y + dy, m, { x: dx * 0.3, y: 0.3, z: 0.9 }, { bias: h - 1, glow: 0.6 + h * 0.13 });
+}
+
+/** A flame standing on the palm, its foot at (x, y); `size` 1..3, its tip leaning `lean` pixels. */
+function flame(c: PixelCanvas, x: number, y: number, size: number, lean: number): void {
+  const m = S.magic;
+  if (size <= 1) {
+    burn(c, x, y, [[0, 0, 2], [0, -1, 1]]);
+    c.spark(x, y, m.core, 0.4);
+    return;
+  }
+  if (size === 2) {
+    burn(c, x, y, [[-1, 0, 1], [0, 0, 3], [1, 0, 1], [0, -1, 2], [lean, -2, 0]]);
+  } else {
+    burn(c, x, y, [
+      [-1, 0, 1], [0, 0, 3], [1, 0, 1],
+      [-1, -1, 0], [0, -1, 3], [1, -1, 1],
+      [lean, -2, 2], [lean + (lean >= 0 ? -1 : 1), -2, 0],
+      [lean, -3, 1],
+    ]);
+    c.spark(x + lean * 2, y - 4, m.hot, 0.6);
+  }
+  // Its light spilling on the palm and round it.
+  c.spark(x, y + 1, m.mid, 0.4);
+  c.spark(x - 2, y, m.deep, 0.35);
+  c.spark(x + 2, y, m.deep, 0.35);
+}
+
+/** The flame in the air, balled up: `dir` -1 rising (its tail below), 1 falling (tail above), 0 turning over at the top. */
+function fireball(c: PixelCanvas, x: number, y: number, dir: number): void {
+  const m = S.magic;
+  if (dir === 0) {
+    burn(c, x, y, [[0, 0, 3], [1, 0, 2], [0, 1, 2], [1, 1, 1], [-1, 0, 0], [2, 1, 0]]);
+    c.spark(x + 1, y - 1, m.hot, 0.5);
+    c.spark(x, y + 2, m.mid, 0.4);
+    return;
+  }
+  const t = dir < 0 ? 1 : -1;
+  burn(c, x, y, [[0, 0, 3], [1, 0, 2], [0, t, 2], [1, t, 1], [0, 2 * t, 0]]);
+  c.spark(x, y + 3 * t, m.mid, 0.5);
+  c.spark(x + 1, y + 4 * t, m.deep, 0.35);
+}
+
+function smoke(c: PixelCanvas, pts: [number, number, number][]): void {
+  c.part();
+  for (const [x, y, b] of pts) c.px(x, y, SMOKE, { x: -0.3, y: 0.4, z: 0.86 }, { bias: b });
+}
+
+function restPyro(): Pose[] {
+  const { x: px, y: py } = PALM;
+  const frames: Pose[] = [stand()];
+  const at = (i: number, f: Partial<Pose>, fx?: (c: PixelCanvas) => void) => {
+    const p = { ...stand(), ...f };
+    p.fx = fx;
+    frames[i] = p;
+  };
+  // 1-2: the hand comes up and snaps, a spark jumping from the fingers.
+  at(1, { free: raise(18.0, 20.8), gaze: [1, 0] });
+  at(2, { free: raise(17.3, 18.8), gaze: [1, 0], hat: 1 }, (c) => twinkle(c, 18.4, 17.2, 0.9));
+  // 3-6: a flame springs up on the palm and grows; the hand dips to throw.
+  at(3, { free: raise(px, py), gaze: [1, 0] }, (c) => flame(c, px, py - 1.4, 1, 0));
+  at(4, { free: raise(px, py), gaze: [1, 0] }, (c) => flame(c, px, py - 1.4, 2, 0));
+  at(5, { free: raise(px, py), gaze: [1, 0], glow: 0.9 }, (c) => flame(c, px, py - 1.4, 3, 1));
+  at(6, { free: raise(px, py + 0.8), gaze: [1, 0], breath: 1 }, (c) => flame(c, px, py - 0.6, 3, -1));
+  // 7-12: tossed up, watched to the top, caught with a dip, settled.
+  at(7, { free: raise(px - 0.2, py - 0.8), gaze: [1, -1], hat: 1 }, (c) => fireball(c, px + 0.4, 15.4, -1));
+  at(8, { free: raise(px, py - 0.2), gaze: [1, -1] }, (c) => fireball(c, px + 1.0, 12.4, -1));
+  at(9, { free: raise(px, py), gaze: [1, -1] }, (c) => fireball(c, px + 1.2, 11.2, 0));
+  at(10, { free: raise(px, py), gaze: [1, -1] }, (c) => fireball(c, px + 0.8, 13.6, 1));
+  at(11, { free: raise(px, py + 0.8), gaze: [1, 0], breath: 1 }, (c) => flame(c, px, py - 0.6, 3, 0));
+  at(12, { free: raise(px, py), gaze: [1, 0] }, (c) => flame(c, px, py - 1.4, 3, 1));
+  // 13-16: the fist closes on it (light leaking between the fingers), a puff of smoke rises and thins.
+  at(13, { free: raise(px - 0.2, py - 0.4), gaze: [1, 0], glow: 0.9 }, (c) => {
+    c.spark(px - 0.6, py - 1.8, S.magic.core, 0.7);
+    c.spark(px + 0.4, py - 2.4, S.magic.hot, 0.5);
+    c.spark(px - 1.6, py - 1.2, S.magic.mid, 0.4);
+  });
+  at(14, { free: raise(px, py + 0.2), gaze: [1, 0], hat: 1 }, (c) => {
+    smoke(c, [[px - 0.6, py - 2.6, -1], [px + 0.4, py - 2.6, -1], [px - 0.6, py - 3.6, 0], [px + 0.4, py - 3.6, 0], [px - 0.6, py - 4.6, -1]]);
+    c.spark(px + 1.4, py - 2.4, S.magic.hot, 0.45);
+  });
+  at(15, { free: raise(px + 0.3, py + 1.3) }, (c) => smoke(c, [[px - 0.8, py - 4.8, -1], [px + 0.2, py - 5.8, 0], [px - 0.8, py - 5.8, -1], [px + 1.2, py - 6.8, -1]]));
+  at(16, { hat: 1 }, (c) => smoke(c, [[px + 0.4, py - 8.6, -1], [px + 1.4, py - 9.6, -1]]));
+  frames.push(stand());
+  return frames;
+}
+
+// --- The Tidecaller: a bubble gathers on her palm; she bounces it like a ball until it wobbles and pops.
+
+/** A bubble of water: a ring of light, brighter where the light passes through, a faint fill and a window of highlight. */
+function bubble(c: PixelCanvas, x: number, y: number, rx: number, ry: number): void {
+  const m = S.magic;
+  if (rx < 1.3) {
+    c.spark(x, y, m.core, 0.8);
+    for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(x + ox, y + oy, m.mid, 0.4);
+    return;
+  }
+  // The skin of water is a ring of solid, glowing pixels (the look's magic, as
+  // the Pyromancer's flame), so it keeps its shape over the robe; inside, a faint haze.
+  const w = fireMat();
+  c.part();
+  for (let yy = Math.floor(y - ry) - 1; yy <= Math.ceil(y + ry); yy++) {
+    for (let xx = Math.floor(x - rx) - 1; xx <= Math.ceil(x + rx); xx++) {
+      const dx = (xx + 0.5 - x) / rx;
+      const dy = (yy + 0.5 - y) / ry;
+      const d = dx * dx + dy * dy;
+      if (d > 1.12) continue;
+      if (d > 0.42) c.px(xx, yy, w, { x: dx * 0.6, y: -dy * 0.6, z: 0.6 }, { bias: dx + dy > 0.5 ? 0 : -1, glow: 0.55 });
+      else c.spark(xx, yy, m.deep, 0.3);
+    }
+  }
+  c.px(x - rx * 0.45, y - ry * 0.5, w, FLAT, { bias: 3, glow: 1 });
+}
+
+function droplets(c: PixelCanvas, x: number, y: number, r: number, fall: number, a: number): void {
+  for (const deg of [-150, -30, 40, 140, -90]) {
+    const dx = Math.cos(deg * RAD) * r;
+    const dy = Math.sin(deg * RAD) * r * 0.8 + fall;
+    c.spark(x + dx, y + dy, S.magic.hot, a);
+    c.spark(x + dx, y + dy - 1, S.magic.deep, a * 0.4);
+  }
+}
+
+function restTide(): Pose[] {
+  const px = PALM.x;
+  const py = 19.8;
+  const frames: Pose[] = [stand()];
+  /** The bubble resting `up` pixels above the palm at `hy`. */
+  const b = (hy: number, up: number, rx: number, ry: number) => (c: PixelCanvas) => bubble(c, px, hy - 1.3 - ry - up, rx, ry);
+  const at = (i: number, f: Partial<Pose>, fx?: (c: PixelCanvas) => void) => {
+    const p = { ...stand(), ...f };
+    p.fx = fx;
+    frames[i] = p;
+  };
+  // 1-5: the hand turns up; water gathers from the air into a bubble that swells on the palm.
+  at(1, { free: raise(18.0, 20.8), gaze: [1, 0] });
+  at(2, { free: raise(px, py), gaze: [1, 0] }, (c) => {
+    for (const deg of [200, 320, 80]) c.spark(px + Math.cos(deg * RAD) * 3.4, py - 2.6 + Math.sin(deg * RAD) * 3, S.magic.hot, 0.6);
+    c.spark(px, py - 2, S.magic.mid, 0.5);
+  });
+  at(3, { free: raise(px, py), gaze: [1, 0] }, (c) => {
+    for (const deg of [200, 320, 80]) c.spark(px + Math.cos(deg * RAD) * 1.9, py - 2.4 + Math.sin(deg * RAD) * 1.7, S.magic.hot, 0.5);
+    bubble(c, px, py - 2.2, 1, 1);
+  });
+  at(4, { free: raise(px, py), gaze: [1, 0] }, b(py, 0, 1.6, 1.6));
+  at(5, { free: raise(px, py), gaze: [1, 0], glow: 0.9 }, b(py, 0, 2.2, 2.2));
+  // 6: the palm dips under it, squashing it.
+  at(6, { free: raise(px, py + 0.7), gaze: [1, 0], breath: 1 }, b(py + 0.7, 0, 2.7, 1.8));
+  // 7-12: flicked up (stretched), round at the top, falling, squashed on the catch, springing back.
+  at(7, { free: raise(px - 0.1, py - 0.8), gaze: [1, 0], hat: 1 }, b(py - 0.8, 2.6, 1.8, 2.5));
+  at(8, { free: raise(px, py - 0.2), gaze: [1, -1] }, b(py, 5.8, 2.2, 2.2));
+  at(9, { free: raise(px, py), gaze: [1, -1] }, b(py, 6.8, 2.4, 2.0));
+  at(10, { free: raise(px, py), gaze: [1, -1] }, b(py, 3.6, 1.9, 2.5));
+  at(11, { free: raise(px, py + 0.8), gaze: [1, 0], breath: 1 }, b(py + 0.8, 0, 2.8, 1.6));
+  at(12, { free: raise(px, py), gaze: [1, 0] }, b(py, 0.3, 2.0, 2.4));
+  // 13-16: it wobbles too far (she squints), pops in a ring of spray, and the droplets fall away.
+  at(13, { free: raise(px, py), blink: true, glow: 0.9 }, (c) => {
+    bubble(c, px, py - 3.8, 2.7, 2.2);
+    c.spark(px + 2.6, py - 5.2, S.magic.mid, 0.5);
+  });
+  at(14, { free: raise(px, py - 0.3), blink: true, hat: 1 }, (c) => {
+    twinkle(c, px, py - 3.8, 0.8);
+    droplets(c, px, py - 3.8, 2.6, 0, 0.75);
+  });
+  at(15, { free: raise(17.8, 20.9), gaze: [1, 0] }, (c) => droplets(c, px, py - 3.8, 4.0, 1.8, 0.5));
+  at(16, {}, (c) => {
+    c.spark(px + 3.6, py + 2.4, S.magic.hot, 0.35);
+    c.spark(px - 3.4, py + 3.6, S.magic.hot, 0.3);
+  });
+  frames.push(stand());
+  return frames;
+}
+
+// --- The Grovekeeper: a butterfly of light slips out of the antler's blossom, lands on a finger, and flies home.
+
+const WINGS = new Map<WizardLook, Material>();
+
+/** Wings in the look's magic: green and gold in the glade, russet in autumn. */
+function wingMat(): Material {
+  let m = WINGS.get(S);
+  if (!m) {
+    const k = S.magic;
+    m = { ramp: [k.deep, k.mid, k.hot, k.core], outline: k.deep.map((v) => Math.round(v * 0.4)) as RGB, emissive: 0.3, noAO: true };
+    WINGS.set(S, m);
+  }
+  return m;
+}
+
+/** A butterfly with its body at (x, y): wings 0 spread, 1 half raised, 2 closed up over its back. */
+function butterfly(c: PixelCanvas, x: number, y: number, wings: number): void {
+  const w = wingMat();
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  c.part();
+  const lit = (t: number, up: number): Vec3 => ({ x: t * 0.4 - 0.2, y: up, z: 0.85 });
+  if (wings === 0) {
+    for (const k of [-1, 1]) {
+      c.px(x0 + k, y0 - 1, w, lit(k, 0.4), { bias: 0 });
+      c.px(x0 + 2 * k, y0 - 1, w, lit(k, 0.4), { bias: -1 });
+      c.px(x0 + 2 * k, y0 - 2, w, lit(k, 0.6), { bias: 0 });
+      c.px(x0 + k, y0, w, lit(k, -0.1), { bias: -2 });
+    }
+    c.spark(x0 - 2, y0 - 2, S.magic.hot, 0.35);
+    c.spark(x0 + 2, y0 - 2, S.magic.hot, 0.35);
+  } else if (wings === 1) {
+    for (const k of [-1, 1]) {
+      c.px(x0 + k, y0 - 1, w, lit(k, 0.4), { bias: 0 });
+      c.px(x0 + k, y0 - 2, w, lit(k, 0.6), { bias: -1 });
+      c.px(x0 + k, y0, w, lit(k, 0), { bias: -1 });
+    }
+    c.spark(x0, y0 - 2, S.magic.hot, 0.3);
+  } else {
+    c.px(x0, y0 - 2, w, lit(0, 0.6), { bias: 0 });
+    c.px(x0, y0 - 1, w, lit(0, 0.4), { bias: -1 });
+    c.px(x0 + 1, y0 - 2, w, lit(1, 0.5), { bias: -1 });
+    c.spark(x0, y0 - 2, S.magic.hot, 0.35);
+  }
+  c.part();
+  c.px(x0, y0, S.inner, { x: 0, y: 0.2, z: 0.98 });
+  if (wings !== 2) c.px(x0, y0 - 1, S.inner, { x: 0, y: 0.4, z: 0.9 }, { bias: 0 });
+}
+
+function restGrove(): Pose[] {
+  const frames: Pose[] = [stand()];
+  const { x: hx, y: hy } = PERCH;
+  // The blossom on the right antler's tip (see groveHeadDown).
+  const bloom = { x: 19, y: 2 };
+  const at = (i: number, f: Partial<Pose>, fly?: [number, number, number], fx?: (c: PixelCanvas) => void) => {
+    const p = { ...stand(), ...f };
+    p.fx = (c) => {
+      fx?.(c);
+      if (fly) butterfly(c, fly[0], fly[1], fly[2]);
+    };
+    frames[i] = p;
+  };
+  const perch = (w: number): [number, number, number] => [hx, hy - 1.6, w];
+  // 1-6: the blossom brightens and she looks up; out it slips and flutters down in loops; she holds out a hand; it lands.
+  at(1, { gaze: [1, -1] }, undefined, (c) => twinkle(c, bloom.x, bloom.y, 0.8));
+  at(2, { gaze: [1, -1], free: raise(18.3, 21.2) }, [19.6, 4.2, 2], (c) => twinkle(c, bloom.x, bloom.y, 0.5));
+  at(3, { gaze: [1, -1], free: raise(18.8, 20.0) }, [21.2, 6.6, 0]);
+  at(4, { gaze: [1, 0], free: raise(19.2, 18.8) }, [20.0, 9.8, 2]);
+  at(5, { gaze: [1, 0], free: raise(hx, hy) }, [21.0, 12.8, 0]);
+  at(6, { gaze: [1, 0], free: raise(hx, hy + 0.5) }, [hx, hy - 1.1, 0]);
+  // 7-12: it rests on the finger, slowly opening and closing its wings; she watches, and blinks.
+  const wings = [0, 1, 2, 2, 1, 0];
+  for (let k = 0; k < 6; k++) {
+    const bob = k === 2 || k === 3 ? 0.3 : 0;
+    at(7 + k, { gaze: [1, 0], free: raise(hx, hy + bob), blink: k === 3, glow: 0.8 + k * 0.03 }, perch(wings[k]));
+  }
+  // 13-16: off it goes, looping back up to the blossom; her hand drops, her eyes follow it home.
+  at(13, { gaze: [1, 0], free: raise(hx - 0.1, hy - 0.5) }, [20.4, 13.6, 2]);
+  at(14, { gaze: [1, -1], free: raise(19.0, 18.9) }, [19.8, 10.0, 0]);
+  at(15, { gaze: [1, -1], free: raise(18.4, 20.4) }, [20.9, 6.4, 2]);
+  at(16, { gaze: [1, -1] }, [19.6, 4.2, 1], (c) => twinkle(c, bloom.x, bloom.y, 0.6));
+  frames.push(stand());
+  return frames;
+}
+
+// --- The Shapeshifter: she gathers a breath, tips her head back and howls, then shakes out her pelt.
+
+/** The howl: breath rising off the muzzle, and rings of sound spreading either side, by phase 0..2. */
+function howlFx(c: PixelCanvas, U: number, ph: number): void {
+  const m = S.magic;
+  // Just over the upturned nose, between the ears.
+  const top = 1.5 + U;
+  const puff: [number, number, number][][] = [
+    [[11.5, top, 0.9], [12.5, top, 0.6]],
+    [[11.5, top - 1, 0.8], [12.5, top - 1, 0.7], [11, top, 0.45]],
+    [[12, top - 2, 0.55], [13, top - 2, 0.45], [11, top - 1, 0.35]],
+  ];
+  for (const [x, y, a] of puff[ph]) c.spark(x, y, BREATH, a);
+  for (let r = 0; r < 2; r++) {
+    const rr = 6 + ((ph + r * 1.5) % 3) * 1.2;
+    const a = 0.9 - ((ph + r * 1.5) % 3) * 0.22;
+    for (const k of [-1, 1]) {
+      for (const deg of [-30, 0, 30]) {
+        c.spark(12 + k * Math.cos(deg * RAD) * rr, 8 + U + Math.sin(deg * RAD) * rr * 0.8, m.hot, a * (deg ? 0.7 : 1));
+      }
+    }
+  }
+}
+
+/** Tufts of fur (or snow off the white pelt) flung off by the shake, to side `k`. */
+function furFlung(c: PixelCanvas, k: number): void {
+  const pelt = S.hair ?? HAIR;
+  c.part();
+  for (const [x, y] of [[12 + k * 7.4, 12], [12 + k * 8.4, 16], [12 + k * 6.6, 8]] as const) c.px(x, y, pelt, { x: k * 0.5, y: 0.3, z: 0.8 }, { bias: 1 });
+  c.spark(12 + k * 9, 13, S.magic.hot, 0.35);
+}
+
+function restWild(): Pose[] {
+  const frames: Pose[] = [stand()];
+  const at = (i: number, f: Partial<Pose>, fx?: (c: PixelCanvas) => void) => {
+    const p = { ...stand(), ...f };
+    p.staff.hy += (p.breath > 0 ? 0.5 : 0);
+    p.fx = fx;
+    frames[i] = p;
+  };
+  // 1-3: she hunches to draw breath, then her chest lifts and her head tips back.
+  at(1, { breath: 1, blink: true, arm: 1 });
+  at(2, { howl: 1, hem: 1 });
+  at(3, { howl: 2, hat: 1 });
+  // 4-12: the howl, held: the breath steaming off the muzzle, the sound rolling out in rings, the pelt stirring.
+  at(4, { howl: 2 }, (c) => howlFx(c, 0, 0));
+  at(5, { howl: 2 }, (c) => howlFx(c, 0, 1));
+  at(6, { howl: 2 }, (c) => howlFx(c, 0, 2));
+  for (let k = 0; k < 6; k++) at(7 + k, { howl: 2, hem: [0, 1, 0, -1, 0, 1][k] }, (c) => howlFx(c, 0, k % 3));
+  // 13-16: head down, eyes screwed shut, a shake to one side and the other, flinging tufts; the pelt settles last.
+  at(13, { shake: -1, hem: -2, blink: true, arm: -1 }, (c) => furFlung(c, -1));
+  at(14, { shake: 1, hem: 2, blink: true, arm: 1 }, (c) => furFlung(c, 1));
+  at(15, { shake: -1, hem: -1 });
+  at(16, { hem: 1 });
+  frames.push(stand());
+  return frames;
+}
+
+/** The look's idle moment, facing the viewer only. */
+function rest(view: 'down' | 'up' | 'side', look: WizardLook): Pose[] {
+  if (view !== 'down') return [];
+  if (look.rest === 'arcane') return restArcane(look);
+  if (look.rest === 'pyro') return restPyro();
+  if (look.rest === 'tide') return restTide();
+  if (look.rest === 'grove') return restGrove();
+  return restWild();
+}
+
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type AnimName = 'idle' | 'walk' | 'cast' | 'aim' | 'charge' | 'beam';
+export type AnimName = 'idle' | 'walk' | 'cast' | 'aim' | 'charge' | 'beam' | 'rest';
 
 export interface AnimDef {
   name: AnimName;
   fps: number;
   loop: boolean;
-  poses: (view: 'down' | 'up' | 'side') => Pose[];
+  /** Frame indices to play in order, when some are held or repeated. */
+  order?: readonly number[];
+  poses: (view: 'down' | 'up' | 'side', look: WizardLook) => Pose[];
 }
 
 export const ANIMS: AnimDef[] = [
@@ -2500,6 +3031,7 @@ export const ANIMS: AnimDef[] = [
   { name: 'aim', fps: 14, loop: false, poses: aim },
   { name: 'charge', fps: 10, loop: true, poses: charge },
   { name: 'beam', fps: 16, loop: true, poses: fire },
+  { name: 'rest', fps: REST_FPS, loop: false, order: REST_ORDER, poses: rest },
 ];
 
 export interface WizardFrame {
@@ -2531,7 +3063,7 @@ export function buildWizardFrames(look: WizardLook = ARCANE_LOOK): WizardFrame[]
   for (const a of ANIMS) {
     for (const dir of DIRS) {
       const view = dir === 'left' || dir === 'right' ? 'side' : dir;
-      a.poses(view).forEach((pose, index) => {
+      a.poses(view, look).forEach((pose, index) => {
         const { canvas, meta } = drawWizardFrame(dir, pose, look);
         out.push({ key: `${a.name}_${dir}_${index}`, anim: a.name, dir, index, canvas, meta });
       });

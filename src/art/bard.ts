@@ -249,6 +249,21 @@ export interface Pose {
   sway: number;
   tick: number;
   blink?: boolean;
+  /** The idle moment's: the head shifted (x, y) in pixels, bobbing to the tune (front view only). */
+  head?: [number, number];
+  /** Little notes of light floating up off the music. */
+  notes?: Note[];
+  /** Rings of light spreading over the drum's head from a beat, by radius; `ringK` is their brightness. */
+  rings?: number[];
+  ringK?: number;
+}
+
+/** A floating note at (x, y) in body coordinates (its head's foot), faded by `k`; `two` beams a pair. */
+export interface Note {
+  x: number;
+  y: number;
+  k: number;
+  two?: boolean;
 }
 
 type View = 'down' | 'up' | 'side';
@@ -695,7 +710,7 @@ function wildDown(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): vo
   c.part();
   c.px(cx, 17 + U, LEAF, sphere(0, -0.5));
   c.px(cx - 1, 17 + U, LEAF, sphere(-0.4, -0.3));
-  hoodDown(c, cx, U, p);
+  hoodDown(c, cx + (p.head?.[0] ?? 0), U + (p.head?.[1] ?? 0), p);
 }
 
 /** The wildsong from behind: the cloak covering his back, the hood's tail trailing down it. */
@@ -1061,6 +1076,9 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const waist = 22 + U;
   const hem = (drum ? 26 : 24.5) + L;
   const howl = S.style === 'howl';
+  // The head may bob on its own (the idle moment); everything else stays put.
+  const hx = cx + (p.head?.[0] ?? 0);
+  const hU = U + (p.head?.[1] ?? 0);
   if (drum) {
     // A kilt of leather strips, then the bare chest under an open vest.
     c.part();
@@ -1107,25 +1125,25 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     }
     // The head: a broad face, war paint across the eyes, a braided beard.
     c.part();
-    c.ellipse(cx, 12.2 + U, 3.0, 2.9, SKIN);
+    c.ellipse(hx, 12.2 + hU, 3.0, 2.9, SKIN);
     c.part();
-    c.shape(Math.round(12 + U), Math.round(12 + U), () => [cx - 3, cx + 3], G.paint, () => sphere(0, 0, 1));
-    c.px(cx - 3, 11 + U, G.paint, sphere(0, 0, 1));
-    c.px(cx + 2, 11 + U, G.paint, sphere(0, 0, 1));
+    c.shape(Math.round(12 + hU), Math.round(12 + hU), () => [hx - 3, hx + 3], G.paint, () => sphere(0, 0, 1));
+    c.px(hx - 3, 11 + hU, G.paint, sphere(0, 0, 1));
+    c.px(hx + 2, 11 + hU, G.paint, sphere(0, 0, 1));
     if (howl) {
       // Woad running down his cheeks like claw marks.
-      c.px(cx - 3, 13 + U, G.paint, sphere(0, 0, 1));
-      c.px(cx + 2, 13 + U, G.paint, sphere(0, 0, 1));
+      c.px(hx - 3, 13 + hU, G.paint, sphere(0, 0, 1));
+      c.px(hx + 2, 13 + hU, G.paint, sphere(0, 0, 1));
     }
-    eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
-    beardDown(c, cx, U);
-    if (howl) wolfHoodDown(c, cx, U, p.tick);
-    else helmDown(c, cx, U);
+    eyes(c, [[hx - 2, 12 + hU], [hx + 1, 12 + hU]], p.blink);
+    beardDown(c, hx, hU);
+    if (howl) wolfHoodDown(c, hx, hU, p.tick);
+    else helmDown(c, hx, hU);
   } else if (S.style === 'harlequin') {
     harlequinBody(c, cx, U, L, p.tick, false);
     ruff(c, cx, 15.4 + U, 4.3, 1.5);
-    maskDown(c, cx, U, p.blink);
-    jesterCap(c, cx, U, p.tick, 'down');
+    maskDown(c, hx, hU, p.blink);
+    jesterCap(c, hx, hU, p.tick, 'down');
   } else if (S.wild) {
     wildDown(c, cx, U, L, p);
   } else {
@@ -1157,20 +1175,20 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     c.px(cx + 2, 16 + U, GOLD, sphere(-0.3, -0.4));
     // Head: chestnut hair to the shoulders, the face, the cap.
     c.part();
-    c.ellipse(cx, 11.6 + U, 3.9, 3.7, CHESTNUT, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+    c.ellipse(hx, 11.6 + hU, 3.9, 3.7, CHESTNUT, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
     c.part();
-    c.capsule(cx - 3.2, 12 + U, cx - 3.6, 15.4 + U, 1.3, 1.0, CHESTNUT);
-    c.capsule(cx + 3.0, 12 + U, cx + 3.4, 15.4 + U, 1.3, 1.0, CHESTNUT);
+    c.capsule(hx - 3.2, 12 + hU, hx - 3.6, 15.4 + hU, 1.3, 1.0, CHESTNUT);
+    c.capsule(hx + 3.0, 12 + hU, hx + 3.4, 15.4 + hU, 1.3, 1.0, CHESTNUT);
     c.part();
-    c.ellipse(cx - 0.2, 12.8 + U, 2.55, 2.4, SKIN);
+    c.ellipse(hx - 0.2, 12.8 + hU, 2.55, 2.4, SKIN);
     c.part();
-    c.shape(Math.round(10 + U), Math.round(10 + U), () => [cx - 2.8, cx + 1.2], CHESTNUT, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
-    c.px(cx - 3, 11 + U, CHESTNUT, sphere(-0.6, 0.2));
-    eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+    c.shape(Math.round(10 + hU), Math.round(10 + hU), () => [hx - 2.8, hx + 1.2], CHESTNUT, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+    c.px(hx - 3, 11 + hU, CHESTNUT, sphere(-0.6, 0.2));
+    eyes(c, [[hx - 2, 12 + hU], [hx + 1, 12 + hU]], p.blink);
     // A small, easy smile.
-    c.shade(cx - 1, 14 + U, -1);
-    c.shade(cx, 14 + U, -1);
-    capDown(c, cx, U, p.tick);
+    c.shade(hx - 1, 14 + hU, -1);
+    c.shade(hx, 14 + hU, -1);
+    capDown(c, hx, hU, p.tick);
   }
 
   if (!drum) drawLute(c, 'down', p, fa, fb);
@@ -1191,7 +1209,56 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     }
   }
   if (S.wild) wisps(c, U, p.tick);
+  if (p.rings) beatRings(c, cx, 21 + U, p.rings, p.ringK ?? 1);
+  for (const n of p.notes ?? []) tinyNote(c, n);
 }
+
+// ---------------------------------------------------------------------------
+// The idle moment's light
+
+/** A little note of light (a few pixels: a head, a stem and a flag, or two beamed), in the music's colours. */
+function tinyNote(c: PixelCanvas, n: Note): void {
+  const [core, hot, mid] = S.light;
+  const x = Math.round(n.x);
+  const y = Math.round(n.y);
+  const lit = (dx: number, dy: number, col: RGB, a = 1) => c.spark(x + dx, y + dy, col, a * n.k);
+  // A round head two pixels square, bright at its heart, and a stem up its right side.
+  const head = (hx: number) => {
+    lit(hx, -1, hot);
+    lit(hx + 1, -1, core);
+    lit(hx, 0, core);
+    lit(hx + 1, 0, hot);
+    for (let i = 2; i <= 4; i++) lit(hx + 1, -i, i === 4 ? core : hot);
+  };
+  head(0);
+  if (n.two) {
+    // A second note, and the beam across their tops.
+    head(4);
+    for (let i = 2; i <= 4; i++) lit(i, -4, hot);
+  } else {
+    // The flag, curling off the stem's top.
+    lit(2, -4, hot);
+    lit(3, -3, mid);
+  }
+}
+
+/** Rings of light spreading out flat from the drum's head, passing behind him where he stands in their way. */
+function beatRings(c: PixelCanvas, cx: number, cy: number, radii: number[], k: number): void {
+  const [, hot, mid, deep] = S.light;
+  radii.forEach((r, j) => {
+    const n = Math.round(r * 5);
+    const a = k * (1 - j * 0.35);
+    for (let i = 0; i < n; i++) {
+      const t = (i / n) * Math.PI * 2;
+      const x = cx + Math.cos(t) * r;
+      const y = cy + Math.sin(t) * r * 0.42;
+      if (Math.sin(t) < 0 && c.filled(Math.floor(x), Math.floor(y))) continue;
+      c.spark(x, y, r < 7 ? hot : r < 10 ? mid : deep, a * (r < 7 ? 0.8 : 0.6));
+    }
+  });
+}
+
+
 
 /** The fur mantle: a ruff of tufts along the shoulders. */
 function mantle(c: PixelCanvas, cx: number, U: number, span: number): void {
@@ -1787,10 +1854,152 @@ const roll = action([
   { a: DRUM_A, b: DRUM_A, stickA: 0.2, stickB: 0.2, glow: 0.3 },
 ]);
 
+/**
+ * The idle moment's tick: 0 on the stand frames, and otherwise climbing from
+ * 1 so the frame before the last lands on 5, one short of the idle's own
+ * 0 (the wisps, bells and plume run on into the idle without a jump).
+ */
+const restTick = (i: number, n: number): number => (i === 0 || i === n - 1 ? 0 : 1 + Math.round(((i - 1) * 16) / Math.max(1, n - 3)));
+
+/** The frame the idle moment starts and ends on: the idle's first, exactly. */
+const restStand = (): Pose => idle('down')[0];
+
+/** Strums in the minstrel's little tune, and the frames each one takes (down, then up). */
+const TUNE = 8;
+/** The minstrel's head bobbing through the tune, one step per strum: over to one side for a bar, then the other. */
+const BOB_X = [0, 1, 1, 0, 0, -1, -1, 0];
+/** Strums that send a note floating up, and which way it drifts. */
+const NOTE_ON: Record<number, number> = { 0: -1, 2: 1, 4: -1, 6: 1, 7: -1 };
+/** How long a note floats, in frames, and how fast it rises. */
+const NOTE_LIFE = 7;
+const NOTE_RISE = 1.6;
+
+/**
+ * The minstrel's idle moment: he draws a breath and strums a little tune,
+ * eight strokes over two bars, head bobbing side to side and a toe tapping
+ * on the off-beat; in the second bar his eyes fall shut. Notes of light
+ * float up off the strings. He ends with a flourish, the neck swung up and a
+ * little hop, then settles back.
+ */
+function minstrelRest(view: View): Pose[] {
+  if (view !== 'down') return [];
+  const frames: Pose[] = [restStand()];
+  const at = (f: Partial<Pose>): void => {
+    frames.push({ ...restStand(), ...f });
+  };
+  // Anticipation: a breath in, the hand lifted over the strings, the neck raised.
+  at({ breath: 1, a: H(1.8, 2.8, -2.0), b: H(2.5, 3.1, 2.8), glow: 0.1 });
+  const chord = [2.4, 2.4, 3.4, 3.4, 2.6, 2.6, 3.8, 3.2];
+  for (let k = 0; k < TUNE; k++) {
+    const accent = k === 0 || k === 4 || k === 7;
+    const b = H(2.5, 3.1 - (chord[k] - 2.4) * 0.15, chord[k]);
+    const closed = k >= 4;
+    // Down: the stroke lands, his head and shoulders dip with it.
+    at({ a: H(1.1, 3.3, -4.6), b, glow: accent ? 1 : 0.75, breath: 1, head: [BOB_X[k], 1], blink: closed });
+    // Up: the hand comes back over the strings, a toe taps.
+    at({ a: H(1.6, 3.0, -2.6), b, glow: 0.25, head: [BOB_X[k], 0], footA: 1, blink: closed });
+  }
+  // The flourish: the neck swung high, a hop, then the landing.
+  at({ a: H(1.1, 3.3, -4.4), b: H(2.4, 2.8, 6.2), glow: 1, lift: 1, head: [0, -1], blink: true });
+  at({ a: H(1.3, 3.2, -4.0), b: H(2.4, 2.9, 5.2), glow: 0.5, breath: 1, head: [0, 0] });
+  at({ a: H(1.5, 3.0, -3.5), b: H(2.5, 3.2, 3.0), glow: 0.15 });
+  frames.push(restStand());
+
+  const n = frames.length;
+  return frames.map((p, i) => {
+    p.tick = restTick(i, n);
+    // The notes: each born on its strum at the strings, rising and drifting, fading as it goes.
+    const notes: Note[] = [];
+    for (const [ks, side] of Object.entries(NOTE_ON)) {
+      const born = 2 + Number(ks) * 2;
+      const age = i - born;
+      if (age < 0 || age >= NOTE_LIFE || i >= n - 1) continue;
+      notes.push({
+        // Off to either side of him, clear of his silhouette, so they read.
+        x: (side < 0 ? 2 : 18) + side * age * 0.6 + Math.sin(age * 1.3) * 0.7,
+        y: 21 - age * NOTE_RISE,
+        k: age === 0 ? 0.75 : 1 - (age - 1) / NOTE_LIFE,
+        two: Number(ks) === 4,
+      });
+    }
+    // The flourish throws a beamed pair up off the lute.
+    const fl = n - 4;
+    if (i >= fl && i < n - 1) notes.push({ x: 18 + (i - fl) * 0.8, y: 12 - (i - fl) * 2.6, k: 1 - (i - fl) * 0.3, two: true });
+    if (notes.length) p.notes = notes;
+    return p;
+  });
+}
+
+/** The drummer's mallets held low and ready over the drum. */
+const LOW = H(1.6, 3.2, 3.6);
+
+/**
+ * The war drummer's idle moment: he rolls his shoulders, cocks the mallets
+ * and plays a drum roll that builds, stroke on stroke, the head glowing
+ * hotter; then both mallets go up high, a held breath, and come down
+ * together on one great beat, eyes squeezed shut, rings of light rolling out
+ * across the ground and two notes leaping off the drum. A satisfied beat,
+ * and the mallets drop back to his sides.
+ */
+function drummerRest(view: View): Pose[] {
+  if (view !== 'down') return [];
+  const frames: Pose[] = [restStand()];
+  const at = (f: Partial<Pose>): void => {
+    frames.push({ ...restStand(), ...f });
+  };
+  at({ breath: 1, a: H(1.8, 3.4, -0.8), b: H(1.8, 3.4, -0.8), stickA: 0.3, stickB: 0.3 });
+  at({ a: LOW, b: LOW, stickA: 0.85, stickB: 0.85 });
+  // The roll: alternating strokes, building.
+  for (let j = 0; j < 8; j++) {
+    const left = (j & 1) === 0;
+    const g = 0.35 + j * 0.07;
+    at({
+      a: left ? HIT : LOW,
+      b: left ? LOW : HIT,
+      stickA: left ? 0 : 0.85,
+      stickB: left ? 0.85 : 0,
+      glow: g,
+      head: [0, j >= 4 && left ? 1 : 0],
+      rings: j >= 3 ? [5.2] : undefined,
+      ringK: 0.25 + j * 0.04,
+    });
+  }
+  // Both up high, a held breath.
+  at({ a: HIGH, b: HIGH, stickA: 1, stickB: 1, lift: 1, glow: 0.2 });
+  at({ a: H(0.3, 3.8, 8.6), b: H(0.3, 3.8, 8.6), stickA: 1, stickB: 1, lift: 1, glow: 0.1, head: [0, -1] });
+  // BOOM.
+  at({ a: HIT, b: HIT, stickA: 0, stickB: 0, glow: 1, breath: 1, blink: true, head: [0, 1], rings: [5.6], ringK: 1 });
+  at({ a: H(1.9, 2.6, 2.4), b: H(1.9, 2.6, 2.4), stickA: 0.08, stickB: 0.08, glow: 0.6, breath: 1, rings: [8.6, 5.6], ringK: 0.8 });
+  // The mallets bounce off the head; he savours it.
+  at({ a: H(1.8, 3.2, 0.2), b: H(1.8, 3.2, 0.2), stickA: 0.35, stickB: 0.35, glow: 0.3, rings: [11.6, 8.6], ringK: 0.5 });
+  at({ a: H(1.2, 4.2, -2.4), b: H(1.2, 4.2, -2.2), stickA: 0.25, stickB: 0.25, glow: 0.1, rings: [11.6], ringK: 0.22 });
+  frames.push(restStand());
+
+  const n = frames.length;
+  const boom = n - 5;
+  return frames.map((p, i) => {
+    p.tick = restTick(i, n);
+    // Two notes leap off the drum's rim on the beat, one to each side.
+    const age = i - boom;
+    if (age >= 0 && i < n - 1) {
+      const k = 1 - age * 0.28;
+      p.notes = [
+        { x: 5 - age * 1.1, y: 20 - age * 3.4, k },
+        { x: 16 + age * 1.1, y: 19 - age * 3.4, k, two: age >= 1 },
+      ];
+    }
+    return p;
+  });
+}
+
+/** Slots of each idle moment in playing order, holds and repeats included. */
+const MINSTREL_REST_ORDER = [0, 1, 1, ...Array.from({ length: TUNE * 2 }, (_, i) => 2 + i), 18, 18, 19, 19, 20, 21];
+const DRUMMER_REST_ORDER = [0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 12, 13, 13, 14, 15, 15, 16, 16, 17];
+
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type BardAnim = 'idle' | 'walk' | 'strum' | 'song' | 'beat' | 'beat2' | 'boom' | 'roll';
+export type BardAnim = 'idle' | 'walk' | 'strum' | 'song' | 'beat' | 'beat2' | 'boom' | 'roll' | 'rest';
 
 export interface BardAnimDef {
   name: BardAnim;
@@ -1799,6 +2008,8 @@ export interface BardAnimDef {
   poses: (view: View) => Pose[];
   /** Only drawn for the drummer (true) or the minstrel (false); both when left out. */
   drum?: boolean;
+  /** Frame indices to play, in order, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 export const BARD_ANIMS: BardAnimDef[] = [
@@ -1810,6 +2021,8 @@ export const BARD_ANIMS: BardAnimDef[] = [
   { name: 'beat2', fps: 16, loop: false, poses: beat2, drum: true },
   { name: 'boom', fps: 13, loop: false, poses: boom, drum: true },
   { name: 'roll', fps: 14, loop: false, poses: roll, drum: true },
+  { name: 'rest', fps: 8, loop: false, poses: minstrelRest, drum: false, order: MINSTREL_REST_ORDER },
+  { name: 'rest', fps: 10, loop: false, poses: drummerRest, drum: true, order: DRUMMER_REST_ORDER },
 ];
 
 /** The anims a look has. */

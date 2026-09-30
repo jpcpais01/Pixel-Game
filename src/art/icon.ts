@@ -4,7 +4,7 @@
 
 import { hex, type RGB } from './pixel';
 import { MAGIC_CORE, MAGIC_DEEP, MAGIC_HOT, MAGIC_MID } from './palette';
-import { ANIMS, drawWizardFrame, FRAME_W } from './wizard';
+import { ANIMS, ARCANE_LOOK, drawWizardFrame, FRAME_W } from './wizard';
 
 export interface IconSpec {
   /** Output file name. */
@@ -68,7 +68,7 @@ export function renderIcon(spec: IconSpec): Uint8ClampedArray {
   if (!Number.isInteger(k)) throw new Error(`${spec.name}: ${spec.size} is not a multiple of ${n}`);
 
   // The idle pose, facing the viewer, crystal held high.
-  const idle = ANIMS.find((a) => a.name === 'idle')!.poses('down')[0];
+  const idle = ANIMS.find((a) => a.name === 'idle')!.poses('down', ARCANE_LOOK)[0];
   const wiz = drawWizardFrame('down', idle);
   const w = wiz.canvas.render();
 

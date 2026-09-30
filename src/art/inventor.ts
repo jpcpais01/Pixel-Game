@@ -135,6 +135,16 @@ export interface Pose {
   blink?: boolean;
   /** Einstein's famous tongue. */
   tongue?: boolean;
+  // The idle moment's extras (front view only).
+  /** Pixels the body sinks as he goes down on one knee (0 standing, KNEEL_DROP down). */
+  kneel?: number;
+  /** A little brass gizmo in the free hand, its lamp lit 0..1; left out when not held. */
+  gizmo?: number;
+  /** 0..1 sparks flying off the wrench's head. */
+  sparks?: number;
+  /** 0..1 the hair standing on end with static, and 0..1 the static crackling in it. */
+  poof?: number;
+  crackle?: number;
 }
 
 type View = 'down' | 'up' | 'side';
@@ -418,9 +428,11 @@ function hardHat(c: PixelCanvas, cx: number, U: number, glow: number, view: View
 
 /** The scientist from the front: messy dark hair, brass goggles on the brow, a small smile. */
 function scientistDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const k = p.poof ?? 0;
   c.part();
-  // Hair behind the face, framing it.
-  c.ellipse(cx, 10.6 + U, 3.9, 3.4, DARK_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.4, 1) });
+  // Hair behind the face, framing it; static makes it stand out in a ball.
+  c.ellipse(cx - 0.3 * k, 10.6 + U - 1.3 * k, 3.9 + 1.5 * k, 3.4 + 1.7 * k, DARK_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.4, 1) });
+  if (k > 0) staticSpikes(c, cx - 0.3, 10.2 + U - 1.3 * k, 4.6 + 1.5 * k, 3.9 + 1.7 * k, k, DARK_HAIR, p);
   c.part();
   c.ellipse(cx, 12.6 + U, 3.2, 2.9, SKIN);
   // A messy fringe, and tufts sticking up.
@@ -432,6 +444,26 @@ function scientistDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.px(cx - 1, 13 + U, SKIN, sphere(-0.2, -0.4), { bias: 1 });
   c.shade(cx - 1, 14 + U, -1);
   c.shade(cx, 14 + U, -1);
+}
+
+/**
+ * Hair standing on end: spikes all round the top of the head, a spark of
+ * static at a few of their tips while it crackles.
+ */
+function staticSpikes(c: PixelCanvas, x: number, y: number, rx: number, ry: number, k: number, m: Material, p: Pose): void {
+  c.part();
+  const N = 11;
+  for (let i = 0; i < N; i++) {
+    const a = Math.PI * (0.95 + (1.1 * i) / (N - 1));
+    const long = (i + p.tick) % 3 === 0 ? 1 : 0;
+    const r0x = rx - 0.8;
+    const r0y = ry - 0.8;
+    const r1 = 0.8 + (1.1 + long * 0.7) * k;
+    const tx = x + Math.cos(a) * (r0x + r1);
+    const ty = y + Math.sin(a) * (r0y + r1);
+    c.line(x + Math.cos(a) * r0x, y + Math.sin(a) * r0y, tx, ty, m, () => sphere(Math.cos(a) * 0.8, Math.sin(a) * 0.8 - 0.2), { bias: i % 2 });
+    if ((p.crackle ?? 0) > 0 && (i + p.tick) % 4 === 1) c.spark(tx, ty - 0.5, S.light[1], p.crackle!);
+  }
 }
 
 /** Brass goggles pushed up on the brow, their lenses catching the light. */
@@ -447,7 +479,8 @@ function goggles(c: PixelCanvas, cx: number, y: number): void {
 
 /** Einstein from the front: the white hair in a wild cloud, bushy brows, the great moustache (and the tongue). */
 function einsteinDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
-  wildHair(c, cx, U, p.tick, 'down');
+  wildHair(c, cx, U, p.tick, 'down', cx, p.poof ?? 0);
+  if ((p.poof ?? 0) > 0) staticSpikes(c, cx, 9.4 + U - 1.2 * (p.poof ?? 0), 5.6 + 1.2 * (p.poof ?? 0), 3.8 + 1.4 * (p.poof ?? 0), p.poof ?? 0, WILD_HAIR, p);
   c.part();
   c.ellipse(cx, 12.5 + U, 3.2, 3.0, SKIN);
   // Bushy brows.
@@ -471,16 +504,17 @@ function einsteinDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
 }
 
 /** Einstein's hair: great puffs over the ears and a thinner cloud on top, stray wisps springing out as he moves. */
-function wildHair(c: PixelCanvas, cx: number, U: number, tick: number, view: View, hx = cx): void {
+function wildHair(c: PixelCanvas, cx: number, U: number, tick: number, view: View, hx = cx, poof = 0): void {
+  const k = poof;
   c.part();
   const n = (_x: number, _y: number, dx: number, dy: number) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1);
   if (view === 'side') {
     c.ellipse(hx + 1.6, 11.2 + U, 3.2, 3.6, WILD_HAIR, { normal: n });
     c.ellipse(hx, 8.6 + U, 3.2, 2.1, WILD_HAIR, { normal: n });
   } else {
-    c.ellipse(cx - 3.8, 11 + U, 2.4, 2.8, WILD_HAIR, { normal: n });
-    c.ellipse(cx + 3.8, 11 + U, 2.4, 2.8, WILD_HAIR, { normal: n });
-    c.ellipse(cx, 8.6 + U, 3.8, 2.2, WILD_HAIR, { normal: n });
+    c.ellipse(cx - 3.8 - 1.1 * k, 11 + U - 0.6 * k, 2.4 + 0.8 * k, 2.8 + 0.8 * k, WILD_HAIR, { normal: n });
+    c.ellipse(cx + 3.8 + 1.1 * k, 11 + U - 0.6 * k, 2.4 + 0.8 * k, 2.8 + 0.8 * k, WILD_HAIR, { normal: n });
+    c.ellipse(cx, 8.6 + U - 1.3 * k, 3.8 + 1.4 * k, 2.2 + 1.4 * k, WILD_HAIR, { normal: n });
     if (view === 'up') c.ellipse(cx, 11.6 + U, 3.6, 3.2, WILD_HAIR, { normal: n });
   }
   // Tufts and wisps: which ones spring up changes frame to frame.
@@ -489,7 +523,7 @@ function wildHair(c: PixelCanvas, cx: number, U: number, tick: number, view: Vie
   const wisps: [number, number][] = [[-6, 9], [5, 8], [-3, 6], [2, 6], [-5, 13], [5, 12], [0, 5], [6, 10]];
   wisps.forEach(([dx, dy], i) => {
     if ((i + tick) % 3 === 0) return;
-    c.px(x0 + dx, dy + U, WILD_HAIR, sphere(dx / 6, -0.5), { bias: i % 2 });
+    c.px(x0 + dx * (1 + 0.3 * k), dy + U - k * (dy < 11 ? 2 : 0.8), WILD_HAIR, sphere(dx / 6, -0.5), { bias: i % 2 });
   });
   for (const s of [-1, 1]) c.shade(Math.round(x0 + s * 3), Math.round(11 + U), -1);
 }
@@ -675,8 +709,67 @@ function legsFront(c: PixelCanvas, L: number, fa: number, fb: number, back: bool
   boot(c, 14.2, 30.3 - r);
 }
 
+/** How far the engineer sinks when he kneels. */
+const KNEEL_DROP = 4;
+
+/**
+ * The engineer's legs as he kneels, `k` 0..1 of the way down: the left knee
+ * comes down to the ground (its boot tucked out of sight behind it), the
+ * right foot stays planted with its knee jutting up toward us.
+ */
+function legsKneel(c: PixelCanvas, L: number, k: number): void {
+  const m = trouser();
+  const hip = 24 + L;
+  if (k < 0.7) boot(c, 9.8, 30.3, false, -1);
+  c.part();
+  const kx = 9.9 - 0.5 * k;
+  const ky = 28.6 + 0.8 * k;
+  c.capsule(10.2, hip, kx, ky, 1.75, 1.6, m);
+  // The kneeling knee, a round patch on the ground.
+  c.part();
+  c.ellipse(kx, ky + 0.2, 1.8, 1.3 * k + 0.2, m, { bias: 1 });
+  // The standing leg: the thigh runs toward us, so the knee sits up by the hip, the shin drops to the boot.
+  c.part();
+  const nx = 14.2 + 0.7 * k;
+  const ny = Math.min(hip + 1.4, 28);
+  c.capsule(nx, ny, 14.3, 28.8, 1.7, 1.45, m);
+  c.part();
+  c.ellipse(nx, ny, 1.9, 1.5, m, { bias: 1 });
+  boot(c, 14.3, 30.3);
+}
+
+/** The little brass gizmo he tinkers with: a cog with a lamp at its hub, held up in the free hand. */
+function drawGizmo(c: PixelCanvas, p: Placed, lit: number): void {
+  const x = p.x;
+  const y = p.y - 2.2;
+  c.part();
+  c.ellipse(x, y, 2.0, 1.8, BRASS);
+  // Teeth round its rim.
+  c.part();
+  for (const [dx, dy] of [[-2.6, -0.4], [2.2, -0.4], [-0.4, -2.4], [-1.9, -2.0], [1.4, -2.0]]) c.px(x + dx, y + dy, BRASS, sphere(dx / 2.6, dy / 2.6), { bias: 1 });
+  c.part();
+  c.px(x - 0.5, y - 0.5, lit > 0.2 ? LAMP : STEEL, sphere(0, -0.2), { glow: lit });
+  if (lit > 0) glowAt(c, x - 0.5, y - 0.5, lit);
+  c.part();
+  c.ellipse(x, p.y + 0.3, 1.25, 1.1, handMat());
+}
+
+/** Sparks flying off the wrench's head, a different spray each frame. */
+function wrenchSparks(c: PixelCanvas, x: number, y: number, k: number, tick: number): void {
+  if (k <= 0) return;
+  const [core, hot, mid] = S.light;
+  const sprays: [number, number][][] = [
+    [[-1, -2], [1, -3], [-3, -2], [2, -1], [-4, -4], [0, -5]],
+    [[0, -3], [-2, -4], [2, -3], [-3, 0], [3, -5], [-5, -2]],
+    [[-1, -1], [-2, -3], [1, -4], [3, -2], [-4, -5], [2, -6]],
+  ];
+  glowAt(c, x, y, k);
+  sprays[tick % 3].forEach(([dx, dy], i) => c.spark(x + dx, y + dy, i < 2 ? core : i < 4 ? hot : mid, k * (i < 4 ? 1 : 0.8)));
+}
+
 function drawDown(c: PixelCanvas, p: Pose): void {
-  const L = -p.lift;
+  const kneel = p.kneel ?? 0;
+  const L = -p.lift + kneel;
   const U = L + p.breath;
   const cx = 12;
   const fa = place('down', 'a', p.a, U, cx);
@@ -697,7 +790,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   if (fb.behind) armB();
   if (toolBack) tool(-1);
 
-  legsFront(c, L, p.footA, p.footB, false);
+  if (kneel > 0.5) legsKneel(c, L, Math.min(1, kneel / KNEEL_DROP));
+  else legsFront(c, L, p.footA, p.footB, false);
   if (eng()) engineerBody(c, cx, U, L, false);
   else if (ein()) cardigan(c, cx, U, L, p.sway, false);
   else labCoat(c, cx, U, L, p.sway, false);
@@ -710,6 +804,11 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   if (!toolBack) tool();
   if (!fa.behind) armA();
   if (p.crate) drawCrate(c, fa);
+  if (p.gizmo !== undefined) drawGizmo(c, fa, p.gizmo);
+  if (p.sparks && eng()) {
+    const len = 9.5 * td.k - 1.2;
+    wrenchSparks(c, fb.x + td.x * len, fb.y + td.y * len, p.sparks, p.tick);
+  }
   drawOrb(c, fa, p.orb, p.tick);
 }
 
@@ -1106,9 +1205,88 @@ const eureka = action([
 ]);
 
 // ---------------------------------------------------------------------------
+// The idle moment (`rest`), played facing us when he has stood still a while.
+// It starts and ends on idle's first frame so it slips in and out unseen.
+
+/** Idle's first frame, with changes. */
+const still = (o: Partial<Pose> = {}): Pose => ({ ...idle('down')[0], ...o });
+
+/** The engineer's gizmo held up in front of him, and the wrench laid across to it. */
+const GIZMO_A = H(2, 3, -1.6);
+const TINKER_B = H(2, 5, -1.4);
+
+/**
+ * The engineer: a fiddly job. He fishes a brass gizmo out of his pouch, sinks
+ * onto one knee, works at it with the wrench till the sparks fly, gives it a
+ * last tap that lights its lamp, admires it with a contented squint, and
+ * tucks it away as he gets up and shoulders the wrench again.
+ */
+function tinker(view: View): Pose[] {
+  if (view !== 'down') return [];
+  return [
+    still(),
+    // Anticipation: a dip, the hand to the pouch, the wrench lifting off the shoulder.
+    still({ breath: 1, sway: 0, a: H(0.2, 4.4, -4.6), b: H(0.8, 3.5, 1.8), t: H(-0.55, -0.2, 1), tick: 1 }),
+    // Going down, the gizmo out, the wrench swinging round to the front.
+    still({ kneel: 2, sway: 0, a: H(1.4, 3.8, -2.8), gizmo: 0, b: H(1.6, 5, 0.6), t: H(0.2, 0.5, 1), tick: 2 }),
+    still({ kneel: KNEEL_DROP, sway: 0, a: GIZMO_A, gizmo: 0, b: TINKER_B, t: H(0, -1, 0.3), tick: 3 }),
+    // Working the nut: the wrench rocks and the sparks spray.
+    still({ kneel: KNEEL_DROP, sway: 0, a: GIZMO_A, gizmo: 0, b: H(2, 5, -1.1), t: H(0, -1, 0.45), sparks: 0.7, tick: 4 }),
+    still({ kneel: KNEEL_DROP, sway: 0, breath: 1, a: GIZMO_A, gizmo: 0.15, b: H(2, 5, -1.6), t: H(0, -1, 0.12), sparks: 1, tick: 5 }),
+    // The last tap: wound up, then down, and the lamp comes on.
+    still({ kneel: KNEEL_DROP, sway: 0, a: GIZMO_A, gizmo: 0, b: H(1.8, 5.2, -0.6), t: H(0, -0.6, 0.85), tick: 6 }),
+    still({ kneel: KNEEL_DROP, sway: 0, breath: 1, a: GIZMO_A, gizmo: 1, b: TINKER_B, t: H(0, -1, 0.3), sparks: 0.5, tick: 7 }),
+    // Admiring it, held up, the wrench let down to rest on the ground.
+    still({ kneel: KNEEL_DROP, sway: 0, a: H(2.4, 3.2, -0.4), gizmo: 0.8, b: H(1.6, 5, -2.2), t: H(1, 0.3, -0.5), blink: true, tick: 8 }),
+    still({ kneel: KNEEL_DROP, sway: 0, a: H(2.4, 3.2, -0.2), gizmo: 0.55, b: H(1.6, 5, -2.2), t: H(1, 0.3, -0.5), blink: true, tick: 9 }),
+    // Tucked away, and up he gets.
+    still({ kneel: 3, sway: 0, a: H(0.2, 4.4, -4.4), b: H(1.4, 4.8, 0.6), t: H(0.2, 0.5, 1), tick: 10 }),
+    still({ kneel: 1, sway: -0.2, a: H(0.6, 4.3, -3.8), b: H(0.8, 3.6, 1.6), t: H(-0.4, -0.3, 1), tick: 11 }),
+    // The wrench lands on his shoulder with a little bounce.
+    still({ breath: 1, b: H(0.6, 3.4, 1.2), t: H(-0.75, -0.3, 1), tick: 12 }),
+  ];
+}
+const TINKER_ORDER = [0, 1, 2, 3, 3, 4, 5, 4, 5, 4, 5, 3, 6, 7, 7, 8, 9, 8, 9, 9, 10, 11, 12, 0];
+
+/** The scientist's gadget raised to peer at, and the free hand fiddling with its coils. */
+const PEER_B = H(2.4, 2.8, 0.8);
+const PEER_T = H(0.2, -0.6, 0.8);
+
+/**
+ * The scientist: he lifts the gadget to peer at it, fiddles with its coils,
+ * and it zaps him: a jolt, his hair stands on end crackling with static
+ * (Einstein's, already wild, goes wilder), a dazed blink, and he pats it
+ * down again, bit by bit.
+ */
+function frazzle(view: View): Pose[] {
+  if (view !== 'down') return [];
+  return [
+    still(),
+    still({ sway: 0, b: PEER_B, t: PEER_T, glow: 0.3, tick: 1 }),
+    still({ sway: 0, b: PEER_B, t: PEER_T, a: H(2.6, 1.2, 0.4), glow: 0.5, tick: 2 }),
+    still({ sway: 0, b: H(2.4, 2.8, 1), t: PEER_T, a: H(2.6, 1.4, 1.2), glow: 0.65, tick: 3 }),
+    // Zap! A jolt up, arms flung, the hair shooting out.
+    still({ lift: 1, sway: 0.4, b: H(1.6, 4.2, 1.8), t: H(0.4, 0.4, 0.6), a: H(1, 5.4, 1.4), glow: 1, poof: 1, crackle: 1, tick: 4 }),
+    still({ lift: 1, sway: -0.3, b: H(1.6, 4.2, 1.6), t: H(0.4, 0.4, 0.6), a: H(1, 5.4, 1.2), glow: 0.8, poof: 1, crackle: 0.8, tick: 5 }),
+    // Dazed, still smoking with it.
+    still({ sway: 0, glow: 0.3, poof: 1, crackle: 0.35, blink: true, tick: 6 }),
+    // The hand up to his head...
+    still({ sway: 0, a: H(1.6, 2.4, 6.6), poof: 0.95, crackle: 0.2, tick: 7 }),
+    // ...and pat, pat: the hair sinks a little with each.
+    still({ sway: 0, a: H(1.2, 1.2, 9.4), poof: 0.9, tick: 8 }),
+    still({ sway: 0, breath: 1, a: H(1.2, 1.2, 8.4), poof: 0.6, tick: 9 }),
+    still({ sway: 0, a: H(1.2, 0.8, 9), poof: 0.55, tick: 10 }),
+    still({ sway: 0, breath: 1, a: H(1.2, 0.8, 8), poof: 0.25, tick: 11 }),
+    // A sheepish breath out, and back to it.
+    still({ breath: 1, a: H(1, 4, -1.8), blink: true, tick: 12 }),
+  ];
+}
+const FRAZZLE_ORDER = [0, 1, 1, 2, 3, 2, 3, 3, 4, 5, 4, 5, 6, 6, 6, 7, 8, 9, 10, 11, 11, 12, 12, 0];
+
+// ---------------------------------------------------------------------------
 // Frame generation
 
-export type InventorAnim = 'idle' | 'walk' | 'swing' | 'swing2' | 'bonk' | 'build' | 'zap' | 'toss' | 'eureka';
+export type InventorAnim = 'idle' | 'walk' | 'swing' | 'swing2' | 'bonk' | 'build' | 'zap' | 'toss' | 'eureka' | 'rest';
 
 export interface InventorAnimDef {
   name: InventorAnim;
@@ -1117,6 +1295,8 @@ export interface InventorAnimDef {
   poses: (view: View) => Pose[];
   /** Only drawn for this type; for both when left out. */
   kind?: InventorKind;
+  /** Frames played in this order, some held or repeated. */
+  order?: readonly number[];
 }
 
 export const INVENTOR_ANIMS: InventorAnimDef[] = [
@@ -1129,6 +1309,8 @@ export const INVENTOR_ANIMS: InventorAnimDef[] = [
   { name: 'zap', fps: 14, loop: false, poses: zap, kind: 'scientist' },
   { name: 'toss', fps: 13, loop: false, poses: toss, kind: 'scientist' },
   { name: 'eureka', fps: 10, loop: false, poses: eureka },
+  { name: 'rest', fps: 8, loop: false, poses: tinker, kind: 'engineer', order: TINKER_ORDER },
+  { name: 'rest', fps: 8, loop: false, poses: frazzle, kind: 'scientist', order: FRAZZLE_ORDER },
 ];
 
 /** The anims a look has. */

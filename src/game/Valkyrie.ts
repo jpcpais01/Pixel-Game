@@ -11,6 +11,7 @@ import { bloom, bolt, clamp01, easeOut, flare, Fx, GROUND, pal, ring, segDist, s
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
+import { stand } from './rest';
 
 // The Valkyrie: the warrior's rig in looks of its own (art/warrior.ts, the
 // `valkyrie` flag), with swan wings, a winged helm and a spear. The attack is
@@ -238,7 +239,7 @@ export class Valkyrie implements Hero {
     if (this.state === 'free') {
       if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
       else if (moving) this.dir = dirOf(mx, my);
-      const key = `${this.kit.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = moving ? `${this.kit.key}_walk_${this.dir}` : stand(this.body, `${this.kit.key}_idle_${this.dir}`);
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else if (this.state === 'swing' || this.state === 'throw') {
       const f = this.body.anims.currentFrame;

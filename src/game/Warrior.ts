@@ -10,6 +10,7 @@ import { GOLD_FX, HitSpark, JADE_FX, JADE_STEEL_FX, STEEL_FX, Shockwave, SlashAr
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
+import { stand } from './rest';
 
 export const MAX_HP = HERO_STATS['warrior.knight'].hp;
 const SPEED = HERO_STATS['warrior.knight'].speed; // world px / second
@@ -176,7 +177,7 @@ export class Warrior implements Hero {
       // Fighting faces the aim, even walking backwards; otherwise the way of the walk.
       if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
       else if (moving) this.dir = dirOf(mx, my);
-      const key = `${this.skin.key}_${moving ? 'walk' : 'idle'}_${this.dir}`;
+      const key = moving ? `${this.skin.key}_walk_${this.dir}` : stand(this.body, `${this.skin.key}_idle_${this.dir}`);
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else if (this.state === 'swing') {
       const f = this.body.anims.currentFrame;

@@ -11,6 +11,7 @@ import { bloom, flare, Fx, pal, ring, type Ink, type Pal } from './ultimate/ink'
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
+import { stand } from './rest';
 
 // The Siege Mech (the Automaton's first type): a walker that stomps about
 // with a cannon on each arm.
@@ -220,7 +221,7 @@ export class Mech implements Hero {
     if (this.firingT > 0) return;
     if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
     else if (moving) this.dir = dirOf(this.lastMove.x, this.lastMove.y);
-    this.play(`${key}_${moving ? 'walk' : 'idle'}_${this.dir}`);
+    this.play(moving ? `${key}_walk_${this.dir}` : stand(this.body, `${key}_idle_${this.dir}`));
   }
 
   private play(key: string): void {

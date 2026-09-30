@@ -80,9 +80,17 @@ export interface PolterPose {
   squint: boolean;
   /** Shaking (the rattle): the whole figure jitters this many px. */
   shake: number;
+  /** The idle moment's peekaboo: the mouth thrown wide open (BOO!). */
+  boo: boolean;
+  /** The Tea Party's parasol: 0..1 lowered from her shoulder to hide her face, slid aside (px) to peek, and flung up high for the boo. */
+  brolly: number;
+  brollyX: number;
+  raise: boolean;
+  /** The Tea Party's hand held to her mouth as she giggles. */
+  hush: boolean;
 }
 
-const base = (): PolterPose => ({ bob: 0, wave: 0, sway: 0, handA: { x: 0, y: 0 }, handB: { x: 0, y: 0 }, lean: 0, glare: 0, squint: false, shake: 0 });
+const base = (): PolterPose => ({ bob: 0, wave: 0, sway: 0, handA: { x: 0, y: 0 }, handB: { x: 0, y: 0 }, lean: 0, glare: 0, squint: false, shake: 0, boo: false, brolly: 0, brollyX: 0, raise: false, hush: false });
 
 // ---------------------------------------------------------------------------
 // The sheet-ghost (body-box coordinates: 24 wide, the ground at y 31; it floats)
@@ -127,6 +135,15 @@ function face(c: PixelCanvas, cx: number, cy: number, p: PolterPose, side: boole
     c.px(Math.round(ex - 0.5), Math.round(cy - 0.8), TOOTH, { x: -0.3, y: 0.5, z: 0.8 });
     if (p.glare > 0) c.spark(ex, cy + 0.5, [160, 255, 220], p.glare * 0.8);
   }
+  if (p.boo && !side) {
+    // BOO: the mouth thrown wide open, a tooth hanging in it.
+    c.ellipse(cx - 0.25, cy + 3.6, 1.9, 1.7, VOID);
+    c.px(Math.round(cx - 1), Math.round(cy + 2.4), TOOTH);
+    c.px(Math.round(cx + 0.5), Math.round(cy + 2.4), TOOTH);
+    c.px(Math.round(cx - 3.8), Math.round(cy + 2), BLUSH);
+    c.px(Math.round(cx + 3.4), Math.round(cy + 2), BLUSH);
+    return;
+  }
   // The grin, a tooth poking down.
   const my = Math.round(cy + 3);
   const mx0 = side ? cx - 4 : cx - 2;
@@ -169,6 +186,17 @@ function drawSheetGhost(c: PixelCanvas, p: PolterPose, view: View): void {
   else {
     sheetArm(c, cx - 5.2, top + 8.5, { x: cx - 7.2 + p.handA.x, y: top + 11.5 + p.handA.y });
     sheetArm(c, cx + 5.2, top + 8.5, { x: cx + 7.2 + p.handB.x, y: top + 11.5 + p.handB.y });
+    // Hands brought up over its face (the idle moment's peekaboo): a mitten
+    // each, lit on top, with a shadow cast on the face under it so it reads
+    // as a hand and not as more sheet.
+    for (const [s, h] of [[-1, p.handA], [1, p.handB]] as const) {
+      if (h.y > -4.5 || Math.abs(h.x) < 3) continue;
+      const hx = cx + s * 7.2 + h.x;
+      const hy = top + 11.5 + h.y;
+      for (let x = Math.round(hx - 1.5); x <= hx + 1; x++) c.shade(x, Math.round(hy + 2), -1);
+      c.part();
+      c.ellipse(hx, hy, 1.6, 1.5, SHEET, { bias: 1 });
+    }
   }
 }
 
@@ -205,7 +233,19 @@ function drawTeaGirl(c: PixelCanvas, p: PolterPose, view: View): void {
   // The parasol over her shoulder, held in the back hand.
   const phx = side ? cx + 2.5 + p.handB.x : cx + 5.5 + p.handB.x;
   const phy = waist - 1 + p.handB.y;
-  if (view !== 'up') parasol(c, phx, phy, side ? cx + 5 : cx + 6.5, headY - 4.5, view);
+  // Its tip: over her shoulder; in the idle moment flung up high, or lowered in front of her face to hide behind.
+  let tx = side ? cx + 5 : cx + 6.5;
+  let ty = headY - 4.5;
+  if (p.raise) {
+    tx = cx + 8;
+    ty = headY - 7;
+  }
+  if (p.brolly > 0) {
+    tx += (cx + 0.5 + p.brollyX - tx) * p.brolly;
+    ty += (headY + 2 - ty) * p.brolly;
+  }
+  const hiding = p.brolly >= 0.5;
+  if (view !== 'up' && !hiding) parasol(c, phx, phy, tx, ty, view);
 
   // Ringlets behind the face.
   c.part();
@@ -291,6 +331,20 @@ function drawTeaGirl(c: PixelCanvas, p: PolterPose, view: View): void {
     const bx = side ? cx - 0.8 : cx - 0.5;
     for (const s of side ? [1] : [-1, 1]) c.ellipse(bx + s * 1.3, headY + 4.2, 1, 0.7, RIBBON);
     c.px(Math.round(bx), Math.round(headY + 4), RIBBON);
+    if (p.boo && !side) {
+      // BOO: a little round o of a mouth.
+      c.part();
+      c.px(Math.round(cx - 1), Math.round(headY + 2.4), VOID);
+      c.px(Math.round(cx), Math.round(headY + 2.4), VOID);
+      c.px(Math.round(cx - 1), Math.round(headY + 3.2), VOID, { x: 0, y: 0, z: 1 }, { bias: 1 });
+      c.px(Math.round(cx), Math.round(headY + 3.2), VOID, { x: 0, y: 0, z: 1 }, { bias: 1 });
+    }
+    // A hand raised to her mouth (the giggle), over her face.
+    if (p.hush && !side) {
+      c.part();
+      c.ellipse(cx - 4.8 + p.handA.x, waist - 0.5 + p.handA.y, 1.1, 1, PORCELAIN);
+    }
+    if (hiding) parasol(c, phx, phy, tx, ty, view);
   } else {
     c.part();
     c.ellipse(cx - 0.5, headY + 3.6, 1.2, 0.8, RIBBON);
@@ -303,13 +357,15 @@ function drawTeaGirl(c: PixelCanvas, p: PolterPose, view: View): void {
 // ---------------------------------------------------------------------------
 // Animations
 
-export type PolterAnim = 'idle' | 'move' | 'throw' | 'rattle' | 'cast';
+export type PolterAnim = 'idle' | 'move' | 'throw' | 'rattle' | 'cast' | 'rest';
 
 interface AnimDef {
   name: PolterAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => PolterPose[];
+  /** Frame indices to play in order, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 const idle = (): PolterPose[] =>
@@ -377,12 +433,56 @@ const cast = (view: View): PolterPose[] =>
     return p;
   });
 
+/**
+ * The idle moment, facing the viewer only: peekaboo. It hides its eyes
+ * behind its hands (the Tea Party behind her lowered parasol), sinks a
+ * little, peeks out with one eye, ducks back, crouches... and pops up with
+ * its arms flung wide and a big BOO, then giggles itself silly and settles.
+ */
+const rest = (view: View): PolterPose[] => {
+  if (view !== 'down') return [];
+  const at = (o: Partial<PolterPose>): PolterPose => ({ ...base(), ...o });
+  if (L.tea) {
+    const hold = { x: -2.5, y: 0 };
+    return [
+      at({}),
+      at({ brolly: 0.4, handB: { x: -1.5, y: -1 }, wave: 1, sway: 1 }),
+      at({ brolly: 1, handB: hold, bob: -1, wave: 2 }),
+      at({ brolly: 1, handB: hold, bob: -1, wave: 3, sway: -1 }),
+      at({ brolly: 1, brollyX: 4, handB: { x: -1, y: 0 }, bob: -1, wave: 4 }),
+      at({ brolly: 1, handB: hold, bob: -2, wave: 5, sway: 1 }),
+      at({ raise: true, handB: { x: 1, y: -5 }, handA: { x: -2, y: -4 }, boo: true, glare: 1, bob: 3, wave: 6 }),
+      at({ raise: true, handB: { x: 1, y: -4 }, handA: { x: -1.5, y: -3 }, boo: true, glare: 0.6, bob: 2, wave: 7 }),
+      at({ squint: true, hush: true, handA: { x: 3.4, y: -6.5 }, bob: 1, shake: 1, wave: 8 }),
+      at({ squint: true, hush: true, handA: { x: 3.4, y: -6.5 }, bob: 1, shake: -1, wave: 9, sway: 1 }),
+      at({ bob: 1, wave: 2, handA: { x: 0, y: -1 } }),
+    ];
+  }
+  // Its sheet hands: over the eyes, halfway there, and one dropped to peek.
+  const eyeA = { x: 5.2, y: -5.5 };
+  const eyeB = { x: -5.2, y: -5.5 };
+  return [
+    at({}),
+    at({ handA: { x: 2.6, y: -3 }, handB: { x: -2.6, y: -3 }, wave: 1, sway: 1 }),
+    at({ handA: eyeA, handB: eyeB, bob: -1, wave: 2 }),
+    at({ handA: eyeA, handB: eyeB, bob: -1, wave: 3, sway: -1 }),
+    at({ handA: { x: 4, y: -2 }, handB: eyeB, bob: -1, wave: 4 }),
+    at({ handA: eyeA, handB: eyeB, bob: -2, wave: 5, sway: 1 }),
+    at({ handA: { x: -2, y: -7 }, handB: { x: 2, y: -7 }, boo: true, glare: 1, bob: 3, wave: 6 }),
+    at({ handA: { x: -1.5, y: -5.5 }, handB: { x: 1.5, y: -5.5 }, boo: true, glare: 0.6, bob: 2, wave: 7 }),
+    at({ squint: true, handA: { x: 2.5, y: -1 }, handB: { x: -2.5, y: -1 }, bob: 1, shake: 1, wave: 8 }),
+    at({ squint: true, handA: { x: 2.5, y: -1.5 }, handB: { x: -2.5, y: -1.5 }, bob: 1, shake: -1, wave: 9, sway: 1 }),
+    at({ bob: 1, wave: 2, handA: { x: 0, y: -1 }, handB: { x: 0, y: -1 } }),
+  ];
+};
+
 export const POLTER_ANIMS: AnimDef[] = [
   { name: 'idle', fps: 5, loop: true, poses: idle },
   { name: 'move', fps: 8, loop: true, poses: move },
   { name: 'throw', fps: 16, loop: false, poses: toss },
   { name: 'rattle', fps: 16, loop: false, poses: rattle },
   { name: 'cast', fps: 10, loop: false, poses: cast },
+  { name: 'rest', fps: 8, loop: false, poses: rest, order: [0, 1, 2, 3, 2, 3, 2, 4, 4, 4, 3, 2, 3, 5, 5, 6, 6, 7, 7, 7, 8, 9, 8, 9, 8, 9, 10, 0] },
 ];
 
 export interface PolterFrame {

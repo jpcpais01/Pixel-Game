@@ -102,6 +102,30 @@ export interface Pose {
   /** Frame counter, for flickering soul fire. */
   tick: number;
   blink?: boolean;
+  /** The idle moment's: the head shifted (x, y) in pixels, leaning in or nodding (front view only). */
+  head?: [number, number];
+  /** The bonecaller's little skull, sat on the casting palm. */
+  skull?: Skull;
+  /** The blood mage's orb, floating off the casting palm. */
+  orb?: Orb;
+}
+
+/** A skull conjured onto the palm: `form` 0..1 as it gathers out of soul fire (or comes apart), its jaw dropped, its sockets lit. */
+export interface Skull {
+  form: number;
+  jaw: number;
+  glow: number;
+  /** Raised off the palm, in pixels (a little hop as it talks back). */
+  rise?: number;
+}
+
+/** A blood orb at (dx, dy) from the palm, radius `r`, a trail of light behind it through `trail` (nearest first). */
+export interface Orb {
+  dx: number;
+  dy: number;
+  r: number;
+  glow: number;
+  trail?: [number, number][];
 }
 
 /** One look for the caster: its texture key, cloth, face and staff. */
@@ -898,26 +922,29 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   c.part();
   c.px(cx, waist, clasp(), sphere(0, -0.3));
 
+  // The head may lean or nod on its own (the idle moment); everything else stays put.
+  const hcx = cx + (p.head?.[0] ?? 0);
+  const hU = U + (p.head?.[1] ?? 0);
   if (S.style === 'wyrm') {
     // Black scales over the shoulders, a molten stone at the throat.
     cowl(c, cx, U, 5.4, 5.4);
     c.part();
     c.ellipse(cx, 16.3 + U, 1.15, 1.05, WYRM_GEM);
-    headWyrmDown(c, cx, U, p);
+    headWyrmDown(c, hcx, hU, p);
   } else if (S.style === 'tomb') {
     cowl(c, cx, U, 5.3, 5.3);
     usekh(c, cx, 14.6 + U);
-    headTombDown(c, cx, U, p);
+    headTombDown(c, hcx, hU, p);
   } else if (S.blood) {
     // Crimson over the shoulders, the gem clasp at the throat.
     cowl(c, cx, U, 5.4, 5.4);
     c.part();
     c.ellipse(cx, 16.3 + U, 1.15, 1.05, BLOOD_GEM);
-    headBloodDown(c, cx, U, p);
+    headBloodDown(c, hcx, hU, p);
   } else {
     cowl(c, cx, U, 5.3, 5.3);
     boneMantle(c, cx, U, 7, 5.0, true);
-    headHoodDown(c, cx, U);
+    headHoodDown(c, hcx, hU);
   }
 
   if (!fb.behind) {
@@ -925,6 +952,88 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     drawStaff(c, 'down', p, fb);
   }
   if (!fa.behind) armA();
+  if (p.skull) heldSkull(c, fa.x, fa.y, p.skull, p.tick);
+  if (p.orb) bloodOrb(c, fa.x, fa.y, p.orb);
+}
+
+// ---------------------------------------------------------------------------
+// The idle moment's props
+
+/**
+ * The bonecaller's little skull on his palm, turned three-quarters towards
+ * him so it can talk back: a bone cranium, two sockets lit with soul fire,
+ * a row of teeth and a jaw that drops open. While `form` is under 1 it is
+ * still gathering out of (or coming apart into) wisps of soul fire.
+ */
+function heldSkull(c: PixelCanvas, x: number, y: number, s: Skull, tick: number): void {
+  const [core, hot, mid, deep] = S.light;
+  const sx = x + 0.4;
+  const sy = y - 2.6 - (s.rise ?? 0);
+  if (s.form < 1) {
+    // Wisps circling in to the palm (or drifting up off it), tighter as the skull forms.
+    const r = 1.6 + (1 - s.form) * 2.6;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + tick * 0.9 + s.form * 2;
+      const wx = sx + Math.cos(a) * r;
+      const wy = sy + Math.sin(a) * r * 0.8 - (1 - s.form) * 0.8;
+      c.spark(wx, wy, i & 1 ? hot : mid, 0.75);
+      c.spark(wx - Math.sin(a) * 1.1, wy + Math.cos(a) * 0.9, deep, 0.4);
+    }
+    c.spark(sx, sy, core, 0.6 + s.form * 0.4);
+    if (s.form < 0.5) return;
+  }
+  // The cranium, the cheek and teeth jutting towards him, the jaw under them.
+  c.part();
+  c.ellipse(sx - 0.1, sy - 0.2, 2.2, 1.95, BONE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.85 + 0.15, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.shape(Math.round(sy + 1.6), Math.round(sy + 1.6), () => [sx - 1.2, sx + 2.1], BONE, (_x, _y, t) => cyl(t, 0.3));
+  const jy = Math.round(sy + 2.6 + s.jaw);
+  c.part();
+  c.shape(jy, jy, () => [sx - 0.6, sx + 1.8], BONE, (_x, _y, t) => cyl(t, 0.5));
+  // Teeth: a dark gap between every other one, and the open mouth's dark.
+  for (const tx of [sx - 0.2, sx + 1.3]) c.shade(tx, Math.round(sy + 1.6), -1);
+  if (s.jaw > 0) {
+    c.part();
+    c.px(sx + 0.3, jy - 1, NECRO_INNER);
+    c.px(sx + 1.3, jy - 1, NECRO_INNER);
+  }
+  // The sockets, lit from within.
+  c.part();
+  // Kept dark (the dark is what reads as a skull at this size), a pinpoint of fire deep in each.
+  for (const ox of [-0.6, 1.4]) {
+    c.px(sx + ox, sy + 0.3, NECRO_INNER);
+    c.spark(sx + ox, sy + 0.3, s.glow > 0.8 ? hot : mid, 0.15 + s.glow * 0.4);
+  }
+  if (s.glow > 0.8) for (const ox of [-0.6, 1.4]) c.spark(sx + ox, sy - 1, mid, 0.25);
+  // Still half made of fire: the light runs over the bone.
+  if (s.form < 1) for (let yy = Math.floor(sy - 1); yy <= Math.round(sy + 2); yy++) c.spark(sx - 1 + ((yy + tick) & 1) * 2, yy, mid, 0.5);
+  if (s.form === 1 && s.glow > 0.95) flareAt(c, sx + 0.5, sy - 0.2, 0.55);
+}
+
+/** The blood mage's orb: a drop of blood hung in the air, pulsing, a ribbon of it trailing where it has been. */
+function bloodOrb(c: PixelCanvas, x: number, y: number, o: Orb): void {
+  const [core, hot, mid, deep] = S.light;
+  const ox = x + o.dx;
+  const oy = y + o.dy;
+  (o.trail ?? []).forEach(([tx, ty], i) => c.spark(x + tx, y + ty, i === 0 ? mid : deep, i === 0 ? 0.7 : 0.45));
+  if (o.r < 1) {
+    // Only a bead yet, welling in the palm.
+    c.spark(ox, oy, core, 0.7);
+    c.spark(ox, oy + 1, mid, 0.5);
+    return;
+  }
+  c.part();
+  c.ellipse(ox, oy, o.r, o.r, S.style === 'wyrm' ? WYRM_GEM : BLOOD_GEM, { glow: 0.5 + o.glow * 0.5 });
+  c.spark(ox - o.r * 0.35, oy - o.r * 0.35, core, 0.5 + o.glow * 0.5);
+  if (o.glow > 0.6) {
+    // A beat: light swells round it.
+    const k = (o.glow - 0.6) / 0.4;
+    const R = o.r + 1;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      c.spark(ox + Math.cos(a) * R, oy + Math.sin(a) * R, i & 1 ? mid : hot, 0.3 + 0.35 * k);
+    }
+  }
 }
 
 /** The hood from the front: its point, a face lost in shadow, a grey chin and two burning eyes. */
@@ -1315,16 +1424,128 @@ const raise = action([
   { a: REST_A, b: REST_B, aSide: REST_A_SIDE, bSide: REST_B_SIDE, palm: 0.15, flare: 0.15 },
 ]);
 
+/** One beat of the idle moment: what differs from the plain stand. */
+interface RestKey {
+  a?: Hand;
+  breath?: number;
+  head?: [number, number];
+  palm?: number;
+  flare?: number;
+  blink?: boolean;
+  skull?: Skull;
+  orb?: Orb;
+}
+
+/**
+ * The bonecaller's idle moment: soul fire gathers in his palm into a little
+ * skull, which he lifts to eye level at arm's length and addresses, Hamlet
+ * fashion. It clacks back at him, they share a dry laugh, and he lets it
+ * come apart into wisps. Slot for slot with the blood mage's (they share
+ * one playing order).
+ */
+const HAMLET = H(2.4, 10.4, 3.8);
+const BONE_REST: RestKey[] = [
+  {},
+  // Anticipation: the shoulders settle, the hand draws in.
+  { breath: 1, a: H(0.8, 4.8, -2.6), palm: 0.15 },
+  // Up and out, the palm filling, wisps circling in.
+  { a: H(1.8, 7.4, 1.2), palm: 0.5, skull: { form: 0.2, jaw: 0, glow: 0.4 } },
+  { a: H(2.2, 9.4, 3.2), palm: 0.7, skull: { form: 0.7, jaw: 0, glow: 0.7 } },
+  // There it is, with a flash; the arm overshoots a touch, then settles.
+  { a: H(2.4, 10.8, 4.4), palm: 0.3, flare: 0.25, skull: { form: 1, jaw: 1, glow: 1 } },
+  { a: HAMLET, skull: { form: 1, jaw: 0, glow: 0.55 } },
+  // He leans in to it, then speaks: a slow nod.
+  { a: HAMLET, head: [-1, 0], skull: { form: 1, jaw: 0, glow: 0.5 } },
+  { a: HAMLET, head: [-1, 1], skull: { form: 1, jaw: 0, glow: 0.45 } },
+  // It answers: the jaw clacking, sockets flaring, a little hop on the palm.
+  { a: HAMLET, head: [-1, 0], skull: { form: 1, jaw: 1, glow: 1, rise: 1 } },
+  { a: HAMLET, head: [-1, 0], skull: { form: 1, jaw: 0, glow: 0.6 } },
+  // He listens, head tipped.
+  { a: HAMLET, head: [0, 0], skull: { form: 1, jaw: 0, glow: 0.5 } },
+  // A shared laugh: his shoulders shaking, its jaw hanging open.
+  { a: HAMLET, breath: 1, head: [-1, 0], flare: 0.2, skull: { form: 1, jaw: 1, glow: 0.85 } },
+  { a: H(2.4, 10.4, 4.3), head: [-1, -1], flare: 0.35, skull: { form: 1, jaw: 1, glow: 1, rise: 1 } },
+  // Enough: it comes apart into soul fire, and the hand sinks back.
+  { a: H(2.4, 10.2, 3.6), palm: 0.4, skull: { form: 0.6, jaw: 1, glow: 0.8 } },
+  { a: H(2.0, 8.4, 2.0), palm: 0.45, skull: { form: 0.15, jaw: 0, glow: 0.5 } },
+  { a: H(1.2, 5.2, -1.2), palm: 0.15 },
+  {},
+];
+
+/**
+ * The blood mage's idle moment: a bead of blood wells in his palm, rises
+ * into an orb and swirls once round his hand, then hangs at eye level and
+ * beats like a heart, the staff (and the wyrmblood's wings) answering each
+ * beat, before it sinks back and soaks into the palm.
+ */
+const HEART = H(3.4, 10.4, 4.6);
+const BLOOD_REST: RestKey[] = [
+  {},
+  { breath: 1, a: H(1.2, 4.2, -2.2), palm: 0.15 },
+  // A bead wells up, and rises.
+  { a: H(2.6, 7.4, 1.4), palm: 0.45, orb: { dx: 0.5, dy: -1.4, r: 0.6, glow: 0.5 } },
+  { a: H(3.2, 9.6, 2.6), palm: 0.3, orb: { dx: 0.5, dy: -3.6, r: 1.2, glow: 0.4, trail: [[0.5, -2.3], [0.5, -1.3]] } },
+  // Once round the hand, a ribbon trailing: out, over the top (smaller, further off), and back in front.
+  { a: H(3.2, 9.6, 2.8), orb: { dx: -2.6, dy: -5.0, r: 1.3, glow: 0.45, trail: [[-1.8, -3.8], [-0.6, -3.3]] } },
+  { a: H(3.2, 9.6, 3.0), orb: { dx: 0.5, dy: -7.0, r: 1.0, glow: 0.4, trail: [[-1.4, -6.6], [-2.5, -5.8]] } },
+  { a: H(3.3, 9.8, 3.4), orb: { dx: 3.4, dy: -5.2, r: 1.3, glow: 0.45, trail: [[2.5, -6.5], [1.2, -7.1]] } },
+  // Lifted to eye level, and he looks into it.
+  { a: HEART, head: [-1, 0], orb: { dx: 0.6, dy: -3.8, r: 1.5, glow: 0.5, trail: [[2.0, -4.6]] } },
+  // It beats.
+  { a: HEART, head: [-1, 0], orb: { dx: 0.6, dy: -3.8, r: 1.5, glow: 0.5 } },
+  { a: H(3.4, 10.4, 4.9), head: [-1, 0], palm: 0.3, flare: 0.55, orb: { dx: 0.6, dy: -4.0, r: 2.1, glow: 1 } },
+  // He tips his head, savouring it.
+  { a: HEART, head: [-1, 1], blink: true, orb: { dx: 0.6, dy: -3.8, r: 1.5, glow: 0.4 } },
+  // Stronger now.
+  { a: HEART, head: [-1, 0], orb: { dx: 0.6, dy: -3.8, r: 1.6, glow: 0.55 } },
+  { a: H(3.4, 10.4, 5.0), head: [-1, 0], palm: 0.5, flare: 0.85, orb: { dx: 0.6, dy: -4.1, r: 2.3, glow: 1 } },
+  // It sinks to the palm, and soaks in.
+  { a: H(3.2, 9.8, 3.2), orb: { dx: 0.5, dy: -1.5, r: 1.1, glow: 0.7, trail: [[0.5, -2.9], [0.5, -4.0]] } },
+  { a: H(3.0, 9.4, 2.6), palm: 1, flare: 0.3 },
+  { a: H(2.0, 6.8, -0.6), palm: 0.35 },
+  {},
+];
+
+/** Slots of the idle moment in playing order, holds and repeats included (8 fps). */
+const REST_ORDER = [0, 1, 1, 2, 3, 4, 5, 6, 7, 7, 8, 9, 8, 9, 8, 10, 10, 10, 11, 12, 11, 12, 11, 10, 13, 14, 15, 15, 16];
+
+/**
+ * The idle moment, drawn facing the viewer only. It starts and ends on the
+ * idle's first frame exactly, so it swaps in and out without a pop.
+ */
+function rest(view: View): Pose[] {
+  if (view !== 'down') return [];
+  const keys = S.blood ? BLOOD_REST : BONE_REST;
+  return keys.map((k, i) => {
+    const p = idle('down')[0];
+    const edge = i === 0 || i === keys.length - 1;
+    if (k.a) p.a = { ...k.a };
+    p.breath = k.breath ?? 0;
+    p.palm = k.palm ?? 0;
+    p.flare = k.flare ?? 0;
+    p.blink = k.blink;
+    p.head = k.head;
+    p.skull = k.skull;
+    p.orb = k.orb;
+    // The robe settles a beat behind the arm; the fire keeps flickering.
+    if (!edge) p.sway += Math.sin(i * 0.9) * 0.3;
+    p.tick = edge ? 0 : i;
+    return p;
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type NecroAnim = 'idle' | 'walk' | 'cast' | 'raise';
+export type NecroAnim = 'idle' | 'walk' | 'cast' | 'raise' | 'rest';
 
 export interface NecroAnimDef {
   name: NecroAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => Pose[];
+  /** Frame indices to play, in order, when some are held or repeated. */
+  order?: readonly number[];
 }
 
 export const NECRO_ANIMS: NecroAnimDef[] = [
@@ -1332,6 +1553,7 @@ export const NECRO_ANIMS: NecroAnimDef[] = [
   { name: 'walk', fps: 9, loop: true, poses: walk },
   { name: 'cast', fps: 16, loop: false, poses: cast },
   { name: 'raise', fps: 10, loop: false, poses: raise },
+  { name: 'rest', fps: 8, loop: false, poses: rest, order: REST_ORDER },
 ];
 
 /** Frame index at which each spell is released. */
