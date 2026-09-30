@@ -52,8 +52,13 @@ function take(sheet: HeroSheet): void {
     if (sheet.meta) {
       // Every look of a rig agrees on the frames they share, but not every
       // look has every frame (the King has no spin), so each adds what's new.
+      // Each is also kept under its look's own key ('jedi_sith:idle_down_0'),
+      // for rigs whose looks pose the same frame differently (the Sith's staff).
       const map = METAS[sheet.meta.kind];
-      for (const [k, m] of sheet.meta.frames) if (!map.has(k)) map.set(k, m);
+      for (const [k, m] of sheet.meta.frames) {
+        if (!map.has(k)) map.set(k, m);
+        map.set(`${sheet.key}:${k}`, m);
+      }
     }
   } finally {
     building = false;

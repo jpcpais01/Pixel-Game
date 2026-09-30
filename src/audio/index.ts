@@ -270,6 +270,16 @@ class GameSound {
     if (t !== null) this.sfx!.gemPickup(t, n);
   }
 
+  gemTink(pan = 0): void {
+    const t = this.slot('gemTink');
+    if (t !== null) this.sfx!.gemTink(t, pan);
+  }
+
+  gemCollect(step: number): void {
+    const t = this.slot('gemCollect');
+    if (t !== null) this.sfx!.gemCollect(t, step);
+  }
+
   candyPickup(n: number): void {
     const t = this.slot('candyPickup');
     if (t !== null) this.sfx!.candyPickup(t, n);
@@ -348,6 +358,41 @@ class GameSound {
   critterCatch(tier: number): void {
     const t = this.slot('critterCatch');
     if (t !== null) this.sfx!.critterCatch(t, tier);
+  }
+
+  fishCast(): void {
+    const t = this.slot('fishCast');
+    if (t !== null) this.sfx!.fishCast(t);
+  }
+
+  fishPlop(pan = 0): void {
+    const t = this.slot('fishPlop');
+    if (t !== null) this.sfx!.fishPlop(t, pan);
+  }
+
+  fishNibble(pan = 0): void {
+    const t = this.slot('fishNibble');
+    if (t !== null) this.sfx!.fishNibble(t, pan);
+  }
+
+  fishBite(pan = 0): void {
+    const t = this.slot('fishBite');
+    if (t !== null) this.sfx!.fishBite(t, pan);
+  }
+
+  reelTick(): void {
+    const t = this.slot('reelTick');
+    if (t !== null) this.sfx!.reelTick(t);
+  }
+
+  fishLanded(tier: number): void {
+    const t = this.slot('fishLanded');
+    if (t !== null) this.sfx!.fishLanded(t, tier);
+  }
+
+  fishLost(): void {
+    const t = this.slot('fishLost');
+    if (t !== null) this.sfx!.fishLost(t);
   }
 
   critterRelease(pan = 0): void {
@@ -508,6 +553,21 @@ class GameSound {
   forcePush(pan = 0, dark = false): void {
     const t = this.slot('forcePush');
     if (t !== null) this.sfx!.forcePush(t, pan, dark);
+  }
+
+  forceLightning(pan = 0, seconds = 0.5): void {
+    const t = this.slot('forceLightning');
+    if (t !== null) this.sfx!.forceLightning(t, pan, seconds);
+  }
+
+  forceGrip(pan = 0): void {
+    const t = this.slot('forceGrip');
+    if (t !== null) this.sfx!.forceGrip(t, pan);
+  }
+
+  forceCrush(pan = 0): void {
+    const t = this.slot('forceCrush');
+    if (t !== null) this.sfx!.forceCrush(t, pan);
   }
 
   punch(step: number, pan = 0): void {

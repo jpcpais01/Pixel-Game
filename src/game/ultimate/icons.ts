@@ -537,3 +537,25 @@ export const wyrmIcon: IconPainter = (put, p) => {
   put(3, 2, p.deep);
   put(12, 14, p.deep);
 };
+
+export const dominionIcon: IconPainter = (put, p) => {
+  // A hooked hand above, holding a foe in the air in a band of dark light, over the pit it will be crushed into.
+  ellipse(put, 8, 14.5, 6, 1.4, 0.35, p.deep);
+  disc(put, 8, 10.5, 2.4, p.deep);
+  put(8, 7, p.deep);
+  put(7, 8, p.deep);
+  put(9, 8, p.deep);
+  for (const x of [4, 12]) for (let y = 6; y <= 9; y++) if (y % 2 === 0) put(x, y, p.mid);
+  ellipse(put, 8, 10.5, 4.6, 1.9, 0.3, p.mid);
+  for (const [x, y] of [[5, 12], [7, 12], [8, 12], [9, 12], [11, 12]] as const) put(x, y, p.hot);
+  put(8, 12, p.core);
+  // The hand: a dark palm, knuckles lit, fingers hooked down with bright tips.
+  for (let x = 5; x <= 11; x++) for (let y = 1; y <= 2; y++) put(x, y, y === 1 ? p.mid : p.deep);
+  put(4, 2, p.mid);
+  put(3, 3, p.hot);
+  for (const x of [5, 7, 9, 11]) {
+    put(x, 3, p.hot);
+    put(x, 4, p.hot);
+    put(x, 5, p.core);
+  }
+};
