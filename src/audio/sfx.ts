@@ -1878,6 +1878,38 @@ export class Sfx {
     if (chain) this.zap(out, t + 0.08, 0.2, 0.08);
   }
 
+  /** An echo wakes at its grave: a hollow breath, and a cold, wavering chord that sighs downward. */
+  echoWake(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.55, 0.85);
+    this.burstNoise(out, t, 'bandpass', 600, 1500, 3, 0.16, 1.0, true);
+    for (const [f, d] of [
+      [440, 0],
+      [415, 0.06],
+      [330, 0.12],
+    ]) {
+      const g = gain(ctx, 0, filter(ctx, 'lowpass', 1800, 0.7, out));
+      g.gain.setValueAtTime(0, t + d);
+      g.gain.linearRampToValueAtTime(0.045, t + d + 0.35);
+      g.gain.linearRampToValueAtTime(0, t + d + 1.6);
+      const o = osc(ctx, 'sine', f, g);
+      sweep(o.frequency, t + d, f, f * 0.84, 1.6);
+      // A slow, uneasy vibrato.
+      const vib = osc(ctx, 'sine', rand(4.5, 6), gain(ctx, f * 0.012, o.frequency));
+      o.start(t + d);
+      o.stop(t + d + 1.7);
+      vib.start(t + d);
+      vib.stop(t + d + 1.7);
+    }
+  }
+
+  /** An echo's blessing reaches the hero: soft, far-off bells in a minor key, rising, and a shimmer. */
+  echoBless(t: number): void {
+    const out = this.out(0, 0.55, 0.8);
+    [440, 523, 659, 880].forEach((f, i) => this.bell(out, t + i * 0.09, f, 0.04, 1.6));
+    this.sparkle(out, t + 0.35, 3, 0.07);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {
