@@ -393,6 +393,11 @@ export class Warden extends Monster {
     }
   }
 
+  /** The Singularity Nova's gathering pose. */
+  protected flourish(): void {
+    this.play('nova', true);
+  }
+
   protected staggers(): boolean {
     return false;
   }

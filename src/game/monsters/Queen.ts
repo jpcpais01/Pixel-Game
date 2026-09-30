@@ -476,6 +476,11 @@ export class Queen extends Monster {
     }
   }
 
+  /** Her scream, head thrown back. */
+  protected flourish(): void {
+    this.play('scream', true);
+  }
+
   protected staggers(): boolean {
     return false;
   }
