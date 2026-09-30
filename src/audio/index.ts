@@ -403,6 +403,21 @@ class GameSound {
     if (t !== null) this.sfx!.starcall(t, pan);
   }
 
+  omen(mood: 'dark' | 'bright' | 'strange'): void {
+    const t = this.slot('omen');
+    if (t !== null) this.sfx!.omen(t, mood);
+  }
+
+  portal(pan = 0): void {
+    const t = this.slot('portal');
+    if (t !== null) this.sfx!.portal(t, pan);
+  }
+
+  cackle(pan = 0): void {
+    const t = this.slot('cackle');
+    if (t !== null) this.sfx!.cackle(t, pan);
+  }
+
   starImpact(pan = 0): void {
     const t = this.slot('starImpact');
     if (t !== null) this.sfx!.starImpact(t, pan);
