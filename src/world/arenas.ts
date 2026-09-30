@@ -13,7 +13,7 @@ import type { Drift } from './Scenery';
 import { CLEARING_GROUND, CLEARING_SPAWN, CLEARING_W, PLAZA_CX, PLAZA_CY, PLAZA_Y, clearingScenery, clearingWalkable, plazaProps } from './clearing';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
-import { warmCosmos, warmDeep, warmGlide, warmIsland, warmRift, warmSpirit, warmTemple } from '../art/arenaLoader';
+import { warmCosmos, warmDeep, warmGlide, warmIsland, warmRift, warmSpirit, warmTemple, warmWorldMap } from '../art/arenaLoader';
 import { RIFT_CX, RIFT_CY, RIFT_H, RIFT_SPAWN, RIFT_W, SHARDS, TEARS, riftWalkable } from './riftLayout';
 import { RIFT_PLATFORM_X, RIFT_PLATFORM_Y, SHARD_H, SHARD_OY } from '../art/rift';
 import { GroundStreamer } from './GroundStreamer';
@@ -22,6 +22,7 @@ import { ELEMENTINHO_HOME, TEMPLE_H, TEMPLE_SPAWN, TEMPLE_SPAWNS, TEMPLE_W, temp
 import { QUEEN_HOME, SPIRIT_H, SPIRIT_SPAWN, SPIRIT_SPAWNS, SPIRIT_W, spiritWalkable } from './spiritLayout';
 import { COLUMN_BASE, COLUMN_H, ISLAND_X, ISLAND_Y } from '../art/island';
 import { COLUMNS, ISLE_H, ISLE_SPAWN, ISLE_W, RING_CX, RING_CY, islandScenery, islandWalkable } from './islandLayout';
+import { HOME_ARENA } from './homeGround';
 import { GARDEN_GROUND, GARDEN_SPAWN, GARDEN_SPAWNS, POOL, gardenLayout, gardenScenery, gardenWalkable } from './sunken';
 
 /** A sprite shown in the arena's window on its select card (world coordinates). */
@@ -424,17 +425,20 @@ export function warmArena(scene: Phaser.Scene, arena: ArenaDef, budget: number):
 }
 
 /**
- * Warm the arena the player chose last time while they're still on the
- * menus, a few ms a frame, so a run there starts at once. Only that one: the
- * arena select shows the others as saved pictures, and builds one only when
- * it's picked. The work is shared: the arena select and the world carry on
+ * Warm the world map, then the arena the player chose last time, while
+ * they're still on the menus, a few ms a frame, so the arena select opens
+ * on a finished map and a run there starts at once. Only that arena: the
+ * select shows the others as saved pictures, and builds one only when it's
+ * picked. The work is shared: the arena select and the world carry on
  * whatever this has begun. True once it's ready.
  */
 export function warmArenasInBackground(scene: Phaser.Scene, budget: number): boolean {
-  return warmArena(scene, arenaById(lastArena()), budget);
+  return warmWorldMap(scene, budget) && warmArena(scene, arenaById(lastArena()), budget);
 }
 
 export function arenaById(id: string | undefined): ArenaDef {
+  // The Home isn't on the select, but friends' invites and the Home button lead there.
+  if (id === HOME_ARENA.id) return HOME_ARENA;
   return ARENAS.find((a) => a.id === id) ?? ARENAS[0];
 }
 

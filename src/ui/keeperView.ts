@@ -8,7 +8,7 @@
 //  - Left: the pieces this keeper works on, as tiles (with counts, levels and
 //    the worn tick), scrolled by dragging.
 //  - Right: the chosen piece. For Nyx, the dust it breaks into and the button
-//    that unmakes it (asking twice for anything rare or upgraded; held down, it
+//    that unmakes it (asking twice only for a legendary; held down, it
 //    unmakes piece after piece, stopping at the first that needs asking); for Tharn,
 //    its level as ten pips, the six stats to put the next point in with what
 //    each would become, and the button that pays for it.
@@ -302,10 +302,10 @@ export class KeeperView extends Phaser.GameObjects.Container {
     }
   }
 
-  /** Rare or better, or upgraded: Nyx asks twice, and a held button stops short of it. */
+  /** Legendary only: Nyx asks twice, and a held button stops short of it. */
   private careful(id: string): boolean {
     const g = gearById(id);
-    return !g || rank(g) >= RARITIES.indexOf('rare') || collection.level(id) > 1;
+    return !g || g.rarity === 'legendary';
   }
 
   /** The button: unmake the piece, or raise it a level. */

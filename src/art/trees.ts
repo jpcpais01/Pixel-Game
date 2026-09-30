@@ -50,7 +50,7 @@ export const PROP_H = 26;
 export const PROP_BASE_Y = 23;
 
 /** A leafy dome made of clumps, each lit as a sphere; leaves ruffle its edges. */
-function canopy(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number, count: number, leaf: Material, R: () => number, size = 1): void {
+export function canopy(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number, count: number, leaf: Material, R: () => number, size = 1): void {
   const clumps: { x: number; y: number; r: number }[] = [];
   for (let k = 0; k < count; k++) {
     const a = R() * Math.PI * 2;
@@ -85,7 +85,7 @@ function canopy(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number, 
   }
 }
 
-function trunk(c: PixelCanvas, bx: number, by: number, height: number, hw: number, bark: Material, lean: number): void {
+export function trunk(c: PixelCanvas, bx: number, by: number, height: number, hw: number, bark: Material, lean: number): void {
   c.part();
   c.shape(by - height, by, (y) => {
     const u = (y - (by - height)) / height;
@@ -96,7 +96,7 @@ function trunk(c: PixelCanvas, bx: number, by: number, height: number, hw: numbe
   }, bark, (_x, _y, t) => cyl(t, 0.1));
 }
 
-function roots(c: PixelCanvas, bx: number, by: number, spread: number, bark: Material, R: () => number): void {
+export function roots(c: PixelCanvas, bx: number, by: number, spread: number, bark: Material, R: () => number): void {
   c.part();
   for (const s of [-1, 1]) {
     c.capsule(bx + s * 2, by - 4, bx + s * (spread + R() * 3), by + 0.5, 2, 0.8, bark);

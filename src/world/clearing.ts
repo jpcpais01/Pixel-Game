@@ -171,7 +171,7 @@ export function clearingWalkable(x: number, y: number): boolean {
 // ---------------------------------------------------------------------------
 // The ground.
 
-const DAY_LOOK: Look = {
+export const DAY_LOOK: Look = {
   ground: DAY_GROUND,
   moss: ramp('#17331f', '#1e4226', '#28542d', '#356a34', '#4a803b', '#679a46', '#8ab45a'),
   litter: ramp('#3a2718', '#58391f', '#7a5024', '#9c6c2c', '#bf8e3c', '#93402a'),
@@ -192,7 +192,7 @@ const DAY_LOOK: Look = {
   wallDark: 1.1,
 };
 
-const NIGHT_LOOK: Look = {
+export const NIGHT_LOOK: Look = {
   ground: NIGHT_GROUND,
   moss: DAY_LOOK.moss.map(nightify),
   litter: DAY_LOOK.litter.map(nightify),
