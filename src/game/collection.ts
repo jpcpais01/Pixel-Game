@@ -4,6 +4,7 @@
 // they log into. Changes save a moment later, so a burst of pickups is one
 // write.
 
+import { CRITTER_KEEP, CRITTER_PRICE, critterById } from './critters';
 import { DUST_VALUE, GEAR_SETS, MAX_LEVEL, STAT_KEYS, SLOTS, UPGRADE_REFUND, canUpgrade, dustSpent, gearById, levelled, upgradeCost, type GearDef, type SetId, type StatKey } from './gear';
 import { FORGE_COST } from './forge';
 import { account, cloudReady, loadSave, onAccount, writeSave, type SaveData } from './cloud';
@@ -413,6 +414,23 @@ class Collection {
     this.data.critters[id] = n + 1;
     this.changed();
     return n === 0;
+  }
+
+  /** Spare critters of kind `id`: every one caught after the first, which stays in its jar. */
+  critterSpares(id: string): number {
+    return Math.max(0, this.critterCount(id) - CRITTER_KEEP);
+  }
+
+  /** Sell up to `n` spare critters of kind `id` to Hazel for dust; returns the dust gained. */
+  sellCritters(id: string, n: number): number {
+    const def = critterById(id);
+    const sold = Math.min(Math.floor(n), this.critterSpares(id));
+    if (!def || sold <= 0) return 0;
+    const got = sold * CRITTER_PRICE[def.rarity];
+    this.data.critters[id] -= sold;
+    this.data.dust += got;
+    this.changed();
+    return got;
   }
 
   /** Wishes since the last legendary skin. */
