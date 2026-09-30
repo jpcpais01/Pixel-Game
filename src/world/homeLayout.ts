@@ -6,7 +6,7 @@
 // Everything here is plain data (no Phaser), so it can be checked anywhere.
 
 import { valueNoise } from '../art/env';
-import { FLOORS, WALLS, extent, floorIndex, packWall, partById, wallKind, wallMat, type PartDef } from './homeParts';
+import { FLOORS, MAX_CRITTERS, WALLS, extent, floorIndex, packWall, partById, wallKind, wallMat, type PartDef } from './homeParts';
 
 /** A cell's size in pixels, and the plot's size in cells. */
 export const CELL = 16;
@@ -100,6 +100,11 @@ export class HomeLayout {
       if (this.wallAt(cx, cy + 1)) return false;
       return !this.things.some((t) => t.x === cx && t.y === cy && partById(t.id)?.wall);
     }
+    // A critter goes anywhere open (it roams off its spot anyway), one to a cell, up to the most a home keeps.
+    if (part.critter) {
+      if (this.things.filter((t) => partById(t.id)?.critter).length >= MAX_CRITTERS) return false;
+      if (this.things.some((t) => t.x === cx && t.y === cy && partById(t.id)?.critter)) return false;
+    }
     const { w, h } = extent(part, turn);
     for (let y = cy; y < cy + h; y++) {
       for (let x = cx; x < cx + w; x++) {
@@ -110,7 +115,7 @@ export class HomeLayout {
     }
     for (const t of this.things) {
       const p = partById(t.id);
-      if (!p || p.wall || !!p.flat !== !!part.flat) continue;
+      if (!p || p.wall || p.critter || part.critter || !!p.flat !== !!part.flat) continue;
       const e = extent(p, t.turn);
       if (t.x < cx + w && t.x + e.w > cx && t.y < cy + h && t.y + e.h > cy) return false;
     }

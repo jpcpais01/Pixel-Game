@@ -27,6 +27,7 @@ import {
   RARITIES,
   RARITY,
   SLOTS,
+  SET_POWERS,
   SLOT_NAME,
   STAT_CAP,
   STAT_KEYS,
@@ -39,6 +40,7 @@ import {
   wornStats,
   type GearDef,
   type GearStats,
+  type SetId,
   type Slot,
 } from '../game/gear';
 import { itemInfo } from '../game/itemInfo';
@@ -603,6 +605,26 @@ export class InventoryView extends Phaser.GameObjects.Container {
     const line = (s: string, tint: number, lx: number, ly: number) => this.cardLine(n++).setText(s.toUpperCase()).setTint(tint).setPosition(Math.round(lx), Math.round(ly)).setVisible(true);
     let rowN = 0;
     this.button.setVisible(false);
+    const btnH = 18;
+    const wornGear = collection.equippedGear();
+    // A Myth set's powers, one per tier: lit once that many pieces are worn.
+    // Each has a line saying what it does, when the card has the room.
+    const powerLines = (set: SetId, worn: number, y: number, bottom: number): number => {
+      const powers = SET_POWERS[set] ?? [];
+      const texts = powers.map((p) => wrap(p.text, chars - 2));
+      const roomy = y + LINE * (powers.length + texts.reduce((n, t) => n + t.length, 0)) <= bottom;
+      powers.forEach((p, i) => {
+        const on = worn >= p.at;
+        line(`${p.at} ${p.name}`, on ? GEAR_SETS[set].tint : SOFT, x + pad, y);
+        y += LINE;
+        if (!roomy) return;
+        for (const s of texts[i]) {
+          line(s, on ? CREAM : SOFT, x + pad + CH * 2, y);
+          y += LINE;
+        }
+      });
+      return y;
+    };
     this.cardTile.setVisible(false);
 
     const id = this.picked;
@@ -618,9 +640,16 @@ export class InventoryView extends Phaser.GameObjects.Container {
         y += LINE;
       }
       y += 6;
-      for (const s of wrap('Only the six worn pieces count: one of each type.', chars)) {
-        line(s, SOFT, x + pad, y);
-        y += LINE;
+      // Wearing a Myth set: its powers, with those reached lit.
+      const set = (Object.keys(SET_POWERS) as SetId[]).map((k) => ({ k, n: setCount(wornGear, k) })).filter((e) => e.n.worn >= 2).sort((a, b) => b.n.worn - a.n.worn)[0];
+      if (set) {
+        line(`${GEAR_SETS[set.k].name} ${set.n.worn}/${set.n.of}`, GEAR_SETS[set.k].tint, x + pad, y);
+        powerLines(set.k, set.n.worn, y + LINE, top + this.det.h - pad);
+      } else {
+        for (const s of wrap('Only the six worn pieces count: one of each type.', chars)) {
+          line(s, SOFT, x + pad, y);
+          y += LINE;
+        }
       }
     } else {
       // The item's tile, and beside it its name, rarity and type.
@@ -666,16 +695,17 @@ export class InventoryView extends Phaser.GameObjects.Container {
         if (g.set) {
           // The set it belongs to, how much of it is worn, and what the whole set gives.
           const set = GEAR_SETS[g.set];
-          const c = setCount(collection.equippedGear(), g.set);
+          const c = setCount(wornGear, g.set);
           y += 3;
           line(`${set.name} ${c.worn}/${c.of}`, c.worn === c.of ? set.tint : DIM, x + pad, y);
           y += LINE;
-          for (const s of wrap(`All ${c.of}: ${statLines(set.bonus).join(' ')}`, chars)) {
+          const whole = wrap(`All ${c.of}: ${statLines(set.bonus).join(' ')}`, chars);
+          if (SET_POWERS[g.set]) y = powerLines(g.set, c.worn, y, top + this.det.h - pad - btnH - 6 - whole.length * LINE);
+          for (const s of whole) {
             line(s, c.worn === c.of ? GOOD : SOFT, x + pad, y);
             y += LINE;
           }
         }
-        const btnH = 18;
         this.button.setVisible(true).set(isWorn ? 'Unequip' : worn ? 'Swap in' : 'Equip', w - pad * 2, btnH, !isWorn);
         this.button.setPosition(x + pad, Math.max(y + 6, Math.min(top + this.det.h - pad - btnH, y + 40)));
       } else if (g) {

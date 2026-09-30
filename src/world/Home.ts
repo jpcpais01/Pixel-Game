@@ -3,6 +3,7 @@ import { CHIMNEY_H, glows, thingLook, warmHome, wallFrameName } from '../art/hom
 import { paintFloors } from '../art/homeFloors';
 import { paintRoof, type RoofArt } from '../art/homeWalls';
 import { JAR_SPOTS } from '../art/homeProps';
+import { CRITTER_H, CRITTER_OX, CRITTER_OY, CRITTER_W } from '../art/critters';
 import { pixelCanvas } from '../art/canvas';
 import { sound } from '../audio';
 import { build, stopBuilding } from '../game/build';
@@ -14,6 +15,7 @@ import { sway, treeSwayReady } from '../game/treeSway';
 import { session, type Msg } from '../net/session';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HOME_SPAWN, homeWalkable, setHomeMask } from './homeGround';
+import { HomeCritters } from './HomeCritters';
 import { HouseShadow, type Stack } from './houseShadow';
 import { treeLeaves } from './Scenery';
 import { CELL, COLS, HomeLayout, HomeMask, PLOT_H, PLOT_W, PLOT_X, PLOT_Y, ROWS, cellIndex, findHouses, inPlot, starterHome, type House, type Thing } from './homeLayout';
@@ -140,6 +142,10 @@ export class Home {
   /** Trees planted before their sway was ready: they start swaying when it is. */
   private stillTrees: { sprite: Sprite; anim: string }[] = [];
   private leaves!: Phaser.GameObjects.Particles.ParticleEmitter;
+  /** The critters let out here, living round their spots. */
+  private critters: HomeCritters;
+  /** A visitor has been sent the home at least once. */
+  private arrived = false;
 
   constructor(
     private scene: WorldScene,
@@ -160,6 +166,7 @@ export class Home {
     this.drawGrid();
     this.cursor = add.graphics().setDepth(9000).setVisible(false);
     this.ghost = add.image(0, 0, 'home', 'chimney').setAlpha(0.6).setDepth(9001).setVisible(false);
+    this.critters = new HomeCritters(scene);
     this.refresh(true);
     // Now and then a leaf, or a cherry petal, comes loose from a tree planted here.
     this.leaves = treeLeaves(
@@ -372,7 +379,8 @@ export class Home {
   /** Placed things: new ones stood up, removed ones taken away; the critter shelves refilled. */
   private refreshThings(): void {
     const l = this.layout;
-    const want = new Map(l.things.map((t) => [Home.keyOf(t), t]));
+    // Critters aren't stood up as things: they live their own lives (HomeCritters).
+    const want = new Map(l.things.filter((t) => !partById(t.id)?.critter).map((t) => [Home.keyOf(t), t]));
     for (const [k, p] of this.placed) {
       if (want.has(k)) continue;
       this.unplace(p);
@@ -382,6 +390,8 @@ export class Home {
     for (const p of this.placed.values()) p.house = this.houseAt[cellIndex(p.t.x, p.t.y + extent(p.part, p.t.turn).h - 1)];
     if (this.leaves) this.leaves.emitting = l.things.some((t) => LEAF_TINTS[t.id]);
     this.fillShelves();
+    // Let out with a sparkle while building (or, for a visitor, once the home has come), not as the home first appears.
+    this.critters.sync(l, this.houseAt, this.owner ? build.on : this.arrived);
   }
 
   private place(k: string, t: Thing): void {
@@ -541,6 +551,8 @@ export class Home {
       p.halo?.setAlpha((0.32 + n * 0.06) * k);
     }
 
+    this.critters.update(dt, heroX, heroY, d, this.scene.cameras.main.worldView);
+
     if (this.stillTrees.length && treeSwayReady(this.scene)) {
       for (const t of this.stillTrees.splice(0)) if (t.sprite.active) sway(t.sprite, t.anim);
     }
@@ -617,7 +629,10 @@ export class Home {
     g.fillRect(PLOT_X + fx * CELL, PLOT_Y + fy * CELL, bw, bh);
     g.lineStyle(1, col, 0.85);
     g.strokeRect(PLOT_X + fx * CELL + 0.5, PLOT_Y + fy * CELL + 0.5, bw - 1, bh - 1);
-    if (thing) {
+    if (thing?.critter) {
+      this.ghost.setTexture('critters', `${thing.critter}_0`).setOrigin(CRITTER_OX / CRITTER_W, CRITTER_OY / CRITTER_H).setFlipX(false);
+      this.ghost.setPosition(PLOT_X + (fx + 0.5) * CELL, PLOT_Y + (fy + 1) * CELL - 5).setTint(ok ? 0xffffff : 0xff8080);
+    } else if (thing) {
       const look = thingLook({ id: thing.id, x: fx, y: fy, flip: build.flip && !!thing.flip, turn });
       this.ghost.setTexture(look.key, look.frame).setOrigin(look.ox, look.oy).setFlipX(look.flipX).setPosition(look.x, look.y).setTint(ok ? 0xffffff : 0xff8080);
     }
@@ -645,9 +660,10 @@ export class Home {
     const i = cellIndex(cx, cy);
     if (pick.layer === 'floor') {
       if (!FLOORS[pick.value - 1]?.water) return true;
-      return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.water && !partById(t.id)?.wall);
+      return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.water && !partById(t.id)?.wall && !partById(t.id)?.critter);
     }
-    if (pick.layer === 'wall') return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.wall) && !this.heroIn(cx, cy) && !this.layout.isWater(cx, cy);
+    // A critter's spot doesn't hold anything up: it finds open ground nearby.
+    if (pick.layer === 'wall') return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.wall && !partById(t.id)?.critter) && !this.heroIn(cx, cy) && !this.layout.isWater(cx, cy);
     return pick.layer === 'roof' || i >= 0;
   }
 
@@ -685,7 +701,9 @@ export class Home {
     if (tab === 'floor') return l.floor[i] ? 'floor' : null;
     if (tab === 'wall') return l.wall[i] ? 'wall' : null;
     if (tab === 'roof') return l.roof[i] ? 'roof' : null;
-    const here = l.thingsAt(cx, cy);
+    // Critters roam off their spots, so the eraser takes the one it touches, wherever it has got to.
+    if (tab === 'critters') return this.critters.at(PLOT_X + (cx + 0.5) * CELL, PLOT_Y + (cy + 0.5) * CELL, CELL * 0.75) ?? l.thingsAt(cx, cy).find((t) => partById(t.id)?.critter) ?? null;
+    const here = l.thingsAt(cx, cy).filter((t) => !partById(t.id)?.critter);
     return here.find((t) => partById(t.id)?.tab === tab) ?? (tab === 'decor' ? null : here.find((t) => !partById(t.id)?.wall)) ?? null;
   }
 
@@ -738,7 +756,7 @@ export class Home {
   private placeThing(p: PartDef, fx: number, fy: number, turn: number): void {
     if (!this.layout.canPlace(p, fx, fy, turn) || this.onHero(p, fx, fy, turn)) return;
     this.layout.things.push({ id: p.id, x: fx, y: fy, flip: build.flip && !!p.flip, turn });
-    sound.thud(0);
+    if (!p.critter) sound.thud(0);
     this.refresh();
   }
 
@@ -792,6 +810,7 @@ export class Home {
         if (!l) break;
         this.layout = l;
         this.refresh();
+        this.arrived = true;
         break;
       }
       case 'dn':
@@ -845,5 +864,6 @@ export class Home {
     }
     this.patches.clear();
     this.roofs = [];
+    this.critters.destroy();
   }
 }

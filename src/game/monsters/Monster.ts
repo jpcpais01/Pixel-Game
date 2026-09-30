@@ -313,6 +313,7 @@ export abstract class Monster implements Hurtbox {
     // Buffs like Might make every blow land harder; its tier's Defense takes the edge off.
     const damage = hit.damage * this.world.mightOf(hit) * defenseFactor(mobDefense(this.stats.key));
     if (!hit.wild) this.world.leech(Math.min(damage, Math.max(0, this.hp)));
+    this.world.heroStruck(this, hit);
     Monster.net?.hit(this, hit, damage);
     this.takeHit(hit, damage);
   }

@@ -1,9 +1,9 @@
 // Build mode on the HUD, in a Home (see world/Home.ts and game/build.ts): a
 // hammer button beside the bag's chest turns it on, and a friends button
 // beside that opens the invite panel. While building, a tray along the bottom
-// holds the tabs (floors, walls, roofs, garden, furniture, lights, wall decor),
-// Undo and Done, and a row of parts that scrolls sideways under a finger or
-// the mouse wheel. The first slot of every tab is the eraser.
+// holds the tabs (floors, walls, roofs, garden, furniture, lights, wall decor,
+// critters), Undo and Done, and a row of parts that scrolls sideways under a
+// finger or the mouse wheel. The first slot of every tab is the eraser.
 //
 // Drawn in device pixels like the other touch controls. Keys: B builds,
 // R flips the picked part (or turns a seat or bed to face the next way),
@@ -163,6 +163,8 @@ export class BuildHud {
     if (build.on) stopBuilding();
     else if (build.available) {
       build.on = true;
+      // The critters caught since the tray last opened join its Critters tab.
+      this.lists.delete('critters');
       this.pick(this.picked.get(build.tab) ?? 1);
       this.onOpen();
     }
@@ -265,7 +267,7 @@ export class BuildHud {
 
     // The picked part's name over the tray, and a Flip toggle beside it for parts that mirror.
     const pick = build.pick;
-    const name = pick ? pick.name : 'Eraser';
+    const name = pick ? pick.name : build.tab === 'critters' && this.list().length < 2 ? 'Critters you catch with the net can live here' : 'Eraser';
     const hint = this.scene.input.activePointer.wasTouch ? '' : pick ? '   RIGHT CLICK ERASES' : '';
     this.nameText.setText((name + hint).toUpperCase()).setScale(ts);
     const nh = Math.round(this.nameText.height + ip * 1.4);
