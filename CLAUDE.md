@@ -17,7 +17,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 
 **Startup and scenes** (`src/main.ts`, `src/scenes/`)
 - `entry.ts` imports `main.ts` only after the page's load event (so the browser's loading bar ends at once). `main.ts` makes the Phaser game, fits the canvas, and drops the graphics level if the world runs below 30 FPS for 5 s.
-- Flow: `BootScene` (builds every texture) → `HomeScene` → `SelectScene` (hero) → `ArenaScene` (arena, and online rooms) → `WorldScene`. `ShopScene` (the Wishing Sanctum) and `InventoryScene` open over Home.
+- Flow: `BootScene` (builds every texture) → `HomeScene` → `SelectScene` (hero) → `ArenaScene` (arena, and online rooms) → `WorldScene`. An arena with a `mode` (Sky Glide) starts its own scene and HUD instead of the world (`ArenaScene.go`); `PauseScene` takes `{ world, ui }` to pause them. `ShopScene` (the Wishing Sanctum) and `InventoryScene` open over Home.
 - Overlays while playing: `UIScene` (joystick, ability buttons, hotbar, buffs, gear HUD), `RiftScene` (the Rift's wave HUD, blessing cards and results), `PauseScene`, `ShadeScene` (brightness), `SoundScene` (mute), `FpsScene`.
 - `src/diagnostics.ts`: crash reports (copyable overlay, heartbeat for killed tabs), switched off: set `CRASH_REPORTS` to true to use them again. `src/pwa.ts` + `scripts/pwa.ts`: install, fullscreen, service worker, icons.
 
@@ -36,6 +36,11 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - `Monster.ts`: base state machine (spawn, idle, wander, notice, chase, windup/attack/recover, hurt, return, dying), slows, strings, knockback. Species override `chase` and `act`.
 - `index.ts`: `MONSTERS` registry, `Spawner` (respawns, and host sync online), `separate`.
 - Bosses use `BossBar` and `noBar: true` and have a `rank` (`legend` or `myth`). `game/tiers.ts` gives every kind a tier, which sets its drops.
+
+**Sky Glide** (`src/scenes/GlideScene.ts`, `GlideUIScene.ts`)
+- Its own mode on the arena select: jump off the Floating Island under a paraglider in the hero's colour and ride down to the goal islet through rings, updrafts and wind rivers, round, over or under floating islets. Timed, with the best time per course in `collection.glide` (and the cloud), a ghost of the best run in localStorage, and online races in a room (the host starts; `gs`/`gp`/`gf` messages).
+- `world/glideLayout.ts`: the course (rings, updrafts, lanes, islets, goal, checkpoints). `game/glide.ts`: the flight model (`stepFlight`), `glideHud`, `glideInput`, ghost recording. `art/glide.ts`: sea tile, cloud tops, islets, rings, swirls, arch, and `gliderSheet(accent)` painted in the page. Textures come from the `glide` arena job plus the island's (`warmGlide`).
+- Height is drawn the game's way: z up is drawn z px higher than the spot below, where the shadow lies; the far sea scrolls at 0.35, far islands at 0.5, wisps above at 1.35.
 
 **Arenas** (`src/world/`)
 - `arenas.ts`: `ARENAS` (clearing, garden, cosmos, spirit, temple, deep, rift, island). Each has a ground, spawn, monsters, `walkable`, scenery and a select-card preview; `solo: true` greys out Online for it.

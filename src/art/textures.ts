@@ -56,6 +56,8 @@ import { FLOAT_ROCK_H, FLOAT_ROCK_W, HOLE_SIZE, METEOR_H, METEOR_W, OBELISK_H, O
 import { COSMOS_H, COSMOS_W } from '../world/cosmosLayout';
 import { COLUMN_H, COLUMN_W, ISLAND_H, ISLAND_W, ISLETS, column, fallStrip, foam, islandArt, islet, skyCanvas, wisp } from './island';
 import { ISLE_H, ISLE_W } from '../world/islandLayout';
+import { DRAFT_FRAMES, DRAFT_H, DRAFT_W, RING, RING_FRAMES, SEA_TILE, archArt, deckPuff, draftFrame, isletArt, ringFrame, seaTile, streak as windStreak } from './glide';
+import { GOAL, ISLETS as SKY_ISLETS } from '../world/glideLayout';
 import { birdSheet } from './skyArena';
 import { BOLT_DIRS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, reticle, salvoIcon } from './mech';
 import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
@@ -522,6 +524,40 @@ function* islandTextures(scene: Phaser.Scene): Generator<void, void, void> {
   bird.add('b1', 0, 5, 0, 5, 3);
 }
 
+/**
+ * Sky Glide: the sea of clouds far below, cloud tops, the islets and the
+ * goal, rings, updraft swirls, wind streaks and the finish arch. It flies
+ * off the Floating Island, whose own set it uses too (see warmGlide).
+ */
+function* glideTextures(scene: Phaser.Scene): Generator<void, void, void> {
+  const sea = yield* seaTile();
+  scene.textures.addCanvas('gl_sea', toCanvas(SEA_TILE, SEA_TILE, sea));
+  yield;
+  [0, 1, 2].forEach((v) => scene.textures.addCanvas(`gl_puff${v}`, deckPuff(v).toCanvas()));
+  yield;
+  for (let i = 0; i < SKY_ISLETS.length; i++) {
+    scene.textures.addCanvas(`gl_islet${i}`, isletArt(SKY_ISLETS[i]).img.toCanvas());
+    yield;
+  }
+  scene.textures.addCanvas('gl_goal', isletArt(GOAL).img.toCanvas());
+  yield;
+  for (const [key, big, prefix] of [
+    ['gl_ring', false, 'g'],
+    ['gl_ring_big', true, 'b'],
+  ] as const) {
+    const size = big ? RING.big.size : RING.gold.size;
+    const tex = scene.textures.addCanvas(key, toCanvas(size * RING_FRAMES, size, sideBySide(size, size, Array.from({ length: RING_FRAMES }, (_, f) => ringFrame(big, f).data))))!;
+    for (let f = 0; f < RING_FRAMES; f++) tex.add(`${prefix}${f}`, 0, f * size, 0, size, size);
+    if (!scene.anims.exists(`${key}_spin`)) scene.anims.create({ key: `${key}_spin`, frames: scene.anims.generateFrameNames(key, { prefix, start: 0, end: RING_FRAMES - 1 }), frameRate: 10, repeat: -1 });
+  }
+  const draft = scene.textures.addCanvas('gl_draft', toCanvas(DRAFT_W * DRAFT_FRAMES, DRAFT_H, sideBySide(DRAFT_W, DRAFT_H, Array.from({ length: DRAFT_FRAMES }, (_, f) => draftFrame(f).data))))!;
+  for (let f = 0; f < DRAFT_FRAMES; f++) draft.add(`d${f}`, 0, f * DRAFT_W, 0, DRAFT_W, DRAFT_H);
+  if (!scene.anims.exists('gl_draft_spin')) scene.anims.create({ key: 'gl_draft_spin', frames: scene.anims.generateFrameNames('gl_draft', { prefix: 'd', start: 0, end: DRAFT_FRAMES - 1 }), frameRate: 9, repeat: -1 });
+  scene.textures.addCanvas('gl_streak', windStreak().toCanvas());
+  // Last: its presence means everything above is built.
+  scene.textures.addCanvas('gl_arch', archArt().toCanvas());
+}
+
 /** The Endless Rift: the void, the platform, tears, shards, drifting rocks and the blessings' icons. */
 function* riftTextures(scene: Phaser.Scene): Generator<void, void, void> {
   const sky = yield* riftVoidCanvas();
@@ -668,7 +704,7 @@ function* deepTextures(scene: Phaser.Scene): Generator<void, void, void> {
 }
 
 /** The painted arenas' texture sets, each built by one job (see arenaLoader.ts). */
-export type ArenaJob = 'cosmos' | 'island' | 'rift' | 'spirit' | 'temple' | 'deep';
+export type ArenaJob = 'cosmos' | 'island' | 'rift' | 'spirit' | 'temple' | 'deep' | 'glide';
 
 /**
  * Each set's steps, which yield between pieces, and the texture it makes
@@ -681,6 +717,7 @@ export const ARENA_JOBS: Record<ArenaJob, { done: string; steps: (scene: Phaser.
   spirit: { done: 'sd_lane', steps: spiritTextures },
   temple: { done: 'et_lane', steps: templeTextures },
   deep: { done: 'gd_lane', steps: deepTextures },
+  glide: { done: 'gl_arch', steps: glideTextures },
 };
 
 /**

@@ -123,3 +123,8 @@ export const warmRift = (scene: Phaser.Scene, budget = Infinity): boolean => war
 export const warmSpirit = (scene: Phaser.Scene, budget = Infinity): boolean => warmArenaTextures(scene, 'spirit', budget);
 export const warmTemple = (scene: Phaser.Scene, budget = Infinity): boolean => warmArenaTextures(scene, 'temple', budget);
 export const warmDeep = (scene: Phaser.Scene, budget = Infinity): boolean => warmArenaTextures(scene, 'deep', budget);
+/** Sky Glide flies off the Floating Island, so it builds the island's set as well as its own. */
+export const warmGlide = (scene: Phaser.Scene, budget = Infinity): boolean => {
+  const island = warmIsland(scene, budget);
+  return warmArenaTextures(scene, 'glide', budget) && island;
+};

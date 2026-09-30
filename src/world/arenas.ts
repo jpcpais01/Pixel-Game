@@ -14,7 +14,7 @@ import { CLEARING_GROUND, CLEARING_H, CLEARING_SPAWN, CLEARING_W, PLAZA_CX, PLAZ
 import { SANCTUM_WORLD_W } from './sanctumLayout';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
-import { warmCosmos, warmDeep, warmIsland, warmRift, warmSpirit, warmTemple } from '../art/arenaLoader';
+import { warmCosmos, warmDeep, warmGlide, warmIsland, warmRift, warmSpirit, warmTemple } from '../art/arenaLoader';
 import { RIFT_CX, RIFT_CY, RIFT_H, RIFT_SPAWN, RIFT_W, SHARDS, TEARS, riftWalkable } from './riftLayout';
 import { RIFT_PLATFORM_X, RIFT_PLATFORM_Y, SHARD_H, SHARD_OY } from '../art/rift';
 import { GroundStreamer } from './GroundStreamer';
@@ -85,6 +85,11 @@ export interface ArenaDef {
   respawn?: number;
   /** Played alone for now: no online rooms (the Endless Rift's waves aren't shared yet). */
   solo?: boolean;
+  /**
+   * Played in a scene of its own instead of the world (Sky Glide), with its
+   * own HUD; online, a race rather than co-op.
+   */
+  mode?: { scene: string; ui: string; race?: boolean };
   /** The select card's window onto the arena: its centre, and what stands in view. */
   preview: { x: number; y: number; sprites(): PreviewSprite[] };
 }
@@ -366,6 +371,41 @@ export const ARENAS: ArenaDef[] = [
       x: RING_CX,
       y: RING_CY + 28,
       sprites: () => COLUMNS.map((c) => ({ texture: 'isle_column', frame: `c${c.v}`, x: c.x, y: c.y, originY: COLUMN_BASE / COLUMN_H })),
+    },
+  },
+  {
+    id: 'glide',
+    name: 'Sky Glide',
+    blurb: 'Ride the wind down from the island',
+    accent: 0x9ae8ff,
+    // Its sky and islets; the course itself is built by scenes/GlideScene.ts.
+    ground: {
+      painted: true,
+      w: 256,
+      h: 256,
+      warm: warmGlide,
+      layers: [{ key: 'gl_sea', x: 0, y: 0 }],
+    },
+    spawn: { x: 128, y: 128 },
+    monsters: [],
+    mode: { scene: 'glide', ui: 'glideui', race: true },
+    scenery: () => ({ trees: [], props: [], rays: [], colliders: [] }),
+    walkable: () => false,
+    drift: { tints: [0xffffff], frequency: 100000, where: () => false },
+    daylight: 1,
+    preview: {
+      x: 128,
+      y: 128,
+      sprites: () => [
+        { texture: 'isle_islet2', x: 196, y: 118 },
+        { texture: 'gl_puff1', x: 70, y: 186 },
+        { texture: 'gl_islet0', x: 84, y: 158 },
+        { texture: 'gl_puff2', x: 196, y: 194 },
+        { texture: 'gl_islet1', x: 176, y: 172 },
+        { texture: 'gl_ring_big', frame: 'b2', x: 112, y: 116, originY: 0.5 },
+        { texture: 'gl_ring', frame: 'g1', x: 134, y: 128, originY: 0.5 },
+        { texture: 'gl_ring', frame: 'g5', x: 152, y: 140, originY: 0.5 },
+      ],
     },
   },
 ];

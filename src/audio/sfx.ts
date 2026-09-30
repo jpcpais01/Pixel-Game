@@ -553,6 +553,71 @@ export class Sfx {
   }
 
   /** One gem out of a dissolving duplicate, reaching the counter. */
+  // ---- Sky Glide
+
+  /** Through a ring: a bright chime that climbs a pentatonic step for each ring in a row; the big ring rings a chord. */
+  glideRing(t: number, pan: number, step: number, big: boolean): void {
+    const out = this.out(pan, big ? 0.8 : 0.55, 0.6);
+    const scale = [0, 2, 4, 7, 9];
+    const n = Math.min(step, 14);
+    const note = 76 + Math.floor(n / 5) * 12 + scale[n % 5];
+    this.bell(out, t, mtof(note), 0.06, 0.7);
+    this.bell(out, t + 0.05, mtof(note + 7), 0.035, 0.6);
+    if (big) {
+      [0, 4, 7, 12].forEach((i, k) => this.bell(out, t + 0.04 + k * 0.05, mtof(72 + i), 0.05, 1.1));
+      this.burstNoise(out, t, 'bandpass', 3000, 700, 1.2, 0.3, 0.45);
+    } else this.burstNoise(out, t, 'bandpass', 4200, 1800, 1.5, 0.08, 0.18);
+  }
+
+  /** Into rising air: a soft swell of wind climbing, and a glassy shimmer. */
+  glideGust(t: number): void {
+    const out = this.out(0, 0.5, 0.5);
+    const ctx = this.m.ctx;
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.28, t + 0.25);
+    g.gain.linearRampToValueAtTime(0, t + 0.9);
+    const bp = filter(ctx, 'bandpass', 500, 2.5, g);
+    sweep(bp.frequency, t, 450, 1700, 0.9);
+    const src = this.m.noiseSource(true);
+    src.connect(bp);
+    this.m.startNoise(src, t, 0.95);
+    this.sparkle(out, t + 0.15, 4, 0.06);
+  }
+
+  /** A rush of air past the ears: diving, or a boost. */
+  glideWhoosh(t: number, pan: number, level = 1): void {
+    const out = this.out(pan, 0.5 * level, 0.25);
+    this.burstNoise(out, t, 'bandpass', 2400, 500, 1.1, 0.45, 0.5, true);
+  }
+
+  /** The countdown's beeps, and a brighter, longer one for GO. */
+  glideCount(t: number, go: boolean): void {
+    const out = this.out(0, 0.5, 0.3);
+    this.chirp(out, t, 'triangle', go ? 1046 : 660, go ? 1046 : 660, go ? 0.3 : 0.22, go ? 0.5 : 0.14);
+    if (go) this.chirp(out, t, 'sine', 1568, 1568, 0.12, 0.5);
+  }
+
+  /** Sinking into the cloud sea: a soft, muffled whump going down. */
+  glideSplash(t: number): void {
+    const out = this.out(0, 0.7, 0.6);
+    this.burstNoise(out, t, 'lowpass', 1800, 200, 0.7, 0.5, 0.8, true);
+    this.chirp(out, t, 'sine', 300, 90, 0.2, 0.5);
+  }
+
+  /** Touching down on the goal: a soft thump in the grass and a little fanfare. */
+  glideLand(t: number): void {
+    const out = this.out(0, 0.8, 0.5);
+    this.burstNoise(out, t, 'lowpass', 900, 200, 0.8, 0.4, 0.25, true);
+    this.chirp(out, t, 'sine', 150, 60, 0.3, 0.22);
+    [60, 64, 67, 72, 76].forEach((m, i) => this.bell(out, t + 0.12 + i * 0.08, mtof(m + 12), 0.05, i === 4 ? 1.6 : 0.8));
+  }
+
+  /** The wind round a glider, held until stopped (see WindBed). */
+  windBed(t: number): WindBed {
+    return new WindBed(this.m, this.out(0, 0.6, 0.15), t);
+  }
+
   gemTick(t: number): void {
     const out = this.out(0, 0.3, 0.2);
     this.bell(out, t, pick([2349, 2637, 3136]), 0.03, 0.25);
@@ -1957,5 +2022,47 @@ export class BeamHum {
     this.env.gain.setTargetAtTime(0, t, 0.03);
     for (const o of this.oscs) o.stop(t + 0.25);
     this.noise.stop(t + 0.25);
+  }
+}
+
+/** The wind past a glider: a bed of noise that swells and brightens with speed, and roars in a dive. */
+export class WindBed {
+  private env: GainNode;
+  private lp: BiquadFilterNode;
+  private bp: BiquadFilterNode;
+  private whistle: GainNode;
+  private noise: AudioBufferSourceNode;
+  private hiss: AudioBufferSourceNode;
+
+  constructor(m: Mixer, out: AudioNode, t: number) {
+    const ctx = m.ctx;
+    this.env = gain(ctx, 0, out);
+    this.env.gain.setValueAtTime(0, t);
+    this.env.gain.linearRampToValueAtTime(0.18, t + 0.6);
+    this.lp = filter(ctx, 'lowpass', 500, 0.6, this.env);
+    this.noise = m.noiseLoop(true);
+    this.noise.connect(this.lp);
+    this.whistle = gain(ctx, 0, this.env);
+    this.bp = filter(ctx, 'bandpass', 1500, 6, this.whistle);
+    this.hiss = m.noiseLoop();
+    this.hiss.connect(this.bp);
+    this.noise.start(t);
+    this.hiss.start(t);
+  }
+
+  /** `speed` 0..1 of top speed; `dive` while diving. */
+  set(speed: number, dive: boolean, t: number): void {
+    const k = 0.12;
+    this.env.gain.setTargetAtTime(0.1 + speed * 0.3, t, k);
+    this.lp.frequency.setTargetAtTime(300 + speed * 1600 + (dive ? 700 : 0), t, k);
+    this.bp.frequency.setTargetAtTime(900 + speed * 1800, t, k);
+    this.whistle.gain.setTargetAtTime(dive ? 0.18 : speed * 0.06, t, k);
+  }
+
+  stop(t: number): void {
+    this.env.gain.cancelScheduledValues(t);
+    this.env.gain.setTargetAtTime(0, t, 0.15);
+    this.noise.stop(t + 0.8);
+    this.hiss.stop(t + 0.8);
   }
 }
