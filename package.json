@@ -11,7 +11,8 @@
     "sheet": "tsx scripts/sheet.ts sheets 5",
     "icons": "tsx scripts/icons.ts",
     "gear": "tsx scripts/gear.ts gear.png 4",
-    "trees": "tsx scripts/trees.ts trees.png 3"
+    "trees": "tsx scripts/trees.ts trees.png 3",
+    "forest": "tsx scripts/forest.ts forest.png"
   },
   "dependencies": {
     "phaser": "3.90.0"

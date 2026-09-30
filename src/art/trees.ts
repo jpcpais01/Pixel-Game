@@ -839,6 +839,247 @@ function cherryBark(c: PixelCanvas, sk: Skeleton, dx: (y: number) => number): vo
   }
 }
 
+// ------------------------------------------------------------------ maples
+
+/** Autumn maples, a turn of the year each: flame orange, gold, and deep crimson. */
+const MAPLE_LEAVES: Material[] = [
+  ramp('#2a0c0a', '#451410', '#651d12', '#8a2c14', '#b04218', '#d05e1e', '#e8802a', '#f6a540', '#ffcb6a'),
+  ramp('#2c1a08', '#48290b', '#6a3f0e', '#8e5812', '#b27518', '#d09320', '#e6b22e', '#f4cd4c', '#fde584'),
+  ramp('#22060e', '#3b0a16', '#58101e', '#781826', '#98222e', '#b83038', '#d44a44', '#ec6c56', '#fa9876'),
+].map((r) => ({ ramp: r, outline: hex('#140604'), outlineLit: r[1] }));
+const MAPLE_BARK: Material = { ramp: ramp('#170f0c', '#261915', '#38251d', '#4c3226', '#624232', '#7a5540'), outline: hex('#0c0706') };
+const MAPLE: Growth = { bow: 0.14, kink: 1, reach: 0.48, taper: 0.78, twig: 0.75, three: 0.3 };
+
+/**
+ * An autumn maple on the forest trees' 96 x 128 frame: a domed crown of
+ * fiery clumps over a grey-brown trunk, and the leaves it has already let go
+ * of lying in a ring round its roots. Variant `v` picks the colour.
+ */
+export function mapleTree(v: number, f = 0): PixelCanvas {
+  const c = new PixelCanvas(TREE_W, TREE_H);
+  const R = rng(5200 + v * 41);
+  const bx = 48;
+  const by = TREE_BASE_Y;
+  const leaf = MAPLE_LEAVES[v % MAPLE_LEAVES.length];
+  const litter: Material = { ramp: leaf.ramp, outline: leaf.outline, noOutline: true, noAO: true };
+  const dx = leaner(swayAt(f, 1.25), by - 40, by - 104);
+  // Fallen leaves, thick by the trunk and thinning out, a few blown further.
+  const fallen = Array.from({ length: 64 }, () => {
+    const a = R() * Math.PI * 2;
+    const d = 4 + R() ** 0.9 * 26;
+    return { x: bx + Math.cos(a) * d * 1.35, y: by - 1 + Math.sin(a) * d * 0.36, s: 2 + Math.floor(R() * 6), two: R() < 0.4 };
+  });
+  // A dome, taller than an oak's and a little narrower, of mid-sized clumps.
+  const cx = bx + (R() - 0.5) * 4;
+  const cy = by - 76;
+  const spots = scatter(R, cx, cy, 25 + v * 2, 22, 11 + v, 0.46, 0.4);
+  const clumps = spots.map((s) => {
+    const r = 9 + R() * 3.5 - Math.abs(s.x - cx) * 0.035;
+    return makeClump(R, s.x, s.y, r, r * 0.85, 2.8);
+  });
+  const trunkR = 4.2 + v * 0.2;
+  const sk = skeleton(R, MAPLE, { x: bx, y: by, r: trunkR + 0.5 }, { x: bx + (R() - 0.5) * 3, y: by - 36, r: trunkR * 0.78 }, spots.map((s) => ({ x: s.x, y: s.y + 3 })));
+  const cr: Crown = { cx, cy, rx: 36, ry: 32, leaf, cluster: 2.8, grain: 0.95, lift: 0.1, clumps };
+
+  c.part();
+  for (const p of fallen) {
+    c.px(p.x, p.y, litter, FLAT);
+    if (p.two) c.px(p.x + 1, p.y, litter, FLAT);
+  }
+  for (const p of fallen) {
+    tone(c, Math.floor(p.x), Math.floor(p.y), p.s);
+    if (p.two) tone(c, Math.floor(p.x) + 1, Math.floor(p.y), Math.max(0, p.s - 1));
+  }
+  paintDepths(c, cr, dx, 0.66);
+  rootsOf(c, bx, by, trunkR, 9, MAPLE_BARK, R);
+  paintLimbs(c, sk, MAPLE_BARK, dx);
+  paintCrown(c, cr, dx, f);
+  // Single leaves catching the sun on the crests: the palest gold.
+  for (let y = by - 114; y < by - 36; y++) {
+    for (let x = 2; x < TREE_W - 2; x++) {
+      if (c.materialAt(x, y) !== leaf) continue;
+      const open = c.filled(x, y - 2) === false || c.filled(x - 2, y) === false;
+      if (open && hash2(x - Math.round(dx(y)), y, 461 + v) > 0.82) tone(c, x, y, leaf.ramp.length - 1);
+    }
+  }
+  shadeUnder(c, MAPLE_BARK, bx - 12, bx + 12, Math.round(crownFloor(cr)) - 2, 7);
+  return c;
+}
+
+// ----------------------------------------------------------------- willows
+
+const WILLOW_LEAF: Material = {
+  ramp: ramp('#0d1e14', '#142c19', '#1d3d1e', '#2a5123', '#3a6628', '#4f7d2e', '#689536', '#86ae40', '#a8c655', '#cadd78'),
+  outline: hex('#08120b'),
+  outlineLit: hex('#142c19'),
+};
+const WILLOW_BARK: Material = { ramp: ramp('#15110d', '#241d16', '#352a1f', '#483a2a', '#5d4c37', '#756247'), outline: hex('#0a0806') };
+const WILLOW: Growth = { bow: 0.22, kink: 1.1, reach: 0.45, taper: 0.74, twig: 0.7, three: 0.35 };
+
+/**
+ * A weeping willow on the forest trees' 96 x 128 frame: a short, stout,
+ * furrowed trunk that splits into arching limbs, and from their crown a
+ * curtain of long hanging strands, almost to the ground. The strands swing
+ * more the lower they hang. Willows grow by the water.
+ */
+export function willowTree(v: number, f = 0): PixelCanvas {
+  const c = new PixelCanvas(TREE_W, TREE_H);
+  const R = rng(6300 + v * 43);
+  const bx = 48;
+  const by = TREE_BASE_Y;
+  const k = WILLOW_LEAF.ramp.length;
+  const sw = swayAt(f, 1);
+  const dx = leaner(sw * 0.7, by - 30, by - 100);
+  // The crown: a low, wide dome where the limbs end.
+  const cx = bx + (R() - 0.5) * 4;
+  const cy = by - 78 + v * 2;
+  const rx = 30 + v * 2;
+  const ry = 14;
+  const spots = scatter(R, cx, cy, rx * 0.8, ry, 8 + v, 0.5, 0);
+  const clumps = spots.map((s) => makeClump(R, s.x, s.y, 8 + R() * 3, 6 + R() * 2, 2.4));
+  const trunkR = 5 + v * 0.3;
+  const sk = skeleton(R, WILLOW, { x: bx, y: by, r: trunkR + 0.6 }, { x: bx + (R() - 0.5) * 5, y: by - 28, r: trunkR * 0.8 }, spots.map((s) => ({ x: s.x, y: s.y + 2 })));
+  const cr: Crown = { cx, cy, rx, ry: ry + 6, leaf: WILLOW_LEAF, cluster: 2.4, grain: 1, lift: 0.04, clumps };
+
+  // The strands: from points over the dome, a little arch outward, then
+  // hanging. `back` ones hang behind the trunk and are darker.
+  interface Strand { x: number; y: number; out: number; len: number; back: boolean; j: number; }
+  const strands: Strand[] = [];
+  const count = 44 + v * 6;
+  for (let s = 0; s < count; s++) {
+    const u = (s + R() * 0.8) / count;
+    const a = Math.PI + u * Math.PI;
+    const x = cx + Math.cos(a) * rx * (0.95 + R() * 0.12);
+    const y = cy + Math.sin(a) * ry * 0.7 + 2 + R() * 4;
+    const edge = Math.abs(Math.cos(a));
+    const len = 34 + R() * 26 + (1 - edge) * 12 - v * 2;
+    strands.push({ x, y, out: Math.sign(Math.cos(a)) * edge * (3 + R() * 3), len: Math.min(len, by - 4 - y), back: R() < 0.4 && edge < 0.8, j: R() - 0.5 });
+  }
+  const hang = (st: Strand, t: number) => {
+    // Out along the arch, then straight down, swinging more the lower it is.
+    const drop = t * st.len;
+    const arch = st.out * Math.min(1, t * 4);
+    return { x: st.x + arch + dx(st.y) + sw * 1.6 * (drop / 50) ** 1.3, y: st.y + drop };
+  };
+  const drawStrand = (st: Strand, dark: number) => {
+    c.part();
+    const n = Math.ceil(st.len);
+    for (let s = 0; s <= n; s++) {
+      const t = s / n;
+      const p = hang(st, t);
+      const side = st.out < 0 ? -1 : 1;
+      c.px(p.x, p.y, WILLOW_LEAF, sphere(side * 0.5, 0.1, 0.8));
+      // Its leaves: little nubs alternating either side, fewer at the tip.
+      if (s % 2 === 0 && t < 0.92) c.px(p.x + (s % 4 === 0 ? -1 : 1), p.y + 0.5, WILLOW_LEAF, sphere((s % 4 === 0 ? -1 : 1) * 0.7, 0.2, 0.7));
+      // Brighter up in the light and on the sun's side, darker down in the shade.
+      const lit = 0.25 - t * 0.9 - (p.x - cx) / (rx * 3) + st.j * 0.4 - dark;
+      const step = toStep(lit, k, Math.floor(p.x), Math.floor(p.y), 0.3);
+      tone(c, Math.floor(p.x), Math.floor(p.y), step);
+      tone(c, Math.floor(p.x) + (s % 4 === 0 ? -1 : 1), Math.floor(p.y + 0.5), Math.max(0, step - 1));
+    }
+  };
+  for (const st of strands) if (st.back) drawStrand(st, 0.5);
+  paintDepths(c, cr, dx, 0.55);
+  rootsOf(c, bx, by, trunkR, 10, WILLOW_BARK, R);
+  paintLimbs(c, sk, WILLOW_BARK, dx);
+  mossOn(c, bx, by, trunkR);
+  paintCrown(c, cr, dx, f);
+  for (const st of strands) if (!st.back) drawStrand(st, 0);
+  shadeUnder(c, WILLOW_BARK, bx - 12, bx + 12, Math.round(cy + 6), 6);
+  return c;
+}
+
+// ------------------------------------------------------------------ elder
+
+export const ELDER_W = 176;
+export const ELDER_H = 184;
+/** Where the elder's trunk meets the ground in its frame. */
+export const ELDER_BASE_Y = 178;
+
+const ELDER_BARK: Material = { ramp: ramp('#140d0a', '#221610', '#332218', '#462f21', '#5b3e2b', '#735037', '#8c6545'), outline: hex('#0a0605') };
+const ELDER_LEAF: Material = {
+  ramp: ramp('#0a1b1a', '#0f2822', '#15372a', '#1e4830', '#295c35', '#377238', '#4b893c', '#66a042', '#8aba50', '#b2d266'),
+  outline: hex('#061110'),
+  outlineLit: hex('#0f2822'),
+};
+/** Pale lichen and the old runes cut in its bark, glowing faintly. */
+const ELDER_GLOW: Material = { ramp: ramp('#1d6a5e', '#34a08c', '#6fd6bd', '#bff5e4'), outline: hex('#0a2a24'), emissive: 0.7, noAO: true, noOutline: true };
+const ELDER: Growth = { bow: 0.16, kink: 1.4, reach: 0.45, taper: 0.8, twig: 1, three: 0.4 };
+
+/**
+ * The elder of a wood: an oak older than the forest round it, twice the
+ * height of the others, with a trunk like a tower of twisted roots, a crown
+ * like a hill of leaves, hanging moss, and old runes in its bark that glow a
+ * little. One stands in the middle of its own glade. Frame `f` of its sway.
+ */
+export function elderTree(f = 0): PixelCanvas {
+  const c = new PixelCanvas(ELDER_W, ELDER_H);
+  const R = rng(7700);
+  const bx = ELDER_W / 2;
+  const by = ELDER_BASE_Y;
+  const dx = leaner(swayAt(f, 0.9), by - 70, by - 170);
+  const cx = bx;
+  const cy = by - 118;
+  const spots = scatter(R, cx, cy, 64, 38, 17, 0.38, 0.4);
+  const clumps = spots.map((s) => {
+    const r = 15 + R() * 6 - Math.abs(s.x - cx) * 0.05;
+    return makeClump(R, s.x, s.y, r, r * 0.8, 3.4);
+  });
+  const trunkR = 11;
+  const sk = skeleton(R, ELDER, { x: bx, y: by, r: trunkR + 1 }, { x: bx + (R() - 0.5) * 6, y: by - 58, r: trunkR * 0.78 }, spots.map((s) => ({ x: s.x, y: s.y + 4 })));
+  const cr: Crown = { cx, cy, rx: 82, ry: 50, leaf: ELDER_LEAF, cluster: 3.4, grain: 0.9, lift: 0.06, clumps };
+  paintDepths(c, cr, dx, 0.75);
+  // Great roots, two rings of them, clawing into the ground.
+  rootsOf(c, bx, by, trunkR, 24, ELDER_BARK, R);
+  rootsOf(c, bx + 2, by + 1, trunkR * 0.7, 16, ELDER_BARK, R);
+  paintLimbs(c, sk, ELDER_BARK, dx);
+  // The trunk's twist: dark seams spiralling up it.
+  const trunk = sk.limbs[0].pts;
+  for (let y = by - 56; y < by - 2; y++) {
+    const p = trunk.reduce((a, b) => (Math.abs(b.y - y) < Math.abs(a.y - y) ? b : a));
+    for (let s = 0; s < 3; s++) {
+      const x = Math.round(p.x + Math.sin((y + s * 17) * 0.11) * p.r * 0.8);
+      if (c.materialAt(x, y) === ELDER_BARK) c.shade(x, y, -2);
+    }
+  }
+  // Moss up the shaded side and the runes, glowing, on the lit side.
+  mossOn(c, bx, by, trunkR);
+  mossOn(c, bx + 3, by - 12, trunkR);
+  c.part();
+  const runes = [
+    [0, 0], [1, 0], [2, 0], [1, 1], [1, 2], [0, 3], [2, 3],
+    [0, 6], [0, 7], [0, 8], [1, 7], [2, 6], [2, 8],
+    [1, 11], [0, 12], [2, 12], [1, 13], [1, 14],
+  ];
+  for (const [rx, ry] of runes) c.px(bx - 6 + rx, by - 44 + ry, ELDER_GLOW, FLAT, { bias: 1 });
+  for (let k = 0; k < 16; k++) {
+    const x = bx - trunkR + R() * trunkR * 2;
+    const y = by - 6 - R() * 48;
+    if (c.materialAt(x, y) === ELDER_BARK) c.px(x, y, ELDER_GLOW, FLAT, { bias: -1 });
+  }
+  paintCrown(c, cr, dx, f);
+  // Moss hanging from the crown's underside in long threads.
+  for (let s = 0; s < 26; s++) {
+    const x0 = cx - 64 + R() * 128;
+    let y0 = -1;
+    for (let y = by - 40; y > by - 170; y--) {
+      if (c.materialAt(Math.floor(x0 + dx(y)), y) === ELDER_LEAF) {
+        y0 = y;
+        break;
+      }
+    }
+    if (y0 < 0) continue;
+    c.part();
+    const len = 6 + R() * 16;
+    for (let t = 0; t < len; t++) {
+      const x = x0 + dx(y0) + Math.sin(t * 0.5 + s) * 0.6 + swayAt(f, 0.6) * (t / 20);
+      c.px(x, y0 + t, MOSS, sphere(0, 0.2));
+    }
+  }
+  shadeUnder(c, ELDER_BARK, bx - 24, bx + 24, Math.round(crownFloor(cr)) - 3, 10);
+  return c;
+}
+
 export type TreeName = 'oak' | 'birch' | 'pine';
 const TREE_DRAW: Record<TreeName, (v: number, f: number) => PixelCanvas> = { oak: oakFrame, birch: birchFrame, pine: pineFrame };
 

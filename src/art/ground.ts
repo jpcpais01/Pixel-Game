@@ -50,6 +50,8 @@ export interface Look {
   petal?: RGB[];
   pad?: RGB[];
   lotus?: RGB[];
+  plank?: RGB[];
+  fallen?: RGB[];
 }
 
 /** What a pixel of ground is. */
@@ -71,6 +73,10 @@ export const K = {
   Petal: 14,
   Pad: 15,
   Lotus: 16,
+  /** Bridge and boardwalk planks (look.plank). */
+  Plank: 17,
+  /** Fallen autumn leaves, their colour picked outright by tone (look.fallen). */
+  Fallen: 18,
 } as const;
 
 /** One pixel of ground, as the spec classifies it. */
@@ -84,6 +90,8 @@ export interface Cell {
 
 /** A strip's fields while it is built, for a spec's decorations (runes, lotus glow). */
 export interface StripFields {
+  /** World x of the strip's first column (0 unless the ground is streamed in tiles, like the Everwood's). */
+  x0: number;
   y0: number;
   W: number;
   H: number;
@@ -116,6 +124,13 @@ export interface GroundSpec {
   key: string;
   w: number;
   h: number;
+  /**
+   * World x of the ground's first column: a ground streamed in tiles (the
+   * Everwood's) is a spec per column of tiles, each `w` wide. 0 by default.
+   */
+  ox?: number;
+  /** Which roof ramp a treetop clump at (x, y) takes, when the spec picks it (else a noise does). */
+  roofSpecies?(x: number, y: number): number;
   night: Look;
   day: Look;
   /** Positive inside the roof, negative in the open, roughly in pixels from its edge. */
@@ -172,7 +187,7 @@ class Clumps {
   readonly zb: Float32Array;
   readonly species: Uint8Array;
 
-  constructor(x0: number, x1: number, y0: number, y1: number) {
+  constructor(x0: number, x1: number, y0: number, y1: number, pick?: (x: number, y: number) => number) {
     this.gx0 = Math.floor(x0 / CLUMP) - 1;
     this.gy0 = Math.floor(y0 / CLUMP) - 1;
     this.cols = Math.floor(x1 / CLUMP) + 2 - this.gx0;
@@ -196,6 +211,10 @@ class Clumps {
         this.zb[k] = hash2(cx, cy, 109) * 0.55;
         // Neighbouring clumps mostly share a species; now and then a whole
         // crown stands out (autumn gold, or pale jasmine).
+        if (pick) {
+          this.species[k] = pick(sx, sy);
+          continue;
+        }
         const s = valueNoise(sx, sy, 90, 97) + (hash2(cx, cy, 113) - 0.5) * 0.35;
         this.species[k] = valueNoise(sx, sy, 34, 131) > 0.86 ? 3 : s < 0.3 ? 2 : s > 0.74 ? 1 : 0;
       }
@@ -305,6 +324,8 @@ const CAST_REACH = 18;
 /** Build strip `index` of `spec`'s ground, yielding every few rows so the work spreads across frames. */
 export function* buildStrip(spec: GroundSpec, index: number): Generator<void, GroundStrip, void> {
   const W = spec.w;
+  // World x of column 0: every field below is a function of world coordinates, so tiles meet without seams.
+  const ox = spec.ox ?? 0;
   const y0 = index * STRIP_H;
   const H = Math.min(STRIP_H, spec.h - y0);
   // Fields carry a one-pixel margin, so normals at the strip's edges match its neighbours.
@@ -331,22 +352,23 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
   for (let y = rowBase; y <= y0 + H; y++) {
     const o = (y - rowBase) * RW;
     for (let x = -1; x <= W; x++) {
-      const d = spec.roofDepth(x, y);
+      const d = spec.roofDepth(x + ox, y);
       roof[o + x + 1] = d;
       if (d > 0) anyRoof = true;
     }
     if ((y & 15) === 15) yield;
   }
   const roofAt = (x: number, y: number) => roof[(y - rowBase) * RW + clamp(x, -1, W) + 1];
-  const clumps = new Clumps(-1, W, y0 - 1, y0 + H);
+  const clumps = new Clumps(ox - 1, ox + W, y0 - 1, y0 + H, spec.roofSpecies?.bind(spec));
   const cell: Cell = { kind: 0, sub: 0, height: 0, tone: 0 };
 
   for (let py = 0; py < PH; py++) {
     const wy = y0 - 1 + py;
     for (let px = 0; px < PW; px++) {
-      const wx = px - 1;
+      const lx = px - 1;
+      const wx = lx + ox;
       const i = py * PW + px;
-      const rd = roofAt(wx, wy);
+      const rd = roofAt(lx, wy);
       wall[i] = rd;
       if (rd > 0) {
         kind[i] = K.Roof;
@@ -385,7 +407,7 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
   }
 
   // Small scattered details.
-  const R = rng(index * 7919 + 13 + spec.key.length * 101);
+  const R = rng(index * 7919 + 13 + spec.key.length * 101 + ox * 31);
   const at = (x: number, y: number) => (y - y0 + 1) * PW + x + 1;
   const inside = (x: number, y: number) => x >= -1 && x <= W && y >= y0 - 1 && y <= y0 + H;
 
@@ -469,12 +491,19 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
       }
     }
   }
-  if (spec.decorate?.({ y0, W, H, PW, kind, sub, height, tone, emissive })) glows = true;
+  if (spec.decorate?.({ x0: ox, y0, W, H, PW, kind, sub, height, tone, emissive })) glows = true;
   yield;
 
   // Crowns whose shadows might reach this strip, and pools of light in it.
-  const casters = spec.casters().filter((t) => t.y > y0 - 30 && t.y < y0 + H + 50);
-  const pools = spec.pools().filter((p) => Math.abs(p.y - y0 - H / 2) < H / 2 + 20);
+  // In the strip's own columns (x - ox), as everything below draws.
+  const casters = spec
+    .casters()
+    .filter((t) => t.y > y0 - 30 && t.y < y0 + H + 50 && t.x > ox - 80 && t.x < ox + W + 80)
+    .map((t) => ({ ...t, x: t.x - ox }));
+  const pools = spec
+    .pools()
+    .filter((p) => Math.abs(p.y - y0 - H / 2) < H / 2 + 20 && p.x > ox - 20 && p.x < ox + W + 20)
+    .map((p) => ({ x: p.x - ox, y: p.y }));
 
   const night = yield* colour(spec.night);
   const day = yield* colour(spec.day);
@@ -485,7 +514,7 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
     const normal = new Uint8ClampedArray(W * H * 4);
     const L = KEY_LIGHT;
     const Ll = Math.hypot(L.x, L.y, L.z);
-    const [ox, oy] = look.cast;
+    const [castX, castY] = look.cast;
     const shadow = new Float32Array(W * H);
     const light = new Float32Array(W * H);
     const put = (a: Float32Array, x: number, y: number, v: number) => {
@@ -497,7 +526,7 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
     if (anyRoof) {
       for (let y = y0; y < y0 + H; y++) {
         for (let x = 0; x < W; x++) {
-          const s = roofAt(x - ox, y - oy) > 0 ? 1 : roofAt(x - Math.round(ox * 0.7), y - Math.round(oy * 0.7)) > 0 ? 0.5 : 0;
+          const s = roofAt(x - castX, y - castY) > 0 ? 1 : roofAt(x - Math.round(castX * 0.7), y - Math.round(castY * 0.7)) > 0 ? 0.5 : 0;
           if (s) shadow[(y - y0) * W + x] = s;
         }
         if ((y & 31) === 31) yield;
@@ -505,8 +534,8 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
     }
     // ...each tree's crown and trunk...
     for (const t of casters) {
-      const cx = t.x + ox * 1.4;
-      const cy = t.y + Math.abs(oy) * 0.4;
+      const cx = t.x + castX * 1.4;
+      const cy = t.y + Math.abs(castY) * 0.4;
       const rx = t.r * 0.9;
       const ry = t.r * 0.5;
       for (let y = Math.floor(cy - ry); y <= cy + ry; y++) {
@@ -528,7 +557,7 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
       for (let y = p.y - 7; y <= p.y + 7; y++) {
         for (let x = p.x - 15; x <= p.x + 15; x++) {
           const e = ((x - p.x) / 15) ** 2 + ((y - p.y) / 7) ** 2;
-          if (e < 1) put(light, x, y, e < 0.45 ? 1 : 0.55 - (hash2(x, y, 81) > 0.5 ? 0.25 : 0));
+          if (e < 1) put(light, x, y, e < 0.45 ? 1 : 0.55 - (hash2(x + ox, y, 81) > 0.5 ? 0.25 : 0));
         }
       }
     }
@@ -538,6 +567,8 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
     const petal = look.petal ?? g.flowers;
     const pad = look.pad ?? look.moss;
     const lotus = look.lotus ?? g.flowers;
+    const plank = look.plank ?? look.path;
+    const fallen = look.fallen ?? look.litter;
     for (let y = 0; y < H; y++) {
       const wy = y0 + y;
       for (let x = 0; x < W; x++) {
@@ -572,11 +603,11 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
           const rp = look.roof[sub[i]];
           col = rp[clamp(Math.round(3.4 + (lit - 0.78) * 5 + tone[i]), 0, rp.length - 1)];
         } else {
-          let dark = spec.gloom(x, wy, wall[i], look);
+          let dark = spec.gloom(x + ox, wy, wall[i], look);
           const j = y * W + x;
           let s = shadow[j];
           // Dappled light through the leaves.
-          if (s > 0 && valueNoise(x, wy, 4, 77) > 0.7) s *= 0.3;
+          if (s > 0 && valueNoise(x + ox, wy, 4, 77) > 0.7) s *= 0.3;
           const pool = light[j];
           if (pool > 0) s *= 1 - pool;
           dark += s * look.shadow - pool * look.pool;
@@ -630,6 +661,13 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
               break;
             case K.Lotus:
               col = lotus[sub[i] % lotus.length];
+              break;
+            case K.Plank:
+              col = plank[clamp(Math.round(3 + shade), 0, plank.length - 1)];
+              break;
+            case K.Fallen:
+              // A leaf keeps its colour; shade only darkens it.
+              col = fallen[clamp(Math.round(tone[i] - Math.max(0, dark) * 0.9 + (lit - 0.78) * 2), 0, fallen.length - 1)];
               break;
             default:
               col = g.grass[clamp(Math.round(2.4 + shade), 0, g.grass.length - 1)];

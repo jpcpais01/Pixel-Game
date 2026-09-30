@@ -30,12 +30,12 @@ export interface CritterDef {
 }
 
 export const CRITTERS: CritterDef[] = [
-  { id: 'firefly', name: 'Firefly', arenas: ['clearing'], when: 'night', rarity: 'common', gait: 'fly', tint: 0xd8ff5a, glow: hex('#d8ff5a'), hint: 'The Clearing, by night' },
-  { id: 'butterfly', name: 'Sky Morpho', arenas: ['clearing'], when: 'day', rarity: 'common', gait: 'fly', tint: 0x6ac0ff, hint: 'The Clearing, by day' },
-  { id: 'ladybug', name: 'Ladybird', arenas: ['clearing', 'garden'], when: 'day', rarity: 'common', gait: 'crawl', tint: 0xff6a58, hint: 'Clearing and Garden, by day' },
-  { id: 'moonmoth', name: 'Luna Moth', arenas: ['clearing'], when: 'night', rarity: 'rare', gait: 'fly', tint: 0xc8ffe8, glow: hex('#a8f0d0'), hint: 'The Clearing, late at night' },
+  { id: 'firefly', name: 'Firefly', arenas: ['clearing', 'forest'], when: 'night', rarity: 'common', gait: 'fly', tint: 0xd8ff5a, glow: hex('#d8ff5a'), hint: 'Clearing and Everwood, by night' },
+  { id: 'butterfly', name: 'Sky Morpho', arenas: ['clearing', 'forest'], when: 'day', rarity: 'common', gait: 'fly', tint: 0x6ac0ff, hint: 'Clearing and Everwood, by day' },
+  { id: 'ladybug', name: 'Ladybird', arenas: ['clearing', 'garden', 'forest'], when: 'day', rarity: 'common', gait: 'crawl', tint: 0xff6a58, hint: 'Clearing, Garden, Everwood, by day' },
+  { id: 'moonmoth', name: 'Luna Moth', arenas: ['clearing', 'forest'], when: 'night', rarity: 'rare', gait: 'fly', tint: 0xc8ffe8, glow: hex('#a8f0d0'), hint: 'Clearing and Everwood, late at night' },
   { id: 'glowfrog', name: 'Glowfrog', arenas: ['garden'], when: 'any', rarity: 'common', gait: 'hop', tint: 0x8af0ff, glow: hex('#8af0ff'), hint: 'The Sunken Garden' },
-  { id: 'dragonfly', name: 'Jewelwing', arenas: ['garden', 'island'], when: 'day', rarity: 'common', gait: 'fly', tint: 0x6affb0, hint: 'Garden and Floating Island' },
+  { id: 'dragonfly', name: 'Jewelwing', arenas: ['garden', 'island', 'forest'], when: 'day', rarity: 'common', gait: 'fly', tint: 0x6affb0, hint: 'Garden, Island and Everwood' },
   { id: 'pearlsnail', name: 'Pearl Snail', arenas: ['garden'], when: 'any', rarity: 'rare', gait: 'crawl', tint: 0xf0d8ff, hint: 'The Sunken Garden, rarely' },
   { id: 'starbeetle', name: 'Star Beetle', arenas: ['cosmos'], when: 'any', rarity: 'common', gait: 'crawl', tint: 0xc8d8ff, glow: hex('#8aa0ff'), hint: 'The Cosmos Arena' },
   { id: 'cometmoth', name: 'Comet Moth', arenas: ['cosmos'], when: 'any', rarity: 'rare', gait: 'fly', tint: 0xb8a0ff, glow: hex('#b8a0ff'), hint: 'The Cosmos Arena, rarely' },

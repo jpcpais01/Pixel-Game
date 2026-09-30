@@ -212,7 +212,7 @@ export class GroundStreamer {
 const warming = new WeakMap<Phaser.Textures.TextureManager, Map<string, { spec: GroundSpec; job: { index: number; gen: Generator<void, GroundStrip, void> } | null }>>();
 
 /** Turn a built strip into textures: night and day, each with its normal map, and its glow. */
-function install(scene: Phaser.Scene, spec: GroundSpec, s: GroundStrip): void {
+export function install(scene: Phaser.Scene, spec: GroundSpec, s: GroundStrip): void {
   const k = GroundStreamer.key(spec, s.index);
   const textures = scene.textures;
   const night = textures.addCanvas(k, toCanvas(s.w, s.h, s.night.diffuse))!;

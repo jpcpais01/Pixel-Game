@@ -8,6 +8,9 @@ import Phaser from 'phaser';
 // Drawn by one screen-fixed image covering the canvas; the image's texture
 // is the cloud tile, sampled in world space from the fragment's position.
 
+/** The cloud tile's size (the 'clouds' texture, see art/textures.ts). */
+const CLOUD_TILE = 256;
+
 const FRAG = `
 #define SHADER_NAME SKY_FS
 precision mediump float;
@@ -57,7 +60,11 @@ export class SkyPipeline extends Phaser.Renderer.WebGL.Pipelines.SinglePipeline 
   onRender(_scene: Phaser.Scene, camera: Phaser.Cameras.Scene2D.Camera): void {
     const z = camera.zoom;
     // Screen x = (worldX - scrollX) * z + width / 2 * (1 - z).
-    this.set2f('uWorldOrigin', camera.scrollX - (camera.width / 2) * (1 - z) / z, camera.scrollY - (camera.height / 2) * (1 - z) / z);
+    // The clouds repeat every tile, so only where the view is within one matters: a phone's shader
+    // floats can't tell pixels apart half a million pixels out (the Everwood's middle).
+    const ox = camera.scrollX - (camera.width / 2) * (1 - z) / z;
+    const oy = camera.scrollY - (camera.height / 2) * (1 - z) / z;
+    this.set2f('uWorldOrigin', ox - Math.floor(ox / CLOUD_TILE) * CLOUD_TILE, oy - Math.floor(oy / CLOUD_TILE) * CLOUD_TILE);
     this.set1f('uZoom', z);
     this.set2f('uResolution', this.renderer.width, this.renderer.height);
     this.set2f('uTile', skyState.tileX, skyState.tileY);
