@@ -19,7 +19,8 @@ import { AFONSO_KIT, King, KING_KIT } from './King';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
 import { CRUSADER_KIT, HOLY_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
-import { GUARD_STYLE, Jedi, JEDI_STYLE, SITH_STYLE } from './Jedi';
+import { GUARD_STYLE, Jedi, JEDI_STYLE, MASTER_STYLE } from './Jedi';
+import { Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
@@ -543,7 +544,7 @@ export const CLASSES: ClassDef[] = [
   {
     id: 'jedi',
     name: 'Jedi',
-    blurb: 'Saber and the Force',
+    blurb: 'The light and the dark',
     types: [
       {
         id: 'knight',
@@ -560,18 +561,6 @@ export const CLASSES: ClassDef[] = [
         lookName: 'Light side',
         skins: [
           {
-            id: 'sith',
-            name: 'Sith',
-            role: 'Dark side',
-            accent: 0xff4a4a,
-            special: 'Force storm',
-            preview: { texture: 'jedi_sith', glow: 'jedi_sith_e', idle: 'jedi_sith_idle_down', chosen: 'jedi_sith_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
-            buttons: {
-              attack: { texture: 'icon_saber_sith' },
-              special: { texture: 'icon_force_sith' },
-            },
-          },
-          {
             // A masked sentinel of the temple in cream and gold, with a long-hilted golden saber.
             id: 'guard',
             name: 'Temple guard',
@@ -585,10 +574,58 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_force_guard' },
             },
           },
+          {
+            // An old master of the order: white hair and a long white beard, indigo robes edged in silver, a green blade.
+            id: 'master',
+            name: 'Grand Master',
+            role: 'Elder of the order',
+            accent: 0x4ae070,
+            attack: "Master's flurry",
+            special: 'Force wave',
+            preview: { texture: 'jedi_master', glow: 'jedi_master_e', idle: 'jedi_master_idle_down', chosen: 'jedi_master_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
+            buttons: {
+              attack: { texture: 'icon_saber_master' },
+              special: { texture: 'icon_force_master' },
+            },
+          },
+        ],
+      },
+      {
+        // The dark side: a saberstaff that cuts both ways, Force lightning, and a grip that crushes.
+        id: 'sith',
+        name: 'Sith',
+        role: 'The dark side',
+        accent: 0xff4a4a,
+        attack: 'Saberstaff',
+        special: 'Force lightning',
+        preview: { texture: 'jedi_sith', glow: 'jedi_sith_e', idle: 'jedi_sith_idle_down', chosen: 'jedi_sith_grip_down', originY: JEDI_ORIGIN_Y / JEDI_H },
+        buttons: {
+          attack: { texture: 'icon_staff' },
+          special: { texture: 'icon_lightning' },
+        },
+        lookName: 'Hooded',
+        skins: [
+          {
+            // A horned, tattooed reaver in black and old blood, with an ember-red saberstaff.
+            id: 'warlord',
+            name: 'Warlord',
+            role: 'Horned reaver',
+            accent: 0xff5a2a,
+            attack: 'Twin-blade fury',
+            special: 'Blood lightning',
+            preview: { texture: 'jedi_warlord', glow: 'jedi_warlord_e', idle: 'jedi_warlord_idle_down', chosen: 'jedi_warlord_grip_down', originY: JEDI_ORIGIN_Y / JEDI_H },
+            buttons: {
+              attack: { texture: 'icon_staff_warlord' },
+              special: { texture: 'icon_lightning_warlord' },
+            },
+          },
         ],
       },
     ],
-    spawn: (world, x, y, look) => new Jedi(world, x, y, look === 'sith' ? SITH_STYLE : look === 'guard' ? GUARD_STYLE : JEDI_STYLE),
+    spawn(world, x, y, look) {
+      if (look === 'sith' || look === 'warlord') return new Sith(world, x, y, look === 'warlord' ? WARLORD_KIT : SITH_KIT);
+      return new Jedi(world, x, y, look === 'guard' ? GUARD_STYLE : look === 'master' ? MASTER_STYLE : JEDI_STYLE);
+    },
   },
   {
     id: 'fighter',

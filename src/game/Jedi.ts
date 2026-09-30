@@ -34,7 +34,7 @@ export interface JediStyle {
   force: Scheme;
   /** The saber's light on its surroundings. */
   light: number;
-  /** The dark side: the push crackles with lightning. */
+  /** The push crackles with lightning. */
   dark: boolean;
 }
 
@@ -46,20 +46,21 @@ export const JEDI_STYLE: JediStyle = {
   dark: false,
 };
 
-export const SITH_STYLE: JediStyle = {
-  key: 'jedi_sith',
-  saber: { core: 0xfff6f2, hot: 0xff6a62, mid: 0xf0283a, deep: 0xa00a22 },
-  force: { core: 0xfff0f4, hot: 0xff8a9a, mid: 0xd0304a, deep: 0x6a1030 },
-  light: 0xff4a4a,
-  dark: true,
-};
-
 /** The Temple guard: a gold blade and a golden Force. */
 export const GUARD_STYLE: JediStyle = {
   key: 'jedi_guard',
   saber: { core: 0xfffdf2, hot: 0xffe680, mid: 0xf2c630, deep: 0xa86a10 },
   force: { core: 0xfffbe8, hot: 0xffe08a, mid: 0xf0b030, deep: 0x8a5a18 },
   light: 0xffd04a,
+  dark: false,
+};
+
+/** The Grand Master: a green blade and a green-white Force. */
+export const MASTER_STYLE: JediStyle = {
+  key: 'jedi_master',
+  saber: { core: 0xf4fff4, hot: 0x8af09a, mid: 0x2ed058, deep: 0x0e8a32 },
+  force: { core: 0xffffff, hot: 0xdcffe4, mid: 0x8ee8a4, deep: 0x2e8a4e },
+  light: 0x5aff7a,
   dark: false,
 };
 
@@ -298,7 +299,7 @@ export class Jedi implements Hero {
     this.shadow.setPosition(rx, ry - 1).setAlpha(this.alpha);
     this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * this.alpha);
     // The blade lights the ground around its middle, brightest at night.
-    const m = jediMeta.get(frame);
+    const m = jediMeta.get(`${this.style.key}:${frame}`);
     const bx = m ? (m.tipX + m.handX) / 2 - JEDI_ORIGIN_X : 0;
     const by = m ? (m.tipY + m.handY) / 2 - JEDI_ORIGIN_Y : -14;
     this.bladeLight.setPosition(rx + bx, ry + by);

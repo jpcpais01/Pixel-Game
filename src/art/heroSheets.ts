@@ -11,7 +11,7 @@ import { packAtlas, type PixelAtlas } from './atlas';
 import { buildWizardFrames, ANIMS, DIRS, FRAME_H, FRAME_W, WIZARD_LOOKS } from './wizard';
 import { buildWarriorFrames, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, warriorAnimsFor } from './warrior';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_LOOKS, PALADIN_W } from './paladin';
-import { buildJediFrames, JEDI_ANIMS, JEDI_H, JEDI_LOOKS, JEDI_W, TWIRL_FPS, TWIRL_FRAMES, twirlStart } from './jedi';
+import { buildJediFrames, DERVISH_FPS, DERVISH_FRAMES, JEDI_H, JEDI_LOOKS, JEDI_W, jediAnimsFor, TWIRL_FPS, TWIRL_FRAMES, twirlStart } from './jedi';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
 import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, buildAlchemistFrames } from './alchemist';
 import { ARCHER_ANIMS, ARCHER_H, ARCHER_LOOKS, ARCHER_W, buildArcherFrames } from './archer';
@@ -121,13 +121,16 @@ const turn = (key: string, name: string, count: number, fps: number, start: (d: 
     return { key: `${key}_${name}_${d}`, frames: Array.from({ length: count + 1 }, (_, i) => `${name}_${(k0 + i) % count}`), fps, loop: false };
   });
 
-// The Druid and the Valkyrie are wizard and warrior looks, and the King is a
-// warrior look with his own swings. Warrior spin frames have no animation:
+// The Druid and the Valkyrie are wizard and warrior looks, the King is a
+// warrior look with his own swings, and the Sith a Jedi look with his own moves. Warrior spin frames have no animation:
 // the whirlwind picks them by angle.
 rig(WIZARD_LOOKS, FRAME_W, FRAME_H, buildWizardFrames, () => ANIMS, { meta: 'wizard' });
 rig(WARRIOR_LOOKS, WARRIOR_W, WARRIOR_H, buildWarriorFrames, warriorAnimsFor, { meta: 'warrior' });
 rig(PALADIN_LOOKS, PALADIN_W, PALADIN_H, buildPaladinFrames, () => PALADIN_ANIMS, { meta: 'paladin' });
-rig(JEDI_LOOKS, JEDI_W, JEDI_H, buildJediFrames, () => JEDI_ANIMS, { meta: 'jedi', extra: (look) => turn(look.key, 'twirl', TWIRL_FRAMES, TWIRL_FPS, twirlStart) });
+rig(JEDI_LOOKS, JEDI_W, JEDI_H, buildJediFrames, jediAnimsFor, {
+  meta: 'jedi',
+  extra: (look) => (look.staff ? turn(look.key, 'dervish', DERVISH_FRAMES, DERVISH_FPS, twirlStart) : turn(look.key, 'twirl', TWIRL_FRAMES, TWIRL_FPS, twirlStart)),
+});
 rig(FIGHTER_LOOKS, FIGHTER_W, FIGHTER_H, buildFighterFrames, (look) => look.anims);
 rig(ALCHEMIST_LOOKS, ALCH_W, ALCH_H, buildAlchemistFrames, (look) => ALCHEMIST_ANIMS.map((a) => ({ ...a, fps: look.fps?.[a.name] ?? a.fps })));
 rig(ARCHER_LOOKS, ARCHER_W, ARCHER_H, buildArcherFrames, () => ARCHER_ANIMS);

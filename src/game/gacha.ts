@@ -30,7 +30,7 @@ export const RARITY_INFO: Record<SkinRarity, { name: string; odds: number; tint:
 const RARITY_OF: Record<string, SkinRarity> = {
   'wizard:hellfire': 'legendary',
   'paladin:seraph': 'legendary',
-  'jedi:sith': 'legendary',
+  'jedi:warlord': 'legendary',
   'necromancer:wyrm': 'legendary',
   'chronomancer:anomaly': 'legendary',
   'puppeteer:arachne': 'legendary',
@@ -45,6 +45,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'beast:sporting': 'legendary',
   'beast:porto': 'legendary',
   'wizard:astral': 'epic',
+  'jedi:master': 'epic',
   'wizard:abyssal': 'epic',
   'warrior:spartan': 'epic',
   'paladin:oathbreaker': 'epic',

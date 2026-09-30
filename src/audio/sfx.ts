@@ -1193,6 +1193,82 @@ export class Sfx {
     }
   }
 
+  /**
+   * Force lightning pouring from the hand: a sustained, snarling crackle for
+   * `dur` seconds, bright noise stuttering under a fast tremolo that wanders,
+   * over a low electric growl, with snaps of static along the way.
+   */
+  forceLightning(t: number, pan: number, dur: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.8, 0.35);
+    const z = gain(ctx, 0, out);
+    z.gain.setValueAtTime(0, t);
+    z.gain.linearRampToValueAtTime(0.32, t + 0.03);
+    z.gain.setValueAtTime(0.28, t + dur - 0.08);
+    z.gain.linearRampToValueAtTime(0, t + dur);
+    const tremDepth = gain(ctx, 0.22, z.gain);
+    const trem = osc(ctx, 'square', 52, tremDepth);
+    sweep(trem.frequency, t, 48, 71, dur);
+    trem.start(t);
+    trem.stop(t + dur + 0.05);
+    const bp = filter(ctx, 'bandpass', 3400, 0.9, z);
+    sweep(bp.frequency, t, 2600, 4200, dur);
+    const n = this.m.noiseSource();
+    n.connect(bp);
+    this.m.startNoise(n, t, dur + 0.05);
+    const hum = gain(ctx, 0, filter(ctx, 'lowpass', 900, 1.4, out));
+    hum.gain.setValueAtTime(0, t);
+    hum.gain.linearRampToValueAtTime(0.1, t + 0.05);
+    hum.gain.setValueAtTime(0.1, t + dur - 0.1);
+    hum.gain.linearRampToValueAtTime(0, t + dur);
+    for (const f of [61, 92]) {
+      const o = osc(ctx, 'sawtooth', f, hum);
+      o.detune.value = f > 70 ? 9 : -9;
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+    for (let k = 0; k < Math.floor(dur / 0.09); k++) this.zap(out, t + k * 0.09 + rand(0, 0.04), rand(0.12, 0.22), rand(0.03, 0.06));
+  }
+
+  /** The Force grip closing: a low, rising strain of air, as of something squeezed. */
+  forceGrip(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.8, 0.6);
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 700, 2.5, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.32, t + 0.5);
+    g.gain.setTargetAtTime(0, t + 1.3, 0.15);
+    for (const [f, type] of [[48, 'sawtooth'], [73, 'square']] as const) {
+      const o = osc(ctx, type, f, g);
+      sweep(o.frequency, t, f, f * 1.35, 1.4);
+      o.start(t);
+      o.stop(t + 1.9);
+    }
+    const air = gain(ctx, 0, out);
+    air.gain.setValueAtTime(0, t);
+    air.gain.linearRampToValueAtTime(0.16, t + 0.8);
+    air.gain.setTargetAtTime(0, t + 1.3, 0.15);
+    const bp = filter(ctx, 'bandpass', 500, 3, air);
+    sweep(bp.frequency, t, 400, 1400, 1.4);
+    const src = this.m.noiseSource(true);
+    src.connect(bp);
+    this.m.startNoise(src, t, 1.9);
+  }
+
+  /** The grip crushing down: a deep, heavy crunch and a thud into the ground. */
+  forceCrush(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 1, 0.6);
+    const b = gain(ctx, 0, out);
+    hit(b.gain, t, 0.9, 0.004, 0.45);
+    const lo = osc(ctx, 'sine', 120, b);
+    sweep(lo.frequency, t, 120, 32, 0.4);
+    lo.start(t);
+    lo.stop(t + 0.5);
+    this.burstNoise(out, t, 'lowpass', 2600, 300, 0.9, 0.55, 0.35, true);
+    this.burstNoise(out, t + 0.01, 'bandpass', 1800, 900, 2, 0.3, 0.12);
+  }
+
   /** A punch cutting the air: a short, tight whoosh, heavier and lower down the combo. */
   punch(t: number, pan: number, step: number): void {
     const ctx = this.m.ctx;

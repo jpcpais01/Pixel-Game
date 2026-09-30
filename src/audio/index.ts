@@ -505,6 +505,21 @@ class GameSound {
     if (t !== null) this.sfx!.forcePush(t, pan, dark);
   }
 
+  forceLightning(pan = 0, seconds = 0.5): void {
+    const t = this.slot('forceLightning');
+    if (t !== null) this.sfx!.forceLightning(t, pan, seconds);
+  }
+
+  forceGrip(pan = 0): void {
+    const t = this.slot('forceGrip');
+    if (t !== null) this.sfx!.forceGrip(t, pan);
+  }
+
+  forceCrush(pan = 0): void {
+    const t = this.slot('forceCrush');
+    if (t !== null) this.sfx!.forceCrush(t, pan);
+  }
+
   punch(step: number, pan = 0): void {
     const t = this.slot('punch');
     if (t !== null) this.sfx!.punch(t, pan, step);

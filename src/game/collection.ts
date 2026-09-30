@@ -25,6 +25,14 @@ const GRANTS: { id: string; user: string; gems: number }[] = [
 /** Set once this device has given a guest the welcome gems, so a fresh guest game can't be made again and again for more. */
 const WELCOMED_KEY = 'pixel-battle.welcomed';
 
+/**
+ * Skins that became types of their own, and the skin that took each one's
+ * place: whoever won the old skin owns its heir. The Sith was a skin of the
+ * Jedi knight until it became its own type (free, like every type's look);
+ * its winners own the Sith's Warlord.
+ */
+const SKIN_HEIRS: Record<string, string> = { 'jedi:warlord': 'jedi:sith' };
+
 const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, glide: {}, pets: [], pet: '', petPity: 0, critters: {}, mats: {}, candy: {}, home: '', homeT: 0 });
 
 /** The welcome gems for a new guest game: the first on this device only. */
@@ -280,9 +288,10 @@ class Collection {
     return true;
   }
 
-  /** Does the player own skin `id` ("class:skin")? Admins own them all. */
+  /** Does the player own skin `id` ("class:skin")? Admins own them all, and a skin's heir comes with it (see SKIN_HEIRS). */
   hasSkin(id: string): boolean {
-    return this.isAdmin || this.data.skins.includes(id);
+    const was = SKIN_HEIRS[id];
+    return this.isAdmin || this.data.skins.includes(id) || (!!was && this.data.skins.includes(was));
   }
 
   /** Logged in as one of the game's admins. */

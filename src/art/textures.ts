@@ -5,6 +5,7 @@
 import { worldMapTextures } from './worldMap';
 import type Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
+import { lightningIcon, MASTER_FORCE_ICON, MASTER_SABER_ICON, SITH_BOLT_ICON, SITH_STAFF_ICON, staffIcon, WARLORD_BOLT_ICON, WARLORD_STAFF_ICON } from './sith';
 import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, PYRO_SPELL, PYRO_METEOR_H, PYRO_METEOR_W, meteorIcon, pyroMeteor, scorchCanvas, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, hammerIcon, sunfallIcon, saberIcon, forceIcon, fistIcon, barrageIcon, palmIcon, quakeIcon, flaskIcon, bogIcon, canisterIcon, chemBarrageIcon, fumeCanvas, CHEM_BREW_COLORS, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
 import { ALCHEMIST_LOOKS, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, flaskFrame } from './alchemist';
 import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, stuckArrowFrame } from './archer';
@@ -371,12 +372,17 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_sunfall', toCanvas(16, 16, sunfallIcon()));
   const icons: [string, IconColors, IconColors][] = [
     ['', [hex('#f6feff'), hex('#86d2ff'), hex('#4aa6ff'), hex('#2a7cff')], [hex('#ffffff'), hex('#d8f0ff'), hex('#8cc4ff'), hex('#4a70c0')]],
-    ['_sith', [hex('#fff6f2'), hex('#ff6a62'), hex('#f0283a'), hex('#c81628')], [hex('#fff0f4'), hex('#ff8a9a'), hex('#d0304a'), hex('#6a1030')]],
+    ['_master', MASTER_SABER_ICON, MASTER_FORCE_ICON],
   ];
   for (const [suffix, saber, force] of icons) {
     scene.textures.addCanvas(`icon_saber${suffix}`, toCanvas(16, 16, saberIcon(saber)));
     scene.textures.addCanvas(`icon_force${suffix}`, toCanvas(16, 16, forceIcon(force)));
   }
+  // The Sith's saberstaff and lightning, and the Warlord's.
+  scene.textures.addCanvas('icon_staff', toCanvas(16, 16, staffIcon(SITH_STAFF_ICON)));
+  scene.textures.addCanvas('icon_lightning', toCanvas(16, 16, lightningIcon(SITH_BOLT_ICON)));
+  scene.textures.addCanvas('icon_staff_warlord', toCanvas(16, 16, staffIcon(WARLORD_STAFF_ICON)));
+  scene.textures.addCanvas('icon_lightning_warlord', toCanvas(16, 16, lightningIcon(WARLORD_BOLT_ICON, [150, 70, 60])));
 
   yield;
   // Skins: the Astral's beam, the Hellfire's meteor and scorch, and the
