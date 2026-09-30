@@ -86,6 +86,7 @@ import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } fr
 import { heroBuffs, type BuffDef } from '../game/buffs';
 import { LootFlare, Pickup } from '../game/Pickup';
 import { gear, GEAR_SETS, RARITY, type GearDef, type SetId } from '../game/gear';
+import { SetPowers } from '../game/setPowers';
 import { rollGems } from '../game/tiers';
 import { activeSeason, rollCandy, seasonalSpots } from '../game/season';
 import { CANDY_SPARKS } from '../art/candy';
@@ -143,6 +144,7 @@ class Dummy implements Hurtbox {
     this.wobble = hit.heavy ? 1.4 : 1;
     this.sprite.setFrame('d1');
     this.world.time.delayedCall(90, () => this.sprite.setFrame('d0'));
+    this.world.heroStruck(this, hit);
     this.world.popNumber(this.x, this.y - 30, `${Math.round(hit.damage * this.world.mightOf(hit))}`, hit.poison ?? (hit.heavy ? 0xffe28a : 0xffffff));
   }
 }
@@ -209,6 +211,8 @@ export class WorldScene extends Phaser.Scene {
   /** Set once the run has begun (after the gear worn from the start is on). */
   private running = false;
   /** The aura of each gear set worn whole about the hero: a glow at their feet and motes rising off them. */
+  /** The Myth sets' powers at 2, 4 and 6 pieces (game/setPowers.ts). */
+  private setPowers = new SetPowers(this);
   private auras = new Map<SetId, { halo: Phaser.GameObjects.Image; motes: Phaser.GameObjects.Particles.ParticleEmitter }>();
   /** How far the camera leans off the hero, toward a boss towering over the fight. */
   private lean = { x: 0, y: 0 };
@@ -327,6 +331,7 @@ export class WorldScene extends Phaser.Scene {
     this.home = null;
     this.character = data?.character;
     this.auras.clear();
+    this.setPowers = new SetPowers(this);
     this.running = false;
     this.lean.x = this.lean.y = 0;
     this.shafts = null;
@@ -813,6 +818,7 @@ export class WorldScene extends Phaser.Scene {
     this.pushY = (dy / l) * k;
     this.cameras.main.shake(120, 0.0006);
     sound.hurt();
+    if (h.vitals.alive) this.setPowers.hurt();
     if (!h.vitals.alive) {
       // The phoenix chick, once a run, lifts the hero back up at half health instead.
       if (this.companion?.rekindle(h.x, h.y)) {
@@ -903,6 +909,7 @@ export class WorldScene extends Phaser.Scene {
    * of gear, popping out of its body.
    */
   monsterSlain(kind: string, x: number, y: number, bodyY: number, stats?: Pick<MonsterStats, 'hp' | 'rank'>, summoned = false): void {
+    if (this.downT <= 0) this.setPowers.slain(x, y);
     if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank) * riftMods.energy * petMods.energy * omenMods.energy, this.ult.ult.pal));
     if (summoned) return;
     // A boss's fall is marked on the world map with a flag.
@@ -1061,6 +1068,7 @@ export class WorldScene extends Phaser.Scene {
   private rewear(): void {
     const d = gear.wear(collection.equippedGear());
     for (const k of Object.keys(SET_AURA) as SetId[]) this.setAura(k, gear.sets.includes(k));
+    this.setPowers.worn(this.running);
     if (!d) return;
     const v = this.hero.vitals;
     if (v.alive) v.grow(d);
@@ -1128,6 +1136,21 @@ export class WorldScene extends Phaser.Scene {
     if (def.rarity === 'epic' || def.rarity === 'legendary') this.addEffect(new LootFlare(this, snap(h.x), snap(h.y), def));
     if (def.rarity === 'legendary') this.cameras.main.shake(90, 0.0008);
     sound.gear(def.rarity === 'legendary' || def.rarity === 'epic');
+  }
+
+  /** The hero's own blow (not a companion's) landed on `h`. */
+  heroStruck(h: Hurtbox, hit: Hit): void {
+    if (!hit.companion) this.setPowers.struck(h);
+  }
+
+  /** The average basic hit in the hero's own code: a set power's blows are measured in it (see setPowers.ts). */
+  get heroKit(): number {
+    return this.stats.kit;
+  }
+
+  /** Basic attacks a second while the button is held. */
+  get heroRate(): number {
+    return this.stats.rate;
   }
 
   /** The hero's blow dealt `damage`: lifesteal from gear heals a share of it. */
@@ -1770,6 +1793,8 @@ export class WorldScene extends Phaser.Scene {
     if (ultPressed && this.downT <= 0) this.ult.request(controls.mouse ? this.mouseAim() : this.touchAim(controls.ultAim), this.facing);
     // Gathering power for the Special: other abilities wait, and the feet stay planted.
     if (this.ult.holding) attack = special = false;
+    // Burrowed under the floor (the Wyrmshard's power): no fighting till they rise.
+    if (this.setPowers.burrowing) attack = special = false;
     if (this.ult.rooted) mx = my = 0;
     if (this.downT > 0) {
       mx = my = 0;
@@ -1787,6 +1812,7 @@ export class WorldScene extends Phaser.Scene {
     this.hero.update(dt, mx, my, attack, special, this.bounds, aim);
     this.settleStep(x0, y0, hb);
     this.net?.record(mx, my, attack, special, aim);
+    this.setPowers.update(dt, attack, special, aim ?? this.facing, this.downT > 0);
     this.ult.update(dt);
     energy.update(dt);
     // Taps press for one frame.
@@ -1795,6 +1821,7 @@ export class WorldScene extends Phaser.Scene {
     const fast = heroBuffs.mod('speed') * gear.speed * riftMods.speed * petMods.speed;
     if (fast !== 1 && this.downT <= 0) this.stretchStep(x0, y0, fast - 1, hb);
     this.updateHeroLife(dt);
+    if (this.setPowers.burrowing) this.hero.alpha = 0;
     this.updateItems(dt);
     this.updateSetAuras(time);
 

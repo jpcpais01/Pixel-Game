@@ -105,6 +105,35 @@ export const GEAR_SETS: Record<SetId, GearSet> = {
   astral: { name: 'Starborn', tint: 0x9ab4ff, bonus: setBonus({ power: 0.5, speed: 0.2, regen: 0.3 }), effect: 'Starborn: starlight wheels about you', boss: 'the Astral Warden' },
 };
 
+/** A power a set gives once `at` of its pieces are worn: the Myth sets' (see game/setPowers.ts). */
+export type PowerId = 'shardskin' | 'wake' | 'burrow' | 'stardust' | 'starfall' | 'singularity';
+
+export interface SetPower {
+  id: PowerId;
+  at: number;
+  name: string;
+  /** One short line for the Inventory. */
+  text: string;
+}
+
+/**
+ * The Myth sets grow stronger piece by piece: a power at 2, 4 and 6 worn,
+ * shaped after their boss's own. They stack with the full set's stats and
+ * aura, and a hero wearing parts of both sets gets the powers of each.
+ */
+export const SET_POWERS: Partial<Record<SetId, SetPower[]>> = {
+  geode: [
+    { id: 'shardskin', at: 2, name: 'Shardskin', text: 'Hit, you burst shards at foes' },
+    { id: 'wake', at: 4, name: 'Crystal Wake', text: 'Every 4th attack raises crystals' },
+    { id: 'burrow', at: 6, name: 'Burrow', text: 'Below 30% HP, dive and erupt. 60s' },
+  ],
+  astral: [
+    { id: 'stardust', at: 2, name: 'Stardust', text: 'Kills call a star on a foe' },
+    { id: 'starfall', at: 4, name: 'Starfall', text: 'A star hits your target every 3s' },
+    { id: 'singularity', at: 6, name: 'Singularity', text: 'Ability opens a black hole. 8s' },
+  ],
+};
+
 export interface GearDef {
   id: string;
   name: string;
@@ -223,6 +252,16 @@ export function fullSets(defs: GearDef[]): SetId[] {
   });
 }
 
+/** The set powers the worn pieces reach. */
+export function wornPowers(defs: GearDef[]): SetPower[] {
+  const out: SetPower[] = [];
+  for (const [set, powers] of Object.entries(SET_POWERS) as [SetId, SetPower[]][]) {
+    const n = setCount(defs, set).worn;
+    for (const p of powers) if (n >= p.at) out.push(p);
+  }
+  return out;
+}
+
 export const gearById = (id: string): GearDef | undefined => GEAR.find((g) => g.id === id);
 
 
@@ -327,6 +366,8 @@ export class GearBag {
   totals: Required<GearStats> = sumStats([]);
   /** Sets worn whole right now. */
   sets: SetId[] = [];
+  /** Set powers the worn pieces reach right now. */
+  powers = new Set<PowerId>();
 
   /** A new run: nothing found yet. Call `wear` with the equipped pieces next. */
   reset(): void {
@@ -335,6 +376,7 @@ export class GearBag {
     this.news = [];
     this.totals = sumStats([]);
     this.sets = [];
+    this.powers.clear();
   }
 
   /** Wear these pieces; returns how much max health changed, for the hero's vitals. */
@@ -343,6 +385,7 @@ export class GearBag {
     this.worn = defs;
     this.totals = wornStats(defs);
     this.sets = fullSets(defs);
+    this.powers = new Set(wornPowers(defs).map((p) => p.id));
     return this.totals.hp - before;
   }
 

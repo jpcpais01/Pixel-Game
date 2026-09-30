@@ -601,6 +601,13 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   const ring = ringCanvas(22, 12);
   scene.textures.addCanvas('danger_ring', toCanvas(ring.w, ring.h, ring.px));
 
+  // The Myth sets' powers (game/setFx.ts), which may be worn in any arena:
+  // Amethrax's crystal spikes and breath shards, the Warden's falling star.
+  register(scene, 'set_spike', pack(frameList([crystalSpike(0), crystalSpike(1), crystalSpike(2)], 'k'), SPIKE_W, SPIKE_H), SPIKE_W, SPIKE_H);
+  register(scene, 'set_shard', pack(frameList([breathShard()], 's'), BREATH_SHARD, BREATH_SHARD), BREATH_SHARD, BREATH_SHARD);
+  scene.textures.addCanvas('set_meteor', toCanvas(METEOR_W, METEOR_H, meteor()));
+  scene.textures.addCanvas('set_pool', toCanvas(64, 26, lightPool(64, 26)));
+
   register(scene, 'dummy', pack(frameList([dummyFrame(false), dummyFrame(true)], 'd'), 18, 28), 18, 28, false);
 
   yield;
