@@ -350,6 +350,41 @@ class GameSound {
     if (t !== null) this.sfx!.critterCatch(t, tier);
   }
 
+  fishCast(): void {
+    const t = this.slot('fishCast');
+    if (t !== null) this.sfx!.fishCast(t);
+  }
+
+  fishPlop(pan = 0): void {
+    const t = this.slot('fishPlop');
+    if (t !== null) this.sfx!.fishPlop(t, pan);
+  }
+
+  fishNibble(pan = 0): void {
+    const t = this.slot('fishNibble');
+    if (t !== null) this.sfx!.fishNibble(t, pan);
+  }
+
+  fishBite(pan = 0): void {
+    const t = this.slot('fishBite');
+    if (t !== null) this.sfx!.fishBite(t, pan);
+  }
+
+  reelTick(): void {
+    const t = this.slot('reelTick');
+    if (t !== null) this.sfx!.reelTick(t);
+  }
+
+  fishLanded(tier: number): void {
+    const t = this.slot('fishLanded');
+    if (t !== null) this.sfx!.fishLanded(t, tier);
+  }
+
+  fishLost(): void {
+    const t = this.slot('fishLost');
+    if (t !== null) this.sfx!.fishLost(t);
+  }
+
   cardFlip(tier: number): void {
     const t = this.slot('cardFlip');
     if (t !== null) this.sfx!.cardFlip(t, tier);

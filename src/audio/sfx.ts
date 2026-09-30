@@ -741,6 +741,61 @@ export class Sfx {
     this.sparkle(out, t + 0.1, 2 + tier * 3, 0.04);
   }
 
+  /** The rod cast: a swish of the rod, then the reel's quick ratchet as the line runs out. */
+  fishCast(t: number): void {
+    const out = this.out(0, 0.45, 0.3);
+    this.burstNoise(out, t, 'bandpass', 700, 2600, 1.3, 0.2, 0.2);
+    for (let i = 0; i < 9; i++) this.burstNoise(out, t + 0.12 + i * 0.035, 'bandpass', 3800, 3200, 7, 0.1 * (1 - i / 10), 0.018);
+  }
+
+  /** The float landing on the water: a small round plop. */
+  fishPlop(t: number, pan: number): void {
+    const out = this.out(pan, 0.5, 0.35);
+    this.chirp(out, t, 'sine', 620, 240, 0.14, 0.09);
+    this.burstNoise(out, t, 'bandpass', 1400, 700, 1.6, 0.1, 0.08);
+  }
+
+  /** A nibble at the bait: a tiny tap on the float. */
+  fishNibble(t: number, pan: number): void {
+    const out = this.out(pan, 0.35, 0.25);
+    this.chirp(out, t, 'sine', 900, 500, 0.06, 0.04);
+  }
+
+  /** A bite: the float pulled under with a splash, the line snapping taut. */
+  fishBite(t: number, pan: number): void {
+    const out = this.out(pan, 0.6, 0.35);
+    this.burstNoise(out, t, 'lowpass', 2400, 400, 0.8, 0.35, 0.25, true);
+    this.chirp(out, t, 'sine', 380, 140, 0.16, 0.14);
+    this.chirp(out, t + 0.03, 'triangle', 1180, 1320, 0.06, 0.12);
+  }
+
+  /** The reel wound in: one click of its ratchet. */
+  reelTick(t: number): void {
+    const out = this.out(0.1, 0.3, 0.05);
+    this.burstNoise(out, t, 'bandpass', rand(3000, 3600), 2800, 8, 0.16, 0.02);
+  }
+
+  /** A fish landed: it leaps out with a splash, then a chime, brighter for a rare one or the legend (tier 0..2). */
+  fishLanded(t: number, tier: number): void {
+    const out = this.out(0, 0.55, 0.45);
+    this.burstNoise(out, t, 'lowpass', 3000, 500, 0.8, 0.4, 0.35, true);
+    this.burstNoise(out, t + 0.02, 'highpass', 5000, 7000, 0.7, 0.08, 0.2);
+    const bells = [
+      [1047, 1319, 1568],
+      [1175, 1480, 1760, 2349],
+      [880, 1109, 1319, 1760, 2217, 2637],
+    ];
+    bells[tier].forEach((f, i) => this.bell(out, t + 0.16 + i * 0.075, f, 0.04, 0.9 + tier * 0.4));
+    this.sparkle(out, t + 0.22, 3 + tier * 4, 0.045);
+  }
+
+  /** The fish gone: the line falls slack with a sagging twang. */
+  fishLost(t: number): void {
+    const out = this.out(0, 0.45, 0.35);
+    this.chirp(out, t, 'triangle', 520, 180, 0.08, 0.35);
+    this.burstNoise(out, t, 'bandpass', 1200, 500, 1.4, 0.12, 0.15);
+  }
+
   /** A card turning over: a soft swish, then a chime in its rarity's key. */
   cardFlip(t: number, tier: number): void {
     const out = this.out(0, 0.45, 0.5);

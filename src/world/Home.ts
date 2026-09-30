@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CHIMNEY_H, glows, thingLook, warmHome, wallFrameName } from '../art/homeArt';
+import { CHIMNEY_H, glows, thingFoot, thingLook, warmHome, wallFrameName } from '../art/homeArt';
 import { paintFloors } from '../art/homeFloors';
 import { EAVES, paintRoof, type RoofArt } from '../art/homeWalls';
 import { JAR_SPOTS } from '../art/homeProps';
@@ -16,7 +16,7 @@ import type { WorldScene } from '../scenes/WorldScene';
 import { HOME_SPAWN, homeWalkable, setHomeMask } from './homeGround';
 import { treeLeaves } from './Scenery';
 import { CELL, COLS, HomeLayout, HomeMask, PLOT_H, PLOT_W, PLOT_X, PLOT_Y, ROWS, cellIndex, findHouses, inPlot, starterHome, type House, type Thing } from './homeLayout';
-import { FLOORS, WALLS, partById, wallKind, wallMat, type PartDef } from './homeParts';
+import { FISH_REACH, FLOORS, WALLS, partById, wallKind, wallMat, type PartDef } from './homeParts';
 
 type Img = Phaser.GameObjects.Image;
 type Sprite = Phaser.GameObjects.Sprite;
@@ -96,6 +96,15 @@ interface Roof {
   chimneys: { img: Img; smoke: Phaser.GameObjects.Particles.ParticleEmitter }[];
 }
 
+/** A fishing rod placed in the Home, and the water it can reach: each water cell's middle, and whether water lies all round it. */
+export interface RodSpot {
+  key: string;
+  x: number;
+  y: number;
+  flip: boolean;
+  water: { x: number; y: number; open: boolean }[];
+}
+
 let uid = 0;
 
 /**
@@ -139,6 +148,8 @@ export class Home {
   /** Trees planted before their sway was ready: they start swaying when it is. */
   private stillTrees: { sprite: Sprite; anim: string }[] = [];
   private leaves!: Phaser.GameObjects.Particles.ParticleEmitter;
+  /** The rods and the water round them, worked out again after any change. */
+  private rodSpots: RodSpot[] | null = null;
 
   constructor(
     private scene: WorldScene,
@@ -200,6 +211,7 @@ export class Home {
     const old = this.shown;
     this.mask = new HomeMask(l);
     setHomeMask(this.mask);
+    this.rodSpots = null;
     const found = findHouses(l);
     this.houses = found.houses;
     this.houseAt = found.at;
@@ -461,6 +473,36 @@ export class Home {
         p.base = 0.9;
       }
     }
+  }
+
+  /** The fishing rods placed here, each with the water within FISH_REACH cells of it (see world/Fishing.ts). */
+  rods(): RodSpot[] {
+    if (this.rodSpots) return this.rodSpots;
+    const l = this.layout;
+    this.rodSpots = [];
+    for (const t of l.things) {
+      if (!partById(t.id)?.fishing) continue;
+      const water: RodSpot['water'] = [];
+      for (let y = t.y - FISH_REACH; y <= t.y + FISH_REACH; y++) {
+        for (let x = t.x - FISH_REACH; x <= t.x + FISH_REACH; x++) {
+          if (!l.isWater(x, y)) continue;
+          const open = l.isWater(x - 1, y) && l.isWater(x + 1, y) && l.isWater(x, y - 1) && l.isWater(x, y + 1);
+          water.push({ x: PLOT_X + (x + 0.5) * CELL, y: PLOT_Y + (y + 0.5) * CELL, open });
+        }
+      }
+      const foot = thingFoot(t);
+      this.rodSpots.push({ key: Home.keyOf(t), x: foot.x, y: foot.y, flip: t.flip, water });
+    }
+    return this.rodSpots;
+  }
+
+  /** Take a rod out of its pail for fishing, or stand it back in. */
+  holdRod(key: string, out: boolean): void {
+    const p = this.placed.get(key);
+    if (!p) return;
+    const frame = out ? (p.t.flip ? 'rodbucket_m' : 'rodbucket') : thingLook(p.t).frame;
+    p.sprite.setFrame(frame);
+    p.shadow?.setFrame(frame);
   }
 
   private drawGrid(): void {
