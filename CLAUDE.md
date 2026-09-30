@@ -23,7 +23,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 
 **The world** (`src/scenes/WorldScene.ts`)
 - Owns the hero, spawners, effects, pickups, lights, day/night, camera, and the combat API: `melee(area, strike)`, `strikeAt(x, y, strike)`, `firstHurtbox`, `hurtboxesWhere`, `hurtHero(harm)`, `popNumber`, `debris`, `addEffect`.
-- Input comes from `game/controls.ts` (written by `UIScene` and the keyboard). PC: WASD, left click/J attack, right click/K/Shift ability, Space Special, 1-9 hotbar, N day/night, E talk (or swing the critter net).
+- Input comes from `game/controls.ts` (written by `UIScene` and the keyboard). PC: WASD, left click/J attack, right click/K/Shift ability, Space Special, 1-3 hotbar, N day/night, E talk (or swing the critter net).
 
 **Heroes** (`src/game/`)
 - `characters.ts`: `CLASSES` → types → skins. The world spawns a hero by look id (a type's id or a skin's id). `skins.ts` remembers the chosen look.
@@ -61,7 +61,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - Arenas are built ahead: the home screen warms them a few ms a frame (`warmArenasInBackground` in `arenas.ts`); build jobs are keyed by the texture manager, so the arena select and the world carry on the same job. Arena cards save a picture of their window (`pixel-battle.thumb.<id>`, per build) to show at once on later launches.
 
 **Loot and progression** (`src/game/`)
-- `items.ts`: potions and the 9-slot hotbar. `buffs.ts`: timed buffs. `Pickup.ts`: items on the ground and the rare/epic/legendary drop shows.
+- `items.ts`: potions and the 3-slot hotbar. `buffs.ts`: timed buffs. `Pickup.ts`: items on the ground and the rare/epic/legendary drop shows.
 - `gear.ts`: 70 pieces, 6 slots, 5 rarities, 5 boss sets (`GEAR_SETS`, `SET_BOSS`; a set piece's icon stands on its set's pattern, `setPattern` in `art/gear.ts`), stat caps, dust and upgrades. The Myth sets (Wyrmshard, Starborn) also give a power at 2, 4 and 6 pieces worn (`SET_POWERS`, `gear.powers`): `game/setPowers.ts` decides when (hooked into WorldScene's update, `hurtHero`, `monsterSlain` and `heroStruck`), `game/setFx.ts` draws them, their blows measured in the hero's own Damage; the Inventory card lists the tiers. `collection.ts`: what the player owns and wears, saved locally and to the cloud. `cloud.ts`: Firebase auth and Firestore over REST. `keepers.ts`: Nyx (disenchant) and Tharn (upgrade) in the Rune Temple, UI in `src/ui/keeper*.ts`.
 - The Rune Temple (walk-in, at the Clearing's head in a glade of the treeline; `world/sanctumLayout.ts` footprint and walkability, `world/Sanctum.ts` roof fade, lights and keeper talk, art in `art/runeHall.ts` for the hall, steps and outside, `art/sanctum.ts` for the palette, runestones, stations and keepers). Nyx and Tharn stand on daises inside; walking up to one opens their counter. Walk-in buildings (it and the Forge) paint their hall on the ground, hide it under an outside sprite whose bottom is the front wall's foot, and fade that sprite while the hero is inside.
 - The Forge (walk-in smithy on the Clearing's west, `world/forgeLayout.ts`, `world/Forge.ts`, art in `art/forge.ts`): Brenna forges a set piece the player is missing from `FORGE_COST` dust plus its boss's material (`game/forge.ts`: `MATERIALS`, `rollMats`; Legends drop 2-3, Myths 3-4, as `mat` pickups; saved as `collection.mats`). Her counter is `ui/forgeView.ts`, opened through `keeperHud.ts` as keeper `forge`. Drop tables are untouched.

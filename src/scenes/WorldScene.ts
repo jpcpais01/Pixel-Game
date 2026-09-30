@@ -609,7 +609,7 @@ export class WorldScene extends Phaser.Scene {
     kb.on('keydown-E', () => {
       if (!this.sanctum?.talk(this.hero.x, this.hero.y) && !this.forge?.talk(this.hero.x, this.hero.y) && !this.hallows?.talk(this.hero.x, this.hero.y) && !this.naturalist?.talk(this.hero.x, this.hero.y)) controls.netTap = true;
     });
-    // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
+    // Keys 1 to 3 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
       const n = e.key.length === 1 ? e.key.charCodeAt(0) - 49 : -1;
       if (n >= 0 && n < HOTBAR_SIZE) controls.items.push(n);

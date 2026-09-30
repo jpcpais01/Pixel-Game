@@ -26,8 +26,8 @@ import type { Pal } from '../game/ultimate/ink';
  * at the cursor), a right click the special, Space the Special and the keyboard walks, so the joystick
  * hides and the ability buttons shrink to indicators above the hotbar.
  *
- * Along the bottom, between the joystick and the buttons, the hotbar: nine
- * item slots, tapped or pressed 1 to 9. Active buffs show as badges under the
+ * The hotbar: three item slots, tapped or pressed 1 to 3, in a row over the
+ * ability buttons on a touch screen and along the bottom with a mouse. Active buffs show as badges under the
  * day/night toggle, draining as they run out. Gear found has a chest button
  * by the pause button (or I / G) opens the bag, where worn gear can be
  * swapped (see ui/gearHud.ts).
@@ -192,7 +192,7 @@ export class UIScene extends Phaser.Scene {
     return new Phaser.Math.Vector2(bp.x - R * 1.45, bp.y - R * 2.75);
   }
 
-  /** The Special's button sits up and to the left of the attack button, clear of the hotbar. */
+  /** The Special's button sits up and to the left of the attack button. */
   private get ultPos(): Phaser.Math.Vector2 {
     if (controls.mouse) return this.indicatorPos.ult;
     const R = this.R;
@@ -201,11 +201,25 @@ export class UIScene extends Phaser.Scene {
   }
 
   /**
-   * The hotbar's slots: square, side by side, centred in the room between the
-   * joystick's resting spot and the attack button, along the bottom edge.
+   * The hotbar's slots: square, side by side. On a touch screen they sit in a
+   * row just over the ability buttons, right-aligned with the beam button's
+   * outer edge so the thumb finds them with the rest of its buttons and the
+   * row stays clear of the net's button on its left. With a mouse they are
+   * centred along the bottom edge, between the joystick's resting spot and
+   * the attack button's.
    */
   private get hotbar(): { x: number; y: number; s: number; gap: number } {
     const R = this.R;
+    if (!controls.mouse) {
+      const gap = Math.round(4 * D);
+      const s = Math.round(Phaser.Math.Clamp(R * 0.66, 30 * D, 46 * D));
+      const w = s * HOTBAR_SIZE + gap * (HOTBAR_SIZE - 1);
+      const bp = this.padPos;
+      const right = Math.min(bp.x + R * 1.35, this.scale.width - 8 * D);
+      // The beam button's ring reaches about R * 0.9 above its centre.
+      const bottom = bp.y - R * 1.95 - R * 0.95;
+      return { x: Math.round(right - w), y: Math.round(bottom - s), s, gap };
+    }
     const left = this.restPos.x + R * 1.1;
     const right = this.padPos.x - R * 1.2;
     const gap = Math.round(3 * D);
@@ -660,7 +674,7 @@ export class UIScene extends Phaser.Scene {
     this.building = on;
   }
 
-  /** Nine slots: an item's icon and count, its key in the corner, a dark wipe while it cools down. */
+  /** Three slots: an item's icon and count, its key in the corner, a dark wipe while it cools down. */
   private drawHotbar(): void {
     const { x: bx, y: by, s, gap } = this.hotbar;
     const iconScale = Math.max(1, Math.floor((s - 6 * D) / 16));
