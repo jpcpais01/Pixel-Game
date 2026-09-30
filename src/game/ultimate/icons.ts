@@ -476,3 +476,64 @@ export const maelstromIcon: IconPainter = (put, p) => {
   }
   for (const [x, y] of [[4, 2], [11, 1], [3, 5], [12, 4]]) put(x, y, p.core);
 };
+
+/** Sky Sovereign: a great eagle seen from below, wings spread wide, primaries parted at the tips. */
+export const skySovereignIcon: IconPainter = (put, p) => {
+  for (let x = 0; x < 16; x++) {
+    const d = Math.abs(x + 0.5 - 8);
+    if (d < 1.5) continue;
+    const top = 6 - d * 0.35;
+    const bot = 8.5 - d * 0.05 + (d > 5 && Math.floor(d) % 2 === 0 ? 1.5 : 0);
+    for (let y = Math.round(top); y <= Math.round(bot); y++) put(x, y, y === Math.round(top) ? p.hot : d > 6 ? p.deep : p.mid);
+  }
+  for (let y = 4; y <= 11; y++) {
+    put(7, y, y < 6 ? p.core : p.hot);
+    put(8, y, y < 6 ? p.core : p.hot);
+  }
+  put(7, 3, p.core);
+  put(8, 3, p.core);
+  // The tail's fan.
+  for (let x = 5; x <= 10; x++) put(x, 12 + (x === 5 || x === 10 ? 0 : 1), p.mid);
+  put(7, 14, p.hot);
+  put(8, 14, p.hot);
+};
+
+/** King's Roar: a lion's head in its mane, jaws wide, rings of the roar round it. */
+export const kingsRoarIcon: IconPainter = (put, p) => {
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const dx = x + 0.5 - 8;
+      const dy = y + 0.5 - 8;
+      const d = Math.hypot(dx, dy);
+      const rim = 5.6 + 0.9 * Math.sin(Math.atan2(dy, dx) * 8);
+      if (d <= 3.4) put(x, y, p.hot);
+      else if (d <= rim) put(x, y, p.mid);
+      else if (Math.abs(d - 7.4) < 0.5) put(x, y, (x + y) % 2 ? p.deep : p.mid);
+    }
+  }
+  put(6, 7, p.core);
+  put(9, 7, p.core);
+  seg(put, 7, 10, 8, 10, p.deep);
+  put(7, 11, p.deep);
+  put(8, 11, p.deep);
+  put(7, 8, p.deep);
+  put(8, 8, p.deep);
+};
+
+/** Wrath of the Wyrm: a serpent of fire coiled in a ring round a burning heart. */
+export const wyrmIcon: IconPainter = (put, p) => {
+  for (let i = 0; i < 60; i++) {
+    const f = i / 60;
+    const a = f * Math.PI * 2.2 - 0.6;
+    const r = 6.2 - f * 0.8;
+    const x = 8 + Math.cos(a) * r;
+    const y = 8.5 + Math.sin(a) * r * 0.8;
+    const w = f < 0.9 ? 1.2 - f * 0.8 : 1.4;
+    disc(put, x, y, w, f > 0.85 ? p.core : f > 0.5 ? p.hot : p.mid);
+  }
+  disc(put, 8, 8.5, 1.8, p.hot);
+  put(7, 8, p.core);
+  put(8, 8, p.core);
+  put(3, 2, p.deep);
+  put(12, 14, p.deep);
+};
