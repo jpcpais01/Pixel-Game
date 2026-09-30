@@ -24,7 +24,7 @@ const GRANTS: { id: string; user: string; gems: number }[] = [
 /** Set once this device has given a guest the welcome gems, so a fresh guest game can't be made again and again for more. */
 const WELCOMED_KEY = 'pixel-battle.welcomed';
 
-const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, pets: [], pet: '', petPity: 0 });
+const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, pets: [], pet: '', petPity: 0, candy: {} });
 
 /** The welcome gems for a new guest game: the first on this device only. */
 function welcomeGems(): number {
@@ -67,6 +67,7 @@ function clean(d: Partial<SaveData> | null | undefined): SaveData {
   out.pets = [...new Set((Array.isArray(d?.pets) ? d.pets : []).filter((p): p is string => typeof p === 'string' && !!p))];
   out.pet = typeof d?.pet === 'string' ? d.pet : '';
   out.petPity = Math.max(0, Math.floor(Number(d?.petPity) || 0));
+  for (const [id, n] of Object.entries(d?.candy ?? {})) if (Number(n) > 0) out.candy[id] = Math.floor(Number(n));
   for (const [id, n] of Object.entries(d?.items ?? {})) if (n > 0) out.items[id] = Math.floor(n);
   for (const id of d?.equipped ?? []) {
     const i = id ? slotIndex(id) : -1;
@@ -263,6 +264,26 @@ class Collection {
     return true;
   }
 
+  /** How much of season `id`'s currency the player has (Hallow's Eve's candy...). */
+  candy(id: string): number {
+    return this.data.candy[id] ?? 0;
+  }
+
+  /** Currency of season `id` picked up. */
+  addCandy(id: string, n: number): void {
+    if (n <= 0) return;
+    this.data.candy[id] = this.candy(id) + Math.floor(n);
+    this.changed();
+  }
+
+  /** Spend `n` of season `id`'s currency; false (and nothing spent) when there isn't enough. */
+  spendCandy(id: string, n: number): boolean {
+    if (this.candy(id) < n) return false;
+    this.data.candy[id] = this.candy(id) - n;
+    this.changed();
+    return true;
+  }
+
   /** Does the player own companion `id`? Admins own them all. */
   hasPet(id: string): boolean {
     return this.isAdmin || this.data.pets.includes(id);
@@ -435,6 +456,8 @@ class Collection {
       merged.pets = [...new Set([...merged.pets, ...local.pets])];
       if (!merged.pet) merged.pet = local.pet;
       merged.petPity = Math.max(local.petPity, merged.petPity);
+      // Candy like gems: the higher count wins, so candy picked up offline isn't lost.
+      for (const [id, n] of Object.entries(local.candy)) merged.candy[id] = Math.max(n, merged.candy[id] ?? 0);
       if (guest) {
         for (const [id, n] of Object.entries(guest.items)) merged.items[id] = (merged.items[id] ?? 0) + n;
         merged.dust += guest.dust;
@@ -443,6 +466,7 @@ class Collection {
         merged.pets = [...new Set([...merged.pets, ...guest.pets])];
         for (const [cls, n] of Object.entries(guest.rift)) merged.rift[cls] = Math.max(n, merged.rift[cls] ?? 0);
         merged.gems = Math.max(merged.gems, guest.gems);
+        for (const [id, n] of Object.entries(guest.candy)) merged.candy[id] = (merged.candy[id] ?? 0) + n;
         if (guest.daily > merged.daily) merged.daily = guest.daily;
         for (const [id, picks] of Object.entries(guest.upgrades)) if (picks.length > (merged.upgrades[id]?.length ?? 0)) merged.upgrades[id] = picks;
         guest.equipped.forEach((id, i) => {
@@ -472,7 +496,7 @@ class Collection {
       return;
     }
     // Logging in from a guest game brings its pickups along.
-    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length || guest.pets.length) ? guest : undefined);
+    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length || guest.pets.length || Object.keys(guest.candy).length) ? guest : undefined);
   }
 }
 

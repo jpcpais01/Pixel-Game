@@ -47,6 +47,8 @@ export interface SaveData {
   pet: string;
   /** Companion wishes since the last legendary companion, for its own guarantee. */
   petPity: number;
+  /** Each season's currency (Hallow's Eve's candy...), by season id (see game/season.ts). */
+  candy: Record<string, number>;
 }
 
 interface Session extends Account {
@@ -239,7 +241,15 @@ export async function loadSave(): Promise<LoadedSave | null> {
   const pets = f.pets && 'stringValue' in f.pets && f.pets.stringValue ? f.pets.stringValue.split(',') : [];
   const pet = f.pet && 'stringValue' in f.pet ? f.pet.stringValue : '';
   const petPity = f.petPity && 'integerValue' in f.petPity ? Number(f.petPity.integerValue) : 0;
-  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, pets, pet, petPity, username };
+  // Seasonal currencies as "hallows:120".
+  const candy: Record<string, number> = {};
+  if (f.candy && 'stringValue' in f.candy && f.candy.stringValue) {
+    for (const pair of f.candy.stringValue.split(',')) {
+      const [id, n] = pair.split(':');
+      if (id && Number(n) > 0) candy[id] = Number(n);
+    }
+  }
+  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, pets, pet, petPity, candy, username };
 }
 
 /** Overwrite the logged-in player's save. */
@@ -264,6 +274,7 @@ export async function writeSave(data: SaveData): Promise<void> {
     pets: { stringValue: data.pets.join(',') },
     pet: { stringValue: data.pet },
     petPity: { integerValue: String(Math.floor(data.petPity)) },
+    candy: { stringValue: Object.entries(data.candy).map(([id, n]) => `${id}:${Math.floor(n)}`).join(',') },
     updated: { timestampValue: new Date().toISOString() },
   };
   const res = await fetch(docUrl(s.uid), {

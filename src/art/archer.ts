@@ -20,6 +20,14 @@
 // over the face with great antlers branching out of it and moonlight burning
 // in its sockets, long black hair, a wolf-fur cloak and ruff, a bow of bone
 // strung with a thread of spirit light, and raven-fletched arrows tipped with it.
+//
+// The scarecrow is his Hallow's Eve skin: a burlap sack for a head, cinched
+// with twine, a crooked grin stitched across it and embers burning in its eye
+// holes; a battered felt hat with a crow perched on its brim; straw bursting
+// from the collar, the cuffs and the boots; a faded plaid flannel shirt under
+// patched denim overalls held up with rope, a ragged old coat; a bow cut from
+// a crooked branch and strung with twine, and crow-fletched arrows tipped with
+// embers that trail ghost-green light.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
 import {
@@ -123,6 +131,23 @@ export interface ArcherLook {
   wrap?: Material;
   /** The wild hunt: a stag's skull and antlers for a hood, long hair and a fur ruff. */
   hunt?: { skull: Material; antler: Material };
+  /** The scarecrow: a sack head under a felt hat, straw everywhere, overalls and a crow. */
+  scarecrow?: Scarecrow;
+}
+
+/** The scarecrow's own materials. */
+export interface Scarecrow {
+  sack: Material;
+  hat: Material;
+  band: Material;
+  straw: Material;
+  stitch: Material;
+  rope: Material;
+  patch: Material;
+  trouser: Material;
+  glove: Material;
+  crow: Material;
+  beak: Material;
 }
 
 export const RANGER_LOOK: ArcherLook = {
@@ -196,7 +221,60 @@ export const HUNT_LOOK: ArcherLook = {
   hunt: { skull: STAG_SKULL, antler: ANTLER },
 };
 
-export const ARCHER_LOOKS = [RANGER_LOOK, STORM_LOOK, HUNT_LOOK];
+// The scarecrow's materials: warm, sun-faded field colours so the ember eyes
+// and arrowheads are the only bright things on him.
+const BURLAP: Material = { ramp: ramp('#3e2c1a', '#62492c', '#8a6c42', '#b0925e', '#cfb47c'), outline: hex('#1a1008'), outlineLit: hex('#342412') };
+const FELT: Material = { ramp: ramp('#141010', '#221b17', '#342a21', '#4a3d2d', '#63553d'), outline: hex('#070504') };
+const HAT_BAND: Material = { ramp: ramp('#4a180a', '#7c2c10', '#b0481a', '#dc7030'), outline: hex('#1a0804') };
+const STRAW: Material = { ramp: ramp('#7a5818', '#ad862c', '#d8b44a', '#f2d884', '#fff0b4'), outline: hex('#352406'), outlineLit: hex('#5a3e10') };
+const FLANNEL: Material = { ramp: ramp('#3c160a', '#6a2c12', '#9a461c', '#c46828', '#e08c40'), outline: hex('#160704') };
+const DENIM: Material = { ramp: ramp('#141824', '#222a3a', '#343f56', '#4c5a76', '#687894'), outline: hex('#06070d') };
+const RAG_COAT: Material = { ramp: ramp('#141310', '#221f19', '#332f25', '#474133', '#5c5543'), outline: hex('#060504') };
+const ROPE: Material = { ramp: ramp('#56401e', '#846634', '#ae904e', '#d0b674'), outline: hex('#20160a') };
+const CLOTH_PATCH: Material = { ramp: ramp('#182a16', '#284222', '#3e5e34', '#5a7e4a'), outline: hex('#08100a') };
+const STITCH: Material = { ramp: ramp('#0e0805', '#1c110a'), outline: hex('#060302'), noAO: true };
+const EMBER_EYE: Material = { ramp: ramp('#8a2a06', '#e05a10', '#ffa030', '#ffe890'), outline: hex('#2a0a02'), emissive: 0.95, noAO: true };
+const BRANCH: Material = { ramp: ramp('#1c140e', '#322418', '#4a3824', '#665034', '#826c4a'), outline: hex('#0a0705') };
+const TWINE: Material = { ramp: ramp('#5a4a2e', '#7e6c48', '#a08e66'), outline: hex('#1e160a') };
+const TIN: Material = { ramp: ramp('#34343c', '#62626c', '#9696a0', '#d2d2da'), outline: hex('#101014'), shine: true };
+const CROW: Material = { ramp: ramp('#050508', '#0c0d14', '#181a28', '#292e46', '#434e78'), outline: hex('#020203'), shine: true };
+const CROW_BEAK: Material = { ramp: ramp('#4a3610', '#8a6a1e', '#c8a040'), outline: hex('#140c03') };
+/** Ember at the heart, orange round it, ghost-green at the edges: a jack-o'-lantern's flame. */
+const EMBER_LIGHT: [RGB, RGB, RGB] = [hex('#fff4d0'), hex('#ffa040'), hex('#8aff9a')];
+
+export const SCARECROW_LOOK: ArcherLook = {
+  key: 'archer_scarecrow',
+  cloak: RAG_COAT,
+  tunic: FLANNEL,
+  jerkin: DENIM,
+  hair: STRAW,
+  eye: EMBER_EYE,
+  bow: BRANCH,
+  string: TWINE,
+  fletch: CROW,
+  head: EMBER_EYE,
+  shaft: BRANCH,
+  metal: TIN,
+  light: EMBER_LIGHT,
+  storm: false,
+  crackle: EMBER_LIGHT,
+  wrap: BURLAP,
+  scarecrow: {
+    sack: BURLAP,
+    hat: FELT,
+    band: HAT_BAND,
+    straw: STRAW,
+    stitch: STITCH,
+    rope: ROPE,
+    patch: CLOTH_PATCH,
+    trouser: DENIM,
+    glove: LEATHER,
+    crow: CROW,
+    beak: CROW_BEAK,
+  },
+};
+
+export const ARCHER_LOOKS = [RANGER_LOOK, STORM_LOOK, HUNT_LOOK, SCARECROW_LOOK];
 
 /** The look being drawn; set by buildArcherFrames. */
 let S: ArcherLook = RANGER_LOOK;
@@ -289,24 +367,38 @@ function drawBow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, bi
   }
   const [tx0, ty0] = at(-1);
   const [tx1, ty1] = at(1);
+  if (S.scarecrow) {
+    // A crooked branch, not a stave: knots along the limbs and a twig still
+    // growing off one of them, a last orange leaf clinging to it.
+    for (const t of [-0.66, -0.3, 0.3, 0.74]) {
+      const [kx, ky] = at(t);
+      c.shade(kx, ky, -1);
+    }
+    const [gx, gy] = at(0.5);
+    c.part();
+    c.line(gx + f.nx * 0.8, gy + f.ny * 0.8, gx + f.nx * 2.2 + f.ax * 0.9, gy + f.ny * 2.2 + f.ay * 0.9, S.bow, () => sphere(-0.3, -0.3), { bias });
+    c.px(gx + f.nx * 2.8 + f.ax * 1.6, gy + f.ny * 2.8 + f.ay * 1.6, S.scarecrow.band, sphere(-0.4, -0.5), { bias });
+  }
   c.part();
   c.capsule(f.x - f.ax * 1.4, f.y - f.ay * 1.4, f.x + f.ax * 1.4, f.y + f.ay * 1.4, 1.05, 1.05, S.wrap ?? LEATHER, { bias });
 
   // The string, from tip to tip, pulled back to the hand while an arrow is on it.
   c.part();
-  const glow = S.crackle ? { glow: 0.9 } : {};
+  // Twine is only twine: the scarecrow's embers live in his arrowheads, not his string.
+  const lit = S.scarecrow ? undefined : S.crackle;
+  const glow = lit ? { glow: 0.9 } : {};
   if (p.nock) {
     c.line(tx0, ty0, fa.x, fa.y, S.string, () => sphere(0, -0.2), glow);
     c.line(fa.x, fa.y, tx1, ty1, S.string, () => sphere(0, -0.2), glow);
   } else {
     c.line(tx0, ty0, tx1, ty1, S.string, () => sphere(0, -0.2), glow);
   }
-  if (S.crackle) {
+  if (lit) {
     // Lightning (or moonlight) living in the string: sparks along it.
     for (let k = 0; k < 3; k++) {
       const u = (k + 0.5) / 3;
       const [sx, sy] = p.nock ? (u < 0.5 ? [tx0 + (fa.x - tx0) * u * 2, ty0 + (fa.y - ty0) * u * 2] : [fa.x + (tx1 - fa.x) * (u - 0.5) * 2, fa.y + (ty1 - fa.y) * (u - 0.5) * 2]) : [tx0 + (tx1 - tx0) * u, ty0 + (ty1 - ty0) * u];
-      c.spark(sx, sy, S.crackle[1], 0.35);
+      c.spark(sx, sy, lit[1], 0.35);
     }
   }
   if (p.nock) arrowOnString(c, fa.x, fa.y, f.nx, f.ny, p.glint);
@@ -374,20 +466,30 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   c.part();
   c.capsule(sx, sy, ex, ey, 1.65, 1.4, S.tunic, { bias });
   c.part();
-  if (bracer) {
+  const sc = S.scarecrow;
+  if (bracer && !sc) {
     c.capsule(ex, ey, ex + (fx - ex) * 0.35, ey + (fy - ey) * 0.35, 1.35, 1.35, S.tunic, { bias });
     c.part();
     c.capsule(ex + (fx - ex) * 0.35, ey + (fy - ey) * 0.35, fx, fy, 1.45, 1.35, S.jerkin, { bias: bias + 1 });
   } else {
     c.capsule(ex, ey, fx, fy, 1.4, 1.25, S.tunic, { bias });
   }
+  if (sc) {
+    // Straw bursting out of the cuff either side of the wrist.
+    const [ux, uy] = unit(fx - ex, fy - ey);
+    const wx = fx - ux * 1.5;
+    const wy = fy - uy * 1.5;
+    c.part();
+    c.px(wx - uy * 1.9 - ux * 0.3, wy + ux * 1.9 - uy * 0.3, sc.straw, sphere(-0.4, -0.5), { bias });
+    c.px(wx + uy * 1.9, wy - ux * 1.9, sc.straw, sphere(0.2, -0.3), { bias });
+  }
   c.part();
-  c.ellipse(fx, fy, 1.2, 1.15, SKIN, { bias });
+  c.ellipse(fx, fy, 1.2, 1.15, sc ? sc.glove : SKIN, { bias });
 }
 
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
   c.part();
-  c.capsule(hx, hy, fx, fy, 1.5, 1.3, TROUSER, { bias });
+  c.capsule(hx, hy, fx, fy, 1.5, 1.3, S.scarecrow?.trouser ?? TROUSER, { bias });
 }
 
 /** A soft leather boot with a turned-down cuff. */
@@ -397,6 +499,13 @@ function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): voi
   else c.ellipse(x, y, 1.6, 1.3, BOOT, { flatten: 0.8, bias });
   c.part();
   c.shape(Math.round(y - 2.4), Math.round(y - 2.4), () => [x - (side ? 1.4 : 1.7), x + (side ? 1.6 : 1.7)], BOOT, (_x, _y, t) => cyl(t, 0.3), { bias: bias + 1 });
+  const sc = S.scarecrow;
+  if (sc) {
+    // Straw sticking out of the boot tops.
+    c.part();
+    c.px(x - (side ? 1.8 : 1.9), y - 3.0, sc.straw, sphere(-0.5, -0.4), { bias });
+    c.px(x + (side ? 2.2 : 2.4), y - 3.4, sc.straw, sphere(0.3, -0.5), { bias });
+  }
 }
 
 /** The quiver's mouth: arrow fletchings fanned at (x, y), leaning `lean` px per row. */
@@ -424,21 +533,29 @@ function quiver(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, 
   c.px(x0 + (x1 - x0) * 0.55, y0 + (y1 - y0) * 0.55, S.metal, sphere(-0.3, -0.3));
 }
 
-/** The hood's cowl, draped over the shoulders from the collar. */
-function cowl(c: PixelCanvas, cx: number, U: number, l: number, r: number): void {
+/** The hood's cowl, draped over the shoulders from the collar (the scarecrow's flannel shoulders, from the front and side). */
+function cowl(c: PixelCanvas, cx: number, U: number, l: number, r: number, m: Material = S.cloak): void {
   const top = 14 + U;
   c.part();
   c.shape(top, top + 3, (y) => {
     const u = (y - top) / 3;
     const k = Math.sqrt(u) * 0.75 + 0.25;
     return [cx - l * k, cx + r * k];
-  }, S.cloak, (_x, _y, t, u) => sphere(t * 0.95, u - 0.6, 1));
+  }, m, (_x, _y, t, u) => sphere(t * 0.95, u - 0.6, 1));
   // A ragged, leaf-cut edge (or a silver hem on the storm cloak).
   const y = top + 3;
   for (let x = Math.floor(cx - l); x <= Math.ceil(cx + r); x++) {
     if (!c.filled(x, y)) continue;
     if (S.trim) c.px(x, y, S.trim, sphere(0, 0.3));
-    else if (S.hunt) {
+    else if (S.scarecrow) {
+      // Straw spilling out from under the collar in uneven wisps.
+      // Only out at the shoulders: across the chest it would read as buttons.
+      const long = (x * 7) % 5 === 0;
+      if ((x & 1) === 1 && Math.abs(x + 0.5 - cx) > 3) {
+        c.px(x, y + 1, S.scarecrow.straw, sphere(0, 0.2));
+        if (long) c.px(x, y + 2, S.scarecrow.straw, sphere(0, 0.5), { bias: -1 });
+      } else c.shade(x, y, -1);
+    } else if (S.hunt) {
       // A shaggy fur ruff: tufts hanging below the edge.
       if ((x & 1) === 0 && !c.filled(x, y + 1)) c.px(x, y + 1, S.cloak, sphere(0, 0.5), { bias: -1 });
       else c.shade(x, y, -1);
@@ -500,6 +617,254 @@ function skullFront(c: PixelCanvas, cx: number, U: number, blink: boolean | unde
 }
 
 // ---------------------------------------------------------------------------
+// The scarecrow
+
+/** Mirror a span of offsets from `cx` when `m` is -1 (the back view flips his left and right). */
+const span = (cx: number, m: number, a: number, b: number): [number, number] => (m > 0 ? [cx + a, cx + b] : [cx - b, cx - a]);
+
+/** Burlap's coarse weave: darker threads in a loose staggered grid over the sack. */
+function weave(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number): void {
+  const m = S.scarecrow!.sack;
+  for (let y = Math.floor(y0); y <= y1; y++) {
+    for (let x = Math.floor(x0); x <= x1; x++) {
+      if (c.materialAt(x, y) === m && (x & 1) === 0 && ((y + (x >> 1)) & 1) === 0) c.shade(x, y, -1);
+    }
+  }
+}
+
+/** The flannel's plaid: dark bands every fourth row and column, darker where they cross. Run once the figure is drawn. */
+function plaid(c: PixelCanvas): void {
+  for (let y = -BODY_Y; y < ARCHER_H - BODY_Y; y++) {
+    for (let x = -BODY_X; x < ARCHER_W - BODY_X; x++) {
+      if (c.materialAt(x, y) !== S.tunic) continue;
+      const v = (((x % 4) + 4) % 4) === 1;
+      const h = (((y % 4) + 4) % 4) === 2;
+      if (v || h) c.shade(x, y, v && h ? -2 : -1);
+    }
+  }
+}
+
+/** A wisp of straw: `n` pixels from (x, y) out along (dx, dy), its tip catching the light. */
+function wisp(c: PixelCanvas, x: number, y: number, dx: number, dy: number, n: number, bias = 0): void {
+  const m = S.scarecrow!.straw;
+  c.part();
+  for (let i = 0; i < n; i++) c.px(x + dx * i, y + dy * i, m, sphere(dx * 0.4 - 0.2, dy * 0.4 - 0.4), { bias: bias + (i === n - 1 ? 1 : 0) });
+}
+
+/** A square of green cloth sewn on over a hole, one big stitch in its corner. */
+function patch(c: PixelCanvas, x: number, y: number, w: number, h: number): void {
+  const k = S.scarecrow!;
+  c.part();
+  for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) c.px(x + dx, y + dy, k.patch, sphere(dx === 0 ? -0.5 : 0.3, dy === 0 ? -0.5 : 0.3));
+  c.px(x + w - 1, y, k.stitch);
+}
+
+/** A rope for a belt along row y, twisted, knotted at `knot` with its ends hanging. */
+function ropeBelt(c: PixelCanvas, x0: number, x1: number, y: number, knot: number): void {
+  const k = S.scarecrow!;
+  c.part();
+  c.shape(y, y, () => [x0, x1], k.rope, (_x, _y, t) => cyl(t, 0));
+  for (let x = Math.round(x0); x < Math.round(x1); x++) if (x & 1) c.shade(x, y, -1);
+  c.part();
+  c.px(knot, y, k.rope, sphere(-0.4, -0.5), { bias: 1 });
+  c.px(knot, y + 1, k.rope, sphere(-0.2, 0.3));
+  c.px(knot + 1, y + 2, k.rope, sphere(0.2, 0.5), { bias: -1 });
+}
+
+/**
+ * The crow perched with its feet at (x, y), facing `dir` (-1 left, 1 right):
+ * a hunched blue-black body, tail dipping behind, and from the front or side
+ * a pale beak and an eye glinting ghost-green.
+ */
+function crow(c: PixelCanvas, x: number, y: number, dir: number, back = false): void {
+  const k = S.scarecrow!;
+  c.part();
+  c.capsule(x - dir * 1.4, y - 1.4, x - dir * 3.2, y - 0.4, 0.75, 0.45, k.crow, { bias: -1 });
+  c.part();
+  c.ellipse(x - dir * 0.2, y - 1.5, 1.75, 1.3, k.crow, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.25, 1) });
+  // A folded wing, a shade darker along its edge.
+  c.shade(x - dir * 0.8, y - 1, -1);
+  c.part();
+  c.ellipse(x + dir * 1.3, y - 3.1, 1.1, 1.05, k.crow, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 1) });
+  if (back) return;
+  c.part();
+  c.px(x + dir * 2.6, y - 2.9, k.beak, sphere(dir * 0.4, -0.5), { bias: 1 });
+  c.spark(x + dir * 1.6, y - 3.4, EMBER_LIGHT[2], 0.9);
+}
+
+/**
+ * The felt hat from the front (m 1) or the back (m -1): a wide battered brim
+ * drooping at one side with a bite torn from it, a dented crown leaning over,
+ * patched, with a faded orange band.
+ */
+function hatFront(c: PixelCanvas, cx: number, U: number, m: number): void {
+  const k = S.scarecrow!;
+  const rows: [number, number][] = [[-4.4, 4.6], [-6.2, 6.4], [-6.5, 5.8], [-6.4, -4.2]];
+  c.part();
+  c.shape(7 + U, 10 + U, (y) => {
+    const [a, b] = rows[y - 7 - U];
+    return span(cx, m, a, b);
+  }, k.hat, (_x, _y, t, u) => sphere(t * 0.8, u * 1.1 - 0.7, 1));
+  // The drooping side falls into shadow, and a bite is torn out of the brim.
+  c.shade(cx - m * 5, 10 + U, -1);
+  c.erase(cx + m * 3 - (m < 0 ? 1 : 0), 9 + U);
+  // The crown, leaning to one side, creased down the top.
+  const widths = [1.8, 2.7, 3.0, 3.1, 3.2, 3.2];
+  const lean = (y: number) => (8 + U - y) * 0.3 * m;
+  c.part();
+  c.shape(3 + U, 8 + U, (y) => {
+    const hw = widths[y - 3 - U];
+    return [cx - hw + lean(y) + 0.2 * m, cx + hw + lean(y) + 0.2 * m];
+  }, k.hat, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.5, 1));
+  c.shade(cx + Math.round(lean(3 + U)), 3 + U, -1);
+  c.shade(cx + Math.round(lean(4 + U)), 4 + U, -1);
+  // The band round its foot.
+  c.part();
+  c.shape(7 + U, 7 + U, () => [cx - 3.0 + lean(7 + U) + 0.2 * m, cx + 3.4 + lean(7 + U) + 0.2 * m], k.band, (_x, _y, t) => cyl(t, 0.1));
+  if (m > 0) patch(c, cx - 2 + Math.round(lean(5 + U)), 4 + U, 2, 2);
+  else patch(c, cx + Math.round(lean(5 + U)), 5 + U, 2, 2);
+}
+
+/** The sack from the front: lumpy burlap, embers in the eye holes, a crooked grin stitched shut, twine at the neck. */
+function sackFront(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+  const k = S.scarecrow!;
+  // Straw spilling out of the sack's mouth under the twine.
+  wisp(c, cx - 2.6, 15.2 + U, -1, 0.5, 2);
+  wisp(c, cx + 2.2, 15.4 + U, 1, 0.4, 2);
+  c.part();
+  c.ellipse(cx, 11.9 + U, 3.4, 3.3, k.sack, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.85 - 0.1, 1) });
+  // Stuffed unevenly: one cheek bulges.
+  c.ellipse(cx + 1.4, 13 + U, 2.1, 1.8, k.sack, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + 0.2, dy * 0.8 + 0.1, 1) });
+  weave(c, cx - 4, cx + 4, 8 + U, 15 + U);
+  // The brim's shadow across the brow.
+  for (let x = cx - 3; x <= cx + 3; x++) c.shade(x, 9 + U, -1);
+  // The twine cinching the neck.
+  c.part();
+  c.shape(15 + U, 15 + U, () => [cx - 2, cx + 2], k.rope, (_x, _y, t) => cyl(t, 0));
+  c.shade(cx - 1, 15 + U, -1);
+  c.shade(cx + 1, 15 + U, -1);
+  // The grin: a crooked slit, higher at one end, sewn shut with pale stitches across it.
+  c.part();
+  for (const [x, y] of [[-3, 12], [-2, 13], [-1, 13], [0, 13], [1, 13], [2, 12], [3, 11]] as const) c.px(cx + x, y + U, k.stitch);
+  for (const [x, y] of [[-2, 12], [0, 12], [-1, 14], [1, 14]] as const) c.shade(cx + x, y + U, 2);
+  // Eye holes with embers burning in them (dimmed to a smoulder on a blink).
+  c.part();
+  for (const x of [cx - 2, cx + 1]) {
+    c.px(x, 11 + U, S.eye, sphere(0, 0), { bias: blink ? -2 : 0, glow: blink ? 0.4 : undefined });
+    if (!blink) {
+      c.spark(x, 11 + U, S.light[1], 0.6);
+      c.spark(x, 10 + U, S.light[1], 0.2);
+    }
+  }
+}
+
+/** The sack from behind: its back seam sewn with big stitches, twine at the neck tied in a knot. */
+function sackBack(c: PixelCanvas, cx: number, U: number): void {
+  const k = S.scarecrow!;
+  wisp(c, cx - 2.6, 15.2 + U, -1, 0.5, 2);
+  wisp(c, cx + 2.2, 15.4 + U, 1, 0.4, 2);
+  c.part();
+  c.ellipse(cx, 11.9 + U, 3.4, 3.3, k.sack, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.85 - 0.1, 1) });
+  weave(c, cx - 4, cx + 4, 8 + U, 15 + U);
+  for (let y = 10; y <= 14; y++) c.shade(cx, y + U, y & 1 ? -3 : -1);
+  c.part();
+  c.shape(15 + U, 15 + U, () => [cx - 2, cx + 2], k.rope, (_x, _y, t) => cyl(t, 0));
+  c.px(cx, 16 + U, k.rope, sphere(0, 0.4));
+  c.px(cx + 1, 17 + U, k.rope, sphere(0.3, 0.5), { bias: -1 });
+}
+
+/** Denim overalls from the front over the flannel: legs from the belt down, a bib with straps to tin buttons, patches, a rope belt. */
+function overallsFront(c: PixelCanvas, cx: number, top: number, waist: number, hem: number): void {
+  c.part();
+  c.shape(waist + 1, hem, (y) => {
+    const hw = tunicWidth(y, top, waist, 4.4);
+    return [cx - hw, cx + hw];
+  }, S.jerkin, (_x, _y, t) => sphere(t * 0.9, 0.2, 1));
+  for (let y = waist + 2; y <= hem; y++) c.shade(cx, y, -2);
+  c.part();
+  c.shape(top + 3, waist - 1, () => [cx - 2.6, cx + 2.6], S.jerkin, (_x, y, t) => sphere(t * 0.8, ((y - top) / (waist - top)) * 0.6 - 0.3, 1));
+  c.part();
+  c.line(cx - 2, top + 3, cx - 3, top, S.jerkin, () => sphere(-0.3, -0.3));
+  c.line(cx + 1, top + 3, cx + 2, top, S.jerkin, () => sphere(0.3, -0.3));
+  c.part();
+  c.px(cx - 2, top + 3, S.metal, sphere(-0.4, -0.5));
+  c.px(cx + 1, top + 3, S.metal, sphere(-0.4, -0.5));
+  patch(c, cx - 1, top + 4, 2, 2);
+  patch(c, cx + 2, waist + 1, 2, 2);
+  ropeBelt(c, cx - 4.2, cx + 4.2, waist, cx - 2);
+}
+
+/** The overalls in profile (facing left): the bib at the front of the chest, a strap over the shoulder, legs below the rope belt. */
+function overallsSide(c: PixelCanvas, hx: number, cx: number, top: number, waist: number, skirt: number): void {
+  c.part();
+  c.shape(waist + 1, skirt, (y) => {
+    const u = (y - waist) / (skirt - waist);
+    const shift = hx + (cx - hx) * u;
+    const hw = tunicWidth(y, top, waist, 3.1);
+    return [shift - hw - 0.2, shift + hw + 0.2];
+  }, S.jerkin, (_x, _y, t) => sphere(t * 0.9 - 0.1, 0.2, 1));
+  c.part();
+  c.shape(top + 3, waist - 1, (y) => {
+    const hw = tunicWidth(y, top, waist, 3.1) - 0.2;
+    return [hx - hw - 0.2, hx + 0.6];
+  }, S.jerkin, (_x, y, t) => sphere(t * 0.9 - 0.3, ((y - top) / (waist - top)) * 0.6 - 0.3, 1));
+  c.part();
+  c.line(hx, top + 3, hx + 1, top, S.jerkin, () => sphere(0.2, -0.4));
+  c.part();
+  c.px(hx - 1, top + 3, S.metal, sphere(-0.4, -0.5));
+  patch(c, hx - 1, waist + 1, 2, 2);
+  ropeBelt(c, hx - 3.1, hx + 3.1, waist, hx - 3);
+}
+
+/** The scarecrow's head from the side (facing left): sack, one ember eye, the grin's end, the hat and its crow. */
+function scarecrowSide(c: PixelCanvas, hx: number, U: number, blink: boolean | undefined, sway: number): void {
+  const k = S.scarecrow!;
+  // Straw bursting out of the back of the neck, streaming a little as he goes.
+  wisp(c, hx + 2, 14.6 + U, 1, 0.4 + sway * 0.1, 3);
+  wisp(c, hx + 1.4, 15.4 + U, 0.8, 1, 2);
+  c.part();
+  c.ellipse(hx - 0.5, 11.9 + U, 3.1, 3.3, k.sack, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.1, dy * 0.85 - 0.1, 1) });
+  c.ellipse(hx - 1.6, 13.1 + U, 2.2, 1.8, k.sack, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 + 0.1, 1) });
+  weave(c, hx - 5, hx + 3, 8 + U, 15 + U);
+  for (let x = hx - 4; x <= hx + 2; x++) c.shade(x, 9 + U, -1);
+  c.part();
+  c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.8], k.rope, (_x, _y, t) => cyl(t, 0));
+  c.shade(hx, 15 + U, -1);
+  // The grin's crooked end curling up the cheek.
+  c.part();
+  for (const [x, y] of [[-4, 13], [-3, 13], [-2, 13], [-1, 12]] as const) c.px(hx + x, y + U, k.stitch);
+  for (const [x, y] of [[-3, 12], [-2, 14]] as const) c.shade(hx + x, y + U, 2);
+  c.part();
+  c.px(hx - 3, 11 + U, S.eye, sphere(0, 0), { bias: blink ? -2 : 0, glow: blink ? 0.4 : undefined });
+  if (!blink) {
+    c.spark(hx - 3, 11 + U, S.light[1], 0.6);
+    c.spark(hx - 4, 11 + U, S.light[1], 0.25);
+  }
+  // The hat in profile: brim drooping over his face, crown leaning back, band and patch.
+  // (It sits a pixel above his head's own rows.)
+  const V = U - 1;
+  c.part();
+  const rows: [number, number][] = [[-4.4, 4.2], [-6.6, 5.6], [-7, -4.4]];
+  c.shape(7 + V, 9 + V, (y) => {
+    const [a, b] = rows[y - 7 - V];
+    return [hx + a, hx + b];
+  }, k.hat, (_x, _y, t, u) => sphere(t * 0.7 - 0.1, u * 1.2 - 0.7, 1));
+  c.shade(hx - 6, 9 + V, -1);
+  c.part();
+  const widths = [1.9, 2.7, 2.9, 3.0, 3.0];
+  const lean = (y: number) => (7 + V - y) * 0.35;
+  c.shape(3 + V, 7 + V, (y) => {
+    const hw = widths[y - 3 - V];
+    return [hx - hw + lean(y) + 0.4, hx + hw + lean(y) + 0.4];
+  }, k.hat, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.5, 1));
+  c.shade(hx + 1, 3 + V, -1);
+  c.part();
+  c.shape(7 + V, 7 + V, () => [hx - 2.6, hx + 3.4], k.band, (_x, _y, t) => cyl(t, 0.1));
+  patch(c, hx - 1, 5 + V, 2, 2);
+  crow(c, hx + 4, 8 + V, -1);
+}
+
+// ---------------------------------------------------------------------------
 // Directions
 // ---------------------------------------------------------------------------
 // Directions
@@ -558,28 +923,44 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     return [cx - hw, cx + hw];
   }, S.tunic, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.25, 1));
   for (let y = waist + 1; y <= hem; y++) c.shade(cx, y, -2);
-  // The jerkin over the chest, laced at a V-neck.
-  c.part();
-  c.shape(top + 1, waist - 1, (y) => {
-    const hw = tunicWidth(y, top, waist, 4.4) - 0.3;
-    return [cx - hw, cx + hw];
-  }, S.jerkin, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.3, 1));
-  for (let y = top + 1; y <= top + 3; y++) {
-    const v = 1.6 - (y - top - 1) * 0.6;
-    for (let x = Math.round(cx - v); x < Math.round(cx + v); x++) c.erase(x, y);
+  if (S.scarecrow) {
+    overallsFront(c, cx, top, waist, hem);
+  } else {
+    // The jerkin over the chest, laced at a V-neck.
+    c.part();
+    c.shape(top + 1, waist - 1, (y) => {
+      const hw = tunicWidth(y, top, waist, 4.4) - 0.3;
+      return [cx - hw, cx + hw];
+    }, S.jerkin, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.3, 1));
+    for (let y = top + 1; y <= top + 3; y++) {
+      const v = 1.6 - (y - top - 1) * 0.6;
+      for (let x = Math.round(cx - v); x < Math.round(cx + v); x++) c.erase(x, y);
+    }
+    for (let y = top + 4; y < waist; y++) c.shade(cx, y, -1);
+    c.px(cx - 1, top + 3, S.metal, sphere(-0.3, -0.3));
+    // Belt and buckle.
+    c.part();
+    c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LEATHER, (_x, _y, t) => cyl(t, 0));
+    c.part();
+    c.px(cx, waist, S.metal, sphere(0, -0.3));
   }
-  for (let y = top + 4; y < waist; y++) c.shade(cx, y, -1);
-  c.px(cx - 1, top + 3, S.metal, sphere(-0.3, -0.3));
-  // Belt and buckle.
+  // The quiver strap across his chest, right shoulder to left hip (a length of rope on the scarecrow).
   c.part();
-  c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LEATHER, (_x, _y, t) => cyl(t, 0));
-  c.part();
-  c.px(cx, waist, S.metal, sphere(0, -0.3));
-  // The quiver strap across his chest, right shoulder to left hip.
-  c.part();
-  c.capsule(8.2, 15.4 + U, 15.4, 21.4 + U, 0.55, 0.55, LEATHER);
+  c.capsule(8.2, 15.4 + U, 15.4, 21.4 + U, 0.55, 0.55, S.scarecrow?.rope ?? LEATHER);
 
-  cowl(c, cx, U, 5.8, 5.8);
+  cowl(c, cx, U, 5.8, 5.8, S.scarecrow ? S.tunic : S.cloak);
+
+  if (S.scarecrow) {
+    sackFront(c, cx, U, p.blink);
+    hatFront(c, cx, U - 1, 1);
+    crow(c, cx + 4.6, 7 + U, 1);
+    if (!fb.behind) {
+      armB();
+      drawBow(c, 'down', p, fa, fb);
+    }
+    if (!fa.behind) armA();
+    return;
+  }
 
   if (S.hunt) {
     antlers(c, cx, U);
@@ -656,7 +1037,7 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   c.shape(waist - 1, 25 + L, (y) => {
     const hw = tunicWidth(y, top, waist, 4.4);
     return [cx - hw, cx + hw];
-  }, S.tunic, (_x, _y, t) => sphere(t * 0.9, 0.25, 1));
+  }, S.scarecrow ? S.jerkin : S.tunic, (_x, _y, t) => sphere(t * 0.9, 0.25, 1));
 
   // The cloak down his back to the knees, swinging.
   const hem = 26 + L;
@@ -678,10 +1059,23 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     else if ((x & 1) === 0) c.erase(x, hem);
   }
 
+  // An old coat, patched where the crows have pecked at it.
+  if (S.scarecrow) patch(c, cx - 4, 21 + U, 2, 3);
   // The quiver slung across the cloak, its mouth at his right shoulder.
   quiver(c, 16.2, 13.4 + U, 10.8, 22 + U);
 
   cowl(c, cx, U, 5.8, 5.8);
+  if (S.scarecrow) {
+    sackBack(c, cx, U);
+    hatFront(c, cx, U - 1, -1);
+    crow(c, cx - 4.6, 7 + U, -1, true);
+    if (!fb.behind) {
+      armB();
+      drawBow(c, 'up', p, fa, fb);
+    }
+    if (!fa.behind) armA();
+    return;
+  }
   if (S.hunt) {
     // Long hair down his back over the ruff, the skull's crown above it, the antlers over all.
     c.part();
@@ -764,20 +1158,30 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     const hw = tunicWidth(y, ttop, waist, 3.1);
     return [shift - hw - 0.2, shift + hw + 0.2];
   }, S.tunic, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? ((y - ttop) / (waist - ttop)) * 0.8 - 0.35 : 0.25, 1));
-  c.part();
-  c.shape(ttop + 1, waist - 1, (y) => {
-    const hw = tunicWidth(y, ttop, waist, 3.1) - 0.2;
-    return [hx - hw - 0.2, hx + hw];
-  }, S.jerkin, (_x, y, t) => sphere(t * 0.9 - 0.1, ((y - ttop) / (waist - ttop)) * 0.8 - 0.3, 1));
-  c.part();
-  c.shape(waist, waist, () => [hx - 3.1, hx + 3.1], LEATHER, (_x, _y, t) => cyl(t, 0));
-  c.part();
-  c.px(Math.round(hx - 3.1), waist, S.metal, sphere(-0.5, -0.3));
+  if (S.scarecrow) overallsSide(c, hx, cx, ttop, waist, skirt);
+  else {
+    c.part();
+    c.shape(ttop + 1, waist - 1, (y) => {
+      const hw = tunicWidth(y, ttop, waist, 3.1) - 0.2;
+      return [hx - hw - 0.2, hx + hw];
+    }, S.jerkin, (_x, y, t) => sphere(t * 0.9 - 0.1, ((y - ttop) / (waist - ttop)) * 0.8 - 0.3, 1));
+    c.part();
+    c.shape(waist, waist, () => [hx - 3.1, hx + 3.1], LEATHER, (_x, _y, t) => cyl(t, 0));
+    c.part();
+    c.px(Math.round(hx - 3.1), waist, S.metal, sphere(-0.5, -0.3));
+  }
   // The quiver strap down the chest.
   c.part();
-  c.capsule(hx + 1.8, 15.2 + U, hx - 2.4, 21.6 + U, 0.55, 0.55, LEATHER);
+  c.capsule(hx + 1.8, 15.2 + U, hx - 2.4, 21.6 + U, 0.55, 0.55, S.scarecrow?.rope ?? LEATHER);
 
-  cowl(c, hx, U, 4.2, 4.4);
+  cowl(c, hx, U, 4.2, 4.4, S.scarecrow ? S.tunic : S.cloak);
+
+  if (S.scarecrow) {
+    scarecrowSide(c, hx, U, p.blink, p.sway);
+    drawBow(c, 'side', p, fa, fb);
+    arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1], false);
+    return;
+  }
 
   if (S.hunt) {
     // The far antler, then his hair streaming back, his face, the skull over
@@ -1009,6 +1413,7 @@ function drawArcherFrame(dir: Dir, pose: Pose): PixelCanvas {
   if (dir === 'down') drawDown(c, pose);
   else if (dir === 'up') drawUp(c, pose);
   else drawSide(c, pose);
+  if (S.scarecrow) plaid(c);
   return dir === 'right' ? c.mirrored() : c;
 }
 

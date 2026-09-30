@@ -34,6 +34,7 @@ import { TempleDungeon } from '../world/Temple';
 import { GlimmerDeep } from '../world/Deep';
 import { RuneTemple } from '../world/Sanctum';
 import { Chapel } from '../world/Chapel';
+import { HallowsClearing } from '../world/Hallows';
 import { INSIDE_SPOT, OUTSIDE_SPOT, roomRect } from '../world/sanctumLayout';
 import { isPainted } from '../world/arenas';
 
@@ -59,6 +60,8 @@ import { heroBuffs, type BuffDef } from '../game/buffs';
 import { LootFlare, Pickup } from '../game/Pickup';
 import { gear, GEAR_SETS, RARITY, type GearDef, type SetId } from '../game/gear';
 import { rollGems } from '../game/tiers';
+import { activeSeason, rollCandy, seasonalSpots } from '../game/season';
+import { CANDY_SPARKS } from '../art/candy';
 import { collection, slotIndex } from '../game/collection';
 import { energy, energyFor } from '../game/energy';
 import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
@@ -168,6 +171,8 @@ export class WorldScene extends Phaser.Scene {
   /** The Rune Temple, when this is the Runestone Clearing. */
   private sanctum: RuneTemple | null = null;
   private chapel: Chapel | null = null;
+  /** A season's dressing of the Runestone Clearing, while one runs. */
+  private hallows: HallowsClearing | null = null;
   /** The hero is inside the Rune Temple (the camera keeps to its room). */
   private inside = false;
   /** Passing through the temple's door: the screen fades out and in. */
@@ -217,7 +222,8 @@ export class WorldScene extends Phaser.Scene {
     return this.bounds;
   }
   /** Can feet stand at (x, y)? The arena's walls, trees and water say no, and so do standing flowers. */
-  walkable = (x: number, y: number): boolean => this.arena.walkable(x, y) && (!this.garden || this.garden.walkable(x, y));
+  walkable = (x: number, y: number): boolean =>
+    this.arena.walkable(x, y) && (!this.garden || this.garden.walkable(x, y)) && (!this.hallows || this.hallows.walkable(x, y));
   /** The streamed ground, or null in an arena painted in one piece. */
   private ground: GroundStreamer | null = null;
   private scenery!: Scenery;
@@ -283,6 +289,7 @@ export class WorldScene extends Phaser.Scene {
     this.deep = null;
     this.sanctum = null;
     this.chapel = null;
+    this.hallows = null;
     this.inside = false;
     this.doorBusy = false;
     this.auras.clear();
@@ -386,6 +393,11 @@ export class WorldScene extends Phaser.Scene {
       for (const d of p.dummies) this.dummy(d.x, d.y);
       this.sanctum = new RuneTemple(this, (img) => ground(img) as Phaser.GameObjects.Image);
       this.shadows.push(...this.sanctum.shadows);
+      const season = activeSeason();
+      if (season) {
+        this.hallows = new HallowsClearing(this, season, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
+        this.shadows.push(...this.hallows.shadows);
+      }
     } else if (arena.id === 'garden') {
       this.garden = new Garden(this);
     }
@@ -433,7 +445,11 @@ export class WorldScene extends Phaser.Scene {
         resetRift();
         this.scene.stop('rift');
       });
-    } else this.spawners.push(new Spawner(this, arena.monsters, arena.respawn));
+    } else {
+      // A season's monsters (Hallow's Eve's pumpkins and bats) join the arena's own while it runs.
+      const extra = arena.monsters.length ? seasonalSpots(arena.id, arena.monsters, arena.walkable) : [];
+      this.spawners.push(new Spawner(this, [...arena.monsters, ...extra], arena.respawn));
+    }
     this.scenery = new Scenery(this, arena.scenery(), arena.drift);
     this.net = session.active ? new NetPlay(this) : null;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -461,7 +477,7 @@ export class WorldScene extends Phaser.Scene {
     kb.on('keydown-N', () => daynight.enabled && daynight.toggle());
     kb.on('keydown-E', () => {
       if (this.inside) this.sanctum?.talk(this.hero.x, this.hero.y);
-      else this.chapel?.talk(this.hero.x, this.hero.y);
+      else if (!this.chapel?.talk(this.hero.x, this.hero.y)) this.hallows?.talk(this.hero.x, this.hero.y);
     });
     // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
@@ -757,13 +773,46 @@ export class WorldScene extends Phaser.Scene {
    * (a boss's a great deal of it), and sometimes it leaves a potion or a piece
    * of gear, popping out of its body.
    */
-  monsterSlain(kind: string, x: number, y: number, bodyY: number, stats?: Pick<MonsterStats, 'hp' | 'rank'>): void {
+  monsterSlain(kind: string, x: number, y: number, bodyY: number, stats?: Pick<MonsterStats, 'hp' | 'rank'>, summoned = false): void {
     if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank) * riftMods.energy * petMods.energy, this.ult.ult.pal));
+    if (summoned) return;
     const id = rollDrop(kind);
     if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
     for (const def of gear.roll(kind)) this.dropGear(def, x, y - bodyY);
     const gems = rollGems(kind, petMods.luck);
     if (gems) this.dropGems(gems, x, y - bodyY);
+    const candy = rollCandy(kind);
+    if (candy) this.dropCandy(candy, x, y - bodyY);
+  }
+
+  /** A season's candy falls: a sweet or two glints down; a boss's hoard falls like a star. */
+  private dropCandy(n: number, x: number, y: number): void {
+    const p = new Pickup(this, x, y, { kind: 'candy', n });
+    this.pickups.push(p);
+    if (n >= 8) sound.lootFall(this.pan(p.x));
+    p.onLand = (at) => {
+      if (n >= 3) sound.lootLand(n >= 8 ? 4 : 2, this.pan(at.x));
+      this.debris(CANDY_SPARKS, snap(at.x), snap(at.y) - 5, Math.min(40, 6 + n * 2), at.y + 20, 'burst');
+      if (n >= 8) {
+        this.cameras.main.shake(160, 0.0014);
+        this.popNumber(snap(at.x), snap(at.y) - 30, 'CANDY HOARD!', 0xffa84a);
+      }
+    };
+  }
+
+  /** Candy picked up: the season's for good, a burst of sweet colours about the hero. */
+  private gainCandy(n: number): void {
+    const season = activeSeason();
+    if (!season) return;
+    collection.addCandy(season.id, n);
+    this.companion?.cheer();
+    const h = this.hero;
+    const hx = snap(h.x);
+    const hy = snap(h.y);
+    this.popNumber(hx, hy - 40, `+${n} ${season.currency.name.toUpperCase()}`, season.currency.tint);
+    this.debris(CANDY_SPARKS, hx, hy - 12, Math.min(50, 10 + n * 3), h.y + 20, 'burst');
+    if (n >= 8) this.addEffect(new LootFlare(this, hx, hy, null, true, 0xff8a2a, 0xfff0c8));
+    sound.candyPickup(n);
   }
 
   /**
@@ -929,17 +978,21 @@ export class WorldScene extends Phaser.Scene {
       const loot = p.loot;
       const room = loot.kind === 'item' ? inventory.canTake(loot.id) : true;
       if (!p.update(dt, down ? null : h.x, down ? null : h.y, room, this.daylight)) continue;
-      if (loot.kind === 'gems') {
-        this.gainGems(loot.n);
+      if (loot.kind === 'gems' || loot.kind === 'candy') {
+        if (loot.kind === 'gems') this.gainGems(loot.n);
+        else this.gainCandy(loot.n);
         p.destroy();
         continue;
       }
-      collection.add(loot.kind === 'item' ? loot.id : loot.def.id);
       if (loot.kind === 'item') {
+        collection.add(loot.id);
         inventory.add(loot.id);
         sound.pickup(this.pan(p.x));
         this.debris([0xffffff, 0xfff0a8], snap(p.x), snap(p.y) - 6, 8, p.y + 20, 'spores');
-      } else this.gainGear(loot.def);
+      } else {
+        collection.add(loot.def.id);
+        this.gainGear(loot.def);
+      }
       p.destroy();
     }
     this.pickups = this.pickups.filter((p) => !p.dead);
@@ -1558,6 +1611,7 @@ export class WorldScene extends Phaser.Scene {
       if (go) this.passDoor(go === 'enter');
     }
     this.chapel?.update(this.hero.x, this.hero.y, dt, Phaser.Math.Easing.Sine.InOut(this.daylight));
+    this.hallows?.update(time, dt, Phaser.Math.Easing.Sine.InOut(this.daylight), this.hero.x, this.hero.y);
     this.followHero();
 
     for (const b of this.balls) {

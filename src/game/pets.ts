@@ -37,6 +37,8 @@ export interface PetDef {
   fights?: boolean;
   /** The phoenix chick: rekindles the hero once a run. */
   rebirth?: boolean;
+  /** A seasonal companion (a season's id, see season.ts): bought at its stall, never wished for. */
+  season?: string;
 }
 
 export const PETS: PetDef[] = [
@@ -48,6 +50,9 @@ export const PETS: PetDef[] = [
   { id: 'wisp', name: 'Starwisp', rarity: 'epic', perk: '+25% energy', mods: { energy: 1.25 }, gait: 'fly', tint: 0xffe08a },
   { id: 'wyrm', name: 'Wyrmling', rarity: 'legendary', perk: 'Fights for you', mods: { damage: 1.05 }, gait: 'fly', tint: 0xc890ff, fights: true },
   { id: 'phoenix', name: 'Phoenix', rarity: 'legendary', perk: 'Revives once', mods: { speed: 1.05 }, gait: 'fly', tint: 0xffb850, rebirth: true },
+  // Hallow's Eve's, sold for candy at Old Wick's stall.
+  { id: 'pumpling', name: 'Pumpling', rarity: 'epic', perk: '+20% energy', mods: { energy: 1.2 }, gait: 'hop', tint: 0xff9a3a, season: 'hallows' },
+  { id: 'hexcat', name: 'Hexcat', rarity: 'epic', perk: '+6% damage', mods: { damage: 1.06 }, gait: 'walk', tint: 0xb07aff, season: 'hallows' },
 ];
 
 export const petById = (id: string): PetDef | undefined => PETS.find((p) => p.id === id);
@@ -61,9 +66,10 @@ export function wearPet(def: PetDef | undefined): void {
   Object.assign(petMods, NEUTRAL, def?.mods ?? {});
 }
 
-/** How many companions the player owns, out of all of them. */
+/** How many companions the player owns, out of all of them (a season's count once owned). */
 export function ownedPets(): { owned: number; of: number } {
-  return { owned: PETS.filter((p) => collection.hasPet(p.id)).length, of: PETS.length };
+  const owned = PETS.filter((p) => collection.hasPet(p.id));
+  return { owned: owned.length, of: PETS.filter((p) => !p.season).length + owned.filter((p) => p.season).length };
 }
 
 export interface PetWishResult {
@@ -103,7 +109,7 @@ export function petWish(count: 1 | 10): PetWishResult[] | null {
   collection.petPity = pity;
   let refund = 0;
   const out = rarities.map((r) => {
-    const pet = pick(PETS.filter((p) => p.rarity === r));
+    const pet = pick(PETS.filter((p) => p.rarity === r && !p.season));
     const fresh = collection.unlockPet(pet.id);
     // The first companion won comes along at once.
     if (fresh && !collection.pet) collection.pet = pet.id;

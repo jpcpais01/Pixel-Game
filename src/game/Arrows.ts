@@ -60,6 +60,18 @@ export const HUNT_ARROW: ArrowStyle = {
   spirit: true,
 };
 
+/** The scarecrow's: ember-tipped arrows trailing ghost-green light, like a jack-o'-lantern's flame. */
+export const SCARECROW_ARROW: ArrowStyle = {
+  core: 0xfff4d0,
+  hot: 0x9cff9a,
+  mid: 0xff8a2a,
+  deep: 0x2a7a3a,
+  light: 0xffa040,
+  suffix: '_scarecrow',
+  storm: false,
+  spirit: true,
+};
+
 /** Rings on the ground seen at an angle: squash them vertically. */
 const SQUASH = 0.58;
 /** Ground marks: under every standing thing, over the ground's shadows. */

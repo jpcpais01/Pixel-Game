@@ -1,6 +1,7 @@
 // The Rune Temple's two keepers, as the world and the HUD share them: the
 // world asks for a keeper's counter when the hero walks up to them, and the
-// HUD opens it (see ui/keeperHud.ts).
+// HUD opens it (see ui/keeperHud.ts). A season's stall keeper in the Clearing
+// opens a counter the same way.
 
 export type Keeper = 'disenchant' | 'upgrade';
 
@@ -21,11 +22,14 @@ export const KEEPERS: Record<Keeper, { name: string; title: string; tint: number
   },
 };
 
+/** A counter the HUD can open: a Rune Temple keeper's, or a season's stall (see season.ts and ui/candyView.ts). */
+export type Counter = Keeper | 'candy';
+
 export const keeperCall = {
   /** The counter the world wants open; the HUD takes it. */
-  want: null as Keeper | null,
+  want: null as Counter | null,
   /** The counter open now, if any. */
-  open: null as Keeper | null,
+  open: null as Counter | null,
   /** The hero walked away from the keeper: the HUD closes their counter. */
   leave: false,
 };
