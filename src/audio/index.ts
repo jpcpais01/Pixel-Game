@@ -270,6 +270,16 @@ class GameSound {
     if (t !== null) this.sfx!.gemPickup(t, n);
   }
 
+  gemTink(pan = 0): void {
+    const t = this.slot('gemTink');
+    if (t !== null) this.sfx!.gemTink(t, pan);
+  }
+
+  gemCollect(step: number): void {
+    const t = this.slot('gemCollect');
+    if (t !== null) this.sfx!.gemCollect(t, step);
+  }
+
   candyPickup(n: number): void {
     const t = this.slot('candyPickup');
     if (t !== null) this.sfx!.candyPickup(t, n);

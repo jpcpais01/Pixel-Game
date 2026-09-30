@@ -305,7 +305,7 @@ class Collection {
     return true;
   }
 
-  /** The furthest wave reached in the Endless Rift with class `cls` (0 if never), or with any class. */
+  /** The furthest wave reached in the Endless Rift with class `cls` (0 if never), or with any class. `cls` may carry a difficulty (riftKey in rift.ts). */
   riftBest(cls?: string): number {
     if (cls) return this.data.rift[cls] ?? 0;
     return Math.max(0, ...Object.values(this.data.rift));

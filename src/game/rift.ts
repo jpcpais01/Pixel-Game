@@ -2,7 +2,12 @@
 // the void, each wave bigger and tougher than the last, a Riftborn Champion
 // with every fifth. Between waves the hero heals a little and picks one of
 // three blessings, which last the whole run. When the hero falls the run is
-// over, and the furthest wave is kept, per class, as a best.
+// over, and the furthest wave is kept, per class and difficulty, as a best.
+//
+// Three difficulties, chosen on the world map before a run: Normal is the
+// rift as it always was; on Hard every foe's blow lands 10x as hard and on
+// Impossible 100x, while their health stays the same; and their drops are
+// twice (Hard) or three times (Impossible) as likely.
 //
 // RiftWaves stands in for the arena's Spawner (the world updates it like
 // one); `riftMods` is what the blessings do, read by the world; `riftHud` is
@@ -58,6 +63,61 @@ const CHAMPION_GEMS_STEP = 2;
 /** With Fortune, each ordinary kill has this chance, per stack, of a gem. */
 const FORTUNE_CHANCE = 0.02;
 
+// ---------------------------------------------------------------- Difficulty
+
+export type RiftDifficulty = 'normal' | 'hard' | 'impossible';
+
+export interface DifficultyDef {
+  id: RiftDifficulty;
+  name: string;
+  /** Foes' blows, as times Normal's. Their health never changes. */
+  hit: number;
+  /** Every drop chance of theirs, as times Normal's (capped at certain). */
+  odds: number;
+  /** Its colour on the map's panel and the run's HUD. */
+  tint: number;
+  /** A line for the map's panel. */
+  note: string;
+  /** The first wave's call. */
+  opens: string;
+}
+
+export const DIFFICULTIES: DifficultyDef[] = [
+  { id: 'normal', name: 'Normal', hit: 1, odds: 1, tint: 0xb8a8e8, note: 'The rift as it always was', opens: 'The rift opens' },
+  { id: 'hard', name: 'Hard', hit: 10, odds: 2, tint: 0xff8a3a, note: 'Foes hit 10x, drops 2x', opens: 'Every blow bites deep' },
+  { id: 'impossible', name: 'Impossible', hit: 100, odds: 3, tint: 0xff3a52, note: 'Foes hit 100x, drops 3x', opens: 'One blow is death' },
+];
+
+export const difficultyDef = (d: RiftDifficulty): DifficultyDef => DIFFICULTIES.find((x) => x.id === d) ?? DIFFICULTIES[0];
+
+const DIFFICULTY_KEY = 'pixel-battle.riftDifficulty';
+let chosen: RiftDifficulty | null = null;
+
+/** The difficulty the next run is played on: the last one chosen on this device. */
+export function riftDifficulty(): RiftDifficulty {
+  if (chosen) return chosen;
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(DIFFICULTY_KEY);
+  } catch {
+    // Storage blocked: Normal.
+  }
+  chosen = DIFFICULTIES.some((d) => d.id === saved) ? (saved as RiftDifficulty) : 'normal';
+  return chosen;
+}
+
+export function setRiftDifficulty(d: RiftDifficulty): void {
+  chosen = d;
+  try {
+    localStorage.setItem(DIFFICULTY_KEY, d);
+  } catch {
+    // Kept for this session only.
+  }
+}
+
+/** Where a class's best on a difficulty is kept: Normal under the class alone, as bests always were. */
+export const riftKey = (cls: string, d: RiftDifficulty): string => (d === 'normal' ? cls : `${cls}:${d}`);
+
 // ---------------------------------------------------------------- Blessings
 
 /** What the run's blessings add up to; the world reads these. 1 (or 0) when nothing has been chosen. */
@@ -75,11 +135,13 @@ export interface RiftMods {
   energy: number;
   /** Fortune's stacks. */
   gems: number;
-  /** The current wave's monsters' blows, as times their own. */
+  /** The current wave's monsters' blows, as times their own (the difficulty's included). */
   fury: number;
+  /** The difficulty's drop chances, as times their own. */
+  odds: number;
 }
 
-const NEUTRAL: RiftMods = { damage: 1, speed: 1, guard: 1, leech: 0, regen: 0, energy: 1, gems: 0, fury: 1 };
+const NEUTRAL: RiftMods = { damage: 1, speed: 1, guard: 1, leech: 0, regen: 0, energy: 1, gems: 0, fury: 1, odds: 1 };
 
 export const riftMods: RiftMods = { ...NEUTRAL };
 
@@ -149,6 +211,8 @@ export const riftHud = {
   /** The class this run is played with, for the best. */
   cls: '',
   className: '',
+  /** The difficulty this run is played on. */
+  difficulty: 'normal' as RiftDifficulty,
 };
 
 /** Out of the Rift: its blessings count for nothing, and its overlay has nothing to show. */
@@ -157,8 +221,8 @@ export function resetRift(): void {
   riftHud.active = false;
 }
 
-function resetHud(cls: string, className: string): void {
-  Object.assign(riftHud, { active: true, phase: 'intro', wave: 0, left: 0, kills: 0, gems: 0, champion: null, offer: null, pick: -1, taken: [], calls: [], best: collection.riftBest(cls), newBest: false, cls, className });
+function resetHud(cls: string, className: string, difficulty: RiftDifficulty): void {
+  Object.assign(riftHud, { active: true, phase: 'intro', wave: 0, left: 0, kills: 0, gems: 0, champion: null, offer: null, pick: -1, taken: [], calls: [], best: collection.riftBest(riftKey(cls, difficulty)), newBest: false, cls, className, difficulty });
 }
 
 // ---------------------------------------------------------------- The waves
@@ -186,6 +250,7 @@ export class RiftWaves extends Spawner {
   private queue: { kind: MonsterKind; champion: boolean }[] = [];
   private timer = INTRO_FIRST;
   private spawnT = 0;
+  private diff: DifficultyDef;
 
   constructor(
     private host: WorldScene,
@@ -195,8 +260,9 @@ export class RiftWaves extends Spawner {
     className: string,
   ) {
     super(host, [], 9000);
-    Object.assign(riftMods, NEUTRAL);
-    resetHud(cls, className);
+    this.diff = difficultyDef(riftDifficulty());
+    Object.assign(riftMods, NEUTRAL, { odds: this.diff.odds });
+    resetHud(cls, className, this.diff.id);
     this.startWave(1);
   }
 
@@ -207,12 +273,12 @@ export class RiftWaves extends Spawner {
   private startWave(n: number): void {
     riftHud.wave = n;
     riftHud.phase = 'intro';
-    riftMods.fury = fury(n);
+    riftMods.fury = fury(n) * this.diff.hit;
     this.timer = n === 1 ? INTRO_FIRST : INTRO;
     this.queue = this.compose(n);
     riftHud.left = this.queue.length;
     const champ = n % CHAMPION_EVERY === 0;
-    riftHud.calls.push({ text: `Wave ${n}`, sub: champ ? 'A champion comes' : n === 1 ? 'The rift opens' : '', tint: champ ? 0xff7ad0 : 0xf4cf6a });
+    riftHud.calls.push({ text: `Wave ${n}`, sub: champ ? 'A champion comes' : n === 1 ? this.diff.opens : '', tint: champ ? 0xff7ad0 : n === 1 && this.diff.id !== 'normal' ? this.diff.tint : 0xf4cf6a });
     this.arena.setWave(true);
   }
 
@@ -311,7 +377,7 @@ export class RiftWaves extends Spawner {
       riftHud.gems += n;
       this.rift.dropGems(n, x, y - e.m.stats.bodyY * CHAMPION_SIZE);
       riftHud.calls.push({ text: 'Champion slain', sub: `+${n} gems`, tint: 0x9ff6ff });
-    } else if (riftMods.gems > 0 && Math.random() < FORTUNE_CHANCE * riftMods.gems) {
+    } else if (riftMods.gems > 0 && Math.random() < FORTUNE_CHANCE * riftMods.gems * riftMods.odds) {
       riftHud.gems += 1;
       this.rift.dropGems(1, x, y - e.m.stats.bodyY);
     }
@@ -356,8 +422,9 @@ export class RiftWaves extends Spawner {
     if (riftHud.phase === 'over') return;
     // The wave in hand counts only once it's cleared.
     const reached = riftHud.phase === 'cleared' || riftHud.phase === 'bless' || riftHud.phase === 'rest' ? riftHud.wave : riftHud.wave - 1;
-    riftHud.best = collection.riftBest(riftHud.cls);
-    riftHud.newBest = reached > 0 && collection.recordRift(riftHud.cls, reached);
+    const key = riftKey(riftHud.cls, riftHud.difficulty);
+    riftHud.best = collection.riftBest(key);
+    riftHud.newBest = reached > 0 && collection.recordRift(key, reached);
     riftHud.wave = reached;
     riftHud.phase = 'over';
     riftHud.offer = null;

@@ -12,6 +12,9 @@ import { buildId } from '../diagnostics';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PANEL_PICKED, PixelButton, panelTexture, pixelText, type PanelStyle } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
 import { openOnlineForm } from '../ui/onlineForm';
+import { DIFFICULTIES, difficultyDef, riftDifficulty, riftKey, setRiftDifficulty, type RiftDifficulty } from '../game/rift';
+import { DIFF_STYLE, difficultyIcon } from '../ui/riftDifficulty';
+import { sound } from '../audio';
 
 /** The window onto the picked arena, at the top of its panel. */
 const WIN_W = 158;
@@ -33,6 +36,8 @@ const MAP_MARGIN = 120;
 const TAP_SLOP = 10;
 /** Glints on the sea at a time. */
 const SPARKS = 16;
+/** The Rift's difficulty button, beside Play where Online would be. */
+const DIFF_W = 90;
 
 const PLATE: PanelStyle = { ...PANEL, alpha: 0.84 };
 
@@ -290,6 +295,9 @@ export class ArenaScene extends Phaser.Scene {
   private back!: PixelButton;
   private play!: PixelButton;
   private online!: PixelButton;
+  /** The Rift's difficulty, one button per difficulty with only the chosen one shown, and a glow behind it. */
+  private diffButtons = new Map<RiftDifficulty, PixelButton>();
+  private diffGlow!: Phaser.GameObjects.Image;
   private zoomIn!: PixelButton;
   private zoomOut!: PixelButton;
   /** The panel's spot on screen (UI px), to keep the picked place out from under it. */
@@ -400,7 +408,16 @@ export class ArenaScene extends Phaser.Scene {
     this.online = new PixelButton(this, 'Online', 56, 18, BUTTON_PLAIN, 'online', () => this.openOnline());
     this.play.place(7, PANEL_H - 27);
     this.online.place(PANEL_W - 7 - 56, PANEL_H - 26);
-    this.panel = this.add.container(0, 0, [bg, this.windowSlot, this.region, this.title, rule, this.lore, ...this.status, this.play, this.online]);
+    // The Rift, being solo, has no Online: its difficulty stands there instead, tapped round in turn.
+    const dx = PANEL_W - 7 - DIFF_W;
+    const dy = PANEL_H - 27;
+    this.diffGlow = this.add.image(dx + DIFF_W / 2, dy + 10, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(3.2, 1.1).setVisible(false);
+    for (const d of DIFFICULTIES) {
+      const b = new PixelButton(this, d.name, DIFF_W, 20, DIFF_STYLE[d.id], `rift_diff_${d.id}`, () => this.cycleDifficulty());
+      b.setIcon(difficultyIcon(this, d.id)).place(dx, dy).setVisible(false);
+      this.diffButtons.set(d.id, b);
+    }
+    this.panel = this.add.container(0, 0, [bg, this.windowSlot, this.region, this.title, rule, this.lore, ...this.status, this.play, this.online, this.diffGlow, ...this.diffButtons.values()]);
     ui.add([this.drawing, this.header, this.back, this.zoomIn, this.zoomOut, this.panel]);
   }
 
@@ -596,6 +613,7 @@ export class ArenaScene extends Phaser.Scene {
     });
     const solo = !!arena.solo;
     this.online.setEnabled(!solo).setAlpha(solo ? 0.4 : 1);
+    this.showDifficulty(arena.id === 'rift');
     this.follow = { x: place.x, y: place.y - 16 };
   }
 
@@ -610,10 +628,30 @@ export class ArenaScene extends Phaser.Scene {
       );
     }
     if (arena.id === 'rift') {
-      const best = collection.riftBest(this.character);
-      if (best > 0) return [{ text: `Best wave: ${best}`, tint: 0xff8ad8 }];
+      const d = difficultyDef(riftDifficulty());
+      const best = collection.riftBest(riftKey(this.character, d.id));
+      const note = { text: d.note, tint: d.tint };
+      return best > 0 ? [note, { text: `Best wave: ${best}`, tint: 0xff8ad8 }] : [note];
     }
     return [{ text: place.note ?? arena.blurb, tint: 0xb8a8e8 }];
+  }
+
+  /** The Rift's difficulty button in Online's place, or Online back for every other arena. */
+  private showDifficulty(rift: boolean): void {
+    const now = riftDifficulty();
+    this.online.setVisible(!rift);
+    for (const [id, b] of this.diffButtons) b.setVisible(rift && id === now).setEnabled(rift && id === now);
+    this.diffGlow.setVisible(rift && now !== 'normal').setTint(difficultyDef(now).tint);
+  }
+
+  /** Normal, Hard, Impossible, and round again; the panel's lines follow. */
+  private cycleDifficulty(): void {
+    if (this.leaving) return;
+    const i = DIFFICULTIES.findIndex((d) => d.id === riftDifficulty());
+    const next = DIFFICULTIES[(i + 1) % DIFFICULTIES.length];
+    setRiftDifficulty(next.id);
+    sound.cardFlip(i + 1 === DIFFICULTIES.length ? 0 : i + 1);
+    this.showPicked();
   }
 
   // ---------------------------------------------------------------- The hero's walk
@@ -929,6 +967,11 @@ export class ArenaScene extends Phaser.Scene {
   /** The living bits: glows breathing, fog drifting, flags flapping, the halo, the sea's glints, the ship. */
   private animate(dt: number): void {
     const t = this.clock / 1000;
+    // Hard smoulders behind its button; Impossible throbs like a heartbeat.
+    if (this.diffGlow.visible) {
+      const beat = riftDifficulty() === 'impossible' ? Math.pow(Math.max(0, Math.sin(t * 5.2)), 6) : 0.5 + 0.5 * Math.sin(t * 2.2);
+      this.diffGlow.setAlpha(0.22 + 0.3 * beat);
+    }
     for (const s of this.spots) {
       s.glows.forEach((g, k) => g.setAlpha(0.32 + 0.12 * Math.sin(t * 1.7 + k * 1.3 + s.place.x)));
       for (const f of s.fog) {
@@ -1082,3 +1125,4 @@ export class ArenaScene extends Phaser.Scene {
     if (this.spots.length) this.follow = this.follow ?? { x: this.spots[this.picked].place.x, y: this.spots[this.picked].place.y - 16 };
   }
 }
+
