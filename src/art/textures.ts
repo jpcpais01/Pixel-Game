@@ -19,6 +19,8 @@ import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, ecli
 import { hex } from './pixel';
 import { bakedCanvas, pixelCanvas } from './canvas';
 import { packAtlas, registerAtlas, whiteOf, type PixelAtlas } from './atlas';
+import { CRITTER_ART, CRITTER_FRAMES, CRITTER_H, CRITTER_W, JAR_H, JAR_W, NET_ANGLES, NET_SIZE, critterFrames, jarFrame, netFrame, netIcon } from './critters';
+import { CRITTERS } from '../game/critters';
 import { EGG_H, EGG_W, PET_ART, PET_FRAMES, PET_H, PET_W, eggCracks, petFrames, wishEgg } from './pets';
 import { RIFT_PLATFORM_H, RIFT_PLATFORM_W, SHARD_H, SHARD_W, TEAR_FRAMES, TEAR_H, TEAR_W, blessingIcon, riftPlatformArt, riftShard, riftTear, riftVoidCanvas, type BlessingIcon } from './rift';
 import { RIFT_H, RIFT_W } from '../world/riftLayout';
@@ -343,6 +345,24 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
       repeat: -1,
     });
   }
+  // Critters: one lit sheet of every frame ('critters'), a looping animation
+  // each ('critter_<id>', wings beating faster than feet walk); each in its
+  // glass jar ('jars', 'jar_<id>', and 'empty' for one not caught yet); the
+  // net's swing ('net', n0..n4) and its button icon.
+  register(scene, 'critters', pack(critterFrames().map((f) => ({ name: f.name, r: f.canvas.render() })), CRITTER_W, CRITTER_H), CRITTER_W, CRITTER_H);
+  const jars: { name: string; r: RenderedFrame }[] = [{ name: 'empty', r: jarFrame(null, 0).render() }];
+  for (const def of CRITTERS) {
+    for (let f = 0; f < CRITTER_FRAMES; f++) jars.push({ name: `${def.id}_${f}`, r: jarFrame(def.id, f, def.gait === 'fly', def.glow).render() });
+  }
+  register(scene, 'jars', pack(jars, JAR_W, JAR_H), JAR_W, JAR_H);
+  for (const id of Object.keys(CRITTER_ART)) {
+    const fly = CRITTERS.find((d) => d.id === id)?.gait === 'fly';
+    const frames = Array.from({ length: CRITTER_FRAMES }, (_, f) => f);
+    scene.anims.create({ key: `critter_${id}`, frames: frames.map((f) => ({ key: 'critters', frame: `${id}_${f}` })), frameRate: fly ? 12 : 6, repeat: -1 });
+    scene.anims.create({ key: `jar_${id}`, frames: frames.map((f) => ({ key: 'jars', frame: `${id}_${f}` })), frameRate: fly ? 8 : 4, repeat: -1 });
+  }
+  register(scene, 'net', pack(NET_ANGLES.map((a, i) => ({ name: `n${i}`, r: netFrame(a).render() })), NET_SIZE, NET_SIZE), NET_SIZE, NET_SIZE, false);
+  scene.textures.addCanvas('icon_net', toCanvas(16, 16, netIcon().render().diffuse));
   const egg = wishEgg().render();
   scene.textures.addCanvas('nest_egg', toCanvas(EGG_W, EGG_H, egg.diffuse));
   scene.textures.addCanvas('nest_egg_e', toCanvas(EGG_W, EGG_H, egg.emissive));

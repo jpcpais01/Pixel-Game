@@ -27,6 +27,8 @@ import { CosmosArena } from '../world/Cosmos';
 import { RiftArena } from '../world/Rift';
 import { RiftWaves, resetRift, riftMods } from '../game/rift';
 import { Companion } from '../game/Companion';
+import { CritterField } from '../game/CritterField';
+import { CRITTER_ARENAS } from '../game/critters';
 import { petById, petMods, wearPet } from '../game/pets';
 import { FloatingIsland } from '../world/Island';
 import { SpiritDungeon } from '../world/Spirit';
@@ -156,6 +158,8 @@ export class WorldScene extends Phaser.Scene {
   private rift: RiftArena | null = null;
   /** The companion following the hero, if one is worn. */
   private companion: Companion | null = null;
+  /** The critters out near the hero, to be caught with the net (arenas that have them). */
+  private critters: CritterField | null = null;
   private riftWaves: RiftWaves | null = null;
   /** The arena's own living parts, when it is the Floating Island. */
   private island: FloatingIsland | null = null;
@@ -417,10 +421,15 @@ export class WorldScene extends Phaser.Scene {
     const pet = duel ? undefined : petById(collection.pet);
     wearPet(pet);
     this.companion = pet ? new Companion(this, pet, this.hero.x, this.hero.y) : null;
+    // Critters come out in the arenas that have them; not in a duel.
+    this.critters = !duel && CRITTER_ARENAS.includes(arena.id) ? new CritterField(this, arena.id, !!arena.dayNight) : null;
+    controls.netTap = false;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.companion?.destroy();
       this.companion = null;
       wearPet(undefined);
+      this.critters?.destroy();
+      this.critters = null;
     });
     if (this.rift) {
       // The Rift's waves stand in for a spawner, and its overlay shows them.
@@ -459,9 +468,10 @@ export class WorldScene extends Phaser.Scene {
 
     const kb = this.input.keyboard!;
     kb.on('keydown-N', () => daynight.enabled && daynight.toggle());
+    // E talks to a keeper close by; anywhere else it swings the critter net.
     kb.on('keydown-E', () => {
       if (this.inside) this.sanctum?.talk(this.hero.x, this.hero.y);
-      else this.chapel?.talk(this.hero.x, this.hero.y);
+      else if (!this.chapel?.talk(this.hero.x, this.hero.y)) controls.netTap = true;
     });
     // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
@@ -1581,6 +1591,11 @@ export class WorldScene extends Phaser.Scene {
     this.cosmos?.update(time, dt);
     this.rift?.update(time, dt);
     this.companion?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight);
+    if (controls.netTap) {
+      controls.netTap = false;
+      if (this.downT <= 0 && !session.paused) this.critters?.swingNet(this.hero.x, this.hero.y, this.facing.x);
+    }
+    this.critters?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight, this.view, controls.mouse, this.inside);
     this.island?.update(time, dt);
     this.spirit?.update(time, dt);
     this.temple?.update(time);

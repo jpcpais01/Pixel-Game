@@ -603,6 +603,25 @@ export class Sfx {
     if (tier === 2) this.lootLand(t, 0, 4);
   }
 
+  /** The net swept through the air: a soft airy swish. */
+  netSwish(t: number, pan: number): void {
+    const out = this.out(pan, 0.4, 0.25);
+    this.burstNoise(out, t, 'bandpass', 900, 3200, 1.4, 0.16, 0.18);
+  }
+
+  /** A critter caught and corked in its jar: a glassy pop and a little chime, brighter for a new or rare one (tier 0..2). */
+  critterCatch(t: number, tier: number): void {
+    const out = this.out(0, 0.45, 0.45);
+    this.chirp(out, t, 'sine', 420, 1100, 0.18, 0.06);
+    const bells = [
+      [1568, 2093],
+      [1319, 1760, 2349],
+      [1175, 1568, 1976, 2637],
+    ];
+    bells[tier].forEach((f, i) => this.bell(out, t + 0.07 + i * 0.07, f, 0.035, 0.8 + tier * 0.3));
+    this.sparkle(out, t + 0.1, 2 + tier * 3, 0.04);
+  }
+
   /** A card turning over: a soft swish, then a chime in its rarity's key. */
   cardFlip(t: number, tier: number): void {
     const out = this.out(0, 0.45, 0.5);
