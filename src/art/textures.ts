@@ -349,6 +349,9 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('shafts', toCanvas(256, 256, sunShaftCanvas(256, 256)));
   scene.textures.addCanvas('icon_sun', toCanvas(12, 12, skyIcon('sun')));
   scene.textures.addCanvas('icon_moon', toCanvas(12, 12, skyIcon('moon')));
+  scene.textures.addCanvas('icon_dawn', toCanvas(12, 12, skyIcon('dawn')));
+  scene.textures.addCanvas('icon_dusk', toCanvas(12, 12, skyIcon('dusk')));
+  scene.textures.addCanvas('icon_cycle', toCanvas(12, 12, skyIcon('cycle')));
   scene.textures.addCanvas('icon_beam', toCanvas(16, 16, beamIcon()));
   scene.textures.addCanvas('icon_beam_void', toCanvas(16, 16, beamIcon(VOID_SPELL)));
   yield;

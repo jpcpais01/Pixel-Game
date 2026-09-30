@@ -257,7 +257,88 @@ export function sunShaftCanvas(w = 256, h = 256): Uint8ClampedArray {
 }
 
 /** 12x12 pixel sun and moon icons for the time-of-day toggle. */
-export function skyIcon(kind: 'sun' | 'moon'): Uint8ClampedArray {
+/**
+ * 12x12 icons for the time of day: the four phases, and `cycle` for auto (a
+ * looping arrow round a little clock's hands). Morning is a pale gold sun
+ * rising over a cool blue horizon; sunset a deep orange one sinking into a
+ * violet one, under a first star.
+ */
+export function skyIcon(kind: 'sun' | 'moon' | 'dawn' | 'dusk' | 'cycle'): Uint8ClampedArray {
+  if (kind === 'dawn' || kind === 'dusk' || kind === 'cycle') return kind === 'cycle' ? cycleIcon() : horizonIcon(kind === 'dawn');
+  return orbIcon(kind);
+}
+
+/** A 12x12 canvas and a pixel setter for it. */
+function icon12(): { px: Uint8ClampedArray; put: (x: number, y: number, c: string) => void } {
+  const S = 12;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const put = (x: number, y: number, c: string) => {
+    if (x < 0 || y < 0 || x >= S || y >= S) return;
+    const n = parseInt(c.slice(1), 16);
+    const i = (y * S + x) * 4;
+    px[i] = n >> 16;
+    px[i + 1] = (n >> 8) & 255;
+    px[i + 2] = n & 255;
+    px[i + 3] = 255;
+  };
+  return { px, put };
+}
+
+/** Half a sun on the horizon, its rays fanning up, its light broken on the water below. */
+function horizonIcon(dawn: boolean): Uint8ClampedArray {
+  const { px, put } = icon12();
+  const pal = dawn
+    ? { hi: '#fff4c4', body: '#ffd66a', rim: '#ffa94a', ray: '#ffcf70', line: '#8fb8f2', glint: '#ffe39a', glint2: '#bcd4ff' }
+    : { hi: '#ffd27a', body: '#ff8e3c', rim: '#e0523a', ray: '#ff7f9e', line: '#a676dc', glint: '#ff9e5c', glint2: '#e06aa0' };
+  // The sunset sun has sunk a little lower than the rising one.
+  const cx = 6;
+  const cy = dawn ? 8 : 8.6;
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 12; x++) {
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      const d = Math.hypot(dx, dy);
+      if (d <= 2.5) put(x, y, dx + dy < -1.6 ? pal.hi : pal.body);
+      else if (d <= 3.4) put(x, y, pal.rim);
+    }
+  }
+  // Rays: five short ones at dawn, three longer pink ones at dusk.
+  const rays = dawn ? [-160, -125, -90, -55, -20] : [-140, -90, -40];
+  for (const a of rays) {
+    const r = (a * Math.PI) / 180;
+    for (const k of dawn ? [4.7] : [4.6, 5.5]) put(Math.floor(cx + Math.cos(r) * k), Math.floor(cy + Math.sin(r) * k), pal.ray);
+  }
+  for (let x = 0; x < 12; x++) put(x, 8, x === 0 || x === 11 ? pal.glint2 : pal.line);
+  // The sun's road on the water, narrowing away.
+  for (const x of [4, 5, 6, 7]) put(x, 9, pal.glint);
+  put(1, 9, pal.glint2);
+  put(10, 9, pal.glint2);
+  for (const x of [5, 6]) put(x, 10, pal.glint2);
+  if (!dawn) put(10, 1, '#fff0f6');
+  return px;
+}
+
+/** Auto: an arrow looping clockwise round a clock's two hands. */
+function cycleIcon(): Uint8ClampedArray {
+  const { px, put } = icon12();
+  for (let y = 0; y < 12; y++) {
+    for (let x = 0; x < 12; x++) {
+      const dx = x + 0.5 - 6;
+      const dy = y + 0.5 - 6;
+      const d = Math.hypot(dx, dy);
+      const a = (Math.atan2(dy, dx) * 180) / Math.PI;
+      // A gap at the top right, where the arrow's head sits.
+      if (d >= 3.1 && d <= 4.4 && !(a > -84 && a < -12)) put(x, y, dx + dy < 0 ? '#f2f5ff' : '#aeb8e8');
+    }
+  }
+  // The head, pointing on round the loop.
+  for (const [x, y] of [[7, 0], [7, 1], [7, 2], [7, 3], [8, 1], [8, 2], [9, 2]]) put(x, y, '#f2f5ff');
+  // The clock's hands.
+  for (const [x, y] of [[5, 3], [5, 4], [5, 5], [6, 5], [7, 5]]) put(x, y, '#ffd24a');
+  return px;
+}
+
+function orbIcon(kind: 'sun' | 'moon'): Uint8ClampedArray {
   const S = 12;
   const px = new Uint8ClampedArray(S * S * 4);
   const put = (x: number, y: number, c: string) => {

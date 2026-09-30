@@ -106,7 +106,13 @@ export class PauseScene extends Phaser.Scene {
 
     const slider = (color: number, value: number, key: 'brightness' | 'music' | 'sfx') =>
       new PixelSlider(this, CONTROL_W, value, color, (x) => settings.set(key, x));
-    this.dayButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => daynight.enabled && daynight.toggle());
+    this.dayButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => {
+      // Morning, Day, Sunset, Night, then Auto, and round again.
+      if (!daynight.enabled) return;
+      if (daynight.auto) daynight.set('morning');
+      else if (daynight.phase === 'night') daynight.setAuto(true);
+      else daynight.next();
+    });
     this.fpsButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => {
       // Hidden, then Shown, then Details (the profiler), then Hidden again.
       const { showFps, profiler } = settings.values;
@@ -152,7 +158,7 @@ export class PauseScene extends Phaser.Scene {
 
   private syncToggles(): void {
     // Arenas without day and night keep their own light.
-    this.dayButton.setText(!daynight.enabled ? 'Fixed' : daynight.target > 0.5 ? 'Day' : 'Night');
+    this.dayButton.setText(!daynight.enabled ? 'Fixed' : daynight.auto ? 'Auto' : { morning: 'Morning', day: 'Day', sunset: 'Sunset', night: 'Night' }[daynight.phase]);
     this.fpsButton.setText(!settings.values.showFps ? 'Hidden' : settings.values.profiler ? 'Details' : 'Shown');
     this.qualityButton.setText({ full: 'Full', fast: 'Fast', low: 'Low' }[settings.values.quality]);
     this.zoomButton.setText({ far: 'Far', normal: 'Normal', close: 'Close' }[settings.values.zoom]);
