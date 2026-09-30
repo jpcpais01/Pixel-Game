@@ -14,7 +14,7 @@ import { CLEARING_GROUND, CLEARING_H, CLEARING_SPAWN, CLEARING_W, PLAZA_CX, PLAZ
 import { SANCTUM_WORLD_W } from './sanctumLayout';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
-import { warmCosmos, warmDeep, warmGlide, warmIsland, warmRift, warmSpirit, warmTemple } from '../art/arenaLoader';
+import { warmCosmos, warmDeep, warmGlide, warmIsland, warmRift, warmSpirit, warmTemple, warmWorldMap } from '../art/arenaLoader';
 import { RIFT_CX, RIFT_CY, RIFT_H, RIFT_SPAWN, RIFT_W, SHARDS, TEARS, riftWalkable } from './riftLayout';
 import { RIFT_PLATFORM_X, RIFT_PLATFORM_Y, SHARD_H, SHARD_OY } from '../art/rift';
 import { GroundStreamer } from './GroundStreamer';
@@ -426,14 +426,15 @@ export function warmArena(scene: Phaser.Scene, arena: ArenaDef, budget: number):
 }
 
 /**
- * Warm the arena the player chose last time while they're still on the
- * menus, a few ms a frame, so a run there starts at once. Only that one: the
- * arena select shows the others as saved pictures, and builds one only when
- * it's picked. The work is shared: the arena select and the world carry on
+ * Warm the world map, then the arena the player chose last time, while
+ * they're still on the menus, a few ms a frame, so the arena select opens
+ * on a finished map and a run there starts at once. Only that arena: the
+ * select shows the others as saved pictures, and builds one only when it's
+ * picked. The work is shared: the arena select and the world carry on
  * whatever this has begun. True once it's ready.
  */
 export function warmArenasInBackground(scene: Phaser.Scene, budget: number): boolean {
-  return warmArena(scene, arenaById(lastArena()), budget);
+  return warmWorldMap(scene, budget) && warmArena(scene, arenaById(lastArena()), budget);
 }
 
 export function arenaById(id: string | undefined): ArenaDef {

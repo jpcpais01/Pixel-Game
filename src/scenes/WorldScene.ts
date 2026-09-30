@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { realm } from '../world/realm';
 import { controls } from '../game/controls';
 import { sunShadow, SUN_SHADOW_ALPHA } from '../game/Wizard';
 import { EnergyBall, type BallKind } from '../game/EnergyBall';
@@ -863,6 +864,8 @@ export class WorldScene extends Phaser.Scene {
   monsterSlain(kind: string, x: number, y: number, bodyY: number, stats?: Pick<MonsterStats, 'hp' | 'rank'>, summoned = false): void {
     if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank) * riftMods.energy * petMods.energy * omenMods.energy, this.ult.ult.pal));
     if (summoned) return;
+    // A boss's fall is marked on the world map with a flag.
+    if (stats?.rank) realm.slay(kind);
     const id = rollDrop(kind);
     if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
     for (const def of gear.roll(kind, omenMods.bump)) this.dropGear(def, x, y - bodyY);

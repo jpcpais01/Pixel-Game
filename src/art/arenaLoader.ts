@@ -128,3 +128,4 @@ export const warmGlide = (scene: Phaser.Scene, budget = Infinity): boolean => {
   const island = warmIsland(scene, budget);
   return warmArenaTextures(scene, 'glide', budget) && island;
 };
+export const warmWorldMap = (scene: Phaser.Scene, budget = Infinity): boolean => warmArenaTextures(scene, 'worldmap', budget);
