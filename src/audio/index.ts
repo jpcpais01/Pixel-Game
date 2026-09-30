@@ -2,7 +2,7 @@ import { Ambience } from './ambience';
 import { Mixer, gain } from './mixer';
 import { Music } from './music';
 import { ShopMusic, type ShopMood } from './shopMusic';
-import { Sfx, type BeamHum } from './sfx';
+import { Sfx, type BeamHum, type WindBed } from './sfx';
 import { note } from '../diagnostics';
 
 const MUTE_KEY = 'pixel-game:muted';
@@ -38,6 +38,7 @@ class GameSound {
   private ambience: Ambience | null = null;
   private sfx: Sfx | null = null;
   private hum: BeamHum | null = null;
+  private wind: WindBed | null = null;
   private listeners = new Set<Listener>();
   private lastPlayed = new Map<string, number>();
   private recent: number[] = [];
@@ -277,6 +278,50 @@ class GameSound {
   gemSpend(): void {
     const t = this.slot('gemSpend');
     if (t !== null) this.sfx!.gemSpend(t);
+  }
+
+  glideRing(pan = 0, step = 0, big = false): void {
+    const t = this.slot('glideRing');
+    if (t !== null) this.sfx!.glideRing(t, pan, step, big);
+  }
+
+  glideGust(): void {
+    const t = this.slot('glideGust');
+    if (t !== null) this.sfx!.glideGust(t);
+  }
+
+  glideWhoosh(pan = 0, level = 1): void {
+    const t = this.slot('glideWhoosh');
+    if (t !== null) this.sfx!.glideWhoosh(t, pan, level);
+  }
+
+  glideCount(go = false): void {
+    const t = this.slot('glideCount');
+    if (t !== null) this.sfx!.glideCount(t, go);
+  }
+
+  glideSplash(): void {
+    const t = this.slot('glideSplash');
+    if (t !== null) this.sfx!.glideSplash(t);
+  }
+
+  glideLand(): void {
+    const t = this.slot('glideLand');
+    if (t !== null) this.sfx!.glideLand(t);
+  }
+
+  /** The wind round the glider: `speed` 0..1 of top speed. */
+  glideWind(speed: number, dive: boolean): void {
+    if (!this.live()) return;
+    const t = this.ctx!.currentTime;
+    if (!this.wind) this.wind = this.sfx!.windBed(t);
+    safely('glideWind', () => this.wind?.set(speed, dive, t));
+  }
+
+  glideWindEnd(): void {
+    const wind = this.wind;
+    if (wind && this.ctx) safely('glideWind', () => wind.stop(this.ctx!.currentTime));
+    this.wind = null;
   }
 
   gemTick(): void {

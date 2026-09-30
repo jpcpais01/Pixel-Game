@@ -25,7 +25,7 @@ const GRANTS: { id: string; user: string; gems: number }[] = [
 /** Set once this device has given a guest the welcome gems, so a fresh guest game can't be made again and again for more. */
 const WELCOMED_KEY = 'pixel-battle.welcomed';
 
-const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, pets: [], pet: '', petPity: 0, critters: {}, mats: {}, candy: {} });
+const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, glide: {}, pets: [], pet: '', petPity: 0, critters: {}, mats: {}, candy: {} });
 
 /** The welcome gems for a new guest game: the first on this device only. */
 function welcomeGems(): number {
@@ -65,6 +65,7 @@ function clean(d: Partial<SaveData> | null | undefined): SaveData {
   out.pity = Math.max(0, Math.floor(Number(d?.pity) || 0));
   out.grants = [...new Set((Array.isArray(d?.grants) ? d.grants : []).filter((g): g is string => typeof g === 'string' && !!g))];
   for (const [cls, n] of Object.entries(d?.rift ?? {})) if (Number(n) > 0) out.rift[cls] = Math.floor(Number(n));
+  for (const [course, ms] of Object.entries(d?.glide ?? {})) if (Number(ms) > 0) out.glide[course] = Math.floor(Number(ms));
   for (const [set, n] of Object.entries(d?.mats ?? {})) if (set in GEAR_SETS && Number(n) > 0) out.mats[set] = Math.floor(Number(n));
   out.pets = [...new Set((Array.isArray(d?.pets) ? d.pets : []).filter((p): p is string => typeof p === 'string' && !!p))];
   out.pet = typeof d?.pet === 'string' ? d.pet : '';
@@ -315,6 +316,20 @@ class Collection {
     return true;
   }
 
+  /** The best Sky Glide time on `course`, in ms (0 if never finished). */
+  glideBest(course: string): number {
+    return this.data.glide[course] ?? 0;
+  }
+
+  /** A Sky Glide run on `course` finished in `ms`: true when that's a new best. */
+  recordGlide(course: string, ms: number): boolean {
+    const best = this.data.glide[course];
+    if (best && ms >= best) return false;
+    this.data.glide[course] = Math.floor(ms);
+    this.changed();
+    return true;
+  }
+
   /** How much of season `id`'s currency the player has (Hallow's Eve's candy...). */
   candy(id: string): number {
     return this.data.candy[id] ?? 0;
@@ -517,6 +532,8 @@ class Collection {
       merged.pity = Math.max(local.pity, merged.pity);
       merged.grants = [...new Set([...merged.grants, ...local.grants])];
       for (const [cls, n] of Object.entries(local.rift)) merged.rift[cls] = Math.max(n, merged.rift[cls] ?? 0);
+      // The faster time wins.
+      for (const [course, ms] of Object.entries(local.glide)) merged.glide[course] = Math.min(ms, merged.glide[course] ?? Infinity);
       merged.pets = [...new Set([...merged.pets, ...local.pets])];
       if (!merged.pet) merged.pet = local.pet;
       merged.petPity = Math.max(local.petPity, merged.petPity);
@@ -532,6 +549,7 @@ class Collection {
         merged.pets = [...new Set([...merged.pets, ...guest.pets])];
         for (const [id, n] of Object.entries(guest.critters)) merged.critters[id] = (merged.critters[id] ?? 0) + n;
         for (const [cls, n] of Object.entries(guest.rift)) merged.rift[cls] = Math.max(n, merged.rift[cls] ?? 0);
+        for (const [course, ms] of Object.entries(guest.glide)) merged.glide[course] = Math.min(ms, merged.glide[course] ?? Infinity);
         for (const [set, n] of Object.entries(guest.mats)) merged.mats[set] = (merged.mats[set] ?? 0) + n;
         merged.gems = Math.max(merged.gems, guest.gems);
         for (const [id, n] of Object.entries(guest.candy)) merged.candy[id] = (merged.candy[id] ?? 0) + n;

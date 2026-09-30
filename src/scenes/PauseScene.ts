@@ -45,12 +45,17 @@ export class PauseScene extends Phaser.Scene {
   private shakeButton!: PixelButton;
   private resume!: PixelButton;
   private home!: PixelButton;
+  /** The scene played in and its HUD: the world's, or a mode's own (Sky Glide). */
+  private worldKey = 'world';
+  private uiKey = 'ui';
 
   constructor() {
     super('pause');
   }
 
-  create(): void {
+  create(data?: { world?: string; ui?: string }): void {
+    this.worldKey = data?.world ?? 'world';
+    this.uiKey = data?.ui ?? 'ui';
     this.open = false;
     this.leaving = false;
     this.pressed = false;
@@ -162,8 +167,8 @@ export class PauseScene extends Phaser.Scene {
     session.paused = open && online;
     if (open) {
       if (!online) {
-        this.scene.pause('world');
-        this.scene.pause('ui');
+        this.scene.pause(this.worldKey);
+        this.scene.pause(this.uiKey);
       }
       releaseControls();
       this.syncToggles();
@@ -171,8 +176,8 @@ export class PauseScene extends Phaser.Scene {
       this.title.setText((session.room ? `Room ${session.room.code}` : 'Paused').toUpperCase());
       this.layout();
     } else if (!online) {
-      this.scene.resume('world');
-      this.scene.resume('ui');
+      this.scene.resume(this.worldKey);
+      this.scene.resume(this.uiKey);
     }
     this.hud.setVisible(!open);
     for (const b of [this.dayButton, this.fpsButton, this.qualityButton, this.zoomButton, this.shakeButton, this.resume, this.home]) b.setEnabled(open);
@@ -184,7 +189,7 @@ export class PauseScene extends Phaser.Scene {
   private goHome(): void {
     if (this.leaving) return;
     this.leaving = true;
-    const cams = ['world', 'shade', 'ui', 'pause'].map((k) => this.scene.get(k).cameras.main);
+    const cams = [this.worldKey, 'shade', this.uiKey, 'pause'].map((k) => this.scene.get(k).cameras.main);
     for (const cam of cams) cam.fadeOut(350, 7, 8, 13);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       releaseControls();
@@ -197,7 +202,7 @@ export class PauseScene extends Phaser.Scene {
       sound.setFire(0);
       sound.setDaylight(0);
       session.paused = false;
-      for (const k of ['world', 'shade', 'ui']) this.scene.stop(k);
+      for (const k of [this.worldKey, 'shade', this.uiKey]) this.scene.stop(k);
       this.scene.start('home');
     });
   }

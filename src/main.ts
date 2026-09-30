@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { WorldScene } from './scenes/WorldScene';
 import { UIScene } from './scenes/UIScene';
+import { GlideScene } from './scenes/GlideScene';
+import { GlideUIScene } from './scenes/GlideUIScene';
 import { LitPipeline } from './game/LitPipeline';
 import { PixelPipeline } from './game/PixelPipeline';
 import { SkyPipeline } from './game/SkyPipeline';
@@ -65,7 +67,7 @@ const game = new Phaser.Game({
   // Right click is the normal ability on a computer, so no browser menu over the game.
   disableContextMenu: true,
   // Later scenes draw on top.
-  scene: [BootScene, HomeScene, SelectScene, InventoryScene, ShopScene, ArenaScene, WorldScene, ShadeScene, UIScene, RiftScene, OmenScene, PauseScene, SoundScene, FpsScene],
+  scene: [BootScene, HomeScene, SelectScene, InventoryScene, ShopScene, ArenaScene, WorldScene, GlideScene, ShadeScene, UIScene, GlideUIScene, RiftScene, OmenScene, PauseScene, SoundScene, FpsScene],
 });
 game.events.once(Phaser.Core.Events.READY, () => watchCanvas(game.canvas));
 

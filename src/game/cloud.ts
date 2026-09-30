@@ -41,6 +41,8 @@ export interface SaveData {
   grants: string[];
   /** The furthest wave reached in the Endless Rift, by class id. */
   rift: Record<string, number>;
+  /** The best Sky Glide time on each course, in ms, by course id. */
+  glide: Record<string, number>;
   /** Companions won from the companion wishes, by id. */
   pets: string[];
   /** The companion that follows the player, or '' for none. */
@@ -242,6 +244,14 @@ export async function loadSave(): Promise<LoadedSave | null> {
       if (cls && Number(n) > 0) rift[cls] = Number(n);
     }
   }
+  // Sky Glide's best times as "skyfall:52340".
+  const glide: Record<string, number> = {};
+  if (f.glide && 'stringValue' in f.glide && f.glide.stringValue) {
+    for (const pair of f.glide.stringValue.split(',')) {
+      const [course, ms] = pair.split(':');
+      if (course && Number(ms) > 0) glide[course] = Number(ms);
+    }
+  }
   const pets = f.pets && 'stringValue' in f.pets && f.pets.stringValue ? f.pets.stringValue.split(',') : [];
   const pet = f.pet && 'stringValue' in f.pet ? f.pet.stringValue : '';
   const petPity = f.petPity && 'integerValue' in f.petPity ? Number(f.petPity.integerValue) : 0;
@@ -269,7 +279,7 @@ export async function loadSave(): Promise<LoadedSave | null> {
       if (id && Number(n) > 0) critters[id] = Number(n);
     }
   }
-  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, pets, pet, petPity, critters, mats, candy, username };
+  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, glide, pets, pet, petPity, critters, mats, candy, username };
 }
 
 /** Overwrite the logged-in player's save. */
@@ -291,6 +301,7 @@ export async function writeSave(data: SaveData): Promise<void> {
     pity: { integerValue: String(Math.floor(data.pity)) },
     grants: { stringValue: data.grants.join(',') },
     rift: { stringValue: Object.entries(data.rift).map(([cls, n]) => `${cls}:${Math.floor(n)}`).join(',') },
+    glide: { stringValue: Object.entries(data.glide).map(([course, ms]) => `${course}:${Math.floor(ms)}`).join(',') },
     pets: { stringValue: data.pets.join(',') },
     pet: { stringValue: data.pet },
     petPity: { integerValue: String(Math.floor(data.petPity)) },
