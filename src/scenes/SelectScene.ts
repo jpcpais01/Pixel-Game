@@ -10,7 +10,6 @@ import { ensureUltIcons, ultFor } from '../game/ultimate';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { statIconsTexture } from '../ui/statIcons';
 import { fpsBottom } from './FpsScene';
-import type { HomeScene } from './HomeScene';
 
 // The hero select. The class's name heads the page between two arrows. Under
 // it, an arched hall: the picked character stands big on a lit dais at the
@@ -1360,7 +1359,8 @@ export class SelectScene extends Phaser.Scene {
   private goBack(): void {
     if (this.leaving) return;
     this.leaving = true;
-    (this.scene.get('home') as HomeScene).showMenu(true);
+    // Back to the game mode menu, still over the home screen.
+    this.scene.launch('modes');
     this.tweens.add({ targets: this.cameras.main, alpha: 0, duration: 200, onComplete: () => this.scene.stop() });
   }
 
