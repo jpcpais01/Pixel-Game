@@ -1025,6 +1025,15 @@ export class ArenaScene extends Phaser.Scene {
     for (const cam of [this.cameras.main, this.uiCam]) cam.fadeOut(450, 7, 8, 13);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.scene.stop('home');
+      const mode = arenaById(arena).mode;
+      if (mode) {
+        // A mode with a scene of its own (Sky Glide): its HUD, and the pause menu over it.
+        this.scene.launch('shade');
+        this.scene.launch(mode.ui);
+        this.scene.launch('pause', { world: mode.scene, ui: mode.ui });
+        this.scene.start(mode.scene, { character });
+        return;
+      }
       this.scene.launch('shade');
       this.scene.launch('ui', { character });
       this.scene.launch('pause');

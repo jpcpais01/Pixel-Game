@@ -284,6 +284,47 @@ export class Sfx {
     }
   }
 
+  /**
+   * A hammer on an anvil: a hard tick, then the anvil's ring, bright and
+   * inharmonic like struck steel, dying away over most of a second.
+   */
+  anvil(t: number, pan: number, level: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.55 * level, 0.3);
+    const k = gain(ctx, 0, out);
+    hit(k.gain, t, 0.5, 0.001, 0.04);
+    const n = this.m.noiseSource();
+    n.connect(filter(ctx, 'bandpass', rand(2600, 3200), 2, k));
+    this.m.startNoise(n, t, 0.06);
+    const ring = gain(ctx, 0, out);
+    hit(ring.gain, t, 0.22, 0.001, rand(0.5, 0.7));
+    const f0 = rand(880, 940);
+    for (const [r, a] of [
+      [1, 1],
+      [2.76, 0.5],
+      [5.4, 0.25],
+      [8.93, 0.12],
+    ]) {
+      const o = osc(ctx, 'sine', f0 * r, gain(ctx, a, ring));
+      o.start(t);
+      o.stop(t + 0.9);
+    }
+  }
+
+  /** A piece forged: three quick blows, rising, and a shimmer as it cools. */
+  forged(t: number): void {
+    for (let k = 0; k < 3; k++) this.anvil(t + k * 0.16, 0, 0.8 + k * 0.1);
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.35, 0.5);
+    for (let k = 0; k < 5; k++) {
+      const g = gain(ctx, 0, out);
+      hit(g.gain, t + 0.5 + k * 0.07, 0.25, 0.005, 0.5);
+      const o = osc(ctx, 'triangle', SPARKLE[k % SPARKLE.length], g);
+      o.start(t + 0.5 + k * 0.07);
+      o.stop(t + 1.2 + k * 0.07);
+    }
+  }
+
   /** The whirlwind kindling: a breath of fire rising in pitch. */
   rise(t: number): void {
     const ctx = this.m.ctx;
@@ -546,6 +587,19 @@ export class Sfx {
     this.sparkle(out, t + 0.05, Math.min(10, 2 + n), 0.035);
   }
 
+  /**
+   * Candy picked up (a season's): the crinkle of a wrapper, then a music box
+   * in a minor key, a note more the bigger the handful.
+   */
+  candyPickup(t: number, n: number): void {
+    const out = this.out(0, 0.45, 0.45);
+    for (let i = 0; i < 3; i++) this.burstNoise(out, t + i * 0.035, 'bandpass', 3200 + i * 900, 5200, 2.5, 0.05, 0.03);
+    const notes = [1319, 1568, 1976, 2349, 2637];
+    const k = Math.min(notes.length, 2 + Math.floor(Math.log2(n + 1)));
+    for (let i = 0; i < k; i++) this.bell(out, t + 0.08 + i * 0.07, notes[i], 0.035, 0.7);
+    if (n >= 8) this.sparkle(out, t + 0.12, 8, 0.04);
+  }
+
   /** Gems spent: a quick falling tinkle as they pour into the crystal. */
   gemSpend(t: number): void {
     const out = this.out(0, 0.4, 0.4);
@@ -553,6 +607,71 @@ export class Sfx {
   }
 
   /** One gem out of a dissolving duplicate, reaching the counter. */
+  // ---- Sky Glide
+
+  /** Through a ring: a bright chime that climbs a pentatonic step for each ring in a row; the big ring rings a chord. */
+  glideRing(t: number, pan: number, step: number, big: boolean): void {
+    const out = this.out(pan, big ? 0.8 : 0.55, 0.6);
+    const scale = [0, 2, 4, 7, 9];
+    const n = Math.min(step, 14);
+    const note = 76 + Math.floor(n / 5) * 12 + scale[n % 5];
+    this.bell(out, t, mtof(note), 0.06, 0.7);
+    this.bell(out, t + 0.05, mtof(note + 7), 0.035, 0.6);
+    if (big) {
+      [0, 4, 7, 12].forEach((i, k) => this.bell(out, t + 0.04 + k * 0.05, mtof(72 + i), 0.05, 1.1));
+      this.burstNoise(out, t, 'bandpass', 3000, 700, 1.2, 0.3, 0.45);
+    } else this.burstNoise(out, t, 'bandpass', 4200, 1800, 1.5, 0.08, 0.18);
+  }
+
+  /** Into rising air: a soft swell of wind climbing, and a glassy shimmer. */
+  glideGust(t: number): void {
+    const out = this.out(0, 0.5, 0.5);
+    const ctx = this.m.ctx;
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.28, t + 0.25);
+    g.gain.linearRampToValueAtTime(0, t + 0.9);
+    const bp = filter(ctx, 'bandpass', 500, 2.5, g);
+    sweep(bp.frequency, t, 450, 1700, 0.9);
+    const src = this.m.noiseSource(true);
+    src.connect(bp);
+    this.m.startNoise(src, t, 0.95);
+    this.sparkle(out, t + 0.15, 4, 0.06);
+  }
+
+  /** A rush of air past the ears: diving, or a boost. */
+  glideWhoosh(t: number, pan: number, level = 1): void {
+    const out = this.out(pan, 0.5 * level, 0.25);
+    this.burstNoise(out, t, 'bandpass', 2400, 500, 1.1, 0.45, 0.5, true);
+  }
+
+  /** The countdown's beeps, and a brighter, longer one for GO. */
+  glideCount(t: number, go: boolean): void {
+    const out = this.out(0, 0.5, 0.3);
+    this.chirp(out, t, 'triangle', go ? 1046 : 660, go ? 1046 : 660, go ? 0.3 : 0.22, go ? 0.5 : 0.14);
+    if (go) this.chirp(out, t, 'sine', 1568, 1568, 0.12, 0.5);
+  }
+
+  /** Sinking into the cloud sea: a soft, muffled whump going down. */
+  glideSplash(t: number): void {
+    const out = this.out(0, 0.7, 0.6);
+    this.burstNoise(out, t, 'lowpass', 1800, 200, 0.7, 0.5, 0.8, true);
+    this.chirp(out, t, 'sine', 300, 90, 0.2, 0.5);
+  }
+
+  /** Touching down on the goal: a soft thump in the grass and a little fanfare. */
+  glideLand(t: number): void {
+    const out = this.out(0, 0.8, 0.5);
+    this.burstNoise(out, t, 'lowpass', 900, 200, 0.8, 0.4, 0.25, true);
+    this.chirp(out, t, 'sine', 150, 60, 0.3, 0.22);
+    [60, 64, 67, 72, 76].forEach((m, i) => this.bell(out, t + 0.12 + i * 0.08, mtof(m + 12), 0.05, i === 4 ? 1.6 : 0.8));
+  }
+
+  /** The wind round a glider, held until stopped (see WindBed). */
+  windBed(t: number): WindBed {
+    return new WindBed(this.m, this.out(0, 0.6, 0.15), t);
+  }
+
   gemTick(t: number): void {
     const out = this.out(0, 0.3, 0.2);
     this.bell(out, t, pick([2349, 2637, 3136]), 0.03, 0.25);
@@ -601,6 +720,25 @@ export class Sfx {
     chords[tier].forEach((f, i) => this.bell(out, t + 0.03 + i * 0.05, f, 0.045, 1.2 + tier * 0.4));
     this.sparkle(out, t + 0.1, 4 + tier * 4, 0.05);
     if (tier === 2) this.lootLand(t, 0, 4);
+  }
+
+  /** The net swept through the air: a soft airy swish. */
+  netSwish(t: number, pan: number): void {
+    const out = this.out(pan, 0.4, 0.25);
+    this.burstNoise(out, t, 'bandpass', 900, 3200, 1.4, 0.16, 0.18);
+  }
+
+  /** A critter caught and corked in its jar: a glassy pop and a little chime, brighter for a new or rare one (tier 0..2). */
+  critterCatch(t: number, tier: number): void {
+    const out = this.out(0, 0.45, 0.45);
+    this.chirp(out, t, 'sine', 420, 1100, 0.18, 0.06);
+    const bells = [
+      [1568, 2093],
+      [1319, 1760, 2349],
+      [1175, 1568, 1976, 2637],
+    ];
+    bells[tier].forEach((f, i) => this.bell(out, t + 0.07 + i * 0.07, f, 0.035, 0.8 + tier * 0.3));
+    this.sparkle(out, t + 0.1, 2 + tier * 3, 0.04);
   }
 
   /** A card turning over: a soft swish, then a chime in its rarity's key. */
@@ -775,6 +913,65 @@ export class Sfx {
     src.connect(bp);
     this.m.startNoise(src, t, 1);
     this.sparkle(out, t + 0.3, 6, 0.07);
+  }
+
+  /**
+   * An omen coming: a deep, slow gong under a chord of bells, dark (minor,
+   * falling) for a threat, bright (major, rising) for a boon, and strange
+   * (a hollow fourth, shimmering) for a wonder.
+   */
+  omen(t: number, mood: 'dark' | 'bright' | 'strange'): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.8, 0.85);
+    // The gong: two low partials beating slowly, a long tail.
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 1400, 0.7, out));
+    hit(g.gain, t, 0.5, 0.01, 2.6);
+    const root = mood === 'dark' ? 55 : mood === 'bright' ? 65.4 : 58.3;
+    for (const [f, lvl] of [
+      [root, 1],
+      [root * 2.02, 0.5],
+      [root * 2.76, 0.28],
+      [root * 4.1, 0.14],
+    ]) {
+      const o = osc(ctx, 'sine', f, gain(ctx, lvl, g));
+      o.start(t);
+      o.stop(t + 3);
+    }
+    this.burstNoise(out, t, 'lowpass', 900, 200, 0.7, 0.18, 0.5, true);
+    const chord = mood === 'dark' ? [440, 523, 659, 831] : mood === 'bright' ? [523, 659, 784, 1047] : [466, 622, 698, 932];
+    const order = mood === 'dark' ? [...chord].reverse() : chord;
+    order.forEach((f, i) => this.bell(out, t + 0.25 + i * 0.16, f, 0.04, 1.8));
+    if (mood !== 'dark') this.sparkle(out, t + 0.5, mood === 'bright' ? 7 : 4, 0.07);
+  }
+
+  /** A portal tearing open: air rushing round and in, with a rising shimmer. */
+  portal(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.6, 0.6);
+    const air = gain(ctx, 0, out);
+    air.gain.setValueAtTime(0, t);
+    air.gain.linearRampToValueAtTime(0.4, t + 0.25);
+    air.gain.linearRampToValueAtTime(0, t + 0.9);
+    const bp = filter(ctx, 'bandpass', 400, 5, air);
+    sweep(bp.frequency, t, 300, 2400, 0.8);
+    const lfo = osc(ctx, 'sine', 11, gain(ctx, 300, bp.frequency));
+    lfo.start(t);
+    lfo.stop(t + 1);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, 1);
+    this.chirp(out, t + 0.05, 'triangle', 330, 990, 0.08, 0.6);
+    this.sparkle(out, t + 0.2, 4, 0.06);
+  }
+
+  /** The Treasure Imp's cackle: a quick run of nasal, bouncing yips. */
+  cackle(t: number, pan: number): void {
+    const out = this.out(pan, 0.5, 0.3);
+    const base = pick([880, 932, 988]);
+    for (let i = 0; i < 5; i++) {
+      const f = base * (1 + (i % 2) * 0.26) * (1 - i * 0.04);
+      this.chirp(out, t + i * 0.075, 'square', f * 1.2, f * 0.8, 0.045, 0.06);
+    }
   }
 
   /** A falling star striking the platform: a bright crack and a deep thud. */
@@ -1878,6 +2075,38 @@ export class Sfx {
     if (chain) this.zap(out, t + 0.08, 0.2, 0.08);
   }
 
+  /** An echo wakes at its grave: a hollow breath, and a cold, wavering chord that sighs downward. */
+  echoWake(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.55, 0.85);
+    this.burstNoise(out, t, 'bandpass', 600, 1500, 3, 0.16, 1.0, true);
+    for (const [f, d] of [
+      [440, 0],
+      [415, 0.06],
+      [330, 0.12],
+    ]) {
+      const g = gain(ctx, 0, filter(ctx, 'lowpass', 1800, 0.7, out));
+      g.gain.setValueAtTime(0, t + d);
+      g.gain.linearRampToValueAtTime(0.045, t + d + 0.35);
+      g.gain.linearRampToValueAtTime(0, t + d + 1.6);
+      const o = osc(ctx, 'sine', f, g);
+      sweep(o.frequency, t + d, f, f * 0.84, 1.6);
+      // A slow, uneasy vibrato.
+      const vib = osc(ctx, 'sine', rand(4.5, 6), gain(ctx, f * 0.012, o.frequency));
+      o.start(t + d);
+      o.stop(t + d + 1.7);
+      vib.start(t + d);
+      vib.stop(t + d + 1.7);
+    }
+  }
+
+  /** An echo's blessing reaches the hero: soft, far-off bells in a minor key, rising, and a shimmer. */
+  echoBless(t: number): void {
+    const out = this.out(0, 0.55, 0.8);
+    [440, 523, 659, 880].forEach((f, i) => this.bell(out, t + i * 0.09, f, 0.04, 1.6));
+    this.sparkle(out, t + 0.35, 3, 0.07);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {
@@ -1957,5 +2186,47 @@ export class BeamHum {
     this.env.gain.setTargetAtTime(0, t, 0.03);
     for (const o of this.oscs) o.stop(t + 0.25);
     this.noise.stop(t + 0.25);
+  }
+}
+
+/** The wind past a glider: a bed of noise that swells and brightens with speed, and roars in a dive. */
+export class WindBed {
+  private env: GainNode;
+  private lp: BiquadFilterNode;
+  private bp: BiquadFilterNode;
+  private whistle: GainNode;
+  private noise: AudioBufferSourceNode;
+  private hiss: AudioBufferSourceNode;
+
+  constructor(m: Mixer, out: AudioNode, t: number) {
+    const ctx = m.ctx;
+    this.env = gain(ctx, 0, out);
+    this.env.gain.setValueAtTime(0, t);
+    this.env.gain.linearRampToValueAtTime(0.18, t + 0.6);
+    this.lp = filter(ctx, 'lowpass', 500, 0.6, this.env);
+    this.noise = m.noiseLoop(true);
+    this.noise.connect(this.lp);
+    this.whistle = gain(ctx, 0, this.env);
+    this.bp = filter(ctx, 'bandpass', 1500, 6, this.whistle);
+    this.hiss = m.noiseLoop();
+    this.hiss.connect(this.bp);
+    this.noise.start(t);
+    this.hiss.start(t);
+  }
+
+  /** `speed` 0..1 of top speed; `dive` while diving. */
+  set(speed: number, dive: boolean, t: number): void {
+    const k = 0.12;
+    this.env.gain.setTargetAtTime(0.1 + speed * 0.3, t, k);
+    this.lp.frequency.setTargetAtTime(300 + speed * 1600 + (dive ? 700 : 0), t, k);
+    this.bp.frequency.setTargetAtTime(900 + speed * 1800, t, k);
+    this.whistle.gain.setTargetAtTime(dive ? 0.18 : speed * 0.06, t, k);
+  }
+
+  stop(t: number): void {
+    this.env.gain.cancelScheduledValues(t);
+    this.env.gain.setTargetAtTime(0, t, 0.15);
+    this.noise.stop(t + 0.8);
+    this.hiss.stop(t + 0.8);
   }
 }

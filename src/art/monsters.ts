@@ -70,6 +70,10 @@ export const MONSTER_FRAME = {
   geodeback: { w: 56, h: 42, ox: 25, oy: 39 },
   sporemother: { w: 84, h: 96, ox: 42, oy: 93 },
   wyrm: { w: 128, h: 136, ox: 60, oy: 130 },
+  gourdling: { w: 22, h: 26, ox: 11, oy: 24 },
+  hexbat: { w: 36, h: 28, ox: 18, oy: 26 },
+  pumpkin_king: { w: 92, h: 104, ox: 46, oy: 100 },
+  imp: { w: 28, h: 28, ox: 14, oy: 26 },
 };
 export type FrameBox = (typeof MONSTER_FRAME)[keyof typeof MONSTER_FRAME];
 

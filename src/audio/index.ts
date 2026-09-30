@@ -2,7 +2,7 @@ import { Ambience } from './ambience';
 import { Mixer, gain } from './mixer';
 import { Music } from './music';
 import { ShopMusic, type ShopMood } from './shopMusic';
-import { Sfx, type BeamHum } from './sfx';
+import { Sfx, type BeamHum, type WindBed } from './sfx';
 import { note } from '../diagnostics';
 
 const MUTE_KEY = 'pixel-game:muted';
@@ -38,6 +38,7 @@ class GameSound {
   private ambience: Ambience | null = null;
   private sfx: Sfx | null = null;
   private hum: BeamHum | null = null;
+  private wind: WindBed | null = null;
   private listeners = new Set<Listener>();
   private lastPlayed = new Map<string, number>();
   private recent: number[] = [];
@@ -197,6 +198,18 @@ class GameSound {
     if (t !== null) this.sfx!.clash(t, pan, heavy);
   }
 
+  /** The Forge's anvil ringing under Brenna's hammer, `level` 0..1 with how near the hero is. */
+  anvil(pan = 0, level = 1): void {
+    const t = this.slot('anvil');
+    if (t !== null) this.sfx!.anvil(t, pan, level);
+  }
+
+  /** A piece forged at Brenna's counter: three blows and the ring of it done. */
+  forged(): void {
+    const t = this.slot('forged');
+    if (t !== null) this.sfx!.forged(t);
+  }
+
   rise(): void {
     const t = this.slot('rise');
     if (t !== null) this.sfx!.rise(t);
@@ -257,9 +270,58 @@ class GameSound {
     if (t !== null) this.sfx!.gemPickup(t, n);
   }
 
+  candyPickup(n: number): void {
+    const t = this.slot('candyPickup');
+    if (t !== null) this.sfx!.candyPickup(t, n);
+  }
+
   gemSpend(): void {
     const t = this.slot('gemSpend');
     if (t !== null) this.sfx!.gemSpend(t);
+  }
+
+  glideRing(pan = 0, step = 0, big = false): void {
+    const t = this.slot('glideRing');
+    if (t !== null) this.sfx!.glideRing(t, pan, step, big);
+  }
+
+  glideGust(): void {
+    const t = this.slot('glideGust');
+    if (t !== null) this.sfx!.glideGust(t);
+  }
+
+  glideWhoosh(pan = 0, level = 1): void {
+    const t = this.slot('glideWhoosh');
+    if (t !== null) this.sfx!.glideWhoosh(t, pan, level);
+  }
+
+  glideCount(go = false): void {
+    const t = this.slot('glideCount');
+    if (t !== null) this.sfx!.glideCount(t, go);
+  }
+
+  glideSplash(): void {
+    const t = this.slot('glideSplash');
+    if (t !== null) this.sfx!.glideSplash(t);
+  }
+
+  glideLand(): void {
+    const t = this.slot('glideLand');
+    if (t !== null) this.sfx!.glideLand(t);
+  }
+
+  /** The wind round the glider: `speed` 0..1 of top speed. */
+  glideWind(speed: number, dive: boolean): void {
+    if (!this.live()) return;
+    const t = this.ctx!.currentTime;
+    if (!this.wind) this.wind = this.sfx!.windBed(t);
+    safely('glideWind', () => this.wind?.set(speed, dive, t));
+  }
+
+  glideWindEnd(): void {
+    const wind = this.wind;
+    if (wind && this.ctx) safely('glideWind', () => wind.stop(this.ctx!.currentTime));
+    this.wind = null;
   }
 
   gemTick(): void {
@@ -276,6 +338,16 @@ class GameSound {
   wishBurst(tier: number): void {
     const t = this.slot('wishBurst');
     if (t !== null) this.sfx!.wishBurst(t, tier);
+  }
+
+  netSwish(pan = 0): void {
+    const t = this.slot('netSwish');
+    if (t !== null) this.sfx!.netSwish(t, pan);
+  }
+
+  critterCatch(tier: number): void {
+    const t = this.slot('critterCatch');
+    if (t !== null) this.sfx!.critterCatch(t, tier);
   }
 
   cardFlip(tier: number): void {
@@ -358,6 +430,16 @@ class GameSound {
     if (t !== null) this.sfx!.fall(t);
   }
 
+  echoWake(pan = 0): void {
+    const t = this.slot('echoWake');
+    if (t !== null) this.sfx!.echoWake(t, pan);
+  }
+
+  echoBless(): void {
+    const t = this.slot('echoBless');
+    if (t !== null) this.sfx!.echoBless(t);
+  }
+
   revive(): void {
     const t = this.slot('revive');
     if (t !== null) this.sfx!.revive(t);
@@ -381,6 +463,21 @@ class GameSound {
   starcall(pan = 0): void {
     const t = this.slot('starcall');
     if (t !== null) this.sfx!.starcall(t, pan);
+  }
+
+  omen(mood: 'dark' | 'bright' | 'strange'): void {
+    const t = this.slot('omen');
+    if (t !== null) this.sfx!.omen(t, mood);
+  }
+
+  portal(pan = 0): void {
+    const t = this.slot('portal');
+    if (t !== null) this.sfx!.portal(t, pan);
+  }
+
+  cackle(pan = 0): void {
+    const t = this.slot('cackle');
+    if (t !== null) this.sfx!.cackle(t, pan);
   }
 
   starImpact(pan = 0): void {

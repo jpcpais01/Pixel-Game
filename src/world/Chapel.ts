@@ -74,7 +74,7 @@ export class Chapel {
     const tharn = C_DAIS.upgrade.station;
     station('rs_crucible', CH_X + nyx.x, CH_TOP + nyx.y, CRUCIBLE_OY, CRUCIBLE_H, 0xa070ff);
     station('rs_anvil', CH_X + tharn.x, CH_TOP + tharn.y, ANVIL_OY, ANVIL_H, 0xffb050);
-    for (const id of ['disenchant', 'upgrade'] as Keeper[]) {
+    for (const id of ['disenchant', 'upgrade'] as const) {
       const k = KEEPERS[id];
       const x = CH_X + C_DAIS[id].keeper.x;
       const y = CH_TOP + C_DAIS[id].keeper.y;

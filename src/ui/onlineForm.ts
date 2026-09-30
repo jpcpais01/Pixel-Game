@@ -48,7 +48,7 @@ export function openOnlineForm(arena: ArenaDef, character: string, onStart: (roo
     <div class="box">
       <h2>Play online</h2>
       <h3>New room</h3>
-      <p>${duel ? `A 1v1 duel on the ${arena.name}.` : `Co-op in the ${arena.name}, up to 4 heroes.`} You'll get a code to send your friends.</p>
+      <p>${duel ? `A 1v1 duel on the ${arena.name}.` : arena.mode?.race ? `A ${arena.name} race, up to 4 heroes launching together.` : `Co-op in the ${arena.name}, up to 4 heroes.`} You'll get a code to send your friends.</p>
       <button type="button" class="go" data-create>Create room</button>
       <div class="sep"></div>
       <h3>Join a friend</h3>

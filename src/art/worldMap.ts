@@ -993,6 +993,7 @@ export const LANDMARKS: Record<string, { w: number; h: number; ax: number; ay: n
   cosmos: { w: 60, h: 76, ax: 30, ay: 72 },
   rift: { w: 60, h: 36, ax: 30, ay: 30 },
   island: { w: 52, h: 58, ax: 26, ay: 54 },
+  glide: { w: 46, h: 40, ax: 20, ay: 34 },
   waymark: { w: 16, h: 20, ax: 8, ay: 18 },
 };
 
@@ -1466,6 +1467,43 @@ function islandArt(): Art {
   return a;
 }
 
+/** Sky Glide: a wooden launch deck out over the cliff, a glider resting on it and a windsock streaming. */
+function glideArt(): Art {
+  const a = new Art(46, 40);
+  groundPatch(a, 16, 34, 15, 5, GRASS);
+  const wood = ramp('#3e2616', '#6a4428', '#8e5e34', '#b07a44', '#d8a46a');
+  const sail = ramp('#1e5a86', '#3a8ec0', '#6ac4e8', '#bfeaff', '#ffffff');
+  const b = new Art(46, 40);
+  // Posts under the deck, the far ones reaching down the cliff.
+  for (const [x, h] of [[12, 4], [24, 6], [36, 8]] as [number, number][]) b.rect(x, 32, x + 1, 32 + h, (px) => (px === x ? wood[1] : wood[0]));
+  b.line(24, 37, 35, 32, wood[1]);
+  // The deck, planks running out over the edge.
+  b.rect(8, 29, 42, 31, (x, y) => (y === 29 ? (x % 4 === 0 ? wood[3] : wood[4]) : y === 30 ? (x % 4 === 0 ? wood[1] : wood[2]) : wood[0]));
+  // The windsock's pole.
+  b.rect(10, 5, 10, 28, (_x, y) => (y < 7 ? hex('#ffe08a') : wood[1]));
+  b.outline(hex('#140e14'));
+  a.stamp(b, 0, 0);
+  // The windsock, striped, streaming out to sea.
+  for (let x = 11; x <= 21; x++) {
+    const hw = Math.max(0, Math.round(2 - (x - 11) * 0.18));
+    const y0 = 8 + Math.round((x - 11) * 0.15);
+    for (let dy = -hw; dy <= hw; dy++) a.set(x, y0 + dy, Math.floor((x - 11) / 3) % 2 ? hex('#ff8a5a') : dy < 0 ? sail[4] : sail[3]);
+  }
+  // The glider resting on the deck: a swept wing on its frame.
+  a.poly([[18, 27], [31, 17], [42, 27], [31, 24]], (x, y) => {
+    const left = x < 31;
+    let v = left ? 0.8 - (31 - x) * 0.012 : 0.42 - (x - 31) * 0.02;
+    if (y === 24 || (x - 31) % 5 === 0) v -= 0.12;
+    return tone(sail, v, x, y);
+  });
+  a.line(18, 27, 31, 17, hex('#1a2a3a'));
+  a.line(31, 17, 42, 27, hex('#1a2a3a'));
+  a.line(31, 17, 31, 28, hex('#3a3a4a'));
+  // Curls of wind.
+  for (const [x, y] of [[33, 9], [34, 8], [35, 8], [36, 9], [39, 13], [40, 12], [41, 12]] as [number, number][]) a.set(x, y, hex('#e0f4ff'));
+  return a;
+}
+
 /** A waymarker for an arena that has no landmark of its own yet. */
 function waymarkArt(): Art {
   const a = new Art(16, 20);
@@ -1485,6 +1523,7 @@ const LANDMARK_ART: Record<string, () => Art> = {
   cosmos: cosmosArt,
   rift: riftArt,
   island: islandArt,
+  glide: glideArt,
   waymark: waymarkArt,
 };
 

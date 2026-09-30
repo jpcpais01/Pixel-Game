@@ -5,6 +5,7 @@ import { CLASSES } from '../game/characters';
 import { lastHero, lastLookOf, worn } from '../game/skins';
 import { buildPixelFont } from '../art/font';
 import { registerGemArt } from '../art/shop';
+import { registerCandyArt } from '../art/candy';
 import { GroundStreamer } from '../world/GroundStreamer';
 import { CLEARING_GROUND } from '../world/clearing';
 
@@ -81,6 +82,7 @@ export class BootScene extends Phaser.Scene {
       // Not remembered; the bar guesses next time.
     }
     registerGemArt(this);
+    registerCandyArt(this);
     window.bootLoader?.progress(0.96);
     // The first arena's ground; the arena select warms up the others while the player picks.
     GroundStreamer.prebuild(this, CLEARING_GROUND, 0, CLEARING_GROUND.h);

@@ -17,13 +17,13 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 
 **Startup and scenes** (`src/main.ts`, `src/scenes/`)
 - `entry.ts` imports `main.ts` only after the page's load event (so the browser's loading bar ends at once). `main.ts` makes the Phaser game, fits the canvas, and drops the graphics level if the world runs below 30 FPS for 5 s.
-- Flow: `BootScene` (builds every texture) → `HomeScene` → `SelectScene` (hero) → `ArenaScene` (the world map of Aurendel: pan/pinch/wheel, a landmark per arena on a road the hero walks, a panel with the picked arena's window and lore, online rooms) → `WorldScene`. `ShopScene` (the Wishing Sanctum) and `InventoryScene` open over Home.
+- Flow: `BootScene` (builds every texture) → `HomeScene` → `SelectScene` (hero) → `ArenaScene` (the world map of Aurendel: pan/pinch/wheel, a landmark per arena on a road the hero walks, a panel with the picked arena's window and lore, online rooms) → `WorldScene`. An arena with a `mode` (Sky Glide) starts its own scene and HUD instead of the world (`ArenaScene.go`); `PauseScene` takes `{ world, ui }` to pause them. `ShopScene` (the Wishing Sanctum) and `InventoryScene` open over Home.
 - Overlays while playing: `UIScene` (joystick, ability buttons, hotbar, buffs, gear HUD), `RiftScene` (the Rift's wave HUD, blessing cards and results), `PauseScene`, `ShadeScene` (brightness), `SoundScene` (mute), `FpsScene`.
 - `src/diagnostics.ts`: crash reports (copyable overlay, heartbeat for killed tabs), switched off: set `CRASH_REPORTS` to true to use them again. `src/pwa.ts` + `scripts/pwa.ts`: install, fullscreen, service worker, icons.
 
 **The world** (`src/scenes/WorldScene.ts`)
 - Owns the hero, spawners, effects, pickups, lights, day/night, camera, and the combat API: `melee(area, strike)`, `strikeAt(x, y, strike)`, `firstHurtbox`, `hurtboxesWhere`, `hurtHero(harm)`, `popNumber`, `debris`, `addEffect`.
-- Input comes from `game/controls.ts` (written by `UIScene` and the keyboard). PC: WASD, left click/J attack, right click/K/Shift ability, Space Special, 1-9 hotbar, N day/night, E talk.
+- Input comes from `game/controls.ts` (written by `UIScene` and the keyboard). PC: WASD, left click/J attack, right click/K/Shift ability, Space Special, 1-9 hotbar, N day/night, E talk (or swing the critter net).
 
 **Heroes** (`src/game/`)
 - `characters.ts`: `CLASSES` → types → skins. The world spawns a hero by look id (a type's id or a skin's id). `skins.ts` remembers the chosen look.
@@ -37,17 +37,25 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - `index.ts`: `MONSTERS` registry, `Spawner` (respawns, and host sync online), `separate`.
 - Bosses use `BossBar` and `noBar: true` and have a `rank` (`legend` or `myth`). `game/tiers.ts` gives every kind a tier, which sets its drops.
 
+**Sky Glide** (`src/scenes/GlideScene.ts`, `GlideUIScene.ts`)
+- Its own mode on the arena select: jump off the Floating Island under a paraglider in the hero's colour and ride down to the goal islet through rings, updrafts and wind rivers, round, over or under floating islets. Timed, with the best time per course in `collection.glide` (and the cloud), a ghost of the best run in localStorage, and online races in a room (the host starts; `gs`/`gp`/`gf` messages).
+- `world/glideLayout.ts`: the course (rings, updrafts, lanes, islets, goal, checkpoints). `game/glide.ts`: the flight model (`stepFlight`), `glideHud`, `glideInput`, ghost recording. `art/glide.ts`: sea tile, cloud tops, islets, rings, swirls, arch, and `gliderSheet(accent)` painted in the page. Textures come from the `glide` arena job plus the island's (`warmGlide`).
+- Height is drawn the game's way: z up is drawn z px higher than the spot below, where the shadow lies; the far sea scrolls at 0.35, far islands at 0.5, wisps above at 1.35.
+
 **Arenas** (`src/world/`)
 - World map: `realm.ts` (places, road legs, region labels, lore, and the player's progress: visited places part their fog, bosses slain plant a flag via `realm.slay` in `WorldScene.monsterSlain`); `art/worldMap.ts` paints terrain, road, props and landmarks, built as the `worldmap` job in the arena worker and warmed on the home screen.
 - `arenas.ts`: `ARENAS` (clearing, garden, cosmos, spirit, temple, deep, rift, island). Each has a ground, spawn, monsters, `walkable`, scenery and a select-card preview; `solo: true` greys out Online for it.
 - `*Layout.ts` files hold positions and walkability; the class files (`Garden.ts`, `Deep.ts`, `Sanctum.ts` for the Rune Temple...) build the arena's living parts.
 - `GroundStreamer.ts` streams the ground in strips; painted arenas warm their textures in `art/textures.ts` (`warmCosmos`, `warmDeep`...).
 - The Endless Rift (solo): `riftLayout.ts`, `art/rift.ts`, `world/Rift.ts` (tears, shards, violet light) and `game/rift.ts` (`RiftWaves`, a `Spawner` that builds each wave from a budget of Temple, Deep and garden monsters, a "Riftborn" champion every 5th wave, blessings picked between waves into `riftMods`, best wave per class in `collection.riftBest`). Monsters scale by `toughness`, `size` and `hunter` on `Monster`. Its warm job also warms the Temple and the Deep for their monster sheets.
+- Omens (garden, cosmos, spirit, temple, deep; `OMEN_ARENAS`): every couple of minutes a random event with a banner and a turn of the light. `game/omens.ts` holds the eight (`OMENS`), `omenMods` (fury, pace, energy, gear rarity `bump`, dark) read by WorldScene like `riftMods`, and `omenHud` for `scenes/OmenScene.ts` (banner, top chip, the merchant's card). `world/Omens.ts` runs them: its own monsters come as extra `Spawner`s numbered from slot 1000 (the Treasure Imp, `monsters/Imp.ts`; Riftborn elites; fog ghosts); online the host picks and sends `o+`/`o-`/`ow`/`mo` and each omen's own messages. Art in `art/omens.ts` (built by `omenTextures` in `textures.ts` a few ms a frame); star dust drops as `Loot` `dust`.
+- Echoes of the fallen: `game/echoes.ts` records the hero's last ~5 s (`EchoRecorder`) and shares a death through Firestore (`echoes/{arena}/slots/s0..s23`, a ring overwritten at random, cached locally); `world/Echoes.ts` raises up to 4 graves per arena that replay the fallen hero as a ghost and bless the toucher (buff id `echo`). Art in `art/echoes.ts`. Not in the clearing, the island or duels. Needs a Firestore rule allowing public read/write on that path.
 - Arenas are built ahead: the home screen warms them a few ms a frame (`warmArenasInBackground` in `arenas.ts`); build jobs are keyed by the texture manager, so the arena select and the world carry on the same job. Arena cards save a picture of their window (`pixel-battle.thumb.<id>`, per build) to show at once on later launches.
 
 **Loot and progression** (`src/game/`)
 - `items.ts`: potions and the 9-slot hotbar. `buffs.ts`: timed buffs. `Pickup.ts`: items on the ground and the rare/epic/legendary drop shows.
 - `gear.ts`: 70 pieces, 6 slots, 5 rarities, 5 boss sets (`GEAR_SETS`, `SET_BOSS`; a set piece's icon stands on its set's pattern, `setPattern` in `art/gear.ts`), stat caps, dust and upgrades. `collection.ts`: what the player owns and wears, saved locally and to the cloud. `cloud.ts`: Firebase auth and Firestore over REST. `keepers.ts`: Nyx (disenchant) and Tharn (upgrade) in the Rune Temple, UI in `src/ui/keeper*.ts`.
+- The Forge (walk-in smithy on the Clearing's west, `world/forgeLayout.ts`, `world/Forge.ts`, art in `art/forge.ts`): Brenna forges a set piece the player is missing from `FORGE_COST` dust plus its boss's material (`game/forge.ts`: `MATERIALS`, `rollMats`; Legends drop 2-3, Myths 3-4, as `mat` pickups; saved as `collection.mats`). Her counter is `ui/forgeView.ts`, opened through `keeperHud.ts` as keeper `forge`. Drop tables are untouched.
 
 **Gems, wishes and skins** (`src/game/`)
 - Skins are locked until won; a type's own look is free. `skins.ts` falls back to the type's look for a skin not owned; the account `kel` (admin, `ADMINS` in `collection.ts`) owns every skin.
@@ -56,10 +64,20 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - Gem drops: `TIER_GEMS` / `rollGems` in `tiers.ts`; the drop show scales with the count (`gemShow` in `Pickup.ts`, `dropGems`/`gainGems` in `WorldScene`).
 - Art in `art/shop.ts` (gems, piles, crystal, altar, hall, cards); sounds `gem*`, `wish*`, `cardFlip` in `audio/sfx.ts`.
 
+**Seasons** (`src/game/season.ts`)
+- `SEASONS`: a month-long event each. Hallow's Eve (October): candy (`collection.candy`, saved to the cloud) dropped by its monsters (`gourdling`, `hexbat`, the `pumpkin_king` Legend in the Sunken Garden; `game/monsters/Hallows.ts`, art in `art/hallowsMonsters.ts`) and a little by any monster, spent at Old Wick's stall in the Clearing (`world/Hallows.ts`: lanterns, fog, stall; art in `art/hallowsDecor.ts`; counter `ui/candyView.ts`, opened as `keeperCall` 'candy').
+- `seasonalSpots` adds its monsters after an arena's own spots (so online slots match). Season skins (`SkinDef.season`) and pets (`PetDef.season`) are sold for candy and never wished for. `?season=hallows|off|auto` previews one on this device.
+- A new season: an entry in `SEASONS`, its monsters, decor, and wares.
+
 **Companions** (`src/game/pets.ts`, `src/game/Companion.ts`)
-- `PETS`: 8 companions (rare/epic/legendary) with a perk in `mods`, a gait, and the wyrmling's `fights` and the phoenix's `rebirth`. Won from the Shop's second banner, the Wishing Nest (`petWish`, own pity `collection.petPity`, same odds and prices as skins); worn one is `collection.pet`, chosen on the Inventory's Companions tab (`ui/petGallery.ts`).
+- `PETS`: 20 companions (rare/epic/legendary) with a perk in `mods` (Scarab's `reach` widens the loot magnet in `Pickup.ts`), a gait, the wyrmling's `fights`, the phoenix's `rebirth`, and a `power` for the newer epics and legendaries: `chill` (Snowpaw), `zap` (Nimbus), `ward` (Mossback, checked in `hurtHero`), `mend` (Pixie, via `WorldScene.mendHero`), `dive` (Gryphon), `lash` (Krakling), `hoard` (Mimic, on `cheer`). Their timings are consts at the top of `Companion.ts`; their effects are in `petPowers.ts`. Won from the Shop's second banner, the Wishing Nest (`petWish`, own pity `collection.petPity`, same odds and prices as skins); worn one is `collection.pet`, chosen on the Inventory's Companions tab (`ui/petGallery.ts`).
 - `wearPet` fills `petMods`, which WorldScene multiplies in beside gear and `riftMods` (damage, speed, guard, regen, energy, and luck in `rollGems`). `Companion` follows the hero in the world.
 - Art: `art/pets.ts` (24x24, 4 frames, facing right; the Nest's egg and cracks), registered as `pets` with `pet_<id>` anims; cards by `ui/petCard.ts`. The Nest mode in `ShopScene` (`setMode`) swaps the crystal for the egg, warms the hall and moves the shop music into its `nest` mood (`sound.setShopMood`).
+
+**Critters** (`src/game/critters.ts`, `src/game/CritterField.ts`)
+- `CRITTERS`: 18 critters, each with its arenas, `when` (day/night, in day/night arenas), rarity (common/rare/omen), gait and glow. `critterPool` picks what can come out now. Omen critters (Blood Moth, Gold Scarab) come out only while their Omen runs: the Omens code calls `setCritterOmen('blood-moon' | 'golden-hour' | null)`.
+- `CritterField` (built by `WorldScene` in arenas listed in `CRITTER_ARENAS`, not in duels): a few near the hero at a time, startled by a running hero, caught with the net (touch net button in `UIScene` via `critterHud`/`controls.netTap`, or E). Caught ones are counted in `collection.critters` (saved locally and to the cloud) and shown as jars on shelves on the Inventory's Critters tab (`ui/critterGallery.ts`).
+- Art in `art/critters.ts`: 16x16 frames (`critters`, anims `critter_<id>`), jars (`jars` sheet, frames `<id>_<f>` and `empty`, anims `jar_<id>`, glowing like lanterns via `jars_e`: ready for Home shelves), the net swing (`net`, `n0`..`n4`) and `icon_net`.
 
 **Online play** (`src/net/`, `server/`)
 - `server/server.js`: a WebSocket relay on Render with 4-letter room codes (co-op up to 4, duel 2). It runs no game logic.

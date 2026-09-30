@@ -9,6 +9,7 @@ import { sound } from '../audio';
 import { account, cloudReady, logOut, onAccount } from '../game/cloud';
 import { openAccountForm } from '../ui/accountForm';
 import { fpsBottom } from './FpsScene';
+import { activeSeason, daysLeft } from '../game/season';
 
 /** How often the glint sweeps the title, and how long each of its frames shows. */
 const SHIMMER_EVERY = 5200;
@@ -47,6 +48,10 @@ export class HomeScene extends Phaser.Scene {
   /** The player's gems, beside the Shop button. */
   private gemIcon!: Phaser.GameObjects.Image;
   private gemText!: Phaser.GameObjects.BitmapText;
+  /** While a season runs: its candy beside the Inventory button, and its name and days left beside Start. */
+  private candyIcon: Phaser.GameObjects.Image | null = null;
+  private candyText: Phaser.GameObjects.BitmapText | null = null;
+  private seasonText: Phaser.GameObjects.BitmapText[] = [];
   /** The daily gift's banner, while it shows. */
   private gift: Phaser.GameObjects.Container | null = null;
   private accountBtn!: PixelButton;
@@ -84,6 +89,16 @@ export class HomeScene extends Phaser.Scene {
     this.who = pixelText(this, 0, 0, '', 0x9a90c8);
     this.arrows = [pixelText(this, 0, 0, '>', 0xf4cf6a), pixelText(this, 0, 0, '<', 0xf4cf6a)];
     this.menu.add([this.titleGlow, this.title, ...this.sparkles, this.start, this.inventory, this.shop, this.gemIcon, this.gemText, this.accountBtn, this.who, ...this.arrows]);
+    const season = activeSeason();
+    this.candyIcon = this.candyText = null;
+    this.seasonText = [];
+    if (season) {
+      const days = daysLeft(season);
+      this.candyIcon = this.add.image(0, 0, 'candy_s').setOrigin(0);
+      this.candyText = pixelText(this, 0, 0, '', season.currency.tint);
+      this.seasonText = [pixelText(this, 0, 0, season.name.toUpperCase(), season.currency.tint), pixelText(this, 0, 0, days === 1 ? 'LAST DAY' : `${days} DAYS LEFT`, 0xb08ae0)];
+      this.menu.add([this.candyIcon, this.candyText, ...this.seasonText]);
+    }
     this.showAccount();
     const unAccount = onAccount(() => this.showAccount());
     // The gem count keeps up with the save, and the daily gift waits for a cloud save to finish loading.
@@ -112,6 +127,8 @@ export class HomeScene extends Phaser.Scene {
 
   private showGems(): void {
     this.gemText.setText(`${collection.gems}`);
+    const season = activeSeason();
+    if (season) this.candyText?.setText(`${collection.candy(season.id)}`);
     if (this.vw) this.layout();
   }
 
@@ -263,6 +280,17 @@ export class HomeScene extends Phaser.Scene {
     this.shop.place((vw - this.shop.boxW) / 2, this.inventory.y + this.inventory.boxH + 5);
     this.gemIcon.setPosition(this.shop.x + this.shop.boxW + 6, this.shop.y + Math.round((this.shop.boxH - this.gemIcon.height) / 2));
     this.gemText.setPosition(this.gemIcon.x + this.gemIcon.width + 2, this.shop.y + Math.round((this.shop.boxH - this.gemText.height) / 2));
+    if (this.candyIcon && this.candyText) {
+      const inv = this.inventory;
+      this.candyIcon.setPosition(inv.x + inv.boxW + 6, inv.y + Math.round((inv.boxH - this.candyIcon.height) / 2));
+      this.candyText.setPosition(this.candyIcon.x + this.candyIcon.width + 2, inv.y + Math.round((inv.boxH - this.candyText.height) / 2));
+    }
+    // The season's name, right-aligned left of Start; hidden on a window too narrow for it.
+    const room = this.start.x - 6;
+    this.seasonText.forEach((t, i) => {
+      t.setVisible(t.width <= room - 2);
+      t.setPosition(Math.round(room - t.width), this.start.y + 2 + i * (t.height + 2));
+    });
     this.accountBtn.place((vw - this.accountBtn.boxW) / 2, this.shop.y + this.shop.boxH + 5);
     this.who.setPosition(Math.round((vw - this.who.width) / 2), this.accountBtn.y + this.accountBtn.boxH + 4);
   }

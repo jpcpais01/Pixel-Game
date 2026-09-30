@@ -6,6 +6,7 @@
 import { DAY_GROUND, NIGHT_GROUND, hash2, rng, valueNoise } from '../art/env';
 import { K, flagstone, nightify, ramp, runeCircle, smoothstep, stone, type Cell, type GroundSpec, type Look, type StripFields } from '../art/ground';
 import { ColliderGrid, TREE_SHAPE, edgeScenery, type RaySpot, type SceneryLayout } from './common';
+import { FG_FOOT, FG_TOP, FG_W, FG_X, forgeBlocks, forgeYardBlocks } from './forgeLayout';
 import { TEMPLE_X, TEMPLE_Y, roomWalkable, templeBlocks } from './sanctumLayout';
 
 export const CLEARING_W = 640;
@@ -20,6 +21,9 @@ export const PLAZA_CY = PLAZA_Y + PLAZA_H / 2;
 export const PLAZA_R = Math.min(CLEARING_W, PLAZA_H) * 0.3;
 /** Where the braziers and crystals stand around the plaza. */
 const RING = 192;
+
+/** Is (x, y) on or just round the Forge, on the west of the plaza (its yard and the chimney's reach included)? */
+const nearForge = (x: number, y: number, pad: number) => x > FG_X - pad && x < FG_X + FG_W + pad && y > FG_TOP - 30 - pad && y < FG_FOOT + 22 + pad;
 
 /** Wobble of the roof's edge, so it reads as a mass of trees rather than a line. */
 const edgeWobble = (x: number, y: number) => (valueNoise(x, y, 7, 41) - 0.5) * 10 + (valueNoise(x, y, 19, 43) - 0.5) * 16;
@@ -54,7 +58,8 @@ export function plazaProps(): PlazaProps {
     [0.78, 0.62],
   ].map(([ax, ay]) => ({ x: Math.round(cx + ax * RING), y: Math.round(cy + ay * RING * 0.87) }));
   const crystals = [
-    { x: cx - RING - 40, y: cy - 30, frame: 'c0' },
+    // The west one stands out of the Forge's way, south of it.
+    { x: cx - RING - 64, y: cy + 150, frame: 'c0' },
     { x: cx + RING + 46, y: cy + 22, frame: 'c1' },
     { x: cx + 124, y: PLAZA_Y + 70, frame: 'c1' },
   ];
@@ -69,6 +74,8 @@ export function plazaProps(): PlazaProps {
     if (x < 16 || x > CLEARING_W - 16 || y > CLEARING_H - 8 || roofDepth(x, y) > -24) continue;
     // Nor in front of or behind the Rune Temple.
     if (Math.abs(x - TEMPLE_X) < 100 && y > TEMPLE_Y - 160 && y < TEMPLE_Y + 24) continue;
+    // Nor on the Forge or in its yard.
+    if (nearForge(x, y, 12)) continue;
     rocks.push({ x, y, frame: `r${i % 3}` });
   }
   const dummies = [
@@ -96,7 +103,7 @@ export function clearingScenery(): SceneryLayout {
     seed: 2024,
     roofDepth,
     trees: true,
-    keepClear: (x, y) => near(x, y, p.crystals, 26) || near(x, y, p.braziers, 30) || (Math.abs(x - TEMPLE_X) < 104 && y > TEMPLE_Y - 170 && y < TEMPLE_Y + 20),
+    keepClear: (x, y) => near(x, y, p.crystals, 26) || near(x, y, p.braziers, 30) || (Math.abs(x - TEMPLE_X) < 104 && y > TEMPLE_Y - 170 && y < TEMPLE_Y + 20) || nearForge(x, y, 10),
   });
   // A few shafts of sunlight slant through the treeline onto the grass.
   const rays: RaySpot[] = [];
@@ -122,7 +129,7 @@ const WALLS = { left: 28, right: CLEARING_W - 28, bottom: CLEARING_H - 24 };
 export function clearingWalkable(x: number, y: number): boolean {
   // The Rune Temple's room, east past the clearing's edge.
   if (x >= CLEARING_W) return roomWalkable(x, y);
-  if (templeBlocks(x, y)) return false;
+  if (templeBlocks(x, y) || forgeBlocks(x, y) || forgeYardBlocks(x, y)) return false;
   if (y < 10 || y > WALLS.bottom || x < WALLS.left || x > WALLS.right) return false;
   if (roofDepth(x, y) > -9) return false;
   grid ??= new ColliderGrid(clearingScenery().colliders);

@@ -48,6 +48,13 @@ export const SPARTAN_SKIN: WarriorSkin = {
   heavy: { core: 0xfff0e8, hot: 0xff9a80, mid: 0xf03a3a, deep: 0x8a0a1a, light: 0xff6a50 },
   aura: 0xffc8a0,
 };
+/** The Headless Knight: ghost-green cuts, and pumpkin fire fading to violet for the thrust and the whirlwind. */
+export const HEADLESS_SKIN: WarriorSkin = {
+  key: 'warrior_headless',
+  swing: { core: 0xffffff, hot: 0xeaffd8, mid: 0x9ef08a, deep: 0x2e8a5a },
+  heavy: { core: 0xfff4d0, hot: 0xffb040, mid: 0xff6a14, deep: 0x5a1a7a, light: 0xff8a2a },
+  aura: 0xffa050,
+};
 
 /**
  * The warrior: a three-hit sword combo on the attack button (slash, backhand,

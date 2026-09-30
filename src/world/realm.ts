@@ -108,6 +108,16 @@ export const PLACES: Place[] = [
     glows: [{ dx: 0, dy: -4, r: 16, tint: 0xff5ac0 }],
   },
   {
+    id: 'glide',
+    x: 506,
+    y: 316,
+    stand: { x: 518, y: 322 },
+    region: 'Windward Cliffs',
+    lore: 'Here the sea wind climbs to the Floating Island. Leap from its edge and ride it.',
+    note: 'Ride the wind down from the island',
+    glows: [{ dx: 9, dy: -18, r: 8, tint: 0x9ae8ff }],
+  },
+  {
     id: 'island',
     x: 574,
     y: 340,
@@ -121,7 +131,8 @@ export const PLACES: Place[] = [
 /**
  * The road: each leg joins two places (by id) through a few waypoints. From
  * waypoint `skyFrom` on, a leg leaves the land: a faint trail of light over
- * the sea (the Floating Island is reached from the Windward Cliffs).
+ * the sea (the Floating Island is reached from the Windward Cliffs). A
+ * `skyFrom` of -1 flies the whole leg.
  */
 export interface Leg {
   a: string;
@@ -131,7 +142,7 @@ export interface Leg {
 }
 
 /** The cliff's edge the Floating Island is reached from (and, one day, glided from). */
-export const WINDWARD_CLIFFS = { x: 514, y: 318 };
+export const WINDWARD_CLIFFS = { x: 514, y: 316 };
 
 export const LEGS: Leg[] = [
   { a: 'clearing', b: 'garden', via: [[262, 338], [236, 352]] },
@@ -140,7 +151,8 @@ export const LEGS: Leg[] = [
   { a: 'garden', b: 'spirit', via: [[172, 334], [160, 300], [138, 268]] },
   { a: 'spirit', b: 'rift', via: [[106, 206], [118, 172], [132, 150]] },
   { a: 'deep', b: 'cosmos', via: [[312, 172], [292, 156], [272, 144], [256, 130]] },
-  { a: 'temple', b: 'island', via: [[478, 292], [WINDWARD_CLIFFS.x, WINDWARD_CLIFFS.y], [540, 324]], skyFrom: 1 },
+  { a: 'temple', b: 'glide', via: [[478, 292], [WINDWARD_CLIFFS.x - 22, WINDWARD_CLIFFS.y + 8]] },
+  { a: 'glide', b: 'island', via: [[544, 326]], skyFrom: -1 },
 ];
 
 /** Names written across the map, centred on these spots. */
@@ -151,7 +163,7 @@ export const LABELS: { text: string; x: number; y: number; sea?: boolean; big?: 
   { text: 'Shardspine Mountains', x: 414, y: 98 },
   { text: 'The Emberwaste', x: 452, y: 216 },
   { text: 'The Sundered Reach', x: 98, y: 156 },
-  { text: 'Windward Cliffs', x: 510, y: 346 },
+  { text: 'Windward Cliffs', x: 486, y: 348 },
   { text: 'The Glass Sea', x: 580, y: 250, sea: true, big: true },
   { text: 'The Dusk Sea', x: 44, y: 400, sea: true, big: true },
 ];

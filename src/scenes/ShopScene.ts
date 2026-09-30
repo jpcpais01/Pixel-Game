@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
 import { settings } from '../game/settings';
 import { collection } from '../game/collection';
-import { ALL_SKINS, DUPE_GEMS, PITY, RARITY_INFO, SKIN_RARITIES, WISH10_COST, WISH_COST, ownedSkins, wish, wornSkin, type SkinEntry, type SkinRarity, type WishResult } from '../game/gacha';
+import { WISH_SKINS, DUPE_GEMS, PITY, RARITY_INFO, SKIN_RARITIES, WISH10_COST, WISH_COST, ownedSkins, wish, wornSkin, type SkinEntry, type SkinRarity, type WishResult } from '../game/gacha';
 import { ALTAR_H, ALTAR_TOP, CRYSTAL_FRAMES, CRYSTAL_H, addBitmap, cardBack, cardFront, registerShopArt, shopHall } from '../art/shop';
 import { BUTTON_GEM, BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { sound } from '../audio';
@@ -456,8 +456,8 @@ export class ShopScene extends Phaser.Scene {
     this.rates = this.add.container(0, 0, rows).setDepth(40);
 
     // The showcase: every legendary skin in turn, in a legendary card.
-    this.legendaries = ALL_SKINS.filter((s) => s.rarity === 'legendary');
-    this.featuredPets = PETS.filter((p) => p.rarity === 'legendary');
+    this.legendaries = WISH_SKINS.filter((s) => s.rarity === 'legendary');
+    this.featuredPets = PETS.filter((p) => p.rarity === 'legendary' && !p.season);
     const sw = SIDE_W;
     const sh = 126;
     const info = RARITY_INFO.legendary;

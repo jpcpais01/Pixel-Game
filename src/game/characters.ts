@@ -12,9 +12,9 @@
 import type Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
 import { ARCANE_SKIN, ASTRAL_SKIN, VOID_SKIN, Wizard } from './Wizard';
-import { EMBER_FIRE, HELL_FIRE, HELL_SKIN, PYRO_SKIN, Pyromancy } from './Pyro';
+import { EMBER_FIRE, HELL_FIRE, HELL_SKIN, PUMPKIN_FIRE, PUMPKIN_SKIN, PYRO_SKIN, Pyromancy } from './Pyro';
 import { ABYSS_MAGIC, ABYSS_SKIN, TIDE_MAGIC, TIDE_SKIN, Tidecraft } from './Tide';
-import { JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
+import { HEADLESS_SKIN, JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
 import { AFONSO_KIT, King, KING_KIT } from './King';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
 import { CRUSADER_KIT, HOLY_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
@@ -25,7 +25,7 @@ import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CHEM_STYLE, CRYO_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
-import { Archer, HUNT_STYLE, RANGER_STYLE, STORM_STYLE } from './Archer';
+import { Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from './Archer';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
 import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
@@ -118,6 +118,12 @@ export interface SkinDef {
   special?: string;
   preview: Preview;
   buttons: Buttons;
+  /**
+   * A seasonal skin (a season's id, see game/season.ts): bought with that
+   * season's currency at its stall while the season runs, never wished for.
+   * Once owned it stays for good.
+   */
+  season?: string;
 }
 
 /** A type: a way to play a class, with its own stats and abilities, and its own skins. */
@@ -255,6 +261,21 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_meteor_hell' },
             },
           },
+          {
+            // Hallow's Eve: a witch under a crooked hat, flame-orange hair, a pale green face with glowing eyes, and a staff crowned with a carved jack-o'-lantern.
+            id: 'pumpkin',
+            name: 'Pumpkin Witch',
+            role: "Hallow's Eve witch",
+            accent: 0xff8a24,
+            attack: "Jack-o'-bolt",
+            special: 'Pumpkin meteor',
+            preview: { texture: 'wizard_pumpkin', glow: 'wizard_pumpkin_e', idle: 'wizard_pumpkin_idle_down', chosen: 'wizard_pumpkin_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_pumpkin_e', frame: 'o0', anim: 'orb_pumpkin_spin' },
+              special: { texture: 'icon_meteor_pumpkin' },
+            },
+            season: 'hallows',
+          },
         ],
       },
       {
@@ -290,10 +311,11 @@ export const CLASSES: ClassDef[] = [
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'pyro' || look === 'hellfire') {
+      if (look === 'pyro' || look === 'hellfire' || look === 'pumpkin') {
         // Fireballs that blast and burn; a charged meteor called down where it's aimed.
         const hell = look === 'hellfire';
-        const fire = new Pyromancy(world, hell ? HELL_FIRE : EMBER_FIRE);
+        const pumpkin = look === 'pumpkin';
+        const fire = new Pyromancy(world, pumpkin ? PUMPKIN_FIRE : hell ? HELL_FIRE : EMBER_FIRE);
         const w = new Wizard(
           world,
           x,
@@ -304,7 +326,7 @@ export const CLASSES: ClassDef[] = [
             target: (dx, dy, level, dist) => fire.target(dx, dy, level, dist),
             untarget: () => fire.untarget(),
           },
-          hell ? HELL_SKIN : PYRO_SKIN,
+          pumpkin ? PUMPKIN_SKIN : hell ? HELL_SKIN : PYRO_SKIN,
         );
         fire.caster = w;
         world.addEffect(fire);
@@ -388,6 +410,21 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_whirl_spartan' },
             },
           },
+          {
+            // Hallow's Eve: blackened, rusting plate, a tattered cloak, and a jack-o'-lantern burning where his head should be.
+            id: 'headless',
+            name: 'Headless Knight',
+            role: 'Rider without a head',
+            accent: 0xff8a2a,
+            attack: 'Grave cleave',
+            special: 'Lantern whirl',
+            preview: { texture: 'warrior_headless', glow: 'warrior_headless_e', idle: 'warrior_headless_idle_down', chosen: 'warrior_headless_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_sword_headless' },
+              special: { texture: 'icon_whirl_headless' },
+            },
+            season: 'hallows',
+          },
         ],
       },
       {
@@ -424,7 +461,7 @@ export const CLASSES: ClassDef[] = [
     ],
     spawn(world, x, y, look) {
       if (look === 'king' || look === 'afonso') return new King(world, x, y, look === 'afonso' ? AFONSO_KIT : KING_KIT);
-      return new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : KNIGHT_SKIN);
+      return new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : look === 'headless' ? HEADLESS_SKIN : KNIGHT_SKIN);
     },
   },
   {
@@ -762,10 +799,25 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_rain_hunt' },
             },
           },
+          {
+            // Hallow's Eve: a burlap sack head with embers for eyes, a crow on his hat, ember arrows trailing ghost-light.
+            id: 'scarecrow',
+            name: 'Scarecrow',
+            role: 'Guardian of the fields',
+            accent: 0xff8a2a,
+            attack: 'Crowfeather shot',
+            special: 'Harvest volley',
+            preview: { texture: 'archer_scarecrow', glow: 'archer_scarecrow_e', idle: 'archer_scarecrow_idle_down', chosen: 'archer_scarecrow_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+            buttons: {
+              attack: { texture: 'icon_bow_scarecrow' },
+              special: { texture: 'icon_rain_scarecrow' },
+            },
+            season: 'hallows',
+          },
         ],
       },
     ],
-    spawn: (world, x, y, look) => new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : RANGER_STYLE),
+    spawn: (world, x, y, look) => new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : RANGER_STYLE),
   },
   {
     id: 'rogue',
