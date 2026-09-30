@@ -577,6 +577,29 @@ export class Sfx {
     this.sparkle(out, t + 0.08, Math.min(12, 2 + n), 0.04);
   }
 
+  /** One gem of a shower lands: a small glass tink, a different stone each time. */
+  gemTink(t: number, pan: number): void {
+    const out = this.out(pan, 0.35, 0.5);
+    const f = pick([2349, 2637, 3136, 3520, 3951]);
+    this.bell(out, t, f, 0.022, 0.35);
+    this.chirp(out, t, 'triangle', f * 1.5, f * 1.2, 0.02, 0.04);
+  }
+
+  /**
+   * One gem gathered: a bright plink, a step up a pentatonic run for each one
+   * gathered in a row, so a shower picked up climbs like a harp.
+   */
+  gemCollect(t: number, step: number): void {
+    const out = this.out(0, 0.45, 0.4);
+    const run = [1319, 1480, 1661, 1976, 2217, 2637, 2960, 3322, 3951, 4435];
+    const top = step >= run.length;
+    const f = run[Math.min(run.length - 1, step)];
+    this.chirp(out, t, 'triangle', f, f * 1.5, 0.09, 0.07);
+    this.bell(out, t + 0.02, f * 2, 0.022, 0.45);
+    // Past the top of the run, a shimmer rides on every one.
+    if (top) this.sparkle(out, t + 0.03, 2, 0.03);
+  }
+
   /** Gems picked up: an arpeggio climbing higher the more there were, glass clinking under it. */
   gemPickup(t: number, n: number): void {
     const out = this.out(0, 0.5, 0.45);

@@ -52,6 +52,13 @@ import { omenMods, resetOmens } from '../game/omens';
 
 type V3 = [number, number, number];
 
+/** Gems' colours, as they burst out, land and are gathered. */
+const GEM_SHARDS = [0xffffff, 0x9ff6ff, 0x5ae8ff, 0xff7ae6];
+/** A shower of gems is at most this many on the ground (a bigger haul lies a few to a stone). */
+const MAX_GEM_STONES = 24;
+/** Only the first few landing gems tink, so a hoard doesn't drown the fight's own sounds. */
+const GEM_TINKS = 7;
+
 /** Star dust's colours, as it lands and is picked up. */
 const DUST_SHARDS = [0xffffff, 0xe0ccff, 0xb07aff, 0x7a4ae0];
 
@@ -86,7 +93,7 @@ const mix3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + 
 import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
 import { heroBuffs, type BuffDef } from '../game/buffs';
-import { LootFlare, Pickup } from '../game/Pickup';
+import { GemTally, LootFlare, Pickup } from '../game/Pickup';
 import { gear, GEAR_SETS, RARITY, type GearDef, type SetId } from '../game/gear';
 import { SetPowers } from '../game/setPowers';
 import { rollGems } from '../game/tiers';
@@ -270,6 +277,8 @@ export class WorldScene extends Phaser.Scene {
   private banner: Phaser.GameObjects.BitmapText | null = null;
   private spawners: Spawner[] = [];
   private effects: Effect[] = [];
+  /** The count over the hero while a shower of gems is gathered. */
+  private gemTally: GemTally | null = null;
   /** Effects a Special set going (and whatever they set going in turn): their blows land as the Special's. */
   private specialEffects = new WeakSet<Effect>();
   /** True while a Special's own code runs, so its blows get the Special's scale (see specialScale in stats.ts). */
@@ -317,6 +326,7 @@ export class WorldScene extends Phaser.Scene {
     this.shadows = [];
     this.spawners = [];
     this.effects = [];
+    this.gemTally = null;
     this.pickups = [];
     this.debrisEmitters = new Map();
     this.downT = this.grace = this.hurtTint = this.pushX = this.pushY = 0;
@@ -932,12 +942,14 @@ export class WorldScene extends Phaser.Scene {
     if (summoned) return;
     // A boss's fall is marked on the world map with a flag.
     if (stats?.rank) realm.slay(kind);
-    const id = rollDrop(kind);
+    // The Rift's Hard and Impossible make every drop likelier (riftMods.odds is 1 elsewhere).
+    const odds = riftMods.odds;
+    const id = rollDrop(kind, odds);
     if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
-    for (const def of gear.roll(kind, omenMods.bump)) this.dropGear(def, x, y - bodyY);
-    const gems = rollGems(kind, petMods.luck);
+    for (const def of gear.roll(kind, omenMods.bump, odds)) this.dropGear(def, x, y - bodyY);
+    const gems = rollGems(kind, petMods.luck * odds);
     if (gems) this.dropGems(gems, x, y - bodyY);
-    const candy = rollCandy(kind);
+    const candy = rollCandy(kind, odds);
     if (candy) this.dropCandy(candy, x, y - bodyY);
     const mats = rollMats(kind);
     if (mats) this.dropMats(mats.set, mats.n, x, y - bodyY);
@@ -995,41 +1007,80 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Gems fall: one glints down with a chime; a few rise in a pillar of cyan
-   * light; five or more fall like a star, and a hoard of ten or more strikes
-   * with a prism of rays, rings racing out and the ground shaking.
+   * Gems fall. A lone gem glints down in a short pillar of cyan light. More
+   * burst out of the spot in a flash, each its own stone flung to its own
+   * place round it, one after another, tinking as they land; five or more
+   * shake the ground, and ten or more are a hoard.
    */
   dropGems(n: number, x: number, y: number): void {
-    const p = new Pickup(this, x, y, { kind: 'gems', n });
-    this.pickups.push(p);
-    if (n >= 5) sound.lootFall(this.pan(p.x));
-    p.onLand = (at) => {
-      sound.gemLand(n, this.pan(at.x));
-      const shards = [0xffffff, 0x9ff6ff, 0x5ae8ff, 0xff7ae6];
-      this.debris(shards, snap(at.x), snap(at.y) - 6, Math.min(60, 8 + n * 3), at.y + 20, 'burst');
-      if (n < 2) return;
-      this.debris(shards, snap(at.x), snap(at.y) - 4, Math.min(30, 4 + n * 2), at.y + 20, 'spores');
-      if (n >= 5) {
-        this.cameras.main.shake(n >= 10 ? 260 : 160, n >= 10 ? 0.0022 : 0.0014);
-        this.popNumber(snap(at.x), snap(at.y) - 30, n >= 10 ? 'GEM HOARD!' : 'GEMS!', 0x9ff6ff);
-      }
-    };
+    if (n <= 1) {
+      const p = new Pickup(this, x, y, { kind: 'gems', n });
+      this.pickups.push(p);
+      p.onLand = (at) => {
+        sound.gemLand(1, this.pan(at.x));
+        this.debris(GEM_SHARDS, snap(at.x), snap(at.y) - 6, 11, at.y + 20, 'burst');
+      };
+      return;
+    }
+    const sx = snap(x);
+    const sy = snap(y);
+    sound.gemLand(n, this.pan(x));
+    this.addEffect(new LootFlare(this, sx, sy + 6, null, n >= 10, 0x5ae8ff, 0xeaffff));
+    this.debris(GEM_SHARDS, sx, sy, Math.min(48, 10 + n * 2), y + 20, 'burst');
+    this.debris(GEM_SHARDS, sx, sy + 2, Math.min(24, 4 + n), y + 20, 'spores');
+    if (n >= 5) {
+      this.cameras.main.shake(n >= 10 ? 220 : 140, n >= 10 ? 0.0018 : 0.0012);
+      this.popNumber(sx, sy - 22, n >= 10 ? 'GEM HOARD!' : 'GEMS!', n >= 10 ? 0xffb0ec : 0x9ff6ff);
+    }
+    // Scattered on a sunflower spiral so they spread evenly without a pattern
+    // showing, squashed into the ground's perspective, the far ones flying a
+    // touch higher; each leaves a moment after the one before.
+    const stones = Math.min(n, MAX_GEM_STONES);
+    const reach = Math.min(34, 10 + 5 * Math.sqrt(stones));
+    const gap = Phaser.Math.Clamp(700 / stones, 25, 55);
+    const spin = Math.random() * Math.PI * 2;
+    for (let i = 0; i < stones; i++) {
+      const a = spin + i * 2.39996 + (Math.random() - 0.5) * 0.5;
+      const r = reach * Math.sqrt((i + 0.6) / stones) * (0.85 + Math.random() * 0.3);
+      const burst = { dx: Math.cos(a) * r, dy: Math.sin(a) * r * 0.6, delay: i * gap, height: 13 + Math.random() * 8 + r * 0.25 };
+      const count = Math.floor(n / stones) + (i < n % stones ? 1 : 0);
+      const p = new Pickup(this, x, y, { kind: 'gems', n: count }, burst);
+      this.pickups.push(p);
+      p.onLand = (at) => {
+        if (i < GEM_TINKS) sound.gemTink(this.pan(at.x));
+        this.debris(GEM_SHARDS, snap(at.x), snap(at.y) - 3, 3, at.y + 20, 'burst');
+      };
+    }
   }
 
-  /** Gems were picked up: they're the player's for good, and burst about the hero in a shower of light, bigger the more there were. */
+  /**
+   * A gem (or a few) picked up: the player's for good. Each one plinks a
+   * step higher than the last while a shower is gathered, sparkles about the
+   * hero and adds to the count over them; the fifth and the tenth flare up.
+   */
   private gainGems(n: number): void {
     collection.addGems(n);
-    this.companion?.cheer();
     const h = this.hero;
     const hx = snap(h.x);
     const hy = snap(h.y);
-    this.popNumber(hx, hy - 40, `+${n} ${n === 1 ? 'GEM' : 'GEMS'}`, 0x9ff6ff);
-    const shards = [0xffffff, 0x9ff6ff, 0x5ae8ff, 0xff7ae6];
-    this.debris(shards, hx, hy - 12, Math.min(70, 12 + n * 4), h.y + 20, 'burst');
-    this.debris(shards, hx, hy - 10, Math.min(40, 6 + n * 2), h.y + 20, 'spores');
-    if (n >= 2) this.addEffect(new LootFlare(this, hx, hy, null, n >= 5, 0x5ae8ff, 0xeaffff));
-    if (n >= 10) this.cameras.main.shake(140, 0.001);
-    sound.gemPickup(n);
+    let tally = this.gemTally;
+    if (!tally?.open) {
+      // A new shower: the companion leaps for it, once.
+      tally = this.gemTally = new GemTally(this, () => this.hero);
+      this.addEffect(tally);
+      this.companion?.cheer();
+    }
+    const before = tally.n;
+    tally.add(n);
+    sound.gemCollect(before);
+    this.debris(GEM_SHARDS, hx, hy - 12, 6 + n * 2, h.y + 20, 'burst');
+    this.debris(GEM_SHARDS, hx, hy - 10, 2 + n, h.y + 20, 'spores');
+    if (before < 5 && tally.n >= 5) this.addEffect(new LootFlare(this, hx, hy, null, false, 0x5ae8ff, 0xeaffff));
+    if (before < 10 && tally.n >= 10) {
+      this.addEffect(new LootFlare(this, hx, hy, null, true, 0xff7ae6, 0xeaffff));
+      this.cameras.main.shake(140, 0.001);
+      sound.gemPickup(tally.n);
+    }
   }
 
   /**

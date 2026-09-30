@@ -138,14 +138,14 @@ const STRAY: Record<string, { chance: number; min: number; max: number }> = {
 };
 
 /** How much of the running season's currency a slain `kind` drops: usually none. */
-export function rollCandy(kind: string): number {
+export function rollCandy(kind: string, odds = 1): number {
   const s = activeSeason();
   if (!s) return 0;
   const r = (lo: number, hi: number) => lo + Math.floor(Math.random() * (hi - lo + 1));
   const own = s.loot[kind];
   if (own) return r(own[0], own[1]);
   const g = STRAY[tierOf(kind)];
-  return g && Math.random() < g.chance ? r(g.min, g.max) : 0;
+  return g && Math.random() < g.chance * odds ? r(g.min, g.max) : 0;
 }
 
 

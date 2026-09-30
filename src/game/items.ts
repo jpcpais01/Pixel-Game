@@ -154,7 +154,7 @@ export const DROP_CHANCE: Record<string, number> = { beetle: 0.6, barkling: 0.3 
 export const DEFAULT_DROP_CHANCE = 0.18;
 
 /** Which potion drops: mostly health. */
-export function rollDrop(kind: string): ItemId | null {
-  if (Math.random() >= (DROP_CHANCE[kind] ?? DEFAULT_DROP_CHANCE)) return null;
+export function rollDrop(kind: string, odds = 1): ItemId | null {
+  if (Math.random() >= (DROP_CHANCE[kind] ?? DEFAULT_DROP_CHANCE) * odds) return null;
   return Math.random() < 0.65 ? 'health' : 'speed';
 }
