@@ -4,27 +4,16 @@
 // camera and the path. Trees and props are lit (diffuse + normal); the
 // rays and boughs are flat art.
 
-import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
+import { FLAT, KEY_LIGHT, PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
 import { hash2, rng } from './env';
 
 const ramp = (...c: string[]): RGB[] => c.map(hex);
 
 const BARK: Material = { ramp: ramp('#1c120c', '#322117', '#4a3324', '#654731', '#826147'), outline: hex('#100a07') };
-const BIRCH_BARK: Material = { ramp: ramp('#6d685f', '#99948a', '#c6c1b3', '#e9e5d8'), outline: hex('#26221e') };
 const LEAF_OAK: Material = {
   ramp: ramp('#10291a', '#173823', '#1f4a2b', '#2b5e33', '#3b753c', '#528d46', '#71a653', '#97c264'),
   outline: hex('#08160d'),
   outlineLit: hex('#16341e'),
-};
-const LEAF_BIRCH: Material = {
-  ramp: ramp('#223c1b', '#314f22', '#43682a', '#588233', '#709c3d', '#8eb54c', '#b2cd62', '#d2e287'),
-  outline: hex('#101c0c'),
-  outlineLit: hex('#2a4418'),
-};
-const LEAF_PINE: Material = {
-  ramp: ramp('#0a1e1c', '#0f2a26', '#153730', '#1c4639', '#255644', '#306850', '#407a5d', '#57906e'),
-  outline: hex('#05100e'),
-  outlineLit: hex('#12302a'),
 };
 const LEAF_BUSH: Material = {
   ramp: ramp('#132d1b', '#1b3d24', '#26512d', '#346836', '#48803f', '#63994b'),
@@ -105,9 +94,20 @@ export function roots(c: PixelCanvas, bx: number, by: number, spread: number, ba
 }
 
 // ---------------------------------------------------------------------------
-// The trees. Each is drawn whole for every frame of a slow sway: the crown's
-// clusters lean a pixel or so with the wind, more the higher they sit, and a
-// few leaves along the top rustle, so a tree breathes without ever tearing.
+// The trees, drawn the way a pixel artist would build one up:
+//   1. A skeleton grown from the ground: a trunk that tapers and bends, then
+//      forks into limbs that fork again, thinner each time, out to twigs.
+//   2. Foliage at the ends of the limbs: clumps, each made of many small
+//      leaf clusters (so its edge is a run of little leafy bumps, not a
+//      circle). Every pixel's shade is picked outright from three layers of
+//      light: the crown as one form (sunny top left, the underside in its own
+//      shadow), the clump (a lit crest, a shaded belly) and the leaf cluster
+//      (a bright tip, a dark crease where it meets the next). The bands meet
+//      in a light dither, never a smooth blend.
+//   3. Gaps between the clumps, where the limbs and the dark inside show.
+// Each is drawn whole for every frame of a slow sway: everything leans a
+// pixel or so with the wind, more the higher it sits, and each clump moves
+// as one piece (its texture goes with it), so nothing shimmers.
 
 /** Frames in a tree's sway, and how fast they play (see textures.ts, `treeSwayTextures`). */
 export const TREE_SWAY_FRAMES = 6;
@@ -119,123 +119,382 @@ const swayAt = (f: number, amp: number): number => Math.sin((f / TREE_SWAY_FRAME
 /** Which way a lean goes at height `y`: nothing at `base`, all of `lean` at `top` and above. */
 const leaner = (lean: number, base: number, top: number) => (y: number): number => lean * Math.max(0, Math.min(1, (base - y) / (base - top))) ** 1.4;
 
-interface CrownOpts {
+const LIGHT = (() => {
+  const l = Math.hypot(KEY_LIGHT.x, KEY_LIGHT.y, KEY_LIGHT.z);
+  return { x: KEY_LIGHT.x / l, y: KEY_LIGHT.y / l, z: KEY_LIGHT.z / l };
+})();
+
+/** A 4x4 ordered dither, -0.5..0.5, so bands meet in a checker rather than a smooth blend. */
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16 - 0.5);
+const bayer = (x: number, y: number): number => BAYER[(y & 3) * 4 + (x & 3)];
+
+/**
+ * Set the ramp step (0 = darkest) a drawn pixel will show, whatever its
+ * normal would give: the normal stays for the game's moving lights, the
+ * shade is the artist's. Contact shadows still apply on top in `render`.
+ */
+function tone(c: PixelCanvas, x: number, y: number, step: number): void {
+  if (x < 0 || y < 0 || x >= c.w || y >= c.h) return;
+  const i = y * c.w + x;
+  const m = c.materialAt(x, y);
+  if (!m) return;
+  const d = c.nx[i] * LIGHT.x + c.ny[i] * LIGHT.y + c.nz[i] * LIGHT.z;
+  const k = m.ramp.length;
+  const t = Math.max(0, Math.min(0.999, (d + 0.25) / 1.45));
+  const natural = Math.floor(t * k) + (m.bias ?? 0);
+  c.bias[i] = Math.max(-k, Math.min(k, Math.round(step) - natural));
+}
+
+/** A light value (about -1 dark .. 1 bright) to a ramp step, dithered at (x, y). */
+const toStep = (v: number, k: number, x: number, y: number, dither = 0.22): number =>
+  Math.max(0, Math.min(k - 1, Math.floor((v * 0.5 + 0.5) * k + bayer(x, y) * dither * 2)));
+
+// ------------------------------------------------------------- the skeleton
+
+interface Knot {
+  x: number;
+  y: number;
+  r: number;
+}
+
+interface Limb {
+  pts: Knot[];
+  /** 0 for the trunk, 1 for its first limbs, and so on. */
+  depth: number;
+}
+
+/** A tree's limbs, and the tips where its foliage grows. */
+interface Skeleton {
+  limbs: Limb[];
+  tips: Knot[];
+}
+
+interface Growth {
+  /** How far a limb bows out of line, against its length. */
+  bow: number;
+  /** How much it kinks along the way, in px. */
+  kink: number;
+  /** How far toward its foliage each limb goes before it forks (0..1). */
+  reach: number;
+  /** A limb's girth at its end against its start. */
+  taper: number;
+  /** Girth of the finest twigs. */
+  twig: number;
+  /** Chance a fork splits three ways rather than two. */
+  three: number;
+}
+
+/**
+ * One limb from `a` to `b`: a gentle bow to one side and a few kinks, its
+ * girth easing from r0 to r1.
+ */
+function limbPts(R: () => number, a: Knot, b: { x: number; y: number }, r1: number, g: Growth): Knot[] {
+  const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  const steps = Math.max(2, Math.round(len / 3));
+  const nx = -(b.y - a.y) / len;
+  const ny = (b.x - a.x) / len;
+  const bow = (R() - 0.5) * 2 * g.bow * len;
+  const kinks = Array.from({ length: steps + 1 }, () => (R() - 0.5) * g.kink);
+  return Array.from({ length: steps + 1 }, (_s, s) => {
+    const t = s / steps;
+    const off = s === 0 || s === steps ? 0 : Math.sin(t * Math.PI) * bow + kinks[s];
+    return { x: a.x + (b.x - a.x) * t + nx * off, y: a.y + (b.y - a.y) * t + ny * off, r: a.r + (r1 - a.r) * t };
+  });
+}
+
+/**
+ * Branch from `from` toward a set of foliage clumps: a limb heads for their
+ * middle, goes part of the way, then forks, each fork taking its share of
+ * the clumps (split by direction) and a girth to match, until one twig
+ * reaches each clump. So the limbs always lead somewhere, and thin as they go.
+ */
+function branchTo(sk: Skeleton, R: () => number, from: Knot, targets: { x: number; y: number }[], depth: number, g: Growth): void {
+  if (targets.length === 1) {
+    const t = targets[0];
+    sk.limbs.push({ pts: limbPts(R, from, t, g.twig, g), depth });
+    sk.tips.push({ x: t.x, y: t.y, r: g.twig });
+    return;
+  }
+  const mx = targets.reduce((s, t) => s + t.x, 0) / targets.length;
+  const my = targets.reduce((s, t) => s + t.y, 0) / targets.length;
+  const f = g.reach * (0.8 + R() * 0.4);
+  const end = { x: from.x + (mx - from.x) * f, y: from.y + (my - from.y) * f };
+  const r1 = Math.max(g.twig, from.r * g.taper);
+  const pts = limbPts(R, from, end, r1, g);
+  sk.limbs.push({ pts, depth });
+  const knot = pts[pts.length - 1];
+  // Split by direction from the fork, so each branch has its own side.
+  const sorted = [...targets].sort((p, q) => Math.atan2(p.y - knot.y, p.x - knot.x) - Math.atan2(q.y - knot.y, q.x - knot.x));
+  const n = targets.length >= 4 && R() < g.three ? 3 : 2;
+  const groups: { x: number; y: number }[][] = [];
+  let at = 0;
+  for (let k = 0; k < n; k++) {
+    const size = Math.round((sorted.length - at) / (n - k));
+    groups.push(sorted.slice(at, at + size));
+    at += size;
+  }
+  for (const grp of groups) {
+    if (!grp.length) continue;
+    // Pipe model: a fork's girth goes with the share of foliage it carries.
+    const r = Math.max(g.twig, knot.r * Math.sqrt(grp.length / targets.length) * 1.05);
+    branchTo(sk, R, { ...knot, r }, grp, depth + 1, g);
+  }
+}
+
+/** A trunk from its foot to where it forks, then limbs out to every clump. */
+function skeleton(R: () => number, g: Growth, foot: Knot, fork: Knot, clumps: { x: number; y: number }[]): Skeleton {
+  const sk: Skeleton = { limbs: [], tips: [] };
+  const trunk = limbPts(R, foot, fork, fork.r, { ...g, bow: g.bow * 0.5 });
+  sk.limbs.push({ pts: trunk, depth: 0 });
+  branchTo(sk, R, trunk[trunk.length - 1], clumps, 1, g);
+  return sk;
+}
+
+/**
+ * Where a crown's clumps sit: spread over an oval, never too close to each
+ * other, the first always at the top so the crown closes over its limbs.
+ */
+function scatter(R: () => number, cx: number, cy: number, rx: number, ry: number, n: number, gap: number, window = 0): { x: number; y: number }[] {
+  const pts: { x: number; y: number }[] = [{ x: cx + (R() - 0.5) * rx * 0.3, y: cy - ry * 0.62 }];
+  for (let tries = 0; pts.length < n && tries < 400; tries++) {
+    const a = R() * Math.PI * 2;
+    const d = Math.sqrt(R());
+    const x = cx + Math.cos(a) * d * rx;
+    const y = cy + Math.sin(a) * d * ry;
+    // A window low in the middle, if asked, where the limbs show under the crown.
+    if (Math.abs(x - cx) < rx * window && y > cy + ry * 0.15) continue;
+    if (pts.every((p) => Math.hypot((p.x - x) / rx, (p.y - y) / ry) > gap)) pts.push({ x, y });
+  }
+  return pts;
+}
+
+/** Roots gripping the ground either side of the trunk, tapering out of sight. */
+function rootsOf(c: PixelCanvas, bx: number, by: number, r: number, spread: number, bark: Material, R: () => number): void {
+  c.part();
+  const roots = [
+    { a: Math.PI - 0.35, l: spread },
+    { a: 0.35, l: spread * (0.8 + R() * 0.3) },
+    { a: Math.PI * 0.5 + (R() < 0.5 ? 0.9 : -0.9), l: spread * 0.55 },
+  ];
+  for (const root of roots) {
+    let x = bx + Math.cos(root.a) * r * 0.4;
+    let y = by - r * 0.9;
+    const steps = 4;
+    for (let s = 0; s < steps; s++) {
+      const u = s / steps;
+      // Out from the trunk, then down into the ground.
+      const nx = x + Math.cos(root.a) * (root.l / steps);
+      const ny = y + (r * 0.9) / steps + 0.2;
+      c.capsule(x, y, nx, ny, r * (0.75 - u * 0.5), r * (0.75 - (u + 1 / steps) * 0.5), bark);
+      x = nx;
+      y = ny;
+    }
+  }
+}
+
+/**
+ * Paint the limbs: each a chain of tapering round segments (thinnest drawn
+ * last, so forks sit on their parents), then bark along them: furrows that
+ * follow the grain, a sunlit edge on the upper left.
+ */
+function paintLimbs(c: PixelCanvas, sk: Skeleton, bark: Material, dx: (y: number) => number, minR = 0): void {
+  const limbs = sk.limbs.filter((l) => l.pts[0].r >= minR);
+  c.part();
+  for (const l of limbs) {
+    for (let s = 1; s < l.pts.length; s++) {
+      const p = l.pts[s - 1];
+      const q = l.pts[s];
+      c.capsule(p.x + dx(p.y), p.y, q.x + dx(q.y), q.y, p.r, q.r, bark);
+    }
+  }
+  // The grain: dashes along each thick limb, dark in the furrows, light on the sunny ridge.
+  for (const l of limbs) {
+    l.pts.forEach((p, s) => {
+      if (s === 0 || p.r < 1.3) return;
+      const q = l.pts[s - 1];
+      const vx = p.x + dx(p.y) - (q.x + dx(q.y));
+      const vy = p.y - q.y;
+      const len = Math.hypot(vx, vy) || 1;
+      const ux = -vy / len;
+      const uy = vx / len;
+      for (let t = 0; t < len; t += 1) {
+        const ax = q.x + dx(q.y) + (vx * t) / len;
+        const ay = q.y + (vy * t) / len;
+        const r = q.r + ((p.r - q.r) * t) / len;
+        for (let lane = -2; lane <= 2; lane++) {
+          const off = lane * 0.34 * r;
+          if (Math.abs(off) > r - 0.6) continue;
+          const px = Math.floor(ax + ux * off);
+          const py = Math.floor(ay + uy * off);
+          const h = hash2(lane * 7 + l.depth * 31, Math.floor((ay + ax * 0.3 + lane * 2.5) / 6), 401);
+          if (lane % 2 !== 0 && h > 0.35) c.shade(px, py, -1);
+          else if (lane % 2 === 0 && h > 0.85) c.shade(px, py, -1);
+        }
+        // Sunlit ridge on the side facing the key light.
+        const side = ux < 0 || (ux === 0 && uy < 0) ? 1 : -1;
+        const px = Math.floor(ax + ux * side * r * 0.55);
+        const py = Math.floor(ay + uy * side * r * 0.55);
+        if (r > 1.8 && hash2(Math.floor(ay / 2), l.depth, 409) > 0.35) c.shade(px, py, 1);
+      }
+    });
+  }
+}
+
+// -------------------------------------------------------------- the foliage
+
+interface Clump {
+  x: number;
+  y: number;
+  rx: number;
+  ry: number;
+  /** Its leaf clusters, as offsets from the clump's centre. */
+  leaves: { x: number; y: number; r: number; j: number }[];
+  /** Tufts along its crest: an angle and a length, and whether it rustles. */
+  tufts: { a: number; long: boolean; rustle: number }[];
+}
+
+interface Crown {
+  /** The crown as one form, for its big light and shadow. */
   cx: number;
   cy: number;
   rx: number;
   ry: number;
-  /** How big the leaf clusters are (1 = an oak's). */
-  size: number;
-  /** Spacing of the clusters against their size (about 1): more is airier, with gaps. */
-  ring: number;
-  /** How many of the low inner clusters are left out, showing the boughs (0..1). */
-  gaps: number;
   leaf: Material;
-  twig: Material;
-  /** Where the boughs leave the trunk. */
-  fork: { x: number; y: number };
-  /** The sway: the lean at height y. */
-  dx: (y: number) => number;
-  frame: number;
-  R: () => number;
+  /** Leaf cluster size in px. */
+  cluster: number;
+  /** How far the cluster's own light carries against the clump's (0..1). */
+  grain: number;
+  /** Lifts or darkens the whole crown. */
+  lift: number;
+  clumps: Clump[];
 }
+
+/** Make a clump of leaf clusters on a jittered grid inside an oval: every random number drawn now. */
+function makeClump(R: () => number, x: number, y: number, rx: number, ry: number, cluster: number): Clump {
+  const leaves: Clump['leaves'] = [];
+  const step = cluster * 1.25;
+  for (let gy = -ry; gy <= ry + 0.1; gy += step * 0.8) {
+    const row = Math.round((gy + ry) / (step * 0.8));
+    for (let gx = -rx; gx <= rx + 0.1; gx += step) {
+      const lx = gx + (row % 2 ? step / 2 : 0) + (R() - 0.5) * step * 0.6;
+      const ly = gy + (R() - 0.5) * step * 0.5;
+      const r = cluster * (0.85 + R() * 0.4);
+      const e = (lx / Math.max(1, rx - r * 0.6)) ** 2 + (ly / Math.max(1, ry - r * 0.6)) ** 2;
+      if (e > 1) continue;
+      leaves.push({ x: lx, y: ly, r, j: R() - 0.5 });
+    }
+  }
+  const tufts = Array.from({ length: Math.round((rx + ry) * 0.5) }, () => ({ a: -Math.PI * (0.1 + R() * 0.8), long: R() < 0.3, rustle: R() }));
+  return { x, y, rx, ry, leaves, tufts };
+}
+
+const NONE: Clump['leaves'] = [];
 
 /**
- * A leafy crown: dark depths behind, boughs reaching up through them, then
- * leaf clusters from the back to the front, each lit as a dome with a
- * texture of little leaves, sunlit tips on its crest and a shaded underside.
- * Gaps between the clusters show the boughs in the dark inside.
+ * Paint a crown's clumps, back (higher) to front, each its own part so the
+ * renderer's contact shadows mark where one sits over another.
  */
-function crown(c: PixelCanvas, o: CrownOpts): void {
-  const { cx, cy, rx, ry, leaf, R, dx } = o;
-  // Every random number is drawn first, so each frame of the sway gets the same tree.
-  // Clusters on a jittered grid filling the crown's oval, overlapping well, so
-  // the outline is a run of soft scallops rather than a bunch of balls.
-  const base = 9 * o.size;
-  const step = base * o.ring;
-  const clusters: { x: number; y: number; r: number }[] = [];
-  for (let gy = -ry; gy <= ry; gy += step * 0.8) {
-    const row = Math.round(gy / (step * 0.8));
-    for (let gx = -rx; gx <= rx; gx += step) {
-      const x = gx + (row % 2 ? step / 2 : 0) + (R() - 0.5) * step * 0.5;
-      const y = gy + (R() - 0.5) * step * 0.4;
-      const r = base * (0.85 + R() * 0.35);
-      const gap = R();
-      const ex = x / Math.max(1, rx - r * 0.75);
-      const ey = y / Math.max(1, ry - r * 0.7);
-      const e = ex * ex + ey * ey;
-      if (e > 1) continue;
-      // A few left out low in the crown, where the boughs show through.
-      if (gap < o.gaps && e < 0.7 && y > -ry * 0.1) continue;
-      clusters.push({ x: cx + x, y: cy + y, r: r * (1 - e * 0.22) });
+function paintCrown(c: PixelCanvas, cr: Crown, dx: (y: number) => number, frame: number): void {
+  const k = cr.leaf.ramp.length;
+  const order = cr.clumps.map((cl, i) => ({ cl, i })).sort((a, b) => a.cl.y + a.cl.ry * 0.5 - (b.cl.y + b.cl.ry * 0.5));
+  for (const { cl, i } of order) {
+    const sx = Math.round(dx(cl.y));
+    const x0 = Math.round(cl.x) + sx;
+    const y0 = Math.round(cl.y);
+    const pad = cr.cluster + 1;
+    // The clusters bucketed by cell, so each pixel only looks at those nearby.
+    const cell = cr.cluster * 2;
+    const buckets = new Map<number, Clump['leaves']>();
+    const key = (bx: number, by: number) => (by + 64) * 256 + bx + 64;
+    for (const l of cl.leaves) {
+      const kk = key(Math.floor(l.x / cell), Math.floor(l.y / cell));
+      const b = buckets.get(kk);
+      if (b) b.push(l);
+      else buckets.set(kk, [l]);
     }
-  }
-  const boughs = clusters.filter((_k, i) => i % 3 === 0).map((k) => ({ x: k.x, y: k.y + k.r * 0.3, w: 1.2 + R() * 0.9 }));
-  const tufts = clusters.map(() => Array.from({ length: 6 }, () => ({ a: -Math.PI * (0.15 + R() * 0.7), long: R() < 0.25 })));
-  const deep: Material = { ...leaf, bias: (leaf.bias ?? 0) - 2 };
-
-  // The dark inside of the crown.
-  c.part();
-  c.ellipse(cx + dx(cy), cy + ry * 0.08, rx * 0.8, ry * 0.8, deep, { flatten: 0.8 });
-  // Boughs from the fork out to the clusters, seen in the gaps.
-  c.part();
-  for (const b of boughs) c.capsule(o.fork.x, o.fork.y, b.x + dx(b.y), b.y, b.w * 1.4, b.w * 0.55, o.twig);
-
-  clusters
-    .map((k, i) => ({ ...k, i }))
-    .sort((a, b) => a.y - b.y)
-    .forEach((k) => {
-      const x = k.x + dx(k.y);
-      const y = k.y;
-      const r = k.r;
-      c.part();
-      c.ellipse(x, y, r, r * 0.84, leaf, { flatten: 0.85 });
-      // Its texture: a leaf every few pixels, catching the light on the upper left, lost in shade below.
-      for (let py = Math.floor(y - r); py <= y + r; py++) {
-        for (let px = Math.floor(x - r); px <= x + r; px++) {
-          const u = (px + 0.5 - x) / r;
-          const v = (py + 0.5 - y) / (r * 0.84);
-          const d2 = u * u + v * v;
-          if (d2 > 1) continue;
-          // In the cluster's own frame, so the leaves move with it as it sways.
-          const lx = px - Math.round(x) + 40;
-          const ly = py - Math.round(y) + 40;
-          const cell = hash2((lx / 3) | 0, (ly / 2) | 0, 211 + k.i);
-          const spot = hash2(lx, ly, 223 + k.i);
-          const lit = -u * 0.55 - v * 0.85;
-          if (lit > 0.15 && spot > 0.62 && cell > 0.35) c.shade(px, py, 1);
-          else if (lit < -0.25 && spot < 0.4) c.shade(px, py, -1);
-          else if (d2 > 0.72 && lit < -0.1) c.shade(px, py, -1);
-          if (lit > 0.55 && d2 > 0.55 && spot > 0.8) c.shade(px, py, 1);
+    c.part();
+    for (let py = Math.floor(-cl.ry - pad); py <= cl.ry + pad; py++) {
+      for (let px = Math.floor(-cl.rx - pad); px <= cl.rx + pad; px++) {
+        // The nearest two leaf clusters: inside the first, and how close to the crease with the second.
+        let d1 = 1e9;
+        let d2 = 1e9;
+        let near = cl.leaves[0];
+        const bx = Math.floor((px + 0.5) / cell);
+        const by = Math.floor((py + 0.5) / cell);
+        for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const l of buckets.get(key(bx + i, by + j)) ?? NONE) {
+          const ddx = px + 0.5 - l.x;
+          const ddy = py + 0.5 - l.y;
+          const d = Math.hypot(ddx, ddy) / l.r;
+          if (d < d1) {
+            d2 = d1;
+            d1 = d;
+            near = l;
+          } else if (d < d2) d2 = d;
+        }
+        if (!near || d1 > 1) continue;
+        const u = (px + 0.5) / cl.rx;
+        const v = (py + 0.5) / cl.ry;
+        const lu = (px + 0.5 - near.x) / near.r;
+        const lv = (py + 0.5 - near.y) / near.r;
+        const X = x0 + px;
+        const Y = y0 + py;
+        c.px(X, Y, cr.leaf, sphere(u * 0.65 + lu * 0.35, v * 0.65 + lv * 0.35, 0.9));
+        // Each leaf cluster takes one shade, from where it sits in the clump
+        // and in the crown (measured at rest, so it moves as one piece):
+        // that is what makes the clusters read as crisp little shapes.
+        const gu = (cl.x + near.x - cr.cx) / cr.rx;
+        const gv = (cl.y + near.y - cr.cy) / cr.ry;
+        const big = -gu * 0.3 - gv * 0.65 - Math.max(0, gu * gu + gv * gv - 0.55) * 0.3;
+        const nu = near.x / cl.rx;
+        const nv = near.y / cl.ry;
+        const mid = -nu * 0.35 - nv * 0.75 - Math.max(0, nu * nu + nv * nv - 0.6) * 0.45;
+        let step = toStep(big * 0.5 + mid * 0.85 + near.j * 0.2 + cr.lift, k, 0, 0, 0);
+        const jump = k >= 8 ? 2 : 1;
+        // Then its own light: a bright rim on its upper left, a dark crease below and where it meets the next.
+        const rim = -lu * 0.5 - lv * 0.85;
+        if (d2 - d1 < 0.18 || (d1 > 0.62 && rim < -0.45)) step -= jump;
+        else if (d1 > 0.45 && rim > 0.35 * (2 - cr.grain)) step += 1;
+        tone(c, X, Y, Math.max(0, Math.min(k - 1, step)));
+      }
+    }
+    // Leaves standing proud of the crest; a few change each frame, as if rustling.
+    cl.tufts.forEach((t, j) => {
+      if (hash2(i * 13 + j, frame, 229) < 0.2 * t.rustle + 0.05) return;
+      const ex = x0 + Math.cos(t.a) * (cl.rx + 0.3);
+      const ey = y0 + Math.sin(t.a) * (cl.ry + 0.3);
+      if (c.materialAt(ex, ey) === cr.leaf && c.layer[Math.floor(ey) * c.w + Math.floor(ex)] === c.layer[y0 * c.w + x0]) {
+        const step = Math.min(k - 1, toStep(-Math.cos(t.a) * 0.2 - Math.sin(t.a) * 0.5 + cr.lift, k, 0, 0) + 1);
+        const n = sphere(Math.cos(t.a) * 0.8, Math.sin(t.a) * 0.8);
+        const tx = ex + Math.cos(t.a) * 1.2;
+        const ty = ey + Math.sin(t.a) * 1.2;
+        if (c.filled(Math.floor(tx), Math.floor(ty))) return;
+        c.px(tx, ty, cr.leaf, n);
+        tone(c, Math.floor(tx), Math.floor(ty), step);
+        if (t.long) {
+          const lx = tx + (Math.cos(t.a) > 0 ? 1 : -1);
+          c.px(lx, ty - 1, cr.leaf, n);
+          tone(c, Math.floor(lx), Math.floor(ty - 1), step);
         }
       }
-      // Leaves standing proud along its crest; a few change each frame, as if rustling.
-      tufts[k.i].forEach((t, j) => {
-        if (y > cy - ry * 0.2) return;
-        if (hash2(k.i * 17 + j, o.frame, 229) < 0.22) return;
-        const ex = x + Math.cos(t.a) * (r + 0.4);
-        const ey = y + Math.sin(t.a) * (r * 0.84 + 0.4);
-        const n = sphere(Math.cos(t.a) * 0.8, Math.sin(t.a) * 0.8);
-        c.px(ex, ey, leaf, n);
-        if (t.long) c.px(ex + (Math.cos(t.a) > 0 ? 1 : -1), ey, leaf, n);
-      });
     });
+  }
+}
 
-  // The crown as one form: the sun on its upper left, its underside in shade.
-  // Sun on the crown's upper-left rim, a step brighter.
-  for (let y = Math.floor(cy - ry - 3); y < cy + ry + 3; y++) {
-    for (let x = Math.floor(cx - rx - 4); x < cx + rx + 4; x++) {
-      if (c.materialAt(x, y) !== leaf) continue;
-      const form = -((x - cx - dx(y)) / rx) * 0.45 - ((y - cy) / ry) * 0.9;
-      if (form < -0.5 && hash2(x, y, 237) > (form < -0.75 ? 0.1 : 0.45)) c.shade(x, y, -1);
-      else if (form > 0.55 && hash2(x >> 1, y, 239) > 0.55) c.shade(x, y, 1);
-      if (!c.filled(x, y - 1) && hash2(x, y, 233) > 0.25) c.shade(x, y, 1);
-      else if (!c.filled(x - 1, y) && hash2(x, y, 235) > 0.5) c.shade(x, y, 1);
+/** The dark inside of a crown, behind the limbs: its deepest shade, seen through the gaps. */
+function paintDepths(c: PixelCanvas, cr: Crown, dx: (y: number) => number, shrink: number): void {
+  c.part();
+  for (const cl of cr.clumps) {
+    const x = cl.x + dx(cl.y);
+    c.ellipse(x, cl.y + cl.ry * 0.15, cl.rx * shrink, cl.ry * shrink, cr.leaf, { flatten: 0.8 });
+  }
+  for (let y = 0; y < c.h; y++) {
+    for (let x = 0; x < c.w; x++) {
+      if (c.materialAt(x, y) === cr.leaf) tone(c, x, y, hash2(x, y, 419) > 0.8 ? 1 : 0);
     }
   }
 }
 
-/** The crown's shade on the trunk just under it. */
+/** The crown's shade falling on the trunk and limbs just under it. */
 function shadeUnder(c: PixelCanvas, bark: Material, x0: number, x1: number, y0: number, depth: number): void {
   for (let x = x0; x <= x1; x++) {
     for (let y = y0; y < y0 + depth; y++) {
@@ -244,120 +503,340 @@ function shadeUnder(c: PixelCanvas, bark: Material, x0: number, x1: number, y0: 
   }
 }
 
-/** Bark: furrows running up the trunk, knots, and moss on the shaded side. */
-function bark(c: PixelCanvas, bx: number, by: number, height: number, hw: number, lean: number, R: () => number, mossy: boolean): void {
-  const at = (y: number) => bx + lean * (1 - (y - (by - height)) / height) ** 2 * 4;
-  for (let k = 0; k < height * 0.7; k++) {
-    const y = by - height + 2 + Math.floor(R() * (height - 4));
-    const x = Math.round(at(y) - hw + 1 + R() * (hw * 2 - 1));
-    const len = 2 + Math.floor(R() * 5);
-    for (let j = 0; j < len; j++) c.shade(x, y + j, -1);
-    if (R() < 0.3) c.shade(x - 1, y, 1);
-  }
-  if (mossy) {
-    c.part();
-    for (let y = by - 12; y < by - 1; y++) {
-      const x = at(y) + hw * 0.4;
-      if (hash2(0, y, 241) > 0.3) c.px(x + hash2(1, y, 243) * hw * 0.6, y, MOSS, cyl(0.6, 0.1));
-    }
-  }
-}
+/** Where a crown's lowest clumps hang, to shade the trunk below them. */
+const crownFloor = (cr: Crown): number => Math.max(...cr.clumps.filter((cl) => Math.abs(cl.x - cr.cx) < cr.rx * 0.4).map((cl) => cl.y + cl.ry * 0.6), cr.cy);
+
+// ---------------------------------------------------------------- materials
+
+const OAK_BARK: Material = { ramp: ramp('#1a100c', '#2c1c14', '#40291c', '#573826', '#6f4a31', '#8a5f40'), outline: hex('#0e0806') };
+const OAK_LEAF: Material = {
+  ramp: ramp('#0c1f1c', '#123024', '#1a412b', '#245431', '#326a36', '#46823b', '#629b42', '#86b64c', '#afcf5c'),
+  outline: hex('#07130f'),
+  outlineLit: hex('#123024'),
+};
+const BIRCH_WOOD: Material = { ramp: ramp('#4f4a45', '#7a756c', '#a8a397', '#cfcabb', '#ebe7da', '#f8f6ee'), outline: hex('#211d1a') };
+const BIRCH_LEAF: Material = {
+  ramp: ramp('#15291a', '#1f3b20', '#2d5025', '#3f662b', '#557f33', '#6f983b', '#8db244', '#b0cb54', '#d4e279'),
+  outline: hex('#0b170c'),
+  outlineLit: hex('#1f3b20'),
+};
+const PINE_WOOD: Material = { ramp: ramp('#170d0a', '#281711', '#3a2218', '#4f2f20', '#66402a'), outline: hex('#0c0604') };
+const PINE_LEAF: Material = {
+  ramp: ramp('#061514', '#0a201e', '#0f2d28', '#153b32', '#1d4b3c', '#275c46', '#346f4f', '#468759', '#62a064', '#88bb74'),
+  outline: hex('#040c0b'),
+  outlineLit: hex('#0f2d28'),
+};
+const CHERRY_WOOD: Material = { ramp: ramp('#0d0708', '#1b0f11', '#2b1719', '#3d2120', '#502c28', '#663a31'), outline: hex('#080405') };
+/** Cherry blossom: mauve in the shade, through rose, to near white where the sun is. */
+export const CHERRY_BLOSSOM: Material = {
+  ramp: ramp('#3b1a33', '#56243f', '#74304c', '#94415d', '#b3566f', '#cc6f85', '#e08c9e', '#efabb9', '#f9cbd4', '#ffe8ec'),
+  outline: hex('#26101f'),
+  outlineLit: hex('#56243f'),
+};
+const PETAL_GROUND: Material = { ramp: CHERRY_BLOSSOM.ramp, outline: CHERRY_BLOSSOM.outline, noOutline: true, noAO: true };
+// -------------------------------------------------------------------- oaks
+
+const OAK: Growth = { bow: 0.12, kink: 1, reach: 0.5, taper: 0.8, twig: 0.8, three: 0.35 };
 
 function oakFrame(v: number, f: number): PixelCanvas {
   const c = new PixelCanvas(TREE_W, TREE_H);
   const R = rng(300 + v * 17);
   const bx = 48;
   const by = TREE_BASE_Y;
-  const lean = (R() - 0.5) * 1.5;
-  const dx = leaner(swayAt(f, 1.3), by - 44, by - 100);
-  const hw = 3.6 + v * 0.3;
-  trunk(c, bx, by, 50, hw, BARK, lean);
-  bark(c, bx, by, 50, hw, lean, R, true);
-  roots(c, bx, by, 9, BARK, R);
-  // Boughs splitting from the trunk into the crown.
-  c.part();
-  const top = by - 44;
-  c.capsule(bx, top + 6, bx - 16 - R() * 4 + dx(by - 64), by - 64, 2.8, 1.3, BARK);
-  c.capsule(bx + 1, top + 2, bx + 15 + R() * 4 + dx(by - 66), by - 66, 2.6, 1.2, BARK);
-  c.capsule(bx, top, bx + lean + dx(by - 80), by - 80, 2.4, 1.2, BARK);
-  crown(c, { cx: bx + lean, cy: by - 70, rx: 36 + v * 2, ry: 29, size: 1.05, ring: 0.95, gaps: 0.55, leaf: LEAF_OAK, twig: BARK, fork: { x: bx, y: top }, dx, frame: f, R });
-  shadeUnder(c, BARK, bx - 8, bx + 8, by - 46, 8);
+  const dx = leaner(swayAt(f, 1.3), by - 44, by - 104);
+  // A broad, round crown of big clumps, then limbs grown out to each one.
+  const cx = bx + (R() - 0.5) * 4;
+  const cy = by - 74;
+  const spots = scatter(R, cx, cy, 28 + v * 2, 18, 9 + v, 0.52, 0.45);
+  const clumps = spots.map((s) => {
+    const r = 10.5 + R() * 4.5 - Math.abs(s.x - cx) * 0.04;
+    return makeClump(R, s.x, s.y, r, r * 0.8, 3.1);
+  });
+  const trunkR = 4.6 + v * 0.3;
+  const sk = skeleton(R, OAK, { x: bx, y: by, r: trunkR + 0.6 }, { x: bx + (R() - 0.5) * 4, y: by - 32, r: trunkR * 0.8 }, spots.map((s) => ({ x: s.x, y: s.y + 3 })));
+  const cr: Crown = { cx, cy, rx: 40, ry: 30, leaf: OAK_LEAF, cluster: 3.1, grain: 0.9, lift: 0.08, clumps };
+  paintDepths(c, cr, dx, 0.72);
+  rootsOf(c, bx, by, trunkR, 10, OAK_BARK, R);
+  paintLimbs(c, sk, OAK_BARK, dx);
+  mossOn(c, bx, by, trunkR);
+  paintCrown(c, cr, dx, f);
+  shadeUnder(c, OAK_BARK, bx - 12, bx + 12, Math.round(crownFloor(cr)) - 2, 7);
   return c;
 }
+
+/** Moss on the shaded side of the trunk's foot. */
+function mossOn(c: PixelCanvas, bx: number, by: number, r: number): void {
+  c.part();
+  for (let y = by - 13; y < by - 1; y++) {
+    const n = hash2(0, y, 241);
+    if (n < 0.3) continue;
+    const w = 1 + Math.floor(hash2(1, y, 243) * 2);
+    for (let j = 0; j < w; j++) {
+      const x = bx + r * 0.35 + j + Math.floor(hash2(2, y, 245) * 2);
+      if (c.filled(Math.floor(x), y)) c.px(x, y, MOSS, cyl(0.5, 0.1));
+    }
+  }
+}
+
+// ----------------------------------------------------------------- birches
+
+const BIRCH: Growth = { bow: 0.06, kink: 0.6, reach: 0.55, taper: 0.75, twig: 0.6, three: 0.2 };
 
 function birchFrame(v: number, f: number): PixelCanvas {
   const c = new PixelCanvas(TREE_W, TREE_H);
   const R = rng(500 + v * 23);
   const bx = 48;
   const by = TREE_BASE_Y;
-  const lean = (R() - 0.5) * 2.5;
   // Birches are lighter and move more.
-  const dx = leaner(swayAt(f, 1.6), by - 40, by - 104);
-  trunk(c, bx, by, 66, 2.3, BIRCH_BARK, lean);
-  // Black lenticels across the white bark, and the dark cracked base.
-  for (let k = 0; k < 22; k++) {
-    const y = by - 62 + Math.floor(R() * 58);
-    const x = bx - 2 + Math.floor(R() * 3) + Math.round(lean * (1 - (y - by + 66) / 66) ** 2 * 4);
-    const len = 1 + Math.floor(R() * 3);
-    for (let j = 0; j < len; j++) c.shade(x + j, y, -3);
-  }
-  for (let y = by - 8; y < by; y++) for (let x = bx - 4; x <= bx + 4; x++) if (c.materialAt(x, y) === BIRCH_BARK && hash2(x, y, 245) > 0.45) c.shade(x, y, -2);
-  roots(c, bx, by, 5, BIRCH_BARK, R);
-  const fork = { x: bx + lean * 1.5, y: by - 56 };
-  c.part();
-  c.capsule(fork.x, fork.y, bx - 11 + dx(by - 76), by - 76, 1.5, 0.7, BIRCH_BARK);
-  c.capsule(fork.x, fork.y - 4, bx + 10 + dx(by - 84), by - 84, 1.4, 0.7, BIRCH_BARK);
-  crown(c, { cx: bx + lean * 3, cy: by - 84, rx: 21 + v, ry: 31, size: 0.8, ring: 1.05, gaps: 0.5, leaf: LEAF_BIRCH, twig: BIRCH_BARK, fork, dx, frame: f, R });
-  shadeUnder(c, BIRCH_BARK, bx - 6, bx + 6, by - 56, 7);
+  const dx = leaner(swayAt(f, 1.6), by - 40, by - 108);
+  // A tall, airy crown of small clumps, the white trunk running up into it.
+  const cx = bx + (R() - 0.5) * 6;
+  const cy = by - 82;
+  const spots = scatter(R, cx, cy, 15 + v, 24, 11 + v, 0.42, 0.3);
+  const clumps = spots.map((s) => {
+    const r = 7 + R() * 2.5;
+    return makeClump(R, s.x, s.y, r, r * 1.05, 2.4);
+  });
+  const sk = skeleton(R, BIRCH, { x: bx, y: by, r: 2.9 }, { x: cx + (R() - 0.5) * 2, y: by - 58, r: 2.1 }, spots.map((s) => ({ x: s.x, y: s.y + 2 })));
+  const cr: Crown = { cx, cy, rx: 24, ry: 32, leaf: BIRCH_LEAF, cluster: 2.4, grain: 1, lift: 0.05, clumps };
+  paintDepths(c, cr, dx, 0.55);
+  rootsOf(c, bx, by, 2.7, 6, BIRCH_WOOD, R);
+  paintLimbs(c, sk, BIRCH_WOOD, dx);
+  birchMarks(c, sk, dx);
+  paintCrown(c, cr, dx, f);
+  shadeUnder(c, BIRCH_WOOD, bx - 8, bx + 8, Math.round(crownFloor(cr)) - 1, 6);
   return c;
 }
+
+/** Birch bark: black lenticels across the white, the dark cracked foot, dark knots at the forks. */
+function birchMarks(c: PixelCanvas, sk: Skeleton, dx: (y: number) => number): void {
+  for (const l of sk.limbs) {
+    l.pts.forEach((p, s) => {
+      if (p.r < 1) return;
+      const x = p.x + dx(p.y);
+      const n = hash2(s, l.depth * 7 + Math.floor(p.x), 421);
+      if (n > 0.45) {
+        const len = 1 + Math.floor(hash2(s, 1, 423) * p.r * 1.1);
+        const start = Math.floor(x - p.r + 0.6 + hash2(s, 2, 425) * p.r);
+        for (let j = 0; j < len; j++) if (c.materialAt(start + j, Math.floor(p.y)) === BIRCH_WOOD) tone(c, start + j, Math.floor(p.y), 0);
+      }
+      // Knots where a limb leaves its parent.
+      if (s === 0 && l.depth > 0) {
+        tone(c, Math.floor(x), Math.floor(p.y), 0);
+        tone(c, Math.floor(x), Math.floor(p.y) + 1, 1);
+      }
+    });
+  }
+  const trunk = sk.limbs[0].pts;
+  for (let y = TREE_BASE_Y - 9; y < TREE_BASE_Y + 2; y++) {
+    for (let x = 36; x < 60; x++) {
+      if (c.materialAt(x, y) !== BIRCH_WOOD) continue;
+      const u = (TREE_BASE_Y - y) / 9;
+      if (hash2(x, y >> 1, 427) > 0.25 + u * 0.6) tone(c, x, y, hash2(x, y, 429) > 0.5 ? 1 : 0);
+    }
+  }
+  void trunk;
+}
+
+// ------------------------------------------------------------------- pines
 
 function pineFrame(v: number, f: number): PixelCanvas {
   const c = new PixelCanvas(TREE_W, TREE_H);
   const R = rng(700 + v * 29);
   const bx = 48;
   const by = TREE_BASE_Y;
-  const dx = leaner(swayAt(f, 1.1), by - 20, by - 110);
-  trunk(c, bx, by, 34, 2.8, BARK, 0);
-  bark(c, bx, by, 34, 2.8, 0, R, false);
-  roots(c, bx, by, 6, BARK, R);
-  // Tiers of drooping boughs, top down, each lower one in front of the one above.
-  const top = by - 114 + v * 4;
-  const tiers = 6;
-  const tips = Array.from({ length: tiers }, (_t, k) => Array.from({ length: 3 + k }, () => R()));
-  for (let k = 0; k < tiers; k++) {
-    const t0 = top + k * 14;
-    const t1 = t0 + 20 + k * 2;
-    const w = 6 + k * 4.6 + v;
-    const sx = dx((t0 + t1) / 2);
+  const dx = leaner(swayAt(f, 1.1), by - 20, by - 112);
+  const top = by - 116 + v * 4;
+  const tiers = 7;
+  // Each tier: a skirt of drooping boughs round the trunk, the lower ones wider.
+  const plan = Array.from({ length: tiers }, (_t, k) => {
+    const u = k / (tiers - 1);
+    const t0 = top + u ** 0.92 * 84;
+    return {
+      t0,
+      h: 13 + u * 11,
+      w: 5 + u * 27 + v + (R() - 0.5) * 3,
+      tips: Array.from({ length: 5 + Math.round(u * 6) }, () => ({ at: R(), len: R(), bend: R() })),
+      // Needle sprays on a jittered grid over the tier, each one shade with a bright top.
+      sprays: (() => {
+        const w = 5 + u * 27 + v + 3;
+        const list: { x: number; y: number; j: number }[] = [];
+        for (let y = 0; y <= 13 + u * 11 + 8; y += 2.6) for (let x = -w; x <= w; x += 3.4) list.push({ x: x + (R() - 0.5) * 2, y: y + (R() - 0.5) * 1.4, j: R() - 0.5 });
+        return list;
+      })(),
+    };
+  });
+  // The trunk, a little of it showing under the lowest tier.
+  const sk: Skeleton = { limbs: [{ pts: [{ x: bx, y: by, r: 3.6 }, { x: bx, y: by - 20, r: 2.8 }, { x: bx, y: by - 60, r: 1.6 }, { x: bx, y: top + 6, r: 0.6 }], depth: 0 }], tips: [] };
+  rootsOf(c, bx, by, 3.6, 7, PINE_WOOD, R);
+  paintLimbs(c, sk, PINE_WOOD, dx);
+  const k = PINE_LEAF.ramp.length;
+  // Lowest tier first, so each tier's hem hangs over the one below it.
+  for (let t = tiers - 1; t >= 0; t--) {
+    const p = plan[t];
+    const cx = bx + dx(p.t0 + p.h * 0.5);
+    const t1 = p.t0 + p.h;
+    // The hem: bough tips hanging down, deeper toward the sides.
+    const hem = (x: number): number => {
+      const s = (x - cx) / p.w;
+      let y = t1 - (1 - Math.abs(s)) * 2 + Math.abs(s) ** 2 * 3;
+      for (const tip of p.tips) {
+        const tx = (tip.at * 2 - 1) * 0.95;
+        const d = Math.abs(s - tx) * p.w;
+        if (d < 2.2) y += (2.2 - d) * (0.9 + tip.len * 1.4);
+      }
+      return y;
+    };
+    const edge = (y: number): number => {
+      const u = (y - p.t0) / p.h;
+      return u <= 0 ? 0.6 : 1 + (p.w - 1) * Math.min(1, u) ** 0.8;
+    };
     c.part();
-    c.shape(t0, t1, (y) => {
-      const u = (y - t0) / (t1 - t0);
-      // Boughs sag at the ends, so the hem curves up at the sides.
-      const hw = 1 + u ** 0.85 * w;
-      return [bx + sx - hw, bx + sx + hw];
-    }, LEAF_PINE, (_x, _y, t, u) => cyl(t, 0.6 - u * 0.5));
-    // Bough tips hanging from the hem.
-    tips[k].forEach((r, j) => {
-      const n = tips[k].length;
-      const tx = bx + sx + ((j + 0.5) / n - 0.5) * 2 * w * (0.9 + r * 0.1);
-      const out = tx < bx + sx ? -1 : 1;
-      c.capsule(tx, t1 - 3, tx + out * (1 + r), t1 + 1 + r * 1.5, 1.8, 0.6, LEAF_PINE);
-    });
-    // Needles: short strokes slanting down and out, bright on the sunny side.
-    for (let y = t0; y <= t1 + 3; y++) {
-      for (let x = Math.floor(bx + sx - w - 2); x <= bx + sx + w + 2; x++) {
-        if (c.materialAt(x, y) !== LEAF_PINE) continue;
-        const side = x < bx + sx ? 1 : -1;
-        const stroke = hash2((x + side * y) >> 1, k, 251 + v);
-        if (stroke > 0.72) c.shade(x, y, side > 0 ? 1 : 0);
-        else if (stroke < 0.18) c.shade(x, y, -1);
-        if (!c.filled(x, y - 1) && side > 0) c.shade(x, y, 1);
+    for (let y = Math.floor(p.t0); y <= t1 + 6; y++) {
+      const hw = edge(y);
+      const row = p.sprays.filter((q) => Math.abs(y + 0.5 - p.t0 - q.y) < 4.8);
+      for (let x = Math.floor(cx - hw - 1); x <= cx + hw + 1; x++) {
+        const s = (x + 0.5 - cx) / hw;
+        if (Math.abs(s) > 1 || y + 0.5 > hem(x + 0.5)) continue;
+        // The nearest two needle sprays (stretched sideways, as boughs lie).
+        const lx = x + 0.5 - cx;
+        const ly = y + 0.5 - p.t0;
+        let d1 = 1e9;
+        let d2 = 1e9;
+        let near = p.sprays[0];
+        for (const q of row) {
+          const ex = (lx - q.x) / 2.3;
+          const ey = (ly - q.y) / 1.6;
+          if (Math.abs(ex) > 3 || Math.abs(ey) > 3) continue;
+          const d = Math.hypot(ex, ey);
+          if (d < d1) {
+            d2 = d1;
+            d1 = d;
+            near = q;
+          } else if (d < d2) d2 = d;
+        }
+        const u = (y - p.t0) / (hem(x + 0.5) - p.t0);
+        c.px(x, y, PINE_LEAF, sphere(s * 0.8, u * 1.4 - 0.7, 0.9));
+        // The spray's shade from where it sits on the tier: the sunny upper left bright, the far side and the underside dark.
+        const ns = near.x / p.w;
+        const nu = near.y / p.h;
+        const whole = -((p.t0 + near.y - top) / 110 - 0.4) * 0.35;
+        let step = toStep(-ns * 0.9 - (nu - 0.25) * 1.2 + whole + near.j * 0.3 + 0.32, k, 0, 0, 0);
+        // Each spray hangs over the next: a bright upper edge, a dark lip under it.
+        const rim = -((lx - near.x) / 2.3) * 0.35 * Math.sign(lx || 1) - ((ly - near.y) / 1.6) * 0.95;
+        if (rim < -0.75 && d2 - d1 < 0.5) step -= 2;
+        else if (rim > 0.55 && d1 > 0.4) step += 1;
+        tone(c, x, y, Math.max(0, Math.min(k - 1, step)));
+      }
+    }
+    // Sunlit needle tips along the tier's top edge on the lit side.
+    for (let y = Math.floor(p.t0); y <= t1 + 6; y++) {
+      for (let x = Math.floor(cx - p.w - 1); x <= cx + 1; x++) {
+        if (c.materialAt(x, y) !== PINE_LEAF || c.filled(x - 1, y - 1) || c.layer[y * c.w + x] !== c.layer[Math.floor(p.t0 + 2) * c.w + Math.floor(cx)]) continue;
+        if (hash2(x - Math.round(cx), y, 437) > 0.3) tone(c, x, y, k - 2 + (hash2(x, y, 439) > 0.7 ? 1 : 0));
       }
     }
   }
-  shadeUnder(c, BARK, bx - 5, bx + 5, top + (tiers - 1) * 14 + 30, 6);
+  // The shade each tier casts on the tier below, just under its hem.
+  for (let y = top + 8; y < by; y++) {
+    for (let x = 0; x < c.w; x++) {
+      if (c.materialAt(x, y) !== PINE_LEAF) continue;
+      const i = y * c.w + x;
+      for (let up = 1; up <= 3; up++) {
+        const j = (y - up) * c.w + x;
+        if (y - up < 0 || c.mat[j] < 0) break;
+        if (c.layer[j] > c.layer[i]) {
+          c.shade(x, y, up === 1 ? -3 : -2);
+          break;
+        }
+      }
+    }
+  }
+  shadeUnder(c, PINE_WOOD, bx - 5, bx + 5, Math.round(plan[tiers - 1].t0 + plan[tiers - 1].h), 5);
   return c;
+}
+
+// ------------------------------------------------------------------ cherry
+
+const CHERRY: Growth = { bow: 0.24, kink: 1.2, reach: 0.4, taper: 0.72, twig: 0.7, three: 0.3 };
+
+/**
+ * A cherry tree in bloom, on the forest trees' 96 x 128 frame: a gnarled dark
+ * trunk twisting up into crooked limbs that reach out wide, carrying layered
+ * clouds of blossom, rose in the shade and near white in the sun, with the
+ * dark limbs showing between the layers; petals fallen round its roots.
+ * Frame `f` of its sway.
+ */
+export function cherryTree(v: number, f = 0): PixelCanvas {
+  const c = new PixelCanvas(TREE_W, TREE_H);
+  const R = rng(4100 + v * 37);
+  const bx = 48;
+  const by = TREE_BASE_Y;
+  const dx = leaner(swayAt(f, 1.3), by - 34, by - 96);
+  // Fallen petals first, under everything: thicker near the trunk.
+  const petals = Array.from({ length: 46 }, () => {
+    const a = R() * Math.PI * 2;
+    const d = 5 + R() ** 0.8 * 24;
+    return { x: bx + Math.cos(a) * d * 1.4, y: by - 1 + Math.sin(a) * d * 0.38, s: 4 + Math.floor(R() * 5) };
+  });
+  // Clouds of blossom in layers, broad and flat, with room between the
+  // layers for the dark limbs to show.
+  const cx = bx + (R() - 0.5) * 4;
+  const spots: { x: number; y: number; rx: number; ry: number }[] = [];
+  const layers = [
+    { y: by - 90, n: 2, w: 10, r: 11 },
+    { y: by - 76, n: 2, w: 24, r: 10.5 },
+    { y: by - 62, n: 2, w: 29, r: 10 },
+    { y: by - 66, n: 1, w: 0, r: 8 },
+  ];
+  for (const l of layers) {
+    for (let k = 0; k < l.n; k++) {
+      const u = l.n === 1 ? 0 : (k / (l.n - 1)) * 2 - 1;
+      const r = l.r + R() * 2.5;
+      spots.push({ x: cx + u * l.w + (R() - 0.5) * 5, y: l.y + (R() - 0.5) * 4 + Math.abs(u) * 4, rx: r * 1.25, ry: r * 0.72 });
+    }
+  }
+  const clumps = spots.map((s) => makeClump(R, s.x, s.y, s.rx, s.ry, 2.8));
+  // A gnarled trunk, leaning and forking low.
+  const lean = (v - 1) * 4 + (R() - 0.5) * 3;
+  const sk = skeleton(R, CHERRY, { x: bx, y: by, r: 4.6 }, { x: bx + lean, y: by - 24, r: 3.8 }, spots.map((s) => ({ x: s.x, y: s.y + 2 })));
+  const cr: Crown = { cx: bx, cy: by - 74, rx: 42, ry: 24, leaf: CHERRY_BLOSSOM, cluster: 2.8, grain: 1, lift: 0.12, clumps };
+
+  c.part();
+  for (const p of petals) c.px(p.x, p.y, PETAL_GROUND, FLAT);
+  for (const p of petals) tone(c, Math.floor(p.x), Math.floor(p.y), p.s);
+  paintDepths(c, cr, dx, 0.3);
+  rootsOf(c, bx, by, 4.2, 9, CHERRY_WOOD, R);
+  paintLimbs(c, sk, CHERRY_WOOD, dx);
+  cherryBark(c, sk, dx);
+  paintCrown(c, cr, dx, f);
+  // Single open blossoms on the sunny crests: the brightest white.
+  for (let y = by - 110; y < by - 36; y++) {
+    for (let x = 2; x < TREE_W - 2; x++) {
+      if (c.materialAt(x, y) !== CHERRY_BLOSSOM) continue;
+      const h = hash2(x - Math.round(dx(y)), y, 441 + v);
+      const lit = c.filled(x, y - 2) === false || c.filled(x - 2, y) === false;
+      if (lit && h > 0.8) tone(c, x, y, CHERRY_BLOSSOM.ramp.length - 1);
+    }
+  }
+  shadeUnder(c, CHERRY_WOOD, bx - 14, bx + 14, Math.round(crownFloor(cr)) - 2, 6);
+  return c;
+}
+
+/** Cherry bark: dark, with pale bands of lenticels round it, as a cherry's has. */
+function cherryBark(c: PixelCanvas, sk: Skeleton, dx: (y: number) => number): void {
+  for (const l of sk.limbs) {
+    if (l.depth > 1) continue;
+    l.pts.forEach((p, s) => {
+      if (p.r < 1.6 || hash2(s, l.depth, 445) < 0.55) return;
+      const x = p.x + dx(p.y);
+      const y = Math.floor(p.y);
+      // A short pale band, across the lit half only.
+      for (let j = Math.floor(x - p.r + 1); j < x; j++) {
+        if (c.materialAt(j, y) === CHERRY_WOOD) c.shade(j, y, 1);
+      }
+    });
+  }
 }
 
 export type TreeName = 'oak' | 'birch' | 'pine';
@@ -372,7 +851,7 @@ for (let v = 0; v < TREE_VARIANTS; v++) {
   for (const kind of ['oak', 'birch', 'pine'] as const) TREE_FRAMES.push({ name: `${kind}${v}`, draw: () => treeFrame(kind, v, 0) });
 }
 
-export { crown, leaner, swayAt };
+export { leaner, swayAt };
 
 // ---------------------------------------------------------------------------
 // Undergrowth, each drawn standing on (24, PROP_BASE_Y) of a 48x26 frame.

@@ -11,7 +11,7 @@
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
 import { FIRE_COLS, hash2, rng } from './env';
-import { canopy, crown, leaner, roots, swayAt, trunk } from './trees';
+import { canopy, cherryTree } from './trees';
 import { FIELDSTONE, IRON } from './sanctum';
 import { CELL } from '../world/homeLayout';
 import { partById } from '../world/homeParts';
@@ -57,8 +57,6 @@ const GLASS: Material = { ...mat('#060e14', '#10202c', '#1a3242', '#284a5c', '#3
 const WAX = mat('#2a241a', '#6a5e48', '#8e8266', '#b2a686', '#d0c6a6', '#e8e0c4', '#f8f4e0');
 const LILY = mat('#081a0c', '#12301a', '#1a4424', '#245a2c', '#307236', '#428a40', '#5aa24c');
 const CATTAIL = mat('#140a04', '#2a1a0c', '#402812', '#58381a', '#704a24');
-const BLOSSOM = mat('#26101a', '#4a1a30', '#6e2a48', '#963c62', '#bc5680', '#d8789c', '#ec9cb8', '#f8c0d2', '#ffe2ec');
-const CHERRY_BARK = mat('#0c0606', '#1a0e0e', '#2c1816', '#402420', '#56322a', '#6c4236');
 const ANTLER = mat('#1a140c', '#4a3e2c', '#6c5e44', '#8e7e60', '#b0a07e', '#ccbe9c', '#e4d8ba');
 const SKIN = mat('#1a0e08', '#5a3424', '#7e4c36', '#a0684a', '#be8662', '#d8a47e', '#ecc29c');
 const BREW: Material = { ...mat('#041a08', '#0c3a12', '#18642a', '#2c9a3e', '#56c85a', '#9af08a', '#dcffc8'), emissive: 0.8, noAO: true };
@@ -267,42 +265,8 @@ function decor(draw: (c: PixelCanvas, f: number) => void, frames = 1, fps = 8): 
 
 // ---------------------------------------------------------------- Garden
 
-/** A cherry tree in bloom, on the forest trees' 96 x 128 frame, petals fallen round its roots; frame `f` of its sway. */
-export function blossomTree(v: number, f = 0): PixelCanvas {
-  const c = new PixelCanvas(96, 128);
-  const R = rng(4100 + v * 37);
-  const bx = 48;
-  const by = 124;
-  const dx = leaner(swayAt(f, 1.3), by - 34, by - 92);
-  // Fallen petals first, under everything.
-  c.part();
-  for (let k = 0; k < 34; k++) {
-    const a = R() * Math.PI * 2;
-    const d = 6 + R() * 18;
-    c.px(bx + Math.cos(a) * d * 1.4, by - 1 + Math.sin(a) * d * 0.4, BLOSSOM, FLOOR, { bias: 1 + Math.floor(R() * 3) });
-  }
-  const lean = 1.2 + v * 0.4;
-  trunk(c, bx, by, 38, 3, CHERRY_BARK, lean);
-  // Bands round the bark, as cherries have.
-  for (let y = by - 36; y < by - 2; y += 3) for (let x = bx - 3; x < bx + 4; x++) if (hash2(x, y, 88) > 0.4) c.shade(x + Math.round(lean * (1 - (y - by + 38) / 38) ** 2 * 4), y, -1);
-  roots(c, bx, by, 7, CHERRY_BARK, R);
-  // Crooked boughs spreading wide, as a cherry's do.
-  c.part();
-  c.capsule(bx + 3, by - 30, bx - 22 + dx(by - 52), by - 52, 2.2, 1, CHERRY_BARK);
-  c.capsule(bx + 4, by - 34, bx + 24 + dx(by - 50), by - 50, 2, 1, CHERRY_BARK);
-  c.capsule(bx + 4, by - 36, bx + 6 + dx(by - 62), by - 62, 2, 1, CHERRY_BARK);
-  crown(c, { cx: bx + 2, cy: by - 68, rx: 36, ry: 24, size: 0.9, ring: 1, gaps: 0.5, leaf: BLOSSOM, twig: CHERRY_BARK, fork: { x: bx + 4, y: by - 34 }, dx, frame: f, R });
-  // White flecks of fresh blossom on top, deeper pink in the hollows.
-  for (let y = by - 96; y < by - 40; y++) {
-    for (let x = bx - 42; x < bx + 46; x++) {
-      if (c.materialAt(x, y) !== BLOSSOM) continue;
-      const h = hash2(x - Math.round(dx(y)), y, 97 + v);
-      if (h > 0.93) c.shade(x, y, 2);
-      else if (h < 0.05) c.shade(x, y, -2);
-    }
-  }
-  return c;
-}
+/** A cherry tree in bloom, on the forest trees' 96 x 128 frame (drawn with the forest's trees); frame `f` of its sway. */
+export const blossomTree = (v: number, f = 0): PixelCanvas => cherryTree(v, f);
 
 function rose(c: PixelCanvas, x: number, y: number, m: Material): void {
   c.part();

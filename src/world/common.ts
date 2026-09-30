@@ -50,7 +50,7 @@ export interface SceneryLayout {
 /** Trunk footprint and canopy reach of each tree kind, in pixels from its base. */
 export const TREE_SHAPE: Record<TreeKind, { trunk: number; canopyR: number; canopyY: number }> = {
   oak: { trunk: 5, canopyR: 34, canopyY: 68 },
-  birch: { trunk: 3, canopyR: 22, canopyY: 70 },
+  birch: { trunk: 3, canopyR: 22, canopyY: 78 },
   pine: { trunk: 4, canopyR: 24, canopyY: 56 },
 };
 

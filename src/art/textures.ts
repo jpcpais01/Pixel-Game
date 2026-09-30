@@ -854,15 +854,17 @@ function* deepTextures(scene: Phaser.Scene): Generator<void, void, void> {
 /**
  * The trees' sway (see art/trees.ts): every frame of every tree on 'tree_sway',
  * and an animation `tree_<kind><v>` for each, starting on its still frame.
- * Built a tree at a time in the background (see game/treeSway.ts), so the
+ * Built a frame at a time in the background (see game/treeSway.ts), so the
  * boot only pays for the still trees.
  */
 export function* treeSwayTextures(scene: Phaser.Scene): Generator<void, void, void> {
   const frames: { name: string; r: RenderedFrame }[] = [];
   for (let v = 0; v < TREE_VARIANTS; v++) {
     for (const kind of ['oak', 'birch', 'pine'] as const) {
-      for (let f = 0; f < TREE_SWAY_FRAMES; f++) frames.push({ name: `${kind}${v}_${f}`, r: treeFrame(kind, v, f).render() });
-      yield;
+      for (let f = 0; f < TREE_SWAY_FRAMES; f++) {
+        frames.push({ name: `${kind}${v}_${f}`, r: treeFrame(kind, v, f).render() });
+        yield;
+      }
     }
   }
   if (!scene.textures.exists('tree_sway')) register(scene, 'tree_sway', pack(frames, TREE_W, TREE_H, 9), TREE_W, TREE_H, false);

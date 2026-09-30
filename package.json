@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "sheet": "tsx scripts/sheet.ts sheets 5",
     "icons": "tsx scripts/icons.ts",
-    "gear": "tsx scripts/gear.ts gear.png 4"
+    "gear": "tsx scripts/gear.ts gear.png 4",
+    "trees": "tsx scripts/trees.ts trees.png 3"
   },
   "dependencies": {
     "phaser": "3.90.0"
