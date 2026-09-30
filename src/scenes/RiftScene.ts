@@ -107,7 +107,17 @@ export class RiftScene extends Phaser.Scene {
     if (riftHud.phase === 'over') {
       this.overT += dt;
       if (!this.results && this.overT > RESULTS_DELAY) this.showResults();
-    }
+    } else if (this.results) this.hideResults();
+  }
+
+  /** Online, the room has started again ("Again", pressed here or by a friend): the results go. */
+  private hideResults(): void {
+    const results = this.results!;
+    this.results = null;
+    this.overT = 0;
+    this.leaving = false;
+    this.tweens.add({ targets: results, alpha: 0, duration: 300, onComplete: () => results.destroy() });
+    this.tweens.add({ targets: this.shade, alpha: 0, duration: 300, onComplete: () => this.shade.setVisible(false) });
   }
 
   // ---------------------------------------------------------------- The HUD
@@ -332,6 +342,11 @@ export class RiftScene extends Phaser.Scene {
   private leave(again: boolean): void {
     if (this.leaving) return;
     this.leaving = true;
+    // Online the room stays together: the rift starts over for everyone in it (see RiftWaves).
+    if (again && session.active) {
+      riftHud.again = true;
+      return;
+    }
     const cams = ['world', 'shade', 'ui', 'rift'].map((k) => this.scene.get(k).cameras.main);
     for (const cam of cams) cam.fadeOut(350, 7, 8, 13);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {

@@ -69,3 +69,30 @@ export function difficultyIcon(scene: Phaser.Scene, d: RiftDifficulty): string {
   scene.textures.addCanvas(key, b.toCanvas());
   return key;
 }
+
+/**
+ * Online on the Rift's panel, where there's room only for a small square
+ * button: two heroes side by side, a lavender friend behind a gold one.
+ */
+export function partyIcon(scene: Phaser.Scene): string {
+  const key = 'rift_party_icon';
+  if (scene.textures.exists(key)) return key;
+  // A head and shoulders; the gap under the head becomes the outline of the neck.
+  const FIGURE = ['.###.', '.###.', '.....', '.###.', '#####', '#####'];
+  const ink = hex('#0b0818');
+  const b = new Bitmap(13, 10);
+  const figure = (ox: number, oy: number, lit: RGB, mid: RGB, dark: RGB) => {
+    const on = (x: number, y: number) => y >= 0 && y < FIGURE.length && x >= 0 && x < 5 && FIGURE[y][x] === '#';
+    for (let y = -1; y <= FIGURE.length; y++) {
+      for (let x = -1; x <= 5; x++) {
+        // Lit from the top left, shaded down the right and along the bottom.
+        if (on(x, y)) b.set(ox + x, oy + y, y === 0 || (y === 4 && x === 0) || (x === 1 && y < 2) ? lit : x === 4 || y === 5 || (x === 3 && y < 2) ? dark : mid);
+        else if ([-1, 0, 1].some((i) => [-1, 0, 1].some((j) => on(x + i, y + j)))) b.set(ox + x, oy + y, ink);
+      }
+    }
+  };
+  figure(1, 1, hex('#e0d4ff'), hex('#9a88d8'), hex('#5a4a98'));
+  figure(7, 3, hex('#fff4d6'), hex('#f4cf6a'), hex('#b08a30'));
+  scene.textures.addCanvas(key, b.toCanvas());
+  return key;
+}
