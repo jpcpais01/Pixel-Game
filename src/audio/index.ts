@@ -615,6 +615,36 @@ class GameSound {
     if (t !== null) this.sfx!.tesla(t, pan, chain);
   }
 
+  feather(pan = 0): void {
+    const t = this.slot('feather');
+    if (t !== null) this.sfx!.feather(t, pan);
+  }
+
+  screech(pan = 0): void {
+    const t = this.slot('screech');
+    if (t !== null) this.sfx!.screech(t, pan);
+  }
+
+  roar(pan = 0, big = false): void {
+    const t = this.slot('roar');
+    if (t !== null) this.sfx!.roar(t, pan, big);
+  }
+
+  rake(pan = 0, heavy = false): void {
+    const t = this.slot('rake');
+    if (t !== null) this.sfx!.rake(t, pan, heavy);
+  }
+
+  fireball(pan = 0): void {
+    const t = this.slot('fireball');
+    if (t !== null) this.sfx!.fireball(t, pan);
+  }
+
+  flame(pan = 0): void {
+    const t = this.slot('flame');
+    if (t !== null) this.sfx!.flame(t, pan);
+  }
+
   servo(pan = 0): void {
     const t = this.slot('servo');
     if (t !== null) this.sfx!.servo(t, pan);

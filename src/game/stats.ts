@@ -89,6 +89,9 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'phantom.poltergeist': { role: 'ranged', hp: 95, damage: 9, defense: 12, rate: 2.98, speed: 64, regen: 0.6, skill: 2.5, ult: 81, kit: 11.2 },
   'phantom.wraith': { role: 'melee', hp: 100, damage: 2.5, defense: 19, rate: 13.9, speed: 58, regen: 0.8, skill: 2.7, ult: 0, kit: 3.6 },
   'inventor.engineer': { role: 'caster', hp: 100, damage: 9, defense: 12, rate: 2.54, speed: 56, regen: 0.6, skill: 11, ult: 344, kit: 12.3 },
+  'beast.eagle': { role: 'ranged', hp: 95, damage: 8.5, defense: 12, rate: 3.5, speed: 68, regen: 0.6, skill: 1.3, ult: 60, kit: 8 },
+  'beast.lion': { role: 'melee', hp: 110, damage: 10, defense: 18, rate: 3.13, speed: 62, regen: 0.9, skill: 1.25, ult: 80, kit: 11.3 },
+  'beast.dragon': { role: 'ranged', hp: 105, damage: 9, defense: 15, rate: 2.75, speed: 56, regen: 0.8, skill: 3.4, ult: 55, kit: 9 },
   'inventor.scientist': { role: 'caster', hp: 85, damage: 9, defense: 12, rate: 2.22, speed: 62, regen: 0.8, skill: 4.6, ult: 72, kit: 9 },
 };
 

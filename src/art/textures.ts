@@ -97,6 +97,7 @@ import { BOLT_DIRS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, reticle, 
 import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
 import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
 import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
+import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, LION_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import {
@@ -349,6 +350,9 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('shafts', toCanvas(256, 256, sunShaftCanvas(256, 256)));
   scene.textures.addCanvas('icon_sun', toCanvas(12, 12, skyIcon('sun')));
   scene.textures.addCanvas('icon_moon', toCanvas(12, 12, skyIcon('moon')));
+  scene.textures.addCanvas('icon_dawn', toCanvas(12, 12, skyIcon('dawn')));
+  scene.textures.addCanvas('icon_dusk', toCanvas(12, 12, skyIcon('dusk')));
+  scene.textures.addCanvas('icon_cycle', toCanvas(12, 12, skyIcon('cycle')));
   scene.textures.addCanvas('icon_beam', toCanvas(16, 16, beamIcon()));
   scene.textures.addCanvas('icon_beam_void', toCanvas(16, 16, beamIcon(VOID_SPELL)));
   yield;
@@ -511,6 +515,23 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_orb', toCanvas(16, 16, orbIcon()));
   scene.textures.addCanvas('icon_tesla_einstein', toCanvas(16, 16, teslaIcon(true)));
   scene.textures.addCanvas('icon_orb_einstein', toCanvas(16, 16, orbIcon(true)));
+  // The Beastkin: the eagle's razor feathers ('feather_<look>': headings
+  // 'r0'..'r15'), the dragon's firebolts ('firebolt_<look>': flickering
+  // 'f0'..'f3'), and the buttons. The beasts themselves are hero sheets.
+  for (const look of [EAGLE_LOOK, BENFICA_LOOK]) {
+    register(scene, `feather_${look.key}`, pack(frameList(Array.from({ length: FEATHER_DIRS }, (_, i) => featherFrame(i, look)), 'r'), FEATHER_SIZE, FEATHER_SIZE), FEATHER_SIZE, FEATHER_SIZE);
+    scene.textures.addCanvas(`icon_feather_${look.key}`, toCanvas(16, 16, featherIcon(look)));
+    scene.textures.addCanvas(`icon_gust_${look.key}`, toCanvas(16, 16, gustIcon(look)));
+  }
+  for (const look of [LION_LOOK, SPORTING_LOOK]) {
+    scene.textures.addCanvas(`icon_claw_${look.key}`, toCanvas(16, 16, clawIcon(look)));
+    scene.textures.addCanvas(`icon_roar_${look.key}`, toCanvas(16, 16, roarIcon(look)));
+  }
+  for (const look of [DRAGON_LOOK, PORTO_LOOK]) {
+    register(scene, `firebolt_${look.key}`, pack(frameList(Array.from({ length: FIREBOLT_FRAMES }, (_, i) => fireboltFrame(i, look)), 'f'), FIREBOLT_SIZE, FIREBOLT_SIZE), FIREBOLT_SIZE, FIREBOLT_SIZE);
+    scene.textures.addCanvas(`icon_fire_${look.key}`, toCanvas(16, 16, fireIcon(look)));
+    scene.textures.addCanvas(`icon_breath_${look.key}`, toCanvas(16, 16, breathIcon(look)));
+  }
 
   scene.textures.addCanvas('icon_cannon', toCanvas(16, 16, cannonIcon()));
   scene.textures.addCanvas('icon_salvo', toCanvas(16, 16, salvoIcon()));
