@@ -640,6 +640,48 @@ function goldscarab(c: PixelCanvas, f: number): void {
   c.spark(gx + 1, cy - 2, hex('#ffe890'), 0.4);
 }
 
+// ---------------------------------------------------------------- Moon Hare (where the White Stag leads)
+
+const HARE: Material = { ramp: ramp('#5a6280', '#8a94b4', '#bcc6e0', '#e4ecf8', '#ffffff'), outline: hex('#1e2238'), outlineLit: hex('#30364e'), emissive: 0.35 };
+const HARE_EAR: Material = { ramp: ramp('#7aa8d8', '#b8e0ff', '#f0faff'), outline: hex('#1e3048'), emissive: 0.9, noAO: true, noOutline: true };
+const CRESCENT: Material = { ramp: ramp('#c8a040', '#ffe890', '#fffae0'), outline: hex('#3a2a08'), emissive: 1, noAO: true, noOutline: true };
+
+function moonhare(c: PixelCanvas, f: number): void {
+  // Sitting up, nose twitching, its long ears tipped with moonlight turning to listen.
+  const twitch = f % 2;
+  const tilt = [0, 0.5, 1, 0.5][f];
+  const cy = 11;
+  // The far ear, laid back a little.
+  c.part();
+  c.capsule(10, cy - 4, 8 - tilt * 0.5, cy - 9.5, 1, 0.7, HARE, { bias: -1 });
+  // A round haunch and body, a white scut behind.
+  c.part();
+  c.ellipse(3.5, cy + 0.5, 1.3, 1.3, HARE, { bias: 1 });
+  c.part();
+  c.ellipse(6.5, cy + 0.5, 4, 3.3, HARE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.25, 1) });
+  c.part();
+  c.ellipse(5.5, cy + 2, 2.6, 1.6, HARE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.3, 1) });
+  c.px(8.5, cy + 3, HARE, cyl(0.3, -0.3));
+  c.px(9.5, cy + 3, HARE, cyl(0.3, -0.3));
+  // The head, the near ear standing tall and glowing at its tip.
+  c.part();
+  c.ellipse(10.5, cy - 2, 2.4, 2.1, HARE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
+  c.part();
+  c.capsule(10.5, cy - 3.5, 10.5 + tilt * 0.6, cy - 9.5, 1.1, 0.7, HARE);
+  c.part();
+  c.px(10.5 + tilt * 0.6, cy - 9, HARE_EAR, FACE, { glow: 0.9 });
+  c.px(10.5 + tilt * 0.3, cy - 7.5, HARE_EAR, FACE, { glow: 0.6 });
+  c.px(8 - tilt * 0.5, cy - 9, HARE_EAR, FACE, { glow: 0.5 });
+  c.part();
+  c.px(12.5, cy - 1.5 + twitch * 0.5, HARE_EAR, sphere(0.5, 0), { glow: 0.4 });
+  eye(c, 11, cy - 2.5, f === 3);
+  // A crescent moon in gold on its flank.
+  c.part();
+  for (const [x, y] of [[5, cy - 1], [4, cy], [4, cy + 1], [5, cy + 2]] as const) c.px(x, y, CRESCENT, FACE);
+  c.spark(10.5 + tilt * 0.6, cy - 10, hex('#d8f0ff'), 0.6);
+  c.spark(4.5, cy + 0.5, hex('#ffe890'), 0.3);
+}
+
 /** Each critter's drawing, by id: draws frame `f` into `c` (a CRITTER_W x CRITTER_H box). */
 export const CRITTER_ART: Record<string, (c: PixelCanvas, f: number) => void> = {
   firefly,
@@ -660,6 +702,7 @@ export const CRITTER_ART: Record<string, (c: PixelCanvas, f: number) => void> = 
   axolotl,
   bloodmoth,
   goldscarab,
+  moonhare,
 };
 
 export function critterFrame(id: string, f: number): PixelCanvas {

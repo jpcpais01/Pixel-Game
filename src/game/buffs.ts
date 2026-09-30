@@ -115,3 +115,13 @@ export const RENEW: BuffDef = {
   duration: 10000,
   mods: { regen: 5 },
 };
+
+/** The White Stag's spring: a long blessing, swifter, stronger and mending (see world/WhiteStag.ts). */
+export const STAG_GRACE: BuffDef = {
+  id: 'stag',
+  name: "Stag's Grace",
+  icon: 'buff_stag',
+  tint: 0xd8f0ff,
+  duration: 240000,
+  mods: { speed: 1.15, damage: 1.15, regen: 2 },
+};

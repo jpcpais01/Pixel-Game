@@ -873,6 +873,11 @@ export class PumpkinKing extends Monster {
     }
   }
 
+  /** Raising his sceptre to call up his patch. */
+  protected flourish(): void {
+    this.play('summon', true);
+  }
+
   protected staggers(): boolean {
     return false;
   }

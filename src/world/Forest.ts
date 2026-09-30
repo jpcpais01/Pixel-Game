@@ -12,7 +12,8 @@ import { SUN_SHADOW_ALPHA, sunShadow } from '../game/Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
 import { install } from './GroundStreamer';
 import { treeLeaves } from './Scenery';
-import { CAMP_SEATS, CHUNK, FOREST_WORLD, WOOD_SHAPE, ruinPieces, stonePieces, type ForestGen, type Poi, type WoodKind } from './forestGen';
+import { CAMP_SEATS, CHUNK, FOREST_WORLD, WOOD_SHAPE, ruinPieces, stonePieces, type Blocker, type ForestGen, type Poi, type WoodKind } from './forestGen';
+import { WhiteStag } from './WhiteStag';
 import { forestTile } from './forestGround';
 import type { TileAsk, TileDone } from './forestWorker';
 
@@ -25,9 +26,13 @@ import type { TileAsk, TileDone } from './forestWorker';
 // The places do something when walked up to: a campfire mends the hero and
 // becomes where they rise; a shrine grants a blessing, once; a chest opens on
 // treasure; a fairy ring gives a gift of gems. Walking into a new wood shows
-// its name.
+// its name. Now and then the White Stag comes to lead the hero somewhere
+// secret (see WhiteStag.ts).
 
 type Img = Phaser.GameObjects.Image;
+
+/** The first view's progress, for the loading screen (scenes/ForestLoadScene.ts). */
+export const forestLoad = { p: 0, done: true };
 type Sprite = Phaser.GameObjects.Sprite;
 
 /** Ground tiles built ahead of the view, and kept beyond it before they are dropped, in tiles. */
@@ -41,7 +46,9 @@ const IN_FLIGHT = 2;
 /** A tile in view still missing after this long (ms) is painted here, whatever it costs. */
 const MISSING_MS = 1500;
 /** The world opens once the view's ground is in, or after this long (ms) regardless. */
-const OPEN_BY = 6000;
+const OPEN_BY = 12000;
+/** Seconds of walking the ground is painted ahead of the hero. */
+const LEAD_S = 3;
 /** How far past the view (px) a chunk's things are stood up, and past which they are taken down. */
 const STAND = 96;
 const FORGET = 2 * CHUNK;
@@ -153,6 +160,9 @@ export class Forest {
   private mendT = 0;
   private region = { ci: 0, cj: 0, shown: false, heldT: 0, nextCi: 0, nextCj: 0 };
   private view = new Phaser.Geom.Rectangle();
+  private stag: WhiteStag;
+  /** Where the hero is headed: their smoothed velocity times LEAD_S, in px. */
+  private lead = { x: 0, y: 0, lastX: NaN, lastY: NaN };
 
   constructor(
     private world: WorldScene,
@@ -210,6 +220,7 @@ export class Forest {
         frequency: 110,
       })
       .setDepth(9988);
+    this.stag = new WhiteStag(world, this, gen);
     const offQuality = settings.watch((q) => {
       const k = q.quality !== 'full' ? 2 : 1;
       this.treeLeaves.frequency = TREE_LEAF_MS * k;
@@ -220,6 +231,7 @@ export class Forest {
       this.job = null;
       this.stopPool();
       this.onReady = null;
+      forestLoad.done = true;
       // The ground's textures go with the world; the forest's layouts with the generator.
       for (const key of this.tiles.keys()) this.dropTile(key);
       this.stood.clear();
@@ -245,14 +257,21 @@ export class Forest {
     return forestTile(this.gen, col, row);
   }
 
-  /** Tiles covering `view` grown by (ax, ay) tiles, nearest its centre first. */
-  private wanted(view: Phaser.Geom.Rectangle, ax: number, ay: number): number[] {
-    const c0 = Math.max(0, Math.floor(view.left / CHUNK) - ax);
-    const c1 = Math.min(FOREST_WORLD / CHUNK - 1, Math.floor(view.right / CHUNK) + ax);
-    const r0 = Math.max(0, Math.floor(view.top / STRIP_H) - ay);
-    const r1 = Math.min(FOREST_WORLD / STRIP_H - 1, Math.floor(view.bottom / STRIP_H) + ay);
-    const mx = view.centerX / CHUNK;
-    const my = view.centerY / STRIP_H;
+  /**
+   * Tiles covering `view` grown by (ax, ay) tiles, and, when asked, the view
+   * where the hero is headed (`lead`): nearest that first, so the ground is
+   * painted ahead of a walking hero rather than evenly all round.
+   */
+  private wanted(view: Phaser.Geom.Rectangle, ax: number, ay: number, lead = false): number[] {
+    const lx = lead ? this.lead.x : 0;
+    const ly = lead ? this.lead.y : 0;
+    const c0 = Math.max(0, Math.floor(Math.min(view.left, view.left + lx) / CHUNK) - ax);
+    const c1 = Math.min(FOREST_WORLD / CHUNK - 1, Math.floor(Math.max(view.right, view.right + lx) / CHUNK) + ax);
+    const r0 = Math.max(0, Math.floor(Math.min(view.top, view.top + ly) / STRIP_H) - ay);
+    const r1 = Math.min(FOREST_WORLD / STRIP_H - 1, Math.floor(Math.max(view.bottom, view.bottom + ly) / STRIP_H) + ay);
+    // Sorted from a point a little way along the hero's heading.
+    const mx = (view.centerX + lx * 0.4) / CHUNK;
+    const my = (view.centerY + ly * 0.4) / STRIP_H;
     const list: { k: number; d: number }[] = [];
     for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) list.push({ k: Forest.tileKey(c, r), d: ((c + 0.5 - mx) * 2) ** 2 + (r + 0.5 - my) ** 2 });
     return list.sort((a, b) => a.d - b.d).map((e) => e.k);
@@ -345,6 +364,19 @@ export class Forest {
     return true;
   }
 
+  /** Follow the hero's heading (a jump, like rising at a campfire, isn't walking). */
+  private steer(hero: { x: number; y: number }, dt: number): void {
+    const l = this.lead;
+    const dx = hero.x - l.lastX;
+    const dy = hero.y - l.lastY;
+    l.lastX = hero.x;
+    l.lastY = hero.y;
+    if (!(dt > 0) || !Number.isFinite(dx) || Math.hypot(dx, dy) > 64) return;
+    const k = Math.min(1, dt / 400);
+    l.x += ((dx / dt) * 1000 * LEAD_S - l.x) * k;
+    l.y += ((dy / dt) * 1000 * LEAD_S - l.y) * k;
+  }
+
   /** Put up a tile a painter sent: its fields and layouts go to the generator; its pixels become textures. */
   private land(t: TileDone, view: Phaser.Geom.Rectangle): void {
     const key = Forest.tileKey(t.col, t.row);
@@ -372,7 +404,7 @@ export class Forest {
         this.land(this.arrived.shift()!, view);
         if (!holes) break;
       }
-      for (const key of this.wanted(view, AHEAD_X, AHEAD_Y)) if (!this.ready(key) && !this.asked.has(key) && !this.ask(key)) break;
+      for (const key of this.wanted(view, AHEAD_X, AHEAD_Y, true)) if (!this.ready(key) && !this.asked.has(key) && !this.ask(key)) break;
       // A hole that stays (the painters are behind, after a jump across the forest) is filled here.
       const hole = inView.find((k) => !this.ready(k));
       this.missingT = hole === undefined ? 0 : this.missingT + dt;
@@ -385,7 +417,7 @@ export class Forest {
         this.buildNow(key);
       }
     }
-    for (const key of this.wanted(view, AHEAD_X, AHEAD_Y)) if (this.ready(key)) this.showTile(key);
+    for (const key of this.wanted(view, AHEAD_X, AHEAD_Y, true)) if (this.ready(key)) this.showTile(key);
     for (const [key, t] of this.tiles) {
       if (!this.near(Math.floor(key / 8192), key % 8192, view)) {
         this.dropTile(key);
@@ -398,9 +430,13 @@ export class Forest {
     }
     if (this.onReady) {
       this.openT += dt;
-      if (this.openT > OPEN_BY || inView.every((k) => this.ready(k))) {
+      const ready = inView.filter((k) => this.ready(k)).length;
+      forestLoad.p = inView.length ? ready / inView.length : 1;
+      if (this.openT > OPEN_BY || ready === inView.length) {
         const f = this.onReady;
         this.onReady = null;
+        forestLoad.p = 1;
+        forestLoad.done = true;
         f();
       }
     }
@@ -408,7 +444,7 @@ export class Forest {
     const start = performance.now();
     while (performance.now() - start < budget) {
       if (!this.job) {
-        const next = this.wanted(view, AHEAD_X, AHEAD_Y).find((k) => !this.ready(k));
+        const next = this.wanted(view, AHEAD_X, AHEAD_Y, true).find((k) => !this.ready(k));
         if (next === undefined) return;
         const col = Math.floor(next / 8192);
         const row = next % 8192;
@@ -441,6 +477,8 @@ export class Forest {
   prime(view: Phaser.Geom.Rectangle, ready: () => void): void {
     this.onReady = ready;
     this.openT = 0;
+    forestLoad.p = 0;
+    forestLoad.done = false;
     this.updateGround(view, 0, 0);
     if (!this.pool) for (const key of this.chunksIn(view, STAND)) this.stand(key);
   }
@@ -468,13 +506,15 @@ export class Forest {
     const place = (obj: Placed['obj'], x: number, y: number, hw: number, up: number) => st.placed.push({ obj, x0: x - hw, x1: x + hw, y0: y - up, y1: y + 6 });
 
     for (const t of l.trees) {
+      // Where the White Stag opened a glade, the trees stand aside.
+      if (this.gen.inGlade(t.x, t.y)) continue;
       const old = t.kind === 'oak' || t.kind === 'birch' || t.kind === 'pine';
       const obj = add.sprite(t.x, t.y, old ? 'tree' : 'ftree', `${t.kind}${t.v}`).setOrigin(0.5, TREE_BASE_Y / TREE_H).setPipeline('Lit').setDepth(t.y).setFlipX(t.flip);
       const shape = WOOD_SHAPE[t.kind];
       st.trees.push({ obj, x: t.x, y: t.y, kind: t.kind, v: t.v, anim: `${old ? 'tree' : 'ftree'}_${t.kind}${t.v}`, swaying: false, alpha: 1, r: shape.canopyR, top: shape.canopyY, glow: null });
       place(obj, t.x, t.y, 48, TREE_BASE_Y);
     }
-    for (const p of l.props) this.prop(st, place, p.kind, p.x, p.y, p.v, p.flip);
+    for (const p of l.props) if (!this.gen.inGlade(p.x, p.y)) this.prop(st, place, p.kind, p.x, p.y, p.v, p.flip);
     for (const r of l.rays) {
       const img = add.image(r.x, r.y, 'ray', `ray${r.seed % 2}`).setOrigin(RAY_FOOT_X / RAY_W, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(r.y + 1).setVisible(false);
       st.rays.push({ img, x: r.x, y: r.y, seed: r.seed });
@@ -605,6 +645,31 @@ export class Forest {
     return img;
   }
 
+  /**
+   * The forest stands aside round (x, y) for a secret place (see
+   * WhiteStag.ts): the trees and undergrowth there fade away in a glitter,
+   * stop no feet, and aren't stood up again; the place's own `blocks` do.
+   */
+  part(x: number, y: number, r: number, blocks: Blocker[]): void {
+    this.gen.addGlade(x, y, r, blocks);
+    const inside = (px: number, py: number) => (px - x) ** 2 + (py - y) ** 2 < r * r;
+    for (const st of this.stood.values()) {
+      const gone = new Set<Placed['obj']>();
+      st.placed = st.placed.filter((p) => {
+        const px = (p.x0 + p.x1) / 2;
+        const py = p.y1 - 6;
+        const key = p.obj.texture.key;
+        if (!inside(px, py) || key === 'elder' || key === 'elder_e') return true;
+        gone.add(p.obj);
+        if (key === 'ftree' || key === 'tree') this.world.debris([0xffffff, 0xd8f0ff, 0xb8ffd8], px, py - 30, 14, py + 20, 'spores');
+        this.world.tweens.add({ targets: p.obj, alpha: 0, duration: 1100, ease: 'Sine.easeIn', onComplete: () => p.obj.destroy() });
+        return false;
+      });
+      st.trees = st.trees.filter((t) => !gone.has(t.obj));
+      st.shrooms = st.shrooms.filter((g) => !gone.has(g.halo));
+    }
+  }
+
   /** Take a chunk's things down again. */
   private unstand(key: number): void {
     const st = this.stood.get(key);
@@ -623,6 +688,7 @@ export class Forest {
    */
   update(time: number, dt: number, d: number, hero: { x: number; y: number; alive: boolean }, view: Phaser.Geom.Rectangle): void {
     this.view.setTo(view.x, view.y, view.width, view.height);
+    this.steer(hero, dt);
     this.night = 1 - d;
     this.updateGround(view, settings.values.quality !== 'full' ? 2.5 : 4, dt);
 
@@ -695,6 +761,7 @@ export class Forest {
     this.motes.emitting = !nightRays && strength > 0.3 && raysShown;
     this.treeLeaves.emitting = leafy;
 
+    this.stag.update(time, dt, d, hero, view);
     if (hero.alive) {
       this.visit(hero, dt);
       this.updateRegion(hero, dt);

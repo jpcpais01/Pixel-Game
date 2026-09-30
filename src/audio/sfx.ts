@@ -827,6 +827,24 @@ export class Sfx {
     this.sparkle(out, t + 0.05, 4, 0.05);
   }
 
+  /**
+   * The White Stag: `appear` a soft rising chime as it steps out of the
+   * trees; `reveal` a wider, slower bloom of bells as its secret place opens;
+   * `flee` a snort and bells falling away as it bolts and fades.
+   */
+  stag(t: number, pan: number, kind: 'appear' | 'reveal' | 'flee'): void {
+    const out = this.out(pan, 0.45, 0.8);
+    if (kind === 'flee') {
+      this.burstNoise(out, t, 'bandpass', 900, 400, 1.4, 0.12, 0.16);
+      [1568, 1319, 1047, 880].forEach((f, i) => this.bell(out, t + 0.12 + i * 0.08, f, 0.03, 0.8));
+      return;
+    }
+    const notes = kind === 'appear' ? [880, 1109, 1319, 1760] : [659, 880, 1109, 1319, 1760, 2217];
+    const gap = kind === 'appear' ? 0.14 : 0.18;
+    notes.forEach((f, i) => this.bell(out, t + i * gap, f, 0.035, 1.6));
+    this.sparkle(out, t + notes.length * gap * 0.6, kind === 'appear' ? 4 : 8, 0.07);
+  }
+
   /** A card turning over: a soft swish, then a chime in its rarity's key. */
   cardFlip(t: number, tier: number): void {
     const out = this.out(0, 0.45, 0.5);
@@ -1094,6 +1112,63 @@ export class Sfx {
     const src = this.m.noiseSource();
     src.connect(bp);
     this.m.startNoise(src, t, dur + 0.1);
+  }
+
+  /**
+   * A boss shows itself for the first time: a ground-shaking boom under a
+   * growl that bends down, with a rush of air. A Myth's is deeper and longer.
+   */
+  bossRoar(t: number, pan: number, myth: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 1, 0.7);
+    const len = myth ? 1.5 : 1.1;
+    this.chirp(out, t, 'sine', myth ? 70 : 90, 26, 1, len);
+    const growl = filter(ctx, 'lowpass', 700, 2, out);
+    sweep(growl.frequency, t, 900, 240, len);
+    for (const f of myth ? [58, 58.8, 87] : [73, 73.9, 110]) this.chirp(growl, t + 0.04, 'sawtooth', f * 1.35, f * 0.8, 0.16, len);
+    this.burstNoise(out, t, 'lowpass', 2600, 160, 0.8, 0.6, len, true);
+    this.burstNoise(out, t + 0.05, 'bandpass', 500, 1400, 2, 0.12, len * 0.8, true);
+  }
+
+  /**
+   * The boss's name comes up: a brass stab of a minor chord over a timpani
+   * hit, ringing out long. A Myth's adds a low octave and a bell high above.
+   */
+  bossTitle(t: number, myth: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.9, 0.9);
+    this.chirp(out, t, 'sine', 110, 48, 0.9, 0.9);
+    this.burstNoise(out, t, 'lowpass', 1200, 200, 0.7, 0.35, 0.4, true);
+    const brass = gain(ctx, 0, filter(ctx, 'lowpass', 1500, 1.2, out));
+    hit(brass.gain, t, 0.22, 0.03, 2.6);
+    for (const f of myth ? [110, 220, 261.6, 329.6, 440] : [220, 261.6, 329.6]) {
+      for (const d of [-4, 4]) {
+        const o = osc(ctx, 'sawtooth', f, brass);
+        o.detune.value = d;
+        o.start(t);
+        o.stop(t + 2.8);
+      }
+    }
+    if (myth) this.bell(out, t + 0.04, 880, 0.05, 2.6);
+  }
+
+  /**
+   * The killing blow on a boss: a hard crack, the world dropping out under a
+   * deep boom, and a high ring hanging in the air through the slow motion.
+   */
+  finalBlow(t: number, myth: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 1, 0.85);
+    this.burstNoise(out, t, 'highpass', 5000, 1800, 0.8, 0.8, 0.12);
+    this.chirp(out, t, 'square', 1400, 180, 0.12, 0.1);
+    const b = gain(ctx, 0, out);
+    hit(b.gain, t + 0.02, 1, 0.004, myth ? 1.8 : 1.3);
+    const lo = osc(ctx, 'sine', 80, b);
+    sweep(lo.frequency, t + 0.02, 80, 22, myth ? 1.6 : 1.2);
+    lo.start(t);
+    lo.stop(t + 2);
+    this.burstNoise(out, t + 0.02, 'lowpass', 3000, 120, 0.7, 0.5, myth ? 1.6 : 1.2, true);
+    this.bell(out, t + 0.06, myth ? 1318.5 : 1568, 0.05, 3);
   }
 
   /** The supernova: a huge boom, a roar of light and a ringing chord. */

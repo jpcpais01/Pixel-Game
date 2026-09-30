@@ -49,9 +49,10 @@ const WOOD = 0x6a4424;
 const WOOD_LIT = 0xb88a50;
 const WOOD_DARK = 0x2a1a0c;
 
-const RARITY_NAME = { common: 'Common', rare: 'Rare', omen: 'Omen' } as const;
-const RARITY_TINT = { common: LAVENDER, rare: GOLD, omen: OMEN } as const;
-const RARITY_TIER = { common: 0, rare: 1, omen: 2 } as const;
+const MOONLIT = 0xd8f0ff;
+const RARITY_NAME = { common: 'Common', rare: 'Rare', omen: 'Omen', secret: 'Secret' } as const;
+const RARITY_TINT = { common: LAVENDER, rare: GOLD, omen: OMEN, secret: MOONLIT } as const;
+const RARITY_TIER = { common: 0, rare: 1, omen: 2, secret: 2 } as const;
 
 interface Cell {
   def: CritterDef;

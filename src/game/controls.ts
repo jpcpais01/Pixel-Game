@@ -36,7 +36,7 @@ export const controls = {
   beamTap: false,
   /** A touch button being dragged, for the world's aim line; `cancel` when pulled back to its centre. `ult` is the Special's button. */
   aiming: null as { special: boolean; ult?: boolean; cancel: boolean } | null,
-  /** Hotbar slots (0..8) asked to be used since the world last looked: taps on the HUD and keys 1 to 9. */
+  /** Hotbar slots (0..2) asked to be used since the world last looked: taps on the HUD and keys 1 to 3. */
   items: [] as number[],
   /** The net's touch button tapped (E on a keyboard): swing it once. */
   netTap: false,

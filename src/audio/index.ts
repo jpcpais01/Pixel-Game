@@ -400,6 +400,11 @@ class GameSound {
     if (t !== null) this.sfx!.critterRelease(t, pan);
   }
 
+  stag(kind: 'appear' | 'reveal' | 'flee', pan = 0): void {
+    const t = this.slot(`stag_${kind}`);
+    if (t !== null) this.sfx!.stag(t, pan, kind);
+  }
+
   cardFlip(tier: number): void {
     const t = this.slot('cardFlip');
     if (t !== null) this.sfx!.cardFlip(t, tier);
@@ -538,6 +543,21 @@ class GameSound {
   gravityWell(seconds: number): void {
     const t = this.slot('gravityWell');
     if (t !== null) this.sfx!.gravityWell(t, seconds);
+  }
+
+  bossRoar(pan = 0, myth = false): void {
+    const t = this.slot('bossRoar');
+    if (t !== null) this.sfx!.bossRoar(t, pan, myth);
+  }
+
+  bossTitle(myth = false): void {
+    const t = this.slot('bossTitle');
+    if (t !== null) this.sfx!.bossTitle(t, myth);
+  }
+
+  finalBlow(myth = false): void {
+    const t = this.slot('finalBlow');
+    if (t !== null) this.sfx!.finalBlow(t, myth);
   }
 
   nova(): void {

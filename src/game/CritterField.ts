@@ -88,6 +88,8 @@ interface Critter {
   x0: number;
   y0: number;
   life: number;
+  /** Brought out on purpose (the Moon Hare at its hollow): it keeps to its home whatever the hour. */
+  stays: boolean;
   /** 0..1 faded in; `going` fades it out. */
   shown: number;
   going: boolean;
@@ -174,6 +176,19 @@ export class CritterField {
       this.marker.setVisible(false);
       this.key.setVisible(false);
     }
+  }
+
+  /**
+   * Bring `def` out at (x, y) now, to live round there for `life` ms,
+   * whatever the hour or the pool (the White Stag's Moon Hare at its hollow).
+   */
+  release(def: CritterDef, x: number, y: number, life: number): void {
+    const c = this.make(def, x, y);
+    c.stays = true;
+    c.life = life;
+    c.rest = 1200;
+    this.out.push(c);
+    this.world.debris([0xffffff, def.tint], snap(x), snap(y) - 6, 12, y + 20, 'spores');
   }
 
   /** Swing the net: at the critter in reach if there is one, else the way the hero faces. */
@@ -358,6 +373,7 @@ export class CritterField {
       x0: x,
       y0: y,
       life: def.rarity === 'common' ? LIFE : RARE_LIFE,
+      stays: false,
       shown: 0,
       going: false,
       facing: Math.random() < 0.5 ? -1 : 1,
@@ -410,7 +426,7 @@ export class CritterField {
     c.life -= dt;
     const far = Math.hypot(c.x - heroX, c.y - heroY) > LEAVE_DIST;
     // Left far behind, its time up, or the light no longer its own: off it goes.
-    if (!c.going && (far || c.life <= 0 || !here.has(c.def))) c.going = true;
+    if (!c.going && (far || c.life <= 0 || (!c.stays && !here.has(c.def)))) c.going = true;
     c.shown = Phaser.Math.Clamp(c.shown + (c.going ? -dt : dt) / FADE, 0, 1);
 
     const rare = c.def.rarity !== 'common';

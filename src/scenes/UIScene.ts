@@ -2,13 +2,15 @@ import Phaser from 'phaser';
 import { controls, beamHud, comboHud, critterHud } from '../game/controls';
 import { fishHud } from '../game/fish';
 import { daynight, PHASES } from '../game/daynight';
-import { DPR as D } from '../game/display';
+import { DPR as D, menuZoom } from '../game/display';
 import { characterById } from '../game/characters';
 import { HOTBAR_SIZE, inventory } from '../game/items';
 import { heroBuffs } from '../game/buffs';
 import { GearHud } from '../ui/gearHud';
 import { KeeperHud } from '../ui/keeperHud';
 import { BuildHud } from '../ui/buildHud';
+import { StatsHud } from '../ui/statsHud';
+import type { WorldScene } from './WorldScene';
 import { build } from '../game/build';
 import { energy } from '../game/energy';
 import { ensureUltIcons, ultFor } from '../game/ultimate';
@@ -24,8 +26,8 @@ import type { Pal } from '../game/ultimate/ink';
  * at the cursor), a right click the special, Space the Special and the keyboard walks, so the joystick
  * hides and the ability buttons shrink to indicators above the hotbar.
  *
- * Along the bottom, between the joystick and the buttons, the hotbar: nine
- * item slots, tapped or pressed 1 to 9. Active buffs show as badges under the
+ * The hotbar: three item slots, tapped or pressed 1 to 3, in a row over the
+ * ability buttons on a touch screen and along the bottom with a mouse. Active buffs show as badges under the
  * day/night toggle, draining as they run out. Gear found has a chest button
  * by the pause button (or I / G) opens the bag, where worn gear can be
  * swapped (see ui/gearHud.ts).
@@ -88,6 +90,10 @@ export class UIScene extends Phaser.Scene {
   private gearHud!: GearHud;
   /** A Rune Temple keeper's counter, when the hero talks to one. */
   private keeperHud!: KeeperHud;
+  /** The hero's stats under the buff badges, and the "i" card on their moves. */
+  private statsHud!: StatsHud;
+  /** Where the stats panel stands, eased as buff badges come and go. */
+  private statsY = -1;
   /** Build mode in a Home: its buttons and tray. */
   private buildHud!: BuildHud;
   /** The pointer building on the world, while build mode is on. */
@@ -186,7 +192,7 @@ export class UIScene extends Phaser.Scene {
     return new Phaser.Math.Vector2(bp.x - R * 1.45, bp.y - R * 2.75);
   }
 
-  /** The Special's button sits up and to the left of the attack button, clear of the hotbar. */
+  /** The Special's button sits up and to the left of the attack button. */
   private get ultPos(): Phaser.Math.Vector2 {
     if (controls.mouse) return this.indicatorPos.ult;
     const R = this.R;
@@ -195,11 +201,25 @@ export class UIScene extends Phaser.Scene {
   }
 
   /**
-   * The hotbar's slots: square, side by side, centred in the room between the
-   * joystick's resting spot and the attack button, along the bottom edge.
+   * The hotbar's slots: square, side by side. On a touch screen they sit in a
+   * row just over the ability buttons, right-aligned with the beam button's
+   * outer edge so the thumb finds them with the rest of its buttons and the
+   * row stays clear of the net's button on its left. With a mouse they are
+   * centred along the bottom edge, between the joystick's resting spot and
+   * the attack button's.
    */
   private get hotbar(): { x: number; y: number; s: number; gap: number } {
     const R = this.R;
+    if (!controls.mouse) {
+      const gap = Math.round(4 * D);
+      const s = Math.round(Phaser.Math.Clamp(R * 0.66, 30 * D, 46 * D));
+      const w = s * HOTBAR_SIZE + gap * (HOTBAR_SIZE - 1);
+      const bp = this.padPos;
+      const right = Math.min(bp.x + R * 1.35, this.scale.width - 8 * D);
+      // The beam button's ring reaches about R * 0.9 above its centre.
+      const bottom = bp.y - R * 1.95 - R * 0.95;
+      return { x: Math.round(right - w), y: Math.round(bottom - s), s, gap };
+    }
     const left = this.restPos.x + R * 1.1;
     const right = this.padPos.x - R * 1.2;
     const gap = Math.round(3 * D);
@@ -266,6 +286,9 @@ export class UIScene extends Phaser.Scene {
     this.gearHud = new GearHud(this, () => this.releaseAll());
     this.keeperHud = new KeeperHud(this, () => this.releaseAll());
     this.buildHud = new BuildHud(this, () => this.releaseAll());
+    const world = this.scene.get('world') as WorldScene;
+    this.statsHud = new StatsHud(this, hero, () => world.heroSheet(), () => this.releaseAll());
+    this.statsY = -1;
     this.buildPointer = null;
     this.building = false;
     this.netButton = this.add.graphics();
@@ -280,12 +303,16 @@ export class UIScene extends Phaser.Scene {
       const tr = this.toggleRect;
       if (fishHud.active) {
         // Fishing: its overlay takes every press (see FishScene).
+      } else if (this.statsHud.open && this.statsHud.pointerDown(p)) {
+        // The "i" card is open: a tap anywhere closes it.
       } else if (this.keeperHud.pointerDown(p)) {
         // A keeper's counter is open: it takes every press.
       } else if (this.gearHud.pointerDown(p)) {
         // The bag's button, or a tap while the bag is open.
       } else if (this.buildHud.pointerDown(p)) {
         // The build and friends buttons, or the build tray.
+      } else if (this.statsHud.pointerDown(p)) {
+        // The stats panel folds or opens; the "i" opens the card.
       } else if (daynight.enabled && Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width, tr.height + 8 * D), p.x, p.y)) {
         // Tap a cell to pick its time of day (which stops auto).
         daynight.set(PHASES[Phaser.Math.Clamp(Math.floor(((p.x - tr.x) / tr.width) * 4), 0, 3)]);
@@ -614,8 +641,25 @@ export class UIScene extends Phaser.Scene {
       .setScale(Math.max(2, Math.floor((ac.radius * 2) / 16)))
       .setAlpha(auto ? 1 : 0.5);
     this.drawBuffs(tr);
+    this.placeStats(tr, delta);
     this.drawHotbar();
     this.hideForBuilding();
+  }
+
+  /**
+   * The stats panel stands at the left under the buff badges' row, and moves
+   * up into it when there are none, easing between the two.
+   */
+  private placeStats(tr: Phaser.Geom.Rectangle, delta: number): void {
+    const menu = menuZoom(this.scale.width, this.scale.height);
+    const z = menu >= 3 ? menu - 1 : menu;
+    const top = Math.round(daynight.enabled ? tr.bottom + 10 * D : tr.y);
+    const badges = Math.round(tr.height * 0.9) + 3 * D + Math.round(3 * D) + 8 * D;
+    const want = top + (heroBuffs.active.length ? badges : 0);
+    this.statsY = this.statsY < 0 ? want : this.statsY + (want - this.statsY) * Math.min(1, delta / 90);
+    if (Math.abs(want - this.statsY) < 0.5) this.statsY = want;
+    this.statsHud.place(tr.x, this.statsY, z, build.on || fishHud.active);
+    this.statsHud.update();
   }
 
   /** While building, the battle buttons and the hotbar make way for the build tray. */
@@ -630,7 +674,7 @@ export class UIScene extends Phaser.Scene {
     this.building = on;
   }
 
-  /** Nine slots: an item's icon and count, its key in the corner, a dark wipe while it cools down. */
+  /** Three slots: an item's icon and count, its key in the corner, a dark wipe while it cools down. */
   private drawHotbar(): void {
     const { x: bx, y: by, s, gap } = this.hotbar;
     const iconScale = Math.max(1, Math.floor((s - 6 * D) / 16));
