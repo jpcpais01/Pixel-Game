@@ -6,6 +6,7 @@ import { GEAR_DROP } from '../art/gear';
 import { GEM_DROPS, gemDropFor } from '../art/shop';
 import { DUST_DROP_H } from '../art/omens';
 import type { Effect } from './Slash';
+import { petMods } from './pets';
 
 /** What lies on the ground: a potion for the hotbar, a piece of gear, gems or dust (`n` of them, in one pile). */
 export type Loot = { kind: 'item'; id: ItemId } | { kind: 'gear'; def: GearDef } | { kind: 'gems'; n: number } | { kind: 'dust'; n: number };
@@ -163,7 +164,8 @@ export class Pickup {
             ? { tint: DUST_ACCENT, texture: 'dust_drop' }
             : { tint: ITEMS[loot.id].tint, texture: ITEMS[loot.id].drop };
     const h = gear ? GEAR_DROP : gems ? GEM_DROPS[pile].h : dust ? DUST_DROP_H : DROP_H;
-    this.magnet = gear || gems || dust ? GEAR_MAGNET : MAGNET;
+    // A worn scarab draws loot in from further off.
+    this.magnet = (gear || gems || dust ? GEAR_MAGNET : MAGNET) * petMods.reach;
     this.life = gear || gems || dust ? LIFE * 2 : LIFE;
     this.shine = gear ? { common: 0.8, uncommon: 0.9, rare: 1, epic: 1.25, legendary: 1.5 }[gear.rarity] : gems ? { one: 0.9, few: 1.15, heap: 1.5, hoard: 1.9 }[pile] : dust ? Math.min(1.3, 0.8 + dust * 0.05) : 0.75;
     this.fromX = x;
