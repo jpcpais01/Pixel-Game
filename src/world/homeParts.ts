@@ -135,6 +135,10 @@ export interface PartDef {
   wall?: boolean;
   /** Can be mirrored. */
   flip?: boolean;
+  /** Turns to face each way: front, right, back, left (Thing.turn 0..3); its side views swap its footprint round. */
+  turns?: boolean;
+  /** Drawn side on (facing right) before it could turn, so old saves without a turn keep it that way. */
+  sideways?: boolean;
   /** A light it gives off: colour, reach, strength, how much of it the day washes out, and its height above the base. */
   light?: { color: number; radius: number; intensity: number; day: number; y: number; flicker?: boolean };
   /** A chimney rises from the roof above it, smoking. */
@@ -165,7 +169,7 @@ export const PARTS: PartDef[] = [
   { id: 'stepping', name: 'Stepping stones', tab: 'garden', w: 1, h: 1, block: 'none', flat: true, flip: true },
   { id: 'lilypad', name: 'Lily pads', tab: 'garden', w: 1, h: 1, block: 'none', flat: true, water: 'only', flip: true },
   { id: 'reeds', name: 'Reeds', tab: 'garden', w: 1, h: 1, block: 'none', water: 'too', flip: true },
-  { id: 'bench', name: 'Garden bench', tab: 'garden', w: 2, h: 1, block: 'full' },
+  { id: 'bench', name: 'Garden bench', tab: 'garden', w: 2, h: 1, block: 'full', turns: true },
   { id: 'well', name: 'Well', tab: 'garden', w: 2, h: 2, block: 'full' },
   { id: 'birdbath', name: 'Birdbath', tab: 'garden', w: 1, h: 1, block: 'post' },
   { id: 'scarecrow', name: 'Scarecrow', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
@@ -174,16 +178,16 @@ export const PARTS: PartDef[] = [
   { id: 'signpost', name: 'Signpost', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
 
   // Furniture
-  { id: 'bed', name: 'Bed', tab: 'furniture', w: 1, h: 2, block: 'full', flip: true },
-  { id: 'bigbed', name: 'Double bed', tab: 'furniture', w: 2, h: 2, block: 'full' },
+  { id: 'bed', name: 'Bed', tab: 'furniture', w: 1, h: 2, block: 'full', turns: true },
+  { id: 'bigbed', name: 'Double bed', tab: 'furniture', w: 2, h: 2, block: 'full', turns: true },
   { id: 'bookshelf', name: 'Bookshelf', tab: 'furniture', w: 2, h: 1, block: 'full' },
   { id: 'wardrobe', name: 'Wardrobe', tab: 'furniture', w: 2, h: 1, block: 'full' },
   { id: 'dresser', name: 'Dresser', tab: 'furniture', w: 1, h: 1, block: 'full', flip: true },
   { id: 'table', name: 'Table', tab: 'furniture', w: 2, h: 1, block: 'full' },
   { id: 'roundtable', name: 'Round table', tab: 'furniture', w: 1, h: 1, block: 'full' },
-  { id: 'chair', name: 'Chair', tab: 'furniture', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'chair', name: 'Chair', tab: 'furniture', w: 1, h: 1, block: 'post', turns: true, sideways: true },
   { id: 'stool', name: 'Stool', tab: 'furniture', w: 1, h: 1, block: 'post' },
-  { id: 'sofa', name: 'Sofa', tab: 'furniture', w: 2, h: 1, block: 'full' },
+  { id: 'sofa', name: 'Sofa', tab: 'furniture', w: 2, h: 1, block: 'full', turns: true },
   { id: 'desk', name: 'Writing desk', tab: 'furniture', w: 2, h: 1, block: 'full', flip: true },
   { id: 'chest', name: 'Chest', tab: 'furniture', w: 1, h: 1, block: 'full', flip: true },
   { id: 'barrel', name: 'Barrel', tab: 'furniture', w: 1, h: 1, block: 'full' },
@@ -207,6 +211,7 @@ export const PARTS: PartDef[] = [
   { id: 'brazier', name: 'Brazier', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xff9444, radius: 140, intensity: 2, day: 0.3, y: 16, flicker: true } },
   { id: 'crystal', name: 'Rune crystal', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0x9a6cff, radius: 100, intensity: 1.6, day: 0.45, y: 10 } },
   { id: 'candelabra', name: 'Candelabra', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xffc070, radius: 90, intensity: 1.5, day: 0.25, y: 22, flicker: true } },
+  { id: 'mushlamp', name: 'Mushroom lamp', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xffa898, radius: 64, intensity: 1.1, day: 0.25, y: 10 } },
   { id: 'fairylights', name: 'Firefly jar', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xc8ff7a, radius: 70, intensity: 1.2, day: 0.2, y: 8 } },
 
   // Wall decor
@@ -242,3 +247,6 @@ PARTS.push(
 
 const byId = new Map(PARTS.map((p) => [p.id, p]));
 export const partById = (id: string): PartDef | undefined => byId.get(id);
+
+/** A part's footprint in cells when turned `turn` quarter turns: a side view lies the other way. */
+export const extent = (p: PartDef, turn = 0): { w: number; h: number } => (p.turns && turn % 2 ? { w: p.h, h: p.w } : { w: p.w, h: p.h });

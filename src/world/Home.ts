@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CHIMNEY_H, glows, thingLook, warmHome, wallFrameName } from '../art/homeArt';
 import { paintFloors } from '../art/homeFloors';
-import { EAVES, paintRoof, type RoofArt } from '../art/homeWalls';
+import { paintRoof, type RoofArt } from '../art/homeWalls';
 import { JAR_SPOTS } from '../art/homeProps';
 import { CRITTER_H, CRITTER_OX, CRITTER_OY, CRITTER_W } from '../art/critters';
 import { pixelCanvas } from '../art/canvas';
@@ -16,9 +16,10 @@ import { session, type Msg } from '../net/session';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HOME_SPAWN, homeWalkable, setHomeMask } from './homeGround';
 import { HomeCritters } from './HomeCritters';
+import { HouseShadow, type Stack } from './houseShadow';
 import { treeLeaves } from './Scenery';
 import { CELL, COLS, HomeLayout, HomeMask, PLOT_H, PLOT_W, PLOT_X, PLOT_Y, ROWS, cellIndex, findHouses, inPlot, starterHome, type House, type Thing } from './homeLayout';
-import { FLOORS, WALLS, partById, wallKind, wallMat, type PartDef } from './homeParts';
+import { FLOORS, WALLS, extent, partById, wallKind, wallMat, type PartDef } from './homeParts';
 
 type Img = Phaser.GameObjects.Image;
 type Sprite = Phaser.GameObjects.Sprite;
@@ -91,7 +92,7 @@ interface Roof {
   art: RoofArt;
   key: string;
   img: Img;
-  shadow: Img;
+  shadow: HouseShadow;
   depth: number;
   reveal: number;
   alpha: number;
@@ -318,22 +319,14 @@ export class Home {
       const key = `hr${this.id}_${this.version++}`;
       const tex = this.scene.textures;
       tex.addCanvas(key, pixelCanvas(art.w, art.h, art.diffuse))!.setDataSource(pixelCanvas(art.w, art.h, art.normal));
-      const sil = new Uint8ClampedArray(art.w * art.h * 4);
-      for (let i = 0; i < art.w * art.h; i++) {
-        sil[i * 4] = 6;
-        sil[i * 4 + 1] = 8;
-        sil[i * 4 + 2] = 22;
-        sil[i * 4 + 3] = art.diffuse[i * 4 + 3];
-      }
-      tex.addCanvas(`${key}_s`, pixelCanvas(art.w, art.h, sil));
       const depth = PLOT_Y + (w.h.y1 + 1) * CELL + 1;
       const img = this.scene.add.image(PLOT_X + art.x, PLOT_Y + art.y, key).setOrigin(0).setPipeline('Lit').setDepth(depth);
-      // The roof's outline stands in for the whole house's: it falls from the foot of the front wall, not from the lifted eaves.
-      const shadow = sunShadow(this.scene.add.image(PLOT_X + art.x + art.w / 2, PLOT_Y + (w.h.y1 + 1) * CELL + EAVES, `${key}_s`).setOrigin(0.5, 1));
+      const shadow = new HouseShadow(this.scene, `${key}_s`, art.solid, PLOT_X, PLOT_Y);
       keep.push({ sig: w.sig, house: w.h, art, key, img, shadow, depth, reveal: 0, alpha: 1, chimneys: [] });
     }
     this.roofs = keep;
     // Chimneys: rebuilt every time, as hearths come and go under a roof that stays.
+    const stacks = new Map<Roof, Stack[]>(this.roofs.map((r) => [r, []]));
     for (const r of this.roofs) {
       for (const c of r.chimneys) {
         c.img.destroy();
@@ -362,7 +355,11 @@ export class Home {
         frequency: 420,
       }).setDepth(r.depth + 1);
       r.chimneys.push({ img, smoke });
+      // It casts with the house: a stack a little narrower than its drawing, from the roof up.
+      const lift = r.art.lift(px, py);
+      stacks.get(r)!.push({ x: px - 4, y: py - 2, w: 8, d: 5, base: lift, top: lift + CHIMNEY_H - 3 });
     }
+    for (const [r, s] of stacks) r.shadow.setStacks(s);
   }
 
   private dropRoof(r: Roof): void {
@@ -373,11 +370,10 @@ export class Home {
       c.smoke.destroy();
     }
     this.scene.textures.remove(r.key);
-    this.scene.textures.remove(`${r.key}_s`);
   }
 
   private static keyOf(t: Thing): string {
-    return `${t.id}@${t.x},${t.y}${t.flip ? 'f' : ''}`;
+    return `${t.id}@${t.x},${t.y}${t.flip ? 'f' : ''}${t.turn ? `r${t.turn}` : ''}`;
   }
 
   /** Placed things: new ones stood up, removed ones taken away; the critter shelves refilled. */
@@ -391,7 +387,7 @@ export class Home {
       this.placed.delete(k);
     }
     for (const [k, t] of want) if (!this.placed.has(k)) this.place(k, t);
-    for (const p of this.placed.values()) p.house = this.houseAt[cellIndex(p.t.x, p.t.y + p.part.h - 1)];
+    for (const p of this.placed.values()) p.house = this.houseAt[cellIndex(p.t.x, p.t.y + extent(p.part, p.t.turn).h - 1)];
     if (this.leaves) this.leaves.emitting = l.things.some((t) => LEAF_TINTS[t.id]);
     this.fillShelves();
     // Let out with a sparkle while building (or, for a visitor, once the home has come), not as the home first appears.
@@ -514,7 +510,8 @@ export class Home {
       r.alpha += (want - r.alpha) * Math.min(1, dt / 120);
       const a = r.alpha * (1 - Phaser.Math.Easing.Sine.InOut(r.reveal));
       r.img.setAlpha(a);
-      r.shadow.setAlpha(SUN_SHADOW_ALPHA * d * (1 - r.reveal));
+      r.shadow.img.setAlpha(SUN_SHADOW_ALPHA * d * (1 - r.reveal));
+      if (d > 0.01 && r.reveal < 1) r.shadow.update();
       for (const c of r.chimneys) {
         c.img.setAlpha(a);
         c.smoke.emitting = a > 0.5;
@@ -598,9 +595,11 @@ export class Home {
     const pick = build.pick;
     const erase = p.erase || !pick;
     const thing = !erase && pick?.layer === 'thing' ? partById(pick.id) ?? null : null;
+    const turn = thing?.turns ? build.turn : 0;
+    const size = thing ? extent(thing, turn) : { w: 1, h: 1 };
     // A thing's footprint hangs from the cell under the pointer by its middle, so the pointer is at its foot.
-    const fx = thing ? cx - Math.floor((thing.w - 1) / 2) : cx;
-    const fy = thing ? cy - (thing.h - 1) : cy;
+    const fx = cx - Math.floor((size.w - 1) / 2);
+    const fy = cy - (size.h - 1);
 
     if (build.pressed) {
       build.pressed = false;
@@ -610,7 +609,7 @@ export class Home {
     if (p.down && !thing) this.stroke(cx, cy, erase);
     if (build.released) {
       build.released = false;
-      if (thing) this.placeThing(thing, fx, fy);
+      if (thing) this.placeThing(thing, fx, fy, turn);
       else this.stroke(cx, cy, erase);
       this.lastCell = null;
       this.endStroke();
@@ -621,10 +620,10 @@ export class Home {
     this.cursor.setVisible(show);
     this.ghost.setVisible(show && !!thing);
     if (!show) return;
-    const ok = erase ? this.canErase(cx, cy) : thing ? this.layout.canPlace(thing, fx, fy) && !this.onHero(thing, fx, fy) : this.canPaint(cx, cy);
+    const ok = erase ? this.canErase(cx, cy) : thing ? this.layout.canPlace(thing, fx, fy, turn) && !this.onHero(thing, fx, fy, turn) : this.canPaint(cx, cy);
     const col = erase ? 0xff9a6a : ok ? 0x9cff8a : 0xff6a6a;
-    const bw = (thing?.w ?? 1) * CELL;
-    const bh = (thing?.h ?? 1) * CELL;
+    const bw = size.w * CELL;
+    const bh = size.h * CELL;
     const g = this.cursor.clear();
     g.fillStyle(col, 0.16);
     g.fillRect(PLOT_X + fx * CELL, PLOT_Y + fy * CELL, bw, bh);
@@ -634,7 +633,7 @@ export class Home {
       this.ghost.setTexture('critters', `${thing.critter}_0`).setOrigin(CRITTER_OX / CRITTER_W, CRITTER_OY / CRITTER_H).setFlipX(false);
       this.ghost.setPosition(PLOT_X + (fx + 0.5) * CELL, PLOT_Y + (fy + 1) * CELL - 5).setTint(ok ? 0xffffff : 0xff8080);
     } else if (thing) {
-      const look = thingLook({ id: thing.id, x: fx, y: fy, flip: build.flip && !!thing.flip });
+      const look = thingLook({ id: thing.id, x: fx, y: fy, flip: build.flip && !!thing.flip, turn });
       this.ghost.setTexture(look.key, look.frame).setOrigin(look.ox, look.oy).setFlipX(look.flipX).setPosition(look.x, look.y).setTint(ok ? 0xffffff : 0xff8080);
     }
   }
@@ -747,15 +746,16 @@ export class Home {
   }
 
   /** Would this thing stand on the hero? */
-  private onHero(p: PartDef, fx: number, fy: number): boolean {
+  private onHero(p: PartDef, fx: number, fy: number, turn: number): boolean {
     if (p.block === 'none' || p.wall) return false;
-    for (let y = fy; y < fy + p.h; y++) for (let x = fx; x < fx + p.w; x++) if (this.heroIn(x, y)) return true;
+    const { w, h } = extent(p, turn);
+    for (let y = fy; y < fy + h; y++) for (let x = fx; x < fx + w; x++) if (this.heroIn(x, y)) return true;
     return false;
   }
 
-  private placeThing(p: PartDef, fx: number, fy: number): void {
-    if (!this.layout.canPlace(p, fx, fy) || this.onHero(p, fx, fy)) return;
-    this.layout.things.push({ id: p.id, x: fx, y: fy, flip: build.flip && !!p.flip });
+  private placeThing(p: PartDef, fx: number, fy: number, turn: number): void {
+    if (!this.layout.canPlace(p, fx, fy, turn) || this.onHero(p, fx, fy, turn)) return;
+    this.layout.things.push({ id: p.id, x: fx, y: fy, flip: build.flip && !!p.flip, turn });
     if (!p.critter) sound.thud(0);
     this.refresh();
   }

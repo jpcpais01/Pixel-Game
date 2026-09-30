@@ -423,7 +423,20 @@ export interface RoofArt {
   y: number;
   /** How far up the roof lifts plot pixel (px, py) of its footprint, for a chimney standing on it. */
   lift(px: number, py: number): number;
+  /** The house as a solid, for its sun shadow: per pixel of the footprint frame (at plot x, y), what stands there from `base` px up to `top` (NONE: open ground). */
+  solid: HouseSolid;
 }
+
+export interface HouseSolid {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  base: Uint8Array;
+  top: Uint8Array;
+}
+/** A pixel of a house solid that holds nothing. */
+export const SOLID_NONE = 255;
 
 /** Paint house `h`'s roof, from its roof cells in `l`. */
 export function paintRoof(l: HomeLayout, h: House): RoofArt {
@@ -592,6 +605,19 @@ export function paintRoof(l: HomeLayout, h: House): RoofArt {
   }
   // The texture is one pixel wider all round for the outline: shift into a padded copy.
   const PW = W + 2;
+  // The house as a solid: walls from the ground up to the eaves, and the
+  // roof over them and its overhang, up to its slope.
+  const sBase = new Uint8Array(n).fill(SOLID_NONE);
+  const sTop = new Uint8Array(n).fill(SOLID_NONE);
+  for (let y = 0; y < FH; y++) {
+    for (let x = 0; x < FW; x++) {
+      const i = y * FW + x;
+      if (out[i] > E) continue;
+      sBase[i] = out[i] === 0 ? 0 : ROOF_ON;
+      sTop[i] = ROOF_ON + Math.round(hAt(x, y) * LIFT);
+    }
+  }
+
   const PH = HH + 2;
   const pd = new Uint8ClampedArray(PW * PH * 4);
   const pn = new Uint8ClampedArray(PW * PH * 4);
@@ -607,6 +633,7 @@ export function paintRoof(l: HomeLayout, h: House): RoofArt {
     x: fx0 - 1,
     y: fy0 - ROOF_ON - rise - 1,
     lift: (px, py) => ROOF_ON + Math.round(hAt(px - fx0, py - fy0) * LIFT),
+    solid: { x: fx0, y: fy0, w: FW, h: FH, base: sBase, top: sTop },
   };
 }
 
