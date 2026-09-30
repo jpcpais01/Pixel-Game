@@ -19,6 +19,8 @@ import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, ecli
 import { hex } from './pixel';
 import { bakedCanvas, pixelCanvas } from './canvas';
 import { packAtlas, registerAtlas, whiteOf, type PixelAtlas } from './atlas';
+import { CRITTER_ART, CRITTER_FRAMES, CRITTER_H, CRITTER_W, JAR_H, JAR_W, NET_ANGLES, NET_SIZE, critterFrames, jarFrame, netFrame, netIcon } from './critters';
+import { CRITTERS } from '../game/critters';
 import { EGG_H, EGG_W, PET_ART, PET_FRAMES, PET_H, PET_W, eggCracks, petFrames, wishEgg } from './pets';
 import { RIFT_PLATFORM_H, RIFT_PLATFORM_W, SHARD_H, SHARD_W, TEAR_FRAMES, TEAR_H, TEAR_W, blessingIcon, riftPlatformArt, riftShard, riftTear, riftVoidCanvas, type BlessingIcon } from './rift';
 import { RIFT_H, RIFT_W } from '../world/riftLayout';
@@ -63,6 +65,40 @@ import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHo
 import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
+import {
+  MERCHANT_FRAMES,
+  MERCHANT_H,
+  MERCHANT_W,
+  METEOR_FRAMES,
+  METEOR_SIZE,
+  ORE_H,
+  ORE_KINDS,
+  ORE_STAGES,
+  ORE_W,
+  PORTAL_FRAMES,
+  PORTAL_H,
+  PORTAL_W,
+  RUG_H,
+  RUG_W,
+  SHRINE_H,
+  SHRINE_STAGES,
+  SHRINE_W,
+  OMEN_ICON,
+  buildImpSheet,
+  dustDrop,
+  fogPuff,
+  merchantFrame,
+  meteorFrame,
+  omenIcon,
+  oreFrame,
+  portalFrame,
+  rugArt,
+  runeRing,
+  scorchMark,
+  shrineFrame,
+  type OmenIcon,
+} from './omens';
+import { FLAME_FRAMES, FLAME_H, FLAME_W, GRAVE_H, GRAVE_KINDS, GRAVE_W, WISP_PX, echoBuffIcon, graveStone, soulFlame, soulWisp } from './echoes';
 import { PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_W, leafBit, rayCanvas } from './trees';
 import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, RIPPLE_FRAMES, RIPPLE_H, RIPPLE_W, rippleFrames, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
 
@@ -343,6 +379,24 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
       repeat: -1,
     });
   }
+  // Critters: one lit sheet of every frame ('critters'), a looping animation
+  // each ('critter_<id>', wings beating faster than feet walk); each in its
+  // glass jar ('jars', 'jar_<id>', and 'empty' for one not caught yet); the
+  // net's swing ('net', n0..n4) and its button icon.
+  register(scene, 'critters', pack(critterFrames().map((f) => ({ name: f.name, r: f.canvas.render() })), CRITTER_W, CRITTER_H), CRITTER_W, CRITTER_H);
+  const jars: { name: string; r: RenderedFrame }[] = [{ name: 'empty', r: jarFrame(null, 0).render() }];
+  for (const def of CRITTERS) {
+    for (let f = 0; f < CRITTER_FRAMES; f++) jars.push({ name: `${def.id}_${f}`, r: jarFrame(def.id, f, def.gait === 'fly', def.glow).render() });
+  }
+  register(scene, 'jars', pack(jars, JAR_W, JAR_H), JAR_W, JAR_H);
+  for (const id of Object.keys(CRITTER_ART)) {
+    const fly = CRITTERS.find((d) => d.id === id)?.gait === 'fly';
+    const frames = Array.from({ length: CRITTER_FRAMES }, (_, f) => f);
+    scene.anims.create({ key: `critter_${id}`, frames: frames.map((f) => ({ key: 'critters', frame: `${id}_${f}` })), frameRate: fly ? 12 : 6, repeat: -1 });
+    scene.anims.create({ key: `jar_${id}`, frames: frames.map((f) => ({ key: 'jars', frame: `${id}_${f}` })), frameRate: fly ? 8 : 4, repeat: -1 });
+  }
+  register(scene, 'net', pack(NET_ANGLES.map((a, i) => ({ name: `n${i}`, r: netFrame(a).render() })), NET_SIZE, NET_SIZE), NET_SIZE, NET_SIZE, false);
+  scene.textures.addCanvas('icon_net', toCanvas(16, 16, netIcon().render().diffuse));
   const egg = wishEgg().render();
   scene.textures.addCanvas('nest_egg', toCanvas(EGG_W, EGG_H, egg.diffuse));
   scene.textures.addCanvas('nest_egg_e', toCanvas(EGG_W, EGG_H, egg.emissive));
@@ -457,6 +511,12 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   register(scene, 'bloom', pack(blooms, BLOOM_W, BLOOM_H, 12), BLOOM_W, BLOOM_H, true, true);
   register(scene, 'seed', pack(BLOOM_KINDS.map((k) => ({ name: k, r: bloomSeed(k).render() })), SEED_W, SEED_H), SEED_W, SEED_H);
   for (const k of ['might', 'ward', 'renew'] as const) scene.textures.addCanvas(`buff_${k}`, toCanvas(16, 16, buffIcon(k)));
+  // Echoes of the fallen: gravestones, the soul flame on their candles, the soul wisp and the blessing's badge.
+  register(scene, 'echo_grave', pack(frameList(Array.from({ length: GRAVE_KINDS }, (_, k) => graveStone(k)), 'g'), GRAVE_W, GRAVE_H), GRAVE_W, GRAVE_H);
+  register(scene, 'echo_flame', pack(frameList(Array.from({ length: FLAME_FRAMES }, (_, f) => soulFlame(f)), 'f'), FLAME_W, FLAME_H), FLAME_W, FLAME_H);
+  scene.anims.create({ key: 'echo_flame_burn', frames: scene.anims.generateFrameNames('echo_flame_e', { prefix: 'f', start: 0, end: FLAME_FRAMES - 1 }), frameRate: 10, repeat: -1 });
+  scene.textures.addCanvas('echo_wisp', toCanvas(WISP_PX, WISP_PX, soulWisp()));
+  scene.textures.addCanvas('buff_echo', toCanvas(16, 16, echoBuffIcon()));
 
   registerMonster(scene, 'frog', buildFrogSheet());
   registerMonster(scene, 'beetle', buildBeetleSheet());
@@ -665,6 +725,66 @@ function* deepTextures(scene: Phaser.Scene): Generator<void, void, void> {
   register(scene, 'gd_shard', pack(frameList([breathShard()], 's'), BREATH_SHARD, BREATH_SHARD), BREATH_SHARD, BREATH_SHARD);
   // Last: its presence means everything above is built.
   scene.textures.addCanvas('gd_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
+}
+
+/**
+ * The Omens' art (see art/omens.ts): the Treasure Imp, portals, meteors and
+ * star ore, the merchant and his rug, the shrine, fog, dust and the omens'
+ * icons. Built a step at a time in the background once an arena with omens
+ * is entered, long before the first one comes.
+ */
+export function* omenTextures(scene: Phaser.Scene): Generator<void, void, void> {
+  // A looping animation on a texture and on its glow alike: '<key>_loop' and '<key>_e_loop'.
+  const loop = (key: string, prefix: string, frames: number, fps: number) => {
+    for (const layer of [key, `${key}_e`]) {
+      scene.anims.create({ key: `${layer}_loop`, frames: scene.anims.generateFrameNames(layer, { prefix, start: 0, end: frames - 1 }), frameRate: fps, repeat: -1 });
+    }
+  };
+  // Left half built by a world closed early, it carries on where it stopped.
+  const has = (key: string) => scene.textures.exists(key);
+  if (!has('imp')) registerMonster(scene, 'imp', buildImpSheet());
+  yield;
+  for (const kind of ['imp', 'rift'] as const) {
+    if (has(`omen_portal_${kind}`)) continue;
+    register(scene, `omen_portal_${kind}`, pack(frameList(Array.from({ length: PORTAL_FRAMES }, (_, f) => portalFrame(kind, f)), 'p'), PORTAL_W, PORTAL_H), PORTAL_W, PORTAL_H);
+    loop(`omen_portal_${kind}`, 'p', PORTAL_FRAMES, 11);
+    yield;
+  }
+  if (!has('omen_meteor')) {
+    register(scene, 'omen_meteor', pack(frameList(Array.from({ length: METEOR_FRAMES }, (_, f) => meteorFrame(f)), 'm'), METEOR_SIZE, METEOR_SIZE), METEOR_SIZE, METEOR_SIZE);
+    loop('omen_meteor', 'm', METEOR_FRAMES, 14);
+  }
+  if (!has('omen_ore')) {
+    const ores: { name: string; r: RenderedFrame }[] = [];
+    for (let v = 0; v < ORE_KINDS; v++) for (let s = 0; s < ORE_STAGES; s++) ores.push({ name: `o${v}${s}`, r: oreFrame(v, s).render() });
+    register(scene, 'omen_ore', pack(ores, ORE_W, ORE_H), ORE_W, ORE_H, true, true);
+    yield;
+  }
+  if (!has('omen_merchant')) {
+    register(scene, 'omen_merchant', pack(frameList(Array.from({ length: MERCHANT_FRAMES }, (_, f) => merchantFrame(f)), 'f'), MERCHANT_W, MERCHANT_H), MERCHANT_W, MERCHANT_H);
+    loop('omen_merchant', 'f', MERCHANT_FRAMES, 6);
+  }
+  if (!has('omen_rug')) register(scene, 'omen_rug', pack(frameList([rugArt()], 'r'), RUG_W, RUG_H), RUG_W, RUG_H, false);
+  yield;
+  if (!has('omen_shrine')) {
+    register(scene, 'omen_shrine', pack(frameList(Array.from({ length: SHRINE_STAGES }, (_, s) => shrineFrame(s)), 's'), SHRINE_W, SHRINE_H), SHRINE_W, SHRINE_H);
+    yield;
+  }
+  if (has('buff_unity')) return;
+  for (const k of ['omen_fog', 'dust_drop', 'omen_scorch', 'omen_ring']) if (has(k)) scene.textures.remove(k);
+  const fogs = [0, 1, 2].map(fogPuff);
+  const fw = fogs[0].w;
+  const fh = fogs[0].h;
+  const fog = scene.textures.addCanvas('omen_fog', toCanvas(fw * 3, fh, sideBySide(fw, fh, fogs.map((b) => b.data))))!;
+  fogs.forEach((_, i) => fog.add(i, 0, i * fw, 0, fw, fh));
+  scene.textures.addCanvas('dust_drop', dustDrop().toCanvas());
+  scene.textures.addCanvas('omen_scorch', scorchMark().toCanvas());
+  scene.textures.addCanvas('omen_ring', runeRing().toCanvas());
+  for (const id of ['blood', 'imp', 'meteor', 'golden', 'fog', 'rift', 'merchant', 'shrine'] as OmenIcon[]) {
+    if (!has(`omen_icon_${id}`)) scene.textures.addCanvas(`omen_icon_${id}`, toCanvas(OMEN_ICON, OMEN_ICON, omenIcon(id)));
+  }
+  // Last, the Shrine of Unity's blessing as a buff's badge: its presence means everything above is built.
+  scene.textures.addCanvas('buff_unity', toCanvas(OMEN_ICON, OMEN_ICON, omenIcon('unity')));
 }
 
 /** The painted arenas' texture sets, each built by one job (see arenaLoader.ts). */

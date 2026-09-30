@@ -259,7 +259,8 @@ export class NetPlay {
         this.monster(m)?.netBind(m.ms as number, m.l as number);
         break;
       case 'm':
-        if (!session.isHost) for (const sp of this.world.spawnerList) sp.sync(m as unknown as SpawnerSnap);
+        // The arena's own monsters; an omen's are kept by the omen (see world/Omens.ts).
+        if (!session.isHost) this.world.spawnerList[0]?.sync(m as unknown as SpawnerSnap);
         break;
       case 'pv': {
         const r = this.remotes.get(f);
@@ -279,7 +280,12 @@ export class NetPlay {
   }
 
   private monster(m: Msg): Monster | null {
-    return this.world.spawnerList[0]?.find(m.i as number, m.g as number) ?? null;
+    // An omen's monsters are numbered past the arena's, so only their own spawner finds them.
+    for (const sp of this.world.spawnerList) {
+      const mon = sp.find(m.i as number, m.g as number);
+      if (mon) return mon;
+    }
+    return null;
   }
 
   /** The connection dropped: carry on alone. */

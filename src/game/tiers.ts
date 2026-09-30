@@ -62,6 +62,8 @@ export const MOB_TIER: Record<string, Tier> = {
   geodeback: 'strong',
   sporemother: 'legend',
   wyrm: 'myth',
+  // The omens' Treasure Imp.
+  imp: 'strong',
 };
 
 export const tierOf = (kind: string): Tier => MOB_TIER[kind] ?? 'normal';
@@ -112,6 +114,7 @@ export const MOB_BULK: Record<string, number> = {
   sporemother: 1.2,
   warden: 0.9,
   wyrm: 1.3,
+  imp: 1.1,
 };
 
 /** A monster's full health: its tier's, times its bulk. */

@@ -4,10 +4,12 @@ import { GEAR_SETS, RARITY, type GearDef, type Rarity } from './gear';
 import { DROP_H } from '../art/items';
 import { GEAR_DROP } from '../art/gear';
 import { GEM_DROPS, gemDropFor } from '../art/shop';
+import { DUST_DROP_H } from '../art/omens';
 import type { Effect } from './Slash';
+import { petMods } from './pets';
 
-/** What lies on the ground: a potion for the hotbar, a piece of gear, or gems (`n` of them, in one pile). */
-export type Loot = { kind: 'item'; id: ItemId } | { kind: 'gear'; def: GearDef } | { kind: 'gems'; n: number };
+/** What lies on the ground: a potion for the hotbar, a piece of gear, gems or dust (`n` of them, in one pile). */
+export type Loot = { kind: 'item'; id: ItemId } | { kind: 'gear'; def: GearDef } | { kind: 'gems'; n: number } | { kind: 'dust'; n: number };
 
 /** Pulled towards the hero from this close, and picked up at this distance. */
 const MAGNET = 30;
@@ -74,9 +76,20 @@ function gemShow(n: number): Show {
   return { ...base, beam: 0.38, width: 0.8, rays: 0, twinkles: 1, motes: 1, runes: false, rings: 1, arrow: false, light: false, star: false };
 }
 
+/** Dust: a violet glimmer, a short pillar for a handful and an epic's for a sackful. */
+const DUST_ACCENT = 0xb07aff;
+const DUST_CORE = 0xf4ecff;
+function dustShow(n: number): Show | null {
+  const base = { accent: DUST_ACCENT, core: DUST_CORE };
+  if (n >= 8) return { ...base, beam: 0.62, width: 1, rays: 0, twinkles: 2, motes: 2, runes: true, rings: 1, arrow: true, light: false, star: false };
+  if (n >= 3) return { ...base, beam: 0.32, width: 0.8, rays: 0, twinkles: 1, motes: 1, runes: false, rings: 1, arrow: false, light: false, star: false };
+  return null;
+}
+
 /** How grand a find is: 0 for potions and common gear, up to 4 for a legendary (or a pile of five gems or more). */
 export function grade(loot: Loot): number {
   if (loot.kind === 'item') return 0;
+  if (loot.kind === 'dust') return loot.n >= 8 ? 3 : loot.n >= 3 ? 2 : 1;
   if (loot.kind === 'gems') return loot.n >= 5 ? 4 : loot.n >= 2 ? 3 : 2;
   return { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 }[loot.def.rarity];
 }
@@ -140,13 +153,21 @@ export class Pickup {
   ) {
     const gear = loot.kind === 'gear' ? loot.def : null;
     const gems = loot.kind === 'gems' ? loot.n : 0;
+    const dust = loot.kind === 'dust' ? loot.n : 0;
     const pile = gemDropFor(gems);
     const look =
-      loot.kind === 'gear' ? { tint: RARITY[loot.def.rarity].tint, texture: loot.def.drop } : loot.kind === 'gems' ? { tint: GEM_ACCENT, texture: `gem_drop_${pile}` } : { tint: ITEMS[loot.id].tint, texture: ITEMS[loot.id].drop };
-    const h = gear ? GEAR_DROP : gems ? GEM_DROPS[pile].h : DROP_H;
-    this.magnet = gear || gems ? GEAR_MAGNET : MAGNET;
-    this.life = gear || gems ? LIFE * 2 : LIFE;
-    this.shine = gear ? { common: 0.8, uncommon: 0.9, rare: 1, epic: 1.25, legendary: 1.5 }[gear.rarity] : gems ? { one: 0.9, few: 1.15, heap: 1.5, hoard: 1.9 }[pile] : 0.75;
+      loot.kind === 'gear'
+        ? { tint: RARITY[loot.def.rarity].tint, texture: loot.def.drop }
+        : loot.kind === 'gems'
+          ? { tint: GEM_ACCENT, texture: `gem_drop_${pile}` }
+          : loot.kind === 'dust'
+            ? { tint: DUST_ACCENT, texture: 'dust_drop' }
+            : { tint: ITEMS[loot.id].tint, texture: ITEMS[loot.id].drop };
+    const h = gear ? GEAR_DROP : gems ? GEM_DROPS[pile].h : dust ? DUST_DROP_H : DROP_H;
+    // A worn scarab draws loot in from further off.
+    this.magnet = (gear || gems || dust ? GEAR_MAGNET : MAGNET) * petMods.reach;
+    this.life = gear || gems || dust ? LIFE * 2 : LIFE;
+    this.shine = gear ? { common: 0.8, uncommon: 0.9, rare: 1, epic: 1.25, legendary: 1.5 }[gear.rarity] : gems ? { one: 0.9, few: 1.15, heap: 1.5, hoard: 1.9 }[pile] : dust ? Math.min(1.3, 0.8 + dust * 0.05) : 0.75;
     this.fromX = x;
     this.fromY = y;
     // Lands a short hop away from where it fell.
@@ -156,10 +177,10 @@ export class Pickup {
     this.shadow = scene.add.image(x, y, 'shadow').setScale(gear ? 0.8 : 0.55, 0.8).setDepth(1).setAlpha(0.7);
     this.glow = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(look.tint).setScale(this.shine).setAlpha(0);
     this.sprite = scene.add.image(x, y, look.texture).setOrigin(0.5, (h - 1) / h);
-    this.lift = gear || gems ? 3 : 0;
+    this.lift = gear || gems || dust ? 3 : 0;
     this.popTime = POP_TIME;
 
-    const base = gems ? gemShow(gems) : gear && SHOWS[gear.rarity];
+    const base = gems ? gemShow(gems) : dust ? dustShow(dust) : gear && SHOWS[gear.rarity];
     if (!base) return;
     // A set piece shines in its set's colour.
     const show: Show = { ...base, accent: gear?.set ? GEAR_SETS[gear.set].tint : base.accent };

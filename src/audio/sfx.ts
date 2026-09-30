@@ -603,6 +603,25 @@ export class Sfx {
     if (tier === 2) this.lootLand(t, 0, 4);
   }
 
+  /** The net swept through the air: a soft airy swish. */
+  netSwish(t: number, pan: number): void {
+    const out = this.out(pan, 0.4, 0.25);
+    this.burstNoise(out, t, 'bandpass', 900, 3200, 1.4, 0.16, 0.18);
+  }
+
+  /** A critter caught and corked in its jar: a glassy pop and a little chime, brighter for a new or rare one (tier 0..2). */
+  critterCatch(t: number, tier: number): void {
+    const out = this.out(0, 0.45, 0.45);
+    this.chirp(out, t, 'sine', 420, 1100, 0.18, 0.06);
+    const bells = [
+      [1568, 2093],
+      [1319, 1760, 2349],
+      [1175, 1568, 1976, 2637],
+    ];
+    bells[tier].forEach((f, i) => this.bell(out, t + 0.07 + i * 0.07, f, 0.035, 0.8 + tier * 0.3));
+    this.sparkle(out, t + 0.1, 2 + tier * 3, 0.04);
+  }
+
   /** A card turning over: a soft swish, then a chime in its rarity's key. */
   cardFlip(t: number, tier: number): void {
     const out = this.out(0, 0.45, 0.5);
@@ -775,6 +794,65 @@ export class Sfx {
     src.connect(bp);
     this.m.startNoise(src, t, 1);
     this.sparkle(out, t + 0.3, 6, 0.07);
+  }
+
+  /**
+   * An omen coming: a deep, slow gong under a chord of bells, dark (minor,
+   * falling) for a threat, bright (major, rising) for a boon, and strange
+   * (a hollow fourth, shimmering) for a wonder.
+   */
+  omen(t: number, mood: 'dark' | 'bright' | 'strange'): void {
+    const ctx = this.m.ctx;
+    const out = this.out(0, 0.8, 0.85);
+    // The gong: two low partials beating slowly, a long tail.
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 1400, 0.7, out));
+    hit(g.gain, t, 0.5, 0.01, 2.6);
+    const root = mood === 'dark' ? 55 : mood === 'bright' ? 65.4 : 58.3;
+    for (const [f, lvl] of [
+      [root, 1],
+      [root * 2.02, 0.5],
+      [root * 2.76, 0.28],
+      [root * 4.1, 0.14],
+    ]) {
+      const o = osc(ctx, 'sine', f, gain(ctx, lvl, g));
+      o.start(t);
+      o.stop(t + 3);
+    }
+    this.burstNoise(out, t, 'lowpass', 900, 200, 0.7, 0.18, 0.5, true);
+    const chord = mood === 'dark' ? [440, 523, 659, 831] : mood === 'bright' ? [523, 659, 784, 1047] : [466, 622, 698, 932];
+    const order = mood === 'dark' ? [...chord].reverse() : chord;
+    order.forEach((f, i) => this.bell(out, t + 0.25 + i * 0.16, f, 0.04, 1.8));
+    if (mood !== 'dark') this.sparkle(out, t + 0.5, mood === 'bright' ? 7 : 4, 0.07);
+  }
+
+  /** A portal tearing open: air rushing round and in, with a rising shimmer. */
+  portal(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.6, 0.6);
+    const air = gain(ctx, 0, out);
+    air.gain.setValueAtTime(0, t);
+    air.gain.linearRampToValueAtTime(0.4, t + 0.25);
+    air.gain.linearRampToValueAtTime(0, t + 0.9);
+    const bp = filter(ctx, 'bandpass', 400, 5, air);
+    sweep(bp.frequency, t, 300, 2400, 0.8);
+    const lfo = osc(ctx, 'sine', 11, gain(ctx, 300, bp.frequency));
+    lfo.start(t);
+    lfo.stop(t + 1);
+    const src = this.m.noiseSource();
+    src.connect(bp);
+    this.m.startNoise(src, t, 1);
+    this.chirp(out, t + 0.05, 'triangle', 330, 990, 0.08, 0.6);
+    this.sparkle(out, t + 0.2, 4, 0.06);
+  }
+
+  /** The Treasure Imp's cackle: a quick run of nasal, bouncing yips. */
+  cackle(t: number, pan: number): void {
+    const out = this.out(pan, 0.5, 0.3);
+    const base = pick([880, 932, 988]);
+    for (let i = 0; i < 5; i++) {
+      const f = base * (1 + (i % 2) * 0.26) * (1 - i * 0.04);
+      this.chirp(out, t + i * 0.075, 'square', f * 1.2, f * 0.8, 0.045, 0.06);
+    }
   }
 
   /** A falling star striking the platform: a bright crack and a deep thud. */
@@ -1876,6 +1954,38 @@ export class Sfx {
     this.zap(out, t, 0.28, chain ? 0.16 : 0.09);
     this.chirp(out, t, 'sawtooth', chain ? 2400 : 1900, chain ? 500 : 700, 0.07, chain ? 0.14 : 0.07);
     if (chain) this.zap(out, t + 0.08, 0.2, 0.08);
+  }
+
+  /** An echo wakes at its grave: a hollow breath, and a cold, wavering chord that sighs downward. */
+  echoWake(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.55, 0.85);
+    this.burstNoise(out, t, 'bandpass', 600, 1500, 3, 0.16, 1.0, true);
+    for (const [f, d] of [
+      [440, 0],
+      [415, 0.06],
+      [330, 0.12],
+    ]) {
+      const g = gain(ctx, 0, filter(ctx, 'lowpass', 1800, 0.7, out));
+      g.gain.setValueAtTime(0, t + d);
+      g.gain.linearRampToValueAtTime(0.045, t + d + 0.35);
+      g.gain.linearRampToValueAtTime(0, t + d + 1.6);
+      const o = osc(ctx, 'sine', f, g);
+      sweep(o.frequency, t + d, f, f * 0.84, 1.6);
+      // A slow, uneasy vibrato.
+      const vib = osc(ctx, 'sine', rand(4.5, 6), gain(ctx, f * 0.012, o.frequency));
+      o.start(t + d);
+      o.stop(t + d + 1.7);
+      vib.start(t + d);
+      vib.stop(t + d + 1.7);
+    }
+  }
+
+  /** An echo's blessing reaches the hero: soft, far-off bells in a minor key, rising, and a shimmer. */
+  echoBless(t: number): void {
+    const out = this.out(0, 0.55, 0.8);
+    [440, 523, 659, 880].forEach((f, i) => this.bell(out, t + i * 0.09, f, 0.04, 1.6));
+    this.sparkle(out, t + 0.35, 3, 0.07);
   }
 
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {

@@ -23,7 +23,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 
 **The world** (`src/scenes/WorldScene.ts`)
 - Owns the hero, spawners, effects, pickups, lights, day/night, camera, and the combat API: `melee(area, strike)`, `strikeAt(x, y, strike)`, `firstHurtbox`, `hurtboxesWhere`, `hurtHero(harm)`, `popNumber`, `debris`, `addEffect`.
-- Input comes from `game/controls.ts` (written by `UIScene` and the keyboard). PC: WASD, left click/J attack, right click/K/Shift ability, Space Special, 1-9 hotbar, N day/night, E talk.
+- Input comes from `game/controls.ts` (written by `UIScene` and the keyboard). PC: WASD, left click/J attack, right click/K/Shift ability, Space Special, 1-9 hotbar, N day/night, E talk (or swing the critter net).
 
 **Heroes** (`src/game/`)
 - `characters.ts`: `CLASSES` → types → skins. The world spawns a hero by look id (a type's id or a skin's id). `skins.ts` remembers the chosen look.
@@ -42,6 +42,8 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - `*Layout.ts` files hold positions and walkability; the class files (`Garden.ts`, `Deep.ts`, `Sanctum.ts` for the Rune Temple...) build the arena's living parts.
 - `GroundStreamer.ts` streams the ground in strips; painted arenas warm their textures in `art/textures.ts` (`warmCosmos`, `warmDeep`...).
 - The Endless Rift (solo): `riftLayout.ts`, `art/rift.ts`, `world/Rift.ts` (tears, shards, violet light) and `game/rift.ts` (`RiftWaves`, a `Spawner` that builds each wave from a budget of Temple, Deep and garden monsters, a "Riftborn" champion every 5th wave, blessings picked between waves into `riftMods`, best wave per class in `collection.riftBest`). Monsters scale by `toughness`, `size` and `hunter` on `Monster`. Its warm job also warms the Temple and the Deep for their monster sheets.
+- Omens (garden, cosmos, spirit, temple, deep; `OMEN_ARENAS`): every couple of minutes a random event with a banner and a turn of the light. `game/omens.ts` holds the eight (`OMENS`), `omenMods` (fury, pace, energy, gear rarity `bump`, dark) read by WorldScene like `riftMods`, and `omenHud` for `scenes/OmenScene.ts` (banner, top chip, the merchant's card). `world/Omens.ts` runs them: its own monsters come as extra `Spawner`s numbered from slot 1000 (the Treasure Imp, `monsters/Imp.ts`; Riftborn elites; fog ghosts); online the host picks and sends `o+`/`o-`/`ow`/`mo` and each omen's own messages. Art in `art/omens.ts` (built by `omenTextures` in `textures.ts` a few ms a frame); star dust drops as `Loot` `dust`.
+- Echoes of the fallen: `game/echoes.ts` records the hero's last ~5 s (`EchoRecorder`) and shares a death through Firestore (`echoes/{arena}/slots/s0..s23`, a ring overwritten at random, cached locally); `world/Echoes.ts` raises up to 4 graves per arena that replay the fallen hero as a ghost and bless the toucher (buff id `echo`). Art in `art/echoes.ts`. Not in the clearing, the island or duels. Needs a Firestore rule allowing public read/write on that path.
 - Arenas are built ahead: the home screen warms them a few ms a frame (`warmArenasInBackground` in `arenas.ts`); build jobs are keyed by the texture manager, so the arena select and the world carry on the same job. Arena cards save a picture of their window (`pixel-battle.thumb.<id>`, per build) to show at once on later launches.
 
 **Loot and progression** (`src/game/`)
@@ -56,9 +58,14 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 - Art in `art/shop.ts` (gems, piles, crystal, altar, hall, cards); sounds `gem*`, `wish*`, `cardFlip` in `audio/sfx.ts`.
 
 **Companions** (`src/game/pets.ts`, `src/game/Companion.ts`)
-- `PETS`: 8 companions (rare/epic/legendary) with a perk in `mods`, a gait, and the wyrmling's `fights` and the phoenix's `rebirth`. Won from the Shop's second banner, the Wishing Nest (`petWish`, own pity `collection.petPity`, same odds and prices as skins); worn one is `collection.pet`, chosen on the Inventory's Companions tab (`ui/petGallery.ts`).
+- `PETS`: 20 companions (rare/epic/legendary) with a perk in `mods` (Scarab's `reach` widens the loot magnet in `Pickup.ts`), a gait, the wyrmling's `fights`, the phoenix's `rebirth`, and a `power` for the newer epics and legendaries: `chill` (Snowpaw), `zap` (Nimbus), `ward` (Mossback, checked in `hurtHero`), `mend` (Pixie, via `WorldScene.mendHero`), `dive` (Gryphon), `lash` (Krakling), `hoard` (Mimic, on `cheer`). Their timings are consts at the top of `Companion.ts`; their effects are in `petPowers.ts`. Won from the Shop's second banner, the Wishing Nest (`petWish`, own pity `collection.petPity`, same odds and prices as skins); worn one is `collection.pet`, chosen on the Inventory's Companions tab (`ui/petGallery.ts`).
 - `wearPet` fills `petMods`, which WorldScene multiplies in beside gear and `riftMods` (damage, speed, guard, regen, energy, and luck in `rollGems`). `Companion` follows the hero in the world.
 - Art: `art/pets.ts` (24x24, 4 frames, facing right; the Nest's egg and cracks), registered as `pets` with `pet_<id>` anims; cards by `ui/petCard.ts`. The Nest mode in `ShopScene` (`setMode`) swaps the crystal for the egg, warms the hall and moves the shop music into its `nest` mood (`sound.setShopMood`).
+
+**Critters** (`src/game/critters.ts`, `src/game/CritterField.ts`)
+- `CRITTERS`: 18 critters, each with its arenas, `when` (day/night, in day/night arenas), rarity (common/rare/omen), gait and glow. `critterPool` picks what can come out now. Omen critters (Blood Moth, Gold Scarab) come out only while their Omen runs: the Omens code calls `setCritterOmen('blood-moon' | 'golden-hour' | null)`.
+- `CritterField` (built by `WorldScene` in arenas listed in `CRITTER_ARENAS`, not in duels): a few near the hero at a time, startled by a running hero, caught with the net (touch net button in `UIScene` via `critterHud`/`controls.netTap`, or E). Caught ones are counted in `collection.critters` (saved locally and to the cloud) and shown as jars on shelves on the Inventory's Critters tab (`ui/critterGallery.ts`).
+- Art in `art/critters.ts`: 16x16 frames (`critters`, anims `critter_<id>`), jars (`jars` sheet, frames `<id>_<f>` and `empty`, anims `jar_<id>`, glowing like lanterns via `jars_e`: ready for Home shelves), the net swing (`net`, `n0`..`n4`) and `icon_net`.
 
 **Online play** (`src/net/`, `server/`)
 - `server/server.js`: a WebSocket relay on Render with 4-letter room codes (co-op up to 4, duel 2). It runs no game logic.
