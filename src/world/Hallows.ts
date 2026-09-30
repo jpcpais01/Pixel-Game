@@ -27,7 +27,7 @@ type Img = Phaser.GameObjects.Image;
 
 /** Jack-o'-lanterns on the lawn: where, and which carving. Two flank the Rune Temple's steps. */
 const LANTERNS: { x: number; y: number; kind: number }[] = [
-  { x: 150, y: 226, kind: 0 },
+  { x: 52, y: 436, kind: 0 },
   { x: 492, y: 226, kind: 1 },
   { x: 196, y: 432, kind: 2 },
   { x: 446, y: 438, kind: 0 },
@@ -42,8 +42,8 @@ const LANTERN_DAY = 0.35;
 /** The feet of a lantern block this far round them, so the hero steps round rather than through. */
 const LANTERN_BLOCK = 6;
 
-/** The candy stall on the west lawn, where the counter's foot meets the grass. */
-const STALL = { x: 124, y: 368 };
+/** The candy stall on the east lawn, across the plaza from the Forge, where the counter's foot meets the grass. */
+const STALL = { x: 506, y: 378 };
 /** Its booth blocks the hero: half its width, and how deep it runs back from the counter's foot. */
 const STALL_HW = 34;
 const STALL_D = 22;
@@ -83,7 +83,7 @@ interface Bank {
 /**
  * Hallow's Eve in the Runestone Clearing: carved jack-o'-lanterns round the
  * lawn with candles flickering inside, low violet fog drifting over the grass
- * (thicker at night), and Old Wick's candy stall on the west lawn, where the
+ * (thicker at night), and Old Wick's candy stall on the east lawn, where the
  * season's candy buys its limited skins and companions. Walking up to her
  * counter opens it, as walking up to Nyx or Tharn does theirs.
  *

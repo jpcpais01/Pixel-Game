@@ -73,6 +73,7 @@ export const MONSTER_FRAME = {
   gourdling: { w: 22, h: 26, ox: 11, oy: 24 },
   hexbat: { w: 36, h: 28, ox: 18, oy: 26 },
   pumpkin_king: { w: 92, h: 104, ox: 46, oy: 100 },
+  imp: { w: 28, h: 28, ox: 14, oy: 26 },
 };
 export type FrameBox = (typeof MONSTER_FRAME)[keyof typeof MONSTER_FRAME];
 

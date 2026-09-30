@@ -11,7 +11,7 @@ import { pixelGrid, snap } from '../game/display';
 import { PixelPipeline } from '../game/PixelPipeline';
 import { skyState } from '../game/SkyPipeline';
 import { characterById, type Aim, type Hero } from '../game/characters';
-import { damageScale, defenseFactor, heroStats, type HeroStats } from '../game/stats';
+import { damageScale, defenseFactor, specialScale, heroStats, type HeroStats } from '../game/stats';
 import { areaOrigin, reachesBody, type Harm, type Hit, type Hurtbox, type MeleeArea, type Strike } from '../game/combat';
 import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
@@ -27,6 +27,8 @@ import { CosmosArena } from '../world/Cosmos';
 import { RiftArena } from '../world/Rift';
 import { RiftWaves, resetRift, riftMods } from '../game/rift';
 import { Companion } from '../game/Companion';
+import { CritterField } from '../game/CritterField';
+import { CRITTER_ARENAS } from '../game/critters';
 import { petById, petMods, wearPet } from '../game/pets';
 import { FloatingIsland } from '../world/Island';
 import { SpiritDungeon } from '../world/Spirit';
@@ -35,10 +37,17 @@ import { GlimmerDeep } from '../world/Deep';
 import { RuneTemple } from '../world/Sanctum';
 import { Chapel } from '../world/Chapel';
 import { HallowsClearing } from '../world/Hallows';
+import { EchoGraves } from '../world/Echoes';
+import { Forge } from '../world/Forge';
 import { INSIDE_SPOT, OUTSIDE_SPOT, roomRect } from '../world/sanctumLayout';
 import { isPainted } from '../world/arenas';
+import { OMEN_ARENAS, Omens } from '../world/Omens';
+import { omenMods, resetOmens } from '../game/omens';
 
 type V3 = [number, number, number];
+
+/** Star dust's colours, as it lands and is picked up. */
+const DUST_SHARDS = [0xffffff, 0xe0ccff, 0xb07aff, 0x7a4ae0];
 
 /** Lighting for each end of the day/night blend. */
 const NIGHT = {
@@ -62,6 +71,7 @@ import { gear, GEAR_SETS, RARITY, type GearDef, type SetId } from '../game/gear'
 import { rollGems } from '../game/tiers';
 import { activeSeason, rollCandy, seasonalSpots } from '../game/season';
 import { CANDY_SPARKS } from '../art/candy';
+import { MATERIALS, rollMats } from '../game/forge';
 import { collection, slotIndex } from '../game/collection';
 import { energy, energyFor } from '../game/energy';
 import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
@@ -159,6 +169,8 @@ export class WorldScene extends Phaser.Scene {
   private rift: RiftArena | null = null;
   /** The companion following the hero, if one is worn. */
   private companion: Companion | null = null;
+  /** The critters out near the hero, to be caught with the net (arenas that have them). */
+  private critters: CritterField | null = null;
   private riftWaves: RiftWaves | null = null;
   /** The arena's own living parts, when it is the Floating Island. */
   private island: FloatingIsland | null = null;
@@ -173,6 +185,7 @@ export class WorldScene extends Phaser.Scene {
   private chapel: Chapel | null = null;
   /** A season's dressing of the Runestone Clearing, while one runs. */
   private hallows: HallowsClearing | null = null;
+  private forge: Forge | null = null;
   /** The hero is inside the Rune Temple (the camera keeps to its room). */
   private inside = false;
   /** Passing through the temple's door: the screen fades out and in. */
@@ -229,9 +242,14 @@ export class WorldScene extends Phaser.Scene {
   private scenery!: Scenery;
   /** The camera's view of the world, in world pixels. */
   private view = new Phaser.Geom.Rectangle();
+  private omens: Omens | null = null;
   private banner: Phaser.GameObjects.BitmapText | null = null;
   private spawners: Spawner[] = [];
   private effects: Effect[] = [];
+  /** Effects a Special set going (and whatever they set going in turn): their blows land as the Special's. */
+  private specialEffects = new WeakSet<Effect>();
+  /** True while a Special's own code runs, so its blows get the Special's scale (see specialScale in stats.ts). */
+  private inSpecial = false;
   /** Items lying on the ground. */
   private pickups: Pickup[] = [];
   /** Time until the next speck of the speed trail. */
@@ -250,6 +268,8 @@ export class WorldScene extends Phaser.Scene {
   private pushX = 0;
   private pushY = 0;
   private fallen: Phaser.GameObjects.BitmapText | null = null;
+  /** Gravestones of players who fell here, and the recording of this hero's last moments (see world/Echoes.ts). */
+  private echoes: EchoGraves | null = null;
   private shafts: Phaser.GameObjects.TileSprite | null = null;
   private shadows: Phaser.GameObjects.Image[] = [];
   private pollen!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -290,6 +310,7 @@ export class WorldScene extends Phaser.Scene {
     this.sanctum = null;
     this.chapel = null;
     this.hallows = null;
+    this.forge = null;
     this.inside = false;
     this.doorBusy = false;
     this.auras.clear();
@@ -393,6 +414,8 @@ export class WorldScene extends Phaser.Scene {
       for (const d of p.dummies) this.dummy(d.x, d.y);
       this.sanctum = new RuneTemple(this, (img) => ground(img) as Phaser.GameObjects.Image);
       this.shadows.push(...this.sanctum.shadows);
+      this.forge = new Forge(this, (img) => ground(img) as Phaser.GameObjects.Image);
+      this.shadows.push(...this.forge.shadows);
       const season = activeSeason();
       if (season) {
         this.hallows = new HallowsClearing(this, season, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
@@ -429,11 +452,26 @@ export class WorldScene extends Phaser.Scene {
     const pet = duel ? undefined : petById(collection.pet);
     wearPet(pet);
     this.companion = pet ? new Companion(this, pet, this.hero.x, this.hero.y) : null;
+    // Critters come out in the arenas that have them; not in a duel.
+    this.critters = !duel && CRITTER_ARENAS.includes(arena.id) ? new CritterField(this, arena.id, !!arena.dayNight) : null;
+    controls.netTap = false;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.companion?.destroy();
       this.companion = null;
       wearPet(undefined);
+      this.critters?.destroy();
+      this.critters = null;
     });
+    // Echoes of the fallen, wherever monsters can fell a hero: not the
+    // peaceful clearing, and not a duel, where the fallen fell to a friend.
+    this.echoes = null;
+    if (arena.id !== 'clearing' && !duel && arena.id !== 'island') {
+      const echoes = (this.echoes = new EchoGraves(this, arena.id, this.hero, ch.skin?.name ?? ch.type.name, arena.spawn));
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        echoes.destroy();
+        if (this.echoes === echoes) this.echoes = null;
+      });
+    }
     if (this.rift) {
       // The Rift's waves stand in for a spawner, and its overlay shows them.
       this.riftWaves = new RiftWaves(this, this.rift, { hero: () => this.hero, dropGems: (n, x, y) => this.dropGems(n, x, y) }, ch.id, ch.name);
@@ -458,6 +496,17 @@ export class WorldScene extends Phaser.Scene {
       // Left mid-charge: nothing will release it, so the hum stops with the world.
       sound.beamChargeEnd();
     });
+    // Now and then something happens in the monster arenas (see world/Omens.ts); its overlay shows it.
+    this.omens = OMEN_ARENAS.has(arena.id) ? new Omens(this) : null;
+    if (this.omens) {
+      this.scene.launch('omen');
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        this.omens?.destroy();
+        this.omens = null;
+        resetOmens();
+        this.scene.stop('omen');
+      });
+    }
 
     // Screen-fixed; it covers the ground camera's image too, as it draws first.
     this.skyLayer = this.add.image(0, 0, 'clouds').setScrollFactor(0).setDepth(20000).setPipeline('Sky');
@@ -475,9 +524,10 @@ export class WorldScene extends Phaser.Scene {
 
     const kb = this.input.keyboard!;
     kb.on('keydown-N', () => daynight.enabled && daynight.toggle());
+    // E talks to a keeper close by; anywhere else it swings the critter net.
     kb.on('keydown-E', () => {
       if (this.inside) this.sanctum?.talk(this.hero.x, this.hero.y);
-      else if (!this.chapel?.talk(this.hero.x, this.hero.y)) this.hallows?.talk(this.hero.x, this.hero.y);
+      else if (!this.forge?.talk(this.hero.x, this.hero.y) && !this.chapel?.talk(this.hero.x, this.hero.y) && !this.hallows?.talk(this.hero.x, this.hero.y)) controls.netTap = true;
     });
     // Keys 1 to 9 (top row or keypad) use the hotbar's slots.
     kb.on('keydown', (e: KeyboardEvent) => {
@@ -537,6 +587,7 @@ export class WorldScene extends Phaser.Scene {
     const out: Hurtbox[] = [...this.dummies];
     if (this.garden) out.push(...this.garden.hurtboxes());
     for (const sp of this.spawners) for (const m of sp.monsters) if (m.alive) out.push(m);
+    if (this.omens) for (const o of this.omens.hurtboxes) if (o.alive) out.push(o);
     return out;
   }
 
@@ -552,6 +603,27 @@ export class WorldScene extends Phaser.Scene {
 
   get spawnerList(): Spawner[] {
     return this.spawners;
+  }
+
+  /** The heroes standing, this player's and the others', for what hunts or blesses them. */
+  get standing(): Target[] {
+    const out: Target[] = this.downT > 0 ? [] : [this.hero];
+    if (this.net) out.push(...this.net.targets());
+    return out;
+  }
+
+  /** How much daylight there is, 0..1 (sun shadows follow it). */
+  get dayLight(): number {
+    return this.daylight;
+  }
+
+  /** The part of the world in view. */
+  get viewRect(): Phaser.Geom.Rectangle {
+    return this.view;
+  }
+
+  get arenaDef(): ArenaDef {
+    return this.arena;
   }
 
   get ultCaster(): UltCaster {
@@ -608,7 +680,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private toHit(s: Strike, x: number, y: number): Hit {
-    return { damage: s.damage, heavy: !!s.heavy, knock: s.knock ?? (s.heavy ? 130 : 60), fromX: s.fromX ?? x, fromY: s.fromY ?? y, poison: s.poison, companion: s.companion };
+    return { damage: s.damage, heavy: !!s.heavy, knock: s.knock ?? (s.heavy ? 130 : 60), fromX: s.fromX ?? x, fromY: s.fromY ?? y, poison: s.poison, companion: s.companion, wild: s.wild };
   }
 
   /** Everything strikeable that passes `test`, for heroes that hurt by other means than a single blow (poison). */
@@ -621,8 +693,16 @@ export class WorldScene extends Phaser.Scene {
     for (const d of this.dummies) if (d.alive && test(d)) return d;
     if (this.garden) for (const f of this.garden.allHurtboxes) if (f.alive && test(f)) return f;
     for (const sp of this.spawners) for (const m of sp.monsters) if (m.alive && test(m)) return m;
+    if (this.omens) for (const o of this.omens.hurtboxes) if (o.alive && test(o)) return o;
     if (this.net) for (const f of this.net.foes()) if (test(f)) return f;
     return null;
+  }
+
+  /** A companion mends the hero by `share` of their health, if they are hurt and up; returns the health restored. */
+  mendHero(share: number): number {
+    const v = this.hero.vitals;
+    if (this.downT > 0 || v.hp >= v.max) return 0;
+    return v.heal(Math.max(1, Math.round(v.max * share)));
   }
 
   /** A monster's blow lands on the hero if its reach (a circle at (x, y)) touches the hero's body. */
@@ -669,8 +749,13 @@ export class WorldScene extends Phaser.Scene {
     if (this.downT > 0 || this.grace > 0) return;
     // A ghost may slip through the blow entirely.
     if (h.dodge?.()) return;
+    // The old turtle's ward turns the blow aside.
+    if (this.companion?.ward()) {
+      this.grace = HURT_GRACE;
+      return;
+    }
     // A ward takes the edge off every blow.
-    const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard') * defenseFactor(this.stats.defense + gear.totals.armor) * riftMods.guard * petMods.guard * riftMods.fury));
+    const damage = Math.max(1, Math.round(harm.damage * heroBuffs.mod('guard') * defenseFactor(this.stats.defense + gear.totals.armor) * riftMods.guard * petMods.guard * riftMods.fury * omenMods.fury));
     const lost = h.vitals.damage(damage);
     this.grace = HURT_GRACE;
     this.rising = false;
@@ -702,6 +787,8 @@ export class WorldScene extends Phaser.Scene {
     this.pushX = this.pushY = 0;
     heroBuffs.clear();
     this.ult.cancel();
+    // Where they fell, others will find their grave.
+    this.echoes?.heroFell(h.x, h.y);
     // In the Rift, falling ends the run.
     this.riftWaves?.end();
     // Struck down mid-charge: the charge never releases, so its hum is stopped here.
@@ -774,15 +861,38 @@ export class WorldScene extends Phaser.Scene {
    * of gear, popping out of its body.
    */
   monsterSlain(kind: string, x: number, y: number, bodyY: number, stats?: Pick<MonsterStats, 'hp' | 'rank'>, summoned = false): void {
-    if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank) * riftMods.energy * petMods.energy, this.ult.ult.pal));
+    if (stats && this.downT <= 0) this.addEffect(new EnergyMotes(this, x, y - bodyY, this.hero, energyFor(stats.hp, stats.rank) * riftMods.energy * petMods.energy * omenMods.energy, this.ult.ult.pal));
     if (summoned) return;
     const id = rollDrop(kind);
     if (id) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'item', id }));
-    for (const def of gear.roll(kind)) this.dropGear(def, x, y - bodyY);
+    for (const def of gear.roll(kind, omenMods.bump)) this.dropGear(def, x, y - bodyY);
     const gems = rollGems(kind, petMods.luck);
     if (gems) this.dropGems(gems, x, y - bodyY);
     const candy = rollCandy(kind);
     if (candy) this.dropCandy(candy, x, y - bodyY);
+    const mats = rollMats(kind);
+    if (mats) this.dropMats(mats.set, mats.n, x, y - bodyY);
+  }
+
+  /** A boss's materials fall for the Forge: a pillar of its set's light, and they land with a ring of it. */
+  private dropMats(set: SetId, n: number, x: number, y: number): void {
+    const p = new Pickup(this, x, y, { kind: 'mat', set, n });
+    this.pickups.push(p);
+    const tint = MATERIALS[set].tint;
+    p.onLand = (at) => {
+      sound.lootLand(3, this.pan(at.x));
+      this.debris([0xffffff, tint], snap(at.x), snap(at.y) - 6, 16, at.y + 20, 'burst');
+    };
+  }
+
+  /** Materials picked up: the player's for the Forge, their name and count over the hero. */
+  private gainMats(set: SetId, n: number): void {
+    collection.addMats(set, n);
+    const h = this.hero;
+    const m = MATERIALS[set];
+    this.popNumber(snap(h.x), snap(h.y) - 40, `+${n} ${m.name.toUpperCase()}`, m.tint);
+    this.debris([0xffffff, m.tint], snap(h.x), snap(h.y) - 12, 18, h.y + 20, 'burst');
+    sound.gear(true);
   }
 
   /** A season's candy falls: a sweet or two glints down; a boss's hoard falls like a star. */
@@ -858,7 +968,32 @@ export class WorldScene extends Phaser.Scene {
    * Pickup), and the world answers with sound, sparks and, for a legendary,
    * a jolt and its name.
    */
-  private dropGear(def: GearDef, x: number, y: number): void {
+  /** Star dust falls, in one pile: a violet glint, and a little burst where it lands. */
+  dropDust(n: number, x: number, y: number): void {
+    const p = new Pickup(this, x, y, { kind: 'dust', n });
+    this.pickups.push(p);
+    p.onLand = (at) => {
+      sound.gemLand(1, this.pan(at.x));
+      this.debris(DUST_SHARDS, snap(at.x), snap(at.y) - 5, Math.min(30, 6 + n * 2), at.y + 20, 'burst');
+    };
+  }
+
+  /** Dust was picked up: it's the player's, for upgrades and the merchant. */
+  private gainDust(n: number): void {
+    collection.addDust(n);
+    const h = this.hero;
+    this.popNumber(snap(h.x), snap(h.y) - 40, `+${n} DUST`, 0xc8a0ff);
+    this.debris(DUST_SHARDS, snap(h.x), snap(h.y) - 12, Math.min(40, 8 + n * 3), h.y + 20, 'burst');
+    sound.gemPickup(1);
+  }
+
+  /** A piece of gear handed over (bought), as if picked up. */
+  grantGear(def: GearDef): void {
+    collection.add(def.id);
+    this.gainGear(def);
+  }
+
+  dropGear(def: GearDef, x: number, y: number): void {
     const p = new Pickup(this, x, y, { kind: 'gear', def });
     this.pickups.push(p);
     const g = p.grade;
@@ -978,9 +1113,19 @@ export class WorldScene extends Phaser.Scene {
       const loot = p.loot;
       const room = loot.kind === 'item' ? inventory.canTake(loot.id) : true;
       if (!p.update(dt, down ? null : h.x, down ? null : h.y, room, this.daylight)) continue;
-      if (loot.kind === 'gems' || loot.kind === 'candy') {
+      if (loot.kind === 'gems' || loot.kind === 'dust') {
         if (loot.kind === 'gems') this.gainGems(loot.n);
-        else this.gainCandy(loot.n);
+        else this.gainDust(loot.n);
+        p.destroy();
+        continue;
+      }
+      if (loot.kind === 'mat') {
+        this.gainMats(loot.set, loot.n);
+        p.destroy();
+        continue;
+      }
+      if (loot.kind === 'candy') {
+        this.gainCandy(loot.n);
         p.destroy();
         continue;
       }
@@ -1048,7 +1193,19 @@ export class WorldScene extends Phaser.Scene {
 
   /** How hard `hit` lands: a companion's blows keep their own numbers, whatever the hero's Damage. */
   mightOf(hit: Hit): number {
-    return hit.companion ? this.might / damageScale(this.stats) : this.might;
+    if (hit.wild) return 1;
+    if (hit.companion) return this.might / damageScale(this.stats);
+    return this.inSpecial ? this.might * specialScale(this.stats) : this.might;
+  }
+
+  /** Run a Special's cast: its blows, and the effects it starts, count as the Special's. */
+  castSpecial(cast: () => void): void {
+    this.inSpecial = true;
+    try {
+      cast();
+    } finally {
+      this.inSpecial = false;
+    }
   }
 
   /** A buff was just picked up: its name over the hero, and a burst of its colour. */
@@ -1138,6 +1295,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Let the world update an effect each frame until it is dead. */
   addEffect(e: Effect): void {
+    if (this.inSpecial) this.specialEffects.add(e);
     this.effects.push(e);
   }
 
@@ -1374,8 +1532,8 @@ export class WorldScene extends Phaser.Scene {
     this.setVignette(0.32 - d * 0.14);
     // Out in the void and down in the dungeon there is neither pollen nor fireflies (they have their own motes).
     const open = !this.cosmos && !this.rift && !this.spirit && !this.temple && !this.deep && !this.inside;
-    this.pollen.emitting = open && d > 0.5;
-    this.fireflies.emitting = open && d < 0.5;
+    this.pollen.emitting = open && d > 0.5 && !omenMods.dark;
+    this.fireflies.emitting = open && d < 0.5 && !omenMods.dark;
     sound.setDaylight(d);
     return d;
   }
@@ -1415,6 +1573,7 @@ export class WorldScene extends Phaser.Scene {
     for (const f of this.flickers) {
       if (f.seed >= 0) near = Math.min(near, Phaser.Math.Distance.Between(f.light.x, f.light.y, this.hero.x, this.hero.y));
     }
+    if (this.forge) near = Math.min(near, this.forge.fireDistance(this.hero.x, this.hero.y));
     // No fire in this arena: no crackle.
     if (near === Infinity) return 0;
     const k = Phaser.Math.Clamp(1 - (near - 16) / 150, 0, 1);
@@ -1598,13 +1757,18 @@ export class WorldScene extends Phaser.Scene {
     }
     const monsters: Monster[] = [];
     for (const sp of this.spawners) {
-      sp.update(dt, targets, this.daylight);
+      // A Blood Moon quickens them.
+      sp.update(dt * omenMods.pace, targets, this.daylight);
       monsters.push(...sp.monsters);
     }
     separate(monsters, targets, HERO_RADIUS);
     this.net?.update(dt, this.daylight);
     this.leanToBoss(dt, monsters);
-    for (const e of this.effects) e.update(dt);
+    for (const e of this.effects) {
+      this.inSpecial = this.specialEffects.has(e);
+      e.update(dt);
+    }
+    this.inSpecial = false;
     this.effects = this.effects.filter((e) => !e.dead);
     if (this.sanctum && !this.doorBusy) {
       const go = this.sanctum.update(this.hero.x, this.hero.y, this.inside, this.view, Phaser.Math.Easing.Sine.InOut(this.daylight));
@@ -1612,6 +1776,7 @@ export class WorldScene extends Phaser.Scene {
     }
     this.chapel?.update(this.hero.x, this.hero.y, dt, Phaser.Math.Easing.Sine.InOut(this.daylight));
     this.hallows?.update(time, dt, Phaser.Math.Easing.Sine.InOut(this.daylight), this.hero.x, this.hero.y);
+    this.forge?.update(this.hero.x, this.hero.y, dt);
     this.followHero();
 
     for (const b of this.balls) {
@@ -1635,10 +1800,18 @@ export class WorldScene extends Phaser.Scene {
     this.cosmos?.update(time, dt);
     this.rift?.update(time, dt);
     this.companion?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight);
+    if (controls.netTap) {
+      controls.netTap = false;
+      if (this.downT <= 0 && !session.paused) this.critters?.swingNet(this.hero.x, this.hero.y, this.facing.x);
+    }
+    this.critters?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight, this.view, controls.mouse, this.inside);
     this.island?.update(time, dt);
     this.spirit?.update(time, dt);
     this.temple?.update(time);
     this.deep?.update(time);
+    this.echoes?.update(dt, time, this.downT > 0, this.hurtTint > 0, d);
+    // After every arena's own light: an omen turns it.
+    this.omens?.update(time, dt);
     this.updateBanner();
     for (const f of this.flickers) {
       const k = 1 + (f.day - 1) * d;

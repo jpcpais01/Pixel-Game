@@ -14,6 +14,7 @@ import { Geodeback, Glimbat, Myconid, Shardling, Sporeling } from './Deep';
 import { Sporemother } from './Sporemother';
 import { Wyrm } from './Wyrm';
 import { Gourdling, Hexbat, PumpkinKing } from './Hallows';
+import { Imp } from './Imp';
 
 export { Monster, type Target } from './Monster';
 
@@ -48,6 +49,7 @@ export const MONSTERS = {
   gourdling: (world: WorldScene, x: number, y: number) => new Gourdling(world, x, y),
   hexbat: (world: WorldScene, x: number, y: number) => new Hexbat(world, x, y),
   pumpkin_king: (world: WorldScene, x: number, y: number) => new PumpkinKing(world, x, y),
+  imp: (world: WorldScene, x: number, y: number) => new Imp(world, x, y),
 } satisfies Record<string, (world: WorldScene, x: number, y: number) => Monster>;
 
 export type MonsterKind = keyof typeof MONSTERS;
@@ -100,26 +102,37 @@ export class Spawner {
   follower = false;
   /** When this game began, so monsters the host lost before this player arrived go quietly. */
   private born: number;
+  /**
+   * Added to every slot, so a second spawner's monsters (an omen's) are named
+   * apart from the arena's for the other players.
+   */
+  private base: number;
+  /** Anything done to each monster as it is made (an omen's make it hunt, or grow). */
+  private dress: ((m: Monster) => void) | null;
 
   constructor(
     private world: WorldScene,
     spots: SpawnSpot[],
     private respawn = 9000,
+    opts: { base?: number; dress?: (m: Monster) => void } = {},
   ) {
     this.born = world.time.now;
+    this.base = opts.base ?? 0;
+    this.dress = opts.dress ?? null;
     this.slots = spots.map((spot, i) => ({ spot, monster: this.make(spot, i, 0), wait: 0, lives: spot.lives ?? Infinity, gen: 0, net: null, missing: 0 }));
   }
 
   private make(spot: SpawnSpot, slot: number, gen: number): Monster {
     const m = MONSTERS[spot.kind](this.world, spot.x, spot.y);
-    m.slot = slot;
+    m.slot = this.base + slot;
     m.gen = gen;
+    this.dress?.(m);
     return m;
   }
 
   /** The monster in `slot` if it is still generation `gen`. */
   find(slot: number, gen: number): Monster | null {
-    const m = this.slots[slot]?.monster;
+    const m = this.slots[slot - this.base]?.monster;
     return m && m.gen === gen && !m.dead ? m : null;
   }
 
@@ -139,7 +152,7 @@ export class Spawner {
     for (const e of snap.l) standing.set(e[0], e);
     this.slots.forEach((s, i) => {
       const hostGen = snap.g[i] ?? 0;
-      const e = standing.get(i);
+      const e = standing.get(i + this.base);
       if (hostGen > s.gen) {
         // The host is on a later monster: this one (long gone for the host) goes quietly.
         s.monster?.netKill(true);

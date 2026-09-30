@@ -66,6 +66,8 @@ export const MOB_TIER: Record<string, Tier> = {
   gourdling: 'weak',
   hexbat: 'weak',
   pumpkin_king: 'legend',
+  // The omens' Treasure Imp.
+  imp: 'strong',
 };
 
 export const tierOf = (kind: string): Tier => MOB_TIER[kind] ?? 'normal';
@@ -119,6 +121,7 @@ export const MOB_BULK: Record<string, number> = {
   gourdling: 1,
   hexbat: 0.85,
   pumpkin_king: 1.1,
+  imp: 1.1,
 };
 
 /** A monster's full health: its tier's, times its bulk. */
