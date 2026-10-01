@@ -275,8 +275,11 @@ export const TRAITS: Record<TraitId, TraitDef> = {
 
 export const TRAIT_IDS = Object.keys(TRAITS) as TraitId[];
 
-/** Each trait's count of different heroes in `keys`, and the level it reaches (0: none yet). */
-export function traitCounts(keys: Iterable<string>): { id: TraitId; count: number; level: number }[] {
+/**
+ * Each trait's count of different heroes in `keys`, and the level it reaches (0: none yet). `bonus` adds to a
+ * trait's count (a crest boon), but only once at least one of its heroes is there.
+ */
+export function traitCounts(keys: Iterable<string>, bonus?: ReadonlyMap<TraitId, number>): { id: TraitId; count: number; level: number }[] {
   const seen = new Set(keys);
   const counts = new Map<TraitId, number>();
   for (const k of seen) {
@@ -284,6 +287,7 @@ export function traitCounts(keys: Iterable<string>): { id: TraitId; count: numbe
     if (!u) continue;
     for (const t of [u.origin, u.role] as TraitId[]) counts.set(t, (counts.get(t) ?? 0) + 1);
   }
+  if (bonus) for (const [t, n] of bonus) if (counts.has(t)) counts.set(t, counts.get(t)! + n);
   return [...counts.entries()]
     .map(([id, count]) => ({ id, count, level: TRAITS[id].levels.filter((n) => count >= n).length }))
     .sort((a, b) => b.level - a.level || b.count - a.count || a.id.localeCompare(b.id));

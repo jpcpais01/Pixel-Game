@@ -14,7 +14,9 @@ import { onlineStyles } from '../ui/onlineForm';
 import { session, type Msg } from '../net/session';
 import { Battle, COLS, HALF, ROWS, TICK, type Placed } from '../game/auto/sim';
 import { AutoPlayer, aiPlan, BENCH_SIZE, cellKey, MAX_LEVEL, PLAN_SECONDS, REROLL_COST, sellValue, SHOP_SIZE, START_HP, START_LEVEL, XP_COST, XP_NEXT, type Piece } from '../game/auto/match';
-import { COST_COLORS, TRAITS, unitDef, type TraitId } from '../game/auto/units';
+import { COST_COLORS, traitCounts, TRAITS, unitDef, type TraitId } from '../game/auto/units';
+import { BOON_SECONDS, boonDef, cleanBoons, isBoonRound, offerBoons, roundTier, TIER_NAMES, type BoonTier } from '../game/auto/boons';
+import { BOON_LINE, boonBack, boonBadge, boonCard, boonIcon, boonLayout, tierAccent } from '../art/boonArt';
 import { FightView, UnitView, cellPt, styleOf, type BoardFrame } from '../game/auto/view';
 import { FxLayer } from '../game/auto/fx';
 import { pieceNumbers, spellText } from '../game/auto/info';
@@ -97,6 +99,16 @@ const RESULT_SECONDS = 2.6;
 const LINGER = 1.3;
 /** Gems for winning a whole match. */
 const WIN_GEMS = { ai: 5, online: 15 };
+/** The boon cards: widest, gap between, how long apart they're dealt, and when each turns over. */
+const BOON_CARD_MAX = 118;
+const BOON_DEAL_MS = 150;
+const BOON_FLIP_MS = 460;
+/** Light motes rising behind the cards, and how often a sheen crosses a card (s). */
+const BOON_MOTES = 36;
+const BOON_SHEEN = [3.4, 2.6, 2.2];
+/** A kept boon's badge, and its step in a row. */
+const BADGE = 14;
+const BADGE_STEP = 15;
 const RIVAL_NAMES = ['Morgana', 'Tharn', 'Brenna', 'Old Wick', 'Hazel', 'Nyx', 'Sir Aldric', 'Vesper'];
 
 const INK = 0xfff4d6;
@@ -108,9 +120,31 @@ const GREEN = 0x7aff8a;
 
 type Phase = 'lobby' | 'wait' | 'plan' | 'fight' | 'result' | 'over';
 
+/** A boon card on show: the box it flips in (centred), its face and back, and what moves on it. */
+interface BoonCardView {
+  id: string;
+  tier: BoonTier;
+  box: Phaser.GameObjects.Container;
+  face: Phaser.GameObjects.Container;
+  back: Phaser.GameObjects.Image;
+  icon: Phaser.GameObjects.Image;
+  glow: Phaser.GameObjects.Image;
+  sheen: Phaser.GameObjects.Graphics;
+  flash: Phaser.GameObjects.Rectangle;
+  hit: Phaser.GameObjects.Zone;
+  w: number;
+  h: number;
+  iconY: number;
+  baseY: number;
+  t: number;
+  hover: boolean;
+}
+
 /** A seat at the table as a match goes: health, level, the board it last fought with, where it finished (0: still
  * in), and, on the host, a bot's own player. */
 interface Seat extends SeatInfo {
+  /** The boons this seat holds (they go into its fights). */
+  boons: string[];
   hp: number;
   level: number;
   board: Placed[];
@@ -472,6 +506,17 @@ export class AutoScene extends Phaser.Scene {
   private overlay: Phaser.GameObjects.Container | null = null;
   private lobby: Phaser.GameObjects.Container | null = null;
   private selected: { key: string; star: number; look: string } | null = null;
+  /** Boons offered to this player and not yet picked; the cards on show; the board looked at past them; a kept boon tapped. */
+  private boonOffer: string[] | null = null;
+  private boonView: Phaser.GameObjects.Container | null = null;
+  private boonCards: BoonCardView[] = [];
+  private boonPeek = false;
+  private boonLive = false;
+  private boonTimer: Phaser.GameObjects.BitmapText | null = null;
+  private boonMotes: { x: number; y: number; v: number; a: number; c: number }[] = [];
+  private boonMoteG: Phaser.GameObjects.Graphics | null = null;
+  private boonBack: PixelButton | null = null;
+  private boonShown: string | null = null;
   private hovered: string | null = null;
 
   // Dragging a piece.
@@ -589,6 +634,7 @@ export class AutoScene extends Phaser.Scene {
     this.infoHit = this.add.zone(0, 0, INFO_W, INFO_H).setOrigin(0).setInteractive();
     this.infoHit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => {
       this.selected = null;
+      this.boonShown = null;
       this.hovered = null;
       this.refreshInfo();
     });
@@ -779,6 +825,7 @@ export class AutoScene extends Phaser.Scene {
       const c = this.boardCentre();
       this.overlay.setPosition(c.x, c.y);
     }
+    if (this.boonView && this.boonOffer) this.showBoons(false);
   }
 
   /** The five cards, `cw` x `ch`, in a row centred across the page at `y`. */
@@ -954,7 +1001,9 @@ export class AutoScene extends Phaser.Scene {
     this.goldText.setPosition(gx + 15, 2);
     const shopOpen = this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result';
     this.xpBtn.setEnabled(shopOpen && this.me.gold >= XP_COST && this.me.level < MAX_LEVEL).setAlpha(this.me.gold >= XP_COST && this.me.level < MAX_LEVEL ? 1 : 0.5);
-    this.rollBtn.setEnabled(shopOpen && this.me.gold >= REROLL_COST).setAlpha(this.me.gold >= REROLL_COST ? 1 : 0.5);
+    const canRoll = this.me.freeRolls > 0 || this.me.gold >= REROLL_COST;
+    this.rollBtn.setText(this.me.freeRolls > 0 ? `Free ${this.me.freeRolls}` : `Roll ${REROLL_COST}`);
+    this.rollBtn.setEnabled(shopOpen && canRoll).setAlpha(canRoll ? 1 : 0.5);
     this.freezeBtn.setEnabled(shopOpen);
     const lock = this.me.frozen ? 'ab_lock' : 'ab_lock_open';
     if (this.freezeBtn.getData('icon') !== lock) this.freezeBtn.setIcon(lock).setData('icon', lock);
@@ -986,17 +1035,32 @@ export class AutoScene extends Phaser.Scene {
     list.setPosition(r.x, r.y);
     const head = pixelText(this, 0, 2, `Team ${this.me.board.size}/${this.me.cap}`, this.me.board.size < this.me.cap ? GOLD : LAVENDER);
     list.add(head);
+    // The boons kept, as badges (tap one for what it does): a row under the count when wide, at the right when tall.
+    const kept = this.me.boons;
+    const badge = (id: string, x: number, y: number) => {
+      const b = this.add.image(x, y, boonBadge(this, id)).setOrigin(0).setInteractive({ useHandCursor: true });
+      b.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => {
+        this.boonShown = this.boonShown === id ? null : id;
+        this.selected = null;
+        this.hovered = null;
+        this.refreshInfo();
+      });
+      list.add(b);
+    };
     const traits = this.me.traits();
     const next = (t: { id: TraitId; count: number }) => {
       const def = TRAITS[t.id];
       return def.levels.find((n) => n > t.count) ?? def.levels[def.levels.length - 1];
     };
     if (!this.wide) {
+      const fit = Math.min(kept.length, Math.max(0, Math.floor((r.width - head.width - 5 - CHIP_W) / BADGE_STEP)));
+      kept.slice(-fit || kept.length).forEach((id, i) => fit && badge(id, r.width - (fit - i) * BADGE_STEP, 0));
+      const limit = r.width - (fit ? fit * BADGE_STEP + 2 : 0);
       // Chips after the team count, wrapping to a second row.
       let x = head.width + 5;
       let y = 0;
       for (const t of traits) {
-        if (x + CHIP_W > r.width) {
+        if (x + CHIP_W > limit) {
           if (y > 0) break;
           x = 0;
           y = CHIP_H + 1;
@@ -1015,10 +1079,13 @@ export class AutoScene extends Phaser.Scene {
     }
     const w = r.width;
     const named = w >= 70;
-    const rows = Math.max(0, Math.floor((r.height - 12) / TRAIT_ROW));
+    const perRow = Math.max(1, Math.floor((w + 1) / BADGE_STEP));
+    kept.forEach((id, i) => badge(id, (i % perRow) * BADGE_STEP, 12 + Math.floor(i / perRow) * BADGE_STEP));
+    const top = 12 + Math.ceil(kept.length / perRow) * BADGE_STEP + (kept.length ? 1 : 0);
+    const rows = Math.max(0, Math.floor((r.height - top) / TRAIT_ROW));
     traits.slice(0, rows).forEach((t, i) => {
       const def = TRAITS[t.id];
-      const y = 12 + i * TRAIT_ROW;
+      const y = top + i * TRAIT_ROW;
       const on = t.level > 0;
       const g = this.add.graphics();
       g.fillStyle(0x0b0818, on ? 0.8 : 0.55).fillRect(0, y - 1, w, TRAIT_ROW - 1);
@@ -1039,12 +1106,26 @@ export class AutoScene extends Phaser.Scene {
     const box = this.info;
     box.removeAll(true);
     const pick = this.hovered ? { key: this.hovered, star: 1, look: lookFor(this.hovered) } : this.selected;
-    const on = !!this.me && (this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result') && !this.press?.dragging && !!pick;
+    const boon = !pick && this.boonShown ? boonDef(this.boonShown) : undefined;
+    const on = !!this.me && (this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result') && !this.press?.dragging && (!!pick || !!boon);
     this.infoBg.setVisible(on);
     if (this.infoHit.input) this.infoHit.input.enabled = on;
     // On a tall screen the traits it covers step out of the way while it's up (on a wide one it covers the players).
     this.traitList.setVisible(!on || this.wide);
-    if (!on || !pick) return;
+    if (!on) return;
+    if (boon) {
+      // A kept boon: its picture, name and tier, and what it does.
+      box.add(this.add.image(6, 6, boonIcon(this, boon.id, 32)).setOrigin(0));
+      box.add(pixelText(this, 44, 9, fitLine(this.probe, boon.name, INFO_W - 50), INK));
+      box.add(pixelText(this, 44, 20, `${TIER_NAMES[boon.tier]} boon`, tierAccent(boon.tier)));
+      let y = 44;
+      for (const l of wrap(this.probe, boon.text, INFO_W - 12)) {
+        box.add(pixelText(this, 6, y, l, LAVENDER));
+        y += 9;
+      }
+      return;
+    }
+    if (!pick) return;
     const d = unitDef(pick.key);
     const st = styleOf(pick.key, pick.look);
     const n = pieceNumbers(pick.key, pick.star);
@@ -1178,7 +1259,10 @@ export class AutoScene extends Phaser.Scene {
     this.nextRound = null;
     this.waitBoard?.remove();
     this.waitBoard = null;
-    this.seats = seats.map((s) => ({ ...s, hp: START_HP, level: START_LEVEL, board: [], place: 0, ai: this.host && s.bot ? new AutoPlayer(s.name) : null }));
+    this.seats = seats.map((s) => ({ ...s, hp: START_HP, level: START_LEVEL, board: [], boons: [], place: 0, ai: this.host && s.bot ? new AutoPlayer(s.name) : null }));
+    this.closeBoons();
+    this.boonOffer = null;
+    this.boonShown = null;
     this.mySeat = mine;
     this.foe = this.seats.findIndex((_, i) => i !== mine);
     this.foeGhost = false;
@@ -1219,7 +1303,9 @@ export class AutoScene extends Phaser.Scene {
     this.phase = 'plan';
     this.ready = false;
     this.readyIds.clear();
-    this.timer = this.timerMax = seconds;
+    // A boon round gives time to read the cards (every screen adds it, so the clocks agree).
+    const boons = isBoonRound(round);
+    this.timer = this.timerMax = seconds + (boons ? BOON_SECONDS : 0);
     this.fight?.destroy();
     this.fight = null;
     this.fx.clear();
@@ -1230,13 +1316,25 @@ export class AutoScene extends Phaser.Scene {
       for (const s of this.seats)
         if (s.ai && s.hp > 0) {
           s.ai.startRound(round, s.ai.streak > 0);
+          // Bots take a boon at random from theirs, before they shop (a purse's gold is spent this round).
+          if (boons) {
+            const offer = offerBoons(roundTier(round), s.ai.boons, traitCounts(s.ai.all().map((p) => p.key)).map((t) => t.id), Math.random);
+            if (offer.length) s.ai.takeBoon(offer[Math.floor(Math.random() * offer.length)]);
+            s.boons = [...s.ai.boons];
+          }
           aiPlan(s.ai, round);
           s.level = s.ai.level;
         }
+    this.boonOffer = null;
+    if (boons && this.me.alive && !this.out) {
+      const offer = offerBoons(roundTier(round), this.me.boons, traitCounts(this.me.all().map((p) => p.key)).map((t) => t.id), Math.random);
+      if (offer.length) this.boonOffer = offer;
+    }
     this.selected = null;
     this.syncPieces();
     this.refreshHud();
     sound.cardFlip(1);
+    if (this.boonOffer) this.showBoons(true);
   }
 
   update(_t: number, delta: number): void {
@@ -1246,6 +1344,7 @@ export class AutoScene extends Phaser.Scene {
       t.setAlpha(f).setScale(0.9 + f * 0.3, 0.7 + f * 0.25);
     }
     for (const c of this.cards) c.tick();
+    if (this.boonView) this.tickBoons(dt);
     this.fx.update(dt);
     if (this.phase === 'plan') {
       this.timer -= dt;
@@ -1280,10 +1379,14 @@ export class AutoScene extends Phaser.Scene {
 
   /** This player's board locks for the fight (and is what they fight with). */
   private lockBoard(): void {
+    // Time ran out on the boon cards: one is taken for the player, at random.
+    if (this.boonOffer && this.me.alive) this.takeBoon(this.boonOffer[Math.floor(Math.random() * this.boonOffer.length)], false);
+    this.closeBoons();
     if (this.me.alive) {
       this.me.autoFill();
       const mine = this.seats[this.mySeat];
       mine.board = this.me.placed();
+      mine.boons = [...this.me.boons];
       mine.level = this.me.level;
     }
     this.phase = 'fight';
@@ -1297,7 +1400,7 @@ export class AutoScene extends Phaser.Scene {
     this.waitBoard = null;
     if (!this.host || this.phase !== 'fight' || this.foughtRound === this.round) return;
     this.foughtRound = this.round;
-    const bouts = drawBouts(this.round, this.aliveSeats(), this.seats.map((s) => s.board), Math.random);
+    const bouts = drawBouts(this.round, this.aliveSeats(), this.seats.map((s) => s.board), this.seats.map((s) => s.boons), Math.random);
     const before = this.seats.map((s) => s.hp);
     const hp = healthAfter(before, bouts);
     const result: RoundResult = { round: this.round, bouts, hp, lv: this.seats.map((s) => s.level), place: placesAfter(before, hp, this.seats.map((s) => s.place)) };
@@ -1340,17 +1443,17 @@ export class AutoScene extends Phaser.Scene {
       this.foe = side === 0 ? bout.b : bout.a;
       this.foeGhost = bout.ghost;
     }
-    this.startFight(shown.boards, shown.seed, side, shown.ghost ? 1 : -1);
+    this.startFight(shown.boards, shown.seed, shown.boons, side, shown.ghost ? 1 : -1);
   }
 
-  private startFight(boards: [Placed[], Placed[]], seed: number, mySide: 0 | 1, ghostSide: number): void {
+  private startFight(boards: [Placed[], Placed[]], seed: number, boons: [string[], string[]], mySide: 0 | 1, ghostSide: number): void {
     this.cancelDrag();
     this.phase = 'fight';
     this.selected = null;
     this.fightDone = 0;
     this.fight?.destroy();
     // A player fighting from the top side sees the board from that end, their own heroes at the bottom.
-    this.fight = new FightView(this, new Battle(boards, seed), { ...this.frame, flip: mySide === 1 }, this.layer, this.fx, mySide, ghostSide);
+    this.fight = new FightView(this, new Battle(boards, seed, boons), { ...this.frame, flip: mySide === 1 }, this.layer, this.fx, mySide, ghostSide);
     // The board's pieces step aside for the fight's own heroes; the bench stays.
     this.syncPieces();
     this.refreshHud();
@@ -1533,10 +1636,289 @@ export class AutoScene extends Phaser.Scene {
     this.views.clear();
     this.fx.clear();
     this.clearOverlay();
+    this.closeBoons();
     this.phase = 'lobby';
     this.out = false;
     this.me = undefined as unknown as AutoPlayer;
     this.showLobby();
+  }
+
+  // ------------------------------------------------------------ boons
+
+  /**
+   * The boon cards: the page dims, motes of the tier's light rise, a title
+   * drops in, and three cards are dealt face down and turn over one by one.
+   * Tap one to keep it. `reveal`: deal them (else they're just shown, after a
+   * resize).
+   */
+  private showBoons(reveal: boolean): void {
+    const offer = this.boonOffer;
+    this.closeBoons();
+    if (!offer || !offer.length) return;
+    const vw = this.vw;
+    const vh = this.vh;
+    const tier = boonDef(offer[0])?.tier ?? 0;
+    const accent = tierAccent(tier);
+    const root = (this.boonView = this.add.container(0, 0).setDepth(30000));
+    const dim = this.add.rectangle(0, 0, vw, vh, 0x05040e, 0.8).setOrigin(0);
+    const block = this.add.zone(0, 0, vw, vh).setOrigin(0).setInteractive();
+    this.boonMoteG = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+    this.boonMotes = [];
+    for (let i = 0; i < BOON_MOTES; i++) this.boonMotes.push(this.newMote(Math.random() * vh));
+    if (!this.textures.exists('ab_boon_title')) this.textures.addCanvas('ab_boon_title', titleBitmap('Choose a Boon').toCanvas());
+    const title = this.add.image(Math.round(vw / 2), PAD + 2, 'ab_boon_title').setOrigin(0.5, 0);
+    const sub = pixelText(this, 0, PAD + 2 + title.height + 3, `${TIER_NAMES[tier]} boons`, accent);
+    sub.setX(Math.round(vw / 2 - sub.width / 2));
+    this.boonTimer = pixelText(this, 0, sub.y + 9, '', SOFT);
+    const heads = [title, sub, this.boonTimer];
+
+    // The cards: as wide as three fit (up to a cap), as tall as their words need.
+    const gap = vw >= 300 ? 10 : 6;
+    const cw = Math.max(60, Math.min(BOON_CARD_MAX, Math.floor((vw - PAD * 2 - 8 - gap * 2) / 3)));
+    const inner = cw - 18;
+    const defs = offer.map((id) => boonDef(id)!);
+    const names = defs.map((d) => wrap(this.probe, d.name, inner).slice(0, 2));
+    const nameLines = Math.max(1, ...names.map((n) => n.length));
+    const texts = defs.map((d) => wrap(this.probe, d.text, inner));
+    const L0 = boonLayout(cw, 0, nameLines);
+    const need = L0.textY + Math.max(...texts.map((t) => t.length)) * BOON_LINE + 22;
+    const top = this.boonTimer.y + 12;
+    const room = vh - top - 16 - PAD * 2 - 6;
+    const ch = Math.min(Math.max(need, Math.round(cw * 1.38)), Math.max(need, room));
+    const x0 = Math.round((vw - (cw * 3 + gap * 2)) / 2);
+
+    // A column of the tier's light behind the row.
+    const wash = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+    for (let i = 0; i < 6; i++) wash.fillStyle(accent, 0.025).fillEllipse(vw / 2, top + ch / 2, (cw * 3 + gap * 2) * (0.7 + i * 0.12), ch * (0.9 + i * 0.1));
+    root.add([dim, block, wash, this.boonMoteG, ...heads]);
+
+    this.boonCards = defs.map((d, i) => {
+      const L = boonLayout(cw, ch, nameLines);
+      const box = this.add.container(x0 + i * (cw + gap) + cw / 2, top + ch / 2);
+      const back = this.add.image(0, 0, boonBack(this, d.tier, cw, ch));
+      const face = this.add.container(-cw / 2, -ch / 2);
+      const bg = this.add.image(0, 0, boonCard(this, d.tier, cw, ch, nameLines)).setOrigin(0);
+      const glow = this.add.image(L.cx, L.cy, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(tierAccent(d.tier)).setDisplaySize(L.halo * 3.4, L.halo * 3.4).setAlpha(0.45);
+      const icon = this.add.image(L.cx, L.cy, boonIcon(this, d.id, L.icon));
+      const sheen = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+      const items: Phaser.GameObjects.GameObject[] = [bg, glow, icon, sheen];
+      // The name on the ribbon, shadowed so it reads on any metal; the words under it; the tier at the foot.
+      const nameY = L.ribbonY + 3 + Math.round(((nameLines - names[i].length) * BOON_LINE) / 2);
+      names[i].forEach((ln, k) => {
+        const shadow = pixelText(this, 0, nameY + k * BOON_LINE + 1, ln, 0x0b0818);
+        const t = pixelText(this, 0, nameY + k * BOON_LINE, ln, INK);
+        const x = Math.round(cw / 2 - t.width / 2);
+        shadow.setX(x);
+        t.setX(x);
+        items.push(shadow, t);
+      });
+      texts[i].forEach((ln, k) => {
+        const t = pixelText(this, 0, L.textY + k * BOON_LINE, ln, 0xe0d8ff);
+        items.push(t.setX(Math.round(cw / 2 - t.width / 2)));
+      });
+      const tl = pixelText(this, 0, ch - L.border - 10, TIER_NAMES[d.tier], tierAccent(d.tier));
+      items.push(tl.setX(Math.round(cw / 2 - tl.width / 2)));
+      face.add(items);
+      const flash = this.add.rectangle(0, 0, cw, ch, 0xffffff, 0).setBlendMode(Phaser.BlendModes.ADD);
+      const hit = this.add.zone(0, 0, cw, ch).setInteractive({ useHandCursor: true });
+      box.add([back, face, flash, hit]);
+      root.add(box);
+      const view: BoonCardView = { id: d.id, tier: d.tier, box, face, back, icon, glow, sheen, flash, hit, w: cw, h: ch, iconY: L.cy, baseY: box.y, t: i * 1.7, hover: false };
+      hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OVER, (p: Phaser.Input.Pointer) => {
+        if (!p.wasTouch) view.hover = true;
+      });
+      hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OUT, () => (view.hover = false));
+      hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => {
+        if (this.boonLive) this.takeBoon(d.id, true);
+      });
+      return view;
+    });
+
+    // Look past the cards at the board (and back).
+    const peek = new PixelButton(this, 'Look at board', 96, 16, BUTTON_PLAIN, 'ab_boon_peek', () => this.peekBoons(true)).place(Math.round(vw / 2 - 48), Math.min(vh - 16 - PAD, top + ch + 6));
+    this.boonBack = new PixelButton(this, 'Choose a boon', 96, 16, BUTTON_GOLD, 'ab_boon_back', () => this.peekBoons(false)).place(Math.round(vw / 2 - 48), PAD + 15);
+    this.boonBack.setVisible(false);
+    this.boonBack.setEnabled(false);
+    root.add([peek, this.boonBack]);
+    root.setData('block', block);
+    root.setData('peek', peek);
+
+    if (!reveal) {
+      this.boonLive = true;
+      for (const c of this.boonCards) {
+        c.back.setVisible(false);
+        c.face.setVisible(true);
+      }
+      return;
+    }
+    // The deal: the dark and the title come in, the cards rise face down, then turn over in turn.
+    dim.setAlpha(0);
+    this.tweens.add({ targets: dim, alpha: 0.8, duration: 260 });
+    title.setAlpha(0).setY(title.y - 10);
+    this.tweens.add({ targets: title, alpha: 1, y: title.y + 10, duration: 320, ease: 'Back.Out' });
+    for (const o of [sub, this.boonTimer, peek]) {
+      o.setAlpha(0);
+      this.tweens.add({ targets: o, alpha: 1, duration: 300, delay: 200 });
+    }
+    this.boonLive = false;
+    this.boonCards.forEach((c, i) => {
+      c.face.setVisible(false);
+      c.box.setAlpha(0).setY(c.baseY + 28);
+      this.tweens.add({ targets: c.box, alpha: 1, y: c.baseY, duration: 300, delay: 120 + i * BOON_DEAL_MS, ease: 'Back.Out' });
+      this.time.delayedCall(120 + BOON_FLIP_MS + i * BOON_DEAL_MS, () => this.flipBoon(c, i));
+    });
+    this.time.delayedCall(120 + BOON_FLIP_MS + 2 * BOON_DEAL_MS + 260, () => {
+      if (this.boonView === root) this.boonLive = true;
+    });
+  }
+
+  /** Turn a dealt card over: it narrows to an edge, shows its face, widens again with a flash. */
+  private flipBoon(c: BoonCardView, i: number): void {
+    if (!c.box.active) return;
+    this.tweens.add({
+      targets: c.box,
+      scaleX: 0,
+      duration: 90,
+      ease: 'Sine.In',
+      onComplete: () => {
+        if (!c.box.active) return;
+        c.back.setVisible(false);
+        c.face.setVisible(true);
+        c.flash.setAlpha(0.75);
+        this.tweens.add({ targets: c.flash, alpha: 0, duration: 320 });
+        this.tweens.add({ targets: c.box, scaleX: 1, duration: 150, ease: 'Back.Out' });
+      },
+    });
+    play(() => sound.cardFlip(Math.min(2, c.tier + (i === 2 ? 1 : 0))));
+  }
+
+  /** A mote of light starting at height `y` (the page's foot when new). */
+  private newMote(y = this.vh + 2): { x: number; y: number; v: number; a: number; c: number } {
+    const tier = boonDef(this.boonOffer?.[0] ?? '')?.tier ?? 0;
+    return { x: Math.random() * this.vw, y, v: 6 + Math.random() * 16, a: 0.25 + Math.random() * 0.5, c: Math.random() < 0.7 ? tierAccent(tier as BoonTier) : 0xffffff };
+  }
+
+  /** The cards' life while they're up: motes rising, pictures bobbing, glows breathing, sheens crossing. */
+  private tickBoons(dt: number): void {
+    const g = this.boonMoteG;
+    if (g) {
+      g.clear();
+      for (const m of this.boonMotes) {
+        m.y -= m.v * dt;
+        m.x += Math.sin((m.y + m.v * 10) / 17) * dt * 3;
+        if (m.y < -2) Object.assign(m, this.newMote());
+        const fade = Math.min(1, m.y / (this.vh * 0.4));
+        g.fillStyle(m.c, m.a * fade).fillRect(Math.round(m.x), Math.round(m.y), m.v > 18 ? 2 : 1, m.v > 18 ? 2 : 1);
+      }
+    }
+    this.boonTimer?.setText(this.phase === 'plan' ? `${Math.max(0, Math.ceil(this.timer))}s to choose` : '');
+    if (this.boonTimer) this.boonTimer.setX(Math.round(this.vw / 2 - this.boonTimer.width / 2));
+    for (const c of this.boonCards) {
+      if (!c.box.active) continue;
+      c.t += dt;
+      c.icon.setY(c.iconY + Math.round(Math.sin(c.t * 2.2) * 1.5));
+      c.glow.setAlpha(0.36 + 0.14 * Math.sin(c.t * 3.1) + (c.hover ? 0.25 : 0));
+      // Lift a little under the pointer.
+      if (this.boonLive) c.box.y += ((c.hover ? c.baseY - 4 : c.baseY) - c.box.y) * Math.min(1, dt * 14);
+      this.drawSheen(c);
+    }
+  }
+
+  /** A slanted band of light crossing a card now and then: prism's shifts through the rainbow as it goes. */
+  private drawSheen(c: BoonCardView): void {
+    const g = c.sheen.clear();
+    const period = BOON_SHEEN[c.tier];
+    const k = (c.t % period) / period / 0.4;
+    if (k >= 1 || !c.face.visible) return;
+    const w = c.w;
+    const h = c.h;
+    const slant = Math.round(h / 3);
+    const bw = 8;
+    const x0 = Math.round(-bw - slant + k * (w + bw * 2 + slant));
+    const base = c.tier === 2 ? Phaser.Display.Color.HSVToRGB(k, 0.45, 1).color : 0xfff4d6;
+    const a = c.tier === 0 ? 0.08 : 0.13;
+    for (let y = 6; y < h - 6; y++) {
+      const x = x0 + Math.round((h - y) / 3);
+      const l = Math.max(6, x);
+      const r = Math.min(w - 6, x + bw);
+      if (r > l) g.fillStyle(base, a).fillRect(l, y, r - l, 1);
+      const l2 = Math.max(6, x + 3);
+      const r2 = Math.min(w - 6, x + 5);
+      if (r2 > l2) g.fillStyle(0xffffff, a).fillRect(l2, y, r2 - l2, 1);
+    }
+  }
+
+  /** Put the cards aside to look at the board (they wait behind a button), or bring them back. */
+  private peekBoons(on: boolean): void {
+    const root = this.boonView;
+    if (!root) return;
+    this.boonPeek = on;
+    for (const o of root.list) if (o !== this.boonBack) (o as unknown as Phaser.GameObjects.Components.Visible).setVisible(!on);
+    this.boonBack?.setVisible(on);
+    // Hidden things still catch taps unless told not to.
+    const block = root.getData('block') as Phaser.GameObjects.Zone | undefined;
+    if (block?.input) block.input.enabled = !on;
+    (root.getData('peek') as PixelButton | undefined)?.setEnabled(!on);
+    this.boonBack?.setEnabled(on);
+    for (const c of this.boonCards) {
+      c.hover = false;
+      if (c.hit.input) c.hit.input.enabled = !on;
+    }
+  }
+
+  /**
+   * Keep a boon: it's this player's from now on, and what it gives at once is
+   * given. `animate`: the chosen card flares and flies to the kept boons, the
+   * others fall away.
+   */
+  private takeBoon(id: string, animate: boolean): void {
+    if (!this.me || !this.boonOffer?.includes(id)) return;
+    this.boonOffer = null;
+    this.me.takeBoon(id);
+    const mine = this.seats[this.mySeat];
+    if (mine) {
+      mine.boons = [...this.me.boons];
+      mine.level = this.me.level;
+    }
+    const tier = boonDef(id)?.tier ?? 0;
+    const root = this.boonView;
+    if (animate && root) {
+      play(() => sound.wishBurst(tier));
+      this.boonLive = false;
+      const cards = this.boonCards;
+      // Detach the view so the next show or a close doesn't fight the exit; it removes itself.
+      this.boonView = null;
+      this.boonCards = [];
+      this.boonMoteG = null;
+      this.boonTimer = null;
+      this.boonBack = null;
+      this.boonPeek = false;
+      for (const c of cards) {
+        if (c.id === id) {
+          c.flash.setAlpha(0.9);
+          this.tweens.add({ targets: c.flash, alpha: 0, duration: 380 });
+          this.tweens.add({ targets: c.box, scale: 1.12, duration: 180, ease: 'Back.Out' });
+          // Then off to where the kept boons are shown.
+          const to = { x: this.traitRect.x + BADGE / 2, y: this.traitRect.y + 12 + BADGE / 2 };
+          this.tweens.add({ targets: c.box, x: to.x, y: to.y, scale: 0.12, alpha: 0.2, delay: 420, duration: 360, ease: 'Cubic.In' });
+        } else this.tweens.add({ targets: c.box, alpha: 0, y: c.box.y + 26, duration: 240, ease: 'Sine.In' });
+      }
+      this.tweens.add({ targets: root, alpha: 0, delay: 620, duration: 220, onComplete: () => root.destroy() });
+    } else this.closeBoons();
+    this.syncPieces();
+    this.refreshHud();
+  }
+
+  /** Take the cards down (the offer, if any, stays). */
+  private closeBoons(): void {
+    this.boonView?.destroy();
+    this.boonView = null;
+    this.boonCards = [];
+    this.boonMoteG = null;
+    this.boonTimer = null;
+    this.boonBack = null;
+    this.boonPeek = false;
+    this.boonLive = false;
   }
 
   // ------------------------------------------------------------ shop
@@ -1638,6 +2020,11 @@ export class AutoScene extends Phaser.Scene {
 
   private toggleReady(): void {
     if (this.phase !== 'plan' || !this.me.alive) return;
+    // A boon is chosen before the fight: Fight while looking at the board brings the cards back.
+    if (this.boonOffer) {
+      if (this.boonPeek) this.peekBoons(false);
+      return;
+    }
     if (this.mode === 'ai') return this.endPlan();
     this.ready = !this.ready;
     session.send({ t: 'ar', round: this.round, on: this.ready });
@@ -1768,6 +2155,7 @@ export class AutoScene extends Phaser.Scene {
       // A tap: show this hero on the card (a second tap puts it away).
       const same = this.selected?.key === pr.piece.key && this.selected.star === pr.piece.star;
       this.selected = same ? null : { key: pr.piece.key, star: pr.piece.star, look: pr.piece.look };
+      this.boonShown = null;
       this.refreshInfo();
       return;
     }
@@ -2114,7 +2502,7 @@ export class AutoScene extends Phaser.Scene {
         if (!this.host && inMatch && this.phase === 'plan') {
           this.cancelDrag();
           this.lockBoard();
-          if (this.me.alive) session.send({ t: 'ab', round: this.round, b: this.me.placed(), lv: this.me.level });
+          if (this.me.alive) session.send({ t: 'ab', round: this.round, b: this.me.placed(), lv: this.me.level, bn: this.me.boons });
         }
         break;
       case 'ab': {
@@ -2122,6 +2510,7 @@ export class AutoScene extends Phaser.Scene {
         const seat = this.seatOf(m.f);
         if (seat < 0) break;
         this.seats[seat].board = cleanBoard(m.b);
+        this.seats[seat].boons = cleanBoons(m.bn);
         this.seats[seat].level = Math.max(1, Math.min(MAX_LEVEL, Number(m.lv) || this.seats[seat].level));
         this.awaiting.delete(seat);
         if (Number(m.round) === this.round && this.phase === 'fight' && !this.awaiting.size) this.hostFights();

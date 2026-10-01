@@ -354,7 +354,7 @@ export function autoIcons(scene: Phaser.Scene): void {
 }
 
 /** Trait badges, 9x9 each, painted in their trait's colour on a dark hexagon. */
-const TRAIT_MARKS: Record<TraitId, string[]> = {
+export const TRAIT_MARKS: Record<TraitId, string[]> = {
   arcane: ['...#...', '..###..', '#######', '.#####.', '..#.#..', '.#...#.', '.......'],
   order: ['.#####.', '.#.#.#.', '.#####.', '.#.#.#.', '..###..', '...#...', '.......'],
   shadow: ['..###..', '.##....', '##.....', '##.....', '.##....', '..###..', '.......'],

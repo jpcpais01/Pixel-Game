@@ -12,12 +12,13 @@
 //                  af { round, bouts, hp, lv, place }   the round (a RoundResult)
 //                  ah { hp, place }           someone left: their seat is out
 //                  ax { to }                  sorry, the match has begun
-//   guest -> host: ab { round, b, lv }        my board
+//   guest -> host: ab { round, b, lv, bn }    my board, level and boons
 //   anyone:        ar { round, on }           ready (or not) to fight early
 
 import { COLS, HALF, ROWS, type Placed } from './sim';
 import { UNITS } from './units';
 import { MAX_SEATS, type Bout, type RoundResult, type SeatInfo } from './table';
+import { cleanBoons } from './boons';
 
 export const AUTO_ARENA = 'auto';
 
@@ -49,6 +50,7 @@ export function cleanRound(m: Record<string, unknown>, n: number): RoundResult {
       ghost: !!o.ghost,
       seed: num(o.seed) | 0,
       boards: [cleanBoard(boards[0]), cleanBoard(boards[1])],
+      boons: [cleanBoons(Array.isArray(o.boons) ? o.boons[0] : []), cleanBoons(Array.isArray(o.boons) ? o.boons[1] : [])],
       win: Math.max(-1, Math.min(1, Math.floor(num(o.win, -1)))),
       dmg: [dmg[0], dmg[1]],
       ticks: num(o.ticks),
@@ -57,8 +59,8 @@ export function cleanRound(m: Record<string, unknown>, n: number): RoundResult {
   return { round: num(m.round), bouts, hp: nums(m.hp, n, 0), lv: nums(m.lv, n, 1), place: nums(m.place, n, 0) };
 }
 
-/** A board as sent: only real heroes, on the sender's own half, at most `max`, stars 1 to 3. */
-export function cleanBoard(raw: unknown, max = 6): Placed[] {
+/** A board as sent: only real heroes, on the sender's own half, at most `max` (the top level, and a boon's one more), stars 1 to 3. */
+export function cleanBoard(raw: unknown, max = 7): Placed[] {
   if (!Array.isArray(raw)) return [];
   const out: Placed[] = [];
   const taken = new Set<number>();

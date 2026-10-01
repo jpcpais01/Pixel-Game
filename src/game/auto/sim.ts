@@ -7,6 +7,7 @@
 
 import { defenseFactor, heroStats } from '../stats';
 import { traitCounts, unitDef, type Spell, type TraitId, type UnitDef } from './units';
+import { crestBonus, EXECUTE_AT, fightMods, type FightMods } from './boons';
 
 export const COLS = 9;
 export const ROWS = 10;
@@ -103,6 +104,8 @@ export interface SimUnit {
   crit: number;
   twice: number;
   steal: number;
+  /** Damage lift on foes nearly down (a boon). */
+  exec: number;
   spellMul: number;
   atkMul: number;
   regen: number;
@@ -137,9 +140,9 @@ const secs = (s: number) => Math.max(1, Math.round(s / TICK));
 /** A board's cell in the other side's frame. */
 export const mirror = (c: number, r: number): [number, number] => [COLS - 1 - c, ROWS - 1 - r];
 
-/** Trait levels for a board (by different heroes). */
-function traitLevels(board: Placed[]): Map<TraitId, number> {
-  return new Map(traitCounts(board.map((p) => p.key)).map((t) => [t.id, t.level]));
+/** Trait levels for a board (by different heroes, and its owner's crests). */
+function traitLevels(board: Placed[], boons: readonly string[]): Map<TraitId, number> {
+  return new Map(traitCounts(board.map((p) => p.key), crestBonus(boons)).map((t) => [t.id, t.level]));
 }
 
 export class Battle {
@@ -155,18 +158,22 @@ export class Battle {
   private events: SimEvent[] = [];
   private regenT = 0;
 
-  /** `boards[0]` fights from the bottom, `boards[1]` from the top; both are given in their own (bottom) frame. */
-  constructor(boards: [Placed[], Placed[]], seed: number) {
+  /**
+   * `boards[0]` fights from the bottom, `boards[1]` from the top; both are given in their own (bottom) frame.
+   * `boons`: each side's owner's boons (see boons.ts).
+   */
+  constructor(boards: [Placed[], Placed[]], seed: number, boons: [readonly string[], readonly string[]] = [[], []]) {
     this.rand = rng(seed);
     boards.forEach((board, side) => {
-      const traits = traitLevels(board);
+      const traits = traitLevels(board, boons[side] ?? []);
+      const mods = fightMods(boons[side] ?? []);
       const lvl = (t: TraitId) => traits.get(t) ?? 0;
       // Placing order is by cell, so both players build the same list.
       const sorted = [...board].sort((a, b) => a.r - b.r || a.c - b.c);
       for (const p of sorted) {
         const [c, r] = side === 0 ? [p.c, p.r] : mirror(p.c, p.r);
         if (c < 0 || c >= COLS || r < 0 || r >= ROWS || this.at(c, r)) continue;
-        const u = this.make(p, side as 0 | 1, c, r, lvl);
+        const u = this.make(p, side as 0 | 1, c, r, lvl, mods);
         this.units.push(u);
         this.cells[r * COLS + c] = u;
       }
@@ -174,17 +181,17 @@ export class Battle {
     this.checkEnd();
   }
 
-  private make(p: Placed, side: 0 | 1, c: number, r: number, lvl: (t: TraitId) => number): SimUnit {
+  private make(p: Placed, side: 0 | 1, c: number, r: number, lvl: (t: TraitId) => number, m: FightMods): SimUnit {
     const def = unitDef(p.key);
     const s = heroStats(def.cls, def.type);
     const star = Math.max(1, Math.min(3, p.star | 0));
-    const lift = (1 + COST_LIFT * (def.cost - 1)) * STAR_LIFT[star];
+    const lift = (1 + COST_LIFT * (def.cost - 1)) * STAR_LIFT[star] * (star > 1 ? m.starred : 1);
     const has = (t: TraitId) => def.origin === t || def.role === t;
     const pick = (t: TraitId, a: number, b: number) => (has(t) ? [0, a, b][lvl(t)] : 0);
     const team = (t: TraitId, a: number, b: number) => [0, a, b][lvl(t)];
-    const maxHp = Math.round(s.hp * HP_MUL * lift * (1 + pick('tank', 0.25, 0.6)));
-    const aps = Math.min(APS.max, Math.max(APS.min, s.rate * APS.scale)) * (1 + pick('wild', 0.2, 0.45));
-    const dps = s.damage * s.rate * DPS_MUL * lift;
+    const maxHp = Math.round(s.hp * HP_MUL * lift * m.hp * (1 + pick('tank', 0.25, 0.6)));
+    const aps = Math.min(APS.max, Math.max(APS.min, s.rate * APS.scale)) * (1 + pick('wild', 0.2, 0.45)) * m.aps;
+    const dps = s.damage * s.rate * DPS_MUL * lift * m.dmg;
     return {
       uid: this.units.length,
       side,
@@ -199,11 +206,11 @@ export class Battle {
       stepDur: 1,
       hp: maxHp,
       maxHp,
-      shield: Math.round(maxHp * pick('order', 0.2, 0.45)),
+      shield: Math.round(maxHp * Math.min(SHIELD_CAP, pick('order', 0.2, 0.45) + m.shield)),
       dmg: dps,
       aps,
       armor: s.defense + pick('forged', 30, 70),
-      mana: team('caster', 20, 45),
+      mana: Math.min(def.mana, team('caster', 20, 45) + m.mana),
       maxMana: def.mana,
       alive: true,
       target: -1,
@@ -221,7 +228,8 @@ export class Battle {
       burnBy: -1,
       crit: pick('shadow', 0.25, 0.45),
       twice: pick('blade', 0.25, 0.5),
-      steal: pick('melee', 0.15, 0.3),
+      steal: pick('melee', 0.15, 0.3) + m.steal,
+      exec: m.exec,
       spellMul: 1 + pick('arcane', 0.25, 0.6),
       atkMul: 1 + pick('ranged', 0.2, 0.5),
       regen: team('show', 0.015, 0.03),
@@ -717,6 +725,7 @@ export class Battle {
       crit = true;
       amount *= CRIT;
     }
+    if (src && src.exec > 1 && dst.hp < dst.maxHp * EXECUTE_AT) amount *= src.exec;
     amount *= defenseFactor(dst.armor);
     let left = amount;
     if (dst.shield > 0) {
