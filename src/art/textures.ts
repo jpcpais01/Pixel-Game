@@ -139,7 +139,7 @@ import { ELDER_H, ELDER_W, PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAME
 import { CAMPFIRE, CHEST_H, CHEST_W, FPROP_FRAMES, FPROP_H, FPROP_W, MENHIR_H, MENHIR_LOOKS, MENHIR_W, SHRINE_FRAMES, SHRINE_H as FSHRINE_H, SHRINE_W as FSHRINE_W, chestArt, menhirArt, shrineArt } from './forest';
 import { ALTAR_H, ALTAR_W, GROVE_FRAMES, GROVE_H, GROVE_W, HOLLOW_FRAMES, HOLLOW_H, HOLLOW_W, PRINT_H, PRINT_W, SPRING_FRAMES, SPRING_H, SPRING_W, STAG_ANIMS, STAG_H, STAG_W, altarArt, groveFrame, hollowArt, hoofprint, springArt, stagBuffIcon, stagFrames } from './stag';
 import { STRIP_H, buildStrip } from './ground';
-import { CHUNK, ForestGen, PREVIEW_SEED } from '../world/forestGen';
+import { CHUNK, ForestGen, EVERWOOD_SEED } from '../world/forestGen';
 import { forestTile } from '../world/forestGround';
 import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, RIPPLE_FRAMES, RIPPLE_H, RIPPLE_W, rippleFrames, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
 
@@ -1026,7 +1026,7 @@ function* forestTextures(scene: Phaser.Scene): Generator<void, void, void> {
   }
   yield;
   // Last, the select card's patch of ground: its presence means everything above is built.
-  const gen = new ForestGen(PREVIEW_SEED);
+  const gen = new ForestGen(EVERWOOD_SEED);
   const at = gen.spawn();
   const col = Math.floor(at.x / CHUNK);
   const row = Math.floor(at.y / STRIP_H);

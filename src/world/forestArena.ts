@@ -3,20 +3,20 @@ import { STRIP_H } from '../art/ground';
 import { warmForest } from '../art/arenaLoader';
 import { PROP_BASE_Y, PROP_H, TREE_BASE_Y, TREE_H } from '../art/trees';
 import type { ArenaDef, PreviewSprite } from './arenas';
-import { CHUNK, FOREST_MID, FOREST_WORLD, ForestGen, PREVIEW_SEED, forestWalkable, type FProp } from './forestGen';
+import { CHUNK, FOREST_MID, FOREST_WORLD, ForestGen, EVERWOOD_SEED, forestWalkable, type FProp } from './forestGen';
 
 // The Everwood on the arena select: a forest without end, grown from a new
 // seed each visit (online, from the room's code, so friends share one). The
 // world builds it by id (see world/Forest.ts); what it needs from the entry
 // is its size, light, drifting leaves and the window its card looks into,
-// which is always the same forest (PREVIEW_SEED), at its start.
+// which is always the same forest (EVERWOOD_SEED), at its start.
 
 let preview: { gen: ForestGen; col: number; row: number } | null = null;
 
 /** The preview forest and the ground tile its window looks at (the one its start is on). */
 function previewSpot(): { gen: ForestGen; col: number; row: number } {
   if (!preview) {
-    const gen = new ForestGen(PREVIEW_SEED);
+    const gen = new ForestGen(EVERWOOD_SEED);
     const at = gen.spawn();
     preview = { gen, col: Math.floor(at.x / CHUNK), row: Math.floor(at.y / STRIP_H) };
   }

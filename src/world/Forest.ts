@@ -69,6 +69,10 @@ const CAMP_TICK = 600;
 /** The shrines' blessings last longer than a potion's. */
 const SHRINE_BLESSINGS: BuffDef[] = [MIGHT, WARD, RENEW, SWIFTNESS].map((d) => ({ ...d, duration: d.duration * 3 }));
 /** The lights of a camp and a shrine: radius, colour, strength, and how much is left by day. */
+/** Tree shadows' strength beside a lone thing's (they overlap in a wood, and the ground already has their soft pools). */
+const TREE_SHADOW = 0.62;
+/** Undergrowth solid enough to cast a shadow (grass, flowers, ferns and little caps don't). */
+const CASTS = new Set(['rock', 'bush', 'berry', 'stump', 'log', 'boulder', 'bigshroom']);
 const CAMP_LIGHT = { r: 150, color: 0xff9a4a, i: 2, day: 0.35 };
 const SHRINE_LIGHT = { r: 80, color: 0x7ae6dc, i: 1.2, day: 0.4 };
 
@@ -134,6 +138,8 @@ interface Stood {
   rays: { img: Img; x: number; y: number; seed: number }[];
   shrooms: { halo: Img | Sprite; seed: number }[];
   shadows: Img[];
+  /** Trees' shadows: long and overlapping in a wood, so laid lighter than a lone thing's. */
+  treeShadows: Img[];
   lights: Phaser.GameObjects.Light[];
 }
 
@@ -500,7 +506,7 @@ export class Forest {
   private stand(key: number): void {
     if (this.stood.has(key)) return;
     const l = this.gen.layout(Math.floor(key / 4096), key % 4096);
-    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], lights: [] };
+    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], treeShadows: [], lights: [] };
     this.stood.set(key, st);
     const add = this.world.add;
     const place = (obj: Placed['obj'], x: number, y: number, hw: number, up: number) => st.placed.push({ obj, x0: x - hw, x1: x + hw, y0: y - up, y1: y + 6 });
@@ -513,6 +519,7 @@ export class Forest {
       const shape = WOOD_SHAPE[t.kind];
       st.trees.push({ obj, x: t.x, y: t.y, kind: t.kind, v: t.v, anim: `${old ? 'tree' : 'ftree'}_${t.kind}${t.v}`, swaying: false, alpha: 1, r: shape.canopyR, top: shape.canopyY, glow: null });
       place(obj, t.x, t.y, 48, TREE_BASE_Y);
+      this.cast(st, st.treeShadows, obj, TREE_H);
     }
     for (const p of l.props) if (!this.gen.inGlade(p.x, p.y)) this.prop(st, place, p.kind, p.x, p.y, p.v, p.flip);
     for (const r of l.rays) {
@@ -541,6 +548,7 @@ export class Forest {
     }
     obj.setPipeline('Lit').setDepth(y).setFlipX(flip && kind !== 'log');
     place(obj, x, y, 24, 40);
+    if (CASTS.has(kind)) this.cast(st, st.shadows, obj, 40);
     // What glows: the little glowing caps, and the giant mushrooms of the hollows.
     const glowKey = kind === 'glowcap' ? 'flora_e' : kind === 'bigshroom' ? 'fprop_e' : null;
     if (glowKey) {
@@ -625,6 +633,7 @@ export class Forest {
       case 'elder': {
         const obj = add.sprite(p.x, p.y, 'elder', 'e0').setOrigin(0.5, ELDER_BASE_Y / ELDER_H).setPipeline('Lit').setDepth(p.y);
         place(obj, p.x, p.y, 90, ELDER_BASE_Y);
+        this.cast(st, st.treeShadows, obj, ELDER_H);
         const glow = add.sprite(p.x, p.y, 'elder_e', 'e0').setOrigin(0.5, ELDER_BASE_Y / ELDER_H).setBlendMode(Phaser.BlendModes.ADD).setDepth(p.y + 0.1);
         place(glow, p.x, p.y, 90, ELDER_BASE_Y);
         st.trees.push({ obj, x: p.x, y: p.y, kind: 'elder', v: 0, anim: 'elder_sway', swaying: false, alpha: 1, r: 76, top: 118, glow });
@@ -671,6 +680,18 @@ export class Forest {
   }
 
   /** Take a chunk's things down again. */
+  /**
+   * The sun's shadow of `obj`: its silhouette laid on the ground from its
+   * foot, turned and stretched with the time of day like the heroes' and the
+   * monsters' (see sunShadow). Kept while it could reach into view: `reach`
+   * px every way from the foot, as the shadow swings round with the sun.
+   */
+  private cast(st: Stood, list: Img[], obj: Img | Sprite, reach: number): void {
+    const sh = sunShadow(this.world.add.image(obj.x, obj.y, `${obj.texture.key}_s`, obj.frame.name).setOrigin(obj.originX, obj.originY).setFlipX(obj.flipX));
+    list.push(sh);
+    st.placed.push({ obj: sh, x0: obj.x - reach, x1: obj.x + reach, y0: obj.y - reach, y1: obj.y + reach });
+  }
+
   private unstand(key: number): void {
     const st = this.stood.get(key);
     if (!st) return;
@@ -723,6 +744,7 @@ export class Forest {
     for (const st of this.stood.values()) {
       for (const p of st.placed) p.obj.setVisible(p.x1 > vx0 && p.x0 < vx1 && p.y1 > vy0 && p.y0 < vy1);
       for (const s of st.shadows) s.setAlpha(shadowAlpha);
+      for (const s of st.treeShadows) s.setAlpha(shadowAlpha * TREE_SHADOW);
       for (const t of st.trees) {
         if (!t.obj.visible) continue;
         if (t.kind !== 'pine' && t.kind !== 'elder') leafy = true;
