@@ -1645,6 +1645,12 @@ export class WorldScene extends Phaser.Scene {
     const maxY = r.bottom - viewH / 2 - halfH;
     let tx = this.hero.x + this.lean.x - halfW;
     let ty = this.hero.y - 12 + this.lean.y - halfH;
+    // At a lookout in the Everwood, the view leans out over the drop.
+    const gaze = this.forest?.gaze;
+    if (gaze) {
+      tx += gaze.x;
+      ty += gaze.y;
+    }
     // A boss's entrance turns the camera to it, and back.
     const f = this.intro?.focus;
     if (f) {

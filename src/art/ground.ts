@@ -52,6 +52,8 @@ export interface Look {
   lotus?: RGB[];
   plank?: RGB[];
   fallen?: RGB[];
+  /** Cliff faces, one ramp per kind of rock (the cell's `sub`). */
+  rock?: RGB[][];
 }
 
 /** What a pixel of ground is. */
@@ -77,6 +79,10 @@ export const K = {
   Plank: 17,
   /** Fallen autumn leaves, their colour picked outright by tone (look.fallen). */
   Fallen: 18,
+  /** A cliff's rock face (look.rock[sub]). */
+  Rock: 19,
+  /** Water falling down a cliff's face: the water ramp, its tone picked outright. */
+  Fall: 20,
 } as const;
 
 /** One pixel of ground, as the spec classifies it. */
@@ -664,6 +670,15 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
               break;
             case K.Plank:
               col = plank[clamp(Math.round(3 + shade), 0, plank.length - 1)];
+              break;
+            case K.Rock: {
+              const rp = look.rock?.[sub[i]] ?? g.stone;
+              col = rp[clamp(Math.round(4.1 + shade), 0, rp.length - 1)];
+              break;
+            }
+            case K.Fall:
+              // Falling water is white with air; shade only dims it a little.
+              col = water[clamp(Math.round(3 + tone[i] - dark * 0.35), 0, water.length - 1)];
               break;
             case K.Fallen:
               // A leaf keeps its colour; shade only darkens it.

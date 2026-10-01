@@ -526,3 +526,117 @@ export function menhirArt(v: number): PixelCanvas {
 export const CAMPFIRE: PropArt = PROP_ART.campfire;
 /** Where its fire sits on the ground, in its frame. */
 export const CAMPFIRE_FOOT = { x: CAMPFIRE.w / 2, y: CAMPFIRE.h - 7 };
+
+// ------------------------------------------------------------------ cliffs
+
+/** A lookout's parapet: 48 x 34, standing on (24, LOOKOUT_BASE_Y), its foot along a cliff's lip. */
+export const LOOKOUT_W = 48;
+export const LOOKOUT_H = 34;
+export const LOOKOUT_BASE_Y = 30;
+
+const PARAPET: Material = { ramp: ramp('#18171a', '#252326', '#353230', '#47423b', '#5c5547', '#746a57', '#8e8469', '#aaa080'), outline: hex('#0a0a0c'), outlineLit: hex('#18171a') };
+const BRASS: Material = { ramp: ramp('#2e1c06', '#4e320c', '#765016', '#a2742a', '#cc9c40', '#ecc66a', '#fff0b4'), outline: hex('#160c02'), shine: true };
+const LEATHER: Material = { ramp: ramp('#1a0e08', '#2c1a10', '#422818', '#5a3a22'), outline: hex('#0c0604') };
+const LENS: Material = { ramp: ramp('#1e3a48', '#3c6e86', '#7ab8d2', '#d4f4ff'), outline: hex('#0a1a20'), shine: true, emissive: 0.35, noAO: true };
+
+/**
+ * A lookout at a cliff's lip: a low dry-stone parapet bowed along the edge,
+ * capstones mossed and uneven, a little cairn at one end and, on a post at
+ * the other, a brass spyglass on a swivel, trained out over the treetops.
+ */
+export function lookoutArt(): PixelCanvas {
+  const c = new PixelCanvas(LOOKOUT_W, LOOKOUT_H);
+  const R = rng(9711);
+  const x0 = 4;
+  const x1 = 43;
+  const mid = (x0 + x1) / 2;
+  // The wall bows south in its middle, as the lip does.
+  const foot = (x: number) => LOOKOUT_BASE_Y - Math.round(2.6 * ((x + 0.5 - mid) / ((x1 - x0) / 2)) ** 2);
+  const H = 7;
+  const tops: number[] = [];
+
+  // The spyglass's post stands behind the wall: drawn first, the wall goes in front of its foot.
+  c.part();
+  const px0 = 33;
+  const postTop = foot(px0) - H - 8;
+  for (let y = postTop; y < foot(px0) - H + 1; y++) for (let x = px0; x < px0 + 3; x++) c.px(x, y, PARAPET, cyl((x - px0 - 1) / 1.5), { bias: y === postTop ? 1 : 0 });
+  c.part();
+  c.ellipse(px0 + 1.5, postTop - 0.5, 1.8, 1.4, BRASS);
+  // The spyglass: eyepiece at the back (west), wide objective out east, tipped a little down toward the view.
+  c.part();
+  c.capsule(px0 - 5, postTop - 3, px0 + 7, postTop - 1, 1.1, 1.8, BRASS);
+  c.part();
+  for (let k = 0; k < 3; k++) c.px(px0 - 1 + k, postTop - 2 + (k > 1 ? 0 : -1) + 1, LEATHER, cyl(0, 0.6));
+  c.part();
+  c.px(px0 + 8, postTop - 2, LENS, sphere(0.6, -0.2));
+  c.px(px0 + 8, postTop - 1, LENS, sphere(0.6, 0.3));
+  c.px(px0 - 6, postTop - 3, LEATHER, FLAT);
+
+  // The wall: capstones on top, coursed stones below with dark joints.
+  c.part();
+  for (let x = x0; x <= x1; x++) {
+    const fy = foot(x);
+    const end = x === x0 || x === x1 ? 1 : 0;
+    const top = fy - H + end - (hash2(x >> 2, 1, 9713) > 0.68 ? 1 : 0);
+    tops[x] = top;
+    for (let y = top; y <= fy; y++) {
+      const down = y - top;
+      if (down < 2) {
+        const stone = Math.floor((x + 1) / 4);
+        c.px(x, y, PARAPET, down === 0 ? UP : sphere(0, -0.3), { bias: (down === 0 ? 2 : 0) + (hash2(stone, 3, 9715) > 0.6 ? 1 : 0) - ((x + 1) % 4 === 0 ? 1 : 0) });
+        continue;
+      }
+      const row = Math.floor((down - 2) / 3);
+      const bw = 4 + Math.floor(hash2(row, 0, 9717) * 3);
+      const along = x + row * 2;
+      const joint = along % bw === 0 || (down - 2) % 3 === 2;
+      const t = end ? (x === x0 ? -0.8 : 0.8) : 0;
+      c.px(x, y, PARAPET, end ? cyl(t, -0.1) : FACE, { bias: joint ? -2 : Math.round((hash2(Math.floor(along / bw), row, 9719) - 0.5) * 2) - (y > fy - 1 ? 1 : 0) });
+    }
+  }
+  // Moss on the capstones and in the joints near the foot.
+  c.part();
+  for (let k = 0; k < 16; k++) {
+    const x = x0 + 1 + Math.floor(R() * (x1 - x0 - 1));
+    const y = tops[x] + (R() < 0.6 ? 0 : Math.floor(R() * (foot(x) - tops[x])));
+    if (c.materialAt(x, y) === PARAPET) c.px(x, y, R() < 0.3 ? LICHEN : MOSS, FLAT, { bias: Math.floor(R() * 2) });
+  }
+  // A cairn of three stones on the west end.
+  c.part();
+  const kx = x0 + 5;
+  const ky = tops[kx];
+  c.ellipse(kx, ky - 1.5, 3.4, 2.1, STONE, { bias: 0 });
+  c.part();
+  c.ellipse(kx + 0.5, ky - 4.2, 2.5, 1.7, STONE, { bias: 1 });
+  c.part();
+  c.ellipse(kx, ky - 6.4, 1.7, 1.3, STONE, { bias: 1 });
+  // Grass at the wall's foot.
+  c.part();
+  for (let x = x0; x <= x1; x += 3 + Math.floor(R() * 3)) tuft(c, x, foot(x) + 1, R, 2 + Math.floor(R() * 3), 3);
+  return c;
+}
+
+/** The streaks scrolled down a waterfall (added over its painted water): 16 x 48, tiling top to bottom. */
+export const FLOW_W = 16;
+export const FLOW_H = 48;
+
+export function fallFlow(): Uint8ClampedArray {
+  const px = new Uint8ClampedArray(FLOW_W * FLOW_H * 4);
+  const R = rng(9801);
+  for (let x = 0; x < FLOW_W; x++) {
+    let y = Math.floor(R() * FLOW_H);
+    for (let k = 0; k < 3; k++) {
+      const len = 4 + Math.floor(R() * 9);
+      const a = 0.3 + R() * 0.55;
+      for (let j = 0; j < len; j++) {
+        const o = (((y + j) % FLOW_H) * FLOW_W + x) * 4;
+        px[o] = 226;
+        px[o + 1] = 248;
+        px[o + 2] = 255;
+        px[o + 3] = Math.max(px[o + 3], Math.round(255 * a * Math.sin(((j + 0.5) / len) * Math.PI)));
+      }
+      y += len + 3 + Math.floor(R() * 10);
+    }
+  }
+  return px;
+}

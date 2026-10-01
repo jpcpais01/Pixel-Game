@@ -13,8 +13,10 @@
 // The Everwood's map is drawn as a traveller would draw it on parchment:
 // watercolour washes for each wood, thickets inked round and stippled with
 // crowns, streams and ponds in blue with their banks drawn in, trails in
-// worn brown, every tree a little mark. What hasn't been walked is blank
-// paper, the known world fraying into it.
+// worn brown, every tree a little mark, cliffs inked as a hard line with
+// hachures down their faces (slopes and stairs left open), each terrace a
+// shade lighter than the one below, and waterfalls white where a stream
+// drops. What hasn't been walked is blank paper, the known world fraying into it.
 
 import { hash2, valueNoise } from './env';
 import { K, type Cell, type GroundSpec, type Look } from './ground';
@@ -26,6 +28,9 @@ import { BIOMES, CHUNK, type FTree, type ForestGen, type WoodKind } from '../wor
 export const MAP_CELL = 8;
 /** Map pixels across a chunk of the Everwood. */
 export const TREK_T = CHUNK / MAP_CELL;
+
+/** How much lighter the explorer's map draws each terrace above the plain. */
+const MAP_LIFT = 0.035;
 /** The Everwood's fog is lifted in squares this many world pixels across (4 to a chunk's side). */
 export const FOG_CELL = 64;
 /** The forest's tree grid (forestGen's TREE_CELL). */
@@ -575,6 +580,9 @@ export function trekTile(gen: ForestGen, cx: number, cy: number, cleared: (x: nu
   const depth = new Float32Array(T * T);
   const core = new Uint8Array(T * T);
   const bio = new Uint8Array(T * T);
+  // Each cell's terrace, and whether the way up from it is open (a slope or stairs).
+  const lvl = new Int8Array(T * T);
+  const open = new Uint8Array(T * T);
   for (let j = 0; j < T; j++) {
     for (let i = 0; i < T; i++) {
       const x = x0 + i * MAP_CELL + 4;
@@ -597,10 +605,14 @@ export function trekTile(gen: ForestGen, cx: number, cy: number, cleared: (x: nu
         depth[n] = roof;
       }
       bio[n] = gen.biomeAt(x, y);
+      const land = gen.terrain(s);
+      lvl[n] = land.level;
+      open[n] = land.slope ? 1 : 0;
     }
   }
   const out = new Uint8ClampedArray(T * T * 4);
   const kind = (i: number, j: number) => cls[clamp(j, 0, T - 1) * T + clamp(i, 0, T - 1)];
+  const level = (i: number, j: number) => lvl[clamp(j, 0, T - 1) * T + clamp(i, 0, T - 1)];
   for (let j = 0; j < T; j++) {
     for (let i = 0; i < T; i++) {
       const n = j * T + i;
@@ -645,6 +657,18 @@ export function trekTile(gen: ForestGen, cx: number, cy: number, cleared: (x: nu
         if (kind(i - 1, j) === WATERC || kind(i + 1, j) === WATERC || kind(i, j - 1) === WATERC || kind(i, j + 1) === WATERC) c = mix(c, INK, 0.22);
         // A thicket's shadow at its south side.
         else if (kind(i, j - 1) === THICKET) c = mix(c, wood.deep, 0.22);
+      }
+      // The lie of the land: higher terraces a shade lighter.
+      c = shade(c, 1 + clamp(lvl[n], -3, 3) * MAP_LIFT);
+      const up = level(i, j - 1) > lvl[n];
+      if (up && k === WATERC) {
+        // A waterfall: the stream drops white, foaming at its foot.
+        c = mix(c, [246, 250, 244], 0.7);
+      } else if (!open[n] && (up || level(i - 1, j) > lvl[n] || level(i + 1, j) > lvl[n] || level(i, j + 1) > lvl[n])) {
+        // The foot of a cliff: a hard inked line, hachured down a face turned south.
+        c = mix(c, INK, up ? 0.78 : 0.5);
+      } else if (!open[n] && level(i, j - 2) > lvl[n] && (x / MAP_CELL) % 2 === 0) {
+        c = mix(c, INK, 0.38);
       }
       const o = n * 4;
       out[o] = c[0];
