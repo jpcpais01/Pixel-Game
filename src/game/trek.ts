@@ -2,8 +2,9 @@
 // the campfires they have rested at (each one a place to travel back to),
 // and the secret places the White Stag has shown them. The forest is always
 // the same one (EVERWOOD_SEED), so this is all that needs keeping: the map
-// itself is painted again from the forest (see art/mapArt.ts). Saved in the
-// player's save as one short string, `t1|squares|fires|secrets`.
+// itself is painted again from the forest (see art/mapArt.ts). It also keeps
+// where the hero last stood, so the forest opens there next time. Saved in
+// the player's save as one short string, `t1|squares|fires|secrets|regions|last`.
 
 import { FOG_CELL } from '../art/mapArt';
 import { CHUNK, FOREST_MID } from '../world/forestGen';
@@ -15,6 +16,8 @@ export const SIGHT = 200;
 const SAVE_MS = 20000;
 /** Most chunks the map remembers, so it always fits in the save. */
 const MAX_CHUNKS = 12000;
+/** The last spot is kept again once the hero is this far (px) from the one kept. */
+const LAST_MOVE = 24;
 /** Fog squares to a chunk's side (4: a chunk's squares fit one 16-bit mask). */
 const F = CHUNK / FOG_CELL;
 const MID = FOREST_MID / CHUNK;
@@ -37,6 +40,8 @@ class Trek {
   secrets: { kind: SecretKind; x: number; y: number }[] = [];
   /** Each wood walked in (by its region cell), and the middle of where in it the hero has walked: its name goes there. */
   regions = new Map<string, { ci: number; cj: number; x: number; y: number; n: number }>();
+  /** Where the hero last stood in the forest: the next visit starts there. */
+  last: { x: number; y: number } | null = null;
   /** Chunks whose squares changed since the map last looked (it repaints them and their neighbours). */
   readonly fresh = new Set<number>();
   /** Raised whenever anything on the map changes. */
@@ -54,9 +59,10 @@ class Trek {
     this.fires.clear();
     this.secrets = [];
     this.regions.clear();
+    this.last = null;
     this.version++;
     if (!s.startsWith('t1|')) return;
-    const [, squares = '', fires = '', secrets = '', regions = ''] = s.split('|');
+    const [, squares = '', fires = '', secrets = '', regions = '', last = ''] = s.split('|');
     for (const item of squares ? squares.split(',') : []) {
       const [dx, dy, m] = item.split('.').map((n) => parseInt(n, 36));
       if (Number.isFinite(dx) && Number.isFinite(dy) && m > 0 && this.masks.size < MAX_CHUNKS) this.masks.set(chunkKey(MID + dx, MID + dy), m & 0xffff);
@@ -75,6 +81,8 @@ class Trek {
       const [ci, cj, x, y, n] = item.split('.').map((v) => parseInt(v, 36));
       if ([ci, cj, x, y, n].every(Number.isFinite)) this.regions.set(`${ci},${cj}`, { ci, cj, x: FOREST_MID + x, y: FOREST_MID + y, n });
     }
+    const [lx, ly] = last.split('.').map((v) => parseInt(v, 36));
+    if (Number.isFinite(lx) && Number.isFinite(ly)) this.last = { x: FOREST_MID + lx, y: FOREST_MID + ly };
   }
 
   private encode(): string {
@@ -83,7 +91,8 @@ class Trek {
     const secrets = this.secrets.map((s) => `${s.kind}.${Math.round(s.x - FOREST_MID).toString(36)}.${Math.round(s.y - FOREST_MID).toString(36)}`).join(',');
     const b36 = (v: number) => Math.round(v).toString(36);
     const regions = [...this.regions.values()].map((r) => `${b36(r.ci)}.${b36(r.cj)}.${b36(r.x - FOREST_MID)}.${b36(r.y - FOREST_MID)}.${b36(r.n)}`).join(',');
-    return `t1|${squares}|${fires}|${secrets}|${regions}`;
+    const last = this.last ? `${b36(this.last.x - FOREST_MID)}.${b36(this.last.y - FOREST_MID)}` : '';
+    return `t1|${squares}|${fires}|${secrets}|${regions}|${last}`;
   }
 
   /** Has the fog square (fx, fy) (in FOG_CELL squares of the world) been walked? */
@@ -134,6 +143,11 @@ class Trek {
         this.fresh.add(k);
         this.changed();
       }
+    }
+    // Where they stand now, for the next visit to start from (it needs no repaint of the map).
+    if (!this.last || Math.hypot(x - this.last.x, y - this.last.y) > LAST_MOVE) {
+      this.last = { x: Math.round(x), y: Math.round(y) };
+      this.dirty = true;
     }
     this.saveT += dt;
     if (this.dirty && this.saveT >= SAVE_MS) this.save();
