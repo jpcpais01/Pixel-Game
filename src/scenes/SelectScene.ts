@@ -86,7 +86,7 @@ const TILE_SIZES = [28, 24, 21, 19];
 const TILE_GAP = 2;
 const tileH = (w: number): number => Math.round(w * 1.3) + 2;
 
-/** How far a press on the hall must travel sideways to count as a swipe to the next class. */
+/** How far a press on the hall must travel sideways to count as a swipe to the class's next character. */
 const SWIPE = 24;
 const TAP_SLOP = 5;
 /** How long a note (a locked skin) replaces the skin's name. */
@@ -805,7 +805,8 @@ class Stage extends Phaser.GameObjects.Container {
     this.skinName = pixelText(scene, 0, 0, '');
     this.lock = scene.add.image(0, 0, 'icon_lock').setOrigin(0).setVisible(false);
 
-    // Over the characters: a tap picks the one under it (or strikes its pose if already picked), a swipe moves to the next class.
+    // Over the characters: a tap picks the one under it (or strikes its pose if already picked); a swipe turns the
+    // line-up, a swipe left bringing the next character (the one standing to the right) to the front.
     const hit = scene.add.zone(0, 0, w, RIBBON_Y - 2).setOrigin(0).setInteractive({ useHandCursor: true });
     const local = (p: Phaser.Input.Pointer) => {
       const z = scene.cameras.main.zoom;
@@ -1472,7 +1473,7 @@ export class SelectScene extends Phaser.Scene {
         this,
         stageW,
         (i) => (i === this.current.types.indexOf(lookOf(this.current).type) ? this.stage?.pose() : this.pickType(i)),
-        (dir) => this.stepClass(dir),
+        (dir) => this.stepType(dir),
         (dir) => this.stepSkin(dir),
       );
       this.add.existing(this.stage);
