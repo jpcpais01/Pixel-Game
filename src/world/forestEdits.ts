@@ -19,6 +19,9 @@ const WALL_PAD = 2;
 /** Chunks are this many cells across (CHUNK / CELL). */
 const CHUNK_CELLS = 16;
 
+/** How far a ward reaches from the middle of its footprint, in world px: its `ward` cells past its own edge. */
+export const wardReach = (p: PartDef, w: number, h: number): number => ((p.ward ?? 0) + Math.max(w, h) / 2) * CELL;
+
 export { footKey } from './forestGen';
 /** A cell's name. Cells run to 65536 each way. */
 export const cellKey = (cx: number, cy: number): number => cx * 65536 + cy;
@@ -38,6 +41,8 @@ export class ForestEdits {
   private chunkWalls = new Map<number, [number, number, number][]>();
   /** Raised on every change, so whatever shows the builds (the map's pins) looks again. */
   version = 0;
+  /** The wards built: their middles and reach (world px); rebuilt by `index`. */
+  wards: { x: number; y: number; r: number }[] = [];
 
   /** Rebuild the lookups after a change. */
   index(): void {
@@ -45,10 +50,12 @@ export class ForestEdits {
     this.cover.clear();
     this.chunkThings.clear();
     this.chunkWalls.clear();
+    this.wards = [];
     for (const t of this.things) {
       const p = partById(t.id);
       if (!p) continue;
       const e = extent(p, t.turn);
+      if (p.ward) this.wards.push({ x: (t.x + e.w / 2) * CELL, y: (t.y + e.h / 2) * CELL, r: wardReach(p, e.w, e.h) });
       for (let y = t.y; y < t.y + e.h; y++) {
         for (let x = t.x; x < t.x + e.w; x++) {
           const k = cellKey(x, y);
@@ -64,6 +71,12 @@ export class ForestEdits {
       const cy = k % 65536;
       push(this.chunkWalls, chunkOf(cx, cy), [cx, cy, v]);
     }
+  }
+
+  /** Is (x, y) inside a ward's reach, where no creature may rise? */
+  warded(x: number, y: number): boolean {
+    for (const w of this.wards) if ((x - w.x) ** 2 + (y - w.y) ** 2 < w.r * w.r) return true;
+    return false;
   }
 
   thingsInChunk(ccx: number, ccy: number): Thing[] {
