@@ -804,6 +804,11 @@ class GameSound {
     if (t !== null) this.sfx!.servo(t, pan);
   }
 
+  crossbow(pan = 0): void {
+    const t = this.slot('crossbow');
+    if (t !== null) this.sfx!.crossbow(t, pan);
+  }
+
   bowShot(pan = 0, storm = false): void {
     const t = this.slot('bowShot');
     if (t !== null) this.sfx!.bowShot(t, pan, storm);

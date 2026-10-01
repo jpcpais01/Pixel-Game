@@ -1760,6 +1760,22 @@ export class Sfx {
     if (storm) this.zap(out, t, 0.18, 0.12);
   }
 
+  /** A crossbow's steel prod letting go: a hard metallic snap and a deep thrum, heavier than a bow's twang. */
+  crossbow(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.8, 0.2);
+    this.burstNoise(out, t, 'bandpass', rand(2600, 3000), 1800, 4, 0.5, 0.025);
+    this.chirp(out, t, 'square', rand(520, 560), 260, 0.14, 0.03);
+    const tw = gain(ctx, 0, out);
+    hit(tw.gain, t, 0.35, 0.002, 0.22);
+    const f = rand(88, 98);
+    const o = osc(ctx, 'triangle', f * 2, filter(ctx, 'lowpass', 1400, 2, tw));
+    sweep(o.frequency, t, f * 2, f, 0.08);
+    o.start(t);
+    o.stop(t + 0.26);
+    this.burstNoise(out, t + 0.01, 'bandpass', 1400, 500, 1.4, 0.3, 0.1);
+  }
+
   /** An arrow striking home: a hard wooden thock into the body; the storm arrow bursts in a crackle. */
   arrowHit(t: number, pan: number, storm: boolean): void {
     const out = this.out(pan, 0.8, 0.2);

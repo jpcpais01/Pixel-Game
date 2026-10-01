@@ -559,3 +559,40 @@ export const dominionIcon: IconPainter = (put, p) => {
     put(x, 5, p.core);
   }
 };
+
+/** Black Powder: a keg on a great bolt, its fuse spitting, a burst behind it. */
+export const powderIcon: IconPainter = (put, p) => {
+  // The burst's rays behind.
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + 0.3;
+    for (let r = 5; r <= (i % 2 ? 6.5 : 7.5); r += 0.5) put(Math.round(8 + Math.cos(a) * r), Math.round(9 + Math.sin(a) * r), r > 6.5 ? p.mid : p.deep);
+  }
+  // The keg: staves, two hoops, a bung.
+  for (let y = 6; y <= 13; y++) {
+    const hw = y === 6 || y === 13 ? 2 : 3;
+    for (let x = 8 - hw; x <= 7 + hw; x++) put(x, y, y === 7 || y === 12 ? p.deep : x <= 6 ? p.hot : x >= 9 ? p.deep : p.mid);
+  }
+  // The bolt it rides, and the fuse's spark.
+  seg(put, 1, 15, 4, 12, p.mid);
+  seg(put, 11, 7, 14, 4, p.hot);
+  put(14, 3, p.core);
+  put(8, 5, p.hot);
+  put(9, 4, p.mid);
+  put(10, 3, p.core);
+  put(11, 2, p.core);
+  put(10, 1, p.hot);
+  put(12, 3, p.hot);
+};
+
+/** Tempest: a funnel of wind, wide at the top, whirling down to a point. */
+export const tempestIcon: IconPainter = (put, p) => {
+  for (let k = 0; k < 6; k++) {
+    const y = 2 + k * 2.2;
+    const r = 6.5 - k * 0.95;
+    ellipse(put, 8 + Math.sin(k * 0.9) * 0.8, y, r, Math.max(0.9, r * 0.32), 0.22, k < 2 ? p.core : k < 4 ? p.hot : p.mid);
+  }
+  put(8, 14, p.mid);
+  put(9, 15, p.deep);
+  // Leaves caught in it.
+  for (const [x, y] of [[2, 5], [13, 8], [4, 11]]) put(x, y, p.deep);
+};

@@ -120,6 +120,9 @@ const DEFS: Record<string, Def> = {
     ult: { kind: 'chain', aim: 'target', n: 6, dmg: 4.2, stun: 0.4, fx: 'lightning', anim: 'eureka' } },
 
   // Order
+  'archer.arbalest': { cost: 3, origin: 'order', range: 4, attack: ['fire'], missile: 'arrow', mana: 80,
+    skill: { name: 'Net bolt', cd: 7, kind: 'blast', aim: 'crowd', r: 1.2, dmg: 0.6, slow: 2.5, stun: 0.5, delay: 0.3, fx: 'arrows', anim: 'brace' },
+    ult: { kind: 'blast', aim: 'crowd', r: 1.8, dmg: 4.5, delay: 0.9, fx: 'fire', anim: 'brace' } },
   'warrior.knight': { cost: 1, origin: 'order', range: 1, attack: ['slash1', 'slash2', 'thrust'], mana: 90,
     skill: { name: 'Fire whirlwind', cd: 6, kind: 'nova', aim: 'self', r: 1.5, dmg: 1.6, fx: 'fire', anim: 'slash2' },
     ult: { kind: 'blast', aim: 'target', r: 1.2, dmg: 4, stun: 0.6, delay: 0.5, fx: 'light', anim: 'rise' } },
@@ -169,6 +172,9 @@ const DEFS: Record<string, Def> = {
   'archer.ranger': { cost: 1, origin: 'wild', range: 4, attack: ['shoot'], missile: 'arrow', mana: 70,
     skill: { name: 'Volley', cd: 6, kind: 'rain', aim: 'crowd', r: 1.5, n: 6, dmg: 2.4, delay: 0.9, fx: 'arrows', anim: 'volley' },
     ult: { kind: 'beam', aim: 'target', r: 7, dmg: 4, fx: 'arrows', anim: 'shoot' } },
+  'archer.wind': { cost: 2, origin: 'wild', range: 3, attack: ['fan'], missile: 'arrow', mana: 70,
+    skill: { name: 'Wind vault', cd: 6, kind: 'beam', aim: 'target', r: 4, dmg: 1.8, knock: 1, dodge: 0.4, fx: 'wind', anim: 'vault' },
+    ult: { kind: 'beam', aim: 'target', r: 5, dmg: 4.2, stun: 0.5, fx: 'wind', anim: 'fan' } },
   'druid.grove': { cost: 2, origin: 'wild', range: 3, attack: ['cast'], missile: 'thorn', mana: 80,
     skill: { name: 'Grove', cd: 7, kind: 'blast', aim: 'crowd', r: 1.1, dmg: 1, stun: 1.2, delay: 0.4, fx: 'thorns', anim: 'charge' },
     ult: { kind: 'blast', aim: 'crowd', r: 2, dmg: 3.5, stun: 1.5, delay: 0.6, fx: 'thorns', anim: 'beam' } },

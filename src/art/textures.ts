@@ -8,7 +8,8 @@ import type { PixelCanvas, RenderedFrame } from './pixel';
 import { lightningIcon, MASTER_FORCE_ICON, MASTER_SABER_ICON, SITH_BOLT_ICON, SITH_STAFF_ICON, staffIcon, WARLORD_BOLT_ICON, WARLORD_STAFF_ICON } from './sith';
 import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, PYRO_SPELL, PYRO_METEOR_H, PYRO_METEOR_W, meteorIcon, pyroMeteor, scorchCanvas, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, hammerIcon, sunfallIcon, saberIcon, forceIcon, fistIcon, barrageIcon, palmIcon, quakeIcon, flaskIcon, bogIcon, canisterIcon, chemBarrageIcon, fumeCanvas, CHEM_BREW_COLORS, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
 import { ALCHEMIST_LOOKS, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, flaskFrame } from './alchemist';
-import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, stuckArrowFrame } from './archer';
+import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbowBoltFrame, stuckArrowFrame, stuckBoltFrame } from './archer';
+import { crossbowIcon, fanShotIcon, netBoltIcon, vaultIcon } from './archerIcons';
 import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, ANOMALY_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
@@ -223,14 +224,24 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   yield;
   // The arrows each archer look looses: 'arrow' frames r0..r15
   // (sixteen headings in flight) and k0..k2 (stuck in the ground), with a
-  // '_storm' suffix for the storm archer.
+  // '_storm' suffix for the storm archer. The arbalest's are its stubby bolts.
   for (const look of ARCHER_LOOKS) {
     const sfx = look.key.slice('archer'.length);
     const arrows = [
-      ...frameList(Array.from({ length: ARROW_DIRS }, (_, i) => arrowFrame(i, look)), 'r'),
-      ...frameList([0, 1, 2].map((k) => stuckArrowFrame(k, look)), 'k'),
+      ...frameList(Array.from({ length: ARROW_DIRS }, (_, i) => (look.arb ? crossbowBoltFrame(i, look) : arrowFrame(i, look))), 'r'),
+      ...frameList([0, 1, 2].map((k) => (look.arb ? stuckBoltFrame(k, look) : stuckArrowFrame(k, look))), 'k'),
     ];
     register(scene, `arrow${sfx}`, pack(arrows, ARROW_SIZE, ARROW_SIZE), ARROW_SIZE, ARROW_SIZE);
+    if (look.arb) {
+      scene.textures.addCanvas('icon_crossbow', toCanvas(16, 16, crossbowIcon()));
+      scene.textures.addCanvas('icon_netbolt', toCanvas(16, 16, netBoltIcon()));
+      continue;
+    }
+    if (look.elf) {
+      scene.textures.addCanvas('icon_fanshot', toCanvas(16, 16, fanShotIcon()));
+      scene.textures.addCanvas('icon_vault', toCanvas(16, 16, vaultIcon()));
+      continue;
+    }
     const q = SKIN_QUIVERS[look.key] ?? (look.storm ? STORM_QUIVER : RANGER_QUIVER);
     scene.textures.addCanvas(`icon_bow${sfx}`, toCanvas(16, 16, bowIcon(q)));
     scene.textures.addCanvas(`icon_rain${sfx}`, toCanvas(16, 16, rainIcon(q, look.storm)));

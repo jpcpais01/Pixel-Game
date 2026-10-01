@@ -72,6 +72,37 @@ export const SCARECROW_ARROW: ArrowStyle = {
   spirit: true,
 };
 
+/** The arbalest's: heavy steel-headed bolts, a hot spark where they bite. */
+export const ARBALEST_ARROW: ArrowStyle = {
+  core: 0xffffff,
+  hot: 0xfff0d8,
+  mid: 0xe8664a,
+  deep: 0x9e2725,
+  light: 0xffb080,
+  suffix: '_arbalest',
+  storm: false,
+};
+
+/** The windrunner's: white-fletched arrows that leave a breath of sea-green wind. */
+export const WIND_ARROW: ArrowStyle = {
+  core: 0xffffff,
+  hot: 0xd8fff6,
+  mid: 0x6ef0dc,
+  deep: 0x2a9a9a,
+  light: 0xa0fff0,
+  suffix: '_wind',
+  storm: false,
+  spirit: true,
+};
+
+/** How an arrow flies, when not the bow's usual way. */
+export interface ArrowFlight {
+  /** World px a second. */
+  speed?: number;
+  /** How many bodies it punches through before the next one stops it. */
+  pierce?: number;
+}
+
 /** Rings on the ground seen at an angle: squash them vertically. */
 const SQUASH = 0.58;
 /** Ground marks: under every standing thing, over the ground's shadows. */
@@ -111,8 +142,12 @@ export class Arrow implements Effect {
   /** Stuck in the ground: ms left before it fades. */
   private stuck = -1;
   private readonly key: string;
-  /** Made once: is a body in this arrow's path at its current point? */
-  private readonly inPathNow = (h: Hurtbox) => inPath(h, this.x, this.y);
+  /** Bodies a piercing bolt has gone through already. */
+  private struck: Hurtbox[] = [];
+  private pierce: number;
+  private readonly speed: number;
+  /** Made once: is a body in this arrow's path at its current point (and not one it's already gone through)? */
+  private readonly inPathNow = (h: Hurtbox) => inPath(h, this.x, this.y) && !this.struck.includes(h);
 
   constructor(
     private world: WorldScene,
@@ -124,7 +159,10 @@ export class Arrow implements Effect {
     private bounds: Phaser.Geom.Rectangle,
     private onHit: (h: Hurtbox, x: number, y: number) => void,
     private style: ArrowStyle = RANGER_ARROW,
+    flight: ArrowFlight = {},
   ) {
+    this.speed = flight.speed ?? ARROW_SPEED;
+    this.pierce = flight.pierce ?? 0;
     this.key = `arrow${style.suffix}`;
     const frame = headingFrame(ux, uy);
     this.sprite = world.add.sprite(x, y - ARROW_H, this.key, frame).setPipeline('Lit');
@@ -146,7 +184,7 @@ export class Arrow implements Effect {
       return;
     }
     // Step a few pixels at a time so it never skips over a small body.
-    let move = (ARROW_SPEED * dt) / 1000;
+    let move = (this.speed * dt) / 1000;
     while (move > 0) {
       const d = Math.min(3, move);
       move -= d;
@@ -160,7 +198,7 @@ export class Arrow implements Effect {
       const hit = this.world.firstHurtbox(this.inPathNow);
       if (hit) {
         this.strike(hit);
-        return;
+        if (this.dead) return;
       }
       if (this.travelled >= this.range) {
         this.stick();
@@ -195,6 +233,12 @@ export class Arrow implements Effect {
     if (s.storm) this.world.addEffect(new Zap(this.world, bx, by, h.y + 20, s));
     sound.arrowHit(this.world.pan(bx), s.storm);
     this.onHit(h, this.x, this.y);
+    // A piercing bolt carries on through, until it runs out of bite.
+    if (this.pierce > 0) {
+      this.pierce--;
+      this.struck.push(h);
+      return;
+    }
     this.destroy();
   }
 
