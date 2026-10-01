@@ -42,7 +42,7 @@ const UNDO_MAX = 30;
 const FADE_MS = 260;
 /** A roof over the hero's head from behind shows this much; while building, this much. */
 const ROOF_BEHIND = 0.45;
-const ROOF_BUILDING = 0.25;
+const ROOF_BUILDING = 0.45;
 /** Walls along a house's south side, seen from inside, are cut down to this many px of face. */
 const STUB = 6;
 /** Visitors are sent the home this long after the last edit, and in pieces no longer than this. */
