@@ -50,9 +50,8 @@ export interface UltDef {
   gate?(world: WorldScene, hero: Hero): string | null;
 }
 
-/** A skin's take on its type's Special: the same power in its own colours and name. */
+/** A skin's take on its type's Special: the same power, under the same name, in its own colours. */
 export interface UltSkin {
-  name: string;
   pal: Pal;
   /** The type it belongs to, when that isn't the class's base type. */
   type?: string;

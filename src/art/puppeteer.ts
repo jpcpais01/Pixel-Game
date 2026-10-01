@@ -76,9 +76,9 @@ export interface PuppeteerLook {
   light: [RGB, RGB, RGB, RGB];
 }
 
-const GLOVE: Material = { ramp: ramp('#6a6878', '#a8a6b6', '#dcdae6', '#fbfaff'), outline: hex('#1c1a24') };
-const CRAVAT: Material = { ramp: ramp('#6a6258', '#a89e8a', '#d8d0bc', '#f6f0e0'), outline: hex('#221c18') };
-const CROSS: Material = { ramp: ramp('#2e1406', '#5a2c10', '#8a4a1c', '#b87030'), outline: hex('#1a0c06') };
+export const GLOVE: Material = { ramp: ramp('#6a6878', '#a8a6b6', '#dcdae6', '#fbfaff'), outline: hex('#1c1a24') };
+export const CRAVAT: Material = { ramp: ramp('#6a6258', '#a89e8a', '#d8d0bc', '#f6f0e0'), outline: hex('#221c18') };
+export const CROSS: Material = { ramp: ramp('#2e1406', '#5a2c10', '#8a4a1c', '#b87030'), outline: hex('#1a0c06') };
 const PALE: Material = { ramp: ramp('#6a4a58', '#a8828e', '#dcbcc0', '#f6e2e0'), outline: hex('#2a1a22') };
 const SPOOL: Material = { ramp: ramp('#2a1810', '#4a2e1c', '#6e4a2c', '#906a42'), outline: hex('#140a06') };
 

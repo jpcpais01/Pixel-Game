@@ -317,7 +317,7 @@ export class CandyView extends Phaser.GameObjects.Container {
     if (wr.skin) {
       const e = wr.skin;
       this.wareName.setText(fit(`${e.skin.name}  ${info.name}`.toUpperCase())).setTint(info.tint);
-      this.what.setText(fit(`${e.type.name} skin. ${e.skin.role ?? ''}`.toUpperCase()));
+      this.what.setText(fit(`${e.type.name} skin. ${e.type.role}`.toUpperCase()));
     } else if (wr.pet) {
       this.wareName.setText(fit(`${wr.pet.name}  ${info.name}`.toUpperCase())).setTint(info.tint);
       this.what.setText(fit(`Companion. ${wr.pet.perk}`.toUpperCase()));

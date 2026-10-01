@@ -73,12 +73,12 @@ const WINE: Material = { ramp: ramp('#240812', '#421022', '#6a1a34', '#922846', 
 const SHIRT: Material = { ramp: ramp('#6a6258', '#a89e8a', '#d8d0bc', '#f6f0e0'), outline: hex('#221c18') };
 const HOSE: Material = { ramp: ramp('#5a4e44', '#8a7c68', '#b8a88c', '#dccdae'), outline: INK };
 const TALL_BOOT: Material = { ramp: ramp('#1e120c', '#3a2216', '#583420', '#7a4a2c'), outline: INK };
-const CHESTNUT: Material = { ramp: ramp('#26120a', '#442214', '#683820', '#8e5432'), outline: hex('#140a08'), outlineLit: hex('#2a140c') };
-const PLUME: Material = { ramp: ramp('#8a8698', '#c2c0cc', '#e8e6ea', '#ffffff'), outline: hex('#2a2634'), outlineLit: hex('#4a4658') };
-const LUTE: Material = { ramp: ramp('#2e1406', '#5a2c10', '#8a4a1c', '#b87030', '#e0a050'), outline: hex('#1a0c06'), shine: true };
-const ROSEWOOD: Material = { ramp: ramp('#160a08', '#2e1610', '#4a2418', '#663424'), outline: hex('#0a0404') };
+export const CHESTNUT: Material = { ramp: ramp('#26120a', '#442214', '#683820', '#8e5432'), outline: hex('#140a08'), outlineLit: hex('#2a140c') };
+export const PLUME: Material = { ramp: ramp('#8a8698', '#c2c0cc', '#e8e6ea', '#ffffff'), outline: hex('#2a2634'), outlineLit: hex('#4a4658') };
+export const LUTE: Material = { ramp: ramp('#2e1406', '#5a2c10', '#8a4a1c', '#b87030', '#e0a050'), outline: hex('#1a0c06'), shine: true };
+export const ROSEWOOD: Material = { ramp: ramp('#160a08', '#2e1610', '#4a2418', '#663424'), outline: hex('#0a0404') };
 const HOLE: Material = { ramp: ramp('#0a0404', '#140806'), outline: hex('#0a0404'), noAO: true, noOutline: true };
-const STRING: Material = { ramp: ramp('#8a8070', '#c8bea8', '#f4ecd8'), outline: hex('#1a0c06'), noOutline: true, noAO: true };
+export const STRING: Material = { ramp: ramp('#8a8070', '#c8bea8', '#f4ecd8'), outline: hex('#1a0c06'), noOutline: true, noAO: true };
 
 const FUR: Material = { ramp: ramp('#2a2018', '#46382a', '#665440', '#8a7658', '#a8946e'), outline: hex('#140e0a'), outlineLit: hex('#241a12') };
 const BRONZE: Material = { ramp: ramp('#2a140a', '#522c14', '#7e4c22', '#a8743a', '#d0a060'), outline: hex('#140a04'), shine: true };

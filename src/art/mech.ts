@@ -33,14 +33,14 @@ const POWER_OFF = 0.35;
 // ---------------------------------------------------------------------------
 // Materials
 
-const PLATE: Material = { ramp: ramp('#5a300c', '#9a5a16', '#d88e24', '#f4c040', '#fff0a0'), outline: hex('#241204'), outlineLit: hex('#3a200a'), shine: true };
-const GUNMETAL: Material = { ramp: ramp('#161820', '#262a38', '#3e4458', '#606a84', '#9aa4bc'), outline: hex('#08090e'), outlineLit: hex('#141620'), shine: true };
-const JOINT: Material = { ramp: ramp('#0a0b10', '#161822', '#252936'), outline: hex('#040406') };
-const GLASS: Material = { ramp: ramp('#0a3444', '#16627a', '#34a6c0', '#86e2f4', '#e6ffff'), outline: hex('#051c24'), shine: true, emissive: 0.12 };
+export const PLATE: Material = { ramp: ramp('#5a300c', '#9a5a16', '#d88e24', '#f4c040', '#fff0a0'), outline: hex('#241204'), outlineLit: hex('#3a200a'), shine: true };
+export const GUNMETAL: Material = { ramp: ramp('#161820', '#262a38', '#3e4458', '#606a84', '#9aa4bc'), outline: hex('#08090e'), outlineLit: hex('#141620'), shine: true };
+export const JOINT: Material = { ramp: ramp('#0a0b10', '#161822', '#252936'), outline: hex('#040406') };
+export const GLASS: Material = { ramp: ramp('#0a3444', '#16627a', '#34a6c0', '#86e2f4', '#e6ffff'), outline: hex('#051c24'), shine: true, emissive: 0.12 };
 const HAZARD: Material = { ramp: ramp('#0c0c10', '#18181e', '#26262e'), outline: hex('#040406') };
-const LAMP: Material = { ramp: ramp('#ffb040', '#ffe6a0', '#fffbe8'), outline: hex('#5a3006'), emissive: 1, noAO: true };
-const VENT: Material = { ramp: ramp('#8a1e06', '#e0501a', '#ffa040', '#ffe08a'), outline: hex('#2a0802'), emissive: 0.85, noAO: true };
-const HELMET: Material = { ramp: ramp('#4a0c0c', '#8e1e1a', '#d0402e', '#ff8060'), outline: hex('#1e0404'), shine: true };
+export const LAMP: Material = { ramp: ramp('#ffb040', '#ffe6a0', '#fffbe8'), outline: hex('#5a3006'), emissive: 1, noAO: true };
+export const VENT: Material = { ramp: ramp('#8a1e06', '#e0501a', '#ffa040', '#ffe08a'), outline: hex('#2a0802'), emissive: 0.85, noAO: true };
+export const HELMET: Material = { ramp: ramp('#4a0c0c', '#8e1e1a', '#d0402e', '#ff8060'), outline: hex('#1e0404'), shine: true };
 const PILOT_VISOR: Material = { ramp: ramp('#10141c', '#2a3446', '#5a7090'), outline: hex('#05060a'), shine: true };
 
 // The Scrap Titan's junk.

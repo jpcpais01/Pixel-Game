@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Bitmap, bayer, clamp01, mix } from '../art/bitmap';
 import { type RGB } from '../art/pixel';
+import { BUST, classBust } from '../art/busts';
 import { menuZoom } from '../game/display';
 import { CLASSES, type ClassDef, type Preview, type SkinDef } from '../game/characters';
 import { heroStats, type HeroStats } from '../game/stats';
@@ -44,7 +45,7 @@ const MEDAL_STEP = 43;
 /** The round window the class's head shows through, inside the medallion's rim. */
 const MEDAL_FACE = MEDAL - 6;
 /** How many times over the head is drawn in its medallion. */
-const MEDAL_ZOOM = 3;
+const MEDAL_ZOOM = 2;
 /** Character cards, largest first: the largest for which four fit the column is used. */
 const CARD_SIZES = [34, 30, 26];
 const CARD_GAP = 4;
@@ -419,7 +420,41 @@ function medalHead(scene: Phaser.Scene, preview: Preview, d: number): string {
   return key;
 }
 
-/** A round class medallion: its plate in the hero's colour and the hero's head large, cut to a disc inside the rim. */
+/**
+ * A class's own bust (see art/busts), painted at the screen's pixel size and
+ * cut to the medallion's disc: sharper than the hero's sprite blown up. Null
+ * for a class without one.
+ */
+function bustTexture(scene: Phaser.Scene, id: string, d: number): string | null {
+  const key = `sel_bust_${id}_${d}`;
+  if (scene.textures.exists(key)) return key;
+  const b = classBust(id);
+  if (!b) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = d;
+  canvas.height = d;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const px = ctx.createImageData(d, d);
+  const o = Math.floor((d - BUST) / 2);
+  const r = d / 2;
+  for (let y = 0; y < d; y++)
+    for (let x = 0; x < d; x++) {
+      const bx = x - o;
+      const by = y - o;
+      if (bx < 0 || by < 0 || bx >= BUST || by >= BUST || Math.hypot(x + 0.5 - r, y + 0.5 - r) > r) continue;
+      const i = (by * BUST + bx) * 4;
+      const j = (y * d + x) * 4;
+      // The glowing parts (eyes, lenses, gems) shine a little brighter, as they do in the world.
+      for (let k = 0; k < 3; k++) px.data[j + k] = Math.min(255, b.diffuse[i + k] + b.emissive[i + k] * 0.5);
+      px.data[j + 3] = b.diffuse[i + 3];
+    }
+  ctx.putImageData(px, 0, 0);
+  scene.textures.addCanvas(key, canvas);
+  return key;
+}
+
+/** A round class medallion: its plate in the hero's colour and the class's bust, cut to a disc inside the rim. */
 class Medal extends Phaser.GameObjects.Container {
   private plate: Phaser.GameObjects.Image;
   private head: Phaser.GameObjects.Image;
@@ -427,7 +462,10 @@ class Medal extends Phaser.GameObjects.Container {
   private preview?: Preview;
   private accent = 0xffffff;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(
+    scene: Phaser.Scene,
+    private classId: string,
+  ) {
     super(scene, 0, 0);
     this.plate = scene.add.image(0, 0, plateTexture(scene)).setOrigin(0);
     this.head = scene.add.image((MEDAL - MEDAL_FACE) / 2, (MEDAL - MEDAL_FACE) / 2, '__DEFAULT').setOrigin(0);
@@ -436,7 +474,8 @@ class Medal extends Phaser.GameObjects.Container {
   }
 
   show(preview: Preview, accent: number): void {
-    if (preview !== this.preview) this.head.setTexture(medalHead(this.scene, preview, MEDAL_FACE));
+    // The class's bust when it has one; else the look's own head, cut from its sprite.
+    if (preview !== this.preview) this.head.setTexture(bustTexture(this.scene, this.classId, MEDAL_FACE) ?? medalHead(this.scene, preview, MEDAL_FACE));
     this.preview = preview;
     this.accent = accent;
   }
@@ -474,7 +513,7 @@ class Wheel extends Phaser.GameObjects.Container {
     private pick: (i: number) => void,
   ) {
     super(scene, 0, 0);
-    this.medals = CLASSES.map(() => new Medal(scene));
+    this.medals = CLASSES.map((c) => new Medal(scene, c.id));
     this.arrows = scene.add.graphics();
     this.zone = scene.add.zone(0, -2, 10, MEDAL + 4).setOrigin(0).setInteractive({ useHandCursor: true });
     this.arrowZones = ([-1, 1] as const).map((dir) => {
@@ -1267,7 +1306,7 @@ export class SelectScene extends Phaser.Scene {
       jump,
     });
     this.showHero(def.preview, def.accent, !!this.peek, pose, jump ? 0 : slide);
-    // Stats are the type's own numbers (skins never change them); the abilities are named for the look.
+    // Stats and ability names are the character's own: a skin only changes the look.
     const ult = ultFor(def);
     this.details.show(look.type.name, def.role, def.accent, heroStats(cls.id, look.type.id), [def.attack, def.special], def.buttons, {
       icon: ult.icon,
