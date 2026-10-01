@@ -216,9 +216,10 @@ function top(mat: string, x: number, y: number, gx: number, gy: number, across: 
 /**
  * One wall cell: material `mat`, joined to the neighbours in `mask` (bits for
  * north, east, south, west), of kind `kind`, variant `v`. The canvas is 16 x
- * (16 + height); the cell itself fills its bottom 16 rows.
+ * (16 + height); the cell itself fills its bottom 16 rows. A `bare` doorway
+ * leaves out the door standing open in it, for a door hung there (art/homeDoor.ts).
  */
-export function wallFrame(mat: number, mask: number, kind: WallKind, v: number): PixelCanvas {
+export function wallFrame(mat: number, mask: number, kind: WallKind, v: number, bare = false): PixelCanvas {
   const def = WALLS[mat];
   const H = def.height;
   const c = new PixelCanvas(CELL, CELL + H);
@@ -249,7 +250,7 @@ export function wallFrame(mat: number, mask: number, kind: WallKind, v: number):
         if (!def.house) continue;
         if (inArch) {
           // The door itself stands open against the west jamb.
-          if (x < 8 - DOOR_HW + 2 && z < archTop - 2) c.px(x, cy, DOOR_WOOD, { x: 0.5, y: -0.2, z: 0.85 }, { bias: x === 8 - DOOR_HW ? 1 : 0 });
+          if (!bare && x < 8 - DOOR_HW + 2 && z < archTop - 2) c.px(x, cy, DOOR_WOOD, { x: 0.5, y: -0.2, z: 0.85 }, { bias: x === 8 - DOOR_HW ? 1 : 0 });
           else doorway(c, x, cy, dx, 1 - z / archTop, z);
           continue;
         }
@@ -315,8 +316,10 @@ export function wallFrame(mat: number, mask: number, kind: WallKind, v: number):
     // A doorway through a north-south wall: posts either side and the door swung back.
     c.part();
     for (const y of [8 - DOOR_HW - 1, 8 + DOOR_HW]) for (let x = 5; x < 11; x++) c.px(x, y, BEAM, TOP, { bias: 1 });
-    c.part();
-    for (let y = 8 - DOOR_HW; y < 8 - DOOR_HW + 5; y++) c.px(10, y, DOOR_WOOD, TOP, { bias: 2 });
+    if (!bare) {
+      c.part();
+      for (let y = 8 - DOOR_HW; y < 8 - DOOR_HW + 5; y++) c.px(10, y, DOOR_WOOD, TOP, { bias: 2 });
+    }
   }
   return c;
 }
@@ -378,7 +381,7 @@ const mix3 = (a: RGB, b: RGB, t: number): RGB => {
   return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
 };
 
-/** Every frame of one material: `w<mask>_<variant>` for plain walls, `d<mask>` for doorways (or gates), `n<mask>` for windows. */
+/** Every frame of one material: `w<mask>_<variant>` for plain walls, `d<mask>` for doorways (or gates), `o<mask>` for a house's doorway with a door hung in it, `n<mask>` for windows. */
 export function wallFrames(mat: number): { name: string; canvas: PixelCanvas }[] {
   const out: { name: string; canvas: PixelCanvas }[] = [];
   const house = WALLS[mat].house;
@@ -387,6 +390,7 @@ export function wallFrames(mat: number): { name: string; canvas: PixelCanvas }[]
     out.push({ name: `w${mask}_1`, canvas: wallFrame(mat, mask, 'wall', 1) });
     out.push({ name: `d${mask}`, canvas: wallFrame(mat, mask, 'door', 0) });
     if (house) out.push({ name: `n${mask}`, canvas: wallFrame(mat, mask, 'window', 0) });
+    if (house) out.push({ name: `o${mask}`, canvas: wallFrame(mat, mask, 'door', 0, true) });
   }
   return out;
 }

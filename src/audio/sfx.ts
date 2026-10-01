@@ -2203,6 +2203,23 @@ export class Sfx {
     for (let i = 0; i < 5; i++) this.burstNoise(out, t + i * 0.045, 'bandpass', rand(1800, 3200), 1200, 5, 0.25, 0.03);
   }
 
+  /** A Home door swinging open: the latch lifting, then a short, soft groan from its hinges. */
+  doorOpen(t: number, pan: number, level: number): void {
+    const out = this.out(pan, 0.4 * level, 0.25);
+    this.burstNoise(out, t, 'bandpass', 2600, 2200, 6, 0.18, 0.025);
+    this.chirp(out, t + 0.05, 'sawtooth', rand(120, 140), rand(170, 190), 0.05, 0.3);
+    // A creak is a train of clicks, slowing as the door swings free.
+    for (let i = 0; i < 6; i++) this.burstNoise(out, t + 0.06 + i * (0.03 + i * 0.008), 'bandpass', rand(1400, 2200), 900, 6, 0.12 - i * 0.012, 0.02);
+  }
+
+  /** A Home door shutting: a round wooden knock against the frame, and the latch dropping. */
+  doorShut(t: number, pan: number, level: number): void {
+    const out = this.out(pan, 0.6 * level, 0.3);
+    this.chirp(out, t, 'sine', 170, 70, 0.4, 0.12);
+    this.burstNoise(out, t, 'lowpass', 1100, 260, 0.8, 0.35, 0.09, true);
+    this.burstNoise(out, t + 0.05, 'bandpass', 3400, 2800, 7, 0.16, 0.02);
+  }
+
   // ------------------------------------------------------------ The Automaton
 
   /** A mech cannon: a hard, low bark and a metal clank as the breech kicks; the scrap's nail gun is a flat pneumatic thwack. */

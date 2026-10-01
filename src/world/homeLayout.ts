@@ -93,6 +93,12 @@ export class HomeLayout {
    */
   canPlace(part: PartDef, cx: number, cy: number, turn = 0): boolean {
     if (this.things.length >= MAX_THINGS) return false;
+    if (part.door) {
+      // In a house's doorway, one to a doorway.
+      const v = this.wallAt(cx, cy);
+      if (!v || wallKind(v) !== 'door' || !WALLS[wallMat(v)]?.house) return false;
+      return !this.things.some((t) => t.x === cx && t.y === cy && partById(t.id)?.door);
+    }
     if (part.wall) {
       const v = this.wallAt(cx, cy);
       if (!v || wallKind(v) !== 'wall' || !WALLS[wallMat(v)]?.house) return false;
@@ -115,7 +121,7 @@ export class HomeLayout {
     }
     for (const t of this.things) {
       const p = partById(t.id);
-      if (!p || p.wall || p.critter || part.critter || !!p.flat !== !!part.flat) continue;
+      if (!p || p.wall || p.door || p.critter || part.critter || !!p.flat !== !!part.flat) continue;
       const e = extent(p, t.turn);
       if (t.x < cx + w && t.x + e.w > cx && t.y < cy + h && t.y + e.h > cy) return false;
     }
@@ -429,6 +435,7 @@ export function starterHome(): HomeLayout {
   put('painting', 26, 8);
   put('shield', 19, 8);
   put('wreath', 23, 16);
+  put('door', 24, 16);
 
   // Out front.
   put('tulips', 19, 17);

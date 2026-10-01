@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { CHIMNEY_H, glows, thingFoot, thingLook, warmHome, wallFrameName } from '../art/homeArt';
+import { CHIMNEY_H, DOOR_OX, DOOR_OY, glows, thingFoot, thingLook, warmHome, wallFrameName } from '../art/homeArt';
+import { DOOR_FH, DOOR_FW, DOOR_OPEN, DOOR_STEP, DOOR_STEPS, doorFrame, type DoorWay } from '../art/homeDoor';
 import { paintFloors } from '../art/homeFloors';
 import { paintRoof, type RoofArt } from '../art/homeWalls';
 import { JAR_SPOTS } from '../art/homeProps';
@@ -18,7 +19,7 @@ import { HOME_SPAWN, homeWalkable, setHomeMask } from './homeGround';
 import { HomeCritters } from './HomeCritters';
 import { HouseShadow, type Stack } from './houseShadow';
 import { treeLeaves } from './Scenery';
-import { CELL, COLS, HomeLayout, HomeMask, PLOT_H, PLOT_W, PLOT_X, PLOT_Y, ROWS, cellIndex, findHouses, inPlot, starterHome, type House, type Thing } from './homeLayout';
+import { CELL, COLS, HomeLayout, HomeMask, PLOT_H, PLOT_W, PLOT_X, PLOT_Y, ROWS, cellIndex, doorAcross, findHouses, inPlot, starterHome, type House, type Thing } from './homeLayout';
 import { FISH_REACH, FLOORS, WALLS, extent, partById, wallKind, wallMat, type PartDef } from './homeParts';
 
 type Img = Phaser.GameObjects.Image;
@@ -55,6 +56,18 @@ const LEAF_TINTS: Record<string, number[]> = {
   birch: [0x8eb54c, 0xb2cd62, 0xd2e287, 0xe8c050],
   blossom: [0xf8c0d2, 0xec9cb8, 0xffe2ec, 0xd8789c],
 };
+/** A door opens for a hero within this far of its doorway, across it and along it, px. */
+const DOOR_REACH = 24;
+const DOOR_SIDE = 13;
+/** It stays open this long after the last hero has gone, ms, then swings shut behind them. */
+const DOOR_HOLD = 450;
+/** Its swing: a spring (stiffness, per s^2, and damping, per s) that overshoots a little opening, and how much it bounces back off the frame shutting. */
+const DOOR_K = 85;
+const DOOR_DAMP = 9.5;
+const DOOR_BOUNCE = 0.28;
+/** Shutting faster than this (degrees a second) knocks; its sounds carry this far, px. */
+const DOOR_KNOCK = 140;
+const DOOR_HEAR = 220;
 
 interface Placed {
   t: Thing;
@@ -69,6 +82,20 @@ interface Placed {
   /** The house over it (-1 outdoors): its lights dim while the roof is on. */
   house: number;
   jars: { jar: Sprite; glow: Sprite }[];
+  /** A door's swing; null for anything else. */
+  door: Swing | null;
+}
+
+/** A door in its doorway: which way it opens, how far open it is (degrees) and how fast it's turning, and how long it stays open. */
+interface Swing {
+  way: DoorWay;
+  /** Hung in a house's doorway (a doorway painted over leaves it hidden until it's taken away). */
+  hung: boolean;
+  deg: number;
+  vel: number;
+  hold: number;
+  step: number;
+  cut: number;
 }
 
 interface WallPiece {
@@ -271,6 +298,8 @@ export class Home {
   /** Each wall cell: its frame for its material, kind and the walls it joins. */
   private refreshWalls(): void {
     const l = this.layout;
+    // Doorways with a door hung in them leave out the door they'd otherwise show standing open.
+    const doors = new Set(l.things.filter((t) => partById(t.id)?.door).map((t) => cellIndex(t.x, t.y)));
     for (let cy = 0; cy < ROWS; cy++) {
       for (let cx = 0; cx < COLS; cx++) {
         const i = cellIndex(cx, cy);
@@ -281,7 +310,7 @@ export class Home {
           mat = wallMat(v);
           const mask = l.wallMask(cx, cy);
           const kind = wallKind(v);
-          const frame = kind === 'door' ? `d${mask}` : kind === 'window' && WALLS[mat].house ? `n${mask}` : `w${mask}_${(cx * 7 + cy * 13) % 2}`;
+          const frame = kind === 'door' ? `${doors.has(i) && WALLS[mat].house ? 'o' : 'd'}${mask}` : kind === 'window' && WALLS[mat].house ? `n${mask}` : `w${mask}_${(cx * 7 + cy * 13) % 2}`;
           key = wallFrameName(mat, frame);
         }
         const h = this.houseAt[i];
@@ -399,6 +428,7 @@ export class Home {
       this.placed.delete(k);
     }
     for (const [k, t] of want) if (!this.placed.has(k)) this.place(k, t);
+    this.hangDoors();
     for (const p of this.placed.values()) p.house = this.houseAt[cellIndex(p.t.x, p.t.y + extent(p.part, p.t.turn).h - 1)];
     if (this.leaves) this.leaves.emitting = l.things.some((t) => LEAF_TINTS[t.id]);
     this.fillShelves();
@@ -408,6 +438,10 @@ export class Home {
 
   private place(k: string, t: Thing): void {
     const part = partById(t.id)!;
+    if (part.door) {
+      this.placeDoor(k, t, part);
+      return;
+    }
     const look = thingLook(t);
     const add = this.scene.add;
     const depth = part.wall ? PLOT_Y + t.y * CELL + 11.2 : part.flat ? 1.5 : look.y;
@@ -431,7 +465,121 @@ export class Home {
       light = this.scene.lights.addLight(lx, ly, L.radius, L.color, L.intensity);
       halo = add.image(lx, ly, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(L.color).setScale(Math.max(0.8, L.radius / 70)).setDepth(depth + 0.2).setAlpha(0.4);
     }
-    this.placed.set(k, { t, part, sprite, glow, shadow, light, halo, base: L?.intensity ?? 0, seed: Math.random() * 100, house: -1, jars: [] });
+    this.placed.set(k, { t, part, sprite, glow, shadow, light, halo, base: L?.intensity ?? 0, seed: Math.random() * 100, house: -1, jars: [], door: null });
+  }
+
+  /** A door: drawn over its doorway's wall, each frame of its swing a whole picture of the doorway (see art/homeDoor.ts). */
+  private placeDoor(k: string, t: Thing, part: PartDef): void {
+    const x = PLOT_X + t.x * CELL - DOOR_OX;
+    const y = PLOT_Y + t.y * CELL - DOOR_OY;
+    const frame = doorFrame('n', t.flip ? 1 : 0, 0);
+    const sprite = this.scene.add.sprite(x, y, 'home', frame).setOrigin(0).setPipeline('Lit');
+    // Its little window shows the lamplight inside, like the house's windows.
+    const glow = this.scene.add.sprite(x, y, 'home_e', frame).setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setAlpha(this.windowGlow());
+    const door: Swing = { way: 'n', hung: false, deg: 0, vel: 0, hold: 0, step: -1, cut: 0 };
+    this.placed.set(k, { t, part, sprite, glow, shadow: null, light: null, halo: null, base: 0, seed: 0, house: -1, jars: [], door });
+  }
+
+  /**
+   * Each door, after a change: hung if its doorway is still a house's, and
+   * opening into the house (north or south through an east-west wall, east
+   * or west through a north-south one), drawn just in front of its wall, or
+   * for a north-south wall at its leaf, so heroes pass it the right side.
+   */
+  private hangDoors(): void {
+    const l = this.layout;
+    const home = (cx: number, cy: number) => inPlot(cx, cy) && this.houseAt[cellIndex(cx, cy)] >= 0;
+    for (const p of this.placed.values()) {
+      const d = p.door;
+      if (!d) continue;
+      const { x: cx, y: cy } = p.t;
+      d.hung = this.hungHere(p);
+      const across = doorAcross(l.wallMask(cx, cy));
+      const way: DoorWay = across ? (home(cx, cy + 1) && !home(cx, cy - 1) ? 's' : 'n') : home(cx - 1, cy) && !home(cx + 1, cy) ? 'w' : 'e';
+      if (way !== d.way) {
+        d.way = way;
+        d.step = -1;
+      }
+      const base = PLOT_Y + cy * CELL;
+      p.sprite.setDepth(across ? base + 11.05 : base + (p.t.flip ? 13.5 : 2.5));
+      p.glow?.setDepth(p.sprite.depth + 0.01);
+      for (const o of [p.sprite, p.glow]) o?.setVisible(d.hung);
+    }
+  }
+
+  /** Is this door's cell still a house's doorway? (Asked without the door itself, which would otherwise be in its own way.) */
+  private hungHere(p: Placed): boolean {
+    const l = this.layout;
+    const others = l.things;
+    l.things = others.filter((o) => o !== p.t);
+    const ok = l.canPlace(p.part, p.t.x, p.t.y);
+    l.things = others;
+    return ok;
+  }
+
+  /** How strongly windows (and a door's little window) glow: hardly by day, fully at night. */
+  private windowGlow(): number {
+    return 0.15 + (1 - Math.max(0, this.daylight)) * 0.85;
+  }
+
+  /**
+   * Doors swing open for any hero walking up to them, this player's or a
+   * friend's (so everyone online sees the same), and shut behind them once
+   * they've gone. The swing is a spring: it overshoots a touch opening, and
+   * knocks against the frame and settles shutting. A door in a wall cut down
+   * to a stub (the hero inside) is cut with it.
+   */
+  private swingDoors(dt: number, heroes: { x: number; y: number }[]): void {
+    const s = Math.min(dt, 50) / 1000;
+    const max = (DOOR_STEPS - 1) * DOOR_STEP;
+    const glow = this.windowGlow();
+    for (const p of this.placed.values()) {
+      const d = p.door;
+      if (!d || !d.hung) continue;
+      const cx = PLOT_X + (p.t.x + 0.5) * CELL;
+      const cy = PLOT_Y + (p.t.y + 0.5) * CELL;
+      const across = d.way === 'n' || d.way === 's';
+      const near = heroes.some((h) => {
+        const a = across ? h.x - cx : h.y - cy;
+        const b = across ? h.y - cy : h.x - cx;
+        return (a / DOOR_SIDE) ** 2 + (b / DOOR_REACH) ** 2 < 1;
+      });
+      if (near) d.hold = DOOR_HOLD;
+      else d.hold = Math.max(0, d.hold - dt);
+      const want = d.hold > 0 ? DOOR_OPEN : 0;
+      const pan = Phaser.Math.Clamp((cx - this.hero.x) / 160, -1, 1);
+      const heard = Math.hypot(cx - this.hero.x, cy - this.hero.y) < DOOR_HEAR;
+      if (want > 0 && d.deg < 1 && d.vel <= 0 && heard) sound.doorOpen(pan);
+      d.vel += (DOOR_K * (want - d.deg) - DOOR_DAMP * d.vel) * s;
+      d.deg += d.vel * s;
+      if (d.deg < 0) {
+        // Against the frame: a knock if it came hard, and a little bounce back.
+        if (d.vel < -DOOR_KNOCK && heard) sound.doorShut(pan, Math.min(1, -d.vel / 400));
+        d.deg = -d.deg * DOOR_BOUNCE;
+        d.vel = -d.vel * DOOR_BOUNCE;
+        if (d.vel < 20) d.deg = d.vel = 0;
+      }
+      if (d.deg > max) {
+        d.deg = max;
+        d.vel = Math.min(0, d.vel);
+      }
+      const step = Math.round(d.deg / DOOR_STEP);
+      if (step !== d.step) {
+        d.step = step;
+        const frame = doorFrame(d.way, p.t.flip ? 1 : 0, step);
+        p.sprite.setFrame(frame);
+        p.glow?.setFrame(frame);
+      }
+      p.glow?.setAlpha(glow);
+      const cut = this.walls.get(cellIndex(p.t.x, p.t.y))?.cut ?? 0;
+      if (cut !== d.cut) {
+        d.cut = cut;
+        for (const o of [p.sprite, p.glow]) {
+          if (cut) o?.setCrop(0, cut, DOOR_FW, DOOR_FH - cut);
+          else o?.setCrop();
+        }
+      }
+    }
   }
 
   private unplace(p: Placed): void {
@@ -522,14 +670,15 @@ export class Home {
 
   // ---------------------------------------------------------------- Each frame
 
-  update(dt: number, heroX: number, heroY: number, daylight: number): void {
+  /** `others`: the other heroes here online, whom doors open for too. */
+  update(dt: number, heroX: number, heroY: number, daylight: number, others: readonly { x: number; y: number }[] = []): void {
     this.hero.x = heroX;
     this.hero.y = heroY;
     const d = daylight;
     if (Math.abs(d - this.daylight) > 0.003) {
       this.daylight = d;
       for (const p of this.patches.values()) p.day.setAlpha(dayGround(d));
-      const windows = 0.15 + (1 - d) * 0.85;
+      const windows = this.windowGlow();
       for (const w of this.walls.values()) {
         w.glow?.setAlpha(windows);
         w.shadow?.setAlpha(SUN_SHADOW_ALPHA * d);
@@ -577,6 +726,7 @@ export class Home {
     // Things hung on a wall cut down to a stub go with it; nothing under a roof casts a sun shadow.
     const t = this.scene.time.now;
     for (const p of this.placed.values()) {
+      if (p.door) continue;
       p.shadow?.setAlpha(p.house >= 0 ? 0 : SUN_SHADOW_ALPHA * d);
       const hidden = !!p.part.wall && (this.walls.get(cellIndex(p.t.x, p.t.y))?.cut ?? 0) > 0;
       if (hidden === p.sprite.visible) {
@@ -593,6 +743,7 @@ export class Home {
       p.halo?.setAlpha((0.32 + n * 0.06) * k);
     }
 
+    this.swingDoors(dt, [this.hero, ...others]);
     this.critters.update(dt, heroX, heroY, d, this.scene.cameras.main.worldView);
 
     if (this.stillTrees.length && treeSwayReady(this.scene)) {
@@ -702,10 +853,10 @@ export class Home {
     const i = cellIndex(cx, cy);
     if (pick.layer === 'floor') {
       if (!FLOORS[pick.value - 1]?.water) return true;
-      return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.water && !partById(t.id)?.wall && !partById(t.id)?.critter);
+      return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.water && !partById(t.id)?.wall && !partById(t.id)?.door && !partById(t.id)?.critter);
     }
     // A critter's spot doesn't hold anything up: it finds open ground nearby.
-    if (pick.layer === 'wall') return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.wall && !partById(t.id)?.critter) && !this.heroIn(cx, cy) && !this.layout.isWater(cx, cy);
+    if (pick.layer === 'wall') return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.wall && !partById(t.id)?.door && !partById(t.id)?.critter) && !this.heroIn(cx, cy) && !this.layout.isWater(cx, cy);
     return pick.layer === 'roof' || i >= 0;
   }
 
@@ -741,12 +892,13 @@ export class Home {
     const i = cellIndex(cx, cy);
     const tab = build.tab;
     if (tab === 'floor') return l.floor[i] ? 'floor' : null;
-    if (tab === 'wall') return l.wall[i] ? 'wall' : null;
+    // A door comes out of its doorway before the doorway goes.
+    if (tab === 'wall') return l.thingsAt(cx, cy).find((t) => partById(t.id)?.door) ?? (l.wall[i] ? 'wall' : null);
     if (tab === 'roof') return l.roof[i] ? 'roof' : null;
     // Critters roam off their spots, so the eraser takes the one it touches, wherever it has got to.
     if (tab === 'critters') return this.critters.at(PLOT_X + (cx + 0.5) * CELL, PLOT_Y + (cy + 0.5) * CELL, CELL * 0.75) ?? l.thingsAt(cx, cy).find((t) => partById(t.id)?.critter) ?? null;
     const here = l.thingsAt(cx, cy).filter((t) => !partById(t.id)?.critter);
-    return here.find((t) => partById(t.id)?.tab === tab) ?? (tab === 'decor' ? null : here.find((t) => !partById(t.id)?.wall)) ?? null;
+    return here.find((t) => partById(t.id)?.tab === tab) ?? (tab === 'decor' ? null : here.find((t) => !partById(t.id)?.wall && !partById(t.id)?.door)) ?? null;
   }
 
   private canErase(cx: number, cy: number): boolean {
@@ -770,14 +922,14 @@ export class Home {
     return true;
   }
 
-  /** Wall hangings only stay on plain house walls whose face shows. */
+  /** Wall hangings only stay on plain house walls whose face shows, and doors in house doorways. */
   private checkDecor(): void {
     const l = this.layout;
     const all = l.things;
     l.things = [];
     for (const t of all) {
       const p = partById(t.id);
-      if (!p?.wall || l.canPlace(p, t.x, t.y)) l.things.push(t);
+      if (!(p?.wall || p?.door) || l.canPlace(p, t.x, t.y)) l.things.push(t);
     }
   }
 
