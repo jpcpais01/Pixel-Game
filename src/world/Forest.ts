@@ -702,10 +702,10 @@ export class Forest {
       }
       if (look.glow) {
         const glow = add.sprite(x, y, look.glow, look.frame).setOrigin(look.ox, look.oy).setFlipX(look.flipX).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1);
+        // Flames flicker in the glow alone (the animation's frames are the glow's); the body's lit frame stays put, as in the Home.
         if (look.anim) glow.play({ key: look.anim, startFrame: Math.floor(Math.random() * 4) });
         st.placed.push({ obj: glow, x0: x - 40, x1: x + 40, y0: y - 70, y1: y + 8 });
       }
-      if (look.anim && this.world.anims.exists(look.anim)) sprite.play({ key: look.anim, startFrame: Math.floor(Math.random() * 4) });
       if (!part.flat) this.cast(st, tall ? st.treeShadows : st.shadows, sprite, tall ? TREE_H : 60);
       const L = part.light;
       if (L) {
