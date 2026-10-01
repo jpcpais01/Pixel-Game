@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { controls, beamHud, comboHud, critterHud } from '../game/controls';
 import { fishHud } from '../game/fish';
-import { daynight, PHASES } from '../game/daynight';
 import { DPR as D, menuZoom } from '../game/display';
 import { characterById } from '../game/characters';
 import { HOTBAR_SIZE, inventory } from '../game/items';
@@ -10,6 +9,7 @@ import { GearHud } from '../ui/gearHud';
 import { KeeperHud } from '../ui/keeperHud';
 import { BuildHud } from '../ui/buildHud';
 import { StatsHud } from '../ui/statsHud';
+import type { MapScene } from './MapScene';
 import type { WorldScene } from './WorldScene';
 import { build } from '../game/build';
 import { energy } from '../game/energy';
@@ -49,7 +49,6 @@ interface Pad {
 }
 
 /** The time of day toggle's highlight in each phase: peach, sky blue, rose, indigo. */
-const PHASE_TINT = [0xe8a878, 0x8ec9f5, 0xd87898, 0x6b74c9];
 /** A tap shorter than this fires on release; holding longer presses the button down. */
 const TAP_GRACE = 90;
 
@@ -76,11 +75,6 @@ export class UIScene extends Phaser.Scene {
   private rightPointer: number | null = null;
   private base = new Phaser.Math.Vector2();
   private knob = new Phaser.Math.Vector2();
-  private toggle!: Phaser.GameObjects.Graphics;
-  /** Morning, day, sunset and night, in `PHASES` order, one to a cell of the pill. */
-  private phaseIcons: Phaser.GameObjects.Image[] = [];
-  private autoButton!: Phaser.GameObjects.Graphics;
-  private autoIcon!: Phaser.GameObjects.Image;
   private bar!: Phaser.GameObjects.Graphics;
   private slotIcons: Phaser.GameObjects.Image[] = [];
   private slotKeys: Phaser.GameObjects.BitmapText[] = [];
@@ -107,18 +101,15 @@ export class UIScene extends Phaser.Scene {
   private netShown = 0;
   private netPressed = 0;
 
-  /** Time of day toggle: a four-cell pill in the top-left corner (morning, day, sunset, night)... */
-  private get toggleRect(): Phaser.Geom.Rectangle {
+  /**
+   * The left column under the minimap (scenes/MapScene.ts, top-left): where
+   * the buff badges start, and how big they are. With no minimap they start
+   * in the corner.
+   */
+  private get column(): { x: number; y: number; size: number } {
+    const map = this.scene.isActive('map') ? (this.scene.get('map') as MapScene).leftBottom : 0;
     const seg = Math.round(Math.max(48 * D, Math.min(this.scale.width, this.scale.height) * 0.13));
-    const h = Math.round(seg * 0.8);
-    return new Phaser.Geom.Rectangle(12 * D, 12 * D, Math.round(h * 0.8) * 4, h);
-  }
-
-  /** ...and the round auto button just right of it. */
-  private get autoCircle(): Phaser.Geom.Circle {
-    const tr = this.toggleRect;
-    const r = Math.round(tr.height * 0.43);
-    return new Phaser.Geom.Circle(tr.right + 6 * D + r, tr.centerY, r);
+    return { x: 12 * D, y: Math.round(map ? map + 8 * D : 12 * D), size: Math.round(Math.round(seg * 0.8) * 0.9) };
   }
 
   /** What each Graphics last drew, so it is only rebuilt when that changes. */
@@ -151,11 +142,6 @@ export class UIScene extends Phaser.Scene {
   /** Something drawn over the whole HUD is open (the bag, a keeper's counter, the "i" card, fishing): the minimap keeps out of its way. */
   get covered(): boolean {
     return !!(this.gearHud?.open || this.keeperHud?.open || this.statsHud?.open || fishHud.active);
-  }
-
-  /** How far down the screen's right side is free of the buttons (the hotbar's top on a touch screen), for the minimap. */
-  get freeBelow(): number {
-    return controls.mouse ? this.scale.height * 0.55 : this.hotbar.y;
   }
 
   private get R(): number {
@@ -212,7 +198,7 @@ export class UIScene extends Phaser.Scene {
 
   /**
    * The hotbar's slots: square, side by side. On a touch screen they sit in a
-   * row just over the ability buttons, right-aligned with the beam button's
+   * row just over the ability buttons, just past the beam button's
    * outer edge so the thumb finds them with the rest of its buttons and the
    * row stays clear of the net's button on its left. With a mouse they are
    * centred along the bottom edge, between the joystick's resting spot and
@@ -225,9 +211,9 @@ export class UIScene extends Phaser.Scene {
       const s = Math.round(Phaser.Math.Clamp(R * 0.66, 30 * D, 46 * D));
       const w = s * HOTBAR_SIZE + gap * (HOTBAR_SIZE - 1);
       const bp = this.padPos;
-      const right = Math.min(bp.x + R * 1.35, this.scale.width - 8 * D);
-      // The beam button's ring reaches about R * 0.9 above its centre.
-      const bottom = bp.y - R * 1.95 - R * 0.95;
+      const right = Math.min(bp.x + R * 1.6, this.scale.width - 8 * D);
+      // The beam button's ring reaches about R * 0.9 above its centre; the row keeps a clear gap over it.
+      const bottom = bp.y - R * 1.95 - R * 1.1;
       return { x: Math.round(right - w), y: Math.round(bottom - s), s, gap };
     }
     const left = this.restPos.x + R * 1.1;
@@ -275,10 +261,6 @@ export class UIScene extends Phaser.Scene {
     this.ultButton = this.add.graphics();
     this.ultIcon = this.add.image(0, 0, ult.icon).setBlendMode(Phaser.BlendModes.ADD);
     this.ultKey = this.add.bitmapText(0, 0, 'pixel', 'SPACE').setLetterSpacing(-1).setOrigin(0.5, 0).setTint(0xdfe6ff);
-    this.toggle = this.add.graphics();
-    this.phaseIcons = ['icon_dawn', 'icon_sun', 'icon_dusk', 'icon_moon'].map((k) => this.add.image(0, 0, k));
-    this.autoButton = this.add.graphics();
-    this.autoIcon = this.add.image(0, 0, 'icon_cycle');
     this.base.copy(this.restPos);
     this.knob.copy(this.restPos);
 
@@ -310,7 +292,6 @@ export class UIScene extends Phaser.Scene {
       const bp = this.buttonPos;
       const mp = this.beamPos;
       const up = this.ultPos;
-      const tr = this.toggleRect;
       if (fishHud.active) {
         // Fishing: its overlay takes every press (see FishScene).
       } else if (this.statsHud.open && this.statsHud.pointerDown(p)) {
@@ -323,11 +304,6 @@ export class UIScene extends Phaser.Scene {
         // The build and friends buttons, or the build tray.
       } else if (this.statsHud.pointerDown(p)) {
         // The stats panel folds or opens; the "i" opens the card.
-      } else if (daynight.enabled && Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Clone(tr).setSize(tr.width, tr.height + 8 * D), p.x, p.y)) {
-        // Tap a cell to pick its time of day (which stops auto).
-        daynight.set(PHASES[Phaser.Math.Clamp(Math.floor(((p.x - tr.x) / tr.width) * 4), 0, 3)]);
-      } else if (daynight.enabled && Phaser.Math.Distance.Between(p.x, p.y, this.autoCircle.x, this.autoCircle.y) < this.autoCircle.radius + 5 * D) {
-        daynight.setAuto(!daynight.auto);
       } else if (build.on) {
         // Building: a touch by the joystick still walks; any other press builds (a right click erases).
         if (p.wasTouch && this.stickPointer === null && Phaser.Math.Distance.Between(p.x, p.y, this.restPos.x, this.restPos.y) < this.R * 1.3) {
@@ -595,63 +571,9 @@ export class UIScene extends Phaser.Scene {
     this.drawUltButton(R * k, u);
     this.drawNetButton(delta);
 
-    const tr = this.toggleRect;
-    const cell = tr.width / 4;
-    // Arenas without day and night have no toggle.
-    const on = daynight.enabled;
-    for (const o of [this.toggle, this.autoButton, this.autoIcon, ...this.phaseIcons]) o.setVisible(on);
-    const w = daynight.mix;
-    // Where the highlight sits (a weighted cell index) and its colour, both eased with the light.
-    let at = 0;
-    let rgb = [0, 0, 0];
-    w.forEach((k, i) => {
-      at += k * i;
-      const c = PHASE_TINT[i];
-      rgb = [rgb[0] + ((c >> 16) & 255) * k, rgb[1] + ((c >> 8) & 255) * k, rgb[2] + (c & 255) * k];
-    });
-    const tg = on ? this.redraw(this.toggle, `${at.toFixed(3)} ${tr.x} ${tr.y} ${tr.width} ${tr.height}`) : null;
-    if (tg) {
-      tg.fillStyle(0x0a0c1c, 0.55);
-      tg.fillRoundedRect(tr.x, tr.y, tr.width, tr.height, tr.height / 2);
-      // Sliding highlight: peach at morning, sky blue by day, rose at sunset, indigo at night.
-      const pad = 3 * D;
-      const hw = cell - pad;
-      const hx = Phaser.Math.Clamp(tr.x + at * cell + pad / 2, tr.x + pad, tr.right - pad - hw);
-      tg.fillStyle(Phaser.Display.Color.GetColor(rgb[0], rgb[1], rgb[2]), 0.85);
-      tg.fillRoundedRect(hx, tr.y + pad, hw, tr.height - pad * 2, Math.min(hw, tr.height - pad * 2) / 2);
-      tg.lineStyle(2 * D, 0xdfe6ff, 0.35);
-      tg.strokeRoundedRect(tr.x, tr.y, tr.width, tr.height, tr.height / 2);
-    }
-    const iconScale = Math.max(2, Math.floor(tr.height / 16));
-    this.phaseIcons.forEach((icon, i) =>
-      icon
-        .setPosition(Math.round(tr.x + cell * (i + 0.5)), Math.round(tr.centerY))
-        .setScale(iconScale)
-        .setAlpha(0.5 + w[i] * 0.5),
-    );
-    // Auto: lit while on, with a ring filling up as the phase runs out.
-    const ac = this.autoCircle;
-    const auto = daynight.auto;
-    const fill = auto ? Math.round(daynight.progress * 120) / 120 : 0;
-    const ag = on ? this.redraw(this.autoButton, `${auto} ${fill} ${ac.x} ${ac.y} ${ac.radius}`) : null;
-    if (ag) {
-      ag.fillStyle(auto ? 0x2a3160 : 0x0a0c1c, auto ? 0.8 : 0.55);
-      ag.fillCircle(ac.x, ac.y, ac.radius);
-      ag.lineStyle(2 * D, 0xdfe6ff, auto ? 0.25 : 0.35);
-      ag.strokeCircle(ac.x, ac.y, ac.radius);
-      if (auto && fill > 0) {
-        ag.lineStyle(2 * D, 0xffd66b, 0.9);
-        ag.beginPath();
-        ag.arc(ac.x, ac.y, ac.radius, -Math.PI / 2, -Math.PI / 2 + fill * Math.PI * 2);
-        ag.strokePath();
-      }
-    }
-    this.autoIcon
-      .setPosition(Math.round(ac.x), Math.round(ac.y))
-      .setScale(Math.max(2, Math.floor((ac.radius * 2) / 16)))
-      .setAlpha(auto ? 1 : 0.5);
-    this.drawBuffs(tr);
-    this.placeStats(tr, delta);
+    const col = this.column;
+    this.drawBuffs(col);
+    this.placeStats(col, delta);
     this.drawHotbar();
     this.hideForBuilding();
   }
@@ -660,15 +582,15 @@ export class UIScene extends Phaser.Scene {
    * The stats panel stands at the left under the buff badges' row, and moves
    * up into it when there are none, easing between the two.
    */
-  private placeStats(tr: Phaser.Geom.Rectangle, delta: number): void {
+  private placeStats(col: { x: number; y: number; size: number }, delta: number): void {
     const menu = menuZoom(this.scale.width, this.scale.height);
     const z = menu >= 3 ? menu - 1 : menu;
-    const top = Math.round(daynight.enabled ? tr.bottom + 10 * D : tr.y);
-    const badges = Math.round(tr.height * 0.9) + 3 * D + Math.round(3 * D) + 8 * D;
+    const top = col.y;
+    const badges = col.size + 3 * D + Math.round(3 * D) + 8 * D;
     const want = top + (heroBuffs.active.length ? badges : 0);
     this.statsY = this.statsY < 0 ? want : this.statsY + (want - this.statsY) * Math.min(1, delta / 90);
     if (Math.abs(want - this.statsY) < 0.5) this.statsY = want;
-    this.statsHud.place(tr.x, this.statsY, z, build.on || fishHud.active);
+    this.statsHud.place(col.x, this.statsY, z, build.on || fishHud.active);
     this.statsHud.update();
   }
 
@@ -735,12 +657,12 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
-  /** A badge per active buff under the day/night toggle: its icon, ringed by a bar draining with the time left. */
-  private drawBuffs(tr: Phaser.Geom.Rectangle): void {
+  /** A badge per active buff in the left column under the minimap: its icon, and a bar under it draining with the time left. */
+  private drawBuffs(col: { x: number; y: number; size: number }): void {
     const list = heroBuffs.active;
-    const size = Math.round(tr.height * 0.9);
+    const size = col.size;
     const gap = Math.round(6 * D);
-    const y = Math.round(daynight.enabled ? tr.bottom + 10 * D : tr.y);
+    const y = col.y;
     const iconScale = Math.max(1, Math.floor((size - 6 * D) / 16));
     while (this.buffIcons.length < list.length) this.buffIcons.push(this.add.image(0, 0, '__DEFAULT'));
     this.buffIcons.forEach((icon, i) => {
@@ -752,13 +674,13 @@ export class UIScene extends Phaser.Scene {
       if (icon.texture.key !== b.def.icon) icon.setTexture(b.def.icon);
       // Blinks through its last two seconds.
       const blink = b.left < 2000 && Math.sin(this.time.now * 0.018) < 0 ? 0.45 : 1;
-      icon.setVisible(true).setPosition(tr.x + i * (size + gap) + size / 2, y + size / 2).setScale(iconScale).setAlpha(blink);
+      icon.setVisible(true).setPosition(col.x + i * (size + gap) + size / 2, y + size / 2).setScale(iconScale).setAlpha(blink);
     });
-    const state = list.map((b) => `${b.def.id} ${Math.ceil((b.left / b.def.duration) * 60)}`).join('|') + ` ${tr.x} ${y} ${size}`;
+    const state = list.map((b) => `${b.def.id} ${Math.ceil((b.left / b.def.duration) * 60)}`).join('|') + ` ${col.x} ${y} ${size}`;
     const g = this.redraw(this.buffBadges, state);
     if (!g) return;
     list.forEach((b, i) => {
-      const x = tr.x + i * (size + gap);
+      const x = col.x + i * (size + gap);
       const r = Math.round(5 * D);
       g.fillStyle(0x0a0c1c, 0.6);
       g.fillRoundedRect(x, y, size, size, r);

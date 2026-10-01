@@ -2,6 +2,12 @@ import Phaser from 'phaser';
 import { sound } from '../audio';
 import { DPR as D } from '../game/display';
 
+/** The speaker button's side in canvas px for a canvas this size. */
+const buttonSize = (width: number, height: number): number => Math.round(Math.max(34 * D, Math.min(width, height) * 0.075));
+
+/** How much of the top-right corner (canvas px, with its margin and touch slack) the button takes, for pages that keep clear of it. */
+export const soundCorner = (width: number, height: number): number => buttonSize(width, height) + 18 * D;
+
 /** A small speaker button in the top-right corner (M on a keyboard) that mutes all sound. */
 export class SoundScene extends Phaser.Scene {
   private g!: Phaser.GameObjects.Graphics;
@@ -13,7 +19,7 @@ export class SoundScene extends Phaser.Scene {
   }
 
   private get size(): number {
-    return Math.round(Math.max(34 * D, Math.min(this.scale.width, this.scale.height) * 0.075));
+    return buttonSize(this.scale.width, this.scale.height);
   }
 
   create(): void {
