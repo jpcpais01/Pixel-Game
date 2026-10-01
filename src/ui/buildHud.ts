@@ -224,6 +224,25 @@ const ICONS: Record<string, { map: string[]; pal: Record<string, string> }> = {
       '...wwwwwwwDDw',
     ],
   },
+  tab_tent: {
+    pal: { R: '#ff7a5a', r: '#b8403a', W: '#f6ecd0', w: '#c8b48c', D: '#2a1a12', P: '#8a5a32', G: '#ffd66b' },
+    map: [
+      '.......G',
+      '.......P',
+      '......rRr',
+      '.....rWRWr',
+      '.....RWRWR',
+      '....rRWRWRr',
+      '....RWRWRWR',
+      '...rRWRDRWRr',
+      '...RWRDDDRWR',
+      '..rRWRDDDRWRr',
+      '..RWRDDDDDRWR',
+      '.rRWRDDDDDRWRr',
+      '.rrrrrrrrrrrrrr',
+      'w.............w',
+    ],
+  },
   tab_garden: {
     pal: { P: '#ffa2c0', p: '#d0507a', Y: '#ffe27a', L: '#9ae486', l: '#3e9a4a' },
     map: [

@@ -758,8 +758,9 @@ class BuiltLayer {
     const things = [];
     for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) things.push(...e.thingsInChunk(cx + i, cy + j));
     let t: HTMLCanvasElement | null = null;
-    if (things.length || e.wallsInChunk(cx, cy).length || this.floored.has(k)) {
-      const src: BuiltSource = { floorAt: (x, y) => e.floorAt(x, y), wallAt: (x, y) => e.wallAt(x, y), roofAt: () => 0, things };
+    const covered = e.houses.some((h) => h.x1 >= cx * CELLS && h.x0 < (cx + 1) * CELLS && h.y1 >= cy * CELLS && h.y0 < (cy + 1) * CELLS);
+    if (things.length || e.wallsInChunk(cx, cy).length || this.floored.has(k) || covered) {
+      const src: BuiltSource = { floorAt: (x, y) => e.floorAt(x, y), wallAt: (x, y) => e.wallAt(x, y), roofAt: (x, y) => e.roofAt(x, y), tentAt: (x, y) => e.tentAt(x, y), things };
       t = canvasOf(paintBuilds(src, cx * CELLS, cy * CELLS, CELLS, CELLS, true), TREK_T, TREK_T);
     }
     this.tiles.set(k, t);

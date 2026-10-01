@@ -12,6 +12,7 @@ import type { PixelCanvas, RenderedFrame } from './pixel';
 import { pixelCanvas } from './canvas';
 import { floorSwatch } from './homeFloors';
 import { bridgeIcon } from './bridgeArt';
+import { tentSwatch } from './tentArt';
 import { CHIMNEY_H, CHIMNEY_W, chimney, roofSwatch, wallFrameH, wallFrames } from './homeWalls';
 import { PROP_ART as FIRST_ART, PROP_TURNS as FIRST_TURNS, blossomTree, bobber, emptyRodBucket, type PropArt } from './homeProps';
 import { YARD_ART, YARD_TURNS } from './homeYard';
@@ -20,8 +21,8 @@ import { DOOR_OX, DOOR_OY, DOOR_STEP, DOOR_STEPS, DOOR_WAYS, doorArt, doorFrame,
 import { GATE_MATS, GATE_WAYS, gateFrames } from './homeGate';
 import { TREE_SWAY_FPS, TREE_SWAY_FRAMES } from './trees';
 import { hash2 } from './env';
-import { CELL, HomeLayout, PLOT_X, PLOT_Y, type Thing } from '../world/homeLayout';
-import { FLOORS, ROOFS, WALLS, extent, partById } from '../world/homeParts';
+import { CELL, PLOT_X, PLOT_Y, type Thing } from '../world/homeLayout';
+import { FLOORS, ROOFS, TENTS, WALLS, extent, partById } from '../world/homeParts';
 
 /** Every placed thing's drawing by part id, and the turning ones' other views (homeYard.ts and homeRoom.ts hold the later pieces). */
 const PROP_ART: Record<string, PropArt> = { ...FIRST_ART, ...YARD_ART, ...ROOM_ART };
@@ -203,7 +204,8 @@ function finishHome(scene: Phaser.Scene, list: Entry[]): void {
 
   // The build palette's samples.
   FLOORS.forEach((f, i) => scene.textures.addCanvas(`hs_f${i + 1}`, pixelCanvas(16, 16, floorSwatch(f.id, 16))));
-  ROOFS.forEach((_r, i) => scene.textures.addCanvas(`hs_r${i + 1}`, pixelCanvas(20, 20, roofSwatch(i + 1, 20, new HomeLayout()))));
+  ROOFS.forEach((_r, i) => scene.textures.addCanvas(`hs_r${i + 1}`, pixelCanvas(20, 20, roofSwatch(i + 1, 20))));
+  TENTS.forEach((_t, i) => scene.textures.addCanvas(`hs_t${i + 1}`, pixelCanvas(20, 20, tentSwatch(i + 1, 20))));
   const bridge = bridgeIcon();
   scene.textures.addCanvas('hs_bridge', pixelCanvas(bridge.w, bridge.h, bridge.px));
 }

@@ -17,7 +17,7 @@
 import { hash2 } from './env';
 import { hex, type RGB } from './pixel';
 import { mix } from './bitmap';
-import { FLOORS, ROOFS, WALLS, extent, partById, wallKind, wallMat } from '../world/homeParts';
+import { FLOORS, ROOFS, TENTS, WALLS, extent, partById, wallKind, wallMat } from '../world/homeParts';
 
 /** Map pixels to a building cell's side. */
 export const BUILD_PX = 2;
@@ -27,6 +27,8 @@ export interface BuiltSource {
   floorAt(cx: number, cy: number): number;
   wallAt(cx: number, cy: number): number;
   roofAt(cx: number, cy: number): number;
+  /** Tents (TENTS index from 1), drawn from above like roofs in their cloth. */
+  tentAt?(cx: number, cy: number): number;
   things: readonly { id: string; x: number; y: number; turn: number }[];
 }
 
@@ -70,6 +72,11 @@ const ROOF_RGB: Record<string, string[]> = {
   clay: ['#6e2e20', '#963e2a', '#bc5a38', '#dc7c50'],
   thatch: ['#6e5020', '#9a7634', '#c09a4a', '#dcbc68'],
   shingle: ['#3e2c1e', '#5c402c', '#7e5a3e', '#9e7652'],
+};
+const TENT_RGB: Record<string, string[]> = {
+  canvas: ['#8a7a56', '#b4a37b', '#cbbb93', '#e2d6b4'],
+  festival: ['#8a1d20', '#c23a32', '#e8dec0', '#f6f0dc'],
+  ranger: ['#4f3623', '#694527', '#865c30', '#a07040'],
 };
 const CHIMNEY: RGB[] = ['#3a3a42', '#6a6a74'].map(hex);
 
@@ -145,6 +152,9 @@ export function paintBuilds(src: BuiltSource, c0: number, r0: number, cols: numb
   const W = cols * BUILD_PX;
   const H = rows * BUILD_PX;
   const rgb = new Float32Array(W * H * 3);
+  // A roof or a tent's cloth: both cover what's under them.
+  const tentAt = (cx: number, cy: number) => src.tentAt?.(cx, cy) ?? 0;
+  const coverAt = (cx: number, cy: number) => src.roofAt(cx, cy) || tentAt(cx, cy);
   const al = new Float32Array(W * H);
   const X0 = c0 * BUILD_PX;
   const Y0 = r0 * BUILD_PX;
@@ -211,7 +221,7 @@ export function paintBuilds(src: BuiltSource, c0: number, r0: number, cols: numb
         put(cx * BUILD_PX + 1, cy * BUILD_PX + 2, [10, 12, 20], 0.28);
         put(cx * BUILD_PX + 2, cy * BUILD_PX + 2, [10, 12, 20], 0.28);
       }
-      if (src.roofAt(cx, cy)) {
+      if (coverAt(cx, cy)) {
         // The roof's shadow falls a cell's width down and to the right.
         for (const [dx, dy] of [
           [2, 1],
@@ -220,7 +230,7 @@ export function paintBuilds(src: BuiltSource, c0: number, r0: number, cols: numb
           [3, 2],
           [2, 3],
         ])
-          if (!src.roofAt(cx + Math.floor((dx + 1) / 2), cy + Math.floor((dy + 1) / 2))) shadow(cx * BUILD_PX + dx, cy * BUILD_PX + dy, 0.18);
+          if (!coverAt(cx + Math.floor((dx + 1) / 2), cy + Math.floor((dy + 1) / 2))) shadow(cx * BUILD_PX + dx, cy * BUILD_PX + dy, 0.18);
       }
     }
   }
@@ -360,7 +370,7 @@ export function paintBuilds(src: BuiltSource, c0: number, r0: number, cols: numb
   }
 
   // ---- roofs: each slope lit by which edge of its roof is nearest, so a hipped roof reads from above
-  const roofed = (x: number, y: number) => src.roofAt(Math.floor(x / BUILD_PX), Math.floor(y / BUILD_PX)) > 0;
+  const roofed = (x: number, y: number) => coverAt(Math.floor(x / BUILD_PX), Math.floor(y / BUILD_PX)) > 0;
   const reach = (x: number, y: number, dx: number, dy: number) => {
     let n = 0;
     while (n < 64 && roofed(x + dx * (n + 1), y + dy * (n + 1))) n++;
@@ -369,8 +379,9 @@ export function paintBuilds(src: BuiltSource, c0: number, r0: number, cols: numb
   for (let cy = r0; cy < r0 + rows; cy++) {
     for (let cx = c0; cx < c0 + cols; cx++) {
       const r = src.roofAt(cx, cy);
-      if (!r) continue;
-      const pal = (ROOF_RGB[ROOFS[r - 1]?.id ?? 'slate'] ?? ROOF_RGB.slate).map(rgbOf);
+      const tent = tentAt(cx, cy);
+      if (!r && !tent) continue;
+      const pal = (r ? (ROOF_RGB[ROOFS[r - 1]?.id ?? 'slate'] ?? ROOF_RGB.slate) : (TENT_RGB[TENTS[tent - 1]?.id ?? 'canvas'] ?? TENT_RGB.canvas)).map(rgbOf);
       for (let j = 0; j < BUILD_PX; j++) {
         for (let i = 0; i < BUILD_PX; i++) {
           const x = cx * BUILD_PX + i;

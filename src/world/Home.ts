@@ -1,9 +1,8 @@
 import Phaser from 'phaser';
-import { CHIMNEY_H, DOOR_OX, DOOR_OY, glows, thingFoot, thingLook, warmHome, wallFrameName } from '../art/homeArt';
+import { DOOR_OX, DOOR_OY, glows, thingFoot, thingLook, warmHome, wallFrameName } from '../art/homeArt';
 import { DOOR_FH, DOOR_FW, doorFrame } from '../art/homeDoor';
 import { GATE_MATS } from '../art/homeGate';
 import { paintFloors } from '../art/homeFloors';
-import { paintRoof, type RoofArt } from '../art/homeWalls';
 import { JAR_SPOTS } from '../art/homeProps';
 import { CRITTER_H, CRITTER_OX, CRITTER_OY, CRITTER_W } from '../art/critters';
 import { pixelCanvas } from '../art/canvas';
@@ -20,7 +19,8 @@ import { HOME_SPAWN, homeWalkable, setHomeMask } from './homeGround';
 import { Farm } from './Farm';
 import { HomeCritters } from './HomeCritters';
 import { BridgeView } from './BridgeView';
-import { HouseShadow, type Stack } from './houseShadow';
+import { RoofView } from './RoofView';
+import type { BuildLand } from './buildLand';
 import { treeLeaves } from './Scenery';
 import { Swing, hangGate } from './swing';
 import { CELL, COLS, HomeLayout, HomeMask, PLOT_H, PLOT_W, PLOT_X, PLOT_Y, ROWS, cellIndex, doorAcross, findHouses, inPlot, starterHome, type House, type Thing } from './homeLayout';
@@ -40,11 +40,6 @@ const PATCH_COLS = PLOT_W / PATCH;
 const PATCH_ROWS = PLOT_H / PATCH;
 /** How many edits can be undone. */
 const UNDO_MAX = 30;
-/** How long a roof takes to fade away, or come back, in ms. */
-const FADE_MS = 260;
-/** A roof over the hero's head from behind shows this much; while building, this much. */
-const ROOF_BEHIND = 0.45;
-const ROOF_BUILDING = 0.45;
 /** Walls along a house's south side, seen from inside, are cut down to this many px of face. */
 const STUB = 6;
 /** Visitors are sent the home this long after the last edit, and in pieces no longer than this. */
@@ -101,18 +96,6 @@ interface WallPiece {
   gate: { sprite: Sprite; swing: Swing } | null;
 }
 
-interface Roof {
-  sig: string;
-  house: House;
-  art: RoofArt;
-  key: string;
-  img: Img;
-  shadow: HouseShadow;
-  depth: number;
-  reveal: number;
-  alpha: number;
-  chimneys: { img: Img; smoke: Phaser.GameObjects.Particles.ParticleEmitter }[];
-}
 
 /** A fishing rod placed in the Home, and the water it can reach: each water cell's middle, and whether water lies all round it. */
 export interface RodSpot {
@@ -145,7 +128,8 @@ export class Home {
   private patches = new Map<number, { day: Img; night: Img; keys: string[] }>();
   private walls = new Map<number, WallPiece>();
   private placed = new Map<string, Placed>();
-  private roofs: Roof[] = [];
+  /** The roofs over the houses and the tents' cloth (see RoofView.ts). */
+  private roofView: RoofView;
   private caught: string[] = [];
   private grid: Phaser.GameObjects.Graphics;
   private cursor: Phaser.GameObjects.Graphics;
@@ -172,6 +156,8 @@ export class Home {
   private critters: HomeCritters;
   /** Bridges over the pond, stood up whole (see bridge.ts). */
   private bridges: BridgeView;
+  /** The plot as the critters and the farm see it (see buildLand.ts). */
+  private land: BuildLand = this.makeLand();
   /** A visitor has been sent the home at least once. */
   private arrived = false;
   /** The crops on the garden beds, and the stoves and pots to cook at. */
@@ -202,10 +188,16 @@ export class Home {
     this.cursor = add.graphics().setDepth(9000).setVisible(false);
     this.ghost = add.image(0, 0, 'home', 'chimney').setAlpha(0.6).setDepth(9001).setVisible(false);
     this.critters = new HomeCritters(scene);
-    this.farm = new Farm(scene, this.owner, () => {
-      if (session.active && this.owner) this.sendT = SEND_MS;
-    });
+    this.farm = new Farm(
+      scene,
+      this.owner,
+      () => {
+        if (session.active && this.owner) this.sendT = SEND_MS;
+      },
+      this.land,
+    );
     this.bridges = new BridgeView(scene, PLOT_X, PLOT_Y);
+    this.roofView = new RoofView(scene, PLOT_X, PLOT_Y);
     this.refresh(true);
     // Now and then a leaf, or a cherry petal, comes loose from a tree planted here.
     this.leaves = treeLeaves(
@@ -237,6 +229,29 @@ export class Home {
       }
     }
     return HOME_SPAWN;
+  }
+
+  private makeLand(): BuildLand {
+    const home = this;
+    return {
+      ox: PLOT_X,
+      oy: PLOT_Y,
+      get things() {
+        return home.layout.things;
+      },
+      floorAt: (cx, cy) => this.layout.floorAt(cx, cy),
+      wallAt: (cx, cy) => this.layout.wallAt(cx, cy),
+      isWater: (cx, cy) => this.layout.isWater(cx, cy),
+      thingsAt: (cx, cy) => this.layout.thingsAt(cx, cy),
+      // Off the plot is no house's and not out of doors either, so the critters keep to the plot.
+      houseAt: (cx, cy) => (inPlot(cx, cy) ? this.houseAt[cellIndex(cx, cy)] : -2),
+      walkable: (x, y) => homeWalkable(x, y),
+      waterCells: () => {
+        const out: { x: number; y: number }[] = [];
+        for (let cy = 0; cy < ROWS; cy++) for (let cx = 0; cx < COLS; cx++) if (this.layout.isWater(cx, cy)) out.push({ x: cx, y: cy });
+        return out;
+      },
+    };
   }
 
   // ---------------------------------------------------------------- Drawing the layout
@@ -346,76 +361,16 @@ export class Home {
     }
   }
 
-  /** One roof per house, repainted only when its cells or tiles change; chimneys over its hearths. */
+  /** A roof over each house and a tent's cloth over each tent, repainted only when its cells change; chimneys over the houses' hearths. */
   private refreshRoofs(): void {
     const l = this.layout;
-    const keep: Roof[] = [];
-    const sigOf = (h: House) => h.cells.map((c) => `${c}.${l.roof[c]}`).sort().join(',');
-    const wanted = this.houses.map((h) => ({ h, sig: sigOf(h) }));
-    for (const r of this.roofs) {
-      const w = wanted.find((x) => x.sig === r.sig);
-      if (w) {
-        r.house = w.h;
-        keep.push(r);
-      } else this.dropRoof(r);
-    }
-    for (const w of wanted) {
-      if (keep.some((r) => r.sig === w.sig)) continue;
-      const art = paintRoof(l, w.h);
-      const key = `hr${this.id}_${this.version++}`;
-      const tex = this.scene.textures;
-      tex.addCanvas(key, pixelCanvas(art.w, art.h, art.diffuse))!.setDataSource(pixelCanvas(art.w, art.h, art.normal));
-      const depth = PLOT_Y + (w.h.y1 + 1) * CELL + 1;
-      const img = this.scene.add.image(PLOT_X + art.x, PLOT_Y + art.y, key).setOrigin(0).setPipeline('Lit').setDepth(depth);
-      const shadow = new HouseShadow(this.scene, `${key}_s`, art.solid, PLOT_X, PLOT_Y);
-      keep.push({ sig: w.sig, house: w.h, art, key, img, shadow, depth, reveal: 0, alpha: 1, chimneys: [] });
-    }
-    this.roofs = keep;
-    // Chimneys: rebuilt every time, as hearths come and go under a roof that stays.
-    const stacks = new Map<Roof, Stack[]>(this.roofs.map((r) => [r, []]));
-    for (const r of this.roofs) {
-      for (const c of r.chimneys) {
-        c.img.destroy();
-        c.smoke.destroy();
-      }
-      r.chimneys = [];
-    }
+    const chimneys = [];
     for (const t of l.things) {
       const p = partById(t.id);
       if (!p?.chimney) continue;
-      const h = this.houseAt[cellIndex(t.x, t.y)];
-      const r = this.roofs.find((x) => x.house.id === h);
-      if (!r) continue;
-      const px = (t.x + p.w / 2) * CELL;
-      const py = t.y * CELL + 5;
-      const x = PLOT_X + px;
-      const y = PLOT_Y + py - r.art.lift(px, py) + 2;
-      const img = this.scene.add.image(x, y, 'home', 'chimney').setOrigin(0.5, 1).setPipeline('Lit').setDepth(r.depth + 0.5);
-      const smoke = this.scene.add.particles(x, y - CHIMNEY_H + 3, 'rogue_smoke', {
-        lifespan: 2800,
-        speedY: { min: -15, max: -8 },
-        speedX: { min: 2, max: 6 },
-        scale: { start: 0.3, end: 1.1 },
-        alpha: { start: 0.32, end: 0 },
-        tint: [0xc8c0b8, 0xa8a4a8],
-        frequency: 420,
-      }).setDepth(r.depth + 1);
-      r.chimneys.push({ img, smoke });
-      // It casts with the house: a stack a little narrower than its drawing, from the roof up.
-      const lift = r.art.lift(px, py);
-      stacks.get(r)!.push({ x: px - 4, y: py - 2, w: 8, d: 5, base: lift, top: lift + CHIMNEY_H - 3 });
+      chimneys.push({ house: this.houseAt[cellIndex(t.x, t.y)], x: (t.x + p.w / 2) * CELL, y: t.y * CELL + 5 });
     }
-    for (const [r, s] of stacks) r.shadow.setStacks(s);
-  }
-
-  private dropRoof(r: Roof): void {
-    r.img.destroy();
-    r.shadow.destroy();
-    for (const c of r.chimneys) {
-      c.img.destroy();
-      c.smoke.destroy();
-    }
-    this.scene.textures.remove(r.key);
+    this.roofView.sync(this.houses, (cx, cy) => l.roofAt(cx, cy), (cx, cy) => l.tentAt(cx, cy), chimneys);
   }
 
   private static keyOf(t: Thing): string {
@@ -439,8 +394,8 @@ export class Home {
     if (this.leaves) this.leaves.emitting = l.things.some((t) => LEAF_TINTS[t.id]);
     this.fillShelves();
     // Let out with a sparkle while building (or, for a visitor, once the home has come), not as the home first appears.
-    this.critters.sync(l, this.houseAt, this.owner ? build.on : this.arrived);
-    this.farm.sync(l);
+    this.critters.sync(this.land, this.owner ? build.on : this.arrived);
+    this.farm.sync();
   }
 
   private place(k: string, t: Thing): void {
@@ -666,23 +621,9 @@ export class Home {
       this.inside = inside;
       sound.setOutdoors(inside < 0);
     }
-    const step = dt / FADE_MS;
-    for (const r of this.roofs) {
-      r.reveal = Phaser.Math.Clamp(r.reveal + (r.house.id === inside ? step : -step), 0, 1);
-      const behind = heroY < r.depth && heroY > r.img.y && heroX > r.img.x && heroX < r.img.x + r.img.width;
-      const want = build.on ? (build.tab === 'roof' ? 0.8 : ROOF_BUILDING) : behind ? ROOF_BEHIND : 1;
-      r.alpha += (want - r.alpha) * Math.min(1, dt / 120);
-      const a = r.alpha * (1 - Phaser.Math.Easing.Sine.InOut(r.reveal));
-      r.img.setAlpha(a);
-      r.shadow.img.setAlpha(SUN_SHADOW_ALPHA * d * (1 - r.reveal));
-      if (d > 0.01 && r.reveal < 1) r.shadow.update();
-      for (const c of r.chimneys) {
-        c.img.setAlpha(a);
-        c.smoke.emitting = a > 0.5;
-      }
-    }
+    this.roofView.update(dt, heroX, heroY, inside, d);
     for (const w of this.walls.values()) {
-      const stub = w.south >= 0 && !w.post && (this.roofs.find((r) => r.house.id === w.south)?.reveal ?? 0) > 0.5;
+      const stub = w.south >= 0 && !w.post && this.roofView.reveal(w.south) > 0.5;
       const top = stub ? w.h + 11 - STUB : 0;
       if (w.cut === top) continue;
       w.cut = top;
@@ -710,7 +651,7 @@ export class Home {
       if (!p.light || hidden) continue;
       const L = p.part.light;
       const day = L ? L.day : 0.3;
-      const k = (1 + (day - 1) * d) * (p.house >= 0 ? 0.3 + 0.7 * (this.roofs.find((r) => r.house.id === p.house)?.reveal ?? 1) : 1);
+      const k = (1 + (day - 1) * d) * (p.house >= 0 ? 0.3 + 0.7 * this.roofView.reveal(p.house) : 1);
       const n = L?.flicker ? Math.sin(t * 0.011 + p.seed) * 0.5 + Math.sin(t * 0.027 + p.seed * 3) * 0.3 + Math.sin(t * 0.061 + p.seed * 7) * 0.2 : Math.sin(t * 0.002 + p.seed) * 0.6;
       p.light.intensity = p.base * (0.87 + n * 0.13) * k;
       p.halo?.setAlpha((0.32 + n * 0.06) * k);
@@ -832,7 +773,7 @@ export class Home {
     const pick = build.pick;
     if (!pick || !inPlot(cx, cy)) return false;
     const i = cellIndex(cx, cy);
-    if (pick.layer === 'seed') return this.farm.canSow(this.layout, cx, cy, pick.id);
+    if (pick.layer === 'seed') return this.farm.canSow(cx, cy, pick.id);
     if (pick.layer === 'thing') {
       const p = partById(pick.id);
       return !!p?.bridge && this.layout.canPlace(p, cx, cy);
@@ -842,7 +783,9 @@ export class Home {
       return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.water && !partById(t.id)?.wall && !partById(t.id)?.door && !partById(t.id)?.critter);
     }
     // A critter's spot doesn't hold anything up: it finds open ground nearby.
-    if (pick.layer === 'wall') return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.wall && !partById(t.id)?.door && !partById(t.id)?.critter) && !this.heroIn(cx, cy) && !this.layout.isWater(cx, cy);
+    if (pick.layer === 'wall') return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.wall && !partById(t.id)?.door && !partById(t.id)?.critter) && !this.heroIn(cx, cy) && !this.layout.isWater(cx, cy) && !this.layout.tentAt(cx, cy);
+    // A tent is its own walls: it goes on open ground, not over walls or water, nor on the hero (its hem would hold them).
+    if (pick.layer === 'tent') return !this.layout.wallAt(cx, cy) && !this.layout.isWater(cx, cy) && (this.layout.tentAt(cx, cy) > 0 || !this.heroIn(cx, cy));
     return pick.layer === 'roof' || i >= 0;
   }
 
@@ -853,7 +796,7 @@ export class Home {
     if (!this.canPaint(cx, cy)) return false;
     // Sowing changes the farm, not the layout: nothing to redraw or undo.
     if (pick.layer === 'seed') {
-      this.farm.sow(l, cx, cy, pick.id);
+      this.farm.sow(cx, cy, pick.id);
       return false;
     }
     if (pick.layer === 'floor') {
@@ -872,6 +815,13 @@ export class Home {
     if (pick.layer === 'roof') {
       if (l.roof[i] === pick.value) return false;
       l.roof[i] = pick.value;
+      l.tent[i] = 0;
+      return true;
+    }
+    if (pick.layer === 'tent') {
+      if (l.tent[i] === pick.value) return false;
+      l.tent[i] = pick.value;
+      l.roof[i] = 0;
       return true;
     }
     if (pick.layer === 'thing') {
@@ -883,7 +833,7 @@ export class Home {
   }
 
   /** What the eraser would take at a cell in this tab: a thing of the tab (or any), or the tab's layer. */
-  private eraseTarget(cx: number, cy: number): 'floor' | 'wall' | 'roof' | 'crop' | Thing | null {
+  private eraseTarget(cx: number, cy: number): 'floor' | 'wall' | 'roof' | 'tent' | 'crop' | Thing | null {
     const l = this.layout;
     const i = cellIndex(cx, cy);
     const tab = build.tab;
@@ -892,6 +842,7 @@ export class Home {
     // A door comes out of its doorway before the doorway goes.
     if (tab === 'wall') return l.thingsAt(cx, cy).find((t) => partById(t.id)?.door) ?? (l.wall[i] ? 'wall' : null);
     if (tab === 'roof') return l.roof[i] ? 'roof' : null;
+    if (tab === 'tent') return l.tent[i] ? 'tent' : null;
     // Critters roam off their spots, so the eraser takes the one it touches, wherever it has got to.
     if (tab === 'critters') return this.critters.at(PLOT_X + (cx + 0.5) * CELL, PLOT_Y + (cy + 0.5) * CELL, CELL * 0.75) ?? l.thingsAt(cx, cy).find((t) => partById(t.id)?.critter) ?? null;
     // Not a bridge from under the hero's feet, out over the pond.
@@ -917,6 +868,7 @@ export class Home {
       l.wall[i] = 0;
       this.checkDecor();
     } else if (what === 'roof') l.roof[i] = 0;
+    else if (what === 'tent') l.tent[i] = 0;
     else {
       l.things = l.things.filter((t) => t !== what);
       sound.puff(0);
@@ -1065,12 +1017,8 @@ export class Home {
     build.available = build.home = false;
     stopBuilding();
     for (const p of this.patches.values()) for (const k of p.keys) this.scene.textures.remove(k);
-    for (const r of this.roofs) {
-      this.scene.textures.remove(r.key);
-      this.scene.textures.remove(`${r.key}_s`);
-    }
     this.patches.clear();
-    this.roofs = [];
+    this.roofView.destroy();
     this.critters.destroy();
     this.farm.destroy();
     this.bridges.destroy();

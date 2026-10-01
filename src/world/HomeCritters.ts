@@ -1,12 +1,11 @@
 import Phaser from 'phaser';
 import { CRITTER_H, CRITTER_OX, CRITTER_OY, CRITTER_W } from '../art/critters';
-import { thingFoot } from '../art/homeArt';
 import { sound } from '../audio';
 import { critterById, type CritterDef } from '../game/critters';
 import { snap } from '../game/display';
 import type { WorldScene } from '../scenes/WorldScene';
-import { homeWalkable } from './homeGround';
-import { CELL, COLS, PLOT_X, PLOT_Y, cellIndex, inPlot, type HomeLayout, type Thing } from './homeLayout';
+import { footOn, type BuildLand } from './buildLand';
+import { CELL, type Thing } from './homeLayout';
 import { partById } from './homeParts';
 
 // The critters the player has let out in their Home (the build tray's
@@ -138,8 +137,7 @@ const between = ([a, b]: number[]): number => a + Math.random() * (b - a);
 
 export class HomeCritters {
   private released = new Map<string, Kept>();
-  private layout!: HomeLayout;
-  private houseAt!: Int16Array;
+  private land!: BuildLand;
   private lamps: Lamp[] = [];
   private flowers: Spot[] = [];
   private water: Spot[] = [];
@@ -152,14 +150,13 @@ export class HomeCritters {
   constructor(private scene: WorldScene) {}
 
   /** Bring the critters up to date with the layout; `loud`, new ones are let out with a sparkle and gone ones leave in a puff. */
-  sync(layout: HomeLayout, houseAt: Int16Array, loud: boolean): void {
-    this.layout = layout;
-    this.houseAt = houseAt;
+  sync(land: BuildLand, loud: boolean): void {
+    this.land = land;
     this.findPlaces();
     // Moths keep to their lamp if it's still there.
     for (const c of this.released.values()) for (const b of c.bugs) if (b.lamp) b.lamp = this.lamps.find((p) => p.x === b.lamp!.x && p.y === b.lamp!.y) ?? null;
     const want = new Map<string, Thing>();
-    for (const t of layout.things) if (partById(t.id)?.critter) want.set(keyOf(t), t);
+    for (const t of land.things) if (partById(t.id)?.critter) want.set(keyOf(t), t);
     for (const [k, c] of this.released) {
       if (want.has(k)) continue;
       for (const b of c.bugs) {
@@ -177,7 +174,7 @@ export class HomeCritters {
       }
       const def = critterById(partById(t.id)!.critter!);
       if (!def) continue;
-      const foot = thingFoot(t);
+      const foot = footOn(land, t);
       const c: Kept = { thing: t, home: { x: foot.x, y: foot.y - 5 }, house: -1, bugs: [] };
       this.settle(c);
       const n = HABIT[def.id] === 'swarm' ? SWARM : 1;
@@ -194,7 +191,7 @@ export class HomeCritters {
   private settle(c: Kept): void {
     const cx = c.thing.x;
     const cy = c.thing.y;
-    c.house = inPlot(cx, cy) ? this.houseAt[cellIndex(cx, cy)] : -1;
+    c.house = this.land.houseAt(cx, cy);
     const def = critterById(partById(c.thing.id)?.critter ?? '');
     if (!def) return;
     if (this.ok(def, c.house, c.home.x, c.home.y)) return;
@@ -212,28 +209,19 @@ export class HomeCritters {
 
   /** The lamps, flowers and water in the home, where critters like to go. */
   private findPlaces(): void {
-    const l = this.layout;
-    const houseOf = (x: number, y: number) => {
-      const cx = Math.floor((x - PLOT_X) / CELL);
-      const cy = Math.floor((y - PLOT_Y) / CELL);
-      return inPlot(cx, cy) ? this.houseAt[cellIndex(cx, cy)] : -1;
-    };
+    const l = this.land;
+    const houseOf = (x: number, y: number) => l.houseAt(Math.floor((x - l.ox) / CELL), Math.floor((y - l.oy) / CELL));
     this.lamps = [];
     this.flowers = [];
     this.water = [];
     for (const t of l.things) {
       const p = partById(t.id);
       if (!p || p.critter) continue;
-      const f = thingFoot(t);
+      const f = footOn(l, t);
       if (p.light && !p.wall) this.lamps.push({ x: f.x, y: f.y, house: houseOf(f.x, f.y - 2), h: p.light.y, fire: !!p.light.flicker });
       if (FLOWERS.has(t.id)) this.flowers.push({ x: f.x, y: f.y - 2, house: houseOf(f.x, f.y - 2) });
     }
-    for (let i = 0; i < l.floor.length; i++) {
-      const cx = i % COLS;
-      const cy = (i - cx) / COLS;
-      if (!l.isWater(cx, cy)) continue;
-      this.water.push({ x: PLOT_X + (cx + 0.5) * CELL, y: PLOT_Y + (cy + 0.5) * CELL, house: this.houseAt[i] });
-    }
+    for (const c of l.waterCells()) this.water.push({ x: l.ox + (c.x + 0.5) * CELL, y: l.oy + (c.y + 0.5) * CELL, house: l.houseAt(c.x, c.y) });
   }
 
   private make(def: CritterDef, c: Kept, late: boolean): Bug {
@@ -289,12 +277,12 @@ export class HomeCritters {
 
   /** Can it be at (x, y)? On its own side of the walls; flyers anywhere off a wall, frogs and the Glowlotl on the pond too. */
   private ok(def: CritterDef, house: number, x: number, y: number): boolean {
-    const cx = Math.floor((x - PLOT_X) / CELL);
-    const cy = Math.floor((y - PLOT_Y) / CELL);
-    if (!inPlot(cx, cy) || this.houseAt[cellIndex(cx, cy)] !== house) return false;
-    const l = this.layout;
+    const l = this.land;
+    const cx = Math.floor((x - l.ox) / CELL);
+    const cy = Math.floor((y - l.oy) / CELL);
+    if (l.houseAt(cx, cy) !== house) return false;
     if (def.gait === 'fly') return !l.wallAt(cx, cy);
-    if (homeWalkable(x, y)) return true;
+    if (l.walkable(x, y)) return true;
     return (def.gait === 'hop' || def.id === 'axolotl') && l.isWater(cx, cy) && !l.wallAt(cx, cy);
   }
 

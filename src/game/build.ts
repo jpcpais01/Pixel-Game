@@ -2,7 +2,7 @@
 // (ui/buildHud.ts, in UIScene) and the world that builds it (world/Home.ts).
 // The HUD writes the pick and the pointer; the world reads them each frame.
 
-import { FLOORS, PARTS, ROOFS, TABS, WALLS, WALL_ITEMS, critterPart, wallKind, wallMat, type BuildTab } from '../world/homeParts';
+import { FLOORS, PARTS, ROOFS, TABS, TENTS, WALLS, WALL_ITEMS, critterPart, wallKind, wallMat, type BuildTab } from '../world/homeParts';
 import { collection } from './collection';
 import { CRITTERS } from './critters';
 import { CROPS } from './farm';
@@ -11,8 +11,8 @@ import { seedKey } from './cooking';
 /** One thing on the palette: which layer it paints (or thing it places), its value, name and picture. */
 export interface PaletteItem {
   /** A seed is sown on garden beds (see world/Farm.ts) rather than built. */
-  layer: 'floor' | 'wall' | 'roof' | 'thing' | 'seed';
-  /** The floor, wall or roof value, for the layers. */
+  layer: 'floor' | 'wall' | 'roof' | 'tent' | 'thing' | 'seed';
+  /** The floor, wall, roof or tent value, for the layers. */
   value: number;
   /** The part, for things. */
   id: string;
@@ -39,6 +39,8 @@ export function palette(tab: BuildTab, partIcon: (id: string) => { key: string; 
       ];
     case 'roof':
       return ROOFS.map((r, i) => ({ layer: 'roof', value: i + 1, id: r.id, name: `${r.name} roof`, icon: { key: `hs_r${i + 1}` } }));
+    case 'tent':
+      return TENTS.map((t, i) => ({ layer: 'tent', value: i + 1, id: t.id, name: t.name, icon: { key: `hs_t${i + 1}` } }));
     case 'critters':
       // Only the ones caught so far; letting one out doesn't use up the catch.
       return CRITTERS.filter((c) => collection.critterCount(c.id) > 0).map((c) => ({ layer: 'thing', value: 0, id: critterPart(c.id), name: c.name, icon: { key: 'critters', frame: `${c.id}_0` } }));
@@ -58,9 +60,9 @@ export const build = {
   /** Build mode is on: the palette shows and taps on the world build. */
   on: false,
   tab: 'floor' as BuildTab,
-  /** The tabs the tray offers here (the Everwood has no houses, so it leaves some out). Set by the world. */
+  /** The tabs the tray offers here. Set by the world. */
   tabs: TABS.map((t) => t.id) as BuildTab[],
-  /** Which palette items may be built here (the Everwood keeps to garden walls and outdoor things); null for all. */
+  /** Which palette items may be built here; null for all. */
   allow: null as ((item: PaletteItem) => boolean) | null,
   /** What's picked: a palette item, or null for the eraser. */
   pick: null as PaletteItem | null,
