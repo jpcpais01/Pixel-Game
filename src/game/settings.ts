@@ -17,11 +17,13 @@ export interface Settings {
   zoom: 'far' | 'normal' | 'close';
   /** Screen shakes (hits, slams, gem hoards, the shop's wishes); off keeps the view still. */
   shake: boolean;
+  /** The minimap in the top-right corner while playing (the Everwood's whole map still opens by its scroll button or Tab). */
+  minimap: boolean;
 }
 
 // Phones and tablets start on Fast; they have dense screens and small GPUs.
 const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true, profiler: false, quality: touch ? 'fast' : 'full', zoom: 'far', shake: true };
+const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true, profiler: false, quality: touch ? 'fast' : 'full', zoom: 'far', shake: true, minimap: true };
 
 type Listener = (s: Settings) => void;
 

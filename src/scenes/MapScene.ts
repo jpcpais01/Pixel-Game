@@ -4,6 +4,7 @@ import { pixelCanvas } from '../art/canvas';
 import { INK, MAP_CELL, TREK_T, groundMapBase, mapIconSheet, reliefMap, stampCrowns, type MapBase } from '../art/mapArt';
 import { DPR as D, menuZoom } from '../game/display';
 import { activeSeason } from '../game/season';
+import { settings } from '../game/settings';
 import { trek, type Fire } from '../game/trek';
 import { session } from '../net/session';
 import { BUTTON_GOLD, PixelButton } from '../ui/widgets';
@@ -211,7 +212,15 @@ export class MapScene extends Phaser.Scene {
 
     this.layout();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
+    // The pause menu's Minimap row: the scroll button moves into the minimap's corner when it's off.
+    let shown = settings.values.minimap;
+    const unwatch = settings.watch((s) => {
+      if (s.minimap === shown) return;
+      shown = s.minimap;
+      this.layout();
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unwatch();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
       if (this.big) this.closeBig();
       if (this.trekMap) trek.save();
@@ -267,7 +276,8 @@ export class MapScene extends Phaser.Scene {
 
     if (this.mapButton) {
       const b = Math.round(s * 0.92);
-      this.mapButton.r.setTo(this.rect.x - b - 8 * D, this.rect.bottom - b, b, b);
+      if (settings.values.minimap) this.mapButton.r.setTo(this.rect.x - b - 8 * D, this.rect.bottom - b, b, b);
+      else this.mapButton.r.setTo(width - pad - b, top, b, b);
       const r = this.mapButton.r;
       this.mapButton.zone.setPosition(r.x - 5 * D, r.y - 5 * D).setSize(r.width + 10 * D, r.height + 10 * D);
       this.mapButton.zone.input!.hitArea.setTo(0, 0, r.width + 10 * D, r.height + 10 * D);
@@ -432,6 +442,15 @@ export class MapScene extends Phaser.Scene {
     }
     if (this.ui?.covered) {
       this.hideMini();
+      return;
+    }
+    if (!settings.values.minimap) {
+      // Switched off in the pause menu: only the Everwood's scroll button stays, to open the whole map.
+      this.hideMini();
+      if (this.mapButton) {
+        this.mapButton.g.setVisible(true);
+        this.mapButton.zone.input!.enabled = true;
+      }
       return;
     }
     this.showMini();
