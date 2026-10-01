@@ -1,4 +1,4 @@
-// An Auto Battle table of two to eight players (people and bots). Each round
+// An Auto Battle table of two to twelve players (people and bots). Each round
 // the players still in are paired at random; with an odd number, the one
 // left over fights a ghost: a copy of another player's board. Beating the
 // ghost wins back the health a loss would have cost, losing to it costs
@@ -10,9 +10,9 @@ import { Battle, type Placed } from './sim';
 import { lossDamage, START_HP } from './match';
 import { lossTaken } from './boons';
 
-/** Most bots a table takes, and most players in all (people and bots). */
-export const MAX_BOTS = 4;
-export const MAX_SEATS = 8;
+/** Most bots a table takes, and most players in all (people and bots): four people online plus eight bots. */
+export const MAX_BOTS = 8;
+export const MAX_SEATS = 12;
 
 /** Who sits at a seat: a name, a bot or a person, and the person's id in the online room (-1 offline). */
 export interface SeatInfo {

@@ -83,8 +83,9 @@ const TRAIT_ROW = 13;
 /** A trait's progress pips: each one wide, and the gap between. */
 const PIP = 3;
 const PIP_STEP = 4;
-/** A row of the wide layout's standings, at a table of more than two. */
+/** A row of the wide layout's standings, at a table of more than two; a big table that can't fit squeezes to the tight row, dropping its health bar. */
 const STAND_ROW = 10;
+const STAND_TIGHT = 9;
 /** The hero card that pops up for a tapped piece (or a hovered shop card). */
 const INFO_W = 142;
 const INFO_H = 106;
@@ -112,7 +113,7 @@ const BOON_SHEEN = [3.4, 2.6, 2.2];
 /** A kept boon's badge, and its step in a row. */
 const BADGE = 14;
 const BADGE_STEP = 15;
-const RIVAL_NAMES = ['Morgana', 'Tharn', 'Brenna', 'Old Wick', 'Hazel', 'Nyx', 'Sir Aldric', 'Vesper'];
+const RIVAL_NAMES = ['Morgana', 'Tharn', 'Brenna', 'Old Wick', 'Hazel', 'Nyx', 'Sir Aldric', 'Vesper', 'Elowen', 'Corvin', 'Isolde', 'Rook', 'Maelis', 'Garrick'];
 
 const INK = 0xfff4d6;
 const LAVENDER = 0xb8a8e8;
@@ -921,32 +922,43 @@ export class AutoScene extends Phaser.Scene {
     const list = this.standings;
     list.removeAll(true);
     if (this.seats.length <= 2) return;
-    const rows = Math.max(0, Math.floor((this.standBottom - y) / STAND_ROW));
-    const order = this.seats
+    const room = Math.max(0, this.standBottom - y);
+    const n = this.seats.length;
+    const tight = room < n * STAND_ROW;
+    const rowH = tight ? STAND_TIGHT : STAND_ROW;
+    const rows = Math.floor(room / rowH);
+    const fight = this.phase !== 'plan';
+    let order = this.seats
       .map((s, i) => ({ s, i }))
-      .sort((a, b) => (b.s.hp > 0 ? 1 : 0) - (a.s.hp > 0 ? 1 : 0) || (a.s.hp > 0 ? b.s.hp - a.s.hp : a.s.place - b.s.place) || a.i - b.i)
-      .slice(0, rows);
+      .sort((a, b) => (b.s.hp > 0 ? 1 : 0) - (a.s.hp > 0 ? 1 : 0) || (a.s.hp > 0 ? b.s.hp - a.s.hp : a.s.place - b.s.place) || a.i - b.i);
+    if (order.length > rows) {
+      // Still too many: this player and their foe always keep a row, the rest go by rank.
+      const keep = (i: number) => i === this.mySeat || (fight && i === this.foe);
+      const must = order.filter((o) => keep(o.i)).length;
+      let free = Math.max(0, rows - must);
+      order = order.filter((o) => keep(o.i) || free-- > 0);
+    }
     const g = this.add.graphics();
     list.add(g);
     order.forEach(({ s, i }, k) => {
-      const ry = y + k * STAND_ROW;
+      const ry = y + k * rowH;
       const mine = i === this.mySeat;
-      const foe = i === this.foe && this.phase !== 'plan';
+      const foe = i === this.foe && fight;
       const inGame = s.hp > 0;
-      g.fillStyle(mine ? 0x1a2a50 : 0x0b0818, inGame ? 0.78 : 0.5).fillRect(x, ry, w, STAND_ROW - 1);
-      g.fillStyle(mine ? 0x6fb8ff : foe ? 0xff6a7a : inGame ? 0x5a5080 : 0x2a2440, 1).fillRect(x, ry, 1, STAND_ROW - 1);
-      if (inGame) {
-        g.fillStyle(0x1a1430, 1).fillRect(x + 1, ry + STAND_ROW - 2, w - 1, 1);
-        g.fillStyle(mine ? 0x5ad07a : foe ? 0xff5a5a : 0x9a8ac8, 1).fillRect(x + 1, ry + STAND_ROW - 2, Math.round(((w - 1) * s.hp) / START_HP), 1);
+      g.fillStyle(mine ? 0x1a2a50 : 0x0b0818, inGame ? 0.78 : 0.5).fillRect(x, ry, w, rowH - 1);
+      g.fillStyle(mine ? 0x6fb8ff : foe ? 0xff6a7a : inGame ? 0x5a5080 : 0x2a2440, 1).fillRect(x, ry, 1, rowH - 1);
+      if (inGame && !tight) {
+        g.fillStyle(0x1a1430, 1).fillRect(x + 1, ry + rowH - 2, w - 1, 1);
+        g.fillStyle(mine ? 0x5ad07a : foe ? 0xff5a5a : 0x9a8ac8, 1).fillRect(x + 1, ry + rowH - 2, Math.round(((w - 1) * s.hp) / START_HP), 1);
       }
-      const right = pixelText(this, 0, ry + 1, inGame ? `${Math.ceil(s.hp)}` : ordinal(s.place || this.seats.length), inGame ? GOLD : SOFT);
+      const right = pixelText(this, 0, ry + (tight ? 0 : 1), inGame ? `${Math.ceil(s.hp)}` : ordinal(s.place || this.seats.length), inGame ? GOLD : SOFT);
       right.setX(x + w - 3 - right.width);
       let nameEnd = right.x - 3;
       if (foe && inGame) {
         nameEnd -= 8;
-        list.add(this.add.image(nameEnd + 1, ry + 1, 'ab_sword').setOrigin(0).setAlpha(this.foeGhost ? 0.6 : 1));
+        list.add(this.add.image(nameEnd + 1, ry + (tight ? 0 : 1), 'ab_sword').setOrigin(0).setAlpha(this.foeGhost ? 0.6 : 1));
       }
-      const name = pixelText(this, x + 4, ry + 1, fitLine(this.probe, s.name, nameEnd - x - 6), inGame ? (mine ? INK : LAVENDER) : SOFT);
+      const name = pixelText(this, x + 4, ry + (tight ? 0 : 1), fitLine(this.probe, s.name, nameEnd - x - 6), inGame ? (mine ? INK : LAVENDER) : SOFT);
       list.add([right, name]);
     });
   }
