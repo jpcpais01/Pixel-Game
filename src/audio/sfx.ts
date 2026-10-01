@@ -690,6 +690,97 @@ export class Sfx {
     [60, 64, 67, 72, 76].forEach((m, i) => this.bell(out, t + 0.12 + i * 0.08, mtof(m + 12), 0.05, i === 4 ? 1.6 : 0.8));
   }
 
+  // ---------------------------------------------------------------- the Everwood's wild things
+
+  /** A gust coming through the trees: a swelling roar from the side it blows from, and the leaves hissing as it passes. */
+  forestGust(t: number, strength: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const dur = 3.4;
+    const out = this.out(pan, 0.22 * strength, 0.35);
+    // The roar: pink noise through a band that rises with the gust and falls behind it.
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(1, t + 1.3);
+    g.gain.setTargetAtTime(0, t + 1.7, 0.55);
+    const bp = filter(ctx, 'bandpass', 280, 0.7, g);
+    bp.frequency.setValueAtTime(280, t);
+    bp.frequency.linearRampToValueAtTime(520 + strength * 420, t + 1.4);
+    bp.frequency.linearRampToValueAtTime(330, t + dur);
+    const src = this.m.noiseSource(true);
+    src.connect(bp);
+    this.m.startNoise(src, t, dur);
+    // The leaves: bright noise fluttering in quick grains through the middle of it.
+    const leaves = gain(ctx, 0, out);
+    let at = t + 0.6;
+    leaves.gain.setValueAtTime(0, t);
+    while (at < t + dur - 0.4) {
+      const swell = Math.sin(((at - t) / dur) * Math.PI);
+      leaves.gain.setTargetAtTime(0.5 * swell * Math.pow(Math.random(), 1.5), at, 0.02);
+      at += rand(0.04, 0.11);
+    }
+    leaves.gain.setTargetAtTime(0, at, 0.1);
+    const hp = filter(ctx, 'highpass', 2600, 0.5, leaves);
+    const lsrc = this.m.noiseSource();
+    lsrc.connect(hp);
+    this.m.startNoise(lsrc, t, dur);
+  }
+
+  /** Birds bursting up: a flurry of wingbeats, `n` birds' worth; an owl's (`soft`) a single hushed sweep. */
+  wings(t: number, pan: number, n: number, soft = false): void {
+    const out = this.out(pan, soft ? 0.18 : 0.32, 0.25);
+    if (soft) {
+      this.burstNoise(out, t, 'lowpass', 500, 260, 0.6, 0.5, 0.5, true);
+      this.burstNoise(out, t + 0.45, 'lowpass', 450, 240, 0.6, 0.35, 0.5, true);
+      return;
+    }
+    const flaps = Math.min(16, 4 + n * 2);
+    for (let i = 0; i < flaps; i++) {
+      const at = t + i * rand(0.025, 0.05) + Math.pow(i / flaps, 1.5) * 0.25;
+      this.burstNoise(out, at, 'bandpass', rand(900, 1500), rand(500, 800), 0.9, rand(0.35, 0.6) * (1 - (i / flaps) * 0.6), rand(0.035, 0.06));
+    }
+    // A startled chirp or two among them.
+    for (let i = 0; i < Math.min(2, n - 2); i++) {
+      const f = rand(3200, 4200);
+      this.chirp(out, t + rand(0.02, 0.2), 'sine', f, f * 1.25, 0.09, 0.05);
+    }
+  }
+
+  /** A deer's alarm: a sharp blowing snort, then hooves drumming away. */
+  deerBolt(t: number, pan: number): void {
+    const out = this.out(pan, 0.4, 0.3);
+    this.burstNoise(out, t, 'bandpass', 1100, 600, 1.4, 0.55, 0.16, true);
+    this.chirp(out, t + 0.01, 'triangle', 340, 180, 0.08, 0.12);
+    for (let i = 0; i < 9; i++) {
+      // In pairs, as a bounding deer lands fore then hind, fading off into the trees.
+      const at = t + 0.3 + Math.floor(i / 2) * 0.19 + (i % 2) * 0.05;
+      const k = 1 - i / 11;
+      this.chirp(out, at, 'sine', 120, 55, 0.22 * k, 0.07);
+      this.burstNoise(out, at, 'lowpass', 600, 300, 0.7, 0.2 * k, 0.04);
+    }
+  }
+
+  /** An owl's call, from where it sits: "hoo ... hoo-hoo". */
+  owlHoot(t: number, pan: number, level: number): void {
+    const out = this.out(pan, 0.2 * level, 0.9);
+    const soft = filter(this.m.ctx, 'lowpass', 900, 0.5, out);
+    const hoot = (at: number, dur: number, f: number) => {
+      const g = gain(this.m.ctx, 0, soft);
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(1, at + dur * 0.35);
+      g.gain.linearRampToValueAtTime(0, at + dur);
+      const o = osc(this.m.ctx, 'sine', f, g);
+      o.frequency.setValueAtTime(f, at);
+      o.frequency.linearRampToValueAtTime(f * 1.13, at + dur * 0.4);
+      o.frequency.linearRampToValueAtTime(f * 1.06, at + dur);
+      o.start(at);
+      o.stop(at + dur + 0.02);
+    };
+    const f = rand(300, 345);
+    hoot(t, 0.5, f);
+    hoot(t + 0.95, 0.22, f);
+    hoot(t + 1.22, 0.45, f * 0.97);
+  }
+
   /** The wind round a glider, held until stopped (see WindBed). */
   windBed(t: number): WindBed {
     return new WindBed(this.m, this.out(0, 0.6, 0.15), t);

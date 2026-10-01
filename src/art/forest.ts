@@ -46,11 +46,19 @@ const SPOTS: Material = { ramp: ramp('#b0e8dc', '#e4fff6', '#ffffff'), outline: 
 const UP: Vec3 = { x: 0, y: 0.62, z: 0.78 };
 const FACE: Vec3 = { x: 0, y: -0.1, z: 0.99 };
 
+/**
+ * The wind bending everything drawn: px a blade's tip is pushed over per 8 px
+ * of its length (see FPROP_BENDS). 0 for the still frames.
+ */
+let wind = 0;
+/** How far the wind pushes the tip of a stem `len` px tall. */
+const bent = (len: number): number => (wind * len) / 8;
+
 /** One blade from (x, y), leaning `lean` px over `len` px, curling at the tip. */
 function blade(c: PixelCanvas, x: number, y: number, len: number, lean: number, m: Material, lit: number): void {
   for (let s = 0; s < len; s++) {
     const u = s / len;
-    const px = x + lean * u * u;
+    const px = x + (lean + bent(len)) * u * u;
     const py = y - s;
     c.px(px, py, m, sphere(Math.sign(lean) * 0.5, -0.3, 0.8), { bias: Math.round(lit + u * 2) - 1 });
   }
@@ -78,9 +86,10 @@ function grassFrame(v: number): PixelCanvas {
   if (v === 2) {
     c.part();
     for (let k = 0; k < 4; k++) {
-      const x = 20 + R() * 9;
+      const x0 = 20 + R() * 9;
       const y = by - 13 - R() * 3;
-      blade(c, x, by - 7, 7, (R() - 0.5) * 2, DRY, 1);
+      blade(c, x0, by - 7, 7, (R() - 0.5) * 2, DRY, 1);
+      const x = x0 + bent(14);
       c.px(x, y - 1, DRY, sphere(0, -0.5), { bias: 2 });
       c.px(x, y, DRY, sphere(0, 0), { bias: 1 });
     }
@@ -101,7 +110,7 @@ function flowerFrame(v: number): PixelCanvas {
     const stem = v === 3 ? 12 + R() * 5 : 5 + R() * 6;
     c.part();
     blade(c, x, by - 1, stem, (R() - 0.5) * 2, GRASS, 0);
-    const hx = Math.floor(x + (R() - 0.5));
+    const hx = Math.floor(x + (R() - 0.5) + bent(stem));
     const hy = Math.floor(by - stem - 1);
     c.part();
     if (v === 0) {
@@ -149,7 +158,7 @@ function reedFrame(v: number): PixelCanvas {
     blade(c, x, by, len, lean, REED, (24 - x) * 0.1 + 0.5);
     // Some carry a cattail's brown head.
     if (k % 2 === 0 && R() < 0.8) {
-      const tx = x + lean * 0.8;
+      const tx = x + (lean + bent(len)) * 0.8;
       const ty = by - len + 2;
       c.part();
       c.capsule(tx, ty, tx, ty + 3.5, 1.1, 1.1, CATTAIL);
@@ -161,7 +170,7 @@ function reedFrame(v: number): PixelCanvas {
     c.part();
     const s = k % 2 ? 1 : -1;
     const x0 = 24 + s * 2;
-    for (let t = 0; t < 10; t++) c.px(x0 + s * t, by - 1 - t * 0.9 + t * t * 0.06, REED, sphere(s * 0.3, -0.5), { bias: 1 - Math.floor(t / 4) });
+    for (let t = 0; t < 10; t++) c.px(x0 + s * t + bent(t * 0.8) * (t / 10), by - 1 - t * 0.9 + t * t * 0.06, REED, sphere(s * 0.3, -0.5), { bias: 1 - Math.floor(t / 4) });
   }
   return c;
 }
@@ -279,6 +288,30 @@ const FPROP_DRAW: Record<FPropKind, (v: number) => PixelCanvas> = { tuft: grassF
 export const FPROP_FRAMES: { name: string; draw: () => PixelCanvas }[] = [];
 for (const kind of Object.keys(FPROP_LOOKS) as FPropKind[]) {
   for (let v = 0; v < FPROP_LOOKS[kind]; v++) FPROP_FRAMES.push({ name: `${kind}${v}`, draw: () => FPROP_DRAW[kind](v) });
+}
+
+/** What bends in a gust, and how hard: frames `<kind><v>~<b>` (b of WIND_BENDS, + leaning right), on their own sheet (see world/ForestWind.ts). */
+export const BENDS: FPropKind[] = ['tuft', 'flowers', 'reeds'];
+export const WIND_BENDS = [-2, -1, 1, 2];
+const BEND_PX = 1.7;
+export const FPROP_BENDS: { name: string; draw: () => PixelCanvas }[] = [];
+for (const kind of BENDS) {
+  for (let v = 0; v < FPROP_LOOKS[kind]; v++) {
+    for (const b of WIND_BENDS) {
+      FPROP_BENDS.push({
+        name: `${kind}${v}~${b}`,
+        draw: () => {
+          // The same blades from the same seed, only pushed over.
+          wind = b * BEND_PX;
+          try {
+            return FPROP_DRAW[kind](v);
+          } finally {
+            wind = 0;
+          }
+        },
+      });
+    }
+  }
 }
 
 // ---------------------------------------------------------------- the shrine
