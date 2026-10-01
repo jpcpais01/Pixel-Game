@@ -122,7 +122,7 @@ export type Block = 'none' | 'post' | 'full';
 export interface PartDef {
   id: string;
   name: string;
-  tab: 'garden' | 'furniture' | 'light' | 'decor' | 'critters';
+  tab: 'wall' | 'garden' | 'furniture' | 'light' | 'decor' | 'critters';
   /** Footprint in cells. */
   w: number;
   h: number;
@@ -149,12 +149,17 @@ export interface PartDef {
   fishing?: boolean;
   /** A critter let out here (its id in game/critters.ts): not drawn as a thing, but living round this spot. */
   critter?: string;
+  /** A door hung in a house's doorway: it swings open as a hero comes to it (art/homeDoor.ts); mirrored, its hinge is on the other side. */
+  door?: boolean;
 }
 
 /** How many cells from a fishing rod the water may be. */
 export const FISH_REACH = 3;
 
 export const PARTS: PartDef[] = [
+  // Walls: a door for a house's doorway, after the walls themselves on their tab.
+  { id: 'door', name: 'Oak door', tab: 'wall', w: 1, h: 1, block: 'none', flip: true, door: true },
+
   // Garden
   { id: 'oak', name: 'Oak tree', tab: 'garden', w: 1, h: 1, block: 'post' },
   { id: 'birch', name: 'Birch tree', tab: 'garden', w: 1, h: 1, block: 'post' },

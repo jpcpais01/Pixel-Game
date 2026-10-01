@@ -660,6 +660,16 @@ class GameSound {
     if (t !== null) this.sfx!.creak(t, pan);
   }
 
+  doorOpen(pan = 0, level = 1): void {
+    const t = this.slot('doorOpen');
+    if (t !== null) this.sfx!.doorOpen(t, pan, level);
+  }
+
+  doorShut(pan = 0, level = 1): void {
+    const t = this.slot('doorShut');
+    if (t !== null) this.sfx!.doorShut(t, pan, level);
+  }
+
   cannon(pan = 0, scrap = false): void {
     const t = this.slot('cannon');
     if (t !== null) this.sfx!.cannon(t, pan, scrap);

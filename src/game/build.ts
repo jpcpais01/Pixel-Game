@@ -23,11 +23,15 @@ export function palette(tab: BuildTab, partIcon: (id: string) => { key: string; 
     case 'floor':
       return FLOORS.map((f, i) => ({ layer: 'floor', value: i + 1, id: f.id, name: f.name, icon: { key: `hs_f${i + 1}` } }));
     case 'wall':
-      return WALL_ITEMS.map((w) => {
-        const kind = wallKind(w.value);
-        const frame = kind === 'door' ? 'd10' : kind === 'window' ? 'n10' : 'w10_0';
-        return { layer: 'wall', value: w.value, id: w.id, name: w.name, icon: wallIcon(wallMat(w.value), frame) };
-      });
+      return [
+        ...WALL_ITEMS.map((w): PaletteItem => {
+          const kind = wallKind(w.value);
+          const frame = kind === 'door' ? 'd10' : kind === 'window' ? 'n10' : 'w10_0';
+          return { layer: 'wall', value: w.value, id: w.id, name: w.name, icon: wallIcon(wallMat(w.value), frame) };
+        }),
+        // Doors hang in a house's doorway, so they come after the walls.
+        ...PARTS.filter((p) => p.tab === 'wall').map((p): PaletteItem => ({ layer: 'thing', value: 0, id: p.id, name: p.name, icon: partIcon(p.id) })),
+      ];
     case 'roof':
       return ROOFS.map((r, i) => ({ layer: 'roof', value: i + 1, id: r.id, name: `${r.name} roof`, icon: { key: `hs_r${i + 1}` } }));
     case 'critters':

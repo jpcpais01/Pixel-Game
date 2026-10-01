@@ -13,6 +13,7 @@ import { pixelCanvas } from './canvas';
 import { floorSwatch } from './homeFloors';
 import { CHIMNEY_H, CHIMNEY_W, chimney, roofSwatch, wallFrameH, wallFrames } from './homeWalls';
 import { PROP_ART, PROP_TURNS, blossomTree, bobber, emptyRodBucket, type PropArt } from './homeProps';
+import { DOOR_ICON_H, DOOR_ICON_W, DOOR_OX, DOOR_OY, doorFrames, doorIcon } from './homeDoor';
 import { TREE_SWAY_FPS, TREE_SWAY_FRAMES } from './trees';
 import { hash2 } from './env';
 import { CELL, HomeLayout, PLOT_X, PLOT_Y, type Thing } from '../world/homeLayout';
@@ -86,6 +87,10 @@ export function warmHome(scene: Phaser.Scene): void {
   add('rodbucket', emptyRodBucket(false));
   add('rodbucket_m', emptyRodBucket(true));
   add('bobber', bobber());
+  // The door: every way it hangs and every step of its swing, and its picture for the palette (mirrored: hinged on the right).
+  for (const f of doorFrames()) list.push({ name: f.name, r: f.r, w: f.r.w, h: f.r.h });
+  list.push({ name: 'p:door:0', r: doorIcon(0), w: DOOR_ICON_W, h: DOOR_ICON_H });
+  list.push({ name: 'p:door:m0', r: doorIcon(1), w: DOOR_ICON_W, h: DOOR_ICON_H });
 
   const sheet = packSheet(list);
   const W = sheet.w;
@@ -146,7 +151,7 @@ export const glows = (frame: string): boolean => glowing.has(frame) || glowing.h
 
 /** A wall cell's frame on the sheet. */
 export const wallFrameName = (mat: number, frame: string): string => `w:${WALLS[mat].id}:${frame}`;
-export { wallFrameH, CHIMNEY_W, CHIMNEY_H };
+export { wallFrameH, CHIMNEY_W, CHIMNEY_H, DOOR_OX, DOOR_OY };
 
 /** How a placed thing is drawn. */
 export interface ThingLook {
@@ -189,6 +194,10 @@ export function thingFoot(t: Thing): { x: number; y: number } {
 export function thingLook(t: Thing): ThingLook {
   const p = partById(t.id)!;
   const foot = thingFoot(t);
+  if (p.door) {
+    // Shut, face on, standing in its doorway (the world swings it: see world/Home.ts).
+    return { key: 'home', frame: t.flip ? 'p:door:m0' : 'p:door:0', glow: 'home_e', anim: null, flipX: false, sway: null, x: PLOT_X + t.x * CELL, y: PLOT_Y + t.y * CELL - DOOR_OY, ox: 0, oy: 0 };
+  }
   const r = REUSED[t.id];
   if (r) {
     const v = Math.floor(hash2(t.x, t.y, 919) * r.n);

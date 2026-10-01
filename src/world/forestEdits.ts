@@ -23,8 +23,8 @@ export { footKey } from './forestGen';
 /** A cell's name. Cells run to 65536 each way. */
 export const cellKey = (cx: number, cy: number): number => cx * 65536 + cy;
 
-/** Parts that belong to a Home: wall hangings need a house wall, critters, fishing and the critter shelf the Home's own systems. */
-export const forestPart = (p: PartDef): boolean => !p.wall && !p.critter && !p.fishing && !p.jars;
+/** Parts that belong to a Home: wall hangings and doors need a house wall, critters, fishing and the critter shelf the Home's own systems. */
+export const forestPart = (p: PartDef): boolean => !p.wall && !p.door && !p.critter && !p.fishing && !p.jars;
 /** Garden walls only (no houses in the forest): their indices in WALLS. */
 export const forestWall = (v: number): boolean => !!WALLS[wallMat(v)] && !WALLS[wallMat(v)].house && wallKind(v) !== 'window';
 

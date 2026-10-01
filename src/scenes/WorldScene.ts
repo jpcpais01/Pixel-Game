@@ -2102,7 +2102,7 @@ export class WorldScene extends Phaser.Scene {
     this.hallows?.update(time, dt, Phaser.Math.Easing.Sine.InOut(this.daylight), this.hero.x, this.hero.y);
     this.forge?.update(this.hero.x, this.hero.y, dt);
     this.naturalist?.update(time, dt, Phaser.Math.Easing.Sine.InOut(this.daylight), this.hero.x, this.hero.y);
-    this.home?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight));
+    this.home?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight), this.net?.targets());
     this.woodBuild?.update(dt, this.hero.x, this.hero.y);
     this.fishing?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight));
     if (build.friends) {
