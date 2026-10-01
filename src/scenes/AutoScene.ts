@@ -80,6 +80,9 @@ const INFO_H = 106;
 /** How far over and under its feet (world px) a press still picks up a hero. */
 const PICK_ABOVE = 26;
 const PICK_BELOW = 5;
+/** A shop card for a hero already held shines: a sweep of light this often (ms), and its gilt rim breathing. */
+const SHINE_MS = 1700;
+const SHINE_W = 5;
 /** A press must move this far (art px) to become a drag. */
 const DRAG_SLOP = 4;
 /** Seconds the result stands before the next round. */
@@ -134,6 +137,9 @@ class Card extends Phaser.GameObjects.Container {
   private coin: Phaser.GameObjects.Image;
   private badges: Phaser.GameObjects.Image[];
   private pair: Phaser.GameObjects.Graphics;
+  private shine: Phaser.GameObjects.Graphics;
+  /** A copy of this hero is already on the bench or the board: the card shines. */
+  private held = false;
   key_: string | null = null;
   /** The card's size (not Container's own width and height, which mean something else). */
   cw = 60;
@@ -146,11 +152,12 @@ class Card extends Phaser.GameObjects.Container {
     this.sprite = scene.add.sprite(0, 0, '__DEFAULT');
     this.glow = scene.add.sprite(0, 0, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD);
     this.pair = scene.add.graphics();
+    this.shine = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
     this.badges = [0, 1].map((i) => scene.add.image(4 + i * 10, 4, 'ab_trait_arcane').setOrigin(0));
     this.coin = scene.add.image(0, 0, 'ab_coin').setOrigin(0);
     this.cost = pixelText(scene, 0, 0, '', GOLD);
     this.label = pixelText(scene, 3, 0, '');
-    this.add([this.bg, this.win, this.sprite, this.glow, this.pair, ...this.badges, this.coin, this.cost, this.label]);
+    this.add([this.bg, this.win, this.sprite, this.glow, this.shine, this.pair, ...this.badges, this.coin, this.cost, this.label]);
     let down = false;
     this.bg.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, () => (down = true));
     this.bg.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => {
@@ -176,9 +183,14 @@ class Card extends Phaser.GameObjects.Container {
     this.bg.setInteractive({ useHandCursor: true });
   }
 
-  /** Show a hero for sale (null: an empty slot). `afford`: dim when it can't be bought. `owned`: copies already held, marked. */
-  show(key: string | null, afford: boolean, owned: number): void {
+  /**
+   * Show a hero for sale (null: an empty slot). `afford`: dim when it can't be bought. `owned`: unstarred copies
+   * already held, marked with pips. `held`: any copy is on the bench or board, so the card shines.
+   */
+  show(key: string | null, afford: boolean, owned: number, held = false): void {
     this.key_ = key;
+    this.held = !!key && held;
+    if (!this.held) this.shine.clear();
     const w = this.cw;
     const h = this.chh;
     const on = !!key;
@@ -229,6 +241,37 @@ class Card extends Phaser.GameObjects.Container {
 
   tick(): void {
     if (this.key_ && this.glow.visible) this.glow.setFrame(this.sprite.frame.name);
+    if (this.held) this.drawShine(this.scene.time.now);
+  }
+
+  /**
+   * The shine of a held hero: a slanted band of light sweeping across the card
+   * now and then, a faint gold wash, and the rim breathing gold, so a pair or
+   * a star-up in the making catches the eye without shouting.
+   */
+  private drawShine(now: number): void {
+    const g = this.shine.clear();
+    const w = this.cw;
+    const h = this.chh;
+    const breath = 0.5 + 0.5 * Math.sin((now / SHINE_MS) * Math.PI * 2);
+    g.fillStyle(0xffd86a, 0.05 + 0.04 * breath).fillRect(2, 2, w - 4, h - 4);
+    g.lineStyle(1, 0xffe08a, 0.25 + 0.35 * breath).strokeRect(1.5, 1.5, w - 3, h - 3);
+    // The sweep runs over the first half of each beat, from beyond the left edge to beyond the right.
+    const k = (now % SHINE_MS) / SHINE_MS / 0.5;
+    if (k >= 1) return;
+    const slant = Math.round(h / 2);
+    const x0 = Math.round(-SHINE_W - slant + k * (w + SHINE_W * 2 + slant));
+    for (let y = 2; y < h - 2; y++) {
+      const x = x0 + Math.round((h - y) / 2);
+      // The band, then its brighter middle on top, each cut to the card's inside.
+      const span = (from: number, len: number, a: number) => {
+        const l = Math.max(2, from);
+        const r = Math.min(w - 2, from + len);
+        if (r > l) g.fillStyle(0xfff4d6, a).fillRect(l, y, r - l, 1);
+      };
+      span(x, SHINE_W, 0.14);
+      span(x + 1, 2, 0.18);
+    }
   }
 }
 
@@ -783,8 +826,8 @@ export class AutoScene extends Phaser.Scene {
     this.rollBtn.setEnabled(shopOpen && this.me.gold >= REROLL_COST).setAlpha(this.me.gold >= REROLL_COST ? 1 : 0.5);
     this.cards.forEach((c, i) => {
       const k = this.me.shop[i];
-      const owned = k ? this.me.all().filter((p) => p.key === k && p.star === 1).length : 0;
-      c.show(k, !!k && unitDef(k).cost <= this.me.gold, owned);
+      const mine = k ? this.me.all().filter((p) => p.key === k) : [];
+      c.show(k, !!k && unitDef(k).cost <= this.me.gold, mine.filter((p) => p.star === 1).length, mine.length > 0);
     });
     if (this.readyBtn) {
       this.readyBtn.setVisible(this.phase === 'plan');
