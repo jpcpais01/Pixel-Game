@@ -213,12 +213,8 @@ function edge(gen: ForestGen, wx: number, wy: number, t: Terrain, water: number,
     const tv = t.up / lean;
     if (t.stairs) return stairs(gen, wx, wy, tv, c);
     if (t.slope) {
-      // A slope: the floor as it is, darkening toward its foot; water on it runs white.
-      if (water > 0) {
-        c.kind = K.Water;
-        c.tone = 1.6 + (hash2(wx, Math.floor(wy / 2), 951 + gen.seed) > 0.6 ? 1.6 : 0);
-        return true;
-      }
+      // A slope: the floor as it is, darkening toward its foot; water runs down it as it runs anywhere.
+      if (water > 0) return false;
       if (hash2(wx, wy, 953) > 0.965) {
         c.kind = K.Pebble;
         c.height = 0.7;
@@ -228,15 +224,6 @@ function edge(gen: ForestGen, wx: number, wy: number, t: Terrain, water: number,
       after.tone = -0.3 - (tv / tall) * 1.1;
       after.height = (tall - tv) * 0.05;
       return false;
-    }
-    const lip = gen.lipWater(wx, wy, tv);
-    if (lip > 0.2) {
-      // Water pouring over: white at the lip and the foot, streaked between.
-      const streak = hash2(wx, Math.floor((tv + hash2(wx, 7, 957) * 9) / 5), 959 + gen.seed);
-      c.kind = K.Fall;
-      c.height = 0;
-      c.tone = 0.8 + (streak > 0.5 ? 1.3 : 0) + (tv < 2 ? 2.4 : 0) + (tv > tall - 3 ? 2 : 0) - (lip < 1.2 ? 1 : 0);
-      return true;
     }
     rock(gen, wx, wy, tv, tall, c);
     return true;
@@ -257,14 +244,7 @@ function edge(gen: ForestGen, wx: number, wy: number, t: Terrain, water: number,
   }
   const below = t.up - t.faceW;
   if (t.facing > 0.25 && below < 9) {
-    // The foot of a cliff. Under a waterfall, a pool churned white; else rubble and shade.
-    const lip = gen.lipWater(wx, wy, t.up / lean);
-    if (lip > 0.2 && water > -(9 - below) * 0.5) {
-      c.kind = K.Water;
-      c.height = 0;
-      c.tone = 2.8 - below * 0.28 + (hash2(wx, Math.floor(wy / 2), 963 + gen.seed) > 0.55 ? 1 : 0);
-      return true;
-    }
+    // The foot of a cliff: rubble and shade.
     if (below < 4 && water < -1 && hash2(wx, wy, 965) > 0.72 + below * 0.05) {
       c.kind = K.Pebble;
       c.height = 0.6;

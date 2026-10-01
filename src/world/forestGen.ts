@@ -18,8 +18,8 @@
 //    water on plank bridges.
 // Under it all lies the land: a smooth height field, cut into terraces a
 // cliff's height apart (see `terrain`). Where it faces south the edge of a
-// terrace shows a rock face, waterfalls where the water runs over it; trails
-// climb it on stairs, and here and there it eases into a walkable slope.
+// terrace shows a rock face; trails climb it on stairs, streams wear it down
+// into a gentle ravine, and here and there it eases into a walkable slope.
 // Trees, undergrowth, sunbeams, creatures and rare places (a campfire, a
 // shrine, a chest, old ruins, standing stones, an elder tree, a fairy ring)
 // are picked cell by cell on grids of their own, each cell from its own
@@ -81,6 +81,8 @@ const SLOPE_AT = 0.62;
 /** A trail climbs an edge on stairs (this far into its trail field), with a walkable slope either side of them. */
 const STAIRS = 1.2;
 const STAIR_SLOPE = 6;
+/** How far from water (px) a cliff eases into a slope, so streams run down through it rather than over. */
+const WATER_EASE = 10;
 /** Feet keep this far (px) from the line of an edge. */
 const LIP = 2.5;
 /** Lookouts: one tried per cell this size, on high ground at the lip of a cliff that faces south. */
@@ -318,8 +320,6 @@ export interface ChunkLayout {
   pois: Poi[];
   rays: { x: number; y: number; seed: number }[];
   spots: FSpot[];
-  /** Where water pours over a cliff in this chunk: the box of each fall, from its lip to its foot. */
-  falls: { x: number; y: number; w: number; h: number }[];
   /** Everything standing in this chunk that feet can't cross (its own, and its neighbours' that reach in). */
   blockers: Blocker[] | null;
   /** Own blockers only, before the neighbours are merged in. */
@@ -617,7 +617,8 @@ export class ForestGen {
     const g = Math.hypot(s.rgx, s.rgy);
     t.level = Math.floor(s.rise);
     t.stairs = s.trail < STAIRS;
-    t.slope = t.stairs || s.trail < STAIR_SLOPE || s.slope > SLOPE_AT;
+    // Water never drops over a cliff: a stream or pond wears the edge down to a slope along its banks.
+    t.slope = t.stairs || s.trail < STAIR_SLOPE || s.slope > SLOPE_AT || Math.max(s.stream, s.pond) > -WATER_EASE;
     if (g < 1e-7) {
       t.up = t.down = Infinity;
       t.facing = t.faceW = 0;
@@ -685,13 +686,6 @@ export class ForestGen {
       }
     }
     return Math.floor(lo) !== Math.floor(hi);
-  }
-
-  /** How full the water is on the lip `tv` px above (x, y) (a face's spot): above 0, it pours over. */
-  lipWater(x: number, y: number, tv: number): number {
-    const s = this.sample(x, y - tv - 1);
-    // A bridge carries the trail over, not the water down.
-    return s.trail < 0.6 ? -1 : Math.max(s.stream, s.pond);
   }
 
   // ---------------------------------------------------------------- the lattice
@@ -1215,63 +1209,9 @@ export class ForestGen {
     }
     for (const p of pois) own.push(...poiBlockers(p, this));
 
-    const out: ChunkLayout = { cx, cy, trees, props, pois, rays, spots, falls: this.fallsIn(cx, cy), blockers: null, own };
+    const out: ChunkLayout = { cx, cy, trees, props, pois, rays, spots, blockers: null, own };
     this.layouts.set(key, out);
     this.fresh?.layouts.push(out);
-    return out;
-  }
-
-  /**
-   * Where water pours over a cliff in chunk (cx, cy) (see ChunkLayout.falls),
-   * each fall listed in the chunk its lip is in. The lattice is looked at
-   * first, so a chunk with no water near a cliff costs next to nothing.
-   */
-  private fallsIn(cx: number, cy: number): ChunkLayout['falls'] {
-    const f = this.fieldChunk(cx, cy);
-    let any = false;
-    for (let k = 0; k < NS * NS && !any; k++) {
-      const o = k * NF;
-      const g = Math.hypot(f[o + F_RGX], f[o + F_RGY]);
-      if (g < 1e-7 || Math.max(f[o + F_STREAM], f[o + F_POND]) < -FACE_H) continue;
-      const fu = f[o + F_RISE] - Math.floor(f[o + F_RISE]);
-      if ((1 - fu) / g < FACE_H + 6 && -f[o + F_RGY] / g > 0.2) any = true;
-    }
-    if (!any) return [];
-    const x0 = cx * CHUNK;
-    const y0 = cy * CHUNK;
-    const cols: { x: number; top: number; foot: number }[] = [];
-    for (let x = x0; x < x0 + CHUNK; x += 2) {
-      let top = Infinity;
-      let foot = -Infinity;
-      for (let y = y0; y < y0 + CHUNK + FACE_H * 2; y += 2) {
-        const t = this.terrain(this.sample(x, y));
-        if (!t.onFace || t.slope || t.facing < 0.25) continue;
-        const lean = Math.max(t.facing, 0.3);
-        const tv = t.up / lean;
-        const tall = t.faceW / lean;
-        const lip = y - tv;
-        if (lip < y0 || lip >= y0 + CHUNK || this.lipWater(x, y, tv) <= 0.2) continue;
-        top = Math.min(top, lip);
-        foot = Math.max(foot, lip + tall);
-      }
-      if (top < foot) cols.push({ x, top, foot });
-    }
-    const out: ChunkLayout['falls'] = [];
-    let run: { x0: number; x1: number; top: number; foot: number } | null = null;
-    const end = () => {
-      if (run && run.x1 - run.x0 >= 2) out.push({ x: run.x0 - 1, y: Math.floor(run.top), w: run.x1 - run.x0 + 3, h: Math.ceil(run.foot - run.top) });
-    };
-    for (const c of cols) {
-      if (run && c.x - run.x1 <= 2 && c.top < run.foot && c.foot > run.top) {
-        run.x1 = c.x;
-        run.top = Math.min(run.top, c.top);
-        run.foot = Math.max(run.foot, c.foot);
-      } else {
-        end();
-        run = { x0: c.x, x1: c.x, top: c.top, foot: c.foot };
-      }
-    }
-    end();
     return out;
   }
 

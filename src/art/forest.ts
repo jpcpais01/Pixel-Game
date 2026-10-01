@@ -615,28 +615,3 @@ export function lookoutArt(): PixelCanvas {
   for (let x = x0; x <= x1; x += 3 + Math.floor(R() * 3)) tuft(c, x, foot(x) + 1, R, 2 + Math.floor(R() * 3), 3);
   return c;
 }
-
-/** The streaks scrolled down a waterfall (added over its painted water): 16 x 48, tiling top to bottom. */
-export const FLOW_W = 16;
-export const FLOW_H = 48;
-
-export function fallFlow(): Uint8ClampedArray {
-  const px = new Uint8ClampedArray(FLOW_W * FLOW_H * 4);
-  const R = rng(9801);
-  for (let x = 0; x < FLOW_W; x++) {
-    let y = Math.floor(R() * FLOW_H);
-    for (let k = 0; k < 3; k++) {
-      const len = 4 + Math.floor(R() * 9);
-      const a = 0.3 + R() * 0.55;
-      for (let j = 0; j < len; j++) {
-        const o = (((y + j) % FLOW_H) * FLOW_W + x) * 4;
-        px[o] = 226;
-        px[o + 1] = 248;
-        px[o + 2] = 255;
-        px[o + 3] = Math.max(px[o + 3], Math.round(255 * a * Math.sin(((j + 0.5) / len) * Math.PI)));
-      }
-      y += len + 3 + Math.floor(R() * 10);
-    }
-  }
-  return px;
-}
