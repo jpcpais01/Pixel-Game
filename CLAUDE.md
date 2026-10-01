@@ -11,11 +11,7 @@ Mobile-first, top-down pixel-art PvE game built with Phaser 3, TypeScript and Vi
 ## Commands
 
 - `npm run dev`: dev server. `npm run build`: `tsc --noEmit` then `vite build`. `npm run typecheck`: types only.
-<<<<<<< HEAD
-- `npm run sheet` / `icons` / `gear` / `trees` / `stag` / `modes`: write sprite sheets, app icons, gear icons, every tree, the White Stag and the mode menu's windows (add `-- stag.png 4 places` for its places) to disk for reviewing art. `npm run maps -- [dir] [scale]` paints the map icons, two arena minimaps and a patch of the explorer's map. `npm run forest -- [seed] [dx] [dy] [w] [h]` paints a patch of the Everwood by day to `forest.png`.
-=======
-- `npm run sheet` / `icons` / `gear` / `trees` / `stag` / `wildlife` / `modes`: write sprite sheets, app icons, gear icons, every tree, the White Stag and the mode menu's windows (add `-- stag.png 4 places` for its places) to disk for reviewing art. `npm run forest -- [seed] [dx] [dy] [w] [h]` paints a patch of the Everwood by day to `forest.png`.
->>>>>>> origin/main
+- `npm run sheet` / `icons` / `gear` / `trees` / `stag` / `wildlife` / `modes`: write sprite sheets, app icons, gear icons, every tree, the White Stag and the mode menu's windows (add `-- stag.png 4 places` for its places) to disk for reviewing art. `npm run maps -- [dir] [scale]` paints the map icons, two arena minimaps and a patch of the explorer's map. `npm run forest -- [seed] [dx] [dy] [w] [h]` paints a patch of the Everwood by day to `forest.png`.
 
 ## Map of the code
 
