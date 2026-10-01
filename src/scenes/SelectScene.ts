@@ -39,8 +39,10 @@ const STEP_SPACE = 8;
 /** The choices are indented past the line that joins the steps. */
 const INDENT = 11;
 /** Class medallions: their size, and the room each takes on the wheel. */
-const MEDAL = 26;
-const MEDAL_STEP = 29;
+const MEDAL = 32;
+const MEDAL_STEP = 35;
+/** The round window the class's head shows through, inside the medallion's rim. */
+const MEDAL_FACE = MEDAL - 6;
 /** Character cards, largest first: the largest for which four fit the column is used. */
 const CARD_SIZES = [34, 30, 26];
 const CARD_GAP = 4;
@@ -373,10 +375,52 @@ function ringTexture(scene: Phaser.Scene): string {
 
 // ---- The picker. ----
 
-/** A round class medallion: its plate in the hero's colour and the hero's head at twice size. */
+/**
+ * A look's head and shoulders at twice size, cut to a disc `d` across, so
+ * nothing of the hero (a hat, a staff, a wing) pokes out of its medallion.
+ * Kept per frame once its head has been found in real pixels.
+ */
+function medalHead(scene: Phaser.Scene, preview: Preview, d: number): string {
+  const frame = idleFrame(scene, preview);
+  const head = headOf(frame, preview);
+  const known = heads.has(`${frame.texture.key}:${frame.name}`);
+  const key = `sel_mh_${frame.texture.key}_${frame.name}_${d}${known ? '' : '_guess'}`;
+  if (known && scene.textures.exists(key)) return key;
+  if (scene.textures.exists(key)) scene.textures.remove(key);
+  const scale = 2;
+  const fw = frame.cutWidth;
+  const fh = frame.cutHeight;
+  const cw = Math.min(fw, Math.ceil(d / scale));
+  const ch = Math.min(fh, Math.ceil(d / scale));
+  const cx = Phaser.Math.Clamp(head.x - Math.floor(cw / 2), 0, fw - cw);
+  const cy = Phaser.Math.Clamp(head.y - Math.floor(ch / 2) + 2, 0, fh - ch);
+  const canvas = document.createElement('canvas');
+  canvas.width = d;
+  canvas.height = d;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const img = frame.source.image as CanvasImageSource | undefined;
+  if (ctx && img) {
+    ctx.imageSmoothingEnabled = false;
+    try {
+      ctx.drawImage(img, frame.cutX + cx, frame.cutY + cy, cw, ch, Math.floor((d - cw * scale) / 2), Math.floor((d - ch * scale) / 2), cw * scale, ch * scale);
+      // Clear everything outside the disc, so the edge is a clean pixel circle.
+      const px = ctx.getImageData(0, 0, d, d);
+      const r = d / 2;
+      for (let y = 0; y < d; y++)
+        for (let x = 0; x < d; x++) if (Math.hypot(x + 0.5 - r, y + 0.5 - r) > r) px.data[(y * d + x) * 4 + 3] = 0;
+      ctx.putImageData(px, 0, 0);
+    } catch {
+      // An image we can't read: the medallion shows its plate alone.
+    }
+  }
+  scene.textures.addCanvas(key, canvas);
+  return key;
+}
+
+/** A round class medallion: its plate in the hero's colour and the hero's head at twice size, cut to a disc inside the rim. */
 class Medal extends Phaser.GameObjects.Container {
   private plate: Phaser.GameObjects.Image;
-  private head: Phaser.GameObjects.Sprite;
+  private head: Phaser.GameObjects.Image;
   private ring: Phaser.GameObjects.Image;
   private preview?: Preview;
   private accent = 0xffffff;
@@ -384,15 +428,13 @@ class Medal extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene) {
     super(scene, 0, 0);
     this.plate = scene.add.image(0, 0, plateTexture(scene)).setOrigin(0);
-    this.head = scene.add.sprite(0, 0, '__DEFAULT');
+    this.head = scene.add.image((MEDAL - MEDAL_FACE) / 2, (MEDAL - MEDAL_FACE) / 2, '__DEFAULT').setOrigin(0);
     this.ring = scene.add.image(-3, -3, ringTexture(scene)).setOrigin(0).setVisible(false);
     this.add([this.plate, this.head, this.ring]);
   }
 
   show(preview: Preview, accent: number): void {
-    // The head's square fits wholly inside the disc, so it needs no mask.
-    const inner = 18;
-    if (preview !== this.preview) portrait(this.head, preview, (MEDAL - inner) / 2, (MEDAL - inner) / 2, inner, inner, 2);
+    if (preview !== this.preview) this.head.setTexture(medalHead(this.scene, preview, MEDAL_FACE));
     this.preview = preview;
     this.accent = accent;
   }
