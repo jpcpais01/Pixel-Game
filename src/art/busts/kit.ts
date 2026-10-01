@@ -1,19 +1,22 @@
 // What every class bust shares: the round class medallions on the character
-// select show a bust painted for them at the screen's own pixel size, rather
-// than the hero's 24x32 sprite blown up, so a face gets real eyes, a nose and
-// a brow instead of three blocks.
+// select show a head and shoulders drawn for them, at the heroes' own pixel
+// size and shown at the same 2x as the sprite heads on the character cards,
+// so they read as the game's sprites: a face about 8 px wide, 1 px eyes, a
+// few tones a material and a dark outline, rather than a finer portrait.
 //
 // A bust is drawn on a BUST x BUST canvas with the same engine and the same
 // materials as its hero (lit from the top left, outlined, contact shadows),
-// and is seen through a disc of that size: keep the hat tips, ears and horns
-// inside the circle round (C, C), and let the shoulders run off its bottom.
+// and is seen through a disc of radius R round (C, C): keep the hat tips,
+// ears and horns inside it, and let the shoulders run off its bottom.
 
 import { PixelCanvas, cyl, type Material } from '../pixel';
 
 /** The bust's canvas, and the disc it is shown through. */
-export const BUST = 34;
+export const BUST = 18;
 /** The middle of the disc. */
 export const C = BUST / 2;
+/** The disc's radius: the medallion's face is a pixel narrower than the canvas. */
+export const R = 8.5;
 
 export type BustPainter = (c: PixelCanvas) => void;
 
@@ -22,7 +25,7 @@ export type BustPainter = (c: PixelCanvas) => void;
  * widening from `neck` to `wide` half-widths over `drop` rows and rounded
  * like a body.
  */
-export function shoulders(c: PixelCanvas, m: Material, top: number, neck = 7, wide = 16, drop = 5, cx = C): void {
+export function shoulders(c: PixelCanvas, m: Material, top: number, neck = 4, wide = 9, drop = 3, cx = C): void {
   c.shape(
     top,
     BUST - 1,

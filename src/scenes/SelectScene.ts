@@ -443,9 +443,9 @@ function medalHead(scene: Phaser.Scene, preview: Preview, d: number): string {
 }
 
 /**
- * A class's own bust (see art/busts), painted at the screen's pixel size and
- * cut to the medallion's disc: sharper than the hero's sprite blown up. Null
- * for a class without one.
+ * A class's own bust (see art/busts), drawn at the heroes' pixel size and
+ * shown at `MEDAL_ZOOM`, like the sprite heads on the character cards, cut to
+ * the medallion's disc. Null for a class without one.
  */
 function bustTexture(scene: Phaser.Scene, id: string, d: number): string | null {
   const key = `sel_bust_${id}_${d}`;
@@ -458,12 +458,12 @@ function bustTexture(scene: Phaser.Scene, id: string, d: number): string | null 
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
   const px = ctx.createImageData(d, d);
-  const o = Math.floor((d - BUST) / 2);
+  const o = Math.floor((d - BUST * MEDAL_ZOOM) / 2);
   const r = d / 2;
   for (let y = 0; y < d; y++)
     for (let x = 0; x < d; x++) {
-      const bx = x - o;
-      const by = y - o;
+      const bx = Math.floor((x - o) / MEDAL_ZOOM);
+      const by = Math.floor((y - o) / MEDAL_ZOOM);
       if (bx < 0 || by < 0 || bx >= BUST || by >= BUST || Math.hypot(x + 0.5 - r, y + 0.5 - r) > r) continue;
       const i = (by * BUST + bx) * 4;
       const j = (y * d + x) * 4;

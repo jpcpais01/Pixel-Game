@@ -17,6 +17,7 @@
     "wildlife": "tsx scripts/wildlife.ts wildlife.png 5",
     "farm": "tsx scripts/farm.ts farm.png 4",
     "modes": "tsx scripts/modes.ts modes.png 3",
+    "busts": "tsx scripts/busts.ts busts.png 4",
     "maps": "tsx scripts/maps.ts"
   },
   "dependencies": {
