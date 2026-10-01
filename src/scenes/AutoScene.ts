@@ -44,11 +44,9 @@ import { fpsBottom } from './FpsScene';
 
 /** Room over the board's top row for the heroes standing there (world px). */
 const HEAD_ROOM = 14;
-/** On a wide screen the board is sized to the room over the tray, which may hide the dais' stone face and the rock
- * under it: only the tiles and this sliver of rim must show. The top may give up part of the head room, as the
- * tallest heroes' crowns on the rival's back row are all that would go. */
-const RIM_SHOW = 2;
-const HEAD_MIN = 8;
+/** On a wide screen the board (its tiles and rim) stands midway between the top of the page and the tray, the same
+ * gap over and under it, at least this much; its stone face and the rock under it go behind the tray. */
+const EDGE_MIN = 2;
 /** A top bar row (the tall layout's). */
 const TOP_H = 15;
 /** The wide layout's left column (players, round, Fight): at least this, more when the centred board leaves it. */
@@ -583,7 +581,7 @@ export class AutoScene extends Phaser.Scene {
     const tilesH = ROWS * CELL_H + RIM * 2 + FACE;
     const dock = { w: 2 * BENCH_SLOT + 6, h: (BENCH_SIZE / 2) * BENCH_SLOT + 6 };
     // What of the wide world must show: the tiles and a sliver of rim, with at least the least head room.
-    const wideH = RIM + ROWS * CELL_H + RIM_SHOW;
+    const wideH = RIM * 2 + ROWS * CELL_H;
     const tallW = bs.w;
     const tallH = HEAD_ROOM + tilesH + 3 + BENCH_SLOT + 6;
     // The biggest whole number of screen px per world px that fits the room each leaves.
@@ -596,7 +594,7 @@ export class AutoScene extends Phaser.Scene {
     const leftNeed = PAD + LEFT_MIN + PAD;
     const dockW = (n: number) => Math.ceil(((4 + dock.w) * n) / z);
     const wideFits = (n: number) =>
-      leftNeed + Math.ceil((bs.w * n) / z) + dockW(n) + PAD + TRAIT_MIN + PAD <= vw && Math.ceil(((HEAD_MIN + wideH) * n) / z) <= vh - PAD * 2 - BLOCK_H_MIN;
+      leftNeed + Math.ceil((bs.w * n) / z) + dockW(n) + PAD + TRAIT_MIN + PAD <= vw && Math.ceil(((wideH + EDGE_MIN * 2) * n) / z) <= vh - PAD * 2 - BLOCK_H_MIN;
     let nWide = 1;
     while (wideFits(nWide + 1)) nWide++;
     const nTall = fit(tallW, tallH, vw - 2, vh - tallTop - trayTallMin);
@@ -643,13 +641,11 @@ export class AutoScene extends Phaser.Scene {
       const rightW = dockW(n);
       const rightNeed = rightW + PAD + TRAIT_MIN + PAD;
       this.wx = Math.round(Math.max(leftNeed, Math.min(vw - rightNeed - ww, (vw - ww) / 2)));
-      // The tray as tall as the board leaves (with the least head room), then the board's tiles standing on it, the
-      // stone face and the rock under it going behind the tray. Room to spare goes over the heads first, up to the
-      // full head room, then is shared out above and below.
-      const blockH = Math.max(BLOCK_H_MIN, Math.min(BLOCK_H, vh - PAD * 2 - Math.ceil((HEAD_MIN + wideH) * s)));
+      // The tray as tall as the board leaves, then the board midway between the page's top and the tray: the same
+      // gap over its rim as under it (the world starts the head room above the rim).
+      const blockH = Math.max(BLOCK_H_MIN, Math.min(BLOCK_H, vh - PAD * 2 - Math.ceil((wideH + EDGE_MIN * 2) * s)));
       const trayY = vh - PAD * 2 - blockH;
-      const spare = trayY - (HEAD_ROOM + wideH) * s;
-      this.wy = Math.round(spare < 0 ? spare : spare / 2);
+      this.wy = Math.round((trayY - wideH * s) / 2 - HEAD_ROOM * s);
       this.leftW = Math.max(LEFT_MIN, Math.min(LEFT_MAX, this.wx - PAD * 2));
       const tx = this.wx + ww + rightW + PAD;
       const ty = corner + PAD;
