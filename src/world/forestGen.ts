@@ -1332,6 +1332,8 @@ export class ForestGen {
     const s = this.sample(x, y);
     if (this.stops(s)) return false;
     const water = Math.max(s.stream, s.pond);
+    // On a bridge the player built, only the bridge itself (its rails) and what else they built can stop feet.
+    if (this.bridged?.(x, y)) return !this.built?.(x, y);
     // Water stops feet, but for a bridge, or a ford's shallows.
     if (water > 0.5 && s.trail > 0.5 && !(s.ford > 0.5 && s.stream >= s.pond)) return false;
     const hit = (b: Blocker) => ((x - b.x) / b.rx) ** 2 + ((y - b.y) / b.ry) ** 2 < 1;
@@ -1351,6 +1353,8 @@ export class ForestGen {
    */
   cleared: Set<number> | null = null;
   built: ((x: number, y: number) => boolean) | null = null;
+  /** Is (x, y) on the deck of a bridge the player built (see bridge.ts)? Feet cross water there. */
+  bridged: ((x: number, y: number) => boolean) | null = null;
 
   /** Has the player cleared the tree or undergrowth standing at (x, y)? */
   isCleared(x: number, y: number): boolean {

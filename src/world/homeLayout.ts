@@ -6,6 +6,7 @@
 // Everything here is plain data (no Phaser), so it can be checked anywhere.
 
 import { valueNoise } from '../art/env';
+import { Bridges, Deck } from './bridge';
 import { FLOORS, MAX_CRITTERS, WALLS, extent, floorIndex, packWall, partById, wallKind, wallMat, type PartDef } from './homeParts';
 
 /** A cell's size in pixels, and the plot's size in cells. */
@@ -61,6 +62,11 @@ export class HomeLayout {
 
   roofAt(cx: number, cy: number): number {
     return inPlot(cx, cy) ? this.roof[cellIndex(cx, cy)] : 0;
+  }
+
+  /** The bridges its bridge cells make (see bridge.ts). */
+  bridges(): Bridges {
+    return new Bridges(this.things.filter((t) => partById(t.id)?.bridge));
   }
 
   isWater(cx: number, cy: number): boolean {
@@ -121,7 +127,8 @@ export class HomeLayout {
     }
     for (const t of this.things) {
       const p = partById(t.id);
-      if (!p || p.wall || p.door || p.critter || part.critter || !!p.flat !== !!part.flat) continue;
+      // A rug can lie under a table, but not under another rug; nothing shares a bridge's cell.
+      if (!p || p.wall || p.door || p.critter || part.critter || (!p.bridge && !part.bridge && !!p.flat !== !!part.flat)) continue;
       const e = extent(p, t.turn);
       if (t.x < cx + w && t.x + e.w > cx && t.y < cy + h && t.y + e.h > cy) return false;
     }
@@ -218,6 +225,8 @@ export const DOOR_HW = 5;
 /** How far feet keep from a wall's face, and from the pond's edge. */
 const WALL_PAD = 2;
 const SHORE = 4;
+/** How far above its cells a bridge's deck is drawn (and walked), at most. */
+const DECK_H_PAD = 8;
 
 /**
  * Which pixels of the plot feet can't stand on: walls (but not their
@@ -259,6 +268,16 @@ export class HomeMask {
         if (wallKind(v) === 'door') {
           if (doorAcross(mask)) clear(px + 8 - DOOR_HW, py, px + 8 + DOOR_HW, py + CELL);
           else clear(px, py + 8 - DOOR_HW, px + CELL, py + 8 + DOOR_HW);
+        }
+      }
+    }
+    // Bridges over the pond: their decks can be walked, their rails and sides can't.
+    const bridges = l.bridges();
+    for (const s of bridges.spans) {
+      for (let y = Math.max(0, s.y0 * CELL - DECK_H_PAD); y < Math.min(PLOT_H, (s.y1 + 1) * CELL); y++) {
+        for (let x = Math.max(0, s.x0 * CELL); x < Math.min(PLOT_W, (s.x1 + 1) * CELL); x++) {
+          const at = bridges.at(x, y);
+          if (at !== Deck.None) d[y * PLOT_W + x] = at === Deck.Stop ? 1 : 0;
         }
       }
     }

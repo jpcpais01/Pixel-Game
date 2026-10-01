@@ -18,6 +18,7 @@ import { session, type Msg } from '../net/session';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HOME_SPAWN, homeWalkable, setHomeMask } from './homeGround';
 import { HomeCritters } from './HomeCritters';
+import { BridgeView } from './BridgeView';
 import { HouseShadow, type Stack } from './houseShadow';
 import { treeLeaves } from './Scenery';
 import { Swing, hangGate } from './swing';
@@ -168,6 +169,8 @@ export class Home {
   private rodSpots: RodSpot[] | null = null;
   /** The critters let out here, living round their spots. */
   private critters: HomeCritters;
+  /** Bridges over the pond, stood up whole (see bridge.ts). */
+  private bridges: BridgeView;
   /** A visitor has been sent the home at least once. */
   private arrived = false;
 
@@ -194,6 +197,7 @@ export class Home {
     this.cursor = add.graphics().setDepth(9000).setVisible(false);
     this.ghost = add.image(0, 0, 'home', 'chimney').setAlpha(0.6).setDepth(9001).setVisible(false);
     this.critters = new HomeCritters(scene);
+    this.bridges = new BridgeView(scene, PLOT_X, PLOT_Y);
     this.refresh(true);
     // Now and then a leaf, or a cherry petal, comes loose from a tree planted here.
     this.leaves = treeLeaves(
@@ -413,8 +417,9 @@ export class Home {
   /** Placed things: new ones stood up, removed ones taken away; the critter shelves refilled. */
   private refreshThings(): void {
     const l = this.layout;
-    // Critters aren't stood up as things: they live their own lives (HomeCritters).
-    const want = new Map(l.things.filter((t) => !partById(t.id)?.critter).map((t) => [Home.keyOf(t), t]));
+    // Critters aren't stood up as things: they live their own lives (HomeCritters). Bridges are stood up whole.
+    const want = new Map(l.things.filter((t) => !partById(t.id)?.critter && !partById(t.id)?.bridge).map((t) => [Home.keyOf(t), t]));
+    this.bridges.sync(l.bridges());
     for (const [k, p] of this.placed) {
       if (want.has(k)) continue;
       this.unplace(p);
@@ -746,7 +751,9 @@ export class Home {
     const cy = Math.floor((w.y - PLOT_Y) / CELL);
     const pick = build.pick;
     const erase = p.erase || !pick;
-    const thing = !erase && pick?.layer === 'thing' ? partById(pick.id) ?? null : null;
+    const picked = !erase && pick?.layer === 'thing' ? partById(pick.id) ?? null : null;
+    // A bridge is laid in strokes, cell by cell, like a wall: only the other things go down one at a time.
+    const thing = picked?.bridge ? null : picked;
     const turn = thing?.turns ? build.turn : 0;
     const size = thing ? extent(thing, turn) : { w: 1, h: 1 };
     // A thing's footprint hangs from the cell under the pointer by its middle, so the pointer is at its foot.
@@ -810,6 +817,10 @@ export class Home {
     const pick = build.pick;
     if (!pick || !inPlot(cx, cy)) return false;
     const i = cellIndex(cx, cy);
+    if (pick.layer === 'thing') {
+      const p = partById(pick.id);
+      return !!p?.bridge && this.layout.canPlace(p, cx, cy);
+    }
     if (pick.layer === 'floor') {
       if (!FLOORS[pick.value - 1]?.water) return true;
       return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.water && !partById(t.id)?.wall && !partById(t.id)?.door && !partById(t.id)?.critter);
@@ -842,6 +853,11 @@ export class Home {
       l.roof[i] = pick.value;
       return true;
     }
+    if (pick.layer === 'thing') {
+      l.things.push({ id: pick.id, x: cx, y: cy, flip: false, turn: 0 });
+      sound.thud(0);
+      return true;
+    }
     return false;
   }
 
@@ -856,7 +872,8 @@ export class Home {
     if (tab === 'roof') return l.roof[i] ? 'roof' : null;
     // Critters roam off their spots, so the eraser takes the one it touches, wherever it has got to.
     if (tab === 'critters') return this.critters.at(PLOT_X + (cx + 0.5) * CELL, PLOT_Y + (cy + 0.5) * CELL, CELL * 0.75) ?? l.thingsAt(cx, cy).find((t) => partById(t.id)?.critter) ?? null;
-    const here = l.thingsAt(cx, cy).filter((t) => !partById(t.id)?.critter);
+    // Not a bridge from under the hero's feet, out over the pond.
+    const here = l.thingsAt(cx, cy).filter((t) => !partById(t.id)?.critter && !(partById(t.id)?.bridge && this.heroIn(cx, cy)));
     return here.find((t) => partById(t.id)?.tab === tab) ?? (tab === 'decor' ? null : here.find((t) => !partById(t.id)?.wall && !partById(t.id)?.door)) ?? null;
   }
 
@@ -1018,5 +1035,6 @@ export class Home {
     this.patches.clear();
     this.roofs = [];
     this.critters.destroy();
+    this.bridges.destroy();
   }
 }
