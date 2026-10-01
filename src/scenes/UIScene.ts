@@ -384,7 +384,8 @@ export class UIScene extends Phaser.Scene {
       if (build.on && (p.id === this.buildPointer || (this.buildPointer === null && !p.wasTouch))) {
         build.pointer.x = p.x;
         build.pointer.y = p.y;
-        build.pointer.over = true;
+        // No cursor on the world under the tray and its buttons.
+        build.pointer.over = p.id === this.buildPointer || !this.buildHud.covers(p.x, p.y);
       }
       if (p.id === this.attackPad.pointer) this.dragPad(this.attackPad, p, false);
       if (p.id === this.beamPad.pointer) this.dragPad(this.beamPad, p, true);
