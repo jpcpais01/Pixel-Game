@@ -5,6 +5,7 @@
 
 import { COLS, HALF, ROWS, type Placed } from './sim';
 import { traitCounts, unitDef, UNIT_KEYS, UNITS, type TraitId } from './units';
+import { crestBonus } from './boons';
 import { heroStats } from '../stats';
 
 export const START_HP = 100;
@@ -34,6 +35,16 @@ const INCOME = 5;
 /** One gold of interest for each this much banked, up to a cap. */
 const INTEREST_STEP = 10;
 const INTEREST_MAX = 3;
+/** Boons' sums (see boons.ts): Dragon's Hoard's interest cap, Golden Goose's gold, Old Tome's XP, and the rest. */
+const HOARD_MAX = 5;
+const GOOSE_GOLD = 3;
+const TOME_XP = 6;
+const PURSE_GOLD = 10;
+const RANSOM_GOLD = 25;
+const DICE_ROLLS = 4;
+/** What Ascension and Wish of Legends give when there's nothing to star up or no room on the bench. */
+const ASCEND_GOLD = 6;
+const WISH_GOLD = 5;
 /** Planning time, first round and later ones (s). */
 export const PLAN_SECONDS = [25, 30];
 
@@ -77,6 +88,10 @@ export class AutoPlayer {
   frozen = false;
   bench: (Piece | null)[] = new Array(BENCH_SIZE).fill(null);
   board = new Map<number, Piece>();
+  /** Boons kept, in the order taken (boons.ts). */
+  boons: string[] = [];
+  /** Rerolls that cost nothing (Fate's Dice, Lucky Clover). */
+  freeRolls = 0;
   /** Copies left in this player's pool, by key. */
   private pool = new Map<string, number>();
   /** The look each of this player's heroes wears (another player's are sent to us). */
@@ -90,7 +105,11 @@ export class AutoPlayer {
   }
 
   get cap(): number {
-    return this.level;
+    return this.level + (this.has('host') ? 1 : 0);
+  }
+
+  has(boon: string): boolean {
+    return this.boons.includes(boon);
   }
 
   get alive(): boolean {
@@ -107,7 +126,7 @@ export class AutoPlayer {
   }
 
   traits(): { id: TraitId; count: number; level: number }[] {
-    return traitCounts([...this.board.values()].map((p) => p.key));
+    return traitCounts([...this.board.values()].map((p) => p.key), crestBonus(this.boons));
   }
 
   all(): Piece[] {
@@ -149,8 +168,9 @@ export class AutoPlayer {
   }
 
   reroll(): boolean {
-    if (this.gold < REROLL_COST) return false;
-    this.gold -= REROLL_COST;
+    if (this.freeRolls > 0) this.freeRolls--;
+    else if (this.gold < REROLL_COST) return false;
+    else this.gold -= REROLL_COST;
     // Rolling by hand means new cards are wanted: the freeze is let go.
     this.frozen = false;
     this.roll();
@@ -271,10 +291,10 @@ export class AutoPlayer {
 
   /** Round income: base, interest, and a streak's bonus. */
   income(): number {
-    const interest = Math.min(INTEREST_MAX, Math.floor(this.gold / INTEREST_STEP));
+    const interest = Math.min(this.has('hoard') ? HOARD_MAX : INTEREST_MAX, Math.floor(this.gold / INTEREST_STEP));
     const s = Math.abs(this.streak);
     const streak = s >= 5 ? 3 : s >= 4 ? 2 : s >= 2 ? 1 : 0;
-    return INCOME + interest + streak;
+    return INCOME + interest + streak + (this.has('goose') ? GOOSE_GOLD : 0);
   }
 
   /** A fight's result for this player: streaks, gold, the win's extra gold, and damage taken. */
@@ -287,8 +307,45 @@ export class AutoPlayer {
   /** Before a round's planning: gold in, xp, a fresh shop (unless it's frozen). */
   startRound(round: number, wonLast: boolean): void {
     this.gold += round === 1 ? 5 : this.income() + (wonLast ? 1 : 0);
-    if (round > 1) this.gainXp(2);
+    if (round > 1) this.gainXp(2 + (this.has('tome') ? 1 : 0));
+    if (this.has('clover')) this.freeRolls++;
     if (!this.frozen || round === 1) this.roll();
+  }
+
+  /** Keep a boon: it's held from now on, and what it gives at once is given. */
+  takeBoon(id: string): void {
+    if (this.has(id)) return;
+    this.boons.push(id);
+    if (id === 'purse') this.gold += PURSE_GOLD;
+    else if (id === 'ransom') this.gold += RANSOM_GOLD;
+    else if (id === 'tome') this.gainXp(TOME_XP);
+    else if (id === 'dice') this.freeRolls += DICE_ROLLS;
+    else if (id === 'ascend') {
+      // The weakest one-star on the board (else the bench) gains a star, where it stands.
+      const ones = (list: Piece[]) => list.filter((p) => p.star === 1).sort((a, b) => unitDef(a.key).cost - unitDef(b.key).cost || a.id - b.id);
+      const p = ones([...this.board.values()])[0] ?? ones(this.all())[0];
+      if (!p) {
+        this.gold += ASCEND_GOLD;
+        return;
+      }
+      const at = this.where(p);
+      const up: Piece = { ...p, id: nextId++, star: 2 };
+      this.remove(p);
+      if (at && 'cell' in at) this.board.set(at.cell, up);
+      else if (at && 'bench' in at) this.bench[at.bench] = up;
+      this.combine(false);
+    } else if (id === 'wish') {
+      const slot = this.bench.indexOf(null);
+      const keys = UNIT_KEYS.filter((k) => UNITS[k].cost === 5 && (this.pool.get(k) ?? 0) > 0);
+      if (slot < 0 || !keys.length) {
+        this.gold += WISH_GOLD;
+        return;
+      }
+      const key = keys[Math.floor(this.rand() * keys.length)];
+      this.pool.set(key, this.pool.get(key)! - 1);
+      this.bench[slot] = { id: nextId++, key, star: 1, look: this.lookOf(key) };
+      this.combine(false);
+    }
   }
 
   /**

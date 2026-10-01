@@ -8,6 +8,7 @@
 
 import { Battle, type Placed } from './sim';
 import { lossDamage, START_HP } from './match';
+import { lossTaken } from './boons';
 
 /** Most bots a table takes, and most players in all (people and bots). */
 export const MAX_BOTS = 4;
@@ -27,6 +28,8 @@ export interface Bout {
   ghost: boolean;
   seed: number;
   boards: [Placed[], Placed[]];
+  /** Each side's owner's boons, which go into the fight. */
+  boons: [string[], string[]];
   /** 0: `a` won, 1: `b` (or its ghost) won, -1: a draw. */
   win: number;
   /** Health lost by [a, b]; a negative number is health won back (from a ghost). A ghost's owner loses nothing. */
@@ -55,10 +58,11 @@ function shuffle<T>(list: T[], rand: () => number): T[] {
 }
 
 /** Fight one bout to its end and reckon its damage. */
-function fightBout(round: number, a: number, b: number, ghost: boolean, boards: Placed[][], rand: () => number): Bout {
+function fightBout(round: number, a: number, b: number, ghost: boolean, boards: Placed[][], boons: string[][], rand: () => number): Bout {
   const pair: [Placed[], Placed[]] = [boards[a] ?? [], boards[b] ?? []];
+  const kept: [string[], string[]] = [boons[a] ?? [], boons[b] ?? []];
   const seed = (rand() * 2 ** 31) | 0;
-  const battle = new Battle(pair, seed);
+  const battle = new Battle(pair, seed, kept);
   battle.runToEnd();
   const stars = battle.survivors().map((u) => u.star);
   const dmg: [number, number] = [0, 0];
@@ -69,7 +73,10 @@ function fightBout(round: number, a: number, b: number, ghost: boolean, boards: 
   } else if (battle.winner === 0) dmg[1] = lossDamage(round, stars);
   else if (battle.winner === 1) dmg[0] = lossDamage(round, stars);
   else dmg[0] = dmg[1] = lossDamage(round, []);
-  return { a, b, ghost, seed, boards: pair, win: battle.winner, dmg, ticks: battle.tick };
+  // Lifeline softens what a lost round costs (not what beating a ghost gives back).
+  dmg[0] = lossTaken(kept[0], dmg[0]);
+  dmg[1] = lossTaken(kept[1], dmg[1]);
+  return { a, b, ghost, seed, boards: pair, boons: kept, win: battle.winner, dmg, ticks: battle.tick };
 }
 
 /**
@@ -77,16 +84,16 @@ function fightBout(round: number, a: number, b: number, ghost: boolean, boards: 
  * out (if any) against a ghost of another seat's board, one still in if any
  * has a board, else any that ever set one out.
  */
-export function drawBouts(round: number, alive: number[], boards: Placed[][], rand: () => number): Bout[] {
+export function drawBouts(round: number, alive: number[], boards: Placed[][], boons: string[][], rand: () => number): Bout[] {
   const order = shuffle(alive, rand);
   const bouts: Bout[] = [];
-  for (let i = 0; i + 1 < order.length; i += 2) bouts.push(fightBout(round, order[i], order[i + 1], false, boards, rand));
+  for (let i = 0; i + 1 < order.length; i += 2) bouts.push(fightBout(round, order[i], order[i + 1], false, boards, boons, rand));
   if (order.length % 2 === 1) {
     const odd = order[order.length - 1];
     const others = boards.map((_, i) => i).filter((i) => i !== odd && (boards[i]?.length ?? 0) > 0);
     const living = others.filter((i) => alive.includes(i));
     const pool = living.length ? living : others;
-    if (pool.length) bouts.push(fightBout(round, odd, pool[Math.floor(rand() * pool.length)], true, boards, rand));
+    if (pool.length) bouts.push(fightBout(round, odd, pool[Math.floor(rand() * pool.length)], true, boards, boons, rand));
   }
   return bouts;
 }
