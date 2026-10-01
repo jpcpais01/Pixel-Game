@@ -15,6 +15,7 @@
     "forest": "tsx scripts/forest.ts forest.png",
     "stag": "tsx scripts/stag.ts stag.png 4",
     "wildlife": "tsx scripts/wildlife.ts wildlife.png 5",
+    "farm": "tsx scripts/farm.ts farm.png 4",
     "modes": "tsx scripts/modes.ts modes.png 3",
     "maps": "tsx scripts/maps.ts"
   },

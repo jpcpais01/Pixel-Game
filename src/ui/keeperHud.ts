@@ -1,6 +1,7 @@
 // The keepers on the HUD: when the hero walks up to Nyx or Tharn in the Rune
-// Temple, Brenna at the Forge, or Hazel at her camp, their counter opens over
-// the room (see ui/keeperView.ts, ui/forgeView.ts and ui/critterView.ts),
+// Temple, Brenna at the Forge or Hazel at her camp, or cooks in the Home,
+// their counter opens over the room (see ui/keeperView.ts, ui/forgeView.ts,
+// ui/critterView.ts and ui/cookView.ts),
 // drawn in art pixels and scaled like the bag. A tap outside it, or its X,
 // closes it.
 
@@ -8,6 +9,7 @@ import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
 import { keeperCall, type Counter } from '../game/keepers';
 import { CandyView } from './candyView';
+import { CookView } from './cookView';
 import { CritterView } from './critterView';
 import { ForgeView } from './forgeView';
 import { KeeperView } from './keeperView';
@@ -18,7 +20,7 @@ const CLOSE = 13;
 
 export class KeeperHud {
   private root: Phaser.GameObjects.Container | null = null;
-  private view: KeeperView | ForgeView | CandyView | CritterView | null = null;
+  private view: KeeperView | ForgeView | CandyView | CritterView | CookView | null = null;
   private frame: Phaser.GameObjects.Image | null = null;
   private closeBg: Phaser.GameObjects.Image | null = null;
   private sized = '';
@@ -47,7 +49,7 @@ export class KeeperHud {
     const x = pixelText(scene, 0, PAD - 1, 'X', 0xfff4d6);
     this.closeBg.setData('x', x);
     this.view =
-      keeper === 'candy' ? new CandyView(scene) : keeper === 'critters' ? new CritterView(scene) : keeper === 'forge' ? new ForgeView(scene) : new KeeperView(scene, keeper);
+      keeper === 'candy' ? new CandyView(scene) : keeper === 'kitchen' ? new CookView(scene) : keeper === 'critters' ? new CritterView(scene) : keeper === 'forge' ? new ForgeView(scene) : new KeeperView(scene, keeper);
     this.view.setPosition(PAD, PAD);
     this.root = scene.add.container(0, 0, [this.frame, this.view, this.closeBg, x]).setDepth(51);
     this.sized = '';

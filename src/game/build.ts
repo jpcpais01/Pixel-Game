@@ -5,16 +5,21 @@
 import { FLOORS, PARTS, ROOFS, TABS, WALLS, WALL_ITEMS, critterPart, wallKind, wallMat, type BuildTab } from '../world/homeParts';
 import { collection } from './collection';
 import { CRITTERS } from './critters';
+import { CROPS } from './farm';
+import { seedKey } from './cooking';
 
 /** One thing on the palette: which layer it paints (or thing it places), its value, name and picture. */
 export interface PaletteItem {
-  layer: 'floor' | 'wall' | 'roof' | 'thing';
+  /** A seed is sown on garden beds (see world/Farm.ts) rather than built. */
+  layer: 'floor' | 'wall' | 'roof' | 'thing' | 'seed';
   /** The floor, wall or roof value, for the layers. */
   value: number;
   /** The part, for things. */
   id: string;
   name: string;
   icon: { key: string; frame?: string };
+  /** How many are in hand, shown on its slot (seeds). */
+  count?: () => number;
 }
 
 /** Each tab's palette. The world's art must be warm (see art/homeArt.ts) before these icons exist. */
@@ -37,6 +42,9 @@ export function palette(tab: BuildTab, partIcon: (id: string) => { key: string; 
     case 'critters':
       // Only the ones caught so far; letting one out doesn't use up the catch.
       return CRITTERS.filter((c) => collection.critterCount(c.id) > 0).map((c) => ({ layer: 'thing', value: 0, id: critterPart(c.id), name: c.name, icon: { key: 'critters', frame: `${c.id}_0` } }));
+    case 'seeds':
+      // The seeds in the pouch; each stroke sows one a cell on garden beds.
+      return CROPS.filter((c) => collection.stock(seedKey(c.id)) > 0).map((c) => ({ layer: 'seed', value: 0, id: c.id, name: `${c.name} seeds`, icon: { key: `seed_${c.id}` }, count: () => collection.stock(seedKey(c.id)) }));
     default:
       return PARTS.filter((p) => p.tab === tab).map((p) => ({ layer: 'thing', value: 0, id: p.id, name: p.name, icon: partIcon(p.id) }));
   }

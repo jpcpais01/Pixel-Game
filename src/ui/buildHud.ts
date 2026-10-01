@@ -108,6 +108,8 @@ export class BuildHud {
   private nameText: Phaser.GameObjects.BitmapText;
   private flipText: Phaser.GameObjects.BitmapText;
   private icons: Phaser.GameObjects.Image[] = [];
+  /** How many are in hand, over the slots that count (seeds). */
+  private counts: Phaser.GameObjects.BitmapText[] = [];
 
   /** Each tab's slots, the eraser (null) first; made once the Home's art exists. */
   private lists = new Map<BuildTab, (PaletteItem | null)[]>();
@@ -165,6 +167,8 @@ export class BuildHud {
       build.on = true;
       // The critters caught since the tray last opened join its Critters tab.
       this.lists.delete('critters');
+      // And the seeds picked up since.
+      this.lists.delete('seeds');
       this.pick(this.picked.get(build.tab) ?? 1);
       this.onOpen();
     }
@@ -272,7 +276,16 @@ export class BuildHud {
 
     // The picked part's name over the tray, and a Flip toggle beside it for parts that mirror.
     const pick = build.pick;
-    const name = pick ? pick.name : build.tab === 'critters' && this.list().length < 2 ? 'Critters you catch with the net can live here' : 'Eraser';
+    const empty = this.list().length < 2;
+    const name = pick
+      ? pick.name
+      : build.tab === 'critters' && empty
+        ? 'Critters you catch with the net can live here'
+        : build.tab === 'seeds' && empty
+          ? 'Seeds come from harvests, and from monsters now and then'
+          : build.tab === 'seeds'
+            ? 'Pull up a crop'
+            : 'Eraser';
     const hint = this.scene.input.activePointer.wasTouch ? '' : pick ? '   RIGHT CLICK ERASES' : '';
     this.nameText.setText((name + hint).toUpperCase()).setScale(ts);
     const nh = Math.round(this.nameText.height + ip * 1.4);
@@ -424,6 +437,19 @@ export class BuildHud {
         return;
       }
       img.setVisible(true).setScale(k).setPosition(Math.round(cx), Math.round(row.centerY)).setCrop(c0, 0, c1 - c0, fh);
+    });
+    // Counts in the slots' bottom right corners, while the whole slot shows.
+    while (this.counts.length < list.length) this.counts.push(this.scene.add.bitmapText(0, 0, 'pixel', '').setLetterSpacing(-1).setOrigin(1, 1).setDepth(DEPTH + 2));
+    this.counts.forEach((t, i) => {
+      const item = list[i];
+      const x = row.x + i * (this.cell + this.cellGap) - this.scroll;
+      if (!item?.count || x < row.x || x + this.cell > row.right) {
+        t.setVisible(false);
+        return;
+      }
+      const n = item.count();
+      t.setVisible(true).setText(`${n}`).setScale(Math.max(1, Math.round(D * 1.5))).setTint(n ? 0xfff4d6 : 0xff8a8a);
+      t.setPosition(Math.round(x + this.cell - 3 * D), Math.round(row.y + this.cell - 2 * D));
     });
   }
 }

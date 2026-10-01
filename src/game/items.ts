@@ -12,6 +12,8 @@ export interface ItemContext {
   /** Heal the hero; returns how much health it restored. */
   heal(amount: number): number;
   addBuff(def: BuffDef): void;
+  /** Give the hero this much Special energy (motes fly to them). */
+  charge(amount: number): void;
   /** A word or number floating up over the hero's head. */
   pop(text: string, tint: number): void;
 }
@@ -90,7 +92,11 @@ export class Inventory {
 
   /** Stacks onto a slot holding the same item, else takes the first empty one. Returns how many fit. */
   add(id: ItemId, count = 1): number {
-    const item = ITEMS[id];
+    return this.addItem(ITEMS[id], count);
+  }
+
+  /** The same for any item, a cooked dish too (see cooking.ts). */
+  addItem(item: ItemDef, count = 1): number {
     let left = count;
     for (let i = 0; i < HOTBAR_SIZE && left > 0; i++) {
       const s = this.slots[i];
