@@ -709,6 +709,16 @@ class GameSound {
     if (t !== null) this.sfx!.doorShut(t, pan, level);
   }
 
+  gateOpen(pan = 0, iron = false): void {
+    const t = this.slot('gateOpen');
+    if (t !== null) this.sfx!.gateOpen(t, pan, iron);
+  }
+
+  gateShut(pan = 0, level = 1, iron = false): void {
+    const t = this.slot('gateShut');
+    if (t !== null) this.sfx!.gateShut(t, pan, level, iron);
+  }
+
   cannon(pan = 0, scrap = false): void {
     const t = this.slot('cannon');
     if (t !== null) this.sfx!.cannon(t, pan, scrap);

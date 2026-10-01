@@ -13,7 +13,8 @@ import { pixelCanvas } from './canvas';
 import { floorSwatch } from './homeFloors';
 import { CHIMNEY_H, CHIMNEY_W, chimney, roofSwatch, wallFrameH, wallFrames } from './homeWalls';
 import { PROP_ART, PROP_TURNS, blossomTree, bobber, emptyRodBucket, type PropArt } from './homeProps';
-import { DOOR_ICON_H, DOOR_ICON_W, DOOR_OX, DOOR_OY, doorFrames, doorIcon } from './homeDoor';
+import { DOOR_ICON_H, DOOR_ICON_W, DOOR_OX, DOOR_OY, DOOR_STEP, DOOR_STEPS, doorFrames, doorIcon } from './homeDoor';
+import { gateFrames } from './homeGate';
 import { TREE_SWAY_FPS, TREE_SWAY_FRAMES } from './trees';
 import { hash2 } from './env';
 import { CELL, HomeLayout, PLOT_X, PLOT_Y, type Thing } from '../world/homeLayout';
@@ -89,6 +90,8 @@ export function warmHome(scene: Phaser.Scene): void {
   add('bobber', bobber());
   // The door: every way it hangs and every step of its swing, and its picture for the palette (mirrored: hinged on the right).
   for (const f of doorFrames()) list.push({ name: f.name, r: f.r, w: f.r.w, h: f.r.h });
+  // Garden gates swing on the same steps as doors (world/swing.ts).
+  for (const f of gateFrames(DOOR_STEPS, DOOR_STEP)) list.push({ name: f.name, r: f.r, w: f.r.w, h: f.r.h });
   list.push({ name: 'p:door:0', r: doorIcon(0), w: DOOR_ICON_W, h: DOOR_ICON_H });
   list.push({ name: 'p:door:m0', r: doorIcon(1), w: DOOR_ICON_W, h: DOOR_ICON_H });
 

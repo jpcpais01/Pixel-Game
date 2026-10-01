@@ -34,7 +34,7 @@ const BRICK: Material = { ramp: ramp('#2a0f0b', '#421711', '#5c2118', '#772b1e',
 const BRICK_MORTAR: Material = { ramp: ramp('#4a4238', '#665c50', '#827868', '#9c9280', '#b4aa96'), outline: hex('#140806') };
 const COPING: Material = { ramp: ramp('#2c2a2e', '#3e3b40', '#524e54', '#68636a', '#807a82', '#9a949a', '#b4aeb2'), outline: hex('#121014'), outlineLit: hex('#34303a') };
 const HEDGE: Material = { ramp: ramp('#0c1f0e', '#133016', '#1c421d', '#275727', '#346d31', '#46863c', '#5ea04a', '#7cb85c'), outline: hex('#061006'), outlineLit: hex('#12260f') };
-const PICKET: Material = { ramp: ramp('#34343e', '#5a5a64', '#84848c', '#aeaeb2', '#d0d0cc', '#e8e6e0', '#f8f6f0'), outline: hex('#16161c'), outlineLit: hex('#40404a') };
+export const PICKET: Material = { ramp: ramp('#34343e', '#5a5a64', '#84848c', '#aeaeb2', '#d0d0cc', '#e8e6e0', '#f8f6f0'), outline: hex('#16161c'), outlineLit: hex('#40404a') };
 const GLASS: Material = { ramp: ramp('#0c1a2a', '#14283e', '#1e3a54', '#2c506c', '#406a86', '#5e8aa4', '#8cb2c8', '#c4dcea'), outline: hex('#06080c'), noAO: true };
 const FRAME: Material = { ramp: ramp('#1e140c', '#2e1f12', '#42301c', '#5a4428', '#745a36', '#8e7046'), outline: hex('#0c0704') };
 const DOOR_WOOD: Material = { ramp: ramp('#1e0f08', '#30190d', '#442414', '#5a311b', '#723f23', '#8a4f2c'), outline: hex('#0c0604') };
@@ -232,7 +232,7 @@ export function wallFrame(mat: number, mask: number, kind: WallKind, v: number, 
   const door = kind === 'door';
   const gap = (x: number, y: number) => door && (across ? Math.abs(x + 0.5 - 8) < DOOR_HW : Math.abs(y + 0.5 - 8) < DOOR_HW);
 
-  if (def.id === 'fence') return fenceFrame(c, mask, door, H);
+  if (def.id === 'fence') return fenceFrame(c, mask, door, H, bare);
 
   // Faces first: every column whose footprint ends inside this cell shows its face below it.
   c.part();
@@ -324,10 +324,11 @@ export function wallFrame(mat: number, mask: number, kind: WallKind, v: number, 
   return c;
 }
 
-/** A picket fence: rails, pointed white pickets with gaps between them, and a gate. */
-function fenceFrame(c: PixelCanvas, mask: number, gate: boolean, H: number): PixelCanvas {
+/** A picket fence: rails, pointed white pickets with gaps between them, and a gate (or, `bare`, the gap it hangs in between two posts). */
+function fenceFrame(c: PixelCanvas, mask: number, gate: boolean, H: number, bare = false): PixelCanvas {
   const across = doorAcross(mask);
-  const run = (x: number) => (x < 8 ? !!(mask & 8) || x >= 7 : !!(mask & 2) || x <= 8);
+  const gap = (x: number) => bare && gate && Math.abs(x + 0.5 - 8) < DOOR_HW;
+  const run = (x: number) => !gap(x) && (x < 8 ? !!(mask & 8) || x >= 7 : !!(mask & 2) || x <= 8);
   if (mask & 10 || !(mask & 5)) {
     // East-west: rails behind, pickets in front.
     const baseY = 9;
@@ -344,15 +345,22 @@ function fenceFrame(c: PixelCanvas, mask: number, gate: boolean, H: number): Pix
       const k = ((x % 4) + 4) % 4;
       if (k !== 1 && k !== 2) continue;
       // A gate's pickets are a little shorter and have a latch; the rest are pointed.
-      const tall = gate ? H - 2 : H;
+      const tall = gate && !bare ? H - 2 : H;
       for (let z = 0; z < tall; z++) {
         if (z === tall - 1 && k === 2) continue;
         c.px(x, baseY + H - 1 - z, PICKET, { x: k === 1 ? -0.3 : 0.3, y: -0.35, z: 0.88 }, { bias: z === tall - 1 ? 1 : 0 });
       }
     }
-    if (gate) {
+    if (gate && !bare) {
       c.part();
       c.px(12, baseY + H - 6, IRON, FACE, { bias: 2 });
+    }
+    if (gate && bare) {
+      // Two stout posts either side of the gap, a pixel taller than the pickets, their tops catching the light.
+      c.part();
+      for (const x0 of [8 - DOOR_HW - 2, 8 + DOOR_HW]) {
+        for (let x = x0; x < x0 + 2; x++) for (let z = 0; z <= H; z++) c.px(x, baseY + H - 1 - z, PICKET, z === H ? TOP : { x: x === x0 ? -0.3 : 0.3, y: -0.35, z: 0.88 }, { bias: z === H ? 2 : x === x0 ? 1 : 0 });
+      }
     }
   }
   if (mask & 5 && !across) {
@@ -390,7 +398,8 @@ export function wallFrames(mat: number): { name: string; canvas: PixelCanvas }[]
     out.push({ name: `w${mask}_1`, canvas: wallFrame(mat, mask, 'wall', 1) });
     out.push({ name: `d${mask}`, canvas: wallFrame(mat, mask, 'door', 0) });
     if (house) out.push({ name: `n${mask}`, canvas: wallFrame(mat, mask, 'window', 0) });
-    if (house) out.push({ name: `o${mask}`, canvas: wallFrame(mat, mask, 'door', 0, true) });
+    // Bare: a house's doorway without its painted door, a garden wall's gap without its gate (the hung ones swing, see homeDoor.ts and homeGate.ts).
+    out.push({ name: `o${mask}`, canvas: wallFrame(mat, mask, 'door', 0, true) });
   }
   return out;
 }

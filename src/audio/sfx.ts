@@ -2314,6 +2314,36 @@ export class Sfx {
     this.burstNoise(out, t + 0.05, 'bandpass', 3400, 2800, 7, 0.16, 0.02);
   }
 
+  /** A garden gate opening: the latch lifting with a click, then its hinges: a dry wooden creak, or an iron gate's thin squeal. */
+  gateOpen(t: number, pan: number, iron: boolean): void {
+    const out = this.out(pan, 0.35, 0.2);
+    this.burstNoise(out, t, 'bandpass', 3800, 3200, 8, 0.16, 0.018);
+    this.chirp(out, t, 'square', 1500, 1300, 0.03, 0.02);
+    if (iron) {
+      // Rusty hinges sing a wavering note that sags as the gate swings free.
+      const f = rand(1700, 2000);
+      this.chirp(out, t + 0.05, 'triangle', f, f * 1.18, 0.05, 0.12);
+      this.chirp(out, t + 0.16, 'triangle', f * 1.15, f * 0.92, 0.04, 0.16);
+      return;
+    }
+    for (let i = 0; i < 4; i++) this.burstNoise(out, t + 0.05 + i * (0.035 + i * 0.01), 'bandpass', rand(1100, 1700), 800, 6, 0.1 - i * 0.015, 0.018);
+  }
+
+  /** A garden gate swinging shut: a light clack of wood (or a ring of iron) on its post, and the latch dropping. */
+  gateShut(t: number, pan: number, level: number, iron: boolean): void {
+    const out = this.out(pan, 0.5 * level, 0.25);
+    if (iron) {
+      this.chirp(out, t, 'triangle', 1250, 1210, 0.14, 0.22);
+      this.chirp(out, t, 'sine', 2730, 2700, 0.06, 0.16);
+      this.burstNoise(out, t, 'highpass', 3000, 2400, 0.7, 0.18, 0.03);
+    } else {
+      this.chirp(out, t, 'sine', 320, 150, 0.3, 0.06);
+      this.burstNoise(out, t, 'bandpass', 1500, 700, 1.2, 0.3, 0.05);
+    }
+    this.burstNoise(out, t + 0.04, 'bandpass', 4200, 3600, 8, 0.14, 0.015);
+    this.chirp(out, t + 0.04, 'square', 2100, 1900, 0.025, 0.015);
+  }
+
   // ------------------------------------------------------------ The Automaton
 
   /** A mech cannon: a hard, low bark and a metal clank as the breech kicks; the scrap's nail gun is a flat pneumatic thwack. */

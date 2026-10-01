@@ -57,7 +57,7 @@ export const doorFrame = (way: DoorWay, hinge: number, step: number): string => 
 
 // ---------------------------------------------------------------- Materials
 
-const OAK: Material = { ramp: ramp('#1c0e07', '#2c170c', '#3e2212', '#522e18', '#683c1f', '#7f4b27', '#965c31', '#ad6e3c', '#c4844c'), outline: hex('#0c0604'), outlineLit: hex('#2a1408') };
+export const OAK: Material = { ramp: ramp('#1c0e07', '#2c170c', '#3e2212', '#522e18', '#683c1f', '#7f4b27', '#965c31', '#ad6e3c', '#c4844c'), outline: hex('#0c0604'), outlineLit: hex('#2a1408') };
 /** The light behind the little window: warm lamplight, glowing at night. */
 const PANE: Material = { ramp: ramp('#5a2a08', '#9a5a18', '#d89a3c', '#ffcc70', '#ffe6a8', '#fff6dc'), outline: hex('#0c0604'), emissive: 0.85, noAO: true };
 
@@ -66,9 +66,9 @@ const n3 = (x: number, y: number, z: number): Vec3 => {
   return { x: x / l, y: y / l, z: z / l };
 };
 /** A leaf's top edge, facing up. */
-const TOP: Vec3 = n3(0, 0.35, 0.94);
+export const TOP: Vec3 = n3(0, 0.35, 0.94);
 /** The drawing's normal for an upright face whose facing on the ground is (ax, ay) (y south, toward the viewer). */
-const upright = (ax: number, ay: number): Vec3 => n3(ax * 0.8, -0.42 * Math.max(0, ay), 0.62 + 0.28 * Math.max(0, ay));
+export const upright = (ax: number, ay: number): Vec3 => n3(ax * 0.8, -0.42 * Math.max(0, ay), 0.62 + 0.28 * Math.max(0, ay));
 
 // ---------------------------------------------------------------- The leaf's shape and faces
 
@@ -81,7 +81,7 @@ const leafTop = (u: number): number => {
 /** What a pixel of the leaf is, given where on it the view meets it. */
 type Surface = 'outer' | 'inner' | 'hinge' | 'latch' | 'top';
 
-interface Paint {
+export interface Paint {
   m: Material;
   bias: number;
   /** Drawn over the wood, as its own part, so the wood beside it takes a contact shadow. */
@@ -172,7 +172,7 @@ function innerFace(u: number, z: number): Paint {
 // ---------------------------------------------------------------- Casting the view
 
 /** Each frame is drawn at pixel centres: a pixel at (col, row) sees ground x = col + .5 - ox, and the line y = row + .5 - oy + t, z = t. */
-interface View {
+export interface View {
   w: number;
   h: number;
   ox: number;
@@ -180,7 +180,7 @@ interface View {
 }
 
 /** A doorway's hinge, its leaf's shut direction and its outward facing, and the wall round it. */
-interface Hang {
+export interface Hang {
   hx: number;
   hy: number;
   /** From the hinge to the latch, shut. */
@@ -193,10 +193,10 @@ interface Hang {
   wall(x: number, y0: number): number;
 }
 
-const NONE = -Infinity;
+export const NONE = -Infinity;
 
 /** Where the line (x, y0 + t, t) is last inside the box [y0, y1] x [z0, z1] (its x already checked), or NONE. */
-const lastIn = (y0: number, ya: number, yb: number, za: number, zb: number): number => {
+export const lastIn = (y0: number, ya: number, yb: number, za: number, zb: number): number => {
   const lo = Math.max(ya - y0, za);
   const hi = Math.min(yb - y0, zb);
   return hi >= lo ? hi : NONE;
@@ -234,15 +234,43 @@ function hang(way: DoorWay, hinge: number): Hang {
 }
 
 /**
- * The door hung `way` with hinge side `hinge`, open `deg` degrees, as a lit
- * frame. `walls` false leaves the wall out (the palette's picture).
+ * A leaf that swings on a hinge: a slab `w` across, `t` thick and up to
+ * `zMax` tall, `solid` where it has wood or iron (a gate's open slats leave
+ * holes the view passes through), each pixel painted by what it shows.
  */
-export function doorArt(way: DoorWay, hinge: number, deg: number, view: View = { w: DOOR_FW, h: DOOR_FH, ox: DOOR_OX, oy: DOOR_OY }, walls = true): RenderedFrame {
-  const g = hang(way, hinge);
+export interface Leaf {
+  w: number;
+  t: number;
+  zMax: number;
+  /** Is the leaf there at `u` across from the hinge and `z` up? (Through its thickness.) */
+  solid(u: number, z: number): boolean;
+  /** A face: `outer` the one that looks out of its doorway (Hang.ox, oy) when shut. */
+  face(outer: boolean, u: number, z: number): Paint;
+  /** An edge seen end on: the hinge side or the latch side of a member, at its top or down its side. */
+  edge(u: number, z: number, top: boolean): Paint;
+}
+
+/** The door's leaf: solid oak, arched, with its faces as above. */
+const DOOR_LEAF: Leaf = {
+  w: LEAF_W,
+  t: LEAF_T,
+  zMax: ARCH_SPRING + DOOR_HW + 0.01,
+  solid: (u, z) => z <= leafTop(u),
+  face: (outer, u, z) => (outer ? outerFace(u, z) : innerFace(u, z)),
+  // End grain on the edges, the top a touch lighter where it catches the sky.
+  edge: (_u, _z, top) => ({ m: OAK, bias: top ? 1 : 0, over: false }),
+};
+
+/**
+ * The leaf `leaf` hung as `g`, open `deg` degrees, as a lit frame seen from
+ * the game's view in a canvas `view`. `walls` false leaves the wall out (a
+ * palette picture).
+ */
+export function castLeaf(leaf: Leaf, g: Hang, deg: number, view: View, walls = true): RenderedFrame {
   const a = (deg * Math.PI) / 180;
   const ca = Math.cos(a);
   const sa = Math.sin(a);
-  // Turning toward the inside: the latch edge leads, the outer face turns after it.
+  // Turning away from its outer side: the latch edge leads, the outer face turns after it.
   const dx = g.dx * ca - g.ox * sa;
   const dy = g.dy * ca - g.oy * sa;
   const nx = g.ox * ca + g.dx * sa;
@@ -251,11 +279,12 @@ export function doorArt(way: DoorWay, hinge: number, deg: number, view: View = {
   const c = new PixelCanvas(W, H);
   const leafT = new Float32Array(W * H).fill(NONE);
   const over: { x: number; y: number; p: Paint; n: Vec3 }[] = [];
-  const zMax = ARCH_SPRING + DOOR_HW + 0.01;
-  const T2 = LEAF_T / 2;
+  const zMax = leaf.zMax;
+  const T2 = leaf.t / 2;
+  const LW = leaf.w;
 
   // Only the pixels the leaf could reach, however it turns.
-  const reach = LEAF_W + LEAF_T;
+  const reach = LW + leaf.t;
   const col0 = Math.max(0, Math.floor(g.hx - reach + view.ox));
   const col1 = Math.min(W - 1, Math.ceil(g.hx + reach + view.ox));
   const row0 = Math.max(0, Math.floor(g.hy - reach - zMax + view.oy));
@@ -284,36 +313,38 @@ export function doorArt(way: DoorWay, hinge: number, deg: number, view: View = {
         }
         return true;
       };
-      if (!slab(U0, dy, 0, LEAF_W, 'hinge', 'latch') || !slab(V0, ny, -T2, T2, 'inner', 'outer') || hi < lo) continue;
-      // March down the line from the viewer's side to the first point under the arched top.
-      let t = hi;
+      if (!slab(U0, dy, 0, LW, 'hinge', 'latch') || !slab(V0, ny, -T2, T2, 'inner', 'outer') || hi < lo) continue;
+      // March down the line from the viewer's side to the first point inside the leaf.
       let hit = NONE;
-      for (; t >= lo; t -= 0.125) {
-        if (t <= leafTop(U0 + t * dy)) {
+      let prevU = U0 + hi * dy;
+      let prevZ = hi;
+      for (let t = hi; t >= lo; t -= 0.125) {
+        const u = U0 + t * dy;
+        if (leaf.solid(u, t)) {
           hit = t;
           break;
         }
+        prevU = u;
+        prevZ = t;
       }
       if (hit === NONE) continue;
-      const surf: Surface = hit < hi ? 'top' : face;
       const u = U0 + hit * dy;
       const z = hit;
+      // Met at once: the slab's own face or edge. Further in: the top of a member, or the side of one past a gap.
+      let surf: Surface = face;
+      if (hit < hi) surf = !leaf.solid(u, prevZ) || prevZ > zMax - 0.01 ? 'top' : prevU < u ? 'hinge' : 'latch';
       leafT[row * W + col] = hit;
       let p: Paint;
       let n: Vec3;
-      if (surf === 'outer') {
-        p = outerFace(u, z);
-        n = upright(nx, ny);
-      } else if (surf === 'inner') {
-        p = innerFace(u, z);
-        n = upright(-nx, -ny);
+      if (surf === 'outer' || surf === 'inner') {
+        p = leaf.face(surf === 'outer', u, z);
+        n = surf === 'outer' ? upright(nx, ny) : upright(-nx, -ny);
       } else if (surf === 'top') {
-        p = { m: OAK, bias: 1, over: false };
+        p = leaf.edge(u, z, true);
         n = TOP;
       } else {
-        // An edge: end grain, the latch edge a touch lighter where hands have worn it.
         const s = surf === 'latch' ? 1 : -1;
-        p = { m: OAK, bias: surf === 'latch' ? 1 : 0, over: false };
+        p = leaf.edge(u, z, false);
         n = upright(dx * s, dy * s);
       }
       if (p.over) over.push({ x: col, y: row, p, n });
@@ -347,6 +378,9 @@ export function doorArt(way: DoorWay, hinge: number, deg: number, view: View = {
   }
   return r;
 }
+
+/** The door hung `way` with hinge side `hinge`, open `deg` degrees. */
+export const doorArt = (way: DoorWay, hinge: number, deg: number, view: View = { w: DOOR_FW, h: DOOR_FH, ox: DOOR_OX, oy: DOOR_OY }, walls = true): RenderedFrame => castLeaf(DOOR_LEAF, hang(way, hinge), deg, view, walls);
 
 /** Every door frame: each way, each hinge side, each step open. */
 export function doorFrames(): { name: string; r: RenderedFrame }[] {
