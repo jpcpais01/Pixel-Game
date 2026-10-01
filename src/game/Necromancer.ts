@@ -1,3 +1,4 @@
+import { heroTimers } from './timers';
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
 import { NECRO_H, NECRO_ORIGIN_X, NECRO_ORIGIN_Y, NECRO_W, RELEASE_FRAME } from '../art/necromancer';
@@ -264,6 +265,9 @@ export class Necromancer implements Hero {
       this.risen.push(r);
       this.world.addEffect(r);
     });
+    // Their timer runs while any of these three still stands.
+    const risen = [...this.risen];
+    heroTimers.follow('risen', 'ability', '', (stats.fx ?? SOUL_FX).hot, () => ({ left: Math.max(0, ...risen.map((r) => r.lifeLeft)), total: stats.life }));
   }
 
   /** He pays in his own blood; it bursts out around him and drains every foe it catches. */

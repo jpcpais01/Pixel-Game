@@ -156,6 +156,8 @@ export class SaberCyclone extends Fx {
     this.lamp = this.light(c.x, c.y, 70, c.pal.light, 1.6);
     this.sx = this.ex = c.x;
     this.sy = this.ey = c.y;
+    // The saber leaves his hand: he's drawn empty-handed and can't strike until it's back.
+    c.hero.holdSaber?.(true);
     // Flies out until a wall or its full reach.
     for (let d = 0; d <= 92; d += 4) {
       const x = c.x + c.dx * d;
@@ -235,7 +237,10 @@ export class SaberCyclone extends Fx {
   }
 
   destroy(): void {
-    if (!this.home && !this.dead) this.world.debris(this.c.pal.tints, this.sx, this.sy - 12, 6, this.sy + 10, 'burst');
+    if (this.dead) return;
+    if (!this.home) this.world.debris(this.c.pal.tints, this.sx, this.sy - 12, 6, this.sy + 10, 'burst');
+    // Caught (or, cut short, called back at once): the blade is his again.
+    this.c.hero.holdSaber?.(false);
     super.destroy();
   }
 }

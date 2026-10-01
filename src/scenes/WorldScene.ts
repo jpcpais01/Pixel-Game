@@ -102,6 +102,7 @@ const mix3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + 
 import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
 import { heroBuffs, type BuffDef } from '../game/buffs';
+import { heroTimers } from '../game/timers';
 import { GemTally, LootFlare, Pickup } from '../game/Pickup';
 import { gear, GEAR_SETS, RARITY, type GearDef, type SetId } from '../game/gear';
 import { SetPowers } from '../game/setPowers';
@@ -115,6 +116,7 @@ import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
 import type { MonsterStats } from '../game/monsters/Monster';
 import { NetPlay } from '../net/NetPlay';
 import { session } from '../net/session';
+import { trek } from '../game/trek';
 import { diag, note } from '../diagnostics';
 import { rouse } from '../game/rest';
 
@@ -430,7 +432,7 @@ export class WorldScene extends Phaser.Scene {
     if (arena.id === 'temple') this.temple = new TempleDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'deep') this.deep = new GlimmerDeep(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'forest') {
-      // Always the same forest, for everyone: the hero starts at its entrance and the rest is theirs to find.
+      // Always the same forest, for everyone: the hero first starts at its entrance, then where they left it.
       const gen = new ForestGen(EVERWOOD_SEED);
       useForest(gen);
       const forest = (this.forest = new Forest(this, gen, (img) => ground(img) as Phaser.GameObjects.Image));
@@ -514,7 +516,10 @@ export class WorldScene extends Phaser.Scene {
     this.spawnX = arena.spawn.x;
     this.spawnY = arena.spawn.y;
     if (this.forest) {
-      const at = this.forest.gen.spawn();
+      // The forest opens where the hero last stood in it (online, a guest starts at the entrance and is taken to the host).
+      trek.load();
+      const last = !session.active || session.isHost ? trek.last : null;
+      const at = last && this.forest.gen.walkable(last.x, last.y) ? last : this.forest.gen.spawn();
       this.spawnX = at.x;
       this.spawnY = at.y;
     }
@@ -679,6 +684,7 @@ export class WorldScene extends Phaser.Scene {
     // A fresh hotbar and no buffs each run.
     inventory.reset(STARTING_ITEMS);
     heroBuffs.clear();
+    heroTimers.clear();
     // The six pieces worn on the Inventory page count from the start of every
     // run, and swapping them in the bag mid-run applies at once.
     gear.reset();
@@ -1091,6 +1097,7 @@ export class WorldScene extends Phaser.Scene {
     this.downT = DOWN_TIME;
     this.pushX = this.pushY = 0;
     heroBuffs.clear();
+    heroTimers.clear();
     this.ult.cancel();
     // Where they fell, others will find their grave.
     this.echoes?.heroFell(h.x, h.y);
@@ -1477,6 +1484,7 @@ export class WorldScene extends Phaser.Scene {
     controls.items.length = 0;
     inventory.update(dt);
     heroBuffs.update(dt);
+    heroTimers.update(dt);
 
     const down = this.downT > 0;
     for (const p of this.pickups) {
@@ -1595,13 +1603,16 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Run a Special's cast: its blows, and the effects it starts, count as the Special's. */
-  castSpecial(cast: () => void): void {
+  castSpecial(cast: () => void): Effect[] {
     this.inSpecial = true;
+    const from = this.effects.length;
     try {
       cast();
     } finally {
       this.inSpecial = false;
     }
+    // What it set going, for the HUD's timer on a lasting Special.
+    return this.effects.slice(from);
   }
 
   /** A buff was just picked up: its name over the hero, and a burst of its colour. */

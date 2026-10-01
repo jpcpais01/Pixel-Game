@@ -299,6 +299,11 @@ export abstract class Fx implements Effect {
 
   protected abstract step(dt: number): void;
 
+  /** Time left and the whole life, for the HUD's timer on a lasting Special or ability. */
+  timeLeft(): { left: number; total: number } | null {
+    return this.dead ? null : { left: this.life - this.t, total: this.life };
+  }
+
   protected own<T extends { destroy(): void }>(o: T): T {
     this.parts.push(o);
     return o;

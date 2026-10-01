@@ -222,6 +222,10 @@ export interface Pose {
   rearFront?: boolean;
   /** Lightning crawling off the free hand's fingers, re-struck by this seed (0: none). */
   crackle?: number;
+  /** The saber is away (thrown by the Special): the saber hand is empty, held out guiding it. */
+  bare?: boolean;
+  /** 0..1 Force light in that empty hand while it guides the blade. */
+  guide?: number;
   // The idle moment's (`rest`) extras, drawn facing the viewer only.
   /** 0..1 lowered into a cross-legged seat on the ground. */
   sit?: number;
@@ -405,6 +409,23 @@ function palm(c: PixelCanvas, x: number, y: number, k: number, crackle = 0): voi
 }
 
 /**
+ * The saber hand with no saber in it, held out after the flying blade: the
+ * sleeve, the open hand, and a faint thread of the Force round the fingers.
+ * Returns the hand, where the blade would have been.
+ */
+function guideHand(c: PixelCanvas, sh: { x: number; y: number }, p: Pose): { x: number; y: number } {
+  const { hx, hy } = p.saber;
+  sleeve(c, sh.x, sh.y, hx, hy);
+  hand(c, hx, hy);
+  // Fingers spread: a knuckle pixel either side of the palm, a shade darker.
+  c.part();
+  c.px(hx - 1, hy - 1, S.glove ?? S.skin, sphere(-0.5, -0.6, 1));
+  c.px(hx + 1, hy - 1, S.glove ?? S.skin, sphere(0.5, -0.6, 1));
+  palm(c, hx, hy - 1, p.guide ?? 0);
+  return { x: hx, y: hy };
+}
+
+/**
  * Lightning crackling round a clenched fist: short arcs jumping off the
  * knuckles and snapping back, now and then a longer one down the wrist.
  */
@@ -516,6 +537,10 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
       // The saber floats free: only the empty hand and its sleeve here.
       sleeve(c, sh.x, sh.y, p.saber.hx, p.saber.hy);
       hand(c, p.saber.hx, p.saber.hy);
+      return;
+    }
+    if (p.bare) {
+      tip = guideHand(c, sh, p);
       return;
     }
     tip = drawSaber(c, p.saber, 'main', p.saberBehind);
@@ -787,6 +812,10 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
   let tip = { x: 0, y: 0 };
   const sh = { x: 16.4, y: 16.8 + U }; // saber shoulder (screen right)
   const saberArm = () => {
+    if (p.bare) {
+      tip = guideHand(c, sh, p);
+      return;
+    }
     tip = drawSaber(c, p.saber, 'main', p.saberBehind);
     sleeve(c, sh.x, sh.y, p.saber.hx, p.saber.hy, p.saberBehind ? -1 : 0);
     hand(c, p.saber.hx, p.saber.hy);
@@ -1024,9 +1053,12 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
 
   // Near arm and saber.
   if (S.staff && p.rearFront) drawSaber(c, p.saber, 'rear');
-  if (!p.saberBehind) tip = drawSaber(c, p.saber, 'main');
-  sleeve(c, sh.x, sh.y, p.saber.hx, p.saber.hy);
-  hand(c, p.saber.hx, p.saber.hy);
+  if (p.bare) tip = guideHand(c, sh, p);
+  else {
+    if (!p.saberBehind) tip = drawSaber(c, p.saber, 'main');
+    sleeve(c, sh.x, sh.y, p.saber.hx, p.saber.hy);
+    hand(c, p.saber.hx, p.saber.hy);
+  }
   shoulder(c, hx + 0.8, 16.8 + U, 2.1, 1.6);
   return { tip, hand: { x: p.saber.hx, y: p.saber.hy }, palm: fh };
 }
@@ -1109,6 +1141,32 @@ function walk(view: View): Pose[] {
     frames.push(p);
   }
   return frames;
+}
+
+/** Where the empty saber hand is held out while the blade flies: raised, reaching towards it. */
+const GUIDE_HAND: Record<View, { x: number; y: number }> = {
+  down: { x: 5, y: 19 },
+  up: { x: 19, y: 19 },
+  side: { x: 6.5, y: 18.5 },
+};
+
+/**
+ * The Jedi with his saber thrown (the Special): his own idle and walk, but
+ * the saber hand raised and open, steering the blade through the air with a
+ * soft glow that swells and ebbs.
+ */
+function bare(of: (view: View) => Pose[]) {
+  return (view: View): Pose[] =>
+    of(view).map((p, i, all) => {
+      const g = GUIDE_HAND[view];
+      const ph = (i / all.length) * Math.PI * 2;
+      p.bare = true;
+      p.saberBehind = false;
+      // The hand rides with the body's bob and sways a pixel as it steers.
+      p.saber = { ...p.saber, hx: g.x + Math.round(Math.sin(ph) * 0.6), hy: g.y + p.breath - p.lift + (Math.cos(ph) > 0.5 ? -0.5 : 0) };
+      p.guide = 0.42 + 0.18 * Math.sin(ph);
+      return p;
+    });
 }
 
 /** A swing keyframe: the blade, drawn behind the body, and (a saberstaff) its back half in front. */
@@ -1422,7 +1480,7 @@ function dervishFrame(k: number): { dir: Dir; pose: Pose } {
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type JediAnim = 'idle' | 'walk' | 'slash1' | 'slash2' | 'push' | 'sweep1' | 'sweep2' | 'lightning' | 'grip' | 'rest';
+export type JediAnim = 'idle' | 'walk' | 'slash1' | 'slash2' | 'push' | 'sweep1' | 'sweep2' | 'lightning' | 'grip' | 'rest' | 'idle_bare' | 'walk_bare';
 
 export interface JediAnimDef {
   name: JediAnim;
@@ -1439,6 +1497,8 @@ export const JEDI_ANIMS: JediAnimDef[] = [
   { name: 'slash1', fps: 22, loop: false, poses: slash('slash1') },
   { name: 'slash2', fps: 22, loop: false, poses: slash('slash2') },
   { name: 'push', fps: 12, loop: false, poses: push },
+  { name: 'idle_bare', fps: 6, loop: true, poses: bare(idle) },
+  { name: 'walk_bare', fps: 10, loop: true, poses: bare(walk) },
   { name: 'rest', fps: 8, loop: false, poses: meditate, order: MEDITATE_ORDER },
 ];
 
