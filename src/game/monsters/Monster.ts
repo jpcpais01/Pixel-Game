@@ -122,7 +122,7 @@ export abstract class Monster implements Hurtbox {
   private paceT = 0;
   private clock: Phaser.GameObjects.Image | null = null;
   private clockTint = 0xffffff;
-  /** Held helpless on a puppeteer's strings for this long, lifted this far off the ground. */
+  /** Held helpless (chains, roots, a grip) for this long, lifted this far off the ground. */
   private heldT = 0;
   private heldLift = 0;
   private lift = 0;
@@ -382,8 +382,8 @@ export abstract class Monster implements Hurtbox {
   }
 
   /**
-   * Strings (a puppeteer's): held helpless for `ms`, whatever it was doing,
-   * lifted `lift` px off the ground. A boss shrugs them off. Returns whether it took hold.
+   * Bound (chains, roots, a grip): held helpless for `ms`, whatever it was doing,
+   * lifted `lift` px off the ground. A boss shrugs it off. Returns whether it took hold.
    */
   bind(ms: number, lift = 0): boolean {
     if (!this.alive || this.boss || this.stats.rank) return false;

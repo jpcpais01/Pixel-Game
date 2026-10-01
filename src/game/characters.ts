@@ -1,13 +1,15 @@
-// Playable characters, in three levels:
-//  - a class (the Wizard) is a hero with its own Hero class and art;
-//  - a type (the Pyromancer) is a way to play that class, with its own stats
-//    and abilities; the first type is the class's base type;
+// Playable characters, in four levels:
+//  - a class (the Mage) is what the select screen lists (CLASSES), gathering
+//    the characters of one or more kits;
+//  - a kit (the Wizard) is a Hero class with its own art and spawn, shared by
+//    its characters; its id keys stats, Specials, skins owned and the rest;
+//  - a type, called a character on screen (the Pyromancer), is a way to play
+//    a kit, with its own stats and abilities;
 //  - a skin (Void) belongs to a type and changes only its looks.
-// The select screen lists CLASSES in order, and the world spawns whichever
-// look was picked. A class's spawn gets a look id: a type's own id for its
-// base look, or one of its skins' ids. Ids are unique within a class, so the
-// look id alone says both the type and the skin (and old saves, which stored
-// one id per hero, still load).
+// A kit's spawn gets a look id: a type's own id for its base look, or one of
+// its skins' ids. Ids are unique within a kit, so the kit and the look id
+// together say both the type and the skin (and old saves, which stored one
+// look id per kit, still load).
 
 import type Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
@@ -37,8 +39,6 @@ import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necroma
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
-import { ARACHNE_KIT, CRIMSON_KIT, LUNA_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, TOYMAKER_KIT, WEAVER_KIT } from './Puppeteer';
-import { PUPPETEER_H, PUPPETEER_ORIGIN_Y } from '../art/puppeteer';
 import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT, PRIMAVERA_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT } from './Samurai';
@@ -157,10 +157,18 @@ export interface TypeDef {
   skins?: SkinDef[];
 }
 
-export interface ClassDef {
+/**
+ * A kit: the heroes that share one Hero class, its art and its spawn (the
+ * Wizard's Arcanist, Pyromancer and Tidecaller). Its id keys everything
+ * about how they play: stats, Specials, skins owned, Auto Battle pieces,
+ * Rift bests. Kits were the classes until the classes were regrouped; the
+ * select screen now shows CLASSES, each gathering the characters of one or
+ * more kits.
+ */
+export interface KitDef {
   id: string;
   name: string;
-  /** One line about the class as a whole. */
+  /** One line about the kit as a whole. */
   blurb: string;
   /**
    * The special is held to charge and fires on release (the wizard's beam), so
@@ -174,10 +182,21 @@ export interface ClassDef {
   spawn(world: WorldScene, x: number, y: number, look: string): Hero;
 }
 
+/** A class as the select screen shows it: characters gathered from one or more kits. */
+export interface ClassDef {
+  id: string;
+  name: string;
+  /** One line about the class as a whole. */
+  blurb: string;
+  /** Every kit's characters, in order; the first is where the class opens. */
+  types: TypeDef[];
+}
+
 /** A class as played: in one type and skin, with everything the HUD and the world need. */
 export interface CharacterDef {
-  /** The class id. */
+  /** The kit's id (see KitDef): what stats, Specials and skins are keyed by. */
   id: string;
+  /** The class's name. */
   name: string;
   type: TypeDef;
   /** The worn skin, or null for the type's own look. */
@@ -194,7 +213,7 @@ export interface CharacterDef {
   spawn(world: WorldScene, x: number, y: number): Hero;
 }
 
-export const CLASSES: ClassDef[] = [
+const KITS: KitDef[] = [
   {
     id: 'wizard',
     name: 'Wizard',
@@ -770,7 +789,7 @@ export const CLASSES: ClassDef[] = [
     types: [
       {
         id: 'ranger',
-        name: 'Ranger',
+        name: 'Archer',
         role: 'Bow and arrow',
         accent: 0x9ad65a,
         attack: 'Quick shot',
@@ -1231,102 +1250,6 @@ export const CLASSES: ClassDef[] = [
     spawn(world, x, y, look) {
       const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, clockwork: CLOCKWORK_KIT, primavera: PRIMAVERA_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT, anomaly: ANOMALY_KIT }[look] ?? KEEPER_KIT;
       return new Chrono(world, x, y, kit);
-    },
-  },
-  {
-    id: 'puppeteer',
-    name: 'Puppeteer',
-    blurb: 'Pulls every string',
-    types: [
-      {
-        // Fights through his puppet: it lunges out to cut and chop, and pirouettes among his foes.
-        id: 'marionette',
-        name: 'Marionettist',
-        role: 'His puppet fights',
-        accent: 0xffc25a,
-        attack: 'Puppet strike',
-        special: 'Pirouette',
-        preview: { texture: 'puppeteer', glow: 'puppeteer_e', idle: 'puppeteer_idle_down', chosen: 'puppeteer_twirl_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
-        buttons: {
-          attack: { texture: 'icon_puppet' },
-          special: { texture: 'icon_pirouette' },
-        },
-        lookName: 'Carnival',
-        skins: [
-          {
-            id: 'porcelain',
-            name: 'Porcelain',
-            accent: 0x8ad0ff,
-            preview: { texture: 'puppeteer_porcelain', glow: 'puppeteer_porcelain_e', idle: 'puppeteer_porcelain_idle_down', chosen: 'puppeteer_porcelain_twirl_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
-            buttons: {
-              attack: { texture: 'icon_puppet_porcelain' },
-              special: { texture: 'icon_pirouette_porcelain' },
-            },
-          },
-          {
-            id: 'toymaker',
-            name: 'Toymaker',
-            accent: 0xff5a4a,
-            preview: { texture: 'puppeteer_toymaker', glow: 'puppeteer_toymaker_e', idle: 'puppeteer_toymaker_idle_down', chosen: 'puppeteer_toymaker_twirl_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
-            buttons: {
-              attack: { texture: 'icon_puppet_toymaker' },
-              special: { texture: 'icon_pirouette_toymaker' },
-            },
-          },
-        ],
-      },
-      {
-        // No puppet: her threads cut, snag and reel foes in, and her strings hold whole crowds helpless.
-        id: 'weaver',
-        name: 'Stringweaver',
-        role: 'Strings up her foes',
-        accent: 0xc08cff,
-        attack: 'Razor thread',
-        special: 'Marionette',
-        preview: { texture: 'weaver', glow: 'weaver_e', idle: 'weaver_idle_down', chosen: 'weaver_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
-        buttons: {
-          attack: { texture: 'icon_thread' },
-          special: { texture: 'icon_marionette' },
-        },
-        lookName: 'Silk',
-        skins: [
-          {
-            id: 'crimson',
-            name: 'Red thread',
-            accent: 0xff4a5a,
-            preview: { texture: 'weaver_crimson', glow: 'weaver_crimson_e', idle: 'weaver_crimson_idle_down', chosen: 'weaver_crimson_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
-            buttons: {
-              attack: { texture: 'icon_thread_crimson' },
-              special: { texture: 'icon_marionette_crimson' },
-            },
-          },
-          {
-            id: 'arachne',
-            name: 'Arachne',
-            accent: 0xa8e040,
-            preview: { texture: 'weaver_arachne', glow: 'weaver_arachne_e', idle: 'weaver_arachne_idle_down', chosen: 'weaver_arachne_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
-            buttons: {
-              attack: { texture: 'icon_thread_arachne' },
-              special: { texture: 'icon_marionette_arachne' },
-            },
-          },
-          {
-            // A moth-woman of the moonlit woods: pale mint wings with long tails, feathery antennae, a cream silk gown and a collar of moth fur.
-            id: 'luna',
-            name: 'Luna Moth',
-            accent: 0x9ee8c0,
-            preview: { texture: 'weaver_luna', glow: 'weaver_luna_e', idle: 'weaver_luna_idle_down', chosen: 'weaver_luna_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
-            buttons: {
-              attack: { texture: 'icon_thread_luna' },
-              special: { texture: 'icon_marionette_luna' },
-            },
-          },
-        ],
-      },
-    ],
-    spawn(world, x, y, look) {
-      const kit = { porcelain: PORCELAIN_KIT, toymaker: TOYMAKER_KIT, weaver: WEAVER_KIT, crimson: CRIMSON_KIT, arachne: ARACHNE_KIT, luna: LUNA_KIT }[look] ?? MARIONETTE_KIT;
-      return new Puppeteer(world, x, y, kit);
     },
   },
   {
@@ -1912,7 +1835,50 @@ export const CLASSES: ClassDef[] = [
   },
 ];
 
-export const classById = (id: string | undefined): ClassDef => CLASSES.find((c) => c.id === id) ?? CLASSES[0];
+/**
+ * The classes on the select screen, each gathering the characters of its
+ * kits, in that order. A class's id may be one of its kits' (old saves stored
+ * kit ids, see classById).
+ */
+const GROUPS: { id: string; name: string; blurb: string; kits: string[] }[] = [
+  { id: 'mage', name: 'Mage', blurb: 'Spells, and time itself', kits: ['wizard', 'chronomancer'] },
+  { id: 'warrior', name: 'Warrior', blurb: 'Steel, faith and fists up front', kits: ['warrior', 'paladin', 'valkyrie', 'fighter'] },
+  { id: 'jedi', name: 'Jedi', blurb: 'The light and the dark', kits: ['jedi'] },
+  { id: 'alchemist', name: 'Alchemist', blurb: 'Brews that melt foes', kits: ['alchemist'] },
+  { id: 'archer', name: 'Ranger', blurb: 'Death from afar', kits: ['archer'] },
+  { id: 'duelist', name: 'Duelist', blurb: 'Blades from the shadows', kits: ['samurai', 'rogue'] },
+  { id: 'necromancer', name: 'Necromancer', blurb: 'Lord of the restless dead', kits: ['necromancer'] },
+  { id: 'mystic', name: 'Mystic', blurb: 'Songs and the old wild', kits: ['bard', 'druid'] },
+  { id: 'automaton', name: 'Automaton', blurb: 'Steel, steam and a heat gauge', kits: ['automaton'] },
+  { id: 'phantom', name: 'Phantom', blurb: 'Only half here: blows pass through', kits: ['phantom'] },
+  { id: 'inventor', name: 'Inventor', blurb: 'Gadgets, gizmos and bright ideas', kits: ['inventor'] },
+  { id: 'beast', name: 'Nature', blurb: 'Wings, claws and dragonfire', kits: ['beast'] },
+];
+
+/** Which kit each type and skin belongs to. */
+const KIT_OF = new Map<TypeDef | SkinDef, KitDef>();
+for (const kit of KITS)
+  for (const type of kit.types) {
+    KIT_OF.set(type, kit);
+    for (const skin of type.skins ?? []) KIT_OF.set(skin, kit);
+  }
+
+/** The kit a type or skin belongs to. */
+export const kitOf = (t: TypeDef | SkinDef): KitDef => KIT_OF.get(t)!;
+
+/** A kit by id, if there is one (an old save's may have been retired). */
+export const kitById = (id: string | undefined): KitDef | undefined => KITS.find((k) => k.id === id);
+
+export const CLASSES: ClassDef[] = GROUPS.map(({ id, name, blurb, kits }) => ({
+  id,
+  name,
+  blurb,
+  types: kits.flatMap((k) => kitById(k)!.types),
+}));
+
+/** The class with this id, or the class holding the kit with this id (old saves), else the first. */
+export const classById = (id: string | undefined): ClassDef =>
+  CLASSES.find((c) => c.id === id) ?? CLASSES.find((c) => c.types.some((t) => kitOf(t).id === id)) ?? CLASSES[0];
 
 /** The class as played in its chosen type and skin. */
 export function characterById(id: string | undefined): CharacterDef {

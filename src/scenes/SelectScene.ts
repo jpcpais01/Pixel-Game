@@ -46,14 +46,36 @@ const MEDAL_STEP = 43;
 const MEDAL_FACE = MEDAL - 6;
 /** How many times over the head is drawn in its medallion. */
 const MEDAL_ZOOM = 2;
-/** Character cards, largest first: the largest for which four fit the column is used. */
-const CARD_SIZES = [34, 30, 26];
+/** Character cards, largest first: the largest for which the biggest class fits in two rows (and the height there is) is used. */
+const CARD_SIZES = [34, 30, 26, 24, 22];
 const CARD_GAP = 4;
+/** The most characters a class has: the picker keeps room for them all. */
+const MOST_TYPES = Math.max(...CLASSES.map((c) => c.types.length));
 /** Skin swatches. */
 const SWATCH = 20;
 const SWATCH_GAP = 3;
-/** The picker's height, for laying out. */
-const PICKER_H = STEP_HEAD + STEP_GAP + MEDAL + 2 + STEP_SPACE + STEP_HEAD + STEP_GAP + CARD_SIZES[0] + STEP_SPACE + STEP_HEAD + STEP_GAP + SWATCH + 1;
+/** The picker's height but for the character cards' rows. */
+const PICKER_FIXED = STEP_HEAD + STEP_GAP + MEDAL + 2 + STEP_SPACE + STEP_HEAD + STEP_GAP + STEP_SPACE + STEP_HEAD + STEP_GAP + SWATCH + 1;
+
+/** The character cards: their size, how many fit a row, and how many rows the class with the most characters needs. */
+interface CardGrid {
+  size: number;
+  perRow: number;
+  rows: number;
+}
+
+const gridH = (g: CardGrid): number => g.rows * g.size + (g.rows - 1) * CARD_GAP;
+
+/** The biggest cards for which the class with the most characters fits a picker `w` wide in two rows, within `room` px of height. */
+function cardGrid(w: number, room = Infinity): CardGrid {
+  const grid = (size: number): CardGrid => {
+    const perRow = Math.max(1, Math.floor((w - INDENT + CARD_GAP) / (size + CARD_GAP)));
+    return { size, perRow, rows: Math.ceil(MOST_TYPES / perRow) };
+  };
+  const fits = CARD_SIZES.map(grid).find((g) => g.rows <= 2 && gridH(g) <= room);
+  return fits ?? grid(CARD_SIZES[CARD_SIZES.length - 1]);
+}
+
 /** How wide the picker and the details columns are on a wide screen. */
 const PICKER_W = [140, 180];
 const DETAILS_W = [124, 150];
@@ -771,6 +793,7 @@ class Picker extends Phaser.GameObjects.Container {
   private probe: Phaser.GameObjects.BitmapText;
   private rows: number[] = [0, 0, 0];
   private boxW = 0;
+  private grid: CardGrid = cardGrid(PICKER_W[0]);
   private shown = false;
   private skin?: SkinPick;
   private note: string | null = null;
@@ -790,13 +813,14 @@ class Picker extends Phaser.GameObjects.Container {
     this.add([this.line, ...this.labels, ...this.values, this.lock, this.wheel, this.probe]);
   }
 
-  resize(w: number): void {
+  resize(w: number, grid: CardGrid): void {
     this.boxW = w;
+    this.grid = grid;
     this.shown = false;
     // Where each step's header sits.
     const s1 = 0;
     const s2 = s1 + STEP_HEAD + STEP_GAP + MEDAL + 2 + STEP_SPACE;
-    const s3 = s2 + STEP_HEAD + STEP_GAP + this.cardSize() + STEP_SPACE;
+    const s3 = s2 + STEP_HEAD + STEP_GAP + gridH(grid) + STEP_SPACE;
     this.rows = [s1, s2, s3];
     this.labels.forEach((l, i) => l.setPosition(INDENT, this.rows[i]));
     this.wheel.setPosition(INDENT - 2, s1 + STEP_HEAD + STEP_GAP);
@@ -813,20 +837,16 @@ class Picker extends Phaser.GameObjects.Container {
     }
   }
 
-  /** The biggest character cards for which four fit the column. */
-  private cardSize(): number {
-    const room = this.boxW - INDENT;
-    return CARD_SIZES.find((s) => s * 4 + CARD_GAP * 3 <= room) ?? CARD_SIZES[CARD_SIZES.length - 1];
-  }
-
   show(d: PickData): void {
     this.wheel.show(d.classes, d.classIndex, !this.shown);
     this.shown = true;
     this.setValue(0, d.className, GOLD);
     this.setValue(1, d.typeName, INK);
 
-    // Step two: a card per character, left to right.
-    const size = this.cardSize();
+    // Step two: a card per character, left to right, in as few rows as they
+    // fit and shared evenly between them (eight in two rows of four).
+    const { size, perRow } = this.grid;
+    const cols = Math.ceil(d.types.length / Math.ceil(d.types.length / perRow));
     while (this.cards.length < d.types.length) {
       const i = this.cards.length;
       const c = new Chip(this.scene, 2, () => this.calls.pickType(i));
@@ -837,8 +857,8 @@ class Picker extends Phaser.GameObjects.Container {
       c.setVisible(i < d.types.length);
       if (i >= d.types.length) return;
       c.resize(size);
-      c.x = INDENT + i * (size + CARD_GAP);
-      c.baseY = this.rows[1] + STEP_HEAD + STEP_GAP;
+      c.x = INDENT + (i % cols) * (size + CARD_GAP);
+      c.baseY = this.rows[1] + STEP_HEAD + STEP_GAP + Math.floor(i / cols) * (size + CARD_GAP);
       c.show(d.types[i], i === d.picked);
     });
 
@@ -1088,6 +1108,7 @@ interface Plan {
   pickerY: number;
   detailsX: number;
   detailsY: number;
+  cards: CardGrid;
 }
 
 /** Side by side: the picker on the left, the hero in the middle, the details on the right. Null when it can't fit. */
@@ -1096,7 +1117,9 @@ function widePlan(vw: number, vh: number): Plan | null {
   const detailsW = Math.round(Phaser.Math.Clamp(vw * 0.27, DETAILS_W[0], DETAILS_W[1]));
   const middle = vw - MARGIN * 2 - pickerW - detailsW - 16;
   const room = vh - TOP - MARGIN;
-  if (middle < 96 || room < Math.max(PICKER_H, detailsH(false))) return null;
+  const cards = cardGrid(pickerW, room - PICKER_FIXED);
+  const pickerH = PICKER_FIXED + gridH(cards);
+  if (middle < 96 || room < Math.max(pickerH, detailsH(false))) return null;
   const scale = HERO_SCALES.find((s) => HERO_TALL * s + 70 <= room && 24 * s <= middle - 8);
   if (!scale) return null;
   const pickerX = MARGIN + 2;
@@ -1111,9 +1134,10 @@ function widePlan(vw: number, vh: number): Plan | null {
     heroX,
     feet,
     pickerX,
-    pickerY: Math.round(TOP + (room - PICKER_H) / 2),
+    pickerY: Math.round(TOP + (room - pickerH) / 2),
     detailsX,
     detailsY: Math.round(TOP + (room - detailsH(false)) / 2),
+    cards,
   };
 }
 
@@ -1121,7 +1145,9 @@ function widePlan(vw: number, vh: number): Plan | null {
 function tallPlan(vw: number, vh: number): Plan | null {
   const w = Math.floor(Math.min(vw - MARGIN * 2, STACK_MAX));
   if (w < PICKER_W[0]) return null;
-  const below = PICKER_H + 12 + detailsH(true);
+  const cards = cardGrid(w);
+  const pickerH = PICKER_FIXED + gridH(cards);
+  const below = pickerH + 12 + detailsH(true);
   const room = vh - TOP - MARGIN - below - 12;
   const scale = HERO_SCALES.find((s) => HERO_TALL * s + 10 <= room && 24 * s <= w);
   if (!scale) return null;
@@ -1131,7 +1157,7 @@ function tallPlan(vw: number, vh: number): Plan | null {
   const top = Math.round(TOP + Math.max(0, (vh - TOP - MARGIN - heroRoom - 12 - below) / 2));
   const feet = top + Math.round((heroRoom + HERO_TALL * scale) / 2);
   const pickerY = top + heroRoom + 12;
-  return { wide: false, pickerW: w, detailsW: w, scale, heroX: Math.round(vw / 2), feet, pickerX: x, pickerY, detailsX: x, detailsY: pickerY + PICKER_H + 12 };
+  return { wide: false, pickerW: w, detailsW: w, scale, heroX: Math.round(vw / 2), feet, pickerX: x, pickerY, detailsX: x, detailsY: pickerY + pickerH + 12, cards };
 }
 
 /** The select page itself, opened over the home screen. */
@@ -1284,7 +1310,7 @@ export class SelectScene extends Phaser.Scene {
     const skins = look.type.skins ?? [];
     const looks: ChipLook[] = [null, ...skins].map((s) => {
       const d = worn(cls, { type: look.type, skin: s });
-      return { preview: d.preview, accent: d.accent, rarity: s ? RARITY_INFO[rarityOf(cls, s)].tint : null, locked: !ownsSkin(cls, s) };
+      return { preview: d.preview, accent: d.accent, rarity: s ? RARITY_INFO[rarityOf(s)].tint : null, locked: !ownsSkin(s) };
     });
     this.picker.show({
       classIndex: this.cls,
@@ -1301,14 +1327,14 @@ export class SelectScene extends Phaser.Scene {
         index: look.skin ? skins.indexOf(look.skin) + 1 : 0,
         locked: !!this.peek,
         looks,
-        rarity: look.skin ? RARITY_INFO[rarityOf(cls, look.skin)].tint : null,
+        rarity: look.skin ? RARITY_INFO[rarityOf(look.skin)].tint : null,
       },
       jump,
     });
     this.showHero(def.preview, def.accent, !!this.peek, pose, jump ? 0 : slide);
     // Stats and ability names are the character's own: a skin only changes the look.
     const ult = ultFor(def);
-    this.details.show(look.type.name, def.role, def.accent, heroStats(cls.id, look.type.id), [def.attack, def.special], def.buttons, {
+    this.details.show(look.type.name, def.role, def.accent, heroStats(def.id, look.type.id), [def.attack, def.special], def.buttons, {
       icon: ult.icon,
       name: ult.name,
       cost: ult.def.cost,
@@ -1398,7 +1424,7 @@ export class SelectScene extends Phaser.Scene {
     const next = i === 0 ? null : (type.skins?.[i - 1] ?? skin);
     if (this.leaving || next === (this.peek ?? skin)) return;
     // A skin not yet won can be looked at, not worn.
-    if (!ownsSkin(cls, next)) this.peek = next;
+    if (!ownsSkin(next)) this.peek = next;
     else {
       this.peek = null;
       setLook(cls, type, next);
@@ -1473,7 +1499,7 @@ export class SelectScene extends Phaser.Scene {
     for (const m of this.motes) this.spawnMote(m, true);
 
     this.picker.setPosition(plan.pickerX, plan.pickerY);
-    this.picker.resize(plan.pickerW);
+    this.picker.resize(plan.pickerW, plan.cards);
     if (!this.details || this.details.boxW !== plan.detailsW || this.details.wide !== !plan.wide) {
       this.details?.destroy();
       this.details = new Details(this, plan.detailsW, !plan.wide, () => this.startGame());

@@ -1,16 +1,36 @@
-// The Rogue's bust: the cutpurse, a charcoal hood pulled low, a crimson
-// scarf up over the nose, and only a pair of narrow, watchful eyes between.
+// The Duelist's bust: the Rogue and the Samurai in one. A charcoal hood
+// pulled low, a crimson scarf up over the nose and only a pair of narrow,
+// watchful eyes between, and a katana slung on his back, its wrapped hilt and
+// gold guard rising over his shoulder.
 
-import { hex, sphere, type Material, type PixelCanvas } from '../pixel';
+import { cyl, hex, sphere, type Material, type PixelCanvas } from '../pixel';
 import { EYE, SKIN } from '../palette';
 import { ROGUE_LOOK } from '../rogue';
+import { BLADEWIND_LOOK } from '../samurai';
 import { C, pair, shoulders } from './kit';
 
 /** The whites of the eyes, a little dimmed by the hood's shadow. */
 const WHITE: Material = { ramp: [hex('#8e8a98'), hex('#c8c4d0')], outline: hex('#0b0910'), noAO: true };
 
-export function rogueBust(c: PixelCanvas): void {
+export function duelistBust(c: PixelCanvas): void {
   const L = ROGUE_LOOK;
+  const K = BLADEWIND_LOOK;
+  // The katana first, so the hood and mantle lie over it: the scabbard's mouth
+  // at his right shoulder, the gold guard, then the grip rising up and out,
+  // bound in a diamond wrap, to a gold cap at the pommel.
+  c.part();
+  c.capsule(10.6, 24, 8.4, 20.6, 1.3, 1.2, K.hakama);
+  c.part();
+  c.capsule(8.6, 19.8, 4.6, 12.2, 1.2, 1.1, K.grip);
+  for (let i = 1; i < 5; i++) {
+    const k = i / 5;
+    c.px(8.6 - 4 * k, 19.8 - 7.6 * k, K.obi, sphere(-0.2, -0.2), { bias: -1 });
+  }
+  c.part();
+  c.ellipse(8.8, 20.4, 2.1, 1.2, K.tsuba, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 - 0.4, 1) });
+  c.part();
+  c.ellipse(4.3, 11.6, 1.2, 1.1, K.tsuba, { normal: (_x, _y, dx, dy) => sphere(dx, dy - 0.2) });
+  c.px(4, 11, K.tsuba, cyl(-0.6, -0.6), { bias: 1 });
   // The leather vest under the mantle.
   shoulders(c, L.vest, 25, 8, 17, 5);
   // A strap across the chest for the knives at his back, buckled in steel.

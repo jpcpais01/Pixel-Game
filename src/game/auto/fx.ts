@@ -340,7 +340,6 @@ export class FxLayer implements Stage {
       switch (kind) {
         case 'arrow':
         case 'lance':
-        case 'thread':
         case 'feather': {
           const len = kind === 'lance' ? 7 : kind === 'feather' ? 4 : 6;
           FxLayer.line(g, { x: p.x - cx * len, y: p.y - cy * len }, p, kind === 'arrow' ? 0xd8c8a8 : pal.mid);
@@ -558,9 +557,8 @@ export class FxLayer implements Stage {
         break;
       case 'thorns':
       case 'quake':
-      case 'haunt':
-      case 'strings': {
-        // Spikes (roots, stones, junk, threads) jut up across the area.
+      case 'haunt': {
+        // Spikes (roots, stones, junk) jut up across the area.
         const n = Math.round(6 + R / 3);
         const spikes = Array.from({ length: n }, () => {
           const a = Math.random() * Math.PI * 2;
@@ -570,12 +568,9 @@ export class FxLayer implements Stage {
         this.old(0.55, (g, _glow, k) => {
           const up = k < 0.25 ? k / 0.25 : k > 0.75 ? (1 - k) / 0.25 : 1;
           for (const s of spikes) {
-            if (fx === 'strings') FxLayer.line(g, { x: s.x, y: s.y - 60 }, { x: s.x, y: s.y - s.h * up }, pal.light, 0.7 * up);
-            else {
-              const col = fx === 'quake' ? 0x8a7a6a : fx === 'haunt' ? 0x9a7a5a : pal.deep;
-              FxLayer.line(g, { x: s.x, y: s.y }, { x: s.x, y: s.y - s.h * up }, col, 1, 2);
-              FxLayer.dot(g, s.x, s.y - s.h * up, fx === 'thorns' ? pal.hot : 0xd8ccb8);
-            }
+            const col = fx === 'quake' ? 0x8a7a6a : fx === 'haunt' ? 0x9a7a5a : pal.deep;
+            FxLayer.line(g, { x: s.x, y: s.y }, { x: s.x, y: s.y - s.h * up }, col, 1, 2);
+            FxLayer.dot(g, s.x, s.y - s.h * up, fx === 'thorns' ? pal.hot : 0xd8ccb8);
           }
         });
         break;

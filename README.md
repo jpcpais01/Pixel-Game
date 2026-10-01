@@ -6,7 +6,7 @@ A mobile-first, top-down pixel-art PvE game: walk with the joystick on the left,
 
 ## Heroes
 
-Thirteen classes: Wizard, Warrior, Paladin, Jedi, Fighter, Alchemist, Archer, Rogue, Necromancer, Bard, Chronomancer, Puppeteer and Samurai. A class comes in one or more types (the Wizard is an Arcanist or a Pyromancer), each with its own stats and abilities, and every type has skins that change its looks. Each hero has an attack, an ability and a Special, paid for with energy gathered by slaying monsters.
+Twelve classes: Mage, Warrior, Jedi, Alchemist, Ranger, Duelist, Necromancer, Mystic, Automaton, Phantom, Inventor and Nature. A class gathers several characters (the Mage is an Arcanist, a Pyromancer, a Tidecaller, a Timekeeper or a Paradox), each with its own stats and abilities, and every character has skins that change its looks. Each hero has an attack, an ability and a Special, paid for with energy gathered by slaying monsters.
 
 ## Arenas
 

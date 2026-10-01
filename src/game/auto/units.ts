@@ -31,7 +31,7 @@ export type SpellKind = 'bolt' | 'beam' | 'nova' | 'blast' | 'leap' | 'dash' | '
 /** How the fight draws a spell (see scenes/auto/fx.ts). */
 export type SpellFx =
   | 'arcane' | 'fire' | 'water' | 'holy' | 'light' | 'saber' | 'lightning' | 'fists' | 'quake' | 'poison' | 'acid'
-  | 'arrows' | 'knives' | 'shadow' | 'souls' | 'blood' | 'notes' | 'drums' | 'clock' | 'shards' | 'strings' | 'wind'
+  | 'arrows' | 'knives' | 'shadow' | 'souls' | 'blood' | 'notes' | 'drums' | 'clock' | 'shards' | 'wind'
   | 'thorns' | 'beasts' | 'spear' | 'missiles' | 'drones' | 'haunt' | 'fear' | 'bullets' | 'feathers' | 'roar' | 'flame' | 'steel';
 
 export interface Spell {
@@ -72,7 +72,7 @@ export interface Spell {
 /** A basic attack's missile, or none for a blow in reach. */
 export type Missile =
   | 'orb' | 'fire' | 'water' | 'flask' | 'chem' | 'arrow' | 'soul' | 'lance' | 'note' | 'hand' | 'shard'
-  | 'thread' | 'thorn' | 'bullet' | 'drone' | 'junk' | 'spark' | 'feather' | 'firebolt';
+  | 'thorn' | 'bullet' | 'drone' | 'junk' | 'spark' | 'feather' | 'firebolt';
 
 export interface UnitDef {
   /** `class.type`, as in HERO_STATS. */
@@ -175,12 +175,6 @@ const DEFS: Record<string, Def> = {
   'archer.wind': { cost: 2, origin: 'wild', range: 3, attack: ['fan'], missile: 'arrow', mana: 70,
     skill: { name: 'Wind vault', cd: 6, kind: 'beam', aim: 'target', r: 4, dmg: 1.8, knock: 1, dodge: 0.4, fx: 'wind', anim: 'vault' },
     ult: { kind: 'beam', aim: 'target', r: 5, dmg: 4.2, stun: 0.5, fx: 'wind', anim: 'fan' } },
-  'druid.grove': { cost: 2, origin: 'wild', range: 3, attack: ['cast'], missile: 'thorn', mana: 80,
-    skill: { name: 'Grove', cd: 7, kind: 'blast', aim: 'crowd', r: 1.1, dmg: 1, stun: 1.2, delay: 0.4, fx: 'thorns', anim: 'charge' },
-    ult: { kind: 'blast', aim: 'crowd', r: 2, dmg: 3.5, stun: 1.5, delay: 0.6, fx: 'thorns', anim: 'beam' } },
-  'druid.wild': { cost: 4, origin: 'wild', range: 1, attack: ['cast'], mana: 70,
-    skill: { name: 'Wolf leap', cd: 6, kind: 'leap', aim: 'crowd', r: 1.1, dmg: 2.2, fx: 'beasts', anim: 'charge' },
-    ult: { kind: 'beam', aim: 'target', r: 6, dmg: 4.5, knock: 1, fx: 'beasts', anim: 'beam' } },
   'beast.eagle': { cost: 2, origin: 'wild', range: 3, attack: ['fling', 'fling2'], missile: 'feather', mana: 70,
     skill: { name: 'Gust', cd: 6, kind: 'nova', aim: 'self', r: 1.5, dmg: 1, knock: 1, fx: 'wind', anim: 'gust' },
     ult: { kind: 'beam', aim: 'target', r: 7, dmg: 4, fx: 'feathers', anim: 'rally' } },
@@ -208,19 +202,19 @@ const DEFS: Record<string, Def> = {
     skill: { name: 'Sentry', cd: 7, kind: 'rain', aim: 'target', n: 5, dmg: 2.2, delay: 1.5, fx: 'bullets', anim: 'build' },
     ult: { kind: 'rain', aim: 'crowd', n: 14, dmg: 7, delay: 1.8, fx: 'missiles', anim: 'build' } },
 
-  // Showfolk
+  // Mystics: the Bard's and the Druid's
   'bard.minstrel': { cost: 1, origin: 'show', range: 3, attack: ['strum'], missile: 'note', mana: 80,
     skill: { name: 'Quick song', cd: 7, kind: 'mend', aim: 'self', r: 2, dmg: 0, heal: 0.1, haste: 0.25, dur: 3, fx: 'notes', anim: 'song' },
     ult: { kind: 'mend', aim: 'self', r: 9, dmg: 0, heal: 0.18, haste: 0.3, dur: 4, fx: 'notes', anim: 'song' } },
   'bard.drummer': { cost: 3, origin: 'show', range: 1, attack: ['beat', 'beat2', 'boom'], mana: 90,
     skill: { name: 'Great beat', cd: 7, kind: 'nova', aim: 'self', r: 1.5, dmg: 1.2, knock: 1, haste: 0.3, dur: 4, fx: 'drums', anim: 'boom' },
     ult: { kind: 'nova', aim: 'self', r: 2.2, dmg: 3.6, stun: 1, knock: 1, fx: 'drums', anim: 'roll' } },
-  'puppeteer.marionette': { cost: 2, origin: 'show', range: 2, attack: ['pull'], mana: 70,
-    skill: { name: 'Pirouette', cd: 6, kind: 'blast', aim: 'target', r: 1.1, dmg: 2, delay: 0.3, fx: 'strings', anim: 'twirl' },
-    ult: { kind: 'blast', aim: 'crowd', r: 1.6, dmg: 4.5, stun: 0.5, delay: 0.6, fx: 'strings', anim: 'twirl' } },
-  'puppeteer.weaver': { cost: 4, origin: 'show', range: 3, attack: ['lash'], missile: 'thread', mana: 90,
-    skill: { name: 'Snag', cd: 7, kind: 'blast', aim: 'crowd', r: 1.1, dmg: 1, stun: 1.5, delay: 0.3, fx: 'strings', anim: 'snag' },
-    ult: { kind: 'blast', aim: 'crowd', r: 2.6, dmg: 3.5, stun: 1.5, delay: 0.6, fx: 'strings', anim: 'weave' } },
+  'druid.grove': { cost: 2, origin: 'show', range: 3, attack: ['cast'], missile: 'thorn', mana: 80,
+    skill: { name: 'Grove', cd: 7, kind: 'blast', aim: 'crowd', r: 1.1, dmg: 1, stun: 1.2, delay: 0.4, fx: 'thorns', anim: 'charge' },
+    ult: { kind: 'blast', aim: 'crowd', r: 2, dmg: 3.5, stun: 1.5, delay: 0.6, fx: 'thorns', anim: 'beam' } },
+  'druid.wild': { cost: 4, origin: 'show', range: 1, attack: ['cast'], mana: 70,
+    skill: { name: 'Wolf leap', cd: 6, kind: 'leap', aim: 'crowd', r: 1.1, dmg: 2.2, fx: 'beasts', anim: 'charge' },
+    ult: { kind: 'beam', aim: 'target', r: 6, dmg: 4.5, knock: 1, fx: 'beasts', anim: 'beam' } },
 
   // Blademasters
   'fighter.brawler': { cost: 1, origin: 'blade', range: 1, attack: ['jab', 'cross', 'hook', 'upper'], mana: 70,
@@ -265,7 +259,7 @@ export const TRAITS: Record<TraitId, TraitDef> = {
   shadow: { id: 'shadow', name: 'Shadow', levels: [2, 4], text: ['Shadow crit 25% of blows', 'Shadow crit 45% of blows'], color: 0xb890ff },
   wild: { id: 'wild', name: 'Wild', levels: [2, 4], text: ['Wild attack 20% faster', 'Wild attack 45% faster'], color: 0x8ad65a },
   forged: { id: 'forged', name: 'Forged', levels: [2, 4], text: ['Forged gain 30 Defense', 'Forged gain 70 Defense'], color: 0xf0a63a },
-  show: { id: 'show', name: 'Showfolk', levels: [2, 4], text: ['Team heals 1.5% HP a second', 'Team heals 3% HP a second'], color: 0x3fd8c8 },
+  show: { id: 'show', name: 'Mystic', levels: [2, 4], text: ['Team heals 1.5% HP a second', 'Team heals 3% HP a second'], color: 0x3fd8c8 },
   blade: { id: 'blade', name: 'Blademaster', levels: [2, 4], text: ['25% chance to strike twice', '50% chance to strike twice'], color: 0xe8e8f4 },
   tank: { id: 'tank', name: 'Guardian', levels: [2, 4], text: ['Guardians gain 25% max HP', 'Guardians gain 60% max HP'], color: 0x9aa8c8 },
   melee: { id: 'melee', name: 'Fighter', levels: [2, 4], text: ['Fighters heal 15% of damage', 'Fighters heal 30% of damage'], color: 0xff7a5a },

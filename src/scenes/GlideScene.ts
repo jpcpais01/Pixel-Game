@@ -5,7 +5,8 @@ import { COLUMN_BASE, COLUMN_H } from '../art/island';
 import { GLIDER_H, GLIDER_HX, GLIDER_HY, GLIDER_W, PUFF_H, gliderSheet, isletBox } from '../art/glide';
 import { TREE_BASE_Y, TREE_H, PROP_BASE_Y, PROP_H } from '../art/trees';
 import { account } from '../game/cloud';
-import { CLASSES, characterById, classById, type Preview } from '../game/characters';
+import { CLASSES, characterById, type Preview } from '../game/characters';
+import { playedAs } from '../game/skins';
 import { collection } from '../game/collection';
 import { artZoom, snap } from '../game/display';
 import { sky } from '../game/LitPipeline';
@@ -118,14 +119,10 @@ interface Look {
   accent: number;
 }
 
-/** The look a player picked: `hero` a class id, `look` a type's or skin's id. */
+/** The look a player picked: `hero` a kit's id, `look` a type's or skin's id within it. */
 function lookOf(hero: string, look: string): Look {
-  const cls = classById(hero);
-  for (const t of cls.types) {
-    if (t.id === look) return { preview: t.preview, accent: t.accent };
-    for (const s of t.skins ?? []) if (s.id === look) return { preview: s.preview, accent: s.accent ?? t.accent };
-  }
-  return { preview: cls.types[0].preview, accent: cls.types[0].accent };
+  const ch = playedAs(hero, look);
+  return { preview: ch.preview, accent: ch.accent };
 }
 
 /** The wing's sheet in this colour, painted the first time it's needed. */
