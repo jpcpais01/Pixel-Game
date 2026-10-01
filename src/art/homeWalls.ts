@@ -329,6 +329,16 @@ function fenceFrame(c: PixelCanvas, mask: number, gate: boolean, H: number, bare
   const across = doorAcross(mask);
   const gap = (x: number) => bare && gate && Math.abs(x + 0.5 - 8) < DOOR_HW;
   const run = (x: number) => !gap(x) && (x < 8 ? !!(mask & 8) || x >= 7 : !!(mask & 2) || x <= 8);
+  // A post: two px square at (x0, y - 1..y), `h` tall, its cap catching the light. A point
+  // (x, y, z) of the cell is drawn at row H + y - z, so its face runs down from its cap.
+  const post = (x0: number, y: number, h: number) => {
+    for (let x = x0; x < x0 + 2; x++) {
+      const side = { x: x === x0 ? -0.3 : 0.3, y: -0.35, z: 0.88 };
+      for (let z = 0; z < h; z++) c.px(x, H + y - z, PICKET, side, { bias: (x === x0 ? 1 : 0) - (z < 2 ? 1 : 0) });
+      c.px(x, H + y - h, PICKET, TOP, { bias: 2 });
+      c.px(x, H + y - h - 1, PICKET, TOP, { bias: 1 });
+    }
+  };
   if (mask & 10 || !(mask & 5)) {
     // East-west: rails behind, pickets in front.
     const baseY = 9;
@@ -355,31 +365,43 @@ function fenceFrame(c: PixelCanvas, mask: number, gate: boolean, H: number, bare
       c.part();
       c.px(12, baseY + H - 6, IRON, FACE, { bias: 2 });
     }
-    if (gate && bare) {
-      // Two stout posts either side of the gap, a pixel taller than the pickets, their tops catching the light.
+    if (gate && bare && across) {
+      // Two stout posts either side of the gap, a pixel taller than the pickets.
       c.part();
-      for (const x0 of [8 - DOOR_HW - 2, 8 + DOOR_HW]) {
-        for (let x = x0; x < x0 + 2; x++) for (let z = 0; z <= H; z++) c.px(x, baseY + H - 1 - z, PICKET, z === H ? TOP : { x: x === x0 ? -0.3 : 0.3, y: -0.35, z: 0.88 }, { bias: z === H ? 2 : x === x0 ? 1 : 0 });
-      }
+      for (const x0 of [8 - DOOR_HW - 2, 8 + DOOR_HW]) post(x0, 8, H + 1);
     }
   }
-  if (mask & 5 && !across) {
-    // North-south: seen from above, a rail with the pickets' tips along it.
+  if (mask & 5 && !(gate && across)) {
+    // North-south: the pickets are seen edge on, one behind the next, so the
+    // run is a narrow strip: each row shows the front-most picket over it,
+    // its pointed tip bright, darkening down its edge, the rails a shade
+    // darker where they cross.
+    const inRun = (y: number) => (y <= 8 ? !!(mask & 1) : !!(mask & 4)) && !(gate && Math.abs(y + 0.5 - 8) < DOOR_HW);
+    const pickets: number[] = [];
+    for (let y = 1; y < CELL; y += 4) if (inRun(y)) pickets.push(y);
     c.part();
-    for (let y = 0; y < CELL; y++) {
-      if ((y < 8 && !(mask & 1)) || (y > 8 && !(mask & 4))) continue;
-      if (gate && Math.abs(y + 0.5 - 8) < DOOR_HW) continue;
-      c.px(7, y, PICKET, TOP, { bias: 1 });
-      if (y % 4 === 1) {
-        c.px(8, y, PICKET, TOP, { bias: 2 });
-        c.px(7, y, PICKET, TOP, { bias: 3 });
+    for (let r = 0; r < CELL + H; r++) {
+      let front = -1;
+      for (const y of pickets) if (y <= r && r <= y + H) front = y;
+      if (front < 0) continue;
+      const z = H + front - r;
+      const rail = z === 3 || z === H - 4;
+      for (const x of [7, 8]) {
+        const n = z === H ? TOP : { x: x === 7 ? -0.3 : 0.3, y: -0.35, z: 0.88 };
+        if (z === H && x === 8) continue;
+        c.px(x, r, PICKET, n, { bias: (z === H ? 2 : x === 7 ? 1 : 0) - (rail ? 1 : 0) - (z < 2 ? 1 : 0) });
       }
     }
-    // The south end's face, where the run stops.
-    if (!(mask & 4)) {
+    if (gate && bare) {
       c.part();
-      for (let z = 0; z < H; z++) c.px(7, CELL + H - 1 - z - 7, PICKET, FACE, { bias: 0 });
+      post(7, 2, H + 1);
+      post(7, 14, H + 1);
     }
+  }
+  // Where the fence turns, branches or stops, a stout post holds it.
+  if (mask !== 10 && mask !== 5 && !gate) {
+    c.part();
+    post(7, 8, H + 1);
   }
   return c;
 }
