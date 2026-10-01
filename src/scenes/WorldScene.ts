@@ -641,6 +641,9 @@ export class WorldScene extends Phaser.Scene {
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scene.stop('forestload'));
     }
     this.showBanner(arena.name);
+    // The minimap in the corner (and in the Everwood, the explorer's map).
+    this.scene.launch('map');
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scene.stop('map'));
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this));
 
@@ -769,6 +772,43 @@ export class WorldScene extends Phaser.Scene {
   /** The part of the world in view. */
   get viewRect(): Phaser.Geom.Rectangle {
     return this.view;
+  }
+
+  /** The Everwood, when this is it. */
+  get everwood(): Forest | null {
+    return this.forest;
+  }
+
+  /** The other players, for the minimap. */
+  get mates(): { x: number; y: number; accent: number; alive: boolean }[] {
+    return this.net?.mates() ?? [];
+  }
+
+  /**
+   * Travel to (x, y) at once (from the explorer's map, to a campfire rested
+   * at): the screen goes dark, the hero is there, and the world opens again
+   * once the ground round them is in. They rise there from now on.
+   */
+  travel(x: number, y: number): void {
+    if (this.downT > 0) return;
+    const cam = this.cameras.main;
+    cam.fadeOut(260, 7, 8, 13);
+    cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      if (!this.running) return;
+      this.hero.x = x;
+      this.hero.y = y;
+      this.setRisePoint(x, y);
+      this.pushX = this.pushY = 0;
+      this.followHero();
+      const open = () => {
+        cam.fadeIn(420, 7, 8, 13);
+        cam.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => cam.fadeEffect.reset());
+      };
+      if (this.forest) this.forest.prime(this.view, open);
+      else open();
+      this.debris([0xfffdf0, 0xffd08a, 0xff9a4a], snap(x), snap(y) - 12, 24, y + 20, 'spores');
+      sound.revive();
+    });
   }
 
   get arenaDef(): ArenaDef {
