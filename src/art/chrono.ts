@@ -79,8 +79,8 @@ export interface ChronoLook {
 const WHITE_HAIR: Material = { ramp: ramp('#6a6878', '#a4a2b0', '#d8d6e0', '#f8f8fc'), outline: hex('#24222e'), outlineLit: hex('#3a3846') };
 const BRASS: Material = { ramp: ramp('#3a2210', '#6a4418', '#a8742a', '#dcae4a', '#fff0b0'), outline: hex('#1e1006'), shine: true, noAO: true };
 const SILVER: Material = { ramp: ramp('#2a2e3a', '#4e5466', '#8a92a8', '#c8d0e0', '#ffffff'), outline: hex('#10121a'), shine: true, noAO: true };
-const STAFF_WOOD: Material = { ramp: ramp('#1a0e0a', '#321c12', '#4e2e1c', '#6a4028'), outline: hex('#0c0604') };
-const GLASS: Material = { ramp: ramp('#2a3440', '#4a5a6a', '#7a8e9e'), outline: hex('#141a22'), noAO: true };
+export const STAFF_WOOD: Material = { ramp: ramp('#1a0e0a', '#321c12', '#4e2e1c', '#6a4028'), outline: hex('#0c0604') };
+export const GLASS: Material = { ramp: ramp('#2a3440', '#4a5a6a', '#7a8e9e'), outline: hex('#141a22'), noAO: true };
 
 export const KEEPER_LOOK: ChronoLook = {
   key: 'chrono',

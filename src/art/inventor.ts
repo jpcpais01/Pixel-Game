@@ -42,14 +42,14 @@ const INK = hex('#120e1f');
 // ---------------------------------------------------------------------------
 // Materials
 
-const HARD_HAT: Material = { ramp: ramp('#5a3606', '#9e660c', '#dca218', '#f6cc3c', '#fff09c'), outline: hex('#241402'), outlineLit: hex('#3a2206'), shine: true };
-const DENIM: Material = { ramp: ramp('#0e1832', '#1a2c58', '#2a4684', '#4064aa', '#6488cc'), outline: INK, outlineLit: hex('#141c38') };
-const WORK_SHIRT: Material = { ramp: ramp('#3a1408', '#682410', '#9e3e1a', '#cc662e', '#ec9658'), outline: hex('#1a0804'), outlineLit: hex('#2a1008') };
+export const HARD_HAT: Material = { ramp: ramp('#5a3606', '#9e660c', '#dca218', '#f6cc3c', '#fff09c'), outline: hex('#241402'), outlineLit: hex('#3a2206'), shine: true };
+export const DENIM: Material = { ramp: ramp('#0e1832', '#1a2c58', '#2a4684', '#4064aa', '#6488cc'), outline: INK, outlineLit: hex('#141c38') };
+export const WORK_SHIRT: Material = { ramp: ramp('#3a1408', '#682410', '#9e3e1a', '#cc662e', '#ec9658'), outline: hex('#1a0804'), outlineLit: hex('#2a1008') };
 const PIPE_RED: Material = { ramp: ramp('#360606', '#6a1212', '#a82222', '#dc4636', '#f8826a'), outline: hex('#180202'), shine: true };
-const STEEL: Material = { ramp: ramp('#22262f', '#444a5a', '#737d93', '#aab4c8', '#e8eef8'), outline: hex('#0c0e14'), shine: true };
-const BRASS: Material = { ramp: ramp('#3a2210', '#6a4418', '#a8742a', '#dcae4a', '#fff0b0'), outline: hex('#1e1006'), shine: true, noAO: true };
+export const STEEL: Material = { ramp: ramp('#22262f', '#444a5a', '#737d93', '#aab4c8', '#e8eef8'), outline: hex('#0c0e14'), shine: true };
+export const BRASS: Material = { ramp: ramp('#3a2210', '#6a4418', '#a8742a', '#dcae4a', '#fff0b0'), outline: hex('#1e1006'), shine: true, noAO: true };
 const COPPER: Material = { ramp: ramp('#2a1208', '#4e2210', '#7a3a1a', '#b0602c', '#e09050'), outline: hex('#140804'), shine: true };
-const MOUSTACHE: Material = { ramp: ramp('#2a1406', '#4c2810', '#784220', '#a0643a'), outline: hex('#140a04') };
+export const MOUSTACHE: Material = { ramp: ramp('#2a1406', '#4c2810', '#784220', '#a0643a'), outline: hex('#140a04') };
 const LAMP: Material = { ramp: ramp('#b88838', '#ffe6a0', '#fffbe8'), outline: hex('#4a3410'), emissive: 1, noAO: true };
 const CRATE: Material = { ramp: ramp('#2e1a0c', '#523018', '#7a4c26', '#a4703c'), outline: hex('#140a04') };
 
@@ -59,7 +59,7 @@ const SLACKS: Material = { ramp: ramp('#15151c', '#25252f', '#383846', '#50505f'
 const GLOVE: Material = { ramp: ramp('#4a1804', '#883208', '#cc5c0e', '#f68c2a', '#ffc070'), outline: hex('#1e0a02'), shine: true };
 const BOW_TIE: Material = { ramp: ramp('#38060c', '#6c0e18', '#aa1c28', '#dc3a44'), outline: hex('#160204') };
 const DARK_HAIR: Material = { ramp: ramp('#100a08', '#221612', '#38261c', '#523e2c'), outline: hex('#060404') };
-const LENS: Material = { ramp: ramp('#0a4a66', '#1a90c0', '#50d4f8', '#b0f4ff'), outline: hex('#041c28'), emissive: 0.45, noAO: true, shine: true };
+export const LENS: Material = { ramp: ramp('#0a4a66', '#1a90c0', '#50d4f8', '#b0f4ff'), outline: hex('#041c28'), emissive: 0.45, noAO: true, shine: true };
 const BULB: Material = { ramp: ramp('#2a4a66', '#5a8eb4', '#a8e0ff', '#eaffff'), outline: hex('#0c1c2a'), emissive: 0.7, noAO: true, shine: true };
 
 const WILD_HAIR: Material = { ramp: ramp('#686c7c', '#a0a4b2', '#d2d6e0', '#f6f8ff'), outline: hex('#26283a'), outlineLit: hex('#3c3e52') };
