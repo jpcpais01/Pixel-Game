@@ -8,10 +8,13 @@
 
 import { hex, type RGB } from './pixel';
 
-export type PointerId = 'classic' | 'blade' | 'ranger' | 'ember' | 'starfall';
+export type PointerId = 'classic' | 'blade' | 'ranger' | 'ember' | 'starfall' | 'wand' | 'quill' | 'frost' | 'sakura' | 'void';
 
-/** What a pointer leaves behind: a ring on click, a sword's swish, falling leaves, fire, or a comet and its stars. */
-export type PointerFx = 'ripple' | 'slash' | 'leaves' | 'ember' | 'starfall';
+/**
+ * What a pointer leaves behind: a ring on click, a sword's swish, falling leaves, fire, a comet and its stars,
+ * a burst of gold sparkles, a splash of ink, snow and shattering ice, drifting blossom, or light pulled into the dark.
+ */
+export type PointerFx = 'ripple' | 'slash' | 'leaves' | 'ember' | 'starfall' | 'sparkle' | 'ink' | 'frost' | 'petals' | 'void';
 
 export interface PointerDef {
   id: PointerId;
@@ -29,6 +32,11 @@ export const POINTERS: PointerDef[] = [
   { id: 'ranger', name: 'Ranger', fx: 'leaves', heavy: false, accent: 0xb8e070 },
   { id: 'ember', name: 'Ember', fx: 'ember', heavy: true, accent: 0xff9a30 },
   { id: 'starfall', name: 'Starfall', fx: 'starfall', heavy: true, accent: 0xb48aff },
+  { id: 'wand', name: 'Wand', fx: 'sparkle', heavy: false, accent: 0xffd970 },
+  { id: 'quill', name: 'Quill', fx: 'ink', heavy: false, accent: 0x8ab4ff },
+  { id: 'frost', name: 'Frost', fx: 'frost', heavy: true, accent: 0x9ef0ff },
+  { id: 'sakura', name: 'Sakura', fx: 'petals', heavy: true, accent: 0xff9ec4 },
+  { id: 'void', name: 'Void', fx: 'void', heavy: false, accent: 0xc070ff },
 ];
 
 export const pointerDef = (id: string): PointerDef => POINTERS.find((p) => p.id === id) ?? POINTERS[0];
@@ -168,11 +176,130 @@ const starfallFill = (x: number, y: number, hover: boolean): RGB | null => {
   return hover ? lift(c, 0.18) : c;
 };
 
+/** A dark wand of plum wood with gold bands, a four-pointed star at its tip. */
+const wandFill = (x: number, y: number, hover: boolean): RGB | null => {
+  const t = x + y;
+  const s = x - y;
+  // The star, centred three px down the diagonal: a bright core, rays along the axes and the diagonal.
+  const dx = x - 3;
+  const dy = y - 3;
+  const ad = Math.abs(dx);
+  const ay = Math.abs(dy);
+  let star: RGB | null = null;
+  if (ad + ay === 0) star = hex('#ffffff');
+  else if (ad + ay === 1) star = hex('#fff6c8');
+  else if ((ad === 0 && ay === 2) || (ay === 0 && ad === 2)) star = hex('#ffd970');
+  else if (dx === dy && dx < 0) star = dx === -1 ? hex('#fff0a0') : dx === -2 ? hex('#ffd970') : hex('#e8a840');
+  else if ((ad === 0 && ay === 3) || (ay === 0 && ad === 3)) star = hex('#c88430');
+  if (star) return hover ? lift(star, 0.3) : star;
+  if (t < 9 || t > 26) return null;
+  if (s !== 0 && s !== 1) return null;
+  // Gold bands near the star and at the butt, a gold cap at the very end.
+  if (t === 9 || t === 10 || t === 21 || t >= 25) return s === 1 ? hex('#ffe08a') : hex('#c08030');
+  return s === 1 ? hex('#8a5aa0') : hex('#5a3470');
+};
+
+/** A writing quill: a gold nib, a white feather swept back, a pale blue sheen to its vane. */
+const quillFill = (x: number, y: number, hover: boolean): RGB | null => {
+  const t = x + y;
+  const s = x - y;
+  const a = Math.abs(s);
+  if (t <= 4) {
+    // The nib, split down its middle.
+    if (a > t >> 1) return null;
+    return s === 0 && t >= 2 ? hex('#5a3a18') : s > 0 ? hex('#fff0b4') : hex('#d89a3c');
+  }
+  if (t > 26) return null;
+  // The vane: broad above the shaft, narrow below, rounded at both ends, with a split or two in it.
+  const up = t < 9 ? t - 5 : t < 22 ? 4 : 26 - t;
+  const down = t < 10 ? 0 : t < 21 ? 2 : t < 24 ? 1 : 0;
+  // The shaft: a grey quill showing between the barbs.
+  if (s === 0) return t < 8 ? hex('#c8b090') : hex('#9aa4cc');
+  if (s > 0) {
+    if (s > up) return null;
+    // A ragged edge where the barbs part, and two splits cut into the vane.
+    if (s === up && up >= 3 && t % 3 === 0) return null;
+    if ((t === 13 || t === 19) && s >= 2) return null;
+    const c = s === up ? hex('#6a8ad8') : s === up - 1 ? hex('#a8c0ff') : t > 18 ? hex('#dce6ff') : hex('#ffffff');
+    return hover ? lift(c, 0.2) : c;
+  }
+  if (a > down) return null;
+  if (a === down && t % 3 === 1) return null;
+  return a === down ? hex('#7a94d8') : hex('#d0dcff');
+};
+
+/** An ice crystal: a spike of ice with two pairs of side branches, like one arm of a snowflake. */
+const frostFill = (x: number, y: number, hover: boolean): RGB | null => {
+  const t = x + y;
+  const s = x - y;
+  const a = Math.abs(s);
+  if (t > 24) return null;
+  let on = false;
+  if (t <= 2) on = a === 0 || (t === 2 && a <= 0);
+  else if (a <= 1) on = true;
+  // Branches across the spike, longer nearer the back.
+  if ((t === 7 || t === 8) && a <= 4) on = true;
+  if ((t === 14 || t === 15) && a <= 6) on = true;
+  // Little barbs angling forward off the branch ends.
+  if (t === 6 && a === 4) on = true;
+  if (t === 13 && a === 6) on = true;
+  if (t === 24 && a > 0) on = false;
+  if (!on) return null;
+  let c: RGB;
+  if (a === 0) c = t < 10 ? hex('#ffffff') : hex('#e4fbff');
+  else if (s > 0) c = a >= 3 ? hex('#7ad8f6') : hex('#c8f6ff');
+  else c = a >= 3 ? hex('#3a8ad0') : hex('#8ec8f0');
+  return hover ? lift(c, 0.25) : c;
+};
+
+/** A cherry twig: an open blossom at the tip, a bud and a leaf along the branch. */
+const sakuraFill = (x: number, y: number, hover: boolean): RGB | null => {
+  const t = x + y;
+  const s = x - y;
+  // The blossom: five round petals, one pointing at the tip, a gold heart.
+  const cx = 2.4;
+  const cy = 2.4;
+  const dx = x + 0.5 - cx - 0.5;
+  const dy = y + 0.5 - cy - 0.5;
+  const d = Math.hypot(dx, dy);
+  if (d <= 3.3) {
+    const ang = Math.atan2(dy, dx) + (Math.PI * 3) / 4;
+    const lobe = Math.cos(ang * 5);
+    if (d < 1.1) return hex('#ffe070');
+    if (d > 2.2 && lobe < -0.35) return null;
+    const c = d < 1.9 ? hex('#ff7aa8') : lobe > 0.4 ? hex('#fff0f6') : hex('#ffb8d4');
+    return hover ? lift(c, 0.2) : c;
+  }
+  // A bud on the upper side, a leaf on the lower.
+  if (t >= 13 && t <= 15 && s >= 2 && s <= 4) return t === 13 ? hex('#ffd0e0') : hex('#e8609a');
+  if (t >= 16 && t <= 19 && s <= -2 && s >= -4 && !(t === 19 && s === -4)) return s === -2 ? hex('#8ad068') : hex('#4a9a48');
+  // The twig, dark bark with a lit edge, from behind the blossom down and right.
+  if (t >= 7 && t <= 24 && (s === 0 || s === 1)) return s === 1 ? hex('#9a6a4a') : hex('#5a3828');
+  return null;
+};
+
+/** The arrow cut from obsidian, a violet light burning in its cracks. */
+const VOID: Record<string, RGB> = { w: hex('#7a6aa0'), a: hex('#463a64'), b: hex('#33284e'), c: hex('#261c3c'), d: hex('#1c142e'), e: hex('#140e22') };
+const voidArrow = grid(ARROW, VOID);
+const voidFill = (x: number, y: number, hover: boolean): RGB | null => {
+  const c = voidArrow(x, y);
+  if (!c) return null;
+  // A forking crack of light down the middle of the head.
+  const crack = (x === 1 && y === 3) || (x === 2 && (y === 4 || y === 5)) || (x === 3 && y === 6) || (x === 2 && y === 6) || (x === 4 && y === 7) || (x === 1 && y === 7);
+  if (crack) return hover ? hex('#ffe0ff') : y < 5 ? hex('#f0c8ff') : hex('#c070ff');
+  return hover ? lift(c, 0.12) : c;
+};
+
 const LOOKS: Record<PointerId, Look> = {
   classic: { fill: (x, y, h) => (h ? goldArrow : silverArrow)(x, y, h), ink: hex('#120e24'), hoverInk: hex('#3a1e08'), halo: hex('#ffd970') },
   blade: { fill: bladeFill, ink: hex('#0e0c20'), hoverInk: hex('#0a2a3a'), halo: hex('#7ae8ff') },
   ranger: { fill: rangerFill, ink: hex('#1a1008'), hoverInk: hex('#1c2a08'), halo: hex('#b8f070') },
   ember: { fill: emberFill, ink: hex('#2a0806'), hoverInk: hex('#5a1404'), halo: hex('#ff9a30') },
+  wand: { fill: wandFill, ink: hex('#1a0e24'), hoverInk: hex('#3a2408'), halo: hex('#ffd970') },
+  quill: { fill: quillFill, ink: hex('#0e1230'), hoverInk: hex('#1a2a60'), halo: hex('#8ab4ff') },
+  frost: { fill: frostFill, ink: hex('#0a1a36'), hoverInk: hex('#0e3050'), halo: hex('#bff4ff') },
+  sakura: { fill: sakuraFill, ink: hex('#2a0c1c'), hoverInk: hex('#4a1430'), halo: hex('#ffb0d0') },
+  void: { fill: voidFill, ink: hex('#8a4ad8'), hoverInk: hex('#e0b0ff'), halo: hex('#a050f0') },
   starfall: { fill: starfallFill, ink: hex('#160a36'), hoverInk: hex('#2a1260'), halo: hex('#d8b8ff') },
 };
 

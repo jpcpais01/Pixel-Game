@@ -4,8 +4,9 @@
 // it leaves behind on a small overlay canvas drawn at the pointer's own pixel
 // size: a ring or a swish on click for the light ones, and for the heavy
 // ones a fire that burns on the pointer and streams off it as it moves
-// (Ember), or a comet's tail, falling stars and two motes circling the
-// crystal (Starfall). The overlay only draws while something is alive on
+// (Ember), a comet's tail, falling stars and two motes circling the
+// crystal (Starfall), a breath of frost and drifting snow that shatters into
+// ice on a click (Frost), or cherry blossom shedding petals (Sakura). The overlay only draws while something is alive on
 // it, and phones and tablets (no mouse) get none of this.
 
 import type Phaser from 'phaser';
@@ -33,6 +34,13 @@ const STARS = ['#ffffff', '#9ef0ff', '#c8a8ff', '#9ef0ff', '#ffe08a'];
 const STAR_STEP = 6;
 const IDLE_STARS = 2.5;
 const ORBIT_S = 1.7;
+// Frost's snow and mist, Sakura's blossom.
+const SNOW_STEP = 7;
+const MIST_STEP = 2;
+const IDLE_SNOW = 3;
+const PETAL_STEP = 9;
+const IDLE_PETALS = 1.4;
+const PETALS = ['#ffd0e2', '#ffb0cc', '#ff8ab4', '#fff0f6'];
 
 const FLAME = 0;
 const EMBER = 1;
@@ -45,6 +53,13 @@ const LEAF = 7;
 const GLINT = 8;
 const SLASH = 9;
 const FLASH = 10;
+const SPARKLE = 11;
+const INK = 12;
+const SNOW = 13;
+const MIST = 14;
+const PETAL = 15;
+const SUCK = 16;
+const ICE = 17;
 
 interface Part {
   x: number;
@@ -120,6 +135,8 @@ class PointerFx {
   /** px moved since the last flame or star. */
   private carry = 0;
   private starCarry = 0;
+  private snowCarry = 0;
+  private mistCarry = 0;
   private idle = 0;
   private hover = false;
   private raf = 0;
@@ -235,6 +252,18 @@ class PointerFx {
         const f = (i + 1) / n;
         this.flame(x - dx * (1 - f), y - dy * (1 - f), -dx * 2, -dy * 2, false);
       }
+    } else if (this.def.fx === 'frost' && d > 0) {
+      // A breath of frost along the way, and now and then a flake drifting down from it.
+      this.mistCarry += d;
+      this.snowCarry += d;
+      for (; this.mistCarry > MIST_STEP; this.mistCarry -= MIST_STEP) {
+        const f = Math.random();
+        this.add(MIST, x - dx * f + rand(0, 5), y - dy * f + rand(0, 5), rand(-4, 4), rand(-3, 6), rand(0.25, 0.5), Math.random(), 1);
+      }
+      for (; this.snowCarry > SNOW_STEP; this.snowCarry -= SNOW_STEP) this.snow(x - dx * Math.random() + rand(-2, 6), y - dy * Math.random() + rand(-2, 6));
+    } else if (this.def.fx === 'petals' && d > 0) {
+      this.snowCarry += d;
+      for (; this.snowCarry > PETAL_STEP; this.snowCarry -= PETAL_STEP) this.petal(x - dx * Math.random() + rand(0, 5), y - dy * Math.random() + rand(0, 5), -dx * 0.8, -dy * 0.8);
     } else if (this.def.fx === 'starfall') {
       this.trail.push({ x, y, t: this.now });
       this.starCarry += d;
@@ -279,6 +308,53 @@ class PointerFx {
         }
         for (let i = 0; i < 10; i++) this.flame(x + rand(-3, 3), y + rand(-2, 4), rand(-20, 20), rand(-40, -10), false);
         break;
+      case 'sparkle':
+        // A puff of gold twinkles off the star.
+        this.add(FLASH, x + 3, y + 3, 0, 0, 0.14, 0, 1);
+        for (let i = 0; i < 12; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const v = rand(30, 85);
+          this.add(SPARKLE, x + 3, y + 3, Math.cos(a) * v, Math.sin(a) * v, rand(0.35, 0.7), Math.random(), 1);
+        }
+        break;
+      case 'ink':
+        // A splash of ink from the nib: drops thrown up and falling.
+        for (let i = 0; i < 9; i++) {
+          const a = -Math.PI / 2 + rand(-1.3, 1.3);
+          const v = rand(25, 70);
+          this.add(INK, x + rand(0, 2), y + rand(0, 2), Math.cos(a) * v, Math.sin(a) * v, rand(0.45, 0.75), Math.random(), Math.random() < 0.4 ? 2 : 1);
+        }
+        this.add(RING, x, y, 0, 0, 0.2, 4, 1);
+        break;
+      case 'frost':
+        // The ice shatters: shards flung out and falling, a ring of rime, a flurry.
+        this.add(RING, x, y, 0, 0, 0.32, 11, 1);
+        this.add(FLASH, x, y, 0, 0, 0.12, 0, 1);
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2 + rand(-0.2, 0.2);
+          const v = rand(50, 100);
+          this.add(ICE, x, y, Math.cos(a) * v, Math.sin(a) * v - 15, rand(0.35, 0.6), Math.random(), 1);
+        }
+        for (let i = 0; i < 6; i++) this.snow(x + rand(-8, 8), y + rand(-8, 4));
+        break;
+      case 'petals':
+        this.add(RING, x, y, 0, 0, 0.3, 8, 1);
+        for (let i = 0; i < 10; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const v = rand(25, 60);
+          this.petal(x + 2, y + 2, Math.cos(a) * v, Math.sin(a) * v - 20);
+        }
+        break;
+      case 'void':
+        // Light is drawn in from all round into the tip, then a dark ring breaks outward.
+        for (let i = 0; i < 14; i++) {
+          const a = (i / 14) * Math.PI * 2 + rand(-0.2, 0.2);
+          const r = rand(9, 14);
+          const life = rand(0.22, 0.32);
+          this.add(SUCK, x + Math.cos(a) * r, y + Math.sin(a) * r, (-Math.cos(a) * r) / life, (-Math.sin(a) * r) / life, life, Math.random(), 1);
+        }
+        this.add(RING, x, y, 0, 0, 0.8, 10, 0.5);
+        break;
       case 'starfall':
         this.add(RING, x, y, 0, 0, 0.4, 13, 0);
         this.add(RING, x, y, 0, 0, 0.55, 8, 0.5);
@@ -317,6 +393,14 @@ class PointerFx {
     );
   }
 
+  private snow(x: number, y: number): void {
+    this.add(SNOW, x, y, rand(-4, 4), rand(8, 16), rand(1.1, 1.8), Math.random(), Math.random() < 0.3 ? 2 : 1);
+  }
+
+  private petal(x: number, y: number, vx: number, vy: number): void {
+    this.add(PETAL, x, y, vx * 0.3 + rand(-8, 8), vy * 0.3 + rand(-6, 4), rand(1.3, 2), Math.random(), 1);
+  }
+
   private star(x: number, y: number): void {
     this.add(STAR, x, y, rand(-5, 5), rand(6, 20), rand(0.7, 1.2), Math.random(), 1);
   }
@@ -348,6 +432,13 @@ class PointerFx {
       if (fx === 'ember') {
         this.idle += dt * IDLE_FLAMES;
         for (; this.idle >= 1; this.idle--) this.flame(this.x, this.y, 0, 0, true);
+      } else if (fx === 'frost') {
+        this.idle += dt * IDLE_SNOW;
+        for (; this.idle >= 1; this.idle--) this.snow(this.x + rand(-2, 10), this.y + rand(0, 10));
+      } else if (fx === 'petals') {
+        // Now and then a petal lets go of the blossom.
+        this.idle += dt * IDLE_PETALS;
+        for (; this.idle >= 1; this.idle--) this.petal(this.x + rand(1, 5), this.y + rand(1, 5), 0, 0);
       } else if (fx === 'starfall') {
         this.idle += dt * IDLE_STARS;
         for (; this.idle >= 1; this.idle--) this.star(this.x + rand(-2, 12), this.y + rand(-2, 12));
@@ -391,8 +482,29 @@ class PointerFx {
           p.vy = Math.min(p.vy + 70 * dt, 22);
           break;
         case GLINT:
-          p.vx *= 1 - dt * 6;
-          p.vy *= 1 - dt * 6;
+        case SPARKLE:
+          p.vx *= 1 - dt * (p.kind === GLINT ? 6 : 4);
+          p.vy *= 1 - dt * (p.kind === GLINT ? 6 : 4);
+          break;
+        case INK:
+          p.vx *= 1 - dt * 1.5;
+          p.vy += 140 * dt;
+          break;
+        case ICE:
+          p.vx *= 1 - dt * 2.5;
+          p.vy = p.vy * (1 - dt * 2.5) + 110 * dt;
+          break;
+        case SNOW:
+          p.vx = Math.sin(p.age * 3 + p.seed * 6) * 7;
+          break;
+        case MIST:
+          p.vx *= 1 - dt * 3;
+          p.vy *= 1 - dt * 3;
+          break;
+        case PETAL:
+          // Drifts down, swinging side to side as it goes.
+          p.vx = p.vx * (1 - dt * 1.8) + Math.sin(p.age * 4 + p.seed * 6) * 30 * dt;
+          p.vy = Math.min(p.vy + 30 * dt, 14);
           break;
       }
       p.x += p.vx * dt;
@@ -424,6 +536,22 @@ class PointerFx {
         const flat = Math.sin(p.age * 9 + p.seed * 9) > -0.3;
         dot(p.x, p.y, c);
         dot(p.x + (flat ? 1 : 0), p.y + (flat ? 0 : 1), flat ? c : '#4a7a2a');
+      } else if (p.kind === INK) {
+        ctx.globalAlpha = f > 0.7 ? (1 - f) / 0.3 : 1;
+        dot(p.x, p.y, '#1a2460', p.size);
+        // A glint of the light on a big drop.
+        if (p.size > 1) dot(p.x, p.y, '#6a8ae0');
+      } else if (p.kind === PETAL) {
+        ctx.globalAlpha = f > 0.8 ? (1 - f) * 5 : 1;
+        const c = PETALS[Math.floor(p.seed * PETALS.length)];
+        // A petal tumbling: open (three pixels and a deeper pink tip), then edge on, then its underside.
+        const turn = Math.sin(p.age * 5 + p.seed * 9);
+        dot(p.x, p.y, c);
+        if (turn > 0.3) {
+          dot(p.x + 1, p.y, c);
+          dot(p.x, p.y + 1, c);
+          dot(p.x + 1, p.y + 1, '#e8609a');
+        } else if (turn < -0.3) dot(p.x + 1, p.y + 1, '#e8609a');
       }
     }
     ctx.globalAlpha = 1;
@@ -483,8 +611,56 @@ class PointerFx {
         case SLASH:
           this.drawSlash(p, f, dot);
           break;
+        case SPARKLE: {
+          const c = f < 0.3 ? '#ffffff' : p.seed < 0.5 ? '#ffe08a' : '#ffb84a';
+          ctx.globalAlpha = f > 0.6 ? (1 - f) / 0.4 : 1;
+          dot(p.x, p.y, c);
+          // Twinkles into a little cross now and then.
+          if (Math.floor(p.age * 12 + p.seed * 5) % 3 === 0) {
+            ctx.globalAlpha *= 0.55;
+            dot(p.x - 1, p.y, c);
+            dot(p.x + 1, p.y, c);
+            dot(p.x, p.y - 1, c);
+            dot(p.x, p.y + 1, c);
+          }
+          ctx.globalAlpha = 1;
+          break;
+        }
+        case SNOW: {
+          ctx.globalAlpha = f > 0.75 ? (1 - f) * 4 : f < 0.1 ? f * 10 : 1;
+          const c = p.seed < 0.6 ? '#ffffff' : '#bff4ff';
+          if (p.size > 1) {
+            // A proper flake: a little six-armed cross.
+            ctx.globalAlpha *= 0.85;
+            dot(p.x, p.y, '#ffffff');
+            dot(p.x - 1, p.y, c);
+            dot(p.x + 1, p.y, c);
+            dot(p.x, p.y - 1, c);
+            dot(p.x, p.y + 1, c);
+          } else dot(p.x, p.y, c);
+          ctx.globalAlpha = 1;
+          break;
+        }
+        case MIST:
+          ctx.globalAlpha = 0.55 * (1 - f);
+          dot(p.x, p.y, f < 0.4 ? '#d8faff' : '#5ab8e0');
+          ctx.globalAlpha = 1;
+          break;
+        case ICE: {
+          const c = f < 0.3 ? '#ffffff' : f < 0.7 ? '#bff4ff' : '#4a9ad8';
+          dot(p.x, p.y, c);
+          dot(p.x - p.vx * 0.018, p.y - p.vy * 0.018, f < 0.5 ? '#7ad8f6' : '#2a5a9a');
+          break;
+        }
+        case SUCK: {
+          // Bright as it nears the tip.
+          const c = f < 0.4 ? '#6a2aa8' : f < 0.75 ? '#c070ff' : '#f4d8ff';
+          dot(p.x, p.y, c);
+          dot(p.x - p.vx * 0.02, p.y - p.vy * 0.02, '#3a1468');
+          break;
+        }
         case FLASH: {
-          const c = this.def.fx === 'ember' ? '#fff0a0' : '#ffffff';
+          const c = this.def.fx === 'ember' || this.def.fx === 'sparkle' ? '#fff0a0' : '#ffffff';
           const r = f < 0.5 ? 3 : 2;
           for (let i = -r; i <= r; i++) {
             dot(p.x + i, p.y, c);
@@ -542,7 +718,7 @@ class PointerFx {
     const r = Math.max(1, Math.round(p.seed * (1 - (1 - g) * (1 - g))));
     const fx = this.def.fx;
     const pal =
-      fx === 'ember' ? ['#ffe070', '#ff8a28', '#a82418'] : fx === 'starfall' ? (p.size < 1 ? ['#e0c8ff', '#9a7aff', '#4a2a90'] : ['#ffffff', '#8ee4ff', '#5a6ac8']) : fx === 'leaves' ? ['#e0f8a0', '#7ab048', '#3a5a20'] : ['#ffffff', '#c9cce4', '#6a6e9a'];
+      fx === 'ember' ? ['#ffe070', '#ff8a28', '#a82418'] : fx === 'frost' ? ['#ffffff', '#9ef0ff', '#3a8ad0'] : fx === 'petals' ? ['#fff0f6', '#ff9ec4', '#b04a7a'] : fx === 'ink' ? ['#8ab4ff', '#4a68c8', '#1a2460'] : fx === 'void' ? ['#f0c8ff', '#a050f0', '#3a1468'] : fx === 'starfall' ? (p.size < 1 ? ['#e0c8ff', '#9a7aff', '#4a2a90'] : ['#ffffff', '#8ee4ff', '#5a6ac8']) : fx === 'leaves' ? ['#e0f8a0', '#7ab048', '#3a5a20'] : ['#ffffff', '#c9cce4', '#6a6e9a'];
     const c = pal[Math.min(2, Math.floor(g * 3))];
     // Midpoint circle.
     let x = r;
