@@ -1,13 +1,11 @@
 import Phaser from 'phaser';
 import { textureSteps } from '../art/textures';
-import { lazyHeroSheets, warmHeroSheets } from '../art/heroLoader';
+import { lazyHeroSheets, warmHeroSheetsLater } from '../art/heroLoader';
 import { CLASSES } from '../game/characters';
 import { lastHero, lastLookOf, worn } from '../game/skins';
 import { buildPixelFont } from '../art/font';
 import { registerGemArt } from '../art/shop';
 import { registerCandyArt } from '../art/candy';
-import { GroundStreamer } from '../world/GroundStreamer';
-import { CLEARING_GROUND } from '../world/clearing';
 
 /** The loading screen in index.html, while it's up. */
 declare global {
@@ -46,12 +44,14 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     buildPixelFont(this);
-    // The heroes are built by workers meanwhile, the looks each class wears
-    // first (the hero select shows them all), the last one played before those.
+    // The heroes are built by workers once the home screen has settled (see
+    // startHeroWarm), the looks each class wears first (the hero select shows
+    // them all), the last one played before those. Until then a look is built
+    // when it's first shown.
     lazyHeroSheets(this);
     const last = lastHero();
     const classes = [...CLASSES].sort((a, b) => (a.id === last ? -1 : b.id === last ? 1 : 0));
-    warmHeroSheets(this.game, [
+    warmHeroSheetsLater(this.game, [
       ...classes.map((c) => worn(c).preview.texture),
       ...classes.flatMap((c) => c.types.map((t) => worn(c, lastLookOf(c, t)).preview.texture)),
     ]);
@@ -83,9 +83,8 @@ export class BootScene extends Phaser.Scene {
     }
     registerGemArt(this);
     registerCandyArt(this);
-    window.bootLoader?.progress(0.96);
-    // The first arena's ground; the arena select warms up the others while the player picks.
-    GroundStreamer.prebuild(this, CLEARING_GROUND, 0, CLEARING_GROUND.h);
+    // No arena is built here: each is built on the way into it (the menus
+    // warm the last one's ground; painted ones have loading screens).
     window.bootLoader?.progress(1);
     this.scene.start('home');
     this.scene.launch('sound');

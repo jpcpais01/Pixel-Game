@@ -22,6 +22,7 @@ import { RiftScene } from './scenes/RiftScene';
 import { OmenScene } from './scenes/OmenScene';
 import { FishScene } from './scenes/FishScene';
 import { ForestLoadScene } from './scenes/ForestLoadScene';
+import { ArenaLoadScene } from './scenes/ArenaLoadScene';
 import { InventoryScene } from './scenes/InventoryScene';
 import { ShopScene } from './scenes/ShopScene';
 import { settings } from './game/settings';
@@ -72,7 +73,7 @@ const game = new Phaser.Game({
   // Right click is the normal ability on a computer, so no browser menu over the game.
   disableContextMenu: true,
   // Later scenes draw on top.
-  scene: [BootScene, HomeScene, ModeScene, SelectScene, AutoScene, InventoryScene, ShopScene, ArenaScene, WorldScene, GlideScene, ShadeScene, UIScene, MapScene, GlideUIScene, RiftScene, OmenScene, FishScene, ForestLoadScene, PauseScene, SoundScene, FpsScene],
+  scene: [BootScene, HomeScene, ModeScene, SelectScene, AutoScene, InventoryScene, ShopScene, ArenaScene, WorldScene, GlideScene, ShadeScene, UIScene, MapScene, GlideUIScene, RiftScene, OmenScene, FishScene, ForestLoadScene, ArenaLoadScene, PauseScene, SoundScene, FpsScene],
 });
 game.events.once(Phaser.Core.Events.READY, () => watchCanvas(game.canvas));
 

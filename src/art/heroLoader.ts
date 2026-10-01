@@ -132,6 +132,25 @@ export function lazyHeroSheets(scene: Phaser.Scene): void {
   };
 }
 
+let later: { game: Phaser.Game; first: string[] } | null = null;
+
+/** Build every look in the background (see warmHeroSheets), once startHeroWarm says so. */
+export function warmHeroSheetsLater(game: Phaser.Game, first: string[]): void {
+  later = { game, first };
+}
+
+/**
+ * Start the background build put off by warmHeroSheetsLater; once only. The
+ * home screen calls it after its first seconds, so they aren't spent
+ * uploading sheets, and every menu past it at once.
+ */
+export function startHeroWarm(): void {
+  if (!later) return;
+  const { game, first } = later;
+  later = null;
+  warmHeroSheets(game, first);
+}
+
 /**
  * Build every look in the background, `first` before the rest: in workers
  * when the browser has them, else one look a frame here. Each finished look

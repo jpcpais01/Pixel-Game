@@ -4,7 +4,8 @@ import { LOGO_FRAMES, mythsLogo, sparkleBitmap } from '../art/logo';
 import { type Backdrop, makeBackdrop } from './homeBackdrops';
 import { BUTTON_GEM, BUTTON_GOLD, BUTTON_PLAIN, PANEL_PICKED, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { collection } from '../game/collection';
-import { warmArenasInBackground } from '../world/arenas';
+import { warmArenasAhead } from '../world/arenas';
+import { startHeroWarm } from '../art/heroLoader';
 import { sound } from '../audio';
 import { account, cloudReady, logOut, onAccount } from '../game/cloud';
 import { openAccountForm } from '../ui/accountForm';
@@ -16,12 +17,15 @@ import { lastHero } from '../game/skins';
 const SHIMMER_EVERY = 5200;
 const SHIMMER_FRAME = 45;
 /**
- * ms a frame spent loading the last arena played while the player is on the
- * menus (the home screen keeps running under the hero, arena, shop and
- * inventory pages), so a run there starts at once. A worker draws it; this
- * is only turning its pixels into textures.
+ * ms a frame spent on the world map and the last arena's ground once the
+ * player is on the menus (the home screen keeps running under the hero,
+ * arena, shop and inventory pages), so the arena select opens at once. Not
+ * while the home screen itself shows: its first seconds stay smooth. Painted
+ * arenas are built behind their own loading screens (ArenaLoadScene).
  */
 const WARM_MS = 4;
+/** ms of the home screen before the heroes' sheets start coming in (at once, if the player moves on sooner). */
+const HEROES_AFTER = 2500;
 /** How long the daily gift's banner stays up. */
 const GIFT_TIME = 3600;
 
@@ -314,7 +318,8 @@ export class HomeScene extends Phaser.Scene {
 
   update(time: number, dt: number): void {
     this.elapsed += dt;
-    if (!this.arenasWarm) this.arenasWarm = warmArenasInBackground(this, WARM_MS);
+    if (this.elapsed > HEROES_AFTER || !this.menu.visible) startHeroWarm();
+    if (!this.arenasWarm && !this.menu.visible) this.arenasWarm = warmArenasAhead(this, WARM_MS);
     const t = this.elapsed / 1000;
     this.backdrop.update(time, t);
 
