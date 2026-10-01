@@ -19,6 +19,17 @@ const CARD_GAP = 8;
 const RESULT_W = 176;
 const RESULT_H = 116;
 const CHAMP_W = 120;
+/**
+ * The wave plate: the wave on the left, the foes left on the right, a gold
+ * diamond between. It grows with its words (in steps, so it doesn't twitch as
+ * the count ticks down) and never narrower than HUD_MIN.
+ */
+const HUD_MIN = 92;
+const HUD_H = 18;
+const HUD_PAD = 7;
+/** Room for the diamond between the two words. */
+const HUD_GAP = 13;
+const HUD_STEP = 8;
 /** How long a flashed call stays up, and how long the results wait after the fall. */
 const CALL_TIME = 1700;
 const RESULTS_DELAY = 1600;
@@ -43,6 +54,8 @@ export class RiftScene extends Phaser.Scene {
   private waveText!: Phaser.GameObjects.BitmapText;
   private leftText!: Phaser.GameObjects.BitmapText;
   private hudPanel!: Phaser.GameObjects.Image;
+  private hudGem!: Phaser.GameObjects.Graphics;
+  private hudW = HUD_MIN;
   private icons: Phaser.GameObjects.Container | null = null;
   private iconsKey = '';
   /** Hard or Impossible, on a plate under the wave (nothing on Normal). */
@@ -82,7 +95,13 @@ export class RiftScene extends Phaser.Scene {
     this.clock = 0;
     this.cameras.main.setOrigin(0, 0);
 
-    this.hudPanel = this.add.image(0, 0, panelTexture(this, 'rift_hud', 92, 18, PANEL)).setOrigin(0);
+    this.hudW = HUD_MIN;
+    this.hudPanel = this.add.image(0, 0, panelTexture(this, 'rift_hud', HUD_MIN, HUD_H, PANEL)).setOrigin(0);
+    // A small gold diamond with a lit top-left edge, between the wave and the count.
+    this.hudGem = this.add.graphics();
+    this.hudGem.fillStyle(0x5a3a10).fillRect(-1, -2, 3, 5).fillRect(-2, -1, 5, 3);
+    this.hudGem.fillStyle(GOLD).fillRect(0, -1, 1, 3).fillRect(-1, 0, 3, 1);
+    this.hudGem.fillStyle(0xfff2c0).fillRect(0, -1, 1, 1);
     this.waveText = pixelText(this, 0, 0, '', GOLD);
     this.leftText = pixelText(this, 0, 0, '', LAVENDER);
     this.champName = pixelText(this, 0, 0, '', MAGENTA);
@@ -126,7 +145,7 @@ export class RiftScene extends Phaser.Scene {
     const over = riftHud.phase === 'over';
     this.waveText.setText(`WAVE ${Math.max(1, riftHud.wave)}`);
     this.leftText.setText(riftHud.phase === 'fight' || riftHud.phase === 'intro' ? `${riftHud.left} ${riftHud.left === 1 ? 'FOE' : 'FOES'}` : riftHud.phase === 'over' ? '' : 'CLEAR');
-    for (const o of [this.hudPanel, this.waveText, this.leftText]) o.setVisible(!over);
+    for (const o of [this.hudPanel, this.waveText, this.leftText, this.hudGem]) o.setVisible(!over);
     this.updateTag(over);
     this.placeHud();
 
@@ -167,10 +186,21 @@ export class RiftScene extends Phaser.Scene {
 
   private placeHud(): void {
     const top = Math.ceil(fpsBottom() / this.z) + 3;
-    const px = Math.round((this.vw - 92) / 2);
+    // Wide enough for both words with the diamond between them, however big the wave gets.
+    const need = HUD_PAD * 2 + this.waveText.width + HUD_GAP + this.leftText.width;
+    const w = Math.max(HUD_MIN, Math.ceil(need / HUD_STEP) * HUD_STEP);
+    if (w !== this.hudW) {
+      this.hudW = w;
+      this.hudPanel.setTexture(panelTexture(this, 'rift_hud', w, HUD_H, PANEL));
+    }
+    const px = Math.round((this.vw - w) / 2);
     this.hudPanel.setPosition(px, top);
-    this.waveText.setPosition(px + 7, top + 5);
-    this.leftText.setPosition(px + 92 - 7 - this.leftText.width, top + 5);
+    const wx = px + HUD_PAD;
+    const lx = px + w - HUD_PAD - this.leftText.width;
+    this.waveText.setPosition(wx, top + 5);
+    this.leftText.setPosition(lx, top + 5);
+    // The diamond sits in the middle of the space between them.
+    this.hudGem.setPosition(Math.round((wx + this.waveText.width + lx) / 2), top + 9).setVisible(this.hudPanel.visible && this.leftText.text !== '');
     // The difficulty's plate hangs just under the wave, and the rest moves down for it.
     const below = top + (this.tag ? 17 : 0);
     this.tag?.setPosition(Math.round((this.vw - this.tagW) / 2), top + 17);
