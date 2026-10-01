@@ -10,6 +10,12 @@ export class Mixer {
   readonly crowd: GainNode;
   /** Reverb send: connect anything here to put it in the space. */
   readonly reverb: GainNode;
+  /**
+   * The music's way into the reverb. The reverb returns straight to the master,
+   * so music sent to it directly skipped the music slider and its echo still
+   * played at zero; this send follows the slider instead.
+   */
+  readonly musicVerb: GainNode;
   readonly white: AudioBuffer;
   readonly pink: AudioBuffer;
 
@@ -40,6 +46,7 @@ export class Mixer {
     conv.buffer = impulse(ctx, 1.8);
     this.reverb = gain(ctx, 1, conv);
     conv.connect(gain(ctx, 0.5, this.master));
+    this.musicVerb = gain(ctx, 1, this.reverb);
 
     this.white = noise(ctx, 2, false);
     this.pink = noise(ctx, 6, true);

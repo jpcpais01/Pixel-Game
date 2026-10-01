@@ -41,15 +41,16 @@ export class Music {
   private phrases: (number | null)[][] = [];
   private melIdx = 3;
   /** Where this track plays into: its own level on the music bus, so it can fade out while another fades in. */
-  private out: AudioNode;
+  private out: GainNode;
 
   constructor(m: Mixer, out: AudioNode = m.music) {
     this.m = m;
-    this.out = out;
     const ctx = m.ctx;
+    // Its own fade-in level, so starting up never touches the music bus the slider sets.
+    this.out = out = gain(ctx, 1, out);
 
     const padOut = gain(ctx, 1, out);
-    padOut.connect(m.reverb);
+    padOut.connect(m.musicVerb);
     this.pad = filter(ctx, 'lowpass', 1100, 0.4, padOut);
     // The filter drifts open and closed over half a minute.
     const drift = gain(ctx, 380, this.pad.frequency);
@@ -59,7 +60,7 @@ export class Music {
     osc(ctx, 'sine', 0.45, this.wobble).start();
 
     this.lead = gain(ctx, 1, out);
-    const rv = gain(ctx, 0.7, m.reverb);
+    const rv = gain(ctx, 0.7, m.musicVerb);
     this.lead.connect(rv);
     // Dotted-quarter echo, darker on every repeat.
     const delay = ctx.createDelay(2);
@@ -74,10 +75,11 @@ export class Music {
   start(t: number): void {
     this.step = 0;
     this.next = t + 0.1;
-    const g = this.m.music.gain;
-    const level = g.value;
+    // Fade in from silence. This used to ramp the music bus itself back up to its
+    // starting level, which undid the saved music volume (even zero) at every launch.
+    const g = this.out.gain;
     g.setValueAtTime(0, t);
-    g.linearRampToValueAtTime(level, t + 6);
+    g.linearRampToValueAtTime(1, t + 6);
   }
 
   /** Schedule everything that starts before `until`. */
