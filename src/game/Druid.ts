@@ -7,6 +7,7 @@ import { onGround } from './Toxins';
 import { bindFoe } from './Strings';
 import { bloom, clamp01, dither, easeOut, Fx, GROUND, hash, pal, pool, ring, shade, type Ink, type Pal } from './ultimate/ink';
 import { AUTUMN_STYLE, FROST_STYLE, GROVE_STYLE, WILD_STYLE, type SpellStyle } from './spells';
+import { TITANIA_STYLE } from './spells';
 import type { Wizard, WizardKit, WizardSkin } from './Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
@@ -46,6 +47,8 @@ export const WILD_SKIN: WizardSkin = { key: 'druid_wild', style: WILD_STYLE, kit
 /** The Grovekeeper's Autumn Warden skin, and the Shapeshifter's Frostfang. */
 export const AUTUMN_SKIN: WizardSkin = { key: 'druid_autumn', style: AUTUMN_STYLE, kit: GROVE_KIT };
 export const FROST_SKIN: WizardSkin = { key: 'druid_frost', style: FROST_STYLE, kit: WILD_KIT };
+/** The Grovekeeper's Titania skin, the faerie queen. */
+export const TITANIA_SKIN: WizardSkin = { key: 'druid_titania', style: TITANIA_STYLE, kit: GROVE_KIT };
 
 /** A druid look's magic: its spells and light, the charge's mark, and (for the grove) its moss, flowers and the tint of what it slows. */
 export interface DruidMagic {
@@ -71,6 +74,8 @@ const magic = (style: SpellStyle, light: number, rest: Omit<DruidMagic, 'style' 
 export const GROVE_MAGIC = magic(GROVE_STYLE, 0x9aff6a, { mark: [0x4ec83a, 0xb8ff6a], tint: 0xa8ff7a, moss: [0x2e6a2a, 0x3e8a34], flowers: [0xffd66b, 0xfff6e8, 0xffa8c8] });
 /** Autumn: russet leaves on the ground, and ember-bright light. */
 export const AUTUMN_MAGIC = magic(AUTUMN_STYLE, 0xffa050, { mark: [0xd86a1e, 0xffc060], tint: 0xffb060, moss: [0x5a2a14, 0x7a3a18], flowers: [0xffd66b, 0xff8a3a, 0xd83a2a] });
+/** Titania: a faerie ring of clover and blossom, pink and gold, with fireflies rising from it. */
+export const TITANIA_MAGIC = magic(TITANIA_STYLE, 0xffb8d0, { mark: [0xe0608e, 0xffd88a], tint: 0xffb0d0, moss: [0x3e5a34, 0x5a7a44], flowers: [0xffb8d0, 0xfff4e8, 0xffd66b, 0xff8ab0] });
 export const WILD_MAGIC = magic(WILD_STYLE, 0xffb050, { mark: [0xd8801e, 0xffc860], tint: 0xffc070, moss: [0x3a2a1a, 0x4a3a24], flowers: [] });
 /** Frostfang: the spirit wolf in ice. */
 export const FROST_MAGIC = magic(FROST_STYLE, 0x8ad0ff, { mark: [0x3a8ad8, 0xa8e0ff], tint: 0xa8e0ff, moss: [0x2a3a5a, 0x3a4a6a], flowers: [] });

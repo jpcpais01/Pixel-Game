@@ -68,6 +68,8 @@ import {
   STAR_ROBE,
 } from './heroSkins';
 import { ABYSS_BONE, ABYSS_DEEP, ABYSS_FIN, ABYSS_HAIR, ABYSS_HOT, ABYSS_INNER, ABYSS_MID, ABYSS_CORE, ABYSS_ROBE, ABYSS_SKIN, CORAL, DRIFTWOOD, FOAM, LURE, PEARL, SEA_HAIR, SHELL, TIDE_CORE, TIDE_DEEP, TIDE_HOT, TIDE_INNER, TIDE_MID, TIDE_ROBE } from './tide';
+import { BAMBOO, INK_HAIR, JADE_ROBE, LILY_PAD, LOTUS_CORE, LOTUS_DEEP, LOTUS_GOLD, LOTUS_HOT, LOTUS_MID, LOTUS_PEARL, LOTUS_PINK, LOTUS_SILK } from './tide';
+import { FAE_BLOSSOM, FAE_GOLD, FAE_GOWN, FAE_PETAL, FAE_WING, HONEY_HAIR, MOONFLOWER, MOONWOOD, TITANIA_CORE, TITANIA_DEEP, TITANIA_HOT, TITANIA_MID } from './druid';
 import { GNARLWOOD, JACK_FIRE, JACK_RIND, JACK_STEM, PUMPKIN_TRIM, WITCH_CORE, WITCH_DEEP, WITCH_EYE, WITCH_GHOST, WITCH_HAIR, WITCH_HAT, WITCH_HOT, WITCH_LINING, WITCH_MID, WITCH_RIBBON, WITCH_ROBE, WITCH_SKIN } from './pumpkin';
 import { ANTLER, AMBER, AUBURN, AUTUMN_LEAF, AUTUMN_ROBE, BARE_ANTLER, BARK, EMBER_SEED, FANG, FROST_HAIR, FROST_HIDE, FROST_TUNIC, FROST_WOOD, HIDE, ICE, ICE_FANG, LEAF, LIVEWOOD, MOSS, MUZZLE, PELT, SEED, SNOW_PELT, TUNIC, WOAD, WOLF_NOSE, AUTUMN_CORE, AUTUMN_DEEP, AUTUMN_HOT, AUTUMN_MID, FROST_CORE, FROST_DEEP, FROST_HOT, FROST_MID, GROVE_CORE, GROVE_DEEP, GROVE_HOT, GROVE_MID, WILD_CORE, WILD_DEEP, WILD_HOT, WILD_MID } from './druid';
 
@@ -119,8 +121,23 @@ export interface WizardLook {
    * the shoulders, a pale green face with glowing eyes, a laced bodice, a
    * ragged hem striped in orange, embers and ghost-motes drifting round her,
    * and a gnarled staff cradling a carved, glowing pumpkin.
+   * 'faerie': the Grovekeeper's Titania, the faerie queen: honey-gold hair to
+   * the waist under a crown of white blossoms and gold leaves, a gown of
+   * petals in tiers from blush to cream, dragonfly wings that flutter as she
+   * breathes and walks, fireflies and pollen round her, and a slender
+   * moonwood staff whose sepals cup a glowing moonflower bud.
+   * 'lotus': the Tidecaller's Lotus, a water-lily priestess: ink-black hair
+   * in a high bun with a lotus in it, jade robes crossed over white silk with
+   * a pink sash, lily pads on her shoulders, petals drifting round her, and a
+   * bamboo staff whose head is an opening lotus cradling a pearl.
    */
-  head?: 'astral' | 'fiend' | 'grove' | 'wild' | 'tide' | 'witch';
+  head?: 'astral' | 'fiend' | 'grove' | 'wild' | 'tide' | 'witch' | 'faerie' | 'lotus';
+  /** Titania's wings. */
+  wing?: Material;
+  /** Flowers worn in the hair: Titania's white blossoms, Lotus's pink lotus (and her staff's petals). */
+  petal?: Material;
+  /** Lotus's lily-pad shoulders. */
+  pad?: Material;
   /** Hair of the bare heads. */
   hair?: Material;
   /** The Tidecaller's crown and staff tines. */
@@ -343,7 +360,43 @@ export const PUMPKIN_LOOK: WizardLook = {
   hair: WITCH_HAIR,
 };
 
-export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK, AUTUMN_LOOK, FROST_LOOK, TIDE_LOOK, ABYSS_LOOK, PUMPKIN_LOOK];
+/** The Grovekeeper's Titania skin: the faerie queen, in petals and gold, on gauzy wings. */
+export const TITANIA_LOOK: WizardLook = {
+  ...GROVE_LOOK,
+  key: 'druid_titania',
+  robe: FAE_GOWN,
+  inner: FAE_PETAL,
+  trim: FAE_GOLD,
+  belt: FAE_GOLD,
+  boot: FAE_PETAL,
+  shaft: MOONWOOD,
+  crystal: MOONFLOWER,
+  magic: { core: TITANIA_CORE, hot: TITANIA_HOT, mid: TITANIA_MID, deep: TITANIA_DEEP },
+  head: 'faerie',
+  hair: HONEY_HAIR,
+  wing: FAE_WING,
+  petal: FAE_BLOSSOM,
+};
+
+/** The Tidecaller's Lotus skin: a priestess of still water, in jade and white silk, crowned with a lotus. */
+export const LOTUS_LOOK: WizardLook = {
+  ...TIDE_LOOK,
+  key: 'wizard_lotus',
+  robe: JADE_ROBE,
+  inner: LOTUS_SILK,
+  trim: LOTUS_GOLD,
+  belt: LOTUS_PINK,
+  boot: LOTUS_SILK,
+  shaft: BAMBOO,
+  crystal: LOTUS_PEARL,
+  magic: { core: LOTUS_CORE, hot: LOTUS_HOT, mid: LOTUS_MID, deep: LOTUS_DEEP },
+  head: 'lotus',
+  hair: INK_HAIR,
+  petal: LOTUS_PINK,
+  pad: LILY_PAD,
+};
+
+export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK, AUTUMN_LOOK, FROST_LOOK, TIDE_LOOK, ABYSS_LOOK, PUMPKIN_LOOK, TITANIA_LOOK, LOTUS_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let S: WizardLook = ARCANE_LOOK;
@@ -391,6 +444,8 @@ export interface Pose {
   trail?: number[];
   /** Burst of light at the crystal (0..1). */
   flash?: number;
+  /** How far open Titania's wings are, 0 swept back to 1 spread (unset: nearly spread). */
+  flap?: number;
 
   // The idle moment only (facing down); every other frame leaves these unset.
   /** The free hand raised to here, bent at `elbow` (frame pixels, breathing added); the forearm is drawn over the head. */
@@ -546,6 +601,53 @@ function drawStaff(c: PixelCanvas, s: Staff, glow: number, free?: { x: number; y
     c.part();
     const sh = at(0, -0.9);
     c.ellipse(sh.x, sh.y, 1.2, 1.0, S.shell ?? S.trim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.2, 1) });
+  } else if (S.head === 'faerie') {
+    // Two cream sepals cup the moonflower bud, and gold leaves unfurl down the slender shaft.
+    const px = -g.dy;
+    const py = g.dx;
+    const at = (side: number, up: number) => ({ x: g.top.x + px * side + g.dx * up, y: g.top.y + py * side + g.dy * up });
+    for (const k of [-1, 1]) {
+      c.part();
+      const a0 = at(k * 0.4, -0.2);
+      const a1 = at(k * 1.8, 1.3);
+      const a2 = at(k * 1.4, 3.3);
+      c.capsule(a0.x, a0.y, a1.x, a1.y, 0.5, 0.62, S.inner, { bias: 1 });
+      c.capsule(a1.x, a1.y, a2.x, a2.y, 0.62, 0.3, S.inner, { bias: k < 0 ? 1 : 0 });
+    }
+    for (const [side, up] of [[1.3, -2.2], [-1.3, -4.6]] as const) {
+      c.part();
+      const l = at(side, up);
+      c.px(l.x, l.y, S.trim, { x: side * 0.4, y: 0.5, z: 0.77 }, { bias: 1 });
+    }
+  } else if (S.head === 'lotus') {
+    // The lotus opening at the staff's head: a petal standing behind the
+    // pearl, then two rings of petals curving out round it, the outer ones
+    // widest; a green cup beneath where the bloom meets the bamboo.
+    const px = -g.dy;
+    const py = g.dx;
+    const at = (side: number, up: number) => ({ x: g.top.x + px * side + g.dx * up, y: g.top.y + py * side + g.dy * up });
+    const petal = S.petal ?? S.trim;
+    c.part();
+    const b0 = at(0, 0.6);
+    const b1 = at(0, 4.9);
+    c.capsule(b0.x, b0.y, b1.x, b1.y, 0.95, 0.45, petal, { bias: -1 });
+    for (const k of [-1, 1]) {
+      c.part();
+      const o0 = at(k * 0.8, 0.3);
+      const o1 = at(k * 3.0, 2.2);
+      const o2 = at(k * 3.4, 3.9);
+      c.capsule(o0.x, o0.y, o1.x, o1.y, 0.7, 0.62, petal);
+      c.capsule(o1.x, o1.y, o2.x, o2.y, 0.62, 0.3, petal, { bias: 1 });
+    }
+    for (const k of [-1, 1]) {
+      c.part();
+      const i0 = at(k * 0.5, 0.2);
+      const i1 = at(k * 1.9, 3.3);
+      c.capsule(i0.x, i0.y, i1.x, i1.y, 0.8, 0.35, petal, { bias: 1 });
+    }
+    c.part();
+    const cup = at(0, -0.4);
+    c.ellipse(cup.x, cup.y, 1.3, 0.9, S.pad ?? S.shaft, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6, 1) });
   } else if (S.head === 'witch') {
     // Gnarled wood: burls bulging off the shaft, and two crooked twigs curling
     // up round the pumpkin like fingers.
@@ -709,8 +811,44 @@ function robeBody(c: PixelCanvas, cx: number, top: number, hem: number, sway: nu
   };
   c.part();
   c.shape(top, hem, edges, S.robe, (_x, _y, t, u) => cyl(t, 0.25 - u * 0.25));
+  skirtTiers(c, edges, hem, sway);
   hemTrim(c, edges, hem, sway);
   return edges;
+}
+
+/**
+ * Layered skirts, for the looks that wear them: each band from its `y0` down
+ * is repainted in its own cloth, and the cloth above hangs over its top edge
+ * in rounded petal tips, every four pixels and drifting with the sway. Titania
+ * wears tiers of petals, blush paling to cream; Lotus a jade overskirt over
+ * white silk.
+ */
+function skirtTiers(c: PixelCanvas, edges: (y: number) => [number, number], hem: number, sway: number): void {
+  const bands: { y0: number; m: Material; bias: number; overBias: number; phase: number }[] =
+    S.head === 'faerie'
+      ? [
+          { y0: hem - 7, m: S.robe, bias: 1, overBias: 0, phase: 0 },
+          { y0: hem - 3, m: S.inner, bias: 0, overBias: 1, phase: 2 },
+        ]
+      : S.head === 'lotus'
+        ? [{ y0: hem - 2, m: S.inner, bias: 1, overBias: 0, phase: 1 }]
+        : [];
+  let over = S.robe;
+  for (const b of bands) {
+    c.part();
+    for (let y = b.y0; y <= hem; y++) {
+      const [l, r] = edges(y);
+      for (let x = Math.round(l); x <= Math.round(r) - 1; x++) c.px(x, y, b.m, cyl(((x + 0.5 - l) / (r - l)) * 2 - 1, 0.15 - (y - b.y0) * 0.06), { bias: b.bias });
+    }
+    // The tier above hangs over this one's top edge.
+    c.part();
+    const [l, r] = edges(b.y0);
+    for (let x = Math.round(l); x <= Math.round(r) - 1; x++) {
+      const k = (((x - Math.round(sway) + b.phase) % 4) + 4) % 4;
+      if (k === 1 || k === 2) c.px(x, b.y0, over, cyl(((x + 0.5 - l) / (r - l)) * 2 - 1, -0.1), { bias: b.overBias });
+    }
+    over = b.m;
+  }
 }
 
 /** Gold trim along the hem, or for the hooded look a ragged, notched hem. */
@@ -737,6 +875,25 @@ function hemTrim(c: PixelCanvas, edges: (y: number) => [number, number], hem: nu
       if (k === 0) c.px(x, hem - 1, S.trim, cyl(0, 0.5), { bias: 1 });
       else if (k === 1) c.px(x, hem - 1, S.trim, cyl(0, 0.2));
       else if (k === 3) c.shade(x, hem, -1);
+    }
+    return;
+  }
+  if (S.head === 'faerie') {
+    // Cream petal tips falling below the hem, and a pale one catching the light beside each.
+    c.part();
+    for (let x = Math.round(l) + 1; x <= Math.round(r) - 2; x++) {
+      const k = (((x - Math.round(sway)) % 3) + 3) % 3;
+      if (k === 0) c.px(x, hem + 1, S.inner, cyl(0, -0.3));
+      else if (k === 1) c.shade(x, hem, 1);
+    }
+    return;
+  }
+  if (S.head === 'lotus') {
+    // The white silk spills a pixel below the jade, in soft scallops.
+    c.part();
+    for (let x = Math.round(l) + 1; x <= Math.round(r) - 2; x++) {
+      const k = (((x - Math.round(sway)) % 4) + 4) % 4;
+      if (k === 1 || k === 2) c.px(x, hem + 1, S.inner, cyl(0, -0.3), { bias: k === 1 ? 0 : -1 });
     }
     return;
   }
@@ -2139,6 +2296,404 @@ function witchLacing(c: PixelCanvas, cx: number, U: number): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Heads: Titania's honey hair, crown of blossoms and dragonfly wings
+
+/** How far open her wings are; poses that don't say hold them nearly spread. */
+const flapOf = (p: Pose) => p.flap ?? 0.85;
+
+/**
+ * One wing: a long teardrop from its root at (x0, y0) to its tip at (x1, y1),
+ * widest two-thirds of the way out with `w` its half-width there. Lilac at the
+ * root paling to pearl at the tip, a vein down its middle, its rim catching a
+ * little of her light. `k` is the side it spreads to (-1 left).
+ */
+function wingLobe(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, w: number, k: number): void {
+  const m = S.wing ?? S.inner;
+  const vx = x1 - x0;
+  const vy = y1 - y0;
+  const len = Math.hypot(vx, vy) || 1;
+  const ux = vx / len;
+  const uy = vy / len;
+  c.part();
+  for (let y = Math.floor(Math.min(y0, y1) - w - 1); y <= Math.ceil(Math.max(y0, y1) + w + 1); y++) {
+    for (let x = Math.floor(Math.min(x0, x1) - w - 1); x <= Math.ceil(Math.max(x0, x1) + w + 1); x++) {
+      const ox = x + 0.5 - x0;
+      const oy = y + 0.5 - y0;
+      const t = (ox * ux + oy * uy) / len;
+      if (t < 0 || t > 1) continue;
+      const d = -ox * uy + oy * ux;
+      const half = w * Math.pow(Math.sin(Math.PI * Math.pow(t, 1.6)), 0.6);
+      if (Math.abs(d) > half) continue;
+      const vein = Math.abs(d) < 0.5 && t > 0.08 && t < 0.85;
+      const rim = Math.abs(d) > half - 0.9 || t > 0.9;
+      // The gauze sits in the middle of the ramp, so it reads as see-through
+      // lilac; the rim and the tip pale to pearl and catch her light.
+      const bias = (t > 0.75 ? 1 : t < 0.25 ? -1 : 0) + (vein ? -1 : 0) + (rim ? 1 : 0);
+      c.px(x, y, m, { x: k * 0.15, y: 0.05, z: 0.75 }, { bias });
+      if (rim) c.spark(x, y, S.magic.hot, 0.12 + t * 0.2);
+      // A wash of other colours across the middle, as on a dragonfly's wing.
+      else if (!vein && t > 0.35 && t < 0.7) c.spark(x, y, (x + y) & 1 ? S.magic.mid : IRIDESCENT, 0.16);
+    }
+  }
+}
+
+/** The mint sheen that plays over Titania's wings beside her own pink. */
+const IRIDESCENT: RGB = [150, 255, 220];
+
+/**
+ * Her wings: two pairs, the upper long and the lower short, rooted between the
+ * shoulders. From the front and the back they spread either side of her; in
+ * profile both sweep back behind her. Folding (flap 0) draws them in and up.
+ */
+function faerieWings(c: PixelCanvas, view: 'down' | 'up' | 'side', cx: number, U: number, p: Pose): void {
+  const f = flapOf(p);
+  if (view === 'side') {
+    const rx = cx + 1.6;
+    wingLobe(c, rx, 16.4 + U, rx + 4.6 + 3 * f, 7.6 + U + (1 - f) * 2.5, 2.1, 1);
+    wingLobe(c, rx, 18.4 + U, rx + 3.6 + 2.2 * f, 24.4 + U - (1 - f) * 1.5, 1.5, 1);
+    return;
+  }
+  for (const k of [-1, 1]) {
+    wingLobe(c, cx + k * 1.2, 16.6 + U, cx + k * (4.6 + 4.6 * f), 7.4 + U + (1 - f) * 3, 2.1, k);
+    wingLobe(c, cx + k * 1.2, 18.6 + U, cx + k * (3.6 + 3.6 * f), 25 + U - (1 - f) * 1.5, 1.5, k);
+  }
+}
+
+/** A wreath across the brow: white blossoms with gold hearts, little gold leaves between them. */
+function blossomCrown(c: PixelCanvas, blooms: [number, number][], leaves: [number, number][], p: Pose): void {
+  const petal = S.petal ?? S.inner;
+  c.part();
+  for (const [x, y] of leaves) c.px(x, y, S.trim, { x: (x - 12) * 0.08, y: 0.55, z: 0.8 }, { bias: 1 });
+  blooms.forEach(([x, y], i) => {
+    c.part();
+    for (const [ox, oy] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) c.px(x + ox, y + oy, petal, sphere(ox * 0.6, oy * 0.6), { bias: oy < 0 || ox < 0 ? 1 : 0 });
+    c.px(x, y, S.trim, { x: 0, y: 0.2, z: 0.98 }, { bias: 1 });
+    // The blossoms breathe with the staff's light, each on its own beat.
+    c.spark(x, y, S.magic.hot, 0.2 + 0.2 * (0.5 + 0.5 * Math.sin(p.glow * 8 + i * 2.2)));
+  });
+}
+
+/** A rose blush on the cheeks and lips: the gown's cloth lit flat, so it reads as colour, not shape. */
+function blush(c: PixelCanvas, pts: [number, number][], lips: [number, number]): void {
+  c.part();
+  for (const [x, y] of pts) c.px(x, y, S.robe, FLAT_DOWN, { bias: 1 });
+  c.px(lips[0], lips[1], S.robe, FLAT_DOWN, { bias: 0 });
+}
+
+function faerieHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  // The back of her hair, then two long curtains over the shoulders, down to
+  // the waist, swinging with the gown, their ends curling.
+  c.part();
+  c.ellipse(cx, 12.2 + U, 4.2, 3.2, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9) });
+  for (const k of [-1, 1]) {
+    c.part();
+    c.shape(12 + U, 24 + U, (y) => {
+      const u = (y - 12 - U) / 12;
+      const inner = 2.7 + u * 1.1;
+      const outer = 4.4 + u * 1.3 + (u > 0.85 ? 0.4 : 0);
+      const sw = p.hem * u * 0.6 + Math.sin(u * 5 + k) * u * 0.5;
+      return k < 0 ? [cx - outer + sw, cx - inner + sw] : [cx + inner + sw, cx + outer + sw];
+    }, hair, (_x, _y, t, u) => cyl(t * 0.8 + k * 0.25, 0.3 - u * 0.3));
+    for (let y = 15; y <= 24; y++) {
+      const u = (y - 12) / 12;
+      const x = cx + k * (3.6 + u * 1.2) + p.hem * u * 0.6 + Math.sin(u * 5 + k) * u * 0.5;
+      if ((y + (k > 0 ? 1 : 0)) % 3 !== 0) c.shade(Math.floor(x), y + U, -1);
+      else c.shade(Math.floor(x) - k, y + U, 1);
+    }
+  }
+  // The neckline: a little skin above the bodice, and a gold drop at the throat.
+  c.part();
+  c.px(11, 16 + U, S.skin, sphere(-0.2, 0.4));
+  c.px(12, 16 + U, S.skin, sphere(0.2, 0.4));
+  c.px(11, 17 + U, S.trim, { x: -0.2, y: 0.3, z: 0.93 }, { bias: 1 });
+  // Face: soft, with rosy cheeks and lips.
+  c.part();
+  c.ellipse(cx, 13.4 + U, 3.1, 2.7, S.skin);
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
+  blush(c, [], [12, 15 + U]);
+  const [gx, gy] = p.gaze ?? [0, 0];
+  c.part();
+  if (p.blink) {
+    c.px(10 + gx, 13 + U + gy, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(13 + gx, 13 + U + gy, S.skin, FLAT_DOWN, { bias: -1 });
+  } else {
+    c.px(10 + gx, 13 + U + gy, EYE);
+    c.px(13 + gx, 13 + U + gy, EYE);
+  }
+  // Crown of the head, parted in the middle, and wavy locks framing the face.
+  c.part();
+  c.ellipse(cx, 10.6 + U, 3.9, 2.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.5, 1) });
+  c.shade(cx, 10 + U, -1);
+  c.shade(cx - 2, 10 + U, 1);
+  for (let y = 12; y <= 16; y++) {
+    const w = (y + Math.round(p.hem)) % 3 === 0 ? 1 : 0;
+    c.px(8 - w, y + U, hair, cyl(-0.7, 0.1), { bias: y > 14 ? -1 : 0 });
+    c.px(15 + w, y + U, hair, cyl(0.7, 0.1), { bias: y > 14 ? -1 : 0 });
+  }
+  blossomCrown(c, [[9, 9 + U], [12, 8 + U], [15, 9 + U]], [[7, 10 + U], [16, 10 + U]], p);
+}
+
+function faerieHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  c.part();
+  c.ellipse(cx, 11.8 + U, 4.0, 3.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 0.9) });
+  // Her hair falls down her back to the waist over the roots of her wings, fanning and swinging, curling at the ends.
+  c.part();
+  c.shape(13 + U, 24 + U, (y) => {
+    const u = (y - 13 - U) / 11;
+    const hw = 3.1 + u * 0.9 - (u > 0.9 ? 0.6 : 0);
+    const x = cx - p.hem * u * 0.6;
+    return [x - hw, x + hw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.85, u * 0.7, 0.9));
+  for (let y = 14; y <= 24; y++) {
+    const u = (y - 13) / 11;
+    const w = Math.round(-p.hem * u * 0.6 + Math.sin(y * 0.9) * 0.6);
+    c.shade(cx - 2 + w, y + U, -1);
+    c.shade(cx + 1 + w, y + U, -1);
+    if (y > 17) c.shade(cx - 3 + w, y + U, (y & 1) ? 1 : -1);
+  }
+  // The curled ends: a lit curl, a dark gap, by turns.
+  for (let x = cx - 3; x <= cx + 3; x += 2) c.px(x - Math.round(p.hem * 0.6), 25 + U, hair, cyl((x - cx) / 5, -0.3), { bias: -1 });
+  blossomCrown(c, [[9, 10 + U], [12, 9 + U], [15, 10 + U]], [[7, 11 + U], [16, 11 + U]], p);
+}
+
+/** Facing left, like drawSide. */
+function faerieHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  // Hair behind, falling to the waist and streaming back.
+  c.part();
+  c.ellipse(cx + 0.8, 12.4 + U, 3.4, 3.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9) });
+  c.part();
+  c.shape(13 + U, 24 + U, (y) => {
+    const u = (y - 13 - U) / 11;
+    const drift = p.hem * u * 0.5 + u * 1.2 + Math.sin(u * 5) * u * 0.6;
+    return [cx - 0.4 + u * 0.6 + drift, cx + 3.6 + u * 0.3 + drift];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.8 + 0.1, u * 0.7, 0.9));
+  for (let y = 15; y <= 24; y++) {
+    const u = (y - 13) / 11;
+    if (y % 3) c.shade(Math.round(cx + 1.6 + u * 1.2 + p.hem * u * 0.5 + Math.sin(u * 5) * u * 0.6), y + U, -1);
+  }
+  // Face in profile, a rosy cheek.
+  c.part();
+  c.ellipse(cx - 1.3, 13.5 + U, 2.8, 2.5, S.skin);
+  c.part();
+  c.px(cx - 5, 13 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(cx - 5, 14 + U, S.skin, sphere(-0.5, 0.3));
+  blush(c, [], [cx - 4, 15 + U]);
+  c.part();
+  if (p.blink) c.px(cx - 3, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+  else c.px(cx - 3, 13 + U, EYE);
+  // Crown of the head and fringe, a wavy lock by the cheek.
+  c.part();
+  c.shape(9 + U, 10 + U, (y) => (y === 9 + U ? [cx - 3.2, cx + 2.8] : [cx - 4.4, cx + 3.6]), hair, (_x, _y, t, u) => sphere(t * 0.9, u - 0.8, 1));
+  c.px(cx - 5, 11 + U, hair, cyl(-0.7, 0.2));
+  for (let y = 13; y <= 16; y++) c.px(cx + ((y + Math.round(p.hem)) % 3 === 0 ? 1 : 0), y + U, hair, cyl(-0.2, 0), { bias: y > 14 ? -1 : 0 });
+  blossomCrown(c, [[cx - 3, 9 + U], [cx, 8 + U], [cx + 3, 9 + U]], [[cx - 5, 10 + U]], p);
+}
+
+/** Dew glittering on her gown, gold fireflies wandering round her and pollen sifting down past her. */
+function faerieFlecks(c: PixelCanvas, U: number, p: Pose): void {
+  for (let y = 18; y < FRAME_H; y++) {
+    for (let x = 0; x < FRAME_W; x++) {
+      const m = c.materialAt(x, y);
+      if (m !== S.robe && m !== S.inner) continue;
+      if (hash(x, y - U, 37) > 0.965) c.spark(x, y, S.magic.core, 0.4);
+    }
+  }
+  const ph = p.glow * 6 + p.staff.float * 2.5 + p.breath * 1.2 + p.hem * 0.8 + (p.flap ?? 0) * 2;
+  const flies: [number, number][] = [[2.5, 18], [21, 14], [4, 27], [20, 25]];
+  flies.forEach(([x, y], i) => {
+    const fx = x + Math.sin(ph + i * 2.1) * 1.5;
+    const fy = y + Math.cos(ph * 1.3 + i) * 1.5;
+    const on = 0.5 + 0.5 * Math.sin(ph * 2 + i * 1.7);
+    c.spark(fx, fy, S.magic.hot, 0.3 + on * 0.5);
+    if (on > 0.8) c.spark(fx, fy - 1, S.magic.core, 0.25);
+  });
+  [[6, 6], [18, 9], [11, 3]].forEach(([x, y], i) => {
+    const fall = ((ph * 1.2 + i * 2.1) % 6 + 6) % 6;
+    c.spark(x + Math.sin(ph + i * 1.3) * 0.8, y + fall * 1.7, i === 1 ? S.magic.mid : S.magic.core, 0.4 * (1 - fall / 6) + 0.1);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Heads: Lotus's high bun and lotus blossom, lily-pad shoulders and crossed collar
+
+/**
+ * A lotus seen from the side, its base at (x, y): a shadowed cup, a row of
+ * petals and three pointed tips, the middle tallest, glowing faintly within.
+ */
+function lotusBloom(c: PixelCanvas, x: number, y: number, p: Pose): void {
+  const m = S.petal ?? S.trim;
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  c.part();
+  for (const dx of [-1, 0, 1]) c.px(x0 + dx, y0, m, sphere(dx * 0.5, 0.5), { bias: -1 });
+  for (const dx of [-2, -1, 0, 1, 2]) c.px(x0 + dx, y0 - 1, m, sphere(dx * 0.4, 0.1), { bias: dx === 0 ? 1 : Math.abs(dx) === 2 ? -1 : 0 });
+  for (const dx of [-2, 0, 2]) c.px(x0 + dx, y0 - 2, m, sphere(dx * 0.3, -0.3), { bias: dx === 0 ? 1 : 0 });
+  c.px(x0, y0 - 3, m, sphere(0, -0.6), { bias: 1 });
+  c.spark(x0, y0 - 1, S.magic.core, 0.3 + p.glow * 0.2);
+}
+
+/** Lily pads over the shoulders: flat, tipped up to the light, a notch toward the neck and veins fanning from it. */
+function lilyPads(c: PixelCanvas, pts: [number, number][], cx: number, U: number): void {
+  const m = S.pad ?? S.trim;
+  for (const [x, y] of pts) {
+    c.part();
+    c.ellipse(x, y + U, 2.8, 1.5, m, { normal: (_x, _y, dx, dy) => sphere(dx * 0.5, dy * 0.5 - 0.45, 1) });
+    const k = x < cx ? 1 : -1;
+    const fx = Math.floor(x);
+    const fy = Math.floor(y + U);
+    // The notch, and veins running out from it.
+    c.shade(fx + k * 2, fy, -2);
+    c.shade(fx + k, fy, -1);
+    c.shade(fx - k, fy - 1, -1);
+    c.shade(fx - k, fy + 1, -1);
+    // The upturned rim catching the light.
+    c.shade(fx, fy - 1, 1);
+  }
+}
+
+function lotusHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  // Her hair is all drawn up: only a little shows behind the face.
+  c.part();
+  c.ellipse(cx, 12.0 + U, 4.0, 3.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9) });
+  lilyPads(c, [[cx - 4.6, 16.4], [cx + 4.6, 16.4]], cx, U);
+  // The robes cross at the throat, white silk over jade, left over right.
+  c.part();
+  c.px(11, 16 + U, S.skin, sphere(-0.2, 0.4));
+  c.px(12, 16 + U, S.skin, sphere(0.2, 0.4));
+  c.px(13, 16 + U, S.skin, sphere(0.3, 0.4), { bias: -1 });
+  c.px(12, 17 + U, S.skin, sphere(0, 0.5), { bias: -1 });
+  c.part();
+  for (const [x, y] of [[10, 16], [11, 17], [12, 18], [13, 19]]) c.px(x, y + U, S.inner, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
+  for (const [x, y] of [[14, 16], [13, 17]]) c.px(x, y + U, S.inner, { x: 0.3, y: 0.3, z: 0.9 });
+  // Face.
+  c.part();
+  c.ellipse(cx, 13.4 + U, 3.0, 2.7, S.skin);
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
+  c.px(12, 15 + U, S.petal ?? S.skin, FLAT_DOWN, { bias: -1 });
+  const gx = p.gaze?.[0] ?? 0;
+  tideEyes(c, [[10 + gx, 13 + U], [13 + gx, 13 + U]], p);
+  // Her hair, sleek and swept up from the brow, a lock before each ear.
+  c.part();
+  c.ellipse(cx, 10.4 + U, 3.9, 1.9, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.6, 1) });
+  c.shade(10, 10 + U, 1);
+  c.shade(14, 10 + U, 1);
+  c.shade(cx, 11 + U, -1);
+  for (let y = 12; y <= 14; y++) {
+    c.px(8, y + U, hair, cyl(-0.7, 0.1), { bias: y > 13 ? -1 : 0 });
+    c.px(15, y + U, hair, cyl(0.7, 0.1), { bias: y > 13 ? -1 : 0 });
+  }
+  lotusBun(c, cx, U, p, 1);
+}
+
+/** The high bun, a gold band at its foot, a hairpin through it, and the lotus tucked in on one side (`k`: 1 her left, seen from the front). */
+function lotusBun(c: PixelCanvas, cx: number, U: number, p: Pose, k: number): void {
+  const hair = S.hair ?? HAIR;
+  c.part();
+  c.ellipse(cx, 6.8 + U, 2.5, 2.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9, 1) });
+  c.shade(cx - 1, 5 + U, 1);
+  c.shade(cx + 1, 7 + U, -1);
+  c.part();
+  c.px(cx - 1, 8 + U, S.trim, { x: -0.3, y: 0.4, z: 0.86 }, { bias: 1 });
+  c.px(cx, 8 + U, S.trim, { x: 0.3, y: 0.4, z: 0.86 });
+  c.part();
+  c.px(cx - k * 3, 5 + U, S.trim, { x: -0.4, y: 0.5, z: 0.77 }, { bias: 1 });
+  c.px(cx - k * 4, 4 + U, S.trim, { x: -0.4, y: 0.6, z: 0.7 }, { bias: 1 });
+  lotusBloom(c, cx + k * 2.5, 8 + U, p);
+}
+
+function lotusHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  lilyPads(c, [[cx - 4.6, 16.4], [cx + 4.6, 16.4]], cx, U);
+  // The collar's white silk at the nape.
+  c.part();
+  c.shape(16 + U, 16 + U, () => [cx - 2.4, cx + 2.4], S.inner, (_x, _y, t) => cyl(t, 0.3));
+  c.part();
+  c.ellipse(cx, 11.6 + U, 4.0, 3.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 0.9) });
+  // The nape, the hair combed up from it to the bun.
+  c.part();
+  c.shape(14 + U, 15 + U, (y) => (y === 14 + U ? [cx - 2.6, cx + 2.6] : [cx - 1.8, cx + 1.8]), hair, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6 + 0.2, 0.9));
+  for (const [x, y, d] of [[10, 12, -1], [14, 12, -1], [11, 10, 1], [13, 13, -1], [12, 9, 1]] as const) c.shade(x, y + U, d);
+  lotusBun(c, cx, U, p, -1);
+}
+
+/** Facing left, like drawSide. */
+function lotusHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  c.part();
+  c.ellipse(cx + 0.8, 12.2 + U, 3.3, 2.9, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9) });
+  c.part();
+  c.shape(14 + U, 15 + U, (y) => (y === 14 + U ? [cx - 0.2, cx + 3.4] : [cx + 0.4, cx + 2.8]), hair, (_x, _y, t, u) => sphere(t * 0.8 + 0.2, u * 0.6 + 0.2, 0.9));
+  lilyPads(c, [[cx + 0.8, 16.6]], cx - 4, U);
+  // The crossed collar at the throat.
+  c.part();
+  c.px(cx - 2, 16 + U, S.inner, { x: -0.4, y: 0.3, z: 0.86 }, { bias: 1 });
+  c.px(cx - 2, 17 + U, S.inner, { x: -0.4, y: 0.2, z: 0.9 });
+  c.px(cx - 1, 18 + U, S.inner, { x: -0.2, y: 0.2, z: 0.95 });
+  // Face in profile.
+  c.part();
+  c.ellipse(cx - 1.3, 13.5 + U, 2.7, 2.5, S.skin);
+  c.part();
+  c.px(cx - 5, 13 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(cx - 5, 14 + U, S.skin, sphere(-0.5, 0.3));
+  c.px(cx - 4, 15 + U, S.petal ?? S.skin, FLAT_DOWN, { bias: -1 });
+  tideEyes(c, [[cx - 3, 13 + U]], p);
+  // Hair swept back from the brow to the bun, a lock before the ear.
+  c.part();
+  c.shape(9 + U, 10 + U, (y) => (y === 9 + U ? [cx - 3.0, cx + 2.8] : [cx - 4.2, cx + 3.6]), hair, (_x, _y, t, u) => sphere(t * 0.9, u - 0.8, 1));
+  c.shade(cx - 1, 10 + U, 1);
+  c.px(cx, 13 + U, hair, cyl(-0.2, 0), { bias: -1 });
+  c.px(cx, 14 + U, hair, cyl(-0.2, 0), { bias: -1 });
+  // The bun sits high on the back of the head; the lotus on the near side of it.
+  c.part();
+  c.ellipse(cx + 1.4, 6.9 + U, 2.3, 1.9, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9, 1) });
+  c.shade(cx, 6 + U, 1);
+  c.part();
+  c.px(cx + 1, 9 + U, S.trim, { x: -0.3, y: 0.4, z: 0.86 }, { bias: 1 });
+  c.px(cx + 4, 5 + U, S.trim, { x: 0.4, y: 0.5, z: 0.77 }, { bias: 1 });
+  c.px(cx + 5, 4 + U, S.trim, { x: 0.4, y: 0.6, z: 0.7 });
+  lotusBloom(c, cx - 0.5, 8.6 + U, p);
+}
+
+const DRIFT = new Map<WizardLook, Material>();
+
+/** A loose petal: the look's petal colour, glowing a little and drawn without an outline, so it floats light over anything. */
+function driftPetal(): Material {
+  let m = DRIFT.get(S);
+  if (!m) {
+    m = { ...(S.petal ?? S.trim), emissive: 0.35, noAO: true, noOutline: true };
+    DRIFT.set(S, m);
+  }
+  return m;
+}
+
+/** Pink petals drifting down round her, rocking as they fall, and motes of jade light rising off the water in her hem. */
+function lotusFlecks(c: PixelCanvas, p: Pose): void {
+  const ph = p.glow * 5 + p.staff.float * 2 + p.breath * 1.1 + p.hem * 0.7;
+  const m = driftPetal();
+  ([[3.5, 11], [20, 8], [2, 19], [21, 17]] as [number, number][]).forEach(([x, y], i) => {
+    const fall = ((ph * 1.1 + i * 2.3) % 6 + 6) % 6;
+    const rock = Math.sin(ph * 1.5 + i * 2);
+    const px = x + rock * 1.2;
+    const py = y + fall * 1.5;
+    c.part();
+    c.px(px, py, m, { x: rock * 0.5, y: 0.4, z: 0.8 }, { bias: 1 });
+    c.px(px + (rock > 0 ? 1 : -1), py + (Math.abs(rock) > 0.6 ? 1 : 0), m, { x: rock * 0.5, y: 0.2, z: 0.9 }, { bias: -1 });
+  });
+  ([[5, 27], [19, 26]] as [number, number][]).forEach(([x, y], i) => {
+    const rise = ((ph * 1.6 + i * 3.1) % 6 + 6) % 6;
+    c.spark(x + Math.sin(ph * 2 + i) * 0.7, y - rise * 1.3, S.magic.hot, 0.5 * (1 - rise / 6) + 0.12);
+  });
+}
+
 function headDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   if (S.head === 'astral') astralHeadDown(c, cx, U, p);
   else if (S.head === 'fiend') fiendHeadDown(c, cx, U, p);
@@ -2146,6 +2701,8 @@ function headDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   else if (S.head === 'wild') wildHeadDown(c, cx, U, p);
   else if (S.head === 'tide') tideHeadDown(c, cx, U, p);
   else if (S.head === 'witch') witchHeadDown(c, cx, U, p);
+  else if (S.head === 'faerie') faerieHeadDown(c, cx, U, p);
+  else if (S.head === 'lotus') lotusHeadDown(c, cx, U, p);
   else if (S.hooded) hoodDown(c, cx, U, p);
   else beardedHeadDown(c, cx, U, p);
 }
@@ -2157,6 +2714,8 @@ function headUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   else if (S.head === 'wild') wildHeadUp(c, cx, U, p);
   else if (S.head === 'tide') tideHeadUp(c, cx, U, p);
   else if (S.head === 'witch') witchHeadUp(c, cx, U, p);
+  else if (S.head === 'faerie') faerieHeadUp(c, cx, U, p);
+  else if (S.head === 'lotus') lotusHeadUp(c, cx, U, p);
   else if (S.hooded) hoodUp(c, cx, U, p);
   else beardedHeadUp(c, cx, U, p);
 }
@@ -2168,6 +2727,8 @@ function headSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   else if (S.head === 'wild') wildHeadSide(c, cx, U, p);
   else if (S.head === 'tide') tideHeadSide(c, cx, U, p);
   else if (S.head === 'witch') witchHeadSide(c, cx, U, p);
+  else if (S.head === 'faerie') faerieHeadSide(c, cx, U, p);
+  else if (S.head === 'lotus') lotusHeadSide(c, cx, U, p);
   else if (S.hooded) hoodSide(c, cx, U, p);
   else beardedHeadSide(c, cx, U, p);
 }
@@ -2183,6 +2744,8 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   let tip = { x: 0, y: 0 };
   if (p.staffBehind) tip = drawStaff(c, p.staff, p.glow);
   if (p.gem?.behind) crystal(c, p.gem.x, p.gem.y, p.glow);
+  // Titania's wings spread behind everything.
+  if (S.wing) faerieWings(c, 'down', cx, U, p);
 
   boot(c, 9.5, 29.6 - p.footA);
   boot(c, 14.5, 29.6 - p.footB);
@@ -2191,10 +2754,10 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   const hem = 28 + L;
   const edges = robeBody(c, cx, top, hem, p.hem);
 
-  // Open robe front showing the darker inner layer.
+  // Open robe front showing the darker inner layer (Titania's gown is closed, its petals unbroken).
   const belt = 21 + U;
   c.part();
-  c.shape(belt + 1, hem - 1, (y) => {
+  if (S.head !== 'faerie') c.shape(belt + 1, hem - 1, (y) => {
     const u = (y - belt) / (hem - belt);
     const x = cx + p.hem * Math.pow((y + 0.5 - top) / (hem + 1 - top), 2);
     return [x - 0.5 - u * 0.6, x + 0.5 + u * 0.6];
@@ -2209,6 +2772,7 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   c.part();
   c.px(11, belt, S.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
   c.px(12, belt, S.trim, { x: 0.2, y: 0.3, z: 0.9 });
+  if (S.head === 'lotus') sashTails(c, 11, belt, p.hem);
 
   // Free arm (character's left, screen right). Raised, only the upper arm is
   // drawn here; the forearm and hand come over the head, to reach a beard or chin.
@@ -2236,6 +2800,8 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'grove') groveFlecks(c, U, p);
   if (S.head === 'tide') tideFlecks(c, U, p);
   if (S.head === 'witch') witchFlecks(c, p);
+  if (S.head === 'faerie') faerieFlecks(c, U, p);
+  if (S.head === 'lotus') lotusFlecks(c, p);
   finishMagic(c, p, tip);
   p.fx?.(c);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
@@ -2263,9 +2829,15 @@ function drawUp(c: PixelCanvas, p: Pose): FrameMeta {
   c.part();
   c.shape(belt, belt, () => [bl, br], S.belt, (_x, _y, t) => cyl(t, 0));
 
+  // Lotus ties her sash in a bow at the back.
+  if (S.head === 'lotus') sashBow(c, cx, belt, p.hem);
+
   // Free arm (character's left, now screen left).
   sleeve(c, 8.2, 17.2 + U, 6.4, 21.6 + U + p.arm);
   hand(c, 6.1, 22.4 + U + p.arm);
+
+  // Titania's wings, over her back and under her hair.
+  if (S.wing) faerieWings(c, 'up', cx, U, p);
 
   headUp(c, cx, U, p);
 
@@ -2277,8 +2849,29 @@ function drawUp(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'grove') groveFlecks(c, U, p);
   if (S.head === 'tide') tideFlecks(c, U, p);
   if (S.head === 'witch') witchFlecks(c, p);
+  if (S.head === 'faerie') faerieFlecks(c, U, p);
+  if (S.head === 'lotus') lotusFlecks(c, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
+}
+
+/** Lotus's sash: two pink tails hanging from the knot at her waist, stirring with the robe. */
+function sashTails(c: PixelCanvas, x: number, belt: number, sway: number): void {
+  c.part();
+  const s = Math.round(sway * 0.5);
+  for (let i = 1; i <= 4; i++) c.px(x + (i > 2 ? s : 0), belt + i, S.belt, cyl(-0.3, 0.1), { bias: i === 4 ? -1 : 0 });
+  for (let i = 1; i <= 3; i++) c.px(x + 1 + (i > 1 ? s : 0), belt + i, S.belt, cyl(0.4, 0.1), { bias: -1 });
+}
+
+/** The bow at the back of Lotus's sash: two loops either side of the knot, and its tails. */
+function sashBow(c: PixelCanvas, cx: number, belt: number, sway: number): void {
+  c.part();
+  for (const [x, y, b] of [[cx - 3, belt - 1, 1], [cx - 2, belt - 1, 1], [cx - 3, belt + 1, -1], [cx + 1, belt - 1, 0], [cx + 2, belt - 1, 0], [cx + 2, belt + 1, -1]] as const) {
+    c.px(x, y, S.belt, { x: (x - cx) * 0.2, y: 0.4, z: 0.86 }, { bias: b });
+  }
+  c.part();
+  c.px(cx - 1, belt, S.trim, { x: -0.2, y: 0.3, z: 0.93 }, { bias: 1 });
+  sashTails(c, cx - 1, belt, -sway);
 }
 
 /** Facing left. Right-facing frames are mirrored from these. */
@@ -2289,6 +2882,7 @@ function drawSide(c: PixelCanvas, p: Pose): FrameMeta {
 
   let tip = { x: 0, y: 0 };
   if (p.staffBehind) tip = drawStaff(c, p.staff, p.glow);
+  if (S.wing) faerieWings(c, 'side', cx, U, p);
 
   // Back foot first, then front foot.
   boot(c, 14.2 - p.footB, 29.6 - Math.max(0, p.footB) * 0.35, true);
@@ -2306,6 +2900,7 @@ function drawSide(c: PixelCanvas, p: Pose): FrameMeta {
   };
   c.part();
   c.shape(top, hem, edges, S.robe, (_x, _y, t, u) => cyl(t * 0.9 - 0.1, 0.25 - u * 0.25));
+  skirtTiers(c, edges, hem, p.hem);
   hemTrim(c, edges, hem, p.hem);
   const belt = 21 + U;
   const [bl, br] = edges(belt);
@@ -2314,7 +2909,7 @@ function drawSide(c: PixelCanvas, p: Pose): FrameMeta {
   c.part();
   c.px(Math.round(bl), belt, S.trim, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
   // Front edge of the robe opening.
-  for (let y = belt + 1; y < hem; y++) {
+  for (let y = belt + 1; y < hem && S.head !== 'faerie'; y++) {
     const [l] = edges(y);
     c.px(Math.round(l) + 1, y, S.inner, cyl(-0.4, 0));
   }
@@ -2332,6 +2927,8 @@ function drawSide(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'grove') groveFlecks(c, U, p);
   if (S.head === 'tide') tideFlecks(c, U, p);
   if (S.head === 'witch') witchFlecks(c, p);
+  if (S.head === 'faerie') faerieFlecks(c, U, p);
+  if (S.head === 'lotus') lotusFlecks(c, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -2355,6 +2952,11 @@ function finishMagic(c: PixelCanvas, p: Pose, tip: { x: number; y: number }): vo
     const lean = p.hat + (p.staff.float % 2 ? 1 : 0);
     c.spark(tip.x - 0.4 + (lean % 2 ? 1 : 0), tip.y - 3.6, S.magic.deep, 0.5 + p.glow * 0.2);
     c.spark(tip.x - 0.4 + (lean % 2 ? 0 : 1), tip.y - 4.8, WITCH_GHOST, 0.3 + p.glow * 0.25);
+  } else if (S.head === 'faerie') {
+    // Pollen lifts off the moonflower, a mote either side by turns.
+    const lean = p.hat + (p.staff.float % 2 ? 1 : 0);
+    c.spark(tip.x - 0.4 + (lean % 2 ? 1.5 : -1.5), tip.y - 3.2, S.magic.hot, 0.35 + p.glow * 0.25);
+    c.spark(tip.x - 0.4 + (lean % 2 ? -1 : 1), tip.y - 4.6, S.magic.core, 0.2 + p.glow * 0.2);
   } else if (S.head === 'astral') {
     // The star at the staff's head throws out four long rays.
     const r = 2 + Math.round(p.glow * 1.5);
@@ -2401,6 +3003,8 @@ function idle(view: 'down' | 'up' | 'side'): Pose[] {
     p.staff.float = 1.2 + Math.round(Math.sin((f / N) * Math.PI * 2) * 1);
     p.glow = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin((f / N) * Math.PI * 2));
     p.blink = f === 11;
+    // Titania's wings open and close twice a loop, slow as breathing.
+    p.flap = 0.55 + 0.45 * Math.cos((f / N) * Math.PI * 4);
     frames.push(p);
   }
   return frames;
@@ -2431,6 +3035,8 @@ function walk(view: 'down' | 'up' | 'side'): Pose[] {
     }
     p.staff.hy -= p.lift;
     p.glow = 0.7;
+    // On the move her wings beat twice a stride.
+    p.flap = 0.5 + 0.5 * Math.cos(((f + 0.5) / N) * Math.PI * 4);
     frames.push(p);
   }
   return frames;
@@ -2546,6 +3152,7 @@ function charge(view: 'down' | 'up' | 'side'): Pose[] {
     // The gathering magic stirs the robe and hat.
     p.hem = view === 'side' ? (i < 2 ? 1 : 0) : [0, 1, 0, -1][i];
     p.hat = i % 2 ? (view === 'side' ? -1 : 1) : 0;
+    p.flap = i % 2 ? 0.7 : 1;
     return p;
   });
 }
@@ -2906,11 +3513,11 @@ function butterfly(c: PixelCanvas, x: number, y: number, wings: number): void {
   if (wings !== 2) c.px(x0, y0 - 1, S.inner, { x: 0, y: 0.4, z: 0.9 }, { bias: 0 });
 }
 
-function restGrove(): Pose[] {
+function restGrove(look: WizardLook): Pose[] {
   const frames: Pose[] = [stand()];
   const { x: hx, y: hy } = PERCH;
-  // The blossom on the right antler's tip (see groveHeadDown).
-  const bloom = { x: 19, y: 2 };
+  // The blossom on the right antler's tip (see groveHeadDown); for Titania, the right blossom of her crown.
+  const bloom = look.head === 'faerie' ? { x: 15, y: 9 } : { x: 19, y: 2 };
   const at = (i: number, f: Partial<Pose>, fly?: [number, number, number], fx?: (c: PixelCanvas) => void) => {
     const p = { ...stand(), ...f };
     p.fx = (c) => {
@@ -3006,7 +3613,7 @@ function rest(view: 'down' | 'up' | 'side', look: WizardLook): Pose[] {
   if (look.rest === 'arcane') return restArcane(look);
   if (look.rest === 'pyro') return restPyro();
   if (look.rest === 'tide') return restTide();
-  if (look.rest === 'grove') return restGrove();
+  if (look.rest === 'grove') return restGrove(look);
   return restWild();
 }
 

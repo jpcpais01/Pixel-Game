@@ -92,7 +92,7 @@ const ULTS: Record<string, UltDef> = {
     range: 115,
     pal: TIDE_MAGIC.pal,
     icon: icons.maelstromIcon,
-    cast: (c) => c.world.addEffect(new Maelstrom(c.world, c.tx, c.ty, c.pal)),
+    cast: (c) => c.world.addEffect(new Maelstrom(c.world, c.tx, c.ty, c.pal, c.look === 'lotus')),
   },
   'warrior:knight': {
     name: 'Skybreaker',
@@ -339,7 +339,7 @@ const ULTS: Record<string, UltDef> = {
     range: 110,
     pal: GROVE_PAL,
     icon: icons.wrathIcon,
-    cast: (c) => c.world.addEffect(new WildWrath(c.world, c.tx, c.ty, c.pal)),
+    cast: (c) => c.world.addEffect(new WildWrath(c.world, c.tx, c.ty, c.pal, c.look === 'titania')),
   },
   'druid:wild': {
     name: 'Primal Stampede',
@@ -496,6 +496,7 @@ const SKINS: Record<string, UltSkin> = {
   'wizard:hellfire': { name: 'Hellstorm', pal: pal(0xf4ffe8, 0xc8ff7a, 0x5ee83a, 0x1a8a3a, 0x7aff5a), type: 'pyro' },
   'wizard:pumpkin': { name: 'Witching Hour', pal: pal(0xfff4d8, 0xffc04a, 0xff7a1a, 0x7a2ad0, 0xff8a30), type: 'pyro' },
   'wizard:abyssal': { name: 'Call of the Deep', pal: ABYSS_MAGIC.pal, type: 'tide' },
+  'wizard:lotus': { name: 'Thousand-Petal Lotus', pal: pal(0xfff4fa, 0xffb8d4, 0x3ed0b0, 0x1a7a78, 0xffa0c8), type: 'tide' },
   'warrior:spartan': { name: 'Wrath of Ares', pal: pal(0xfff0e8, 0xff9a80, 0xf03a3a, 0x8a0a1a, 0xff6a50) },
   'warrior:headless': { name: 'Hollow Ride', pal: pal(0xfff4d0, 0xffb040, 0xff6a14, 0x5a1a7a, 0xff8a2a) },
   'warrior:afonso': { name: 'Miracle of Ourique', pal: AFONSO_KIT.pal, type: 'king' },
@@ -507,6 +508,7 @@ const SKINS: Record<string, UltSkin> = {
   'samurai:kitsune': { name: 'Nine-Tailed Descent', pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { name: 'Thousand Moons', pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
   'druid:autumn': { name: 'Wrath of the Fall', pal: AUTUMN_MAGIC.pal },
+  'druid:titania': { name: 'Midsummer Dream', pal: pal(0xfffaf0, 0xffd88a, 0xff9ac0, 0xb8487a, 0xffb8d0) },
   'druid:frostfang': { name: 'Winter Stampede', pal: FROST_MAGIC.pal, type: 'wild' },
   'valkyrie:sunshield': { name: 'Spear of the Sun', pal: SUN_KIT.pal },
   'valkyrie:raven': { name: 'Wrath of the Raven', pal: RAVEN_KIT.pal, type: 'storm' },

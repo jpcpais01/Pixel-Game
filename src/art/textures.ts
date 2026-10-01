@@ -28,6 +28,8 @@ import { EGG_H, EGG_W, PET_ART, PET_FRAMES, PET_H, PET_W, eggCracks, petFrames, 
 import { RIFT_PLATFORM_H, RIFT_PLATFORM_W, SHARD_H, SHARD_W, TEAR_FRAMES, TEAR_H, TEAR_W, blessingIcon, riftPlatformArt, riftShard, riftTear, riftVoidCanvas, type BlessingIcon } from './rift';
 import { RIFT_H, RIFT_W } from '../world/riftLayout';
 import { ABYSS_SPELL, ABYSS_TONES, TIDE_SPELL, waveIcon } from './tide';
+import { LOTUS_SPELL, lilyWaveIcon } from './tide';
+import { TITANIA_SPELL, blossomSeedIcon, faerieRingIcon } from './druid';
 import { PUMPKIN_EMBERS, PUMPKIN_METEOR, PUMPKIN_SPELL, jackOrbFrame, pumpkinMeteorIcon } from './pumpkin';
 import { AUTUMN_SPELL, AUTUMN_TONES, FROST_SPELL, FROST_TONES, GROVE_SPELL, WILD_SPELL, clawsIcon, groveIcon, pounceIcon, thornSeedIcon } from './druid';
 import { RAVEN_INK, RAVEN_TONES, SUN_INK, SUN_TONES, diveIcon, spearIcon, spearThrowIcon } from './valkyrie';
@@ -358,7 +360,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
 
   yield;
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
-  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL], ['_grove', GROVE_SPELL], ['_wild', WILD_SPELL], ['_autumn', AUTUMN_SPELL], ['_frost', FROST_SPELL], ['_tide', TIDE_SPELL], ['_abyss', ABYSS_SPELL]] as const) {
+  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL], ['_grove', GROVE_SPELL], ['_wild', WILD_SPELL], ['_autumn', AUTUMN_SPELL], ['_frost', FROST_SPELL], ['_tide', TIDE_SPELL], ['_abyss', ABYSS_SPELL], ['_titania', TITANIA_SPELL], ['_lotus', LOTUS_SPELL]] as const) {
     register(scene, `orb${suffix}`, pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i, k)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
     register(scene, `burst${suffix}`, pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i, k)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
     scene.anims.create({ key: `orb${suffix}_spin`, frames: scene.anims.generateFrameNames(`orb${suffix}_e`, { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });
@@ -509,11 +511,14 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_dive', toCanvas(16, 16, diveIcon()));
   scene.textures.addCanvas('icon_thorn_autumn', toCanvas(16, 16, thornSeedIcon(AUTUMN_TONES)));
   scene.textures.addCanvas('icon_grove_autumn', toCanvas(16, 16, groveIcon(AUTUMN_TONES)));
+  scene.textures.addCanvas('icon_thorn_titania', toCanvas(16, 16, blossomSeedIcon()));
+  scene.textures.addCanvas('icon_grove_titania', toCanvas(16, 16, faerieRingIcon()));
   scene.textures.addCanvas('icon_claws_frost', toCanvas(16, 16, clawsIcon(FROST_TONES)));
   scene.textures.addCanvas('icon_pounce_frost', toCanvas(16, 16, pounceIcon(FROST_TONES)));
   // The Tidecaller's wave, and the Abyssal's.
   scene.textures.addCanvas('icon_wave', toCanvas(16, 16, waveIcon()));
   scene.textures.addCanvas('icon_wave_abyss', toCanvas(16, 16, waveIcon(ABYSS_TONES)));
+  scene.textures.addCanvas('icon_wave_lotus', toCanvas(16, 16, lilyWaveIcon()));
   scene.textures.addCanvas('icon_spear_sun', toCanvas(16, 16, spearIcon(false, SUN_INK, SUN_TONES)));
   scene.textures.addCanvas('icon_spearthrow_sun', toCanvas(16, 16, spearThrowIcon(SUN_TONES)));
   scene.textures.addCanvas('icon_spear_raven', toCanvas(16, 16, spearIcon(true, RAVEN_INK, RAVEN_TONES)));
