@@ -27,10 +27,14 @@ const APS = { scale: 0.42, min: 0.55, max: 1.4 };
 /** Seconds of wind-up before a blow in reach lands, and missile speed in cells a second. */
 const SWING = 0.22;
 const MISSILE_SPEED = 9;
-/** Mana for each attack made and each blow taken (Guardians take more from blows). */
+/** Mana for each attack made and each blow taken (Guardians take more from blows, but not so much more that a
+ * front-liner under a crowd casts every few seconds). */
 const MANA_ATTACK = 10;
 const MANA_STRUCK = 3;
-const MANA_STRUCK_TANK = 6;
+const MANA_STRUCK_TANK = 4;
+/** The most barrier a hero can hold, as a share of its max HP: barriers from repeated casts top up to this rather
+ * than stacking without end. */
+const SHIELD_CAP = 0.6;
 /** How long a cast holds the caster, and when in it the spell goes off. */
 const CAST_LOCK = 0.75;
 const CAST_AT = 0.4;
@@ -744,8 +748,10 @@ export class Battle {
 
   private barrier(u: SimUnit, amt: number): void {
     if (!u.alive) return;
-    u.shield += amt;
-    this.emit({ t: 'shield', u: u.uid, amt: Math.round(amt) });
+    const add = Math.min(amt, Math.max(0, u.maxHp * SHIELD_CAP - u.shield));
+    if (add <= 0) return;
+    u.shield += add;
+    this.emit({ t: 'shield', u: u.uid, amt: Math.round(add) });
   }
 
   /** Run to the end (the host's own reckoning, or a fight nobody watches). */
