@@ -116,6 +116,7 @@ import { ensureUltIcons, EnergyMotes, UltCaster } from '../game/ultimate';
 import type { MonsterStats } from '../game/monsters/Monster';
 import { NetPlay } from '../net/NetPlay';
 import { session } from '../net/session';
+import { trek } from '../game/trek';
 import { diag, note } from '../diagnostics';
 import { rouse } from '../game/rest';
 
@@ -431,7 +432,7 @@ export class WorldScene extends Phaser.Scene {
     if (arena.id === 'temple') this.temple = new TempleDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'deep') this.deep = new GlimmerDeep(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'forest') {
-      // Always the same forest, for everyone: the hero starts at its entrance and the rest is theirs to find.
+      // Always the same forest, for everyone: the hero first starts at its entrance, then where they left it.
       const gen = new ForestGen(EVERWOOD_SEED);
       useForest(gen);
       const forest = (this.forest = new Forest(this, gen, (img) => ground(img) as Phaser.GameObjects.Image));
@@ -515,7 +516,10 @@ export class WorldScene extends Phaser.Scene {
     this.spawnX = arena.spawn.x;
     this.spawnY = arena.spawn.y;
     if (this.forest) {
-      const at = this.forest.gen.spawn();
+      // The forest opens where the hero last stood in it (online, a guest starts at the entrance and is taken to the host).
+      trek.load();
+      const last = !session.active || session.isHost ? trek.last : null;
+      const at = last && this.forest.gen.walkable(last.x, last.y) ? last : this.forest.gen.spawn();
       this.spawnX = at.x;
       this.spawnY = at.y;
     }
