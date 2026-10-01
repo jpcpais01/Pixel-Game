@@ -1,4 +1,4 @@
-// Fishing in the Home: walk up to a rod standing in its pail within three
+// Fishing in the Home or the Everwood: walk up to a rod standing in its pail within three
 // squares of water and press E (or the touch button, which shows a rod) to
 // take it out. The hero casts, the float bobs, a fish nibbles, then bites:
 // press to hook it, then hold to lift the reel's green zone and keep the fish
@@ -16,7 +16,14 @@ import { controls } from '../game/controls';
 import { daynight } from '../game/daynight';
 import { fishById, fishHud, fishSay, fishTier, rollFish, type FishDef, type FishPhase } from '../game/fish';
 import type { WorldScene } from '../scenes/WorldScene';
-import type { Home, RodSpot } from './Home';
+import type { RodSpot } from './Home';
+
+/** Where the rods stand: the Home, or the Everwood. */
+export interface RodHost {
+  rods(): RodSpot[];
+  /** Take a rod out of its pail for fishing, or stand it back in. */
+  holdRod(key: string, out: boolean): void;
+}
 
 /** How close to a pail's foot the hero must stand to take its rod, px. */
 const REACH = 20;
@@ -105,7 +112,7 @@ export class Fishing {
 
   constructor(
     private scene: WorldScene,
-    private home: Home,
+    private home: RodHost,
   ) {
     warmFish(scene);
     const add = scene.add;

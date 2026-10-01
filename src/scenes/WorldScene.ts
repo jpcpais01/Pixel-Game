@@ -441,7 +441,13 @@ export class WorldScene extends Phaser.Scene {
       const forest = (this.forest = new Forest(this, gen, (img) => ground(img) as Phaser.GameObjects.Image));
       // The player's own changes on top: what they built, and the trees and undergrowth they cleared.
       const woodBuild = (this.woodBuild = new ForestBuild(this, forest));
+      // Fishing rods built here fish the forest's own streams and ponds.
+      const fishing = (this.fishing = new Fishing(this, woodBuild));
+      this.scene.launch('fish');
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        fishing.destroy();
+        if (this.fishing === fishing) this.fishing = null;
+        this.scene.stop('fish');
         woodBuild.destroy();
         this.woodBuild = null;
         useForest(null);
@@ -2015,6 +2021,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Is the hero under a roof (in the Rune Temple or the Forge)? No critters come out in there. */
   private indoors(): boolean {
+    if (this.forest) return this.forest.inside >= 0;
     return !!this.sanctum && (inTemple(this.hero.x, this.hero.y) || inForge(this.hero.x, this.hero.y));
   }
 
@@ -2292,7 +2299,7 @@ export class WorldScene extends Phaser.Scene {
     this.forge?.update(this.hero.x, this.hero.y, dt);
     this.naturalist?.update(time, dt, Phaser.Math.Easing.Sine.InOut(this.daylight), this.hero.x, this.hero.y);
     this.home?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight), this.net?.targets());
-    this.woodBuild?.update(dt, this.hero.x, this.hero.y);
+    this.woodBuild?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight));
     this.fishing?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight));
     if (build.friends) {
       build.friends = false;
@@ -2325,7 +2332,7 @@ export class WorldScene extends Phaser.Scene {
     this.companion?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight);
     if (controls.netTap) {
       controls.netTap = false;
-      if (this.downT <= 0 && !session.paused && !this.fishing?.tap() && !this.home?.act()) this.critters?.swingNet(this.hero.x, this.hero.y, this.facing.x);
+      if (this.downT <= 0 && !session.paused && !this.fishing?.tap() && !this.home?.act() && !this.woodBuild?.act()) this.critters?.swingNet(this.hero.x, this.hero.y, this.facing.x);
     }
     this.critters?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight, this.view, controls.mouse, this.indoors());
     this.island?.update(time, dt);

@@ -26,9 +26,13 @@ import { ForestFloors } from './ForestFloors';
 import { CELL, doorAcross } from './homeLayout';
 import { GATE_MATS } from '../art/homeGate';
 import { Swing, hangGate } from './swing';
-import { WALLS, partById, wallKind, wallMat, type PartDef } from './homeParts';
-import { glows, thingLook, wallFrameName } from '../art/homeArt';
-import { PLOT_X, PLOT_Y } from './homeLayout';
+import { WALLS, extent, partById, wallKind, wallMat, type PartDef } from './homeParts';
+import { DOOR_OX, DOOR_OY, glows, thingLook, wallFrameName } from '../art/homeArt';
+import { DOOR_FH, DOOR_FW, doorFrame } from '../art/homeDoor';
+import { JAR_SPOTS } from '../art/homeProps';
+import { critterById } from '../game/critters';
+import { PLOT_X, PLOT_Y, type Thing } from './homeLayout';
+import { RoofView } from './RoofView';
 import type { ClearedNote, TileAsk, TileDone } from './forestWorker';
 
 // The Everwood as it is walked: its ground painted tile by tile round the
@@ -204,12 +208,46 @@ interface Stood {
   /** What the player may clear here: trees and undergrowth, by foot key, with the box a tap on them lands in. */
   clearable: Clearable[];
   /** Lamps the player built: their light flickers and the day washes it out, as in the Home. */
-  lamps: { light: Phaser.GameObjects.Light; halo: Img; part: PartDef; seed: number }[];
+  lamps: { light: Phaser.GameObjects.Light; halo: Img; part: PartDef; seed: number; cx: number; cy: number }[];
   /** Grass, flowers and reeds, which bend as a gust goes over (see ForestWind.ts). */
   grass: Bending[];
   /** Gates in the garden walls built here (see world/swing.ts). */
   gates: Swing[];
+  /** Walls built here, which drop to stubs along a house's south side while the hero is inside it. */
+  walls: BuiltWall[];
+  /** Doors hung in house doorways, swinging as heroes come to them. */
+  doors: BuiltDoor[];
+  /** Wall hangings, which go with their wall when it drops to a stub. */
+  hangings: { objs: (Img | Sprite)[]; light: Phaser.GameObjects.Light | null; cx: number; cy: number }[];
+  /** Sun shadows of what's built: none under a roof or a tent's cloth. */
+  builtShadows: { img: Img; cx: number; cy: number }[];
+  /** Critters in jars on the shelves built here: each glow keeps to its jar's frame. */
+  jars: { jar: Sprite; glow: Sprite }[];
 }
+
+interface BuiltWall {
+  cx: number;
+  cy: number;
+  img: Img;
+  glow: Img | null;
+  shadow: Img;
+  h: number;
+  /** Rows cut off its top (0: whole). */
+  cut: number;
+}
+
+interface BuiltDoor {
+  t: Thing;
+  sprite: Sprite;
+  glow: Sprite;
+  swing: Swing;
+  cut: number;
+  /** The edits' version its way was worked out for. */
+  ver: number;
+}
+
+/** Walls along a house's south side, seen from inside, are cut down to this many px of face (as in a Home). */
+const STUB = 6;
 
 /** A piece of undergrowth the wind bends: its look, and the bend it shows now. */
 export interface Bending {
@@ -276,6 +314,13 @@ export class Forest {
   /** The floors laid and the bridges built, kept up with the edits' version. */
   private floors: ForestFloors;
   private bridges: BridgeView;
+  /** The roofs over houses built here and the tents' cloth (see RoofView.ts), and the house the hero is in (-1 for none). */
+  private roofs: RoofView;
+  inside = -1;
+  /** Fishing rods built here, by their key (see ForestBuild.rods), to take out of their pails. */
+  private rodSprites = new Map<string, { sprite: Sprite; shadow: Img | null; frame: string; flip: boolean }>();
+  /** The critters the owner has caught, for the jar shelves built here (set by ForestBuild). */
+  caught: () => string[] = () => [];
   private builtVer = -1;
   /** Each ground tile's version, raised when a tree near it is cleared (it is painted again), and whether the painters still need the cleared list. */
   private vers = new Map<number, number>();
@@ -351,6 +396,7 @@ export class Forest {
     this.sounds = new ForestSounds(world, gen);
     this.floors = new ForestFloors(world, adopt);
     this.bridges = new BridgeView(world);
+    this.roofs = new RoofView(world);
     const offQuality = settings.watch((q) => {
       const k = q.quality !== 'full' ? 2 : 1;
       this.treeLeaves.frequency = TREE_LEAF_MS * k;
@@ -367,6 +413,7 @@ export class Forest {
       this.stood.clear();
       this.floors.destroy();
       this.bridges.destroy();
+      this.roofs.destroy();
     });
   }
 
@@ -667,7 +714,7 @@ export class Forest {
   private stand(key: number): void {
     if (this.stood.has(key)) return;
     const l = this.gen.layout(Math.floor(key / 4096), key % 4096);
-    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], treeShadows: [], lights: [], clearable: [], lamps: [], grass: [], gates: [] };
+    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], treeShadows: [], lights: [], clearable: [], lamps: [], grass: [], gates: [], walls: [], doors: [], hangings: [], builtShadows: [], jars: [] };
     this.stood.set(key, st);
     const add = this.world.add;
     const place = (obj: Placed['obj'], x: number, y: number, hw: number, up: number) => st.placed.push({ obj, x0: x - hw, x1: x + hw, y0: y - up, y1: y + 6 });
@@ -692,67 +739,146 @@ export class Forest {
     if (this.edits) this.standBuilt(st, Math.floor(key / 4096), key % 4096);
   }
 
-  /** What the player built in chunk (ccx, ccy): their things, drawn as in the Home, and their garden walls. */
+  /** What the player built in chunk (ccx, ccy): their things and walls, drawn as in the Home. */
   private standBuilt(st: Stood, ccx: number, ccy: number): void {
     const e = this.edits!;
     const add = this.world.add;
     for (const t of e.thingsInChunk(ccx, ccy)) {
       const part = partById(t.id);
-      // Bridges are stood up whole, not a cell to a chunk (see `update`).
-      if (!part || part.bridge) continue;
+      // Bridges and roofs are stood up whole, not a cell to a chunk (see `update`); critters live their own lives (ForestBuild).
+      if (!part || part.bridge || part.critter) continue;
+      if (part.door) {
+        this.standDoor(st, t);
+        continue;
+      }
       // The Home's own drawing, moved from its plot onto the forest's grid.
       const look = thingLook(t);
       const x = look.x - PLOT_X;
       const y = look.y - PLOT_Y;
-      const depth = part.flat ? 1.5 : y;
+      // A hanging sorts just in front of its wall.
+      const depth = part.wall ? t.y * CELL + 11.2 : part.flat ? 1.5 : y;
       const sprite = add.sprite(x, y, look.key, look.frame).setOrigin(look.ox, look.oy).setFlipX(look.flipX).setPipeline('Lit').setDepth(depth);
       const tall = look.key === 'tree' || t.id === 'blossom';
       st.placed.push({ obj: sprite, x0: x - 56, x1: x + 56, y0: y - (tall ? 130 : 70), y1: y + 8 });
+      const footCx = t.x;
+      const footCy = t.y + extent(part, t.turn).h - 1;
       if (look.sway) {
         // Planted trees sway with the rest (see `update`).
         st.trees.push({ obj: sprite, x, y, kind: t.id === 'blossom' ? 'cherry' : (t.id as WoodKind), v: 0, anim: look.sway, swaying: false, alpha: 1, r: 34, top: 66, glow: null });
       }
+      let glow: Sprite | null = null;
       if (look.glow) {
-        const glow = add.sprite(x, y, look.glow, look.frame).setOrigin(look.ox, look.oy).setFlipX(look.flipX).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1);
+        glow = add.sprite(x, y, look.glow, look.frame).setOrigin(look.ox, look.oy).setFlipX(look.flipX).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1);
         // Flames flicker in the glow alone (the animation's frames are the glow's); the body's lit frame stays put, as in the Home.
         if (look.anim) glow.play({ key: look.anim, startFrame: Math.floor(Math.random() * 4) });
         st.placed.push({ obj: glow, x0: x - 40, x1: x + 40, y0: y - 70, y1: y + 8 });
       }
-      if (!part.flat) this.cast(st, tall ? st.treeShadows : st.shadows, sprite, tall ? TREE_H : 60);
-      const L = part.light;
-      if (L) {
-        const ly = y - L.y;
-        const light = this.world.lights.addLight(x, ly, L.radius, L.color, L.intensity);
-        st.lights.push(light);
-        const halo = add.image(x, ly, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(L.color).setScale(Math.max(0.8, L.radius / 70)).setDepth(depth + 0.2).setAlpha(0.4);
-        st.placed.push({ obj: halo, x0: x - 60, x1: x + 60, y0: ly - 60, y1: ly + 60 });
-        st.lamps.push({ light, halo, part, seed: Math.random() * 100 });
+      let shadow: Img | null = null;
+      if (!part.flat && !part.wall) {
+        shadow = this.cast(st, tall ? st.treeShadows : null, sprite, tall ? TREE_H : 60);
+        if (!tall) st.builtShadows.push({ img: shadow, cx: footCx, cy: footCy });
       }
+      if (part.fishing) this.rodSprites.set(`${t.id}@${t.x},${t.y}`, { sprite, shadow, frame: look.frame, flip: t.flip });
+      const L = part.light;
+      let light: Phaser.GameObjects.Light | null = null;
+      if (L) {
+        // A sconce's flame stands out from the wall, over its cell.
+        const lx = part.wall ? x + 2 : x;
+        const ly = part.wall ? t.y * CELL - 9 : y - L.y;
+        light = this.world.lights.addLight(lx, ly, L.radius, L.color, L.intensity);
+        st.lights.push(light);
+        const halo = add.image(lx, ly, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(L.color).setScale(Math.max(0.8, L.radius / 70)).setDepth(depth + 0.2).setAlpha(0.4);
+        st.placed.push({ obj: halo, x0: lx - 60, x1: lx + 60, y0: ly - 60, y1: ly + 60 });
+        st.lamps.push({ light, halo, part, seed: Math.random() * 100, cx: footCx, cy: part.wall ? t.y + 1 : footCy });
+        if (part.wall) st.hangings.push({ objs: [halo], light, cx: t.x, cy: t.y });
+      }
+      if (part.wall) st.hangings.push({ objs: glow ? [sprite, glow] : [sprite], light: null, cx: t.x, cy: t.y });
+      if (part.jars) this.fillShelf(st, t, part, sprite);
     }
     for (const [cx, cy, v] of e.wallsInChunk(ccx, ccy)) {
       const mat = wallMat(v);
       const def = WALLS[mat];
       if (!def) continue;
       const mask = e.wallMask(cx, cy);
-      // A gate is its own sprite, swinging over the bare gap.
-      const gate = wallKind(v) === 'door' && GATE_MATS.includes(mat);
-      const frame = wallKind(v) === 'door' ? `${gate ? 'o' : 'd'}${mask}` : `w${mask}_${(cx * 7 + cy * 13) % 2}`;
+      const kind = wallKind(v);
+      // A garden wall's gate is its own sprite, swinging over the bare gap; so is a door hung in a house's doorway.
+      const gate = !def.house && kind === 'door' && GATE_MATS.includes(mat);
+      const bare = def.house ? e.thingsAt(cx, cy).some((t) => partById(t.id)?.door) : gate;
+      const frame = kind === 'door' ? `${bare ? 'o' : 'd'}${mask}` : kind === 'window' && def.house ? `n${mask}` : `w${mask}_${(cx * 7 + cy * 13) % 2}`;
       const key = wallFrameName(mat, frame);
       const x = cx * CELL;
       const y = cy * CELL - def.height;
       const depth = cy * CELL + 11;
       const img = add.image(x, y, 'home', key).setOrigin(0).setPipeline('Lit').setDepth(depth);
       st.placed.push({ obj: img, x0: x, x1: x + CELL, y0: y, y1: (cy + 1) * CELL });
-      if (glows(key)) st.placed.push({ obj: add.image(x, y, 'home_e', key).setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1), x0: x, x1: x + CELL, y0: y, y1: (cy + 1) * CELL });
+      let glow: Img | null = null;
+      if (glows(key)) {
+        glow = add.image(x, y, 'home_e', key).setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1);
+        st.placed.push({ obj: glow, x0: x, x1: x + CELL, y0: y, y1: (cy + 1) * CELL });
+      }
       const shadow = sunShadow(add.image(x + CELL / 2, (cy + 1) * CELL, 'home_s', key).setOrigin(0.5, 1));
-      st.shadows.push(shadow);
       st.placed.push({ obj: shadow, x0: x - 40, x1: x + CELL + 40, y0: y - 40, y1: (cy + 1) * CELL + 40 });
+      st.walls.push({ cx, cy, img, glow, shadow, h: def.height, cut: 0 });
       if (gate) {
         const g = hangGate(this.world, mat, x, cy * CELL, doorAcross(mask));
         st.gates.push(g.swing);
         st.placed.push({ obj: g.sprite, x0: x - CELL, x1: x + CELL * 2, y0: y - CELL, y1: (cy + 2) * CELL });
       }
     }
+  }
+
+  /** A door in its doorway: each frame of its swing a whole picture of the doorway (see art/homeDoor.ts), as in a Home. */
+  private standDoor(st: Stood, t: Thing): void {
+    const x = t.x * CELL - DOOR_OX;
+    const y = t.y * CELL - DOOR_OY;
+    const frame = doorFrame('n', t.flip ? 1 : 0, 0);
+    const sprite = this.world.add.sprite(x, y, 'home', frame).setOrigin(0).setPipeline('Lit');
+    // Its little window shows the lamplight inside, like the house's windows.
+    const glow = this.world.add.sprite(x, y, 'home_e', frame).setOrigin(0).setBlendMode(Phaser.BlendModes.ADD);
+    const swing = new Swing((t.x + 0.5) * CELL, (t.y + 0.5) * CELL, true, 'n', 'door', false, (way, step) => {
+      const f = doorFrame(way, t.flip ? 1 : 0, step);
+      sprite.setFrame(f);
+      glow.setFrame(f);
+    });
+    st.doors.push({ t, sprite, glow, swing, cut: 0, ver: -1 });
+    for (const obj of [sprite, glow]) st.placed.push({ obj, x0: x - CELL, x1: x + DOOR_FW + CELL, y0: y - CELL, y1: y + DOOR_FH + CELL });
+  }
+
+  /** A critter shelf shows the owner's caught critters in turn, three to a shelf, in the order the shelves went up (as in a Home). */
+  private fillShelf(st: Stood, t: Thing, part: PartDef, body: Sprite): void {
+    let n = 0;
+    for (const o of this.edits!.things) {
+      if (o === t) break;
+      n += partById(o.id)?.jars ?? 0;
+    }
+    const caught = this.caught();
+    const x0 = t.x * CELL;
+    const y = t.y * CELL + JAR_SPOTS.y;
+    let lit: number | null = null;
+    for (let k = 0; k < part.jars!; k++) {
+      const id = caught[n + k];
+      const x = x0 + JAR_SPOTS.xs[k];
+      const jar = this.world.add.sprite(x, y, 'jars', id ? `${id}_0` : 'empty').setOrigin(0.5, 1).setPipeline('Lit').setDepth(body.depth + 0.2);
+      const glow = this.world.add.sprite(x, y, 'jars_e', id ? `${id}_0` : 'empty').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(body.depth + 0.3).setVisible(!!id);
+      if (id) {
+        jar.play({ key: `jar_${id}`, startFrame: k });
+        st.jars.push({ jar, glow });
+      }
+      for (const obj of [jar, glow]) st.placed.push({ obj, x0: x - 12, x1: x + 12, y0: y - 30, y1: y + 4 });
+      const d = critterById(id ?? '');
+      if (lit === null && d?.glow) lit = (d.glow[0] << 16) | (d.glow[1] << 8) | d.glow[2];
+    }
+    // The shelf glows in the colour of its brightest critter.
+    if (lit !== null) st.lights.push(this.world.lights.addLight(x0 + 24, y - 10, 70, lit, 0.9));
+  }
+
+  /** Take a fishing rod built here out of its pail, or stand it back in. */
+  holdRod(key: string, out: boolean): void {
+    const r = this.rodSprites.get(key);
+    if (!r?.sprite.active) return;
+    const frame = out ? (r.flip ? 'rodbucket_m' : 'rodbucket') : r.frame;
+    r.sprite.setFrame(frame);
+    r.shadow?.setFrame(frame);
   }
 
   /** Stand chunk (cx, cy) up again on the next frame: something was built, cleared or taken down in it. */
@@ -1078,10 +1204,62 @@ export class Forest {
    * monsters' (see sunShadow). Kept while it could reach into view: `reach`
    * px every way from the foot, as the shadow swings round with the sun.
    */
-  private cast(st: Stood, list: Img[], obj: Img | Sprite, reach: number): void {
+  private cast(st: Stood, list: Img[] | null, obj: Img | Sprite, reach: number): Img {
     const sh = sunShadow(this.world.add.image(obj.x, obj.y, `${obj.texture.key}_s`, obj.frame.name).setOrigin(obj.originX, obj.originY).setFlipX(obj.flipX));
-    list.push(sh);
+    list?.push(sh);
     st.placed.push({ obj: sh, x0: obj.x - reach, x1: obj.x + reach, y0: obj.y - reach, y1: obj.y + reach });
+    return sh;
+  }
+
+  /** What's built in a chunk, each frame: walls cut to stubs in a house the hero is in, doors swinging, hangings with their walls, no sun shadows indoors, windows lit by night. */
+  private updateBuilt(st: Stood, e: ForestEdits, dt: number, walkers: readonly { x: number; y: number }[], hero: { x: number; y: number }, shadowAlpha: number, windows: number): void {
+    for (const s of st.builtShadows) s.img.setAlpha(e.houseAt(s.cx, s.cy) >= 0 ? 0 : shadowAlpha);
+    for (const w of st.walls) {
+      const house = e.houseAt(w.cx, w.cy);
+      w.shadow.setAlpha(house >= 0 ? 0 : shadowAlpha);
+      w.glow?.setAlpha(windows);
+      // On the house's south side and not a corner the side wall runs into: a stub while the hero is in.
+      const south = house >= 0 && e.houseAt(w.cx, w.cy + 1) !== house && !(e.wallMask(w.cx, w.cy) & 1);
+      const top = south && this.roofs.reveal(house) > 0.5 ? w.h + 11 - STUB : 0;
+      if (w.cut === top) continue;
+      w.cut = top;
+      for (const o of [w.img, w.glow]) {
+        if (top) o?.setCrop(0, top, CELL, CELL + w.h - top);
+        else o?.setCrop();
+      }
+    }
+    const cutAt = (cx: number, cy: number) => st.walls.find((w) => w.cx === cx && w.cy === cy)?.cut ?? 0;
+    for (const dr of st.doors) {
+      const { x: cx, y: cy } = dr.t;
+      if (dr.ver !== e.version) {
+        // Opening into the house, drawn just in front of its wall (or, in a north-south wall, at its leaf) so heroes pass it the right side.
+        dr.ver = e.version;
+        const home = (x: number, y: number) => e.houseAt(x, y) >= 0;
+        const across = doorAcross(e.wallMask(cx, cy));
+        dr.swing.across = across;
+        dr.swing.setWay(across ? (home(cx, cy + 1) && !home(cx, cy - 1) ? 's' : 'n') : home(cx - 1, cy) && !home(cx + 1, cy) ? 'w' : 'e');
+        const base = cy * CELL;
+        dr.sprite.setDepth(across ? base + 11.05 : base + (dr.t.flip ? 13.5 : 2.5));
+        dr.glow.setDepth(dr.sprite.depth + 0.01);
+      }
+      dr.swing.update(dt, walkers, hero);
+      dr.glow.setAlpha(windows);
+      const cut = cutAt(cx, cy);
+      if (cut !== dr.cut) {
+        dr.cut = cut;
+        for (const o of [dr.sprite, dr.glow]) {
+          if (cut) o.setCrop(0, cut, DOOR_FW, DOOR_FH - cut);
+          else o.setCrop();
+        }
+      }
+    }
+    for (const h of st.hangings) {
+      if (!cutAt(h.cx, h.cy)) continue;
+      for (const o of h.objs) o.setVisible(false);
+      if (h.light) h.light.visible = false;
+    }
+    for (const h of st.hangings) if (h.light && !cutAt(h.cx, h.cy)) h.light.visible = true;
+    for (const j of st.jars) if (j.glow.visible) j.glow.setFrame(j.jar.frame.name);
   }
 
   private unstand(key: number): void {
@@ -1129,6 +1307,13 @@ export class Forest {
         this.builtVer = e.version;
         this.floors.sync(e);
         this.bridges.sync(e.bridges);
+        // Roofs over the houses, chimneys over their hearths, and the tents' cloth.
+        const chimneys = [];
+        for (const t of e.things) {
+          const p = partById(t.id);
+          if (p?.chimney) chimneys.push({ house: e.houseAt(t.x, t.y), x: (t.x + p.w / 2) * CELL, y: t.y * CELL + 5 });
+        }
+        this.roofs.sync(e.houses, (cx, cy) => e.roofAt(cx, cy), (cx, cy) => e.tentAt(cx, cy), chimneys);
       }
       this.floors.update(e, view);
     }
@@ -1152,15 +1337,26 @@ export class Forest {
     let raysShown = false;
     let leafy = false;
     const walkers = hero.alive ? [hero, ...others] : others;
+    // The house or tent the hero stands in: its roof or cloth fades, its south walls drop to stubs, and it's quiet indoors.
+    const inside = e ? e.houseAt(Math.floor(hero.x / CELL), Math.floor(hero.y / CELL)) : -1;
+    if (inside !== this.inside) {
+      this.inside = inside;
+      sound.setOutdoors(inside < 0);
+    }
+    if (e) this.roofs.update(dt, hero.x, hero.y, inside, d);
+    const windows = 0.15 + (1 - d) * 0.85;
     for (const st of this.stood.values()) {
       for (const p of st.placed) p.obj.setVisible(p.x1 > vx0 && p.x0 < vx1 && p.y1 > vy0 && p.y0 < vy1);
       for (const g of st.gates) g.update(dt, walkers, hero);
       for (const s of st.shadows) s.setAlpha(shadowAlpha);
+      if (e) this.updateBuilt(st, e, dt, walkers, hero, shadowAlpha, windows);
       for (const s of st.treeShadows) s.setAlpha(shadowAlpha * TREE_SHADOW);
       // Built lamps: fire flickers, the day washes them out.
       for (const l of st.lamps) {
         const L = l.part.light!;
-        const k = 1 + (L.day - 1) * d;
+        // Under a roof or a tent's cloth, a lamp shows little until the hero is inside.
+        const house = e ? e.houseAt(l.cx, l.cy) : -1;
+        const k = (1 + (L.day - 1) * d) * (house >= 0 ? 0.3 + 0.7 * this.roofs.reveal(house) : 1);
         const n = L.flicker ? Math.sin(time * 0.011 + l.seed) * 0.5 + Math.sin(time * 0.027 + l.seed * 3) * 0.3 + Math.sin(time * 0.061 + l.seed * 7) * 0.2 : Math.sin(time * 0.002 + l.seed) * 0.6;
         l.light.intensity = L.intensity * (0.87 + n * 0.13) * k;
         l.halo.setAlpha((0.32 + n * 0.06) * k);

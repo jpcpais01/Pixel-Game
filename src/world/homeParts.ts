@@ -12,12 +12,13 @@
 import { CRITTERS } from '../game/critters';
 
 /** The palette's tabs, in order; each is a layer or a kind of thing to place. */
-export type BuildTab = 'floor' | 'wall' | 'roof' | 'garden' | 'furniture' | 'light' | 'decor' | 'critters' | 'seeds';
+export type BuildTab = 'floor' | 'wall' | 'roof' | 'tent' | 'garden' | 'furniture' | 'light' | 'decor' | 'critters' | 'seeds';
 
 export const TABS: { id: BuildTab; name: string }[] = [
   { id: 'floor', name: 'Floors' },
   { id: 'wall', name: 'Walls' },
   { id: 'roof', name: 'Roofs' },
+  { id: 'tent', name: 'Tents' },
   { id: 'garden', name: 'Garden' },
   { id: 'furniture', name: 'Furniture' },
   { id: 'light', name: 'Lights' },
@@ -113,6 +114,23 @@ export const ROOFS: { id: string; name: string }[] = [
   { id: 'clay', name: 'Clay tiles' },
   { id: 'thatch', name: 'Thatch' },
   { id: 'shingle', name: 'Shingles' },
+];
+
+// ---------------------------------------------------------------- Tents
+
+/**
+ * Tents: wall and roof in one, laid cell by cell like a roof but on open
+ * ground, no walls needed. Each joined patch becomes one tent that shapes
+ * itself to the cells (see art/tentArt.ts): its ridge runs the long way, its
+ * cloth slopes from the ridge right down to the ground, pegged out at the
+ * hem, and its door is a flap tied back at the front. It is walked into like
+ * a house: the cloth fades away round the hero inside. Their index here, from
+ * 1, is what a layout stores.
+ */
+export const TENTS: { id: string; name: string }[] = [
+  { id: 'canvas', name: 'Canvas tent' },
+  { id: 'festival', name: 'Festival tent' },
+  { id: 'ranger', name: 'Ranger tent' },
 ];
 
 // ---------------------------------------------------------------- Things

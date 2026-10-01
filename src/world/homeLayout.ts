@@ -1,13 +1,14 @@
 // The player's Home: a plot of lawn in a forest clearing, laid out on a grid
 // of 16 px cells. Each cell may have a floor, a wall (or door, or window) and
-// a roof; things (plants, furniture, lights, wall hangings) are placed on
+// a roof, or a tent; things (plants, furniture, lights, wall hangings) are placed on
 // top. This file holds the layout itself, how it is saved and sent to friends
 // as a short string, where feet may go, and which roofs join into houses.
 // Everything here is plain data (no Phaser), so it can be checked anywhere.
 
 import { valueNoise } from '../art/env';
 import { Bridges, Deck } from './bridge';
-import { FLOORS, MAX_CRITTERS, WALLS, extent, floorIndex, packWall, partById, wallKind, wallMat, type PartDef } from './homeParts';
+import { findHousesIn, tentStops, type House } from './houses';
+import { FLOORS, MAX_CRITTERS, TENTS, WALLS, extent, floorIndex, packWall, partById, wallKind, wallMat, type PartDef } from './homeParts';
 
 /** A cell's size in pixels, and the plot's size in cells. */
 export const CELL = 16;
@@ -41,6 +42,8 @@ export class HomeLayout {
   floor = new Uint8Array(N);
   wall = new Uint8Array(N);
   roof = new Uint8Array(N);
+  /** Tents: wall and roof in one (see houses.ts). */
+  tent = new Uint8Array(N);
   things: Thing[] = [];
 
   clone(): HomeLayout {
@@ -48,6 +51,7 @@ export class HomeLayout {
     l.floor.set(this.floor);
     l.wall.set(this.wall);
     l.roof.set(this.roof);
+    l.tent.set(this.tent);
     l.things = this.things.map((t) => ({ ...t }));
     return l;
   }
@@ -62,6 +66,10 @@ export class HomeLayout {
 
   roofAt(cx: number, cy: number): number {
     return inPlot(cx, cy) ? this.roof[cellIndex(cx, cy)] : 0;
+  }
+
+  tentAt(cx: number, cy: number): number {
+    return inPlot(cx, cy) ? this.tent[cellIndex(cx, cy)] : 0;
   }
 
   /** The bridges its bridge cells make (see bridge.ts). */
@@ -137,19 +145,20 @@ export class HomeLayout {
 
   // ---- Saving
 
-  /** The whole layout as a short string: `h1|floors|walls|roofs|things`, each grid run-length coded; a thing is `id.x.y` and `.f` if mirrored, `.r<n>` if turned. */
+  /** The whole layout as a short string: `h1|floors|walls|roofs|things|tents`, each grid run-length coded; a thing is `id.x.y` and `.f` if mirrored, `.r<n>` if turned. (Saved before tents, it ends at the things.) */
   encode(): string {
     const things = this.things.map((t) => `${t.id}.${t.x.toString(36)}.${t.y.toString(36)}${t.flip ? '.f' : ''}${t.turn || partById(t.id)?.sideways ? `.r${t.turn}` : ''}`).join(',');
-    return `h1|${runs(this.floor)}|${runs(this.wall)}|${runs(this.roof)}|${things}`;
+    return `h1|${runs(this.floor)}|${runs(this.wall)}|${runs(this.roof)}|${things}|${runs(this.tent)}`;
   }
 
   /** A layout from `encode`, or null if the string isn't one. Unknown parts and values are dropped. */
   static decode(s: string | null | undefined): HomeLayout | null {
     if (!s || !s.startsWith('h1|')) return null;
     const parts = s.split('|');
-    if (parts.length !== 5) return null;
+    if (parts.length !== 5 && parts.length !== 6) return null;
     const l = new HomeLayout();
     if (!unruns(parts[1], l.floor, FLOORS.length) || !unruns(parts[2], l.wall, (WALLS.length + 1) * 4 - 1) || !unruns(parts[3], l.roof, 4)) return null;
+    if (parts[5] !== undefined && !unruns(parts[5], l.tent, TENTS.length)) return null;
     // Wall values from the packing: a known material and kind.
     for (let i = 0; i < N; i++) {
       const v = l.wall[i];
@@ -281,6 +290,13 @@ export class HomeMask {
         }
       }
     }
+    // Tents: their hems stop feet, all but the doorway.
+    for (const h of findHouses(l).houses) {
+      if (!h.tent) continue;
+      for (const c of h.cells) {
+        for (let y = c.y * CELL; y < (c.y + 1) * CELL; y++) for (let x = c.x * CELL; x < (c.x + 1) * CELL; x++) if (tentStops(h, x, y)) d[y * PLOT_W + x] = 1;
+      }
+    }
     for (const t of l.things) {
       const p = partById(t.id);
       if (!p || p.block === 'none' || p.wall) continue;
@@ -302,55 +318,19 @@ export class HomeMask {
 
 // ---------------------------------------------------------------- Houses
 
-/**
- * The roofs, each patch of joined roof cells one house: its cells, and the
- * box round them. `at` gives the house over each cell (-1 for none).
- */
-export interface House {
-  id: number;
-  cells: number[];
-  x0: number;
-  y0: number;
-  x1: number;
-  y1: number;
-}
+export type { House };
 
+/** The houses and tents on the plot (see houses.ts); `at` gives the one over each cell (-1 for none). */
 export function findHouses(l: HomeLayout): { houses: House[]; at: Int16Array } {
+  const cells = (layer: Uint8Array) => {
+    const out: { x: number; y: number }[] = [];
+    for (let i = 0; i < N; i++) if (layer[i]) out.push({ x: i % COLS, y: Math.floor(i / COLS) });
+    return out;
+  };
+  const found = findHousesIn(cells(l.roof), cells(l.tent));
   const at = new Int16Array(N).fill(-1);
-  const houses: House[] = [];
-  for (let i = 0; i < N; i++) {
-    if (!l.roof[i] || at[i] >= 0) continue;
-    const h: House = { id: houses.length, cells: [], x0: COLS, y0: ROWS, x1: -1, y1: -1 };
-    const stack = [i];
-    at[i] = h.id;
-    while (stack.length) {
-      const c = stack.pop()!;
-      h.cells.push(c);
-      const cx = c % COLS;
-      const cy = (c - cx) / COLS;
-      h.x0 = Math.min(h.x0, cx);
-      h.x1 = Math.max(h.x1, cx);
-      h.y0 = Math.min(h.y0, cy);
-      h.y1 = Math.max(h.y1, cy);
-      for (const [dx, dy] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ]) {
-        const nx = cx + dx;
-        const ny = cy + dy;
-        if (!inPlot(nx, ny)) continue;
-        const j = cellIndex(nx, ny);
-        if (l.roof[j] && at[j] < 0) {
-          at[j] = h.id;
-          stack.push(j);
-        }
-      }
-    }
-    houses.push(h);
-  }
-  return { houses, at };
+  for (const [k, id] of found.at) at[cellIndex(Math.floor(k / 65536), k % 65536)] = id;
+  return { houses: found.houses, at };
 }
 
 // ---------------------------------------------------------------- The clearing round the plot

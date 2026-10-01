@@ -16,12 +16,10 @@ import { CROPS, STARTER_SEEDS, cropById, decodeFarm, encodeFarm, homeAct, rollHa
 import { keeperCall } from '../game/keepers';
 import { SUN_SHADOW_ALPHA, sunShadow } from '../game/Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
-import { thingFoot } from '../art/homeArt';
-import { CELL, PLOT_X, PLOT_Y, cellIndex, inPlot, type HomeLayout } from './homeLayout';
+import { footOn, type BuildLand } from './buildLand';
+import { CELL } from './homeLayout';
 import { extent, floorIndex, partById } from './homeParts';
 
-/** The Home's farm in the saved string. */
-const AT = 'h';
 /** How close the hero's feet must be to a ripe crop's to pick it, px; everything ripe that close is picked at once. */
 const PICK_R = 22;
 /** How close to a stove or pot the hero must stand to cook, px from its footprint, and how far they walk before it closes. */
@@ -66,11 +64,15 @@ export class Farm {
     private owner: boolean,
     /** The farm changed: save it and show visitors. */
     private onChange: () => void,
+    /** The grid it's on, the Home's or the Everwood's. */
+    private land: BuildLand,
+    /** Which farm it is in the saved string: 'h' the Home's, 'w' the Everwood's. */
+    private at = 'h',
   ) {
     warmFarm(scene);
     if (owner) {
       collection.giveStarter(CROPS.filter((c) => c.kind === 'garden').map((c) => c.id), STARTER_SEEDS);
-      this.plots = decodeFarm(collection.farm).filter((p) => p.at === AT);
+      this.plots = decodeFarm(collection.farm).filter((p) => p.at === this.at);
     }
     const add = scene.add;
     this.sparkle = add.particles(0, 0, 'spark', {
@@ -106,7 +108,7 @@ export class Farm {
 
   /** The farm a visitor is sent with the home. */
   adopt(s: string): void {
-    this.plots = decodeFarm(s).filter((p) => p.at === AT);
+    this.plots = decodeFarm(s).filter((p) => p.at === this.at);
     this.redraw();
   }
 
@@ -117,8 +119,8 @@ export class Farm {
 
   private save(): void {
     if (this.owner) {
-      // Keep any other farm's plots (the Everwood's, one day) as they were.
-      const others = decodeFarm(collection.farm).filter((p) => p.at !== AT);
+      // Keep the other farm's plots (the Home's, or the Everwood's) as they were.
+      const others = decodeFarm(collection.farm).filter((p) => p.at !== this.at);
       collection.saveFarm(encodeFarm([...others, ...this.plots]));
     }
     this.onChange();
@@ -134,19 +136,20 @@ export class Farm {
   }
 
   /** Could `crop` be sown here: open garden bed, nothing on it, nothing growing, and a seed in hand? */
-  canSow(l: HomeLayout, cx: number, cy: number, crop: string): boolean {
-    if (!inPlot(cx, cy) || l.floor[cellIndex(cx, cy)] !== this.soil || this.plotAt(cx, cy)) return false;
+  canSow(cx: number, cy: number, crop: string): boolean {
+    const l = this.land;
+    if (l.floorAt(cx, cy) !== this.soil || this.plotAt(cx, cy)) return false;
     if (l.thingsAt(cx, cy).some((t) => !partById(t.id)?.critter)) return false;
     return collection.stock(seedKey(crop)) > 0;
   }
 
-  sow(l: HomeLayout, cx: number, cy: number, crop: string): boolean {
-    if (!this.owner || !this.canSow(l, cx, cy, crop)) return false;
+  sow(cx: number, cy: number, crop: string): boolean {
+    if (!this.owner || !this.canSow(cx, cy, crop)) return false;
     collection.useStock([[seedKey(crop), 1]]);
-    this.plots.push({ at: AT, x: cx, y: cy, crop, t: Date.now() });
+    this.plots.push({ at: this.at, x: cx, y: cy, crop, t: Date.now() });
     this.show(this.plots[this.plots.length - 1]);
-    const x = PLOT_X + (cx + 0.5) * CELL;
-    const y = PLOT_Y + cy * CELL + CROP_FY - 15;
+    const x = this.land.ox + (cx + 0.5) * CELL;
+    const y = this.land.oy + cy * CELL + CROP_FY - 15;
     this.dirt.explode(5, x, y);
     sound.plant(this.scene.pan(x));
     this.save();
@@ -160,7 +163,7 @@ export class Farm {
     if (stageOf(p) === 0) collection.addStock(seedKey(p.crop), 1);
     this.plots = this.plots.filter((q) => q !== p);
     this.drop(keyOf(cx, cy));
-    this.dirt.explode(6, PLOT_X + (cx + 0.5) * CELL, PLOT_Y + cy * CELL + CROP_FY - 15);
+    this.dirt.explode(6, this.land.ox + (cx + 0.5) * CELL, this.land.oy + cy * CELL + CROP_FY - 15);
     sound.puff(0);
     this.save();
     return true;
@@ -171,8 +174,9 @@ export class Farm {
    * something now stands on, is gone (its seed back if it hadn't come up);
    * and the stoves and pots are found again.
    */
-  sync(l: HomeLayout): void {
-    const keep = this.plots.filter((p) => inPlot(p.x, p.y) && l.floor[cellIndex(p.x, p.y)] === this.soil && !l.thingsAt(p.x, p.y).some((t) => !partById(t.id)?.critter));
+  sync(): void {
+    const l = this.land;
+    const keep = this.plots.filter((p) => l.floorAt(p.x, p.y) === this.soil && !l.thingsAt(p.x, p.y).some((t) => !partById(t.id)?.critter));
     if (keep.length !== this.plots.length && this.owner) {
       for (const p of this.plots) if (!keep.includes(p) && stageOf(p) === 0) collection.addStock(seedKey(p.crop), 1);
       this.plots = keep;
@@ -183,15 +187,15 @@ export class Farm {
       const part = partById(t.id);
       if (!part?.cook) continue;
       const e = extent(part, t.turn);
-      const foot = thingFoot(t);
+      const foot = footOn(l, t);
       this.stations.push({
-        x0: PLOT_X + t.x * CELL,
-        y0: PLOT_Y + t.y * CELL,
-        x1: PLOT_X + (t.x + e.w) * CELL,
-        y1: PLOT_Y + (t.y + e.h) * CELL,
+        x0: this.land.ox + t.x * CELL,
+        y0: this.land.oy + t.y * CELL,
+        x1: this.land.ox + (t.x + e.w) * CELL,
+        y1: this.land.oy + (t.y + e.h) * CELL,
         kind: part.cook,
         // Steam off the copper pot on the stove's left plate, or off the pot over the fire.
-        steamX: part.cook === 'stove' ? PLOT_X + t.x * CELL + 8 : foot.x,
+        steamX: part.cook === 'stove' ? this.land.ox + t.x * CELL + 8 : foot.x,
         steamY: part.cook === 'stove' ? foot.y - 24 : foot.y - 16,
       });
     }
@@ -214,8 +218,8 @@ export class Farm {
   /** A crop stood up on its cell: its foot a little below the cell's middle, so rows read as rows. */
   private show(p: Plot): void {
     const add = this.scene.add;
-    const x = PLOT_X + (p.x + 0.5) * CELL;
-    const y = PLOT_Y + p.y * CELL + 12;
+    const x = this.land.ox + (p.x + 0.5) * CELL;
+    const y = this.land.oy + p.y * CELL + 12;
     const stage = stageOf(p);
     const frame = `${p.crop}_${stage}`;
     const ox = CROP_FX / 20;

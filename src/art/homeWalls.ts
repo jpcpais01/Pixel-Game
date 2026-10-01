@@ -21,7 +21,8 @@ import { ramp } from './ground';
 import { KEY_LIGHT, PixelCanvas, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
 import { fbm } from './spirit';
 import { BUSH, FIELDSTONE, HEARTH, IRON, doorway } from './sanctum';
-import { CELL, DOOR_HW, doorAcross, wallBoxes, type House, type HomeLayout, COLS, cellIndex, inPlot } from '../world/homeLayout';
+import { CELL, DOOR_HW, doorAcross, wallBoxes } from '../world/homeLayout';
+import { findHousesIn, type House } from '../world/houses';
 import { ROOFS, WALLS, type WallKind } from '../world/homeParts';
 
 // ---------------------------------------------------------------- Materials
@@ -473,27 +474,22 @@ export interface HouseSolid {
 /** A pixel of a house solid that holds nothing. */
 export const SOLID_NONE = 255;
 
-/** Paint house `h`'s roof, from its roof cells in `l`. */
-export function paintRoof(l: HomeLayout, h: House): RoofArt {
+/** Paint house `h`'s roof; `roofAt` gives each cell's roof (its index in ROOFS, from 1). Plot px are the grid's: cell (0, 0) at 0. */
+export function paintRoof(roofAt: (cx: number, cy: number) => number, h: House): RoofArt {
   const E = EAVES;
   const fx0 = h.x0 * CELL - E;
   const fy0 = h.y0 * CELL - E;
   const FW = (h.x1 - h.x0 + 1) * CELL + E * 2;
   const FH = (h.y1 - h.y0 + 1) * CELL + E * 2;
   const n = FW * FH;
-  const roofAt = (px: number, py: number) => {
-    const cx = Math.floor((px + fx0) / CELL);
-    const cy = Math.floor((py + fy0) / CELL);
-    return inPlot(cx, cy) ? l.roof[cellIndex(cx, cy)] : 0;
-  };
-  const own = new Set(h.cells);
+  const kindAt = (px: number, py: number) => roofAt(Math.floor((px + fx0) / CELL), Math.floor((py + fy0) / CELL));
   // Footprint: the house's roof cells, grown by the eaves.
   const out = new Float32Array(n).fill(1e9);
   for (let y = 0; y < FH; y++) {
     for (let x = 0; x < FW; x++) {
       const cx = Math.floor((x + fx0) / CELL);
       const cy = Math.floor((y + fy0) / CELL);
-      if (inPlot(cx, cy) && own.has(cellIndex(cx, cy))) out[y * FW + x] = 0;
+      if (h.has(cx, cy)) out[y * FW + x] = 0;
     }
   }
   chamfer(out, FW, FH, E + 1);
@@ -539,7 +535,7 @@ export function paintRoof(l: HomeLayout, h: House): RoofArt {
       let nx = -gx * pitch;
       let ny = gy * pitch;
       let nz = 1;
-      const kind = ROOFS[Math.max(0, roofAt(x, y) - 1)]?.id ?? 'slate';
+      const kind = ROOFS[Math.max(0, kindAt(x, y) - 1)]?.id ?? 'slate';
       const base = ROOF_RAMPS[kind];
       let r = base;
       let idx = 3.6;
@@ -706,9 +702,9 @@ function chamfer(d: Float32Array, W: number, H: number, cap: number): void {
 }
 
 /** A roof's sample for the build palette: a small hipped roof of it, `size` px square. */
-export function roofSwatch(kind: number, size: number, l: HomeLayout): Uint8ClampedArray<ArrayBuffer> {
-  for (let y = 0; y < 2; y++) for (let x = 0; x < 3; x++) l.roof[y * COLS + x] = kind;
-  const art = paintRoof(l, { id: 0, cells: [0, 1, 2, COLS, COLS + 1, COLS + 2], x0: 0, y0: 0, x1: 2, y1: 1 });
+export function roofSwatch(kind: number, size: number): Uint8ClampedArray<ArrayBuffer> {
+  const cells = [0, 1, 2].flatMap((x) => [0, 1].map((y) => ({ x, y })));
+  const art = paintRoof(() => kind, findHousesIn(cells, []).houses[0]);
   const out = new Uint8ClampedArray(size * size * 4);
   // The roof's slopes, centred, without the walls' lift under them.
   const ox = Math.round((art.w - size) / 2);

@@ -681,7 +681,9 @@ function everwoodPins(world: WorldScene, tm: TrekMap, x0: number, y0: number, x1
           if (t.id !== BUILT_FIRE) things.push(t);
           else out.push({ icon: 'campfire', x: t.x * 16 + 8, y: t.y * 16 + 8, fire: { id: builtFireId(t.x, t.y), x: t.x * 16 + 8, y: t.y * 16 + 12 } });
         }
-        const walls = edits.wallsInChunk(cx, cy);
+        const walls = [...edits.wallsInChunk(cx, cy)];
+        // A tent counts where its first cell is.
+        for (const h of edits.houses) if (h.tent && Math.floor((h.cells[0].x * 16) / CHUNK) === cx && Math.floor((h.cells[0].y * 16) / CHUNK) === cy) walls.push([h.cells[0].x, h.cells[0].y, 0]);
         const n = things.length + walls.length;
         if (!n) continue;
         let sx = 0;
