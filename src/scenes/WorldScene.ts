@@ -602,7 +602,7 @@ export class WorldScene extends Phaser.Scene {
       });
     } else if (this.forest) {
       // The forest's creatures wake and sleep with the chunks round the players.
-      this.spawners.push(new ForestSpawner(this, this.forest.gen));
+      this.spawners.push(new ForestSpawner(this, this.forest.gen, (x, y) => !!this.forest?.edits?.warded(x, y)));
     } else {
       // A season's monsters (Hallow's Eve's pumpkins and bats) join the arena's own while it runs.
       const extra = arena.monsters.length ? seasonalSpots(arena.id, arena.monsters, arena.walkable) : [];

@@ -151,6 +151,8 @@ export interface PartDef {
   critter?: string;
   /** A door hung in a house's doorway: it swings open as a hero comes to it (art/homeDoor.ts); mirrored, its hinge is on the other side. */
   door?: boolean;
+  /** A ward: no creature rises within this many cells of it (in the Everwood; see ForestEdits.warded). */
+  ward?: number;
 }
 
 /** How many cells from a fishing rod the water may be. */
@@ -224,6 +226,10 @@ export const PARTS: PartDef[] = [
   { id: 'candelabra', name: 'Candelabra', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xffc070, radius: 90, intensity: 1.5, day: 0.25, y: 22, flicker: true } },
   { id: 'mushlamp', name: 'Mushroom lamp', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xffa898, radius: 64, intensity: 1.1, day: 0.25, y: 10 } },
   { id: 'fairylights', name: 'Firefly jar', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xc8ff7a, radius: 70, intensity: 1.2, day: 0.2, y: 8 } },
+  // Wards: moonlit lanterns no creature will rise near, from a wayfarer's crook to a beacon that keeps a whole glade.
+  { id: 'wardlamp', name: 'Ward lantern', tab: 'light', w: 1, h: 1, block: 'post', ward: 3, light: { color: 0x9ee4ff, radius: 90, intensity: 1.4, day: 0.25, y: 24 } },
+  { id: 'wardstone', name: 'Warden stone', tab: 'light', w: 1, h: 1, block: 'post', ward: 5, light: { color: 0x7af0e0, radius: 110, intensity: 1.6, day: 0.3, y: 18 } },
+  { id: 'wardbeacon', name: 'Sanctuary beacon', tab: 'light', w: 2, h: 2, block: 'full', ward: 10, light: { color: 0xb4e8ff, radius: 170, intensity: 2.1, day: 0.35, y: 38 } },
 
   // Wall decor
   { id: 'painting', name: 'Painting', tab: 'decor', w: 1, h: 1, block: 'none', wall: true, flip: true },
