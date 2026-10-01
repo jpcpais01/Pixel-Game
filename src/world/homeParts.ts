@@ -28,10 +28,10 @@ export const TABS: { id: BuildTab; name: string }[] = [
 // ---------------------------------------------------------------- Floors
 
 /**
- * Floors, painted a cell at a time. Soft ones (grass, paths, water) melt into
- * their neighbours with ragged, rounded edges; laid ones (boards, tiles,
- * cobbles) keep to their cells. Their index in this list, from 1, is what the
- * layout stores (0 is bare lawn).
+ * Floors, painted a cell at a time. Soft ones (grass, beds, paths, water,
+ * cobbles stone by stone) melt into their neighbours with ragged, rounded
+ * edges; laid ones (boards, tiles, flags) keep to their cells. Their index in
+ * this list, from 1, is what the layout stores (0 is bare lawn).
  */
 export interface FloorDef {
   id: string;
@@ -45,12 +45,12 @@ export interface FloorDef {
 export const FLOORS: FloorDef[] = [
   { id: 'lawn', name: 'Lawn', soft: true },
   { id: 'meadow', name: 'Wildflowers', soft: true },
-  { id: 'soil', name: 'Garden bed' },
+  { id: 'soil', name: 'Garden bed', soft: true },
   { id: 'path', name: 'Dirt path', soft: true },
   { id: 'gravel', name: 'Gravel', soft: true },
   { id: 'sand', name: 'Sand', soft: true },
   { id: 'pond', name: 'Pond', soft: true, water: true },
-  { id: 'cobble', name: 'Cobbles' },
+  { id: 'cobble', name: 'Cobbles', soft: true },
   { id: 'flags', name: 'Flagstones' },
   { id: 'bricks', name: 'Brick paving' },
   { id: 'oak', name: 'Oak boards' },

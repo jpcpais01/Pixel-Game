@@ -240,14 +240,14 @@ export class Home {
     this.houses = found.houses;
     this.houseAt = found.at;
 
-    // Floors: the patches round every cell whose floor or wall changed (a wall shades the floor at its foot).
+    // Floors: the patches round every cell whose floor or wall changed (a wall shades the floor at its foot, and soft floors and cobbles reach into the cells beside theirs).
     const dirty = new Set<number>();
     for (let cy = 0; cy < ROWS; cy++) {
       for (let cx = 0; cx < COLS; cx++) {
         const i = cellIndex(cx, cy);
         if (!all && l.floor[i] === old.floor[i] && l.wall[i] === old.wall[i]) continue;
-        for (let py = Math.floor((cy * CELL - CELL) / PATCH); py <= Math.floor((cy * CELL + CELL * 2) / PATCH); py++) {
-          for (let px = Math.floor((cx * CELL - CELL) / PATCH); px <= Math.floor((cx * CELL + CELL * 2) / PATCH); px++) {
+        for (let py = Math.floor((cy * CELL - CELL * 2) / PATCH); py <= Math.floor((cy * CELL + CELL * 3) / PATCH); py++) {
+          for (let px = Math.floor((cx * CELL - CELL * 2) / PATCH); px <= Math.floor((cx * CELL + CELL * 3) / PATCH); px++) {
             if (px >= 0 && py >= 0 && px < PATCH_COLS && py < PATCH_ROWS) dirty.add(py * PATCH_COLS + px);
           }
         }
