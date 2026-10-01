@@ -347,6 +347,9 @@ export function autoIcons(scene: Phaser.Scene): void {
   draw('ab_star', ['..k..', '.kyk.', 'kyyyk', '.kyk.', 'k.k.k'], { k: '#3a2410', y: '#ffe08a' });
   draw('ab_star2', ['..k..', '.kyk.', 'kyyyk', '.kyk.', 'k.k.k'], { k: '#10183a', y: '#dce8ff' });
   draw('ab_star3', ['..k..', '.kyk.', 'kyyyk', '.kyk.', 'k.k.k'], { k: '#3a1010', y: '#ffb04a' });
+  // The shop's freeze: a padlock, open and grey, or shut and rimed with frost.
+  draw('ab_lock_open', ['..kkk..', '.k...k.', '.k.....', '.k.....', 'kkkkkkk', 'kgggggk', 'kgg.ggk', 'kgggggk', 'kkkkkkk'], { k: '#1a1430', g: '#8a80b8' });
+  draw('ab_lock', ['..kkk..', '.kwwwk.', '.kw.wk.', '.kw.wk.', 'kkkkkkk', 'kbwbbbk', 'kbb.bbk', 'kbbbbwk', 'kkkkkkk'], { k: '#0e2440', w: '#e8f8ff', b: '#6fc8ff' });
   draw('ab_sword', ['....kw', '...kwk', 'k.kwk.', '.kwk..', '.kk...', 'k..k..'], { k: '#1a1430', w: '#e8e8f4' });
 }
 

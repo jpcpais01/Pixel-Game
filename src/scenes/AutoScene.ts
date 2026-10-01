@@ -385,6 +385,9 @@ export class AutoScene extends Phaser.Scene {
   private goldText!: Phaser.GameObjects.BitmapText;
   private xpBtn!: PixelButton;
   private rollBtn!: PixelButton;
+  private freezeBtn!: PixelButton;
+  /** Frost round the shop's cards while it's frozen. */
+  private frost!: Phaser.GameObjects.Graphics;
   private sellZone!: Phaser.GameObjects.Container;
   private sellText!: Phaser.GameObjects.BitmapText;
   private probe!: Phaser.GameObjects.BitmapText;
@@ -458,6 +461,7 @@ export class AutoScene extends Phaser.Scene {
 
     const kb = this.input.keyboard;
     kb?.on('keydown-D', () => this.reroll());
+    kb?.on('keydown-L', () => this.toggleFreeze());
     kb?.on('keydown-F', () => this.buyXp());
     kb?.on('keydown-SPACE', () => this.toggleReady());
     kb?.on('keydown-ESC', () => this.leave());
@@ -505,6 +509,7 @@ export class AutoScene extends Phaser.Scene {
         ),
       );
     // Over the shop while a piece is dragged: drop here to sell.
+    this.frost = this.add.graphics();
     this.sellZone = this.add.container(0, 0).setVisible(false);
     this.sellText = pixelText(this, 0, 0, '', GOLD, 2);
     // The hero card pops up over everything else; a tap on it puts it away.
@@ -516,7 +521,7 @@ export class AutoScene extends Phaser.Scene {
       this.hovered = null;
       this.refreshInfo();
     });
-    this.hud.add([this.trayG, this.plates, ...this.meText, ...this.rivalText, ...this.hearts, this.traitList, this.banner, this.roundText, this.phaseText, this.leaveBtn, this.lvlBox, this.goldBox, ...this.cards, this.sellZone, this.infoBg, this.info, this.infoHit]);
+    this.hud.add([this.trayG, this.plates, ...this.meText, ...this.rivalText, ...this.hearts, this.traitList, this.banner, this.roundText, this.phaseText, this.leaveBtn, this.lvlBox, this.goldBox, ...this.cards, this.frost, this.sellZone, this.infoBg, this.info, this.infoHit]);
   }
 
   /**
@@ -538,9 +543,14 @@ export class AutoScene extends Phaser.Scene {
     const goldBg = this.add.image(0, 0, panelTexture(this, `ab_gold_${w}x${h}`, w, h, PANEL)).setOrigin(0);
     const coin = this.add.image(0, 3, 'ab_coin').setOrigin(0).setScale(2);
     this.goldText = pixelText(this, 0, 3, '', GOLD, 2);
-    this.rollBtn = new PixelButton(this, `Roll ${REROLL_COST}`, bw, 17, BUTTON_GOLD, `ab_roll_${bw}`, () => this.reroll());
+    // Roll, and beside it the freeze that keeps this shop for the next round.
+    const fw = 15;
+    const rw = bw - fw - 1;
+    this.rollBtn = new PixelButton(this, `Roll ${REROLL_COST}`, rw, 17, BUTTON_GOLD, `ab_roll_${rw}`, () => this.reroll());
     this.rollBtn.setIcon('ab_coin').place(3, h - 19);
-    this.goldBox.add([goldBg, coin, this.goldText, this.rollBtn]);
+    this.freezeBtn = new PixelButton(this, '', fw, 17, BUTTON_PLAIN, 'ab_freeze', () => this.toggleFreeze());
+    this.freezeBtn.setIcon('ab_lock_open').setData('icon', 'ab_lock_open').place(3 + rw + 1, h - 19);
+    this.goldBox.add([goldBg, coin, this.goldText, this.rollBtn, this.freezeBtn]);
     this.goldBox.setData('coin', coin);
   }
 
@@ -831,6 +841,10 @@ export class AutoScene extends Phaser.Scene {
     const shopOpen = this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result';
     this.xpBtn.setEnabled(shopOpen && this.me.gold >= XP_COST && this.me.level < MAX_LEVEL).setAlpha(this.me.gold >= XP_COST && this.me.level < MAX_LEVEL ? 1 : 0.5);
     this.rollBtn.setEnabled(shopOpen && this.me.gold >= REROLL_COST).setAlpha(this.me.gold >= REROLL_COST ? 1 : 0.5);
+    this.freezeBtn.setEnabled(shopOpen);
+    const lock = this.me.frozen ? 'ab_lock' : 'ab_lock_open';
+    if (this.freezeBtn.getData('icon') !== lock) this.freezeBtn.setIcon(lock).setData('icon', lock);
+    this.drawFrost();
     this.cards.forEach((c, i) => {
       const k = this.me.shop[i];
       const mine = k ? this.me.all().filter((p) => p.key === k) : [];
@@ -1319,6 +1333,52 @@ export class AutoScene extends Phaser.Scene {
         sound.cardFlip(0);
       });
       this.refreshHud();
+    }
+  }
+
+  /** Freeze the shop so the next round keeps it (free), or thaw it. */
+  private toggleFreeze(): void {
+    if (!this.me || this.phase === 'lobby' || this.phase === 'over' || this.phase === 'wait') return;
+    this.me.frozen = !this.me.frozen;
+    play(() => {
+      sound.cardFlip(0);
+    });
+    this.refreshHud();
+  }
+
+  /**
+   * While the shop is frozen: an icy rim round each card, rime gathered in
+   * their corners, and a few flakes caught on the top edge.
+   */
+  private drawFrost(): void {
+    const g = this.frost.clear();
+    if (!this.me?.frozen) return;
+    for (const c of this.cards) {
+      const x = c.x;
+      const y = c.y;
+      const w = c.cw;
+      const h = c.chh;
+      g.lineStyle(1, 0x9ad8ff, 0.9).strokeRect(x - 0.5, y - 0.5, w + 1, h + 1);
+      g.fillStyle(0xe8f8ff, 0.08).fillRect(x + 1, y + 1, w - 2, h - 2);
+      // Rime in the corners: a stair of pale pixels.
+      g.fillStyle(0xe8f8ff, 0.85);
+      for (const [cx, cy, dx, dy] of [
+        [x, y, 1, 1],
+        [x + w - 1, y, -1, 1],
+        [x, y + h - 1, 1, -1],
+        [x + w - 1, y + h - 1, -1, -1],
+      ]) {
+        g.fillRect(cx, cy, 1, 1);
+        g.fillRect(cx + dx, cy, 1, 1);
+        g.fillRect(cx, cy + dy, 1, 1);
+        g.fillStyle(0x9ad8ff, 0.6).fillRect(cx + dx * 2, cy, 1, 1).fillRect(cx, cy + dy * 2, 1, 1);
+        g.fillStyle(0xe8f8ff, 0.85);
+      }
+      // Two flakes on the top edge, placed by the card's spot so they don't jump about.
+      for (const fx of [Math.round(w * 0.3), Math.round(w * 0.72)]) {
+        g.fillStyle(0xe8f8ff, 0.9).fillRect(x + fx, y - 1, 1, 1);
+        g.fillStyle(0x9ad8ff, 0.7).fillRect(x + fx - 1, y - 1, 1, 1).fillRect(x + fx + 1, y - 1, 1, 1).fillRect(x + fx, y - 2, 1, 1);
+      }
     }
   }
 
