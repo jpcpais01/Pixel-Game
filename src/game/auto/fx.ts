@@ -1,14 +1,35 @@
-// Auto Battle's effects, drawn a pixel at a time: missiles, slashes, rings,
-// beams, lightning, falling strikes, sparks. Each lives a moment in the
-// layer's list, drawn each frame onto one plain and one glowing Graphics, with
-// soft 'glow' sprites for the brightest flashes. Colours come from the hero's
-// own Special palette, so a skin's colours carry into its fights.
+// Auto Battle's effects, drawn a pixel at a time. Each hero's own looks (its
+// missile, its blows, its ability and Special: kits/*.ts, drawn with paint.ts)
+// live a moment in the layer's list and draw each frame onto two pixel
+// canvases laid over the board, one under the heroes and one over them, with
+// soft 'glow' sprites for the bloom. Colours come from the hero's own Special
+// palette, so a skin's colours carry into its fights. The older generic
+// shapes below (drawn on Graphics) stand in for anything a kit leaves out.
 
 import Phaser from 'phaser';
+import { PixelLayer } from '../Beam';
 import type { Pal } from '../ultimate/ink';
 import type { Missile, SpellFx } from './units';
+import type { DrawFn, Layers, Px, SparkOpts, Stage } from './paint';
 
-export type Pt = { x: number; y: number };
+export type { Pt } from './paint';
+type Pt = { x: number; y: number };
+
+/** The pixel canvases' size: the board with room round it, and sky over its far row for things that fall. */
+const CANVAS_W = 264;
+const CANVAS_H = 300;
+/** How far the canvas reaches past the board's left edge and over its top. */
+const CANVAS_LEFT = 48;
+const CANVAS_TOP = 130;
+
+interface Fx {
+  t: number;
+  dur: number;
+  draw: DrawFn;
+  wait: number;
+  done?: () => void;
+}
+
 type Draw = (g: Phaser.GameObjects.Graphics, glow: Phaser.GameObjects.Graphics, k: number, t: number) => void;
 
 interface Live {
@@ -32,6 +53,8 @@ interface Spark {
   max: number;
   col: number;
   glow: boolean;
+  /** Drawn on the ground canvas. */
+  low?: boolean;
 }
 
 /** How flat a circle on the board looks. */
@@ -41,9 +64,15 @@ const MAX_SPARKS = 500;
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 const easeOut = (k: number) => 1 - (1 - k) * (1 - k);
 
-export class FxLayer {
+export class FxLayer implements Stage {
   private lives: Live[] = [];
-  private sparks: Spark[] = [];
+  private fxs: Fx[] = [];
+  private low: PixelLayer;
+  private high: PixelLayer;
+  private ox = 0;
+  private oy = 0;
+  private layers: Layers;
+  private sparks_: Spark[] = [];
   private g: Phaser.GameObjects.Graphics;
   private glowG: Phaser.GameObjects.Graphics;
   private glows: Phaser.GameObjects.Image[] = [];
@@ -58,8 +87,57 @@ export class FxLayer {
     this.glowG = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
     over.add([this.g, this.glowG]);
     this.under = scene.add.graphics();
-    under.add(this.under);
+    this.low = new PixelLayer(scene, CANVAS_W, CANVAS_H);
+    this.high = new PixelLayer(scene, CANVAS_W, CANVAS_H);
+    under.add([this.under, this.low.image]);
+    over.add(this.high.image);
+    over.bringToTop(this.glowG);
     this.overC = over;
+    const canvas = (layer: PixelLayer): Px => ({ put: (x, y, c, a = 1) => layer.put(Math.round(x) - this.ox, Math.round(y) - this.oy, c, a) });
+    this.layers = { ground: canvas(this.low), air: canvas(this.high), light: (x, y, size, col, a) => this.light(x, y, size, col, a) };
+    this.focus(0, 0);
+  }
+
+  /** Lay the canvases over a board whose top-left cell starts at (x, y). */
+  focus(x: number, y: number): void {
+    this.ox = Math.round(x) - CANVAS_LEFT;
+    this.oy = Math.round(y) - CANVAS_TOP;
+    this.low.image.setPosition(this.ox, this.oy);
+    this.high.image.setPosition(this.ox, this.oy);
+  }
+
+  // --- Stage: what the kits draw with --------------------------------------------
+
+  add(dur: number, draw: DrawFn, wait = 0, done?: () => void): void {
+    this.fxs.push({ t: 0, dur, draw, wait, done });
+  }
+
+  sparks(x: number, y: number, n: number, cols: number[], o: SparkOpts = {}): void {
+    for (let i = 0; i < n && this.sparks_.length < MAX_SPARKS; i++) {
+      const a = o.dir !== undefined ? o.dir + (Math.random() - 0.5) * 2 * (o.cone ?? 0.5) : Math.random() * Math.PI * 2;
+      const sp = (o.speed ?? 30) * (0.4 + Math.random() * 0.8);
+      const life = (o.life ?? 0.45) * (0.6 + Math.random() * 0.7);
+      const sx = (Math.random() - 0.5) * (o.spread ?? 0);
+      const sy = (Math.random() - 0.5) * (o.spread ?? 0) * FLAT;
+      this.sparks_.push({
+        x: x + sx,
+        y: y + sy,
+        z: o.z ?? 2,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp * FLAT,
+        vz: (o.up ?? 30) * (0.5 + Math.random()),
+        g: o.g ?? 90,
+        life,
+        max: life,
+        col: cols[i % cols.length],
+        glow: true,
+        low: o.ground,
+      });
+    }
+  }
+
+  shake(ms: number, amt: number): void {
+    this.scene.cameras.main.shake(ms, amt);
   }
 
   /** Marks on the ground, drawn under the heroes (telegraphs, rings). */
@@ -70,10 +148,11 @@ export class FxLayer {
   clear(): void {
     this.lives = [];
     this.grounds = [];
-    this.sparks = [];
+    this.sparks_ = [];
+    this.fxs = [];
   }
 
-  private add(dur: number, draw: Draw, wait = 0, done?: () => void, ground = false): void {
+  private old(dur: number, draw: Draw, wait = 0, done?: () => void, ground = false): void {
     (ground ? this.grounds : this.lives).push({ t: 0, dur, draw, wait, done });
   }
 
@@ -99,8 +178,34 @@ export class FxLayer {
       });
     this.grounds = run(this.grounds, this.under, this.under);
     this.lives = run(this.lives, this.g, this.glowG);
-    // Sparks: a little arc through the air, then gone.
-    this.sparks = this.sparks.filter((s) => {
+    this.low.clear();
+    this.high.clear();
+    const running = this.fxs;
+    this.fxs = [];
+    const kept = running.filter((f) => {
+      let step = dt;
+      if (f.wait > 0) {
+        f.wait -= dt;
+        if (f.wait > 0) return true;
+        step = -f.wait;
+        f.wait = 0;
+      }
+      f.t += step;
+      const k = Math.min(1, f.t / f.dur);
+      // A look that throws is dropped, not allowed to stop the fight.
+      try {
+        f.draw(this.layers, k, f.t);
+        if (k >= 1) f.done?.();
+      } catch (err) {
+        console.warn('Auto Battle effect failed', err);
+        return false;
+      }
+      return k < 1;
+    });
+    // Effects started by one ending (a missile's landing) join the list after it.
+    this.fxs = kept.concat(this.fxs);
+    // Sparks: a little arc through the air, then gone; the last of their life dithers away.
+    this.sparks_ = this.sparks_.filter((s) => {
       s.life -= dt;
       if (s.life <= 0) return false;
       s.x += s.vx * dt;
@@ -108,9 +213,16 @@ export class FxLayer {
       s.vz -= s.g * dt;
       s.z = Math.max(0, s.z + s.vz * dt);
       const a = Math.min(1, (s.life / s.max) * 1.6);
-      (s.glow ? this.glowG : this.g).fillStyle(s.col, a).fillRect(Math.round(s.x), Math.round(s.y - s.z), 1, 1);
+      const x = Math.round(s.x);
+      const y = Math.round(s.y - s.z);
+      const lx = x - this.ox;
+      const ly = y - this.oy;
+      if (lx < 0 || ly < 0 || lx >= CANVAS_W || ly >= CANVAS_H) this.glowG.fillStyle(s.col, a).fillRect(x, y, 1, 1);
+      else if (a >= 1 || ((x * 7 + y * 13) & 7) / 8 < a) (s.low ? this.low : this.high).put(lx, ly, s.col, 1);
       return true;
     });
+    this.low.flush();
+    this.high.flush();
     for (let i = this.glowUsed; i < this.glows.length; i++) this.glows[i].setVisible(false);
   }
 
@@ -127,12 +239,12 @@ export class FxLayer {
   }
 
   sparksAt(x: number, y: number, n: number, cols: number[], o: { speed?: number; up?: number; g?: number; life?: number; glow?: boolean; spread?: number } = {}): void {
-    for (let i = 0; i < n && this.sparks.length < MAX_SPARKS; i++) {
+    for (let i = 0; i < n && this.sparks_.length < MAX_SPARKS; i++) {
       const a = Math.random() * Math.PI * 2;
       const sp = (o.speed ?? 30) * (0.4 + Math.random() * 0.8);
       const life = (o.life ?? 0.45) * (0.6 + Math.random() * 0.7);
       const sx = (Math.random() - 0.5) * (o.spread ?? 0);
-      this.sparks.push({
+      this.sparks_.push({
         x: x + sx,
         y: y + sx * 0.3,
         z: 2,
@@ -194,7 +306,7 @@ export class FxLayer {
     const ang = Math.atan2(at.y - from.y, at.x - from.x);
     const r = heavy ? 9 : 7;
     const dir = Math.random() < 0.5 ? 1 : -1;
-    this.add(0.2, (g, glow, k) => {
+    this.old(0.2, (g, glow, k) => {
       const sweep = easeOut(k);
       const a = 1 - k;
       for (let i = 0; i < 14; i++) {
@@ -220,10 +332,10 @@ export class FxLayer {
     const pos = (k: number) => ({ x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k) - 11 - (lob ? Math.sin(k * Math.PI) * 14 : Math.sin(k * Math.PI) * 2) });
     if (kind === 'spark') {
       // Lightning is there at once and flickers out.
-      this.add(0.18, (g, _glow, k, t) => FxLayer.zig(g, { x: a.x, y: a.y - 14 }, { x: b.x, y: b.y - 11 }, pal.mid, pal.core, 1 - k, Math.floor(t * 30)));
+      this.old(0.18, (g, _glow, k, t) => FxLayer.zig(g, { x: a.x, y: a.y - 14 }, { x: b.x, y: b.y - 11 }, pal.mid, pal.core, 1 - k, Math.floor(t * 30)));
       return;
     }
-    this.add(dur, (g, glow, k, t) => {
+    this.old(dur, (g, glow, k, t) => {
       const p = pos(k);
       switch (kind) {
         case 'arrow':
@@ -301,7 +413,7 @@ export class FxLayer {
 
   /** A small burst where a missile lands. */
   pop(at: Pt, pal: Pal, big: boolean): void {
-    this.add(0.22, (_g, glow, k) => {
+    this.old(0.22, (_g, glow, k) => {
       FxLayer.ring(glow, at.x, at.y - 8, 2 + k * (big ? 7 : 4), pal.mid, 1 - k);
       if (k < 0.4) this.light(at.x, at.y - 9, big ? 22 : 14, pal.hot, 0.7 * (1 - k / 0.4));
     });
@@ -312,7 +424,7 @@ export class FxLayer {
 
   /** A cast gathering: a turning rune circle under the caster. */
   gather(at: Pt, pal: Pal, dur: number, big: boolean): void {
-    this.add(
+    this.old(
       dur,
       (g, _glow, k, t) => {
         const r = (big ? 11 : 8) * easeOut(Math.min(1, k * 3));
@@ -324,13 +436,13 @@ export class FxLayer {
       undefined,
       true,
     );
-    this.add(dur, (_g, _glow, k) => this.light(at.x, at.y - 12, big ? 40 : 26, pal.mid, 0.5 * Math.sin(k * Math.PI)));
+    this.old(dur, (_g, _glow, k) => this.light(at.x, at.y - 12, big ? 40 : 26, pal.mid, 0.5 * Math.sin(k * Math.PI)));
     this.sparksAt(at.x, at.y, big ? 10 : 5, [pal.hot, pal.mid], { speed: 14, up: 30, g: -20, life: 0.6, spread: 14 });
   }
 
   /** Where a delayed blast will land: a ring that closes in. */
   telegraph(at: Pt, r: number, pal: Pal, dur: number): void {
-    this.add(
+    this.old(
       dur,
       (g, _glow, k, t) => {
         FxLayer.ring(g, at.x, at.y, r, pal.deep, 0.7, 3, t);
@@ -359,7 +471,7 @@ export class FxLayer {
         this.beam(from, at, pal, fx, o.big);
         break;
       case 'dash':
-        this.add(0.3, (g, glow, k) => {
+        this.old(0.3, (g, glow, k) => {
           FxLayer.line(glow, { x: from.x, y: from.y - 10 }, { x: at.x, y: at.y - 10 }, pal.mid, (1 - k) * 0.8, 3);
           FxLayer.line(g, { x: from.x, y: from.y - 10 }, { x: at.x, y: at.y - 10 }, pal.core, 1 - k);
         });
@@ -367,7 +479,7 @@ export class FxLayer {
         break;
       case 'chain': {
         const pts = [from, ...o.path];
-        this.add(0.35, (g, _glow, k, t) => {
+        this.old(0.35, (g, _glow, k, t) => {
           for (let i = 1; i < pts.length; i++)
             FxLayer.zig(g, { x: pts[i - 1].x, y: pts[i - 1].y - 12 }, { x: pts[i].x, y: pts[i].y - 11 }, pal.mid, pal.core, 1 - k, Math.floor(t * 25) + i);
         });
@@ -377,7 +489,7 @@ export class FxLayer {
       }
       case 'rain':
         o.path.forEach((p, i) => this.drop(p, pal, fx, Math.max(0, (o.span * i) / Math.max(1, o.path.length) - 0.16)));
-        if (o.big) this.add(o.span + 0.3, (_g, _glow, k) => this.light(at.x, at.y - 30, 70, pal.deep, 0.35 * Math.sin(k * Math.PI)));
+        if (o.big) this.old(o.span + 0.3, (_g, _glow, k) => this.light(at.x, at.y - 30, 70, pal.deep, 0.35 * Math.sin(k * Math.PI)));
         break;
       case 'mend':
         this.shock(from, Math.max(10, R), pal, false);
@@ -388,7 +500,7 @@ export class FxLayer {
 
   /** An expanding shock ring with a flash and a spray of sparks. */
   private shock(c: Pt, R: number, pal: Pal, big: boolean): void {
-    this.add(
+    this.old(
       0.42,
       (g, _glow, k) => {
         const r = Math.max(4, R) * easeOut(k);
@@ -400,7 +512,7 @@ export class FxLayer {
       undefined,
       true,
     );
-    this.add(0.3, (_g, _glow, k) => this.light(c.x, c.y - 8, R * 2.2 + 20, pal.mid, 0.9 * (1 - k)));
+    this.old(0.3, (_g, _glow, k) => this.light(c.x, c.y - 8, R * 2.2 + 20, pal.mid, 0.9 * (1 - k)));
     this.sparksAt(c.x, c.y - 4, big ? 26 : 12, [pal.core, pal.hot, pal.mid, pal.deep], { speed: 18 + R * 1.4, up: 26, life: 0.55, spread: R * 0.6 });
   }
 
@@ -411,7 +523,7 @@ export class FxLayer {
       case 'holy':
       case 'spear': {
         // A shaft of light (or the spear) comes down from the sky.
-        this.add(0.45, (g, glow, k) => {
+        this.old(0.45, (g, glow, k) => {
           const a = 1 - k;
           const w = big ? 5 : 3;
           for (let y = -80; y < 0; y += 1) {
@@ -427,12 +539,12 @@ export class FxLayer {
         break;
       }
       case 'lightning':
-        this.add(0.3, (g, _glow, k, t) => {
+        this.old(0.3, (g, _glow, k, t) => {
           FxLayer.zig(g, { x: c.x + 6, y: c.y - 90 }, { x: c.x, y: c.y - 4 }, pal.mid, pal.core, 1 - k, Math.floor(t * 30));
         });
         break;
       case 'clock':
-        this.add(0.7, (g, _glow, k) => {
+        this.old(0.7, (g, _glow, k) => {
           const r = Math.max(10, R * 0.8);
           const a = k < 0.7 ? 1 : (1 - k) / 0.3;
           FxLayer.ring(g, c.x, c.y - 2, r, pal.hot, a);
@@ -455,7 +567,7 @@ export class FxLayer {
           const d = Math.sqrt(Math.random()) * Math.max(8, R);
           return { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d * FLAT, h: 4 + Math.random() * 6 };
         });
-        this.add(0.55, (g, _glow, k) => {
+        this.old(0.55, (g, _glow, k) => {
           const up = k < 0.25 ? k / 0.25 : k > 0.75 ? (1 - k) / 0.25 : 1;
           for (const s of spikes) {
             if (fx === 'strings') FxLayer.line(g, { x: s.x, y: s.y - 60 }, { x: s.x, y: s.y - s.h * up }, pal.light, 0.7 * up);
@@ -473,7 +585,7 @@ export class FxLayer {
       case 'acid':
       case 'blood':
         // A lingering pool.
-        this.add(1.2, (g, _glow, k) => {
+        this.old(1.2, (g, _glow, k) => {
           const r = Math.max(8, R) * (0.7 + easeOut(Math.min(1, k * 4)) * 0.3);
           const a = (k < 0.8 ? 0.45 : (1 - k) * 2.25) * 1;
           for (let y = -r * FLAT; y <= r * FLAT; y += 1)
@@ -490,7 +602,7 @@ export class FxLayer {
       case 'souls':
       case 'fear':
         // Motes spiral in to the centre before the burst.
-        this.add(0.5, (g, glow, k) => {
+        this.old(0.5, (g, glow, k) => {
           for (let i = 0; i < 10; i++) {
             const t = (i / 10) * Math.PI * 2 + k * 6;
             const d = Math.max(10, R) * (1 - k);
@@ -508,7 +620,7 @@ export class FxLayer {
       case 'roar':
       case 'wind':
         // A second, wider wave.
-        this.add(0.5, (g, _glow, k) => FxLayer.ring(g, c.x, c.y, Math.max(8, R) * 1.3 * easeOut(k), pal.light, (1 - k) * 0.7, 2), 0.1, undefined, true);
+        this.old(0.5, (g, _glow, k) => FxLayer.ring(g, c.x, c.y, Math.max(8, R) * 1.3 * easeOut(k), pal.light, (1 - k) * 0.7, 2), 0.1, undefined, true);
         break;
       default:
         break;
@@ -520,7 +632,7 @@ export class FxLayer {
     const a = { x: from.x, y: from.y - 12 };
     const b = { x: to.x, y: to.y - 10 };
     const w = big ? 5 : 3;
-    this.add(0.45, (g, glow, k, t) => {
+    this.old(0.45, (g, glow, k, t) => {
       const fade = k < 0.2 ? k / 0.2 : (1 - k) / 0.8;
       const reach = Math.min(1, k * 4);
       const end = { x: lerp(a.x, b.x, reach), y: lerp(a.y, b.y, reach) };
@@ -537,7 +649,7 @@ export class FxLayer {
         FxLayer.dot(g, end.x, end.y, 0xffffff, 1, 2);
       }
     });
-    this.add(0.45, (_g, _glow, k) => this.light(lerp(a.x, b.x, Math.min(1, k * 4)), lerp(a.y, b.y, Math.min(1, k * 4)), big ? 34 : 24, pal.mid, 0.8 * (1 - k)));
+    this.old(0.45, (_g, _glow, k) => this.light(lerp(a.x, b.x, Math.min(1, k * 4)), lerp(a.y, b.y, Math.min(1, k * 4)), big ? 34 : 24, pal.mid, 0.8 * (1 - k)));
     const n = Math.round(Math.hypot(b.x - a.x, b.y - a.y) / 5);
     for (let i = 0; i < n; i++) this.sparksAt(lerp(a.x, b.x, i / n), lerp(a.y, b.y, i / n) + 10, 1, [pal.hot, pal.mid], { speed: 12, up: 16, life: 0.4 });
   }
@@ -546,7 +658,7 @@ export class FxLayer {
   private drop(p: Pt, pal: Pal, fx: SpellFx, wait: number): void {
     const dur = 0.16;
     const ox = fx === 'missiles' || fx === 'drones' || fx === 'bullets' ? (Math.random() - 0.5) * 40 : (Math.random() - 0.5) * 8;
-    this.add(
+    this.old(
       dur,
       (g, glow, k, t) => {
         const y = lerp(p.y - 70, p.y - 6, k);
@@ -565,7 +677,7 @@ export class FxLayer {
 
   /** A heal or blessing on an ally: rising motes and a soft plus. */
   private blessing(p: Pt, pal: Pal, fx: SpellFx): void {
-    this.add(0.7, (g, _glow, k) => {
+    this.old(0.7, (g, _glow, k) => {
       const a = 1 - k;
       const y = p.y - 16 - k * 10;
       if (fx === 'notes') {
@@ -579,14 +691,14 @@ export class FxLayer {
 
   /** A shadow left behind a blink. */
   afterimage(p: Pt, pal: Pal): void {
-    this.add(0.3, (g, _glow, k) => {
+    this.old(0.3, (g, _glow, k) => {
       g.fillStyle(pal.deep, 0.5 * (1 - k)).fillRect(Math.round(p.x) - 3, Math.round(p.y) - 18, 6, 16);
     });
   }
 
   /** Stars circling a stunned head. */
   stun(get: () => Pt | null, sec: number): void {
-    this.add(sec, (g, _glow, k, t) => {
+    this.old(sec, (g, _glow, k, t) => {
       const p = get();
       if (!p) return;
       for (let i = 0; i < 3; i++) {
@@ -599,7 +711,7 @@ export class FxLayer {
   /** A hero falls: a puff of dust and a wisp that rises away. */
   death(p: Pt, pal: Pal): void {
     this.sparksAt(p.x, p.y - 4, 14, [0x8a86a8, 0x5c567a, pal.mid], { speed: 22, up: 12, g: 40, life: 0.6, glow: false, spread: 8 });
-    this.add(0.9, (g, glow, k) => {
+    this.old(0.9, (g, glow, k) => {
       const y = p.y - 14 - k * 30;
       const x = p.x + Math.sin(k * 9) * 3;
       FxLayer.dot(glow, x, y, pal.mid, (1 - k) * 0.8, 3);

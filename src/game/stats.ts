@@ -158,7 +158,7 @@ export function specialScale(s: HeroStats): number {
 /** What every blow in a type's code is multiplied by, so its basic attack deals its Damage. */
 export const damageScale = (s: HeroStats): number => s.damage / s.kit;
 
-if (import.meta.env.DEV) {
+if (import.meta.env?.DEV) {
   for (const [id, s] of Object.entries(HERO_STATS)) {
     const p = budget(s);
     if (p < BUDGET.min || p > BUDGET.max) console.warn(`${id} is off budget: ${p.toFixed(1)} points`);

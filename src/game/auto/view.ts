@@ -11,8 +11,10 @@ import type { Pal } from '../ultimate/ink';
 import { pixelText } from '../../ui/widgets';
 import { sound } from '../../audio';
 import { Battle, COLS, ROWS, TICK, type SimEvent, type SimUnit } from './sim';
-import { unitDef, type Missile } from './units';
+import { unitDef, type Missile, type Spell } from './units';
 import { FxLayer, type Pt } from './fx';
+import { kitFor } from './kits';
+import { CELL, type Cast, type Move } from './paint';
 
 /** How big each star level stands. */
 const STAR_SCALE = [1, 1, 1.1, 1.2];
@@ -267,6 +269,7 @@ export class FightView {
     /** The side that is this player's own. */
     private mySide: 0 | 1,
   ) {
+    fx.focus(frame.x, frame.y);
     this.views = battle.units.map((u) => {
       const v = new UnitView(scene, u.def.key, u.look, u.star, u.side === mySide, u.side === mySide ? 'up' : 'down');
       layer.add(v);
@@ -336,12 +339,32 @@ export class FightView {
     }
   }
 
+  /** A hero's own look for its ability or Special, if its kit has one. */
+  private move(u: SimUnit, ult: boolean): Move | undefined {
+    const kit = kitFor(u.def.key);
+    return ult ? kit.ult : kit.skill;
+  }
+
+  private castOf(u: SimUnit, s: Spell, from: Pt, at: Pt, hits: Pt[], path: Pt[], lead: number): Cast {
+    const st = styleOf(u.def.key, u.look);
+    return { from, at, hits, path, r: (s.r ?? 1) * CELL, pal: st.pal, look: u.look, lead, span: s.delay ?? 1.2, stun: s.stun ?? 0 };
+  }
+
   private unitPt(uid: number): Pt {
     return this.pt(this.battle.units[uid]);
   }
 
   private handle(e: SimEvent): void {
     this.onEvent?.(e);
+    try {
+      this.draw(e);
+    } catch (err) {
+      // The fight goes on even if a look fails to start.
+      console.warn('Auto Battle effect failed', err);
+    }
+  }
+
+  private draw(e: SimEvent): void {
     const units = this.battle.units;
     switch (e.t) {
       case 'attack': {
@@ -352,12 +375,20 @@ export class FightView {
         const st = styleOf(u.def.key, u.look);
         const a = this.unitPt(e.u);
         const b = this.unitPt(e.to);
+        const kit = kitFor(u.def.key);
         if (e.missile) {
-          this.fx.missile(a, b, e.land * TICK, u.def.missile as Missile, st.pal);
+          if (kit.shot) kit.shot(this.fx, a, b, e.land * TICK, st.pal);
+          else this.fx.missile(a, b, e.land * TICK, u.def.missile as Missile, st.pal);
           this.sfx(() => missileSound(u.def.missile as Missile));
         } else {
           const heavy = u.def.attack.length > 1 && u.swing % u.def.attack.length === 0;
-          this.scene.time.delayedCall(e.land * TICK * 1000, () => this.views[e.to]?.active && this.fx.slash(this.unitPt(e.to), a, st.pal, heavy));
+          this.scene.time.delayedCall(e.land * TICK * 1000, () => {
+            if (!this.views[e.to]?.active) return;
+            const at = this.unitPt(e.to);
+            const from = this.unitPt(e.u);
+            if (kit.melee) kit.melee(this.fx, at, from, st.pal, heavy);
+            else this.fx.slash(at, from, st.pal, heavy);
+          });
           this.sfx(() => swingSound(u.def.cls));
         }
         break;
@@ -369,8 +400,12 @@ export class FightView {
         v.face(this.facing(u));
         v.act(e.spell.anim, 1.1);
         const at = this.pt({ ...u, c: e.x, r: e.y, fc: e.x, fr: e.y, step: 1, stepDur: 1 } as SimUnit);
-        this.fx.gather(this.unitPt(e.u), st.pal, (e.ult ? 0.75 : 0.45), e.ult);
-        if (e.spell.kind === 'blast' && e.spell.delay) this.fx.telegraph(at, (e.spell.r ?? 1) * 18, st.pal, e.land * TICK);
+        const move = this.move(u, e.ult);
+        if (move) move.cast?.(this.fx, this.castOf(u, e.spell, this.unitPt(e.u), at, [], [], e.land * TICK));
+        else {
+          this.fx.gather(this.unitPt(e.u), st.pal, e.ult ? 0.75 : 0.45, e.ult);
+          if (e.spell.kind === 'blast' && e.spell.delay) this.fx.telegraph(at, (e.spell.r ?? 1) * 18, st.pal, e.land * TICK);
+        }
         if (e.ult) {
           this.callout(v, st.ult, st.pal.hot);
           this.sfx(() => sound.ultRelease());
@@ -381,7 +416,23 @@ export class FightView {
         const u = units[e.u];
         const st = styleOf(u.def.key, u.look);
         const at = this.pt({ ...u, c: e.x, r: e.y, fc: e.x, fr: e.y, step: 1, stepDur: 1 } as SimUnit);
-        this.fx.spell({
+        const move = this.move(u, e.ult);
+        // A leap or dash has already set off; its look starts where it set off from.
+        const from = e.spell.kind === 'leap' || e.spell.kind === 'dash' ? this.pt({ ...u, c: u.fc, r: u.fr, step: 1, stepDur: 1 } as SimUnit) : this.unitPt(e.u);
+        if (move) {
+          move.hit(
+            this.fx,
+            this.castOf(
+              u,
+              e.spell,
+              from,
+              at,
+              e.hits.map((h) => this.unitPt(h)),
+              (e.path ?? []).map((h) => this.unitPt(h)),
+              0,
+            ),
+          );
+        } else this.fx.spell({
           fx: e.spell.fx,
           kind: e.spell.kind,
           from: this.unitPt(e.u),
@@ -393,7 +444,8 @@ export class FightView {
           big: e.ult,
           span: e.spell.delay ?? 1.2,
         });
-        if (e.spell.kind !== 'mend') this.scene.cameras.main.shake(e.ult ? 140 : 70, e.ult ? 0.004 : 0.002);
+        // Kits shake the view themselves, on their big moments.
+        if (!move && e.spell.kind !== 'mend') this.scene.cameras.main.shake(e.ult ? 140 : 70, e.ult ? 0.004 : 0.002);
         this.sfx(() => (e.spell.kind === 'mend' ? sound.heal() : e.ult ? sound.blast() : sound.impact(0, true)));
         break;
       }
