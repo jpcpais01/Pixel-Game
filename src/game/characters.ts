@@ -25,7 +25,7 @@ import { Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
-import { Alchemist, CHEM_STYLE, CRYO_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
+import { Alchemist, CHEM_STYLE, CRYO_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
 import { Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from './Archer';
 import { Arbalest } from './Arbalest';
@@ -45,7 +45,7 @@ import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SH
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { AUTUMN_MAGIC, AUTUMN_SKIN, FROST_MAGIC, FROST_SKIN, GROVE_MAGIC, GROVE_SKIN, Grovecraft, WILD_MAGIC, WILD_SKIN, Wildcraft } from './Druid';
 import { TITANIA_MAGIC, TITANIA_SKIN } from './Druid';
-import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, Valkyrie } from './Valkyrie';
+import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT, Valkyrie } from './Valkyrie';
 import { MECH_KIT, Mech, SCRAP_KIT } from './Mech';
 import { HIVE_KIT, SYNTH_KIT, Synth } from './Synth';
 import { MECH_H, MECH_ORIGIN_Y } from '../art/mech';
@@ -777,6 +777,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_bog_shaman' },
             },
           },
+          {
+            // A hedge-witch herbalist: a straw hat with foxgloves, a chestnut braid, a sage dress and apron, tinctures of violet and pink.
+            id: 'foxglove',
+            name: 'Foxglove',
+            role: 'Tinctures of the hedgerow',
+            accent: 0xf07ad0,
+            attack: 'Foxglove tincture',
+            special: 'Bed of foxgloves',
+            preview: { texture: 'alchemist_foxglove', glow: 'alchemist_foxglove_e', idle: 'alchemist_foxglove_idle_down', chosen: 'alchemist_foxglove_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
+            buttons: {
+              attack: { texture: 'icon_flask_foxglove' },
+              special: { texture: 'icon_bog_foxglove' },
+            },
+          },
         ],
       },
       {
@@ -813,7 +827,7 @@ export const CLASSES: ClassDef[] = [
       },
     ],
     spawn: (world, x, y, look) =>
-      new Alchemist(world, x, y, look === 'chem' ? CHEM_STYLE : look === 'cryo' ? CRYO_STYLE : look === 'witch' ? WITCH_STYLE : look === 'shaman' ? SHAMAN_STYLE : PLAGUE_STYLE),
+      new Alchemist(world, x, y, look === 'chem' ? CHEM_STYLE : look === 'cryo' ? CRYO_STYLE : look === 'witch' ? WITCH_STYLE : look === 'shaman' ? SHAMAN_STYLE : look === 'foxglove' ? FOXGLOVE_STYLE : PLAGUE_STYLE),
   },
   {
     id: 'archer',
@@ -1681,6 +1695,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_spearthrow_sun' },
             },
           },
+          {
+            // Pearl and silver-blue over lake-blue silk, great swan wings, platinum braids and a feathered diadem.
+            id: 'swan',
+            name: 'Swan Maiden',
+            role: 'Grace of the moonlit lake',
+            accent: 0xb8d4ff,
+            attack: 'Swanwing chain',
+            special: 'Moonfeather spear',
+            preview: { texture: 'valkyrie_swan', glow: 'valkyrie_swan_e', idle: 'valkyrie_swan_idle_down', chosen: 'valkyrie_swan_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_spear_swan' },
+              special: { texture: 'icon_spearthrow_swan' },
+            },
+          },
         ],
       },
       {
@@ -1716,7 +1744,7 @@ export const CLASSES: ClassDef[] = [
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { spear: SPEAR_KIT, sunshield: SUN_KIT, storm: STORM_KIT, raven: RAVEN_KIT }[look] ?? SPEAR_KIT;
+      const kit = { spear: SPEAR_KIT, sunshield: SUN_KIT, swan: SWAN_KIT, storm: STORM_KIT, raven: RAVEN_KIT }[look] ?? SPEAR_KIT;
       return new Valkyrie(world, x, y, kit);
     },
   },

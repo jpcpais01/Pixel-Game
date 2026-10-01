@@ -31,8 +31,9 @@
 // quilted blue front and canisters of freezing blue.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
-import { BEAK, BOOT, BRASS, CHEM_BREW, CHEM_COAT, CHEM_COPPER, CHEM_CORE, CHEM_HOT, CHEM_LENS, CHEM_MID, CHEM_RUBBER, CHEM_STEEL, GLASS, GOLD, HEX_BREW, HEX_CORE, HEX_EYE, HEX_HOT, HEX_MID, LEATHER, LENS, MANTLE, PLAGUE_COAT, PLAGUE_HAT, TOXIN, TOX_CORE, TOX_HOT, TOX_MID, TROUSER, WITCH_HAIR, WITCH_ROBE, WITCH_SHAWL, WITCH_SKIN, WOOD } from './palette';
+import { BEAK, BOOT, BRASS, EYE, SKIN, CHEM_BREW, CHEM_COAT, CHEM_COPPER, CHEM_CORE, CHEM_HOT, CHEM_LENS, CHEM_MID, CHEM_RUBBER, CHEM_STEEL, GLASS, GOLD, HEX_BREW, HEX_CORE, HEX_EYE, HEX_HOT, HEX_MID, LEATHER, LENS, MANTLE, PLAGUE_COAT, PLAGUE_HAT, TOXIN, TOX_CORE, TOX_HOT, TOX_MID, TROUSER, WITCH_HAIR, WITCH_ROBE, WITCH_SHAWL, WITCH_SKIN, WOOD } from './palette';
 import { DIRS, type Dir } from './wizard';
+import { CHESTNUT, FRECKLE, LINEN, LIPS, PETAL, PINK_BREW, RIBBON, SAGE, STEM, STRAW, VIOLET_BREW } from './foxglove';
 
 export const ALCH_W = 48;
 export const ALCH_H = 50;
@@ -109,8 +110,19 @@ export interface AlchemistLook {
   shaman?: boolean;
   /** Cryotech: a glass bubble helmet over a hood and visor, and an insulated front (drawn on the chem rig). */
   cryo?: boolean;
-  /** Chemtech's apron, when not leather. */
+  /** Chemtech's apron, when not leather (Foxglove's linen apron, chemise and cuffs). */
   apron?: Material;
+  /**
+   * Foxglove, the hedge-witch herbalist (drawn on the plague rig): a wide straw
+   * hat (the hat) ringed with a ribbon (the band) and stuck with foxglove
+   * spikes, a freckled face with lips, a chestnut braid (the hair) over one
+   * shoulder, a sage dress (the coat) with a laced bodice and a linen apron,
+   * sleeves rolled to the elbow over bare forearms (the gloves are her skin),
+   * a satchel of herbs, and vials of her pink tincture beside the violet.
+   */
+  herbal?: boolean;
+  /** What stoppers the flasks, when not cork: Foxglove's are stoppered with a bloom. */
+  cork?: Material;
   /** Animation speeds that differ from the usual ones. */
   fps?: Partial<Record<AlchemistAnim, number>>;
 }
@@ -226,7 +238,27 @@ export const CRYO_LOOK: AlchemistLook = {
   apron: ICE_PANEL,
 };
 
-export const ALCHEMIST_LOOKS = [PLAGUE_LOOK, WITCH_LOOK, CHEM_LOOK, SHAMAN_LOOK, CRYO_LOOK];
+export const FOXGLOVE_LOOK: AlchemistLook = {
+  key: 'alchemist_foxglove',
+  coat: SAGE,
+  mantle: LINEN,
+  hat: STRAW,
+  face: SKIN,
+  eye: EYE,
+  gloves: SKIN,
+  band: RIBBON,
+  brew: VIOLET_BREW,
+  core: hex('#fff0fa'),
+  hot: hex('#ff9ad8'),
+  mid: hex('#c85ad0'),
+  witch: false,
+  hair: CHESTNUT,
+  herbal: true,
+  apron: LINEN,
+  cork: PETAL,
+};
+
+export const ALCHEMIST_LOOKS = [PLAGUE_LOOK, WITCH_LOOK, CHEM_LOOK, SHAMAN_LOOK, CRYO_LOOK, FOXGLOVE_LOOK];
 
 /** The look being drawn; set by buildAlchemistFrames. */
 let S: AlchemistLook = PLAGUE_LOOK;
@@ -277,8 +309,8 @@ function heldFlask(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: numb
   c.part();
   const neckTop = by - r - (size === 2 ? 1.2 : 0.6);
   c.line(x, by - r + 0.4, x, neckTop, GLASS, () => cyl(0.2, 0.3), { bias });
-  c.px(x, neckTop - 1, WOOD, sphere(-0.2, -0.6));
-  if (size === 2) c.px(x - 1, neckTop - 1, WOOD, sphere(-0.6, -0.5));
+  c.px(x, neckTop - 1, S.cork ?? WOOD, sphere(-0.2, -0.6));
+  if (size === 2) c.px(x - 1, neckTop - 1, S.cork ?? WOOD, sphere(-0.6, -0.5));
   // The poison's light, and bubbles rising off it as it boils.
   const k = 0.3 + boil * 0.5;
   c.spark(x, by, S.hot, k * 0.6);
@@ -383,10 +415,15 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   c.part();
   c.capsule(sx, sy, ex, ey, 1.75, 1.5, S.coat, { bias });
   c.part();
-  c.capsule(ex, ey, fx, fy, 1.5, 1.35, S.coat, { bias });
+  if (S.herbal) {
+    // Sleeves rolled to the elbow: a bare, slender forearm under a roll of linen.
+    c.capsule(ex, ey, fx, fy, 1.15, 1.0, S.gloves, { bias });
+    c.part();
+    c.ellipse(ex, ey, 1.35, 1.05, S.apron ?? S.coat, { bias });
+  } else c.capsule(ex, ey, fx, fy, 1.5, 1.35, S.coat, { bias });
   if (hold.size) heldFlask(c, fx, fy - 0.6, hold.size, hold.boil, bias, hold.seed);
   c.part();
-  if (S.witch || S.shaman) c.ellipse(fx, fy, 1.15, 1.1, S.gloves, { bias });
+  if (S.witch || S.shaman || S.herbal) c.ellipse(fx, fy, 1.15, 1.1, S.gloves, { bias });
   else c.ellipse(fx, fy, 1.35, 1.25, S.gloves, { bias: bias + 1 });
 }
 
@@ -433,6 +470,10 @@ function hat(c: PixelCanvas, cx: number, U: number, view: View): void {
   }
   if (S.shaman) {
     horns(c, cx, U, view);
+    return;
+  }
+  if (S.herbal) {
+    strawHat(c, cx, U, view);
     return;
   }
   const brimY = 9.4 + U;
@@ -750,6 +791,313 @@ function puff(c: PixelCanvas, x: number, y: number, k: number): void {
 }
 
 // ---------------------------------------------------------------------------
+// Foxglove: the straw hat, her face and braid, her dress and satchel
+
+/** How far the straw hat's brim reaches, from the front and from the side. */
+const STRAW_BRIM = 7.4;
+const STRAW_BRIM_SIDE = 6.9;
+
+/** Shade every third pixel of `m` in a box, on a slant, so the straw reads as woven. */
+function weave(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, m: Material): void {
+  for (let y = Math.floor(y0); y <= Math.ceil(y1); y++) {
+    for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) if (c.materialAt(x, y) === m && (x * 2 + y) % 3 === 0) c.shade(x, y, -1);
+  }
+}
+
+/** A spike of foxglove tucked in the hat band at (x, y): a stem `h` px tall leaning `lean` px, bells either side in turn, a bud on top. */
+function hatSpike(c: PixelCanvas, x: number, y: number, h: number, lean: number): void {
+  c.part();
+  c.px(x - Math.sign(lean || 1), y - 1, STEM, sphere(-0.4, -0.3), { bias: 1 });
+  for (let i = 0; i <= h; i++) c.px(x + (lean * i) / h, y - i, STEM, sphere(0.2, 0), { bias: i > h - 2 ? 1 : 0 });
+  c.part();
+  for (let i = 1; i < h; i++) {
+    const k = i % 2 ? 1 : -1;
+    const sx = x + (lean * i) / h;
+    c.px(sx + k, y - i, PETAL, sphere(k * 0.5, 0.2), { bias: i < 2 ? -1 : i > h - 2 ? 1 : 0 });
+  }
+  c.px(x + lean, y - h - 1, PETAL, sphere(0, -0.6), { bias: 1 });
+}
+
+/**
+ * Foxglove's wide straw hat: a broad brim, a low round crown, a rose ribbon
+ * round it whose tails flutter out behind, and two foxglove spikes stuck in
+ * the band at her right temple.
+ */
+function strawHat(c: PixelCanvas, cx: number, U: number, view: View): void {
+  const side = view === 'side';
+  const off = side ? 0.6 : 0;
+  const brimY = 9.4 + U;
+  // The ribbon's tails first, so the brim covers their roots.
+  c.part();
+  if (view === 'down') {
+    c.capsule(cx + 5.8, 10 + U, cx + 6.8, 13 + U, 0.5, 0.4, S.band, { bias: -1 });
+  } else if (view === 'up') {
+    c.capsule(cx - 0.4, 10 + U, cx - 0.9, 14 + U, 0.5, 0.4, S.band);
+    c.capsule(cx + 0.6, 10 + U, cx + 1.4, 13.4 + U, 0.5, 0.4, S.band, { bias: -1 });
+  } else {
+    c.capsule(cx + 3, 9 + U, cx + 6.2, 12.6 + U, 0.6, 0.45, S.band);
+    c.capsule(cx + 3.2, 9.4 + U, cx + 5.2, 13.8 + U, 0.55, 0.4, S.band, { bias: -1 });
+  }
+  // The brim, woven, its front edge catching the light.
+  c.part();
+  const rx = side ? STRAW_BRIM_SIDE : STRAW_BRIM;
+  const ry = side ? 1.5 : 2.1;
+  c.ellipse(cx, brimY, rx, ry, S.hat, { normal: (_x, _y, dx, dy) => sphere(dx * 0.6, dy * 0.45 - 0.5, 1) });
+  weave(c, cx - rx, brimY - ry, cx + rx, brimY + ry, S.hat);
+  const lip = Math.round(brimY + (side ? 0.6 : 1.2));
+  for (let x = Math.round(cx - rx + 1.5); x <= Math.round(cx + rx - 2); x++) c.shade(x, lip, 1);
+  // The crown: low and rounded.
+  c.part();
+  const crown = [2.0, 2.8, 3.1, 3.2];
+  c.shape(5 + U, 8 + U, (y) => {
+    const hw = crown[y - 5 - U];
+    return [cx + off - hw, cx + off + hw];
+  }, S.hat, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.8, 1));
+  weave(c, cx + off - 3.3, 5 + U, cx + off + 3.3, 8 + U, S.hat);
+  // The ribbon round it.
+  c.part();
+  c.shape(8 + U, 8 + U, () => [cx + off - 3.3, cx + off + 3.3], S.band, (_x, _y, t) => cyl(t, 0.2), { bias: 1 });
+  // Foxgloves stuck in the band: at her right temple, so screen left from the
+  // front and screen right from behind; from the side they lean back.
+  if (view === 'down') {
+    hatSpike(c, cx - 2.6, 8 + U, 4, -1);
+    hatSpike(c, cx - 1.4, 8 + U, 3, -0.2);
+  } else if (view === 'up') {
+    hatSpike(c, cx + 2.6, 8 + U, 4, 1);
+    hatSpike(c, cx + 1.4, 8 + U, 3, 0.2);
+  } else {
+    hatSpike(c, cx + off + 2.2, 8 + U, 4, 1.2);
+    hatSpike(c, cx + off + 1, 8 + U, 3, 0.4);
+  }
+}
+
+/** A chestnut braid from (x0, y0) to (x1, y1): plaits shaded in turn, tied with a ribbon, a tuft below. */
+function herbBraid(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
+  const hair = S.hair ?? S.hat;
+  c.part();
+  for (let y = Math.round(y0); y <= Math.round(y1); y++) {
+    const u = (y - y0) / Math.max(1, y1 - y0);
+    const x = x0 + (x1 - x0) * u;
+    const k = y & 1 ? 1 : -1;
+    c.px(x - (k > 0 ? 1 : 0), y, hair, cyl(k * 0.5, 0.2), { bias: k > 0 ? 1 : 0 });
+    c.px(x - (k > 0 ? 0 : 1), y, hair, cyl(-k * 0.3, 0.1), { bias: -1 });
+  }
+  c.part();
+  c.px(x1 - 0.5, Math.round(y1) + 1, S.band, sphere(-0.3, 0), { bias: 1 });
+  c.px(x1 + 0.5, Math.round(y1) + 1, S.band, sphere(0.3, 0));
+  c.part();
+  c.px(x1 - 0.5, Math.round(y1) + 2, hair, sphere(0, 0.4));
+}
+
+/** A vial on the satchel strap: a pixel of glass over a pixel of tincture, `pink` or violet. */
+function herbVial(c: PixelCanvas, x: number, y: number, pink: boolean): void {
+  c.px(x, y - 1, GLASS, sphere(-0.3, -0.4));
+  c.px(x, y, pink ? PINK_BREW : S.brew, sphere(0, 0.2));
+  c.spark(x, y, pink ? [255, 130, 200] : S.mid, 0.3);
+}
+
+/** Her satchel, its flap over rows y..y+1, sprigs of herbs and a lavender head poking out under it. */
+function satchel(c: PixelCanvas, x0: number, x1: number, y: number, bias = 0): void {
+  c.part();
+  for (const [dx, dy, m] of [[0.8, -1, STEM], [1.2, -2, STEM], [1.8, -3, PETAL], [2.6, -1, STEM], [3, -2, STRAW]] as const) c.px(x0 + dx, y + dy, m, sphere(0, -0.4), { bias });
+  c.part();
+  c.shape(y, y + 3, () => [x0, x1], LEATHER, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.4, 1), { bias });
+  c.part();
+  c.shape(y, y + 1, () => [x0 - 0.2, x1 + 0.2], LEATHER, (_x, _y, t) => cyl(t, 0.4), { bias: bias + 1 });
+  c.px((x0 + x1) / 2, y + 1, GOLD, sphere(0, -0.3));
+}
+
+/** The dress's outline, as wide either side as this: a fitted bodice to the waist, then the skirt flaring to its hem. */
+function dressWidth(y: number, top: number, waist: number, hem: number): number {
+  if (y <= waist) {
+    const u = (y + 0.5 - top) / (waist - top);
+    return 4.2 - 0.9 * u * u;
+  }
+  const u = (y + 0.5 - waist) / (hem + 1 - waist);
+  return 3.4 + 2.3 * u;
+}
+
+/** Foxglove from the front, below the head: dress, chemise, laced bodice, apron, waist ribbon, satchel and tinctures. */
+function herbalBodyDown(c: PixelCanvas, p: Pose, U: number, L: number): void {
+  const cx = 12;
+  const top = 15 + U;
+  const waist = 21 + U;
+  const hem = 28 + L;
+  const skirtU = (y: number) => Math.max(0, (y + 0.5 - waist) / (hem + 1 - waist));
+  const dress = (y: number): [number, number] => {
+    const hw = dressWidth(y, top, waist, hem);
+    const sw = skirtU(y) * p.sway;
+    return [cx - hw + sw, cx + hw + sw];
+  };
+  c.part();
+  c.shape(top, hem, dress, S.coat, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.2, 1));
+  // Soft folds down the skirt.
+  for (let y = waist + 2; y <= hem; y++) {
+    const [l, r] = dress(y);
+    for (const f of [0.18, 0.84]) c.shade(Math.round(l + (r - l) * f), y, -1);
+  }
+  // The chemise's gathered neckline, and the bodice laced up the front in linen.
+  c.part();
+  c.shape(top, top, () => [cx - 3.4, cx + 3.4], S.apron ?? S.coat, (_x, _y, t) => cyl(t, 0.3));
+  c.part();
+  for (let y = top + 2; y < waist; y++) {
+    c.shade(11, y, -1);
+    c.shade(12, y, -1);
+    c.px(y & 1 ? 11 : 12, y, S.apron ?? S.coat, { x: 0, y: 0.3, z: 0.95 }, { bias: 1 });
+  }
+  // The apron, with a pocket and a scalloped hem.
+  c.part();
+  const apronTop = waist + 1;
+  const apronBot = hem - 1;
+  const apron = (y: number): [number, number] => {
+    const u = (y - apronTop) / (apronBot - apronTop);
+    const hw = 2.4 + u * 0.9;
+    const sw = skirtU(y) * p.sway;
+    return [cx - hw + sw, cx + hw + sw];
+  };
+  c.shape(apronTop, apronBot, apron, S.apron ?? S.coat, (_x, _y, t, u) => sphere(t * 0.8, u * 0.4 - 0.1, 1));
+  c.shade(cx + 1, apronTop + 2, -1);
+  c.shade(cx + 2, apronTop + 2, -1);
+  const [al, ar] = apron(apronBot);
+  for (let x = Math.round(al); x < Math.round(ar); x += 2) c.shade(x, apronBot, -1);
+  // The rose ribbon tied at her waist, its bow at her right hip.
+  c.part();
+  c.shape(waist, waist, () => [cx - 3.6, cx + 3.6], S.band, (_x, _y, t) => cyl(t, 0.1));
+  c.part();
+  c.px(7, waist - 1, S.band, sphere(-0.5, -0.3), { bias: 1 });
+  c.px(7, waist + 1, S.band, sphere(-0.5, 0.3));
+  c.px(8, waist + 2, S.band, sphere(0.2, 0.4), { bias: -1 });
+  // The satchel's strap from her left shoulder to her right hip, tinctures along it, the satchel there.
+  c.part();
+  c.capsule(16.2, 15.4 + U, 9.2, 21.6 + U, 0.55, 0.55, LEATHER);
+  herbVial(c, 15, 17 + U, true);
+  herbVial(c, 13, 18 + U, false);
+  satchel(c, 5.4, 9.0, waist + 1);
+}
+
+/** Foxglove's face from the front, under the brim: freckles, lips, locks either side, the braid over her left shoulder. */
+function herbalFaceDown(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+  const hair = S.hair ?? S.hat;
+  c.part();
+  c.shape(10 + U, 13 + U, () => [cx - 3.7, cx + 3.7], hair, (_x, _y, t, u) => cyl(t * 0.8, 0.2 - u * 0.3), { bias: -1 });
+  c.part();
+  c.ellipse(cx, 12.4 + U, 2.8, 2.5, S.face);
+  c.part();
+  c.px(11, 13 + U, S.face, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(10, 13 + U, FRECKLE, FLAT_FACE);
+  c.px(13, 13 + U, FRECKLE, FLAT_FACE);
+  c.px(11, 14 + U, LIPS, { x: -0.2, y: 0.3, z: 0.93 });
+  c.px(12, 14 + U, LIPS, { x: 0.3, y: 0.2, z: 0.93 }, { bias: -1 });
+  c.part();
+  if (blink) {
+    c.shade(10, 12 + U, -1);
+    c.shade(13, 12 + U, -1);
+  } else {
+    c.px(10, 12 + U, S.eye);
+    c.px(13, 12 + U, S.eye);
+  }
+  // A fringe parted in the middle, and locks past her cheeks.
+  c.part();
+  for (const x of [9, 10, 13, 14]) c.px(x, 11 + U, hair, sphere(x < cx ? -0.4 : 0.4, -0.3), { bias: x === 10 || x === 13 ? 1 : 0 });
+  c.shape(11 + U, 15 + U, () => [8.4, 9.6], hair, (_x, _y, t) => cyl(t * 0.6 - 0.3, 0.1));
+  c.shape(11 + U, 14 + U, () => [14.4, 15.6], hair, (_x, _y, t) => cyl(t * 0.6 + 0.3, 0.1));
+  herbBraid(c, 15.4, 13 + U, 16.2, 21 + U);
+}
+
+/** A face's flat front, for freckles. */
+const FLAT_FACE = { x: 0, y: 0.1, z: 0.99 };
+
+/** Foxglove from behind: the dress with its bow at the small of her back, satchel, and the back of her head. */
+function herbalBodyUp(c: PixelCanvas, p: Pose, U: number, L: number): void {
+  const cx = 12;
+  const top = 15 + U;
+  const waist = 21 + U;
+  const hem = 28 + L;
+  const dress = (y: number): [number, number] => {
+    const hw = dressWidth(y, top, waist, hem);
+    const sw = Math.max(0, (y + 0.5 - waist) / (hem + 1 - waist)) * p.sway;
+    return [cx - hw + sw, cx + hw + sw];
+  };
+  c.part();
+  c.shape(top, hem, dress, S.coat, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.2, 1));
+  for (let y = waist + 2; y <= hem; y++) {
+    const [l, r] = dress(y);
+    for (const f of [0.3, 0.7]) c.shade(Math.round(l + (r - l) * f), y, -1);
+  }
+  // The apron's ties and the waist ribbon in a bow at the small of her back.
+  c.part();
+  c.shape(waist, waist, () => [cx - 3.6, cx + 3.6], S.band, (_x, _y, t) => cyl(t, 0.1));
+  c.part();
+  for (const [x, y, k] of [[10, -1, -1], [10, 0, -1], [13, -1, 1], [13, 0, 1], [11, 1, 0], [11, 2, 0], [12, 1, 0], [12, 3, 0]] as const) c.px(x, waist + y, S.band, sphere(k * 0.5, -0.2), { bias: y < 0 ? 1 : 0 });
+  // The strap across her back, and the satchel at her right hip.
+  c.part();
+  c.capsule(7.8, 15.4 + U, 14.8, 21.6 + U, 0.55, 0.55, LEATHER);
+  satchel(c, 15, 18.6, waist + 1);
+  // The back of her head; her hair gathered into the braid, which goes over her left shoulder.
+  const hair = S.hair ?? S.hat;
+  c.part();
+  c.ellipse(cx, 12 + U, 3.3, 2.7, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  for (let y = 10; y <= 14; y++) for (let x = 10; x <= 14; x += 2) c.shade(x + ((y >> 1) & 1), y + U, -1);
+  herbBraid(c, cx - 0.6, 13 + U, cx - 3.6, 17 + U);
+}
+
+/** Foxglove facing left, below the hat: satchel behind, dress and apron, strap and tinctures, her face in profile and the braid. */
+function herbalSide(c: PixelCanvas, p: Pose, U: number, L: number, hx: number, cx: number): void {
+  const top = 15 + U;
+  const waist = 21 + U;
+  const hem = 28 + L;
+  // The satchel at her far hip, peeking out behind.
+  satchel(c, hx + 2.2, hx + 5.4, waist + 1, -1);
+  const dress = (y: number): [number, number] => {
+    if (y <= waist) {
+      const bust = y >= top + 1 && y <= top + 3 ? 0.6 : 0;
+      return [hx - 2.8 - bust, hx + 2.6];
+    }
+    const u = (y + 0.5 - waist) / (hem + 1 - waist);
+    const shift = hx + (cx - hx) * u;
+    return [shift - 2.9 - u * 1.2, shift + 2.8 + u * 1.8 + u * p.sway];
+  };
+  c.part();
+  c.shape(top, hem, dress, S.coat, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.2, 1));
+  for (let y = waist + 2; y <= hem; y++) {
+    const [l, r] = dress(y);
+    c.shade(Math.round(l + (r - l) * 0.6), y, -1);
+  }
+  // The apron down her front, the chemise at her neck and the bodice's lacing.
+  c.part();
+  c.shape(waist + 1, hem - 1, (y) => {
+    const [l] = dress(y);
+    return [l, l + 2.2];
+  }, S.apron ?? S.coat, (_x, _y, t) => sphere(t * 0.8 - 0.3, 0.1, 1));
+  c.part();
+  c.shape(top, top, () => [hx - 2.6, hx + 1.6], S.apron ?? S.coat, (_x, _y, t) => cyl(t, 0.3));
+  for (let y = top + 2; y < waist; y += 2) c.px(Math.round(hx - 3), y, S.apron ?? S.coat, { x: -0.6, y: 0.2, z: 0.8 }, { bias: 1 });
+  c.part();
+  c.shape(waist, waist, () => [hx - 2.9, hx + 2.7], S.band, (_x, _y, t) => cyl(t * 0.9 - 0.1, 0.1));
+  // The strap down her near side, tinctures on it.
+  c.part();
+  c.capsule(hx + 1.6, 15.4 + U, hx - 2, 21.4 + U, 0.55, 0.55, LEATHER);
+  herbVial(c, Math.round(hx + 0.6), 17 + U, true);
+  herbVial(c, Math.round(hx - 1), 19 + U, false);
+  // Her head: hair behind, then the face in profile with a freckled cheek, then the braid over her near shoulder.
+  const hair = S.hair ?? S.hat;
+  c.part();
+  c.ellipse(hx + 1.2, 12 + U, 2.3, 2.6, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8, 1) });
+  c.part();
+  c.ellipse(hx - 0.6, 12.3 + U, 2.5, 2.4, S.face);
+  c.part();
+  c.px(hx - 4, 13 + U, S.face, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(hx - 3, 14 + U, LIPS, { x: -0.4, y: 0.2, z: 0.9 });
+  c.px(hx - 1, 13 + U, FRECKLE, FLAT_FACE);
+  if (p.blink) c.shade(hx - 2, 12 + U, -1);
+  else c.px(hx - 2, 12 + U, S.eye);
+  c.part();
+  c.px(hx - 3, 11 + U, hair, sphere(-0.5, -0.3), { bias: 1 });
+  c.px(hx - 2, 11 + U, hair, sphere(-0.2, -0.3));
+  herbBraid(c, hx + 0.4, 13 + U, hx - 1.2, 20 + U);
+}
+
+// ---------------------------------------------------------------------------
 // Directions
 
 const REACH_FRONT = 4.4;
@@ -790,6 +1138,17 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
   leg(c, 13.8, 25.5 + L, 14, 28.4 - p.footB);
   boot(c, 10, 29.6 - p.footA);
   boot(c, 14, 29.6 - p.footB);
+
+  if (S.herbal) {
+    herbalBodyDown(c, p, U, L);
+    head(() => {
+      herbalFaceDown(c, cx, U, p.blink);
+      hat(c, cx, U, 'down');
+    });
+    if (!fa.behind) armA();
+    if (!fb.behind) armB();
+    return;
+  }
 
   // The greatcoat, its front parted below the belt.
   const top = 15 + U;
@@ -910,6 +1269,14 @@ function drawUp(c: PixelCanvas, p: Pose, seed: number): void {
   boot(c, 10, 29.6 - p.footB);
   boot(c, 14, 29.6 - p.footA);
 
+  if (S.herbal) {
+    herbalBodyUp(c, p, U, L);
+    hat(c, cx, U, 'up');
+    if (!fa.behind) armA();
+    if (!fb.behind) armB();
+    return;
+  }
+
   // The coat from behind: a seam down the back to a vent at the hem.
   const top = 15 + U;
   const waist = 22 + U;
@@ -984,6 +1351,13 @@ function drawSide(c: PixelCanvas, p: Pose, seed: number): void {
   boot(c, cx + 0.4 - p.footB, 29.7 - lift(p.footB), true, -1);
   leg(c, cx - 0.6, 25.5 + L, cx - 0.4 - p.footA, 28.4 - lift(p.footA));
   boot(c, cx - 1.2 - p.footA, 29.7 - lift(p.footA), true);
+
+  if (S.herbal) {
+    herbalSide(c, p, U, L, hx, cx);
+    hat(c, hx, U, 'side');
+    arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.3, 1], { size: p.flask, boil: p.boil, seed });
+    return;
+  }
 
   if (S.chem) {
     // The pressure tank on his back, peeking out behind the coat.
@@ -1409,7 +1783,7 @@ export function flaskFrame(i: number, big: boolean, look: AlchemistLook = PLAGUE
   c.part();
   c.capsule(bx + ux * (r - 0.3), by + uy * (r - 0.3), bx + ux * (r + neck), by + uy * (r + neck), 0.65, 0.6, GLASS);
   c.part();
-  c.ellipse(bx + ux * (r + neck + 0.9), by + uy * (r + neck + 0.9), big ? 1.1 : 0.8, big ? 1.1 : 0.8, WOOD);
+  c.ellipse(bx + ux * (r + neck + 0.9), by + uy * (r + neck + 0.9), big ? 1.1 : 0.8, big ? 1.1 : 0.8, look.cork ?? WOOD);
   c.spark(bx, by, look.hot, big ? 0.7 : 0.5);
   if (big) {
     const cols: RGB[] = [look.hot, look.mid];

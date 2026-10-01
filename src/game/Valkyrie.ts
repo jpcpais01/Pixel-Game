@@ -79,7 +79,16 @@ export interface ValkyrieKit {
   /** The Stormwing: lightning off her blows, and the dive instead of the throw. */
   storm: boolean;
   specialCooldown: number;
+  /** White feathers drift down where her blows land and in the thrown spear's wake (the Swan Maiden). */
+  feathers?: boolean;
 }
+
+// The Swan Maiden's drifting feathers.
+const FEATHER_LIFE = 1300;
+const FEATHERS_PER_HIT = 2;
+const FEATHERS_PER_HEAVY = 4;
+/** One feather in the thrown spear's wake every this many ms. */
+const FEATHER_TRAIL_MS = 110;
 
 export const SPEAR_KIT: ValkyrieKit = {
   key: 'valkyrie',
@@ -123,6 +132,17 @@ export const RAVEN_KIT: ValkyrieKit = {
   heavy: { core: 0xf8f0ff, hot: 0xd8b0ff, mid: 0xa060ff, deep: 0x4a1a8a, light: 0xb880ff },
   pal: pal(0xf8f0ff, 0xd8b0ff, 0xa060ff, 0x4a1a8a, 0xb880ff),
   aura: 0xd8c0ff,
+};
+
+/** The Spearmaiden's Swan Maiden skin: pearl and moonlit blue, and white feathers drifting down. */
+export const SWAN_KIT: ValkyrieKit = {
+  ...SPEAR_KIT,
+  key: 'valkyrie_swan',
+  swing: { core: 0xffffff, hot: 0xf2f6ff, mid: 0xc4d8f4, deep: 0x5a82c0 },
+  heavy: { core: 0xffffff, hot: 0xdfeaff, mid: 0x8cb8e8, deep: 0x2e5a9a, light: 0xb8d4ff },
+  pal: pal(0xffffff, 0xdfeaff, 0x8cb8e8, 0x2e5a9a, 0xb8d4ff),
+  aura: 0xd8e6ff,
+  feathers: true,
 };
 
 export class Valkyrie implements Hero {
@@ -315,6 +335,7 @@ export class Valkyrie implements Hero {
       sound.clash(this.world.pan(h.x), heavy);
     }
     if (hits.length) this.world.cameras.main.shake(heavy ? 110 : 70, heavy ? 0.0005 : 0.0003);
+    if (this.kit.feathers && hits.length) this.world.addEffect(new DriftFeathers(this.world, hits[0].x, hits[0].y - 12, heavy ? FEATHERS_PER_HEAVY : FEATHERS_PER_HIT, this.kit.pal));
     if (this.kit.storm && hits.length) arcFrom(this.world, hits[0].x, hits[0].y, ARC_RANGE, ARC_TARGETS, ARC_DAMAGE, this.kit.pal);
   }
 
@@ -343,7 +364,7 @@ export class Valkyrie implements Hero {
     const a = this.abilityAim;
     const x = this.x + a.x * 6;
     const y = this.y - CHEST_Y + a.y * 4;
-    this.world.addEffect(new ThrownSpear(this.world, this, x, y, a.x, a.y, this.kit.pal, this.kit.heavy));
+    this.world.addEffect(new ThrownSpear(this.world, this, x, y, a.x, a.y, this.kit.pal, this.kit.heavy, !!this.kit.feathers));
     sound.windDash(this.world.pan(x));
     this.specialCd = this.kit.specialCooldown;
   }
@@ -567,6 +588,7 @@ class ThrownSpear extends Fx {
     dy: number,
     private p: Pal,
     private scheme: Scheme,
+    private feathers = false,
   ) {
     super(world, 4000);
     this.ux = dx;
@@ -622,6 +644,9 @@ class ThrownSpear extends Fx {
     this.trail.push({ x: this.x, y: this.y });
     if (this.trail.length > 6) this.trail.shift();
     if (Math.floor(this.t / 35) !== Math.floor((this.t - dt) / 35)) this.world.debris([this.p.hot, this.p.mid], this.x - this.ux * 10, this.y - this.uy * 10, 1, this.y + 30, 'trail');
+    if (this.feathers && this.phase !== 'hang' && Math.floor(this.t / FEATHER_TRAIL_MS) !== Math.floor((this.t - dt) / FEATHER_TRAIL_MS)) {
+      this.world.addEffect(new DriftFeathers(this.world, this.x - this.ux * 12, this.y - this.uy * 12, 1, this.p));
+    }
     this.draw();
   }
 
@@ -664,5 +689,53 @@ class ThrownSpear extends Fx {
     g.end();
     this.lamp.setPosition(x, y);
     this.glow.setPosition(Math.round(x + ux * 2), Math.round(y + uy * 2)).setDepth(y + CHEST_Y + 2);
+  }
+}
+
+/**
+ * A few small white feathers loosed at (x, y): each puffs out, then drifts
+ * down rocking side to side, tipping one way and the other as it swings,
+ * and fades before it reaches the ground.
+ */
+export class DriftFeathers extends Fx {
+  private g: Ink;
+  private bits: { x: number; y: number; vx: number; phase: number; rate: number }[] = [];
+
+  constructor(
+    world: WorldScene,
+    private x: number,
+    private y: number,
+    n: number,
+    private p: Pal,
+  ) {
+    super(world, FEATHER_LIFE);
+    this.g = this.ink(48, 48);
+    for (let i = 0; i < n; i++) {
+      this.bits.push({ x: (Math.random() - 0.5) * 8, y: (Math.random() - 0.5) * 6, vx: (Math.random() - 0.5) * 30, phase: Math.random() * Math.PI * 2, rate: 0.006 + Math.random() * 0.003 });
+    }
+  }
+
+  protected step(dt: number): void {
+    const { p, t } = this;
+    const s = dt / 1000;
+    const a = 1 - clamp01((t - FEATHER_LIFE * 0.6) / (FEATHER_LIFE * 0.4));
+    const g = this.g.begin(this.x, this.y + 8, this.y + 26);
+    for (const b of this.bits) {
+      // The first puff slows quickly; then a slow fall with a swing.
+      b.vx *= Math.exp(-dt / 180);
+      b.x += b.vx * s;
+      b.y += (t < 120 ? -10 : 13) * s;
+      const swing = Math.sin(t * b.rate + b.phase);
+      const fx = this.x + b.x + swing * 3;
+      const fy = this.y + b.y + Math.abs(swing) * 1.2;
+      // Four pixels on a slant that follows the swing: quill tip in blue, vane white.
+      const k = swing > 0 ? 1 : -1;
+      g.put(fx - k, fy - 1, p.core, a);
+      g.put(fx, fy, p.core, a);
+      g.put(fx + k, fy + 1, p.hot, a);
+      g.put(fx + k * 2, fy + 1, p.mid, a * 0.9);
+      g.put(fx, fy - 1, p.hot, a * 0.6);
+    }
+    g.end();
   }
 }

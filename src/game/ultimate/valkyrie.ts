@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import { sound } from '../../audio';
 import type { Hurtbox } from '../combat';
 import { onGround } from '../Toxins';
-import { Thunderbolt } from '../Valkyrie';
+import { DriftFeathers, Thunderbolt } from '../Valkyrie';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { bloom, clamp01, dither, easeIn, easeOut, flare, Fx, GROUND, hash, line, ring, rune, strikeGround, type Ink, type Pal } from './ink';
 import type { Cast } from './types';
@@ -23,6 +23,8 @@ const RUNE_DAMAGE = 22;
 const ODIN_LIFE = 2300;
 /** How deep the spear sinks into the ground. */
 const SUNK = 10;
+/** Puffs of white feathers round the Swan Song's rune ring as it bursts. */
+const SWAN_FEATHER_PUFFS = 8;
 
 /** A great spear standing point-down with its point at (x, tip); pixels below `floor` are in the ground. */
 function greatSpear(g: Ink, x: number, tip: number, p: Pal, a: number, floor = Infinity): void {
@@ -73,6 +75,8 @@ export class OdinSpear extends Fx {
     private x: number,
     private y: number,
     private p: Pal,
+    /** The Swan Maiden's Swan Song: the runes burst into a ring of drifting white feathers. */
+    private feathers = false,
   ) {
     super(world, ODIN_LIFE);
     this.spear = this.ink(28, 100);
@@ -155,6 +159,12 @@ export class OdinSpear extends Fx {
     world.debris(p.tints, x, y - 2, 18, y + 20, 'burst');
     flare(world, x, y - 8, 180, p.light, 2.5, 450);
     sound.quakeSlam(world.pan(x));
+    if (this.feathers) {
+      for (let i = 0; i < SWAN_FEATHER_PUFFS; i++) {
+        const q = (i / SWAN_FEATHER_PUFFS) * Math.PI * 2;
+        world.addEffect(new DriftFeathers(world, x + Math.cos(q) * RUNE_R * 0.8, y + Math.sin(q) * RUNE_R * 0.8 * GROUND - 14, 2, p));
+      }
+    }
   }
 }
 

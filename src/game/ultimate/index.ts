@@ -3,7 +3,7 @@ import { bakedCanvas } from '../../art/canvas';
 import { sound } from '../../audio';
 import { dirOf } from '../Wizard';
 import { energy } from '../energy';
-import { CHEM_TOX, CRYO_TOX, HEX_TOX, PLAGUE_TOX, SPIRIT_TOX, type ToxStyle } from '../Toxins';
+import { CHEM_TOX, CRYO_TOX, FOXGLOVE_TOX, HEX_TOX, PLAGUE_TOX, SPIRIT_TOX, type ToxStyle } from '../Toxins';
 import type { Aim, CharacterDef, Hero } from '../characters';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { bloom, easeOut, flare, Fx, Ink, pal, ring, rune, type Pal } from './ink';
@@ -28,7 +28,7 @@ import { AsgardThunder, OdinSpear } from './valkyrie';
 import { KingsCrown } from './king';
 import { AFONSO_KIT, KING_KIT } from '../King';
 import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
-import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT } from '../Valkyrie';
+import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
 import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
 import { HIVE_KIT, SYNTH_KIT } from '../Synth';
 import { SIEGE_MS, SwarmProtocol } from './robot';
@@ -178,7 +178,7 @@ const ULTS: Record<string, UltDef> = {
     range: 110,
     pal: toxPal(PLAGUE_TOX),
     icon: icons.pestilenceIcon,
-    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : c.look === 'shaman' ? SPIRIT_TOX : PLAGUE_TOX)),
+    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : c.look === 'shaman' ? SPIRIT_TOX : c.look === 'foxglove' ? FOXGLOVE_TOX : PLAGUE_TOX)),
   },
   'alchemist:chem': {
     name: 'Chem Bomb',
@@ -358,7 +358,7 @@ const ULTS: Record<string, UltDef> = {
     range: 105,
     pal: SPEAR_KIT.pal,
     icon: icons.odinIcon,
-    cast: (c) => c.world.addEffect(new OdinSpear(c.world, c.tx, c.ty, c.pal)),
+    cast: (c) => c.world.addEffect(new OdinSpear(c.world, c.tx, c.ty, c.pal, c.look === 'swan')),
   },
   'valkyrie:storm': {
     name: 'Thunder of Asgard',
@@ -467,6 +467,7 @@ const SKINS: Record<string, UltSkin> = {
   'fighter:champ': { name: "Can't See Me", pal: pal(0xf8ffe8, 0x9cff5a, 0xff8a2a, 0x1c7a1a, 0x8cf060) },
   'fighter:guardian': { name: 'Wrath of Stone', pal: pal(0xfff4d0, 0xffc050, 0xff6a1a, 0xa02a10, 0xff8a30), type: 'monk' },
   'alchemist:shaman': { name: 'Spirit Plague', pal: toxPal(SPIRIT_TOX) },
+  'alchemist:foxglove': { name: 'Deadly Bloom', pal: toxPal(FOXGLOVE_TOX) },
   'alchemist:cryo': { name: 'Absolute Zero', pal: toxPal(CRYO_TOX), type: 'chem' },
   'archer:scarecrow': { name: 'Murder of Crows', pal: pal(0xfff4d0, 0xffb048, 0xff7a1a, 0x2a7a3a, 0x9cff9a) },
   'archer:hunt': { name: 'Moonpiercer', pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
@@ -513,6 +514,7 @@ const SKINS: Record<string, UltSkin> = {
   'druid:titania': { name: 'Midsummer Dream', pal: pal(0xfffaf0, 0xffd88a, 0xff9ac0, 0xb8487a, 0xffb8d0) },
   'druid:frostfang': { name: 'Winter Stampede', pal: FROST_MAGIC.pal, type: 'wild' },
   'valkyrie:sunshield': { name: 'Spear of the Sun', pal: SUN_KIT.pal },
+  'valkyrie:swan': { name: 'Swan Song', pal: SWAN_KIT.pal },
   'valkyrie:raven': { name: 'Wrath of the Raven', pal: RAVEN_KIT.pal, type: 'storm' },
   'automaton:scrap': { name: 'Grand Opening', pal: SCRAP_KIT.boom },
   'automaton:hive': { name: 'The Golden Swarm', pal: HIVE_KIT.pal, type: 'synth' },
