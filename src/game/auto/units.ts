@@ -264,7 +264,7 @@ export const TRAITS: Record<TraitId, TraitDef> = {
   tank: { id: 'tank', name: 'Guardian', levels: [2, 4], text: ['Guardians gain 25% max HP', 'Guardians gain 60% max HP'], color: 0x9aa8c8 },
   melee: { id: 'melee', name: 'Fighter', levels: [2, 4], text: ['Fighters heal 15% of damage', 'Fighters heal 30% of damage'], color: 0xff7a5a },
   ranged: { id: 'ranged', name: 'Marksman', levels: [2, 4], text: ['Marksmen deal 20% more', 'Marksmen deal 50% more'], color: 0xc8f59a },
-  caster: { id: 'caster', name: 'Mystic', levels: [2, 4], text: ['Team starts with 20 mana', 'Team starts with 45 mana'], color: 0xd4a8ff },
+  caster: { id: 'caster', name: 'Sage', levels: [2, 4], text: ['Team starts with 20 mana', 'Team starts with 45 mana'], color: 0xd4a8ff },
 };
 
 export const TRAIT_IDS = Object.keys(TRAITS) as TraitId[];

@@ -79,7 +79,10 @@ const FIGHT_H = 20;
 /** The tall layout's trait chips. */
 const CHIP_W = 34;
 const CHIP_H = 11;
-const TRAIT_ROW = 11;
+const TRAIT_ROW = 13;
+/** A trait's progress pips: each one wide, and the gap between. */
+const PIP = 3;
+const PIP_STEP = 4;
 /** A row of the wide layout's standings, at a table of more than two. */
 const STAND_ROW = 10;
 /** The hero card that pops up for a tapped piece (or a hovered shop card). */
@@ -517,6 +520,8 @@ export class AutoScene extends Phaser.Scene {
   private boonMoteG: Phaser.GameObjects.Graphics | null = null;
   private boonBack: PixelButton | null = null;
   private boonShown: string | null = null;
+  /** A team combo (trait) tapped, shown on the card. */
+  private traitShown: TraitId | null = null;
   private hovered: string | null = null;
 
   // Dragging a piece.
@@ -635,6 +640,7 @@ export class AutoScene extends Phaser.Scene {
     this.infoHit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => {
       this.selected = null;
       this.boonShown = null;
+      this.traitShown = null;
       this.hovered = null;
       this.refreshInfo();
     });
@@ -1023,9 +1029,12 @@ export class AutoScene extends Phaser.Scene {
   }
 
   /**
-   * The traits on the board, active ones first, lit, with how many of the next
-   * level: a column beside the board on a wide screen (names when there's
-   * room), a row of chips under the top bar on a tall one.
+   * The team combos (traits) on the board, active ones first: each a tile
+   * with its badge, a pip for every hero toward its top level (a gap marks
+   * each level), lit in its colour once a level is reached and rimmed in gold
+   * at the top one, and its name where there's room. A column beside the board
+   * on a wide screen, two rows of chips under the top bar on a tall one. Tap a
+   * tile for what it does. The boons kept show as badges with the team count.
    */
   private drawTraits(): void {
     const list = this.traitList;
@@ -1033,7 +1042,9 @@ export class AutoScene extends Phaser.Scene {
     if (!this.me) return;
     const r = this.traitRect;
     list.setPosition(r.x, r.y);
-    const head = pixelText(this, 0, 2, `Team ${this.me.board.size}/${this.me.cap}`, this.me.board.size < this.me.cap ? GOLD : LAVENDER);
+    const size = this.me.board.size;
+    const cap = this.me.cap;
+    const head = pixelText(this, 0, 2, this.wide && r.width < 60 ? `${size}/${cap}` : `Team ${size}/${cap}`, size < cap ? GOLD : LAVENDER);
     list.add(head);
     // The boons kept, as badges (tap one for what it does): a row under the count when wide, at the right when tall.
     const kept = this.me.boons;
@@ -1041,6 +1052,7 @@ export class AutoScene extends Phaser.Scene {
       const b = this.add.image(x, y, boonBadge(this, id)).setOrigin(0).setInteractive({ useHandCursor: true });
       b.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => {
         this.boonShown = this.boonShown === id ? null : id;
+        this.traitShown = null;
         this.selected = null;
         this.hovered = null;
         this.refreshInfo();
@@ -1048,13 +1060,9 @@ export class AutoScene extends Phaser.Scene {
       list.add(b);
     };
     const traits = this.me.traits();
-    const next = (t: { id: TraitId; count: number }) => {
-      const def = TRAITS[t.id];
-      return def.levels.find((n) => n > t.count) ?? def.levels[def.levels.length - 1];
-    };
     if (!this.wide) {
       const fit = Math.min(kept.length, Math.max(0, Math.floor((r.width - head.width - 5 - CHIP_W) / BADGE_STEP)));
-      kept.slice(-fit || kept.length).forEach((id, i) => fit && badge(id, r.width - (fit - i) * BADGE_STEP, 0));
+      if (fit) kept.slice(-fit).forEach((id, i) => badge(id, r.width - (fit - i) * BADGE_STEP, 0));
       const limit = r.width - (fit ? fit * BADGE_STEP + 2 : 0);
       // Chips after the team count, wrapping to a second row.
       let x = head.width + 5;
@@ -1065,37 +1073,66 @@ export class AutoScene extends Phaser.Scene {
           x = 0;
           y = CHIP_H + 1;
         }
-        const def = TRAITS[t.id];
-        const on = t.level > 0;
-        const g = this.add.graphics();
-        g.fillStyle(0x0b0818, on ? 0.85 : 0.6).fillRect(x, y, CHIP_W - 1, CHIP_H);
-        if (on) g.fillStyle(def.color, 1).fillRect(x, y + CHIP_H - 1, CHIP_W - 1, 1);
-        const icon = this.add.image(x + 1, y + 1, `ab_trait_${t.id}${on ? '' : '_off'}`).setOrigin(0);
-        const count = pixelText(this, x + 13, y + 2, `${t.count}/${next(t)}`, on ? def.color : SOFT);
-        list.add([g, icon, count]);
+        this.traitTile(t, x, y, CHIP_W - 1, CHIP_H);
         x += CHIP_W;
       }
       return;
     }
     const w = r.width;
-    const named = w >= 70;
     const perRow = Math.max(1, Math.floor((w + 1) / BADGE_STEP));
     kept.forEach((id, i) => badge(id, (i % perRow) * BADGE_STEP, 12 + Math.floor(i / perRow) * BADGE_STEP));
     const top = 12 + Math.ceil(kept.length / perRow) * BADGE_STEP + (kept.length ? 1 : 0);
     const rows = Math.max(0, Math.floor((r.height - top) / TRAIT_ROW));
-    traits.slice(0, rows).forEach((t, i) => {
-      const def = TRAITS[t.id];
-      const y = top + i * TRAIT_ROW;
-      const on = t.level > 0;
-      const g = this.add.graphics();
-      g.fillStyle(0x0b0818, on ? 0.8 : 0.55).fillRect(0, y - 1, w, TRAIT_ROW - 1);
-      if (on) g.fillStyle(def.color, 1).fillRect(0, y - 1, 1, TRAIT_ROW - 1);
-      const icon = this.add.image(2, y, `ab_trait_${t.id}${on ? '' : '_off'}`).setOrigin(0);
-      const count = pixelText(this, 0, y + 1, `${t.count}/${next(t)}`, on ? def.color : SOFT);
-      count.setX(w - 3 - count.width);
-      list.add([g, icon, count]);
-      if (named) list.add(pixelText(this, 14, y + 1, fitLine(this.probe, def.name, w - 14 - count.width - 6), on ? INK : SOFT));
+    // More combos than room: the last row says how many more (a tap on any shows the rest on the card).
+    const shown = traits.length > rows ? Math.max(0, rows - 1) : traits.length;
+    traits.slice(0, shown).forEach((t, i) => this.traitTile(t, 0, top + i * TRAIT_ROW, w, TRAIT_ROW - 1));
+    if (shown < traits.length && rows > 0) list.add(pixelText(this, 2, top + shown * TRAIT_ROW + 2, `+${traits.length - shown} more`, SOFT));
+  }
+
+  /** One combo's tile, `w` x `h` at (x, y) in the trait list. */
+  private traitTile(t: { id: TraitId; count: number; level: number }, x: number, y: number, w: number, h: number): void {
+    const def = TRAITS[t.id];
+    const on = t.level > 0;
+    const top = t.level >= def.levels.length;
+    const g = this.add.graphics();
+    g.fillStyle(0x0b0818, on ? 0.86 : 0.6).fillRect(x, y, w, h);
+    if (on) {
+      g.fillStyle(def.color, 0.16).fillRect(x, y, w, h);
+      g.fillStyle(def.color, 1).fillRect(x, y, 2, h);
+      if (top) g.fillStyle(GOLD, 1).fillRect(x, y, w, 1).fillStyle(GOLD, 0.55).fillRect(x, y + h - 1, w, 1);
+    }
+    if (this.traitShown === t.id) g.lineStyle(1, INK, 0.8).strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    const icon = this.add.image(x + 3, y + Math.floor((h - 9) / 2), `ab_trait_${t.id}${on ? '' : '_off'}`).setOrigin(0);
+    // The pips, right-aligned: lit up to the count, brighter for the levels reached, a gap after each level's mark.
+    const most = def.levels[def.levels.length - 1];
+    const gaps = def.levels.length - 1;
+    const pipsW = most * PIP_STEP - 1 + gaps;
+    const px0 = x + w - 3 - pipsW;
+    const py = y + Math.floor((h - PIP) / 2);
+    for (let i = 1; i <= most; i++) {
+      const px = px0 + (i - 1) * PIP_STEP + def.levels.filter((l) => l < i).length;
+      const lit = t.count >= i;
+      const reached = lit && def.levels.filter((l) => l <= t.count).some((l) => l >= i);
+      g.fillStyle(0x05040e, 1).fillRect(px - 1, py - 1, PIP + 2, PIP + 2);
+      g.fillStyle(lit ? def.color : 0x2a2440, lit ? (reached ? 1 : 0.55) : 1).fillRect(px, py, PIP, PIP);
+      if (reached) g.fillStyle(0xffffff, 0.7).fillRect(px, py, 1, 1);
+    }
+    const items: Phaser.GameObjects.GameObject[] = [g, icon];
+    // Past the top level (a crest, say), the extra shows as a number.
+    if (t.count > most) items.push(pixelText(this, px0 - 9, y + Math.floor((h - 7) / 2), `+${t.count - most}`, def.color));
+    const room = px0 - (x + 14) - 4 - (t.count > most ? 10 : 0);
+    if (room >= 22) items.push(pixelText(this, x + 14, y + Math.floor((h - 7) / 2), fitLine(this.probe, def.name, room), on ? INK : SOFT));
+    const hit = this.add.zone(x, y, w, h).setOrigin(0).setInteractive({ useHandCursor: true });
+    hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => {
+      this.traitShown = this.traitShown === t.id ? null : t.id;
+      this.boonShown = null;
+      this.selected = null;
+      this.hovered = null;
+      this.drawTraits();
+      this.refreshInfo();
     });
+    items.push(hit);
+    this.traitList.add(items);
   }
 
   /**
@@ -1107,12 +1144,38 @@ export class AutoScene extends Phaser.Scene {
     box.removeAll(true);
     const pick = this.hovered ? { key: this.hovered, star: 1, look: lookFor(this.hovered) } : this.selected;
     const boon = !pick && this.boonShown ? boonDef(this.boonShown) : undefined;
-    const on = !!this.me && (this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result') && !this.press?.dragging && (!!pick || !!boon);
+    const trait = !pick && !boon && this.traitShown ? this.traitShown : null;
+    const on = !!this.me && (this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result') && !this.press?.dragging && (!!pick || !!boon || !!trait);
     this.infoBg.setVisible(on);
     if (this.infoHit.input) this.infoHit.input.enabled = on;
     // On a tall screen the traits it covers step out of the way while it's up (on a wide one it covers the players).
     this.traitList.setVisible(!on || this.wide);
     if (!on) return;
+    if (trait) {
+      // A team combo: its badge and name, how many count toward it, each level (lit once reached), and who counts.
+      const def = TRAITS[trait];
+      const t = this.me.traits().find((x) => x.id === trait) ?? { id: trait, count: 0, level: 0 };
+      box.add(this.add.image(6, 6, `ab_trait_${trait}`).setOrigin(0).setScale(2));
+      box.add(pixelText(this, 28, 6, def.name, def.color));
+      box.add(pixelText(this, 28, 16, `${t.count} on the team`, LAVENDER));
+      let y = 30;
+      def.levels.forEach((n, i) => {
+        const got = t.count >= n;
+        const lines = wrap(this.probe, def.text[i], INFO_W - 30);
+        box.add(pixelText(this, 6, y, `${n}`, got ? def.color : SOFT));
+        lines.forEach((l, k) => box.add(pixelText(this, 18, y + k * 8, l, got ? INK : SOFT)));
+        y += lines.length * 8 + 3;
+      });
+      const who = [...new Set([...this.me.board.values()].map((p) => p.key))].filter((k) => unitDef(k).origin === trait || unitDef(k).role === trait);
+      if (who.length) {
+        y += 2;
+        for (const l of wrap(this.probe, who.map((k) => styleOf(k, lookFor(k)).ch.type.name).join(', '), INFO_W - 12).slice(0, Math.max(1, Math.floor((INFO_H - 6 - y) / 8)))) {
+          box.add(pixelText(this, 6, y, l, SOFT));
+          y += 8;
+        }
+      }
+      return;
+    }
     if (boon) {
       // A kept boon: its picture, name and tier, and what it does.
       box.add(this.add.image(6, 6, boonIcon(this, boon.id, 32)).setOrigin(0));
@@ -1263,6 +1326,7 @@ export class AutoScene extends Phaser.Scene {
     this.closeBoons();
     this.boonOffer = null;
     this.boonShown = null;
+    this.traitShown = null;
     this.mySeat = mine;
     this.foe = this.seats.findIndex((_, i) => i !== mine);
     this.foeGhost = false;
@@ -2156,6 +2220,7 @@ export class AutoScene extends Phaser.Scene {
       const same = this.selected?.key === pr.piece.key && this.selected.star === pr.piece.star;
       this.selected = same ? null : { key: pr.piece.key, star: pr.piece.star, look: pr.piece.look };
       this.boonShown = null;
+      this.traitShown = null;
       this.refreshInfo();
       return;
     }
