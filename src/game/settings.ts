@@ -1,5 +1,7 @@
 // Player options from the pause menu, saved in localStorage.
 
+import type { PointerId } from '../art/pointers';
+
 const KEY = 'pixel-battle.settings';
 
 export interface Settings {
@@ -19,11 +21,13 @@ export interface Settings {
   shake: boolean;
   /** The minimap in the top-right corner while playing (the Everwood's whole map still opens by its scroll button or Tab). */
   minimap: boolean;
+  /** The mouse pointer on a computer (art/pointers.ts), picked in the pause menu's More options. */
+  pointer: PointerId;
 }
 
 // Phones and tablets start on Fast; they have dense screens and small GPUs.
 const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true, profiler: false, quality: touch ? 'fast' : 'full', zoom: 'far', shake: true, minimap: true };
+const DEFAULTS: Settings = { brightness: 0.5, music: 1, sfx: 1, showFps: true, profiler: false, quality: touch ? 'fast' : 'full', zoom: 'far', shake: true, minimap: true, pointer: 'classic' };
 
 type Listener = (s: Settings) => void;
 
