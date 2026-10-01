@@ -318,8 +318,10 @@ export function power(p: Piece): number {
 
 /** A free cell: the front rows for fighters, the back for ranged heroes, from the middle out. */
 function freeCell(pl: AutoPlayer, back: boolean): number | null {
-  const rows = back ? [ROWS - 1, ROWS - 2, HALF + 1, HALF] : [HALF, HALF + 1, ROWS - 2, ROWS - 1];
-  const cols = [3, 2, 4, 1, 5, 0, 6];
+  const front = Array.from({ length: ROWS - HALF }, (_, i) => HALF + i);
+  const rows = back ? front.reverse() : front;
+  const mid = (COLS - 1) / 2;
+  const cols = Array.from({ length: COLS }, (_, i) => i).sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid) || a - b);
   for (const r of rows) for (const c of cols) if (!pl.board.has(cellKey(c, r))) return cellKey(c, r);
   return null;
 }
