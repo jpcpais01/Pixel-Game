@@ -80,6 +80,12 @@ const PAINT_SKY = mat('#0c1a2a', '#3a6a9a', '#5a8ab8', '#7aa6cc', '#9cc2dc', '#c
 const PAINT_HILL = mat('#0a1a0c', '#1e3e1c', '#2e5a28', '#447836', '#5e9646', '#7cb45a');
 const PAINT_DARK = mat('#08060a', '#140e16', '#1e1622', '#2a1e2e', '#382a3c');
 const BANNER = mat('#04081a', '#0c1638', '#142456', '#1e3474', '#2a4690', '#3a5aaa');
+// The wards' moonlight: glass and runes lit cool from within, silver fittings, a rowan staff.
+const MOONGLASS: Material = { ...mat('#0a2230', '#16465c', '#2a7690', '#4ea6c0', '#86d2e4', '#c2f0f8', '#f0fdff'), emissive: 0.95, noAO: true };
+const RUNEGLOW: Material = { ...mat('#06302c', '#0e5a50', '#1a8a7a', '#38bca6', '#7aead2', '#c8fff0'), emissive: 0.9, noAO: true, noOutline: true };
+const SILVER: Material = { ...mat('#10141c', '#262e3a', '#3c4656', '#566272', '#74808e', '#96a2ae', '#bcc6ce', '#e6eef2'), shine: true };
+const ROWAN = mat('#0e0806', '#22140c', '#342014', '#472d1c', '#5c3c26', '#714c31', '#87603e');
+const RIBBON = mat('#0a1426', '#18284a', '#24406c', '#34588c', '#4a74a8', '#6890c0', '#90b0d6');
 
 // ---------------------------------------------------------------- Normals and helpers
 
@@ -1822,6 +1828,251 @@ const mushLamp = art('mushlamp', 4, 16, (c, g, f) => {
   tufts(c, cx, gy + 2, 5, 431, 4);
 }, 4, 3);
 
+// ---------------------------------------------------------------- Wards
+
+/** Moonlight motes drifting up round a ward, a few to a frame, in the glow only. */
+function motes(c: PixelCanvas, cx: number, top: number, spread: number, rise: number, f: number, seed: number, n: number): void {
+  const R = rng(seed);
+  for (let k = 0; k < n; k++) {
+    const x0 = cx + (R() - 0.5) * spread * 2;
+    const ph = R();
+    const u = (ph + f / 4) % 1;
+    const x = x0 + Math.sin((u + ph) * Math.PI * 2) * 1.5;
+    const y = top - u * rise;
+    const a = Math.sin(u * Math.PI) * (0.55 + R() * 0.35);
+    c.spark(x, y, [180, 236, 255], a);
+    if (a > 0.6) c.spark(x, y + 1, [120, 200, 240], a * 0.35);
+  }
+}
+
+const wardLamp = art('wardlamp', 6, 36, (c, g, f) => {
+  // A wayfarer's ward: a rowan crook planted in a cairn of three stones, a
+  // small silver lantern of moon-glass hung from its hook, and a blue ribbon
+  // tied below it, lifting in the night air.
+  const sx = g.cx - 2;
+  const gy = g.y1 - 6;
+  const pulse = [0, 1, 1, 0][f];
+  c.part();
+  c.ellipse(g.cx, gy + 0.5, 5, 2, MOSS, { normal: () => FLOOR });
+  // The cairn round the staff's foot.
+  c.part();
+  c.ellipse(sx - 2, gy - 1, 2.6, 2, FIELDSTONE, { flatten: 0.8 });
+  c.part();
+  c.ellipse(sx + 2.5, gy - 0.5, 2.2, 1.7, FIELDSTONE, { flatten: 0.8 });
+  // The staff, thickening to its foot, the bark knotted here and there.
+  c.part();
+  c.shape(gy - 31, gy - 1, (y) => {
+    const u = (y - gy + 31) / 30;
+    const hw = 0.85 + u * 0.4;
+    return [sx - hw, sx + hw];
+  }, ROWAN, (_x, _y, t) => cyl(t, 0));
+  for (const y of [gy - 22, gy - 13, gy - 6]) c.px(sx, y, ROWAN, FACE, { bias: 2 });
+  c.part();
+  c.ellipse(sx, gy - 2.5, 3, 1.6, FIELDSTONE, { flatten: 0.9 });
+  // The crook, curling over to the right.
+  c.part();
+  c.capsule(sx, gy - 31, sx + 1, gy - 34, 1.1, 1, ROWAN);
+  c.capsule(sx + 1, gy - 34, sx + 4, gy - 34.5, 1, 0.9, ROWAN);
+  c.capsule(sx + 4, gy - 34.5, sx + 5.5, gy - 32, 0.9, 0.8, ROWAN);
+  // Its chain and the lantern: a silver cap, four bars, moon-glass, a little dish below.
+  const lx = sx + 5.5;
+  c.part();
+  for (let y = gy - 31; y <= gy - 30; y++) c.px(Math.round(lx) - 1, y, SILVER, FACE, { bias: y & 1 });
+  const top = gy - 29;
+  c.part();
+  c.shape(top, top + 2, (y) => {
+    const hw = 1 + (y - top) * 1.1;
+    return [lx - 1 - hw, lx - 1 + hw];
+  }, SILVER, (_x, _y, t) => n3(t * 0.7, 0.6, 0.6));
+  c.part();
+  for (let y = top + 3; y <= top + 8; y++) {
+    for (let x = Math.round(lx) - 4; x <= Math.round(lx) + 1; x++) {
+      const bar = x === Math.round(lx) - 4 || x === Math.round(lx) + 1;
+      if (bar) c.px(x, y, SILVER, FACE, { bias: x > lx - 1 ? -1 : 1 });
+      else {
+        // Brightest at its heart, bluer toward the bars and the cap.
+        const heart = Math.abs(x + 0.5 - (lx - 1)) < 1.2 && y > top + 3 && y < top + 8;
+        c.px(x, y, MOONGLASS, FACE, { bias: (heart ? 1 + pulse : -1) - (y === top + 3 ? 1 : 0) });
+      }
+    }
+  }
+  c.part();
+  for (let x = Math.round(lx) - 4; x <= Math.round(lx) + 1; x++) c.px(x, top + 9, SILVER, TOP, { bias: 1 });
+  for (let x = Math.round(lx) - 3; x <= Math.round(lx); x++) c.px(x, top + 10, SILVER, FACE, { bias: -1 });
+  // The light inside: a still, white heart, no flame.
+  c.spark(lx - 1.5, top + 5, [240, 252, 255], 0.9);
+  c.spark(lx - 1.5, top + 6, [200, 240, 255], 0.8);
+  c.spark(lx - 2.5, top + 6, [160, 224, 250], 0.4 + pulse * 0.2);
+  c.spark(lx - 0.5, top + 5, [160, 224, 250], 0.4 + pulse * 0.2);
+  // The ribbon, tied at the crook's bend, its tail lifting.
+  c.part();
+  const lift = [0, 1, 2, 1][f];
+  for (let k = 0; k < 7; k++) {
+    const x = sx + 1 - Math.round(k * 0.45 + (k > 3 ? lift * 0.5 : 0));
+    const y = gy - 32 + k;
+    c.px(x, y, RIBBON, FACE, { bias: k & 1 ? 0 : 1 });
+    if (k < 4) c.px(x + 1, y, RIBBON, FACE, { bias: -1 });
+  }
+  halo(c, lx - 1.5, top + 5.5, 8, [150, 220, 255], 0.32 + pulse * 0.08);
+  motes(c, lx - 1.5, top + 4, 4, 14, f, 451, 3);
+  tufts(c, g.cx, gy + 2, 5, 452, 5);
+}, 4, 5);
+
+const wardStone = art('wardstone', 5, 38, (c, g, f) => {
+  // A warden stone: an old standing stone worn smooth, a lamp of moon-glass
+  // set in a niche cut through it, and the warding runes down its face lit
+  // one after another, like a slow breath.
+  const cx = g.cx;
+  const gy = g.y1 - 6;
+  c.part();
+  c.ellipse(cx, gy + 0.5, 7, 2.6, MOSS, { normal: () => FLOOR });
+  // A ring of pebbles round its foot.
+  for (let k = 0; k < 7; k++) {
+    const a = (k / 7) * Math.PI * 2 + 0.3;
+    c.part();
+    c.ellipse(cx + Math.cos(a) * 6, gy + Math.sin(a) * 2.4, 1.2, 0.9, PALE_STONE, { flatten: 0.8 });
+  }
+  // The stone: broad at the foot, a slight lean, a rounded crown.
+  c.part();
+  const top = gy - 32;
+  c.shape(top, gy, (y) => {
+    const u = (y - top) / (gy - top);
+    const crown = u < 0.12 ? Math.sqrt(u / 0.12) : 1;
+    const hw = (3 + u * 1.6) * crown;
+    const lean = (1 - u) * 0.8;
+    return [cx - hw + lean, cx + hw + lean];
+  }, FIELDSTONE, (_x, _y, t, u) => n3(t * 0.8, 0.25 - u * 0.4, 0.75));
+  // Weathering: a few darker pits and a pale chip.
+  for (let k = 0; k < 9; k++) c.shade(cx - 3 + Math.floor(hash2(k, 1, 461) * 6), top + 4 + Math.floor(hash2(k, 2, 462) * 26), -1);
+  c.shade(cx + 2, top + 6, 1);
+  // The niche, cut through: a dark arch, the lamp glowing inside it.
+  const ny = top + 8;
+  c.part();
+  for (let y = ny; y <= ny + 6; y++) {
+    const hw = y === ny ? 0.6 : y === ny + 1 ? 1.4 : 2;
+    for (let x = Math.round(cx - hw + 0.6); x < Math.round(cx + hw + 0.6); x++) c.px(x, y, SOOT, FACE, { bias: -1 });
+  }
+  c.part();
+  c.ellipse(cx + 0.6, ny + 3.5, 1.3, 2, MOONGLASS, { bias: [0, 1, 1, 0][f] });
+  c.spark(cx + 0.6, ny + 3, [240, 252, 255], 0.9);
+  // The runes: little carved marks down the face, each lit in turn.
+  const glyphs = [
+    [[0, 0], [0, 1], [0, 2], [1, 1]],
+    [[0, 0], [1, 1], [0, 2], [-1, 1]],
+    [[-1, 0], [0, 0], [0, 1], [0, 2], [1, 2]],
+  ];
+  glyphs.forEach((gl, k) => {
+    const gy0 = ny + 9 + k * 4;
+    const lit = (k + 4 - f) % 4 === 0 ? 2 : (k + 4 - f) % 4 === 1 ? 1 : 0;
+    c.part();
+    for (const [dx, dy] of gl) c.px(Math.round(cx + 0.4 + dx), gy0 + dy, RUNEGLOW, FACE, { bias: lit });
+    for (const [dx, dy] of gl) c.spark(Math.round(cx + 0.4 + dx), gy0 + dy, [110, 240, 220], 0.25 + lit * 0.25);
+  });
+  // Moss over its shoulder and up from the foot.
+  c.part();
+  for (let x = cx - 3; x <= cx + 1; x++) if (hash2(x, 3, 463) > 0.35) c.px(x + 1, top + 2 + ((x + 9) % 2), MOSS, TOP, { bias: 1 });
+  for (let x = cx - 4; x <= cx + 4; x++) for (let y = gy - 3; y < gy; y++) if (hash2(x, y, 464) > 0.55) c.px(x, y, MOSS, FACE, { bias: 0 });
+  halo(c, cx + 0.6, ny + 3.5, 9, [120, 236, 220], 0.3 + [0, 1, 1, 0][f] * 0.08);
+  motes(c, cx, ny + 2, 5, 16, f, 465, 3);
+  tufts(c, cx, gy + 2, 6, 466, 6);
+}, 4, 4);
+
+const wardBeacon = art('wardbeacon', 8, 54, (c, g, f) => {
+  // A sanctuary beacon: two round steps of pale stone ringed with glowing
+  // runes, a slender column bound in silver, and on top a silver cage round a
+  // globe of moon-glass, a crystal turning inside it; wisps circle it slowly.
+  const cx = g.cx;
+  const gy = g.y1 - 13;
+  const pulse = [0, 1, 2, 1][f];
+  c.part();
+  c.ellipse(cx, gy + 2, 15, 7, MOSS, { normal: () => FLOOR });
+  drum(c, cx, gy, 13, 6.5, 0, 3, PALE_STONE, PALE_STONE, { topBias: 0 });
+  // The rune ring on the lower step, lit round as it turns.
+  for (let k = 0; k < 20; k++) {
+    const a = (k / 20) * Math.PI * 2;
+    const x = Math.round(cx + Math.cos(a) * 11);
+    const y = Math.round(gy - 3 + Math.sin(a) * 5.4);
+    if (Math.sin(a) < -0.85) continue;
+    const lit = (k + f * 5) % 20 < 5 ? 2 : 0;
+    if (k % 2 === 0) {
+      c.px(x, y, RUNEGLOW, TOP, { bias: lit });
+      c.spark(x, y, [120, 240, 230], 0.25 + lit * 0.2);
+    }
+  }
+  drum(c, cx, gy - 1, 8.5, 4.2, 3, 6, PALE_STONE, PALE_STONE, { topBias: 1 });
+  // Moss creeping over the steps' edges.
+  c.part();
+  for (let x = cx - 13; x <= cx + 13; x++) if (hash2(x, 5, 471) > 0.72) c.px(x, gy + Math.round(Math.sqrt(Math.max(0, 1 - ((x - cx) / 13) ** 2)) * 6.5) - 1, MOSS, FACE, { bias: 0 });
+  // The column, its silver bands, a carved collar under the lantern.
+  const ct = gy - 34;
+  c.part();
+  c.shape(ct, gy - 6, (y) => {
+    const u = (y - ct) / (gy - 6 - ct);
+    const hw = 1.9 + u * 0.9;
+    return [cx - hw, cx + hw];
+  }, PALE_STONE, (_x, _y, t) => cyl(t, 0));
+  for (const y of [gy - 11, gy - 24]) {
+    c.part();
+    for (let x = cx - 3; x <= cx + 2; x++) c.px(x, y, SILVER, FACE, { bias: x === cx - 3 ? 1 : x === cx + 2 ? -1 : 2 });
+  }
+  drum(c, cx, ct + 1, 4, 1.8, 0, 2, PALE_STONE, PALE_STONE, { topBias: 1 });
+  // The globe of moon-glass and the crystal inside it.
+  const oy = ct - 7;
+  c.part();
+  c.ellipse(cx, oy, 5.2, 5.6, MOONGLASS, { bias: -2 + (pulse > 1 ? 1 : 0), normal: (_x, _y, dx, dy) => n3(dx * 0.7, -dy * 0.6, 0.6) });
+  c.part();
+  const turn = [0, 1, 0, -1][f];
+  c.shape(oy - 4, oy + 3, (y) => {
+    const u = (y - oy + 4) / 7;
+    const hw = u < 0.6 ? (u / 0.6) * 2.2 : ((1 - u) / 0.4) * 2.2;
+    return [cx - hw + turn * 0.3, cx + hw + turn * 0.3];
+  }, MOONGLASS, (_x, _y, t) => n3(t * 0.9 + turn * 0.3, 0.3, 0.5), { bias: 1 });
+  c.spark(cx, oy - 1, [255, 255, 255], 0.95);
+  c.spark(cx, oy, [220, 248, 255], 0.9);
+  c.spark(cx - 1, oy - 2, [190, 236, 255], 0.6);
+  // The silver cage: ribs bowed round the globe, a cap and its spire.
+  c.part();
+  for (const k of [-1, -0.35, 0.35, 1]) {
+    for (let y = oy - 5; y <= oy + 5; y++) {
+      const v = (y - oy) / 5.6;
+      const x = Math.round(cx + k * 5.4 * Math.sqrt(Math.max(0, 1 - v * v)) - 0.5);
+      c.px(x, y, SILVER, n3(k * 0.8, -v * 0.4, 0.6), { bias: k < 0 ? 1 : 0 });
+    }
+  }
+  c.part();
+  c.shape(oy - 8, oy - 5, (y) => {
+    const hw = 1 + (y - oy + 8) * 1.3;
+    return [cx - hw, cx + hw];
+  }, SILVER, (_x, _y, t) => n3(t * 0.7, 0.6, 0.6));
+  c.part();
+  c.line(cx, oy - 12, cx, oy - 9, SILVER, () => FACE, { bias: 2 });
+  c.ellipse(cx, oy - 12.5, 1, 1, MOONGLASS, { bias: 2 });
+  c.spark(cx, oy - 13, [220, 248, 255], 0.8);
+  // Its light, and the wisps circling it.
+  halo(c, cx, oy, 14, [150, 220, 255], 0.3 + pulse * 0.05);
+  halo(c, cx, oy, 6, [230, 250, 255], 0.25);
+  for (let k = 0; k < 3; k++) {
+    const a = (f / 4 + k / 3) * Math.PI * 2;
+    const x = cx + Math.cos(a) * 9;
+    const y = oy + 2 + Math.sin(a) * 3;
+    const front = Math.sin(a) > 0;
+    c.spark(x, y, [200, 244, 255], front ? 0.95 : 0.45);
+    c.spark(x - Math.cos(a + 0.5) * 1.5, y - Math.sin(a + 0.5) * 0.6, [140, 210, 250], front ? 0.4 : 0.2);
+  }
+  motes(c, cx, oy - 4, 9, 18, f, 472, 4);
+  // Wildflowers and grass round the steps.
+  c.part();
+  for (let k = 0; k < 7; k++) {
+    const a = 0.2 + k * 0.42;
+    const x = Math.round(cx + Math.cos(a) * 14);
+    const y = Math.round(gy + 1 + Math.sin(a) * 6.5);
+    c.px(x, y - 1, LEAF, TOP, { bias: 1 });
+    c.px(x, y - 2, k % 2 ? LAVENDER : PETAL_Y, TOP, { bias: 1 });
+  }
+  tufts(c, cx - 12, gy + 4, 3, 473, 4);
+  tufts(c, cx + 12, gy + 4, 3, 474, 4);
+}, 4, 5);
+
 // ---------------------------------------------------------------- Wall decor
 
 /** A frame of a colour round an inner area. */
@@ -2288,6 +2539,9 @@ export const PROP_ART: Record<string, PropArt> = {
   candelabra,
   fairylights: fireflyJar,
   mushlamp: mushLamp,
+  wardlamp: wardLamp,
+  wardstone: wardStone,
+  wardbeacon: wardBeacon,
   painting,
   portrait,
   banner,
