@@ -6,6 +6,7 @@
 import Phaser from 'phaser';
 import { Bitmap, bayer, clamp01, mix } from './bitmap';
 import { hex, type RGB } from './pixel';
+import { SIGIL_FRAMES, SIGIL_H, SIGIL_W, crystalIcon, eggHalves, eggIcon, sigilSheet } from './wishArt';
 
 // ---- Gems ----
 
@@ -410,6 +411,29 @@ export function shopHall(w: number, h: number, floorY: number): Bitmap {
       b.set(x, y, c);
     }
   }
+  // Two round steps up to the altar, of the same violet stone, a gilt line along each riser.
+  const step = [hex('#0b0818'), hex('#1a1238'), hex('#2a1e58'), hex('#3e2e7e'), hex('#5a48a8'), hex('#7e6cd0')];
+  for (const [sy, rx, ry, rise] of [[floorY + 20, 58, 11, 4], [floorY + 16, 45, 8, 3]] as const) {
+    for (let y = sy - ry - 1; y <= sy + ry + rise + 1; y++) {
+      for (let x = Math.floor(cx - rx - 1); x <= cx + rx + 1; x++) {
+        const dx = (x + 0.5 - cx) / rx;
+        const topE = Math.hypot(dx, (y + 0.5 - sy) / ry);
+        const lowE = Math.hypot(dx, (y + 0.5 - sy - rise) / ry);
+        if (topE <= 1) {
+          const light = clamp01(0.7 - dx * 0.45 - ((y - sy) / ry) * 0.25);
+          let c = step[Math.min(5, 3 + Math.floor(light * 2 + bayer(x, y) * 0.8))];
+          if (topE > 0.93) c = y < sy ? step[5] : step[4];
+          b.set(x, y, c);
+        } else if (lowE <= 1 && y > sy) {
+          const light = clamp01(0.65 - dx * 0.55);
+          let c = step[Math.min(3, 1 + Math.floor(light * 2 + bayer(x, y) * 0.7))];
+          if (y - sy - ry * Math.sqrt(Math.max(0, 1 - dx * dx)) < 1.5) c = hex('#b8742c');
+          if (lowE > 0.95) c = step[0];
+          b.set(x, y, c);
+        } else if (Math.min(topE, lowE) <= 1.04) b.set(x, y, step[0]);
+      }
+    }
+  }
   // The great arch: two columns and a rounded head framing the vault.
   const archW = Math.min(w * 0.62, 300);
   const archL = Math.round(cx - archW / 2);
@@ -464,101 +488,328 @@ export function shopHall(w: number, h: number, floorY: number): Bitmap {
 
 // ---- Wish cards ----
 
-/** The front of a card of a rarity: a jewelled frame round a dark window lit from where the hero will stand, and a plate `plate` tall for its name. */
-export function cardFront(w: number, h: number, tint: number, deep: number, legendary: boolean, plate = 22): Bitmap {
+const INK = hex('#0b0818');
+const WHITE: RGB = [255, 255, 255];
+/** Gilt for the finer cards' trim, brightest first. */
+const GILT = [hex('#fff4bf'), hex('#f4cf6a'), hex('#d69a3a'), hex('#8a4e22')];
+const toRGB = (c: number): RGB => [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+
+/** A little hash of a pixel, 0..1, for scattering stars without a generator. */
+const speck = (x: number, y: number, seed: number): number => {
+  let n = (x * 374761393 + y * 668265263 + seed * 2147483647) | 0;
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+};
+
+/** Stamp a little picture of characters onto `b` from a palette, mirrored as asked ('.' is left alone). */
+function stamp(b: Bitmap, x0: number, y0: number, rows: string[], pal: Record<string, RGB>, flipX = false, flipY = false): void {
+  rows.forEach((r, y) =>
+    [...r].forEach((ch, x) => {
+      if (ch === '.') return;
+      b.set(flipX ? x0 - x : x0 + x, flipY ? y0 - y : y0 + y, pal[ch]);
+    }),
+  );
+}
+
+/** A cut gem `r` pixels from its middle to its points, at (cx, cy): bright upper left, deep lower right, a glint. */
+function cutGem(b: Bitmap, cx: number, cy: number, r: number, light: RGB, mid: RGB, dark: RGB, rim: RGB): void {
+  for (let dy = -r - 1; dy <= r + 1; dy++) {
+    for (let dx = -r - 1; dx <= r + 1; dx++) {
+      const m = Math.abs(dx) + Math.abs(dy);
+      if (m === r + 1) b.set(cx + dx, cy + dy, INK);
+      else if (m === r) b.set(cx + dx, cy + dy, dy < 0 || (dy === 0 && dx < 0) ? rim : mix(rim, INK, 0.45));
+      else if (m < r) b.set(cx + dx, cy + dy, dx === -1 && dy === -Math.max(1, r - 2) ? WHITE : dx + dy < 0 ? light : dx + dy > 0 ? dark : mid);
+    }
+  }
+}
+
+/** Is (x, y) on a `w` x `h` card, whose corners are cut? */
+const onCard = (x: number, y: number, w: number, h: number): boolean => Math.min(x, w - 1 - x) + Math.min(y, h - 1 - y) >= 2;
+
+/**
+ * The front of a card of a rarity (`tier` 0 rare, 1 epic, 2 legendary): a
+ * bevelled frame round a dark window lit from where the hero will stand, and
+ * a plate `plate` tall for its name. The finer the rarity, the finer the
+ * card: a rare's is plain steel-blue with a jewel at each corner; an epic's
+ * gains a gilt fillet, gilt brackets in the window's corners, a gem atop its
+ * frame and a scatter of stars behind the hero; a legendary's is all gilt,
+ * with filigree corners, a winged crest holding a cut gem, gilt ends to its
+ * plate and a sunburst behind the hero.
+ */
+export function cardFront(w: number, h: number, tint: number, deep: number, tier: number, plate = 22): Bitmap {
   const b = new Bitmap(w, h);
-  const col = hex(`#${tint.toString(16).padStart(6, '0')}`);
-  const dark = hex(`#${deep.toString(16).padStart(6, '0')}`);
-  const lit = mix(col, [255, 255, 255], 0.55);
-  const out = hex('#0b0818');
+  const col = toRGB(tint);
+  const dark = toRGB(deep);
+  const lit = mix(col, WHITE, 0.55);
   const plateY = h - plate;
+  const cx = w / 2;
+  // Where the window's light comes from: behind the hero, a little above the middle.
+  const gy = plateY * 0.55;
+  // The frame's bevel: a legendary's is gilt whatever its colour.
+  const band = tier >= 2 ? [GILT[0], GILT[1], GILT[2], GILT[3]] : [lit, col, mix(col, dark, 0.5), dark];
+  const fillet = tier === 0 ? INK : tier === 1 ? GILT[2] : GILT[1];
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const ex = Math.min(x, w - 1 - x);
       const ey = Math.min(y, h - 1 - y);
       if (ex + ey < 2) continue;
       let c: RGB;
-      if (ex === 0 || ey === 0 || ex + ey === 2) c = out;
-      else if (ex <= 2 || ey <= 2) c = x < w / 2 && y < h / 2 ? lit : ex === 2 || ey === 2 ? dark : col;
-      else if (ex === 3 || ey === 3) c = out;
+      if (ex === 0 || ey === 0 || ex + ey === 2) c = INK;
+      else if (ex <= 2 || ey <= 2) {
+        // Lit from the top left: the top and left sides catch it, the others fall into shade.
+        const horiz = ey <= ex;
+        const litSide = horiz ? y < h / 2 : x < w / 2;
+        const outer = (horiz ? ey : ex) === 1;
+        c = litSide ? band[outer ? 0 : 1] : band[outer ? 2 : 3];
+        // Polished metal: a soft gleam travels along a legendary's frame.
+        if (tier >= 2 && litSide && Math.sin((x + y) * 0.21) > 0.75) c = mix(c, WHITE, 0.45);
+      } else if (ex === 3 || ey === 3) c = y >= plateY && ey !== 3 ? INK : fillet;
       else if (y >= plateY) {
-        // The name plate: a darker strip with the frame's colour along its top.
-        c = y === plateY ? col : mix(hex('#0e0a22'), dark, 0.25 + 0.15 * bayer(x, y));
+        // The name plate: a darker strip, lit along its top in the frame's trim.
+        if (y === plateY) c = tier >= 1 ? GILT[1] : col;
+        else if (y === plateY + 1) c = INK;
+        else c = mix(hex('#0e0a22'), dark, 0.22 + 0.14 * bayer(x, y) + 0.1 * (1 - (y - plateY) / plate));
       } else {
         // The window: dark, lit from behind the hero in the rarity's colour.
-        const glow = clamp01(1 - Math.hypot((x - w / 2) / (w * 0.5), (y - plateY * 0.55) / (plateY * 0.55)));
-        const q = Math.floor(glow * glow * 5 + bayer(x, y)) / 5;
-        c = mix(hex('#0c0920'), dark, q * 0.9);
-        if (q >= 0.8) c = mix(dark, col, 0.35);
+        const d = Math.hypot((x - cx) / (w * 0.5), (y - gy) / (plateY * 0.55));
+        const glow = clamp01(1 - d);
+        let q = glow * glow;
+        if (tier >= 2) {
+          // Sunburst: alternate wedges of light turning out from behind the hero.
+          const a = Math.atan2(y - gy, x - cx);
+          const wedge = Math.floor(((a + Math.PI) / (Math.PI * 2)) * 16) & 1;
+          if (wedge) q += 0.22 * clamp01(1.25 - d);
+        }
+        const step = Math.floor(clamp01(q) * 5 + bayer(x, y)) / 5;
+        c = mix(hex('#0c0920'), dark, step * 0.9);
+        if (step >= 0.8) c = mix(dark, col, 0.35);
+        // An epic's and a legendary's window is sown with little stars.
+        if (tier >= 1 && glow < 0.7) {
+          const s = speck(x, y, w + h);
+          if (s < 0.018) c = mix(col, WHITE, 0.5);
+          else if (s < 0.03) c = mix(c, col, 0.45);
+        }
+        // A soft dark rim inside the frame, so the window sits back.
+        if (ex === 4 || ey === 4) c = mix(c, INK, 0.45);
       }
       b.set(x, y, c);
     }
   }
-  // Jewels at the corners, and for a legendary a crest over the top.
+
   const jewel = (x: number, y: number) => {
     b.set(x, y - 1, lit);
     b.set(x - 1, y, col);
-    b.set(x, y, [255, 255, 255]);
+    b.set(x, y, WHITE);
     b.set(x + 1, y, dark);
     b.set(x, y + 1, dark);
   };
-  jewel(4, 4);
-  jewel(w - 5, 4);
-  jewel(4, h - 5);
-  jewel(w - 5, h - 5);
-  if (legendary) {
-    const cx = Math.floor(w / 2);
-    for (let i = -6; i <= 6; i++) b.set(cx + i, 1, Math.abs(i) < 4 ? lit : col);
-    for (let i = -3; i <= 3; i++) b.set(cx + i, 2, col);
-    jewel(cx, 2);
+  const midX = Math.floor(w / 2);
+  if (tier === 0) {
+    jewel(4, 4);
+    jewel(w - 5, 4);
+    jewel(4, plateY - 4);
+    jewel(w - 5, plateY - 4);
+  } else {
+    // Brackets of gilt in the window's corners; a legendary's curl into filigree.
+    const G = { G: GILT[1], W: GILT[0], d: GILT[3], o: INK, c: col, l: lit };
+    const corner = tier >= 2 ? ['WGGGGd', 'GlcGd.', 'GcGd..', 'GGd...', 'Gd..W.', 'd.....'] : ['WGGd', 'Gd..', 'G...', 'd...'];
+    const far = plateY - 4;
+    stamp(b, 4, 4, corner, G);
+    stamp(b, w - 5, 4, corner, G, true);
+    stamp(b, 4, far, corner, G, false, true);
+    stamp(b, w - 5, far, corner, G, true, true);
+  }
+  if (tier === 1) {
+    // A small gem set in the top of the frame.
+    cutGem(b, midX, 2, 2, lit, col, dark, GILT[1]);
+  }
+  if (tier >= 2) {
+    // A winged crest astride the top of the frame, holding one of the shop's own cut gems.
+    for (const s of [-1, 1]) {
+      for (let i = 0; i < 9; i++) {
+        const x = midX + s * (5 + i);
+        const top = i < 3 ? 0 : i < 6 ? 1 : 2;
+        for (let y = top; y <= 3; y++) b.set(x, y, y === top ? INK : y === top + 1 ? GILT[0] : y === 3 ? GILT[3] : GILT[1]);
+      }
+    }
+    cutGem(b, midX, 3, 3, hex('#c8faff'), hex('#86ecff'), hex('#2a3aa8'), GILT[0]);
+    // Gilt ends to the name plate, each with a bead.
+    for (const x of [4, w - 5]) {
+      b.set(x, plateY, GILT[0]);
+      b.set(x, plateY - 1, GILT[1]);
+      b.set(x, plateY + 1, GILT[2]);
+    }
+    for (const x of [midX - 3, midX + 3]) b.set(x, plateY, GILT[0]);
+    b.set(midX, plateY, WHITE);
   }
   return b;
 }
 
-/** The back of a card: indigo, a gold frame and a star at its heart over a lattice of little diamonds. */
-export function cardBack(w: number, h: number): Bitmap {
+/**
+ * The back of a card. The Sanctum's: indigo, a gilt frame with a fillet
+ * inside it, a lattice of little diamonds, and at its heart the Wish Crystal
+ * in a ring of runes. The Nest's (`egg`): forest green, the lattice of
+ * leaves, and the wishing egg in a ring of leaves.
+ */
+export function cardBack(w: number, h: number, egg = false): Bitmap {
   const b = new Bitmap(w, h);
-  const out = hex('#0b0818');
-  const gold = hex('#d8a040');
-  const goldLit = hex('#fff0a8');
-  const goldDark = hex('#8a4e22');
-  const base = [hex('#1a1244'), hex('#2a1e66'), hex('#3a2c8a')];
-  const cx = w / 2;
-  const cy = h / 2;
+  const base = egg ? [hex('#0e2418'), hex('#183a24'), hex('#285a34')] : [hex('#1a1244'), hex('#2a1e66'), hex('#3a2c8a')];
+  const rune = egg ? hex('#9ee85a') : hex('#9ff6ff');
+  const cx = (w - 1) / 2;
+  const cy = (h - 1) / 2;
+  const R = Math.min(w, h) * 0.3;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const ex = Math.min(x, w - 1 - x);
       const ey = Math.min(y, h - 1 - y);
       if (ex + ey < 2) continue;
       let c: RGB;
-      if (ex === 0 || ey === 0 || ex + ey === 2) c = out;
-      else if (ex <= 2 || ey <= 2) c = x < cx && y < cy ? goldLit : ex === 2 || ey === 2 ? goldDark : gold;
-      else if (ex === 3 || ey === 3) c = out;
-      else if (ex === 6 || ey === 6) c = goldDark;
+      if (ex === 0 || ey === 0 || ex + ey === 2) c = INK;
+      else if (ex <= 2 || ey <= 2) {
+        const horiz = ey <= ex;
+        const litSide = horiz ? y < h / 2 : x < w / 2;
+        const outer = (horiz ? ey : ex) === 1;
+        c = litSide ? GILT[outer ? 0 : 1] : GILT[outer ? 2 : 3];
+      } else if (ex === 3 || ey === 3) c = INK;
+      else if ((ex === 6 || ey === 6) && ex >= 6 && ey >= 6) c = (ex === 6 ? x < cx : y < cy) ? GILT[2] : GILT[3];
       else {
-        const lattice = (Math.abs(((x + y) % 8) - 4) + Math.abs(((x - y + 800) % 8) - 4)) < 2;
-        const glow = clamp01(1 - Math.hypot((x - cx) / (w * 0.45), (y - cy) / (h * 0.4)));
-        c = base[Math.min(2, Math.floor(glow * 2.5 + bayer(x, y) * 0.7))];
-        if (lattice) c = mix(c, gold, 0.25);
+        const glow = clamp01(1 - Math.hypot((x - cx) / (w * 0.5), (y - cy) / (h * 0.42)));
+        c = base[Math.min(2, Math.floor(glow * 2.6 + bayer(x, y) * 0.7))];
+        // The lattice: diamonds (the Sanctum) or little leaves along slanting lines (the Nest).
+        const u = (x + y) % 8;
+        const v = (x - y + 800) % 8;
+        const lattice = egg ? (u === 0 && v < 3) || (v === 0 && u > 5) : Math.abs(u - 4) + Math.abs(v - 4) < 2;
+        if (lattice && ex > 6 && ey > 6) c = mix(c, GILT[2], 0.28);
       }
       b.set(x, y, c);
     }
   }
-  // An eight-point star in the middle.
-  const R = Math.min(w, h) * 0.22;
+  // Studs where the fillet turns its corners.
+  for (const [x, y] of [[6, 6], [w - 7, 6], [6, h - 7], [w - 7, h - 7]]) {
+    b.set(x, y, GILT[0]);
+    b.set(x + 1, y + 1, GILT[2]);
+  }
+  // The ring round the emblem, set with runes (or leaves) that glow.
+  for (let a = 0; a < 360; a += 1) {
+    const t = (a * Math.PI) / 180;
+    const x = Math.round(cx + Math.cos(t) * R);
+    const y = Math.round(cy + Math.sin(t) * R * 1.05);
+    b.set(x, y, a % 45 < 6 ? rune : y < cy ? GILT[1] : GILT[2]);
+  }
+  for (let i = 0; i < 8; i++) {
+    const t = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    const x = Math.round(cx + Math.cos(t) * (R + 2.5));
+    const y = Math.round(cy + Math.sin(t) * (R + 2.5) * 1.05);
+    b.set(x, y, rune);
+    if (R > 14) b.set(x, y - 1, mix(rune, WHITE, 0.5));
+  }
+  // A soft light inside the ring.
   for (let y = Math.floor(cy - R); y <= cy + R; y++) {
     for (let x = Math.floor(cx - R); x <= cx + R; x++) {
-      const dx = x + 0.5 - cx;
-      const dy = y + 0.5 - cy;
-      const a = Math.atan2(dy, dx);
-      const r = Math.hypot(dx, dy);
-      const reach = R * (0.35 + 0.65 * Math.pow(Math.abs(Math.cos(a * 4)), 6)) + (Math.abs(Math.cos(a * 2)) > 0.99 ? R * 0.15 : 0);
-      if (r > reach) continue;
-      b.set(x, y, r < R * 0.2 ? [255, 255, 255] : dx + dy < 0 ? goldLit : gold);
+      const d = Math.hypot(x - cx, (y - cy) / 1.05) / (R - 1);
+      if (d >= 1) continue;
+      if (bayer(x, y) < (1 - d) * 0.5) b.set(x, y, mix(base[2], rune, 0.25));
+    }
+  }
+  if (egg) {
+    // The egg: pale, round below, with a gilt band and teal spots.
+    const eh = R * 1.25;
+    for (let y = Math.floor(cy - eh * 0.55); y <= cy + eh * 0.5; y++) {
+      const v = (y + 0.5 - cy) / (eh * 0.5);
+      const k = v < 0 ? 0.78 + 0.22 * (1 + v) : 1;
+      const hw = R * 0.55 * Math.sqrt(Math.max(0, 1 - v * v)) * k;
+      for (let x = Math.floor(cx - hw); x <= cx + hw; x++) {
+        const dx = (x + 0.5 - cx) / Math.max(1, hw);
+        if (Math.abs(dx) > 1) continue;
+        const edge = Math.abs(dx) > 0.82 || v > 0.9;
+        let c = edge ? hex('#5a4a30') : dx < -0.2 && v < 0.2 ? hex('#fff8e8') : dx > 0.4 ? hex('#b8a480') : hex('#e6d8b8');
+        if (!edge && Math.abs(v - dx * 0.6 - 0.05) < 0.09) c = GILT[1];
+        b.set(x, y, c);
+      }
+    }
+    for (const [dx, dy] of [[-0.25, -0.1], [0.2, 0.25], [0.05, -0.45]]) b.set(Math.round(cx + dx * R), Math.round(cy + dy * R), hex('#2ea88a'));
+  } else {
+    // The Wish Crystal: a tall point of faceted violet, lit on the left, brightest down its middle.
+    const top = R * 0.85;
+    const half = R * 0.38;
+    for (let y = Math.floor(cy - top); y <= cy + top; y++) {
+      const v = (y + 0.5 - cy) / top;
+      const hw = half * (1 - Math.abs(v)) * (v < 0 ? 1 : 1.0);
+      for (let x = Math.floor(cx - hw); x <= cx + hw; x++) {
+        const dx = (x + 0.5 - cx) / Math.max(0.6, hw);
+        if (Math.abs(dx) > 1) continue;
+        let c = dx < -0.25 ? hex('#8a78f8') : dx > 0.3 ? hex('#4a24b0') : hex('#b8ecff');
+        if (v > 0) c = mix(c, hex('#2a1470'), 0.35);
+        if (Math.abs(dx) > 0.8) c = mix(c, INK, 0.5);
+        b.set(x, y, c);
+      }
+    }
+    b.set(Math.round(cx), Math.round(cy - top * 0.45), WHITE);
+  }
+  return b;
+}
+
+/**
+ * A card's aura, `pad` pixels round a `w` x `h` card: white light hugging
+ * its edge and falling away in dithered steps, tinted by the scene in the
+ * colour of what the card holds, to hint before it turns.
+ */
+export function cardAura(w: number, h: number, pad = 7): Bitmap {
+  const W = w + pad * 2;
+  const H = h + pad * 2;
+  const b = new Bitmap(W, H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = Math.max(pad - x, x - (W - 1 - pad), 0);
+      const dy = Math.max(pad - y, y - (H - 1 - pad), 0);
+      const inside = dx === 0 && dy === 0;
+      const d = inside ? 0 : Math.hypot(dx, dy) + (dx && dy ? 1 : 0);
+      if (inside) {
+        // Only a thin ring inside the card's edge.
+        const e = Math.min(x - pad, W - 1 - pad - x, y - pad, H - 1 - pad - y);
+        if (e < 2) b.set(x, y, WHITE, e === 0 ? 150 : 70);
+        continue;
+      }
+      const t = 1 - d / pad;
+      if (t <= 0) continue;
+      const level = Math.floor(t * t * 4 + bayer(x, y) * 0.9) / 4;
+      if (level > 0) b.set(x, y, WHITE, Math.round(230 * level));
     }
   }
   return b;
 }
+
+/** A card's shape in white, for the flash as it turns. */
+export function cardFlash(w: number, h: number): Bitmap {
+  const b = new Bitmap(w, h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (onCard(x, y, w, h)) b.set(x, y, WHITE);
+  return b;
+}
+
+/** Frames in a card's sheen. */
+export const SHEEN_FRAMES = 12;
+
+/** The sheen that sweeps over a fine card: a slanting band of light, `SHEEN_FRAMES` frames across it, side by side. */
+export function cardSheen(w: number, h: number): Bitmap {
+  const F = SHEEN_FRAMES;
+  const b = new Bitmap(w * F, h);
+  const span = w + h * 0.5;
+  for (let f = 0; f < F; f++) {
+    const at = -0.15 + (1.3 * f) / (F - 1);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (!onCard(x, y, w, h)) continue;
+        const u = (x + (h - y) * 0.5) / span;
+        const d = Math.abs(u - at);
+        if (d < 0.035) b.set(f * w + x, y, WHITE, 170);
+        else if (d < 0.07 && bayer(x, y) < 0.6) b.set(f * w + x, y, WHITE, 80);
+        else if (d < 0.1 && bayer(x, y) < 0.25) b.set(f * w + x, y, WHITE, 50);
+      }
+    }
+  }
+  return b;
+}
+
 
 // ---- Registering ----
 
@@ -587,4 +838,33 @@ export function registerShopArt(scene: Phaser.Scene): void {
   }
   addBitmap(scene, 'shop_altar', altar());
   addBitmap(scene, 'shop_altar_runes', altarRunes());
+  addBitmap(scene, 'wish_icon_crystal', crystalIcon());
+  addBitmap(scene, 'wish_icon_egg', eggIcon());
+  if (!scene.textures.exists('shop_sigil')) {
+    const tex = scene.textures.addCanvas('shop_sigil', sigilSheet().toCanvas())!;
+    for (let f = 0; f < SIGIL_FRAMES; f++) tex.add(f, 0, f * SIGIL_W, 0, SIGIL_W, SIGIL_H);
+  }
+  // The egg's two halves, broken from its own picture, for when it hatches.
+  if (!scene.textures.exists('nest_half_top') && scene.textures.exists('nest_egg')) {
+    const src = scene.textures.get('nest_egg').getSourceImage() as HTMLCanvasElement;
+    const ctx = src.getContext?.('2d');
+    if (ctx) {
+      const [top, bottom] = eggHalves(ctx.getImageData(0, 0, src.width, src.height).data, src.width, src.height);
+      addBitmap(scene, 'nest_half_top', top);
+      addBitmap(scene, 'nest_half_bottom', bottom);
+    }
+  }
+}
+
+/** A card's back, aura, flash and sheen at a size, made once each. */
+export function registerCardArt(scene: Phaser.Scene, w: number, h: number): void {
+  addBitmap(scene, `wish_back_${w}x${h}`, cardBack(w, h));
+  addBitmap(scene, `wish_backegg_${w}x${h}`, cardBack(w, h, true));
+  addBitmap(scene, `wish_aura_${w}x${h}`, cardAura(w, h));
+  addBitmap(scene, `wish_flash_${w}x${h}`, cardFlash(w, h));
+  const sheen = `wish_sheen_${w}x${h}`;
+  if (!scene.textures.exists(sheen)) {
+    const tex = scene.textures.addCanvas(sheen, cardSheen(w, h).toCanvas())!;
+    for (let f = 0; f < SHEEN_FRAMES; f++) tex.add(f, 0, f * w, 0, w, h);
+  }
 }

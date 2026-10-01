@@ -4,7 +4,7 @@
 // stars, and (on a big card) what it does across the top.
 
 import Phaser from 'phaser';
-import { RARITY_INFO } from '../game/gacha';
+import { RARITY_INFO, SKIN_RARITIES } from '../game/gacha';
 import type { PetDef } from '../game/pets';
 import { addBitmap, cardFront } from '../art/shop';
 import { PET_H, PET_OX, PET_OY, PET_W } from '../art/pets';
@@ -18,7 +18,7 @@ const COMPACT_PLATE = 13;
 export function petFace(scene: Phaser.Scene, pet: PetDef, w: number, h: number, scale: number, perk = false, compact = false): SkinFace {
   const info = RARITY_INFO[pet.rarity];
   const plate = compact ? COMPACT_PLATE : PLATE;
-  const front = scene.add.image(0, 0, addBitmap(scene, `wish_card_${pet.rarity}_${w}x${h}_${plate}`, cardFront(w, h, info.tint, info.deep, pet.rarity === 'legendary', plate)));
+  const front = scene.add.image(0, 0, addBitmap(scene, `wish_card_${pet.rarity}_${w}x${h}_${plate}`, cardFront(w, h, info.tint, info.deep, SKIN_RARITIES.indexOf(pet.rarity), plate)));
   // Stood a little above the plate; a soft light of its own colour behind it.
   const feet = h / 2 - plate - 4;
   const halo = scene.add.image(0, feet - (PET_OY - 10) * scale * 0.5, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(pet.tint).setAlpha(0.3).setScale(scale * 0.55);
