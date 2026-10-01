@@ -148,6 +148,16 @@ export class UIScene extends Phaser.Scene {
     return g.clear();
   }
 
+  /** Something drawn over the whole HUD is open (the bag, a keeper's counter, the "i" card, fishing): the minimap keeps out of its way. */
+  get covered(): boolean {
+    return !!(this.gearHud?.open || this.keeperHud?.open || this.statsHud?.open || fishHud.active);
+  }
+
+  /** How far down the screen's right side is free of the buttons (the hotbar's top on a touch screen), for the minimap. */
+  get freeBelow(): number {
+    return controls.mouse ? this.scale.height * 0.55 : this.hotbar.y;
+  }
+
   private get R(): number {
     return Math.max(42 * D, Math.min(this.scale.width, this.scale.height) * 0.13);
   }

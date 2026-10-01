@@ -14,6 +14,7 @@ import { install } from './GroundStreamer';
 import { treeLeaves } from './Scenery';
 import { CAMP_SEATS, CHUNK, FOREST_WORLD, WOOD_SHAPE, ruinPieces, stonePieces, type Blocker, type ForestGen, type Poi, type WoodKind } from './forestGen';
 import { WhiteStag } from './WhiteStag';
+import { trek } from '../game/trek';
 import { forestTile } from './forestGround';
 import { footKey, type ForestEdits } from './forestEdits';
 import { CELL } from './homeLayout';
@@ -992,6 +993,8 @@ export class Forest {
             this.camp = p;
             w.setRisePoint(p.x, p.y + 18);
             w.popNumber(p.x, p.y - 34, 'CAMP MADE', 0xffb45a);
+            // On the explorer's map from now on: a place to travel back to.
+            trek.kindle(p.id, p.x, p.y);
             sound.pickup(w.pan(p.x));
           }
           this.mendT += dt;
