@@ -182,6 +182,10 @@ export class MapScene extends Phaser.Scene {
     const forest = this.world.everwood;
     this.trekMap = forest ? new TrekMap(forest.gen) : null;
     if (forest) trek.load();
+    // A phone may close the game without warning: keep the map (and where the hero stands) when the page is hidden.
+    const hidden = () => document.visibilityState === 'hidden' && this.trekMap && trek.save();
+    document.addEventListener('visibilitychange', hidden);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => document.removeEventListener('visibilitychange', hidden));
     this.full = forest ? null : (arenaMaps.get(this.arena.id) ?? null);
     this.job = forest || this.full ? null : this.buildArena();
 
