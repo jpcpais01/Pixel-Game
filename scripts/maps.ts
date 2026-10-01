@@ -63,3 +63,30 @@ for (let r = 0; r < NR; r++) for (let c = 0; c < NC; c++) {
 }
 console.log('trek', ((performance.now() - t0) / (NC * NR)).toFixed(1), 'ms a tile');
 save('map-everwood.png', W, H, img, 3);
+
+// The Home's map: its grounds in relief with the starter home's builds laid over them.
+{
+  const { HOME_GROUND, homeScenery, homeWalkable } = await import('../src/world/homeGround');
+  const { COLS, ROWS, PLOT_X, PLOT_Y, PLOT_W, PLOT_H, starterHome } = await import('../src/world/homeLayout');
+  const { BUILD_PX, paintBuilds } = await import('../src/art/mapBuilds');
+  const g = groundMapBase(HOME_GROUND, HOME_GROUND.w, HOME_GROUND.h);
+  let r = g.next();
+  while (!r.done) r = g.next();
+  const base = r.value;
+  stampCrowns(base, homeScenery().trees.map((t) => ({ x: t.x, y: t.y, kind: t.kind, r: TREE_SHAPE[t.kind].canopyR })));
+  const walk = new Uint8Array(base.w * base.h);
+  for (let j = 0; j < base.h; j++) for (let i = 0; i < base.w; i++) {
+    const x = i * MAP_CELL + 4, y = j * MAP_CELL + 4;
+    walk[j * base.w + i] = (x >= PLOT_X && y >= PLOT_Y && x < PLOT_X + PLOT_W && y < PLOT_Y + PLOT_H) || homeWalkable(x, y) ? 1 : 0;
+  }
+  const px = reliefMap(base, walk);
+  const over = paintBuilds(starterHome(), 0, 0, COLS, ROWS);
+  const ow = COLS * BUILD_PX, ox = PLOT_X / MAP_CELL, oy = PLOT_Y / MAP_CELL;
+  for (let j = 0; j < ROWS * BUILD_PX; j++) for (let i = 0; i < ow; i++) {
+    const s = (j * ow + i) * 4, a = over[s + 3] / 255;
+    if (!a) continue;
+    const d = ((oy + j) * base.w + ox + i) * 4;
+    for (let k = 0; k < 3; k++) px[d + k] = over[s + k] * a + px[d + k] * (1 - a);
+  }
+  save('map-home.png', base.w, base.h, px);
+}
