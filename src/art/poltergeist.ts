@@ -28,13 +28,13 @@ export const POLTER_CHEST_Y = 14;
 // ---------------------------------------------------------------------------
 // Materials
 
-const SHEET: Material = { ramp: ramp('#34525e', '#5e8a94', '#94c0be', '#c6e6de', '#eafcf4'), outline: hex('#0e2228'), outlineLit: hex('#18343c'), emissive: 0.18, noAO: true };
-const MIST: Material = { ramp: ramp('#3e6470', '#78a8ac', '#b4e0d8'), outline: hex('#1a3a42'), emissive: 0.45, noAO: true, noOutline: true };
-const VOID: Material = { ramp: ramp('#05060a', '#0e1018', '#1c2030'), outline: hex('#020204'), shine: true, noAO: true };
+export const SHEET: Material = { ramp: ramp('#34525e', '#5e8a94', '#94c0be', '#c6e6de', '#eafcf4'), outline: hex('#0e2228'), outlineLit: hex('#18343c'), emissive: 0.18, noAO: true };
+export const MIST: Material = { ramp: ramp('#3e6470', '#78a8ac', '#b4e0d8'), outline: hex('#1a3a42'), emissive: 0.45, noAO: true, noOutline: true };
+export const VOID: Material = { ramp: ramp('#05060a', '#0e1018', '#1c2030'), outline: hex('#020204'), shine: true, noAO: true };
 const TOOTH: Material = { ramp: ramp('#b8c4c0', '#ffffff'), outline: hex('#05060a'), noAO: true };
 const PATCH: Material = { ramp: ramp('#4a4e5e', '#707890', '#9aa2b8'), outline: hex('#1a1e28') };
 const STITCH: Material = { ramp: ramp('#1e2230', '#2c3040'), outline: hex('#0c0e14'), noOutline: true };
-const BLUSH: Material = { ramp: ramp('#c05a7a', '#f08aa8'), outline: hex('#401420'), noOutline: true, noAO: true };
+export const BLUSH: Material = { ramp: ramp('#c05a7a', '#f08aa8'), outline: hex('#401420'), noOutline: true, noAO: true };
 
 // The tea party.
 const PORCELAIN: Material = { ramp: ramp('#6a6a82', '#9e9eb8', '#cfcfe2', '#f2f2fa'), outline: hex('#20203a'), outlineLit: hex('#2e2e4a'), shine: true, emissive: 0.1 };
