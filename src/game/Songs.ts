@@ -20,6 +20,12 @@ export const WILD_PAL: Pal = pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f07
 export const DRUM_PAL: Pal = pal(0xfffbe8, 0xffd98a, 0xff9a3a, 0xb8401e, 0xffa850);
 /** The minstrel's harlequin skin: rose and gold. */
 export const HARLEQUIN_PAL: Pal = pal(0xfff4fb, 0xffb0e8, 0xff4ab8, 0x8a1a6a, 0xff70c8);
+/** The minstrel's vagabond skin: lavender dusk. */
+export const VAGABOND_PAL: Pal = pal(0xfbf6ff, 0xe2d0ff, 0xb08cff, 0x5a3aa8, 0xc0a0ff);
+/** The minstrel's fadista skin: azulejo cobalt and white. */
+export const FADISTA_PAL: Pal = pal(0xf4f8ff, 0xb8d2ff, 0x3c7cff, 0x1a2e9a, 0x6a9cff);
+/** The minstrel's Orpheus skin: gold, the underworld's violet at its edge. */
+export const ORPHEUS_PAL: Pal = pal(0xfffdf2, 0xffeeaa, 0xffc84a, 0x7a3ab0, 0xffd870);
 /** The drummer's moonhowl skin: pale spirit indigo. */
 export const HOWL_PAL: Pal = pal(0xf2f4ff, 0xbcc8ff, 0x6c7cff, 0x2c2a9a, 0x8a9aff);
 
@@ -37,6 +43,9 @@ export const HASTE: BuffDef = {
 export const WILD_HASTE: BuffDef = { ...HASTE, name: 'Song of the grove', icon: 'icon_song_wild', tint: 0xb8f070 };
 /** And in the harlequin's. */
 export const HARLEQUIN_HASTE: BuffDef = { ...HASTE, name: 'Song of mirth', icon: 'icon_song_harlequin', tint: 0xff70c8 };
+export const VAGABOND_HASTE: BuffDef = { ...HASTE, name: 'Song of the road', icon: 'icon_song_vagabond', tint: 0xc0a0ff };
+export const FADISTA_HASTE: BuffDef = { ...HASTE, name: 'Song of saudade', icon: 'icon_song_fadista', tint: 0x6a9cff };
+export const ORPHEUS_HASTE: BuffDef = { ...HASTE, name: 'Hymn of the Muses', icon: 'icon_song_orpheus', tint: 0xffd870 };
 
 /** How the minstrel's music looks: the notes' texture (frames n0 and n1) and their colours. */
 export interface SongLook {
@@ -49,6 +58,22 @@ export const TROUBADOUR_SONG: SongLook = { tex: 'note_e', pal: SONG_PAL };
 export const WILD_SONG: SongLook = { tex: 'note_wild_e', pal: WILD_PAL };
 /** Diamond-headed notes and spinning diamonds. */
 export const HARLEQUIN_SONG: SongLook = { tex: 'note_harlequin_e', pal: HARLEQUIN_PAL };
+/** Feather-flagged notes and dandelion seeds. */
+export const VAGABOND_SONG: SongLook = { tex: 'note_vagabond_e', pal: VAGABOND_PAL };
+/** Swallows and azulejo tiles. */
+export const FADISTA_SONG: SongLook = { tex: 'note_fadista_e', pal: FADISTA_PAL };
+/** Laurel-flagged notes and little golden lyres. */
+export const ORPHEUS_SONG: SongLook = { tex: 'note_orpheus_e', pal: ORPHEUS_PAL };
+
+/** Each minstrel look's music and song of haste, by look id (the minstrel's own when it isn't here). */
+export const MINSTREL_SONGS: Record<string, { song: SongLook; haste: BuffDef }> = {
+  minstrel: { song: TROUBADOUR_SONG, haste: HASTE },
+  wildsong: { song: WILD_SONG, haste: WILD_HASTE },
+  harlequin: { song: HARLEQUIN_SONG, haste: HARLEQUIN_HASTE },
+  vagabond: { song: VAGABOND_SONG, haste: VAGABOND_HASTE },
+  fadista: { song: FADISTA_SONG, haste: FADISTA_HASTE },
+  orpheus: { song: ORPHEUS_SONG, haste: ORPHEUS_HASTE },
+};
 
 /** The drummer's rhythm: every blow lands harder. */
 export const RHYTHM: BuffDef = {

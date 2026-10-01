@@ -7,7 +7,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
 import { heroBuffs } from './buffs';
-import { DRUM_PAL, HARLEQUIN_HASTE, HARLEQUIN_SONG, HASTE, HOWL_PAL, HOWL_RHYTHM, Note, RHYTHM, Shockwave, SongBurst, TROUBADOUR_SONG, WILD_HASTE, WILD_SONG, type NoteKind, type SongLook } from './Songs';
+import { DRUM_PAL, FADISTA_HASTE, FADISTA_SONG, HARLEQUIN_HASTE, HARLEQUIN_SONG, HASTE, HOWL_PAL, HOWL_RHYTHM, Note, ORPHEUS_HASTE, ORPHEUS_SONG, RHYTHM, Shockwave, SongBurst, TROUBADOUR_SONG, VAGABOND_HASTE, VAGABOND_SONG, WILD_HASTE, WILD_SONG, type NoteKind, type SongLook } from './Songs';
 import type { Pal } from './ultimate/ink';
 import type { BuffDef } from './buffs';
 import type { Aim, Hero } from './characters';
@@ -84,6 +84,15 @@ export const WILD_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_wild', song: WILD
 
 /** The minstrel in his harlequin skin: the same bard in motley, rose and gold. */
 export const HARLEQUIN_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_harlequin', song: HARLEQUIN_SONG, haste: HARLEQUIN_HASTE };
+
+/** The minstrel as a vagabond of the open road, with his banjo: lavender light. */
+export const VAGABOND_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_vagabond', song: VAGABOND_SONG, haste: VAGABOND_HASTE };
+
+/** The minstrel as a fadista, with the Portuguese guitar: cobalt and white. */
+export const FADISTA_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_fadista', song: FADISTA_SONG, haste: FADISTA_HASTE };
+
+/** The minstrel as Orpheus, with his golden lyre: gold and underworld violet. */
+export const ORPHEUS_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_orpheus', song: ORPHEUS_SONG, haste: ORPHEUS_HASTE };
 
 /**
  * The war drummer: tougher and slower, beating waves of sound out of his drum

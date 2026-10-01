@@ -12,7 +12,7 @@ import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, stuckArrowFrame } fro
 import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, ANOMALY_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
-import { HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, WILD_LOOK, NOTE_SIZE, drumIcon, luteIcon, noteFrame, rhythmIcon, songIcon } from './bard';
+import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, ORPHEUS_LOOK, VAGABOND_LOOK, WILD_LOOK, NOTE_SIZE, banjoIcon, drumIcon, guitarraIcon, luteIcon, lyreIcon, noteFrame, rhythmIcon, skinSongIcon, songIcon } from './bard';
 import { crossIcon, cutMark, dashIcon, katanaIcon } from './samurai';
 import { PUPPET_LOOKS, buildPuppetSheet, marionetteIcon, pirouetteIcon, puppetStrikeIcon, threadIcon } from './puppeteer';
 import { daggersIcon, ROGUE_ICONS, ROGUE_LOOKS, shadowstepIcon, smokeCanvas } from './rogue';
@@ -274,6 +274,16 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_song_wild', toCanvas(16, 16, songIcon('wild')));
   scene.textures.addCanvas('icon_lute_harlequin', toCanvas(16, 16, luteIcon('harlequin')));
   scene.textures.addCanvas('icon_song_harlequin', toCanvas(16, 16, songIcon('harlequin')));
+  // The vagabond's, the fadista's and Orpheus's: dandelion seeds, swallows and tiles, lyres; their instruments and songs.
+  for (const look of [VAGABOND_LOOK, FADISTA_LOOK, ORPHEUS_LOOK]) {
+    register(scene, look.key.replace('bard_', 'note_'), pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, look)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
+  }
+  scene.textures.addCanvas('icon_lute_vagabond', toCanvas(16, 16, banjoIcon()));
+  scene.textures.addCanvas('icon_lute_fadista', toCanvas(16, 16, guitarraIcon()));
+  scene.textures.addCanvas('icon_lute_orpheus', toCanvas(16, 16, lyreIcon()));
+  scene.textures.addCanvas('icon_song_vagabond', toCanvas(16, 16, skinSongIcon('vagabond')));
+  scene.textures.addCanvas('icon_song_fadista', toCanvas(16, 16, skinSongIcon('fadista')));
+  scene.textures.addCanvas('icon_song_orpheus', toCanvas(16, 16, skinSongIcon('orpheus')));
   scene.textures.addCanvas('icon_drum', toCanvas(16, 16, drumIcon()));
   scene.textures.addCanvas('icon_rhythm', toCanvas(16, 16, rhythmIcon()));
   scene.textures.addCanvas('icon_drum_howl', toCanvas(16, 16, drumIcon(HOWL_DRUM_ICON)));

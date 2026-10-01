@@ -20,6 +20,28 @@
 // grown rather than carved, pale living wood with leaves budding at its head.
 // Two wisps of forest light drift round him wherever he goes.
 //
+// The vagabond is a minstrel of the open road: a wide-brimmed felt hat with
+// a hawk's feather in its band, shaggy hair and a stubbled chin, a striped
+// scarf, a long ochre duster worn open over a rust waistcoat and patched at
+// the elbows and skirts, and a bedroll strapped across his back. He plays a
+// banjo, its round vellum head ringed in nickel, a fifth peg halfway up the
+// neck; his music is the lavender of the sky at dusk, blown about like
+// dandelion seeds.
+//
+// The fadista sings fado, Coimbra's way: a long black student's cape over
+// his shoulders, its collar turned up behind his head, a black frock coat
+// buttoned to a white collar, black hair combed back, a blue-and-white
+// swallow pinned to his breast. He plays the Portuguese guitar, its spruce
+// belly round as a pear and its head a gleaming fan of tuning screws; his
+// notes fly as swallows and azulejo tiles, in cobalt and white.
+//
+// Orpheus, whose song moved the dead: golden curls under a wreath of golden
+// laurel, its violet ribbons trailing behind, a white chiton bordered in a
+// gold key pattern and belted with gold cord, a violet himation over one
+// shoulder pinned with a gold brooch, bare arms banded in gold, sandals laced
+// up the shins. His golden lyre, its bowl a tortoise shell, never quite stops
+// shining; its light is gold with the violet of the underworld at its edge.
+//
 // The body keeps to the 24x32 box; frames are larger so the mallets can be
 // raised overhead and the plume can stream back. Hands are posed in the
 // bard's own terms (forward, out to the side, height) and placed per view.
@@ -96,6 +118,11 @@ interface Dress {
   /** The lute's belly and its neck. */
   lute: Material;
   neck: Material;
+  /**
+   * Plain sleeves rather than the minstrel's slashed puffs: the upper arm, the
+   * forearm, and a short cap of cloth over the shoulder (Orpheus's chiton).
+   */
+  sleeve?: { upper: Material; fore: Material; cap?: Material };
 }
 
 const TROUBADOUR: Dress = { coat: DOUBLET, cloak: WINE, cuff: SHIRT, hose: HOSE, boot: TALL_BOOT, hand: SKIN, lute: LUTE, neck: ROSEWOOD };
@@ -147,6 +174,42 @@ const WARBAND: Gear = { fur: FUR, vest: VEST, paint: WARPAINT, beard: GINGER, be
 const DARKWOOD: Material = { ramp: ramp('#140e0a', '#2a1e14', '#44321e', '#5e4a2c'), outline: hex('#080504'), shine: true };
 const PACK: Gear = { fur: WOLF, vest: WOLF, paint: WOAD, beard: BLACK_BEARD, bead: BONE, kilt: HIDE_KILT, shell: SPIRIT_SHELL, rim: DARKWOOD, rope: SINEW, hide: PALE_HIDE, handle: BONE, knob: WOLF };
 
+// The vagabond.
+const DUSTER: Material = { ramp: ramp('#2a1a08', '#503416', '#7e5a26', '#a8843c', '#cca85a'), outline: INK, outlineLit: hex('#22160a') };
+const RUST: Material = { ramp: ramp('#280b06', '#4c190c', '#7a2c16', '#a44622', '#c86636'), outline: INK, outlineLit: hex('#220a06') };
+const CHARCOAL: Material = { ramp: ramp('#121218', '#22222c', '#343442', '#484858'), outline: INK };
+const FELT: Material = { ramp: ramp('#100b08', '#221812', '#38281c', '#4e3c2a', '#665036'), outline: hex('#080504'), outlineLit: hex('#18100a') };
+const ASH_HAIR: Material = { ramp: ramp('#2e2014', '#5a4228', '#8a6c40', '#b4955e', '#d2b884'), outline: hex('#140e08'), outlineLit: hex('#22180e') };
+/** The scarf: plum wool, striped lighter. */
+const PLUM: Material = { ramp: ramp('#1c0c20', '#36183c', '#56285c', '#783e80', '#9a5aa2'), outline: INK, outlineLit: hex('#1a0a1e') };
+const HAWK: Material = { ramp: ramp('#2e241c', '#5e4c3c', '#94806a', '#cbb89a', '#efe2c8'), outline: hex('#140e0a'), noAO: true };
+const BEDROLL: Material = { ramp: ramp('#14221f', '#223a36', '#34544e', '#4c706a', '#6a908a'), outline: INK };
+const NICKEL: Material = { ramp: ramp('#26262c', '#4e5058', '#868a94', '#c4c8d0', '#f2f4f8'), outline: hex('#0c0c10'), shine: true };
+const VELLUM: Material = { ramp: ramp('#7e7258', '#ae9f7e', '#d6c9a6', '#f2e8cc'), outline: hex('#2a2216') };
+const WALNUT: Material = { ramp: ramp('#180c06', '#2e180c', '#482814', '#62381c'), outline: hex('#0a0503') };
+const ROAD: Dress = { coat: DUSTER, cloak: RUST, cuff: SHIRT, hose: CHARCOAL, boot: TALL_BOOT, hand: SKIN, lute: VELLUM, neck: WALNUT, sleeve: { upper: DUSTER, fore: DUSTER } };
+
+// The fadista.
+const BATINA: Material = { ramp: ramp('#05060a', '#0d0f17', '#171b27', '#232a3b', '#343d55'), outline: hex('#020204'), outlineLit: hex('#090b12') };
+const CAPA: Material = { ramp: ramp('#040509', '#0a0c14', '#131724', '#1d2436', '#2c354d'), outline: hex('#020204'), outlineLit: hex('#080a12') };
+const SHOE: Material = { ramp: ramp('#050508', '#121218', '#24242e', '#4a4a58'), outline: hex('#020203'), shine: true };
+const RAVEN: Material = { ramp: ramp('#100a08', '#22160f', '#382419', '#503628', '#6c4c38'), outline: hex('#060403'), outlineLit: hex('#140c08') };
+const SPRUCE: Material = { ramp: ramp('#4e3214', '#82582a', '#b48848', '#dab474', '#f2d8a2'), outline: hex('#1a0e06'), shine: true };
+const AZULEJO: Material = { ramp: ramp('#0a1a5a', '#16308e', '#2a52c4', '#5a86ea', '#9cbcff'), outline: hex('#050a24') };
+const LISBON: Dress = { coat: BATINA, cloak: CAPA, cuff: SHIRT, hose: BATINA, boot: SHOE, hand: SKIN, lute: SPRUCE, neck: ROSEWOOD, sleeve: { upper: BATINA, fore: BATINA } };
+
+// Orpheus.
+const CHITON: Material = { ramp: ramp('#6a6252', '#9c947e', '#c4bca4', '#e0d8c2', '#f2ecdc'), outline: hex('#26221c'), outlineLit: hex('#3a362e') };
+const HIMATION: Material = { ramp: ramp('#1c0826', '#380f46', '#581b6c', '#7c2c92', '#a048b6'), outline: INK, outlineLit: hex('#22081c') };
+const CURLS: Material = { ramp: ramp('#482808', '#784c14', '#ac7c2c', '#d8ac54', '#f4d686'), outline: hex('#281404'), outlineLit: hex('#3a2006') };
+/** The wreath and the brooch: gold that catches the light even in the dark. */
+const BROOCH: Material = { ...GOLD, emissive: 0.22 };
+/** Laurel leaves, dark and glossy. */
+const LAUREL: Material = { ramp: ramp('#14280e', '#244816', '#3a6c22', '#5a9632', '#8cc456'), outline: hex('#0a1406'), shine: true };
+const TORTOISE: Material = { ramp: ramp('#180a04', '#381c0a', '#663814', '#985c22', '#c4883a'), outline: hex('#0c0502'), shine: true };
+const LYRE_STRING: Material = { ramp: ramp('#7a5a22', '#b88c3c', '#ecc870'), outline: hex('#2a1606'), noOutline: true, noAO: true, emissive: 0.18 };
+const HELLAS: Dress = { coat: CHITON, cloak: HIMATION, cuff: GOLD, hose: SKIN, boot: LEATHER, hand: SKIN, lute: TORTOISE, neck: GOLD, sleeve: { upper: SKIN, fore: SKIN, cap: CHITON } };
+
 /** One look for the bard: its texture key, its instrument, and the light of its music. */
 export interface BardLook {
   key: string;
@@ -157,7 +220,7 @@ export interface BardLook {
   /** The wildsong: hooded, cloaked in moss, wisps drifting round him. */
   wild?: boolean;
   /** A skin that changes the cut, not just the cloth: the harlequin (a minstrel) or the moonhowl (a drummer). */
-  style?: 'harlequin' | 'howl';
+  style?: 'harlequin' | 'howl' | 'vagabond' | 'fadista' | 'orpheus';
   /** The drummer's kit. */
   gear?: Gear;
   /** Light of the music, brightest first. */
@@ -206,7 +269,34 @@ export const HOWL_LOOK: BardLook = {
   light: [hex('#f2f4ff'), hex('#bcc8ff'), hex('#6c7cff'), hex('#2c2a9a')],
 };
 
-export const BARD_LOOKS = [MINSTREL_LOOK, DRUMMER_LOOK, WILD_LOOK, HARLEQUIN_LOOK, HOWL_LOOK];
+/** The minstrel's vagabond skin: lavender, the sky on the road at dusk. */
+export const VAGABOND_LOOK: BardLook = {
+  key: 'bard_vagabond',
+  drum: false,
+  dress: ROAD,
+  style: 'vagabond',
+  light: [hex('#fbf6ff'), hex('#e2d0ff'), hex('#b08cff'), hex('#5a3aa8')],
+};
+
+/** The minstrel's fadista skin: azulejo cobalt and white. */
+export const FADISTA_LOOK: BardLook = {
+  key: 'bard_fadista',
+  drum: false,
+  dress: LISBON,
+  style: 'fadista',
+  light: [hex('#f4f8ff'), hex('#b8d2ff'), hex('#3c7cff'), hex('#1a2e9a')],
+};
+
+/** The minstrel's Orpheus skin: gold, with the underworld's violet at its edge. */
+export const ORPHEUS_LOOK: BardLook = {
+  key: 'bard_orpheus',
+  drum: false,
+  dress: HELLAS,
+  style: 'orpheus',
+  light: [hex('#fffdf2'), hex('#ffeeaa'), hex('#ffc84a'), hex('#7a3ab0')],
+};
+
+export const BARD_LOOKS = [MINSTREL_LOOK, DRUMMER_LOOK, WILD_LOOK, HARLEQUIN_LOOK, HOWL_LOOK, VAGABOND_LOOK, FADISTA_LOOK, ORPHEUS_LOOK];
 
 /** The look being drawn; set by buildBardFrames. */
 let S: BardLook = MINSTREL_LOOK;
@@ -326,12 +416,24 @@ function elbow(sx: number, sy: number, fx: number, fy: number, reach: number, hi
 function sleevedArm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, hint: [number, number], bias = 0, swap = false): void {
   const [ex, ey] = elbow(sx, sy, p.x, p.y, reach, hint);
   // The harlequin's sleeves are motley: each arm the other way round.
-  const puff = swap ? D.coat : D.cloak;
-  const fore = swap ? D.cloak : D.coat;
+  const plain = D.sleeve;
+  const puff = plain ? plain.upper : swap ? D.coat : D.cloak;
+  const fore = plain ? plain.fore : swap ? D.cloak : D.coat;
   c.part();
-  c.capsule(sx, sy, ex, ey, 2.0, 1.6, puff, { bias });
+  if (plain) c.capsule(sx, sy, ex, ey, 1.7, 1.45, puff, { bias });
+  else c.capsule(sx, sy, ex, ey, 2.0, 1.6, puff, { bias });
+  if (plain?.cap) {
+    // A short cap of cloth over the shoulder.
+    c.part();
+    c.capsule(sx, sy, sx + (ex - sx) * 0.35, sy + (ey - sy) * 0.35, 1.95, 1.75, plain.cap, { bias });
+  }
+  if (S.style === 'vagabond') {
+    // A patch sewn on at the elbow.
+    c.part();
+    c.px(ex - 0.5, ey - 0.5, BEDROLL, sphere(0, -0.2), { bias: bias + 1 });
+  }
   // A slash of the doublet down the puff (the wildsong's is all cloak).
-  if (!S.wild) {
+  if (!S.wild && !plain) {
     c.part();
     c.px((sx + ex) / 2, (sy + ey) / 2, fore, sphere(0, -0.2), { bias: bias + 1 });
   }
@@ -394,9 +496,18 @@ function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bia
 
 /** The minstrel's tall boot with a turned cuff; the drummer's boot wrapped in fur. */
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
+  if (S.style === 'orpheus') {
+    sandal(c, x, y, side, bias);
+    return;
+  }
   c.part();
   if (side) c.ellipse(x, y, 2.2, 1.2, S.drum ? BOOT : D.boot, { flatten: 0.8, bias });
   else c.ellipse(x, y, 1.6, 1.3, S.drum ? BOOT : D.boot, { flatten: 0.8, bias });
+  if (S.style === 'fadista') {
+    // Polished shoes: no boot tops, a glint on the toe.
+    c.shade(side ? x - 2 : x - 1, y - 1, 1);
+    return;
+  }
   c.part();
   const w = side ? 1.6 : 1.8;
   const top = Math.round(y - 2.4);
@@ -406,6 +517,24 @@ function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): voi
     c.shade(x - 1, top + 1, -1);
   } else {
     c.shape(top - 1, top, () => [x - w, x + w], D.boot, (_x, _y, t) => cyl(t, 0.3), { bias: bias + 1 });
+  }
+}
+
+/** Orpheus's sandal: a bare foot on a leather sole, its laces crossing up the shin. */
+function sandal(c: PixelCanvas, x: number, y: number, side: boolean, bias: number): void {
+  c.part();
+  if (side) c.ellipse(x, y - 0.2, 2.0, 1.0, SKIN, { flatten: 0.8, bias });
+  else c.ellipse(x, y - 0.2, 1.4, 1.1, SKIN, { flatten: 0.8, bias });
+  c.part();
+  const w = side ? 2.2 : 1.6;
+  c.shape(Math.round(y + 0.8), Math.round(y + 0.8), () => [x - w, x + w], LEATHER, (_x, _y, t) => cyl(t, 0.4), { bias });
+  // The laces, crossing as they climb.
+  c.part();
+  for (let i = 0; i < 3; i++) {
+    const yy = Math.round(y - 1 - i * 1.2);
+    const lx = side ? x - 0.6 + (i & 1) : x - 1 + (i & 1) * 1.4;
+    c.px(lx, yy, LEATHER, sphere(0, -0.3), { bias: bias + 1 });
+    if (!side) c.px(lx + ((i & 1) ? -1 : 1), yy, LEATHER, sphere(0, -0.2), { bias: bias + 1 });
   }
 }
 
@@ -435,21 +564,51 @@ function drawLute(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, b
   uy /= l;
   const vx = -uy;
   const vy = ux;
+  if (S.style === 'orpheus') {
+    drawLyre(c, p, bx, by, ux, uy, vx, vy, bias);
+    return;
+  }
+  const banjo = S.style === 'vagabond';
+  const guitarra = S.style === 'fadista';
   // The neck and its pegbox first, so the belly overlaps its root.
   const n0 = 3.2;
-  const n1 = 10.5;
+  const n1 = banjo ? 11.2 : 10.5;
   c.part();
   c.capsule(bx + ux * n0, by + uy * n0, bx + ux * n1, by + uy * n1, 0.8, 0.7, D.neck, { bias });
-  // The pegbox bends back from the neck, two gold pegs at its sides.
   const ex = bx + ux * n1;
   const ey = by + uy * n1;
   const bend = view === 'side' ? 1 : -1;
   const px = ux * 0.35 + vx * 0.94 * bend;
   const py = uy * 0.35 + vy * 0.94 * bend;
+  if (banjo) {
+    // A straight headstock, nickel pegs either side, and the banjo's own short fifth string pegged halfway up the neck.
+    c.part();
+    c.capsule(ex, ey, ex + ux * 2.4, ey + uy * 2.4, 1.0, 0.85, D.neck, { bias });
+    c.part();
+    for (const k of [0.8, 2.0]) for (const s2 of [-1, 1]) c.px(ex + ux * k + vx * s2 * 1.6, ey + uy * k + vy * s2 * 1.6, NICKEL, sphere(s2 * 0.3, -0.4), { bias });
+    c.px(bx + ux * 7.2 + vx * 1.2 * bend, by + uy * 7.2 + vy * 1.2 * bend, NICKEL, sphere(0, -0.5), { bias });
+  } else if (guitarra) {
+    // The Portuguese guitar's head: a fan of brass tuning screws spread round the neck's end like a shell.
+    c.part();
+    for (let a = -1.25; a <= 1.25; a += 0.18) {
+      for (let r = 0.4; r <= 2.0; r += 0.5) {
+        const fx = ex + (ux * Math.cos(a) + vx * Math.sin(a)) * r;
+        const fy = ey + (uy * Math.cos(a) + vy * Math.sin(a)) * r;
+        c.px(fx, fy, GOLD, sphere(Math.sin(a) * 0.6, -0.5 + r * 0.1), { bias });
+      }
+    }
+    // A dark seam between each screw, the fan's ribs.
+    for (const a of [-0.8, 0, 0.8]) c.shade(ex + (ux * Math.cos(a) + vx * Math.sin(a)) * 1.4, ey + (uy * Math.cos(a) + vy * Math.sin(a)) * 1.4, -1);
+    c.spark(ex + ux * 2.2, ey + uy * 2.2, S.light[0], 0.25 + p.glow * 0.3);
+  } else {
+    // The pegbox bends back from the neck, two gold pegs at its sides.
+    c.part();
+    c.capsule(ex, ey, ex + px * 2.6, ey + py * 2.6, 0.85, 0.7, D.neck, { bias });
+  }
   c.part();
-  c.capsule(ex, ey, ex + px * 2.6, ey + py * 2.6, 0.85, 0.7, D.neck, { bias });
-  c.part();
-  if (S.wild) {
+  if (banjo || guitarra) {
+    // (pegged above)
+  } else if (S.wild) {
     // The wildsong's lute is still growing: leaves bud where the pegs would be, and a bud of light at its tip.
     c.px(ex + px * 1.2 - ux * 1.2, ey + py * 1.2 - uy * 1.2, LEAF, sphere(-0.3, -0.5), { bias });
     c.px(ex + px * 1.2 - ux * 2.1, ey + py * 1.2 - uy * 2.1, LEAF, sphere(-0.5, -0.2), { bias });
@@ -461,7 +620,12 @@ function drawLute(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, b
     c.px(ex + px * 2.2 + ux * 1.1, ey + py * 2.2 + uy * 1.1, GOLD, sphere(0, -0.4), { bias });
   }
 
-  // The belly: a round bowl with a narrower shoulder towards the neck.
+  if (banjo) {
+    drawBanjoPot(c, p, bx, by, ux, uy, vx, vy, n0, bias);
+    return;
+  }
+  // The belly: a round bowl with a narrower shoulder towards the neck (the Portuguese guitar's rounder, a pear).
+  const [bu, bv, su, sv] = guitarra ? [4.0, 3.7, 2.5, 2.7] : [3.8, 3.3, 2.6, 2.2];
   c.part();
   for (let y = Math.floor(by - 5); y <= Math.ceil(by + 5); y++) {
     for (let x = Math.floor(bx - 5); x <= Math.ceil(bx + 5); x++) {
@@ -469,14 +633,22 @@ function drawLute(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, b
       const dy = y + 0.5 - by;
       const u = dx * ux + dy * uy;
       const v = dx * vx + dy * vy;
-      const bowl = (u * u) / (3.8 * 3.8) + (v * v) / (3.3 * 3.3) <= 1;
-      const shoulder = ((u - 2.4) * (u - 2.4)) / (2.6 * 2.6) + (v * v) / (2.2 * 2.2) <= 1;
+      const bowl = (u * u) / (bu * bu) + (v * v) / (bv * bv) <= 1;
+      const shoulder = ((u - 2.4) * (u - 2.4)) / (su * su) + (v * v) / (sv * sv) <= 1;
       if (bowl || shoulder) c.px(x, y, D.lute, sphere(dx / 4, dy / 3.7, 1), { bias });
     }
   }
   // The rosette, the bridge, and the strings between them.
   const hx = bx + ux * 1.1;
   const hy = by + uy * 1.1;
+  if (guitarra) {
+    // A ring of blue and white tile-work round the sound hole.
+    c.part();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      c.px(hx + 0.4 + Math.cos(a) * 1.6, hy + 0.4 + Math.sin(a) * 1.6, i & 1 ? SHIRT : AZULEJO, sphere(Math.cos(a) * 0.3, -0.4), { bias });
+    }
+  }
   c.part();
   c.line(bx - ux * 2.2, by - uy * 2.2, bx + ux * (n0 + 0.6), by + uy * (n0 + 0.6), STRING, () => sphere(0, -0.3), { bias });
   c.part();
@@ -504,6 +676,97 @@ function drawLute(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, b
     const [, hot, mid] = S.light;
     for (let i = 1; i <= 4; i++) c.spark(bx + ux * (i * 1.6), by + uy * (i * 1.6), i < 3 ? hot : mid, p.glow * (0.7 - i * 0.12));
   }
+}
+
+/** Light off struck strings running from (x, y) along (ux, uy): brightest where they're struck. */
+function stringLight(c: PixelCanvas, x: number, y: number, ux: number, uy: number, glow: number): void {
+  if (glow <= 0) return;
+  glowAt(c, x, y, glow);
+  const [, hot, mid] = S.light;
+  for (let i = 1; i <= 4; i++) c.spark(x + ux * (i * 1.6), y + uy * (i * 1.6), i < 3 ? hot : mid, glow * (0.7 - i * 0.12));
+}
+
+/**
+ * The banjo's pot: a round vellum head stretched in a nickel rim, a dark
+ * bridge standing on it and a tailpiece at its foot, the strings running
+ * from there up the neck.
+ */
+function drawBanjoPot(c: PixelCanvas, p: Pose, bx: number, by: number, ux: number, uy: number, vx: number, vy: number, n0: number, bias: number): void {
+  const R = 3.9;
+  c.part();
+  for (let y = Math.floor(by - R - 1); y <= Math.ceil(by + R + 1); y++) {
+    for (let x = Math.floor(bx - R - 1); x <= Math.ceil(bx + R + 1); x++) {
+      const dx = x + 0.5 - bx;
+      const dy = y + 0.5 - by;
+      const d = Math.hypot(dx, dy);
+      if (d > R) continue;
+      // The rim's hooks show as a ring of brighter nickel nubs.
+      if (d > R - 1) c.px(x, y, NICKEL, sphere(dx / R, dy / R - 0.3, 1), { bias: bias + ((x + y) % 3 === 0 ? 1 : 0) });
+      else c.px(x, y, D.lute, sphere((dx / R) * 0.5, (dy / R) * 0.5 - 0.6, 1), { bias });
+    }
+  }
+  // A soft shadow under the strings on the head, the bridge across them, the tailpiece at the rim.
+  c.part();
+  c.line(bx - ux * 3.0, by - uy * 3.0, bx + ux * (n0 + 0.6), by + uy * (n0 + 0.6), STRING, () => sphere(0, -0.3), { bias });
+  c.part();
+  c.px(bx - ux * 1.2 + vx * 0.5, by - uy * 1.2 + vy * 0.5, WALNUT, sphere(0, -0.4), { bias });
+  c.px(bx - ux * 1.2 - vx * 0.5, by - uy * 1.2 - vy * 0.5, WALNUT, sphere(0, -0.4), { bias });
+  c.px(bx - ux * 3.4, by - uy * 3.4, NICKEL, sphere(0, -0.5), { bias });
+  stringLight(c, bx - ux * 0.2, by - uy * 0.2, ux, uy, p.glow);
+}
+
+/**
+ * Orpheus's lyre: a tortoise-shell bowl at his hip, two golden arms rising
+ * from it and curling out at their tips like horns, a yoke across them, and
+ * four strings from the bowl to the yoke that never quite stop shining.
+ */
+function drawLyre(c: PixelCanvas, p: Pose, bx: number, by: number, ux: number, uy: number, vx: number, vy: number, bias: number): void {
+  const at = (u: number, v: number): [number, number] => [bx + ux * u + vx * v, by + uy * u + vy * v];
+  // The arms first, behind the strings: out from the bowl, bowing wide, in at the yoke, curling out at the tips.
+  c.part();
+  for (const s2 of [-1, 1]) {
+    const pts: [number, number, number][] = [[0.6, 2.0, 0.85], [3.4, 3.2, 0.8], [6.4, 3.1, 0.7], [8.6, 2.3, 0.65], [10.0, 2.6, 0.6], [10.6, 3.6, 0.5]].map(([u, v, r]) => [...at(u, v * s2), r] as [number, number, number]);
+    chain(c, pts, D.neck, bias);
+  }
+  // The yoke across the tops of the arms, a gold bead at each end.
+  c.part();
+  const [y0x, y0y] = at(8.8, -2.6);
+  const [y1x, y1y] = at(8.8, 2.6);
+  c.capsule(y0x, y0y, y1x, y1y, 0.7, 0.7, D.neck, { bias });
+  // The bowl: a tortoise shell, mottled.
+  c.part();
+  for (let y = Math.floor(by - 4); y <= Math.ceil(by + 4); y++) {
+    for (let x = Math.floor(bx - 4); x <= Math.ceil(bx + 4); x++) {
+      const dx = x + 0.5 - bx;
+      const dy = y + 0.5 - by;
+      const u = dx * ux + dy * uy;
+      const v = dx * vx + dy * vy;
+      if (((u + 0.4) * (u + 0.4)) / (2.6 * 2.6) + (v * v) / (3.2 * 3.2) > 1) continue;
+      const mottle = ((x * 7 + y * 13) % 5 === 0 ? -1 : 0) + ((x * 3 + y * 5) % 7 === 0 ? 1 : 0);
+      c.px(x, y, D.lute, sphere(dx / 3.4, dy / 3.2, 1), { bias: bias + mottle });
+    }
+  }
+  // A gold rim along the bowl's top edge, where the strings are tied.
+  c.part();
+  for (let v = -2.4; v <= 2.4; v += 0.8) {
+    const [x, y] = at(1.6 - (v * v) * 0.08, v);
+    c.px(x, y, GOLD, sphere(v * 0.15, -0.5), { bias });
+  }
+  // The strings, from the bowl's bridge to the yoke.
+  c.part();
+  for (const v of [-1.3, -0.45, 0.45, 1.3]) {
+    const [sx, sy] = at(-0.6, v * 0.8);
+    const [tx, ty] = at(8.6, v);
+    c.line(sx, sy, tx, ty, LYRE_STRING, () => sphere(0, -0.3), { bias });
+  }
+  // The strings hold a little light always, and blaze when struck.
+  const [, hot, mid] = S.light;
+  for (let i = 0; i < 5; i++) {
+    const [x, y] = at(1 + i * 1.7, ((p.tick + i) % 4) * 0.8 - 1.2);
+    c.spark(x, y, i % 2 ? mid : hot, 0.12 + p.glow * 0.35);
+  }
+  const [gx, gy] = at(0.6, 0);
+  stringLight(c, gx, gy, ux, uy, p.glow);
 }
 
 // ---------------------------------------------------------------------------
@@ -1032,6 +1295,645 @@ function feathers(c: PixelCanvas, x: number, y: number, tick: number): void {
 }
 
 // ---------------------------------------------------------------------------
+// Shared cuts
+
+/** Half the width of a fitted body at row `y`: narrowing to the waist, then a skirt flaring by `flare` a row. */
+const fitHw = (y: number, top: number, waist: number, flare: number): number => (y <= waist ? 4.5 - 0.5 * ((y + 0.5 - top) / (waist - top)) ** 2 : 4.1 + (y - waist) * flare);
+
+/** Light falling on a fitted body from the front or the back at (x, y), `hw` its half width there. */
+const fitNormal = (x: number, y: number, cx: number, hw: number, top: number, waist: number) =>
+  sphere(((x + 0.5 - cx) / hw) * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1);
+
+/** A fitted coat or tunic from the front or back, down to `hem`. */
+function fitted(c: PixelCanvas, cx: number, top: number, waist: number, hem: number, m: Material, flare = 0.55): void {
+  c.part();
+  c.shape(top, Math.round(hem), (y) => {
+    const hw = fitHw(y, top, waist, flare);
+    return [cx - hw, cx + hw];
+  }, m, (x, y) => fitNormal(x, y, cx, fitHw(y, top, waist, flare), top, waist));
+}
+
+/** The same in profile, facing left: the chest at `hx`, the skirt swinging back over the hips at `cx`; `tail` widens it behind. */
+function fittedSide(c: PixelCanvas, cx: number, hx: number, top: number, waist: number, hem: number, m: Material, flare = 0.5, tail = 0): void {
+  c.part();
+  c.shape(top, Math.round(hem), (y) => {
+    const u = y <= waist ? 0 : (y - waist) / 2.5;
+    const shift = y <= waist ? hx : hx + (cx - hx) * Math.min(1, u);
+    const hw = y <= waist ? 3.2 - 0.4 * ((y + 0.5 - top) / (waist - top)) ** 2 : 2.9 + (y - waist) * flare;
+    const back = y <= waist ? 0 : ((y - waist) / Math.max(1, hem - waist)) * tail;
+    return [shift - hw - 0.2, shift + hw + 0.2 + back];
+  }, m, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1));
+}
+
+/** The front edge of the profile body at row `y` (as fittedSide cuts it). */
+const sideFront = (cx: number, hx: number, top: number, waist: number, y: number, flare = 0.5): number => {
+  if (y <= waist) return hx - (3.2 - 0.4 * ((y + 0.5 - top) / (waist - top)) ** 2) - 0.2;
+  const u = Math.min(1, (y - waist) / 2.5);
+  return hx + (cx - hx) * u - (2.9 + (y - waist) * flare) - 0.2;
+};
+
+// ---------------------------------------------------------------------------
+// The vagabond
+
+/** A hawk's feather tucked in the hat band, barred light and dark, its tip stirring. */
+function hawkFeather(c: PixelCanvas, x: number, y: number, dir: number, tick: number): void {
+  const flick = [0, 0.3, 0.5, 0.3, 0, -0.2][tick % 6];
+  c.part();
+  for (let i = 0; i <= 8; i++) {
+    const k = i / 8;
+    const fx = x + dir * k * 3.4;
+    const fy = y - k * 4.4 + k * k * 1.3 + (k > 0.6 ? flick * (k - 0.6) * 2.4 : 0);
+    c.px(fx, fy, HAWK, sphere(dir * 0.3, -0.6 + k * 0.6), { bias: k > 0.85 ? 1 : 0 });
+    if (k > 0.2 && k < 0.8) c.px(fx + dir, fy + 0.4, HAWK, sphere(dir * 0.5, -0.2), { bias: i % 3 === 0 ? -1 : 0 });
+  }
+}
+
+/** The wide felt hat from the front (or behind): a broad brim tipped down to one side, a pinched crown, a rust band and the feather. */
+function slouchHat(c: PixelCanvas, cx: number, U: number, tick: number, back: boolean): void {
+  const tip = back ? -0.09 : 0.09;
+  c.part();
+  for (let y = Math.floor(7.6 + U); y <= Math.ceil(12 + U); y++) {
+    for (let x = Math.floor(cx - 7.2); x <= Math.ceil(cx + 7.4); x++) {
+      const dx = (x + 0.5 - cx - 0.2) / 6.7;
+      const dy = (y + 0.5 - 9.9 - U - (x + 0.5 - cx) * tip) / 1.75;
+      if (dx * dx + dy * dy > 1) continue;
+      c.px(x, y, FELT, sphere(dx * 0.8, dy * 0.4 - 0.7, 1));
+    }
+  }
+  // The brim's underside, in its own shadow; a rim worn lighter at the front.
+  for (let x = cx - 5; x <= cx + 5; x++) c.shade(x, Math.round(11 + U + (x + 0.5 - cx) * tip), -1);
+  c.part();
+  c.shape(Math.round(6 + U), Math.round(9 + U), (y) => {
+    const hw = 2.4 + ((y - 6 - U) / 3) * 1.1;
+    return [cx - hw + 0.2, cx + hw + 0.2];
+  }, FELT, (_x, _y, t, u) => sphere(t * 0.9, u * 0.7 - 0.5, 1));
+  // The pinch down the crown's top.
+  c.shade(cx, 6 + U, -2);
+  c.shade(cx, 7 + U, -1);
+  c.part();
+  c.shape(Math.round(9 + U), Math.round(9 + U), () => [cx - 3.4, cx + 3.8], RUST, (_x, _y, t) => cyl(t, 0.2));
+  hawkFeather(c, back ? cx - 3.0 : cx + 3.2, 8.8 + U, back ? -1 : 1, tick);
+}
+
+/** A striped scarf wound at the throat, from the front: one end hanging down his chest. */
+function scarfDown(c: PixelCanvas, cx: number, U: number, sway: number): void {
+  c.part();
+  const tx = cx - 2.2 + sway * 0.4;
+  c.capsule(cx - 1.6, 16.6 + U, tx, 20.8 + U, 1.0, 0.85, PLUM);
+  for (let x = Math.floor(tx) - 1; x <= Math.ceil(tx) + 1; x++) if (c.materialAt(x, Math.round(18.6 + U)) === PLUM) c.shade(x, 18.6 + U, 2);
+  // A fringe on its end.
+  c.part();
+  for (const dx of [-1, 0, 1]) c.px(tx + dx * 0.9, 21.4 + U, PLUM, sphere(0, 0.5), { bias: -1 });
+  c.part();
+  c.ellipse(cx, 15.9 + U, 3.2, 1.15, PLUM, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 - 0.4, 1) });
+  for (const x of [cx - 2, cx + 1]) c.shade(x, 16 + U, 2);
+}
+
+/** The bedroll strapped across his back, seen from the front: its ends standing out past his shoulders. */
+function bedrollFront(c: PixelCanvas, cx: number, U: number): void {
+  c.part();
+  c.capsule(cx - 7.3, 14.6 + U, cx + 7.3, 14.6 + U, 1.5, 1.5, BEDROLL, { bias: -1 });
+  for (const x of [cx - 6, cx + 5]) for (let y = 13; y <= 16; y++) c.shade(x, y + U, 1);
+  // The rolled ends, a dark curl in each.
+  c.shade(cx - 8, 14.6 + U, -2);
+  c.shade(cx + 7, 14.6 + U, -2);
+}
+
+/** The vagabond's shaggy head and stubbled face from the front, under his hat. */
+function vagabondHead(c: PixelCanvas, hx: number, hU: number, p: Pose): void {
+  c.part();
+  c.ellipse(hx, 11.8 + hU, 3.9, 3.6, ASH_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.capsule(hx - 3.3, 12 + hU, hx - 3.7, 14.8 + hU, 1.3, 0.9, ASH_HAIR);
+  c.capsule(hx + 3.1, 12 + hU, hx + 3.5, 14.8 + hU, 1.3, 0.9, ASH_HAIR);
+  c.part();
+  c.ellipse(hx - 0.2, 12.8 + hU, 2.55, 2.4, SKIN);
+  c.part();
+  c.px(hx - 3, 11 + hU, ASH_HAIR, sphere(-0.6, 0.2));
+  c.px(hx + 2, 11 + hU, ASH_HAIR, sphere(0.6, 0.2));
+  eyes(c, [[hx - 2, 12 + hU], [hx + 1, 12 + hU]], p.blink);
+  // Stubble along the jaw, and a lopsided grin.
+  c.shade(hx - 2, 14 + hU, -1);
+  c.shade(hx + 1, 14 + hU, -1);
+  c.shade(hx - 1, 14 + hU, -2);
+  c.shade(hx, 14 + hU, -1);
+  slouchHat(c, hx, hU, p.tick, false);
+}
+
+/** The vagabond from the front: the long duster open over a rust waistcoat, patched, the scarf, the bedroll's ends behind. */
+function vagabondDown(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 27 + L;
+  const flare = 0.42;
+  fitted(c, cx, top, waist + 1, waist + 1, RUST);
+  c.part();
+  c.shape(waist, waist, () => [cx - 4.1, cx + 4.1], LEATHER, (_x, _y, t) => cyl(t, 0));
+  c.px(cx, waist, NICKEL, sphere(0, -0.4));
+  for (const y of [top + 2, top + 4]) c.px(cx, y, GOLD, sphere(0, -0.4));
+  // The duster, open down the front; its skirts swing.
+  const open = (y: number) => (y <= waist ? 1.3 + (0.5 * (y - top)) / (waist - top) : 1.8 + (y - waist) * 0.3);
+  const swing = (y: number) => (y > waist ? ((y - waist) / (hem - waist)) * p.sway * 0.6 : 0);
+  const normal = (x: number, y: number) => fitNormal(x - swing(y), y, cx, fitHw(y, top, waist, flare), top, waist);
+  c.part();
+  c.shape(top, Math.round(hem), (y) => [cx - fitHw(y, top, waist, flare) + swing(y), cx - open(y) + swing(y)], DUSTER, normal);
+  c.shape(top, Math.round(hem), (y) => [cx + open(y) + swing(y), cx + fitHw(y, top, waist, flare) + swing(y)], DUSTER, normal);
+  for (let y = top; y <= Math.round(hem); y++) {
+    const s2 = swing(y);
+    // Lapels turned back at the chest, folds down the skirts.
+    if (y <= top + 3) {
+      c.shade(Math.round(cx - open(y) + s2) - 1, y, 1);
+      c.shade(Math.round(cx + open(y) + s2), y, 1);
+    }
+    if (y > waist + 1) {
+      c.shade(Math.round(cx - 4 + s2), y, -1);
+      c.shade(Math.round(cx + 3 + s2), y, -1);
+    }
+  }
+  // Patches: blue-grey wool on a skirt, rust on the breast, both stitched on.
+  c.part();
+  for (const [x, y, m] of [[cx - 4, waist + 2, BEDROLL], [cx - 3, waist + 2, BEDROLL], [cx - 4, waist + 3, BEDROLL], [cx - 3, waist + 3, BEDROLL], [cx + 3, top + 3, RUST], [cx + 2, top + 3, RUST], [cx + 3, top + 4, RUST]] as const) {
+    const sx = x + Math.round(swing(y));
+    if (c.materialAt(sx, y) === DUSTER) c.px(sx, y, m, sphere(0, -0.2), { bias: (sx + y) & 1 ? 0 : 1 });
+  }
+  scarfDown(c, cx, U, p.sway);
+  vagabondHead(c, cx + (p.head?.[0] ?? 0), U + (p.head?.[1] ?? 0), p);
+}
+
+/** The vagabond from behind: the duster's back with its vent and half-belt, the bedroll strapped across, the hat. */
+function vagabondUp(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 27 + L;
+  const flare = 0.42;
+  const swing = (y: number) => (y > waist ? ((y - waist) / (hem - waist)) * p.sway * 0.6 : 0);
+  c.part();
+  c.shape(top, Math.round(hem), (y) => {
+    const hw = fitHw(y, top, waist, flare);
+    return [cx - hw + swing(y), cx + hw + swing(y)];
+  }, DUSTER, (x, y) => fitNormal(x - swing(y), y, cx, fitHw(y, top, waist, flare), top, waist));
+  for (let y = waist + 1; y <= Math.round(hem); y++) c.shade(Math.round(cx + swing(y)), y, -2);
+  c.part();
+  c.shape(waist, waist, () => [cx - 2.6, cx + 2.6], DUSTER, (_x, _y, t) => sphere(t * 0.6, -0.4, 1), { bias: 1 });
+  c.px(cx - 2, waist, GOLD, sphere(0, -0.4));
+  c.px(cx + 1, waist, GOLD, sphere(0, -0.4));
+  c.part();
+  for (const [x, y] of [[cx + 2, top + 5], [cx + 3, top + 5], [cx + 2, top + 6], [cx + 3, top + 6]]) c.px(x, y, BEDROLL, sphere(0.3, 0), { bias: (x + y) & 1 ? 0 : 1 });
+  // Shaggy hair to the collar.
+  c.part();
+  c.ellipse(cx, 11.8 + U, 3.9, 3.7, ASH_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.shape(Math.round(13 + U), Math.round(15.6 + U), (y) => {
+    const hw = 3.5 - (y - 13 - U) * 0.3;
+    return [cx - hw, cx + hw];
+  }, ASH_HAIR, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
+  for (let x = cx - 3; x <= cx + 2; x += 2) c.shade(x, 15.6 + U, -1);
+  // The bedroll, strapped on with two leather straps.
+  c.part();
+  c.capsule(cx - 6.6, 16.2 + U, cx + 6.6, 16.2 + U, 1.55, 1.55, BEDROLL);
+  for (const x of [cx - 5, cx + 4]) for (let y = 15; y <= 17; y++) c.shade(x, y + U, 1);
+  c.part();
+  for (const x of [cx - 3, cx + 2]) c.line(x, 14.4 + U, x, 18 + U, LEATHER, () => sphere(0, -0.2));
+  slouchHat(c, cx, U, p.tick, true);
+}
+
+/** The vagabond in profile, facing left: the duster's tails swinging, the bedroll on his back, scarf trailing, the hat. */
+function vagabondSide(c: PixelCanvas, cx: number, hx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 27 + L;
+  // The bedroll's end, behind his shoulders.
+  c.part();
+  c.ellipse(hx + 3.5, 15.6 + U, 1.9, 1.8, BEDROLL, { normal: (_x, _y, dx, dy) => sphere(dx * 0.6 + 0.3, dy * 0.6 - 0.2, 1) });
+  c.shade(hx + 3, 15 + U, -1);
+  c.shade(hx + 4, 16 + U, -1);
+  c.shade(hx + 3, 16 + U, -2);
+  fittedSide(c, cx, hx, top, waist, hem, DUSTER, 0.42, 1.2 + p.sway);
+  // The waistcoat showing where the duster hangs open, and the belt.
+  c.part();
+  for (let y = top + 1; y < waist; y++) c.px(Math.round(sideFront(cx, hx, top, waist, y)), y, RUST, sphere(-0.6, 0));
+  c.shape(waist, waist, () => [hx - 3.4, hx - 1.4], LEATHER, (_x, _y, t) => cyl(t, 0));
+  for (let y = waist + 1; y <= Math.round(hem); y++) c.shade(Math.round(sideFront(cx, hx, top, waist, y, 0.42)) + 1, y, -1);
+  c.part();
+  for (const [x, y] of [[hx + 1, waist + 2], [hx + 2, waist + 2], [hx + 1, waist + 3], [hx + 2, waist + 3]]) if (c.materialAt(x, y) === DUSTER) c.px(x, y, BEDROLL, sphere(0, -0.2), { bias: (x + y) & 1 ? 0 : 1 });
+  // The strap across his chest.
+  c.part();
+  c.line(hx + 2.2, 15.2 + U, hx - 2.6, 20.4 + U, LEATHER, () => sphere(-0.3, -0.3));
+  // The scarf, its end trailing back.
+  c.part();
+  c.capsule(hx + 1.6, 16.2 + U, hx + 4.4 + p.sway * 0.6, 18 + U, 0.95, 0.75, PLUM);
+  c.shade(Math.round(hx + 3 + p.sway * 0.3), 17 + U, 2);
+  c.part();
+  c.ellipse(hx - 0.4, 15.8 + U, 2.4, 1.1, PLUM, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 - 0.4, 1) });
+  c.shade(hx - 1, 16 + U, 2);
+  // Head: shaggy hair behind, the stubbled face turned left.
+  c.part();
+  c.ellipse(hx + 0.6, 11.8 + U, 3.4, 3.6, ASH_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.capsule(hx + 1.8, 12.5 + U, hx + 2.6 + p.sway * 0.3, 15.2 + U, 1.5, 1.0, ASH_HAIR);
+  c.part();
+  c.ellipse(hx - 1.4, 12.9 + U, 2.2, 2.3, SKIN);
+  c.part();
+  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.px(hx - 1, 11 + U, ASH_HAIR, sphere(0.2, 0.2));
+  c.shade(hx - 3, 14 + U, -2);
+  c.shade(hx - 2, 14 + U, -1);
+  c.shade(hx - 1, 14 + U, -1);
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  // The hat in profile: the brim wide, the pinched crown, the feather in the band at the back.
+  c.part();
+  c.ellipse(hx - 0.4, 9.9 + U, 5.9, 1.45, FELT, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.4 - 0.7, 1) });
+  for (let x = hx - 5; x <= hx + 4; x++) c.shade(x, 11 + U, -1);
+  c.part();
+  c.shape(Math.round(6 + U), Math.round(9 + U), (y) => {
+    const hw = 2.3 + ((y - 6 - U) / 3) * 0.9;
+    return [hx - hw + 0.2, hx + hw + 0.4];
+  }, FELT, (_x, _y, t, u) => sphere(t * 0.9, u * 0.7 - 0.5, 1));
+  c.shade(hx - 1, 6 + U, -1);
+  c.part();
+  c.shape(Math.round(9 + U), Math.round(9 + U), () => [hx - 3.0, hx + 3.6], RUST, (_x, _y, t) => cyl(t, 0.2));
+  hawkFeather(c, hx + 2.6, 8.8 + U, 1, p.tick);
+}
+
+// ---------------------------------------------------------------------------
+// The fadista
+
+/** The long student's cape seen from the front: behind him on both sides, down to his ankles. */
+function capaBehind(c: PixelCanvas, cx: number, U: number, L: number, sway: number): void {
+  const top = 14.6 + U;
+  const hem = 28.4 + L;
+  c.part();
+  c.shape(top, Math.round(hem), (y) => {
+    const u = (y - top) / (hem - top);
+    return [cx - 5.6 - u * 1.4 + u * sway, cx + 5.6 + u * 1.4 + u * sway];
+  }, CAPA, (_x, _y, t, u) => sphere(t * 0.9, u * 0.4, 1), { bias: -1 });
+  // Long folds down the cloth either side of him.
+  for (let y = Math.round(top + 5); y <= Math.round(hem); y++) {
+    const u = (y - top) / (hem - top);
+    c.shade(Math.round(cx - 6.2 - u * 0.8 + u * sway), y, 1);
+    c.shade(Math.round(cx + 5.6 + u * 0.8 + u * sway), y, 1);
+  }
+  tears(c, [cx - 7, cx + 6], Math.round(hem));
+}
+
+/** Tears cut in the cape's hem, Coimbra's way: one for each love, at columns `xs` of row `hem`. */
+function tears(c: PixelCanvas, xs: number[], hem: number): void {
+  for (const x of xs) {
+    if (!c.filled(x, hem - 1) || c.materialAt(x, hem) !== CAPA) continue;
+    c.erase(x, hem);
+    c.erase(x + 1, hem);
+    c.erase(x, hem - 1);
+    c.shade(x - 1, hem - 1, -1);
+  }
+}
+
+/** A tiny swallow in blue and white, pinned over his heart. */
+function swallowPin(c: PixelCanvas, x: number, y: number): void {
+  c.part();
+  c.px(x - 1, y - 1, AZULEJO, sphere(-0.3, -0.5));
+  c.px(x, y, AZULEJO, sphere(0, -0.4));
+  c.px(x + 1, y - 1, AZULEJO, sphere(0.3, -0.5));
+  c.px(x, y - 1, SHIRT, sphere(0, -0.5));
+  c.spark(x, y - 1, S.light[1], 0.35);
+}
+
+/** The fadista's head from the front: black hair combed back in a wave, the face solemn, the cape's collar standing up behind. */
+function fadistaHead(c: PixelCanvas, hx: number, hU: number, p: Pose): void {
+  // The cape's collar standing up either side of his jaw.
+  c.part();
+  for (const s2 of [-1, 1]) {
+    c.shape(Math.round(12.6 + hU), Math.round(15 + hU), (y) => {
+      const hw = 3.9 + ((y - 12.6 - hU) / 2.4) * 1.2;
+      return s2 < 0 ? [hx - hw, hx - 2.2] : [hx + 2.0, hx + hw];
+    }, CAPA, (_x, _y, t) => sphere(t * 0.5 + s2 * 0.5, -0.3, 1));
+  }
+  c.part();
+  c.ellipse(hx, 11.4 + hU, 3.8, 3.6, RAVEN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.25, 1) });
+  c.part();
+  c.capsule(hx - 3.1, 11.8 + hU, hx - 3.2, 13.6 + hU, 1.0, 0.7, RAVEN);
+  c.capsule(hx + 2.9, 11.8 + hU, hx + 3.0, 13.6 + hU, 1.0, 0.7, RAVEN);
+  c.part();
+  c.ellipse(hx - 0.2, 12.8 + hU, 2.55, 2.4, SKIN);
+  c.part();
+  c.shape(Math.round(10 + hU), Math.round(10 + hU), () => [hx - 2.8, hx + 2.4], RAVEN, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+  // A wave falling over one brow, and the sheen along the combed crown.
+  c.px(hx + 1, 11 + hU, RAVEN, sphere(0.4, 0.2));
+  for (let x = hx - 2; x <= hx + 1; x++) c.shade(x, 8 + hU, 2);
+  c.shade(hx - 1, 9 + hU, 1);
+  eyes(c, [[hx - 2, 12 + hU], [hx + 1, 12 + hU]], p.blink);
+  c.shade(hx - 2, 11 + hU, -1);
+  c.shade(hx - 1, 14 + hU, -1);
+  c.shade(hx, 14 + hU, -1);
+}
+
+/** The fadista from the front: the black frock coat buttoned to a white collar, the cape over his shoulders, a swallow pinned on it. */
+function fadistaDown(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 25.6 + L;
+  fitted(c, cx, top, waist, hem, BATINA, 0.45);
+  for (let y = waist + 1; y <= Math.round(hem); y++) c.shade(cx, y, -2);
+  for (let y = top + 2; y <= waist; y += 2) c.shade(cx, y, 2);
+  // The cape's fronts falling either side of the coat.
+  c.part();
+  for (const s2 of [-1, 1]) {
+    c.shape(Math.round(16 + U), Math.round(23.5 + U), (y) => {
+      const u = (y - 16 - U) / 7.5;
+      const o = 4.3 + u * 0.4 + u * p.sway * 0.3 * s2;
+      return s2 < 0 ? [cx - o - 1.6, cx - o] : [cx + o, cx + o + 1.6];
+    }, CAPA, (_x, _y, t) => sphere(t * 0.6 + s2 * 0.4, 0, 1));
+  }
+  c.part();
+  c.ellipse(cx, 16.1 + U, 5.6, 1.9, CAPA, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 - 0.4, 1) });
+  // The white collar at the throat.
+  c.part();
+  c.shape(top, top, () => [cx - 2, cx + 2], SHIRT, (_x, _y, t) => sphere(t * 0.6, -0.5, 1));
+  c.shape(top + 1, top + 1, () => [cx - 1, cx + 1], SHIRT, (_x, _y, t) => sphere(t * 0.6, -0.3, 1));
+  swallowPin(c, cx + 3, 17 + U);
+  fadistaHead(c, cx + (p.head?.[0] ?? 0), U + (p.head?.[1] ?? 0), p);
+}
+
+/** The fadista from behind: the cape covering him from the turned-up collar to his ankles. */
+function fadistaUp(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 14.4 + U;
+  const hem = 28.4 + L;
+  c.part();
+  c.shape(top, Math.round(hem), (y) => {
+    const u = (y - top) / (hem - top);
+    return [cx - 5.4 - u * 1.2 + u * p.sway * 0.5, cx + 5.4 + u * (1.2 + p.sway)];
+  }, CAPA, (_x, _y, t, u) => sphere(t * 0.9, u * 0.6 - 0.3, 1));
+  for (let y = Math.round(18 + U); y <= Math.round(hem); y++) {
+    const u = (y - top) / (hem - top);
+    c.shade(Math.round(cx - 2.5 + u * p.sway * 0.5 - u), y, -1);
+    c.shade(Math.round(cx + 2 + u * p.sway + u), y, -1);
+    c.shade(Math.round(cx + u * p.sway * 0.7), y, 1);
+  }
+  tears(c, [cx - 4, cx + 1, cx + 5], Math.round(hem));
+  // Two ribbons, cobalt and white, pinned at his shoulder and hanging down the cape.
+  c.part();
+  for (const [i, m] of [[0, AZULEJO], [1, SHIRT]] as const) {
+    const x0 = cx - 3.2 + i;
+    c.line(x0, 16 + U, x0 - 0.6 + p.sway * 0.4, 22.4 + U - i * 0.8, m, () => sphere(-0.3, -0.2));
+  }
+  c.px(cx - 3, 16 + U, GOLD, sphere(0, -0.5));
+  c.part();
+  c.ellipse(cx, 11.4 + U, 3.8, 3.6, RAVEN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.15, 1) });
+  for (let y = 9; y <= 12; y++) c.shade(cx + ((y & 1) === 0 ? -1 : 0), y + U, 1);
+  c.part();
+  c.shape(Math.round(12.8 + U), Math.round(15.4 + U), (y) => {
+    const hw = 3.6 + ((y - 12.8 - U) / 2.6) * 1.8;
+    return [cx - hw, cx + hw];
+  }, CAPA, (_x, _y, t, u) => sphere(t * 0.9, -0.6 + u * 0.5, 1), { bias: 1 });
+}
+
+/** The fadista in profile, facing left: the cape streaming long behind him, its collar up at his nape. */
+function fadistaSide(c: PixelCanvas, cx: number, hx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  fittedSide(c, cx, hx, top, waist, 25.6 + L, BATINA, 0.45);
+  for (const y of [top + 2, top + 4, top + 6]) c.shade(Math.round(sideFront(cx, hx, top, waist, y)) + 1, y, 2);
+  c.part();
+  c.px(Math.round(hx - 3.2), top, SHIRT, sphere(-0.5, -0.4));
+  c.px(Math.round(hx - 2.2), top, SHIRT, sphere(-0.2, -0.4));
+  // The cape over his shoulder, the collar standing at his nape.
+  c.part();
+  c.ellipse(hx + 0.8, 16.2 + U, 3.6, 1.9, CAPA, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + 0.1, dy * 0.6 - 0.4, 1) });
+  swallowPin(c, hx - 1.6, 17 + U);
+  c.part();
+  c.capsule(hx + 2.0, 12.4 + U, hx + 2.6, 15.6 + U, 1.8, 1.6, CAPA);
+  // Head: hair combed back, the face turned left.
+  c.part();
+  c.ellipse(hx + 0.6, 11.6 + U, 3.4, 3.5, RAVEN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.2, 1) });
+  for (let x = hx - 2; x <= hx + 2; x++) c.shade(x, 8 + U, 2);
+  c.part();
+  c.ellipse(hx - 1.4, 12.9 + U, 2.2, 2.3, SKIN);
+  c.part();
+  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => [hx - 3.2, hx + 0.6], RAVEN, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+  c.px(hx, 11 + U, RAVEN, sphere(0.3, 0));
+  c.px(hx, 12 + U, RAVEN, sphere(0.3, 0));
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  c.shade(hx - 3, 11 + U, -1);
+  c.shade(hx - 3, 14 + U, -1);
+}
+
+// ---------------------------------------------------------------------------
+// Orpheus
+
+/** A gold key-pattern border along row `y` and the row above it, wherever the cloth is. */
+function keyHem(c: PixelCanvas, x0: number, x1: number, y: number): void {
+  const cloth = new Set<number>();
+  for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) if (c.materialAt(x, y) === CHITON) cloth.add(x);
+  c.part();
+  for (const x of cloth) {
+    const k = ((x % 3) + 3) % 3;
+    c.px(x, y, GOLD, sphere(0, 0.3), { bias: k === 1 ? -1 : 0 });
+    if (k === 0 && c.materialAt(x, y - 1) === CHITON) c.px(x, y - 1, GOLD, sphere(0, 0));
+  }
+}
+
+/** Golden curls: the hair pricked out in light and dark wherever it shows. */
+function curlTexture(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number): void {
+  for (let y = Math.floor(y0); y <= Math.ceil(y1); y++) {
+    for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) {
+      if (c.materialAt(x, y) !== CURLS) continue;
+      const k = (((x * 2 + y * 3) % 5) + 5) % 5;
+      if (k === 0) c.shade(x, y, -1);
+      else if (k === 2) c.shade(x, y, 1);
+    }
+  }
+}
+
+/**
+ * The laurel wreath: a band of dark glossy leaves round his brow, a leaf
+ * springing from it every other pixel, alternately up and down, and gold
+ * berries among them that catch the light in turn.
+ */
+function wreath(c: PixelCanvas, cx: number, U: number, tick: number, view: View): void {
+  const pts: [number, number][] = [];
+  if (view === 'side') for (let x = -3.6; x <= 3.4; x += 1) pts.push([cx + x, 9.9 + U - (x + 3.6) * 0.12]);
+  else for (let x = -4.2; x <= 3.4; x += 1) pts.push([cx + x + 0.4, 9.7 + U + (1 - ((x + 0.4) / 4.2) ** 2) * (view === 'up' ? -0.5 : 0.6)]);
+  c.part();
+  pts.forEach(([x, y], i) => {
+    c.px(x, y, LAUREL, sphere(0, -0.4));
+    const up = i % 2 === 0;
+    // Leaves lean towards the front of his head (in profile, back along the band).
+    const lean = view === 'side' ? 1 : x < cx ? 1 : -1;
+    if (up) c.px(x + lean * 0.6, y - 1, LAUREL, sphere(lean * 0.3, -0.8), { bias: 1 });
+    else if (i % 4 === 1) c.px(x, y + 1, LAUREL, sphere(0, 0.4), { bias: -1 });
+  });
+  c.part();
+  pts.forEach(([x, y], i) => {
+    if (i % 3 !== 1) return;
+    c.px(x, y, BROOCH, sphere(0, -0.5));
+    if ((tick + i) % 4 === 0) c.spark(x, y, S.light[0], 0.5);
+  });
+}
+
+/** The two violet ribbons hanging from the wreath's knot, stirring as he moves. */
+function wreathRibbons(c: PixelCanvas, x: number, y: number, ends: [number, number][], tick: number): void {
+  const flick = [0, 0.3, 0.5, 0.3, 0, -0.2][tick % 6];
+  c.part();
+  ends.forEach(([ex, ey], i) => c.capsule(x, y, ex + flick * (i ? 0.6 : -0.4), ey + flick * 0.3, 0.6, 0.5, HIMATION));
+  c.part();
+  c.px(x, y, BROOCH, sphere(0, -0.4));
+}
+
+/** The himation hanging down his back from the left shoulder, seen from the front. */
+function himationBehind(c: PixelCanvas, cx: number, U: number, L: number, sway: number): void {
+  const top = 15 + U;
+  const hem = 25.6 + L;
+  c.part();
+  c.shape(top, Math.round(hem), (y) => {
+    const u = (y - top) / (hem - top);
+    return [cx + 0.6 + u * sway, cx + 5.8 + u * (1.4 + sway)];
+  }, HIMATION, (_x, _y, t, u) => sphere(t * 0.9, u * 0.4, 1), { bias: -1 });
+  const row = Math.round(hem);
+  for (let x = cx; x <= cx + 9; x++) if (c.materialAt(x, row) === HIMATION) c.px(x, row, GOLD, sphere(0, 0.3), { bias: -1 });
+}
+
+/** Orpheus's head from the front: golden curls, a calm face, the laurel. */
+function orpheusHead(c: PixelCanvas, hx: number, hU: number, p: Pose): void {
+  c.part();
+  c.ellipse(hx, 11.4 + hU, 4.0, 3.7, CURLS, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.capsule(hx - 3.4, 12 + hU, hx - 3.7, 14.6 + hU, 1.4, 1.1, CURLS);
+  c.capsule(hx + 3.2, 12 + hU, hx + 3.5, 14.6 + hU, 1.4, 1.1, CURLS);
+  c.part();
+  c.ellipse(hx - 0.2, 12.8 + hU, 2.5, 2.4, SKIN);
+  c.part();
+  for (let x = hx - 3; x <= hx + 2; x++) c.px(x, 10 + hU, CURLS, sphere((x - hx) * 0.25, -0.2));
+  c.px(hx - 3, 11 + hU, CURLS, sphere(-0.6, 0.2));
+  c.px(hx + 2, 11 + hU, CURLS, sphere(0.6, 0.2));
+  curlTexture(c, hx - 5, hx + 5, 7 + hU, 16 + hU);
+  eyes(c, [[hx - 2, 12 + hU], [hx + 1, 12 + hU]], p.blink);
+  c.shade(hx - 1, 14 + hU, -1);
+  c.shade(hx, 14 + hU, -1);
+  wreath(c, hx, hU, p.tick, 'down');
+}
+
+/** Orpheus from the front: the white chiton bordered in gold, the himation across him from shoulder to hip, a gold brooch. */
+function orpheusDown(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 25.2 + L;
+  fitted(c, cx, top, waist, hem, CHITON, 0.6);
+  for (let y = waist + 1; y <= Math.round(hem); y++) {
+    c.shade(cx - 2, y, -1);
+    c.shade(cx + 1, y, -1);
+  }
+  c.shade(cx - 2, top + 3, -1);
+  c.shade(cx - 3, top + 4, -1);
+  keyHem(c, cx - 8, cx + 8, Math.round(hem));
+  c.part();
+  c.shape(waist, waist, () => [cx - 4.1, cx + 4.1], GOLD, (_x, _y, t) => cyl(t, 0.2));
+  c.part();
+  c.ellipse(cx + 3.8, 16 + U, 2.4, 1.6, HIMATION, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + 0.2, dy * 0.6 - 0.4, 1) });
+  c.part();
+  c.px(cx + 3, 16 + U, BROOCH, sphere(-0.3, -0.5));
+  c.spark(cx + 3, 16 + U, S.light[0], 0.45);
+  orpheusHead(c, cx + (p.head?.[0] ?? 0), U + (p.head?.[1] ?? 0), p);
+}
+
+/** Orpheus from behind: the himation falling across his back, curls to his nape, the wreath's ribbons hanging. */
+function orpheusUp(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 25.2 + L;
+  fitted(c, cx, top, waist, hem, CHITON, 0.6);
+  for (let y = waist + 1; y <= Math.round(hem); y++) c.shade(cx + 2, y, -1);
+  keyHem(c, cx - 8, cx + 8, Math.round(hem));
+  c.part();
+  c.shape(waist, waist, () => [cx - 4.1, cx + 4.1], GOLD, (_x, _y, t) => cyl(t, 0.2));
+  // The himation, over his left shoulder and widening down across his back.
+  const hHem = 25.8 + L;
+  const right = (y: number) => cx - 1.2 + (y - top) * 0.5 + ((y - top) / (hHem - top)) * p.sway;
+  c.part();
+  c.shape(Math.round(top - 0.5), Math.round(hHem), (y) => {
+    const u = (y - top) / (hHem - top);
+    return [cx - 5.0 - u * 0.6 + u * p.sway * 0.5, right(y)];
+  }, HIMATION, (_x, _y, t, u) => sphere(t * 0.9, u * 0.6 - 0.3, 1));
+  for (let y = Math.round(top); y <= Math.round(hHem); y++) c.px(Math.round(right(y)) - 1, y, GOLD, sphere(0.4, 0));
+  for (let y = Math.round(top + 3); y <= Math.round(hHem); y++) c.shade(Math.round(cx - 3 + ((y - top) / (hHem - top)) * p.sway * 0.5), y, -1);
+  c.part();
+  c.ellipse(cx - 3.6, 16 + U, 2.4, 1.6, HIMATION, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 - 0.2, dy * 0.6 - 0.4, 1) });
+  // Curls from behind, to the nape.
+  c.part();
+  c.ellipse(cx, 11.4 + U, 4.0, 3.8, CURLS, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.shape(Math.round(13 + U), Math.round(15.2 + U), (y) => {
+    const hw = 3.6 - (y - 13 - U) * 0.4;
+    return [cx - hw, cx + hw];
+  }, CURLS, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
+  curlTexture(c, cx - 5, cx + 5, 7 + U, 16 + U);
+  wreath(c, cx, U, p.tick, 'up');
+  wreathRibbons(c, cx, 9.6 + U, [[cx - 1.4 - p.sway * 0.3, 15.8 + U], [cx + 1.4 + p.sway * 0.4, 15.2 + U]], p.tick);
+}
+
+/** Orpheus in profile, facing left: the himation streaming back from his shoulder, the ribbons from the wreath. */
+function orpheusSide(c: PixelCanvas, cx: number, hx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 25.2 + L;
+  fittedSide(c, cx, hx, top, waist, hem, CHITON, 0.55);
+  for (let y = waist + 1; y <= Math.round(hem); y++) c.shade(Math.round(sideFront(cx, hx, top, waist, y, 0.55)) + 2, y, -1);
+  keyHem(c, cx - 8, cx + 8, Math.round(hem));
+  c.part();
+  c.shape(waist, waist, () => [hx - 3.1, hx + 3.1], GOLD, (_x, _y, t) => cyl(t, 0.2));
+  // The himation across his chest, from the far shoulder to the near hip, edged in gold.
+  c.part();
+  const band = (y: number) => hx + 1.6 - ((y - top) / (waist + 1 - top)) * 3.6;
+  c.shape(top, waist + 1, (y) => [band(y) - 1.2, band(y) + 1.2], HIMATION, (_x, _y, t) => sphere(t * 0.7 - 0.3, -0.1, 1));
+  c.part();
+  c.ellipse(hx + 0.4, 16 + U, 3.0, 1.7, HIMATION, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + 0.1, dy * 0.6 - 0.4, 1) });
+  c.part();
+  c.px(hx + 1, 15 + U, BROOCH, sphere(0, -0.6));
+  // The ribbons first, then the head: curls, the face turned left, the wreath.
+  wreathRibbons(c, hx + 3.2, 10 + U, [[hx + 6.0 + p.sway * 0.5, 13.4 + U], [hx + 5.0 + p.sway * 0.4, 14.8 + U]], p.tick);
+  c.part();
+  c.ellipse(hx + 0.6, 11.6 + U, 3.5, 3.6, CURLS, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.15, 1) });
+  c.part();
+  c.capsule(hx + 1.8, 12.5 + U, hx + 2.4 + p.sway * 0.3, 15.2 + U, 1.5, 1.1, CURLS);
+  c.part();
+  c.ellipse(hx - 1.4, 12.9 + U, 2.2, 2.3, SKIN);
+  c.part();
+  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => [hx - 3.4, hx + 0.6], CURLS, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+  c.px(hx - 3, 11 + U, CURLS, sphere(-0.5, 0.2));
+  curlTexture(c, hx - 5, hx + 5, 7 + U, 16 + U);
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  c.shade(hx - 3, 14 + U, -1);
+  wreath(c, hx, U, p.tick, 'side');
+}
+
+/** The himation streaming behind him in profile, its hem edged in gold. */
+function himationSide(c: PixelCanvas, hx: number, top: number, L: number, sway: number): void {
+  const hem = 25.6 + L;
+  c.part();
+  c.shape(Math.round(top - 0.5), Math.round(hem), (y) => {
+    const u = (y - top + 0.5) / (hem - top + 0.5);
+    return [hx + 0.6, hx + 3.8 + u * (1.6 + sway)];
+  }, HIMATION, (_x, _y, t, u) => sphere(t * 0.9 + 0.1, u * 0.5 - 0.2, 1), { bias: -1 });
+  const row = Math.round(hem);
+  for (let x = Math.floor(hx); x <= hx + 9; x++) if (c.materialAt(x, row) === HIMATION) c.px(x, row, GOLD, sphere(0.3, 0.3), { bias: -1 });
+}
+
+/** The fadista's cape streaming long behind him in profile. */
+function capaSide(c: PixelCanvas, hx: number, top: number, L: number, sway: number): void {
+  const hem = 28.4 + L;
+  c.part();
+  c.shape(Math.round(top - 1), Math.round(hem), (y) => {
+    const u = (y - top + 1) / (hem - top + 1);
+    return [hx + 0.2 - u * 0.4, hx + 4.4 + u * (2.2 + sway)];
+  }, CAPA, (_x, _y, t, u) => sphere(t * 0.9 + 0.1, u * 0.5 - 0.2, 1), { bias: -1 });
+  for (let y = Math.round(top + 3); y <= Math.round(hem); y++) {
+    const u = (y - top + 1) / (hem - top + 1);
+    c.shade(Math.round(hx + 2.8 + u * (1.2 + sway)), y, 1);
+  }
+  tears(c, [Math.round(hx + 3), Math.round(hx + 6)], Math.round(hem));
+}
+
+// ---------------------------------------------------------------------------
 // Views
 
 const REACH_FRONT = 4.5;
@@ -1049,6 +1951,9 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const sticks = (arm: 'a' | 'b') => drum && mallet(c, 'down', arm, arm === 'a' ? fa : fb, arm === 'a' ? p.stickA : p.stickB, p.glow, (arm === 'a' ? fa : fb).behind ? -1 : 0);
 
   if (S.wild) wildCloakBehind(c, cx, U, L, p.sway);
+  else if (S.style === 'vagabond') bedrollFront(c, cx, U);
+  else if (S.style === 'fadista') capaBehind(c, cx, U, L, p.sway);
+  else if (S.style === 'orpheus') himationBehind(c, cx, U, L, p.sway);
   else if (!drum && !S.style) {
     // The half-cape hangs from his left shoulder, showing behind him on that side.
     c.part();
@@ -1144,6 +2049,12 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     ruff(c, cx, 15.4 + U, 4.3, 1.5);
     maskDown(c, hx, hU, p.blink);
     jesterCap(c, hx, hU, p.tick, 'down');
+  } else if (S.style === 'vagabond') {
+    vagabondDown(c, cx, U, L, p);
+  } else if (S.style === 'fadista') {
+    fadistaDown(c, cx, U, L, p);
+  } else if (S.style === 'orpheus') {
+    orpheusDown(c, cx, U, L, p);
   } else if (S.wild) {
     wildDown(c, cx, U, L, p);
   } else {
@@ -1368,6 +2279,12 @@ function drawUp(c: PixelCanvas, p: Pose): void {
       }
     }
     jesterCap(c, cx, U, p.tick, 'up');
+  } else if (S.style === 'vagabond') {
+    vagabondUp(c, cx, U, L, p);
+  } else if (S.style === 'fadista') {
+    fadistaUp(c, cx, U, L, p);
+  } else if (S.style === 'orpheus') {
+    orpheusUp(c, cx, U, L, p);
   } else if (S.wild) {
     wildUp(c, cx, U, L, p);
   } else {
@@ -1438,6 +2355,10 @@ function drawSide(c: PixelCanvas, p: Pose): void {
       c.shade(Math.round(hx + 2.6 + u * (1 + p.sway)), y, -1);
     }
     leafHem(c, hx - 2, hx + 9, hem, -1);
+  } else if (S.style === 'fadista') {
+    capaSide(c, hx, top, L, p.sway);
+  } else if (S.style === 'orpheus') {
+    himationSide(c, hx, top, L, p.sway);
   } else if (!drum && !S.style) {
     // The cape streaming behind him.
     const hem = 25 + L;
@@ -1561,6 +2482,12 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     c.px(hx - 3, 14 + U, LIP, sphere(-0.3, 0.3));
     c.px(hx - 3, 12 + U, p.blink ? MASK : EYE, sphere(0, -0.3), { bias: p.blink ? -1 : 0 });
     jesterCap(c, hx, U, p.tick, 'side');
+  } else if (S.style === 'vagabond') {
+    vagabondSide(c, cx, hx, U, L, p);
+  } else if (S.style === 'fadista') {
+    fadistaSide(c, cx, hx, U, L, p);
+  } else if (S.style === 'orpheus') {
+    orpheusSide(c, cx, hx, U, L, p);
   } else if (S.wild) {
     wildSide(c, cx, hx, U, L, p);
   } else {
@@ -2119,6 +3046,63 @@ export function noteFrame(i: number, look: BardLook = MINSTREL_LOOK): PixelCanva
     }
     return c;
   }
+  if (look.style === 'vagabond') {
+    if (i === 0) {
+      // A note with a hawk's feather for its flag.
+      head(4, 8);
+      stem(5, 1, 7);
+      for (const [x, y, col] of [[6, 1, core], [7, 1, hot], [6, 2, hot], [7, 2, core], [8, 2, mid], [7, 3, hot], [8, 3, mid], [9, 3, deep], [8, 4, mid], [9, 5, deep]] as const) lit(x, y, col);
+    } else {
+      // A dandelion seed adrift: a crown of fine threads over a stalk and the seed.
+      for (let k = 0; k < 9; k++) {
+        const a = Math.PI * (1.05 + (k / 8) * 0.9);
+        for (let r = 1; r <= 3; r++) lit(5 + Math.cos(a) * r, 4 + Math.sin(a) * r, r === 3 ? core : r === 2 ? hot : mid, r === 3 ? 0.9 : 0.7);
+      }
+      lit(5, 4, core);
+      for (let y = 5; y <= 8; y++) lit(5, y, y < 7 ? hot : mid, 0.85);
+      lit(5, 9, deep);
+      lit(5, 10, deep, 0.7);
+    }
+    return c;
+  }
+  if (look.style === 'fadista') {
+    if (i === 0) {
+      // A swallow, flying right: swept wings, a forked tail, a white breast.
+      for (const [x, y, col] of [
+        [9, 4, hot], [10, 4, mid], [8, 4, hot], [8, 5, core], [9, 5, core], [10, 5, hot],
+        [4, 5, mid], [5, 5, hot], [6, 5, hot], [7, 5, hot], [5, 6, core], [6, 6, core], [7, 6, core],
+        [3, 5, mid], [2, 4, mid], [1, 3, deep], [0, 2, deep], [3, 6, mid], [2, 7, mid], [1, 8, deep],
+        [6, 4, mid], [5, 3, mid], [4, 2, deep], [3, 1, deep], [6, 7, mid], [5, 8, deep], [4, 9, deep],
+      ] as const) lit(x, y, col);
+    } else {
+      // An azulejo: a square tile, a four-petalled flower at its heart.
+      for (let y = 2; y <= 8; y++) {
+        for (let x = 2; x <= 8; x++) {
+          const edge = x === 2 || x === 8 || y === 2 || y === 8;
+          const petal = (x === 5 && Math.abs(y - 5) <= 2) || (y === 5 && Math.abs(x - 5) <= 2);
+          const corner = (x === 3 || x === 7) && (y === 3 || y === 7);
+          lit(x, y, x === 5 && y === 5 ? core : petal ? hot : edge ? mid : corner ? hot : deep, edge || petal || corner ? 1 : 0.45);
+        }
+      }
+    }
+    return c;
+  }
+  if (look.style === 'orpheus') {
+    if (i === 0) {
+      // A golden note whose flag is a sprig of laurel.
+      head(4, 8);
+      stem(5, 1, 7);
+      for (const [x, y, col] of [[6, 1, core], [7, 2, hot], [8, 3, mid], [7, 1, hot], [8, 2, mid], [6, 3, hot], [7, 4, mid], [9, 4, deep]] as const) lit(x, y, col);
+    } else {
+      // A little lyre: two horned arms, a yoke, three strings, the bowl.
+      for (const [x, y] of [[2, 1], [2, 2], [3, 3], [3, 4], [3, 5], [3, 6], [3, 7], [8, 1], [8, 2], [7, 3], [7, 4], [7, 5], [7, 6], [7, 7]]) lit(x, y, y < 3 ? core : hot);
+      for (let x = 3; x <= 7; x++) lit(x, 3, core);
+      for (const x of [4, 5, 6]) for (let y = 4; y <= 7; y++) lit(x, y, mid, 0.7);
+      for (let x = 3; x <= 7; x++) lit(x, 8, hot);
+      for (let x = 4; x <= 6; x++) lit(x, 9, deep);
+    }
+    return c;
+  }
   if (look.wild) {
     if (i === 0) {
       // A note whose flag is a leaf.
@@ -2302,5 +3286,103 @@ export function rhythmIcon(k: DrumIconColors = WAR_DRUM_ICON): Uint8ClampedArray
     for (const [x, y] of [[13, 0], [14, 0], [15, 1], [15, 2], [14, 3], [13, 3], [14, 1], [14, 2]]) put(x, y, x === 14 && (y === 1 || y === 2) ? '#6c7cff' : k.light[0]);
   }
   outline(k === HOWL_DRUM_ICON ? '#06060e' : '#1e0806');
+  return px;
+}
+
+/** Colours of a minstrel skin's song icon: its light, brightest first, its outline, and its sparks. */
+interface SongIconColors {
+  light: [string, string, string];
+  outline: string;
+  spark: string;
+}
+
+const SONG_ICONS: Record<'vagabond' | 'fadista' | 'orpheus', SongIconColors> = {
+  vagabond: { light: ['#fbf6ff', '#e2d0ff', '#b08cff'], outline: '#1c0e3a', spark: '#ffe8c0' },
+  fadista: { light: ['#f4f8ff', '#b8d2ff', '#3c7cff'], outline: '#06103a', spark: '#ffffff' },
+  orpheus: { light: ['#fffdf2', '#ffeeaa', '#ffc84a'], outline: '#2a1040', spark: '#c890ff' },
+};
+
+/** The song in a newer minstrel skin's colours, with its own sign over the beam: a seed adrift, a swallow, a sprig of laurel. */
+export function skinSongIcon(style: 'vagabond' | 'fadista' | 'orpheus'): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  const k = SONG_ICONS[style];
+  const [core, hot, mid] = k.light;
+  const head = (cx: number, cy: number) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.hypot((x + 0.5 - cx) / 2.3, (y + 0.5 - cy) / 1.7) <= 1) put(x, y, x + 0.5 < cx && y + 0.5 < cy ? core : mid);
+  };
+  head(4.5, 12.5);
+  head(11.5, 11);
+  for (let y = 4; y <= 12; y++) put(6, y, hot);
+  for (let y = 3; y <= 10; y++) put(13, y, hot);
+  for (let x = 6; x <= 13; x++) {
+    const y = Math.round(4 - (x - 6) * 0.15);
+    put(x, y, core);
+    put(x, y + 1, mid);
+  }
+  if (style === 'vagabond') for (const [x, y] of [[2, 1], [3, 0], [4, 1], [3, 2], [3, 3], [3, 4]]) put(x, y, y < 2 ? core : '#8a6c40');
+  if (style === 'fadista') for (const [x, y] of [[1, 2], [2, 3], [3, 3], [4, 2], [3, 1], [5, 1], [2, 4]]) put(x, y, x === 3 && y === 3 ? '#ffffff' : '#2a52c4');
+  if (style === 'orpheus') for (const [x, y] of [[8, 0], [9, 1], [10, 0], [11, 1], [12, 0]]) put(x, y, (x & 1) ? '#5a9632' : '#8cc456');
+  outline(k.outline);
+  for (const [x, y] of [[1, 7], [9, 7], [14, 14], [15, 4]]) put(x, y, k.spark);
+  return px;
+}
+
+/** The vagabond's banjo: a round vellum head in a nickel rim, a long neck, a straight headstock with its pegs. */
+export function banjoIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  for (let i = 0; i < 8; i++) {
+    put(8 + i, 7 - i, '#482814');
+    put(9 + i, 7 - i, '#62381c');
+  }
+  for (const [x, y] of [[13, 0], [15, 2], [15, 0]]) put(x, y, '#c4c8d0');
+  put(11, 6, '#c4c8d0');
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const d = Math.hypot(x + 0.5 - 6, y + 0.5 - 10);
+      if (d <= 5.2) put(x, y, d > 4.2 ? ((x + y) % 3 === 0 ? '#f2f4f8' : '#868a94') : d < 2.4 ? '#f2e8cc' : x + y < 16 ? '#d6c9a6' : '#ae9f7e');
+    }
+  }
+  outline('#0c0c10');
+  for (let i = 0; i < 6; i++) put(4 + i, 12 - i, '#8a8070');
+  put(5, 11, '#36180c');
+  put(6, 11, '#36180c');
+  put(12, 3, '#e2d0ff');
+  return px;
+}
+
+/** The fadista's Portuguese guitar: a pear-round spruce belly, a tiled rosette, and the bright fan of its head. */
+export function guitarraIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  for (let i = 0; i < 6; i++) {
+    put(8 + i, 7 - i, '#4a2418');
+    put(9 + i, 7 - i, '#663424');
+  }
+  for (let y = 0; y < 5; y++) for (let x = 11; x < 16; x++) if (Math.hypot(x + 0.5 - 14.5, y + 0.5 - 1.5) <= 2.8 && x + y >= 13) put(x, y, (x + y) % 2 ? '#f4cf6a' : '#d69a3a');
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const d = Math.hypot(x + 0.5 - 6, y + 0.5 - 10);
+      const d2 = Math.hypot(x + 0.5 - 8.4, y + 0.5 - 7.6);
+      if (d <= 5.0 || d2 <= 3.2) put(x, y, d < 2.8 ? '#f2d8a2' : x + y < 15 ? '#dab474' : '#b48848');
+    }
+  }
+  outline('#1a0e06');
+  for (const [x, y, c] of [[6, 8, '#2a52c4'], [8, 8, '#ffffff'], [8, 10, '#2a52c4'], [6, 10, '#ffffff'], [5, 9, '#2a52c4'], [9, 9, '#2a52c4']] as const) put(x, y, c);
+  put(7, 9, '#140806');
+  for (let i = 0; i < 5; i++) put(4 + i, 13 - i, '#f4ecd8');
+  put(12, 2, '#b8d2ff');
+  return px;
+}
+
+/** Orpheus's lyre: a tortoise-shell bowl, two golden arms curling out at the top, a yoke and shining strings. */
+export function lyreIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  for (const [x, y] of [[2, 1], [3, 1], [3, 2], [4, 3], [4, 4], [4, 5], [4, 6], [4, 7], [4, 8], [4, 9], [13, 1], [12, 1], [12, 2], [11, 3], [11, 4], [11, 5], [11, 6], [11, 7], [11, 8], [11, 9]]) put(x, y, x < 8 ? '#f4cf6a' : '#d69a3a');
+  for (let x = 3; x <= 12; x++) put(x, 4, x % 3 === 0 ? '#fff4bf' : '#d69a3a');
+  for (const x of [6, 8, 9]) for (let y = 5; y <= 11; y++) put(x, y, '#ffeeaa');
+  for (let y = 10; y < 16; y++) for (let x = 2; x < 14; x++) if (Math.hypot((x + 0.5 - 7.5) / 5.4, (y + 0.5 - 11.5) / 3.6) <= 1) put(x, y, (x * 7 + y * 13) % 5 === 0 ? '#381c0a' : y < 12 ? '#c4883a' : '#985c22');
+  outline('#2a1040');
+  put(7, 6, '#fffdf2');
+  put(1, 0, '#c890ff');
+  put(14, 0, '#c890ff');
   return px;
 }
