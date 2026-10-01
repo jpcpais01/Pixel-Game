@@ -4,12 +4,12 @@
 // (dx, dy): the patch's middle, from the forest's start.
 import { writeFileSync } from 'node:fs';
 import { STRIP_H, buildStrip } from '../src/art/ground';
-import { CAMPFIRE, CAMPFIRE_FOOT, CHEST_BASE_Y, FPROP_BASE_Y, FPROP_FRAMES, FPROP_LOOKS, MENHIR_BASE_Y, SHRINE_BASE_Y, chestArt, menhirArt, shrineArt, type FPropKind } from '../src/art/forest';
+import { CAMPFIRE, CAMPFIRE_FOOT, CHEST_BASE_Y, FPROP_BASE_Y, FPROP_FRAMES, FPROP_LOOKS, LOOKOUT_BASE_Y, MENHIR_BASE_Y, SHRINE_BASE_Y, chestArt, lookoutArt, menhirArt, shrineArt, type FPropKind } from '../src/art/forest';
 import { PILLAR_BASE, RUIN_H_BASE, RUIN_V_BASE, pillar, ruinH, ruinV } from '../src/art/garden';
 import { rock } from '../src/art/env';
 import type { PixelCanvas, RenderedFrame } from '../src/art/pixel';
 import { ELDER_BASE_Y, PROP_BASE_Y, PROP_FRAMES, TREE_BASE_Y, cherryTree, elderTree, mapleTree, treeFrame, willowTree } from '../src/art/trees';
-import { CAMP_SEATS, CHUNK, ForestGen, ruinPieces, stonePieces } from '../src/world/forestGen';
+import { CAMP_SEATS, CHUNK, ForestGen, LOOK_RAIL, ruinPieces, stonePieces } from '../src/world/forestGen';
 import { forestTile } from '../src/world/forestGround';
 import { encodePNG } from './png';
 
@@ -114,6 +114,7 @@ for (let ccy = Math.floor(y0 / CHUNK); ccy <= Math.floor((y0 + H + 200) / CHUNK)
       } else if (p.kind === 'shrine') put('shrine', () => shrineArt(0), p.x, p.y, SHRINE_BASE_Y);
       else if (p.kind === 'chest') put('chest', () => chestArt(false), p.x, p.y, CHEST_BASE_Y);
       else if (p.kind === 'elder') put('elder', () => elderTree(0), p.x, p.y, ELDER_BASE_Y);
+      else if (p.kind === 'lookout') put('lookout', () => lookoutArt(), p.x, p.y + LOOK_RAIL, LOOKOUT_BASE_Y);
       else if (p.kind === 'stones') for (const s of stonePieces(p)) put(`m${s.v}`, () => menhirArt(s.v), s.x, s.y, MENHIR_BASE_Y);
       else if (p.kind === 'ruins') {
         for (const r of ruinPieces(p)) {

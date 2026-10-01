@@ -5,17 +5,28 @@
 // leaves (coloured by the wood it grows in), streams and ponds with their
 // banks, lily pads and fords, trails and the plank bridges that carry them
 // over the water, the floor of each kind of wood, the places' floors, and
-// the litter, needles or petals at every tree's foot.
+// the litter, needles or petals at every tree's foot; and the land's
+// terraces: rock faces in strata with grass hanging over their lips, stairs
+// where the trails climb them, slopes, water pouring over them, rubble and
+// plunge pools at their feet, and the shadows they cast.
 
 import { DAY_GROUND, NIGHT_GROUND, hash2, rng, valueNoise } from '../art/env';
 import { K, STRIP_H, flagstone, nightify, ramp, stone, type Cell, type GroundSpec, type Look, type StripFields } from '../art/ground';
 import type { RGB } from '../art/pixel';
-import { BIOMES, CHUNK, FOREST_WORLD, WOOD_SHAPE, type ForestGen, type FTree, type Poi } from './forestGen';
+import { BIOMES, CHUNK, FOREST_WORLD, WOOD_SHAPE, type BiomeId, type ForestGen, type FTree, type Here, type Poi, type Terrain } from './forestGen';
 
 const smooth = (a: number, b: number, v: number): number => {
   const t = v <= a ? 0 : v >= b ? 1 : (v - a) / (b - a);
   return t * t * (3 - 2 * t);
 };
+
+/** Each terrace up is this much lighter (tone steps): a little air between the levels. */
+const LEVEL_LIFT = 0.3;
+/** A cliff's shadow reaches this many of the look's cast lengths from it (full, then soft). */
+const CLIFF_CAST = 1;
+const CLIFF_SOFT = 1.6;
+/** The rock of each wood's cliffs (look.rock). */
+const ROCK_OF: Record<BiomeId, number> = { oak: 0, autumn: 0, meadow: 0, birch: 1, pine: 1, hollow: 2, sakura: 3 };
 
 // ---------------------------------------------------------------- palettes
 
@@ -54,6 +65,14 @@ export const FOREST_DAY: Look = {
   lotus: ramp('#ffd0e0', '#ff9ec0', '#fff8fc'),
   plank: ramp('#2a1a10', '#3e2816', '#58391f', '#74502c', '#906a3c', '#ad8752', '#c7a36c'),
   fallen: ramp('#5a1612', '#8e2418', '#c0461c', '#e07422', '#f0a032', '#f6c85a'),
+  rock: [
+    // Warm sandstone in the oak and maple woods and the meadows; cool granite under the pines and birches;
+    // dark basalt in the hollows; pale rose granite in the Sakura glades.
+    ramp('#1a1411', '#2a2019', '#3c2f25', '#514031', '#69543f', '#836b51', '#9f8566', '#bca17e'),
+    ramp('#13161b', '#1e2329', '#2b3239', '#3c444b', '#50595f', '#687175', '#848b8b', '#a3a8a3'),
+    ramp('#0b1313', '#121e1e', '#1a2a28', '#243833', '#2f4841', '#3f5a51', '#536f65', '#6c867b'),
+    ramp('#281c20', '#3a2a2e', '#523e42', '#6a5456', '#846c6c', '#9f8786', '#bba2a0', '#d6c1ba'),
+  ],
 };
 
 const night = (r: RGB[]) => r.map(nightify);
@@ -79,6 +98,7 @@ export const FOREST_NIGHT: Look = {
   lotus: ramp('#a890b4', '#8a6a9a', '#c8b8d4'),
   plank: night(FOREST_DAY.plank!),
   fallen: night(FOREST_DAY.fallen!),
+  rock: FOREST_DAY.rock!.map(night),
 };
 
 /** Glow of the hollows' moss and mushrooms, fairy rings, and the runes of shrines and standing stones. */
@@ -109,6 +129,13 @@ export function forestTile(gen: ForestGen, col: number, row: number, ver = 0): G
       rays.push(...l.rays);
     }
   }
+  // Most tiles lie on one terrace: only where the land steps are its cliffs and their shadows worked out.
+  const relief = gen.reliefIn(ox - SHADE_PAD, y0 - SHADE_PAD, ox + CHUNK + SHADE_PAD, y0 + STRIP_H + SHADE_PAD);
+  let heights: Heights | null = null;
+  // Each pixel's own terrace (and whether it's on a face), noted as the floor is painted, for its shading.
+  const PW = CHUNK + 2;
+  const own = relief ? { level: new Int8Array(PW * (STRIP_H + 2)), face: new Uint8Array(PW * (STRIP_H + 2)) } : null;
+  const ownAt = (x: number, y: number) => (y - y0 + 1) * PW + (x - ox + 1);
   return {
     // A tile painted again (a tree cleared near it) gets new textures beside the old, which show till it's done.
     key: ver ? `fw${gen.seed}_${col}v${ver}` : `fw${gen.seed}_${col}`,
@@ -128,18 +155,249 @@ export function forestTile(gen: ForestGen, col: number, row: number, ver = 0): G
       if (b.roof === 3) return odd < 0.3 ? 6 : odd < 0.55 ? 7 : 3;
       return b.roof;
     },
-    floor: (x, y, wall, c) => floor(gen, pois, x, y, wall, c),
-    gloom: (_x, _y, wall, look) => smooth(-46, 0, wall) * look.wallDark,
+    floor: (x, y, wall, c) => {
+      if (!own) return floor(gen, pois, x, y, wall, c);
+      const t = landFloor(gen, pois, x, y, wall, c);
+      own.level[ownAt(x, y)] = t.level + (t.onFace ? 1 : 0);
+      own.face[ownAt(x, y)] = t.onFace ? 1 : 0;
+    },
+    gloom: (x, y, wall, look) => {
+      const d = smooth(-46, 0, wall) * look.wallDark;
+      if (!own) return d;
+      const i = ownAt(x, y);
+      return d + cliffGloom((heights ??= heightsOf(gen, ox, y0)), own.level[i], own.face[i] === 1, x, y, look);
+    },
     decorate: (s) => decorate(gen, s, trees, pois),
     casters: () => trees.map((t) => ({ x: t.x, y: t.y, r: WOOD_SHAPE[t.kind].canopyR * (t.kind === 'willow' ? 1.1 : 1) })),
     pools: () => rays,
   };
 }
 
+// ---------------------------------------------------------------- the land
+
+/** Tone and height laid over a cell the floor painted (a slope's shading, a lip's light, a foot's shade). */
+const after = { tone: 0, height: 0 };
+
+/** The floor where the land steps: the terraces' edges first, else the floor, shaded for where it lies. */
+const land: Terrain = { level: 0, up: 0, down: 0, facing: 0, faceW: 0, onFace: false, slope: false, stairs: false };
+
+function landFloor(gen: ForestGen, pois: Poi[], wx: number, wy: number, wall: number, c: Cell): Terrain {
+  after.tone = 0;
+  after.height = 0;
+  let s = gen.sample(wx, wy);
+  const water = Math.max(s.stream, s.pond);
+  const t = Object.assign(land, gen.terrain(s));
+  if (t.up < t.faceW + 9 || t.down < 2.2) {
+    if (edge(gen, wx, wy, t, water, c)) return t;
+    // (It may have looked elsewhere: the sample is shared.)
+    s = gen.sample(wx, wy);
+  }
+  floor(gen, pois, wx, wy, wall, c, s);
+  // (A flower's tone is its colour, not a shade.)
+  if (c.kind !== K.Flower) c.tone += after.tone;
+  c.height += after.height;
+  return t;
+}
+
+/**
+ * A terrace's edge: the face of the terrace above (rock, or water pouring
+ * down it, or the stairs or slope that climb it), the lip of this one, and
+ * the foot of a cliff. Returns whether it painted the cell; else it may
+ * leave `after` for the floor to be shaded by.
+ */
+function edge(gen: ForestGen, wx: number, wy: number, t: Terrain, water: number, c: Cell): boolean {
+  // Down a face, in screen px: a face leans toward the viewer as it turns south.
+  const lean = Math.max(t.facing, 0.3);
+  if (t.onFace) {
+    const tall = t.faceW / lean;
+    const tv = t.up / lean;
+    if (t.stairs) return stairs(gen, wx, wy, tv, c);
+    if (t.slope) {
+      // A slope: the floor as it is, darkening toward its foot; water on it runs white.
+      if (water > 0) {
+        c.kind = K.Water;
+        c.tone = 1.6 + (hash2(wx, Math.floor(wy / 2), 951 + gen.seed) > 0.6 ? 1.6 : 0);
+        return true;
+      }
+      if (hash2(wx, wy, 953) > 0.965) {
+        c.kind = K.Pebble;
+        c.height = 0.7;
+        c.tone = (hash2(wx, wy, 955) - 0.5) * 1.2;
+        return true;
+      }
+      after.tone = -0.3 - (tv / tall) * 1.1;
+      after.height = (tall - tv) * 0.05;
+      return false;
+    }
+    const lip = gen.lipWater(wx, wy, tv);
+    if (lip > 0.2) {
+      // Water pouring over: white at the lip and the foot, streaked between.
+      const streak = hash2(wx, Math.floor((tv + hash2(wx, 7, 957) * 9) / 5), 959 + gen.seed);
+      c.kind = K.Fall;
+      c.height = 0;
+      c.tone = 0.8 + (streak > 0.5 ? 1.3 : 0) + (tv < 2 ? 2.4 : 0) + (tv > tall - 3 ? 2 : 0) - (lip < 1.2 ? 1 : 0);
+      return true;
+    }
+    rock(gen, wx, wy, tv, tall, c);
+    return true;
+  }
+  if (t.down < 2.2 && !t.slope) {
+    if (t.facing > 0.15) {
+      // The lip of a cliff below: the grass on its edge catches the light.
+      after.tone = 1.1 - t.down * 0.3;
+      after.height = 0.3;
+      return false;
+    }
+    // The lip of a cliff whose face is turned away: a line of rock along the edge.
+    c.kind = K.Rock;
+    c.sub = ROCK_OF[BIOMES[gen.biomeAt(wx, wy)].id];
+    c.height = 0.6;
+    c.tone = 1.4 - t.down * 0.7 + (hash2(wx, wy, 961) - 0.5) * 0.8;
+    return true;
+  }
+  const below = t.up - t.faceW;
+  if (t.facing > 0.25 && below < 9) {
+    // The foot of a cliff. Under a waterfall, a pool churned white; else rubble and shade.
+    const lip = gen.lipWater(wx, wy, t.up / lean);
+    if (lip > 0.2 && water > -(9 - below) * 0.5) {
+      c.kind = K.Water;
+      c.height = 0;
+      c.tone = 2.8 - below * 0.28 + (hash2(wx, Math.floor(wy / 2), 963 + gen.seed) > 0.55 ? 1 : 0);
+      return true;
+    }
+    if (below < 4 && water < -1 && hash2(wx, wy, 965) > 0.72 + below * 0.05) {
+      c.kind = K.Pebble;
+      c.height = 0.6;
+      c.tone = (hash2(wx, wy, 967) - 0.5) * 1.4 - 0.4;
+      return true;
+    }
+    after.tone = -Math.max(0, 1.5 - below * 0.3);
+    return false;
+  }
+  if (t.facing < 0.15 && t.up < 3.5) {
+    // At the foot of an edge whose face is turned away, the ground darkens toward it.
+    after.tone = -(3.5 - t.up) * (t.slope ? 0.2 : 0.5);
+  }
+  return false;
+}
+
+/** A trail's stairs up a cliff: stone treads with dark risers, kerbs at their sides, moss in the joints. */
+function stairs(gen: ForestGen, wx: number, wy: number, tv: number, c: Cell): boolean {
+  const step = Math.floor(tv / 3.4);
+  const f = tv / 3.4 - step;
+  const s = gen.sample(wx, wy);
+  c.kind = K.Stone;
+  c.height = 0.4 + (f < 0.6 ? 0.4 : 0);
+  if (s.trail > -0.7) {
+    // The kerb.
+    c.tone = -0.6 + (hash2(wx >> 1, step, 971) - 0.5) * 0.6;
+    return true;
+  }
+  const slab = Math.floor((wx * -s.tgy + wy * s.tgx) / 5);
+  c.tone = (hash2(slab, step, 973 + gen.seed) - 0.5) * 0.9 + (f < 0.15 ? 0.9 : f < 0.6 ? 0.2 : -1.3);
+  if (f >= 0.6 && hash2(wx, wy, 975) > 0.8) {
+    c.kind = K.Moss;
+    c.tone = -0.8;
+  }
+  return true;
+}
+
+/**
+ * A cliff's rock face, `tv` px down from its lip of `tall`: layers of rock
+ * following the lip, each a row of blocks with a lit ledge on top and an
+ * undercut beneath; grass hanging over the lip, roots and creepers trailing
+ * down, moss in streaks, and shade where it meets the ground.
+ */
+function rock(gen: ForestGen, wx: number, wy: number, tv: number, tall: number, c: Cell): void {
+  const biome = BIOMES[gen.biomeAt(wx, wy)].id;
+  // Grass and roots hang over the lip, ragged.
+  const fringe = 0.8 + hash2(wx, 0, 981) * 1.4 + (hash2(wx >> 1, 1, 983) > 0.72 ? 1.6 : 0);
+  if (tv < fringe) {
+    c.kind = biome === 'pine' || biome === 'hollow' ? K.Moss : K.Grass;
+    c.height = 0.6;
+    c.tone = -0.5 - tv * 0.5;
+    return;
+  }
+  const vine = hash2(wx, 3, 985 + gen.seed);
+  if (vine > 0.93 && tv < 3 + (vine - 0.93) * 220) {
+    c.kind = K.Moss;
+    c.height = 0.8;
+    c.tone = -0.4 + (Math.floor(tv) % 3 === 0 ? 0.9 : 0);
+    return;
+  }
+  c.kind = K.Rock;
+  c.sub = ROCK_OF[biome];
+  const wave = valueNoise(wx, 0, 23, 987) * 3;
+  const layer = Math.floor((tv + wave) / 5);
+  const lt = tv + wave - layer * 5;
+  const blockW = 6 + Math.floor(hash2(layer, 0, 989) * 5);
+  const along = wx + layer * 3.7;
+  const bx = Math.floor(along / blockW);
+  let tone = (hash2(bx, layer, 991 + gen.seed) - 0.5) * 1.3 + (hash2(wx, wy, 993) - 0.5) * 0.6;
+  if (lt < 1) tone += 1.2;
+  else if (lt > 4) tone -= 1.1;
+  if (along - bx * blockW < 1) tone -= 1.4;
+  if (tv < fringe + 2) tone -= 1;
+  if (tv > tall - 2.5) tone -= 1.3;
+  tone -= (tv / tall) * 0.6;
+  c.tone = tone;
+  c.height = (tall - tv) * 0.03 + (lt < 1 ? 0.25 : 0);
+  // Moss in streaks down the face, thickest in the hollows.
+  const moss = valueNoise(wx, wy, 7, 995) * 0.7 + valueNoise(wx, wy, 19, 997) * 0.3;
+  if (moss > (biome === 'hollow' ? 0.55 : biome === 'pine' || biome === 'oak' ? 0.64 : 0.7) && tv < tall - 2) {
+    c.kind = K.Moss;
+    c.tone = tone * 0.5 - 0.6;
+  }
+}
+
+/** How high the ground stands round a tile, every HEIGHTS_STEP px (a face counts as the terrace it hangs from), for the cliffs' shadows. */
+interface Heights {
+  x0: number;
+  y0: number;
+  w: number;
+  h: number;
+  level: Int8Array;
+}
+
+const HEIGHTS_STEP = 2;
+
+/** Room round a tile for the shadows cast into it (beyond the longest cast, day or night). */
+const SHADE_PAD = 30;
+
+function heightsOf(gen: ForestGen, ox: number, y0: number): Heights {
+  const x0 = ox - 1 - SHADE_PAD;
+  const top = y0 - 1 - SHADE_PAD;
+  const w = Math.ceil((CHUNK + 2 + SHADE_PAD * 2) / HEIGHTS_STEP) + 1;
+  const h = Math.ceil((STRIP_H + 2 + SHADE_PAD * 2) / HEIGHTS_STEP) + 1;
+  const level = new Int8Array(w * h);
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const t = gen.terrain(gen.sample(x0 + i * HEIGHTS_STEP, top + j * HEIGHTS_STEP));
+      level[j * w + i] = t.level + (t.onFace ? 1 : 0);
+    }
+  }
+  return { x0, y0: top, w, h, level };
+}
+
+/**
+ * How much darker the ground is for where it lies: lighter a terrace up,
+ * and in a cliff's shadow when the spot a cast's length toward the sun (or
+ * moon) is higher ground, or a higher cliff's face.
+ */
+function cliffGloom(m: Heights, level: number, face: boolean, x: number, y: number, look: Look): number {
+  const S = HEIGHTS_STEP;
+  const at = (px: number, py: number) => Math.min(m.h - 1, Math.max(0, Math.round((py - m.y0) / S))) * m.w + Math.min(m.w - 1, Math.max(0, Math.round((px - m.x0) / S)));
+  if (face) return -level * LEVEL_LIFT;
+  let d = -level * LEVEL_LIFT;
+  const [cx, cy] = look.cast;
+  if (m.level[at(x - cx * CLIFF_CAST, y - cy * CLIFF_CAST)] > level) d += look.shadow * 0.85;
+  else if (m.level[at(x - cx * CLIFF_SOFT, y - cy * CLIFF_SOFT)] > level) d += look.shadow * 0.4;
+  return d;
+}
+
 // ---------------------------------------------------------------- the floor
 
-function floor(gen: ForestGen, pois: Poi[], wx: number, wy: number, wall: number, c: Cell): void {
-  const s = gen.sample(wx, wy);
+function floor(gen: ForestGen, pois: Poi[], wx: number, wy: number, wall: number, c: Cell, s: Here = gen.sample(wx, wy)): void {
   const water = Math.max(s.stream, s.pond);
   const inStream = s.stream >= s.pond;
 
@@ -333,6 +591,22 @@ function placeFloor(p: Poi, wx: number, wy: number, c: Cell): boolean {
       c.kind = hash2(wx, wy, 701) > 0.9 ? K.Litter : K.Moss;
       c.height = valueNoise(wx, wy, 3, 703) * 0.4;
       c.tone = c.kind === K.Litter ? 1 + Math.floor(hash2(wx, wy, 705) * 3) : (valueNoise(wx, wy, 8, 707) - 0.5) * 1.6 + 0.2;
+      return true;
+    }
+    case 'lookout': {
+      // A half-moon of old paving at the cliff's lip, worn smooth.
+      if (d > 19 + wob * 0.2 || wy > p.y + 10) return false;
+      if (d > 16) {
+        if (hash2(wx, wy, 721) > 0.6) return false;
+        c.kind = K.Pebble;
+        c.height = 0.5;
+        c.tone = (hash2(wx, wy, 723) - 0.5) * 1.2;
+        return true;
+      }
+      flagstone(wx, wy);
+      c.kind = stone.edge < 0.5 ? K.Grout : K.Stone;
+      c.height = c.kind === K.Stone ? Math.min(1, stone.edge / 2.2) * 0.6 : 0;
+      c.tone = c.kind === K.Stone ? (stone.t - 0.5) * 0.8 + 0.2 : hash2(wx, wy, 725) > 0.5 ? 2 : 1;
       return true;
     }
     case 'chest': {

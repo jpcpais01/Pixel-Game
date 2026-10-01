@@ -136,7 +136,7 @@ import {
 } from './omens';
 import { FLAME_FRAMES, FLAME_H, FLAME_W, GRAVE_H, GRAVE_KINDS, GRAVE_W, WISP_PX, echoBuffIcon, graveStone, soulFlame, soulWisp } from './echoes';
 import { ELDER_H, ELDER_W, PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_SWAY_FPS, TREE_SWAY_FRAMES, TREE_VARIANTS, TREE_W, cherryTree, elderTree, leafBit, mapleTree, rayCanvas, treeFrame, willowTree } from './trees';
-import { CAMPFIRE, CHEST_H, CHEST_W, FPROP_FRAMES, FPROP_H, FPROP_W, MENHIR_H, MENHIR_LOOKS, MENHIR_W, SHRINE_FRAMES, SHRINE_H as FSHRINE_H, SHRINE_W as FSHRINE_W, chestArt, menhirArt, shrineArt } from './forest';
+import { CAMPFIRE, CHEST_H, CHEST_W, FLOW_H, FLOW_W, FPROP_FRAMES, FPROP_H, FPROP_W, LOOKOUT_H, LOOKOUT_W, MENHIR_H, MENHIR_LOOKS, MENHIR_W, SHRINE_FRAMES, SHRINE_H as FSHRINE_H, SHRINE_W as FSHRINE_W, chestArt, fallFlow, lookoutArt, menhirArt, shrineArt } from './forest';
 import { ALTAR_H, ALTAR_W, GROVE_FRAMES, GROVE_H, GROVE_W, HOLLOW_FRAMES, HOLLOW_H, HOLLOW_W, PRINT_H, PRINT_W, SPRING_FRAMES, SPRING_H, SPRING_W, STAG_ANIMS, STAG_H, STAG_W, altarArt, groveFrame, hollowArt, hoofprint, springArt, stagBuffIcon, stagFrames } from './stag';
 import { STRIP_H, buildStrip } from './ground';
 import { CHUNK, ForestGen, EVERWOOD_SEED } from '../world/forestGen';
@@ -993,6 +993,9 @@ function* forestTextures(scene: Phaser.Scene): Generator<void, void, void> {
   }
   register(scene, 'fchest', pack([{ name: 'shut', r: chestArt(false).render() }, { name: 'open', r: chestArt(true).render() }], CHEST_W, CHEST_H, 2), CHEST_W, CHEST_H);
   register(scene, 'menhir', pack(frameList(Array.from({ length: MENHIR_LOOKS }, (_, v) => menhirArt(v)), 'm'), MENHIR_W, MENHIR_H), MENHIR_W, MENHIR_H);
+  // The lookouts' parapet, and the streaks that run down the waterfalls.
+  register(scene, 'flook', pack([{ name: 'l0', r: lookoutArt().render() }], LOOKOUT_W, LOOKOUT_H, 1), LOOKOUT_W, LOOKOUT_H);
+  if (!scene.textures.exists('fall_flow')) scene.textures.addCanvas('fall_flow', toCanvas(FLOW_W, FLOW_H, fallFlow()));
   register(scene, 'fcamp', pack(frameList(Array.from({ length: CAMPFIRE.frames }, (_, f) => CAMPFIRE.draw(f)), 'c'), CAMPFIRE.w, CAMPFIRE.h), CAMPFIRE.w, CAMPFIRE.h);
   for (const layer of ['fcamp', 'fcamp_e']) {
     scene.anims.create({ key: `${layer}_burn`, frames: scene.anims.generateFrameNames(layer, { prefix: 'c', start: 0, end: CAMPFIRE.frames - 1 }), frameRate: CAMPFIRE.fps, repeat: -1 });

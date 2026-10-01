@@ -206,6 +206,8 @@ export class ForestBuild {
 
   /** Is the open forest floor at the middle of cell (cx, cy)? Not under a thicket's roof, nor in water unless `water` allows it. */
   private open(cx: number, cy: number, water?: PartDef['water']): boolean {
+    // Not on a cliff, its lip or its foot: things there would hang in the air or stand in the rock.
+    if (this.forest.gen.edgeAt((cx + 0.5) * CELL, (cy + 0.5) * CELL, 4)) return false;
     const s = this.forest.gen.sample((cx + 0.5) * CELL, (cy + 0.5) * CELL);
     if (s.roof > -9) return false;
     const wet = Math.max(s.stream, s.pond) > -1;
@@ -217,9 +219,11 @@ export class ForestBuild {
     const { w, h } = extent(p, turn);
     if (this.edits.occupied(p, fx, fy, w, h)) return false;
     const gen = this.forest.gen;
+    // All on one terrace.
+    const level = gen.levelAt((fx + 0.5) * CELL, (fy + 0.5) * CELL);
     for (let y = fy; y < fy + h; y++) {
       for (let x = fx; x < fx + w; x++) {
-        if (!this.open(x, y, p.water)) return false;
+        if (!this.open(x, y, p.water) || gen.levelAt((x + 0.5) * CELL, (y + 0.5) * CELL) !== level) return false;
         // Standing things keep off the forest's trunks, rocks and places (clear them first).
         if (!p.flat && p.water !== 'too' && !gen.walkable((x + 0.5) * CELL, (y + 0.5) * CELL)) return false;
       }
