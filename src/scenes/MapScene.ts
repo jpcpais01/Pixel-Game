@@ -29,8 +29,8 @@ import type { WorldScene } from './WorldScene';
 // In the Everwood it is the explorer's map: the forest on parchment, drawn
 // only where the hero has walked (game/trek.ts), its places pinned as
 // they're found. The scroll button beside it (or Tab) opens the whole map:
-// drag to look round, zoom in and out, and tap a campfire rested at to
-// travel back to it.
+// drag to look round, zoom in and out, and tap a campfire rested at, or a
+// shrine found, to travel back to it.
 
 /** The minimap's width across against the screen's short side, and folded. */
 const MINI = 0.25;
@@ -43,7 +43,7 @@ const TILE_MS = 2.5;
 const TILE_MS_OPEN = 10;
 /** Most monsters marked at once. */
 const MAX_MOBS = 80;
-/** How near (device px) a tap must land to a campfire to pick it. */
+/** How near (device px) a tap must land to a campfire or shrine to pick it. */
 const PICK = 22;
 /** Remembered: the minimap folded. */
 const FOLD_KEY = 'pixel-battle.minimap';
@@ -662,7 +662,8 @@ function everwoodPins(world: WorldScene, tm: TrekMap, x0: number, y0: number, x1
   for (const p of tm.places(x0, y0, x1, y1)) {
     if (!known(p.x, p.y)) continue;
     if (p.kind === 'campfire') out.push({ icon: trek.fires.has(p.id) ? 'campfire' : 'ember', x: p.x, y: p.y - 4, fire: trek.fires.has(p.id) ? p : undefined });
-    else out.push({ icon: POI_ICON[p.kind], x: p.x, y: p.y - 6 });
+    // A shrine is a place to travel to as soon as it's found.
+    else out.push({ icon: POI_ICON[p.kind], x: p.x, y: p.y - 6, fire: p.kind === 'shrine' ? p : undefined });
   }
   for (const s of trek.secrets) if (s.x >= x0 && s.x < x1 && s.y >= y0 && s.y < y1) out.push({ icon: s.kind, x: s.x, y: s.y });
   // What the player built: a pin for each chunk with anything in it, at its middle.
@@ -693,7 +694,7 @@ function everwoodPins(world: WorldScene, tm: TrekMap, x0: number, y0: number, x1
       }
     }
   }
-  // Campfires on top of the rest.
+  // Travel points on top of the rest.
   return out.sort((a, b) => Number(!!a.fire) - Number(!!b.fire));
 }
 
@@ -702,8 +703,8 @@ function everwoodPins(world: WorldScene, tm: TrekMap, x0: number, y0: number, x1
 /**
  * The whole explorer's map, open over the screen as a scroll of parchment
  * between two rods: dragged to look round, zoomed in and out, the names of
- * the woods written where they were walked, and every campfire rested at a
- * place to travel back to.
+ * the woods written where they were walked, and every campfire rested at
+ * and shrine found a place to travel back to.
  */
 class BigMap {
   private shade: Phaser.GameObjects.Graphics;
@@ -790,7 +791,7 @@ class BigMap {
     if (d.moved < 8 * D) this.tap(p.x, p.y);
   }
 
-  /** A tap on the sheet: picks the campfire nearest it (rested at, or built) if close enough, to travel to. */
+  /** A tap on the sheet: picks the travel point nearest it (a campfire rested at or built, a shrine found) if close enough. */
   private tap(x: number, y: number): void {
     let best: Fire | null = null;
     let near = PICK * D;
@@ -914,12 +915,12 @@ class BigMap {
     g.fillRect(m.x + 7 * u, m.y + 11 * u, 10 * u, 2 * u);
   }
 
-  /** The Travel button under the sheet, while a campfire is picked. */
+  /** The Travel button under the sheet, while a travel point is picked. */
   private layoutTravel(): void {
     this.travel?.destroy();
     this.travel = null;
     const f = this.picked;
-    this.hint.setText(f ? '' : trek.fires.size || builtFires(this.world) ? 'TAP A CAMPFIRE TO TRAVEL THERE' : 'REST AT A CAMPFIRE TO TRAVEL BACK LATER');
+    this.hint.setText(f ? '' : trek.fires.size || builtFires(this.world) || this.pins.some((p) => p.fire) ? 'TAP A CAMPFIRE OR SHRINE TO TRAVEL' : 'REST AT A CAMPFIRE TO TRAVEL BACK LATER');
     if (!f) return;
     const z = this.zoom;
     const b = new PixelButton(this.scene, 'TRAVEL HERE', 64, 16, BUTTON_GOLD, 'trektravel', () => {
