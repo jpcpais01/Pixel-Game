@@ -34,6 +34,11 @@ export interface UltDef {
   /** Aimed a way ('dir'), at a spot within `range` ('spot'), or cast where the hero stands ('self'). */
   aim: 'dir' | 'spot' | 'self';
   range?: number;
+  /**
+   * How long it lasts, in ms, for the HUD's timer, when that isn't the life of
+   * the effect it sets going (the mech's siege is the hero itself).
+   */
+  lasts?: number;
   pal: Pal;
   cast(c: Cast): void;
   icon: IconPainter;

@@ -1,3 +1,4 @@
+import { heroTimers } from './timers';
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
 import { CHEST_Y, FIGHTER_H, FIGHTER_ORIGIN_X, FIGHTER_ORIGIN_Y, FIGHTER_W, HIT_FRAME, LEAP_AIR } from '../art/fighter';
@@ -352,6 +353,7 @@ export class Fighter implements Hero {
     this.body.play(`${this.key}_barrage_${this.dir}`);
     this.flurry = new Flurry(this.world, BARRAGE_REACH, this.style.chi);
     this.barrageLeft = BARRAGE_TIME;
+    heroTimers.follow('barrage', 'ability', '', this.style.air.hot, () => (this.barrageLeft > 0 ? { left: this.barrageLeft, total: BARRAGE_TIME } : null));
     this.throwT = 0;
     this.hitT = HIT_EVERY * 0.5;
     this.throws = 0;
