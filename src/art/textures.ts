@@ -16,7 +16,7 @@ import { AEON_ICON, ANOMALY_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_
 import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, ORPHEUS_LOOK, VAGABOND_LOOK, WILD_LOOK, NOTE_SIZE, banjoIcon, drumIcon, guitarraIcon, luteIcon, lyreIcon, noteFrame, rhythmIcon, skinSongIcon, songIcon } from './bard';
 import { crossIcon, cutMark, dashIcon, katanaIcon } from './samurai';
 import { PUPPET_LOOKS, buildPuppetSheet, marionetteIcon, pirouetteIcon, puppetStrikeIcon, threadIcon } from './puppeteer';
-import { daggersIcon, ROGUE_ICONS, ROGUE_LOOKS, shadowstepIcon, smokeCanvas } from './rogue';
+import { daggersIcon, petalCanvas, ROGUE_ICONS, ROGUE_LOOKS, shadowstepIcon, smokeCanvas } from './rogue';
 import { gourdIcon, registerMoreSkinIcons, SKIN_BREWS, SKIN_QUIVERS } from './moreSkinIcons';
 import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, eclipseFallIcon, oathHammerIcon, pikeSaberIcon, seraphMaceIcon } from './heroSkins';
 import { hex } from './pixel';
@@ -249,7 +249,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
 
   yield;
   // Each rogue look's smoke and icons ('rogue', 'rogue_dancer' for the shadow
-  // dancer, and the skins' '_corsair' and '_kitsune').
+  // dancer, and the skins' '_corsair', '_kitsune' and '_nightbloom').
   for (const look of ROGUE_LOOKS) {
     const sfx = look.key.slice('rogue'.length);
     const icons = ROGUE_ICONS[look.key];
@@ -259,6 +259,8 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     scene.textures.addCanvas(`icon_daggers${sfx}`, toCanvas(16, 16, daggersIcon(icons.daggers)));
     scene.textures.addCanvas(`icon_shadowstep${sfx}`, toCanvas(16, 16, shadowstepIcon(icons.daggers, icons.dance)));
   }
+  // Nightbloom's moonflower petals, scattered by her shadow.
+  scene.textures.addCanvas('rogue_petal', toCanvas(5, 5, petalCanvas()));
 
   yield;
   // The necromancers' bolts use the spell orbs below ('orb_soul', 'orb_blood'); the dead
@@ -529,14 +531,15 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   register(scene, 'mech_bolt', pack(bolts, MECH_BOLT_SIZE, MECH_BOLT_SIZE), MECH_BOLT_SIZE, MECH_BOLT_SIZE);
   scene.textures.addCanvas('mech_reticle', toCanvas(13, 13, reticle()));
   // The Phantom's haunted things thrown ('haunt', by kind), the wisps ('soulwisp' and
-  // 'soulwisp_petal', flickering on a loop), the possession marks, the Dead of
+  // 'soulwisp_petal' and 'soulwisp_firefly', flickering on a loop), the possession marks, the Dead of
   // Night's dark, and the icons.
   register(scene, 'haunt', pack(HAUNT_KINDS.map((k) => ({ name: k, r: hauntFrame(k).render() })), HAUNT_SIZE, HAUNT_SIZE), HAUNT_SIZE, HAUNT_SIZE);
-  for (const [key, petal] of [['soulwisp', false], ['soulwisp_petal', true]] as const) {
-    register(scene, key, pack(frameList(Array.from({ length: WISP_FRAMES }, (_, f) => wispFrame(f, petal)), 'w'), WISP_SIZE, WISP_SIZE), WISP_SIZE, WISP_SIZE);
-    scene.anims.create({ key: `${key}_flicker`, frames: Array.from({ length: WISP_FRAMES }, (_, f) => ({ key, frame: `w${f}` })), frameRate: petal ? 8 : 12, repeat: -1 });
+  for (const [key, petal, fly] of [['soulwisp', false, false], ['soulwisp_petal', true, false], ['soulwisp_firefly', false, true]] as const) {
+    register(scene, key, pack(frameList(Array.from({ length: WISP_FRAMES }, (_, f) => wispFrame(f, petal, fly)), 'w'), WISP_SIZE, WISP_SIZE), WISP_SIZE, WISP_SIZE);
+    scene.anims.create({ key: `${key}_flicker`, frames: Array.from({ length: WISP_FRAMES }, (_, f) => ({ key, frame: `w${f}` })), frameRate: petal || fly ? 8 : 12, repeat: -1 });
   }
-  register(scene, 'possess_mark', pack([{ name: 'w', r: possessMark(false).render() }, { name: 'c', r: possessMark(true).render() }], POSSESS_MARK, POSSESS_MARK), POSSESS_MARK, POSSESS_MARK);
+  const possessMarks = [{ name: 'w', r: possessMark(false).render() }, { name: 'c', r: possessMark(true).render() }, { name: 'f', r: possessMark(false, true).render() }];
+  register(scene, 'possess_mark', pack(possessMarks, POSSESS_MARK, POSSESS_MARK), POSSESS_MARK, POSSESS_MARK);
   scene.textures.addCanvas('night_hole', toCanvas(128, 128, nightHole()));
   scene.textures.addCanvas('icon_hurl', toCanvas(16, 16, hurlIcon()));
   scene.textures.addCanvas('icon_rattle', toCanvas(16, 16, rattleIcon()));
@@ -546,6 +549,8 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_possess', toCanvas(16, 16, possessIcon()));
   scene.textures.addCanvas('icon_lantern_cala', toCanvas(16, 16, lanternIcon(true)));
   scene.textures.addCanvas('icon_possess_cala', toCanvas(16, 16, possessIcon(true)));
+  scene.textures.addCanvas('icon_lantern_firefly', toCanvas(16, 16, lanternIcon(false, true)));
+  scene.textures.addCanvas('icon_possess_firefly', toCanvas(16, 16, possessIcon(false, true)));
   // The Inventor's turret ('turret': unfolding 'b0'..'b4', turned 'h0'..'h7'
   // and firing 'f0'..'f7'), and its icons. The Engineer and the Scientist
   // themselves are hero sheets (see heroSheets.ts).

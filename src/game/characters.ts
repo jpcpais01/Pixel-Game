@@ -30,7 +30,7 @@ import { Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from '
 import { Arbalest } from './Arbalest';
 import { Windrunner } from './Windrunner';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
-import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
+import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
@@ -49,7 +49,7 @@ import { HIVE_KIT, SYNTH_KIT, Synth } from './Synth';
 import { MECH_H, MECH_ORIGIN_Y } from '../art/mech';
 import { SYNTH_H, SYNTH_ORIGIN_Y } from '../art/synth';
 import { POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
-import { CALA_KIT, WRAITH_KIT, Wraith } from './Wraith';
+import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT, Wraith } from './Wraith';
 import { POLTER_H, POLTER_ORIGIN_Y } from '../art/poltergeist';
 import { WRAITH_H, WRAITH_ORIGIN_Y } from '../art/wraith';
 import { ENGINEER_KIT, Engineer } from './Engineer';
@@ -964,11 +964,25 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_shadowstep_kitsune' },
             },
           },
+          {
+            // A moonflower dancer: indigo silk veils and sashes, moonflowers in her hair, petal blades of moonsilver.
+            id: 'nightbloom',
+            name: 'Nightbloom',
+            role: 'Dancer of the moonlit garden',
+            accent: 0xb8b0ff,
+            attack: 'Petal cuts',
+            special: 'Moonflower dance',
+            preview: { texture: 'rogue_nightbloom', glow: 'rogue_nightbloom_e', idle: 'rogue_nightbloom_idle_down', chosen: 'rogue_nightbloom_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
+            buttons: {
+              attack: { texture: 'icon_daggers_nightbloom' },
+              special: { texture: 'icon_shadowstep_nightbloom' },
+            },
+          },
         ],
       },
     ],
     spawn: (world, x, y, look) =>
-      new Rogue(world, x, y, look === 'dancer' ? DANCER_STYLE : look === 'kitsune' ? KITSUNE_STYLE : look === 'corsair' ? CORSAIR_STYLE : ROGUE_STYLE),
+      new Rogue(world, x, y, look === 'dancer' ? DANCER_STYLE : look === 'kitsune' ? KITSUNE_STYLE : look === 'nightbloom' ? NIGHTBLOOM_STYLE : look === 'corsair' ? CORSAIR_STYLE : ROGUE_STYLE),
   },
   {
     id: 'necromancer',
@@ -1787,12 +1801,27 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_possess_cala' },
             },
           },
+          {
+            // A gentle forest spirit: a mossy cloak trimmed with ferns and mushrooms, leafy hair, a wicker lantern of fireflies.
+            id: 'firefly',
+            name: 'Firefly',
+            role: 'Lantern-maiden of the deep wood',
+            accent: 0xd0ff70,
+            attack: 'Firefly lantern',
+            special: 'Mossbound possession',
+            preview: { texture: 'wraith_firefly', glow: 'wraith_firefly_e', idle: 'wraith_firefly_idle_down', chosen: 'wraith_firefly_cast_down', originY: WRAITH_ORIGIN_Y / WRAITH_H },
+            buttons: {
+              attack: { texture: 'icon_lantern_firefly' },
+              special: { texture: 'icon_possess_firefly' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
       if (look === 'wraith') return new Wraith(world, x, y, WRAITH_KIT);
       if (look === 'cala') return new Wraith(world, x, y, CALA_KIT);
+      if (look === 'firefly') return new Wraith(world, x, y, FIREFLY_KIT);
       return new Poltergeist(world, x, y, look === 'tea' ? TEA_KIT : POLTER_KIT);
     },
   },

@@ -5,10 +5,14 @@
 // drift: a painted sugar-skull face (flowers round the eyes, a heart for a
 // nose, a stitched smile), a crown of marigolds, a black lace veil, a
 // crimson gown embroidered with flowers and ruffled in black lace, fading to
-// mist, and a paper lantern glowing gold through its cut-outs.
+// mist, and a paper lantern glowing gold through its cut-outs. Its Firefly
+// skin is a gentle forest spirit rather than a dread one: a maiden in a mossy
+// hooded cloak trimmed with ferns and tiny mushrooms, open over a pale sage
+// gown, a soft face in the hood with long leafy hair spilling out of it, a
+// willow-wicker lantern full of fireflies, and fireflies drifting round her.
 //
 // Also here: the wisps it leaves (green soul-flames; marigold petals for the
-// Calavera) and the icons.
+// Calavera; fireflies for the Firefly) and the icons.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
 import { DIRS, type Dir } from './wizard';
@@ -29,6 +33,10 @@ export const WRAITH_CHEST_Y = 14;
 /** The idle moment's dissolve: how much later the top of it goes than the bottom (0 all at once), and its wisps. */
 const DISSOLVE_TOP = 0.6;
 const WISPS = 18;
+/** The fireflies always drifting round the Firefly: how many, and how far out. */
+const SWARM = 7;
+const SWARM_RX = 9;
+const SWARM_RY = 6;
 
 // ---------------------------------------------------------------------------
 // Materials
@@ -59,14 +67,32 @@ const EMBROIDERY: Material[] = [
 const PAPER: Material = { ramp: ramp('#6a0a38', '#b01e64', '#e04a8e', '#ff86b8'), outline: hex('#240414'), emissive: 0.2 };
 const GOLD_LIGHT: Material = { ramp: ramp('#ff9a2a', '#ffd860', '#fffbd0'), outline: hex('#5a2a06'), emissive: 1, noAO: true, noOutline: true };
 
+// The Firefly.
+const MOSS: Material = { ramp: ramp('#132414', '#1e3a1e', '#2e5428', '#46703a', '#62904c'), outline: hex('#07100a'), outlineLit: hex('#0f1e10') };
+const SAGE: Material = { ramp: ramp('#5a6a4a', '#8a9c74', '#b8c8a0', '#dce6c4', '#f2f6e2'), outline: hex('#1a2214'), outlineLit: hex('#2a3420') };
+const FERN: Material = { ramp: ramp('#1e5a1e', '#3a8a2a', '#6ab840', '#a0e060'), outline: hex('#0a200a'), noAO: true };
+const LEAF_HAIR: Material = { ramp: ramp('#3a4a1a', '#5e7a26', '#86a436', '#b4cc52', '#dcec84'), outline: hex('#141a08'), outlineLit: hex('#222e10') };
+const FAE_SKIN: Material = { ramp: ramp('#8a6a5c', '#c49c88', '#e8c8b4', '#f8e4d6', '#fff4ea'), outline: hex('#2e1e18'), outlineLit: hex('#4a3428') };
+const FAE_EYE: Material = { ramp: ramp('#14301a', '#1e4426'), outline: hex('#06100a'), noAO: true };
+const FAE_LIP: Material = { ramp: ramp('#a05a5a', '#c87a74'), outline: hex('#2e1e18'), noAO: true };
+const MUSH_CAP: Material = { ramp: ramp('#8a6a3a', '#c8a060', '#ecd4a0', '#fff2d0'), outline: hex('#2a1c0a'), shine: true, emissive: 0.15 };
+const MUSH_STALK: Material = { ramp: ramp('#8a8468', '#b8b090', '#e8e2c8'), outline: hex('#2a2618'), noAO: true };
+const WICKER: Material = { ramp: ramp('#3a2610', '#6a4a22', '#9a7438', '#c8a058'), outline: hex('#1a1006') };
+const FIREFLY: Material = { ramp: ramp('#8ac02a', '#d0f050', '#f6ffb0'), outline: hex('#2a4006'), emissive: 1, noAO: true, noOutline: true };
+/** The fireflies' light, for sparks. */
+const FLY_GLOW: RGB = [210, 255, 120];
+
 export interface WraithLook {
   key: string;
   calavera: boolean;
+  /** The Firefly: a forest maiden in a mossy cloak, a wicker lantern of fireflies. */
+  firefly?: boolean;
 }
 
 export const WRAITH_LOOK: WraithLook = { key: 'wraith', calavera: false };
 export const CALAVERA_LOOK: WraithLook = { key: 'wraith_cala', calavera: true };
-export const WRAITH_LOOKS = [WRAITH_LOOK, CALAVERA_LOOK];
+export const FIREFLY_LOOK: WraithLook = { key: 'wraith_firefly', calavera: false, firefly: true };
+export const WRAITH_LOOKS = [WRAITH_LOOK, CALAVERA_LOOK, FIREFLY_LOOK];
 
 let L: WraithLook = WRAITH_LOOK;
 
@@ -101,10 +127,12 @@ const base = (): WraithPose => ({ bob: 0, trail: 0, flutter: 0, swing: 0, lift: 
 function robe(c: PixelCanvas, cx: number, top: number, hem: number, p: WraithPose, view: View): void {
   const side = view === 'side';
   const cala = L.calavera;
-  const m = cala ? GOWN : ROBE;
+  const fly = !!L.firefly;
+  const m = cala ? GOWN : fly ? MOSS : ROBE;
   const edge = (y: number): [number, number] => {
     const u = (y - top) / (hem - top);
-    const hw = (side ? 3.4 : 4.3) + u * u * (side ? 2.2 : 2.4);
+    // The Firefly's cloak is narrow at the shoulders and flares to its hem.
+    const hw = fly ? (side ? 2.9 : 3.5) + u * u * (side ? 2.6 : 3.0) : (side ? 3.4 : 4.3) + u * u * (side ? 2.2 : 2.4);
     const back = side ? u * u * (1 + p.trail) : 0;
     return [cx - hw + back * 0.3, cx + hw + back];
   };
@@ -119,17 +147,22 @@ function robe(c: PixelCanvas, cx: number, top: number, hem: number, p: WraithPos
   c.part();
   const [l, r] = edge(hem);
   for (let x = Math.round(l); x < r; x++) {
-    const n = cala ? 3 : 1 + (((x * 7 + 3) % 3) + ((x + Math.round(p.flutter)) % 2));
+    const n = cala ? 3 : fly ? 1 + (hash(x, 7) > 0.45 ? 1 : 0) : 1 + (((x * 7 + 3) % 3) + ((x + Math.round(p.flutter)) % 2));
     for (let i = 1; i <= n; i++) {
       const y = Math.round(hem + i);
       const drift = side ? Math.round((i / n) * (0.5 + p.trail * 0.4)) : Math.round(Math.sin(x * 0.8 + p.flutter) * (i / n) * 0.8);
       if (cala) {
         if ((x + y + Math.round(p.flutter)) % (i < 2 ? 2 : 3) === 0) c.px(x + drift, y, GOWN_MIST, { x: 0, y: 0, z: 1 });
+      } else if (fly) {
+        // A fringe of little fern fronds.
+        c.px(x + drift, y, i === n ? FERN : MOSS, sphere(0, 0.3), { bias: i === n && (x & 1) ? 1 : 0 });
       } else if (i < n || x % 2 === 0) c.px(x + drift, y, i === n ? MIST : ROBE, sphere(0, -0.3));
     }
   }
   c.part();
-  if (cala) {
+  if (fly) {
+    fernTrim(c, cx, top, hem, edge, p, view);
+  } else if (cala) {
     // Embroidered flowers, and black lace ruffles.
     for (let y = Math.round(top + 2); y < hem; y += 3) {
       const [a, b] = edge(y);
@@ -152,6 +185,13 @@ function robe(c: PixelCanvas, cx: number, top: number, hem: number, p: WraithPos
 
 /** A wide sleeve from the shoulder to the hand, a bony hand at its end. */
 function sleeve(c: PixelCanvas, sx: number, sy: number, hx: number, hy: number): void {
+  if (L.firefly) {
+    // A soft bell sleeve with a fern cuff, a slender hand.
+    c.capsule(sx, sy, hx, hy - 0.8, 1.2, 1.6, MOSS);
+    c.px(Math.round(hx - 0.5), Math.round(hy - 0.6), FERN, sphere(0, 0.3));
+    c.ellipse(hx, hy + 0.3, 0.8, 0.85, FAE_SKIN);
+    return;
+  }
   c.capsule(sx, sy, hx, hy - 0.8, 1.4, L.calavera ? 1.2 : 1.9, L.calavera ? GOWN : ROBE);
   if (L.calavera) for (let a = -1; a <= 0; a++) c.px(Math.round(hx + a), Math.round(hy - 0.5), LACE_BLACK, { x: 0, y: -0.3, z: 0.9 });
   c.ellipse(hx, hy + 0.3, 0.9, 0.9, BONE);
@@ -161,6 +201,10 @@ function sleeve(c: PixelCanvas, sx: number, sy: number, hx: number, hy: number):
 function lantern(c: PixelCanvas, hx: number, hy: number, p: WraithPose): void {
   const lx = hx + p.swing;
   const ly = hy + 1.5 - p.lift;
+  if (L.firefly) {
+    wickerLantern(c, hx, hy, lx, ly, p);
+    return;
+  }
   c.part();
   c.line(hx, hy, lx, ly, L.calavera ? INK : IRON);
   c.part();
@@ -187,6 +231,10 @@ function lantern(c: PixelCanvas, hx: number, hy: number, p: WraithPose): void {
 
 /** The hood: a point falling back, and inside, dark, two eye-lights. */
 function hood(c: PixelCanvas, cx: number, cy: number, view: View, p: WraithPose): void {
+  if (L.firefly) {
+    faeHood(c, cx, cy, view, p);
+    return;
+  }
   c.part();
   const side = view === 'side';
   c.ellipse(cx + (side ? 0.7 : 0), cy, side ? 3.8 : 4.2, 4.1, ROBE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
@@ -268,6 +316,151 @@ function veil(c: PixelCanvas, cx: number, cy: number, view: View): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// The Firefly
+
+/** A tiny mushroom: a cream cap (`big`: three wide with a crown) on a pale stalk, its foot at (x, y). */
+function mushroom(c: PixelCanvas, x: number, y: number, big = false): void {
+  c.part();
+  c.px(x, y, MUSH_STALK, sphere(0, 0.2));
+  c.px(x, y - 1, MUSH_CAP, sphere(0.1, -0.2));
+  c.px(x - 1, y - 1, MUSH_CAP, sphere(-0.6, 0));
+  if (big) {
+    c.px(x + 1, y - 1, MUSH_CAP, sphere(0.6, 0.1));
+    c.px(x, y - 2, MUSH_CAP, sphere(0, -0.7));
+  }
+}
+
+/**
+ * The cloak open over her gown: a panel of sage widening to the hem with ferns
+ * along its edges, a fern ribbon under the bust, moss speckled lighter, and
+ * mushrooms growing at the hem.
+ */
+function fernTrim(c: PixelCanvas, cx: number, top: number, hem: number, edge: (y: number) => [number, number], p: WraithPose, view: View): void {
+  const side = view === 'side';
+  // The moss: here and there a tuft a shade lighter.
+  for (let y = Math.round(top); y <= hem; y++) {
+    const [l, r] = edge(y);
+    for (let x = Math.round(l); x < r; x++) if (c.filled(x, y) && hash(x, y) > 0.86) c.shade(x, y, 1);
+  }
+  if (view !== 'up') {
+    for (let y = Math.round(top + 2); y <= hem; y++) {
+      const u = (y - top) / (hem - top);
+      const [l] = edge(y);
+      const a = side ? l + 0.3 : cx - 0.5 - (0.5 + u * 2.3);
+      const b = side ? l + 1.3 + u * 1.3 : cx - 0.5 + (0.5 + u * 2.3);
+      for (let x = Math.round(a); x < Math.round(b); x++) {
+        if (c.filled(x, y)) c.px(x, y, SAGE, sphere(((x + 0.5 - a) / Math.max(1, b - a)) * 1.4 - 0.7, -0.1 + u * 0.4, 1));
+      }
+      // Fern leaflets along the cloak's open edges, swaying a little.
+      if ((y + Math.round(p.flutter)) % 2 === 0) {
+        if (!side) c.px(Math.round(a) - 1, y, FERN, sphere(-0.4, 0), { bias: (y >> 1) & 1 });
+        c.px(Math.round(b), y, FERN, sphere(0.4, 0), { bias: (y >> 1) & 1 });
+      }
+    }
+  }
+  // A ribbon of fern green under the bust.
+  const ry = Math.round(top + 3);
+  const [rl, rr] = edge(ry);
+  for (let x = Math.round(rl); x < rr; x++) if (c.filled(x, ry)) c.px(x, ry, FERN, cyl(((x + 0.5 - rl) / (rr - rl)) * 2 - 1, 0.3), { bias: -1 });
+  // Mushrooms at the hem.
+  const [hl, hr] = edge(hem);
+  if (side) mushroom(c, Math.round(hr - 2), Math.round(hem), true);
+  else {
+    mushroom(c, Math.round(hl + 1.5), Math.round(hem), true);
+    mushroom(c, Math.round(hr - 2), Math.round(hem - 1));
+  }
+}
+
+/** A long lock of leafy hair, from (x0, y0) to (x1, y1), its leaves catching the light. */
+function leafLock(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
+  c.part();
+  c.capsule(x0, y0, x1, y1, 1.15, 0.8, LEAF_HAIR);
+  c.part();
+  const n = Math.round(y1 - y0);
+  const out = x1 >= x0 ? 1 : -1;
+  for (let i = 1; i < n; i += 2) {
+    const t = i / n;
+    c.px(x0 + (x1 - x0) * t + out * ((i >> 1) & 1 ? 1 : -0.2), y0 + (y1 - y0) * t, LEAF_HAIR, sphere(out * 0.4, -0.4), { bias: 1 });
+  }
+  c.px(x1, y1 + 1, FERN, sphere(0, 0.4));
+}
+
+/** The Firefly's hood: moss, a fern sprig at its point, mushrooms on it, and her face inside, framed in leafy hair. */
+function faeHood(c: PixelCanvas, cx: number, cy: number, view: View, p: WraithPose): void {
+  const side = view === 'side';
+  c.part();
+  c.ellipse(cx + (side ? 0.7 : 0), cy, side ? 3.7 : 4.0, 4.0, MOSS, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  const tx = cx + (side ? 3.6 : 1.0 - p.tilt * 2.2);
+  const ty = cy - 4.8 + Math.abs(p.tilt) * 0.8;
+  c.capsule(cx + (side ? 1.6 : 0.3), cy - 3, tx, ty, 1.6, 0.7, MOSS);
+  c.part();
+  // A fern sprig at the point, and mushrooms on the hood's side.
+  c.px(tx, ty - 1, FERN, sphere(0, -0.5));
+  c.px(tx + 1, ty - 2, FERN, sphere(0.3, -0.6), { bias: 1 });
+  c.px(tx - 1, ty - 1, FERN, sphere(-0.3, -0.4));
+  mushroom(c, Math.round(cx + (side ? 2.6 : -3.2)), Math.round(cy - 1.4), true);
+  if (!side) mushroom(c, Math.round(cx - 2), Math.round(cy - 2.6));
+  if (view === 'up') return;
+  const ox = side ? cx - 1.8 : cx;
+  c.part();
+  c.ellipse(ox, cy + 0.7, side ? 1.8 : 2.6, 2.8, FAE_SKIN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.7, 1) });
+  // Ferns round the hood's opening.
+  c.part();
+  for (let i = 0; i < 9; i++) {
+    const a = Math.PI * 0.1 + (i / 8) * Math.PI * 0.8;
+    if (side && Math.cos(a) > 0) continue;
+    c.px(Math.round(ox - 0.5 - Math.cos(a) * (side ? 2.0 : 3.1)), Math.round(cy + 0.6 - Math.sin(a) * 3.2), FERN, sphere(-Math.cos(a) * 0.5, 0.2), { bias: i & 1 });
+  }
+  // A fringe of leafy hair swept across her brow.
+  c.part();
+  const f0 = Math.round(cy - 2);
+  c.shape(f0, f0 + 1, (y) => (y === f0 ? [ox - 2.8, ox + 2.8] : side ? [ox - 1.6, ox + 1.8] : [ox - 2.8, ox + 0.4]), LEAF_HAIR, (x, _y, t) => sphere(t * 0.8, -0.4 + (x & 1 ? 0.2 : 0), 1));
+  for (const [ex, ey] of eyeSpots(ox, cy, side, p.tilt)) c.px(ex, ey, FAE_EYE);
+  c.px(Math.round(ox - (side ? 1.4 : 0.5)), Math.round(cy + 2.4), FAE_LIP, sphere(0, 0.2));
+  // Long leafy locks spilling out of the hood over her shoulders.
+  if (side) leafLock(c, ox + 1.4, cy + 1, ox + 2, cy + 8);
+  else for (const s of [-1, 1]) leafLock(c, ox + s * 2.8, cy + 1, ox + s * 3.3 + p.tilt * 0.3, cy + 8);
+}
+
+/** The willow-wicker lantern: a basket woven loose, fireflies glowing through the gaps, a willow leaf on its loop. */
+function wickerLantern(c: PixelCanvas, hx: number, hy: number, lx: number, ly: number, p: WraithPose): void {
+  c.part();
+  c.line(hx, hy, lx, ly + 0.5, WICKER);
+  c.px(Math.round(hx + (lx - hx) * 0.5 + 0.5), Math.round(hy + (ly - hy) * 0.5) + 1, FERN, sphere(0.3, 0.4));
+  c.part();
+  c.ellipse(lx, ly + 2.9, 2.2, 2.5, WICKER, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.7, 1) });
+  c.part();
+  const glow = 0.5 + p.blaze * 0.5;
+  for (let y = Math.round(ly + 1.5); y <= ly + 4.4; y++) {
+    for (let x = Math.round(lx - 1.6); x <= lx + 1.1; x++) if (((x + y) & 1) === 0 && c.filled(x, y)) c.px(x, y, FIREFLY, { x: 0, y: 0, z: 1 }, { glow });
+  }
+  c.ellipse(lx, ly + 0.6, 1.6, 0.6, WICKER, { flatten: 0.5 });
+  c.px(Math.round(lx - 0.5), Math.round(ly + 5.4), WICKER, sphere(0, 0.6));
+  // Fireflies slipping out of the weave, and its soft glow.
+  for (let i = 0; i < 3; i++) {
+    const a = p.flutter * 1.3 + i * 2.1;
+    c.spark(lx + Math.cos(a) * 3.4, ly + 2.2 + Math.sin(a) * 2.6 - i * 0.6, FLY_GLOW, 0.5 + p.blaze * 0.4);
+  }
+  for (let a = 0; a < 10; a++) {
+    const q = (a / 10) * Math.PI * 2;
+    c.spark(lx + Math.cos(q) * 3.2, ly + 2.8 + Math.sin(q) * 3.2, FLY_GLOW, 0.08 + p.blaze * 0.15);
+  }
+}
+
+/** Fireflies drifting round her, each on its own slow loop, some dark between blinks. */
+function swarm(c: PixelCanvas, cx: number, top: number, p: WraithPose): void {
+  c.part();
+  for (let i = 0; i < SWARM; i++) {
+    if ((i + Math.round(p.flutter)) % 4 === 0) continue;
+    const a = hash(i, 3) * Math.PI * 2 + p.flutter * (0.35 + hash(i, 5) * 0.3);
+    const x = Math.round(cx + Math.cos(a) * SWARM_RX * (0.7 + hash(i, 11) * 0.3));
+    const y = Math.round(top + 2 + Math.sin(a * 1.3) * SWARM_RY * (0.6 + hash(i, 17) * 0.4) - hash(i, 23) * 4);
+    c.px(x, y, FIREFLY, { x: 0, y: 0, z: 1 }, { glow: 0.9 });
+    c.spark(x, y, FLY_GLOW, 0.35);
+  }
+}
+
 function drawFigure(c: PixelCanvas, p: WraithPose, view: View): void {
   const side = view === 'side';
   const cala = L.calavera;
@@ -288,6 +481,7 @@ function drawFigure(c: PixelCanvas, p: WraithPose, view: View): void {
   }
   c.part();
   robe(c, cx + (side ? p.lean * 0.4 : 0), top, hem, p, view);
+  if (L.firefly && view === 'up') leafLock(c, cx + p.tilt, headY + 2, cx + p.tilt + 0.4, top + 8);
   if (cala && view === 'down') {
     c.part();
     for (const s of [-1, 1]) c.capsule(cx + s * 3.6, headY + 1, cx + s * 4.4, top + 2, 0.9, 1.3, LACE_BLACK);
@@ -303,11 +497,12 @@ function drawFigure(c: PixelCanvas, p: WraithPose, view: View): void {
   else hood(c, headX, headY, view, p);
   if (p.fade > 0) dissolve(c, cx, headY, hem, p);
   if (view !== 'up') lantern(c, hx, hy, p);
+  if (L.firefly) swarm(c, cx, top, p);
 }
 
 /**
- * The idle moment: the body coming apart into wisps (green soul-flame, or
- * marigold petals for the Calavera), the bottom going first, until only the
+ * The idle moment: the body coming apart into wisps (green soul-flame,
+ * marigold petals for the Calavera, fireflies for the Firefly), the bottom going first, until only the
  * eyes hang in the air by the lantern; drawn backwards it gathers again.
  */
 function dissolve(c: PixelCanvas, cx: number, headY: number, hem: number, p: WraithPose): void {
@@ -338,6 +533,10 @@ function dissolve(c: PixelCanvas, cx: number, headY: number, hem: number, p: Wra
     if (cala) {
       c.px(x, y, i % 3 === 0 ? PETAL_PINK : MARIGOLD, { x: 0, y: 0.3, z: 0.9 });
       c.spark(x, y, [255, 200, 90], 0.25);
+    } else if (L.firefly) {
+      // She comes apart into fireflies.
+      c.px(x, y, FIREFLY, { x: 0, y: 0, z: 1 }, { glow: 0.8 });
+      c.spark(x, y, FLY_GLOW, 0.3);
     } else {
       c.px(x, y, SOUL, { x: 0, y: 0, z: 1 }, { glow: 0.55 });
       // A faint tail of mist below each, where it came from.
@@ -351,9 +550,9 @@ function dissolve(c: PixelCanvas, cx: number, headY: number, hem: number, p: Wra
   const eyes: [number, number][] = cala
     ? [-1.5, 1.5].map((dx) => [Math.round(hx + dx - 0.5), Math.round(headY + (Math.sign(dx) === Math.sign(p.tilt) ? 1 : 0) + 0.3)])
     : eyeSpots(hx, headY, false, p.tilt);
-  const col: RGB = cala ? [255, 210, 110] : [110, 255, 190];
+  const col: RGB = cala ? [255, 210, 110] : L.firefly ? FLY_GLOW : [110, 255, 190];
   for (const [ex, ey] of eyes) {
-    c.px(ex, ey, cala ? GOLD_LIGHT : SOUL, { x: 0, y: 0, z: 1 }, { glow: 1, bias: 2 });
+    c.px(ex, ey, cala ? GOLD_LIGHT : L.firefly ? FIREFLY : SOUL, { x: 0, y: 0, z: 1 }, { glow: 1, bias: 2 });
     // With the body gone they burn a little bigger: a soft halo round each.
     c.spark(ex, ey, col, 0.3 + p.fade * 0.5);
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(ex + dx, ey + dy, col, p.fade * 0.3);
@@ -501,13 +700,27 @@ export function buildWraithFrames(look: WraithLook = WRAITH_LOOK): WraithFrame[]
 }
 
 // ---------------------------------------------------------------------------
-// The wisps: a soul-flame flickering (frames 0-3), or a marigold petal turning.
+// The wisps: a soul-flame flickering (frames 0-3), a marigold petal turning, or a firefly blinking.
 
 export const WISP_SIZE = 10;
 export const WISP_FRAMES = 4;
 
-export function wispFrame(f: number, petal: boolean): PixelCanvas {
+export function wispFrame(f: number, petal: boolean, fly = false): PixelCanvas {
   const c = new PixelCanvas(WISP_SIZE, WISP_SIZE);
+  if (fly) {
+    // A firefly: a dark little body, wings beating, its tail glowing brighter and dimmer.
+    c.px(5, 3, FAE_EYE);
+    c.px(5, 4, WICKER, sphere(0, -0.3));
+    c.part();
+    const up = f % 2 === 0;
+    c.px(4, up ? 3 : 4, SAGE, sphere(-0.5, -0.5), { glow: 0.3 });
+    c.px(6, up ? 3 : 4, SAGE, sphere(0.5, -0.5), { glow: 0.3 });
+    c.part();
+    const lit = [1, 0.75, 0.45, 0.8][f];
+    c.ellipse(5.5, 6.4, 1.2, 1.4, FIREFLY, { glow: lit });
+    for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(5 + dx, 6 + dy, FLY_GLOW, lit * (dx || dy ? 0.35 : 0.8));
+    return c;
+  }
   if (petal) {
     // A petal turning over: wide, edge-on, and back.
     const w = [2.6, 1.6, 0.8, 1.6][f];
@@ -530,18 +743,26 @@ export function wispFrame(f: number, petal: boolean): PixelCanvas {
 
 const WRAITH_TONES: Tones = [hex('#e0fff4'), hex('#7af0c0'), hex('#2ab888'), hex('#0e4a3a')];
 const CALA_TONES: Tones = [hex('#fffbd0'), hex('#ffd860'), hex('#ff9a2a'), hex('#a0400a')];
+const FLY_TONES: Tones = [hex('#fbffd8'), hex('#e4ff8a'), hex('#a8e04a'), hex('#2e5a22')];
 
 /** The lantern's swing: a lantern at the end of its arc, wisps left behind it. */
-export function lanternIcon(cala = false): Uint8ClampedArray {
-  const t = cala ? CALA_TONES : WRAITH_TONES;
-  const frame: RGB = cala ? hex('#ff62a8') : hex('#545a70');
+export function lanternIcon(cala = false, fly = false): Uint8ClampedArray {
+  const t = fly ? FLY_TONES : cala ? CALA_TONES : WRAITH_TONES;
+  const frame: RGB = fly ? hex('#9a7438') : cala ? hex('#ff62a8') : hex('#545a70');
   return icon16((put) => {
     for (let i = 0; i <= 10; i++) {
       const a = Math.PI * (0.1 + (i / 10) * 0.7);
       put(8 + Math.cos(a) * 7, 2 + Math.sin(a) * 7, t[3]);
     }
     seg(put, 8, 1, 11, 6, hex('#34384a'));
-    for (let y = 7; y <= 12; y++) for (let x = 9; x <= 13; x++) put(x, y, x === 9 || x === 13 || y === 7 || y === 12 ? frame : y < 9 ? t[0] : t[1]);
+    for (let y = 7; y <= 12; y++) {
+      for (let x = 9; x <= 13; x++) {
+        const rim = x === 9 || x === 13 || y === 7 || y === 12;
+        // The Firefly's wicker: woven across, the light showing through every other gap.
+        if (fly && !rim) put(x, y, (x + y) % 2 ? frame : y < 10 ? t[0] : t[1]);
+        else put(x, y, rim ? frame : y < 9 ? t[0] : t[1]);
+      }
+    }
     for (const [x, y] of [[3, 7], [2, 11], [5, 13]]) {
       put(x, y, t[1]);
       put(x, y - 1, t[2]);
@@ -550,8 +771,8 @@ export function lanternIcon(cala = false): Uint8ClampedArray {
 }
 
 /** Possess: a ghostly figure diving head-first into a dark shape. */
-export function possessIcon(cala = false): Uint8ClampedArray {
-  const t = cala ? CALA_TONES : WRAITH_TONES;
+export function possessIcon(cala = false, fly = false): Uint8ClampedArray {
+  const t = fly ? FLY_TONES : cala ? CALA_TONES : WRAITH_TONES;
   return icon16((put) => {
     // The foe: a dark mound, its eyes lit by the ghost inside.
     for (let y = 8; y <= 15; y++) for (let x = 6; x <= 15; x++) if ((x - 10.5) ** 2 / 20 + (y - 13) ** 2 / 25 <= 1) put(x, y, hex('#2a2e3a'));
@@ -564,17 +785,35 @@ export function possessIcon(cala = false): Uint8ClampedArray {
     put(8, 8, t[0]);
     put(0, 3, t[3]);
     put(3, 0, t[3]);
+    if (fly) {
+      // Fireflies scattered off the dive.
+      for (const [x, y] of [[5, 2], [1, 6], [4, 5], [12, 3]]) put(x, y, t[0]);
+    }
   });
 }
 
 // ---------------------------------------------------------------------------
 // A possessed foe wears a mark over its face: two soul-lights burning in it,
-// or (for the Calavera) a little painted sugar skull. Frames 'w' and 'c'.
+// or (for the Calavera) a little painted sugar skull, or (for the Firefly) a
+// wreath of fern with two fireflies for eyes. Frames 'w', 'c' and 'f'.
 
 export const MARK_SIZE = 9;
 
-export function possessMark(cala: boolean): PixelCanvas {
+export function possessMark(cala: boolean, fly = false): PixelCanvas {
   const c = new PixelCanvas(MARK_SIZE, MARK_SIZE);
+  if (fly) {
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      if (Math.sin(a) > 0.8) continue;
+      c.px(4.5 + Math.cos(a) * 3.6, 4.5 + Math.sin(a) * 3.6, FERN, sphere(Math.cos(a) * 0.5, Math.sin(a) * 0.5), { bias: i & 1 });
+    }
+    c.part();
+    for (const ex of [3, 6]) {
+      c.px(ex, 4, FIREFLY, { x: 0, y: 0, z: 1 }, { glow: 1 });
+      c.spark(ex, 4, FLY_GLOW, 0.7);
+    }
+    return c;
+  }
   if (cala) {
     c.ellipse(4.5, 4.5, 3.6, 3.8, SKULL);
     c.part();

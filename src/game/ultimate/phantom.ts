@@ -16,7 +16,9 @@ import type { Cast } from './types';
 //    lantern. Every foe out in the dark near it is frozen with fear, the dread
 //    gnawing at it, until the lantern flares and burns everything in its
 //    light. The Calavera's night is a candlelit procession: warm dusk, a ring
-//    of candles floating round her and marigold petals falling.
+//    of candles floating round her and marigold petals falling. The
+//    Firefly's is Thousand Fireflies: a deep green forest dusk, a swarm of
+//    fireflies wheeling round her, blinking, and rising out of the grass.
 
 const HOUSE_MS = 4000;
 const HOUSE_R = 46;
@@ -33,6 +35,12 @@ const NIGHT_FLARE_R = 120;
 const NIGHT_FLARE_DAMAGE = 24;
 /** How big the dark's hole of lantern light is drawn. */
 const NIGHT_SCALE = 3.8;
+/** The Firefly's swarm: how many wheel round her, and how far out. */
+const SWARM_FLIES = 28;
+const SWARM_R = 64;
+/** Her dusk: a deep forest green, and how deep it falls. */
+const FOREST_DUSK = 0x0a1a10;
+const FOREST_DEPTH = 0.55;
 
 const inside = (h: Hurtbox, x: number, y: number, r: number): boolean => {
   const dx = (h.x - x) / (r + h.radius);
@@ -200,6 +208,8 @@ export class DeadOfNight extends Fx {
   private rim: Phaser.GameObjects.Graphics;
   private lamp: Phaser.GameObjects.Light;
   private candles: Ink | null = null;
+  private flies: Ink | null = null;
+  private firefly: boolean;
   private tickT = 0;
   private cala: boolean;
   private flared = false;
@@ -213,12 +223,14 @@ export class DeadOfNight extends Fx {
   ) {
     super(world, NIGHT_MS + 500);
     this.cala = c.look === 'cala';
+    this.firefly = c.look === 'firefly';
     this.ghost = !!(world as unknown as { __ghost?: boolean }).__ghost;
-    const tint = this.cala ? 0x3a1420 : 0x000000;
+    const tint = this.cala ? 0x3a1420 : this.firefly ? FOREST_DUSK : 0x000000;
     this.dark = this.own(world.add.image(c.hero.x, c.hero.y, 'night_hole').setScale(NIGHT_SCALE).setDepth(9500).setTint(tint).setAlpha(0));
     this.rim = this.own(world.add.graphics().setDepth(9500));
     this.lamp = this.light(c.hero.x, c.hero.y, 110, c.pal.light, 0);
     if (this.cala) this.candles = this.ink(150, 110);
+    if (this.firefly) this.flies = this.ink(SWARM_R * 2 + 30, SWARM_R + 60);
     sound.wail(world.pan(c.hero.x));
   }
 
@@ -230,13 +242,13 @@ export class DeadOfNight extends Fx {
     const y = h.y - 12;
     const on = this.t < NIGHT_MS;
     const k = on ? clamp01(this.t / 450) : 1 - clamp01((this.t - NIGHT_MS) / 450);
-    const depth = this.ghost ? 0 : this.cala ? 0.45 : 0.8;
+    const depth = this.ghost ? 0 : this.cala ? 0.45 : this.firefly ? FOREST_DEPTH : 0.8;
     this.dark.setPosition(Math.round(x), Math.round(y)).setAlpha(k * depth);
     // Past the image's edges the dark carries on, to cover the whole view.
     const half = (128 * NIGHT_SCALE) / 2;
     const cam = w.cameras.main.worldView;
     const g = this.rim.clear();
-    g.fillStyle(this.cala ? 0x3a1420 : 0x000000, k * depth);
+    g.fillStyle(this.cala ? 0x3a1420 : this.firefly ? FOREST_DUSK : 0x000000, k * depth);
     const l = x - half;
     const r = x + half;
     const t = y - half;
@@ -261,6 +273,25 @@ export class DeadOfNight extends Fx {
       }
       cg.end();
       if (Math.floor(this.t / 140) !== Math.floor((this.t - dt) / 140) && on) w.debris([0xffb030, 0xf07a14, 0xffe070], x + (Math.random() - 0.5) * 160, y - 40, 1, y + 40, 'spores');
+    }
+
+    if (this.flies) {
+      // Fireflies wheeling round her, each on its own loop and height, blinking in turn.
+      const fg = this.flies.begin(x, y + 12, y + 60);
+      for (let i = 0; i < SWARM_FLIES; i++) {
+        const r = SWARM_R * (0.35 + ((i * 37) % 64) / 100);
+        const q = (i / SWARM_FLIES) * Math.PI * 2 + this.t * (0.0005 + (i % 5) * 0.00012) * (i % 2 ? 1 : -1);
+        const fx = x + Math.cos(q) * r;
+        const fy = y + 12 + Math.sin(q) * r * GROUND - 10 - ((i * 13) % 14) + Math.sin(this.t * 0.003 + i) * 3;
+        const blink = Math.sin(this.t * 0.006 + i * 1.7);
+        if (blink < -0.3) continue;
+        const a = k * (0.5 + blink * 0.5);
+        fg.put(fx, fy, blink > 0.6 ? p.core : p.hot, a);
+        fg.put(fx + 1, fy, p.mid, a * 0.5);
+        fg.put(fx, fy + 1, p.mid, a * 0.5);
+      }
+      fg.end();
+      if (Math.floor(this.t / 120) !== Math.floor((this.t - dt) / 120) && on) w.debris([p.hot, p.mid, p.core], x + (Math.random() - 0.5) * 150, h.y + (Math.random() - 0.5) * 40, 1, h.y + 40, 'spores');
     }
 
     if (on) {

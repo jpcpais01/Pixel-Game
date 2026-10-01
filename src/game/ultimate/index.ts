@@ -34,7 +34,7 @@ import { HIVE_KIT, SYNTH_KIT } from '../Synth';
 import { SIEGE_MS, SwarmProtocol } from './robot';
 import { DeadOfNight, HauntedHouse } from './phantom';
 import { POLTER_KIT, TEA_KIT } from '../Poltergeist';
-import { CALA_KIT, WRAITH_KIT } from '../Wraith';
+import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT } from '../Wraith';
 import { ENGINEER_KIT } from '../Engineer';
 import { EINSTEIN_KIT, SCIENTIST_KIT } from '../Scientist';
 import { chainReaction, megaSentry } from './inventor';
@@ -472,6 +472,7 @@ const SKINS: Record<string, UltSkin> = {
   'archer:hunt': { name: 'Moonpiercer', pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
   'rogue:corsair': { name: 'Broadside', pal: pal(0xfffbe0, 0xffe08a, 0xe0a030, 0x8a5018, 0xffc050) },
   'rogue:kitsune': { name: 'Nine-Tail Eclipse', pal: pal(0xf4fbff, 0xa8e0ff, 0x4a9cff, 0x1a3aa0, 0x70b0ff), type: 'dancer' },
+  'rogue:nightbloom': { name: 'Moonflower Waltz', pal: pal(0xffffff, 0xe4e8fa, 0x8a7ef0, 0x241a6a, 0xc8c0ff), type: 'dancer' },
   'archer:storm': { name: 'Thunder Arrow', pal: pal(0xf2fbff, 0xa8e4ff, 0x5ec8ff, 0x3a6ad8, 0x8ad8ff) },
   'chronomancer:moon': { name: 'Moonstill', pal: MOON_PAL },
   'chronomancer:aeon': { name: 'Aeon Legion', pal: AEON_PAL, type: 'paradox' },
@@ -513,6 +514,7 @@ const SKINS: Record<string, UltSkin> = {
   'automaton:hive': { name: 'The Golden Swarm', pal: HIVE_KIT.pal, type: 'synth' },
   'phantom:tea': { name: 'Endless Tea Party', pal: TEA_KIT.pal },
   'phantom:cala': { name: 'Candlelit Procession', pal: CALA_KIT.pal, type: 'wraith' },
+  'phantom:firefly': { name: 'Thousand Fireflies', pal: FIREFLY_KIT.pal, type: 'wraith' },
   'inventor:einstein': { name: 'E = mc²', pal: EINSTEIN_KIT.pal, type: 'scientist' },
   'beast:benfica': { name: 'Flight of Victory', pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { name: 'Roar of Alvalade', pal: SPORTING_KIT.pal, type: 'lion' },
