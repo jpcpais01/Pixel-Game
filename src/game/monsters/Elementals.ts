@@ -87,6 +87,8 @@ export interface LobSpec {
   ringTint: number;
   /** Spins as it flies. */
   spin?: number;
+  /** Drawn this many times its size. */
+  scale?: number;
   onLand?: (x: number, y: number) => void;
 }
 
@@ -107,7 +109,7 @@ export class Lob implements Effect {
     private s: LobSpec,
   ) {
     const add = world.add;
-    this.body = add.image(s.sx, s.sy - s.lift, s.texture, s.frame).setVisible(false);
+    this.body = add.image(s.sx, s.sy - s.lift, s.texture, s.frame).setVisible(false).setScale(s.scale ?? 1);
     if (s.lit) this.body.setPipeline('Lit');
     else {
       this.body.setBlendMode(Phaser.BlendModes.ADD);

@@ -4,6 +4,9 @@ const SPARKLE = [2093, 2349, 2637, 3136, 3520, 4186]; // C major pentatonic, hig
 /** The minstrel's tune, one note per strum (MIDI, D dorian): his attacks play it through. */
 const LUTE_TUNE = [62, 65, 69, 67, 65, 64, 62, 57, 62, 69, 67, 72, 69, 65, 67, 62];
 
+/** The Aurora Colosseum's frost sounds (see Sfx.frost). */
+export type FrostSound = 'crack' | 'freeze' | 'howl' | 'chime' | 'crunch' | 'gust';
+
 /** One-shot game sounds. `pan` is -1 (left) .. 1 (right) on screen. */
 export class Sfx {
   private m: Mixer;
@@ -2479,6 +2482,98 @@ export class Sfx {
     vib.start(t);
     vib.stop(t + 0.6);
     this.burstNoise(out, t, 'highpass', 3000, 5000, 1, 0.08, 0.2);
+  }
+
+  /**
+   * The Aurora Colosseum's frost, by kind:
+   *   crack:  ice splitting (a spike erupting, a footstep on the lake)
+   *   freeze: a crystalline shimmer over a hiss (frost spreading, a chill)
+   *   howl:   a wolf's long howl (`big`: a great wolf's)
+   *   chime:  a bright clink of ice (a dart shattering)
+   *   crunch: a heavy footfall in packed snow (`big`: a giant's)
+   *   gust:   a blast of freezing wind
+   */
+  frost(t: number, kind: FrostSound, pan: number, big: boolean): void {
+    const ctx = this.m.ctx;
+    switch (kind) {
+      case 'crack': {
+        const out = this.out(pan, big ? 0.9 : 0.6, 0.35);
+        // A sharp split, a few splinters, and a low settle under it.
+        this.burstNoise(out, t, 'highpass', 2600, 1400, 0.8, 0.5, 0.05);
+        for (let i = 0; i < 4; i++) this.burstNoise(out, t + 0.012 + i * rand(0.01, 0.03), 'bandpass', rand(3200, 6000), rand(2000, 3500), 6, 0.22, 0.04);
+        this.chirp(filter(ctx, 'lowpass', 800, 1, out), t, 'triangle', big ? 120 : 180, 60, big ? 0.35 : 0.2, 0.18);
+        this.bell(out, t + 0.02, rand(2400, 2800), 0.02, 0.25);
+        break;
+      }
+      case 'freeze': {
+        const out = this.out(pan, 0.55, 0.6);
+        // Glassy tones climbing over a soft hiss of frost spreading.
+        for (let i = 0; i < 5; i++) this.bell(out, t + i * 0.045, 1800 + i * 420 + rand(-40, 40), 0.018, 0.4);
+        const g = gain(ctx, 0, out);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.12, t + 0.08);
+        g.gain.setTargetAtTime(0, t + 0.2, 0.15);
+        const hp = filter(ctx, 'highpass', 5000, 0.7, g);
+        sweep(hp.frequency, t, 3500, 7000, 0.5);
+        const src = this.m.noiseSource();
+        src.connect(hp);
+        this.m.startNoise(src, t, 0.7);
+        break;
+      }
+      case 'howl': {
+        const dur = big ? 1.6 : 1.05;
+        const out = this.out(pan, big ? 0.7 : 0.45, 0.75);
+        const g = gain(ctx, 0, filter(ctx, 'lowpass', big ? 1500 : 2200, 2, out));
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.3, t + dur * 0.3);
+        g.gain.setTargetAtTime(0, t + dur * 0.7, dur * 0.12);
+        const depth = gain(ctx, 6);
+        const vib = osc(ctx, 'sine', 5.5, depth);
+        const base = big ? 260 : 420;
+        for (const [r, type, lvl] of [[1, 'sawtooth', 0.6], [2, 'triangle', 0.35], [1.5, 'sine', 0.3]] as const) {
+          const o = osc(ctx, type, base * r, gain(ctx, lvl, g));
+          depth.connect(o.frequency);
+          o.frequency.setValueAtTime(base * r * 0.8, t);
+          o.frequency.linearRampToValueAtTime(base * r * 1.25, t + dur * 0.35);
+          o.frequency.linearRampToValueAtTime(base * r * 1.1, t + dur * 0.7);
+          o.frequency.linearRampToValueAtTime(base * r * 0.75, t + dur);
+          o.start(t);
+          o.stop(t + dur + 0.2);
+        }
+        vib.start(t);
+        vib.stop(t + dur + 0.2);
+        break;
+      }
+      case 'chime': {
+        const out = this.out(pan, 0.4, 0.4);
+        this.bell(out, t, rand(3000, 3600), 0.03, 0.22);
+        this.burstNoise(out, t, 'highpass', 6000, 8000, 0.7, 0.12, 0.08);
+        break;
+      }
+      case 'crunch': {
+        const out = this.out(pan, big ? 0.85 : 0.5, 0.2);
+        // Packed snow giving underfoot: a muffled crunch, crisp grains on top.
+        this.burstNoise(out, t, 'lowpass', big ? 700 : 1200, big ? 200 : 400, 0.8, big ? 0.6 : 0.35, big ? 0.25 : 0.12, true);
+        for (let i = 0; i < 3; i++) this.burstNoise(out, t + i * 0.02, 'bandpass', rand(2500, 4000), rand(1500, 2500), 3, 0.12, 0.04);
+        if (big) this.chirp(out, t, 'sine', 90, 40, 0.4, 0.3);
+        break;
+      }
+      case 'gust': {
+        const dur = big ? 0.9 : 0.55;
+        const out = this.out(pan, big ? 0.7 : 0.5, 0.5);
+        const g = gain(ctx, 0, out);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.4, t + dur * 0.25);
+        g.gain.setTargetAtTime(0, t + dur * 0.5, dur * 0.2);
+        const bp = filter(ctx, 'bandpass', 700, 1.5, g);
+        sweep(bp.frequency, t, 400, big ? 1800 : 2600, dur);
+        const src = this.m.noiseSource(true);
+        src.connect(bp);
+        this.m.startNoise(src, t, dur + 0.1);
+        this.burstNoise(out, t + dur * 0.2, 'highpass', 4000, 6000, 0.6, 0.1, dur * 0.6);
+        break;
+      }
+    }
   }
 
   /** A lion's roar: a deep growl swelling into a rasping bellow; the great one rolls on longer. */

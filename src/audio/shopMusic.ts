@@ -56,13 +56,13 @@ export class ShopMusic {
     const ctx = m.ctx;
     // Pads: dark and wide, deep in the reverb, the filter slowly breathing.
     const padOut = gain(ctx, 1, out);
-    padOut.connect(gain(ctx, 1.4, m.reverb));
+    padOut.connect(gain(ctx, 1.4, m.musicVerb));
     this.pad = filter(ctx, 'lowpass', 900, 0.4, padOut);
     osc(ctx, 'sine', 0.05, gain(ctx, 300, this.pad.frequency)).start();
     // The music box, with a soft echo a dotted eighth behind.
     this.boxTone = filter(ctx, 'lowpass', 5200, 0.5, out);
     this.box = gain(ctx, 1, this.boxTone);
-    this.box.connect(gain(ctx, 0.9, m.reverb));
+    this.box.connect(gain(ctx, 0.9, m.musicVerb));
     const delay = ctx.createDelay(2);
     delay.delayTime.value = EIGHTH * 1.5;
     const fb = gain(ctx, 0.32, delay);
