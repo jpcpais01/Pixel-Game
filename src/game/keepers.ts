@@ -39,8 +39,8 @@ export const NATURALIST = {
   hello: 'Every creature in Aurendel has a story. Keep the first of each kind in its jar and bring me your spares. I pay in dust, and handsomely for rare ones.',
 };
 
-/** A counter the HUD can open: a Rune Temple keeper's, Hazel's, or a season's stall (see season.ts and ui/candyView.ts). */
-export type Counter = Keeper | 'candy' | 'critters';
+/** A counter the HUD can open: a Rune Temple keeper's, Hazel's, a season's stall (see season.ts and ui/candyView.ts), or the Home's kitchen (ui/cookView.ts). */
+export type Counter = Keeper | 'candy' | 'critters' | 'kitchen';
 
 export const keeperCall = {
   /** The counter the world wants open; the HUD takes it. */

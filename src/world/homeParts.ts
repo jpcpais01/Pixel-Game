@@ -12,7 +12,7 @@
 import { CRITTERS } from '../game/critters';
 
 /** The palette's tabs, in order; each is a layer or a kind of thing to place. */
-export type BuildTab = 'floor' | 'wall' | 'roof' | 'garden' | 'furniture' | 'light' | 'decor' | 'critters';
+export type BuildTab = 'floor' | 'wall' | 'roof' | 'garden' | 'furniture' | 'light' | 'decor' | 'critters' | 'seeds';
 
 export const TABS: { id: BuildTab; name: string }[] = [
   { id: 'floor', name: 'Floors' },
@@ -23,6 +23,7 @@ export const TABS: { id: BuildTab; name: string }[] = [
   { id: 'light', name: 'Lights' },
   { id: 'decor', name: 'Wall decor' },
   { id: 'critters', name: 'Critters' },
+  { id: 'seeds', name: 'Seeds' },
 ];
 
 // ---------------------------------------------------------------- Floors
@@ -153,6 +154,8 @@ export interface PartDef {
   door?: boolean;
   /** A ward: no creature rises within this many cells of it (in the Everwood; see ForestEdits.warded). */
   ward?: number;
+  /** A place to cook (see game/cooking.ts): the kitchen stove indoors, or a pot over a fire in the garden. */
+  cook?: 'stove' | 'fire';
   /** A bridge's cell: laid in strokes like a wall, joined with its neighbours into one bridge that shapes itself (see bridge.ts). */
   bridge?: boolean;
 }
@@ -193,6 +196,19 @@ export const PARTS: PartDef[] = [
   { id: 'mailbox', name: 'Mailbox', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
   { id: 'fishrod', name: 'Fishing rod', tab: 'garden', w: 1, h: 1, block: 'post', flip: true, fishing: true },
   { id: 'signpost', name: 'Signpost', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'cookpot', name: 'Cooking pot', tab: 'garden', w: 1, h: 1, block: 'full', cook: 'fire', light: { color: 0xff8a3a, radius: 120, intensity: 1.9, day: 0.35, y: 5, flicker: true } },
+  { id: 'gnome', name: 'Garden gnome', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'frogstatue', name: 'Frog statue', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'cacti', name: 'Potted cacti', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'wateringcan', name: 'Watering can', tab: 'garden', w: 1, h: 1, block: 'none', flip: true },
+  { id: 'beehive', name: 'Beehive', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'birdhouse', name: 'Birdhouse', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'deckchair', name: 'Deck chair', tab: 'garden', w: 1, h: 1, block: 'post', turns: true },
+  { id: 'wheelbarrow', name: 'Wheelbarrow', tab: 'garden', w: 2, h: 1, block: 'full', flip: true },
+  { id: 'doghouse', name: 'Doghouse', tab: 'garden', w: 2, h: 1, block: 'full', turns: true },
+  { id: 'arbor', name: 'Rose arch', tab: 'garden', w: 2, h: 1, block: 'none' },
+  { id: 'swing', name: 'Garden swing', tab: 'garden', w: 2, h: 1, block: 'full' },
+  { id: 'fountain', name: 'Fountain', tab: 'garden', w: 2, h: 2, block: 'full' },
 
   // Furniture
   { id: 'bed', name: 'Bed', tab: 'furniture', w: 1, h: 2, block: 'full', turns: true },
@@ -210,12 +226,26 @@ export const PARTS: PartDef[] = [
   { id: 'barrel', name: 'Barrel', tab: 'furniture', w: 1, h: 1, block: 'full' },
   { id: 'crate', name: 'Crates', tab: 'furniture', w: 1, h: 1, block: 'full', flip: true },
   { id: 'fireplace', name: 'Fireplace', tab: 'furniture', w: 2, h: 1, block: 'full', chimney: true, light: { color: 0xff9a48, radius: 130, intensity: 1.9, day: 0.35, y: 10, flicker: true } },
+  { id: 'stove', name: 'Kitchen stove', tab: 'furniture', w: 2, h: 1, block: 'full', chimney: true, cook: 'stove', light: { color: 0xff9a48, radius: 100, intensity: 1.5, day: 0.35, y: 7, flicker: true } },
   { id: 'cauldron', name: 'Cauldron', tab: 'furniture', w: 1, h: 1, block: 'full', light: { color: 0x7aff8a, radius: 70, intensity: 1.2, day: 0.4, y: 10, flicker: true } },
   { id: 'clock', name: 'Tall clock', tab: 'furniture', w: 1, h: 1, block: 'full' },
   { id: 'armorstand', name: 'Armour stand', tab: 'furniture', w: 1, h: 1, block: 'post', flip: true },
   { id: 'weaponrack', name: 'Weapon rack', tab: 'furniture', w: 2, h: 1, block: 'full' },
   { id: 'jarshelf', name: 'Critter shelf', tab: 'furniture', w: 3, h: 1, block: 'full', jars: 3 },
   { id: 'plant', name: 'Potted plant', tab: 'furniture', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'armchair', name: 'Armchair', tab: 'furniture', w: 1, h: 1, block: 'full', turns: true },
+  { id: 'rocker', name: 'Rocking chair', tab: 'furniture', w: 1, h: 1, block: 'post', turns: true },
+  { id: 'pouf', name: 'Floor cushion', tab: 'furniture', w: 1, h: 1, block: 'post' },
+  { id: 'catbed', name: 'Cat bed', tab: 'furniture', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'nightstand', name: 'Nightstand', tab: 'furniture', w: 1, h: 1, block: 'full', flip: true, light: { color: 0xffc888, radius: 60, intensity: 1, day: 0.2, y: 16 } },
+  { id: 'bathtub', name: 'Bathtub', tab: 'furniture', w: 2, h: 1, block: 'full', turns: true },
+  { id: 'piano', name: 'Piano', tab: 'furniture', w: 2, h: 1, block: 'full' },
+  { id: 'harp', name: 'Harp', tab: 'furniture', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'spinwheel', name: 'Spinning wheel', tab: 'furniture', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'globe', name: 'Globe', tab: 'furniture', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'telescope', name: 'Telescope', tab: 'furniture', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'fishbowl', name: 'Fishbowl', tab: 'furniture', w: 1, h: 1, block: 'post' },
+  { id: 'coatrack', name: 'Coat rack', tab: 'furniture', w: 1, h: 1, block: 'post', flip: true },
   { id: 'rug', name: 'Red rug', tab: 'furniture', w: 3, h: 2, block: 'none', flat: true },
   { id: 'roundrug', name: 'Round rug', tab: 'furniture', w: 2, h: 2, block: 'none', flat: true },
   { id: 'runner', name: 'Long rug', tab: 'furniture', w: 1, h: 3, block: 'none', flat: true },
@@ -230,6 +260,10 @@ export const PARTS: PartDef[] = [
   { id: 'candelabra', name: 'Candelabra', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xffc070, radius: 90, intensity: 1.5, day: 0.25, y: 22, flicker: true } },
   { id: 'mushlamp', name: 'Mushroom lamp', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xffa898, radius: 64, intensity: 1.1, day: 0.25, y: 10 } },
   { id: 'fairylights', name: 'Firefly jar', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xc8ff7a, radius: 70, intensity: 1.2, day: 0.2, y: 8 } },
+  { id: 'floorlamp', name: 'Floor lamp', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xffd090, radius: 100, intensity: 1.5, day: 0.2, y: 30 } },
+  { id: 'paperlanterns', name: 'Paper lanterns', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xff9a7a, radius: 100, intensity: 1.5, day: 0.25, y: 28 } },
+  { id: 'candles', name: 'Candles', tab: 'light', w: 1, h: 1, block: 'none', light: { color: 0xffb468, radius: 70, intensity: 1.3, day: 0.25, y: 6, flicker: true } },
+  { id: 'hooklantern', name: 'Hook lantern', tab: 'light', w: 1, h: 1, block: 'post', flip: true, light: { color: 0xffb060, radius: 100, intensity: 1.6, day: 0.2, y: 28, flicker: true } },
   // Wards: moonlit lanterns no creature will rise near, from a wayfarer's crook to a beacon that keeps a whole glade.
   { id: 'wardlamp', name: 'Ward lantern', tab: 'light', w: 1, h: 1, block: 'post', ward: 6, light: { color: 0x9ee4ff, radius: 90, intensity: 1.4, day: 0.25, y: 24 } },
   { id: 'wardstone', name: 'Warden stone', tab: 'light', w: 1, h: 1, block: 'post', ward: 10, light: { color: 0x7af0e0, radius: 110, intensity: 1.6, day: 0.3, y: 18 } },
@@ -244,6 +278,12 @@ export const PARTS: PartDef[] = [
   { id: 'wallshelf', name: 'Wall shelf', tab: 'decor', w: 1, h: 1, block: 'none', wall: true, flip: true },
   { id: 'sconce', name: 'Wall sconce', tab: 'decor', w: 1, h: 1, block: 'none', wall: true, light: { color: 0xffb060, radius: 90, intensity: 1.5, day: 0.25, y: 0, flicker: true } },
   { id: 'wreath', name: 'Wreath', tab: 'decor', w: 1, h: 1, block: 'none', wall: true },
+  { id: 'mirror', name: 'Mirror', tab: 'decor', w: 1, h: 1, block: 'none', wall: true },
+  { id: 'cuckoo', name: 'Cuckoo clock', tab: 'decor', w: 1, h: 1, block: 'none', wall: true },
+  { id: 'oldmap', name: 'Old map', tab: 'decor', w: 1, h: 1, block: 'none', wall: true, flip: true },
+  { id: 'hangplant', name: 'Hanging plant', tab: 'decor', w: 1, h: 1, block: 'none', wall: true, flip: true },
+  { id: 'garland', name: 'Star garland', tab: 'decor', w: 1, h: 1, block: 'none', wall: true, light: { color: 0xffe6a0, radius: 60, intensity: 1, day: 0.2, y: 0 } },
+  { id: 'tapestry', name: 'Tapestry', tab: 'decor', w: 1, h: 1, block: 'none', wall: true, flip: true },
 ];
 
 /** Critters living in a Home: most at once, so a phone keeps its frame rate. */

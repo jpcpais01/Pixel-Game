@@ -46,6 +46,9 @@ import { inForge } from '../world/forgeLayout';
 import { inTemple } from '../world/sanctumLayout';
 import { Home } from '../world/Home';
 import { Fishing } from '../world/Fishing';
+import { warmFarm } from '../art/farm';
+import { cropById, rollSeedDrop } from '../game/farm';
+import { isDish, seedKey, syncLunch } from '../game/cooking';
 import { build } from '../game/build';
 import { openHomeFriends } from '../ui/homeFriends';
 import { isPainted } from '../world/arenas';
@@ -683,6 +686,9 @@ export class WorldScene extends Phaser.Scene {
 
     // A fresh hotbar and no buffs each run.
     inventory.reset(STARTING_ITEMS);
+    // The dish picked to take along, from the larder (see cooking.ts).
+    warmFarm(this);
+    syncLunch();
     heroBuffs.clear();
     heroTimers.clear();
     // The six pieces worn on the Inventory page count from the start of every
@@ -702,6 +708,7 @@ export class WorldScene extends Phaser.Scene {
         return got;
       },
       addBuff: (def) => heroBuffs.add(def),
+      charge: (n) => this.chargeSpecial(this.hero.x, this.hero.y - 20, n),
       pop: (text, tint) => this.popNumber(snap(this.hero.x), snap(this.hero.y) - 38, text, tint),
     };
     this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N,C') as Record<string, Phaser.Input.Keyboard.Key>;
@@ -1199,6 +1206,20 @@ export class WorldScene extends Phaser.Scene {
     if (candy) this.dropCandy(candy, x, y - bodyY);
     const mats = rollMats(kind);
     if (mats) this.dropMats(mats.set, mats.n, x, y - bodyY);
+    // Now and then a packet of seeds for the Home's garden beds.
+    const seed = rollSeedDrop(kind, odds);
+    if (seed) this.pickups.push(new Pickup(this, x, y - bodyY, { kind: 'seed', id: seed }));
+  }
+
+  /** A seed packet picked up: into the pouch for the garden beds, its name over the hero. */
+  private gainSeed(id: string, x: number, y: number): void {
+    const c = cropById(id);
+    if (!c) return;
+    collection.addStock(seedKey(id), 1);
+    const h = this.hero;
+    this.popNumber(snap(h.x), snap(h.y) - 40, `+${c.name.toUpperCase()} SEEDS`, c.tint);
+    this.debris([0xffffff, c.tint], snap(x), snap(y) - 6, 10, y + 20, 'spores');
+    sound.pickup(this.pan(x));
   }
 
   /** A boss's materials fall for the Forge: a pillar of its set's light, and they land with a ring of it. */
@@ -1482,6 +1503,13 @@ export class WorldScene extends Phaser.Scene {
       if (this.downT > 0) break;
       const used = inventory.use(i, this.itemCtx);
       if (!used) continue;
+      if (isDish(used)) {
+        // A dish eaten: the next of it from the larder takes its place.
+        syncLunch();
+        sound.heal(0);
+        this.debris([0xffffff, used.tint], snap(h.x), snap(h.y) - 14, 12, h.y + 20, 'spores');
+        continue;
+      }
       const swift = used.id === 'speed';
       sound.drink(swift);
       if (swift) this.debris([0xffffff, 0x9cecff, 0x36c2f2], snap(h.x), snap(h.y) - 12, 18, h.y + 20, 'burst');
@@ -1509,6 +1537,11 @@ export class WorldScene extends Phaser.Scene {
       }
       if (loot.kind === 'candy') {
         this.gainCandy(loot.n);
+        p.destroy();
+        continue;
+      }
+      if (loot.kind === 'seed') {
+        this.gainSeed(loot.id, p.x, p.y);
         p.destroy();
         continue;
       }
@@ -2297,7 +2330,7 @@ export class WorldScene extends Phaser.Scene {
     this.companion?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight);
     if (controls.netTap) {
       controls.netTap = false;
-      if (this.downT <= 0 && !session.paused && !this.fishing?.tap()) this.critters?.swingNet(this.hero.x, this.hero.y, this.facing.x);
+      if (this.downT <= 0 && !session.paused && !this.fishing?.tap() && !this.home?.act()) this.critters?.swingNet(this.hero.x, this.hero.y, this.facing.x);
     }
     this.critters?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight, this.view, controls.mouse, this.indoors());
     this.island?.update(time, dt);

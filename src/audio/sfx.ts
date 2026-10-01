@@ -858,6 +858,36 @@ export class Sfx {
     this.sparkle(out, t + 0.1, 2 + tier * 3, 0.04);
   }
 
+  /** A seed pressed into the bed: a soft pat of earth and a tiny rising note. */
+  plant(t: number, pan: number): void {
+    const out = this.out(pan, 0.4, 0.2);
+    this.burstNoise(out, t, 'lowpass', 900, 300, 0.9, 0.22, 0.09, true);
+    this.chirp(out, t + 0.06, 'sine', 660, 990, 0.08, 0.07);
+  }
+
+  /** Crops pulled from the bed: a rustle of leaves, a pop of earth, then a chime, brighter for wild and magic ones (tier 0..2). */
+  harvest(t: number, tier: number): void {
+    const out = this.out(0, 0.45, 0.35);
+    this.burstNoise(out, t, 'bandpass', 2600, 1400, 1.2, 0.16, 0.16);
+    this.chirp(out, t + 0.08, 'sine', 300, 140, 0.18, 0.08);
+    const bells = [
+      [1175, 1568],
+      [1175, 1480, 1760],
+      [1319, 1760, 2093, 2637],
+    ];
+    bells[tier].forEach((f, i) => this.bell(out, t + 0.14 + i * 0.06, f, 0.03, 0.6 + tier * 0.25));
+    if (tier) this.sparkle(out, t + 0.16, tier * 3, 0.035);
+  }
+
+  /** A dish done: a last sizzle, then a warm little fanfare, grander the first time it's ever made (tier 0..1). */
+  cooked(t: number, tier: number): void {
+    const out = this.out(0, 0.5, 0.45);
+    this.burstNoise(out, t, 'highpass', 4200, 6000, 0.8, 0.14, 0.18);
+    const notes = tier ? [784, 988, 1175, 1568] : [880, 1175];
+    notes.forEach((f, i) => this.bell(out, t + 0.1 + i * 0.07, f, 0.04, 0.7));
+    this.sparkle(out, t + 0.14, 2 + tier * 4, 0.04);
+  }
+
   /** The rod cast: a swish of the rod, then the reel's quick ratchet as the line runs out. */
   fishCast(t: number): void {
     const out = this.out(0, 0.45, 0.3);

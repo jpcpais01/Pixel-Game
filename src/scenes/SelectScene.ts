@@ -7,86 +7,76 @@ import { heroStats, type HeroStats } from '../game/stats';
 import { lastHero, lastLookOf, lookOf, ownsSkin, rememberHero, setLook, setType, worn } from '../game/skins';
 import { RARITY_INFO, rarityOf } from '../game/gacha';
 import { ensureUltIcons, ultFor } from '../game/ultimate';
-import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText } from '../ui/widgets';
+import { BUTTON_GOLD, BUTTON_PLAIN, PixelButton, pixelText } from '../ui/widgets';
 import { statIconsTexture } from '../ui/statIcons';
 
-// The hero select, in three parts that sit side by side on a wide screen and
-// stack on a tall one:
-// - the roster: a grid of portrait chips, one per class, each its hero's head
-//   and shoulders at twice size, lit from below in the hero's colour;
-// - the showcase: the class's name between two arrows, a row of pills for its
-//   characters (the picked one opens to show its name), the picked character
-//   big on a lit platform with a turning ring of light, and a row of swatches
-//   for its skins under it;
-// - the card: name and role, the six stats as bars, attack, ability and the
-//   Special, and Play.
-// It is all built from CLASSES, so new classes, characters and skins show up by
-// themselves. Swiping the showcase steps through the class's characters;
-// the arrows, the roster, the wheel and Left/Right change class.
+// The hero select. The whole screen is a splash for the picked hero: a dark
+// backdrop with a slanted slab of the hero's colour behind it, a halo round
+// it and sparks rising, and the hero standing big in the light. Over it, with
+// no boxes round them:
+// - the picker, three steps read top to bottom and joined by a line:
+//   1 Class (a wheel of round medallions, the picked one in the middle),
+//   2 Character (a card per character of that class), 3 Skin (a swatch per
+//   look of that character). Each step names what is picked in it;
+// - the details: name and role, the six stats, attack, ability and Special,
+//   and Play.
+// On a wide screen the picker stands on the left, the hero in the middle and
+// the details on the right; on a tall one the hero is on top, then the
+// picker, then the details. It is all built from CLASSES, so new classes,
+// characters and skins show up by themselves. Swiping the hero steps through
+// the class's characters; the medallions, the wheel and Left/Right change class.
 
-/** Space round the page and between its parts. */
 const MARGIN = 6;
-const GAP = 5;
 const BACK_W = 40;
 const BACK_H = 14;
-/** The parts start under the Back button. */
+/** Everything starts under the Back button. */
 const TOP = MARGIN + BACK_H + 4;
-/** The card's width on a wide screen, and the tallest the row of parts gets. */
-const INFO_W = 156;
-const BAND_MAX = 250;
-/** The showcase's width on a wide screen, and the widest a stacked page gets. */
-const SHOW_MIN = 150;
-const SHOW_MAX = 280;
-const COLUMN_MAX = 300;
 
-/** Roster chips, largest first: the largest that fits is used. */
-const CHIP_SIZES = [30, 26, 24, 22, 20];
-const CHIP_GAP = 2;
-const ROSTER_PAD = 4;
-
-/** The showcase, rows from its top: the class's name, then the pills. */
-const HEAD_Y = 5;
-const PILLS_Y = 23;
-const PILL_H = 22;
-const PILL_GAP = 3;
-const PILLS_BOTTOM = PILLS_Y + PILL_H;
-/** The skin row from the showcase's bottom: swatches, and the skin's name over them. */
-const SWATCH = 18;
+/** The picker's steps: a header row (marker, step name, what is picked), then its choices. */
+const STEP_HEAD = 9;
+const STEP_GAP = 3;
+const STEP_SPACE = 8;
+/** The choices are indented past the line that joins the steps. */
+const INDENT = 11;
+/** Class medallions: their size, and the room each takes on the wheel. */
+const MEDAL = 26;
+const MEDAL_STEP = 29;
+/** Character cards, largest first: the largest for which four fit the column is used. */
+const CARD_SIZES = [34, 30, 26];
+const CARD_GAP = 4;
+/** Skin swatches. */
+const SWATCH = 20;
 const SWATCH_GAP = 3;
-const SWATCH_BOTTOM = 6;
-const SKIN_NAME_DY = 11;
-/** The hero's feet stand this far above the skin row; it is drawn at the biggest of these sizes that fits. */
-const FEET_ABOVE_SKINS = 9;
-const HERO_SCALES = [4, 3, 2];
-/** A hero's height in frame pixels, for fitting. */
-const HERO_TALL = 30;
-/** The most characters one class shows. */
-const MAX_TYPES = 4;
-/** Sparks drifting up through the light. */
-const MOTES = 10;
-/** The ring of light on the platform: how many dashes, and how fast it turns (dashes a second). */
-const RING_DASHES = 14;
-const RING_SPEED = 1.2;
-/** How long a new character takes to slide in. */
-const SLIDE_MS = 240;
+/** The picker's height, for laying out. */
+const PICKER_H = STEP_HEAD + STEP_GAP + MEDAL + 2 + STEP_SPACE + STEP_HEAD + STEP_GAP + CARD_SIZES[0] + STEP_SPACE + STEP_HEAD + STEP_GAP + SWATCH + 1;
+/** How wide the picker and the details columns are on a wide screen. */
+const PICKER_W = [140, 180];
+const DETAILS_W = [124, 150];
+/** The widest a stacked page gets. */
+const STACK_MAX = 240;
 
-/** The card, rows from its top. */
-const PAD = 7;
-const NAME_Y = 7;
-const ROLE_Y = 23;
-const RULE_Y = 33;
-const STATS_Y = 38;
+/** The hero: its height in frame pixels, and the sizes it may be drawn at, biggest first. */
+const HERO_TALL = 30;
+const HERO_SCALES = [5, 4, 3, 2];
+/** Sparks drifting up round the hero. */
+const MOTES = 12;
+/** How long a new character takes to slide in. */
+const SLIDE_MS = 260;
+/** How many backdrops are kept painted (the screen-sized pictures are big). */
+const BACKDROPS_KEPT = 3;
+/** How long the medallion wheel takes to turn to a class. */
+const WHEEL_MS = 280;
+
+/** The details. */
+const NAME_H = 16;
+const ROLE_H = 10;
 const STAT_ROW = 10;
-const BAR_H = 5;
 const ABIL_ROW = 21;
 const ICON_BOX = 18;
 const PLAY_H = 18;
-/** Wide cards put the stats and the attack and ability in two columns. */
-const TWO_COLS = 200;
-/** How long the stat bars take to grow to a new character's numbers. */
-const BAR_MS = 260;
+const SECTION = 6;
 
-/** How far a press on the showcase must travel sideways to count as a swipe to the class's next character. */
+/** How far a press on the hero must travel sideways to count as a swipe to the class's next character. */
 const SWIPE = 24;
 const TAP_SLOP = 5;
 /** How long a note (a locked skin) replaces the skin's name. */
@@ -104,8 +94,7 @@ const GOLD_DARK = 0xb8742c;
 const DIMMED = 0x8a84a8;
 const OUTLINE = 0x0b0818;
 const DEEP = 0x120e26;
-/** The panels, solid so nothing on the screen behind shows through. */
-const SOLID = { ...PANEL, alpha: 1 };
+const LINE = 0x43356e;
 const NOTE = 0x9ff6ff;
 
 const NIGHT: RGB = [11, 8, 24];
@@ -114,38 +103,15 @@ const rgbOf = (c: number): RGB => [(c >> 16) & 255, (c >> 8) & 255, c & 255];
 const numOf = (c: RGB): number => (c[0] << 16) | (c[1] << 8) | c[2];
 const mixN = (a: number, b: number, t: number): number => numOf(mix(rgbOf(a), rgbOf(b), t));
 
-/** Stats: an icon, a short name, how high it reads on its bar, and how its value reads (ATK/S: attacks a second; REGEN: HP a second). */
-const STATS: {
-  icon: number;
-  name: string;
-  num: (s: HeroStats) => number;
-  value: (s: HeroStats) => string;
-}[] = [
-  { icon: 0, name: 'HP', num: (s) => s.hp, value: (s) => `${s.hp}` },
-  { icon: 1, name: 'DMG', num: (s) => s.damage, value: (s) => `${s.damage}` },
-  { icon: 3, name: 'DEF', num: (s) => s.defense, value: (s) => `${s.defense}` },
-  { icon: 2, name: 'MOVE', num: (s) => s.speed, value: (s) => `${s.speed}` },
-  {
-    icon: 4,
-    name: 'ATK/S',
-    num: (s) => s.rate,
-    value: (s) => s.rate.toFixed(1),
-  },
-  { icon: 5, name: 'REGEN', num: (s) => s.regen, value: (s) => `${s.regen}` },
+/** Stats: an icon, a short name, and how its value reads (ATK/S: attacks a second; REGEN: HP a second). */
+const STATS: { icon: number; name: string; value: (s: HeroStats) => string }[] = [
+  { icon: 0, name: 'HP', value: (s) => `${s.hp}` },
+  { icon: 1, name: 'DMG', value: (s) => `${s.damage}` },
+  { icon: 3, name: 'DEF', value: (s) => `${s.defense}` },
+  { icon: 2, name: 'MOVE', value: (s) => `${s.speed}` },
+  { icon: 4, name: 'ATK/S', value: (s) => s.rate.toFixed(1) },
+  { icon: 5, name: 'REGEN', value: (s) => `${s.regen}` },
 ];
-
-/** Each stat's highest value over every character, so a full bar is the best there is. */
-let statTops: number[] | null = null;
-function statMax(): number[] {
-  if (statTops) return statTops;
-  const tops = STATS.map(() => 0);
-  for (const cls of CLASSES)
-    for (const type of cls.types) {
-      const st = heroStats(cls.id, type.id);
-      STATS.forEach((s, i) => (tops[i] = Math.max(tops[i], s.num(st))));
-    }
-  return (statTops = tops);
-}
 
 /** Trim a single line to `maxW`, ending in a dot, as a last resort for text too long to fit. */
 export function fitLine(probe: Phaser.GameObjects.BitmapText, text: string, maxW: number): string {
@@ -182,7 +148,7 @@ export function cropToWindow(s: Phaser.GameObjects.Sprite, preview: Preview, w: 
   s.setCrop(Math.round((fw - cw) / 2), top, cw, bottom - top);
 }
 
-// ---- Portraits: a look's head and shoulders, for the chips, pills and swatches. ----
+// ---- Portraits: a look's head and shoulders, for the medallions, cards and swatches. ----
 
 /** Where each look's head is in its first idle frame, found once from its pixels. */
 const heads = new Map<string, { x: number; y: number }>();
@@ -233,7 +199,7 @@ function headOf(frame: Phaser.Textures.Frame, preview: Preview): { x: number; y:
 }
 
 /** Show a look's head and shoulders, standing still, in a window `w` x `h` with its top left at (x, y), drawn at `scale`. */
-function portrait(s: Phaser.GameObjects.Sprite, preview: Preview, x: number, y: number, w: number, h: number, scale: number): void {
+function portrait(s: Phaser.GameObjects.Sprite, preview: Preview, x: number, y: number, w: number, h: number, scale: number, drop = 1): void {
   const frame = idleFrame(s.scene, preview);
   const head = headOf(frame, preview);
   s.stop();
@@ -243,7 +209,7 @@ function portrait(s: Phaser.GameObjects.Sprite, preview: Preview, x: number, y: 
   const cw = Math.min(fw, Math.floor(w / scale));
   const ch = Math.min(fh, Math.floor(h / scale));
   const cx = Phaser.Math.Clamp(head.x - Math.floor(cw / 2), 0, fw - cw);
-  const cy = Phaser.Math.Clamp(head.y - Math.floor(ch / 2) + 1, 0, fh - ch);
+  const cy = Phaser.Math.Clamp(head.y - Math.floor(ch / 2) + drop, 0, fh - ch);
   s.setCrop(cx, cy, cw, ch);
   s.setPosition(x + Math.floor((w - cw * scale) / 2) - cx * scale, y + Math.floor((h - ch * scale) / 2) - cy * scale);
 }
@@ -251,15 +217,10 @@ function portrait(s: Phaser.GameObjects.Sprite, preview: Preview, x: number, y: 
 // ---- Drawing helpers. ----
 
 /** A box with 2 px rounded corners: a dark outline, a 1 px rim and a fill. */
-function roundBox(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, fill: number, rim: number, fillAlpha = 1): void {
-  g.fillStyle(OUTLINE)
-    .fillRect(x + 2, y, w - 4, h)
-    .fillRect(x + 1, y + 1, w - 2, h - 2)
-    .fillRect(x, y + 2, w, h - 4);
-  g.fillStyle(rim)
-    .fillRect(x + 2, y + 1, w - 4, h - 2)
-    .fillRect(x + 1, y + 2, w - 2, h - 4);
-  g.fillStyle(fill, fillAlpha).fillRect(x + 2, y + 2, w - 4, h - 4);
+function roundBox(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, fill: number, rim: number): void {
+  g.fillStyle(OUTLINE).fillRect(x + 2, y, w - 4, h).fillRect(x + 1, y + 1, w - 2, h - 2).fillRect(x, y + 2, w, h - 4);
+  g.fillStyle(rim).fillRect(x + 2, y + 1, w - 4, h - 2).fillRect(x + 1, y + 2, w - 2, h - 4);
+  g.fillStyle(fill).fillRect(x + 2, y + 2, w - 4, h - 4);
 }
 
 /** Tall, thin arrows (5 x 13) pointing left or right, with a dark outline, drawn in `color`. */
@@ -278,136 +239,73 @@ function drawTallArrow(g: Phaser.GameObjects.Graphics, x: number, y: number, dir
   g.fillStyle(0xffffff, 0.45 * alpha).fillRect(dir < 0 ? x : x + 4, y + 5, 1, 1);
 }
 
-// ---- The showcase's backdrop, painted once per colour and size and cached. ----
-
-/** Blend `c` over the pixel at (x, y) by `a` (0..1). */
-function blend(b: Bitmap, x: number, y: number, c: RGB, a: number): void {
-  x = Math.round(x);
-  y = Math.round(y);
-  if (x < 0 || y < 0 || x >= b.w || y >= b.h || b.alpha(x, y) === 0) return;
-  const i = (y * b.w + x) * 4;
-  b.set(x, y, mix([b.data[i], b.data[i + 1], b.data[i + 2]], c, a));
-}
-
-/** A round platform seen from above and in front: a top face with a pale rim and a shaded drum `depth` tall, in stone touched with `tint`. */
-function paintDisc(b: Bitmap, cx: number, cy: number, rx: number, ry: number, depth: number, tint: RGB): void {
-  const topLit = mix([110, 96, 170], tint, 0.3);
-  const topDark = mix([46, 36, 92], tint, 0.25);
-  const rim = mix(mix([214, 204, 244], tint, 0.35), WHITE, 0.2);
-  const drumLit = mix([66, 52, 124], tint, 0.25);
-  const drumDark = mix([22, 17, 48], tint, 0.15);
-  for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
-    const dx = (x + 0.5 - cx) / rx;
-    if (Math.abs(dx) > 1) continue;
-    const e = ry * Math.sqrt(1 - dx * dx);
-    const top = Math.round(cy - e);
-    const bottom = Math.round(cy + e);
-    // The drum: lit on the left, falling off to the right, darker at its foot.
-    for (let y = bottom; y <= bottom + depth; y++) {
-      const t = clamp01((dx + 1) / 2);
-      let c = mix(drumLit, drumDark, Math.min(1, Math.floor(t * 3 + bayer(x, y)) / 3));
-      if (y === bottom + depth) c = NIGHT;
-      else if (y === bottom + 1) c = mix(c, rim, 0.25);
-      b.set(x, y, c);
-    }
-    // The top face, brighter towards the back left, with a pale rim round the edge.
-    for (let y = top; y <= bottom; y++) {
-      const dy = (y + 0.5 - cy) / ry;
-      const t = clamp01((dx * 0.6 + dy * 0.8 + 1) / 2);
-      let c = mix(topLit, topDark, Math.min(1, Math.floor(t * 3 + bayer(x, y)) / 3));
-      if (y === top || Math.abs(dx) > 0.97) c = rim;
-      else if (y === bottom) c = mix(topDark, NIGHT, 0.4);
-      b.set(x, y, c);
-    }
-  }
-}
-
-/** The platform's size for a hero drawn at `scale`: its top face's half-width and half-height. */
-const platformOf = (scale: number) => {
-  const rx = 12 * scale + 10;
-  return { rx, ry: Math.max(5, Math.round(rx * 0.2)) };
-};
+// ---- Painted once and cached. ----
 
 /**
- * The showcase's backdrop for a hero in `accent`: a wall that darkens towards
- * the top, crossed by soft diagonal bands of light, a dithered glow of the
- * hero's colour behind where it stands, a floor below the horizon with a pool
- * of light and two dashed rings round a two-step platform, darker towards the
- * sides, all in a box with cut corners and a rim lit from above.
+ * The backdrop for a hero in `accent` standing at (`hx`, `feet`), drawn at
+ * `scale`: a night gradient; a slab of the hero's colour leaning to the right
+ * as it rises, lit from below, ruled with fine stripes and dotted with halftone
+ * towards its foot, with a thin echo either side; a halo of light behind the
+ * hero ringed by a fine circle; a pool of light at its feet; and darkness
+ * gathering towards the edges, so the text either side reads clearly.
  */
-function showcaseTexture(scene: Phaser.Scene, w: number, h: number, feet: number, scale: number, accent: number): string {
-  const key = `sel_show_${w}x${h}_${feet}_${scale}_${accent.toString(16)}`;
+function backdropTexture(scene: Phaser.Scene, w: number, h: number, hx: number, feet: number, scale: number, accent: number): string {
+  const key = `sel_bd_${w}x${h}_${hx}_${feet}_${scale}_${accent.toString(16)}`;
   if (scene.textures.exists(key)) return key;
   const b = new Bitmap(w, h);
   const A = rgbOf(accent);
-  const wallTop = mix(NIGHT, A, 0.1);
-  const wallLow = mix([30, 24, 60], A, 0.4);
-  const light = mix(A, WHITE, 0.45);
-  const floorFar = mix([24, 19, 48], A, 0.32);
-  const floorNear = mix(NIGHT, A, 0.2);
-  const cx = w / 2;
-  const horizon = feet - 10 * scale;
-  const gy = feet - 17 * scale;
-  const grx = Math.min(w * 0.48, 34 * scale);
-  const gry = 30 * scale;
-  const { rx, ry } = platformOf(scale);
+  const skyLow = mix([26, 20, 52], A, 0.1);
+  const deep = mix(NIGHT, A, 0.3);
+  const mid = mix([38, 28, 78], A, 0.62);
+  const lit = mix(A, WHITE, 0.4);
+  const heroH = HERO_TALL * scale;
+  const half = Math.round(Math.max(30, scale * 12));
+  const slant = 0.36;
+  const cy = feet - heroH * 0.55;
+  const R = heroH * 0.6;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const ex = Math.min(x, w - 1 - x);
-      const ey = Math.min(y, h - 1 - y);
-      // Cut corners, 3 px on the diagonal.
-      if (ex + ey < 3) continue;
-      const edge = ex + ey === 3 ? 0 : Math.min(ex, ey);
-      let c: RGB;
-      if (y < horizon) {
-        const t = y / horizon;
-        c = mix(wallTop, wallLow, Math.floor(t * 6 + bayer(x, y)) / 6);
-        // Wide bands of light falling from the upper left, fading down the wall.
-        const band = (((x + y * 0.7) % 52) + 52) % 52;
-        if (band < 18) {
-          const k = 1 - Math.abs(band - 9) / 9;
-          if (k * (1 - t * 0.6) > bayer(x, y) + 0.15) c = mix(c, light, 0.09);
+      const d = bayer(x, y);
+      let c = mix(NIGHT, skyLow, Math.floor((y / h) * 7 + d) / 7);
+      // The slab, fading out a little under the hero's feet.
+      const rise = feet - y;
+      const fade = clamp01((rise + 34) / 34);
+      const bx = x - hx - rise * slant;
+      const edge = Math.abs(bx);
+      if (edge < half && fade > d * 0.999) {
+        const up = clamp01(rise / (feet + 1));
+        let s = mix(mid, deep, Math.floor(up * 5 + d) / 5);
+        // Fine stripes along the slab, brighter towards its foot.
+        if (((Math.floor(bx) % 7) + 7) % 7 === 0) s = mix(s, lit, 0.1 + (1 - up) * 0.12);
+        // Halftone dots in its lower part, growing as they near the feet.
+        if (up < 0.45) {
+          const big = up < 0.2;
+          if ((big ? (x & 3) < 2 && (y & 3) < 2 : (x & 3) === 0 && (y & 3) === 0) && rise > -30) s = mix(s, lit, 0.22);
         }
+        if (edge > half - 1) s = mix(s, lit, 0.7);
+        else if (edge > half - 2) s = mix(s, NIGHT, 0.4);
+        c = s;
       } else {
-        const t = (y - horizon) / Math.max(1, h - horizon);
-        c = mix(floorFar, floorNear, Math.floor(t * 4 + bayer(x, y)) / 4);
-        if (y === horizon) c = mix(c, light, 0.4);
-        else if (y === horizon + 1) c = mix(c, NIGHT, 0.35);
-        // A pool of light on the floor round the platform.
-        const pe = Math.hypot((x + 0.5 - cx) / (rx * 2.3), (y + 0.5 - feet) / (ry * 3.2));
-        if (pe < 1) c = mix(c, light, (Math.floor((1 - pe) * 4 + bayer(x, y)) / 4) * 0.22);
+        // Thin echoes of the slab on either side.
+        const e1 = Math.abs(bx - half - 9);
+        const e2 = Math.abs(bx + half + 7);
+        if (fade > d && (e1 < 3 || e2 < 1.5)) c = mix(c, mid, 0.55);
       }
-      // The glow of the hero's colour behind it, in dithered steps.
-      const ge = Math.hypot((x + 0.5 - cx) / grx, (y + 0.5 - gy) / gry);
-      if (ge < 1) c = mix(c, light, (Math.floor((1 - ge) * (1 - ge) * 5 + bayer(x, y)) / 5) * 0.4);
-      // Darker towards the sides and the very top, so the eye goes to the middle.
-      const vx = Math.abs(x + 0.5 - cx) / cx;
-      const v = clamp01(vx * vx * 0.9 + (y < 16 ? (16 - y) / 40 : 0));
-      if (v * 0.95 > bayer(x, y)) c = mix(c, NIGHT, Math.min(0.55, v * 0.7));
-      // The rim: lit along the top, the hero's colour down the sides, dark along the bottom.
-      if (edge === 0) c = NIGHT;
-      else if (edge === 1) c = y < h * 0.4 ? mix(light, WHITE, 0.15) : y < h - 2 ? mix(A, NIGHT, 0.35) : mix(A, NIGHT, 0.6);
-      else if (edge === 2) c = mix(c, NIGHT, 0.5);
+      // The halo behind the hero, in dithered steps, ringed by a fine circle.
+      const r = Math.hypot(x + 0.5 - hx, (y + 0.5 - cy) * 1.05);
+      if (r < R) c = mix(c, lit, (Math.floor(Math.pow(1 - r / R, 1.4) * 5 + d) / 5) * 0.5);
+      if (Math.abs(r - R * 1.12) < 0.55) c = mix(c, lit, 0.5);
+      if (Math.abs(r - R * 1.3) < 0.55 && (Math.floor(Math.atan2(y - cy, x - hx) * 40) & 3) === 0) c = mix(c, lit, 0.4);
+      // The pool of light at its feet.
+      const pe = Math.hypot((x + 0.5 - hx) / (heroH * 0.75), (y + 0.5 - feet) / Math.max(5, heroH * 0.12));
+      if (pe < 1) c = mix(c, lit, (Math.floor((1 - pe) * 4 + d) / 4) * 0.35);
+      // Darker away from the hero, and at the very bottom.
+      const vx = Math.abs(x - hx) / Math.max(hx, w - hx);
+      const v = clamp01(vx * vx * 0.85 + (y > h - 20 ? (y - (h - 20)) / 40 : 0));
+      if (v > d * 0.9) c = mix(c, NIGHT, Math.min(0.6, v * 0.75));
       b.set(x, y, c);
     }
   }
-  // Two dashed rings on the floor round the platform.
-  for (const [k, a] of [
-    [1.55, 0.45],
-    [2.2, 0.25],
-  ] as const) {
-    const steps = Math.round(rx * k * 7);
-    for (let i = 0; i < steps; i++) {
-      if (i % 9 >= 6) continue;
-      const t = (i / steps) * Math.PI * 2;
-      const py = feet + 1 + Math.sin(t) * ry * k;
-      if (py < horizon + 2) continue;
-      blend(b, cx + Math.cos(t) * rx * k, py, light, a);
-    }
-  }
-  // The platform: a broad lower step and a raised top.
-  paintDisc(b, cx, feet + 4, rx + 9, ry + 2, 3, A);
-  paintDisc(b, cx, feet + 1, rx, ry, 4, A);
   scene.textures.addCanvas(key, b.toCanvas());
   return key;
 }
@@ -429,22 +327,238 @@ function moteTexture(scene: Phaser.Scene): string {
   return key;
 }
 
-// ---- Pieces of the page. ----
+/**
+ * A class medallion's plate, in greys so it takes its hero's colour when
+ * tinted: a disc lit from below, with a dark edge and a pale rim at the top.
+ */
+function plateTexture(scene: Phaser.Scene): string {
+  const key = 'sel_medal';
+  if (scene.textures.exists(key)) return key;
+  const b = new Bitmap(MEDAL, MEDAL);
+  const c = MEDAL / 2;
+  for (let y = 0; y < MEDAL; y++)
+    for (let x = 0; x < MEDAL; x++) {
+      const r = Math.hypot(x + 0.5 - c, y + 0.5 - c);
+      if (r > c) continue;
+      const t = y / MEDAL;
+      let v = 52 + 90 * (Math.floor(t * 4 + bayer(x, y)) / 4);
+      if (r > c - 1.2) v = 14;
+      else if (r > c - 2.2) v = y < c ? 200 : 110;
+      b.set(x, y, [v, v, v]);
+    }
+  scene.textures.addCanvas(key, b.toCanvas());
+  return key;
+}
 
-/** What a chip shows: a look, its colour, and for skins, how rare it is and whether it's owned. */
+/** The gold ring round the picked medallion, with a faint glow outside it. */
+function ringTexture(scene: Phaser.Scene): string {
+  const key = 'sel_medal_ring';
+  if (scene.textures.exists(key)) return key;
+  const s = MEDAL + 6;
+  const b = new Bitmap(s, s);
+  const c = s / 2;
+  const lit = rgbOf(GOLD_LIT);
+  const dark = rgbOf(GOLD_DARK);
+  for (let y = 0; y < s; y++)
+    for (let x = 0; x < s; x++) {
+      const r = Math.hypot(x + 0.5 - c, y + 0.5 - c);
+      const edge = MEDAL / 2;
+      if (r > edge - 2.2 && r <= edge - 0.8) b.set(x, y, y < c ? lit : dark);
+      else if (r > edge - 0.8 && r <= edge + 0.4) b.set(x, y, NIGHT);
+      else if (r > edge + 0.4 && r <= edge + 2.6) b.set(x, y, lit, Math.round(90 * (1 - (r - edge) / 2.6)));
+    }
+  scene.textures.addCanvas(key, b.toCanvas());
+  return key;
+}
+
+// ---- The picker. ----
+
+/** A round class medallion: its plate in the hero's colour and the hero's head at twice size. */
+class Medal extends Phaser.GameObjects.Container {
+  private plate: Phaser.GameObjects.Image;
+  private head: Phaser.GameObjects.Sprite;
+  private ring: Phaser.GameObjects.Image;
+  private preview?: Preview;
+  private accent = 0xffffff;
+
+  constructor(scene: Phaser.Scene) {
+    super(scene, 0, 0);
+    this.plate = scene.add.image(0, 0, plateTexture(scene)).setOrigin(0);
+    this.head = scene.add.sprite(0, 0, '__DEFAULT');
+    this.ring = scene.add.image(-3, -3, ringTexture(scene)).setOrigin(0).setVisible(false);
+    this.add([this.plate, this.head, this.ring]);
+  }
+
+  show(preview: Preview, accent: number): void {
+    // The head's square fits wholly inside the disc, so it needs no mask.
+    const inner = 18;
+    if (preview !== this.preview) portrait(this.head, preview, (MEDAL - inner) / 2, (MEDAL - inner) / 2, inner, inner, 2);
+    this.preview = preview;
+    this.accent = accent;
+  }
+
+  light(picked: boolean, hover: boolean): void {
+    this.ring.setVisible(picked);
+    this.plate.setTint(mixN(this.accent, 0xffffff, picked ? 0.2 : hover ? 0.05 : 0));
+    this.plate.setAlpha(picked || hover ? 1 : 0.8);
+    if (picked) this.head.clearTint();
+    else this.head.setTint(hover ? 0xd8d0f0 : 0x8a82ac);
+  }
+}
+
+/**
+ * Step one: a wheel of class medallions, the picked one in the middle with a
+ * gold ring and the others fading away to either side, with an arrow at each
+ * end. It wraps round, so every class is a short turn away. Drag it to turn it;
+ * tap a medallion (or an arrow) to pick.
+ */
+class Wheel extends Phaser.GameObjects.Container {
+  private medals: Medal[];
+  private arrows: Phaser.GameObjects.Graphics;
+  private zone: Phaser.GameObjects.Zone;
+  private arrowZones: Phaser.GameObjects.Zone[];
+  /** Where the wheel stands: the class (as a fraction while turning) in the middle. */
+  private pos = 0;
+  private picked = 0;
+  private hover = -1;
+  private turn?: Phaser.Tweens.Tween;
+  private drag: { x: number; pos: number; moved: boolean } | null = null;
+  private boxW = 0;
+
+  constructor(
+    scene: Phaser.Scene,
+    private pick: (i: number) => void,
+  ) {
+    super(scene, 0, 0);
+    this.medals = CLASSES.map(() => new Medal(scene));
+    this.arrows = scene.add.graphics();
+    this.zone = scene.add.zone(0, -2, 10, MEDAL + 4).setOrigin(0).setInteractive({ useHandCursor: true });
+    this.arrowZones = ([-1, 1] as const).map((dir) => {
+      const z = scene.add.zone(0, -2, 14, MEDAL + 4).setOrigin(0);
+      onTap(scene, z, () => this.pick((this.picked + dir + CLASSES.length) % CLASSES.length));
+      return z;
+    });
+    this.add([...this.medals, this.arrows, this.zone, ...this.arrowZones]);
+
+    const z = () => scene.cameras.main.zoom;
+    this.zone.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, (p: Phaser.Input.Pointer) => {
+      this.turn?.stop();
+      this.drag = { x: p.x, pos: this.pos, moved: false };
+    });
+    this.zone.on(Phaser.Input.Events.GAMEOBJECT_POINTER_MOVE, (p: Phaser.Input.Pointer) => {
+      if (!p.wasTouch && !this.drag) this.setHover(this.medalAt(p));
+    });
+    this.zone.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OUT, () => this.setHover(-1));
+    const move = (p: Phaser.Input.Pointer) => {
+      if (!this.drag || !p.isDown) return;
+      const dx = (p.x - this.drag.x) / z();
+      if (Math.abs(dx) > TAP_SLOP) this.drag.moved = true;
+      if (this.drag.moved) this.place(this.drag.pos - dx / MEDAL_STEP);
+    };
+    const up = (p: Phaser.Input.Pointer) => {
+      const d = this.drag;
+      if (!d) return;
+      this.drag = null;
+      const n = CLASSES.length;
+      const i = d.moved ? ((Math.round(this.pos) % n) + n) % n : this.medalAt(p);
+      if (i >= 0 && i !== this.picked) this.pick(i);
+      else this.settle();
+    };
+    scene.input.on(Phaser.Input.Events.POINTER_MOVE, move);
+    scene.input.on(Phaser.Input.Events.POINTER_UP, up);
+    this.once(Phaser.GameObjects.Events.DESTROY, () => {
+      scene.input.off(Phaser.Input.Events.POINTER_MOVE, move);
+      scene.input.off(Phaser.Input.Events.POINTER_UP, up);
+    });
+  }
+
+  resize(w: number): void {
+    this.boxW = w;
+    this.zone.setSize(w - 24, MEDAL + 4).setX(12);
+    this.arrowZones[0].setX(-2);
+    this.arrowZones[1].setX(w - 12);
+    const g = this.arrows.clear();
+    drawTallArrow(g, 1, Math.round(MEDAL / 2) - 6, -1, GOLD);
+    drawTallArrow(g, w - 6, Math.round(MEDAL / 2) - 6, 1, GOLD);
+    this.place(this.pos);
+  }
+
+  /** Every class's look and colour; the picked one turns to the middle (at once, or over a moment). */
+  show(looks: { preview: Preview; accent: number }[], picked: number, now: boolean): void {
+    looks.forEach((l, i) => this.medals[i].show(l.preview, l.accent));
+    this.picked = picked;
+    this.turn?.stop();
+    if (now) this.place(picked);
+    else this.settle();
+    this.lightAll();
+  }
+
+  /** Turn to the picked class the short way round: to the copy of it nearest where the wheel stands. */
+  private settle(): void {
+    const n = CLASSES.length;
+    const from = this.pos;
+    const target = from + ((((this.picked - from + n / 2) % n) + n) % n) - n / 2;
+    this.turn?.stop();
+    this.turn = this.scene.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: WHEEL_MS,
+      ease: 'Cubic.easeOut',
+      onUpdate: (tw) => this.place(from + (target - from) * (tw.getValue() ?? 1)),
+      onComplete: () => this.place(this.picked),
+    });
+  }
+
+  /** Stand the wheel at `pos`: each medallion along the row by how far it is round from the middle, fading out to the ends. */
+  private place(pos: number): void {
+    const n = CLASSES.length;
+    this.pos = ((pos % n) + n) % n;
+    const cx = this.boxW / 2;
+    const reach = cx - 8 - MEDAL / 2;
+    this.medals.forEach((m, i) => {
+      const rel = ((((i - this.pos + n / 2) % n) + n) % n) - n / 2;
+      const x = cx + rel * MEDAL_STEP;
+      const off = Math.abs(x - cx);
+      m.setVisible(off <= reach + 2);
+      m.setPosition(Math.round(x - MEDAL / 2), 0);
+      m.setAlpha(clamp01(1 - Math.pow(off / (reach + MEDAL_STEP * 0.6), 2)));
+    });
+    // The middle one over its neighbours.
+    this.bringToTop(this.medals[this.picked]);
+  }
+
+  /** The class whose medallion is under the pointer. */
+  private medalAt(p: Phaser.Input.Pointer): number {
+    const z = this.scene.cameras.main.zoom;
+    const x = p.x / z - this.x - (this.parentContainer?.x ?? 0);
+    const n = CLASSES.length;
+    const rel = Math.round((x - this.boxW / 2) / MEDAL_STEP);
+    return (((Math.round(this.pos) + rel) % n) + n) % n;
+  }
+
+  private setHover(i: number): void {
+    if (i === this.hover) return;
+    this.hover = i;
+    this.lightAll();
+  }
+
+  private lightAll(): void {
+    this.medals.forEach((m, i) => m.light(i === this.picked, i === this.hover));
+  }
+}
+
+/** What a card or swatch shows: a look, its colour, and for skins, how rare it is and whether it's owned. */
 interface ChipLook {
   preview: Preview;
   accent: number;
-  /** The rarity's colour, drawn as a line along the chip's foot; null for none. */
   rarity?: number | null;
   locked?: boolean;
 }
 
 /**
- * A square chip with a hero's head and shoulders in it, lit from below in the
- * hero's colour: a class in the roster (heads at twice size) or a skin under
- * the showcase (at their own size). The picked one has a gold rim and stands
- * a pixel higher; one under the pointer brightens.
+ * A square card with a hero's head and shoulders, lit from below in its
+ * colour: a character in step two (at twice size) or a skin in step three (at
+ * its own size). The picked one has a gold rim and stands a pixel higher.
  */
 class Chip extends Phaser.GameObjects.Container {
   private g: Phaser.GameObjects.Graphics;
@@ -492,7 +606,7 @@ class Chip extends Phaser.GameObjects.Container {
 
   private frame(): void {
     if (!this.look || !this.size) return;
-    portrait(this.head, this.look.preview, 2, 2, this.size - 4, this.size - 4, this.headScale);
+    portrait(this.head, this.look.preview, 2, 2, this.size - 4, this.size - 4, this.headScale, this.headScale > 1 ? 2 : 3);
     this.draw();
   }
 
@@ -508,16 +622,12 @@ class Chip extends Phaser.GameObjects.Container {
     const { picked, hover } = this;
     this.y = this.baseY - (picked ? 1 : 0);
     const a = look.accent;
-    const k = picked ? 1 : hover ? 0.75 : 0.5;
+    const k = picked ? 1 : hover ? 0.7 : 0.4;
     const top = mixN(DEEP, a, 0.08 + 0.14 * k);
     const low = mixN(DEEP, a, 0.12 + 0.45 * k);
-    const rim = picked ? GOLD : mixN(0x3a2f66, a, hover ? 0.5 : 0.22);
+    const rim = picked ? GOLD : mixN(0x3a2f66, a, hover ? 0.5 : 0.2);
     const g = this.g.clear();
-    // The picked chip glows in its colour round the rim.
-    if (picked)
-      g.fillStyle(a, 0.35)
-        .fillRect(-1, 1, s + 2, s - 2)
-        .fillRect(1, -1, s - 2, s + 2);
+    if (picked) g.fillStyle(a, 0.35).fillRect(-1, 1, s + 2, s - 2).fillRect(1, -1, s - 2, s + 2);
     roundBox(g, 0, 0, s, s, top, rim);
     // The lower part lit with the hero's colour, dithered into the top.
     const inner = s - 4;
@@ -530,84 +640,12 @@ class Chip extends Phaser.GameObjects.Container {
     if (look.rarity != null) g.fillStyle(look.rarity, look.locked ? 0.5 : 1).fillRect(2, s - 3, s - 4, 1);
     if (look.locked) this.head.setTint(0x5a5480);
     else if (picked) this.head.clearTint();
-    else this.head.setTint(hover ? 0xe0d8f4 : 0xa49cc4);
+    else this.head.setTint(hover ? 0xe0d8f4 : 0x9890b8);
     this.lock.setVisible(!!look.locked).setPosition(s - this.lock.width - 1, s - this.lock.height - 1);
   }
 }
 
-/**
- * A pill for one of the class's characters: its head in a lit square, and for
- * the picked one, its name beside it. It knows how wide it wants to be.
- */
-class Pill extends Phaser.GameObjects.Container {
-  private g: Phaser.GameObjects.Graphics;
-  private head: Phaser.GameObjects.Sprite;
-  private label: Phaser.GameObjects.BitmapText;
-  private zone: Phaser.GameObjects.Zone;
-  private preview?: Preview;
-  private accent = 0xffffff;
-  private picked = false;
-  private hover = false;
-  boxW = PILL_H;
-
-  constructor(scene: Phaser.Scene, tap: () => void) {
-    super(scene, 0, 0);
-    this.g = scene.add.graphics();
-    this.head = scene.add.sprite(0, 0, '__DEFAULT');
-    this.label = pixelText(scene, 0, 0, '');
-    this.zone = scene.add.zone(0, 0, PILL_H, PILL_H).setOrigin(0);
-    onTap(scene, this.zone, tap);
-    this.zone.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OVER, (p: Phaser.Input.Pointer) => !p.wasTouch && this.setHover(true));
-    this.zone.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OUT, () => this.setHover(false));
-    this.add([this.g, this.head, this.label, this.zone]);
-  }
-
-  /** The width it takes with its name showing (when picked) or not. */
-  set(preview: Preview, name: string, accent: number, picked: boolean): void {
-    if (preview !== this.preview) portrait(this.head, preview, 2, 2, PILL_H - 4, PILL_H - 4, 2);
-    this.preview = preview;
-    this.accent = accent;
-    this.picked = picked;
-    this.label.setText(name.toUpperCase());
-  }
-
-  /** Its width with the name shown or hidden. */
-  widthWith(named: boolean): number {
-    return named ? PILL_H + this.label.width + 6 : PILL_H;
-  }
-
-  /** Lay it out with or without its name. */
-  open(named: boolean): void {
-    this.boxW = this.widthWith(named);
-    this.label.setVisible(named).setPosition(PILL_H + 1, Math.round((PILL_H - this.label.height) / 2));
-    this.zone.setSize(this.boxW, PILL_H);
-    this.draw();
-  }
-
-  private setHover(on: boolean): void {
-    this.hover = on;
-    this.draw();
-  }
-
-  private draw(): void {
-    const { picked, hover, accent } = this;
-    const w = this.boxW;
-    const g = this.g.clear();
-    const fill = picked ? mixN(0x1a1433, accent, 0.4) : hover ? 0x2a2150 : 0x17122f;
-    const rim = picked ? mixN(accent, 0xffffff, 0.4) : hover ? 0x6b5aa6 : 0x43356e;
-    roundBox(g, 0, 0, w, PILL_H, fill, rim, 0.95);
-    // The head's square, lit from below in its colour.
-    const inner = PILL_H - 4;
-    g.fillStyle(mixN(DEEP, accent, picked ? 0.3 : 0.12)).fillRect(2, 2, inner, inner);
-    g.fillStyle(mixN(DEEP, accent, picked ? 0.62 : 0.28)).fillRect(2, 2 + inner / 2, inner, inner / 2);
-    if (picked) g.fillStyle(0xffffff, 0.3).fillRect(3, 2, w - 6, 1);
-    this.label.setTint(INK);
-    if (picked) this.head.clearTint();
-    else this.head.setTint(hover ? 0xe0d8f4 : 0x9890b8);
-  }
-}
-
-/** Which skin is worn and every look of the picked character, for the swatches. */
+/** Which skin is worn and every look of the picked character, for step three. */
 interface SkinPick {
   name: string;
   index: number;
@@ -618,325 +656,138 @@ interface SkinPick {
   rarity: number | null;
 }
 
-/** Everything the showcase shows. */
-interface ShowData {
+/** What the picker shows. */
+interface PickData {
+  classIndex: number;
   className: string;
-  types: { preview: Preview; name: string; accent: number }[];
+  classes: { preview: Preview; accent: number }[];
+  types: ChipLook[];
+  typeName: string;
   picked: number;
-  hero: Preview;
-  accent: number;
   skin: SkinPick;
-  /** -1 or 1: a new character slides in from that side; 0: the same character. */
-  slide: -1 | 0 | 1;
-  /** A new class: everything comes in at once. */
   jump: boolean;
-  pose: boolean;
 }
-
-/** What the showcase calls back. */
-interface ShowHandlers {
-  stepClass(dir: -1 | 1): void;
-  pickType(i: number): void;
-  stepType(dir: -1 | 1): void;
-  pose(): void;
-  pickSkin(i: number): void;
-  stepSkin(dir: -1 | 1): void;
-}
-
-/** The least height a showcase needs for a hero drawn at `scale`. */
-const showMinH = (scale: number): number => PILLS_BOTTOM + 3 + HERO_TALL * scale + FEET_ABOVE_SKINS + SKIN_NAME_DY + 2 + SWATCH + SWATCH_BOTTOM;
 
 /**
- * The showcase: the class's name between arrows, the pills of its characters,
- * the picked one big on a platform with a ring of light turning under it and
- * sparks rising round it, and the swatches of its skins below.
+ * The picker: three steps, each a header (a gold diamond on the line that
+ * joins them, the step's name, and what is picked in it) over its choices.
  */
-class Showcase extends Phaser.GameObjects.Container {
-  private bgBack: Phaser.GameObjects.Image;
-  private bgFront: Phaser.GameObjects.Image;
-  private aura: Phaser.GameObjects.Image;
-  private ring: Phaser.GameObjects.Graphics;
-  private ringTurn = 0;
-  private ringColor = 0xffffff;
-  private hero: Phaser.GameObjects.Container;
-  private sprite: Phaser.GameObjects.Sprite;
-  private glow: Phaser.GameObjects.Sprite;
-  private header: Phaser.GameObjects.BitmapText;
-  private headerShadow: Phaser.GameObjects.BitmapText;
-  private arrows: Phaser.GameObjects.Graphics;
-  private arrowZones: Phaser.GameObjects.Zone[];
-  private pills: Pill[] = [];
-  private skinName: Phaser.GameObjects.BitmapText;
+class Picker extends Phaser.GameObjects.Container {
+  private line: Phaser.GameObjects.Graphics;
+  private labels: Phaser.GameObjects.BitmapText[];
+  private values: Phaser.GameObjects.BitmapText[];
   private lock: Phaser.GameObjects.Image;
+  private wheel: Wheel;
+  private cards: Chip[] = [];
   private swatches: Chip[] = [];
-  private skinArrows: Phaser.GameObjects.Graphics;
-  private skinZones: Phaser.GameObjects.Zone[];
-  private motes: {
-    img: Phaser.GameObjects.Image;
-    t: number;
-    life: number;
-    x: number;
-    rise: number;
-  }[] = [];
   private probe: Phaser.GameObjects.BitmapText;
-  private readonly cx: number;
-  private readonly feet: number;
-  private readonly swatchY: number;
-  private preview?: Preview;
-  private accent = -1;
+  private rows: number[] = [0, 0, 0];
+  private boxW = 0;
+  private shown = false;
   private skin?: SkinPick;
-  private locked = false;
   private note: string | null = null;
   private noteTimer?: Phaser.Time.TimerEvent;
 
   constructor(
     scene: Phaser.Scene,
-    readonly boxW: number,
-    readonly boxH: number,
-    readonly heroScale: number,
-    private calls: ShowHandlers,
+    private calls: { pickClass(i: number): void; pickType(i: number): void; pickSkin(i: number): void },
   ) {
     super(scene, 0, 0);
-    const cx = (this.cx = Math.round(boxW / 2));
-    this.swatchY = boxH - SWATCH_BOTTOM - SWATCH;
-    this.feet = this.swatchY - SKIN_NAME_DY - 2 - FEET_ABOVE_SKINS;
-    this.bgBack = scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false);
-    this.bgFront = scene.add.image(0, 0, '__DEFAULT').setOrigin(0);
-    this.aura = scene.add
-      .image(cx, this.feet - 15 * heroScale, 'glow')
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setScale(heroScale * 1.4);
-    scene.tweens.add({
-      targets: this.aura,
-      alpha: { from: 0.3, to: 0.55 },
-      duration: 2400,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-    this.ring = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-
-    const shadow = scene.add.image(0, 0, 'shadow').setScale(1.3, 1);
-    this.sprite = scene.add.sprite(0, 0, '__DEFAULT');
-    this.glow = scene.add.sprite(0, 0, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD);
-    this.hero = scene.add.container(cx, this.feet, [shadow, this.sprite, this.glow]).setScale(heroScale);
-
-    const mote = moteTexture(scene);
-    for (let i = 0; i < MOTES; i++) {
-      const img = scene.add.image(0, 0, mote).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
-      this.motes.push({ img, t: Math.random(), life: 1, x: 0, rise: 0 });
-    }
-
-    this.headerShadow = pixelText(scene, 0, 0, '', OUTLINE, 2).setAlpha(0.6);
-    this.header = pixelText(scene, 0, 0, '', GOLD, 2);
-    this.arrows = scene.add.graphics();
-    this.arrowZones = ([-1, 1] as const).map((dir) => {
-      const z = scene.add.zone(0, 0, 24, 22).setOrigin(0);
-      onTap(scene, z, () => calls.stepClass(dir));
-      return z;
-    });
-    for (let i = 0; i < MAX_TYPES; i++) this.pills.push(new Pill(scene, () => calls.pickType(i)));
-
-    // Over the hero: a tap on it strikes its pose; a swipe steps to the class's next character
-    // (a swipe left bringing the next one in from the right).
-    const hit = scene.add
-      .zone(0, PILLS_BOTTOM + 2, boxW, this.swatchY - SKIN_NAME_DY - 3 - PILLS_BOTTOM - 2)
-      .setOrigin(0)
-      .setInteractive({ useHandCursor: true });
-    let down: { x: number; y: number } | null = null;
-    hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, (p: Phaser.Input.Pointer) => (down = { x: p.x, y: p.y }));
-    hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OUT, () => (down = null));
-    hit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, (p: Phaser.Input.Pointer) => {
-      if (!down) return;
-      const z = scene.cameras.main.zoom;
-      const dx = (p.x - down.x) / z;
-      const dy = (p.y - down.y) / z;
-      down = null;
-      if (Math.abs(dx) >= SWIPE && Math.abs(dx) > Math.abs(dy)) calls.stepType(dx < 0 ? 1 : -1);
-      else if (!dragged(scene, p)) {
-        const x = p.x / z - this.x;
-        const y = p.y / z - this.y;
-        const s = this.heroScale;
-        if (Math.abs(x - this.cx) <= 12 * s && y <= this.feet + 6 && y >= this.feet - 31 * s) calls.pose();
-      }
-    });
-
-    this.skinName = pixelText(scene, 0, 0, '');
+    this.line = scene.add.graphics();
+    this.labels = ['Class', 'Character', 'Skin'].map((t) => pixelText(scene, 0, 0, t, SOFT));
+    this.values = [0, 1, 2].map(() => pixelText(scene, 0, 0, '', INK));
     this.lock = scene.add.image(0, 0, 'icon_lock').setOrigin(0).setVisible(false);
-    this.skinArrows = scene.add.graphics();
-    this.skinZones = ([-1, 1] as const).map((dir) => {
-      const z = scene.add.zone(0, 0, 16, SWATCH + 6).setOrigin(0);
-      onTap(scene, z, () => calls.stepSkin(dir));
-      return z;
-    });
+    this.wheel = new Wheel(scene, (i) => calls.pickClass(i));
     this.probe = pixelText(scene, 0, 0, '').setVisible(false);
-
-    this.add([
-      this.bgBack,
-      this.bgFront,
-      this.aura,
-      this.ring,
-      this.hero,
-      ...this.motes.map((m) => m.img),
-      hit,
-      this.headerShadow,
-      this.header,
-      this.arrows,
-      ...this.arrowZones,
-      ...this.pills,
-      this.skinArrows,
-      ...this.skinZones,
-      this.skinName,
-      this.lock,
-      this.probe,
-    ]);
-    for (const m of this.motes) this.spawnMote(m, true);
+    this.add([this.line, ...this.labels, ...this.values, this.lock, this.wheel, this.probe]);
   }
 
-  show(d: ShowData): void {
-    // The backdrop takes the hero's colour, the new one fading in over the old.
-    if (d.accent !== this.accent) {
-      const key = showcaseTexture(this.scene, this.boxW, this.boxH, this.feet, this.heroScale, d.accent);
-      const first = this.accent < 0;
-      this.accent = d.accent;
-      this.scene.tweens.killTweensOf(this.bgFront);
-      if (!first) this.bgBack.setTexture(this.bgFront.texture.key).setVisible(true);
-      this.bgFront.setTexture(key).setAlpha(first ? 1 : 0);
-      if (!first)
-        this.scene.tweens.add({
-          targets: this.bgFront,
-          alpha: 1,
-          duration: 260,
-          ease: 'Sine.easeOut',
-          onComplete: () => this.bgBack.setVisible(false),
-        });
-      this.aura.setTint(d.accent);
-      this.ringColor = mixN(d.accent, 0xffffff, 0.45);
-      for (const m of this.motes) m.img.setTint(this.ringColor);
+  resize(w: number): void {
+    this.boxW = w;
+    this.shown = false;
+    // Where each step's header sits.
+    const s1 = 0;
+    const s2 = s1 + STEP_HEAD + STEP_GAP + MEDAL + 2 + STEP_SPACE;
+    const s3 = s2 + STEP_HEAD + STEP_GAP + this.cardSize() + STEP_SPACE;
+    this.rows = [s1, s2, s3];
+    this.labels.forEach((l, i) => l.setPosition(INDENT, this.rows[i]));
+    this.wheel.setPosition(INDENT - 2, s1 + STEP_HEAD + STEP_GAP);
+    this.wheel.resize(w - INDENT + 2);
+    // The line joining the steps' diamonds, and the diamonds.
+    const g = this.line.clear();
+    const lx = 3;
+    g.fillStyle(LINE).fillRect(lx, this.rows[0] + 4, 1, this.rows[2] - this.rows[0]);
+    for (const y of this.rows) {
+      const cy = y + 3;
+      g.fillStyle(OUTLINE).fillRect(lx - 3, cy - 1, 7, 3).fillRect(lx - 2, cy - 2, 5, 5).fillRect(lx - 1, cy - 3, 3, 7);
+      g.fillStyle(GOLD_DARK).fillRect(lx - 2, cy, 5, 1).fillRect(lx - 1, cy - 1, 3, 3).fillRect(lx, cy - 2, 1, 5);
+      g.fillStyle(GOLD_LIT).fillRect(lx, cy - 1, 1, 1);
     }
-    this.showHeader(d.className);
-    this.showPills(d);
-    this.showHero(d);
+  }
+
+  /** The biggest character cards for which four fit the column. */
+  private cardSize(): number {
+    const room = this.boxW - INDENT;
+    return CARD_SIZES.find((s) => s * 4 + CARD_GAP * 3 <= room) ?? CARD_SIZES[CARD_SIZES.length - 1];
+  }
+
+  show(d: PickData): void {
+    this.wheel.show(d.classes, d.classIndex, !this.shown);
+    this.shown = true;
+    this.setValue(0, d.className, GOLD);
+    this.setValue(1, d.typeName, INK);
+
+    // Step two: a card per character, left to right.
+    const size = this.cardSize();
+    while (this.cards.length < d.types.length) {
+      const i = this.cards.length;
+      const c = new Chip(this.scene, 2, () => this.calls.pickType(i));
+      this.cards.push(c);
+      this.add(c);
+    }
+    this.cards.forEach((c, i) => {
+      c.setVisible(i < d.types.length);
+      if (i >= d.types.length) return;
+      c.resize(size);
+      c.x = INDENT + i * (size + CARD_GAP);
+      c.baseY = this.rows[1] + STEP_HEAD + STEP_GAP;
+      c.show(d.types[i], i === d.picked);
+    });
+
     this.skin = d.skin;
     this.note = null;
     this.noteTimer?.remove();
     this.drawSkins();
   }
 
-  private showHeader(name: string): void {
-    const text = name.toUpperCase();
-    this.header.setText(text);
-    this.headerShadow.setText(text);
-    const x = Math.round(this.cx - this.header.width / 2);
-    this.header.setPosition(x, HEAD_Y);
-    this.headerShadow.setPosition(x + 1, HEAD_Y + 2);
-    const g = this.arrows.clear();
-    const mid = HEAD_Y + Math.round(this.header.height / 2) - 6;
-    for (const dir of [-1, 1] as const) {
-      const at = dir < 0 ? x - 13 : x + this.header.width + 8;
-      drawTallArrow(g, at, mid, dir, GOLD);
-      this.arrowZones[dir < 0 ? 0 : 1].setPosition(at - 9, mid - 4);
-    }
-  }
-
-  /** The pills, centred in a row; the picked one opens to show its name when the row has room. */
-  private showPills(d: ShowData): void {
-    const n = Math.min(d.types.length, MAX_TYPES);
-    this.pills.forEach((p, i) => {
-      p.setVisible(n > 1 && i < n);
-      if (n > 1 && i < n) p.set(d.types[i].preview, d.types[i].name, d.types[i].accent, i === d.picked);
-    });
-    if (n < 2) return;
-    const room = this.boxW - 12;
-    const width = (named: boolean) => this.pills.slice(0, n).reduce((sum, p, i) => sum + p.widthWith(named && i === d.picked), 0) + (n - 1) * PILL_GAP;
-    const named = width(true) <= room;
-    let x = Math.round(this.cx - width(named) / 2);
-    for (let i = 0; i < n; i++) {
-      const p = this.pills[i];
-      p.open(named && i === d.picked);
-      p.setPosition(x, PILLS_Y);
-      x += p.boxW + PILL_GAP;
-    }
-  }
-
-  private showHero(d: ShowData): void {
-    const preview = d.hero;
-    this.locked = d.skin.locked;
-    if (preview !== this.preview) {
-      this.preview = preview;
-      const oy = preview.originY ?? 31 / 32;
-      // Drop a pose's queued return to the old look's idle first: stopping plays the queue, and one frame
-      // of a smaller hero would clamp this look's crop for good (a samurai after the wizard was cut in half).
-      this.sprite.chain();
-      this.sprite.stop();
-      this.sprite.setTexture(preview.texture).setOrigin(0.5, oy);
-      const wide = Math.floor((this.boxW - 8) / this.heroScale);
-      cropToWindow(this.sprite, preview, Math.min(40, wide), 44, 3, 1);
-      this.glow.setVisible(!!preview.glow);
-      if (preview.glow) {
-        this.glow.setTexture(preview.glow).setOrigin(0.5, oy);
-        cropToWindow(this.glow, preview, Math.min(40, wide), 44, 3, 1);
-      }
-      this.sprite.play(preview.idle);
-      // In from the side it was swiped from, or up from the platform for a new class or skin.
-      this.scene.tweens.killTweensOf(this.hero);
-      const fromX = d.slide && !d.jump ? d.slide * 18 : 0;
-      this.hero.setAlpha(0).setPosition(this.cx + fromX, this.feet + (fromX ? 0 : 4));
-      this.scene.tweens.add({
-        targets: this.hero,
-        alpha: 1,
-        x: this.cx,
-        y: this.feet,
-        duration: SLIDE_MS,
-        ease: 'Cubic.easeOut',
-      });
-    }
-    if (this.locked) this.sprite.setTint(0x4a4468);
-    else this.sprite.clearTint();
-    this.glow.setAlpha(this.locked ? 0.25 : 1);
-    if (d.pose && !this.locked) this.pose();
-  }
-
-  /** The skin's name (or a note for a moment) over a row of swatches, one per look, with arrows either side. */
+  /** Step three: the skin's name (or a note for a moment) in its header, and a swatch per look. */
   private drawSkins(): void {
     const skin = this.skin;
     if (!skin) return;
-    const n = skin.looks.length;
-    const many = n > 1;
-    const nameY = this.swatchY - SKIN_NAME_DY;
-    const note = this.note;
-    this.lock.setVisible(!note && skin.locked);
-    if (note) this.skinName.setText(note.toUpperCase()).setTint(NOTE);
-    else this.skinName.setText(fitLine(this.probe, skin.name, this.boxW - 24)).setTint(skin.locked ? DIMMED : (skin.rarity ?? LAVENDER));
-    const lockW = this.lock.visible ? this.lock.width + 2 : 0;
-    const left = Math.round(this.cx - (lockW + this.skinName.width) / 2);
-    this.lock.setPosition(left, nameY);
-    this.skinName.setPosition(left + lockW, nameY);
-
-    while (this.swatches.length < n) {
+    if (this.note) this.setValue(2, this.note, NOTE);
+    else this.setValue(2, skin.name, skin.locked ? DIMMED : (skin.rarity ?? LAVENDER), skin.locked);
+    while (this.swatches.length < skin.looks.length) {
       const i = this.swatches.length;
       const c = new Chip(this.scene, 1, () => this.calls.pickSkin(i)).resize(SWATCH);
       this.swatches.push(c);
-      this.addAt(c, this.getIndex(this.skinName));
+      this.add(c);
     }
-    const total = n * SWATCH + (n - 1) * SWATCH_GAP;
-    const x0 = Math.round(this.cx - total / 2);
     this.swatches.forEach((c, i) => {
-      c.setVisible(many && i < n);
-      if (!many || i >= n) return;
-      c.x = x0 + i * (SWATCH + SWATCH_GAP);
-      c.baseY = this.swatchY;
+      c.setVisible(i < skin.looks.length);
+      if (i >= skin.looks.length) return;
+      c.x = INDENT + i * (SWATCH + SWATCH_GAP);
+      c.baseY = this.rows[2] + STEP_HEAD + STEP_GAP;
       c.show(skin.looks[i], i === skin.index);
     });
-    const g = this.skinArrows.clear();
-    this.skinZones.forEach((z) => z.setVisible(many));
-    for (const z of this.skinZones) if (z.input) z.input.enabled = many;
-    if (!many) return;
-    const ay = this.swatchY + 2;
-    drawTallArrow(g, x0 - 11, ay, -1, this.ringColor);
-    drawTallArrow(g, x0 + total + 6, ay, 1, this.ringColor);
-    this.skinZones[0].setPosition(x0 - 16, this.swatchY - 3);
-    this.skinZones[1].setPosition(x0 + total, this.swatchY - 3);
+  }
+
+  /** A step's value, set to the column's right edge (with a lock before a skin not yet won). */
+  private setValue(i: number, text: string, tint: number, locked = false): void {
+    const lockW = locked ? this.lock.width + 2 : 0;
+    const room = this.boxW - INDENT - this.labels[i].width - 8 - lockW;
+    const t = this.values[i].setText(fitLine(this.probe, text, room)).setTint(tint);
+    t.setPosition(this.boxW - t.width, this.rows[i]);
+    if (i === 2) this.lock.setVisible(locked).setPosition(t.x - lockW, this.rows[i]);
   }
 
   /** Show `text` where the skin's name goes for a moment. */
@@ -953,213 +804,119 @@ class Showcase extends Phaser.GameObjects.Container {
   /** Tried to play a locked skin: the lock shakes. */
   rattle(): void {
     const x = this.lock.x;
-    this.scene.tweens.add({
-      targets: this.lock,
-      x: { from: x - 2, to: x },
-      duration: 60,
-      repeat: 3,
-      yoyo: true,
-      onComplete: () => this.lock.setX(x),
-    });
-  }
-
-  pose(): void {
-    if (this.preview && !this.locked) this.sprite.play(this.preview.chosen).chain(this.preview.idle);
-  }
-
-  update(dt: number): void {
-    if (this.glow.visible) this.glow.setFrame(this.sprite.frame.name);
-    this.drawRing(dt);
-    for (const m of this.motes) {
-      m.t += dt / m.life;
-      if (m.t >= 1) this.spawnMote(m, false);
-      // Fade in, drift up with a slight sway, fade out near the top.
-      const a = Math.sin(Math.PI * Math.min(1, m.t)) * 0.85;
-      m.img.setAlpha(a);
-      m.img.setPosition(Math.round(m.x + Math.sin(m.t * 6 + m.rise) * 2), Math.round(this.feet - 2 - m.t * m.rise));
-    }
-  }
-
-  /** A dashed ring of light on the platform's top face, turning slowly. */
-  private drawRing(dt: number): void {
-    this.ringTurn = (this.ringTurn + dt * RING_SPEED) % RING_DASHES;
-    const { rx, ry } = platformOf(this.heroScale);
-    const rrx = rx - 6;
-    const rry = ry - 2;
-    const steps = Math.round(rrx * 5);
-    const g = this.ring.clear();
-    g.fillStyle(this.ringColor, 0.85);
-    let last = '';
-    for (let i = 0; i < steps; i++) {
-      const u = (i / steps) * RING_DASHES + this.ringTurn;
-      if (u % 1 > 0.6) continue;
-      const t = (i / steps) * Math.PI * 2;
-      const x = Math.round(this.cx + Math.cos(t) * rrx);
-      const y = Math.round(this.feet + 1 + Math.sin(t) * rry);
-      const k = `${x},${y}`;
-      if (k === last) continue;
-      last = k;
-      g.fillRect(x, y, 1, 1);
-    }
-  }
-
-  private spawnMote(m: Showcase['motes'][number], scatter: boolean): void {
-    const { rx } = platformOf(this.heroScale);
-    m.t = scatter ? Math.random() : 0;
-    m.life = Phaser.Math.FloatBetween(1.8, 3.4);
-    m.x = this.cx + Phaser.Math.Between(-rx + 4, rx - 4);
-    m.rise = Phaser.Math.Between(30, Math.max(40, this.feet - PILLS_BOTTOM - 6));
+    this.scene.tweens.add({ targets: this.lock, x: { from: x - 2, to: x }, duration: 60, repeat: 3, yoyo: true, onComplete: () => this.lock.setX(x) });
   }
 }
 
-/** How the card lays out at width `w`: where its rows go, and the least height it needs. */
-function cardRows(w: number, h = 0) {
-  const cols = w >= TWO_COLS ? 2 : 1;
-  const perCol = STATS.length / cols;
-  const abilRows = 2 / cols;
-  const minH = STATS_Y + perCol * STAT_ROW + 5 + abilRows * ABIL_ROW + ICON_BOX + 2 + 5 + PLAY_H + PAD;
-  // A card taller than it needs spreads its rows a little rather than leaving a gap over Play.
-  const extra = Math.max(0, h - minH);
-  const statRow = STAT_ROW + Math.min(3, Math.floor((extra * 0.4) / perCol));
-  const left = extra - (statRow - STAT_ROW) * perCol;
-  const abilRow = ABIL_ROW + Math.min(6, Math.floor((left * 0.4) / abilRows));
-  const space = 5 + Math.min(5, Math.floor(left * 0.1));
-  const rule2 = STATS_Y + perCol * statRow;
-  const abilY = rule2 + space;
-  const specialY = abilY + abilRows * abilRow + (space - 5);
-  return { cols, statRow, abilRow, rule2, abilY, specialY, minH };
-}
+// ---- The details. ----
+
+/** The details' height: one narrow column, or wide (stats in three columns, abilities side by side). */
+const detailsH = (wide: boolean): number =>
+  NAME_H + ROLE_H + SECTION + (wide ? 2 * STAT_ROW : STATS.length * STAT_ROW) + SECTION + (wide ? ICON_BOX + 10 : 3 * ABIL_ROW) + SECTION + PLAY_H;
 
 /**
- * The card: the picked character's name and role over a line of its colour,
- * its six stats as segmented bars measured against the best of every
- * character, its attack and ability, the gold Special strip, and Play.
+ * The details: the picked character's name and role over a line of its
+ * colour, its stats, its attack, ability and Special (the Special in gold,
+ * with its energy cost), and Play.
  */
-class InfoCard extends Phaser.GameObjects.Container {
-  private top: Phaser.GameObjects.Graphics;
+class Details extends Phaser.GameObjects.Container {
   private nameText: Phaser.GameObjects.BitmapText;
   private role: Phaser.GameObjects.BitmapText;
-  private bars: Phaser.GameObjects.Graphics;
-  private values: Phaser.GameObjects.BitmapText[];
-  private abilities: Phaser.GameObjects.BitmapText[];
-  private icons: {
-    attack: Phaser.GameObjects.Sprite;
-    special: Phaser.GameObjects.Image;
-    ult: Phaser.GameObjects.Image;
-  };
-  private ultName: Phaser.GameObjects.BitmapText;
-  private ultCost: Phaser.GameObjects.BitmapText;
-  private bolt: Phaser.GameObjects.Graphics;
-  private probe: Phaser.GameObjects.BitmapText;
-  private rows: ReturnType<typeof cardRows>;
-  /** Each stat bar: its place, and how full it is now and is growing to. */
-  private barAt: { x: number; y: number; w: number }[] = [];
-  /** Each stat value's right edge. */
+  private rule: Phaser.GameObjects.Graphics;
+  private values: Phaser.GameObjects.BitmapText[] = [];
   private valueX: number[] = [];
-  private fill: number[] = STATS.map(() => 0);
-  private from: number[] = STATS.map(() => 0);
-  private to: number[] = STATS.map(() => 0);
-  private grow?: Phaser.Tweens.Tween;
-  private accent = 0xffffff;
+  private names: Phaser.GameObjects.BitmapText[] = [];
+  private nameW: number[] = [];
+  private icons: { attack: Phaser.GameObjects.Sprite; special: Phaser.GameObjects.Image; ult: Phaser.GameObjects.Image };
+  private cost: Phaser.GameObjects.BitmapText;
+  private bolt: Phaser.GameObjects.Graphics;
+  private boltAt: { x: number; y: number } | null = null;
+  private probe: Phaser.GameObjects.BitmapText;
 
   constructor(
     scene: Phaser.Scene,
     readonly boxW: number,
-    readonly boxH: number,
+    readonly wide: boolean,
     play: () => void,
   ) {
     super(scene, 0, 0);
     const w = boxW;
-    const rows = (this.rows = cardRows(w, boxH));
-    const bg = scene.add.image(0, 0, panelTexture(scene, 'sel_card', w, boxH, SOLID)).setOrigin(0);
-    this.top = scene.add.graphics();
-    this.nameText = pixelText(scene, PAD, NAME_Y, '', INK, 2);
-    this.role = pixelText(scene, PAD, ROLE_Y, '', LAVENDER);
     this.probe = pixelText(scene, 0, 0, '').setVisible(false);
+    this.nameText = pixelText(scene, 0, 0, '', INK, 2);
+    this.role = pixelText(scene, 0, NAME_H, '', LAVENDER);
+    this.rule = scene.add.graphics();
     const parts: Phaser.GameObjects.GameObject[] = [];
-    const lines = scene.add.graphics();
-    const rule = (y: number) => {
-      lines.fillStyle(OUTLINE).fillRect(PAD, y, w - PAD * 2, 1);
-      lines.fillStyle(0x43356e).fillRect(PAD, y + 1, w - PAD * 2, 1);
-    };
 
-    // The stats: an icon, a name, a bar, and the value at the column's right edge.
-    const colGap = 10;
-    const colW = Math.floor((w - PAD * 2 - (rows.cols - 1) * colGap) / rows.cols);
-    const labelW = Math.max(...STATS.map((s) => this.probe.setText(s.name).width)) + 3;
-    const valueW = this.probe.setText('000').width + 1;
-    const perCol = STATS.length / rows.cols;
-    this.values = STATS.map((s, i) => {
+    // The stats: an icon, a name and the value, in rows (or three columns of two when wide).
+    let y = NAME_H + ROLE_H + SECTION;
+    const cols = wide ? 3 : 1;
+    const colGap = 8;
+    const colW = Math.floor((w - (cols - 1) * colGap) / cols);
+    const perCol = STATS.length / cols;
+    STATS.forEach((s, i) => {
       const col = Math.floor(i / perCol);
-      const x = PAD + col * (colW + colGap);
-      const y = STATS_Y + (i % perCol) * rows.statRow;
-      parts.push(scene.add.image(x - 1, y - 1, 'sel_stat_icons', s.icon).setOrigin(0));
-      parts.push(pixelText(scene, x + 10, y, s.name, SOFT));
-      const bx = x + 10 + labelW;
-      this.barAt.push({ x: bx, y: y + 1, w: x + colW - valueW - 3 - bx });
+      const x = col * (colW + colGap);
+      const sy = y + (i % perCol) * STAT_ROW;
+      parts.push(scene.add.image(x - 1, sy - 1, 'sel_stat_icons', s.icon).setOrigin(0));
+      parts.push(pixelText(scene, x + 10, sy, s.name, SOFT));
+      this.values.push(pixelText(scene, 0, sy, '', INK));
       this.valueX.push(x + colW);
-      return pixelText(scene, x + colW, y, '', INK);
     });
-    this.bars = scene.add.graphics();
-    rule(rows.rule2);
+    y += perCol * STAT_ROW + SECTION;
 
-    // Attack and ability: an icon in a recessed box, what it is, and its name.
+    // Attack, ability and Special: an icon in a recessed box, what it is, and its name.
     const boxes = scene.add.graphics();
-    const box = (x: number, y: number, size: number, rimC: number) => {
-      boxes.fillStyle(OUTLINE).fillRect(x, y, size, size);
-      boxes.fillStyle(0x140f2a).fillRect(x + 1, y + 1, size - 2, size - 2);
-      boxes.fillStyle(rimC).fillRect(x + 1, y + size - 2, size - 2, 1);
+    const box = (x: number, by: number, rimC: number, edge: number) => {
+      boxes.fillStyle(OUTLINE).fillRect(x, by, ICON_BOX, ICON_BOX);
+      boxes.fillStyle(0x140f2a).fillRect(x + 1, by + 1, ICON_BOX - 2, ICON_BOX - 2);
+      boxes.fillStyle(rimC).fillRect(x + 1, by + ICON_BOX - 2, ICON_BOX - 2, 1);
+      boxes.fillStyle(edge).fillRect(x + 1, by + 1, ICON_BOX - 2, 1);
     };
-    const abilW = Math.floor((w - PAD * 2 - (rows.cols - 1) * colGap) / rows.cols);
-    const abilAt = (i: number) => (rows.cols === 2 ? { x: PAD + i * (abilW + colGap), y: rows.abilY } : { x: PAD, y: rows.abilY + i * rows.abilRow });
-    this.abilities = ['Attack', 'Ability'].map((kind, i) => {
-      const { x, y } = abilAt(i);
-      box(x, y, ICON_BOX, 0x43356e);
-      parts.push(pixelText(scene, x + ICON_BOX + 5, y, kind, SOFT));
-      return pixelText(scene, x + ICON_BOX + 5, y + 9, '');
+    const kinds = ['Attack', 'Ability', 'Special'];
+    const at: { x: number; y: number }[] = [];
+    const third = Math.floor((w - 2 * colGap) / 3);
+    kinds.forEach((kind, i) => {
+      const special = i === 2;
+      const tint = special ? GOLD : SOFT;
+      if (wide) {
+        // Side by side: the box, its kind beside it, its name under it.
+        const x = i * (third + colGap);
+        at.push({ x, y });
+        box(x, y, special ? GOLD_DARK : LINE, special ? GOLD_LIT : 0x221a44);
+        parts.push(pixelText(scene, x + ICON_BOX + 3, y + 1, kind, tint));
+        this.names.push(pixelText(scene, x, y + ICON_BOX + 2, ''));
+        this.nameW.push(third);
+      } else {
+        const ry = y + i * ABIL_ROW;
+        at.push({ x: 0, y: ry });
+        box(0, ry, special ? GOLD_DARK : LINE, special ? GOLD_LIT : 0x221a44);
+        parts.push(pixelText(scene, ICON_BOX + 4, ry, kind, tint));
+        this.names.push(pixelText(scene, ICON_BOX + 4, ry + 9, ''));
+        this.nameW.push(w - ICON_BOX - 4);
+      }
     });
-
-    // The Special: a gold-rimmed strip with its icon, its name and what it costs in energy.
-    const sx = PAD - 2;
-    const sw = w - (PAD - 2) * 2;
-    const sy = rows.specialY;
-    const sh = ICON_BOX + 2;
-    const strip = scene.add.graphics();
-    strip.fillStyle(OUTLINE).fillRect(sx, sy, sw, sh);
-    strip.fillStyle(GOLD_DARK).fillRect(sx + 1, sy + 1, sw - 2, sh - 2);
-    strip.fillStyle(0x1c1538).fillRect(sx + 2, sy + 2, sw - 4, sh - 4);
-    strip.fillStyle(GOLD_LIT, 0.7).fillRect(sx + 2, sy + 1, sw - 4, 1);
-    strip.fillStyle(GOLD_LIT, 0.08).fillRect(sx + 2, sy + 2, sw - 4, 6);
-    const ultBox = sx + 2;
-    box(ultBox, sy + 1, ICON_BOX, 0x8a4e22);
-    const ultLabel = pixelText(scene, ultBox + ICON_BOX + 5, sy + 2, 'Special', GOLD);
-    this.ultName = pixelText(scene, ultBox + ICON_BOX + 5, sy + 11, '');
-    this.ultCost = pixelText(scene, 0, sy + 6, '', GOLD);
+    // The Special's cost, a bolt and a number: under its kind when wide, at the row's right when narrow.
+    this.cost = pixelText(scene, 0, 0, '', GOLD);
     this.bolt = scene.add.graphics();
-
-    const a0 = abilAt(0);
-    const a1 = abilAt(1);
+    this.boltAt = wide ? { x: at[2].x + ICON_BOX + 3, y: at[2].y + 9 } : null;
+    const costY = wide ? at[2].y + 9 : at[2].y;
+    this.cost.setY(costY);
     this.icons = {
-      attack: scene.add.sprite(a0.x + ICON_BOX / 2, a0.y + ICON_BOX / 2, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD),
-      special: scene.add.image(a1.x + ICON_BOX / 2, a1.y + ICON_BOX / 2, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD),
-      ult: scene.add.image(ultBox + ICON_BOX / 2, sy + 1 + ICON_BOX / 2, '__DEFAULT'),
+      attack: scene.add.sprite(at[0].x + ICON_BOX / 2, at[0].y + ICON_BOX / 2, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD),
+      special: scene.add.image(at[1].x + ICON_BOX / 2, at[1].y + ICON_BOX / 2, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD),
+      ult: scene.add.image(at[2].x + ICON_BOX / 2, at[2].y + ICON_BOX / 2, '__DEFAULT'),
     };
-    const playBtn = new PixelButton(scene, 'Play', w - PAD * 2, PLAY_H, BUTTON_GOLD, `sel_play_${w}`, play).place(PAD, boxH - PAD - PLAY_H);
+    y += (wide ? ICON_BOX + 10 : 3 * ABIL_ROW) + SECTION;
+    const playBtn = new PixelButton(scene, 'Play', w, PLAY_H, BUTTON_GOLD, `sel_play_${w}`, play).place(0, y);
     this.add([
-      bg,
-      this.top,
       this.nameText,
       this.role,
-      lines,
+      this.rule,
       ...parts,
-      this.bars,
       ...this.values,
       boxes,
-      ...this.abilities,
-      strip,
-      ultLabel,
-      this.ultName,
-      this.ultCost,
+      ...this.names,
+      this.cost,
       this.bolt,
       this.icons.attack,
       this.icons.special,
@@ -1174,204 +931,142 @@ class InfoCard extends Phaser.GameObjects.Container {
     role: string,
     accent: number,
     stats: HeroStats,
-    attack: string,
-    special: string,
-    buttons: {
-      attack: { texture: string; frame?: string; anim?: string };
-      special: { texture: string };
-    },
+    abilities: string[],
+    buttons: { attack: { texture: string; frame?: string; anim?: string }; special: { texture: string } },
     ult: { icon: string; name: string; cost: number },
   ): void {
     const w = this.boxW;
-    const textW = w - PAD * 2;
-    this.accent = accent;
-    // A band of the hero's colour along the top, and a line under its role that fades out to the right.
-    const g = this.top.clear();
-    g.fillStyle(accent).fillRect(2, 2, w - 4, 2);
-    g.fillStyle(0xffffff, 0.35).fillRect(2, 2, w - 4, 1);
-    for (let x = 0; x < textW; x++) {
-      const a = 1 - x / textW;
-      if (a < bayer(x, 0) * 0.9) continue;
-      g.fillStyle(accent, 0.35 + a * 0.65).fillRect(PAD + x, RULE_Y, 1, 1);
-    }
-    g.fillStyle(OUTLINE, 0.8).fillRect(PAD, RULE_Y + 1, textW, 1);
-
-    // The name, big when it fits, and the role.
+    // The name, big when it fits, and the role over a line of the hero's colour that fades out to the right.
     this.nameText.setScale(2).setText(name.toUpperCase());
-    if (this.nameText.width > textW)
-      this.nameText
-        .setScale(1)
-        .setText(fitLine(this.probe, name, textW))
-        .setY(NAME_Y + 5);
-    else this.nameText.setY(NAME_Y);
-    this.role.setText(fitLine(this.probe, role, textW));
-
-    // The stats: values set to their column's right edge, the bars growing to the new numbers.
-    const tops = statMax();
+    let nameY = 0;
+    if (this.nameText.width > w) {
+      this.nameText.setScale(1).setText(fitLine(this.probe, name, w));
+      nameY = 5;
+    }
+    this.role.setText(fitLine(this.probe, role, w));
+    const g = this.rule.clear();
+    const ry = NAME_H + ROLE_H;
+    for (let x = 0; x < w; x++) {
+      const a = 1 - x / w;
+      if (a < bayer(x, 0) * 0.9) continue;
+      g.fillStyle(accent, 0.35 + a * 0.65).fillRect(x, ry - 1, 1, 1);
+    }
     STATS.forEach((s, i) => {
       const t = this.values[i].setText(s.value(stats));
       t.setX(this.valueX[i] - t.width);
-      this.to[i] = Phaser.Math.Clamp(s.num(stats) / tops[i], 0.06, 1);
     });
-    this.from = [...this.fill];
-    this.grow?.stop();
-    this.grow = this.scene.tweens.addCounter({
-      from: 0,
-      to: 1,
-      duration: BAR_MS,
-      ease: 'Cubic.easeOut',
-      onUpdate: (tw) => this.drawBars(tw.getValue() ?? 1),
-      onComplete: () => this.drawBars(1),
-    });
+    // The name and role come in from the right a little as the hero changes.
+    this.scene.tweens.killTweensOf([this.nameText, this.role]);
+    this.nameText.setY(nameY);
+    for (const t of [this.nameText, this.role]) {
+      t.setAlpha(0).setX(6);
+      this.scene.tweens.add({ targets: t, alpha: 1, x: 0, duration: 220, ease: 'Cubic.easeOut' });
+    }
 
-    // Attack and ability, named for the look.
-    const abW = (i: number) => this.abilityRight(i) - this.abilities[i].x;
-    this.abilities[0].setText(fitLine(this.probe, attack, abW(0)));
-    this.abilities[1].setText(fitLine(this.probe, special, abW(1)));
     this.icons.attack.stop();
     this.icons.attack.setTexture(buttons.attack.texture, buttons.attack.frame);
     if (buttons.attack.anim) this.icons.attack.play(buttons.attack.anim);
     this.icons.special.setTexture(buttons.special.texture);
-
-    // The Special, and its energy cost at the right with a bolt.
     if (this.scene.textures.exists(ult.icon)) this.icons.ult.setTexture(ult.icon).setVisible(true);
     else this.icons.ult.setVisible(false);
-    const right = w - PAD - 3;
-    const sy = this.rows.specialY;
-    this.ultCost.setText(`${ult.cost}`);
-    this.ultCost.setX(right - this.ultCost.width);
-    const boltX = this.ultCost.x - 7;
+
+    // The Special's cost with a bolt.
+    this.cost.setText(`${ult.cost}`);
+    const boltX = this.boltAt ? this.boltAt.x : w - this.cost.width - 7;
+    const by = this.cost.y;
+    this.cost.setX(boltX + 6);
     const b = this.bolt.clear();
     const BOLT = ['..##', '.##.', '####', '.##.', '##..'];
-    BOLT.forEach((row, y) => [...row].forEach((c, x) => c === '#' && b.fillStyle(GOLD_LIT).fillRect(boltX + x, sy + 7 + y, 1, 1)));
-    this.ultName.setText(fitLine(this.probe, ult.name, boltX - 4 - this.ultName.x));
-  }
+    BOLT.forEach((row, yy) => [...row].forEach((c, xx) => c === '#' && b.fillStyle(GOLD_LIT).fillRect(boltX + xx, by + 1 + yy, 1, 1)));
 
-  /** The right edge an ability's name may run to. */
-  private abilityRight(i: number): number {
-    if (this.rows.cols === 1) return this.boxW - PAD;
-    const colGap = 10;
-    const colW = Math.floor((this.boxW - PAD * 2 - colGap) / 2);
-    return PAD + i * (colW + colGap) + colW;
-  }
-
-  /** The stat bars, `t` of the way from their old fill to the new: a dark trough, then segments of the hero's colour lit along the top. */
-  private drawBars(t: number): void {
-    const g = this.bars.clear();
-    const lit = mixN(this.accent, 0xffffff, 0.45);
-    const dark = mixN(this.accent, OUTLINE, 0.35);
-    this.barAt.forEach((at, i) => {
-      const f = (this.fill[i] = this.from[i] + (this.to[i] - this.from[i]) * t);
-      const inner = at.w - 2;
-      const fw = Math.max(1, Math.round(inner * f));
-      g.fillStyle(OUTLINE).fillRect(at.x, at.y, at.w, BAR_H);
-      g.fillStyle(0x1e1840).fillRect(at.x + 1, at.y + 1, inner, BAR_H - 2);
-      g.fillStyle(dark).fillRect(at.x + 1, at.y + 1, fw, BAR_H - 2);
-      g.fillStyle(this.accent).fillRect(at.x + 1, at.y + 1, fw, BAR_H - 3);
-      g.fillStyle(lit).fillRect(at.x + 1, at.y + 1, fw, 1);
-      // Notches every few pixels split the bar into segments.
-      for (let x = 5; x < fw; x += 6) g.fillStyle(OUTLINE, 0.5).fillRect(at.x + 1 + x, at.y + 1, 1, BAR_H - 2);
-      g.fillStyle(0xffffff, 0.75).fillRect(at.x + fw, at.y + 1, 1, BAR_H - 2);
+    [abilities[0], abilities[1], ult.name].forEach((n, i) => {
+      const room = i === 2 && !this.wide ? boltX - 4 - this.names[i].x : this.nameW[i];
+      this.names[i].setText(fitLine(this.probe, n, room));
     });
   }
 }
 
-/** How the page fits a view: stacked or side by side, and every part's size. */
+// ---- The page. ----
+
+/** How the page fits a view. */
 interface Plan {
-  tall: boolean;
-  chip: number;
-  cols: number;
-  rosterW: number;
-  rosterH: number;
-  showW: number;
-  showH: number;
+  wide: boolean;
+  pickerW: number;
+  detailsW: number;
   scale: number;
-  infoW: number;
-  infoH: number;
+  heroX: number;
+  feet: number;
+  pickerX: number;
+  pickerY: number;
+  detailsX: number;
+  detailsY: number;
 }
 
-/** The roster's size with `chip`-sized chips in `cols` columns. */
-const rosterSize = (chip: number, cols: number) => {
-  const rows = Math.ceil(CLASSES.length / cols);
-  return {
-    w: cols * (chip + CHIP_GAP) - CHIP_GAP + ROSTER_PAD * 2,
-    h: rows * (chip + CHIP_GAP) - CHIP_GAP + ROSTER_PAD * 2,
-  };
-};
-
-/** Side by side, for a wide view: the roster on the left, the showcase in the middle, the card on the right. Null when it can't fit. */
+/** Side by side: the picker on the left, the hero in the middle, the details on the right. Null when it can't fit. */
 function widePlan(vw: number, vh: number): Plan | null {
-  const band = Math.min(vh - TOP - MARGIN, BAND_MAX);
-  if (band < cardRows(INFO_W).minH) return null;
-  for (const chip of CHIP_SIZES)
-    for (const cols of [3, 4]) {
-      const r = rosterSize(chip, cols);
-      if (r.h > band) continue;
-      const showW = Math.min(SHOW_MAX, Math.floor((vw - MARGIN * 2 - r.w - INFO_W - GAP * 2) / 2) * 2);
-      if (showW < SHOW_MIN) continue;
-      const scale = HERO_SCALES.find((s) => showMinH(s) <= band && 24 * s <= showW - 20);
-      if (!scale) continue;
-      return {
-        tall: false,
-        chip,
-        cols,
-        rosterW: r.w,
-        rosterH: band,
-        showW,
-        showH: band,
-        scale,
-        infoW: INFO_W,
-        infoH: band,
-      };
-    }
-  return null;
+  const pickerW = Math.round(Phaser.Math.Clamp(vw * 0.34, PICKER_W[0], PICKER_W[1]));
+  const detailsW = Math.round(Phaser.Math.Clamp(vw * 0.27, DETAILS_W[0], DETAILS_W[1]));
+  const middle = vw - MARGIN * 2 - pickerW - detailsW - 16;
+  const room = vh - TOP - MARGIN;
+  if (middle < 96 || room < Math.max(PICKER_H, detailsH(false))) return null;
+  const scale = HERO_SCALES.find((s) => HERO_TALL * s + 70 <= room && 24 * s <= middle - 8);
+  if (!scale) return null;
+  const pickerX = MARGIN + 2;
+  const detailsX = Math.round(vw - MARGIN - 2 - detailsW);
+  const heroX = Math.round((pickerX + pickerW + detailsX) / 2);
+  const feet = Math.round(TOP + (room + HERO_TALL * scale) / 2 + 4);
+  return {
+    wide: true,
+    pickerW,
+    detailsW,
+    scale,
+    heroX,
+    feet,
+    pickerX,
+    pickerY: Math.round(TOP + (room - PICKER_H) / 2),
+    detailsX,
+    detailsY: Math.round(TOP + (room - detailsH(false)) / 2),
+  };
 }
 
-/** Stacked, for a tall view: the showcase, the card under it, and the roster at the bottom. Null when it can't fit. */
+/** Stacked: the hero on top, the picker under it, the details at the bottom. Null when it can't fit. */
 function tallPlan(vw: number, vh: number): Plan | null {
-  const w = Math.floor(Math.min(vw - MARGIN * 2, COLUMN_MAX) / 2) * 2;
-  if (w < SHOW_MIN) return null;
-  const infoH = cardRows(w).minH;
-  // The biggest chips that keep the roster to three rows, else the smallest.
-  let chip = CHIP_SIZES[CHIP_SIZES.length - 1];
-  for (const c of CHIP_SIZES) {
-    const cols = Math.floor((w - ROSTER_PAD * 2 + CHIP_GAP) / (c + CHIP_GAP));
-    if (Math.ceil(CLASSES.length / cols) <= 3) {
-      chip = c;
-      break;
-    }
-  }
-  const cols = Math.floor((w - ROSTER_PAD * 2 + CHIP_GAP) / (chip + CHIP_GAP));
-  const r = rosterSize(chip, cols);
-  const room = vh - TOP - MARGIN - GAP * 2 - infoH - r.h;
-  const scale = HERO_SCALES.find((s) => showMinH(s) <= room && 24 * s <= w - 20);
+  const w = Math.floor(Math.min(vw - MARGIN * 2, STACK_MAX));
+  if (w < PICKER_W[0]) return null;
+  const below = PICKER_H + 12 + detailsH(true);
+  const room = vh - TOP - MARGIN - below - 12;
+  const scale = HERO_SCALES.find((s) => HERO_TALL * s + 10 <= room && 24 * s <= w);
   if (!scale) return null;
-  return {
-    tall: true,
-    chip,
-    cols,
-    rosterW: w,
-    rosterH: r.h,
-    showW: w,
-    showH: Math.min(room, showMinH(scale) + 30),
-    scale,
-    infoW: w,
-    infoH,
-  };
+  const x = Math.round((vw - w) / 2);
+  // The hero in the middle of the room above the picker; the rest hangs below it.
+  const heroRoom = Math.min(room, HERO_TALL * scale + 60);
+  const top = Math.round(TOP + Math.max(0, (vh - TOP - MARGIN - heroRoom - 12 - below) / 2));
+  const feet = top + Math.round((heroRoom + HERO_TALL * scale) / 2);
+  const pickerY = top + heroRoom + 12;
+  return { wide: false, pickerW: w, detailsW: w, scale, heroX: Math.round(vw / 2), feet, pickerX: x, pickerY, detailsX: x, detailsY: pickerY + PICKER_H + 12 };
 }
 
 /** The select page itself, opened over the home screen. */
 export class SelectScene extends Phaser.Scene {
   private cls = 0;
   private leaving = false;
-  private shade!: Phaser.GameObjects.Graphics;
-  private back!: PixelButton;
-  private rosterBg!: Phaser.GameObjects.Image;
-  private roster: Chip[] = [];
-  private show?: Showcase;
-  private info?: InfoCard;
   /** A skin not yet won that the player is looking at (the look worn stays the one they own). */
   private peek: SkinDef | null = null;
+  private plan?: Plan;
+  private bgBack!: Phaser.GameObjects.Image;
+  private bgFront!: Phaser.GameObjects.Image;
+  private bgKeys: string[] = [];
+  private halo!: Phaser.GameObjects.Image;
+  private hero!: Phaser.GameObjects.Container;
+  private sprite!: Phaser.GameObjects.Sprite;
+  private glow!: Phaser.GameObjects.Sprite;
+  private heroZone!: Phaser.GameObjects.Zone;
+  private motes: { img: Phaser.GameObjects.Image; t: number; life: number; x: number; rise: number }[] = [];
+  private preview?: Preview;
+  private accent = -1;
+  private back!: PixelButton;
+  private picker!: Picker;
+  private details?: Details;
 
   constructor() {
     super('select');
@@ -1384,8 +1079,12 @@ export class SelectScene extends Phaser.Scene {
   create(): void {
     this.leaving = false;
     this.peek = null;
-    this.show = undefined;
-    this.info = undefined;
+    this.plan = undefined;
+    this.details = undefined;
+    this.preview = undefined;
+    this.accent = -1;
+    this.bgKeys = [];
+    this.motes = [];
     const cam = this.cameras.main.setOrigin(0, 0).setAlpha(0);
     this.tweens.add({ targets: cam, alpha: 1, duration: 260 });
     const saved = CLASSES.findIndex((c) => c.id === lastHero());
@@ -1393,10 +1092,37 @@ export class SelectScene extends Phaser.Scene {
     ensureUltIcons(this);
     statIconsTexture(this);
 
-    this.shade = this.add.graphics();
-    this.rosterBg = this.add.image(0, 0, '__DEFAULT').setOrigin(0);
-    this.roster = CLASSES.map((_c, i) => new Chip(this, 2, () => this.pickClass(i)));
-    for (const c of this.roster) this.add.existing(c);
+    // The splash: the backdrop (the new one fading in over the old), the halo, the hero and its sparks.
+    this.bgBack = this.add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false);
+    this.bgFront = this.add.image(0, 0, '__DEFAULT').setOrigin(0);
+    this.halo = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: this.halo, alpha: { from: 0.35, to: 0.6 }, duration: 2600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const shadow = this.add.image(0, 0, 'shadow').setScale(1.4, 1);
+    this.sprite = this.add.sprite(0, 0, '__DEFAULT');
+    this.glow = this.add.sprite(0, 0, '__DEFAULT').setBlendMode(Phaser.BlendModes.ADD);
+    this.hero = this.add.container(0, 0, [shadow, this.sprite, this.glow]);
+    const mote = moteTexture(this);
+    for (let i = 0; i < MOTES; i++) {
+      const img = this.add.image(0, 0, mote).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+      this.motes.push({ img, t: Math.random(), life: 1, x: 0, rise: 0 });
+    }
+    // A tap on the hero strikes its pose; a swipe steps to the class's next character (a swipe left brings the next one).
+    this.heroZone = this.add.zone(0, 0, 1, 1).setOrigin(0).setInteractive({ useHandCursor: true });
+    let down: { x: number; y: number } | null = null;
+    this.heroZone.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, (p: Phaser.Input.Pointer) => (down = { x: p.x, y: p.y }));
+    this.heroZone.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OUT, () => (down = null));
+    this.heroZone.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, (p: Phaser.Input.Pointer) => {
+      if (!down) return;
+      const z = this.cameras.main.zoom;
+      const dx = (p.x - down.x) / z;
+      const dy = (p.y - down.y) / z;
+      down = null;
+      if (Math.abs(dx) >= SWIPE && Math.abs(dx) > Math.abs(dy)) this.stepType(dx < 0 ? 1 : -1);
+      else if (!dragged(this, p)) this.pose();
+    });
+
+    this.picker = new Picker(this, { pickClass: (i) => this.pickClass(i), pickType: (i) => this.pickType(i), pickSkin: (i) => this.pickSkin(i) });
+    this.add.existing(this.picker);
     this.back = new PixelButton(this, 'Back', BACK_W, BACK_H, BUTTON_PLAIN, 'sel_back', () => this.goBack());
 
     const kb = this.input.keyboard;
@@ -1419,11 +1145,36 @@ export class SelectScene extends Phaser.Scene {
 
     this.layout();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
+      // The backdrops are screen-sized: let them go.
+      for (const k of this.bgKeys) if (this.textures.exists(k)) this.textures.remove(k);
+      this.bgKeys = [];
+    });
   }
 
   update(_time: number, delta: number): void {
-    this.show?.update(Math.min(0.1, delta / 1000));
+    const dt = Math.min(0.1, delta / 1000);
+    if (this.glow.visible) this.glow.setFrame(this.sprite.frame.name);
+    const plan = this.plan;
+    if (!plan) return;
+    for (const m of this.motes) {
+      m.t += dt / m.life;
+      if (m.t >= 1) this.spawnMote(m, false);
+      // Fade in, drift up with a slight sway, fade out near the top.
+      m.img.setAlpha(Math.sin(Math.PI * Math.min(1, m.t)) * 0.85);
+      m.img.setPosition(Math.round(m.x + Math.sin(m.t * 6 + m.rise) * 2), Math.round(plan.feet - 2 - m.t * m.rise));
+    }
+  }
+
+  private spawnMote(m: SelectScene['motes'][number], scatter: boolean): void {
+    const plan = this.plan;
+    if (!plan) return;
+    const reach = 14 * plan.scale;
+    m.t = scatter ? Math.random() : 0;
+    m.life = Phaser.Math.FloatBetween(1.8, 3.6);
+    m.x = plan.heroX + Phaser.Math.Between(-reach, reach);
+    m.rise = Phaser.Math.Between(20, HERO_TALL * plan.scale + 10);
   }
 
   /**
@@ -1431,39 +1182,32 @@ export class SelectScene extends Phaser.Scene {
    * `pose` plays the picked character's pose; `jump` is a new class; `slide` the side a new character comes in from.
    */
   private refresh(pose: boolean, jump: boolean, slide: -1 | 0 | 1 = 0): void {
-    const show = this.show;
-    const info = this.info;
-    if (!show || !info) return;
+    if (!this.plan || !this.details) return;
     const cls = this.current;
     const own = lookOf(cls);
     const look = this.peek ? { type: own.type, skin: this.peek } : own;
     const def = worn(cls, look);
-    this.roster.forEach((c, i) => {
-      const d = worn(CLASSES[i]);
-      c.show({ preview: d.preview, accent: d.accent }, i === this.cls);
-    });
     const picked = cls.types.indexOf(look.type);
     // Every character of the class, each in the look it was last worn in (the picked one as it is now).
-    const types = cls.types.map((type, i) => {
+    const types: ChipLook[] = cls.types.map((type, i) => {
       const d = i === picked ? def : worn(cls, lastLookOf(cls, type));
-      return { preview: d.preview, name: type.name, accent: d.accent };
+      return { preview: d.preview, accent: d.accent };
     });
     const skins = look.type.skins ?? [];
     const looks: ChipLook[] = [null, ...skins].map((s) => {
       const d = worn(cls, { type: look.type, skin: s });
-      return {
-        preview: d.preview,
-        accent: d.accent,
-        rarity: s ? RARITY_INFO[rarityOf(cls, s)].tint : null,
-        locked: !ownsSkin(cls, s),
-      };
+      return { preview: d.preview, accent: d.accent, rarity: s ? RARITY_INFO[rarityOf(cls, s)].tint : null, locked: !ownsSkin(cls, s) };
     });
-    show.show({
+    this.picker.show({
+      classIndex: this.cls,
       className: cls.name,
+      classes: CLASSES.map((c) => {
+        const d = worn(c);
+        return { preview: d.preview, accent: d.accent };
+      }),
       types,
+      typeName: look.type.name,
       picked,
-      hero: def.preview,
-      accent: def.accent,
       skin: {
         name: look.skin?.name ?? look.type.lookName ?? 'Classic',
         index: look.skin ? skins.indexOf(look.skin) + 1 : 0,
@@ -1471,17 +1215,72 @@ export class SelectScene extends Phaser.Scene {
         looks,
         rarity: look.skin ? RARITY_INFO[rarityOf(cls, look.skin)].tint : null,
       },
-      slide,
       jump,
-      pose,
     });
+    this.showHero(def.preview, def.accent, !!this.peek, pose, jump ? 0 : slide);
     // Stats are the type's own numbers (skins never change them); the abilities are named for the look.
     const ult = ultFor(def);
-    info.show(look.type.name, def.role, def.accent, heroStats(cls.id, look.type.id), def.attack, def.special, def.buttons, {
+    this.details.show(look.type.name, def.role, def.accent, heroStats(cls.id, look.type.id), [def.attack, def.special], def.buttons, {
       icon: ult.icon,
       name: ult.name,
       cost: ult.def.cost,
     });
+  }
+
+  /** The hero in the light: a new look comes in from the side it was swiped from, or up from the floor. */
+  private showHero(preview: Preview, accent: number, locked: boolean, pose: boolean, slide: -1 | 0 | 1): void {
+    const plan = this.plan!;
+    if (accent !== this.accent) this.paintBackdrop(accent);
+    if (preview !== this.preview) {
+      this.preview = preview;
+      const oy = preview.originY ?? 31 / 32;
+      // Drop a pose's queued return to the old look's idle first: stopping plays the queue, and one frame
+      // of a smaller hero would clamp this look's crop for good (a samurai after the wizard was cut in half).
+      this.sprite.chain();
+      this.sprite.stop();
+      this.sprite.setTexture(preview.texture).setOrigin(0.5, oy);
+      cropToWindow(this.sprite, preview, 44, 46, 3, 1);
+      this.glow.setVisible(!!preview.glow);
+      if (preview.glow) {
+        this.glow.setTexture(preview.glow).setOrigin(0.5, oy);
+        cropToWindow(this.glow, preview, 44, 46, 3, 1);
+      }
+      this.sprite.play(preview.idle);
+      this.tweens.killTweensOf(this.hero);
+      const fromX = slide * 22;
+      this.hero.setAlpha(0).setPosition(plan.heroX + fromX, plan.feet + (fromX ? 0 : 6));
+      this.tweens.add({ targets: this.hero, alpha: 1, x: plan.heroX, y: plan.feet, duration: SLIDE_MS, ease: 'Cubic.easeOut' });
+    }
+    if (locked) this.sprite.setTint(0x4a4468);
+    else this.sprite.clearTint();
+    this.glow.setAlpha(locked ? 0.25 : 1);
+    if (pose && !locked) this.pose();
+  }
+
+  /** Paint the backdrop for the hero's colour and fade it in over the last one. */
+  private paintBackdrop(accent: number): void {
+    const plan = this.plan!;
+    const cam = this.cameras.main;
+    const w = Math.ceil(this.scale.width / cam.zoom);
+    const h = Math.ceil(this.scale.height / cam.zoom);
+    const key = backdropTexture(this, w, h, plan.heroX, plan.feet, plan.scale, accent);
+    const first = this.accent < 0 || this.bgFront.texture.key === '__DEFAULT';
+    this.accent = accent;
+    this.tweens.killTweensOf(this.bgFront);
+    if (!first) this.bgBack.setTexture(this.bgFront.texture.key).setVisible(true);
+    else this.bgBack.setVisible(false);
+    this.bgFront.setTexture(key).setAlpha(first ? 1 : 0);
+    if (!first) this.tweens.add({ targets: this.bgFront, alpha: 1, duration: 280, ease: 'Sine.easeOut', onComplete: () => this.bgBack.setVisible(false) });
+    this.halo.setTint(accent);
+    const lit = mixN(accent, 0xffffff, 0.45);
+    for (const m of this.motes) m.img.setTint(lit);
+    // Keep the last few painted; let older ones go (never the two on show).
+    this.bgKeys = [key, ...this.bgKeys.filter((k) => k !== key)];
+    for (const k of this.bgKeys.splice(BACKDROPS_KEPT)) if (this.textures.exists(k) && k !== this.bgBack.texture.key) this.textures.remove(k);
+  }
+
+  private pose(): void {
+    if (this.preview && !this.peek) this.sprite.play(this.preview.chosen).chain(this.preview.idle);
   }
 
   private pickClass(i: number): void {
@@ -1540,21 +1339,16 @@ export class SelectScene extends Phaser.Scene {
     this.leaving = true;
     // Back to the game mode menu, still over the home screen.
     this.scene.launch('modes');
-    this.tweens.add({
-      targets: this.cameras.main,
-      alpha: 0,
-      duration: 200,
-      onComplete: () => this.scene.stop(),
-    });
+    this.tweens.add({ targets: this.cameras.main, alpha: 0, duration: 200, onComplete: () => this.scene.stop() });
   }
 
   /** On to the arena select, with this hero. */
   private startGame(): void {
     if (this.leaving) return;
     if (this.peek) {
-      // Not theirs yet: the lock rattles, and the skin row says where to get it.
-      this.show?.rattle();
-      this.show?.say('Win it in the Shop');
+      // Not theirs yet: the lock rattles, and the skin step says where to get it.
+      this.picker.rattle();
+      this.picker.say('Win it in the Shop');
       return;
     }
     this.leaving = true;
@@ -1562,105 +1356,46 @@ export class SelectScene extends Phaser.Scene {
     lastPicked = this.cls;
     rememberHero(character);
     this.scene.launch('arena', { character });
-    this.tweens.add({
-      targets: this.cameras.main,
-      alpha: 0,
-      duration: 200,
-      onComplete: () => this.scene.stop(),
-    });
+    this.tweens.add({ targets: this.cameras.main, alpha: 0, duration: 200, onComplete: () => this.scene.stop() });
   }
 
   private layout(): void {
     const { width, height } = this.scale;
     // The layout that suits the view's shape; zoom out a whole step at a time (keeping the pixels crisp) until it fits.
-    let z = menuZoom(width, height);
-    const planFor = (zz: number): Plan | null => {
-      const vw = width / zz;
-      const vh = height / zz;
-      return vw >= vh * 1.1 ? (widePlan(vw, vh) ?? tallPlan(vw, vh)) : (tallPlan(vw, vh) ?? widePlan(vw, vh));
+    const planFor = (z: number): Plan | null => {
+      const vw = width / z;
+      const vh = height / z;
+      return vw >= vh ? (widePlan(vw, vh) ?? tallPlan(vw, vh)) : (tallPlan(vw, vh) ?? widePlan(vw, vh));
     };
+    let z = menuZoom(width, height);
     let plan = planFor(z);
     while (!plan && z > 1) plan = planFor(--z);
     this.cameras.main.setZoom(z);
     const vw = width / z;
-    const vh = height / z;
-    plan ??= {
-      tall: true,
-      chip: 20,
-      cols: 9,
-      rosterW: vw - 12,
-      rosterH: 74,
-      showW: SHOW_MIN,
-      showH: showMinH(2),
-      scale: 2,
-      infoW: SHOW_MIN,
-      infoH: cardRows(SHOW_MIN).minH,
-    };
-
-    // The page behind dims, most at the bottom, so the parts stand out.
-    const g = this.shade.clear();
-    g.fillStyle(OUTLINE, 0.5).fillRect(0, 0, Math.ceil(vw) + 1, Math.ceil(vh) + 1);
-    for (let i = 0; i < 6; i++) g.fillStyle(OUTLINE, 0.07).fillRect(0, vh - 48 + i * 8, Math.ceil(vw) + 1, 48 - i * 8);
+    plan ??= tallPlan(Math.max(vw, PICKER_W[0] + 12), 2000)!;
+    this.plan = plan;
     this.back.place(MARGIN, MARGIN);
 
-    // The showcase and the card are built anew when their size changes.
-    let fresh = false;
-    if (!this.show || this.show.boxW !== plan.showW || this.show.boxH !== plan.showH || this.show.heroScale !== plan.scale) {
-      this.show?.destroy();
-      this.show = new Showcase(this, plan.showW, plan.showH, plan.scale, {
-        stepClass: (d) => this.stepClass(d),
-        pickType: (i) => this.pickType(i),
-        stepType: (d) => this.stepType(d),
-        pose: () => this.show?.pose(),
-        pickSkin: (i) => this.pickSkin(i),
-        stepSkin: (d) => this.stepSkin(d),
-      });
-      this.add.existing(this.show);
-      fresh = true;
-    }
-    if (!this.info || this.info.boxW !== plan.infoW || this.info.boxH !== plan.infoH) {
-      this.info?.destroy();
-      this.info = new InfoCard(this, plan.infoW, plan.infoH, () => this.startGame());
-      this.add.existing(this.info);
-      fresh = true;
-    }
+    this.hero.setScale(plan.scale);
+    this.halo.setPosition(plan.heroX, plan.feet - 16 * plan.scale).setScale(plan.scale * 1.5);
+    const zoneX = plan.wide ? plan.pickerX + plan.pickerW + 4 : 0;
+    const zoneW = plan.wide ? plan.detailsX - 4 - zoneX : vw;
+    const zoneTop = plan.feet - HERO_TALL * plan.scale - 8;
+    this.heroZone.setPosition(zoneX, zoneTop).setSize(zoneW, plan.feet + 8 - zoneTop);
+    for (const m of this.motes) this.spawnMote(m, true);
 
-    // Where each part goes.
-    let rx: number, ry: number, sx: number, sy: number, ix: number, iy: number;
-    if (plan.tall) {
-      const total = plan.showH + GAP + plan.infoH + GAP + plan.rosterH;
-      const x = Math.round((vw - plan.showW) / 2);
-      const y = Math.round(TOP + Math.max(0, (vh - TOP - MARGIN - total) / 2));
-      sx = ix = rx = x;
-      sy = y;
-      iy = sy + plan.showH + GAP;
-      ry = iy + plan.infoH + GAP;
-    } else {
-      const total = plan.rosterW + GAP + plan.showW + GAP + plan.infoW;
-      rx = Math.round((vw - total) / 2);
-      sx = rx + plan.rosterW + GAP;
-      ix = sx + plan.showW + GAP;
-      ry = sy = iy = Math.round(TOP + Math.max(0, (vh - TOP - MARGIN - plan.showH) / 2));
+    this.picker.setPosition(plan.pickerX, plan.pickerY);
+    this.picker.resize(plan.pickerW);
+    if (!this.details || this.details.boxW !== plan.detailsW || this.details.wide !== !plan.wide) {
+      this.details?.destroy();
+      this.details = new Details(this, plan.detailsW, !plan.wide, () => this.startGame());
+      this.add.existing(this.details);
     }
-    this.show.setPosition(sx, sy);
-    this.info.setPosition(ix, iy);
+    this.details.setPosition(plan.detailsX, plan.detailsY);
 
-    // The roster: its panel, and the chips in rows, each row centred (the last may be shorter), the grid centred in the panel.
-    this.rosterBg.setTexture(panelTexture(this, 'sel_roster', plan.rosterW, plan.rosterH, SOLID)).setPosition(rx, ry);
-    const n = CLASSES.length;
-    const rows = Math.ceil(n / plan.cols);
-    const step = plan.chip + CHIP_GAP;
-    const gridH = rows * step - CHIP_GAP;
-    const y0 = ry + Math.round((plan.rosterH - gridH) / 2);
-    this.roster.forEach((c, i) => {
-      const row = Math.floor(i / plan.cols);
-      const inRow = Math.min(plan.cols, n - row * plan.cols);
-      const rowW = inRow * step - CHIP_GAP;
-      c.resize(plan.chip);
-      c.x = rx + Math.round((plan.rosterW - rowW) / 2) + (i % plan.cols) * step;
-      c.baseY = y0 + row * step;
-      c.y = c.baseY - (i === this.cls ? 1 : 0);
-    });
-    if (fresh) this.refresh(true, true);
+    // A new size paints a new backdrop and stands the hero afresh.
+    this.accent = -1;
+    this.preview = undefined;
+    this.refresh(true, true);
   }
 }
