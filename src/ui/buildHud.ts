@@ -514,7 +514,7 @@ export class BuildHud {
     const ty = this.panel.y + ip;
     this.row.setTo(this.panel.x + ip, ty + chip + ip, this.panel.width - ip * 2, this.cell);
 
-    let ts = Math.max(1, Math.floor(chip / 14));
+    let ts = Math.max(1, Math.floor(chip / 18));
     const tp = Math.round(6 * D);
     const shown = TABS.map((t) => build.tabs.includes(t.id));
     const open = TABS.findIndex((t) => t.id === build.tab);
