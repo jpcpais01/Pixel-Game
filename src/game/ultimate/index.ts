@@ -470,6 +470,8 @@ const SKINS: Record<string, UltSkin> = {
   'alchemist:cryo': { name: 'Absolute Zero', pal: toxPal(CRYO_TOX), type: 'chem' },
   'archer:scarecrow': { name: 'Murder of Crows', pal: pal(0xfff4d0, 0xffb048, 0xff7a1a, 0x2a7a3a, 0x9cff9a) },
   'archer:hunt': { name: 'Moonpiercer', pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
+  'archer:wisteria': { name: 'Wisteria Gale', pal: pal(0xffffff, 0xe8dcff, 0xb48ae8, 0x5a7a58, 0xd0b8ff), type: 'wind' },
+  'archer:briar': { name: 'Rosethorn Bloom', pal: pal(0xfff0f2, 0xffa0b0, 0xe8344a, 0x2e6e24, 0xff6a7a), type: 'arbalest' },
   'rogue:corsair': { name: 'Broadside', pal: pal(0xfffbe0, 0xffe08a, 0xe0a030, 0x8a5018, 0xffc050) },
   'rogue:kitsune': { name: 'Nine-Tail Eclipse', pal: pal(0xf4fbff, 0xa8e0ff, 0x4a9cff, 0x1a3aa0, 0x70b0ff), type: 'dancer' },
   'archer:storm': { name: 'Thunder Arrow', pal: pal(0xf2fbff, 0xa8e4ff, 0x5ec8ff, 0x3a6ad8, 0x8ad8ff) },

@@ -6,7 +6,7 @@ import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
-import { Arrow, WIND_ARROW } from './Arrows';
+import { Arrow, WIND_ARROW, WISTERIA_ARROW } from './Arrows';
 import { GaleShot } from './Bolts';
 import type { ArcherStyle } from './Archer';
 import type { Aim, Hero } from './characters';
@@ -41,6 +41,8 @@ const FOOTFALLS = new Set([1, 4]);
 type State = 'free' | 'fan' | 'vault';
 
 export const WIND_STYLE: ArcherStyle = { key: 'archer_wind', arrow: WIND_ARROW };
+/** Wisteria: arrows shedding wisteria petals, and a gale that whirls them. */
+export const WISTERIA_STYLE: ArcherStyle = { key: 'archer_wisteria', arrow: WISTERIA_ARROW };
 
 /**
  * The windrunner: a light elven skirmisher who never stands still. The attack
@@ -182,7 +184,10 @@ export class Windrunner implements Hero {
     this.world.evade(VAULT_EVADE);
     this.body.play(`${this.style.key}_vault_${this.dir}`);
     sound.windDash(this.world.pan(this.x));
-    this.world.debris([0xffffff, 0xd8fff6, 0x6ef0dc], this.x, this.y - 2, 6, this.y + 1, 'trail');
+    const s = this.style.arrow;
+    this.world.debris([s.core, s.hot, s.mid], this.x, this.y - 2, 6, this.y + 1, 'trail');
+    // Wisteria springs away in a swirl of petals.
+    if (s.petals) this.world.debris(s.petals, this.x, this.y - 6, 12, this.y + 1, 'spores');
   }
 
   /** Which way: at the mouse on a computer, else ahead the way she last walked. */
@@ -230,7 +235,7 @@ export class Windrunner implements Hero {
     const s = this.style.arrow;
     sound.bowShot(this.world.pan(this.x), false);
     sound.gust(this.world.pan(this.x));
-    this.world.addEffect(new GaleShot(this.world, this.x + u.x * 6, this.y + u.y * 3, u.x, u.y, pal(s.core, s.hot, s.mid, s.deep, s.light)));
+    this.world.addEffect(new GaleShot(this.world, this.x + u.x * 6, this.y + u.y * 3, u.x, u.y, pal(s.core, s.hot, s.mid, s.deep, s.light), s.petals));
   }
 
   private updateHud(): void {
