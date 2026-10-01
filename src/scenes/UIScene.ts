@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { controls, beamHud, comboHud, critterHud } from '../game/controls';
 import { fishHud } from '../game/fish';
+import { homeAct } from '../game/farm';
 import { DPR as D, menuZoom } from '../game/display';
 import { characterById } from '../game/characters';
 import { HOTBAR_SIZE, inventory } from '../game/items';
@@ -383,7 +384,8 @@ export class UIScene extends Phaser.Scene {
       if (build.on && (p.id === this.buildPointer || (this.buildPointer === null && !p.wasTouch))) {
         build.pointer.x = p.x;
         build.pointer.y = p.y;
-        build.pointer.over = true;
+        // No cursor on the world under the tray and its buttons.
+        build.pointer.over = p.id === this.buildPointer || !this.buildHud.covers(p.x, p.y);
       }
       if (p.id === this.attackPad.pointer) this.dragPad(this.attackPad, p, false);
       if (p.id === this.beamPad.pointer) this.dragPad(this.beamPad, p, true);
@@ -892,9 +894,9 @@ export class UIScene extends Phaser.Scene {
   private drawNetButton(delta: number): void {
     // By a fishing rod in the Home it's the rod's button instead.
     const rod = fishHud.near;
-    const icon = rod ? 'icon_rod' : 'icon_net';
+    const icon = rod ? 'icon_rod' : homeAct.near === 'harvest' ? 'icon_harvest' : homeAct.near === 'cook' ? 'icon_cook' : 'icon_net';
     if (this.netIcon.texture.key !== icon && this.textures.exists(icon)) this.netIcon.setTexture(icon);
-    const want = (critterHud.near || rod) && !controls.mouse ? 1 : 0;
+    const want = (critterHud.near || rod || homeAct.near) && !controls.mouse ? 1 : 0;
     this.netShown = Phaser.Math.Clamp(this.netShown + (want ? 1 : -1) * (delta / 160), 0, 1);
     this.netPressed = Math.max(0, this.netPressed - delta / 180);
     const on = this.netShown > 0;

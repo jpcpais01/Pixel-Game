@@ -68,6 +68,13 @@ export interface SaveData {
   trekT: number;
   /** Bosses the player has met, by monster key: each one's entrance plays only the first time. */
   met: string[];
+  /** The kitchen's stores: seeds, produce, fish to cook, dishes and how often each was made, by key (see game/cooking.ts). */
+  pantry: Record<string, number>;
+  /** What's planted (see game/farm.ts), and when it last changed (ms). */
+  farm: string;
+  farmT: number;
+  /** The dish taken along in the hotbar, or ''. */
+  lunch: string;
 }
 
 interface Session extends Account {
@@ -310,7 +317,19 @@ export async function loadSave(): Promise<LoadedSave | null> {
   const trek = f.trek && 'stringValue' in f.trek ? f.trek.stringValue : '';
   const trekT = f.trekT && 'integerValue' in f.trekT ? Number(f.trekT.integerValue) : 0;
   const met = f.met && 'stringValue' in f.met && f.met.stringValue ? f.met.stringValue.split(',') : [];
-  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, glide, pets, pet, petPity, critters, fish, mats, candy, home, homeT, wood, woodT, trek, trekT, met, username };
+  // The pantry as "seed.carrot:4,crop.carrot:7,dish.soup:2" (the counts are after the last colon).
+  const pantry: Record<string, number> = {};
+  if (f.pantry && 'stringValue' in f.pantry && f.pantry.stringValue) {
+    for (const pair of f.pantry.stringValue.split(',')) {
+      const at = pair.lastIndexOf(':');
+      const n = Number(pair.slice(at + 1));
+      if (at > 0 && n > 0) pantry[pair.slice(0, at)] = n;
+    }
+  }
+  const farm = f.farm && 'stringValue' in f.farm ? f.farm.stringValue : '';
+  const farmT = f.farmT && 'integerValue' in f.farmT ? Number(f.farmT.integerValue) : 0;
+  const lunch = f.lunch && 'stringValue' in f.lunch ? f.lunch.stringValue : '';
+  return { items, equipped, dust, upgrades, gems, skins, daily, pity, grants, rift, glide, pets, pet, petPity, critters, fish, mats, candy, home, homeT, wood, woodT, trek, trekT, met, pantry, farm, farmT, lunch, username };
 }
 
 /** Overwrite the logged-in player's save. */
@@ -347,6 +366,10 @@ export async function writeSave(data: SaveData): Promise<void> {
     trek: { stringValue: data.trek },
     trekT: { integerValue: String(Math.floor(data.trekT)) },
     met: { stringValue: data.met.join(',') },
+    pantry: { stringValue: Object.entries(data.pantry).map(([k, n]) => `${k}:${Math.floor(n)}`).join(',') },
+    farm: { stringValue: data.farm },
+    farmT: { integerValue: String(Math.floor(data.farmT)) },
+    lunch: { stringValue: data.lunch },
     updated: { timestampValue: new Date().toISOString() },
   };
   const res = await fetch(docUrl(s.uid), {

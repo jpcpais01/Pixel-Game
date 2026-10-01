@@ -16,59 +16,59 @@ import { FIELDSTONE, IRON } from './sanctum';
 import { CELL } from '../world/homeLayout';
 import { partById } from '../world/homeParts';
 
-const ramp = (...c: string[]): RGB[] => c.map(hex);
-const mat = (o: string, ...c: string[]): Material => ({ ramp: ramp(...c), outline: hex(o) });
+export const ramp = (...c: string[]): RGB[] => c.map(hex);
+export const mat = (o: string, ...c: string[]): Material => ({ ramp: ramp(...c), outline: hex(o) });
 
 // ---------------------------------------------------------------- Materials
 
-const OAKW = mat('#120904', '#2a170c', '#3d2413', '#52311a', '#6a4122', '#83532c', '#9c6737', '#b57d46', '#cc9458');
-const DARKW = mat('#0a0503', '#150b07', '#21120b', '#2f1b10', '#3e2416', '#4f2f1d', '#613b25', '#744830');
-const PALEW = mat('#1e140a', '#4a3420', '#634730', '#7e5c3e', '#9a744e', '#b58d60', '#cca674', '#dfbd8a');
-const BRASS: Material = { ...mat('#1c1004', '#3a2408', '#5c3c10', '#84581a', '#a87624', '#c89634', '#e2b84e', '#f6dc84'), shine: true };
-const STEEL: Material = { ...mat('#0a0c10', '#1a1c24', '#2a2e38', '#3e4450', '#565e6a', '#727a86', '#929aa4', '#b8bec6', '#e0e4ea'), shine: true };
-const LINEN = mat('#26262e', '#5a5a66', '#7c7c88', '#a0a0a8', '#c2c0c4', '#dcdad8', '#eeece6', '#faf8f2');
-const QUILT_R = mat('#1a0406', '#3a0c10', '#5a1418', '#7c1e20', '#9c2c28', '#b83e32', '#d05a42', '#e27c5a');
-const QUILT_B = mat('#060c1a', '#0c1a36', '#132850', '#1c386a', '#284a84', '#365e9c', '#4a76b2', '#6490c6');
-const VELVET = mat('#040e0a', '#0a1f16', '#103024', '#174232', '#1f5642', '#296a52', '#378064', '#4c9878');
-const GOLD_CLOTH = mat('#241804', '#4a320a', '#6e4c12', '#94681c', '#b88828', '#d4a83e', '#ecc85e');
-const PALE_STONE = mat('#18161c', '#3c3a40', '#56525a', '#706b72', '#8a858a', '#a49ea0', '#bdb6b4', '#d4ccc6', '#e8e0d8');
-const MOSS: Material = { ...mat('#0a1a0a', '#1c3a1c', '#2a5226', '#3c6c2e', '#56883a', '#72a246'), noOutline: true };
-const WATER: Material = { ...mat('#04121a', '#0a2230', '#10323f', '#17454f', '#1f5a62', '#2a7276', '#3a8c8a', '#58aaa2', '#8accc0'), noAO: true };
-const LEAF = mat('#08160d', '#10291a', '#173823', '#1f4a2b', '#2b5e33', '#3b753c', '#528d46', '#71a653', '#97c264');
-const LEAF_DARK = mat('#061209', '#0c2214', '#12301b', '#1a4224', '#24562e', '#306a38', '#407f44', '#58964e');
-const STEM: Material = { ...mat('#0a1808', '#1c3a16', '#2a5220', '#3a6a2a', '#4e8436'), noOutline: true };
-const ROSE: Material = { ...mat('#1a0208', '#3a0610', '#620c1a', '#8e1426', '#b82032', '#dc3444', '#f25a60', '#ff8a86'), shine: true };
-const TULIP_R = mat('#1a0406', '#4a0a0e', '#781416', '#a41e1c', '#cc3226', '#e8503a', '#f87a5a');
-const TULIP_Y = mat('#2a1a04', '#5a3a06', '#8a5e0a', '#b88412', '#dcaa20', '#f2cc40', '#ffe278', '#fff2b4');
-const TULIP_P = mat('#240818', '#4a1030', '#761c48', '#a02c62', '#c8467e', '#e46a9a', '#f898ba', '#ffc4d8');
-const LAVENDER = mat('#0e0a1c', '#1e1438', '#2e1e56', '#422c74', '#583e92', '#7054ae', '#8c70c8', '#aa92dc');
-const SAGE: Material = { ...mat('#0c140e', '#1c2a22', '#2a3c30', '#3a5040', '#4c6450', '#607a62', '#789276'), noOutline: true };
-const PETAL_Y = mat('#2a1802', '#5a3204', '#8a5006', '#b87210', '#e09a1c', '#f8c030', '#ffdc5e', '#fff09a');
-const SEEDS = mat('#0a0402', '#140a04', '#241408', '#38200e', '#4e3016', '#664020');
-const PUMPKIN: Material = { ...mat('#200a02', '#4a1a04', '#6e2806', '#94380a', '#b84c10', '#d6621a', '#ec7c2a', '#f89c48'), shine: true };
-const CABBAGE = mat('#0c1a0c', '#1a3418', '#28482a', '#3a603a', '#50784a', '#6a925c', '#88ac72', '#a8c68c', '#c8deaa');
-const HAY = mat('#241a08', '#4a3410', '#6a4c18', '#8c6620', '#ac822c', '#c89c3c', '#dcb652', '#ecd070');
-const TERRA = mat('#1a0804', '#3a140a', '#5a2010', '#7a3018', '#984222', '#b4562e', '#cc6c3c', '#de8650');
-const SOIL = mat('#0a0604', '#1a100a', '#2a1a10', '#3a2618', '#4c3220');
-const BURLAP = mat('#1a1208', '#3a2c1a', '#524026', '#6c5634', '#886e44', '#a28656', '#b89e6a');
-const DENIM = mat('#0a1020', '#1a2440', '#26345a', '#344674', '#46598c', '#5a6ea2', '#7288b8');
-const RED_PAINT: Material = { ...mat('#1a0404', '#3a0808', '#5c0e0e', '#821616', '#a82020', '#c8302a', '#e04a3a', '#f47456'), shine: true };
-const GLASS: Material = { ...mat('#060e14', '#10202c', '#1a3242', '#284a5c', '#3c6478', '#588294', '#80a6b4', '#b4d0da', '#e4f2f6'), noAO: true };
-const WAX = mat('#2a241a', '#6a5e48', '#8e8266', '#b2a686', '#d0c6a6', '#e8e0c4', '#f8f4e0');
-const LILY = mat('#081a0c', '#12301a', '#1a4424', '#245a2c', '#307236', '#428a40', '#5aa24c');
-const CATTAIL = mat('#140a04', '#2a1a0c', '#402812', '#58381a', '#704a24');
-const ANTLER = mat('#1a140c', '#4a3e2c', '#6c5e44', '#8e7e60', '#b0a07e', '#ccbe9c', '#e4d8ba');
-const SKIN = mat('#1a0e08', '#5a3424', '#7e4c36', '#a0684a', '#be8662', '#d8a47e', '#ecc29c');
-const BREW: Material = { ...mat('#041a08', '#0c3a12', '#18642a', '#2c9a3e', '#56c85a', '#9af08a', '#dcffc8'), emissive: 0.8, noAO: true };
-const EMBERS: Material = { ...mat('#1a0602', '#4a1204', '#8a2808', '#d0501a', '#ff8a3a', '#ffc070'), emissive: 0.9, noAO: true, noOutline: true };
-const SHROOM: Material = { ...mat('#3a0e1a', '#6e1e30', '#9a2e44', '#c4445a', '#e26a72', '#f7948e', '#ffbcae', '#ffe2d4'), emissive: 0.55 };
-const SPOTS: Material = { ...mat('#5a4a3a', '#d8c8a8', '#f0e4c8', '#fff6e4', '#fffcf4'), emissive: 0.7, noOutline: true };
-const STALK = mat('#2e2418', '#6e5e48', '#9a8a6c', '#bcae90', '#d8ccb0', '#ece4cc', '#f8f2e2');
-const LAMP: Material = { ...mat('#3a2008', '#8a5a1a', '#d8a048', '#ffd488', '#fff0c8', '#fffaec'), emissive: 0.95, noAO: true };
-const SOOT = mat('#040304', '#0a0808', '#141012', '#1e1a1c', '#2a2428');
-const DIAL = mat('#2a2418', '#8a7e64', '#b8ae94', '#d8d0b8', '#eeead8', '#fcfaf0');
-const FLAG_RED = mat('#1a0404', '#4a0c0c', '#7a1414', '#a82020', '#d03a2a');
-const BOOKS = [
+export const OAKW = mat('#120904', '#2a170c', '#3d2413', '#52311a', '#6a4122', '#83532c', '#9c6737', '#b57d46', '#cc9458');
+export const DARKW = mat('#0a0503', '#150b07', '#21120b', '#2f1b10', '#3e2416', '#4f2f1d', '#613b25', '#744830');
+export const PALEW = mat('#1e140a', '#4a3420', '#634730', '#7e5c3e', '#9a744e', '#b58d60', '#cca674', '#dfbd8a');
+export const BRASS: Material = { ...mat('#1c1004', '#3a2408', '#5c3c10', '#84581a', '#a87624', '#c89634', '#e2b84e', '#f6dc84'), shine: true };
+export const STEEL: Material = { ...mat('#0a0c10', '#1a1c24', '#2a2e38', '#3e4450', '#565e6a', '#727a86', '#929aa4', '#b8bec6', '#e0e4ea'), shine: true };
+export const LINEN = mat('#26262e', '#5a5a66', '#7c7c88', '#a0a0a8', '#c2c0c4', '#dcdad8', '#eeece6', '#faf8f2');
+export const QUILT_R = mat('#1a0406', '#3a0c10', '#5a1418', '#7c1e20', '#9c2c28', '#b83e32', '#d05a42', '#e27c5a');
+export const QUILT_B = mat('#060c1a', '#0c1a36', '#132850', '#1c386a', '#284a84', '#365e9c', '#4a76b2', '#6490c6');
+export const VELVET = mat('#040e0a', '#0a1f16', '#103024', '#174232', '#1f5642', '#296a52', '#378064', '#4c9878');
+export const GOLD_CLOTH = mat('#241804', '#4a320a', '#6e4c12', '#94681c', '#b88828', '#d4a83e', '#ecc85e');
+export const PALE_STONE = mat('#18161c', '#3c3a40', '#56525a', '#706b72', '#8a858a', '#a49ea0', '#bdb6b4', '#d4ccc6', '#e8e0d8');
+export const MOSS: Material = { ...mat('#0a1a0a', '#1c3a1c', '#2a5226', '#3c6c2e', '#56883a', '#72a246'), noOutline: true };
+export const WATER: Material = { ...mat('#04121a', '#0a2230', '#10323f', '#17454f', '#1f5a62', '#2a7276', '#3a8c8a', '#58aaa2', '#8accc0'), noAO: true };
+export const LEAF = mat('#08160d', '#10291a', '#173823', '#1f4a2b', '#2b5e33', '#3b753c', '#528d46', '#71a653', '#97c264');
+export const LEAF_DARK = mat('#061209', '#0c2214', '#12301b', '#1a4224', '#24562e', '#306a38', '#407f44', '#58964e');
+export const STEM: Material = { ...mat('#0a1808', '#1c3a16', '#2a5220', '#3a6a2a', '#4e8436'), noOutline: true };
+export const ROSE: Material = { ...mat('#1a0208', '#3a0610', '#620c1a', '#8e1426', '#b82032', '#dc3444', '#f25a60', '#ff8a86'), shine: true };
+export const TULIP_R = mat('#1a0406', '#4a0a0e', '#781416', '#a41e1c', '#cc3226', '#e8503a', '#f87a5a');
+export const TULIP_Y = mat('#2a1a04', '#5a3a06', '#8a5e0a', '#b88412', '#dcaa20', '#f2cc40', '#ffe278', '#fff2b4');
+export const TULIP_P = mat('#240818', '#4a1030', '#761c48', '#a02c62', '#c8467e', '#e46a9a', '#f898ba', '#ffc4d8');
+export const LAVENDER = mat('#0e0a1c', '#1e1438', '#2e1e56', '#422c74', '#583e92', '#7054ae', '#8c70c8', '#aa92dc');
+export const SAGE: Material = { ...mat('#0c140e', '#1c2a22', '#2a3c30', '#3a5040', '#4c6450', '#607a62', '#789276'), noOutline: true };
+export const PETAL_Y = mat('#2a1802', '#5a3204', '#8a5006', '#b87210', '#e09a1c', '#f8c030', '#ffdc5e', '#fff09a');
+export const SEEDS = mat('#0a0402', '#140a04', '#241408', '#38200e', '#4e3016', '#664020');
+export const PUMPKIN: Material = { ...mat('#200a02', '#4a1a04', '#6e2806', '#94380a', '#b84c10', '#d6621a', '#ec7c2a', '#f89c48'), shine: true };
+export const CABBAGE = mat('#0c1a0c', '#1a3418', '#28482a', '#3a603a', '#50784a', '#6a925c', '#88ac72', '#a8c68c', '#c8deaa');
+export const HAY = mat('#241a08', '#4a3410', '#6a4c18', '#8c6620', '#ac822c', '#c89c3c', '#dcb652', '#ecd070');
+export const TERRA = mat('#1a0804', '#3a140a', '#5a2010', '#7a3018', '#984222', '#b4562e', '#cc6c3c', '#de8650');
+export const SOIL = mat('#0a0604', '#1a100a', '#2a1a10', '#3a2618', '#4c3220');
+export const BURLAP = mat('#1a1208', '#3a2c1a', '#524026', '#6c5634', '#886e44', '#a28656', '#b89e6a');
+export const DENIM = mat('#0a1020', '#1a2440', '#26345a', '#344674', '#46598c', '#5a6ea2', '#7288b8');
+export const RED_PAINT: Material = { ...mat('#1a0404', '#3a0808', '#5c0e0e', '#821616', '#a82020', '#c8302a', '#e04a3a', '#f47456'), shine: true };
+export const GLASS: Material = { ...mat('#060e14', '#10202c', '#1a3242', '#284a5c', '#3c6478', '#588294', '#80a6b4', '#b4d0da', '#e4f2f6'), noAO: true };
+export const WAX = mat('#2a241a', '#6a5e48', '#8e8266', '#b2a686', '#d0c6a6', '#e8e0c4', '#f8f4e0');
+export const LILY = mat('#081a0c', '#12301a', '#1a4424', '#245a2c', '#307236', '#428a40', '#5aa24c');
+export const CATTAIL = mat('#140a04', '#2a1a0c', '#402812', '#58381a', '#704a24');
+export const ANTLER = mat('#1a140c', '#4a3e2c', '#6c5e44', '#8e7e60', '#b0a07e', '#ccbe9c', '#e4d8ba');
+export const SKIN = mat('#1a0e08', '#5a3424', '#7e4c36', '#a0684a', '#be8662', '#d8a47e', '#ecc29c');
+export const BREW: Material = { ...mat('#041a08', '#0c3a12', '#18642a', '#2c9a3e', '#56c85a', '#9af08a', '#dcffc8'), emissive: 0.8, noAO: true };
+export const EMBERS: Material = { ...mat('#1a0602', '#4a1204', '#8a2808', '#d0501a', '#ff8a3a', '#ffc070'), emissive: 0.9, noAO: true, noOutline: true };
+export const SHROOM: Material = { ...mat('#3a0e1a', '#6e1e30', '#9a2e44', '#c4445a', '#e26a72', '#f7948e', '#ffbcae', '#ffe2d4'), emissive: 0.55 };
+export const SPOTS: Material = { ...mat('#5a4a3a', '#d8c8a8', '#f0e4c8', '#fff6e4', '#fffcf4'), emissive: 0.7, noOutline: true };
+export const STALK = mat('#2e2418', '#6e5e48', '#9a8a6c', '#bcae90', '#d8ccb0', '#ece4cc', '#f8f2e2');
+export const LAMP: Material = { ...mat('#3a2008', '#8a5a1a', '#d8a048', '#ffd488', '#fff0c8', '#fffaec'), emissive: 0.95, noAO: true };
+export const SOOT = mat('#040304', '#0a0808', '#141012', '#1e1a1c', '#2a2428');
+export const DIAL = mat('#2a2418', '#8a7e64', '#b8ae94', '#d8d0b8', '#eeead8', '#fcfaf0');
+export const FLAG_RED = mat('#1a0404', '#4a0c0c', '#7a1414', '#a82020', '#d03a2a');
+export const BOOKS = [
   mat('#140404', '#3a0a0a', '#5c1210', '#801c16', '#a42a1e', '#c23e2a'),
   mat('#04081a', '#0e1a3a', '#16285a', '#223a7a', '#304e98', '#4466b2'),
   mat('#041206', '#0e2a14', '#164020', '#20582c', '#2e7038', '#408a48'),
@@ -76,36 +76,36 @@ const BOOKS = [
   mat('#10061a', '#2a1440', '#3e1e5c', '#542a7a', '#6a3a94', '#8452ae'),
   mat('#1a1204', '#4a3408', '#6e4e0e', '#946a16', '#b88a22', '#d4a834'),
 ];
-const PAINT_SKY = mat('#0c1a2a', '#3a6a9a', '#5a8ab8', '#7aa6cc', '#9cc2dc', '#c4dcea');
-const PAINT_HILL = mat('#0a1a0c', '#1e3e1c', '#2e5a28', '#447836', '#5e9646', '#7cb45a');
-const PAINT_DARK = mat('#08060a', '#140e16', '#1e1622', '#2a1e2e', '#382a3c');
-const BANNER = mat('#04081a', '#0c1638', '#142456', '#1e3474', '#2a4690', '#3a5aaa');
+export const PAINT_SKY = mat('#0c1a2a', '#3a6a9a', '#5a8ab8', '#7aa6cc', '#9cc2dc', '#c4dcea');
+export const PAINT_HILL = mat('#0a1a0c', '#1e3e1c', '#2e5a28', '#447836', '#5e9646', '#7cb45a');
+export const PAINT_DARK = mat('#08060a', '#140e16', '#1e1622', '#2a1e2e', '#382a3c');
+export const BANNER = mat('#04081a', '#0c1638', '#142456', '#1e3474', '#2a4690', '#3a5aaa');
 // The wards' moonlight: glass and runes lit cool from within, silver fittings, a rowan staff.
-const MOONGLASS: Material = { ...mat('#0a2230', '#16465c', '#2a7690', '#4ea6c0', '#86d2e4', '#c2f0f8', '#f0fdff'), emissive: 0.95, noAO: true };
-const RUNEGLOW: Material = { ...mat('#06302c', '#0e5a50', '#1a8a7a', '#38bca6', '#7aead2', '#c8fff0'), emissive: 0.9, noAO: true, noOutline: true };
-const SILVER: Material = { ...mat('#10141c', '#262e3a', '#3c4656', '#566272', '#74808e', '#96a2ae', '#bcc6ce', '#e6eef2'), shine: true };
-const ROWAN = mat('#0e0806', '#22140c', '#342014', '#472d1c', '#5c3c26', '#714c31', '#87603e');
-const RIBBON = mat('#0a1426', '#18284a', '#24406c', '#34588c', '#4a74a8', '#6890c0', '#90b0d6');
+export const MOONGLASS: Material = { ...mat('#0a2230', '#16465c', '#2a7690', '#4ea6c0', '#86d2e4', '#c2f0f8', '#f0fdff'), emissive: 0.95, noAO: true };
+export const RUNEGLOW: Material = { ...mat('#06302c', '#0e5a50', '#1a8a7a', '#38bca6', '#7aead2', '#c8fff0'), emissive: 0.9, noAO: true, noOutline: true };
+export const SILVER: Material = { ...mat('#10141c', '#262e3a', '#3c4656', '#566272', '#74808e', '#96a2ae', '#bcc6ce', '#e6eef2'), shine: true };
+export const ROWAN = mat('#0e0806', '#22140c', '#342014', '#472d1c', '#5c3c26', '#714c31', '#87603e');
+export const RIBBON = mat('#0a1426', '#18284a', '#24406c', '#34588c', '#4a74a8', '#6890c0', '#90b0d6');
 
 // ---------------------------------------------------------------- Normals and helpers
 
-const n3 = (x: number, y: number, z: number): Vec3 => {
+export const n3 = (x: number, y: number, z: number): Vec3 => {
   const l = Math.hypot(x, y, z) || 1;
   return { x: x / l, y: y / l, z: z / l };
 };
 /** Facing the viewer, facing up, and the flat of something lying on the ground. */
-const FACE: Vec3 = n3(0, -0.42, 0.9);
-const TOP: Vec3 = n3(0, 0.35, 0.94);
-const FLOOR: Vec3 = n3(0, 0.12, 0.99);
-const EAST: Vec3 = n3(0.75, -0.15, 0.65);
-const WEST: Vec3 = n3(-0.75, -0.15, 0.65);
+export const FACE: Vec3 = n3(0, -0.42, 0.9);
+export const TOP: Vec3 = n3(0, 0.35, 0.94);
+export const FLOOR: Vec3 = n3(0, 0.12, 0.99);
+export const EAST: Vec3 = n3(0.75, -0.15, 0.65);
+export const WEST: Vec3 = n3(-0.75, -0.15, 0.65);
 
 /**
  * A block: ground rect [x0, x1) x [y0, y1), from `z0` to `z1` px up. Its top
  * shows lifted by its height and its front face below that; edges catch the
  * light on the lit side and fall away on the other.
  */
-function box(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, m: Material, o: { top?: Material; bias?: number; topBias?: number } = {}): void {
+export function box(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, m: Material, o: { top?: Material; bias?: number; topBias?: number } = {}): void {
   c.part();
   const fy0 = y1 - z1;
   const fy1 = y1 - z0;
@@ -131,7 +131,7 @@ function box(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, z0:
 }
 
 /** Wood grain over a drawn area: long streaks a shade darker, the odd knot. */
-function grain(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, seed: number, across = true): void {
+export function grain(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, seed: number, across = true): void {
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
       const a = across ? hash2(Math.floor(x / 5), y, seed) : hash2(x, Math.floor(y / 5), seed);
@@ -145,7 +145,7 @@ function grain(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, s
  * An upright drum: an ellipse `rx` by `ry` on the ground centred at (cx, gy),
  * standing from `z0` to `z1`: its round side, then its top. `top` null leaves it open.
  */
-function drum(c: PixelCanvas, cx: number, gy: number, rx: number, ry: number, z0: number, z1: number, m: Material, top: Material | null = m, o: { bias?: number; topBias?: number } = {}): void {
+export function drum(c: PixelCanvas, cx: number, gy: number, rx: number, ry: number, z0: number, z1: number, m: Material, top: Material | null = m, o: { bias?: number; topBias?: number } = {}): void {
   c.part();
   for (let x = Math.floor(cx - rx); x < Math.ceil(cx + rx); x++) {
     const t = (x + 0.5 - cx) / rx;
@@ -161,7 +161,7 @@ function drum(c: PixelCanvas, cx: number, gy: number, rx: number, ry: number, z0
 }
 
 /** Flames of sparks: `hw` wide at the base, `h` tall, swaying with the frame. */
-function flame(c: PixelCanvas, cx: number, by: number, hw: number, h: number, f: number, seed: number, a = 1): void {
+export function flame(c: PixelCanvas, cx: number, by: number, hw: number, h: number, f: number, seed: number, a = 1): void {
   const R = rng(seed + f * 31);
   for (let y = Math.floor(by - h); y <= by; y++) {
     const u = (y - (by - h)) / h; // 0 at the tip, 1 at the base
@@ -179,7 +179,7 @@ function flame(c: PixelCanvas, cx: number, by: number, hw: number, h: number, f:
 }
 
 /** A soft pool of warm light, only in the glow. */
-function halo(c: PixelCanvas, cx: number, cy: number, r: number, col: RGB, a: number): void {
+export function halo(c: PixelCanvas, cx: number, cy: number, r: number, col: RGB, a: number): void {
   for (let y = Math.floor(cy - r); y <= cy + r; y++) {
     for (let x = Math.floor(cx - r); x <= cx + r; x++) {
       const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy) / r;
@@ -189,7 +189,7 @@ function halo(c: PixelCanvas, cx: number, cy: number, r: number, col: RGB, a: nu
 }
 
 /** A few blades of grass round a base, so things sit in the lawn rather than on it. */
-function tufts(c: PixelCanvas, cx: number, by: number, spread: number, seed: number, n = 5): void {
+export function tufts(c: PixelCanvas, cx: number, by: number, spread: number, seed: number, n = 5): void {
   const R = rng(seed);
   c.part();
   for (let k = 0; k < n; k++) {
@@ -202,7 +202,7 @@ function tufts(c: PixelCanvas, cx: number, by: number, spread: number, seed: num
 // ---------------------------------------------------------------- The drawings' frames
 
 /** A drawing's footprint inside its canvas. */
-interface Foot {
+export interface Foot {
   x0: number;
   x1: number;
   y0: number;
@@ -223,15 +223,15 @@ export interface PropArt {
   draw(f: number): PixelCanvas;
 }
 
-type Drawer = (c: PixelCanvas, g: Foot, f: number) => void;
+export type Drawer = (c: PixelCanvas, g: Foot, f: number) => void;
 
-function art(id: string, pad: number, up: number, draw: Drawer, frames = 1, fps = 8): PropArt {
+export function art(id: string, pad: number, up: number, draw: Drawer, frames = 1, fps = 8): PropArt {
   const p = partById(id)!;
   return sized(p.w, p.h, pad, up, draw, frames, fps);
 }
 
 /** A drawing over a footprint `fw` x `fh` cells (a turned part's is its own). */
-function sized(fw: number, fh: number, pad: number, up: number, draw: Drawer, frames = 1, fps = 8): PropArt {
+export function sized(fw: number, fh: number, pad: number, up: number, draw: Drawer, frames = 1, fps = 8): PropArt {
   const w = fw * CELL + pad * 2;
   const h = up + fh * CELL + 2;
   const g: Foot = { x0: pad, x1: pad + fw * CELL, y0: up, y1: up + fh * CELL, cx: pad + (fw * CELL) / 2, cy: up + (fh * CELL) / 2 };
@@ -253,7 +253,7 @@ function sized(fw: number, fh: number, pad: number, up: number, draw: Drawer, fr
 /** Wall decorations: 16 x 18, hung on the face of the wall cell they belong to, centred about 16 px up it. */
 export const DECOR_W = 16;
 export const DECOR_H = 18;
-function decor(draw: (c: PixelCanvas, f: number) => void, frames = 1, fps = 8): PropArt {
+export function decor(draw: (c: PixelCanvas, f: number) => void, frames = 1, fps = 8): PropArt {
   return {
     w: DECOR_W,
     h: DECOR_H,
@@ -274,7 +274,7 @@ function decor(draw: (c: PixelCanvas, f: number) => void, frames = 1, fps = 8): 
 /** A cherry tree in bloom, on the forest trees' 96 x 128 frame (drawn with the forest's trees); frame `f` of its sway. */
 export const blossomTree = (v: number, f = 0): PixelCanvas => cherryTree(v, f);
 
-function rose(c: PixelCanvas, x: number, y: number, m: Material): void {
+export function rose(c: PixelCanvas, x: number, y: number, m: Material): void {
   c.part();
   c.ellipse(x, y, 1.8, 1.5, m, { flatten: 0.8 });
   c.shade(x, y, -2);
@@ -1728,6 +1728,142 @@ const campfire = art('campfire', 3, 18, (c, g, f) => {
   halo(c, cx, gy - 4, 9, [255, 130, 50], 0.3);
 }, 4, 9);
 
+// The kitchen's two places to cook (see game/cooking.ts).
+const COPPER: Material = { ...mat('#1a0804', '#3a140a', '#5e2410', '#86381a', '#ac5226', '#cc6e36', '#e6904e', '#f8b878'), shine: true };
+const EGG = mat('#3a3a36', '#b8b4aa', '#dcd8ce', '#f0ece4', '#fcfaf4', '#ffffff');
+const YOLK: Material = { ...mat('#4a2a04', '#c07010', '#ec9a1c', '#ffc030', '#ffdc6a'), shine: true };
+const STEW = mat('#2a0e04', '#5a220a', '#8a3a12', '#b0561e', '#cc7030', '#e08c48');
+const GLASS_FIRE: Material = { ...mat('#1a0602', '#3a0e04', '#6a1c08', '#a8320e', '#e05418', '#ff8a34'), emissive: 0.85, noAO: true };
+
+/** A cast-iron range: an oven with a fire glowing through its window, the firebox's grille, a copper pot and a pan with an egg on the plates, its pipe up the back. */
+const stove = art('stove', 2, 34, (c, g, f) => {
+  const x0 = g.x0 + 1;
+  const x1 = g.x1 - 1;
+  const y0 = g.y0 + 5;
+  const y1 = g.y1 - 2;
+  const H = 14;
+  const mid = (y0 + y1) / 2;
+  // The pipe up the back, banded where its lengths join.
+  drum(c, x1 - 5, y0 + 1, 1.8, 0.8, H, 34, IRON, IRON);
+  for (const z of [20, 27]) for (let x = x1 - 7; x <= x1 - 3; x++) c.shade(x, y0 + 1 - z, 1);
+  // Feet, then the body with its darker plate on top.
+  for (const fx of [x0 + 1, x1 - 3]) box(c, fx, fx + 2, y1 - 2, y1, 0, 2, IRON);
+  box(c, x0, x1, y0, y1, 2, H, IRON, { topBias: -1 });
+  const fy0 = y1 - H;
+  const fy1 = y1 - 2;
+  // A brass rail along the front edge, a striped cloth hung over it.
+  c.part();
+  for (let x = x0 + 1; x < x1 - 1; x++) c.px(x, fy0 + 1, BRASS, FACE, { bias: x === x0 + 1 ? 1 : 0 });
+  c.part();
+  for (let y = fy0 + 2; y <= fy0 + 6; y++) for (let x = x0 + 18; x <= x0 + 21; x++) c.px(x, y, (x + Math.floor(y / 2)) % 3 ? LINEN : FLAG_RED, FACE, { bias: y === fy0 + 6 ? -1 : 0 });
+  // The oven's door: a brass frame round a window onto its fire.
+  c.part();
+  const ox0 = x0 + 3;
+  const ox1 = x0 + 16;
+  for (let y = fy0 + 3; y <= fy1 - 1; y++) {
+    for (let x = ox0; x <= ox1; x++) {
+      const edge = y === fy0 + 3 || y === fy1 - 1 || x === ox0 || x === ox1;
+      c.px(x, y, edge ? BRASS : IRON, FACE, { bias: edge ? (y === fy0 + 3 ? 1 : 0) : -1 });
+    }
+  }
+  c.part();
+  for (let y = fy0 + 5; y <= fy1 - 3; y++) for (let x = ox0 + 3; x <= ox1 - 3; x++) c.px(x, y, GLASS_FIRE, FACE, { bias: Math.round((hash2(x, y + f * 7, 611) - 0.5) * 2) + (y > fy1 - 5 ? 1 : 0) });
+  flame(c, (ox0 + ox1) / 2, fy1 - 3, 3, 5, f, 612, 0.7);
+  c.part();
+  c.px(ox1 - 1, fy0 + 5, BRASS, FACE, { bias: 2 });
+  c.px(ox1 - 1, fy0 + 6, BRASS, FACE, { bias: 1 });
+  // The firebox: embers glowing through a grille of bars.
+  c.part();
+  for (let y = fy0 + 8; y <= fy1 - 1; y++) {
+    for (let x = x0 + 18; x <= x1 - 3; x++) {
+      const bar = (x - x0) % 2 === 0;
+      c.px(x, y, bar ? IRON : EMBERS, FACE, { bias: bar ? 1 : (f + x + y) % 3 === 0 ? 1 : -1 });
+    }
+  }
+  halo(c, (x0 + 18 + x1 - 3) / 2, fy1 - 2, 6, [255, 130, 50], 0.25);
+  halo(c, (ox0 + ox1) / 2, (fy0 + fy1) / 2 + 1, 8, [255, 140, 60], 0.3);
+  // The plates on top: a copper pot on the left one, a pan with an egg on the right.
+  const top = (y: number) => y - H;
+  c.part();
+  c.ellipse(x0 + 7, top(mid), 4.2, 1.5, SOOT, { normal: () => TOP });
+  drum(c, x0 + 7, mid, 4, 1.6, H, H + 6, COPPER, COPPER, { topBias: 1 });
+  c.part();
+  c.ellipse(x0 + 7, top(mid) - 6, 3.2, 1.1, COPPER, { normal: () => TOP, bias: -1 });
+  c.px(x0 + 7, top(mid) - 7, BRASS, TOP, { bias: 2 });
+  for (const hx of [x0 + 2, x0 + 12]) c.px(hx, top(mid) - 4, COPPER, FACE, { bias: hx < x0 + 7 ? 1 : -1 });
+  c.part();
+  const px = x1 - 10;
+  c.ellipse(px, top(mid) - 1, 4, 1.6, IRON, { normal: () => TOP, bias: 1 });
+  c.part();
+  c.ellipse(px, top(mid) - 1, 3, 1, IRON, { normal: () => TOP, bias: -1 });
+  c.line(px + 4, top(mid) - 1, px + 8, top(mid) - 2, IRON, () => TOP, { bias: 1 });
+  c.part();
+  c.ellipse(px - 0.5, top(mid) - 1, 1.8, 0.8, EGG, { normal: () => TOP, bias: 1 });
+  c.px(px - 0.5, top(mid) - 2, YOLK, TOP, { bias: 1 });
+  // Fat spitting in the pan.
+  c.spark(px + 1 + (f % 2), top(mid) - 3 - (f % 3), [255, 240, 200], 0.4);
+}, 4, 8);
+
+/** A garden cooking pot: an iron pot of stew on a chain from a tripod of poles, over a fire in a ring of stones. */
+const cookpot = art('cookpot', 5, 26, (c, g, f) => {
+  const cx = g.cx;
+  const gy = g.y1 - 7;
+  const apex = { x: cx, y: gy - 24 };
+  const stones = Array.from({ length: 9 }, (_, k) => {
+    const a = (k / 9) * Math.PI * 2 + 0.2;
+    return { x: cx + Math.cos(a) * 7, y: gy + Math.sin(a) * 3.6, k };
+  });
+  // The back pole and the back of the ring, then the ash bed and the fire.
+  c.part();
+  c.line(cx + 1, gy - 4, apex.x, apex.y, ROWAN, () => n3(-0.3, 0.2, 0.9), { bias: -1 });
+  for (const s of stones.filter((s) => s.y < gy)) {
+    c.part();
+    c.ellipse(s.x, s.y - 1, 2, 1.6, FIELDSTONE, { bias: s.k % 2 });
+  }
+  c.part();
+  c.ellipse(cx, gy, 5.5, 2.6, SOOT, { normal: () => FLOOR });
+  c.part();
+  c.ellipse(cx, gy, 3.6, 1.7, EMBERS, { normal: () => FLOOR, bias: f % 2 });
+  c.part();
+  c.capsule(cx - 4, gy + 1, cx + 3, gy - 1, 1, 0.8, OAKW);
+  c.capsule(cx + 4, gy + 1, cx - 2, gy - 1.5, 1, 0.8, DARKW);
+  flame(c, cx - 1.5, gy - 1, 2.6, 6, f, 621);
+  flame(c, cx + 2, gy - 1, 2, 5, (f + 2) % 4, 622, 0.85);
+  // The pot: round iron, a lip, stew bubbling in it, a bail handle up to the chain.
+  const py = gy - 9;
+  c.part();
+  c.ellipse(cx, py, 5.6, 4.6, IRON, { flatten: 0.9 });
+  c.part();
+  c.ellipse(cx, py - 3.6, 5.2, 1.7, IRON, { normal: () => TOP, bias: 2 });
+  c.part();
+  c.ellipse(cx, py - 3.6, 4, 1.1, STEW, { normal: () => TOP });
+  const R = rng(623 + f * 3);
+  for (let k = 0; k < 2; k++) c.px(cx - 2.5 + R() * 5, py - 3.6 + (R() - 0.5), STEW, TOP, { bias: 3 });
+  c.part();
+  for (let k = 0; k <= 8; k++) {
+    const t = k / 8;
+    c.px(cx - 5 + t * 10, py - 4 - Math.sin(t * Math.PI) * 3, IRON, TOP, { bias: 1 });
+  }
+  // The chain, link by link, from the tripod's top to the handle.
+  c.part();
+  for (let y = apex.y + 2; y < py - 6; y++) c.px(cx, y, IRON, y % 2 ? FACE : TOP, { bias: y % 2 ? 2 : 0 });
+  // The front poles, lashed where they cross.
+  c.part();
+  c.line(cx - 8, gy + 3, apex.x, apex.y, ROWAN, () => n3(-0.5, 0.2, 0.85));
+  c.line(cx + 8, gy + 3, apex.x, apex.y, ROWAN, () => n3(0.5, 0.2, 0.85), { bias: -1 });
+  c.part();
+  c.px(apex.x, apex.y + 1, HAY, FACE, { bias: 1 });
+  c.px(apex.x - 1, apex.y + 2, HAY, FACE);
+  c.px(apex.x + 1, apex.y + 2, HAY, FACE, { bias: -1 });
+  for (const s of stones.filter((s) => s.y >= gy)) {
+    c.part();
+    c.ellipse(s.x, s.y - 1, 2.1, 1.7, FIELDSTONE, { bias: s.k % 2 });
+  }
+  // Sparks rising past the pot, and the warm pool of its light.
+  c.spark(cx - 4 + f, py - 6 - f * 1.5, FIRE_COLS[1], 0.7);
+  halo(c, cx, gy - 3, 8, [255, 130, 50], 0.28);
+}, 4, 9);
+
 const candelabra = art('candelabra', 4, 30, (c, g, f) => {
   const cx = g.cx;
   const gy = g.y1 - 6;
@@ -1831,7 +1967,7 @@ const mushLamp = art('mushlamp', 4, 16, (c, g, f) => {
 // ---------------------------------------------------------------- Wards
 
 /** Moonlight motes drifting up round a ward, a few to a frame, in the glow only. */
-function motes(c: PixelCanvas, cx: number, top: number, spread: number, rise: number, f: number, seed: number, n: number): void {
+export function motes(c: PixelCanvas, cx: number, top: number, spread: number, rise: number, f: number, seed: number, n: number): void {
   const R = rng(seed);
   for (let k = 0; k < n; k++) {
     const x0 = cx + (R() - 0.5) * spread * 2;
@@ -2076,7 +2212,7 @@ const wardBeacon = art('wardbeacon', 8, 54, (c, g, f) => {
 // ---------------------------------------------------------------- Wall decor
 
 /** A frame of a colour round an inner area. */
-function frame(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, m: Material): void {
+export function frame(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, m: Material): void {
   c.part();
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
@@ -2241,7 +2377,7 @@ const wreath = decor((c) => {
 // cushions, and a chair's back seen from behind hides its seat.
 
 /** The top of a block rounded across its depth (a sofa's rolled arm seen end on). */
-function rollTop(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, z: number, m: Material): void {
+export function rollTop(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, z: number, m: Material): void {
   c.part();
   const mid = (y0 + y1) / 2;
   const half = (y1 - y0) / 2;
@@ -2252,7 +2388,7 @@ function rollTop(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number,
 }
 
 /** A quilt's patchwork and stitching over whatever of it shows, from screen row `top`. */
-function patchwork(c: PixelCanvas, quilt: Material, x0: number, x1: number, top: number, bottom: number): void {
+export function patchwork(c: PixelCanvas, quilt: Material, x0: number, x1: number, top: number, bottom: number): void {
   for (let y = top; y < bottom; y++) {
     for (let x = x0; x < x1; x++) {
       if (c.materialAt(x, y) !== quilt) continue;
@@ -2537,6 +2673,8 @@ export const PROP_ART: Record<string, PropArt> = {
   torch,
   campfire,
   candelabra,
+  stove,
+  cookpot,
   fairylights: fireflyJar,
   mushlamp: mushLamp,
   wardlamp: wardLamp,

@@ -34,7 +34,7 @@ const WELCOMED_KEY = 'pixel-battle.welcomed';
  */
 const SKIN_HEIRS: Record<string, string> = { 'jedi:warlord': 'jedi:sith' };
 
-const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, glide: {}, pets: [], pet: '', petPity: 0, critters: {}, fish: {}, mats: {}, candy: {}, home: '', homeT: 0, wood: '', woodT: 0, trek: '', trekT: 0, met: [] });
+const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, glide: {}, pets: [], pet: '', petPity: 0, critters: {}, fish: {}, mats: {}, candy: {}, home: '', homeT: 0, wood: '', woodT: 0, trek: '', trekT: 0, met: [], pantry: {}, farm: '', farmT: 0, lunch: '' });
 
 /** The welcome gems for a new guest game: the first on this device only. */
 function welcomeGems(): number {
@@ -86,6 +86,10 @@ function clean(d: Partial<SaveData> | null | undefined): SaveData {
   out.trekT = Number(d?.trekT) > 0 ? Number(d?.trekT) : 0;
   out.met = [...new Set((Array.isArray(d?.met) ? d.met : []).filter((k): k is string => typeof k === 'string' && !!k))];
   out.petPity = Math.max(0, Math.floor(Number(d?.petPity) || 0));
+  for (const [k, n] of Object.entries(d?.pantry ?? {})) if (Number(n) > 0) out.pantry[k] = Math.floor(Number(n));
+  out.farm = typeof d?.farm === 'string' ? d.farm : '';
+  out.farmT = Number(d?.farmT) > 0 ? Number(d?.farmT) : 0;
+  out.lunch = typeof d?.lunch === 'string' ? d.lunch : '';
   for (const [id, n] of Object.entries(d?.candy ?? {})) if (Number(n) > 0) out.candy[id] = Math.floor(Number(n));
   for (const [id, n] of Object.entries(d?.critters ?? {})) if (Number(n) > 0) out.critters[id] = Math.floor(Number(n));
   for (const [id, n] of Object.entries(d?.fish ?? {})) if (Number(n) > 0) out.fish[id] = Math.floor(Number(n));
@@ -474,12 +478,72 @@ class Collection {
     return this.data.fish[id] ?? 0;
   }
 
-  /** A fish landed with the rod: true when it's the first of its kind. */
+  /** A fish landed with the rod: true when it's the first of its kind. It's counted for its plaque, and goes in the pantry to cook. */
   catchFish(id: string): boolean {
     const n = this.fishCount(id);
     this.data.fish[id] = n + 1;
+    this.data.pantry[`fish.${id}`] = (this.data.pantry[`fish.${id}`] ?? 0) + 1;
     this.changed();
     return n === 0;
+  }
+
+  // The kitchen's pantry (see cooking.ts for its keys) and the farm (farm.ts).
+
+  /** How many of `key` the pantry holds. */
+  stock(key: string): number {
+    return this.data.pantry[key] ?? 0;
+  }
+
+  addStock(key: string, n = 1): void {
+    if (n <= 0) return;
+    this.data.pantry[key] = this.stock(key) + Math.floor(n);
+    this.changed();
+  }
+
+  /** Take every `[key, n]` out of the pantry and put `gain` in, all at once; false (and nothing taken) if any is short. */
+  useStock(take: [string, number][], gain: [string, number][] = []): boolean {
+    if (take.some(([k, n]) => this.stock(k) < n)) return false;
+    for (const [k, n] of take) {
+      this.data.pantry[k] = this.stock(k) - n;
+      if (this.data.pantry[k] <= 0) delete this.data.pantry[k];
+    }
+    for (const [k, n] of gain) this.data.pantry[k] = this.stock(k) + n;
+    this.changed();
+    return true;
+  }
+
+  /**
+   * The starter pouch, the first time a farm is visited: a few of each garden
+   * seed, and every fish landed before there was a kitchen goes in the pantry.
+   */
+  giveStarter(seeds: string[], each: number): void {
+    if (this.stock('starter')) return;
+    this.data.pantry.starter = 1;
+    for (const id of seeds) this.data.pantry[`seed.${id}`] = this.stock(`seed.${id}`) + each;
+    for (const [id, n] of Object.entries(this.data.fish)) this.data.pantry[`fish.${id}`] = this.stock(`fish.${id}`) + n;
+    this.changed();
+  }
+
+  get farm(): string {
+    return this.data.farm;
+  }
+
+  saveFarm(encoded: string): void {
+    if (encoded === this.data.farm) return;
+    this.data.farm = encoded;
+    this.data.farmT = Date.now();
+    this.changed();
+  }
+
+  /** The dish taken along in the hotbar. */
+  get lunch(): string {
+    return this.data.lunch;
+  }
+
+  set lunch(id: string) {
+    if (id === this.data.lunch) return;
+    this.data.lunch = id;
+    this.changed();
   }
 
   /** Spare critters of kind `id`: every one caught after the first, which stays in its jar. */
@@ -642,6 +706,13 @@ class Collection {
       for (const [id, n] of Object.entries(local.fish)) merged.fish[id] = Math.max(n, merged.fish[id] ?? 0);
       // Candy like gems: the higher count wins, so candy picked up offline isn't lost.
       for (const [id, n] of Object.entries(local.candy)) merged.candy[id] = Math.max(n, merged.candy[id] ?? 0);
+      // The pantry like candy: the higher count of each wins. The farm, whichever was tended last.
+      for (const [k, n] of Object.entries(local.pantry)) merged.pantry[k] = Math.max(n, merged.pantry[k] ?? 0);
+      if (local.farmT > merged.farmT) {
+        merged.farm = local.farm;
+        merged.farmT = local.farmT;
+      }
+      if (!merged.lunch) merged.lunch = local.lunch;
       // The Home: whichever was built on last.
       if (local.homeT > merged.homeT) {
         merged.home = local.home;
@@ -683,6 +754,13 @@ class Collection {
         for (const [set, n] of Object.entries(guest.mats)) merged.mats[set] = (merged.mats[set] ?? 0) + n;
         merged.gems = Math.max(merged.gems, guest.gems);
         for (const [id, n] of Object.entries(guest.candy)) merged.candy[id] = (merged.candy[id] ?? 0) + n;
+        // The starter pouch is given once, so it isn't added twice.
+        for (const [k, n] of Object.entries(guest.pantry)) merged.pantry[k] = k === 'starter' ? 1 : (merged.pantry[k] ?? 0) + n;
+        if (!merged.farm && guest.farm) {
+          merged.farm = guest.farm;
+          merged.farmT = guest.farmT;
+        }
+        if (!merged.lunch) merged.lunch = guest.lunch;
         if (guest.daily > merged.daily) merged.daily = guest.daily;
         for (const [id, picks] of Object.entries(guest.upgrades)) if (picks.length > (merged.upgrades[id]?.length ?? 0)) merged.upgrades[id] = picks;
         guest.equipped.forEach((id, i) => {
@@ -712,7 +790,7 @@ class Collection {
       return;
     }
     // Logging in from a guest game brings its pickups along.
-    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length || guest.pets.length || Object.keys(guest.critters).length || Object.keys(guest.fish).length || Object.keys(guest.mats).length || Object.keys(guest.candy).length) ? guest : undefined);
+    void this.pull(guest && (Object.keys(guest.items).length || guest.dust || guest.skins.length || guest.pets.length || Object.keys(guest.critters).length || Object.keys(guest.fish).length || Object.keys(guest.mats).length || Object.keys(guest.candy).length || Object.keys(guest.pantry).length) ? guest : undefined);
   }
 }
 

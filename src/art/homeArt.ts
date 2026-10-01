@@ -11,14 +11,21 @@ import type Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { pixelCanvas } from './canvas';
 import { floorSwatch } from './homeFloors';
+import { bridgeIcon } from './bridgeArt';
 import { CHIMNEY_H, CHIMNEY_W, chimney, roofSwatch, wallFrameH, wallFrames } from './homeWalls';
-import { PROP_ART, PROP_TURNS, blossomTree, bobber, emptyRodBucket, type PropArt } from './homeProps';
+import { PROP_ART as FIRST_ART, PROP_TURNS as FIRST_TURNS, blossomTree, bobber, emptyRodBucket, type PropArt } from './homeProps';
+import { YARD_ART, YARD_TURNS } from './homeYard';
+import { ROOM_ART, ROOM_TURNS } from './homeRoom';
 import { DOOR_OX, DOOR_OY, DOOR_STEP, DOOR_STEPS, DOOR_WAYS, doorArt, doorFrame, doorIcon } from './homeDoor';
 import { GATE_MATS, GATE_WAYS, gateFrames } from './homeGate';
 import { TREE_SWAY_FPS, TREE_SWAY_FRAMES } from './trees';
 import { hash2 } from './env';
 import { CELL, HomeLayout, PLOT_X, PLOT_Y, type Thing } from '../world/homeLayout';
 import { FLOORS, ROOFS, WALLS, extent, partById } from '../world/homeParts';
+
+/** Every placed thing's drawing by part id, and the turning ones' other views (homeYard.ts and homeRoom.ts hold the later pieces). */
+const PROP_ART: Record<string, PropArt> = { ...FIRST_ART, ...YARD_ART, ...ROOM_ART };
+const PROP_TURNS: Record<string, { side: PropArt; back: PropArt }> = { ...FIRST_TURNS, ...YARD_TURNS, ...ROOM_TURNS };
 
 /** How wide the sheet is; it grows downward as frames are packed. */
 const SHEET_W = 1024;
@@ -197,6 +204,8 @@ function finishHome(scene: Phaser.Scene, list: Entry[]): void {
   // The build palette's samples.
   FLOORS.forEach((f, i) => scene.textures.addCanvas(`hs_f${i + 1}`, pixelCanvas(16, 16, floorSwatch(f.id, 16))));
   ROOFS.forEach((_r, i) => scene.textures.addCanvas(`hs_r${i + 1}`, pixelCanvas(20, 20, roofSwatch(i + 1, 20, new HomeLayout()))));
+  const bridge = bridgeIcon();
+  scene.textures.addCanvas('hs_bridge', pixelCanvas(bridge.w, bridge.h, bridge.px));
 }
 
 /** Whether a frame on the sheet has anything that glows. */
@@ -291,6 +300,8 @@ export function thingLook(t: Thing): ThingLook {
 
 /** A part's picture for the build palette: its texture and frame. */
 export function partIcon(id: string): { key: string; frame: string } {
+  // A bridge has no one look: it shapes itself to the cells laid (see art/bridgeArt.ts).
+  if (partById(id)?.bridge) return { key: 'hs_bridge', frame: '__BASE' };
   const r = REUSED[id];
   if (r) return { key: r.key, frame: `${r.prefix}0` };
   return { key: 'home', frame: `p:${id}:0` };
