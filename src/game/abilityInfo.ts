@@ -132,16 +132,6 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Snaps back to a spot from moments ago, undoing wounds since.',
     special: 'Four echoes of the hero step out and throw shards at foes near.',
   },
-  'puppeteer.marionette': {
-    attack: 'The puppet lunges out to cut twice, then leaps into a heavy chop.',
-    ability: 'The puppet dashes out and pirouettes, blade out, among foes.',
-    special: 'The puppet slams down giant on the spot, then spins through foes.',
-  },
-  'puppeteer.weaver': {
-    attack: 'Razor threads cut along their line, the third reeling a foe in.',
-    ability: 'Strings hoist a crowd of foes up helpless and slam them down.',
-    special: 'Strings seize up to eight foes near and dash them together.',
-  },
   'samurai.bladewind': {
     attack: 'Stabs in a line, and two hits charge a tornado that lifts foes.',
     ability: 'Dashes through a foe, and an attack right after spins all round.',

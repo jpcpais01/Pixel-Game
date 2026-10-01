@@ -4,7 +4,7 @@
 // already owned evaporates into gems: half what a wish costs. Ten wishes at once always
 // hold an epic or better, and a legendary is guaranteed within PITY wishes.
 
-import { CLASSES, type ClassDef, type SkinDef, type TypeDef } from './characters';
+import { CLASSES, kitOf, type ClassDef, type SkinDef, type TypeDef } from './characters';
 import { worn } from './skins';
 import { collection } from './collection';
 
@@ -26,15 +26,13 @@ export const RARITY_INFO: Record<SkinRarity, { name: string; odds: number; tint:
   legendary: { name: 'Legendary', odds: 0.05, tint: 0xffc84a, core: 0xfffbe8, deep: 0xa85a18, stars: 5 },
 };
 
-/** Every skin's rarity, by "class:skin"; any not listed is rare. */
+/** Every skin's rarity, by "kit:skin" (see KitDef in characters.ts); any not listed is rare. */
 const RARITY_OF: Record<string, SkinRarity> = {
   'wizard:hellfire': 'legendary',
   'paladin:seraph': 'legendary',
   'jedi:warlord': 'legendary',
   'necromancer:wyrm': 'legendary',
   'chronomancer:anomaly': 'legendary',
-  'puppeteer:arachne': 'legendary',
-  'puppeteer:luna': 'epic',
   'chronomancer:primavera': 'legendary',
   'samurai:kitsune': 'legendary',
   'valkyrie:raven': 'legendary',
@@ -65,7 +63,6 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'bard:harlequin': 'epic',
   'bard:fadista': 'epic',
   'chronomancer:clockwork': 'epic',
-  'puppeteer:toymaker': 'epic',
   'samurai:shogun': 'epic',
   'druid:autumn': 'epic',
   'wizard:lotus': 'epic',
@@ -80,7 +77,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
 
 /** One skin as the shop knows it. */
 export interface SkinEntry {
-  /** "class:skin". */
+  /** "kit:skin". */
   id: string;
   cls: ClassDef;
   type: TypeDef;
@@ -91,16 +88,19 @@ export interface SkinEntry {
 export const ALL_SKINS: SkinEntry[] = CLASSES.flatMap((cls) =>
   cls.types.flatMap((type) =>
     (type.skins ?? []).map((skin) => {
-      const id = `${cls.id}:${skin.id}`;
+      const id = skinId(skin);
       return { id, cls, type, skin, rarity: RARITY_OF[id] ?? 'rare' };
     }),
   ),
 );
 
-export const skinId = (cls: ClassDef, skin: SkinDef): string => `${cls.id}:${skin.id}`;
+/** A skin's id as it is owned and saved: "kit:skin". */
+export function skinId(skin: SkinDef): string {
+  return `${kitOf(skin).id}:${skin.id}`;
+}
 
-/** A skin's rarity, by class and skin. */
-export const rarityOf = (cls: ClassDef, skin: SkinDef): SkinRarity => RARITY_OF[skinId(cls, skin)] ?? 'rare';
+/** A skin's rarity. */
+export const rarityOf = (skin: SkinDef): SkinRarity => RARITY_OF[skinId(skin)] ?? 'rare';
 
 /** The skins a wish can give: every one but the seasons' limited skins, which only their stalls sell. */
 export const WISH_SKINS: SkinEntry[] = ALL_SKINS.filter((s) => !s.skin.season);

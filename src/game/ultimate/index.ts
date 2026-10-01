@@ -14,8 +14,6 @@ import { BloodMoon, Eclipse, FanOfKnives, SoulStorm } from './shadow';
 import { ChemBomb, GreatArrow, Pestilence } from './nature';
 import { PowderKeg, Tempest } from './archers';
 import { Encore, ThunderOfWar } from './bard';
-import { GrandFinale, PuppetMaster } from './puppeteer';
-import { FATE_STRINGS, GOLD_STRINGS, ICE_STRINGS, SILK_STRINGS, TOY_STRINGS, VENOM_STRINGS } from '../Strings';
 import { Legion, TimeStop } from './chrono';
 import { HundredCuts, quakeGate, SkyQuake } from './samurai';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT } from '../Samurai';
@@ -291,25 +289,6 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.legionIcon,
     cast: (c) => c.world.addEffect(new Legion(c.world, c)),
   },
-  'puppeteer:marionette': {
-    name: 'Grand Finale',
-    cost: 70,
-    windup: 550,
-    aim: 'spot',
-    range: 110,
-    pal: GOLD_STRINGS,
-    icon: icons.finaleIcon,
-    cast: (c) => c.world.addEffect(new GrandFinale(c.world, c)),
-  },
-  'puppeteer:weaver': {
-    name: 'Puppet Master',
-    cost: 75,
-    windup: 600,
-    aim: 'self',
-    pal: SILK_STRINGS,
-    icon: icons.puppetMasterIcon,
-    cast: (c) => c.world.addEffect(new PuppetMaster(c.world, c)),
-  },
   'samurai:bladewind': {
     name: 'Sky Quake',
     cost: 60,
@@ -490,11 +469,6 @@ const SKINS: Record<string, UltSkin> = {
   'chronomancer:clockwork': { pal: CLOCKWORK_PAL },
   'chronomancer:primavera': { pal: pal(0xfffaf2, 0xffd0de, 0xf48cae, 0x3e9a78, 0xd8f4e4) },
   'chronomancer:anomaly': { pal: ANOMALY_PAL, type: 'paradox' },
-  'puppeteer:porcelain': { pal: ICE_STRINGS },
-  'puppeteer:crimson': { pal: FATE_STRINGS, type: 'weaver' },
-  'puppeteer:toymaker': { pal: TOY_STRINGS },
-  'puppeteer:arachne': { pal: VENOM_STRINGS, type: 'weaver' },
-  'puppeteer:luna': { pal: pal(0xfffdf2, 0xd8f8e6, 0x8ee0b8, 0x3e7a6a, 0xc8f0dc), type: 'weaver' },
   'samurai:oni': { pal: schemePal(ONI_KIT.wind) },
   'samurai:sakura': { pal: schemePal(SAKURA_KIT.wind), type: 'ronin' },
   'wizard:astral': { pal: pal(0xfffdf2, 0xfff0a8, 0xffc860, 0x6a5ae0, 0xffe08a) },

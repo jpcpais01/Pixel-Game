@@ -16,7 +16,6 @@ import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
 import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, ORPHEUS_LOOK, VAGABOND_LOOK, WILD_LOOK, NOTE_SIZE, banjoIcon, drumIcon, guitarraIcon, luteIcon, lyreIcon, noteFrame, rhythmIcon, skinSongIcon, songIcon } from './bard';
 import { crossIcon, cutMark, dashIcon, katanaIcon } from './samurai';
-import { PUPPET_LOOKS, buildPuppetSheet, marionetteIcon, mothSnareIcon, pirouetteIcon, puppetStrikeIcon, threadIcon } from './puppeteer';
 import { daggersIcon, petalCanvas, ROGUE_ICONS, ROGUE_LOOKS, shadowstepIcon, smokeCanvas } from './rogue';
 import { gourdIcon, registerMoreSkinIcons, SKIN_BREWS, SKIN_QUIVERS } from './moreSkinIcons';
 import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, eclipseFallIcon, oathHammerIcon, pikeSaberIcon, seraphMaceIcon } from './heroSkins';
@@ -317,24 +316,6 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_rhythm_howl', toCanvas(16, 16, rhythmIcon(HOWL_DRUM_ICON)));
 
   yield;
-  // The marionettist's puppet, like a monster ('puppet', 'puppet_porcelain'),
-  // and the puppeteers' icons.
-  for (const look of PUPPET_LOOKS) registerMonster(scene, look.key, buildPuppetSheet(look));
-  scene.textures.addCanvas('icon_puppet', toCanvas(16, 16, puppetStrikeIcon(false)));
-  scene.textures.addCanvas('icon_pirouette', toCanvas(16, 16, pirouetteIcon(false)));
-  scene.textures.addCanvas('icon_puppet_porcelain', toCanvas(16, 16, puppetStrikeIcon(true)));
-  scene.textures.addCanvas('icon_pirouette_porcelain', toCanvas(16, 16, pirouetteIcon(true)));
-  scene.textures.addCanvas('icon_thread', toCanvas(16, 16, threadIcon('#fbf4ff', '#dcc0ff', '#a878ff')));
-  scene.textures.addCanvas('icon_marionette', toCanvas(16, 16, marionetteIcon('#fbf4ff', '#dcc0ff', '#a878ff')));
-  scene.textures.addCanvas('icon_thread_crimson', toCanvas(16, 16, threadIcon('#fff0f0', '#ff9aa0', '#ff3a4a')));
-  scene.textures.addCanvas('icon_marionette_crimson', toCanvas(16, 16, marionetteIcon('#fff0f0', '#ff9aa0', '#ff3a4a')));
-  scene.textures.addCanvas('icon_puppet_toymaker', toCanvas(16, 16, puppetStrikeIcon(false, true)));
-  scene.textures.addCanvas('icon_pirouette_toymaker', toCanvas(16, 16, pirouetteIcon(false, true)));
-  scene.textures.addCanvas('icon_thread_arachne', toCanvas(16, 16, threadIcon('#fbffe8', '#e0ff9a', '#a8e040')));
-  scene.textures.addCanvas('icon_marionette_arachne', toCanvas(16, 16, marionetteIcon('#fbffe8', '#e0ff9a', '#a8e040')));
-  scene.textures.addCanvas('icon_thread_luna', toCanvas(16, 16, threadIcon('#f6fff8', '#c8f5dc', '#8ee0b8', true)));
-  scene.textures.addCanvas('icon_marionette_luna', toCanvas(16, 16, mothSnareIcon()));
-
   yield;
   // Each chronomancer look's bolts ('<key>_bolt_e', frames b0-b3); the clock over a slowed foe
   // ('chrono_mark_e', m0-m7, tinted in game); and the icons.

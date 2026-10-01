@@ -10,8 +10,8 @@
 
 import Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
-import { classById, type Aim, type CharacterDef, type Hero } from '../game/characters';
-import { lookById, worn } from '../game/skins';
+import type { Aim, CharacterDef, Hero } from '../game/characters';
+import { playedAs } from '../game/skins';
 import { UltCaster } from '../game/ultimate';
 import { areaOrigin, reachesBody, type Hit, type Hurtbox, type MeleeArea } from '../game/combat';
 import type { Effect } from '../game/Slash';
@@ -107,8 +107,7 @@ export class RemotePlayer implements Hurtbox {
     private onStruck: (rp: RemotePlayer, hit: Hit) => void,
   ) {
     this.id = info.id;
-    const cls = classById(info.hero);
-    this.ch = worn(cls, lookById(cls, info.look) ?? undefined);
+    this.ch = playedAs(info.hero, info.look);
     this.view = this.ghostWorld();
     this.hero = asGhost(() => this.ch.spawn(this.view, x, y));
     this.ult = asGhost(() => new UltCaster(this.view, this.hero, this.ch));

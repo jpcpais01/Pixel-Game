@@ -18,7 +18,6 @@ import { ARCHER_H, ARCHER_LOOKS, ARCHER_W, archerAnimsFor, buildArcherFrames } f
 import { buildRogueFrames, ROGUE_ANIMS, ROGUE_H, ROGUE_LOOKS, ROGUE_W } from './rogue';
 import { buildNecroFrames, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W } from './necromancer';
 import { BARD_H, BARD_LOOKS, BARD_W, bardAnims, buildBardFrames } from './bard';
-import { PUPPETEER_H, PUPPETEER_LOOKS, PUPPETEER_W, buildPuppeteerFrames, puppeteerAnims } from './puppeteer';
 import { CHRONO_H, CHRONO_LOOKS, CHRONO_W, buildChronoFrames, chronoAnims } from './chrono';
 import { SAMURAI_ANIMS, SAMURAI_H, SAMURAI_LOOKS, SAMURAI_W, SPIN_FPS, SPIN_FRAMES, buildSamuraiFrames, spinStart } from './samurai';
 import { MECH_ANIMS, MECH_H, MECH_LOOKS, MECH_W, buildMechFrames } from './mech';
@@ -142,7 +141,6 @@ rig(ARCHER_LOOKS, ARCHER_W, ARCHER_H, buildArcherFrames, archerAnimsFor);
 rig(ROGUE_LOOKS, ROGUE_W, ROGUE_H, buildRogueFrames, () => ROGUE_ANIMS, { flash: true });
 rig(NECRO_LOOKS, NECRO_W, NECRO_H, buildNecroFrames, () => NECRO_ANIMS);
 rig(BARD_LOOKS, BARD_W, BARD_H, buildBardFrames, bardAnims);
-rig(PUPPETEER_LOOKS, PUPPETEER_W, PUPPETEER_H, buildPuppeteerFrames, puppeteerAnims);
 rig(CHRONO_LOOKS, CHRONO_W, CHRONO_H, buildChronoFrames, chronoAnims);
 rig(SAMURAI_LOOKS, SAMURAI_W, SAMURAI_H, buildSamuraiFrames, () => SAMURAI_ANIMS, { meta: 'samurai', extra: (look) => turn(look.key, 'spin', SPIN_FRAMES, SPIN_FPS, spinStart) });
 rig(MECH_LOOKS, MECH_W, MECH_H, buildMechFrames, () => MECH_ANIMS);

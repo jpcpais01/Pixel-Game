@@ -5,7 +5,7 @@
 
 import Phaser from 'phaser';
 import { classById, type CharacterDef } from '../characters';
-import { lookById, worn } from '../skins';
+import { lookIn, worn } from '../skins';
 import { ultFor } from '../ultimate';
 import type { Pal } from '../ultimate/ink';
 import { pixelText } from '../../ui/widgets';
@@ -45,7 +45,7 @@ export function styleOf(key: string, look: string): Styled {
     const def = unitDef(key);
     const cls = classById(def.cls);
     const type = cls.types.find((t) => t.id === def.type) ?? cls.types[0];
-    const found = lookById(cls, look);
+    const found = lookIn(def.cls, look);
     const ch = worn(cls, found && found.type === type ? found : { type, skin: null });
     const u = ultFor(ch);
     s = { ch, pal: u.pal, ult: u.name };
@@ -616,8 +616,6 @@ function missileSound(m: Missile): void {
       return sound.tesla();
     case 'feather':
       return sound.feather();
-    case 'thread':
-      return sound.twang();
     default:
       return sound.cast();
   }

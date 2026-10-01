@@ -2,18 +2,34 @@
 
 import { PixelCanvas, type RenderedFrame } from '../pixel';
 import { BUST, type BustPainter } from './kit';
+import { alchemistBust } from './alchemist';
+import { archerBust } from './archer';
+import { automatonBust } from './automaton';
+import { beastBust } from './beast';
+import { duelistBust } from './duelist';
+import { inventorBust } from './inventor';
+import { jediBust } from './jedi';
+import { mysticBust } from './mystic';
+import { necromancerBust } from './necromancer';
+import { phantomBust } from './phantom';
+import { warriorBust } from './warrior';
 import { wizardBust } from './wizard';
-import { BUSTS_A } from './group-a';
-import { BUSTS_B } from './group-b';
-import { BUSTS_C } from './group-c';
 
 export { BUST } from './kit';
 
 const BUSTS: Record<string, BustPainter> = {
-  wizard: wizardBust,
-  ...BUSTS_A,
-  ...BUSTS_B,
-  ...BUSTS_C,
+  mage: wizardBust,
+  warrior: warriorBust,
+  jedi: jediBust,
+  alchemist: alchemistBust,
+  archer: archerBust,
+  duelist: duelistBust,
+  necromancer: necromancerBust,
+  mystic: mysticBust,
+  automaton: automatonBust,
+  phantom: phantomBust,
+  inventor: inventorBust,
+  beast: beastBust,
 };
 
 const done = new Map<string, RenderedFrame>();

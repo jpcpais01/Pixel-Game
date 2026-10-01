@@ -1,14 +1,17 @@
-// The Druid's bust: the Grovekeeper, a kind face in a hood of moss with
-// antlers growing up through it, a mantle hemmed in young leaves pinned by a
-// glowing seed, and a firefly or two drifting by.
+// The Mystic's bust: the Druid and the Bard in one. A kind face in a hood
+// of moss with antlers growing up through it, a mantle hemmed in young leaves
+// pinned by a glowing seed, a lute's neck over the shoulder, and fireflies
+// and a glowing note drifting by: a song of the old wild.
 
 import { cyl, sphere, type PixelCanvas } from '../pixel';
 import { EYE, SKIN } from '../palette';
 import { ANTLER, BARK, GROVE_HOT, GROVE_MID, LEAF, MOSS, SEED } from '../druid';
+import { STRING, WILD_LOOK } from '../bard';
 import { ROSE_LIP } from '../valkyrie';
 import { C, pair, shoulders } from './kit';
 
-export function druidBust(c: PixelCanvas): void {
+export function mysticBust(c: PixelCanvas): void {
+  const D = WILD_LOOK.dress;
   // Antlers first, so the hood sits in front of their roots.
   pair(12, (x, s) => {
     const o = (dx: number) => x - dx * s;
@@ -75,8 +78,25 @@ export function druidBust(c: PixelCanvas): void {
   // The seed at the throat, pinning the mantle shut.
   c.part();
   c.ellipse(C, 26, 1.6, 1.6, SEED);
+  // The lute's neck of pale birch rising past the shoulder, a string along it,
+  // the pegbox bent back from the nut with three dark pegs.
+  c.part();
+  c.line(19, 33, 27, 21, D.lute, () => sphere(-0.5, 0.2));
+  c.line(20, 33, 28, 21, D.lute, () => sphere(0.5, -0.2));
+  c.line(20, 32, 27, 22, STRING, () => sphere(0, 0));
+  c.part();
+  c.line(27, 20, 29, 18, D.lute, () => sphere(-0.3, -0.4));
+  c.line(28, 21, 30, 19, D.lute, () => sphere(0.4, 0.2), { bias: -1 });
+  c.part();
+  for (const [x, y] of [[26, 19], [27, 18], [28, 17]] as const) c.px(x, y, D.neck, sphere(-0.3, -0.5));
+  // A note of light rising off the strings, the same glow as the seed.
+  c.part();
+  c.line(31, 7, 31, 11, SEED, () => sphere(0.3, -0.2));
+  c.px(30, 7, SEED, sphere(0.2, -0.6));
+  c.ellipse(30.1, 12.2, 1.5, 1.1, SEED);
+  c.spark(31, 9, GROVE_HOT, 0.5);
   // Fireflies in the air.
-  for (const [x, y, a] of [[27, 19, 1], [6, 21, 0.8], [28, 9, 0.6]] as const) {
+  for (const [x, y, a] of [[6, 21, 0.8], [5, 11, 0.6], [24, 3, 0.5]] as const) {
     c.spark(x, y, GROVE_HOT, a);
     c.spark(x - 1, y, GROVE_MID, a * 0.4);
     c.spark(x + 1, y, GROVE_MID, a * 0.4);

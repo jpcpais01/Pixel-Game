@@ -89,8 +89,6 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'bard.drummer': { role: 'tank', hp: 115, damage: 10, defense: 22, rate: 2.33, speed: 58, regen: 1, skill: 0.5, ult: 90, kit: 11 },
   'chronomancer.keeper': { role: 'caster', hp: 82, damage: 10, defense: 12, rate: 2.15, speed: 60, regen: 0.8, skill: 1.7, ult: 0, kit: 8 },
   'chronomancer.paradox': { role: 'ranged', hp: 92, damage: 6, defense: 12, rate: 4.49, speed: 66, regen: 0.6, skill: 1.3, ult: 256, kit: 7.1 },
-  'puppeteer.marionette': { role: 'ranged', hp: 105, damage: 12, defense: 12, rate: 2.15, speed: 60, regen: 0.6, skill: 8, ult: 130, kit: 13.8 },
-  'puppeteer.weaver': { role: 'caster', hp: 80, damage: 9, defense: 12, rate: 2.49, speed: 66, regen: 0.8, skill: 3.1, ult: 0, kit: 8 },
   'samurai.bladewind': { role: 'melee', hp: 90, damage: 8, defense: 20, rate: 3.99, speed: 66, regen: 0.8, skill: 3, ult: 70, kit: 11.3 },
   'samurai.ronin': { role: 'melee', hp: 100, damage: 10, defense: 20, rate: 2.99, speed: 60, regen: 0.8, skill: 5.2, ult: 48, kit: 11 },
   'druid.grove': { role: 'caster', hp: 85, damage: 6, defense: 12, rate: 2.33, speed: 58, regen: 0.8, skill: 19, ult: 44, kit: 7.5 },

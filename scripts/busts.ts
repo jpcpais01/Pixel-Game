@@ -8,10 +8,9 @@ import { encodePNG } from './png';
 
 /** Each class and its first character's sheet. */
 const CLASSES: [string, string][] = [
-  ['wizard', 'wizard'], ['warrior', 'warrior'], ['paladin', 'paladin'], ['jedi', 'jedi'], ['fighter', 'fighter'],
-  ['alchemist', 'alchemist'], ['archer', 'archer'], ['rogue', 'rogue'], ['necromancer', 'necro'], ['bard', 'bard'],
-  ['chronomancer', 'chrono'], ['puppeteer', 'puppeteer'], ['samurai', 'samurai'], ['druid', 'druid'], ['valkyrie', 'valkyrie'],
-  ['automaton', 'mech'], ['phantom', 'polter'], ['inventor', 'engineer'], ['beast', 'eagle'],
+  ['mage', 'wizard'], ['warrior', 'warrior'], ['jedi', 'jedi'], ['alchemist', 'alchemist'], ['archer', 'archer'],
+  ['duelist', 'rogue'], ['necromancer', 'necro'], ['mystic', 'druid'], ['automaton', 'mech'], ['phantom', 'polter'],
+  ['inventor', 'engineer'], ['beast', 'eagle'],
 ];
 
 const out = process.argv[2] ?? 'busts.png';
