@@ -36,6 +36,8 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 export class NetPlay {
   readonly duel: boolean;
   private remotes = new Map<number, RemotePlayer>();
+  /** A guest in the Everwood has been taken to the host. */
+  private metHost = false;
   private off: () => void;
   private sendT = 0;
   private snapT = 0;
@@ -241,6 +243,11 @@ export class NetPlay {
         if (!r) break;
         const wasDown = r.down;
         r.apply(m as unknown as HeroState, now);
+        // In the Everwood a guest is taken to wherever the host is, the first time the host is heard from.
+        if (!this.metHost && f === session.room?.host && !session.isHost && this.world.everwood) {
+          this.metHost = true;
+          this.world.travel(m.x as number, (m.y as number) + 14);
+        }
         if (this.duel && r.down && !wasDown && !this.world.heroDown) {
           this.score.me++;
           this.world.announce(`Victory ${this.score.me}-${this.score.them}`);
