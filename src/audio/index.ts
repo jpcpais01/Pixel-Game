@@ -1,4 +1,4 @@
-import { Ambience } from './ambience';
+import { Ambience, type Wild } from './ambience';
 import { Mixer, gain } from './mixer';
 import { Music } from './music';
 import { ShopMusic, type ShopMood } from './shopMusic';
@@ -55,6 +55,7 @@ class GameSound {
   private daylight = 0;
   private outdoors = true;
   private fire = 0;
+  private wild: Wild | null = null;
   private _muted = readMuted();
   private volume = { music: 1, sfx: 1 };
 
@@ -154,6 +155,36 @@ class GameSound {
   setFire(level: number): void {
     this.fire = level;
     if (this.ctx) safely('fire', () => this.ambience?.setFire(level, this.ctx!.currentTime));
+  }
+
+  /** The Everwood's own sounds round the listener (water heard before it's seen, frogs, a woodpecker), or null to stop them. */
+  setWild(w: Wild | null): void {
+    this.wild = w;
+    if (this.ctx) safely('wild', () => this.ambience?.setWild(w, this.ctx!.currentTime));
+  }
+
+  /** A gust coming through the forest, 0..1 strong, from the side `pan` says. */
+  forestGust(strength: number, pan = 0): void {
+    const t = this.slot('forestGust');
+    if (t !== null) this.sfx!.forestGust(t, strength, pan);
+  }
+
+  /** Wings: `n` birds starting up, or an owl (`soft`) leaving its branch. */
+  wings(pan = 0, n = 4, soft = false): void {
+    const t = this.slot('wings');
+    if (t !== null) this.sfx!.wings(t, pan, n, soft);
+  }
+
+  /** A deer snorting its alarm and bounding off. */
+  deerBolt(pan = 0): void {
+    const t = this.slot('deerBolt');
+    if (t !== null) this.sfx!.deerBolt(t, pan);
+  }
+
+  /** An owl hooting from its branch, `level` 0..1 with how near it sits. */
+  owlHoot(pan = 0, level = 1): void {
+    const t = this.slot('owlHoot');
+    if (t !== null) this.sfx!.owlHoot(t, pan, level);
   }
 
   charge(): void {
@@ -1069,6 +1100,7 @@ class GameSound {
     this.ambience.setDaylight(this.daylight, 0);
     this.ambience.setOutdoors(this.outdoors, 0);
     this.ambience.setFire(this.fire, 0);
+    this.ambience.setWild(this.wild, 0);
     this.music.start(ctx.currentTime);
     window.setInterval(() => this.tick(), TICK_MS);
     this.tick();

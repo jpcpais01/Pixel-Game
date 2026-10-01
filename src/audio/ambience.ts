@@ -10,6 +10,17 @@ interface Bird {
   next: number;
 }
 
+/**
+ * The Everwood round the listener (see world/ForestSounds.ts): how near (0..1)
+ * running water and still water are, and on which side (-1..1).
+ */
+export interface Wild {
+  stream: number;
+  streamPan: number;
+  pond: number;
+  pondPan: number;
+}
+
 interface Cricket {
   pitch: number;
   pan: number;
@@ -43,6 +54,12 @@ export class Ambience {
   private gust = 0.3;
   private nextCrackle = 0;
   private nextOwl = 0;
+  /** The forest's water, frogs and woodpecker: built the first time the Everwood is entered. */
+  private wild: Wild | null = null;
+  private water: { level: GainNode; pan: StereoPannerNode; gurgle: StereoPannerNode } | null = null;
+  private nextBubble = 0;
+  private nextFrog = 0;
+  private nextPeck = 0;
 
   constructor(m: Mixer) {
     this.m = m;
@@ -115,8 +132,34 @@ export class Ambience {
     this.fire.gain.setTargetAtTime(level, t, 0.25);
   }
 
+  /** The Everwood's sounds on (where its water is) or off. */
+  setWild(w: Wild | null, t: number): void {
+    this.wild = w;
+    if (w && !this.water) {
+      // A brook's rush: white noise in a wide band, its level and side following the nearest stream.
+      const ctx = this.m.ctx;
+      const pan = panner(ctx, 0, this.m.ambience);
+      const level = gain(ctx, 0, pan);
+      const band = filter(ctx, 'bandpass', 1500, 0.45, level);
+      const shelf = filter(ctx, 'lowpass', 5200, 0.5, band);
+      const n = this.m.noiseLoop(false);
+      n.connect(shelf);
+      n.start();
+      const gurgle = panner(ctx, 0, this.m.ambience);
+      gurgle.connect(gain(ctx, 0.3, this.m.reverb));
+      this.water = { level, pan, gurgle };
+      this.nextPeck = t + rand(12, 30);
+    }
+    if (!this.water) return;
+    const rush = w ? Math.pow(w.stream, 1.6) * 0.075 : 0;
+    this.water.level.gain.setTargetAtTime(rush * this.outdoors, t, 0.4);
+    this.water.pan.pan.setTargetAtTime(w ? w.streamPan * 0.8 : 0, t, 0.4);
+    this.water.gurgle.pan.setTargetAtTime(w ? w.streamPan * 0.8 : 0, t, 0.4);
+  }
+
   tick(now: number, until: number): void {
     const catchUp = (x: number) => (x < now - 0.5 ? now + rand(0.1, 1) : x);
+    if (this.wild && this.water) this.tickWild(until, catchUp);
     this.nextGust = catchUp(this.nextGust);
     while (this.nextGust < until) {
       const t = this.nextGust;
@@ -161,6 +204,75 @@ export class Ambience {
     while (this.nextCrackle < until) {
       if (this.fireLevel > 0.02) this.crackle(this.nextCrackle, Math.random() < 0.08);
       this.nextCrackle += Math.random() < 0.3 ? rand(0.01, 0.05) : rand(0.08, 0.4);
+    }
+  }
+
+  /** The brook's bubbles and plinks, frogs by still water at night, and a woodpecker drumming somewhere by day. */
+  private tickWild(until: number, catchUp: (x: number) => number): void {
+    const w = this.wild!;
+    this.nextBubble = catchUp(this.nextBubble);
+    while (this.nextBubble < until) {
+      if (w.stream > 0.08 && this.outdoors) this.bubble(this.nextBubble, w.stream);
+      // The nearer the brook, the busier its chatter.
+      this.nextBubble += rand(0.05, 0.16) / Math.max(0.3, w.stream);
+    }
+    this.nextFrog = catchUp(this.nextFrog);
+    while (this.nextFrog < until) {
+      if (w.pond > 0.12 && this.daylight < 0.6 && this.outdoors) this.croak(this.nextFrog, w.pond, w.pondPan);
+      this.nextFrog += Math.random() < 0.35 ? rand(0.5, 0.9) : rand(2, 6);
+    }
+    this.nextPeck = catchUp(this.nextPeck);
+    while (this.nextPeck < until) {
+      if (this.daylight > 0.4 && this.outdoors) this.drum(this.nextPeck);
+      this.nextPeck += rand(25, 60);
+    }
+  }
+
+  /** One bubble: a tiny rising plink of water. */
+  private bubble(t: number, near: number): void {
+    const ctx = this.m.ctx;
+    const g = gain(ctx, 0, this.water!.gurgle);
+    const dur = rand(0.025, 0.06);
+    hit(g.gain, t, 0.035 * near * rand(0.4, 1), 0.003, dur);
+    const f = rand(450, 1300);
+    const o = osc(ctx, 'sine', f, g);
+    sweep(o.frequency, t, f, f * rand(1.4, 2.2), dur);
+    o.start(t);
+    o.stop(t + dur + 0.03);
+  }
+
+  /** A frog's croak: a buzzing pulse train, low and wooden. */
+  private croak(t: number, near: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.voice(pan * 0.8 + rand(-0.15, 0.15), 0.06 * near, this.night, 0.4);
+    const bp = filter(ctx, 'bandpass', rand(500, 800), 3, out);
+    const g = gain(ctx, 0, bp);
+    const pulses = Math.floor(rand(5, 10));
+    for (let i = 0; i < pulses; i++) {
+      const at = t + i * 0.022;
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(1, at + 0.004);
+      g.gain.linearRampToValueAtTime(0, at + 0.018);
+    }
+    const o = osc(ctx, 'sawtooth', rand(95, 140), g);
+    o.start(t);
+    o.stop(t + pulses * 0.022 + 0.03);
+  }
+
+  /** A woodpecker far off in the trees: a quick roll of knocks, speeding up and dying away. */
+  private drum(t: number): void {
+    const ctx = this.m.ctx;
+    const out = this.voice(rand(-0.85, 0.85), 0.05, this.day, 0.7);
+    const bp = filter(ctx, 'bandpass', rand(1400, 1900), 2.5, out);
+    const knocks = Math.floor(rand(12, 20));
+    let at = t;
+    for (let i = 0; i < knocks; i++) {
+      const g = gain(ctx, 0, bp);
+      hit(g.gain, at, 1 - (i / knocks) * 0.7, 0.001, 0.02);
+      const src = this.m.noiseSource();
+      src.connect(g);
+      this.m.startNoise(src, at, 0.02);
+      at += 0.06 - (i / knocks) * 0.02;
     }
   }
 

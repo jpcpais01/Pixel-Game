@@ -61,6 +61,8 @@ type V3 = [number, number, number];
 const GEM_SHARDS = [0xffffff, 0x9ff6ff, 0x5ae8ff, 0xff7ae6];
 /** A shower of gems is at most this many on the ground (a bigger haul lies a few to a stone). */
 const MAX_GEM_STONES = 24;
+/** Holding C walks at this much of full speed (the stick does it with a light touch). */
+const CREEP = 0.4;
 /** Only the first few landing gems tink, so a hoard doesn't drown the fight's own sounds. */
 const GEM_TINKS = 7;
 
@@ -676,7 +678,7 @@ export class WorldScene extends Phaser.Scene {
       addBuff: (def) => heroBuffs.add(def),
       pop: (text, tint) => this.popNumber(snap(this.hero.x), snap(this.hero.y) - 38, text, tint),
     };
-    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,J,K,SHIFT,N,C') as Record<string, Phaser.Input.Keyboard.Key>;
   }
 
   /**
@@ -2003,7 +2005,8 @@ export class WorldScene extends Phaser.Scene {
     const kx = (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0);
     const ky = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0);
     if (kx || ky) {
-      const l = Math.hypot(kx, ky);
+      // Holding C creeps: slow and quiet, so wild things let the hero come close.
+      const l = Math.hypot(kx, ky) / (k.C.isDown ? CREEP : 1);
       mx = kx / l;
       my = ky / l;
     }

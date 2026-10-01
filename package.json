@@ -14,6 +14,7 @@
     "trees": "tsx scripts/trees.ts trees.png 3",
     "forest": "tsx scripts/forest.ts forest.png",
     "stag": "tsx scripts/stag.ts stag.png 4",
+    "wildlife": "tsx scripts/wildlife.ts wildlife.png 5",
     "modes": "tsx scripts/modes.ts modes.png 3"
   },
   "dependencies": {
