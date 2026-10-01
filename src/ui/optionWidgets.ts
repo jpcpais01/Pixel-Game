@@ -412,19 +412,29 @@ export class PointerPicker extends Phaser.GameObjects.Container implements MenuC
         const ox = Math.random() * Math.min(oy * 0.8, 10);
         this.parts.push({ x: tipX + ox, y: tipY + oy, vx: (Math.random() - 0.5) * 10, vy: -16 - Math.random() * 22, age: 0, life: 0.35 + Math.random() * 0.4, seed: Math.random() });
       }
+    } else if (def.fx === 'petals') {
+      // Petals letting go of the blossom and drifting down past the twig.
+      this.spawn += s * 2.2;
+      for (; this.spawn >= 1; this.spawn--) {
+        this.parts.push({ x: tipX + Math.random() * 10, y: tipY + Math.random() * 8, vx: 4 + Math.random() * 8, vy: 6 + Math.random() * 6, age: 0, life: 1.6 + Math.random() * 0.8, seed: Math.random() });
+      }
     } else {
-      this.spawn += s * 3;
+      // Starfall's stars, or Frost's snow, falling across the card.
+      this.spawn += s * (def.fx === 'frost' ? 6 : 3);
       for (; this.spawn >= 1; this.spawn--) {
         this.parts.push({ x: tipX - 6 + Math.random() * 36, y: tipY - 4 + Math.random() * 10, vx: 0, vy: 8 + Math.random() * 10, age: 0, life: 0.9 + Math.random() * 0.6, seed: Math.random() });
       }
     }
     const FIRE = [0xfffbe0, 0xffe070, 0xffb03a, 0xff8a28, 0xf2601e, 0xd23a18, 0xa82418];
     const STAR = [0xffffff, 0x9ef0ff, 0xc8a8ff, 0xffe08a];
+    const PETAL = [0xffd0e2, 0xffb0cc, 0xff8ab4, 0xfff0f6];
     let n = 0;
     for (const p of this.parts) {
       p.age += s;
       if (p.age >= p.life) continue;
-      p.x += p.vx * s;
+      // Snow and petals swing side to side as they fall.
+      const sway = def.fx === 'frost' || def.fx === 'petals' ? Math.sin(p.age * 4 + p.seed * 6) * 6 : 0;
+      p.x += (p.vx + sway) * s;
       p.y += p.vy * s;
       this.parts[n++] = p;
       // Kept inside the card.
@@ -432,6 +442,12 @@ export class PointerPicker extends Phaser.GameObjects.Container implements MenuC
       const f = p.age / p.life;
       if (def.fx === 'ember') {
         g.fillStyle(FIRE[Math.min(FIRE.length - 1, Math.floor(f * FIRE.length))]).fillRect(Math.floor(p.x), Math.floor(p.y), f < 0.4 ? 2 : 1, f < 0.4 ? 2 : 1);
+      } else if (def.fx === 'petals') {
+        const c = PETAL[Math.floor(p.seed * PETAL.length)];
+        g.fillStyle(c, f > 0.8 ? (1 - f) * 5 : 1).fillRect(Math.floor(p.x), Math.floor(p.y), Math.sin(p.age * 5 + p.seed * 9) > 0 ? 2 : 1, 1);
+      } else if (def.fx === 'frost') {
+        g.fillStyle(p.seed < 0.6 ? 0xffffff : 0xbff4ff, f > 0.7 ? (1 - f) / 0.3 : 1).fillRect(Math.floor(p.x), Math.floor(p.y), 1, 1);
+        if (p.seed > 0.75) g.fillRect(Math.floor(p.x) - 1, Math.floor(p.y), 3, 1).fillRect(Math.floor(p.x), Math.floor(p.y) - 1, 1, 3);
       } else {
         const c = STAR[Math.floor(p.seed * STAR.length)];
         g.fillStyle(c, f > 0.7 ? (1 - f) / 0.3 : 1).fillRect(Math.floor(p.x), Math.floor(p.y), 1, 1);
