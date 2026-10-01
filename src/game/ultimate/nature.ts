@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { sound } from '../../audio';
-import { Venom, type ToxStyle } from '../Toxins';
+import { foxSpike, Venom, type ToxStyle } from '../Toxins';
 import type { Hurtbox } from '../combat';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { bloom, bolt, clamp01, column, dither, easeOut, flare, Fx, GROUND, hash, line, pool, ring, segDist, star, stroke, strikeGround, type Ink, type Pal } from './ink';
@@ -11,6 +11,8 @@ import type { Cast } from './types';
 
 const CLOUD_R = 48;
 const CLOUD_TIME = 5000;
+/** Foxgloves standing round Foxglove's Deadly Bloom. */
+const BLOOM_SPIKES = 14;
 
 /** The Plague doctor's Pestilence: a great churning miasma settles on the spot, poisoning everything inside deeper and deeper. */
 export class Pestilence extends Fx {
@@ -49,6 +51,17 @@ export class Pestilence extends Fx {
 
     const g = this.ground.begin(x, y, 2.5);
     pool(g, x, y, CLOUD_R * open, tox.murk, tox.deep, open, GROUND, 0.7);
+    // Foxglove's Deadly Bloom: a ring of tall foxgloves rises round the miasma, nodding in it.
+    const fl = tox.flowers;
+    if (fl && open > 0.05) {
+      for (let i = 0; i < BLOOM_SPIKES; i++) {
+        const a = ((i + hash(i, 31) * 0.6) / BLOOM_SPIKES) * Math.PI * 2;
+        const rr = CLOUD_R * open * (0.8 + hash(i, 32) * 0.18);
+        const h = Math.round((4 + hash(i, 33) * 4) * open);
+        const sway = Math.sin(t * 0.003 + i * 1.3) > 0.5 ? 1 : 0;
+        foxSpike((px, py, col, al) => g.put(px, py, col, al), Math.round(x + Math.cos(a) * rr), Math.round(y + Math.sin(a) * rr * GROUND), h, fl, open, sway);
+      }
+    }
     g.end();
 
     // The miasma: puffs wheeling slowly round the heart, each a dithered blob of the brew's colours.
