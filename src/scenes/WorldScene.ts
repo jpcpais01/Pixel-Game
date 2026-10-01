@@ -108,6 +108,7 @@ import { heroBuffs, type BuffDef } from '../game/buffs';
 import { heroTimers } from '../game/timers';
 import { GemTally, LootFlare, Pickup } from '../game/Pickup';
 import { gear, GEAR_SETS, RARITY, type GearDef, type SetId } from '../game/gear';
+import { HeroDress } from '../game/heroDress';
 import { SetPowers } from '../game/setPowers';
 import { rollGems } from '../game/tiers';
 import { activeSeason, rollCandy, seasonalSpots } from '../game/season';
@@ -251,6 +252,8 @@ export class WorldScene extends Phaser.Scene {
   /** The aura of each gear set worn whole about the hero: a glow at their feet and motes rising off them. */
   /** The Myth sets' powers at 2, 4 and 6 pieces (game/setPowers.ts). */
   private setPowers = new SetPowers(this);
+  /** Moves the hero's sprites onto their look dressed in the set worn (4+ pieces). */
+  private dress: HeroDress | null = null;
   private auras = new Map<SetId, { halo: Phaser.GameObjects.Image; motes: Phaser.GameObjects.Particles.ParticleEmitter }>();
   /** How far the camera leans off the hero, toward a boss towering over the fight. */
   private lean = { x: 0, y: 0 };
@@ -548,7 +551,9 @@ export class WorldScene extends Phaser.Scene {
       this.spawnY = at.y;
     }
     const ch = characterById(data?.character);
+    const before = new Set(this.children.list);
     this.hero = ch.spawn(this, this.spawnX, this.spawnY);
+    this.dress = new HeroDress(this, this.hero.sprite, this.children.list.filter((o) => !before.has(o)));
     this.stats = heroStats(ch.id, ch.type.id);
     diag.hero = `${ch.id} / ${ch.type.id} / ${ch.skin?.id ?? 'no skin'}`;
     diag.arena = arena.id;
@@ -1410,11 +1415,22 @@ export class WorldScene extends Phaser.Scene {
   private rewear(): void {
     const d = gear.wear(collection.equippedGear());
     for (const k of Object.keys(SET_AURA) as SetId[]) this.setAura(k, gear.sets.includes(k));
+    this.redress();
     this.setPowers.worn(this.running);
     if (!d) return;
     const v = this.hero.vitals;
     if (v.alive) v.grow(d);
     else v.max += d;
+  }
+
+  /** Four or more pieces of a set: the hero's own sprite wears it (art/dress.ts); put on mid-run, it shimmers in. */
+  private redress(): void {
+    const d = this.dress;
+    if (!d || d.set === gear.dress) return;
+    d.set = gear.dress;
+    if (!this.running || !d.set) return;
+    const h = this.hero;
+    this.debris([0xffffff, GEAR_SETS[d.set].tint], snap(h.x), snap(h.y) - 12, 20, h.y + 20, 'spores');
   }
 
   /**

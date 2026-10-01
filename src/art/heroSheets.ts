@@ -8,6 +8,8 @@
 
 import type { PixelCanvas } from './pixel';
 import { packAtlas, type PixelAtlas } from './atlas';
+import { dresser, dressedKey, undress } from './dress';
+import type { SetId } from '../game/gear';
 import { buildWizardFrames, ANIMS, DIRS, FRAME_H, FRAME_W, WIZARD_LOOKS } from './wizard';
 import { buildWarriorFrames, WARRIOR_H, WARRIOR_LOOKS, WARRIOR_W, warriorAnimsFor } from './warrior';
 import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_LOOKS, PALADIN_W } from './paladin';
@@ -51,7 +53,8 @@ export interface HeroSheet {
 interface SheetDef {
   /** Also makes the white hit flash (`<key>_w`). */
   flash: boolean;
-  build(): HeroSheet;
+  /** With a set: the look dressed in it (see dress.ts), textures only, its animations are the look's own. */
+  build(set?: SetId): HeroSheet;
 }
 
 interface RigFrame {
@@ -88,8 +91,19 @@ function rig<L extends { key: string }>(
   for (const look of looks) {
     SHEETS.set(look.key, {
       flash: !!o.flash,
-      build: () => {
+      build: (set) => {
         const frames = build(look);
+        if (set) {
+          const dress = dresser(look, set);
+          return {
+            key: dressedKey(look.key, set),
+            fw,
+            fh,
+            atlas: packAtlas(frames.map((f, i) => ({ name: f.key, r: dress(f.canvas, i) })), fw, fh, 16, !!o.flash),
+            anims: [],
+            meta: null,
+          };
+        }
         const list: SheetAnim[] = [];
         for (const a of anims(look)) {
           for (const d of DIRS) {
@@ -155,8 +169,10 @@ export const HERO_SHEETS: readonly string[] = [...SHEETS.keys()];
 
 export const sheetFlashes = (key: string): boolean => !!SHEETS.get(key)?.flash;
 
+/** Builds a look's sheet, or a dressed look's (`<look>.<set>`, see dress.ts). */
 export function buildHeroSheet(key: string): HeroSheet {
-  const def = SHEETS.get(key);
+  const dressed = undress(key);
+  const def = SHEETS.get(dressed ? dressed.look : key);
   if (!def) throw new Error(`No hero sheet '${key}'`);
-  return def.build();
+  return def.build(dressed?.set);
 }

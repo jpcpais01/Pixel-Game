@@ -295,6 +295,21 @@ export class PixelCanvas {
     this.light[i + 3] = 1;
   }
 
+  /**
+   * Swap every material for another (a gear set's dressing), keeping each
+   * pixel's shape, normal and shading. Mirrored frames share their source's
+   * materials, so `fn` must give a material it has already swapped back as is.
+   */
+  remap(fn: (m: Material) => Material): void {
+    for (let i = 0; i < this.materials.length; i++) this.materials[i] = fn(this.materials[i]);
+  }
+
+  /** The material at a pixel's index into the buffers (no offset), or null. */
+  materialOf(i: number): Material | null {
+    const m = this.mat[i];
+    return m >= 0 ? this.materials[m] : null;
+  }
+
   /** Mirror horizontally (for right-facing frames), flipping normals too. */
   mirrored(): PixelCanvas {
     const c = new PixelCanvas(this.w, this.h);
