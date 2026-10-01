@@ -3,7 +3,7 @@
 // window, its name on the plate and the rarity's stars under it.
 
 import Phaser from 'phaser';
-import { RARITY_INFO, wornSkin, type SkinEntry } from '../game/gacha';
+import { RARITY_INFO, SKIN_RARITIES, wornSkin, type SkinEntry } from '../game/gacha';
 import { addBitmap, cardFront } from '../art/shop';
 import { cropToWindow, fitLine } from '../scenes/SelectScene';
 import { pixelText } from './widgets';
@@ -28,7 +28,7 @@ export interface SkinFace {
 export function skinFace(scene: Phaser.Scene, entry: SkinEntry, w: number, h: number, scale: number, title?: { text: string; tint: number }, compact = false): SkinFace {
   const info = RARITY_INFO[entry.rarity];
   const plate = compact ? COMPACT_PLATE : PLATE;
-  const front = scene.add.image(0, 0, addBitmap(scene, `wish_card_${entry.rarity}_${w}x${h}_${plate}`, cardFront(w, h, info.tint, info.deep, entry.rarity === 'legendary', plate)));
+  const front = scene.add.image(0, 0, addBitmap(scene, `wish_card_${entry.rarity}_${w}x${h}_${plate}`, cardFront(w, h, info.tint, info.deep, SKIN_RARITIES.indexOf(entry.rarity), plate)));
   // The hero stands in the window, feet a little above the name plate.
   const p = wornSkin(entry).preview;
   const feet = h / 2 - plate - 2;
