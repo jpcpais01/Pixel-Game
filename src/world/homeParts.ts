@@ -227,9 +227,9 @@ export const PARTS: PartDef[] = [
   { id: 'mushlamp', name: 'Mushroom lamp', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xffa898, radius: 64, intensity: 1.1, day: 0.25, y: 10 } },
   { id: 'fairylights', name: 'Firefly jar', tab: 'light', w: 1, h: 1, block: 'post', light: { color: 0xc8ff7a, radius: 70, intensity: 1.2, day: 0.2, y: 8 } },
   // Wards: moonlit lanterns no creature will rise near, from a wayfarer's crook to a beacon that keeps a whole glade.
-  { id: 'wardlamp', name: 'Ward lantern', tab: 'light', w: 1, h: 1, block: 'post', ward: 3, light: { color: 0x9ee4ff, radius: 90, intensity: 1.4, day: 0.25, y: 24 } },
-  { id: 'wardstone', name: 'Warden stone', tab: 'light', w: 1, h: 1, block: 'post', ward: 5, light: { color: 0x7af0e0, radius: 110, intensity: 1.6, day: 0.3, y: 18 } },
-  { id: 'wardbeacon', name: 'Sanctuary beacon', tab: 'light', w: 2, h: 2, block: 'full', ward: 10, light: { color: 0xb4e8ff, radius: 170, intensity: 2.1, day: 0.35, y: 38 } },
+  { id: 'wardlamp', name: 'Ward lantern', tab: 'light', w: 1, h: 1, block: 'post', ward: 6, light: { color: 0x9ee4ff, radius: 90, intensity: 1.4, day: 0.25, y: 24 } },
+  { id: 'wardstone', name: 'Warden stone', tab: 'light', w: 1, h: 1, block: 'post', ward: 10, light: { color: 0x7af0e0, radius: 110, intensity: 1.6, day: 0.3, y: 18 } },
+  { id: 'wardbeacon', name: 'Sanctuary beacon', tab: 'light', w: 2, h: 2, block: 'full', ward: 20, light: { color: 0xb4e8ff, radius: 170, intensity: 2.1, day: 0.35, y: 38 } },
 
   // Wall decor
   { id: 'painting', name: 'Painting', tab: 'decor', w: 1, h: 1, block: 'none', wall: true, flip: true },
