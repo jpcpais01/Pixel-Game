@@ -438,6 +438,21 @@ class GameSound {
     if (t !== null) this.sfx!.fishLost(t);
   }
 
+  plant(pan = 0): void {
+    const t = this.slot('plant');
+    if (t !== null) this.sfx!.plant(t, pan);
+  }
+
+  harvest(tier: number): void {
+    const t = this.slot('harvest');
+    if (t !== null) this.sfx!.harvest(t, tier);
+  }
+
+  cooked(tier: number): void {
+    const t = this.slot('cooked');
+    if (t !== null) this.sfx!.cooked(t, tier);
+  }
+
   critterRelease(pan = 0): void {
     const t = this.slot('critterRelease');
     if (t !== null) this.sfx!.critterRelease(t, pan);

@@ -17,6 +17,7 @@ import { sway, treeSwayReady } from '../game/treeSway';
 import { session, type Msg } from '../net/session';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HOME_SPAWN, homeWalkable, setHomeMask } from './homeGround';
+import { Farm } from './Farm';
 import { HomeCritters } from './HomeCritters';
 import { HouseShadow, type Stack } from './houseShadow';
 import { treeLeaves } from './Scenery';
@@ -170,6 +171,10 @@ export class Home {
   private critters: HomeCritters;
   /** A visitor has been sent the home at least once. */
   private arrived = false;
+  /** The crops on the garden beds, and the stoves and pots to cook at. */
+  private farm: Farm;
+  /** The owner's farm, sent with the home's first piece, shown once the home has come. */
+  private farmSent: string | null = null;
 
   constructor(
     private scene: WorldScene,
@@ -194,6 +199,9 @@ export class Home {
     this.cursor = add.graphics().setDepth(9000).setVisible(false);
     this.ghost = add.image(0, 0, 'home', 'chimney').setAlpha(0.6).setDepth(9001).setVisible(false);
     this.critters = new HomeCritters(scene);
+    this.farm = new Farm(scene, this.owner, () => {
+      if (session.active && this.owner) this.sendT = SEND_MS;
+    });
     this.refresh(true);
     // Now and then a leaf, or a cherry petal, comes loose from a tree planted here.
     this.leaves = treeLeaves(
@@ -427,6 +435,7 @@ export class Home {
     this.fillShelves();
     // Let out with a sparkle while building (or, for a visitor, once the home has come), not as the home first appears.
     this.critters.sync(l, this.houseAt, this.owner ? build.on : this.arrived);
+    this.farm.sync(l);
   }
 
   private place(k: string, t: Thing): void {
@@ -704,6 +713,7 @@ export class Home {
 
     this.swingDoors(dt, [this.hero, ...others]);
     this.critters.update(dt, heroX, heroY, d, this.scene.cameras.main.worldView);
+    this.farm.update(dt, heroX, heroY, d);
 
     if (this.stillTrees.length && treeSwayReady(this.scene)) {
       for (const t of this.stillTrees.splice(0)) if (t.sprite.active) sway(t.sprite, t.anim);
@@ -712,6 +722,11 @@ export class Home {
     this.buildStep();
     this.shareDay();
     if (this.sendT > 0 && (this.sendT -= dt) <= 0) this.sendHome();
+  }
+
+  /** E or the touch button: pick the ripe crops in reach, or open the kitchen at a stove or pot. True when it did. */
+  act(): boolean {
+    return this.farm.act();
   }
 
   /** How far the hero is from a fire burning here, for its crackle. */
@@ -772,7 +787,7 @@ export class Home {
     this.cursor.setVisible(show);
     this.ghost.setVisible(show && !!thing);
     if (!show) return;
-    const ok = erase ? this.canErase(cx, cy) : thing ? this.layout.canPlace(thing, fx, fy, turn) && !this.onHero(thing, fx, fy, turn) : this.canPaint(cx, cy);
+    const ok = erase ? this.canErase(cx, cy) : thing ? this.canPut(thing, fx, fy, turn) : this.canPaint(cx, cy);
     const col = erase ? 0xff9a6a : ok ? 0x9cff8a : 0xff6a6a;
     const bw = size.w * CELL;
     const bh = size.h * CELL;
@@ -810,6 +825,7 @@ export class Home {
     const pick = build.pick;
     if (!pick || !inPlot(cx, cy)) return false;
     const i = cellIndex(cx, cy);
+    if (pick.layer === 'seed') return this.farm.canSow(this.layout, cx, cy, pick.id);
     if (pick.layer === 'floor') {
       if (!FLOORS[pick.value - 1]?.water) return true;
       return !this.layout.thingsAt(cx, cy).some((t) => !partById(t.id)?.water && !partById(t.id)?.wall && !partById(t.id)?.door && !partById(t.id)?.critter);
@@ -824,6 +840,11 @@ export class Home {
     const l = this.layout;
     const i = cellIndex(cx, cy);
     if (!this.canPaint(cx, cy)) return false;
+    // Sowing changes the farm, not the layout: nothing to redraw or undo.
+    if (pick.layer === 'seed') {
+      this.farm.sow(l, cx, cy, pick.id);
+      return false;
+    }
     if (pick.layer === 'floor') {
       if (l.floor[i] === pick.value) return false;
       l.floor[i] = pick.value;
@@ -846,10 +867,11 @@ export class Home {
   }
 
   /** What the eraser would take at a cell in this tab: a thing of the tab (or any), or the tab's layer. */
-  private eraseTarget(cx: number, cy: number): 'floor' | 'wall' | 'roof' | Thing | null {
+  private eraseTarget(cx: number, cy: number): 'floor' | 'wall' | 'roof' | 'crop' | Thing | null {
     const l = this.layout;
     const i = cellIndex(cx, cy);
     const tab = build.tab;
+    if (tab === 'seeds') return this.farm.plotAt(cx, cy) ? 'crop' : null;
     if (tab === 'floor') return l.floor[i] ? 'floor' : null;
     // A door comes out of its doorway before the doorway goes.
     if (tab === 'wall') return l.thingsAt(cx, cy).find((t) => partById(t.id)?.door) ?? (l.wall[i] ? 'wall' : null);
@@ -869,6 +891,10 @@ export class Home {
     const i = cellIndex(cx, cy);
     const what = this.eraseTarget(cx, cy);
     if (!what) return false;
+    if (what === 'crop') {
+      this.farm.uproot(cx, cy);
+      return false;
+    }
     if (what === 'floor') l.floor[i] = 0;
     else if (what === 'wall') {
       l.wall[i] = 0;
@@ -906,8 +932,15 @@ export class Home {
     return false;
   }
 
+  /** Can this thing go down here: room on the layout, not on the hero, and not on a crop growing (wall hangings, doors and critters aside). */
+  private canPut(p: PartDef, fx: number, fy: number, turn: number): boolean {
+    if (!this.layout.canPlace(p, fx, fy, turn) || this.onHero(p, fx, fy, turn)) return false;
+    const e = extent(p, turn);
+    return !!(p.wall || p.door || p.critter) || !this.farm.covers(fx, fy, e.w, e.h);
+  }
+
   private placeThing(p: PartDef, fx: number, fy: number, turn: number): void {
-    if (!this.layout.canPlace(p, fx, fy, turn) || this.onHero(p, fx, fy, turn)) return;
+    if (!this.canPut(p, fx, fy, turn)) return;
     this.layout.things.push({ id: p.id, x: fx, y: fy, flip: build.flip && !!p.flip, turn });
     if (!p.critter) sound.thud(0);
     this.refresh();
@@ -952,6 +985,7 @@ export class Home {
         const n = m.n as number;
         if (!this.pieces || this.pieces.k !== k) this.pieces = { k, parts: new Array(n).fill('') };
         this.pieces.parts[m.i as number] = String(m.d ?? '');
+        if (typeof m.fm === 'string') this.farmSent = m.fm;
         if (typeof m.c === 'string') this.caught = m.c ? m.c.split(',').filter((id) => critterById(id)) : [];
         if (typeof m.dn === 'string') {
           daynight.adopt(m.dn as Phase, !!m.da, m.dl as number);
@@ -963,6 +997,8 @@ export class Home {
         if (!l) break;
         this.layout = l;
         this.refresh();
+        if (this.farmSent !== null) this.farm.adopt(this.farmSent);
+        this.farmSent = null;
         this.arrived = true;
         break;
       }
@@ -984,6 +1020,7 @@ export class Home {
       const m: Msg = { t: 'hl', k, i, n, d: s.slice(i * PIECE, (i + 1) * PIECE) };
       if (i === 0) {
         m.c = this.caught.join(',');
+        m.fm = this.farm.encoded();
         m.dn = daynight.phase;
         m.da = daynight.auto;
         m.dl = Math.round(daynight.left);
@@ -1018,5 +1055,6 @@ export class Home {
     this.patches.clear();
     this.roofs = [];
     this.critters.destroy();
+    this.farm.destroy();
   }
 }

@@ -413,11 +413,11 @@ export function starterHome(): HomeLayout {
   // A campfire in a ring of stones out east.
   f('flags', 37, 27, 39, 29);
 
-  // Inside: the hearth on the north wall between two sconces, shelves and a bed, a table on a rug.
+  // Inside: the hearth on the north wall between two sconces, shelves, a stove and a bed, a table on a rug.
   put('fireplace', 23, 9);
   put('bookshelf', 19, 9);
   put('clock', 21, 9);
-  put('dresser', 27, 9);
+  put('stove', 27, 9);
   put('bed', 29, 9);
   put('rug', 22, 11);
   put('roundtable', 20, 12);
@@ -450,13 +450,12 @@ export function starterHome(): HomeLayout {
   put('mailbox', 26, 33);
   put('signpost', 22, 33, true);
 
-  // The vegetable patch.
+  // The vegetable patch, its south row left bare for sowing.
   for (let x = 35; x <= 42; x++) {
     if (x === 38) continue;
     put('sunflowers', x, 10, x % 2 === 0);
     put('cabbages', x, 12, x % 2 === 1);
     put(x % 3 === 0 ? 'pumpkin' : 'cabbages', x, 14, x % 2 === 0);
-    put('cabbages', x, 16);
   }
   put('scarecrow', 38, 13);
   put('haybale', 44, 16);
@@ -481,6 +480,7 @@ export function starterHome(): HomeLayout {
   put('stump', 36, 28);
   put('stump', 40, 28, true);
   put('stump', 38, 30);
+  put('cookpot', 40, 30);
 
   // Trees round the edges, and a few rocks.
   put('oak', 6, 11);

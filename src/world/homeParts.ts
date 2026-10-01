@@ -12,7 +12,7 @@
 import { CRITTERS } from '../game/critters';
 
 /** The palette's tabs, in order; each is a layer or a kind of thing to place. */
-export type BuildTab = 'floor' | 'wall' | 'roof' | 'garden' | 'furniture' | 'light' | 'decor' | 'critters';
+export type BuildTab = 'floor' | 'wall' | 'roof' | 'garden' | 'furniture' | 'light' | 'decor' | 'critters' | 'seeds';
 
 export const TABS: { id: BuildTab; name: string }[] = [
   { id: 'floor', name: 'Floors' },
@@ -23,6 +23,7 @@ export const TABS: { id: BuildTab; name: string }[] = [
   { id: 'light', name: 'Lights' },
   { id: 'decor', name: 'Wall decor' },
   { id: 'critters', name: 'Critters' },
+  { id: 'seeds', name: 'Seeds' },
 ];
 
 // ---------------------------------------------------------------- Floors
@@ -153,6 +154,8 @@ export interface PartDef {
   door?: boolean;
   /** A ward: no creature rises within this many cells of it (in the Everwood; see ForestEdits.warded). */
   ward?: number;
+  /** A place to cook (see game/cooking.ts): the kitchen stove indoors, or a pot over a fire in the garden. */
+  cook?: 'stove' | 'fire';
 }
 
 /** How many cells from a fishing rod the water may be. */
@@ -189,6 +192,7 @@ export const PARTS: PartDef[] = [
   { id: 'mailbox', name: 'Mailbox', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
   { id: 'fishrod', name: 'Fishing rod', tab: 'garden', w: 1, h: 1, block: 'post', flip: true, fishing: true },
   { id: 'signpost', name: 'Signpost', tab: 'garden', w: 1, h: 1, block: 'post', flip: true },
+  { id: 'cookpot', name: 'Cooking pot', tab: 'garden', w: 1, h: 1, block: 'full', cook: 'fire', light: { color: 0xff8a3a, radius: 120, intensity: 1.9, day: 0.35, y: 5, flicker: true } },
 
   // Furniture
   { id: 'bed', name: 'Bed', tab: 'furniture', w: 1, h: 2, block: 'full', turns: true },
@@ -206,6 +210,7 @@ export const PARTS: PartDef[] = [
   { id: 'barrel', name: 'Barrel', tab: 'furniture', w: 1, h: 1, block: 'full' },
   { id: 'crate', name: 'Crates', tab: 'furniture', w: 1, h: 1, block: 'full', flip: true },
   { id: 'fireplace', name: 'Fireplace', tab: 'furniture', w: 2, h: 1, block: 'full', chimney: true, light: { color: 0xff9a48, radius: 130, intensity: 1.9, day: 0.35, y: 10, flicker: true } },
+  { id: 'stove', name: 'Kitchen stove', tab: 'furniture', w: 2, h: 1, block: 'full', chimney: true, cook: 'stove', light: { color: 0xff9a48, radius: 100, intensity: 1.5, day: 0.35, y: 7, flicker: true } },
   { id: 'cauldron', name: 'Cauldron', tab: 'furniture', w: 1, h: 1, block: 'full', light: { color: 0x7aff8a, radius: 70, intensity: 1.2, day: 0.4, y: 10, flicker: true } },
   { id: 'clock', name: 'Tall clock', tab: 'furniture', w: 1, h: 1, block: 'full' },
   { id: 'armorstand', name: 'Armour stand', tab: 'furniture', w: 1, h: 1, block: 'post', flip: true },
