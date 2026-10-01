@@ -20,7 +20,9 @@ import { Wildlife } from './Wildlife';
 import { ForestSounds } from './ForestSounds';
 import { forestTile } from './forestGround';
 import { footKey, type ForestEdits } from './forestEdits';
-import { CELL } from './homeLayout';
+import { CELL, doorAcross } from './homeLayout';
+import { GATE_MATS } from '../art/homeGate';
+import { Swing, hangGate } from './swing';
 import { WALLS, partById, wallKind, wallMat, type PartDef } from './homeParts';
 import { glows, thingLook, wallFrameName } from '../art/homeArt';
 import { PLOT_X, PLOT_Y } from './homeLayout';
@@ -163,6 +165,8 @@ interface Stood {
   lamps: { light: Phaser.GameObjects.Light; halo: Img; part: PartDef; seed: number }[];
   /** Grass, flowers and reeds, which bend as a gust goes over (see ForestWind.ts). */
   grass: Bending[];
+  /** Gates in the garden walls built here (see world/swing.ts). */
+  gates: Swing[];
 }
 
 /** A piece of undergrowth the wind bends: its look, and the bend it shows now. */
@@ -612,7 +616,7 @@ export class Forest {
   private stand(key: number): void {
     if (this.stood.has(key)) return;
     const l = this.gen.layout(Math.floor(key / 4096), key % 4096);
-    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], treeShadows: [], lights: [], clearable: [], lamps: [], grass: [] };
+    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], treeShadows: [], lights: [], clearable: [], lamps: [], grass: [], gates: [] };
     this.stood.set(key, st);
     const add = this.world.add;
     const place = (obj: Placed['obj'], x: number, y: number, hw: number, up: number) => st.placed.push({ obj, x0: x - hw, x1: x + hw, y0: y - up, y1: y + 6 });
@@ -678,7 +682,9 @@ export class Forest {
       const def = WALLS[mat];
       if (!def) continue;
       const mask = e.wallMask(cx, cy);
-      const frame = wallKind(v) === 'door' ? `d${mask}` : `w${mask}_${(cx * 7 + cy * 13) % 2}`;
+      // A gate is its own sprite, swinging over the bare gap.
+      const gate = wallKind(v) === 'door' && GATE_MATS.includes(mat);
+      const frame = wallKind(v) === 'door' ? `${gate ? 'o' : 'd'}${mask}` : `w${mask}_${(cx * 7 + cy * 13) % 2}`;
       const key = wallFrameName(mat, frame);
       const x = cx * CELL;
       const y = cy * CELL - def.height;
@@ -689,6 +695,11 @@ export class Forest {
       const shadow = sunShadow(add.image(x + CELL / 2, (cy + 1) * CELL, 'home_s', key).setOrigin(0.5, 1));
       st.shadows.push(shadow);
       st.placed.push({ obj: shadow, x0: x - 40, x1: x + CELL + 40, y0: y - 40, y1: (cy + 1) * CELL + 40 });
+      if (gate) {
+        const g = hangGate(this.world, mat, x, cy * CELL, doorAcross(mask));
+        st.gates.push(g.swing);
+        st.placed.push({ obj: g.sprite, x0: x - CELL, x1: x + CELL * 2, y0: y - CELL, y1: (cy + 2) * CELL });
+      }
     }
   }
 
@@ -908,9 +919,10 @@ export class Forest {
 
   /**
    * `hero` is where the player stands and `view` the camera's world view;
-   * `d` is the eased daylight (0 night .. 1 day).
+   * `d` is the eased daylight (0 night .. 1 day). `others` are the other
+   * heroes here online, whom built gates open for too.
    */
-  update(time: number, dt: number, d: number, hero: { x: number; y: number; alive: boolean }, view: Phaser.Geom.Rectangle): void {
+  update(time: number, dt: number, d: number, hero: { x: number; y: number; alive: boolean }, view: Phaser.Geom.Rectangle, others: readonly { x: number; y: number }[] = []): void {
     this.view.setTo(view.x, view.y, view.width, view.height);
     this.steer(hero, dt);
     this.night = 1 - d;
@@ -951,8 +963,10 @@ export class Forest {
     const strength = Math.abs(d - 0.5) * 2;
     let raysShown = false;
     let leafy = false;
+    const walkers = hero.alive ? [hero, ...others] : others;
     for (const st of this.stood.values()) {
       for (const p of st.placed) p.obj.setVisible(p.x1 > vx0 && p.x0 < vx1 && p.y1 > vy0 && p.y0 < vy1);
+      for (const g of st.gates) g.update(dt, walkers, hero);
       for (const s of st.shadows) s.setAlpha(shadowAlpha);
       for (const s of st.treeShadows) s.setAlpha(shadowAlpha * TREE_SHADOW);
       // Built lamps: fire flickers, the day washes them out.

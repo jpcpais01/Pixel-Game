@@ -2176,7 +2176,7 @@ export class WorldScene extends Phaser.Scene {
     const d = this.updateDaylight(time, dt);
     this.ground?.update(this.view, settings.values.quality !== 'full' ? 2.5 : 4);
     this.scenery.update(time, dt, d, this.hero, this.view);
-    this.forest?.update(time, dt, d, { x: this.hero.x, y: this.hero.y, alive: this.downT <= 0 }, this.view);
+    this.forest?.update(time, dt, d, { x: this.hero.x, y: this.hero.y, alive: this.downT <= 0 }, this.view, this.net?.targets());
     this.garden?.update(time, dt, target, d, this.view);
     // After the day/night light: the cosmos lights itself.
     this.cosmos?.update(time, dt);
