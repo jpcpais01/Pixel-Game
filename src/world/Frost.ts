@@ -219,10 +219,11 @@ export class FrostArena implements WaveArena {
       b.halo.setAlpha(0.24 * f + this.fury * 0.06);
     }
 
-    // The snow falls from the top of the view, wherever the camera is.
+    // Flakes are born in the world over the view (and a little above and upwind of it),
+    // fading in where they appear; the emitters stay put, so a flake once fallen keeps
+    // its place in the world as the camera moves.
     const v = this.view;
-    for (const e of [this.snow, this.blizzard]) e.setPosition(v.x, v.y);
-    this.snowZone.setTo(-40, -12, v.width + 120, 4);
+    this.snowZone.setTo(v.x - 40, v.y - 30, v.width + 120, v.height + 30);
 
     for (const m of this.mists) {
       m.x += m.speed * (1 + this.storm * 4) * dt / 1000 * -1;
