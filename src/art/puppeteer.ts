@@ -66,6 +66,12 @@ export interface PuppeteerLook {
   toymaker?: boolean;
   /** Four spider legs arching from her back, extra eyes, and an hourglass on her back instead of the web. */
   spider?: { leg: Material; mark: Material };
+  /**
+   * Luna Moth: no hood but long hair with feathery antennae rising from it,
+   * a moth-fur collar, and a luna moth's wings (fore and hind, the hind
+   * trailing long tails) spread behind her.
+   */
+  moth?: MothParts;
   /** The strings' light, brightest first. */
   light: [RGB, RGB, RGB, RGB];
 }
@@ -172,7 +178,52 @@ export const ARACHNE_LOOK: PuppeteerLook = {
   },
 };
 
-export const PUPPETEER_LOOKS = [CARNIVAL_LOOK, PORCELAIN_LOOK, SILK_LOOK, CRIMSON_LOOK, TOYMAKER_LOOK, ARACHNE_LOOK];
+/** The luna moth's own materials: its wings, their edges and eyes, her collar, antennae and lips. */
+export interface MothParts {
+  wing: Material;
+  /** The wings' leading edge, a thin dusky mauve line as on a real luna moth. */
+  costa: Material;
+  /** The wings' outer margin, glowing softly. */
+  edge: Material;
+  /** The eye spots on all four wings. */
+  eye: Material;
+  fur: Material;
+  feeler: Material;
+  lip: Material;
+}
+
+/**
+ * Luna Moth, the stringweaver's skin: a moth-woman of the moonlit woods. A
+ * cream silk gown open over a mint underskirt, a collar of white moth fur,
+ * long silvery-white hair with two feathery antennae rising from it, and
+ * pale mint wings behind her, eye-spotted, edged in a soft glow, the hind
+ * pair trailing long tails to her heels. Her silk shines moonlit green.
+ */
+export const LUNA_LOOK: PuppeteerLook = {
+  key: 'weaver_luna',
+  weaver: true,
+  coat: { ramp: ramp('#5e5844', '#948c70', '#c4bc9e', '#e6e0c8', '#faf6e8'), outline: hex('#26221a'), outlineLit: hex('#3a3628') },
+  trim: { ramp: ramp('#56646a', '#8ea0a4', '#c4d4d4', '#ecf8f4', '#ffffff'), outline: hex('#1c2428'), shine: true },
+  under: { ramp: ramp('#3e6a58', '#6aa088', '#9cceb4', '#c8ecd8'), outline: hex('#183028') },
+  stripe: { ramp: ramp('#5ab088', '#a8ecc8', '#e8fff2'), outline: hex('#183028'), emissive: 0.5, noAO: true },
+  pants: { ramp: ramp('#5e5844', '#948c70', '#c4bc9e', '#e6e0c8'), outline: hex('#26221a') },
+  hair: { ramp: ramp('#6a7484', '#a0aabb', '#ccd4e0', '#eef2f8', '#ffffff'), outline: hex('#283040'), outlineLit: hex('#3c4454'), shine: true },
+  mask: PALE,
+  hat: { ramp: ramp('#7a6e58', '#b0a488', '#dcd2b8', '#f6f0de'), outline: hex('#2a2418') },
+  plume: { ramp: ramp('#3e8a78', '#8ee0b8', '#e8fff2'), outline: hex('#183028'), noOutline: true },
+  light: [hex('#f6fff8'), hex('#c8f5dc'), hex('#8ee0b8'), hex('#3e8a78')],
+  moth: {
+    wing: { ramp: ramp('#3e7462', '#64a48a', '#90cead', '#bce8cc', '#e0faea'), outline: hex('#1a3a30'), outlineLit: hex('#2c5446'), emissive: 0.08 },
+    costa: { ramp: ramp('#4a2a44', '#74466a', '#a06a8e'), outline: hex('#24121e') },
+    edge: { ramp: ramp('#7ccca6', '#a8e8c8', '#d0f6e2'), outline: hex('#1a3a30'), emissive: 0.45, noAO: true },
+    eye: { ramp: ramp('#8a5a20', '#d09a40', '#f6d878'), outline: hex('#3a2410'), emissive: 0.3, noAO: true },
+    fur: { ramp: ramp('#8a8678', '#c0bcac', '#e6e2d6', '#fbfaf4', '#ffffff'), outline: hex('#2e2c24'), outlineLit: hex('#444034') },
+    feeler: { ramp: ramp('#8a7a50', '#b8a470', '#e0d09c', '#f8eec8'), outline: hex('#2a2010'), emissive: 0.2, noOutline: true },
+    lip: { ramp: ramp('#a8586a', '#d07e8c'), outline: hex('#5a2430'), noOutline: true, noAO: true },
+  },
+};
+
+export const PUPPETEER_LOOKS = [CARNIVAL_LOOK, PORCELAIN_LOOK, SILK_LOOK, CRIMSON_LOOK, TOYMAKER_LOOK, ARACHNE_LOOK, LUNA_LOOK];
 
 /** The look being drawn; set by buildPuppeteerFrames. */
 let S: PuppeteerLook = CARNIVAL_LOOK;
@@ -599,6 +650,258 @@ function spiderLegs(c: PixelCanvas, x0: number, y0: number, side: number, tick: 
   for (const [kx, ky] of pairs) c.px(x0 + side * kx, y0 + ky, S.trim, sphere(side * 0.4, -0.5), { bias });
 }
 
+// ---------------------------------------------------------------------------
+// Luna Moth: wings, head and collar
+
+/** Luna's skin: moonlit, paler and cooler than the hooded weavers' in their shadow. */
+const FAIR: Material = { ramp: ramp('#8a6e74', '#c4a4a6', '#ecd4cc', '#fcece4'), outline: hex('#3a2228') };
+
+/** Is (x, y) inside the polygon (even-odd)? */
+function inPoly(pts: [number, number][], x: number, y: number): boolean {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i];
+    const [xj, yj] = pts[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/**
+ * The luna moth's wings, one side's pair, in the wing's own frame: x out from
+ * the root along the body's side, y down. The forewing sweeps up and out to a
+ * blunt point; the hindwing rounds below it and runs into a long tail, which
+ * curls in at its end.
+ */
+const FOREWING: [number, number][] = [[0, 0], [2.4, -4.6], [6.4, -8.2], [11.4, -9.8], [12.4, -7.6], [10.8, -3.6], [7.2, -0.4], [3, 1.4]];
+const HINDWING: [number, number][] = [[0, 1], [4.4, 0.2], [8.4, 1.6], [9.2, 4.2], [7.6, 6.8], [5.2, 7.4], [1.8, 4.8]];
+const TAIL: [number, number][] = [[6.2, 6], [7.6, 9.4], [8.2, 12], [7.2, 14.4]];
+/** How far from the root the margin starts to glow. */
+const EDGE_FROM = 6.5;
+
+/** How open her wings are this frame: a slow breathing flutter, folding a little as she rises. */
+const flapOf = (p: Pose): number => 0.88 + 0.12 * Math.cos(p.tick * 1.05) - p.lift * 0.08;
+
+/**
+ * One side's wings (`s` -1 left, 1 right) from the root (rx, ry), squeezed
+ * across by `kx` (narrower seen from the side), opened by `flap`: closing,
+ * they narrow and their tips rise. Mint, with a mauve leading edge, an eye
+ * spot on each wing, veins running out from the root, and a margin of soft
+ * light all round the outside.
+ */
+function mothWing(c: PixelCanvas, rx: number, ry: number, s: number, kx: number, flap: number, bias = 0): void {
+  const M = S.moth;
+  if (!M) return;
+  const at = (q: readonly [number, number]): [number, number] => [rx + s * q[0] * kx * flap, ry + q[1] - (1 - flap) * q[0] * 0.55];
+  const fore = FOREWING.map(at);
+  const hind = HINDWING.map(at);
+  const inFore = (x: number, y: number) => inPoly(fore, x + 0.5, y + 0.5);
+  const inHind = (x: number, y: number) => inPoly(hind, x + 0.5, y + 0.5);
+  const xs = [...fore, ...hind].map((q) => q[0]);
+  const ys = [...fore, ...hind].map((q) => q[1]);
+  const x0 = Math.floor(Math.min(...xs));
+  const x1 = Math.ceil(Math.max(...xs));
+  const y0 = Math.floor(Math.min(...ys));
+  const y1 = Math.ceil(Math.max(...ys));
+  const reach = (x: number, y: number) => Math.hypot((x + 0.5 - rx) / kx, y + 0.5 - ry);
+  // A gentle cup: each wing bulges towards the viewer about its middle.
+  const [fx, fy] = at([6.4, -4.4]);
+  const [hx, hy] = at([5.2, 3.6]);
+  const fill = (inside: (x: number, y: number) => boolean, mx: number, my: number, r: number) => {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      if (inside(x, y)) c.px(x, y, M.wing, sphere(((x + 0.5 - mx) / r) * 0.55, ((y + 0.5 - my) / r) * 0.55), { bias });
+    }
+  };
+  c.part();
+  fill(inHind, hx, hy, 5);
+  // The tail: tapering, then swelling a little to a curled paddle at its end.
+  const tail = TAIL.map(at);
+  for (let i = 1; i < tail.length; i++) c.capsule(tail[i - 1][0], tail[i - 1][1], tail[i][0], tail[i][1], 1.4 - i * 0.25, 1.15 - i * 0.2, M.wing, { bias });
+  const [tx, ty] = tail[tail.length - 1];
+  c.ellipse(tx, ty, 1.1, 1.2, M.wing, { bias });
+  c.part();
+  fill(inFore, fx, fy, 6);
+  // The margins: mauve along the forewing's leading edge, soft light round the outside.
+  c.part();
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const f = inFore(x, y);
+    const h = !f && inHind(x, y);
+    if (!f && !h) continue;
+    const open = (qx: number, qy: number) => !inFore(qx, qy) && !inHind(qx, qy);
+    if (f && !inFore(x, y - 1) && reach(x, y) > 2 && reach(x, y) < 11.5) c.px(x, y, M.costa, sphere(0, -0.6), { bias });
+    else if (reach(x, y) > EDGE_FROM && (open(x + s, y) || open(x, y + 1) || (f && open(x, y - 1)))) c.px(x, y, M.edge, sphere(s * 0.4, 0.2), { bias });
+  }
+  // The tail's tip glows too.
+  c.px(tx + s * 0.6, ty + 0.6, M.edge, sphere(s * 0.4, 0.4), { bias });
+  // Veins out from the root.
+  for (const q of [[9.6, -6.6], [9.6, -2.6], [7.6, 3.4]] as const) {
+    const [vx, vy] = at(q);
+    const n = 8;
+    for (let i = 2; i < n; i++) c.shade(rx + ((vx - rx) * i) / n, ry + ((vy - ry) * i) / n, -1);
+  }
+  // Eye spots: a ringed one on the forewing, a smaller one on the hind.
+  c.part();
+  const [ex, ey] = at([6.6, -4.8]);
+  c.px(ex, ey, M.eye, sphere(0, -0.3), { bias });
+  c.px(ex - s, ey, M.costa, sphere(0, 0), { bias });
+  c.px(ex, ey + 1, M.eye, sphere(0, 0.4), { bias: bias - 1 });
+  const [gx, gy] = at([5.4, 3.4]);
+  c.px(gx, gy, M.eye, sphere(0, 0), { bias });
+  c.spark(ex, ey, S.light[1], 0.35);
+}
+
+/** Both wings spread behind (or, from behind, over) her back. */
+function mothWings(c: PixelCanvas, cx: number, ry: number, flap: number, bias = 0): void {
+  mothWing(c, cx - 1.5, ry, -1, 1, flap, bias);
+  mothWing(c, cx + 1.5, ry, 1, 1, flap, bias);
+}
+
+/**
+ * A feathery antenna rising from (x0, y0) and arching out to its side `s`,
+ * swaying with `tick`: a fine shaft, short barbs combed off its outer side,
+ * and a glint of light at its tip.
+ */
+function feeler(c: PixelCanvas, x0: number, y0: number, s: number, tick: number, lean = 0, bias = 0): void {
+  const M = S.moth;
+  if (!M) return;
+  const sway = [0, 0.4, 0.6, 0.4, 0, -0.3][tick % 6];
+  const pts: [number, number][] = [];
+  const n = 7;
+  for (let i = 0; i <= n; i++) {
+    const u = i / n;
+    // Up from the crown, then arching out and over at the tip.
+    pts.push([x0 + s * (u * 1.2 + u * u * 3.2) + lean * u + sway * u * u * s, y0 - u * 5.6 + u * u * 1.6]);
+  }
+  c.part();
+  let last = '';
+  for (const [x, y] of pts) {
+    const k = `${Math.floor(x)},${Math.floor(y)}`;
+    if (k === last) continue;
+    last = k;
+    c.px(x, y, M.feeler, sphere(s * 0.3, -0.4), { bias });
+  }
+  // The feathering: a faint fringe of light along the outer half.
+  for (let i = 3; i < n; i += 2) c.spark(pts[i][0] + s, pts[i][1] + 1, S.light[2], 0.4);
+  const [tx, ty] = pts[n];
+  c.spark(tx, ty, S.light[1], 0.7);
+}
+
+/** Her head from the front: a soft face framed by long silver-white hair, the antennae rising from it. */
+function mothHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const M = S.moth!;
+  // The hair behind her head, and the long locks falling past her shoulders.
+  c.part();
+  c.ellipse(cx, 12 + U, 3.7, 3.8, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.capsule(cx - 3.0, 12.4 + U, cx - 3.6 + p.sway * 0.2, 19.6 + U, 1.4, 1.0, S.hair);
+  c.capsule(cx + 3.0, 12.4 + U, cx + 3.6 + p.sway * 0.2, 19.6 + U, 1.4, 1.0, S.hair);
+  c.shade(cx - 4, 17 + U, -1);
+  c.shade(cx + 3, 17 + U, -1);
+  // The face.
+  c.part();
+  c.ellipse(cx, 13.2 + U, 2.5, 2.6, FAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 + 0.1, 1) });
+  // A side-swept fringe, parted off the middle.
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(11 + U), () => [cx - 2.8, cx + 2.8], S.hair, (_x, _y, t, u) => sphere(t * 0.8, u * 0.5 - 0.5, 1));
+  c.px(cx - 3, 12 + U, S.hair, sphere(-0.6, 0));
+  c.px(cx + 2, 12 + U, S.hair, sphere(0.6, 0));
+  c.erase(cx - 1, 11 + U);
+  c.px(cx - 1, 11 + U, FAIR, sphere(0, -0.3));
+  c.shade(cx + 1, 11 + U, 1);
+  eyes(c, [[cx - 2, 13 + U], [cx + 1, 13 + U]], p.blink);
+  if (!p.blink) {
+    c.spark(cx - 2, 13 + U, S.light[2], 0.25);
+    c.spark(cx + 1, 13 + U, S.light[2], 0.25);
+  }
+  // Rose lips, a touch of blush.
+  c.part();
+  c.px(cx - 1, 15 + U, M.lip, sphere(0, 0.3));
+  // The antennae, rising from the crown.
+  feeler(c, cx - 1.6, 8.6 + U, -1, p.tick);
+  feeler(c, cx + 0.6, 8.6 + U, 1, p.tick + 3);
+}
+
+/**
+ * The gown's embroidery, from the front: a trail of little moonsilk leaves
+ * down each edge of the opening, and the hem scalloped like a wing's margin.
+ */
+function mothGown(c: PixelCanvas, cx: number, waist: number, hem: number): void {
+  c.part();
+  for (let y = waist + 2; y < hem; y += 2) {
+    const w = (y - waist) * 0.28 + 1.4;
+    for (const s of [-1, 1]) {
+      const x = Math.round(cx + s * w + (s > 0 ? 0 : -1));
+      if (c.filled(x, y)) c.px(x, y, S.stripe, sphere(s * 0.3, 0), { glow: 0.25 });
+    }
+  }
+  for (let x = cx - 6; x <= cx + 6; x += 2) if (c.filled(x, hem - 1)) c.shade(x, hem - 1, -1);
+}
+
+/**
+ * Her back: the wings spread over it from the shoulder blades, the fur
+ * collar, and her hair falling long between the wings to her waist, the
+ * antennae rising over her crown.
+ */
+function mothBack(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  mothWings(c, cx, 16.5 + U, flapOf(p));
+  furCollar(c, cx, 15.6 + U, 3.9, true);
+  c.part();
+  c.ellipse(cx, 12 + U, 3.7, 3.8, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.shape(Math.round(14 + U), Math.round(22 + U), (y) => {
+    const u = (y - 14 - U) / 8;
+    const hw = 3.2 - u * 1.2;
+    const s = u * u * p.sway * 0.6;
+    return [cx - hw + s, cx + hw + s];
+  }, S.hair, (_x, _y, t, u) => sphere(t * 0.8, u * 0.5 - 0.1, 1));
+  // Strands down it, and the tips parting at the end.
+  for (let y = 15; y <= 21; y++) {
+    c.shade(cx - 1, y + U, -1);
+    if (y > 17) c.shade(cx + 1, y + U, -1);
+  }
+  c.erase(cx, Math.round(22 + U));
+  c.shade(cx - 1, 11 + U, 1);
+  feeler(c, cx - 1.6, 8.6 + U, -1, p.tick);
+  feeler(c, cx + 0.6, 8.6 + U, 1, p.tick + 3);
+}
+
+/** Her head in profile, facing left: the face, the hair falling long down her back, the antennae sweeping up and back. */
+function mothHeadSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const M = S.moth!;
+  furCollar(c, hx - 0.2, 15.8 + U, 3.0);
+  c.part();
+  c.ellipse(hx + 0.6, 12 + U, 3.3, 3.7, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.shape(Math.round(13 + U), Math.round(21 + U), (y) => {
+    const u = (y - 13 - U) / 8;
+    const back = hx + 3.6 + u * (0.8 + p.sway * 0.5);
+    return [back - 3.2 + u * 0.8, back];
+  }, S.hair, (_x, _y, t, u) => sphere(t * 0.8 + 0.2, u * 0.5 - 0.1, 1));
+  for (let y = 14; y <= 20; y++) c.shade(hx + 2 + Math.round((y - 14) * 0.15), y + U, -1);
+  c.part();
+  c.ellipse(hx - 1.6, 13.2 + U, 2.0, 2.5, FAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 - 0.3, dy * 0.6 + 0.1, 1) });
+  c.px(hx - 4, 13 + U, FAIR, sphere(-0.8, 0));
+  // The fringe over her brow, a lock before her ear.
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(11 + U), () => [hx - 3.6, hx + 0.4], S.hair, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, u * 0.5 - 0.5, 1));
+  c.capsule(hx - 0.2, 12 + U, hx - 0.4, 17 + U, 0.8, 0.6, S.hair);
+  eyes(c, [[hx - 3, 13 + U]], p.blink);
+  if (!p.blink) c.spark(hx - 3, 13 + U, S.light[2], 0.25);
+  c.part();
+  c.px(hx - 3, 15 + U, M.lip, sphere(-0.3, 0.3));
+  feeler(c, hx - 1.4, 8.8 + U, -1, p.tick, 0.4);
+  feeler(c, hx + 0.6, 8.6 + U, 1, p.tick + 3, -0.6, -1);
+}
+
+/** Her collar of white moth fur, fluffed in soft scallops round her shoulders. */
+function furCollar(c: PixelCanvas, x: number, y: number, rx: number, back = false): void {
+  const M = S.moth!;
+  c.part();
+  c.ellipse(x, y, rx, 1.7, M.fur, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 - 0.4, 1) });
+  // Tufts along its lower edge.
+  for (let i = -Math.floor(rx); i <= Math.floor(rx); i += 2) c.px(x + i, y + 1.7, M.fur, sphere(i / rx, 0.5), { bias: -1 });
+  if (!back) c.shade(x, y + 1, -1);
+}
 
 // ---------------------------------------------------------------------------
 // The idle moment's props
@@ -752,6 +1055,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     }, S.coat, (_x, _y, t) => sphere(t * 0.9, 0.3, 1), { bias: -1 });
     for (let y = waist + 2; y <= 27 + L; y++) c.erase(cx, y);
   }
+  mothWings(c, cx, 16.5 + U, flapOf(p));
   if (fa.behind) armA();
   if (fb.behind) armB();
   spiderLegs(c, cx - 1, 17 + U, -1, p.tick, -1);
@@ -782,10 +1086,16 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     c.shape(Math.round(waist + 1), Math.round(waist + 3), () => [cx + 3, cx + 5.2], SPOOL, (_x, _y, t) => cyl(t, 0.2));
     c.part();
     c.shape(Math.round(waist + 1.5), Math.round(waist + 2.5), () => [cx + 3.4, cx + 4.8], S.stripe, (_x, _y, t) => cyl(t, 0.2), { glow: 0.5 });
-    // A silver clasp at the throat.
-    c.part();
-    c.px(cx, 15.5 + U, S.trim, sphere(0, -0.5));
-    hoodDown(c, cx, U, p);
+    if (S.moth) {
+      mothGown(c, cx, waist, hem);
+      furCollar(c, cx, 15.6 + U, 3.9);
+      mothHeadDown(c, cx, U, p);
+    } else {
+      // A silver clasp at the throat.
+      c.part();
+      c.px(cx, 15.5 + U, S.trim, sphere(0, -0.5));
+      hoodDown(c, cx, U, p);
+    }
   } else {
     // The coat, open over the waistcoat; piping down the lapels.
     c.part();
@@ -864,35 +1174,41 @@ function drawUp(c: PixelCanvas, p: Pose): void {
       return [cx - hw + s, cx + hw + s];
     }, S.coat, (_x, _y, t, u) => sphere(t * 0.9, u * 0.6 - 0.3, 1));
     for (let x = cx - 5; x <= cx + 6; x++) if (c.filled(x, hem)) c.px(x, hem, S.trim, sphere(0, 0.4));
-    // A web stitched in silver across her back (Arachne: a red hourglass).
-    c.part();
-    const wy = 19.5 + U;
-    if (S.spider) {
-      for (const [y, x0, x1] of [[0, 10, 13], [1, 11, 12], [2, 11, 12], [3, 10, 13]]) for (let x = x0; x <= x1; x++) c.px(x, Math.round(18 + U) + y, S.spider.mark, sphere(0, 0));
-    } else for (let k = 0; k < 6; k++) {
-      const a = (k / 6) * Math.PI * 2 + 0.26;
-      for (let r = 1; r <= 3.4; r += 0.7) c.px(Math.round(cx + Math.cos(a) * r), Math.round(wy + Math.sin(a) * r * 0.8), S.under, sphere(0, 0));
-    }
-    if (!S.spider) for (const r of [1.8, 3.2]) {
-      for (let k = 0; k < 12; k++) {
-        const a = (k / 12) * Math.PI * 2;
-        if (k % 2 === 0) c.px(Math.round(cx + Math.cos(a) * r), Math.round(wy + Math.sin(a) * r * 0.8), S.trim, sphere(0, 0), { bias: -1 });
+    if (S.moth) {
+      c.part();
+      c.shape(waist, waist, () => [cx - 4, cx + 4], S.under, (_x, _y, t) => cyl(t, 0));
+      mothBack(c, cx, U, p);
+    } else {
+      // A web stitched in silver across her back (Arachne: a red hourglass).
+      c.part();
+      const wy = 19.5 + U;
+      if (S.spider) {
+        for (const [y, x0, x1] of [[0, 10, 13], [1, 11, 12], [2, 11, 12], [3, 10, 13]]) for (let x = x0; x <= x1; x++) c.px(x, Math.round(18 + U) + y, S.spider.mark, sphere(0, 0));
+      } else for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * Math.PI * 2 + 0.26;
+        for (let r = 1; r <= 3.4; r += 0.7) c.px(Math.round(cx + Math.cos(a) * r), Math.round(wy + Math.sin(a) * r * 0.8), S.under, sphere(0, 0));
       }
+      if (!S.spider) for (const r of [1.8, 3.2]) {
+        for (let k = 0; k < 12; k++) {
+          const a = (k / 12) * Math.PI * 2;
+          if (k % 2 === 0) c.px(Math.round(cx + Math.cos(a) * r), Math.round(wy + Math.sin(a) * r * 0.8), S.trim, sphere(0, 0), { bias: -1 });
+        }
+      }
+      c.part();
+      c.shape(waist, waist, () => [cx - 4, cx + 4], S.under, (_x, _y, t) => cyl(t, 0));
+      // The back of the hood, its point hanging down between the shoulders.
+      c.part();
+      c.ellipse(cx, 12 + U, 4.3, 4.3, S.coat, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8, 1) });
+      c.part();
+      c.capsule(cx, 14 + U, cx + 0.4, 17.6 + U, 1.4, 0.5, S.coat);
+      c.shade(cx - 1, 12 + U, -1);
+      c.shade(cx - 1, 13 + U, -1);
+      c.part();
+      c.capsule(cx - 3.6, 13 + U, cx - 3.8, 17 + U, 0.7, 0.5, S.hair);
+      c.capsule(cx + 3.6, 13 + U, cx + 3.8, 17 + U, 0.7, 0.5, S.hair);
+      spiderLegs(c, cx - 1, 17 + U, -1, p.tick);
+      spiderLegs(c, cx + 1, 17 + U, 1, p.tick);
     }
-    c.part();
-    c.shape(waist, waist, () => [cx - 4, cx + 4], S.under, (_x, _y, t) => cyl(t, 0));
-    // The back of the hood, its point hanging down between the shoulders.
-    c.part();
-    c.ellipse(cx, 12 + U, 4.3, 4.3, S.coat, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8, 1) });
-    c.part();
-    c.capsule(cx, 14 + U, cx + 0.4, 17.6 + U, 1.4, 0.5, S.coat);
-    c.shade(cx - 1, 12 + U, -1);
-    c.shade(cx - 1, 13 + U, -1);
-    c.part();
-    c.capsule(cx - 3.6, 13 + U, cx - 3.8, 17 + U, 0.7, 0.5, S.hair);
-    c.capsule(cx + 3.6, 13 + U, cx + 3.8, 17 + U, 0.7, 0.5, S.hair);
-    spiderLegs(c, cx - 1, 17 + U, -1, p.tick);
-    spiderLegs(c, cx + 1, 17 + U, 1, p.tick);
   } else {
     c.part();
     c.shape(top, Math.round(27.5 + L), (y) => {
@@ -934,6 +1250,12 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const top = 15 + U;
   const waist = 22 + U;
 
+  // Luna's wings behind everything, the far pair a touch higher and in shade.
+  if (S.moth) {
+    const flap = flapOf(p);
+    mothWing(c, hx + 3.4, 15.4 + U, 1, 0.62, flap, -1);
+    mothWing(c, hx + 2.2, 16.6 + U, 1, 0.78, flap);
+  }
   // The far arm first.
   const armB = (bias: number) => arm(c, hx + 1.2, 16.4 + U, fb, REACH_SIDE, [0.3, 1], bias);
   if (fb.behind) armB(-1);
@@ -975,21 +1297,24 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     c.shape(Math.round(waist + 1), Math.round(waist + 3), () => [hx + 1, hx + 3], SPOOL, (_x, _y, t) => cyl(t, 0.2));
     c.px(hx + 1, waist + 2, S.stripe, sphere(0, 0), { glow: 0.5 });
     c.px(hx + 2, waist + 2, S.stripe, sphere(0, 0), { glow: 0.5 });
-    // The hood in profile, its point hanging back; the face in its shadow.
-    c.part();
-    c.ellipse(hx + 0.4, 12 + U, 3.9, 4.2, S.coat, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.2, 1) });
-    c.part();
-    c.capsule(hx + 3, 11 + U, hx + 4.6, 14.4 + U, 1.3, 0.5, S.coat);
-    c.part();
-    c.ellipse(hx - 1.6, 13 + U, 1.9, 2.4, S.under, { normal: () => sphere(-0.3, 0.3, 1), bias: -2 });
-    c.part();
-    c.ellipse(hx - 2.2, 13.4 + U, 1.4, 2.0, PALE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 - 0.2, dy * 0.6 + 0.2, 1), bias: -1 });
-    c.part();
-    c.capsule(hx - 1.2, 12 + U, hx - 1.6, 17.4 + U, 0.9, 0.7, S.hair);
-    eyes(c, S.spider ? [[hx - 3, 13 + U], [hx - 2, 12 + U]] : [[hx - 3, 13 + U]], p.blink, true);
-    c.part();
-    c.px(hx - 4, 10 + U, S.trim, sphere(-0.5, -0.4));
-    c.px(hx - 3, 9 + U, S.trim, sphere(-0.3, -0.5));
+    if (S.moth) mothHeadSide(c, hx, U, p);
+    else {
+      // The hood in profile, its point hanging back; the face in its shadow.
+      c.part();
+      c.ellipse(hx + 0.4, 12 + U, 3.9, 4.2, S.coat, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.2, 1) });
+      c.part();
+      c.capsule(hx + 3, 11 + U, hx + 4.6, 14.4 + U, 1.3, 0.5, S.coat);
+      c.part();
+      c.ellipse(hx - 1.6, 13 + U, 1.9, 2.4, S.under, { normal: () => sphere(-0.3, 0.3, 1), bias: -2 });
+      c.part();
+      c.ellipse(hx - 2.2, 13.4 + U, 1.4, 2.0, PALE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 - 0.2, dy * 0.6 + 0.2, 1), bias: -1 });
+      c.part();
+      c.capsule(hx - 1.2, 12 + U, hx - 1.6, 17.4 + U, 0.9, 0.7, S.hair);
+      eyes(c, S.spider ? [[hx - 3, 13 + U], [hx - 2, 12 + U]] : [[hx - 3, 13 + U]], p.blink, true);
+      c.part();
+      c.px(hx - 4, 10 + U, S.trim, sphere(-0.5, -0.4));
+      c.px(hx - 3, 9 + U, S.trim, sphere(-0.3, -0.5));
+    }
   } else {
     c.part();
     c.shape(top, waist, (y) => {
@@ -1858,8 +2183,8 @@ export function pirouetteIcon(dark: boolean, toy = false): Uint8ClampedArray {
   return px;
 }
 
-/** The razor thread: a needle trailing a curling, shining thread. */
-export function threadIcon(core: string, hot: string, mid: string): Uint8ClampedArray {
+/** The razor thread: a needle trailing a curling, shining thread (Luna's sheds motes of moth dust). */
+export function threadIcon(core: string, hot: string, mid: string, dust = false): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
   for (let i = 0; i < 16; i++) {
     const x = i;
@@ -1871,6 +2196,7 @@ export function threadIcon(core: string, hot: string, mid: string): Uint8Clamped
   put(11, 5, '#7e8498');
   put(15, 1, '#ffffff');
   outline('#0e0818');
+  if (dust) for (const [x, y] of [[3, 6], [6, 14], [8, 6], [1, 14], [12, 13]]) put(x, y, y > 10 ? mid : '#fffbe8');
   return px;
 }
 
@@ -1892,5 +2218,39 @@ export function marionetteIcon(core: string, hot: string, mid: string): Uint8Cla
   outline('#0e0818');
   put(3, 7, mid);
   put(13, 7, mid);
+  return px;
+}
+
+/**
+ * Luna Moth's snare: a luna moth of light, wings spread and tails trailing,
+ * three strings of moonsilk falling from it onto a startled foe, and dust
+ * drifting down.
+ */
+export function mothSnareIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  const WING = ['#64a48a', '#9cd6b8', '#d0f4e0'];
+  for (const s of [-1, 1]) {
+    // Forewing up and out, hindwing below it, a tail trailing down; rows of (y, from, to) out from the body.
+    const at = (o: number) => (s < 0 ? 7 - o : 8 + o);
+    for (const [y, o0, o1] of [[0, 4, 7], [1, 1, 7], [2, 1, 6], [3, 1, 4], [4, 1, 4], [5, 2, 4], [6, 3, 4], [7, 4, 4]] as const) {
+      for (let o = o0; o <= o1; o++) put(at(o), y, o === o1 || y === 0 ? WING[2] : (o + y) % 3 === 0 ? WING[0] : WING[1]);
+    }
+    put(at(3), 2, '#d09a40');
+    put(at(2), 4, '#d09a40');
+    for (let o = 1; o <= 3; o++) put(at(o), 1, '#a06a8e');
+  }
+  for (let y = 1; y <= 5; y++) for (const x of [7, 8]) put(x, y, y < 3 ? '#ffffff' : '#e6e2d6');
+  put(6, 0, '#e0d09c');
+  put(9, 0, '#e0d09c');
+  for (const [x, y1] of [[4, 9], [8, 8], [11, 9]]) for (let y = x === 8 ? 6 : 8; y <= y1; y++) put(x, y, y % 2 ? '#c8f5dc' : '#f6fff8');
+  // The strung-up foe.
+  for (let y = 8; y <= 14; y++) for (let x = 3; x <= 13; x++) if (Math.hypot((x - 8) / 5, (y - 11) / 3.2) <= 1) put(x, y, x + y < 18 ? '#8ad67a' : '#4a9a4a');
+  put(6, 10, '#0c0816');
+  put(10, 10, '#0c0816');
+  put(8, 12, '#0c0816');
+  put(6, 15, '#2a5a2a');
+  put(10, 15, '#2a5a2a');
+  outline('#0e1a16');
+  for (const [x, y] of [[1, 9], [14, 11], [2, 13]]) put(x, y, '#fffbe8');
   return px;
 }

@@ -24,6 +24,12 @@ export const FATE_STRINGS: Pal = pal(0xfff0f0, 0xff9aa0, 0xff3a4a, 0x8a0f1f);
 export const TOY_STRINGS: Pal = pal(0xfffaf0, 0xffd890, 0xff5a4a, 0x9a1a28);
 /** Arachne's silk: acid green. */
 export const VENOM_STRINGS: Pal = pal(0xfbffe8, 0xe0ff9a, 0xa8e040, 0x4a7a10);
+/** Luna Moth's moonsilk: pale moonlit green running to silver. */
+export const MOONSILK_STRINGS: Pal = pal(0xf6fff8, 0xc8f5dc, 0x8ee0b8, 0x3e8a78, 0xd8f0e8);
+/** The moth dust her moonsilk sheds: cream, silver and mint motes. */
+const MOTH_DUST = [0xfffbe8, 0xe8f0f0, 0xc8f5dc, 0x8ee0b8];
+/** How often a thread out in the air sheds a mote of moth dust, in ms. */
+const DUST_EVERY = 40;
 
 /** Something strings can hold: the monsters (bosses shrug them off). */
 type Bindable = Hurtbox & { bind(ms: number, lift?: number): boolean; readonly held?: boolean };
@@ -451,6 +457,8 @@ export class ThreadLash extends Fx {
     private uy: number,
     private kind: LashKind,
     private p: Pal,
+    /** Luna Moth's: the thread sheds soft motes of moth dust along its length. */
+    private dust = false,
   ) {
     super(world, OUT + HOLD + (kind.snag ? REEL : 0) + BACK);
     this.pix = this.ink(Math.ceil(kind.length * 2 + 24), Math.ceil(kind.length * 2 + 24));
@@ -496,6 +504,10 @@ export class ThreadLash extends Fx {
     g.put(tx + 1, ty, this.p.hot, 0.7);
     g.put(tx, ty - 1, this.p.hot, 0.7);
     g.end();
+    if (this.dust && out > 0.3 && Math.floor(t / DUST_EVERY) !== Math.floor((t - dt) / DUST_EVERY)) {
+      const u = 0.2 + Math.random() * 0.8;
+      this.world.debris(MOTH_DUST, snap(o.x + (this.tip.x - o.x) * u), snap(o.y + (this.tip.y - o.y) * u), 1, Math.max(o.y, this.tip.y) + 20, 'spores');
+    }
   }
 
   /** At full stretch: the thread cuts along its length, or hooks the first foe on it. */
@@ -506,7 +518,7 @@ export class ThreadLash extends Fx {
     const y1 = o.y + this.uy * kind.length;
     if (!kind.snag) {
       const hits = this.world.melee({ kind: 'line', x0: o.x, y0: o.y, x1, y1, radius: 4 }, { damage: kind.damage, knock: 50, fromX: o.x, fromY: o.y });
-      for (const h of hits) this.world.debris(this.p.tints, snap(h.x), snap(h.y), 4, h.y + 20);
+      for (const h of hits) this.world.debris(this.dust ? MOTH_DUST : this.p.tints, snap(h.x), snap(h.y), 4, h.y + 20, this.dust ? 'spores' : 'burst');
       return;
     }
     // The first foe along the thread.
@@ -548,14 +560,16 @@ export class Marionette extends Fx {
     private radius = 36,
     private hold = 1500,
     private slam = 16,
+    /** Luna Moth's: dust drifts down off the strings while they hold. */
+    private dust = false,
   ) {
     super(world, 300 + hold + 350);
     this.pix = this.ink(Math.ceil(radius * 2 + 40), Math.ceil(radius + 130));
-    world.debris(p.tints, snap(x), snap(y) - 70, 10, y + 40, 'spores');
+    world.debris(dust ? MOTH_DUST : p.tints, snap(x), snap(y) - 70, dust ? 16 : 10, y + 40, 'spores');
     sound.strings(world.pan(x));
   }
 
-  protected step(): void {
+  protected step(dt: number): void {
     const { t, x, y, p, world } = this;
     const drop = 300;
     const barY = y - 78;
@@ -602,6 +616,10 @@ export class Marionette extends Fx {
         const top = h.y - h.bodyY - 5;
         strand(g, x + (h.x - x) * 0.3 - 2, barY, h.x - 2 + jerk, top, p, fade, t);
         strand(g, x + (h.x - x) * 0.3 + 2, barY, h.x + 2 + jerk, top, p, fade * 0.8, t + 400);
+        if (this.dust && Math.floor(t / (DUST_EVERY * 3)) !== Math.floor((t - dt) / (DUST_EVERY * 3))) {
+          const u = Math.random();
+          world.debris(MOTH_DUST, snap(x + (h.x - x) * (0.3 + 0.7 * u)), snap(barY + (top - barY) * u), 1, h.y + 20, 'spores');
+        }
       }
     }
     ring(g, x, y, this.radius * open, 1.2, p, 0.5 * open * (t < drop ? t / drop : 1), undefined, 0.35, 7);

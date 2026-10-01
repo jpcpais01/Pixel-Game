@@ -12,10 +12,10 @@ import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbow
 import { crossbowIcon, fanShotIcon, netBoltIcon, vaultIcon } from './archerIcons';
 import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
-import { AEON_ICON, ANOMALY_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
+import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
 import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, ORPHEUS_LOOK, VAGABOND_LOOK, WILD_LOOK, NOTE_SIZE, banjoIcon, drumIcon, guitarraIcon, luteIcon, lyreIcon, noteFrame, rhythmIcon, skinSongIcon, songIcon } from './bard';
 import { crossIcon, cutMark, dashIcon, katanaIcon } from './samurai';
-import { PUPPET_LOOKS, buildPuppetSheet, marionetteIcon, pirouetteIcon, puppetStrikeIcon, threadIcon } from './puppeteer';
+import { PUPPET_LOOKS, buildPuppetSheet, marionetteIcon, mothSnareIcon, pirouetteIcon, puppetStrikeIcon, threadIcon } from './puppeteer';
 import { daggersIcon, petalCanvas, ROGUE_ICONS, ROGUE_LOOKS, shadowstepIcon, smokeCanvas } from './rogue';
 import { gourdIcon, registerMoreSkinIcons, SKIN_BREWS, SKIN_QUIVERS } from './moreSkinIcons';
 import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, eclipseFallIcon, oathHammerIcon, pikeSaberIcon, seraphMaceIcon } from './heroSkins';
@@ -320,6 +320,8 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_pirouette_toymaker', toCanvas(16, 16, pirouetteIcon(false, true)));
   scene.textures.addCanvas('icon_thread_arachne', toCanvas(16, 16, threadIcon('#fbffe8', '#e0ff9a', '#a8e040')));
   scene.textures.addCanvas('icon_marionette_arachne', toCanvas(16, 16, marionetteIcon('#fbffe8', '#e0ff9a', '#a8e040')));
+  scene.textures.addCanvas('icon_thread_luna', toCanvas(16, 16, threadIcon('#f6fff8', '#c8f5dc', '#8ee0b8', true)));
+  scene.textures.addCanvas('icon_marionette_luna', toCanvas(16, 16, mothSnareIcon()));
 
   yield;
   // Each chronomancer look's bolts ('<key>_bolt_e', frames b0-b3); the clock over a slowed foe
@@ -328,7 +330,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     register(scene, `${look.key}_bolt`, pack(frameList(Array.from({ length: BOLT_FRAMES }, (_, i) => boltFrame(i, look)), 'b'), BOLT_SIZE, BOLT_SIZE), BOLT_SIZE, BOLT_SIZE);
   }
   register(scene, 'chrono_mark', pack(frameList(Array.from({ length: MARK_FRAMES }, (_, i) => markFrame(i)), 'm'), MARK_SIZE, MARK_SIZE), MARK_SIZE, MARK_SIZE);
-  for (const [suffix, k] of [['', BRASS_ICON], ['_moon', MOON_ICON], ['_clockwork', CLOCKWORK_ICON]] as const) {
+  for (const [suffix, k] of [['', BRASS_ICON], ['_moon', MOON_ICON], ['_clockwork', CLOCKWORK_ICON], ['_primavera', PRIMAVERA_ICON]] as const) {
     scene.textures.addCanvas(`icon_hand${suffix}`, toCanvas(16, 16, handIcon(k)));
     scene.textures.addCanvas(`icon_stasis${suffix}`, toCanvas(16, 16, stasisIcon(k)));
   }
