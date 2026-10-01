@@ -1,12 +1,12 @@
 // Dev tool: render the arenas' loading-screen pictures (the glow added, on the screen's dark) to a zoomed PNG.
 // Usage: npx tsx scripts/loading.ts [out.png] [scale]
 import { writeFileSync } from 'node:fs';
-import { LOAD_H, LOAD_W, paintCosmos, paintDeep, paintFrost, paintRift, paintSky, paintSpirit, paintTemple } from '../src/art/loadArt';
+import { LOAD_H, LOAD_W, paintCosmos, paintDeep, paintFrost, paintHomeLoad, paintRift, paintSky, paintSpirit, paintTemple } from '../src/art/loadArt';
 import { encodePNG } from './png';
 
 const out = process.argv[2] ?? 'loading.png';
 const S = Number(process.argv[3] ?? 3);
-const arts = [paintDeep(), paintSpirit(), paintTemple(), paintCosmos(), paintRift(), paintFrost(), paintSky(false), paintSky(true)];
+const arts = [paintDeep(), paintSpirit(), paintTemple(), paintCosmos(), paintRift(), paintFrost(), paintSky(false), paintSky(true), paintHomeLoad()];
 const COLS = 2;
 const W = COLS * LOAD_W * S;
 const H = Math.ceil(arts.length / COLS) * LOAD_H * S;

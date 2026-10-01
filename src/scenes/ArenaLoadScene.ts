@@ -2,7 +2,10 @@ import Phaser from 'phaser';
 import { menuZoom } from '../game/display';
 import { pixelText } from '../ui/widgets';
 import { arenaById, isPainted, type ArenaDef } from '../world/arenas';
-import { LOAD_BG, LOAD_H, LOAD_W, paintCosmos, paintDeep, paintFrost, paintRift, paintSky, paintSpirit, paintTemple, type LoadArt } from '../art/loadArt';
+import { LOAD_BG, LOAD_H, LOAD_W, paintCosmos, paintDeep, paintFrost, paintHomeLoad, paintRift, paintSky, paintSpirit, paintTemple, type LoadArt } from '../art/loadArt';
+import { warmHomeSoon } from '../art/homeArt';
+import { GroundStreamer } from '../world/GroundStreamer';
+import { HOME_GROUND } from '../world/homeGround';
 
 // A painted arena's loading screen. Its textures (a cave floor the size of
 // the Glimmerdeep, the monsters' sheets, the bosses') used to be built ahead
@@ -66,6 +69,24 @@ interface Look {
   lights: Light[];
   /** Falling stars streak across now and then. */
   stars?: boolean;
+  /**
+   * For a place that isn't a painted arena (the Home): build it for at most
+   * `budget` ms, true once done (a budget of 0 only checks). Painted arenas
+   * use their ground's own `warm`.
+   */
+  warm?: (scene: Phaser.Scene, budget: number) => boolean;
+  /** ms a frame for `warm`, when it isn't the default. */
+  budget?: number;
+}
+
+/**
+ * The Home: its sheet (painted on this thread, a piece at a time), then all
+ * its ground. Its world must open on both, or its first frame paints them
+ * while the screen stays black.
+ */
+function warmHomeArena(scene: Phaser.Scene, budget: number): boolean {
+  if (budget <= 0) return scene.textures.exists('home') && GroundStreamer.warm(scene, HOME_GROUND, 0, HOME_GROUND.h, 0);
+  return warmHomeSoon(scene, budget) && GroundStreamer.warm(scene, HOME_GROUND, 0, HOME_GROUND.h, budget);
 }
 
 const LOOKS: Record<string, Look> = {
@@ -183,6 +204,26 @@ const LOOKS: Record<string, Look> = {
     ],
     lights: [],
   },
+  home: {
+    paint: paintHomeLoad,
+    sub: 'Lighting the hearth',
+    title: 0xffc890,
+    text: 0xc8b8d8,
+    bar: [0x1a1430, 0xd8803a, 0xffe0a0],
+    motes: [
+      // Smoke curling up from the chimney, faintly moonlit.
+      { zone: 'spots', spot: 'chimney', spread: 1, speedX: [1, 4], speedY: [-7, -4], life: [2600, 3800], every: 240, tints: [0x8a84a8, 0x6a6488], alpha: 0.5 },
+      // Fireflies about the garden.
+      { zone: [10, 80, 204, 44], speedX: [-3, 3], speedY: [-3, 2], life: [1800, 3200], every: 260, tints: [0xd8ff7a, 0xf6ffb0, 0x9dffb0] },
+    ],
+    lights: [
+      { spot: 'windows', tint: 0xffb050, r: 14, kind: 'flicker', alpha: 0.32 },
+      { spot: 'pond', tint: 0x8878d0, r: 18, kind: 'breathe', alpha: 0.2 },
+    ],
+    warm: warmHomeArena,
+    // Painted here rather than by a worker: a bigger slice, as the screen asks little else of the frame.
+    budget: 16,
+  },
   glide: {
     paint: () => paintSky(true),
     sub: 'Catching the wind',
@@ -200,7 +241,10 @@ const LOOKS: Record<string, Look> = {
 
 /** Does setting off for this arena go through a loading screen (it has one, and isn't built yet)? */
 export function needsLoading(scene: Phaser.Scene, arena: ArenaDef): boolean {
-  return !!LOOKS[arena.id] && isPainted(arena.ground) && !arena.ground.warm(scene, 0);
+  const look = LOOKS[arena.id];
+  if (!look) return false;
+  if (look.warm) return !look.warm(scene, 0);
+  return isPainted(arena.ground) && !arena.ground.warm(scene, 0);
 }
 
 /** Does this arena have a loading screen of its own? */
@@ -274,7 +318,7 @@ export class ArenaLoadScene extends Phaser.Scene {
     this.nextStar = 1500;
     this.expected = lastTime(this.arena.id);
     // Set the worker going before anything else, so it paints while this screen is put up.
-    if (isPainted(this.arena.ground)) this.arena.ground.warm(this, 0.01);
+    if (!this.look.warm && isPainted(this.arena.ground)) this.arena.ground.warm(this, 0.01);
 
     const cam = this.cameras.main.setOrigin(0, 0).setBackgroundColor(LOAD_BG);
     cam.fadeIn(FADE_IN, 7, 8, 13);
@@ -377,7 +421,8 @@ export class ArenaLoadScene extends Phaser.Scene {
     // The arena's textures: a slice of this thread a frame.
     if (this.loadedAt === null) {
       const g = this.arena.ground;
-      if (!isPainted(g) || g.warm(this, WARM_MS)) {
+      const look = this.look;
+      if (look.warm ? look.warm(this, look.budget ?? WARM_MS) : !isPainted(g) || g.warm(this, WARM_MS)) {
         this.loadedAt = t;
         // Timed only when there was real work, so a quick second visit doesn't shorten the guess.
         if (t > 300) rememberTime(this.arena.id, t);
