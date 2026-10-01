@@ -382,13 +382,6 @@ export function castLeaf(leaf: Leaf, g: Hang, deg: number, view: View, walls = t
 /** The door hung `way` with hinge side `hinge`, open `deg` degrees. */
 export const doorArt = (way: DoorWay, hinge: number, deg: number, view: View = { w: DOOR_FW, h: DOOR_FH, ox: DOOR_OX, oy: DOOR_OY }, walls = true): RenderedFrame => castLeaf(DOOR_LEAF, hang(way, hinge), deg, view, walls);
 
-/** Every door frame: each way, each hinge side, each step open. */
-export function doorFrames(): { name: string; r: RenderedFrame }[] {
-  const out: { name: string; r: RenderedFrame }[] = [];
-  for (const way of DOOR_WAYS) for (let hinge = 0; hinge < 2; hinge++) for (let s = 0; s < DOOR_STEPS; s++) out.push({ name: doorFrame(way, hinge, s), r: doorArt(way, hinge, s * DOOR_STEP) });
-  return out;
-}
-
 /** The palette's picture (and the build cursor's ghost): the door shut, face on, in a wall frame's size. */
 export const DOOR_ICON_W = CELL;
 export const DOOR_ICON_H = WALL_H + CELL;

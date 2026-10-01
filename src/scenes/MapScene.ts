@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { sound } from '../audio';
-import { pixelCanvas } from '../art/canvas';
+import { bakedCanvas, pixelCanvas } from '../art/canvas';
 import { INK, MAP_CELL, RING_M, RING_MID, TREK_T, diskRow, groundMapBase, mapIconSheet, reliefMap, ringFrame, stampCrowns, type MapBase } from '../art/mapArt';
 import { DPR as D, menuZoom } from '../game/display';
 import { activeSeason } from '../game/season';
@@ -590,7 +590,8 @@ function canvasOf(px: Uint8ClampedArray, w: number, h: number): HTMLCanvasElemen
   c.width = w;
   c.height = h;
   c.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(px), w, h), 0, 0);
-  return c;
+  // Finished art: a plain texture, without Phaser reading it back off the GPU (see game/bakedTextures.ts).
+  return bakedCanvas(c);
 }
 
 /** A base widened to the whole world, where the world reaches past the ground. */

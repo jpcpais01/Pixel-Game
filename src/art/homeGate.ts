@@ -162,12 +162,12 @@ function gateHang(mat: number, way: GateWay): Hang {
 /** Garden walls' materials, which have gates. */
 export const GATE_MATS: number[] = WALLS.flatMap((w, i) => (!w.house && LEAVES[w.id] ? [i] : []));
 
-/** Every gate frame: each garden wall's gate, each way, each step open (steps as the door's). */
-export function gateFrames(steps: number, step: number): { name: string; r: RenderedFrame }[] {
+/** Gate frames, each step open (steps as the door's): every garden wall's gate each way, or just `only` material's one `way`. */
+export function gateFrames(steps: number, step: number, only?: number, way?: GateWay): { name: string; r: RenderedFrame }[] {
   const out: { name: string; r: RenderedFrame }[] = [];
-  for (const mat of GATE_MATS) {
+  for (const mat of only === undefined ? GATE_MATS : [only]) {
     const view = gateFrameSize(mat);
-    for (const way of GATE_WAYS) for (let s = 0; s < steps; s++) out.push({ name: gateFrame(mat, way, s), r: castLeaf(gateLeaf(mat, way), gateHang(mat, way), s * step, view) });
+    for (const w of way ? [way] : GATE_WAYS) for (let s = 0; s < steps; s++) out.push({ name: gateFrame(mat, w, s), r: castLeaf(gateLeaf(mat, w), gateHang(mat, w), s * step, view) });
   }
   return out;
 }

@@ -6,6 +6,7 @@
 // pixels for the menu's own camera, every edge stepped like the panel's.
 
 import Phaser from 'phaser';
+import { bakedCanvas } from '../art/canvas';
 import { daynight, PHASES } from '../game/daynight';
 
 /** The picker's size in the menu's art pixels. */
@@ -47,7 +48,8 @@ function pillCanvas(w: number, h: number, paint: (x: number, y: number, edge: bo
     }
   }
   ctx.putImageData(img, 0, 0);
-  return c;
+  // Finished art: a plain texture, without Phaser reading it back off the GPU (see game/bakedTextures.ts).
+  return bakedCanvas(c);
 }
 
 const rgba = (c: number, a = 1): Rgba => [(c >> 16) & 255, (c >> 8) & 255, c & 255, Math.round(a * 255)];
