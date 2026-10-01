@@ -641,11 +641,12 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   registerMonster(scene, 'puffcap', buildPuffcapSheet());
   registerMonster(scene, 'barkling', buildBarklingSheet());
   registerMonster(scene, 'glowmoth', buildGlowmothSheet());
-  registerMonster(scene, 'warden', buildWardenSheet());
+  // The spirits (which Omens call up in other arenas too). Their queen and
+  // the Cosmos's Warden are bosses of one arena each, so they're built with
+  // its set, behind its loading screen.
   registerMonster(scene, 'wisp', buildWispSheet());
   registerMonster(scene, 'shade', buildShadeSheet());
   registerMonster(scene, 'banshee', buildBansheeSheet());
-  registerMonster(scene, 'queen', buildQueenSheet());
   register(scene, 'thorns', pack(frameList([0, 1, 2].map(thornFrame), 't'), THORN_W, THORN_H), THORN_W, THORN_H, false);
   scene.textures.addCanvas('venom', toCanvas(7, 7, venomGlob()));
   const ring = ringCanvas(22, 12);
@@ -697,6 +698,10 @@ function* cosmosTextures(scene: Phaser.Scene): Generator<void, void, void> {
   scene.textures.addCanvas('cosmos_hole_ring', toCanvas(HOLE_SIZE, HOLE_SIZE, hole.ring));
   const nova = ringCanvas(92, 62);
   scene.textures.addCanvas('cosmos_nova_ring', toCanvas(nova.w, nova.h, nova.px));
+  yield;
+  // The Astral Warden, its Myth.
+  registerMonster(scene, 'warden', buildWardenSheet());
+  yield;
   // Last: its presence means everything above is built.
   scene.textures.addCanvas('cosmos_streak', toCanvas(40, 3, streak(40)));
 }
@@ -794,6 +799,10 @@ function* spiritTextures(scene: Phaser.Scene): Generator<void, void, void> {
   scene.anims.create({ key: 'sd_hand_grasp', frames: scene.anims.generateFrameNames('sd_hand_e', { prefix: 'h', start: 0, end: HAND_FRAMES - 1 }), frameRate: 10, repeat: 0 });
   [0, 1, 2].forEach((k) => scene.textures.addCanvas(`sd_mist${k}`, toCanvas(72, 30, mistPuff(72, 30, 300 + k * 23))));
   scene.textures.addCanvas('sd_orb', toCanvas(ORB_PX, ORB_PX, spiritOrb()));
+  yield;
+  // The Hollow Queen, its Legend.
+  registerMonster(scene, 'queen', buildQueenSheet());
+  yield;
   // Last: its presence means everything above is built.
   scene.textures.addCanvas('sd_lane', toCanvas(LANE_W, LANE_H, laneCanvas()));
 }

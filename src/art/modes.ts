@@ -83,7 +83,7 @@ RAMPS[MOON] = ramp('#3a3a5a', '#54547a', '#707096', '#8e8eae', '#aaaac4', '#c4c4
 RAMPS[FLOWER] = ramp('#2a0e1e', '#4a1430', '#742044', '#a0325a', '#c84e6e', '#e8708a', '#f89aa8', '#ffc4c8', '#fff0e8');
 RAMPS[CLOTH] = ramp('#16060d', '#290b17', '#431221', '#641a2c', '#8c2634', '#b53c3c', '#dd6446', '#f79a66', '#ffd3a0');
 
-function hash(x: number, y: number, s = 0): number {
+export function hash(x: number, y: number, s = 0): number {
   let h = (x * 374761393 + y * 668265263 + s * 2246822519) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   h = Math.imul(h ^ (h >>> 16), 2246822519);
@@ -91,7 +91,7 @@ function hash(x: number, y: number, s = 0): number {
 }
 
 /** Smooth 1D value noise, 0..1. */
-function noise(x: number, s: number): number {
+export function noise(x: number, s: number): number {
   const i = Math.floor(x);
   const t = x - i;
   const u = t * t * (3 - 2 * t);
@@ -100,7 +100,7 @@ function noise(x: number, s: number): number {
 }
 
 /** Smooth 2D value noise, 0..1. */
-function noise2(x: number, y: number, s: number): number {
+export function noise2(x: number, y: number, s: number): number {
   const ix = Math.floor(x);
   const iy = Math.floor(y);
   const fx = x - ix;
@@ -114,10 +114,14 @@ function noise2(x: number, y: number, s: number): number {
   return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
 }
 
-const fbm = (x: number, y: number, s: number) => noise2(x, y, s) * 0.55 + noise2(x * 2.1, y * 2.1, s + 1) * 0.3 + noise2(x * 4.3, y * 4.3, s + 2) * 0.15;
+export const fbm = (x: number, y: number, s: number) => noise2(x, y, s) * 0.55 + noise2(x * 2.1, y * 2.1, s + 1) * 0.3 + noise2(x * 4.3, y * 4.3, s + 2) * 0.15;
 
-/** Per-pixel material and light, plus a glow layer, resolved to colours at the end. */
-class Paint {
+/**
+ * Per-pixel material and light, plus a glow layer, resolved to colours at the
+ * end. `ramps` are the materials' colours (by default the menu's own); the
+ * arenas' loading screens bring theirs (see art/loadArt.ts).
+ */
+export class Paint {
   readonly mat: Uint8Array;
   readonly lum: Float32Array;
   /** Additive glow, linear RGB 0..255 (can pile up; clamped when resolved). */
@@ -128,6 +132,7 @@ class Paint {
   constructor(
     readonly w: number,
     readonly h: number,
+    readonly ramps: RGB[][] = RAMPS,
   ) {
     this.mat = new Uint8Array(w * h);
     this.lum = new Float32Array(w * h);
@@ -203,7 +208,7 @@ class Paint {
           const j = i * 4;
           base.set(x, y, [this.over.data[j], this.over.data[j + 1], this.over.data[j + 2]]);
         } else {
-          const r = RAMPS[this.mat[i]] ?? RAMPS[SKY];
+          const r = this.ramps[this.mat[i]] ?? this.ramps[SKY];
           const v = clamp01(this.lum[i]) * (r.length - 1) + (bayer(x, y) - 0.5) * 0.9;
           base.set(x, y, r[Math.max(0, Math.min(r.length - 1, Math.round(v)))]);
         }
@@ -224,7 +229,7 @@ class Paint {
 }
 
 /** Is (x, y) inside the polygon? */
-function inPoly(pts: [number, number][], x: number, y: number): boolean {
+export function inPoly(pts: [number, number][], x: number, y: number): boolean {
   let inside = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
     const [xi, yi] = pts[i];

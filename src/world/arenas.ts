@@ -470,16 +470,22 @@ export function warmArena(scene: Phaser.Scene, arena: ArenaDef, budget: number):
   return GroundStreamer.warm(scene, ground, top, top + PREVIEW_H, budget);
 }
 
+/** How far above and below an arena's spawn its ground is warmed ahead (px): the first view and a little more. */
+const SPAWN_REACH = 320;
+
 /**
- * Warm the world map, then the arena the player chose last time, while
- * they're still on the menus, a few ms a frame, so the arena select opens
- * on a finished map and a run there starts at once. Only that arena: the
- * select shows the others as saved pictures, and builds one only when it's
- * picked. The work is shared: the arena select and the world carry on
- * whatever this has begun. True once it's ready.
+ * Warm the world map, then the ground round the spawn of the arena the
+ * player chose last time, while they're on the menus, a few ms a frame, so
+ * the arena select opens on a finished map and a run there starts at once.
+ * Only a streamed arena's ground: a painted arena is built behind its own
+ * loading screen when the player sets off for it (see ArenaLoadScene). The
+ * work is shared: the arena select and the world carry on whatever this has
+ * begun. True once it's ready.
  */
-export function warmArenasInBackground(scene: Phaser.Scene, budget: number): boolean {
-  return warmWorldMap(scene, budget) && warmArena(scene, arenaById(lastArena()), budget);
+export function warmArenasAhead(scene: Phaser.Scene, budget: number): boolean {
+  if (!warmWorldMap(scene, budget)) return false;
+  const { ground, spawn } = arenaById(lastArena());
+  return isPainted(ground) || GroundStreamer.warm(scene, ground, spawn.y - SPAWN_REACH, spawn.y + SPAWN_REACH, budget);
 }
 
 export function arenaById(id: string | undefined): ArenaDef {

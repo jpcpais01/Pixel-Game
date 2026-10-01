@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { STRIP_H } from '../art/ground';
 import { warmWorldMap } from '../art/arenaLoader';
+import { enterArena, hasLoadScreen, needsLoading } from './ArenaLoadScene';
 import { LANDMARKS, SEA_COLOUR } from '../art/worldMap';
 import { menuZoom } from '../game/display';
 import { characterById } from '../game/characters';
@@ -126,9 +127,15 @@ class ArenaWindow extends Phaser.GameObjects.Container {
     img.src = url;
   }
 
-  /** Build the arena for the window a little at a time; show it live once it's all there. */
+  /**
+   * Build the arena for the window a little at a time; show it live once
+   * it's all there. An arena with a loading screen of its own that already
+   * has its saved picture is left for that screen to build, so browsing the
+   * map stays smooth.
+   */
   warm(): void {
     if (this.built) return;
+    if (hasLoadScreen(this.arena.id) && savedThumb(this.arena.id)) return;
     if (!warmArena(this.scene, this.arena, WARM_BUDGET)) return;
     this.built = true;
     this.loading.setVisible(false);
@@ -1069,7 +1076,7 @@ export class ArenaScene extends Phaser.Scene {
     this.leaving = true;
     const arena = ARENAS[this.picked];
     const win = this.windows.get(arena.id);
-    if (arenaId || win?.ready) return this.go(arenaId ?? arena.id, !!arenaId);
+    if (arenaId || win?.ready || hasLoadScreen(arena.id)) return this.go(arenaId ?? arena.id, !!arenaId);
     // Still loading: wait for it here, where the frame rate holds, rather
     // than in the world's first frame.
     this.waitingSince = this.time.now;
@@ -1084,19 +1091,9 @@ export class ArenaScene extends Phaser.Scene {
     for (const cam of [this.cameras.main, this.uiCam]) cam.fadeOut(450, 7, 8, 13);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.scene.stop('home');
-      const mode = arenaById(arena).mode;
-      if (mode) {
-        // A mode with a scene of its own (Sky Glide): its HUD, and the pause menu over it.
-        this.scene.launch('shade');
-        this.scene.launch(mode.ui);
-        this.scene.launch('pause', { world: mode.scene, ui: mode.ui });
-        this.scene.start(mode.scene, { character });
-        return;
-      }
-      this.scene.launch('shade');
-      this.scene.launch('ui', { character });
-      this.scene.launch('pause');
-      this.scene.start('world', { character, arena });
+      // A painted arena not built yet is built behind its own loading screen.
+      if (needsLoading(this, arenaById(arena))) this.scene.start('arenaload', { character, arena });
+      else enterArena(this, character, arena);
     });
   }
 
