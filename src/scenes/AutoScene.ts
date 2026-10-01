@@ -44,8 +44,11 @@ import { fpsBottom } from './FpsScene';
 
 /** Room over the board's top row for the heroes standing there (world px). */
 const HEAD_ROOM = 14;
-/** How much of the rock hanging under the dais must show in the wide layout. */
-const UNDER_SHOW = 6;
+/** On a wide screen the board is sized to the room over the tray, which may hide the dais' stone face and the rock
+ * under it: only the tiles and this sliver of rim must show. The top may give up part of the head room, as the
+ * tallest heroes' crowns on the rival's back row are all that would go. */
+const RIM_SHOW = 2;
+const HEAD_MIN = 8;
 /** A top bar row (the tall layout's). */
 const TOP_H = 15;
 /** The wide layout's left column (players, round, Fight): at least this, more when the centred board leaves it. */
@@ -57,7 +60,7 @@ const TRAIT_MIN = 36;
  * little of its height (never under the min) when that lets the board up a size. */
 const BLOCK_W = 72;
 const BLOCK_H = 40;
-const BLOCK_H_MIN = 38;
+const BLOCK_H_MIN = 36;
 /** Shop cards: as tall as the blocks in the wide tray; in the tall one, from this up to the max as room allows. */
 const CARD_H_ROW = 46;
 const CARD_H_ROW_MAX = 64;
@@ -530,13 +533,13 @@ export class AutoScene extends Phaser.Scene {
     this.xpBar = this.add.graphics();
     this.xpText = pixelText(this, 0, 4, '', LAVENDER);
     this.xpBtn = new PixelButton(this, `XP ${XP_COST}`, bw, 17, BUTTON_PLAIN, `ab_xp_${bw}`, () => this.buyXp());
-    this.xpBtn.setIcon('ab_coin').place(3, h - 20);
+    this.xpBtn.setIcon('ab_coin').place(3, h - 19);
     this.lvlBox.add([lvlBg, this.lvlText, this.xpBar, this.xpText, this.xpBtn]);
     const goldBg = this.add.image(0, 0, panelTexture(this, `ab_gold_${w}x${h}`, w, h, PANEL)).setOrigin(0);
     const coin = this.add.image(0, 3, 'ab_coin').setOrigin(0).setScale(2);
     this.goldText = pixelText(this, 0, 3, '', GOLD, 2);
     this.rollBtn = new PixelButton(this, `Roll ${REROLL_COST}`, bw, 17, BUTTON_GOLD, `ab_roll_${bw}`, () => this.reroll());
-    this.rollBtn.setIcon('ab_coin').place(3, h - 20);
+    this.rollBtn.setIcon('ab_coin').place(3, h - 19);
     this.goldBox.add([goldBg, coin, this.goldText, this.rollBtn]);
     this.goldBox.setData('coin', coin);
   }
@@ -569,7 +572,8 @@ export class AutoScene extends Phaser.Scene {
     const bs = boardSize(COLS, ROWS);
     const tilesH = ROWS * CELL_H + RIM * 2 + FACE;
     const dock = { w: 2 * BENCH_SLOT + 6, h: (BENCH_SIZE / 2) * BENCH_SLOT + 6 };
-    const wideH = HEAD_ROOM + tilesH + UNDER_SHOW;
+    // What of the wide world must show: the tiles and a sliver of rim, with at least the least head room.
+    const wideH = RIM + ROWS * CELL_H + RIM_SHOW;
     const tallW = bs.w;
     const tallH = HEAD_ROOM + tilesH + 3 + BENCH_SLOT + 6;
     // The biggest whole number of screen px per world px that fits the room each leaves.
@@ -582,7 +586,7 @@ export class AutoScene extends Phaser.Scene {
     const leftNeed = PAD + LEFT_MIN + PAD;
     const dockW = (n: number) => Math.ceil(((4 + dock.w) * n) / z);
     const wideFits = (n: number) =>
-      leftNeed + Math.ceil((bs.w * n) / z) + dockW(n) + PAD + TRAIT_MIN + PAD <= vw && Math.ceil((wideH * n) / z) <= vh - PAD * 2 - BLOCK_H_MIN;
+      leftNeed + Math.ceil((bs.w * n) / z) + dockW(n) + PAD + TRAIT_MIN + PAD <= vw && Math.ceil(((HEAD_MIN + wideH) * n) / z) <= vh - PAD * 2 - BLOCK_H_MIN;
     let nWide = 1;
     while (wideFits(nWide + 1)) nWide++;
     const nTall = fit(tallW, tallH, vw - 2, vh - tallTop - trayTallMin);
@@ -599,8 +603,8 @@ export class AutoScene extends Phaser.Scene {
       this.benchCols = 2;
       bx = 0;
       benchX = bs.w + 4;
-      // The dock's foot lines up with the board's front edge, beside the player's half.
-      benchY = HEAD_ROOM + tilesH - FACE - dock.h;
+      // The dock's foot lines up with the front row's tiles, beside the player's half, clear of the tray.
+      benchY = HEAD_ROOM + RIM + ROWS * CELL_H + 1 - dock.h;
     } else {
       this.benchCols = BENCH_SIZE;
       bx = 0;
@@ -629,10 +633,13 @@ export class AutoScene extends Phaser.Scene {
       const rightW = dockW(n);
       const rightNeed = rightW + PAD + TRAIT_MIN + PAD;
       this.wx = Math.round(Math.max(leftNeed, Math.min(vw - rightNeed - ww, (vw - ww) / 2)));
-      const worldH = Math.ceil(wideH * s);
-      const blockH = Math.max(BLOCK_H_MIN, Math.min(BLOCK_H, vh - PAD * 2 - worldH));
+      // The tray as tall as the board leaves (with the least head room), then the board's tiles standing on it, the
+      // stone face and the rock under it going behind the tray. Room to spare goes over the heads first, up to the
+      // full head room, then is shared out above and below.
+      const blockH = Math.max(BLOCK_H_MIN, Math.min(BLOCK_H, vh - PAD * 2 - Math.ceil((HEAD_MIN + wideH) * s)));
       const trayY = vh - PAD * 2 - blockH;
-      this.wy = Math.round(Math.max(0, (trayY - worldH) / 2));
+      const spare = trayY - (HEAD_ROOM + wideH) * s;
+      this.wy = Math.round(spare < 0 ? spare : spare / 2);
       this.leftW = Math.max(LEFT_MIN, Math.min(LEFT_MAX, this.wx - PAD * 2));
       const tx = this.wx + ww + rightW + PAD;
       const ty = corner + PAD;
@@ -811,10 +818,10 @@ export class AutoScene extends Phaser.Scene {
     this.xpText.setX(bw - 4 - this.xpText.width);
     const g = this.xpBar.clear();
     // The xp toward the next level, on a bar under the readout.
-    g.fillStyle(0x0b0818, 1).fillRect(4, 13, bw - 8, 4);
-    g.fillStyle(0x1a1430, 1).fillRect(5, 14, bw - 10, 2);
-    if (need) g.fillStyle(0x4aa6ff, 1).fillRect(5, 14, Math.round(((bw - 10) * this.me.xp) / need), 2);
-    else g.fillStyle(0xffc94a, 1).fillRect(5, 14, bw - 10, 2);
+    g.fillStyle(0x0b0818, 1).fillRect(4, 12, bw - 8, 4);
+    g.fillStyle(0x1a1430, 1).fillRect(5, 13, bw - 10, 2);
+    if (need) g.fillStyle(0x4aa6ff, 1).fillRect(5, 13, Math.round(((bw - 10) * this.me.xp) / need), 2);
+    else g.fillStyle(0xffc94a, 1).fillRect(5, 13, bw - 10, 2);
     // Gold, big, centred over the reroll.
     this.goldText.setText(`${this.me.gold}`);
     const coin = this.goldBox.getData('coin') as Phaser.GameObjects.Image | undefined;
