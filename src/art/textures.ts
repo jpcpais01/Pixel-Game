@@ -573,6 +573,10 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     scene.textures.addCanvas(`item_${kind}`, toCanvas(ITEM_ICON_SIZE, ITEM_ICON_SIZE, potionIcon(kind)));
     scene.textures.addCanvas(`drop_${kind}`, toCanvas(DROP_W, DROP_H, potionDrop(kind)));
   }
+  // Star dust on the ground (an Omen's, a chest's) and the wave arenas' blessings: wanted
+  // in more than one arena, so made here rather than with any one arena's set.
+  scene.textures.addCanvas('dust_drop', dustDrop().toCanvas());
+  for (const kind of ['might', 'swift', 'vigor', 'fang', 'ward', 'renew', 'surge', 'fortune'] as BlessingIcon[]) scene.textures.addCanvas(`blessing_${kind}`, toCanvas(16, 16, blessingIcon(kind)));
   yield;
   // Gear: 32x32 icons for the bag, 16x16 sprites for the ground, and the bag's chest button.
   for (const g of GEAR) {
@@ -747,7 +751,7 @@ function* riftTextures(scene: Phaser.Scene): Generator<void, void, void> {
   register(scene, 'rift_rock', pack(frameList([4, 9, 13].map(floatingRock), 'r'), FLOAT_ROCK_W, FLOAT_ROCK_H), FLOAT_ROCK_W, FLOAT_ROCK_H, false);
   yield;
   // Last: its presence means everything above is built.
-  for (const kind of ['might', 'swift', 'vigor', 'fang', 'ward', 'renew', 'surge', 'fortune'] as BlessingIcon[]) scene.textures.addCanvas(`blessing_${kind}`, toCanvas(16, 16, blessingIcon(kind)));
+  scene.textures.addCanvas('rift_done', toCanvas(1, 1, new Uint8ClampedArray(4)));
 }
 
 /** The Spirit Dungeon: floor plan, props and spells. */
@@ -947,13 +951,12 @@ export function* omenTextures(scene: Phaser.Scene): Generator<void, void, void> 
     yield;
   }
   if (has('buff_unity')) return;
-  for (const k of ['omen_fog', 'dust_drop', 'omen_scorch', 'omen_ring']) if (has(k)) scene.textures.remove(k);
+  for (const k of ['omen_fog', 'omen_scorch', 'omen_ring']) if (has(k)) scene.textures.remove(k);
   const fogs = [0, 1, 2].map(fogPuff);
   const fw = fogs[0].w;
   const fh = fogs[0].h;
   const fog = scene.textures.addCanvas('omen_fog', toCanvas(fw * 3, fh, sideBySide(fw, fh, fogs.map((b) => b.data))))!;
   fogs.forEach((_, i) => fog.add(i, 0, i * fw, 0, fw, fh));
-  scene.textures.addCanvas('dust_drop', dustDrop().toCanvas());
   scene.textures.addCanvas('omen_scorch', scorchMark().toCanvas());
   scene.textures.addCanvas('omen_ring', runeRing().toCanvas());
   for (const id of ['blood', 'imp', 'meteor', 'golden', 'fog', 'rift', 'merchant', 'shrine'] as OmenIcon[]) {
@@ -1197,7 +1200,7 @@ export type ArenaJob = 'cosmos' | 'island' | 'rift' | 'spirit' | 'temple' | 'dee
 export const ARENA_JOBS: Record<ArenaJob, { done: string; steps: (scene: Phaser.Scene) => Generator<void, void, void> }> = {
   cosmos: { done: 'cosmos_streak', steps: cosmosTextures },
   island: { done: 'isle_bird', steps: islandTextures },
-  rift: { done: 'blessing_fortune', steps: riftTextures },
+  rift: { done: 'rift_done', steps: riftTextures },
   spirit: { done: 'sd_lane', steps: spiritTextures },
   temple: { done: 'et_lane', steps: templeTextures },
   deep: { done: 'gd_lane', steps: deepTextures },
