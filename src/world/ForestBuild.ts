@@ -7,7 +7,7 @@ import { session, type Msg } from '../net/session';
 import type { WorldScene } from '../scenes/WorldScene';
 import type { Forest } from './Forest';
 import { CHUNK } from './forestGen';
-import { ForestEdits, MAX_CLEARED, MAX_THINGS, MAX_WALLS, cellKey, forestPart, forestWall } from './forestEdits';
+import { ForestEdits, MAX_CLEARED, MAX_THINGS, MAX_WALLS, cellKey, forestPart, forestWall, wardReach } from './forestEdits';
 import { CELL, PLOT_X, PLOT_Y } from './homeLayout';
 import { extent, partById, type BuildTab, type PartDef } from './homeParts';
 
@@ -32,6 +32,8 @@ const SEND_MS = 700;
 const PIECE = 12000;
 /** A cleared thing's tint while the eraser is over it. */
 const DOOMED = 0xff8a7a;
+/** The ring a ward lantern shows while being placed: how far it keeps the creatures off. */
+const WARD_RING = 0xa8e8ff;
 
 type Img = Phaser.GameObjects.Image;
 
@@ -168,6 +170,19 @@ export class ForestBuild {
     g.fillRect(fx * CELL, fy * CELL, size.w * CELL, size.h * CELL);
     g.lineStyle(1, col, 0.85);
     g.strokeRect(fx * CELL + 0.5, fy * CELL + 0.5, size.w * CELL - 1, size.h * CELL - 1);
+    const part = thing ? partById(thing.id) : null;
+    if (part?.ward) {
+      // A ward shows how far it keeps the creatures off: a soft moonlit ring.
+      const r = wardReach(part, size.w, size.h);
+      const mx = (fx + size.w / 2) * CELL;
+      const my = (fy + size.h / 2) * CELL;
+      g.fillStyle(WARD_RING, 0.07);
+      g.fillCircle(mx, my, r);
+      g.lineStyle(1, WARD_RING, 0.55);
+      g.strokeCircle(mx, my, r);
+      g.lineStyle(1, WARD_RING, 0.18);
+      g.strokeCircle(mx, my, r - 3);
+    }
     if (thing) {
       const look = thingLook({ id: thing.id, x: fx, y: fy, flip: build.flip && !!thing.flip, turn });
       this.ghost

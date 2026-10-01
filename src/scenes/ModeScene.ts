@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Bitmap, bayer } from '../art/bitmap';
 import { hex, type RGB } from '../art/pixel';
 import { ARENAS_SIZE, SIDE_SIZE, type ModeArt, paintArenas, paintAuto, paintHome } from '../art/modes';
+import { warmHomeSoon } from '../art/homeArt';
 import { menuZoom } from '../game/display';
 import { BUTTON_PLAIN, PANEL_PICKED, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
@@ -17,6 +18,9 @@ const F = 4;
 /** How far a tile rises as it comes in, and how long between one tile and the next. */
 const ENTER_RISE = 10;
 const ENTER_STAGGER = 70;
+/** ms a frame spent painting the Home's sheet while the menu is up, and once Home is picked. */
+const HOME_WARM_MS = 4;
+const HOME_WARM_PICKED = 24;
 /** A press further than this (art px) is a drag, not a tap. */
 const TAP_SLOP = 6;
 
@@ -448,6 +452,8 @@ export class ModeScene extends Phaser.Scene {
   private tiles: ModeTile[] = [];
   private focus = 0;
   private leaving = false;
+  /** Home was picked and its sheet is still being painted: it opens once that's done. */
+  private homeWait = false;
   private elapsed = 0;
 
   constructor() {
@@ -456,6 +462,7 @@ export class ModeScene extends Phaser.Scene {
 
   create(): void {
     this.leaving = false;
+    this.homeWait = false;
     this.elapsed = 0;
     this.focus = 0;
     const cam = this.cameras.main.setOrigin(0, 0).setAlpha(0);
@@ -506,6 +513,13 @@ export class ModeScene extends Phaser.Scene {
     const dt = Math.min(0.1, delta / 1000);
     this.elapsed += dt;
     for (const t of this.tiles) t.tick(this.elapsed, dt);
+    // The Home's sheet is painted a little each frame while the menu is up,
+    // more once Home is picked, rather than all at once as the Home opens,
+    // which held the screen black for seconds on a phone.
+    if (warmHomeSoon(this, this.homeWait ? HOME_WARM_PICKED : HOME_WARM_MS) && this.homeWait) {
+      this.homeWait = false;
+      this.openHome();
+    }
   }
 
   private setFocus(i: number): void {
@@ -521,13 +535,19 @@ export class ModeScene extends Phaser.Scene {
       this.leave(() => this.scene.launch('select'));
     } else if (id === 'home') {
       this.leaving = true;
-      this.tweens.add({ targets: this.cameras.main, alpha: 0, duration: 300 });
-      (this.scene.get('home') as HomeScene).playHome();
+      if (warmHomeSoon(this, 0)) this.openHome();
+      else this.homeWait = true;
     } else if (autoBattleReady(this)) {
       this.leave(() => this.scene.launch(AUTO_BATTLE_SCENE));
     } else {
       this.tiles[i].nudge();
     }
+  }
+
+  /** Into the player's Home (its sheet painted). */
+  private openHome(): void {
+    this.tweens.add({ targets: this.cameras.main, alpha: 0, duration: 300 });
+    (this.scene.get('home') as HomeScene).playHome();
   }
 
   /** Fade this page away, run `next`, and stop. */

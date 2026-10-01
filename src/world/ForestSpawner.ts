@@ -7,7 +7,10 @@ import { CHUNK, type FSpot, type ForestGen } from './forestGen';
 // ForestGen.layout), and a spot comes alive when a player walks within reach
 // of its chunk and goes quiet again once every player is far away. A slot is
 // named by its spot's id, so the host and the other players, who grow the
-// same forest from the same seed, agree which creature is which.
+// same forest from the same seed, agree which creature is which. No creature
+// rises within a ward lantern's reach (see ForestEdits.warded): those already
+// out stay out, but once slain, or asleep and woken again, they don't come back
+// while it stands. Online the host decides, so the host's lanterns count.
 
 /** Chunks round each player whose creatures are awake, and past which they sleep again. */
 const WAKE = 2;
@@ -35,6 +38,8 @@ export class ForestSpawner extends Spawner {
   constructor(
     private host: WorldScene,
     private gen: ForestGen,
+    /** Is a spot inside a ward's reach? */
+    private warded: (x: number, y: number) => boolean = () => false,
   ) {
     super(host, [], RESPAWN);
     this.started = host.time.now;
@@ -152,7 +157,7 @@ export class ForestSpawner extends Spawner {
         }
       } else if (!this.follower) {
         s.wait -= dt;
-        if (s.wait <= 0 && !targets.some((t) => Math.hypot(t.x - s.spot.x, t.y - s.spot.y) < KEEP_AWAY)) {
+        if (s.wait <= 0 && !targets.some((t) => Math.hypot(t.x - s.spot.x, t.y - s.spot.y) < KEEP_AWAY) && !this.warded(s.spot.x, s.spot.y)) {
           s.gen++;
           s.monster = this.wakeUp(s);
         }
@@ -174,7 +179,8 @@ export class ForestSpawner extends Spawner {
           for (const spot of this.gen.layout(i, j).spots) {
             if (this.spots.has(spot.id)) continue;
             const s: Slot = { spot, monster: null, gen: 1, wait: 0, net: null, missing: 0 };
-            s.monster = this.wakeUp(s);
+            // A warded spot is kept, empty, and fills as soon as its ward is gone.
+            if (!this.warded(spot.x, spot.y)) s.monster = this.wakeUp(s);
             this.spots.set(spot.id, s);
           }
         }

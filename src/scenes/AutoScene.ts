@@ -34,42 +34,47 @@ import { fpsBottom } from './FpsScene';
 
 // The battlefield is the page: the board and bench are drawn at their own,
 // bigger zoom (a whole number of screen pixels per art pixel, so they stay
-// crisp) in whatever room the slim bars round the edges leave. On a wide
-// screen the bench is a 2x4 dock beside the board and the shop a column on
-// the right; on a tall one the bench sits under the board and the shop runs
-// along the bottom. Whichever lets the board be bigger wins.
+// crisp) in whatever room the edges leave. The shop is always a tray along
+// the bottom: level on its left, the five cards, gold and reroll on its
+// right. On a wide screen the bench is a 2x4 dock beside the board, with the
+// players, the round and Fight in a slim column on the left and the traits
+// on the right; on a tall one the bench sits under the board and the players
+// and traits go across the top. Whichever lets the board be bigger wins.
 
 /** Room over the board's top row for the heroes standing there (world px). */
 const HEAD_ROOM = 14;
 /** How much of the rock hanging under the dais must show in the wide layout. */
 const UNDER_SHOW = 6;
-/** A top bar row. */
+/** A top bar row (the tall layout's). */
 const TOP_H = 15;
-/** The wide layout's shop column, and the narrowest trait column beside the board. */
-const COL_W = 80;
+/** The wide layout's left column (players, round, Fight), and the narrowest trait column on the right. */
+const LEFT_W = 100;
 const TRAIT_MIN = 36;
-/** The level and gold rows over and under the shop's cards. */
-const ROW_H = 19;
-/** A shop card's height in the tall layout, and the bounds in the wide one. */
+/** The tray's level and gold blocks either side of the cards: a readout over a button. */
+const BLOCK_W = 72;
+const BLOCK_H = 40;
+/** Shop cards: as tall as the blocks in the wide tray; in the tall one, from this up to the max as room allows. */
 const CARD_H_ROW = 46;
 const CARD_H_ROW_MAX = 64;
-const CARD_H_MIN = 30;
-const CARD_H_MAX = 46;
+const CARD_W_MAX = 78;
 const GAP = 2;
 /** The round and clock: two lines and a bar in the wide layout's trait column, one line between the players in the tall one. */
 const BANNER_H = 24;
-const BANNER_W_TALL = 56;
-/** About half the FPS counter's width (page px), kept clear in the top bar's middle while it shows. */
-const FPS_HALF = 55;
+/** A player's plate. */
+const PLATE_H = 14;
+const BANNER_W_TALL = 66;
 const PAD = 3;
-const FIGHT_H = 18;
+const FIGHT_H = 20;
 /** The tall layout's trait chips. */
-const CHIP_W = 31;
+const CHIP_W = 34;
 const CHIP_H = 11;
 const TRAIT_ROW = 11;
 /** The hero card that pops up for a tapped piece (or a hovered shop card). */
 const INFO_W = 142;
 const INFO_H = 106;
+/** How far over and under its feet (world px) a press still picks up a hero. */
+const PICK_ABOVE = 26;
+const PICK_BELOW = 5;
 /** A press must move this far (art px) to become a drag. */
 const DRAG_SLOP = 4;
 /** Seconds the result stands before the next round. */
@@ -302,6 +307,7 @@ export class AutoScene extends Phaser.Scene {
   // The page.
   private hud!: Phaser.GameObjects.Container;
   private plates!: Phaser.GameObjects.Graphics;
+  private trayG!: Phaser.GameObjects.Graphics;
   private meText!: Phaser.GameObjects.BitmapText[];
   private rivalText!: Phaser.GameObjects.BitmapText[];
   private hearts: Phaser.GameObjects.Image[] = [];
@@ -317,7 +323,9 @@ export class AutoScene extends Phaser.Scene {
   private cards: Card[] = [];
   private lvlBox!: Phaser.GameObjects.Container;
   private goldBox!: Phaser.GameObjects.Container;
-  private lvlW = 0;
+  private blockW = BLOCK_W;
+  /** The shop tray along the bottom, page px. */
+  private tray = new Phaser.Geom.Rectangle();
   private lvlText!: Phaser.GameObjects.BitmapText;
   private xpText!: Phaser.GameObjects.BitmapText;
   private xpBar!: Phaser.GameObjects.Graphics;
@@ -335,8 +343,6 @@ export class AutoScene extends Phaser.Scene {
   /** The tall layout's second top row, under the mute button; the round banner's spot. */
   private row2 = TOP_H;
   private bannerAt = { x: 0, y: 0, w: 0 };
-  /** The mute button's corner, page px. */
-  private corner = 0;
   private overlay: Phaser.GameObjects.Container | null = null;
   private lobby: Phaser.GameObjects.Container | null = null;
   private selected: { key: string; star: number; look: string } | null = null;
@@ -402,6 +408,7 @@ export class AutoScene extends Phaser.Scene {
     kb?.on('keydown-F', () => this.buyXp());
     kb?.on('keydown-SPACE', () => this.toggleReady());
     kb?.on('keydown-ESC', () => this.leave());
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, this.onDown, this);
     this.input.on(Phaser.Input.Events.POINTER_MOVE, this.onMove, this);
     this.input.on(Phaser.Input.Events.POINTER_UP, this.onUp, this);
     this.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, this.onUp, this);
@@ -421,6 +428,7 @@ export class AutoScene extends Phaser.Scene {
 
   private buildHud(): void {
     this.hud = this.add.container(0, 0);
+    this.trayG = this.add.graphics();
     this.plates = this.add.graphics();
     this.meText = [pixelText(this, 0, 0, ''), pixelText(this, 0, 0, '', GOLD), pixelText(this, 0, 0, '', LAVENDER)];
     this.rivalText = [pixelText(this, 0, 0, ''), pixelText(this, 0, 0, '', GOLD), pixelText(this, 0, 0, '', LAVENDER)];
@@ -455,33 +463,38 @@ export class AutoScene extends Phaser.Scene {
       this.hovered = null;
       this.refreshInfo();
     });
-    this.hud.add([this.plates, ...this.meText, ...this.rivalText, ...this.hearts, this.traitList, this.banner, this.roundText, this.phaseText, this.leaveBtn, this.lvlBox, this.goldBox, ...this.cards, this.sellZone, this.infoBg, this.info, this.infoHit]);
+    this.hud.add([this.trayG, this.plates, ...this.meText, ...this.rivalText, ...this.hearts, this.traitList, this.banner, this.roundText, this.phaseText, this.leaveBtn, this.lvlBox, this.goldBox, ...this.cards, this.sellZone, this.infoBg, this.info, this.infoHit]);
   }
 
-  /** The level row (level, xp toward the next, buy xp) and the gold row (gold, reroll), `lw` and `gw` wide. */
-  private buildRows(lw: number, gw: number): void {
-    this.lvlW = lw;
+  /**
+   * The tray's two blocks, `w` wide: the level (LVL 5, xp toward the next on a
+   * bar, a button to buy xp) and the gold (a big readout, the reroll button).
+   */
+  private buildBlocks(w: number): void {
+    this.blockW = w;
     this.lvlBox.removeAll(true);
     this.goldBox.removeAll(true);
-    const lvlBg = this.add.image(0, 0, panelTexture(this, `ab_lvl_${lw}`, lw, ROW_H, PANEL)).setOrigin(0);
-    this.lvlText = pixelText(this, 4, 6, '', INK);
+    const bw = w - 6;
+    const lvlBg = this.add.image(0, 0, panelTexture(this, `ab_lvl_${w}`, w, BLOCK_H, PANEL)).setOrigin(0);
+    this.lvlText = pixelText(this, 4, 4, '', INK);
     this.xpBar = this.add.graphics();
-    this.xpText = pixelText(this, 16, 3, '', LAVENDER);
-    this.xpBtn = new PixelButton(this, `XP ${XP_COST}`, 36, 15, BUTTON_PLAIN, 'ab_xp', () => this.buyXp());
-    this.xpBtn.setIcon('ab_coin').place(lw - 38, 2);
+    this.xpText = pixelText(this, 0, 4, '', LAVENDER);
+    this.xpBtn = new PixelButton(this, `XP ${XP_COST}`, bw, 17, BUTTON_PLAIN, `ab_xp_${bw}`, () => this.buyXp());
+    this.xpBtn.setIcon('ab_coin').place(3, BLOCK_H - 20);
     this.lvlBox.add([lvlBg, this.lvlText, this.xpBar, this.xpText, this.xpBtn]);
-    const goldBg = this.add.image(0, 0, panelTexture(this, `ab_gold_${gw}`, gw, ROW_H, PANEL)).setOrigin(0);
-    const coin = this.add.image(5, 6, 'ab_coin').setOrigin(0);
-    this.goldText = pixelText(this, 14, 6, '', GOLD);
-    this.rollBtn = new PixelButton(this, `Roll ${REROLL_COST}`, 46, 15, BUTTON_GOLD, 'ab_roll', () => this.reroll());
-    this.rollBtn.setIcon('ab_coin').place(gw - 48, 2);
+    const goldBg = this.add.image(0, 0, panelTexture(this, `ab_gold_${w}`, w, BLOCK_H, PANEL)).setOrigin(0);
+    const coin = this.add.image(0, 3, 'ab_coin').setOrigin(0).setScale(2);
+    this.goldText = pixelText(this, 0, 3, '', GOLD, 2);
+    this.rollBtn = new PixelButton(this, `Roll ${REROLL_COST}`, bw, 17, BUTTON_GOLD, `ab_roll_${bw}`, () => this.reroll());
+    this.rollBtn.setIcon('ab_coin').place(3, BLOCK_H - 20);
     this.goldBox.add([goldBg, coin, this.goldText, this.rollBtn]);
+    this.goldBox.setData('coin', coin);
   }
 
-  /** The Fight (or Ready) button, `w` wide at (x, y). */
-  private buildReady(w: number, x: number, y: number): void {
+  /** The Fight (or Ready) button, `w` x `h` at (x, y). */
+  private buildReady(w: number, h: number, x: number, y: number): void {
     this.readyBtn?.destroy();
-    this.readyBtn = new PixelButton(this, 'Fight!', w, FIGHT_H, BUTTON_GOLD, `ab_ready_${w}`, () => this.toggleReady()).place(x, y);
+    this.readyBtn = new PixelButton(this, 'Fight!', w, h, BUTTON_GOLD, `ab_ready_${w}x${h}`, () => this.toggleReady()).place(x, y);
     this.hud.add(this.readyBtn);
   }
 
@@ -499,7 +512,7 @@ export class AutoScene extends Phaser.Scene {
     this.sky.setTexture(autoBackdrop(this, vw + 1, vh + 1));
 
     // Keep clear of the mute button in the top-right corner.
-    const corner = (this.corner = Math.ceil(soundCorner(width, height) / z));
+    const corner = Math.ceil(soundCorner(width, height) / z);
     this.row2 = Math.max(TOP_H, corner);
 
     // Both layouts, sized in world px: the board with room over it for heads, and the bench.
@@ -512,10 +525,12 @@ export class AutoScene extends Phaser.Scene {
     const tallH = HEAD_ROOM + tilesH + 3 + BENCH_SLOT + 6;
     // The biggest whole number of screen px per world px that fits the room each leaves.
     const fit = (w: number, h: number, roomW: number, roomH: number) => Math.max(1, Math.floor(Math.min((roomW * z) / w, (roomH * z) / h)));
+    // The tray: one row in the wide layout (blocks and cards side by side), two in the tall (blocks and Fight, then the cards).
+    const trayWide = PAD + BLOCK_H + PAD;
     const tallTop = this.row2 + TOP_H + CHIP_H * 2 + 4;
-    const shopTall = ROW_H + GAP + CARD_H_ROW + PAD;
-    const nWide = fit(wideW, wideH, vw - PAD * 4 - COL_W - TRAIT_MIN, vh - TOP_H - 1);
-    const nTall = fit(tallW, tallH, vw - 2, vh - tallTop - shopTall);
+    const trayTallMin = PAD + BLOCK_H + GAP + CARD_H_ROW + PAD;
+    const nWide = fit(wideW, wideH, vw - PAD * 4 - LEFT_W - TRAIT_MIN, vh - trayWide - 2);
+    const nTall = fit(tallW, tallH, vw - 2, vh - tallTop - trayTallMin);
     this.wide = nWide > nTall || (nWide === nTall && vw >= vh);
     const n = this.wide ? nWide : nTall;
     const s = (this.s = n / z);
@@ -552,65 +567,54 @@ export class AutoScene extends Phaser.Scene {
     this.torches.forEach((t, i) => t.setPosition(corners[i][0], corners[i][1]));
 
     if (this.wide) {
-      // A one-row top bar; the shop's column on the left, next to the bench dock (bought heroes land close by);
-      // the world in the middle; the round and the traits on the right, under the mute button.
-      this.topH = TOP_H;
+      // The board fills the height over the tray. Left: Leave, the players, the round and Fight. Right, under the
+      // mute button: the traits.
+      this.topH = 0;
       const ww = Math.ceil(wideW * s);
-      const left = PAD + COL_W + PAD;
+      const left = PAD + LEFT_W + PAD;
       const right = vw - PAD - TRAIT_MIN - PAD;
       this.wx = Math.max(left, Math.round((left + right - ww) / 2));
-      this.wy = Math.round(TOP_H + Math.max(0, (vh - TOP_H - wideH * s) / 2));
+      const trayY = vh - trayWide;
+      this.wy = Math.round(Math.max(1, (trayY - wideH * s) / 2));
       const tx = this.wx + ww + PAD;
-      const ty = Math.max(TOP_H, corner) + PAD;
-      this.bannerAt = { x: tx, y: ty, w: vw - PAD - tx };
-      this.traitRect.setTo(tx, ty + BANNER_H + GAP, vw - PAD - tx, vh - PAD - ty - BANNER_H - GAP);
-      // The column: level, five cards, gold, Fight.
-      let y = TOP_H + PAD;
-      this.buildRows(COL_W, COL_W);
-      this.lvlBox.setPosition(PAD, y);
-      y += ROW_H + GAP;
-      const cardsRoom = vh - PAD - FIGHT_H - GAP - ROW_H - GAP - y;
-      const ch = Math.max(CARD_H_MIN, Math.min(CARD_H_MAX, Math.floor((cardsRoom - GAP * (SHOP_SIZE - 1)) / SHOP_SIZE)));
-      this.shopRect.setTo(PAD, y, COL_W, ch * SHOP_SIZE + GAP * (SHOP_SIZE - 1));
-      this.cards.forEach((c, i) => {
-        c.resize(COL_W, ch);
-        c.setPosition(PAD, y + (ch + GAP) * i);
-      });
-      y += this.shopRect.height + GAP;
-      this.goldBox.setPosition(PAD, y);
-      y += ROW_H + GAP;
-      this.buildReady(COL_W, PAD, Math.min(y, vh - PAD - FIGHT_H));
+      const ty = corner + PAD;
+      this.traitRect.setTo(tx, ty, vw - PAD - tx, trayY - GAP - ty);
+      this.bannerAt = { x: PAD, y: PAD + 13 + GAP + 2 * (PLATE_H + GAP), w: LEFT_W };
+      this.buildReady(LEFT_W, FIGHT_H, PAD, trayY - GAP - FIGHT_H);
+      // The tray: level, five cards, gold.
+      this.tray.setTo(0, trayY, vw, vh - trayY);
+      this.buildBlocks(BLOCK_W);
+      this.lvlBox.setPosition(PAD, trayY + PAD);
+      this.goldBox.setPosition(vw - PAD - BLOCK_W, trayY + PAD);
+      const room = vw - PAD * 2 - BLOCK_W * 2 - GAP * 4;
+      const cw = Math.min(CARD_W_MAX, Math.floor((room - GAP * (SHOP_SIZE - 1)) / SHOP_SIZE));
+      this.placeCards(cw, BLOCK_H, trayY + PAD);
       this.infoAt = { x: vw - PAD - INFO_W, y: ty };
     } else {
       // Leave (and the mute button) on the first row; the players and the round on the second; a row of trait chips;
-      // the world; then the shop along the bottom, its cards as tall as the room left over allows.
+      // the world; then the tray, its cards as tall as the room left over allows.
       this.topH = this.row2 + TOP_H;
       this.bannerAt = { x: Math.round((vw - BANNER_W_TALL) / 2), y: this.row2, w: BANNER_W_TALL };
       this.traitRect.setTo(PAD, this.topH + 2, vw - PAD * 2, CHIP_H * 2 + 1);
-      const spare = vh - tallTop - shopTall - Math.ceil(tallH * s);
+      const spare = vh - tallTop - trayTallMin - Math.ceil(tallH * s);
       const ch = CARD_H_ROW + Math.max(0, Math.min(CARD_H_ROW_MAX - CARD_H_ROW, Math.floor(spare / 2)));
-      const shopH = ROW_H + GAP + ch + PAD;
+      const trayH = PAD + BLOCK_H + GAP + ch + PAD;
+      const trayY = vh - trayH;
+      this.tray.setTo(0, trayY, vw, trayH);
       const ww = Math.ceil(tallW * s);
       this.wx = Math.round((vw - ww) / 2);
-      const room = vh - shopH - tallTop;
-      this.wy = Math.round(tallTop + Math.max(0, (room - tallH * s) / 2));
-      const fightW = 52;
-      const rowW = Math.floor((vw - PAD * 2 - fightW - GAP * 2) / 2);
-      let y = vh - shopH;
-      this.buildRows(rowW, rowW);
-      this.lvlBox.setPosition(PAD, y);
-      this.goldBox.setPosition(PAD + rowW + GAP, y);
-      this.buildReady(vw - PAD * 2 - rowW * 2 - GAP * 2, PAD + (rowW + GAP) * 2, y);
-      y += ROW_H + GAP;
+      this.wy = Math.round(tallTop + Math.max(0, (trayY - tallTop - tallH * s) / 2));
+      const fightW = 56;
+      const bw = Math.floor((vw - PAD * 2 - fightW - GAP * 2) / 2);
+      this.buildBlocks(bw);
+      this.lvlBox.setPosition(PAD, trayY + PAD);
+      this.goldBox.setPosition(PAD + bw + GAP, trayY + PAD);
+      this.buildReady(vw - PAD * 2 - bw * 2 - GAP * 2, BLOCK_H, PAD + (bw + GAP) * 2, trayY + PAD);
       const cw = Math.floor((vw - PAD * 2 - GAP * (SHOP_SIZE - 1)) / SHOP_SIZE);
-      const x0 = Math.round((vw - (cw * SHOP_SIZE + GAP * (SHOP_SIZE - 1))) / 2);
-      this.shopRect.setTo(x0, y, cw * SHOP_SIZE + GAP * (SHOP_SIZE - 1), ch);
-      this.cards.forEach((c, i) => {
-        c.resize(cw, ch);
-        c.setPosition(x0 + (cw + GAP) * i, y);
-      });
+      this.placeCards(cw, ch, trayY + PAD + BLOCK_H + GAP);
       this.infoAt = { x: Math.round((vw - INFO_W) / 2), y: this.topH + 2 };
     }
+    this.drawTray();
     this.world.setPosition(this.wx, this.wy);
     const r = this.shopRect;
     this.sellZone.removeAll(true);
@@ -619,13 +623,43 @@ export class AutoScene extends Phaser.Scene {
     this.infoBg.setPosition(this.infoAt.x, this.infoAt.y);
     this.info.setPosition(this.infoAt.x, this.infoAt.y);
     this.infoHit.setPosition(this.infoAt.x, this.infoAt.y);
-    this.leaveBtn.place(PAD, 1);
+    this.leaveBtn.place(PAD, this.wide ? PAD : 1);
     this.syncPieces();
     this.refreshHud();
     if (this.lobby && this.phase === 'lobby') this.showLobby();
     if (this.overlay) {
       const c = this.boardCentre();
       this.overlay.setPosition(c.x, c.y);
+    }
+  }
+
+  /** The five cards, `cw` x `ch`, in a row centred across the page at `y`. */
+  private placeCards(cw: number, ch: number, y: number): void {
+    const rowW = cw * SHOP_SIZE + GAP * (SHOP_SIZE - 1);
+    const x0 = Math.round((this.vw - rowW) / 2);
+    this.shopRect.setTo(x0, y, rowW, ch);
+    this.cards.forEach((c, i) => {
+      c.resize(cw, ch);
+      c.setPosition(x0 + (cw + GAP) * i, y);
+    });
+  }
+
+  /** The tray under the shop: dark wood-stained stone with a gilt lip, shading the board's foot as it rises over it. */
+  private drawTray(): void {
+    const g = this.trayG.clear();
+    const r = this.tray;
+    // A soft shadow up onto what's behind.
+    for (let i = 1; i <= 4; i++) g.fillStyle(0x0b0818, 0.1 * (5 - i)).fillRect(r.x, r.y - i, r.width, 1);
+    const bands = [0x1e1838, 0x1a1532, 0x17122c, 0x140f27, 0x110d22];
+    const bh = r.height / bands.length;
+    bands.forEach((c, i) => g.fillStyle(c, 0.96).fillRect(r.x, Math.floor(r.y + i * bh), r.width, Math.ceil(bh) + 1));
+    g.fillStyle(0x8a4e22, 1).fillRect(r.x, r.y, r.width, 1);
+    g.fillStyle(0xd69a3a, 1).fillRect(r.x, r.y + 1, r.width, 1);
+    g.fillStyle(0xffe08a, 0.35).fillRect(r.x, r.y + 2, r.width, 1);
+    // Rivets along the lip.
+    for (let x = 6; x < r.width - 4; x += 24) {
+      g.fillStyle(0x3a2410, 1).fillRect(r.x + x, r.y + 3, 2, 1);
+      g.fillStyle(0xffe08a, 0.5).fillRect(r.x + x, r.y + 3, 1, 1);
     }
   }
 
@@ -644,9 +678,11 @@ export class AutoScene extends Phaser.Scene {
     if (!this.me) return;
     const g = this.plates.clear();
     const vw = this.vw;
-    g.fillStyle(0x0b0818, 0.72).fillRect(0, 0, vw, this.topH);
-    g.fillStyle(0x0b0818, 0.35).fillRect(0, this.topH, vw, 1);
-    g.fillStyle(0xb8742c, 0.8).fillRect(0, this.topH - 1, vw, 1);
+    if (this.topH) {
+      g.fillStyle(0x0b0818, 0.72).fillRect(0, 0, vw, this.topH);
+      g.fillStyle(0x0b0818, 0.35).fillRect(0, this.topH, vw, 1);
+      g.fillStyle(0xb8742c, 0.8).fillRect(0, this.topH - 1, vw, 1);
+    }
     const plate = (i: number, p: { name: string; hp: number; level: number }, t: Phaser.GameObjects.BitmapText[], x: number, y: number, w: number, mine: boolean) => {
       g.fillStyle(mine ? 0x223a6a : 0x5a2234, 0.9).fillRect(x, y + 1, w, 12);
       g.fillStyle(mine ? 0x6fb8ff : 0xff6a7a, 1).fillRect(x, y + 1, 1, 12);
@@ -661,12 +697,10 @@ export class AutoScene extends Phaser.Scene {
     };
     const me = { name: this.me.name, hp: this.me.hp, level: this.me.level };
     if (this.wide) {
-      const mid = settings.values.showFps ? FPS_HALF : 0;
-      const lx = PAD + this.leaveBtn.boxW + 4;
-      const rEnd = vw - this.corner - 2;
-      const w = Math.max(60, Math.min(110, Math.floor(vw / 2 - mid - 4 - lx), Math.floor(rEnd - (vw / 2 + mid) - 4)));
-      plate(0, me, this.meText, lx, 0, w, true);
-      plate(1, this.rival, this.rivalText, rEnd - w, 0, w, false);
+      // Down the left column under Leave: you, the rival, then the round.
+      const y = PAD + 13 + GAP;
+      plate(0, me, this.meText, PAD, y, LEFT_W, true);
+      plate(1, this.rival, this.rivalText, PAD, y + PLATE_H + GAP, LEFT_W, false);
     } else {
       const w = Math.floor((vw - PAD * 2 - BANNER_W_TALL - 8) / 2);
       plate(0, me, this.meText, PAD, this.row2, w, true);
@@ -711,16 +745,23 @@ export class AutoScene extends Phaser.Scene {
     this.hud.setVisible(playing || this.phase === 'over');
     this.drawTop();
     // Level and gold.
-    this.lvlText.setText(`L${this.me.level}`);
+    const bw = this.blockW;
+    this.lvlText.setText(`LVL ${this.me.level}`);
     const need = XP_NEXT[this.me.level];
-    const g = this.xpBar.clear();
-    // The bar runs from after the level to the XP button.
-    const xw = this.lvlW - 38 - 16 - 3;
-    g.fillStyle(0x1a1430, 1).fillRect(16, 12, xw, 3);
-    if (need) g.fillStyle(0x4aa6ff, 1).fillRect(16, 12, Math.round((xw * this.me.xp) / need), 3);
-    else g.fillStyle(0xffc94a, 1).fillRect(16, 12, xw, 3);
     this.xpText.setText(need ? `${this.me.xp}/${need}` : 'MAX');
+    this.xpText.setX(bw - 4 - this.xpText.width);
+    const g = this.xpBar.clear();
+    // The xp toward the next level, on a bar under the readout.
+    g.fillStyle(0x0b0818, 1).fillRect(4, 13, bw - 8, 4);
+    g.fillStyle(0x1a1430, 1).fillRect(5, 14, bw - 10, 2);
+    if (need) g.fillStyle(0x4aa6ff, 1).fillRect(5, 14, Math.round(((bw - 10) * this.me.xp) / need), 2);
+    else g.fillStyle(0xffc94a, 1).fillRect(5, 14, bw - 10, 2);
+    // Gold, big, centred over the reroll.
     this.goldText.setText(`${this.me.gold}`);
+    const coin = this.goldBox.getData('coin') as Phaser.GameObjects.Image | undefined;
+    const gx = Math.round((bw - (12 + 3 + this.goldText.width)) / 2);
+    coin?.setPosition(gx, 4);
+    this.goldText.setPosition(gx + 15, 2);
     const shopOpen = this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result';
     this.xpBtn.setEnabled(shopOpen && this.me.gold >= XP_COST && this.me.level < MAX_LEVEL).setAlpha(this.me.gold >= XP_COST && this.me.level < MAX_LEVEL ? 1 : 0.5);
     this.rollBtn.setEnabled(shopOpen && this.me.gold >= REROLL_COST).setAlpha(this.me.gold >= REROLL_COST ? 1 : 0.5);
@@ -888,16 +929,18 @@ export class AutoScene extends Phaser.Scene {
       ['Create room', () => this.openRoom()],
       ['Join room', () => this.joinRoom()],
     ];
-    const buttons = labels.map(([label, fn], i) => {
-      if (this.wide) {
-        const top = Math.round(r.y + r.height / 2 - (18 * 3 + 6 * 2) / 2);
-        return new PixelButton(this, label, r.width, 18, BUTTON_GOLD, `ab_l_${label}_${r.width}`, fn).place(r.x, top + i * 24);
-      }
-      const bw = Math.floor((this.vw - PAD * 2 - GAP * 2) / 3);
-      return new PixelButton(this, label, bw, 18, BUTTON_GOLD, `ab_l_${label}_${bw}`, fn).place(PAD + i * (bw + GAP), r.y + r.height - 18);
-    });
+    // The buttons in a row where the shop's cards will be, on the tray.
+    const bw = Math.min(100, Math.floor((r.width - GAP * 4) / 3));
+    const bx = Math.round(r.x + (r.width - bw * 3 - GAP * 4) / 2);
+    const buttons = labels.map(([label, fn], i) =>
+      new PixelButton(this, label, bw, 18, BUTTON_GOLD, `ab_l_${label}_${bw}`, fn).place(bx + i * (bw + GAP * 2), Math.round(r.y + (r.height - 18) / 2)),
+    );
+    const tray = this.add.graphics();
+    tray.fillStyle(0x110d22, 0.96).fillRect(this.tray.x, this.tray.y, this.tray.width, this.tray.height);
+    tray.fillStyle(0xd69a3a, 1).fillRect(this.tray.x, this.tray.y + 1, this.tray.width, 1);
+    tray.fillStyle(0x8a4e22, 1).fillRect(this.tray.x, this.tray.y, this.tray.width, 1);
     const back = new PixelButton(this, 'Back', 34, 13, BUTTON_PLAIN, 'ab_back', () => this.leave()).place(PAD, 1);
-    c.add([band, title, ...texts, ...buttons, back]);
+    c.add([band, tray, title, ...texts, ...buttons, back]);
     this.hud.setVisible(false);
   }
 
@@ -1255,7 +1298,6 @@ export class AutoScene extends Phaser.Scene {
         v.hideBars();
         this.layer.add(v);
         this.views.set(p.id, v);
-        this.hookPiece(p, v);
       }
       if (this.press?.piece === p && this.press.dragging) return;
       v.setPosition(Math.round(x), Math.round(y)).setDepth(depth);
@@ -1282,12 +1324,48 @@ export class AutoScene extends Phaser.Scene {
     this.drawMarks(null);
   }
 
-  private hookPiece(p: Piece, v: UnitView): void {
-    v.sprite.setInteractive({ useHandCursor: true, pixelPerfect: false });
-    v.sprite.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, (ptr: Phaser.Input.Pointer) => {
-      if (this.phase === 'lobby' || this.phase === 'over' || this.phase === 'wait') return;
-      this.press = { piece: p, view: v, x: ptr.x / this.z, y: ptr.y / this.z, dragging: false };
-    });
+  /**
+   * A press anywhere: the piece under it, if any, is picked up (a tap shows its
+   * card, a drag moves it). Pieces aren't hit by their sprites, whose frames are
+   * wider than a cell and mostly empty, so neighbours overlapped and the one
+   * drawn on top won; `pieceAt` goes by where each hero stands instead.
+   */
+  private onDown(ptr: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]): void {
+    if (this.phase === 'lobby' || this.phase === 'over' || this.phase === 'wait' || !this.me) return;
+    // A press on a card, a button or the hero card belongs to it.
+    if (over.length) return;
+    const x = ptr.x / this.z;
+    const y = ptr.y / this.z;
+    const piece = this.pieceAt(x, y);
+    const view = piece && this.views.get(piece.id);
+    if (!piece || !view) return;
+    this.press = { piece, view, x, y, dragging: false };
+  }
+
+  /**
+   * The piece a press at page px (x, y) means: of those whose body (a box from
+   * the feet up a hero's height, a cell wide) holds the point, the one whose
+   * middle is nearest.
+   */
+  private pieceAt(x: number, y: number): Piece | null {
+    const w = this.toWorld(x, y);
+    const half = CELL_W / 2;
+    let best: Piece | null = null;
+    let bestD = Infinity;
+    const consider = (p: Piece, at: { x: number; y: number }) => {
+      const dx = Math.abs(w.x - at.x);
+      const dy = w.y - at.y;
+      if (dx > half || dy > PICK_BELOW || dy < -PICK_ABOVE) return;
+      // Nearest to the body's middle, a little up from the feet; across counts for more than up and down.
+      const d = dx * dx + 0.35 * (dy + 9) * (dy + 9);
+      if (d < bestD) {
+        bestD = d;
+        best = p;
+      }
+    };
+    this.me.bench.forEach((p, i) => p && consider(p, this.benchPt(i)));
+    if (!this.fight) for (const { spot, piece } of this.me.boardPieces()) consider(piece, cellPt(this.frame, spot.c, spot.r));
+    return best;
   }
 
   private onMove(ptr: Phaser.Input.Pointer): void {

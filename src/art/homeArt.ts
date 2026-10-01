@@ -13,8 +13,8 @@ import { pixelCanvas } from './canvas';
 import { floorSwatch } from './homeFloors';
 import { CHIMNEY_H, CHIMNEY_W, chimney, roofSwatch, wallFrameH, wallFrames } from './homeWalls';
 import { PROP_ART, PROP_TURNS, blossomTree, bobber, emptyRodBucket, type PropArt } from './homeProps';
-import { DOOR_ICON_H, DOOR_ICON_W, DOOR_OX, DOOR_OY, DOOR_STEP, DOOR_STEPS, doorFrames, doorIcon } from './homeDoor';
-import { gateFrames } from './homeGate';
+import { DOOR_OX, DOOR_OY, DOOR_STEP, DOOR_STEPS, DOOR_WAYS, doorArt, doorFrame, doorIcon } from './homeDoor';
+import { GATE_MATS, GATE_WAYS, gateFrames } from './homeGate';
 import { TREE_SWAY_FPS, TREE_SWAY_FRAMES } from './trees';
 import { hash2 } from './env';
 import { CELL, HomeLayout, PLOT_X, PLOT_Y, type Thing } from '../world/homeLayout';
@@ -55,46 +55,96 @@ function packSheet(list: { name: string; r: RenderedFrame; w: number; h: number 
   return { w: SHEET_W, h: y + row, frames };
 }
 
-/** The Home's sheet and palette samples, made the first time they're needed. */
-export function warmHome(scene: Phaser.Scene): void {
-  if (scene.textures.exists('home')) return;
-  const list: { name: string; r: RenderedFrame; w: number; h: number }[] = [];
-  const add = (name: string, c: PixelCanvas) => list.push({ name, r: c.render(), w: c.w, h: c.h });
+type Entry = { name: string; r: RenderedFrame; w: number; h: number };
 
-  WALLS.forEach((w, m) => {
-    for (const f of wallFrames(m)) add(`w:${w.id}:${f.name}`, f.canvas);
-  });
+/** The sheet being painted, a piece at a time, and the pieces still to paint. */
+let job: { list: Entry[]; tasks: (() => void)[]; next: number } | null = null;
+
+/** Painting the sheet, cut into small pieces (a wall material, a part, a door's way...) so it can be spread over frames. */
+function homeTasks(list: Entry[]): (() => void)[] {
+  const tasks: (() => void)[] = [];
+  const add = (name: string, c: PixelCanvas) => list.push({ name, r: c.render(), w: c.w, h: c.h });
+  const frame = (name: string, r: RenderedFrame) => list.push({ name, r, w: r.w, h: r.h });
+
+  WALLS.forEach((w, m) =>
+    tasks.push(() => {
+      for (const f of wallFrames(m)) add(`w:${w.id}:${f.name}`, f.canvas);
+    }),
+  );
   for (const [id, a] of Object.entries(PROP_ART)) {
-    const flip = !!partById(id)?.flip;
-    for (let f = 0; f < a.frames; f++) {
-      const c = a.draw(f);
-      add(`p:${id}:${f}`, c);
-      if (flip) add(`p:${id}:m${f}`, c.mirrored());
-    }
+    tasks.push(() => {
+      const flip = !!partById(id)?.flip;
+      for (let f = 0; f < a.frames; f++) {
+        const c = a.draw(f);
+        add(`p:${id}:${f}`, c);
+        if (flip) add(`p:${id}:m${f}`, c.mirrored());
+      }
+    });
   }
   // Turned views: right, back, and left (the right one mirrored).
   for (const [id, v] of Object.entries(PROP_TURNS)) {
-    for (let f = 0; f < v.side.frames; f++) {
-      const c = v.side.draw(f);
-      add(`p:${id}:r${f}`, c);
-      add(`p:${id}:l${f}`, c.mirrored());
-    }
-    for (let f = 0; f < v.back.frames; f++) add(`p:${id}:b${f}`, v.back.draw(f));
+    tasks.push(() => {
+      for (let f = 0; f < v.side.frames; f++) {
+        const c = v.side.draw(f);
+        add(`p:${id}:r${f}`, c);
+        add(`p:${id}:l${f}`, c.mirrored());
+      }
+      for (let f = 0; f < v.back.frames; f++) add(`p:${id}:b${f}`, v.back.draw(f));
+    });
   }
   // The cherry trees and their sway (the forest's trees sway from their own sheet, see game/treeSway.ts).
-  for (let v = 0; v < 3; v++) for (let f = 0; f < TREE_SWAY_FRAMES; f++) add(f ? `p:blossom:${v}_${f}` : `p:blossom:${v}`, blossomTree(v, f));
-  add('chimney', chimney());
-  // The fishing rod's pail with its rod out at the water, and the float (see world/Fishing.ts).
-  add('rodbucket', emptyRodBucket(false));
-  add('rodbucket_m', emptyRodBucket(true));
-  add('bobber', bobber());
-  // The door: every way it hangs and every step of its swing, and its picture for the palette (mirrored: hinged on the right).
-  for (const f of doorFrames()) list.push({ name: f.name, r: f.r, w: f.r.w, h: f.r.h });
-  // Garden gates swing on the same steps as doors (world/swing.ts).
-  for (const f of gateFrames(DOOR_STEPS, DOOR_STEP)) list.push({ name: f.name, r: f.r, w: f.r.w, h: f.r.h });
-  list.push({ name: 'p:door:0', r: doorIcon(0), w: DOOR_ICON_W, h: DOOR_ICON_H });
-  list.push({ name: 'p:door:m0', r: doorIcon(1), w: DOOR_ICON_W, h: DOOR_ICON_H });
+  for (let v = 0; v < 3; v++) for (let f = 0; f < TREE_SWAY_FRAMES; f++) tasks.push(() => add(f ? `p:blossom:${v}_${f}` : `p:blossom:${v}`, blossomTree(v, f)));
+  tasks.push(() => {
+    add('chimney', chimney());
+    // The fishing rod's pail with its rod out at the water, and the float (see world/Fishing.ts).
+    add('rodbucket', emptyRodBucket(false));
+    add('rodbucket_m', emptyRodBucket(true));
+    add('bobber', bobber());
+    // The door's picture for the palette (mirrored: hinged on the right).
+    frame('p:door:0', doorIcon(0));
+    frame('p:door:m0', doorIcon(1));
+  });
+  // The door: every way it hangs and every step of its swing; and the garden gates, on the same steps (world/swing.ts).
+  for (const way of DOOR_WAYS) for (let hinge = 0; hinge < 2; hinge++) tasks.push(() => {
+    for (let s = 0; s < DOOR_STEPS; s++) frame(doorFrame(way, hinge, s), doorArt(way, hinge, s * DOOR_STEP));
+  });
+  for (const mat of GATE_MATS) for (const way of GATE_WAYS) tasks.push(() => {
+    for (const f of gateFrames(DOOR_STEPS, DOOR_STEP, mat, way)) frame(f.name, f.r);
+  });
+  return tasks;
+}
 
+/**
+ * Paint the Home's sheet for at most about `budget` ms, carrying on where
+ * the last call stopped: the menus warm it a little each frame before the
+ * Home is opened, as painting it at once holds the screen black for
+ * seconds on a phone. True once it's made.
+ */
+export function warmHomeSoon(scene: Phaser.Scene, budget: number): boolean {
+  if (scene.textures.exists('home')) return true;
+  if (!job) {
+    const list: Entry[] = [];
+    job = { list, tasks: homeTasks(list), next: 0 };
+  }
+  const end = performance.now() + budget;
+  while (job.next < job.tasks.length) {
+    job.tasks[job.next++]();
+    if (performance.now() >= end) break;
+  }
+  if (job.next < job.tasks.length) return false;
+  const list = job.list;
+  job = null;
+  finishHome(scene, list);
+  return true;
+}
+
+/** The Home's sheet and palette samples, made the first time they're needed (finishing any warming begun). */
+export function warmHome(scene: Phaser.Scene): void {
+  warmHomeSoon(scene, Infinity);
+}
+
+/** Pack the painted pieces on the sheet and register it, its animations and the palette's samples. */
+function finishHome(scene: Phaser.Scene, list: Entry[]): void {
   const sheet = packSheet(list);
   const W = sheet.w;
   const H = sheet.h;
