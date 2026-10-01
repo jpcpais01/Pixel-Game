@@ -6,7 +6,7 @@ import { collection } from '../game/collection';
 import { account } from '../game/cloud';
 import { sound } from '../audio';
 import { titleBitmap } from '../art/font';
-import { autoBackdrop, autoBench, autoBoard, autoIcons, BENCH_SLOT, boardSize, CELL_H, CELL_W, FACE, RIM, traitIcons } from '../art/autoArt';
+import { autoBackdrop, autoBench, autoBoard, autoCloud, autoIcons, BENCH_SLOT, boardSize, CELL_H, CELL_W, FACE, RIM, traitIcons } from '../art/autoArt';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PixelButton, panelTexture, pixelText, type PanelStyle } from '../ui/widgets';
 import { hex } from '../art/pixel';
 import { cropToWindow, fitLine } from './SelectScene';
@@ -99,6 +99,22 @@ const SHINE_W = 5;
 const DRAG_SLOP = 4;
 /** Seconds the result stands before the next round. */
 const RESULT_SECONDS = 2.6;
+/**
+ * Big blows shake the battlefield (the board and bench), never the page: the
+ * HUD, tray and traits keep still. A shake's strength (the kits' 0.002 to
+ * 0.005) times this is its first jolt in screen px, easing to nothing, with a
+ * new jolt this often (ms).
+ */
+const QUAKE_PX = 750;
+const QUAKE_STEP = 33;
+/**
+ * Clouds drift between the board and the land far below, their shadows on
+ * the land behind them (offset: the land is a long way down). Speeds in
+ * page px a second; nearer (bigger, faster) ones pass over farther ones.
+ */
+const CLOUDS = 6;
+const CLOUD_SPEED = [5, 9];
+const CLOUD_SHADOW = { x: -22, y: 30, alpha: 0.2 };
 /** Seconds a finished fight lingers on its winners' cheer. */
 const LINGER = 1.3;
 /** Gems for winning a whole match. */
@@ -435,10 +451,16 @@ export class AutoScene extends Phaser.Scene {
 
   // The world: the board, bench, heroes and effects, drawn at their own zoom `s` (world px to page px) from (wx, wy).
   private sky!: Phaser.GameObjects.Image;
+  private clouds: { img: Phaser.GameObjects.Image; shade: Phaser.GameObjects.Image; v: number }[] = [];
   private world!: Phaser.GameObjects.Container;
   private s = 1;
   private wx = 0;
   private wy = 0;
+  /** The battlefield's shake: when it began and ends, its first jolt (screen px), and when it last jolted. */
+  private quakeAt = 0;
+  private quakeEnd = 0;
+  private quakePx = 0;
+  private quakeStep = 0;
   /** The wide layout (bench beside the board, shop on the right), else the tall one. */
   private wide = true;
   private benchCols = BENCH_SIZE;
@@ -567,6 +589,16 @@ export class AutoScene extends Phaser.Scene {
       if (!this.textures.exists(key)) this.textures.addCanvas(key, titleBitmap(text).toCanvas());
 
     this.sky = this.add.image(0, 0, '__DEFAULT').setOrigin(0);
+    for (let i = 0; i < CLOUDS; i++) {
+      const key = autoCloud(this, i);
+      const shade = this.add.image(0, 0, key).setOrigin(0).setTintFill(0x0a0820).setAlpha(CLOUD_SHADOW.alpha);
+      const img = this.add.image(0, 0, key).setOrigin(0).setAlpha(0.92);
+      const v = CLOUD_SPEED[0] + (CLOUD_SPEED[1] - CLOUD_SPEED[0]) * (i / (CLOUDS - 1));
+      this.clouds.push({ img, shade, v });
+    }
+    // Shadows lie on the land, under every cloud.
+    for (const c of this.clouds) c.shade.setDepth(-1);
+    this.sky.setDepth(-2);
     this.world = this.add.container(0, 0);
     this.boardImg = this.add.image(0, 0, autoBoard(this, COLS, ROWS)).setOrigin(0);
     this.benchImg = this.add.image(0, 0, '__DEFAULT').setOrigin(0);
@@ -575,6 +607,7 @@ export class AutoScene extends Phaser.Scene {
     this.layer = this.add.container(0, 0);
     this.fxOver = this.add.container(0, 0);
     this.fx = new FxLayer(this, this.fxUnder, this.fxOver);
+    this.fx.onQuake = (ms, amt) => this.quake(ms, amt);
     for (let i = 0; i < 4; i++) this.torches.push(this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffa040));
     this.world.add([this.boardImg, ...this.torches, this.benchImg, this.marks, this.fxUnder, this.layer, this.fxOver]);
     this.probe = pixelText(this, 0, 0, '').setVisible(false);
@@ -697,6 +730,13 @@ export class AutoScene extends Phaser.Scene {
     const vw = (this.vw = Math.floor(width / z));
     const vh = (this.vh = Math.floor(height / z));
     this.sky.setTexture(autoBackdrop(this, vw + 1, vh + 1));
+    // Scatter the clouds over the page anew (left to right, at different heights).
+    this.clouds.forEach((c, i) => {
+      const x = Math.round(((i + 0.5) / CLOUDS) * (vw + c.img.width) - c.img.width + ((i * 53) % 29));
+      const y = Math.round(((i * 0.618 + 0.1) % 1) * (vh - c.img.height * 0.5) - c.img.height * 0.25);
+      c.img.setPosition(x, y);
+      c.shade.setPosition(x + CLOUD_SHADOW.x, y + CLOUD_SHADOW.y);
+    });
 
     // Keep clear of the mute button in the top-right corner.
     const corner = Math.ceil(soundCorner(width, height) / z);
@@ -750,6 +790,7 @@ export class AutoScene extends Phaser.Scene {
     this.benchX = benchX;
     this.benchY = benchY;
     this.boardImg.setPosition(bx, by);
+    this.fx.setGround(this.boardImg.texture.key, bx, by);
     this.frame = { ...this.frame, x: bx + RIM, y: by + RIM };
     const corners = [
       [bx + 4, by + 4],
@@ -1413,15 +1454,52 @@ export class AutoScene extends Phaser.Scene {
     if (this.boonOffer) this.showBoons(true);
   }
 
+  /** A shake of the battlefield; a stronger one takes over a weaker one under way. */
+  private quake(ms: number, amt: number): void {
+    const now = this.time.now;
+    const px = amt * QUAKE_PX;
+    const left = this.quakeEnd > now ? (this.quakePx * (this.quakeEnd - now)) / Math.max(1, this.quakeEnd - this.quakeAt) : 0;
+    if (px < left) return;
+    this.quakeAt = now;
+    this.quakeEnd = now + ms;
+    this.quakePx = px;
+    this.quakeStep = 0;
+  }
+
+  /** Jolt the battlefield by whole screen px, easing out; back to its place once the shake ends. */
+  private tickQuake(): void {
+    const now = this.time.now;
+    if (!this.quakePx) return;
+    if (now >= this.quakeEnd) {
+      this.quakePx = 0;
+      this.world.setPosition(this.wx, this.wy);
+      return;
+    }
+    if (now - this.quakeStep < QUAKE_STEP) return;
+    this.quakeStep = now;
+    const k = (this.quakeEnd - now) / Math.max(1, this.quakeEnd - this.quakeAt);
+    const amp = this.quakePx * k * k;
+    const jolt = () => Math.round((Math.random() * 2 - 1) * amp) / this.z;
+    this.world.setPosition(this.wx + jolt(), this.wy + jolt() * 0.7);
+  }
+
   update(_t: number, delta: number): void {
     const dt = Math.min(0.1, delta / 1000);
     for (const [i, t] of this.torches.entries()) {
       const f = 0.55 + Math.sin(this.time.now / 90 + i * 2.1) * 0.08 + Math.sin(this.time.now / 37 + i) * 0.05;
       t.setAlpha(f).setScale(0.9 + f * 0.3, 0.7 + f * 0.25);
     }
+    for (const c of this.clouds) {
+      let x = c.img.x + c.v * dt;
+      // Gone off the right (shadow and all): back in from the left.
+      if (x > this.vw - CLOUD_SHADOW.x) x = -c.img.width;
+      c.img.x = x;
+      c.shade.x = x + CLOUD_SHADOW.x;
+    }
     for (const c of this.cards) c.tick();
     if (this.boonView) this.tickBoons(dt);
     this.fx.update(dt);
+    this.tickQuake();
     if (this.phase === 'plan') {
       this.timer -= dt;
       this.drawBanner();
