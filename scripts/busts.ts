@@ -1,12 +1,14 @@
 // Dev tool: paint every class bust in its medallion as the character select
 // shows it (a 40 px plate, the bust at 2x cut to a 34 px disc), to a PNG.
-// Usage: npx tsx scripts/busts.ts [out.png] [scale]
+// Usage: npx tsx scripts/busts.ts [out.png] [scale] [emblems]
 import { writeFileSync } from 'node:fs';
 import { BUST, classBust } from '../src/art/busts';
+import { classEmblem } from '../src/art/emblems';
 import { encodePNG } from './png';
 
 const out = process.argv[2] ?? 'busts.png';
 const S = Number(process.argv[3] ?? 4);
+const art = process.argv[4] === 'emblems' ? classEmblem : classBust;
 const IDS = ['mage', 'warrior', 'jedi', 'alchemist', 'archer', 'duelist', 'necromancer', 'mystic', 'automaton', 'phantom', 'inventor', 'beast'];
 const Z = 2;
 const D = 40;
@@ -37,7 +39,7 @@ IDS.forEach((id, n) => {
       if (d > r) continue;
       put(ox + x, oy + y, d > r - 1.2 ? [11, 8, 24] : d > r - 2.2 ? [150, 130, 200] : [60 - (y * 20) / D, 50 - (y * 16) / D, 100 - (y * 30) / D]);
     }
-  const b = classBust(id);
+  const b = art(id);
   if (!b) return;
   const f = (D - FACE) / 2;
   const o = Math.floor((FACE - BUST * Z) / 2);
