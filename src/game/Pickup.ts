@@ -9,9 +9,10 @@ import { CANDY_DROPS, candyDropFor } from '../art/candy';
 import { DUST_DROP_H } from '../art/omens';
 import type { Effect } from './Slash';
 import { petMods } from './pets';
+import { cropById } from './farm';
 
 /** What lies on the ground: a potion for the hotbar, a piece of gear, gems or dust (`n` of them, in one pile), a boss's materials for the Forge, or a season's candy. */
-export type Loot = { kind: 'item'; id: ItemId } | { kind: 'gear'; def: GearDef } | { kind: 'gems'; n: number } | { kind: 'dust'; n: number } | { kind: 'mat'; set: SetId; n: number } | { kind: 'candy'; n: number };
+export type Loot = { kind: 'item'; id: ItemId } | { kind: 'gear'; def: GearDef } | { kind: 'gems'; n: number } | { kind: 'dust'; n: number } | { kind: 'mat'; set: SetId; n: number } | { kind: 'candy'; n: number } | { kind: 'seed'; id: string };
 
 /** Pulled towards the hero from this close, and picked up at this distance. */
 const MAGNET = 30;
@@ -121,6 +122,7 @@ function candyShow(n: number): Show | null {
 /** How grand a find is: 0 for potions and common gear, up to 4 for a legendary (or a pile of five gems or more). */
 export function grade(loot: Loot): number {
   if (loot.kind === 'item') return 0;
+  if (loot.kind === 'seed') return cropById(loot.id)?.kind === 'magic' ? 2 : 1;
   if (loot.kind === 'candy') return loot.n >= 8 ? 4 : loot.n >= 3 ? 2 : 1;
   if (loot.kind === 'dust') return loot.n >= 8 ? 3 : loot.n >= 3 ? 2 : 1;
   if (loot.kind === 'gems') return loot.n >= 5 ? 4 : loot.n >= 2 ? 3 : 2;
@@ -208,9 +210,11 @@ export class Pickup {
               ? { tint: MATERIALS[loot.set].tint, texture: matIcon(loot.set) }
               : loot.kind === 'candy'
                 ? { tint: CANDY_ACCENT, texture: `candy_drop_${bag}` }
-                : { tint: ITEMS[loot.id].tint, texture: ITEMS[loot.id].drop };
+                : loot.kind === 'seed'
+                  ? { tint: cropById(loot.id)?.tint ?? 0xffffff, texture: `seed_${loot.id}` }
+                  : { tint: ITEMS[loot.id].tint, texture: ITEMS[loot.id].drop };
     const big = !!(gear || gems || dust || mat || candy);
-    const h = gear ? GEAR_DROP : gems ? GEM_DROPS[pile].h : dust ? DUST_DROP_H : mat ? MAT_SIZE : candy ? CANDY_DROPS[bag].h : DROP_H;
+    const h = gear ? GEAR_DROP : gems ? GEM_DROPS[pile].h : dust ? DUST_DROP_H : mat ? MAT_SIZE : candy ? CANDY_DROPS[bag].h : loot.kind === 'seed' ? 15 : DROP_H;
     // A worn scarab draws loot in from further off.
     this.magnet = (big ? GEAR_MAGNET : MAGNET) * petMods.reach;
     this.life = big ? LIFE * 2 : LIFE;

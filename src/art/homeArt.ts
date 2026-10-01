@@ -11,6 +11,7 @@ import type Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { pixelCanvas } from './canvas';
 import { floorSwatch } from './homeFloors';
+import { bridgeIcon } from './bridgeArt';
 import { CHIMNEY_H, CHIMNEY_W, chimney, roofSwatch, wallFrameH, wallFrames } from './homeWalls';
 import { PROP_ART as FIRST_ART, PROP_TURNS as FIRST_TURNS, blossomTree, bobber, emptyRodBucket, type PropArt } from './homeProps';
 import { YARD_ART, YARD_TURNS } from './homeYard';
@@ -203,6 +204,8 @@ function finishHome(scene: Phaser.Scene, list: Entry[]): void {
   // The build palette's samples.
   FLOORS.forEach((f, i) => scene.textures.addCanvas(`hs_f${i + 1}`, pixelCanvas(16, 16, floorSwatch(f.id, 16))));
   ROOFS.forEach((_r, i) => scene.textures.addCanvas(`hs_r${i + 1}`, pixelCanvas(20, 20, roofSwatch(i + 1, 20, new HomeLayout()))));
+  const bridge = bridgeIcon();
+  scene.textures.addCanvas('hs_bridge', pixelCanvas(bridge.w, bridge.h, bridge.px));
 }
 
 /** Whether a frame on the sheet has anything that glows. */
@@ -297,6 +300,8 @@ export function thingLook(t: Thing): ThingLook {
 
 /** A part's picture for the build palette: its texture and frame. */
 export function partIcon(id: string): { key: string; frame: string } {
+  // A bridge has no one look: it shapes itself to the cells laid (see art/bridgeArt.ts).
+  if (partById(id)?.bridge) return { key: 'hs_bridge', frame: '__BASE' };
   const r = REUSED[id];
   if (r) return { key: r.key, frame: `${r.prefix}0` };
   return { key: 'home', frame: `p:${id}:0` };

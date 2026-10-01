@@ -297,6 +297,25 @@ const ICONS: Record<string, { map: string[]; pal: Record<string, string> }> = {
       '.gggggggggggggg',
     ],
   },
+  tab_seeds: {
+    pal: { B: '#e8c890', b: '#a07a4a', d: '#5a3e22', S: '#ffe27a', L: '#9ae486', l: '#3e9a4a' },
+    map: [
+      '',
+      '..........L',
+      '.........LLl',
+      '......LL.Ll',
+      '.....LLLlLl',
+      '.......lll',
+      '....dddddddd',
+      '...dbBBBBBBbd',
+      '..dbBBBBBBBBbd',
+      '..dbBBSBBBSBbd',
+      '..dbBBBBSBBBbd',
+      '..dbBSBBBBBBbd',
+      '...dbBBBBBBbd',
+      '....dddddddd',
+    ],
+  },
   tab_critters: {
     pal: { B: '#a2dcff', b: '#4a8ad0', d: '#2a2440', Y: '#fff2a0' },
     map: [
@@ -352,6 +371,8 @@ export class BuildHud {
   private nameText: Phaser.GameObjects.BitmapText;
   private hintText: Phaser.GameObjects.BitmapText;
   private icons: Phaser.GameObjects.Image[] = [];
+  /** How many are in hand, over the slots that count (seeds). */
+  private counts: Phaser.GameObjects.BitmapText[] = [];
 
   /** Each tab's slots, the eraser (null) first; made once the Home's art exists. */
   private lists = new Map<BuildTab, (PaletteItem | null)[]>();
@@ -417,6 +438,8 @@ export class BuildHud {
       build.on = true;
       // The critters caught since the tray last opened join its Critters tab.
       this.lists.delete('critters');
+      // And the seeds picked up since.
+      this.lists.delete('seeds');
       this.pick(this.picked.get(build.tab) ?? 1);
       this.onOpen();
     }
@@ -549,7 +572,16 @@ export class BuildHud {
     // The caption over the tray: the picked (or hovered) part's name, and on a PC the keys, dimmer.
     const l = this.list();
     const item = this.hover >= 0 ? l[this.hover] : build.pick;
-    const name = item ? item.name : build.tab === 'critters' && l.length < 2 ? 'Critters you catch with the net can live here' : 'Eraser';
+    const empty = l.length < 2;
+    const name = item
+      ? item.name
+      : build.tab === 'critters' && empty
+        ? 'Critters you catch with the net can live here'
+        : build.tab === 'seeds' && empty
+          ? 'Seeds come from harvests, and from monsters now and then'
+          : build.tab === 'seeds'
+            ? 'Pull up a crop'
+            : 'Eraser';
     const mouse = !this.scene.input.activePointer.wasTouch;
     const keys = [this.twistable() ? (this.turnable() ? 'R TURN' : 'R FLIP') : '', 'X ERASER', 'RIGHT CLICK ERASES'].filter(Boolean).join('  ');
     this.nameText.setText(name.toUpperCase()).setScale(ts);
@@ -763,6 +795,19 @@ export class BuildHud {
         return;
       }
       img.setVisible(true).setScale(k).setPosition(Math.round(cx), Math.round(row.centerY)).setCrop(c0, 0, c1 - c0, fh);
+    });
+    // Counts in the slots' bottom right corners, while the whole slot shows.
+    while (this.counts.length < list.length) this.counts.push(this.scene.add.bitmapText(0, 0, 'pixel', '').setLetterSpacing(-1).setOrigin(1, 1).setDepth(DEPTH + 2));
+    this.counts.forEach((t, i) => {
+      const item = list[i];
+      const x = row.x + i * (this.cell + this.cellGap) - this.scroll;
+      if (!item?.count || x < row.x || x + this.cell > row.right) {
+        t.setVisible(false);
+        return;
+      }
+      const n = item.count();
+      t.setVisible(true).setText(`${n}`).setScale(Math.max(1, Math.round(D * 1.5))).setTint(n ? 0xfff4d6 : 0xff8a8a);
+      t.setPosition(Math.round(x + this.cell - 3 * D), Math.round(row.y + this.cell - 2 * D));
     });
   }
 }

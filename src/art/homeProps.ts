@@ -1728,6 +1728,142 @@ const campfire = art('campfire', 3, 18, (c, g, f) => {
   halo(c, cx, gy - 4, 9, [255, 130, 50], 0.3);
 }, 4, 9);
 
+// The kitchen's two places to cook (see game/cooking.ts).
+const COPPER: Material = { ...mat('#1a0804', '#3a140a', '#5e2410', '#86381a', '#ac5226', '#cc6e36', '#e6904e', '#f8b878'), shine: true };
+const EGG = mat('#3a3a36', '#b8b4aa', '#dcd8ce', '#f0ece4', '#fcfaf4', '#ffffff');
+const YOLK: Material = { ...mat('#4a2a04', '#c07010', '#ec9a1c', '#ffc030', '#ffdc6a'), shine: true };
+const STEW = mat('#2a0e04', '#5a220a', '#8a3a12', '#b0561e', '#cc7030', '#e08c48');
+const GLASS_FIRE: Material = { ...mat('#1a0602', '#3a0e04', '#6a1c08', '#a8320e', '#e05418', '#ff8a34'), emissive: 0.85, noAO: true };
+
+/** A cast-iron range: an oven with a fire glowing through its window, the firebox's grille, a copper pot and a pan with an egg on the plates, its pipe up the back. */
+const stove = art('stove', 2, 34, (c, g, f) => {
+  const x0 = g.x0 + 1;
+  const x1 = g.x1 - 1;
+  const y0 = g.y0 + 5;
+  const y1 = g.y1 - 2;
+  const H = 14;
+  const mid = (y0 + y1) / 2;
+  // The pipe up the back, banded where its lengths join.
+  drum(c, x1 - 5, y0 + 1, 1.8, 0.8, H, 34, IRON, IRON);
+  for (const z of [20, 27]) for (let x = x1 - 7; x <= x1 - 3; x++) c.shade(x, y0 + 1 - z, 1);
+  // Feet, then the body with its darker plate on top.
+  for (const fx of [x0 + 1, x1 - 3]) box(c, fx, fx + 2, y1 - 2, y1, 0, 2, IRON);
+  box(c, x0, x1, y0, y1, 2, H, IRON, { topBias: -1 });
+  const fy0 = y1 - H;
+  const fy1 = y1 - 2;
+  // A brass rail along the front edge, a striped cloth hung over it.
+  c.part();
+  for (let x = x0 + 1; x < x1 - 1; x++) c.px(x, fy0 + 1, BRASS, FACE, { bias: x === x0 + 1 ? 1 : 0 });
+  c.part();
+  for (let y = fy0 + 2; y <= fy0 + 6; y++) for (let x = x0 + 18; x <= x0 + 21; x++) c.px(x, y, (x + Math.floor(y / 2)) % 3 ? LINEN : FLAG_RED, FACE, { bias: y === fy0 + 6 ? -1 : 0 });
+  // The oven's door: a brass frame round a window onto its fire.
+  c.part();
+  const ox0 = x0 + 3;
+  const ox1 = x0 + 16;
+  for (let y = fy0 + 3; y <= fy1 - 1; y++) {
+    for (let x = ox0; x <= ox1; x++) {
+      const edge = y === fy0 + 3 || y === fy1 - 1 || x === ox0 || x === ox1;
+      c.px(x, y, edge ? BRASS : IRON, FACE, { bias: edge ? (y === fy0 + 3 ? 1 : 0) : -1 });
+    }
+  }
+  c.part();
+  for (let y = fy0 + 5; y <= fy1 - 3; y++) for (let x = ox0 + 3; x <= ox1 - 3; x++) c.px(x, y, GLASS_FIRE, FACE, { bias: Math.round((hash2(x, y + f * 7, 611) - 0.5) * 2) + (y > fy1 - 5 ? 1 : 0) });
+  flame(c, (ox0 + ox1) / 2, fy1 - 3, 3, 5, f, 612, 0.7);
+  c.part();
+  c.px(ox1 - 1, fy0 + 5, BRASS, FACE, { bias: 2 });
+  c.px(ox1 - 1, fy0 + 6, BRASS, FACE, { bias: 1 });
+  // The firebox: embers glowing through a grille of bars.
+  c.part();
+  for (let y = fy0 + 8; y <= fy1 - 1; y++) {
+    for (let x = x0 + 18; x <= x1 - 3; x++) {
+      const bar = (x - x0) % 2 === 0;
+      c.px(x, y, bar ? IRON : EMBERS, FACE, { bias: bar ? 1 : (f + x + y) % 3 === 0 ? 1 : -1 });
+    }
+  }
+  halo(c, (x0 + 18 + x1 - 3) / 2, fy1 - 2, 6, [255, 130, 50], 0.25);
+  halo(c, (ox0 + ox1) / 2, (fy0 + fy1) / 2 + 1, 8, [255, 140, 60], 0.3);
+  // The plates on top: a copper pot on the left one, a pan with an egg on the right.
+  const top = (y: number) => y - H;
+  c.part();
+  c.ellipse(x0 + 7, top(mid), 4.2, 1.5, SOOT, { normal: () => TOP });
+  drum(c, x0 + 7, mid, 4, 1.6, H, H + 6, COPPER, COPPER, { topBias: 1 });
+  c.part();
+  c.ellipse(x0 + 7, top(mid) - 6, 3.2, 1.1, COPPER, { normal: () => TOP, bias: -1 });
+  c.px(x0 + 7, top(mid) - 7, BRASS, TOP, { bias: 2 });
+  for (const hx of [x0 + 2, x0 + 12]) c.px(hx, top(mid) - 4, COPPER, FACE, { bias: hx < x0 + 7 ? 1 : -1 });
+  c.part();
+  const px = x1 - 10;
+  c.ellipse(px, top(mid) - 1, 4, 1.6, IRON, { normal: () => TOP, bias: 1 });
+  c.part();
+  c.ellipse(px, top(mid) - 1, 3, 1, IRON, { normal: () => TOP, bias: -1 });
+  c.line(px + 4, top(mid) - 1, px + 8, top(mid) - 2, IRON, () => TOP, { bias: 1 });
+  c.part();
+  c.ellipse(px - 0.5, top(mid) - 1, 1.8, 0.8, EGG, { normal: () => TOP, bias: 1 });
+  c.px(px - 0.5, top(mid) - 2, YOLK, TOP, { bias: 1 });
+  // Fat spitting in the pan.
+  c.spark(px + 1 + (f % 2), top(mid) - 3 - (f % 3), [255, 240, 200], 0.4);
+}, 4, 8);
+
+/** A garden cooking pot: an iron pot of stew on a chain from a tripod of poles, over a fire in a ring of stones. */
+const cookpot = art('cookpot', 5, 26, (c, g, f) => {
+  const cx = g.cx;
+  const gy = g.y1 - 7;
+  const apex = { x: cx, y: gy - 24 };
+  const stones = Array.from({ length: 9 }, (_, k) => {
+    const a = (k / 9) * Math.PI * 2 + 0.2;
+    return { x: cx + Math.cos(a) * 7, y: gy + Math.sin(a) * 3.6, k };
+  });
+  // The back pole and the back of the ring, then the ash bed and the fire.
+  c.part();
+  c.line(cx + 1, gy - 4, apex.x, apex.y, ROWAN, () => n3(-0.3, 0.2, 0.9), { bias: -1 });
+  for (const s of stones.filter((s) => s.y < gy)) {
+    c.part();
+    c.ellipse(s.x, s.y - 1, 2, 1.6, FIELDSTONE, { bias: s.k % 2 });
+  }
+  c.part();
+  c.ellipse(cx, gy, 5.5, 2.6, SOOT, { normal: () => FLOOR });
+  c.part();
+  c.ellipse(cx, gy, 3.6, 1.7, EMBERS, { normal: () => FLOOR, bias: f % 2 });
+  c.part();
+  c.capsule(cx - 4, gy + 1, cx + 3, gy - 1, 1, 0.8, OAKW);
+  c.capsule(cx + 4, gy + 1, cx - 2, gy - 1.5, 1, 0.8, DARKW);
+  flame(c, cx - 1.5, gy - 1, 2.6, 6, f, 621);
+  flame(c, cx + 2, gy - 1, 2, 5, (f + 2) % 4, 622, 0.85);
+  // The pot: round iron, a lip, stew bubbling in it, a bail handle up to the chain.
+  const py = gy - 9;
+  c.part();
+  c.ellipse(cx, py, 5.6, 4.6, IRON, { flatten: 0.9 });
+  c.part();
+  c.ellipse(cx, py - 3.6, 5.2, 1.7, IRON, { normal: () => TOP, bias: 2 });
+  c.part();
+  c.ellipse(cx, py - 3.6, 4, 1.1, STEW, { normal: () => TOP });
+  const R = rng(623 + f * 3);
+  for (let k = 0; k < 2; k++) c.px(cx - 2.5 + R() * 5, py - 3.6 + (R() - 0.5), STEW, TOP, { bias: 3 });
+  c.part();
+  for (let k = 0; k <= 8; k++) {
+    const t = k / 8;
+    c.px(cx - 5 + t * 10, py - 4 - Math.sin(t * Math.PI) * 3, IRON, TOP, { bias: 1 });
+  }
+  // The chain, link by link, from the tripod's top to the handle.
+  c.part();
+  for (let y = apex.y + 2; y < py - 6; y++) c.px(cx, y, IRON, y % 2 ? FACE : TOP, { bias: y % 2 ? 2 : 0 });
+  // The front poles, lashed where they cross.
+  c.part();
+  c.line(cx - 8, gy + 3, apex.x, apex.y, ROWAN, () => n3(-0.5, 0.2, 0.85));
+  c.line(cx + 8, gy + 3, apex.x, apex.y, ROWAN, () => n3(0.5, 0.2, 0.85), { bias: -1 });
+  c.part();
+  c.px(apex.x, apex.y + 1, HAY, FACE, { bias: 1 });
+  c.px(apex.x - 1, apex.y + 2, HAY, FACE);
+  c.px(apex.x + 1, apex.y + 2, HAY, FACE, { bias: -1 });
+  for (const s of stones.filter((s) => s.y >= gy)) {
+    c.part();
+    c.ellipse(s.x, s.y - 1, 2.1, 1.7, FIELDSTONE, { bias: s.k % 2 });
+  }
+  // Sparks rising past the pot, and the warm pool of its light.
+  c.spark(cx - 4 + f, py - 6 - f * 1.5, FIRE_COLS[1], 0.7);
+  halo(c, cx, gy - 3, 8, [255, 130, 50], 0.28);
+}, 4, 9);
+
 const candelabra = art('candelabra', 4, 30, (c, g, f) => {
   const cx = g.cx;
   const gy = g.y1 - 6;
@@ -2537,6 +2673,8 @@ export const PROP_ART: Record<string, PropArt> = {
   torch,
   campfire,
   candelabra,
+  stove,
+  cookpot,
   fairylights: fireflyJar,
   mushlamp: mushLamp,
   wardlamp: wardLamp,

@@ -17,8 +17,18 @@ import { hash2, valueNoise } from './env';
 import { flagstone, nightify, ramp, stone } from './ground';
 import { KEY_LIGHT, type RGB } from './pixel';
 import { fbm } from './spirit';
-import { CELL, COLS, HomeLayout, ROWS, cellIndex, inPlot, wallBoxes } from '../world/homeLayout';
+import { CELL, HomeLayout, cellIndex, wallBoxes } from '../world/homeLayout';
 import { FLOORS, WALLS, floorIndex, wallMat } from '../world/homeParts';
+
+/**
+ * What floors are painted from: a Home's layout, or what the player has laid
+ * in the Everwood (see world/forestEdits.ts). Cells off it are bare (0).
+ */
+export interface FloorGrid {
+  floorAt(cx: number, cy: number): number;
+  wallAt(cx: number, cy: number): number;
+  wallMask(cx: number, cy: number): number;
+}
 
 // ---------------------------------------------------------------- Palette
 
@@ -426,7 +436,7 @@ const COBBLE_SIZE = 7;
 const COBBLE_SEED = 401;
 
 /** Is there a house wall (not a garden one) on cell (cx, cy)? */
-function houseWall(l: HomeLayout, cx: number, cy: number): boolean {
+function houseWall(l: FloorGrid, cx: number, cy: number): boolean {
   const v = l.wallAt(cx, cy);
   return v > 0 && WALLS[wallMat(v)].house;
 }
@@ -443,7 +453,7 @@ const near = [0, 0, 0, 0];
  * path runs right up to the boards beside it. Kinds in the bit mask `skip`
  * don't take part; -1 if none is left.
  */
-function blend(l: HomeLayout, x: number, y: number, own: number, skip: number): number {
+function blend(l: FloorGrid, x: number, y: number, own: number, skip: number): number {
   const fx = x / CELL - 0.5;
   const fy = y / CELL - 0.5;
   const ix = Math.floor(fx);
@@ -460,12 +470,8 @@ function blend(l: HomeLayout, x: number, y: number, own: number, skip: number): 
     const cx = ix + (j & 1);
     const cy = iy + (j >> 1);
     // Off the plot counts as bare lawn; a laid floor, or a bare house wall, as this cell's own (so a floor fills its house to the walls).
-    let f = 0;
-    if (inPlot(cx, cy)) {
-      const c = cellIndex(cx, cy);
-      f = l.floor[c];
-      if (!f && houseWall(l, cx, cy)) f = -1;
-    }
+    let f = l.floorAt(cx, cy);
+    if (!f && houseWall(l, cx, cy)) f = -1;
     near[j] = f < 0 || (f && !SOFT[f - 1]) ? own : f;
   }
   const k = near;
@@ -493,21 +499,20 @@ function blend(l: HomeLayout, x: number, y: number, own: number, skip: number): 
  * stone belongs where its middle falls, so the cobbles' edge is whole stones
  * set loose into the turf rather than stones cut through by the blend.
  */
-function cobbleIn(l: HomeLayout, x: number, y: number): boolean {
+function cobbleIn(l: FloorGrid, x: number, y: number): boolean {
   voronoi(x, y, COBBLE_SIZE, COBBLE_SEED);
   const sx = Math.floor(cell.sx);
   const sy = Math.floor(cell.sy);
   const cx = Math.floor(sx / CELL);
   const cy = Math.floor(sy / CELL);
-  if (!inPlot(cx, cy)) return false;
-  const f = l.floor[cellIndex(cx, cy)];
+  const f = l.floorAt(cx, cy);
   // In a laid floor's cell it is the cobbles' own (they run right up to it).
   if (f && !SOFT[f - 1]) return true;
   return blend(l, sx, sy, f, 0) === COBBLES;
 }
 
 /** The floor at plot pixel (x, y). Inside a laid floor's cell, that floor; elsewhere the soft ones blend (see blend). */
-function floorAt(l: HomeLayout, x: number, y: number): number {
+function floorAt(l: FloorGrid, x: number, y: number): number {
   const ox = Math.floor(x / CELL);
   const oy = Math.floor(y / CELL);
   const own = l.floorAt(ox, oy);
@@ -577,8 +582,8 @@ function chamfer(d: Float32Array, W: number, H: number, cap: number): void {
   }
 }
 
-/** Paint the floors of plot pixels [x, x + w) x [y, y + h). */
-export function paintFloors(l: HomeLayout, x0: number, y0: number, w: number, h: number): FloorPatch {
+/** Paint the floors of plot pixels [x, x + w) x [y, y + h); `bare`: shade bare ground at walls' feet too (the Home's lawn; the Everwood's ground has its own). */
+export function paintFloors(l: FloorGrid, x0: number, y0: number, w: number, h: number, bare = true): FloorPatch {
   const W = w + M * 2;
   const H = h + M * 2;
   const n = W * H;
@@ -599,9 +604,9 @@ export function paintFloors(l: HomeLayout, x0: number, y0: number, w: number, h:
   const c1 = Math.floor((x0 + w + M) / CELL) + 1;
   const r0 = Math.floor((y0 - M) / CELL) - 1;
   const r1 = Math.floor((y0 + h + M) / CELL) + 1;
-  for (let cy = Math.max(0, r0); cy <= Math.min(ROWS - 1, r1); cy++) {
-    for (let cx = Math.max(0, c0); cx <= Math.min(COLS - 1, c1); cx++) {
-      const v = l.wall[cellIndex(cx, cy)];
+  for (let cy = r0; cy <= r1; cy++) {
+    for (let cx = c0; cx <= c1; cx++) {
+      const v = l.wallAt(cx, cy);
       if (!v) continue;
       for (const b of wallBoxes(l.wallMask(cx, cy), WALLS[wallMat(v)].thick)) {
         for (let y = cy * CELL + b.y0; y < cy * CELL + b.y1; y++) {
@@ -624,7 +629,7 @@ export function paintFloors(l: HomeLayout, x0: number, y0: number, w: number, h:
     day: new Uint8ClampedArray(w * h * 4),
     night: new Uint8ClampedArray(w * h * 4),
     normal: new Uint8ClampedArray(w * h * 4),
-    any: anyFloor || anyWall,
+    any: anyFloor || (anyWall && bare),
   };
   if (!out.any) return out;
   if (anyWall) chamfer(wallD, W, H, WALL_SHADE);
@@ -672,7 +677,7 @@ export function paintFloors(l: HomeLayout, x0: number, y0: number, w: number, h:
       const wd = wallD[i];
       if (!k) {
         // Bare lawn: only the shade of a wall, in the night layer (which always shows under the day one).
-        if (wd < WALL_SHADE) {
+        if (bare && wd < WALL_SHADE) {
           const a = (1 - wd / WALL_SHADE) ** 1.5 * 0.42;
           out.night[o + 3] = Math.round(a * 255);
           out.normal[o] = 128;

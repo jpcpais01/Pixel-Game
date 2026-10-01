@@ -33,6 +33,7 @@ import { bakeArtTextures } from './game/bakedTextures';
 import { cacheGraphics } from './game/graphicsCache';
 import { installCrashReports, watchCanvas } from './diagnostics';
 import { afterLoad } from './loaded';
+import { installPointer } from './ui/pointer';
 
 installCrashReports();
 setupApp();
@@ -76,6 +77,8 @@ const game = new Phaser.Game({
   scene: [BootScene, HomeScene, ModeScene, SelectScene, AutoScene, InventoryScene, ShopScene, ArenaScene, WorldScene, GlideScene, ShadeScene, UIScene, MapScene, GlideUIScene, RiftScene, OmenScene, FishScene, ForestLoadScene, ArenaLoadScene, PauseScene, SoundScene, FpsScene],
 });
 game.events.once(Phaser.Core.Events.READY, () => watchCanvas(game.canvas));
+// The picked mouse pointer and its effects, on a computer.
+installPointer(game);
 
 // Fit the canvas to the window once per frame at most, and only when the
 // size or resolution really changed: every resize makes each scene lay itself
