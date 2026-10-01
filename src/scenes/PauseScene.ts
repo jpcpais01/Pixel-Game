@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { sound } from '../audio';
 import { beamHud, comboHud, controls } from '../game/controls';
+import { build, stopBuilding } from '../game/build';
 import { daynight } from '../game/daynight';
 import { DPR as D, menuZoom } from '../game/display';
 import { settings, type Settings } from '../game/settings';
@@ -130,8 +131,9 @@ export class PauseScene extends Phaser.Scene {
 
     const kb = this.input.keyboard;
     kb?.on('keydown-ESC', () => {
-      // Esc first closes the hero's "i" card, if it is open (ui/statsHud.ts), and More options before the menu.
+      // Esc first closes the hero's "i" card, if it is open (ui/statsHud.ts), leaves building (ui/buildHud.ts), and closes More options before the menu.
       if (statsCard.open && !this.open) statsCard.close();
+      else if (build.on && !this.open) stopBuilding();
       else if (this.moreOpen) this.setMore(false);
       else this.setOpen(!this.open);
     });

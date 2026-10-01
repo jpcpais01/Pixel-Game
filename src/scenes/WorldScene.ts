@@ -815,6 +815,11 @@ export class WorldScene extends Phaser.Scene {
     return this.forest;
   }
 
+  /** The Home's plot, while in the Home (its layout is what the map draws). */
+  get homePlot(): Home | null {
+    return this.home;
+  }
+
   /** The other players, for the minimap. */
   get mates(): { x: number; y: number; accent: number; alive: boolean }[] {
     return this.net?.mates() ?? [];

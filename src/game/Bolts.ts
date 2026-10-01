@@ -10,7 +10,8 @@ import { clamp01, dither, easeOut, Fx, GROUND, hash, line, segDist, type Ink, ty
 // with a canister for a head that bursts over the ground into a weighted net,
 // and everything under it wades as if through tar until it rots away. The
 // windrunner's gale shot: an arrow wrapped in a whirl of wind that goes
-// through everything in its path and blows it all back.
+// through everything in its path and blows it all back. Briar Rose's net is
+// woven of briar with rosebuds for weights; Wisteria's gale whirls petals.
 
 /** The net bolt's flight, world px a second. */
 const NET_SPEED = 300;
@@ -29,10 +30,44 @@ const NET_DAMAGE = 8;
 /** Ground marks lie under every standing thing. */
 const GROUND_DEPTH = 3;
 
-const CORD: Pal = { core: 0xf0dca0, hot: 0xd0b674, mid: 0xae904e, deep: 0x846634, light: 0xffe0a0, tints: [0xf0dca0, 0xd0b674, 0xae904e, 0x846634] };
-const LEAD = [0x8a92a4, 0x5c6478, 0x343a48];
-const STEEL = [0xe6eef8, 0xa8b4c8, 0x5c6880];
-const WOOD = [0xb88050, 0x94603a, 0x6e4426];
+/** What a net bolt and its net are made of: the cords, the weights round the rim, the bolt that carries it. */
+export interface NetLook {
+  /** The cords: the knot at the middle, the lit cords, the shadowed ones. */
+  cord: { core: number; hot: number; mid: number };
+  /** Each weight from its lit top to its shadowed side. */
+  weight: [number, number, number];
+  /** The canister head, lit to shadowed, the shaft, and its vanes. */
+  head: [number, number, number];
+  shaft: [number, number];
+  vane: number;
+  /** The tint on foes caught under it. */
+  slow: number;
+  /** Briar: thorns standing off the cords, a leaf under each weight (a rosebud). */
+  thorns?: number;
+  leaf?: number;
+}
+
+/** The arbalest's: hemp cord, lead weights, a steel canister on a walnut bolt. */
+export const ROPE_NET: NetLook = {
+  cord: { core: 0xf0dca0, hot: 0xd0b674, mid: 0xae904e },
+  weight: [0x8a92a4, 0x5c6478, 0x343a48],
+  head: [0xe6eef8, 0xa8b4c8, 0x5c6880],
+  shaft: [0xb88050, 0x94603a],
+  vane: 0xe8664a,
+  slow: 0xd8c088,
+};
+
+/** Briar Rose's: a net of briar, thorns all along it, rosebuds for its weights. */
+export const BRIAR_NET: NetLook = {
+  cord: { core: 0xe8344a, hot: 0x76a048, mid: 0x3a5e24 },
+  weight: [0xff8088, 0xb4162e, 0x7c0c22],
+  head: [0x76a048, 0x3a5e24, 0x244018],
+  shaft: [0x567e34, 0x3a5e24],
+  vane: 0xe4344a,
+  slow: 0x8ac060,
+  thorns: 0x96402c,
+  leaf: 0x2e6e24,
+};
 
 /**
  * A bolt with a net packed in its head, loosed from the ground point (x, y)
@@ -60,6 +95,7 @@ export class NetBolt extends Fx {
     y: number,
     tx: number,
     ty: number,
+    private look: NetLook = ROPE_NET,
   ) {
     super(world, 99999);
     this.px = x;
@@ -102,12 +138,14 @@ export class NetBolt extends Fx {
     const g = this.flyInk.begin(x, y, this.py + 1);
     const nx = -this.uy;
     const ny = this.ux;
-    for (let i = 3; i <= 10; i++) g.put(x - this.ux * i, y - this.uy * i, WOOD[i < 6 ? 0 : 1]);
-    for (const s of [-1, 1]) g.put(x - this.ux * 10 + nx * s, y - this.uy * 10 + ny * s, 0xe8664a);
+    const k = this.look;
+    for (let i = 3; i <= 10; i++) g.put(x - this.ux * i, y - this.uy * i, k.shaft[i < 6 ? 0 : 1]);
+    for (const s of [-1, 1]) g.put(x - this.ux * 10 + nx * s, y - this.uy * 10 + ny * s, k.vane);
+    if (k.thorns !== undefined) for (const i of [5, 8]) g.put(x - this.ux * i + nx * (i === 5 ? 1 : -1), y - this.uy * i + ny * (i === 5 ? 1 : -1), k.thorns);
     for (let i = -1; i <= 2; i++) {
-      for (let o = -1.5; o <= 1.5; o += 0.5) g.put(x - this.ux * i + nx * o, y - this.uy * i + ny * o, o < -0.5 ? STEEL[0] : o < 0.8 ? STEEL[1] : STEEL[2]);
+      for (let o = -1.5; o <= 1.5; o += 0.5) g.put(x - this.ux * i + nx * o, y - this.uy * i + ny * o, o < -0.5 ? k.head[0] : o < 0.8 ? k.head[1] : k.head[2]);
     }
-    g.put(x + this.ux * 3, y + this.uy * 3, STEEL[0]);
+    g.put(x + this.ux * 3, y + this.uy * 3, k.head[0]);
     g.end();
     this.shadow.setPosition(Math.round(this.px), Math.round(this.py));
   }
@@ -119,11 +157,14 @@ export class NetBolt extends Fx {
     this.life = this.t + NET_LIFE;
     this.flyInk.begin(0, 0, 0).end();
     this.shadow.setVisible(false);
-    world.debris([STEEL[0], CORD.hot, CORD.mid], this.px, this.py - ARROW_H, 8, this.py + 2);
+    const k = this.look;
+    world.debris([k.head[0], k.cord.hot, k.cord.mid], this.px, this.py - ARROW_H, 8, this.py + 2);
+    // The briar net bursts in a flurry of rose petals.
+    if (k.leaf !== undefined) world.debris([k.weight[0], k.weight[1], k.cord.core, k.leaf], this.px, this.py - ARROW_H, 14, this.py + 2, 'spores');
     sound.netSwish(world.pan(this.px));
     for (const h of world.hurtboxesWhere((b) => b.alive && onGround(b, this.px, this.py, NET_R))) {
       h.hurt({ damage: NET_DAMAGE, heavy: false, knock: 0, fromX: this.px, fromY: this.py });
-      h.slow?.(NET_SLOW, NET_LIFE - NET_FADE, 0xd8c088);
+      h.slow?.(NET_SLOW, NET_LIFE - NET_FADE, k.slow);
     }
   }
 
@@ -134,7 +175,7 @@ export class NetBolt extends Fx {
     this.tick -= dt;
     if (this.tick <= 0 && age < NET_LIFE - NET_FADE) {
       this.tick = NET_TICK;
-      for (const h of world.hurtboxesWhere((b) => b.alive && onGround(b, this.px, this.py, NET_R))) h.slow?.(NET_SLOW, NET_TICK + 150, 0xd8c088);
+      for (const h of world.hurtboxesWhere((b) => b.alive && onGround(b, this.px, this.py, NET_R))) h.slow?.(NET_SLOW, NET_TICK + 150, this.look.slow);
     }
     if (age === 0 || age - dt < NET_OPEN + 60) this.draw(age);
     else if (age > NET_LIFE - NET_FADE) this.draw(age);
@@ -149,6 +190,7 @@ export class NetBolt extends Fx {
     const lift = (1 - k) * 8;
     const cx = this.px;
     const cy = this.py;
+    const look = this.look;
     const g = this.netInk.begin(cx, cy, GROUND_DEPTH);
     if (fade <= 0) {
       g.end();
@@ -160,9 +202,13 @@ export class NetBolt extends Fx {
       const th = (a / 8) * Math.PI * 2 + hash(a, this.seed) * 0.2;
       const [x1, y1] = at(th, R);
       line(g, cx, cy + 1, x1, y1 + 1, 0x1a1208, 0.35 * fade);
-      line(g, cx, cy, x1, y1, a % 2 ? CORD.mid : CORD.hot, fade);
+      line(g, cx, cy, x1, y1, a % 2 ? look.cord.mid : look.cord.hot, fade);
+      // Briar cords bristle with thorns along their length.
+      if (look.thorns !== undefined) {
+        for (const f of [0.35, 0.7]) g.put(cx + (x1 - cx) * f + (a % 2 ? 1 : -1), cy + (y1 - cy) * f, look.thorns, fade);
+      }
     }
-    for (const [f, c] of [[0.42, CORD.hot], [0.78, CORD.mid]] as const) {
+    for (const [f, c] of [[0.42, look.cord.hot], [0.78, look.cord.mid]] as const) {
       const r = R * f;
       const n = Math.ceil(r * 7);
       for (let i = 0; i < n; i++) {
@@ -175,17 +221,18 @@ export class NetBolt extends Fx {
       }
     }
     // The knot in the middle.
-    g.put(cx, cy, CORD.core, fade);
-    g.put(cx + 1, cy, CORD.hot, fade);
-    g.put(cx, cy - 1, CORD.hot, fade);
+    g.put(cx, cy, look.cord.core, fade);
+    g.put(cx + 1, cy, look.leaf ?? look.cord.hot, fade);
+    g.put(cx, cy - 1, look.leaf ?? look.cord.hot, fade);
     // Lead weights round the rim, each lit from the top left.
     for (let a = 0; a < 8; a++) {
       const th = (a / 8) * Math.PI * 2 + hash(a, this.seed) * 0.2;
       const [x, y] = at(th, R);
       g.put(x, y + 1, 0x0c0a08, 0.45 * fade);
-      g.put(x, y, LEAD[1], fade);
-      g.put(x + 1, y, LEAD[2], fade);
-      g.put(x, y - 1, LEAD[0], fade);
+      if (look.leaf !== undefined) g.put(x - 1, y, look.leaf, fade);
+      g.put(x, y, look.weight[1], fade);
+      g.put(x + 1, y, look.weight[2], fade);
+      g.put(x, y - 1, look.weight[0], fade);
     }
     g.end();
     if (age >= NET_OPEN && !this.landed) {
@@ -225,6 +272,8 @@ export class GaleShot extends Fx {
     private ux: number,
     private uy: number,
     private p: Pal,
+    /** Petals whirled along in its wind (Wisteria's), lit to shadowed. */
+    private petals?: number[],
   ) {
     super(world, 99999);
     this.px = x;
@@ -255,6 +304,7 @@ export class GaleShot extends Fx {
       }
       // Wind peeling off its wake.
       if (Math.random() < dt / 30) world.debris([p.core, p.hot, p.mid], this.px - this.ux * 10, this.py - ARROW_H - this.uy * 10, 1, this.py + 2, 'trail');
+      if (this.petals && Math.random() < dt / 45) world.debris(this.petals, this.px - this.ux * 14, this.py - ARROW_H - this.uy * 14, 1, this.py + 2, 'spores');
     }
     this.draw();
   }
@@ -287,6 +337,13 @@ export class GaleShot extends Fx {
         const sx = x - ux * (i + 1) + nx * w;
         const sy = y - uy * (i + 1) + ny * w;
         if (dither(Math.round(sx), Math.round(sy)) < a) g.put(sx, sy, i < 5 ? p.core : i < 12 ? p.hot : p.mid);
+        // Petals caught in the whirl: every few steps along a strand, a two-pixel petal tumbling over.
+        const pt = this.petals;
+        if (pt && i % 5 === 3 && a > 0.2) {
+          const k = Math.floor(t / 60 + i) % 2;
+          g.put(sx, sy, pt[1]);
+          g.put(sx + (k ? nx : ux), sy + (k ? ny : uy), pt[2]);
+        }
       }
     }
     g.end();

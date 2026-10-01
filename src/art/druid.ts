@@ -233,6 +233,88 @@ export const FROST_DEEP = hex('#2a5aa8');
 export const FROST_SPELL: SpellColors = { core: FROST_CORE, hot: FROST_HOT, mid: FROST_MID, deep: FROST_DEEP, accent: hex('#e0f6ff') };
 
 // ---------------------------------------------------------------------------
+// The Grovekeeper's Titania skin: the faerie queen. Honey-gold hair to the
+// waist under a crown of white blossoms and gold leaves, a gown of layered
+// petals from blush pink down to cream, gauzy wings that catch the light, and
+// a slender staff of moonwood holding a glowing moonflower bud.
+
+/** The gown's upper petals: blush pink. */
+export const FAE_GOWN: Material = {
+  ramp: ramp('#4a2236', '#7a3a56', '#b0607e', '#e090aa', '#ffc4d4'),
+  outline: hex('#1e0a14'),
+  outlineLit: hex('#3a1828'),
+};
+
+/** The gown's lowest petals, the staff's sepals and her slippers: cream. */
+export const FAE_PETAL: Material = {
+  ramp: ramp('#9a6070', '#d4a2ac', '#f2d6d2', '#fff4ec'),
+  outline: hex('#3a1a24'),
+  outlineLit: hex('#4e2a32'),
+  shine: true,
+};
+
+/** Gold leaf: the girdle, the crown's leaves. */
+export const FAE_GOLD: Material = {
+  ramp: ramp('#6a4210', '#a8741e', '#e0b040', '#fff0a0'),
+  outline: hex('#241404'),
+  shine: true,
+};
+
+export const HONEY_HAIR: Material = {
+  ramp: ramp('#5a3612', '#8c5c1e', '#c08c34', '#e8bc56', '#fde494'),
+  outline: hex('#24140a'),
+  outlineLit: hex('#3a220c'),
+  shine: true,
+};
+
+/**
+ * Wings like a dragonfly's: lilac at the root paling to pearl at the tips,
+ * with a soft glow of their own, and a light outline so they read as gauze
+ * rather than as solid shapes.
+ */
+export const FAE_WING: Material = {
+  ramp: ramp('#56609e', '#7e8cd0', '#a8b4ec', '#d8c8f2', '#fbf2ff'),
+  outline: hex('#4a4a8a'),
+  outlineLit: hex('#6a6aa8'),
+  emissive: 0.22,
+  noAO: true,
+};
+
+/** The crown's white blossoms. */
+export const FAE_BLOSSOM: Material = {
+  ramp: ramp('#9a8a96', '#d8ccd4', '#f6f0f2', '#ffffff'),
+  // A soft outline: a wreath of petals, not a row of teeth.
+  outline: hex('#5a4656'),
+  outlineLit: hex('#7a6676'),
+  emissive: 0.15,
+  shine: true,
+};
+
+/** Pale moonwood, silvery like birch. */
+export const MOONWOOD: Material = {
+  ramp: ramp('#3a3240', '#665a6c', '#a0949e', '#d8ccd2'),
+  outline: hex('#140e16'),
+};
+
+/** The moonflower bud at the staff's head, lit from within. */
+export const MOONFLOWER: Material = {
+  ramp: ramp('#b0607e', '#ffb8d0', '#fff0e0', '#ffffff'),
+  outline: hex('#3a1828'),
+  outlineLit: hex('#4a2030'),
+  emissive: 0.95,
+  shine: true,
+  noAO: true,
+};
+
+// Faerie light (light-only colours): moonlit white, gold, blush, deepening to rose.
+export const TITANIA_CORE = hex('#fffaf0');
+export const TITANIA_HOT = hex('#ffd88a');
+export const TITANIA_MID = hex('#ff9ac0');
+export const TITANIA_DEEP = hex('#b8487a');
+
+export const TITANIA_SPELL: SpellColors = { core: TITANIA_CORE, hot: TITANIA_HOT, mid: TITANIA_MID, deep: TITANIA_DEEP, accent: hex('#fff0b0'), petals: true };
+
+// ---------------------------------------------------------------------------
 // Button icons: 16x16, drawn additively on the buttons, so black is empty and
 // where shapes overlap the brighter colour stays.
 
@@ -270,6 +352,7 @@ export const GROVE_TONES: Tones = [GROVE_CORE, GROVE_HOT, GROVE_MID, GROVE_DEEP]
 export const WILD_TONES: Tones = [WILD_CORE, WILD_HOT, WILD_MID, WILD_DEEP];
 export const AUTUMN_TONES: Tones = [AUTUMN_CORE, AUTUMN_HOT, AUTUMN_MID, AUTUMN_DEEP];
 export const FROST_TONES: Tones = [FROST_CORE, FROST_HOT, FROST_MID, FROST_DEEP];
+export const TITANIA_TONES: Tones = [TITANIA_CORE, TITANIA_HOT, TITANIA_MID, TITANIA_DEEP];
 
 /** The thorn seed: a glowing seed bristling with thorns, a leaf sprouting from its top. */
 export function thornSeedIcon(k: Tones = GROVE_TONES): Uint8ClampedArray {
@@ -363,5 +446,58 @@ export function pounceIcon(k: Tones = WILD_TONES): Uint8ClampedArray {
       put(x, y, k[0]);
     }
     put(11, 13, k[0]);
+  });
+}
+
+/** Titania's blossom seed: a five-petalled flower with a gold heart, pollen drifting off it. */
+export function blossomSeedIcon(k: Tones = TITANIA_TONES): Uint8ClampedArray {
+  return icon16((put) => {
+    const dim: RGB = [k[3][0] >> 1, k[3][1] >> 1, k[3][2] >> 1];
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const dx = x + 0.5 - 8;
+        const dy = y + 0.5 - 8.5;
+        // Five petals: a radius that swells five times round the heart.
+        const a = Math.atan2(dy, dx) + Math.PI / 2;
+        const lobe = Math.abs(Math.cos((a * 5) / 2));
+        const R = 3.2 + 3.6 * lobe;
+        const d = Math.hypot(dx, dy);
+        if (d > R) continue;
+        const f = d / R;
+        // Paler toward each petal's tip, a darker crease between petals.
+        put(x, y, lobe < 0.35 && f > 0.55 ? k[3] : f > 0.82 ? k[0] : f > 0.45 ? k[2] : dim);
+      }
+    }
+    // The heart: gold stamens round a white centre.
+    for (const [x, y] of [[7, 8], [8, 7], [9, 8], [8, 9]]) put(x, y, k[1]);
+    put(8, 8, k[0]);
+    // Pollen drifting off it.
+    for (const [x, y] of [[13, 2], [2, 3], [14, 13], [1, 12]]) put(x, y, k[1]);
+  });
+}
+
+/** Titania's faerie ring: a ring of little flowers on the grass, fireflies dancing over it. */
+export function faerieRingIcon(k: Tones = TITANIA_TONES): Uint8ClampedArray {
+  return icon16((put) => {
+    // A glow on the grass inside the ring.
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const d = Math.hypot((x + 0.5 - 8) / 6.4, (y + 0.5 - 11.5) / 2.8);
+        if (d <= 0.8 && (x + y) % 2) put(x, y, [k[3][0] >> 1, k[3][1] >> 1, k[3][2] >> 1]);
+      }
+    }
+    // Eight blossoms round the ring, pink and cream by turns, each with a gold heart.
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + 0.2;
+      const x = Math.round(8 + Math.cos(a) * 6.2 - 0.5);
+      const y = Math.round(11.5 + Math.sin(a) * 2.8 - 0.5);
+      const petal = i % 2 ? k[0] : k[2];
+      for (const [ox, oy] of [[1, 0], [-1, 0], [0, -1], [0, 1]]) put(x + ox, y + oy, petal);
+      put(x, y, k[1]);
+    }
+    // Fireflies over it, the middle one twinkling.
+    for (const [x, y] of [[4, 3], [12, 2], [10, 6]]) put(x, y, k[1]);
+    put(7, 1, k[0]);
+    for (const [x, y] of [[6, 1], [8, 1], [7, 0], [7, 2]]) put(x, y, k[1]);
   });
 }

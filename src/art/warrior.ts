@@ -35,7 +35,7 @@ import { BRONZE, PTERUGES, SPARTAN_RED, TAN_SKIN } from './heroSkins';
 import { DIRS, type Dir } from './wizard';
 import { AFONSO_BEARD, CROSS_BLUE, ERMINE, ERMINE_TAIL, KING_HAIR, NORMAN_IRON, ROYAL, RUBY, SAPPHIRE, SURCOAT } from './king';
 import { HOLLOW_BLADE, HOLLOW_CLOAK, HOLLOW_GLOW, HOLLOW_IRON, HOLLOW_MAIL, PUMPKIN, RUST, lanternBack, lanternFront, lanternSide } from './headless';
-import { ASH, BLONDE, COPPER, GILT, RAVEN_CLOTH, RAVEN_HAIR, RAVEN_STEEL, RAVEN_WING, ROSE_WING, SKY_CLOTH, SLATE_WING, STORM_ASH, STORM_CLOTH, STORM_STEEL, SUN_WOOD, SWAN, WHITE_HAIR } from './valkyrie';
+import { ASH, BIRCH, BLONDE, COPPER, GILT, LAKE_SILK, MOON_PEARL, MOON_STEEL, PEARL, PLATINUM, RAVEN_CLOTH, RAVEN_HAIR, RAVEN_STEEL, RAVEN_WING, ROSE_LIP, ROSE_WING, SKY_CLOTH, SLATE_WING, STORM_ASH, STORM_CLOTH, STORM_STEEL, SUN_WOOD, SWAN, SWAN_DOWN, SWAN_TIP, WHITE_HAIR } from './valkyrie';
 
 // ---------------------------------------------------------------------------
 // Looks (skins). Every look shares the rig and poses, so the blade sits on the
@@ -94,6 +94,18 @@ export interface WarriorLook {
   storm?: boolean;
   /** A ring of sunlight behind her head (the Spearmaiden's Sunshield skin). */
   sun?: boolean;
+  /**
+   * The Swan Maiden (with `valkyrie`): no helm, only a slender silver diadem
+   * with a single swan feather on her bare platinum hair, which falls loose
+   * behind into two long braids; a face with lips; great swan wings of
+   * layered feather rows, their flight feathers tipped in `tip`; a fitted
+   * pearl bodice and feathered shoulder caps over a flowing silk skirt (the
+   * cloth) instead of the tabard and mail; and a slim silver leaf of a spear
+   * with a tassel of white feathers. `gem` is the diadem's and brooch's pearl.
+   */
+  swan?: boolean;
+  tip?: Material;
+  lips?: Material;
   /**
    * The King: a bare head under a jewelled crown, hair to the shoulders and a
    * full beard, an ermine mantle on the shoulders instead of pauldrons, a
@@ -260,6 +272,30 @@ export const RAVEN_LOOK: WarriorLook = {
   glow: { core: hex('#f8f0ff'), hot: hex('#d8b0ff'), mid: hex('#a060ff') },
 };
 
+/** The Spearmaiden's Swan Maiden skin: pearl and silver-blue over lake-blue silk, swan wings, platinum braids and a diadem. */
+export const SWAN_LOOK: WarriorLook = {
+  ...SPEAR_LOOK,
+  key: 'valkyrie_swan',
+  plate: PEARL,
+  cloth: LAKE_SILK,
+  plume: LAKE_SILK,
+  trim: SILVER,
+  belt: MOON_STEEL,
+  glove: PEARL,
+  boot: MOON_STEEL,
+  arms: MOON_STEEL,
+  blade: BLADE,
+  grip: BIRCH,
+  guard: SILVER,
+  wing: SWAN_DOWN,
+  tip: SWAN_TIP,
+  hair: PLATINUM,
+  lips: ROSE_LIP,
+  gem: MOON_PEARL,
+  glow: { core: hex('#ffffff'), hot: hex('#dfeaff'), mid: hex('#8cb8e8') },
+  swan: true,
+};
+
 /** The King: bright steel, royal purple and gold, an ermine mantle, a jewelled crown. */
 export const KING_LOOK: WarriorLook = {
   key: 'warrior_king',
@@ -327,7 +363,7 @@ export const HEADLESS_LOOK: WarriorLook = {
   headless: true,
 };
 
-export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK, HEADLESS_LOOK, SPEAR_LOOK, STORM_LOOK, SUN_LOOK, RAVEN_LOOK, KING_LOOK, AFONSO_LOOK];
+export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK, HEADLESS_LOOK, SPEAR_LOOK, STORM_LOOK, SUN_LOOK, RAVEN_LOOK, SWAN_LOOK, KING_LOOK, AFONSO_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let LK: WarriorLook = KNIGHT_LOOK;
@@ -541,12 +577,29 @@ function drawSpear(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
     if (LK.storm) {
       off = (Math.floor(u * 3.2) % 2 ? 0.75 : -0.75) * (1 - u);
       hw = u < 0.12 ? 0.5 + u * 3 : 0.3 + 0.75 * (1 - u);
+    } else if (LK.swan) {
+      // A slimmer willow leaf, widest low down and drawn out to a long point.
+      hw = u < 0.3 ? 0.45 + (u / 0.3) * 0.6 : 0.1 + (0.95 * (1 - u)) / 0.7;
     } else hw = u < 0.35 ? 0.55 + (u / 0.35) * 0.8 : 0.15 + (1.2 * (1 - u)) / 0.65;
     if (Math.abs(side - off) > hw) return;
     const k = side - off >= 0 ? 1 : -1;
     c.px(x, y, LK.blade, facing(px * k * 0.7, py * k * 0.7, 0.72), { glow: LK.storm ? Math.max(0.3, glow * 0.85) : glow * 0.85 });
   });
   if (LK.storm) c.spark(tip.x, tip.y, LK.glow.hot, 0.5);
+  if (LK.swan) {
+    // A tassel of white feathers tied under the socket, hanging down whichever
+    // way the spear points, and a pearl bead where it is bound.
+    const nx = s.hx + dx * (neck - 1.2);
+    const ny = s.hy + dy * (neck - 1.2);
+    c.part();
+    for (const [ox, len] of [[-0.35, 2.6], [0.45, 2.1]] as const) {
+      const fx = nx + ox;
+      c.capsule(fx, ny + 0.5, fx + ox * 0.5, ny + 0.5 + len, 0.55, 0.4, LK.wing ?? LK.plate, { bias: ox < 0 ? 1 : 0 });
+      c.px(fx + ox * 0.5, ny + 0.6 + len, LK.tip ?? LK.plate, { x: 0, y: -0.3, z: 0.95 });
+    }
+    c.part();
+    c.px(nx, ny, LK.gem ?? LK.guard, { x: -0.3, y: 0.4, z: 0.86 });
+  }
   if (glow > 0) {
     // Light running up the head, and sparks off the shaft.
     for (let t = neck; t < end; t += 1.2) {
@@ -569,6 +622,10 @@ function drawSpear(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
  * `flap` raises it, `size` shrinks the far wing seen from the side.
  */
 function wing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, size = 1, bias = 0, spread = 0, ruffle = 0): void {
+  if (LK.swan) {
+    swanWing(c, rx, ry, k, flap, size, bias, spread, ruffle);
+    return;
+  }
   const m = LK.wing ?? LK.cloth;
   size *= 0.85;
   // The swan's wings spread wide and level; the Stormwing's are raised high in
@@ -700,6 +757,369 @@ function braid(c: PixelCanvas, x: number, y0: number, y1: number, sway = 0): voi
   c.px(x + sway - 0.5, Math.round(y1) + 1, LK.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
 }
 
+// ---------------------------------------------------------------------------
+// The Swan Maiden: swan wings, a bare head under a diadem, a bodice and skirt
+
+/** Flight feathers in a swan wing, from the one hanging by her side to the outermost primary. */
+const SWAN_FEATHERS = 9;
+/** How far up the leading edge bows between shoulder and wrist, the swan's arch. */
+const SWAN_ARCH = 1.3;
+/** How much of each flight feather, from its tip, is silver-blue. */
+const SWAN_TIP_LEN = 0.38;
+
+/**
+ * A swan's wing, rooted at (rx, ry) like `wing`: a long arched leading edge,
+ * nine flight feathers growing longer toward the wrist with silver-blue tips,
+ * a row of coverts laid over their roots and a thick row of small coverts
+ * along the edge, each row its own layer so the feathers read in tiers.
+ */
+function swanWing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, size: number, bias: number, spread: number, ruffle: number): void {
+  const m = LK.wing ?? LK.cloth;
+  const tipM = LK.tip ?? m;
+  size *= 0.92;
+  const wx = rx + k * (6 - flap * 0.3 + spread * 1.4) * size;
+  const wy = ry - (8.2 + flap * 1.6 + spread * 1.2) * size;
+  const along = (t: number) => ({ x: rx + (wx - rx) * t, y: ry + (wy - ry) * t - Math.sin(t * Math.PI) * SWAN_ARCH * size });
+  const n = SWAN_FEATHERS;
+  const bases: { x: number; y: number }[] = [];
+  const tips: { x: number; y: number }[] = [];
+  const angles: number[] = [];
+  const lens: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const b = along(t * 0.96);
+    const a = (24 + spread * 14 + t * (74 + flap * 6 + spread * 30)) * RAD;
+    const len = (5.6 + t * t * 6.4) * size * (1 + spread * 0.12);
+    bases.push(b);
+    angles.push(a);
+    lens.push(len);
+    tips.push({ x: b.x + k * Math.sin(a) * len, y: b.y + Math.cos(a) * len + (i % 2 ? ruffle : -ruffle) });
+  }
+  // The web under the feathers, in shade.
+  c.part();
+  for (let i = 0; i < n - 1; i++) fillQuad(c, [bases[i], tips[i], tips[i + 1], bases[i + 1]], m, { x: k * 0.3, y: -0.2, z: 0.93 }, bias - 1);
+  // The flight feathers, inner ones over outer so the trailing edge scallops, each tipped in silver-blue.
+  for (let i = n - 1; i >= 0; i--) {
+    const b = bases[i];
+    const p = tips[i];
+    const f = 1 - SWAN_TIP_LEN;
+    const fb = bias + (i % 2 ? 0 : 1);
+    c.part();
+    c.capsule(b.x, b.y, p.x, p.y, 1.2 * size, 0.55, m, { bias: fb });
+    c.capsule(b.x + (p.x - b.x) * f, b.y + (p.y - b.y) * f, p.x, p.y, 0.95 * size, 0.5, tipM, { bias: fb });
+  }
+  // Coverts over the feathers' roots: shorter, laid a little closer.
+  for (let i = n - 2; i >= 0; i -= 1) {
+    const b = along((i / (n - 1)) * 0.9);
+    const a = angles[i] - 8 * RAD;
+    const len = lens[i] * 0.52;
+    c.part();
+    c.capsule(b.x, b.y, b.x + k * Math.sin(a) * len, b.y + Math.cos(a) * len, 1.3 * size, 0.75, m, { bias: bias + 1 + (i % 2 ? 0 : 1) });
+  }
+  // The small coverts thick along the arched edge, lit along the top.
+  const mid = along(0.5);
+  const near = along(0.12);
+  const far = along(0.85);
+  c.part();
+  c.capsule(rx, ry, mid.x, mid.y, 1.8 * size, 1.5 * size, m, { bias: bias + 2 });
+  c.capsule(mid.x, mid.y, wx, wy, 1.5 * size, 1.0 * size, m, { bias: bias + 2 });
+  c.part();
+  c.capsule(near.x, near.y + 1.6 * size, far.x, far.y + 1.5 * size, 1.25 * size, 0.85 * size, m, { bias: bias + 1 });
+}
+
+/** Strands drawn down a mass of hair already laid between `edges`: a dark line every other column, offset by row. */
+function strands(c: PixelCanvas, y0: number, y1: number, edges: (y: number) => [number, number]): void {
+  for (let y = Math.round(y0) + 1; y <= Math.round(y1); y++) {
+    const [l, r] = edges(y);
+    for (let x = Math.round(l) + 1; x < Math.round(r) - 1; x += 2) c.shade(x + ((y >> 1) & 1), y, -1);
+  }
+}
+
+/** Her loose hair falling behind her shoulders, seen from the front: it frames her neck either side. */
+function swanHairBehind(c: PixelCanvas, cx: number, U: number, sway: number): void {
+  const m = LK.hair ?? LK.plume;
+  const y0 = 10 + U;
+  const y1 = 20 + U;
+  const edges = (y: number): [number, number] => {
+    const u = (y - y0) / (y1 - y0);
+    const hw = 4.6 + Math.sin(Math.min(1, u * 1.6) * Math.PI * 0.5) * 0.9 - Math.max(0, u - 0.7) * 2;
+    const x = cx + sway * u * u * 0.4;
+    return [x - hw, x + hw];
+  };
+  c.part();
+  c.shape(y0, y1, edges, m, (_x, _y, t, u) => cyl(t * 0.8, 0.2 - u * 0.3), { bias: -1 });
+  strands(c, y0, y1, edges);
+}
+
+/** The diadem's pearl, glowing a little. */
+function pearl(c: PixelCanvas, x: number, y: number): void {
+  c.px(x, y, LK.gem ?? LK.trim, { x: -0.35, y: 0.4, z: 0.85 }, { bias: 1 });
+}
+
+/** A single swan feather standing from the diadem at (x, y), curving out to the side `k` and up. */
+function diademFeather(c: PixelCanvas, x: number, y: number, k: number, sway = 0): void {
+  const m = LK.wing ?? LK.plate;
+  const mx = x + k * 1.4;
+  const my = y - 2.4;
+  const tx = x + k * 2.6 + sway * 0.4;
+  const ty = y - 4.6;
+  c.part();
+  c.capsule(x, y, mx, my, 0.5, 0.7, m, { bias: 1 });
+  c.capsule(mx, my, tx, ty, 0.7, 0.35, m, { bias: 1 });
+  // Its tip in silver-blue, and the quill as a fine shade down its middle.
+  c.px(tx, ty, LK.tip ?? m, { x: k * 0.3, y: 0.5, z: 0.8 });
+  c.shade(x + k * 0.6, y - 1.6, -1);
+}
+
+/** The Swan Maiden's head from the front: face, parted platinum hair, side locks, the diadem and its feather. */
+function swanHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = LK.hair ?? LK.plume;
+  c.part();
+  c.ellipse(cx, 12.7 + U, 3.1, 2.8, LK.skin);
+  c.part();
+  c.px(11, 13 + U, LK.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 13 + U, LK.skin, sphere(0.35, -0.2));
+  // Soft lips, the right half in shade.
+  c.part();
+  c.px(11, 14 + U, LK.lips ?? LK.skin, { x: -0.2, y: 0.3, z: 0.93 });
+  c.px(12, 14 + U, LK.lips ?? LK.skin, { x: 0.3, y: 0.2, z: 0.93 }, { bias: -1 });
+  c.part();
+  const look = p.look ?? 0;
+  if (p.blink) {
+    c.px(10, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
+    c.px(13, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
+  } else {
+    c.px(10, 12 + U + look, EYE);
+    c.px(13, 12 + U + look, EYE);
+  }
+  // Lashes: the outer corners darkened.
+  c.shade(9, 12 + U, -2);
+  c.shade(14, 12 + U, -2);
+  // The crown of her hair, parted in the middle.
+  c.part();
+  const top = 6 + U;
+  const crown = (y: number): [number, number] => {
+    const u = (y + 0.5 - top) / 5;
+    const w = 1.8 + 2.7 * Math.sqrt(Math.min(1, u));
+    return [cx - w, cx + w];
+  };
+  c.shape(top, 10 + U, crown, hair, (_x, _y, t, u) => sphere(t * 0.95, u * 1.2 - 0.9, 1));
+  for (let y = top; y <= 8 + U; y++) c.shade(11, y, -1);
+  // The fringe swept out from the parting, and locks falling past her cheeks.
+  c.part();
+  for (const [x, y] of [[8, 11], [9, 11], [10, 10], [13, 10], [14, 11], [15, 11], [9, 10], [14, 10]] as const) c.px(x, y + U, hair, sphere(x < cx ? -0.5 : 0.5, -0.2), { bias: x === 10 || x === 13 ? 1 : 0 });
+  const lockL = (y: number): [number, number] => [7.5 - (y - 11 - U) * 0.1, 9.2];
+  const lockR = (y: number): [number, number] => [14.8, 16.5 + (y - 11 - U) * 0.1];
+  c.part();
+  c.shape(11 + U, 16 + U, lockL, hair, (_x, _y, t) => cyl(t * 0.7 - 0.3, 0.1));
+  c.shape(11 + U, 16 + U, lockR, hair, (_x, _y, t) => cyl(t * 0.7 + 0.3, 0.1));
+  c.shade(8, 13 + U, -1);
+  c.shade(15, 14 + U, -1);
+  // The diadem: a slender silver band over her brow rising to a point, a pearl at its heart.
+  c.part();
+  c.shape(9 + U, 9 + U, () => [cx - 4.3, cx + 4.3], LK.trim, (_x, _y, t) => cyl(t, 0.2), { bias: 1 });
+  c.px(11, 8 + U, LK.trim, { x: -0.3, y: 0.5, z: 0.8 }, { bias: 1 });
+  c.px(12, 8 + U, LK.trim, { x: 0.3, y: 0.5, z: 0.8 });
+  c.part();
+  pearl(c, 11, 9 + U);
+  c.px(12, 9 + U, LK.gem ?? LK.trim, { x: 0.3, y: 0.3, z: 0.9 });
+  diademFeather(c, cx + 3.6, 8.6 + U, 1, p.plume);
+}
+
+/** The Swan Maiden's head from behind: the back of her hair under the diadem's band, falling into one long braid. */
+function swanHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = LK.hair ?? LK.plume;
+  diademFeather(c, cx - 3.6, 8.6 + U, -1, p.plume);
+  c.part();
+  c.ellipse(cx, 10.3 + U, 4.4, 4.3, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.15, 1) });
+  for (let y = 7; y <= 14; y++) for (let x = 9; x <= 15; x += 2) c.shade(x + ((y >> 1) & 1), y + U, -1);
+  // The band, seen only where it rounds her temples.
+  c.part();
+  for (const x of [7, 8, 15, 16]) c.px(x, 9 + U, LK.trim, { x: x < cx ? -0.6 : 0.6, y: 0.2, z: 0.77 }, { bias: x === 7 ? 1 : 0 });
+  // Her hair falls loose down her back, gathering into a braid below the shoulder blades.
+  const y0 = 13 + U;
+  const y1 = 20 + U;
+  const fall = (y: number): [number, number] => {
+    const u = (y - y0) / (y1 - y0);
+    const hw = 3.9 - u * 2.6;
+    const x = cx + p.cape * u * u * 0.4;
+    return [x - hw, x + hw];
+  };
+  c.part();
+  c.shape(y0, y1, fall, hair, (_x, _y, t, u) => cyl(t * 0.85, 0.2 - u * 0.3));
+  strands(c, y0, y1, fall);
+  braid(c, cx + 0.5 + p.cape * 0.4, y1, 27 + U, p.cape * 0.5);
+}
+
+/** The Swan Maiden's head in profile, facing left: hair over the back of her head, falling behind into a braid. */
+function swanHeadSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const hair = LK.hair ?? LK.plume;
+  // The hair down her back, behind everything else of the head.
+  const y0 = 11 + U;
+  const y1 = 19 + U;
+  const fall = (y: number): [number, number] => {
+    const u = (y - y0) / (y1 - y0);
+    return [hx + 0.2 + u * 0.6, hx + 3.8 + u * 0.5 + p.cape * u * u * 0.8 - Math.max(0, u - 0.6) * 3];
+  };
+  c.part();
+  c.shape(y0, y1, fall, hair, (_x, _y, t, u) => cyl(t * 0.8 + 0.2, 0.2 - u * 0.3), { bias: -1 });
+  strands(c, y0, y1, fall);
+  diademFeather(c, hx + 1.4, 8.4 + U, 1, p.plume);
+  c.part();
+  c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, LK.skin);
+  c.part();
+  c.px(hx - 5, 13 + U, LK.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(hx - 4, 14 + U, LK.lips ?? LK.skin, { x: -0.4, y: 0.2, z: 0.9 });
+  c.part();
+  if (p.blink) c.px(hx - 3, 12 + U, LK.skin, FLAT_DOWN, { bias: -1 });
+  else c.px(hx - 3, 12 + U, EYE);
+  c.shade(hx - 2, 12 + U, -2);
+  // The cap of her hair: over the crown, and down behind her cheek and ear.
+  c.part();
+  const top = 6 + U;
+  c.shape(top, 14 + U, (y) => {
+    const u = (y + 0.5 - top) / 8.6;
+    const w = 4.3 * Math.sqrt(Math.max(0, 1 - Math.pow(u * 2 - 1.05, 2)));
+    const l = y <= 10 + U ? hx - 0.3 - w : hx - 1.2;
+    return [l, hx - 0.3 + w];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.9 + 0.1, u * 1.2 - 0.6, 1));
+  for (let y = top + 1; y <= 13 + U; y++) for (let x = Math.round(hx); x <= hx + 3; x += 2) c.shade(x + ((y >> 1) & 1), y, -1);
+  // A lock of fringe over her brow.
+  c.part();
+  c.px(hx - 4, 10 + U, hair, sphere(-0.6, -0.1), { bias: 1 });
+  c.px(hx - 3, 10 + U, hair, sphere(-0.3, -0.2));
+  // The diadem across her brow, its pearl at the front.
+  c.part();
+  c.shape(9 + U, 9 + U, () => [hx - 4.6, hx + 1.2], LK.trim, (_x, _y, t) => cyl(t * 0.6 - 0.3, 0.2), { bias: 1 });
+  c.part();
+  pearl(c, hx - 4, 9 + U);
+  braid(c, hx + 2.6, 15 + U, 24 + U, p.cape * 0.6);
+}
+
+/** Her skirt of silk from the waist to just above her feet, flaring and swaying, folds running down it, hemmed in silver-blue. */
+function swanSkirt(c: PixelCanvas, waist: number, hem: number, edges: (u: number) => [number, number], back = false): void {
+  const e = (y: number) => edges((y + 0.5 - waist) / (hem + 1 - waist));
+  c.part();
+  c.shape(waist, hem, e, LK.cloth, (_x, _y, t, u) => cyl(t * 0.85, 0.15 - u * 0.35), { bias: back ? -1 : 0 });
+  // Folds: a shaded crease with a lit ridge beside it, spreading as the skirt flares.
+  for (let y = waist + 2; y <= hem; y++) {
+    const [l, r] = e(y);
+    for (const f of [0.24, 0.52, 0.8]) {
+      const x = Math.round(l + (r - l) * f);
+      c.shade(x, y, -1);
+      if (y > waist + 3) c.shade(x + 1, y, 1);
+    }
+  }
+  c.part();
+  const [l, r] = e(hem + 1);
+  c.shape(hem + 1, hem + 1, () => [l + 0.3, r - 0.3], LK.tip ?? LK.trim, (_x, _y, t) => cyl(t, -0.1));
+}
+
+/** Pearl tassets over her hips shaped like feathers, pointing down, centred on each x. */
+function swanTassets(c: PixelCanvas, xs: number[], y0: number, k = 0): void {
+  for (const x of xs) {
+    c.part();
+    c.shape(y0, y0 + 3, (y) => {
+      const hw = 1.55 * (1 - (y - y0) / 4.2);
+      return [x - hw, x + hw];
+    }, LK.plate, (_x, _y, t, u) => sphere(t * 0.8 + k * 0.2, u * 0.9 - 0.4, 1));
+    c.shade(Math.round(x - 0.5), y0 + 1, -1);
+  }
+}
+
+/** A feathered shoulder cap: a small pearl plate, three white feathers fanned below it. */
+function swanCap(c: PixelCanvas, x: number, y: number, rx: number, ry: number): void {
+  const k = x < 12 ? -1 : 1;
+  const m = LK.wing ?? LK.plate;
+  c.part();
+  for (let j = -1; j <= 1; j++) {
+    const fx = x + j * 1.1;
+    c.capsule(fx, y + 0.6, fx + k * 0.4 + j * 0.4, y + 2.9 - Math.abs(j) * 0.4, 0.75, 0.45, m, { bias: j === -k ? 0 : 1 });
+  }
+  c.part();
+  c.ellipse(x, y, rx * 0.8, ry * 0.85, LK.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.25, 0.95) });
+  c.px(x - 0.5, y + ry * 0.85 - 0.6, LK.tip ?? LK.trim, { x: 0, y: -0.2, z: 0.98 });
+}
+
+/** Where the Swan Maiden's skirt ends, the row above its silver-blue hem (before the walk's lift). */
+const SWAN_HEM = 28;
+
+/** A fitted pearl bodice narrowing to a pointed basque waist, rows top..waist-1 between `edges`. */
+function swanBodice(c: PixelCanvas, top: number, waist: number, edges: (u: number) => [number, number], lean = 0): void {
+  c.part();
+  c.shape(top, waist - 1, (y) => edges((y + 0.5 - top) / (waist - top)), LK.plate, (_x, _y, t, u) => sphere(t * 0.9 + lean, (u - 0.35) * 1.1, 1));
+}
+
+/** The Swan Maiden's body from the front: lake-blue skirt, pearl bodice with a sweetheart neckline, a brooch and feathered tassets. */
+function swanBodyDown(c: PixelCanvas, cx: number, U: number, L: number, cape: number): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  swanSkirt(c, waist, SWAN_HEM + L, (u) => {
+    const hw = 3.5 + 2.7 * Math.pow(u, 0.9);
+    const x = cx + cape * 0.5 * u * u;
+    return [x - hw, x + hw];
+  });
+  swanBodice(c, top, waist, (u) => {
+    const hw = 4.2 - 1.4 * u * u;
+    return [cx - hw, cx + hw];
+  });
+  // The neckline dips at the middle, a moonlit pearl brooch just under it.
+  c.part();
+  c.px(11, top + 1, LK.skin, { x: -0.2, y: 0.3, z: 0.93 });
+  c.px(12, top + 1, LK.skin, { x: 0.2, y: 0.3, z: 0.93 }, { bias: -1 });
+  c.part();
+  pearl(c, 11, top + 2);
+  c.px(12, top + 2, LK.gem ?? LK.trim, { x: 0.3, y: 0.3, z: 0.9 });
+  // Seams of silver-blue curving down from the bust to the waist's point.
+  c.part();
+  for (const [x, y] of [[9, 3], [9, 4], [10, 5], [14, 3], [14, 4], [13, 5]] as const) c.px(x, top + y, LK.belt, { x: x < cx ? -0.3 : 0.3, y: 0.2, z: 0.93 });
+  // The pointed basque waist.
+  c.part();
+  c.shape(waist, waist, () => [cx - 3, cx + 3], LK.belt, (_x, _y, t) => cyl(t, 0.1));
+  c.shape(waist + 1, waist + 1, () => [cx - 1, cx + 1], LK.belt, (_x, _y, t) => cyl(t, -0.2));
+  swanTassets(c, [cx - 3.4, cx + 3.4], waist + 1);
+}
+
+/** The Swan Maiden's body from behind: skirt, the bodice laced up the back, tassets. */
+function swanBodyUp(c: PixelCanvas, cx: number, U: number, L: number, cape: number): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  swanSkirt(c, waist, SWAN_HEM + L, (u) => {
+    const hw = 3.5 + 2.7 * Math.pow(u, 0.9);
+    const x = cx + cape * u * u * 0.8;
+    return [x - hw, x + hw];
+  });
+  swanBodice(c, top, waist, (u) => {
+    const hw = 4.2 - 1.4 * u * u;
+    return [cx - hw, cx + hw];
+  });
+  // Lacing crossing up her back.
+  c.part();
+  for (let y = top + 2; y < waist; y++) c.px(y & 1 ? 11 : 12, y, LK.belt, { x: 0, y: 0.2, z: 0.97 }, { bias: y & 1 ? 1 : 0 });
+  c.part();
+  c.shape(waist, waist, () => [cx - 3, cx + 3], LK.belt, (_x, _y, t) => cyl(t, 0.1));
+  swanTassets(c, [cx - 3.4, cx + 3.4], waist + 1);
+}
+
+/** The Swan Maiden's body in profile, facing left: the skirt sweeping back, the bodice, a tasset at the hip. */
+function swanBodySide(c: PixelCanvas, cx: number, hx: number, S: number, U: number, L: number, cape: number): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  swanSkirt(c, waist, SWAN_HEM + L, (u) => [cx - 2.8 + S * 0.5 - u * 1.4, cx + 2.8 + u * 2.8 + cape * u * u * 0.9]);
+  c.part();
+  c.shape(top, waist - 1, (y) => {
+    const u = (y + 0.5 - top) / (waist - top);
+    const bust = y >= top + 1 && y <= top + 3 ? 0.7 : 0;
+    return [hx - 2.6 - bust + u * 0.4, hx + 2.4 - u * 0.5];
+  }, LK.plate, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
+  c.part();
+  pearl(c, hx - 3, top + 2);
+  c.part();
+  c.shape(waist, waist, () => [hx - 2.4, hx + 2.1], LK.belt, (_x, _y, t) => cyl(t * 0.9 - 0.1, 0.1));
+  c.px(hx - 2.6, waist + 1, LK.belt, { x: -0.4, y: -0.1, z: 0.9 });
+  swanTassets(c, [hx - 0.6], waist + 1, -1);
+}
+
 function arm(c: PixelCanvas, sx: number, sy: number, hx: number, hy: number, bias = 0): void {
   c.part();
   const vx = hx - sx;
@@ -719,6 +1139,10 @@ function glove(c: PixelCanvas, x: number, y: number): void {
 }
 
 function pauldron(c: PixelCanvas, x: number, y: number, rx = 2.3, ry = 1.75): void {
+  if (LK.swan) {
+    swanCap(c, x, y, rx, ry);
+    return;
+  }
   if (LK.samurai) {
     sode(c, x, y, rx, ry);
     return;
@@ -1305,6 +1729,11 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     const flap = flapOf(p);
     wing(c, cx - 3.2, 17.5 + U, -1, flap, 1, -1, p.spread ?? 0, p.ruffle ?? 0);
     wing(c, cx + 3.2, 17.5 + U, 1, flap, 1, -1, p.spread ?? 0, -(p.ruffle ?? 0));
+    if (LK.swan) {
+      if (p.head) c.offset(BODY_X + p.head.x, BODY_Y + p.head.y);
+      swanHairBehind(c, cx, U, p.cape);
+      if (p.head) c.offset(BODY_X, BODY_Y);
+    }
   } else {
     // Cape lining, seen behind the shoulders and legs.
     const ct = 15 + U;
@@ -1325,6 +1754,8 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   boot(c, 9.6, 29.7 - p.footA);
   boot(c, 14.4, 29.7 - p.footB);
 
+  if (LK.swan) swanBodyDown(c, cx, U, L, p.cape);
+  else {
   // Breastplate, rounded so it catches the light at the upper left.
   const top = 15 + U;
   const waist = 22 + U;
@@ -1390,6 +1821,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     c.px(11, 19 + U, LK.trim, FLAT_DOWN, { bias: -1 });
     c.px(12, 19 + U, LK.trim, FLAT_DOWN, { bias: -1 });
   }
+  }
 
   // Free arm (character's left, screen right).
   const fh = p.free ? { x: p.free.x, y: p.free.y + U } : { x: 17.6, y: 22.2 + U + p.arm };
@@ -1401,7 +1833,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
 
   // Mail gorget between chin and breastplate (a bare neck under the Spartan's helm).
   c.part();
-  c.shape(15 + U, 15 + U, () => [cx - 2.4, cx + 2.4], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
+  c.shape(15 + U, 15 + U, () => [cx - 2.4, cx + 2.4], LK.spartan || LK.swan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
   if (LK.king && !LK.afonso) ermineCollar(c, cx - 4.8, cx + 4.8, 15 + U);
   // The idle moment may nudge the head (a tilt, a nod): drawn through a shifted canvas.
   const hd = p.head;
@@ -1413,6 +1845,8 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     corinthianFront(c, cx, U);
   } else if (LK.king) {
     kingHeadDown(c, cx, U, !!p.blink, p.look ?? 0);
+  } else if (LK.swan) {
+    swanHeadDown(c, cx, U, p);
   } else {
     // Head: face framed by the helmet's cheek guards, a plume on top.
     if (LK.valkyrie && LK.storm) {
@@ -1481,8 +1915,8 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   if (LK.valkyrie && !LK.storm) {
     // Her braids, falling from under the helm over her shoulders.
     if (hd) c.offset(BODY_X + hd.x, BODY_Y + hd.y);
-    braid(c, cx - 3, 13 + U, 19 + U, p.cape * 0.5);
-    braid(c, cx + 4, 13 + U, 19 + U, p.cape * 0.5);
+    braid(c, cx - 3, 13 + U, (LK.swan ? 23 : 19) + U, p.cape * 0.5);
+    braid(c, cx + 4, 13 + U, (LK.swan ? 23 : 19) + U, p.cape * 0.5);
     if (hd) c.offset(BODY_X, BODY_Y);
   }
   p.fx?.(c);
@@ -1515,6 +1949,8 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
   const top = 15 + U;
   const waist = 22 + U;
   const hem = 26 + L;
+  if (LK.swan) swanBodyUp(c, cx, U, L, p.cape);
+  else {
   c.part();
   c.shape(top, waist - 1, (y) => {
     const u = (y + 0.5 - top) / (waist - top);
@@ -1527,6 +1963,7 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
     const hw = 3.9 + 1.1 * u;
     return [cx - hw, cx + hw];
   }, LK.mail, (_x, _y, t, u) => cyl(t, 0.1 - u * 0.2));
+  }
 
   // Free arm (character's left, now screen left), under the cape's edge.
   arm(c, 7.4, 16.8 + U, fh.x, fh.y);
@@ -1561,10 +1998,12 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
     // The ermine collar over the cape's shoulders, then his head.
     if (!LK.afonso) ermineCollar(c, cx - 4.8, cx + 4.8, Math.round(ct));
     kingHeadUp(c, cx, U, p.cape);
+  } else if (LK.swan) {
+    swanHeadUp(c, cx, U, p);
   } else {
   // Helmet from behind, with a mail neck guard; the plume runs down its back.
   c.part();
-  c.shape(13 + U, 15 + U, () => [cx - 3.4, cx + 3.4], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0));
+  c.shape(13 + U, 15 + U, () => [cx - 3.4, cx + 3.4], LK.spartan || LK.swan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0));
   if (LK.samurai) crest(c, cx, 5.8 + U, 'back'); // behind the helmet: only the horns show
   c.part();
   c.ellipse(cx, 10.2 + U, 4.7, 4.5, LK.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.15, 1) });
@@ -1681,6 +2120,8 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
   leg(c, cx - 0.2, 24 + L, cx + 0.2 - p.footA, 28.4 - lift(p.footA));
   boot(c, cx - 0.5 - p.footA, 29.7 - lift(p.footA), true);
 
+  if (LK.swan) swanBodySide(c, cx, hx, S, U, L, p.cape);
+  else {
   // Breastplate in profile, chest pushed forward.
   const top = 15 + U;
   const waist = 22 + U;
@@ -1722,6 +2163,7 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
   c.shape(waist, waist, () => [bl - 0.1, br + 0.2], LK.belt, (_x, _y, t) => cyl(t, 0));
   c.part();
   c.px(Math.round(bl), waist, LK.trim, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
+  }
 
   // The Spartan's shield, up before his chest.
   if (LK.spartan) aspisSide(c, hx - 4.4, 19.2 + U);
@@ -1729,7 +2171,7 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
 
   // Head: profile face under the helmet, cheek guard, plume streaming back.
   c.part();
-  c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.6], LK.spartan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
+  c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.6], LK.spartan || LK.swan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
   if (LK.king && !LK.afonso) ermineCollar(c, hx - 2.8, hx + 2.8, 15 + U);
   if (LK.headless) {
     lanternSide(c, hx, U, emberPhase(p));
@@ -1738,6 +2180,8 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     corinthianSide(c, hx, U);
   } else if (LK.king) {
     kingHeadSide(c, hx, U, !!p.blink);
+  } else if (LK.swan) {
+    swanHeadSide(c, hx, U, p);
   } else {
     c.part();
     c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, LK.skin);

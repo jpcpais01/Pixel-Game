@@ -17,6 +17,14 @@ export interface SpellColors {
   flame?: boolean;
   /** Starlight: a four-pointed star that twinkles, and a burst of long rays (the astral look). */
   star?: boolean;
+  /** Petals: the orb's motes and the burst's sparks are petals in the accent colour (Titania, Lotus). */
+  petals?: boolean;
+}
+
+/** A petal two pixels long, lying at angle `a`, its tip paler than its base. */
+function petal(c: PixelCanvas, x: number, y: number, a: number, k: SpellColors, alpha: number): void {
+  c.spark(x, y, k.accent, alpha);
+  c.spark(x + Math.cos(a), y + Math.sin(a), k.core, alpha * 0.7);
 }
 
 export const ARCANE_SPELL: SpellColors = { core: MAGIC_CORE, hot: MAGIC_HOT, mid: MAGIC_MID, deep: MAGIC_DEEP, accent: MAGIC_VIOLET };
@@ -54,6 +62,14 @@ export function orbFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanvas 
       else if (d <= 5.4 + pulse && hash(x, y, f) > 0.35) c.spark(x, y, k.hollow ? k.mid : k.deep, 0.55);
       else if (d <= 6.6 && hash(x, y, f + 9) > 0.86) c.spark(x, y, k.deep, 0.35);
     }
+  }
+  if (k.petals) {
+    // Three petals swept round it, lying along their path.
+    for (let m = 0; m < 3; m++) {
+      const a = ((f * 40 + m * 120) * Math.PI) / 180;
+      petal(c, cx + Math.cos(a) * 5.4, cy + Math.sin(a) * 5.4, a + Math.PI / 2, k, 1);
+    }
+    return c;
   }
   for (let m = 0; m < 2; m++) {
     const a = ((f * 45 + m * 180) * Math.PI) / 180;
@@ -140,6 +156,11 @@ export function burstFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanva
     const a = (i / 10) * Math.PI * 2 + hash(i, 1) * 0.5;
     const dist = r + 1.5 + hash(i, 2) * 3;
     const col = i % 3 === 0 ? k.accent : k.hot;
+    // Petal looks fling petals, tumbling a little as they fly.
+    if (k.petals && i % 2 === 0) {
+      if (f < BURST_FRAMES - 1) petal(c, cx + Math.cos(a) * dist, cy + Math.sin(a) * dist, a + f * 0.9, k, 1 - t * 0.8);
+      continue;
+    }
     if (f < BURST_FRAMES - 1) c.spark(cx + Math.cos(a) * dist, cy + Math.sin(a) * dist, col, 1 - t);
   }
   return c;

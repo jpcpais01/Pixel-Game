@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { sound } from '../audio';
 import { bakedCanvas, pixelCanvas } from '../art/canvas';
 import { INK, MAP_CELL, RING_M, RING_MID, TREK_T, diskRow, groundMapBase, mapIconSheet, reliefMap, ringFrame, stampCrowns, type MapBase } from '../art/mapArt';
+import { BUILD_PX, paintBuilds, type BuiltSource } from '../art/mapBuilds';
 import { DPR as D, menuZoom } from '../game/display';
 import { activeSeason } from '../game/season';
 import { settings } from '../game/settings';
@@ -12,7 +13,9 @@ import { isPainted, type ArenaDef } from '../world/arenas';
 import { NATURALIST_CAMP } from '../world/clearing';
 import { TREE_SHAPE } from '../world/common';
 import { FG_CX, FG_FOOT, FG_TOP } from '../world/forgeLayout';
+import type { ForestEdits } from '../world/forestEdits';
 import { CHUNK } from '../world/forestGen';
+import { CELL, COLS, PLOT_H, PLOT_W, PLOT_X, PLOT_Y, ROWS } from '../world/homeLayout';
 import { TP_CX, TP_FOOT, TP_TOP } from '../world/sanctumLayout';
 import { POOL } from '../world/sunken';
 import { TrekMap } from '../world/trekMap';
@@ -140,9 +143,12 @@ export class MapScene extends Phaser.Scene {
   private job: Generator<void, void, void> | null = null;
   private full: { canvas: HTMLCanvasElement; w: number; h: number } | null = null;
   /** The Home's: kept to be drawn in relief again as it's built. */
-  private homeBase: MapBase | null = null;
-  private homeWalk: Uint8Array | null = null;
+  /** The Home's grounds in relief, without what's built: the plot's builds are laid over it as they change. */
+  private homeRelief: HTMLCanvasElement | null = null;
+  private homeSig = '';
   private homeT = 0;
+  /** The Everwood's builds, drawn over the explorer's map. */
+  private built: BuiltLayer | null = null;
   private fullVersion = 0;
   /** The hero's last spot and the way they last walked, for the arrow. */
   private last = { x: NaN, y: NaN, dir: 4 };
@@ -170,8 +176,11 @@ export class MapScene extends Phaser.Scene {
     this.drawn = '';
     this.pinsKey = '';
     this.big = null;
+    // The scene is started afresh for each arena: the last one's scroll button went with it.
+    this.mapButton = null;
     this.last = { x: NaN, y: NaN, dir: 4 };
-    this.homeBase = this.homeWalk = null;
+    this.homeRelief = null;
+    this.homeSig = '';
     ensureIcons(this);
     try {
       this.folded = localStorage.getItem(FOLD_KEY) === '1';
@@ -181,6 +190,7 @@ export class MapScene extends Phaser.Scene {
 
     const forest = this.world.everwood;
     this.trekMap = forest ? new TrekMap(forest.gen) : null;
+    this.built = forest ? new BuiltLayer(() => this.world.everwood?.edits ?? null) : null;
     if (forest) trek.load();
     // A phone may close the game without warning: keep the map (and where the hero stands) when the page is hidden.
     const hidden = () => document.visibilityState === 'hidden' && this.trekMap && trek.save();
@@ -348,38 +358,48 @@ export class MapScene extends Phaser.Scene {
     const trees = a.scenery().trees.map((t) => ({ x: t.x, y: t.y, kind: t.kind, r: TREE_SHAPE[t.kind]?.canopyR ?? 30 }));
     stampCrowns(base, trees);
     yield;
+    // The Home's plot counts as open ground here: what's built on it is drawn as itself (art/mapBuilds.ts), not sunk as a blocked patch.
+    const home = a.id === 'home';
+    const open = (x: number, y: number) => home && x >= PLOT_X && y >= PLOT_Y && x < PLOT_X + PLOT_W && y < PLOT_Y + PLOT_H;
     const walk = new Uint8Array(cw * ch);
     for (let j = 0; j < ch; j++) {
-      for (let i = 0; i < cw; i++) walk[j * cw + i] = a.walkable(i * MAP_CELL + 4, j * MAP_CELL + 4) ? 1 : 0;
+      for (let i = 0; i < cw; i++) {
+        const x = i * MAP_CELL + 4;
+        const y = j * MAP_CELL + 4;
+        walk[j * cw + i] = open(x, y) || a.walkable(x, y) ? 1 : 0;
+      }
       if ((j & 15) === 15) yield;
     }
-    this.full = { canvas: canvasOf(reliefMap(base, walk), cw, ch), w: cw, h: ch };
-    this.fullVersion++;
-    if (a.id === 'home') {
-      this.homeBase = base;
-      this.homeWalk = walk;
-    } else arenaMaps.set(a.id, this.full);
+    const relief = canvasOf(reliefMap(base, walk), cw, ch);
+    if (home) {
+      this.homeRelief = relief;
+      this.homeSig = '';
+      this.followHome(Infinity);
+    } else {
+      this.full = { canvas: relief, w: cw, h: ch };
+      this.fullVersion++;
+      arenaMaps.set(a.id, this.full);
+    }
   }
 
-  /** The Home's map follows what's built on it: walls and things stand out as they go up. */
+  /** The Home's map follows what's built on it: floors, walls, roofs and things are laid over the grounds as they change. */
   private followHome(dt: number): void {
-    if (!this.homeBase || !this.homeWalk) return;
+    const plot = this.world.homePlot;
+    if (!this.homeRelief || !plot) return;
     this.homeT += dt;
-    if (this.homeT < 1500) return;
+    if (this.homeT < 1000) return;
     this.homeT = 0;
-    const { w, h } = this.homeBase;
-    const walk = new Uint8Array(w * h);
-    let changed = false;
-    for (let j = 0; j < h; j++) {
-      for (let i = 0; i < w; i++) {
-        const n = j * w + i;
-        walk[n] = this.arena.walkable(i * MAP_CELL + 4, j * MAP_CELL + 4) ? 1 : 0;
-        if (walk[n] !== this.homeWalk[n]) changed = true;
-      }
-    }
-    if (!changed) return;
-    this.homeWalk = walk;
-    this.full = { canvas: canvasOf(reliefMap(this.homeBase, walk), w, h), w, h };
+    const sig = plot.layout.encode();
+    if (sig === this.homeSig) return;
+    this.homeSig = sig;
+    const { width: w, height: h } = this.homeRelief;
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d')!;
+    ctx.drawImage(this.homeRelief, 0, 0);
+    ctx.drawImage(canvasOf(paintBuilds(plot.layout, 0, 0, COLS, ROWS), COLS * BUILD_PX, ROWS * BUILD_PX), PLOT_X / MAP_CELL, PLOT_Y / MAP_CELL);
+    this.full = { canvas: c, w, h };
     this.fullVersion++;
   }
 
@@ -464,18 +484,24 @@ export class MapScene extends Phaser.Scene {
     const { cw, ch } = this;
     const hx = hero.x / MAP_CELL;
     const hy = (hero.y - 8) / MAP_CELL;
-    // The hero always at the middle; past an arena's edge is the dark round it.
-    const x0 = Math.round(hx - cw / 2);
-    const y0 = Math.round(hy - ch / 2);
-    const key = `${x0},${y0},${tm ? `${tm.version}` : this.fullVersion}`;
+    // The hero at the middle, but an arena's map keeps inside the arena (or sits in the middle when smaller than the window) rather than show the dark past its edge.
+    let x0 = Math.round(hx - cw / 2);
+    let y0 = Math.round(hy - ch / 2);
+    if (!tm && this.full) {
+      x0 = this.full.w <= cw ? Math.round((this.full.w - cw) / 2) : Phaser.Math.Clamp(x0, 0, this.full.w - cw);
+      y0 = this.full.h <= ch ? Math.round((this.full.h - ch) / 2) : Phaser.Math.Clamp(y0, 0, this.full.h - ch);
+    }
+    const key = `${x0},${y0},${tm ? `${tm.version},${this.built?.version}` : this.fullVersion}`;
     if (key !== this.drawn && this.tex) {
       this.drawn = key;
       const ctx = this.tex.context;
       ctx.imageSmoothingEnabled = false;
       ctx.fillStyle = tm ? '#dcc495' : '#0b0a14';
       ctx.fillRect(0, 0, cw, ch);
-      if (tm) drawTrek(ctx, tm, x0, y0, cw, ch);
-      else if (this.full) {
+      if (tm) {
+        drawTrek(ctx, tm, x0, y0, cw, ch);
+        this.built?.draw(ctx, x0, y0, cw, ch);
+      } else if (this.full) {
         const sx = Math.max(0, x0);
         const sy = Math.max(0, y0);
         const sw = Math.min(this.full.w, x0 + cw) - sx;
@@ -560,7 +586,7 @@ export class MapScene extends Phaser.Scene {
   private openBig(): void {
     // Not over the pause menu, or a counter or the bag.
     if (this.big || !this.trekMap || this.ui?.covered || !this.scene.isActive('world')) return;
-    this.big = new BigMap(this, this.world, this.trekMap, () => this.closeBig(), () => this.last.dir);
+    this.big = new BigMap(this, this.world, this.trekMap, this.built, () => this.closeBig(), () => this.last.dir);
     sound.cardFlip(0);
     // Alone, the world waits while the map is read; online it can't.
     if (!session.active) {
@@ -659,7 +685,7 @@ const BUILT_FIRE = 'campfire';
 const builtFireId = (cx: number, cy: number): number => -1 - (cx * 100000 + cy);
 const builtFires = (world: WorldScene): boolean => !!world.everwood?.edits?.things.some((t) => t.id === BUILT_FIRE);
 
-/** The Everwood's pins in a box: its places where walked, the Stag's secrets, and the player's builds. */
+/** The Everwood's pins in a box: its places where walked, the Stag's secrets, and the campfires the player built. */
 function everwoodPins(world: WorldScene, tm: TrekMap, x0: number, y0: number, x1: number, y1: number): { icon: string; x: number; y: number; fire?: Fire }[] {
   const out: { icon: string; x: number; y: number; fire?: Fire }[] = [];
   const known = (x: number, y: number) => trek.known(Math.floor(x / 64), Math.floor(y / 64));
@@ -670,38 +696,77 @@ function everwoodPins(world: WorldScene, tm: TrekMap, x0: number, y0: number, x1
     else out.push({ icon: POI_ICON[p.kind], x: p.x, y: p.y - 6, fire: p.kind === 'shrine' ? p : undefined });
   }
   for (const s of trek.secrets) if (s.x >= x0 && s.x < x1 && s.y >= y0 && s.y < y1) out.push({ icon: s.kind, x: s.x, y: s.y });
-  // What the player built: a pin for each chunk with anything in it, at its middle.
+  // Campfires the player built are places to travel to at once, with no need to rest at them; everything else they built is drawn on the map itself (BuiltLayer).
   const edits = world.everwood?.edits;
   if (edits) {
     for (let cy = Math.floor(y0 / CHUNK); cy < Math.ceil(y1 / CHUNK); cy++) {
       for (let cx = Math.floor(x0 / CHUNK); cx < Math.ceil(x1 / CHUNK); cx++) {
-        const things: typeof edits.things = [];
-        // A campfire the player built is a place to travel to at once: no need to rest at it first.
         for (const t of edits.thingsInChunk(cx, cy)) {
-          if (t.id !== BUILT_FIRE) things.push(t);
-          else out.push({ icon: 'campfire', x: t.x * 16 + 8, y: t.y * 16 + 8, fire: { id: builtFireId(t.x, t.y), x: t.x * 16 + 8, y: t.y * 16 + 12 } });
+          if (t.id === BUILT_FIRE) out.push({ icon: 'campfire', x: t.x * 16 + 8, y: t.y * 16 + 8, fire: { id: builtFireId(t.x, t.y), x: t.x * 16 + 8, y: t.y * 16 + 12 } });
         }
-        const walls = [...edits.wallsInChunk(cx, cy)];
-        // A tent counts where its first cell is.
-        for (const h of edits.houses) if (h.tent && Math.floor((h.cells[0].x * 16) / CHUNK) === cx && Math.floor((h.cells[0].y * 16) / CHUNK) === cy) walls.push([h.cells[0].x, h.cells[0].y, 0]);
-        const n = things.length + walls.length;
-        if (!n) continue;
-        let sx = 0;
-        let sy = 0;
-        for (const t of things) {
-          sx += t.x;
-          sy += t.y;
-        }
-        for (const [x, y] of walls) {
-          sx += x;
-          sy += y;
-        }
-        out.push({ icon: 'build', x: (sx / n) * 16 + 8, y: (sy / n) * 16 + 8 });
       }
     }
   }
   // Travel points on top of the rest.
   return out.sort((a, b) => Number(!!a.fire) - Number(!!b.fire));
+}
+
+/** Most chunks of builds kept painted, and building cells to a chunk's side. */
+const KEEP_BUILT = 400;
+const CELLS = CHUNK / CELL;
+
+/**
+ * What the player has built in the Everwood, drawn over the explorer's map:
+ * each chunk with anything in it painted once (art/mapBuilds.ts, washed
+ * toward the parchment) and kept until something is built or cleared.
+ */
+class BuiltLayer {
+  private tiles = new Map<number, HTMLCanvasElement | null>();
+  private seen = -1;
+  /** Chunks with floors laid in them. */
+  private floored = new Set<number>();
+
+  constructor(private edits: () => ForestEdits | null) {}
+
+  /** Changes with every build, so the maps showing it draw again. */
+  get version(): number {
+    return this.edits()?.version ?? 0;
+  }
+
+  /** Draw the builds over a map window whose top-left is map pixel (x0, y0). */
+  draw(ctx: CanvasRenderingContext2D, x0: number, y0: number, w: number, h: number): void {
+    const e = this.edits();
+    if (!e) return;
+    if (e.version !== this.seen) {
+      this.seen = e.version;
+      this.tiles.clear();
+      this.floored.clear();
+      for (const k of e.floors.keys()) this.floored.add(Math.floor(Math.floor(k / 65536) / CELLS) * 4096 + Math.floor((k % 65536) / CELLS));
+    }
+    for (let cy = Math.floor(y0 / TREK_T); cy <= Math.floor((y0 + h - 1) / TREK_T); cy++) {
+      for (let cx = Math.floor(x0 / TREK_T); cx <= Math.floor((x0 + w - 1) / TREK_T); cx++) {
+        const t = this.tile(e, cx, cy);
+        if (t) ctx.drawImage(t, cx * TREK_T - x0, cy * TREK_T - y0);
+      }
+    }
+  }
+
+  private tile(e: ForestEdits, cx: number, cy: number): HTMLCanvasElement | null {
+    const k = cx * 4096 + cy;
+    if (this.tiles.has(k)) return this.tiles.get(k)!;
+    // Things from the chunks round it too: a tree's crown reaches over the edge.
+    const things = [];
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) things.push(...e.thingsInChunk(cx + i, cy + j));
+    let t: HTMLCanvasElement | null = null;
+    const covered = e.houses.some((h) => h.x1 >= cx * CELLS && h.x0 < (cx + 1) * CELLS && h.y1 >= cy * CELLS && h.y0 < (cy + 1) * CELLS);
+    if (things.length || e.wallsInChunk(cx, cy).length || this.floored.has(k) || covered) {
+      const src: BuiltSource = { floorAt: (x, y) => e.floorAt(x, y), wallAt: (x, y) => e.wallAt(x, y), roofAt: (x, y) => e.roofAt(x, y), tentAt: (x, y) => e.tentAt(x, y), things };
+      t = canvasOf(paintBuilds(src, cx * CELLS, cy * CELLS, CELLS, CELLS, true), TREK_T, TREK_T);
+    }
+    this.tiles.set(k, t);
+    if (this.tiles.size > KEEP_BUILT) this.tiles.delete(this.tiles.keys().next().value!);
+    return t;
+  }
 }
 
 // ---------------------------------------------------------------- the explorer's map, whole
@@ -748,6 +813,7 @@ class BigMap {
     private scene: MapScene,
     private world: WorldScene,
     private tm: TrekMap,
+    private built: BuiltLayer | null,
     private onClose: () => void,
     private heading: () => number,
   ) {
@@ -940,7 +1006,7 @@ class BigMap {
 
   update(): void {
     const tm = this.tm;
-    const key = `${this.x0},${this.y0},${tm.version},${this.bz}`;
+    const key = `${this.x0},${this.y0},${tm.version},${this.built?.version},${this.bz}`;
     if (key !== this.drawn && this.tex) {
       this.drawn = key;
       const ctx = this.tex.context;
@@ -948,6 +1014,7 @@ class BigMap {
       ctx.fillStyle = '#dcc495';
       ctx.fillRect(0, 0, this.vw, this.vh);
       drawTrek(ctx, tm, this.x0, this.y0, this.vw, this.vh);
+      this.built?.draw(ctx, this.x0, this.y0, this.vw, this.vh);
       // A faint grid of the chunks, as a surveyor would rule it.
       ctx.fillStyle = `rgba(${INK[0]},${INK[1]},${INK[2]},0.07)`;
       for (let c = Math.ceil(this.x0 / TREK_T) * TREK_T; c < this.x0 + this.vw; c += TREK_T * 2) ctx.fillRect(c - this.x0, 0, 1, this.vh);

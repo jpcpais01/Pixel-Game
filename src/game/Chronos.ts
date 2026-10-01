@@ -25,6 +25,12 @@ export const AEON_PAL: Pal = pal(0xeafff6, 0x9affd8, 0x2ee0a0, 0x127a6a, 0x6ff0c
 export const CLOCKWORK_PAL: Pal = pal(0xf6ffe8, 0xd8ffa0, 0x8ef040, 0x2e8a2a, 0xa8f060);
 /** The anomaly's: error cyan. */
 export const ANOMALY_PAL: Pal = pal(0xf0ffff, 0xa0faff, 0x20d8f0, 0x1a4aa0, 0x40e0ff);
+/** Primavera's: cream and rose, running to spring mint. */
+export const PRIMAVERA_PAL: Pal = pal(0xfffaf2, 0xffd0de, 0xf48cae, 0x4cb88c, 0xffb8cc);
+/** The petals Primavera's magic sheds: rose, blush, cream and a fleck of mint leaf. */
+const PETALS = [0xffa8c4, 0xffd0de, 0xfff4ea, 0x8ed8a8];
+/** The blossoms a flower clock wears at its hours, in turn. */
+const BLOOMS = [0xffa8c4, 0xfff6ee, 0xffc8a4];
 
 /** How a bolt (or a shard) flies and what it does. */
 export interface BoltKind {
@@ -43,6 +49,8 @@ export interface BoltKind {
   slowMs: number;
   /** Casts a real light (kept off for echoes and the Special's many shards: lights are few). */
   lit: boolean;
+  /** Primavera's: it trails drifting petals, and bursts into them. */
+  petals?: boolean;
 }
 
 /** Is a body standing at (x, y) close enough to the ground point (gx, gy) for a bolt passing over it to strike it? */
@@ -110,6 +118,7 @@ export class TimeBolt implements Effect {
     if (this.trailT <= 0) {
       this.trailT = 45;
       this.world.debris(this.kind.pal.tints, snap(this.x - this.ux * 4), snap(this.y - BOLT_H - this.uy * 4), 1, this.y - 0.2, 'trail');
+      if (this.kind.petals && Math.random() < 0.4) this.world.debris(PETALS, snap(this.x - this.ux * 5), snap(this.y - BOLT_H - this.uy * 5), 1, this.y - 0.2, 'spores');
     }
   }
 
@@ -117,7 +126,7 @@ export class TimeBolt implements Effect {
     const k = this.kind;
     h.hurt({ damage: k.damage, heavy: false, knock: k.rift ? 70 : 35, fromX: h.x - this.ux * 8, fromY: h.y - h.bodyY - this.uy * 8 });
     if (k.slow < 1 && h.slow) h.slow(Math.max(k.slowFloor, (h.tempo ?? 1) * k.slow), k.slowMs, k.pal.hot);
-    this.world.debris(k.pal.tints, snap(h.x - this.ux * (h.radius - 1)), snap(h.y - h.bodyY), 6, h.y + 20);
+    this.world.debris(k.petals ? PETALS : k.pal.tints, snap(h.x - this.ux * (h.radius - 1)), snap(h.y - h.bodyY), 6, h.y + 20, k.petals ? 'spores' : 'burst');
     sound.chronoHit(this.world.pan(h.x), k.rift);
     this.pop(1);
   }
@@ -216,6 +225,8 @@ export class StasisClock extends Fx {
     private y: number,
     private p: Pal,
     private damage: number,
+    /** Primavera's flower clock: blossoms at the hours, each opening as the hand reaches it. */
+    private flowers = false,
   ) {
     super(world, STASIS_TIME + 420);
     this.face = this.ink(STASIS_R * 2 + 14, Math.ceil(STASIS_R * 2 * GROUND) + 14);
@@ -231,7 +242,7 @@ export class StasisClock extends Fx {
       const open = easeOut(t / 260);
       const fade = Math.min(1, (STASIS_TIME - t) / 120 + 0.6);
       const r = STASIS_R * open;
-      clockFace(g, x, y, r, p, open * fade, Math.floor((t / STASIS_TIME) * 12) / 12, t / STASIS_TIME / 12);
+      clockFace(g, x, y, r, p, open * fade, Math.floor((t / STASIS_TIME) * 12) / 12, t / STASIS_TIME / 12, GROUND, this.flowers);
       // Everything on it is held all but still, and the hold keeps being renewed.
       this.holdT -= dt;
       if (this.holdT <= 0) {
@@ -257,7 +268,7 @@ export class StasisClock extends Fx {
     sound.hourStrike(this.world.pan(x));
     flare(this.world, x, y - 6, 110, p.light, 2.6, 500);
     bloom(this.world, x, y - 4, p.hot, 2.2, 380, y + 30, 0.8);
-    this.world.debris(p.tints, snap(x), snap(y) - 4, 16, y + 20, 'spores');
+    this.world.debris(this.flowers ? PETALS : p.tints, snap(x), snap(y) - 4, this.flowers ? 24 : 16, y + 20, 'spores');
   }
 }
 
@@ -266,7 +277,7 @@ export class StasisClock extends Fx {
  * quarters brighter), and two hands from the middle. `minute` and `hour` are
  * fractions of a turn from twelve.
  */
-export function clockFace(g: Ink, x: number, y: number, r: number, p: Pal, a: number, minute: number, hour: number, sq = GROUND): void {
+export function clockFace(g: Ink, x: number, y: number, r: number, p: Pal, a: number, minute: number, hour: number, sq = GROUND, flowers = false): void {
   if (r < 3 || a <= 0) return;
   ring(g, x, y, r, 1.4, p, a, sq);
   circle(g, x, y, r * 0.78, p.mid, a * 0.8, sq);
@@ -286,6 +297,7 @@ export function clockFace(g: Ink, x: number, y: number, r: number, p: Pal, a: nu
     line(g, x, y, ex, ey, c0, a);
     line(g, x + 1, y, ex + 1, ey, c1, a * 0.5);
   };
+  if (flowers) flowerHours(g, x, y, r, a, minute, sq);
   hand(hour, 0.4, p.hot, p.mid);
   hand(minute, 0.7, p.core, p.hot);
   g.put(x, y, p.core, a);
@@ -296,5 +308,30 @@ export function clockFace(g: Ink, x: number, y: number, r: number, p: Pal, a: nu
       if (d > 0.74 || ((dx + dy) & 2) === 0) continue;
       g.put(x + dx, y + dy, shade(p, 0.9), a * 0.35 * (1 - d));
     }
+  }
+}
+
+/**
+ * A flower clock's hours, like a horologium florae: a blossom at each hour on
+ * the face, closed in bud until the minute hand has reached it, then open,
+ * rose, cream and peach in turn, each with a leaf beside it.
+ */
+function flowerHours(g: Ink, x: number, y: number, r: number, a: number, minute: number, sq: number): void {
+  for (let h = 0; h < 12; h++) {
+    const th = -Math.PI / 2 + (h / 12) * Math.PI * 2;
+    const fx = Math.round(x + Math.cos(th) * r * 0.9);
+    const fy = Math.round(y + Math.sin(th) * r * 0.9 * sq);
+    const col = BLOOMS[h % 3];
+    const open = h / 12 <= minute + 0.001;
+    g.put(fx + (Math.cos(th) > 0 ? 1 : -1), fy + 1, PETALS[3], a * 0.8);
+    if (!open) {
+      g.put(fx, fy, col, a * 0.8);
+      continue;
+    }
+    // On a great clock (the Special's) the blossoms open twice as wide.
+    const k = r > 60 ? 2 : 1;
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) for (let i = 1; i <= k; i++) g.put(fx + dx * i, fy + dy * i, col, a);
+    if (k > 1) for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) g.put(fx + dx, fy + dy, col, a * 0.7);
+    g.put(fx, fy, 0xfff4a8, a);
   }
 }

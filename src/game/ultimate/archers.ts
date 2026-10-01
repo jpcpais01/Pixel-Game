@@ -12,6 +12,10 @@ import { bloom, bump, circle, clamp01, dither, drag, easeOut, flare, Fx, GROUND,
 // windrunner's Tempest: a cyclone set loose along the aim that drags foes
 // into its heart, wears at them while it walks, and flings them away when it
 // blows itself out.
+//
+// Their skins change more than colour here: Briar Rose's Rosethorn Bloom lobs
+// a great rosebud instead of a keg, which bursts in petals and thorns over a
+// ring of briar; Wisteria's Gale whirls wisteria petals up its funnel.
 
 /** Black Powder: the keg's flight, its fuse, and the blast. */
 const KEG_FLIGHT = 380;
@@ -25,6 +29,11 @@ const KEG_AFTER = 1100;
 
 const STAVE = [0xc89058, 0x9a6438, 0x6a4022];
 const HOOP = [0x8a92a4, 0x444a58];
+/** Briar Rose's bud: its petals lit to shadowed, the green sepals cupping it, its leaves and thorns. */
+const BUD = [0xff8088, 0xe4344a, 0xb4162e, 0x7c0c22];
+const SEPAL = [0x76a048, 0x3a5e24];
+const ROSE_PETALS = [0xffd0d8, 0xff8088, 0xe4344a, 0xb4162e];
+const BRIAR_LEAVES = [0x76a048, 0x4a9036, 0x2e6e24];
 
 /** A great bolt with a keg of black powder lashed behind its head, lobbed onto the aimed spot. */
 export class PowderKeg extends Fx {
@@ -37,18 +46,21 @@ export class PowderKeg extends Fx {
   private readonly x0: number;
   private readonly y0: number;
   private readonly seed = Math.floor(Math.random() * 1000);
+  /** Briar Rose's Rosethorn Bloom: a rosebud for a keg. */
+  private readonly rose: boolean;
 
   constructor(
     world: WorldScene,
     private c: Cast,
   ) {
     super(world, KEG_FLIGHT + KEG_FUSE + KEG_AFTER);
+    this.rose = c.look === 'briar';
     this.x0 = c.x + c.dx * 6;
     this.y0 = c.y + c.dy * 3;
     this.air = this.ink(32, 32);
     this.scar = this.ink(KEG_R * 2 + 12, Math.ceil(KEG_R * GROUND * 2) + 12);
     this.shadow = this.own(world.add.image(this.x0, this.y0, 'shadow').setDepth(1).setScale(0.5, 0.35).setAlpha(0.35));
-    this.lamp = this.light(this.x0, this.y0, 40, 0xffa040, 0.9);
+    this.lamp = this.light(this.x0, this.y0, 40, this.rose ? c.pal.light : 0xffa040, 0.9);
     sound.crossbow(world.pan(c.x));
     sound.cannon(world.pan(c.x), false);
   }
@@ -68,7 +80,7 @@ export class PowderKeg extends Fx {
       this.air.end();
       this.shadow.setPosition(Math.round(gx), Math.round(gy));
       this.lamp.setPosition(gx, gy - h);
-      if (Math.random() < 0.4) world.debris([0xfff0c0, 0xffa040], gx - (dx / d) * 6, gy - h - (dy / d) * 6, 1, gy + 2, 'trail');
+      if (Math.random() < 0.4) world.debris(this.rose ? ROSE_PETALS : [0xfff0c0, 0xffa040], gx - (dx / d) * 6, gy - h - (dy / d) * 6, 1, gy + 2, 'trail');
       return;
     }
     if (!this.landed) {
@@ -91,14 +103,16 @@ export class PowderKeg extends Fx {
       this.scar.end();
       this.lamp.setPosition(c.tx, c.ty - 12);
       this.lamp.intensity = 0.8 + pulse;
-      if (Math.random() < 0.6) world.debris([0xffffff, 0xfff0a0, 0xffa040], c.tx + 1, c.ty - 15, 1, c.ty + 1, 'burst');
+      if (Math.random() < 0.6) world.debris(this.rose ? [0xffffff, c.pal.hot, c.pal.mid] : [0xffffff, 0xfff0a0, 0xffa040], c.tx + 1, c.ty - 15, 1, c.ty + 1, 'burst');
       return;
     }
     if (!this.blown) this.blow();
     // The scorch and the smoke clearing.
     const after = (t - KEG_FLIGHT - KEG_FUSE) / KEG_AFTER;
     const s = this.scar.begin(c.tx, c.ty, 3);
-    pool(s, c.tx, c.ty, KEG_R * 0.55, 0x1a120c, 0x2a1a10, 1 - after, GROUND, 0.7);
+    // A scorch, or for the rose a bed of fallen petals on dark leaves.
+    pool(s, c.tx, c.ty, KEG_R * 0.55, this.rose ? 0x10200e : 0x1a120c, this.rose ? 0x5a0a18 : 0x2a1a10, 1 - after, GROUND, 0.7);
+    if (this.rose) this.briarRing(s, after);
     ring(s, c.tx, c.ty, KEG_R * (0.6 + 0.5 * easeOut(after * 3)), 3 * (1 - after), c.pal, clamp01(1 - after * 3), GROUND, 0.3, this.seed);
     for (let i = 0; i < 14; i++) {
       // Embers left on the scorch, winking out one by one.
@@ -126,15 +140,49 @@ export class PowderKeg extends Fx {
     bloom(world, c.tx, c.ty - 10, c.pal.hot, 3.2, 380, c.ty + 40);
     bloom(world, c.tx, c.ty - 6, c.pal.mid, 4.5, 600, c.ty + 39, 0.6);
     world.debris([c.pal.core, c.pal.hot, c.pal.mid], c.tx, c.ty - 8, 26, c.ty + 30);
-    world.debris([0x4a4038, 0x6a5e52, 0x2e2822], c.tx, c.ty - 6, 18, c.ty + 30, 'spores');
+    if (this.rose) {
+      world.debris(ROSE_PETALS, c.tx, c.ty - 10, 34, c.ty + 30, 'spores');
+      world.debris(BRIAR_LEAVES, c.tx, c.ty - 6, 14, c.ty + 30, 'spores');
+    } else world.debris([0x4a4038, 0x6a5e52, 0x2e2822], c.tx, c.ty - 6, 18, c.ty + 30, 'spores');
     world.debris([0x8a6a4a, 0x5a4430], c.tx, c.ty, 12, c.ty + 2);
     this.lamp.setPosition(c.tx, c.ty - 10);
   }
 
-  /** The great bolt, head first along (ux, uy), with the keg lashed behind its head and the fuse burning. */
+  /** Briar Rose's ring: briar stems curling round the blast, thorns standing off them, withering as it fades. */
+  private briarRing(s: Ink, after: number): void {
+    const { c } = this;
+    const a0 = clamp01(1 - after * 1.3);
+    if (a0 <= 0) return;
+    for (let i = 0; i < 90; i++) {
+      const th = (i / 90) * Math.PI * 2;
+      // Two stems twisting round each other.
+      for (const k of [0, 1]) {
+        const r = KEG_R * (0.78 + 0.06 * Math.sin(th * 7 + k * Math.PI));
+        const x = c.tx + Math.cos(th) * r;
+        const y = c.ty + Math.sin(th) * r * GROUND;
+        if (dither(Math.round(x), Math.round(y)) < a0) s.put(x, y, k ? SEPAL[1] : SEPAL[0]);
+        if (i % 9 === k * 4) s.put(x, y - 1, 0x96402c, a0);
+      }
+      // Here and there a rose blooming on it.
+      if (i % 15 === 7 && hash(i, this.seed) < a0) {
+        const x = c.tx + Math.cos(th) * KEG_R * 0.78;
+        const y = c.ty + Math.sin(th) * KEG_R * 0.78 * GROUND;
+        s.put(x, y - 1, BUD[0]);
+        s.put(x + 1, y - 1, BUD[1]);
+        s.put(x, y, BUD[2]);
+        s.put(x + 1, y, BUD[3]);
+      }
+    }
+  }
+
+  /** The great bolt, head first along (ux, uy), with the keg lashed behind its head and the fuse burning (or Briar Rose's rosebud on a briar shaft). */
   private drawKeg(g: Ink, x: number, y: number, ux: number, uy: number, stuck: boolean): void {
     const nx = -uy;
     const ny = ux;
+    if (this.rose) {
+      this.drawBud(g, x, y, ux, uy, nx, ny, stuck);
+      return;
+    }
     // Shaft and red vanes.
     for (let i = -14; i <= 4; i++) g.put(x + ux * i, y + uy * i, i < -6 ? 0x94603a : 0xb88050);
     if (!stuck) for (const s of [-1, 1]) for (let i = 12; i <= 14; i++) g.put(x - ux * i + nx * s * (1 + (i - 12) * 0.5), y - uy * i + ny * s * (1 + (i - 12) * 0.5), 0xe8664a);
@@ -154,6 +202,25 @@ export class PowderKeg extends Fx {
     const fy = y - uy * 3 - ny * 3;
     g.put(fx, fy, 0x3a2a1a);
     g.put(fx - nx, fy - ny - 1, Math.random() < 0.5 ? 0xffffff : 0xfff0a0);
+  }
+
+  /** A great rosebud bound to a briar stem: petals furled to a point, green sepals cupping it, thorns down the stem, a glitter at its tip. */
+  private drawBud(g: Ink, x: number, y: number, ux: number, uy: number, nx: number, ny: number, stuck: boolean): void {
+    for (let i = -14; i <= -3; i++) g.put(x + ux * i, y + uy * i, i < -8 ? SEPAL[1] : SEPAL[0]);
+    for (const i of [-12, -9, -6]) g.put(x + ux * i + nx * (i % 2 ? 1 : -1), y + uy * i + ny * (i % 2 ? 1 : -1), 0x96402c);
+    if (!stuck) for (const s of [-1, 1]) g.put(x - ux * 14 + nx * s, y - uy * 14 + ny * s, BUD[1]);
+    // The bud, widest near its base, furled to a point ahead.
+    for (let j = -3; j <= 5; j++) {
+      const hw = j < 0 ? 2.4 + j * 0.4 : 2.6 - j * 0.45;
+      for (let o = -hw; o <= hw; o += 0.5) {
+        const spiral = Math.sin(j * 1.3 + o * 1.6) > 0.55;
+        const col = o < -hw * 0.4 ? BUD[0] : o < hw * 0.3 ? BUD[1] : BUD[2];
+        g.put(x + ux * j + nx * o, y + uy * j + ny * o, spiral ? BUD[3] : col);
+      }
+    }
+    // Green sepals cupping its base.
+    for (const s of [-1, 1]) for (let j = -3; j <= -1; j++) g.put(x + ux * j + nx * s * (2.6 + j * 0.2), y + uy * j + ny * s * (2.6 + j * 0.2), SEPAL[j < -2 ? 1 : 0]);
+    g.put(x + ux * 6, y + uy * 6, Math.random() < 0.5 ? 0xffffff : BUD[0]);
   }
 }
 
@@ -184,12 +251,15 @@ export class Tempest extends Fx {
   private burst = false;
   private whirlIn = 0;
   private readonly seed = Math.floor(Math.random() * 1000);
+  /** Wisteria's Gale: petals whirled up the funnel instead of leaves and dust. */
+  private readonly petals: boolean;
 
   constructor(
     world: WorldScene,
     private c: Cast,
   ) {
     super(world, TEMPEST_TIME + TEMPEST_FADE);
+    this.petals = c.look === 'wisteria';
     this.x = c.x + c.dx * 20;
     this.y = c.y + c.dy * 14;
     this.pix = this.ink(72, 72);
@@ -229,7 +299,7 @@ export class Tempest extends Fx {
       // Leaves and dust whipped round it.
       if (Math.random() < dt / 40) {
         const a = Math.random() * Math.PI * 2;
-        world.debris([c.pal.hot, c.pal.mid, 0x8ac06a, 0xd8c078], this.x + Math.cos(a) * 14, this.y - 4 - Math.random() * 30, 1, this.y + 4, 'gather');
+        world.debris(this.petals ? [0xffffff, 0xe0ccff, 0xb48af0, 0x8a52d8] : [c.pal.hot, c.pal.mid, 0x8ac06a, 0xd8c078], this.x + Math.cos(a) * 14, this.y - 4 - Math.random() * 30, 1, this.y + 4, 'gather');
       }
     } else if (!this.burst) {
       this.blowOut();
@@ -294,6 +364,11 @@ export class Tempest extends Fx {
         const u = front ? (streak > 0.75 ? 0 : streak > 0.45 ? 1 : 2) : 3;
         const col = [p.core, p.hot, p.mid, p.deep][u];
         if (dither(Math.round(px), Math.round(py)) < fade * (front ? 1 : 0.55)) g.put(px, py, col, front ? 1 : 0.7);
+        // Wisteria petals caught in the streaks, tumbling as they go round.
+        if (this.petals && front && streak > 0.9 && hash(k, i, this.seed) < 0.5) {
+          g.put(px, py, 0x8a52d8);
+          g.put(px + (Math.floor(t / 80 + i) % 2 ? 1 : 0), py - 1, 0xe0ccff);
+        }
       }
     }
     g.end();
