@@ -15,6 +15,7 @@
 
 import type { WorldScene } from '../scenes/WorldScene';
 import type { Aim } from '../game/characters';
+import { gear } from '../game/gear';
 import type { Hit, Hurtbox } from '../game/combat';
 import { Monster, type Target } from '../game/monsters';
 import type { SpawnerSnap } from '../game/monsters';
@@ -213,6 +214,7 @@ export class NetPlay {
       mh: Math.round(v.max),
       br: Math.round(v.barrier),
       dn: this.world.heroDown ? 1 : 0,
+      ...(gear.dress ? { ds: gear.dress } : {}),
     };
     this.attackHeld = this.specialHeld = false;
     session.send(s as unknown as Msg);

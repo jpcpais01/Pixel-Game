@@ -11,6 +11,8 @@
 import Phaser from 'phaser';
 import type { WorldScene } from '../scenes/WorldScene';
 import type { Aim, CharacterDef, Hero } from '../game/characters';
+import { GEAR_SETS, type SetId } from '../game/gear';
+import { HeroDress } from '../game/heroDress';
 import { playedAs } from '../game/skins';
 import { UltCaster } from '../game/ultimate';
 import { areaOrigin, reachesBody, type Hit, type Hurtbox, type MeleeArea } from '../game/combat';
@@ -44,6 +46,8 @@ export interface HeroState {
   br: number;
   /** Fallen. */
   dn: 0 | 1;
+  /** The gear set their sprite wears (4+ pieces), if any. */
+  ds?: SetId;
 }
 
 /** Their hero is too far from where they say it is: it jumps there instead of gliding. */
@@ -95,6 +99,7 @@ export class RemotePlayer implements Hurtbox {
   private fade = 1;
   private pruneT = 0;
   private gone = false;
+  private dress: HeroDress;
 
   constructor(
     private world: WorldScene,
@@ -110,6 +115,7 @@ export class RemotePlayer implements Hurtbox {
     this.ch = playedAs(info.hero, info.look);
     this.view = this.ghostWorld();
     this.hero = asGhost(() => this.ch.spawn(this.view, x, y));
+    this.dress = new HeroDress(world, this.hero.sprite, this.objects as unknown as Phaser.GameObjects.GameObject[]);
     this.ult = asGhost(() => new UltCaster(this.view, this.hero, this.ch));
     this.bar = new HealthBar(world);
     this.tag = world.add
@@ -164,6 +170,7 @@ export class RemotePlayer implements Hurtbox {
     }
     this.prev = { x: s.x, y: s.y, at: now };
     this.state = s;
+    this.dress.set = s.ds && s.ds in GEAR_SETS ? s.ds : null;
     this.at = now;
     if (!was) {
       // First word from them: stand where they are.
@@ -251,6 +258,7 @@ export class RemotePlayer implements Hurtbox {
   destroy(): void {
     if (this.gone) return;
     this.gone = true;
+    this.dress.destroy();
     this.ult.cancel();
     for (const o of this.objects) if (o.scene) o.destroy();
     this.objects = [];

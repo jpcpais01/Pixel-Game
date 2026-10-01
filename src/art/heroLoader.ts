@@ -11,6 +11,8 @@
 import Phaser from 'phaser';
 import { registerAtlas } from './atlas';
 import { buildHeroSheet, HERO_SHEETS, sheetFlashes, type HeroSheet, type MetaKind } from './heroSheets';
+import { dressedKey, undress } from './dress';
+import type { SetId } from '../game/gear';
 import type { FrameMeta } from './wizard';
 import type { WarriorMeta } from './warrior';
 import type { PaladinMeta } from './paladin';
@@ -65,6 +67,61 @@ function take(sheet: HeroSheet): void {
   }
 }
 
+/** Dressed looks (`<look>.<set>`, see dress.ts) registered, and being built. */
+const dressed = new Set<string>();
+const dressing = new Set<string>();
+
+function takeDressed(sheet: HeroSheet): void {
+  dressing.delete(sheet.key);
+  if (!home || dressed.has(sheet.key)) return;
+  dressed.add(sheet.key);
+  building = true;
+  try {
+    registerAtlas(home, sheet.key, sheet.atlas, sheet.fw, sheet.fh);
+  } finally {
+    building = false;
+  }
+}
+
+/**
+ * Is `look` dressed in `set` ready? If not, it starts being built in a
+ * worker (or on a later frame here, without workers) and is uploaded on a
+ * frame of its own; ask again then. Its frames are named as the look's, so
+ * a sprite playing the look's animations can wear it (game/heroDress.ts).
+ */
+export function wantDressed(look: string, set: SetId): boolean {
+  const key = dressedKey(look, set);
+  if (dressed.has(key)) return true;
+  if (!home || dressing.has(key) || !owner.has(look)) return false;
+  dressing.add(key);
+  const game = home.game;
+  const upload = (sheet: HeroSheet) => game.events.once(Phaser.Core.Events.POST_STEP, () => takeDressed(sheet));
+  try {
+    const w = new Worker(new URL('./sheetWorker.ts', import.meta.url), { type: 'module' });
+    w.onmessage = (e: MessageEvent<HeroSheet>) => {
+      w.terminate();
+      upload(e.data);
+    };
+    w.onerror = (e) => {
+      e.preventDefault();
+      w.terminate();
+      dressing.delete(key);
+    };
+    w.postMessage(key);
+  } catch {
+    game.events.once(Phaser.Core.Events.POST_STEP, () => upload(buildHeroSheet(key)));
+  }
+  return false;
+}
+
+/** The look a hero texture belongs to and which of its layers it is (`''`, `_e`, `_s`, `_w`), dressed or not. */
+export function heroLayer(key: string): { look: string; layer: string } | null {
+  const d = undress(key);
+  if (d && owner.has(d.look)) return { look: d.look, layer: d.layer };
+  const look = owner.get(key);
+  return look ? { look, layer: key.slice(look.length) } : null;
+}
+
 /** Build a look now, on this thread, because something needs it this moment. */
 function buildNow(key: string): void {
   if (!pending.has(key)) return;
@@ -93,6 +150,13 @@ export function lazyHeroSheets(scene: Phaser.Scene): void {
     if (building || typeof k !== 'string') return;
     const look = owner.get(k);
     if (look) buildNow(look);
+    else if (k.includes('.')) {
+      // A dressed look asked for by name (another hero's echo): build it here and now.
+      const d = undress(k);
+      if (!d || !owner.has(d.look)) return;
+      const key = dressedKey(d.look, d.set);
+      if (!dressed.has(key)) takeDressed(buildHeroSheet(key));
+    }
   };
   textures.list = new Proxy(textures.list, {
     get(t, k, r) {

@@ -244,6 +244,14 @@ export function setCount(defs: GearDef[], set: SetId): { worn: number; of: numbe
   return { worn: defs.filter((g) => g.set === set).length, of: GEAR.filter((g) => g.set === set).length };
 }
 
+/** Pieces of one set worn before the hero's own sprite takes on its look (see art/dress.ts). */
+export const DRESS_AT = 4;
+
+/** The set the hero is dressed in: the one with DRESS_AT or more pieces worn, if any (six slots fit only one). */
+export function dressSet(defs: GearDef[]): SetId | null {
+  return (Object.keys(GEAR_SETS) as SetId[]).find((k) => setCount(defs, k).worn >= DRESS_AT) ?? null;
+}
+
 /** The sets worn whole among `defs`. */
 export function fullSets(defs: GearDef[]): SetId[] {
   return (Object.keys(GEAR_SETS) as SetId[]).filter((k) => {
@@ -368,6 +376,8 @@ export class GearBag {
   sets: SetId[] = [];
   /** Set powers the worn pieces reach right now. */
   powers = new Set<PowerId>();
+  /** The set the hero's sprite is dressed in, if any. */
+  dress: SetId | null = null;
 
   /** A new run: nothing found yet. Call `wear` with the equipped pieces next. */
   reset(): void {
@@ -377,6 +387,7 @@ export class GearBag {
     this.totals = sumStats([]);
     this.sets = [];
     this.powers.clear();
+    this.dress = null;
   }
 
   /** Wear these pieces; returns how much max health changed, for the hero's vitals. */
@@ -386,6 +397,7 @@ export class GearBag {
     this.totals = wornStats(defs);
     this.sets = fullSets(defs);
     this.powers = new Set(wornPowers(defs).map((p) => p.id));
+    this.dress = dressSet(defs);
     return this.totals.hp - before;
   }
 
