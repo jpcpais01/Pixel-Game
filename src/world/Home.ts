@@ -6,7 +6,7 @@ import { JAR_SPOTS } from '../art/homeProps';
 import { CRITTER_H, CRITTER_OX, CRITTER_OY, CRITTER_W } from '../art/critters';
 import { pixelCanvas } from '../art/canvas';
 import { sound } from '../audio';
-import { build, stopBuilding } from '../game/build';
+import { TABS, build, stopBuilding } from '../game/build';
 import { collection } from '../game/collection';
 import { CRITTERS, critterById } from '../game/critters';
 import { daynight, type Phase } from '../game/daynight';
@@ -169,6 +169,9 @@ export class Home {
     if (this.owner) this.caught = CRITTERS.filter((c) => collection.critterCount(c.id) > 0).map((c) => c.id);
     build.available = this.owner;
     build.home = true;
+    // Every tab and every part (the Everwood keeps to fewer).
+    build.tabs = TABS.map((t) => t.id);
+    build.allow = null;
     stopBuilding();
     build.canUndo = false;
 

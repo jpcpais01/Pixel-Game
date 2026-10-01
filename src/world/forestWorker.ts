@@ -14,31 +14,46 @@ export interface TileAsk {
   seed: number;
   col: number;
   row: number;
+  /** The tile's version: it is painted again when the player clears a tree near it. */
+  ver: number;
+}
+
+/** The trees the player has cleared (by foot key), sent before any tile they change is asked for. */
+export interface ClearedNote {
+  cleared: number[];
 }
 
 export interface TileDone {
   seed: number;
   col: number;
   row: number;
+  ver: number;
   strip: GroundStrip;
   fresh: FreshWork;
 }
 
 interface WorkerScope {
-  onmessage: ((e: MessageEvent<TileAsk>) => void) | null;
+  onmessage: ((e: MessageEvent<TileAsk | ClearedNote>) => void) | null;
   postMessage(message: TileDone, transfer: Transferable[]): void;
 }
 
 const scope = self as unknown as WorkerScope;
 let gen: ForestGen | null = null;
+let cleared: Set<number> | null = null;
 
 scope.onmessage = (e) => {
-  const { seed, col, row } = e.data;
+  if ('cleared' in e.data) {
+    cleared = new Set(e.data.cleared);
+    if (gen) gen.cleared = cleared;
+    return;
+  }
+  const { seed, col, row, ver } = e.data;
   if (!gen || gen.seed !== seed) {
     gen = new ForestGen(seed);
+    gen.cleared = cleared;
     gen.noteFresh();
   }
-  const b = buildStrip(forestTile(gen, col, row), row);
+  const b = buildStrip(forestTile(gen, col, row, ver), row);
   let r = b.next();
   while (!r.done) r = b.next();
   const strip = r.value;
@@ -46,5 +61,5 @@ scope.onmessage = (e) => {
   // The pixels are handed over outright; the fields are copied (this side keeps its own for the next tiles).
   const transfer: Transferable[] = [strip.night.diffuse.buffer, strip.night.normal.buffer, strip.day.diffuse.buffer, strip.day.normal.buffer];
   if (strip.emissive) transfer.push(strip.emissive.buffer);
-  scope.postMessage({ seed, col, row, strip, fresh }, transfer);
+  scope.postMessage({ seed, col, row, ver, strip, fresh }, transfer);
 };

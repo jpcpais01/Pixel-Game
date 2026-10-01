@@ -245,6 +245,8 @@ export interface Blocker {
   y: number;
   rx: number;
   ry: number;
+  /** The tree or undergrowth it belongs to (its foot key, see forestEdits.ts), which the player may clear. */
+  of?: number;
 }
 
 export interface FSpot {
@@ -338,6 +340,9 @@ export interface Where {
   b: number;
   w: number;
 }
+
+/** A tree's or a piece of undergrowth's name: where its foot stands (x and y are under 2^20). */
+export const footKey = (x: number, y: number): number => Math.round(x) * 1048576 + Math.round(y);
 
 const smooth = (a: number, b: number, v: number): number => {
   const t = v <= a ? 0 : v >= b ? 1 : (v - a) / (b - a);
@@ -912,10 +917,10 @@ export class ForestGen {
 
     // What stops feet.
     const own: Blocker[] = [];
-    for (const t of trees) own.push({ x: t.x, y: t.y - 1, rx: WOOD_SHAPE[t.kind].trunk + 1, ry: 3 });
+    for (const t of trees) own.push({ x: t.x, y: t.y - 1, rx: WOOD_SHAPE[t.kind].trunk + 1, ry: 3, of: footKey(t.x, t.y) });
     for (const p of props) {
       const b = PROP_BLOCK[p.kind];
-      if (b) own.push({ x: p.kind === 'log' ? p.x + (p.flip ? -1 : 1) : p.x, y: p.y - 2, rx: b[0], ry: b[1] });
+      if (b) own.push({ x: p.kind === 'log' ? p.x + (p.flip ? -1 : 1) : p.x, y: p.y - 2, rx: b[0], ry: b[1], of: footKey(p.x, p.y) });
     }
     for (const p of pois) own.push(...poiBlockers(p, this));
 
@@ -984,9 +989,26 @@ export class ForestGen {
     // Water stops feet, but for a bridge, or a ford's shallows.
     if (water > 0.5 && s.trail > 0.5 && !(s.ford > 0.5 && s.stream >= s.pond)) return false;
     const hit = (b: Blocker) => ((x - b.x) / b.rx) ** 2 + ((y - b.y) / b.ry) ** 2 < 1;
-    for (const b of this.blockers(Math.floor(x / CHUNK), Math.floor(y / CHUNK))) if (hit(b) && !(this.glades.length && this.inGlade(b.x, b.y))) return false;
+    const cleared = this.cleared;
+    for (const b of this.blockers(Math.floor(x / CHUNK), Math.floor(y / CHUNK))) {
+      if (hit(b) && !(this.glades.length && this.inGlade(b.x, b.y)) && !(cleared && b.of !== undefined && cleared.has(b.of))) return false;
+    }
+    if (this.built?.(x, y)) return false;
     for (const g of this.glades) for (const b of g.blocks) if (hit(b)) return false;
     return true;
+  }
+
+  /**
+   * What the player has changed (see forestEdits.ts): the trees and
+   * undergrowth they cleared, by foot key, and what they built that stops
+   * feet. The ground's painters only need the first.
+   */
+  cleared: Set<number> | null = null;
+  built: ((x: number, y: number) => boolean) | null = null;
+
+  /** Has the player cleared the tree or undergrowth standing at (x, y)? */
+  isCleared(x: number, y: number): boolean {
+    return !!this.cleared && this.cleared.has(footKey(x, y));
   }
 
   /** Open a glade at (x, y), radius `r`, with its place's own `blocks`. */
