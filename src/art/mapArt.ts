@@ -11,8 +11,8 @@
 // shadow with an inked rim, and a wall's shadow along its foot.
 //
 // The Everwood's map is drawn as a traveller would draw it on parchment:
-// watercolour washes for each wood, thickets inked round and stippled with
-// crowns, streams and ponds in blue with their banks drawn in, trails in
+// watercolour washes for each wood, deeper where its groves stand close,
+// streams and ponds in blue with their banks drawn in, trails in
 // worn brown, every tree a little mark, cliffs inked as a hard line with
 // hachures down their faces (slopes and stairs left open), each terrace a
 // shade lighter than the one below. What hasn't been walked is blank paper,
@@ -156,6 +156,72 @@ const ICONS: Record<string, string[]> = {
     'kmMk.kMmk',
     '.kmk.kmk.',
     '..k...k..',
+  ],
+  lookout: [
+    '.........',
+    '....kk...',
+    '...kssk..',
+    '..kssSSk.',
+    '.kssSSSSk',
+    'kkkkkkkkk',
+    'kSSSSSSSk',
+    'kSdSdSdSk',
+    'kkkkkkkkk',
+  ],
+  glade: [
+    '..y...y..',
+    '...yyy...',
+    '.yyywyyy.',
+    '...yyy...',
+    '..y...y..',
+    '.........',
+    '.kmk.kbk.',
+    'kgGgkgGgk',
+    '.kkkkkkk.',
+  ],
+  bog: [
+    '..k...k..',
+    '.kck.kgk.',
+    '..k..kgk.',
+    '.kk..kgk.',
+    'kBBkkkgkk',
+    'kBbBBBBBk',
+    'kBBBbBBBk',
+    '.kkkkkkk.',
+    '.........',
+  ],
+  glowcaps: [
+    '..kkkkk..',
+    '.kcccbck.',
+    'kcwccccbk',
+    'kccccwcck',
+    'kkkkkkkkk',
+    '...kwk...',
+    '...klk...',
+    '..kllwk..',
+    '..kkkkk..',
+  ],
+  brambles: [
+    '..kkkkk..',
+    '.kGgGgGk.',
+    'kGrGgRgGk',
+    'kgGgrGgGk',
+    'kGRgGgrGk',
+    'kgGgGRgGk',
+    '.kGgGgGk.',
+    '..kkkkk..',
+    '.........',
+  ],
+  camp: [
+    '....k....',
+    '...knk...',
+    '..knNnk..',
+    '.knNkNnk.',
+    'knNkkkNnk',
+    'kNnk.knNk',
+    'knNk.kNnk',
+    'kkkkkkkkk',
+    '.........',
   ],
   spring: [
     '..kkkkk..',
@@ -640,7 +706,7 @@ const WATER: RGB[] = ['#2e5a6e', '#4a7f92', '#6b9fae', '#94bec4'].map(hex);
 const TRAIL: RGB[] = ['#6e4a2a', '#9a7448'].map(hex);
 const PLANK: RGB = hex('#8a6438');
 
-/** Each wood's wash over the paper, and its thickets' colour (light, dark). */
+/** Each wood's wash over the paper, and its groves' colour (light, dark). */
 const WOODS: Record<string, { wash: RGB; leaf: RGB; deep: RGB; fleck: RGB | null }> = {
   oak: { wash: hex('#9db56e'), leaf: hex('#6f9448'), deep: hex('#3d5e2c'), fleck: null },
   birch: { wash: hex('#c9cf86'), leaf: hex('#9cb253'), deep: hex('#5e7a2e'), fleck: hex('#f4f0d8') },
@@ -669,7 +735,6 @@ function paper(x: number, y: number, base: RGB): RGB {
   return c;
 }
 
-const THICKET = 1;
 const WATERC = 2;
 const TRAILC = 3;
 const BRIDGE = 4;
@@ -697,7 +762,6 @@ export function trekTile(gen: ForestGen, cx: number, cy: number, cleared: (x: nu
       const s = gen.sample(x, y);
       const water = Math.max(s.stream, s.pond);
       const trail = s.trail;
-      const roof = s.roof;
       const n = j * T + i;
       // Trails and streams are drawn a little wider than they are, as on any map.
       if (trail < 2.5 && water > -4) cls[n] = BRIDGE;
@@ -707,10 +771,7 @@ export function trekTile(gen: ForestGen, cx: number, cy: number, cleared: (x: nu
       } else if (trail < 2.5) {
         cls[n] = TRAILC;
         core[n] = trail < -1 ? 1 : 0;
-      } else if (roof > 0) {
-        cls[n] = THICKET;
-        depth[n] = roof;
-      }
+      } else depth[n] = s.grove;
       bio[n] = gen.biomeAt(x, y);
       const land = gen.terrain(s);
       lvl[n] = land.level;
@@ -743,27 +804,14 @@ export function trekTile(gen: ForestGen, cx: number, cy: number, cleared: (x: nu
         c = (i + j) % 2 ? PLANK : shade(PLANK, 0.78);
       } else if (k === TRAILC) {
         c = mix(p, core[n] ? TRAIL[0] : TRAIL[1], core[n] ? 0.72 : 0.5);
-      } else if (k === THICKET) {
-        const rim = kind(i - 1, j) !== THICKET || kind(i + 1, j) !== THICKET || kind(i, j - 1) !== THICKET || kind(i, j + 1) !== THICKET;
-        if (rim) c = mix(p, wood.deep, 0.85);
-        else {
-          // Stippled crowns: a light dot over a dark one, in loose rows.
-          const row = Math.floor(y / 24);
-          const sx = (x / MAP_CELL + (row % 2) * 2) % 4;
-          const sy = (y / MAP_CELL) % 3;
-          const t = valueNoise(x, y, 40, 411);
-          c = mix(p, mix(wood.leaf, wood.deep, 0.25 + t * 0.35), 0.62);
-          if (sx === 1 && sy === 0) c = mix(c, [255, 250, 220], 0.22);
-          else if (sx === 1 && sy === 1) c = mix(c, wood.deep, 0.55);
-        }
       } else {
         const t = valueNoise(x, y, 70, 413);
         c = mix(p, wood.wash, 0.2 + t * 0.16);
         if (wood.fleck && hash2(x >> 3, y >> 3, 415) > 0.965) c = mix(c, wood.fleck, 0.6);
+        // A grove: the wash deepens to the leaves' green where the trees stand close.
+        if (depth[n] > -20) c = mix(c, wood.leaf, clamp((depth[n] + 20) / 60, 0, 1) * 0.28);
         // A bank: earth drawn along the water.
         if (kind(i - 1, j) === WATERC || kind(i + 1, j) === WATERC || kind(i, j - 1) === WATERC || kind(i, j + 1) === WATERC) c = mix(c, INK, 0.22);
-        // A thicket's shadow at its south side.
-        else if (kind(i, j - 1) === THICKET) c = mix(c, wood.deep, 0.22);
       }
       // The lie of the land: higher terraces a shade lighter.
       c = shade(c, 1 + clamp(lvl[n], -3, 3) * MAP_LIFT);
@@ -796,7 +844,7 @@ export function trekTile(gen: ForestGen, cx: number, cy: number, cleared: (x: nu
     if (cleared(t.x, t.y)) continue;
     const i = Math.floor((t.x - x0) / MAP_CELL);
     const j = Math.floor((t.y - y0) / MAP_CELL) - 1;
-    if (kind(i, j) === THICKET || kind(i, j) === WATERC) continue;
+    if (kind(i, j) === WATERC) continue;
     const [light, dark] = MARKS[t.kind];
     if (t.kind === 'pine') {
       put(i, j - 1, dark, 0.9);

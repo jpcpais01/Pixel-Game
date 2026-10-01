@@ -648,7 +648,7 @@ function drawTrek(ctx: CanvasRenderingContext2D, tm: TrekMap, x0: number, y0: nu
   }
 }
 
-const POI_ICON: Record<string, string> = { shrine: 'shrine', chest: 'chest', ruins: 'ruins', stones: 'stones', elder: 'elder', fairy: 'fairy' };
+const POI_ICON: Record<string, string> = { shrine: 'shrine', chest: 'chest', ruins: 'ruins', stones: 'stones', elder: 'elder', fairy: 'fairy', lookout: 'lookout', glade: 'glade', bog: 'bog', glowcaps: 'glowcaps', brambles: 'brambles', camp: 'camp' };
 
 /** The build tray's part that is a campfire, and a travel id for one at cell (cx, cy) (below zero, apart from the forest's own). */
 const BUILT_FIRE = 'campfire';

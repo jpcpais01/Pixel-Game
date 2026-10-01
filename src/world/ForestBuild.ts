@@ -219,12 +219,11 @@ export class ForestBuild {
     if (changed) this.edits.index();
   }
 
-  /** Is the open forest floor at the middle of cell (cx, cy)? Not under a thicket's roof, nor in water unless `water` allows it. */
+  /** Is the open forest floor at the middle of cell (cx, cy)? Not in water unless `water` allows it. */
   private open(cx: number, cy: number, water?: PartDef['water']): boolean {
     // Not on a cliff, its lip or its foot: things there would hang in the air or stand in the rock.
     if (this.forest.gen.edgeAt((cx + 0.5) * CELL, (cy + 0.5) * CELL, 4)) return false;
     const s = this.forest.gen.sample((cx + 0.5) * CELL, (cy + 0.5) * CELL);
-    if (s.roof > -9) return false;
     const wet = Math.max(s.stream, s.pond) > -1;
     return water === 'only' ? Math.max(s.stream, s.pond) > 1.5 : water === 'too' || !wet;
   }

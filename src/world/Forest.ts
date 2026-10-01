@@ -1,18 +1,19 @@
 import Phaser from 'phaser';
 import { sound } from '../audio';
 import { warmForest } from '../art/arenaLoader';
-import { CAMPFIRE, CAMPFIRE_FOOT, CHEST_BASE_Y, CHEST_H, FPROP_BASE_Y, FPROP_H, FPROP_LOOKS, LOOKOUT_BASE_Y, LOOKOUT_H, MENHIR_BASE_Y, MENHIR_H, SHRINE_BASE_Y, SHRINE_H, type FPropKind } from '../art/forest';
+import { CAMPFIRE, CAMPFIRE_FOOT, CHEST_BASE_Y, CHEST_H, FPROP_BASE_Y, FPROP_H, FPROP_LOOKS, GREATCAP_BASE_Y, GREATCAP_H, HUNT_BASE_Y, HUNT_H, LOOKOUT_BASE_Y, LOOKOUT_H, MENHIR_BASE_Y, MENHIR_H, SHRINE_BASE_Y, SHRINE_H, type FPropKind } from '../art/forest';
 import { PILLAR_BASE, PILLAR_H, RUIN_H_BASE, RUIN_H_H, RUIN_V_BASE, RUIN_V_H } from '../art/garden';
 import { STRIP_H, buildStrip, type GroundSpec, type GroundStrip } from '../art/ground';
 import { ELDER_BASE_Y, ELDER_H, PROP_BASE_Y, PROP_H, RAY_FOOT_X, RAY_H, RAY_W, TREE_BASE_Y, TREE_H } from '../art/trees';
-import { MIGHT, RENEW, SWIFTNESS, WARD, heroBuffs, type BuffDef } from '../game/buffs';
+import { GLOWSPORE, MIGHT, MOONLIT, RENEW, SUNLIT, SWIFTNESS, WARD, heroBuffs, type BuffDef } from '../game/buffs';
 import { settings } from '../game/settings';
 import { sway, treeSwayReady } from '../game/treeSway';
 import { SUN_SHADOW_ALPHA, sunShadow } from '../game/Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
 import { install } from './GroundStreamer';
 import { treeLeaves } from './Scenery';
-import { CAMP_SEATS, CHUNK, FOREST_WORLD, LOOK_RAIL, WOOD_SHAPE, ruinPieces, stonePieces, type Blocker, type ForestGen, type Poi, type WoodKind } from './forestGen';
+import { hash2 } from '../art/env';
+import { CAMP_SEATS, CHUNK, FOREST_WORLD, LOOK_RAIL, WOOD_SHAPE, ruinPieces, stonePieces, wildPieces, type Blocker, type ForestGen, type Poi, type WoodKind } from './forestGen';
 import { WhiteStag } from './WhiteStag';
 import { trek } from '../game/trek';
 import { ForestWind } from './ForestWind';
@@ -36,9 +37,12 @@ import type { ClearedNote, TileAsk, TileDone } from './forestWorker';
 //
 // The places do something when walked up to: a campfire mends the hero and
 // becomes where they rise; a shrine grants a blessing, once; a chest opens on
-// treasure; a fairy ring gives a gift of gems. Walking into a new wood shows
-// its name. At a lookout on a cliff's lip the view swings out over the
-// drop. Now and then the White Stag comes to lead the hero somewhere
+// treasure; a fairy ring gives a gift of gems. The wild places too: resting
+// in a sunlit glade's light blesses (moonlit by night); a bog's
+// will-o'-wisps, caught, feed the Special; the great glowcap's spores make
+// blows land harder; a bramble's berries mend; a hunter's camp keeps a chest.
+// Walking into a new wood shows its name. At a lookout on a cliff's lip the
+// view swings out over the drop. Now and then the White Stag comes to lead the hero somewhere
 // secret (see WhiteStag.ts).
 
 type Img = Phaser.GameObjects.Image;
@@ -91,6 +95,22 @@ const LOOK_R = 24;
 const LOOK_PAN = 110;
 const LOOK_EASE = 700;
 const SHRINE_LIGHT = { r: 80, color: 0x7ae6dc, i: 1.2, day: 0.4 };
+/** The wild places: the glade's light is felt after standing this long (ms) within this share of its radius. */
+const GLADE_IN = 0.55;
+const GLADE_REST = 1600;
+/** How near (px) a wisp is caught, a bramble bush picked, the great glowcap's spores breathed. */
+const WISP_R = 13;
+const BUSH_R = 17;
+const CAP_R = 22;
+/** What a wisp gives the Special, and the share of health a bush's berries mend. */
+const WISP_ENERGY = 14;
+const BERRY_MEND = 0.08;
+/** The great glowcap's light, the bog's, and the lantern at a hunter's camp. */
+const CAP_LIGHT = { r: 110, color: 0x5ff0d0, i: 1.3, day: 0.3 };
+const BOG_LIGHT = { r: 90, color: 0x8affd0, i: 0.8, day: 0.1 };
+const LAMP_LIGHT = { r: 70, color: 0xffb060, i: 1.1, day: 0.2 };
+/** Butterflies over a glade, in a few colours. */
+const BUTTERFLY_TINTS = [0xffffff, 0xffe8a0, 0xffc0e8, 0xc8f0ff];
 
 /** The leaves each kind lets fall. */
 const LEAF_TINTS: Record<WoodKind, number[][]> = {
@@ -145,8 +165,28 @@ interface Place {
   body: Sprite | null;
   glow: Sprite | null;
   light: Phaser.GameObjects.Light | null;
+  /** How its light breathes (a fire flickers). */
+  lightDef: { r: number; color: number; i: number; day: number } | null;
   halo: Img | null;
   sparks: Img[];
+  /** A wild place's parts that move or are used one by one. */
+  bits: Bit[];
+  /** How long the hero has stood in a glade's light (ms). */
+  held: number;
+}
+
+/** A part of a wild place on its own: a wisp, a butterfly (a firefly by night), mist, a spore, a berry bush. */
+interface Bit {
+  kind: 'wisp' | 'fly' | 'mist' | 'spore' | 'bush';
+  obj: Img | Sprite;
+  /** Its glow, for those that glow. */
+  halo: Img | null;
+  x: number;
+  y: number;
+  seed: number;
+  /** Its id among the things used up this visit; and whether it is (a wisp caught, a bush picked). */
+  id: number;
+  gone: boolean;
 }
 
 interface Stood {
@@ -774,16 +814,16 @@ export class Forest {
   /** A place: its pieces, and its light. */
   private poi(st: Stood, place: (obj: Placed['obj'], x: number, y: number, hw: number, up: number) => void, p: Poi): void {
     const add = this.world.add;
-    const lit = (x: number, y: number, key: string, frame: string, oy: number, hw: number, up: number): Sprite => {
-      const obj = add.sprite(x, y, key, frame).setOrigin(0.5, oy).setPipeline('Lit').setDepth(y);
+    const lit = (x: number, y: number, key: string, frame: string, oy: number, hw: number, up: number, flip = false): Sprite => {
+      const obj = add.sprite(x, y, key, frame).setOrigin(0.5, oy).setPipeline('Lit').setDepth(y).setFlipX(flip);
       place(obj, x, y, hw, up);
-      const sh = sunShadow(add.image(x, y, `${key}_s`, frame).setOrigin(0.5, oy));
+      const sh = sunShadow(add.image(x, y, `${key}_s`, frame).setOrigin(0.5, oy).setFlipX(flip));
       st.shadows.push(sh);
       place(sh, x, y, hw + 30, up);
       return obj;
     };
     const glowOf = (body: Sprite, key: string): Sprite => {
-      const g = add.sprite(body.x, body.y, key, body.frame.name).setOrigin(body.originX, body.originY).setBlendMode(Phaser.BlendModes.ADD).setDepth(body.depth + 0.1);
+      const g = add.sprite(body.x, body.y, key, body.frame.name).setOrigin(body.originX, body.originY).setFlipX(body.flipX).setBlendMode(Phaser.BlendModes.ADD).setDepth(body.depth + 0.1);
       place(g, body.x, body.y, 30, 60);
       return g;
     };
@@ -794,7 +834,7 @@ export class Forest {
       place(halo, x, y, 40, 40);
       return { lt, halo };
     };
-    const pl: Place = { poi: p, body: null, glow: null, light: null, halo: null, sparks: [] };
+    const pl: Place = { poi: p, body: null, glow: null, light: null, lightDef: null, halo: null, sparks: [], bits: [], held: 0 };
     switch (p.kind) {
       case 'campfire': {
         const body = lit(p.x, p.y, 'fcamp', 'c0', CAMPFIRE_FOOT.y / CAMPFIRE.h, 16, 40).play({ key: 'fcamp_burn', startFrame: Math.floor(Math.random() * 4) });
@@ -803,6 +843,7 @@ export class Forest {
         for (const s of CAMP_SEATS) lit(p.x + s.x, p.y + s.y, 'flora', `stump${s.v}`, PROP_BASE_Y / PROP_H, 24, 26);
         const { lt, halo } = light(p.x, p.y - 8, CAMP_LIGHT, 0xffa04a, 1.8);
         pl.light = lt;
+        pl.lightDef = CAMP_LIGHT;
         pl.halo = halo;
         break;
       }
@@ -816,6 +857,7 @@ export class Forest {
           pl.glow.play('fshrine_e_pulse');
           const { lt, halo } = light(p.x, p.y - 20, SHRINE_LIGHT, 0x8af6ff, 1.2);
           pl.light = lt;
+          pl.lightDef = SHRINE_LIGHT;
           pl.halo = halo;
         }
         break;
@@ -857,8 +899,132 @@ export class Forest {
         // Fairy lights bobbing over the ring, brightest at night.
         for (let k = 0; k < 6; k++) pl.sparks.push(this.spark(place, p.x + Math.cos(k * 1.05) * 16, p.y - 8 + Math.sin(k * 1.05) * 8, k % 2 ? 0xffb8f0 : 0x9afff0));
         break;
+      default:
+        this.wildPlace(st, place, p, pl, lit, glowOf, light);
     }
     st.places.push(pl);
+  }
+
+  /** A wild place's parts (see forestGen.ts `wildPieces`). */
+  private wildPlace(
+    st: Stood,
+    place: (obj: Placed['obj'], x: number, y: number, hw: number, up: number) => void,
+    p: Poi,
+    pl: Place,
+    lit: (x: number, y: number, key: string, frame: string, oy: number, hw: number, up: number, flip?: boolean) => Sprite,
+    glowOf: (body: Sprite, key: string) => Sprite,
+    light: (x: number, y: number, l: { r: number; color: number; i: number }, tint: number, scale: number) => { lt: Phaser.GameObjects.Light; halo: Img },
+  ): void {
+    const add = this.world.add;
+    const pc = wildPieces(p, this.gen);
+    const hash = (x: number, y: number) => hash2(x, y, 1501);
+    const glow = (x: number, y: number, tint: number, scale: number, alpha: number) => {
+      const img = add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(tint).setScale(scale).setAlpha(alpha).setDepth(y + 30);
+      place(img, x, y, 50, 60);
+      return img;
+    };
+    // Grass, flowers and reeds the wind bends, like the wood's own.
+    const bending = (kind: 'flowers' | 'tuft' | 'reeds', v: number, x: number, y: number) => {
+      const n = v % FPROP_LOOKS[kind];
+      const obj = add.image(x, y, 'fprop', `${kind}${n}`).setOrigin(0.5, FPROP_BASE_Y / FPROP_H).setPipeline('Lit').setDepth(y).setFlipX((x + y) % 2 === 0);
+      place(obj, x, y, 24, 40);
+      st.grass.push({ obj, x, y, kind, v: n, bend: 0 });
+    };
+    const bit = (kind: Bit['kind'], obj: Img | Sprite, halo: Img | null, x: number, y: number, k: number) => {
+      const id = p.id * 16 + k;
+      const b: Bit = { kind, obj, halo, x, y, seed: hash(x, y) * 10, id, gone: this.used.has(id) };
+      pl.bits.push(b);
+      return b;
+    };
+    switch (p.kind) {
+      case 'glade': {
+        // Broad shafts of sun into it (moonbeams by night), wildflowers, and butterflies that are fireflies after dark.
+        for (const [dx, dy, v] of [[-16, 8, 0], [8, -6, 1], [22, 12, 0]]) {
+          const img = add.image(p.x + dx, p.y + dy, 'ray', `ray${v}`).setOrigin(RAY_FOOT_X / RAY_W, 1).setBlendMode(Phaser.BlendModes.ADD).setScale(1.3).setDepth(p.y + dy + 1).setVisible(false);
+          st.rays.push({ img, x: p.x + dx, y: p.y + dy, seed: (p.x % 37) + dx });
+        }
+        for (const f of pc.small) bending(f.v < 5 ? 'flowers' : 'tuft', f.v, f.x, f.y);
+        const fly = this.world.anims.exists('critter_butterfly');
+        pc.air.forEach((a, k) => {
+          const obj = fly ? add.sprite(a.x, a.y, 'critters').play({ key: 'critter_butterfly', startFrame: k % 4 }) : add.image(a.x, a.y, 'glow').setScale(0.2);
+          obj.setPipeline('Lit').setTint(BUTTERFLY_TINTS[k % BUTTERFLY_TINTS.length]).setDepth(a.y + 20);
+          place(obj, a.x, a.y, 40, 50);
+          bit('fly', obj, glow(a.x, a.y, 0xd8ff6a, 0.3, 0), a.x, a.y, k);
+        });
+        break;
+      }
+      case 'bog': {
+        // Reeds round its pools, mist lying over it, and its will-o'-wisps.
+        for (const r of pc.small) bending(r.v < 2 ? 'reeds' : 'tuft', r.v < 2 ? r.v : r.v - 2, r.x, r.y);
+        for (let k = 0; k < 5; k++) {
+          const x = p.x + (hash(p.x + k, p.y) - 0.5) * 90;
+          const y = p.y + (hash(p.x, p.y + k) - 0.5) * 60;
+          const obj = add.image(x, y, 'glow').setTint(0xe0f0ea).setScale(3.4, 1.2).setAlpha(0).setDepth(y + 14);
+          place(obj, x, y, 80, 40);
+          bit('mist', obj, null, x, y, 8 + k);
+        }
+        pc.air.forEach((a, k) => {
+          const b = bit('wisp', glow(a.x, a.y, 0xd8fff4, 0.4, 0), glow(a.x, a.y, 0x4af0b8, 1.4, 0), a.x, a.y, k);
+          if (b.gone) b.obj.setScale(0);
+        });
+        const { lt, halo } = light(p.x, p.y - 10, BOG_LIGHT, 0x6af0c0, 2.2);
+        pl.light = lt;
+        pl.lightDef = BOG_LIGHT;
+        pl.halo = halo;
+        break;
+      }
+      case 'glowcaps': {
+        // The great glowcap amid a ring of giant ones, little caps glowing in the moss, spores rising.
+        const spent = this.used.has(p.id);
+        const body = lit(p.x, p.y, 'fgreatcap', spent ? 'spent' : 'g0', GREATCAP_BASE_Y / GREATCAP_H, 30, 62);
+        pl.body = body;
+        pl.glow = glowOf(body, 'fgreatcap_e');
+        if (!spent) {
+          const { lt, halo } = light(p.x, p.y - 36, CAP_LIGHT, 0x6af0d8, 2.6);
+          pl.light = lt;
+          pl.lightDef = CAP_LIGHT;
+          pl.halo = halo;
+        }
+        for (const m of pc.main) {
+          const obj = lit(m.x, m.y, 'fprop', `bigshroom${m.v}`, FPROP_BASE_Y / FPROP_H, 24, 40, (m.x + m.y) % 2 === 0);
+          glowOf(obj, 'fprop_e');
+          st.shrooms.push({ halo: glow(m.x - 2, m.y - 22, m.v ? 0xb88aff : 0x4ff0d0, 2.2, 0), seed: m.x });
+        }
+        for (const m of pc.small) {
+          const obj = add.image(m.x, m.y, 'flora', 'shrooms0').setOrigin(0.5, PROP_BASE_Y / PROP_H).setPipeline('Lit').setDepth(m.y);
+          place(obj, m.x, m.y, 16, 20);
+          place(add.image(m.x, m.y, 'flora_e', 'shrooms0').setOrigin(0.5, PROP_BASE_Y / PROP_H).setBlendMode(Phaser.BlendModes.ADD).setDepth(m.y + 0.1), m.x, m.y, 16, 20);
+        }
+        pc.air.forEach((a, k) => bit('spore', glow(a.x, a.y, 0xa8fff0, 0.16, 0), null, a.x, a.y, k));
+        break;
+      }
+      case 'brambles':
+        // Berry bushes, each picked once a visit.
+        pc.main.forEach((m, k) => {
+          const picked = this.used.has(p.id * 16 + k);
+          const obj = lit(m.x, m.y, 'flora', picked ? 'bush0' : 'bush1', PROP_BASE_Y / PROP_H, 20, 26, m.v % 2 === 0);
+          bit('bush', obj, null, m.x, m.y, k);
+        });
+        break;
+      case 'camp': {
+        // The lean-to and its lantern, the drying rack, the chest it keeps, a stump by the cold firepit, firewood.
+        const [lean, rack, chest, seat] = pc.main;
+        const flip = lean.x > p.x;
+        const body = lit(lean.x, lean.y, 'fhunt', 'lean', HUNT_BASE_Y / HUNT_H, 30, 44, flip);
+        glowOf(body, 'fhunt_e');
+        const lamp = light(lean.x + (flip ? -20 : 20), lean.y - 20, LAMP_LIGHT, 0xffb060, 0.9);
+        pl.light = lamp.lt;
+        pl.lightDef = LAMP_LIGHT;
+        pl.halo = lamp.halo;
+        lit(rack.x, rack.y, 'fhunt', 'rack', HUNT_BASE_Y / HUNT_H, 30, 44, rack.v === 1);
+        const open = this.used.has(p.id);
+        pl.body = lit(chest.x, chest.y, 'fchest', open ? 'open' : 'shut', CHEST_BASE_Y / CHEST_H, 16, 30);
+        if (!open) pl.sparks.push(this.spark(place, chest.x, chest.y - 13, 0xffe070));
+        lit(seat.x, seat.y, 'flora', `stump${seat.v}`, PROP_BASE_Y / PROP_H, 20, 26);
+        for (const f of pc.small) lit(f.x, f.y, 'flora', 'log0', PROP_BASE_Y / PROP_H, 20, 20, flip);
+        break;
+      }
+    }
   }
 
   private spark(place: (obj: Placed['obj'], x: number, y: number, hw: number, up: number) => void, x: number, y: number, tint: number): Img {
@@ -1032,19 +1198,54 @@ export class Forest {
   /** A place's light breathing and its sparks bobbing. */
   private updatePlace(pl: Place, time: number, d: number): void {
     const p = pl.poi;
-    if (pl.light && pl.halo) {
-      const l = p.kind === 'campfire' ? CAMP_LIGHT : SHRINE_LIGHT;
+    if (pl.light && pl.halo && pl.lightDef) {
+      const l = pl.lightDef;
       const kd = 1 + (l.day - 1) * d;
-      const n = p.kind === 'campfire' ? Math.sin(time * 0.011 + p.x) * 0.5 + Math.sin(time * 0.027 + p.y) * 0.3 + Math.sin(time * 0.061) * 0.2 : Math.sin(time * 0.002 + p.x) * 0.8;
+      const fire = l === CAMP_LIGHT || l === LAMP_LIGHT;
+      const n = fire ? Math.sin(time * 0.011 + p.x) * 0.5 + Math.sin(time * 0.027 + p.y) * 0.3 + Math.sin(time * 0.061) * 0.2 : Math.sin(time * 0.002 + p.x) * 0.8;
       pl.light.intensity = l.i * (0.85 + n * 0.15) * kd;
       pl.halo.setAlpha((0.26 + n * 0.05) * kd);
     }
     for (const s of pl.sparks) {
       if (!s.visible) continue;
       const seed = s.getData('seed') as number;
-      const bright = p.kind === 'chest' ? 0.35 + 0.65 * Math.max(0, Math.sin(time * 0.004 + seed)) ** 6 : 0.25 + this.night * 0.6;
+      const bright = p.kind === 'chest' || p.kind === 'camp' ? 0.35 + 0.65 * Math.max(0, Math.sin(time * 0.004 + seed)) ** 6 : 0.25 + this.night * 0.6;
       s.setPosition(s.getData('x') + Math.sin(time * 0.0013 + seed) * 3, s.getData('y') + Math.sin(time * 0.0021 + seed * 2) * 3);
       s.setAlpha(bright * (0.7 + Math.sin(time * 0.009 + seed * 5) * 0.3));
+    }
+    for (const b of pl.bits) this.updateBit(b, time, d);
+  }
+
+  /** A wild place's part moving: butterflies flitting (fireflies blinking by night), mist drifting, wisps bobbing, spores rising. */
+  private updateBit(b: Bit, time: number, d: number): void {
+    const s = b.seed;
+    const night = this.night;
+    switch (b.kind) {
+      case 'fly': {
+        const x = b.x + Math.sin(time * 0.0007 + s) * 20 + Math.sin(time * 0.0023 + s * 3) * 6;
+        const y = b.y + Math.sin(time * 0.0011 + s * 2) * 12;
+        const lift = 12 + Math.sin(time * 0.004 + s) * 3;
+        b.obj.setPosition(x, y - lift).setDepth(y + 20).setAlpha(Math.max(0, (d - 0.35) / 0.3)).setFlipX(Math.cos(time * 0.0007 + s) < 0);
+        b.halo?.setPosition(x, y - lift).setAlpha(night * Math.max(0, Math.sin(time * 0.0031 + s * 7)) ** 3 * 0.9);
+        break;
+      }
+      case 'mist':
+        b.obj.setPosition(b.x + Math.sin(time * 0.00012 + s) * 16, b.y + Math.sin(time * 0.0002 + s) * 4).setAlpha((0.08 + 0.12 * night) * (0.8 + Math.sin(time * 0.0005 + s) * 0.2));
+        break;
+      case 'wisp': {
+        if (b.gone) break;
+        const x = b.x + Math.sin(time * 0.00045 + s) * 18 + Math.sin(time * 0.0017 + s * 2) * 4;
+        const y = b.y + Math.sin(time * 0.0006 + s * 2) * 10 - 10 - Math.sin(time * 0.003 + s) * 2;
+        const a = (0.35 + 0.65 * night) * (0.8 + Math.sin(time * 0.006 + s * 3) * 0.2);
+        b.obj.setPosition(x, y).setAlpha(a);
+        b.halo?.setPosition(x, y).setAlpha(a * 0.45);
+        break;
+      }
+      case 'spore': {
+        const u = (time * 0.00012 + s) % 1;
+        b.obj.setPosition(b.x + Math.sin(time * 0.001 + s * 5) * 4, b.y - 8 - u * 40).setAlpha(Math.sin(u * Math.PI) * (0.35 + 0.6 * night));
+        break;
+      }
     }
   }
 
@@ -1055,7 +1256,7 @@ export class Forest {
       for (const pl of st.places) {
         const p = pl.poi;
         const dist = Math.hypot(hero.x - p.x, (hero.y - p.y) * 1.25);
-        if (dist > 60) continue;
+        if (dist > p.r + 24) continue;
         if (p.kind === 'campfire' && dist < CAMP_R) {
           // Resting by the fire: it mends, and here is where the hero rises now.
           if (this.camp?.id !== p.id) {
@@ -1105,6 +1306,60 @@ export class Forest {
               this.world.announce(`Over ${this.gen.regionName(w.ci, w.cj)}`);
             }
           }
+        } else if (p.kind === 'glade') {
+          // Resting in the glade's light: a blessing, once a visit, the sun's by day and the moon's by night.
+          pl.held = dist < p.r * GLADE_IN ? pl.held + dt : 0;
+          if (pl.held >= GLADE_REST && !this.used.has(p.id)) {
+            this.used.add(p.id);
+            const def = this.night > 0.5 ? MOONLIT : SUNLIT;
+            heroBuffs.add(def);
+            w.buffGained(def);
+            sound.heal(w.pan(p.x));
+            w.debris(this.night > 0.5 ? [0xffffff, 0xa8c8ff, 0xd8e8ff] : [0xffffff, 0xffe680, 0xffd040], hero.x, hero.y - 12, 22, hero.y + 20, 'gather');
+          }
+        } else if (p.kind === 'bog') {
+          // A wisp caught bursts, and its light flies to the hero's Special.
+          for (const b of pl.bits) {
+            if (b.kind !== 'wisp' || b.gone || Math.hypot(hero.x - b.obj.x, (hero.y - b.obj.y - 8) * 1.25) > WISP_R) continue;
+            b.gone = true;
+            this.used.add(b.id);
+            b.obj.setScale(0);
+            b.halo?.setScale(0);
+            w.debris([0xffffff, 0xb8ffe8, 0x4af0b8], b.obj.x, b.obj.y, 16, b.y + 10, 'burst');
+            w.chargeSpecial(b.obj.x, b.obj.y, WISP_ENERGY);
+          }
+        } else if (p.kind === 'glowcaps' && dist < CAP_R && !this.used.has(p.id)) {
+          // The great glowcap breathes its spores over the hero, and dims.
+          this.used.add(p.id);
+          heroBuffs.add(GLOWSPORE);
+          w.buffGained(GLOWSPORE);
+          sound.heal(w.pan(p.x));
+          w.debris([0xffffff, 0xa8fff0, 0x4ff0d0, 0xc8a0ff], p.x, p.y - 34, 30, p.y + 20, 'spores');
+          pl.body?.setFrame('spent');
+          pl.glow?.setFrame('spent');
+          if (pl.light) {
+            w.lights.removeLight(pl.light);
+            st.lights.splice(st.lights.indexOf(pl.light), 1);
+            pl.light = null;
+          }
+          pl.halo?.setVisible(false).setScale(0);
+          pl.halo = null;
+        } else if (p.kind === 'brambles') {
+          // Berries picked from a bush walked into: a mouthful that mends.
+          for (const b of pl.bits) {
+            if (b.gone || Math.hypot(hero.x - b.x, (hero.y - b.y) * 1.25) > BUSH_R) continue;
+            b.gone = true;
+            this.used.add(b.id);
+            (b.obj as Sprite).setFrame('bush0');
+            w.mendHero(BERRY_MEND);
+            sound.pickup(w.pan(b.x));
+            w.debris([0xc8203a, 0x7a1a5a, 0xff6a6a], b.x, b.y - 10, 10, b.y + 6, 'burst');
+          }
+        } else if (p.kind === 'camp' && pl.body && !this.used.has(p.id) && Math.hypot(hero.x - pl.body.x, (hero.y - pl.body.y) * 1.25) < CHEST_R) {
+          this.used.add(p.id);
+          pl.body.setFrame('open');
+          for (const s of pl.sparks) s.setScale(0);
+          w.openTreasure(pl.body.x, pl.body.y - 12);
         } else if (p.kind === 'fairy' && dist < FAIRY_R && !this.used.has(p.id)) {
           this.used.add(p.id);
           w.debris([0xffb8f0, 0x9afff0, 0xffffff], p.x, p.y - 10, 30, p.y + 20, 'gather');

@@ -251,7 +251,7 @@ export class Wildlife {
       const y = hero.y + Math.sin(a) * d * 0.85;
       if (view.contains(x, y) || !this.gen.hasFields(Math.floor(x / CHUNK), Math.floor(y / CHUNK))) continue;
       const h = this.gen.sample(x, y);
-      if (h.roof > -36 || h.stream > -10 || h.pond > -10) continue;
+      if (h.grove > -36 || h.stream > -10 || h.pond > -10) continue;
       if (!this.open(x, y, room)) continue;
       const score = (this.gen.biomeAt(x, y) === MEADOW ? 2 : 1) + Math.random();
       if (!best || score > best.score) best = { x, y, score };

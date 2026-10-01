@@ -4,12 +4,12 @@
 // (dx, dy): the patch's middle, from the forest's start.
 import { writeFileSync } from 'node:fs';
 import { STRIP_H, buildStrip } from '../src/art/ground';
-import { CAMPFIRE, CAMPFIRE_FOOT, CHEST_BASE_Y, FPROP_BASE_Y, FPROP_FRAMES, FPROP_LOOKS, LOOKOUT_BASE_Y, MENHIR_BASE_Y, SHRINE_BASE_Y, chestArt, lookoutArt, menhirArt, shrineArt, type FPropKind } from '../src/art/forest';
+import { CAMPFIRE, CAMPFIRE_FOOT, CHEST_BASE_Y, FPROP_BASE_Y, FPROP_FRAMES, FPROP_LOOKS, GREATCAP_BASE_Y, HUNT_BASE_Y, LOOKOUT_BASE_Y, MENHIR_BASE_Y, SHRINE_BASE_Y, chestArt, greatCapArt, leanToArt, lookoutArt, menhirArt, rackArt, shrineArt, type FPropKind } from '../src/art/forest';
 import { PILLAR_BASE, RUIN_H_BASE, RUIN_V_BASE, pillar, ruinH, ruinV } from '../src/art/garden';
 import { rock } from '../src/art/env';
 import type { PixelCanvas, RenderedFrame } from '../src/art/pixel';
 import { ELDER_BASE_Y, PROP_BASE_Y, PROP_FRAMES, TREE_BASE_Y, cherryTree, elderTree, mapleTree, treeFrame, willowTree } from '../src/art/trees';
-import { CAMP_SEATS, CHUNK, ForestGen, LOOK_RAIL, ruinPieces, stonePieces } from '../src/world/forestGen';
+import { CAMP_SEATS, CHUNK, ForestGen, LOOK_RAIL, ruinPieces, stonePieces, wildPieces } from '../src/world/forestGen';
 import { forestTile } from '../src/world/forestGround';
 import { encodePNG } from './png';
 
@@ -122,6 +122,26 @@ for (let ccy = Math.floor(y0 / CHUNK); ccy <= Math.floor((y0 + H + 200) / CHUNK)
           if (r.kind === 'pillar') put(`p${r.v}`, () => pillar(r.v), r.x, r.y, PILLAR_BASE);
           else if (r.kind === 'wall_h') put(`h${r.v}`, () => ruinH(r.v), r.x, r.y, RUIN_H_BASE);
           else put(`v${r.v}`, () => ruinV(r.v), r.x, r.y, RUIN_V_BASE);
+        }
+      }
+      else if (p.kind === 'glade' || p.kind === 'bog' || p.kind === 'glowcaps' || p.kind === 'brambles' || p.kind === 'camp') {
+        const pc = wildPieces(p, gen);
+        const fp = (k: string, x: number, y: number, flip = false) => put(k, FPROP_FRAMES.find((f) => f.name === k)!.draw, x, y, FPROP_BASE_Y, flip);
+        if (p.kind === 'glade') for (const f of pc.small) fp(f.v < 5 ? `flowers${f.v % 4}` : `tuft${f.v % 3}`, f.x, f.y);
+        if (p.kind === 'bog') for (const r of pc.small) fp(r.v < 2 ? `reeds${r.v}` : `tuft${(r.v - 2) % 3}`, r.x, r.y);
+        if (p.kind === 'glowcaps') {
+          put('greatcap', () => greatCapArt(false), p.x, p.y, GREATCAP_BASE_Y);
+          for (const m of pc.main) fp(`bigshroom${m.v}`, m.x, m.y, (m.x + m.y) % 2 === 0);
+          for (const m of pc.small) put('shrooms0', flora('shrooms0'), m.x, m.y, PROP_BASE_Y);
+        }
+        if (p.kind === 'brambles') for (const m of pc.main) put('bush1', flora('bush1'), m.x, m.y, PROP_BASE_Y, m.v % 2 === 0);
+        if (p.kind === 'camp') {
+          const [lean, rack, chest, seat] = pc.main;
+          put('lean', leanToArt, lean.x, lean.y, HUNT_BASE_Y, lean.x > p.x);
+          put('rack', rackArt, rack.x, rack.y, HUNT_BASE_Y, rack.v === 1);
+          put('chest', () => chestArt(false), chest.x, chest.y, CHEST_BASE_Y);
+          put(`stump${seat.v}`, flora(`stump${seat.v}`), seat.x, seat.y, PROP_BASE_Y);
+          for (const f of pc.small) put('log0', flora('log0'), f.x, f.y, PROP_BASE_Y, lean.x > p.x);
         }
       }
       console.log(`place: ${p.kind} at ${p.x - start.x}, ${p.y - start.y}`);

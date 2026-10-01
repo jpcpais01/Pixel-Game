@@ -125,3 +125,35 @@ export const STAG_GRACE: BuffDef = {
   duration: 240000,
   mods: { speed: 1.15, damage: 1.15, regen: 2 },
 };
+
+// The Everwood's wild places (see world/Forest.ts).
+
+/** Resting in a sunlit glade: mending, and lighter on the feet. */
+export const SUNLIT: BuffDef = {
+  id: 'sunlit',
+  name: 'Sunlit',
+  icon: 'buff_sun',
+  tint: 0xffd860,
+  duration: 180000,
+  mods: { regen: 3, speed: 1.1 },
+};
+
+/** The same glade by moonlight: mending, and blows glance off. */
+export const MOONLIT: BuffDef = {
+  id: 'moonlit',
+  name: 'Moonlit',
+  icon: 'buff_moon',
+  tint: 0xa8c8ff,
+  duration: 180000,
+  mods: { regen: 3, guard: 0.85 },
+};
+
+/** Breathing the great glowcap's spores: the hero's blows land harder. */
+export const GLOWSPORE: BuffDef = {
+  id: 'glowspore',
+  name: 'Glowspore',
+  icon: 'buff_spore',
+  tint: 0x6af0d8,
+  duration: 150000,
+  mods: { damage: 1.2 },
+};

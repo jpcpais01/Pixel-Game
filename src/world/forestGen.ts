@@ -10,7 +10,7 @@
 // maples, mushroom hollows. Where two meet they mingle over a band rather
 // than change at a line. Over them run smooth fields, sampled on a 4 px
 // lattice and blended between its nodes (cheap enough to ask per pixel):
-//  - thickets, where the treetops close into a roof of leaves (not walkable);
+//  - groves, where the trees stand close, trunk by trunk, with ferns between;
 //  - streams, the contour lines of a noise, widening and fading with a
 //    second one, with shallow fords here and there;
 //  - ponds, the high ground of another noise;
@@ -21,8 +21,9 @@
 // terrace shows a rock face; trails climb it on stairs, streams wear it down
 // into a gentle ravine, and here and there it eases into a walkable slope.
 // Trees, undergrowth, sunbeams, creatures and rare places (a campfire, a
-// shrine, a chest, old ruins, standing stones, an elder tree, a fairy ring)
-// are picked cell by cell on grids of their own, each cell from its own
+// shrine, a chest, old ruins, standing stones, an elder tree, a fairy ring;
+// and wilder ones: a sunlit glade, a misty bog, a grove of glowing
+// mushrooms, a bramble patch, a hunter's camp) are picked cell by cell on grids of their own, each cell from its own
 // hash, so a chunk's contents never depend on which chunks were made first.
 
 import { hash2, valueNoise } from '../art/env';
@@ -41,11 +42,15 @@ const NS = NN + 1;
 const REGION = 560;
 const BAND = 96;
 /** Grids things are picked on. */
-/** Raises every wood's thicket threshold: thickets are small islands of treetops to walk round, never walls. */
-const THICKET_LIFT = 0.16;
+/** Raises every wood's grove threshold: groves are patches of close-standing trees, not the whole wood. */
+const GROVE_LIFT = 0.1;
+/** How likely a tree cell deep in a grove holds a tree. */
+const GROVE_TREES = 0.62;
 const TREE_CELL = 22;
 /** How far below a place (px) a tree's crown would still stand over it. */
 const TREE_SHADE = 96;
+/** How much further back from a glade the trees stand. */
+const GLADE_OPEN = 26;
 const PROP_CELL = 13;
 const POI_CELL = 704;
 const RAY_CELL = 230;
@@ -109,14 +114,12 @@ export interface Biome {
   hills: number;
   /** How often a region is this wood. */
   weight: number;
-  /** Noise level above which the treetops close into a thicket (higher: fewer). */
-  thicket: number;
+  /** Noise level above which the trees close into a grove (higher: fewer). */
+  grove: number;
   /** Chance a tree cell holds a tree. */
   trees: number;
   /** Which trees, by weight. */
   kinds: [WoodKind, number][];
-  /** Its thickets' roof ramp (see forestGround.ts). */
-  roof: number;
   /** Added to the pond noise: more ponds, or fewer. */
   ponds: number;
   /** Chance a prop cell holds something, and what, by weight. */
@@ -150,10 +153,9 @@ export const BIOMES: Biome[] = [
     id: 'oak',
     hills: 0.55,
     weight: 24,
-    thicket: 0.6,
+    grove: 0.6,
     trees: 0.075,
     kinds: [['oak', 80], ['birch', 10], ['pine', 10]],
-    roof: 0,
     ponds: 0,
     props: 0.12,
     undergrowth: [['fern', 28], ['bush', 16], ['berry', 6], ['tuft', 24], ['rock', 6], ['stump', 6], ['log', 4], ['redcap', 4], ['flowers', 6]],
@@ -164,10 +166,9 @@ export const BIOMES: Biome[] = [
     id: 'birch',
     hills: 0.45,
     weight: 16,
-    thicket: 0.7,
+    grove: 0.7,
     trees: 0.09,
     kinds: [['birch', 82], ['oak', 18]],
-    roof: 1,
     ponds: 0.01,
     props: 0.12,
     undergrowth: [['tuft', 36], ['flowers', 22], ['fern', 14], ['bush', 10], ['stump', 6], ['rock', 6]],
@@ -178,10 +179,9 @@ export const BIOMES: Biome[] = [
     id: 'pine',
     hills: 1.0,
     weight: 17,
-    thicket: 0.57,
+    grove: 0.57,
     trees: 0.1,
     kinds: [['pine', 90], ['birch', 10]],
-    roof: 2,
     ponds: -0.03,
     props: 0.1,
     undergrowth: [['fern', 24], ['rock', 10], ['boulder', 5], ['stump', 10], ['log', 8], ['redcap', 6], ['tuft', 10]],
@@ -192,10 +192,9 @@ export const BIOMES: Biome[] = [
     id: 'sakura',
     hills: 0.7,
     weight: 11,
-    thicket: 0.72,
+    grove: 0.72,
     trees: 0.06,
     kinds: [['cherry', 78], ['birch', 12], ['oak', 10]],
-    roof: 4,
     ponds: 0.03,
     props: 0.12,
     undergrowth: [['flowers', 26], ['tuft', 30], ['bush', 14], ['rock', 12], ['fern', 10]],
@@ -206,10 +205,9 @@ export const BIOMES: Biome[] = [
     id: 'meadow',
     hills: 0.3,
     weight: 13,
-    thicket: 0.84,
+    grove: 0.84,
     trees: 0.015,
     kinds: [['oak', 50], ['cherry', 20], ['birch', 30]],
-    roof: 0,
     ponds: 0.02,
     props: 0.26,
     undergrowth: [['flowers', 46], ['tuft', 44], ['rock', 5], ['bush', 5]],
@@ -220,10 +218,9 @@ export const BIOMES: Biome[] = [
     id: 'autumn',
     hills: 0.85,
     weight: 12,
-    thicket: 0.62,
+    grove: 0.62,
     trees: 0.07,
     kinds: [['maple', 74], ['oak', 16], ['birch', 10]],
-    roof: 3,
     ponds: 0,
     props: 0.12,
     undergrowth: [['bush', 16], ['berry', 6], ['tuft', 24], ['stump', 10], ['log', 8], ['fern', 14], ['redcap', 8], ['rock', 5]],
@@ -234,10 +231,9 @@ export const BIOMES: Biome[] = [
     id: 'hollow',
     hills: 0.6,
     weight: 7,
-    thicket: 0.56,
+    grove: 0.56,
     trees: 0.08,
     kinds: [['oak', 55], ['pine', 45]],
-    roof: 5,
     ponds: 0.03,
     props: 0.16,
     undergrowth: [['bigshroom', 12], ['glowcap', 30], ['fern', 24], ['log', 10], ['stump', 8], ['boulder', 5], ['redcap', 8]],
@@ -252,10 +248,28 @@ const START_BIOME = 0;
 
 // ---------------------------------------------------------------- places
 
-export type PoiKind = 'campfire' | 'shrine' | 'chest' | 'ruins' | 'stones' | 'elder' | 'fairy' | 'lookout';
+export type PoiKind = 'campfire' | 'shrine' | 'chest' | 'ruins' | 'stones' | 'elder' | 'fairy' | 'lookout' | WildKind;
+/** The wilder places, on a grid of their own: a sunlit glade, a misty bog, a grove of glowing mushrooms, a bramble patch, a hunter's old camp. */
+export type WildKind = 'glade' | 'bog' | 'glowcaps' | 'brambles' | 'camp';
 
 /** How much room each kind of place clears round itself. */
-const POI_R: Record<PoiKind, number> = { campfire: 30, shrine: 26, chest: 22, ruins: 64, stones: 46, elder: 58, fairy: 26, lookout: 24 };
+const POI_R: Record<PoiKind, number> = { campfire: 30, shrine: 26, chest: 22, ruins: 64, stones: 46, elder: 58, fairy: 26, lookout: 24, glade: 64, bog: 66, glowcaps: 56, brambles: 46, camp: 50 };
+/**
+ * The wild places' grid: one tried per cell this size, kept this often, and
+ * which by weight (a glade needs the most room, so is tried most). Their
+ * own grid (and ids from WILD_ID up), so the older places stay where they
+ * always were.
+ */
+const WILD_CELL = 640;
+const WILD_CHANCE = 0.62;
+const WILD_WEIGHTS: [WildKind, number][] = [
+  ['glade', 40],
+  ['bog', 14],
+  ['glowcaps', 18],
+  ['brambles', 24],
+  ['camp', 20],
+];
+const WILD_ID = 2 ** 33;
 const POI_WEIGHTS: [PoiKind, number][] = [
   ['campfire', 20],
   ['shrine', 16],
@@ -350,7 +364,7 @@ const PROP_BLOCK: Partial<Record<PropKind, [number, number]>> = { rock: [6, 3], 
 /** Field indices on the lattice. */
 const F_WX = 0;
 const F_WY = 1;
-const F_ROOF = 2;
+const F_GROVE = 2;
 const F_STREAM = 3;
 const F_POND = 4;
 const F_TRAIL = 5;
@@ -370,8 +384,8 @@ export interface Here {
   /** Warp applied before the regions are looked up. */
   wx: number;
   wy: number;
-  /** Positive inside a thicket, negative in the open: roughly px from its edge. */
-  roof: number;
+  /** Positive inside a grove, negative in the open: roughly px from its edge. */
+  grove: number;
   /** Positive inside a stream (px from its bank), negative outside. */
   stream: number;
   /** Positive inside a pond, negative outside. */
@@ -469,6 +483,7 @@ export class ForestGen {
   private layouts = new Lru<ChunkLayout>(LAYOUT_CACHE);
   private poiCells = new Lru<Poi | null>(POI_CACHE);
   private lookCells = new Lru<Poi | null>(LOOK_CACHE);
+  private wildCells = new Lru<Poi | null>(POI_CACHE);
   /** Salts every noise with the seed. */
   private readonly k: number;
   private startCell: { i: number; j: number };
@@ -478,7 +493,7 @@ export class ForestGen {
   private fresh: FreshWork | null = null;
   private lastKey = -1;
   private lastF: Float32Array | null = null;
-  private readonly here: Here = { wx: 0, wy: 0, roof: 0, stream: 0, pond: 0, trail: 0, ford: 0, tgx: 0, tgy: 1, sgx: 0, sgy: 1, rise: 0.5, rgx: 0, rgy: 0, slope: 0 };
+  private readonly here: Here = { wx: 0, wy: 0, grove: 0, stream: 0, pond: 0, trail: 0, ford: 0, tgx: 0, tgy: 1, sgx: 0, sgy: 1, rise: 0.5, rgx: 0, rgy: 0, slope: 0 };
   private readonly ground: Terrain = { level: 0, up: Infinity, down: Infinity, facing: 0, faceW: 0, onFace: false, slope: false, stairs: false };
   private readonly where: Where = { ci: 0, cj: 0, a: 0, b: 0, w: 0 };
   /**
@@ -711,31 +726,29 @@ export class ForestGen {
     const pond = (pv - 0.8 - mixB((b) => b.ponds)) * 150;
     const ford = smooth(0.68, 0.74, this.n(x, y, 85, 51));
 
-    // Thickets, drawn back from the trails, the water and the places.
+    // Groves, drawn back from the trails, the water and the places.
     const rv = this.n(x, y, 165, 53) * 0.84 + this.n(x, y, 56, 55) * 0.16;
-    // The fine noise only bites into a thicket's edge, never adds to it: added, it left lone
-    // clumps of treetops standing in the open, which read as boulders.
-    let roof = (rv - mixB((b) => b.thicket) - THICKET_LIFT) * 170 + Math.min(0, (this.n(x, y, 7, 57) - 0.5) * 8 + (this.n(x, y, 19, 59) - 0.5) * 14);
-    roof -= Math.max(0, 22 - trail) * 2.2;
-    roof -= Math.max(0, 20 + Math.max(stream, pond)) * 2;
+    let grove = (rv - mixB((b) => b.grove) - GROVE_LIFT) * 170 + (this.n(x, y, 19, 59) - 0.5) * 14;
+    grove -= Math.max(0, 22 - trail) * 2.2;
+    grove -= Math.max(0, 20 + Math.max(stream, pond)) * 2;
     if (pois) {
       for (const p of this.poisNear(x, y)) {
         const d = Math.hypot(x - p.x, (y - p.y) * 1.2);
-        roof -= Math.max(0, p.r + 36 - d) * 2.2;
+        grove -= Math.max(0, p.r + 36 - d) * 2.2;
       }
     }
     // The land: crags wander the edges a few px either way (scaled by the slope, so it's px on any hill);
-    // thickets keep back from the cliffs, which show over the treetops' edge.
+    // groves keep back from the cliffs, so their crowns don't hide the rock.
     const rg = Math.hypot(rgx, rgy);
     const rise = hv + (this.n(x, y, 13, 85) - 0.5) * 2 * CRAG * rg;
     if (rg > 1e-7) {
       const fu = rise - Math.floor(rise);
-      roof -= Math.max(0, faceWidth(-rgy / rg) + 12 - (1 - fu) / rg) * 2.4 + Math.max(0, 12 - fu / rg) * 2.4;
+      grove -= Math.max(0, faceWidth(-rgy / rg) + 12 - (1 - fu) / rg) * 2.4 + Math.max(0, 12 - fu / rg) * 2.4;
     }
 
     out[o + F_WX] = wx;
     out[o + F_WY] = wy;
-    out[o + F_ROOF] = roof;
+    out[o + F_GROVE] = grove;
     out[o + F_STREAM] = stream;
     out[o + F_POND] = pond;
     out[o + F_TRAIL] = trail;
@@ -863,7 +876,7 @@ export class ForestGen {
     const h = this.here;
     h.wx = at(F_WX);
     h.wy = at(F_WY);
-    h.roof = at(F_ROOF);
+    h.grove = at(F_GROVE);
     h.stream = at(F_STREAM);
     h.pond = at(F_POND);
     h.trail = at(F_TRAIL);
@@ -899,7 +912,7 @@ export class ForestGen {
     return {
       wx: f[F_WX],
       wy: f[F_WY],
-      roof: f[F_ROOF],
+      grove: f[F_GROVE],
       stream: f[F_STREAM],
       pond: f[F_POND],
       trail: f[F_TRAIL],
@@ -931,12 +944,12 @@ export class ForestGen {
         const x = Math.round(FOREST_MID + Math.cos(a) * r);
         const y = Math.round(FOREST_MID + Math.sin(a) * r);
         const e = this.exact(x, y);
-        if (e.trail > -1 || e.trail < -3 || e.roof > -40 || Math.max(e.stream, e.pond) > -44 || this.nearEdge(e, 40)) continue;
+        if (e.trail > -1 || e.trail < -3 || e.grove > -40 || Math.max(e.stream, e.pond) > -44 || this.nearEdge(e, 40)) continue;
         // Room for the campfire on the open side.
         const fx = x + e.tgx * 34;
         const fy = y + e.tgy * 34;
         const f = this.exact(fx, fy);
-        if (f.trail < 10 || Math.max(f.stream, f.pond) > -30 || f.roof > -30 || this.nearEdge(f, 30)) continue;
+        if (f.trail < 10 || Math.max(f.stream, f.pond) > -30 || f.grove > -30 || this.nearEdge(f, 30)) continue;
         best = { x, y };
         this.startFire = { id: -1, kind: 'campfire', x: Math.round(fx), y: Math.round(fy), r: POI_R.campfire, biome: BIOMES[START_BIOME].id };
         break;
@@ -992,6 +1005,7 @@ export class ForestGen {
     const out: Poi[] = [];
     this.near(x, y, POI_CELL, (i, j) => this.poiIn(i, j), out);
     this.near(x, y, LOOK_CELL, (i, j) => this.lookoutIn(i, j), out);
+    this.near(x, y, WILD_CELL, (i, j) => this.wildIn(i, j), out);
     return out;
   }
 
@@ -1010,6 +1024,7 @@ export class ForestGen {
     for (const [cell, at] of [
       [POI_CELL, (i: number, j: number) => this.poiIn(i, j)],
       [LOOK_CELL, (i: number, j: number) => this.lookoutIn(i, j)],
+      [WILD_CELL, (i: number, j: number) => this.wildIn(i, j)],
     ] as const) {
       for (let j = Math.floor((y0 - 80) / cell); j <= Math.floor((y1 + 80) / cell); j++) {
         for (let i = Math.floor((x0 - 80) / cell); i <= Math.floor((x1 + 80) / cell); i++) {
@@ -1062,6 +1077,45 @@ export class ForestGen {
     return poi;
   }
 
+  /**
+   * The wild place in wild cell (i, j), if it has one: on dry, level ground
+   * off the trails, clear of the older places. A wood can change which:
+   * the hollows grow glowcaps where others have a glade, a meadow is all
+   * glade, and a pine wood is too dry for brambles.
+   */
+  private wildIn(i: number, j: number): Poi | null {
+    const key = key2(i, j);
+    const had = this.wildCells.get(key);
+    if (had !== undefined) return had;
+    let poi: Poi | null = null;
+    const start = this.spawn();
+    if (this.h(i, j, 191) < WILD_CHANCE) {
+      const want = this.pick(WILD_WEIGHTS, this.h(i * 7 + 3, j * 13 + 5, 4111));
+      for (let t = 0; t < 8 && !poi; t++) {
+        const x = Math.round((i + 0.16 + this.h(i, j, 4200 + t * 7) * 0.68) * WILD_CELL);
+        const y = Math.round((j + 0.16 + this.h(i, j, 4300 + t * 7) * 0.68) * WILD_CELL);
+        if (Math.hypot(x - start.x, y - start.y) < 360) continue;
+        const e = this.exact(x, y);
+        const biome = BIOMES[this.nearestCell(x + e.wx, y + e.wy).a].id;
+        let kind: WildKind = want;
+        if (biome === 'hollow' && kind === 'glade') kind = 'glowcaps';
+        else if (biome === 'meadow' && kind === 'glowcaps') kind = 'glade';
+        else if (biome === 'pine' && kind === 'brambles') kind = 'camp';
+        const rad = POI_R[kind];
+        // A bog keeps to the wet ground by a stream or pond; the rest to dry.
+        const water = Math.max(e.stream, e.pond);
+        if ((kind === 'bog' ? water > -(rad * 0.6) || water < -110 : water > -(rad + 10)) || e.trail < 8 || this.nearEdge(e, rad + 8)) continue;
+        const busy: Poi[] = [];
+        this.near(x, y, POI_CELL, (a, b) => this.poiIn(a, b), busy);
+        this.near(x, y, LOOK_CELL, (a, b) => this.lookoutIn(a, b), busy);
+        if (busy.some((p) => Math.hypot(p.x - x, p.y - y) < p.r + rad + 24)) continue;
+        poi = { id: WILD_ID + key, kind, x, y, r: rad, biome };
+      }
+    }
+    this.wildCells.set(key, poi);
+    return poi;
+  }
+
   // ---------------------------------------------------------------- trees
 
   private pick<T>(list: [T, number][], r: number): T {
@@ -1080,7 +1134,6 @@ export class ForestGen {
     const x = Math.round((i + 0.2 + this.h(i, j, 101) * 0.6) * TREE_CELL);
     const y = Math.round((j + 0.2 + this.h(i, j, 103) * 0.6) * TREE_CELL);
     const s = this.sample(x, y);
-    if (s.roof > -6) return null;
     const water = Math.max(s.stream, s.pond);
     if (water > -8 || s.trail < 8) return null;
     // Not on a cliff's face nor right at its lip; but they crowd the tops of the cliffs, crowns over the drop.
@@ -1092,9 +1145,11 @@ export class ForestGen {
     const start = this.spawn();
     if (Math.hypot(x - start.x, y - start.y) < 46 || (y > start.y && y - start.y < TREE_SHADE && Math.abs(x - start.x) < 60)) return null;
     for (const p of this.poisNear(x, y)) {
-      if (Math.hypot(x - p.x, (y - p.y) * 1.2) < p.r + 6) return null;
+      // A glade is open to the sky: the trees stand further back from it.
+      const open = p.kind === 'glade' ? GLADE_OPEN : 0;
+      if (Math.hypot(x - p.x, (y - p.y) * 1.2) < p.r + 6 + open) return null;
       // Nor just below one, where its crown would hide the place.
-      if (y > p.y && y - p.y < TREE_SHADE && Math.abs(x - p.x) < p.r + 24) return null;
+      if (y > p.y && y - p.y < TREE_SHADE + open && Math.abs(x - p.x) < p.r + 24) return null;
     }
     // A lookout keeps its view: a widening wedge down the drop in front of it.
     for (let lj = Math.floor((y - LOOK_VIEW) / LOOK_CELL); lj <= Math.floor((y + 10) / LOOK_CELL); lj++) {
@@ -1105,8 +1160,8 @@ export class ForestGen {
     }
     const biome = BIOMES[this.biomeAt(x, y)];
     let chance = biome.trees * (0.5 + 0.95 * this.n(x, y, 120, 105));
-    // Trees crowd a thicket's edge, so their crowns hide where the roof begins.
-    if (s.roof > -24) chance = Math.max(chance, 0.22);
+    // Trees stand close in a grove, thickest at its heart.
+    if (s.grove > -20) chance = Math.max(chance, GROVE_TREES * smooth(-20, 40, s.grove) + 0.12);
     if (brink) chance = Math.max(chance, 0.16);
     // Willows lean over the water.
     const bank = water > -26 && biome.id !== 'pine';
@@ -1160,6 +1215,7 @@ export class ForestGen {
     for (const [cell, at] of [
       [POI_CELL, (i: number, j: number) => this.poiIn(i, j)],
       [LOOK_CELL, (i: number, j: number) => this.lookoutIn(i, j)],
+      [WILD_CELL, (i: number, j: number) => this.wildIn(i, j)],
     ] as const) {
       for (let j = Math.floor(y0 / cell); j <= Math.floor((y1 - 1) / cell); j++) {
         for (let i = Math.floor(x0 / cell); i <= Math.floor((x1 - 1) / cell); i++) {
@@ -1178,7 +1234,7 @@ export class ForestGen {
         const y = Math.round((j + 0.2 + this.h(i, j, 135) * 0.6) * RAY_CELL);
         if (x < x0 || x >= x1 || y < y0 || y >= y1) continue;
         const s = this.sample(x, y);
-        if (s.roof > -14 || Math.max(s.stream, s.pond) > -2 || this.nearEdge(s, 4)) continue;
+        if (s.grove > -14 || Math.max(s.stream, s.pond) > -2 || this.nearEdge(s, 4)) continue;
         rays.push({ x, y, seed: Math.floor(this.h(i, j, 137) * 100) });
       }
     }
@@ -1193,7 +1249,7 @@ export class ForestGen {
       if (Math.hypot(x - start.x, y - start.y) < QUIET_START) continue;
       const s = this.sample(x, y);
       const water = Math.max(s.stream, s.pond);
-      if (s.roof > -14 || water > -6 || this.nearEdge(s, 10)) continue;
+      if (s.grove > -14 || water > -6 || this.nearEdge(s, 10)) continue;
       if (this.poisNear(x, y).some((p) => Math.hypot(x - p.x, y - p.y) < p.r + 10)) continue;
       const biome = BIOMES[this.biomeAt(x, y)];
       const kind: ForestMonster = water > -40 && this.h(cx, cy, 153 + k) < 0.6 ? 'frog' : this.pick(biome.monsters, this.h(cx, cy, 157 + k));
@@ -1218,7 +1274,7 @@ export class ForestGen {
   /** The undergrowth in prop cell (i, j), at (x, y), if any. */
   private propAt(i: number, j: number, x: number, y: number, treeCell: (i: number, j: number) => FTree | null): FProp | null {
     const s = this.sample(x, y);
-    if (s.roof > -3 || s.trail < 3) return null;
+    if (s.trail < 3) return null;
     const land = this.terrain(s);
     if (land.onFace || land.up < 3 || land.down < 3) return null;
     // Rock fallen from a cliff lies at its foot, ferns in its shade.
@@ -1243,8 +1299,8 @@ export class ForestGen {
     }
     if (foot && r < 0.5) return { x, y, kind: r < 0.14 ? 'boulder' : r < 0.32 ? 'rock' : 'fern', v, flip };
     const biome = BIOMES[this.biomeAt(x, y)];
-    // The thicket's edge is crowded with ferns and bushes.
-    if (s.roof > -22) {
+    // A grove is crowded with ferns and bushes between its trunks.
+    if (s.grove > -22) {
       if (r > 0.34) return null;
       return { x, y, kind: r < 0.17 ? 'fern' : biome.id === 'hollow' ? 'glowcap' : 'bush', v, flip };
     }
@@ -1274,7 +1330,6 @@ export class ForestGen {
   walkable(x: number, y: number): boolean {
     if (x < 16 || y < 16 || x > FOREST_WORLD - 16 || y > FOREST_WORLD - 16) return false;
     const s = this.sample(x, y);
-    if (s.roof > -9) return false;
     if (this.stops(s)) return false;
     const water = Math.max(s.stream, s.pond);
     // Water stops feet, but for a bridge, or a ford's shallows.
@@ -1369,6 +1424,135 @@ export const CAMP_SEATS = [
   { x: 20, y: -4, v: 1 },
 ];
 
+/** A pool, a bush or a piece standing in a wild place: its middle, and its size (a pool's half-width and half-height). */
+export interface WildBit {
+  x: number;
+  y: number;
+  rx: number;
+  ry: number;
+  v: number;
+}
+
+/** What stands in each wild place (worked out once: the bog's and the brambles' keep off any trail that runs through). */
+export interface WildPieces {
+  /** The bog's pools; the glowcaps' ring of giant mushrooms; the bramble bushes; the camp's lean-to, rack, chest and seat. */
+  main: WildBit[];
+  /** Reeds round the pools; flowers in the glade; little glowcaps; the camp's firewood. */
+  small: WildBit[];
+  /** Where the bog's will-o'-wisps, the glade's butterflies and the glowcaps' spores hang. */
+  air: WildBit[];
+}
+
+const wildMemo = new Map<string, WildPieces>();
+
+export function wildPieces(p: Poi, gen: ForestGen): WildPieces {
+  const memo = `${gen.seed}:${p.id}`;
+  const had = wildMemo.get(memo);
+  if (had) return had;
+  const h = (k: number) => hash2(p.x, p.y, 1200 + k);
+  const out: WildPieces = { main: [], small: [], air: [] };
+  const clear = (x: number, y: number, room: number) => gen.sample(x, y).trail > room;
+  switch (p.kind) {
+    case 'glade': {
+      // Wildflowers about the rim, butterflies over the middle.
+      for (let k = 0; k < 9; k++) {
+        const a = h(1) * 7 + k * 0.7 + h(10 + k) * 0.4;
+        const d = 30 + h(20 + k) * 22;
+        const x = Math.round(p.x + Math.cos(a) * d);
+        const y = Math.round(p.y + Math.sin(a) * d * 0.8);
+        if (clear(x, y, 4)) out.small.push({ x, y, rx: 0, ry: 0, v: Math.floor(h(30 + k) * 8) });
+      }
+      for (let k = 0; k < 5; k++) out.air.push({ x: Math.round(p.x + (h(40 + k) - 0.5) * 70), y: Math.round(p.y + (h(50 + k) - 0.5) * 46), rx: 0, ry: 0, v: k });
+      break;
+    }
+    case 'bog': {
+      // Dark pools between hummocks, never across a trail.
+      const n = 4 + Math.floor(h(1) * 3);
+      for (let k = 0; k < n * 3 && out.main.length < n; k++) {
+        const a = h(60 + k) * Math.PI * 2;
+        const d = (k ? 18 : 0) + h(70 + k) * 30;
+        const x = Math.round(p.x + Math.cos(a) * d);
+        const y = Math.round(p.y + Math.sin(a) * d * 0.75);
+        const rx = 9 + Math.floor(h(80 + k) * 8);
+        const ry = Math.round(rx * (0.55 + h(90 + k) * 0.15));
+        if (!clear(x, y, rx + 8)) continue;
+        if (out.main.some((o) => Math.hypot((o.x - x) / (o.rx + rx + 7), (o.y - y) / (o.ry + ry + 6)) < 1)) continue;
+        out.main.push({ x, y, rx, ry, v: k });
+      }
+      // Reeds at the pools' edges.
+      for (const o of out.main) {
+        for (let k = 0; k < 3; k++) {
+          const a = h(100 + o.v * 5 + k) * Math.PI * 2;
+          const x = Math.round(o.x + Math.cos(a) * (o.rx + 2));
+          const y = Math.round(o.y + Math.sin(a) * (o.ry + 2));
+          if (clear(x, y, 3) && a > 0.3 && a < Math.PI - 0.3) out.small.push({ x, y, rx: 0, ry: 0, v: Math.floor(h(120 + o.v * 5 + k) * 2) });
+        }
+      }
+      // Sedge in tussocks across the peat (v from 2: tufts, below: reeds).
+      for (let k = 0; k < 10; k++) {
+        const x = Math.round(p.x + (h(300 + k) - 0.5) * 100);
+        const y = Math.round(p.y + (h(320 + k) - 0.5) * 70);
+        if (Math.hypot(x - p.x, (y - p.y) * 1.25) > 54 || !clear(x, y, 3)) continue;
+        if (out.main.some((o) => Math.hypot((o.x - x) / (o.rx + 3), (o.y - y) / (o.ry + 3)) < 1)) continue;
+        out.small.push({ x, y, rx: 0, ry: 0, v: 2 + Math.floor(h(340 + k) * 3) });
+      }
+      for (let k = 0; k < 3; k++) out.air.push({ x: Math.round(p.x + (h(130 + k) - 0.5) * 80), y: Math.round(p.y + (h(140 + k) - 0.5) * 50), rx: 0, ry: 0, v: k });
+      break;
+    }
+    case 'glowcaps': {
+      // A ring of giant mushrooms round the great one, little caps between.
+      const n = 6 + Math.floor(h(1) * 3);
+      const turn = h(2) * Math.PI * 2;
+      for (let k = 0; k < n; k++) {
+        if (h(150 + k) < 0.18) continue;
+        const a = turn + (k / n) * Math.PI * 2 + (h(160 + k) - 0.5) * 0.3;
+        const x = Math.round(p.x + Math.cos(a) * (38 + h(170 + k) * 6));
+        const y = Math.round(p.y + Math.sin(a) * (27 + h(180 + k) * 4));
+        if (clear(x, y, 6)) out.main.push({ x, y, rx: 5, ry: 3, v: k % 2 });
+      }
+      for (let k = 0; k < 10; k++) {
+        const a = h(190 + k) * Math.PI * 2;
+        const d = 14 + h(200 + k) * 30;
+        const x = Math.round(p.x + Math.cos(a) * d);
+        const y = Math.round(p.y + Math.sin(a) * d * 0.72);
+        if (clear(x, y, 4) && Math.hypot(x - p.x, (y - p.y) * 1.3) > 14) out.small.push({ x, y, rx: 0, ry: 0, v: 0 });
+      }
+      for (let k = 0; k < 7; k++) out.air.push({ x: Math.round(p.x + (h(210 + k) - 0.5) * 60), y: Math.round(p.y + (h(220 + k) - 0.5) * 34), rx: 0, ry: 0, v: k });
+      break;
+    }
+    case 'brambles': {
+      // Berry bushes in a loose thicket, the odd gap to walk in by.
+      const n = 6 + Math.floor(h(1) * 3);
+      for (let k = 0; k < n * 3 && out.main.length < n; k++) {
+        const a = h(230 + k) * Math.PI * 2;
+        const d = 6 + h(240 + k) * 32;
+        const x = Math.round(p.x + Math.cos(a) * d);
+        const y = Math.round(p.y + Math.sin(a) * d * 0.7);
+        if (!clear(x, y, 9) || out.main.some((o) => Math.hypot(o.x - x, (o.y - y) * 1.4) < 20)) continue;
+        out.main.push({ x, y, rx: 7, ry: 3, v: k });
+      }
+      break;
+    }
+    case 'camp': {
+      // The lean-to on the north, the drying rack beside it, the chest it keeps and a stump to sit on; the firepit lies before it.
+      const side = h(1) < 0.5 ? -1 : 1;
+      out.main.push({ x: p.x - side * 12, y: p.y - 12, rx: 17, ry: 6, v: 0 });
+      out.main.push({ x: p.x + side * 30, y: p.y - 6, rx: 10, ry: 3, v: side < 0 ? 1 : 0 });
+      out.main.push({ x: p.x - side * 36, y: p.y + 8, rx: 8, ry: 3, v: 0 });
+      out.main.push({ x: p.x + side * 15, y: p.y + 17, rx: 6, ry: 3, v: Math.floor(h(2) * 2) });
+      // Firewood by the rack.
+      out.small.push({ x: p.x + side * 32, y: p.y + 14, rx: 0, ry: 0, v: 0 });
+      break;
+    }
+  }
+  if (wildMemo.size > 400) wildMemo.clear();
+  wildMemo.set(memo, out);
+  return out;
+}
+
+/** The camp's firepit, from the camp's middle. */
+export const FIREPIT = { x: 0, y: 12, r: 6 };
+
 /** Where a place stops feet. */
 function poiBlockers(p: Poi, gen: ForestGen): Blocker[] {
   switch (p.kind) {
@@ -1385,6 +1569,16 @@ function poiBlockers(p: Poi, gen: ForestGen): Blocker[] {
       return [{ x: p.x, y: p.y + LOOK_RAIL - 1, rx: 16, ry: 3 }];
     case 'stones':
       return stonePieces(p).map((s) => ({ x: s.x, y: s.y - 1, rx: 5, ry: 3 }));
+    case 'bog':
+      // The pools, a little inside their banks.
+      return wildPieces(p, gen).main.map((o) => ({ x: o.x, y: o.y, rx: o.rx - 1.5, ry: o.ry - 1 }));
+    case 'glowcaps':
+      return [{ x: p.x, y: p.y - 2, rx: 9, ry: 4 }, ...wildPieces(p, gen).main.map((o) => ({ x: o.x, y: o.y - 1, rx: o.rx, ry: o.ry }))];
+    case 'brambles':
+      return wildPieces(p, gen).main.map((o) => ({ x: o.x, y: o.y - 1, rx: o.rx, ry: o.ry }));
+    case 'camp':
+      // The lean-to reaches back from its open front.
+      return wildPieces(p, gen).main.map((o, k) => ({ x: o.x, y: o.y - (k ? 1 : 5), rx: o.rx, ry: o.ry }));
     case 'ruins':
       return ruinPieces(p)
         .filter((r) => gen.sample(r.x, r.y).trail > 2)
