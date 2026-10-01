@@ -367,16 +367,12 @@ class Lru<V> {
 
 const key2 = (i: number, j: number): number => (i + 32768) * 65536 + (j + 32768);
 
-/** A seed from a word (a room's code), so everyone in a room grows the same forest. */
-export function seedFrom(word: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < word.length; i++) h = Math.imul(h ^ word.charCodeAt(i), 16777619);
-  return 1 + ((h >>> 0) % 60000);
-}
-
-export const randomSeed = (): number => 1 + Math.floor(Math.random() * 60000);
-/** The forest the arena select's window looks into. */
-export const PREVIEW_SEED = 2718;
+/**
+ * The Everwood's one seed: everyone, alone or online, walks the same forest
+ * (and the arena select's window looks into it). It has no end, so there is
+ * always somewhere new past where anyone has been.
+ */
+export const EVERWOOD_SEED = 2718;
 
 export class ForestGen {
   private fields = new Lru<Float32Array>(FIELD_CACHE);

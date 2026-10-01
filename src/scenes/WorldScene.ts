@@ -50,7 +50,7 @@ import { isPainted } from '../world/arenas';
 import { OMEN_ARENAS, Omens } from '../world/Omens';
 import { Forest } from '../world/Forest';
 import { ForestSpawner } from '../world/ForestSpawner';
-import { ForestGen, randomSeed, seedFrom, useForest } from '../world/forestGen';
+import { EVERWOOD_SEED, ForestGen, useForest } from '../world/forestGen';
 import { omenMods, resetOmens } from '../game/omens';
 import { BossIntro, FinalBlow, bossTint } from '../game/BossIntro';
 
@@ -409,9 +409,8 @@ export class WorldScene extends Phaser.Scene {
     if (arena.id === 'temple') this.temple = new TempleDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'deep') this.deep = new GlimmerDeep(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'forest') {
-      // A new forest each visit; online, the room's code grows it, so friends walk the same one.
-      const code = session.active ? session.room?.code : undefined;
-      const gen = new ForestGen(code ? seedFrom(code) : randomSeed());
+      // Always the same forest, for everyone: the hero starts at its entrance and the rest is theirs to find.
+      const gen = new ForestGen(EVERWOOD_SEED);
       useForest(gen);
       this.forest = new Forest(this, gen, (img) => ground(img) as Phaser.GameObjects.Image);
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
