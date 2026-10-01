@@ -145,10 +145,85 @@ export const ABYSS_DEEP = hex('#5a2ab8');
 export const ABYSS_SPELL: SpellColors = { core: ABYSS_CORE, hot: ABYSS_HOT, mid: ABYSS_MID, deep: ABYSS_DEEP, accent: hex('#c8a8ff') };
 
 // ---------------------------------------------------------------------------
+// The Lotus skin: a water-lily priestess. Blue-black hair in a high bun with a
+// pink lotus in it, layered robes of jade over white silk crossed at the
+// throat, lily pads for shoulders, a pink sash, and a staff of green bamboo
+// whose head is an opening lotus cradling a glowing pearl.
+
+export const JADE_ROBE: Material = {
+  ramp: ramp('#0c2a24', '#145040', '#1e7458', '#2e9a72', '#52c094'),
+  outline: hex('#04120e'),
+  outlineLit: hex('#0c2a24'),
+};
+
+/** White silk: the underskirt, the crossed collar, the front panel. */
+export const LOTUS_SILK: Material = {
+  ramp: ramp('#5a6a68', '#98aaa6', '#d4e2dc', '#f6fffa'),
+  outline: hex('#1a2422'),
+  outlineLit: hex('#2a3634'),
+  shine: true,
+};
+
+/** Lotus pink: the blossom in her hair, the staff's petals, the sash. */
+export const LOTUS_PINK: Material = {
+  ramp: ramp('#7a2a4a', '#c04a78', '#f080a8', '#ffbcd4', '#fff0f6'),
+  outline: hex('#2a0a18'),
+  outlineLit: hex('#3e1224'),
+  shine: true,
+};
+
+export const LILY_PAD: Material = {
+  ramp: ramp('#123a1a', '#1e5a26', '#2e7e32', '#4ea444', '#80c860'),
+  outline: hex('#061408'),
+  outlineLit: hex('#0e2410'),
+};
+
+/** Ink-black hair with a blue sheen. */
+export const INK_HAIR: Material = {
+  ramp: ramp('#0a0810', '#16121e', '#241e30', '#363044', '#4e4862'),
+  outline: hex('#030206'),
+  outlineLit: hex('#0c0a12'),
+  shine: true,
+};
+
+/** Green bamboo, for the staff. */
+export const BAMBOO: Material = {
+  ramp: ramp('#1e3a22', '#2e5a30', '#4a7e44', '#78a862'),
+  outline: hex('#0a160a'),
+};
+
+/** Pale gold: hairpins and the sash's clasp. */
+export const LOTUS_GOLD: Material = {
+  ramp: ramp('#6a5018', '#a88a34', '#e0c460', '#fff4b8'),
+  outline: hex('#221a06'),
+  shine: true,
+};
+
+/** The pearl in the lotus: white, with a blush of pink and a jade sheen. */
+export const LOTUS_PEARL: Material = {
+  ramp: ramp('#5a9a94', '#b8ecdc', '#fff4fa', '#ffffff'),
+  outline: hex('#183a36'),
+  outlineLit: hex('#244a46'),
+  emissive: 0.9,
+  shine: true,
+  noAO: true,
+};
+
+// Lotus light (light-only colours): pearl white, clear jade, deepening to a still green pool; pink petals for the accent.
+export const LOTUS_CORE = hex('#f4fffa');
+export const LOTUS_HOT = hex('#a8f4dc');
+export const LOTUS_MID = hex('#3ed0b0');
+export const LOTUS_DEEP = hex('#1a7a78');
+export const LOTUS_BLUSH = hex('#ffa0c8');
+
+export const LOTUS_SPELL: SpellColors = { core: LOTUS_CORE, hot: LOTUS_HOT, mid: LOTUS_MID, deep: LOTUS_DEEP, accent: LOTUS_BLUSH, petals: true };
+
+// ---------------------------------------------------------------------------
 // Button icons
 
 export const TIDE_TONES: Tones = [TIDE_CORE, TIDE_HOT, TIDE_MID, TIDE_DEEP];
 export const ABYSS_TONES: Tones = [ABYSS_CORE, ABYSS_HOT, ABYSS_MID, ABYSS_DEEP];
+export const LOTUS_TONES: Tones = [LOTUS_CORE, LOTUS_HOT, LOTUS_MID, LOTUS_DEEP];
 
 /** The tidal wave: a curling wall of water, foam along its lip and spray flying off it. */
 export function waveIcon(k: Tones = TIDE_TONES): Uint8ClampedArray {
@@ -179,4 +254,33 @@ export function waveIcon(k: Tones = TIDE_TONES): Uint8ClampedArray {
     seg(put, 8, 3, 14, 11, k[1]);
     for (const [x, y] of [[9, 1], [12, 3], [2, 3], [14, 7]]) put(x, y, k[0]);
   });
+}
+
+/** Lotus's wave: the same curling wall of jade water, lily pads riding its back and pink petals in its spray. */
+export function lilyWaveIcon(k: Tones = LOTUS_TONES): Uint8ClampedArray {
+  const px = waveIcon(k);
+  const set = (x: number, y: number, c: RGB) => {
+    const i = (y * 16 + x) * 4;
+    px[i] = c[0];
+    px[i + 1] = c[1];
+    px[i + 2] = c[2];
+    px[i + 3] = 255;
+  };
+  const pad = hex('#5ec850');
+  const padDark = hex('#2e7e32');
+  const rose = hex('#ff70a8');
+  // Two lily pads riding down the back of the wave, a notch cut in each.
+  for (const [x, y] of [[10, 7], [13, 10]]) {
+    for (const [ox, oy] of [[-1, 0], [0, 0], [1, 0], [0, 1], [-1, 1]]) set(x + ox, y + oy, pad);
+    set(x + 1, y + 1, padDark);
+  }
+  // A lotus open on the first pad.
+  set(10, 6, LOTUS_BLUSH);
+  set(9, 6, rose);
+  set(11, 6, rose);
+  // Petals flung off the crest among the spray.
+  set(2, 3, LOTUS_BLUSH);
+  set(9, 1, LOTUS_BLUSH);
+  set(1, 6, rose);
+  return px;
 }

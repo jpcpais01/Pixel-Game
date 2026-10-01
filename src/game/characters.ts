@@ -14,6 +14,7 @@ import type { WorldScene } from '../scenes/WorldScene';
 import { ARCANE_SKIN, ASTRAL_SKIN, VOID_SKIN, Wizard } from './Wizard';
 import { EMBER_FIRE, HELL_FIRE, HELL_SKIN, PUMPKIN_FIRE, PUMPKIN_SKIN, PYRO_SKIN, Pyromancy } from './Pyro';
 import { ABYSS_MAGIC, ABYSS_SKIN, TIDE_MAGIC, TIDE_SKIN, Tidecraft } from './Tide';
+import { LOTUS_MAGIC, LOTUS_SKIN } from './Tide';
 import { HEADLESS_SKIN, JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
 import { AFONSO_KIT, King, KING_KIT } from './King';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
@@ -43,6 +44,7 @@ import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT } from './Samurai';
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { AUTUMN_MAGIC, AUTUMN_SKIN, FROST_MAGIC, FROST_SKIN, GROVE_MAGIC, GROVE_SKIN, Grovecraft, WILD_MAGIC, WILD_SKIN, Wildcraft } from './Druid';
+import { TITANIA_MAGIC, TITANIA_SKIN } from './Druid';
 import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, Valkyrie } from './Valkyrie';
 import { MECH_KIT, Mech, SCRAP_KIT } from './Mech';
 import { HIVE_KIT, SYNTH_KIT, Synth } from './Synth';
@@ -316,6 +318,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_wave_abyss' },
             },
           },
+          {
+            // A water-lily priestess: ink-black hair in a high bun with a lotus, jade robes over white silk, lily-pad shoulders, and a lotus staff cradling a pearl.
+            id: 'lotus',
+            name: 'Lotus',
+            role: 'Priestess of still water',
+            accent: 0xff9ec8,
+            attack: 'Lily bolt',
+            special: 'Petal tide',
+            preview: { texture: 'wizard_lotus', glow: 'wizard_lotus_e', idle: 'wizard_lotus_idle_down', chosen: 'wizard_lotus_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_lotus_e', frame: 'o0', anim: 'orb_lotus_spin' },
+              special: { texture: 'icon_wave_lotus' },
+            },
+          },
         ],
       },
     ],
@@ -341,10 +357,11 @@ export const CLASSES: ClassDef[] = [
         world.addEffect(fire);
         return w;
       }
-      if (look === 'tide' || look === 'abyssal') {
+      if (look === 'tide' || look === 'abyssal' || look === 'lotus') {
         // Bolts that splash and throw back; a charged tidal wave that rolls out and carries foes away.
         const abyss = look === 'abyssal';
-        const craft = new Tidecraft(world, abyss ? ABYSS_MAGIC : TIDE_MAGIC);
+        const lotus = look === 'lotus';
+        const craft = new Tidecraft(world, lotus ? LOTUS_MAGIC : abyss ? ABYSS_MAGIC : TIDE_MAGIC);
         const w = new Wizard(
           world,
           x,
@@ -353,7 +370,7 @@ export const CLASSES: ClassDef[] = [
             cast: (x, y, dx, dy) => craft.bolt(x, y, dx, dy),
             beam: (_x, _y, dx, dy, power) => craft.wave(dx, dy, power),
           },
-          abyss ? ABYSS_SKIN : TIDE_SKIN,
+          lotus ? LOTUS_SKIN : abyss ? ABYSS_SKIN : TIDE_SKIN,
         );
         craft.caster = w;
         world.addEffect(craft);
@@ -1500,6 +1517,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_grove_autumn' },
             },
           },
+          {
+            // The faerie queen: honey-gold hair under a crown of blossoms, a gown of petals, dragonfly wings, and a moonflower on a moonwood staff.
+            id: 'titania',
+            name: 'Titania',
+            role: 'Queen of the faerie ring',
+            accent: 0xffb8d0,
+            attack: 'Blossom seed',
+            special: 'Faerie ring',
+            preview: { texture: 'druid_titania', glow: 'druid_titania_e', idle: 'druid_titania_idle_down', chosen: 'druid_titania_cast_down' },
+            buttons: {
+              attack: { texture: 'icon_thorn_titania' },
+              special: { texture: 'icon_grove_titania' },
+            },
+          },
         ],
       },
       {
@@ -1555,7 +1586,8 @@ export const CLASSES: ClassDef[] = [
         return w;
       }
       const autumn = look === 'autumn';
-      const craft = new Grovecraft(world, autumn ? AUTUMN_MAGIC : GROVE_MAGIC);
+      const titania = look === 'titania';
+      const craft = new Grovecraft(world, titania ? TITANIA_MAGIC : autumn ? AUTUMN_MAGIC : GROVE_MAGIC);
       const w = new Wizard(
         world,
         x,
@@ -1566,7 +1598,7 @@ export const CLASSES: ClassDef[] = [
           target: (dx, dy, level, dist) => craft.target(dx, dy, level, dist),
           untarget: () => craft.untarget(),
         },
-        autumn ? AUTUMN_SKIN : GROVE_SKIN,
+        titania ? TITANIA_SKIN : autumn ? AUTUMN_SKIN : GROVE_SKIN,
       );
       craft.caster = w;
       world.addEffect(craft);

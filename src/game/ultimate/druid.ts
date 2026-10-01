@@ -53,6 +53,8 @@ export class WildWrath extends Fx {
     private x: number,
     private y: number,
     private p: Pal,
+    /** Titania's Midsummer Dream: every root's tip opens into a blossom, and the crush throws up petals. */
+    private blossom = false,
   ) {
     super(world, WRATH_LIFE);
     this.ground = this.ink(WRATH_R * 2 + 16, Math.ceil(WRATH_R * 2 * GROUND + 16));
@@ -96,7 +98,9 @@ export class WildWrath extends Fx {
       if (t < r.at) continue;
       const up = easeOut((t - r.at) / 150);
       const sink = clamp01((t - (WRATH_LIFE - 500 - r.seed * 12)) / 350);
-      drawRoot(R, r, Math.round(r.h * up * (1 - sink)), p, this.crushed && t - CRUSH_AT < 200);
+      const h = Math.round(r.h * up * (1 - sink));
+      drawRoot(R, r, h, p, this.crushed && t - CRUSH_AT < 200);
+      if (this.blossom && h > 3) blossomAt(R, r, h, p, clamp01((t - r.at - 120) / 260));
     }
     R.end();
   }
@@ -127,9 +131,25 @@ export class WildWrath extends Fx {
     strikeGround(world, x, y, WRATH_R, { damage: Math.round(CRUSH_DAMAGE / 2), heavy: false, knock: 60, fromX: x, fromY: y }, this.held);
     flare(world, x, y - 12, 200, p.light, 3.5, 600);
     bloom(world, x, y - 10, p.hot, 3.2, 420, y + 30);
+    if (this.blossom) world.debris([p.core, p.mid, p.hot, 0xffb8d0], x, y - 16, 22, y + 20, 'spores');
     world.cameras.main.shake(220, 0.003);
     sound.slam(world.pan(x));
   }
+}
+
+/** A blossom opening at a root's tip, `open` 0..1: a bud, then five petals round a gold heart. */
+function blossomAt(g: Ink, r: Root, h: number, p: Pal, open: number): void {
+  if (open <= 0) return;
+  const x = Math.round(r.x + r.lean * h + Math.sign(r.lean || 1) * 2.5);
+  const y = r.y - h - 2;
+  if (open < 0.5) {
+    g.put(x, y, p.mid);
+    g.put(x, y - 1, p.core);
+    return;
+  }
+  for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [-1, 1], [1, 1]]) g.put(x + ox, y + oy, p.mid);
+  g.put(x, y, p.hot);
+  g.put(x, y - 1, p.core, 0.8);
 }
 
 /** A root `h` px tall: thick and barked at its foot, twisting as it rises, thorns along it and a glowing tip curling outward. */
