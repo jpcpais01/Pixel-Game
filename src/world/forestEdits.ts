@@ -36,9 +36,12 @@ export class ForestEdits {
   private cover = new Map<number, Thing[]>();
   private chunkThings = new Map<number, Thing[]>();
   private chunkWalls = new Map<number, [number, number, number][]>();
+  /** Raised on every change, so whatever shows the builds (the map's pins) looks again. */
+  version = 0;
 
   /** Rebuild the lookups after a change. */
   index(): void {
+    this.version++;
     this.cover.clear();
     this.chunkThings.clear();
     this.chunkWalls.clear();
