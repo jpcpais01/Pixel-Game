@@ -12,6 +12,7 @@ import { DragonRush, MountainWrath, SaberCyclone, Skybreaker } from './martial';
 import { HeavensLight, SunWrath } from './holy';
 import { BloodMoon, Eclipse, FanOfKnives, SoulStorm } from './shadow';
 import { ChemBomb, GreatArrow, Pestilence } from './nature';
+import { PowderKeg, Tempest } from './archers';
 import { Encore, ThunderOfWar } from './bard';
 import { GrandFinale, PuppetMaster } from './puppeteer';
 import { FATE_STRINGS, GOLD_STRINGS, ICE_STRINGS, SILK_STRINGS, TOY_STRINGS, VENOM_STRINGS } from '../Strings';
@@ -189,6 +190,25 @@ const ULTS: Record<string, UltDef> = {
     pal: pal(0xf4ffe8, 0xc8f59a, 0x8ad65a, 0x3f8a4a, 0xb0f080),
     icon: icons.greatArrowIcon,
     cast: (c) => c.world.addEffect(new GreatArrow(c.world, c)),
+  },
+  'archer:arbalest': {
+    name: 'Black Powder',
+    cost: 65,
+    windup: 500,
+    aim: 'spot',
+    range: 120,
+    pal: pal(0xfffbe8, 0xffd27a, 0xff7a2a, 0x9e2725, 0xffa040),
+    icon: icons.powderIcon,
+    cast: (c) => c.world.addEffect(new PowderKeg(c.world, c)),
+  },
+  'archer:wind': {
+    name: 'Tempest',
+    cost: 60,
+    windup: 450,
+    aim: 'dir',
+    pal: pal(0xffffff, 0xd8fff6, 0x6ef0dc, 0x2a9a9a, 0xa0fff0),
+    icon: icons.tempestIcon,
+    cast: (c) => c.world.addEffect(new Tempest(c.world, c)),
   },
   'rogue:rogue': {
     name: 'Fan of Knives',

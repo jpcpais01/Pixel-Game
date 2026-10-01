@@ -27,6 +27,8 @@ import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CHEM_STYLE, CRYO_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
 import { Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from './Archer';
+import { Arbalest } from './Arbalest';
+import { Windrunner } from './Windrunner';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
 import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
@@ -857,8 +859,43 @@ export const CLASSES: ClassDef[] = [
           },
         ],
       },
+      {
+        // A bearded crossbowman in a kettle hat and brigandine, a painted pavise on his back.
+        id: 'arbalest',
+        name: 'Arbalest',
+        role: 'Heavy crossbow',
+        accent: 0xd8483c,
+        attack: 'Heavy bolt',
+        special: 'Net bolt',
+        preview: { texture: 'archer_arbalest', glow: 'archer_arbalest_e', idle: 'archer_arbalest_idle_down', chosen: 'archer_arbalest_brace_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+        buttons: {
+          attack: { texture: 'icon_crossbow' },
+          special: { texture: 'icon_netbolt' },
+        },
+        lookName: 'Steel',
+      },
+      {
+        // A light elven skirmisher in dusk-blue silk, a long scarf streaming, a silverwood bow.
+        id: 'wind',
+        name: 'Windrunner',
+        role: 'Elven skirmisher',
+        accent: 0x6ef0dc,
+        attack: 'Gale fan',
+        special: 'Wind vault',
+        preview: { texture: 'archer_wind', glow: 'archer_wind_e', idle: 'archer_wind_idle_down', chosen: 'archer_wind_fan_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+        buttons: {
+          attack: { texture: 'icon_fanshot' },
+          special: { texture: 'icon_vault' },
+        },
+        lookName: 'Gale',
+      },
     ],
-    spawn: (world, x, y, look) => new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : RANGER_STYLE),
+    spawn: (world, x, y, look) =>
+      look === 'arbalest'
+        ? new Arbalest(world, x, y)
+        : look === 'wind'
+          ? new Windrunner(world, x, y)
+          : new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : RANGER_STYLE),
   },
   {
     id: 'rogue',

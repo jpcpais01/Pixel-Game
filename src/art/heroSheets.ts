@@ -14,7 +14,7 @@ import { buildPaladinFrames, PALADIN_ANIMS, PALADIN_H, PALADIN_LOOKS, PALADIN_W 
 import { buildJediFrames, DERVISH_FPS, DERVISH_FRAMES, JEDI_H, JEDI_LOOKS, JEDI_W, jediAnimsFor, TWIRL_FPS, TWIRL_FRAMES, twirlStart } from './jedi';
 import { buildFighterFrames, FIGHTER_H, FIGHTER_LOOKS, FIGHTER_W } from './fighter';
 import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, buildAlchemistFrames } from './alchemist';
-import { ARCHER_ANIMS, ARCHER_H, ARCHER_LOOKS, ARCHER_W, buildArcherFrames } from './archer';
+import { ARCHER_H, ARCHER_LOOKS, ARCHER_W, archerAnimsFor, buildArcherFrames } from './archer';
 import { buildRogueFrames, ROGUE_ANIMS, ROGUE_H, ROGUE_LOOKS, ROGUE_W } from './rogue';
 import { buildNecroFrames, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W } from './necromancer';
 import { BARD_H, BARD_LOOKS, BARD_W, bardAnims, buildBardFrames } from './bard';
@@ -138,7 +138,7 @@ rig(JEDI_LOOKS, JEDI_W, JEDI_H, buildJediFrames, jediAnimsFor, {
 });
 rig(FIGHTER_LOOKS, FIGHTER_W, FIGHTER_H, buildFighterFrames, (look) => look.anims);
 rig(ALCHEMIST_LOOKS, ALCH_W, ALCH_H, buildAlchemistFrames, (look) => ALCHEMIST_ANIMS.map((a) => ({ ...a, fps: look.fps?.[a.name] ?? a.fps })));
-rig(ARCHER_LOOKS, ARCHER_W, ARCHER_H, buildArcherFrames, () => ARCHER_ANIMS);
+rig(ARCHER_LOOKS, ARCHER_W, ARCHER_H, buildArcherFrames, archerAnimsFor);
 rig(ROGUE_LOOKS, ROGUE_W, ROGUE_H, buildRogueFrames, () => ROGUE_ANIMS, { flash: true });
 rig(NECRO_LOOKS, NECRO_W, NECRO_H, buildNecroFrames, () => NECRO_ANIMS);
 rig(BARD_LOOKS, BARD_W, BARD_H, buildBardFrames, bardAnims);

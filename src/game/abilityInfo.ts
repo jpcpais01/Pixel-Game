@@ -82,6 +82,16 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'A volley rains arrows on a ring, striking foes again and again.',
     special: 'One huge arrow pierces everything along the aim.',
   },
+  'archer.arbalest': {
+    attack: 'A heavy bolt that punches through two foes, then a slow crank to reload.',
+    ability: 'Kneels and fires a net bolt: foes under the net are slowed to a crawl.',
+    special: 'Lobs a powder keg on a spot; after a short fuse it blows everything back.',
+  },
+  'archer.wind': {
+    attack: 'Three short arrows in a fan, loosed without slowing down.',
+    ability: 'Flips back out of reach, firing a gale arrow that pierces and blows foes away.',
+    special: 'A walking cyclone pulls foes in, wears at them, then flings them away.',
+  },
   'rogue.rogue': {
     attack: 'Two bleeding stabs, then an X cut that rips the wounds open.',
     ability: 'Dashes through foes unharmed, then hides for a double-damage ambush.',

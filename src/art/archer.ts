@@ -28,6 +28,21 @@
 // patched denim overalls held up with rope, a ragged old coat; a bow cut from
 // a crooked branch and strung with twine, and crow-fletched arrows tipped with
 // embers that trail ghost-green light.
+//
+// The arbalest is the archer's second type, on the same rig: a crossbowman
+// in a steel kettle hat with a brown beard under its brim, a quilted
+// wine-red gambeson, a navy brigandine studded with rivets, a mail tippet,
+// and a tall pavise slung on his back (plain boards inside; painted outside,
+// per pale red and cream with a chevron counterchanged and a gilt boss). His
+// heavy crossbow rides on his shoulder. He shoulders it to shoot, then sets
+// its nose in the stirrup at his feet and winds the string back with a
+// crank. His bolts are drawn here too.
+//
+// The windrunner is the third: an elf skirmisher, light on her feet.
+// Platinum hair in a high tail, long pointed ears, a silver circlet with a
+// wind-gem, a dusk-blue silk tunic under teal leathers, a long scarf whose tails
+// stream in the wind, and a slender silverwood bow strung with a thread of
+// wind. She nocks three arrows at once, and leaps back loosing a gale.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
 import {
@@ -44,6 +59,7 @@ import {
   HAIR,
   JERKIN,
   LEATHER,
+  MAIL,
   RANGER_CLOAK,
   RANGER_HAIR,
   RANGER_TUNIC,
@@ -111,6 +127,27 @@ export interface Pose {
   /** The head nudged from the body; front view only. */
   headX?: number;
   headY?: number;
+  /**
+   * The crossbow's line, from the rear of its stock to its fore-end, when it
+   * isn't held between the hands (on his shoulder, nose down in the stirrup).
+   */
+  xb?: { r: Hand; f: Hand };
+  /** The crank turning at the stock's butt, the draw hand on its handle. */
+  crank?: boolean;
+  /** The net canister loaded instead of a bolt. */
+  net?: boolean;
+  /** The kettle hat pushed up off the brow, px. */
+  hatTip?: number;
+  /** Mouth wide open (a yawn). */
+  yawn?: boolean;
+  /** Feet off the ground (a leap), px. */
+  air?: number;
+  /** Three arrows on the string at once, fanned. */
+  fan?: boolean;
+  /** A leaf drifting by (front view, body coordinates). */
+  leaf?: [number, number];
+  /** Wind streaming the scarf and hair, 0..1. */
+  gust?: number;
 }
 
 /** One look for the archer: its texture key, its cloth and its bow. */
@@ -143,6 +180,37 @@ export interface ArcherLook {
   hunt?: { skull: Material; antler: Material };
   /** The scarecrow: a sack head under a felt hat, straw everywhere, overalls and a crow. */
   scarecrow?: Scarecrow;
+  /** The arbalest: a kettle hat, a pavise on his back, a crossbow for a bow. */
+  arb?: Arbalest;
+  /** The windrunner: an elf with a high tail of hair and a scarf for a cloak. */
+  elf?: Elf;
+  /** Gloves, legs and boots, when not the ranger's bare hands, dark trousers and soft boots. */
+  glove?: Material;
+  trouser?: Material;
+  boot?: Material;
+}
+
+/** The arbalest's own materials. */
+export interface Arbalest {
+  helm: Material;
+  beard: Material;
+  /** The crossbow's walnut stock, and its steel prod and fittings. */
+  stock: Material;
+  prod: Material;
+  /** The pavise: its bare boards inside, its painted face's two fields, its boss. */
+  board: Material;
+  field: [Material, Material];
+  boss: Material;
+  /** The net canister's cord and its lead weights. */
+  rope: Material;
+  lead: Material;
+}
+
+/** The windrunner's own materials. */
+export interface Elf {
+  scarf: Material;
+  gem: Material;
+  leaf: Material;
 }
 
 /** The scarecrow's own materials. */
@@ -284,7 +352,80 @@ export const SCARECROW_LOOK: ArcherLook = {
   },
 };
 
-export const ARCHER_LOOKS = [RANGER_LOOK, STORM_LOOK, HUNT_LOOK, SCARECROW_LOOK];
+// The arbalest's materials: soldier's colours, wine-red and navy and steel,
+// so the painted pavise and the bright prod are what catch the eye.
+const ARB_BEARD: Material = { ramp: ramp('#2a140a', '#4c2814', '#74401e', '#9c5e2e', '#c08046'), outline: hex('#120804') };
+const GAMBESON: Material = { ramp: ramp('#28090f', '#46111b', '#6a1b29', '#902b37', '#b44649'), outline: hex('#130407'), outlineLit: hex('#2a0a10') };
+const BRIGANDINE: Material = { ramp: ramp('#0d111b', '#171e2c', '#252f43', '#36435d', '#4e5c7a'), outline: hex('#05070b') };
+const WALNUT: Material = { ramp: ramp('#2a160c', '#4a2a16', '#6e4426', '#94603a', '#b88050'), outline: hex('#0d0603'), outlineLit: hex('#22120a'), shine: true };
+const PAVISE_BOARD: Material = { ramp: ramp('#1a120c', '#2c2016', '#423222', '#5a4630', '#74603f'), outline: hex('#0a0705') };
+const PAVISE_RED: Material = { ramp: ramp('#3a0b0d', '#681316', '#972122', '#c23a30', '#e05e46'), outline: hex('#170405'), outlineLit: hex('#300a0b') };
+const PAVISE_CREAM: Material = { ramp: ramp('#4c3c28', '#7a684a', '#a8946e', '#d2c096', '#efe3bf'), outline: hex('#1b1309'), outlineLit: hex('#33271a') };
+const VANE: Material = { ramp: ramp('#3a0a0c', '#6a1517', '#9e2725', '#ca4333', '#e8664a'), outline: hex('#150405') };
+const LEAD: Material = { ramp: ramp('#13151b', '#282c36', '#444a58', '#687080', '#9aa2b2'), outline: hex('#06070a'), shine: true };
+const GLOVE: Material = { ramp: ramp('#1c1109', '#342018', '#523624', '#724e38', '#90684a'), outline: hex('#0b0603') };
+
+export const ARBALEST_LOOK: ArcherLook = {
+  key: 'archer_arbalest',
+  // His "cloak" is the mail tippet over his shoulders.
+  cloak: MAIL,
+  tunic: GAMBESON,
+  jerkin: BRIGANDINE,
+  hair: ARB_BEARD,
+  eye: EYE,
+  bow: STEEL,
+  string: BOWSTRING,
+  fletch: VANE,
+  head: STEEL,
+  shaft: WALNUT,
+  metal: STEEL,
+  light: [[255, 250, 232], [255, 222, 150], [236, 168, 80]],
+  storm: false,
+  wrap: LEATHER,
+  glove: GLOVE,
+  arb: { helm: STEEL, beard: ARB_BEARD, stock: WALNUT, prod: STEEL, board: PAVISE_BOARD, field: [PAVISE_RED, PAVISE_CREAM], boss: GOLD, rope: ROPE, lead: LEAD },
+};
+
+// The windrunner's materials: a dusk-blue silk tunic, sea-teal leathers and platinum
+// hair, with the wind's own light living in her eyes, her gem and her string.
+const SILK: Material = { ramp: ramp('#232c48', '#36446a', '#4e6290', '#7088b4', '#9cb4d8'), outline: hex('#0c1020'), outlineLit: hex('#1a2238') };
+const TEAL_LEATHER: Material = { ramp: ramp('#09252a', '#113c42', '#1a5a5e', '#267a78', '#3c9c94'), outline: hex('#041214') };
+const SCARF: Material = { ramp: ramp('#1c6872', '#389ca2', '#72d0ca', '#bdf1e8', '#f2fffb'), outline: hex('#0a292d'), outlineLit: hex('#164247') };
+const PLATINUM: Material = { ramp: ramp('#5a5c78', '#8a8eaa', '#bcc0d6', '#e4e7f4', '#ffffff'), outline: hex('#1e1f38'), outlineLit: hex('#363854') };
+const GALE_EYE: Material = { ramp: ramp('#0a4e4e', '#18a29a', '#6aead9', '#dcfff6'), outline: hex('#041f1e'), emissive: 0.8, noAO: true };
+const SILVERWOOD: Material = { ramp: ramp('#2a323e', '#4a5868', '#78889c', '#a8b8c8', '#dce8f2'), outline: hex('#0e131b'), outlineLit: hex('#1c2430'), shine: true };
+const WIND_STRING: Material = { ramp: ramp('#2a9896', '#7ae6d8', '#cefff3', '#ffffff'), outline: hex('#0b3333'), emissive: 0.85, noAO: true, noOutline: true };
+const WHITE_FLETCH: Material = { ramp: ramp('#7a8a98', '#b2c2ce', '#e0ecf2', '#ffffff'), outline: hex('#25313b') };
+const WIND_GEM: Material = { ramp: ramp('#09595a', '#20b2a8', '#82f2e0', '#e8fffa'), outline: hex('#032120'), emissive: 0.9, shine: true, noAO: true };
+const SILVER: Material = { ramp: ramp('#343c4a', '#606c7e', '#9eaaba', '#dae4f0', '#ffffff'), outline: hex('#0f131b'), shine: true };
+const GREY_BOOT: Material = { ramp: ramp('#20262e', '#38424e', '#56626e', '#7a8692', '#9eaab4'), outline: hex('#0a0d11') };
+const LEAF: Material = { ramp: ramp('#28480f', '#4a781b', '#7aac2e', '#b2da58', '#e2f6a0'), outline: hex('#111f05') };
+const GALE_LIGHT: [RGB, RGB, RGB] = [hex('#f0fffb'), hex('#a2f4e6'), hex('#4ac2ba')];
+
+export const WIND_LOOK: ArcherLook = {
+  key: 'archer_wind',
+  // Her "cloak" is the scarf.
+  cloak: SCARF,
+  tunic: SILK,
+  jerkin: TEAL_LEATHER,
+  hair: PLATINUM,
+  eye: GALE_EYE,
+  bow: SILVERWOOD,
+  string: WIND_STRING,
+  fletch: WHITE_FLETCH,
+  head: WIND_GEM,
+  shaft: SILVERWOOD,
+  metal: SILVER,
+  light: GALE_LIGHT,
+  storm: false,
+  crackle: GALE_LIGHT,
+  wrap: TEAL_LEATHER,
+  trouser: TEAL_LEATHER,
+  boot: GREY_BOOT,
+  elf: { scarf: SCARF, gem: WIND_GEM, leaf: LEAF },
+};
+
+export const ARCHER_LOOKS = [RANGER_LOOK, STORM_LOOK, HUNT_LOOK, SCARECROW_LOOK, ARBALEST_LOOK, WIND_LOOK];
 
 /** The look being drawn; set by buildArcherFrames. */
 let S: ArcherLook = RANGER_LOOK;
@@ -393,6 +534,15 @@ function drawBow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, bi
   }
   c.part();
   c.capsule(f.x - f.ax * 1.4, f.y - f.ay * 1.4, f.x + f.ax * 1.4, f.y + f.ay * 1.4, 1.05, 1.05, S.wrap ?? LEATHER, { bias });
+  if (S.elf) {
+    // A wind-gem set in the grip, and the limbs swelling leaf-like halfway out.
+    c.part();
+    c.px(f.x, f.y, S.elf.gem, sphere(-0.3, -0.4), { bias: bias + 1 });
+    for (const t of [-0.5, 0.5]) {
+      const [lx, ly] = at(t);
+      c.px(lx + f.nx * 0.8, ly + f.ny * 0.8, S.bow, sphere(f.nx * 0.5, -0.4), { bias });
+    }
+  }
 
   // The string, from tip to tip, pulled back to the hand while an arrow is on it.
   c.part();
@@ -413,7 +563,130 @@ function drawBow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, bi
       c.spark(sx, sy, lit[1], 0.35);
     }
   }
-  if (p.nock) arrowOnString(c, fa.x, fa.y, f.nx, f.ny, p.glint);
+  if (p.nock && p.fan) {
+    // Three arrows nocked together, the outer two splayed either side of the aim.
+    for (const a of [-FAN_SPREAD, FAN_SPREAD, 0]) {
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      arrowOnString(c, fa.x, fa.y, f.nx * ca - f.ny * sa, f.nx * sa + f.ny * ca, a === 0 ? p.glint : p.glint * 0.5);
+    }
+  } else if (p.nock) arrowOnString(c, fa.x, fa.y, f.nx, f.ny, p.glint);
+}
+
+/** How far the windrunner's outer arrows splay from the middle one on the string, radians. */
+const FAN_SPREAD = 0.26;
+
+/** The look's weapon: the bow, or the arbalest's crossbow (whose stock may lie along its own line, `xr` to `xf`). */
+function drawWeapon(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, bias = 0, xr?: Placed, xf?: Placed): void {
+  if (S.arb) drawCrossbow(c, view, p, fa, fb, xr, xf, bias);
+  else drawBow(c, view, p, fa, fb, bias);
+}
+
+/** Light gathering at a point: a small cross of it, its arms growing with `glint`. */
+function glintAt(c: PixelCanvas, x: number, y: number, glint: number): void {
+  if (glint <= 0) return;
+  const [core, hot, mid] = S.light;
+  c.spark(x, y, core, glint);
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(x + dx, y + dy, hot, 0.7 * glint);
+  if (glint > 0.6) for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) c.spark(x + dx, y + dy, mid, 0.5 * glint);
+}
+
+/**
+ * The arbalest's crossbow: a walnut stock from its butt (behind `r`) to its
+ * nose (past `f`), a steel prod across the nose with its limbs bent back by
+ * the string (spanned to the nut, or slack against the prod), a stirrup at
+ * the tip, the trigger bar under the stock, and the loaded bolt (or the net
+ * canister) in the groove. Seen end on, the prod foreshortens to a stub.
+ */
+function drawCrossbow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, xr: Placed | undefined, xf: Placed | undefined, bias: number): void {
+  const k = S.arb!;
+  const r = xr ?? fa;
+  const f = xf ?? fb;
+  const [nx, ny] = Math.hypot(f.x - r.x, f.y - r.y) > 1.5 ? unit(f.x - r.x, f.y - r.y) : view === 'side' ? [-1, 0] : view === 'down' ? [0, 1] : [0, -1];
+  const o = { bias };
+  const bx = r.x - nx * 2.2;
+  const by = r.y - ny * 2.2;
+  const ex = f.x + nx * 3.4;
+  const ey = f.y + ny * 3.4;
+  // The stock, swelling to the butt.
+  c.part();
+  c.capsule(bx, by, ex, ey, 1.15, 0.75, k.stock, o);
+  c.part();
+  c.capsule(bx - nx * 0.3, by - ny * 0.3, r.x - nx * 0.5, r.y - ny * 0.5, 1.4, 1.2, k.stock, o);
+  // The long trigger bar hanging under it.
+  let [dx, dy] = [-ny, nx];
+  if (dy < 0) [dx, dy] = [-dx, -dy];
+  if (dy > 0.35) {
+    c.part();
+    c.line(r.x + nx * 0.4 + dx, r.y + ny * 0.4 + dy, r.x - nx * 0.8 + dx * 2.6, r.y - ny * 0.8 + dy * 2.6, k.prod, () => sphere(0, 0.3), o);
+  }
+  // The prod across the nose: thick at the middle, tapering, bent back by the string.
+  const cx = ex - nx * 0.9;
+  const cy = ey - ny * 0.9;
+  // The nut, the steel catch the string is spanned back to: a hand's length behind the prod.
+  const back = Math.min(4.6, Math.max(1, Math.hypot(cx - r.x, cy - r.y) - 1));
+  const ux = cx - nx * back;
+  const uy = cy - ny * back;
+  c.part();
+  c.px(ux, uy, k.prod, sphere(-0.3, -0.5), { bias: bias + 1 });
+  let [qx, qy] = [-ny, nx];
+  if (qy > 0 || (qy === 0 && qx > 0)) [qx, qy] = [-qx, -qy];
+  const L = 5.4 * Math.sqrt((0.42 * nx) ** 2 + ny ** 2);
+  const bend = 0.6 + p.draw * 1.3;
+  const at = (t: number): [number, number] => [cx + qx * t * L - nx * bend * t * t, cy + qy * t * L - ny * bend * t * t];
+  c.part();
+  const steps = 8;
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < steps; i++) {
+      const [x0, y0] = at((i / steps) * s);
+      const [x1, y1] = at(((i + 1) / steps) * s);
+      c.capsule(x0, y0, x1, y1, 1.15 - (i / steps) * 0.55, 1.15 - ((i + 1) / steps) * 0.55, k.prod, o);
+    }
+  }
+  // The stirrup's loop at the very nose.
+  c.part();
+  for (const s of [-1, 1]) c.px(ex + qx * s * 0.9 + nx * 0.5, ey + qy * s * 0.9 + ny * 0.5, k.prod, sphere(s * 0.4, -0.2), o);
+  c.px(ex + nx * 1.4, ey + ny * 1.4, k.prod, sphere(0, -0.3), o);
+  // The string, tip to tip, drawn back towards the nut as it's spanned.
+  const [tx0, ty0] = at(-1);
+  const [tx1, ty1] = at(1);
+  const sx = cx + (ux - cx) * p.draw;
+  const sy = cy + (uy - cy) * p.draw;
+  c.part();
+  c.line(tx0, ty0, sx, sy, S.string, () => sphere(0, -0.2), o);
+  c.line(sx, sy, tx1, ty1, S.string, () => sphere(0, -0.2), o);
+  if (p.nock) {
+    c.part();
+    if (p.net) {
+      // The net canister: a bundle of cord on a short shaft, lead weights bound round it.
+      const gx = cx + nx * 1.7;
+      const gy = cy + ny * 1.7;
+      c.line(ux + nx * 0.6, uy + ny * 0.6, cx, cy, S.shaft, () => sphere(0, -0.3), o);
+      c.part();
+      c.ellipse(gx, gy, 1.7, 1.6, k.rope, { bias });
+      c.shade(gx, gy, -1);
+      c.part();
+      for (const s of [-1, 1]) c.px(gx + qx * s * 1.7, gy + qy * s * 1.7, k.lead, sphere(s * 0.5, -0.4), o);
+      c.px(gx + nx * 1.6, gy + ny * 1.6, k.lead, sphere(0, -0.5), { bias: bias + 1 });
+      glintAt(c, gx + nx * 1.6, gy + ny * 1.6, p.glint);
+    } else {
+      // A bolt: a stout shaft, leather vanes at the nut, a broad steel head past the prod.
+      const hx = cx + nx * 2.4;
+      const hy = cy + ny * 2.4;
+      c.line(ux + nx * 0.6, uy + ny * 0.6, hx - nx, hy - ny, S.shaft, () => sphere(0, -0.3), o);
+      c.part();
+      for (const s of [-1, 1]) c.px(ux + nx * 0.9 + qx * s * 0.9, uy + ny * 0.9 + qy * s * 0.9, S.fletch, sphere(s * 0.3, 0.2), o);
+      c.part();
+      c.px(hx - nx * 0.8, hy - ny * 0.8, S.head, sphere(-0.3, -0.4), o);
+      c.px(hx, hy, S.head, sphere(-0.5, -0.5), { bias: bias + 1 });
+      glintAt(c, hx, hy, p.glint);
+    }
+  }
+  if (p.crank) {
+    // The crank's arm, from the butt round to the handle in his hand.
+    c.part();
+    c.line(bx + nx * 0.8, by + ny * 0.8, fa.x, fa.y, k.prod, () => sphere(0, -0.4), o);
+  }
 }
 
 /** An arrow nocked at (x, y), pointing along (nx, ny): fletching at the nock, the shaft, a steel head. */
@@ -436,13 +709,8 @@ function arrowOnString(c: PixelCanvas, x: number, y: number, nx: number, ny: num
     c.spark(hx, hy, S.crackle[0], 0.5 + glint * 0.5);
     c.spark(hx + nx, hy + ny, S.crackle[1], 0.3 + glint * 0.4);
   }
-  if (glint > 0) {
-    // Light gathering at the head: a small cross of it, the arms growing with the glint.
-    const [core, hot, mid] = S.light;
-    c.spark(hx, hy, core, glint);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(hx + dx, hy + dy, hot, 0.7 * glint);
-    if (glint > 0.6) for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) c.spark(hx + dx, hy + dy, mid, 0.5 * glint);
-  }
+  // Light gathering at the head.
+  glintAt(c, hx, hy, glint);
 }
 
 /** An arrow held in the hand at `p`, heading `ang` on screen, gripped `grip` px up the shaft from its nock. */
@@ -503,21 +771,22 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
     c.px(wx + uy * 1.9, wy - ux * 1.9, sc.straw, sphere(0.2, -0.3), { bias });
   }
   c.part();
-  c.ellipse(fx, fy, 1.2, 1.15, sc ? sc.glove : SKIN, { bias });
+  c.ellipse(fx, fy, 1.2, 1.15, sc ? sc.glove : (S.glove ?? SKIN), { bias });
 }
 
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
   c.part();
-  c.capsule(hx, hy, fx, fy, 1.5, 1.3, S.scarecrow?.trouser ?? TROUSER, { bias });
+  c.capsule(hx, hy, fx, fy, 1.5, 1.3, S.scarecrow?.trouser ?? S.trouser ?? TROUSER, { bias });
 }
 
 /** A soft leather boot with a turned-down cuff. */
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
+  const m = S.boot ?? BOOT;
   c.part();
-  if (side) c.ellipse(x, y, 2.2, 1.2, BOOT, { flatten: 0.8, bias });
-  else c.ellipse(x, y, 1.6, 1.3, BOOT, { flatten: 0.8, bias });
+  if (side) c.ellipse(x, y, 2.2, 1.2, m, { flatten: 0.8, bias });
+  else c.ellipse(x, y, 1.6, 1.3, m, { flatten: 0.8, bias });
   c.part();
-  c.shape(Math.round(y - 2.4), Math.round(y - 2.4), () => [x - (side ? 1.4 : 1.7), x + (side ? 1.6 : 1.7)], BOOT, (_x, _y, t) => cyl(t, 0.3), { bias: bias + 1 });
+  c.shape(Math.round(y - 2.4), Math.round(y - 2.4), () => [x - (side ? 1.4 : 1.7), x + (side ? 1.6 : 1.7)], m, (_x, _y, t) => cyl(t, 0.3), { bias: bias + 1 });
   const sc = S.scarecrow;
   if (sc) {
     // Straw sticking out of the boot tops.
@@ -885,6 +1154,370 @@ function scarecrowSide(c: PixelCanvas, hx: number, U: number, blink: boolean | u
 }
 
 // ---------------------------------------------------------------------------
+// The arbalest
+
+/**
+ * The kettle hat: a domed steel crown with a ridge running front to back and
+ * a ring of rivets round its foot, on a broad brim that shades the face.
+ * `hy` is the brim's widest row; `cx` its middle; `rx` how far it reaches
+ * either side (wide from the front and back, a little less in profile).
+ */
+function kettle(c: PixelCanvas, cx: number, hy: number, rx: number, crownX = cx): void {
+  const k = S.arb!;
+  // The brim's far half, the crown over it, then the brim's near lip across its foot.
+  c.part();
+  c.ellipse(cx, hy + 0.5, rx, 1.7, k.helm, { normal: (_x, _y, dx, dy) => sphere(dx * 0.55, dy * 0.5 - 0.75, 1) });
+  c.part();
+  c.ellipse(crownX, hy - 1.4, 3.5, 3.1, k.helm, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
+  const top = Math.ceil(hy - 4.5);
+  for (let y = top; y <= Math.floor(hy); y++) c.shade(Math.floor(crownX) - 1, y, 1);
+  for (let x = Math.floor(crownX) - 3; x <= crownX + 2; x += 2) c.shade(x, Math.floor(hy), 1);
+  c.part();
+  c.shape(Math.floor(hy) + 1, Math.floor(hy) + 1, () => [cx - rx + 0.6, cx + rx - 0.6], k.helm, (_x, _y, t) => sphere(t * 0.6, 0.55, 1));
+}
+
+/** His face from the front under the hat: ears, a full brown moustache and a short square beard. */
+function kettleFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const k = S.arb!;
+  const T = Math.round(p.hatTip ?? 0);
+  c.part();
+  c.px(cx - 4, 12 + U, SKIN, sphere(-0.7, 0.1));
+  c.px(cx + 3, 12 + U, SKIN, sphere(0.7, 0.1));
+  c.part();
+  c.ellipse(cx, 12.6 + U, 2.6, 2.5, SKIN);
+  // Cropped hair, seen under the brim when he pushes the hat back.
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 2.8, cx + 2.8], k.beard, (_x, _y, t) => sphere(t * 0.8, -0.4, 1));
+  c.px(cx - 3, 11 + U, k.beard, sphere(-0.6, 0));
+  c.px(cx + 2, 11 + U, k.beard, sphere(0.6, 0));
+  // The moustache, and the beard along his jaw.
+  c.part();
+  c.shape(13 + U, 15 + U, (y) => {
+    const hw = [2.0, 2.5, 1.6][y - 13 - U];
+    return [cx - hw, cx + hw];
+  }, k.beard, (_x, _y, t, u) => sphere(t * 0.8, u * 0.7 - 0.2, 1));
+  // His cheeks show either side of the moustache.
+  c.px(cx - 3, 13 + U, SKIN, sphere(-0.6, 0.2));
+  c.px(cx + 2, 13 + U, SKIN, sphere(0.6, 0.2));
+  if (p.yawn) {
+    for (const [x, y] of [[-1, 14], [0, 14], [-1, 15], [0, 15]] as const) c.px(cx + x, y + U, EYE);
+  } else {
+    c.shade(cx - 1, 14 + U, -2);
+    c.shade(cx, 14 + U, -2);
+  }
+  c.shade(cx - 1, 13 + U, 1);
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  kettle(c, cx, 8.6 + U - T, 6.0);
+  // The brim's shadow over his brow (none when he's pushed it back).
+  if (T < 1) for (let x = cx - 2; x <= cx + 1; x++) c.shade(x, 11 + U, -1);
+}
+
+/** His head from behind: cropped hair over the nape, the hat over it. */
+function kettleBack(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const k = S.arb!;
+  c.part();
+  c.px(cx - 4, 12 + U, SKIN, sphere(-0.7, 0.1));
+  c.px(cx + 3, 12 + U, SKIN, sphere(0.7, 0.1));
+  c.part();
+  c.ellipse(cx, 12.2 + U, 2.8, 2.7, k.beard, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  for (let x = cx - 2; x <= cx + 1; x++) if (x & 1) c.shade(x, 13 + U, -1);
+  kettle(c, cx, 8.6 + U - Math.round(p.hatTip ?? 0), 6.0);
+}
+
+/** His head in profile (facing left): ear, nose, beard along the jaw, the hat's brim jutting over his face. */
+function kettleSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const k = S.arb!;
+  c.part();
+  c.ellipse(hx + 0.8, 12 + U, 2.4, 2.6, k.beard, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8, 1) });
+  c.part();
+  c.ellipse(hx - 1.4, 12.8 + U, 2.2, 2.2, SKIN);
+  c.part();
+  c.px(hx - 4, 12.4 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.px(hx + 0.2, 12 + U, SKIN, sphere(0.5, 0.2));
+  c.shade(hx + 0.2, 13 + U, -1);
+  c.part();
+  c.shape(13 + U, 16 + U, (y) => {
+    const [a, b] = ([[-4.2, -0.4], [-4.0, 0.8], [-3.6, 0.6], [-3.0, -0.6]] as const)[y - 13 - U];
+    return [hx + a, hx + b];
+  }, k.beard, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, u * 0.7 - 0.2, 1));
+  if (p.yawn) {
+    c.px(hx - 4, 14 + U, EYE);
+    c.px(hx - 4, 15 + U, EYE);
+  } else c.shade(hx - 4, 14 + U, -2);
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  kettle(c, hx - 0.6, 8.6 + U - Math.round(p.hatTip ?? 0), 5.7, hx + 0.1);
+  if ((p.hatTip ?? 0) < 1) for (let x = hx - 4; x <= hx - 1; x++) c.shade(x, 11 + U, -1);
+}
+
+/** The pavise on his back, top and bottom rows (it reaches above his shoulders and down past his belt). */
+const paviseRows = (U: number, L: number): [number, number] => [7 + U, 24 + L];
+
+/** The pavise seen from in front of him: its bare boards behind his shoulders, a strap across, the painted face's edge. */
+function paviseInside(c: PixelCanvas, cx: number, U: number, L: number): void {
+  const k = S.arb!;
+  const [top, bot] = paviseRows(U, L);
+  c.part();
+  c.shape(top, bot, (y) => (y === top ? [cx - 5.4, cx + 5.4] : [cx - 6.4, cx + 6.4]), k.board, (_x, _y, t, u) => sphere(t * 0.5, u * 0.3 - 0.3, 1), { bias: -1 });
+  for (let y = top + 1; y <= bot; y++) {
+    c.shade(cx - 3, y, -1);
+    c.shade(cx + 2, y, -1);
+    // The painted face shows round its edge: the red field on this side, the cream on that.
+    c.px(cx + 5, y, k.field[0], sphere(0.6, 0), { bias: -1 });
+    c.px(cx - 6, y, k.field[1], sphere(-0.6, 0), { bias: -1 });
+  }
+  c.part();
+  for (const y of [top + 4, bot - 5]) c.shape(y, y, () => [cx - 6.4, cx + 6.4], LEATHER, (_x, _y, t) => cyl(t, 0.1), { bias: -1 });
+}
+
+/**
+ * The pavise's painted face, seen from behind him: per pale red and cream,
+ * a raised ridge down the middle, a chevron counterchanged (cream on the red,
+ * red on the cream) and a gilt boss in its crook.
+ */
+function paviseFace(c: PixelCanvas, cx: number, U: number, L: number): void {
+  const k = S.arb!;
+  const [top, bot] = paviseRows(U, L);
+  const edge = (y: number): number => (y === top ? 5.4 : 6.4);
+  const n = (x: number, y: number) => sphere(((x + 0.5 - cx) / 6.4) * 0.7, ((y - top) / (bot - top)) * 0.5 - 0.35, 1);
+  c.part();
+  c.shape(top, bot, (y) => [cx - edge(y), cx], k.field[0], (x, y) => n(x, y));
+  c.part();
+  c.shape(top, bot, (y) => [cx, cx + edge(y)], k.field[1], (x, y) => n(x, y));
+  // The chevron: two rows thick, its point under the shoulders.
+  for (let x = cx - 6; x < cx + 6; x++) {
+    const y0 = Math.round(16 + U + Math.abs(x + 0.5 - cx) * 0.85);
+    for (const y of [y0, y0 + 1]) {
+      if (y > bot - 1) continue;
+      c.px(x, y, x < cx ? k.field[1] : k.field[0], n(x, y));
+    }
+  }
+  // The ridge down the middle catches the light on one side.
+  for (let y = top + 1; y <= bot; y++) {
+    c.shade(cx - 1, y, 1);
+    c.shade(cx, y, -1);
+  }
+  c.part();
+  c.ellipse(cx, 20.6 + U, 1.4, 1.3, k.boss);
+}
+
+/** The pavise in profile, a thick slab across his back, its painted face turned away. */
+function paviseSide(c: PixelCanvas, hx: number, U: number, L: number): void {
+  const k = S.arb!;
+  const [top, bot] = paviseRows(U, L);
+  const at = (y: number) => hx + 2.6 + (y - top) * 0.06;
+  c.part();
+  c.shape(top, bot, (y) => [at(y), at(y) + 2.2], k.board, (_x, _y, t, u) => sphere(t * 0.8 + 0.2, u * 0.4 - 0.4, 1), { bias: -1 });
+  for (let y = top; y <= bot; y++) c.px(Math.round(at(y) + 2.2), y, k.field[0], sphere(0.7, 0), { bias: -1 });
+  c.part();
+  c.px(Math.round(at(top + 13) + 3.0), top + 13, k.boss, sphere(0.6, -0.2), { bias: -1 });
+}
+
+/** The bolt case at his hip: a leather box, a band round it, the vanes of three bolts peeking out. */
+function boltCase(c: PixelCanvas, x: number, y: number, bias = 0): void {
+  c.part();
+  c.shape(y, y + 3, () => [x - 1.2, x + 1.4], S.wrap ?? LEATHER, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6 - 0.2, 1), { bias });
+  c.shade(x - 1, y + 1, 1);
+  c.shade(x, y + 1, 1);
+  c.part();
+  c.px(x - 1, y - 1, S.fletch, sphere(-0.4, -0.5), { bias });
+  c.px(x, y - 1, S.fletch, sphere(0, -0.6), { bias });
+  c.px(x, y - 2, S.fletch, sphere(0.2, -0.7), { bias: bias + 1 });
+}
+
+/** Quilting on the gambeson, rivets on the brigandine, rings in the mail. Run once the figure is drawn. */
+function arbTexture(c: PixelCanvas): void {
+  for (let y = -BODY_Y; y < ARCHER_H - BODY_Y; y++) {
+    for (let x = -BODY_X; x < ARCHER_W - BODY_X; x++) {
+      const m = c.materialAt(x, y);
+      const ym = ((y % 3) + 3) % 3;
+      if (m === S.tunic && ym === 0) c.shade(x, y, -1);
+      else if (m === S.jerkin && (x & 1) === 0 && ym === 1) c.shade(x, y, 2);
+      else if (m === S.cloak && ((x + y) & 1) === 1) c.shade(x, y, -1);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The windrunner
+
+/** Her tail of hair from the front: gathered high on the crown and swinging out past her shoulder (behind her). */
+function tailFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const g = p.gust ?? 0;
+  const sw = p.sway * 0.8 + g * 2.6;
+  c.part();
+  c.capsule(cx + 1.2, 8.2 + U, cx + 3.2 + sw * 0.4, 12.8 + U - g, 1.8, 1.4, S.hair, { bias: -1 });
+  c.capsule(cx + 3.2 + sw * 0.4, 12.8 + U - g, cx + 4.2 + sw, 19 + U - g * 3, 1.4, 0.55, S.hair, { bias: -1 });
+  for (let y = 13; y <= 18; y += 2) c.shade(Math.round(cx + 3.6 + sw * 0.7), y + U - Math.round(g * 2), -1);
+}
+
+/**
+ * Her head from the front: the hair swept to one side over her brow, long
+ * ears pointing up and out through it, a silver circlet with the wind-gem,
+ * and eyes lit by the wind.
+ */
+function elfFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const k = S.elf!;
+  c.part();
+  c.ellipse(cx, 11.2 + U, 3.3, 3.3, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  // The tail's knot high on her crown, a silver clasp round it.
+  c.part();
+  c.ellipse(cx + 1.4, 7.9 + U, 1.5, 1.2, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.4, 1) });
+  c.px(cx + 1, 8 + U, S.metal, sphere(0.2, -0.5), { bias: 1 });
+  for (const s of [-1, 1]) {
+    c.part();
+    c.capsule(cx + s * 2.9, 12.6 + U, cx + s * 5.3, 9.9 + U, 0.85, 0.35, SKIN);
+  }
+  c.part();
+  c.ellipse(cx, 12.6 + U, 2.5, 2.4, SKIN);
+  // Locks framing her face, and the fringe swept across her brow.
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 3, cx + 0.8], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.2, 1));
+  c.px(cx - 3, 11 + U, S.hair, sphere(-0.6, 0.1));
+  c.px(cx - 3, 12 + U, S.hair, sphere(-0.6, 0.4));
+  c.px(cx + 2, 11 + U, S.hair, sphere(0.6, 0.1));
+  c.part();
+  c.shape(9 + U, 9 + U, () => [cx - 2.8, cx + 2.8], S.metal, (_x, _y, t) => cyl(t, -0.3));
+  c.part();
+  c.px(cx - 1, 9 + U, k.gem, sphere(-0.3, -0.5), { bias: 1 });
+  c.px(cx, 9 + U, k.gem, sphere(0.3, -0.3));
+  c.spark(cx - 1, 9 + U, S.light[1], 0.5);
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  c.shade(cx - 1, 14 + U, -1);
+}
+
+/** Her head from behind: the tail falling down her back from its clasp, her ears through her hair. */
+function elfBack(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const g = p.gust ?? 0;
+  const sw = p.sway * 0.6 + g * 2;
+  for (const s of [-1, 1]) {
+    c.part();
+    c.capsule(cx + s * 2.9, 12.6 + U, cx + s * 5.3, 9.9 + U, 0.85, 0.35, SKIN);
+  }
+  c.part();
+  c.ellipse(cx, 11.2 + U, 3.4, 3.4, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.px(cx - 4, 9 + U, S.metal, sphere(-0.6, -0.2));
+  c.px(cx + 3, 9 + U, S.metal, sphere(0.6, -0.2));
+  c.part();
+  c.capsule(cx - 0.4, 8 + U, cx + sw * 0.4, 14 + U - g, 1.8, 1.4, S.hair);
+  c.capsule(cx + sw * 0.4, 14 + U - g, cx + sw, 21 + U - g * 3, 1.4, 0.55, S.hair);
+  for (let y = 10; y <= 20; y += 2) c.shade(Math.round(cx - 0.4 + sw * ((y - 8) / 13)), y + U - Math.round(g * ((y - 8) / 13) * 3), -1);
+  c.part();
+  c.px(cx - 1, 8 + U, S.metal, sphere(0, -0.5), { bias: 1 });
+  c.px(cx, 8 + U, S.metal, sphere(0.3, -0.4));
+}
+
+/** Her head in profile (facing left): the tail streaming back from her crown, a long ear swept back, the circlet's gem at her brow. */
+function elfSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const k = S.elf!;
+  const g = p.gust ?? 0;
+  const sw = p.sway * 0.6;
+  c.part();
+  c.capsule(hx + 1.2, 8.2 + U, hx + 4.6 + sw * 0.5 + g * 1.5, 10.4 + U - g * 0.8, 1.7, 1.3, S.hair, { bias: -1 });
+  c.capsule(hx + 4.6 + sw * 0.5 + g * 1.5, 10.4 + U - g * 0.8, hx + 6.4 + sw + g * 4, 16.2 + U - g * 4.4, 1.3, 0.55, S.hair, { bias: -1 });
+  c.part();
+  c.ellipse(hx + 0.6, 11.4 + U, 3.0, 3.1, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.ellipse(hx - 1.4, 12.8 + U, 2.2, 2.2, SKIN);
+  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.shade(hx - 3, 14 + U, -1);
+  c.part();
+  c.capsule(hx + 0.4, 12.8 + U, hx + 3.2, 10 + U, 0.85, 0.35, SKIN);
+  c.part();
+  c.shape(10 + U, 10 + U, () => [hx - 3.4, hx + 0.6], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+  c.px(hx - 0.4, 11 + U, S.hair, sphere(0.3, 0.2));
+  c.part();
+  c.shape(9 + U, 9 + U, () => [hx - 3.4, hx + 1.4], S.metal, (_x, _y, t) => cyl(t, -0.3));
+  c.part();
+  c.px(hx - 3, 9 + U, k.gem, sphere(-0.5, -0.4), { bias: 1 });
+  c.spark(hx - 3, 9 + U, S.light[1], 0.5);
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+}
+
+/** Her scarf from the front: wound round her neck, knotted to one side, its tails fluttering. */
+function scarfFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const k = S.elf!;
+  const g = p.gust ?? 0;
+  const sw = p.sway * 0.8;
+  c.part();
+  c.shape(14 + U, 15 + U, (y) => (y === 14 + U ? [cx - 2.8, cx + 2.8] : [cx - 3.5, cx + 3.5]), k.scarf, (_x, _y, t, u) => sphere(t * 0.9, u - 0.5, 1));
+  c.shade(cx - 2, 15 + U, -1);
+  c.shade(cx + 1, 14 + U, -1);
+  const ex = cx + 3.6 + sw + g * 3.4;
+  const ey = 21.4 + U - g * 4.2;
+  c.part();
+  c.capsule(cx + 2.4, 16.4 + U, ex + 1.8 + g, ey - 1.6 - g, 0.95, 0.7, k.scarf, { bias: -1 });
+  c.part();
+  c.capsule(cx + 1.8, 16.4 + U, ex, ey, 1.05, 0.8, k.scarf);
+  c.shade(Math.round(ex), Math.round(ey), -2);
+  c.shade(Math.round(ex + 1.8 + g), Math.round(ey - 1.6 - g), -2);
+  c.part();
+  c.ellipse(cx + 1.8, 16.1 + U, 1.2, 1.0, k.scarf, { bias: 1 });
+}
+
+/** Her scarf in profile: round her neck, the tails streaming out behind her. */
+function scarfSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const k = S.elf!;
+  const g = p.gust ?? 0;
+  const sw = p.sway;
+  const wave = Math.sin(sw * 2.2) * 0.7;
+  for (const [dy, len, bias] of [[-0.4, 1, -1], [0.8, 0.85, 0]] as const) {
+    const x1 = hx + 2.4 + (2.8 + sw * 0.6 + g * 1.4) * len;
+    const y1 = 15.6 + U + dy + 0.6 - g * 0.6 + wave;
+    const x2 = hx + 2.4 + (5.8 + sw + g * 3) * len;
+    const y2 = 16.8 + U + dy - g * 1.6 - wave;
+    c.part();
+    c.capsule(hx + 2, 15.2 + U + dy, x1, y1, 1.0, 0.85, k.scarf, { bias });
+    c.capsule(x1, y1, x2, y2, 0.85, 0.65, k.scarf, { bias });
+    c.shade(Math.round(x2), Math.round(y2), -2);
+  }
+  c.part();
+  c.shape(14 + U, 15 + U, () => [hx - 2.6, hx + 2.4], k.scarf, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, u - 0.5, 1));
+  c.shade(hx - 1, 15 + U, -1);
+}
+
+/** Her scarf from behind: round her neck, its tails hanging down her back. */
+function scarfBack(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const k = S.elf!;
+  const g = p.gust ?? 0;
+  const sw = p.sway * 0.8 + g * 3;
+  c.part();
+  c.capsule(cx - 1.4, 15.6 + U, cx - 1 + sw * 0.8, 21.6 + U - g * 3, 1.0, 0.75, k.scarf, { bias: -1 });
+  c.capsule(cx - 0.2, 15.6 + U, cx + 0.6 + sw, 22.6 + U - g * 3.6, 1.05, 0.8, k.scarf);
+  c.shade(Math.round(cx + 0.6 + sw), Math.round(22.6 + U - g * 3.6), -2);
+  c.part();
+  c.shape(14 + U, 15 + U, (y) => (y === 14 + U ? [cx - 2.8, cx + 2.8] : [cx - 3.5, cx + 3.5]), k.scarf, (_x, _y, t, u) => sphere(t * 0.9, u - 0.5, 1));
+}
+
+/** Her back from behind: the silk tunic, the leathers laced over it, the belt. */
+function torsoBack(c: PixelCanvas, cx: number, top: number, waist: number): void {
+  c.part();
+  c.shape(top, waist, (y) => {
+    const hw = tunicWidth(y, top, waist, 4.4);
+    return [cx - hw, cx + hw];
+  }, S.tunic, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.35, 1));
+  if (!S.elf) return;
+  c.part();
+  c.shape(top + 1, waist - 1, (y) => {
+    const hw = tunicWidth(y, top, waist, 4.4) - 0.4;
+    return [cx - hw, cx + hw];
+  }, S.jerkin, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.3, 1));
+  for (let y = top + 2; y < waist; y++) c.shade(cx - 1 + (y & 1), y, -2);
+  c.part();
+  c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LEATHER, (_x, _y, t) => cyl(t, 0));
+}
+
+/** A leaf drifting on the wind, two or three pixels, catching the light. */
+function leaf(c: PixelCanvas, x: number, y: number): void {
+  const m = S.elf!.leaf;
+  c.part();
+  c.px(x, y, m, sphere(-0.4, -0.5), { bias: 1 });
+  c.px(x + 1, y, m, sphere(0.2, -0.3));
+  c.px(x + 1, y + 1, m, sphere(0.4, 0.3), { bias: -1 });
+  c.spark(x, y, S.light[1], 0.3);
+}
+
+// ---------------------------------------------------------------------------
 // Directions
 // ---------------------------------------------------------------------------
 // Directions
@@ -905,14 +1538,20 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const L = -p.lift;
   const U = L + p.breath;
   const cx = 12;
+  const air = p.air ?? 0;
   const fa = place('down', 'a', p.a, U, cx);
   const fb = place('down', 'b', p.b, U, cx);
+  const xr = p.xb && place('down', 'a', p.xb.r, U, cx);
+  const xf = p.xb && place('down', 'a', p.xb.f, U, cx);
   // An arrow in the draw hand goes under the fist.
   const armA = () => {
     if (p.shaft !== undefined && !p.shaftBehind) heldArrow(c, fa, p.shaft, p.grip ?? 0);
     arm(c, 7.4, 16.4 + U, fa, REACH_FRONT, [-0.5, 1], false, fa.behind ? -1 : 0);
   };
   const armB = () => arm(c, 16.6, 16.4 + U, fb, REACH_FRONT, [0.5, 1], true, fb.behind ? -1 : 0);
+  // The weapon goes behind him when it's held out behind, or the bow hand is.
+  const behind = xf ? xf.behind : fb.behind;
+  const weapon = (bias: number) => drawWeapon(c, 'down', p, fa, fb, bias, xr, xf);
   // Everything above the collar, drawn nudged by the pose's head offset.
   const head = (draw: () => void) => {
     c.offset(BODY_X + (p.headX ?? 0), BODY_Y + (p.headY ?? 0));
@@ -920,30 +1559,36 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     c.offset(BODY_X, BODY_Y);
   };
 
-  // The quiver's fletchings peek over his right shoulder.
-  fletchings(c, 7.4, 12.6 + U, -0.4);
-  // An arrow being drawn from it (or slid home) rises out of the quiver, behind him.
-  if (p.shaft !== undefined && p.shaftBehind) heldArrow(c, fa, p.shaft, p.grip ?? 0);
-  c.part();
-  c.capsule(6.9, 13.8 + U, 8.2, 13.8 + U, 0.8, 0.8, S.wrap ?? LEATHER);
-  // The cloak hangs behind him, showing at his sides.
-  c.part();
-  c.shape(15 + U, 26 + L, (y) => {
-    const u = (y - 15 - U) / (11 + L - U);
-    const hw = 5.0 + u * 1.3;
-    const sw = u * p.sway;
-    return [cx - hw + sw, cx + hw + sw];
-  }, S.cloak, (_x, _y, t, u) => sphere(t * 0.9, u * 0.4, 1), { bias: -1 });
-  if (fa.behind) armA();
-  if (fb.behind) {
-    armB();
-    drawBow(c, 'down', p, fa, fb, -1);
+  if (S.arb) {
+    // The pavise's bare boards behind him, wider than his shoulders.
+    paviseInside(c, cx, U, L);
+  } else {
+    // The quiver's fletchings peek over his right shoulder.
+    fletchings(c, 7.4, 12.6 + U, -0.4);
+    // An arrow being drawn from it (or slid home) rises out of the quiver, behind him.
+    if (p.shaft !== undefined && p.shaftBehind) heldArrow(c, fa, p.shaft, p.grip ?? 0);
+    c.part();
+    c.capsule(6.9, 13.8 + U, 8.2, 13.8 + U, 0.8, 0.8, S.wrap ?? LEATHER);
   }
+  if (S.elf) tailFront(c, cx, U, p);
+  else if (!S.arb) {
+    // The cloak hangs behind him, showing at his sides.
+    c.part();
+    c.shape(15 + U, 26 + L, (y) => {
+      const u = (y - 15 - U) / (11 + L - U);
+      const hw = 5.0 + u * 1.3;
+      const sw = u * p.sway;
+      return [cx - hw + sw, cx + hw + sw];
+    }, S.cloak, (_x, _y, t, u) => sphere(t * 0.9, u * 0.4, 1), { bias: -1 });
+  }
+  if (fa.behind) armA();
+  if (fb.behind) armB();
+  if (behind && !p.xb) weapon(-1);
 
-  leg(c, 10.2, 24.5 + L, 10, 28.4 - p.footA);
-  leg(c, 13.8, 24.5 + L, 14, 28.4 - p.footB);
-  boot(c, 10, 29.6 - p.footA);
-  boot(c, 14, 29.6 - p.footB);
+  leg(c, 10.2, 24.5 + L, 10, 28.4 - p.footA - air);
+  leg(c, 13.8, 24.5 + L, 14, 28.4 - p.footB - air);
+  boot(c, 10, 29.6 - p.footA - air);
+  boot(c, 14, 29.6 - p.footB - air);
 
   // The tunic, its skirt split at the front.
   const top = 15 + U;
@@ -958,29 +1603,36 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   if (S.scarecrow) {
     overallsFront(c, cx, top, waist, hem);
   } else {
-    // The jerkin over the chest, laced at a V-neck.
+    // The jerkin over the chest, laced at a V-neck (the brigandine closes high, studded to the collar).
     c.part();
     c.shape(top + 1, waist - 1, (y) => {
       const hw = tunicWidth(y, top, waist, 4.4) - 0.3;
       return [cx - hw, cx + hw];
     }, S.jerkin, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.3, 1));
-    for (let y = top + 1; y <= top + 3; y++) {
-      const v = 1.6 - (y - top - 1) * 0.6;
-      for (let x = Math.round(cx - v); x < Math.round(cx + v); x++) c.erase(x, y);
+    if (!S.arb) {
+      for (let y = top + 1; y <= top + 3; y++) {
+        const v = 1.6 - (y - top - 1) * 0.6;
+        for (let x = Math.round(cx - v); x < Math.round(cx + v); x++) c.erase(x, y);
+      }
+      c.px(cx - 1, top + 3, S.metal, sphere(-0.3, -0.3));
     }
     for (let y = top + 4; y < waist; y++) c.shade(cx, y, -1);
-    c.px(cx - 1, top + 3, S.metal, sphere(-0.3, -0.3));
     // Belt and buckle.
     c.part();
     c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LEATHER, (_x, _y, t) => cyl(t, 0));
     c.part();
     c.px(cx, waist, S.metal, sphere(0, -0.3));
   }
-  // The quiver strap across his chest, right shoulder to left hip (a length of rope on the scarecrow).
+  if (S.arb) boltCase(c, cx + 4.8, 21 + U);
+  // The quiver strap across his chest, right shoulder to left hip (a length of rope on the
+  // scarecrow, the pavise's strap on the arbalest).
   c.part();
   c.capsule(8.2, 15.4 + U, 15.4, 21.4 + U, 0.55, 0.55, S.scarecrow?.rope ?? LEATHER);
 
-  cowl(c, cx, U, 5.8, 5.8, S.scarecrow ? S.tunic : S.cloak);
+  if (S.elf) scarfFront(c, cx, U, p);
+  else cowl(c, cx, U, 5.8, 5.8, S.scarecrow ? S.tunic : S.cloak);
+  // The crossbow on his shoulder: over his body, under his head.
+  if (p.xb) weapon(0);
 
   if (S.scarecrow) {
     head(() => {
@@ -988,54 +1640,55 @@ function drawDown(c: PixelCanvas, p: Pose): void {
       hatFront(c, cx, U - 1, 1);
       crow(c, cx + 4.6, 7 + U, 1);
     });
-    if (!fb.behind) {
-      armB();
-      drawBow(c, 'down', p, fa, fb);
-    }
-    if (!fa.behind) armA();
-    return;
-  }
-
-  if (S.hunt) {
+  } else if (S.hunt) {
     head(() => {
       antlers(c, cx, U);
       skullFront(c, cx, U, p.blink);
     });
-    if (!fb.behind) {
-      armB();
-      drawBow(c, 'down', p, fa, fb);
-    }
-    if (!fa.behind) armA();
-    return;
-  }
-
-  // Head: the hood, a face in its shadow, a fringe of hair under its edge.
-  head(() => {
-    c.part();
-    c.ellipse(cx, 11.3 + U, 3.9, 3.7, S.cloak, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
-    c.part();
-    c.px(cx - 1, 7 + U, S.cloak, sphere(-0.3, -0.8));
-    if (S.trim) {
+  } else if (S.arb) {
+    head(() => kettleFront(c, cx, U, p));
+  } else if (S.elf) {
+    head(() => elfFront(c, cx, U, p));
+  } else {
+    // Head: the hood, a face in its shadow, a fringe of hair under its edge.
+    head(() => {
       c.part();
-      c.ellipse(cx, 12.5 + U, 2.95, 2.75, S.trim);
-    }
-    c.part();
-    c.ellipse(cx, 12.7 + U, 2.5, 2.3, SKIN);
-    c.part();
-    c.shape(10 + U, 10 + U, () => [cx - 2.5, cx + 2.5], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
-    c.px(cx - 3, 11 + U, S.hair, sphere(-0.6, 0.2));
-    c.px(cx + 1, 11 + U, S.hair, sphere(0.2, 0), { bias: -1 });
-    // The hood's shadow across the brow, the eyes under it.
-    for (let x = cx - 2; x <= cx + 1; x++) c.shade(x, 11 + U, -1);
-    eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
-    c.shade(cx - 1, 14 + U, -1);
-  });
-
-  if (!fb.behind) {
-    armB();
-    drawBow(c, 'down', p, fa, fb);
+      c.ellipse(cx, 11.3 + U, 3.9, 3.7, S.cloak, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+      c.part();
+      c.px(cx - 1, 7 + U, S.cloak, sphere(-0.3, -0.8));
+      if (S.trim) {
+        c.part();
+        c.ellipse(cx, 12.5 + U, 2.95, 2.75, S.trim);
+      }
+      c.part();
+      c.ellipse(cx, 12.7 + U, 2.5, 2.3, SKIN);
+      c.part();
+      c.shape(10 + U, 10 + U, () => [cx - 2.5, cx + 2.5], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+      c.px(cx - 3, 11 + U, S.hair, sphere(-0.6, 0.2));
+      c.px(cx + 1, 11 + U, S.hair, sphere(0.2, 0), { bias: -1 });
+      // The hood's shadow across the brow, the eyes under it.
+      for (let x = cx - 2; x <= cx + 1; x++) c.shade(x, 11 + U, -1);
+      eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+      c.shade(cx - 1, 14 + U, -1);
+    });
   }
+
+  if (!fb.behind) armB();
+  if (!behind && !p.xb) weapon(0);
   if (!fa.behind) armA();
+
+  if (p.leaf && S.elf) {
+    // A leaf on the wind, and her breath carrying it off.
+    leaf(c, p.leaf[0], p.leaf[1]);
+    if ((p.gust ?? 0) > 0.8) {
+      for (let i = 0; i < 6; i++) {
+        const u = i / 6;
+        const wx = 11 + (p.leaf[0] - 11) * u;
+        const wy = 14 + U + (p.leaf[1] - 14 - U) * u + Math.sin(u * Math.PI) * 1.5;
+        c.spark(wx, wy, S.light[i % 2 ? 2 : 1], 0.45 * (1 - u * 0.5));
+      }
+    }
+  }
 }
 
 function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
@@ -1053,20 +1706,23 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   const L = -p.lift;
   const U = L + p.breath;
   const cx = 12;
+  const air = p.air ?? 0;
   const fa = place('up', 'a', p.a, U, cx);
   const fb = place('up', 'b', p.b, U, cx);
+  const xr = p.xb && place('up', 'a', p.xb.r, U, cx);
+  const xf = p.xb && place('up', 'a', p.xb.f, U, cx);
   const armA = () => arm(c, 7.4, 16.4 + U, fa, REACH_FRONT, [-0.5, 0.8], false, fa.behind ? -1 : 0);
   const armB = () => arm(c, 16.6, 16.4 + U, fb, REACH_FRONT, [0.5, 0.8], true, fb.behind ? -1 : 0);
+  const behind = xf ? xf.behind : fb.behind;
+  const weapon = (bias: number) => drawWeapon(c, 'up', p, fa, fb, bias, xr, xf);
   if (fa.behind) armA();
-  if (fb.behind) {
-    armB();
-    drawBow(c, 'up', p, fa, fb, -1);
-  }
+  if (fb.behind) armB();
+  if (behind) weapon(-1);
 
-  leg(c, 10.2, 24.5 + L, 10, 28.4 - p.footB);
-  leg(c, 13.8, 24.5 + L, 14, 28.4 - p.footA);
-  boot(c, 10, 29.6 - p.footB);
-  boot(c, 14, 29.6 - p.footA);
+  leg(c, 10.2, 24.5 + L, 10, 28.4 - p.footB - air);
+  leg(c, 13.8, 24.5 + L, 14, 28.4 - p.footA - air);
+  boot(c, 10, 29.6 - p.footB - air);
+  boot(c, 14, 29.6 - p.footA - air);
 
   // The tunic's skirt below the cloak.
   const top = 15 + U;
@@ -1076,6 +1732,25 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     const hw = tunicWidth(y, top, waist, 4.4);
     return [cx - hw, cx + hw];
   }, S.scarecrow ? S.jerkin : S.tunic, (_x, _y, t) => sphere(t * 0.9, 0.25, 1));
+
+  if (S.arb || S.elf) {
+    // No cloak: the back of the tunic (and her leathers), then his pavise over it, or her quiver.
+    torsoBack(c, cx, top, waist);
+    if (S.arb) {
+      boltCase(c, cx - 4.6, 21 + U);
+      paviseFace(c, cx, U, L);
+      cowl(c, cx, U, 5.8, 5.8);
+      kettleBack(c, cx, U, p);
+    } else {
+      quiver(c, 16.2, 13.4 + U, 10.8, 22 + U);
+      scarfBack(c, cx, U, p);
+      elfBack(c, cx, U, p);
+    }
+    if (!fb.behind) armB();
+    if (!behind) weapon(0);
+    if (!fa.behind) armA();
+    return;
+  }
 
   // The cloak down his back to the knees, swinging.
   const hem = 26 + L;
@@ -1107,14 +1782,7 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     sackBack(c, cx, U);
     hatFront(c, cx, U - 1, -1);
     crow(c, cx - 4.6, 7 + U, -1, true);
-    if (!fb.behind) {
-      armB();
-      drawBow(c, 'up', p, fa, fb);
-    }
-    if (!fa.behind) armA();
-    return;
-  }
-  if (S.hunt) {
+  } else if (S.hunt) {
     // Long hair down his back over the ruff, the skull's crown above it, the antlers over all.
     c.part();
     c.ellipse(cx, 11.6 + U, 3.6, 3.4, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
@@ -1127,27 +1795,20 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     c.part();
     c.ellipse(cx, 9.6 + U, 3.0, 1.7, S.hunt.skull, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.4, 1) });
     antlers(c, cx, U);
-    if (!fb.behind) {
-      armB();
-      drawBow(c, 'up', p, fa, fb);
-    }
-    if (!fa.behind) armA();
-    return;
+  } else {
+    // The back of the hood, drawn to a point.
+    c.part();
+    c.ellipse(cx, 11.4 + U, 3.9, 3.7, S.cloak, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+    c.part();
+    c.shape(14 + U, 17 + U, (y) => {
+      const hw = 1.6 - (y - 14 - U) * 0.45;
+      return hw < 0.3 ? null : [cx - hw, cx + hw];
+    }, S.cloak, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
+    c.shade(cx, 9 + U, 1);
   }
-  // The back of the hood, drawn to a point.
-  c.part();
-  c.ellipse(cx, 11.4 + U, 3.9, 3.7, S.cloak, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
-  c.part();
-  c.shape(14 + U, 17 + U, (y) => {
-    const hw = 1.6 - (y - 14 - U) * 0.45;
-    return hw < 0.3 ? null : [cx - hw, cx + hw];
-  }, S.cloak, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
-  c.shade(cx, 9 + U, 1);
 
-  if (!fb.behind) {
-    armB();
-    drawBow(c, 'up', p, fa, fb);
-  }
+  if (!fb.behind) armB();
+  if (!behind) weapon(0);
   if (!fa.behind) armA();
 }
 
@@ -1157,33 +1818,46 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const U = L + p.breath;
   const cx = 12;
   const hx = cx - p.lean; // upper body centre
+  const air = p.air ?? 0;
   const fa = place('side', 'a', p.a, U, hx);
   const fb = place('side', 'b', p.b, U, hx);
+  const xr = p.xb && place('side', 'a', p.xb.r, U, hx);
+  const xf = p.xb && place('side', 'a', p.xb.f, U, hx);
+  const weapon = () => drawWeapon(c, 'side', p, fa, fb, 0, xr, xf);
 
-  // The quiver on his back, fletchings over the shoulder.
-  quiver(c, hx + 3.2, 12.6 + U, hx + 1.4, 21.4 + U, -1);
-  // The cloak hanging behind him, streaming out as he goes.
   const top = 14 + U;
   const hem = 26 + L;
-  c.part();
-  c.shape(top, hem, (y) => {
-    const u = (y - top) / (hem - top);
-    return [hx + 0.6, hx + 3.6 + u * (1.4 + p.sway)];
-  }, S.cloak, (_x, _y, t, u) => sphere(t * 0.9 + 0.1, u * 0.5 - 0.2, 1), { bias: -1 });
-  if (S.trim) for (let y = top + 2; y <= hem; y++) {
-    const u = (y - top) / (hem - top);
-    c.px(Math.round(hx + 3.6 + u * (1.4 + p.sway)) - 1, y, S.trim, sphere(0.5, 0), { bias: -1 });
+  if (S.arb) {
+    // The pavise across his back, the bolt case at his hip.
+    paviseSide(c, hx, U, L);
+    boltCase(c, hx + 3.2, 20 + U, -1);
+  } else {
+    // The quiver on his back, fletchings over the shoulder.
+    quiver(c, hx + 3.2, 12.6 + U, hx + 1.4, 21.4 + U, -1);
+  }
+  if (!S.arb && !S.elf) {
+    // The cloak hanging behind him, streaming out as he goes.
+    c.part();
+    c.shape(top, hem, (y) => {
+      const u = (y - top) / (hem - top);
+      return [hx + 0.6, hx + 3.6 + u * (1.4 + p.sway)];
+    }, S.cloak, (_x, _y, t, u) => sphere(t * 0.9 + 0.1, u * 0.5 - 0.2, 1), { bias: -1 });
+    if (S.trim) for (let y = top + 2; y <= hem; y++) {
+      const u = (y - top) / (hem - top);
+      c.px(Math.round(hx + 3.6 + u * (1.4 + p.sway)) - 1, y, S.trim, sphere(0.5, 0), { bias: -1 });
+    }
   }
 
   // Far arm behind everything; the bow it carries low goes behind him too.
   arm(c, hx + 1.2, 16.6 + U, fb, REACH_SIDE, [0.3, 1], true, -1);
 
-  // Legs: back leg in shade first, then the front leg.
+  // Legs: back leg in shade first, then the front leg. Off the ground, the knees draw up.
   const lift = (f: number) => Math.max(0, f) * 0.35;
-  leg(c, cx + 0.8, 24.5 + L, cx + 1 - p.footB, 28.4 - lift(p.footB), -1);
-  boot(c, cx + 0.4 - p.footB, 29.7 - lift(p.footB), true, -1);
-  leg(c, cx - 0.6, 24.5 + L, cx - 0.4 - p.footA, 28.4 - lift(p.footA));
-  boot(c, cx - 1.2 - p.footA, 29.7 - lift(p.footA), true);
+  const tuck = air > 0 ? 0.6 : 1;
+  leg(c, cx + 0.8, 24.5 + L, cx + 1 - p.footB * tuck, 28.4 - lift(p.footB) - air, -1);
+  boot(c, cx + 0.4 - p.footB * tuck, 29.7 - lift(p.footB) - air, true, -1);
+  leg(c, cx - 0.6, 24.5 + L, cx - 0.4 - p.footA * tuck, 28.4 - lift(p.footA) - air);
+  boot(c, cx - 1.2 - p.footA * tuck, 29.7 - lift(p.footA) - air, true);
 
   // The tunic in profile, the jerkin over it.
   const ttop = 15 + U;
@@ -1212,16 +1886,21 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   c.part();
   c.capsule(hx + 1.8, 15.2 + U, hx - 2.4, 21.6 + U, 0.55, 0.55, S.scarecrow?.rope ?? LEATHER);
 
-  cowl(c, hx, U, 4.2, 4.4, S.scarecrow ? S.tunic : S.cloak);
+  if (S.elf) scarfSide(c, hx, U, p);
+  else cowl(c, hx, U, 4.2, 4.4, S.scarecrow ? S.tunic : S.cloak);
 
   if (S.scarecrow) {
     scarecrowSide(c, hx, U, p.blink, p.sway);
-    drawBow(c, 'side', p, fa, fb);
+  } else if (S.arb) {
+    // The crossbow on his shoulder goes behind his head; raised, it's out before him.
+    if (p.xb) weapon();
+    kettleSide(c, hx, U, p);
+    if (!p.xb) weapon();
     arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1], false);
     return;
-  }
-
-  if (S.hunt) {
+  } else if (S.elf) {
+    elfSide(c, hx, U, p);
+  } else if (S.hunt) {
     // The far antler, then his hair streaming back, his face, the skull over
     // it with its snout thrust forward, and the near antler.
     const k = S.hunt;
@@ -1247,38 +1926,35 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     c.shade(hx - 2, 11 + U, -2);
     eyes(c, [[hx - 3, 12 + U]], p.blink);
     antler(c, beam(0), tines(0));
-    drawBow(c, 'side', p, fa, fb);
-    arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1], false);
-    return;
-  }
-
-  // Head: the hood in profile, the face peeking out of it.
-  c.part();
-  c.ellipse(hx + 0.4, 11.4 + U, 3.4, 3.6, S.cloak, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
-  c.part();
-  // The hood's tail hanging down the back of the neck.
-  c.capsule(hx + 2.8, 12.5 + U, hx + 3.6 + p.sway * 0.3, 15.2 + U, 1.1, 0.6, S.cloak);
-  if (S.trim) {
+  } else {
+    // Head: the hood in profile, the face peeking out of it.
     c.part();
-    c.ellipse(hx - 1.3, 12.6 + U, 2.6, 2.5, S.trim);
+    c.ellipse(hx + 0.4, 11.4 + U, 3.4, 3.6, S.cloak, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
+    c.part();
+    // The hood's tail hanging down the back of the neck.
+    c.capsule(hx + 2.8, 12.5 + U, hx + 3.6 + p.sway * 0.3, 15.2 + U, 1.1, 0.6, S.cloak);
+    if (S.trim) {
+      c.part();
+      c.ellipse(hx - 1.3, 12.6 + U, 2.6, 2.5, S.trim);
+    }
+    c.part();
+    c.ellipse(hx - 1.4, 12.8 + U, 2.2, 2.2, SKIN);
+    c.part();
+    c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+    c.shade(hx - 3, 14 + U, -1);
+    // Hair spilling from the hood's edge over the brow and down behind the ear.
+    c.part();
+    c.shape(10 + U, 10 + U, () => [hx - 3.4, hx + 0.4], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+    c.px(hx - 0.2, 11 + U, S.hair, sphere(0.3, 0.2));
+    c.px(hx, 12 + U, S.hair, sphere(0.4, 0.4), { bias: -1 });
+    c.part();
+    // The hood's peak over the brow.
+    c.shape(8 + U, 9 + U, (y) => [hx - 3.6 + (9 + U - y) * 0.8, hx + 3], S.cloak, (_x, _y, t, u) => sphere(t * 0.9, u - 0.7, 1));
+    eyes(c, [[hx - 3, 12 + U]], p.blink);
   }
-  c.part();
-  c.ellipse(hx - 1.4, 12.8 + U, 2.2, 2.2, SKIN);
-  c.part();
-  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
-  c.shade(hx - 3, 14 + U, -1);
-  // Hair spilling from the hood's edge over the brow and down behind the ear.
-  c.part();
-  c.shape(10 + U, 10 + U, () => [hx - 3.4, hx + 0.4], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
-  c.px(hx - 0.2, 11 + U, S.hair, sphere(0.3, 0.2));
-  c.px(hx, 12 + U, S.hair, sphere(0.4, 0.4), { bias: -1 });
-  c.part();
-  // The hood's peak over the brow.
-  c.shape(8 + U, 9 + U, (y) => [hx - 3.6 + (9 + U - y) * 0.8, hx + 3], S.cloak, (_x, _y, t, u) => sphere(t * 0.9, u - 0.7, 1));
-  eyes(c, [[hx - 3, 12 + U]], p.blink);
 
   // The bow is held out ahead of him, raised or carried.
-  drawBow(c, 'side', p, fa, fb);
+  weapon();
   // Near shoulder and the draw arm.
   arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1], false);
 }
@@ -1362,6 +2038,18 @@ interface Key {
   lean?: number;
   breath?: number;
   step?: number;
+  /** The crossbow's own line (see Pose.xb), front and side. */
+  xb?: { r: Hand; f: Hand };
+  xbSide?: { r: Hand; f: Hand };
+  crank?: boolean;
+  net?: boolean;
+  fan?: boolean;
+  /** Down on his haunches, px. */
+  crouch?: number;
+  /** Up in a leap, px, and the feet tucked up under her beyond that. */
+  jump?: number;
+  tuck?: number;
+  gust?: number;
 }
 
 /** An action as keyframes, the bow raised throughout; anything left out stays at rest. */
@@ -1371,11 +2059,22 @@ function action(keys: Key[]) {
       const p = base(view);
       p.a = { ...(view === 'side' && k.aSide ? k.aSide : k.a) };
       p.b = { ...(view === 'side' && k.bSide ? k.bSide : k.b) };
+      const xb = view === 'side' ? (k.xbSide ?? k.xb) : k.xb;
+      if (xb) p.xb = { r: { ...xb.r }, f: { ...xb.f } };
+      p.crank = k.crank;
+      p.net = k.net;
+      p.fan = k.fan;
+      p.gust = k.gust;
       p.raised = true;
       p.nock = k.nock ?? false;
       p.draw = k.draw ?? 0;
       p.glint = k.glint ?? 0;
       p.breath = k.breath ?? 0;
+      if (k.crouch) p.lift = -k.crouch;
+      if (k.jump) {
+        p.lift = k.jump;
+        p.air = k.jump + (k.tuck ?? 0);
+      }
       const step = k.step ?? 0;
       if (view === 'side') {
         p.lean = k.lean ?? 0;
@@ -1463,9 +2162,173 @@ function rest(view: View): Pose[] {
 }
 
 // ---------------------------------------------------------------------------
+// The arbalest's moves
+
+/** The crossbow on his shoulder: its butt in his right hand at the chest, the prod up behind his shoulder. */
+const SHOULDER = { r: H(0.6, 3.4, -0.4), f: H(-1.4, 5.6, 4.6) };
+const SHOULDER_SIDE = { r: H(1.2, 0, -0.2), f: H(-1.4, 0, 4.8) };
+
+/** A carrying pose with the crossbow on his shoulder, loaded and spanned; his other hand hangs free. */
+function shouldered(view: View, p: Pose, swing = 0): Pose {
+  const x = view === 'side' ? SHOULDER_SIDE : SHOULDER;
+  p.xb = { r: { ...x.r }, f: { ...x.f } };
+  p.a = { ...x.r };
+  p.b = view === 'side' ? H(0.6 - swing * 1.8, 0, -3.6 + p.lift * 0.4) : H(0.8 - swing * 1.4, 4.4, -3.4 + p.lift * 0.4);
+  p.nock = true;
+  p.draw = 1;
+  return p;
+}
+
+const arbIdle = (view: View): Pose[] => idle(view).map((p) => shouldered(view, p));
+const arbWalk = (view: View): Pose[] => walk(view).map((p, f) => shouldered(view, p, Math.sin(((f + 0.5) / 6) * Math.PI * 2)));
+
+/** Shouldered and aimed, the butt at his cheek: straight ahead from the front, level from the side. */
+const XB_A = H(1.0, 0.8, 3.4);
+const XB_B = H(5.0, -0.8, 2.8);
+const XB_A_SIDE = H(0.4, 0, 3.4);
+const XB_B_SIDE = H(5.4, 0, 3.0);
+
+/** The shot: up to the cheek, a breath to aim, the hard kick of the loose. */
+const fire = action([
+  { a: H(1.4, 1.8, 2.4), b: H(4.0, -0.2, 1.6), aSide: H(1, 0, 2.6), bSide: H(4.4, 0, 2.0), nock: true, draw: 1, step: 1 },
+  { a: XB_A, b: XB_B, aSide: XB_A_SIDE, bSide: XB_B_SIDE, nock: true, draw: 1, glint: 0.5, step: 1 },
+  { a: H(0.0, 1.0, 3.9), b: H(4.0, -0.6, 3.5), aSide: H(-0.6, 0, 3.9), bSide: H(4.4, 0, 3.7), draw: 0, step: 1, lean: -1 },
+  { a: H(0.6, 1.0, 3.4), b: H(4.6, -0.6, 3.0), aSide: H(0, 0, 3.4), bSide: H(5, 0, 3.1), draw: 0, step: 1 },
+]);
+
+/** The crossbow nose down, its stirrup under his foot, while he winds it. */
+const XB_DOWN = { r: H(1.2, 0.8, 2.4), f: H(4.2, 0.4, -6.4) };
+const XB_DOWN_SIDE = { r: H(0.6, 0, 2.0), f: H(4.0, 0, -6.6) };
+/** Crank turns in one wind, and frames in it. */
+const CRANK_FRAMES = 6;
+
+/** Spanning: the stirrup set under his foot, two turns of the crank winding the string back to the nut, a bolt dropped in the groove. */
+const crank = action(
+  Array.from({ length: CRANK_FRAMES }, (_, i): Key => {
+    const th = i * ((Math.PI * 4) / CRANK_FRAMES);
+    const r = XB_DOWN.r;
+    const rs = XB_DOWN_SIDE.r;
+    return {
+      a: H(r.f, r.s + Math.cos(th) * 1.5, r.h + Math.sin(th) * 1.5),
+      b: H(2.6, -0.4, -1.6),
+      aSide: H(rs.f + Math.cos(th) * 1.4, 0, rs.h + Math.sin(th) * 1.4),
+      bSide: H(2.4, 0, -1.8),
+      xb: XB_DOWN,
+      xbSide: XB_DOWN_SIDE,
+      crank: true,
+      draw: (i + 1) / CRANK_FRAMES,
+      nock: i === CRANK_FRAMES - 1,
+      breath: i % 2,
+      step: 1,
+    };
+  }),
+);
+
+/**
+ * The net shot: he drops to one knee, shoulders the crossbow with the net
+ * canister in its groove, the light gathering on its leads, and looses it
+ * with a kick that rocks him back.
+ */
+const brace = action([
+  { a: H(1.2, 1.8, 2.6), b: H(4.2, -0.2, 2.0), aSide: H(1, 0, 2.6), bSide: H(4.6, 0, 2.2), nock: true, net: true, draw: 1, crouch: 1, step: 1 },
+  { a: XB_A, b: XB_B, aSide: XB_A_SIDE, bSide: XB_B_SIDE, nock: true, net: true, draw: 1, glint: 0.3, crouch: 2, step: 2 },
+  { a: XB_A, b: XB_B, aSide: XB_A_SIDE, bSide: XB_B_SIDE, nock: true, net: true, draw: 1, glint: 0.7, crouch: 2, step: 2 },
+  { a: XB_A, b: XB_B, aSide: XB_A_SIDE, bSide: XB_B_SIDE, nock: true, net: true, draw: 1, glint: 1, crouch: 2, step: 2 },
+  { a: H(-0.4, 0.8, 4.2), b: H(3.8, -0.8, 4.0), aSide: H(-1.0, 0, 4.2), bSide: H(4.2, 0, 4.2), draw: 0, crouch: 2, step: 2, lean: -1 },
+  { a: H(0.6, 0.8, 3.2), b: H(4.6, -0.8, 2.8), aSide: H(0, 0, 3.2), bSide: H(5, 0, 2.9), draw: 0, crouch: 1, step: 1 },
+]);
+
+/** A pose from the arbalest's stand (idle frame 0) with the given changes. */
+const fromArb = (k: Partial<Pose>): Pose => ({ ...arbIdle('down')[0], ...k });
+/** The crossbow stood on its nose before him, its butt under his hands at his chest. */
+const XB_LEAN = { r: H(1.0, 1.0, 2.6), f: H(4.0, 0.6, -8.4) };
+const LEAN_A = H(1.0, 1.2, 2.2);
+const LEAN_B = H(1.2, -0.6, 2.8);
+
+/**
+ * The arbalest's idle moment: he swings the crossbow down off his shoulder
+ * and leans on it, pushes his hat back off his brow, and gives a long,
+ * jaw-cracking yawn; then tugs the hat down again and shoulders the crossbow.
+ */
+const ARB_REST: Pose[] = [
+  fromArb({}),
+  fromArb({ xb: { r: H(1, 2.4, 1.4), f: H(2.6, 3.2, -2.4) }, a: H(1, 2.4, 1.4), sway: 0.2 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: LEAN_B, breath: 1 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: H(1.8, 2.6, 8.4), hatTip: 1 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: H(1.6, 2.8, 9.6), hatTip: 2 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: H(1.4, 3.6, 5.6), hatTip: 2, yawn: true, blink: true, headY: -1 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: H(1.4, 3.8, 4.6), hatTip: 2, yawn: true, blink: true, headY: -1, breath: 1 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: H(1.8, 2.6, 9.0), hatTip: 1, breath: 1 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: LEAN_B }),
+];
+const ARB_ORDER = [0, 1, 2, 2, 2, 3, 4, 4, 5, 6, 6, 6, 5, 4, 4, 7, 8, 8, 2, 1, 0];
+
+function arbRest(view: View): Pose[] {
+  return view === 'down' ? ARB_REST : [];
+}
+
+// ---------------------------------------------------------------------------
+// The windrunner's moves
+
+/** The windrunner stands and walks as the ranger does, her scarf and hair stirring (streaming as she goes). */
+const windIdle = (view: View): Pose[] => idle(view).map((p, f) => ({ ...p, gust: 0.1 + 0.1 * Math.sin((f / 6) * Math.PI * 2) }));
+const windWalk = (view: View): Pose[] => walk(view).map((p) => ({ ...p, gust: 0.45 }));
+
+/** Three arrows at once: nocked together, a quick half-draw, loosed in a fan. */
+const fan = action([
+  { a: H(3.6, 0.8, 2.0), b: AIM_B, nock: true, fan: true, draw: 0.3, step: 1, gust: 0.2 },
+  { a: H(0.2, 1.1, 3.0), b: AIM_B, nock: true, fan: true, draw: 0.95, glint: 0.4, step: 1, lean: -1, gust: 0.3 },
+  { a: H(-2.2, 2.4, 3.8), b: H(6, 0.6, 2.2), step: 1, gust: 0.6 },
+  { a: H(-1.2, 2.8, 1.5), b: H(5.2, 0.8, 1.2), step: 1, gust: 0.3 },
+]);
+
+/**
+ * The wind vault: a crouch, a spring backwards with her knees drawn up,
+ * drawing in the air, loosing the gale at the top of the leap, and landing
+ * light on her toes.
+ */
+const vault = action([
+  { a: H(3.0, 0.8, 1.6), b: H(4.6, 0.6, 1.0), crouch: 2, gust: 0.3, lean: 1 },
+  { a: H(2.0, 0.9, 2.4), b: AIM_B, nock: true, draw: 0.4, jump: 3, tuck: 2, gust: 0.8, lean: -1 },
+  { a: H(0.2, 1.1, 3.0), b: AIM_B, nock: true, draw: 1, glint: 0.8, jump: 6, tuck: 4, gust: 1, lean: -1 },
+  { a: H(-2.2, 2.4, 3.8), b: H(6, 0.6, 2.2), jump: 6, tuck: 3, gust: 1, lean: -1 },
+  { a: H(-1.2, 2.8, 1.5), b: H(5.2, 0.8, 1.2), jump: 3, tuck: 1, gust: 0.6 },
+  { a: H(0.4, 3.4, -1.0), b: H(4.0, 1.0, -0.4), crouch: 1, gust: 0.3 },
+]);
+
+/** A pose from the windrunner's stand (idle frame 0) with the given changes. */
+const fromWind = (k: Partial<Pose>): Pose => ({ ...windIdle('down')[0], ...k });
+
+/**
+ * The windrunner's idle moment: a breeze gets up and she shuts her eyes to
+ * it, holding out her hand; a leaf comes tumbling down out of the air into
+ * her palm. She lifts it to her lips and blows, and the wind carries it off.
+ */
+const WIND_REST: Pose[] = [
+  fromWind({}),
+  fromWind({ a: H(2.0, 3.4, 2.4), gust: 0.3, leaf: [17, 0] }),
+  fromWind({ a: H(2.4, 3.2, 3.6), gust: 0.4, leaf: [15.5, 3.5], blink: true }),
+  fromWind({ a: H(2.6, 3.0, 4.4), gust: 0.4, leaf: [13.5, 7], blink: true }),
+  fromWind({ a: H(2.6, 3.0, 4.6), gust: 0.3, leaf: [11, 10.5], blink: true }),
+  fromWind({ a: H(2.6, 3.0, 4.6), gust: 0.2, leaf: [9.5, 12.8], blink: true }),
+  fromWind({ a: H(2.6, 3.0, 4.6), gust: 0.1, leaf: [8.5, 14] }),
+  fromWind({ a: H(2.6, 1.8, 6.0), leaf: [9.5, 12.6] }),
+  fromWind({ a: H(2.6, 1.8, 6.2), leaf: [9.5, 12.4], gust: 0.3, breath: 1 }),
+  fromWind({ a: H(2.6, 2.0, 6.0), leaf: [14, 9], gust: 1 }),
+  fromWind({ a: H(2.4, 2.4, 5.0), leaf: [18, 5], gust: 1 }),
+  fromWind({ a: H(1.6, 3.2, 3.0), leaf: [23, 1], gust: 0.7 }),
+  fromWind({ a: H(1.0, 3.8, 0.4), gust: 0.4 }),
+];
+const WIND_ORDER = [0, 1, 2, 3, 4, 5, 6, 6, 6, 7, 8, 8, 9, 10, 11, 12, 12, 0];
+
+function windRest(view: View): Pose[] {
+  return view === 'down' ? WIND_REST : [];
+}
+
+// ---------------------------------------------------------------------------
 // Frame generation
 
-export type ArcherAnim = 'idle' | 'walk' | 'shoot' | 'volley' | 'rest';
+export type ArcherAnim = 'idle' | 'walk' | 'shoot' | 'volley' | 'rest' | 'fire' | 'crank' | 'brace' | 'fan' | 'vault';
 
 export interface ArcherAnimDef {
   name: ArcherAnim;
@@ -1484,8 +2347,28 @@ export const ARCHER_ANIMS: ArcherAnimDef[] = [
   { name: 'rest', fps: 9, loop: false, poses: rest, order: RANGER_ORDER },
 ];
 
+export const ARBALEST_ANIMS: ArcherAnimDef[] = [
+  { name: 'idle', fps: 6, loop: true, poses: arbIdle },
+  { name: 'walk', fps: 9, loop: true, poses: arbWalk },
+  { name: 'fire', fps: 14, loop: false, poses: fire },
+  { name: 'crank', fps: 12, loop: false, poses: crank },
+  { name: 'brace', fps: 12, loop: false, poses: brace },
+  { name: 'rest', fps: 8, loop: false, poses: arbRest, order: ARB_ORDER },
+];
+
+export const WIND_ANIMS: ArcherAnimDef[] = [
+  { name: 'idle', fps: 7, loop: true, poses: windIdle },
+  { name: 'walk', fps: 11, loop: true, poses: windWalk },
+  { name: 'fan', fps: 15, loop: false, poses: fan },
+  { name: 'vault', fps: 20, loop: false, poses: vault },
+  { name: 'rest', fps: 9, loop: false, poses: windRest, order: WIND_ORDER },
+];
+
+/** A look's moves: the ranger's (and his skins'), the arbalest's or the windrunner's. */
+export const archerAnimsFor = (look: ArcherLook): ArcherAnimDef[] => (look.arb ? ARBALEST_ANIMS : look.elf ? WIND_ANIMS : ARCHER_ANIMS);
+
 /** Frame index at which each shot is loosed. */
-export const LOOSE_FRAME = { shoot: 3, volley: 4 } as const;
+export const LOOSE_FRAME = { shoot: 3, volley: 4, fire: 2, brace: 4, fan: 2, vault: 3 } as const;
 
 export interface ArcherFrame {
   key: string; // e.g. "walk_left_3"
@@ -1502,13 +2385,14 @@ function drawArcherFrame(dir: Dir, pose: Pose): PixelCanvas {
   else drawSide(c, pose);
   winking = false;
   if (S.scarecrow) plaid(c);
+  if (S.arb) arbTexture(c);
   return dir === 'right' ? c.mirrored() : c;
 }
 
 export function buildArcherFrames(look: ArcherLook = RANGER_LOOK): ArcherFrame[] {
   S = look;
   const out: ArcherFrame[] = [];
-  for (const a of ARCHER_ANIMS) {
+  for (const a of archerAnimsFor(look)) {
     for (const dir of DIRS) {
       const view: View = dir === 'left' || dir === 'right' ? 'side' : dir;
       a.poses(view).forEach((pose, index) => {
@@ -1578,6 +2462,57 @@ export function stuckArrowFrame(k: number, look: ArcherLook = RANGER_LOOK): Pixe
     c.px(x + 1, y + 0.5, look.fletch, sphere(0.5, 0));
   }
   if (look.crackle) c.spark(x0, y0, look.crackle[1], 0.6);
+  return c;
+}
+
+/** A crossbow bolt in flight along heading `i`: short and stout, leather vanes, a broad steel head. */
+export function boltFrame(i: number, look: ArcherLook = ARBALEST_LOOK): PixelCanvas {
+  const c = new PixelCanvas(ARROW_SIZE, ARROW_SIZE);
+  const a = (i / ARROW_DIRS) * Math.PI * 2;
+  const ux = Math.cos(a);
+  const uy = Math.sin(a);
+  const m = (ARROW_SIZE - 1) / 2 + 0.5;
+  const px = (t: number, side = 0): [number, number] => [m + ux * t - uy * side, m + uy * t + ux * side];
+  c.part();
+  const [x0, y0] = px(-4.4);
+  const [x1, y1] = px(3.4);
+  c.line(x0, y0, x1, y1, look.shaft, () => sphere(-uy * 0.3, -0.4));
+  c.part();
+  for (const t of [-4.2, -3.2]) {
+    for (const s of [-1, 1]) {
+      const [fx, fy] = px(t, s);
+      c.px(fx, fy, look.fletch, sphere(-uy * s * 0.4, ux * s * 0.4 - 0.2));
+    }
+  }
+  c.part();
+  // The head: a broad, barbed point.
+  for (const s of [-1, 1]) {
+    const [bx, by] = px(3.8, s * 0.9);
+    c.px(bx, by, look.head, sphere(-uy * s * 0.4, ux * s * 0.4 - 0.3));
+  }
+  const [mx, my] = px(4.4);
+  c.px(mx, my, look.head, sphere(-0.3, -0.3));
+  const [hx, hy] = px(5.4);
+  c.px(hx, hy, look.head, sphere(-0.5, -0.5), { bias: 1 });
+  return c;
+}
+
+/** A bolt stuck in the ground, shorter than an arrow, leaning `k` 0 left, 1 straight, 2 right; its foot at the bottom centre. */
+export function stuckBoltFrame(k: number, look: ArcherLook = ARBALEST_LOOK): PixelCanvas {
+  const c = new PixelCanvas(ARROW_SIZE, ARROW_SIZE);
+  const lean = (k - 1) * 0.45;
+  const x0 = (ARROW_SIZE - 1) / 2 + 0.5;
+  const y0 = ARROW_SIZE - 1.5;
+  const len = 5.5;
+  c.part();
+  c.line(x0, y0, x0 + lean * len, y0 - len, look.shaft, () => sphere(-0.3, -0.3));
+  c.part();
+  for (const t of [len - 1.2, len - 0.2]) {
+    const x = x0 + lean * t;
+    const y = y0 - t;
+    c.px(x - 1, y + 0.5, look.fletch, sphere(-0.5, 0));
+    c.px(x + 1, y + 0.5, look.fletch, sphere(0.5, 0));
+  }
   return c;
 }
 
