@@ -204,7 +204,7 @@ export class Rimefang extends Monster {
         this.gone = 0;
         this.struck = false;
         this.enter('attack', 99999);
-        this.pose('leap');
+        this.pose('leap0');
         sound.windDash(w.pan(this.x));
         w.debris(SNOW_TINTS, snap(this.x), snap(this.y), 6, this.y + 1, 'spores');
       }
@@ -224,7 +224,7 @@ export class Rimefang extends Monster {
         this.hover = 0;
         if (!this.struck) this.struck = this.bite(13, 10);
         this.clear();
-        this.pose('bite');
+        this.pose('bite0');
         w.debris(SNOW_TINTS, snap(this.x + this.ux * 6), snap(this.y), 8, this.y + 1, 'spores');
         sound.frost('crunch', w.pan(this.x));
         this.enter('recover', FANG_RECOVER);
@@ -377,7 +377,7 @@ export class Frostbound extends Monster {
         this.gone = 0;
         this.struck = false;
         this.enter('attack', BOUND_BASH);
-        this.pose('bash');
+        this.pose('bash0');
         sound.windDash(w.pan(this.x));
       }
       return;
@@ -433,7 +433,7 @@ export class Frostbound extends Monster {
     // A moment braced behind the shield (unless it was mid-bash).
     if (this.state === 'chase' || this.state === 'idle' || this.state === 'notice') {
       this.blockT = BOUND_BLOCK_POSE;
-      this.pose('block');
+      this.pose('block0');
     }
   }
 
@@ -608,7 +608,7 @@ export class Rimewitch extends Monster {
 
   private cast(): void {
     const w = this.world;
-    this.pose('cast');
+    this.pose('cast0');
     this.enter('attack', 400);
     const dx = this.aim.x - this.x;
     const dy = this.aim.y - this.y;
@@ -799,7 +799,7 @@ export class Galeclaw extends Monster {
         if (this.timer <= 0) {
           this.struck = false;
           this.enter('attack', GALE_GUST_TIME);
-          this.pose('gust');
+          this.pose('gust0');
           this.cone?.play('fn_gust_blow');
           sound.gust(w.pan(this.x));
           sound.frost('gust', w.pan(this.x), true);
@@ -864,7 +864,7 @@ export class Galeclaw extends Monster {
 
   private volley(): void {
     const w = this.world;
-    this.pose('throw');
+    this.pose('throw0');
     this.enter('attack', 420);
     const sx = this.x + this.ax * 6;
     const sy = this.y - this.hover - 14;
@@ -971,7 +971,7 @@ export class Chillstone extends Monster {
         if (this.hopT <= 0) {
           this.hop = 'crouch';
           this.hopT = STONE_CROUCH;
-          this.pose('crouch');
+          this.pose('crouch0');
         }
         break;
       case 'crouch':
@@ -981,7 +981,7 @@ export class Chillstone extends Monster {
           this.face(ux);
           this.hop = 'air';
           this.hopT = STONE_AIR;
-          this.pose('air');
+          this.pose('air0');
         }
         break;
       case 'air': {
@@ -994,7 +994,7 @@ export class Chillstone extends Monster {
           this.hover = 0;
           this.hop = 'land';
           this.hopT = STONE_LAND;
-          this.pose('land');
+          this.pose('land0');
           this.hops++;
           w.debris(SNOW_TINTS, snap(this.x), snap(this.y), 6, this.y + 1, 'spores');
           sound.thud(w.pan(this.x));
@@ -1050,7 +1050,7 @@ export class Chillstone extends Monster {
         this.fromX = this.x;
         this.fromY = this.y;
         this.enter('attack', STONE_BIG_AIR);
-        this.pose('air');
+        this.pose('air0');
         w.debris(SNOW_TINTS, snap(this.x), snap(this.y), 10, this.y + 1, 'spores');
         sound.windDash(w.pan(this.x));
       }
