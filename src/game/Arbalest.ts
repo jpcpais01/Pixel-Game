@@ -6,8 +6,8 @@ import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
-import { Arrow, ARBALEST_ARROW } from './Arrows';
-import { NetBolt } from './Bolts';
+import { Arrow, ARBALEST_ARROW, BRIAR_ARROW } from './Arrows';
+import { BRIAR_NET, NetBolt } from './Bolts';
 import type { ArcherStyle } from './Archer';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
@@ -41,6 +41,8 @@ const PACE = { fire: 0.35, crank: 0.55, brace: 0 };
 type State = 'free' | 'fire' | 'crank' | 'brace';
 
 export const ARBALEST_STYLE: ArcherStyle = { key: 'archer_arbalest', arrow: ARBALEST_ARROW };
+/** Briar Rose: thorned briar bolts shedding rose petals, and a net of briar. */
+export const BRIAR_STYLE: ArcherStyle = { key: 'archer_briar', arrow: BRIAR_ARROW, net: BRIAR_NET };
 
 /**
  * The arbalest: a slow, heavy crossbowman behind a great pavise. The attack
@@ -219,7 +221,7 @@ export class Arbalest implements Hero {
     const ty = Phaser.Math.Clamp((fromChest ? this.y - ARROW_H : this.y) + u.y * this.range, area.top, area.bottom);
     this.specialCd = SPECIAL_COOLDOWN;
     sound.crossbow(this.world.pan(this.x));
-    this.world.addEffect(new NetBolt(this.world, this.x + u.x * 7, this.y + u.y * 3, tx, ty));
+    this.world.addEffect(new NetBolt(this.world, this.x + u.x * 7, this.y + u.y * 3, tx, ty, this.style.net));
   }
 
   private updateHud(): void {

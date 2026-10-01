@@ -221,3 +221,39 @@ export const ABYSS_STYLE: SpellStyle = {
   orb: { texture: 'orb_abyss_e', anim: 'orb_abyss_spin' },
   burst: { texture: 'burst_abyss_e', anim: 'burst_abyss_pop' },
 };
+
+/** The Grovekeeper's Titania skin: moonlit white, faerie gold and blush pink, deepening to rose. */
+export const TITANIA_STYLE: SpellStyle = {
+  core: 0xfffaf0,
+  hot: 0xffd88a,
+  mid: 0xff9ac0,
+  deep: 0xb8487a,
+  accent: 0xfff0b0,
+  sparks: [0xffd88a, 0xff9ac0, 0xfff0b0, 0xfffaf0],
+  glow: 0xff9ac0,
+  light: 0xffb8d0,
+  flash: 0xffe8f0,
+  unstable: 0xe0507a,
+  fizzle: 0x9a7a8a,
+  fizzleSparks: [0x9a7a8a, 0xff9ac0, 0xffd88a],
+  orb: { texture: 'orb_titania_e', anim: 'orb_titania_spin' },
+  burst: { texture: 'burst_titania_e', anim: 'burst_titania_pop' },
+};
+
+/** The Tidecaller's Lotus skin: clear jade water carrying pink lotus petals. */
+export const LOTUS_STYLE: SpellStyle = {
+  core: 0xf4fffa,
+  hot: 0xa8f4dc,
+  mid: 0x3ed0b0,
+  deep: 0x1a7a78,
+  accent: 0xffa0c8,
+  sparks: [0xa8f4dc, 0x3ed0b0, 0xffa0c8, 0xf4fffa],
+  glow: 0x3ed0b0,
+  light: 0x7af0d0,
+  flash: 0xd8fff0,
+  unstable: 0xff70a8,
+  fizzle: 0x5a8a80,
+  fizzleSparks: [0x5a8a80, 0x3ed0b0, 0xffa0c8],
+  orb: { texture: 'orb_lotus_e', anim: 'orb_lotus_spin' },
+  burst: { texture: 'burst_lotus_e', anim: 'burst_lotus_pop' },
+};

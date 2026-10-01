@@ -14,6 +14,7 @@ import type { WorldScene } from '../scenes/WorldScene';
 import { ARCANE_SKIN, ASTRAL_SKIN, VOID_SKIN, Wizard } from './Wizard';
 import { EMBER_FIRE, HELL_FIRE, HELL_SKIN, PUMPKIN_FIRE, PUMPKIN_SKIN, PYRO_SKIN, Pyromancy } from './Pyro';
 import { ABYSS_MAGIC, ABYSS_SKIN, TIDE_MAGIC, TIDE_SKIN, Tidecraft } from './Tide';
+import { LOTUS_MAGIC, LOTUS_SKIN } from './Tide';
 import { HEADLESS_SKIN, JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
 import { AFONSO_KIT, King, KING_KIT } from './King';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
@@ -24,32 +25,33 @@ import { Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
-import { Alchemist, CHEM_STYLE, CRYO_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
+import { Alchemist, CHEM_STYLE, CRYO_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
 import { Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from './Archer';
-import { Arbalest } from './Arbalest';
-import { Windrunner } from './Windrunner';
+import { Arbalest, BRIAR_STYLE } from './Arbalest';
+import { Windrunner, WISTERIA_STYLE } from './Windrunner';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
-import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
+import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
-import { ARACHNE_KIT, CRIMSON_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, TOYMAKER_KIT, WEAVER_KIT } from './Puppeteer';
+import { ARACHNE_KIT, CRIMSON_KIT, LUNA_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, TOYMAKER_KIT, WEAVER_KIT } from './Puppeteer';
 import { PUPPETEER_H, PUPPETEER_ORIGIN_Y } from '../art/puppeteer';
-import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT } from './Chrono';
+import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT, PRIMAVERA_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT } from './Samurai';
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { AUTUMN_MAGIC, AUTUMN_SKIN, FROST_MAGIC, FROST_SKIN, GROVE_MAGIC, GROVE_SKIN, Grovecraft, WILD_MAGIC, WILD_SKIN, Wildcraft } from './Druid';
-import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, Valkyrie } from './Valkyrie';
+import { TITANIA_MAGIC, TITANIA_SKIN } from './Druid';
+import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT, Valkyrie } from './Valkyrie';
 import { MECH_KIT, Mech, SCRAP_KIT } from './Mech';
 import { HIVE_KIT, SYNTH_KIT, Synth } from './Synth';
 import { MECH_H, MECH_ORIGIN_Y } from '../art/mech';
 import { SYNTH_H, SYNTH_ORIGIN_Y } from '../art/synth';
 import { POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
-import { CALA_KIT, WRAITH_KIT, Wraith } from './Wraith';
+import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT, Wraith } from './Wraith';
 import { POLTER_H, POLTER_ORIGIN_Y } from '../art/poltergeist';
 import { WRAITH_H, WRAITH_ORIGIN_Y } from '../art/wraith';
 import { ENGINEER_KIT, Engineer } from './Engineer';
@@ -316,6 +318,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_wave_abyss' },
             },
           },
+          {
+            // A water-lily priestess: ink-black hair in a high bun with a lotus, jade robes over white silk, lily-pad shoulders, and a lotus staff cradling a pearl.
+            id: 'lotus',
+            name: 'Lotus',
+            role: 'Priestess of still water',
+            accent: 0xff9ec8,
+            attack: 'Lily bolt',
+            special: 'Petal tide',
+            preview: { texture: 'wizard_lotus', glow: 'wizard_lotus_e', idle: 'wizard_lotus_idle_down', chosen: 'wizard_lotus_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_lotus_e', frame: 'o0', anim: 'orb_lotus_spin' },
+              special: { texture: 'icon_wave_lotus' },
+            },
+          },
         ],
       },
     ],
@@ -341,10 +357,11 @@ export const CLASSES: ClassDef[] = [
         world.addEffect(fire);
         return w;
       }
-      if (look === 'tide' || look === 'abyssal') {
+      if (look === 'tide' || look === 'abyssal' || look === 'lotus') {
         // Bolts that splash and throw back; a charged tidal wave that rolls out and carries foes away.
         const abyss = look === 'abyssal';
-        const craft = new Tidecraft(world, abyss ? ABYSS_MAGIC : TIDE_MAGIC);
+        const lotus = look === 'lotus';
+        const craft = new Tidecraft(world, lotus ? LOTUS_MAGIC : abyss ? ABYSS_MAGIC : TIDE_MAGIC);
         const w = new Wizard(
           world,
           x,
@@ -353,7 +370,7 @@ export const CLASSES: ClassDef[] = [
             cast: (x, y, dx, dy) => craft.bolt(x, y, dx, dy),
             beam: (_x, _y, dx, dy, power) => craft.wave(dx, dy, power),
           },
-          abyss ? ABYSS_SKIN : TIDE_SKIN,
+          lotus ? LOTUS_SKIN : abyss ? ABYSS_SKIN : TIDE_SKIN,
         );
         craft.caster = w;
         world.addEffect(craft);
@@ -760,6 +777,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_bog_shaman' },
             },
           },
+          {
+            // A hedge-witch herbalist: a straw hat with foxgloves, a chestnut braid, a sage dress and apron, tinctures of violet and pink.
+            id: 'foxglove',
+            name: 'Foxglove',
+            role: 'Tinctures of the hedgerow',
+            accent: 0xf07ad0,
+            attack: 'Foxglove tincture',
+            special: 'Bed of foxgloves',
+            preview: { texture: 'alchemist_foxglove', glow: 'alchemist_foxglove_e', idle: 'alchemist_foxglove_idle_down', chosen: 'alchemist_foxglove_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
+            buttons: {
+              attack: { texture: 'icon_flask_foxglove' },
+              special: { texture: 'icon_bog_foxglove' },
+            },
+          },
         ],
       },
       {
@@ -796,7 +827,7 @@ export const CLASSES: ClassDef[] = [
       },
     ],
     spawn: (world, x, y, look) =>
-      new Alchemist(world, x, y, look === 'chem' ? CHEM_STYLE : look === 'cryo' ? CRYO_STYLE : look === 'witch' ? WITCH_STYLE : look === 'shaman' ? SHAMAN_STYLE : PLAGUE_STYLE),
+      new Alchemist(world, x, y, look === 'chem' ? CHEM_STYLE : look === 'cryo' ? CRYO_STYLE : look === 'witch' ? WITCH_STYLE : look === 'shaman' ? SHAMAN_STYLE : look === 'foxglove' ? FOXGLOVE_STYLE : PLAGUE_STYLE),
   },
   {
     id: 'archer',
@@ -875,6 +906,22 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_netbolt' },
         },
         lookName: 'Steel',
+        skins: [
+          {
+            // A lady huntress: a rose-red hooded capelet, green velvet gown, a rose at her throat, a thornwood crossbow.
+            id: 'briar',
+            name: 'Briar Rose',
+            role: 'Lady of the thorns',
+            accent: 0xe8344a,
+            attack: 'Thorn bolt',
+            special: 'Briar net',
+            preview: { texture: 'archer_briar', glow: 'archer_briar_e', idle: 'archer_briar_idle_down', chosen: 'archer_briar_brace_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+            buttons: {
+              attack: { texture: 'icon_crossbow_briar' },
+              special: { texture: 'icon_netbolt_briar' },
+            },
+          },
+        ],
       },
       {
         // A light elven skirmisher in dusk-blue silk, a long scarf streaming, a silverwood bow.
@@ -890,13 +937,29 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_vault' },
         },
         lookName: 'Gale',
+        skins: [
+          {
+            // An elven maiden: a lilac braid woven with wisteria, a silver leaf circlet, a leaf-hemmed gown, a birch bow wound with vine.
+            id: 'wisteria',
+            name: 'Wisteria',
+            role: 'Maiden of the blossom',
+            accent: 0xb48ae8,
+            attack: 'Petal volley',
+            special: 'Blossom vault',
+            preview: { texture: 'archer_wisteria', glow: 'archer_wisteria_e', idle: 'archer_wisteria_idle_down', chosen: 'archer_wisteria_fan_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+            buttons: {
+              attack: { texture: 'icon_fanshot_wisteria' },
+              special: { texture: 'icon_vault_wisteria' },
+            },
+          },
+        ],
       },
     ],
     spawn: (world, x, y, look) =>
-      look === 'arbalest'
-        ? new Arbalest(world, x, y)
-        : look === 'wind'
-          ? new Windrunner(world, x, y)
+      look === 'arbalest' || look === 'briar'
+        ? new Arbalest(world, x, y, look === 'briar' ? BRIAR_STYLE : undefined)
+        : look === 'wind' || look === 'wisteria'
+          ? new Windrunner(world, x, y, look === 'wisteria' ? WISTERIA_STYLE : undefined)
           : new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : RANGER_STYLE),
   },
   {
@@ -964,11 +1027,25 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_shadowstep_kitsune' },
             },
           },
+          {
+            // A moonflower dancer: indigo silk veils and sashes, moonflowers in her hair, petal blades of moonsilver.
+            id: 'nightbloom',
+            name: 'Nightbloom',
+            role: 'Dancer of the moonlit garden',
+            accent: 0xb8b0ff,
+            attack: 'Petal cuts',
+            special: 'Moonflower dance',
+            preview: { texture: 'rogue_nightbloom', glow: 'rogue_nightbloom_e', idle: 'rogue_nightbloom_idle_down', chosen: 'rogue_nightbloom_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
+            buttons: {
+              attack: { texture: 'icon_daggers_nightbloom' },
+              special: { texture: 'icon_shadowstep_nightbloom' },
+            },
+          },
         ],
       },
     ],
     spawn: (world, x, y, look) =>
-      new Rogue(world, x, y, look === 'dancer' ? DANCER_STYLE : look === 'kitsune' ? KITSUNE_STYLE : look === 'corsair' ? CORSAIR_STYLE : ROGUE_STYLE),
+      new Rogue(world, x, y, look === 'dancer' ? DANCER_STYLE : look === 'kitsune' ? KITSUNE_STYLE : look === 'nightbloom' ? NIGHTBLOOM_STYLE : look === 'corsair' ? CORSAIR_STYLE : ROGUE_STYLE),
   },
   {
     id: 'necromancer',
@@ -1219,6 +1296,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_stasis_clockwork' },
             },
           },
+          {
+            // The spirit of spring: a crown of blossoms, rose-gold hair, a green gown embroidered with flowers, and a flower clock for her halo.
+            id: 'primavera',
+            name: 'Primavera',
+            role: 'Spirit of the turning seasons',
+            accent: 0xffb8cc,
+            attack: 'Blossom hand',
+            special: 'Flower clock',
+            preview: { texture: 'chrono_primavera', glow: 'chrono_primavera_e', idle: 'chrono_primavera_idle_down', chosen: 'chrono_primavera_field_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+            buttons: {
+              attack: { texture: 'icon_hand_primavera' },
+              special: { texture: 'icon_stasis_primavera' },
+            },
+          },
         ],
       },
       {
@@ -1267,7 +1358,7 @@ export const CLASSES: ClassDef[] = [
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, clockwork: CLOCKWORK_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT, anomaly: ANOMALY_KIT }[look] ?? KEEPER_KIT;
+      const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, clockwork: CLOCKWORK_KIT, primavera: PRIMAVERA_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT, anomaly: ANOMALY_KIT }[look] ?? KEEPER_KIT;
       return new Chrono(world, x, y, kit);
     },
   },
@@ -1360,11 +1451,25 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_marionette_arachne' },
             },
           },
+          {
+            // A moth-woman of the moonlit woods: pale mint wings with long tails, feathery antennae, a cream silk gown and a collar of moth fur.
+            id: 'luna',
+            name: 'Luna Moth',
+            role: 'Moonsilk and moth dust',
+            accent: 0x9ee8c0,
+            attack: 'Moonsilk thread',
+            special: 'Moth-dust snare',
+            preview: { texture: 'weaver_luna', glow: 'weaver_luna_e', idle: 'weaver_luna_idle_down', chosen: 'weaver_luna_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
+            buttons: {
+              attack: { texture: 'icon_thread_luna' },
+              special: { texture: 'icon_marionette_luna' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { porcelain: PORCELAIN_KIT, toymaker: TOYMAKER_KIT, weaver: WEAVER_KIT, crimson: CRIMSON_KIT, arachne: ARACHNE_KIT }[look] ?? MARIONETTE_KIT;
+      const kit = { porcelain: PORCELAIN_KIT, toymaker: TOYMAKER_KIT, weaver: WEAVER_KIT, crimson: CRIMSON_KIT, arachne: ARACHNE_KIT, luna: LUNA_KIT }[look] ?? MARIONETTE_KIT;
       return new Puppeteer(world, x, y, kit);
     },
   },
@@ -1500,6 +1605,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_grove_autumn' },
             },
           },
+          {
+            // The faerie queen: honey-gold hair under a crown of blossoms, a gown of petals, dragonfly wings, and a moonflower on a moonwood staff.
+            id: 'titania',
+            name: 'Titania',
+            role: 'Queen of the faerie ring',
+            accent: 0xffb8d0,
+            attack: 'Blossom seed',
+            special: 'Faerie ring',
+            preview: { texture: 'druid_titania', glow: 'druid_titania_e', idle: 'druid_titania_idle_down', chosen: 'druid_titania_cast_down' },
+            buttons: {
+              attack: { texture: 'icon_thorn_titania' },
+              special: { texture: 'icon_grove_titania' },
+            },
+          },
         ],
       },
       {
@@ -1555,7 +1674,8 @@ export const CLASSES: ClassDef[] = [
         return w;
       }
       const autumn = look === 'autumn';
-      const craft = new Grovecraft(world, autumn ? AUTUMN_MAGIC : GROVE_MAGIC);
+      const titania = look === 'titania';
+      const craft = new Grovecraft(world, titania ? TITANIA_MAGIC : autumn ? AUTUMN_MAGIC : GROVE_MAGIC);
       const w = new Wizard(
         world,
         x,
@@ -1566,7 +1686,7 @@ export const CLASSES: ClassDef[] = [
           target: (dx, dy, level, dist) => craft.target(dx, dy, level, dist),
           untarget: () => craft.untarget(),
         },
-        autumn ? AUTUMN_SKIN : GROVE_SKIN,
+        titania ? TITANIA_SKIN : autumn ? AUTUMN_SKIN : GROVE_SKIN,
       );
       craft.caster = w;
       world.addEffect(craft);
@@ -1607,6 +1727,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_spearthrow_sun' },
             },
           },
+          {
+            // Pearl and silver-blue over lake-blue silk, great swan wings, platinum braids and a feathered diadem.
+            id: 'swan',
+            name: 'Swan Maiden',
+            role: 'Grace of the moonlit lake',
+            accent: 0xb8d4ff,
+            attack: 'Swanwing chain',
+            special: 'Moonfeather spear',
+            preview: { texture: 'valkyrie_swan', glow: 'valkyrie_swan_e', idle: 'valkyrie_swan_idle_down', chosen: 'valkyrie_swan_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_spear_swan' },
+              special: { texture: 'icon_spearthrow_swan' },
+            },
+          },
         ],
       },
       {
@@ -1642,7 +1776,7 @@ export const CLASSES: ClassDef[] = [
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { spear: SPEAR_KIT, sunshield: SUN_KIT, storm: STORM_KIT, raven: RAVEN_KIT }[look] ?? SPEAR_KIT;
+      const kit = { spear: SPEAR_KIT, sunshield: SUN_KIT, swan: SWAN_KIT, storm: STORM_KIT, raven: RAVEN_KIT }[look] ?? SPEAR_KIT;
       return new Valkyrie(world, x, y, kit);
     },
   },
@@ -1787,12 +1921,27 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_possess_cala' },
             },
           },
+          {
+            // A gentle forest spirit: a mossy cloak trimmed with ferns and mushrooms, leafy hair, a wicker lantern of fireflies.
+            id: 'firefly',
+            name: 'Firefly',
+            role: 'Lantern-maiden of the deep wood',
+            accent: 0xd0ff70,
+            attack: 'Firefly lantern',
+            special: 'Mossbound possession',
+            preview: { texture: 'wraith_firefly', glow: 'wraith_firefly_e', idle: 'wraith_firefly_idle_down', chosen: 'wraith_firefly_cast_down', originY: WRAITH_ORIGIN_Y / WRAITH_H },
+            buttons: {
+              attack: { texture: 'icon_lantern_firefly' },
+              special: { texture: 'icon_possess_firefly' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
       if (look === 'wraith') return new Wraith(world, x, y, WRAITH_KIT);
       if (look === 'cala') return new Wraith(world, x, y, CALA_KIT);
+      if (look === 'firefly') return new Wraith(world, x, y, FIREFLY_KIT);
       return new Poltergeist(world, x, y, look === 'tea' ? TEA_KIT : POLTER_KIT);
     },
   },

@@ -20,6 +20,13 @@ const ERUPT_DAMAGE = 30;
 const LIFE = 3000;
 const SPOUT_H = 78;
 
+// Lotus's lilies: how many pads ride the whirlpool, and the colours of pads and petals.
+const LILIES = 9;
+const LILY_LIGHT = 0x5ec850;
+const LILY_DARK = 0x2e7e32;
+const LOTUS_PINK = 0xf080a8;
+const LOTUS_BLUSH = 0xffa0c8;
+
 export class Maelstrom extends Fx {
   private ground: Ink;
   private spout: Ink;
@@ -32,6 +39,8 @@ export class Maelstrom extends Fx {
     private x: number,
     private y: number,
     private p: Pal,
+    /** Lotus's Thousand-Petal Lotus: lily pads circle the whirlpool, a lotus opens at its eye, and the spout throws petals. */
+    private lotus = false,
   ) {
     super(world, LIFE);
     this.ground = this.ink(R * 2 + 12, Math.ceil(R * 2 * GROUND) + 12);
@@ -101,8 +110,39 @@ export class Maelstrom extends Fx {
           g.put(px, py, c, d < 0.14 ? 0.9 : 0.78);
         }
       }
+      if (this.lotus) this.drawLilies(g, r, spin, fade);
     }
     g.end();
+  }
+
+  /**
+   * Lotus's touch: lily pads riding round the whirlpool's arms, and over the
+   * eye a great lotus opening petal by petal until the spout bursts through it.
+   */
+  private drawLilies(g: Ink, r: number, spin: number, fade: number): void {
+    const { x, y, t } = this;
+    for (let i = 0; i < LILIES; i++) {
+      const d = r * (0.42 + 0.4 * ((i * 0.37) % 1));
+      const a = (i / LILIES) * Math.PI * 2 + spin * (1.6 - d / r);
+      const px = Math.round(x + Math.cos(a) * d);
+      const py = Math.round(y + Math.sin(a) * d * GROUND);
+      for (const ox of [-1, 0, 1]) g.put(px + ox, py, LILY_LIGHT, fade);
+      g.put(px - 1, py + 1, LILY_DARK, fade);
+      g.put(px + 2, py, LILY_DARK, fade);
+      if (i % 3 === 0) g.put(px, py - 1, LOTUS_BLUSH, fade);
+    }
+    if (this.erupted) return;
+    // The lotus at the eye: its petals open out one ring after another.
+    const open = clamp01((t - 300) / (ERUPT_AT - 500));
+    const n = Math.round(4 + open * 8);
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2 + 0.3;
+      const len = 1.5 + open * 4.5;
+      for (let j = 1; j <= len; j++) {
+        g.put(x + Math.cos(a) * j, y + Math.sin(a) * j * GROUND - j * 0.4 * open, j > len - 1.2 ? 0xfff0f6 : j > len * 0.5 ? LOTUS_BLUSH : LOTUS_PINK, fade);
+      }
+    }
+    g.put(x, y - 1, this.p.core, fade);
   }
 
   /** The eye bursts upward: everything in it is struck hard and flung out, under a rain of spray. */
@@ -114,6 +154,7 @@ export class Maelstrom extends Fx {
     bloom(world, x, y - 18, p.hot, 3.2, 600, y + 30);
     world.debris(p.tints, x, y - 30, 26, y + 20, 'burst');
     world.debris([0xffffff, p.hot, p.mid], x, y - 50, 14, y + 20, 'spores');
+    if (this.lotus) world.debris([LOTUS_PINK, LOTUS_BLUSH, 0xfff0f6], x, y - 40, 24, y + 20, 'spores');
     world.cameras.main.shake(220, 0.0016);
     sound.quakeSlam(world.pan(x));
     sound.splash(world.pan(x));

@@ -4,7 +4,8 @@ import type { Hurtbox } from './combat';
 import type { WorldScene } from '../scenes/WorldScene';
 
 // The rogue's effects: the bleeding his daggers leave, the puff of smoke he
-// vanishes in, and the fading echoes of him left along a shadowstep. All of
+// vanishes in, and the fading echoes of him left along a shadowstep (with
+// Nightbloom, moonflower petals scattering from both). All of
 // them are a handful of plain sprites on shared textures, so they cost next
 // to nothing on a phone.
 
@@ -15,7 +16,14 @@ export interface ShadowStyle {
   /** Echo tint, and whether echoes are added as light (the dancer's) or laid down as shade. */
   echo: number;
   glow: boolean;
+  /** A petal texture: moonflower petals scatter from each puff and drift off each echo. */
+  petal?: string;
 }
+
+/** Petals: how many burst from a puff and slip off an echo, and how long they drift. */
+const PUFF_PETALS = 6;
+const ECHO_PETALS = 1;
+const PETAL_LIFE = 900;
 
 /**
  * Bleeding in the monsters the daggers opened: every TICK ms each one takes
@@ -88,6 +96,7 @@ export class SmokePuff implements Effect {
       if (style.glow) img.setBlendMode(Phaser.BlendModes.SCREEN);
       this.lumps.push({ img, dx, dy, rise: 4 + Math.random() * 5, s: 0.7 + Math.random() * 0.35 });
     }
+    if (style.petal) world.addEffect(new PetalDrift(world, x, y - 8, style.petal, big ? PUFF_PETALS + 2 : PUFF_PETALS, 40));
     this.update(0);
   }
 
@@ -126,6 +135,7 @@ export class Afterimage implements Effect {
   constructor(world: WorldScene, x: number, y: number, key: string, frame: string, originX: number, originY: number, style: ShadowStyle, private readonly duration = 280) {
     this.img = world.add.image(x, y, `${key}_w`, frame).setOrigin(originX, originY).setTint(style.echo).setDepth(y - 0.2);
     if (style.glow) this.img.setBlendMode(Phaser.BlendModes.ADD);
+    if (style.petal) world.addEffect(new PetalDrift(world, x, y - 14, style.petal, ECHO_PETALS, 12));
     this.update(0);
   }
 
@@ -147,3 +157,52 @@ export class Afterimage implements Effect {
   }
 }
 
+
+/**
+ * Moonflower petals flung out from (x, y): each sails off its own way, slows,
+ * and sinks, turning over in quarter turns (so it stays crisp) as it fades.
+ */
+export class PetalDrift implements Effect {
+  dead = false;
+  private petals: { img: Phaser.GameObjects.Image; x: number; y: number; vx: number; vy: number; turn: number }[] = [];
+  private age = 0;
+
+  constructor(world: WorldScene, x: number, y: number, key: string, n: number, speed: number) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = speed * (0.5 + Math.random() * 0.5);
+      const img = world.add.image(x, y, key).setDepth(y + 20).setBlendMode(Phaser.BlendModes.SCREEN);
+      this.petals.push({ img, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6 - speed * 0.3, turn: Math.floor(Math.random() * 4) });
+    }
+    this.update(0);
+  }
+
+  update(dt: number): void {
+    if (this.dead) return;
+    this.age += dt;
+    const t = this.age / PETAL_LIFE;
+    if (t >= 1) {
+      this.destroy();
+      return;
+    }
+    const s = dt / 1000;
+    const drag = Math.exp(-dt / 260);
+    const spin = Math.floor(this.age / 140);
+    this.petals.forEach((p, i) => {
+      p.vx *= drag;
+      p.vy = p.vy * drag + 14 * s;
+      p.x += p.vx * s + Math.sin(this.age * 0.01 + i) * 0.1;
+      p.y += p.vy * s;
+      p.img
+        .setPosition(Math.round(p.x), Math.round(p.y))
+        .setAngle(((p.turn + spin) % 4) * 90)
+        .setAlpha(1 - t * t);
+    });
+  }
+
+  destroy(): void {
+    if (this.dead) return;
+    this.dead = true;
+    for (const p of this.petals) p.img.destroy();
+  }
+}

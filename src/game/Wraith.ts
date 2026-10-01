@@ -28,7 +28,8 @@ import { stand } from './rest';
 //  - Special: Dead of Night (see ultimate/phantom.ts).
 // Like every Phantom it phases through the next blow (see phase.ts).
 // The Calavera leaves marigold petals and gives the possessed a sugar-skull
-// face; it plays the same.
+// face; the Firefly leaves fireflies and crowns the possessed in fern. Both
+// play the same.
 
 const SWING_EVERY = 460;
 /** The lantern strikes this long into the swing. */
@@ -71,7 +72,7 @@ export interface WraithKit {
   speed: number;
   /** The wisp texture (its animation is `<wisp>_flicker`), and the possession mark's frame. */
   wisp: string;
-  mark: 'w' | 'c';
+  mark: 'w' | 'c' | 'f';
   pal: Pal;
 }
 
@@ -92,6 +93,15 @@ export const CALA_KIT: WraithKit = {
   wisp: 'soulwisp_petal',
   mark: 'c',
   pal: pal(0xfffbd0, 0xffd860, 0xff9a2a, 0xa0400a, 0xffc060),
+};
+
+/** The Firefly: a forest spirit's lantern of fireflies, warm yellow-green over moss. */
+export const FIREFLY_KIT: WraithKit = {
+  ...WRAITH_KIT,
+  key: 'wraith_firefly',
+  wisp: 'soulwisp_firefly',
+  mark: 'f',
+  pal: pal(0xfbffd8, 0xe4ff8a, 0xa8e04a, 0x2e5a22, 0xd0ff70),
 };
 
 type Bindable = Hurtbox & { bind?(ms: number, lift: number): boolean; shove?(dx: number, dy: number): void };

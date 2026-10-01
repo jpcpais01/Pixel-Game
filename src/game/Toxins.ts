@@ -26,6 +26,13 @@ export interface ToxStyle {
   numbers: number;
   /** Texture key suffix: '' for the plague doctor, '_witch' for the hex witch. */
   suffix: string;
+  /**
+   * Foxglove's brews bloom: petals among the splash's droplets, little bell
+   * flowers springing up in the puddle, spikes of foxglove standing round the
+   * bog's rim and pollen drifting off it. Colours of the petals (lit and
+   * shaded), their speckled throats, the stems and the pollen.
+   */
+  flowers?: { petal: number; shade: number; throat: number; stem: number; pollen: number };
 }
 
 export const PLAGUE_TOX: ToxStyle = {
@@ -90,10 +97,50 @@ export const CRYO_TOX: ToxStyle = {
   suffix: '_cryo',
 };
 
+/** Foxglove's tinctures: foxglove purple and pink, with gold pollen. */
+export const FOXGLOVE_TOX: ToxStyle = {
+  core: 0xfff0fa,
+  hot: 0xff9ad8,
+  mid: 0xc85ad0,
+  deep: 0x6e2a8a,
+  murk: 0x2e1238,
+  tints: [0xfff0fa, 0xff9ad8, 0xc85ad0, 0xffe27a],
+  light: 0xe070e0,
+  numbers: 0xff9ae0,
+  suffix: '_foxglove',
+  flowers: { petal: 0xf07ad0, shade: 0xa83aa8, throat: 0xfff4fa, stem: 0x4e8a3a, pollen: 0xffe27a },
+};
+
+/** A pixel canvas: Ink's and PixelLayer's `put`. */
+type Put = (x: number, y: number, c: number, a?: number) => void;
+
+/**
+ * A spike of foxglove standing with its foot at (x, y): a stem `h` px tall,
+ * bells hanging in turn either side of it, a bud at the top; `sway` leans
+ * the top over by up to a pixel.
+ */
+export function foxSpike(put: Put, x: number, y: number, h: number, f: NonNullable<ToxStyle['flowers']>, a = 1, sway = 0): void {
+  for (let i = 0; i <= h; i++) {
+    const sx = Math.round(x + sway * (i / Math.max(1, h)));
+    put(sx, y - i, f.stem, a);
+    // Bells from the second pixel up, alternating sides, shading darker under each.
+    if (i >= 1 && i < h) {
+      const k = i % 2 ? 1 : -1;
+      put(sx + k, y - i, i === 1 ? f.shade : f.petal, a);
+      if (i === 1 || i === 3) put(sx + k, y - i + 1, f.throat, a * 0.9);
+    }
+  }
+  put(Math.round(x + sway), y - h - 1, f.petal, a * 0.85);
+}
+
 /** Splashes are circles on the ground seen at an angle: squash them vertically. */
 const SQUASH = 0.58;
 /** Ground effects: under every standing thing, over the ground's shadows. */
 const GROUND_DEPTH = 3;
+/** Foxglove's bogs: rows of room above the pool for the spikes, a spike per this many px of radius, ms between pollen motes. */
+const FOX_SPIKE_ROOM = 9;
+const FOX_SPIKE_EVERY = 4;
+const POLLEN_EVERY = 140;
 
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
@@ -285,6 +332,21 @@ export class Splash implements Effect {
         }
       }
     }
+    // Foxglove's puddle sprouts little bell flowers that wilt as it sinks.
+    const fl = this.style.flowers;
+    if (fl && pr > 2) {
+      const n = 3 + Math.round(R / 5);
+      for (let i = 0; i < n; i++) {
+        const up = ms - 100 - i * 45;
+        if (up < 0) continue;
+        const an = hash(i, 11, seed) * Math.PI * 2;
+        const d = (0.25 + hash(i, 12, seed) * 0.6) * pr;
+        const fx = Math.round(gw + Math.cos(an) * d);
+        const fy = Math.round(gh + Math.sin(an) * d * SQUASH);
+        const h = Math.min(3, 1 + Math.floor(up / 90));
+        foxSpike((x, y, c, al) => g.put(x, y, c, al), fx, fy, h, fl, t > 0.55 ? 1 - (t - 0.55) / 0.45 : 1);
+      }
+    }
     // The spray ring rolling out along the ground.
     const rt = ms / 260;
     if (rt < 1) {
@@ -316,7 +378,9 @@ export class Splash implements Effect {
         const px = Math.cos(an) * reach * easeOut(k);
         const py = Math.sin(an) * reach * SQUASH * easeOut(k) - up * 4 * k * (1 - k);
         const shard = i % 4 === 0;
-        const col = shard ? (k < 0.5 ? 0xeaffff : 0x8fc0c8) : k < 0.35 ? this.style.hot : this.style.mid;
+        const fl = this.style.flowers;
+        // Foxglove's flasks throw petals where the others throw glass.
+        const col = shard ? (fl ? (k < 0.5 ? fl.petal : fl.shade) : k < 0.5 ? 0xeaffff : 0x8fc0c8) : k < 0.35 ? this.style.hot : this.style.mid;
         a.put(Math.round(gw + px), Math.round(ah + py - 2), col, 1 - k * 0.5);
       }
     }
@@ -403,7 +467,8 @@ export class Bog implements Effect {
   ) {
     this.fumeEvery = opts.fumeEvery ?? 130;
     this.hw = Math.ceil(radius) + 3;
-    this.hh = Math.ceil(radius * SQUASH) + 3;
+    // Foxglove spikes stand up past the rim, so her bogs have more room above.
+    this.hh = Math.ceil(radius * SQUASH) + (style.flowers ? FOX_SPIKE_ROOM : 3);
     this.layer = new PixelLayer(world, this.hw * 2, this.hh * 2);
     this.layer.image.setPosition(x - this.hw, y - this.hh).setDepth(GROUND_DEPTH);
     this.glow = world.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(this.style.mid).setScale(radius / 10, (radius * SQUASH) / 10).setDepth(GROUND_DEPTH + 1).setAlpha(0);
@@ -438,6 +503,14 @@ export class Bog implements Effect {
       this.biteIn += this.tick;
       const inside = this.world.hurtboxesWhere((h) => h.alive && onGround(h, this.x, this.y, this.radius * grow));
       if (inside.length) this.bite(inside);
+    }
+
+    // Pollen shaken off the foxgloves, drifting up.
+    const fl = this.style.flowers;
+    if (fl && fade > 0.3 && Math.floor(this.age / POLLEN_EVERY) !== Math.floor((this.age - dt) / POLLEN_EVERY)) {
+      const an = Math.random() * Math.PI * 2;
+      const d = this.radius * (0.6 + Math.random() * 0.35) * grow;
+      this.world.debris([fl.pollen, 0xfff6c0, fl.petal], Math.round(this.x + Math.cos(an) * d), Math.round(this.y + Math.sin(an) * d * SQUASH) - 4, 1, this.y + 14, 'spores');
     }
 
     // Fumes: soft puffs drifting up off the pool, fewer as it dies away.
@@ -506,6 +579,19 @@ export class Bog implements Effect {
           col = sw > 0.75 ? this.style.mid : sw > 0.1 ? this.style.deep : this.style.murk;
         }
         b.put(hw + x, hh + y, col, alpha);
+      }
+    }
+    // Foxglove's spikes round the rim, growing as the bog spreads and nodding in turn.
+    const fl = this.style.flowers;
+    if (fl) {
+      const n = Math.max(5, Math.round(this.radius / FOX_SPIKE_EVERY));
+      for (let i = 0; i < n; i++) {
+        const an = ((i + hash(i, 21, seed) * 0.5) / n) * Math.PI * 2;
+        const d = R * (0.86 + hash(i, 22, seed) * 0.12);
+        const h = Math.round((3 + hash(i, 23, seed) * 3) * grow * (0.6 + 0.4 * fade));
+        if (h < 1) continue;
+        const sway = Math.sin(this.age * 0.003 + i * 1.7) > 0.6 ? 1 : 0;
+        foxSpike((x, y, c, a) => b.put(x, y, c, a), Math.round(hw + Math.cos(an) * d), Math.round(hh + Math.sin(an) * d * SQUASH), h, fl, fade, sway);
       }
     }
     // Bubbles swell into rings and pop in a flash.

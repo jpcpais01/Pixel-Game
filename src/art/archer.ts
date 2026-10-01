@@ -43,6 +43,20 @@
 // wind-gem, a dusk-blue silk tunic under teal leathers, a long scarf whose tails
 // stream in the wind, and a slender silverwood bow strung with a thread of
 // wind. She nocks three arrows at once, and leaps back loosing a gale.
+//
+// Wisteria is the windrunner's skin: an elven maiden with pale lilac hair in
+// a loose braid over her shoulder, woven with racemes of wisteria (violet
+// paling to white, their tips glowing faintly at night), more of them hanging
+// from a slim silver circlet with a silver leaf at her brow; a lilac silk gown
+// under a sage bodice, a sage peplum and a sage underlayer both cut into
+// leaves at their hems; a birch bow wound with a flowering vine.
+//
+// Briar Rose is the arbalest's skin: a lady huntress in a rose-red hooded
+// capelet over a green velvet gown, its bodice laced in gold and its skirt
+// opening over a rose underskirt; auburn hair spilling from the hood, a rose
+// pinned at her throat (which she unpins and breathes in, idling); a crossbow
+// of dark thornwood with a rose carved in the stock and a briar wound round
+// its prod, loaded with thorned briar bolts with rose-petal vanes.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
 import {
@@ -148,6 +162,8 @@ export interface Pose {
   leaf?: [number, number];
   /** Wind streaming the scarf and hair, 0..1. */
   gust?: number;
+  /** Briar Rose holds the rose from her throat in her free hand. */
+  rose?: boolean;
 }
 
 /** One look for the archer: its texture key, its cloth and its bow. */
@@ -188,6 +204,31 @@ export interface ArcherLook {
   glove?: Material;
   trouser?: Material;
   boot?: Material;
+  /** Wisteria (a windrunner skin): a lilac braid woven with wisteria, a leaf-hemmed gown, a birch bow wound with vine. */
+  wisteria?: WisteriaKit;
+  /** Briar Rose (an arbalest skin): a rose-red hooded capelet, a green velvet gown, a thornwood crossbow. */
+  briar?: BriarKit;
+}
+
+/** Wisteria's own materials. Her tunic is the gown's lilac underskirt and sleeves, her jerkin its sage bodice. */
+export interface WisteriaKit {
+  /** The racemes: violet at the stem fading to white at the tip, picked by ramp step. */
+  bloom: Material;
+  vine: Material;
+  /** The sage overskirt, cut into leaves at its hem. */
+  over: Material;
+  lip: Material;
+}
+
+/** Briar Rose's own materials. Her cloak is the capelet, her tunic the velvet skirt and sleeves, her jerkin the bodice. */
+export interface BriarKit {
+  hood: Material;
+  rose: Material;
+  leaf: Material;
+  thorn: Material;
+  /** The gold lacing on her bodice and the trim along her skirt's opening. */
+  lace: Material;
+  lip: Material;
 }
 
 /** The arbalest's own materials. */
@@ -425,7 +466,89 @@ export const WIND_LOOK: ArcherLook = {
   elf: { scarf: SCARF, gem: WIND_GEM, leaf: LEAF },
 };
 
-export const ARCHER_LOOKS = [RANGER_LOOK, STORM_LOOK, HUNT_LOOK, SCARECROW_LOOK, ARBALEST_LOOK, WIND_LOOK];
+// Wisteria's materials: pale lilac hair and a lilac silk gown under a sage
+// bodice, the violet-to-white racemes the one strong colour, a birch bow.
+const WIST_HAIR: Material = { ramp: ramp('#5c5478', '#857ca4', '#ada4c8', '#cdc6e2', '#e6e2f2'), outline: hex('#211c34'), outlineLit: hex('#35304c') };
+const WIST_BLOOM: Material = { ramp: ramp('#2e1460', '#5a2aa0', '#8a52d8', '#b48af0', '#e0ccff', '#ffffff'), outline: hex('#190a34'), outlineLit: hex('#2a1450') };
+const WIST_SILK: Material = { ramp: ramp('#3a2e56', '#58487e', '#7c68a6', '#a290ca', '#c8bce4'), outline: hex('#16102a'), outlineLit: hex('#282040') };
+const SAGE: Material = { ramp: ramp('#253526', '#3a503c', '#56705a', '#78927a', '#a2ba9c'), outline: hex('#0e160f'), outlineLit: hex('#1a261b') };
+const WIST_VINE: Material = { ramp: ramp('#1c3612', '#2c561c', '#46802e', '#70a846'), outline: hex('#0b1606') };
+const BIRCH: Material = { ramp: ramp('#5a5448', '#8e8676', '#b8b09c', '#d6cfbc', '#ebe6d6'), outline: hex('#221e18'), outlineLit: hex('#3a352c') };
+const WIST_EYE: Material = { ramp: ramp('#34245e', '#6650aa', '#a68ee6', '#e6dcff'), outline: hex('#140c30'), emissive: 0.45, noAO: true };
+const WIST_STRING: Material = { ramp: ramp('#6a54a0', '#9a84d0', '#c8b8ee', '#e4dcfa'), outline: hex('#2a1a50'), emissive: 0.35, noAO: true, noOutline: true };
+const WIST_FLETCH: Material = { ramp: ramp('#56389a', '#8866c8', '#baa4ec', '#ece4ff'), outline: hex('#1e1238') };
+const WIST_PETAL: Material = { ramp: ramp('#6440a4', '#9670d8', '#c4acf0', '#f2ecff'), outline: hex('#24164a') };
+const DOE: Material = { ramp: ramp('#3e322c', '#605044', '#86725e', '#aa967c', '#c8b698'), outline: hex('#161210') };
+const SOFT_LIP: Material = { ramp: ramp('#8a4a66', '#b06a84', '#d08aa0'), outline: hex('#2a1420'), noAO: true };
+const WIST_LIGHT: [RGB, RGB, RGB] = [hex('#fbf6ff'), hex('#d8c4ff'), hex('#a07ce0')];
+
+export const WISTERIA_LOOK: ArcherLook = {
+  ...WIND_LOOK,
+  key: 'archer_wisteria',
+  cloak: WIST_SILK,
+  tunic: WIST_SILK,
+  jerkin: SAGE,
+  hair: WIST_HAIR,
+  eye: WIST_EYE,
+  bow: BIRCH,
+  string: WIST_STRING,
+  fletch: WIST_FLETCH,
+  head: SILVER,
+  shaft: BIRCH,
+  metal: SILVER,
+  light: WIST_LIGHT,
+  crackle: WIST_LIGHT,
+  wrap: SAGE,
+  trouser: WIST_SILK,
+  boot: DOE,
+  // The leaf of her idle moment is a wisteria petal.
+  elf: { scarf: WIST_SILK, gem: WIST_BLOOM, leaf: WIST_PETAL },
+  wisteria: { bloom: WIST_BLOOM, vine: WIST_VINE, over: SAGE, lip: SOFT_LIP },
+};
+
+// Briar Rose's materials: a rose-red capelet and deep green velvet, auburn
+// hair, gold lacing, and a crossbow of near-black thornwood.
+const ROSE_CLOTH: Material = { ramp: ramp('#360812', '#600e1e', '#8e182c', '#bc2a3c', '#e0525a'), outline: hex('#150309'), outlineLit: hex('#2c0710') };
+const VELVET: Material = { ramp: ramp('#0a1a12', '#12301e', '#1c4a2c', '#2a663c', '#3e8452'), outline: hex('#040b07'), outlineLit: hex('#0a160e') };
+const VELVET_BODICE: Material = { ramp: ramp('#08150e', '#0f2818', '#183e25', '#245634', '#357248'), outline: hex('#030906'), outlineLit: hex('#08130c') };
+const AUBURN: Material = { ramp: ramp('#3a120a', '#62200e', '#8e3616', '#b8521e', '#dc7a3a'), outline: hex('#160604'), outlineLit: hex('#2a0c06') };
+const ROSE: Material = { ramp: ramp('#480614', '#7c0c22', '#b4162e', '#e4344a', '#ff8088'), outline: hex('#1a0208'), outlineLit: hex('#300410'), shine: true };
+const ROSE_LEAF: Material = { ramp: ramp('#0e2a0e', '#1c4a18', '#2e6e24', '#4a9036'), outline: hex('#061006') };
+const THORNWOOD: Material = { ramp: ramp('#160a0a', '#28140f', '#3c2018', '#563024', '#724636'), outline: hex('#070303'), outlineLit: hex('#1a0c08'), shine: true };
+const BRIAR_STEM: Material = { ramp: ramp('#14260c', '#244018', '#3a5e24', '#567e34', '#76a048'), outline: hex('#081004') };
+const THORN: Material = { ramp: ramp('#2a0e0a', '#4a1a12', '#6e2a1e', '#96402c'), outline: hex('#100403') };
+const ROSE_GLOVE: Material = { ramp: ramp('#2a1210', '#4a2018', '#6a3424', '#8a4c34', '#a8664a'), outline: hex('#0e0605') };
+const ROSE_LIP: Material = { ramp: ramp('#6a1424', '#a02436', '#cc404e'), outline: hex('#24060c'), noAO: true };
+const BRIAR_EYE: Material = { ramp: ramp('#0c2614', '#1a4a26', '#2e7a3c', '#5aaa5e'), outline: hex('#050f08') };
+
+export const BRIAR_LOOK: ArcherLook = {
+  ...ARBALEST_LOOK,
+  key: 'archer_briar',
+  cloak: ROSE_CLOTH,
+  tunic: VELVET,
+  jerkin: VELVET_BODICE,
+  hair: AUBURN,
+  eye: BRIAR_EYE,
+  bow: THORNWOOD,
+  fletch: ROSE_CLOTH,
+  head: THORN,
+  shaft: BRIAR_STEM,
+  metal: GOLD,
+  // Rose light: where her bolts gather it, white at the heart, rose round it.
+  light: [hex('#fff0f2'), hex('#ffb0bc'), hex('#e8344a')],
+  wrap: ROSE_GLOVE,
+  glove: ROSE_GLOVE,
+  trouser: VELVET,
+  boot: ROSE_GLOVE,
+  // Her net is coiled briar, rosebuds for its weights.
+  arb: { ...ARBALEST_LOOK.arb!, helm: ROSE_CLOTH, beard: AUBURN, stock: THORNWOOD, prod: THORNWOOD, rope: BRIAR_STEM, lead: ROSE },
+  briar: { hood: ROSE_CLOTH, rose: ROSE, leaf: ROSE_LEAF, thorn: THORN, lace: GOLD, lip: ROSE_LIP },
+};
+
+export const ARCHER_LOOKS = [RANGER_LOOK, STORM_LOOK, HUNT_LOOK, SCARECROW_LOOK, ARBALEST_LOOK, WIND_LOOK, WISTERIA_LOOK, BRIAR_LOOK];
+
+/** A lady's look: a long gown instead of the short tunic and trousers. */
+const gowned = (): boolean => !!(S.wisteria || S.briar);
 
 /** The look being drawn; set by buildArcherFrames. */
 let S: ArcherLook = RANGER_LOOK;
@@ -534,7 +657,29 @@ function drawBow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, bi
   }
   c.part();
   c.capsule(f.x - f.ax * 1.4, f.y - f.ay * 1.4, f.x + f.ax * 1.4, f.y + f.ay * 1.4, 1.05, 1.05, S.wrap ?? LEATHER, { bias });
-  if (S.elf) {
+  if (S.wisteria) {
+    // Birch: dark flecks of bark along the pale limbs, and a flowering vine
+    // wound round them from the grip to the tips, a blossom at the grip.
+    const w = S.wisteria;
+    for (const t of [-0.74, -0.42, 0.26, 0.6]) {
+      const [kx, ky] = at(t);
+      c.shade(kx, ky, -2);
+    }
+    c.part();
+    for (let i = -8; i <= 8; i++) {
+      if (i === 0) continue;
+      const side = i % 2 === 0 ? 1 : -1;
+      const [vx, vy] = at(i / 9);
+      c.px(vx + f.nx * side * 0.9, vy + f.ny * side * 0.9, w.vine, sphere(f.nx * side * 0.5, -0.3), { bias });
+    }
+    c.part();
+    for (const t of [-0.66, 0.4, 0.82]) {
+      const [bx, by] = at(t);
+      c.px(bx - f.nx, by - f.ny, w.bloom, sphere(-0.3, -0.4), { bias: bias + 1, glow: 0.3 });
+    }
+    c.px(f.x, f.y, w.bloom, sphere(-0.3, -0.4), { bias: bias + 1, glow: 0.3 });
+    c.px(f.x + f.ax * 0.9, f.y + f.ay * 0.9, w.bloom, sphere(0.2, -0.2), { bias });
+  } else if (S.elf) {
     // A wind-gem set in the grip, and the limbs swelling leaf-like halfway out.
     c.part();
     c.px(f.x, f.y, S.elf.gem, sphere(-0.3, -0.4), { bias: bias + 1 });
@@ -647,6 +792,26 @@ function drawCrossbow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Place
   c.part();
   for (const s of [-1, 1]) c.px(ex + qx * s * 0.9 + nx * 0.5, ey + qy * s * 0.9 + ny * 0.5, k.prod, sphere(s * 0.4, -0.2), o);
   c.px(ex + nx * 1.4, ey + ny * 1.4, k.prod, sphere(0, -0.3), o);
+  const br = S.briar;
+  if (br) {
+    // A briar wound round the thornwood limbs, thorns standing off it, a leaf
+    // at each tip; and a rose carved in the stock by the butt.
+    c.part();
+    for (let i = -6; i <= 6; i++) {
+      if (i === 0) continue;
+      const side = i % 2 === 0 ? 1 : -1;
+      const [vx, vy] = at(i / 7);
+      c.px(vx + nx * side * 0.8, vy + ny * side * 0.8, k.rope, sphere(nx * side * 0.5, -0.3), o);
+      if (i % 3 === 0) c.px(vx + nx * side * 1.7, vy + ny * side * 1.7, br.thorn, sphere(0, -0.4), o);
+    }
+    for (const s of [-1, 1]) {
+      const [lx, ly] = at(s);
+      c.px(lx - nx * 0.8, ly - ny * 0.8, br.leaf, sphere(-0.3, -0.4), { bias: bias + 1 });
+    }
+    c.part();
+    c.px(r.x - nx * 0.8, r.y - ny * 0.8, br.rose, sphere(-0.4, -0.5), { bias: bias + 1 });
+    c.px(r.x - nx * 0.8 + qx * 0.9, r.y - ny * 0.8 + qy * 0.9, br.rose, sphere(0.3, 0.2), o);
+  }
   // The string, tip to tip, drawn back towards the nut as it's spanned.
   const [tx0, ty0] = at(-1);
   const [tx1, ty1] = at(1);
@@ -679,6 +844,8 @@ function drawCrossbow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Place
       c.part();
       c.px(hx - nx * 0.8, hy - ny * 0.8, S.head, sphere(-0.3, -0.4), o);
       c.px(hx, hy, S.head, sphere(-0.5, -0.5), { bias: bias + 1 });
+      // A briar bolt keeps a thorn halfway along its stem.
+      if (br) c.px(cx - nx * 0.6 - qx * 0.9, cy - ny * 0.6 - qy * 0.9, br.thorn, sphere(0, -0.4), o);
       glintAt(c, hx, hy, p.glint);
     }
   }
@@ -686,6 +853,8 @@ function drawCrossbow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Place
     // The crank's arm, from the butt round to the handle in his hand.
     c.part();
     c.line(bx + nx * 0.8, by + ny * 0.8, fa.x, fa.y, k.prod, () => sphere(0, -0.4), o);
+    // Briar Rose's string draws back in a little glitter of rose light, brightest as it catches the nut.
+    if (br) glintAt(c, sx, sy, p.draw > 0.95 ? 0.8 : 0.25 + 0.2 * Math.sin(p.draw * 19));
   }
 }
 
@@ -1496,13 +1665,21 @@ function torsoBack(c: PixelCanvas, cx: number, top: number, waist: number): void
     const hw = tunicWidth(y, top, waist, 4.4);
     return [cx - hw, cx + hw];
   }, S.tunic, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.35, 1));
-  if (!S.elf) return;
+  if (!S.elf && !S.briar) return;
   c.part();
   c.shape(top + 1, waist - 1, (y) => {
     const hw = tunicWidth(y, top, waist, 4.4) - 0.4;
     return [cx - hw, cx + hw];
   }, S.jerkin, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.3, 1));
-  for (let y = top + 2; y < waist; y++) c.shade(cx - 1 + (y & 1), y, -2);
+  if (S.briar) {
+    // Her bodice laces up the back in gold.
+    c.part();
+    for (let y = top + 2; y < waist; y++) c.px(cx - 1 + (y & 1), y, S.briar.lace, sphere(0, -0.3));
+  } else for (let y = top + 2; y < waist; y++) c.shade(cx - 1 + (y & 1), y, -2);
+  if (gowned()) {
+    girdle(c, cx - 4.0, cx + 4.0, waist, cx);
+    return;
+  }
   c.part();
   c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LEATHER, (_x, _y, t) => cyl(t, 0));
 }
@@ -1515,6 +1692,506 @@ function leaf(c: PixelCanvas, x: number, y: number): void {
   c.px(x + 1, y, m, sphere(0.2, -0.3));
   c.px(x + 1, y + 1, m, sphere(0.4, 0.3), { bias: -1 });
   c.spark(x, y, S.light[1], 0.3);
+}
+
+// ---------------------------------------------------------------------------
+// The ladies: Wisteria and Briar Rose, in long gowns
+
+/** A lady's face, rounded softly so her cheek doesn't fall into deep shadow on a face this small. */
+const SOFT_FACE = (_x: number, _y: number, dx: number, dy: number) => sphere(dx * 0.55, dy * 0.55 - 0.1, 1);
+
+/** Where a skirt's soft pleats fall, as fractions of its half-width either side of its middle. */
+const PLEATS = [-0.55, 0, 0.55];
+/** The gown's hem row (body coordinates) at rest: just above the feet, which show under it. */
+const GOWN_HEM = 28;
+
+/**
+ * A row of leaves cut into a hem along row y, from x0 to x1: each leaf three
+ * pixels wide, its middle hanging `depth` rows below the row, its sides one.
+ * `phase` shifts the leaves so two layered hems don't line up.
+ */
+function leafHem(c: PixelCanvas, y: number, x0: number, x1: number, m: Material, depth: number, phase = 0): void {
+  const a = Math.round(x0);
+  const b = Math.round(x1) - 1;
+  for (let x = a; x <= b; x++) {
+    const j = (((x - a + phase) % 3) + 3) % 3;
+    const reach = j === 1 ? depth : depth - 1;
+    for (let k = 1; k <= reach; k++) c.px(x, y + k, m, sphere(j === 0 ? -0.5 : j === 2 ? 0.5 : 0, 0.5), { bias: k === depth ? -1 : 0 });
+    // A lit midrib down each leaf, a shadow where two meet.
+    if (j === 1) c.shade(x, y, 1);
+    else if (j === 0) c.shade(x, y, -1);
+  }
+}
+
+/** Soft pleats down a skirt between rows y0 and y1: folds falling into shadow. */
+function pleats(c: PixelCanvas, y0: number, y1: number, mid: (y: number) => number, half: (y: number) => number, m: Material): void {
+  for (let y = y0; y <= y1; y++) {
+    for (const f of PLEATS) {
+      const x = Math.round(mid(y) + f * half(y));
+      if (c.materialAt(x, y) === m) c.shade(x, y, -1);
+    }
+  }
+}
+
+/**
+ * A gown's skirt between the waist and the hem, its edges at each row given
+ * by `edges`. Wisteria's falls in lilac silk to a leaf-cut hem with a layer
+ * of sage leaves peeking under it, a peplum of sage leaves at the waist and
+ * a few blossoms embroidered on it; Briar Rose's is green velvet, its hem
+ * a shade darker, opening (`open`) over a rose-red underskirt trimmed in gold.
+ */
+function skirt(c: PixelCanvas, waist: number, hem: number, edges: (y: number) => [number, number], tilt: number, open: 'front' | 'side' | null): void {
+  const mid = (y: number) => (edges(y)[0] + edges(y)[1]) / 2;
+  const half = (y: number) => (edges(y)[1] - edges(y)[0]) / 2;
+  const normal = (_x: number, _y: number, t: number, v: number) => sphere(t * 0.9 + tilt, 0.05 + v * 0.35, 1);
+  const w = S.wisteria;
+  if (w) {
+    // The sage leaves under the hem first, so the silk covers all but their tips.
+    const [l, r] = edges(hem);
+    c.part();
+    c.shape(hem - 2, hem - 1, () => [l - 0.3, r + 0.3], w.over, normal);
+    leafHem(c, hem - 1, l - 0.3, r + 0.3, w.over, 2, 1);
+  }
+  c.part();
+  c.shape(waist + 1, w ? hem - 1 : hem, edges, S.tunic, normal);
+  pleats(c, waist + 4, hem, mid, half, S.tunic);
+  if (w) {
+    const [l, r] = edges(hem - 1);
+    leafHem(c, hem - 1, l, r, S.tunic, 1);
+    // A short peplum of sage leaves over the hips.
+    const py = waist + 1;
+    c.part();
+    c.shape(py, py, (y) => [edges(y)[0] - 0.3, edges(y)[1] + 0.3], w.over, normal);
+    leafHem(c, py, edges(py)[0] - 0.3, edges(py)[1] + 0.3, w.over, 1);
+    // Blossoms embroidered on the silk, catching a little light at night.
+    c.part();
+    for (const [f, dy] of [[-0.5, 6], [0.45, 4]] as const) c.px(mid(waist + dy) + f * half(waist + dy), waist + dy, w.bloom, sphere(-0.3, -0.3), { bias: 1, glow: 0.2 });
+  }
+  const k = S.briar;
+  if (!k) return;
+  // The hem's edge a shade darker, the velvet's nap.
+  const [l, r] = edges(hem);
+  for (let x = Math.floor(l); x <= r; x++) c.shade(x, hem, -1);
+  c.part();
+  if (open === 'front') {
+    // Opening down the front over the rose underskirt, a gold trim either side.
+    for (let y = waist + 3; y <= hem; y++) {
+      const g = (y - waist - 3) * 0.42 + 0.5;
+      const a = Math.round(mid(y) - g);
+      const b = Math.round(mid(y) + g);
+      for (let x = a; x < b; x++) c.px(x, y, k.hood, sphere(((x + 0.5 - mid(y)) / g) * 0.5, 0.35));
+      c.px(a - 1, y, k.lace, sphere(-0.4, 0));
+      c.px(b, y, k.lace, sphere(0.4, 0));
+    }
+  } else if (open === 'side') {
+    // The rose underskirt showing at the front edge where the velvet parts.
+    for (let y = waist + 3; y <= hem; y++) {
+      const x = Math.round(edges(y)[0]);
+      c.px(x, y, k.hood, sphere(-0.5, 0.3));
+      if (y > waist + 4) c.px(x - 1, y, k.hood, sphere(-0.7, 0.4));
+      c.px(x + (y > waist + 4 ? 1 : 0), y, k.lace, sphere(-0.2, 0), { bias: -1 });
+    }
+  }
+}
+
+/** The gown from the front (or the back): flaring as it falls, swinging with her step, billowing in a leap. */
+function gownFront(c: PixelCanvas, cx: number, waist: number, hem: number, p: Pose, back: boolean): void {
+  const span = Math.max(1, hem - waist);
+  const u = (y: number) => Math.max(0, Math.min(1, (y - waist) / span));
+  const billow = (p.air ?? 0) > 0 ? 0.9 : 0;
+  const mid = (y: number) => cx + u(y) ** 2 * p.sway * 0.6;
+  const half = (y: number) => 3.9 + u(y) * (1.9 + billow);
+  skirt(c, waist, hem, (y) => [mid(y) - half(y), mid(y) + half(y)], 0, back ? null : 'front');
+}
+
+/** The gown in profile (facing left): it falls from her waist at `hx` to the hem below the feet at `cx`, sweeping back as she goes. */
+function gownSide(c: PixelCanvas, hx: number, cx: number, waist: number, hem: number, p: Pose): void {
+  const span = Math.max(1, hem - waist);
+  const u = (y: number) => Math.max(0, Math.min(1, (y - waist) / span));
+  const billow = (p.air ?? 0) > 0 ? 0.9 : 0;
+  const stride = Math.max(0, p.footA, p.footB);
+  const at = (y: number) => hx + (cx - hx) * u(y);
+  const front = (y: number) => at(y) - 3.3 - u(y) * (1.2 + stride * 0.45 + billow);
+  const back = (y: number) => at(y) + 3.1 + u(y) * (1.3 + p.sway * 0.7 + billow);
+  skirt(c, waist, hem, (y) => [front(y), back(y)], -0.1, 'side');
+}
+
+/** The girdle at her waist: Wisteria's a twist of vine with a blossom and a raceme at the knot, Briar Rose's of gold cord. */
+function girdle(c: PixelCanvas, x0: number, x1: number, y: number, knot: number): void {
+  c.part();
+  if (S.wisteria) {
+    c.shape(y, y, () => [x0, x1], S.wisteria.vine, (_x, _y, t) => cyl(t, 0));
+    for (let x = Math.round(x0); x < x1; x += 2) c.shade(x, y, 1);
+    raceme(c, knot, y, 3, 0);
+  } else {
+    c.shape(y, y, () => [x0, x1], S.briar!.lace, (_x, _y, t) => cyl(t, 0));
+    for (let x = Math.round(x0) + 1; x < x1; x += 2) c.shade(x, y, -1);
+    c.part();
+    c.px(knot, y + 1, S.briar!.lace, sphere(0, 0.3));
+    c.px(knot, y + 2, S.briar!.lace, sphere(0, 0.5), { bias: -1 });
+  }
+}
+
+/**
+ * A raceme of wisteria hanging from (x, y): `n` florets down, deep violet at
+ * the stem paling to white at the tip (the tip glowing faintly at night),
+ * plumper near the top, the whole drooping `lean` px to one side.
+ */
+function raceme(c: PixelCanvas, x: number, y: number, n: number, lean: number): void {
+  const m = S.wisteria!.bloom;
+  // A leaf where it hangs from, so it parts from whatever it hangs against.
+  c.part();
+  c.px(x + (lean < 0 ? 0.6 : -0.6), y - 0.6, S.wisteria!.vine, sphere(-0.3, -0.5), { bias: 1 });
+  c.part();
+  for (let i = 0; i < n; i++) {
+    const u = n === 1 ? 1 : i / (n - 1);
+    const bx = x + lean * u + (i & 1 ? 0.45 : -0.2) * (1 - u);
+    const b = Math.round(-1 + u * 4);
+    c.px(bx, y + i, m, sphere(i & 1 ? 0.3 : -0.3, -0.2), { bias: b, glow: u > 0.6 ? 0.4 : 0 });
+    // Florets either side near the top, so it tapers to its tip.
+    if (n > 3 && i > 0 && i < n - 2) c.px(bx + (i & 1 ? -1 : 1), y + i, m, sphere(i & 1 ? -0.6 : 0.6, 0), { bias: b - 1 });
+  }
+}
+
+/** A point along a path of points, `t` 0..1 by segment. */
+function along(pts: [number, number][], t: number): [number, number] {
+  const s = Math.max(0, Math.min(pts.length - 1.001, t * (pts.length - 1)));
+  const i = Math.floor(s);
+  const f = s - i;
+  return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f];
+}
+
+/**
+ * Her braid along a path: a loose plait tapering to its tie, each row shaded
+ * on alternate sides so it reads as woven, racemes pinned along its outer
+ * edge (`out` px to that side), and a last raceme falling free from the tie.
+ */
+function braid(c: PixelCanvas, pts: [number, number][], out: number, bias = 0): void {
+  const w = S.wisteria!;
+  c.part();
+  for (let i = 0; i < pts.length - 1; i++) {
+    const r0 = 1.25 - (i / (pts.length - 1)) * 0.45;
+    const r1 = 1.25 - ((i + 1) / (pts.length - 1)) * 0.45;
+    c.capsule(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], r0, r1, S.hair, { bias });
+  }
+  const y0 = Math.ceil(pts[0][1]) + 1;
+  const y1 = Math.floor(pts[pts.length - 1][1]);
+  for (let y = y0; y <= y1; y++) {
+    const [x] = along(pts, (y - pts[0][1]) / (pts[pts.length - 1][1] - pts[0][1]));
+    c.shade(x - 0.6, y, y & 1 ? -1 : 1);
+    c.shade(x + 0.6, y, y & 1 ? 1 : -1);
+  }
+  c.part();
+  for (const t of [0.3, 0.62]) {
+    const [x, y] = along(pts, t);
+    c.px(x + out, y, w.bloom, sphere(out * 0.4, -0.3), { bias: 0 });
+    c.px(x + out, y + 1, w.bloom, sphere(out * 0.4, 0), { bias: 2, glow: 0.3 });
+  }
+  const [ex, ey] = pts[pts.length - 1];
+  c.part();
+  c.px(ex, ey + 0.6, S.metal, sphere(-0.3, -0.3), { bias: bias + 1 });
+  raceme(c, ex, ey + 1.6, 4, out * 0.3);
+}
+
+/** Wisteria's hair from the front, behind her: a long lilac fall showing past her neck and shoulders. */
+function wistHairBack(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const g = p.gust ?? 0;
+  const sw = p.sway * 0.8 + g * 2.2;
+  const top = 10 + U;
+  const bot = 20 + U - Math.round(g * 2);
+  c.part();
+  c.shape(top, bot, (y) => {
+    const v = (y - top) / (bot - top);
+    const hw = 3.8 + Math.min(1.4, v * 3) - Math.max(0, v - 0.6) * 3.2;
+    const s = v * v * sw;
+    return [cx - hw + s - 0.3, cx + hw + s];
+  }, S.hair, (x, _y, t, u) => sphere(t * 0.8, u * 0.5 - 0.3 + (x & 1 ? 0.15 : -0.15), 1), { bias: -1 });
+}
+
+/**
+ * Wisteria's head from the front: long elven ears through pale lilac hair,
+ * the fringe parted and falling in locks either side of her face, a slim
+ * silver circlet with a silver leaf at her brow, and racemes of wisteria
+ * hanging from it at her temples.
+ */
+function wistFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const w = S.wisteria!;
+  for (const s of [-1, 1]) {
+    c.part();
+    c.capsule(cx + s * 2.9, 12.6 + U, cx + s * 5.1, 10.1 + U, 0.85, 0.35, SKIN);
+  }
+  c.part();
+  c.ellipse(cx, 11.1 + U, 3.4, 3.4, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  // Locks framing her face (drawn under it, so they don't shadow her cheeks); the near one falls on past her jaw.
+  c.part();
+  for (let y = 11; y <= 15; y++) c.px(cx - 3, y + U, S.hair, sphere(-0.6, (y - 12) * 0.2), { bias: y > 13 ? 1 : 0 });
+  for (let y = 11; y <= 14; y++) c.px(cx + 2, y + U, S.hair, sphere(0.6, (y - 12) * 0.2));
+  c.part();
+  c.ellipse(cx, 12.6 + U, 2.3, 2.4, SKIN, { normal: SOFT_FACE });
+  // The fringe, parted and swept either way over her brow.
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 3, cx + 3], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.2, 1));
+  c.shade(cx, 10 + U, -1);
+  // The circlet, a silver leaf rising at its middle.
+  c.part();
+  c.shape(9 + U, 9 + U, () => [cx - 3, cx + 3], S.metal, (_x, _y, t) => cyl(t, -0.3));
+  c.part();
+  c.px(cx - 1, 8 + U, S.metal, sphere(-0.4, -0.6), { bias: 1 });
+  c.px(cx, 8 + U, S.metal, sphere(0.4, -0.4));
+  c.px(cx - 1, 7 + U, S.metal, sphere(-0.2, -0.8), { bias: 1 });
+  c.spark(cx - 1, 8 + U, S.light[0], 0.3);
+  // Wisteria hanging from it at her temples, over her ears.
+  raceme(c, cx - 4, 9 + U, 5, -0.4);
+  raceme(c, cx + 3, 9 + U, 4, 0.4);
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  c.part();
+  c.px(cx - 1, 14 + U, w.lip, sphere(0, 0.2));
+}
+
+/** Wisteria's braid from the front: over her left shoulder (screen right) and down her breast, swinging out in the wind. */
+function wistBraidFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const g = p.gust ?? 0;
+  const sw = p.sway * 0.7 + g * 2.6;
+  braid(c, [[cx + 2.4, 13 + U], [cx + 3.4, 15.6 + U], [cx + 3.5 + sw * 0.35, 18.6 + U - g], [cx + 3.2 + sw * 0.7, 21.2 + U - g * 2.2]], 1);
+}
+
+/**
+ * Wisteria's head from behind: her hair falling long down her back with
+ * blossoms pinned in it, the braid's root turning over her left shoulder,
+ * the circlet's clasp at the back with a cascade of wisteria from it.
+ */
+function wistBack(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const w = S.wisteria!;
+  const g = p.gust ?? 0;
+  const sw = p.sway * 0.6 + g * 2;
+  for (const s of [-1, 1]) {
+    c.part();
+    c.capsule(cx + s * 2.9, 12.6 + U, cx + s * 5.1, 10.1 + U, 0.85, 0.35, SKIN);
+  }
+  c.part();
+  c.ellipse(cx, 11.2 + U, 3.5, 3.5, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  const top = 12 + U;
+  const bot = 21 + U - Math.round(g * 2);
+  const shift = (y: number) => ((y - top) / (bot - top)) ** 2 * sw;
+  c.part();
+  c.shape(top, bot, (y) => {
+    const v = (y - top) / (bot - top);
+    const hw = 3.5 - v * 1.2;
+    return [cx - hw + shift(y), cx + hw + shift(y)];
+  }, S.hair, (x, _y, t, u) => sphere(t * 0.8, u * 0.4 - 0.1 + (x & 1 ? 0.12 : -0.12), 1));
+  for (let y = top + 1; y <= bot; y++) {
+    c.shade(cx - 1.5 + shift(y), y, -1);
+    c.shade(cx + 1 + shift(y), y, -1);
+  }
+  // Blossoms pinned through it.
+  c.part();
+  c.px(cx + 1.6 + shift(16 + U), 16 + U, w.bloom, sphere(0.3, -0.3), { bias: 1, glow: 0.25 });
+  c.px(cx - 2 + shift(19 + U), 19 + U, w.bloom, sphere(-0.3, -0.3), { bias: 1, glow: 0.2 });
+  // The braid's root, turning forward over her left shoulder.
+  braid(c, [[cx - 2.2, 12.6 + U], [cx - 3.6, 14.6 + U]], -1);
+  // The circlet showing at her temples, its clasp at the back, and wisteria hanging from all three.
+  c.part();
+  c.px(cx - 4, 9 + U, S.metal, sphere(-0.6, -0.2));
+  c.px(cx + 3, 9 + U, S.metal, sphere(0.6, -0.2));
+  c.px(cx - 1, 9 + U, S.metal, sphere(-0.2, -0.5), { bias: 1 });
+  c.px(cx, 9 + U, S.metal, sphere(0.3, -0.4));
+  raceme(c, cx - 4.2, 10 + U, 4, -0.4);
+  raceme(c, cx + 3.2, 10 + U, 4, 0.4);
+  raceme(c, cx - 0.6 + sw * 0.1, 10 + U, 5, sw * 0.25);
+}
+
+/**
+ * Wisteria's head in profile (facing left): her hair streaming down her back
+ * (and out in the wind), a long ear swept back, the circlet's leaf at her brow,
+ * a raceme at her temple, and the braid hanging over her near shoulder.
+ */
+function wistSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const w = S.wisteria!;
+  const g = p.gust ?? 0;
+  const sw = p.sway * 0.6;
+  const m1x = hx + 3.0 + sw * 0.5 + g * 2;
+  const m1y = 16 + U - g * 1.5;
+  const m2x = hx + 3.6 + sw + g * 4.4;
+  const m2y = 20.5 + U - g * 3.6;
+  c.part();
+  c.capsule(hx + 1.6, 11 + U, m1x, m1y, 2.5, 1.9, S.hair, { bias: -1 });
+  c.capsule(m1x, m1y, m2x, m2y, 1.9, 0.8, S.hair, { bias: -1 });
+  for (let k = 1; k <= 6; k++) {
+    const t = k / 7;
+    c.shade(hx + 1.6 + (m2x - hx - 1.6) * t + 0.5, 11 + U + (m2y - 11 - U) * t, -1);
+  }
+  c.part();
+  c.px(m1x + 0.4, m1y + 0.5, w.bloom, sphere(0.3, -0.3), { bias: 1, glow: 0.25 });
+  c.part();
+  c.ellipse(hx + 0.6, 11.3 + U, 3.1, 3.3, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.ellipse(hx - 1.4, 12.8 + U, 2.2, 2.2, SKIN);
+  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.part();
+  c.capsule(hx + 0.4, 12.8 + U, hx + 3.2, 10 + U, 0.85, 0.35, SKIN);
+  c.part();
+  c.shape(10 + U, 10 + U, () => [hx - 3.4, hx + 0.6], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+  for (let y = 11; y <= 13; y++) c.px(hx - 0.4, y + U, S.hair, sphere(0.3, (y - 12) * 0.2));
+  c.part();
+  c.shape(9 + U, 9 + U, () => [hx - 3.4, hx + 1.6], S.metal, (_x, _y, t) => cyl(t, -0.3));
+  c.part();
+  c.px(hx - 3, 8 + U, S.metal, sphere(-0.5, -0.5), { bias: 1 });
+  c.px(hx - 3, 7 + U, S.metal, sphere(-0.3, -0.8), { bias: 1 });
+  raceme(c, hx + 1.4, 9 + U, 5, 0.5 + g * 0.8);
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  c.part();
+  c.px(hx - 3, 14 + U, w.lip, sphere(-0.2, 0.2));
+  // The braid over her near shoulder, down her front.
+  braid(c, [[hx + 0.2, 13.2 + U], [hx - 1.1 + g * 0.8, 16.4 + U], [hx - 1.5 + g * 1.6 + sw * 0.3, 19.6 + U - g]], -1);
+}
+
+/** A rose pinned at (x, y): three petals curling round a dark heart, a leaf tucked under it. */
+function roseAt(c: PixelCanvas, x: number, y: number): void {
+  const k = S.briar!;
+  c.part();
+  c.px(x + 2, y + 1, k.leaf, sphere(0.5, 0.2));
+  c.px(x + 1, y + 2, k.leaf, sphere(0.2, 0.6), { bias: -1 });
+  c.part();
+  c.px(x, y, k.rose, sphere(-0.5, -0.5), { bias: 1 });
+  c.px(x + 1, y, k.rose, sphere(0.4, -0.5));
+  c.px(x, y + 1, k.rose, sphere(-0.5, 0.4));
+  c.px(x + 1, y + 1, k.rose, sphere(0.3, 0.3), { bias: -1 });
+  c.spark(x, y, S.light[1], 0.25);
+}
+
+/** Briar Rose's capelet from the front: over her shoulders, parting below the rose at her throat, its dark lining at the opening. */
+function capeletFront(c: PixelCanvas, cx: number, U: number): void {
+  const top = 14 + U;
+  const bot = 19 + U;
+  const half = (y: number) => 3.6 + ((y - top) / (bot - top)) * 3.1;
+  c.part();
+  c.shape(top, bot, (y) => [cx - half(y), cx + half(y)], S.cloak, (_x, _y, t, u) => sphere(t * 0.95, u - 0.55, 1));
+  for (let y = top + 2; y <= bot; y++) {
+    const g = (y - top - 2) * 0.75;
+    if (g <= 0) continue;
+    const a = Math.round(cx - g);
+    const b = Math.round(cx + g);
+    for (let x = a; x < b; x++) c.erase(x, y);
+    c.shade(a - 1, y, -2);
+    c.shade(b, y, -2);
+  }
+  // A softly scalloped hem, its corners rounded off.
+  for (let x = Math.floor(cx - half(bot)); x <= cx + half(bot); x++) if (x & 1) c.shade(x, bot, -1);
+  c.erase(Math.round(cx - half(bot)), bot);
+  c.erase(Math.round(cx + half(bot)) - 1, bot);
+}
+
+/** The capelet from behind: down to her shoulder blades, swinging, soft folds in it. */
+function capeletBack(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const top = 14 + U;
+  const bot = 20 + U;
+  const v = (y: number) => (y - top) / (bot - top);
+  const mid = (y: number) => cx + v(y) ** 2 * p.sway * 0.8;
+  const half = (y: number) => 3.8 + v(y) * 3.0;
+  c.part();
+  c.shape(top, bot, (y) => [mid(y) - half(y), mid(y) + half(y)], S.cloak, (_x, _y, t, u) => sphere(t * 0.95, u * 0.6 - 0.3, 1));
+  pleats(c, top + 2, bot, mid, half, S.cloak);
+  for (let x = Math.floor(mid(bot) - half(bot)); x <= mid(bot) + half(bot); x++) if (x & 1) c.shade(x, bot, -1);
+  c.erase(Math.round(mid(bot) - half(bot)), bot);
+  c.erase(Math.round(mid(bot) + half(bot)) - 1, bot);
+}
+
+/** The capelet in profile, round her shoulders and swinging out behind. */
+function capeletSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const top = 14 + U;
+  const bot = 19 + U;
+  c.part();
+  c.shape(top, bot, (y) => {
+    const v = (y - top) / (bot - top);
+    return [hx - 3.3 - v * 0.7, hx + 3.3 + v * (1.6 + p.sway * 0.8)];
+  }, S.cloak, (_x, _y, t, u) => sphere(t * 0.95 - 0.1, u - 0.55, 1));
+  for (let x = Math.floor(hx - 4); x <= hx + 6; x++) if (x & 1) c.shade(x, bot, -1);
+}
+
+/** Her auburn hair spilling in a loose wave from (x0, y0) down to (x1, y1), each row a little in or out. */
+function wave(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, bias = 0): void {
+  c.part();
+  c.capsule(x0, y0, x1, y1, 1.1, 0.6, S.hair, { bias });
+  for (let y = Math.ceil(y0) + 1; y <= y1; y++) {
+    const x = x0 + ((x1 - x0) * (y - y0)) / (y1 - y0);
+    c.shade(x + (y % 3 === 0 ? -0.6 : 0.6), y, y % 3 === 1 ? 1 : -1);
+  }
+}
+
+/**
+ * Briar Rose's head from the front: the rose-red hood up, its lining in
+ * shadow round auburn hair parted over her brow, her face, and the waves of
+ * hair spilling from the hood down over the capelet; the rose at her throat.
+ */
+function briarFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const k = S.briar!;
+  c.part();
+  c.ellipse(cx, 11.0 + U, 4.1, 4.0, k.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.px(cx - 1, 6.6 + U, k.hood, sphere(-0.3, -0.8));
+  c.part();
+  c.ellipse(cx, 12.0 + U, 3.3, 3.2, k.hood, { bias: -2 });
+  c.part();
+  c.ellipse(cx, 11.9 + U, 3.0, 2.9, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.ellipse(cx, 12.7 + U, 2.4, 2.3, SKIN, { normal: SOFT_FACE });
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 2.6, cx + 2.6], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.2, 1));
+  c.px(cx - 2, 11 + U, S.hair, sphere(-0.3, 0.3));
+  c.px(cx + 1, 11 + U, S.hair, sphere(0.2, 0.2), { bias: -1 });
+  for (let y = 11; y <= 13; y++) {
+    c.px(cx - 3, y + U, S.hair, sphere(-0.6, 0.2));
+    c.px(cx + 2, y + U, S.hair, sphere(0.6, 0.2));
+  }
+  // The hood's shadow along her brow.
+  c.shade(cx - 1, 10 + U, -1);
+  c.shade(cx, 10 + U, -1);
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  c.part();
+  c.px(cx - 1, 14 + U, k.lip, sphere(0, 0.2));
+  wave(c, cx - 3.0, 13 + U, cx - 3.9, 18.8 + U);
+  wave(c, cx + 2.4, 13 + U, cx + 3.3, 18.2 + U);
+  if (!p.rose) roseAt(c, cx - 1, 15 + U);
+}
+
+/** Briar Rose's head from behind: the hood drawn up to a soft point, a seam down it, auburn waves escaping either side. */
+function briarBack(c: PixelCanvas, cx: number, U: number): void {
+  const k = S.briar!;
+  wave(c, cx - 3.4, 13.2 + U, cx - 4.0, 17.8 + U);
+  wave(c, cx + 2.6, 13.2 + U, cx + 3.2, 17.4 + U);
+  c.part();
+  c.ellipse(cx, 11.2 + U, 4.1, 3.9, k.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  c.px(cx - 1, 6.8 + U, k.hood, sphere(-0.3, -0.8));
+  for (let y = 8; y <= 14; y++) c.shade(cx - 1, y + U, y & 1 ? -1 : -2);
+  // Where the hood falls into the capelet.
+  c.part();
+  c.shape(14 + U, 15 + U, (y) => (y === 14 + U ? [cx - 2.6, cx + 2.6] : [cx - 2, cx + 2]), k.hood, (_x, _y, t) => sphere(t * 0.8, 0.4, 1));
+}
+
+/** Briar Rose's head in profile (facing left): hood with its peak over her brow and its tail behind, hair spilling front and back. */
+function briarSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const k = S.briar!;
+  wave(c, hx + 2.4, 13 + U, hx + 3.6 + p.sway * 0.5, 18.6 + U, -1);
+  c.part();
+  c.ellipse(hx + 0.4, 11.3 + U, 3.6, 3.8, k.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.capsule(hx + 2.8, 12.5 + U, hx + 3.6 + p.sway * 0.3, 15 + U, 1.1, 0.6, k.hood);
+  c.part();
+  c.ellipse(hx - 1.1, 12.4 + U, 2.7, 2.7, k.hood, { bias: -2 });
+  c.part();
+  c.ellipse(hx - 0.6, 12.2 + U, 2.5, 2.6, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8, 1) });
+  c.part();
+  c.ellipse(hx - 1.5, 12.8 + U, 2.1, 2.2, SKIN);
+  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.part();
+  c.shape(10 + U, 10 + U, () => [hx - 3.4, hx + 0.4], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+  c.px(hx - 0.2, 11 + U, S.hair, sphere(0.3, 0.2));
+  c.part();
+  c.shape(8 + U, 9 + U, (y) => [hx - 3.6 + (9 + U - y) * 0.8, hx + 3], k.hood, (_x, _y, t, u) => sphere(t * 0.9, u - 0.7, 1));
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  c.part();
+  c.px(hx - 3, 14 + U, k.lip, sphere(-0.2, 0.2));
+  wave(c, hx - 0.2, 13.4 + U, hx - 0.9, 18.4 + U);
+  if (!p.rose) roseAt(c, hx - 3, 15 + U);
 }
 
 // ---------------------------------------------------------------------------
@@ -1560,8 +2237,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   };
 
   if (S.arb) {
-    // The pavise's bare boards behind him, wider than his shoulders.
-    paviseInside(c, cx, U, L);
+    // The pavise's bare boards behind him, wider than his shoulders (Briar Rose carries none).
+    if (!S.briar) paviseInside(c, cx, U, L);
   } else {
     // The quiver's fletchings peek over his right shoulder.
     fletchings(c, 7.4, 12.6 + U, -0.4);
@@ -1570,7 +2247,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     c.part();
     c.capsule(6.9, 13.8 + U, 8.2, 13.8 + U, 0.8, 0.8, S.wrap ?? LEATHER);
   }
-  if (S.elf) tailFront(c, cx, U, p);
+  if (S.wisteria) wistHairBack(c, cx, U, p);
+  else if (S.elf) tailFront(c, cx, U, p);
   else if (!S.arb) {
     // The cloak hangs behind him, showing at his sides.
     c.part();
@@ -1590,16 +2268,18 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   boot(c, 10, 29.6 - p.footA - air);
   boot(c, 14, 29.6 - p.footB - air);
 
-  // The tunic, its skirt split at the front.
+  // The tunic, its skirt split at the front (a lady's gown falls long instead).
   const top = 15 + U;
   const waist = 22 + U;
-  const hem = 25 + L;
+  const gown = gowned();
+  const hem = gown ? waist : 25 + L;
   c.part();
   c.shape(top, hem, (y) => {
     const hw = tunicWidth(y, top, waist, 4.4);
     return [cx - hw, cx + hw];
   }, S.tunic, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.25, 1));
   for (let y = waist + 1; y <= hem; y++) c.shade(cx, y, -2);
+  if (gown) gownFront(c, cx, waist, Math.min(GOWN_HEM + L, GOWN_HEM + 1), p, false);
   if (S.scarecrow) {
     overallsFront(c, cx, top, waist, hem);
   } else {
@@ -1609,27 +2289,44 @@ function drawDown(c: PixelCanvas, p: Pose): void {
       const hw = tunicWidth(y, top, waist, 4.4) - 0.3;
       return [cx - hw, cx + hw];
     }, S.jerkin, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.3, 1));
-    if (!S.arb) {
+    if (S.wisteria) {
+      // A scooped neckline: her collarbones, and a violet drop on a fine chain.
+      c.part();
+      c.shape(top, top, () => [cx - 2, cx + 2], SKIN, (_x, _y, t) => sphere(t * 0.7, -0.2, 1));
+      c.px(cx - 1, top + 1, SKIN, sphere(-0.2, 0.1));
+      c.px(cx, top + 1, SKIN, sphere(0.2, 0.1));
+      c.part();
+      c.px(cx - 1, top + 2, S.wisteria.bloom, sphere(-0.3, -0.3), { bias: 1, glow: 0.4 });
+    } else if (S.briar) {
+      // Gold lacing criss-crossing down the bodice.
+      c.part();
+      for (let y = top + 2; y < waist; y++) c.px(cx - 1 + (y & 1), y, S.briar.lace, sphere(0, -0.3));
+    } else if (!S.arb) {
       for (let y = top + 1; y <= top + 3; y++) {
         const v = 1.6 - (y - top - 1) * 0.6;
         for (let x = Math.round(cx - v); x < Math.round(cx + v); x++) c.erase(x, y);
       }
       c.px(cx - 1, top + 3, S.metal, sphere(-0.3, -0.3));
     }
-    for (let y = top + 4; y < waist; y++) c.shade(cx, y, -1);
-    // Belt and buckle.
-    c.part();
-    c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LEATHER, (_x, _y, t) => cyl(t, 0));
-    c.part();
-    c.px(cx, waist, S.metal, sphere(0, -0.3));
+    if (!gown) for (let y = top + 4; y < waist; y++) c.shade(cx, y, -1);
+    if (gown) girdle(c, cx - 4.0, cx + 4.0, waist, cx - 1);
+    else {
+      // Belt and buckle.
+      c.part();
+      c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LEATHER, (_x, _y, t) => cyl(t, 0));
+      c.part();
+      c.px(cx, waist, S.metal, sphere(0, -0.3));
+    }
   }
   if (S.arb) boltCase(c, cx + 4.8, 21 + U);
   // The quiver strap across his chest, right shoulder to left hip (a length of rope on the
-  // scarecrow, the pavise's strap on the arbalest).
+  // scarecrow, the pavise's strap on the arbalest, a twist of vine on Wisteria).
   c.part();
-  c.capsule(8.2, 15.4 + U, 15.4, 21.4 + U, 0.55, 0.55, S.scarecrow?.rope ?? LEATHER);
+  c.capsule(8.2, 15.4 + U, 15.4, 21.4 + U, 0.55, 0.55, S.wisteria?.vine ?? S.scarecrow?.rope ?? LEATHER);
 
-  if (S.elf) scarfFront(c, cx, U, p);
+  if (S.wisteria) wistBraidFront(c, cx, U, p);
+  else if (S.elf) scarfFront(c, cx, U, p);
+  else if (S.briar) capeletFront(c, cx, U);
   else cowl(c, cx, U, 5.8, 5.8, S.scarecrow ? S.tunic : S.cloak);
   // The crossbow on his shoulder: over his body, under his head.
   if (p.xb) weapon(0);
@@ -1645,8 +2342,12 @@ function drawDown(c: PixelCanvas, p: Pose): void {
       antlers(c, cx, U);
       skullFront(c, cx, U, p.blink);
     });
+  } else if (S.briar) {
+    head(() => briarFront(c, cx, U, p));
   } else if (S.arb) {
     head(() => kettleFront(c, cx, U, p));
+  } else if (S.wisteria) {
+    head(() => wistFront(c, cx, U, p));
   } else if (S.elf) {
     head(() => elfFront(c, cx, U, p));
   } else {
@@ -1676,6 +2377,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   if (!fb.behind) armB();
   if (!behind && !p.xb) weapon(0);
   if (!fa.behind) armA();
+  // The rose from her throat, held up in her fingers.
+  if (p.rose && S.briar) roseAt(c, fb.x - 1, fb.y - 2);
 
   if (p.leaf && S.elf) {
     // A leaf on the wind, and her breath carrying it off.
@@ -1724,23 +2427,33 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   boot(c, 10, 29.6 - p.footB - air);
   boot(c, 14, 29.6 - p.footA - air);
 
-  // The tunic's skirt below the cloak.
+  // The tunic's skirt below the cloak (a lady's gown is drawn with her back).
   const top = 15 + U;
   const waist = 22 + U;
-  c.part();
-  c.shape(waist - 1, 25 + L, (y) => {
-    const hw = tunicWidth(y, top, waist, 4.4);
-    return [cx - hw, cx + hw];
-  }, S.scarecrow ? S.jerkin : S.tunic, (_x, _y, t) => sphere(t * 0.9, 0.25, 1));
+  if (!gowned()) {
+    c.part();
+    c.shape(waist - 1, 25 + L, (y) => {
+      const hw = tunicWidth(y, top, waist, 4.4);
+      return [cx - hw, cx + hw];
+    }, S.scarecrow ? S.jerkin : S.tunic, (_x, _y, t) => sphere(t * 0.9, 0.25, 1));
+  }
 
   if (S.arb || S.elf) {
     // No cloak: the back of the tunic (and her leathers), then his pavise over it, or her quiver.
+    if (gowned()) gownFront(c, cx, waist, Math.min(GOWN_HEM + L, GOWN_HEM + 1), p, true);
     torsoBack(c, cx, top, waist);
-    if (S.arb) {
+    if (S.briar) {
+      boltCase(c, cx - 4.6, 21 + U);
+      capeletBack(c, cx, U, p);
+      briarBack(c, cx, U);
+    } else if (S.arb) {
       boltCase(c, cx - 4.6, 21 + U);
       paviseFace(c, cx, U, L);
       cowl(c, cx, U, 5.8, 5.8);
       kettleBack(c, cx, U, p);
+    } else if (S.wisteria) {
+      quiver(c, 16.2, 13.4 + U, 10.8, 22 + U);
+      wistBack(c, cx, U, p);
     } else {
       quiver(c, 16.2, 13.4 + U, 10.8, 22 + U);
       scarfBack(c, cx, U, p);
@@ -1829,7 +2542,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const hem = 26 + L;
   if (S.arb) {
     // The pavise across his back, the bolt case at his hip.
-    paviseSide(c, hx, U, L);
+    if (!S.briar) paviseSide(c, hx, U, L);
     boltCase(c, hx + 3.2, 20 + U, -1);
   } else {
     // The quiver on his back, fletchings over the shoulder.
@@ -1862,7 +2575,8 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   // The tunic in profile, the jerkin over it.
   const ttop = 15 + U;
   const waist = 22 + U;
-  const skirt = 25 + L;
+  const gown = gowned();
+  const skirt = gown ? waist : 25 + L;
   c.part();
   c.shape(ttop, skirt, (y) => {
     const u = y <= waist ? 0 : (y - waist) / (skirt - waist);
@@ -1870,6 +2584,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     const hw = tunicWidth(y, ttop, waist, 3.1);
     return [shift - hw - 0.2, shift + hw + 0.2];
   }, S.tunic, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? ((y - ttop) / (waist - ttop)) * 0.8 - 0.35 : 0.25, 1));
+  if (gown) gownSide(c, hx, cx, waist, Math.min(GOWN_HEM + L, GOWN_HEM + 1), p);
   if (S.scarecrow) overallsSide(c, hx, cx, ttop, waist, skirt);
   else {
     c.part();
@@ -1877,16 +2592,26 @@ function drawSide(c: PixelCanvas, p: Pose): void {
       const hw = tunicWidth(y, ttop, waist, 3.1) - 0.2;
       return [hx - hw - 0.2, hx + hw];
     }, S.jerkin, (_x, y, t) => sphere(t * 0.9 - 0.1, ((y - ttop) / (waist - ttop)) * 0.8 - 0.3, 1));
-    c.part();
-    c.shape(waist, waist, () => [hx - 3.1, hx + 3.1], LEATHER, (_x, _y, t) => cyl(t, 0));
-    c.part();
-    c.px(Math.round(hx - 3.1), waist, S.metal, sphere(-0.5, -0.3));
+    if (S.briar) {
+      c.part();
+      for (let y = ttop + 2; y < waist; y++) c.px(Math.round(hx - 3.2) + (y & 1), y, S.briar.lace, sphere(-0.3, -0.3));
+    }
+    if (gown) girdle(c, hx - 3.1, hx + 3.1, waist, Math.round(hx - 2.6));
+    else {
+      c.part();
+      c.shape(waist, waist, () => [hx - 3.1, hx + 3.1], LEATHER, (_x, _y, t) => cyl(t, 0));
+      c.part();
+      c.px(Math.round(hx - 3.1), waist, S.metal, sphere(-0.5, -0.3));
+    }
   }
   // The quiver strap down the chest.
   c.part();
-  c.capsule(hx + 1.8, 15.2 + U, hx - 2.4, 21.6 + U, 0.55, 0.55, S.scarecrow?.rope ?? LEATHER);
+  c.capsule(hx + 1.8, 15.2 + U, hx - 2.4, 21.6 + U, 0.55, 0.55, S.wisteria?.vine ?? S.scarecrow?.rope ?? LEATHER);
 
-  if (S.elf) scarfSide(c, hx, U, p);
+  // (Wisteria's hair and braid come with her head.)
+  if (S.elf) {
+    if (!S.wisteria) scarfSide(c, hx, U, p);
+  } else if (S.briar) capeletSide(c, hx, U, p);
   else cowl(c, hx, U, 4.2, 4.4, S.scarecrow ? S.tunic : S.cloak);
 
   if (S.scarecrow) {
@@ -1894,10 +2619,13 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   } else if (S.arb) {
     // The crossbow on his shoulder goes behind his head; raised, it's out before him.
     if (p.xb) weapon();
-    kettleSide(c, hx, U, p);
+    if (S.briar) briarSide(c, hx, U, p);
+    else kettleSide(c, hx, U, p);
     if (!p.xb) weapon();
     arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1], false);
     return;
+  } else if (S.wisteria) {
+    wistSide(c, hx, U, p);
   } else if (S.elf) {
     elfSide(c, hx, U, p);
   } else if (S.hunt) {
@@ -2267,6 +2995,32 @@ function arbRest(view: View): Pose[] {
   return view === 'down' ? ARB_REST : [];
 }
 
+/** Briar Rose's free hand at the rose on her throat, and lifted to her face. */
+const THROAT_B = H(1.2, 0.2, 3.2);
+const NOSE_B = H(1.4, 0.2, 5.0);
+
+/**
+ * Briar Rose's idle moment: she sets the crossbow down on its nose and rests
+ * her hand on it, unpins the rose from her throat, lifts it and breathes it in
+ * with her eyes closed, then pins it back and shoulders the crossbow again.
+ */
+const BRIAR_REST: Pose[] = [
+  fromArb({}),
+  fromArb({ xb: { r: H(1, 2.4, 1.4), f: H(2.6, 3.2, -2.4) }, a: H(1, 2.4, 1.4), sway: 0.2 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: LEAN_B, breath: 1 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: THROAT_B }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: H(1.3, 0.6, 4.0), rose: true }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: NOSE_B, rose: true, blink: true }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: NOSE_B, rose: true, blink: true, breath: 1, headY: -1 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: H(1.3, 0.6, 4.0), rose: true, breath: 1 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: THROAT_B, breath: 1 }),
+];
+const BRIAR_ORDER = [0, 1, 2, 2, 2, 3, 4, 5, 5, 6, 6, 6, 5, 5, 7, 8, 2, 2, 1, 0];
+
+function briarRest(view: View): Pose[] {
+  return view === 'down' ? BRIAR_REST : [];
+}
+
 // ---------------------------------------------------------------------------
 // The windrunner's moves
 
@@ -2356,6 +3110,9 @@ export const ARBALEST_ANIMS: ArcherAnimDef[] = [
   { name: 'rest', fps: 8, loop: false, poses: arbRest, order: ARB_ORDER },
 ];
 
+/** Briar Rose moves as the arbalest does, but for her idle moment. */
+export const BRIAR_ANIMS: ArcherAnimDef[] = ARBALEST_ANIMS.map((a) => (a.name === 'rest' ? { ...a, poses: briarRest, order: BRIAR_ORDER } : a));
+
 export const WIND_ANIMS: ArcherAnimDef[] = [
   { name: 'idle', fps: 7, loop: true, poses: windIdle },
   { name: 'walk', fps: 11, loop: true, poses: windWalk },
@@ -2365,7 +3122,7 @@ export const WIND_ANIMS: ArcherAnimDef[] = [
 ];
 
 /** A look's moves: the ranger's (and his skins'), the arbalest's or the windrunner's. */
-export const archerAnimsFor = (look: ArcherLook): ArcherAnimDef[] => (look.arb ? ARBALEST_ANIMS : look.elf ? WIND_ANIMS : ARCHER_ANIMS);
+export const archerAnimsFor = (look: ArcherLook): ArcherAnimDef[] => (look.briar ? BRIAR_ANIMS : look.arb ? ARBALEST_ANIMS : look.elf ? WIND_ANIMS : ARCHER_ANIMS);
 
 /** Frame index at which each shot is loosed. */
 export const LOOSE_FRAME = { shoot: 3, volley: 4, fire: 2, brace: 4, fan: 2, vault: 3 } as const;
@@ -2385,7 +3142,7 @@ function drawArcherFrame(dir: Dir, pose: Pose): PixelCanvas {
   else drawSide(c, pose);
   winking = false;
   if (S.scarecrow) plaid(c);
-  if (S.arb) arbTexture(c);
+  if (S.arb && !S.briar) arbTexture(c);
   return dir === 'right' ? c.mirrored() : c;
 }
 
@@ -2435,6 +3192,14 @@ export function arrowFrame(i: number, look: ArcherLook = RANGER_LOOK): PixelCanv
   const [bx, by] = px(4.6);
   c.px(bx, by, look.head, sphere(-0.3, -0.3));
   c.px(hx, hy, look.head, sphere(-0.5, -0.5), { bias: 1 });
+  if (look.wisteria) {
+    // Two petals shed from her fletching, tumbling in its wake.
+    c.part();
+    const [ax, ay] = px(-6.8, 0.9);
+    const [bx2, by2] = px(-6.2, -1.6);
+    c.px(ax, ay, look.wisteria.bloom, sphere(-0.3, -0.3), { bias: 1, glow: 0.35 });
+    c.px(bx2, by2, look.wisteria.bloom, sphere(0.3, -0.3), { bias: 2, glow: 0.35 });
+  }
   if (look.crackle) {
     c.spark(hx, hy, look.crackle[0], 0.8);
     const [sx, sy] = px(6.6);
@@ -2494,6 +3259,17 @@ export function boltFrame(i: number, look: ArcherLook = ARBALEST_LOOK): PixelCan
   c.px(mx, my, look.head, sphere(-0.3, -0.3));
   const [hx, hy] = px(5.4);
   c.px(hx, hy, look.head, sphere(-0.5, -0.5), { bias: 1 });
+  const br = look.briar;
+  if (br) {
+    // A briar stem for a shaft: thorns standing off it, and a rose petal shed behind.
+    c.part();
+    for (const [t, s] of [[-1.6, 1], [0.8, -1]] as const) {
+      const [tx, ty] = px(t, s);
+      c.px(tx, ty, br.thorn, sphere(-uy * s * 0.4, ux * s * 0.4 - 0.3));
+    }
+    const [rx, ry] = px(-5.8, -1.2);
+    c.px(rx, ry, br.rose, sphere(-0.3, -0.3), { bias: 1 });
+  }
   return c;
 }
 

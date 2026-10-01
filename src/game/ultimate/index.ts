@@ -3,7 +3,7 @@ import { bakedCanvas } from '../../art/canvas';
 import { sound } from '../../audio';
 import { dirOf } from '../Wizard';
 import { energy } from '../energy';
-import { CHEM_TOX, CRYO_TOX, HEX_TOX, PLAGUE_TOX, SPIRIT_TOX, type ToxStyle } from '../Toxins';
+import { CHEM_TOX, CRYO_TOX, FOXGLOVE_TOX, HEX_TOX, PLAGUE_TOX, SPIRIT_TOX, type ToxStyle } from '../Toxins';
 import type { Aim, CharacterDef, Hero } from '../characters';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { bloom, easeOut, flare, Fx, Ink, pal, ring, rune, type Pal } from './ink';
@@ -28,13 +28,13 @@ import { AsgardThunder, OdinSpear } from './valkyrie';
 import { KingsCrown } from './king';
 import { AFONSO_KIT, KING_KIT } from '../King';
 import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
-import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT } from '../Valkyrie';
+import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
 import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
 import { HIVE_KIT, SYNTH_KIT } from '../Synth';
 import { SIEGE_MS, SwarmProtocol } from './robot';
 import { DeadOfNight, HauntedHouse } from './phantom';
 import { POLTER_KIT, TEA_KIT } from '../Poltergeist';
-import { CALA_KIT, WRAITH_KIT } from '../Wraith';
+import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT } from '../Wraith';
 import { ENGINEER_KIT } from '../Engineer';
 import { EINSTEIN_KIT, SCIENTIST_KIT } from '../Scientist';
 import { chainReaction, megaSentry } from './inventor';
@@ -92,7 +92,7 @@ const ULTS: Record<string, UltDef> = {
     range: 115,
     pal: TIDE_MAGIC.pal,
     icon: icons.maelstromIcon,
-    cast: (c) => c.world.addEffect(new Maelstrom(c.world, c.tx, c.ty, c.pal)),
+    cast: (c) => c.world.addEffect(new Maelstrom(c.world, c.tx, c.ty, c.pal, c.look === 'lotus')),
   },
   'warrior:knight': {
     name: 'Skybreaker',
@@ -178,7 +178,7 @@ const ULTS: Record<string, UltDef> = {
     range: 110,
     pal: toxPal(PLAGUE_TOX),
     icon: icons.pestilenceIcon,
-    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : c.look === 'shaman' ? SPIRIT_TOX : PLAGUE_TOX)),
+    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : c.look === 'shaman' ? SPIRIT_TOX : c.look === 'foxglove' ? FOXGLOVE_TOX : PLAGUE_TOX)),
   },
   'alchemist:chem': {
     name: 'Chem Bomb',
@@ -339,7 +339,7 @@ const ULTS: Record<string, UltDef> = {
     range: 110,
     pal: GROVE_PAL,
     icon: icons.wrathIcon,
-    cast: (c) => c.world.addEffect(new WildWrath(c.world, c.tx, c.ty, c.pal)),
+    cast: (c) => c.world.addEffect(new WildWrath(c.world, c.tx, c.ty, c.pal, c.look === 'titania')),
   },
   'druid:wild': {
     name: 'Primal Stampede',
@@ -358,7 +358,7 @@ const ULTS: Record<string, UltDef> = {
     range: 105,
     pal: SPEAR_KIT.pal,
     icon: icons.odinIcon,
-    cast: (c) => c.world.addEffect(new OdinSpear(c.world, c.tx, c.ty, c.pal)),
+    cast: (c) => c.world.addEffect(new OdinSpear(c.world, c.tx, c.ty, c.pal, c.look === 'swan')),
   },
   'valkyrie:storm': {
     name: 'Thunder of Asgard',
@@ -467,11 +467,15 @@ const SKINS: Record<string, UltSkin> = {
   'fighter:champ': { name: "Can't See Me", pal: pal(0xf8ffe8, 0x9cff5a, 0xff8a2a, 0x1c7a1a, 0x8cf060) },
   'fighter:guardian': { name: 'Wrath of Stone', pal: pal(0xfff4d0, 0xffc050, 0xff6a1a, 0xa02a10, 0xff8a30), type: 'monk' },
   'alchemist:shaman': { name: 'Spirit Plague', pal: toxPal(SPIRIT_TOX) },
+  'alchemist:foxglove': { name: 'Deadly Bloom', pal: toxPal(FOXGLOVE_TOX) },
   'alchemist:cryo': { name: 'Absolute Zero', pal: toxPal(CRYO_TOX), type: 'chem' },
   'archer:scarecrow': { name: 'Murder of Crows', pal: pal(0xfff4d0, 0xffb048, 0xff7a1a, 0x2a7a3a, 0x9cff9a) },
   'archer:hunt': { name: 'Moonpiercer', pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
+  'archer:wisteria': { name: 'Wisteria Gale', pal: pal(0xffffff, 0xe8dcff, 0xb48ae8, 0x5a7a58, 0xd0b8ff), type: 'wind' },
+  'archer:briar': { name: 'Rosethorn Bloom', pal: pal(0xfff0f2, 0xffa0b0, 0xe8344a, 0x2e6e24, 0xff6a7a), type: 'arbalest' },
   'rogue:corsair': { name: 'Broadside', pal: pal(0xfffbe0, 0xffe08a, 0xe0a030, 0x8a5018, 0xffc050) },
   'rogue:kitsune': { name: 'Nine-Tail Eclipse', pal: pal(0xf4fbff, 0xa8e0ff, 0x4a9cff, 0x1a3aa0, 0x70b0ff), type: 'dancer' },
+  'rogue:nightbloom': { name: 'Moonflower Waltz', pal: pal(0xffffff, 0xe4e8fa, 0x8a7ef0, 0x241a6a, 0xc8c0ff), type: 'dancer' },
   'archer:storm': { name: 'Thunder Arrow', pal: pal(0xf2fbff, 0xa8e4ff, 0x5ec8ff, 0x3a6ad8, 0x8ad8ff) },
   'chronomancer:moon': { name: 'Moonstill', pal: MOON_PAL },
   'chronomancer:aeon': { name: 'Aeon Legion', pal: AEON_PAL, type: 'paradox' },
@@ -484,17 +488,20 @@ const SKINS: Record<string, UltSkin> = {
   'bard:orpheus': { name: 'Lament of Orpheus', pal: pal(0xfffdf2, 0xffeeaa, 0xffc84a, 0x7a3ab0, 0xffd870) },
   'bard:howl': { name: 'Thunder of the Pack', pal: pal(0xf2f4ff, 0xbcc8ff, 0x6c7cff, 0x2c2a9a, 0x8a9aff), type: 'drummer' },
   'chronomancer:clockwork': { name: 'Mainspring Halt', pal: CLOCKWORK_PAL },
+  'chronomancer:primavera': { name: 'Eternal Spring', pal: pal(0xfffaf2, 0xffd0de, 0xf48cae, 0x3e9a78, 0xd8f4e4) },
   'chronomancer:anomaly': { name: 'Legion of Errors', pal: ANOMALY_PAL, type: 'paradox' },
   'puppeteer:porcelain': { name: 'Shattered Finale', pal: ICE_STRINGS },
   'puppeteer:crimson': { name: 'Strings of Fate', pal: FATE_STRINGS, type: 'weaver' },
   'puppeteer:toymaker': { name: 'Midnight Parade', pal: TOY_STRINGS },
   'puppeteer:arachne': { name: 'Broodmother', pal: VENOM_STRINGS, type: 'weaver' },
+  'puppeteer:luna': { name: 'Moonsilk Cocoon', pal: pal(0xfffdf2, 0xd8f8e6, 0x8ee0b8, 0x3e7a6a, 0xc8f0dc), type: 'weaver' },
   'samurai:oni': { name: "Oni's Downpour", pal: schemePal(ONI_KIT.wind) },
   'samurai:sakura': { name: 'Falling Petals', pal: schemePal(SAKURA_KIT.wind), type: 'ronin' },
   'wizard:astral': { name: 'Supernova', pal: pal(0xfffdf2, 0xfff0a8, 0xffc860, 0x6a5ae0, 0xffe08a) },
   'wizard:hellfire': { name: 'Hellstorm', pal: pal(0xf4ffe8, 0xc8ff7a, 0x5ee83a, 0x1a8a3a, 0x7aff5a), type: 'pyro' },
   'wizard:pumpkin': { name: 'Witching Hour', pal: pal(0xfff4d8, 0xffc04a, 0xff7a1a, 0x7a2ad0, 0xff8a30), type: 'pyro' },
   'wizard:abyssal': { name: 'Call of the Deep', pal: ABYSS_MAGIC.pal, type: 'tide' },
+  'wizard:lotus': { name: 'Thousand-Petal Lotus', pal: pal(0xfff4fa, 0xffb8d4, 0x3ed0b0, 0x1a7a78, 0xffa0c8), type: 'tide' },
   'warrior:spartan': { name: 'Wrath of Ares', pal: pal(0xfff0e8, 0xff9a80, 0xf03a3a, 0x8a0a1a, 0xff6a50) },
   'warrior:headless': { name: 'Hollow Ride', pal: pal(0xfff4d0, 0xffb040, 0xff6a14, 0x5a1a7a, 0xff8a2a) },
   'warrior:afonso': { name: 'Miracle of Ourique', pal: AFONSO_KIT.pal, type: 'king' },
@@ -506,13 +513,16 @@ const SKINS: Record<string, UltSkin> = {
   'samurai:kitsune': { name: 'Nine-Tailed Descent', pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { name: 'Thousand Moons', pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
   'druid:autumn': { name: 'Wrath of the Fall', pal: AUTUMN_MAGIC.pal },
+  'druid:titania': { name: 'Midsummer Dream', pal: pal(0xfffaf0, 0xffd88a, 0xff9ac0, 0xb8487a, 0xffb8d0) },
   'druid:frostfang': { name: 'Winter Stampede', pal: FROST_MAGIC.pal, type: 'wild' },
   'valkyrie:sunshield': { name: 'Spear of the Sun', pal: SUN_KIT.pal },
+  'valkyrie:swan': { name: 'Swan Song', pal: SWAN_KIT.pal },
   'valkyrie:raven': { name: 'Wrath of the Raven', pal: RAVEN_KIT.pal, type: 'storm' },
   'automaton:scrap': { name: 'Grand Opening', pal: SCRAP_KIT.boom },
   'automaton:hive': { name: 'The Golden Swarm', pal: HIVE_KIT.pal, type: 'synth' },
   'phantom:tea': { name: 'Endless Tea Party', pal: TEA_KIT.pal },
   'phantom:cala': { name: 'Candlelit Procession', pal: CALA_KIT.pal, type: 'wraith' },
+  'phantom:firefly': { name: 'Thousand Fireflies', pal: FIREFLY_KIT.pal, type: 'wraith' },
   'inventor:einstein': { name: 'E = mc²', pal: EINSTEIN_KIT.pal, type: 'scientist' },
   'beast:benfica': { name: 'Flight of Victory', pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { name: 'Roar of Alvalade', pal: SPORTING_KIT.pal, type: 'lion' },

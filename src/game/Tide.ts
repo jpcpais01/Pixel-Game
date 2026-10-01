@@ -5,6 +5,7 @@ import type { Effect } from './Slash';
 import { onGround } from './Toxins';
 import { clamp01, dither, easeOut, flare, Fx, GROUND, hash, pal, ring, type Ink, type Pal } from './ultimate/ink';
 import { ABYSS_STYLE, TIDE_STYLE, type SpellStyle } from './spells';
+import { LOTUS_STYLE } from './spells';
 import type { Wizard, WizardKit, WizardSkin } from './Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
@@ -28,18 +29,30 @@ export const TIDE_KIT: WizardKit = {
 export const TIDE_SKIN: WizardSkin = { key: 'wizard_tide', style: TIDE_STYLE, kit: TIDE_KIT };
 /** The Abyssal skin: the same sorceress, from the lightless deep. */
 export const ABYSS_SKIN: WizardSkin = { key: 'wizard_abyss', style: ABYSS_STYLE, kit: TIDE_KIT };
+/** The Lotus skin: a water-lily priestess of still jade water. */
+export const LOTUS_SKIN: WizardSkin = { key: 'wizard_lotus', style: LOTUS_STYLE, kit: TIDE_KIT };
 
 /** A Tidecaller look's water: its spells, the wave's colours (foam first, down to its depths) and the spray it throws. */
 export interface TideMagic {
   style: SpellStyle;
   pal: Pal;
   spray: number[];
+  /** Lily pads riding the wave's back and petals in its face (Lotus): the pads' dark and light greens, and the petals' pink. */
+  lily?: { pad: [number, number]; petal: number };
 }
 
 export const TIDE_MAGIC: TideMagic = {
   style: TIDE_STYLE,
   pal: pal(0xf0ffff, 0x9cf4ff, 0x2ec4e0, 0x1a5ab8, 0x6ae0ff),
   spray: [0xffffff, 0xc8faff, 0x6ae0ff, 0x2ec4e0],
+};
+
+/** Lotus: clear jade water strewn with pink petals, lily pads riding the wave. */
+export const LOTUS_MAGIC: TideMagic = {
+  style: LOTUS_STYLE,
+  pal: pal(0xf4fffa, 0xa8f4dc, 0x3ed0b0, 0x1a7a78, 0x7af0d0),
+  spray: [0xf4fffa, 0xa8f4dc, 0xffa0c8, 0x3ed0b0],
+  lily: { pad: [0x2e7e32, 0x5ec850], petal: 0xffa0c8 },
 };
 
 /** The Abyssal: black water lit by living teal, violet in its depths. */
@@ -269,6 +282,36 @@ class TidalWave extends Fx {
   }
 
   /**
+   * Lotus's lily pads, riding the wave's back slope a little behind the crest:
+   * each a flat oval of green with its notch, the middle one bearing a lotus.
+   * After the wave breaks they settle onto the foam and fade with it.
+   */
+  private drawPads(cx: number, cy: number, H: number, sink: number): void {
+    const lily = this.m.lily!;
+    const { dx, dy, nx, ny, w } = this;
+    const g = this.layer;
+    const a = -5;
+    for (const o of [-0.62, 0, 0.58]) {
+      const c = o * w;
+      const edge = Math.abs(c) / w;
+      const slope = Math.pow(1 + a / WAVE_BACK, 1.6);
+      const h = Math.round(H * (1 - edge * edge * edge) * (0.35 + 0.65 * slope) * (1 - sink));
+      const px = Math.round(cx + dx * a + nx * c);
+      const py = Math.round(cy + dy * a + ny * c) - h - 1;
+      const alpha = 1 - sink;
+      if (alpha <= 0) continue;
+      for (const ox of [-1, 0, 1, 2]) g.put(px + ox, py, ox === 2 ? lily.pad[0] : lily.pad[1], alpha);
+      g.put(px - 1, py + 1, lily.pad[0], alpha);
+      g.put(px, py + 1, lily.pad[0], alpha);
+      if (o === 0) {
+        g.put(px, py - 1, lily.petal, alpha);
+        g.put(px + 1, py - 1, lily.petal, alpha);
+        g.put(px, py - 2, this.m.pal.core, alpha);
+      }
+    }
+  }
+
+  /**
    * The wave drawn as columns of water standing on the ground, tallest at the
    * crest and sloping away behind it, pale foam along the top. The layer keeps
    * the most opaque pixel, so the crest's face (drawn solid) stands in front of
@@ -303,11 +346,12 @@ class TidalWave extends Fx {
           let col = up > 0.72 ? pl.hot : up > 0.38 ? pl.mid : pl.deep;
           // Foam: the top of the crest, and flecks the churn throws up the face.
           if (j === h && (face || slope > 0.6)) col = pl.core;
-          else if (face && up > 0.5 && hash(Math.round(c * 1.4), j, seed) > 0.86) col = pl.core;
+          else if (face && up > 0.5 && hash(Math.round(c * 1.4), j, seed) > 0.86) col = this.m.lily && hash(Math.round(c * 1.4), j, seed + 7) > 0.5 ? this.m.lily.petal : pl.core;
           g.put(gx, gy - j, col, alpha);
         }
       }
     }
+    if (this.m.lily) this.drawPads(cx, cy, H, sink);
     // Once it breaks, foam spreads out over where it fell.
     if (sink > 0) {
       for (let c = -w - 4 * sink; c <= w + 4 * sink; c += 0.8) {

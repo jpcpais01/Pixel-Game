@@ -7,7 +7,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { reachesBody, Vitals, type Hurtbox, type MeleeArea } from './combat';
 import { HitSpark, SlashArc, ThrustStreak, type Effect, type Scheme } from './Slash';
-import { Afterimage, Bleed, SmokePuff, type ShadowStyle } from './Shadows';
+import { Afterimage, Bleed, PetalDrift, SmokePuff, type ShadowStyle } from './Shadows';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
@@ -126,6 +126,15 @@ export const KITSUNE_STYLE: RogueStyle = {
   steel: { core: 0xffffff, hot: 0xd8f0ff, mid: 0x7ab8ff, deep: 0x2a5ad0, light: 0x8ac8ff },
   shade: { core: 0xf4fbff, hot: 0xa8e0ff, mid: 0x4a9cff, deep: 0x1a3aa0, light: 0x70b0ff },
   shadow: { smoke: 'rogue_kitsune_smoke', echo: 0x3a70e8, glow: true },
+};
+
+/** Nightbloom: the shadow dancer's blades in moonsilver, her shadow deep indigo shedding moonflower petals. */
+export const NIGHTBLOOM_STYLE: RogueStyle = {
+  ...DANCER_STYLE,
+  key: 'rogue_nightbloom',
+  steel: { core: 0xffffff, hot: 0xf2eeff, mid: 0xc4bcf4, deep: 0x5a4aa8, light: 0xd8d0ff },
+  shade: { core: 0xffffff, hot: 0xe4e8fa, mid: 0x7a6ee0, deep: 0x241a6a, light: 0xb8b0ff },
+  shadow: { smoke: 'rogue_nightbloom_smoke', echo: 0x4a3ec0, glow: true, petal: 'rogue_petal' },
 };
 
 type State = 'free' | 'strike' | 'step' | 'dance';
@@ -325,6 +334,9 @@ export class Rogue implements Hero {
     } else if (b.shape === 'spin') {
       area = { kind: 'circle', x: cx, y: cy, radius: b.reach };
       this.fx.push(new SlashArc(this.world, cx, cy, deg, deg + 360, b.reach - 3, this.style.shade, depth, 240));
+      // Nightbloom's spin throws a ring of moonflower petals off her blades.
+      const petal = this.style.shadow.petal;
+      if (petal) this.world.addEffect(new PetalDrift(this.world, cx, cy, petal, 8, 70));
     } else {
       const spread = b.shape === 'cross' ? 80 : 105;
       area = { kind: 'arc', x: cx, y: cy, radius: b.reach, angle: Math.atan2(u.y, u.x), spread: Phaser.Math.DegToRad(spread) };

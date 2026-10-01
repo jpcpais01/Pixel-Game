@@ -8,6 +8,7 @@ import { sound } from '../audio';
 import { Vitals } from './combat';
 import { Arrow, ArrowRain, HUNT_ARROW, RANGER_ARROW, SCARECROW_ARROW, STORM_ARROW, type ArrowStyle } from './Arrows';
 import { onGround } from './Toxins';
+import type { NetLook } from './Bolts';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
@@ -39,6 +40,8 @@ type State = 'free' | 'shoot' | 'volley';
 export interface ArcherStyle {
   key: string;
   arrow: ArrowStyle;
+  /** The arbalest's net bolt, when not hemp and lead (Briar Rose's briar). */
+  net?: NetLook;
 }
 
 export const RANGER_STYLE: ArcherStyle = { key: 'archer', arrow: RANGER_ARROW };

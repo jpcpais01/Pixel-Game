@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { sound } from '../../audio';
 import { Venom, type ToxStyle } from '../Toxins';
+import { PetalDrift } from '../Shadows';
 import type { Hurtbox } from '../combat';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { bloom, circle, clamp01, dither, easeOut, flare, Fx, GROUND, hash, line, pool, ring, stroke, strikeGround, type Ink, type Pal } from './ink';
@@ -170,12 +171,14 @@ export class Eclipse extends Fx {
       const feet = f ? f.y : s.y;
       if (f?.alive) f.hurt({ damage: 22, heavy: this.next === CUTS, knock: 40, fromX: x + (Math.random() - 0.5) * 10, fromY: y - 6 });
       world.addEffect(new CrossCut(world, x, y, feet + 20, hash(this.next, 7) * Math.PI, p));
+      // Nightbloom's Moonflower Waltz: every cut sheds a flurry of moonflower petals.
+      if (c.look === 'nightbloom') world.addEffect(new PetalDrift(world, x, y, 'rogue_petal', 5, 55));
       world.debris(p.tints, x, y, 5, feet + 20, 'burst');
       sound.blink(world.pan(x));
     }
     const g = this.ground.begin(c.x, c.y, 2.5);
     const open = easeOut(t / 260) * (1 - clamp01((t - 1600) / 400));
-    pool(g, c.x, c.y, 82 * open, 0x0c0616, p.deep, open, GROUND, 0.7);
+    pool(g, c.x, c.y, 82 * open, c.look === 'nightbloom' ? 0x080620 : 0x0c0616, p.deep, open, GROUND, 0.7);
     circle(g, c.x, c.y, 82 * open, p.mid, open * 0.9);
     circle(g, c.x, c.y, 80 * open, p.deep, open * 0.6, GROUND, t * 0.003, t * 0.003 + Math.PI);
     // Petals of shadow drifting up out of the dark.
