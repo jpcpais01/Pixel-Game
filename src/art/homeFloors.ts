@@ -61,7 +61,7 @@ const LAWN_H = 0.5;
 const px = { r: LAWN as RGB[], i: 3, h: 0.5 };
 
 /** Nearest two seeds on a jittered grid of `size` px: how far into its stone a pixel is, and that stone's own number. */
-const cell = { edge: 0, id: 0 };
+const cell = { edge: 0, id: 0, sx: 0, sy: 0 };
 function voronoi(x: number, y: number, size: number, seed: number): void {
   const gx = Math.floor(x / size);
   const gy = Math.floor(y / size);
@@ -79,6 +79,8 @@ function voronoi(x: number, y: number, size: number, seed: number): void {
         d2 = d1;
         d1 = d;
         id = hash2(cx, cy, seed + 2);
+        cell.sx = sx;
+        cell.sy = sy;
       } else if (d < d2) d2 = d;
     }
   }
@@ -144,19 +146,22 @@ function meadow(x: number, y: number): void {
 }
 
 function soil(x: number, y: number, edge: number): void {
-  // A raised bed: an oak edging, and furrows of dark earth inside it.
-  if (edge < 2) {
-    px.r = OAK;
-    px.i = edge < 1 ? 3.6 : 2.2;
-    px.h = 0.66;
-    if (((x + y) & 7) === 0 && edge < 1) px.i -= 1.4;
+  // A heaped bed of dark earth. It dips just inside the lawn's edge, then rounds
+  // up over its first few px, so the sun lights its near rim and shades the far
+  // one; the furrows run along the top and fade toward the rim, where the earth
+  // is drier and paler and the lawn's blades creep over.
+  const rise = Math.min(edge, 4) / 4;
+  const mound = rise * (2 - rise);
+  const ridge = Math.sin(((y % 6) / 6) * Math.PI * 2) * mound;
+  px.r = SOIL;
+  px.i = 3 + ridge * 0.5 + (1 - mound) * 0.9 + (valueNoise(x, y, 3, 331) - 0.5) * 1.2 + (hash2(x, y, 333) > 0.92 ? 1 : 0);
+  px.h = 0.44 + mound * 0.14 + ridge * 0.06 + (hash2(x >> 1, y, 335) - 0.5) * 0.04;
+  if (edge < 1.5 && hash2(x, y, 339) > 0.62) {
+    px.r = LAWN;
+    px.i = 3.2 + hash2(x, y, 341);
+    px.h = 0.56;
     return;
   }
-  const row = (y % 6) / 6;
-  const ridge = Math.sin(row * Math.PI * 2);
-  px.r = SOIL;
-  px.i = 3 + ridge * 0.5 + (valueNoise(x, y, 3, 331) - 0.5) * 1.2 + (hash2(x, y, 333) > 0.92 ? 1 : 0);
-  px.h = 0.34 + ridge * 0.07 + (hash2(x >> 1, y, 335) - 0.5) * 0.04;
   // A pale pebble here and there.
   if (hash2(x, y, 337) > 0.985) {
     px.r = GRAVEL;
@@ -237,10 +242,11 @@ function pond(x: number, y: number, depth: number): void {
   px.i = i;
 }
 
-function cobble(x: number, y: number): void {
-  voronoi(x, y, 7, 401);
+function cobble(x: number, y: number, edge: number): void {
+  voronoi(x, y, COBBLE_SIZE, COBBLE_SEED);
   if (cell.edge < 0.75) {
-    const mossy = valueNoise(x, y, 9, 403) > 0.6;
+    // Moss in the joints, and always at the outer stones, where they sit loose in the turf.
+    const mossy = edge < 2 || valueNoise(x, y, 9, 403) > 0.6;
     px.r = mossy ? MOSS : MORTAR;
     px.i = mossy ? 2 + hash2(x, y, 405) * 2 : 1.5;
     px.h = 0.34;
@@ -393,7 +399,7 @@ function paint(k: number, x: number, y: number, edge: number): void {
     case 'pond':
       return pond(x, y, edge);
     case 'cobble':
-      return cobble(x, y);
+      return cobble(x, y, edge);
     case 'flags':
       return flags(x, y);
     case 'bricks':
@@ -415,20 +421,29 @@ function paint(k: number, x: number, y: number, edge: number): void {
 
 const SOFT = FLOORS.map((f) => !!f.soft);
 const PONDS = FLOORS.map((f) => !!f.water);
+const COBBLES = floorIndex('cobble');
+const COBBLE_SIZE = 7;
+const COBBLE_SEED = 401;
+
+/** Is there a house wall (not a garden one) on cell (cx, cy)? */
+function houseWall(l: HomeLayout, cx: number, cy: number): boolean {
+  const v = l.wallAt(cx, cy);
+  return v > 0 && WALLS[wallMat(v)].house;
+}
+
+/** The kinds of the four cells round the pixel blend() last looked at. */
+const near = [0, 0, 0, 0];
 
 /**
- * The floor at plot pixel (x, y). Inside a laid floor's cell, that floor.
- * Elsewhere the soft floors (and bare lawn) of the four nearest cells blend:
- * each one's share is how much of the pixel's surroundings it covers, eased,
- * with a ragged edge of noise. So a lone pond cell is a round pool, a path
- * wanders a little, and corners are rounded. Laid floors count as the cell's
- * own floor here, so a path runs right up to the cobbles beside it.
+ * The soft floor that wins at plot pixel (x, y), where `own` is its cell's
+ * floor: each of the four nearest cells' floors (and bare lawn) has a share,
+ * how much of the pixel's surroundings it covers, eased, with a ragged edge of
+ * noise. So a lone pond cell is a round pool, a path wanders a little, and
+ * corners are rounded. Laid floors count as the cell's own floor here, so a
+ * path runs right up to the boards beside it. Kinds in the bit mask `skip`
+ * don't take part; -1 if none is left.
  */
-function floorAt(l: HomeLayout, x: number, y: number): number {
-  const ox = Math.floor(x / CELL);
-  const oy = Math.floor(y / CELL);
-  const own = l.floorAt(ox, oy);
-  if (own && !SOFT[own - 1]) return own;
+function blend(l: HomeLayout, x: number, y: number, own: number, skip: number): number {
   const fx = x / CELL - 0.5;
   const fy = y / CELL - 0.5;
   const ix = Math.floor(fx);
@@ -437,26 +452,33 @@ function floorAt(l: HomeLayout, x: number, y: number): number {
   let ty = fy - iy;
   tx = tx * tx * (3 - 2 * tx);
   ty = ty * ty * (3 - 2 * ty);
-  const k = [0, 0, 0, 0];
-  const w = [(1 - tx) * (1 - ty), tx * (1 - ty), (1 - tx) * ty, tx * ty];
+  const w0 = (1 - tx) * (1 - ty);
+  const w1 = tx * (1 - ty);
+  const w2 = (1 - tx) * ty;
+  const w3 = tx * ty;
   for (let j = 0; j < 4; j++) {
     const cx = ix + (j & 1);
     const cy = iy + (j >> 1);
-    // Off the plot counts as bare lawn; a laid floor, or a wall, as this cell's own.
-    const f = inPlot(cx, cy) ? l.floor[cellIndex(cx, cy)] : 0;
-    k[j] = f && !SOFT[f - 1] ? own : f;
+    // Off the plot counts as bare lawn; a laid floor, or a bare house wall, as this cell's own (so a floor fills its house to the walls).
+    let f = 0;
+    if (inPlot(cx, cy)) {
+      const c = cellIndex(cx, cy);
+      f = l.floor[c];
+      if (!f && houseWall(l, cx, cy)) f = -1;
+    }
+    near[j] = f < 0 || (f && !SOFT[f - 1]) ? own : f;
   }
-  if (k[0] === k[1] && k[1] === k[2] && k[2] === k[3]) return k[0];
-  let best = own;
-  let bestV = -1;
+  const k = near;
+  if (!skip && k[0] === k[1] && k[1] === k[2] && k[2] === k[3]) return k[0];
+  let best = -1;
+  let bestV = -1e9;
   for (let j = 0; j < 4; j++) {
     const kind = k[j];
-    if (j > 0 && k.indexOf(kind) < j) continue;
-    let v = 0;
-    for (let m = 0; m < 4; m++) if (k[m] === kind) v += w[m];
+    if (k.indexOf(kind) < j || skip & (1 << kind)) continue;
+    let v = (k[0] === kind ? w0 : 0) + (k[1] === kind ? w1 : 0) + (k[2] === kind ? w2 : 0) + (k[3] === kind ? w3 : 0);
     // Each floor's edge frays in its own way; the pond's stays smooth and round.
-    const fray = kind && PONDS[kind - 1] ? 0.12 : 0.3;
-    v += (valueNoise(x, y, 5, 491 + kind * 7) - 0.5) * fray + (hash2(x, y, 493 + kind) - 0.5) * (kind && PONDS[kind - 1] ? 0.02 : 0.1);
+    const pond = kind > 0 && PONDS[kind - 1];
+    v += (valueNoise(x, y, 5, 491 + kind * 7) - 0.5) * (pond ? 0.12 : 0.3) + (hash2(x, y, 493 + kind) - 0.5) * (pond ? 0.02 : 0.1);
     if (kind === own) v += 0.02;
     if (v > bestV) {
       bestV = v;
@@ -464,6 +486,42 @@ function floorAt(l: HomeLayout, x: number, y: number): number {
     }
   }
   return best;
+}
+
+/**
+ * Is the cobble under plot pixel (x, y) one that lies in cobbled ground? A
+ * stone belongs where its middle falls, so the cobbles' edge is whole stones
+ * set loose into the turf rather than stones cut through by the blend.
+ */
+function cobbleIn(l: HomeLayout, x: number, y: number): boolean {
+  voronoi(x, y, COBBLE_SIZE, COBBLE_SEED);
+  const sx = Math.floor(cell.sx);
+  const sy = Math.floor(cell.sy);
+  const cx = Math.floor(sx / CELL);
+  const cy = Math.floor(sy / CELL);
+  if (!inPlot(cx, cy)) return false;
+  const f = l.floor[cellIndex(cx, cy)];
+  // In a laid floor's cell it is the cobbles' own (they run right up to it).
+  if (f && !SOFT[f - 1]) return true;
+  return blend(l, sx, sy, f, 0) === COBBLES;
+}
+
+/** The floor at plot pixel (x, y). Inside a laid floor's cell, that floor; elsewhere the soft ones blend (see blend). */
+function floorAt(l: HomeLayout, x: number, y: number): number {
+  const ox = Math.floor(x / CELL);
+  const oy = Math.floor(y / CELL);
+  const own = l.floorAt(ox, oy);
+  if (own && !SOFT[own - 1]) return own;
+  // A bare house wall's cell stays bare: the floors either side keep to their own cells.
+  if (!own && houseWall(l, ox, oy)) return 0;
+  const b = blend(l, x, y, own, 0);
+  const cobbles = near.includes(COBBLES);
+  if (!cobbles) return b;
+  // Cobbles go stone by stone: whole stones in or out (cobbleIn overwrites near, so ask after reading it).
+  if (cobbleIn(l, x, y)) return COBBLES;
+  if (b !== COBBLES) return b;
+  const r = blend(l, x, y, own, 1 << COBBLES);
+  return r < 0 ? COBBLES : r;
 }
 
 // ---------------------------------------------------------------- A patch
