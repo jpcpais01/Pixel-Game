@@ -23,6 +23,11 @@ const BAR_W = 16;
 const BAR_Y = -31;
 /** Sound effects at most this often (s), so a big fight doesn't roar. */
 const SOUND_GAP = 0.05;
+/** A ghost (a copy of another player's board, fought by the odd one out): pale and see-through, cold at the head
+ * and fading to deep blue at the feet, breathing in and out, an afterimage drifting off it, wisps rising. */
+const GHOST_TINT = { head: 0xc8e8ff, feet: 0x5a78d8 };
+const GHOST_ALPHA = 0.68;
+const GHOST_WISPS = 4;
 
 /** A hero's look, its Special's palette and name, by piece key and look id. */
 export interface Styled {
@@ -73,6 +78,10 @@ export class UnitView extends Phaser.GameObjects.Container {
   /** Lift off the ground (a leap), in px. */
   lift = 0;
   flashT = 0;
+  private ghost = false;
+  private echo: Phaser.GameObjects.Sprite | null = null;
+  private wisps: Phaser.GameObjects.Graphics | null = null;
+  private ghostT = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -215,6 +224,32 @@ export class UnitView extends Phaser.GameObjects.Container {
     this.bars.clear();
   }
 
+  /** Make this hero a ghost: see-through and cold, with an afterimage and wisps (see `tick`). */
+  setGhost(): this {
+    if (this.ghost) return this;
+    this.ghost = true;
+    // Each ghost breathes at its own time, so a board of them doesn't pulse as one.
+    this.ghostT = Math.random() * 7;
+    this.echo = this.scene.add
+      .sprite(0, 0, this.sprite.texture.key, this.sprite.frame.name)
+      .setOrigin(this.sprite.originX, this.sprite.originY)
+      .setScale(this.sprite.scaleX)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(0x4a8cff);
+    this.addAt(this.echo, this.getIndex(this.sprite));
+    this.wisps = this.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+    this.add(this.wisps);
+    this.shadow.setAlpha(0.3);
+    this.ghostLook();
+    return this;
+  }
+
+  private ghostLook(): void {
+    const { head, feet } = GHOST_TINT;
+    this.sprite.setTint(head, head, feet, feet);
+    this.glow?.setTint(0x9ad8ff);
+  }
+
   tick(dt: number): void {
     if (this.glow) this.glow.setFrame(this.sprite.frame.name);
     this.sprite.y = -this.lift;
@@ -223,13 +258,42 @@ export class UnitView extends Phaser.GameObjects.Container {
     if (this.flashT > 0) {
       this.flashT -= dt;
       this.sprite.setTintFill(0xffffff);
-      if (this.flashT <= 0) this.sprite.clearTint();
+      if (this.flashT <= 0) {
+        this.sprite.clearTint();
+        if (this.ghost) this.ghostLook();
+      }
+    }
+    if (this.ghost) this.haunt(dt);
+  }
+
+  /** A ghost's life: it breathes, hovers a little, trails an afterimage, and wisps rise off it. */
+  private haunt(dt: number): void {
+    const t = (this.ghostT += dt);
+    const breath = Math.sin(t * 2.4);
+    const hover = Math.round(Math.sin(t * 1.7) * 1.2) - 1;
+    this.sprite.y = -this.lift + hover;
+    if (this.glow) this.glow.y = this.sprite.y;
+    this.sprite.setAlpha(GHOST_ALPHA + breath * 0.08);
+    const echo = this.echo!;
+    echo.setTexture(this.sprite.texture.key, this.sprite.frame.name).setFlipX(this.sprite.flipX);
+    // The afterimage lags up and to one side, swaying, and fades as it drifts.
+    echo.setPosition(Math.round(Math.sin(t * 1.1) * 2), this.sprite.y - 2 - Math.round((breath + 1) * 0.8));
+    echo.setAlpha(0.22 + (1 - breath) * 0.06);
+    const g = this.wisps!.clear();
+    for (let i = 0; i < GHOST_WISPS; i++) {
+      const k = (t * 0.45 + i / GHOST_WISPS) % 1;
+      const x = Math.round(Math.sin(t * 1.9 + i * 2.3) * (3 + k * 4));
+      const y = Math.round(-2 - k * 30);
+      const a = (1 - k) * 0.55;
+      g.fillStyle(0xbfe4ff, a).fillRect(x, y, 1, 1);
+      if (k < 0.5) g.fillStyle(0x6aa8ff, a * 0.6).fillRect(x, y + 1, 1, 1);
     }
   }
 
   /** Dim (a piece that can't be placed, a fallen hero). */
   setDim(on: boolean): void {
     if (on) this.sprite.setTint(0x6a6488);
+    else if (this.ghost) this.ghostLook();
     else this.sprite.clearTint();
     this.glow?.setAlpha(on ? 0.3 : 1);
   }
@@ -268,10 +332,13 @@ export class FightView {
     private fx: FxLayer,
     /** The side that is this player's own. */
     private mySide: 0 | 1,
+    /** A side fought as ghosts (a copy of another player's board), if any. */
+    ghostSide = -1,
   ) {
     fx.focus(frame.x, frame.y);
     this.views = battle.units.map((u) => {
       const v = new UnitView(scene, u.def.key, u.look, u.star, u.side === mySide, u.side === mySide ? 'up' : 'down');
+      if (u.side === ghostSide) v.setGhost();
       layer.add(v);
       return v;
     });
