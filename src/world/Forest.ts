@@ -15,6 +15,9 @@ import { treeLeaves } from './Scenery';
 import { CAMP_SEATS, CHUNK, FOREST_WORLD, WOOD_SHAPE, ruinPieces, stonePieces, type Blocker, type ForestGen, type Poi, type WoodKind } from './forestGen';
 import { WhiteStag } from './WhiteStag';
 import { trek } from '../game/trek';
+import { ForestWind } from './ForestWind';
+import { Wildlife } from './Wildlife';
+import { ForestSounds } from './ForestSounds';
 import { forestTile } from './forestGround';
 import { footKey, type ForestEdits } from './forestEdits';
 import { CELL } from './homeLayout';
@@ -153,6 +156,28 @@ interface Stood {
   clearable: Clearable[];
   /** Lamps the player built: their light flickers and the day washes it out, as in the Home. */
   lamps: { light: Phaser.GameObjects.Light; halo: Img; part: PartDef; seed: number }[];
+  /** Grass, flowers and reeds, which bend as a gust goes over (see ForestWind.ts). */
+  grass: Bending[];
+}
+
+/** A piece of undergrowth the wind bends: its look, and the bend it shows now. */
+export interface Bending {
+  obj: Img;
+  x: number;
+  y: number;
+  kind: FPropKind;
+  v: number;
+  bend: number;
+}
+
+/** A tree as the wind and the wild things see it: where it stands, how wide and tall its crown. */
+export interface StandingTree {
+  obj: Sprite;
+  x: number;
+  y: number;
+  kind: WoodKind | 'elder';
+  r: number;
+  top: number;
 }
 
 interface Clearable {
@@ -190,6 +215,10 @@ export class Forest {
   private region = { ci: 0, cj: 0, shown: false, heldT: 0, nextCi: 0, nextCj: 0 };
   private view = new Phaser.Geom.Rectangle();
   private stag: WhiteStag;
+  /** Gusts through the trees and grass, the wild things, and what the forest sounds like here. */
+  private wind: ForestWind;
+  private wild: Wildlife;
+  private sounds: ForestSounds;
   /** What the player has built and cleared here (set by ForestBuild), and the chunks to stand up again for a change. */
   edits: ForestEdits | null = null;
   private dirty = new Set<number>();
@@ -256,6 +285,9 @@ export class Forest {
       })
       .setDepth(9988);
     this.stag = new WhiteStag(world, this, gen);
+    this.wind = new ForestWind(world, this);
+    this.wild = new Wildlife(world, this, gen);
+    this.sounds = new ForestSounds(world, gen);
     const offQuality = settings.watch((q) => {
       const k = q.quality !== 'full' ? 2 : 1;
       this.treeLeaves.frequency = TREE_LEAF_MS * k;
@@ -569,7 +601,7 @@ export class Forest {
   private stand(key: number): void {
     if (this.stood.has(key)) return;
     const l = this.gen.layout(Math.floor(key / 4096), key % 4096);
-    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], treeShadows: [], lights: [], clearable: [], lamps: [] };
+    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], treeShadows: [], lights: [], clearable: [], lamps: [], grass: [] };
     this.stood.set(key, st);
     const add = this.world.add;
     const place = (obj: Placed['obj'], x: number, y: number, hw: number, up: number) => st.placed.push({ obj, x0: x - hw, x1: x + hw, y0: y - up, y1: y + 6 });
@@ -701,6 +733,7 @@ export class Forest {
     }
     obj.setPipeline('Lit').setDepth(y).setFlipX(flip && kind !== 'log');
     place(obj, x, y, 24, 40);
+    if (kind === 'tuft' || kind === 'flowers' || kind === 'reeds') st.grass.push({ obj, x, y, kind, v: v % FPROP_LOOKS[kind], bend: 0 });
     const tall = kind === 'bigshroom' ? 30 : kind === 'boulder' || kind === 'reeds' || kind === 'bush' || kind === 'berry' ? 20 : kind === 'log' ? 12 : 14;
     st.clearable.push({ of: footKey(x, y), obj, tree: false, x, y, hw: kind === 'log' ? 16 : kind === 'boulder' ? 13 : 9, top: tall });
     if (CASTS.has(kind)) this.cast(st, st.shadows, obj, 40);
@@ -954,6 +987,9 @@ export class Forest {
     this.treeLeaves.emitting = leafy;
 
     this.stag.update(time, dt, d, hero, view);
+    this.wind.update(dt, d, hero, view);
+    this.wild.update(dt, d, hero, view);
+    this.sounds.update(dt, hero);
     if (hero.alive) {
       this.visit(hero, dt);
       this.updateRegion(hero, dt);
@@ -1056,6 +1092,22 @@ export class Forest {
     r.cj = w.cj;
     r.heldT = 0;
     this.world.announce(this.gen.regionName(w.ci, w.cj));
+  }
+
+  /** Every tree stood up and in view now (the wind sways them, birds start out of them, owls perch in them). */
+  eachTree(fn: (t: StandingTree) => void): void {
+    for (const st of this.stood.values()) for (const t of st.trees) if (t.obj.visible && t.obj.active) fn(t);
+  }
+
+  /** Every piece of grass, flowers or reeds stood up (in view or not). */
+  eachGrass(fn: (g: Bending) => void): void {
+    for (const st of this.stood.values()) for (const g of st.grass) fn(g);
+  }
+
+  /** The colours of the leaves a tree of this kind lets fall (none for a pine). */
+  leafTints(kind: WoodKind | 'elder', v: number): number[] {
+    const sets = kind === 'elder' ? LEAF_TINTS.oak : LEAF_TINTS[kind];
+    return sets.length ? sets[v % sets.length] : [];
   }
 
   /** How far the nearest campfire burns from (x, y), for its crackle. */
