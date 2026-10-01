@@ -6,7 +6,7 @@ import { LANDMARKS, SEA_COLOUR } from '../art/worldMap';
 import { menuZoom } from '../game/display';
 import { characterById } from '../game/characters';
 import { collection } from '../game/collection';
-import { ARENAS, PREVIEW_H, arenaById, isPainted, lastArena, rememberArena, warmArena, type ArenaDef, type PreviewSprite } from '../world/arenas';
+import { ARENAS, arenaById, isPainted, lastArena, rememberArena, warmArena, type ArenaDef, type PreviewSprite } from '../world/arenas';
 import { LABELS, LEGS, MAP_H, MAP_W, REALM_NAME, legRoad, placeFor, realm, standAt, type Place, type Pt } from '../world/realm';
 import { GroundStreamer } from '../world/GroundStreamer';
 import { buildId } from '../diagnostics';
@@ -14,14 +14,20 @@ import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PANEL_PICKED, PixelButto
 import { fpsBottom } from './FpsScene';
 import { openOnlineForm } from '../ui/onlineForm';
 import { DIFFICULTIES, difficultyDef, isWaveArena, riftDifficulty, riftKey, setRiftDifficulty, type RiftDifficulty } from '../game/rift';
-import { DIFF_STYLE, difficultyIcon, partyIcon } from '../ui/riftDifficulty';
+import { DIFF_STYLE, difficultyIcon } from '../ui/riftDifficulty';
 import { sound } from '../audio';
 
-/** The window onto the picked arena, at the top of its panel. */
-const WIN_W = 158;
-const WIN_H = PREVIEW_H;
-const PANEL_W = 172;
-const PANEL_H = 206;
+/** A small window onto the picked arena, at the left of its tag. */
+const WIN_W = 64;
+const WIN_H = 36;
+/**
+ * The picked place's tag: a slim strip along the bottom, so the map stays in
+ * view. Widest it gets, its height, where its text starts, and its buttons' column.
+ */
+const TAG_W = 330;
+const TAG_H = 46;
+const TAG_TEXT_X = 75;
+const TAG_BTN_W = 52;
 /** ms per frame spent building an arena for its window (most of the work is in a worker; this is uploading). */
 const WARM_BUDGET = 10;
 /** Longest Play waits for the picked arena to finish loading before the world takes over and finishes it itself. */
@@ -37,10 +43,9 @@ const MAP_MARGIN = 120;
 const TAP_SLOP = 10;
 /** Glints on the sea at a time. */
 const SPARKS = 16;
-/** The Rift's row: a narrower Play, Online as a small square with two heroes on it, and the difficulty. */
-const RIFT_PLAY_W = 44;
-const RIFT_ONLINE_W = 22;
+/** The Rift's difficulty button, standing in for the tag's last line. */
 const DIFF_W = 86;
+const DIFF_H = 18;
 
 const PLATE: PanelStyle = { ...PANEL, alpha: 0.84 };
 
@@ -62,21 +67,18 @@ function saveThumb(id: string, url: string): void {
   }
 }
 
-/** Break text into lines that fit `width` in the pixel font (6 px a letter), at most `max` lines. */
-function wrap(text: string, width: number, max: number): string {
+/** Text cut to fit `width` in the pixel font on one line, with an ellipsis if it was cut. */
+function fit(text: string, width: number): string {
   const per = Math.floor((width + 1) / 6);
-  const lines: string[] = [];
-  let line = '';
-  for (const word of text.toUpperCase().split(' ')) {
-    const next = line ? `${line} ${word}` : word;
-    if (next.length > per && line) {
-      lines.push(line);
-      line = word;
-    } else line = next;
-  }
-  lines.push(line);
-  return lines.slice(0, max).join('\n');
+  const t = text.toUpperCase();
+  if (t.length <= per) return t;
+  const cut = t.slice(0, per - 2);
+  const at = cut.lastIndexOf(' ');
+  return `${(at > per / 2 ? cut.slice(0, at) : cut).replace(/[,.:;]$/, '')}..`;
 }
+
+/** A place's lore in a line: its first sentence, shortened if it must be. */
+const loreLine = (lore: string, width: number): string => fit(lore.split(/(?<=\.) /)[0], width);
 
 /** Animations to play on a preview sprite's glow layer. */
 const GLOW_ANIMS: Record<string, string> = { brazier_e: 'brazier_burn', fountain_e: 'fountain_flow' };
@@ -305,8 +307,8 @@ export class ArenaScene extends Phaser.Scene {
   private play!: PixelButton;
   private online!: PixelButton;
   /** The Rift's own Play and Online, smaller, to make room for its difficulty. */
-  private riftPlay!: PixelButton;
-  private riftOnline!: PixelButton;
+  private tagBg!: Phaser.GameObjects.Image;
+  private tagW = TAG_W;
   /** The Rift's difficulty, one button per difficulty with only the chosen one shown, and a glow behind it. */
   private diffButtons = new Map<RiftDifficulty, PixelButton>();
   private diffGlow!: Phaser.GameObjects.Image;
@@ -406,35 +408,25 @@ export class ArenaScene extends Phaser.Scene {
     this.zoomIn = new PixelButton(this, '+', 18, 18, BUTTON_PLAIN, 'wm_zoom_in', () => this.stepZoom(1));
     this.zoomOut = new PixelButton(this, '-', 18, 18, BUTTON_PLAIN, 'wm_zoom_out', () => this.stepZoom(-1));
 
-    // The panel: a window onto the arena, its name, land and lore, and the buttons.
-    const bg = this.add.image(0, 0, panelTexture(this, 'wm_panel', PANEL_W, PANEL_H, PANEL)).setOrigin(0);
-    // Presses on the panel stay on the panel instead of dragging the map.
-    bg.setInteractive();
-    this.windowSlot = this.add.container(7, 7);
-    this.region = pixelText(this, 7, 97, '', 0x8a7cc0);
-    this.title = pixelText(this, 7, 107, '', 0xfff4d6);
-    const rule = this.add.rectangle(7, 119, WIN_W, 1, 0x43356e).setOrigin(0);
-    this.lore = pixelText(this, 7, 124, '', 0xe8dcc0);
-    this.status = [pixelText(this, 7, 158, '', 0xf4cf6a), pixelText(this, 7, 168, '', 0xf4cf6a)];
-    this.play = new PixelButton(this, 'Play', 64, 20, BUTTON_GOLD, 'play', () => this.startGame());
-    this.online = new PixelButton(this, 'Online', 56, 18, BUTTON_PLAIN, 'online', () => this.openOnline());
-    this.play.place(7, PANEL_H - 27);
-    this.online.place(PANEL_W - 7 - 56, PANEL_H - 26);
-    // The Rift's difficulty stands on the right, tapped round in turn; Play and Online squeeze up beside it.
-    this.riftPlay = new PixelButton(this, 'Play', RIFT_PLAY_W, 20, BUTTON_GOLD, 'rift_play', () => this.startGame()).place(7, PANEL_H - 27).setVisible(false);
-    this.riftOnline = new PixelButton(this, '', RIFT_ONLINE_W, 20, BUTTON_PLAIN, 'rift_online', () => this.openOnline())
-      .setIcon(partyIcon(this))
-      .place(7 + RIFT_PLAY_W + 3, PANEL_H - 27)
-      .setVisible(false);
-    const dx = PANEL_W - 7 - DIFF_W;
-    const dy = PANEL_H - 27;
-    this.diffGlow = this.add.image(dx + DIFF_W / 2, dy + 10, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(3.2, 1.1).setVisible(false);
+    // The tag: a small window onto the arena, its name and land, a line of lore, its bosses, and the buttons.
+    this.tagBg = this.add.image(0, 0, panelTexture(this, 'wm_tag', TAG_W, TAG_H, PLATE)).setOrigin(0);
+    // Presses on the tag stay on the tag instead of dragging the map.
+    this.tagBg.setInteractive();
+    this.windowSlot = this.add.container(5, 5);
+    this.title = pixelText(this, TAG_TEXT_X, 5, '', 0xfff4d6);
+    this.region = pixelText(this, TAG_TEXT_X, 5, '', 0x8a7cc0);
+    this.lore = pixelText(this, TAG_TEXT_X, 17, '', 0xe8dcc0);
+    this.status = [pixelText(this, TAG_TEXT_X, 29, '', 0xf4cf6a)];
+    this.play = new PixelButton(this, 'Play', TAG_BTN_W, 20, BUTTON_GOLD, 'wm_play', () => this.startGame());
+    this.online = new PixelButton(this, 'Online', TAG_BTN_W, 16, BUTTON_PLAIN, 'wm_online', () => this.openOnline());
+    // The Rift's difficulty takes the last line, tapped round in turn.
+    this.diffGlow = this.add.image(TAG_TEXT_X + DIFF_W / 2, 26 + DIFF_H / 2, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(3.2, 1).setVisible(false);
     for (const d of DIFFICULTIES) {
-      const b = new PixelButton(this, d.name, DIFF_W, 20, DIFF_STYLE[d.id], `rift_diff_${d.id}`, () => this.cycleDifficulty());
-      b.setIcon(difficultyIcon(this, d.id)).place(dx, dy).setVisible(false);
+      const b = new PixelButton(this, d.name, DIFF_W, DIFF_H, DIFF_STYLE[d.id], `wm_diff_${d.id}`, () => this.cycleDifficulty());
+      b.setIcon(difficultyIcon(this, d.id)).place(TAG_TEXT_X, 25).setVisible(false);
       this.diffButtons.set(d.id, b);
     }
-    this.panel = this.add.container(0, 0, [bg, this.windowSlot, this.region, this.title, rule, this.lore, ...this.status, this.play, this.online, this.riftPlay, this.riftOnline, this.diffGlow, ...this.diffButtons.values()]);
+    this.panel = this.add.container(0, 0, [this.tagBg, this.windowSlot, this.title, this.region, this.lore, ...this.status, this.play, this.online, this.diffGlow, ...this.diffButtons.values()]);
     ui.add([this.drawing, this.header, this.back, this.zoomIn, this.zoomOut, this.panel]);
   }
 
@@ -619,15 +611,23 @@ export class ArenaScene extends Phaser.Scene {
     }
     win.setVisible(true);
 
-    this.title.setText(arena.name.toUpperCase()).setTint(arena.accent);
-    this.region.setText(place.region.toUpperCase());
-    this.lore.setText(wrap(place.lore, WIN_W, 3));
-    const lines = this.statusLines(arena, place);
-    this.status.forEach((t, k) => {
-      const l = lines[k];
-      t.setVisible(!!l);
-      if (l) t.setText(wrap(l.text, WIN_W, 1)).setTint(l.tint);
-    });
+    const tw = this.tagTextW();
+    this.title.setText(fit(arena.name, tw)).setTint(arena.accent);
+    // The land beside the name, when there's room for it.
+    const regionX = this.title.x + this.title.width + 7;
+    this.region.setText(place.region.toUpperCase()).setX(regionX);
+    this.region.setVisible(regionX + this.region.width <= TAG_TEXT_X + tw);
+    const [first, second] = this.statusLines(arena, place);
+    if (isWaveArena(arena.id)) {
+      // The Rift's difficulty button takes the last line: its best wave (or the difficulty's note) goes above it.
+      const l = second ?? first;
+      this.lore.setText(fit(l.text, tw)).setTint(l.tint);
+      this.status[0].setVisible(false);
+    } else {
+      this.lore.setText(loreLine(place.lore, tw)).setTint(0xe8dcc0);
+      this.status[0].setVisible(!!first);
+      if (first) this.status[0].setText(fit(first.text, tw)).setTint(first.tint);
+    }
     const solo = !!arena.solo;
     this.online.setEnabled(!solo).setAlpha(solo ? 0.4 : 1);
     this.showDifficulty(isWaveArena(arena.id));
@@ -643,12 +643,21 @@ export class ArenaScene extends Phaser.Scene {
       const note = { text: d.note, tint: d.tint };
       return best > 0 ? [note, { text: `Best wave: ${best}`, tint: arena.id === 'frost' ? 0x5affb0 : 0xff8ad8 }] : [note];
     }
-    if (place.bosses?.length) {
-      return place.bosses.map((b) =>
+    const bosses = place.bosses ?? [];
+    if (bosses.length === 1) {
+      const b = bosses[0];
+      return [
         slain.includes(b.kind)
           ? { text: `Slain: ${b.name}`, tint: 0x8ae07a }
           : { text: `${b.rank === 'myth' ? 'Myth' : 'Legend'}: ${b.name}`, tint: b.rank === 'myth' ? 0xc8a0ff : 0xf4cf6a },
-      );
+      ];
+    }
+    if (bosses.length > 1) {
+      // Several bosses share the one line: their names, without "The".
+      const names = bosses.map((b) => b.name.replace(/^The /, '')).join(' & ');
+      const left = bosses.filter((b) => !slain.includes(b.kind));
+      if (!left.length) return [{ text: `Slain: ${names}`, tint: 0x8ae07a }];
+      return [{ text: `Bosses: ${names}`, tint: left.some((b) => b.rank === 'myth') ? 0xc8a0ff : 0xf4cf6a }];
     }
     return [{ text: place.note ?? arena.blurb, tint: 0xb8a8e8 }];
   }
@@ -656,14 +665,13 @@ export class ArenaScene extends Phaser.Scene {
   /** The Rift's row (small Play and Online, and its difficulty), or the usual Play and Online for every other arena. */
   private showDifficulty(rift: boolean): void {
     const now = riftDifficulty();
-    this.play.setVisible(!rift).setEnabled(!rift);
-    this.online.setVisible(!rift);
-    // Hidden under the difficulty button, it mustn't catch its taps.
-    if (rift) this.online.setEnabled(false);
-    this.riftPlay.setVisible(rift).setEnabled(rift);
-    this.riftOnline.setVisible(rift).setEnabled(rift);
     for (const [id, b] of this.diffButtons) b.setVisible(rift && id === now).setEnabled(rift && id === now);
     this.diffGlow.setVisible(rift && now !== 'normal').setTint(difficultyDef(now).tint);
+  }
+
+  /** Room for text on the tag, between its window and its buttons. */
+  private tagTextW(): number {
+    return this.tagW - 5 - TAG_BTN_W - 6 - TAG_TEXT_X;
   }
 
   /** Normal, Hard, Impossible, and round again; the panel's lines follow. */
@@ -1081,7 +1089,6 @@ export class ArenaScene extends Phaser.Scene {
     // than in the world's first frame.
     this.waitingSince = this.time.now;
     this.play.setAlpha(0.6);
-    this.riftPlay.setAlpha(0.6);
   }
 
   private go(arena: string, online: boolean): void {
@@ -1117,25 +1124,25 @@ export class ArenaScene extends Phaser.Scene {
     this.back.place(6, top - 1);
     this.drawing.setPosition(Math.round((vw - this.drawing.width) / 2), Math.round(vh / 2));
 
-    // The panel: down the right side on a wide screen, along the bottom on a tall one.
-    const wide = vw >= PANEL_W + 220 || vw > vh * 1.2;
-    let px: number;
-    let py: number;
-    if (wide) {
-      px = vw - PANEL_W - 6;
-      py = Math.max(top + 18, Math.round((vh - PANEL_H) / 2));
-      if (py + PANEL_H > vh - 4) py = Math.max(4, vh - PANEL_H - 4);
-    } else {
-      px = Math.round((vw - PANEL_W) / 2);
-      py = vh - PANEL_H - 6;
+    // The tag: a slim strip along the bottom, centred, as wide as fits.
+    const w = Math.min(TAG_W, Math.floor(vw) - 12);
+    if (w !== this.tagW || this.tagBg.texture.key === '__MISSING') {
+      this.tagW = w;
+      this.tagBg.setTexture(panelTexture(this, 'wm_tag', w, TAG_H, PLATE));
     }
+    this.play.place(w - 5 - TAG_BTN_W, 4);
+    this.online.place(w - 5 - TAG_BTN_W, 26);
+    const px = Math.round((vw - w) / 2);
+    const py = Math.round(vh - TAG_H - 6);
     this.panel.setPosition(px, py);
-    this.panelBox.setTo(px, py, PANEL_W, PANEL_H);
+    this.panelBox.setTo(px, py, w, TAG_H);
+    const wide = px >= 52;
     // Zoom buttons at the bottom left, clear of the panel.
     const zy = wide ? vh - 26 : py - 26;
     this.zoomOut.place(6, zy);
     this.zoomIn.place(28, zy);
-    if (this.spots.length) this.follow = this.follow ?? { x: this.spots[this.picked].place.x, y: this.spots[this.picked].place.y - 16 };
+    // Refill the tag for its new width (and glide back to the picked place).
+    this.showPicked();
   }
 }
 
