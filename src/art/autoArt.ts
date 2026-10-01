@@ -289,12 +289,12 @@ export function autoBoard(scene: Phaser.Scene, cols: number, rows: number): stri
 
 const WOOD: RGB[] = ['#1e120e', '#3a2418', '#5a3a24', '#7a5030', '#9a6a3e', '#b8864e'].map(hex);
 
-/** The bench: a wooden dock of `n` slots, planks with iron studs. */
-export function autoBench(scene: Phaser.Scene, n: number): string {
-  const key = `ab_bench_${n}`;
+/** The bench: a wooden dock of `cols` x `rows` slots, planks with iron studs. */
+export function autoBench(scene: Phaser.Scene, cols: number, rows = 1): string {
+  const key = `ab_bench_${cols}x${rows}`;
   if (scene.textures.exists(key)) return key;
-  const w = n * BENCH_SLOT + 6;
-  const h = BENCH_SLOT + 6;
+  const w = cols * BENCH_SLOT + 6;
+  const h = rows * BENCH_SLOT + 6;
   const b = new Bitmap(w, h);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -310,9 +310,11 @@ export function autoBench(scene: Phaser.Scene, n: number): string {
     }
   }
   // Slots: sunken squares, each with a faint ring.
-  for (let i = 0; i < n; i++) {
-    const x0 = 3 + i * BENCH_SLOT + 1;
-    const y0 = 3 + 1;
+  for (let i = 0; i < cols * rows; i++) {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x0 = 3 + col * BENCH_SLOT + 1;
+    const y0 = 3 + row * BENCH_SLOT + 1;
     const s = BENCH_SLOT - 2;
     for (let y = 0; y < s; y++)
       for (let x = 0; x < s; x++) {
@@ -323,11 +325,11 @@ export function autoBench(scene: Phaser.Scene, n: number): string {
         if (Math.abs(d - 6.5) < 0.6 && y > s / 2 - 2) v += 0.2;
         b.set(x0 + x, y0 + y, ramp(WOOD, v, x0 + x, y0 + y));
       }
-    // Iron studs between slots.
-    if (i > 0) {
-      b.set(x0 - 1, 2, hex('#b8b4d8'));
-      b.set(x0 - 1, h - 3, hex('#6a6488'));
-    }
+    // Iron studs between slots, along the dock's edges.
+    if (col > 0 && row === 0) b.set(x0 - 1, 2, hex('#b8b4d8'));
+    if (col > 0 && row === rows - 1) b.set(x0 - 1, h - 3, hex('#6a6488'));
+    if (row > 0 && col === 0) b.set(2, y0 - 1, hex('#b8b4d8'));
+    if (row > 0 && col === cols - 1) b.set(w - 3, y0 - 1, hex('#6a6488'));
   }
   return add(scene, key, b);
 }
