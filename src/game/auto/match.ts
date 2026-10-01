@@ -73,6 +73,8 @@ export class AutoPlayer {
   xp = 0;
   streak = 0;
   shop: (string | null)[] = new Array(SHOP_SIZE).fill(null);
+  /** The shop is frozen: the next rounds keep these cards (bought ones stay gone) until it's thawed or rolled. */
+  frozen = false;
   bench: (Piece | null)[] = new Array(BENCH_SIZE).fill(null);
   board = new Map<number, Piece>();
   /** Copies left in this player's pool, by key. */
@@ -149,6 +151,8 @@ export class AutoPlayer {
   reroll(): boolean {
     if (this.gold < REROLL_COST) return false;
     this.gold -= REROLL_COST;
+    // Rolling by hand means new cards are wanted: the freeze is let go.
+    this.frozen = false;
     this.roll();
     return true;
   }
@@ -280,11 +284,11 @@ export class AutoPlayer {
     this.hp = Math.max(0, this.hp - damage);
   }
 
-  /** Before a round's planning: gold in, xp, a fresh shop. */
+  /** Before a round's planning: gold in, xp, a fresh shop (unless it's frozen). */
   startRound(round: number, wonLast: boolean): void {
     this.gold += round === 1 ? 5 : this.income() + (wonLast ? 1 : 0);
     if (round > 1) this.gainXp(2);
-    this.roll();
+    if (!this.frozen || round === 1) this.roll();
   }
 
   /**
