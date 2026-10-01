@@ -34,7 +34,7 @@ const WELCOMED_KEY = 'pixel-battle.welcomed';
  */
 const SKIN_HEIRS: Record<string, string> = { 'jedi:warlord': 'jedi:sith' };
 
-const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, glide: {}, pets: [], pet: '', petPity: 0, critters: {}, fish: {}, mats: {}, candy: {}, home: '', homeT: 0, wood: '', woodT: 0, met: [] });
+const empty = (gems = 0): SaveData => ({ items: {}, equipped: new Array(EQUIP_SLOTS).fill(null), dust: 0, upgrades: {}, gems, skins: [], daily: '', pity: 0, grants: [], rift: {}, glide: {}, pets: [], pet: '', petPity: 0, critters: {}, fish: {}, mats: {}, candy: {}, home: '', homeT: 0, wood: '', woodT: 0, trek: '', trekT: 0, met: [] });
 
 /** The welcome gems for a new guest game: the first on this device only. */
 function welcomeGems(): number {
@@ -82,6 +82,8 @@ function clean(d: Partial<SaveData> | null | undefined): SaveData {
   out.homeT = Number(d?.homeT) > 0 ? Number(d?.homeT) : 0;
   out.wood = typeof d?.wood === 'string' ? d.wood : '';
   out.woodT = Number(d?.woodT) > 0 ? Number(d?.woodT) : 0;
+  out.trek = typeof d?.trek === 'string' ? d.trek : '';
+  out.trekT = Number(d?.trekT) > 0 ? Number(d?.trekT) : 0;
   out.met = [...new Set((Array.isArray(d?.met) ? d.met : []).filter((k): k is string => typeof k === 'string' && !!k))];
   out.petPity = Math.max(0, Math.floor(Number(d?.petPity) || 0));
   for (const [id, n] of Object.entries(d?.candy ?? {})) if (Number(n) > 0) out.candy[id] = Math.floor(Number(n));
@@ -429,6 +431,19 @@ class Collection {
     this.changed();
   }
 
+  /** The Everwood as far as the player has walked it: the explorer's map ('' for none; see game/trek.ts). */
+  get trek(): string {
+    return this.data.trek;
+  }
+
+  /** Keep the explorer's map as it now stands, here and in the cloud. */
+  saveTrek(encoded: string): void {
+    if (encoded === this.data.trek) return;
+    this.data.trek = encoded;
+    this.data.trekT = Date.now();
+    this.changed();
+  }
+
   /** How many of critter `id` the player has caught. */
   critterCount(id: string): number {
     return this.data.critters[id] ?? 0;
@@ -637,7 +652,16 @@ class Collection {
         merged.wood = local.wood;
         merged.woodT = local.woodT;
       }
+      // And the explorer's map.
+      if (local.trekT > merged.trekT) {
+        merged.trek = local.trek;
+        merged.trekT = local.trekT;
+      }
       if (guest) {
+        if (!merged.trek && guest.trek) {
+          merged.trek = guest.trek;
+          merged.trekT = guest.trekT;
+        }
         if (!merged.wood && guest.wood) {
           merged.wood = guest.wood;
           merged.woodT = guest.woodT;

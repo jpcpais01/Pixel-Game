@@ -136,7 +136,8 @@ import {
 } from './omens';
 import { FLAME_FRAMES, FLAME_H, FLAME_W, GRAVE_H, GRAVE_KINDS, GRAVE_W, WISP_PX, echoBuffIcon, graveStone, soulFlame, soulWisp } from './echoes';
 import { ELDER_H, ELDER_W, PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_SWAY_FPS, TREE_SWAY_FRAMES, TREE_VARIANTS, TREE_W, cherryTree, elderTree, leafBit, mapleTree, rayCanvas, treeFrame, willowTree } from './trees';
-import { CAMPFIRE, CHEST_H, CHEST_W, FLOW_H, FLOW_W, FPROP_FRAMES, FPROP_H, FPROP_W, LOOKOUT_H, LOOKOUT_W, MENHIR_H, MENHIR_LOOKS, MENHIR_W, SHRINE_FRAMES, SHRINE_H as FSHRINE_H, SHRINE_W as FSHRINE_W, chestArt, fallFlow, lookoutArt, menhirArt, shrineArt } from './forest';
+import { BIRD_ANIMS, BIRD_H, BIRD_LOOKS, BIRD_W, DEER_ANIMS, DEER_H, DEER_LOOKS, DEER_W, FOX_ANIMS, FOX_H, FOX_W, GUST_FRAMES, GUST_H, GUST_W, OWL_ANIMS, OWL_H, OWL_W, birdFrames, deerFrames, foxFrames, gustFrame, owlFrames } from './wildlife';
+import { CAMPFIRE, CHEST_H, CHEST_W, FLOW_H, FLOW_W, FPROP_BENDS, FPROP_FRAMES, FPROP_H, FPROP_W, LOOKOUT_H, LOOKOUT_W, MENHIR_H, MENHIR_LOOKS, MENHIR_W, SHRINE_FRAMES, SHRINE_H as FSHRINE_H, SHRINE_W as FSHRINE_W, chestArt, fallFlow, lookoutArt, menhirArt, shrineArt } from './forest';
 import { ALTAR_H, ALTAR_W, GROVE_FRAMES, GROVE_H, GROVE_W, HOLLOW_FRAMES, HOLLOW_H, HOLLOW_W, PRINT_H, PRINT_W, SPRING_FRAMES, SPRING_H, SPRING_W, STAG_ANIMS, STAG_H, STAG_W, altarArt, groveFrame, hollowArt, hoofprint, springArt, stagBuffIcon, stagFrames } from './stag';
 import { STRIP_H, buildStrip } from './ground';
 import { CHUNK, ForestGen, EVERWOOD_SEED } from '../world/forestGen';
@@ -1027,6 +1028,35 @@ function* forestTextures(scene: Phaser.Scene): Generator<void, void, void> {
     scene.anims.create({ key: `${layer}_part`, frames: f(['p0', 'p1', 'p2', 'o0']), frameRate: 6, repeat: 0 });
     scene.anims.create({ key: `${layer}_open`, frames: f(['o0', 'o1']), frameRate: 2, repeat: -1 });
   }
+  yield;
+  // The wild things: deer, the fox, songbirds and the owl; the undergrowth bent by a gust, and the gust's own streaks.
+  register(scene, 'fbend', pack(FPROP_BENDS.map((f) => ({ name: f.name, r: f.draw().render() })), FPROP_W, FPROP_H, 12), FPROP_W, FPROP_H, false);
+  yield;
+  register(scene, 'wdeer', pack(deerFrames().map((f) => ({ name: f.name, r: f.canvas.render() })), DEER_W, DEER_H, 16), DEER_W, DEER_H, false);
+  for (const look of DEER_LOOKS) {
+    for (const a of DEER_ANIMS) scene.anims.create({ key: `wdeer_${look}_${a.name}`, frames: scene.anims.generateFrameNames('wdeer', { prefix: `${look}_${a.name}`, start: 0, end: a.frames - 1 }), frameRate: a.fps, repeat: -1 });
+  }
+  yield;
+  register(scene, 'wfox', pack(foxFrames().map((f) => ({ name: f.name, r: f.canvas.render() })), FOX_W, FOX_H, 12), FOX_W, FOX_H);
+  for (const a of FOX_ANIMS) {
+    for (const layer of ['wfox', 'wfox_e']) scene.anims.create({ key: `${layer}_${a.name}`, frames: scene.anims.generateFrameNames(layer, { prefix: a.name, start: 0, end: a.frames - 1 }), frameRate: a.fps, repeat: -1 });
+  }
+  register(scene, 'wbird', pack(birdFrames().map((f) => ({ name: f.name, r: f.canvas.render() })), BIRD_W, BIRD_H, 16), BIRD_W, BIRD_H, false);
+  for (const look of BIRD_LOOKS) {
+    for (const a of BIRD_ANIMS) scene.anims.create({ key: `wbird_${look}_${a.name}`, frames: scene.anims.generateFrameNames('wbird', { prefix: `${look}_${a.name}`, start: 0, end: a.frames - 1 }), frameRate: a.fps, repeat: -1 });
+  }
+  register(scene, 'wowl', pack(owlFrames().map((f) => ({ name: f.name, r: f.canvas.render() })), OWL_W, OWL_H, 11), OWL_W, OWL_H);
+  for (const a of OWL_ANIMS) {
+    for (const layer of ['wowl', 'wowl_e']) scene.anims.create({ key: `${layer}_${a.name}`, frames: scene.anims.generateFrameNames(layer, { prefix: a.name, start: 0, end: a.frames - 1 }), frameRate: a.fps, repeat: a.loop ? -1 : 0 });
+  }
+  const gust = new Uint8ClampedArray(GUST_W * GUST_FRAMES * GUST_H * 4);
+  for (let f = 0; f < GUST_FRAMES; f++) {
+    const px = gustFrame(f);
+    for (let y = 0; y < GUST_H; y++) gust.set(px.subarray(y * GUST_W * 4, (y + 1) * GUST_W * 4), (y * GUST_W * GUST_FRAMES + f * GUST_W) * 4);
+  }
+  const gtex = scene.textures.addCanvas('wgust', toCanvas(GUST_W * GUST_FRAMES, GUST_H, gust))!;
+  for (let f = 0; f < GUST_FRAMES; f++) gtex.add(`g${f}`, 0, f * GUST_W, 0, GUST_W, GUST_H);
+  scene.anims.create({ key: 'wgust', frames: scene.anims.generateFrameNames('wgust', { prefix: 'g', start: 0, end: GUST_FRAMES - 1 }), frameRate: 10, repeat: 0 });
   yield;
   // Last, the select card's patch of ground: its presence means everything above is built.
   const gen = new ForestGen(EVERWOOD_SEED);

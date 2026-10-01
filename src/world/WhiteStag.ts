@@ -6,6 +6,7 @@ import { STAG_GRACE, heroBuffs } from '../game/buffs';
 import { critterById } from '../game/critters';
 import { snap } from '../game/display';
 import { session, type Msg } from '../net/session';
+import { trek } from '../game/trek';
 import type { WorldScene } from '../scenes/WorldScene';
 import type { Forest } from './Forest';
 import { CHUNK, type Blocker, type ForestGen } from './forestGen';
@@ -851,6 +852,7 @@ export class WhiteStag {
    */
   private reveal(kind: SecretKind, x: number, y: number, id: number, fanfare: boolean): void {
     if (session.active && session.isHost) session.send({ t: 'sgr', k: kind, x, y, id });
+    trek.secret(kind, x, y);
     const add = this.world.add;
     const parts: Secret['parts'] = [];
     const blocks: Blocker[] = [];

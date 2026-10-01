@@ -78,6 +78,11 @@ export class NetPlay {
 
   }
 
+  /** The other players, where they are and in their hero's colour, for the minimap. */
+  mates(): { x: number; y: number; accent: number; alive: boolean }[] {
+    return [...this.remotes.values()].map((r) => ({ x: r.x, y: r.y, accent: r.ch.accent, alive: r.alive }));
+  }
+
   /** The other players standing, for monsters to hunt. */
   targets(): Target[] {
     const out: Target[] = [];
