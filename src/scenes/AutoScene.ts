@@ -12,13 +12,14 @@ import { hex } from '../art/pixel';
 import { cropToWindow, fitLine } from './SelectScene';
 import { onlineStyles } from '../ui/onlineForm';
 import { session, type Msg } from '../net/session';
-import { Battle, COLS, HALF, ROWS, type Placed } from '../game/auto/sim';
-import { AutoPlayer, aiPlan, BENCH_SIZE, cellKey, lossDamage, MAX_LEVEL, PLAN_SECONDS, REROLL_COST, sellValue, SHOP_SIZE, XP_COST, XP_NEXT, type Piece } from '../game/auto/match';
+import { Battle, COLS, HALF, ROWS, TICK, type Placed } from '../game/auto/sim';
+import { AutoPlayer, aiPlan, BENCH_SIZE, cellKey, MAX_LEVEL, PLAN_SECONDS, REROLL_COST, sellValue, SHOP_SIZE, START_HP, START_LEVEL, XP_COST, XP_NEXT, type Piece } from '../game/auto/match';
 import { COST_COLORS, TRAITS, unitDef, type TraitId } from '../game/auto/units';
 import { FightView, UnitView, cellPt, styleOf, type BoardFrame } from '../game/auto/view';
 import { FxLayer } from '../game/auto/fx';
 import { pieceNumbers, spellText } from '../game/auto/info';
-import { AUTO_ARENA, BOARD_WAIT_MS, cleanBoard, type FightMsg } from '../game/auto/online';
+import { AUTO_ARENA, BOARD_WAIT_MS, cleanBoard, cleanRound, cleanSeats } from '../game/auto/online';
+import { drawBouts, healthAfter, MAX_BOTS, MAX_SEATS, ordinal, placesAfter, type Bout, type RoundResult, type SeatInfo } from '../game/auto/table';
 import { AUTO_BATTLE_SCENE } from './ModeScene';
 import { soundCorner } from './SoundScene';
 import { settings } from '../game/settings';
@@ -77,6 +78,8 @@ const FIGHT_H = 20;
 const CHIP_W = 34;
 const CHIP_H = 11;
 const TRAIT_ROW = 11;
+/** A row of the wide layout's standings, at a table of more than two. */
+const STAND_ROW = 10;
 /** The hero card that pops up for a tapped piece (or a hovered shop card). */
 const INFO_W = 142;
 const INFO_H = 106;
@@ -104,6 +107,49 @@ const RED = 0xff6a6a;
 const GREEN = 0x7aff8a;
 
 type Phase = 'lobby' | 'wait' | 'plan' | 'fight' | 'result' | 'over';
+
+/** A seat at the table as a match goes: health, level, the board it last fought with, where it finished (0: still
+ * in), and, on the host, a bot's own player. */
+interface Seat extends SeatInfo {
+  hp: number;
+  level: number;
+  board: Placed[];
+  place: number;
+  ai: AutoPlayer | null;
+}
+
+/** `n` bot names, none of them already at the table. */
+function botNames(n: number, taken: string[] = []): string[] {
+  const free = RIVAL_NAMES.filter((x) => !taken.includes(x));
+  const out: string[] = [];
+  while (out.length < n) {
+    const pool = free.length ? free : RIVAL_NAMES;
+    const i = Math.floor(Math.random() * pool.length);
+    out.push(pool[i]);
+    if (free.length) free.splice(i, 1);
+  }
+  return out;
+}
+
+const BOTS_KEY = 'pixel-battle.autoBots';
+
+/** Practice bots, as last picked on this device (one if never). */
+function loadBots(): number {
+  try {
+    const n = Number(localStorage.getItem(BOTS_KEY));
+    return n >= 1 && n <= MAX_BOTS ? Math.floor(n) : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function saveBots(n: number): void {
+  try {
+    localStorage.setItem(BOTS_KEY, String(n));
+  } catch {
+    // Remembering it is only a nicety.
+  }
+}
 type Mode = 'ai' | 'online';
 type Drop = { bench: number } | { cell: number } | { sell: true } | null;
 
@@ -310,21 +356,44 @@ export class AutoScene extends Phaser.Scene {
   private mode: Mode = 'ai';
   private phase: Phase = 'lobby';
   private me!: AutoPlayer;
-  private ai: AutoPlayer | null = null;
-  private rival = { name: 'Rival', hp: 100, level: 2 };
+  /** Everyone at the table (this player, other people, bots), and which seat is this player's. */
+  private seats: Seat[] = [];
+  private mySeat = 0;
+  /** Who this player fights (or last fought), and whether as a ghost of their board. */
+  private foe = 1;
+  private foeGhost = false;
+  /** The foe as the plates show it. */
+  private get rival(): { name: string; hp: number; level: number } {
+    const s = this.seats[this.foe];
+    return s ? { name: this.foeGhost ? `Ghost of ${s.name}` : s.name, hp: s.hp, level: s.level } : { name: 'Rival', hp: START_HP, level: START_LEVEL };
+  }
+  /** Out of a match that goes on (online), watching. */
+  private out = false;
+  /** The match's end has been shown. */
+  private ended = false;
+  /** Bots for practice (remembered on this device), and for a room being set up. */
+  private botCount = loadBots();
+  private roomBots = 0;
+  private roomCode: string | null = null;
+  /** Online, the room's host (a guest's match ends if the host goes). */
+  private hostPeer = -1;
   private round = 0;
   private timer = 0;
   private timerMax = 1;
   private ready = false;
-  private rivalReady = false;
+  /** People (by room id) who said they're ready this round. */
+  private readyIds = new Set<number>();
   private wonLast = false;
   private leaving = false;
   private host = false;
   private off: (() => void) | null = null;
-  /** Online: the guest's last board (the host fights it if a new one is late), and the round's waits. */
-  private guestBoard: Placed[] = [];
+  /** The host: people whose boards it's waiting for, how long it waits, and the round already fought. */
+  private awaiting = new Set<number>();
   private waitBoard: Phaser.Time.TimerEvent | null = null;
-  private pendingResult: FightMsg | null = null;
+  private foughtRound = 0;
+  /** The round being played, until this player's fight ends; and the host's call to the next round. */
+  private pendingRound: RoundResult | null = null;
+  private nextRound: Phaser.Time.TimerEvent | null = null;
 
   // The world: the board, bench, heroes and effects, drawn at their own zoom `s` (world px to page px) from (wx, wy).
   private sky!: Phaser.GameObjects.Image;
@@ -345,8 +414,6 @@ export class AutoScene extends Phaser.Scene {
   private fx!: FxLayer;
   private torches: Phaser.GameObjects.Image[] = [];
   private frame: BoardFrame = { x: 0, y: 0, cw: CELL_W, ch: CELL_H, flip: false };
-  /** Online, the guest sees fights from the other end (its own heroes are the sim's top side). */
-  private flipFight = false;
   /** The match is settled (someone is out): a leaving rival no longer changes it. */
   private decided = false;
   private benchX = 0;
@@ -363,6 +430,9 @@ export class AutoScene extends Phaser.Scene {
   private rivalText!: Phaser.GameObjects.BitmapText[];
   private hearts: Phaser.GameObjects.Image[] = [];
   private traitList!: Phaser.GameObjects.Container;
+  /** Everyone at a bigger table, in the wide layout's column; and how far down it may run. */
+  private standings!: Phaser.GameObjects.Container;
+  private standBottom = 0;
   private banner!: Phaser.GameObjects.Graphics;
   private roundText!: Phaser.GameObjects.BitmapText;
   private phaseText!: Phaser.GameObjects.BitmapText;
@@ -491,6 +561,7 @@ export class AutoScene extends Phaser.Scene {
     this.rivalText = [pixelText(this, 0, 0, ''), pixelText(this, 0, 0, '', GOLD), pixelText(this, 0, 0, '', LAVENDER)];
     this.hearts = [this.add.image(0, 0, 'ab_heart').setOrigin(0), this.add.image(0, 0, 'ab_heart').setOrigin(0)];
     this.traitList = this.add.container(0, 0);
+    this.standings = this.add.container(0, 0);
     this.banner = this.add.graphics();
     this.roundText = pixelText(this, 0, 0, '', GOLD);
     this.phaseText = pixelText(this, 0, 0, '', LAVENDER);
@@ -521,7 +592,7 @@ export class AutoScene extends Phaser.Scene {
       this.hovered = null;
       this.refreshInfo();
     });
-    this.hud.add([this.trayG, this.plates, ...this.meText, ...this.rivalText, ...this.hearts, this.traitList, this.banner, this.roundText, this.phaseText, this.leaveBtn, this.lvlBox, this.goldBox, ...this.cards, this.frost, this.sellZone, this.infoBg, this.info, this.infoHit]);
+    this.hud.add([this.trayG, this.plates, ...this.meText, ...this.rivalText, ...this.hearts, this.traitList, this.standings, this.banner, this.roundText, this.phaseText, this.leaveBtn, this.lvlBox, this.goldBox, ...this.cards, this.frost, this.sellZone, this.infoBg, this.info, this.infoHit]);
   }
 
   /**
@@ -656,6 +727,7 @@ export class AutoScene extends Phaser.Scene {
       this.traitRect.setTo(tx, ty, vw - PAD - tx, trayY - GAP - ty);
       this.bannerAt = { x: PAD, y: PAD + 13 + GAP + 2 * (PLATE_H + GAP), w: this.leftW };
       this.buildReady(this.leftW, FIGHT_H, PAD, trayY - GAP - FIGHT_H);
+      this.standBottom = trayY - GAP * 2 - FIGHT_H;
       // The tray: level, five cards, gold.
       this.tray.setTo(0, trayY, vw, vh - trayY);
       this.buildBlocks(BLOCK_W, blockH);
@@ -777,7 +849,9 @@ export class AutoScene extends Phaser.Scene {
       const y = PAD + 13 + GAP;
       plate(0, me, this.meText, PAD, y, this.leftW, true);
       plate(1, this.rival, this.rivalText, PAD, y + PLATE_H + GAP, this.leftW, false);
+      this.drawStandings(PAD, this.bannerAt.y + BANNER_H + GAP, this.leftW);
     } else {
+      this.standings.removeAll(true);
       const w = Math.floor((vw - PAD * 2 - BANNER_W_TALL - 8) / 2);
       plate(0, me, this.meText, PAD, this.row2, w, true);
       plate(1, this.rival, this.rivalText, vw - PAD - w, this.row2, w, false);
@@ -785,12 +859,52 @@ export class AutoScene extends Phaser.Scene {
     this.drawBanner();
   }
 
+  /**
+   * At a table of more than two: everyone, still-in first by health, then
+   * those out by where they finished. This player's row is marked blue, the
+   * foe's red with a sword, and a thin bar under each shows its health.
+   */
+  private drawStandings(x: number, y: number, w: number): void {
+    const list = this.standings;
+    list.removeAll(true);
+    if (this.seats.length <= 2) return;
+    const rows = Math.max(0, Math.floor((this.standBottom - y) / STAND_ROW));
+    const order = this.seats
+      .map((s, i) => ({ s, i }))
+      .sort((a, b) => (b.s.hp > 0 ? 1 : 0) - (a.s.hp > 0 ? 1 : 0) || (a.s.hp > 0 ? b.s.hp - a.s.hp : a.s.place - b.s.place) || a.i - b.i)
+      .slice(0, rows);
+    const g = this.add.graphics();
+    list.add(g);
+    order.forEach(({ s, i }, k) => {
+      const ry = y + k * STAND_ROW;
+      const mine = i === this.mySeat;
+      const foe = i === this.foe && this.phase !== 'plan';
+      const inGame = s.hp > 0;
+      g.fillStyle(mine ? 0x1a2a50 : 0x0b0818, inGame ? 0.78 : 0.5).fillRect(x, ry, w, STAND_ROW - 1);
+      g.fillStyle(mine ? 0x6fb8ff : foe ? 0xff6a7a : inGame ? 0x5a5080 : 0x2a2440, 1).fillRect(x, ry, 1, STAND_ROW - 1);
+      if (inGame) {
+        g.fillStyle(0x1a1430, 1).fillRect(x + 1, ry + STAND_ROW - 2, w - 1, 1);
+        g.fillStyle(mine ? 0x5ad07a : foe ? 0xff5a5a : 0x9a8ac8, 1).fillRect(x + 1, ry + STAND_ROW - 2, Math.round(((w - 1) * s.hp) / START_HP), 1);
+      }
+      const right = pixelText(this, 0, ry + 1, inGame ? `${Math.ceil(s.hp)}` : ordinal(s.place || this.seats.length), inGame ? GOLD : SOFT);
+      right.setX(x + w - 3 - right.width);
+      let nameEnd = right.x - 3;
+      if (foe && inGame) {
+        nameEnd -= 8;
+        list.add(this.add.image(nameEnd + 1, ry + 1, 'ab_sword').setOrigin(0).setAlpha(this.foeGhost ? 0.6 : 1));
+      }
+      const name = pixelText(this, x + 4, ry + 1, fitLine(this.probe, s.name, nameEnd - x - 6), inGame ? (mine ? INK : LAVENDER) : SOFT);
+      list.add([right, name]);
+    });
+  }
+
   /** The round, what's on (planning with the seconds left, the fight, the result), and a bar running down while planning. */
   private drawBanner(): void {
     const at = this.bannerAt;
     const b = this.banner.clear();
     const inPlay = this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result';
-    const label = this.phase === 'plan' ? `Plan ${Math.ceil(Math.max(0, this.timer))}` : this.phase === 'fight' ? 'Fight' : this.phase === 'result' ? 'Result' : '';
+    const label =
+      this.phase === 'plan' ? `Plan ${Math.ceil(Math.max(0, this.timer))}` : this.phase === 'fight' ? (this.out ? 'Watching' : 'Fight') : this.phase === 'result' ? 'Result' : '';
     let barY: number;
     if (this.wide) {
       b.fillStyle(0x0b0818, 0.72).fillRect(at.x, at.y, at.w, BANNER_H - 1);
@@ -851,8 +965,9 @@ export class AutoScene extends Phaser.Scene {
       c.show(k, !!k && unitDef(k).cost <= this.me.gold, mine.filter((p) => p.star === 1).length, mine.length > 0);
     });
     if (this.readyBtn) {
-      this.readyBtn.setVisible(this.phase === 'plan');
-      this.readyBtn.setText(this.mode === 'ai' ? 'Fight!' : this.ready ? (this.rivalReady ? 'Starting' : 'Waiting') : this.rivalReady ? 'Ready 1/2' : 'Ready');
+      this.readyBtn.setVisible(this.phase === 'plan' && this.me.alive);
+      const [n, m] = this.mode === 'ai' ? [0, 1] : this.readyCount();
+      this.readyBtn.setText(m <= 1 && this.host ? 'Fight!' : this.ready ? `Waiting ${n}/${m}` : n ? `Ready ${n}/${m}` : 'Ready');
     }
     this.drawTraits();
     this.refreshInfo();
@@ -1020,7 +1135,13 @@ export class AutoScene extends Phaser.Scene {
     tray.fillStyle(0xd69a3a, 1).fillRect(this.tray.x, this.tray.y + 1, this.tray.width, 1);
     tray.fillStyle(0x8a4e22, 1).fillRect(this.tray.x, this.tray.y, this.tray.width, 1);
     const back = new PixelButton(this, 'Back', 34, 13, BUTTON_PLAIN, 'ab_back', () => this.leave()).place(PAD, 1);
-    c.add([band, tray, title, ...texts, ...buttons, back]);
+    // How many bots to practise against, where the level block will be.
+    const bots = this.stepper(this.lvlBox.x, this.wide ? Math.round(this.tray.y + (this.tray.height - 15) / 2) : this.lvlBox.y, this.blockW, this.botCount, 1, MAX_BOTS, (n) => {
+      this.botCount = n;
+      saveBots(n);
+      this.showLobby();
+    });
+    c.add([band, tray, title, ...texts, ...buttons, back, bots]);
     this.hud.setVisible(false);
   }
 
@@ -1037,7 +1158,8 @@ export class AutoScene extends Phaser.Scene {
 
   // ------------------------------------------------------------ a match
 
-  private newMatch(mode: Mode): void {
+  /** A new match at this table; `mine` is this player's seat. The host plays the bots. */
+  private newMatch(mode: Mode, seats: SeatInfo[], mine: number): void {
     this.mode = mode;
     this.closeLobby();
     this.clearOverlay();
@@ -1045,42 +1167,72 @@ export class AutoScene extends Phaser.Scene {
     this.me.lookOf = lookFor;
     this.round = 0;
     this.wonLast = false;
-    this.guestBoard = [];
-    this.pendingResult = null;
-    this.flipFight = mode === 'online' && !this.host;
+    this.pendingRound = null;
+    this.foughtRound = 0;
     this.decided = false;
+    this.ended = false;
+    this.out = false;
+    this.readyIds.clear();
+    this.awaiting.clear();
+    this.nextRound?.remove();
+    this.nextRound = null;
+    this.waitBoard?.remove();
+    this.waitBoard = null;
+    this.seats = seats.map((s) => ({ ...s, hp: START_HP, level: START_LEVEL, board: [], place: 0, ai: this.host && s.bot ? new AutoPlayer(s.name) : null }));
+    this.mySeat = mine;
+    this.foe = this.seats.findIndex((_, i) => i !== mine);
+    this.foeGhost = false;
     this.fight?.destroy();
     this.fight = null;
     for (const v of this.views.values()) v.destroy();
     this.views.clear();
   }
 
+  /** Practice: this player and `botCount` bots. */
   private startPractice(): void {
     this.host = true;
-    this.newMatch('ai');
-    const name = RIVAL_NAMES[Math.floor(Math.random() * RIVAL_NAMES.length)];
-    this.ai = new AutoPlayer(name);
-    this.rival = { name, hp: this.ai.hp, level: this.ai.level };
+    const seats: SeatInfo[] = [{ name: this.myName(), bot: false, peer: -1 }, ...botNames(this.botCount).map((name) => ({ name, bot: true, peer: -1 }))];
+    this.newMatch('ai', seats, 0);
     this.startPlan(1, PLAN_SECONDS[0]);
   }
 
-  /** Planning: gold in, a fresh shop, the clock runs. */
+  /** Seats still in. */
+  private aliveSeats(): number[] {
+    return this.seats.map((_, i) => i).filter((i) => this.seats[i].hp > 0);
+  }
+
+  /** People still in, other than this player (online). */
+  private livePeople(): number[] {
+    return this.aliveSeats().filter((i) => i !== this.mySeat && !this.seats[i].bot && this.seats[i].peer >= 0);
+  }
+
+  private seatOf(peer: number | undefined): number {
+    return peer === undefined ? -1 : this.seats.findIndex((s) => !s.bot && s.peer === peer);
+  }
+
+  /** Planning: gold in, a fresh shop, the clock runs; the host's bots plan too. */
   private startPlan(round: number, seconds: number): void {
+    // A fight still playing here ends now, its result applied, so the rounds keep in step.
+    if (this.phase === 'fight' && this.fight) this.finishFight();
+    if (this.phase === 'over' && !this.out) return;
     this.round = round;
     this.phase = 'plan';
     this.ready = false;
-    this.rivalReady = false;
+    this.readyIds.clear();
     this.timer = this.timerMax = seconds;
     this.fight?.destroy();
     this.fight = null;
     this.fx.clear();
-    this.clearOverlay();
-    this.me.startRound(round, this.wonLast);
-    if (this.ai) {
-      this.ai.startRound(round, this.ai.streak > 0);
-      aiPlan(this.ai, round);
-      this.rival.level = this.ai.level;
-    }
+    if (!this.out) this.clearOverlay();
+    if (this.me.alive) this.me.startRound(round, this.wonLast);
+    this.seats[this.mySeat].level = this.me.level;
+    if (this.host)
+      for (const s of this.seats)
+        if (s.ai && s.hp > 0) {
+          s.ai.startRound(round, s.ai.streak > 0);
+          aiPlan(s.ai, round);
+          s.level = s.ai.level;
+        }
     this.selected = null;
     this.syncPieces();
     this.refreshHud();
@@ -1098,7 +1250,7 @@ export class AutoScene extends Phaser.Scene {
     if (this.phase === 'plan') {
       this.timer -= dt;
       this.drawBanner();
-      if (this.timer <= 0 && (this.mode === 'ai' || this.host)) this.endPlan();
+      if (this.timer <= 0 && this.host) this.endPlan();
     }
     if (this.phase === 'fight' && this.fight) {
       this.fight.update(dt);
@@ -1112,124 +1264,162 @@ export class AutoScene extends Phaser.Scene {
     for (const v of this.views.values()) v.tick(dt);
   }
 
-  /** Planning is over: the board locks and the fight is worked out. */
+  /** Planning is over (the host's call): boards lock, and the round is fought once every board is in. */
   private endPlan(): void {
-    if (this.phase !== 'plan') return;
+    if (this.phase !== 'plan' || !this.host) return;
     this.cancelDrag();
-    this.me.autoFill();
-    if (this.mode === 'ai') {
-      const seed = (Math.random() * 2 ** 31) | 0;
-      this.startFight([this.me.placed(), this.ai!.placed()], seed, 0);
-      return;
-    }
-    // Online, the host asks for the guest's board, and fights its last one if it's late.
-    if (!this.host) return;
-    this.phase = 'fight';
+    this.lockBoard();
+    for (const s of this.seats) if (s.ai && s.hp > 0) s.board = s.ai.placed();
+    // Online, the other people send their boards; the host fights their last ones if any are late.
+    this.awaiting = new Set(this.livePeople());
+    if (!this.awaiting.size) return this.hostFights();
     session.send({ t: 'al', round: this.round });
-    this.refreshHud();
     this.waitBoard?.remove();
-    this.waitBoard = this.time.delayedCall(BOARD_WAIT_MS, () => this.hostFight());
+    this.waitBoard = this.time.delayedCall(BOARD_WAIT_MS, () => this.hostFights());
   }
 
-  /** The host has both boards: the fight's outcome, worked out at once, goes to both. */
-  private hostFight(): void {
+  /** This player's board locks for the fight (and is what they fight with). */
+  private lockBoard(): void {
+    if (this.me.alive) {
+      this.me.autoFill();
+      const mine = this.seats[this.mySeat];
+      mine.board = this.me.placed();
+      mine.level = this.me.level;
+    }
+    this.phase = 'fight';
+    this.syncPieces();
+    this.refreshHud();
+  }
+
+  /** The host has the boards: every bout of the round, worked out at once and sent to all. */
+  private hostFights(): void {
     this.waitBoard?.remove();
     this.waitBoard = null;
-    if (this.fight || !this.host) return;
-    const a = this.me.placed();
-    const b = this.guestBoard;
-    const seed = (Math.random() * 2 ** 31) | 0;
-    const judge = new Battle([a, b], seed);
-    judge.runToEnd();
-    const dmg: [number, number] = [0, 0];
-    const stars = judge.survivors().map((u) => u.star);
-    if (judge.winner === 0) dmg[1] = lossDamage(this.round, stars);
-    else if (judge.winner === 1) dmg[0] = lossDamage(this.round, stars);
-    else dmg[0] = dmg[1] = lossDamage(this.round, []);
-    const msg: FightMsg = {
-      round: this.round,
-      seed,
-      a,
-      b,
-      win: judge.winner,
-      dmg,
-      hp: [Math.max(0, this.me.hp - dmg[0]), Math.max(0, this.rival.hp - dmg[1])],
-      lv: [this.me.level, this.rival.level],
-    };
-    session.send({ t: 'af', ...msg });
-    this.pendingResult = msg;
-    this.startFight([a, b], seed, 0);
+    if (!this.host || this.phase !== 'fight' || this.foughtRound === this.round) return;
+    this.foughtRound = this.round;
+    const bouts = drawBouts(this.round, this.aliveSeats(), this.seats.map((s) => s.board), Math.random);
+    const before = this.seats.map((s) => s.hp);
+    const hp = healthAfter(before, bouts);
+    const result: RoundResult = { round: this.round, bouts, hp, lv: this.seats.map((s) => s.level), place: placesAfter(before, hp, this.seats.map((s) => s.place)) };
+    // The bots keep their streaks (for their income) and their health.
+    for (const b of bouts)
+      for (const [i, side] of [[b.a, 0], ...(b.ghost ? [] : [[b.b, 1]])] as [number, 0 | 1][]) {
+        const ai = this.seats[i].ai;
+        if (!ai) continue;
+        ai.settle(b.win === -1 ? null : b.win === side, 0);
+        ai.hp = hp[i];
+      }
+    if (this.mode === 'online') session.send({ t: 'af', ...result });
+    this.playRound(result);
+    // The next round once the longest fight has played out and its result has stood.
+    const longest = Math.max(0, ...bouts.map((b) => b.ticks)) * TICK;
+    this.nextRound?.remove();
+    this.nextRound = this.time.delayedCall((longest + LINGER + RESULT_SECONDS + 0.6) * 1000, () => {
+      this.nextRound = null;
+      if (this.decided) return;
+      if (this.mode === 'online') session.send({ t: 'ap', round: this.round + 1, sec: PLAN_SECONDS[1] });
+      this.startPlan(this.round + 1, PLAN_SECONDS[1]);
+    });
   }
 
-  private startFight(boards: [Placed[], Placed[]], seed: number, mySide: 0 | 1): void {
+  /** A round arrives: play this player's own bout (or, once out, watch one). */
+  private playRound(r: RoundResult): void {
+    if (this.phase === 'fight' && this.fight) return;
+    this.pendingRound = r;
+    const my = this.mySeat;
+    const bout = r.bouts.find((b) => b.a === my || (!b.ghost && b.b === my));
+    const shown = bout ?? r.bouts.find((b) => !b.ghost) ?? r.bouts[0];
+    if (!shown) {
+      // Nothing to watch: the round's result stands at once.
+      this.phase = 'fight';
+      this.applyRound();
+      return;
+    }
+    const side: 0 | 1 = bout && bout.b === my ? 1 : 0;
+    if (bout) {
+      this.foe = side === 0 ? bout.b : bout.a;
+      this.foeGhost = bout.ghost;
+    }
+    this.startFight(shown.boards, shown.seed, side, shown.ghost ? 1 : -1);
+  }
+
+  private startFight(boards: [Placed[], Placed[]], seed: number, mySide: 0 | 1, ghostSide: number): void {
     this.cancelDrag();
     this.phase = 'fight';
     this.selected = null;
     this.fightDone = 0;
     this.fight?.destroy();
-    this.fight = new FightView(this, new Battle(boards, seed), { ...this.frame, flip: this.flipFight }, this.layer, this.fx, mySide);
+    // A player fighting from the top side sees the board from that end, their own heroes at the bottom.
+    this.fight = new FightView(this, new Battle(boards, seed), { ...this.frame, flip: mySide === 1 }, this.layer, this.fx, mySide, ghostSide);
     // The board's pieces step aside for the fight's own heroes; the bench stays.
     this.syncPieces();
     this.refreshHud();
     sound.drumBeat(0, true);
   }
 
-  /** The fight is over: who lost what, then the next round (or the end). */
+  /** The fight is over: the round's result stands. */
   private finishFight(): void {
     if (this.phase !== 'fight' || !this.fight) return;
-    const b = this.fight.battle;
-    this.phase = 'result';
-    let myDmg = 0;
-    let rivalDmg = 0;
-    let won: boolean | null;
-    if (this.mode === 'ai') {
-      const stars = b.survivors().map((u) => u.star);
-      won = b.winner === 0 ? true : b.winner === 1 ? false : null;
-      if (won === true) rivalDmg = lossDamage(this.round, stars);
-      else if (won === false) myDmg = lossDamage(this.round, stars);
-      else myDmg = rivalDmg = lossDamage(this.round, []);
-      this.ai!.settle(won === null ? null : !won, rivalDmg);
-      this.rival.hp = this.ai!.hp;
-      this.me.settle(won, myDmg);
-    } else {
-      // Online, the host's reckoning stands for both.
-      const r = this.pendingResult;
-      const mine = this.host ? 0 : 1;
-      if (!r) return;
-      won = r.win === -1 ? null : r.win === mine;
-      myDmg = r.dmg[mine];
-      rivalDmg = r.dmg[1 - mine];
-      this.me.settle(won, myDmg);
-      this.me.hp = Math.max(0, r.hp[mine]);
-      this.rival.hp = Math.max(0, r.hp[1 - mine]);
-      this.rival.level = r.lv[1 - mine];
-      this.pendingResult = null;
-    }
-    this.wonLast = won === true;
-    this.showResult(won, myDmg, rivalDmg);
-    this.refreshHud();
-    const over = !this.me.alive || this.rival.hp <= 0;
-    this.decided = over;
-    this.time.delayedCall(RESULT_SECONDS * 1000, () => {
-      if (this.phase !== 'result') return;
-      if (over) return this.gameOver(this.me.alive && this.rival.hp <= 0 ? true : !this.me.alive && this.rival.hp > 0 ? false : null);
-      if (this.mode === 'ai') this.startPlan(this.round + 1, PLAN_SECONDS[1]);
-      else if (this.host) {
-        session.send({ t: 'ap', round: this.round + 1, sec: PLAN_SECONDS[1] });
-        this.startPlan(this.round + 1, PLAN_SECONDS[1]);
-      }
-    });
+    this.applyRound();
   }
 
-  private showResult(won: boolean | null, myDmg: number, rivalDmg: number): void {
+  /** Who lost what (as the host reckoned it), this player's result, and whether they or the match are done. */
+  private applyRound(): void {
+    const r = this.pendingRound;
+    this.phase = 'result';
+    if (!r) return;
+    this.pendingRound = null;
+    const my = this.mySeat;
+    const wasIn = this.seats[my].hp > 0;
+    this.seats.forEach((s, i) => {
+      s.hp = r.hp[i] ?? s.hp;
+      if (i !== my) s.level = r.lv[i] ?? s.level;
+      s.place = r.place[i] ?? s.place;
+    });
+    const bout = r.bouts.find((b) => b.a === my || (!b.ghost && b.b === my));
+    let won: boolean | null = null;
+    if (bout) {
+      const side = bout.a === my ? 0 : 1;
+      won = bout.win === -1 ? null : bout.win === side;
+      this.me.settle(won, 0);
+      if (wasIn) this.showResult(won, bout, side);
+    }
+    this.me.hp = this.seats[my].hp;
+    this.wonLast = won === true;
+    this.refreshHud();
+    this.checkEnd(wasIn);
+  }
+
+  /** The match ends with one (or nobody) left; a player who just fell is out (in practice, that's the end). */
+  private checkEnd(wasIn: boolean): void {
+    if (this.decided) return;
+    const left = this.aliveSeats().length;
+    const fell = wasIn && this.seats[this.mySeat].hp <= 0;
+    if (left <= 1 || (fell && this.mode === 'ai')) {
+      this.decided = true;
+      this.nextRound?.remove();
+      this.nextRound = null;
+      this.time.delayedCall(RESULT_SECONDS * 1000, () => this.gameOver());
+    } else if (fell) {
+      this.out = true;
+      this.time.delayedCall(RESULT_SECONDS * 1000, () => this.showOut());
+    }
+  }
+
+  private showResult(won: boolean | null, bout: Bout, side: 0 | 1): void {
+    if (this.out) return;
     this.clearOverlay();
     const at = this.boardCentre();
     const c = (this.overlay = this.add.container(at.x, at.y));
     const key = won === true ? 'ab_victory' : won === false ? 'ab_defeat' : 'ab_draw';
     const img = this.add.image(0, -20, key).setScale(2);
     if (won === false) img.setTint(0xff9a9a);
-    const line = won === true ? `${this.rival.name} loses ${rivalDmg}` : won === false ? `You lose ${myDmg}` : `Both lose ${myDmg}`;
-    const t = pixelText(this, 0, 0, line, won === false ? RED : won === true ? GREEN : LAVENDER);
+    const foe = this.seats[side === 0 ? bout.b : bout.a];
+    const mine = bout.dmg[side];
+    let line: string;
+    if (bout.ghost) line = won === true ? `Ghost beaten: +${-mine} health` : won === false ? `The ghost wins: you lose ${mine}` : 'The ghost fades: no change';
+    else line = won === true ? `${foe.name} loses ${bout.dmg[1 - side]}` : won === false ? `You lose ${mine}` : `Both lose ${mine}`;
+    const t = pixelText(this, 0, 0, fitLine(this.probe, line, this.vw - 8), won === false ? RED : won === true ? GREEN : LAVENDER);
     t.setPosition(-Math.round(t.width / 2), 2);
     c.add([img, t]).setDepth(20000).setAlpha(0).setScale(0.8);
     this.tweens.add({ targets: c, alpha: 1, scale: 1, duration: 260, ease: 'Back.Out' });
@@ -1245,21 +1435,67 @@ export class AutoScene extends Phaser.Scene {
     this.overlay = null;
   }
 
-  /** The match is over: a banner, the prize, and the way out. */
-  private gameOver(won: boolean | null): void {
+  /** Out of a match that goes on (online): the place, and watch on or leave. The host's leaving ends it for all. */
+  private showOut(): void {
+    if (this.decided || this.leaving) return;
+    this.clearOverlay();
+    const at = this.boardCentre();
+    const c = (this.overlay = this.add.container(at.x, at.y));
+    const bg = this.add.image(0, 0, panelTexture(this, 'ab_out_panel', 200, 72, PANEL)).setOrigin(0.5);
+    const img = this.add.image(0, -18, 'ab_defeat').setScale(1.2).setTint(0xff9a9a);
+    const t = pixelText(this, 0, -2, `Out in ${ordinal(this.seats[this.mySeat].place || this.aliveSeats().length + 1)} place`, LAVENDER);
+    t.setX(-Math.round(t.width / 2));
+    const items: Phaser.GameObjects.GameObject[] = [bg, img, t];
+    if (this.host) {
+      const h = pixelText(this, 0, 8, 'Leaving ends the match for all', SOFT);
+      h.setX(-Math.round(h.width / 2));
+      items.push(h);
+    }
+    const watch = new PixelButton(this, 'Watch', 90, 16, BUTTON_GOLD, 'ab_watch', () => this.clearOverlay()).place(-94, 18);
+    const out = new PixelButton(this, 'Leave', 90, 16, BUTTON_PLAIN, 'ab_out', () => this.leave()).place(4, 18);
+    items.push(watch, out);
+    c.add(items).setDepth(20000);
+  }
+
+  /** The match is over: a banner, this player's place, the prize, and the way out. */
+  private gameOver(): void {
+    if (this.ended) return;
+    this.ended = true;
     this.phase = 'over';
+    this.out = false;
+    this.nextRound?.remove();
+    this.nextRound = null;
+    this.waitBoard?.remove();
+    this.waitBoard = null;
     this.off?.();
     this.off = null;
     if (this.mode === 'online') session.close();
+    this.fight?.destroy();
+    this.fight = null;
     this.clearOverlay();
+    const my = this.seats[this.mySeat];
+    const alive = this.aliveSeats();
+    // The last one in wins; if the last ones all fell together, they share it as a draw.
+    const won: boolean | null = alive.length === 1 ? alive[0] === this.mySeat : alive.length === 0 && my.place === 1 ? null : false;
     const gems = won ? WIN_GEMS[this.mode] : 0;
     if (gems) collection.addGems(gems);
+    const winner = alive.length === 1 ? this.seats[alive[0]] : null;
     const at = this.boardCentre();
     const c = (this.overlay = this.add.container(at.x, at.y));
     const bg = this.add.image(0, 0, panelTexture(this, 'ab_over', 200, 96, PANEL)).setOrigin(0.5);
     const img = this.add.image(0, -26, won ? 'ab_victory' : won === false ? 'ab_defeat' : 'ab_draw').setScale(1.5);
-    const line = won ? `You beat ${this.rival.name} in ${this.round} rounds` : won === false ? `${this.rival.name} wins in ${this.round} rounds` : 'Nobody is left standing';
-    const t = pixelText(this, 0, -4, line, LAVENDER);
+    const two = this.seats.length === 2;
+    const other = this.seats[1 - this.mySeat];
+    const line = won
+      ? two
+        ? `You beat ${other.name} in ${this.round} rounds`
+        : `Last one standing after ${this.round} rounds`
+      : won === false
+        ? two
+          ? `${other.name} wins in ${this.round} rounds`
+          : `${ordinal(my.place || alive.length + 1)} place${winner ? `: ${winner.name} wins` : ''}`
+        : 'Nobody is left standing';
+    const t = pixelText(this, 0, -4, fitLine(this.probe, line, 190), LAVENDER);
     t.setX(-Math.round(t.width / 2));
     const items: Phaser.GameObjects.GameObject[] = [bg, img, t];
     if (gems) {
@@ -1275,6 +1511,7 @@ export class AutoScene extends Phaser.Scene {
     const out = new PixelButton(this, 'Leave', 90, 16, BUTTON_PLAIN, 'ab_out', () => this.leave()).place(4, 24);
     items.push(again, out);
     c.add(items).setDepth(20000);
+    this.syncPieces();
     this.refreshHud();
     this.readyBtn?.setVisible(false);
     play(() => {
@@ -1286,6 +1523,10 @@ export class AutoScene extends Phaser.Scene {
     this.off?.();
     this.off = null;
     session.close();
+    this.nextRound?.remove();
+    this.nextRound = null;
+    this.waitBoard?.remove();
+    this.waitBoard = null;
     this.fight?.destroy();
     this.fight = null;
     for (const v of this.views.values()) v.destroy();
@@ -1293,6 +1534,7 @@ export class AutoScene extends Phaser.Scene {
     this.fx.clear();
     this.clearOverlay();
     this.phase = 'lobby';
+    this.out = false;
     this.me = undefined as unknown as AutoPlayer;
     this.showLobby();
   }
@@ -1300,7 +1542,7 @@ export class AutoScene extends Phaser.Scene {
   // ------------------------------------------------------------ shop
 
   private buy(i: number): void {
-    if (!this.me || !(this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result')) return;
+    if (!this.me?.alive || !(this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result')) return;
     const before = this.me.all().map((p) => p.star);
     const piece = this.me.buy(i, this.phase !== 'plan');
     if (!piece) {
@@ -1327,7 +1569,7 @@ export class AutoScene extends Phaser.Scene {
   }
 
   private reroll(): void {
-    if (!this.me || this.phase === 'lobby' || this.phase === 'over' || this.phase === 'wait') return;
+    if (!this.me?.alive || this.phase === 'lobby' || this.phase === 'over' || this.phase === 'wait') return;
     if (this.me.reroll()) {
       play(() => {
         sound.cardFlip(0);
@@ -1338,7 +1580,7 @@ export class AutoScene extends Phaser.Scene {
 
   /** Freeze the shop so the next round keeps it (free), or thaw it. */
   private toggleFreeze(): void {
-    if (!this.me || this.phase === 'lobby' || this.phase === 'over' || this.phase === 'wait') return;
+    if (!this.me?.alive || this.phase === 'lobby' || this.phase === 'over' || this.phase === 'wait') return;
     this.me.frozen = !this.me.frozen;
     play(() => {
       sound.cardFlip(0);
@@ -1383,7 +1625,7 @@ export class AutoScene extends Phaser.Scene {
   }
 
   private buyXp(): void {
-    if (!this.me || this.phase === 'lobby' || this.phase === 'over' || this.phase === 'wait') return;
+    if (!this.me?.alive || this.phase === 'lobby' || this.phase === 'over' || this.phase === 'wait') return;
     const lvl = this.me.level;
     if (this.me.buyXp()) {
       play(() => {
@@ -1395,11 +1637,11 @@ export class AutoScene extends Phaser.Scene {
   }
 
   private toggleReady(): void {
-    if (this.phase !== 'plan') return;
+    if (this.phase !== 'plan' || !this.me.alive) return;
     if (this.mode === 'ai') return this.endPlan();
     this.ready = !this.ready;
     session.send({ t: 'ar', round: this.round, on: this.ready });
-    if (this.host && this.ready && this.rivalReady) this.endPlan();
+    this.checkReady();
     this.refreshHud();
   }
 
@@ -1457,7 +1699,7 @@ export class AutoScene extends Phaser.Scene {
    * drawn on top won; `pieceAt` goes by where each hero stands instead.
    */
   private onDown(ptr: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]): void {
-    if (this.phase === 'lobby' || this.phase === 'over' || this.phase === 'wait' || !this.me) return;
+    if (this.phase === 'lobby' || this.phase === 'over' || this.phase === 'wait' || !this.me?.alive) return;
     // A press on a card, a button or the hero card belongs to it.
     if (over.length) return;
     const x = ptr.x / this.z;
@@ -1610,13 +1852,15 @@ export class AutoScene extends Phaser.Scene {
 
   private openRoom(): void {
     if (!session.configured) return this.notice("Online play isn't set up.");
-    this.waiting('Opening a room...', null);
+    this.host = true;
+    this.waiting(null);
     session
-      .open({ t: 'create', mode: 'duel', arena: AUTO_ARENA }, this.onlineMe())
+      .open({ t: 'create', mode: 'coop', arena: AUTO_ARENA }, this.onlineMe())
       .then((room) => {
         this.host = true;
+        this.roomCode = room.code;
         this.listen();
-        this.waiting('Send this code to a friend', room.code);
+        this.waiting(room.code);
       })
       .catch((e: Error) => this.backToLobby(e.message));
   }
@@ -1650,7 +1894,8 @@ export class AutoScene extends Phaser.Scene {
         return;
       }
       close();
-      this.waiting('Joining...', null);
+      this.host = false;
+      this.waiting(null);
       session
         .open({ t: 'join', code }, this.onlineMe())
         .then((room) => {
@@ -1659,8 +1904,10 @@ export class AutoScene extends Phaser.Scene {
             return this.backToLobby("That code isn't an Auto Battle room.");
           }
           this.host = false;
+          this.hostPeer = room.host;
+          this.roomCode = room.code;
           this.listen();
-          this.waiting('Waiting for the host...', room.code);
+          this.waiting(room.code);
         })
         .catch((e: Error) => this.backToLobby(e.message));
     };
@@ -1669,25 +1916,89 @@ export class AutoScene extends Phaser.Scene {
     input.focus();
   }
 
-  /** The waiting screen: a line, the room's code big, and Cancel. */
-  private waiting(line: string, code: string | null): void {
+  /** People in the room, this player first. */
+  private roomPeople(): { name: string; id: number }[] {
+    return [{ name: this.myName(), id: session.you }, ...[...session.peers.values()].map((p) => ({ name: p.name || 'Rival', id: p.id }))];
+  }
+
+  /**
+   * The room before the match: its code big, who has come, and for the host
+   * the bots to add and Start (once there are two at the table). No code yet
+   * while the room opens.
+   */
+  private waiting(code: string | null): void {
     this.phase = 'wait';
     this.closeLobby();
     const c = (this.lobby = this.add.container(0, 0));
     const cx = Math.round(this.vw / 2);
-    const bg = this.add.image(cx, Math.round(this.vh / 2), panelTexture(this, 'ab_wait', 220, 100, PANEL)).setOrigin(0.5);
-    const t = pixelText(this, 0, Math.round(this.vh / 2) - 38, line, LAVENDER);
-    t.setX(cx - Math.round(t.width / 2));
-    c.add([bg, t]);
+    const cy = Math.round(this.vh / 2);
+    const W = 230;
+    const H = this.host && code ? 132 : 104;
+    const top = cy - Math.round(H / 2);
+    c.add(this.add.image(cx, cy, panelTexture(this, `ab_wait_${H}`, W, H, PANEL)).setOrigin(0.5));
+    const text = (y: number, s: string, tint: number) => {
+      const t = pixelText(this, 0, y, fitLine(this.probe, s, W - 12), tint);
+      t.setX(cx - Math.round(t.width / 2));
+      c.add(t);
+      return t;
+    };
+    const line = !code ? (this.host ? 'Opening a room...' : 'Joining...') : this.host ? 'Send this code to friends' : 'Waiting for the host to start';
+    text(top + 7, line, LAVENDER);
     if (code) {
       const k = `ab_code_${code}`;
       if (!this.textures.exists(k)) this.textures.addCanvas(k, titleBitmap(code).toCanvas());
-      c.add(this.add.image(cx, Math.round(this.vh / 2) - 6, k).setScale(2));
+      c.add(this.add.image(cx, top + 36, k).setScale(2));
+      const people = this.roomPeople();
+      text(top + 58, `${people.length}/4 here: ${people.map((p) => p.name).join(', ')}`, INK);
+    } else c.add(pixelText(this, cx - 6, top + 30, '...', GOLD, 2));
+    let y = top + H - 22;
+    if (this.host && code) {
+      // The bots to add, and Start.
+      const people = this.roomPeople().length;
+      const most = Math.min(MAX_BOTS, MAX_SEATS - people);
+      this.roomBots = Math.max(0, Math.min(most, this.roomBots));
+      c.add(this.stepper(cx - 50, top + 72, 100, this.roomBots, 0, most, (n) => {
+        this.roomBots = n;
+        this.waiting(code);
+      }));
+      const start = new PixelButton(this, 'Start', 80, 16, BUTTON_GOLD, 'ab_start', () => this.startOnline()).place(cx - 84, y);
+      const ok = people + this.roomBots >= 2;
+      start.setEnabled(ok).setAlpha(ok ? 1 : 0.5);
+      c.add(start);
+      c.add(new PixelButton(this, 'Cancel', 80, 16, BUTTON_PLAIN, 'ab_cancel', () => this.backToLobby()).place(cx + 4, y));
     } else {
-      c.add(pixelText(this, cx - 6, Math.round(this.vh / 2) - 10, '...', GOLD, 2));
+      y = top + H - 22;
+      c.add(new PixelButton(this, 'Cancel', 80, 16, BUTTON_PLAIN, 'ab_cancel', () => this.backToLobby()).place(cx - 40, y));
     }
-    c.add(new PixelButton(this, 'Cancel', 80, 16, BUTTON_PLAIN, 'ab_cancel', () => this.backToLobby()).place(cx - 40, Math.round(this.vh / 2) + 24));
     this.hud.setVisible(false);
+  }
+
+  /** A row to pick a count: minus, "n bots", plus. */
+  private stepper(x: number, y: number, w: number, n: number, min: number, max: number, set: (n: number) => void): Phaser.GameObjects.Container {
+    const c = this.add.container(x, y);
+    const minus = new PixelButton(this, '-', 15, 15, BUTTON_PLAIN, 'ab_minus', () => n > min && set(n - 1)).place(0, 0);
+    const plus = new PixelButton(this, '+', 15, 15, BUTTON_PLAIN, 'ab_plus', () => n < max && set(n + 1)).place(w - 15, 0);
+    minus.setAlpha(n > min ? 1 : 0.45);
+    plus.setAlpha(n < max ? 1 : 0.45);
+    const t = pixelText(this, 0, 4, `${n} ${n === 1 ? 'bot' : 'bots'}`, GOLD);
+    t.setX(Math.round(w / 2 - t.width / 2));
+    c.add([minus, plus, t]);
+    return c;
+  }
+
+  /** The host starts the match: the people in the room, then the bots. */
+  private startOnline(): void {
+    if (!this.host || this.phase !== 'wait') return;
+    const people = this.roomPeople();
+    const seats: SeatInfo[] = [
+      ...people.map((p) => ({ name: p.name, bot: false, peer: p.id })),
+      ...botNames(this.roomBots, people.map((p) => p.name)).map((name) => ({ name, bot: true, peer: -1 })),
+    ];
+    if (seats.length < 2) return;
+    this.newMatch('online', seats, 0);
+    session.send({ t: 'ag', seats });
+    session.send({ t: 'ap', round: 1, sec: PLAN_SECONDS[0] });
+    this.startPlan(1, PLAN_SECONDS[0]);
   }
 
   private backToLobby(err?: string): void {
@@ -1711,90 +2022,141 @@ export class AutoScene extends Phaser.Scene {
     this.off = session.on((m) => this.onMsg(m));
   }
 
+  /** How many of the people still in are ready, of how many. */
+  private readyCount(): [number, number] {
+    const people = this.livePeople();
+    const n = people.filter((i) => this.readyIds.has(this.seats[i].peer)).length + (this.ready && this.me.alive ? 1 : 0);
+    return [n, people.length + (this.me.alive ? 1 : 0)];
+  }
+
+  /** The host fights early once everyone still in is ready. */
+  private checkReady(): void {
+    if (!this.host || this.phase !== 'plan') return;
+    const [n, m] = this.readyCount();
+    if (m > 0 && n >= m) this.endPlan();
+  }
+
+  /** Someone left mid-match (the host's call): their seat is out, and the match may be settled. */
+  private seatLeft(seat: number): void {
+    const s = this.seats[seat];
+    if (!s || s.hp <= 0) return;
+    const before = this.seats.map((x) => x.hp);
+    s.hp = 0;
+    const hp = this.seats.map((x) => x.hp);
+    placesAfter(before, hp, this.seats.map((x) => x.place)).forEach((p, i) => (this.seats[i].place = p));
+    session.send({ t: 'ah', hp, place: this.seats.map((x) => x.place) });
+    this.awaiting.delete(seat);
+    if (this.phase === 'fight' && !this.awaiting.size) this.hostFights();
+    this.checkReady();
+    this.afterLeave();
+  }
+
+  /** After someone left: the standings show it, and with one left the match is over. */
+  private afterLeave(): void {
+    this.refreshHud();
+    if (this.decided || this.ended) return;
+    if (this.aliveSeats().length <= 1) {
+      this.decided = true;
+      this.gameOver();
+    }
+  }
+
   private onMsg(m: Msg): void {
+    const inMatch = !!this.me && this.phase !== 'wait' && this.phase !== 'lobby';
     switch (m.t) {
       case 'peer+': {
-        const p = m.p as { name: string };
-        this.rival.name = p.name || 'Rival';
-        if (this.host && this.phase === 'wait') {
-          this.newMatch('online');
-          this.rival = { name: p.name || 'Rival', hp: 100, level: 2 };
-          session.send({ t: 'ag' });
-          session.send({ t: 'ap', round: 1, sec: PLAN_SECONDS[0] });
-          this.startPlan(1, PLAN_SECONDS[0]);
+        const p = m.p as { id: number };
+        if (this.phase === 'wait') this.waiting(this.roomCode);
+        // Too late to sit down: the match has begun.
+        else if (this.host && inMatch) session.send({ t: 'ax', to: p.id });
+        break;
+      }
+      case 'peer-': {
+        const id = Number(m.id);
+        if (this.phase === 'wait') {
+          if (!this.host && id === this.hostPeer) this.backToLobby('The host closed the room.');
+          else this.waiting(this.roomCode);
+          break;
+        }
+        if (!inMatch || this.ended) break;
+        if (this.host) this.seatLeft(this.seatOf(id));
+        else if (id === this.hostPeer) {
+          // The host closes the room when the match is settled, maybe while this player's last fight still plays.
+          const r = this.pendingRound;
+          if (this.decided || (r && r.hp.filter((h) => h > 0).length <= 1)) break;
+          this.toLobby();
+          this.notice('The host left the match.');
         }
         break;
       }
-      case 'peer-':
       case 'closed':
-        if (this.decided) break;
-        if (this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result') {
-          // The rival left: the match goes to whoever stayed (or ends, if it was us who lost the line).
-          const lost = m.t === 'closed';
-          this.cancelDrag();
-          this.fight?.destroy();
-          this.fight = null;
-          if (lost) {
-            this.toLobby();
-            this.notice('The connection was lost.');
-          } else {
-            this.rival.hp = 0;
-            this.gameOver(true);
-          }
-        } else if (this.phase === 'wait' && m.t === 'closed') this.backToLobby('The connection was lost.');
-        break;
-      case 'ag':
-        if (!this.host) {
-          this.newMatch('online');
-          const peer = [...session.peers.values()][0];
-          this.rival = { name: peer?.name || 'Rival', hp: 100, level: 2 };
+        if (this.ended) break;
+        if (this.phase === 'wait') this.backToLobby('The connection was lost.');
+        else if (inMatch) {
+          this.toLobby();
+          this.notice('The connection was lost.');
         }
         break;
+      case 'ax':
+        if (!this.host) this.backToLobby('That match has already begun.');
+        break;
+      case 'ag': {
+        if (this.host) break;
+        const seats = cleanSeats(m.seats);
+        const mine = seats.findIndex((s) => !s.bot && s.peer === session.you);
+        if (seats.length >= 2 && mine >= 0) this.newMatch('online', seats, mine);
+        break;
+      }
       case 'ap':
-        if (!this.host && this.me) {
-          // A fight still playing here ends now, its result applied, so the rounds keep in step.
-          if (this.phase === 'fight' && this.fight) this.finishFight();
-          this.startPlan(Number(m.round) || this.round + 1, Number(m.sec) || PLAN_SECONDS[1]);
-        }
+        if (!this.host && inMatch && !this.ended) this.startPlan(Number(m.round) || this.round + 1, Number(m.sec) || PLAN_SECONDS[1]);
         break;
       case 'al':
-        if (!this.host && this.me && this.phase === 'plan') {
+        if (!this.host && inMatch && this.phase === 'plan') {
           this.cancelDrag();
-          this.me.autoFill();
-          this.phase = 'fight';
-          this.syncPieces();
-          this.refreshHud();
-          session.send({ t: 'ab', round: this.round, b: this.me.placed(), lv: this.me.level });
+          this.lockBoard();
+          if (this.me.alive) session.send({ t: 'ab', round: this.round, b: this.me.placed(), lv: this.me.level });
         }
         break;
-      case 'ab':
-        if (this.host && this.me) {
-          this.guestBoard = cleanBoard(m.b);
-          this.rival.level = Math.max(1, Math.min(MAX_LEVEL, Number(m.lv) || this.rival.level));
-          if (Number(m.round) === this.round && this.phase === 'fight' && !this.fight) this.hostFight();
-        }
+      case 'ab': {
+        if (!this.host || !inMatch) break;
+        const seat = this.seatOf(m.f);
+        if (seat < 0) break;
+        this.seats[seat].board = cleanBoard(m.b);
+        this.seats[seat].level = Math.max(1, Math.min(MAX_LEVEL, Number(m.lv) || this.seats[seat].level));
+        this.awaiting.delete(seat);
+        if (Number(m.round) === this.round && this.phase === 'fight' && !this.awaiting.size) this.hostFights();
         break;
+      }
       case 'ar':
-        if (Number(m.round) === this.round) {
-          this.rivalReady = !!m.on;
-          if (this.host && this.ready && this.rivalReady) this.endPlan();
+        if (inMatch && Number(m.round) === this.round && typeof m.f === 'number') {
+          if (m.on) this.readyIds.add(m.f);
+          else this.readyIds.delete(m.f);
+          this.checkReady();
           this.refreshHud();
         }
         break;
       case 'af':
-        if (!this.host && this.me) {
-          const r: FightMsg = {
-            round: Number(m.round),
-            seed: Number(m.seed) | 0,
-            a: cleanBoard(m.a),
-            b: cleanBoard(m.b),
-            win: Number(m.win),
-            dmg: (m.dmg as [number, number]) ?? [0, 0],
-            hp: (m.hp as [number, number]) ?? [this.rival.hp, this.me.hp],
-            lv: (m.lv as [number, number]) ?? [this.rival.level, this.me.level],
-          };
-          this.pendingResult = r;
-          this.startFight([r.a, r.b], r.seed, 1);
+        if (!this.host && inMatch && !this.ended) {
+          if (this.phase === 'plan') {
+            this.cancelDrag();
+            this.lockBoard();
+          }
+          if (this.phase === 'fight' && this.fight) this.finishFight();
+          this.phase = 'fight';
+          this.playRound(cleanRound(m, this.seats.length));
+        }
+        break;
+      case 'ah':
+        if (!this.host && inMatch && !this.ended) {
+          const n = this.seats.length;
+          const hp = cleanRound({ hp: m.hp }, n).hp;
+          const place = cleanRound({ place: m.place }, n).place;
+          this.seats.forEach((s, i) => {
+            s.hp = hp[i];
+            s.place = place[i];
+          });
+          this.me.hp = this.seats[this.mySeat].hp;
+          this.afterLeave();
         }
         break;
       default:

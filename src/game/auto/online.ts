@@ -1,37 +1,60 @@
-// Auto Battle online: a 1v1 room on the play server (a 'duel' room in the
-// 'auto' arena, so the relay needs nothing new). The host keeps the clock and
-// referees: it starts each round's planning, asks for the guest's board when
-// time is up, works out the fight, and sends both boards, the seed and the
-// result, so both screens play the same fight and agree on who lost what.
-// Each player runs their own shop and gold.
+// Auto Battle online: a room on the play server (a 'coop' room in the 'auto'
+// arena, so up to four people; the relay needs nothing new). The host seats
+// the people who came and any bots it adds, keeps the clock and referees: it
+// starts each round's planning, asks for everyone's boards when time is up,
+// plays its bots, works out every bout of the round (see table.ts), and
+// sends them, so each screen plays its own player's fight and all agree on
+// who lost what. Each player runs their own shop and gold.
 //
-//   host -> guest: ag (go: the match starts)
+//   host -> all:   ag { seats }               the match starts: who sits where (SeatInfo[])
 //                  ap { round, sec }          planning starts
 //                  al { round }               planning is over: send your board
-//                  af { round, seed, a, b, win, dmg, hp, lv }   the fight (a: host's board, b: guest's)
+//                  af { round, bouts, hp, lv, place }   the round (a RoundResult)
+//                  ah { hp, place }           someone left: their seat is out
+//                  ax { to }                  sorry, the match has begun
 //   guest -> host: ab { round, b, lv }        my board
-//   either:        ar { round, on }           ready (or not) to fight early
+//   anyone:        ar { round, on }           ready (or not) to fight early
 
 import { COLS, HALF, ROWS, type Placed } from './sim';
 import { UNITS } from './units';
+import { MAX_SEATS, type Bout, type RoundResult, type SeatInfo } from './table';
 
 export const AUTO_ARENA = 'auto';
 
-/** How long the host waits for the guest's board before fighting its last one. */
+/** How long the host waits for the others' boards before fighting their last ones. */
 export const BOARD_WAIT_MS = 4000;
 
-export interface FightMsg {
-  round: number;
-  seed: number;
-  a: Placed[];
-  b: Placed[];
-  /** 0 host, 1 guest, -1 a draw. */
-  win: number;
-  /** Damage dealt to [host, guest]. */
-  dmg: [number, number];
-  /** Health after, [host, guest]. */
-  hp: [number, number];
-  lv: [number, number];
+const num = (v: unknown, d = 0): number => (Number.isFinite(Number(v)) ? Number(v) : d);
+const nums = (v: unknown, n: number, d: number): number[] => Array.from({ length: n }, (_, i) => num(Array.isArray(v) ? v[i] : undefined, d));
+
+/** The seats as the host sent them. */
+export function cleanSeats(raw: unknown): SeatInfo[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, MAX_SEATS).map((s) => {
+    const o = (s && typeof s === 'object' ? s : {}) as Record<string, unknown>;
+    return { name: String(o.name ?? 'Rival').slice(0, 16), bot: !!o.bot, peer: Math.floor(num(o.peer, -1)) };
+  });
+}
+
+/** A round as the host sent it, for a table of `n` seats. */
+export function cleanRound(m: Record<string, unknown>, n: number): RoundResult {
+  const seat = (v: unknown) => Math.max(0, Math.min(n - 1, Math.floor(num(v))));
+  const bouts: Bout[] = (Array.isArray(m.bouts) ? m.bouts : []).slice(0, MAX_SEATS).map((b: unknown) => {
+    const o = (b && typeof b === 'object' ? b : {}) as Record<string, unknown>;
+    const boards = Array.isArray(o.boards) ? o.boards : [];
+    const dmg = nums(o.dmg, 2, 0);
+    return {
+      a: seat(o.a),
+      b: seat(o.b),
+      ghost: !!o.ghost,
+      seed: num(o.seed) | 0,
+      boards: [cleanBoard(boards[0]), cleanBoard(boards[1])],
+      win: Math.max(-1, Math.min(1, Math.floor(num(o.win, -1)))),
+      dmg: [dmg[0], dmg[1]],
+      ticks: num(o.ticks),
+    };
+  });
+  return { round: num(m.round), bouts, hp: nums(m.hp, n, 0), lv: nums(m.lv, n, 1), place: nums(m.place, n, 0) };
 }
 
 /** A board as sent: only real heroes, on the sender's own half, at most `max`, stars 1 to 3. */
