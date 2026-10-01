@@ -32,7 +32,7 @@ import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, Rogue, ROGUE_STYLE } from '
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
-import { Bard, DRUMMER_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, WILD_KIT } from './Bard';
+import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
 import { ARACHNE_KIT, CRIMSON_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, TOYMAKER_KIT, WEAVER_KIT } from './Puppeteer';
 import { PUPPETEER_H, PUPPETEER_ORIGIN_Y } from '../art/puppeteer';
@@ -1052,6 +1052,48 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_song_harlequin' },
             },
           },
+          {
+            // A wanderer of the open road: wide felt hat, a patched duster, a bedroll, a banjo.
+            id: 'vagabond',
+            name: 'Vagabond',
+            role: 'Songs of the open road',
+            accent: 0xb890ff,
+            attack: 'Drifting notes',
+            special: 'Song of the road',
+            preview: { texture: 'bard_vagabond', glow: 'bard_vagabond_e', idle: 'bard_vagabond_idle_down', chosen: 'bard_vagabond_song_down', originY: BARD_ORIGIN_Y / BARD_H },
+            buttons: {
+              attack: { texture: 'icon_lute_vagabond' },
+              special: { texture: 'icon_song_vagabond' },
+            },
+          },
+          {
+            // A Coimbra fado singer in a long black cape, playing the Portuguese guitar; his notes fly as swallows.
+            id: 'fadista',
+            name: 'Fadista',
+            role: 'Songs of longing',
+            accent: 0x5a8cff,
+            attack: 'Swallow notes',
+            special: 'Song of saudade',
+            preview: { texture: 'bard_fadista', glow: 'bard_fadista_e', idle: 'bard_fadista_idle_down', chosen: 'bard_fadista_song_down', originY: BARD_ORIGIN_Y / BARD_H },
+            buttons: {
+              attack: { texture: 'icon_lute_fadista' },
+              special: { texture: 'icon_song_fadista' },
+            },
+          },
+          {
+            // The singer whose song moved the dead: laurel, a white chiton, a violet himation and a golden lyre.
+            id: 'orpheus',
+            name: 'Orpheus',
+            role: 'The song that moved the dead',
+            accent: 0xffd060,
+            attack: 'Golden notes',
+            special: 'Hymn of the Muses',
+            preview: { texture: 'bard_orpheus', glow: 'bard_orpheus_e', idle: 'bard_orpheus_idle_down', chosen: 'bard_orpheus_song_down', originY: BARD_ORIGIN_Y / BARD_H },
+            buttons: {
+              attack: { texture: 'icon_lute_orpheus' },
+              special: { texture: 'icon_song_orpheus' },
+            },
+          },
         ],
       },
       {
@@ -1087,7 +1129,7 @@ export const CLASSES: ClassDef[] = [
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { minstrel: MINSTREL_KIT, wildsong: WILD_KIT, harlequin: HARLEQUIN_KIT, drummer: DRUMMER_KIT, howl: HOWL_KIT }[look] ?? MINSTREL_KIT;
+      const kit = { minstrel: MINSTREL_KIT, wildsong: WILD_KIT, harlequin: HARLEQUIN_KIT, vagabond: VAGABOND_KIT, fadista: FADISTA_KIT, orpheus: ORPHEUS_KIT, drummer: DRUMMER_KIT, howl: HOWL_KIT }[look] ?? MINSTREL_KIT;
       return new Bard(world, x, y, kit);
     },
   },

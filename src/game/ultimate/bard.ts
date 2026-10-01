@@ -3,10 +3,10 @@ import { sound } from '../../audio';
 import { heroBuffs } from '../buffs';
 import { snap } from '../display';
 import { NOTE_H } from '../../art/bard';
-import { HARLEQUIN_HASTE, HARLEQUIN_SONG, HASTE, HOWL_RHYTHM, Note, RHYTHM, TROUBADOUR_SONG, WILD_HASTE, WILD_SONG, type NoteKind } from '../Songs';
+import { HOWL_RHYTHM, MINSTREL_SONGS, Note, RHYTHM, TROUBADOUR_SONG, type NoteKind } from '../Songs';
 import type { Hurtbox } from '../combat';
 import type { WorldScene } from '../../scenes/WorldScene';
-import { clamp01, easeOut, flare, Fx, ring, rune, strikeGround, type Ink } from './ink';
+import { circle, clamp01, easeOut, flare, Fx, hash, line, ring, rune, strikeGround, type Ink, type Pal } from './ink';
 import type { Cast } from './types';
 
 // The Bard's Specials: the minstrel's encore, a ring of notes that turns
@@ -25,17 +25,20 @@ export class Encore extends Fx {
   private nextShot = 250;
   private fired = 0;
   private beatT = 0;
-  /** The skin's notes: the wildsong's leaves and wisps, the harlequin's diamonds. */
+  /** The skin's notes: the wildsong's leaves and wisps, the harlequin's diamonds... */
   private song = TROUBADOUR_SONG;
+  /** Orpheus's: the dead rise to listen. */
+  private orpheus: boolean;
 
   constructor(
     world: WorldScene,
     private c: Cast,
   ) {
     super(world, ENCORE_TIME);
-    const { song, haste } = c.look === 'wildsong' ? { song: WILD_SONG, haste: WILD_HASTE } : c.look === 'harlequin' ? { song: HARLEQUIN_SONG, haste: HARLEQUIN_HASTE } : { song: TROUBADOUR_SONG, haste: HASTE };
+    const { song, haste } = MINSTREL_SONGS[c.look] ?? MINSTREL_SONGS.minstrel;
     this.song = { tex: song.tex, pal: c.pal };
-    this.ground = this.ink(96, 60);
+    this.orpheus = c.look === 'orpheus';
+    this.ground = this.ink(this.orpheus ? 120 : 96, this.orpheus ? 96 : 60);
     for (let i = 0; i < 6; i++) this.notes.push(this.own(world.add.image(c.x, c.y, this.song.tex, i % 2 ? 'n1' : 'n0').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0)));
     const v = c.hero.vitals;
     const got = v.heal(Math.round(v.max * 0.2));
@@ -82,7 +85,10 @@ export class Encore extends Fx {
     const g = this.ground.begin(h.x, h.y, 2.5);
     const k = (this.beatT % 560) / 560;
     ring(g, h.x, h.y, 8 + 34 * easeOut(k), 1.8 * (1 - k) + 0.4, c.pal, (1 - k) * open);
-    rune(g, h.x, h.y, 14 * open, t * 0.003, c.pal, 0.6 * open);
+    if (this.orpheus) {
+      greekKey(g, h.x, h.y, 22 * open, t * 0.0012, c.pal, 0.75 * open);
+      shades(g, h.x, h.y, t, c.pal, open);
+    } else rune(g, h.x, h.y, 14 * open, t * 0.003, c.pal, 0.6 * open);
     g.end();
   }
 
@@ -97,6 +103,48 @@ export class Encore extends Fx {
       }
     }
     return pick;
+  }
+}
+
+/** The meander that rings Orpheus's Lament: a band of Greek key turning slowly round him on the ground. */
+function greekKey(g: Ink, cx: number, cy: number, r: number, rot: number, p: Pal, a: number): void {
+  if (r < 6 || a <= 0) return;
+  const sq = 0.58;
+  circle(g, cx, cy, r + 3, p.mid, a * 0.8, sq);
+  circle(g, cx, cy, r - 3, p.mid, a * 0.8, sq);
+  // Each key: a hook stepping out from the inner ring to the outer and back in.
+  const n = Math.max(8, Math.round(r * 0.75));
+  for (let i = 0; i < n; i++) {
+    const t0 = rot + (i / n) * Math.PI * 2;
+    const t1 = rot + ((i + 0.6) / n) * Math.PI * 2;
+    const at = (t: number, rr: number): [number, number] => [cx + Math.cos(t) * rr, cy + Math.sin(t) * rr * sq];
+    const [ax, ay] = at(t0, r - 2);
+    const [bx, by] = at(t0, r + 2);
+    const [dx, dy] = at(t1, r + 2);
+    const [ex, ey] = at(t1, r);
+    line(g, ax, ay, bx, by, p.hot, a);
+    line(g, bx, by, dx, dy, p.hot, a);
+    line(g, dx, dy, ex, ey, p.core, a);
+  }
+}
+
+/** The shades of the dead, rising out of the ground round him to hear the song: pale wisps in the underworld's violet. */
+function shades(g: Ink, cx: number, cy: number, t: number, p: Pal, open: number): void {
+  for (let i = 0; i < 7; i++) {
+    const life = 1400;
+    const k = ((t + i * 211) % life) / life;
+    const a = hash(i, Math.floor((t + i * 211) / life)) * Math.PI * 2;
+    const r = 26 + hash(i, 7) * 16;
+    const x = cx + Math.cos(a) * r;
+    const y = cy + Math.sin(a) * r * 0.58 - k * 22;
+    const fade = open * Math.sin(k * Math.PI) * 0.8;
+    if (fade <= 0.02) continue;
+    // A head, a body tapering into a tail that sways as it climbs.
+    g.put(x, y, p.core, fade);
+    g.put(x + 1, y, p.hot, fade);
+    g.put(x, y + 1, p.hot, fade);
+    g.put(x + 1, y + 1, p.mid, fade);
+    for (let j = 2; j <= 5; j++) g.put(x + Math.sin(k * 9 + j) * 0.8, y + j, j < 4 ? p.mid : p.deep, fade * (1 - j * 0.14));
   }
 }
 
