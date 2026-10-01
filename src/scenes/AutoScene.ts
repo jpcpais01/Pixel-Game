@@ -36,10 +36,11 @@ import { fpsBottom } from './FpsScene';
 // bigger zoom (a whole number of screen pixels per art pixel, so they stay
 // crisp) in whatever room the edges leave. The shop is always a tray along
 // the bottom: level on its left, the five cards, gold and reroll on its
-// right. On a wide screen the bench is a 2x4 dock beside the board, with the
-// players, the round and Fight in a slim column on the left and the traits
-// on the right; on a tall one the bench sits under the board and the players
-// and traits go across the top. Whichever lets the board be bigger wins.
+// right. On a wide screen the board stands in the middle of the page, as big
+// as the height allows, with the bench as a 2x4 dock on its right and the
+// traits beyond, and the players, the round and Fight in a column on its
+// left; on a tall one the bench sits under the board and the players and
+// traits go across the top. Whichever lets the board be bigger wins.
 
 /** Room over the board's top row for the heroes standing there (world px). */
 const HEAD_ROOM = 14;
@@ -47,12 +48,16 @@ const HEAD_ROOM = 14;
 const UNDER_SHOW = 6;
 /** A top bar row (the tall layout's). */
 const TOP_H = 15;
-/** The wide layout's left column (players, round, Fight), and the narrowest trait column on the right. */
-const LEFT_W = 100;
+/** The wide layout's left column (players, round, Fight): at least this, more when the centred board leaves it. */
+const LEFT_MIN = 84;
+const LEFT_MAX = 120;
+/** The narrowest trait column on the right. */
 const TRAIT_MIN = 36;
-/** The tray's level and gold blocks either side of the cards: a readout over a button. */
+/** The tray's level and gold blocks either side of the cards: a readout over a button. A wide tray gives up a
+ * little of its height (never under the min) when that lets the board up a size. */
 const BLOCK_W = 72;
 const BLOCK_H = 40;
+const BLOCK_H_MIN = 38;
 /** Shop cards: as tall as the blocks in the wide tray; in the tall one, from this up to the max as room allows. */
 const CARD_H_ROW = 46;
 const CARD_H_ROW_MAX = 64;
@@ -324,6 +329,8 @@ export class AutoScene extends Phaser.Scene {
   private lvlBox!: Phaser.GameObjects.Container;
   private goldBox!: Phaser.GameObjects.Container;
   private blockW = BLOCK_W;
+  /** The wide layout's left column width. */
+  private leftW = LEFT_MIN;
   /** The shop tray along the bottom, page px. */
   private tray = new Phaser.Geom.Rectangle();
   private lvlText!: Phaser.GameObjects.BitmapText;
@@ -470,23 +477,23 @@ export class AutoScene extends Phaser.Scene {
    * The tray's two blocks, `w` wide: the level (LVL 5, xp toward the next on a
    * bar, a button to buy xp) and the gold (a big readout, the reroll button).
    */
-  private buildBlocks(w: number): void {
+  private buildBlocks(w: number, h = BLOCK_H): void {
     this.blockW = w;
     this.lvlBox.removeAll(true);
     this.goldBox.removeAll(true);
     const bw = w - 6;
-    const lvlBg = this.add.image(0, 0, panelTexture(this, `ab_lvl_${w}`, w, BLOCK_H, PANEL)).setOrigin(0);
+    const lvlBg = this.add.image(0, 0, panelTexture(this, `ab_lvl_${w}x${h}`, w, h, PANEL)).setOrigin(0);
     this.lvlText = pixelText(this, 4, 4, '', INK);
     this.xpBar = this.add.graphics();
     this.xpText = pixelText(this, 0, 4, '', LAVENDER);
     this.xpBtn = new PixelButton(this, `XP ${XP_COST}`, bw, 17, BUTTON_PLAIN, `ab_xp_${bw}`, () => this.buyXp());
-    this.xpBtn.setIcon('ab_coin').place(3, BLOCK_H - 20);
+    this.xpBtn.setIcon('ab_coin').place(3, h - 20);
     this.lvlBox.add([lvlBg, this.lvlText, this.xpBar, this.xpText, this.xpBtn]);
-    const goldBg = this.add.image(0, 0, panelTexture(this, `ab_gold_${w}`, w, BLOCK_H, PANEL)).setOrigin(0);
+    const goldBg = this.add.image(0, 0, panelTexture(this, `ab_gold_${w}x${h}`, w, h, PANEL)).setOrigin(0);
     const coin = this.add.image(0, 3, 'ab_coin').setOrigin(0).setScale(2);
     this.goldText = pixelText(this, 0, 3, '', GOLD, 2);
     this.rollBtn = new PixelButton(this, `Roll ${REROLL_COST}`, bw, 17, BUTTON_GOLD, `ab_roll_${bw}`, () => this.reroll());
-    this.rollBtn.setIcon('ab_coin').place(3, BLOCK_H - 20);
+    this.rollBtn.setIcon('ab_coin').place(3, h - 20);
     this.goldBox.add([goldBg, coin, this.goldText, this.rollBtn]);
     this.goldBox.setData('coin', coin);
   }
@@ -519,17 +526,22 @@ export class AutoScene extends Phaser.Scene {
     const bs = boardSize(COLS, ROWS);
     const tilesH = ROWS * CELL_H + RIM * 2 + FACE;
     const dock = { w: 2 * BENCH_SLOT + 6, h: (BENCH_SIZE / 2) * BENCH_SLOT + 6 };
-    const wideW = dock.w + 4 + bs.w;
     const wideH = HEAD_ROOM + tilesH + UNDER_SHOW;
     const tallW = bs.w;
     const tallH = HEAD_ROOM + tilesH + 3 + BENCH_SLOT + 6;
     // The biggest whole number of screen px per world px that fits the room each leaves.
     const fit = (w: number, h: number, roomW: number, roomH: number) => Math.max(1, Math.floor(Math.min((roomW * z) / w, (roomH * z) / h)));
     // The tray: one row in the wide layout (blocks and cards side by side), two in the tall (blocks and Fight, then the cards).
-    const trayWide = PAD + BLOCK_H + PAD;
     const tallTop = this.row2 + TOP_H + CHIP_H * 2 + 4;
     const trayTallMin = PAD + BLOCK_H + GAP + CARD_H_ROW + PAD;
-    const nWide = fit(wideW, wideH, vw - PAD * 4 - LEFT_W - TRAIT_MIN, vh - trayWide - 2);
+    // Wide: the board in the middle, the left column on one side and the dock and traits on the other (the board is
+    // pushed off the middle only when they can't both fit), over the slimmest tray.
+    const leftNeed = PAD + LEFT_MIN + PAD;
+    const dockW = (n: number) => Math.ceil(((4 + dock.w) * n) / z);
+    const wideFits = (n: number) =>
+      leftNeed + Math.ceil((bs.w * n) / z) + dockW(n) + PAD + TRAIT_MIN + PAD <= vw && Math.ceil((wideH * n) / z) <= vh - PAD * 2 - BLOCK_H_MIN;
+    let nWide = 1;
+    while (wideFits(nWide + 1)) nWide++;
     const nTall = fit(tallW, tallH, vw - 2, vh - tallTop - trayTallMin);
     this.wide = nWide > nTall || (nWide === nTall && vw >= vh);
     const n = this.wide ? nWide : nTall;
@@ -542,8 +554,8 @@ export class AutoScene extends Phaser.Scene {
     let benchY: number;
     if (this.wide) {
       this.benchCols = 2;
-      bx = dock.w + 4;
-      benchX = 0;
+      bx = 0;
+      benchX = bs.w + 4;
       // The dock's foot lines up with the board's front edge, beside the player's half.
       benchY = HEAD_ROOM + tilesH - FACE - dock.h;
     } else {
@@ -567,29 +579,33 @@ export class AutoScene extends Phaser.Scene {
     this.torches.forEach((t, i) => t.setPosition(corners[i][0], corners[i][1]));
 
     if (this.wide) {
-      // The board fills the height over the tray. Left: Leave, the players, the round and Fight. Right, under the
-      // mute button: the traits.
+      // The board in the middle, as tall as the room over the tray. Left: Leave, the players, the round and Fight.
+      // Right: the bench, then the traits under the mute button.
       this.topH = 0;
-      const ww = Math.ceil(wideW * s);
-      const left = PAD + LEFT_W + PAD;
-      const right = vw - PAD - TRAIT_MIN - PAD;
-      this.wx = Math.max(left, Math.round((left + right - ww) / 2));
-      const trayY = vh - trayWide;
-      this.wy = Math.round(Math.max(1, (trayY - wideH * s) / 2));
-      const tx = this.wx + ww + PAD;
+      const ww = Math.ceil(bs.w * s);
+      const rightW = dockW(n);
+      const rightNeed = rightW + PAD + TRAIT_MIN + PAD;
+      this.wx = Math.round(Math.max(leftNeed, Math.min(vw - rightNeed - ww, (vw - ww) / 2)));
+      const worldH = Math.ceil(wideH * s);
+      const blockH = Math.max(BLOCK_H_MIN, Math.min(BLOCK_H, vh - PAD * 2 - worldH));
+      const trayY = vh - PAD * 2 - blockH;
+      this.wy = Math.round(Math.max(0, (trayY - worldH) / 2));
+      this.leftW = Math.max(LEFT_MIN, Math.min(LEFT_MAX, this.wx - PAD * 2));
+      const tx = this.wx + ww + rightW + PAD;
       const ty = corner + PAD;
       this.traitRect.setTo(tx, ty, vw - PAD - tx, trayY - GAP - ty);
-      this.bannerAt = { x: PAD, y: PAD + 13 + GAP + 2 * (PLATE_H + GAP), w: LEFT_W };
-      this.buildReady(LEFT_W, FIGHT_H, PAD, trayY - GAP - FIGHT_H);
+      this.bannerAt = { x: PAD, y: PAD + 13 + GAP + 2 * (PLATE_H + GAP), w: this.leftW };
+      this.buildReady(this.leftW, FIGHT_H, PAD, trayY - GAP - FIGHT_H);
       // The tray: level, five cards, gold.
       this.tray.setTo(0, trayY, vw, vh - trayY);
-      this.buildBlocks(BLOCK_W);
+      this.buildBlocks(BLOCK_W, blockH);
       this.lvlBox.setPosition(PAD, trayY + PAD);
       this.goldBox.setPosition(vw - PAD - BLOCK_W, trayY + PAD);
       const room = vw - PAD * 2 - BLOCK_W * 2 - GAP * 4;
       const cw = Math.min(CARD_W_MAX, Math.floor((room - GAP * (SHOP_SIZE - 1)) / SHOP_SIZE));
-      this.placeCards(cw, BLOCK_H, trayY + PAD);
-      this.infoAt = { x: vw - PAD - INFO_W, y: ty };
+      this.placeCards(cw, blockH, trayY + PAD);
+      // The hero card pops up over the left column, clear of the bench and the traits.
+      this.infoAt = { x: PAD, y: PAD + 13 + GAP };
     } else {
       // Leave (and the mute button) on the first row; the players and the round on the second; a row of trait chips;
       // the world; then the tray, its cards as tall as the room left over allows.
@@ -699,8 +715,8 @@ export class AutoScene extends Phaser.Scene {
     if (this.wide) {
       // Down the left column under Leave: you, the rival, then the round.
       const y = PAD + 13 + GAP;
-      plate(0, me, this.meText, PAD, y, LEFT_W, true);
-      plate(1, this.rival, this.rivalText, PAD, y + PLATE_H + GAP, LEFT_W, false);
+      plate(0, me, this.meText, PAD, y, this.leftW, true);
+      plate(1, this.rival, this.rivalText, PAD, y + PLATE_H + GAP, this.leftW, false);
     } else {
       const w = Math.floor((vw - PAD * 2 - BANNER_W_TALL - 8) / 2);
       plate(0, me, this.meText, PAD, this.row2, w, true);
@@ -847,8 +863,8 @@ export class AutoScene extends Phaser.Scene {
     const on = !!this.me && (this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result') && !this.press?.dragging && !!pick;
     this.infoBg.setVisible(on);
     if (this.infoHit.input) this.infoHit.input.enabled = on;
-    // The traits it covers step out of the way while it's up.
-    this.traitList.setVisible(!on);
+    // On a tall screen the traits it covers step out of the way while it's up (on a wide one it covers the players).
+    this.traitList.setVisible(!on || this.wide);
     if (!on || !pick) return;
     const d = unitDef(pick.key);
     const st = styleOf(pick.key, pick.look);
