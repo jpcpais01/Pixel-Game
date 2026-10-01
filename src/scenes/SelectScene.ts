@@ -38,11 +38,13 @@ const STEP_GAP = 3;
 const STEP_SPACE = 8;
 /** The choices are indented past the line that joins the steps. */
 const INDENT = 11;
-/** Class medallions: their size, and the room each takes on the wheel. */
-const MEDAL = 32;
-const MEDAL_STEP = 35;
+/** Class medallions: their size, and the room each takes on the wheel (less on a narrow wheel, tucking the neighbours behind the middle one). */
+const MEDAL = 40;
+const MEDAL_STEP = 43;
 /** The round window the class's head shows through, inside the medallion's rim. */
 const MEDAL_FACE = MEDAL - 6;
+/** How many times over the head is drawn in its medallion. */
+const MEDAL_ZOOM = 3;
 /** Character cards, largest first: the largest for which four fit the column is used. */
 const CARD_SIZES = [34, 30, 26];
 const CARD_GAP = 4;
@@ -376,7 +378,7 @@ function ringTexture(scene: Phaser.Scene): string {
 // ---- The picker. ----
 
 /**
- * A look's head and shoulders at twice size, cut to a disc `d` across, so
+ * A look's head and shoulders at `MEDAL_ZOOM` times size, cut to a disc `d` across, so
  * nothing of the hero (a hat, a staff, a wing) pokes out of its medallion.
  * Kept per frame once its head has been found in real pixels.
  */
@@ -387,7 +389,7 @@ function medalHead(scene: Phaser.Scene, preview: Preview, d: number): string {
   const key = `sel_mh_${frame.texture.key}_${frame.name}_${d}${known ? '' : '_guess'}`;
   if (known && scene.textures.exists(key)) return key;
   if (scene.textures.exists(key)) scene.textures.remove(key);
-  const scale = 2;
+  const scale = MEDAL_ZOOM;
   const fw = frame.cutWidth;
   const fh = frame.cutHeight;
   const cw = Math.min(fw, Math.ceil(d / scale));
@@ -417,7 +419,7 @@ function medalHead(scene: Phaser.Scene, preview: Preview, d: number): string {
   return key;
 }
 
-/** A round class medallion: its plate in the hero's colour and the hero's head at twice size, cut to a disc inside the rim. */
+/** A round class medallion: its plate in the hero's colour and the hero's head large, cut to a disc inside the rim. */
 class Medal extends Phaser.GameObjects.Container {
   private plate: Phaser.GameObjects.Image;
   private head: Phaser.GameObjects.Image;
@@ -495,7 +497,7 @@ class Wheel extends Phaser.GameObjects.Container {
       if (!this.drag || !p.isDown) return;
       const dx = (p.x - this.drag.x) / z();
       if (Math.abs(dx) > TAP_SLOP) this.drag.moved = true;
-      if (this.drag.moved) this.place(this.drag.pos - dx / MEDAL_STEP);
+      if (this.drag.moved) this.place(this.drag.pos - dx / this.step);
     };
     const up = (p: Phaser.Input.Pointer) => {
       const d = this.drag;
@@ -551,6 +553,11 @@ class Wheel extends Phaser.GameObjects.Container {
     });
   }
 
+  /** How far apart the medallions stand: their full room, or close enough that both neighbours of the middle one fit between the arrows. */
+  private get step(): number {
+    return Math.min(MEDAL_STEP, Math.floor(this.boxW / 2 - 8 - MEDAL / 2));
+  }
+
   /** Stand the wheel at `pos`: each medallion along the row by how far it is round from the middle, fading out to the ends. */
   private place(pos: number): void {
     const n = CLASSES.length;
@@ -559,11 +566,11 @@ class Wheel extends Phaser.GameObjects.Container {
     const reach = cx - 8 - MEDAL / 2;
     this.medals.forEach((m, i) => {
       const rel = ((((i - this.pos + n / 2) % n) + n) % n) - n / 2;
-      const x = cx + rel * MEDAL_STEP;
+      const x = cx + rel * this.step;
       const off = Math.abs(x - cx);
       m.setVisible(off <= reach + 2);
       m.setPosition(Math.round(x - MEDAL / 2), 0);
-      m.setAlpha(clamp01(1 - Math.pow(off / (reach + MEDAL_STEP * 0.6), 2)));
+      m.setAlpha(clamp01(1 - Math.pow(off / (reach + this.step * 0.6), 2)));
     });
     // The middle one over its neighbours.
     this.bringToTop(this.medals[this.picked]);
@@ -574,7 +581,7 @@ class Wheel extends Phaser.GameObjects.Container {
     const z = this.scene.cameras.main.zoom;
     const x = p.x / z - this.x - (this.parentContainer?.x ?? 0);
     const n = CLASSES.length;
-    const rel = Math.round((x - this.boxW / 2) / MEDAL_STEP);
+    const rel = Math.round((x - this.boxW / 2) / this.step);
     return (((Math.round(this.pos) + rel) % n) + n) % n;
   }
 
