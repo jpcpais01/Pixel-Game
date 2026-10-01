@@ -15,8 +15,8 @@
 // crowns, streams and ponds in blue with their banks drawn in, trails in
 // worn brown, every tree a little mark, cliffs inked as a hard line with
 // hachures down their faces (slopes and stairs left open), each terrace a
-// shade lighter than the one below, and waterfalls white where a stream
-// drops. What hasn't been walked is blank paper, the known world fraying into it.
+// shade lighter than the one below. What hasn't been walked is blank paper,
+// the known world fraying into it.
 
 import { hash2, valueNoise } from './env';
 import { K, type Cell, type GroundSpec, type Look } from './ground';
@@ -661,9 +661,8 @@ export function trekTile(gen: ForestGen, cx: number, cy: number, cleared: (x: nu
       // The lie of the land: higher terraces a shade lighter.
       c = shade(c, 1 + clamp(lvl[n], -3, 3) * MAP_LIFT);
       const up = level(i, j - 1) > lvl[n];
-      if (up && k === WATERC) {
-        // A waterfall: the stream drops white, foaming at its foot.
-        c = mix(c, [246, 250, 244], 0.7);
+      if (k === WATERC) {
+        // Water wears its banks down to slopes: no cliff is inked across it.
       } else if (!open[n] && (up || level(i - 1, j) > lvl[n] || level(i + 1, j) > lvl[n] || level(i, j + 1) > lvl[n])) {
         // The foot of a cliff: a hard inked line, hachured down a face turned south.
         c = mix(c, INK, up ? 0.78 : 0.5);
