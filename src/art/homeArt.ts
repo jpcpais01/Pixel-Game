@@ -12,13 +12,19 @@ import type { PixelCanvas, RenderedFrame } from './pixel';
 import { pixelCanvas } from './canvas';
 import { floorSwatch } from './homeFloors';
 import { CHIMNEY_H, CHIMNEY_W, chimney, roofSwatch, wallFrameH, wallFrames } from './homeWalls';
-import { PROP_ART, PROP_TURNS, blossomTree, bobber, emptyRodBucket, type PropArt } from './homeProps';
+import { PROP_ART as FIRST_ART, PROP_TURNS as FIRST_TURNS, blossomTree, bobber, emptyRodBucket, type PropArt } from './homeProps';
+import { YARD_ART, YARD_TURNS } from './homeYard';
+import { ROOM_ART, ROOM_TURNS } from './homeRoom';
 import { DOOR_OX, DOOR_OY, DOOR_STEP, DOOR_STEPS, DOOR_WAYS, doorArt, doorFrame, doorIcon } from './homeDoor';
 import { GATE_MATS, GATE_WAYS, gateFrames } from './homeGate';
 import { TREE_SWAY_FPS, TREE_SWAY_FRAMES } from './trees';
 import { hash2 } from './env';
 import { CELL, HomeLayout, PLOT_X, PLOT_Y, type Thing } from '../world/homeLayout';
 import { FLOORS, ROOFS, WALLS, extent, partById } from '../world/homeParts';
+
+/** Every placed thing's drawing by part id, and the turning ones' other views (homeYard.ts and homeRoom.ts hold the later pieces). */
+const PROP_ART: Record<string, PropArt> = { ...FIRST_ART, ...YARD_ART, ...ROOM_ART };
+const PROP_TURNS: Record<string, { side: PropArt; back: PropArt }> = { ...FIRST_TURNS, ...YARD_TURNS, ...ROOM_TURNS };
 
 /** How wide the sheet is; it grows downward as frames are packed. */
 const SHEET_W = 1024;
