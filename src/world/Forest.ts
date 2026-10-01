@@ -21,6 +21,8 @@ import { Wildlife } from './Wildlife';
 import { ForestSounds } from './ForestSounds';
 import { forestTile } from './forestGround';
 import { footKey, type ForestEdits } from './forestEdits';
+import { BridgeView } from './BridgeView';
+import { ForestFloors } from './ForestFloors';
 import { CELL, doorAcross } from './homeLayout';
 import { GATE_MATS } from '../art/homeGate';
 import { Swing, hangGate } from './swing';
@@ -271,6 +273,10 @@ export class Forest {
   /** What the player has built and cleared here (set by ForestBuild), and the chunks to stand up again for a change. */
   edits: ForestEdits | null = null;
   private dirty = new Set<number>();
+  /** The floors laid and the bridges built, kept up with the edits' version. */
+  private floors: ForestFloors;
+  private bridges: BridgeView;
+  private builtVer = -1;
   /** Each ground tile's version, raised when a tree near it is cleared (it is painted again), and whether the painters still need the cleared list. */
   private vers = new Map<number, number>();
   private clearedSent = false;
@@ -343,6 +349,8 @@ export class Forest {
     this.wind = new ForestWind(world, this);
     this.wild = new Wildlife(world, this, gen);
     this.sounds = new ForestSounds(world, gen);
+    this.floors = new ForestFloors(world, adopt);
+    this.bridges = new BridgeView(world);
     const offQuality = settings.watch((q) => {
       const k = q.quality !== 'full' ? 2 : 1;
       this.treeLeaves.frequency = TREE_LEAF_MS * k;
@@ -357,6 +365,8 @@ export class Forest {
       // The ground's textures go with the world; the forest's layouts with the generator.
       for (const key of this.tiles.keys()) this.dropTile(key);
       this.stood.clear();
+      this.floors.destroy();
+      this.bridges.destroy();
     });
   }
 
@@ -624,6 +634,7 @@ export class Forest {
       t.day.setAlpha(daylight);
       t.glow?.setAlpha(glow);
     }
+    this.floors.setLight(daylight);
   }
 
   /**
@@ -687,7 +698,8 @@ export class Forest {
     const add = this.world.add;
     for (const t of e.thingsInChunk(ccx, ccy)) {
       const part = partById(t.id);
-      if (!part) continue;
+      // Bridges are stood up whole, not a cell to a chunk (see `update`).
+      if (!part || part.bridge) continue;
       // The Home's own drawing, moved from its plot onto the forest's grid.
       const look = thingLook(t);
       const x = look.x - PLOT_X;
@@ -1109,6 +1121,16 @@ export class Forest {
       const cx = Math.floor(key / 4096) * CHUNK;
       const cy = (key % 4096) * CHUNK;
       if (cx + CHUNK < view.left - FORGET || cx > view.right + FORGET || cy + CHUNK < view.top - FORGET || cy > view.bottom + FORGET + ELDER_H) this.unstand(key);
+    }
+    // Floors and bridges the player laid: painted again where they changed, and round the view.
+    const e = this.edits;
+    if (e) {
+      if (e.version !== this.builtVer) {
+        this.builtVer = e.version;
+        this.floors.sync(e);
+        this.bridges.sync(e.bridges);
+      }
+      this.floors.update(e, view);
     }
     // Chunks the player changed: stood up again as they now are.
     for (const key of this.dirty) {

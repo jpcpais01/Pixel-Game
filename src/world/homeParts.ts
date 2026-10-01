@@ -153,6 +153,8 @@ export interface PartDef {
   door?: boolean;
   /** A ward: no creature rises within this many cells of it (in the Everwood; see ForestEdits.warded). */
   ward?: number;
+  /** A bridge's cell: laid in strokes like a wall, joined with its neighbours into one bridge that shapes itself (see bridge.ts). */
+  bridge?: boolean;
 }
 
 /** How many cells from a fishing rod the water may be. */
@@ -181,6 +183,8 @@ export const PARTS: PartDef[] = [
   { id: 'stepping', name: 'Stepping stones', tab: 'garden', w: 1, h: 1, block: 'none', flat: true, flip: true },
   { id: 'lilypad', name: 'Lily pads', tab: 'garden', w: 1, h: 1, block: 'none', flat: true, water: 'only', flip: true },
   { id: 'reeds', name: 'Reeds', tab: 'garden', w: 1, h: 1, block: 'none', water: 'too', flip: true },
+  // Laid a cell at a time across water (or anywhere), ramping up off one bank and down onto the other.
+  { id: 'bridge', name: 'Wooden bridge', tab: 'garden', w: 1, h: 1, block: 'none', water: 'too', bridge: true },
   { id: 'bench', name: 'Garden bench', tab: 'garden', w: 2, h: 1, block: 'full', turns: true },
   { id: 'well', name: 'Well', tab: 'garden', w: 2, h: 2, block: 'full' },
   { id: 'birdbath', name: 'Birdbath', tab: 'garden', w: 1, h: 1, block: 'post' },
