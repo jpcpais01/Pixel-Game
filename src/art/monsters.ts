@@ -5,6 +5,7 @@
 // `<pose>_l`.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
+import { FROST_FRAMES } from './frostFrames';
 
 const ramp = (...c: string[]): RGB[] => c.map(hex);
 const INK = hex('#0b0a1a');
@@ -74,6 +75,8 @@ export const MONSTER_FRAME = {
   hexbat: { w: 36, h: 28, ox: 18, oy: 26 },
   pumpkin_king: { w: 92, h: 104, ox: 46, oy: 100 },
   imp: { w: 28, h: 28, ox: 14, oy: 26 },
+  // The Aurora Colosseum's (art/frostFrames.ts).
+  ...FROST_FRAMES,
 };
 export type FrameBox = (typeof MONSTER_FRAME)[keyof typeof MONSTER_FRAME];
 

@@ -36,15 +36,15 @@ export class HealthBar {
     this.parts = [this.frame, this.back, this.hp, this.hpLit, this.barrier, this.barrierLit];
   }
 
-  /** (x, y) is the bar's centre top, on the character's pixel grid. */
-  update(dt: number, x: number, y: number, hp: number, max: number, barrier: number): void {
+  /** (x, y) is the bar's centre top, on the character's pixel grid. `alpha` dims it with a body that fades (a stalker hiding in the snow). */
+  update(dt: number, x: number, y: number, hp: number, max: number, barrier: number, alpha = 1): void {
     const key = `${Math.round(hp)} ${Math.round(barrier)}`;
     // The first reading only sets the baseline, so a fresh bar starts hidden.
     if ((key !== this.last && this.last !== '') || hp < max || barrier > 0.5) this.hold = 1800;
     else this.hold = Math.max(0, this.hold - dt);
     this.last = key;
     this.shown = Phaser.Math.Clamp(this.shown + (this.hold > 0 ? dt / 150 : -dt / 400), 0, 1);
-    for (const p of this.parts) p.setVisible(this.shown > 0).setAlpha(this.shown);
+    for (const p of this.parts) p.setVisible(this.shown > 0).setAlpha(this.shown * alpha);
     if (this.shown === 0) return;
 
     const total = Math.max(max, hp + barrier);

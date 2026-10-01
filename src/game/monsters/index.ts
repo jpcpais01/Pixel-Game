@@ -15,6 +15,14 @@ import { Sporemother } from './Sporemother';
 import { Wyrm } from './Wyrm';
 import { Gourdling, Hexbat, PumpkinKing } from './Hallows';
 import { Imp } from './Imp';
+import { Snowmite, Rimesprite, Icebeak, Rimeweaver, Flurrykin } from './FrostWeak';
+import { Rimefang, Frostbound, Rimewitch, Galeclaw, Chillstone, Snowstalker } from './FrostNormal';
+import { FrostTroll, Tuskmaw, Frostdrake, Yeti, Rimeknight } from './FrostStrong';
+import { Vargr } from './Vargr';
+import { SnowQueen } from './SnowQueen';
+import { WinterKing } from './WinterKing';
+import { Colossus } from './Colossus';
+import { Aurelith } from './Aurelith';
 
 export { Monster, type Target } from './Monster';
 
@@ -50,6 +58,28 @@ export const MONSTERS = {
   hexbat: (world: WorldScene, x: number, y: number) => new Hexbat(world, x, y),
   pumpkin_king: (world: WorldScene, x: number, y: number) => new PumpkinKing(world, x, y),
   imp: (world: WorldScene, x: number, y: number) => new Imp(world, x, y),
+  // The Aurora Colosseum's creatures and bosses.
+  snowmite: (world: WorldScene, x: number, y: number) => new Snowmite(world, x, y),
+  rimesprite: (world: WorldScene, x: number, y: number) => new Rimesprite(world, x, y),
+  icebeak: (world: WorldScene, x: number, y: number) => new Icebeak(world, x, y),
+  rimeweaver: (world: WorldScene, x: number, y: number) => new Rimeweaver(world, x, y),
+  flurrykin: (world: WorldScene, x: number, y: number) => new Flurrykin(world, x, y),
+  rimefang: (world: WorldScene, x: number, y: number) => new Rimefang(world, x, y),
+  frostbound: (world: WorldScene, x: number, y: number) => new Frostbound(world, x, y),
+  rimewitch: (world: WorldScene, x: number, y: number) => new Rimewitch(world, x, y),
+  galeclaw: (world: WorldScene, x: number, y: number) => new Galeclaw(world, x, y),
+  chillstone: (world: WorldScene, x: number, y: number) => new Chillstone(world, x, y),
+  snowstalker: (world: WorldScene, x: number, y: number) => new Snowstalker(world, x, y),
+  frost_troll: (world: WorldScene, x: number, y: number) => new FrostTroll(world, x, y),
+  tuskmaw: (world: WorldScene, x: number, y: number) => new Tuskmaw(world, x, y),
+  frostdrake: (world: WorldScene, x: number, y: number) => new Frostdrake(world, x, y),
+  yeti: (world: WorldScene, x: number, y: number) => new Yeti(world, x, y),
+  rimeknight: (world: WorldScene, x: number, y: number) => new Rimeknight(world, x, y),
+  vargr: (world: WorldScene, x: number, y: number) => new Vargr(world, x, y),
+  snowqueen: (world: WorldScene, x: number, y: number) => new SnowQueen(world, x, y),
+  winterking: (world: WorldScene, x: number, y: number) => new WinterKing(world, x, y),
+  colossus: (world: WorldScene, x: number, y: number) => new Colossus(world, x, y),
+  aurelith: (world: WorldScene, x: number, y: number) => new Aurelith(world, x, y),
 } satisfies Record<string, (world: WorldScene, x: number, y: number) => Monster>;
 
 export type MonsterKind = keyof typeof MONSTERS;

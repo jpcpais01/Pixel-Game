@@ -13,7 +13,10 @@ import type { Drift } from './Scenery';
 import { CLEARING_GROUND, CLEARING_SPAWN, CLEARING_W, PLAZA_CX, PLAZA_CY, PLAZA_Y, clearingScenery, clearingWalkable, plazaProps } from './clearing';
 import { COSMOS_CX, COSMOS_CY, COSMOS_H, COSMOS_SPAWN, COSMOS_W, OBELISKS, cosmosWalkable } from './cosmosLayout';
 import { PLATFORM_X, PLATFORM_Y } from '../art/cosmos';
-import { warmCosmos, warmDeep, warmGlide, warmIsland, warmRift, warmSpirit, warmTemple, warmWorldMap } from '../art/arenaLoader';
+import { warmCosmos, warmDeep, warmFrost, warmGlide, warmIsland, warmRift, warmSpirit, warmTemple, warmWorldMap } from '../art/arenaLoader';
+import { BRAZIERS, FROST_CX, FROST_CY, FROST_H, FROST_SPAWN, FROST_W, STATUES, brazierAt, frostWalkable } from './frostLayout';
+import { BRAZIER_H, BRAZIER_OY, STATUE_H, STATUE_OY } from '../art/frost';
+import { MONSTER_FRAME } from '../art/monsters';
 import { RIFT_CX, RIFT_CY, RIFT_H, RIFT_SPAWN, RIFT_W, SHARDS, TEARS, riftWalkable } from './riftLayout';
 import { RIFT_PLATFORM_X, RIFT_PLATFORM_Y, SHARD_H, SHARD_OY } from '../art/rift';
 import { GroundStreamer } from './GroundStreamer';
@@ -342,6 +345,48 @@ export const ARENAS: ArenaDef[] = [
         { texture: 'wisp', frame: 'idle1_l', glow: 'wisp_e', x: RIFT_CX - 44, y: RIFT_CY - 26, originY: 22 / 24 },
         { texture: 'blob_fire', frame: 'idle2_r', glow: 'blob_fire_e', x: RIFT_CX - 18, y: RIFT_CY - 8, originY: 19 / 22 },
       ],
+    },
+  },
+  {
+    id: 'frost',
+    name: 'Aurora Colosseum',
+    blurb: 'The Long Winter, wave after wave',
+    accent: 0x5affb0,
+    ground: {
+      painted: true,
+      w: FROST_W,
+      h: FROST_H,
+      warm: warmFrost,
+      layers: [
+        { key: 'fz_sky', x: 0, y: 0 },
+        { key: 'fz_arena', x: 0, y: 0 },
+        { key: 'fz_arena_e', x: 0, y: 0, glow: true },
+      ],
+    },
+    spawn: FROST_SPAWN,
+    // Its waves come from game/frost.ts (run by game/rift.ts), not a spawn table.
+    monsters: [],
+    scenery: () => ({ trees: [], props: [], rays: [], colliders: [] }),
+    walkable: frostWalkable,
+    drift: { tints: [0xffffff], frequency: 100000, where: () => false },
+    // Always night on the roof of the world, under the northern lights.
+    daylight: 0,
+    preview: {
+      x: FROST_CX,
+      y: 262,
+      sprites: () => {
+        const f = (k: keyof typeof MONSTER_FRAME) => MONSTER_FRAME[k].oy / MONSTER_FRAME[k].h;
+        return [
+          ...BRAZIERS.slice(0, 4).map((deg) => {
+            const b = brazierAt(deg);
+            return { texture: 'fz_brazier', frame: 'f0', glow: 'fz_brazier_e', x: b.x, y: b.y, originY: BRAZIER_OY / BRAZIER_H };
+          }),
+          ...STATUES.filter((s) => s.y < FROST_CY).map((s) => ({ texture: 'fz_statue', frame: `s${s.v}`, glow: 'fz_statue_e', x: s.x, y: s.y, originY: STATUE_OY / STATUE_H })),
+          { texture: 'vargr', frame: 'idle0_l', glow: 'vargr_e', x: FROST_CX + 8, y: 286, originY: f('vargr') },
+          { texture: 'rimefang', frame: 'idle0_r', glow: 'rimefang_e', x: FROST_CX - 64, y: 300, originY: f('rimefang') },
+          { texture: 'rimesprite', frame: 'fly0_l', glow: 'rimesprite_e', x: FROST_CX + 72, y: 276, originY: f('rimesprite') },
+        ];
+      },
     },
   },
   {

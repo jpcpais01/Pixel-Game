@@ -2,7 +2,7 @@ import { Ambience, type Wild } from './ambience';
 import { Mixer, gain } from './mixer';
 import { Music } from './music';
 import { ShopMusic, type ShopMood } from './shopMusic';
-import { Sfx, type BeamHum, type WindBed } from './sfx';
+import { Sfx, type BeamHum, type FrostSound, type WindBed } from './sfx';
 import { note } from '../diagnostics';
 
 const MUTE_KEY = 'pixel-game:muted';
@@ -654,6 +654,12 @@ class GameSound {
   toss(pan = 0, big = false): void {
     const t = this.slot('toss');
     if (t !== null) this.sfx!.toss(t, pan, big);
+  }
+
+  /** The Aurora Colosseum's frost: ice cracking, freezing, a howl, a chime, a crunch of snow, a gust (see Sfx.frost). */
+  frost(kind: FrostSound, pan = 0, big = false): void {
+    const t = this.slot(`frost:${kind}`);
+    if (t !== null) this.sfx!.frost(t, kind, pan, big);
   }
 
   shatter(pan = 0, big = false): void {

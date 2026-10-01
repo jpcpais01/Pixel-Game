@@ -17,7 +17,7 @@ import { areaOrigin, reachesBody, type Harm, type Hit, type Hurtbox, type MeleeA
 import { HealthBar } from '../game/HealthBar';
 import { HealPop } from '../game/Holy';
 import type { Effect } from '../game/Slash';
-import { separate, Spawner, type Monster, type Target } from '../game/monsters';
+import { separate, Spawner, type Monster, type MonsterKind, type Target } from '../game/monsters';
 import { freeBox } from '../world/common';
 import { GroundStreamer } from '../world/GroundStreamer';
 import { Scenery } from '../world/Scenery';
@@ -26,6 +26,8 @@ import { PLAZA_H, PLAZA_Y, plazaProps } from '../world/clearing';
 import { Garden } from '../world/Garden';
 import { CosmosArena } from '../world/Cosmos';
 import { RiftArena } from '../world/Rift';
+import { FrostArena } from '../world/Frost';
+import { FROST_PLAN } from '../game/frost';
 import { RiftWaves, resetRift, riftMods } from '../game/rift';
 import { Companion } from '../game/Companion';
 import { CritterField } from '../game/CritterField';
@@ -201,6 +203,8 @@ export class WorldScene extends Phaser.Scene {
   private cosmos: CosmosArena | null = null;
   /** The Endless Rift: its arena, and the waves standing in for its spawner. */
   private rift: RiftArena | null = null;
+  /** The Aurora Colosseum: its arena (its waves run on the Rift's runner, on its own plan). */
+  private frost: FrostArena | null = null;
   /** The companion following the hero, if one is worn. */
   private companion: Companion | null = null;
   /** The critters out near the hero, to be caught with the net (arenas that have them). */
@@ -208,6 +212,12 @@ export class WorldScene extends Phaser.Scene {
   /** The hero swung, cast or used their Special this frame (the White Stag shies from a fight). */
   heroFighting = false;
   private riftWaves: RiftWaves | null = null;
+  /** Chilled by the Aurora Colosseum's frost: the share of their speed the hero keeps, and for how long. */
+  private chillK = 1;
+  private chillT = 0;
+  private chillGlow: Phaser.GameObjects.Image | null = null;
+  /** Monsters a boss called up outside the waves, each in a spawner of its own, let go once it falls. */
+  private summonPacks: Spawner[] = [];
   /** The arena's own living parts, when it is the Floating Island. */
   private island: FloatingIsland | null = null;
   /** The arena's own living parts, when it is the Spirit Dungeon. */
@@ -346,11 +356,16 @@ export class WorldScene extends Phaser.Scene {
     this.pickups = [];
     this.debrisEmitters = new Map();
     this.downT = this.grace = this.hurtTint = this.pushX = this.pushY = 0;
+    this.chillK = 1;
+    this.chillT = 0;
+    this.chillGlow = null;
+    this.summonPacks = [];
     this.fallen = null;
     this.banner = null;
     this.garden = null;
     this.cosmos = null;
     this.rift = null;
+    this.frost = null;
     this.riftWaves = null;
     resetRift();
     this.island = null;
@@ -409,6 +424,7 @@ export class WorldScene extends Phaser.Scene {
     this.ground = isPainted(arena.ground) ? null : new GroundStreamer(this, arena.ground, (img) => ground(img) as Phaser.GameObjects.Image);
     sound.setOutdoors(arena.id !== 'cosmos' && arena.id !== 'spirit' && arena.id !== 'temple' && arena.id !== 'deep' && arena.id !== 'rift');
     if (arena.id === 'rift') this.rift = new RiftArena(this, (img) => ground(img) as Phaser.GameObjects.Image);
+    if (arena.id === 'frost') this.frost = new FrostArena(this, ground, this.view);
     if (arena.id === 'cosmos') this.cosmos = new CosmosArena(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'spirit') this.spirit = new SpiritDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'temple') this.temple = new TempleDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
@@ -562,9 +578,10 @@ export class WorldScene extends Phaser.Scene {
         if (this.echoes === echoes) this.echoes = null;
       });
     }
-    if (this.rift) {
-      // The Rift's waves stand in for a spawner, and its overlay shows them.
-      this.riftWaves = new RiftWaves(this, this.rift, {
+    const waves = this.rift ?? this.frost;
+    if (waves) {
+      // The Rift's waves (or the Colosseum's, on its own plan) stand in for a spawner, and its overlay shows them.
+      this.riftWaves = new RiftWaves(this, waves, {
           hero: () => this.hero,
           dropGems: (n, x, y) => this.dropGems(n, x, y),
           // Online, the fallen rise at the start when their friends beat the wave.
@@ -573,7 +590,7 @@ export class WorldScene extends Phaser.Scene {
             this.downT = 0;
             this.rise();
           },
-        }, ch.id, ch.name);
+        }, ch.id, ch.name, this.frost ? FROST_PLAN : undefined);
       this.spawners.push(this.riftWaves);
       this.scene.launch('rift');
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -930,6 +947,77 @@ export class WorldScene extends Phaser.Scene {
     if (dx * dx + dy * dy > 1) return false;
     this.hurtHero(harm);
     return true;
+  }
+
+  /** The hero's feet, while they stand (null while they're down): for spells that seek them out. */
+  get heroPos(): { x: number; y: number } | null {
+    return this.downT > 0 ? null : this.hero;
+  }
+
+  /**
+   * Chill the hero: they keep `k` of their speed for `ms` (frost's bite).
+   * The deepest chill wins and the longest lasts; a hero who is down or in
+   * their grace isn't chilled. Only this player's own hero feels it.
+   */
+  chillHero(k: number, ms: number): void {
+    if (this.downT > 0 || this.grace > HURT_GRACE) return;
+    this.chillK = this.chillT > 0 ? Math.min(this.chillK, k) : k;
+    this.chillT = Math.max(this.chillT, ms);
+  }
+
+  /** The chill wearing off: the hero pales toward ice while it lasts, a frost glow at their feet and flakes drifting off them. */
+  private updateChill(dt: number): void {
+    const h = this.hero;
+    if (this.chillT <= 0) return;
+    this.chillT -= dt;
+    if (this.chillT <= 0 || this.downT > 0) {
+      this.chillT = 0;
+      this.chillK = 1;
+      if (this.hurtTint <= 0) h.sprite.clearTint();
+      this.chillGlow?.setVisible(false);
+      return;
+    }
+    const deep = 1 - this.chillK;
+    const fade = Math.min(1, this.chillT / 300);
+    if (this.hurtTint <= 0) {
+      const k = deep * 1.4 * fade;
+      const ch = (c: number) => Math.round(255 - (255 - c) * Math.min(1, k));
+      h.sprite.setTint((ch(0x9a) << 16) | (ch(0xd8) << 8) | 0xff);
+    }
+    this.chillGlow ??= this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x7ad8ff);
+    this.chillGlow.setVisible(true).setPosition(snap(h.x), snap(h.y) - 2).setDepth(h.y - 0.5).setScale(0.9, 0.42).setAlpha((0.25 + deep * 0.4) * fade);
+    if (Math.random() < dt / 110) this.debris([0xffffff, 0xc8f0ff, 0x9ae8ff], snap(h.x + (Math.random() - 0.5) * 12), snap(h.y) - 4 - Math.random() * 18, 1, h.y + 1, 'spores');
+  }
+
+  /**
+   * A boss calls up a `kind` at (x, y) to fight at its side: it hunts the
+   * heroes at once and carries no loot. In a wave arena it joins the wave
+   * (online only the host's boss calls); elsewhere, alone, it gets a spawner
+   * of its own. Null when it can't come.
+   */
+  summon(kind: MonsterKind, x: number, y: number): Monster | null {
+    if (this.riftWaves) return this.riftWaves.summon(kind, x, y);
+    if (this.net) return null;
+    const pack = new Spawner(this, [{ kind, x, y, lives: 0 }]);
+    const m = pack.monsters[0] ?? null;
+    if (m) {
+      m.hunter = true;
+      m.summoned = true;
+    }
+    this.spawners.push(pack);
+    this.summonPacks.push(pack);
+    return m;
+  }
+
+  /** Let go of summoned monsters' spawners once they have fallen. */
+  private pruneSummons(): void {
+    if (!this.summonPacks.length) return;
+    this.summonPacks = this.summonPacks.filter((p) => {
+      if (p.monsters.length) return true;
+      const i = this.spawners.indexOf(p);
+      if (i >= 0) this.spawners.splice(i, 1);
+      return false;
+    });
   }
 
   /** Drag the hero toward (x, y) at `speed` px/s (a boss's gravity), never through walls. */
@@ -1844,7 +1932,7 @@ export class WorldScene extends Phaser.Scene {
     for (const s of this.shadows) s.setAlpha(SUN_SHADOW_ALPHA * d);
     this.setVignette(0.32 - d * 0.14);
     // Out in the void and down in the dungeon there is neither pollen nor fireflies (they have their own motes).
-    const open = !this.cosmos && !this.rift && !this.spirit && !this.temple && !this.deep;
+    const open = !this.cosmos && !this.rift && !this.frost && !this.spirit && !this.temple && !this.deep;
     // Pollen in the morning and by day; fireflies from sunset on.
     this.pollen.emitting = open && d > 0.6 && !omenMods.dark;
     this.fireflies.emitting = open && d < 0.56 && !omenMods.dark;
@@ -2115,9 +2203,11 @@ export class WorldScene extends Phaser.Scene {
     // Taps press for one frame.
     controls.attackTap = controls.beamTap = false;
     this.drawAimLine();
-    const fast = heroBuffs.mod('speed') * gear.speed * riftMods.speed * petMods.speed;
+    const fast = heroBuffs.mod('speed') * gear.speed * riftMods.speed * petMods.speed * (this.chillT > 0 ? this.chillK : 1);
     if (fast !== 1 && this.downT <= 0) this.stretchStep(x0, y0, fast - 1, hb);
     this.updateHeroLife(dt);
+    this.updateChill(dt);
+    this.pruneSummons();
     if (this.setPowers.burrowing) this.hero.alpha = 0;
     this.updateItems(dt);
     this.updateSetAuras(time);
@@ -2181,6 +2271,7 @@ export class WorldScene extends Phaser.Scene {
     // After the day/night light: the cosmos lights itself.
     this.cosmos?.update(time, dt);
     this.rift?.update(time, dt);
+    this.frost?.update(time, dt);
     this.companion?.update(dt, this.hero.x, this.hero.y, this.downT > 0, this.daylight);
     if (controls.netTap) {
       controls.netTap = false;

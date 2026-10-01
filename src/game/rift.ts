@@ -18,9 +18,13 @@
 // one); `riftMods` is what the blessings do, read by the world; `riftHud` is
 // what the Rift's overlay (scenes/RiftScene.ts) shows and the choice it hands
 // back.
+//
+// The waves run from a plan (`WavePlan`): the Rift's own is RIFT_PLAN below;
+// the Aurora Colosseum (game/frost.ts) runs on the same waves, blessings,
+// difficulties, gems and online play with its own creatures, its bosses in
+// place of champions, and elites.
 
 import type { WorldScene } from '../scenes/WorldScene';
-import type { RiftArena } from '../world/Rift';
 import type { BlessingIcon } from '../art/rift';
 import { TEARS } from '../world/riftLayout';
 import { collection } from './collection';
@@ -33,14 +37,20 @@ import { sound } from '../audio';
 const WEAK: MonsterKind[] = ['frog', 'puffcap', 'glowmoth', 'wisp', 'blob_water', 'blob_fire', 'blob_earth', 'blob_air', 'sporeling', 'glimbat'];
 const NORMAL: MonsterKind[] = ['banshee', 'shade', 'gale', 'undine', 'salamander', 'shardling', 'myconid'];
 const STRONG: MonsterKind[] = ['beetle', 'barkling', 'golem', 'geodeback'];
-const COST = { weak: 1, normal: 2, strong: 4 };
+export const WAVE_COST = { weak: 1, normal: 2, strong: 4 };
 
 /** The champions, in turn, every fifth wave; and what each is called. */
 const CHAMPIONS: MonsterKind[] = ['barkling', 'golem', 'beetle', 'geodeback'];
 const CHAMPION_NAME: Partial<Record<MonsterKind, string>> = { barkling: 'Riftborn Barkling', golem: 'Riftborn Golem', beetle: 'Riftborn Beetle', geodeback: 'Riftborn Geodeback' };
-const CHAMPION_EVERY = 5;
+export const CHAMPION_EVERY = 5;
 const CHAMPION_SIZE = 1.45;
 const CHAMPION_TOUGH = 7;
+/** A boss in the waves: its health, as a share of what the wave's toughness alone would give it (a boss is already a whole fight). */
+const BOSS_TOUGH = 0.42;
+/** Elites: drawn this much bigger, this many times as tough, and a gem or two when slain. */
+const ELITE_SIZE = 1.28;
+const ELITE_TOUGH = 3;
+const ELITE_GEMS = 1;
 
 /** A wave's budget: what its monsters may cost in all. */
 const budget = (n: number) => 4 + 3 * n;
@@ -81,6 +91,86 @@ const CROWD_ALIVE = 3;
 const BLESS_WAIT = 25000;
 /** How far a player's copy of a monster may stray from the host's before it jumps there. */
 const SNAP_DIST = 56;
+
+// ---------------------------------------------------------------- Plans
+
+/** One foe of a wave: an ordinary one, a champion (the Rift's, or a boss), or an elite. */
+export interface WaveFoe {
+  kind: MonsterKind;
+  champion: boolean;
+  elite?: boolean;
+}
+
+/** What an arena's waves need of the arena they run in. */
+export interface WaveArena {
+  /** A wave is coming (its gates open) or is done. */
+  setWave(on: boolean): void;
+  /** Something steps out of gate `i`. */
+  flare(i: number): void;
+  /** A champion, boss or elite has stepped out: dress it (an aura that follows it). */
+  dress?(m: Monster, as: 'champion' | 'boss' | 'elite'): void;
+}
+
+/** How an arena runs its waves. */
+export interface WavePlan {
+  /** 'rift' keeps the Rift's best waves under their old keys; any other id keeps its own, prefixed. */
+  id: string;
+  /** Where foes step out. */
+  gates: { x: number; y: number }[];
+  /** A wave's foes (the champion, if any, last). Rift's: a few kinds of each tier it has reached. */
+  compose(n: number, budget: number): WaveFoe[];
+  /** Every fifth wave's champion, and what it is called; `boss` when it is a boss (its own bar, entrance and size). */
+  champion(n: number): { kind: MonsterKind; name: string; boss: boolean };
+  /** Which gates a champion may come out of (all, when unset). */
+  championGates?: number[];
+  /** The wave's call as it begins, when a champion comes. */
+  championCall(n: number): string;
+  /** The tint of the calls for a champion's wave. */
+  championTint: number;
+}
+
+const pickKinds = <T>(list: T[], n: number): T[] => Array.from({ length: n }, () => list[Math.floor(Math.random() * list.length)]);
+
+/** The Rift's waves: its budget spent on a few kinds from each tier it has reached, cheaper ones thinning out. */
+export const RIFT_PLAN: WavePlan = {
+  id: 'rift',
+  gates: TEARS,
+  compose(n, left) {
+    const kinds = {
+      weak: pickKinds(WEAK, 3),
+      normal: n >= 3 ? pickKinds(NORMAL, 2) : [],
+      strong: n >= 6 ? pickKinds(STRONG, 2) : [],
+    };
+    const weights = { weak: Math.max(1, 6 - n * 0.4), normal: n >= 3 ? Math.min(6, n - 1) : 0, strong: n >= 6 ? Math.min(5, (n - 4) * 0.6) : 0 };
+    return spend(left, kinds, weights);
+  },
+  champion(n) {
+    const kind = CHAMPIONS[(n / CHAMPION_EVERY - 1) % CHAMPIONS.length];
+    return { kind, name: CHAMPION_NAME[kind] ?? 'Riftborn Champion', boss: false };
+  },
+  championCall: () => 'A champion comes',
+  championTint: 0xff7ad0,
+};
+
+/** Spend a wave's budget on the kinds given, a tier at a time by its weight. */
+export function spend(left: number, kinds: Record<'weak' | 'normal' | 'strong', MonsterKind[]>, weights: Record<'weak' | 'normal' | 'strong', number>): WaveFoe[] {
+  const out: WaveFoe[] = [];
+  while (left > 0) {
+    const total = weights.weak + weights.normal + weights.strong;
+    let r = Math.random() * total;
+    const tier = (r -= weights.weak) < 0 ? 'weak' : (r -= weights.normal) < 0 ? 'normal' : 'strong';
+    if (!kinds[tier].length || (WAVE_COST[tier] > left && tier !== 'weak')) {
+      if (!kinds.weak.length) break;
+      continue;
+    }
+    out.push({ kind: pickOne(kinds[tier]), champion: false });
+    left -= WAVE_COST[tier];
+  }
+  return out;
+}
+
+/** The arenas played in waves (each its own plan, its own bests); the plan id is the arena's. */
+export const isWaveArena = (id: string): boolean => id === 'rift' || id === 'frost';
 
 // ---------------------------------------------------------------- Difficulty
 
@@ -134,8 +224,14 @@ export function setRiftDifficulty(d: RiftDifficulty): void {
   }
 }
 
-/** Where a class's best on a difficulty is kept: Normal under the class alone, as bests always were. */
-export const riftKey = (cls: string, d: RiftDifficulty): string => (d === 'normal' ? cls : `${cls}:${d}`);
+/**
+ * Where a class's best on a difficulty is kept: Normal under the class alone,
+ * as bests always were; another arena's waves under its own id first.
+ */
+export const riftKey = (cls: string, d: RiftDifficulty, plan = 'rift'): string => {
+  const key = plan === 'rift' ? cls : `${plan}.${cls}`;
+  return d === 'normal' ? key : `${key}:${d}`;
+};
 
 // ---------------------------------------------------------------- Blessings
 
@@ -215,8 +311,10 @@ export const riftHud = {
   kills: 0,
   /** Gems the run has dropped. */
   gems: 0,
-  /** The champion standing, if any. */
+  /** The champion standing, if any (a boss shows its own bar instead). */
   champion: null as { name: string; hp: number; max: number } | null,
+  /** Whose waves these are (a WavePlan's id). */
+  plan: 'rift' as string,
   /** The blessings offered now, and the one chosen (its index; -1 until then). */
   offer: null as Blessing[] | null,
   pick: -1,
@@ -242,8 +340,8 @@ export function resetRift(): void {
   riftHud.active = false;
 }
 
-function resetHud(cls: string, className: string, difficulty: RiftDifficulty): void {
-  Object.assign(riftHud, { active: true, phase: 'intro', wave: 0, left: 0, kills: 0, gems: 0, champion: null, offer: null, pick: -1, taken: [], calls: [], again: false, best: collection.riftBest(riftKey(cls, difficulty)), newBest: false, cls, className, difficulty });
+function resetHud(cls: string, className: string, difficulty: RiftDifficulty, plan: string): void {
+  Object.assign(riftHud, { active: true, phase: 'intro', wave: 0, left: 0, kills: 0, gems: 0, champion: null, offer: null, pick: -1, taken: [], calls: [], again: false, best: collection.riftBest(riftKey(cls, difficulty, plan)), newBest: false, cls, className, difficulty, plan });
 }
 
 // ---------------------------------------------------------------- The waves
@@ -252,6 +350,9 @@ interface Entry {
   m: Monster;
   kind: MonsterKind;
   champion: boolean;
+  /** The champion is a boss (its own bar and entrance). */
+  boss: boolean;
+  elite: boolean;
   /** Its death has been counted. */
   counted: boolean;
   /** How it came out of its tear, for players who join later (host only). */
@@ -297,7 +398,7 @@ const between = (p: RiftPhase): boolean => p === 'cleared' || p === 'bless' || p
  */
 export class RiftWaves extends Spawner {
   private entries: Entry[] = [];
-  private queue: { kind: MonsterKind; champion: boolean }[] = [];
+  private queue: WaveFoe[] = [];
   private timer = INTRO_FIRST;
   private spawnT = 0;
   private diff: DifficultyDef;
@@ -317,15 +418,16 @@ export class RiftWaves extends Spawner {
 
   constructor(
     private host: WorldScene,
-    private arena: RiftArena,
+    private arena: WaveArena,
     private rift: RiftHost,
     private cls: string,
     private className: string,
+    private plan: WavePlan = RIFT_PLAN,
   ) {
     super(host, [], 9000);
     this.diff = difficultyDef(riftDifficulty());
     Object.assign(riftMods, NEUTRAL, { odds: this.diff.odds });
-    resetHud(cls, className, this.diff.id);
+    resetHud(cls, className, this.diff.id, plan.id);
     this.off = session.on((m) => this.receive(m));
     // Joining a friend's rift: their first word says which wave it is on, and on what difficulty.
     if (session.active && !session.isHost) this.follower = true;
@@ -346,66 +448,76 @@ export class RiftWaves extends Spawner {
     this.waitT = 0;
     riftHud.left = this.follower ? this.hostQueue : this.queue.length;
     const champ = n % CHAMPION_EVERY === 0;
-    riftHud.calls.push({ text: `Wave ${n}`, sub: champ ? 'A champion comes' : n === 1 ? this.diff.opens : '', tint: champ ? 0xff7ad0 : n === 1 && this.diff.id !== 'normal' ? this.diff.tint : 0xf4cf6a });
+    riftHud.calls.push({ text: `Wave ${n}`, sub: champ ? this.plan.championCall(n) : n === 1 ? this.diff.opens : '', tint: champ ? this.plan.championTint : n === 1 && this.diff.id !== 'normal' ? this.diff.tint : 0xf4cf6a });
     this.arena.setWave(true);
   }
 
   /**
-   * A wave's monsters: its budget spent on a few kinds from each tier it has
-   * reached (normal from wave 3, strong from wave 6), cheaper kinds thinning
-   * out as the waves go on; with a champion last, every fifth wave. Online
-   * the budget grows with every hero past the first.
+   * A wave's monsters, from the plan: its budget (which grows online with
+   * every hero past the first) spent on its kinds; with a champion last,
+   * every fifth wave.
    */
-  private compose(n: number): { kind: MonsterKind; champion: boolean }[] {
-    const kinds = {
-      weak: [pickOne(WEAK), pickOne(WEAK), pickOne(WEAK)],
-      normal: n >= 3 ? [pickOne(NORMAL), pickOne(NORMAL)] : [],
-      strong: n >= 6 ? [pickOne(STRONG), pickOne(STRONG)] : [],
-    };
-    const weights = { weak: Math.max(1, 6 - n * 0.4), normal: n >= 3 ? Math.min(6, n - 1) : 0, strong: n >= 6 ? Math.min(5, (n - 4) * 0.6) : 0 };
+  private compose(n: number): WaveFoe[] {
     const champ = n % CHAMPION_EVERY === 0;
-    let left = Math.round(budget(n) * (champ ? 0.7 : 1) * (1 + CROWD_BUDGET * (heroes() - 1)));
-    const out: { kind: MonsterKind; champion: boolean }[] = [];
-    while (left > 0) {
-      const total = weights.weak + weights.normal + weights.strong;
-      let r = Math.random() * total;
-      const tier = (r -= weights.weak) < 0 ? 'weak' : (r -= weights.normal) < 0 ? 'normal' : 'strong';
-      if (COST[tier] > left && tier !== 'weak') continue;
-      out.push({ kind: pickOne(kinds[tier]), champion: false });
-      left -= COST[tier];
-    }
-    if (champ) out.push({ kind: CHAMPIONS[(n / CHAMPION_EVERY - 1) % CHAMPIONS.length], champion: true });
+    const left = Math.round(budget(n) * (champ ? 0.7 : 1) * (1 + CROWD_BUDGET * (heroes() - 1)));
+    const out = this.plan.compose(n, left);
+    if (champ) out.push({ kind: this.plan.champion(n).kind, champion: true });
     return out;
   }
 
-  /** Step a monster out of a tear, not too near any hero, here and in every other player's game. */
-  private spawn(next: { kind: MonsterKind; champion: boolean }, targets: Target[]): void {
-    const far = TEARS.map((t, i) => ({ t, i })).filter(({ t }) => targets.every((h) => Math.hypot(t.x - h.x, t.y - h.y) > TEAR_KEEP_AWAY));
-    const { t, i } = pickOne(far.length ? far : TEARS.map((t, i) => ({ t, i })));
-    const tough = toughness(riftHud.wave) * (next.champion ? CHAMPION_TOUGH : 1) * (1 + CROWD_TOUGH * (heroes() - 1));
-    const made: Msg = { t: 'rm', r: this.run, i: this.nextSlot++, k: next.kind, c: next.champion ? 1 : 0, x: Math.round(t.x + (Math.random() - 0.5) * 6), y: Math.round(t.y + 3), tf: Math.round(tough * 1000) / 1000, e: i };
+  /** Step a monster out of a gate, not too near any hero, here and in every other player's game. */
+  private spawn(next: WaveFoe, targets: Target[]): void {
+    const gates = this.plan.gates;
+    const allowed = next.champion && this.plan.championGates ? this.plan.championGates : gates.map((_, i) => i);
+    const all = allowed.map((i) => ({ t: gates[i], i }));
+    const far = all.filter(({ t }) => targets.every((h) => Math.hypot(t.x - h.x, t.y - h.y) > TEAR_KEEP_AWAY));
+    const { t, i } = pickOne(far.length ? far : all);
+    const boss = next.champion && this.plan.champion(riftHud.wave).boss;
+    const own = next.champion ? (boss ? BOSS_TOUGH : CHAMPION_TOUGH) : next.elite ? ELITE_TOUGH : 1;
+    const tough = toughness(riftHud.wave) * own * (1 + CROWD_TOUGH * (heroes() - 1));
+    const made: Msg = { t: 'rm', r: this.run, i: this.nextSlot++, k: next.kind, c: next.champion ? (boss ? 2 : 1) : 0, el: next.elite ? 1 : 0, x: Math.round(t.x + (Math.random() - 0.5) * 6), y: Math.round(t.y + 3), tf: Math.round(tough * 1000) / 1000, e: i };
     session.send(made);
     this.bring(made);
   }
 
-  /** A monster out of tear `e`: brought out here, or as the host says. */
-  private bring(s: Msg): void {
+  /** A monster out of gate `e`: brought out here, or as the host says. */
+  private bring(s: Msg): Monster {
     const kind = s.k as MonsterKind;
     const champion = !!s.c;
+    const boss = s.c === 2;
+    const elite = !!s.el;
     const m = MONSTERS[kind](this.host, s.x as number, s.y as number);
     m.slot = s.i as number;
     m.gen = this.run;
     m.hunter = true;
+    m.summoned = !!s.sm;
     m.toughness = s.tf as number;
-    if (champion) m.size = CHAMPION_SIZE;
+    if (champion && !boss) m.size = CHAMPION_SIZE;
+    if (elite) m.size = ELITE_SIZE;
     m.hp = m.maxHp;
-    this.entries.push({ m, kind, champion, counted: false, made: s, net: null });
-    this.arena.flare(s.e as number);
+    this.entries.push({ m, kind, champion, boss, elite, counted: false, made: s, net: null });
+    if (s.e !== undefined) this.arena.flare(s.e as number);
+    if (champion || elite) this.arena.dress?.(m, boss ? 'boss' : champion ? 'champion' : 'elite');
     if (champion) {
-      riftHud.calls.push({ text: CHAMPION_NAME[kind] ?? 'Riftborn Champion', sub: 'Champion', tint: 0xff7ad0 });
+      const named = this.plan.champion(riftHud.wave);
+      riftHud.calls.push({ text: named.kind === kind ? named.name : 'Champion', sub: boss ? '' : 'Champion', tint: this.plan.championTint });
       this.host.cameras.main.shake(260, 0.002);
       sound.slam(this.host.pan(s.x as number));
     }
+    return m;
+  }
+
+  /**
+   * A boss calls up a monster at (x, y) to fight at its side: it hunts at
+   * once, carries no loot, and must be beaten with the wave. Online only the
+   * host's boss calls (every player's copy chooses its moves for itself), and
+   * the others are told; a follower's call does nothing.
+   */
+  summon(kind: MonsterKind, x: number, y: number): Monster | null {
+    if (this.follower || riftHud.phase === 'over') return null;
+    const made: Msg = { t: 'rm', r: this.run, i: this.nextSlot++, k: kind, c: 0, sm: 1, x: Math.round(x), y: Math.round(y), tf: Math.round(toughness(riftHud.wave) * 1000) / 1000 };
+    session.send(made);
+    return this.bring(made);
   }
 
   update(dt: number, targets: Target[], daylight: number): void {
@@ -423,8 +535,8 @@ export class RiftWaves extends Spawner {
     }
     this.entries = this.entries.filter((e) => !e.m.dead);
     const standing = this.entries.filter((e) => !e.counted);
-    const champ = standing.find((e) => e.champion);
-    riftHud.champion = champ ? { name: CHAMPION_NAME[champ.kind] ?? 'Champion', hp: Math.max(0, champ.m.hp), max: champ.m.maxHp } : null;
+    const champ = standing.find((e) => e.champion && !e.boss);
+    riftHud.champion = champ ? { name: this.plan.champion(riftHud.wave).name, hp: Math.max(0, champ.m.hp), max: champ.m.maxHp } : null;
     riftHud.left = (this.follower ? this.hostQueue : this.queue.length) + standing.length;
 
     // Every hero is down (alone, the hero has fallen): the run is over.
@@ -480,11 +592,16 @@ export class RiftWaves extends Spawner {
     e.counted = true;
     riftHud.kills++;
     const { x, y } = e.m;
+    if (e.m.summoned) return;
     if (e.champion) {
       const n = CHAMPION_GEMS + CHAMPION_GEMS_STEP * Math.floor(riftHud.wave / CHAMPION_EVERY - 1) + riftMods.gems * 2;
       riftHud.gems += n;
-      this.rift.dropGems(n, x, y - e.m.stats.bodyY * CHAMPION_SIZE);
-      riftHud.calls.push({ text: 'Champion slain', sub: `+${n} gems`, tint: 0x9ff6ff });
+      this.rift.dropGems(n, x, y - e.m.bodyY);
+      riftHud.calls.push({ text: e.boss ? 'Boss slain' : 'Champion slain', sub: `+${n} gems`, tint: 0x9ff6ff });
+    } else if (e.elite) {
+      const n = ELITE_GEMS + riftMods.gems;
+      riftHud.gems += n;
+      this.rift.dropGems(n, x, y - e.m.bodyY);
     } else if (riftMods.gems > 0 && Math.random() < FORTUNE_CHANCE * riftMods.gems * riftMods.odds) {
       riftHud.gems += 1;
       this.rift.dropGems(1, x, y - e.m.stats.bodyY);
@@ -553,7 +670,7 @@ export class RiftWaves extends Spawner {
     if (riftHud.phase === 'over') return;
     // The wave in hand counts only once it's cleared.
     reached ??= between(riftHud.phase) ? riftHud.wave : riftHud.wave - 1;
-    const key = riftKey(riftHud.cls, riftHud.difficulty);
+    const key = riftKey(riftHud.cls, riftHud.difficulty, this.plan.id);
     riftHud.best = collection.riftBest(key);
     riftHud.newBest = reached > 0 && collection.recordRift(key, reached);
     riftHud.wave = reached;
@@ -576,7 +693,7 @@ export class RiftWaves extends Spawner {
     this.rift.revive();
     hero.vitals.reset();
     Object.assign(riftMods, NEUTRAL, { odds: this.diff.odds });
-    resetHud(this.cls, this.className, this.diff.id);
+    resetHud(this.cls, this.className, this.diff.id, this.plan.id);
     if (!this.follower) this.startWave(1);
   }
 
@@ -587,7 +704,7 @@ export class RiftWaves extends Spawner {
     riftMods.odds = this.diff.odds;
     riftMods.fury = fury(Math.max(1, riftHud.wave)) * this.diff.hit;
     riftHud.difficulty = d;
-    riftHud.best = collection.riftBest(riftKey(this.cls, d));
+    riftHud.best = collection.riftBest(riftKey(this.cls, d, this.plan.id));
   }
 
   // ---------------------------------------------------------------- Online

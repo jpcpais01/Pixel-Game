@@ -24,6 +24,12 @@ export const BOSS_TITLES: Record<string, BossTitle> = {
   sporemother: { name: 'Sporemother', epithet: 'Heart of the Glimmerdeep', light: 0xffe4f8, mid: 0xff6ad8, dark: 0x781c68 },
   elementinho: { name: 'Elementinho', epithet: 'The Drop That Burns', light: 0xfff2b0, mid: 0xffa22c, dark: 0x9c2c0c },
   pumpkin_king: { name: 'Pumpkin King', epithet: "Lord of Hallow's Eve", light: 0xffe6a0, mid: 0xff8a30, dark: 0x7e2a0a },
+  // The Aurora Colosseum's five.
+  vargr: { name: 'Vargr', epithet: 'The Winterfang', light: 0xf0f8ff, mid: 0x8ac8ff, dark: 0x2a4a8a },
+  snowqueen: { name: 'Snow Queen', epithet: 'Mistress of the Frozen Mirror', light: 0xf4fcff, mid: 0x9ae8ff, dark: 0x2a5aa0 },
+  winterking: { name: 'Kaldr', epithet: 'The Lich of the Long Winter', light: 0xeef4ff, mid: 0x9ab0ff, dark: 0x3a2a8a },
+  colossus: { name: 'Ymir', epithet: 'The Glacier Colossus', light: 0xeafcff, mid: 0x6ad0f4, dark: 0x1a4a7a },
+  aurelith: { name: 'Aurelith', epithet: 'Serpent of the Northern Lights', light: 0xeafff4, mid: 0x5affb0, dark: 0x5a2aa0 },
 };
 
 const rgb = (c: number): [number, number, number] => hex(`#${c.toString(16).padStart(6, '0')}`);
