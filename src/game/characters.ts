@@ -93,6 +93,8 @@ export interface Hero {
   update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle, aim?: Aim | null): void;
   /** A blow is about to land: returning true, the hero slips through it unharmed (a ghost's phasing). */
   dodge?(): boolean;
+  /** The Special has thrown the hero's weapon (true) or it has come back (false): drawn empty-handed and unable to strike meanwhile. */
+  holdSaber?(away: boolean): void;
 }
 
 /** The animated portrait on the select screen. */
