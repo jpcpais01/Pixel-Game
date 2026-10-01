@@ -1844,15 +1844,15 @@ const GROUPS: { id: string; name: string; blurb: string; kits: string[] }[] = [
   { id: 'mage', name: 'Mage', blurb: 'Spells, and time itself', kits: ['wizard', 'chronomancer'] },
   { id: 'warrior', name: 'Warrior', blurb: 'Steel, faith and fists up front', kits: ['warrior', 'paladin', 'valkyrie', 'fighter'] },
   { id: 'jedi', name: 'Jedi', blurb: 'The light and the dark', kits: ['jedi'] },
-  { id: 'alchemist', name: 'Alchemist', blurb: 'Brews that melt foes', kits: ['alchemist'] },
+  { id: 'alchemist', name: 'Alchemist', blurb: 'Brews that melt foes', kits: ['alchemist', 'transmuter', 'brewmaster', 'pyrotechnist'] },
   { id: 'archer', name: 'Ranger', blurb: 'Death from afar', kits: ['archer'] },
   { id: 'duelist', name: 'Duelist', blurb: 'Blades from the shadows', kits: ['samurai', 'rogue'] },
   { id: 'necromancer', name: 'Necromancer', blurb: 'Lord of the restless dead', kits: ['necromancer'] },
   { id: 'mystic', name: 'Mystic', blurb: 'Songs and the old wild', kits: ['bard', 'druid'] },
   { id: 'automaton', name: 'Automaton', blurb: 'Steel, steam and a heat gauge', kits: ['automaton'] },
   { id: 'phantom', name: 'Phantom', blurb: 'Only half here: blows pass through', kits: ['phantom'] },
-  { id: 'inventor', name: 'Inventor', blurb: 'Gadgets, gizmos and bright ideas', kits: ['inventor'] },
-  { id: 'beast', name: 'Nature', blurb: 'Wings, claws and dragonfire', kits: ['beast'] },
+  { id: 'inventor', name: 'Inventor', blurb: 'Gadgets, gizmos and bright ideas', kits: ['inventor', 'aviator', 'aquanaut', 'lightwright'] },
+  { id: 'beast', name: 'Nature', blurb: 'Wings, claws and dragonfire', kits: ['beast', 'bear'] },
 ];
 
 /** Which kit each type and skin belongs to. */
@@ -1873,7 +1873,7 @@ export const CLASSES: ClassDef[] = GROUPS.map(({ id, name, blurb, kits }) => ({
   id,
   name,
   blurb,
-  types: kits.flatMap((k) => kitById(k)!.types),
+  types: kits.flatMap((k) => kitById(k)?.types ?? []),
 }));
 
 /** The class with this id, or the class holding the kit with this id (old saves), else the first. */
