@@ -261,6 +261,11 @@ export class Risen implements Effect {
   }
 
   /** Still standing (not yet falling apart). */
+  /** Time left before it crumbles, for the HUD's timer. */
+  get lifeLeft(): number {
+    return this.standing ? Math.max(0, this.life) : 0;
+  }
+
   get standing(): boolean {
     return this.state !== 'fall' && !this.dead;
   }

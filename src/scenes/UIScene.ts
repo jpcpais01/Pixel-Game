@@ -5,7 +5,8 @@ import { homeAct } from '../game/farm';
 import { DPR as D, menuZoom } from '../game/display';
 import { characterById } from '../game/characters';
 import { HOTBAR_SIZE, inventory } from '../game/items';
-import { heroBuffs } from '../game/buffs';
+import { heroTimers } from '../game/timers';
+import { GLYPH_H } from '../art/font';
 import { GearHud } from '../ui/gearHud';
 import { KeeperHud } from '../ui/keeperHud';
 import { BuildHud } from '../ui/buildHud';
@@ -52,6 +53,28 @@ interface Pad {
 /** The time of day toggle's highlight in each phase: peach, sky blue, rose, indigo. */
 /** A tap shorter than this fires on release; holding longer presses the button down. */
 const TAP_GRACE = 90;
+/** A timer badge's side, in art px: a 16 px icon, a pixel of glass and the rim round it. */
+const TIMER_ART = 20;
+/** Badges to a row before they wrap under. */
+const TIMER_ROW = 6;
+/** ms a new timer badge takes to pop in. */
+const TIMER_POP = 280;
+
+/**
+ * The rim of a timer badge, clockwise from the middle of its top edge (the
+ * corners are cut, for studs or nothing): the order its light goes out in.
+ */
+const TIMER_RIM: readonly (readonly [number, number])[] = (() => {
+  const n = TIMER_ART;
+  const h = n / 2;
+  const rim: [number, number][] = [];
+  for (let x = h; x <= n - 2; x++) rim.push([x, 0]);
+  for (let y = 1; y <= n - 2; y++) rim.push([n - 1, y]);
+  for (let x = n - 2; x >= 1; x--) rim.push([x, n - 1]);
+  for (let y = n - 2; y >= 1; y--) rim.push([0, y]);
+  for (let x = 1; x < h; x++) rim.push([x, 0]);
+  return rim;
+})();
 
 export class UIScene extends Phaser.Scene {
   private stick!: Phaser.GameObjects.Graphics;
@@ -80,14 +103,18 @@ export class UIScene extends Phaser.Scene {
   private slotIcons: Phaser.GameObjects.Image[] = [];
   private slotKeys: Phaser.GameObjects.BitmapText[] = [];
   private slotCounts: Phaser.GameObjects.BitmapText[] = [];
-  private buffBadges!: Phaser.GameObjects.Graphics;
-  private buffIcons: Phaser.GameObjects.Image[] = [];
+  /** The timer badges under the minimap: their rims, icons and seconds left. */
+  private timerRims!: Phaser.GameObjects.Graphics;
+  private timerIcons: Phaser.GameObjects.Image[] = [];
+  private timerLabels: Phaser.GameObjects.BitmapText[] = [];
+  /** When each timer badge first showed, for its pop-in. */
+  private timerBorn = new Map<string, number>();
   private gearHud!: GearHud;
   /** A Rune Temple keeper's counter, when the hero talks to one. */
   private keeperHud!: KeeperHud;
   /** The hero's stats under the buff badges, and the "i" card on their moves. */
   private statsHud!: StatsHud;
-  /** Where the stats panel stands, eased as buff badges come and go. */
+  /** Where the stats panel stands, eased as timer badges come and go. */
   private statsY = -1;
   /** Build mode in a Home: its buttons and tray. */
   private buildHud!: BuildHud;
@@ -274,8 +301,10 @@ export class UIScene extends Phaser.Scene {
       this.slotKeys.push(this.add.bitmapText(0, 0, 'pixel', `${i + 1}`).setLetterSpacing(-1).setOrigin(0, 0).setTint(0xb8c4ff));
       this.slotCounts.push(this.add.bitmapText(0, 0, 'pixel', '').setLetterSpacing(-1).setOrigin(1, 1).setTint(0xfff4d8));
     }
-    this.buffBadges = this.add.graphics();
-    this.buffIcons = [];
+    this.timerRims = this.add.graphics();
+    this.timerIcons = [];
+    this.timerLabels = [];
+    this.timerBorn.clear();
     this.gearHud = new GearHud(this, () => this.releaseAll());
     this.keeperHud = new KeeperHud(this, () => this.releaseAll());
     this.buildHud = new BuildHud(this, () => this.releaseAll());
@@ -573,22 +602,25 @@ export class UIScene extends Phaser.Scene {
     this.drawNetButton(delta);
 
     const col = this.column;
-    this.drawBuffs(col);
-    this.placeStats(col, delta);
+    const timers = this.drawTimers(col);
+    this.placeStats(col, timers, delta);
     this.drawHotbar();
     this.hideForBuilding();
   }
 
-  /**
-   * The stats panel stands at the left under the buff badges' row, and moves
-   * up into it when there are none, easing between the two.
-   */
-  private placeStats(col: { x: number; y: number; size: number }, delta: number): void {
+  /** The scale of the left column's art: the stats panel and the timer badges. */
+  private get columnZoom(): number {
     const menu = menuZoom(this.scale.width, this.scale.height);
-    const z = menu >= 3 ? menu - 1 : menu;
-    const top = col.y;
-    const badges = col.size + 3 * D + Math.round(3 * D) + 8 * D;
-    const want = top + (heroBuffs.active.length ? badges : 0);
+    return menu >= 3 ? menu - 1 : menu;
+  }
+
+  /**
+   * The stats panel stands at the left under the timer badges, and moves up
+   * into their place when there are none, easing between the two.
+   */
+  private placeStats(col: { x: number; y: number; size: number }, timers: number, delta: number): void {
+    const z = this.columnZoom;
+    const want = col.y + timers;
     this.statsY = this.statsY < 0 ? want : this.statsY + (want - this.statsY) * Math.min(1, delta / 90);
     if (Math.abs(want - this.statsY) < 0.5) this.statsY = want;
     this.statsHud.place(col.x, this.statsY, z, build.on || fishHud.active);
@@ -658,44 +690,113 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
-  /** A badge per active buff in the left column under the minimap: its icon, and a bar under it draining with the time left. */
-  private drawBuffs(col: { x: number; y: number; size: number }): void {
-    const list = heroBuffs.active;
-    const size = col.size;
-    const gap = Math.round(6 * D);
-    const y = col.y;
-    const iconScale = Math.max(1, Math.floor((size - 6 * D) / 16));
-    while (this.buffIcons.length < list.length) this.buffIcons.push(this.add.image(0, 0, '__DEFAULT'));
-    this.buffIcons.forEach((icon, i) => {
-      const b = list[i];
-      if (!b) {
+  /**
+   * The timer badges, a row (or two) under the minimap: everything timed on
+   * the hero, the Special first, then the ability's lasting effects, then the
+   * buffs. Each is a small chamfered pixel badge round its icon; its rim is
+   * lit in the timer's colour and goes dark clockwise from the top as the
+   * time runs out, like a clock hand sweeping, with the seconds left under
+   * it. Specials wear gold corner studs, abilities steel ones. A new badge
+   * pops in with a white rim; through its last two seconds it blinks.
+   * Returns how much height the badges take, for the stats panel under them.
+   */
+  private drawTimers(col: { x: number; y: number; size: number }): number {
+    const list = build.on || fishHud.active ? [] : heroTimers.list();
+    const u = this.columnZoom;
+    const size = TIMER_ART * u;
+    const gap = 3 * u;
+    const textScale = Math.max(1, Math.floor(u / 2));
+    const labelH = (GLYPH_H + 2) * textScale;
+    const rowH = size + u + labelH + gap;
+    const perRow = Math.max(1, Math.min(TIMER_ROW, Math.floor((this.scale.width * 0.45 + gap) / (size + gap))));
+    const now = this.time.now;
+
+    // Forget badges that have gone, so one that comes again pops in again.
+    for (const id of this.timerBorn.keys()) if (!list.some((t) => t.id === id)) this.timerBorn.delete(id);
+    for (const t of list) if (!this.timerBorn.has(t.id)) this.timerBorn.set(t.id, now);
+
+    while (this.timerIcons.length < list.length) {
+      this.timerIcons.push(this.add.image(0, 0, '__DEFAULT'));
+      this.timerLabels.push(this.add.bitmapText(0, 0, 'pixel', '').setLetterSpacing(-1).setOrigin(0.5, 0));
+    }
+    const at = (i: number) => ({ x: col.x + (i % perRow) * (size + gap), y: col.y + Math.floor(i / perRow) * rowH });
+    let state = `${col.x} ${col.y} ${u}`;
+    this.timerIcons.forEach((icon, i) => {
+      const label = this.timerLabels[i];
+      const t = list[i];
+      if (!t) {
         icon.setVisible(false);
+        label.setVisible(false);
         return;
       }
-      if (icon.texture.key !== b.def.icon) icon.setTexture(b.def.icon);
-      // Blinks through its last two seconds.
-      const blink = b.left < 2000 && Math.sin(this.time.now * 0.018) < 0 ? 0.45 : 1;
-      icon.setVisible(true).setPosition(col.x + i * (size + gap) + size / 2, y + size / 2).setScale(iconScale).setAlpha(blink);
+      const { x, y } = at(i);
+      const key = t.icon || (t.kind === 'ability' ? this.beamIcon.texture.key : '__DEFAULT');
+      if (icon.texture.key !== key) icon.setTexture(key);
+      const age = now - (this.timerBorn.get(t.id) ?? now);
+      const pop = Math.max(0, 1 - age / TIMER_POP);
+      const blink = t.left < 2000 && Math.sin(now * 0.018) < 0;
+      // Button icons are drawn to glow on the dark buttons; the buff icons are plain.
+      icon
+        .setBlendMode(t.kind === 'buff' ? Phaser.BlendModes.NORMAL : Phaser.BlendModes.ADD)
+        .setVisible(true)
+        .setPosition(x + size / 2, y + size / 2)
+        .setScale(u * (1 + 0.3 * pop * pop))
+        .setAlpha(blink ? 0.45 : 1);
+      const secs = Math.ceil(t.left / 1000);
+      label
+        .setVisible(true)
+        .setText(secs >= 60 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` : `${secs}`)
+        .setScale(textScale)
+        .setPosition(Math.round(x + size / 2), y + size + u)
+        .setTint(secs <= 3 ? 0xffb08a : 0xdfe6ff)
+        .setAlpha(blink ? 0.6 : 0.95);
+      const lit = Math.ceil(TIMER_RIM.length * Math.max(0, Math.min(1, t.left / t.total)));
+      state += `|${t.id} ${lit} ${blink ? 1 : 0} ${Math.ceil(pop * 6)}`;
     });
-    const state = list.map((b) => `${b.def.id} ${Math.ceil((b.left / b.def.duration) * 60)}`).join('|') + ` ${col.x} ${y} ${size}`;
-    const g = this.redraw(this.buffBadges, state);
-    if (!g) return;
-    list.forEach((b, i) => {
-      const x = col.x + i * (size + gap);
-      const r = Math.round(5 * D);
-      g.fillStyle(0x0a0c1c, 0.6);
-      g.fillRoundedRect(x, y, size, size, r);
-      g.lineStyle(Math.round(1.5 * D), b.def.tint, 0.35);
-      g.strokeRoundedRect(x, y, size, size, r);
-      // Time left: a bar under the badge.
-      const k = Math.max(0, b.left / b.def.duration);
-      const bh = Math.round(3 * D);
-      g.fillStyle(0x0a0c1c, 0.6);
-      g.fillRect(x, y + size + 3 * D, size, bh);
-      g.fillStyle(b.def.tint, 0.95);
-      g.fillRect(x, y + size + 3 * D, Math.round(size * k), bh);
-    });
+
+    const g = this.redraw(this.timerRims, state);
+    if (g) {
+      const N = TIMER_ART;
+      const px = (x: number, y: number, ax: number, ay: number, w = 1, h = 1) => g.fillRect(x + ax * u, y + ay * u, w * u, h * u);
+      list.forEach((t, i) => {
+        const { x, y } = at(i);
+        const age = now - (this.timerBorn.get(t.id) ?? now);
+        const pop = Math.max(0, 1 - age / TIMER_POP);
+        const blink = t.left < 2000 && Math.sin(now * 0.018) < 0;
+        // The body: dark glass with a wash of the timer's colour, lit along the top, shaded along the bottom.
+        g.fillStyle(0x0a0c1c, 0.78);
+        px(x, y, 1, 1, N - 2, N - 2);
+        g.fillStyle(t.tint, 0.13);
+        px(x, y, 2, 2, N - 4, N - 4);
+        g.fillStyle(0xffffff, 0.1);
+        px(x, y, 2, 1, N - 4, 1);
+        g.fillStyle(0x000000, 0.3);
+        px(x, y, 2, N - 2, N - 4, 1);
+        // The rim: dark where the time has gone, lit where it is left, the hand a bright pixel.
+        const n = TIMER_RIM.length;
+        const lit = Math.ceil(n * Math.max(0, Math.min(1, t.left / t.total)));
+        TIMER_RIM.forEach(([ax, ay], k) => {
+          const on = k >= n - lit;
+          if (pop > 0) g.fillStyle(0xffffff, 0.5 + 0.5 * pop);
+          else if (!on) g.fillStyle(t.tint, 0.2);
+          else if (k === n - lit) g.fillStyle(0xffffff, 0.95);
+          else g.fillStyle(t.tint, blink ? 0.55 : 1);
+          px(x, y, ax, ay);
+        });
+        // Corner studs: gold on a Special, steel on an ability's effect.
+        if (t.kind !== 'buff') {
+          const stud = t.kind === 'special' ? 0xffd66b : 0xb8c4e0;
+          for (const [ax, ay] of [[0, 0], [N - 1, 0], [0, N - 1], [N - 1, N - 1]]) {
+            g.fillStyle(stud, 0.95);
+            px(x, y, ax, ay);
+          }
+        }
+      });
+    }
+    if (!list.length) return 0;
+    return Math.ceil(list.length / perRow) * rowH + 5 * u;
   }
+
   /**
    * The Special's button: dark and dim while energy gathers, its ring filling
    * clockwise in the Special's colour; once there is enough, the icon lights,

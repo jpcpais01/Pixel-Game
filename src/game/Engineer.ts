@@ -1,3 +1,4 @@
+import { heroTimers } from './timers';
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
 import { INV_H, INV_HAND_Y, INV_ORIGIN_X, INV_ORIGIN_Y, INV_W, TURRET_BUILD, TURRET_FOOT, TURRET_GUN_Y, TURRET_HEADINGS, TURRET_SIZE } from '../art/inventor';
@@ -242,6 +243,7 @@ export class Engineer implements Hero {
     const t = new Turret(this.world, this.x + u.x * 4, this.y, tx, ty, SENTRY, this.kit.pal);
     this.turrets.push(t);
     this.world.addEffect(t);
+    heroTimers.follow(t, 'ability', '', this.kit.pal.hot, () => t.timeLeft());
     sound.toss();
   }
 
@@ -341,6 +343,13 @@ export class Turret implements Effect {
     this.shade = world.add.image(x, y, 'shadow').setScale(0.7 * s, 0.6 * s).setAlpha(0).setDepth(1);
     this.sprite = world.add.sprite(fromX, fromY, 'turret', 'b0').setOrigin(0.5, TURRET_FOOT / TURRET_SIZE).setScale(s).setPipeline('Lit');
     this.glow = world.add.sprite(fromX, fromY, 'turret_e', 'b0').setOrigin(0.5, TURRET_FOOT / TURRET_SIZE).setScale(s).setBlendMode(Phaser.BlendModes.ADD);
+  }
+
+  /** Time left until it folds away, for the HUD's timer. */
+  timeLeft(): { left: number; total: number } | null {
+    if (this.dead || this.folding >= 0) return null;
+    const total = this.flyMs + UNFOLD_MS + this.spec.life;
+    return { left: total - this.t, total };
   }
 
   /** Time's up early: fold away now. */

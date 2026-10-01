@@ -46,6 +46,14 @@ import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
+import type { Effect } from '../Slash';
+import { heroBuffs } from '../buffs';
+import { heroTimers, LASTING_MS, type TimeLeft } from '../timers';
+
+/** An effect that can say how long it has left (every `Fx`, the sentry). */
+interface TimeTeller {
+  timeLeft(): TimeLeft | null;
+}
 
 // The Special: each type's most powerful ability, paid for with energy (see
 // energy.ts) and cast with Space or the Special button. The hero plants their
@@ -369,6 +377,7 @@ const ULTS: Record<string, UltDef> = {
     pal: MECH_KIT.boom,
     icon: icons.siegeIcon,
     // The mech plants itself and does the firing (see Mech.siege).
+    lasts: SIEGE_MS,
     cast: (c) => (c.hero as Partial<Mech>).siege?.(SIEGE_MS),
   },
   'automaton:synth': {
@@ -776,11 +785,41 @@ export class UltCaster {
     flare(w, h.x, h.y - 14, 150, p.light, 3, 500);
     bloom(w, h.x, h.y - 14, p.hot, 2.4, 320, h.y + 20);
     w.addEffect(new Shock(w, h.x, h.y, p));
-    w.castSpecial(() => this.ult.def.cast(c));
+    const fresh = heroBuffs.active.filter((b) => b.left >= b.def.duration);
+    const made = w.castSpecial(() => this.ult.def.cast(c));
+    this.time(made, fresh.length);
     if (this.title) {
       const title = this.title;
       this.title = null;
       w.tweens.add({ targets: title, y: title.y - 10, alpha: 0, delay: 350, duration: 650, ease: 'Sine.In', onComplete: () => title.destroy() });
+    }
+  }
+
+  /**
+   * A Special that lasts gets a timer badge in the HUD, following the longest
+   * lived thing it set going. One that only buffs the hero is already shown by
+   * that buff's badge.
+   */
+  private time(made: Effect[], buffsBefore: number): void {
+    const def = this.ult.def;
+    const key = 'special';
+    if (def.lasts) {
+      heroTimers.run(key, 'special', this.ult.icon, this.ult.pal.hot, def.lasts);
+      return;
+    }
+    if (heroBuffs.active.filter((b) => b.left >= b.def.duration).length > buffsBefore) return;
+    let best: TimeTeller | null = null;
+    let most = LASTING_MS;
+    for (const e of made) {
+      const t = (e as Partial<TimeTeller>).timeLeft?.();
+      if (t && t.left >= most) {
+        most = t.left;
+        best = e as unknown as TimeTeller;
+      }
+    }
+    if (best) {
+      const teller = best;
+      heroTimers.follow(key, 'special', this.ult.icon, this.ult.pal.hot, () => teller.timeLeft());
     }
   }
 

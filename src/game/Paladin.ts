@@ -1,3 +1,4 @@
+import { heroTimers } from './timers';
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
 import { CONSECRATE_HIT, CRUSADER_LOOK, HOLY_LOOK, OATH_LOOK, SERAPH_LOOK, PALADIN_H, PALADIN_ORIGIN_X, PALADIN_ORIGIN_Y, PALADIN_W, SMITE_HIT, type PaladinLook } from '../art/paladin';
@@ -308,6 +309,7 @@ export class Paladin implements Hero {
     const r = REACH[this.dir];
     this.sanctuary?.destroy();
     this.sanctuary = new Sanctuary(this.world, x, y, SANCTUARY_RADIUS, SANCTUARY_TIME, this.kit.fx, this.kit.groundEdge);
+    heroTimers.run('sanctuary', 'ability', '', this.kit.fx.hot, SANCTUARY_TIME);
     this.pulseIn = PULSE_EVERY * 0.6;
     this.fx.push(new SmiteBurst(this.world, x + r.x * 0.6, y + r.y * 0.6, true, this.kit.fx));
     const hits = this.world.melee({ kind: 'circle', x, y: y - 6, radius: SANCTUARY_RADIUS }, { damage: 12, heavy: true, knock: 150 });
@@ -335,6 +337,7 @@ export class Paladin implements Hero {
     this.fx.push(new HealPop(this.world, x, y - 35, `+${shield}`, BARRIER_TINT));
     this.motes.setDepth(y + 0.5).explode(10, x, y - 8);
     this.zeal = ZEAL_TIME;
+    heroTimers.follow('zeal', 'ability', '', this.kit.fx.hot, () => (this.zeal > 0 ? { left: this.zeal, total: ZEAL_TIME } : null));
     sound.consecrate(this.world.pan(x));
     this.world.cameras.main.shake(240, 0.0008);
     this.specialCd = this.kit.specialCooldown;
