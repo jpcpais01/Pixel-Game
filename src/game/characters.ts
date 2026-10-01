@@ -28,8 +28,8 @@ import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CHEM_STYLE, CRYO_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
 import { Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from './Archer';
-import { Arbalest } from './Arbalest';
-import { Windrunner } from './Windrunner';
+import { Arbalest, BRIAR_STYLE } from './Arbalest';
+import { Windrunner, WISTERIA_STYLE } from './Windrunner';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
 import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
@@ -906,6 +906,22 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_netbolt' },
         },
         lookName: 'Steel',
+        skins: [
+          {
+            // A lady huntress: a rose-red hooded capelet, green velvet gown, a rose at her throat, a thornwood crossbow.
+            id: 'briar',
+            name: 'Briar Rose',
+            role: 'Lady of the thorns',
+            accent: 0xe8344a,
+            attack: 'Thorn bolt',
+            special: 'Briar net',
+            preview: { texture: 'archer_briar', glow: 'archer_briar_e', idle: 'archer_briar_idle_down', chosen: 'archer_briar_brace_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+            buttons: {
+              attack: { texture: 'icon_crossbow_briar' },
+              special: { texture: 'icon_netbolt_briar' },
+            },
+          },
+        ],
       },
       {
         // A light elven skirmisher in dusk-blue silk, a long scarf streaming, a silverwood bow.
@@ -921,13 +937,29 @@ export const CLASSES: ClassDef[] = [
           special: { texture: 'icon_vault' },
         },
         lookName: 'Gale',
+        skins: [
+          {
+            // An elven maiden: a lilac braid woven with wisteria, a silver leaf circlet, a leaf-hemmed gown, a birch bow wound with vine.
+            id: 'wisteria',
+            name: 'Wisteria',
+            role: 'Maiden of the blossom',
+            accent: 0xb48ae8,
+            attack: 'Petal volley',
+            special: 'Blossom vault',
+            preview: { texture: 'archer_wisteria', glow: 'archer_wisteria_e', idle: 'archer_wisteria_idle_down', chosen: 'archer_wisteria_fan_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+            buttons: {
+              attack: { texture: 'icon_fanshot_wisteria' },
+              special: { texture: 'icon_vault_wisteria' },
+            },
+          },
+        ],
       },
     ],
     spawn: (world, x, y, look) =>
-      look === 'arbalest'
-        ? new Arbalest(world, x, y)
-        : look === 'wind'
-          ? new Windrunner(world, x, y)
+      look === 'arbalest' || look === 'briar'
+        ? new Arbalest(world, x, y, look === 'briar' ? BRIAR_STYLE : undefined)
+        : look === 'wind' || look === 'wisteria'
+          ? new Windrunner(world, x, y, look === 'wisteria' ? WISTERIA_STYLE : undefined)
           : new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : RANGER_STYLE),
   },
   {

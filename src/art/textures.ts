@@ -10,7 +10,7 @@ import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, A
 import { ALCHEMIST_LOOKS, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, flaskFrame } from './alchemist';
 import { FOXGLOVE_BREW, foxBogIcon, foxFlaskIcon } from './foxglove';
 import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbowBoltFrame, stuckArrowFrame, stuckBoltFrame } from './archer';
-import { crossbowIcon, fanShotIcon, netBoltIcon, vaultIcon } from './archerIcons';
+import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
 import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
@@ -235,6 +235,17 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
       ...frameList([0, 1, 2].map((k) => (look.arb ? stuckBoltFrame(k, look) : stuckArrowFrame(k, look))), 'k'),
     ];
     register(scene, `arrow${sfx}`, pack(arrows, ARROW_SIZE, ARROW_SIZE), ARROW_SIZE, ARROW_SIZE);
+    // The arbalest's and windrunner's own icons carry no suffix; their skins' do.
+    if (look.briar) {
+      scene.textures.addCanvas(`icon_crossbow${sfx}`, toCanvas(16, 16, briarCrossbowIcon()));
+      scene.textures.addCanvas(`icon_netbolt${sfx}`, toCanvas(16, 16, briarNetIcon()));
+      continue;
+    }
+    if (look.wisteria) {
+      scene.textures.addCanvas(`icon_fanshot${sfx}`, toCanvas(16, 16, petalFanIcon()));
+      scene.textures.addCanvas(`icon_vault${sfx}`, toCanvas(16, 16, blossomVaultIcon()));
+      continue;
+    }
     if (look.arb) {
       scene.textures.addCanvas('icon_crossbow', toCanvas(16, 16, crossbowIcon()));
       scene.textures.addCanvas('icon_netbolt', toCanvas(16, 16, netBoltIcon()));

@@ -27,6 +27,8 @@ export interface ArrowStyle {
   storm: boolean;
   /** Spirit light (the wild hunt's): the arrows glow as they fly and leave trails of it. */
   spirit?: boolean;
+  /** Petals its shots shed as they fly and scatter where they strike (Wisteria's, Briar Rose's). */
+  petals?: number[];
 }
 
 export const RANGER_ARROW: ArrowStyle = {
@@ -93,6 +95,31 @@ export const WIND_ARROW: ArrowStyle = {
   suffix: '_wind',
   storm: false,
   spirit: true,
+};
+
+/** Wisteria's: birch arrows fletched in violet, trailing lilac light and shedding wisteria petals. */
+export const WISTERIA_ARROW: ArrowStyle = {
+  core: 0xffffff,
+  hot: 0xe8dcff,
+  mid: 0xb48ae8,
+  deep: 0x5a2aa0,
+  light: 0xd0b8ff,
+  suffix: '_wisteria',
+  storm: false,
+  spirit: true,
+  petals: [0xffffff, 0xe0ccff, 0xb48af0, 0x8a52d8],
+};
+
+/** Briar Rose's: thorned briar bolts with rose-petal vanes, shedding petals as they go. */
+export const BRIAR_ARROW: ArrowStyle = {
+  core: 0xffffff,
+  hot: 0xffd0d8,
+  mid: 0xe8344a,
+  deep: 0x2e6e24,
+  light: 0xff8a98,
+  suffix: '_briar',
+  storm: false,
+  petals: [0xffb0bc, 0xe8344a, 0xb4162e, 0x4a9036],
 };
 
 /** How an arrow flies, when not the bow's usual way. */
@@ -211,6 +238,8 @@ export class Arrow implements Effect {
       this.trailT = this.style.storm || this.style.spirit ? 22 : 40;
       const s = this.style;
       this.world.debris(s.storm || s.spirit ? [s.core, s.hot, s.mid] : [s.hot, s.mid], snap(this.x - this.ux * 5), snap(this.y - ARROW_H - this.uy * 5), 1, this.y - 0.2, 'trail');
+      // Now and then a petal comes loose and drifts off behind it.
+      if (s.petals && Math.random() < 0.3) this.world.debris(s.petals, snap(this.x - this.ux * 7), snap(this.y - ARROW_H - this.uy * 7), 1, this.y - 0.2, 'spores');
     }
   }
 
@@ -230,6 +259,7 @@ export class Arrow implements Effect {
     const by = h.y - h.bodyY;
     const s = this.style;
     this.world.debris([s.core, s.hot, s.mid], snap(bx), snap(by), s.storm ? 12 : s.spirit ? 10 : 7, h.y + 20);
+    if (s.petals) this.world.debris(s.petals, snap(bx), snap(by), 6, h.y + 20, 'spores');
     if (s.storm) this.world.addEffect(new Zap(this.world, bx, by, h.y + 20, s));
     sound.arrowHit(this.world.pan(bx), s.storm);
     this.onHit(h, this.x, this.y);
