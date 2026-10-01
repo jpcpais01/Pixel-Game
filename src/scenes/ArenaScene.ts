@@ -12,7 +12,7 @@ import { buildId } from '../diagnostics';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PANEL_PICKED, PixelButton, panelTexture, pixelText, type PanelStyle } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
 import { openOnlineForm } from '../ui/onlineForm';
-import { DIFFICULTIES, difficultyDef, riftDifficulty, riftKey, setRiftDifficulty, type RiftDifficulty } from '../game/rift';
+import { DIFFICULTIES, difficultyDef, isWaveArena, riftDifficulty, riftKey, setRiftDifficulty, type RiftDifficulty } from '../game/rift';
 import { DIFF_STYLE, difficultyIcon, partyIcon } from '../ui/riftDifficulty';
 import { sound } from '../audio';
 
@@ -623,25 +623,25 @@ export class ArenaScene extends Phaser.Scene {
     });
     const solo = !!arena.solo;
     this.online.setEnabled(!solo).setAlpha(solo ? 0.4 : 1);
-    this.showDifficulty(arena.id === 'rift');
+    this.showDifficulty(isWaveArena(arena.id));
     this.follow = { x: place.x, y: place.y - 16 };
   }
 
   /** What the panel says under the lore: a place's bosses (and which have fallen), its best wave, or a note. */
   private statusLines(arena: ArenaDef, place: Place): { text: string; tint: number }[] {
     const slain = realm.get().slain;
+    if (isWaveArena(arena.id)) {
+      const d = difficultyDef(riftDifficulty());
+      const best = collection.riftBest(riftKey(this.character, d.id, arena.id));
+      const note = { text: d.note, tint: d.tint };
+      return best > 0 ? [note, { text: `Best wave: ${best}`, tint: arena.id === 'frost' ? 0x5affb0 : 0xff8ad8 }] : [note];
+    }
     if (place.bosses?.length) {
       return place.bosses.map((b) =>
         slain.includes(b.kind)
           ? { text: `Slain: ${b.name}`, tint: 0x8ae07a }
           : { text: `${b.rank === 'myth' ? 'Myth' : 'Legend'}: ${b.name}`, tint: b.rank === 'myth' ? 0xc8a0ff : 0xf4cf6a },
       );
-    }
-    if (arena.id === 'rift') {
-      const d = difficultyDef(riftDifficulty());
-      const best = collection.riftBest(riftKey(this.character, d.id));
-      const note = { text: d.note, tint: d.tint };
-      return best > 0 ? [note, { text: `Best wave: ${best}`, tint: 0xff8ad8 }] : [note];
     }
     return [{ text: place.note ?? arena.blurb, tint: 0xb8a8e8 }];
   }

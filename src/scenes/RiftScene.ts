@@ -311,7 +311,8 @@ export class RiftScene extends Phaser.Scene {
   private showResults(): void {
     const panel = this.add.image(0, 0, panelTexture(this, 'rift_results', RESULT_W, RESULT_H, PANEL)).setOrigin(0);
     const center = (t: Phaser.GameObjects.BitmapText, y: number) => t.setPosition(Math.round((RESULT_W - t.width) / 2), y);
-    const title = center(pixelText(this, 0, 0, 'The rift closes', MAGENTA, 1), 9);
+    const frost = riftHud.plan === 'frost';
+    const title = center(pixelText(this, 0, 0, frost ? 'The winter claims you' : 'The rift closes', frost ? 0x9ae8ff : MAGENTA, 1), 9);
     const wave = center(pixelText(this, 0, 0, `Wave ${riftHud.wave}`, GOLD, 2), 23);
     const best = riftHud.newBest ? 'New best!' : `Best ${Math.max(riftHud.best, riftHud.wave)}`;
     const bestText = center(pixelText(this, 0, 0, `${best}  ${riftHud.className}`, riftHud.newBest ? 0x9dffb0 : LAVENDER), 44);
@@ -363,7 +364,8 @@ export class RiftScene extends Phaser.Scene {
         this.scene.launch('shade');
         this.scene.launch('ui', { character });
         this.scene.launch('pause');
-        this.scene.start('world', { character, arena: 'rift' });
+        // The plan's id is its arena's.
+        this.scene.start('world', { character, arena: riftHud.plan });
       } else {
         sound.setFire(0);
         sound.setDaylight(0);

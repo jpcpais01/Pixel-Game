@@ -551,7 +551,7 @@ export abstract class Monster implements Hurtbox {
     const up = Math.min(1, (this.hover + this.lift) / 10);
     this.shadow.setPosition(rx, ry - 1).setAlpha(alpha * this.fade * (1 - up * 0.4)).setScale((this.stats.radius / 7) * this.size, this.size);
     this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * alpha);
-    if (!this.stats.noBar) this.bar.update(dt, rx, ry - Math.round(this.stats.barY * this.size) - Math.round(this.lift), this.state === 'dying' ? 0 : this.hp, this.maxHp, 0);
+    if (!this.stats.noBar) this.bar.update(dt, rx, ry - Math.round(this.stats.barY * this.size) - Math.round(this.lift), this.state === 'dying' ? 0 : this.hp, this.maxHp, 0, this.fade);
     if (this.paceT > 0) this.syncClock(rx, hy);
   }
 

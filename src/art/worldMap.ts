@@ -1,6 +1,6 @@
 // The world map of Aurendel, the arena select's picture of the realm: seas
 // and coasts, the lands (meadow, bloom, the dark Gloamwood, the Emberwaste,
-// the Sundered Reach, the Shardspine Mountains), the river out of the
+// the Sundered Reach, the Shardspine Mountains, the Frostreach's ice), the river out of the
 // Glimmerdeep, the road between the arenas, and a landmark for each arena.
 //
 // Everything here is drawn once into a few textures (in the arena worker,
@@ -31,6 +31,8 @@ const BLOBS: [number, number, number, number][] = [
   [300, 372, 150, 58],
   [200, 360, 84, 56],
   [496, 314, 34, 30],
+  // The Frostreach, north of the Emberwaste across a neck of land.
+  [556, 108, 64, 50],
 ];
 /** Bays bitten out of the coast (x, y, rx, ry). */
 const BAYS: [number, number, number, number][] = [
@@ -75,7 +77,14 @@ const RIVER: [number, number][] = [
   [368, 420],
   [370, 452],
 ];
-const COMPASS = { x: 598, y: 58 };
+const COMPASS = { x: 40, y: 40 };
+/** The Frostreach's mountains, set by hand round the colosseum (x, foot y, radius). */
+const FROST_PEAKS: [number, number, number][] = [
+  [604, 96, 11],
+  [516, 92, 9],
+  [590, 136, 8],
+  [612, 128, 7],
+];
 
 // Lands, each a set of centres: a pixel belongs to the nearest one.
 const MEADOW = 0;
@@ -85,6 +94,7 @@ const EMBER = 3;
 const WASTE = 4;
 const HIGH = 5;
 const ROCK = 6;
+const FROST = 7;
 const CENTRES: [number, number, number][] = [
   [MEADOW, 300, 330],
   [MEADOW, 262, 256],
@@ -108,6 +118,10 @@ const CENTRES: [number, number, number][] = [
   [HIGH, 290, 170],
   [HIGH, 380, 176],
   [HIGH, 236, 150],
+  [FROST, 556, 104],
+  [FROST, 594, 90],
+  [FROST, 520, 120],
+  [FROST, 572, 142],
 ];
 
 const GROUND: RGB[][] = [
@@ -118,6 +132,7 @@ const GROUND: RGB[][] = [
   ramp('#261c36', '#342848', '#44365a', '#58486e', '#6e5c84'),
   ramp('#34463a', '#465a44', '#58704e', '#6e865a', '#8c9e6a'),
   ramp('#3c3650', '#4e4866', '#645e7c', '#7e7894', '#a09ab2'),
+  ramp('#7484a8', '#94a4c4', '#b4c2dc', '#d2dcee', '#eef4ff'),
 ];
 /** The cliff under each land's coast, top (lit lip) to bottom. */
 const CLIFF: RGB[][] = [
@@ -128,6 +143,7 @@ const CLIFF: RGB[][] = [
   ramp('#6a5a7a', '#4a3c60', '#322646', '#1e162c'),
   ramp('#8a7e5e', '#62583e', '#443c2c', '#2a241c'),
   ramp('#8e88a4', '#625c7a', '#443e58', '#2a2638'),
+  ramp('#c4e4f8', '#7aa6d0', '#4a6e9e', '#2a4068'),
 ];
 const SAND = ramp('#c4a676', '#dcc28a', '#f0dca8');
 const FOAM = hex('#e2f6f0');
@@ -434,6 +450,7 @@ function* paintLand(): Generator<void, Land, void> {
   const volcanoD = (x: number, y: number) => Math.hypot(x - VOLCANO.x, (y - VOLCANO.y) * 1.3);
   const rift = PLACES.find((p) => p.id === 'rift')!;
   const riftD = (x: number, y: number) => Math.hypot(x - rift.x, (y - rift.y + 4) * 1.6);
+  const frost = PLACES.find((p) => p.id === 'frost')!;
 
   // The ground.
   for (let y = 0; y < H; y++) {
@@ -453,6 +470,8 @@ function* paintLand(): Generator<void, Land, void> {
       else if (b === BLOOM && r < 0.06) c = [hex('#ff9ec8'), hex('#fff4fa'), hex('#ffe08a'), hex('#e2b4ff')][Math.floor(hash2(x, y, 93) * 4)];
       else if (b === GLOAM && r < 0.03) c = hex('#4e7a60');
       else if (b === HIGH && r < 0.03) c = hex('#a4a494');
+      else if (b === FROST && r < 0.03) c = hex('#ffffff');
+      else if (b === FROST && Math.abs(valueNoise(x, y, 16, 95) - 0.5) < 0.012) c = hex('#8ab4e0');
       else if (b === EMBER || b === WASTE) {
         // Cracked ground: in the Emberwaste, cracks near the volcano run with lava.
         const crack = Math.abs(valueNoise(x, y, 14, 97) - 0.5) < 0.012 && fbm(x, y, 40, 98) > 0.45;
@@ -461,6 +480,9 @@ function* paintLand(): Generator<void, Land, void> {
         else if (crack) c = mix(c, b === EMBER ? hex('#2a1414') : hex('#160e22'), 0.7);
         else if (b === WASTE && r < 0.012) c = hex('#c89cff');
       }
+      // The ice about the colosseum takes the aurora's green.
+      const fd = Math.hypot(x - frost.x, (y - frost.y + 10) * 1.4);
+      if (fd < 40) c = mix(c, hex('#5affb0'), (1 - fd / 40) * 0.14);
       // The ground about the Rift is stained by its light.
       const rd = riftD(x, y);
       if (rd < 46) c = mix(c, hex('#a0306e'), (1 - rd / 46) * 0.3);
@@ -899,6 +921,7 @@ function* paintProps(l: Land): Generator<void, void, void> {
     props.push(mountain(x, y, r, r * (1.0 + rand() * 0.45), 1000 + x * 7 + y, GROUND[ROCK], m > 0.55));
   }
   props.push(volcano());
+  for (const [x, y, r] of FROST_PEAKS) if (!clear[idx(x, y)]) props.push(mountain(x, y, r, r * 1.5, 2000 + x, GROUND[FROST], true));
   yield;
 
   // Forests and groves.
@@ -939,6 +962,11 @@ function* paintProps(l: Land): Generator<void, void, void> {
       } else if (b === EMBER) {
         if (r > 0.045) continue;
         props.push(kind < 0.5 ? deadTree(x, y, ramp('#1a0e0c', '#2e1a16', '#4a2a22')) : boulder(x, y, ramp('#2a1414', '#4a2420', '#6a3428', '#8e4a30', '#b06a3e')));
+      } else if (b === FROST) {
+        // Snowbound pines, a few ice spires and boulders under snow.
+        if (r > 0.05 + g * 0.08) continue;
+        const ice = ramp('#2a4a7a', '#4a7ab8', '#7ab4e8', '#bfe8ff', '#ffffff');
+        props.push(kind < 0.65 ? pine(x, y, TREE.pine, true) : kind < 0.85 ? crystal(x, y, ice, 3 + Math.floor(kind * 4)) : boulder(x, y, GROUND[FROST]));
       } else if (b === WASTE) {
         if (r > 0.05) continue;
         const shard = ramp('#3a2a5a', '#6a4aa0', '#9a70e0', '#c89cff', '#f0e0ff');
@@ -997,6 +1025,7 @@ export const LANDMARKS: Record<string, { w: number; h: number; ax: number; ay: n
   deep: { w: 56, h: 44, ax: 28, ay: 40 },
   cosmos: { w: 60, h: 76, ax: 30, ay: 72 },
   rift: { w: 60, h: 36, ax: 30, ay: 30 },
+  frost: { w: 62, h: 58, ax: 31, ay: 52 },
   island: { w: 52, h: 58, ax: 26, ay: 54 },
   glide: { w: 46, h: 40, ax: 20, ay: 34 },
   forest: { w: 64, h: 58, ax: 32, ay: 54 },
@@ -1427,6 +1456,88 @@ function riftArt(): Art {
   return a;
 }
 
+/**
+ * The Aurora Colosseum: a ring of old stone on the ice, its tiered north
+ * stands rising behind a floor of dark ice with a glowing heart, blue fire
+ * on its wall, and the northern lights hanging over it.
+ */
+function frostArt(): Art {
+  const a = new Art(62, 58);
+  groundPatch(a, 31, 48, 29, 8, GROUND[FROST]);
+  const stone = ramp('#1c2232', '#2c3548', '#424e66', '#5c6a84', '#7c8aa4', '#a4b0c6');
+  const ice = ramp('#0a1a34', '#123058', '#1e4e80', '#3a7ab0', '#7ab8e0', '#cff0ff');
+  const snow = SNOW;
+  const cx = 31;
+  const cy = 42;
+  const rx = 23;
+  const ry = 8;
+  const b = new Art(62, 58);
+  // The north stands: a curved shell climbing behind the floor in tiers, crenellated along its crown.
+  for (let x = cx - rx; x <= cx + rx; x++) {
+    const u = (x + 0.5 - cx) / rx;
+    const k = Math.sqrt(Math.max(0, 1 - u * u));
+    const back = cy - ry * k;
+    const top = Math.round(back - 6 - 13 * k);
+    for (let y = top; y <= back; y++) {
+      const up = (back - y) / (back - top + 0.01);
+      const tier = Math.floor((y - top) / 3);
+      const tread = (y - top) % 3 === 0;
+      let v = 0.62 - u * 0.32 - up * 0.08;
+      if (tread) v += 0.18;
+      let c = tone(stone, v, x, y);
+      if (tread && tier > 0 && hash2(x, y, 7) < 0.6) c = snow[x < cx ? 2 : 1];
+      b.set(x, y, c);
+    }
+    if (x % 3 === 0 && k > 0.3) b.set(x, top - 1, stone[3]);
+  }
+  // The floor: dark ice in the wall's ring, a glow at its heart, snow round its rim.
+  b.oval(cx, cy, rx - 2, ry - 1.4, (x, y, nx, ny) => {
+    const d = nx * nx + ny * ny;
+    if (d > 0.7) return hash2(x, y, 9) < 0.55 ? snow[1] : tone(stone, 0.5, x, y);
+    if (d < 0.12) return d < 0.04 ? hex('#cff8ff') : hex('#5ad2e8');
+    if (Math.abs(d - 0.3) < 0.05) return hex('#5affb0');
+    return tone(ice, 0.35 + lit(nx, ny, 0.2) * 0.4, x, y);
+  });
+  // The south parapet and the masonry below it, arches along it.
+  for (let x = cx - rx; x <= cx + rx; x++) {
+    const u = (x + 0.5 - cx) / rx;
+    const k = Math.sqrt(Math.max(0, 1 - u * u));
+    const front = Math.round(cy + ry * k);
+    const foot = front + Math.round(4 + 3 * k);
+    for (let y = front - 2; y <= foot; y++) {
+      let v = 0.5 - u * 0.36 - (y - front) * 0.03;
+      if (y === front - 2) v += 0.3;
+      let c = tone(stone, v, x, y);
+      if (y === front - 2 && hash2(x, 0, 11) < 0.7) c = snow[2];
+      if (y > front + 1 && y < foot - 1 && (x - cx + 40) % 6 < 2) c = stone[0];
+      b.set(x, y, c);
+    }
+  }
+  b.outline(hex('#080c18'));
+  a.stamp(b, 0, 0);
+  castShadow(a, cx + rx - 2, cx + rx + 2, cy + 6, 4);
+  // Blue fire on the wall.
+  for (const [x, y] of [[cx - 13, cy - 13], [cx + 13, cy - 13], [cx, cy - 16]] as [number, number][]) {
+    a.set(x, y, hex('#3a4458'));
+    a.set(x, y - 1, hex('#7ad8ff'));
+    a.set(x, y - 2, hex('#e8fbff'));
+  }
+  // The northern lights: curtains hanging over the colosseum, green below, violet above.
+  for (let x = 2; x < 60; x++) {
+    for (const [base, amp, ph, hgt] of [[14, 3, 0.3, 7], [8, 2.5, 2.1, 5]] as [number, number, number, number][]) {
+      const by = Math.round(base + amp * Math.sin(x * 0.19 + ph) + Math.sin(x * 0.47 + ph * 2));
+      const ray = 0.5 + 0.5 * Math.sin(x * 1.3 + ph * 5);
+      for (let k = 0; k < hgt; k++) {
+        const t = k / hgt;
+        const al = (1 - t) * (0.35 + ray * 0.45) * (1 - Math.abs(x - 31) / 34);
+        if (al <= 0.08) continue;
+        a.over(x, by - k, t < 0.45 ? hex('#5affb0') : t < 0.75 ? hex('#4ae8e0') : hex('#b48aff'), Math.min(0.8, al));
+      }
+    }
+  }
+  return a;
+}
+
 /** The Floating Island: a grassy disc with a marble duelling ring, on a tapering rock, adrift over the sea. */
 function islandArt(): Art {
   const a = new Art(52, 58);
@@ -1598,6 +1709,7 @@ const LANDMARK_ART: Record<string, () => Art> = {
   deep: deepArt,
   cosmos: cosmosArt,
   rift: riftArt,
+  frost: frostArt,
   island: islandArt,
   glide: glideArt,
   forest: forestArt,

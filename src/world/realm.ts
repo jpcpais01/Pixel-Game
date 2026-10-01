@@ -130,6 +130,26 @@ export const PLACES: Place[] = [
     ],
   },
   {
+    id: 'frost',
+    x: 556,
+    y: 116,
+    stand: { x: 536, y: 124 },
+    region: 'The Frostreach',
+    lore: 'On the roof of the world the winter never ended. Its hosts still fight there, under the northern lights.',
+    note: 'The Long Winter, wave after wave',
+    bosses: [
+      { kind: 'vargr', name: 'Vargr', rank: 'legend' },
+      { kind: 'snowqueen', name: 'The Snow Queen', rank: 'legend' },
+      { kind: 'colossus', name: 'Ymir', rank: 'myth' },
+      { kind: 'winterking', name: 'Kaldr', rank: 'legend' },
+      { kind: 'aurelith', name: 'Aurelith', rank: 'myth' },
+    ],
+    glows: [
+      { dx: 0, dy: -12, r: 14, tint: 0x5affb0 },
+      { dx: 0, dy: -34, r: 12, tint: 0xb48aff },
+    ],
+  },
+  {
     id: 'island',
     x: 574,
     y: 340,
@@ -166,6 +186,8 @@ export const LEGS: Leg[] = [
   { a: 'deep', b: 'cosmos', via: [[312, 172], [292, 156], [272, 144], [256, 130]] },
   { a: 'temple', b: 'glide', via: [[478, 292], [WINDWARD_CLIFFS.x - 22, WINDWARD_CLIFFS.y + 8]] },
   { a: 'glide', b: 'island', via: [[544, 326]], skyFrom: -1 },
+  // Round the volcano's eastern foot and up onto the ice.
+  { a: 'temple', b: 'frost', via: [[486, 252], [524, 232], [540, 200], [542, 168], [536, 142]] },
 ];
 
 /** Names written across the map, centred on these spots. */
@@ -178,6 +200,7 @@ export const LABELS: { text: string; x: number; y: number; sea?: boolean; big?: 
   { text: 'The Sundered Reach', x: 98, y: 156 },
   { text: 'Windward Cliffs', x: 486, y: 348 },
   { text: 'The Everwood', x: 420, y: 398 },
+  { text: 'The Frostreach', x: 574, y: 54 },
   { text: 'The Glass Sea', x: 580, y: 250, sea: true, big: true },
   { text: 'The Dusk Sea', x: 44, y: 400, sea: true, big: true },
 ];

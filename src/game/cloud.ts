@@ -253,8 +253,11 @@ export async function loadSave(): Promise<LoadedSave | null> {
   const rift: Record<string, number> = {};
   if (f.rift && 'stringValue' in f.rift && f.rift.stringValue) {
     for (const pair of f.rift.stringValue.split(',')) {
-      const [cls, n] = pair.split(':');
-      if (cls && Number(n) > 0) rift[cls] = Number(n);
+      // The key may carry its own colons (a difficulty: "wizard:hard"), so the wave is after the last.
+      const at = pair.lastIndexOf(':');
+      const cls = pair.slice(0, at);
+      const n = pair.slice(at + 1);
+      if (at > 0 && Number(n) > 0) rift[cls] = Number(n);
     }
   }
   // Sky Glide's best times as "skyfall:52340".

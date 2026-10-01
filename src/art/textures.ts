@@ -140,6 +140,19 @@ import { BIRD_ANIMS, BIRD_H, BIRD_LOOKS, BIRD_W, DEER_ANIMS, DEER_H, DEER_LOOKS,
 import { CAMPFIRE, CHEST_H, CHEST_W, FPROP_BENDS, FPROP_FRAMES, FPROP_H, FPROP_W, LOOKOUT_H, LOOKOUT_W, MENHIR_H, MENHIR_LOOKS, MENHIR_W, SHRINE_FRAMES, SHRINE_H as FSHRINE_H, SHRINE_W as FSHRINE_W, chestArt, lookoutArt, menhirArt, shrineArt } from './forest';
 import { ALTAR_H, ALTAR_W, GROVE_FRAMES, GROVE_H, GROVE_W, HOLLOW_FRAMES, HOLLOW_H, HOLLOW_W, PRINT_H, PRINT_W, SPRING_FRAMES, SPRING_H, SPRING_W, STAG_ANIMS, STAG_H, STAG_W, altarArt, groveFrame, hollowArt, hoofprint, springArt, stagBuffIcon, stagFrames } from './stag';
 import { STRIP_H, buildStrip } from './ground';
+import { FZ_FLAKE, FZ_ICICLE_H, FZ_ICICLE_W, FZ_LANE_H, FZ_LANE_W, FZ_MIST_H, FZ_MIST_W, FZ_PATCH_FRAMES, FZ_PATCH_H, FZ_PATCH_W, FZ_RING_H, FZ_RING_W, FZ_SHARD_H, FZ_SHARD_W, FZ_SNOWBALL, FZ_SPIKE_H, FZ_SPIKE_W, frostFlake, frostIcicle, frostLaneArt, frostMist, frostPatch, frostRing, frostShard, frostSnowball, frostSpike } from './frostFx';
+import type { FxRegistrar } from './frostKit';
+import { AURORA_H, AURORA_W, BRAZIER_FRAMES as FZ_BRAZIER_FRAMES, BRAZIER_H as FZ_BRAZIER_H, BRAZIER_W as FZ_BRAZIER_W, STATUE_H as FZ_STATUE_H, STATUE_W as FZ_STATUE_W, archGlowArt, auroraRibbon, frostArenaArt, frostBrazier, frostSkyArt, frostStatue } from './frost';
+import { FROST_H, FROST_W, GATES } from '../world/frostLayout';
+import { buildFlurrykinSheet, buildIcebeakSheet, buildRimespriteSheet, buildRimeweaverSheet, buildSnowmiteSheet, frostWeakFx } from './frostWeak';
+import { buildChillstoneSheet, buildFrostboundSheet, buildGaleclawSheet, buildRimefangSheet, buildRimewitchSheet, buildSnowstalkerSheet, frostNormalFx } from './frostNormal';
+import { buildFrostTrollSheet, buildFrostdrakeSheet, buildRimeknightSheet, buildTuskmawSheet, buildYetiSheet, frostStrongFx } from './frostStrong';
+import { buildVargrSheet, vargrFx } from './vargr';
+import { buildSnowQueenSheet, snowQueenFx } from './snowQueen';
+import { buildWinterKingSheet, winterKingFx } from './winterKing';
+import { buildColossusSheet, colossusFx } from './colossus';
+import { buildAurelithSheet, aurelithFx } from './aurelith';
+
 import { CHUNK, ForestGen, EVERWOOD_SEED } from '../world/forestGen';
 import { forestTile } from '../world/forestGround';
 import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, RIPPLE_FRAMES, RIPPLE_H, RIPPLE_W, rippleFrames, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
@@ -1066,8 +1079,116 @@ function* forestTextures(scene: Phaser.Scene): Generator<void, void, void> {
   scene.textures.addCanvas('fr_preview', toCanvas(strip.w, strip.h, strip.day.diffuse));
 }
 
+/** What a creature file registers its own spell textures through (see FxRegistrar in frostKit.ts). */
+function fxRegistrar(scene: Phaser.Scene): FxRegistrar {
+  return {
+    frames: (key, list, w, h) => register(scene, key, pack(list.map((f) => ({ name: f.name, r: f.canvas.render() })), w, h, Math.max(1, Math.min(16, Math.floor(2048 / w)))), w, h),
+    image: (key, w, h, px) => {
+      scene.textures.addCanvas(key, toCanvas(w, h, px));
+    },
+    strip: (key, w, h, frames, prefix = 'f') => {
+      const tex = scene.textures.addCanvas(key, toCanvas(w * frames.length, h, sideBySide(w, h, frames)))!;
+      frames.forEach((_, i) => tex.add(`${prefix}${i}`, 0, i * w, 0, w, h));
+    },
+    anim: (key, texture, frames, fps, loop) => {
+      if (!scene.anims.exists(key)) scene.anims.create({ key, frames: frames.map((frame) => ({ key: texture, frame })), frameRate: fps, repeat: loop ? -1 : 0 });
+    },
+  };
+}
+
+/**
+ * The Aurora Colosseum: its sky, stands, walls and floor, the gates, the
+ * frozen champions and braziers, the spells its creatures share, and its
+ * whole bestiary (sixteen creatures and five bosses), each with the spells
+ * of its own.
+ */
+function* frostTextures(scene: Phaser.Scene): Generator<void, void, void> {
+  // The sky, and the colosseum itself (lit, with its normal map and glow).
+  const sky = yield* frostSkyArt();
+  scene.textures.addCanvas('fz_sky', toCanvas(FROST_W, FROST_H, sky));
+  const arena = yield* frostArenaArt();
+  scene.textures.addCanvas('fz_arena', toCanvas(FROST_W, FROST_H, arena.diffuse))!.setDataSource(toCanvas(FROST_W, FROST_H, arena.normal));
+  scene.textures.addCanvas('fz_arena_e', toCanvas(FROST_W, FROST_H, arena.emissive));
+  yield;
+  // The light that kindles in each arch, the aurora's ribbons, the champions and the braziers.
+  GATES.forEach((g, i) => {
+    if (g.kind !== 'arch') return;
+    const a = archGlowArt(g);
+    scene.textures.addCanvas(`fz_arch${i}`, toCanvas(a.w, a.h, a.px));
+  });
+  // Each ribbon its own texture, as the arena tiles them.
+  [0.7, 2.9].forEach((seed, i) => scene.textures.addCanvas(`fz_aurora${i}`, toCanvas(AURORA_W, AURORA_H, auroraRibbon(seed))));
+  register(scene, 'fz_statue', pack(frameList([0, 1, 2, 3].map(frostStatue), 's'), FZ_STATUE_W, FZ_STATUE_H), FZ_STATUE_W, FZ_STATUE_H);
+  register(scene, 'fz_brazier', pack(frameList(Array.from({ length: FZ_BRAZIER_FRAMES }, (_, f) => frostBrazier(f)), 'f'), FZ_BRAZIER_W, FZ_BRAZIER_H), FZ_BRAZIER_W, FZ_BRAZIER_H);
+  if (!scene.anims.exists('fz_brazier_burn')) scene.anims.create({ key: 'fz_brazier_burn', frames: scene.anims.generateFrameNames('fz_brazier', { prefix: 'f', start: 0, end: FZ_BRAZIER_FRAMES - 1 }), frameRate: 9, repeat: -1 });
+  if (!scene.anims.exists('fz_brazier_glow')) scene.anims.create({ key: 'fz_brazier_glow', frames: scene.anims.generateFrameNames('fz_brazier_e', { prefix: 'f', start: 0, end: FZ_BRAZIER_FRAMES - 1 }), frameRate: 9, repeat: -1 });
+  yield;
+  // The spells they share (art/frostFx.ts).
+  register(scene, 'fz_spike', pack(frameList([frostSpike(0), frostSpike(1), frostSpike(2)], 'k'), FZ_SPIKE_W, FZ_SPIKE_H), FZ_SPIKE_W, FZ_SPIKE_H);
+  register(scene, 'fz_icicle', pack([{ name: 'i', r: frostIcicle().render() }], FZ_ICICLE_W, FZ_ICICLE_H), FZ_ICICLE_W, FZ_ICICLE_H);
+  register(scene, 'fz_snowball', pack([{ name: 's', r: frostSnowball().render() }], FZ_SNOWBALL, FZ_SNOWBALL), FZ_SNOWBALL, FZ_SNOWBALL);
+  scene.textures.addCanvas('fz_shard', toCanvas(FZ_SHARD_W, FZ_SHARD_H, frostShard()));
+  scene.textures.addCanvas('fz_lane', toCanvas(FZ_LANE_W, FZ_LANE_H, frostLaneArt()));
+  scene.textures.addCanvas('fz_flake', toCanvas(FZ_FLAKE, FZ_FLAKE, frostFlake()));
+  scene.textures.addCanvas('fz_mist', toCanvas(FZ_MIST_W, FZ_MIST_H, frostMist()));
+  const reg = fxRegistrar(scene);
+  reg.strip('fz_ring', FZ_RING_W, FZ_RING_H, [0, 1, 2, 3].map(frostRing), 'r');
+  reg.anim('fz_ring_spin', 'fz_ring', ['r0', 'r1', 'r2', 'r3'], 10, true);
+  reg.strip('fz_patch', FZ_PATCH_W, FZ_PATCH_H, Array.from({ length: FZ_PATCH_FRAMES }, (_, f) => frostPatch(f)), 'p');
+  reg.anim('fz_patch_glint', 'fz_patch', Array.from({ length: FZ_PATCH_FRAMES }, (_, f) => `p${f}`), 4, true);
+  yield;
+  // The weak.
+  registerMonster(scene, 'snowmite', buildSnowmiteSheet());
+  registerMonster(scene, 'rimesprite', buildRimespriteSheet());
+  yield;
+  registerMonster(scene, 'icebeak', buildIcebeakSheet());
+  registerMonster(scene, 'rimeweaver', buildRimeweaverSheet());
+  registerMonster(scene, 'flurrykin', buildFlurrykinSheet());
+  frostWeakFx(reg);
+  yield;
+  // The normal.
+  registerMonster(scene, 'rimefang', buildRimefangSheet());
+  registerMonster(scene, 'frostbound', buildFrostboundSheet());
+  yield;
+  registerMonster(scene, 'rimewitch', buildRimewitchSheet());
+  registerMonster(scene, 'galeclaw', buildGaleclawSheet());
+  yield;
+  registerMonster(scene, 'chillstone', buildChillstoneSheet());
+  registerMonster(scene, 'snowstalker', buildSnowstalkerSheet());
+  frostNormalFx(reg);
+  yield;
+  // The strong.
+  registerMonster(scene, 'frost_troll', buildFrostTrollSheet());
+  registerMonster(scene, 'tuskmaw', buildTuskmawSheet());
+  yield;
+  registerMonster(scene, 'frostdrake', buildFrostdrakeSheet());
+  registerMonster(scene, 'yeti', buildYetiSheet());
+  yield;
+  registerMonster(scene, 'rimeknight', buildRimeknightSheet());
+  frostStrongFx(reg);
+  yield;
+  // The bosses.
+  registerMonster(scene, 'vargr', buildVargrSheet());
+  vargrFx(reg);
+  yield;
+  registerMonster(scene, 'snowqueen', buildSnowQueenSheet());
+  snowQueenFx(reg);
+  yield;
+  registerMonster(scene, 'winterking', buildWinterKingSheet());
+  winterKingFx(reg);
+  yield;
+  registerMonster(scene, 'colossus', buildColossusSheet());
+  colossusFx(reg);
+  yield;
+  registerMonster(scene, 'aurelith', buildAurelithSheet());
+  aurelithFx(reg);
+  yield;
+  // Last: its presence means everything above is built.
+  scene.textures.addCanvas('fz_done', toCanvas(1, 1, new Uint8ClampedArray(4)));
+}
+
 /** The painted arenas' texture sets, each built by one job (see arenaLoader.ts). */
-export type ArenaJob = 'cosmos' | 'island' | 'rift' | 'spirit' | 'temple' | 'deep' | 'glide' | 'forest' | 'worldmap';
+export type ArenaJob = 'cosmos' | 'island' | 'rift' | 'spirit' | 'temple' | 'deep' | 'glide' | 'forest' | 'frost' | 'worldmap';
 
 /**
  * Each set's steps, which yield between pieces, and the texture it makes
@@ -1082,6 +1203,7 @@ export const ARENA_JOBS: Record<ArenaJob, { done: string; steps: (scene: Phaser.
   deep: { done: 'gd_lane', steps: deepTextures },
   glide: { done: 'gl_arch', steps: glideTextures },
   forest: { done: 'fr_preview', steps: forestTextures },
+  frost: { done: 'fz_done', steps: frostTextures },
   // Not an arena, but built the same way: the arena select's map of the realm.
   worldmap: { done: 'wm_bits', steps: worldMapTextures },
 };
