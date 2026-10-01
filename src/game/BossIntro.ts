@@ -235,6 +235,11 @@ export class BossIntro {
       this.motes.emitting = true;
     }
     this.updateRings(dt);
+    // Closed: hand the world back. Checked before anything is drawn, since a closed card draws nothing and returns early.
+    if (t >= this.end + CLOSE) {
+      this.finish();
+      return;
+    }
 
     // Everything on screen, placed in art pixels from the screen's centre (the zoom pivots there).
     const { width, height } = w.scale;
@@ -293,7 +298,6 @@ export class BossIntro {
     const ep = easeOut((c - 480) / 420);
     this.epithet.setPosition(Math.round(cx), cy + divTop + this.divider.height + 1 + Math.round((1 - ep) * 3)).setAlpha(ep * open);
 
-    if (t >= this.end + CLOSE) this.finish();
   }
 
   /** The boss's signature move, for show: it turns to the hero, the ground shakes, rings roll out from its feet. */
