@@ -797,31 +797,18 @@ export class AutoScene extends Phaser.Scene {
 
   /**
    * The hero card that pops up: whatever piece was tapped, else the hovered
-   * shop hero, else (in the first round's planning) how to play. A tap on it
-   * puts it away.
+   * shop hero. A tap on it puts it away.
    */
   private refreshInfo(): void {
     const box = this.info;
     box.removeAll(true);
     const pick = this.hovered ? { key: this.hovered, star: 1, look: lookFor(this.hovered) } : this.selected;
-    const help = !pick && this.round === 1 && this.phase === 'plan';
-    const on = !!this.me && (this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result') && !this.press?.dragging && (!!pick || help);
+    const on = !!this.me && (this.phase === 'plan' || this.phase === 'fight' || this.phase === 'result') && !this.press?.dragging && !!pick;
     this.infoBg.setVisible(on);
     if (this.infoHit.input) this.infoHit.input.enabled = on;
     // The traits it covers step out of the way while it's up.
     this.traitList.setVisible(!on);
-    if (!on) return;
-    if (!pick) {
-      const lines = ['How to play', '', 'Tap the shop to buy heroes.', 'Drag them onto the board.', 'Three alike star up.', 'Shared traits add power.', 'Drop one on the shop to sell.'];
-      let y = 6;
-      for (const [i, l] of lines.entries()) {
-        for (const w of i === 0 || !l ? [l] : wrap(this.probe, l, INFO_W - 12)) {
-          box.add(pixelText(this, 6, y, w, i === 0 ? GOLD : LAVENDER));
-          y += 9;
-        }
-      }
-      return;
-    }
+    if (!on || !pick) return;
     const d = unitDef(pick.key);
     const st = styleOf(pick.key, pick.look);
     const n = pieceNumbers(pick.key, pick.star);
