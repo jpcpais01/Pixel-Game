@@ -135,6 +135,8 @@ class GameSound {
     // Squared so the slider feels even to the ear.
     const set = (g: GainNode, base: number, v: number) => g.gain.setTargetAtTime(base * v * v, t, 0.05);
     set(m.music, MUSIC_LEVEL, this.volume.music);
+    // The music's reverb has no base level of its own: it just follows the slider.
+    set(m.musicVerb, 1, this.volume.music);
     set(m.ambience, AMBIENCE_LEVEL, this.volume.sfx);
     set(m.sfx, SFX_LEVEL, this.volume.sfx);
   }

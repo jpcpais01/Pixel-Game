@@ -36,7 +36,7 @@ import type { ClearedNote, TileAsk, TileDone } from './forestWorker';
 // becomes where they rise; a shrine grants a blessing, once; a chest opens on
 // treasure; a fairy ring gives a gift of gems. Walking into a new wood shows
 // its name. At a lookout on a cliff's lip the view swings out over the
-// drop; waterfalls run and mist where they land. Now and then the White Stag comes to lead the hero somewhere
+// drop. Now and then the White Stag comes to lead the hero somewhere
 // secret (see WhiteStag.ts).
 
 type Img = Phaser.GameObjects.Image;
@@ -88,10 +88,6 @@ const CAMP_LIGHT = { r: 150, color: 0xff9a4a, i: 2, day: 0.35 };
 const LOOK_R = 24;
 const LOOK_PAN = 110;
 const LOOK_EASE = 700;
-/** How fast a waterfall's streaks run down it (px/ms), and how bright they and its mist are by day and by night. */
-const FALL_SPEED = 0.07;
-const FALL_DAY = 0.55;
-const FALL_NIGHT = 0.22;
 const SHRINE_LIGHT = { r: 80, color: 0x7ae6dc, i: 1.2, day: 0.4 };
 
 /** The leaves each kind lets fall. */
@@ -163,8 +159,6 @@ interface Stood {
   lights: Phaser.GameObjects.Light[];
   /** What the player may clear here: trees and undergrowth, by foot key, with the box a tap on them lands in. */
   clearable: Clearable[];
-  /** Waterfalls: the streaks running down each, and the mist where it lands. */
-  falls: { flow: Phaser.GameObjects.TileSprite; mist: Img; seed: number }[];
   /** Lamps the player built: their light flickers and the day washes it out, as in the Home. */
   lamps: { light: Phaser.GameObjects.Light; halo: Img; part: PartDef; seed: number }[];
   /** Grass, flowers and reeds, which bend as a gust goes over (see ForestWind.ts). */
@@ -618,7 +612,7 @@ export class Forest {
   private stand(key: number): void {
     if (this.stood.has(key)) return;
     const l = this.gen.layout(Math.floor(key / 4096), key % 4096);
-    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], treeShadows: [], lights: [], clearable: [], lamps: [], grass: [], falls: [] };
+    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], treeShadows: [], lights: [], clearable: [], lamps: [], grass: [] };
     this.stood.set(key, st);
     const add = this.world.add;
     const place = (obj: Placed['obj'], x: number, y: number, hw: number, up: number) => st.placed.push({ obj, x0: x - hw, x1: x + hw, y0: y - up, y1: y + 6 });
@@ -640,14 +634,6 @@ export class Forest {
       st.rays.push({ img, x: r.x, y: r.y, seed: r.seed });
     }
     for (const p of l.pois) this.poi(st, place, p);
-    // Waterfalls run: streaks down the painted water, mist where it lands.
-    for (const f of l.falls) {
-      const flow = add.tileSprite(f.x, f.y, f.w, f.h, 'fall_flow').setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(f.y);
-      flow.tilePositionX = f.x;
-      const mist = add.image(f.x + f.w / 2, f.y + f.h - 1, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xdff4ff).setScale(Math.max(0.7, f.w / 26), Math.max(0.45, f.w / 46)).setDepth(f.y + f.h);
-      st.placed.push({ obj: flow, x0: f.x, x1: f.x + f.w, y0: f.y, y1: f.y + f.h }, { obj: mist, x0: f.x - 20, x1: f.x + f.w + 20, y0: f.y + f.h - 20, y1: f.y + f.h + 20 });
-      st.falls.push({ flow, mist, seed: f.x * 0.37 });
-    }
     if (this.edits) this.standBuilt(st, Math.floor(key / 4096), key % 4096);
   }
 
@@ -1011,13 +997,6 @@ export class Forest {
       // Glowing mushrooms and the standing stones' runes by night.
       for (const g of st.shrooms) if (g.halo.visible) g.halo.setAlpha(this.night * (0.5 + Math.sin(time * 0.0017 + g.seed) * 0.14));
       for (const pl of st.places) this.updatePlace(pl, time, d);
-      const wet = FALL_NIGHT + (FALL_DAY - FALL_NIGHT) * d;
-      for (const f of st.falls) {
-        if (!f.flow.visible) continue;
-        f.flow.tilePositionY -= dt * FALL_SPEED;
-        f.flow.setAlpha(wet);
-        f.mist.setAlpha(wet * (0.55 + Math.sin(time * 0.003 + f.seed) * 0.15 + Math.sin(time * 0.0071 + f.seed * 2) * 0.1));
-      }
     }
     this.motes.emitting = !nightRays && strength > 0.3 && raysShown;
     this.treeLeaves.emitting = leafy;

@@ -81,8 +81,6 @@ export const K = {
   Fallen: 18,
   /** A cliff's rock face (look.rock[sub]). */
   Rock: 19,
-  /** Water falling down a cliff's face: the water ramp, its tone picked outright. */
-  Fall: 20,
 } as const;
 
 /** One pixel of ground, as the spec classifies it. */
@@ -676,10 +674,6 @@ export function* buildStrip(spec: GroundSpec, index: number): Generator<void, Gr
               col = rp[clamp(Math.round(4.1 + shade), 0, rp.length - 1)];
               break;
             }
-            case K.Fall:
-              // Falling water is white with air; shade only dims it a little.
-              col = water[clamp(Math.round(3 + tone[i] - dark * 0.35), 0, water.length - 1)];
-              break;
             case K.Fallen:
               // A leaf keeps its colour; shade only darkens it.
               col = fallen[clamp(Math.round(tone[i] - Math.max(0, dark) * 0.9 + (lit - 0.78) * 2), 0, fallen.length - 1)];
