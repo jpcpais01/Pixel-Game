@@ -7,7 +7,7 @@ import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
-import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, Ghost, KEEPER_PAL, MOON_PAL, RIFT_PAL, StasisClock, TimeBolt, type BoltKind } from './Chronos';
+import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, Ghost, KEEPER_PAL, MOON_PAL, PRIMAVERA_PAL, RIFT_PAL, StasisClock, TimeBolt, type BoltKind } from './Chronos';
 import { Shockwave } from './Songs';
 import { bloom, flare, strikeGround, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
@@ -36,6 +36,8 @@ export interface ChronoKit {
   /** The stasis clock's strike when its hour comes; the paradox burst left where the rewind began. */
   specialDamage: number;
   specialCooldown: number;
+  /** Primavera: a flower clock, and petals off her magic. */
+  flowers?: boolean;
 }
 
 const keeperBolt = (key: string, p: Pal): BoltKind => ({ key, rift: false, pal: p, damage: 8, speed: 165, range: 150, slow: 0.62, slowFloor: 0.3, slowMs: 2000, lit: true });
@@ -60,6 +62,8 @@ export const KEEPER_KIT: ChronoKit = {
 
 export const MOON_KIT: ChronoKit = { ...KEEPER_KIT, key: 'chrono_moon', pal: MOON_PAL, bolt: keeperBolt('chrono_moon', MOON_PAL) };
 export const CLOCKWORK_KIT: ChronoKit = { ...KEEPER_KIT, key: 'chrono_clockwork', pal: CLOCKWORK_PAL, bolt: keeperBolt('chrono_clockwork', CLOCKWORK_PAL) };
+/** Primavera: blossoms of light for second hands, trailing petals, and a flower clock on the ground. */
+export const PRIMAVERA_KIT: ChronoKit = { ...KEEPER_KIT, key: 'chrono_primavera', pal: PRIMAVERA_PAL, bolt: { ...keeperBolt('chrono_primavera', PRIMAVERA_PAL), petals: true }, flowers: true };
 
 /**
  * The paradox: quicker and tougher, throwing shards that his own echo, a
@@ -261,7 +265,7 @@ export class Chrono implements Hero {
       ty = this.y + u.y * d;
       if (this.world.walkable(tx, ty)) break;
     }
-    const clock = new StasisClock(this.world, tx, ty, this.kit.pal, this.kit.specialDamage);
+    const clock = new StasisClock(this.world, tx, ty, this.kit.pal, this.kit.specialDamage, this.kit.flowers);
     this.world.addEffect(clock);
     heroTimers.follow('stasis', 'ability', '', this.kit.pal.hot, () => clock.timeLeft());
   }

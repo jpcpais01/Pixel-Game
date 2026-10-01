@@ -34,6 +34,8 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'necromancer:wyrm': 'legendary',
   'chronomancer:anomaly': 'legendary',
   'puppeteer:arachne': 'legendary',
+  'puppeteer:luna': 'epic',
+  'chronomancer:primavera': 'legendary',
   'samurai:kitsune': 'legendary',
   'valkyrie:raven': 'legendary',
   'warrior:afonso': 'legendary',

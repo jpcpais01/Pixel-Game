@@ -36,9 +36,9 @@ import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necroma
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
-import { ARACHNE_KIT, CRIMSON_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, TOYMAKER_KIT, WEAVER_KIT } from './Puppeteer';
+import { ARACHNE_KIT, CRIMSON_KIT, LUNA_KIT, MARIONETTE_KIT, PORCELAIN_KIT, Puppeteer, TOYMAKER_KIT, WEAVER_KIT } from './Puppeteer';
 import { PUPPETEER_H, PUPPETEER_ORIGIN_Y } from '../art/puppeteer';
-import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT } from './Chrono';
+import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT, PRIMAVERA_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT } from './Samurai';
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
@@ -1219,6 +1219,20 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_stasis_clockwork' },
             },
           },
+          {
+            // The spirit of spring: a crown of blossoms, rose-gold hair, a green gown embroidered with flowers, and a flower clock for her halo.
+            id: 'primavera',
+            name: 'Primavera',
+            role: 'Spirit of the turning seasons',
+            accent: 0xffb8cc,
+            attack: 'Blossom hand',
+            special: 'Flower clock',
+            preview: { texture: 'chrono_primavera', glow: 'chrono_primavera_e', idle: 'chrono_primavera_idle_down', chosen: 'chrono_primavera_field_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+            buttons: {
+              attack: { texture: 'icon_hand_primavera' },
+              special: { texture: 'icon_stasis_primavera' },
+            },
+          },
         ],
       },
       {
@@ -1267,7 +1281,7 @@ export const CLASSES: ClassDef[] = [
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, clockwork: CLOCKWORK_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT, anomaly: ANOMALY_KIT }[look] ?? KEEPER_KIT;
+      const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, clockwork: CLOCKWORK_KIT, primavera: PRIMAVERA_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT, anomaly: ANOMALY_KIT }[look] ?? KEEPER_KIT;
       return new Chrono(world, x, y, kit);
     },
   },
@@ -1360,11 +1374,25 @@ export const CLASSES: ClassDef[] = [
               special: { texture: 'icon_marionette_arachne' },
             },
           },
+          {
+            // A moth-woman of the moonlit woods: pale mint wings with long tails, feathery antennae, a cream silk gown and a collar of moth fur.
+            id: 'luna',
+            name: 'Luna Moth',
+            role: 'Moonsilk and moth dust',
+            accent: 0x9ee8c0,
+            attack: 'Moonsilk thread',
+            special: 'Moth-dust snare',
+            preview: { texture: 'weaver_luna', glow: 'weaver_luna_e', idle: 'weaver_luna_idle_down', chosen: 'weaver_luna_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
+            buttons: {
+              attack: { texture: 'icon_thread_luna' },
+              special: { texture: 'icon_marionette_luna' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { porcelain: PORCELAIN_KIT, toymaker: TOYMAKER_KIT, weaver: WEAVER_KIT, crimson: CRIMSON_KIT, arachne: ARACHNE_KIT }[look] ?? MARIONETTE_KIT;
+      const kit = { porcelain: PORCELAIN_KIT, toymaker: TOYMAKER_KIT, weaver: WEAVER_KIT, crimson: CRIMSON_KIT, arachne: ARACHNE_KIT, luna: LUNA_KIT }[look] ?? MARIONETTE_KIT;
       return new Puppeteer(world, x, y, kit);
     },
   },

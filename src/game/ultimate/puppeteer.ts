@@ -4,7 +4,7 @@ import { bindFoe, strand } from '../Strings';
 import type { Puppeteer } from '../Puppeteer';
 import type { Hurtbox } from '../combat';
 import type { WorldScene } from '../../scenes/WorldScene';
-import { bloom, clamp01, drag, easeIn, easeOut, flare, Fx, ring, rune, strikeGround, type Ink } from './ink';
+import { bloom, clamp01, drag, easeIn, easeOut, flare, Fx, ring, rune, strikeGround, type Ink, type Pal } from './ink';
 import type { Cast } from './types';
 
 // The Puppeteer's Specials: the marionettist's grand finale, his puppet
@@ -167,12 +167,15 @@ export class PuppetMaster extends Fx {
   private partner = new Map<Hurtbox, Hurtbox | null>();
   private bout = -1;
   private met = new Set<Hurtbox>();
+  /** Luna Moth's Moonsilk Cocoon: a great moth of light beats its wings over her instead of the cross, shedding dust. */
+  private luna: boolean;
 
   constructor(
     world: WorldScene,
     private c: Cast,
   ) {
     super(world, MASTER_TIME);
+    this.luna = c.look === 'luna';
     this.pix = this.ink(300, 220);
     const h = c.hero;
     this.foes = world
@@ -220,7 +223,8 @@ export class PuppetMaster extends Fx {
     const fade = clamp01((MASTER_TIME - t) / 300) * easeOut(t / 250);
     const g = this.pix.begin(cx, cy + 50, cy + 200);
     const rot = t * 0.0016;
-    for (const [a, len] of [[rot, 16], [rot + Math.PI / 2, 10]] as const) {
+    if (this.luna) lunaMoth(g, cx, cy, t, p, fade);
+    else for (const [a, len] of [[rot, 16], [rot + Math.PI / 2, 10]] as const) {
       const ux = Math.cos(a);
       const uy = Math.sin(a) * 0.45;
       for (let i = -len; i <= len; i++) {
@@ -233,12 +237,13 @@ export class PuppetMaster extends Fx {
     strand(g, hand.x, hand.y, cx, cy + 1, p, fade * 0.7, t);
     live.forEach((f, i) => {
       const end = Math.cos(rot + (i / Math.max(1, live.length)) * Math.PI * 2);
-      const sx = cx + end * 14;
-      const sy = cy + Math.sin(rot + i) * 3;
+      const sx = cx + end * (this.luna ? 9 : 14);
+      const sy = cy + Math.sin(rot + i) * 3 + (this.luna ? 4 : 0);
       strand(g, sx, sy, f.x + Math.sin(t * 0.02 + i) * 1.5, f.y - f.bodyY - 5, p, fade, t + i * 250, 2);
     });
     g.end();
-    if (Math.floor(t / 90) !== Math.floor((t - dt) / 90)) world.debris(p.tints, snap(cx + (Math.random() - 0.5) * 30), snap(cy + 2), 1, cy + 200, 'spores');
+    const every = this.luna ? 45 : 90;
+    if (Math.floor(t / every) !== Math.floor((t - dt) / every)) world.debris(p.tints, snap(cx + (Math.random() - 0.5) * 30), snap(cy + 2), 1, cy + 200, 'spores');
   }
 
   /** The foes meet: those that reached their partner strike each other; the rest are lashed by the strings. */
@@ -282,4 +287,39 @@ export class PuppetMaster extends Fx {
     }
     return pick;
   }
+}
+
+/**
+ * Luna Moth's great moth of light, hung over her in place of the cross: two
+ * pairs of wings beating slowly round a bright body, the hind pair trailing
+ * long tails, an eye glowing on each forewing.
+ */
+function lunaMoth(g: Ink, cx: number, cy: number, t: number, p: Pal, fade: number): void {
+  const beat = 0.75 + 0.25 * Math.cos(t * 0.009);
+  for (const s of [-1, 1]) {
+    for (let dy = -9; dy <= 8; dy++) {
+      for (let dx = 1; dx <= 18; dx++) {
+        const x = dx * (1 / beat);
+        // Forewing: a rounded blade up and out; hindwing: a smaller lobe below.
+        const fore = Math.hypot((x - 9) / 9, (dy + 4 + x * 0.12) / 4.2) <= 1;
+        const hind = Math.hypot((x - 6) / 6, (dy - 3) / 3.6) <= 1;
+        if (!fore && !hind) continue;
+        const rim = fore ? Math.hypot((x - 9) / 9, (dy + 4 + x * 0.12) / 4.2) > 0.78 : Math.hypot((x - 6) / 6, (dy - 3) / 3.6) > 0.72;
+        if (!rim && (dx + dy) % 2 === 0) continue;
+        g.put(cx + s * dx, cy + dy, rim ? p.hot : p.mid, fade * (rim ? 0.95 : 0.55));
+      }
+    }
+    // The tails, swinging a little as it beats.
+    for (let i = 0; i <= 12; i++) {
+      const u = i / 12;
+      g.put(cx + s * (7 * beat + u * 3 - u * u * 3), cy + 6 + i, u > 0.85 ? p.core : p.hot, fade * 0.9);
+    }
+    g.put(cx + s * 9 * beat, cy - 5, p.core, fade);
+    g.put(cx + s * 9 * beat + s, cy - 5, p.light, fade * 0.8);
+  }
+  for (let dy = -5; dy <= 5; dy++) g.put(cx, cy + dy, dy < -2 ? p.core : p.hot, fade);
+  g.put(cx - 1, cy - 7, p.mid, fade);
+  g.put(cx + 1, cy - 7, p.mid, fade);
+  g.put(cx - 2, cy - 8, p.core, fade);
+  g.put(cx + 2, cy - 8, p.core, fade);
 }

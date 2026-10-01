@@ -6,7 +6,7 @@ import { beamHud, comboHud } from './controls';
 import { snap } from './display';
 import { sound } from '../audio';
 import { Vitals, type Hurtbox } from './combat';
-import { FATE_STRINGS, GOLD_STRINGS, ICE_STRINGS, Marionette, Puppet, SILK_STRINGS, ThreadLash, TOY_STRINGS, VENOM_STRINGS, type LashKind, type PuppetKit } from './Strings';
+import { FATE_STRINGS, GOLD_STRINGS, ICE_STRINGS, Marionette, MOONSILK_STRINGS, Puppet, SILK_STRINGS, ThreadLash, TOY_STRINGS, VENOM_STRINGS, type LashKind, type PuppetKit } from './Strings';
 import type { Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
@@ -39,6 +39,8 @@ export interface PuppeteerKit {
   lash?: LashKind;
   snag?: LashKind;
   marionette?: { range: number; radius: number; hold: number; slam: number };
+  /** Luna Moth: her threads and strings shed moth dust. */
+  dust?: boolean;
 }
 
 const GALLANT: PuppetKit = {
@@ -104,6 +106,9 @@ export const TOYMAKER_KIT: PuppeteerKit = {
 };
 
 export const ARACHNE_KIT: PuppeteerKit = { ...WEAVER_KIT, key: 'weaver_arachne', strings: VENOM_STRINGS };
+
+/** Luna Moth: moonsilk, pale green and silver, leaving soft moth dust where it runs. */
+export const LUNA_KIT: PuppeteerKit = { ...WEAVER_KIT, key: 'weaver_luna', strings: MOONSILK_STRINGS, dust: true };
 
 /**
  * The puppeteer: works on the attack button towards the aim (the mouse on a
@@ -266,7 +271,7 @@ export class Puppeteer implements Hero {
       case 'snag': {
         const snag = act === 'snag';
         const u = this.line;
-        this.world.addEffect(new ThreadLash(this.world, () => this.hand(), u.x, u.y, snag ? this.kit.snag! : this.kit.lash!, this.kit.strings));
+        this.world.addEffect(new ThreadLash(this.world, () => this.hand(), u.x, u.y, snag ? this.kit.snag! : this.kit.lash!, this.kit.strings, this.kit.dust));
         sound.twang(this.world.pan(this.x), false);
         this.combo = snag ? 0 : this.combo + 1;
         if (snag) this.comboT = 0;
@@ -276,7 +281,7 @@ export class Puppeteer implements Hero {
         this.specialCd = this.kit.specialCooldown;
         const m = this.kit.marionette!;
         const s = this.spot(64, m.range);
-        this.world.addEffect(new Marionette(this.world, s.x, s.y, this.kit.strings, m.radius, m.hold, m.slam));
+        this.world.addEffect(new Marionette(this.world, s.x, s.y, this.kit.strings, m.radius, m.hold, m.slam, this.kit.dust));
         break;
       }
     }

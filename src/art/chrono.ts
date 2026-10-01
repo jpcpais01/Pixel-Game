@@ -71,7 +71,7 @@ export interface ChronoLook {
   /** Light of the magic, brightest first. */
   light: [RGB, RGB, RGB, RGB];
   /** A skin that changes the cut, not just the cloth: the clockwork (a timekeeper) or the anomaly (a paradox). */
-  style?: 'clockwork' | 'anomaly';
+  style?: 'clockwork' | 'anomaly' | 'primavera';
   /** Hands, when not bare. */
   hand?: Material;
 }
@@ -157,10 +157,42 @@ export const ANOMALY_LOOK: ChronoLook = {
   light: [hex('#f0ffff'), hex('#a0faff'), hex('#20d8f0'), hex('#1a4aa0')],
 };
 
+// Primavera's own materials: her skin, the blossoms, leaves and living wood.
+const FAIR: Material = { ramp: ramp('#94706a', '#ccaaa0', '#f0d8cc', '#fff0e8'), outline: hex('#3a2020') };
+const ROSE_PETAL: Material = { ramp: ramp('#a8406a', '#e0709a', '#ffa8c4', '#ffd8e4'), outline: hex('#4a1428'), emissive: 0.25, noAO: true, noOutline: true };
+const WHITE_PETAL: Material = { ramp: ramp('#b0a49c', '#e2dad2', '#fbf6f0', '#ffffff'), outline: hex('#3a2e2a'), emissive: 0.2, noAO: true, noOutline: true };
+const PEACH_PETAL: Material = { ramp: ramp('#b86a4a', '#f0a07a', '#ffc8a4', '#ffe6d2'), outline: hex('#4a2414'), emissive: 0.2, noAO: true, noOutline: true };
+const POLLEN: Material = { ramp: ramp('#c8902a', '#f6d050', '#fff4a8'), outline: hex('#4a3010'), emissive: 0.5, noAO: true, noOutline: true };
+const LEAF: Material = { ramp: ramp('#1e4a24', '#347a36', '#58a64e', '#8ed070'), outline: hex('#0c200e'), noAO: true, noOutline: true };
+const VINE_WOOD: Material = { ramp: ramp('#2a2410', '#4a4020', '#6a6232', '#8e8a4a'), outline: hex('#141006') };
+/** The blossoms her clocks and crown are made of, in turn. */
+const BLOSSOMS = [ROSE_PETAL, WHITE_PETAL, PEACH_PETAL];
+
+/**
+ * Primavera, the timekeeper's skin: the spirit of spring and the turning
+ * seasons. A gown of spring green embroidered with blossoms over a rose
+ * underskirt, flowing rose-gold hair under a crown of fresh blossoms, and for
+ * a clock a flower clock: a garland ring of twelve blossoms behind her head,
+ * each hour's flower opening as the light comes round to it, and a staff of
+ * living wood crowned with a dial of petals. Butterflies keep her company and
+ * petals drift off her hem. Her magic is soft rose and mint.
+ */
+export const PRIMAVERA_LOOK: ChronoLook = {
+  key: 'chrono_primavera',
+  rift: false,
+  robe: { ramp: ramp('#14301a', '#24502a', '#3a743c', '#5c9a52', '#88c272'), outline: hex('#08160a'), outlineLit: hex('#122a14') },
+  inner: { ramp: ramp('#6a2a42', '#a4526c', '#d4869e', '#f4bccb'), outline: hex('#2e0c18') },
+  trim: { ramp: ramp('#5a2e22', '#9a5a42', '#d0907a', '#f4c4aa', '#fff0e2'), outline: hex('#2a140c'), shine: true, noAO: true },
+  hair: { ramp: ramp('#5e2430', '#9a4250', '#cc6a70', '#ec9a94', '#ffcabe'), outline: hex('#2a0c14'), outlineLit: hex('#44161e'), shine: true },
+  hand: FAIR,
+  style: 'primavera',
+  light: [hex('#fffaf2'), hex('#ffd0de'), hex('#f48cae'), hex('#4cb88c')],
+};
+
 /** The anomaly's other light, where it tears. */
 const MAGENTA: RGB = hex('#ff38c8');
 
-export const CHRONO_LOOKS = [KEEPER_LOOK, MOON_LOOK, PARADOX_LOOK, AEON_LOOK, CLOCKWORK_LOOK, ANOMALY_LOOK];
+export const CHRONO_LOOKS = [KEEPER_LOOK, MOON_LOOK, PARADOX_LOOK, AEON_LOOK, CLOCKWORK_LOOK, ANOMALY_LOOK, PRIMAVERA_LOOK];
 
 /** The look being drawn; set by buildChronoFrames. */
 let S: ChronoLook = KEEPER_LOOK;
@@ -454,6 +486,22 @@ function halo(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number, ti
     if (shows(x, y, Math.sin(a))) hours.push([x, y, h]);
   }
   c.part();
+  if (S.style === 'primavera') {
+    // Primavera's flower clock: a garland of leaves, a flower at each hour,
+    // and each hour's flower open wide as the light comes round to it.
+    for (const [i, [x, y]] of ring.entries()) if (i % 2 === 0) c.spark(x, y, S.light[3], 0.4);
+    const lit = tick % 12;
+    for (const [x, y, h] of hours) {
+      const on = h === lit || h === (lit + 6) % 12;
+      if (on) blossom(c, x, y, BLOSSOMS[h % 3], true, front ? 0 : -1);
+      else {
+        c.part();
+        c.px(x, y, BLOSSOMS[h % 3], sphere(0, -0.2), { bias: front ? 0 : -1 });
+      }
+      c.spark(x, y, on ? core : hot, on ? 0.9 : 0.25);
+    }
+    return;
+  }
   for (const [x, y, dx, dy] of ring) c.px(x, y, S.trim, sphere(dx * 0.6, dy * 0.6), { bias: front ? 0 : -1 });
   // The hours: a spark at each, and a light running round.
   const lit = tick % 12;
@@ -882,6 +930,227 @@ function glitch(c: PixelCanvas, tick: number, view: View): void {
 }
 
 // ---------------------------------------------------------------------------
+// Primavera: blossoms, her head, her gown, her staff and her butterflies
+
+const LIP: Material = { ramp: ramp('#a84a62', '#d8728a'), outline: hex('#4a1828'), noOutline: true, noAO: true };
+
+/** A blossom a few pixels across: a heart of pollen and four petals round it, or, `open` false, a closed bud. */
+function blossom(c: PixelCanvas, x: number, y: number, m: Material, open = true, bias = 0): void {
+  c.part();
+  if (!open) {
+    c.px(x, y, m, sphere(0, -0.3), { bias });
+    c.px(x, y + 1, LEAF, sphere(0, 0.4), { bias });
+    return;
+  }
+  for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) c.px(x + dx, y + dy, m, sphere(dx * 0.6, dy * 0.6), { bias });
+  c.px(x, y, POLLEN, sphere(0, 0), { bias });
+}
+
+/** Her crown of fresh blossoms across the top of her head, a sprig of leaves between them. */
+function crown(c: PixelCanvas, cx: number, y: number, bias = 0): void {
+  c.part();
+  for (const dx of [-2, -1, 1, 2]) c.px(cx + dx - 0.5, y + 1, LEAF, sphere(dx * 0.2, -0.3), { bias });
+  blossom(c, cx - 3.5, y + 0.6, ROSE_PETAL, true, bias);
+  blossom(c, cx + 2.5, y + 0.6, ROSE_PETAL, true, bias);
+  blossom(c, cx - 0.5, y - 0.4, WHITE_PETAL, true, bias);
+}
+
+/** Her head from the front: a soft face, a centre parting, rose-gold hair flowing to her waist, the crown. */
+function springHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(cx - 0.5, 11.6 + U, 3.9, 3.9, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  // Long locks falling over her shoulders, waved.
+  c.part();
+  for (const s of [-1, 1]) {
+    c.capsule(cx + s * 3.1 - 0.5, 12 + U, cx + s * 4.0 - 0.5 + p.sway * 0.3, 21 + U, 1.5, 1.1, S.hair);
+    for (let y = 14; y <= 20; y += 2) c.shade(cx + s * 3.4 - 0.5 + (y % 4 === 0 ? s : 0), y + U, -1);
+  }
+  c.part();
+  c.ellipse(cx - 0.5, 12.8 + U, 2.5, 2.7, FAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 + 0.1, 1) });
+  // The fringe, parted in the middle and swept to the sides.
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => [cx - 3.2, cx + 2.2], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.5, 1));
+  for (const x of [cx - 3, cx - 2, cx + 1]) c.px(x, 11 + U, S.hair, sphere((x - cx) * 0.3, 0));
+  eyes(c, [[cx - 2, 13 + U], [cx, 13 + U]], p.blink);
+  c.part();
+  c.px(cx - 1, 15 + U, LIP, sphere(0, 0.3));
+  crown(c, cx, 8.2 + U);
+}
+
+/** Her head from behind: her hair falling long to her waist in waves, the crown over it. */
+function springHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(cx - 0.5, 11.6 + U, 3.9, 3.9, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.shape(Math.round(13 + U), Math.round(23 + U), (y) => {
+    const u = (y - 13 - U) / 10;
+    const hw = 3.6 - u * 1.4;
+    const s = u * u * p.sway * 0.8;
+    return [cx - 0.5 - hw + s, cx - 0.5 + hw + s];
+  }, S.hair, (_x, _y, t, u) => sphere(t * 0.8, u * 0.5 - 0.1, 1));
+  // Waves down it, and the tips parting at the end.
+  for (let y = 14; y <= 22; y++) {
+    const w = y % 4 < 2 ? 0 : 1;
+    c.shade(cx - 2 + w, y + U, -1);
+    c.shade(cx + 1 - w, y + U, -1);
+  }
+  c.erase(cx - 1, Math.round(23 + U));
+  c.shade(cx - 1, 10 + U, 1);
+  crown(c, cx, 8.2 + U, -1);
+}
+
+/** Her head in profile, facing left: her face, her hair flowing down her back, the crown. */
+function springHeadSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(hx + 0.6, 11.8 + U, 3.4, 3.8, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.shape(Math.round(13 + U), Math.round(22 + U), (y) => {
+    const u = (y - 13 - U) / 9;
+    const back = hx + 3.8 + u * (1 + p.sway * 0.6);
+    return [back - 3.4 + u * 1.2, back];
+  }, S.hair, (_x, _y, t, u) => sphere(t * 0.8 + 0.2, u * 0.5 - 0.1, 1));
+  for (let y = 14; y <= 21; y++) c.shade(hx + 2 + (y % 4 < 2 ? 0 : 1) + Math.round((y - 14) * 0.15), y + U, -1);
+  c.part();
+  c.ellipse(hx - 1.5, 12.9 + U, 2.0, 2.5, FAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 - 0.3, dy * 0.6 + 0.1, 1) });
+  c.px(hx - 4, 13 + U, FAIR, sphere(-0.8, 0));
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(11 + U), () => [hx - 3.4, hx + 0.6], S.hair, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, u * 0.5 - 0.5, 1));
+  c.capsule(hx - 0.2, 12 + U, hx - 0.2, 17 + U, 0.8, 0.6, S.hair);
+  eyes(c, [[hx - 3, 13 + U]], p.blink);
+  c.part();
+  c.px(hx - 3, 15 + U, LIP, sphere(-0.3, 0.3));
+  blossom(c, hx - 2, 9 + U, ROSE_PETAL);
+  blossom(c, hx + 1, 8.4 + U, WHITE_PETAL);
+  c.part();
+  c.px(hx + 3, 9 + U, LEAF, sphere(0.4, -0.3));
+}
+
+/**
+ * Her gown from the front or back: spring green, fitted at the bodice and
+ * flaring wide, open at the front over a rose underskirt, blossoms
+ * embroidered over the skirt, a rose sash tied in a bow, a hem of rose gold.
+ */
+function gownFront(c: PixelCanvas, cx: number, U: number, L: number, sway: number, back: boolean): void {
+  const top = 15 + U;
+  const waist = 21 + U;
+  const hem = 30 + L;
+  c.part();
+  c.shape(top, hem, (y) => {
+    const hw = y <= waist ? 4.2 - 0.9 * ((y + 0.5 - top) / (waist - top)) : 3.5 + (y - waist) * 0.42;
+    const s = y > waist ? ((y - waist) / (hem - waist)) * sway : 0;
+    return [cx - hw + s, cx + hw + s];
+  }, S.robe, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.25, 1));
+  // Soft folds falling from the waist.
+  for (let y = waist + 2; y < hem; y++) {
+    const s = ((y - waist) / (hem - waist)) * sway;
+    for (const k of [-3.4, 3.4]) c.shade(Math.round(cx + (k * (y - waist)) / (hem - waist) + s), y, -1);
+  }
+  if (!back) {
+    // The underskirt in the opening.
+    c.part();
+    for (let y = waist + 1; y <= hem; y++) {
+      const s = ((y - waist) / (hem - waist)) * sway;
+      const hw = (y - waist) * 0.24;
+      c.shape(y, y, () => [cx - hw - 0.3 + s, cx + hw + 0.3 + s], S.inner, (_x, _y, t) => sphere(t * 0.5, 0.4, 1));
+    }
+    // The neckline: a curve of skin under a line of rose gold.
+    c.part();
+    for (const x of [cx - 2, cx - 1, cx, cx + 1]) c.px(x, top, FAIR, sphere((x - cx) * 0.3, -0.2));
+    c.px(cx - 1, top + 1, FAIR, sphere(0, 0));
+    c.px(cx, top + 1, FAIR, sphere(0, 0));
+    c.part();
+    for (const x of [cx - 3, cx + 2]) c.px(x, top + 1, S.trim, sphere(0, -0.3));
+    for (const x of [cx - 2, cx + 1]) c.px(x, top + 2, S.trim, sphere(0, -0.3));
+  }
+  // Blossoms embroidered over the skirt.
+  const flowers: [number, number][] = back ? [[-3, 3], [2, 5], [-1, 7], [3, 8]] : [[-3, 3], [3, 5], [-4, 7], [4, 8]];
+  flowers.forEach(([dx, dy], i) => {
+    const y = waist + dy;
+    const x = cx + dx + ((y - waist) / (hem - waist)) * sway;
+    if (!c.filled(Math.round(x), y)) return;
+    c.part();
+    c.px(x, y, BLOSSOMS[i % 3], sphere(0, 0), { glow: 0.1 });
+    c.px(x + 1, y, BLOSSOMS[i % 3], sphere(0.4, 0), { glow: 0.1, bias: -1 });
+    c.px(x, y - 1, LEAF, sphere(0, -0.3));
+  });
+  // The rose-gold hem.
+  c.part();
+  for (let x = cx - 9; x <= cx + 9; x++) if (c.filled(x, hem)) c.px(x, hem, S.trim, sphere((x - cx) / 8, 0.3));
+  // The sash, and its bow at her side.
+  c.part();
+  c.shape(waist, waist, () => [cx - 3.4, cx + 3.4], S.inner, (_x, _y, t) => cyl(t, 0));
+  const bx = back ? cx - 1 : cx + 2;
+  c.part();
+  c.px(bx - 1, waist - 1, S.inner, sphere(-0.4, -0.3));
+  c.px(bx + 1, waist - 1, S.inner, sphere(0.4, -0.3));
+  c.px(bx, waist, POLLEN, sphere(0, 0));
+  c.px(bx - 1, waist + 1, S.inner, sphere(-0.3, 0.4));
+  c.px(bx + 1, waist + 2, S.inner, sphere(0.3, 0.4));
+}
+
+/**
+ * Her staff: living wood with leaves budding from it, crowned with a flower
+ * clock, a ring of petals round a heart of light and a hand of light going
+ * round it. `up` is the staff's direction from the hand.
+ */
+function drawBloomStaff(c: PixelCanvas, p: Placed, ux: number, uy: number, glow: number, tick: number, bias = 0): void {
+  const below = 10;
+  const above = 11;
+  const vx = -uy;
+  const vy = ux;
+  c.part();
+  c.line(p.x - ux * below, p.y - uy * below, p.x + ux * above, p.y + uy * above, VINE_WOOD, () => sphere(vx * 0.6, vy * 0.6 - 0.2), { bias });
+  // Leaves budding off it.
+  c.part();
+  for (const [k, s] of [[-6, 1], [4, -1], [8, 1]] as const) c.px(p.x + ux * k + vx * s, p.y + uy * k + vy * s, LEAF, sphere(s * 0.5, -0.3), { bias });
+  // The dial of petals at its head.
+  const x = p.x + ux * (above + 2.6);
+  const y = p.y + uy * (above + 2.6);
+  c.part();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    c.px(x + Math.cos(a) * 2.4, y + Math.sin(a) * 2.4, BLOSSOMS[i % 3], sphere(Math.cos(a) * 0.6, Math.sin(a) * 0.6), { bias });
+  }
+  const [core, hot, mid] = S.light;
+  const k = 0.4 + 0.6 * glow;
+  c.spark(x, y, core, k);
+  const a = (tick % 8) * (Math.PI / 4) - Math.PI / 2;
+  c.spark(x + Math.round(Math.cos(a)), y + Math.round(Math.sin(a)), hot, 0.9 * k);
+  c.spark(x - 1, y, mid, 0.4 * k);
+  if (glow > 0.5) glowAt(c, x, y, (glow - 0.5) * 1.6);
+}
+
+/**
+ * Two small butterflies of light keeping her company, one rose and one mint,
+ * looping round her at their own paces, their wings opening and closing; and
+ * a petal or two drifting off her hem.
+ */
+function springCompany(c: PixelCanvas, tick: number, view: View): void {
+  const [core, hot, mid, deep] = S.light;
+  const fly = (x: number, y: number, col: RGB, beat: boolean) => {
+    c.spark(x, y, core, 0.9);
+    if (beat) {
+      c.spark(x - 1, y - 1, col, 0.85);
+      c.spark(x + 1, y - 1, col, 0.85);
+      c.spark(x - 1, y, col, 0.6);
+      c.spark(x + 1, y, col, 0.6);
+    } else {
+      c.spark(x, y - 1, col, 0.85);
+    }
+  };
+  const a = tick * 0.52;
+  const back = view === 'side' ? 3 : 0;
+  fly(Math.round(12 + back + Math.cos(a) * 9), Math.round(9 + Math.sin(a * 2) * 2), hot, (tick >> 1) % 2 === 0);
+  fly(Math.round(12 + back - Math.cos(a * 0.8 + 1) * 8), Math.round(19 + Math.sin(a * 1.6 + 1) * 2), deep, (tick >> 1) % 2 === 1);
+  // Petals off the hem, drifting down and aside.
+  for (let i = 0; i < 2; i++) {
+    const d = (tick + i * 5) % 10;
+    if (d > 7) continue;
+    c.spark(5 + i * 13 + Math.round(d * 0.5), 26 + Math.round(d * 0.5), i ? mid : hot, 0.7 - d * 0.06);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Bodies
 
 /** The timekeeper's robe from the front or back: brass-hemmed, the stole down its front, a clock for a buckle. */
@@ -1001,6 +1270,9 @@ function fractures(c: PixelCanvas, cx: number, hem: number, sway: number, tick: 
 const REACH_FRONT = 4.5;
 const REACH_SIDE = 5.2;
 
+/** The look's staff: brass and hourglass, the clockwork's cog, or Primavera's flower clock. */
+const staffOf = () => (S.style === 'clockwork' ? drawCogStaff : S.style === 'primavera' ? drawBloomStaff : drawStaff);
+
 /** The staff's direction from the hand: upright, tipping forward (towards the viewer, or out to the side from the front). */
 function staffUp(view: View, tilt: number): [number, number] {
   if (view === 'side') return [-Math.sin(tilt), -Math.cos(tilt)];
@@ -1017,7 +1289,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const armA = () => arm(c, 7.4, 16.3 + U, fa, REACH_FRONT, [-0.6, 1], fa.behind ? -1 : 0);
   const armB = () => arm(c, 16.6, 16.3 + U, fb, REACH_FRONT, [0.6, 1], fb.behind ? -1 : 0);
   const [sx, sy] = staffUp('down', p.tilt);
-  const staff = S.style === 'clockwork' ? drawCogStaff : drawStaff;
+  const staff = staffOf();
 
   if (S.rift && S.style !== 'anomaly') {
     // The hood's back drapes behind the shoulders.
@@ -1046,6 +1318,10 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     clockChest(c, cx, U, p.tick, false);
     cogShoulders(c, cx, U, 4.6, p.tick);
     clockHeadDown(c, cx, U, p);
+  } else if (S.style === 'primavera') {
+    gownFront(c, cx, U, L, p.sway, false);
+    springHeadDown(c, cx, U, p);
+    halo(c, cx - 0.5, 10.6 + U, 7.2, 6.6, p.tick, false);
   } else {
     robeFront(c, cx, U, L, p.sway, false);
     sageDown(c, cx, U, p.blink);
@@ -1072,7 +1348,7 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   const [sx, sy] = staffUp('up', p.tilt);
 
   // What he holds is in front of him, hidden but for what rises past.
-  if (!S.rift) (S.style === 'clockwork' ? drawCogStaff : drawStaff)(c, fa, sx, sy, p.glow, p.tick, -1);
+  if (!S.rift) staffOf()(c, fa, sx, sy, p.glow, p.tick, -1);
   if (fa.behind) armA();
   if (fb.behind) armB();
 
@@ -1122,6 +1398,10 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     c.ellipse(cx, 11.4 + U, 3.5, 3.4, S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
     c.shade(cx - 1, 10 + U, 1);
     c.shade(cx, 12 + U, -1);
+  } else if (S.style === 'primavera') {
+    gownFront(c, cx, U, L, p.sway, true);
+    springHeadUp(c, cx, U, p);
+    halo(c, cx - 0.5, 10.6 + U, 7.2, 6.6, p.tick, true);
   } else {
     robeFront(c, cx, U, L, p.sway, true);
     // The back of the head: the bald crown, the fringe of white hair round it.
@@ -1153,7 +1433,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const top = 15 + U;
   const waist = 21 + U;
   const [sx, sy] = staffUp('side', p.tilt);
-  const staff = S.style === 'clockwork' ? drawCogStaff : drawStaff;
+  const staff = staffOf();
 
   // The far arm behind everything, unless it reaches out in front.
   const armA = (bias: number) => arm(c, hx + 1.2, 16.4 + U, fa, REACH_SIDE, [0.3, 1], bias);
@@ -1181,7 +1461,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   c.shape(top, hem, (y) => {
     const u = y <= waist ? 0 : (y - waist) / (hem - waist);
     const shift = y <= waist ? hx : hx + (cx - hx) * Math.min(1, u * 2);
-    const hw = y <= waist ? 3.3 - 0.4 * ((y + 0.5 - top) / (waist - top)) ** 2 : 3.0 + (y - waist) * (S.rift ? 0.2 : 0.26);
+    const hw = y <= waist ? 3.3 - 0.4 * ((y + 0.5 - top) / (waist - top)) ** 2 : 3.0 + (y - waist) * (S.rift ? 0.2 : S.style === 'primavera' ? 0.36 : 0.26);
     return [shift - hw - 0.2, shift + hw + 0.2 + u * p.sway];
   }, S.robe, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.25, 1));
   for (let y = waist + 2; y < hem; y++) c.shade(Math.round(hx + 1 + ((y - waist) / (hem - waist)) * p.sway), y, -1);
@@ -1224,6 +1504,32 @@ function drawSide(c: PixelCanvas, p: Pose): void {
       c.spark(hx - 5, 13 + U, S.light[1], 0.35);
     }
     }
+  } else if (S.style === 'primavera') {
+    // The neckline, the sash and its bow at her back, blossoms on the skirt, the rose-gold hem.
+    c.part();
+    c.px(hx - 3, top, FAIR, sphere(-0.4, -0.2));
+    c.px(hx - 2, top, FAIR, sphere(0, -0.2));
+    c.px(hx - 3, top + 1, S.trim, sphere(-0.3, -0.3));
+    c.part();
+    c.shape(waist, waist, () => [hx - 2.8, hx + 2.8], S.inner, (_x, _y, t) => cyl(t, 0));
+    c.part();
+    c.px(hx + 3, waist - 1, S.inner, sphere(0.4, -0.3));
+    c.px(hx + 3, waist + 1, S.inner, sphere(0.4, 0.3));
+    c.px(hx + 4, waist + 2, S.inner, sphere(0.5, 0.4));
+    c.px(hx + 3, waist, POLLEN, sphere(0, 0));
+    ([[-2, 3], [1, 5], [-3, 7], [2, 8]] as const).forEach(([dx, dy], i) => {
+      const y = waist + dy;
+      const x = Math.round(hx + (cx - hx) * Math.min(1, (dy / (hem - waist)) * 2) + dx + (dy / (hem - waist)) * p.sway * 0.5);
+      if (!c.filled(x, y) || !c.filled(x + 1, y)) return;
+      c.part();
+      c.px(x, y, BLOSSOMS[i % 3], sphere(0, 0), { glow: 0.1 });
+      c.px(x + 1, y, BLOSSOMS[i % 3], sphere(0.4, 0), { glow: 0.1, bias: -1 });
+      c.px(x, y - 1, LEAF, sphere(0, -0.3));
+    });
+    c.part();
+    for (let x = cx - 8; x <= cx + 9; x++) if (c.filled(x, hem)) c.px(x, hem, S.trim, sphere(0, 0.3));
+    springHeadSide(c, hx, U, p);
+    halo(c, hx + 3, 10.4 + U, 1.8, 6.6, p.tick, false);
   } else {
     // The stole over the shoulder, the belt, the brass hem.
     c.part();
@@ -1588,6 +1894,7 @@ function drawChronoFrame(dir: Dir, pose: Pose): PixelCanvas {
   else drawSide(c, pose);
   if (pose.echo) stampEcho(c, pose.echo.pose, pose.echo.dx, pose.echo.k);
   if (S.style === 'anomaly') glitch(c, pose.tick, dir === 'down' || dir === 'up' ? dir : 'side');
+  if (S.style === 'primavera') springCompany(c, pose.tick, dir === 'down' || dir === 'up' ? dir : 'side');
   return dir === 'right' ? c.mirrored() : c;
 }
 
@@ -1636,6 +1943,24 @@ export function boltFrame(i: number, look: ChronoLook): PixelCanvas {
       }
     }
     c.spark(o, o, deep, 0.7);
+    return c;
+  }
+  if (look.style === 'primavera') {
+    // A blossom of light, five petals round a bright heart, turning a fifth of a petal a frame, a mint leaf at its side.
+    const turn = (i / BOLT_FRAMES) * ((Math.PI * 2) / 5);
+    for (let y = 0; y < BOLT_SIZE; y++) {
+      for (let x = 0; x < BOLT_SIZE; x++) {
+        const dx = x - o;
+        const dy = y - o;
+        const d = Math.hypot(dx, dy);
+        const a = Math.atan2(dy, dx) - turn;
+        const petal = 2.2 + 2.4 * Math.max(0, Math.cos(a * 5));
+        if (d > petal) continue;
+        c.spark(x, y, d < 1.2 ? core : d < petal - 1.2 ? hot : mid, d < petal - 1.2 ? 1 : 0.85);
+      }
+    }
+    const la = turn + Math.PI / 5;
+    c.spark(o + Math.round(Math.cos(la) * 4.6), o + Math.round(Math.sin(la) * 4.6), deep, 0.8);
     return c;
   }
   if (look.style === 'anomaly') {
@@ -1714,6 +2039,8 @@ export interface ChronoIconColors {
   metal: [string, string, string];
   light: [string, string, string, string];
   outline: string;
+  /** Flowers instead of ticks: blossoms at the hours and at the hand's root (Primavera). */
+  bloom?: boolean;
 }
 
 export const BRASS_ICON: ChronoIconColors = { metal: ['#6a4418', '#a8742a', '#f0cc6a'], light: ['#fffbe8', '#ffe6a0', '#ffc050', '#b8701e'], outline: '#1e1006' };
@@ -1722,6 +2049,8 @@ export const RIFT_ICON: ChronoIconColors = { metal: ['#2b203c', '#56406e', '#8a7
 export const AEON_ICON: ChronoIconColors = { metal: ['#142c27', '#2c5850', '#5a8a80'], light: ['#eafff6', '#9affd8', '#2ee0a0', '#127a6a'], outline: '#03100c' };
 export const CLOCKWORK_ICON: ChronoIconColors = { metal: ['#5a2c14', '#a85a2a', '#f0a060'], light: ['#f6ffe8', '#d8ffa0', '#8ef040', '#2e8a2a'], outline: '#140804' };
 export const ANOMALY_ICON: ChronoIconColors = { metal: ['#1a1c24', '#e8eef4', '#ffffff'], light: ['#f0ffff', '#a0faff', '#20d8f0', '#1a4aa0'], outline: '#04060c' };
+/** Primavera's: living green for the metal, rose and mint light, and blossoms at the hours. */
+export const PRIMAVERA_ICON: ChronoIconColors = { metal: ['#2e5a32', '#5c9a52', '#a8dc88'], light: ['#fffaf2', '#ffd0de', '#f48cae', '#2e6a4e'], outline: '#0c1a0e', bloom: true };
 
 /** The second hand: a clock's long hand of light, loosed and flying, a ring of ticks behind it. */
 export function handIcon(k: ChronoIconColors): Uint8ClampedArray {
@@ -1742,6 +2071,13 @@ export function handIcon(k: ChronoIconColors): Uint8ClampedArray {
   put(6, 9, k.light[0]);
   put(5, 9, k.metal[2]);
   put(6, 10, k.metal[1]);
+  if (k.bloom) {
+    // A blossom at the hand's root, and petals drifting off the hand.
+    for (const [x, y] of [[5, 9], [7, 9], [6, 8], [6, 10]]) put(x, y, '#ffa8c4');
+    put(6, 9, '#f6d050');
+    put(13, 6, '#ffd0de');
+    put(11, 9, '#ffffff');
+  }
   outline(k.outline);
   return px;
 }
@@ -1757,7 +2093,9 @@ export function stasisIcon(k: ChronoIconColors): Uint8ClampedArray {
   }
   for (let h = 0; h < 12; h++) {
     const t = (h / 12) * Math.PI * 2;
-    put(Math.round(7.5 + Math.cos(t) * 4.2), Math.round(7.5 + Math.sin(t) * 4.2), h % 3 === 0 ? k.light[0] : k.light[2]);
+    const x = Math.round(7.5 + Math.cos(t) * 4.2);
+    const y = Math.round(7.5 + Math.sin(t) * 4.2);
+    put(x, y, k.bloom ? ['#ffa8c4', '#ffffff', '#ffc8a4'][h % 3] : h % 3 === 0 ? k.light[0] : k.light[2]);
   }
   for (let r = 0; r <= 3; r++) put(8, 8 - r, k.light[r < 2 ? 1 : 0]);
   for (let r = 0; r <= 2; r++) put(8 + r, 8, k.light[1]);
