@@ -12,6 +12,8 @@ import { openAccountForm } from '../ui/accountForm';
 import { fpsBottom } from './FpsScene';
 import { activeSeason, daysLeft } from '../game/season';
 import { lastHero } from '../game/skins';
+import { enterArena, needsLoading } from './ArenaLoadScene';
+import { HOME_ARENA } from '../world/homeGround';
 
 /** How often the glint sweeps the title, and how long each of its frames shows. */
 const SHIMMER_EVERY = 5200;
@@ -220,10 +222,9 @@ export class HomeScene extends Phaser.Scene {
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.scene.stop('modes');
       this.scene.stop('home');
-      this.scene.launch('shade');
-      this.scene.launch('ui', { character });
-      this.scene.launch('pause');
-      this.scene.start('world', { character, arena: 'home' });
+      // Its sheet and ground are painted behind its own loading screen the first time.
+      if (needsLoading(this, HOME_ARENA)) this.scene.start('arenaload', { character, arena: HOME_ARENA.id });
+      else enterArena(this, character, HOME_ARENA.id);
     });
   }
 

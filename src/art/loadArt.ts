@@ -11,6 +11,7 @@
 // - The Endless Rift: a tear in the void, rock torn loose drifting round it.
 // - The Aurora Colosseum: arcades under the aurora, a frozen lake below.
 // - The Floating Island and Sky Glide: the island over a sea of clouds.
+// - The Home: the mode menu's cottage at blue hour, seen closer.
 //
 // Painted like the mode menu's windows (art/modes.ts): a material and a light
 // level per pixel, dithered between the steps of its ramp, and what glows in
@@ -19,7 +20,7 @@
 
 import { hex, type RGB } from './pixel';
 import { Bitmap, bayer, clamp01, mix } from './bitmap';
-import { Paint, fbm, hash, inPoly, noise, noise2 } from './modes';
+import { Paint, fbm, hash, inPoly, noise, noise2, paintHome } from './modes';
 
 export interface LoadArt {
   base: Bitmap;
@@ -1202,4 +1203,30 @@ export function paintSky(glider: boolean): LoadArt {
   }
 
   return finish(p, spots);
+}
+
+// ---------------------------------------------------------------- The Home
+
+/**
+ * The Home: the cottage at blue hour from the mode menu's window (see
+ * paintHome), cropped round the house, so tapping its window leads on into
+ * the same evening.
+ */
+export function paintHomeLoad(): LoadArt {
+  const src = paintHome();
+  const sw = src.base.w;
+  const sh = src.base.h;
+  const x0 = Math.round(Math.max(0, Math.min(sw - W, src.focusX - W / 2)));
+  const y0 = Math.round(Math.max(0, (sh - H) * src.focusY));
+  const base = new Bitmap(W, H);
+  const glow = new Bitmap(W, H);
+  for (let y = 0; y < H; y++) {
+    const from = ((y + y0) * sw + x0) * 4;
+    base.data.set(src.base.data.subarray(from, from + W * 4), y * W * 4);
+    glow.data.set(src.glow.data.subarray(from, from + W * 4), y * W * 4);
+  }
+  const art = { base, glow };
+  feather(art);
+  const at = (k: string): [number, number] => [src.spots[k][0] - x0, src.spots[k][1] - y0];
+  return { ...art, spots: { chimney: [at('chimney')], pond: [at('pond')], windows: [at('window0'), at('window1'), at('lamp')] } };
 }

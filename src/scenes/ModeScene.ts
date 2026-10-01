@@ -2,10 +2,7 @@ import Phaser from 'phaser';
 import { Bitmap, bayer } from '../art/bitmap';
 import { hex, type RGB } from '../art/pixel';
 import { ARENAS_SIZE, SIDE_SIZE, type ModeArt, paintArenas, paintAuto, paintHome } from '../art/modes';
-import { warmHomeSoon } from '../art/homeArt';
 import { menuZoom } from '../game/display';
-import { GroundStreamer } from '../world/GroundStreamer';
-import { HOME_GROUND } from '../world/homeGround';
 import { BUTTON_PLAIN, PANEL_PICKED, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
 import type { HomeScene } from './HomeScene';
@@ -20,9 +17,6 @@ const F = 4;
 /** How far a tile rises as it comes in, and how long between one tile and the next. */
 const ENTER_RISE = 10;
 const ENTER_STAGGER = 70;
-/** ms a frame spent painting the Home (its sheet, then its ground) while the menu is up, and once Home is picked. */
-const HOME_WARM_MS = 4;
-const HOME_WARM_PICKED = 24;
 /** A press further than this (art px) is a drag, not a tap. */
 const TAP_SLOP = 6;
 
@@ -95,15 +89,6 @@ export function backToModes(from: Phaser.Scene): void {
   }
 }
 
-/**
- * Paint what the Home's first frame needs for at most about `budget` ms:
- * its sheet, then its ground. The arena select waits for an arena's ground
- * the same way; the Home was opened with none of its ground built, so its
- * first frame painted it all while the screen stayed black. True once ready.
- */
-function warmHomeArena(scene: Phaser.Scene, budget: number): boolean {
-  return warmHomeSoon(scene, budget) && GroundStreamer.warm(scene, HOME_GROUND, 0, HOME_GROUND.h, budget);
-}
 
 /** The frame for a `w` x `h` tile, plain or lit (hovered): bevelled metal with a gem in each corner. */
 function frameBitmap(w: number, h: number, def: TileDef, lit: boolean): Bitmap {
@@ -465,7 +450,6 @@ export class ModeScene extends Phaser.Scene {
   private focus = 0;
   private leaving = false;
   /** Home was picked and its sheet is still being painted: it opens once that's done. */
-  private homeWait = false;
   private elapsed = 0;
 
   constructor() {
@@ -474,7 +458,6 @@ export class ModeScene extends Phaser.Scene {
 
   create(): void {
     this.leaving = false;
-    this.homeWait = false;
     this.elapsed = 0;
     this.focus = 0;
     const cam = this.cameras.main.setOrigin(0, 0).setAlpha(0);
@@ -525,13 +508,6 @@ export class ModeScene extends Phaser.Scene {
     const dt = Math.min(0.1, delta / 1000);
     this.elapsed += dt;
     for (const t of this.tiles) t.tick(this.elapsed, dt);
-    // The Home's sheet and ground are painted a little each frame while the
-    // menu is up, more once Home is picked, rather than all at once as the
-    // Home opens, which held the screen black for seconds on a phone.
-    if (warmHomeArena(this, this.homeWait ? HOME_WARM_PICKED : HOME_WARM_MS) && this.homeWait) {
-      this.homeWait = false;
-      this.openHome();
-    }
   }
 
   private setFocus(i: number): void {
@@ -546,9 +522,9 @@ export class ModeScene extends Phaser.Scene {
     if (id === 'arenas') {
       this.leave(() => this.scene.launch('select'));
     } else if (id === 'home') {
+      // Its sheet and ground are painted behind its loading screen (see HomeScene.playHome).
       this.leaving = true;
-      if (warmHomeArena(this, 0)) this.openHome();
-      else this.homeWait = true;
+      this.openHome();
     } else if (autoBattleReady(this)) {
       this.leave(() => this.scene.launch(AUTO_BATTLE_SCENE));
     } else {
@@ -556,7 +532,7 @@ export class ModeScene extends Phaser.Scene {
     }
   }
 
-  /** Into the player's Home (its sheet painted). */
+  /** Into the player's Home. */
   private openHome(): void {
     this.tweens.add({ targets: this.cameras.main, alpha: 0, duration: 300 });
     (this.scene.get('home') as HomeScene).playHome();

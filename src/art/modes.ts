@@ -762,7 +762,7 @@ export function paintHome(): ModeArt {
   p.halo(lamp[0], lamp[1] + 2, 12, hex('#ff8a30'), 0.18, 0.35);
 
   const { base, glow } = p.resolve();
-  return { base, glow, focusX: CX - 6, focusY: 0.6, spots: { chimney: [ch.x + 3, ch.y - 2], bush: [200, 110], pond, tree: [64, 72] } };
+  return { base, glow, focusX: CX - 6, focusY: 0.6, spots: { chimney: [ch.x + 3, ch.y - 2], bush: [200, 110], pond, tree: [64, 72], window0: [CX - 17, WALL_TOP + 4], window1: [CX + 9, WALL_TOP + 4], lamp: [lamp[0], lamp[1] - 16] } };
 }
 
 // ---------------------------------------------------------------- Auto Battle
