@@ -4,14 +4,14 @@ import { pixelCanvas } from '../art/canvas';
 import { INK, MAP_CELL, TREK_T, groundMapBase, mapIconSheet, reliefMap, stampCrowns, type MapBase } from '../art/mapArt';
 import { DPR as D, menuZoom } from '../game/display';
 import { activeSeason } from '../game/season';
-import { trek } from '../game/trek';
+import { trek, type Fire } from '../game/trek';
 import { session } from '../net/session';
 import { BUTTON_GOLD, PixelButton } from '../ui/widgets';
 import { isPainted, type ArenaDef } from '../world/arenas';
 import { NATURALIST_CAMP } from '../world/clearing';
 import { TREE_SHAPE } from '../world/common';
 import { FG_CX, FG_FOOT, FG_TOP } from '../world/forgeLayout';
-import { CHUNK, type Poi } from '../world/forestGen';
+import { CHUNK } from '../world/forestGen';
 import { TP_CX, TP_FOOT, TP_TOP } from '../world/sanctumLayout';
 import { POOL } from '../world/sunken';
 import { TrekMap } from '../world/trekMap';
@@ -147,7 +147,7 @@ export class MapScene extends Phaser.Scene {
   /** Where the HUD's buttons begin below the minimap, last laid out for. */
   private free = 0;
   /** The Everwood's places in the minimap's window, found again when it moves a chunk. */
-  private pins: { icon: string; x: number; y: number; fire?: Poi }[] = [];
+  private pins: { icon: string; x: number; y: number; fire?: Fire }[] = [];
   private pinsKey = '';
 
   // ---- the map button (the Everwood) and the whole map
@@ -540,7 +540,7 @@ export class MapScene extends Phaser.Scene {
     const r0 = Math.floor((y0 * MAP_CELL) / CHUNK) - 1;
     const c1 = Math.floor(((x0 + this.cw) * MAP_CELL) / CHUNK) + 1;
     const r1 = Math.floor(((y0 + this.ch) * MAP_CELL) / CHUNK) + 1;
-    const key = `${c0},${r0},${c1},${r1},${trek.version}`;
+    const key = `${c0},${r0},${c1},${r1},${trek.version},${this.world.everwood?.edits?.version ?? 0}`;
     if (key === this.pinsKey) return;
     this.pinsKey = key;
     this.pins = everwoodPins(this.world, tm, c0 * CHUNK, r0 * CHUNK, (c1 + 1) * CHUNK, (r1 + 1) * CHUNK);
@@ -644,9 +644,14 @@ function drawTrek(ctx: CanvasRenderingContext2D, tm: TrekMap, x0: number, y0: nu
 
 const POI_ICON: Record<string, string> = { shrine: 'shrine', chest: 'chest', ruins: 'ruins', stones: 'stones', elder: 'elder', fairy: 'fairy' };
 
+/** The build tray's part that is a campfire, and a travel id for one at cell (cx, cy) (below zero, apart from the forest's own). */
+const BUILT_FIRE = 'campfire';
+const builtFireId = (cx: number, cy: number): number => -1 - (cx * 100000 + cy);
+const builtFires = (world: WorldScene): boolean => !!world.everwood?.edits?.things.some((t) => t.id === BUILT_FIRE);
+
 /** The Everwood's pins in a box: its places where walked, the Stag's secrets, and the player's builds. */
-function everwoodPins(world: WorldScene, tm: TrekMap, x0: number, y0: number, x1: number, y1: number): { icon: string; x: number; y: number; fire?: Poi }[] {
-  const out: { icon: string; x: number; y: number; fire?: Poi }[] = [];
+function everwoodPins(world: WorldScene, tm: TrekMap, x0: number, y0: number, x1: number, y1: number): { icon: string; x: number; y: number; fire?: Fire }[] {
+  const out: { icon: string; x: number; y: number; fire?: Fire }[] = [];
   const known = (x: number, y: number) => trek.known(Math.floor(x / 64), Math.floor(y / 64));
   for (const p of tm.places(x0, y0, x1, y1)) {
     if (!known(p.x, p.y)) continue;
@@ -659,7 +664,12 @@ function everwoodPins(world: WorldScene, tm: TrekMap, x0: number, y0: number, x1
   if (edits) {
     for (let cy = Math.floor(y0 / CHUNK); cy < Math.ceil(y1 / CHUNK); cy++) {
       for (let cx = Math.floor(x0 / CHUNK); cx < Math.ceil(x1 / CHUNK); cx++) {
-        const things = edits.thingsInChunk(cx, cy);
+        const things: typeof edits.things = [];
+        // A campfire the player built is a place to travel to at once: no need to rest at it first.
+        for (const t of edits.thingsInChunk(cx, cy)) {
+          if (t.id !== BUILT_FIRE) things.push(t);
+          else out.push({ icon: 'campfire', x: t.x * 16 + 8, y: t.y * 16 + 8, fire: { id: builtFireId(t.x, t.y), x: t.x * 16 + 8, y: t.y * 16 + 12 } });
+        }
         const walls = edits.wallsInChunk(cx, cy);
         const n = things.length + walls.length;
         if (!n) continue;
@@ -713,9 +723,9 @@ class BigMap {
   private vw = 0;
   private vh = 0;
   private drawn = '';
-  private pins: { icon: string; x: number; y: number; fire?: Poi }[] = [];
+  private pins: { icon: string; x: number; y: number; fire?: Fire }[] = [];
   private pinsKey = '';
-  private picked: Poi | null = null;
+  private picked: Fire | null = null;
   private drag: { id: number; x: number; y: number; cx: number; cy: number; moved: number } | null = null;
   private zoom = 4;
   private btn = { close: new Phaser.Geom.Rectangle(), plus: new Phaser.Geom.Rectangle(), minus: new Phaser.Geom.Rectangle() };
@@ -774,9 +784,9 @@ class BigMap {
     if (d.moved < 8 * D) this.tap(p.x, p.y);
   }
 
-  /** A tap on the sheet: picks the campfire nearest it, if one rested at is close enough, to travel to. */
+  /** A tap on the sheet: picks the campfire nearest it (rested at, or built) if close enough, to travel to. */
   private tap(x: number, y: number): void {
-    let best: Poi | null = null;
+    let best: Fire | null = null;
     let near = PICK * D;
     for (const pin of this.pins) {
       if (!pin.fire) continue;
@@ -903,7 +913,7 @@ class BigMap {
     this.travel?.destroy();
     this.travel = null;
     const f = this.picked;
-    this.hint.setText(f ? '' : trek.fires.size ? 'TAP A CAMPFIRE TO TRAVEL THERE' : 'REST AT A CAMPFIRE TO TRAVEL BACK LATER');
+    this.hint.setText(f ? '' : trek.fires.size || builtFires(this.world) ? 'TAP A CAMPFIRE TO TRAVEL THERE' : 'REST AT A CAMPFIRE TO TRAVEL BACK LATER');
     if (!f) return;
     const z = this.zoom;
     const b = new PixelButton(this.scene, 'TRAVEL HERE', 64, 16, BUTTON_GOLD, 'trektravel', () => {
@@ -937,7 +947,7 @@ class BigMap {
     const r0 = Math.floor((this.y0 * MAP_CELL) / CHUNK);
     const c1 = Math.floor(((this.x0 + this.vw) * MAP_CELL) / CHUNK);
     const r1 = Math.floor(((this.y0 + this.vh) * MAP_CELL) / CHUNK);
-    const pk = `${c0},${r0},${c1},${r1},${trek.version}`;
+    const pk = `${c0},${r0},${c1},${r1},${trek.version},${this.world.everwood?.edits?.version ?? 0}`;
     if (pk !== this.pinsKey) {
       this.pinsKey = pk;
       this.pins = everwoodPins(this.world, tm, c0 * CHUNK, r0 * CHUNK, (c1 + 1) * CHUNK, (r1 + 1) * CHUNK);
