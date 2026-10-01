@@ -1306,7 +1306,7 @@ export class SelectScene extends Phaser.Scene {
       jump,
     });
     this.showHero(def.preview, def.accent, !!this.peek, pose, jump ? 0 : slide);
-    // Stats are the type's own numbers (skins never change them); the abilities are named for the look.
+    // Stats and ability names are the character's own: a skin only changes the look.
     const ult = ultFor(def);
     this.details.show(look.type.name, def.role, def.accent, heroStats(cls.id, look.type.id), [def.attack, def.special], def.buttons, {
       icon: ult.icon,

@@ -122,11 +122,11 @@ export interface Buttons {
 export interface SkinDef {
   id: string;
   name: string;
-  /** Overrides for the type's colour, tagline and ability names while worn. */
+  /**
+   * The highlight colour while worn. A skin is only a look: the character's
+   * name, tagline, ability names and Special always stay the character's own.
+   */
   accent?: number;
-  role?: string;
-  attack?: string;
-  special?: string;
   preview: Preview;
   buttons: Buttons;
   /**
@@ -218,10 +218,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'void',
             name: 'Void',
-            role: 'Void caller',
             accent: 0xc47cff,
-            attack: 'Void orb',
-            special: 'Umbral beam',
             preview: { texture: 'wizard_void', glow: 'wizard_void_e', idle: 'wizard_void_idle_down', chosen: 'wizard_void_cast_down' },
             buttons: {
               attack: { texture: 'orb_void_e', frame: 'o0', anim: 'orb_void_spin' },
@@ -232,10 +229,7 @@ export const CLASSES: ClassDef[] = [
             // A reader of the stars: silver hair under a gold circlet, a crown of stars, a robe strewn with them.
             id: 'astral',
             name: 'Astral',
-            role: 'Reader of the stars',
             accent: 0xffe08a,
-            attack: 'Star orb',
-            special: 'Starlight beam',
             preview: { texture: 'wizard_astral', glow: 'wizard_astral_e', idle: 'wizard_astral_idle_down', chosen: 'wizard_astral_cast_down' },
             buttons: {
               attack: { texture: 'orb_astral_e', frame: 'o0', anim: 'orb_astral_spin' },
@@ -262,10 +256,7 @@ export const CLASSES: ClassDef[] = [
             // A horned, crimson-skinned warlock in black and blood red, burning with green hellfire.
             id: 'hellfire',
             name: 'Hellfire',
-            role: 'Horned warlock',
             accent: 0x7aff5a,
-            attack: 'Hellfire bolt',
-            special: 'Doom meteor',
             preview: { texture: 'wizard_hell', glow: 'wizard_hell_e', idle: 'wizard_hell_idle_down', chosen: 'wizard_hell_cast_down' },
             buttons: {
               attack: { texture: 'orb_hell_e', frame: 'o0', anim: 'orb_hell_spin' },
@@ -276,10 +267,7 @@ export const CLASSES: ClassDef[] = [
             // Hallow's Eve: a witch under a crooked hat, flame-orange hair, a pale green face with glowing eyes, and a staff crowned with a carved jack-o'-lantern.
             id: 'pumpkin',
             name: 'Pumpkin Witch',
-            role: "Hallow's Eve witch",
             accent: 0xff8a24,
-            attack: "Jack-o'-bolt",
-            special: 'Pumpkin meteor',
             preview: { texture: 'wizard_pumpkin', glow: 'wizard_pumpkin_e', idle: 'wizard_pumpkin_idle_down', chosen: 'wizard_pumpkin_cast_down' },
             buttons: {
               attack: { texture: 'orb_pumpkin_e', frame: 'o0', anim: 'orb_pumpkin_spin' },
@@ -308,10 +296,7 @@ export const CLASSES: ClassDef[] = [
             // A witch of the trench: black robes lit with living light, pale skin, and an anglerfish's lure over her brow.
             id: 'abyssal',
             name: 'Abyssal',
-            role: 'Witch of the deep',
             accent: 0x3ae0d0,
-            attack: 'Abyss bolt',
-            special: 'Black tide',
             preview: { texture: 'wizard_abyss', glow: 'wizard_abyss_e', idle: 'wizard_abyss_idle_down', chosen: 'wizard_abyss_cast_down' },
             buttons: {
               attack: { texture: 'orb_abyss_e', frame: 'o0', anim: 'orb_abyss_spin' },
@@ -322,10 +307,7 @@ export const CLASSES: ClassDef[] = [
             // A water-lily priestess: ink-black hair in a high bun with a lotus, jade robes over white silk, lily-pad shoulders, and a lotus staff cradling a pearl.
             id: 'lotus',
             name: 'Lotus',
-            role: 'Priestess of still water',
             accent: 0xff9ec8,
-            attack: 'Lily bolt',
-            special: 'Petal tide',
             preview: { texture: 'wizard_lotus', glow: 'wizard_lotus_e', idle: 'wizard_lotus_idle_down', chosen: 'wizard_lotus_cast_down' },
             buttons: {
               attack: { texture: 'orb_lotus_e', frame: 'o0', anim: 'orb_lotus_spin' },
@@ -412,10 +394,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'jade',
             name: 'Jade',
-            role: 'Blade of the jade wind',
             accent: 0x4fe0a0,
-            attack: 'Katana combo',
-            special: 'Jade gale',
             preview: { texture: 'warrior_jade', glow: 'warrior_jade_e', idle: 'warrior_jade_idle_down', chosen: 'warrior_jade_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
             buttons: {
               attack: { texture: 'icon_sword_jade' },
@@ -426,10 +405,7 @@ export const CLASSES: ClassDef[] = [
             // Bronze and crimson: a crested Corinthian helm, a round shield and a leaf-bladed sword.
             id: 'spartan',
             name: 'Spartan',
-            role: 'Bronze of the phalanx',
             accent: 0xf0a050,
-            attack: 'Xiphos combo',
-            special: 'Bronze whirlwind',
             preview: { texture: 'warrior_spartan', glow: 'warrior_spartan_e', idle: 'warrior_spartan_idle_down', chosen: 'warrior_spartan_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
             buttons: {
               attack: { texture: 'icon_sword_spartan' },
@@ -440,10 +416,7 @@ export const CLASSES: ClassDef[] = [
             // Hallow's Eve: blackened, rusting plate, a tattered cloak, and a jack-o'-lantern burning where his head should be.
             id: 'headless',
             name: 'Headless Knight',
-            role: 'Rider without a head',
             accent: 0xff8a2a,
-            attack: 'Grave cleave',
-            special: 'Lantern whirl',
             preview: { texture: 'warrior_headless', glow: 'warrior_headless_e', idle: 'warrior_headless_idle_down', chosen: 'warrior_headless_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
             buttons: {
               attack: { texture: 'icon_sword_headless' },
@@ -472,10 +445,7 @@ export const CLASSES: ClassDef[] = [
             // The first king of Portugal as his statue in Guimarães stands: a crowned conical helm, mail, a long beard, the blue cross on white.
             id: 'afonso',
             name: 'Afonso Henriques',
-            role: 'The first king of Portugal',
             accent: 0x5a8aff,
-            attack: "Conqueror's blade",
-            special: 'Oath of Ourique',
             preview: { texture: 'warrior_afonso', glow: 'warrior_afonso_e', idle: 'warrior_afonso_idle_down', chosen: 'warrior_afonso_decree_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
             buttons: {
               attack: { texture: 'icon_sword_afonso' },
@@ -513,10 +483,7 @@ export const CLASSES: ClassDef[] = [
             // A winged guardian in pearl plate, a halo over golden hair, light the colour of dawn.
             id: 'seraph',
             name: 'Seraph',
-            role: 'Winged guardian',
             accent: 0xffc8a8,
-            attack: 'Dawn smite',
-            special: 'Sacred ground',
             preview: { texture: 'paladin_seraph', glow: 'paladin_seraph_e', idle: 'paladin_seraph_idle_down', chosen: 'paladin_seraph_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
             buttons: {
               attack: { texture: 'icon_mace_seraph' },
@@ -544,10 +511,7 @@ export const CLASSES: ClassDef[] = [
             // A fallen crusader: horned helm, spiked black-violet plate, a torn cloak and an eclipse for a sun.
             id: 'oathbreaker',
             name: 'Oathbreaker',
-            role: 'Hammer of the eclipse',
             accent: 0xb070ff,
-            attack: 'Dusk hammer',
-            special: 'Eclipse fall',
             preview: { texture: 'paladin_oath', glow: 'paladin_oath_e', idle: 'paladin_oath_idle_down', chosen: 'paladin_oath_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
             buttons: {
               attack: { texture: 'icon_hammer_oath' },
@@ -585,10 +549,7 @@ export const CLASSES: ClassDef[] = [
             // A masked sentinel of the temple in cream and gold, with a long-hilted golden saber.
             id: 'guard',
             name: 'Temple guard',
-            role: 'Sentinel of the temple',
             accent: 0xffd04a,
-            attack: 'Sentinel flurry',
-            special: 'Force repulse',
             preview: { texture: 'jedi_guard', glow: 'jedi_guard_e', idle: 'jedi_guard_idle_down', chosen: 'jedi_guard_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
             buttons: {
               attack: { texture: 'icon_saber_guard' },
@@ -599,10 +560,7 @@ export const CLASSES: ClassDef[] = [
             // An old master of the order: white hair and a long white beard, indigo robes edged in silver, a green blade.
             id: 'master',
             name: 'Grand Master',
-            role: 'Elder of the order',
             accent: 0x4ae070,
-            attack: "Master's flurry",
-            special: 'Force wave',
             preview: { texture: 'jedi_master', glow: 'jedi_master_e', idle: 'jedi_master_idle_down', chosen: 'jedi_master_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
             buttons: {
               attack: { texture: 'icon_saber_master' },
@@ -630,10 +588,7 @@ export const CLASSES: ClassDef[] = [
             // A horned, tattooed reaver in black and old blood, with an ember-red saberstaff.
             id: 'warlord',
             name: 'Warlord',
-            role: 'Horned reaver',
             accent: 0xff5a2a,
-            attack: 'Twin-blade fury',
-            special: 'Blood lightning',
             preview: { texture: 'jedi_warlord', glow: 'jedi_warlord_e', idle: 'jedi_warlord_idle_down', chosen: 'jedi_warlord_grip_down', originY: JEDI_ORIGIN_Y / JEDI_H },
             buttons: {
               attack: { texture: 'icon_staff_warlord' },
@@ -671,10 +626,7 @@ export const CLASSES: ClassDef[] = [
             // A masked showman of the ring: a crimson cape, a gold title belt and boots to the knee.
             id: 'lucha',
             name: 'Luchador',
-            role: 'Masked fists of the ring',
             accent: 0xff4fa0,
-            attack: 'Lucha combo',
-            special: 'Ring barrage',
             preview: { texture: 'fighter_lucha', glow: 'fighter_lucha_e', idle: 'fighter_lucha_idle_down', chosen: 'fighter_lucha_smash_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
             buttons: {
               attack: { texture: 'icon_fist_lucha' },
@@ -685,10 +637,7 @@ export const CLASSES: ClassDef[] = [
             // A ring hero off the merch stand: a lime tee and cap, jorts, sweatbands and dog tags. Never gives up.
             id: 'champ',
             name: 'Champ',
-            role: 'Never gives up',
             accent: 0x7ae84a,
-            attack: 'Hustle combo',
-            special: 'Knuckle shuffle',
             preview: { texture: 'fighter_champ', glow: 'fighter_champ_e', idle: 'fighter_champ_idle_down', chosen: 'fighter_champ_smash_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
             buttons: {
               attack: { texture: 'icon_fist_champ' },
@@ -715,10 +664,7 @@ export const CLASSES: ClassDef[] = [
             // A temple statue woken to fight: basalt cracked with fire, and a carved ring at its back.
             id: 'guardian',
             name: 'Stone guardian',
-            role: 'Palms of living stone',
             accent: 0xff7a2a,
-            attack: 'Basalt palm',
-            special: 'Magma quake',
             preview: { texture: 'fighter_guardian', glow: 'fighter_guardian_e', idle: 'fighter_guardian_idle_down', chosen: 'fighter_guardian_leap_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
             buttons: {
               attack: { texture: 'icon_palm_guardian' },
@@ -753,10 +699,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'witch',
             name: 'Hex witch',
-            role: 'Hexes and brews',
             accent: 0xe060ff,
-            attack: 'Hex flask',
-            special: 'Hex mire',
             preview: { texture: 'alchemist_witch', glow: 'alchemist_witch_e', idle: 'alchemist_witch_idle_down', chosen: 'alchemist_witch_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
             buttons: {
               attack: { texture: 'icon_flask_witch' },
@@ -767,10 +710,7 @@ export const CLASSES: ClassDef[] = [
             // A ram's skull for a mask, a crown of raven feathers, and gourds of spirit-fire.
             id: 'shaman',
             name: 'Bone shaman',
-            role: 'Juju and spirit-fire',
             accent: 0x2ad8a8,
-            attack: 'Juju gourd',
-            special: 'Spirit mire',
             preview: { texture: 'alchemist_shaman', glow: 'alchemist_shaman_e', idle: 'alchemist_shaman_idle_down', chosen: 'alchemist_shaman_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
             buttons: {
               attack: { texture: 'icon_flask_shaman' },
@@ -781,10 +721,7 @@ export const CLASSES: ClassDef[] = [
             // A hedge-witch herbalist: a straw hat with foxgloves, a chestnut braid, a sage dress and apron, tinctures of violet and pink.
             id: 'foxglove',
             name: 'Foxglove',
-            role: 'Tinctures of the hedgerow',
             accent: 0xf07ad0,
-            attack: 'Foxglove tincture',
-            special: 'Bed of foxgloves',
             preview: { texture: 'alchemist_foxglove', glow: 'alchemist_foxglove_e', idle: 'alchemist_foxglove_idle_down', chosen: 'alchemist_foxglove_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
             buttons: {
               attack: { texture: 'icon_flask_foxglove' },
@@ -813,10 +750,7 @@ export const CLASSES: ClassDef[] = [
             // A bubble helmet, an insulated suit and canisters that freeze.
             id: 'cryo',
             name: 'Cryotech',
-            role: 'Cryo canisters',
             accent: 0x6ab8ff,
-            attack: 'Cryo canister',
-            special: 'Cryo barrage',
             preview: { texture: 'alchemist_cryo', glow: 'alchemist_cryo_e', idle: 'alchemist_cryo_idle_down', chosen: 'alchemist_cryo_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
             buttons: {
               attack: { texture: 'icon_flask_cryo' },
@@ -851,10 +785,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'storm',
             name: 'Storm',
-            role: 'Arrows of lightning',
             accent: 0x5ec8ff,
-            attack: 'Lightning shot',
-            special: 'Thunder rain',
             preview: { texture: 'archer_storm', glow: 'archer_storm_e', idle: 'archer_storm_idle_down', chosen: 'archer_storm_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
             buttons: {
               attack: { texture: 'icon_bow_storm' },
@@ -865,10 +796,7 @@ export const CLASSES: ClassDef[] = [
             // A stag's skull and antlers for a hood, a bow of bone, and arrows of moonlight.
             id: 'hunt',
             name: 'Wild hunt',
-            role: 'Hunter under the moon',
             accent: 0xb8a0ff,
-            attack: 'Moon shot',
-            special: 'Moonfall',
             preview: { texture: 'archer_hunt', glow: 'archer_hunt_e', idle: 'archer_hunt_idle_down', chosen: 'archer_hunt_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
             buttons: {
               attack: { texture: 'icon_bow_hunt' },
@@ -879,10 +807,7 @@ export const CLASSES: ClassDef[] = [
             // Hallow's Eve: a burlap sack head with embers for eyes, a crow on his hat, ember arrows trailing ghost-light.
             id: 'scarecrow',
             name: 'Scarecrow',
-            role: 'Guardian of the fields',
             accent: 0xff8a2a,
-            attack: 'Crowfeather shot',
-            special: 'Harvest volley',
             preview: { texture: 'archer_scarecrow', glow: 'archer_scarecrow_e', idle: 'archer_scarecrow_idle_down', chosen: 'archer_scarecrow_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
             buttons: {
               attack: { texture: 'icon_bow_scarecrow' },
@@ -911,10 +836,7 @@ export const CLASSES: ClassDef[] = [
             // A lady huntress: a rose-red hooded capelet, green velvet gown, a rose at her throat, a thornwood crossbow.
             id: 'briar',
             name: 'Briar Rose',
-            role: 'Lady of the thorns',
             accent: 0xe8344a,
-            attack: 'Thorn bolt',
-            special: 'Briar net',
             preview: { texture: 'archer_briar', glow: 'archer_briar_e', idle: 'archer_briar_idle_down', chosen: 'archer_briar_brace_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
             buttons: {
               attack: { texture: 'icon_crossbow_briar' },
@@ -942,10 +864,7 @@ export const CLASSES: ClassDef[] = [
             // An elven maiden: a lilac braid woven with wisteria, a silver leaf circlet, a leaf-hemmed gown, a birch bow wound with vine.
             id: 'wisteria',
             name: 'Wisteria',
-            role: 'Maiden of the blossom',
             accent: 0xb48ae8,
-            attack: 'Petal volley',
-            special: 'Blossom vault',
             preview: { texture: 'archer_wisteria', glow: 'archer_wisteria_e', idle: 'archer_wisteria_idle_down', chosen: 'archer_wisteria_fan_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
             buttons: {
               attack: { texture: 'icon_fanshot_wisteria' },
@@ -985,10 +904,7 @@ export const CLASSES: ClassDef[] = [
             // A captain of the high seas: tricorn, eyepatch, a navy coat and gold.
             id: 'corsair',
             name: 'Corsair',
-            role: 'Daggers and plunder',
             accent: 0xf0b040,
-            attack: 'Boarding stabs',
-            special: 'Powder step',
             preview: { texture: 'rogue_corsair', glow: 'rogue_corsair_e', idle: 'rogue_corsair_idle_down', chosen: 'rogue_corsair_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
             buttons: {
               attack: { texture: 'icon_daggers_corsair' },
@@ -1017,10 +933,7 @@ export const CLASSES: ClassDef[] = [
             // A fox spirit: ears and a mask, three great tails and blades of blue foxfire.
             id: 'kitsune',
             name: 'Fox-mask thief',
-            role: 'Masked trickster of the festival night',
             accent: 0x6ab0ff,
-            attack: 'Foxfire cuts',
-            special: 'Fox dance',
             preview: { texture: 'rogue_kitsune', glow: 'rogue_kitsune_e', idle: 'rogue_kitsune_idle_down', chosen: 'rogue_kitsune_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
             buttons: {
               attack: { texture: 'icon_daggers_kitsune' },
@@ -1031,10 +944,7 @@ export const CLASSES: ClassDef[] = [
             // A moonflower dancer: indigo silk veils and sashes, moonflowers in her hair, petal blades of moonsilver.
             id: 'nightbloom',
             name: 'Nightbloom',
-            role: 'Dancer of the moonlit garden',
             accent: 0xb8b0ff,
-            attack: 'Petal cuts',
-            special: 'Moonflower dance',
             preview: { texture: 'rogue_nightbloom', glow: 'rogue_nightbloom_e', idle: 'rogue_nightbloom_idle_down', chosen: 'rogue_nightbloom_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
             buttons: {
               attack: { texture: 'icon_daggers_nightbloom' },
@@ -1070,10 +980,7 @@ export const CLASSES: ClassDef[] = [
             // A pharaoh risen from his tomb: nemes and gold mask, a lapis ankh staff, mummies at his call.
             id: 'tomb',
             name: 'Tomb King',
-            role: 'Pharaoh of the risen dead',
             accent: 0x5aa8ff,
-            attack: 'Ankh bolt',
-            special: 'Tomb guard',
             preview: { texture: 'necro_tomb', glow: 'necro_tomb_e', idle: 'necro_tomb_idle_down', chosen: 'necro_tomb_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
             buttons: {
               attack: { texture: 'icon_soul_tomb' },
@@ -1102,10 +1009,7 @@ export const CLASSES: ClassDef[] = [
             // A dragon-blooded sorcerer: ivory horns, crimson wings, obsidian scales cracked with fire.
             id: 'wyrm',
             name: 'Wyrmblood',
-            role: 'Dragon blood, molten and old',
             accent: 0xff7a2a,
-            attack: 'Magma lance',
-            special: 'Wyrmfire nova',
             preview: { texture: 'necro_wyrm', glow: 'necro_wyrm_e', idle: 'necro_wyrm_idle_down', chosen: 'necro_wyrm_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
             buttons: {
               attack: { texture: 'icon_lance_wyrm' },
@@ -1144,10 +1048,7 @@ export const CLASSES: ClassDef[] = [
             // A hooded wanderer out of the deep wood, wisps of light drifting round him.
             id: 'wildsong',
             name: 'Wildsong',
-            role: 'Songs of the deep wood',
             accent: 0x9ee85a,
-            attack: 'Wisp notes',
-            special: 'Song of the grove',
             preview: { texture: 'bard_wild', glow: 'bard_wild_e', idle: 'bard_wild_idle_down', chosen: 'bard_wild_song_down', originY: BARD_ORIGIN_Y / BARD_H },
             buttons: {
               attack: { texture: 'icon_lute_wild' },
@@ -1158,10 +1059,7 @@ export const CLASSES: ClassDef[] = [
             // A masked jester in rose and black motley, bells on his cap, diamonds for notes.
             id: 'harlequin',
             name: 'Harlequin',
-            role: 'A song and a smile',
             accent: 0xff5ab8,
-            attack: 'Diamond notes',
-            special: 'Song of mirth',
             preview: { texture: 'bard_harlequin', glow: 'bard_harlequin_e', idle: 'bard_harlequin_idle_down', chosen: 'bard_harlequin_song_down', originY: BARD_ORIGIN_Y / BARD_H },
             buttons: {
               attack: { texture: 'icon_lute_harlequin' },
@@ -1172,10 +1070,7 @@ export const CLASSES: ClassDef[] = [
             // A wanderer of the open road: wide felt hat, a patched duster, a bedroll, a banjo.
             id: 'vagabond',
             name: 'Vagabond',
-            role: 'Songs of the open road',
             accent: 0xb890ff,
-            attack: 'Drifting notes',
-            special: 'Song of the road',
             preview: { texture: 'bard_vagabond', glow: 'bard_vagabond_e', idle: 'bard_vagabond_idle_down', chosen: 'bard_vagabond_song_down', originY: BARD_ORIGIN_Y / BARD_H },
             buttons: {
               attack: { texture: 'icon_lute_vagabond' },
@@ -1186,10 +1081,7 @@ export const CLASSES: ClassDef[] = [
             // A Coimbra fado singer in a long black cape, playing the Portuguese guitar; his notes fly as swallows.
             id: 'fadista',
             name: 'Fadista',
-            role: 'Songs of longing',
             accent: 0x5a8cff,
-            attack: 'Swallow notes',
-            special: 'Song of saudade',
             preview: { texture: 'bard_fadista', glow: 'bard_fadista_e', idle: 'bard_fadista_idle_down', chosen: 'bard_fadista_song_down', originY: BARD_ORIGIN_Y / BARD_H },
             buttons: {
               attack: { texture: 'icon_lute_fadista' },
@@ -1200,10 +1092,7 @@ export const CLASSES: ClassDef[] = [
             // The singer whose song moved the dead: laurel, a white chiton, a violet himation and a golden lyre.
             id: 'orpheus',
             name: 'Orpheus',
-            role: 'The song that moved the dead',
             accent: 0xffd060,
-            attack: 'Golden notes',
-            special: 'Hymn of the Muses',
             preview: { texture: 'bard_orpheus', glow: 'bard_orpheus_e', idle: 'bard_orpheus_idle_down', chosen: 'bard_orpheus_song_down', originY: BARD_ORIGIN_Y / BARD_H },
             buttons: {
               attack: { texture: 'icon_lute_orpheus' },
@@ -1231,10 +1120,7 @@ export const CLASSES: ClassDef[] = [
             // A wolf-pelt shaman painted in woad, beating a black spirit drum for the pack.
             id: 'howl',
             name: 'Moonhowl',
-            role: 'Drums of the wolf spirit',
             accent: 0x8a9aff,
-            attack: 'Spirit drum',
-            special: 'Pack rhythm',
             preview: { texture: 'bard_howl', glow: 'bard_howl_e', idle: 'bard_howl_idle_down', chosen: 'bard_howl_boom_down', originY: BARD_ORIGIN_Y / BARD_H },
             buttons: {
               attack: { texture: 'icon_drum_howl' },
@@ -1272,10 +1158,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'moon',
             name: 'Moonclock',
-            role: 'Keeper of the night hours',
             accent: 0x9ccaff,
-            attack: 'Moon hand',
-            special: 'Moon dial',
             preview: { texture: 'chrono_moon', glow: 'chrono_moon_e', idle: 'chrono_moon_idle_down', chosen: 'chrono_moon_field_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
             buttons: {
               attack: { texture: 'icon_hand_moon' },
@@ -1286,10 +1169,7 @@ export const CLASSES: ClassDef[] = [
             // A wind-up automaton: an alarm clock for a head, a pendulum swinging in a glass case, a key turning in his back.
             id: 'clockwork',
             name: 'Clockwork',
-            role: 'Wound up and ticking',
             accent: 0xa8f060,
-            attack: 'Cog hand',
-            special: 'Stasis engine',
             preview: { texture: 'chrono_clockwork', glow: 'chrono_clockwork_e', idle: 'chrono_clockwork_idle_down', chosen: 'chrono_clockwork_field_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
             buttons: {
               attack: { texture: 'icon_hand_clockwork' },
@@ -1300,10 +1180,7 @@ export const CLASSES: ClassDef[] = [
             // The spirit of spring: a crown of blossoms, rose-gold hair, a green gown embroidered with flowers, and a flower clock for her halo.
             id: 'primavera',
             name: 'Primavera',
-            role: 'Spirit of the turning seasons',
             accent: 0xffb8cc,
-            attack: 'Blossom hand',
-            special: 'Flower clock',
             preview: { texture: 'chrono_primavera', glow: 'chrono_primavera_e', idle: 'chrono_primavera_idle_down', chosen: 'chrono_primavera_field_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
             buttons: {
               attack: { texture: 'icon_hand_primavera' },
@@ -1330,10 +1207,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'aeon',
             name: 'Aeon',
-            role: 'Echoes of a green age',
             accent: 0x6ff0c0,
-            attack: 'Aeon shards',
-            special: 'Aeon rewind',
             preview: { texture: 'chrono_aeon', glow: 'chrono_aeon_e', idle: 'chrono_aeon_idle_down', chosen: 'chrono_aeon_rewind_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
             buttons: {
               attack: { texture: 'icon_shards_aeon' },
@@ -1344,10 +1218,7 @@ export const CLASSES: ClassDef[] = [
             // A traveller from a future that went wrong: white coat, a black visor, a tesseract in hand, and the picture tearing round him.
             id: 'anomaly',
             name: 'Anomaly',
-            role: 'An error in time',
             accent: 0x40e0ff,
-            attack: 'Glitch shards',
-            special: 'Rollback',
             preview: { texture: 'chrono_anomaly', glow: 'chrono_anomaly_e', idle: 'chrono_anomaly_idle_down', chosen: 'chrono_anomaly_rewind_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
             buttons: {
               attack: { texture: 'icon_shards_anomaly' },
@@ -1385,10 +1256,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'porcelain',
             name: 'Porcelain',
-            role: 'A doll of cracked porcelain',
             accent: 0x8ad0ff,
-            attack: 'Doll strike',
-            special: 'Porcelain spin',
             preview: { texture: 'puppeteer_porcelain', glow: 'puppeteer_porcelain_e', idle: 'puppeteer_porcelain_idle_down', chosen: 'puppeteer_porcelain_twirl_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
             buttons: {
               attack: { texture: 'icon_puppet_porcelain' },
@@ -1398,10 +1266,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'toymaker',
             name: 'Toymaker',
-            role: 'Works a nutcracker soldier',
             accent: 0xff5a4a,
-            attack: 'Nutcracker strike',
-            special: 'Toy soldier spin',
             preview: { texture: 'puppeteer_toymaker', glow: 'puppeteer_toymaker_e', idle: 'puppeteer_toymaker_idle_down', chosen: 'puppeteer_toymaker_twirl_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
             buttons: {
               attack: { texture: 'icon_puppet_toymaker' },
@@ -1428,10 +1293,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'crimson',
             name: 'Red thread',
-            role: 'Threads of fate',
             accent: 0xff4a5a,
-            attack: 'Fate thread',
-            special: 'Bound by fate',
             preview: { texture: 'weaver_crimson', glow: 'weaver_crimson_e', idle: 'weaver_crimson_idle_down', chosen: 'weaver_crimson_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
             buttons: {
               attack: { texture: 'icon_thread_crimson' },
@@ -1441,10 +1303,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'arachne',
             name: 'Arachne',
-            role: 'A spider queen and her silk',
             accent: 0xa8e040,
-            attack: 'Venom silk',
-            special: 'Web of Arachne',
             preview: { texture: 'weaver_arachne', glow: 'weaver_arachne_e', idle: 'weaver_arachne_idle_down', chosen: 'weaver_arachne_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
             buttons: {
               attack: { texture: 'icon_thread_arachne' },
@@ -1455,10 +1314,7 @@ export const CLASSES: ClassDef[] = [
             // A moth-woman of the moonlit woods: pale mint wings with long tails, feathery antennae, a cream silk gown and a collar of moth fur.
             id: 'luna',
             name: 'Luna Moth',
-            role: 'Moonsilk and moth dust',
             accent: 0x9ee8c0,
-            attack: 'Moonsilk thread',
-            special: 'Moth-dust snare',
             preview: { texture: 'weaver_luna', glow: 'weaver_luna_e', idle: 'weaver_luna_idle_down', chosen: 'weaver_luna_weave_down', originY: PUPPETEER_ORIGIN_Y / PUPPETEER_H },
             buttons: {
               attack: { texture: 'icon_thread_luna' },
@@ -1496,10 +1352,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'oni',
             name: 'Oni',
-            role: 'A demon of the blood-red wind',
             accent: 0xff5a4a,
-            attack: 'Oni tempest',
-            special: 'Demon step',
             preview: { texture: 'samurai_oni', glow: 'samurai_oni_e', idle: 'samurai_oni_idle_down', chosen: 'samurai_oni_slash1_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
             buttons: {
               attack: { texture: 'icon_katana_oni' },
@@ -1509,10 +1362,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'kitsune',
             name: 'Kitsune',
-            role: 'A fox spirit burning with foxfire',
             accent: 0x40e8b0,
-            attack: 'Foxfire tempest',
-            special: 'Fox step',
             preview: { texture: 'samurai_kitsune', glow: 'samurai_kitsune_e', idle: 'samurai_kitsune_idle_down', chosen: 'samurai_kitsune_slash1_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
             buttons: {
               attack: { texture: 'icon_katana_kitsune' },
@@ -1539,10 +1389,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'sakura',
             name: 'Sakura',
-            role: 'Blossoms on the blade',
             accent: 0xff9ac0,
-            attack: 'Blossom cut',
-            special: 'Petal crossing',
             preview: { texture: 'ronin_sakura', glow: 'ronin_sakura_e', idle: 'ronin_sakura_idle_down', chosen: 'ronin_sakura_slash2_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
             buttons: {
               attack: { texture: 'icon_iai_sakura' },
@@ -1552,10 +1399,7 @@ export const CLASSES: ClassDef[] = [
           {
             id: 'shogun',
             name: 'Shogun',
-            role: 'A warlord under the crescent moon',
             accent: 0xa89cff,
-            attack: 'Crescent cut',
-            special: 'Warlord crossing',
             preview: { texture: 'ronin_shogun', glow: 'ronin_shogun_e', idle: 'ronin_shogun_idle_down', chosen: 'ronin_shogun_slash2_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
             buttons: {
               attack: { texture: 'icon_iai_shogun' },
@@ -1595,10 +1439,7 @@ export const CLASSES: ClassDef[] = [
             // Russet leaves and bare antlers, and seeds that burn like embers.
             id: 'autumn',
             name: 'Autumn Warden',
-            role: 'Keeper of the falling leaves',
             accent: 0xff9a40,
-            attack: 'Ember seed',
-            special: 'Grove of the fall',
             preview: { texture: 'druid_autumn', glow: 'druid_autumn_e', idle: 'druid_autumn_idle_down', chosen: 'druid_autumn_cast_down' },
             buttons: {
               attack: { texture: 'icon_thorn_autumn' },
@@ -1609,10 +1450,7 @@ export const CLASSES: ClassDef[] = [
             // The faerie queen: honey-gold hair under a crown of blossoms, a gown of petals, dragonfly wings, and a moonflower on a moonwood staff.
             id: 'titania',
             name: 'Titania',
-            role: 'Queen of the faerie ring',
             accent: 0xffb8d0,
-            attack: 'Blossom seed',
-            special: 'Faerie ring',
             preview: { texture: 'druid_titania', glow: 'druid_titania_e', idle: 'druid_titania_idle_down', chosen: 'druid_titania_cast_down' },
             buttons: {
               attack: { texture: 'icon_thorn_titania' },
@@ -1640,10 +1478,7 @@ export const CLASSES: ClassDef[] = [
             // A white wolf's pelt with eyes of ice, and a spirit wolf of winter.
             id: 'frostfang',
             name: 'Frostfang',
-            role: 'The white wolf of winter',
             accent: 0x8ad0ff,
-            attack: 'Frost claws',
-            special: 'Winter pounce',
             preview: { texture: 'druid_frost', glow: 'druid_frost_e', idle: 'druid_frost_idle_down', chosen: 'druid_frost_cast_down' },
             buttons: {
               attack: { texture: 'icon_claws_frost' },
@@ -1717,10 +1552,7 @@ export const CLASSES: ClassDef[] = [
             // Gilded plate, a crimson tabard, rose-gold wings and a halo of the sun.
             id: 'sunshield',
             name: 'Sunshield',
-            role: 'Spear of the morning sun',
             accent: 0xffb060,
-            attack: 'Sunlit chain',
-            special: 'Spear of dawn',
             preview: { texture: 'valkyrie_sun', glow: 'valkyrie_sun_e', idle: 'valkyrie_sun_idle_down', chosen: 'valkyrie_sun_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
             buttons: {
               attack: { texture: 'icon_spear_sun' },
@@ -1731,10 +1563,7 @@ export const CLASSES: ClassDef[] = [
             // Pearl and silver-blue over lake-blue silk, great swan wings, platinum braids and a feathered diadem.
             id: 'swan',
             name: 'Swan Maiden',
-            role: 'Grace of the moonlit lake',
             accent: 0xb8d4ff,
-            attack: 'Swanwing chain',
-            special: 'Moonfeather spear',
             preview: { texture: 'valkyrie_swan', glow: 'valkyrie_swan_e', idle: 'valkyrie_swan_idle_down', chosen: 'valkyrie_swan_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
             buttons: {
               attack: { texture: 'icon_spear_swan' },
@@ -1762,10 +1591,7 @@ export const CLASSES: ClassDef[] = [
             // Black steel, raven wings and violet lightning.
             id: 'raven',
             name: 'Raven Queen',
-            role: 'Queen of the black storm',
             accent: 0xb880ff,
-            attack: 'Raven spear',
-            special: 'Raven dive',
             preview: { texture: 'valkyrie_raven', glow: 'valkyrie_raven_e', idle: 'valkyrie_raven_idle_down', chosen: 'valkyrie_raven_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
             buttons: {
               attack: { texture: 'icon_spear_raven' },
@@ -1806,10 +1632,7 @@ export const CLASSES: ClassDef[] = [
             // A junkyard mech: an oil-barrel body with a goblin in goggles at the porthole, a cone for a hat, a claw and a drill.
             id: 'scrap',
             name: 'Scrap Titan',
-            role: 'Held together with hope',
             accent: 0xe8783a,
-            attack: 'Nail guns',
-            special: 'Bottle rockets',
             preview: { texture: 'mech_scrap', glow: 'mech_scrap_e', idle: 'mech_scrap_idle_down', chosen: 'mech_scrap_deploy_down', originY: MECH_ORIGIN_Y / MECH_H },
             buttons: {
               attack: { texture: 'icon_cannon_scrap' },
@@ -1837,10 +1660,7 @@ export const CLASSES: ClassDef[] = [
             // A bee queen of gold and chitin: compound eyes, a tiara, wings, and bee-bots for drones.
             id: 'hive',
             name: 'Hive Queen',
-            role: 'Queen of the golden swarm',
             accent: 0xffb03a,
-            attack: 'Bee-bot sting',
-            special: 'Honeycomb wall',
             preview: { texture: 'synth_hive', glow: 'synth_hive_e', idle: 'synth_hive_idle_down', chosen: 'synth_hive_open_down', originY: SYNTH_ORIGIN_Y / SYNTH_H },
             buttons: {
               attack: { texture: 'icon_drone_hive' },
@@ -1880,10 +1700,7 @@ export const CLASSES: ClassDef[] = [
             // A Victorian ghost girl: a bonnet and bow, ringlets, lace skirts fading to mist, a parasol, and the tea set.
             id: 'tea',
             name: 'Tea Party',
-            role: 'More tea, dearie?',
             accent: 0xd0b0ff,
-            attack: 'Flying teacups',
-            special: 'Tablecloth trick',
             preview: { texture: 'polter_tea', glow: 'polter_tea_e', idle: 'polter_tea_idle_down', chosen: 'polter_tea_cast_down', originY: POLTER_ORIGIN_Y / POLTER_H },
             buttons: {
               attack: { texture: 'icon_hurl_tea' },
@@ -1911,10 +1728,7 @@ export const CLASSES: ClassDef[] = [
             // A Día de Muertos spirit: a painted sugar skull, a marigold crown, a lace veil and a paper lantern.
             id: 'cala',
             name: 'Calavera',
-            role: 'Marigolds for the departed',
             accent: 0xffb030,
-            attack: 'Marigold lantern',
-            special: 'Sugar-skull possession',
             preview: { texture: 'wraith_cala', glow: 'wraith_cala_e', idle: 'wraith_cala_idle_down', chosen: 'wraith_cala_cast_down', originY: WRAITH_ORIGIN_Y / WRAITH_H },
             buttons: {
               attack: { texture: 'icon_lantern_cala' },
@@ -1925,10 +1739,7 @@ export const CLASSES: ClassDef[] = [
             // A gentle forest spirit: a mossy cloak trimmed with ferns and mushrooms, leafy hair, a wicker lantern of fireflies.
             id: 'firefly',
             name: 'Firefly',
-            role: 'Lantern-maiden of the deep wood',
             accent: 0xd0ff70,
-            attack: 'Firefly lantern',
-            special: 'Mossbound possession',
             preview: { texture: 'wraith_firefly', glow: 'wraith_firefly_e', idle: 'wraith_firefly_idle_down', chosen: 'wraith_firefly_cast_down', originY: WRAITH_ORIGIN_Y / WRAITH_H },
             buttons: {
               attack: { texture: 'icon_lantern_firefly' },
@@ -1984,10 +1795,7 @@ export const CLASSES: ClassDef[] = [
             // The wild white hair, the moustache, a baggy cardigan, and a stick of glowing chalk.
             id: 'einstein',
             name: 'Einstein',
-            role: 'Imagination is everything',
             accent: 0xffd060,
-            attack: 'Photon spark',
-            special: 'Gravity well',
             preview: { texture: 'scientist_einstein', glow: 'scientist_einstein_e', idle: 'scientist_einstein_idle_down', chosen: 'scientist_einstein_eureka_down', originY: INV_ORIGIN_Y / INV_H },
             buttons: {
               attack: { texture: 'icon_tesla_einstein' },
@@ -2027,10 +1835,7 @@ export const CLASSES: ClassDef[] = [
             // Benfica's red shirt, white shorts and red socks, gilded wings, and red feathers.
             id: 'benfica',
             name: 'Benfica',
-            role: 'The eagle of the Light',
             accent: 0xff3a44,
-            attack: 'Red feathers',
-            special: 'Gale of the Luz',
             preview: { texture: 'eagle_benfica', glow: 'eagle_benfica_e', idle: 'eagle_benfica_idle_down', chosen: 'eagle_benfica_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
             buttons: {
               attack: { texture: 'icon_feather_eagle_benfica' },
@@ -2058,10 +1863,7 @@ export const CLASSES: ClassDef[] = [
             // Sporting's green and white hoops over a brighter golden coat, and a green roar.
             id: 'sporting',
             name: 'Sporting',
-            role: 'The pride of Alvalade',
             accent: 0x2ed070,
-            attack: 'Lion claws',
-            special: 'Green roar',
             preview: { texture: 'lion_sporting', glow: 'lion_sporting_e', idle: 'lion_sporting_idle_down', chosen: 'lion_sporting_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
             buttons: {
               attack: { texture: 'icon_claw_lion_sporting' },
@@ -2089,10 +1891,7 @@ export const CLASSES: ClassDef[] = [
             // Porto's blue and white stripes, royal blue scales, a little gold crown, and blue fire.
             id: 'porto',
             name: 'Porto',
-            role: 'The dragon of the Invicta',
             accent: 0x3a8cff,
-            attack: 'Blue fire',
-            special: 'Blue breath',
             preview: { texture: 'dragon_porto', glow: 'dragon_porto_e', idle: 'dragon_porto_idle_down', chosen: 'dragon_porto_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
             buttons: {
               attack: { texture: 'icon_fire_dragon_porto' },
