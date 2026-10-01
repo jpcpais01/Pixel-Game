@@ -1,3 +1,4 @@
+import { heroTimers } from './timers';
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
 import { WRAITH_CHEST_Y, WRAITH_H, WRAITH_LANTERN_Y, WRAITH_ORIGIN_X, WRAITH_ORIGIN_Y, WRAITH_W } from '../art/wraith';
@@ -306,6 +307,7 @@ export class Wraith implements Hero {
     }
     this.state = 'inside';
     this.insideT = POSSESS_MS;
+    heroTimers.follow('possess', 'ability', '', this.kit.pal.hot, () => (this.state === 'inside' ? { left: this.insideT, total: POSSESS_MS } : null));
     this.lashT = 0;
     this.bindT = 0;
     this.mark.setVisible(true);

@@ -1,3 +1,4 @@
+import { heroTimers } from './timers';
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
 import { SYNTH_CHEST_Y, SYNTH_H, SYNTH_ORIGIN_X, SYNTH_ORIGIN_Y, SYNTH_W } from '../art/synth';
@@ -395,6 +396,7 @@ export class Synth implements Hero {
     this.grid = new LaserGrid(this.world, this.drones, this.kit.pal, this.kit.hive);
     this.world.addEffect(this.grid);
     this.gridT = GRID_MS;
+    heroTimers.follow('grid', 'ability', '', this.kit.pal.hot, () => (this.grid ? { left: this.gridT, total: GRID_MS } : null));
     this.gridCd = GRID_COOLDOWN;
     this.dir = dirOf(u.x, u.y);
     this.body.play(`${this.kit.key}_grid_${this.dir}`, true);

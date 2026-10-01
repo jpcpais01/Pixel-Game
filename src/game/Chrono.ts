@@ -1,3 +1,4 @@
+import { heroTimers } from './timers';
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
 import { CHRONO_H, CHRONO_ORIGIN_X, CHRONO_ORIGIN_Y, CHRONO_RELEASE, CHRONO_W } from '../art/chrono';
@@ -260,7 +261,9 @@ export class Chrono implements Hero {
       ty = this.y + u.y * d;
       if (this.world.walkable(tx, ty)) break;
     }
-    this.world.addEffect(new StasisClock(this.world, tx, ty, this.kit.pal, this.kit.specialDamage));
+    const clock = new StasisClock(this.world, tx, ty, this.kit.pal, this.kit.specialDamage);
+    this.world.addEffect(clock);
+    heroTimers.follow('stasis', 'ability', '', this.kit.pal.hot, () => clock.timeLeft());
   }
 
   /** Keep a few seconds of his past, and let any echo whose moment has come throw its shard. */
