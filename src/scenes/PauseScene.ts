@@ -5,21 +5,24 @@ import { daynight } from '../game/daynight';
 import { DPR as D, menuZoom } from '../game/display';
 import { settings } from '../game/settings';
 import { session } from '../net/session';
+import { DAY_PICKER_H, DayPicker } from '../ui/dayPicker';
 import { PixelSlider } from '../ui/slider';
 import { statsCard } from '../ui/statsHud';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PixelButton, panelTexture, pixelText } from '../ui/widgets';
 import { fpsBottom } from './FpsScene';
 
 const PANEL_W = 172;
-const PANEL_H = 214;
+const PANEL_H = 198;
 const ROW_H = 16;
+/** The time of day's row, under the title in arenas with day and night: its height with the room round it. */
+const DAY_ROW = DAY_PICKER_H + 2;
 const CONTROL_X = 86;
 const CONTROL_W = 76;
 
 /**
  * The in-game pause button (top right, beside the speaker; Esc or P on a
- * keyboard) and the menu it opens: brightness, music and sound volume, time
- * of day, the FPS counter, graphics quality, and a way back to the home screen. Pausing freezes
+ * keyboard) and the menu it opens: the time of day (in arenas that have
+ * one), brightness, music and sound volume, the FPS counter, graphics quality, and a way back to the home screen. Pausing freezes
  * the world and the touch controls; the frozen world stays on screen, dimmed.
  *
  * The camera works in menu art pixels; the HUD button is drawn in device
@@ -36,10 +39,12 @@ export class PauseScene extends Phaser.Scene {
   private menu!: Phaser.GameObjects.Container;
   private shade!: Phaser.GameObjects.Rectangle;
   private panel!: Phaser.GameObjects.Image;
+  /** The panel without and with the time of day's row. */
+  private panelKeys: [string, string] = ['', ''];
   private title!: Phaser.GameObjects.BitmapText;
   private labels: Phaser.GameObjects.BitmapText[] = [];
   private controlsRow: (PixelSlider | PixelButton)[] = [];
-  private dayButton!: PixelButton;
+  private dayPicker!: DayPicker;
   private fpsButton!: PixelButton;
   private qualityButton!: PixelButton;
   private zoomButton!: PixelButton;
@@ -107,18 +112,14 @@ export class PauseScene extends Phaser.Scene {
   private buildMenu(): void {
     const v = settings.values;
     this.shade = this.add.rectangle(0, 0, 1, 1, 0x0b0818, 0.55).setOrigin(0);
-    this.panel = this.add.image(0, 0, panelTexture(this, 'pause', PANEL_W, PANEL_H, PANEL)).setOrigin(0);
+    // Taller with the time of day's row.
+    this.panelKeys = [panelTexture(this, 'pause', PANEL_W, PANEL_H, PANEL), panelTexture(this, 'pause_day', PANEL_W, PANEL_H + DAY_ROW, PANEL)];
+    this.panel = this.add.image(0, 0, this.panelKeys[0]).setOrigin(0);
     this.title = pixelText(this, 0, 0, 'Paused', 0xf4cf6a, 2);
 
     const slider = (color: number, value: number, key: 'brightness' | 'music' | 'sfx') =>
       new PixelSlider(this, CONTROL_W, value, color, (x) => settings.set(key, x));
-    this.dayButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => {
-      // Morning, Day, Sunset, Night, then Auto, and round again.
-      if (!daynight.enabled) return;
-      if (daynight.auto) daynight.set('morning');
-      else if (daynight.phase === 'night') daynight.setAuto(true);
-      else daynight.next();
-    });
+    this.dayPicker = new DayPicker(this);
     this.fpsButton = new PixelButton(this, '', CONTROL_W, 14, BUTTON_PLAIN, 'pause_toggle', () => {
       // Hidden, then Shown, then Details (the profiler), then Hidden again.
       const { showFps, profiler } = settings.values;
@@ -141,7 +142,6 @@ export class PauseScene extends Phaser.Scene {
       ['Brightness', slider(0xffe08a, v.brightness, 'brightness')],
       ['Music', slider(0x6fe4ff, v.music, 'music')],
       ['Sound FX', slider(0x9dffb0, v.sfx, 'sfx')],
-      ['Time of day', this.dayButton],
       ['FPS counter', this.fpsButton],
       ['Graphics', this.qualityButton],
       ['Zoom', this.zoomButton],
@@ -154,19 +154,20 @@ export class PauseScene extends Phaser.Scene {
     this.resume = new PixelButton(this, 'Resume', 72, 20, BUTTON_GOLD, 'resume', () => this.setOpen(false));
     this.home = new PixelButton(this, 'Home', 56, 20, BUTTON_PLAIN, 'home', () => this.goHome());
 
-    this.menu = this.add.container(0, 0, [this.shade, this.panel, this.title, ...this.labels, ...this.controlsRow, this.resume, this.home]);
+    this.menu = this.add.container(0, 0, [this.shade, this.panel, this.title, this.dayPicker, ...this.labels, ...this.controlsRow, this.resume, this.home]);
     this.menu.setVisible(false).setAlpha(0);
     this.syncToggles();
   }
 
-  update(): void {
-    // The day/night toggle also lives on the HUD and the N key, so keep the label current.
-    if (this.open) this.syncToggles();
+  update(_time: number, delta: number): void {
+    // The time of day also turns by itself and by the N key, so keep the picker current.
+    if (this.open) {
+      this.syncToggles();
+      this.dayPicker.update(delta);
+    }
   }
 
   private syncToggles(): void {
-    // Arenas without day and night keep their own light.
-    this.dayButton.setText(!daynight.enabled ? 'Fixed' : daynight.auto ? 'Auto' : { morning: 'Morning', day: 'Day', sunset: 'Sunset', night: 'Night' }[daynight.phase]);
     this.fpsButton.setText(!settings.values.showFps ? 'Hidden' : settings.values.profiler ? 'Details' : 'Shown');
     this.qualityButton.setText({ full: 'Full', fast: 'Fast', low: 'Low' }[settings.values.quality]);
     this.zoomButton.setText({ far: 'Far', normal: 'Normal', close: 'Close' }[settings.values.zoom]);
@@ -195,7 +196,8 @@ export class PauseScene extends Phaser.Scene {
       this.scene.resume(this.uiKey);
     }
     this.hud.setVisible(!open);
-    for (const b of [this.dayButton, this.fpsButton, this.qualityButton, this.zoomButton, this.shakeButton, this.minimapButton, this.resume, this.home]) b.setEnabled(open);
+    this.dayPicker.setEnabled(open && daynight.enabled);
+    for (const b of [this.fpsButton, this.qualityButton, this.zoomButton, this.shakeButton, this.minimapButton, this.resume, this.home]) b.setEnabled(open);
     this.tweens.killTweensOf(this.menu);
     if (open) this.menu.setVisible(true);
     this.tweens.add({ targets: this.menu, alpha: open ? 1 : 0, duration: 140, onComplete: () => this.menu.setVisible(open) });
@@ -224,7 +226,12 @@ export class PauseScene extends Phaser.Scene {
 
   private layout(): void {
     const { width, height } = this.scale;
+    // Arenas without day and night keep their own light: no picker, a shorter panel.
+    const day = daynight.enabled;
+    const ph = PANEL_H + (day ? DAY_ROW : 0);
     this.z = menuZoom(width, height);
+    // A short screen draws the menu a size smaller rather than cut its foot off.
+    while (this.z > 1 && height / this.z < ph + 4) this.z--;
     this.cameras.main.setZoom(this.z);
     const vw = width / this.z;
     const vh = height / this.z;
@@ -236,11 +243,12 @@ export class PauseScene extends Phaser.Scene {
     const top = Math.ceil(fpsBottom() / this.z) + 3;
     const px = Math.round((vw - PANEL_W) / 2);
     // Centred, below the FPS counter when there's room.
-    const py = Math.min(Math.max(top, Math.round((vh - PANEL_H) / 2)), Math.max(0, Math.floor(vh - PANEL_H - 2)));
-    this.panel.setPosition(px, py);
+    const py = Math.min(Math.max(top, Math.round((vh - ph) / 2)), Math.max(0, Math.floor(vh - ph - 2)));
+    this.panel.setTexture(this.panelKeys[day ? 1 : 0]).setPosition(px, py);
     this.title.setPosition(Math.round(px + (PANEL_W - this.title.width) / 2), py + 9);
+    this.dayPicker.setVisible(day).place(px + Math.round((PANEL_W - this.dayPicker.boxW) / 2), py + 27);
 
-    const rowsY = py + 34;
+    const rowsY = py + 34 + (day ? DAY_ROW : 0);
     this.labels.forEach((l, i) => {
       const c = this.controlsRow[i];
       const y = rowsY + i * ROW_H;
@@ -248,7 +256,7 @@ export class PauseScene extends Phaser.Scene {
       l.setPosition(px + 10, y + Math.round((ROW_H - 2 - l.height) / 2));
     });
 
-    const by = py + PANEL_H - 30;
+    const by = py + ph - 30;
     const gap = 8;
     const bx = Math.round(px + (PANEL_W - (this.home.boxW + gap + this.resume.boxW)) / 2);
     this.home.place(bx, by);

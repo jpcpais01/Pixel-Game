@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { sound } from '../audio';
 import { pixelCanvas } from '../art/canvas';
-import { INK, MAP_CELL, TREK_T, groundMapBase, mapIconSheet, reliefMap, stampCrowns, type MapBase } from '../art/mapArt';
+import { INK, MAP_CELL, RING_M, RING_MID, TREK_T, diskRow, groundMapBase, mapIconSheet, reliefMap, ringFrame, stampCrowns, type MapBase } from '../art/mapArt';
 import { DPR as D, menuZoom } from '../game/display';
 import { activeSeason } from '../game/season';
 import { settings } from '../game/settings';
@@ -19,11 +19,12 @@ import { TrekMap } from '../world/trekMap';
 import type { UIScene } from './UIScene';
 import type { WorldScene } from './WorldScene';
 
-// The map in the top-right corner of every arena, under the row of buttons:
-// the arena drawn small round the hero (see art/mapArt.ts), with the hero's
-// arrow, friends in their colours, monsters as red dots, bosses by their
-// rank, and the places worth finding (the keepers' halls, the fountain).
-// A tap folds it smaller, or opens it out again.
+// The round map in the top-left corner of every arena, in a framed rim: the
+// arena drawn small round the hero (see art/mapArt.ts), the hero's arrow in
+// the middle, friends in their colours, monsters as red dots, bosses by their
+// rank (one too far off waits on the rim, the way to it), and the places
+// worth finding (the keepers' halls, the fountain). A tap folds it smaller,
+// or opens it out again; the pause menu can switch it off.
 //
 // In the Everwood it is the explorer's map: the forest on parchment, drawn
 // only where the hero has walked (game/trek.ts), its places pinned as
@@ -31,12 +32,11 @@ import type { WorldScene } from './WorldScene';
 // drag to look round, zoom in and out, and tap a campfire rested at to
 // travel back to it.
 
-/** Size of the minimap against the screen's short side, and folded. */
-const MINI = 0.3;
+/** The minimap's width across against the screen's short side, and folded. */
+const MINI = 0.25;
 const FOLDED = 0.6;
-/** Widest the minimap gets, against its height, and against the screen's width. */
-const ASPECT = 1.45;
-const MAX_W = 0.32;
+/** Its frame's outside from the screen's top-left corner, device px (as the HUD's other corners). */
+const EDGE = 10;
 /** ms of painting an arena's map gets a frame, and the Everwood's tiles (more while its whole map is open). */
 const BUILD_MS = 3;
 const TILE_MS = 2.5;
@@ -129,7 +129,9 @@ export class MapScene extends Phaser.Scene {
   private ch = 0;
   private tex: Phaser.Textures.CanvasTexture | null = null;
   private img!: Img;
-  private frame!: Phaser.GameObjects.Graphics;
+  /** The rim round it, painted once a size (art/mapArt.ts ringFrame). */
+  private frame!: Img;
+  private frameTex: Phaser.Textures.CanvasTexture | null = null;
   private zone!: Phaser.GameObjects.Zone;
   private icons!: Icons;
   private drawn = '';
@@ -145,8 +147,10 @@ export class MapScene extends Phaser.Scene {
   /** The hero's last spot and the way they last walked, for the arrow. */
   private last = { x: NaN, y: NaN, dir: 4 };
   private regionT = 0;
-  /** Where the HUD's buttons begin below the minimap, last laid out for. */
-  private free = 0;
+  /** Each row of the minimap's disk: its first and last pixel. */
+  private spans: [number, number][] = [];
+  /** The left column's bottom, for the HUD (see leftBottom). */
+  private bottom = 0;
   /** The Everwood's places in the minimap's window, found again when it moves a chunk. */
   private pins: { icon: string; x: number; y: number; fire?: Fire }[] = [];
   private pinsKey = '';
@@ -181,8 +185,8 @@ export class MapScene extends Phaser.Scene {
     this.full = forest ? null : (arenaMaps.get(this.arena.id) ?? null);
     this.job = forest || this.full ? null : this.buildArena();
 
-    this.frame = this.add.graphics().setDepth(1);
     this.img = this.add.image(0, 0, '__DEFAULT').setOrigin(0).setDepth(2);
+    this.frame = this.add.image(0, 0, '__DEFAULT').setOrigin(0).setDepth(2.5);
     this.icons = new Icons(this, 3);
     this.zone = this.add.zone(0, 0, 1, 1).setOrigin(0).setInteractive({ useHandCursor: true });
     this.zone.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => this.fold(!this.folded));
@@ -227,7 +231,8 @@ export class MapScene extends Phaser.Scene {
       this.trekMap = null;
       this.job = null;
       if (this.tex) this.textures.remove(this.tex);
-      this.tex = null;
+      if (this.frameTex) this.textures.remove(this.frameTex);
+      this.tex = this.frameTex = null;
     });
   }
 
@@ -246,72 +251,53 @@ export class MapScene extends Phaser.Scene {
     this.layout();
   }
 
-  /** Where the minimap goes: the top-right corner under the buttons, clear of the hotbar below. */
+  /** How far down the screen's left side the minimap and the Everwood's scroll button reach, device px (0: nothing there): the HUD's buffs and stats stand below. */
+  get leftBottom(): number {
+    return this.bottom;
+  }
+
+  /** Where the minimap goes: a disk in its rim in the top-left corner, the Everwood's scroll button tucked by its lower right. */
   private layout(): void {
     const { width, height } = this.scale;
     const s = Math.round(Math.max(34 * D, Math.min(width, height) * 0.075));
-    const pad = 12 * D;
-    const top = pad + s + 10 * D;
-    const zoom = menuZoom(width, height);
-    this.px = Math.max(1, Math.round(zoom / 2));
-    const floor = (this.ui?.freeBelow ?? height * 0.55) - 8 * D;
-    let h = Math.min(Math.round(Math.min(width, height) * MINI), floor - top);
-    let w = Math.min(Math.round(h * ASPECT), Math.round(width * MAX_W));
-    if (this.folded) {
-      h = Math.round(h * FOLDED);
-      w = Math.round(w * FOLDED);
-    }
-    this.cw = Math.max(8, Math.floor(w / this.px));
-    this.ch = Math.max(8, Math.floor(h / this.px));
-    this.rect.setTo(width - pad - this.cw * this.px, top, this.cw * this.px, this.ch * this.px);
+    const p = (this.px = Math.max(1, Math.round(menuZoom(width, height) / 2)));
+    let d = Math.min(width, height) * MINI;
+    if (this.folded) d *= FOLDED;
+    // An even number of map pixels across, so the hero stands at the very middle.
+    const n = Math.max(16, Math.floor(d / p / 2) * 2);
+    this.cw = this.ch = n;
+    // The rim's inked outside (6 map pixels out) touches the corner's margin.
+    this.rect.setTo(EDGE * D + 6 * p, EDGE * D + 6 * p, n * p, n * p);
+    this.spans = Array.from({ length: n }, (_, j) => diskRow(n, j));
 
     if (this.tex) this.textures.remove(this.tex);
-    this.tex = this.textures.createCanvas(`minimap_${Date.now()}`, this.cw, this.ch);
-    this.img.setTexture(this.tex!.key).setPosition(this.rect.x, this.rect.y).setScale(this.px);
+    this.tex = this.textures.createCanvas(`minimap_${Date.now()}`, n, n);
+    this.img.setTexture(this.tex!.key).setPosition(this.rect.x, this.rect.y).setScale(p);
+    if (this.frameTex) this.textures.remove(this.frameTex);
+    const ring = ringFrame(n, !!this.trekMap);
+    this.frameTex = this.textures.addCanvas(`minimapring_${Date.now()}`, canvasOf(ring.px, ring.w, ring.w));
+    this.frame.setTexture(this.frameTex!.key).setPosition(this.rect.x - RING_M * p, this.rect.y - RING_M * p).setScale(p);
     this.drawn = '';
     const z = 4 * D;
     this.zone.setPosition(this.rect.x - z, this.rect.y - z).setSize(this.rect.width + z * 2, this.rect.height + z * 2);
     this.zone.input!.hitArea.setTo(0, 0, this.rect.width + z * 2, this.rect.height + z * 2);
-    this.drawFrame();
 
+    const on = settings.values.minimap;
+    let bottom = on ? this.rect.bottom + 6 * p : 0;
     if (this.mapButton) {
       const b = Math.round(s * 0.92);
-      if (settings.values.minimap) this.mapButton.r.setTo(this.rect.x - b - 8 * D, this.rect.bottom - b, b, b);
-      else this.mapButton.r.setTo(width - pad - b, top, b, b);
+      // Its top-left corner on a circle just outside the rim, at the lower right: the rest of it falls clear.
+      const out = (n / 2 + 6) * p + 4 * D;
+      if (on) this.mapButton.r.setTo(Math.round(this.rect.centerX + out * Math.SQRT1_2), Math.round(this.rect.centerY + out * Math.SQRT1_2), b, b);
+      else this.mapButton.r.setTo(EDGE * D, EDGE * D, b, b);
       const r = this.mapButton.r;
       this.mapButton.zone.setPosition(r.x - 5 * D, r.y - 5 * D).setSize(r.width + 10 * D, r.height + 10 * D);
       this.mapButton.zone.input!.hitArea.setTo(0, 0, r.width + 10 * D, r.height + 10 * D);
       this.drawMapButton();
+      bottom = Math.max(bottom, r.bottom);
     }
+    this.bottom = bottom;
     this.big?.layout();
-  }
-
-  /** The minimap's frame: a dark rim, a carved border (wood round the explorer's parchment, stone elsewhere) and a pin at each corner. */
-  private drawFrame(): void {
-    const g = this.frame.clear();
-    const r = this.rect;
-    const p = this.px;
-    const wood = !!this.trekMap;
-    const [lit, mid, dark] = wood ? [0xc89a5a, 0x8a6036, 0x4a2e18] : [0xb8bcd8, 0x6e7194, 0x34364e];
-    // A soft shadow under it.
-    g.fillStyle(0x000000, 0.28).fillRect(r.x - p * 2, r.y - p, r.width + p * 5, r.height + p * 5);
-    g.fillStyle(0x0b0a14, 1).fillRect(r.x - p * 4, r.y - p * 4, r.width + p * 8, r.height + p * 8);
-    g.fillStyle(mid, 1).fillRect(r.x - p * 3, r.y - p * 3, r.width + p * 6, r.height + p * 6);
-    g.fillStyle(lit, 1).fillRect(r.x - p * 3, r.y - p * 3, r.width + p * 6, p);
-    g.fillRect(r.x - p * 3, r.y - p * 3, p, r.height + p * 6);
-    g.fillStyle(dark, 1).fillRect(r.x - p * 3, r.bottom + p * 2, r.width + p * 6, p);
-    g.fillRect(r.right + p * 2, r.y - p * 3, p, r.height + p * 6);
-    g.fillStyle(0x0b0a14, 1).fillRect(r.x - p, r.y - p, r.width + p * 2, r.height + p * 2);
-    // Corner studs.
-    for (const [x, y] of [
-      [r.x - p * 4, r.y - p * 4],
-      [r.right + p, r.y - p * 4],
-      [r.x - p * 4, r.bottom + p],
-      [r.right + p, r.bottom + p],
-    ]) {
-      g.fillStyle(0x0b0a14, 1).fillRect(x, y, p * 3, p * 3);
-      g.fillStyle(wood ? 0xe8c070 : 0xdfe6ff, 1).fillRect(x + p, y + p, p, p);
-    }
   }
 
   /** The scroll button beside the Everwood's minimap, that opens the whole map. */
@@ -434,12 +420,6 @@ export class MapScene extends Phaser.Scene {
       this.hideMini();
       return;
     }
-    // The touch buttons and the mouse lay the HUD out differently: follow a switch.
-    const free = this.ui?.freeBelow ?? 0;
-    if (Math.abs(free - this.free) > 1) {
-      this.free = free;
-      this.layout();
-    }
     if (this.ui?.covered) {
       this.hideMini();
       return;
@@ -480,13 +460,9 @@ export class MapScene extends Phaser.Scene {
     const { cw, ch } = this;
     const hx = hero.x / MAP_CELL;
     const hy = (hero.y - 8) / MAP_CELL;
-    let x0 = Math.round(hx - cw / 2);
-    let y0 = Math.round(hy - ch / 2);
-    if (!tm && this.full) {
-      // An arena's map stays inside the arena, or sits in the middle when smaller than the window.
-      x0 = this.full.w <= cw ? Math.round((this.full.w - cw) / 2) : Phaser.Math.Clamp(x0, 0, this.full.w - cw);
-      y0 = this.full.h <= ch ? Math.round((this.full.h - ch) / 2) : Phaser.Math.Clamp(y0, 0, this.full.h - ch);
-    }
+    // The hero always at the middle; past an arena's edge is the dark round it.
+    const x0 = Math.round(hx - cw / 2);
+    const y0 = Math.round(hy - ch / 2);
     const key = `${x0},${y0},${tm ? `${tm.version}` : this.fullVersion}`;
     if (key !== this.drawn && this.tex) {
       this.drawn = key;
@@ -502,6 +478,11 @@ export class MapScene extends Phaser.Scene {
         const sh = Math.min(this.full.h, y0 + ch) - sy;
         if (sw > 0 && sh > 0) ctx.drawImage(this.full.canvas, sx, sy, sw, sh, sx - x0, sy - y0, sw, sh);
       }
+      // Round: what's outside the disk is cleared, under the rim.
+      this.spans.forEach(([a, b], j) => {
+        if (a > 0) ctx.clearRect(0, j, a, 1);
+        if (b < cw - 1) ctx.clearRect(b + 1, j, cw - b - 1, 1);
+      });
       this.tex.refresh();
     }
 
@@ -510,8 +491,15 @@ export class MapScene extends Phaser.Scene {
     const r = this.rect;
     const sx = (wx: number) => r.x + (wx / MAP_CELL - x0) * p;
     const sy = (wy: number) => r.y + (wy / MAP_CELL - y0) * p;
-    const inset = 2 * p;
-    const inside = (x: number, y: number) => x >= r.x + inset && x <= r.right - inset && y >= r.y + inset && y <= r.bottom - inset;
+    const cx = r.centerX;
+    const cy = r.centerY;
+    const rad = (cw / 2) * p;
+    const inside = (x: number, y: number) => Math.hypot(x - cx, y - cy) <= rad - 3 * p;
+    /** (x, y) pulled in toward the middle to `at` px from it, if it lies further out. */
+    const within = (x: number, y: number, at: number): [number, number] => {
+      const d = Math.hypot(x - cx, y - cy);
+      return d <= at ? [x, y] : [cx + ((x - cx) / d) * at, cy + ((y - cy) / d) * at];
+    };
     const icons = this.icons;
     icons.begin();
     if (tm) {
@@ -533,19 +521,17 @@ export class MapScene extends Phaser.Scene {
       for (const m of sp.monsters) {
         if (!m.alive) continue;
         const rank = m.stats.rank;
-        let x = sx(m.x);
-        let y = sy(m.y);
+        const x = sx(m.x);
+        const y = sy(m.y);
         if (rank) {
-          // A boss is never lost off the edge: it waits at the rim, the way to it.
-          x = Phaser.Math.Clamp(x, r.x + inset * 2, r.right - inset * 2);
-          y = Phaser.Math.Clamp(y, r.y + inset * 2, r.bottom - inset * 2);
-          icons.put(rank, x, y, p, 2);
+          // A boss is never lost off the edge: it waits on the rim, the way to it.
+          const [bx, by] = inside(x, y) ? [x, y] : within(x, y, rad + RING_MID * p);
+          icons.put(rank, bx, by, p, 2);
         } else if (inside(x, y) && mobs++ < MAX_MOBS) icons.put('mob', x, y, p, 1);
       }
     }
     for (const mate of this.world.mates) {
-      const x = Phaser.Math.Clamp(sx(mate.x), r.x + inset * 2, r.right - inset * 2);
-      const y = Phaser.Math.Clamp(sy(mate.y), r.y + inset * 2, r.bottom - inset * 2);
+      const [x, y] = within(sx(mate.x), sy(mate.y), rad - 4 * p);
       icons.put('mate', x, y, p, 3, mate.accent).setAlpha(mate.alive ? 1 : 0.5);
     }
     icons.put(`me${this.last.dir}`, sx(hero.x), sy(hero.y - 8), p, 4).setAlpha(this.world.heroDown ? 0.5 : 1);

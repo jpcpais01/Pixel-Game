@@ -341,6 +341,113 @@ export function mapIconSheet(): { w: number; h: number; px: Uint8ClampedArray; f
   return { w, h, px, frames };
 }
 
+// ---------------------------------------------------------------- the round minimap's frame
+
+/** Map pixels from the round minimap's edge to the frame's outside: inked edge, rim, inked edge, and a shadow. */
+export const RING_M = 8;
+/** The rim's middle, in map pixels out from the map's edge: where the studs, the north jewel and a boss far off sit. */
+export const RING_MID = 3;
+
+const RIMS: Record<'wood' | 'stone', { tones: RGB[]; ink: RGB; jewel: RGB[] }> = {
+  // Carved, oiled wood round the explorer's parchment, its jewel a red compass stone.
+  wood: { tones: ['#4a2e18', '#7a5030', '#a87642', '#d2a262', '#f0cc8a'].map(hex), ink: hex('#24140a'), jewel: ['#8a2418', '#e8452c', '#ffb090'].map(hex) },
+  // Silvered stone elsewhere, set with a sky-blue one.
+  stone: { tones: ['#3a3c56', '#646888', '#9498b8', '#c8cce4', '#f4f6ff'].map(hex), ink: hex('#0b0a14'), jewel: ['#2a6a98', '#6fd4ff', '#e0fbff'].map(hex) },
+};
+/** The gold studs at the four diagonals: rim, body, glint. */
+const STUD = ['#5a3a14', '#e0b050', '#fff0b0'].map(hex);
+
+/** Which pixels of row `j` lie in a disk `d` pixels across (pixel centres within it): [first, last]. */
+export function diskRow(d: number, j: number): [number, number] {
+  const r = d / 2;
+  const dy = j + 0.5 - r;
+  const h = Math.sqrt(Math.max(0, r * r - dy * dy));
+  return [Math.ceil(r - h - 0.5), Math.floor(r + h - 0.5)];
+}
+
+/**
+ * The round minimap's frame, for a map `d` map pixels across: a square of
+ * d + RING_M * 2 with the map's disk left clear. A raised rim, lit from the
+ * top left (each of its four rings of pixels faces a little further out, so
+ * the light rolls round it), inked inside and out, grained or speckled, with
+ * gold studs at the diagonals and a jewel at north; a soft shadow under it,
+ * and the rim's own shadow fallen just inside the map on the lit side, so the
+ * map sits down in it.
+ */
+export function ringFrame(d: number, wood: boolean): { w: number; px: Uint8ClampedArray } {
+  const S = d + RING_M * 2;
+  const px = new Uint8ClampedArray(S * S * 4);
+  const pal = RIMS[wood ? 'wood' : 'stone'];
+  const c = S / 2;
+  const R = d / 2;
+  // Toward the light, from the top left and above.
+  const lx = -0.6 * 0.7;
+  const ly = -0.8 * 0.7;
+  const lz = 0.71;
+  const studAt = [45, 135, 225, 315].map((a) => [c + Math.cos((a * Math.PI) / 180) * (R + RING_MID), c + Math.sin((a * Math.PI) / 180) * (R + RING_MID)]);
+  const jx = c;
+  const jy = c - R - RING_MID;
+  const put = (x: number, y: number, col: RGB, a = 1) => {
+    const o = (y * S + x) * 4;
+    px[o] = col[0];
+    px[o + 1] = col[1];
+    px[o + 2] = col[2];
+    px[o + 3] = Math.round(a * 255);
+  };
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const fx = x + 0.5 - c;
+      const fy = y + 0.5 - c;
+      const r = Math.hypot(fx, fy) || 1;
+      const nx = fx / r;
+      const ny = fy / r;
+      const k = r - R;
+      // The north jewel: a diamond set in the rim, inked round, lit on its upper left.
+      const dx = x + 0.5 - jx;
+      const dy = y + 0.5 - jy;
+      const m = Math.abs(dx) + Math.abs(dy);
+      if (m <= 2.6) {
+        if (m > 1.6) put(x, y, pal.ink);
+        else put(x, y, dy < -0.4 && dx <= 0.6 ? pal.jewel[2] : dy > 0.4 || dx > 0.6 ? pal.jewel[0] : pal.jewel[1]);
+        continue;
+      }
+      // A stud: a gold boss with a dark rim and a glint.
+      const stud = studAt.find(([sx, sy]) => Math.hypot(x + 0.5 - sx, y + 0.5 - sy) <= 1.75);
+      if (stud) {
+        const sx = x + 0.5 - stud[0];
+        const sy = y + 0.5 - stud[1];
+        const sr = Math.hypot(sx, sy);
+        put(x, y, sr > 1.05 ? STUD[0] : sx < 0 && sy < 0 ? STUD[2] : STUD[1]);
+        continue;
+      }
+      if (k <= 0) {
+        // Inside: the rim's shadow on the map, deepest on the lit side.
+        if (k > -2) {
+          const lit = Math.max(0, -(nx * 0.6 + ny * 0.8));
+          put(x, y, pal.ink, (k > -1 ? 0.34 : 0.14) * (0.35 + 0.65 * lit));
+        }
+      } else if (k <= 1 || (k > 5 && k <= 6)) put(x, y, pal.ink);
+      else if (k <= 5) {
+        // The rim: four rings of pixels, from facing in to facing out.
+        const b = Math.min(3, Math.floor(k - 1));
+        const f = [-0.85, -0.3, 0.3, 0.85][b];
+        const v = f * (nx * lx + ny * ly) + Math.sqrt(1 - f * f) * lz;
+        let t = v > 0.9 ? 4 : v > 0.74 ? 3 : v > 0.5 ? 2 : v > 0.2 ? 1 : 0;
+        // Wood grain runs round the rim; stone is speckled.
+        const ang = Math.round(((Math.atan2(fy, fx) + Math.PI) / (Math.PI * 2)) * (wood ? 40 : 90));
+        if (t > 0 && hash2(wood ? ang : x, wood ? b : y, 41) < (wood ? 0.22 : 0.1)) t--;
+        put(x, y, pal.tones[t]);
+      } else {
+        // A soft shadow below and to the right.
+        const sk = Math.hypot(fx - 1, fy - 2) - R;
+        if (sk <= 6) put(x, y, [0, 0, 0], 0.32);
+        else if (sk <= 7) put(x, y, [0, 0, 0], 0.12);
+      }
+    }
+  }
+  return { w: S, px };
+}
+
 // ---------------------------------------------------------------- an arena's minimap
 
 /** The colour the ground engine would give open ground at (x, y), flat and in plain light. */
