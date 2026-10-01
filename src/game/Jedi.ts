@@ -90,6 +90,8 @@ export class Jedi implements Hero {
   /** The blade's light on the ground around him, following it. */
   private bladeLight: Phaser.GameObjects.Light;
   private state: State = 'free';
+  /** The saber is out flying (Saber Cyclone): empty-handed, he can't swing or push until it's back. */
+  private saberAway = false;
   private lastMove = new Phaser.Math.Vector2(0, 1);
   /** Towards the mouse on a computer (see Hero). */
   private aim: Aim | null = null;
@@ -162,8 +164,10 @@ export class Jedi implements Hero {
     const pressed = attack && !this.prevAttack;
     this.prevAttack = attack;
     if (pressed && this.state === 'swing') this.buffered = true;
+    // Taps while the saber is away are dropped, not saved up for its return.
+    if (this.saberAway) this.buffered = false;
 
-    if (this.state === 'free' && this.cooldown === 0) {
+    if (this.state === 'free' && this.cooldown === 0 && !this.saberAway) {
       if (special && this.specialCd === 0) this.startPush();
       else if (attack || this.buffered) this.startSwing();
     }
@@ -183,7 +187,10 @@ export class Jedi implements Hero {
       // Fighting faces the aim, even walking backwards; otherwise the way of the walk.
       if (this.aim?.look) this.dir = dirOf(this.aim.x, this.aim.y);
       else if (moving) this.dir = dirOf(mx, my);
-      const key = moving ? `${this.style.key}_walk_${this.dir}` : stand(this.body, `${this.style.key}_idle_${this.dir}`);
+      const k = this.style.key;
+      const key = this.saberAway
+        ? `${k}_${moving ? 'walk' : 'idle'}_bare_${this.dir}`
+        : moving ? `${k}_walk_${this.dir}` : stand(this.body, `${k}_idle_${this.dir}`);
       if (this.body.anims.currentAnim?.key !== key) this.body.play(key, true);
     } else {
       const f = this.body.anims.currentFrame;
@@ -304,6 +311,13 @@ export class Jedi implements Hero {
     const bx = m ? (m.tipX + m.handX) / 2 - JEDI_ORIGIN_X : 0;
     const by = m ? (m.tipY + m.handY) / 2 - JEDI_ORIGIN_Y : -14;
     this.bladeLight.setPosition(rx + bx, ry + by);
-    this.bladeLight.intensity = 0.35 + 0.75 * (1 - this.daylight);
+    // With the saber away it's the Special's own light that shines; his hand holds only a faint glow.
+    this.bladeLight.intensity = this.saberAway ? 0 : 0.35 + 0.75 * (1 - this.daylight);
+  }
+
+  holdSaber(away: boolean): void {
+    this.saberAway = away;
+    this.buffered = false;
+    if (!away && this.body.scene) sound.ignite();
   }
 }
