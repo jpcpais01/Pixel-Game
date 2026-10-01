@@ -523,7 +523,6 @@ export class WhiteStag {
     if (laid) return this.gen.walkable(x, y);
     if (this.gen.cliffAt(x, y)) return false;
     const s = this.gen.sample(x, y);
-    if (s.roof > -12) return false;
     const water = Math.max(s.stream, s.pond);
     return !(water > -1 && s.trail > 0.5 && !(s.ford > 0.5 && s.stream >= s.pond));
   }
@@ -534,12 +533,12 @@ export class WhiteStag {
     for (let k = 0; k < 8; k++) {
       const a = (k / 8) * Math.PI * 2;
       const s = this.gen.hasFields(Math.floor((x + Math.cos(a) * r) / CHUNK), Math.floor((y + Math.sin(a) * r) / CHUNK)) ? this.gen.sample(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.8) : null;
-      if (!s || s.roof > -6 || Math.max(s.stream, s.pond) > -4) return false;
+      if (!s || s.grove > -6 || Math.max(s.stream, s.pond) > -4) return false;
     }
     // On one terrace, clear of its cliffs.
     if (this.gen.edgeAt(x, y, r)) return false;
     const s = this.gen.sample(x, y);
-    if (s.roof > -14 || Math.max(s.stream, s.pond) > -10 || s.trail < 0) return false;
+    if (s.grove > -14 || Math.max(s.stream, s.pond) > -10 || s.trail < 0) return false;
     if (this.gen.poisNear(x, y).some((p) => Math.hypot(p.x - x, p.y - y) < p.r + r + 40)) return false;
     return !this.secrets.some((q) => Math.hypot(q.x - x, q.y - y) < 260);
   }

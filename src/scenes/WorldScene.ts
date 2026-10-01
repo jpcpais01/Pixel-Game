@@ -925,6 +925,12 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** A companion mends the hero by `share` of their health, if they are hurt and up; returns the health restored. */
+  /** Energy for the Special from something in the world (a will-o'-wisp caught): motes fly in to the hero, as from a slain foe. */
+  chargeSpecial(x: number, y: number, amount: number): void {
+    if (this.downT > 0) return;
+    this.addEffect(new EnergyMotes(this, x, y, this.hero, amount * petMods.energy * omenMods.energy, this.ult.ult.pal));
+  }
+
   mendHero(share: number): number {
     const v = this.hero.vitals;
     if (this.downT > 0 || v.hp >= v.max) return 0;

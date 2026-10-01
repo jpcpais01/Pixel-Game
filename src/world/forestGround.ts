@@ -1,19 +1,20 @@
 // The Everwood's ground, painted a tile at a time by the ground engine
 // (art/ground.ts): a tile is a GroundSpec of one chunk's width, placed at its
 // column's world x, built one strip of rows at a time. Everything it paints
-// comes from the forest's fields (world/forestGen.ts): the thickets' roof of
-// leaves (coloured by the wood it grows in), streams and ponds with their
-// banks, lily pads and fords, trails and the plank bridges that carry them
-// over the water, the floor of each kind of wood, the places' floors, and
-// the litter, needles or petals at every tree's foot; and the land's
-// terraces: rock faces in strata with grass hanging over their lips, stairs
-// where the trails climb them, slopes, water pouring over them, rubble and
-// plunge pools at their feet, and the shadows they cast.
+// comes from the forest's fields (world/forestGen.ts): streams and ponds
+// with their banks, lily pads and fords, trails and the plank bridges that
+// carry them over the water, the floor of each kind of wood (moss and
+// litter under its groves), the places' floors (a glade's wildflowers, a
+// bog's peat and pools, a camp's firepit...), and the litter, needles or
+// petals at every tree's foot; and the land's terraces: rock faces in
+// strata with grass hanging over their lips, stairs where the trails climb
+// them, slopes where streams wear them down, rubble at their feet, and the
+// shadows they cast.
 
 import { DAY_GROUND, NIGHT_GROUND, hash2, rng, valueNoise } from '../art/env';
 import { K, STRIP_H, flagstone, nightify, ramp, stone, type Cell, type GroundSpec, type Look, type StripFields } from '../art/ground';
 import type { RGB } from '../art/pixel';
-import { BIOMES, CHUNK, FOREST_WORLD, WOOD_SHAPE, type BiomeId, type ForestGen, type FTree, type Here, type Poi, type Terrain } from './forestGen';
+import { BIOMES, CHUNK, FIREPIT, FOREST_WORLD, WOOD_SHAPE, wildPieces, type BiomeId, type ForestGen, type FTree, type Here, type Poi, type Terrain } from './forestGen';
 
 const smooth = (a: number, b: number, v: number): number => {
   const t = v <= a ? 0 : v >= b ? 1 : (v - a) / (b - a);
@@ -40,18 +41,8 @@ export const FOREST_DAY: Look = {
   litter: ramp('#3a2718', '#58391f', '#7a5024', '#9c6c2c', '#bf8e3c', '#93402a'),
   path: ramp('#3e2e22', '#55402d', '#6e553a', '#876c4a', '#a1865d', '#baa072', '#cfb788'),
   bark: ramp('#1f140e', '#352318', '#4f3524', '#6b4a32'),
-  roof: [
-    // Oak green, birch's yellow green, pine's blue green, autumn gold, Sakura pink, the hollow's deep teal.
-    ramp('#0d2419', '#133220', '#1b4328', '#255630', '#336b38', '#468241', '#5f9a4b', '#80b35a'),
-    ramp('#1a3319', '#26461f', '#355d25', '#46742c', '#5c8c35', '#77a53f', '#96be4f', '#b8d466'),
-    ramp('#081c1b', '#0c2724', '#11332d', '#184237', '#205142', '#2b634d', '#3a7658', '#4d8a62'),
-    ramp('#3a0e0a', '#5a160c', '#7e240e', '#a23612', '#c44e16', '#dc6c1e', '#ee922e', '#f8b848'),
-    ramp('#3b1a33', '#5a2642', '#7c3552', '#a04a66', '#c0637c', '#d98396', '#eba6b4', '#f8c8d2'),
-    ramp('#07161a', '#0b2124', '#102c2c', '#173a35', '#1f4a3e', '#2a5b48', '#386e52', '#4a825e'),
-    // The autumn wood's other crowns: gold and crimson among the orange.
-    ramp('#3a2408', '#5a360a', '#7c4e0e', '#a06a12', '#c48a1a', '#dcaa28', '#eec63e', '#f8e070'),
-    ramp('#300a14', '#4a0e1a', '#681420', '#8a1c26', '#ac2a2e', '#c8423a', '#e0644a', '#f08c62'),
-  ],
+  // The Everwood has no roof of treetops (its groves are real trees), so no roof colours.
+  roof: [],
   bloom: ramp('#7d8cf0', '#eef3ff', '#f4e27c', '#f0a0cf', '#a6d8ff'),
   shroom: [200, 255, 240],
   stem: [232, 226, 204],
@@ -144,17 +135,8 @@ export function forestTile(gen: ForestGen, col: number, row: number, ver = 0): G
     ox,
     night: FOREST_NIGHT,
     day: FOREST_DAY,
-    roofDepth: (x, y) => gen.sample(x, y).roof,
-    roofSpecies: (x, y) => {
-      const b = BIOMES[gen.biomeAt(x, y)];
-      // Now and then a crown of another colour in the mass.
-      const odd = hash2(Math.floor(x / 17), Math.floor(y / 17), 611 + gen.seed);
-      if (odd > 0.93 && b.roof === 0) return 1;
-      if (odd > 0.96 && b.roof === 1) return 0;
-      // The autumn wood is every colour a maple turns.
-      if (b.roof === 3) return odd < 0.3 ? 6 : odd < 0.55 ? 7 : 3;
-      return b.roof;
-    },
+    // Never above 0, so no roof of treetops is painted; the floor darkens to moss and litter under a grove (`wall`).
+    roofDepth: (x, y) => Math.min(-0.01, gen.sample(x, y).grove),
     floor: (x, y, wall, c) => {
       if (!own) return floor(gen, pois, x, y, wall, c);
       const t = landFloor(gen, pois, x, y, wall, c);
@@ -492,14 +474,14 @@ function floor(gen: ForestGen, pois: Poi[], wx: number, wy: number, wall: number
 
   // The places' own floors.
   for (const p of pois) {
-    if (placeFloor(p, wx, wy, c)) return;
+    if (placeFloor(gen, p, wx, wy, c)) return;
   }
 
   woodFloor(gen, wx, wy, wall, c);
 }
 
 /** A place's floor under (x, y), if it has one there. */
-function placeFloor(p: Poi, wx: number, wy: number, c: Cell): boolean {
+function placeFloor(gen: ForestGen, p: Poi, wx: number, wy: number, c: Cell): boolean {
   const dx = wx + 0.5 - p.x;
   const dy = (wy + 0.5 - p.y) * 1.25;
   const d = Math.hypot(dx, dy);
@@ -589,6 +571,125 @@ function placeFloor(p: Poi, wx: number, wy: number, c: Cell): boolean {
       c.tone = c.kind === K.Stone ? (stone.t - 0.5) * 0.8 + 0.2 : hash2(wx, wy, 725) > 0.5 ? 2 : 1;
       return true;
     }
+    case 'glade': {
+      // A sunny lawn thick with wildflowers in drifts, each drift mostly one colour, thinning to the rim.
+      if (d > 58 + wob) return false;
+      const thin = smooth(28, 58, d);
+      const gx = Math.floor(wx / 5);
+      const gy = Math.floor(wy / 5);
+      if (hash2(gx, gy, 1305) > 0.32 + thin * 0.55) {
+        const fx = (gx + 0.5) * 5 + (hash2(gx, gy, 1301) - 0.5) * 2.4;
+        const fy = (gy + 0.5) * 5 + (hash2(gx, gy, 1303) - 0.5) * 2.4;
+        if (Math.hypot(wx + 0.5 - fx, wy + 0.5 - fy) < 1.3 + hash2(wx, wy, 1307) * 0.9 && hash2(wx, wy, 1311) > 0.3) {
+          const hue = Math.floor(valueNoise(wx, wy, 26, 1309) * 9);
+          c.kind = K.Flower;
+          c.sub = hue >= 4 ? 1 : 0;
+          c.height = 0.9;
+          c.tone = hue % 5;
+          return true;
+        }
+      }
+      c.kind = K.Grass;
+      c.height = valueNoise(wx, wy, 4, 1313) * 0.3 + valueNoise(wx, wy, 10, 1315) * 0.25;
+      c.tone = (valueNoise(wx, wy, 14, 1317) - 0.5) * 1.6 + 1.9 - thin * 1.2;
+      return true;
+    }
+    case 'bog': {
+      if (d > 62 + wob) return false;
+      // Its pools: black peat water, pale at the shallow edge, a lily pad or two; a bank of wet moss and mud round each.
+      for (const o of wildPieces(p, gen).main) {
+        const u = Math.hypot((wx + 0.5 - o.x) / o.rx, (wy + 0.5 - o.y) / o.ry) + (valueNoise(wx, wy, 5, 1319) - 0.5) * 0.14;
+        if (u < 1) {
+          const gx = Math.floor(wx / 6);
+          const gy = Math.floor(wy / 6);
+          const px = (gx + 0.5) * 6;
+          const py = (gy + 0.5) * 6;
+          const pad = u < 0.75 && hash2(gx, gy, 1321) > 0.72 && Math.hypot(wx + 0.5 - px, (wy + 0.5 - py) * 1.35) < 1.9;
+          if (pad) {
+            c.kind = K.Pad;
+            c.height = 0.6;
+            c.tone = (hash2(gx, gy, 1323) - 0.5) * 0.8;
+            return true;
+          }
+          c.kind = K.Water;
+          c.height = 0;
+          c.tone = (u > 0.86 ? -0.9 : -1.8 - (1 - u) * 1.4) + (hash2(wx, wy, 1325) > 0.97 ? 1.6 : 0);
+          return true;
+        }
+        if (u < 1.3) {
+          const mud = hash2(wx, wy, 1327) > 0.45;
+          c.kind = mud ? K.Dirt : K.Moss;
+          c.height = mud ? 0.1 : 0.3;
+          c.tone = mud ? -1.4 + hash2(wx, wy, 1329) * 0.6 : -1;
+          return true;
+        }
+      }
+      // Between them: dark peat, tussocks of moss and sedge.
+      if (d > 52 + wob && hash2(wx >> 1, wy >> 1, 1331) > (62 + wob - d) / 10) return false;
+      const tussock = valueNoise(wx, wy, 6, 1333) + (valueNoise(wx, wy, 2, 1335) - 0.5) * 0.3;
+      if (tussock > 0.5) {
+        c.kind = K.Moss;
+        c.height = 0.3 + (tussock - 0.5) * 1.6;
+        c.tone = (tussock - 0.5) * 4 - 0.9;
+        return true;
+      }
+      if (tussock < 0.3 && hash2(wx, wy, 1337) > 0.8) {
+        c.kind = K.Twig;
+        c.height = 0.6;
+        return true;
+      }
+      c.kind = K.Dirt;
+      c.height = valueNoise(wx, wy, 3, 1339) * 0.15;
+      c.tone = -1.7 + valueNoise(wx, wy, 8, 1341) * 0.9;
+      return true;
+    }
+    case 'glowcaps': {
+      // A deep moss carpet, rings of fallen spores showing in it.
+      if (d > 52 + wob) return false;
+      c.kind = hash2(wx, wy, 1343) > 0.93 ? K.Litter : K.Moss;
+      c.height = valueNoise(wx, wy, 3, 1345) * 0.45;
+      c.tone = c.kind === K.Litter ? Math.floor(hash2(wx, wy, 1347) * 2) : (valueNoise(wx, wy, 7, 1349) - 0.5) * 1.4 - 0.5 + (Math.abs(d - 20) < 1.2 ? 0.8 : 0);
+      return true;
+    }
+    case 'brambles': {
+      // Dry, trodden ground between the bushes, the odd fallen berry.
+      if (d > 40 + wob) return false;
+      if (d > 30 + wob && hash2(wx, wy, 1351) > 0.5) return false;
+      if (hash2(wx, wy, 1353) > 0.985) {
+        c.kind = K.Flower;
+        c.sub = 0;
+        c.height = 0.7;
+        c.tone = 2;
+        return true;
+      }
+      const bare = valueNoise(wx, wy, 5, 1355) > 0.55;
+      c.kind = bare ? K.Dirt : K.Grass;
+      c.height = bare ? 0.15 : 0.3;
+      c.tone = bare ? (hash2(wx, wy, 1357) - 0.5) * 1.2 : -0.6 + (valueNoise(wx, wy, 9, 1359) - 0.5);
+      return true;
+    }
+    case 'camp': {
+      // Trodden earth, and before the lean-to a ring of blackened stones round cold ash.
+      if (d > 42 + wob * 0.5) return false;
+      const fd = Math.hypot(wx + 0.5 - p.x - FIREPIT.x, (wy + 0.5 - p.y - FIREPIT.y) * 1.3);
+      if (fd < FIREPIT.r + 2) {
+        const ring = fd > FIREPIT.r - 1.2;
+        c.kind = ring ? K.Stone : K.Dirt;
+        c.height = ring ? 0.9 : 0.05;
+        c.tone = ring ? (hash2(Math.floor(Math.atan2(wy - p.y, wx - p.x) * 3), 1, 1361) - 0.5) * 0.8 - 0.6 : -2 + hash2(wx, wy, 1363) * 0.7 + (hash2(wx, wy, 1365) > 0.9 ? 1.2 : 0);
+        return true;
+      }
+      if (d > 32 + wob * 0.5 && hash2(wx, wy, 1367) > 0.45) return false;
+      if (hash2(wx, wy, 1369) > 0.975) {
+        c.kind = K.Twig;
+        c.height = 0.7;
+        return true;
+      }
+      c.kind = K.Dirt;
+      c.height = valueNoise(wx, wy, 3, 1371) * 0.2;
+      c.tone = (valueNoise(wx, wy, 5, 1373) - 0.5) * 1.1 - 0.2;
+      return true;
+    }
     case 'chest': {
       if (d > 10 + wob * 0.2) return false;
       const pebble = hash2(wx, wy, 709) > 0.8;
@@ -605,7 +706,7 @@ function placeFloor(p: Poi, wx: number, wy: number, c: Cell): boolean {
 /** The floor of whichever wood (x, y) is in. */
 function woodFloor(gen: ForestGen, wx: number, wy: number, wall: number, c: Cell): void {
   const biome = BIOMES[gen.biomeAt(wx, wy)].id;
-  // Toward a thicket the open floor gives way to the forest's own: moss and litter, needles or petals.
+  // Into a grove the open floor gives way to the forest's own: moss and litter, needles or petals.
   const shade = smooth(-70, -16, wall);
   const under = shade > 0.5 + (valueNoise(wx, wy, 9, 713) - 0.5) * 0.9;
   const grass = (lift: number) => {
@@ -705,7 +806,7 @@ function woodFloor(gen: ForestGen, wx: number, wy: number, wall: number, c: Cell
 
 /**
  * Drawn over the finished fields: litter, needles or petals at each tree's
- * foot, glowing specks in the hollows' moss, fairy rings, and the runes of
+ * foot, glowing specks in the hollows' moss and the glowcap groves, fairy rings, and the runes of
  * shrines and standing stones (which glow by night).
  */
 function decorate(gen: ForestGen, s: StripFields, trees: FTree[], pois: Poi[]): boolean {
@@ -800,6 +901,21 @@ function decorate(gen: ForestGen, s: StripFields, trees: FTree[], pois: Poi[]): 
           height[i] = part ? 0.9 : 1.2;
           if (!part) glow(x + dx, y + dy, hash2(x, y, 815) > 0.5 ? GLOW_FAIRY : GLOW_TEAL, 0.7);
         }
+      }
+    } else if (p.kind === 'glowcaps') {
+      // Tiny glowing caps scattered through the moss, thickest toward the great one.
+      const R2 = rng(Math.floor(p.x * 7 + p.y));
+      for (let k = 0; k < 70; k++) {
+        const a = R2() * Math.PI * 2;
+        const d = 10 + R2() ** 0.7 * 34;
+        const x = Math.round(p.x + Math.cos(a) * d);
+        const y = Math.round(p.y + Math.sin(a) * d * 0.8);
+        if (!inside(x, y) || kind[at(x, y)] !== K.Moss) continue;
+        const i = at(x, y);
+        kind[i] = K.Shroom;
+        sub[i] = 0;
+        height[i] = 1;
+        glow(x, y, R2() < 0.6 ? GLOW_TEAL : GLOW_FAIRY, 0.5 + R2() * 0.35);
       }
     } else if (p.kind === 'stones' || p.kind === 'shrine') {
       // A faint circle of runes inside the ring.

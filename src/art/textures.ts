@@ -138,7 +138,7 @@ import {
 import { FLAME_FRAMES, FLAME_H, FLAME_W, GRAVE_H, GRAVE_KINDS, GRAVE_W, WISP_PX, echoBuffIcon, graveStone, soulFlame, soulWisp } from './echoes';
 import { ELDER_H, ELDER_W, PROP_FRAMES, PROP_H, PROP_W, RAY_H, RAY_W, TREE_FRAMES, TREE_H, TREE_SWAY_FPS, TREE_SWAY_FRAMES, TREE_VARIANTS, TREE_W, cherryTree, elderTree, leafBit, mapleTree, rayCanvas, treeFrame, willowTree } from './trees';
 import { BIRD_ANIMS, BIRD_H, BIRD_LOOKS, BIRD_W, DEER_ANIMS, DEER_H, DEER_LOOKS, DEER_W, FOX_ANIMS, FOX_H, FOX_W, GUST_FRAMES, GUST_H, GUST_W, OWL_ANIMS, OWL_H, OWL_W, birdFrames, deerFrames, foxFrames, gustFrame, owlFrames } from './wildlife';
-import { CAMPFIRE, CHEST_H, CHEST_W, FPROP_BENDS, FPROP_FRAMES, FPROP_H, FPROP_W, LOOKOUT_H, LOOKOUT_W, MENHIR_H, MENHIR_LOOKS, MENHIR_W, SHRINE_FRAMES, SHRINE_H as FSHRINE_H, SHRINE_W as FSHRINE_W, chestArt, lookoutArt, menhirArt, shrineArt } from './forest';
+import { CAMPFIRE, CHEST_H, CHEST_W, FPROP_BENDS, FPROP_FRAMES, FPROP_H, FPROP_W, GREATCAP_H, GREATCAP_W, HUNT_H, HUNT_W, LOOKOUT_H, LOOKOUT_W, MENHIR_H, MENHIR_LOOKS, MENHIR_W, SHRINE_FRAMES, SHRINE_H as FSHRINE_H, SHRINE_W as FSHRINE_W, chestArt, greatCapArt, leanToArt, lookoutArt, menhirArt, moonBuffIcon, rackArt, shrineArt, sporeBuffIcon, sunBuffIcon } from './forest';
 import { ALTAR_H, ALTAR_W, GROVE_FRAMES, GROVE_H, GROVE_W, HOLLOW_FRAMES, HOLLOW_H, HOLLOW_W, PRINT_H, PRINT_W, SPRING_FRAMES, SPRING_H, SPRING_W, STAG_ANIMS, STAG_H, STAG_W, altarArt, groveFrame, hollowArt, hoofprint, springArt, stagBuffIcon, stagFrames } from './stag';
 import { STRIP_H, buildStrip } from './ground';
 import { FZ_FLAKE, FZ_ICICLE_H, FZ_ICICLE_W, FZ_LANE_H, FZ_LANE_W, FZ_MIST_H, FZ_MIST_W, FZ_PATCH_FRAMES, FZ_PATCH_H, FZ_PATCH_W, FZ_RING_H, FZ_RING_W, FZ_SHARD_H, FZ_SHARD_W, FZ_SNOWBALL, FZ_SPIKE_H, FZ_SPIKE_W, frostFlake, frostIcicle, frostLaneArt, frostMist, frostPatch, frostRing, frostShard, frostSnowball, frostSpike } from './frostFx';
@@ -1033,6 +1033,12 @@ function* forestTextures(scene: Phaser.Scene): Generator<void, void, void> {
   register(scene, 'menhir', pack(frameList(Array.from({ length: MENHIR_LOOKS }, (_, v) => menhirArt(v)), 'm'), MENHIR_W, MENHIR_H), MENHIR_W, MENHIR_H);
   // The lookouts' parapet.
   register(scene, 'flook', pack([{ name: 'l0', r: lookoutArt().render() }], LOOKOUT_W, LOOKOUT_H, 1), LOOKOUT_W, LOOKOUT_H);
+  // The wild places: the glowcap grove's great cap, the hunter's lean-to and drying rack, and the blessings they give.
+  register(scene, 'fgreatcap', pack([{ name: 'g0', r: greatCapArt(false).render() }, { name: 'spent', r: greatCapArt(true).render() }], GREATCAP_W, GREATCAP_H, 2), GREATCAP_W, GREATCAP_H);
+  register(scene, 'fhunt', pack([{ name: 'lean', r: leanToArt().render() }, { name: 'rack', r: rackArt().render() }], HUNT_W, HUNT_H, 2), HUNT_W, HUNT_H);
+  scene.textures.addCanvas('buff_sun', toCanvas(16, 16, sunBuffIcon()));
+  scene.textures.addCanvas('buff_moon', toCanvas(16, 16, moonBuffIcon()));
+  scene.textures.addCanvas('buff_spore', toCanvas(16, 16, sporeBuffIcon()));
   register(scene, 'fcamp', pack(frameList(Array.from({ length: CAMPFIRE.frames }, (_, f) => CAMPFIRE.draw(f)), 'c'), CAMPFIRE.w, CAMPFIRE.h), CAMPFIRE.w, CAMPFIRE.h);
   for (const layer of ['fcamp', 'fcamp_e']) {
     scene.anims.create({ key: `${layer}_burn`, frames: scene.anims.generateFrameNames(layer, { prefix: 'c', start: 0, end: CAMPFIRE.frames - 1 }), frameRate: CAMPFIRE.fps, repeat: -1 });

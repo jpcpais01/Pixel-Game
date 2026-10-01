@@ -615,3 +615,417 @@ export function lookoutArt(): PixelCanvas {
   for (let x = x0; x <= x1; x += 3 + Math.floor(R() * 3)) tuft(c, x, foot(x) + 1, R, 2 + Math.floor(R() * 3), 3);
   return c;
 }
+
+// ------------------------------------------------------------ the wild places
+
+/** The great glowcap at the heart of a glowcap grove: 56 x 64, standing on (28, GREATCAP_BASE_Y). */
+export const GREATCAP_W = 56;
+export const GREATCAP_H = 64;
+export const GREATCAP_BASE_Y = 60;
+
+const GREAT_CAP: Material = { ramp: ramp('#0a3034', '#11484a', '#196662', '#24887e', '#3aaa9a', '#62cab4', '#a0e6d2', '#e0fff4'), outline: hex('#041416'), outlineLit: hex('#11484a'), emissive: 0.45 };
+const GREAT_CAP_DIM: Material = { ...GREAT_CAP, emissive: 0.12 };
+const GILL_GLOW: Material = { ramp: ramp('#1a5a5a', '#2c8a84', '#58c4b4', '#a8f4e4'), outline: hex('#061a1a'), noOutline: true, emissive: 0.9, noAO: true };
+const GILL_DIM: Material = { ...GILL_GLOW, emissive: 0.2 };
+const SPOTS_DIM: Material = { ...SPOTS, emissive: 0.25 };
+const ROOT: Material = { ramp: ramp('#3e3830', '#5a5244', '#7a705c', '#9c9078', '#bcb096'), outline: hex('#16120e') };
+
+/**
+ * The great glowcap: a giant of a mushroom, its stalk flaring into roots
+ * that grip the moss, a ragged skirt halfway up, and a broad cap whose rim
+ * droops, sea-glass teal with pale spots, its gills glowing beneath. Two
+ * young ones crowd its foot. Once its spores are taken (`spent`) its glow
+ * is low until the next visit.
+ */
+export function greatCapArt(spent: boolean): PixelCanvas {
+  const c = new PixelCanvas(GREATCAP_W, GREATCAP_H);
+  const R = rng(9901);
+  const by = GREATCAP_BASE_Y;
+  const cx = 28;
+  const cap = spent ? GREAT_CAP_DIM : GREAT_CAP;
+  const gill = spent ? GILL_DIM : GILL_GLOW;
+  const spots = spent ? SPOTS_DIM : SPOTS;
+  const stalkH = 30;
+  // The stalk: thick, leaning a touch, flaring at the foot.
+  const lean = (u: number) => cx + 1.5 * (1 - u) * (1 - u);
+  c.part();
+  c.shape(by - stalkH, by, (y) => {
+    const u = (y - (by - stalkH)) / stalkH;
+    const hw = 3.6 + u * 1.2 + Math.max(0, u - 0.78) ** 2 * 60;
+    return [lean(u) - hw, lean(u) + hw];
+  }, STALK, (_x, _y, t) => cyl(t, 0.08), {});
+  // Roots splaying out over the ground.
+  c.part();
+  for (const [dx, len, up] of [[-1, 9, 2], [1, 8, 1], [-1, 5, 0], [1, 5, 0]] as const) {
+    const x0 = cx + dx * 4;
+    c.capsule(x0, by - 2 - up, x0 + dx * len, by + (up ? 0 : 1), 1.6, 0.6, ROOT);
+  }
+  // Fibres down the stalk.
+  c.part();
+  for (let k = 0; k < 7; k++) {
+    const x = cx - 3 + R() * 6;
+    const y0 = by - stalkH + 6 + R() * 8;
+    for (let y = y0; y < y0 + 4 + R() * 8; y++) if (c.materialAt(x, y) === STALK) c.shade(Math.floor(x), Math.floor(y), -1);
+  }
+  // The skirt, ragged at its hem.
+  c.part();
+  const skY = by - stalkH + 8;
+  c.shape(skY - 1, skY + 3, (y) => {
+    const u = (y - skY + 1) / 4;
+    const hw = 4.6 + u * 2.4;
+    return [lean(0.25) - hw, lean(0.25) + hw];
+  }, STALK, (_x, _y, t, u) => ({ x: t * 0.7, y: -0.3 + u * 0.4, z: 0.7 }), { bias: 1 });
+  for (let x = Math.floor(lean(0.25) - 7); x <= lean(0.25) + 7; x++) if (hash2(x, 1, 9903) > 0.55) c.erase(x, skY + 3);
+  // Gills under the cap: a dark ring with glowing lines fanning out.
+  const top = by - stalkH - 1;
+  const capR = 22;
+  c.part();
+  c.ellipse(cx + 1, top + 1, capR - 2, 4.2, GILLS, { normal: () => ({ x: 0, y: 0.8, z: 0.6 }) });
+  c.part();
+  for (let k = -9; k <= 9; k++) {
+    const a = k / 9;
+    for (let s = 0.25; s < 1; s += 0.08) {
+      const x = cx + 1 + a * (capR - 3) * s;
+      const y = top + 1 + Math.sqrt(Math.max(0, 1 - a * a)) * 3.6 * s;
+      if (c.materialAt(x, y) === GILLS) c.px(Math.floor(x), Math.floor(y), gill, FLAT, { bias: s > 0.7 ? 1 : 0 });
+    }
+  }
+  // The cap: a broad dome, its rim drooping lower at the sides.
+  c.part();
+  const capH = 17;
+  for (let y = top - capH; y <= top + 3; y++) {
+    for (let x = cx + 1 - capR - 1; x <= cx + 1 + capR + 1; x++) {
+      const dx = (x + 0.5 - cx - 1) / capR;
+      if (Math.abs(dx) > 1) continue;
+      const rim = top + 1 + dx * dx * 2.6 - (1 - dx * dx) * 1.2;
+      const dome = top - capH * Math.sqrt(1 - dx * dx) * (0.92 + 0.08 * Math.cos(dx * 3));
+      if (y < dome || y > rim) continue;
+      const n = sphere(dx * 0.95, Math.max(-1, Math.min(1, -0.75 + (y - dome) / (top + 2 - dome) * 1.4)), 0.85);
+      c.px(x, y, cap, n, { bias: y > rim - 1 ? -1 : 0 });
+    }
+  }
+  // Spots, larger toward the crown.
+  c.part();
+  for (let s = 0; s < 18; s++) {
+    const a = -Math.PI * (0.08 + R() * 0.84);
+    const d = 0.2 + R() * 0.7;
+    const x = cx + 1 + Math.cos(a) * d * capR;
+    const y = top - 1 + Math.sin(a) * d * capH;
+    const big = d < 0.55 && R() < 0.6;
+    for (const [ox, oy] of big ? [[0, 0], [1, 0], [0, -1], [1, -1]] : [[0, 0]]) {
+      if (c.materialAt(x + ox, y + oy) === cap) c.px(Math.floor(x + ox), Math.floor(y + oy), spots, FLAT, { bias: oy ? 1 : 0 });
+    }
+  }
+  // Two young ones at its foot, one dusk violet.
+  for (const m of [
+    { x: 12, h: 9, r: 5, cap: BIG_CAPS[1] },
+    { x: 44, h: 6, r: 4, cap: BIG_CAPS[0] },
+  ]) {
+    c.part();
+    c.shape(by - m.h, by, (y) => {
+      const u = (y - (by - m.h)) / m.h;
+      const hw = 1.1 + u * 0.6;
+      return [m.x - hw, m.x + hw];
+    }, STALK, (_x, _y, t) => cyl(t, 0.1));
+    c.part();
+    const t0 = by - m.h;
+    for (let y = Math.floor(t0 - m.r * 0.8); y <= t0 + 1; y++) {
+      for (let x = Math.floor(m.x - m.r - 1); x <= m.x + m.r + 1; x++) {
+        const dx = (x + 0.5 - m.x) / m.r;
+        const dy = (y + 0.5 - t0 - 1) / (m.r * 0.8);
+        if (dy > 0 || dx * dx + dy * dy > 1) continue;
+        c.px(x, y, spent ? { ...m.cap, emissive: 0.15 } : m.cap, sphere(dx, dy * 0.9 + 0.1, 0.9));
+      }
+    }
+    c.part();
+    c.px(m.x - 1, t0 - Math.round(m.r * 0.45), spots, FLAT);
+  }
+  // Moss and grass round the foot.
+  c.part();
+  for (let x = cx - 12; x < cx + 12; x++) {
+    const h = Math.floor(hash2(x, 3, 9905) * 3);
+    for (let j = 0; j < h; j++) c.px(x, by - j + 1, MOSS, sphere(0, -0.5), { bias: 1 - j });
+  }
+  tuft(c, 6, by + 1, R, 3, 4);
+  tuft(c, 50, by + 1, R, 3, 4);
+  // Spores hanging in the air under the cap's glow.
+  if (!spent) for (let k = 0; k < 6; k++) c.spark(cx - 16 + R() * 34, top + 4 + R() * 14, [150, 255, 220], 0.7);
+  return c;
+}
+
+/** The hunter's camp: the lean-to (frame 'lean') and the drying rack ('rack'), each 56 x 44 on (28, HUNT_BASE_Y). */
+export const HUNT_W = 56;
+export const HUNT_H = 44;
+export const HUNT_BASE_Y = 40;
+
+const POLE: Material = { ramp: ramp('#1e140c', '#2e2014', '#42301e', '#58422a', '#705636', '#8a6c44', '#a48656'), outline: hex('#0e0905'), outlineLit: hex('#1e140c') };
+const BARK_SHEET: Material = { ramp: ramp('#1a120c', '#281c12', '#3a2a1c', '#4c3826', '#604832'), outline: hex('#0c0805') };
+const BOUGH: Material = { ramp: ramp('#0c1e16', '#12301e', '#1a4428', '#245834', '#327042', '#468a50'), outline: hex('#06100a'), noOutline: true };
+const HIDE: Material = { ramp: ramp('#3a2414', '#563620', '#74502e', '#946c40', '#b48a56', '#d0aa74'), outline: hex('#1a0e06') };
+const FUR: Material = { ramp: ramp('#2a1e16', '#3e2e22', '#564232', '#6e5844', '#8a7258', '#a68e72'), outline: hex('#120c08'), noOutline: true };
+const ROPE: Material = { ramp: ramp('#5a4a30', '#7e6a46', '#a28c60', '#c4ae80'), outline: hex('#241c10'), noOutline: true };
+const LAMP_GLASS: Material = { ramp: ramp('#c86a1a', '#f0a030', '#ffd060', '#fff2b0'), outline: hex('#2a1404'), emissive: 1, noAO: true };
+const IRON: Material = { ramp: ramp('#141418', '#222228', '#34343c', '#4a4a54'), outline: hex('#08080a'), shine: true };
+const HERB: Material = { ramp: ramp('#2a3a16', '#3e5420', '#566e2c', '#70883a'), outline: hex('#121a08'), noOutline: true };
+const FISH_SKIN: Material = { ramp: ramp('#3a4a52', '#5a6e78', '#8298a0', '#b0c4c8'), outline: hex('#141c20'), shine: true };
+
+/**
+ * A hunter's lean-to, left as if they'd only just gone, seen from its open
+ * end: poles laid from the ground up onto a crossbar on forked posts,
+ * thatched with bark and spruce boughs, their ends poking out past the bar;
+ * in the dark under the slope a fur bedroll and a pack; a pelt hung on the
+ * post, and a little lantern hanging from the bar that someone keeps lit.
+ */
+export function leanToArt(): PixelCanvas {
+  const c = new PixelCanvas(HUNT_W, HUNT_H);
+  const R = rng(9921);
+  const by = HUNT_BASE_Y;
+  // The roof runs from the ground at xa up to height Z at xb, and DEPTH px back (north), drawn 0.7 to the px.
+  const xa = 5;
+  const xb = 41;
+  const Z = 25;
+  const DEPTH = 15;
+  const zAt = (x: number) => ((x - xa) / (xb - xa)) * Z;
+  const edge = (x: number) => by - zAt(x);
+  // Under the slope, seen through the open south end: the dark inside, darker toward the low end.
+  c.part();
+  for (let x = xa + 2; x < xb; x++) {
+    for (let y = Math.ceil(edge(x)); y <= by; y++) {
+      const deep = 1 - (x - xa) / (xb - xa);
+      c.px(x, y, BARK_SHEET, { x: 0.3, y: 0.2, z: 0.9 }, { bias: -3 - Math.round(deep) + (y > by - 2 ? 1 : 0) });
+    }
+  }
+  // The bedroll, a pack and a bow propped inside.
+  c.part();
+  c.shape(by - 6, by - 1, (y) => [19 + (by - 6 - y) * -0.4, 37 - (by - 6 - y) * -0.2], FUR, (_x, _y, t, u) => ({ x: t * 0.4, y: 0.6 - u * 0.9, z: 0.7 }), {});
+  for (let k = 0; k < 12; k++) {
+    const x = 20 + R() * 16;
+    const y = by - 6 + R() * 5;
+    if (c.materialAt(x, y) === FUR) c.shade(Math.floor(x), Math.floor(y), R() < 0.5 ? 1 : -1);
+  }
+  c.part();
+  c.line(23, by - 4, 34, by - 4, HIDE, () => FLAT, { bias: -1 });
+  c.part();
+  c.ellipse(35, by - 12, 3.4, 4.2, HIDE, { bias: -1 });
+  c.part();
+  c.line(33, by - 14, 37, by - 14, ROPE);
+  // The roof's top: poles laid along the slope, thatched with bark and boughs, ragged at its edges.
+  c.part();
+  for (let x = xa; x <= xb + 1; x++) {
+    const z = zAt(Math.min(x, xb));
+    for (let y = Math.floor(by - z - DEPTH * 0.7 - 2); y <= by - z + 1; y++) {
+      const n = (by - z - y) / 0.7;
+      const rag = (hash2(x, y, 9931) - 0.5) * 2.4;
+      if (n < -0.6 + (rag > 0.8 ? -1 : 0) || n > DEPTH + rag) continue;
+      const pole = Math.floor(n + 0.5) % 3 === 0;
+      const sheet = hash2(x >> 2, Math.floor(n / 3), 9927) > 0.78;
+      const m = sheet ? BARK_SHEET : pole && hash2(x >> 1, Math.floor(n), 9933) > 0.4 ? POLE : BOUGH;
+      const lit = n > DEPTH - 3 ? 1 : n < 1.5 ? -1 : 0;
+      c.px(x, y, m, { x: -0.55, y: 0.55, z: 0.63 }, { bias: lit + (m === BOUGH && hash2(x, y, 9929) > 0.68 ? 1 : 0) + (m === POLE ? 1 : 0) });
+    }
+  }
+  // Needle tips standing up out of the thatch.
+  c.part();
+  for (let k = 0; k < 34; k++) {
+    const x = xa + 2 + R() * (xb - xa - 2);
+    const y = by - zAt(x) - DEPTH * 0.7 - R() * 2;
+    if (!c.filled(Math.floor(x), Math.floor(y))) c.px(Math.floor(x), Math.floor(y), BOUGH, UP, { bias: 2 });
+  }
+  // The posts, front and back, and the crossbar resting in their forks; the poles' ends poke out past it.
+  const top = by - Z;
+  c.part();
+  c.capsule(xb + 1, top - DEPTH * 0.7 - 2, xb + 1, by - DEPTH * 0.7, 1.3, 1.4, POLE, { bias: -1 });
+  c.part();
+  for (let k = 0; k < 4; k++) {
+    const y = top - 2 - k * 2.6;
+    c.capsule(xb - 1, y + 1.5, xb + 3 + (k % 2), y - 1, 0.8, 0.6, POLE, { bias: k % 2 });
+  }
+  c.part();
+  c.capsule(xb + 1, top + 1, xb + 1, top - DEPTH * 0.7 - 1, 1.3, 1.3, POLE, { bias: 1 });
+  c.part();
+  c.capsule(xb + 1, by, xb + 1, top - 1, 1.6, 1.4, POLE);
+  c.capsule(xb + 1, top + 1, xb - 1, top - 3, 0.8, 0.6, POLE);
+  c.capsule(xb + 1, top + 1, xb + 3, top - 3, 0.8, 0.6, POLE);
+  // A pelt hung on the front post.
+  c.part();
+  c.shape(top + 4, top + 15, (y) => {
+    const u = (y - top - 4) / 11;
+    const hw = 2.4 + Math.sin(u * Math.PI) * 1.4;
+    return [xb + 1 - hw + 0.5, xb + 1 + hw + 0.5];
+  }, HIDE, (_x, _y, t) => cyl(t, 0.1));
+  c.part();
+  c.line(xb - 1, top + 4, xb + 3, top + 4, ROPE);
+  // The lantern, on a cord from the crossbar's end.
+  const lx = xb + 7;
+  c.part();
+  c.line(xb + 3, top - 2, lx, top - 1, ROPE);
+  c.line(lx, top - 1, lx, top + 2, ROPE);
+  c.part();
+  for (const dx of [-1, 0, 1]) c.px(lx + dx, top + 3, IRON, UP);
+  for (let y = top + 4; y < top + 8; y++) {
+    c.px(lx - 1, y, IRON, cyl(-0.8));
+    c.px(lx, y, LAMP_GLASS, FLAT, { bias: y === top + 5 ? 1 : 0 });
+    c.px(lx + 1, y, IRON, cyl(0.8));
+  }
+  c.px(lx, top + 8, IRON, FLAT);
+  c.spark(lx, top + 5, [255, 210, 120], 1);
+  // Grass and a stone or two round the low end.
+  c.part();
+  tuft(c, xa - 1, by + 1, R, 3, 4);
+  tuft(c, xa + 7, by + 1, R, 2, 3);
+  tuft(c, xb + 4, by + 1, R, 2, 3);
+  return c;
+}
+
+/**
+ * A drying rack: two crossed trestles holding a pole, a hide stretched on a
+ * frame of sticks at one end, and from the rest herbs and a couple of
+ * fish hung to cure.
+ */
+export function rackArt(): PixelCanvas {
+  const c = new PixelCanvas(HUNT_W, HUNT_H);
+  const R = rng(9941);
+  const by = HUNT_BASE_Y;
+  const x0 = 12;
+  const x1 = 44;
+  const barY = by - 20;
+  // The trestles: two legs crossed under each end of the pole.
+  c.part();
+  for (const px of [x0, x1]) {
+    c.capsule(px - 4, by, px + 1, barY - 2, 1.1, 0.9, POLE);
+    c.capsule(px + 4, by, px - 1, barY - 2, 1.1, 0.9, POLE, { bias: -1 });
+  }
+  // A hide on a frame of sticks, hung from the west end.
+  c.part();
+  const hx0 = x0 + 2;
+  const hx1 = x0 + 13;
+  for (let y = barY + 2; y < by - 6; y++) {
+    const u = (y - barY - 2) / (by - 8 - barY);
+    const inset = Math.sin(u * Math.PI) * 1.2;
+    for (let x = Math.round(hx0 + inset); x < hx1 - inset; x++) {
+      const t = ((x + 0.5 - hx0) / (hx1 - hx0)) * 2 - 1;
+      c.px(x, y, HIDE, { x: t * 0.3, y: -0.1, z: 0.95 }, { bias: hash2(x >> 1, y >> 1, 9943) > 0.75 ? 1 : 0 });
+    }
+  }
+  c.part();
+  c.line(hx0 - 1, barY + 1, hx0 - 1, by - 6, POLE);
+  c.line(hx1, barY + 1, hx1, by - 6, POLE);
+  c.line(hx0 - 1, by - 6, hx1, by - 6, POLE);
+  for (const [ax, ay] of [[hx0, barY + 2], [hx1 - 1, barY + 2], [hx0, by - 7], [hx1 - 1, by - 7]]) c.px(ax, ay, ROPE, FLAT, { bias: 1 });
+  // The pole across.
+  c.part();
+  c.capsule(x0 - 2, barY - 1, x1 + 2, barY, 1.3, 1.2, POLE);
+  // Bundles of herbs and two fish hung along it.
+  for (const [hx, kind] of [[29, 'herb'], [33, 'fish'], [37, 'herb'], [41, 'fish']] as const) {
+    c.part();
+    c.line(hx, barY + 1, hx, barY + 3, ROPE);
+    c.part();
+    if (kind === 'herb') {
+      for (let k = 0; k < 9; k++) c.line(hx, barY + 3, hx + Math.round((R() - 0.5) * 5), barY + 8 + Math.round(R() * 4), HERB, () => cyl(0, 0.3), { bias: Math.floor(R() * 3) });
+      c.px(hx, barY + 3, ROPE, FLAT, { bias: 1 });
+    } else {
+      // Hung by the tail: the forked tail up top, the body swelling, the head down.
+      c.shape(barY + 4, barY + 14, (y) => {
+        const u = (y - barY - 4) / 10;
+        const hw = u < 0.12 ? 1.9 : u < 0.25 ? 0.7 : 0.7 + Math.sin(((u - 0.25) / 0.75) * Math.PI * 0.85) * 1.5;
+        return [hx - hw + 0.5, hx + hw + 0.5];
+      }, FISH_SKIN, (_x, _y, t) => cyl(t, 0.1));
+      c.erase(hx, barY + 4);
+      c.px(hx, barY + 12, IRON, FLAT);
+    }
+  }
+  // Grass at the legs' feet.
+  c.part();
+  for (const fx of [x0 - 4, x0 + 4, x1 - 4, x1 + 4]) tuft(c, fx, by + 1, R, 2, 3);
+  return c;
+}
+
+// ------------------------------------------------------------ blessings' badges
+
+/** A 16 x 16 badge drawn from rows of palette letters, outlined in the badges' dark. */
+function badge(rows: string[], pal: Record<string, string>): Uint8ClampedArray {
+  const w = 16;
+  const px = new Uint8ClampedArray(w * w * 4);
+  const put = (x: number, y: number, c: string) => {
+    const n = parseInt(c.slice(1), 16);
+    px.set([n >> 16, (n >> 8) & 255, n & 255, 255], (y * w + x) * 4);
+  };
+  rows.forEach((row, y) => [...row].forEach((ch, x) => ch !== '.' && pal[ch] && put(x, y, pal[ch])));
+  const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < w && px[(y * w + x) * 4 + 3] === 255;
+  const out: [number, number][] = [];
+  for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) if (!filled(x, y) && (filled(x - 1, y) || filled(x + 1, y) || filled(x, y - 1) || filled(x, y + 1))) out.push([x, y]);
+  for (const [x, y] of out) put(x, y, '#0c1020');
+  return px;
+}
+
+/** Sunlit: the glade's sun, rays round it, over a sprig of green. */
+export const sunBuffIcon = (): Uint8ClampedArray =>
+  badge(
+    [
+      '................',
+      '.......y........',
+      '..y....y....y...',
+      '...y.......y....',
+      '......ooo.......',
+      '.....oYYYo......',
+      'yy..oYwwYYo..yy.',
+      '....oYwYYYo.....',
+      '....oYYYYOo.....',
+      '.....oYYOo......',
+      '...y..ooo..y....',
+      '..y.........y...',
+      '.......g........',
+      '......gGg.g.....',
+      '....gg.G.gG.....',
+      '........G.......',
+    ],
+    { y: '#ffe680', o: '#e8a020', Y: '#ffd040', O: '#d88a18', w: '#fffbe0', g: '#7cd860', G: '#3a8a3a' },
+  );
+
+/** Moonlit: the glade by night, a crescent and two stars. */
+export const moonBuffIcon = (): Uint8ClampedArray =>
+  badge(
+    [
+      '................',
+      '..........s.....',
+      '.....bbb..s.....',
+      '...bbwbb.sws....',
+      '..bwwb....s.....',
+      '..bwb.....s.....',
+      '.bwwb...........',
+      '.bwwb...........',
+      '.bwwb.......s...',
+      '.bwwwb.....sws..',
+      '..bwwwb.....s...',
+      '..bBwwwbb..bb...',
+      '...bBBwwwwwBb...',
+      '....bbBBBBBb....',
+      '......bbbbb.....',
+      '................',
+    ],
+    { b: '#7aa6e8', B: '#4a6ab8', w: '#e6f0ff', s: '#d8e8ff' },
+  );
+
+/** Glowspore: a glowing cap breathing out spores. */
+export const sporeBuffIcon = (): Uint8ClampedArray =>
+  badge(
+    [
+      '...c......c.....',
+      '.c....c.......c.',
+      '......cc..c.....',
+      '....tttttt......',
+      '..ttTwwTTttt....',
+      '.tTwwTTTTwTtt...',
+      '.tTTTTwwTTTTt...',
+      'tTTTTTTTTTTTTt..',
+      'tggggggggggggt..',
+      '.....sss........',
+      '.....sSs....c...',
+      '.....sSs........',
+      '....ssSss.......',
+      '..mmsSSSsmm.....',
+      '.mmmmmmmmmmm....',
+      '................',
+    ],
+    { c: '#a8fff0', t: '#24887e', T: '#3aaa9a', w: '#e0fff4', g: '#58c4b4', s: '#d8d0bc', S: '#a39a84', m: '#4b883c' },
+  );
