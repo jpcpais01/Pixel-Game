@@ -53,8 +53,8 @@ export interface Stage {
   add(dur: number, draw: DrawFn, wait?: number, done?: () => void): void;
   /** A spray of single-pixel sparks that arc and fall. */
   sparks(x: number, y: number, n: number, cols: number[], o?: SparkOpts): void;
-  /** Shake the view (ms, strength); only the big moments. */
-  shake(ms: number, amt: number): void;
+  /** Shake the battlefield (ms, strength); only the big moments. A strong one ripples the board round `at` (or the last sparks). */
+  shake(ms: number, amt: number, at?: Pt): void;
 }
 
 /** Everything an ability's look needs, in board px (points are feet on the ground). */

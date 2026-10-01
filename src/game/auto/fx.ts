@@ -60,6 +60,21 @@ interface Spark {
 /** How flat a circle on the board looks. */
 const FLAT = 0.62;
 const MAX_SPARKS = 500;
+/**
+ * The board's ripple on a big blow: a ring that runs out from the hit and
+ * bends the flagstones under it (their own pixels, pushed out and back),
+ * lit on its outer slope and shaded on its inner. Only shakes this strong
+ * ripple; a shake with no spot of its own takes sparks thrown this lately.
+ */
+const RIPPLE_FROM = 0.003;
+const RIPPLE_SEC = 0.5;
+const RIPPLE_REACH = 36;
+const RIPPLE_W = 5;
+/** Push at the start, in board px, for a shake of 0.004 (stronger ones push a little more). */
+const RIPPLE_PUSH = 2.4;
+const RIPPLE_LIGHT = 0.22;
+const RIPPLE_MAX = 3;
+const SPOT_SEC = 0.15;
 
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 const easeOut = (k: number) => 1 - (1 - k) * (1 - k);
@@ -77,6 +92,14 @@ export class FxLayer implements Stage {
   private glowG: Phaser.GameObjects.Graphics;
   private glows: Phaser.GameObjects.Image[] = [];
   private glowUsed = 0;
+  private clock = 0;
+  /** Where sparks last flew, for a shake that names no spot. */
+  private spot: { x: number; y: number; t: number } | null = null;
+  private ripples: { x: number; y: number; t: number; push: number }[] = [];
+  /** The board's own pixels and where its image sits, for the ripple to bend. */
+  private ground: { px: Uint8ClampedArray; w: number; h: number; x: number; y: number } | null = null;
+  /** Called on every shake; the scene moves the battlefield, not the screen. */
+  onQuake: ((ms: number, amt: number) => void) | null = null;
 
   constructor(
     private scene: Phaser.Scene,
@@ -113,6 +136,7 @@ export class FxLayer implements Stage {
   }
 
   sparks(x: number, y: number, n: number, cols: number[], o: SparkOpts = {}): void {
+    this.spot = { x, y, t: this.clock };
     for (let i = 0; i < n && this.sparks_.length < MAX_SPARKS; i++) {
       const a = o.dir !== undefined ? o.dir + (Math.random() - 0.5) * 2 * (o.cone ?? 0.5) : Math.random() * Math.PI * 2;
       const sp = (o.speed ?? 30) * (0.4 + Math.random() * 0.8);
@@ -136,8 +160,67 @@ export class FxLayer implements Stage {
     }
   }
 
-  shake(ms: number, amt: number): void {
-    this.scene.cameras.main.shake(ms, amt);
+  shake(ms: number, amt: number, at?: Pt): void {
+    this.onQuake?.(ms, amt);
+    if (amt < RIPPLE_FROM) return;
+    const spot = at ?? (this.spot && this.clock - this.spot.t <= SPOT_SEC ? this.spot : null);
+    if (!spot) return;
+    // Two big moments on one spot at once make one ripple.
+    if (this.ripples.some((r) => r.t < 0.08 && Math.abs(r.x - spot.x) + Math.abs(r.y - spot.y) < 12)) return;
+    if (this.ripples.length >= RIPPLE_MAX) this.ripples.shift();
+    this.ripples.push({ x: spot.x, y: spot.y, t: 0, push: RIPPLE_PUSH * Math.min(1.4, amt / 0.004) });
+  }
+
+  /** The board's texture and its image's top-left, in the same px as the effects. */
+  setGround(key: string, x: number, y: number): void {
+    if (this.ground?.w && this.ground.x === x && this.ground.y === y) return;
+    const src = this.scene.textures.get(key).getSourceImage() as HTMLCanvasElement;
+    const ctx = src.getContext?.('2d');
+    if (!ctx) return;
+    const data = ctx.getImageData(0, 0, src.width, src.height).data;
+    this.ground = { px: data, w: src.width, h: src.height, x, y };
+  }
+
+  /** Each ripple's ring, drawn from the board's own pixels pushed along the ring's radius. */
+  private drawRipples(dt: number): void {
+    const gr = this.ground;
+    this.ripples = this.ripples.filter((rp) => (rp.t += dt) < RIPPLE_SEC);
+    if (!gr) return;
+    for (const rp of this.ripples) {
+      const k = rp.t / RIPPLE_SEC;
+      const r = 3 + RIPPLE_REACH * easeOut(k);
+      const fade = (1 - k) * (1 - k);
+      const push = rp.push * fade;
+      const out = r + RIPPLE_W;
+      const x0 = Math.floor(rp.x - out);
+      const x1 = Math.ceil(rp.x + out);
+      const y0 = Math.floor(rp.y - out * FLAT);
+      const y1 = Math.ceil(rp.y + out * FLAT);
+      for (let y = y0; y <= y1; y++) {
+        const dy = (y - rp.y) / FLAT;
+        for (let x = x0; x <= x1; x++) {
+          const dx = x - rp.x;
+          const d = Math.hypot(dx, dy);
+          const u = (d - r) / RIPPLE_W;
+          if (u <= -1 || u >= 1 || d < 0.5) continue;
+          // Over this pixel only where the board is (not the sky round it).
+          const tx = x - gr.x;
+          const ty = y - gr.y;
+          if (tx < 0 || ty < 0 || tx >= gr.w || ty >= gr.h || gr.px[(ty * gr.w + tx) * 4 + 3] < 255) continue;
+          const wave = Math.sin(u * Math.PI);
+          const off = push * wave;
+          const sx = Math.round(tx - (dx / d) * off);
+          const sy = Math.round(ty - (dy / d) * off * FLAT);
+          if (sx < 0 || sy < 0 || sx >= gr.w || sy >= gr.h) continue;
+          const i = (sy * gr.w + sx) * 4;
+          if (gr.px[i + 3] < 255) continue;
+          const lit = 1 + RIPPLE_LIGHT * fade * wave;
+          const c = (Math.min(255, Math.round(gr.px[i] * lit)) << 16) | (Math.min(255, Math.round(gr.px[i + 1] * lit)) << 8) | Math.min(255, Math.round(gr.px[i + 2] * lit));
+          // Just under full, so the blows' own ground marks still draw over it.
+          this.low.put(x - this.ox, y - this.oy, c, 0.996);
+        }
+      }
+    }
   }
 
   /** Marks on the ground, drawn under the heroes (telegraphs, rings). */
@@ -146,6 +229,8 @@ export class FxLayer implements Stage {
   private grounds: Live[] = [];
 
   clear(): void {
+    this.ripples = [];
+    this.spot = null;
     this.lives = [];
     this.grounds = [];
     this.sparks_ = [];
@@ -157,6 +242,7 @@ export class FxLayer implements Stage {
   }
 
   update(dt: number): void {
+    this.clock += dt;
     this.g.clear();
     this.glowG.clear();
     this.under.clear();
@@ -221,6 +307,7 @@ export class FxLayer implements Stage {
       else if (a >= 1 || ((x * 7 + y * 13) & 7) / 8 < a) (s.low ? this.low : this.high).put(lx, ly, s.col, 1);
       return true;
     });
+    this.drawRipples(dt);
     this.low.flush();
     this.high.flush();
     for (let i = this.glowUsed; i < this.glows.length; i++) this.glows[i].setVisible(false);
