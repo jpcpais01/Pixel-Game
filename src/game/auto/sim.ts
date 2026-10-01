@@ -8,10 +8,10 @@
 import { defenseFactor, heroStats } from '../stats';
 import { traitCounts, unitDef, type Spell, type TraitId, type UnitDef } from './units';
 
-export const COLS = 7;
-export const ROWS = 8;
-/** Side 0 holds rows 4..7 (the bottom), side 1 rows 0..3. */
-export const HALF = 4;
+export const COLS = 9;
+export const ROWS = 10;
+/** Side 0 holds rows 5..9 (the bottom), side 1 rows 0..4. */
+export const HALF = 5;
 export const TICK = 0.05;
 /** Longest a fight runs before it's called a draw. */
 export const FIGHT_SECONDS = 32;
@@ -48,7 +48,7 @@ export interface Placed {
   key: string;
   look: string;
   star: number;
-  /** Cell, in side 0's frame (rows 4..7). */
+  /** Cell, in side 0's frame (rows HALF..ROWS-1). */
   c: number;
   r: number;
 }
