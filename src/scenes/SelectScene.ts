@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Bitmap, bayer, clamp01, mix } from '../art/bitmap';
 import { type RGB } from '../art/pixel';
 import { BUST, classBust } from '../art/busts';
+import { classEmblem } from '../art/emblems';
 import { menuZoom } from '../game/display';
 import { CLASSES, type ClassDef, type Preview, type SkinDef } from '../game/characters';
 import { heroStats, type HeroStats } from '../game/stats';
@@ -46,6 +47,8 @@ const MEDAL_STEP = 43;
 const MEDAL_FACE = MEDAL - 6;
 /** How many times over the head is drawn in its medallion. */
 const MEDAL_ZOOM = 2;
+/** What the class medallions show: each class's emblem (art/emblems.ts) or its bust (art/busts). */
+const MEDAL_ART: 'emblem' | 'bust' = 'emblem';
 /** Character cards, largest first: the largest for which the biggest class fits in two rows (and the height there is) is used. */
 const CARD_SIZES = [34, 30, 26, 24, 22];
 const CARD_GAP = 4;
@@ -443,14 +446,14 @@ function medalHead(scene: Phaser.Scene, preview: Preview, d: number): string {
 }
 
 /**
- * A class's own bust (see art/busts), drawn at the heroes' pixel size and
- * shown at `MEDAL_ZOOM`, like the sprite heads on the character cards, cut to
- * the medallion's disc. Null for a class without one.
+ * A class's own emblem or bust (see `MEDAL_ART`), drawn at the heroes' pixel
+ * size and shown at `MEDAL_ZOOM`, like the sprite heads on the character
+ * cards, cut to the medallion's disc. Null for a class without one.
  */
 function bustTexture(scene: Phaser.Scene, id: string, d: number): string | null {
-  const key = `sel_bust_${id}_${d}`;
+  const key = `sel_${MEDAL_ART}_${id}_${d}`;
   if (scene.textures.exists(key)) return key;
-  const b = classBust(id);
+  const b = MEDAL_ART === 'emblem' ? classEmblem(id) : classBust(id);
   if (!b) return null;
   const canvas = document.createElement('canvas');
   canvas.width = d;

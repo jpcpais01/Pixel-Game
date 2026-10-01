@@ -18,6 +18,7 @@
     "farm": "tsx scripts/farm.ts farm.png 4",
     "modes": "tsx scripts/modes.ts modes.png 3",
     "busts": "tsx scripts/busts.ts busts.png 4",
+    "emblems": "tsx scripts/busts.ts emblems.png 4 emblems",
     "maps": "tsx scripts/maps.ts"
   },
   "dependencies": {
