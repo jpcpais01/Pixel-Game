@@ -308,10 +308,10 @@ export class StatsHud {
     const textW = CARD_W - CARD_PAD * 2;
 
     // The hero's name (big when it fits) and role, over a line of their colour fading out.
-    const title = (hero.skin?.name ?? hero.type.name).toUpperCase();
+    const title = hero.type.name.toUpperCase();
     const name = pixelText(scene, CARD_PAD, 6, title, INK, 2);
     if (name.width > textW - CLOSE - 4) name.setScale(1).setY(10);
-    const role = pixelText(scene, CARD_PAD, 24, hero.skin ? `${hero.type.name} - ${hero.role}` : hero.role, LAVENDER);
+    const role = pixelText(scene, CARD_PAD, 24, hero.role, LAVENDER);
     for (let x = 0; x < textW; x++) {
       const a = 1 - x / textW;
       if (a < bayer(x, 0) * 0.9) continue;
