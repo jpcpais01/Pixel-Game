@@ -49,8 +49,9 @@ import { openHomeFriends } from '../ui/homeFriends';
 import { isPainted } from '../world/arenas';
 import { OMEN_ARENAS, Omens } from '../world/Omens';
 import { Forest } from '../world/Forest';
+import { ForestBuild } from '../world/ForestBuild';
 import { ForestSpawner } from '../world/ForestSpawner';
-import { ForestGen, randomSeed, seedFrom, useForest } from '../world/forestGen';
+import { EVERWOOD_SEED, ForestGen, useForest } from '../world/forestGen';
 import { omenMods, resetOmens } from '../game/omens';
 import { BossIntro, FinalBlow, bossTint } from '../game/BossIntro';
 
@@ -315,6 +316,7 @@ export class WorldScene extends Phaser.Scene {
   private echoes: EchoGraves | null = null;
   /** The Everwood, streamed round the view, when the world is in it. */
   private forest: Forest | null = null;
+  private woodBuild: ForestBuild | null = null;
   private shafts: Phaser.GameObjects.TileSprite | null = null;
   private shadows: Phaser.GameObjects.Image[] = [];
   private pollen!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -360,6 +362,7 @@ export class WorldScene extends Phaser.Scene {
     this.home = null;
     this.fishing = null;
     this.forest = null;
+    this.woodBuild = null;
     this.character = data?.character;
     this.auras.clear();
     this.setPowers = new SetPowers(this);
@@ -409,12 +412,15 @@ export class WorldScene extends Phaser.Scene {
     if (arena.id === 'temple') this.temple = new TempleDungeon(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'deep') this.deep = new GlimmerDeep(this, (img) => ground(img) as Phaser.GameObjects.Image, this.view);
     if (arena.id === 'forest') {
-      // A new forest each visit; online, the room's code grows it, so friends walk the same one.
-      const code = session.active ? session.room?.code : undefined;
-      const gen = new ForestGen(code ? seedFrom(code) : randomSeed());
+      // Always the same forest, for everyone: the hero starts at its entrance and the rest is theirs to find.
+      const gen = new ForestGen(EVERWOOD_SEED);
       useForest(gen);
-      this.forest = new Forest(this, gen, (img) => ground(img) as Phaser.GameObjects.Image);
+      const forest = (this.forest = new Forest(this, gen, (img) => ground(img) as Phaser.GameObjects.Image));
+      // The player's own changes on top: what they built, and the trees and undergrowth they cleared.
+      const woodBuild = (this.woodBuild = new ForestBuild(this, forest));
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        woodBuild.destroy();
+        this.woodBuild = null;
         useForest(null);
         this.forest = null;
       });
@@ -2097,6 +2103,7 @@ export class WorldScene extends Phaser.Scene {
     this.forge?.update(this.hero.x, this.hero.y, dt);
     this.naturalist?.update(time, dt, Phaser.Math.Easing.Sine.InOut(this.daylight), this.hero.x, this.hero.y);
     this.home?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight), this.net?.targets());
+    this.woodBuild?.update(dt, this.hero.x, this.hero.y);
     this.fishing?.update(dt, this.hero.x, this.hero.y, Phaser.Math.Easing.Sine.InOut(this.daylight));
     if (build.friends) {
       build.friends = false;

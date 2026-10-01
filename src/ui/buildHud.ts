@@ -173,7 +173,8 @@ export class BuildHud {
   private list(tab: BuildTab = build.tab): (PaletteItem | null)[] {
     let l = this.lists.get(tab);
     if (!l) {
-      l = [null, ...palette(tab, partIcon, (m, f) => ({ key: 'home', frame: wallFrameName(m, f) }))];
+      const allow = build.allow;
+      l = [null, ...palette(tab, partIcon, (m, f) => ({ key: 'home', frame: wallFrameName(m, f) })).filter((item) => !allow || allow(item))];
       this.lists.set(tab, l);
     }
     return l;
@@ -243,7 +244,7 @@ export class BuildHud {
     this.row.setTo(this.panel.x + ip, ty + tabH + ip, this.panel.width - ip * 2, this.cell);
 
     // The tab labels shrink a step at a time until the row fits.
-    const texts = [...this.tabTexts, this.undoText, this.doneText];
+    const texts = [...this.tabTexts.filter((_, i) => build.tabs.includes(TABS[i].id)), this.undoText, this.doneText];
     const tp = Math.round(5 * D);
     const tg = Math.round(3 * D);
     let ts = Math.max(1, Math.floor(tabH / 12));
@@ -251,6 +252,10 @@ export class BuildHud {
     while (ts > 1 && !fits()) ts--;
     let x = this.row.x;
     this.tabTexts.forEach((t, i) => {
+      if (!build.tabs.includes(TABS[i].id)) {
+        this.tabRects[i].setTo(0, 0, 0, 0);
+        return;
+      }
       const w = Math.round(t.width + tp * 2);
       this.tabRects[i].setTo(x, ty, w, tabH);
       t.setPosition(Math.round(x + tp), Math.round(ty + (tabH - t.height) / 2));
@@ -334,7 +339,8 @@ export class BuildHud {
     const bs = (r: Phaser.Geom.Rectangle) => Math.max(1, Math.floor((r.width - 6 * D) / 16));
     this.hammer.setPosition(Math.round(this.buildRect.centerX), Math.round(this.buildRect.centerY)).setScale(bs(this.buildRect));
     this.people.setPosition(Math.round(this.friendsRect.centerX), Math.round(this.friendsRect.centerY)).setScale(bs(this.friendsRect));
-    for (const t of [...this.tabTexts, this.undoText, this.doneText, this.nameText]) t.setVisible(on);
+    for (const t of [this.undoText, this.doneText, this.nameText]) t.setVisible(on);
+    this.tabTexts.forEach((t, i) => t.setVisible(on && build.tabs.includes(TABS[i].id)));
     const flip = on && (this.flippable() || this.turnable());
     const lit = this.flippable() && build.flip;
     this.flipText.setVisible(flip).setTint(lit ? 0x1a1206 : 0xdfe6ff);
@@ -344,7 +350,7 @@ export class BuildHud {
     const picked = this.picked.get(build.tab) ?? 1;
     this.placeIcons(list);
 
-    const state = `${this.scene.scale.width} ${this.scene.scale.height} ${build.available} ${build.home} ${on} ${build.tab} ${picked} ${Math.round(this.scroll)} ${build.canUndo} ${flip} ${lit} ${this.nameRect.width}`;
+    const state = `${build.tabs.join()} ${this.scene.scale.width} ${this.scene.scale.height} ${build.available} ${build.home} ${on} ${build.tab} ${picked} ${Math.round(this.scroll)} ${build.canUndo} ${flip} ${lit} ${this.nameRect.width}`;
     if (state === this.drawn) return;
     this.drawn = state;
     const g = this.g.clear();
@@ -370,7 +376,7 @@ export class BuildHud {
     g.fillRoundedRect(p.x, p.y, p.width, p.height, round);
     g.lineStyle(Math.round(2 * D), 0x6b5aa6, 0.6);
     g.strokeRoundedRect(p.x, p.y, p.width, p.height, round);
-    this.tabRects.forEach((r, i) => pill(r, TABS[i].id === build.tab));
+    this.tabRects.forEach((r, i) => build.tabs.includes(TABS[i].id) && pill(r, TABS[i].id === build.tab));
     pill(this.undoRect, false);
     pill(this.doneRect, true, 0x8dff8a);
     g.fillStyle(0x0a0c1c, 0.72);

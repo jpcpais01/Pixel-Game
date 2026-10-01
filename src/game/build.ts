@@ -50,6 +50,10 @@ export const build = {
   /** Build mode is on: the palette shows and taps on the world build. */
   on: false,
   tab: 'floor' as BuildTab,
+  /** The tabs the tray offers here (the Everwood has no houses, so it leaves some out). Set by the world. */
+  tabs: TABS.map((t) => t.id) as BuildTab[],
+  /** Which palette items may be built here (the Everwood keeps to garden walls and outdoor things); null for all. */
+  allow: null as ((item: PaletteItem) => boolean) | null,
   /** What's picked: a palette item, or null for the eraser. */
   pick: null as PaletteItem | null,
   /** Things that can be mirrored go down mirrored. */

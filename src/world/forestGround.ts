@@ -94,7 +94,7 @@ const RUNE_SHRINE: RGB = [120, 255, 200];
  * and roof from the forest's fields, the trees round it for their shadows
  * and litter, the places on it, the sunbeams' pools.
  */
-export function forestTile(gen: ForestGen, col: number, row: number): GroundSpec {
+export function forestTile(gen: ForestGen, col: number, row: number, ver = 0): GroundSpec {
   const ox = col * CHUNK;
   const y0 = row * STRIP_H;
   const pois = gen.poisIn(ox - 4, y0 - 4, ox + CHUNK + 4, y0 + STRIP_H + 4);
@@ -104,12 +104,14 @@ export function forestTile(gen: ForestGen, col: number, row: number): GroundSpec
   for (let j = cy - 1; j <= cy + 1; j++) {
     for (let i = col - 1; i <= col + 1; i++) {
       const l = gen.layout(i, j);
-      trees.push(...l.trees);
+      // Trees the player cleared leave no shadow or litter behind.
+      for (const t of l.trees) if (!gen.isCleared(t.x, t.y)) trees.push(t);
       rays.push(...l.rays);
     }
   }
   return {
-    key: `fw${gen.seed}_${col}`,
+    // A tile painted again (a tree cleared near it) gets new textures beside the old, which show till it's done.
+    key: ver ? `fw${gen.seed}_${col}v${ver}` : `fw${gen.seed}_${col}`,
     w: CHUNK,
     h: FOREST_WORLD,
     ox,

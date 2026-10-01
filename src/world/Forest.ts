@@ -15,7 +15,12 @@ import { treeLeaves } from './Scenery';
 import { CAMP_SEATS, CHUNK, FOREST_WORLD, WOOD_SHAPE, ruinPieces, stonePieces, type Blocker, type ForestGen, type Poi, type WoodKind } from './forestGen';
 import { WhiteStag } from './WhiteStag';
 import { forestTile } from './forestGround';
-import type { TileAsk, TileDone } from './forestWorker';
+import { footKey, type ForestEdits } from './forestEdits';
+import { CELL } from './homeLayout';
+import { WALLS, partById, wallKind, wallMat, type PartDef } from './homeParts';
+import { glows, thingLook, wallFrameName } from '../art/homeArt';
+import { PLOT_X, PLOT_Y } from './homeLayout';
+import type { ClearedNote, TileAsk, TileDone } from './forestWorker';
 
 // The Everwood as it is walked: its ground painted tile by tile round the
 // view (a tile is a chunk wide and a strip of rows tall, see forestGround.ts)
@@ -69,6 +74,10 @@ const CAMP_TICK = 600;
 /** The shrines' blessings last longer than a potion's. */
 const SHRINE_BLESSINGS: BuffDef[] = [MIGHT, WARD, RENEW, SWIFTNESS].map((d) => ({ ...d, duration: d.duration * 3 }));
 /** The lights of a camp and a shrine: radius, colour, strength, and how much is left by day. */
+/** Tree shadows' strength beside a lone thing's (they overlap in a wood, and the ground already has their soft pools). */
+const TREE_SHADOW = 0.62;
+/** Undergrowth solid enough to cast a shadow (grass, flowers, ferns and little caps don't). */
+const CASTS = new Set(['rock', 'bush', 'berry', 'stump', 'log', 'boulder', 'bigshroom']);
 const CAMP_LIGHT = { r: 150, color: 0xff9a4a, i: 2, day: 0.35 };
 const SHRINE_LIGHT = { r: 80, color: 0x7ae6dc, i: 1.2, day: 0.4 };
 
@@ -92,6 +101,8 @@ interface Tile {
   glow: Img | null;
   y: number;
   x: number;
+  /** The textures it shows (a tile painted again keeps showing these till the new ones come). */
+  k: string;
 }
 
 /** Something stood up, with the box it can cover, to hide when out of view. */
@@ -134,7 +145,24 @@ interface Stood {
   rays: { img: Img; x: number; y: number; seed: number }[];
   shrooms: { halo: Img | Sprite; seed: number }[];
   shadows: Img[];
+  /** Trees' shadows: long and overlapping in a wood, so laid lighter than a lone thing's. */
+  treeShadows: Img[];
   lights: Phaser.GameObjects.Light[];
+  /** What the player may clear here: trees and undergrowth, by foot key, with the box a tap on them lands in. */
+  clearable: Clearable[];
+  /** Lamps the player built: their light flickers and the day washes it out, as in the Home. */
+  lamps: { light: Phaser.GameObjects.Light; halo: Img; part: PartDef; seed: number }[];
+}
+
+interface Clearable {
+  of: number;
+  obj: Img | Sprite;
+  tree: boolean;
+  x: number;
+  y: number;
+  /** Half its width, and how tall it stands, for a tap. */
+  hw: number;
+  top: number;
 }
 
 export class Forest {
@@ -161,6 +189,12 @@ export class Forest {
   private region = { ci: 0, cj: 0, shown: false, heldT: 0, nextCi: 0, nextCj: 0 };
   private view = new Phaser.Geom.Rectangle();
   private stag: WhiteStag;
+  /** What the player has built and cleared here (set by ForestBuild), and the chunks to stand up again for a change. */
+  edits: ForestEdits | null = null;
+  private dirty = new Set<number>();
+  /** Each ground tile's version, raised when a tree near it is cleared (it is painted again), and whether the painters still need the cleared list. */
+  private vers = new Map<number, number>();
+  private clearedSent = false;
   /** Where the hero is headed: their smoothed velocity times LEAD_S, in px. */
   private lead = { x: 0, y: 0, lastX: NaN, lastY: NaN };
 
@@ -250,11 +284,25 @@ export class Forest {
   }
 
   private texKey(col: number, row: number): string {
-    return `gnd_fw${this.gen.seed}_${col}_${row}`;
+    const v = this.vers.get(Forest.tileKey(col, row)) ?? 0;
+    return `gnd_fw${this.gen.seed}_${col}${v ? `v${v}` : ''}_${row}`;
   }
 
   private spec(col: number, row: number): GroundSpec {
-    return forestTile(this.gen, col, row);
+    return forestTile(this.gen, col, row, this.vers.get(Forest.tileKey(col, row)) ?? 0);
+  }
+
+  /** Paint the ground over this box again (a tree cleared: its shadow and litter go); the old tiles show till the new ones are in. */
+  private repaint(x0: number, y0: number, x1: number, y1: number): void {
+    for (let c = Math.floor(x0 / CHUNK); c <= Math.floor(x1 / CHUNK); c++) {
+      for (let r = Math.floor(y0 / STRIP_H); r <= Math.floor(y1 / STRIP_H); r++) {
+        const key = Forest.tileKey(c, r);
+        this.vers.set(key, (this.vers.get(key) ?? 0) + 1);
+        this.asked.delete(key);
+        if (this.job?.key === key) this.job = null;
+      }
+    }
+    this.clearedSent = false;
   }
 
   /**
@@ -292,17 +340,29 @@ export class Forest {
   }
 
   private showTile(key: number): void {
-    if (this.tiles.has(key)) return;
     const col = Math.floor(key / 8192);
     const row = key % 8192;
     const k = this.texKey(col, row);
+    const had = this.tiles.get(key);
+    if (had && had.k === k) return;
+    if (had) {
+      // Painted again: the same images take the new textures, and the old ones go.
+      const textures = this.world.textures;
+      had.night.setTexture(k);
+      had.day.setTexture(`${k}_day`);
+      had.glow?.destroy();
+      had.glow = textures.exists(`${k}_e`) ? this.adopt(this.world.add.image(had.x, had.y, `${k}_e`).setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(2).setAlpha(this.glowAlpha)) : null;
+      for (const name of [had.k, `${had.k}_day`, `${had.k}_e`]) if (textures.exists(name)) textures.remove(name);
+      had.k = k;
+      return;
+    }
     const x = col * CHUNK;
     const y = row * STRIP_H;
     const add = this.world.add;
     const night = this.adopt(add.image(x, y, k).setOrigin(0).setPipeline('Lit').setDepth(0));
     const day = this.adopt(add.image(x, y, `${k}_day`).setOrigin(0).setPipeline('Lit').setDepth(1).setAlpha(this.daylight));
     const glow = this.world.textures.exists(`${k}_e`) ? this.adopt(add.image(x, y, `${k}_e`).setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(2).setAlpha(this.glowAlpha)) : null;
-    this.tiles.set(key, { night, day, glow, x, y });
+    this.tiles.set(key, { night, day, glow, x, y, k });
   }
 
   private dropTile(key: number): void {
@@ -317,7 +377,7 @@ export class Forest {
     }
     const k = this.texKey(col, row);
     const textures = this.world.textures;
-    for (const name of [k, `${k}_day`, `${k}_e`]) if (textures.exists(name)) textures.remove(name);
+    for (const name of [k, `${k}_day`, `${k}_e`, ...(t ? [t.k, `${t.k}_day`, `${t.k}_e`] : [])]) if (textures.exists(name)) textures.remove(name);
   }
 
   // ---------------------------------------------------------------- the painters
@@ -357,9 +417,15 @@ export class Forest {
     let best: { w: Worker; out: number } | null = null;
     for (const p of this.pool!) if (p.out < IN_FLIGHT && (!best || p.out < best.out)) best = p;
     if (!best) return false;
+    if (!this.clearedSent) {
+      // The painters learn what's been cleared before they paint any tile it changes.
+      this.clearedSent = true;
+      const note: ClearedNote = { cleared: [...(this.gen.cleared ?? [])] };
+      for (const p of this.pool!) p.w.postMessage(note);
+    }
     best.out++;
     this.asked.add(key);
-    const m: TileAsk = { seed: this.gen.seed, col: Math.floor(key / 8192), row: key % 8192 };
+    const m: TileAsk = { seed: this.gen.seed, col: Math.floor(key / 8192), row: key % 8192, ver: this.vers.get(key) ?? 0 };
     best.w.postMessage(m);
     return true;
   }
@@ -380,8 +446,10 @@ export class Forest {
   /** Put up a tile a painter sent: its fields and layouts go to the generator; its pixels become textures. */
   private land(t: TileDone, view: Phaser.Geom.Rectangle): void {
     const key = Forest.tileKey(t.col, t.row);
-    this.asked.delete(key);
     this.gen.adopt(t.fresh);
+    // Painted before a tree near it was cleared: it's been asked for again.
+    if (t.ver !== (this.vers.get(key) ?? 0)) return;
+    this.asked.delete(key);
     if (this.ready(key) || !this.near(t.col, t.row, view)) return;
     install(this.world, this.spec(t.col, t.row), t.strip);
     this.showTile(key);
@@ -500,26 +568,117 @@ export class Forest {
   private stand(key: number): void {
     if (this.stood.has(key)) return;
     const l = this.gen.layout(Math.floor(key / 4096), key % 4096);
-    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], lights: [] };
+    const st: Stood = { placed: [], trees: [], places: [], rays: [], shrooms: [], shadows: [], treeShadows: [], lights: [], clearable: [], lamps: [] };
     this.stood.set(key, st);
     const add = this.world.add;
     const place = (obj: Placed['obj'], x: number, y: number, hw: number, up: number) => st.placed.push({ obj, x0: x - hw, x1: x + hw, y0: y - up, y1: y + 6 });
 
     for (const t of l.trees) {
       // Where the White Stag opened a glade, the trees stand aside.
-      if (this.gen.inGlade(t.x, t.y)) continue;
+      if (this.gen.inGlade(t.x, t.y) || this.gen.isCleared(t.x, t.y)) continue;
       const old = t.kind === 'oak' || t.kind === 'birch' || t.kind === 'pine';
       const obj = add.sprite(t.x, t.y, old ? 'tree' : 'ftree', `${t.kind}${t.v}`).setOrigin(0.5, TREE_BASE_Y / TREE_H).setPipeline('Lit').setDepth(t.y).setFlipX(t.flip);
       const shape = WOOD_SHAPE[t.kind];
       st.trees.push({ obj, x: t.x, y: t.y, kind: t.kind, v: t.v, anim: `${old ? 'tree' : 'ftree'}_${t.kind}${t.v}`, swaying: false, alpha: 1, r: shape.canopyR, top: shape.canopyY, glow: null });
       place(obj, t.x, t.y, 48, TREE_BASE_Y);
+      this.cast(st, st.treeShadows, obj, TREE_H);
+      st.clearable.push({ of: footKey(t.x, t.y), obj, tree: true, x: t.x, y: t.y, hw: Math.round(shape.canopyR * 0.75), top: shape.canopyY + Math.round(shape.canopyR * 0.6) });
     }
-    for (const p of l.props) if (!this.gen.inGlade(p.x, p.y)) this.prop(st, place, p.kind, p.x, p.y, p.v, p.flip);
+    for (const p of l.props) if (!this.gen.inGlade(p.x, p.y) && !this.gen.isCleared(p.x, p.y)) this.prop(st, place, p.kind, p.x, p.y, p.v, p.flip);
     for (const r of l.rays) {
       const img = add.image(r.x, r.y, 'ray', `ray${r.seed % 2}`).setOrigin(RAY_FOOT_X / RAY_W, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(r.y + 1).setVisible(false);
       st.rays.push({ img, x: r.x, y: r.y, seed: r.seed });
     }
     for (const p of l.pois) this.poi(st, place, p);
+    if (this.edits) this.standBuilt(st, Math.floor(key / 4096), key % 4096);
+  }
+
+  /** What the player built in chunk (ccx, ccy): their things, drawn as in the Home, and their garden walls. */
+  private standBuilt(st: Stood, ccx: number, ccy: number): void {
+    const e = this.edits!;
+    const add = this.world.add;
+    for (const t of e.thingsInChunk(ccx, ccy)) {
+      const part = partById(t.id);
+      if (!part) continue;
+      // The Home's own drawing, moved from its plot onto the forest's grid.
+      const look = thingLook(t);
+      const x = look.x - PLOT_X;
+      const y = look.y - PLOT_Y;
+      const depth = part.flat ? 1.5 : y;
+      const sprite = add.sprite(x, y, look.key, look.frame).setOrigin(look.ox, look.oy).setFlipX(look.flipX).setPipeline('Lit').setDepth(depth);
+      const tall = look.key === 'tree' || t.id === 'blossom';
+      st.placed.push({ obj: sprite, x0: x - 56, x1: x + 56, y0: y - (tall ? 130 : 70), y1: y + 8 });
+      if (look.sway) {
+        // Planted trees sway with the rest (see `update`).
+        st.trees.push({ obj: sprite, x, y, kind: t.id === 'blossom' ? 'cherry' : (t.id as WoodKind), v: 0, anim: look.sway, swaying: false, alpha: 1, r: 34, top: 66, glow: null });
+      }
+      if (look.glow) {
+        const glow = add.sprite(x, y, look.glow, look.frame).setOrigin(look.ox, look.oy).setFlipX(look.flipX).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1);
+        if (look.anim) glow.play({ key: look.anim, startFrame: Math.floor(Math.random() * 4) });
+        st.placed.push({ obj: glow, x0: x - 40, x1: x + 40, y0: y - 70, y1: y + 8 });
+      }
+      if (look.anim && this.world.anims.exists(look.anim)) sprite.play({ key: look.anim, startFrame: Math.floor(Math.random() * 4) });
+      if (!part.flat) this.cast(st, tall ? st.treeShadows : st.shadows, sprite, tall ? TREE_H : 60);
+      const L = part.light;
+      if (L) {
+        const ly = y - L.y;
+        const light = this.world.lights.addLight(x, ly, L.radius, L.color, L.intensity);
+        st.lights.push(light);
+        const halo = add.image(x, ly, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(L.color).setScale(Math.max(0.8, L.radius / 70)).setDepth(depth + 0.2).setAlpha(0.4);
+        st.placed.push({ obj: halo, x0: x - 60, x1: x + 60, y0: ly - 60, y1: ly + 60 });
+        st.lamps.push({ light, halo, part, seed: Math.random() * 100 });
+      }
+    }
+    for (const [cx, cy, v] of e.wallsInChunk(ccx, ccy)) {
+      const mat = wallMat(v);
+      const def = WALLS[mat];
+      if (!def) continue;
+      const mask = e.wallMask(cx, cy);
+      const frame = wallKind(v) === 'door' ? `d${mask}` : `w${mask}_${(cx * 7 + cy * 13) % 2}`;
+      const key = wallFrameName(mat, frame);
+      const x = cx * CELL;
+      const y = cy * CELL - def.height;
+      const depth = cy * CELL + 11;
+      const img = add.image(x, y, 'home', key).setOrigin(0).setPipeline('Lit').setDepth(depth);
+      st.placed.push({ obj: img, x0: x, x1: x + CELL, y0: y, y1: (cy + 1) * CELL });
+      if (glows(key)) st.placed.push({ obj: add.image(x, y, 'home_e', key).setOrigin(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 0.1), x0: x, x1: x + CELL, y0: y, y1: (cy + 1) * CELL });
+      const shadow = sunShadow(add.image(x + CELL / 2, (cy + 1) * CELL, 'home_s', key).setOrigin(0.5, 1));
+      st.shadows.push(shadow);
+      st.placed.push({ obj: shadow, x0: x - 40, x1: x + CELL + 40, y0: y - 40, y1: (cy + 1) * CELL + 40 });
+    }
+  }
+
+  /** Stand chunk (cx, cy) up again on the next frame: something was built, cleared or taken down in it. */
+  touch(cx: number, cy: number): void {
+    this.dirty.add(cx * 4096 + cy);
+  }
+
+  /** Stand every chunk up again: a whole new set of changes came in (online). */
+  touchAll(): void {
+    for (const key of this.stood.keys()) this.dirty.add(key);
+  }
+
+  /** A tree or piece of undergrowth was cleared (or put back): it goes, and a tree's shadow and litter on the ground with it. */
+  clearedAt(x: number, y: number, tree: boolean): void {
+    this.touch(Math.floor(x / CHUNK), Math.floor(y / CHUNK));
+    if (tree) this.repaint(x - 90, y - 60, x + 90, y + 70);
+  }
+
+  /** The tree or undergrowth a tap at (x, y) lands on, front-most first; null for none. */
+  clearableAt(x: number, y: number): Clearable | null {
+    let best: Clearable | null = null;
+    const cx = Math.floor(x / CHUNK);
+    const cy = Math.floor(y / CHUNK);
+    for (let j = cy - 1; j <= cy + 1; j++) {
+      for (let i = cx - 1; i <= cx + 1; i++) {
+        for (const c of this.stood.get(i * 4096 + j)?.clearable ?? []) {
+          if (!c.obj.active || Math.abs(x - c.x) > c.hw || y < c.y - c.top || y > c.y + 4) continue;
+          // Undergrowth before a tree it stands in front of; else the nearer the foot, the likelier.
+          if (!best || (c.tree === best.tree ? c.y > best.y : !c.tree)) best = c;
+        }
+      }
+    }
+    return best;
   }
 
   /** One piece of undergrowth: the older forests' art where it has it, the Everwood's own for the rest. */
@@ -541,6 +700,9 @@ export class Forest {
     }
     obj.setPipeline('Lit').setDepth(y).setFlipX(flip && kind !== 'log');
     place(obj, x, y, 24, 40);
+    const tall = kind === 'bigshroom' ? 30 : kind === 'boulder' || kind === 'reeds' || kind === 'bush' || kind === 'berry' ? 20 : kind === 'log' ? 12 : 14;
+    st.clearable.push({ of: footKey(x, y), obj, tree: false, x, y, hw: kind === 'log' ? 16 : kind === 'boulder' ? 13 : 9, top: tall });
+    if (CASTS.has(kind)) this.cast(st, st.shadows, obj, 40);
     // What glows: the little glowing caps, and the giant mushrooms of the hollows.
     const glowKey = kind === 'glowcap' ? 'flora_e' : kind === 'bigshroom' ? 'fprop_e' : null;
     if (glowKey) {
@@ -625,6 +787,7 @@ export class Forest {
       case 'elder': {
         const obj = add.sprite(p.x, p.y, 'elder', 'e0').setOrigin(0.5, ELDER_BASE_Y / ELDER_H).setPipeline('Lit').setDepth(p.y);
         place(obj, p.x, p.y, 90, ELDER_BASE_Y);
+        this.cast(st, st.treeShadows, obj, ELDER_H);
         const glow = add.sprite(p.x, p.y, 'elder_e', 'e0').setOrigin(0.5, ELDER_BASE_Y / ELDER_H).setBlendMode(Phaser.BlendModes.ADD).setDepth(p.y + 0.1);
         place(glow, p.x, p.y, 90, ELDER_BASE_Y);
         st.trees.push({ obj, x: p.x, y: p.y, kind: 'elder', v: 0, anim: 'elder_sway', swaying: false, alpha: 1, r: 76, top: 118, glow });
@@ -671,6 +834,18 @@ export class Forest {
   }
 
   /** Take a chunk's things down again. */
+  /**
+   * The sun's shadow of `obj`: its silhouette laid on the ground from its
+   * foot, turned and stretched with the time of day like the heroes' and the
+   * monsters' (see sunShadow). Kept while it could reach into view: `reach`
+   * px every way from the foot, as the shadow swings round with the sun.
+   */
+  private cast(st: Stood, list: Img[], obj: Img | Sprite, reach: number): void {
+    const sh = sunShadow(this.world.add.image(obj.x, obj.y, `${obj.texture.key}_s`, obj.frame.name).setOrigin(obj.originX, obj.originY).setFlipX(obj.flipX));
+    list.push(sh);
+    st.placed.push({ obj: sh, x0: obj.x - reach, x1: obj.x + reach, y0: obj.y - reach, y1: obj.y + reach });
+  }
+
   private unstand(key: number): void {
     const st = this.stood.get(key);
     if (!st) return;
@@ -708,6 +883,13 @@ export class Forest {
       const cy = (key % 4096) * CHUNK;
       if (cx + CHUNK < view.left - FORGET || cx > view.right + FORGET || cy + CHUNK < view.top - FORGET || cy > view.bottom + FORGET + ELDER_H) this.unstand(key);
     }
+    // Chunks the player changed: stood up again as they now are.
+    for (const key of this.dirty) {
+      if (!this.stood.has(key)) continue;
+      this.unstand(key);
+      this.stand(key);
+    }
+    this.dirty.clear();
 
     const vx0 = view.x - 16;
     const vx1 = view.right + 16;
@@ -723,6 +905,15 @@ export class Forest {
     for (const st of this.stood.values()) {
       for (const p of st.placed) p.obj.setVisible(p.x1 > vx0 && p.x0 < vx1 && p.y1 > vy0 && p.y0 < vy1);
       for (const s of st.shadows) s.setAlpha(shadowAlpha);
+      for (const s of st.treeShadows) s.setAlpha(shadowAlpha * TREE_SHADOW);
+      // Built lamps: fire flickers, the day washes them out.
+      for (const l of st.lamps) {
+        const L = l.part.light!;
+        const k = 1 + (L.day - 1) * d;
+        const n = L.flicker ? Math.sin(time * 0.011 + l.seed) * 0.5 + Math.sin(time * 0.027 + l.seed * 3) * 0.3 + Math.sin(time * 0.061 + l.seed * 7) * 0.2 : Math.sin(time * 0.002 + l.seed) * 0.6;
+        l.light.intensity = L.intensity * (0.87 + n * 0.13) * k;
+        l.halo.setAlpha((0.32 + n * 0.06) * k);
+      }
       for (const t of st.trees) {
         if (!t.obj.visible) continue;
         if (t.kind !== 'pine' && t.kind !== 'elder') leafy = true;
@@ -867,7 +1058,11 @@ export class Forest {
   /** How far the nearest campfire burns from (x, y), for its crackle. */
   fireDistance(x: number, y: number): number {
     let near = Infinity;
-    for (const st of this.stood.values()) for (const pl of st.places) if (pl.poi.kind === 'campfire') near = Math.min(near, Math.hypot(pl.poi.x - x, pl.poi.y - y));
+    for (const st of this.stood.values()) {
+      for (const pl of st.places) if (pl.poi.kind === 'campfire') near = Math.min(near, Math.hypot(pl.poi.x - x, pl.poi.y - y));
+      // Fires the player built crackle too (not the candles).
+      for (const l of st.lamps) if (l.part.light?.flicker && l.part.id !== 'candelabra') near = Math.min(near, Math.hypot(l.light.x - x, l.light.y - y));
+    }
     return near;
   }
 }
