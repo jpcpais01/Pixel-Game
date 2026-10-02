@@ -15,6 +15,7 @@ import { YUREI_AUTO } from './yurei';
 import { CAPTAIN_AUTO } from './captain';
 import { BALLERINA_AUTO } from './ballerina';
 import { JUGG_AUTO } from './juggernaut';
+import { GUNSLINGER_AUTO } from './gunslinger';
 import { LIGHTWRIGHT_KITS } from './lightwright';
 import { TRANSMUTER_KITS } from './transmuter';
 import { AQUANAUT_KITS } from './aquanaut';
@@ -35,6 +36,7 @@ export const KITS: Record<string, Kit> = {
   ...CAPTAIN_AUTO,
   ...BALLERINA_AUTO,
   ...JUGG_AUTO,
+  ...GUNSLINGER_AUTO,
   ...LIGHTWRIGHT_KITS,
   ...TRANSMUTER_KITS,
   ...AQUANAUT_KITS,

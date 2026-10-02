@@ -45,6 +45,8 @@ import { GhostShip, ghostShipIcon } from './captain';
 import { ADMIRAL_KIT, CAPTAIN_KIT } from '../Captain';
 import { MusicBox, MUSIC_MS, musicBoxIcon } from './ballerina';
 import { BALLET_KIT, FIREBIRD_KIT, type Ballerina } from '../Ballerina';
+import { HighNoon, NOON_MS, noonIcon } from './gunslinger';
+import { DESPERADO_KIT, GUNSL_KIT, type Gunslinger } from '../Gunslinger';
 import { JUGG_KIT, TINMAN_KIT, type Juggernaut } from '../Juggernaut';
 import { MELT_MS, meltdownIcon } from './juggernaut';
 import { chainReaction, megaSentry } from './inventor';
@@ -437,6 +439,21 @@ const ULTS: Record<string, UltDef> = {
       c.world.addEffect(new MusicBox(c.world, c));
     },
   },
+  'automaton:gunslinger': {
+    name: 'High Noon',
+    cost: 70,
+    windup: 550,
+    aim: 'self',
+    pal: GUNSL_KIT.pal,
+    icon: noonIcon,
+    // The Gunslinger stands and aims itself (Gunslinger.highNoon); the sun, the marks and the volley are HighNoon.
+    lasts: NOON_MS,
+    cast: (c) => {
+      const g = c.hero as Partial<Gunslinger>;
+      if (g.highNoon) g.highNoon(c);
+      else c.world.addEffect(new HighNoon(c.world, c, c.hero));
+    },
+  },
   'phantom:captain': {
     name: 'Ghost Ship',
     cost: 75,
@@ -677,6 +694,7 @@ const SKINS: Record<string, UltSkin> = {
   'phantom:ferryman': { pal: FERRY_KIT.pal, type: 'wraith' },
   'automaton:tinman': { pal: TINMAN_KIT.pal, type: 'juggernaut' },
   'automaton:firebird': { pal: FIREBIRD_KIT.pal, type: 'ballerina' },
+  'automaton:desperado': { pal: DESPERADO_KIT.pal, type: 'gunslinger' },
   'phantom:admiral': { pal: ADMIRAL_KIT.pal, type: 'captain' },
   'phantom:yuki': { pal: YUKI_KIT.pal, type: 'yurei' },
   'phantom:bride': { pal: BRIDE_KIT.pal, type: 'weeper' },
