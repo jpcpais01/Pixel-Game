@@ -75,6 +75,8 @@ import { matIcon } from '../game/forge';
 import { AFONSO_TONES, decreeIcon, KING_TONES } from './king';
 import { JADE_LOOK } from './warrior';
 import { hollowSwordIcon, lanternWhirlIcon } from './headless';
+import { dragonSwordIcon, dragonWhirlIcon } from './dragonslayer';
+import { sunDecreeIcon, sunSwordIcon } from './sunking';
 import { WIND_DEEP } from './palette';
 import { buildBarklingSheet, buildBeetleSheet, buildFrogSheet, buildGlowmothSheet, buildPuffcapSheet, ringCanvas, thornFrame, THORN_H, THORN_W, venomGlob, type MonsterSheet } from './monsters';
 import { buildWardenSheet } from './warden';
@@ -452,6 +454,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_decree', toCanvas(16, 16, decreeIcon(KING_TONES)));
   scene.textures.addCanvas('icon_sword_afonso', toCanvas(16, 16, swordIcon({ blade: '#d6dce8', bladeDark: '#7a869c', tip: '#f4f8ff', guard: '#5e6878', guardLit: '#98a2b4', guardDark: '#252a34', grip: '#6a3d26', ink: '#06070a' })));
   scene.textures.addCanvas('icon_decree_afonso', toCanvas(16, 16, decreeIcon(AFONSO_TONES)));
+  // The Dragonslayer's burning jagged blade and a whirl of dragonfire round a horned skull; the Sun King's sun-pommelled sword and his sun over the decree.
+  scene.textures.addCanvas('icon_sword_dragon', toCanvas(16, 16, dragonSwordIcon()));
+  scene.textures.addCanvas('icon_whirl_dragon', toCanvas(16, 16, dragonWhirlIcon()));
+  scene.textures.addCanvas('icon_sword_sunking', toCanvas(16, 16, sunSwordIcon()));
+  scene.textures.addCanvas('icon_decree_sunking', toCanvas(16, 16, sunDecreeIcon()));
   scene.textures.addCanvas('icon_mace_seraph', toCanvas(16, 16, seraphMaceIcon()));
   scene.textures.addCanvas('icon_sanctuary_seraph', toCanvas(16, 16, dawnGroundIcon()));
   scene.textures.addCanvas('icon_hammer_oath', toCanvas(16, 16, oathHammerIcon()));

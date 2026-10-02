@@ -24,7 +24,7 @@ import { Maelstrom } from './tide';
 import { ABYSS_MAGIC, TIDE_MAGIC } from '../Tide';
 import { AsgardThunder, OdinSpear } from './valkyrie';
 import { KingsCrown } from './king';
-import { AFONSO_KIT, KING_KIT } from '../King';
+import { AFONSO_KIT, KING_KIT, SUNKING_KIT } from '../King';
 import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
 import { AMAZON_KIT, NORTH_KIT, RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
 import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
@@ -483,6 +483,8 @@ const SKINS: Record<string, UltSkin> = {
   'warrior:spartan': { pal: pal(0xfff0e8, 0xff9a80, 0xf03a3a, 0x8a0a1a, 0xff6a50) },
   'warrior:headless': { pal: pal(0xfff4d0, 0xffb040, 0xff6a14, 0x5a1a7a, 0xff8a2a) },
   'warrior:afonso': { pal: AFONSO_KIT.pal, type: 'king' },
+  'warrior:dragon': { pal: pal(0xfff0d0, 0xffa040, 0xff4a14, 0x3a0a06, 0xff6a20) },
+  'warrior:sunking': { pal: SUNKING_KIT.pal, type: 'king' },
   'paladin:seraph': { pal: pal(0xffffff, 0xfff0d0, 0xffc890, 0xff8ab8, 0xffd8b0) },
   'paladin:oathbreaker': { pal: pal(0xf6eeff, 0xd8b0ff, 0xa060ff, 0x4a1a8a, 0xb070ff), type: 'crusader' },
   'paladin:lionheart': { pal: pal(0xfffbe8, 0xffd870, 0xffb43a, 0xa01828, 0xffc870) },
