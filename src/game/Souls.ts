@@ -290,7 +290,7 @@ export interface RisenStats {
   leash: number;
   /** The soul fire it rises and falls in (soul green unless given). */
   fx?: Scheme;
-  /** Its sheet, drawn and animated like the skeleton's ('skeleton' unless given: the BarrowKnight's ghouls). */
+  /** Its sheet, drawn and animated like the skeleton's ('skeleton' unless given: the Barrow Knight's ghouls). */
   sheet?: string;
 }
 

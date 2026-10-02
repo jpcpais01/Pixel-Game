@@ -1810,20 +1810,29 @@ export class Sfx {
     this.m.startNoise(src, t + 0.12, 0.9);
   }
 
-  /** The BarrowKnight's spade cutting the air: a heavy whoosh, lower for the scoop. */
-  spadeSwing(t: number, pan: number, heavy: boolean): void {
-    const out = this.out(pan, heavy ? 0.5 : 0.4, 0.12);
-    this.burstNoise(out, t, 'bandpass', heavy ? 500 : 800, heavy ? 1200 : 1800, 1.2, 0.3, heavy ? 0.2 : 0.14, true);
-    this.chirp(out, t, 'triangle', heavy ? 160 : 220, 90, 0.08, 0.12);
+  /**
+   * The Barrow Knight's grave maul heaved through the air: a slow, low whoosh
+   * of a great weight, the creak of its iron bands riding it; lower and
+   * longer for the dragging backhand.
+   */
+  maulSwing(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.55 : 0.45, 0.14);
+    const dur = heavy ? 0.26 : 0.2;
+    this.burstNoise(out, t, 'bandpass', heavy ? 320 : 480, heavy ? 900 : 1300, 1.1, 0.34, dur, true);
+    this.chirp(out, t, 'triangle', heavy ? 120 : 160, 60, 0.1, dur * 0.8);
+    // The iron bands and the haft's socket grating.
+    this.chirp(out, t + 0.02, 'sawtooth', rand(210, 240), rand(170, 190), 0.018, 0.09);
   }
 
-  /** The spade brought down flat: an iron clang over a deep thump of earth. */
-  spadeSlam(t: number, pan: number): void {
-    const out = this.out(pan, 0.9, 0.4);
-    this.chirp(out, t, 'sine', 120, 38, 0.75, 0.28);
-    this.burstNoise(out, t, 'lowpass', 1000, 180, 0.8, 0.5, 0.3, true);
-    this.bell(out, t, rand(620, 700), 0.06, 0.25);
-    for (let i = 0; i < 4; i++) this.burstNoise(out, t + 0.06 + i * rand(0.04, 0.08), 'bandpass', rand(500, 1000), 400, 2, 0.15, 0.05, true);
+  /** The gravestone brought down: a deep thud of stone into earth, a dull ring of iron, grit and stone chips after. */
+  maulSlam(t: number, pan: number): void {
+    const out = this.out(pan, 0.95, 0.45);
+    this.chirp(out, t, 'sine', 110, 32, 0.85, 0.32);
+    this.burstNoise(out, t, 'lowpass', 900, 150, 0.8, 0.55, 0.32, true);
+    // Stone on earth: a short, hard crack before the rumble.
+    this.burstNoise(out, t, 'bandpass', 1800, 900, 1.5, 0.3, 0.04);
+    this.bell(out, t + 0.01, rand(380, 430), 0.045, 0.3);
+    for (let i = 0; i < 5; i++) this.burstNoise(out, t + 0.06 + i * rand(0.04, 0.08), 'bandpass', rand(700, 1400), 500, 2.5, 0.14, 0.04, true);
   }
 
   /** The ground torn open: earth splitting, a groan from below, bones clattering up. */

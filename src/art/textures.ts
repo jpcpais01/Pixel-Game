@@ -19,7 +19,7 @@ import { FALCONER_TONES, falconIcon, quickShotIcon, SNOWFEATHER_TONES } from './
 import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
 import { deathStepIcon, reapIcon } from './reaper';
 import { boneSpikesIcon, DROWNED_ICON, rimeBoltIcon } from './lich';
-import { MOSSGRAVE_ICON, graveIcon, spadeIcon } from './barrow';
+import { MOSSGRAVE_ICON, graveIcon, maulIcon } from './barrow';
 import { GRAVE_LOOK, MOSS_GRAVE_LOOK, buildGhoulSheet, buildStoneSheet } from './barrowFx';
 import { sunBowIcon, sunRainIcon } from './apolloIcons';
 import { BLOOD_SPELL, DIGGER_ICON, DIGGER_SPELL, SOUL_SPELL, TOMB_SPELL, VAMPIRE_ICON, VAMPIRE_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, batCanvas, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
@@ -347,14 +347,14 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_raise_tomb', toCanvas(16, 16, tombRaiseIcon()));
   scene.textures.addCanvas('icon_lance_wyrm', toCanvas(16, 16, bloodLanceIcon(WYRM_ICON)));
   scene.textures.addCanvas('icon_nova_wyrm', toCanvas(16, 16, novaIcon(WYRM_ICON)));
-  // The BarrowKnight's ghouls and headstones (the Graveyard's), plain and Mossgrave's, and his buttons.
+  // The Barrow Knight's ghouls and headstones (the Graveyard's), plain and Mossgrave's, and his buttons.
   registerMonster(scene, 'ghoul', buildGhoulSheet(GRAVE_LOOK));
   registerMonster(scene, 'ghoul_moss', buildGhoulSheet(MOSS_GRAVE_LOOK));
   registerMonster(scene, 'headstones', buildStoneSheet(GRAVE_LOOK));
   registerMonster(scene, 'headstones_moss', buildStoneSheet(MOSS_GRAVE_LOOK));
-  scene.textures.addCanvas('icon_spade', toCanvas(16, 16, spadeIcon()));
+  scene.textures.addCanvas('icon_gravemaul', toCanvas(16, 16, maulIcon()));
   scene.textures.addCanvas('icon_grave', toCanvas(16, 16, graveIcon()));
-  scene.textures.addCanvas('icon_spade_mossgrave', toCanvas(16, 16, spadeIcon(MOSSGRAVE_ICON)));
+  scene.textures.addCanvas('icon_gravemaul_mossgrave', toCanvas(16, 16, maulIcon(MOSSGRAVE_ICON)));
   scene.textures.addCanvas('icon_grave_mossgrave', toCanvas(16, 16, graveIcon(MOSSGRAVE_ICON)));
   // The Reaper's Reap and Death's step, and the Catrina's.
   scene.textures.addCanvas('icon_reap', toCanvas(16, 16, reapIcon()));

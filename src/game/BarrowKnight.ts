@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
-import { BARROW_H, BARROW_HIT_FRAME, BARROW_ORIGIN_X, BARROW_ORIGIN_Y, BARROW_W, LANTERN_AT } from '../art/barrow';
+import { BARROW_H, BARROW_HIT_FRAME, BARROW_ORIGIN_X, BARROW_ORIGIN_Y, BARROW_W, LAMP_AT } from '../art/barrow';
 import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
@@ -16,13 +16,14 @@ import { HERO_STATS } from './stats';
 import { stand } from './rest';
 import { heroTimers } from './timers';
 
-// The BarrowKnight: the Necromancer's tank, a burly old sexton with an iron
-// spade and a lantern of corpse-light at his belt (art/barrow.ts).
-//  - The attack is the spade: a swing, a scooping backswing that flings earth,
-//    then an overhead slam that cracks the ground and throws foes back.
-//  - The ability is Open grave: he drives the spade into the earth where he
-//    aims and heaves; the ground splits, arms of bone burst up and seize
-//    every foe on it, and a ghoul climbs out of the pit to fight for him.
+// The Barrow Knight: the Necromancer's tank, a knight of the old kings risen
+// from his barrow in rusted plate, swinging a maul whose head is a gravestone,
+// a soul-lamp of corpse-light at his belt (art/barrow.ts).
+//  - The attack is the grave maul: a swing, a dragging backhand that flings
+//    earth, then an overhead slam that cracks the ground and throws foes back.
+//  - The ability is Open grave: he drives the gravestone into the earth where
+//    he aims and wrenches it; the ground splits, arms of bone burst up and
+//    seize every foe on it, and a ghoul climbs out of the pit to fight for him.
 //  - His Special, Graveyard, is in ultimate/barrow.ts.
 
 const stats = HERO_STATS['necromancer.barrow'];
@@ -33,8 +34,8 @@ const COMBO_WINDOW = 1400;
 const SETTLE = { swing1: 30, swing2: 30, slam: 180 };
 /** The two swings: reach from his chest, half-angle of the arc, blow, knockback. */
 const SWING = { reach: 23, spread: (70 * Math.PI) / 180, damage: 11, knock: 70 };
-const SCOOP = { reach: 22, spread: (60 * Math.PI) / 180, damage: 11, knock: 90 };
-/** The slam: how far ahead the blade comes down, the ring it shakes, its blow. */
+const BACKHAND = { reach: 22, spread: (60 * Math.PI) / 180, damage: 11, knock: 90 };
+/** The slam: how far ahead the stone comes down, the ring it shakes, its blow. */
 const SLAM = { ahead: 13, radius: 21, damage: 20, knock: 160 };
 /** The swings strike from about his chest. */
 const CHEST_Y = 10;
@@ -52,8 +53,8 @@ const GHOUL = { life: 8000, damage: 6, speed: 44, rest: 700, leash: 120 };
 /** Where the ghoul keeps to round him while there's nothing to fight. */
 const GHOUL_SLOT = { x: -16, y: 10 };
 
-/** The lantern's light: how far it reaches, and its gutter. */
-const LANTERN = { radius: 44, day: 0.25, night: 0.95, flicker: 0.12 };
+/** The soul-lamp's light: how far it reaches, and its gutter. */
+const LAMP = { radius: 40, day: 0.25, night: 0.95, flicker: 0.12 };
 
 // Walk frames where a foot lands.
 const FOOTFALLS = new Set([1, 4]);
@@ -62,12 +63,12 @@ const DEG: Record<Dir, number> = { right: 0, down: 90, left: 180, up: 270 };
 type State = 'free' | 'swing' | 'dig';
 type Blow = 'swing1' | 'swing2' | 'slam';
 
-/** How a BarrowKnight look plays: its sheet, the colours of his blows and lantern, his earth and his dead. */
+/** How a Barrow Knight look plays: its sheet, the colours of his blows and his corpse-light, his earth and his dead. */
 export interface BarrowKit {
   key: string;
-  /** The spade's arcs. */
-  blade: Scheme;
-  /** The lantern's corpse-light: the grave's glow, the cracks' seams, the ghoul's rising. */
+  /** The maul's arcs. */
+  arc: Scheme;
+  /** The corpse-light (his eyes, his lamp): the grave's glow, the cracks' seams, the ghoul's rising. */
   glow: Scheme;
   soil: Soil;
   /** The ghoul's sheet. */
@@ -76,16 +77,16 @@ export interface BarrowKit {
 
 export const BARROW_KIT: BarrowKit = {
   key: 'necro_barrow',
-  blade: { core: 0xf4ffe8, hot: 0xd8e8c0, mid: 0x9aa890, deep: 0x4a5a48, light: 0xb8f070 },
+  arc: { core: 0xf4ffe8, hot: 0xd8e8c0, mid: 0x9aa890, deep: 0x4a5a48, light: 0xb8f070 },
   glow: { core: 0xf4ffe0, hot: 0xd0ff8a, mid: 0x8ad84a, deep: 0x2e6a2a, light: 0xb8f070 },
   soil: GRAVE_SOIL,
   ghoul: 'ghoul',
 };
 
-/** Mossgrave: the same spade wound in roots, a wisp in the lantern, roots for arms. */
+/** Mossgrave: a mossy stone bound in roots, a wisp's light in his eyes and lamp, roots for arms. */
 export const MOSSGRAVE_KIT: BarrowKit = {
   key: 'necro_mossgrave',
-  blade: { core: 0xeafff8, hot: 0xc8e8d8, mid: 0x7aa898, deep: 0x3a5a52, light: 0x6af0e8 },
+  arc: { core: 0xeafff8, hot: 0xc8e8d8, mid: 0x7aa898, deep: 0x3a5a52, light: 0x6af0e8 },
   glow: { core: 0xecfffc, hot: 0x9ff8ee, mid: 0x3ad0c8, deep: 0x0e5a68, light: 0x6af0e8 },
   soil: MOSS_SOIL,
   ghoul: 'ghoul_moss',
@@ -106,7 +107,7 @@ export class BarrowKnight implements Hero {
   private glowLayer: Phaser.GameObjects.Sprite;
   private shadow: Phaser.GameObjects.Image;
   private castShadow: Phaser.GameObjects.Sprite;
-  private lantern: Phaser.GameObjects.Light;
+  private lamp: Phaser.GameObjects.Light;
   private state: State = 'free';
   private lastMove = new Phaser.Math.Vector2(0, 1);
   /** Towards the mouse on a computer (see Hero). */
@@ -115,7 +116,7 @@ export class BarrowKnight implements Hero {
   private cooldown = 0;
   private graveCd = 0;
 
-  // The spade chain.
+  // The maul chain.
   private blow: Blow = 'swing1';
   private step = 0;
   private lastSwingAt = -Infinity;
@@ -148,7 +149,7 @@ export class BarrowKnight implements Hero {
     this.castShadow = sunShadow(world.add.sprite(x, y, `${key}_s`, 'idle_down_0').setOrigin(ox, oy));
     this.body = world.add.sprite(x, y, key, 'idle_down_0').setOrigin(ox, oy).setPipeline('Lit');
     this.glowLayer = world.add.sprite(x, y, `${key}_e`, 'idle_down_0').setOrigin(ox, oy).setBlendMode(Phaser.BlendModes.ADD);
-    this.lantern = world.lights.addLight(x, y, LANTERN.radius, kit.glow.light ?? kit.glow.hot, 0);
+    this.lamp = world.lights.addLight(x, y, LAMP.radius, kit.glow.light ?? kit.glow.hot, 0);
     this.body.play(`${key}_idle_down`);
 
     this.body.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (anim: Phaser.Animations.Animation) => {
@@ -161,7 +162,7 @@ export class BarrowKnight implements Hero {
     });
     world.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       beamHud.firing = false;
-      world.lights.removeLight(this.lantern);
+      world.lights.removeLight(this.lamp);
     });
   }
 
@@ -217,7 +218,7 @@ export class BarrowKnight implements Hero {
         if (this.blow === 'slam') this.slam();
         else this.sweep();
       } else if (this.state === 'dig') {
-        // Until the spade bites, the grave goes where the mouse is.
+        // Until the stone bites, the grave goes where the mouse is.
         if (!this.struck) this.takeAim();
         if (!this.struck && at >= BARROW_HIT_FRAME.dig) {
           this.struck = true;
@@ -242,38 +243,38 @@ export class BarrowKnight implements Hero {
     this.blow = this.step === 1 ? 'swing1' : this.step === 2 ? 'swing2' : 'slam';
     this.dir = this.aimDir();
     const u = this.facing();
-    sound.spadeSwing(this.world.pan(this.x), this.step === 2);
+    sound.maulSwing(this.world.pan(this.x), this.step === 2);
     this.body.play(`${this.kit.key}_${this.blow}_${this.dir}`);
     this.dash = { vx: u.x * LUNGE.speed, vy: u.y * LUNGE.speed, t: LUNGE.ms };
   }
 
-  /** A swing lands: the spade cuts a wide arc before him; the scoop throws earth after it. */
+  /** A swing lands: the stone cuts a wide arc before him; the backhand throws earth after it. */
   private sweep(): void {
     const cx = snap(this.x);
     const cy = snap(this.y) - CHEST_Y;
     const depth = snap(this.y);
     const deg = DEG[this.dir];
-    const s = this.blow === 'swing1' ? SWING : SCOOP;
-    // Swing and scoop sweep opposite ways round him.
+    const s = this.blow === 'swing1' ? SWING : BACKHAND;
+    // Swing and backhand sweep opposite ways round him.
     const way = this.blow === 'swing1' ? 1 : -1;
     const sweep = (s.spread * 180) / Math.PI + 15;
-    this.fx.push(new SlashArc(this.world, cx, cy, deg - way * sweep, deg + way * sweep, 19, this.kit.blade, depth, 170));
+    this.fx.push(new SlashArc(this.world, cx, cy, deg - way * sweep, deg + way * sweep, 19, this.kit.arc, depth, 170));
     const rad = (deg * Math.PI) / 180;
     const hits = this.world.melee({ kind: 'arc', x: cx, y: cy, radius: s.reach, angle: rad, spread: s.spread }, { damage: s.damage, knock: s.knock });
     if (this.blow === 'swing2') {
-      // The scoop comes up full: a spadeful of grave dirt flung the way he faces.
+      // The backhand drags through the ground: grave dirt flung off the stone the way he faces.
       this.world.addEffect(new Clods(this.world, cx + Math.cos(rad) * 8, snap(this.y) + Math.sin(rad) * 5, 9, this.kit.soil, { dir: rad, spread: 0.9, speed: 70, up: 60 }));
     }
     this.impact(hits, false);
   }
 
-  /** The slam: the blade comes down flat, the ground cracks and everything round it is thrown back. */
+  /** The slam: the gravestone comes down foot-first, the ground cracks and everything round it is thrown back. */
   private slam(): void {
     const u = this.facing();
     const x = snap(this.x + u.x * SLAM.ahead);
     const y = snap(this.y + u.y * SLAM.ahead * 0.6);
     const { glow, soil } = this.kit;
-    sound.spadeSlam(this.world.pan(x));
+    sound.maulSlam(this.world.pan(x));
     this.world.cameras.main.shake(130, 0.0009);
     this.world.addEffect(new GroundCrack(this.world, x, y, SLAM.radius, glow, soil));
     this.world.addEffect(new Clods(this.world, x, y, 14, soil, { speed: 50, up: 85 }));
@@ -283,7 +284,7 @@ export class BarrowKnight implements Hero {
   }
 
   private impact(hits: { x: number; y: number }[], heavy: boolean): void {
-    for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, this.kit.blade, h.y + 13, heavy));
+    for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, this.kit.arc, h.y + 13, heavy));
     if (hits.length) {
       sound.boneHit(this.world.pan(hits[0].x));
       if (!heavy) this.world.cameras.main.shake(60, 0.0003);
@@ -310,7 +311,7 @@ export class BarrowKnight implements Hero {
     }
   }
 
-  /** The spade bites and he heaves: the grave opens where he aimed, and a ghoul climbs out of it. */
+  /** The stone bites and he wrenches it: the grave opens where he aimed, and a ghoul climbs out of it. */
   private openGrave(): void {
     this.graveCd = GRAVE_COOLDOWN;
     const area = this.world.area;
@@ -364,10 +365,10 @@ export class BarrowKnight implements Hero {
     this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(frame).setAlpha(this.alpha);
     this.shadow.setPosition(rx, ry - 1).setAlpha(this.alpha);
     this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * this.alpha);
-    // The lantern at his belt lights the ground round him, brightest at night, guttering.
-    const at = LANTERN_AT[this.dir];
-    this.lantern.setPosition(rx + at.x, ry + at.y);
-    const flick = 1 + LANTERN.flicker * (Math.sin(this.clock * 0.013) + Math.sin(this.clock * 0.031) * 0.5);
-    this.lantern.intensity = (LANTERN.day + (LANTERN.night - LANTERN.day) * (1 - this.daylight)) * flick * this.alpha;
+    // The soul-lamp at his belt lights the ground round him, brightest at night, guttering.
+    const at = LAMP_AT[this.dir];
+    this.lamp.setPosition(rx + at.x, ry + at.y);
+    const flick = 1 + LAMP.flicker * (Math.sin(this.clock * 0.013) + Math.sin(this.clock * 0.031) * 0.5);
+    this.lamp.intensity = (LAMP.day + (LAMP.night - LAMP.day) * (1 - this.daylight)) * flick * this.alpha;
   }
 }

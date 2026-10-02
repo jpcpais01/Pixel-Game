@@ -1,4 +1,4 @@
-// What the BarrowKnight calls up out of the ground: the ghoul that climbs out
+// What the Barrow Knight calls up out of the ground: the ghoul that climbs out
 // of his open grave and fights for him, and the headstones of his Special.
 // Mossgrave's are a bog body grown over with moss and fungus, and old
 // standing stones furred with moss, a spiral cut in each.
@@ -10,7 +10,7 @@
 import { PixelCanvas, hex, sphere, type Material, type RGB } from './pixel';
 import { sheet, type MonsterSheet } from './monsters';
 import { SKELETON_FRAME } from './skeleton';
-import { LANTERN_HOT, LANTERN_MID, WISP_HOT, WISP_MID } from './barrow';
+import { SOUL_HOT, SOUL_MID, WISP_HOT, WISP_MID } from './barrow';
 
 const ramp = (...c: string[]): RGB[] => c.map(hex);
 
@@ -43,8 +43,8 @@ export const GRAVE_LOOK: GraveLook = {
   earth: EARTH,
   stone: { ramp: ramp('#2a2a2e', '#44454a', '#62646a', '#84868a', '#a6a8aa'), outline: hex('#0c0c0e'), outlineLit: hex('#18181c') },
   carve: { ramp: ramp('#2e6a2a', '#7ad040', '#c8ff8a'), outline: hex('#0c160a'), emissive: 0.8, noAO: true },
-  hot: LANTERN_HOT,
-  mid: LANTERN_MID,
+  hot: SOUL_HOT,
+  mid: SOUL_MID,
 };
 
 export const MOSS_GRAVE_LOOK: GraveLook = {

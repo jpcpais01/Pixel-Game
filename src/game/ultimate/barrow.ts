@@ -8,7 +8,7 @@ import { clamp01, dither, easeOut, flare, Fx, GROUND, hash, strikeGround, type I
 import type { Cast, IconPainter } from './types';
 import type { WorldScene } from '../../scenes/WorldScene';
 
-// The BarrowKnight's Special, Graveyard: headstones burst up out of the earth
+// The Barrow Knight's Special, Graveyard: headstones burst up out of the earth
 // in a ring round him, throwing back everything they come up under. For a
 // few seconds the ring stands, and from every stone a ghost tears loose,
 // streaking for the nearest foe, then another, then another; at the last the

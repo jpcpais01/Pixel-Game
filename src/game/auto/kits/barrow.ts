@@ -1,5 +1,5 @@
-// The BarrowKnight's effects on the board: the spade's swings and earth-
-// cracking slam, the open grave whose arms hold what stands on it, and the
+// The Barrow Knight's effects on the board: the grave maul's swings and
+// earth-cracking slam, the open grave whose arms hold what stands on it, and the
 // Graveyard's ring of headstones loosing ghosts. Earth, iron and stone keep
 // their own colours; the corpse-light takes the palette, so Mossgrave's look
 // recolours it (and makes the arms roots, the stones mossy, the ghosts wisps).
@@ -43,16 +43,23 @@ const MOSS_LIGHT = 0x6af0e8;
 
 const mossy = (c: Cast | { look: string }): boolean => c.look === 'mossgrave';
 
-/** The spade on its haft from (x, y), the blade out at angle `th`. */
-function spade(px: Px, x: number, y: number, th: number, len: number): void {
+/** The grave maul on its haft from (x, y), the gravestone out at angle `th`: its arch on the haft, an iron band round its foot. */
+function maul(px: Px, x: number, y: number, th: number, len: number): void {
   const ex = x + Math.cos(th) * len;
   const ey = y + Math.sin(th) * len;
   line(px, x, y, ex, ey, HAFT, 1);
-  // The blade: a broad spoon of iron at the end, lit along one edge.
-  const nx = -Math.sin(th);
-  const ny = Math.cos(th);
-  for (let i = 0; i < 4; i++)
-    for (let j = -1; j <= 1; j++) px.put(ex + Math.cos(th) * i + nx * j, ey + Math.sin(th) * i + ny * j, IRON[j === -1 ? 0 : j === 0 ? 1 : 2], 1);
+  const ux = Math.cos(th);
+  const uy = Math.sin(th);
+  const nx = -uy;
+  const ny = ux;
+  for (let i = 0; i < 5; i++) {
+    // The arch narrows to the haft; the foot is banded in iron.
+    const w = i === 0 ? 1 : 2;
+    for (let j = -w; j <= w; j++) {
+      const c = i === 3 ? IRON[j < 0 ? 0 : j === 0 ? 1 : 2] : STONE[j < 0 ? 0 : j === 0 ? 1 : j === 1 ? 2 : 3];
+      px.put(ex + ux * i + nx * j, ey + uy * i + ny * j, c, 1);
+    }
+  }
 }
 
 /** Clods thrown up off the ground at `at`, earth or moss. */
@@ -83,8 +90,8 @@ function cracks(s: Stage, at: Pt, R: number, p: Pal, seed: number, dur = 0.9): v
   });
 }
 
-/** A spade blow: the swing's smear, the clang, earth flung up; the slam cracks the ground. */
-function spadeBlow(s: Stage, at: Pt, from: Pt, p: Pal, heavy: boolean): void {
+/** A maul blow: the swing's smear, the thud, earth flung up; the slam cracks the ground. */
+function maulBlow(s: Stage, at: Pt, from: Pt, p: Pal, heavy: boolean): void {
   const side = at.x >= from.x ? 1 : -1;
   const P = { x: lerp(from.x, at.x, 0.3), y: lerp(from.y, at.y, 0.3) - HAND - (heavy ? 4 : 1) };
   const foe = { x: at.x, y: at.y - (heavy ? 2 : CHEST) };
@@ -102,7 +109,7 @@ function spadeBlow(s: Stage, at: Pt, from: Pt, p: Pal, heavy: boolean): void {
     const lo = Math.min(a0, cur);
     const hi = Math.max(a0, cur);
     if (hi - lo > 0.2) arc(L.air, P.x, P.y, len + 2, 2, lo, hi, p, fade * 0.8);
-    if (t < swing + 0.06) spade(L.air, P.x, P.y, cur, len);
+    if (t < swing + 0.06) maul(L.air, P.x, P.y, cur, len);
   });
   s.add(0.01, () => {}, swing * 0.8, () => {
     s.add(0.2, (L, k) => {
@@ -139,7 +146,7 @@ function limb(px: Px, x: number, y: number, h: number, lean: number, grip: boole
 /** Open grave: the ground darkens and splits at the aim; arms burst up round every foe on it and hold. */
 const graveMove = {
   cast(s: Stage, c: Cast): void {
-    // The spade bites: dust lifts off the spot before it opens.
+    // The stone bites: dust lifts off the spot before it opens.
     const moss = mossy(c);
     s.add(c.lead, (L, k) => {
       pool(L.ground, c.at.x, c.at.y, 4 + c.r * 0.6 * easeOut(k), 0x0c0806, (moss ? MOSS_EARTH : EARTH)[2], 0.7 * k);
@@ -245,5 +252,5 @@ const graveyardMove = {
 };
 
 export const BARROW_KITS: Record<string, Kit> = {
-  'necromancer.barrow': { melee: spadeBlow, skill: graveMove, ult: graveyardMove },
+  'necromancer.barrow': { melee: maulBlow, skill: graveMove, ult: graveyardMove },
 };
