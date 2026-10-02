@@ -207,4 +207,9 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Pours out a long cone of fire that turns with the aim.',
     special: 'A flame serpent coils round the spot, raking, then dives in a blast.',
   },
+  'transmuter.transmuter': {
+    attack: 'Flicks a quicksilver bead that bursts and splits after two more foes.',
+    ability: 'Chalks a circle; foes in it turn to lead: held, and struck 30% harder.',
+    special: 'A golden array gilds foes round her into statues, then shatters them.',
+  },
 };

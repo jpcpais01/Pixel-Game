@@ -2686,6 +2686,56 @@ export class Sfx {
     this.sparkle(out, t + 0.35, 3, 0.07);
   }
 
+  // ------------------------------------------------------------ The Transmuter
+
+  /** A bead of quicksilver flicked off the gauntlet: a liquid, rising plip and a little metal ring. */
+  quicksilver(t: number, pan: number): void {
+    const out = this.out(pan, 0.4, 0.2);
+    this.chirp(out, t, 'sine', 700, 1700, 0.14, 0.06);
+    this.bell(out, t + 0.01, 2600, 0.025, 0.18);
+  }
+
+  /** Quicksilver bursting on a foe: a wet splat and a scatter of tiny bright drips (fewer for a split bead). */
+  quickSplash(t: number, pan: number, small: boolean): void {
+    const out = this.out(pan, 0.45, 0.2);
+    this.burstNoise(out, t, 'bandpass', 2400, 900, 1.6, small ? 0.12 : 0.22, 0.08);
+    this.chirp(out, t, 'sine', 1500, 500, small ? 0.06 : 0.1, 0.07);
+    for (let i = 0; i < (small ? 1 : 3); i++) this.chirp(out, t + 0.04 + i * 0.035, 'sine', rand(1800, 2600), rand(2800, 3400), 0.04, 0.03);
+  }
+
+  /** Chalk scratching a circle on stone: a dry, quick scrape, round and round. */
+  chalk(t: number, pan: number): void {
+    const out = this.out(pan, 0.4, 0.15);
+    for (let i = 0; i < 4; i++) this.burstNoise(out, t + i * 0.1, 'bandpass', rand(3000, 3800), rand(4200, 5000), 4, 0.1, 0.07);
+  }
+
+  /** The circle kindles and flesh turns to lead: a low, heavy clang and a dull settling thud. */
+  transmute(t: number, pan: number, struck: boolean): void {
+    const out = this.out(pan, 0.55, 0.4);
+    this.chirp(out, t, 'triangle', 1100, 1600, 0.08, 0.12);
+    this.sparkle(out, t, 3, 0.05);
+    if (!struck) return;
+    this.bell(out, t + 0.04, 180, 0.14, 0.7);
+    this.burstNoise(out, t + 0.04, 'lowpass', 600, 120, 0.7, 0.3, 0.2, true);
+  }
+
+  /** The golden array: a rising chord of bells; `gild`, the foes turning to gold, rings it out bright. */
+  gild(t: number, pan: number, gild: boolean): void {
+    const out = this.out(pan, 0.6, 0.7);
+    const notes = gild ? [523, 659, 784, 1047] : [392, 494, 587];
+    notes.forEach((f, i) => this.bell(out, t + i * 0.06, f, gild ? 0.07 : 0.05, 1.4));
+    this.sparkle(out, t + 0.1, gild ? 5 : 3, 0.06);
+  }
+
+  /** The statues shatter: a great crack, ringing shards of metal, and a low boom under it. */
+  opusShatter(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.5);
+    this.burstNoise(out, t, 'highpass', 2000, 6000, 0.8, 0.4, 0.18);
+    this.burstNoise(out, t, 'lowpass', 400, 60, 0.7, 0.5, 0.5, true);
+    for (let i = 0; i < 6; i++) this.bell(out, t + 0.02 + i * 0.045, rand(1400, 3200), 0.05, 0.6);
+    this.sparkle(out, t + 0.15, 4, 0.07);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {

@@ -62,6 +62,8 @@ import { LION_KIT, Lion, SPORTING_KIT } from './Lion';
 import { DRAGON_KIT, Dragon, PORTO_KIT } from './Dragon';
 import { BEAST_H, BEAST_ORIGIN_Y } from '../art/beast';
 import { worn } from './skins';
+import { QUICKSILVER_KIT, RUBEDO_KIT, Transmuter } from './Transmuter';
+import { TRANS_H, TRANS_ORIGIN_Y } from '../art/transmuter';
 import type { Vitals } from './combat';
 
 /** A unit direction. */
@@ -1831,6 +1833,45 @@ const KITS: KitDef[] = [
       if (look === 'dragon') return new Dragon(world, x, y, DRAGON_KIT);
       if (look === 'porto') return new Dragon(world, x, y, PORTO_KIT);
       return new Eagle(world, x, y, EAGLE_KIT);
+    },
+  },
+  {
+    id: 'transmuter',
+    name: 'Transmuter',
+    blurb: 'Quicksilver, chalk and the Great Work',
+    types: [
+      {
+        // Beads of quicksilver that split on a hit, and a chalk circle that turns foes to lead.
+        id: 'transmuter',
+        name: 'Transmuter',
+        role: 'Turns flesh to metal',
+        accent: 0x4ad0c8,
+        attack: 'Quicksilver',
+        special: 'Transmutation circle',
+        preview: { texture: 'transmuter', glow: 'transmuter_e', idle: 'transmuter_idle_down', chosen: 'transmuter_opus_down', originY: TRANS_ORIGIN_Y / TRANS_H },
+        buttons: {
+          attack: { texture: 'icon_quicksilver' },
+          special: { texture: 'icon_transmute' },
+        },
+        lookName: 'Quicksilver',
+        skins: [
+          {
+            // The reddening, the Work's last stage: a crimson-and-gold robe, a ruby stone, red-gold quicksilver.
+            id: 'rubedo',
+            name: 'Rubedo',
+            accent: 0xff4a3a,
+            preview: { texture: 'transmuter_rubedo', glow: 'transmuter_rubedo_e', idle: 'transmuter_rubedo_idle_down', chosen: 'transmuter_rubedo_opus_down', originY: TRANS_ORIGIN_Y / TRANS_H },
+            buttons: {
+              attack: { texture: 'icon_quicksilver_rubedo' },
+              special: { texture: 'icon_transmute_rubedo' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      if (look === 'rubedo') return new Transmuter(world, x, y, RUBEDO_KIT);
+      return new Transmuter(world, x, y, QUICKSILVER_KIT);
     },
   },
 ];

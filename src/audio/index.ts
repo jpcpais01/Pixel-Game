@@ -1055,6 +1055,36 @@ class GameSound {
     if (t !== null) this.sfx!.ultReady(t);
   }
 
+  quicksilver(pan = 0): void {
+    const t = this.slot('quicksilver');
+    if (t !== null) this.sfx!.quicksilver(t, pan);
+  }
+
+  quickSplash(pan = 0, small = false): void {
+    const t = this.slot('quickSplash');
+    if (t !== null) this.sfx!.quickSplash(t, pan, small);
+  }
+
+  chalk(pan = 0): void {
+    const t = this.slot('chalk');
+    if (t !== null) this.sfx!.chalk(t, pan);
+  }
+
+  transmute(pan = 0, struck = false): void {
+    const t = this.slot('transmute');
+    if (t !== null) this.sfx!.transmute(t, pan, struck);
+  }
+
+  gild(pan = 0, gild = false): void {
+    const t = this.slot('gild');
+    if (t !== null) this.sfx!.gild(t, pan, gild);
+  }
+
+  opusShatter(pan = 0): void {
+    const t = this.slot('opusShatter');
+    if (t !== null) this.sfx!.opusShatter(t, pan);
+  }
+
   /**
    * When a one-shot may start, or null to drop it. Phones glitch when the audio
    * thread is handed dozens of overlapping voices at once (a swarm all

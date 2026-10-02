@@ -42,6 +42,7 @@ import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
 import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
+import { magnumOpus } from './transmuter';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
@@ -435,6 +436,15 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.wyrmIcon,
     cast: wyrmWrath,
   },
+  'transmuter:transmuter': {
+    name: 'Magnum Opus',
+    cost: 70,
+    windup: 600,
+    aim: 'self',
+    pal: pal(0xfffbe8, 0xffe08a, 0xf0b030, 0x8a5a14, 0xffd060),
+    icon: icons.magnumOpusIcon,
+    cast: magnumOpus,
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -501,6 +511,7 @@ const SKINS: Record<string, UltSkin> = {
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
+  'transmuter:rubedo': { pal: pal(0xfff0e0, 0xffc070, 0xe8402a, 0x7a0e14, 0xff7a40) },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

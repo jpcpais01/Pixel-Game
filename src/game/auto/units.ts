@@ -48,6 +48,8 @@ export interface Spell {
   stun?: number;
   /** Seconds foes attack 40% slower. */
   slow?: number;
+  /** Seconds foes take 30% more damage (turned to lead). */
+  brittle?: number;
   /** Extra damage over 3 s, in seconds of the caster's attack damage. */
   burn?: number;
   /** Cells foes are thrown back. */
@@ -229,6 +231,9 @@ const DEFS: Record<string, Def> = {
   'samurai.ronin': { cost: 1, origin: 'blade', range: 1, attack: ['slash1', 'slash2'], mana: 70,
     skill: { name: 'Iaido', cd: 6, kind: 'dash', aim: 'weak', dmg: 2, fx: 'steel', anim: 'dash' },
     ult: { kind: 'nova', aim: 'self', r: 2, dmg: 4, dodge: 0.8, fx: 'steel', anim: 'slash1' } },
+  'transmuter.transmuter': { cost: 3, origin: 'forged', range: 3, attack: ['flick'], missile: 'flask', mana: 80,
+    skill: { name: 'Transmutation circle', cd: 7, kind: 'blast', aim: 'crowd', r: 1.2, dmg: 0.6, stun: 1.5, brittle: 2.5, delay: 0.5, fx: 'steel', anim: 'inscribe' },
+    ult: { kind: 'blast', aim: 'crowd', r: 1.8, dmg: 4.2, stun: 1, delay: 0.9, fx: 'steel', anim: 'opus' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};
