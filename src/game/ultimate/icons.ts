@@ -572,3 +572,31 @@ export const tempestIcon: IconPainter = (put, p) => {
   // Leaves caught in it.
   for (const [x, y] of [[2, 5], [13, 8], [4, 11]]) put(x, y, p.deep);
 };
+
+/** Ursine Wrath: a bear's head roaring, eyes ablaze, the rage flaring off it in spikes. */
+export const ursineWrathIcon: IconPainter = (put, p) => {
+  // The rage flaring round the head.
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + 0.2;
+    seg(put, 8 + Math.cos(a) * 5.6, 8.5 + Math.sin(a) * 5.6, 8 + Math.cos(a) * (i % 2 ? 7 : 7.8), 8.5 + Math.sin(a) * (i % 2 ? 7 : 7.8), i % 2 ? p.deep : p.mid);
+  }
+  // Ears, then the head over them.
+  disc(put, 4, 4.5, 1.9, p.mid);
+  disc(put, 12, 4.5, 1.9, p.mid);
+  put(4, 4, p.deep);
+  put(11, 4, p.deep);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.hypot(x + 0.5 - 8, (y + 0.5 - 8.8) * 1.1) <= 5) put(x, y, y < 7 ? p.mid : p.hot);
+  // The muzzle, the nose, the jaws wide.
+  disc(put, 8, 10.6, 2.6, p.core);
+  put(7, 9, p.deep);
+  put(8, 9, p.deep);
+  seg(put, 7, 11, 8, 11, 0x1a0808);
+  seg(put, 7, 12, 8, 12, 0x1a0808);
+  put(6, 11, 0xffffff);
+  put(9, 11, 0xffffff);
+  // Eyes ablaze.
+  put(5, 7, p.core);
+  put(10, 7, p.core);
+  put(6, 7, p.hot);
+  put(9, 7, p.hot);
+};

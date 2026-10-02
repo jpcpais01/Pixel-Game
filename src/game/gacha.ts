@@ -73,6 +73,8 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'warrior:headless': 'legendary',
   'wizard:pumpkin': 'epic',
   'archer:scarecrow': 'epic',
+  // The Bear's (wished for as usual).
+  'bear:panda': 'legendary',
 };
 
 /** One skin as the shop knows it. */

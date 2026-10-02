@@ -40,6 +40,8 @@ import { BENFICA_KIT, EAGLE_KIT } from '../Eagle';
 import { LION_KIT, SPORTING_KIT } from '../Lion';
 import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
+import { ursineWrath } from './bear';
+import { BEAR_KIT, PANDA_KIT } from '../Bear';
 import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
 import * as icons from './icons';
@@ -435,6 +437,16 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.wyrmIcon,
     cast: wyrmWrath,
   },
+  'bear:bear': {
+    name: 'Ursine Wrath',
+    cost: 65,
+    windup: 550,
+    aim: 'self',
+    pal: BEAR_KIT.pal,
+    icon: icons.ursineWrathIcon,
+    // The rage is the bear himself (see Bear.enrage); its badge is the wrath's buff.
+    cast: ursineWrath,
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -501,6 +513,7 @@ const SKINS: Record<string, UltSkin> = {
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
+  'bear:panda': { pal: PANDA_KIT.pal, type: 'bear' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

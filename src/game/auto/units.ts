@@ -229,6 +229,10 @@ const DEFS: Record<string, Def> = {
   'samurai.ronin': { cost: 1, origin: 'blade', range: 1, attack: ['slash1', 'slash2'], mana: 70,
     skill: { name: 'Iaido', cd: 6, kind: 'dash', aim: 'weak', dmg: 2, fx: 'steel', anim: 'dash' },
     ult: { kind: 'nova', aim: 'self', r: 2, dmg: 4, dodge: 0.8, fx: 'steel', anim: 'slash1' } },
+  // The Bear: a Wild frontline wall
+  'bear.bear': { cost: 3, origin: 'wild', range: 1, attack: ['swipe', 'swipe2', 'smash'], mana: 90,
+    skill: { name: 'Earthsplitter', cd: 7, kind: 'nova', aim: 'self', r: 1.6, dmg: 1.4, stun: 1, fx: 'quake', anim: 'quake' },
+    ult: { kind: 'mend', aim: 'self', r: 0, dmg: 0, shield: 0.35, haste: 0.4, dur: 6, fx: 'roar', anim: 'rally' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

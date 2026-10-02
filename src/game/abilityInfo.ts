@@ -207,4 +207,9 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Pours out a long cone of fire that turns with the aim.',
     special: 'A flame serpent coils round the spot, raking, then dives in a blast.',
   },
+  'bear.bear': {
+    attack: 'Two wide, heavy swipes, then a two-paw smash that cracks the ground and throws foes back.',
+    ability: 'Rears up and slams down: the earth cracks round him, striking and stunning every foe near.',
+    special: 'Grows huge in a rage: takes far less harm, and every maul blow sends a shockwave ahead.',
+  },
 };

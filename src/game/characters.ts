@@ -61,6 +61,7 @@ import { BENFICA_KIT, EAGLE_KIT, Eagle } from './Eagle';
 import { LION_KIT, Lion, SPORTING_KIT } from './Lion';
 import { DRAGON_KIT, Dragon, PORTO_KIT } from './Dragon';
 import { BEAST_H, BEAST_ORIGIN_Y } from '../art/beast';
+import { Bear, BEAR_KIT, PANDA_KIT } from './Bear';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -1831,6 +1832,44 @@ const KITS: KitDef[] = [
       if (look === 'dragon') return new Dragon(world, x, y, DRAGON_KIT);
       if (look === 'porto') return new Dragon(world, x, y, PORTO_KIT);
       return new Eagle(world, x, y, EAGLE_KIT);
+    },
+  },
+  {
+    id: 'bear',
+    name: 'Bear',
+    blurb: 'A wall of fur, claws and fury',
+    types: [
+      {
+        // Wide, heavy swipes and a ground-cracking smash, a quake that stuns, and a wrath that makes him huge.
+        id: 'bear',
+        name: 'Bear',
+        role: 'An unshakable wall of fur',
+        accent: 0xc0803c,
+        attack: 'Maul',
+        special: 'Earthsplitter',
+        preview: { texture: 'bear', glow: 'bear_e', idle: 'bear_idle_down', chosen: 'bear_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+        buttons: {
+          attack: { texture: 'icon_maul_bear' },
+          special: { texture: 'icon_quake_bear' },
+        },
+        lookName: 'Grizzly',
+        skins: [
+          {
+            // A giant panda: black and white fur, a bamboo-leaf talisman, a red sash, jade light and bamboo leaves in his quakes.
+            id: 'panda',
+            name: 'Panda',
+            accent: 0x3ad89a,
+            preview: { texture: 'bear_panda', glow: 'bear_panda_e', idle: 'bear_panda_idle_down', chosen: 'bear_panda_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+            buttons: {
+              attack: { texture: 'icon_maul_bear_panda' },
+              special: { texture: 'icon_quake_bear_panda' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Bear(world, x, y, look === 'panda' ? PANDA_KIT : BEAR_KIT);
     },
   },
 ];

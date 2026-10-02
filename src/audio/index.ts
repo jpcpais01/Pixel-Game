@@ -1055,6 +1055,11 @@ class GameSound {
     if (t !== null) this.sfx!.ultReady(t);
   }
 
+  bearGrowl(pan = 0, big = false): void {
+    const t = this.slot('bearGrowl');
+    if (t !== null) this.sfx!.bearGrowl(t, pan, big);
+  }
+
   /**
    * When a one-shot may start, or null to drop it. Phones glitch when the audio
    * thread is handed dozens of overlapping voices at once (a swarm all
