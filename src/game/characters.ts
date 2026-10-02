@@ -35,7 +35,7 @@ import { Windrunner, WISTERIA_STYLE } from './Windrunner';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
 import { COBRA_STYLE, CORSAIR_STYLE, DANCER_STYLE, GENTLEMAN_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
-import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
+import { BLOOD_KIT, DIGGER_KIT, NECRO_KIT, Necromancer, TOMB_KIT, VAMPIRE_KIT, WYRM_KIT } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
@@ -1086,6 +1086,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_raise_tomb' },
             },
           },
+          {
+            // A hunched cemetery keeper: a battered stovepipe, a patched greatcoat, a green-lit lantern at his hip, a runed spade.
+            id: 'gravedigger',
+            name: 'Gravedigger',
+            accent: 0xa8e05a,
+            preview: { texture: 'necro_digger', glow: 'necro_digger_e', idle: 'necro_digger_idle_down', chosen: 'necro_digger_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
+            buttons: {
+              attack: { texture: 'icon_soul_digger' },
+              special: { texture: 'icon_raise_digger' },
+            },
+          },
         ],
       },
       {
@@ -1115,11 +1126,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_nova_wyrm' },
             },
           },
+          {
+            // An aristocrat of the night: slicked black hair, a tall collar, a ruby at his jabot, a bat-winged cape lined in crimson.
+            id: 'vampire',
+            name: 'Vampire Lord',
+            accent: 0xc8102e,
+            preview: { texture: 'necro_vampire', glow: 'necro_vampire_e', idle: 'necro_vampire_idle_down', chosen: 'necro_vampire_raise_down', originY: NECRO_ORIGIN_Y / NECRO_H },
+            buttons: {
+              attack: { texture: 'icon_lance_vampire' },
+              special: { texture: 'icon_nova_vampire' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { necro: NECRO_KIT, tomb: TOMB_KIT, blood: BLOOD_KIT, wyrm: WYRM_KIT }[look] ?? NECRO_KIT;
+      const kit = { necro: NECRO_KIT, tomb: TOMB_KIT, gravedigger: DIGGER_KIT, blood: BLOOD_KIT, wyrm: WYRM_KIT, vampire: VAMPIRE_KIT }[look] ?? NECRO_KIT;
       return new Necromancer(world, x, y, kit);
     },
   },

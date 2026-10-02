@@ -14,7 +14,7 @@ import { bellBarrageIcon, bellIcon, DIVER_BREW_COLORS } from './diver';
 import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbowBoltFrame, stuckArrowFrame, stuckBoltFrame } from './archer';
 import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
 import { sunBowIcon, sunRainIcon } from './apolloIcons';
-import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
+import { BLOOD_SPELL, DIGGER_ICON, DIGGER_SPELL, SOUL_SPELL, TOMB_SPELL, VAMPIRE_ICON, VAMPIRE_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, batCanvas, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
 import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, ORPHEUS_LOOK, VAGABOND_LOOK, WILD_LOOK, NOTE_SIZE, banjoIcon, drumIcon, guitarraIcon, luteIcon, lyreIcon, noteFrame, rhythmIcon, skinSongIcon, songIcon } from './bard';
@@ -298,6 +298,13 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_raise_tomb', toCanvas(16, 16, tombRaiseIcon()));
   scene.textures.addCanvas('icon_lance_wyrm', toCanvas(16, 16, bloodLanceIcon(WYRM_ICON)));
   scene.textures.addCanvas('icon_nova_wyrm', toCanvas(16, 16, novaIcon(WYRM_ICON)));
+  scene.textures.addCanvas('icon_soul_digger', toCanvas(16, 16, soulBoltIcon(DIGGER_ICON)));
+  scene.textures.addCanvas('icon_raise_digger', toCanvas(16, 16, raiseIcon(DIGGER_ICON)));
+  scene.textures.addCanvas('icon_lance_vampire', toCanvas(16, 16, bloodLanceIcon(VAMPIRE_ICON)));
+  scene.textures.addCanvas('icon_nova_vampire', toCanvas(16, 16, novaIcon(VAMPIRE_ICON)));
+  // The vampire lord's bats, wings up and down (see BatFlight in game/Souls.ts).
+  scene.textures.addCanvas('vbat0', toCanvas(7, 5, batCanvas(true)));
+  scene.textures.addCanvas('vbat1', toCanvas(7, 5, batCanvas(false)));
 
   yield;
   // The bards' glowing notes (the minstrel's ('note_e', frames n0 and n1; the wildsong's leaf notes and wisps in
@@ -370,7 +377,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
 
   yield;
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
-  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL], ['_grove', GROVE_SPELL], ['_wild', WILD_SPELL], ['_autumn', AUTUMN_SPELL], ['_frost', FROST_SPELL], ['_tide', TIDE_SPELL], ['_abyss', ABYSS_SPELL], ['_titania', TITANIA_SPELL], ['_lotus', LOTUS_SPELL]] as const) {
+  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL], ['_digger', DIGGER_SPELL], ['_vampire', VAMPIRE_SPELL], ['_grove', GROVE_SPELL], ['_wild', WILD_SPELL], ['_autumn', AUTUMN_SPELL], ['_frost', FROST_SPELL], ['_tide', TIDE_SPELL], ['_abyss', ABYSS_SPELL], ['_titania', TITANIA_SPELL], ['_lotus', LOTUS_SPELL]] as const) {
     register(scene, `orb${suffix}`, pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i, k)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
     register(scene, `burst${suffix}`, pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i, k)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
     scene.anims.create({ key: `orb${suffix}_spin`, frames: scene.anims.generateFrameNames(`orb${suffix}_e`, { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });

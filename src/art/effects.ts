@@ -19,12 +19,24 @@ export interface SpellColors {
   star?: boolean;
   /** Petals: the orb's motes and the burst's sparks are petals in the accent colour (Titania, Lotus). */
   petals?: boolean;
+  /** Bats: the orb's motes and the burst's sparks are little bats in the deep colour, rimmed in the accent (the vampire lord). */
+  bats?: boolean;
 }
 
 /** A petal two pixels long, lying at angle `a`, its tip paler than its base. */
 function petal(c: PixelCanvas, x: number, y: number, a: number, k: SpellColors, alpha: number): void {
   c.spark(x, y, k.accent, alpha);
   c.spark(x + Math.cos(a), y + Math.sin(a), k.core, alpha * 0.7);
+}
+
+/** A bat four pixels across at (x, y): wings up (an M) or down (a W) by `up`, its body a pixel of light. */
+function bat(c: PixelCanvas, x: number, y: number, up: boolean, k: SpellColors, alpha: number): void {
+  const w = up ? -1 : 1;
+  c.spark(x, y, k.hot, alpha);
+  c.spark(x - 1, y + (up ? -1 : 0), k.mid, alpha);
+  c.spark(x + 1, y + (up ? -1 : 0), k.mid, alpha);
+  c.spark(x - 2, y + (up ? 0 : w), k.accent, alpha * 0.8);
+  c.spark(x + 2, y + (up ? 0 : w), k.accent, alpha * 0.8);
 }
 
 export const ARCANE_SPELL: SpellColors = { core: MAGIC_CORE, hot: MAGIC_HOT, mid: MAGIC_MID, deep: MAGIC_DEEP, accent: MAGIC_VIOLET };
@@ -68,6 +80,14 @@ export function orbFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanvas 
     for (let m = 0; m < 3; m++) {
       const a = ((f * 40 + m * 120) * Math.PI) / 180;
       petal(c, cx + Math.cos(a) * 5.4, cy + Math.sin(a) * 5.4, a + Math.PI / 2, k, 1);
+    }
+    return c;
+  }
+  if (k.bats) {
+    // Two bats wheeling round it, flapping as they go.
+    for (let m = 0; m < 2; m++) {
+      const a = ((f * 45 + m * 180) * Math.PI) / 180;
+      bat(c, cx + Math.cos(a) * 5.4, cy + Math.sin(a) * 4.6, (f + m) % 2 === 0, k, 1);
     }
     return c;
   }
@@ -157,6 +177,11 @@ export function burstFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanva
     const dist = r + 1.5 + hash(i, 2) * 3;
     const col = i % 3 === 0 ? k.accent : k.hot;
     // Petal looks fling petals, tumbling a little as they fly.
+    // The bats scatter from it.
+    if (k.bats && i % 3 === 0) {
+      if (f < BURST_FRAMES - 1) bat(c, cx + Math.cos(a) * (dist + f), cy + Math.sin(a) * (dist + f) - f, f % 2 === 0, k, 1 - t * 0.7);
+      continue;
+    }
     if (k.petals && i % 2 === 0) {
       if (f < BURST_FRAMES - 1) petal(c, cx + Math.cos(a) * dist, cy + Math.sin(a) * dist, a + f * 0.9, k, 1 - t * 0.8);
       continue;
