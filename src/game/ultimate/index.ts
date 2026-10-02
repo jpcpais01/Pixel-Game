@@ -26,6 +26,7 @@ import { AsgardThunder, OdinSpear } from './valkyrie';
 import { KingsCrown } from './king';
 import { AFONSO_KIT, KING_KIT } from '../King';
 import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
+import { CINDER_MAGIC, MYCELIA_MAGIC } from '../Druid';
 import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
 import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
 import { HIVE_KIT, SYNTH_KIT, VAPOR_KIT } from '../Synth';
@@ -318,7 +319,7 @@ const ULTS: Record<string, UltDef> = {
     range: 110,
     pal: GROVE_PAL,
     icon: icons.wrathIcon,
-    cast: (c) => c.world.addEffect(new WildWrath(c.world, c.tx, c.ty, c.pal, c.look === 'titania')),
+    cast: (c) => c.world.addEffect(new WildWrath(c.world, c.tx, c.ty, c.pal, c.look === 'titania' ? 'blossom' : c.look === 'mycelia' ? 'shroom' : undefined)),
   },
   'druid:wild': {
     name: 'Primal Stampede',
@@ -327,7 +328,7 @@ const ULTS: Record<string, UltDef> = {
     aim: 'dir',
     pal: WILD_PAL,
     icon: icons.stampedeIcon,
-    cast: (c) => c.world.addEffect(new PrimalStampede(c.world, c)),
+    cast: (c) => c.world.addEffect(new PrimalStampede(c.world, c, c.look === 'cinderhide' ? CINDER_MAGIC.smoke : undefined)),
   },
   'valkyrie:spear': {
     name: 'Spear of Odin',
@@ -489,6 +490,8 @@ const SKINS: Record<string, UltSkin> = {
   'druid:autumn': { pal: AUTUMN_MAGIC.pal },
   'druid:titania': { pal: pal(0xfffaf0, 0xffd88a, 0xff9ac0, 0xb8487a, 0xffb8d0) },
   'druid:frostfang': { pal: FROST_MAGIC.pal, type: 'wild' },
+  'druid:mycelia': { pal: MYCELIA_MAGIC.pal },
+  'druid:cinderhide': { pal: CINDER_MAGIC.pal, type: 'wild' },
   'valkyrie:sunshield': { pal: SUN_KIT.pal },
   'valkyrie:swan': { pal: SWAN_KIT.pal },
   'valkyrie:raven': { pal: RAVEN_KIT.pal, type: 'storm' },

@@ -71,6 +71,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'druid:autumn': 'epic',
   'wizard:lotus': 'epic',
   'druid:frostfang': 'epic',
+  'druid:mycelia': 'epic',
   'automaton:scrap': 'epic',
   'automaton:vaporwave': 'epic',
   'phantom:tea': 'epic',
