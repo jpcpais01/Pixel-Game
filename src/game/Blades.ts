@@ -191,3 +191,76 @@ export class CutBurst extends Fx {
     g.end();
   }
 }
+
+/** A skin's drifting motes: black feathers, snowflakes. `colors` run dark, mid, bright. */
+export interface Motes {
+  kind: 'feather' | 'snow';
+  colors: [number, number, number];
+}
+
+/** How long a mote drifts, and how far the burst throws them before they settle into falling. */
+const DRIFT_MS = 1100;
+const DRIFT_SPREAD = 38;
+const DRIFT_FALL = 14;
+
+/**
+ * A few motes thrown off a cut and drifting down: crow feathers that rock as
+ * they fall, or snowflakes that twinkle. Only for show; they touch nothing.
+ */
+export class Drift extends Fx {
+  private pix: Ink;
+  private motes: { x: number; y: number; vx: number; vy: number; ph: number; life: number }[] = [];
+
+  constructor(
+    world: WorldScene,
+    private x: number,
+    private y: number,
+    private m: Motes,
+    n: number,
+    private depth: number,
+  ) {
+    super(world, DRIFT_MS);
+    this.pix = this.ink(64, 64);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = DRIFT_SPREAD * (0.4 + Math.random() * 0.6);
+      this.motes.push({ x: 0, y: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6 - 12, ph: Math.random() * 6.28, life: DRIFT_MS * (0.65 + Math.random() * 0.35) });
+    }
+  }
+
+  protected step(dt: number): void {
+    const s = dt / 1000;
+    const g = this.pix.begin(this.x, this.y, this.depth);
+    const [dark, mid, bright] = this.m.colors;
+    for (const p of this.motes) {
+      // The burst slows quickly, then they fall gently, swaying side to side.
+      const k = Math.exp(-5 * s);
+      p.vx *= k;
+      p.vy = p.vy * k + DRIFT_FALL * (1 - k);
+      const sway = Math.sin(this.t * 0.006 + p.ph);
+      p.x += (p.vx + sway * 9) * s;
+      p.y += p.vy * s;
+      const a = 1 - clamp01((this.t - p.life * 0.65) / (p.life * 0.35));
+      if (a <= 0) continue;
+      const x = this.x + p.x;
+      const y = this.y + p.y;
+      if (this.m.kind === 'feather') {
+        // A slim feather rocking as it falls: dark vane, a brighter shaft, a glint at the quill.
+        const r = sway * 0.9;
+        const dx = Math.cos(r);
+        const dy = Math.sin(r) * 0.8;
+        g.put(x - dx, y - dy, dark, a);
+        g.put(x, y, mid, a);
+        g.put(x + dx, y + dy, dark, a);
+        g.put(x - dx * 2, y - dy * 2, dark, a * 0.7);
+        if (sway > 0.3) g.put(x + dx * 1.6, y + dy * 1.6 + 1, bright, a * 0.8);
+      } else {
+        // A snowflake: a bright point, opening into a little star as it catches the light.
+        g.put(x, y, bright, a);
+        if (Math.sin(this.t * 0.012 + p.ph * 3) > 0.4) for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) g.put(x + ox, y + oy, mid, a * 0.7);
+        else g.put(x + 1, y + 1, dark, a * 0.4);
+      }
+    }
+    g.end();
+  }
+}

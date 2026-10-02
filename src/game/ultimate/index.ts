@@ -3,7 +3,7 @@ import { bakedCanvas } from '../../art/canvas';
 import { sound } from '../../audio';
 import { dirOf } from '../Wizard';
 import { energy } from '../energy';
-import { CHEM_TOX, CRYO_TOX, FOXGLOVE_TOX, HEX_TOX, PLAGUE_TOX, SPIRIT_TOX, type ToxStyle } from '../Toxins';
+import { CARNIVAL_TOX, CHEM_TOX, CRYO_TOX, DIVER_TOX, FOXGLOVE_TOX, HEX_TOX, PLAGUE_TOX, SPIRIT_TOX, type ToxStyle } from '../Toxins';
 import type { Aim, CharacterDef, Hero } from '../characters';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { bloom, easeOut, flare, Fx, Ink, pal, ring, rune, type Pal } from './ink';
@@ -16,7 +16,7 @@ import { PowderKeg, Tempest } from './archers';
 import { Encore, ThunderOfWar } from './bard';
 import { Legion, TimeStop } from './chrono';
 import { HundredCuts, quakeGate, SkyQuake } from './samurai';
-import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT } from '../Samurai';
+import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT, SNOWFALL_KIT, TENGU_KIT } from '../Samurai';
 import { schemePal } from '../Blades';
 import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
 import { PrimalStampede, WildWrath } from './druid';
@@ -42,7 +42,7 @@ import { LION_KIT, NEMEAN_KIT, SPORTING_KIT } from '../Lion';
 import { DRAGON_KIT, JADE_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
 import { DarkDominion } from './sith';
-import { SITH_KIT, WARLORD_KIT } from '../Sith';
+import { EMPRESS_KIT, SITH_KIT, WARLORD_KIT } from '../Sith';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
@@ -177,7 +177,7 @@ const ULTS: Record<string, UltDef> = {
     range: 110,
     pal: toxPal(PLAGUE_TOX),
     icon: icons.pestilenceIcon,
-    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : c.look === 'shaman' ? SPIRIT_TOX : c.look === 'foxglove' ? FOXGLOVE_TOX : PLAGUE_TOX)),
+    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : c.look === 'shaman' ? SPIRIT_TOX : c.look === 'foxglove' ? FOXGLOVE_TOX : c.look === 'carnevale' ? CARNIVAL_TOX : PLAGUE_TOX)),
   },
   'alchemist:chem': {
     name: 'Chem Bomb',
@@ -187,7 +187,7 @@ const ULTS: Record<string, UltDef> = {
     range: 120,
     pal: toxPal(CHEM_TOX),
     icon: icons.chemBombIcon,
-    cast: (c) => c.world.addEffect(new ChemBomb(c.world, c, c.look === 'cryo' ? CRYO_TOX : CHEM_TOX)),
+    cast: (c) => c.world.addEffect(new ChemBomb(c.world, c, c.look === 'cryo' ? CRYO_TOX : c.look === 'diver' ? DIVER_TOX : CHEM_TOX)),
   },
   'archer:ranger': {
     name: 'Great Arrow',
@@ -449,19 +449,28 @@ const SKINS: Record<string, UltSkin> = {
   'alchemist:shaman': { pal: toxPal(SPIRIT_TOX) },
   'alchemist:foxglove': { pal: toxPal(FOXGLOVE_TOX) },
   'alchemist:cryo': { pal: toxPal(CRYO_TOX), type: 'chem' },
+  'alchemist:carnevale': { pal: toxPal(CARNIVAL_TOX) },
+  'alchemist:diver': { pal: toxPal(DIVER_TOX), type: 'chem' },
   'archer:scarecrow': { pal: pal(0xfff4d0, 0xffb048, 0xff7a1a, 0x2a7a3a, 0x9cff9a) },
   'archer:hunt': { pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
+  'archer:apollo': { pal: pal(0xfffbe8, 0xffe890, 0xffc030, 0xb06a10, 0xffd860) },
   'archer:wisteria': { pal: pal(0xffffff, 0xe8dcff, 0xb48ae8, 0x5a7a58, 0xd0b8ff), type: 'wind' },
   'archer:briar': { pal: pal(0xfff0f2, 0xffa0b0, 0xe8344a, 0x2e6e24, 0xff6a7a), type: 'arbalest' },
+  'archer:ironbeard': { pal: pal(0xfff4c8, 0xffb040, 0xff6a1a, 0x5a2410, 0xff8a30), type: 'arbalest' },
+  'archer:owl': { pal: pal(0xffffff, 0xe4f4ff, 0x9ccaf0, 0x4a78b0, 0xc8e8ff), type: 'wind' },
   'rogue:corsair': { pal: pal(0xfffbe0, 0xffe08a, 0xe0a030, 0x8a5018, 0xffc050) },
   'rogue:kitsune': { pal: pal(0xf4fbff, 0xa8e0ff, 0x4a9cff, 0x1a3aa0, 0x70b0ff), type: 'dancer' },
   'rogue:nightbloom': { pal: pal(0xffffff, 0xe4e8fa, 0x8a7ef0, 0x241a6a, 0xc8c0ff), type: 'dancer' },
+  'rogue:gentleman': { pal: pal(0xffffff, 0xeef0fa, 0xd0303e, 0x4a0814, 0xff5060) },
+  'rogue:cobra': { pal: pal(0xfaffe0, 0xd8ff8a, 0x5ad040, 0x0e4a26, 0xffd860), type: 'dancer' },
   'archer:storm': { pal: pal(0xf2fbff, 0xa8e4ff, 0x5ec8ff, 0x3a6ad8, 0x8ad8ff) },
   'chronomancer:moon': { pal: MOON_PAL },
   'chronomancer:aeon': { pal: AEON_PAL, type: 'paradox' },
   'bard:wildsong': { pal: pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070) },
   'necromancer:tomb': { pal: pal(0xf4fbff, 0xa8dcff, 0x3c94f0, 0x1a3894, 0x5aa8ff) },
   'necromancer:wyrm': { pal: pal(0xfff8e0, 0xffc860, 0xff6a1a, 0x8a1e0a, 0xff8a30), type: 'blood' },
+  'necromancer:gravedigger': { pal: pal(0xf6ffe0, 0xd4ff8a, 0x8ad83a, 0x3a6a1a, 0xa8f05a) },
+  'necromancer:vampire': { pal: pal(0xffe8ec, 0xff6a7a, 0xc0102a, 0x3a0410, 0xff3048), type: 'blood' },
   'bard:harlequin': { pal: pal(0xfff4fb, 0xffb0e8, 0xff4ab8, 0x8a1a6a, 0xff6ac8) },
   'bard:vagabond': { pal: pal(0xfbf6ff, 0xe2d0ff, 0xb08cff, 0x5a3aa8, 0xc0a0ff) },
   'bard:fadista': { pal: pal(0xf4f8ff, 0xb8d2ff, 0x3c7cff, 0x1a2e9a, 0x6a9cff) },
@@ -487,8 +496,12 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:guard': { pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
   'jedi:master': { pal: pal(0xf4fff4, 0x9af4a8, 0x2ed058, 0x0e7a32, 0x5aff7a) },
   'jedi:warlord': { pal: WARLORD_KIT.dominion, type: 'sith' },
+  'jedi:nomad': { pal: pal(0xf6fffd, 0xa8f0ea, 0x3ac8cc, 0x1a7480, 0x6ae0dc) },
+  'jedi:empress': { pal: EMPRESS_KIT.dominion, type: 'sith' },
   'samurai:kitsune': { pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
+  'samurai:tengu': { pal: schemePal(TENGU_KIT.wind) },
+  'samurai:snowfall': { pal: schemePal(SNOWFALL_KIT.wind), type: 'ronin' },
   'druid:autumn': { pal: AUTUMN_MAGIC.pal },
   'druid:titania': { pal: pal(0xfffaf0, 0xffd88a, 0xff9ac0, 0xb8487a, 0xffb8d0) },
   'druid:frostfang': { pal: FROST_MAGIC.pal, type: 'wild' },
