@@ -671,7 +671,13 @@ export class WorldScene extends Phaser.Scene {
     this.followHero();
     this.ground?.prime(this.view);
     if (this.forest) {
-      this.forest.prime(this.view, () => cam.fadeIn(500, 7, 8, 13));
+      // Its ground may be in already, calling back at once while the hold above
+      // hasn't finished: Phaser ignores a fade asked for during another, which
+      // would leave the screen dark for good, so the hold is cleared first.
+      this.forest.prime(this.view, () => {
+        cam.fadeEffect.reset();
+        cam.fadeIn(500, 7, 8, 13);
+      });
       // A loading screen while the painters get the first view in (it goes by itself).
       this.scene.launch('forestload');
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scene.stop('forestload'));
@@ -838,18 +844,22 @@ export class WorldScene extends Phaser.Scene {
   travel(x: number, y: number): void {
     if (this.downT > 0) return;
     const cam = this.cameras.main;
+    // Over the world's own opening fade, which would otherwise swallow this one.
+    cam.fadeEffect.reset();
     cam.fadeOut(260, 7, 8, 13);
     cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      if (!this.running) return;
+      const open = () => {
+        cam.fadeEffect.reset();
+        cam.fadeIn(420, 7, 8, 13);
+        cam.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => cam.fadeEffect.reset());
+      };
+      // Not playing any more (fallen meanwhile): no journey, but never left dark.
+      if (!this.running) return open();
       this.hero.x = x;
       this.hero.y = y;
       this.setRisePoint(x, y);
       this.pushX = this.pushY = 0;
       this.followHero();
-      const open = () => {
-        cam.fadeIn(420, 7, 8, 13);
-        cam.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => cam.fadeEffect.reset());
-      };
       if (this.forest) this.forest.prime(this.view, open);
       else open();
       this.debris([0xfffdf0, 0xffd08a, 0xff9a4a], snap(x), snap(y) - 12, 24, y + 20, 'spores');
