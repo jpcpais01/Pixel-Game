@@ -31,6 +31,7 @@ import { YUREI_ANIMS, YUREI_H, YUREI_LOOKS, YUREI_W, buildYureiFrames } from './
 import { CAPTAIN_ANIMS, CAPTAIN_H, CAPTAIN_LOOKS, CAPTAIN_W, buildCaptainFrames } from './captain';
 import { BALLET_ANIMS, BALLET_H, BALLET_LOOKS, BALLET_W, buildBalletFrames } from './ballerina';
 import { JUGG_ANIMS, JUGG_H, JUGG_LOOKS, JUGG_W, buildJuggFrames } from './juggernaut';
+import { GUNSL_ANIMS, GUNSL_H, GUNSL_LOOKS, GUNSL_W, buildGunslFrames } from './gunslinger';
 import { INV_H, INV_W, INVENTOR_LOOKS, buildInventorFrames, inventorAnims } from './inventor';
 import { BEAST_H, BEAST_LOOKS, BEAST_W, beastAnims, buildBeastFrames } from './beast';
 import { LIGHTWRIGHT_ANIMS, LIGHTWRIGHT_LOOKS, LW_H, LW_W, buildLightwrightFrames } from './lightwright';
@@ -178,6 +179,7 @@ rig(YUREI_LOOKS, YUREI_W, YUREI_H, buildYureiFrames, () => YUREI_ANIMS);
 rig(CAPTAIN_LOOKS, CAPTAIN_W, CAPTAIN_H, buildCaptainFrames, () => CAPTAIN_ANIMS);
 rig(BALLET_LOOKS, BALLET_W, BALLET_H, buildBalletFrames, () => BALLET_ANIMS);
 rig(JUGG_LOOKS, JUGG_W, JUGG_H, buildJuggFrames, () => JUGG_ANIMS);
+rig(GUNSL_LOOKS, GUNSL_W, GUNSL_H, buildGunslFrames, () => GUNSL_ANIMS);
 rig(INVENTOR_LOOKS, INV_W, INV_H, buildInventorFrames, inventorAnims);
 rig(BEAST_LOOKS, BEAST_W, BEAST_H, buildBeastFrames, beastAnims);
 rig(LIGHTWRIGHT_LOOKS, LW_W, LW_H, buildLightwrightFrames, () => LIGHTWRIGHT_ANIMS);
