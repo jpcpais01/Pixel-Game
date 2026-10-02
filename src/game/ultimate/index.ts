@@ -668,7 +668,7 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:master': { pal: pal(0xf4fff4, 0x9af4a8, 0x2ed058, 0x0e7a32, 0x5aff7a) },
   'jedi:warlord': { pal: WARLORD_KIT.dominion, type: 'sith' },
   'jedi:starseer': { pal: STARSEER_KIT.lift, type: 'sage' },
-  'jedi:dune': { pal: pal(0xfffaf0, 0xffd27a, 0xf29a14, 0x9a4cff, 0xffb040), type: 'twin' },
+  'jedi:peacock': { pal: pal(0xf6fff8, 0x86f4ae, 0x22d070, 0x3a68ff, 0xffd060), type: 'twin' },
   'jedi:voidhunter': { pal: VOIDHUNTER_KIT.pal, type: 'inquisitor' },
   'jedi:nomad': { pal: pal(0xf6fffd, 0xa8f0ea, 0x3ac8cc, 0x1a7480, 0x6ae0dc) },
   'jedi:empress': { pal: EMPRESS_KIT.dominion, type: 'sith' },

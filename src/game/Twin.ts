@@ -77,12 +77,12 @@ export const TWIN_KIT: TwinKit = {
   light: 0x5ae8ff,
 };
 
-/** The Dune Wanderer: an amber blade and a violet shoto. */
-export const DUNE_KIT: TwinKit = {
-  key: 'jedi_dune',
-  main: { core: 0xfffaf0, hot: 0xffc858, mid: 0xf29a14, deep: 0xa85a06 },
-  shoto: { core: 0xfaf4ff, hot: 0xc89aff, mid: 0x9a4cff, deep: 0x5a1cb0 },
-  light: 0xffb040,
+/** The Peacock: an emerald blade and a sapphire shoto, lighting the ground in jewel green. */
+export const PEACOCK_KIT: TwinKit = {
+  key: 'jedi_peacock',
+  main: { core: 0xf6fff8, hot: 0x86f4ae, mid: 0x22d070, deep: 0x0a8040 },
+  shoto: { core: 0xf6f8ff, hot: 0x94b4ff, mid: 0x3a68ff, deep: 0x1430b0 },
+  light: 0x40e090,
 };
 
 /** A Special's palette from a blade's scheme. */
