@@ -1842,6 +1842,77 @@ export class Sfx {
     for (let i = 0; i < 6; i++) this.burstNoise(out, t + 0.1 + i * rand(0.04, 0.09), 'bandpass', rand(700, 1300), 500, 3, 0.2, 0.05, true);
   }
 
+  // ------------------------------------------------------------ The Reaper
+
+  /** A scythe swung: a long low whoosh of a heavy blade through the air, a cold ring of its edge riding it. */
+  reap(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.8 : 0.65, 0.35);
+    const dur = heavy ? 0.42 : 0.26;
+    this.burstNoise(out, t, 'bandpass', 380, heavy ? 1800 : 1400, 1.3, heavy ? 0.45 : 0.36, dur, true);
+    this.burstNoise(out, t + dur * 0.4, 'bandpass', 1600, 700, 1.1, 0.18, dur * 0.6, true);
+    this.chirp(out, t + 0.03, 'sine', rand(2900, 3100), rand(2500, 2600), 0.02, dur);
+    if (heavy) this.chirp(out, t + 0.15, 'sine', rand(3300, 3400), 2900, 0.018, 0.25);
+  }
+
+  /** The scythe biting: a dry hiss of a cut, a hollow knock, and a breath of something leaving. */
+  reapHit(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.85 : 0.7, 0.4);
+    this.burstNoise(out, t, 'highpass', 2800, 1500, 0.8, heavy ? 0.42 : 0.32, heavy ? 0.12 : 0.08);
+    this.chirp(out, t, 'sine', heavy ? 160 : 200, 55, heavy ? 0.34 : 0.22, 0.12);
+    this.chirp(out, t + 0.05, 'triangle', 640, 1100, 0.035, 0.22);
+  }
+
+  /** Death's step: a hiss drawn in, a hollow rush of shade, and a breath out where he forms. */
+  deathStep(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.7, 0.55);
+    this.burstNoise(out, t, 'bandpass', 3200, 900, 1.2, 0.2, 0.14);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t + 0.08);
+    g.gain.linearRampToValueAtTime(0.32, t + 0.14);
+    g.gain.setTargetAtTime(0, t + 0.2, 0.08);
+    const bp = filter(ctx, 'bandpass', 260, 2, g);
+    sweep(bp.frequency, t + 0.08, 260, 1400, 0.25);
+    const src = this.m.noiseSource(true);
+    src.connect(bp);
+    this.m.startNoise(src, t + 0.08, 0.5);
+    this.chirp(out, t + 0.1, 'sine', 180, 90, 0.18, 0.25);
+  }
+
+  /**
+   * The Harvest: first a deep bell tolling (n 0), then the great spectral
+   * scythe's whoosh each time it comes round (n 1, 2), and the last reap (n 3):
+   * a cleave and a rising chorus of souls let go.
+   */
+  reapHarvest(t: number, pan: number, n: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.9, 0.7);
+    if (n === 0) {
+      this.bell(out, t, 98, 0.22, 2.2);
+      this.bell(out, t, 196, 0.1, 1.6);
+      this.bell(out, t + 0.01, 293, 0.05, 1.2);
+      return;
+    }
+    if (n < 3) {
+      this.burstNoise(out, t, 'bandpass', 200, 1200, 1.2, 0.5, 0.5, true);
+      this.burstNoise(out, t + 0.2, 'bandpass', 1400, 400, 1.2, 0.3, 0.35, true);
+      this.chirp(out, t + 0.05, 'sine', 2600, 2100, 0.02, 0.4);
+      return;
+    }
+    this.burstNoise(out, t, 'highpass', 3600, 1400, 0.8, 0.5, 0.18);
+    this.chirp(out, t, 'sine', 130, 38, 0.6, 0.4);
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 2600, 1, out));
+    g.gain.setValueAtTime(0, t + 0.05);
+    g.gain.linearRampToValueAtTime(0.09, t + 0.3);
+    g.gain.linearRampToValueAtTime(0, t + 1.2);
+    for (const f of [330, 415, 494]) {
+      const o = osc(ctx, 'triangle', f * 0.7, g);
+      sweep(o.frequency, t + 0.05, f * 0.7, f * 1.25, 1.1);
+      o.start(t + 0.05);
+      o.stop(t + 1.3);
+    }
+  }
+
   /** The bow drawn: the wood creaking as the string comes back, longer for the volley. */
   bowDraw(t: number, big: boolean): void {
     const ctx = this.m.ctx;

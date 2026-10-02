@@ -49,6 +49,8 @@ import { SAGE_KIT, STARSEER_KIT } from '../Sage';
 import { cutsGate, ThousandCuts, thousandCutsIcon } from './twin';
 import { Purge, purgeIcon } from './inquisitor';
 import { INQUISITOR_KIT, VOIDHUNTER_KIT } from '../Inquisitor';
+import { harvest, harvestIcon } from './reaper';
+import { CATRINA_KIT, REAPER_KIT } from '../Reaper';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
@@ -307,6 +309,15 @@ const ULTS: Record<string, UltDef> = {
     icon: graveyardIcon,
     cast: (c) => c.world.addEffect(new Graveyard(c.world, c)),
   },
+  'necromancer:reaper': {
+    name: 'Harvest',
+    cost: 70,
+    windup: 550,
+    aim: 'self',
+    pal: REAPER_KIT.pal,
+    icon: harvestIcon,
+    cast: harvest,
+  },
   'bard:minstrel': {
     name: 'Encore',
     cost: 65,
@@ -517,6 +528,7 @@ const SKINS: Record<string, UltSkin> = {
   'necromancer:tomb': { pal: pal(0xf4fbff, 0xa8dcff, 0x3c94f0, 0x1a3894, 0x5aa8ff) },
   'necromancer:wyrm': { pal: pal(0xfff8e0, 0xffc860, 0xff6a1a, 0x8a1e0a, 0xff8a30), type: 'blood' },
   'necromancer:mossgrave': { pal: pal(0xecfffc, 0x9ff8ee, 0x3ad0c8, 0x0e5a68, 0x6af0e8), type: 'digger' },
+  'necromancer:catrina': { pal: CATRINA_KIT.pal, type: 'reaper' },
   'bard:harlequin': { pal: pal(0xfff4fb, 0xffb0e8, 0xff4ab8, 0x8a1a6a, 0xff6ac8) },
   'bard:vagabond': { pal: pal(0xfbf6ff, 0xe2d0ff, 0xb08cff, 0x5a3aa8, 0xc0a0ff) },
   'bard:fadista': { pal: pal(0xf4f8ff, 0xb8d2ff, 0x3c7cff, 0x1a2e9a, 0x6a9cff) },

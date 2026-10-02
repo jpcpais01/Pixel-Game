@@ -15,6 +15,7 @@ import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbow
 import { BIRD_H as HAWK_H, BIRD_LOOKS as HAWK_LOOKS, BIRD_W as HAWK_W, birdFrames as hawkFrames, FALCONER_LOOKS, falconArrowFrame, falconStuckFrame } from './falconer';
 import { FALCONER_TONES, falconIcon, quickShotIcon, SNOWFEATHER_TONES } from './falconerIcons';
 import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
+import { deathStepIcon, reapIcon } from './reaper';
 import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { MOSSGRAVE_ICON, graveIcon, spadeIcon } from './digger';
 import { GRAVE_LOOK, MOSS_GRAVE_LOOK, buildGhoulSheet, buildStoneSheet } from './diggerFx';
@@ -321,6 +322,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_grave', toCanvas(16, 16, graveIcon()));
   scene.textures.addCanvas('icon_spade_mossgrave', toCanvas(16, 16, spadeIcon(MOSSGRAVE_ICON)));
   scene.textures.addCanvas('icon_grave_mossgrave', toCanvas(16, 16, graveIcon(MOSSGRAVE_ICON)));
+  // The Reaper's Reap and Death's step, and the Catrina's.
+  scene.textures.addCanvas('icon_reap', toCanvas(16, 16, reapIcon()));
+  scene.textures.addCanvas('icon_deathstep', toCanvas(16, 16, deathStepIcon()));
+  scene.textures.addCanvas('icon_reap_catrina', toCanvas(16, 16, reapIcon(true)));
+  scene.textures.addCanvas('icon_deathstep_catrina', toCanvas(16, 16, deathStepIcon(true)));
 
   yield;
   // The bards' glowing notes (the minstrel's ('note_e', frames n0 and n1; the wildsong's leaf notes and wisps in

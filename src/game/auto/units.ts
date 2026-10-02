@@ -244,6 +244,9 @@ const DEFS: Record<string, Def> = {
   'jedi.twin': { cost: 3, origin: 'blade', range: 1, attack: ['cut1', 'cut2', 'cut3', 'xcut'], mana: 70,
     skill: { name: 'Riposte', cd: 6, kind: 'nova', aim: 'self', r: 1.2, dmg: 1.8, dodge: 1, fx: 'saber', anim: 'counter' },
     ult: { kind: 'chain', aim: 'target', n: 5, dmg: 3.5, dodge: 1.2, fx: 'saber', anim: 'xcut' } },
+  'necromancer.reaper': { cost: 4, origin: 'blade', range: 1, attack: ['reap1', 'reap2', 'reap3'], mana: 80,
+    skill: { name: "Death's step", cd: 6, kind: 'dash', aim: 'weak', dmg: 1.8, dodge: 0.4, fx: 'shadow', anim: 'step' },
+    ult: { kind: 'nova', aim: 'self', r: 2, dmg: 4, drain: 0.5, fx: 'souls', anim: 'harvest' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

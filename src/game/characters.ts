@@ -47,6 +47,8 @@ import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necroma
 import { DIGGER_KIT, Gravedigger, MOSSGRAVE_KIT } from './Gravedigger';
 import { DIGGER_H, DIGGER_ORIGIN_Y } from '../art/digger';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
+import { CATRINA_KIT, Reaper, REAPER_KIT } from './Reaper';
+import { REAPER_H, REAPER_ORIGIN_Y } from '../art/reaper';
 import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
 import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT, PRIMAVERA_KIT } from './Chrono';
@@ -1193,9 +1195,41 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // Death's own harvester: a gaunt skull in a tattered black-green shroud
+        // with a great scythe; broad reaps that tear souls loose to heal him, a
+        // step through shade that marks foes, and a Harvest that executes.
+        id: 'reaper',
+        name: 'Reaper',
+        role: 'The harvest of souls',
+        accent: 0xb0f080,
+        attack: 'Reap',
+        special: "Death's step",
+        preview: { texture: 'necro_reaper', glow: 'necro_reaper_e', idle: 'necro_reaper_idle_down', chosen: 'necro_reaper_harvest_down', originY: REAPER_ORIGIN_Y / REAPER_H },
+        buttons: {
+          attack: { texture: 'icon_reap' },
+          special: { texture: 'icon_deathstep' },
+        },
+        lookName: 'Shroud',
+        skins: [
+          {
+            // A Día de Muertos calavera: a painted sugar skull, a wide black hat crowned with marigolds and a pink plume,
+            // a black gown with a magenta panel and marigold ruffles, a lacquered scythe wound with a marigold garland.
+            id: 'catrina',
+            name: 'Catrina',
+            accent: 0xff8ab0,
+            preview: { texture: 'necro_catrina', glow: 'necro_catrina_e', idle: 'necro_catrina_idle_down', chosen: 'necro_catrina_harvest_down', originY: REAPER_ORIGIN_Y / REAPER_H },
+            buttons: {
+              attack: { texture: 'icon_reap_catrina' },
+              special: { texture: 'icon_deathstep_catrina' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
       if (look === 'digger' || look === 'mossgrave') return new Gravedigger(world, x, y, look === 'mossgrave' ? MOSSGRAVE_KIT : DIGGER_KIT);
+      if (look === 'reaper' || look === 'catrina') return new Reaper(world, x, y, look === 'catrina' ? CATRINA_KIT : REAPER_KIT);
       const kit = { necro: NECRO_KIT, tomb: TOMB_KIT, blood: BLOOD_KIT, wyrm: WYRM_KIT }[look] ?? NECRO_KIT;
       return new Necromancer(world, x, y, kit);
     },

@@ -137,6 +137,11 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Opens a grave at the aim: arms burst out and hold every foe on it, and a ghoul climbs out to fight.',
     special: 'Headstones burst up in a ring, throwing foes back, and ghosts streak from them into foes nearby.',
   },
+  'necromancer.reaper': {
+    attack: 'Two wide scythe sweeps and a spinning reap; each foe cut frees a soul that heals the hero.',
+    ability: 'Steps through shade along the aim, cutting and marking foes passed; marked foes take more from reaps.',
+    special: 'A great ghost scythe sweeps round twice drawing foes in, then reaps, executing the nearly dead.',
+  },
   'bard.minstrel': {
     attack: 'Lute notes that bend toward foes and leap from one to the next.',
     ability: "A song that quickens the hero's feet and heals.",

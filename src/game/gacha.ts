@@ -33,6 +33,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'jedi:warlord': 'legendary',
   'jedi:voidhunter': 'legendary',
   'necromancer:wyrm': 'legendary',
+  'necromancer:catrina': 'legendary',
   'chronomancer:anomaly': 'legendary',
   'chronomancer:primavera': 'legendary',
   'samurai:kitsune': 'legendary',
