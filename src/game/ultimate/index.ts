@@ -42,6 +42,8 @@ import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
 import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
+import { Levitation, levitationIcon } from './sage';
+import { SAGE_KIT, STARSEER_KIT } from '../Sage';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
@@ -148,6 +150,15 @@ const ULTS: Record<string, UltDef> = {
     pal: SITH_KIT.dominion,
     icon: icons.dominionIcon,
     cast: (c) => c.world.addEffect(new DarkDominion(c.world, c)),
+  },
+  'jedi:sage': {
+    name: 'Levitation',
+    cost: 65,
+    windup: 550,
+    aim: 'self',
+    pal: SAGE_KIT.lift,
+    icon: levitationIcon,
+    cast: (c) => c.world.addEffect(new Levitation(c.world, c)),
   },
   'fighter:brawler': {
     name: 'Dragon Rush',
@@ -484,6 +495,7 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:guard': { pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
   'jedi:master': { pal: pal(0xf4fff4, 0x9af4a8, 0x2ed058, 0x0e7a32, 0x5aff7a) },
   'jedi:warlord': { pal: WARLORD_KIT.dominion, type: 'sith' },
+  'jedi:starseer': { pal: STARSEER_KIT.lift, type: 'sage' },
   'samurai:kitsune': { pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
   'druid:autumn': { pal: AUTUMN_MAGIC.pal },

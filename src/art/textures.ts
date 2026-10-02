@@ -99,6 +99,7 @@ import { GOAL, ISLETS as SKY_ISLETS } from '../world/glideLayout';
 import { birdSheet } from './skyArena';
 import { BOLT_DIRS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, reticle, salvoIcon } from './mech';
 import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
+import { SAGE_TONES, STARSEER_TONES, STONE_SIZE, barrierIcon, stoneFrames, stoneKey, throwIcon } from './sage';
 import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
 import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
 import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, LION_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
@@ -547,6 +548,14 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_rattle', toCanvas(16, 16, rattleIcon()));
   scene.textures.addCanvas('icon_hurl_tea', toCanvas(16, 16, hurlIcon(true)));
   scene.textures.addCanvas('icon_rattle_tea', toCanvas(16, 16, rattleIcon(true)));
+  // The Force Sage's stones ('sage_stone', the Starseer's 'sage_meteor': '<rock|slab>_<turn>') and her buttons.
+  for (const meteor of [false, true]) {
+    register(scene, stoneKey(meteor), pack(stoneFrames(meteor).map((f) => ({ name: f.name, r: f.canvas.render() })), STONE_SIZE, STONE_SIZE), STONE_SIZE, STONE_SIZE);
+  }
+  scene.textures.addCanvas('icon_forcethrow', toCanvas(16, 16, throwIcon(SAGE_TONES)));
+  scene.textures.addCanvas('icon_barrier', toCanvas(16, 16, barrierIcon(SAGE_TONES)));
+  scene.textures.addCanvas('icon_forcethrow_starseer', toCanvas(16, 16, throwIcon(STARSEER_TONES, true)));
+  scene.textures.addCanvas('icon_barrier_starseer', toCanvas(16, 16, barrierIcon(STARSEER_TONES)));
   scene.textures.addCanvas('icon_lantern', toCanvas(16, 16, lanternIcon()));
   scene.textures.addCanvas('icon_possess', toCanvas(16, 16, possessIcon()));
   scene.textures.addCanvas('icon_lantern_cala', toCanvas(16, 16, lanternIcon(true)));

@@ -648,6 +648,18 @@ class GameSound {
     if (t !== null) this.sfx!.forceCrush(t, pan);
   }
 
+  /** The Force Sage's stones: torn up, shattering on a foe, or a slab bursting (see Sfx.forceStone). */
+  forceStone(pan = 0, kind: 'rip' | 'hit' | 'big' = 'hit'): void {
+    const t = this.slot(`forceStone:${kind}`);
+    if (t !== null) this.sfx!.forceStone(t, pan, kind);
+  }
+
+  /** The Force Sage's barrier: springing up, taking a blow, or bursting (see Sfx.forceBarrier). */
+  forceBarrier(pan = 0, kind: 'up' | 'hit' | 'break' = 'up'): void {
+    const t = this.slot(`forceBarrier:${kind}`);
+    if (t !== null) this.sfx!.forceBarrier(t, pan, kind);
+  }
+
   punch(step: number, pan = 0): void {
     const t = this.slot('punch');
     if (t !== null) this.sfx!.punch(t, pan, step);

@@ -57,6 +57,11 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Lightning pours into foes ahead, jumping on and slowing them.',
     special: 'Lifts and squeezes foes on a spot, draining life, then crushes.',
   },
+  'jedi.sage': {
+    attack: 'Tears stones from the ground and hurls them, then a slab that bursts.',
+    ability: 'A dome of light soaks blows for 3 s, then bursts and throws foes back.',
+    special: 'Lifts every foe in a wide ring into the air, then slams them all down.',
+  },
   'fighter.brawler': {
     attack: 'A five-punch combo ending in a flying straight that launches.',
     ability: 'A stream of chi fists hammers far ahead, ending in a finisher.',

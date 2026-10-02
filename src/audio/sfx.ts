@@ -1554,6 +1554,59 @@ export class Sfx {
     this.burstNoise(out, t + 0.01, 'bandpass', 1800, 900, 2, 0.3, 0.12);
   }
 
+  /**
+   * The Force Sage's stones: 'rip', a stone torn out of the ground (a gritty
+   * crunch and a rising hum of the Force under it); 'hit', it shatters on a
+   * foe (a dry crack and pebbles); 'big', a slab bursting on the ground (a
+   * deep thud under the crack, and rubble raining down).
+   */
+  forceStone(t: number, pan: number, kind: 'rip' | 'hit' | 'big'): void {
+    const ctx = this.m.ctx;
+    if (kind === 'rip') {
+      const out = this.out(pan, 0.6, 0.3);
+      this.burstNoise(out, t, 'lowpass', 900, 300, 1.2, 0.35, 0.16, true);
+      for (let i = 0; i < 4; i++) this.burstNoise(out, t + i * rand(0.015, 0.03), 'bandpass', rand(1800, 2600), rand(1200, 1800), 3, 0.12, 0.03);
+      this.chirp(filter(ctx, 'lowpass', 1400, 1.5, out), t + 0.02, 'triangle', 160, 420, 0.1, 0.22);
+      return;
+    }
+    const big = kind === 'big';
+    const out = this.out(pan, big ? 1 : 0.75, big ? 0.45 : 0.25);
+    // The crack.
+    this.burstNoise(out, t, 'bandpass', big ? 1600 : 2400, big ? 600 : 900, 1.1, big ? 0.55 : 0.42, big ? 0.14 : 0.08);
+    this.chirp(out, t, 'sine', big ? 150 : 210, big ? 38 : 70, big ? 0.6 : 0.35, big ? 0.32 : 0.14);
+    // Pebbles skittering off.
+    for (let i = 0; i < (big ? 8 : 4); i++) this.burstNoise(out, t + 0.03 + i * rand(0.02, 0.045), 'bandpass', rand(2600, 4200), rand(1800, 3000), 4, big ? 0.14 : 0.1, 0.025);
+    if (big) this.burstNoise(out, t, 'lowpass', 1200, 200, 0.8, 0.5, 0.45, true);
+  }
+
+  /**
+   * The Force barrier: 'up', a dome of light springing up (a soft rising
+   * shimmer over a hum); 'hit', a blow turned on it (a glassy ping); 'break',
+   * it bursts outward (a ringing shatter and a push of air).
+   */
+  forceBarrier(t: number, pan: number, kind: 'up' | 'hit' | 'break'): void {
+    const ctx = this.m.ctx;
+    if (kind === 'hit') {
+      const out = this.out(pan, 0.55, 0.4);
+      this.bell(out, t, rand(1500, 1700), 0.06, 0.4);
+      this.burstNoise(out, t, 'highpass', 3000, 5000, 0.7, 0.12, 0.08);
+      return;
+    }
+    if (kind === 'up') {
+      const out = this.out(pan, 0.7, 0.6);
+      this.chirp(filter(ctx, 'lowpass', 1600, 1.2, out), t, 'triangle', 220, 660, 0.18, 0.5);
+      this.chirp(out, t + 0.05, 'sine', 440, 1320, 0.08, 0.45);
+      this.sparkle(out, t + 0.08, 4, 0.06);
+      return;
+    }
+    const out = this.out(pan, 0.9, 0.55);
+    this.bell(out, t, 1320, 0.08, 0.6);
+    this.bell(out, t + 0.02, 1980, 0.05, 0.45);
+    for (let i = 0; i < 6; i++) this.burstNoise(out, t + i * rand(0.01, 0.02), 'bandpass', rand(4000, 7000), rand(3000, 5000), 5, 0.18, 0.03);
+    this.burstNoise(out, t, 'lowpass', 2000, 250, 0.9, 0.45, 0.4, true);
+    this.chirp(out, t, 'sine', 120, 40, 0.4, 0.35);
+  }
+
   /** A punch cutting the air: a short, tight whoosh, heavier and lower down the combo. */
   punch(t: number, pan: number, step: number): void {
     const ctx = this.m.ctx;

@@ -25,6 +25,8 @@ import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { GUARD_STYLE, Jedi, JEDI_STYLE, MASTER_STYLE } from './Jedi';
 import { Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
+import { Sage, SAGE_KIT, STARSEER_KIT } from './Sage';
+import { SAGE_H, SAGE_ORIGIN_Y } from '../art/sage';
 import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CHEM_STYLE, CRYO_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
@@ -616,8 +618,37 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // A scholar of the Force who fights with the mind: stones torn from the ground and hurled, a dome of light, foes lifted and slammed.
+        id: 'sage',
+        name: 'Force Sage',
+        role: 'The mind as a weapon',
+        accent: 0x5ae0d0,
+        attack: 'Force throw',
+        special: 'Force barrier',
+        preview: { texture: 'jedi_sage', glow: 'jedi_sage_e', idle: 'jedi_sage_idle_down', chosen: 'jedi_sage_levitate_down', originY: SAGE_ORIGIN_Y / SAGE_H },
+        buttons: {
+          attack: { texture: 'icon_forcethrow' },
+          special: { texture: 'icon_barrier' },
+        },
+        lookName: 'Scholar',
+        skins: [
+          {
+            // Night-blue robes stitched with silver star charts, a pale silver braid, starlight Force, and meteorites to throw.
+            id: 'starseer',
+            name: 'Starseer',
+            accent: 0xb8a4ff,
+            preview: { texture: 'jedi_starseer', glow: 'jedi_starseer_e', idle: 'jedi_starseer_idle_down', chosen: 'jedi_starseer_levitate_down', originY: SAGE_ORIGIN_Y / SAGE_H },
+            buttons: {
+              attack: { texture: 'icon_forcethrow_starseer' },
+              special: { texture: 'icon_barrier_starseer' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
+      if (look === 'sage' || look === 'starseer') return new Sage(world, x, y, look === 'starseer' ? STARSEER_KIT : SAGE_KIT);
       if (look === 'sith' || look === 'warlord') return new Sith(world, x, y, look === 'warlord' ? WARLORD_KIT : SITH_KIT);
       return new Jedi(world, x, y, look === 'guard' ? GUARD_STYLE : look === 'master' ? MASTER_STYLE : JEDI_STYLE);
     },
