@@ -80,6 +80,8 @@ import { ADMIRAL_KIT, CAPTAIN_KIT, Captain } from './Captain';
 import { CAPTAIN_H, CAPTAIN_ORIGIN_Y } from '../art/captain';
 import { BALLET_KIT, Ballerina, FIREBIRD_KIT } from './Ballerina';
 import { BALLET_H, BALLET_ORIGIN_Y } from '../art/ballerina';
+import { DESPERADO_KIT, GUNSL_KIT, Gunslinger } from './Gunslinger';
+import { GUNSL_H, GUNSL_ORIGIN_Y } from '../art/gunslinger';
 import { JUGG_KIT, Juggernaut, TINMAN_KIT } from './Juggernaut';
 import { JUGG_H, JUGG_ORIGIN_Y } from '../art/juggernaut';
 import { ENGINEER_KIT, Engineer, FORGEBEARD_KIT } from './Engineer';
@@ -2276,6 +2278,34 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // A clockwork cowboy: alternating six-shooters fanned every sixth shot, a sliding Quickdraw, and a dead-eye volley at High Noon.
+        id: 'gunslinger',
+        name: 'Gunslinger',
+        role: 'Twin six-shooters, dead-eye aim',
+        accent: 0x9ad0ff,
+        attack: 'Six-shooters',
+        special: 'Quickdraw',
+        preview: { texture: 'gunsl', glow: 'gunsl_e', idle: 'gunsl_idle_down', chosen: 'gunsl_cast_down', originY: GUNSL_ORIGIN_Y / GUNSL_H },
+        buttons: {
+          attack: { texture: 'icon_gunsl_shoot' },
+          special: { texture: 'icon_gunsl_draw' },
+        },
+        lookName: 'Duster',
+        skins: [
+          {
+            // Copper gone to rust, a tall sombrero with pompoms, a wire moustache and a cigarillo, a striped poncho, a bandolier, chaps and star rowels; forge-orange gunfire.
+            id: 'desperado',
+            name: 'Desperado',
+            accent: 0xff8a2a,
+            preview: { texture: 'gunsl_desperado', glow: 'gunsl_desperado_e', idle: 'gunsl_desperado_idle_down', chosen: 'gunsl_desperado_cast_down', originY: GUNSL_ORIGIN_Y / GUNSL_H },
+            buttons: {
+              attack: { texture: 'icon_gunsl_shoot_desperado' },
+              special: { texture: 'icon_gunsl_draw_desperado' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
       if (look === 'synth') return new Synth(world, x, y, SYNTH_KIT);
@@ -2284,6 +2314,8 @@ const KITS: KitDef[] = [
       if (look === 'tinman') return new Juggernaut(world, x, y, TINMAN_KIT);
       if (look === 'ballerina') return new Ballerina(world, x, y, BALLET_KIT);
       if (look === 'firebird') return new Ballerina(world, x, y, FIREBIRD_KIT);
+      if (look === 'gunslinger') return new Gunslinger(world, x, y, GUNSL_KIT);
+      if (look === 'desperado') return new Gunslinger(world, x, y, DESPERADO_KIT);
       if (look === 'vaporwave') return new Synth(world, x, y, VAPOR_KIT);
       return new Mech(world, x, y, look === 'scrap' ? SCRAP_KIT : look === 'dreadnought' ? DREAD_KIT : MECH_KIT);
     },

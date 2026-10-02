@@ -128,6 +128,7 @@ import { HITODAMA_FRAMES, HITODAMA_H, HITODAMA_W, OFUDA_FRAMES, OFUDA_SIZE, hair
 import { captainCutlassIcon, captainHookIcon } from './captain';
 import { balletLeapIcon, balletSpinIcon } from './ballerina';
 import { fistsIcon as juggFistsIcon, rushIcon as juggRushIcon } from './juggernaut';
+import { quickdrawIcon as gunslDrawIcon, sixShooterIcon as gunslShootIcon } from './gunslinger';
 import { registerAquanautArt } from './aquanautKit';
 import { registerBearIcons } from './bear';
 import { BREW_LOOKS, KEG_SIZE, kegFrames, kegKey, fireIcon as brewFireIcon, paddleIcon } from './brewmaster';
@@ -708,6 +709,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_jugg_rush', toCanvas(16, 16, juggRushIcon()));
   scene.textures.addCanvas('icon_jugg_fists_tinman', toCanvas(16, 16, juggFistsIcon(true)));
   scene.textures.addCanvas('icon_jugg_rush_tinman', toCanvas(16, 16, juggRushIcon(true)));
+  // The Gunslinger's: a six-shooter bucking as it fires, and Quickdraw (the Desperado's in copper and fire).
+  scene.textures.addCanvas('icon_gunsl_shoot', toCanvas(16, 16, gunslShootIcon()));
+  scene.textures.addCanvas('icon_gunsl_draw', toCanvas(16, 16, gunslDrawIcon()));
+  scene.textures.addCanvas('icon_gunsl_shoot_desperado', toCanvas(16, 16, gunslShootIcon(true)));
+  scene.textures.addCanvas('icon_gunsl_draw_desperado', toCanvas(16, 16, gunslDrawIcon(true)));
   // The Ballerina's: a pirouette in a ring of blades, and the grand jeté (the Firebird's in flame).
   scene.textures.addCanvas('icon_ballet_spin', toCanvas(16, 16, balletSpinIcon()));
   scene.textures.addCanvas('icon_ballet_leap', toCanvas(16, 16, balletLeapIcon()));

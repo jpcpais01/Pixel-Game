@@ -105,6 +105,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'phantom:admiral': 'epic',
   'automaton:firebird': 'legendary',
   'automaton:tinman': 'epic',
+  'automaton:desperado': 'epic',
   'transmuter:rubedo': 'legendary',
   // Hallow's Eve's, bought with candy rather than wished for (see game/season.ts).
   'warrior:headless': 'legendary',

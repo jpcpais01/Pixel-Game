@@ -222,6 +222,11 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Charges ahead, carrying foes it rams, and ends in a double shove.',
     special: 'Furnace bursts open: always hot, scalding steam, shockwave punches, a great vent.',
   },
+  'automaton.gunslinger': {
+    attack: 'Left gun, right gun, fast rounds; every sixth shot it fans the hammer for three.',
+    ability: 'Slides aside out of harm, then two instant shots strike the nearest foes.',
+    special: 'The sun flares and time drags; up to six dead-eye marks, then one volley lands them all.',
+  },
   'automaton.ballerina': {
     attack: 'Two bladed pirouettes cut all round her, then a kick flings a blade arc through foes.',
     ability: 'A soaring leap the way she aims, landing in a ring of steel that slashes all round.',

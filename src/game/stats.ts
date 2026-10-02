@@ -110,6 +110,7 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'phantom.weeper': { role: 'ranged', hp: 100, damage: 10, defense: 14, rate: 2.38, speed: 64, regen: 0.6, skill: 2, ult: 54, kit: 7 },
   'phantom.yurei': { role: 'caster', hp: 85, damage: 8, defense: 12, rate: 2.78, speed: 60, regen: 0.8, skill: 3.5, ult: 124, kit: 12 },
   'phantom.captain': { role: 'melee', hp: 100, damage: 9.5, defense: 18, rate: 3.13, speed: 62, regen: 0.8, skill: 4.33, ult: 84, kit: 11.33 },
+  'automaton.gunslinger': { role: 'ranged', hp: 95, damage: 6, defense: 12, rate: 4.37, speed: 64, regen: 0.6, skill: 6.4, ult: 132, kit: 8 },
   'automaton.ballerina': { role: 'melee', hp: 92, damage: 10, defense: 18, rate: 2.95, speed: 70, regen: 0.8, skill: 2.77, ult: 68, kit: 10 },
   'automaton.juggernaut': { role: 'tank', hp: 125, damage: 8, defense: 22, rate: 2.19, speed: 52, regen: 1, skill: 4.33, ult: 178, kit: 13.6 },
   'inventor.engineer': { role: 'caster', hp: 100, damage: 9, defense: 12, rate: 2.54, speed: 56, regen: 0.6, skill: 11, ult: 344, kit: 12.3 },
