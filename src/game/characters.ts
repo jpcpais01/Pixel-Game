@@ -33,7 +33,7 @@ import { Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from '
 import { Arbalest, BRIAR_STYLE } from './Arbalest';
 import { Windrunner, WISTERIA_STYLE } from './Windrunner';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
-import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
+import { COBRA_STYLE, CORSAIR_STYLE, DANCER_STYLE, GENTLEMAN_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
@@ -930,6 +930,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_shadowstep_corsair' },
             },
           },
+          {
+            // A phantom thief of the night: top hat, white domino mask and monocle, tailcoat, cravat and a crimson-lined cape.
+            id: 'gentleman',
+            name: 'Gentleman Thief',
+            accent: 0xd0303e,
+            preview: { texture: 'rogue_gentleman', glow: 'rogue_gentleman_e', idle: 'rogue_gentleman_idle_down', chosen: 'rogue_gentleman_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
+            buttons: {
+              attack: { texture: 'icon_daggers_gentleman' },
+              special: { texture: 'icon_shadowstep_gentleman' },
+            },
+          },
         ],
       },
       {
@@ -970,11 +981,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_shadowstep_nightbloom' },
             },
           },
+          {
+            // A desert serpent assassin: a cobra's hood of emerald scales edged in gold, kohl eyes over a veil, gold snake armlets, twin fang daggers.
+            id: 'cobra',
+            name: 'Cobra',
+            accent: 0x5ad040,
+            preview: { texture: 'rogue_cobra', glow: 'rogue_cobra_e', idle: 'rogue_cobra_idle_down', chosen: 'rogue_cobra_cross_down', originY: ROGUE_ORIGIN_Y / ROGUE_H },
+            buttons: {
+              attack: { texture: 'icon_daggers_cobra' },
+              special: { texture: 'icon_shadowstep_cobra' },
+            },
+          },
         ],
       },
     ],
     spawn: (world, x, y, look) =>
-      new Rogue(world, x, y, look === 'dancer' ? DANCER_STYLE : look === 'kitsune' ? KITSUNE_STYLE : look === 'nightbloom' ? NIGHTBLOOM_STYLE : look === 'corsair' ? CORSAIR_STYLE : ROGUE_STYLE),
+      new Rogue(world, x, y, look === 'dancer' ? DANCER_STYLE : look === 'kitsune' ? KITSUNE_STYLE : look === 'nightbloom' ? NIGHTBLOOM_STYLE : look === 'corsair' ? CORSAIR_STYLE : look === 'gentleman' ? GENTLEMAN_STYLE : look === 'cobra' ? COBRA_STYLE : ROGUE_STYLE),
   },
   {
     id: 'necromancer',

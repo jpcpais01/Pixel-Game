@@ -16,7 +16,7 @@ export interface ShadowStyle {
   /** Echo tint, and whether echoes are added as light (the dancer's) or laid down as shade. */
   echo: number;
   glow: boolean;
-  /** A petal texture: moonflower petals scatter from each puff and drift off each echo. */
+  /** A petal texture: moonflower petals (or calling cards, or venom) scatter from each puff and drift off each echo. */
   petal?: string;
 }
 
