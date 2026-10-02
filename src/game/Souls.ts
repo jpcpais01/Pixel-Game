@@ -205,6 +205,8 @@ export interface RisenStats {
   leash: number;
   /** The soul fire it rises and falls in (soul green unless given). */
   fx?: Scheme;
+  /** Its sheet, drawn and animated like the skeleton's ('skeleton' unless given: the Gravedigger's ghouls). */
+  sheet?: string;
 }
 
 /** Something to follow: where the necromancer stands. */
@@ -232,6 +234,7 @@ export class Risen implements Effect {
   private struck = false;
   private fade = -1;
   private life: number;
+  private readonly key: string;
 
   constructor(
     private world: WorldScene,
@@ -243,19 +246,21 @@ export class Risen implements Effect {
     private stats: RisenStats,
   ) {
     this.life = stats.life;
+    this.key = stats.sheet ?? 'skeleton';
+    const key = this.key;
     this.side = x < master.x ? 'l' : 'r';
     const ox = SKELETON_FRAME.ox / SKELETON_FRAME.w;
     const oy = SKELETON_FRAME.oy / SKELETON_FRAME.h;
     this.shadow = world.add.image(x, y, 'shadow').setDepth(1).setScale(0.75, 0.8).setAlpha(0);
-    this.sprite = world.add.sprite(x, y, 'skeleton', `rise0_${this.side}`).setOrigin(ox, oy).setPipeline('Lit');
-    this.glow = world.add.sprite(x, y, 'skeleton_e', `rise0_${this.side}`).setOrigin(ox, oy).setBlendMode(Phaser.BlendModes.ADD);
+    this.sprite = world.add.sprite(x, y, key, `rise0_${this.side}`).setOrigin(ox, oy).setPipeline('Lit');
+    this.glow = world.add.sprite(x, y, `${key}_e`, `rise0_${this.side}`).setOrigin(ox, oy).setBlendMode(Phaser.BlendModes.ADD);
     this.play('rise');
     this.sprite.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (anim: Phaser.Animations.Animation) => {
-      if (anim.key.startsWith('skeleton_rise') || anim.key.startsWith('skeleton_hit')) this.state = 'idle';
-      else if (anim.key.startsWith('skeleton_fall')) this.fade = 600;
+      if (anim.key.startsWith(`${key}_rise`) || anim.key.startsWith(`${key}_hit`)) this.state = 'idle';
+      else if (anim.key.startsWith(`${key}_fall`)) this.fade = 600;
     });
     this.sprite.on(Phaser.Animations.Events.ANIMATION_UPDATE, (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
-      if (anim.key.startsWith('skeleton_hit') && frame.index - 1 === SKELETON_STRIKE_FRAME) this.land();
+      if (anim.key.startsWith(`${key}_hit`) && frame.index - 1 === SKELETON_STRIKE_FRAME) this.land();
     });
     this.sync();
   }
@@ -381,7 +386,7 @@ export class Risen implements Effect {
   }
 
   private play(anim: RisenState, ignoreIfPlaying = false): void {
-    this.sprite.play(`skeleton_${anim}_${this.side}`, ignoreIfPlaying);
+    this.sprite.play(`${this.key}_${anim}_${this.side}`, ignoreIfPlaying);
   }
 
   private sync(): void {

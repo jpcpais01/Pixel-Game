@@ -911,6 +911,26 @@ class GameSound {
     if (t !== null) this.sfx!.bloodNova(t, pan);
   }
 
+  spadeSwing(pan = 0, heavy = false): void {
+    const t = this.slot('spadeSwing');
+    if (t !== null) this.sfx!.spadeSwing(t, pan, heavy);
+  }
+
+  spadeSlam(pan = 0): void {
+    const t = this.slot('spadeSlam');
+    if (t !== null) this.sfx!.spadeSlam(t, pan);
+  }
+
+  graveOpen(pan = 0): void {
+    const t = this.slot('graveOpen');
+    if (t !== null) this.sfx!.graveOpen(t, pan);
+  }
+
+  tombRise(pan = 0): void {
+    const t = this.slot('tombRise');
+    if (t !== null) this.sfx!.tombRise(t, pan);
+  }
+
   lutePluck(pan = 0): void {
     const t = this.slot('lutePluck');
     if (t !== null) this.sfx!.lutePluck(t, pan);
