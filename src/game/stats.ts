@@ -77,6 +77,7 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'jedi.sage': { role: 'caster', hp: 85, damage: 11, defense: 12, rate: 2.03, speed: 60, regen: 0.8, skill: 1.75, ult: 66, kit: 13.3 },
   'jedi.sith': { role: 'melee', hp: 100, damage: 10, defense: 18, rate: 2.95, speed: 62, regen: 0.8, skill: 3.6, ult: 88, kit: 12 },
   'jedi.twin': { role: 'melee', hp: 92, damage: 8, defense: 18, rate: 3.6, speed: 68, regen: 0.8, skill: 1.6, ult: 78, kit: 8 },
+  'jedi.inquisitor': { role: 'melee', hp: 95, damage: 9, defense: 18, rate: 2.6, speed: 66, regen: 0.8, skill: 2.6, ult: 60, kit: 8 },
   'fighter.brawler': { role: 'melee', hp: 110, damage: 7, defense: 17, rate: 3.98, speed: 62, regen: 0.8, skill: 13.1, ult: 74, kit: 10.4 },
   'fighter.monk': { role: 'tank', hp: 125, damage: 8, defense: 22, rate: 2.83, speed: 53, regen: 1, skill: 4, ult: 78, kit: 13.1 },
   'alchemist.plague': { role: 'ranged', hp: 110, damage: 5, defense: 12, rate: 4.14, speed: 60, regen: 0.6, skill: 13.1, ult: 180, kit: 6 },

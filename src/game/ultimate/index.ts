@@ -47,6 +47,8 @@ import { SITH_KIT, WARLORD_KIT } from '../Sith';
 import { Levitation, levitationIcon } from './sage';
 import { SAGE_KIT, STARSEER_KIT } from '../Sage';
 import { cutsGate, ThousandCuts, thousandCutsIcon } from './twin';
+import { Purge, purgeIcon } from './inquisitor';
+import { INQUISITOR_KIT, VOIDHUNTER_KIT } from '../Inquisitor';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
@@ -173,6 +175,15 @@ const ULTS: Record<string, UltDef> = {
     icon: thousandCutsIcon,
     gate: cutsGate,
     cast: (c) => c.world.addEffect(new ThousandCuts(c.world, c)),
+  },
+  'jedi:inquisitor': {
+    name: 'Purge',
+    cost: 65,
+    windup: 600,
+    aim: 'self',
+    pal: INQUISITOR_KIT.pal,
+    icon: purgeIcon,
+    cast: (c) => c.world.addEffect(new Purge(c.world, c)),
   },
   'fighter:brawler': {
     name: 'Dragon Rush',
@@ -531,6 +542,7 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:warlord': { pal: WARLORD_KIT.dominion, type: 'sith' },
   'jedi:starseer': { pal: STARSEER_KIT.lift, type: 'sage' },
   'jedi:dune': { pal: pal(0xfffaf0, 0xffd27a, 0xf29a14, 0x9a4cff, 0xffb040), type: 'twin' },
+  'jedi:voidhunter': { pal: VOIDHUNTER_KIT.pal, type: 'inquisitor' },
   'samurai:kitsune': { pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
   'druid:autumn': { pal: AUTUMN_MAGIC.pal },

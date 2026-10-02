@@ -32,6 +32,7 @@ import { SAGE_ANIMS, SAGE_H, SAGE_LOOKS, SAGE_W, buildSageFrames } from './sage'
 import { DIGGER_ANIMS, DIGGER_H, DIGGER_LOOKS, DIGGER_W, buildDiggerFrames } from './digger';
 import { FALC_H, FALC_W, FALCONER_ANIMS, FALCONER_LOOKS, buildFalconerFrames } from './falconer';
 import { TWIN_ANIMS, TWIN_H, TWIN_LOOKS, TWIN_W, buildTwinFrames } from './twin';
+import { INQ_ANIMS, INQ_H, INQ_W, INQUISITOR_LOOKS, buildInquisitorFrames } from './inquisitor';
 
 /** The rigs whose frames carry points the game reads (a crystal, a blade tip): the same for every look of the rig. */
 export type MetaKind = 'wizard' | 'warrior' | 'paladin' | 'jedi' | 'samurai';
@@ -173,6 +174,7 @@ rig(DIGGER_LOOKS, DIGGER_W, DIGGER_H, buildDiggerFrames, () => DIGGER_ANIMS);
 rig(FALCONER_LOOKS, FALC_W, FALC_H, buildFalconerFrames, () => FALCONER_ANIMS);
 // The Twin Blade, the Jedi class's third type, on a rig of his own; his frames carry the Jedi's points (blade tips).
 rig(TWIN_LOOKS, TWIN_W, TWIN_H, buildTwinFrames, () => TWIN_ANIMS, { meta: 'jedi' });
+rig(INQUISITOR_LOOKS, INQ_W, INQ_H, buildInquisitorFrames, () => INQ_ANIMS);
 
 /** Every hero sheet's key, in roster order. */
 export const HERO_SHEETS: readonly string[] = [...SHEETS.keys()];

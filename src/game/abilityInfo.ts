@@ -67,6 +67,11 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Crossed blades turn the next blow aside and answer it with a hard counter-cut.',
     special: 'Blinks from foe to foe cutting each, then every cut bursts at once.',
   },
+  'jedi.inquisitor': {
+    attack: 'Throws the ring saber out and back, cutting foes both ways; whirls it up close.',
+    ability: 'Leaps onto a foe ahead and lands in a red shockwave that staggers all round.',
+    special: 'The ring saber spirals round him, out wide and back, carving all it passes.',
+  },
   'fighter.brawler': {
     attack: 'A five-punch combo ending in a flying straight that launches.',
     ability: 'A stream of chi fists hammers far ahead, ending in a finisher.',

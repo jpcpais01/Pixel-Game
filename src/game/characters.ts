@@ -29,6 +29,8 @@ import { Sage, SAGE_KIT, STARSEER_KIT } from './Sage';
 import { SAGE_H, SAGE_ORIGIN_Y } from '../art/sage';
 import { DUNE_KIT, Twin, TWIN_KIT } from './Twin';
 import { TWIN_H, TWIN_ORIGIN_Y } from '../art/twin';
+import { Inquisitor, INQUISITOR_KIT, VOIDHUNTER_KIT } from './Inquisitor';
+import { INQ_H, INQ_ORIGIN_Y } from '../art/inquisitor';
 import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CHEM_STYLE, CRYO_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
@@ -680,11 +682,40 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // A dark-side hunter in grey-black armour and a short cape, his ring saber thrown like a boomerang.
+        id: 'inquisitor',
+        name: 'Inquisitor',
+        role: 'Hunter of the light',
+        accent: 0xe8403c,
+        attack: 'Ring saber',
+        special: "Hunter's leap",
+        preview: { texture: 'jedi_inquisitor', glow: 'jedi_inquisitor_e', idle: 'jedi_inquisitor_idle_down', chosen: 'jedi_inquisitor_purge_down', originY: INQ_ORIGIN_Y / INQ_H },
+        buttons: {
+          attack: { texture: 'icon_ringsaber' },
+          special: { texture: 'icon_hunterleap' },
+        },
+        lookName: 'Pale crest',
+        skins: [
+          {
+            // Obsidian armour with violet seams that glow, a horned black helm with one slit of light, a violet-white ring blade.
+            id: 'voidhunter',
+            name: 'Voidhunter',
+            accent: 0xb06cff,
+            preview: { texture: 'jedi_voidhunter', glow: 'jedi_voidhunter_e', idle: 'jedi_voidhunter_idle_down', chosen: 'jedi_voidhunter_purge_down', originY: INQ_ORIGIN_Y / INQ_H },
+            buttons: {
+              attack: { texture: 'icon_ringsaber_voidhunter' },
+              special: { texture: 'icon_hunterleap_voidhunter' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
       if (look === 'sage' || look === 'starseer') return new Sage(world, x, y, look === 'starseer' ? STARSEER_KIT : SAGE_KIT);
       if (look === 'sith' || look === 'warlord') return new Sith(world, x, y, look === 'warlord' ? WARLORD_KIT : SITH_KIT);
       if (look === 'twin' || look === 'dune') return new Twin(world, x, y, look === 'dune' ? DUNE_KIT : TWIN_KIT);
+      if (look === 'inquisitor' || look === 'voidhunter') return new Inquisitor(world, x, y, look === 'voidhunter' ? VOIDHUNTER_KIT : INQUISITOR_KIT);
       return new Jedi(world, x, y, look === 'guard' ? GUARD_STYLE : look === 'master' ? MASTER_STYLE : JEDI_STYLE);
     },
   },
