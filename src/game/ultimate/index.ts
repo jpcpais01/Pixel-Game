@@ -40,6 +40,8 @@ import { BENFICA_KIT, EAGLE_KIT } from '../Eagle';
 import { LION_KIT, SPORTING_KIT } from '../Lion';
 import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
+import { bombingRun } from './aviator';
+import { ACE_KIT, AVIATOR_KIT } from '../Aviator';
 import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
 import * as icons from './icons';
@@ -435,6 +437,15 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.wyrmIcon,
     cast: wyrmWrath,
   },
+  'aviator:aviator': {
+    name: 'Bombing Run',
+    cost: 65,
+    windup: 550,
+    aim: 'dir',
+    pal: AVIATOR_KIT.pal,
+    icon: icons.bombingRunIcon,
+    cast: bombingRun,
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -501,6 +512,7 @@ const SKINS: Record<string, UltSkin> = {
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
+  'aviator:ace': { pal: ACE_KIT.pal },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

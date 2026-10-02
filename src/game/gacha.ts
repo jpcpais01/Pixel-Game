@@ -73,6 +73,8 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'warrior:headless': 'legendary',
   'wizard:pumpkin': 'epic',
   'archer:scarecrow': 'epic',
+  // The Aviator's Flying Ace.
+  'aviator:ace': 'epic',
 };
 
 /** One skin as the shop knows it. */

@@ -145,6 +145,7 @@ import { ALTAR_H, ALTAR_W, GROVE_FRAMES, GROVE_H, GROVE_W, HOLLOW_FRAMES, HOLLOW
 import { STRIP_H, buildStrip } from './ground';
 import { FZ_FLAKE, FZ_ICICLE_H, FZ_ICICLE_W, FZ_LANE_H, FZ_LANE_W, FZ_MIST_H, FZ_MIST_W, FZ_PATCH_FRAMES, FZ_PATCH_H, FZ_PATCH_W, FZ_RING_H, FZ_RING_W, FZ_SHARD_H, FZ_SHARD_W, FZ_SNOWBALL, FZ_SPIKE_H, FZ_SPIKE_W, frostFlake, frostIcicle, frostLaneArt, frostMist, frostPatch, frostRing, frostShard, frostSnowball, frostSpike } from './frostFx';
 import type { FxRegistrar } from './frostKit';
+import { aviatorTextures } from './aviator';
 import { AURORA_H, AURORA_W, BRAZIER_FRAMES as FZ_BRAZIER_FRAMES, BRAZIER_H as FZ_BRAZIER_H, BRAZIER_W as FZ_BRAZIER_W, STATUE_H as FZ_STATUE_H, STATUE_W as FZ_STATUE_W, archGlowArt, auroraRibbon, frostArenaArt, frostBrazier, frostSkyArt, frostStatue } from './frost';
 import { FROST_H, FROST_W, GATES } from '../world/frostLayout';
 import { buildFlurrykinSheet, buildIcebeakSheet, buildRimespriteSheet, buildRimeweaverSheet, buildSnowmiteSheet, frostWeakFx } from './frostWeak';
@@ -585,6 +586,8 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     scene.textures.addCanvas(`icon_fire_${look.key}`, toCanvas(16, 16, fireIcon(look)));
     scene.textures.addCanvas(`icon_breath_${look.key}`, toCanvas(16, 16, breathIcon(look)));
   }
+  // The Aviator's biplane, its bombs and her buttons (she herself is a hero sheet).
+  aviatorTextures(fxRegistrar(scene));
 
   scene.textures.addCanvas('icon_cannon', toCanvas(16, 16, cannonIcon()));
   scene.textures.addCanvas('icon_salvo', toCanvas(16, 16, salvoIcon()));

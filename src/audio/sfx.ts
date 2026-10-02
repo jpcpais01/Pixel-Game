@@ -2697,6 +2697,59 @@ export class Sfx {
       o.stop(at + 0.3);
     }
   }
+
+  // ------------------------------------------------------------ The Aviator
+
+  /** The flare pistol: a hollow pop and the flare's fizzing hiss; the star shell's deeper, with a crackle. */
+  flareShot(t: number, pan: number, star: boolean): void {
+    const out = this.out(pan, star ? 0.7 : 0.55, 0.2);
+    this.chirp(out, t, 'sine', star ? 260 : 340, 90, 0.4, 0.08);
+    this.burstNoise(out, t, 'bandpass', 1800, 900, 1.2, 0.35, 0.05);
+    this.burstNoise(out, t + 0.02, 'highpass', 4200, 6800, 0.8, 0.14, star ? 0.32 : 0.22);
+    if (star) for (let i = 0; i < 4; i++) this.burstNoise(out, t + 0.06 + i * 0.035 * rand(0.8, 1.3), 'highpass', 3000, 4000, 1, 0.18, 0.015);
+  }
+
+  /** The jetpack lighting for a hop: a cough, then a rushing roar that climbs and dies away. */
+  jetHop(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.25);
+    this.chirp(out, t, 'square', 140, 60, 0.18, 0.05);
+    this.burstNoise(out, t + 0.04, 'lowpass', 600, 2800, 0.9, 0.5, 0.42, true);
+    this.burstNoise(out, t + 0.06, 'bandpass', 1200, 3600, 1.4, 0.2, 0.36);
+    this.chirp(out, t + 0.05, 'sawtooth', 70, 140, 0.08, 0.35);
+  }
+
+  /** The biplane's pass: an engine's putter, swelling as it comes, its pitch dropping as it goes by, fading off. */
+  biplane(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const dur = 2.3;
+    const out = this.out(pan, 0.55, 0.25);
+    const env = gain(ctx, 0, filter(ctx, 'lowpass', 1400, 0.8, out));
+    env.gain.setValueAtTime(0, t);
+    env.gain.linearRampToValueAtTime(0.28, t + dur * 0.45);
+    env.gain.linearRampToValueAtTime(0.18, t + dur * 0.6);
+    env.gain.linearRampToValueAtTime(0, t + dur);
+    // The cylinders' putter: the engine note pulsed by a fast tremolo.
+    const putter = gain(ctx, 0.5, env);
+    const trem = osc(ctx, 'square', 22, gain(ctx, 0.5, putter.gain));
+    for (const [type, mul] of [['sawtooth', 1], ['square', 0.5]] as const) {
+      const o = osc(ctx, type, 118 * mul, putter);
+      o.frequency.setValueAtTime(118 * mul, t);
+      o.frequency.setValueAtTime(118 * mul, t + dur * 0.45);
+      o.frequency.linearRampToValueAtTime(92 * mul, t + dur * 0.62);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+    trem.start(t);
+    trem.stop(t + dur + 0.05);
+    // The rush of air as it goes over.
+    this.burstNoise(out, t + dur * 0.35, 'bandpass', 500, 1400, 1, 0.12, dur * 0.35, true);
+  }
+
+  /** A bomb falling: a thin whistle sliding down. */
+  bombWhistle(t: number, pan: number): void {
+    const out = this.out(pan, 0.35, 0.2);
+    this.chirp(out, t, 'sine', 1900, 700, 0.12, 0.4);
+  }
 }
 
 /**

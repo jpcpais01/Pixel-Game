@@ -201,6 +201,9 @@ const DEFS: Record<string, Def> = {
   'inventor.engineer': { cost: 2, origin: 'forged', range: 1, attack: ['swing', 'swing2', 'bonk'], mana: 80,
     skill: { name: 'Sentry', cd: 7, kind: 'rain', aim: 'target', n: 5, dmg: 2.2, delay: 1.5, fx: 'bullets', anim: 'build' },
     ult: { kind: 'rain', aim: 'crowd', n: 14, dmg: 7, delay: 1.8, fx: 'missiles', anim: 'build' } },
+  'aviator.aviator': { cost: 3, origin: 'forged', range: 3, attack: ['shoot'], missile: 'spark', mana: 80,
+    skill: { name: 'Rocket hop', cd: 7, kind: 'leap', aim: 'crowd', r: 1.2, dmg: 1.6, knock: 1, fx: 'fire', anim: 'hop' },
+    ult: { kind: 'beam', aim: 'target', r: 6, dmg: 4.2, fx: 'fire', anim: 'signal' } },
 
   // Mystics: the Bard's and the Druid's
   'bard.minstrel': { cost: 1, origin: 'show', range: 3, attack: ['strum'], missile: 'note', mana: 80,
