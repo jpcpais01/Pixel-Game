@@ -883,6 +883,34 @@ class GameSound {
     this.fx('hundredCuts', 'hundredCuts', [pan], 0);
   }
 
+  harpoon(pan = 0): void {
+    this.fx('harpoon', 'harpoon', [pan], 0);
+  }
+
+  chainReel(pan = 0): void {
+    this.fx('chainReel', 'chainReel', [pan], 0);
+  }
+
+  torpedo(pan = 0): void {
+    this.fx('torpedo', 'torpedo', [pan], 0);
+  }
+
+  seaBurst(pan = 0): void {
+    this.fx('seaBurst', 'seaBurst', [pan], 0);
+  }
+
+  paddle(pan = 0, heavy = false): void {
+    this.fx('paddle', 'paddle', [pan, heavy], 0);
+  }
+
+  kegRoll(pan = 0): void {
+    this.fx('kegRoll', 'kegRoll', [pan], 0);
+  }
+
+  foamBurst(pan = 0): void {
+    this.fx('foamBurst', 'foamBurst', [pan], 0);
+  }
+
   step(): void {
     this.fx('step', 'step', []);
   }
@@ -900,6 +928,26 @@ class GameSound {
     let baked = false;
     safely(`clip ${method}`, () => (baked = this.baker!.play(method, list, panAt, t, pan)));
     if (!baked) (this.sfx![method] as (t: number, ...a: unknown[]) => void)(t, ...list);
+  }
+
+  candle(pan = 0): void {
+    this.fx('candle', 'candle', [pan], 0);
+  }
+
+  starPop(pan = 0): void {
+    this.fx('starPop', 'starPop', [pan], 0);
+  }
+
+  firecracker(pan = 0): void {
+    this.fx('firecracker', 'firecracker', [pan], 0);
+  }
+
+  rocketWhistle(pan = 0): void {
+    this.fx('rocketWhistle', 'rocketWhistle', [pan], 0);
+  }
+
+  fireworkBurst(pan = 0): void {
+    this.fx('fireworkBurst', 'fireworkBurst', [pan], 0);
   }
 
   private live(): boolean {
@@ -922,6 +970,62 @@ class GameSound {
 
   ultReady(): void {
     this.fx('ultReady', 'ultReady', []);
+  }
+
+  focusRay(pan = 0, struck = false): void {
+    this.fx('focusRay', 'focusRay', [pan, struck], 0);
+  }
+
+  prism(pan = 0, hum = false, shatter = false): void {
+    this.fx('prism', 'prism', [pan, hum, shatter], 0);
+  }
+
+  burningMirror(pan = 0, lit = false): void {
+    this.fx('burningMirror', 'burningMirror', [pan, lit], 0);
+  }
+
+  quicksilver(pan = 0): void {
+    this.fx('quicksilver', 'quicksilver', [pan], 0);
+  }
+
+  quickSplash(pan = 0, small = false): void {
+    this.fx('quickSplash', 'quickSplash', [pan, small], 0);
+  }
+
+  chalk(pan = 0): void {
+    this.fx('chalk', 'chalk', [pan], 0);
+  }
+
+  transmute(pan = 0, struck = false): void {
+    this.fx('transmute', 'transmute', [pan, struck], 0);
+  }
+
+  gild(pan = 0, gild = false): void {
+    this.fx('gild', 'gild', [pan, gild], 0);
+  }
+
+  opusShatter(pan = 0): void {
+    this.fx('opusShatter', 'opusShatter', [pan], 0);
+  }
+
+  bearGrowl(pan = 0, big = false): void {
+    this.fx('bearGrowl', 'bearGrowl', [pan, big], 0);
+  }
+
+  flareShot(pan = 0, star = false): void {
+    this.fx('flareShot', 'flareShot', [pan, star], 0);
+  }
+
+  jetHop(pan = 0): void {
+    this.fx('jetHop', 'jetHop', [pan], 0);
+  }
+
+  biplane(pan = 0): void {
+    this.fx('biplane', 'biplane', [pan], 0);
+  }
+
+  bombWhistle(pan = 0): void {
+    this.fx('bombWhistle', 'bombWhistle', [pan], 0);
   }
 
   /**

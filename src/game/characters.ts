@@ -65,8 +65,21 @@ import { BENFICA_KIT, EAGLE_KIT, Eagle, PHOENIX_KIT } from './Eagle';
 import { LION_KIT, Lion, NEMEAN_KIT, SPORTING_KIT } from './Lion';
 import { DRAGON_KIT, Dragon, JADE_KIT, PORTO_KIT } from './Dragon';
 import { BEAST_H, BEAST_ORIGIN_Y } from '../art/beast';
+import { Lightwright, LIGHTWRIGHT_KIT, STARGAZER_KIT } from './Lightwright';
+import { LW_H, LW_ORIGIN_Y } from '../art/lightwright';
+import { AQUANAUT_KIT, Aquanaut, BARNACLE_KIT } from './Aquanaut';
+import { AQUA_H, AQUA_ORIGIN_Y } from '../art/aquanaut';
+import { Bear, BEAR_KIT, PANDA_KIT } from './Bear';
+import { ACE_KIT, AVIATOR_KIT, Aviator } from './Aviator';
+import { AVI_H, AVI_ORIGIN_Y } from '../art/aviator';
+import { CARNIVAL_STYLE, Pyrotechnist, VERMILION_STYLE } from './Pyrotechnist';
+import { PYRO_H, PYRO_ORIGIN_Y } from '../art/pyrotechnist';
 import { worn } from './skins';
+import { QUICKSILVER_KIT, RUBEDO_KIT, Transmuter } from './Transmuter';
+import { TRANS_H, TRANS_ORIGIN_Y } from '../art/transmuter';
 import type { Vitals } from './combat';
+import { BREW_H, BREW_ORIGIN_Y } from '../art/brewmaster';
+import { BREW_KIT, Brewmaster, JARL_KIT } from './Brewmaster';
 
 /** A unit direction. */
 export interface Aim {
@@ -2300,6 +2313,273 @@ const KITS: KitDef[] = [
       return new Eagle(world, x, y, EAGLE_KIT);
     },
   },
+  {
+    id: 'lightwright',
+    name: 'Lightwright',
+    blurb: 'Lenses, prisms and the sun itself',
+    types: [
+      {
+        // An optician-inventor in a mustard coat and cream waistcoat, a brass loupe over one eye, a lens cannon at his hip.
+        id: 'lightwright',
+        name: 'Lightwright',
+        role: 'Master of light and lenses',
+        accent: 0xffd060,
+        attack: 'Focus beam',
+        special: 'Rainbow prism',
+        preview: { texture: 'lightwright', glow: 'lightwright_e', idle: 'lightwright_idle_down', chosen: 'lightwright_unveil_down', originY: LW_ORIGIN_Y / LW_H },
+        buttons: {
+          attack: { texture: 'icon_focus_lightwright' },
+          special: { texture: 'icon_prism_lightwright' },
+        },
+        lookName: 'Brass optics',
+        skins: [
+          {
+            // An astronomer in a midnight coat stitched with silver constellations, silver hair and beard, silver optics shining starlight.
+            id: 'stargazer',
+            name: 'Stargazer',
+            accent: 0x9ac4ff,
+            preview: { texture: 'lightwright_star', glow: 'lightwright_star_e', idle: 'lightwright_star_idle_down', chosen: 'lightwright_star_unveil_down', originY: LW_ORIGIN_Y / LW_H },
+            buttons: {
+              attack: { texture: 'icon_focus_lightwright_star' },
+              special: { texture: 'icon_prism_lightwright_star' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Lightwright(world, x, y, look === 'stargazer' ? STARGAZER_KIT : LIGHTWRIGHT_KIT);
+    },
+  },
+  {
+    id: 'transmuter',
+    name: 'Transmuter',
+    blurb: 'Quicksilver, chalk and the Great Work',
+    types: [
+      {
+        // Beads of quicksilver that split on a hit, and a chalk circle that turns foes to lead.
+        id: 'transmuter',
+        name: 'Transmuter',
+        role: 'Turns flesh to metal',
+        accent: 0x4ad0c8,
+        attack: 'Quicksilver',
+        special: 'Transmutation circle',
+        preview: { texture: 'transmuter', glow: 'transmuter_e', idle: 'transmuter_idle_down', chosen: 'transmuter_opus_down', originY: TRANS_ORIGIN_Y / TRANS_H },
+        buttons: {
+          attack: { texture: 'icon_quicksilver' },
+          special: { texture: 'icon_transmute' },
+        },
+        lookName: 'Quicksilver',
+        skins: [
+          {
+            // The reddening, the Work's last stage: a crimson-and-gold robe, a ruby stone, red-gold quicksilver.
+            id: 'rubedo',
+            name: 'Rubedo',
+            accent: 0xff4a3a,
+            preview: { texture: 'transmuter_rubedo', glow: 'transmuter_rubedo_e', idle: 'transmuter_rubedo_idle_down', chosen: 'transmuter_rubedo_opus_down', originY: TRANS_ORIGIN_Y / TRANS_H },
+            buttons: {
+              attack: { texture: 'icon_quicksilver_rubedo' },
+              special: { texture: 'icon_transmute_rubedo' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      if (look === 'rubedo') return new Transmuter(world, x, y, RUBEDO_KIT);
+      return new Transmuter(world, x, y, QUICKSILVER_KIT);
+    },
+  },
+  {
+    id: 'aquanaut',
+    name: 'Aquanaut',
+    blurb: 'A hard-hat diver up from the deep',
+    types: [
+      {
+        // A heavy harpoon gun that pierces, a chain hook that reels foes in, and a steam torpedo.
+        id: 'aquanaut',
+        name: 'Aquanaut',
+        role: 'Hauls foes up from the deep',
+        accent: 0x3cc0e8,
+        attack: 'Harpoon',
+        special: 'Reel in',
+        preview: { texture: 'aquanaut', glow: 'aquanaut_e', idle: 'aquanaut_idle_down', chosen: 'aquanaut_surge_down', originY: AQUA_ORIGIN_Y / AQUA_H },
+        buttons: {
+          attack: { texture: 'icon_harpoon' },
+          special: { texture: 'icon_reel' },
+        },
+        lookName: 'Brass helm',
+        skins: [
+          {
+            // A helmet gone green with verdigris, crusted with barnacles and a starfish, kelp trailing, a sea-green suit.
+            id: 'barnacle',
+            name: 'Barnacle',
+            accent: 0x4ad0a0,
+            preview: { texture: 'aquanaut_barnacle', glow: 'aquanaut_barnacle_e', idle: 'aquanaut_barnacle_idle_down', chosen: 'aquanaut_barnacle_surge_down', originY: AQUA_ORIGIN_Y / AQUA_H },
+            buttons: {
+              attack: { texture: 'icon_harpoon_barnacle' },
+              special: { texture: 'icon_reel_barnacle' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Aquanaut(world, x, y, look === 'barnacle' ? BARNACLE_KIT : AQUANAUT_KIT);
+    },
+  },
+  {
+    id: 'bear',
+    name: 'Bear',
+    blurb: 'A wall of fur, claws and fury',
+    types: [
+      {
+        // Wide, heavy swipes and a ground-cracking smash, a quake that stuns, and a wrath that makes him huge.
+        id: 'bear',
+        name: 'Bear',
+        role: 'An unshakable wall of fur',
+        accent: 0xc0803c,
+        attack: 'Maul',
+        special: 'Earthsplitter',
+        preview: { texture: 'bear', glow: 'bear_e', idle: 'bear_idle_down', chosen: 'bear_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+        buttons: {
+          attack: { texture: 'icon_maul_bear' },
+          special: { texture: 'icon_quake_bear' },
+        },
+        lookName: 'Grizzly',
+        skins: [
+          {
+            // A giant panda: black and white fur, a bamboo-leaf talisman, a red sash, jade light and bamboo leaves in his quakes.
+            id: 'panda',
+            name: 'Panda',
+            accent: 0x3ad89a,
+            preview: { texture: 'bear_panda', glow: 'bear_panda_e', idle: 'bear_panda_idle_down', chosen: 'bear_panda_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+            buttons: {
+              attack: { texture: 'icon_maul_bear_panda' },
+              special: { texture: 'icon_quake_bear_panda' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Bear(world, x, y, look === 'panda' ? PANDA_KIT : BEAR_KIT);
+    },
+  },
+  {
+    id: 'brewmaster',
+    name: 'Brewmaster',
+    blurb: 'Foam, fire and a mighty paddle',
+    types: [
+      {
+        // A mash paddle up close, a swig spat through a flame, and a keg bowled through the crowd.
+        id: 'brewmaster',
+        name: 'Brewmaster',
+        role: 'Stout, strong and well brewed',
+        accent: 0xf0a030,
+        attack: 'Mash paddle',
+        special: 'Firebreath',
+        preview: { texture: 'brewmaster', glow: 'brewmaster_e', idle: 'brewmaster_idle_down', chosen: 'brewmaster_heave_down', originY: BREW_ORIGIN_Y / BREW_H },
+        buttons: {
+          attack: { texture: 'icon_paddle' },
+          special: { texture: 'icon_firebreath' },
+        },
+        lookName: 'Copper still',
+        skins: [
+          {
+            // A braided blond beard, an iron cap, a wolf-fur mantle, a cask of honey mead on his back, and fire burning blue-white.
+            id: 'jarl',
+            name: 'Mead Jarl',
+            accent: 0xffc838,
+            preview: { texture: 'brewmaster_jarl', glow: 'brewmaster_jarl_e', idle: 'brewmaster_jarl_idle_down', chosen: 'brewmaster_jarl_heave_down', originY: BREW_ORIGIN_Y / BREW_H },
+            buttons: {
+              attack: { texture: 'icon_paddle_jarl' },
+              special: { texture: 'icon_firebreath_jarl' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Brewmaster(world, x, y, look === 'jarl' ? JARL_KIT : BREW_KIT);
+    },
+  },
+  {
+    id: 'aviator',
+    name: 'Aviator',
+    blurb: 'A jetpack, a flare pistol and a biplane she built',
+    types: [
+      {
+        // Quick flare shots, a rocket hop to where she aims, and a biplane that bombs a line.
+        id: 'aviator',
+        name: 'Aviator',
+        role: 'Hops in on a jetpack, lights them up',
+        accent: 0xffa848,
+        attack: 'Flare pistol',
+        special: 'Rocket hop',
+        preview: { texture: 'aviator', glow: 'aviator_e', idle: 'aviator_idle_down', chosen: 'aviator_signal_down', originY: AVI_ORIGIN_Y / AVI_H },
+        buttons: {
+          attack: { texture: 'icon_flare_aviator' },
+          special: { texture: 'icon_hop_aviator' },
+        },
+        lookName: 'Barnstormer',
+        skins: [
+          {
+            // A crimson jacket, a cream scarf, silver goggles, red fins on her jetpack, red-white fire and a red biplane.
+            id: 'ace',
+            name: 'Flying Ace',
+            accent: 0xff4a42,
+            preview: { texture: 'aviator_ace', glow: 'aviator_ace_e', idle: 'aviator_ace_idle_down', chosen: 'aviator_ace_signal_down', originY: AVI_ORIGIN_Y / AVI_H },
+            buttons: {
+              attack: { texture: 'icon_flare_aviator_ace' },
+              special: { texture: 'icon_hop_aviator_ace' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Aviator(world, x, y, look === 'ace' ? ACE_KIT : AVIATOR_KIT);
+    },
+  },
+  {
+    id: 'pyrotechnist',
+    name: 'Pyrotechnist',
+    blurb: 'Fireworks for every foe',
+    types: [
+      {
+        // A Roman candle's stars of coloured fire, and a string of firecrackers that staggers a crowd.
+        id: 'pyrotechnist',
+        name: 'Pyrotechnist',
+        role: 'Fireworks and firecrackers',
+        accent: 0xff7a3a,
+        attack: 'Roman candle',
+        special: 'Firecrackers',
+        preview: { texture: 'pyrotechnist', glow: 'pyrotechnist_e', idle: 'pyrotechnist_idle_down', chosen: 'pyrotechnist_finale_down', originY: PYRO_ORIGIN_Y / PYRO_H },
+        buttons: {
+          attack: { texture: 'icon_candle' },
+          special: { texture: 'icon_crackers' },
+        },
+        lookName: 'Vermilion',
+        skins: [
+          {
+            // A Venetian carnival: harlequin diamonds in purple, teal and gold, a gilded half mask, a plumed hat.
+            id: 'carnival',
+            name: 'Masquerade',
+            accent: 0xb070f0,
+            preview: { texture: 'pyrotechnist_carnival', glow: 'pyrotechnist_carnival_e', idle: 'pyrotechnist_carnival_idle_down', chosen: 'pyrotechnist_carnival_finale_down', originY: PYRO_ORIGIN_Y / PYRO_H },
+            buttons: {
+              attack: { texture: 'icon_candle_carnival' },
+              special: { texture: 'icon_crackers_carnival' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Pyrotechnist(world, x, y, look === 'carnival' ? CARNIVAL_STYLE : VERMILION_STYLE);
+    },
+  },
 ];
 
 /**
@@ -2311,15 +2591,15 @@ const GROUPS: { id: string; name: string; blurb: string; kits: string[] }[] = [
   { id: 'mage', name: 'Mage', blurb: 'Spells, and time itself', kits: ['wizard', 'chronomancer'] },
   { id: 'warrior', name: 'Warrior', blurb: 'Steel, faith and fists up front', kits: ['warrior', 'paladin', 'valkyrie', 'fighter'] },
   { id: 'jedi', name: 'Jedi', blurb: 'The light and the dark', kits: ['jedi'] },
-  { id: 'alchemist', name: 'Alchemist', blurb: 'Brews that melt foes', kits: ['alchemist'] },
+  { id: 'alchemist', name: 'Alchemist', blurb: 'Brews that melt foes', kits: ['alchemist', 'transmuter', 'brewmaster', 'pyrotechnist'] },
   { id: 'archer', name: 'Ranger', blurb: 'Death from afar', kits: ['archer'] },
   { id: 'duelist', name: 'Duelist', blurb: 'Blades from the shadows', kits: ['samurai', 'rogue'] },
   { id: 'necromancer', name: 'Necromancer', blurb: 'Lord of the restless dead', kits: ['necromancer'] },
   { id: 'mystic', name: 'Mystic', blurb: 'Songs and the old wild', kits: ['bard', 'druid'] },
   { id: 'automaton', name: 'Automaton', blurb: 'Steel, steam and a heat gauge', kits: ['automaton'] },
   { id: 'phantom', name: 'Phantom', blurb: 'Only half here: blows pass through', kits: ['phantom'] },
-  { id: 'inventor', name: 'Inventor', blurb: 'Gadgets, gizmos and bright ideas', kits: ['inventor'] },
-  { id: 'beast', name: 'Nature', blurb: 'Wings, claws and dragonfire', kits: ['beast'] },
+  { id: 'inventor', name: 'Inventor', blurb: 'Gadgets, gizmos and bright ideas', kits: ['inventor', 'aviator', 'aquanaut', 'lightwright'] },
+  { id: 'beast', name: 'Nature', blurb: 'Wings, claws and dragonfire', kits: ['beast', 'bear'] },
 ];
 
 /** Which kit each type and skin belongs to. */
@@ -2340,7 +2620,7 @@ export const CLASSES: ClassDef[] = GROUPS.map(({ id, name, blurb, kits }) => ({
   id,
   name,
   blurb,
-  types: kits.flatMap((k) => kitById(k)!.types),
+  types: kits.flatMap((k) => kitById(k)?.types ?? []),
 }));
 
 /** The class with this id, or the class holding the kit with this id (old saves), else the first. */

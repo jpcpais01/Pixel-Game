@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
 import { BEAST_H, BEAST_ORIGIN_X, BEAST_ORIGIN_Y, BEAST_W, type BeastKind } from '../art/beast';
 import { snap } from './display';
-import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
+import { dirOf, sunCastNow, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
@@ -22,7 +22,7 @@ const FOOTFALLS = new Set([1, 4]);
 export interface BeastKit {
   /** The look's texture. */
   key: string;
-  kind: BeastKind;
+  kind: BeastKind | 'bear';
   maxHp: number;
   speed: number;
   /** The Special's colours and the abilities' light. */
@@ -65,6 +65,8 @@ export abstract class Beast implements Hero {
   private landed = false;
   protected fx: Effect[] = [];
   private prevSpecial = false;
+  /** How big the beast is drawn (the Bear grows in his wrath); its feet stay put. */
+  protected size = 1;
 
   get sprite(): Phaser.GameObjects.Sprite {
     return this.body;
@@ -116,6 +118,10 @@ export abstract class Beast implements Hero {
   /** How bright the beast's own light burns now, 0..1 (at night its glow lights the ground). */
   protected lampLevel(): number {
     return 0;
+  }
+  /** How strongly its glow layer (eyes, claws, sparks) shows, 0..1. */
+  protected glowLevel(): number {
+    return 1;
   }
 
   update(dt: number, mx: number, my: number, attack: boolean, special: boolean, bounds: Phaser.Geom.Rectangle, aim: Aim | null = null): void {
@@ -202,10 +208,13 @@ export abstract class Beast implements Hero {
     const rx = snap(this.x);
     const ry = snap(this.y);
     const frame = this.body.frame.name;
-    this.body.setPosition(rx, ry).setDepth(ry).setAlpha(this.alpha);
-    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(frame).setAlpha(this.alpha);
-    this.shadow.setPosition(rx, ry - 1).setAlpha(this.alpha);
+    const k = this.size;
+    this.body.setPosition(rx, ry).setDepth(ry).setAlpha(this.alpha).setScale(k);
+    this.glowLayer.setPosition(rx, ry).setDepth(ry + 0.1).setFrame(frame).setAlpha(this.alpha * this.glowLevel()).setScale(k);
+    this.shadow.setPosition(rx, ry - 1).setAlpha(this.alpha).setScale(k);
     this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * this.alpha);
+    // The sun shadow keeps the sun's slant and stretch, grown with him.
+    if (k !== 1 || this.castShadow.scaleX !== 1) this.castShadow.setScale(k, -sunCastNow().length * k);
     this.lamp.setPosition(rx, ry - 18);
     this.lamp.intensity = this.lampLevel() * (1.4 - this.daylight * 0.8);
   }

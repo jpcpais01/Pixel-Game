@@ -52,6 +52,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'beast:benfica': 'legendary',
   'beast:sporting': 'legendary',
   'beast:porto': 'legendary',
+  'lightwright:stargazer': 'legendary',
   'beast:phoenix': 'legendary',
   'beast:nemean': 'epic',
   'bard:orpheus': 'legendary',
@@ -92,10 +93,20 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'automaton:scrap': 'epic',
   'automaton:vaporwave': 'epic',
   'phantom:tea': 'epic',
+  'transmuter:rubedo': 'legendary',
   // Hallow's Eve's, bought with candy rather than wished for (see game/season.ts).
   'warrior:headless': 'legendary',
   'wizard:pumpkin': 'epic',
   'archer:scarecrow': 'epic',
+  'aquanaut:barnacle': 'epic',
+  // The Bear's (wished for as usual).
+  'bear:panda': 'legendary',
+  // The Brewmaster's Mead Jarl (wished for like any other).
+  'brewmaster:jarl': 'epic',
+  // The Aviator's Flying Ace.
+  'aviator:ace': 'epic',
+  // Wished for like the rest (not a season's).
+  'pyrotechnist:carnival': 'epic',
 };
 
 /** One skin as the shop knows it. */

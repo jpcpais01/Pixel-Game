@@ -115,6 +115,10 @@ import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, ferryLanternIcon, la
 import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, coilOrbIcon, hammerWrenchIcon, orbIcon, runeTurretIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
 import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, JADE_SERPENT_LOOK, LION_LOOK, NEMEAN_LOOK, PHOENIX_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon, vaporDroneIcon, vaporGridIcon } from './synth';
+import { registerAquanautArt } from './aquanautKit';
+import { registerBearIcons } from './bear';
+import { BREW_LOOKS, KEG_SIZE, kegFrames, kegKey, fireIcon as brewFireIcon, paddleIcon } from './brewmaster';
+import { pyroIcons } from './pyrotechnist';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import {
   MERCHANT_FRAMES,
@@ -157,6 +161,7 @@ import { ALTAR_H, ALTAR_W, GROVE_FRAMES, GROVE_H, GROVE_W, HOLLOW_FRAMES, HOLLOW
 import { STRIP_H, buildStrip } from './ground';
 import { FZ_FLAKE, FZ_ICICLE_H, FZ_ICICLE_W, FZ_LANE_H, FZ_LANE_W, FZ_MIST_H, FZ_MIST_W, FZ_PATCH_FRAMES, FZ_PATCH_H, FZ_PATCH_W, FZ_RING_H, FZ_RING_W, FZ_SHARD_H, FZ_SHARD_W, FZ_SNOWBALL, FZ_SPIKE_H, FZ_SPIKE_W, frostFlake, frostIcicle, frostLaneArt, frostMist, frostPatch, frostRing, frostShard, frostSnowball, frostSpike } from './frostFx';
 import type { FxRegistrar } from './frostKit';
+import { aviatorTextures } from './aviator';
 import { AURORA_H, AURORA_W, BRAZIER_FRAMES as FZ_BRAZIER_FRAMES, BRAZIER_H as FZ_BRAZIER_H, BRAZIER_W as FZ_BRAZIER_W, STATUE_H as FZ_STATUE_H, STATUE_W as FZ_STATUE_W, archGlowArt, auroraRibbon, frostArenaArt, frostBrazier, frostSkyArt, frostStatue } from './frost';
 import { FROST_H, FROST_W, GATES } from '../world/frostLayout';
 import { buildFlurrykinSheet, buildIcebeakSheet, buildRimespriteSheet, buildRimeweaverSheet, buildSnowmiteSheet, frostWeakFx } from './frostWeak';
@@ -167,9 +172,11 @@ import { buildSnowQueenSheet, snowQueenFx } from './snowQueen';
 import { buildWinterKingSheet, winterKingFx } from './winterKing';
 import { buildColossusSheet, colossusFx } from './colossus';
 import { buildAurelithSheet, aurelithFx } from './aurelith';
+import { lightwrightFx } from './lightwright';
 
 import { CHUNK, ForestGen, EVERWOOD_SEED } from '../world/forestGen';
 import { forestTile } from '../world/forestGround';
+import { registerTransmuterIcons } from './transmuter';
 import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, RIPPLE_FRAMES, RIPPLE_H, RIPPLE_W, rippleFrames, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
 
 const toCanvas = pixelCanvas;
@@ -667,6 +674,12 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     scene.textures.addCanvas(`icon_fire_${look.key}`, toCanvas(16, 16, fireIcon(look)));
     scene.textures.addCanvas(`icon_breath_${look.key}`, toCanvas(16, 16, breathIcon(look)));
   }
+  // The Bear's buttons ('icon_maul_<look>', 'icon_quake_<look>'); his effects are drawn live.
+  registerBearIcons((key, px) => scene.textures.addCanvas(key, toCanvas(16, 16, px)));
+  // The Aviator's biplane, its bombs and her buttons (she herself is a hero sheet).
+  aviatorTextures(fxRegistrar(scene));
+  // The Pyrotechnist's buttons: the Roman candle and the firecrackers, in each look.
+  for (const [key, px] of pyroIcons()) scene.textures.addCanvas(key, toCanvas(16, 16, px));
 
   scene.textures.addCanvas('icon_cannon', toCanvas(16, 16, cannonIcon()));
   scene.textures.addCanvas('icon_salvo', toCanvas(16, 16, salvoIcon()));
@@ -680,6 +693,19 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_grid_hive', toCanvas(16, 16, gridIcon(true)));
   scene.textures.addCanvas('icon_drone_vapor', toCanvas(16, 16, vaporDroneIcon()));
   scene.textures.addCanvas('icon_grid_vapor', toCanvas(16, 16, vaporGridIcon()));
+  // The Lightwright's prisms ('lw_prism_<look>', turning 'p0'..'p7') and his buttons.
+  lightwrightFx(fxRegistrar(scene));
+  registerTransmuterIcons((key, px) => scene.textures.addCanvas(key, toCanvas(16, 16, px)));
+  registerAquanautArt(scene);
+  // The Brewmaster's rolling keg ('keg_<look>': headings 'h0'..'h7', each
+  // turned through 8 roll frames, 'h<h>_<r>') and his buttons. He himself is a
+  // hero sheet.
+  for (const look of BREW_LOOKS) {
+    register(scene, kegKey(look), pack(kegFrames(look).map((f) => ({ name: f.name, r: f.canvas.render() })), KEG_SIZE, KEG_SIZE), KEG_SIZE, KEG_SIZE);
+    const sfx = look.jarl ? '_jarl' : '';
+    scene.textures.addCanvas(`icon_paddle${sfx}`, toCanvas(16, 16, paddleIcon(look)));
+    scene.textures.addCanvas(`icon_firebreath${sfx}`, toCanvas(16, 16, brewFireIcon(look)));
+  }
 
   yield;
   // Items: hotbar icons and the bottles monsters drop.
