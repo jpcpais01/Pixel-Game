@@ -884,38 +884,31 @@ class GameSound {
   }
 
   harpoon(pan = 0): void {
-    const t = this.slot('harpoon');
-    if (t !== null) this.sfx!.harpoon(t, pan);
+    this.fx('harpoon', 'harpoon', [pan], 0);
   }
 
   chainReel(pan = 0): void {
-    const t = this.slot('chainReel');
-    if (t !== null) this.sfx!.chainReel(t, pan);
+    this.fx('chainReel', 'chainReel', [pan], 0);
   }
 
   torpedo(pan = 0): void {
-    const t = this.slot('torpedo');
-    if (t !== null) this.sfx!.torpedo(t, pan);
+    this.fx('torpedo', 'torpedo', [pan], 0);
   }
 
   seaBurst(pan = 0): void {
-    const t = this.slot('seaBurst');
-    if (t !== null) this.sfx!.seaBurst(t, pan);
+    this.fx('seaBurst', 'seaBurst', [pan], 0);
   }
 
   paddle(pan = 0, heavy = false): void {
-    const t = this.slot('paddle');
-    if (t !== null) this.sfx!.paddle(t, pan, heavy);
+    this.fx('paddle', 'paddle', [pan, heavy], 0);
   }
 
   kegRoll(pan = 0): void {
-    const t = this.slot('kegRoll');
-    if (t !== null) this.sfx!.kegRoll(t, pan);
+    this.fx('kegRoll', 'kegRoll', [pan], 0);
   }
 
   foamBurst(pan = 0): void {
-    const t = this.slot('foamBurst');
-    if (t !== null) this.sfx!.foamBurst(t, pan);
+    this.fx('foamBurst', 'foamBurst', [pan], 0);
   }
 
   step(): void {
@@ -938,28 +931,23 @@ class GameSound {
   }
 
   candle(pan = 0): void {
-    const t = this.slot('candle');
-    if (t !== null) this.sfx!.candle(t, pan);
+    this.fx('candle', 'candle', [pan], 0);
   }
 
   starPop(pan = 0): void {
-    const t = this.slot('starPop');
-    if (t !== null) this.sfx!.starPop(t, pan);
+    this.fx('starPop', 'starPop', [pan], 0);
   }
 
   firecracker(pan = 0): void {
-    const t = this.slot('firecracker');
-    if (t !== null) this.sfx!.firecracker(t, pan);
+    this.fx('firecracker', 'firecracker', [pan], 0);
   }
 
   rocketWhistle(pan = 0): void {
-    const t = this.slot('rocketWhistle');
-    if (t !== null) this.sfx!.rocketWhistle(t, pan);
+    this.fx('rocketWhistle', 'rocketWhistle', [pan], 0);
   }
 
   fireworkBurst(pan = 0): void {
-    const t = this.slot('fireworkBurst');
-    if (t !== null) this.sfx!.fireworkBurst(t, pan);
+    this.fx('fireworkBurst', 'fireworkBurst', [pan], 0);
   }
 
   private live(): boolean {
@@ -985,73 +973,59 @@ class GameSound {
   }
 
   focusRay(pan = 0, struck = false): void {
-    const t = this.slot('focusRay');
-    if (t !== null) this.sfx!.focusRay(t, pan, struck);
+    this.fx('focusRay', 'focusRay', [pan, struck], 0);
   }
 
   prism(pan = 0, hum = false, shatter = false): void {
-    const t = this.slot('prism');
-    if (t !== null) this.sfx!.prism(t, pan, hum, shatter);
+    this.fx('prism', 'prism', [pan, hum, shatter], 0);
   }
 
   burningMirror(pan = 0, lit = false): void {
-    const t = this.slot('burningMirror');
-    if (t !== null) this.sfx!.burningMirror(t, pan, lit);
+    this.fx('burningMirror', 'burningMirror', [pan, lit], 0);
   }
 
   quicksilver(pan = 0): void {
-    const t = this.slot('quicksilver');
-    if (t !== null) this.sfx!.quicksilver(t, pan);
+    this.fx('quicksilver', 'quicksilver', [pan], 0);
   }
 
   quickSplash(pan = 0, small = false): void {
-    const t = this.slot('quickSplash');
-    if (t !== null) this.sfx!.quickSplash(t, pan, small);
+    this.fx('quickSplash', 'quickSplash', [pan, small], 0);
   }
 
   chalk(pan = 0): void {
-    const t = this.slot('chalk');
-    if (t !== null) this.sfx!.chalk(t, pan);
+    this.fx('chalk', 'chalk', [pan], 0);
   }
 
   transmute(pan = 0, struck = false): void {
-    const t = this.slot('transmute');
-    if (t !== null) this.sfx!.transmute(t, pan, struck);
+    this.fx('transmute', 'transmute', [pan, struck], 0);
   }
 
   gild(pan = 0, gild = false): void {
-    const t = this.slot('gild');
-    if (t !== null) this.sfx!.gild(t, pan, gild);
+    this.fx('gild', 'gild', [pan, gild], 0);
   }
 
   opusShatter(pan = 0): void {
-    const t = this.slot('opusShatter');
-    if (t !== null) this.sfx!.opusShatter(t, pan);
+    this.fx('opusShatter', 'opusShatter', [pan], 0);
   }
 
   bearGrowl(pan = 0, big = false): void {
-    const t = this.slot('bearGrowl');
-    if (t !== null) this.sfx!.bearGrowl(t, pan, big);
+    this.fx('bearGrowl', 'bearGrowl', [pan, big], 0);
   }
 
   flareShot(pan = 0, star = false): void {
-    const t = this.slot('flareShot');
-    if (t !== null) this.sfx!.flareShot(t, pan, star);
+    this.fx('flareShot', 'flareShot', [pan, star], 0);
   }
 
   jetHop(pan = 0): void {
-    const t = this.slot('jetHop');
-    if (t !== null) this.sfx!.jetHop(t, pan);
+    this.fx('jetHop', 'jetHop', [pan], 0);
   }
 
   biplane(pan = 0): void {
-    const t = this.slot('biplane');
-    if (t !== null) this.sfx!.biplane(t, pan);
+    this.fx('biplane', 'biplane', [pan], 0);
   }
 
   bombWhistle(pan = 0): void {
-    const t = this.slot('bombWhistle');
-    if (t !== null) this.sfx!.bombWhistle(t, pan);
+    this.fx('bombWhistle', 'bombWhistle', [pan], 0);
   }
 
   /**

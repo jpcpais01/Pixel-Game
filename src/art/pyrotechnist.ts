@@ -8,7 +8,7 @@
 // mop of dark hair, and his cheeks are streaked with soot. In one hand, a
 // striped Roman candle; in the other, a linstock whose slow match smoulders.
 //
-// Carnival is his other look on the same rig: a white Venetian half-mask
+// Masquerade is his other look on the same rig: a white Venetian half-mask
 // trimmed in gold, a harlequin coat of purple and teal diamonds, and a
 // feathered tricorne with a plume of teal, gold and magenta.
 //
@@ -59,7 +59,7 @@ const JADE_PAPER: Material = { ramp: ramp('#06301e', '#0e5a36', '#1e8a52', '#4cc
 const AZURE_PAPER: Material = { ramp: ramp('#0a1e4a', '#14387e', '#2a5ec0', '#5a94f0'), outline: hex('#040a1e') };
 const WHITE_PAPER: Material = { ramp: ramp('#7a7068', '#b8aea2', '#e6dcd0', '#fff8ee'), outline: hex('#2a2620') };
 
-// Carnival's.
+// Masquerade's.
 const HARLEQUIN_PURPLE: Material = { ramp: ramp('#1e0a30', '#3a1458', '#5c2288', '#8238b8', '#a868e0'), outline: hex('#0c0414'), outlineLit: hex('#1a0828'), shine: true };
 const HARLEQUIN_TEAL: Material = { ramp: ramp('#04221e', '#0a443c', '#126a5e', '#1e9684', '#4ec8b0'), outline: hex('#020e0c'), shine: true };
 const PORCELAIN: Material = { ramp: ramp('#5a5260', '#a69cae', '#dcd4e2', '#f6f2fa', '#ffffff'), outline: hex('#1e1824'), outlineLit: hex('#34303c'), shine: true };
@@ -76,7 +76,7 @@ const GEM: Material = { ramp: ramp('#0a4a40', '#18a088', '#5af0d0', '#e0fff6'), 
 
 export interface PyroLook {
   key: string;
-  /** The coat; Carnival's is harlequin, `coat` and `coatB` in diamonds. */
+  /** The coat; Masquerade's is harlequin, `coat` and `coatB` in diamonds. */
   coat: Material;
   coatB?: Material;
   /** Gold frogging, epaulettes, cuffs and hem. */
@@ -89,7 +89,7 @@ export interface PyroLook {
   candle: [Material, Material];
   /** The papers of the rockets on the bandolier and in the quiver. */
   papers: Material[];
-  /** Carnival: the half-mask, the feathered tricorne and its plume. */
+  /** Masquerade: the half-mask, the feathered tricorne and its plume. */
   carnival?: boolean;
   mask?: Material;
   hat?: Material;
@@ -446,7 +446,7 @@ function soot(c: PixelCanvas, pts: [number, number][]): void {
 }
 
 /**
- * Carnival's tricorne: a cocked brim with gold lace, a low crown, and a
+ * Masquerade's tricorne: a cocked brim with gold lace, a low crown, and a
  * plume of teal, gold and magenta curling up from a jewelled brooch.
  */
 function tricorne(c: PixelCanvas, cx: number, U: number, view: View): void {
@@ -509,7 +509,7 @@ function tricorne(c: PixelCanvas, cx: number, U: number, view: View): void {
   }
 }
 
-/** Carnival's half-mask from the front: white porcelain over the brow and eyes, its corners swept up into points, gold lace round the eyeholes. */
+/** Masquerade's half-mask from the front: white porcelain over the brow and eyes, its corners swept up into points, gold lace round the eyeholes. */
 function maskFront(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
   const m = S.mask!;
   c.part();

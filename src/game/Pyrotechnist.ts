@@ -65,7 +65,7 @@ export const VERMILION_STARS: Pal[] = [
   pal(0xf0f8ff, 0xa0d0ff, 0x4a98ff, 0x1a4ab0, 0x80b8ff),
 ];
 
-/** Carnival's: purple, teal, gold and magenta. */
+/** Masquerade's: purple, teal, gold and magenta. */
 export const CARNIVAL_STARS: Pal[] = [
   pal(0xfbf0ff, 0xd8a0ff, 0xa050f0, 0x5a1ea0, 0xc080ff),
   pal(0xf0fffb, 0x90ffe8, 0x20d0b0, 0x0a7a6a, 0x60f0d0),

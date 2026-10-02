@@ -2325,7 +2325,7 @@ const KITS: KitDef[] = [
         role: 'Master of light and lenses',
         accent: 0xffd060,
         attack: 'Focus beam',
-        special: 'Prism',
+        special: 'Rainbow prism',
         preview: { texture: 'lightwright', glow: 'lightwright_e', idle: 'lightwright_idle_down', chosen: 'lightwright_unveil_down', originY: LW_ORIGIN_Y / LW_H },
         buttons: {
           attack: { texture: 'icon_focus_lightwright' },
@@ -2565,7 +2565,7 @@ const KITS: KitDef[] = [
           {
             // A Venetian carnival: harlequin diamonds in purple, teal and gold, a gilded half mask, a plumed hat.
             id: 'carnival',
-            name: 'Carnival',
+            name: 'Masquerade',
             accent: 0xb070f0,
             preview: { texture: 'pyrotechnist_carnival', glow: 'pyrotechnist_carnival_e', idle: 'pyrotechnist_carnival_idle_down', chosen: 'pyrotechnist_carnival_finale_down', originY: PYRO_ORIGIN_Y / PYRO_H },
             buttons: {

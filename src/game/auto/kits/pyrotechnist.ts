@@ -3,7 +3,7 @@
 // another, and Skyburst, a crate of rockets that climb over the foes and
 // burst in chrysanthemums, raining glitter. Paper, wood and smoke keep their
 // own colours; the fire takes the palette (and the rockets the look's star
-// colours, as in the main game), so the Carnival skin recolours it.
+// colours, as in the main game), so the Masquerade skin recolours it.
 
 import { CHEST, circle, clamp01, dither, dot, easeOut, FLAT, hash, lerp, line, orb, pool, shade, star, type Cast, type Kit, type Layers, type Pal, type Pt, type Stage } from '../paint';
 import { flight, HAND, scorch, smoke, trail } from './common';
@@ -11,7 +11,7 @@ import { flight, HAND, scorch, smoke, trail } from './common';
 /** A palette without importing the game's (this file stays free of Phaser for the render script). */
 const P = (core: number, hot: number, mid: number, deep: number, light = hot): Pal => ({ core, hot, mid, deep, light, tints: [core, hot, mid, deep] });
 
-/** The rockets' colours, the same as the hero's stars (game/Pyrotechnist.ts): Vermilion's gold, rose, jade and azure; Carnival's purple, teal, gold and magenta. */
+/** The rockets' colours, the same as the hero's stars (game/Pyrotechnist.ts): Vermilion's gold, rose, jade and azure; Masquerade's purple, teal, gold and magenta. */
 const STARS: Pal[] = [P(0xfffbe0, 0xffe070, 0xffb020, 0xc06a10, 0xffc050), P(0xfff0f6, 0xffa0c8, 0xff4a8a, 0xa8185a, 0xff80b0), P(0xf0fff4, 0xa0ffc0, 0x30d878, 0x108a48, 0x70f0a0), P(0xf0f8ff, 0xa0d0ff, 0x4a98ff, 0x1a4ab0, 0x80b8ff)];
 const CARNIVAL_STARS: Pal[] = [P(0xfbf0ff, 0xd8a0ff, 0xa050f0, 0x5a1ea0, 0xc080ff), P(0xf0fffb, 0x90ffe8, 0x20d0b0, 0x0a7a6a, 0x60f0d0), P(0xfffbe0, 0xffe070, 0xffb020, 0xc06a10, 0xffc050), P(0xfff0fa, 0xff9ae0, 0xe83ab8, 0x8a1270, 0xff70d0)];
 
