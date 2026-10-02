@@ -36,6 +36,8 @@ import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
 import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
+import { DIGGER_KIT, Gravedigger, MOSSGRAVE_KIT } from './Gravedigger';
+import { DIGGER_H, DIGGER_ORIGIN_Y } from '../art/digger';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
@@ -1037,8 +1039,38 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // The class's tank: a burly old sexton with an iron spade and a
+        // lantern of corpse-light, who opens the earth and calls up its dead.
+        id: 'digger',
+        name: 'Gravedigger',
+        role: 'Spade and the restless earth',
+        accent: 0xb8e05a,
+        attack: 'Spade',
+        special: 'Open grave',
+        preview: { texture: 'necro_digger', glow: 'necro_digger_e', idle: 'necro_digger_idle_down', chosen: 'necro_digger_dig_down', originY: DIGGER_ORIGIN_Y / DIGGER_H },
+        buttons: {
+          attack: { texture: 'icon_spade' },
+          special: { texture: 'icon_grave' },
+        },
+        lookName: 'Sexton',
+        skins: [
+          {
+            // Long buried and grown over: moss and lichen, toadstools on his brim, roots round his spade, a wisp in his lantern.
+            id: 'mossgrave',
+            name: 'Mossgrave',
+            accent: 0x5ae8d8,
+            preview: { texture: 'necro_mossgrave', glow: 'necro_mossgrave_e', idle: 'necro_mossgrave_idle_down', chosen: 'necro_mossgrave_dig_down', originY: DIGGER_ORIGIN_Y / DIGGER_H },
+            buttons: {
+              attack: { texture: 'icon_spade_mossgrave' },
+              special: { texture: 'icon_grave_mossgrave' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
+      if (look === 'digger' || look === 'mossgrave') return new Gravedigger(world, x, y, look === 'mossgrave' ? MOSSGRAVE_KIT : DIGGER_KIT);
       const kit = { necro: NECRO_KIT, tomb: TOMB_KIT, blood: BLOOD_KIT, wyrm: WYRM_KIT }[look] ?? NECRO_KIT;
       return new Necromancer(world, x, y, kit);
     },

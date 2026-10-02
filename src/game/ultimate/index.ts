@@ -41,6 +41,7 @@ import { LION_KIT, SPORTING_KIT } from '../Lion';
 import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
 import { DarkDominion } from './sith';
+import { Graveyard, graveyardIcon } from './digger';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
@@ -253,6 +254,15 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.bloodMoonIcon,
     cast: (c) => c.world.addEffect(new BloodMoon(c.world, c.tx, c.ty, c)),
   },
+  'necromancer:digger': {
+    name: 'Graveyard',
+    cost: 70,
+    windup: 600,
+    aim: 'self',
+    pal: pal(0xf4ffe0, 0xd0ff8a, 0x8ad84a, 0x2e6a2a, 0xb8f070),
+    icon: graveyardIcon,
+    cast: (c) => c.world.addEffect(new Graveyard(c.world, c)),
+  },
   'bard:minstrel': {
     name: 'Encore',
     cost: 65,
@@ -461,6 +471,7 @@ const SKINS: Record<string, UltSkin> = {
   'bard:wildsong': { pal: pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070) },
   'necromancer:tomb': { pal: pal(0xf4fbff, 0xa8dcff, 0x3c94f0, 0x1a3894, 0x5aa8ff) },
   'necromancer:wyrm': { pal: pal(0xfff8e0, 0xffc860, 0xff6a1a, 0x8a1e0a, 0xff8a30), type: 'blood' },
+  'necromancer:mossgrave': { pal: pal(0xecfffc, 0x9ff8ee, 0x3ad0c8, 0x0e5a68, 0x6af0e8), type: 'digger' },
   'bard:harlequin': { pal: pal(0xfff4fb, 0xffb0e8, 0xff4ab8, 0x8a1a6a, 0xff6ac8) },
   'bard:vagabond': { pal: pal(0xfbf6ff, 0xe2d0ff, 0xb08cff, 0x5a3aa8, 0xc0a0ff) },
   'bard:fadista': { pal: pal(0xf4f8ff, 0xb8d2ff, 0x3c7cff, 0x1a2e9a, 0x6a9cff) },

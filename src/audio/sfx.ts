@@ -1756,6 +1756,39 @@ export class Sfx {
     this.m.startNoise(src, t + 0.12, 0.9);
   }
 
+  /** The Gravedigger's spade cutting the air: a heavy whoosh, lower for the scoop. */
+  spadeSwing(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.5 : 0.4, 0.12);
+    this.burstNoise(out, t, 'bandpass', heavy ? 500 : 800, heavy ? 1200 : 1800, 1.2, 0.3, heavy ? 0.2 : 0.14, true);
+    this.chirp(out, t, 'triangle', heavy ? 160 : 220, 90, 0.08, 0.12);
+  }
+
+  /** The spade brought down flat: an iron clang over a deep thump of earth. */
+  spadeSlam(t: number, pan: number): void {
+    const out = this.out(pan, 0.9, 0.4);
+    this.chirp(out, t, 'sine', 120, 38, 0.75, 0.28);
+    this.burstNoise(out, t, 'lowpass', 1000, 180, 0.8, 0.5, 0.3, true);
+    this.bell(out, t, rand(620, 700), 0.06, 0.25);
+    for (let i = 0; i < 4; i++) this.burstNoise(out, t + 0.06 + i * rand(0.04, 0.08), 'bandpass', rand(500, 1000), 400, 2, 0.15, 0.05, true);
+  }
+
+  /** The ground torn open: earth splitting, a groan from below, bones clattering up. */
+  graveOpen(t: number, pan: number): void {
+    const out = this.out(pan, 0.85, 0.5);
+    this.chirp(out, t, 'sine', 90, 34, 0.6, 0.45);
+    this.burstNoise(out, t, 'lowpass', 700, 140, 0.9, 0.45, 0.5, true);
+    this.chirp(out, t + 0.05, 'sawtooth', 70, 55, 0.08, 0.6);
+    for (let i = 0; i < 7; i++) this.burstNoise(out, t + 0.08 + i * rand(0.03, 0.06), 'bandpass', rand(1800, 3000), 1400, 4, 0.18, 0.03);
+  }
+
+  /** Headstones heaving up out of the earth: a grinding rumble and a stony knock. */
+  tombRise(t: number, pan: number): void {
+    const out = this.out(pan, 0.9, 0.55);
+    this.chirp(out, t, 'sine', 70, 30, 0.7, 0.6);
+    this.burstNoise(out, t, 'bandpass', 300, 600, 1.5, 0.4, 0.55, true);
+    for (let i = 0; i < 6; i++) this.burstNoise(out, t + 0.1 + i * rand(0.04, 0.09), 'bandpass', rand(700, 1300), 500, 3, 0.2, 0.05, true);
+  }
+
   /** The bow drawn: the wood creaking as the string comes back, longer for the volley. */
   bowDraw(t: number, big: boolean): void {
     const ctx = this.m.ctx;
