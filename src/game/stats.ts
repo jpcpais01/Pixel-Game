@@ -73,6 +73,8 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'paladin.holy': { role: 'tank', hp: 120, damage: 9, defense: 22, rate: 2.33, speed: 54, regen: 1, skill: 5.3, ult: 78, kit: 15 },
   'paladin.crusader': { role: 'melee', hp: 105, damage: 17, defense: 20, rate: 1.82, speed: 60, regen: 0.8, skill: 4, ult: 340, kit: 20 },
   'jedi.knight': { role: 'melee', hp: 95, damage: 9, defense: 20, rate: 3.32, speed: 64, regen: 0.8, skill: 1.7, ult: 85, kit: 10.5 },
+  // The Force Sage: stones of 11, 11 and a slab of 18 (with its splash) in about 1.5 s; the barrier's burst of 14 every 8 s; Levitation's 6 and 60.
+  'jedi.sage': { role: 'caster', hp: 85, damage: 11, defense: 12, rate: 2.03, speed: 60, regen: 0.8, skill: 1.75, ult: 66, kit: 13.3 },
   'jedi.sith': { role: 'melee', hp: 100, damage: 10, defense: 18, rate: 2.95, speed: 62, regen: 0.8, skill: 3.6, ult: 88, kit: 12 },
   'fighter.brawler': { role: 'melee', hp: 110, damage: 7, defense: 17, rate: 3.98, speed: 62, regen: 0.8, skill: 13.1, ult: 74, kit: 10.4 },
   'fighter.monk': { role: 'tank', hp: 125, damage: 8, defense: 22, rate: 2.83, speed: 53, regen: 1, skill: 4, ult: 78, kit: 13.1 },
