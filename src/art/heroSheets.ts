@@ -32,6 +32,7 @@ import { LIGHTWRIGHT_ANIMS, LIGHTWRIGHT_LOOKS, LW_H, LW_W, buildLightwrightFrame
 import { TRANSMUTER_ANIMS, TRANSMUTER_LOOKS, TRANS_H, TRANS_W, buildTransmuterFrames } from './transmuter';
 import { AQUA_H, AQUA_W, AQUANAUT_LOOKS, aquanautAnims, buildAquanautFrames } from './aquanaut';
 import { BEAR_H, BEAR_LOOKS, BEAR_W, bearAnims, buildBearFrames } from './bear';
+import { BREW_ANIMS, BREW_H, BREW_LOOKS, BREW_W, buildBrewFrames } from './brewmaster';
 
 /** The rigs whose frames carry points the game reads (a crystal, a blade tip): the same for every look of the rig. */
 export type MetaKind = 'wizard' | 'warrior' | 'paladin' | 'jedi' | 'samurai';
@@ -171,6 +172,7 @@ rig(LIGHTWRIGHT_LOOKS, LW_W, LW_H, buildLightwrightFrames, () => LIGHTWRIGHT_ANI
 rig(TRANSMUTER_LOOKS, TRANS_W, TRANS_H, buildTransmuterFrames, () => TRANSMUTER_ANIMS);
 rig(AQUANAUT_LOOKS, AQUA_W, AQUA_H, buildAquanautFrames, aquanautAnims);
 rig(BEAR_LOOKS, BEAR_W, BEAR_H, buildBearFrames, bearAnims);
+rig(BREW_LOOKS, BREW_W, BREW_H, buildBrewFrames, () => BREW_ANIMS);
 
 /** Every hero sheet's key, in roster order. */
 export const HERO_SHEETS: readonly string[] = [...SHEETS.keys()];

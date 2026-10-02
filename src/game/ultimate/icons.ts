@@ -674,3 +674,20 @@ export const ursineWrathIcon: IconPainter = (put, p) => {
   put(6, 7, p.hot);
   put(9, 7, p.hot);
 };
+
+/** Rolling Thunder: a great keg seen end on, rolling to the right, speed lines behind and froth spraying ahead. */
+export const rollingThunderIcon: IconPainter = (put, p) => {
+  // Speed lines trailing it.
+  seg(put, 0, 6, 3, 6, p.deep);
+  seg(put, 0, 9, 2, 9, p.mid);
+  seg(put, 1, 12, 3, 12, p.deep);
+  // The head of the keg: a ring of hoop, boards across it turned with the roll, the bung.
+  disc(put, 8.5, 9.5, 5.4, p.mid);
+  ellipse(put, 8.5, 9.5, 5.4, 5.4, 0.13, p.hot);
+  for (let i = -2; i <= 2; i += 2) seg(put, Math.round(8.5 + i - 2.4), Math.round(9.5 - i - 2.4), Math.round(8.5 + i + 2.4), Math.round(9.5 - i + 2.4), p.deep);
+  put(6, 7, p.core);
+  put(7, 6, p.hot);
+  put(10, 12, p.core);
+  // Froth spraying off ahead of it.
+  for (const [x, y, c] of [[14, 13, p.core], [15, 11, p.hot], [14, 9, p.core], [15, 14, p.mid], [13, 15, p.hot], [15, 7, p.mid], [12, 3, p.hot], [14, 4, p.core]] as const) put(x, y, c);
+};

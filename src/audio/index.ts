@@ -1044,6 +1044,21 @@ class GameSound {
     if (t !== null) this.sfx!.seaBurst(t, pan);
   }
 
+  paddle(pan = 0, heavy = false): void {
+    const t = this.slot('paddle');
+    if (t !== null) this.sfx!.paddle(t, pan, heavy);
+  }
+
+  kegRoll(pan = 0): void {
+    const t = this.slot('kegRoll');
+    if (t !== null) this.sfx!.kegRoll(t, pan);
+  }
+
+  foamBurst(pan = 0): void {
+    const t = this.slot('foamBurst');
+    if (t !== null) this.sfx!.foamBurst(t, pan);
+  }
+
   step(): void {
     const t = this.slot('step');
     if (t !== null) this.sfx!.step(t);

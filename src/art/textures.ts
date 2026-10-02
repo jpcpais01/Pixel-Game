@@ -103,6 +103,7 @@ import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHo
 import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
 import { registerAquanautArt } from './aquanautKit';
 import { registerBearIcons } from './bear';
+import { BREW_LOOKS, KEG_SIZE, kegFrames, kegKey, fireIcon as brewFireIcon, paddleIcon } from './brewmaster';
 import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, LION_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
@@ -604,6 +605,15 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   lightwrightFx(fxRegistrar(scene));
   registerTransmuterIcons((key, px) => scene.textures.addCanvas(key, toCanvas(16, 16, px)));
   registerAquanautArt(scene);
+  // The Brewmaster's rolling keg ('keg_<look>': headings 'h0'..'h7', each
+  // turned through 8 roll frames, 'h<h>_<r>') and his buttons. He himself is a
+  // hero sheet.
+  for (const look of BREW_LOOKS) {
+    register(scene, kegKey(look), pack(kegFrames(look).map((f) => ({ name: f.name, r: f.canvas.render() })), KEG_SIZE, KEG_SIZE), KEG_SIZE, KEG_SIZE);
+    const sfx = look.jarl ? '_jarl' : '';
+    scene.textures.addCanvas(`icon_paddle${sfx}`, toCanvas(16, 16, paddleIcon(look)));
+    scene.textures.addCanvas(`icon_firebreath${sfx}`, toCanvas(16, 16, brewFireIcon(look)));
+  }
 
   yield;
   // Items: hotbar icons and the bottles monsters drop.

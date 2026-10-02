@@ -54,6 +54,8 @@ import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
 import { heroBuffs } from '../buffs';
 import { heroTimers, LASTING_MS, type TimeLeft } from '../timers';
+import { BREW_KIT, JARL_KIT } from '../Brewmaster';
+import { rollingThunder } from './brewmaster';
 
 /** An effect that can say how long it has left (every `Fx`, the sentry). */
 interface TimeTeller {
@@ -480,6 +482,15 @@ const ULTS: Record<string, UltDef> = {
     // The rage is the bear himself (see Bear.enrage); its badge is the wrath's buff.
     cast: ursineWrath,
   },
+  'brewmaster:brewmaster': {
+    name: 'Rolling Thunder',
+    cost: 65,
+    windup: 620,
+    aim: 'dir',
+    pal: BREW_KIT.ult,
+    icon: icons.rollingThunderIcon,
+    cast: rollingThunder,
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -550,6 +561,7 @@ const SKINS: Record<string, UltSkin> = {
   'transmuter:rubedo': { pal: pal(0xfff0e0, 0xffc070, 0xe8402a, 0x7a0e14, 0xff7a40) },
   'aquanaut:barnacle': { pal: BARNACLE_KIT.style.pal },
   'bear:panda': { pal: PANDA_KIT.pal, type: 'bear' },
+  'brewmaster:jarl': { pal: JARL_KIT.ult },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

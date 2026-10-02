@@ -248,6 +248,11 @@ const DEFS: Record<string, Def> = {
   'bear.bear': { cost: 3, origin: 'wild', range: 1, attack: ['swipe', 'swipe2', 'smash'], mana: 90,
     skill: { name: 'Earthsplitter', cd: 7, kind: 'nova', aim: 'self', r: 1.6, dmg: 1.4, stun: 1, fx: 'quake', anim: 'quake' },
     ult: { kind: 'mend', aim: 'self', r: 0, dmg: 0, shield: 0.35, haste: 0.4, dur: 6, fx: 'roar', anim: 'rally' } },
+
+  // The Brewmaster: a front-line bruiser of the forge's own
+  'brewmaster.brewmaster': { cost: 3, origin: 'forged', range: 1, attack: ['swing', 'swing2', 'slam'], mana: 90,
+    skill: { name: 'Firebreath', cd: 7, kind: 'beam', aim: 'target', r: 2, dmg: 1.4, burn: 1.2, fx: 'flame', anim: 'breath' },
+    ult: { kind: 'beam', aim: 'target', r: 6, dmg: 3.6, knock: 1, stun: 0.6, fx: 'quake', anim: 'heave' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

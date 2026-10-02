@@ -78,6 +78,8 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'aquanaut:barnacle': 'epic',
   // The Bear's (wished for as usual).
   'bear:panda': 'legendary',
+  // The Brewmaster's Mead Jarl (wished for like any other).
+  'brewmaster:jarl': 'epic',
 };
 
 /** One skin as the shop knows it. */

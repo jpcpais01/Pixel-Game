@@ -2736,6 +2736,47 @@ export class Sfx {
     this.sparkle(out, t + 0.15, 4, 0.07);
   }
 
+  /** The Brewmaster's paddle landing: a hollow wooden thwock and a wet slap of foam; the slam adds a deep belly thump. */
+  paddle(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.9 : 0.7, heavy ? 0.3 : 0.18);
+    this.chirp(out, t, 'triangle', heavy ? 260 : 340, heavy ? 120 : 170, 0.4, heavy ? 0.1 : 0.07);
+    this.burstNoise(out, t, 'bandpass', heavy ? 900 : 1300, 500, 2.5, 0.45, 0.05);
+    this.burstNoise(out, t + 0.02, 'highpass', 2600, 4200, 0.8, 0.16, 0.12);
+    if (heavy) {
+      this.chirp(out, t, 'sine', 140, 45, 0.65, 0.24);
+      this.burstNoise(out, t, 'lowpass', 900, 200, 0.7, 0.4, 0.18, true);
+    }
+  }
+
+  /** The keg rolling: a low wooden rumble that wobbles as the staves come round. */
+  kegRoll(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.6, 0.25);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.35, t + 0.12);
+    g.gain.linearRampToValueAtTime(0.25, t + 0.9);
+    g.gain.linearRampToValueAtTime(0, t + 1.1);
+    const lp = filter(ctx, 'lowpass', 260, 2, g);
+    const trem = osc(ctx, 'sine', 9, gain(ctx, 120, lp.frequency));
+    const src = this.m.noiseSource();
+    src.connect(lp);
+    this.m.startNoise(src, t, 1.15);
+    trem.start(t);
+    trem.stop(t + 1.15);
+    for (let i = 0; i < 4; i++) this.chirp(out, t + 0.1 + i * 0.24 + rand(0, 0.04), 'triangle', 150, 90, 0.12, 0.06);
+  }
+
+  /** The keg bursting: a boom, splintering staves, and a long frothy hiss of foam. */
+  foamBurst(t: number, pan: number): void {
+    const out = this.out(pan, 1, 0.5);
+    this.chirp(out, t, 'sine', 120, 35, 0.8, 0.4);
+    this.burstNoise(out, t, 'lowpass', 1400, 200, 0.7, 0.6, 0.3, true);
+    for (let i = 0; i < 4; i++) this.burstNoise(out, t + 0.01 + i * 0.03 + rand(0, 0.02), 'bandpass', rand(1200, 2200), 700, 3, 0.25, 0.04);
+    this.burstNoise(out, t + 0.06, 'highpass', 3000, 6000, 0.7, 0.22, 0.8);
+    this.burstNoise(out, t + 0.1, 'bandpass', 2400, 1400, 1.2, 0.12, 0.7);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {

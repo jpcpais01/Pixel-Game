@@ -227,4 +227,9 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Rears up and slams down: the earth cracks round him, striking and stunning every foe near.',
     special: 'Grows huge in a rage: takes far less harm, and every maul blow sends a shockwave ahead.',
   },
+  'brewmaster.brewmaster': {
+    attack: 'Two paddle swings, then a belly-first slam that throws foes back.',
+    ability: 'A swig from the jug spat through a flame: a short cone of fire that burns.',
+    special: 'A huge keg rolls along the aim, bowling foes aside, then bursts in foam.',
+  },
 };
