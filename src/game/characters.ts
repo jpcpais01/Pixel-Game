@@ -50,8 +50,8 @@ import { MECH_KIT, Mech, SCRAP_KIT } from './Mech';
 import { HIVE_KIT, SYNTH_KIT, Synth } from './Synth';
 import { MECH_H, MECH_ORIGIN_Y } from '../art/mech';
 import { SYNTH_H, SYNTH_ORIGIN_Y } from '../art/synth';
-import { POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
-import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT, Wraith } from './Wraith';
+import { BANSHEE_KIT, POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
+import { CALA_KIT, FERRY_KIT, FIREFLY_KIT, WRAITH_KIT, Wraith } from './Wraith';
 import { POLTER_H, POLTER_ORIGIN_Y } from '../art/poltergeist';
 import { WRAITH_H, WRAITH_ORIGIN_Y } from '../art/wraith';
 import { ENGINEER_KIT, Engineer } from './Engineer';
@@ -1630,6 +1630,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_rattle_tea' },
             },
           },
+          {
+            // The wailing spirit: long streaming silver hair, a hollow face wailing, a tattered sea-green shroud, a mourner's keepsakes.
+            id: 'banshee',
+            name: 'Banshee',
+            accent: 0xc8eccc,
+            preview: { texture: 'polter_banshee', glow: 'polter_banshee_e', idle: 'polter_banshee_idle_down', chosen: 'polter_banshee_cast_down', originY: POLTER_ORIGIN_Y / POLTER_H },
+            buttons: {
+              attack: { texture: 'icon_hurl_banshee' },
+              special: { texture: 'icon_rattle_banshee' },
+            },
+          },
         ],
       },
       {
@@ -1669,6 +1680,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_possess_firefly' },
             },
           },
+          {
+            // The ferryman of the dead: a skull in a deep charcoal-blue hood, cyan eye-lights, a coin on a cord, the lantern on a punting pole's crook.
+            id: 'ferryman',
+            name: 'Ferryman',
+            accent: 0x7ae8e0,
+            preview: { texture: 'wraith_ferry', glow: 'wraith_ferry_e', idle: 'wraith_ferry_idle_down', chosen: 'wraith_ferry_cast_down', originY: WRAITH_ORIGIN_Y / WRAITH_H },
+            buttons: {
+              attack: { texture: 'icon_lantern_ferry' },
+              special: { texture: 'icon_possess_ferry' },
+            },
+          },
         ],
       },
     ],
@@ -1676,6 +1698,8 @@ const KITS: KitDef[] = [
       if (look === 'wraith') return new Wraith(world, x, y, WRAITH_KIT);
       if (look === 'cala') return new Wraith(world, x, y, CALA_KIT);
       if (look === 'firefly') return new Wraith(world, x, y, FIREFLY_KIT);
+      if (look === 'ferryman') return new Wraith(world, x, y, FERRY_KIT);
+      if (look === 'banshee') return new Poltergeist(world, x, y, BANSHEE_KIT);
       return new Poltergeist(world, x, y, look === 'tea' ? TEA_KIT : POLTER_KIT);
     },
   },

@@ -40,6 +40,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'warrior:afonso': 'legendary',
   'automaton:hive': 'legendary',
   'phantom:cala': 'legendary',
+  'phantom:ferryman': 'legendary',
   'fighter:champ': 'legendary',
   'inventor:einstein': 'legendary',
   'beast:benfica': 'legendary',
