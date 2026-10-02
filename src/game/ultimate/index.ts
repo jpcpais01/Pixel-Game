@@ -445,6 +445,8 @@ const SKINS: Record<string, UltSkin> = {
   'fighter:lucha': { pal: pal(0xfff8e8, 0xffd35c, 0xff4fa0, 0x9a1c6a, 0xff80b8) },
   'fighter:champ': { pal: pal(0xf8ffe8, 0x9cff5a, 0xff8a2a, 0x1c7a1a, 0x8cf060) },
   'fighter:guardian': { pal: pal(0xfff4d0, 0xffc050, 0xff6a1a, 0xa02a10, 0xff8a30), type: 'monk' },
+  'fighter:tigerclaw': { pal: pal(0xfff4e0, 0xffb040, 0xff6a10, 0x2a1008, 0xff8a30) },
+  'fighter:wukong': { pal: pal(0xfffbe8, 0xffe070, 0xffb020, 0xb8201a, 0xffc850), type: 'monk' },
   'alchemist:shaman': { pal: toxPal(SPIRIT_TOX) },
   'alchemist:foxglove': { pal: toxPal(FOXGLOVE_TOX) },
   'alchemist:cryo': { pal: toxPal(CRYO_TOX), type: 'chem' },

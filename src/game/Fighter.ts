@@ -8,7 +8,10 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals, type MeleeArea } from './combat';
 import { HitSpark, Shockwave, type Effect, type Scheme } from './Slash';
-import { AIR_FX, CHAMP_AIR_FX, CHAMP_FX, CHI_FX, Fissure, Flurry, LUCHA_AIR_FX, LUCHA_FX, MAGMA_FX, PALM_FX, PunchBlast, QI_FX, STONE_FX } from './Fists';
+import {
+  AIR_FX, CHAMP_AIR_FX, CHAMP_FX, CHI_FX, ClawRake, CLOUD_FX, CloudCurl, Fissure, Flurry, LUCHA_AIR_FX, LUCHA_FX, MAGMA_FX, PALM_FX, PunchBlast, QI_FX, STONE_FX, TIGER_AIR_FX, TIGER_FX,
+  WUKONG_AIR_FX, WUKONG_FX,
+} from './Fists';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
@@ -20,6 +23,9 @@ const BARRAGE_REACH = 44;
 /** A fist leaves every THROW_EVERY ms; whatever is in the line of fire is struck every HIT_EVERY ms. */
 const THROW_EVERY = 45;
 const HIT_EVERY = 110;
+/** The somersault cloud's puffs: how many ring the earthshaker's landing, how far out, and how fast they drift. */
+const CLOUD_RING = 6;
+const CLOUD_DRIFT = 26;
 
 type Blow = 'jab' | 'cross' | 'hook' | 'upper' | 'smash' | 'palm' | 'palm2' | 'thrust';
 
@@ -72,6 +78,10 @@ export interface FighterStyle {
   chi: Scheme;
   /** What glows in the cracks the earthshaker leaves, when not golden qi. */
   fire?: Scheme;
+  /** Tigerclaw: every blow that lands rakes three claw slashes across the air in these colours. */
+  claws?: Scheme;
+  /** The Monkey King: puffs of somersault cloud off his palms, his leap and his landing. */
+  clouds?: Scheme;
 }
 
 export const BRAWLER_STYLE: FighterStyle = {
@@ -103,6 +113,12 @@ export const LUCHA_STYLE: FighterStyle = { ...BRAWLER_STYLE, key: 'fighter_lucha
 
 /** The champ: the brawler's moves in jorts and a cap, in lime and orange. */
 export const CHAMP_STYLE: FighterStyle = { ...BRAWLER_STYLE, key: 'fighter_champ', air: CHAMP_AIR_FX, chi: CHAMP_FX };
+
+/** Tigerclaw: the brawler's moves in a tiger's hood, claw slashes raking the air in orange and black. */
+export const TIGER_STYLE: FighterStyle = { ...BRAWLER_STYLE, key: 'fighter_tiger', air: TIGER_AIR_FX, chi: TIGER_FX, claws: TIGER_FX };
+
+/** The Monkey King: the monk's moves in gold, golden cloud curling off his palms and round his landing. */
+export const WUKONG_STYLE: FighterStyle = { ...MONK_STYLE, key: 'fighter_wukong', air: WUKONG_AIR_FX, chi: WUKONG_FX, fire: WUKONG_FX, clouds: CLOUD_FX };
 
 /** The stone guardian: the monk's moves in stone, fire welling up where he strikes. */
 export const GUARDIAN_STYLE: FighterStyle = { ...MONK_STYLE, key: 'fighter_guardian', air: STONE_FX, chi: MAGMA_FX, fire: MAGMA_FX };
@@ -328,6 +344,7 @@ export class Fighter implements Hero {
         ? { kind: 'arc', x: cx, y: cy, radius: b.reach, angle: Math.atan2(u.y, u.x), spread: (70 * Math.PI) / 180 }
         : { kind: 'line', x0: cx, y0: cy, x1: cx + u.x * b.reach, y1: cy + u.y * b.reach, radius: b.radius };
     this.fx.push(new PunchBlast(this.world, Math.round(cx + u.x * b.fist), Math.round(cy + u.y * b.fist), u.x, u.y, scheme, snap(this.y), b.size));
+    this.flourish(cx + u.x * b.fist, cy + u.y * b.fist, b.size, heavy);
     const hits = this.world.melee(area, { damage: b.damage, heavy: b.heavy, knock: b.knock, fromX: cx, fromY: cy });
     hits.forEach((h, i) => {
       this.fx.push(new HitSpark(this.world, h.x, h.y, scheme, h.y + 13, !!b.heavy));
@@ -339,6 +356,24 @@ export class Fighter implements Hero {
       this.world.cameras.main.shake(180, 0.0008);
     } else if (hits.length) {
       this.world.cameras.main.shake(50, b.heavy ? 0.0004 : 0.00025);
+    }
+  }
+
+  /**
+   * A skin's own touch where a blow meets the air: Tigerclaw's claw slashes,
+   * the Monkey King's puffs of cloud rolling off to either side of his palm.
+   */
+  private flourish(x: number, y: number, size: number, heavy: boolean): void {
+    const u = this.line;
+    const depth = snap(this.y);
+    if (this.style.claws) this.fx.push(new ClawRake(this.world, Math.round(x + u.x * 3), Math.round(y + u.y * 3), u.x, u.y, this.style.claws, depth, size));
+    const cl = this.style.clouds;
+    if (cl) {
+      for (const s of heavy ? [-1, 1] : [Math.random() < 0.5 ? -1 : 1]) {
+        const nx = -u.y * s;
+        const ny = u.x * s;
+        this.fx.push(new CloudCurl(this.world, x + nx * 4 - u.x * 2, y + ny * 4 - u.y * 2, nx * CLOUD_DRIFT - u.x * 8, ny * CLOUD_DRIFT - u.y * 8, cl, depth + (u.y < -0.5 ? -0.6 : 0.2), heavy ? 0.9 : 0.7));
+      }
     }
   }
 
@@ -388,6 +423,7 @@ export class Fighter implements Hero {
         { damage: 3, knock: 45, fromX: cx, fromY: cy },
       );
       hits.slice(0, 3).forEach((h) => this.fx.push(new HitSpark(this.world, h.x, h.y, this.style.chi, h.y + 13, false)));
+      if (hits.length && this.style.claws) this.fx.push(new ClawRake(this.world, hits[0].x, hits[0].y - 4, u.x, u.y, this.style.claws, hits[0].y + 13, 0.8));
       if (hits.length) {
         sound.punchHit(this.world.pan(hits[0].x), false);
         this.world.cameras.main.shake(40, 0.0002);
@@ -438,6 +474,11 @@ export class Fighter implements Hero {
     this.specialCd = this.style.specialCooldown;
     this.body.play(`${this.key}_leap_${this.dir}`);
     sound.kiai();
+    // The Monkey King springs off a puff of cloud that bursts apart under his feet.
+    const cl = this.style.clouds;
+    if (cl) {
+      for (const s of [-1, 1]) this.fx.push(new CloudCurl(this.world, snap(this.x) + s * 4, snap(this.y) - 2, s * CLOUD_DRIFT, -4, cl, snap(this.y) + 0.2, 0.9));
+    }
   }
 
   private updateLeap(dt: number): void {
@@ -469,6 +510,16 @@ export class Fighter implements Hero {
     const scheme = this.style.chi;
     this.fx.push(new Fissure(this.world, x, y, QUAKE_RADIUS * 0.8, this.style.fire));
     this.fx.push(new Shockwave(this.world, x, y - 1, QUAKE_RADIUS, scheme));
+    const cl = this.style.clouds;
+    if (cl) {
+      // A ring of golden cloud billowing out round where he came down.
+      for (let i = 0; i < CLOUD_RING; i++) {
+        const a = (i / CLOUD_RING) * Math.PI * 2 + Math.random() * 0.4;
+        const r = QUAKE_RADIUS * 0.35;
+        const cy = y + Math.sin(a) * r * 0.6;
+        this.fx.push(new CloudCurl(this.world, x + Math.cos(a) * r, cy, Math.cos(a) * CLOUD_DRIFT * 1.4, Math.sin(a) * CLOUD_DRIFT * 0.8, cl, cy + 1, 1.1));
+      }
+    }
     const hits = this.world.melee({ kind: 'circle', x, y: y - 4, radius: QUAKE_RADIUS }, { damage: QUAKE_DAMAGE, heavy: true, knock: QUAKE_KNOCK, fromX: x, fromY: y - 4 });
     hits.slice(0, 4).forEach((h) => this.fx.push(new HitSpark(this.world, h.x, h.y, scheme, h.y + 13, true)));
     sound.slam(this.world.pan(x));

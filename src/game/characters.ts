@@ -25,7 +25,7 @@ import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { GUARD_STYLE, Jedi, JEDI_STYLE, MASTER_STYLE } from './Jedi';
 import { Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
-import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
+import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE, TIGER_STYLE, WUKONG_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CHEM_STYLE, CRYO_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
@@ -663,6 +663,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_barrage_champ' },
             },
           },
+          {
+            // A kung-fu tiger: a striped orange gi, a tiger's-head hood with ears and fangs, a tail, and claws on his fists.
+            id: 'tigerclaw',
+            name: 'Tigerclaw',
+            accent: 0xff8a1a,
+            preview: { texture: 'fighter_tiger', glow: 'fighter_tiger_e', idle: 'fighter_tiger_idle_down', chosen: 'fighter_tiger_smash_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
+            buttons: {
+              attack: { texture: 'icon_fist_tiger' },
+              special: { texture: 'icon_barrage_tiger' },
+            },
+          },
         ],
       },
       {
@@ -690,11 +701,39 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_quake_guardian' },
             },
           },
+          {
+            // Sun Wukong: gold mail and a red sash, a circlet plumed with pheasant feathers, the staff on his back and a curling tail.
+            id: 'wukong',
+            name: 'Monkey King',
+            accent: 0xffc83a,
+            preview: { texture: 'fighter_wukong', glow: 'fighter_wukong_e', idle: 'fighter_wukong_idle_down', chosen: 'fighter_wukong_leap_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
+            buttons: {
+              attack: { texture: 'icon_palm_wukong' },
+              special: { texture: 'icon_quake_wukong' },
+            },
+          },
         ],
       },
     ],
     spawn: (world, x, y, look) =>
-      new Fighter(world, x, y, look === 'monk' ? MONK_STYLE : look === 'guardian' ? GUARDIAN_STYLE : look === 'lucha' ? LUCHA_STYLE : look === 'champ' ? CHAMP_STYLE : BRAWLER_STYLE),
+      new Fighter(
+        world,
+        x,
+        y,
+        look === 'monk'
+          ? MONK_STYLE
+          : look === 'guardian'
+            ? GUARDIAN_STYLE
+            : look === 'wukong'
+              ? WUKONG_STYLE
+              : look === 'lucha'
+                ? LUCHA_STYLE
+                : look === 'champ'
+                  ? CHAMP_STYLE
+                  : look === 'tigerclaw'
+                    ? TIGER_STYLE
+                    : BRAWLER_STYLE,
+      ),
   },
   {
     id: 'alchemist',
