@@ -133,8 +133,8 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     special: 'A crimson moon rains lances of blood on foes below, then bursts.',
   },
   'necromancer.barrow': {
-    attack: 'Two spade swings, the second flinging earth, then a slam that cracks the ground and throws foes back.',
-    ability: 'Opens a grave at the aim: arms burst out and hold every foe on it, and a ghoul climbs out to fight.',
+    attack: 'Two swings of a gravestone maul, the second flinging earth, then a slam that cracks the ground and throws foes back.',
+    ability: 'Drives the maul into the earth and opens a grave at the aim: arms burst out and hold every foe on it, and a ghoul climbs out to fight.',
     special: 'Headstones burst up in a ring, throwing foes back, and ghosts streak from them into foes nearby.',
   },
   'necromancer.reaper': {

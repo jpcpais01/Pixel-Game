@@ -807,14 +807,14 @@ class GameSound {
     this.fx('bloodNova', 'bloodNova', [pan], 0);
   }
 
-  spadeSwing(pan = 0, heavy = false): void {
-    const t = this.slot('spadeSwing');
-    if (t !== null) this.sfx!.spadeSwing(t, pan, heavy);
+  maulSwing(pan = 0, heavy = false): void {
+    const t = this.slot('maulSwing');
+    if (t !== null) this.sfx!.maulSwing(t, pan, heavy);
   }
 
-  spadeSlam(pan = 0): void {
-    const t = this.slot('spadeSlam');
-    if (t !== null) this.sfx!.spadeSlam(t, pan);
+  maulSlam(pan = 0): void {
+    const t = this.slot('maulSlam');
+    if (t !== null) this.sfx!.maulSlam(t, pan);
   }
 
   graveOpen(pan = 0): void {

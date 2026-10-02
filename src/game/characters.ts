@@ -1428,29 +1428,30 @@ const KITS: KitDef[] = [
         ],
       },
       {
-        // The class's tank: a burly old sexton with an iron spade and a
-        // lantern of corpse-light, who opens the earth and calls up its dead.
+        // The class's tank: a knight of the old kings risen from his barrow
+        // in rusted plate, a gravestone for a maul, who opens the earth and
+        // calls up its dead.
         id: 'barrow',
         name: 'Barrow Knight',
-        role: 'Spade and the restless earth',
+        role: 'Iron, earth and the restless dead',
         accent: 0xb8e05a,
-        attack: 'Spade',
+        attack: 'Grave maul',
         special: 'Open grave',
         preview: { texture: 'necro_barrow', glow: 'necro_barrow_e', idle: 'necro_barrow_idle_down', chosen: 'necro_barrow_dig_down', originY: BARROW_ORIGIN_Y / BARROW_H },
         buttons: {
-          attack: { texture: 'icon_spade' },
+          attack: { texture: 'icon_gravemaul' },
           special: { texture: 'icon_grave' },
         },
-        lookName: 'Sexton',
+        lookName: 'Rusted',
         skins: [
           {
-            // Long buried and grown over: moss and lichen, toadstools on his brim, roots round his spade, a wisp in his lantern.
+            // Long buried and grown over: moss and lichen on his plate, toadstools on his pauldrons, roots binding his maul, a wisp's light in his eyes.
             id: 'mossgrave',
             name: 'Mossgrave',
             accent: 0x5ae8d8,
             preview: { texture: 'necro_mossgrave', glow: 'necro_mossgrave_e', idle: 'necro_mossgrave_idle_down', chosen: 'necro_mossgrave_dig_down', originY: BARROW_ORIGIN_Y / BARROW_H },
             buttons: {
-              attack: { texture: 'icon_spade_mossgrave' },
+              attack: { texture: 'icon_gravemaul_mossgrave' },
               special: { texture: 'icon_grave_mossgrave' },
             },
           },

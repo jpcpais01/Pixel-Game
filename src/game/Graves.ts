@@ -7,7 +7,7 @@ import { onGround } from './Toxins';
 import { sound } from '../audio';
 import type { WorldScene } from '../scenes/WorldScene';
 
-// The BarrowKnight's earthwork: clods of earth flung by his spade, the cracks
+// The Barrow Knight's earthwork: clods of earth flung off his maul, the cracks
 // and dust of his slam, and the open grave, a split in the ground out of which
 // skeletal arms (roots, for Mossgrave) burst to seize and hold every foe on it.
 
@@ -138,8 +138,8 @@ const SEAM_GLOW = 520;
 const DUST_LIFE = 520;
 
 /**
- * Where the spade comes down: the ground cracks in jagged lines running out
- * from the blow, the seams lit a moment from below by the lantern's colour,
+ * Where the gravestone comes down: the ground cracks in jagged lines running out
+ * from the blow, the seams lit a moment from below by his corpse-light,
  * and a ring of dust rolls out and settles.
  */
 export class GroundCrack implements Effect {
