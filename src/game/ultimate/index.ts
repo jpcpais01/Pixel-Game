@@ -18,7 +18,7 @@ import { Legion, TimeStop } from './chrono';
 import { HundredCuts, quakeGate, SkyQuake } from './samurai';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT } from '../Samurai';
 import { schemePal } from '../Blades';
-import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
+import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL, SANDGLASS_PAL, VHS_PAL } from '../Chronos';
 import { PrimalStampede, WildWrath } from './druid';
 import { Maelstrom } from './tide';
 import { ABYSS_MAGIC, TIDE_MAGIC } from '../Tide';
@@ -471,6 +471,8 @@ const SKINS: Record<string, UltSkin> = {
   'chronomancer:clockwork': { pal: CLOCKWORK_PAL },
   'chronomancer:primavera': { pal: pal(0xfffaf2, 0xffd0de, 0xf48cae, 0x3e9a78, 0xd8f4e4) },
   'chronomancer:anomaly': { pal: ANOMALY_PAL, type: 'paradox' },
+  'chronomancer:sandglass': { pal: SANDGLASS_PAL },
+  'chronomancer:rewind': { pal: VHS_PAL, type: 'paradox' },
   'samurai:oni': { pal: schemePal(ONI_KIT.wind) },
   'samurai:sakura': { pal: schemePal(SAKURA_KIT.wind), type: 'ronin' },
   'wizard:astral': { pal: pal(0xfffdf2, 0xfff0a8, 0xffc860, 0x6a5ae0, 0xffe08a) },
