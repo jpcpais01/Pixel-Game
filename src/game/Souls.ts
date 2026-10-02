@@ -21,6 +21,13 @@ export const TOMB_FX: Scheme = { core: 0xf4fbff, hot: 0xa8dcff, mid: 0x3c94f0, d
 /** The wyrmblood's: molten, white-gold to ember. */
 export const WYRM_FX: Scheme = { core: 0xfff8e0, hot: 0xffc860, mid: 0xff6a1a, deep: 0x8a1e0a, light: 0xff8a30 };
 
+/** The gravedigger's: his lantern's sickly green. */
+export const DIGGER_FX: Scheme = { core: 0xf6ffe0, hot: 0xd4ff8a, mid: 0x8ad83a, deep: 0x3a6a1a, light: 0xa8f05a };
+/** The vampire lord's: dark blood, near black at its deepest. */
+export const VAMPIRE_FX: Scheme = { core: 0xffe8ec, hot: 0xff6a7a, mid: 0xc0102a, deep: 0x3a0410, light: 0xff3048 };
+/** Grave dirt, flung off the gravedigger's bolts. */
+export const GRAVE_DIRT = [0x8a6646, 0x6a4a34, 0x4a3226];
+
 /** How a bolt flies and what it does. */
 export interface BoltKind {
   /** Texture suffix of its orb and burst: '_soul' or '_blood'. */
@@ -34,6 +41,10 @@ export interface BoltKind {
   /** How many more bodies it tears through after the first. */
   pierce: number;
   blood: boolean;
+  /** Extra colours mixed into its trail and its hits (the gravedigger's grave dirt). */
+  motes?: number[];
+  /** Bats scatter from wherever it bursts (the vampire lord). */
+  bats?: boolean;
 }
 
 /** Is a body standing at (x, y) close enough to the ground point (gx, gy) for a bolt passing over it to strike it? */
@@ -77,7 +88,7 @@ export class SoulBolt implements Effect {
   ) {
     this.pierceLeft = kind.pierce;
     const fx = kind.fx;
-    this.tints = [fx.core, fx.hot, fx.mid];
+    this.tints = [fx.core, fx.hot, fx.mid, ...(kind.motes ?? [])];
     this.sprite = world.add.sprite(x, y - BOLT_H, `orb${kind.suffix}_e`, 'o0').setBlendMode(Phaser.BlendModes.ADD).play(`orb${kind.suffix}_spin`);
     if (kind.blood) this.sprite.setScale(0.8);
     this.halo = world.add.image(x, y - BOLT_H, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(fx.mid).setAlpha(0.7).setScale(0.8);
@@ -175,6 +186,7 @@ export class SoulBolt implements Effect {
     const b = this.world.add.sprite(snap(this.x), snap(this.y - BOLT_H), `burst${s}_e`, 'b0').setBlendMode(Phaser.BlendModes.ADD).setDepth(this.y + 20).play(`burst${s}_pop`);
     if (!struck) b.setScale(0.6);
     b.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => b.destroy());
+    if (struck && this.kind.bats) this.world.addEffect(new BatFlight(this.world, this.x, this.y - BOLT_H, BOLT_BATS, this.y + 20));
     this.destroy();
   }
 
@@ -185,6 +197,79 @@ export class SoulBolt implements Effect {
     this.halo.destroy();
     this.shadow.destroy();
     this.world.lights.removeLight(this.light);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The vampire lord's bats
+
+/** Bats that scatter from a lance's hit, and from his nova. */
+const BOLT_BATS = 2;
+export const NOVA_BATS = 9;
+/** How long a bat flies before it is gone into the dark, ms; how fast, px/s; wingbeats a second. */
+const BAT_LIFE = 700;
+const BAT_SPEED = 70;
+const BAT_FLAP = 14;
+
+interface Bat {
+  s: Phaser.GameObjects.Image;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  t: number;
+  life: number;
+  phase: number;
+}
+
+/**
+ * A flutter of little black bats bursting out from a point and away in every
+ * direction, beating their wings, climbing as they go, and fading into the
+ * dark. Purely a look: they touch nothing.
+ */
+export class BatFlight implements Effect {
+  dead = false;
+  private bats: Bat[] = [];
+
+  constructor(
+    world: WorldScene,
+    x: number,
+    y: number,
+    n: number,
+    depth: number,
+  ) {
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.8;
+      const sp = BAT_SPEED * (0.7 + Math.random() * 0.6);
+      const s = world.add.image(snap(x), snap(y), 'vbat0').setDepth(depth);
+      this.bats.push({ s, x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6 - 20, t: 0, life: BAT_LIFE * (0.7 + Math.random() * 0.5), phase: Math.random() });
+    }
+  }
+
+  update(dt: number): void {
+    if (this.dead) return;
+    let alive = 0;
+    for (const b of this.bats) {
+      b.t += dt;
+      if (b.t >= b.life) {
+        b.s.setVisible(false);
+        continue;
+      }
+      alive++;
+      const k = b.t / b.life;
+      // A bat's flight jinks: a wobble across its path, and it climbs.
+      b.x += (b.vx * dt) / 1000;
+      b.y += ((b.vy - 25 * k) * dt) / 1000 + Math.sin(b.t * 0.03 + b.phase * 6) * 0.25;
+      const up = Math.floor((b.t / 1000) * BAT_FLAP + b.phase * 2) % 2 === 0;
+      b.s.setTexture(up ? 'vbat0' : 'vbat1').setPosition(snap(b.x), snap(b.y)).setAlpha(1 - k * k).setFlipX(b.vx < 0);
+    }
+    if (!alive) this.destroy();
+  }
+
+  destroy(): void {
+    if (this.dead) return;
+    this.dead = true;
+    for (const b of this.bats) b.s.destroy();
   }
 }
 

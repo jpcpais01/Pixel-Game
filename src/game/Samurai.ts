@@ -8,7 +8,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { reachesBody, Vitals, type Hurtbox, type MeleeArea } from './combat';
 import { HitSpark, SlashArc, ThrustStreak, type Effect, type Scheme } from './Slash';
-import { CutBurst, Gust, schemePal, WindRing } from './Blades';
+import { CutBurst, Drift, Gust, schemePal, WindRing, type Motes } from './Blades';
 import { Ink, segDist, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
@@ -29,6 +29,8 @@ export interface SamuraiKit {
   steel: Scheme;
   /** The Bladewind's wind, or the ronin's delayed cuts. */
   wind: Scheme;
+  /** Motes his cuts throw off to drift down (the Tengu's feathers, Snowfall's snow). */
+  motes?: Motes;
 }
 
 export const BLADEWIND_KIT: SamuraiKit = {
@@ -54,6 +56,15 @@ export const KITSUNE_KIT: SamuraiKit = {
   wind: { core: 0xf0fff8, hot: 0xb0ffe0, mid: 0x40e8b0, deep: 0x107a6a, light: 0x60f0c0 },
 };
 
+/** The Tengu: wind in dusk violet shading to black, and crow feathers drifting off every cut. */
+export const TENGU_KIT: SamuraiKit = {
+  ...BLADEWIND_KIT,
+  key: 'samurai_tengu',
+  steel: { core: 0xffffff, hot: 0xeadfff, mid: 0xa88ee0, deep: 0x3a2860 },
+  wind: { core: 0xf2eaff, hot: 0xc4a4ff, mid: 0x8456d8, deep: 0x22143e, light: 0xa070ff },
+  motes: { kind: 'feather', colors: [0x0c0a18, 0x2a2648, 0x8c80d0] },
+};
+
 export const RONIN_KIT: SamuraiKit = {
   key: 'ronin',
   ronin: true,
@@ -68,6 +79,15 @@ export const SAKURA_KIT: SamuraiKit = {
   key: 'ronin_sakura',
   steel: { core: 0xffffff, hot: 0xfff0f4, mid: 0xf4b8cc, deep: 0xb0607e },
   wind: { core: 0xfff4f8, hot: 0xffc0d4, mid: 0xff7aa6, deep: 0xb03a6a, light: 0xff9ac0 },
+};
+
+/** Snowfall: cuts in ice blue and white, shedding snowflakes. */
+export const SNOWFALL_KIT: SamuraiKit = {
+  ...RONIN_KIT,
+  key: 'ronin_snowfall',
+  steel: { core: 0xffffff, hot: 0xf0faff, mid: 0xc0e2f8, deep: 0x5a8cbc },
+  wind: { core: 0xffffff, hot: 0xd8f2ff, mid: 0x88ccf4, deep: 0x3a74b0, light: 0xa8e0ff },
+  motes: { kind: 'snow', colors: [0x6a9cd0, 0xc8ecff, 0xffffff] },
 };
 
 export const SHOGUN_KIT: SamuraiKit = {
@@ -297,6 +317,7 @@ export class Samurai implements Hero {
         if (t.alive) {
           t.hurt({ damage: DASH_DAMAGE, heavy: false, knock: 30, fromX: this.x, fromY: this.y });
           this.fx.push(new HitSpark(this.world, t.x, t.y - t.bodyY, this.kit.wind, t.y + 13, false));
+          this.drift(t.x, t.y - t.bodyY, 3, t.y + 14);
           sound.katanaHit(this.world.pan(t.x), false);
         }
       }
@@ -390,6 +411,7 @@ export class Samurai implements Hero {
     sound.katana(this.world.pan(this.x), true);
     if (this.stacks >= 2) {
       this.world.addEffect(new WindRing(this.world, this.x, this.y, this.pal, 6));
+      this.drift(this.x, this.y - CHEST_Y, 7, this.y + 14);
       this.stacks = 0;
       this.stackT = 0;
     } else if (hits.length) this.gainStack();
@@ -464,6 +486,7 @@ export class Samurai implements Hero {
       const n = this.marks.get(h)?.n ?? 0;
       h.hurt({ damage: base + per * n, heavy: true, knock: 40, fromX: h.x, fromY: h.y - 4 });
       this.world.addEffect(new CutBurst(this.world, h.x, h.y - h.bodyY, this.pal, n >= 2));
+      this.drift(h.x, h.y - h.bodyY, n >= 2 ? 4 : 2, h.y + 14);
       this.unmark(h);
     }
     if (foes.length) {
@@ -545,6 +568,7 @@ export class Samurai implements Hero {
     this.fx.push(new SlashArc(this.world, cx, cy, deg + sweep * 100, deg - sweep * 100, 18, move === 'gust' ? this.kit.wind : this.kit.steel, depth, 180));
     if (move === 'gust') {
       this.world.addEffect(new Gust(this.world, this.x + u.x * 6, this.y + u.y * 6, u.x, u.y, this.pal, GUST_DAMAGE));
+      this.drift(cx + u.x * 14, cy + u.y * 14, 5, depth + 14);
       this.stacks = 0;
       this.stackT = 0;
       return;
@@ -566,6 +590,7 @@ export class Samurai implements Hero {
   private sparks(hits: Hurtbox[], s: Scheme, heavy: boolean): void {
     for (const h of hits) {
       this.fx.push(new HitSpark(this.world, h.x, h.y - h.bodyY, s, h.y + 13, heavy));
+      this.drift(h.x, h.y - h.bodyY, heavy ? 3 : 2, h.y + 14);
       sound.katanaHit(this.world.pan(h.x), heavy);
     }
     if (hits.length) this.world.cameras.main.shake(heavy ? 90 : 50, heavy ? 0.0005 : 0.0003);
@@ -576,6 +601,11 @@ export class Samurai implements Hero {
     this.state = 'free';
     this.cooldown = rest;
     this.body.play(`${this.kit.key}_idle_${this.dir}`);
+  }
+
+  /** A skin's motes thrown off at (x, y), if it has any. */
+  private drift(x: number, y: number, n: number, depth: number): void {
+    if (this.kit.motes) this.world.addEffect(new Drift(this.world, snap(x), snap(y), this.kit.motes, n, depth));
   }
 
   /** A fading copy of him left behind as he dashes. */
@@ -589,6 +619,8 @@ export class Samurai implements Hero {
       .setAlpha(0.4 * this.alpha * (this.vanished ? 0 : 1))
       .setDepth(b.depth - 0.2);
     this.world.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
+    // A mote shed in his wake now and then.
+    if (Math.random() < 0.5) this.drift(this.x, this.y - CHEST_Y, 1, this.y + 2);
   }
 
   /** Wind curling round the point of a charged blade. */

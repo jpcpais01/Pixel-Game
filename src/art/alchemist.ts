@@ -29,11 +29,25 @@
 // Cryotech is Chemtech's skin: a white insulated suit, a glass bubble helmet
 // over a hood and a glowing ice visor, frosted steel pauldrons and tank, a
 // quilted blue front and canisters of freezing blue.
+//
+// Carnevale is the plague doctor's Venetian skin: a gilded medico mask with
+// crimson swirls painted round its eyes, a black tricorn laced in gold under
+// tall plumes, a harlequin coat of crimson and black diamonds, a white ruff,
+// a velvet cape trimmed in gold, white kid gloves and ribboned flasks of
+// magenta brew. Its pieces are in carnevale.ts.
+//
+// The Brass Diver is Chemtech's deep-sea skin: a round brass helmet with
+// three riveted portholes and a face glowing behind the front glass, a copper
+// corselet, a canvas suit under leather braces and a weight belt, lead-soled
+// boots, an air hose looping back to a brass tank, and chem carried in little
+// glass diving bells that fizz with bubbles. Its pieces are in diver.ts.
 
-import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
+import { PixelCanvas, cyl, hex, sphere, type Material, type NormalFn, type RGB, type Vec3 } from './pixel';
 import { BEAK, BOOT, BRASS, EYE, SKIN, CHEM_BREW, CHEM_COAT, CHEM_COPPER, CHEM_CORE, CHEM_HOT, CHEM_LENS, CHEM_MID, CHEM_RUBBER, CHEM_STEEL, GLASS, GOLD, HEX_BREW, HEX_CORE, HEX_EYE, HEX_HOT, HEX_MID, LEATHER, LENS, MANTLE, PLAGUE_COAT, PLAGUE_HAT, TOXIN, TOX_CORE, TOX_HOT, TOX_MID, TROUSER, WITCH_HAIR, WITCH_ROBE, WITCH_SHAWL, WITCH_SKIN, WOOD } from './palette';
 import { DIRS, type Dir } from './wizard';
 import { CHESTNUT, FRECKLE, LINEN, LIPS, PETAL, PINK_BREW, RIBBON, SAGE, STEM, STRAW, VIOLET_BREW } from './foxglove';
+import { CARNIVAL_BREW, CONFETTI, CRIMSON, GILT, KID, MASK_EYE, MASK_PAINT, PLUME, RIBBON_MAGENTA, RUFF, VELVET } from './carnevale';
+import { BELL_BREW, CANVAS, CORSELET, DIVER_EYE, HELM_BRASS, LEAD, PORT_GLASS, RIM_BRASS, RUBBER } from './diver';
 
 export const ALCH_W = 48;
 export const ALCH_H = 50;
@@ -123,6 +137,22 @@ export interface AlchemistLook {
   herbal?: boolean;
   /** What stoppers the flasks, when not cork: Foxglove's are stoppered with a bloom. */
   cork?: Material;
+  /**
+   * Carnevale (drawn on the plague rig): a gilded beak mask (the face) with
+   * painted swirls, a gold-laced tricorn (the hat) under plumes, a harlequin
+   * coat whose diamonds alternate the coat and the hat's velvet, a white ruff,
+   * a cape (the mantle) trimmed in gold, and ribbons on the flasks.
+   */
+  carnival?: boolean;
+  /**
+   * The Brass Diver (drawn on the chem rig): a round brass helmet (the hat)
+   * with three portholes, a corselet (the mantle), braces and a weight belt
+   * instead of the apron, heavy boots, an air hose to the tank, diving bells
+   * for canisters and bubbles for vapour.
+   */
+  diver?: boolean;
+  /** The belt and bandolier, when not brown leather. */
+  belt?: Material;
   /** Animation speeds that differ from the usual ones. */
   fps?: Partial<Record<AlchemistAnim, number>>;
 }
@@ -258,7 +288,43 @@ export const FOXGLOVE_LOOK: AlchemistLook = {
   cork: PETAL,
 };
 
-export const ALCHEMIST_LOOKS = [PLAGUE_LOOK, WITCH_LOOK, CHEM_LOOK, SHAMAN_LOOK, CRYO_LOOK, FOXGLOVE_LOOK];
+export const CARNEVALE_LOOK: AlchemistLook = {
+  key: 'alchemist_carnevale',
+  coat: CRIMSON,
+  mantle: VELVET,
+  hat: VELVET,
+  face: GILT,
+  eye: MASK_EYE,
+  gloves: KID,
+  band: GILT,
+  brew: CARNIVAL_BREW,
+  core: hex('#fff0fa'),
+  hot: hex('#ff7ad8'),
+  mid: hex('#e03ab0'),
+  witch: false,
+  carnival: true,
+  cork: GILT,
+  belt: VELVET,
+};
+
+export const DIVER_LOOK: AlchemistLook = {
+  ...CHEM_LOOK,
+  key: 'alchemist_diver',
+  coat: CANVAS,
+  mantle: CORSELET,
+  hat: HELM_BRASS,
+  face: RUBBER,
+  eye: DIVER_EYE,
+  gloves: RUBBER,
+  band: RIM_BRASS,
+  brew: BELL_BREW,
+  core: hex('#e8fff6'),
+  hot: hex('#6affc8'),
+  mid: hex('#1ad8a0'),
+  diver: true,
+};
+
+export const ALCHEMIST_LOOKS = [PLAGUE_LOOK, WITCH_LOOK, CHEM_LOOK, SHAMAN_LOOK, CRYO_LOOK, FOXGLOVE_LOOK, CARNEVALE_LOOK, DIVER_LOOK];
 
 /** The look being drawn; set by buildAlchemistFrames. */
 let S: AlchemistLook = PLAGUE_LOOK;
@@ -311,6 +377,14 @@ function heldFlask(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: numb
   c.line(x, by - r + 0.4, x, neckTop, GLASS, () => cyl(0.2, 0.3), { bias });
   c.px(x, neckTop - 1, S.cork ?? WOOD, sphere(-0.2, -0.6));
   if (size === 2) c.px(x - 1, neckTop - 1, S.cork ?? WOOD, sphere(-0.6, -0.5));
+  if (S.carnival) {
+    // Ribbons tied at the neck, their tails trailing off to one side.
+    c.part();
+    c.px(x + 1, neckTop + 0.4, RIBBON_MAGENTA, sphere(0.4, -0.2), { bias: 1 });
+    c.px(x + 2, neckTop + 1.2, RIBBON_MAGENTA, sphere(0.5, 0.3));
+    c.px(x + 1, neckTop + 1.4, GILT, sphere(0.2, 0.4));
+    if (size === 2) c.px(x + 2, neckTop + 2.2, GILT, sphere(0.5, 0.5), { bias: -1 });
+  }
   // The poison's light, and bubbles rising off it as it boils.
   const k = 0.3 + boil * 0.5;
   c.spark(x, by, S.hot, k * 0.6);
@@ -320,7 +394,9 @@ function heldFlask(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: numb
   if (boil > 0) {
     for (let i = 0; i < 3; i++) {
       const up = ((seed * 3 + i * 5) % 7) + 1;
-      c.spark(x + ((i + seed) % 3) - 1, neckTop - 1 - up * boil, i === 0 ? S.core : S.hot, 0.55 * boil);
+      // Carnevale's brew throws up confetti rather than bubbles.
+      const col = S.carnival ? CONFETTI[(seed + i) % CONFETTI.length] : i === 0 ? S.core : S.hot;
+      c.spark(x + ((i + seed) % 3) - 1, neckTop - 1 - up * boil, col, 0.55 * boil);
     }
   }
 }
@@ -360,6 +436,10 @@ function heldGourd(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: numb
 
 /** A chem canister held at (x, y): a steel cylinder with brass caps, a valve, and a window of glowing chem. */
 function heldCanister(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: number, bias: number, seed: number): void {
+  if (S.diver) {
+    heldBell(c, x, y, size, boil, bias, seed);
+    return;
+  }
   const hw = size === 2 ? 2.1 : 1.4;
   const bot = Math.round(y);
   const top = bot - (size === 2 ? 6 : 4);
@@ -381,6 +461,46 @@ function heldCanister(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: n
     for (let i = 0; i < 3; i++) {
       const up = ((seed * 3 + i * 5) % 7) + 1;
       c.spark(x + ((i + seed) % 3) - 1, top - 1 - up * boil, i === 0 ? S.core : S.hot, 0.55 * boil);
+    }
+  }
+}
+
+/** How wide a diving bell is at `u` = 0 (its crown) .. 1 (its rim), as a share of its widest. */
+const bellWidth = (u: number) => 0.45 + 0.55 * Math.sqrt(Math.max(0, u));
+
+/**
+ * The Brass Diver's little diving bell held at (x, y): a brass crown with a
+ * ring on top, glass flaring down to a brass rim, the chem glowing in its
+ * lower half, and bubbles rising off it as it boils.
+ */
+function heldBell(c: PixelCanvas, x: number, y: number, size: 1 | 2, boil: number, bias: number, seed: number): void {
+  const hw = size === 2 ? 2.4 : 1.7;
+  const bot = Math.round(y);
+  const top = bot - (size === 2 ? 6 : 4);
+  const at = (yy: number) => bellWidth((yy - top) / (bot - top)) * hw;
+  c.part();
+  c.shape(top, bot - 1, (yy) => [x - at(yy), x + at(yy)], GLASS, (_x, _y, t) => cyl(t, 0.2), { bias });
+  c.part();
+  const surf = top + Math.ceil((bot - top) * 0.45);
+  c.shape(surf, bot - 1, (yy) => [x - at(yy) + 0.4, x + at(yy) - 0.4], S.brew, (_x, _y, t) => cyl(t, 0), { bias: bias + (boil > 0.6 ? 1 : 0) });
+  c.part();
+  c.shape(top, top, () => [x - at(top) - 0.2, x + at(top) + 0.2], S.hat, (_x, _y, t) => cyl(t, -0.6), { bias });
+  c.shape(bot, bot, () => [x - hw - 0.3, x + hw + 0.3], S.band, (_x, _y, t) => cyl(t, 0.5), { bias });
+  c.px(x, top - 1, S.band, sphere(-0.2, -0.7));
+  const k = 0.3 + boil * 0.5;
+  const my = (surf + bot) / 2;
+  c.spark(x, my, S.hot, k * 0.6);
+  c.spark(x - hw, my, S.mid, k * 0.3);
+  c.spark(x + hw, my, S.mid, k * 0.3);
+  if (boil > 0) {
+    // Bubbles wobbling up off the crown, the biggest a ring.
+    for (let i = 0; i < 3; i++) {
+      const up = ((seed * 3 + i * 5) % 7) + 1;
+      const bx = x + ((i + seed) % 3) - 1 + (up & 1 ? 0.6 : -0.4);
+      const by = top - 2 - up * boil;
+      if (i === 0 && boil > 0.5) {
+        for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) c.spark(bx + dx, by + dy, S.hot, 0.45 * boil);
+      } else c.spark(bx, by, i === 0 ? S.core : S.hot, 0.55 * boil);
     }
   }
 }
@@ -429,11 +549,28 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
 
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
   c.part();
-  c.capsule(hx, hy, fx, fy, 1.5, 1.3, TROUSER, { bias });
+  // The diver's legs are the canvas suit's; the carnival's black hose.
+  c.capsule(hx, hy, fx, fy, 1.5, 1.3, S.diver ? S.coat : S.carnival ? S.hat : TROUSER, { bias });
 }
 
 /** A tall black boot, the toe turned towards the viewer or forward. */
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
+  if (S.diver) {
+    // Weighted diving boots: a thick lead sole, a brass toe cap and a strap.
+    c.part();
+    if (side) c.ellipse(x - 0.2, y, 2.6, 1.45, LEAD, { flatten: 0.8, bias });
+    else c.ellipse(x, y, 1.95, 1.5, LEAD, { flatten: 0.8, bias });
+    c.part();
+    if (side) {
+      c.px(x - 2.4, y - 0.6, S.hat, sphere(-0.6, -0.3), { bias });
+      c.px(x - 1.4, y - 0.8, S.hat, sphere(-0.2, -0.5), { bias });
+    } else {
+      c.px(x - 1, y - 0.2, S.hat, sphere(-0.4, -0.3), { bias });
+      c.px(x, y - 0.2, S.hat, sphere(0.3, -0.3), { bias });
+    }
+    c.px(x + (side ? 0.6 : 1), y - 1, LEATHER, sphere(0.3, -0.4), { bias });
+    return;
+  }
   c.part();
   if (side) c.ellipse(x, y, 2.2, 1.2, BOOT, { flatten: 0.8, bias });
   else c.ellipse(x, y, 1.6, 1.3, BOOT, { flatten: 0.8, bias });
@@ -474,6 +611,10 @@ function hat(c: PixelCanvas, cx: number, U: number, view: View): void {
   }
   if (S.herbal) {
     strawHat(c, cx, U, view);
+    return;
+  }
+  if (S.carnival) {
+    tricorn(c, cx, U, view);
     return;
   }
   const brimY = 9.4 + U;
@@ -519,6 +660,10 @@ function hat(c: PixelCanvas, cx: number, U: number, view: View): void {
 function helmet(c: PixelCanvas, cx: number, U: number, view: View): void {
   if (S.cryo) {
     dome(c, cx, U, view);
+    return;
+  }
+  if (S.diver) {
+    diverHelmet(c, cx, U, view, false);
     return;
   }
   const x = cx + (view === 'side' ? 0.6 : 0);
@@ -569,7 +714,8 @@ function tankBack(c: PixelCanvas, cx: number, U: number): void {
   c.part();
   c.shape(14 + U, 14 + U, () => [cx - 2.1, cx + 2.1], S.band, (_x, _y, t) => cyl(t, -0.5));
   c.shape(23 + U, 23 + U, () => [cx - 2.1, cx + 2.1], S.band, (_x, _y, t) => cyl(t, 0.5));
-  // Hoses from the valve up over the shoulders to the mask.
+  // Hoses from the valve up over the shoulders to the mask (the diver's goes to his helmet).
+  if (S.diver) return;
   c.part();
   c.capsule(cx - 1.4, 14.2 + U, cx - 3.8, 12.6 + U, 0.55, 0.5, S.face);
   c.capsule(cx + 1.4, 14.2 + U, cx + 3.8, 12.6 + U, 0.55, 0.5, S.face);
@@ -609,6 +755,12 @@ function mantle(c: PixelCanvas, cx: number, U: number, l: number, r: number): vo
       c.part();
       for (const [x, y] of [[cx - l * 0.55, top + 1], [cx - l * 0.8, top + 3], [cx + r * 0.55 - 1, top + 1], [cx + r * 0.8 - 1, top + 3]] as const) c.px(Math.round(x), y, DOME, sphere(0, -0.5), { glow: 0.3 });
     }
+  }
+  if (S.carnival) {
+    // The cape's hem laced in gold.
+    c.part();
+    const y = top + 4;
+    for (let x = Math.floor(cx - l) - 1; x <= Math.ceil(cx + r) + 1; x++) if (c.materialAt(x, y) === S.mantle) c.px(x, y, GILT, sphere(0, 0.4), { bias: (x & 1) - 1 });
   }
   if (S.witch || S.shaman) {
     // The shawl's ragged edge.
@@ -773,6 +925,10 @@ function cryoFace(c: PixelCanvas, cx: number, U: number, blink: boolean | undefi
  * that rises, drifts off to one side and thins out over `k` = 1..3.
  */
 function puff(c: PixelCanvas, x: number, y: number, k: number): void {
+  if (S.diver) {
+    bubbles(c, x, y, k);
+    return;
+  }
   const px = x + PUFF_DRIFT * k;
   const py = y - PUFF_RISE * k;
   const r = 0.6 + k * 0.55;
@@ -788,6 +944,28 @@ function puff(c: PixelCanvas, x: number, y: number, k: number): void {
   }
   // A wisp still trailing back to the valve.
   for (let i = 1; i < k + 1; i++) c.spark(x + (px - x) * (i / (k + 1)), y + (py - y) * (i / (k + 1)), S.hot, 0.45);
+}
+
+/**
+ * The diver's take on the valve's puff: a burst of bubbles off the bell's
+ * crown, wobbling up and apart over `k` = 1..3, the big one a ring.
+ */
+function bubbles(c: PixelCanvas, x: number, y: number, k: number): void {
+  const pts: [number, number, number][] = [
+    [0, 0, 1.4],
+    [-1.8, 0.8, 0],
+    [1.4, 1.6, 0],
+    [-0.6, 2.6, 1],
+  ];
+  pts.forEach(([dx, dy, r], i) => {
+    const bx = x + dx * (0.6 + k * 0.4) + (i & 1 ? 1 : -1) * (k & 1) * 0.6;
+    const by = y - PUFF_RISE * k - dy;
+    const a = 1.6 - k * 0.35;
+    if (r >= 1 && k > 1) {
+      for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) c.spark(bx + ox, by + oy, S.hot, a * 0.8);
+      c.spark(bx - 1, by - 1, S.core, a * 0.5);
+    } else c.spark(bx, by, i === 0 ? S.core : S.hot, a);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1098,6 +1276,290 @@ function herbalSide(c: PixelCanvas, p: Pose, U: number, L: number, hx: number, c
 }
 
 // ---------------------------------------------------------------------------
+// Carnevale: the tricorn and its plumes, the ruff, the gilded mask, the harlequin coat
+
+/** The harlequin coat's diamonds: this many px across and this many tall. */
+const HARLEQUIN_W = 6;
+const HARLEQUIN_H = 7;
+/** How near a diamond's corner a pixel must be to carry a gold pip. */
+const PIP = 0.13;
+
+/**
+ * The material of the harlequin coat at (x, y): diamonds of the coat's
+ * crimson and the hat's velvet, one centred on `cx`, with a pip of gold
+ * where their corners meet.
+ */
+function harlequin(x: number, y: number, cx: number, top: number): Material {
+  const u = (x + 0.5 - cx) / (HARLEQUIN_W / 2) + 1;
+  const v = (y + 0.5 - top) / (HARLEQUIN_H / 2);
+  const a = (u + v) / 2;
+  const b = (u - v) / 2;
+  if (Math.abs(a - Math.round(a)) < PIP && Math.abs(b - Math.round(b)) < PIP) return GILT;
+  return (Math.floor(a) + Math.floor(b)) & 1 ? S.hat : S.coat;
+}
+
+/**
+ * The coat's body, as `c.shape` draws it; Carnevale's is cut into harlequin
+ * diamonds round `cx`, counted from its top row.
+ */
+function coatShape(c: PixelCanvas, y0: number, y1: number, edges: (y: number) => [number, number], normal: NormalFn, cx: number): void {
+  if (!S.carnival) {
+    c.shape(y0, y1, edges, S.coat, normal);
+    return;
+  }
+  for (let y = y0; y <= y1; y++) {
+    const [l, r] = edges(y);
+    const u = y1 === y0 ? 0 : (y - y0) / (y1 - y0);
+    for (let x = Math.round(l); x <= Math.round(r) - 1; x++) {
+      const t = r - l > 0.001 ? ((x + 0.5 - l) / (r - l)) * 2 - 1 : 0;
+      c.px(x, y, harlequin(x, y, cx, y0), normal(x, y, t, u));
+    }
+  }
+}
+
+/** A starched white ruff round the throat at row `y`, `hw` px either side of `cx`: pleated, its lower edge scalloped. */
+function ruff(c: PixelCanvas, cx: number, y: number, hw: number, ry = 1.45): void {
+  c.part();
+  c.ellipse(cx, y, hw, ry, RUFF, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.7 - 0.25, 1) });
+  const y0 = Math.floor(y - ry);
+  const y1 = Math.ceil(y + ry);
+  for (let py = y0; py <= y1; py++) {
+    for (let px = Math.floor(cx - hw); px <= Math.ceil(cx + hw); px++) {
+      if (c.materialAt(px, py) !== RUFF) continue;
+      // The pleats: every other column a shade deeper; the bottom row scalloped.
+      if ((px & 1) === 0) c.shade(px, py, -1);
+      if ((px & 1) === 1 && c.materialAt(px, py + 1) !== RUFF) c.shade(px, py, 1);
+    }
+  }
+}
+
+/** A plume from (x0, y0) curling through (x1, y1) to its tip (x2, y2): thick at the quill, the barbs shaded in turn. */
+function plume(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, m: Material, r: number, bias = 0): void {
+  c.part();
+  c.capsule(x0, y0, x1, y1, r * 0.55, r, m, { bias });
+  c.capsule(x1, y1, x2, y2, r, r * 0.4, m, { bias });
+  const n = Math.ceil(Math.hypot(x2 - x1, y2 - y1) + Math.hypot(x1 - x0, y1 - y0));
+  for (let i = 1; i < n; i += 2) {
+    const k = i / n;
+    const [ax, ay, bx, by, kk] = k < 0.5 ? [x0, y0, x1, y1, k * 2] : [x1, y1, x2, y2, k * 2 - 1];
+    c.shade(ax + (bx - ax) * kk + 0.6, ay + (by - ay) * kk + 0.4, -1);
+  }
+}
+
+/**
+ * Carnevale's tricorn: a low crown inside a brim cocked up on three sides,
+ * laced with gold along its edge, a crimson cockade on one flap and plumes
+ * of crimson and white rising off it. From the front its point dips over
+ * the mask; from behind the back flap stands up; from the side the front
+ * point juts and the back corner rises.
+ */
+function tricorn(c: PixelCanvas, cx: number, U: number, view: View): void {
+  const side = view === 'side';
+  const off = side ? 0.6 : 0;
+  // The plumes first, so the crown hides their quills: at his left temple,
+  // screen right from the front and left from behind; from the side, swept back.
+  // The crimson one arches out and droops over the brim; the white one curls back over the crown.
+  if (view === 'down' || view === 'up') {
+    const k = view === 'down' ? 1 : -1;
+    plume(c, cx + k * 1.6, 6.4 + U, cx + k * 0.6, 2.6 + U, cx - k * 2.2, 2.4 + U, RUFF, 1.05, 1);
+    plume(c, cx + k * 2.6, 6.4 + U, cx + k * 4.2, 2.2 + U, cx + k * 7.0, 4.2 + U, PLUME, 1.3);
+  } else {
+    plume(c, cx + off + 0.4, 6.4 + U, cx + off - 0.6, 2.4 + U, cx + off - 2.6, 2.6 + U, RUFF, 1.05, 1);
+    plume(c, cx + off + 1.6, 6.4 + U, cx + off + 3.6, 2.0 + U, cx + off + 6.6, 3.8 + U, PLUME, 1.3);
+  }
+  c.part();
+  const crown = [2.0, 2.7, 3.0, 3.1];
+  c.shape(5 + U, 8 + U, (y) => {
+    const hw = crown[y - 5 - U];
+    return [cx + off - hw, cx + off + hw];
+  }, S.hat, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.8, 1));
+  // The brim, row by row between its top and bottom edge at each column.
+  const span = side ? 6.2 : 6.7;
+  const edgesAt = (dx: number): [number, number] => {
+    const a = Math.min(1, Math.abs(dx) / span);
+    if (view === 'down') return [9.0 - 3.0 * a * a, 9.9 + 0.7 * Math.max(0, 1 - Math.abs(dx) / 2.2) - 0.7 * a * a];
+    if (view === 'up') return [7.6 - 1.4 * a * a, 10.0 - 0.5 * a * a];
+    // Facing left: the front point (dx < 0) juts and dips, the side flap stands
+    // up along his near side, and the back corner (dx > 0) cocks up.
+    if (dx < 0) return [7.6 + 1.9 * a * a, 9.9 + 0.9 * a * a];
+    return [7.6 - 1.2 * a * a, 9.9 - 0.9 * a * a];
+  };
+  c.part();
+  for (let y = 4; y <= 12; y++) {
+    for (let x = Math.floor(cx - span - 1); x <= Math.ceil(cx + span + 1); x++) {
+      const dx = x + 0.5 - cx;
+      if (Math.abs(dx) > span) continue;
+      const [t0, t1] = edgesAt(dx);
+      const yc = y + 0.5;
+      if (yc < t0 || yc > t1 + 0.5) continue;
+      const k = (yc - t0) / Math.max(0.5, t1 + 0.5 - t0);
+      // The lace: the brim's upper edge in gold.
+      const lace = yc - 1 < t0;
+      c.px(x, y + U, lace ? GILT : S.hat, sphere((dx / span) * 0.7, k * 0.8 - 0.5, 1), { bias: lace ? 0 : -1 + Math.round(k) });
+    }
+  }
+  // The cockade: a crimson rosette with a gold button, on the flap over his left temple.
+  if (view !== 'up') {
+    c.part();
+    const kx = view === 'down' ? cx + 4 : cx + 2;
+    c.px(kx, 8 + U, PLUME, sphere(-0.3, -0.3), { bias: 1 });
+    c.px(kx + 1, 8 + U, PLUME, sphere(0.3, -0.3));
+    c.px(kx, 9 + U, PLUME, sphere(-0.3, 0.3), { bias: -1 });
+    c.px(kx + 1, 9 + U, GILT, sphere(0.2, 0.2));
+  }
+}
+
+/** Carnevale from the front: a gilded medico mask, crimson swirls painted round its glowing lenses and down the beak. */
+function carnivalFace(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+  c.part();
+  c.ellipse(cx, 12 + U, 3.0, 2.4, S.face);
+  c.part();
+  // A longer beak than the plain medico's, reaching down over the ruff.
+  c.shape(12 + U, 17 + U, (y) => {
+    const hw = 1.55 - (y - 12 - U) * 0.24;
+    return [cx - hw, cx + hw];
+  }, S.face, (_x, _y, t, u) => sphere(t * 0.8, 0.5 - u * 0.6, 1));
+  c.shade(cx - 1, 13 + U, 1);
+  c.shade(cx - 1, 14 + U, 1);
+  c.shade(cx, 15 + U, -1);
+  // The painted swirls: curling out from under each lens, a stripe down the beak.
+  c.part();
+  for (const [x, y] of [[9, 12], [8, 12], [9, 13], [14, 12], [15, 12], [14, 13]] as const) c.px(x, y + U, MASK_PAINT, sphere(x < cx ? -0.5 : 0.5, 0.2));
+  c.px(cx, 14 + U, MASK_PAINT, sphere(0.2, 0.3));
+  c.px(cx - 1, 16 + U, MASK_PAINT, sphere(-0.2, 0.4));
+  lenses(c, [[9, 11 + U], [10, 11 + U], [13, 11 + U], [14, 11 + U]], blink);
+}
+
+/** The ribbons that tie the mask on, hanging down the back of his head from a gold knot. */
+function maskTies(c: PixelCanvas, x: number, y: number, sway: number): void {
+  c.part();
+  c.capsule(x - 0.5, y, x - 1.6, y + 5, 0.55, 0.45, RIBBON_MAGENTA);
+  c.capsule(x + 0.5, y, x + 1.4 + sway, y + 4.4, 0.55, 0.45, RIBBON_MAGENTA, { bias: -1 });
+  c.part();
+  c.px(x, y, GILT, sphere(0, -0.3));
+}
+
+// ---------------------------------------------------------------------------
+// The Brass Diver: the helmet, its hose, the braces and the weight belt
+
+/** Pixels within `r0`..`r1` of (x, y), for porthole glass and rims. */
+function disc(c: PixelCanvas, x: number, y: number, r0: number, r1: number, m: Material, n: (dx: number, dy: number, d: number) => Vec3, bias = 0): void {
+  for (let py = Math.floor(y - r1 - 1); py <= Math.ceil(y + r1); py++) {
+    for (let px = Math.floor(x - r1 - 1); px <= Math.ceil(x + r1); px++) {
+      const dx = px + 0.5 - x;
+      const dy = py + 0.5 - y;
+      const d = Math.hypot(dx, dy);
+      if (d < r0 || d > r1) continue;
+      c.px(px, py, m, n(dx, dy, d || 1), { bias });
+    }
+  }
+}
+
+/** A porthole: glass lit from inside within `r`, a brass rim to `r + 1`, its bolts catching the light in turn. */
+function porthole(c: PixelCanvas, x: number, y: number, r: number): void {
+  c.part();
+  disc(c, x, y, 0, r, PORT_GLASS, (dx, dy) => sphere(dx * 0.3, dy * 0.3, 1));
+  c.part();
+  disc(c, x, y, r, r + 1.05, S.band, (dx, dy, d) => sphere((dx / d) * 0.7, (dy / d) * 0.7, 1));
+  let i = 0;
+  for (let py = Math.floor(y - r - 2); py <= Math.ceil(y + r + 1); py++) {
+    for (let px = Math.floor(x - r - 2); px <= Math.ceil(x + r + 1); px++) if (c.materialAt(px, py) === S.band && (px + py) % 2 === 0 && i++ % 2 === 0) c.shade(px, py, 1);
+  }
+}
+
+/** The air hose: a rubber tube through the given points, bound in brass where it meets the helmet. */
+function hose(c: PixelCanvas, pts: [number, number][], bias = 0): void {
+  c.part();
+  for (let i = 0; i < pts.length - 1; i++) c.capsule(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], 0.7, 0.7, S.face, { bias });
+  for (let i = 1; i < pts.length - 1; i++) c.shade(pts[i][0], pts[i][1], 1);
+  c.part();
+  c.px(pts[0][0], pts[0][1], S.band, sphere(0, -0.4), { bias });
+}
+
+/**
+ * The diver's helmet: a brass dome over his whole head, three portholes
+ * (the front one showing the glow of his face behind the glass), a knob on
+ * the crown, the air hose looping off to the tank, and a bolted flange
+ * where it sits on the corselet.
+ */
+function diverHelmet(c: PixelCanvas, cx: number, U: number, view: View, blink: boolean | undefined): void {
+  const side = view === 'side';
+  const x = cx - (side ? 0.3 : 0);
+  const y = 11.2 + U;
+  if (view === 'down') hose(c, [[cx + 3.4, 8.6 + U], [cx + 5.8, 8.8 + U], [cx + 6.8, 11.6 + U], [cx + 6.2, 14.8 + U]]);
+  if (view === 'side') hose(c, [[x + 3.6, 9.6 + U], [x + 5.8, 10.2 + U], [x + 6, 13.4 + U]], -1);
+  c.part();
+  c.ellipse(x, y, side ? 4.3 : 4.5, 4.3, S.hat, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.1, 1) });
+  // A seam round the bonnet.
+  for (let px = Math.floor(x - 4); px <= Math.ceil(x + 4); px++) if (c.materialAt(px, 8 + U) === S.hat) c.shade(px, 8 + U, -1);
+  // The flange it sits on, bolted.
+  c.part();
+  c.shape(15 + U, 15 + U, () => [x - (side ? 3.2 : 3.6), x + (side ? 3.2 : 3.6)], S.band, (_x, _y, t) => cyl(t, 0.3));
+  for (const dx of side ? [-2, 1] : [-3, -1, 1, 3]) c.shade(x + dx, 15 + U, 1);
+  c.part();
+  c.px(x, 6.4 + U, S.band, sphere(0, -0.7));
+  if (view === 'down') {
+    porthole(c, cx, 12 + U, 1.9);
+    // The side ports peep round the dome's edges.
+    c.part();
+    for (const k of [-1, 1]) {
+      const ex = k < 0 ? Math.floor(cx - 4.5) : Math.ceil(cx + 4.5) - 1;
+      c.px(ex, 11 + U, PORT_GLASS, sphere(k * 0.8, 0));
+      c.px(ex, 12 + U, PORT_GLASS, sphere(k * 0.8, 0.2));
+      c.px(ex - k, 11 + U, S.band, sphere(k * 0.6, -0.1));
+      c.px(ex - k, 12 + U, S.band, sphere(k * 0.6, 0.2));
+    }
+    // His face behind the glass: two eyes and the glow round them.
+    lenses(c, [[10, 12 + U], [13, 12 + U]], blink);
+    c.spark(cx, 12 + U, S.mid, blink ? 0.15 : 0.35);
+    c.spark(cx - 2.4, y - 2.8, [255, 250, 220], 0.5);
+    return;
+  }
+  if (view === 'up') {
+    // Behind: the air inlet and the valve, the side ports at the edges, and
+    // the hose from the inlet down to the tank.
+    c.part();
+    c.px(cx + 1, 9 + U, S.band, sphere(0.2, -0.4));
+    c.px(cx + 2, 9 + U, S.band, sphere(0.5, -0.3), { bias: -1 });
+    c.px(cx - 2, 10 + U, S.band, sphere(-0.4, -0.2));
+    for (const k of [-1, 1]) {
+      const ex = k < 0 ? Math.floor(cx - 4.5) : Math.ceil(cx + 4.5) - 1;
+      c.px(ex, 11 + U, PORT_GLASS, sphere(k * 0.8, 0));
+      c.px(ex, 12 + U, PORT_GLASS, sphere(k * 0.8, 0.2));
+    }
+    hose(c, [[cx + 2.4, 9.6 + U], [cx + 5.6, 10.4 + U], [cx + 5.2, 14.6 + U], [cx + 2.8, 16.6 + U]]);
+    return;
+  }
+  // Facing left: the front port juts out, the side port faces us with his
+  // eye glowing through it.
+  c.part();
+  c.ellipse(x - 4.4, 12 + U, 1.1, 2.2, S.band, { normal: (_x, _y, dx, dy) => sphere(-0.7 + dx * 0.3, dy * 0.8, 1) });
+  c.px(x - 5.3, 11 + U, PORT_GLASS, sphere(-0.8, -0.1));
+  c.px(x - 5.3, 12 + U, PORT_GLASS, sphere(-0.8, 0.2));
+  c.spark(x - 5.3, 11.5 + U, S.mid, blink ? 0.2 : 0.5);
+  porthole(c, x + 0.4, 11.8 + U, 1.5);
+  lenses(c, [[Math.round(x - 0.6), 11 + U]], blink);
+  c.spark(x - 1.8, y - 2.8, [255, 250, 220], 0.5);
+}
+
+/** The diver's braces, from the shoulders down to the weight belt, buckled in brass. */
+function braces(c: PixelCanvas, pts: [number, number, number, number][]): void {
+  c.part();
+  for (const [x0, y0, x1, y1] of pts) c.capsule(x0, y0, x1, y1, 0.55, 0.55, LEATHER);
+  c.part();
+  for (const [x0, y0, x1, y1] of pts) c.px(x0 + (x1 - x0) * 0.4, y0 + (y1 - y0) * 0.4, S.band, sphere(0, -0.3));
+}
+
+/** Lead weights hung on the belt at row `y`. */
+function weights(c: PixelCanvas, xs: number[], y: number): void {
+  c.part();
+  for (const x of xs) {
+    c.px(x, y, LEAD, sphere(-0.3, -0.3));
+    c.px(x, y + 1, LEAD, sphere(-0.2, 0.4), { bias: -1 });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Directions
 
 const REACH_FRONT = 4.4;
@@ -1155,15 +1617,18 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
   const waist = 22 + U;
   const hem = 27 + L;
   c.part();
-  c.shape(top, hem, (y) => {
+  coatShape(c, top, hem, (y) => {
     const hw = coatWidth(y, top, waist, hem, 4.7);
     const sw = y > waist ? ((y - waist) / (hem - waist)) * p.sway : 0;
     return [cx - hw + sw, cx + hw + sw];
-  }, S.coat, (_x, y, t) => sphere(t * 0.9, y <= waist ? (y - top) / (waist - top) * 0.8 - 0.35 : 0.2, 1));
+  }, (_x, y, t) => sphere(t * 0.9, y <= waist ? (y - top) / (waist - top) * 0.8 - 0.35 : 0.2, 1), cx);
   for (let y = waist + 1; y <= hem; y++) c.shade(cx + Math.round(((y - waist) / (hem - waist)) * p.sway), y, -2);
   for (let y = top + 2; y < waist; y++) c.shade(cx, y, -1);
   if (S.witch || S.shaman) tatter(c, hem, cx - 6, cx + 6);
-  if (S.chem) {
+  if (S.diver) {
+    // Leather braces over the canvas, down to the weight belt.
+    braces(c, [[9.2, top + 1, 9.8, waist], [14.8, top + 1, 14.2, waist]]);
+  } else if (S.chem) {
     // A heavy leather apron down the front, riveted at the corners.
     c.part();
     c.shape(top + 3, hem, (y) => {
@@ -1179,17 +1644,20 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
   }
   // Brass buttons down the front, where the beak doesn't cover them.
   c.part();
-  if (!S.witch && !S.chem && !S.shaman) for (const y of [19, 21]) c.px(cx - 2, y + U, GOLD, sphere(-0.3, -0.4));
+  if (!S.witch && !S.chem && !S.shaman && !S.carnival) for (const y of [19, 21]) c.px(cx - 2, y + U, GOLD, sphere(-0.3, -0.4));
   // Belt and buckle.
   c.part();
-  c.shape(waist, waist, () => [cx - 4.3, cx + 4.3], LEATHER, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist, () => [cx - 4.3, cx + 4.3], S.belt ?? LEATHER, (_x, _y, t) => cyl(t, 0));
   c.part();
   c.px(cx, waist, GOLD, sphere(0, -0.3));
   c.px(cx - 1, waist, GOLD, sphere(-0.4, -0.3), { bias: -1 });
-  // The bandolier, shoulder to hip, with its vials.
-  c.part();
-  c.capsule(7.8, 15.6 + U, 16.2, 22.4 + U, 0.6, 0.6, LEATHER);
-  for (const t of [0.42, 0.6, 0.78]) vial(c, Math.round(7.8 + 8.4 * t), Math.round(15.6 + 6.8 * t + U) - 1);
+  if (S.diver) weights(c, [cx - 4, cx - 2, cx + 2, cx + 3], waist);
+  else {
+    // The bandolier, shoulder to hip, with its vials.
+    c.part();
+    c.capsule(7.8, 15.6 + U, 16.2, 22.4 + U, 0.6, 0.6, S.belt ?? LEATHER);
+    for (const t of [0.42, 0.6, 0.78]) vial(c, Math.round(7.8 + 8.4 * t), Math.round(15.6 + 6.8 * t + U) - 1);
+  }
 
   mantle(c, cx, U, 5.9, 5.9);
 
@@ -1223,13 +1691,27 @@ function drawDown(c: PixelCanvas, p: Pose, seed: number): void {
 
   if (S.chem) {
     head(() => {
-      if (S.cryo) cryoFace(c, cx, U, p.blink);
-      else chemMask(c, cx, U, p.blink);
-      hat(c, cx, U, 'down');
+      if (S.diver) diverHelmet(c, cx, U, 'down', p.blink);
+      else {
+        if (S.cryo) cryoFace(c, cx, U, p.blink);
+        else chemMask(c, cx, U, p.blink);
+        hat(c, cx, U, 'down');
+      }
     });
     if (!fa.behind) armA();
     if (!fb.behind) armB();
     if (p.puff) puff(c, fa.x, Math.round(fa.y - 0.6) - 5, p.puff);
+    return;
+  }
+
+  if (S.carnival) {
+    ruff(c, cx, 15.6 + U, 4.6);
+    head(() => {
+      carnivalFace(c, cx, U, p.blink);
+      hat(c, cx, U, 'down');
+    });
+    if (!fa.behind) armA();
+    if (!fb.behind) armB();
     return;
   }
 
@@ -1282,22 +1764,30 @@ function drawUp(c: PixelCanvas, p: Pose, seed: number): void {
   const waist = 22 + U;
   const hem = 27 + L;
   c.part();
-  c.shape(top, hem, (y) => {
+  coatShape(c, top, hem, (y) => {
     const hw = coatWidth(y, top, waist, hem, 4.7);
     const sw = y > waist ? ((y - waist) / (hem - waist)) * p.sway : 0;
     return [cx - hw + sw, cx + hw + sw];
-  }, S.coat, (_x, y, t) => sphere(t * 0.9, y <= waist ? (y - top) / (waist - top) * 0.8 - 0.35 : 0.2, 1));
+  }, (_x, y, t) => sphere(t * 0.9, y <= waist ? (y - top) / (waist - top) * 0.8 - 0.35 : 0.2, 1), cx);
   for (let y = top + 3; y <= hem; y++) c.shade(cx + (y > waist ? Math.round(((y - waist) / (hem - waist)) * p.sway) : 0), y, y > hem - 3 ? -2 : -1);
   if (S.witch || S.shaman) tatter(c, hem, cx - 6, cx + 6);
+  const belt = S.belt ?? LEATHER;
   c.part();
-  c.shape(waist, waist, () => [cx - 4.3, cx + 4.3], LEATHER, (_x, _y, t) => cyl(t, 0));
-  // The bandolier crossing the back, and a satchel at the hip.
+  c.shape(waist, waist, () => [cx - 4.3, cx + 4.3], belt, (_x, _y, t) => cyl(t, 0));
+  if (S.diver) {
+    // The braces crossed over the back, and the weights on the belt.
+    braces(c, [[9.4, top + 1, 14.4, waist], [14.6, top + 1, 9.6, waist]]);
+    weights(c, [cx - 4, cx - 1, cx + 1, cx + 3], waist);
+  } else {
+    // The bandolier crossing the back.
+    c.part();
+    c.capsule(16.2, 15.6 + U, 8.2, 22.4 + U, 0.6, 0.6, belt);
+  }
+  // A satchel at the hip.
   c.part();
-  c.capsule(16.2, 15.6 + U, 8.2, 22.4 + U, 0.6, 0.6, LEATHER);
+  c.shape(22 + U, 25 + U, () => [6.2, 9.8], belt, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.4, 1));
   c.part();
-  c.shape(22 + U, 25 + U, () => [6.2, 9.8], LEATHER, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.4, 1));
-  c.part();
-  c.shape(22 + U, 23 + U, () => [6.0, 10.0], LEATHER, (_x, _y, t) => cyl(t, 0.4), { bias: 1 });
+  c.shape(22 + U, 23 + U, () => [6.0, 10.0], belt, (_x, _y, t) => cyl(t, 0.4), { bias: 1 });
   c.px(8, 23 + U, GOLD, sphere(0, -0.3));
 
   mantle(c, cx, U, 5.9, 5.9);
@@ -1316,6 +1806,19 @@ function drawUp(c: PixelCanvas, p: Pose, seed: number): void {
     braid(c, cx - 1.6, 13 + U, 20 + U, -0.4);
     braid(c, cx + 1.6, 13 + U, 20 + U, 0.4);
     feathers(c, cx, U, 'up');
+  } else if (S.diver) {
+    // The tank on his back, then the helmet over it, its hose looping down to the tank.
+    tankBack(c, cx, U);
+    diverHelmet(c, cx, U, 'up', false);
+    if (!fa.behind) armA();
+    if (!fb.behind) armB();
+    return;
+  } else if (S.carnival) {
+    // The ruff, a velvet hood behind the mask and the ribbons that tie it on.
+    ruff(c, cx, 15.4 + U, 4.4, 1.3);
+    c.part();
+    c.ellipse(cx, 12 + U, 3.2, 2.6, S.hat, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+    maskTies(c, cx, 12 + U, p.sway * 0.5);
   } else if (S.chem) {
     // The back of the mask's rubber hood, its straps, and the tank over it all.
     c.part();
@@ -1376,23 +1879,29 @@ function drawSide(c: PixelCanvas, p: Pose, seed: number): void {
   const waist = 22 + U;
   const hem = 27 + L;
   c.part();
-  c.shape(top, hem, (y) => {
+  coatShape(c, top, hem, (y) => {
     const u = y <= waist ? 0 : (y - waist) / (hem - waist);
     const shift = y <= waist ? hx : hx + (cx - hx) * u;
     const hw = coatWidth(y, top, waist, hem, 3.2);
     return [shift - hw - 0.2, shift + hw + 0.3 + u * p.sway];
-  }, S.coat, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? (y - top) / (waist - top) * 0.8 - 0.35 : 0.2, 1));
+  }, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? (y - top) / (waist - top) * 0.8 - 0.35 : 0.2, 1), hx);
   // The fold where the front panel meets the side.
   for (let y = waist + 1; y <= hem; y++) c.shade(Math.round(hx + (cx - hx) * ((y - waist) / (hem - waist)) - 1.5), y, -1);
   if (S.witch || S.shaman) tatter(c, hem, cx - 5, cx + 6);
   c.part();
-  c.shape(waist, waist, () => [hx - 3.1, hx + 3.2], LEATHER, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist, () => [hx - 3.1, hx + 3.2], S.belt ?? LEATHER, (_x, _y, t) => cyl(t, 0));
   c.part();
   c.px(Math.round(hx - 3.1), waist, GOLD, sphere(-0.5, -0.3));
-  // The bandolier runs down the near side, vials along it.
-  c.part();
-  c.capsule(hx + 1.6, 15.4 + U, hx - 2.2, 22.2 + U, 0.6, 0.6, LEATHER);
-  for (const t of [0.45, 0.72]) vial(c, Math.round(hx + 1.6 - 3.8 * t), Math.round(15.4 + 6.8 * t + U) - 1);
+  if (S.diver) {
+    // A brace down his near side, and weights on the belt.
+    braces(c, [[hx + 0.4, top + 1, hx - 1.4, waist]]);
+    weights(c, [Math.round(hx - 2), Math.round(hx + 1)], waist);
+  } else {
+    // The bandolier runs down the near side, vials along it.
+    c.part();
+    c.capsule(hx + 1.6, 15.4 + U, hx - 2.2, 22.2 + U, 0.6, 0.6, S.belt ?? LEATHER);
+    for (const t of [0.45, 0.72]) vial(c, Math.round(hx + 1.6 - 3.8 * t), Math.round(15.4 + 6.8 * t + U) - 1);
+  }
 
   mantle(c, hx, U, 4.4, 4.2);
 
@@ -1433,6 +1942,33 @@ function drawSide(c: PixelCanvas, p: Pose, seed: number): void {
     c.shade(hx - 3, 15 + U, -1);
     c.shade(hx - 3, 11 + U, -2);
     necklace(c, [[hx - 3, 17 + U], [hx - 3, 18 + U], [hx - 2, 18 + U], [hx - 1, 18 + U]]);
+    lenses(c, [[hx - 2, 11 + U]], p.blink);
+    hat(c, hx, U, 'side');
+    arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.3, 1], { size: p.flask, boil: p.boil, seed });
+    return;
+  }
+
+  if (S.diver) {
+    diverHelmet(c, hx, U, 'side', p.blink);
+    arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.3, 1], { size: p.flask, boil: p.boil, seed });
+    return;
+  }
+
+  if (S.carnival) {
+    // The ruff, a velvet hood behind the mask, the ribbons tying it on, then
+    // the gilded mask in profile: its long beak striped with paint.
+    ruff(c, hx - 0.4, 15.5 + U, 3.4, 1.35);
+    c.part();
+    c.ellipse(hx + 1.3, 12 + U, 1.9, 2.4, S.hat, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8, 1) });
+    maskTies(c, hx + 2.4, 12 + U, p.sway * 0.6);
+    c.part();
+    c.ellipse(hx - 0.2, 12 + U, 2.8, 2.4, S.face);
+    c.part();
+    c.capsule(hx - 2.3, 12.4 + U, hx - 5.2, 13.3 + U, 1.35, 0.95, S.face);
+    c.capsule(hx - 5.2, 13.3 + U, hx - 7.3, 14.9 + U, 0.95, 0.45, S.face);
+    c.shade(hx - 4, 13 + U, 1);
+    c.part();
+    for (const [x, y] of [[hx - 1, 13], [hx, 13], [hx - 3, 14], [hx - 5, 14]] as const) c.px(x, y + U, MASK_PAINT, sphere(-0.3, 0.3));
     lenses(c, [[hx - 2, 11 + U]], p.blink);
     hat(c, hx, U, 'side');
     arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.3, 1], { size: p.flask, boil: p.boil, seed });
@@ -1762,6 +2298,7 @@ export const BIG_FLASK_SIZE = 15;
 
 /** A flask tumbling end over end: frame `i` of FLASK_FRAMES, turned i/FLASK_FRAMES of a circle. */
 export function flaskFrame(i: number, big: boolean, look: AlchemistLook = PLAGUE_LOOK): PixelCanvas {
+  if (look.diver) return bellFrame(i, big, look);
   if (look.chem) return canisterFrame(i, big, look);
   if (look.shaman) return gourdFrame(i, big, look);
   const S = big ? BIG_FLASK_SIZE : FLASK_SIZE;
@@ -1784,9 +2321,19 @@ export function flaskFrame(i: number, big: boolean, look: AlchemistLook = PLAGUE
   c.capsule(bx + ux * (r - 0.3), by + uy * (r - 0.3), bx + ux * (r + neck), by + uy * (r + neck), 0.65, 0.6, GLASS);
   c.part();
   c.ellipse(bx + ux * (r + neck + 0.9), by + uy * (r + neck + 0.9), big ? 1.1 : 0.8, big ? 1.1 : 0.8, look.cork ?? WOOD);
+  if (look.carnival) {
+    // Carnevale's ribbons streaming back from the neck as it tumbles.
+    c.part();
+    const nx = bx + ux * (r + neck * 0.4);
+    const ny = by + uy * (r + neck * 0.4);
+    for (let k = 1; k <= (big ? 3 : 2); k++) {
+      const wave = (k & 1 ? 0.5 : -0.5) * (i & 1 ? 1 : -1);
+      c.px(nx + uy * (k + 0.5) - ux * wave, ny - ux * (k + 0.5) - uy * wave, k === 2 ? GILT : RIBBON_MAGENTA, sphere(0, -0.3));
+    }
+  }
   c.spark(bx, by, look.hot, big ? 0.7 : 0.5);
   if (big) {
-    const cols: RGB[] = [look.hot, look.mid];
+    const cols: RGB[] = look.carnival ? CONFETTI : [look.hot, look.mid];
     for (let k = 0; k < 6; k++) {
       const t = (k / 6) * Math.PI * 2 + i * 0.6;
       c.spark(bx + Math.cos(t) * (r + 1.2), by + Math.sin(t) * (r + 1.2), cols[k % 2], 0.4);
@@ -1813,6 +2360,49 @@ function canisterFrame(i: number, big: boolean, look: AlchemistLook): PixelCanva
   c.px(m + ux * (len + r * 0.6), m + uy * (len + r * 0.6), look.band, sphere(ux * 0.6, uy * 0.6 - 0.3));
   c.px(m - ux * (len + r * 0.5), m - uy * (len + r * 0.5), look.band, sphere(-ux * 0.6, -uy * 0.6 - 0.3));
   c.spark(m, m, look.hot, big ? 0.7 : 0.5);
+  if (big) {
+    const cols: RGB[] = [look.hot, look.mid];
+    for (let k = 0; k < 6; k++) {
+      const t = (k / 6) * Math.PI * 2 + i * 0.6;
+      c.spark(m + Math.cos(t) * (r + 2), m + Math.sin(t) * (r + 2), cols[k % 2], 0.35);
+    }
+  }
+  return c;
+}
+
+/** The Brass Diver's diving bell tumbling: a brass crown, glass flaring to a brass rim, chem glowing in its lower half, bubbles trailing. */
+function bellFrame(i: number, big: boolean, look: AlchemistLook): PixelCanvas {
+  const S = big ? BIG_FLASK_SIZE : FLASK_SIZE;
+  const c = new PixelCanvas(S, S);
+  const a = (i / FLASK_FRAMES) * Math.PI * 2 - Math.PI / 2;
+  const ux = Math.cos(a);
+  const uy = Math.sin(a);
+  const len = big ? 3.4 : 2.5;
+  const r = big ? 2.6 : 1.8;
+  const m = S / 2;
+  c.part();
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - m;
+      const dy = y + 0.5 - m;
+      const along = dx * ux + dy * uy;
+      const across = -dx * uy + dy * ux;
+      if (Math.abs(along) > len) continue;
+      // u runs from the crown (along +len) to the rim (along -len).
+      const u = (len - along) / (2 * len);
+      const w = bellWidth(u) * r;
+      if (Math.abs(across) > w) continue;
+      const k = across / w;
+      const n = sphere(-uy * k * 0.8, ux * k * 0.8, 1);
+      const mat = u < 0.18 ? look.hat : u > 0.88 ? look.band : u > 0.5 && Math.abs(k) < 0.8 ? look.brew : GLASS;
+      c.px(x, y, mat, n);
+    }
+  }
+  c.part();
+  c.px(m + ux * (len + 0.6), m + uy * (len + 0.6), look.band, sphere(ux * 0.6, uy * 0.6 - 0.3));
+  c.spark(m - ux * len * 0.4, m - uy * len * 0.4, look.hot, big ? 0.7 : 0.5);
+  // A bubble or two trailing off the crown.
+  c.spark(m + ux * (len + 2) + uy, m + uy * (len + 2) - ux, look.core, 0.5);
   if (big) {
     const cols: RGB[] = [look.hot, look.mid];
     for (let k = 0; k < 6; k++) {
