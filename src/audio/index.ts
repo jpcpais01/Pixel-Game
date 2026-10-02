@@ -1068,6 +1068,18 @@ class GameSound {
     if (t !== null) this.sfx!.hundredCuts(t, pan);
   }
 
+  /** The Twin Blade's Riposte: a blow turned on his crossed sabers. */
+  saberParry(pan = 0): void {
+    const t = this.slot('saberParry');
+    if (t !== null) this.sfx!.saberParry(t, pan);
+  }
+
+  /** Thousand Cuts' last crossing flash. */
+  saberCross(pan = 0): void {
+    const t = this.slot('saberCross');
+    if (t !== null) this.sfx!.saberCross(t, pan);
+  }
+
   step(): void {
     const t = this.slot('step');
     if (t !== null) this.sfx!.step(t);

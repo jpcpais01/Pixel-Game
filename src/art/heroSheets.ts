@@ -31,6 +31,7 @@ import { BEAST_H, BEAST_LOOKS, BEAST_W, beastAnims, buildBeastFrames } from './b
 import { SAGE_ANIMS, SAGE_H, SAGE_LOOKS, SAGE_W, buildSageFrames } from './sage';
 import { DIGGER_ANIMS, DIGGER_H, DIGGER_LOOKS, DIGGER_W, buildDiggerFrames } from './digger';
 import { FALC_H, FALC_W, FALCONER_ANIMS, FALCONER_LOOKS, buildFalconerFrames } from './falconer';
+import { TWIN_ANIMS, TWIN_H, TWIN_LOOKS, TWIN_W, buildTwinFrames } from './twin';
 
 /** The rigs whose frames carry points the game reads (a crystal, a blade tip): the same for every look of the rig. */
 export type MetaKind = 'wizard' | 'warrior' | 'paladin' | 'jedi' | 'samurai';
@@ -170,6 +171,8 @@ rig(BEAST_LOOKS, BEAST_W, BEAST_H, buildBeastFrames, beastAnims);
 rig(SAGE_LOOKS, SAGE_W, SAGE_H, buildSageFrames, () => SAGE_ANIMS);
 rig(DIGGER_LOOKS, DIGGER_W, DIGGER_H, buildDiggerFrames, () => DIGGER_ANIMS);
 rig(FALCONER_LOOKS, FALC_W, FALC_H, buildFalconerFrames, () => FALCONER_ANIMS);
+// The Twin Blade, the Jedi class's third type, on a rig of his own; his frames carry the Jedi's points (blade tips).
+rig(TWIN_LOOKS, TWIN_W, TWIN_H, buildTwinFrames, () => TWIN_ANIMS, { meta: 'jedi' });
 
 /** Every hero sheet's key, in roster order. */
 export const HERO_SHEETS: readonly string[] = [...SHEETS.keys()];

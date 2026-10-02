@@ -62,6 +62,11 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'A dome of light soaks blows for 3 s, then bursts and throws foes back.',
     special: 'Lifts every foe in a wide ring into the air, then slams them all down.',
   },
+  'jedi.twin': {
+    attack: 'Three quick crossing cuts, hand after hand, then an X-cut that staggers.',
+    ability: 'Crossed blades turn the next blow aside and answer it with a hard counter-cut.',
+    special: 'Blinks from foe to foe cutting each, then every cut bursts at once.',
+  },
   'fighter.brawler': {
     attack: 'A five-punch combo ending in a flying straight that launches.',
     ability: 'A stream of chi fists hammers far ahead, ending in a finisher.',

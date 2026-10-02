@@ -46,6 +46,7 @@ import { Graveyard, graveyardIcon } from './digger';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
 import { Levitation, levitationIcon } from './sage';
 import { SAGE_KIT, STARSEER_KIT } from '../Sage';
+import { cutsGate, ThousandCuts, thousandCutsIcon } from './twin';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
@@ -161,6 +162,17 @@ const ULTS: Record<string, UltDef> = {
     pal: SAGE_KIT.lift,
     icon: levitationIcon,
     cast: (c) => c.world.addEffect(new Levitation(c.world, c)),
+  },
+  'jedi:twin': {
+    name: 'Thousand Cuts',
+    cost: 65,
+    windup: 500,
+    aim: 'self',
+    // The long blade's cyan, the shoto's magenta as its deepest colour (see ultimate/twin.ts).
+    pal: pal(0xf4ffff, 0x8af4ff, 0x22d0ec, 0xea2e9c, 0x5ae8ff),
+    icon: thousandCutsIcon,
+    gate: cutsGate,
+    cast: (c) => c.world.addEffect(new ThousandCuts(c.world, c)),
   },
   'fighter:brawler': {
     name: 'Dragon Rush',
@@ -518,6 +530,7 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:master': { pal: pal(0xf4fff4, 0x9af4a8, 0x2ed058, 0x0e7a32, 0x5aff7a) },
   'jedi:warlord': { pal: WARLORD_KIT.dominion, type: 'sith' },
   'jedi:starseer': { pal: STARSEER_KIT.lift, type: 'sage' },
+  'jedi:dune': { pal: pal(0xfffaf0, 0xffd27a, 0xf29a14, 0x9a4cff, 0xffb040), type: 'twin' },
   'samurai:kitsune': { pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
   'druid:autumn': { pal: AUTUMN_MAGIC.pal },
