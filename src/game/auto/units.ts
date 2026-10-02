@@ -229,6 +229,11 @@ const DEFS: Record<string, Def> = {
   'samurai.ronin': { cost: 1, origin: 'blade', range: 1, attack: ['slash1', 'slash2'], mana: 70,
     skill: { name: 'Iaido', cd: 6, kind: 'dash', aim: 'weak', dmg: 2, fx: 'steel', anim: 'dash' },
     ult: { kind: 'nova', aim: 'self', r: 2, dmg: 4, dodge: 0.8, fx: 'steel', anim: 'slash1' } },
+
+  // The Brewmaster: a front-line bruiser of the forge's own
+  'brewmaster.brewmaster': { cost: 3, origin: 'forged', range: 1, attack: ['swing', 'swing2', 'slam'], mana: 90,
+    skill: { name: 'Firebreath', cd: 7, kind: 'beam', aim: 'target', r: 2, dmg: 1.4, burn: 1.2, fx: 'flame', anim: 'breath' },
+    ult: { kind: 'beam', aim: 'target', r: 6, dmg: 3.6, knock: 1, stun: 0.6, fx: 'quake', anim: 'heave' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

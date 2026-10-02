@@ -207,4 +207,9 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Pours out a long cone of fire that turns with the aim.',
     special: 'A flame serpent coils round the spot, raking, then dives in a blast.',
   },
+  'brewmaster.brewmaster': {
+    attack: 'Two paddle swings, then a belly-first slam that throws foes back.',
+    ability: 'A swig from the jug spat through a flame: a short cone of fire that burns.',
+    special: 'A huge keg rolls along the aim, bowling foes aside, then bursts in foam.',
+  },
 };

@@ -63,6 +63,8 @@ import { DRAGON_KIT, Dragon, PORTO_KIT } from './Dragon';
 import { BEAST_H, BEAST_ORIGIN_Y } from '../art/beast';
 import { worn } from './skins';
 import type { Vitals } from './combat';
+import { BREW_H, BREW_ORIGIN_Y } from '../art/brewmaster';
+import { BREW_KIT, Brewmaster, JARL_KIT } from './Brewmaster';
 
 /** A unit direction. */
 export interface Aim {
@@ -1831,6 +1833,44 @@ const KITS: KitDef[] = [
       if (look === 'dragon') return new Dragon(world, x, y, DRAGON_KIT);
       if (look === 'porto') return new Dragon(world, x, y, PORTO_KIT);
       return new Eagle(world, x, y, EAGLE_KIT);
+    },
+  },
+  {
+    id: 'brewmaster',
+    name: 'Brewmaster',
+    blurb: 'Foam, fire and a mighty paddle',
+    types: [
+      {
+        // A mash paddle up close, a swig spat through a flame, and a keg bowled through the crowd.
+        id: 'brewmaster',
+        name: 'Brewmaster',
+        role: 'Stout, strong and well brewed',
+        accent: 0xf0a030,
+        attack: 'Mash paddle',
+        special: 'Firebreath',
+        preview: { texture: 'brewmaster', glow: 'brewmaster_e', idle: 'brewmaster_idle_down', chosen: 'brewmaster_heave_down', originY: BREW_ORIGIN_Y / BREW_H },
+        buttons: {
+          attack: { texture: 'icon_paddle' },
+          special: { texture: 'icon_firebreath' },
+        },
+        lookName: 'Copper still',
+        skins: [
+          {
+            // A braided blond beard, an iron cap, a wolf-fur mantle, a cask of honey mead on his back, and fire burning blue-white.
+            id: 'jarl',
+            name: 'Mead Jarl',
+            accent: 0xffc838,
+            preview: { texture: 'brewmaster_jarl', glow: 'brewmaster_jarl_e', idle: 'brewmaster_jarl_idle_down', chosen: 'brewmaster_jarl_heave_down', originY: BREW_ORIGIN_Y / BREW_H },
+            buttons: {
+              attack: { texture: 'icon_paddle_jarl' },
+              special: { texture: 'icon_firebreath_jarl' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Brewmaster(world, x, y, look === 'jarl' ? JARL_KIT : BREW_KIT);
     },
   },
 ];

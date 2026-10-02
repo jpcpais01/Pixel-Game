@@ -47,6 +47,8 @@ import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
 import { heroBuffs } from '../buffs';
 import { heroTimers, LASTING_MS, type TimeLeft } from '../timers';
+import { BREW_KIT, JARL_KIT } from '../Brewmaster';
+import { rollingThunder } from './brewmaster';
 
 /** An effect that can say how long it has left (every `Fx`, the sentry). */
 interface TimeTeller {
@@ -435,6 +437,15 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.wyrmIcon,
     cast: wyrmWrath,
   },
+  'brewmaster:brewmaster': {
+    name: 'Rolling Thunder',
+    cost: 65,
+    windup: 620,
+    aim: 'dir',
+    pal: BREW_KIT.ult,
+    icon: icons.rollingThunderIcon,
+    cast: rollingThunder,
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -501,6 +512,7 @@ const SKINS: Record<string, UltSkin> = {
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
+  'brewmaster:jarl': { pal: JARL_KIT.ult },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */
