@@ -599,3 +599,24 @@ export const burningMirrorIcon: IconPainter = (put, p) => {
   put(13, 11, p.core);
   for (const [x, y] of [[14, 11], [12, 11], [13, 10], [13, 12], [15, 11], [13, 13], [14, 9], [15, 13]] as const) put(x, y, x === 15 || y === 13 || y === 9 ? p.mid : p.hot);
 };
+
+export const magnumOpusIcon: IconPainter = (put, p) => {
+  // The golden array: a ring, a seven-pointed star in it, the philosopher's stone blazing at the heart.
+  for (let i = 0; i < 56; i++) {
+    const a = (i / 56) * Math.PI * 2;
+    put(Math.round(8 + Math.cos(a) * 7 - 0.5), Math.round(8 + Math.sin(a) * 7 - 0.5), p.mid);
+  }
+  const pts: [number, number][] = [];
+  for (let i = 0; i < 7; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI * 2) / 7;
+    pts.push([7.5 + Math.cos(a) * 6, 7.5 + Math.sin(a) * 6]);
+  }
+  for (let i = 0; i < 7; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 3) % 7];
+    for (let s = 0; s <= 12; s++) put(Math.round(x0 + ((x1 - x0) * s) / 12), Math.round(y0 + ((y1 - y0) * s) / 12), p.hot);
+  }
+  for (const [x, y] of pts) put(Math.round(x), Math.round(y), p.core);
+  disc(put, 8, 8, 2, p.deep);
+  disc(put, 8, 8, 1, p.core);
+};

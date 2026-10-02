@@ -11,6 +11,7 @@ import { FORGED_KITS } from './forged';
 import { SHOW_KITS } from './show';
 import { BLADE_KITS } from './blade';
 import { LIGHTWRIGHT_KITS } from './lightwright';
+import { TRANSMUTER_KITS } from './transmuter';
 
 export const KITS: Record<string, Kit> = {
   ...ARCANE_KITS,
@@ -21,6 +22,7 @@ export const KITS: Record<string, Kit> = {
   ...SHOW_KITS,
   ...BLADE_KITS,
   ...LIGHTWRIGHT_KITS,
+  ...TRANSMUTER_KITS,
 };
 
 export const kitFor = (key: string): Kit => KITS[key] ?? {};

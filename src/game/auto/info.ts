@@ -65,6 +65,7 @@ export function spellText(s: Spell, dps: number): string {
   const extra = [
     s.stun ? `stuns ${sec(s.stun)}` : '',
     s.slow ? 'slows' : '',
+    s.brittle ? `turns to lead ${sec(s.brittle)} (struck 30% harder)` : '',
     s.burn ? `burns ${Math.round(dps * s.burn)}` : '',
     s.knock ? 'throws back' : '',
     s.drain ? `heals ${Math.round(s.drain * 100)}% of it` : '',

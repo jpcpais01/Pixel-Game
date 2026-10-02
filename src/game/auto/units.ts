@@ -48,6 +48,8 @@ export interface Spell {
   stun?: number;
   /** Seconds foes attack 40% slower. */
   slow?: number;
+  /** Seconds foes take 30% more damage (turned to lead). */
+  brittle?: number;
   /** Extra damage over 3 s, in seconds of the caster's attack damage. */
   burn?: number;
   /** Cells foes are thrown back. */
@@ -232,6 +234,9 @@ const DEFS: Record<string, Def> = {
   'lightwright.lightwright': { cost: 3, origin: 'forged', range: 3, attack: ['focus'], missile: 'orb', mana: 80,
     skill: { name: 'Prism', cd: 7, kind: 'blast', aim: 'crowd', r: 1.4, dmg: 1.8, delay: 0.4, fx: 'light', anim: 'toss' },
     ult: { kind: 'beam', aim: 'target', r: 5, dmg: 4.4, burn: 1, fx: 'fire', anim: 'unveil' } },
+  'transmuter.transmuter': { cost: 3, origin: 'forged', range: 3, attack: ['flick'], missile: 'flask', mana: 80,
+    skill: { name: 'Transmutation circle', cd: 7, kind: 'blast', aim: 'crowd', r: 1.2, dmg: 0.6, stun: 1.5, brittle: 2.5, delay: 0.5, fx: 'steel', anim: 'inscribe' },
+    ult: { kind: 'blast', aim: 'crowd', r: 1.8, dmg: 4.2, stun: 1, delay: 0.9, fx: 'steel', anim: 'opus' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

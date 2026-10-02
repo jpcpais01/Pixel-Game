@@ -44,6 +44,7 @@ import { LIGHTWRIGHT_KIT, STARGAZER_KIT } from '../Lightwright';
 import { burningMirror } from './lightwright';
 import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
+import { magnumOpus } from './transmuter';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
@@ -447,6 +448,15 @@ const ULTS: Record<string, UltDef> = {
     // The mirror stands behind him while he braces and steers it (see Lightwright.braceMirror).
     cast: burningMirror,
   },
+  'transmuter:transmuter': {
+    name: 'Magnum Opus',
+    cost: 70,
+    windup: 600,
+    aim: 'self',
+    pal: pal(0xfffbe8, 0xffe08a, 0xf0b030, 0x8a5a14, 0xffd060),
+    icon: icons.magnumOpusIcon,
+    cast: magnumOpus,
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -514,6 +524,7 @@ const SKINS: Record<string, UltSkin> = {
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
   'lightwright:stargazer': { pal: STARGAZER_KIT.light.pal },
+  'transmuter:rubedo': { pal: pal(0xfff0e0, 0xffc070, 0xe8402a, 0x7a0e14, 0xff7a40) },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

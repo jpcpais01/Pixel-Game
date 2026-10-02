@@ -212,4 +212,9 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'A hovering prism sweeps spectrum beams round it, then shatters.',
     special: 'A great mirror focuses a steerable heat ray that scorches the ground.',
   },
+  'transmuter.transmuter': {
+    attack: 'Flicks a quicksilver bead that bursts and splits after two more foes.',
+    ability: 'Chalks a circle; foes in it turn to lead: held, and struck 30% harder.',
+    special: 'A golden array gilds foes round her into statues, then shatters them.',
+  },
 };

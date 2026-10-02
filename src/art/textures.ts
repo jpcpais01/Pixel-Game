@@ -159,6 +159,7 @@ import { lightwrightFx } from './lightwright';
 
 import { CHUNK, ForestGen, EVERWOOD_SEED } from '../world/forestGen';
 import { forestTile } from '../world/forestGround';
+import { registerTransmuterIcons } from './transmuter';
 import { BLOOM_H, BLOOM_KINDS, BLOOM_W, FOUNTAIN_FRAMES, FOUNTAIN_H, FOUNTAIN_W, RIPPLE_FRAMES, RIPPLE_H, RIPPLE_W, rippleFrames, PILLAR_H, PILLAR_W, RUIN_H_H, RUIN_H_W, RUIN_V_H, RUIN_V_W, SEED_H, SEED_W, THORNBLOOM_H, THORNBLOOM_W, bloom, bloomSeed, buffIcon, fountain, pillar, ruinH, ruinV, thornbloom } from './garden';
 
 const toCanvas = pixelCanvas;
@@ -597,6 +598,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_grid_hive', toCanvas(16, 16, gridIcon(true)));
   // The Lightwright's prisms ('lw_prism_<look>', turning 'p0'..'p7') and his buttons.
   lightwrightFx(fxRegistrar(scene));
+  registerTransmuterIcons((key, px) => scene.textures.addCanvas(key, toCanvas(16, 16, px)));
 
   yield;
   // Items: hotbar icons and the bottles monsters drop.
