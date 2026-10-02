@@ -1809,7 +1809,7 @@ export class Sfx {
     this.m.startNoise(src, t + 0.12, 0.9);
   }
 
-  /** The Gravedigger's spade cutting the air: a heavy whoosh, lower for the scoop. */
+  /** The BarrowKnight's spade cutting the air: a heavy whoosh, lower for the scoop. */
   spadeSwing(t: number, pan: number, heavy: boolean): void {
     const out = this.out(pan, heavy ? 0.5 : 0.4, 0.12);
     this.burstNoise(out, t, 'bandpass', heavy ? 500 : 800, heavy ? 1200 : 1800, 1.2, 0.3, heavy ? 0.2 : 0.14, true);

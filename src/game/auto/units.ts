@@ -213,7 +213,7 @@ const DEFS: Record<string, Def> = {
   'inventor.engineer': { cost: 2, origin: 'forged', range: 1, attack: ['swing', 'swing2', 'bonk'], mana: 80,
     skill: { name: 'Sentry', cd: 7, kind: 'rain', aim: 'target', n: 5, dmg: 2.2, delay: 1.5, fx: 'bullets', anim: 'build' },
     ult: { kind: 'rain', aim: 'crowd', n: 14, dmg: 7, delay: 1.8, fx: 'missiles', anim: 'build' } },
-  'necromancer.digger': { cost: 3, origin: 'forged', range: 1, attack: ['swing1', 'swing2', 'slam'], mana: 90,
+  'necromancer.barrow': { cost: 3, origin: 'forged', range: 1, attack: ['swing1', 'swing2', 'slam'], mana: 90,
     skill: { name: 'Open grave', cd: 7, kind: 'blast', aim: 'crowd', r: 1.1, dmg: 1.4, stun: 1.6, delay: 0.4, fx: 'souls', anim: 'dig' },
     ult: { kind: 'nova', aim: 'self', r: 2.2, dmg: 3.6, knock: 1, stun: 0.5, fx: 'haunt', anim: 'dig' } },
 

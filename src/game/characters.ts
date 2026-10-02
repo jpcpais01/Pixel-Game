@@ -44,8 +44,8 @@ import { FALC_H, FALC_ORIGIN_Y } from '../art/falconer';
 import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
-import { DIGGER_KIT, Gravedigger, MOSSGRAVE_KIT } from './Gravedigger';
-import { DIGGER_H, DIGGER_ORIGIN_Y } from '../art/digger';
+import { BARROW_KIT, BarrowKnight, MOSSGRAVE_KIT } from './BarrowKnight';
+import { BARROW_H, BARROW_ORIGIN_Y } from '../art/barrow';
 import { DROWNED_KIT, Lich, LICH_KIT } from './Lich';
 import { LICH_H, LICH_ORIGIN_Y } from '../art/lich';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
@@ -689,7 +689,7 @@ const KITS: KitDef[] = [
       {
         // A dark-side hunter in grey-black armour and a short cape, his ring saber thrown like a boomerang.
         id: 'inquisitor',
-        name: 'Inquisitor',
+        name: 'Ringblade',
         role: 'Hunter of the light',
         accent: 0xe8403c,
         attack: 'Ring saber',
@@ -1171,13 +1171,13 @@ const KITS: KitDef[] = [
       {
         // The class's tank: a burly old sexton with an iron spade and a
         // lantern of corpse-light, who opens the earth and calls up its dead.
-        id: 'digger',
-        name: 'Gravedigger',
+        id: 'barrow',
+        name: 'Barrow Knight',
         role: 'Spade and the restless earth',
         accent: 0xb8e05a,
         attack: 'Spade',
         special: 'Open grave',
-        preview: { texture: 'necro_digger', glow: 'necro_digger_e', idle: 'necro_digger_idle_down', chosen: 'necro_digger_dig_down', originY: DIGGER_ORIGIN_Y / DIGGER_H },
+        preview: { texture: 'necro_barrow', glow: 'necro_barrow_e', idle: 'necro_barrow_idle_down', chosen: 'necro_barrow_dig_down', originY: BARROW_ORIGIN_Y / BARROW_H },
         buttons: {
           attack: { texture: 'icon_spade' },
           special: { texture: 'icon_grave' },
@@ -1189,7 +1189,7 @@ const KITS: KitDef[] = [
             id: 'mossgrave',
             name: 'Mossgrave',
             accent: 0x5ae8d8,
-            preview: { texture: 'necro_mossgrave', glow: 'necro_mossgrave_e', idle: 'necro_mossgrave_idle_down', chosen: 'necro_mossgrave_dig_down', originY: DIGGER_ORIGIN_Y / DIGGER_H },
+            preview: { texture: 'necro_mossgrave', glow: 'necro_mossgrave_e', idle: 'necro_mossgrave_idle_down', chosen: 'necro_mossgrave_dig_down', originY: BARROW_ORIGIN_Y / BARROW_H },
             buttons: {
               attack: { texture: 'icon_spade_mossgrave' },
               special: { texture: 'icon_grave_mossgrave' },
@@ -1260,7 +1260,7 @@ const KITS: KitDef[] = [
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'digger' || look === 'mossgrave') return new Gravedigger(world, x, y, look === 'mossgrave' ? MOSSGRAVE_KIT : DIGGER_KIT);
+      if (look === 'barrow' || look === 'mossgrave') return new BarrowKnight(world, x, y, look === 'mossgrave' ? MOSSGRAVE_KIT : BARROW_KIT);
       if (look === 'reaper' || look === 'catrina') return new Reaper(world, x, y, look === 'catrina' ? CATRINA_KIT : REAPER_KIT);
       if (look === 'lich' || look === 'drowned') return new Lich(world, x, y, look === 'drowned' ? DROWNED_KIT : LICH_KIT);
       const kit = { necro: NECRO_KIT, tomb: TOMB_KIT, blood: BLOOD_KIT, wyrm: WYRM_KIT }[look] ?? NECRO_KIT;

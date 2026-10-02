@@ -1,4 +1,4 @@
-// The Gravedigger's effects on the board: the spade's swings and earth-
+// The BarrowKnight's effects on the board: the spade's swings and earth-
 // cracking slam, the open grave whose arms hold what stands on it, and the
 // Graveyard's ring of headstones loosing ghosts. Earth, iron and stone keep
 // their own colours; the corpse-light takes the palette, so Mossgrave's look
@@ -244,6 +244,6 @@ const graveyardMove = {
   },
 };
 
-export const DIGGER_KITS: Record<string, Kit> = {
-  'necromancer.digger': { melee: spadeBlow, skill: graveMove, ult: graveyardMove },
+export const BARROW_KITS: Record<string, Kit> = {
+  'necromancer.barrow': { melee: spadeBlow, skill: graveMove, ult: graveyardMove },
 };

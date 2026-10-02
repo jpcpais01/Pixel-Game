@@ -30,7 +30,7 @@ import { WRAITH_ANIMS, WRAITH_H, WRAITH_LOOKS, WRAITH_W, buildWraithFrames } fro
 import { INV_H, INV_W, INVENTOR_LOOKS, buildInventorFrames, inventorAnims } from './inventor';
 import { BEAST_H, BEAST_LOOKS, BEAST_W, beastAnims, buildBeastFrames } from './beast';
 import { SAGE_ANIMS, SAGE_H, SAGE_LOOKS, SAGE_W, buildSageFrames } from './sage';
-import { DIGGER_ANIMS, DIGGER_H, DIGGER_LOOKS, DIGGER_W, buildDiggerFrames } from './digger';
+import { BARROW_ANIMS, BARROW_H, BARROW_LOOKS, BARROW_W, buildBarrowFrames } from './barrow';
 import { FALC_H, FALC_W, FALCONER_ANIMS, FALCONER_LOOKS, buildFalconerFrames } from './falconer';
 import { TWIN_ANIMS, TWIN_H, TWIN_LOOKS, TWIN_W, buildTwinFrames } from './twin';
 import { INQ_ANIMS, INQ_H, INQ_W, INQUISITOR_LOOKS, buildInquisitorFrames } from './inquisitor';
@@ -173,7 +173,7 @@ rig(INVENTOR_LOOKS, INV_W, INV_H, buildInventorFrames, inventorAnims);
 rig(BEAST_LOOKS, BEAST_W, BEAST_H, buildBeastFrames, beastAnims);
 // The Force Sage: a Jedi-class type on a rig of her own.
 rig(SAGE_LOOKS, SAGE_W, SAGE_H, buildSageFrames, () => SAGE_ANIMS);
-rig(DIGGER_LOOKS, DIGGER_W, DIGGER_H, buildDiggerFrames, () => DIGGER_ANIMS);
+rig(BARROW_LOOKS, BARROW_W, BARROW_H, buildBarrowFrames, () => BARROW_ANIMS);
 rig(FALCONER_LOOKS, FALC_W, FALC_H, buildFalconerFrames, () => FALCONER_ANIMS);
 // The Twin Blade, the Jedi class's third type, on a rig of his own; his frames carry the Jedi's points (blade tips).
 rig(TWIN_LOOKS, TWIN_W, TWIN_H, buildTwinFrames, () => TWIN_ANIMS, { meta: 'jedi' });

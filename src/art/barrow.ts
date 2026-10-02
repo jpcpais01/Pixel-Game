@@ -1,4 +1,4 @@
-// The Gravedigger: the necromancers' sexton, drawn from his own rig.
+// The BarrowKnight: the necromancers' sexton, drawn from his own rig.
 //
 // A burly old man, hunched from a life bent over a spade: a battered,
 // wide-brimmed felt hat pulled low (a dent in the crown, a notch in the
@@ -10,7 +10,7 @@
 // lantern burning a sickly green, and in his hands is a big iron spade, its
 // worn edge bright, earth still on its face.
 //
-// Mossgrave is his skin: a bog-digger the marsh has half taken back. Moss
+// Mossgrave is his skin: a bog-barrow the marsh has half taken back. Moss
 // grows thick on his shoulders and hat brim, lichen spots his coat, two
 // tiny mushrooms sprout from the brim, roots wind round the spade's haft
 // up to a verdigris blade, and the lantern is a cage of twisted root with
@@ -24,13 +24,13 @@ import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel'
 import { iconPainter } from './effects';
 import { DIRS, type Dir } from './wizard';
 
-export const DIGGER_W = 60;
-export const DIGGER_H = 56;
+export const BARROW_W = 60;
+export const BARROW_H = 56;
 const BODY_X = 18;
 const BODY_Y = 16;
 /** Sprite origin in the frame: body centre, just under the feet. */
-export const DIGGER_ORIGIN_X = BODY_X + 12;
-export const DIGGER_ORIGIN_Y = BODY_Y + 31;
+export const BARROW_ORIGIN_X = BODY_X + 12;
+export const BARROW_ORIGIN_Y = BODY_Y + 31;
 
 const ramp = (...c: string[]): RGB[] => c.map(hex);
 
@@ -43,8 +43,8 @@ export interface Overgrowth {
   root: Material;
 }
 
-/** One look for the gravedigger: his cloth, his face, his spade and his lantern. */
-export interface DiggerLook {
+/** One look for the gravebarrow: his cloth, his face, his spade and his lantern. */
+export interface BarrowLook {
   key: string;
   coat: Material;
   /** Two patches sewn on the coat. */
@@ -88,8 +88,8 @@ export const WISP_HOT = hex('#9ff8ee');
 export const WISP_MID = hex('#3ad0c8');
 export const WISP_DEEP = hex('#0e5a68');
 
-export const DIGGER_LOOK: DiggerLook = {
-  key: 'necro_digger',
+export const BARROW_LOOK: BarrowLook = {
+  key: 'necro_barrow',
   coat: { ramp: ramp('#1a1c16', '#2b2f24', '#40452f', '#575e40', '#6f7652'), outline: hex('#0a0b08'), outlineLit: hex('#14160f') },
   patch: { ramp: ramp('#2a1c1e', '#44302e', '#5e4440', '#785a50'), outline: hex('#0e0808') },
   patch2: { ramp: ramp('#30280f', '#4c401c', '#6a5a2c', '#86743e'), outline: hex('#100c04') },
@@ -114,7 +114,7 @@ export const DIGGER_LOOK: DiggerLook = {
 };
 
 /** Mossgrave: moss, lichen and root over peat-dark cloth, a verdigris blade and a wisp in a cage of root. */
-export const MOSSGRAVE_LOOK: DiggerLook = {
+export const MOSSGRAVE_LOOK: BarrowLook = {
   key: 'necro_mossgrave',
   coat: { ramp: ramp('#121a0e', '#1e2c16', '#2e4220', '#405a2a', '#527034'), outline: hex('#060a04'), outlineLit: hex('#0c1208') },
   patch: { ramp: ramp('#1e2a14', '#2e4220', '#46622c', '#5e823a'), outline: hex('#080c04') },
@@ -146,10 +146,10 @@ export const MOSSGRAVE_LOOK: DiggerLook = {
   },
 };
 
-export const DIGGER_LOOKS = [DIGGER_LOOK, MOSSGRAVE_LOOK];
+export const BARROW_LOOKS = [BARROW_LOOK, MOSSGRAVE_LOOK];
 
-/** The look being drawn; set by buildDiggerFrames. */
-let S: DiggerLook = DIGGER_LOOK;
+/** The look being drawn; set by buildBarrowFrames. */
+let S: BarrowLook = BARROW_LOOK;
 
 const hash = (a: number, b: number): number => {
   let h = (a * 374761393 + b * 668265263) | 0;
@@ -1206,17 +1206,17 @@ function rest(view: View): Pose[] {
 // ---------------------------------------------------------------------------
 // Frame generation
 
-export type DiggerAnim = 'idle' | 'walk' | 'swing1' | 'swing2' | 'slam' | 'dig' | 'rest';
+export type BarrowAnim = 'idle' | 'walk' | 'swing1' | 'swing2' | 'slam' | 'dig' | 'rest';
 
-export interface DiggerAnimDef {
-  name: DiggerAnim;
+export interface BarrowAnimDef {
+  name: BarrowAnim;
   fps: number;
   loop: boolean;
   poses: (view: View) => Pose[];
   order?: readonly number[];
 }
 
-export const DIGGER_ANIMS: DiggerAnimDef[] = [
+export const BARROW_ANIMS: BarrowAnimDef[] = [
   { name: 'idle', fps: 6, loop: true, poses: idle },
   { name: 'walk', fps: 8, loop: true, poses: walk },
   { name: 'swing1', fps: 15, loop: false, poses: swing1 },
@@ -1227,7 +1227,7 @@ export const DIGGER_ANIMS: DiggerAnimDef[] = [
 ];
 
 /** Frame index at which each move lands. */
-export const DIGGER_HIT_FRAME = { swing1: 2, swing2: 2, slam: 3, dig: 5 } as const;
+export const BARROW_HIT_FRAME = { swing1: 2, swing2: 2, slam: 3, dig: 5 } as const;
 
 /** The lantern's place on him, from his feet, per facing (for its light in the world). */
 export const LANTERN_AT: Record<Dir, { x: number; y: number }> = {
@@ -1237,33 +1237,33 @@ export const LANTERN_AT: Record<Dir, { x: number; y: number }> = {
   right: { x: 0.2, y: -7 },
 };
 
-export interface DiggerFrame {
+export interface BarrowFrame {
   key: string;
-  anim: DiggerAnim;
+  anim: BarrowAnim;
   dir: Dir;
   canvas: PixelCanvas;
 }
 
-function drawDiggerFrame(dir: Dir, pose: Pose): PixelCanvas {
-  const c = new PixelCanvas(DIGGER_W, DIGGER_H).offset(BODY_X, BODY_Y);
+function drawBarrowFrame(dir: Dir, pose: Pose): PixelCanvas {
+  const c = new PixelCanvas(BARROW_W, BARROW_H).offset(BODY_X, BODY_Y);
   if (dir === 'down') drawDown(c, pose);
   else if (dir === 'up') drawUp(c, pose);
   else drawSide(c, pose);
   return dir === 'right' ? c.mirrored() : c;
 }
 
-export function buildDiggerFrames(look: DiggerLook = DIGGER_LOOK): DiggerFrame[] {
+export function buildBarrowFrames(look: BarrowLook = BARROW_LOOK): BarrowFrame[] {
   S = look;
-  const out: DiggerFrame[] = [];
-  for (const a of DIGGER_ANIMS) {
+  const out: BarrowFrame[] = [];
+  for (const a of BARROW_ANIMS) {
     for (const dir of DIRS) {
       const view: View = dir === 'left' || dir === 'right' ? 'side' : dir;
       a.poses(view).forEach((pose, index) => {
-        out.push({ key: `${a.name}_${dir}_${index}`, anim: a.name, dir, canvas: drawDiggerFrame(dir, pose) });
+        out.push({ key: `${a.name}_${dir}_${index}`, anim: a.name, dir, canvas: drawBarrowFrame(dir, pose) });
       });
     }
   }
-  S = DIGGER_LOOK;
+  S = BARROW_LOOK;
   return out;
 }
 
@@ -1271,7 +1271,7 @@ export function buildDiggerFrames(look: DiggerLook = DIGGER_LOOK): DiggerFrame[]
 // Ability icons (16x16)
 
 /** Colours an icon is painted in: the spade, the earth, the glow, and the outline. */
-export interface DiggerIcon {
+export interface BarrowIcon {
   iron: [string, string, string];
   haft: [string, string];
   earth: [string, string, string];
@@ -1283,7 +1283,7 @@ export interface DiggerIcon {
   moss?: string;
 }
 
-export const DIGGER_ICON: DiggerIcon = {
+export const BARROW_ICON: BarrowIcon = {
   iron: ['#d8dde0', '#8a9096', '#4a4e54'],
   haft: ['#8a6a42', '#5a3e24'],
   earth: ['#7a5a3a', '#5a3e26', '#3a2818'],
@@ -1292,7 +1292,7 @@ export const DIGGER_ICON: DiggerIcon = {
   outline: '#120c08',
 };
 
-export const MOSSGRAVE_ICON: DiggerIcon = {
+export const MOSSGRAVE_ICON: BarrowIcon = {
   iron: ['#b8e0c4', '#5a8a6a', '#2e4a3a'],
   haft: ['#6e5232', '#3e2a18'],
   earth: ['#4e6a2c', '#344c1c', '#1e2e10'],
@@ -1303,7 +1303,7 @@ export const MOSSGRAVE_ICON: DiggerIcon = {
 };
 
 /** The spade: swung on a slant, earth flying off its blade. */
-export function spadeIcon(k: DiggerIcon = DIGGER_ICON): Uint8ClampedArray {
+export function spadeIcon(k: BarrowIcon = BARROW_ICON): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
   // The haft from the T-grip at the top left down to the blade.
   for (let i = 0; i < 8; i++) {
@@ -1336,7 +1336,7 @@ export function spadeIcon(k: DiggerIcon = DIGGER_ICON): Uint8ClampedArray {
 }
 
 /** Open grave: the ground split, an arm clawing out of it, the lantern's light rising from the crack. */
-export function graveIcon(k: DiggerIcon = DIGGER_ICON): Uint8ClampedArray {
+export function graveIcon(k: BarrowIcon = BARROW_ICON): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
   // The turned earth, and the crack across it glowing.
   for (let y = 10; y < 16; y++) {

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { sound } from '../../audio';
-import { STONE_CRUMBLE, STONE_FRAME, STONE_KINDS, STONE_RISE } from '../../art/diggerFx';
+import { STONE_CRUMBLE, STONE_FRAME, STONE_KINDS, STONE_RISE } from '../../art/barrowFx';
 import type { Hurtbox } from '../combat';
 import { Clods, GRAVE_SOIL, MOSS_SOIL } from '../Graves';
 import { snap } from '../display';
@@ -8,7 +8,7 @@ import { clamp01, dither, easeOut, flare, Fx, GROUND, hash, strikeGround, type I
 import type { Cast, IconPainter } from './types';
 import type { WorldScene } from '../../scenes/WorldScene';
 
-// The Gravedigger's Special, Graveyard: headstones burst up out of the earth
+// The BarrowKnight's Special, Graveyard: headstones burst up out of the earth
 // in a ring round him, throwing back everything they come up under. For a
 // few seconds the ring stands, and from every stone a ghost tears loose,
 // streaking for the nearest foe, then another, then another; at the last the

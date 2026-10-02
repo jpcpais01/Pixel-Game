@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
-import { DIGGER_H, DIGGER_HIT_FRAME, DIGGER_ORIGIN_X, DIGGER_ORIGIN_Y, DIGGER_W, LANTERN_AT } from '../art/digger';
+import { BARROW_H, BARROW_HIT_FRAME, BARROW_ORIGIN_X, BARROW_ORIGIN_Y, BARROW_W, LANTERN_AT } from '../art/barrow';
 import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
@@ -16,16 +16,16 @@ import { HERO_STATS } from './stats';
 import { stand } from './rest';
 import { heroTimers } from './timers';
 
-// The Gravedigger: the Necromancer's tank, a burly old sexton with an iron
-// spade and a lantern of corpse-light at his belt (art/digger.ts).
+// The BarrowKnight: the Necromancer's tank, a burly old sexton with an iron
+// spade and a lantern of corpse-light at his belt (art/barrow.ts).
 //  - The attack is the spade: a swing, a scooping backswing that flings earth,
 //    then an overhead slam that cracks the ground and throws foes back.
 //  - The ability is Open grave: he drives the spade into the earth where he
 //    aims and heaves; the ground splits, arms of bone burst up and seize
 //    every foe on it, and a ghoul climbs out of the pit to fight for him.
-//  - His Special, Graveyard, is in ultimate/digger.ts.
+//  - His Special, Graveyard, is in ultimate/barrow.ts.
 
-const stats = HERO_STATS['necromancer.digger'];
+const stats = HERO_STATS['necromancer.barrow'];
 
 /** A swing chains into the next if it starts within this long of the previous one. */
 const COMBO_WINDOW = 1400;
@@ -62,8 +62,8 @@ const DEG: Record<Dir, number> = { right: 0, down: 90, left: 180, up: 270 };
 type State = 'free' | 'swing' | 'dig';
 type Blow = 'swing1' | 'swing2' | 'slam';
 
-/** How a Gravedigger look plays: its sheet, the colours of his blows and lantern, his earth and his dead. */
-export interface DiggerKit {
+/** How a BarrowKnight look plays: its sheet, the colours of his blows and lantern, his earth and his dead. */
+export interface BarrowKit {
   key: string;
   /** The spade's arcs. */
   blade: Scheme;
@@ -74,8 +74,8 @@ export interface DiggerKit {
   ghoul: string;
 }
 
-export const DIGGER_KIT: DiggerKit = {
-  key: 'necro_digger',
+export const BARROW_KIT: BarrowKit = {
+  key: 'necro_barrow',
   blade: { core: 0xf4ffe8, hot: 0xd8e8c0, mid: 0x9aa890, deep: 0x4a5a48, light: 0xb8f070 },
   glow: { core: 0xf4ffe0, hot: 0xd0ff8a, mid: 0x8ad84a, deep: 0x2e6a2a, light: 0xb8f070 },
   soil: GRAVE_SOIL,
@@ -83,7 +83,7 @@ export const DIGGER_KIT: DiggerKit = {
 };
 
 /** Mossgrave: the same spade wound in roots, a wisp in the lantern, roots for arms. */
-export const MOSSGRAVE_KIT: DiggerKit = {
+export const MOSSGRAVE_KIT: BarrowKit = {
   key: 'necro_mossgrave',
   blade: { core: 0xeafff8, hot: 0xc8e8d8, mid: 0x7aa898, deep: 0x3a5a52, light: 0x6af0e8 },
   glow: { core: 0xecfffc, hot: 0x9ff8ee, mid: 0x3ad0c8, deep: 0x0e5a68, light: 0x6af0e8 },
@@ -91,7 +91,7 @@ export const MOSSGRAVE_KIT: DiggerKit = {
   ghoul: 'ghoul_moss',
 };
 
-export class Gravedigger implements Hero {
+export class BarrowKnight implements Hero {
   x: number;
   y: number;
   /** 0 = night, 1 = day. */
@@ -101,7 +101,7 @@ export class Gravedigger implements Hero {
   alpha = 1;
   private dir: Dir = 'down';
   private world: WorldScene;
-  private kit: DiggerKit;
+  private kit: BarrowKit;
   private body: Phaser.GameObjects.Sprite;
   private glowLayer: Phaser.GameObjects.Sprite;
   private shadow: Phaser.GameObjects.Image;
@@ -136,14 +136,14 @@ export class Gravedigger implements Hero {
     return this.body;
   }
 
-  constructor(world: WorldScene, x: number, y: number, kit: DiggerKit = DIGGER_KIT) {
+  constructor(world: WorldScene, x: number, y: number, kit: BarrowKit = BARROW_KIT) {
     this.world = world;
     this.kit = kit;
     this.x = x;
     this.y = y;
     const key = kit.key;
-    const ox = DIGGER_ORIGIN_X / DIGGER_W;
-    const oy = DIGGER_ORIGIN_Y / DIGGER_H;
+    const ox = BARROW_ORIGIN_X / BARROW_W;
+    const oy = BARROW_ORIGIN_Y / BARROW_H;
     this.shadow = world.add.image(x, y, 'shadow').setDepth(1).setScale(1.25, 1.1);
     this.castShadow = sunShadow(world.add.sprite(x, y, `${key}_s`, 'idle_down_0').setOrigin(ox, oy));
     this.body = world.add.sprite(x, y, key, 'idle_down_0').setOrigin(ox, oy).setPipeline('Lit');
@@ -212,14 +212,14 @@ export class Gravedigger implements Hero {
     } else {
       const f = this.body.anims.currentFrame;
       const at = f ? f.index - 1 : 0;
-      if (this.state === 'swing' && !this.struck && at >= DIGGER_HIT_FRAME[this.blow]) {
+      if (this.state === 'swing' && !this.struck && at >= BARROW_HIT_FRAME[this.blow]) {
         this.struck = true;
         if (this.blow === 'slam') this.slam();
         else this.sweep();
       } else if (this.state === 'dig') {
         // Until the spade bites, the grave goes where the mouse is.
         if (!this.struck) this.takeAim();
-        if (!this.struck && at >= DIGGER_HIT_FRAME.dig) {
+        if (!this.struck && at >= BARROW_HIT_FRAME.dig) {
           this.struck = true;
           this.openGrave();
         }

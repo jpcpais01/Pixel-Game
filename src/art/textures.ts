@@ -18,8 +18,8 @@ import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanSho
 import { deathStepIcon, reapIcon } from './reaper';
 import { boneSpikesIcon, DROWNED_ICON, rimeBoltIcon } from './lich';
 import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
-import { MOSSGRAVE_ICON, graveIcon, spadeIcon } from './digger';
-import { GRAVE_LOOK, MOSS_GRAVE_LOOK, buildGhoulSheet, buildStoneSheet } from './diggerFx';
+import { MOSSGRAVE_ICON, graveIcon, spadeIcon } from './barrow';
+import { GRAVE_LOOK, MOSS_GRAVE_LOOK, buildGhoulSheet, buildStoneSheet } from './barrowFx';
 import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
 import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, ORPHEUS_LOOK, VAGABOND_LOOK, WILD_LOOK, NOTE_SIZE, banjoIcon, drumIcon, guitarraIcon, luteIcon, lyreIcon, noteFrame, rhythmIcon, skinSongIcon, songIcon } from './bard';
@@ -314,7 +314,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_raise_tomb', toCanvas(16, 16, tombRaiseIcon()));
   scene.textures.addCanvas('icon_lance_wyrm', toCanvas(16, 16, bloodLanceIcon(WYRM_ICON)));
   scene.textures.addCanvas('icon_nova_wyrm', toCanvas(16, 16, novaIcon(WYRM_ICON)));
-  // The Gravedigger's ghouls and headstones (the Graveyard's), plain and Mossgrave's, and his buttons.
+  // The BarrowKnight's ghouls and headstones (the Graveyard's), plain and Mossgrave's, and his buttons.
   registerMonster(scene, 'ghoul', buildGhoulSheet(GRAVE_LOOK));
   registerMonster(scene, 'ghoul_moss', buildGhoulSheet(MOSS_GRAVE_LOOK));
   registerMonster(scene, 'headstones', buildStoneSheet(GRAVE_LOOK));

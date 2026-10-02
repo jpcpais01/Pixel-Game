@@ -132,7 +132,7 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: "Spends the hero's own blood on a nova that hits and drains foes around.",
     special: 'A crimson moon rains lances of blood on foes below, then bursts.',
   },
-  'necromancer.digger': {
+  'necromancer.barrow': {
     attack: 'Two spade swings, the second flinging earth, then a slam that cracks the ground and throws foes back.',
     ability: 'Opens a grave at the aim: arms burst out and hold every foe on it, and a ghoul climbs out to fight.',
     special: 'Headstones burst up in a ring, throwing foes back, and ghosts streak from them into foes nearby.',

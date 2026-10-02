@@ -7,7 +7,7 @@ import { onGround } from './Toxins';
 import { sound } from '../audio';
 import type { WorldScene } from '../scenes/WorldScene';
 
-// The Gravedigger's earthwork: clods of earth flung by his spade, the cracks
+// The BarrowKnight's earthwork: clods of earth flung by his spade, the cracks
 // and dust of his slam, and the open grave, a split in the ground out of which
 // skeletal arms (roots, for Mossgrave) burst to seize and hold every foe on it.
 

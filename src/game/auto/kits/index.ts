@@ -11,7 +11,7 @@ import { FORGED_KITS } from './forged';
 import { SHOW_KITS } from './show';
 import { BLADE_KITS } from './blade';
 import { SAGE_KITS } from './sage';
-import { DIGGER_KITS } from './digger';
+import { BARROW_KITS } from './barrow';
 import { FALCONER_KITS } from './falconer';
 import { TWIN_KITS } from './twin';
 import { INQUISITOR_KITS } from './inquisitor';
@@ -27,7 +27,7 @@ export const KITS: Record<string, Kit> = {
   ...SHOW_KITS,
   ...BLADE_KITS,
   ...SAGE_KITS,
-  ...DIGGER_KITS,
+  ...BARROW_KITS,
   ...FALCONER_KITS,
   ...TWIN_KITS,
   ...INQUISITOR_KITS,
