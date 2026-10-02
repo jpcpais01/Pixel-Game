@@ -450,6 +450,7 @@ const SKINS: Record<string, UltSkin> = {
   'alchemist:cryo': { pal: toxPal(CRYO_TOX), type: 'chem' },
   'archer:scarecrow': { pal: pal(0xfff4d0, 0xffb048, 0xff7a1a, 0x2a7a3a, 0x9cff9a) },
   'archer:hunt': { pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
+  'archer:apollo': { pal: pal(0xfffbe8, 0xffe890, 0xffc030, 0xb06a10, 0xffd860) },
   'archer:wisteria': { pal: pal(0xffffff, 0xe8dcff, 0xb48ae8, 0x5a7a58, 0xd0b8ff), type: 'wind' },
   'archer:briar': { pal: pal(0xfff0f2, 0xffa0b0, 0xe8344a, 0x2e6e24, 0xff6a7a), type: 'arbalest' },
   'rogue:corsair': { pal: pal(0xfffbe0, 0xffe08a, 0xe0a030, 0x8a5018, 0xffc050) },

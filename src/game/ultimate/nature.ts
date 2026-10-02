@@ -241,6 +241,8 @@ export class GreatArrow extends Fx {
   private px: number;
   private py: number;
   private storm: boolean;
+  /** Apollo's: the head burns as a little sun. */
+  private sun: boolean;
   private stopped = false;
 
   constructor(
@@ -252,6 +254,7 @@ export class GreatArrow extends Fx {
     this.px = c.x + c.dx * 8;
     this.py = c.y - 13 + c.dy * 8;
     this.storm = c.look === 'storm';
+    this.sun = c.look === 'apollo';
     this.lamp = this.light(this.px, this.py, 80, c.pal.light, 1.8);
     sound.bowShot(world.pan(c.x), this.storm);
     sound.volley(world.pan(c.x), this.storm);
@@ -303,6 +306,15 @@ export class GreatArrow extends Fx {
         const seed = Math.floor(t / 45);
         bolt(g, x - ux * 28 + nx * 6, y - uy * 28 + ny * 6, x - ux * 4, y - uy * 4, p, seed, fade, 0.8);
         bolt(g, x - ux * 28 - nx * 6, y - uy * 28 - ny * 6, x - ux * 8, y - uy * 8, p, seed + 99, fade * 0.8, 0.8);
+      }
+      if (this.sun) {
+        // A sun at the arrowhead: its rays, long and short by turns, wheeling round it.
+        const spin = t * 0.006;
+        for (let k = 0; k < 8; k++) {
+          const a = spin + (k / 8) * Math.PI * 2;
+          const len = k % 2 ? 4.5 : 7;
+          for (let r = 3; r < len; r += 0.5) g.put(x + Math.cos(a) * r, y + Math.sin(a) * r, r < 4 ? p.hot : p.mid, fade * (1 - (r - 3) / len));
+        }
       }
     }
     g.end();

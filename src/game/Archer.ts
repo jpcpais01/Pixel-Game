@@ -6,7 +6,7 @@ import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
-import { Arrow, ArrowRain, HUNT_ARROW, RANGER_ARROW, SCARECROW_ARROW, STORM_ARROW, type ArrowStyle } from './Arrows';
+import { Arrow, ArrowRain, HUNT_ARROW, RANGER_ARROW, SCARECROW_ARROW, STORM_ARROW, SUN_ARROW, type ArrowStyle } from './Arrows';
 import { onGround } from './Toxins';
 import type { NetLook } from './Bolts';
 import type { Aim, Hero } from './characters';
@@ -48,6 +48,8 @@ export const RANGER_STYLE: ArcherStyle = { key: 'archer', arrow: RANGER_ARROW };
 export const STORM_STYLE: ArcherStyle = { key: 'archer_storm', arrow: STORM_ARROW };
 export const HUNT_STYLE: ArcherStyle = { key: 'archer_hunt', arrow: HUNT_ARROW };
 export const SCARECROW_STYLE: ArcherStyle = { key: 'archer_scarecrow', arrow: SCARECROW_ARROW };
+/** Apollo: arrows of golden light, a rain of sunbeams. */
+export const APOLLO_STYLE: ArcherStyle = { key: 'archer_apollo', arrow: SUN_ARROW };
 
 /**
  * The archer: looses arrows on the attack button, fast and straight (at the
