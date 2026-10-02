@@ -13,6 +13,11 @@ const CLOUD_R = 48;
 const CLOUD_TIME = 5000;
 /** Foxgloves standing round Foxglove's Deadly Bloom. */
 const BLOOM_SPIKES = 14;
+/** Confetti fluttering down through Carnevale's cloud, and how long each takes to fall. */
+const CONFETTI_FLECKS = 22;
+const CONFETTI_FALL = 1600;
+/** ms between bubbles rising off the Diver's Chem Bomb pool. */
+const BOMB_BUBBLE_EVERY = 70;
 
 /** The Plague doctor's Pestilence: a great churning miasma settles on the spot, poisoning everything inside deeper and deeper. */
 export class Pestilence extends Fx {
@@ -86,6 +91,19 @@ export class Pestilence extends Fx {
           circleSmall(c, bx, by - 1, r, tox.hot);
           c.put(bx - 1, by - 2, tox.core);
         } else star(c, bx, by - 1, 2, { core: tox.core, hot: tox.hot, mid: tox.mid, deep: tox.deep, light: tox.light, tints: tox.tints });
+      }
+      // Carnevale's: confetti fluttering down through the miasma, swaying as it falls, flashing as it turns.
+      const cf = tox.confetti;
+      if (cf) {
+        for (let i = 0; i < CONFETTI_FLECKS; i++) {
+          const life = ((t + hash(i, 51) * CONFETTI_FALL) % CONFETTI_FALL) / CONFETTI_FALL;
+          const lap = Math.floor((t + hash(i, 51) * CONFETTI_FALL) / CONFETTI_FALL);
+          const fx = x + (hash(i, lap, 52) - 0.5) * CLOUD_R * 1.6 * open + Math.sin(life * 9 + i) * 2;
+          const fy = y - 26 + life * 30 + (hash(i, lap, 53) - 0.5) * CLOUD_R * GROUND;
+          const turn = Math.floor(t / 90 + i) % 3;
+          c.put(fx, fy, turn === 0 ? tox.core : cf[i % cf.length], open * (1 - life * 0.4));
+          if (turn === 1) c.put(fx + 1, fy, cf[i % cf.length], open * (1 - life * 0.4));
+        }
       }
     }
     c.end();
@@ -193,6 +211,12 @@ export class ChemBomb extends Fx {
         ring(g, tx, ty, 4 + 44 * easeOut(k * 1.3), 2, p, 0.8 * (1 - k), GROUND, 0.4, 5);
       }
       g.end();
+      // The Diver's pool fizzes: bubbles breaking off it and wobbling up.
+      if (tox.bubbles !== undefined && pooled > 0.3 && Math.floor(a / BOMB_BUBBLE_EVERY) !== Math.floor((a - dt) / BOMB_BUBBLE_EVERY)) {
+        const an = Math.random() * Math.PI * 2;
+        const d = Math.sqrt(Math.random()) * 46 * pooled;
+        world.debris([tox.bubbles, tox.hot], tx + Math.cos(an) * d, ty + Math.sin(an) * d * GROUND - 2, 2, ty + 30, 'spores');
+      }
 
       // The blast's cloud: a stem of green fire, and a cap of smoke boiling up over it and thinning away.
       const m = this.plume.begin(tx, ty + 4, ty + 3, 0.5, 1);
@@ -241,6 +265,8 @@ export class GreatArrow extends Fx {
   private px: number;
   private py: number;
   private storm: boolean;
+  /** Apollo's: the head burns as a little sun. */
+  private sun: boolean;
   private stopped = false;
 
   constructor(
@@ -252,6 +278,7 @@ export class GreatArrow extends Fx {
     this.px = c.x + c.dx * 8;
     this.py = c.y - 13 + c.dy * 8;
     this.storm = c.look === 'storm';
+    this.sun = c.look === 'apollo';
     this.lamp = this.light(this.px, this.py, 80, c.pal.light, 1.8);
     sound.bowShot(world.pan(c.x), this.storm);
     sound.volley(world.pan(c.x), this.storm);
@@ -303,6 +330,15 @@ export class GreatArrow extends Fx {
         const seed = Math.floor(t / 45);
         bolt(g, x - ux * 28 + nx * 6, y - uy * 28 + ny * 6, x - ux * 4, y - uy * 4, p, seed, fade, 0.8);
         bolt(g, x - ux * 28 - nx * 6, y - uy * 28 - ny * 6, x - ux * 8, y - uy * 8, p, seed + 99, fade * 0.8, 0.8);
+      }
+      if (this.sun) {
+        // A sun at the arrowhead: its rays, long and short by turns, wheeling round it.
+        const spin = t * 0.006;
+        for (let k = 0; k < 8; k++) {
+          const a = spin + (k / 8) * Math.PI * 2;
+          const len = k % 2 ? 4.5 : 7;
+          for (let r = 3; r < len; r += 0.5) g.put(x + Math.cos(a) * r, y + Math.sin(a) * r, r < 4 ? p.hot : p.mid, fade * (1 - (r - 3) / len));
+        }
       }
     }
     g.end();

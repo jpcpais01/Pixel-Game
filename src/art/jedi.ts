@@ -51,6 +51,27 @@ import {
   WARLORD_SKIN,
   WARLORD_TRIM,
   WARLORD_TUNIC,
+  EMPRESS_CROWN,
+  EMPRESS_GEM,
+  EMPRESS_GLOVE,
+  EMPRESS_GOWN,
+  EMPRESS_HAIR,
+  EMPRESS_LIPS,
+  EMPRESS_SILK,
+  EMPRESS_SILVER,
+  EMPRESS_SKIN,
+  NOMAD_BRASS,
+  NOMAD_CLOAK,
+  NOMAD_GRIP,
+  NOMAD_LENS,
+  NOMAD_SCARF,
+  NOMAD_SKIN,
+  NOMAD_TUNIC,
+  NOMAD_WRAP,
+  SABER_AMETHYST,
+  SABER_AMETHYST_GLOW,
+  SABER_DUNE,
+  SABER_DUNE_GLOW,
 } from './sith';
 import { DIRS, type Dir } from './wizard';
 
@@ -98,6 +119,18 @@ export interface JediLook {
   glove?: Material;
   /** The glow of eyes that shine (hooded or horned looks); defaults to the Force's hot colour. */
   eyeGlow?: RGB;
+  /**
+   * The Dune Nomad: the head bound in `wrap` with brass goggles pushed up on
+   * it, a `scarf` over the mouth and round the shoulders, the cloak's hem
+   * frayed to rags, and a worn hilt (tarnished `brass` caps, a leather grip).
+   */
+  nomad?: { wrap: Material; scarf: Material; brass: Material; lens: Material; grip: Material };
+  /**
+   * The Dark Empress: a tall spiked `crown` banded in `silver` with glowing
+   * `gem`s, long hair, a high flared collar, a gown to the floor with a train
+   * and a shimmer, and an ornate silver saberstaff set with a gem.
+   */
+  empress?: { crown: Material; silver: Material; gem: Material; lips: Material };
 }
 
 export const JEDI_LOOK: JediLook = {
@@ -181,7 +214,41 @@ export const GUARD_LOOK: JediLook = {
   trim: GUARD_GOLD,
 };
 
-export const JEDI_LOOKS = [JEDI_LOOK, SITH_LOOK, GUARD_LOOK, MASTER_LOOK, WARLORD_LOOK];
+/** The Jedi knight's Dune Nomad skin: sand-bleached rags and rust wraps, goggles and scarf, a sun-bleached cyan blade. */
+export const NOMAD_LOOK: JediLook = {
+  key: 'jedi_nomad',
+  robe: NOMAD_CLOAK,
+  tunic: NOMAD_TUNIC,
+  sash: LEATHER,
+  skin: NOMAD_SKIN,
+  hair: NOMAD_WRAP,
+  hooded: false,
+  blade: SABER_DUNE,
+  bladeGlow: SABER_DUNE_GLOW,
+  force: [hex('#fffcf2'), hex('#d8f6f0'), hex('#8edcd4')],
+  nomad: { wrap: NOMAD_WRAP, scarf: NOMAD_SCARF, brass: NOMAD_BRASS, lens: NOMAD_LENS, grip: NOMAD_GRIP },
+};
+
+/** The Sith's Dark Empress skin: spiked crown, flared collar, a black-and-amethyst gown in silver, a violet saberstaff. */
+export const EMPRESS_LOOK: JediLook = {
+  key: 'jedi_empress',
+  robe: EMPRESS_GOWN,
+  tunic: EMPRESS_SILK,
+  sash: EMPRESS_SILVER,
+  skin: EMPRESS_SKIN,
+  hair: EMPRESS_HAIR,
+  hooded: false,
+  blade: SABER_AMETHYST,
+  bladeGlow: SABER_AMETHYST_GLOW,
+  force: [hex('#fff4ff'), hex('#f0b0ff'), hex('#d050ff')],
+  staff: true,
+  glove: EMPRESS_GLOVE,
+  trim: EMPRESS_SILVER,
+  eyeGlow: hex('#d890ff'),
+  empress: { crown: EMPRESS_CROWN, silver: EMPRESS_SILVER, gem: EMPRESS_GEM, lips: EMPRESS_LIPS },
+};
+
+export const JEDI_LOOKS = [JEDI_LOOK, SITH_LOOK, GUARD_LOOK, MASTER_LOOK, WARLORD_LOOK, NOMAD_LOOK, EMPRESS_LOOK];
 
 /** The look being drawn; set by buildJediFrames. */
 let S: JediLook = JEDI_LOOK;
@@ -260,6 +327,9 @@ const EMITTER = 1.8;
 /** Sitting down cross-legged: how far the upper body sinks, and how far the robe pools out on the ground. */
 const SIT_DROP = 6;
 const SIT_POOL = 2.2;
+/** How far the Empress's gown flares out at the floor, and how far her train trails behind her (side view). */
+const GOWN_FLARE = 1.4;
+const TRAIN = 3;
 /** How many Force motes can hang round him as he meditates. */
 const MOTES = 7;
 /** The body's centre line. */
@@ -339,7 +409,12 @@ function drawBlade(c: PixelCanvas, s: Saber, back: boolean, hidden: boolean): { 
   box((x, y, along, side) => {
     if (along < butt || along > emitter || Math.abs(side) > 0.62) return;
     const n = facing(px * side - 0.3, py * side + 0.3, 0.8);
-    if (staff) {
+    if (staff && S.empress) {
+      // The Empress's: an obsidian grip, a silver collar, and an amethyst set round each emitter.
+      if (along < 1.0) c.px(x, y, S.empress.crown, n);
+      else if (along < emitter - 0.55) c.px(x, y, S.empress.silver, n, { bias: 1 });
+      else c.px(x, y, S.empress.gem, n);
+    } else if (staff) {
       // Out from the hand: the grip, a chrome collar, and the emitter's dark ring.
       if (along < 1.0) c.px(x, y, HILT_DARK, n);
       else if (along < emitter - 0.55) c.px(x, y, SILVER, n, { bias: 1 });
@@ -347,7 +422,11 @@ function drawBlade(c: PixelCanvas, s: Saber, back: boolean, hidden: boolean): { 
     }
     // The guard's long hilt is banded in gold.
     else if (S.guard && along < -1.1) c.px(x, y, Math.round(along) % 2 ? GUARD_GOLD : HILT_DARK, n);
-    else if (along > -1.1 && along < 0.9) c.px(x, y, HILT_DARK, n);
+    // The Nomad's worn hilt: a grip bound in leather (its turns a pixel apart) between tarnished brass caps.
+    else if (S.nomad) {
+      if (along > -1.1 && along < 0.9) c.px(x, y, S.nomad.grip, n, { bias: Math.round(along * 2) % 2 ? -1 : 0 });
+      else c.px(x, y, S.nomad.brass, n, { bias: along > 0 ? 0 : -1 });
+    } else if (along > -1.1 && along < 0.9) c.px(x, y, HILT_DARK, n);
     else c.px(x, y, SILVER, n, { bias: along > 0 ? 1 : 0 });
   });
   return { x: s.hx + dx * end, y: s.hy + dy * end };
@@ -499,9 +578,9 @@ function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefine
   if (S.guard) return;
   c.part();
   for (const [x, y] of pts) {
-    if (S.hooded || S.horns) {
+    if (S.hooded || S.horns || S.empress) {
       if (blink) continue;
-      c.px(x, y, SITH_EYE);
+      c.px(x, y, S.empress?.gem ?? SITH_EYE);
       c.spark(x, y, S.eyeGlow ?? S.force[1], 0.3 + glare * 0.6);
       // Flaring, the glow bleeds out sideways into the shadow.
       if (glare > 0) {
@@ -516,6 +595,211 @@ function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefine
 /** Half-width of a cowl row, u = 0 at its peak down to 1 at the shoulders. */
 function cowlHW(u: number, full: number): number {
   return 0.8 + (full - 0.8) * Math.sin(Math.min(1, u / 0.6) * (Math.PI / 2));
+}
+
+// ---------------------------------------------------------------------------
+// The skins' extras: the Nomad's rags and head, the Empress's gown, collar and crown
+
+/** A seed that changes from frame to frame with the pose, so frayed hems flutter and the gown's glints wander. */
+const poseSeed = (p: Pose): number =>
+  Math.round(p.breath * 3 + p.robe * 5 + p.footA * 7 + p.footB * 13 + p.lift * 11 + p.saber.angle * 0.5 + p.saber.hx * 3) & 1023;
+
+/** The Nomad's cloak frayed to rags along row `rb`: strands hanging a pixel or two below, notches torn into it. */
+function rags(c: PixelCanvas, rb: number, l: number, r: number, seed: number): void {
+  for (let x = Math.round(l); x < Math.round(r); x++) {
+    if (c.materialAt(x, rb) !== S.robe) continue;
+    const h = hash(x, rb, seed);
+    if (h > 0.48) c.px(x, rb + 1, S.robe, cyl(0, -0.3), { bias: -1 });
+    if (h > 0.86) c.px(x, rb + 2, S.robe, cyl(0, -0.4), { bias: -2 });
+    else if (h < 0.16) c.shade(x, rb, -2);
+  }
+}
+
+/**
+ * The Empress's gown between rows y0 and rb: a silver band along the hem, a
+ * row of silver scrolls above it, and a few glints of amethyst shimmering in
+ * the black silk, moving from frame to frame.
+ */
+function gown(c: PixelCanvas, y0: number, rb: number, span: (y: number) => [number, number], seed: number): void {
+  const e = S.empress!;
+  for (let y = y0; y <= rb; y++) {
+    const [l, r] = span(y);
+    for (let x = Math.round(l); x < Math.round(r); x++) {
+      if (c.materialAt(x, y) !== S.robe) continue;
+      if (y === rb) c.px(x, y, e.silver, cyl(0, 0.1), { bias: -1 });
+      else if (y === rb - 2 && (x & 1) === 0) c.px(x, y, e.silver, cyl(0, 0.2), { bias: -1 });
+      else if (y === rb - 3 && (x & 3) === 1) c.px(x, y, e.silver, cyl(0, 0.3), { bias: -2 });
+      else if (y < rb - 3 && hash(x, y, seed) > 0.95) c.spark(x, y, e.gem.ramp[2], 0.3);
+    }
+  }
+}
+
+/** The Nomad's head from the front: the linen wrap, the brass goggles pushed up on it, the scarf over the mouth. */
+function nomadFront(c: PixelCanvas, cx: number, U: number): void {
+  const n = S.nomad!;
+  c.part();
+  const widths = [2.6, 3.7, 4.2, 4.4];
+  c.shape(7 + U, 10 + U, (y) => [cx - widths[y - 7 - U], cx + widths[y - 7 - U]], n.wrap, (_x, _y, t, u) => sphere(t * 0.9, u * 1.2 - 0.9, 1));
+  c.part();
+  for (const y of [11, 12, 13]) {
+    c.px(8, y + U, n.wrap, cyl(-0.8, 0));
+    c.px(15, y + U, n.wrap, cyl(0.8, 0));
+  }
+  // The turns of the cloth wound round the crown.
+  for (const [x, y] of [[9, 8], [10, 7], [13, 10], [14, 9], [15, 8]] as const) c.shade(x, y + U, -1);
+  // Goggles pushed up on the brow: brass rims round two sea-glass lenses, the strap to either side.
+  c.part();
+  for (const x of [9, 11, 12, 14]) c.px(x, 9 + U, n.brass, sphere((x - cx + 0.5) / 4, -0.2, 1));
+  c.px(10, 8 + U, n.brass, sphere(-0.2, -0.8, 1));
+  c.px(13, 8 + U, n.brass, sphere(0.2, -0.8, 1));
+  for (const x of [10, 13]) c.px(x, 9 + U, n.lens, sphere((x - cx + 0.5) / 5, -0.5, 1));
+  c.spark(10, 9 + U, n.lens.ramp[3], 0.2);
+  c.part();
+  c.px(8, 9 + U, LEATHER, cyl(-0.8, 0));
+  c.px(15, 9 + U, LEATHER, cyl(0.8, 0));
+  // The scarf drawn up over the nose and mouth, bunched under the chin.
+  c.part();
+  const sw = [3.0, 3.4, 3.4, 2.8];
+  c.shape(13 + U, 16 + U, (y) => [cx - sw[y - 13 - U], cx + sw[y - 13 - U]], n.scarf, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.2, 1));
+  c.shade(11, 13 + U, 1);
+  c.shade(12, 13 + U, 1);
+  for (const [x, y] of [[10, 14], [13, 15], [11, 15], [14, 13]] as const) c.shade(x, y + U, -1);
+}
+
+/** The Nomad's head in profile (facing left, the upper body centred on hx). */
+function nomadSide(c: PixelCanvas, hx: number, U: number): void {
+  const n = S.nomad!;
+  c.part();
+  const rows: [number, number][] = [[-2.9, 2.4], [-3.9, 3.0], [-4.3, 3.3], [-4.4, 3.4], [0.2, 3.4], [0.5, 3.3], [0.9, 2.9]];
+  c.shape(7 + U, 13 + U, (y) => {
+    const [l, r] = rows[y - 7 - U];
+    return [hx + l, hx + r];
+  }, n.wrap, (_x, _y, t, u) => sphere(t * 0.9, u * 1.4 - 0.9, 1));
+  for (const [dx, y] of [[-1, 8], [0, 9], [1, 10], [2, 8]] as const) c.shade(hx + dx, y + U, -1);
+  // The wrap's loose end hanging down behind the neck.
+  c.part();
+  c.shape(13 + U, 17 + U, (y) => {
+    const k = (y - 13 - U) * 0.35;
+    return [hx + 1.4 + k, hx + 3.3 + k];
+  }, n.wrap, (_x, _y, t, u) => cyl(t * 0.8 + 0.2, 0.2 - u * 0.3), { bias: -1 });
+  // The goggles: a lens on the front of the brow in its brass rim, the strap round the wrap.
+  c.part();
+  for (let dx = -2; dx <= 2; dx++) c.px(hx + dx, 9 + U, LEATHER, sphere(dx / 4, -0.2, 1));
+  c.px(hx - 3, 9 + U, n.brass, sphere(-0.3, -0.4, 1));
+  c.px(hx - 4, 8 + U, n.brass, sphere(-0.5, -0.8, 1));
+  c.px(hx - 4, 9 + U, n.lens, sphere(-0.7, -0.3, 1));
+  c.spark(hx - 4, 9 + U, n.lens.ramp[3], 0.2);
+  // The scarf over the face up to the nose, wound round the neck.
+  c.part();
+  const sr: [number, number][] = [[-5.2, 0.8], [-5.0, 1.4], [-4.6, 1.8], [-3.8, 1.8]];
+  c.shape(13 + U, 16 + U, (y) => {
+    const [l, r] = sr[y - 13 - U];
+    return [hx + l, hx + r];
+  }, n.scarf, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, u * 0.8 - 0.2, 1));
+  c.shade(hx - 5, 13 + U, 1);
+  c.shade(hx - 3, 15 + U, -1);
+  c.shade(hx - 1, 14 + U, -1);
+}
+
+/** The Empress's crown from the front or behind: obsidian spikes, silver tips and band, and (from the front) amethysts that glow. */
+function crownFront(c: PixelCanvas, cx: number, U: number, front: boolean): void {
+  const e = S.empress!;
+  c.part();
+  // Tallest at the middle, a pair either side, and the outer ones slanting away.
+  const spikes: [number, number][] = [
+    [11, 3], [11, 4], [12, 4], [11, 5], [12, 5], [11, 6], [12, 6], [11, 7], [12, 7],
+    [9, 5], [9, 6], [9, 7], [10, 7], [14, 5], [14, 6], [14, 7], [13, 7],
+    [7, 5], [8, 6], [8, 7], [16, 5], [15, 6], [15, 7],
+  ];
+  for (const [x, y] of spikes) c.px(x, y + U, e.crown, sphere((x - cx + 0.5) / 4, -0.2, 1));
+  for (const [x, y] of [[11, 3], [9, 5], [14, 5], [7, 5], [16, 5]] as const) c.px(x, y + U, e.silver, sphere((x - cx + 0.5) / 4, -0.7, 1));
+  c.shade(12, 4 + U, 1);
+  // The silver band round the brow.
+  c.part();
+  c.shape(8 + U, 8 + U, () => [cx - 4.1, cx + 4.1], e.silver, (_x, _y, t) => cyl(t, 0.2));
+  if (!front) return;
+  // A great amethyst in the middle spike and two small ones in the band, lit from within.
+  c.part();
+  for (const [x, y] of [[11, 6], [12, 6], [11, 7], [12, 7], [9, 8], [14, 8]] as const) {
+    c.px(x, y + U, e.gem, sphere((x - cx + 0.5) / 3, (y - 6.5) / 2, 1));
+    c.spark(x, y + U, e.gem.ramp[2], y < 8 ? 0.4 : 0.3);
+  }
+  c.spark(11, 5 + U, e.gem.ramp[2], 0.15);
+  c.spark(12, 5 + U, e.gem.ramp[2], 0.15);
+}
+
+/** The Empress's high collar from the front: two obsidian wings rising either side of the head, edged in silver. */
+function collarFront(c: PixelCanvas, cx: number, U: number): void {
+  const e = S.empress!;
+  const out = (y: number) => 6.0 - Math.max(0, y - 11) * 0.3;
+  c.part();
+  for (const side of [-1, 1] as const) {
+    c.shape(10 + U, 16 + U, (y) => (side < 0 ? [cx - out(y - U), cx - 2] : [cx + 2, cx + out(y - U)]), e.crown, (_x, _y, t, u) => cyl(-t * side * 0.6 + side * 0.2, 0.4 - u * 0.4));
+  }
+  // Silver along the outer edges, up to the points.
+  for (let y = 10; y <= 15; y++) {
+    c.px(Math.round(cx - out(y)), y + U, e.silver, cyl(-0.6, 0.3), { bias: -1 });
+    c.px(Math.round(cx + out(y)) - 1, y + U, e.silver, cyl(0.6, 0.3), { bias: -1 });
+  }
+  c.px(cx - 6, 9 + U, e.silver, sphere(-0.5, -0.7, 1));
+  c.px(cx + 5, 9 + U, e.silver, sphere(0.5, -0.7, 1));
+}
+
+/** The Empress's head from the front: hair parted in the middle and falling to the shoulders, dark lips, the crown. */
+function empressFront(c: PixelCanvas, cx: number, U: number): void {
+  const e = S.empress!;
+  c.part();
+  const widths = [2.4, 3.4, 3.9, 4.1];
+  c.shape(7 + U, 10 + U, (y) => [cx - widths[y - 7 - U], cx + widths[y - 7 - U]], S.hair, (_x, _y, t, u) => sphere(t * 0.9, u * 1.2 - 0.9, 1));
+  c.part();
+  for (let y = 11; y <= 16; y++) {
+    c.px(8, y + U, S.hair, cyl(-0.8, 0), { bias: y > 14 ? -1 : 0 });
+    c.px(15, y + U, S.hair, cyl(0.8, 0), { bias: y > 14 ? -1 : 0 });
+  }
+  c.px(9, 11 + U, S.hair, cyl(-0.4, 0));
+  c.px(14, 11 + U, S.hair, cyl(0.4, 0));
+  // The parting: the brow showing in a V under the band.
+  c.px(11, 10 + U, S.skin, sphere(-0.1, -0.8));
+  c.px(12, 10 + U, S.skin, sphere(0.2, -0.8));
+  c.part();
+  c.px(11, 14 + U, e.lips, sphere(-0.3, 0.2, 1));
+  c.px(12, 14 + U, e.lips, sphere(0.3, 0.2, 1));
+  crownFront(c, cx, U, true);
+}
+
+/** The Empress's head in profile: hair swept back long, the collar's wing behind, the crown. */
+function empressSide(c: PixelCanvas, hx: number, U: number): void {
+  const e = S.empress!;
+  c.part();
+  const rows: [number, number][] = [[-2.9, 2.2], [-3.8, 2.8], [-4.2, 3.1], [-4.2, 3.2], [0.2, 3.2], [0.5, 3.2], [0.8, 3.0]];
+  c.shape(7 + U, 13 + U, (y) => {
+    const [l, r] = rows[y - 7 - U];
+    return [hx + l, hx + r];
+  }, S.hair, (_x, _y, t, u) => sphere(t * 0.9, u * 1.4 - 0.9, 1));
+  c.erase(hx - 5, 10 + U);
+  // The long fall down the back.
+  c.part();
+  c.shape(14 + U, 17 + U, (y) => [hx + 0.8, hx + 3.0 - (y - 14 - U) * 0.2], S.hair, (_x, _y, t, u) => cyl(t * 0.8, 0.2 - u * 0.3), { bias: -1 });
+  // The collar's wing standing up behind the head.
+  const wing = (y: number) => hx + 4.8 - Math.max(0, y - 12) * 0.4;
+  c.part();
+  c.shape(10 + U, 16 + U, (y) => [hx + 2.6, wing(y - U)], e.crown, (_x, _y, t, u) => cyl(t * 0.6 + 0.2, 0.4 - u * 0.4));
+  for (let y = 10; y <= 15; y++) c.px(Math.round(wing(y)) - 1, y + U, e.silver, cyl(0.6, 0.3), { bias: -1 });
+  c.px(hx + 4, 9 + U, e.silver, sphere(0.5, -0.7, 1));
+  c.part();
+  c.px(hx - 4, 14 + U, e.lips, sphere(-0.6, 0.2, 1));
+  // The crown in profile: the tall spike at the brow, smaller ones round to the back.
+  c.part();
+  const spikes: [number, number][] = [[-3, 3], [-3, 4], [-3, 5], [-3, 6], [-3, 7], [-2, 6], [-2, 7], [-1, 5], [-1, 6], [-1, 7], [0, 7], [1, 5], [1, 6], [1, 7], [2, 7], [3, 6], [4, 5]];
+  for (const [dx, y] of spikes) c.px(hx + dx, y + U, e.crown, sphere(dx / 4, -0.2, 1));
+  for (const [dx, y] of [[-3, 3], [-1, 5], [1, 5], [4, 5]] as const) c.px(hx + dx, y + U, e.silver, sphere(dx / 4, -0.7, 1));
+  c.part();
+  c.shape(8 + U, 8 + U, () => [hx - 4.2, hx + 3.2], e.silver, (_x, _y, t) => cyl(t, 0.2));
+  c.part();
+  for (const [dx, y] of [[-3, 6], [-3, 7], [-1, 8]] as const) {
+    c.px(hx + dx, y + U, e.gem, sphere(-0.5, (y - 6.5) / 2, 1));
+    c.spark(hx + dx, y + U, e.gem.ramp[2], y < 8 ? 0.4 : 0.3);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -556,11 +840,13 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   const rt = 15 + U;
   const rb = 28 + L + Math.round(s * 2);
   const pool = s * SIT_POOL;
+  // The Empress's gown flares out at the floor.
+  const flare = S.empress ? GOWN_FLARE : 0;
   const robeX = (u: number) => cx + p.robe * u * u;
   c.part();
   c.shape(rt, rb, (y) => {
     const u = (y + 0.5 - rt) / (rb + 1 - rt);
-    const hw = 4.6 + 2.0 * u + pool * u * u;
+    const hw = 4.6 + 2.0 * u + pool * u * u + flare * u * u * u;
     return [robeX(u) - hw, robeX(u) + hw];
   }, S.robe, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.3), { bias: -2 });
 
@@ -575,7 +861,8 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   // Tunic: a wrapped chest and a skirt to the knee.
   const top = 15 + U;
   const waist = 22 + U;
-  const hem = s > 0 ? Math.max(26 + L, waist + 2) : 26 + L;
+  // The Empress's silk underskirt falls to the floor like her gown.
+  const hem = S.empress ? rb : s > 0 ? Math.max(26 + L, waist + 2) : 26 + L;
   c.part();
   c.shape(top, waist - 1, (y) => {
     const u = (y + 0.5 - top) / (waist - top);
@@ -603,7 +890,7 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   // The robe's front panels, open over the tunic down to the ankles.
   const panel = (side: -1 | 1) => (y: number): [number, number] => {
     const u = (y + 0.5 - rt) / (rb + 1 - rt);
-    const hw = 4.9 + 2.1 * u + pool * u * u;
+    const hw = 4.9 + 2.1 * u + pool * u * u + flare * u * u * u;
     const gap = 2.2 + 1.0 * u;
     const x = robeX(u);
     return side < 0 ? [x - hw, x - gap] : [x + gap, x + hw];
@@ -621,6 +908,11 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
       c.shade(Math.round(panel(-1)(y)[1]) - 1, y, 1);
       c.shade(Math.round(panel(1)(y)[0]), y, 1);
     }
+  }
+  if (S.nomad) for (const side of [-1, 1] as const) rags(c, rb, ...panel(side)(rb), poseSeed(p));
+  if (S.empress) {
+    gown(c, rt + 2, rb, panel(-1), poseSeed(p));
+    gown(c, rt + 2, rb, panel(1), poseSeed(p) + 1);
   }
 
   // The folded shins cross in front of the lap.
@@ -642,10 +934,11 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   if (!p.handFront) freeArm();
   shoulder(c, 16.8, 16.2 + U);
 
-  // The lowered hood, bunched round the neck.
-  if (!S.hooded) {
+  // The lowered hood, bunched round the neck (the Nomad's scarf wound there instead), or the Empress's high collar.
+  if (S.empress) collarFront(c, cx, U);
+  else if (!S.hooded) {
     c.part();
-    c.ellipse(cx, 15.4 + U, 4.3, 1.7, S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.35, 1) });
+    c.ellipse(cx, 15.4 + U, 4.3, 1.7, S.nomad?.scarf ?? S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.35, 1) });
   }
 
   // Head, tipped aside by the pose.
@@ -659,6 +952,8 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   c.shade(12, 14 + U, -1);
   if (S.hooded) cowlFront(c, cx, U);
   else if (S.horns) warlordFront(c, cx, U);
+  else if (S.nomad) nomadFront(c, cx, U);
+  else if (S.empress) empressFront(c, cx, U);
   else {
     // Swept hair with a side parting, falling to the jaw.
     c.part();
@@ -841,19 +1136,24 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
   // The robe from behind, falling from the shoulders to the ankles in two folds.
   const rt = 14.5 + U;
   const rb = 28 + L;
+  // The Empress's gown flares at the floor and its train spreads out on the ground towards us.
+  const flare = S.empress ? GOWN_FLARE : 0;
+  const end = S.empress ? rb + TRAIN - 1 : rb;
   const edges = (y: number): [number, number] => {
-    const u = Math.max(0, (y + 0.5 - rt) / (rb + 1 - rt));
-    const hw = 4.6 + 2.2 * Math.pow(u, 1.1);
+    const u = Math.max(0, Math.min(1, (y + 0.5 - rt) / (rb + 1 - rt)));
+    const hw = 4.6 + 2.2 * Math.pow(u, 1.1) + flare * u * u * u - Math.max(0, y - rb) * 1.6;
     const x = cx + p.robe * u * u;
     return [x - hw, x + hw];
   };
   c.part();
-  c.shape(rt, rb, edges, S.robe, (_x, _y, t, u) => cyl(t * 0.9, 0.25 - u * 0.35));
-  for (let y = Math.round(rt + 6); y <= rb; y++) {
+  c.shape(rt, end, edges, S.robe, (_x, _y, t, u) => cyl(t * 0.9, 0.25 - u * 0.35));
+  for (let y = Math.round(rt + 6); y <= end; y++) {
     const [l, r] = edges(y);
     c.shade(Math.round(l + (r - l) * 0.32), y, -1);
     c.shade(Math.round(l + (r - l) * 0.66), y, -1);
   }
+  if (S.nomad) rags(c, rb, ...edges(rb), poseSeed(p));
+  if (S.empress) gown(c, Math.round(rt + 2), end, edges, poseSeed(p));
   // Sash knot at the back of the waist.
   c.part();
   c.shape(22 + U, 22 + U, () => [cx - 4.4, cx + 4.4], S.sash, (_x, _y, t) => cyl(t, 0), { bias: -1 });
@@ -875,6 +1175,26 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
       return hw < 0.8 ? null : [cx - hw, cx + hw];
     }, S.robe, (_x, _y, t, u) => cyl(t, 0.45 - u * 0.4));
     for (let y = 8 + U; y <= 16 + U; y++) c.shade(cx, y, -1);
+  } else if (S.empress) {
+    // The back of her head under the crown, then the collar's back rising round it like a fan.
+    const e = S.empress;
+    c.part();
+    c.ellipse(cx, 11 + U, 3.9, 3.9, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
+    c.shade(cx - 1, 8 + U, 1);
+    crownFront(c, cx, U, false);
+    c.part();
+    const fan = (y: number) => 6.0 - Math.max(0, y - 11) * 0.35;
+    c.shape(11 + U, 17 + U, (y) => [cx - fan(y - U), cx + fan(y - U)], e.crown, (_x, _y, t, u) => cyl(t * 0.9, 0.5 - u * 0.5));
+    c.shape(10 + U, 10 + U, () => [cx - 6, cx - 4.4], e.crown, (_x, _y, t) => cyl(t, 0.6));
+    c.shape(10 + U, 10 + U, () => [cx + 4.4, cx + 6], e.crown, (_x, _y, t) => cyl(t, 0.6));
+    // Silver along the rim of its wings and down its middle seam, and an amethyst at the nape.
+    for (let x = cx - 6; x < cx + 6; x++) if ((x < cx - 3 || x >= cx + 3) && c.materialAt(x, 11 + U) === e.crown) c.px(x, 11 + U, e.silver, cyl((x - cx + 0.5) / 6, 0.5), { bias: x < cx - 4 || x >= cx + 4 ? -1 : -2 });
+    for (let y = 13; y <= 16; y++) c.px(y % 2 ? cx - 1 : cx, y + U, e.silver, cyl(0, 0.3), { bias: -1 });
+    c.part();
+    c.px(cx - 1, 12 + U, e.gem, sphere(-0.3, 0, 1));
+    c.px(cx, 12 + U, e.gem, sphere(0.3, 0, 1));
+    c.spark(cx - 1, 12 + U, e.gem.ramp[2], 0.3);
+    c.spark(cx, 12 + U, e.gem.ramp[2], 0.3);
   } else {
     // The lowered hood lies across the shoulders, its point hanging down the back.
     c.part();
@@ -884,12 +1204,26 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
       const u = (y + 0.5 - top) / (bottom + 1 - top);
       const hw = 4.4 * Math.cos(u * 1.3) + 0.2;
       return hw < 0.6 ? null : [cx - hw, cx + hw];
-    }, S.robe, (_x, _y, t, u) => cyl(t * 0.8, 0.5 - u * 0.5));
+    }, S.nomad?.scarf ?? S.robe, (_x, _y, t, u) => cyl(t * 0.8, 0.5 - u * 0.5));
     for (let y = top + 1; y < bottom; y++) c.shade(cx, y, -1);
     // The back of the head.
     c.part();
     c.ellipse(cx, 11 + U, 3.9, 3.9, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
     c.shade(cx - 1, 8 + U, 1);
+    if (S.nomad) {
+      // The wrap's turns, the goggles' strap round the back with its brass buckle, and the loose end hanging down.
+      const n = S.nomad;
+      for (const [x, y] of [[9, 9], [10, 8], [11, 7], [13, 11], [14, 10]] as const) c.shade(x, y + U, -1);
+      c.part();
+      for (let x = 8; x <= 15; x++) c.px(x, 10 + U, LEATHER, cyl((x - cx + 0.5) / 4, 0));
+      c.px(12, 10 + U, n.brass, sphere(0.2, -0.3, 1));
+      c.part();
+      c.shape(12 + U, 18 + U, (y) => {
+        const k = (y - 12 - U) * 0.25;
+        return [cx + 0.6 + k, cx + 2.6 + k - (y - 12 - U) * 0.1];
+      }, n.wrap, (_x, _y, t, u) => cyl(t * 0.8, 0.3 - u * 0.4));
+      c.shade(13, 15 + U, -1);
+    }
     if (S.horns) {
       // Tattoo bars down the back of the scalp, and the horns' crown.
       c.part();
@@ -922,15 +1256,21 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   // The robe's back streaming behind.
   const rt = 15 + U;
   const rb = 28 + L;
+  // The Empress's gown sweeps out behind into a train, its last row lying along the ground.
+  const train = S.empress ? TRAIN : 0;
   const back = (y: number) => {
-    const u = Math.max(0, (y + 0.5 - rt) / (rb + 1 - rt));
-    return hx + 3.0 + 2.6 * Math.pow(u, 1.2) + p.robe * u * u - Sx * u;
+    const u = Math.max(0, Math.min(1, (y + 0.5 - rt) / (rb + 1 - rt)));
+    return hx + 3.0 + 2.6 * Math.pow(u, 1.2) + p.robe * u * u - Sx * u + train * Math.pow(u, 4) + (y > rb ? train * 0.5 : 0);
   };
   c.part();
   c.shape(rt, rb, (y) => {
     const u = Math.max(0, (y + 0.5 - rt) / (rb + 1 - rt));
     return [hx - 1.5 - Sx * u, back(y)];
   }, S.robe, (_x, _y, t, u) => cyl(t * 0.8 + 0.15, 0.25 - u * 0.3), { bias: -1 });
+  if (S.empress) {
+    c.part();
+    c.shape(rb + 1, rb + 1, (y) => [hx + 0.5, back(y)], S.robe, (_x, _y, t) => cyl(t * 0.6, -0.6), { bias: -2 });
+  }
 
   // Far arm, mostly hidden behind the body.
   const fh = p.free ? { x: p.free.x + Sx, y: p.free.y + U } : { x: hx + 2.6 - p.arm, y: 22.4 + U };
@@ -947,7 +1287,7 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   // Tunic in profile, then the robe over the back half of it.
   const top = 15 + U;
   const waist = 22 + U;
-  const hem = 26 + L;
+  const hem = S.empress ? rb : 26 + L;
   c.part();
   c.shape(top, waist - 1, (y) => [hx - 2.8 - (y >= top + 1 && y <= top + 3 ? 0.4 : 0), hx + 2.6], S.tunic, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
   c.part();
@@ -972,11 +1312,14 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
     if (S.trim) c.px(ex, y, S.trim, cyl(-0.5, 0.2));
     else c.shade(ex, y, 1);
   }
+  const side = (y: number): [number, number] => [hx - 3 - Sx, back(y) + 1];
+  if (S.nomad) rags(c, rb, ...side(rb), poseSeed(p));
+  if (S.empress) gown(c, rt + 2, rb + 1, side, poseSeed(p));
 
-  // Head.
-  if (!S.hooded) {
+  // Head, over the lowered hood (the Nomad's scarf wound there instead; the Empress's collar is drawn with her head).
+  if (!S.hooded && !S.empress) {
     c.part();
-    c.ellipse(hx + 1.3, 15.2 + U, 2.8, 1.8, S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.1, dy * 0.8 - 0.35, 1) });
+    c.ellipse(hx + 1.3, 15.2 + U, 2.8, 1.8, S.nomad?.scarf ?? S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.1, dy * 0.8 - 0.35, 1) });
   }
   c.part();
   c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, S.skin);
@@ -1011,6 +1354,10 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
       c.px(hx - 4, 15 + U, S.skin, { x: -0.5, y: -0.2, z: 0.8 }, { bias: -1 });
     }
     eyes(c, [[hx - 4, 12 + U]], p.blink);
+  } else if (S.nomad || S.empress) {
+    if (S.nomad) nomadSide(c, hx, U);
+    else empressSide(c, hx, U);
+    eyes(c, [[hx - 3, 12 + U]], p.blink);
   } else {
     c.part();
     const rows: [number, number][] = [

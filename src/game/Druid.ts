@@ -8,6 +8,7 @@ import { bindFoe } from './Strings';
 import { bloom, clamp01, dither, easeOut, Fx, GROUND, hash, pal, pool, ring, shade, type Ink, type Pal } from './ultimate/ink';
 import { AUTUMN_STYLE, FROST_STYLE, GROVE_STYLE, WILD_STYLE, type SpellStyle } from './spells';
 import { TITANIA_STYLE } from './spells';
+import { CINDER_STYLE, MYCELIA_STYLE } from './spells';
 import type { Wizard, WizardKit, WizardSkin } from './Wizard';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
@@ -49,6 +50,9 @@ export const AUTUMN_SKIN: WizardSkin = { key: 'druid_autumn', style: AUTUMN_STYL
 export const FROST_SKIN: WizardSkin = { key: 'druid_frost', style: FROST_STYLE, kit: WILD_KIT };
 /** The Grovekeeper's Titania skin, the faerie queen. */
 export const TITANIA_SKIN: WizardSkin = { key: 'druid_titania', style: TITANIA_STYLE, kit: GROVE_KIT };
+/** The Grovekeeper's Mycelia skin, the mushroom druid, and the Shapeshifter's Cinderhide, the volcano's shaman. */
+export const MYCELIA_SKIN: WizardSkin = { key: 'druid_mycelia', style: MYCELIA_STYLE, kit: GROVE_KIT };
+export const CINDER_SKIN: WizardSkin = { key: 'druid_cinder', style: CINDER_STYLE, kit: WILD_KIT };
 
 /** A druid look's magic: its spells and light, the charge's mark, and (for the grove) its moss, flowers and the tint of what it slows. */
 export interface DruidMagic {
@@ -62,6 +66,10 @@ export interface DruidMagic {
   /** The grove's floor, darker and lighter. */
   moss: [number, number];
   flowers: number[];
+  /** Mycelia: the grove's flowers grow as glowing toadstools on pale stems, and puff spores. */
+  shrooms?: boolean;
+  /** Cinderhide: dark smoke billowing off the claws and the spirit wolf, darkest first. */
+  smoke?: [number, number];
 }
 
 const magic = (style: SpellStyle, light: number, rest: Omit<DruidMagic, 'style' | 'pal' | 'fx'>): DruidMagic => ({
@@ -76,9 +84,13 @@ export const GROVE_MAGIC = magic(GROVE_STYLE, 0x9aff6a, { mark: [0x4ec83a, 0xb8f
 export const AUTUMN_MAGIC = magic(AUTUMN_STYLE, 0xffa050, { mark: [0xd86a1e, 0xffc060], tint: 0xffb060, moss: [0x5a2a14, 0x7a3a18], flowers: [0xffd66b, 0xff8a3a, 0xd83a2a] });
 /** Titania: a faerie ring of clover and blossom, pink and gold, with fireflies rising from it. */
 export const TITANIA_MAGIC = magic(TITANIA_STYLE, 0xffb8d0, { mark: [0xe0608e, 0xffd88a], tint: 0xffb0d0, moss: [0x3e5a34, 0x5a7a44], flowers: [0xffb8d0, 0xfff4e8, 0xffd66b, 0xff8ab0] });
+/** Mycelia: dark leaf mould, luminous toadstools and drifting spores. */
+export const MYCELIA_MAGIC = magic(MYCELIA_STYLE, 0x6af0e0, { mark: [0x2aa8b8, 0x9af6e8], tint: 0x8ef6e6, moss: [0x221a2a, 0x302438], flowers: [0x8ef6e6, 0x36c4cc, 0xc8a4ff], shrooms: true });
 export const WILD_MAGIC = magic(WILD_STYLE, 0xffb050, { mark: [0xd8801e, 0xffc860], tint: 0xffc070, moss: [0x3a2a1a, 0x4a3a24], flowers: [] });
 /** Frostfang: the spirit wolf in ice. */
 export const FROST_MAGIC = magic(FROST_STYLE, 0x8ad0ff, { mark: [0x3a8ad8, 0xa8e0ff], tint: 0xa8e0ff, moss: [0x2a3a5a, 0x3a4a6a], flowers: [] });
+/** Cinderhide: the spirit wolf in ember fire, trailing smoke. */
+export const CINDER_MAGIC = magic(CINDER_STYLE, 0xff8a30, { mark: [0xd8501a, 0xffb04a], tint: 0xff9a50, moss: [0x2a1a14, 0x3a2418], flowers: [], smoke: [0x1a1412, 0x3a302c] });
 
 export const GROVE_PAL = GROVE_MAGIC.pal;
 export const WILD_PAL = WILD_MAGIC.pal;
@@ -392,7 +404,17 @@ class Grove extends Fx {
       const sway = hh >= 3 ? Math.round(Math.sin(t * 0.004 + pl.seed) * 0.7) : 0;
       for (let j = 0; j < hh; j++) g.put(pl.x + (j === hh - 1 ? sway : 0), pl.y - j, j === hh - 1 ? this.m.pal.hot : this.m.pal.mid);
       if (hh >= 2) g.put(pl.x + (pl.seed % 2 ? 1 : -1), pl.y - 1, this.m.pal.mid);
-      if (pl.flower >= 0 && up > 0.85) {
+      if (pl.flower >= 0 && up > 0.85 && this.m.shrooms) {
+        // A glowcap: a pale stem under a little domed cap, and now and then a puff of spores.
+        const fx = pl.x + sway;
+        const fy = pl.y - hh;
+        g.put(fx, fy, 0xd8ccc0);
+        g.put(fx - 1, fy - 1, pl.flower);
+        g.put(fx, fy - 1, pl.flower);
+        g.put(fx + 1, fy - 1, pl.flower);
+        g.put(fx, fy - 2, this.m.pal.core, 0.9);
+        if (pl.seed % 3 === 0) g.put(fx + Math.round(Math.sin(t * 0.003 + pl.seed) * 2), fy - 4 - ((t * 0.006 + pl.seed) % 5), this.m.pal.hot, 0.6);
+      } else if (pl.flower >= 0 && up > 0.85) {
         const fx = pl.x + sway;
         const fy = pl.y - hh;
         g.put(fx, fy, pl.flower);
@@ -479,7 +501,7 @@ export class Wildcraft implements Effect {
     const reach = maul ? MAUL_REACH : RAKE_REACH;
     const side = this.chain % 2 ? 1 : -1;
     const w = this.world;
-    w.addEffect(new ClawRake(w, cx, cy, angle, reach, side, maul, this.m.pal, c.y + (dy < -0.5 ? -0.5 : 1)));
+    w.addEffect(new ClawRake(w, cx, cy, angle, reach, side, maul, this.m.pal, c.y + (dy < -0.5 ? -0.5 : 1), this.m.smoke));
     sound.knife(w.pan(cx), this.chain, maul);
     const hits = w.melee({ kind: 'arc', x: cx, y: cy, radius: reach, angle, spread: RAKE_SPREAD }, { damage: maul ? MAUL_DAMAGE : RAKE_DAMAGE, heavy: maul, knock: maul ? 150 : 50 });
     for (const h of hits) {
@@ -550,6 +572,8 @@ class ClawRake extends Fx {
     private maul: boolean,
     private p: Pal,
     private depth: number,
+    /** Cinderhide's claws leave smoke hanging where they passed. */
+    private smoke?: [number, number],
   ) {
     super(world, maul ? 300 : 240);
     const s = Math.ceil(reach * 2 + 10);
@@ -578,6 +602,12 @@ class ClawRake extends Fx {
         if (fade <= 0.05) continue;
         const px = x + Math.cos(q) * rr;
         const py = y + Math.sin(q) * rr;
+        // The smoke curls up off the cooling tail of each claw, dithered thin.
+        if (this.smoke && u > 0.55) {
+          const sy = py - (u - 0.55) * 6 * k;
+          if (dither(Math.round(px), Math.round(sy)) < fade * 1.6) g.put(px, sy, this.smoke[(i + n) % 2], 0.85);
+          continue;
+        }
         g.put(px, py, shade(p, u * 0.9), Math.min(1, fade * 1.4));
         if (u < 0.35) g.put(px + Math.cos(q), py + Math.sin(q), p.hot, fade);
       }
@@ -691,6 +721,19 @@ class Pounce extends Fx {
       const bx = snap(hero.x);
       const by = snap(hero.y) - 7 - lift;
       const g = this.g.begin(bx, by, snap(hero.y) + 0.5);
+      // Cinderhide's wolf drags a plume of smoke behind it.
+      const smoke = this.m.smoke;
+      if (smoke) {
+        for (let i = 0; i < 3; i++) {
+          const sx = bx - this.dir * (10 + i * 2.5);
+          const sy = by - 1 - i + Math.sin(t * 0.02 + i) * 1.2;
+          const r = 1.6 + i * 0.5;
+          for (let oy = -2; oy <= 2; oy++) for (let ox = -3; ox <= 3; ox++) {
+            if (Math.hypot(ox, oy) > r || dither(Math.round(sx + ox), Math.round(sy + oy)) > 0.75 - i * 0.18) continue;
+            g.put(sx + ox, sy + oy, smoke[(ox + oy + i) & 1], 0.8);
+          }
+        }
+      }
       // Crouched to spring, stretched in the air, gathering to land.
       spiritBeast(g, bx, by, this.dir, 'wolf', k < 0.15 ? 0.2 : k > 0.85 ? 0.4 : 1, this.m.pal);
       g.end();

@@ -16,7 +16,11 @@
 // fire, a moss-dark robe and ember sash, and a carved ring behind the head.
 // The champ (also the brawler's) is a big ring hero off a merch stand: a green
 // tee with an orange print, a matching cap, jorts past the knee, sweatbands,
-// dog tags and white sneakers.
+// dog tags and white sneakers. Tigerclaw (the brawler's) is a kung-fu tiger:
+// an orange gi striped black, a tiger's-head hood with ears and fangs, a
+// banded tail, white wraps and claws on dark gloves. The Monkey King (the iron
+// monk's) is Sun Wukong: gold mail, a red sash, fur at the shoulders, a gold
+// circlet with two pheasant plumes, the staff across his back and a curling tail.
 
 import { FLAT, PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
 import {
@@ -111,6 +115,10 @@ export interface FighterLook {
   guardian?: { ring: Material; vein: Material };
   /** The champ: the tee's colour is `gi`; its print, the dark in it, the cap, the jorts' frayed hem and the dog tags. */
   champ?: { print: Material; ink: Material; cap: Material; fray: Material; chain: Material };
+  /** Tigerclaw: a tiger's-head hood (the gi's orange), black stripes, white fur and fangs, pink in the ears, claws on the gloves, and a tail. */
+  tiger?: { stripe: Material; fur: Material; fang: Material; ear: Material; claw: Material };
+  /** The Monkey King: chain mail (the gi), golden fur, a circlet, two pheasant plumes and their bars, and the staff across his back. */
+  wukong?: { fur: Material; circlet: Material; plume: Material; bar: Material; staff: Material };
 }
 
 /** The style being drawn (set per frame by drawFighterFrame). */
@@ -176,8 +184,8 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   }
   c.part();
   c.capsule(sx, sy, ex, ey, 1.65, 1.35, LK.skin, { bias });
-  if (LK.champ) {
-    // The tee's short sleeve, stretched over the top of the arm.
+  if (LK.champ || LK.wukong) {
+    // The tee's short sleeve (or the Monkey King's mail), stretched over the top of the arm.
     c.part();
     c.capsule(sx, sy, sx + (ex - sx) * 0.45, sy + (ey - sy) * 0.45, 1.95, 1.8, LK.gi, { bias });
   }
@@ -186,8 +194,29 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   c.part();
   const band = LK.monk ? 1.5 : 1.3;
   c.capsule(ex + (fx - ex) * 0.45, ey + (fy - ey) * 0.45, fx, fy, band, band, LK.wrap, { bias });
+  if (LK.tiger) {
+    // Stripes painted round the bare forearm and the upper arm.
+    const m = LK.tiger.stripe;
+    for (const [ax, ay, bx, by, k] of [[sx, sy, ex, ey, 0.55], [ex, ey, fx, fy, 0.22]] as const) {
+      const l = Math.hypot(bx - ax, by - ay) || 1;
+      const nx = -(by - ay) / l;
+      const ny = (bx - ax) / l;
+      const mx = ax + (bx - ax) * k;
+      const my = ay + (by - ay) * k;
+      stripe(c, [[mx + nx * 0.7, my + ny * 0.7], [mx - nx * 0.5, my - ny * 0.5]], m);
+    }
+  }
   c.part();
   c.ellipse(fx, fy, LK.hand * p.scale, LK.hand * 0.92 * p.scale, LK.glove, { bias });
+  if (LK.tiger && bias >= 0) {
+    // Ivory claws curving out past the knuckles, along the line of the forearm.
+    const l = Math.hypot(fx - ex, fy - ey) || 1;
+    const ux = (fx - ex) / l;
+    const uy = (fy - ey) / l;
+    const r = LK.hand * p.scale + 0.4;
+    c.part();
+    for (const s of [-0.9, 0.9]) c.px(fx + ux * r - uy * s, fy + uy * r + ux * s, LK.tiger.claw, sphere(ux * 0.4, -0.5, 1), { bias: 1 });
+  }
   if (LK.guardian) {
     // A crack of fire down the stone arm, from the shoulder to the elbow and on towards the bracer.
     const v = LK.guardian.vein;
@@ -619,6 +648,258 @@ function champSide(c: PixelCanvas, hx: number, top: number, waist: number, U: nu
 }
 
 // ---------------------------------------------------------------------------
+// Tigerclaw and the Monkey King
+
+/** A bold stripe painted over something already drawn (a tiger's stripe on the gi, the hood, a forearm). */
+function stripe(c: PixelCanvas, pts: readonly (readonly [number, number])[], m: Material, n: Vec3 = sphere(0, -0.2, 1)): void {
+  c.part();
+  for (const [x, y] of pts) if (c.filled(Math.floor(x), Math.floor(y))) c.px(x, y, m, n);
+}
+
+/**
+ * A tail as a chain of short capsules through `pts`, thinning from r0 to r1.
+ * `mat(i, n)` picks each segment's material, so the tiger's can be banded
+ * with a black tip and the monkey's plain fur.
+ */
+function tailChain(c: PixelCanvas, pts: [number, number][], r0: number, r1: number, mat: (i: number, n: number) => Material, bias = 0): void {
+  const n = pts.length - 1;
+  for (let i = 0; i < n; i++) {
+    const k = i / Math.max(1, n - 1);
+    c.part();
+    c.capsule(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], r0 + (r1 - r0) * k, r0 + (r1 - r0) * Math.min(1, k + 1 / n), mat(i, n), { bias });
+  }
+}
+
+/** Points along a quadratic curve from a through b (as a control) to c. */
+function curve(a: [number, number], b: [number, number], e: [number, number], steps: number): [number, number][] {
+  const out: [number, number][] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const u = 1 - t;
+    out.push([u * u * a[0] + 2 * u * t * b[0] + t * t * e[0], u * u * a[1] + 2 * u * t * b[1] + t * t * e[1]]);
+  }
+  return out;
+}
+
+/** The tiger's tail: orange ringed in black, the last of it black, swinging with his moves. */
+function tigerTail(c: PixelCanvas, root: [number, number], bend: [number, number], tip: [number, number], bias = 0): void {
+  const t = LK.tiger!;
+  tailChain(c, curve(root, bend, tip, 8), 0.8, 0.5, (i, n) => (i === n - 1 || i % 3 === 2 ? t.stripe : LK.gi), bias);
+}
+
+/** The Monkey King's tail: golden fur, coiling up into a curl at its end. */
+function monkeyTail(c: PixelCanvas, pts: [number, number][], bias = 0): void {
+  tailChain(c, pts, 0.85, 0.6, () => LK.wukong!.fur, bias);
+}
+
+/**
+ * One of the Monkey King's pheasant plumes: a long feather rising from the
+ * circlet and arcing away, barred light and dark along its length, its tip pale.
+ */
+function plume(c: PixelCanvas, a: [number, number], b: [number, number], e: [number, number]): void {
+  const w = LK.wukong!;
+  const pts = curve(a, b, e, 14);
+  c.part();
+  let last = '';
+  pts.forEach(([x, y], i) => {
+    const key = `${Math.floor(x)},${Math.floor(y)}`;
+    if (key === last) return;
+    last = key;
+    const tip = i > pts.length - 3;
+    // Barred every few pixels, the way a pheasant's tail is.
+    const bar = !tip && i % 4 === 3;
+    c.px(x, y, bar ? w.bar : w.plume, sphere(0, -0.6, 1), { bias: tip ? 2 : i < 3 ? -1 : 0 });
+  });
+}
+
+/** The staff, red lacquer between two golden bands, slung or held from (x0, y0) to (x1, y1). */
+function staff(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, bias = 0): void {
+  const w = LK.wukong!;
+  const len = Math.hypot(x1 - x0, y1 - y0) || 1;
+  const cap = 2 / len;
+  c.part();
+  c.capsule(x0, y0, x1, y1, 0.8, 0.8, w.staff, { bias });
+  c.part();
+  c.capsule(x0, y0, x0 + (x1 - x0) * cap, y0 + (y1 - y0) * cap, 0.95, 0.95, w.circlet, { bias });
+  c.capsule(x1, y1, x1 - (x1 - x0) * cap, y1 - (y1 - y0) * cap, 0.95, 0.95, w.circlet, { bias });
+}
+
+/** Chain mail: a fine grid of shadowed links over the gold, so it glitters rather than reading as plate. */
+function mail(c: PixelCanvas, top: number, bottom: number, x0: number, x1: number): void {
+  for (let y = top + 1; y <= bottom; y++) {
+    for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) {
+      if (c.materialAt(x, y) === LK.gi && (x + y * 2) % 3 === 0) c.shade(x, y, -1);
+    }
+  }
+}
+
+/** A fur mantle over a shoulder: a rounded tuft, ragged along its lower edge. */
+function furShoulder(c: PixelCanvas, x: number, y: number, rx = 2.4): void {
+  const m = LK.wukong!.fur;
+  c.part();
+  c.ellipse(x, y - 0.2, rx, 1.9, m, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.35, 0.95) });
+  c.part();
+  for (let i = -1; i <= 1; i++) c.px(x + i * 1.4 - 0.5, y + 1.9, m, sphere(i * 0.4, 0.2, 1), { bias: (i + 3) % 2 ? -1 : 0 });
+}
+
+/**
+ * The tiger hood from the front: a tiger's head pulled over his own, its
+ * upper jaw across his brow with a fang either side, his face looking out
+ * from its mouth, round ears on top and stripes across its forehead.
+ */
+function tigerHoodFront(c: PixelCanvas, cx: number, U: number): void {
+  const t = LK.tiger!;
+  c.part();
+  const widths = [2.8, 3.7, 4.0, 4.1];
+  c.shape(7 + U, 10 + U, (y) => [cx - widths[y - 7 - U], cx + widths[y - 7 - U]], LK.gi, (_x, _y, tt, u) => sphere(tt * 0.9, u * 1.1 - 0.9, 1));
+  // The cheeks of the hood coming down the sides of his face, a white ruff at their foot.
+  c.part();
+  for (let y = 11; y <= 13; y++) {
+    const m = y === 13 ? t.fur : LK.gi;
+    c.px(8, y + U, m, cyl(-0.8, 0));
+    c.px(15, y + U, m, cyl(0.8, 0));
+  }
+  // Ears: orange, pink inside.
+  c.part();
+  for (const [x, y, m] of [[8, 6, LK.gi], [9, 5, LK.gi], [9, 6, t.ear], [15, 6, LK.gi], [14, 5, LK.gi], [14, 6, t.ear]] as const) {
+    c.px(x, y + U, m, sphere(x < 12 ? -0.4 : 0.4, -0.7), { bias: m === t.ear ? 0 : 1 });
+  }
+  // The upper lip, white across his brow, and the fangs hanging from it.
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 3.0, cx + 3.0], t.fur, (_x, _y, tt) => cyl(tt * 0.9, 0.3));
+  c.px(9, 11 + U, t.fang, sphere(-0.3, 0.2));
+  c.px(14, 11 + U, t.fang, sphere(0.3, 0.2));
+  // Its stripes: one down the middle of the brow and a pair sweeping in from each temple.
+  stripe(c, [[11, 7 + U], [12, 7 + U], [11, 8 + U], [8, 8 + U], [9, 9 + U], [15, 8 + U], [14, 9 + U]], t.stripe);
+}
+
+/** The tiger hood from behind: the back of its head striped down to a white ruff, the ears up. */
+function tigerHoodBack(c: PixelCanvas, cx: number, U: number): void {
+  const t = LK.tiger!;
+  c.part();
+  c.ellipse(cx, 11.4 + U, 3.7, 3.6, LK.gi, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
+  c.part();
+  for (const [x, y] of [[8, 7], [9, 6], [15, 7], [14, 6]] as const) c.px(x, y + U, LK.gi, sphere(x < 12 ? -0.4 : 0.4, -0.7), { bias: 1 });
+  // Chevrons of stripes down the back of the head.
+  stripe(c, [[11, 8 + U], [12, 8 + U], [9, 9 + U], [10, 10 + U], [14, 9 + U], [13, 10 + U], [8, 12 + U], [9, 12 + U], [15, 12 + U], [14, 12 + U], [11, 11 + U], [12, 11 + U]], t.stripe);
+  c.part();
+  c.shape(14 + U, 14 + U, () => [cx - 2.4, cx + 2.4], t.fur, (_x, _y, tt) => cyl(tt * 0.9, 0.3), { bias: -1 });
+}
+
+/** The tiger hood in profile, facing left: the jaw over his brow with its fang, an ear up behind, stripes. */
+function tigerHoodSide(c: PixelCanvas, hx: number, U: number): void {
+  const t = LK.tiger!;
+  c.part();
+  const rows: [number, number][] = [
+    [-2.6, 2.4],
+    [-3.6, 3.0],
+    [-4.0, 3.3],
+    [-4.4, 3.4],
+    [-0.2, 3.4],
+    [0.2, 3.2],
+    [0.6, 2.8],
+    [1.0, 2.4],
+  ];
+  c.shape(7 + U, 14 + U, (y) => [hx + rows[y - 7 - U][0], hx + rows[y - 7 - U][1]], LK.gi, (_x, _y, tt, u) => sphere(tt * 0.9, u * 1.3 - 0.8, 1));
+  c.part();
+  c.px(hx + 1, 6 + U, LK.gi, sphere(0.2, -0.8), { bias: 1 });
+  c.px(hx + 2, 6 + U, LK.gi, sphere(0.5, -0.7));
+  c.px(hx + 1, 5 + U, LK.gi, sphere(0.3, -0.9), { bias: 1 });
+  c.px(hx, 6 + U, t.ear, sphere(-0.2, -0.6));
+  // The lip along the brow, the fang at its front, the ruff at the nape.
+  c.part();
+  c.shape(10 + U, 10 + U, () => [hx - 4.4, hx - 0.6], t.fur, (_x, _y, tt) => sphere(tt * 0.7 - 0.3, 0.2, 1));
+  c.px(hx - 4, 11 + U, t.fang, sphere(-0.4, 0.2));
+  c.px(hx + 1, 14 + U, t.fur, sphere(0.3, 0.3), { bias: -1 });
+  stripe(c, [[hx - 2, 7 + U], [hx - 1, 8 + U], [hx + 1, 8 + U], [hx + 2, 9 + U], [hx + 1, 11 + U], [hx + 2, 12 + U], [hx - 3, 9 + U]], t.stripe);
+}
+
+/** Tiger stripes across the front of the gi: chevrons sweeping in from each side, narrowing to the belt. */
+function tigerChestFront(c: PixelCanvas, cx: number, top: number): void {
+  const m = LK.tiger!.stripe;
+  stripe(c, [[cx - 5, top + 1], [cx - 4, top + 2], [cx - 5, top + 4], [cx - 4, top + 4], [cx - 3, top + 5], [cx - 4, top + 6]], m, sphere(-0.6, -0.1, 1));
+  stripe(c, [[cx + 4, top + 1], [cx + 3, top + 2], [cx + 4, top + 4], [cx + 3, top + 4], [cx + 2, top + 5], [cx + 3, top + 6]], m, sphere(0.6, -0.1, 1));
+}
+
+/** The stripes across the back of the gi, running from the sides towards the spine. */
+function tigerChestBack(c: PixelCanvas, cx: number, top: number): void {
+  const m = LK.tiger!.stripe;
+  stripe(c, [[cx - 5, top + 1], [cx - 4, top + 2], [cx - 3, top + 2], [cx - 2, top + 3], [cx - 5, top + 4], [cx - 4, top + 5], [cx - 3, top + 5], [cx - 4, top + 6]], m, sphere(-0.6, -0.1, 1));
+  stripe(c, [[cx + 4, top + 1], [cx + 3, top + 2], [cx + 2, top + 2], [cx + 1, top + 3], [cx + 4, top + 4], [cx + 3, top + 5], [cx + 2, top + 5], [cx + 3, top + 6]], m, sphere(0.6, -0.1, 1));
+}
+
+/**
+ * The Monkey King's head from the front: a cap of golden fur with a tuft at
+ * the crown, fur down his cheeks round a bare face, the golden circlet across
+ * his brow, and the two long plumes rising from it.
+ */
+function wukongHeadFront(c: PixelCanvas, cx: number, U: number, sway: number): void {
+  const w = LK.wukong!;
+  c.part();
+  const widths = [2.8, 3.7, 4.0];
+  c.shape(7 + U, 9 + U, (y) => [cx - widths[y - 7 - U], cx + widths[y - 7 - U]], w.fur, (_x, _y, t, u) => sphere(t * 0.9, u * 1.2 - 0.9, 1));
+  c.part();
+  for (const [x, y] of [[10, 6], [11, 5], [12, 6], [13, 6]] as const) c.px(x, y + U, w.fur, sphere((x - 11.5) * 0.3, -0.9), { bias: y === 5 ? 1 : 0 });
+  // Fur framing the face, the ears showing through it.
+  c.part();
+  for (const y of [11, 13]) {
+    c.px(8, y + U, w.fur, cyl(-0.8, 0));
+    c.px(15, y + U, w.fur, cyl(0.8, 0));
+  }
+  c.px(8, 12 + U, LK.skin, cyl(-0.8, 0), { bias: 1 });
+  c.px(15, 12 + U, LK.skin, cyl(0.8, 0));
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 3.9, cx + 3.9], w.circlet, (_x, _y, t) => cyl(t, -0.2));
+  c.part();
+  c.px(11, 10 + U, w.circlet, sphere(-0.2, -0.6), { bias: 1 });
+  c.px(12, 10 + U, w.circlet, sphere(0.2, -0.6), { bias: 1 });
+  plume(c, [9.5, 8.5 + U], [7 + sway * 0.3, -0.5 + U], [2.5 - sway * 0.6, 3 + U]);
+  plume(c, [14.5, 8.5 + U], [17 - sway * 0.3, -0.5 + U], [21.5 + sway * 0.6, 3 + U]);
+}
+
+/** The Monkey King from behind: a furred head, the circlet round it and the plumes rising over it. */
+function wukongHeadBack(c: PixelCanvas, cx: number, U: number, sway: number): void {
+  const w = LK.wukong!;
+  c.part();
+  c.ellipse(cx, 11.6 + U, 3.6, 3.5, w.fur, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
+  c.shade(cx - 1, 9 + U, 1);
+  c.part();
+  for (const [x, y] of [[11, 7], [12, 7], [12, 6]] as const) c.px(x, y + U, w.fur, sphere(0, -0.9), { bias: 1 });
+  c.part();
+  c.px(8, 12 + U, LK.skin, cyl(-0.8, 0));
+  c.px(16, 12 + U, LK.skin, cyl(0.8, 0));
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 3.8, cx + 3.8], w.circlet, (_x, _y, t) => cyl(t, -0.2));
+  plume(c, [9.5, 8.5 + U], [7 - sway * 0.3, -0.5 + U], [2.5 + sway * 0.6, 3 + U]);
+  plume(c, [14.5, 8.5 + U], [17 + sway * 0.3, -0.5 + U], [21.5 - sway * 0.6, 3 + U]);
+}
+
+/** The Monkey King in profile, facing left: fur over the skull, a bare face, the circlet, both plumes streaming back. */
+function wukongHeadSide(c: PixelCanvas, hx: number, U: number, sway: number, blink?: boolean): void {
+  const w = LK.wukong!;
+  c.part();
+  const skull: [number, number][] = [
+    [-3.0, 2.6],
+    [-3.8, 3.1],
+    [-4.0, 3.3],
+    [-1.0, 3.2],
+    [-0.4, 3.0],
+    [0.2, 2.6],
+  ];
+  c.shape(8 + U, 13 + U, (y) => [hx + skull[y - 8 - U][0], hx + skull[y - 8 - U][1]], w.fur, (_x, _y, t, u) => sphere(t * 0.9, u * 1.3 - 0.8, 1));
+  c.part();
+  c.px(hx - 1, 7 + U, w.fur, sphere(-0.2, -0.9), { bias: 1 });
+  c.px(hx, 7 + U, w.fur, sphere(0.2, -0.9));
+  c.part();
+  c.px(hx + 1, 12 + U, LK.skin, sphere(0.4, 0), { bias: 1 });
+  c.part();
+  c.shape(10 + U, 10 + U, () => [hx - 4.1, hx + 3.3], w.circlet, (_x, _y, t) => cyl(t * 0.9, -0.2));
+  eyes(c, [[hx - 3, 12 + U]], blink);
+  plume(c, [hx - 2, 9 + U], [hx - 1 + sway * 0.2, 2.5 + U], [hx + 7 + sway * 0.8, 2 + U]);
+  plume(c, [hx - 1, 9 + U], [hx + 2 + sway * 0.2, 4 + U], [hx + 9.5 + sway, 5 + U]);
+}
+
+// ---------------------------------------------------------------------------
 // Directions
 
 const REACH_FRONT = 4.6;
@@ -639,11 +920,19 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const armB = () => arm(c, shB.x, shB.y, fb, REACH_FRONT, [0.3, 1], p.chi, fb.behind ? -1 : 0);
 
   // Headband tails, knotted behind the head, flying out past it.
-  if (!LK.monk && !LK.lucha && !LK.champ) {
+  if (!LK.monk && !LK.lucha && !LK.champ && !LK.tiger) {
     tail(c, 14.6, 10.2 + U, 17.4 + p.tails, 11.8 + U - p.tails * 0.4);
     tail(c, 14.6, 10.6 + U, 16.8 + p.tails * 0.6, 13.8 + U);
   }
   halo(c, cx, 11.4 + U, 5.8);
+  // The tiger's tail swinging out from behind his hip.
+  if (LK.tiger) tigerTail(c, [cx + 2, 23 + U], [cx + 8 + p.tails * 0.6, 26 + L], [cx + 9 + p.tails, 20.5 + U - p.tails * 0.4], -1);
+  if (LK.wukong) {
+    // The staff slung across his back, its ends showing past a shoulder and a hip, and the tail curling up beside him.
+    staff(c, cx - 8.2, 10.5 + U, cx + 8.2, 27 + U, -1);
+    const s = p.tails * 0.4;
+    monkeyTail(c, [[cx + 2, 23 + U], [cx + 6, 25 + L], [cx + 8.4 + s, 23 + L], [cx + 9 + s, 20 + U], [cx + 8 + s, 18.2 + U], [cx + 6.8 + s, 18.8 + U], [cx + 7.2 + s, 20 + U]], -1);
+  }
   if (LK.lucha) capeFront(c, cx, 15 + U, 26 + L, p.tails);
   if (fa.behind) armA();
   if (fb.behind) armB();
@@ -674,7 +963,13 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     const hw = 2.1 - (y - top) * 0.6;
     return hw < 0.4 ? null : [cx - hw, cx + hw];
   }, LK.skin, (_x, _y, t, u) => sphere(t * 0.7, u * 0.5 - 0.2, 1));
-  if (LK.monk) {
+  if (LK.wukong) {
+    // Gold mail to the throat, and the red sash across it from shoulder to hip.
+    c.part();
+    c.shape(top, top + 1, () => [cx - 1.6, cx + 1.6], LK.gi, (_x, _y, t) => sphere(t * 0.7, -0.4, 1));
+    mail(c, top, waist - 1, cx - 5, cx + 5);
+    sash(c, top, waist - 1, 15.4, 8.8, 1.15, torso);
+  } else if (LK.monk) {
     // The sash from his left shoulder down across to the right hip, the beads over it.
     sash(c, top, waist - 1, 15.4, 8.8, 1.15, torso);
     beads(c, [[9, top], [9, top + 1], [10, top + 2], [11, top + 3], [12, top + 3], [13, top + 2], [14, top + 1], [14, top]], [12, top + 4]);
@@ -687,6 +982,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     if (!fa.behind) armA();
     if (!fb.behind) armB();
     return;
+  } else if (LK.tiger) {
+    tigerChestFront(c, cx, top);
   } else {
     for (let y = top + 3; y < waist; y++) c.shade(Math.round(cx - 0.5 + (y - top - 3) * 0.45), y, -1);
   }
@@ -720,6 +1017,10 @@ function drawDown(c: PixelCanvas, p: Pose): void {
 
   deltoid(c, 7.1, 16.8 + U);
   deltoid(c, 16.9, 16.8 + U, 2.1, LK.monk ? LK.sash : LK.skin);
+  if (LK.wukong) {
+    furShoulder(c, 7.1, 16.6 + U);
+    furShoulder(c, 16.9, 16.6 + U);
+  }
 
   // Head: a square jaw, spiky hair, the headband across the brow.
   c.part();
@@ -729,7 +1030,11 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   c.px(12, 13 + U, LK.skin, sphere(0.35, -0.2));
   c.shade(11, 14 + U, -1);
   c.shade(12, 14 + U, -1);
-  if (LK.monk) {
+  if (LK.wukong) {
+    wukongHeadFront(c, cx, U, p.tails);
+  } else if (LK.tiger) {
+    tigerHoodFront(c, cx, U);
+  } else if (LK.monk) {
     // A shaved dome catching the light, and ears.
     c.part();
     const dome = [2.7, 3.5];
@@ -827,6 +1132,8 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   c.part();
   c.shape(top, waist - 1, torso, LK.gi, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
   for (let y = top + 2; y < waist; y++) c.shade(cx, y, -1);
+  if (LK.wukong) mail(c, top, waist - 1, cx - 5, cx + 5);
+  if (LK.tiger) tigerChestBack(c, cx, top);
   // The sash across his back, from the left shoulder (screen left from behind) down to the right hip.
   if (LK.monk) sash(c, top, waist - 1, 8.6, 15.2, 1.15, torso);
   if (LK.champ) {
@@ -843,11 +1150,28 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   deltoid(c, 7.1, 16.8 + U, 2.1, LK.monk ? LK.sash : LK.skin);
   deltoid(c, 16.9, 16.8 + U);
   if (LK.lucha) capeBack(c, cx, top, 26 + L, -p.tails);
+  if (LK.tiger) tigerTail(c, [cx, 23 + U], [cx - 4 - p.tails * 0.4, 27 + L], [cx - 7.5 - p.tails, 23 + U + p.tails * 0.3]);
+  if (LK.wukong) {
+    // From behind: the tail curling up from the small of his back, the staff across it over the sash, fur on both shoulders.
+    const s = -p.tails * 0.4;
+    monkeyTail(c, [[cx, 23 + U], [cx - 3, 26 + L], [cx - 6.4 + s, 25 + L], [cx - 7.6 + s, 22 + U], [cx - 7 + s, 19.6 + U], [cx - 5.6 + s, 19.8 + U], [cx - 5.6 + s, 21 + U]]);
+    staff(c, cx + 8.2, 10.5 + U, cx - 8.2, 27 + U);
+    furShoulder(c, 7.1, 16.6 + U);
+    furShoulder(c, 16.9, 16.6 + U);
+  }
   if (!fa.behind) armA();
   if (!fb.behind) armB();
 
   if (LK.lucha) {
     maskBack(c, cx, U);
+    return;
+  }
+  if (LK.wukong) {
+    wukongHeadBack(c, cx, U, p.tails);
+    return;
+  }
+  if (LK.tiger) {
+    tigerHoodBack(c, cx, U);
     return;
   }
   if (LK.monk) {
@@ -896,11 +1220,18 @@ function drawSide(c: PixelCanvas, p: Pose): void {
 
   halo(c, hx + 4.4, 11.4 + U, 5.8, true);
   if (LK.lucha) capeSide(c, hx, 15 + U, 26 + L, p.tails);
+  // The tiger's tail streaming out behind; the monkey's curling up behind his back, the staff slung across it.
+  if (LK.tiger) tigerTail(c, [hx + 2.5, 22.5 + U], [hx + 7 + p.tails * 0.6, 25 + L], [hx + 9.5 + p.tails, 20.5 + U - p.tails * 0.5], -1);
+  if (LK.wukong) {
+    const s = p.tails * 0.5;
+    staff(c, hx + 7.5, 10 + U, hx - 0.5, 28.5 + U, -1);
+    monkeyTail(c, [[hx + 2.5, 22.5 + U], [hx + 6 + s, 24 + L], [hx + 8 + s, 21.5 + U], [hx + 7.6 + s, 18.6 + U], [hx + 6 + s, 18.4 + U], [hx + 5.8 + s, 19.8 + U]], -1);
+  }
   // Far arm, behind everything.
   arm(c, hx + 1.4, 16.6 + U, fb, REACH_SIDE, [0.3, 1], p.chi, -1);
 
   // Headband tails streaming back.
-  if (!LK.monk && !LK.lucha && !LK.champ) {
+  if (!LK.monk && !LK.lucha && !LK.champ && !LK.tiger) {
     tail(c, hx + 3, 10.2 + U, hx + 6.6 + p.tails, 10.8 + U + (p.tails > 1 ? 0 : 1));
     tail(c, hx + 3, 10.6 + U, hx + 5.8 + p.tails * 0.8, 13 + U);
   }
@@ -921,10 +1252,16 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   c.shape(top, waist - 1, (y) => [hx - 3.0 - (y >= top + 1 && y <= top + 3 ? 0.5 : 0), hx + 2.8], LK.gi, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
   c.part();
   c.shape(top, top + 1, (y) => [hx - 3.0, hx - 1.2 - (y - top)], LK.skin, (_x, _y, t) => sphere(t * 0.6 - 0.4, -0.2, 1));
+  if (LK.wukong) {
+    c.part();
+    c.shape(top, top + 1, (y) => [hx - 3.0, hx - 1.2 - (y - top)], LK.gi, (_x, _y, t) => sphere(t * 0.6 - 0.4, -0.2, 1));
+    mail(c, top, waist - 1, hx - 4, hx + 3);
+  }
+  if (LK.tiger) stripe(c, [[hx + 2, top + 1], [hx + 1, top + 2], [hx + 2, top + 4], [hx + 1, top + 5], [hx, top + 5], [hx - 3, top + 3], [hx - 2, top + 4]], LK.tiger.stripe);
   if (LK.monk) {
     // The sash runs from the near shoulder back to the far hip; the beads hang at the collar.
     sash(c, top, waist - 1, hx + 0.2, hx + 1.8, 1.1, (y) => [hx - 3.0 - (y >= top + 1 && y <= top + 3 ? 0.5 : 0), hx + 2.8]);
-    beads(c, [[hx - 1, top], [hx - 2, top + 1], [hx - 3, top + 2], [hx - 3, top + 3]], [hx - 3, top + 4]);
+    if (!LK.wukong) beads(c, [[hx - 1, top], [hx - 2, top + 1], [hx - 3, top + 2], [hx - 3, top + 3]], [hx - 3, top + 4]);
   }
   if (LK.champ) {
     champSide(c, hx, top, waist, U, p.blink);
@@ -956,6 +1293,13 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   c.part();
   c.px(hx - 5, 13 + U, LK.skin, sphere(-0.6, -0.2), { bias: 1 });
   c.shade(hx - 4, 14 + U, -1);
+  if (LK.wukong) {
+    wukongHeadSide(c, hx, U, p.tails, p.blink);
+    deltoid(c, hx + 0.2, 17 + U, 1.9, LK.gi);
+    furShoulder(c, hx + 0.2, 16.8 + U, 2.2);
+    arm(c, hx + 0.2, 17 + U, fa, REACH_SIDE, [0.3, 1], p.chi);
+    return;
+  }
   if (LK.monk) {
     // A shaved crown and the back of the skull, an ear, heavy brows.
     c.part();
@@ -993,6 +1337,13 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     [0.4, 3.0],
     [0.8, 2.4],
   ];
+  if (LK.tiger) {
+    tigerHoodSide(c, hx, U);
+    eyes(c, [[hx - 3, 12 + U]], p.blink);
+    deltoid(c, hx + 0.2, 17 + U, 1.9);
+    arm(c, hx + 0.2, 17 + U, fa, REACH_SIDE, [0.3, 1], p.chi);
+    return;
+  }
   c.shape(7 + U, 13 + U, (y) => {
     const [l, r] = rows[y - 7 - U];
     return l === r ? null : [hx + l, hx + r];
@@ -1483,7 +1834,63 @@ export const CHAMP_LOOK: FighterLook = {
   champ: { print: CHAMP_PRINT, ink: CHAMP_INK, cap: CHAMP_CAP, fray: JORTS_FRAY, chain: DOG_TAG },
 };
 
-export const FIGHTER_LOOKS = [BRAWLER_LOOK, MONK_LOOK, LUCHA_LOOK, GUARDIAN_LOOK, CHAMP_LOOK];
+// Tigerclaw's colours: a tiger-orange gi and hood, black stripes and trousers, white fur, wraps and fangs, dark claw gloves.
+const TIGER_ORANGE: Material = { ramp: ramp('#40140a', '#82300c', '#c85a12', '#f48a26', '#ffc26a'), outline: hex('#1c0804'), outlineLit: hex('#3a1408') };
+const TIGER_STRIPE: Material = { ramp: ramp('#060408', '#100c12', '#1c161e', '#2c2430'), outline: hex('#040306') };
+const TIGER_PANTS: Material = { ramp: ramp('#0a080c', '#16121a', '#241e2a', '#383040', '#56485e'), outline: hex('#050406'), outlineLit: hex('#120e16') };
+const TIGER_WHITE: Material = { ramp: ramp('#686270', '#aea6b4', '#e8e2ea', '#ffffff'), outline: hex('#16141c'), outlineLit: hex('#2c2834') };
+const TIGER_EAR: Material = { ramp: ramp('#7a3040', '#c0606e', '#f0a0aa', '#ffd8dc'), outline: hex('#2a0c12') };
+const TIGER_GLOVE: Material = { ramp: ramp('#120a08', '#24160e', '#3e2818', '#5e3e24', '#8a6040'), outline: hex('#080404'), shine: true };
+const TIGER_CLAW: Material = { ramp: ramp('#8a7c62', '#cabc98', '#f4ecd2', '#ffffff'), outline: hex('#1a140c'), shine: true };
+
+/** Tigerclaw, the brawler's skin: a kung-fu tiger in a striped orange gi and a tiger's-head hood, claws on his fists. */
+export const TIGER_LOOK: FighterLook = {
+  ...BRAWLER_LOOK,
+  key: 'fighter_tiger',
+  gi: TIGER_ORANGE,
+  trouser: TIGER_PANTS,
+  belt: TIGER_WHITE,
+  band: TIGER_ORANGE,
+  glove: TIGER_GLOVE,
+  wrap: TIGER_WHITE,
+  feet: TIGER_WHITE,
+  hair: TIGER_STRIPE,
+  chi: [hex('#fff6e8'), hex('#ffb040'), hex('#ff6a10')],
+  tiger: { stripe: TIGER_STRIPE, fur: TIGER_WHITE, fang: TIGER_CLAW, ear: TIGER_EAR, claw: TIGER_CLAW },
+};
+
+// The Monkey King's colours: gold mail and circlet, golden-brown fur, a red sash and lacquered staff, pheasant plumes, black boots.
+const WUKONG_MAIL: Material = { ramp: ramp('#3a2206', '#74480e', '#b88220', '#eab840', '#fff0a8'), outline: hex('#1a0e02'), outlineLit: hex('#3a2408'), shine: true };
+const WUKONG_GOLD: Material = { ramp: ramp('#4a2c06', '#90600e', '#d8a428', '#ffd860', '#fffad0'), outline: hex('#201202'), shine: true, emissive: 0.15 };
+const WUKONG_FUR: Material = { ramp: ramp('#3a2210', '#6a4220', '#a06c34', '#cc9a52', '#ecc88a'), outline: hex('#180c04'), outlineLit: hex('#30200e') };
+const WUKONG_SASH: Material = { ramp: ramp('#3e0608', '#7a0e12', '#c01c1c', '#ec4430', '#ff9a78'), outline: hex('#1a0204'), outlineLit: hex('#300608') };
+const WUKONG_TROUSER: Material = { ramp: ramp('#200406', '#40080c', '#661214', '#902420'), outline: hex('#0e0204') };
+const WUKONG_BOOT: Material = { ramp: ramp('#08070a', '#141218', '#221e28', '#38323e'), outline: hex('#040306') };
+const WUKONG_STAFF: Material = { ramp: ramp('#3a0406', '#760a10', '#b8161a', '#ea3a2c', '#ffa080'), outline: hex('#180204'), shine: true };
+const WUKONG_PLUME: Material = { ramp: ramp('#3e1806', '#7a3410', '#b85e1e', '#e8943e', '#fff0c8'), outline: hex('#1a0a04') };
+const WUKONG_BAR: Material = { ramp: ramp('#140806', '#24120c', '#3a2014', '#54321e'), outline: hex('#0a0402') };
+const WUKONG_FACE: Material = { ramp: ramp('#6a3a30', '#b06a50', '#e8a682', '#fcd4b4'), outline: hex('#2a1410'), outlineLit: hex('#4a2620') };
+
+/** The Monkey King, the iron monk's skin: Sun Wukong in gold mail and a red sash, plumed circlet, staff on his back and a curling tail. */
+export const WUKONG_LOOK: FighterLook = {
+  ...MONK_LOOK,
+  key: 'fighter_wukong',
+  gi: WUKONG_MAIL,
+  trouser: WUKONG_TROUSER,
+  belt: WUKONG_SASH,
+  band: WUKONG_SASH,
+  glove: WUKONG_FACE,
+  wrap: WUKONG_GOLD,
+  feet: WUKONG_BOOT,
+  hair: WUKONG_BAR,
+  chi: [hex('#fffbe0'), hex('#ffd84a'), hex('#ff9a1a')],
+  skin: WUKONG_FACE,
+  sash: WUKONG_SASH,
+  bead: WUKONG_GOLD,
+  wukong: { fur: WUKONG_FUR, circlet: WUKONG_GOLD, plume: WUKONG_PLUME, bar: WUKONG_BAR, staff: WUKONG_STAFF },
+};
+
+export const FIGHTER_LOOKS = [BRAWLER_LOOK, MONK_LOOK, LUCHA_LOOK, GUARDIAN_LOOK, CHAMP_LOOK, TIGER_LOOK, WUKONG_LOOK];
 
 export interface FighterFrame {
   key: string; // e.g. "walk_left_3"

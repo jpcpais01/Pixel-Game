@@ -30,7 +30,7 @@ import { BANSHEE_ANIMS, BANSHEE_H, BANSHEE_LOOKS, BANSHEE_W, buildBansheeFrames 
 import { YUREI_ANIMS, YUREI_H, YUREI_LOOKS, YUREI_W, buildYureiFrames } from './yurei';
 import { CAPTAIN_ANIMS, CAPTAIN_H, CAPTAIN_LOOKS, CAPTAIN_W, buildCaptainFrames } from './captain';
 import { BALLET_ANIMS, BALLET_H, BALLET_LOOKS, BALLET_W, buildBalletFrames } from './ballerina';
-import { DIVER_ANIMS, DIVER_H, DIVER_LOOKS, DIVER_W, buildDiverFrames } from './diver';
+import { DIVER_ANIMS, DIVER_H, DIVER_LOOKS, DIVER_W, buildDiverFrames } from './deepdiver';
 import { JUGG_ANIMS, JUGG_H, JUGG_LOOKS, JUGG_W, buildJuggFrames } from './juggernaut';
 import { INV_H, INV_W, INVENTOR_LOOKS, buildInventorFrames, inventorAnims } from './inventor';
 import { BEAST_H, BEAST_LOOKS, BEAST_W, beastAnims, buildBeastFrames } from './beast';

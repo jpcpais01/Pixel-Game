@@ -4,10 +4,16 @@
 // Victorian ghost girl on the same float: a porcelain face in a lavender
 // bonnet tied with a pink bow, pale ringlets, a bodice with puffed sleeves,
 // a lace-frilled skirt fading into mist and a parasol over her shoulder.
+// Its Banshee skin is the wailing spirit: very long white-silver hair
+// streaming in a wind only she feels, a hollow pale face with dark sunken
+// eyes and a mouth stretched wide in a wail, a silver comb in her hair, a
+// tattered sea-green shroud fading into mist, and thin arms reaching out
+// with long bony fingers.
 //
 // Also here: the haunted things it throws (a chair, a book, a candlestick, a
 // pot, a trunk for the big throw; for the tea party a cup, a saucer, a jug of
-// milk and the teapot), and the icons.
+// milk and the teapot; for the Banshee a silver comb, a cracked hand mirror,
+// a funeral urn, a tarnished bell and a coffin), and the icons.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
 import { DIRS, type Dir } from './wizard';
@@ -46,14 +52,27 @@ const DRESS_MIST: Material = { ramp: ramp('#4a3e7a', '#8070b4', '#bcb0e8'), outl
 const PARASOL: Material = { ramp: ramp('#7a5a70', '#b494a8', '#dcc4d2', '#f6e8f0'), outline: hex('#2a1624'), emissive: 0.1 };
 const STICK: Material = { ramp: ramp('#2a1a0e', '#5a3a1e', '#8a6030'), outline: hex('#100804') };
 
+// The Banshee.
+const BAN_HAIR: Material = { ramp: ramp('#5a6872', '#8a9aa4', '#b2c0c6', '#d4e0e2', '#eef6f4'), outline: hex('#141c22'), outlineLit: hex('#222c34'), emissive: 0.15, shine: true };
+const BAN_SKIN: Material = { ramp: ramp('#3e4e4a', '#6a827c', '#98b2aa', '#c0d6cc', '#e0eee6'), outline: hex('#0e1614'), outlineLit: hex('#1a2622'), emissive: 0.16 };
+const SHROUD: Material = { ramp: ramp('#0c2624', '#16423c', '#246254', '#3c8670', '#62ac90'), outline: hex('#041210'), outlineLit: hex('#0a1e1a'), emissive: 0.08 };
+const SHROUD_MIST: Material = { ramp: ramp('#244e46', '#4e8a78', '#90ccb4'), outline: hex('#0e2a24'), emissive: 0.45, noAO: true, noOutline: true };
+const SILVER: Material = { ramp: ramp('#3a4448', '#6a7a7e', '#a8b8b8', '#dce8e4', '#ffffff'), outline: hex('#121a1c'), shine: true };
+/** The sickly green-silver light in her sockets and on what she hurls. */
+const SICK: Material = { ramp: ramp('#5a9a6a', '#b4f0b4', '#f2fff0'), outline: hex('#0e2a18'), emissive: 1, noAO: true, noOutline: true };
+const SICK_GLOW: RGB = [190, 255, 200];
+
 export interface PolterLook {
   key: string;
   tea: boolean;
+  /** The Banshee: long streaming silver hair, a wailing face, a tattered shroud. */
+  banshee?: boolean;
 }
 
 export const POLTER_LOOK: PolterLook = { key: 'polter', tea: false };
 export const TEA_LOOK: PolterLook = { key: 'polter_tea', tea: true };
-export const POLTER_LOOKS = [POLTER_LOOK, TEA_LOOK];
+export const BANSHEE_LOOK: PolterLook = { key: 'polter_banshee', tea: false, banshee: true };
+export const POLTER_LOOKS = [POLTER_LOOK, TEA_LOOK, BANSHEE_LOOK];
 
 let L: PolterLook = POLTER_LOOK;
 
@@ -88,9 +107,11 @@ export interface PolterPose {
   raise: boolean;
   /** The Tea Party's hand held to her mouth as she giggles. */
   hush: boolean;
+  /** The Banshee's silver comb taken from her hair into her hand, combing it. */
+  comb: boolean;
 }
 
-const base = (): PolterPose => ({ bob: 0, wave: 0, sway: 0, handA: { x: 0, y: 0 }, handB: { x: 0, y: 0 }, lean: 0, glare: 0, squint: false, shake: 0, boo: false, brolly: 0, brollyX: 0, raise: false, hush: false });
+const base = (): PolterPose => ({ bob: 0, wave: 0, sway: 0, handA: { x: 0, y: 0 }, handB: { x: 0, y: 0 }, lean: 0, glare: 0, squint: false, shake: 0, boo: false, brolly: 0, brollyX: 0, raise: false, hush: false, comb: false });
 
 // ---------------------------------------------------------------------------
 // The sheet-ghost (body-box coordinates: 24 wide, the ground at y 31; it floats)
@@ -355,6 +376,213 @@ function drawTeaGirl(c: PixelCanvas, p: PolterPose, view: View): void {
 }
 
 // ---------------------------------------------------------------------------
+// The Banshee
+
+/** A steady 0..1 per pixel, so ragged edges stay put from frame to frame. */
+const hash = (x: number, y: number): number => {
+  const h = Math.imul(Math.round(x) * 374761393 + Math.round(y) * 668265263, 1274126177) >>> 0;
+  return (((h ^ (h >>> 13)) >>> 0) % 1000) / 1000;
+};
+
+/**
+ * Her hair: a long fall of white-silver from the crown to below her waist,
+ * in strands (every third a shade darker) that ripple in a wind only she
+ * feels, their tips ragged. Facing away it covers her whole back; side on it
+ * streams out behind her.
+ */
+function bansheeHair(c: PixelCanvas, cx: number, headY: number, bottom: number, wave: number, view: View): void {
+  const side = view === 'side';
+  const top = Math.round(headY - 4.4);
+  for (let y = top; y <= bottom; y++) {
+    const u = (y - top) / (bottom - top);
+    // Wider as it falls; side on, it streams back (to the right: she faces left).
+    // (Rounded over the crown.)
+    const crown = Math.min(1, 0.6 + (y - top) * 0.2);
+    const hw = (view === 'up' ? 3.4 + u * 3.4 : 4.4 + Math.min(1, u * 2.2) * 1.6 + u * 0.8) * crown;
+    const ripple = Math.sin(wave * 1.6 + y * 0.5) * u * 1.3;
+    const l = side ? cx - 2.6 + u * 1.2 + ripple : cx - hw + ripple;
+    const r = side ? cx + 3.2 + u * 6.5 + ripple * 1.4 : cx + hw + ripple;
+    for (let x = Math.floor(l); x < r; x++) {
+      // Ragged tips: each strand ends at its own length.
+      if (y > bottom - 4 + hash(x, 3) * 4) continue;
+      const t = ((x + 0.5 - l) / Math.max(1, r - l)) * 2 - 1;
+      const strand = (x + Math.round(ripple) + 99) % 3 === 0 ? -1 : 0;
+      c.px(x, y, BAN_HAIR, sphere(t * 0.35, u < 0.2 ? -0.6 + u * 2 : 0.1, 1), { bias: strand + (u > 0.85 ? -1 : 0) });
+    }
+  }
+}
+
+/** A thin arm reaching out: a torn shroud sleeve to the elbow, a bony forearm, long fingers spread the way it reaches. */
+function reachingArm(c: PixelCanvas, sx: number, sy: number, hx: number, hy: number, wave: number): void {
+  const ex = sx + (hx - sx) * 0.45;
+  const ey = sy + (hy - sy) * 0.45;
+  c.capsule(sx, sy, hx, hy, 0.7, 0.55, BAN_SKIN);
+  c.part();
+  c.capsule(sx, sy, ex, ey, 1.2, 1.1, SHROUD);
+  // The sleeve's torn end hangs in two strips.
+  for (const d of [-0.6, 0.6]) {
+    const n = 2 + Math.round(hash(sx + d * 3, sy) * 1.5);
+    for (let i = 1; i <= n; i++) c.px(ex + d, ey + 0.6 + i + (i === n ? Math.round(Math.sin(wave + d * 3) * 0.6) : 0), i === n ? SHROUD_MIST : SHROUD, sphere(d * 0.6, 0.2));
+  }
+  c.part();
+  // The fingers: three long thin ones, spread round the way the arm reaches.
+  const dx = hx - sx;
+  const dy = hy - sy;
+  const l = Math.hypot(dx, dy) || 1;
+  const ux = dx / l;
+  const uy = dy / l;
+  for (const f of [-0.75, 0, 0.75]) {
+    const fx = ux - uy * f;
+    const fy = uy + ux * f;
+    for (let i = 1; i <= (f === 0 ? 2.6 : 2); i++) c.px(hx + fx * i, hy + fy * i, BAN_SKIN, sphere(fx * 0.5, -0.3), { bias: i > 1.5 ? -1 : 0 });
+  }
+}
+
+/** The silver comb: a small bar with its teeth, at (x, y), lying flat across. */
+function silverComb(c: PixelCanvas, x: number, y: number): void {
+  c.part();
+  for (let i = -1; i <= 1; i++) c.px(x + i, y, SILVER, sphere(i * 0.4, -0.6));
+  for (const i of [-1, 1]) c.px(x + i, y + 1, SILVER, sphere(0, 0.4), { bias: -1 });
+}
+
+/** The hollow face: pale and long, sockets dark with a sickly light at the back of them, the mouth stretched wide in a wail. */
+function wailingFace(c: PixelCanvas, cx: number, headY: number, p: PolterPose, side: boolean): void {
+  const open = p.boo ? 1 : 0;
+  const fx = side ? cx - 1.1 : cx;
+  c.part();
+  c.ellipse(fx, headY + 1.1 + open * 0.4, side ? 2.3 : 2.9, 3.7 + open * 0.5, BAN_SKIN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.7, dy * 0.35 - 0.25, 1) });
+  // Her brow shadowing the sockets.
+  for (let x = Math.round(fx - 2); x <= fx + 1; x++) c.shade(x, Math.round(headY - 0.8), -1);
+  // Sunken cheeks.
+  if (!side) for (const s of [-1, 1]) c.shade(Math.round(cx + s * 1.9 - 0.5), Math.round(headY + 2.2), -1);
+  else c.shade(Math.round(cx - 0.5), Math.round(headY + 2.2), -1);
+  c.part();
+  const eyes = side ? [cx - 2.3] : [cx - 1.5, cx + 1.5];
+  for (const ex of eyes) {
+    const x = Math.round(ex - 0.5);
+    c.px(x, Math.round(headY + 0.2), VOID);
+    c.px(x, Math.round(headY + 1.2), VOID);
+    if (p.squint) continue;
+    // A sickly glint deep in each socket, burning up when she wails.
+    c.px(x, Math.round(headY + 1.2), SICK, { x: 0, y: 0, z: 1 }, { glow: 0.35 + p.glare * 0.6, bias: -1 });
+    c.spark(x, headY + 1, SICK_GLOW, 0.25 + p.glare * 0.6);
+  }
+  // The mouth: a long dark O, dropping wider and lower in the full wail.
+  const mx = side ? cx - 2.6 : cx - 0.5;
+  const m0 = Math.round(headY + 2.6);
+  const m1 = Math.round(headY + 3.8 + open * 1.2);
+  for (let y = m0; y <= m1; y++) {
+    const wide = !side && (open ? y > m0 && y < m1 : y === m0 + 1);
+    c.px(Math.round(mx), y, VOID, { x: 0, y: 0, z: 1 });
+    if (!side) c.px(Math.round(mx) + 1, y, VOID, { x: 0, y: 0, z: 1 });
+    if (wide) c.px(Math.round(mx) - 1, y, VOID, { x: 0, y: 0, z: 1 });
+  }
+}
+
+function drawBanshee(c: PixelCanvas, p: PolterPose, view: View): void {
+  const b = p.bob;
+  const side = view === 'side';
+  const cx = 12 - (side ? p.lean : 0);
+  const headY = 9.6 - b;
+  const neck = headY + 4.8;
+  const hem = 25 - b;
+  // In the wail her hair lifts and flies out round her.
+  const flare = p.boo ? 1.5 : 0;
+
+  // Where her hands rest, reaching a little out and forward; and her shoulders.
+  const shoulder = neck + 1.4;
+  const restA = side ? { x: cx - 5.5, y: neck + 5.5 } : { x: cx - 6.6, y: neck + 6 };
+  const restB = side ? { x: cx + 1.5, y: neck + 6.5 } : { x: cx + 6.6, y: neck + 6 };
+  const hA = { x: restA.x + p.handA.x, y: restA.y + p.handA.y };
+  const hB = { x: restB.x + p.handB.x, y: restB.y + p.handB.y };
+
+  if (view !== 'up') {
+    c.part();
+    bansheeHair(c, cx, headY - flare, Math.round(hem - 2 - flare * 2), p.wave + (side ? 1 : 0), view);
+  }
+  if (side) {
+    c.part();
+    reachingArm(c, cx + 1, shoulder, hB.x, hB.y, p.wave);
+  }
+
+  // The shroud: narrow at the shoulders, falling wide, torn into strips at the hem that thin into mist.
+  c.part();
+  const edge = (y: number): [number, number] => {
+    const u = (y - neck) / (hem - neck);
+    const hw = side ? 2.6 + u * 2.8 : 3.2 + Math.pow(u, 1.3) * 3.2;
+    const back = side ? u * 1.4 : 0;
+    return [cx - hw + back * 0.3, cx + hw + back];
+  };
+  c.shape(Math.round(neck), Math.round(hem), edge, SHROUD, (_x, y, t) => sphere(t * 0.9, 0.3 - ((y - neck) / (hem - neck)) * 0.6, 1));
+  for (let y = Math.round(neck + 2); y <= hem; y++) {
+    const u = (y - neck) / (hem - neck);
+    c.shade(Math.round(cx - 1.8 - u * 1.4), y, -1);
+    if (!side) c.shade(Math.round(cx + 1.6 + u * 1.4), y, -1);
+  }
+  // Rents in the cloth.
+  for (const [hx, hy] of side ? [[cx + 1.5, hem - 3]] : [[cx - 3, hem - 2], [cx + 2.5, hem - 5]]) {
+    c.shade(Math.round(hx), Math.round(hy), -2);
+    c.shade(Math.round(hx), Math.round(hy) + 1, -2);
+  }
+  c.part();
+  const [l, r] = edge(hem);
+  for (let x = Math.round(l); x < r; x++) {
+    const n = 1 + Math.round(hash(x, 11) * 3);
+    for (let i = 1; i <= n + 2; i++) {
+      const y = Math.round(hem + i);
+      const drift = side ? Math.round((i / (n + 2)) * 1.5) : Math.round(Math.sin(x * 0.9 + p.wave * 1.6) * (i / (n + 2)));
+      if (i <= n) c.px(x + drift, y, i === n ? SHROUD_MIST : SHROUD, sphere(0, -0.3));
+      else if ((x + y + Math.round(p.wave * 2)) % 2 === 0) c.px(x + drift, y, SHROUD_MIST, { x: 0, y: 0, z: 1 });
+    }
+  }
+  // A cowl of the shroud gathered round her shoulders.
+  c.part();
+  c.shape(Math.round(neck), Math.round(neck + 1), (y) => (y === Math.round(neck) ? [cx - 2.4, cx + 2.4 + (side ? 0.5 : 0)] : [cx - 3.4, cx + 3.4 + (side ? 0.5 : 0)]), SHROUD, (_x, _y, t) => cyl(t, -0.4), { bias: 1 });
+
+  if (view === 'up') {
+    // From behind: her arms out to the sides, and her hair over all of her back.
+    c.part();
+    reachingArm(c, cx - 3.2, shoulder, hA.x, hA.y, p.wave);
+    reachingArm(c, cx + 3.2, shoulder, hB.x, hB.y, p.wave);
+    c.part();
+    bansheeHair(c, cx, headY - flare, Math.round(hem - 1 - flare * 2), p.wave, view);
+    if (!p.comb) silverComb(c, cx + 2, headY - 2);
+    return;
+  }
+
+  // Her arms, thin and reaching.
+  c.part();
+  if (side) reachingArm(c, cx - 1, shoulder, hA.x, hA.y, p.wave);
+  else {
+    reachingArm(c, cx - 3.2, shoulder, hA.x, hA.y, p.wave);
+    reachingArm(c, cx + 3.2, shoulder, hB.x, hB.y, p.wave);
+  }
+
+  wailingFace(c, cx, headY, p, side);
+  // Her hair over her crown, parted in the middle, leaving her face clear.
+  c.part();
+  const crown = Math.round(headY - 4.4);
+  const brow = side ? headY - 1 : headY - 2;
+  for (let y = crown; y <= brow; y++) {
+    const k = (y - crown) / (brow - crown);
+    const hw = 2.4 + k * 1.1;
+    const x0 = side ? cx - 2.9 + (1 - k) * 0.8 : cx - hw;
+    const x1 = side ? cx + 3.4 : cx + hw;
+    for (let x = Math.floor(x0); x < x1; x++) {
+      const t = ((x + 0.5 - x0) / (x1 - x0)) * 2 - 1;
+      const parting = !side && x === Math.round(cx - 0.5);
+      c.px(x, y, BAN_HAIR, sphere(t * 0.6, -0.7 + k * 0.4, 1), { bias: parting ? -2 : (x + 99) % 3 === 0 ? -1 : 0 });
+    }
+  }
+  // Strands falling past her cheeks, over the shroud.
+  if (side) c.capsule(cx - 0.4, headY - 1, cx + 0.4, headY + 5, 0.9, 0.6, BAN_HAIR);
+  else for (const s of [-1, 1]) c.capsule(cx + s * 3.5, headY - 1.5, cx + s * (3.4 + Math.sin(p.wave + s) * 0.4), neck + 3.5, 0.75, 0.55, BAN_HAIR);
+  // The comb in her hair, or in her hand, combing it.
+  if (!p.comb) silverComb(c, side ? cx + 1.5 : cx + 2.4, headY - 3);
+  else silverComb(c, hB.x, hB.y - 1);
+}
+
+// ---------------------------------------------------------------------------
 // Animations
 
 export type PolterAnim = 'idle' | 'move' | 'throw' | 'rattle' | 'cast' | 'rest';
@@ -458,6 +686,25 @@ const rest = (view: View): PolterPose[] => {
       at({ bob: 1, wave: 2, handA: { x: 0, y: -1 } }),
     ];
   }
+  if (L.banshee) {
+    // The Banshee instead takes the silver comb from her hair and combs it,
+    // slow strokes, pauses, sinks as she draws breath... and keens, arms
+    // flung up and her mouth dropped wide, sobbing the wail out in shudders.
+    const shudder = { x: -2, y: -5 };
+    return [
+      at({}),
+      at({ handB: { x: -1.5, y: -5 }, wave: 1, sway: 1 }),
+      at({ comb: true, handB: { x: -3, y: -9 }, wave: 2 }),
+      at({ comb: true, handB: { x: -2, y: -4.5 }, wave: 3, sway: -1 }),
+      at({ comb: true, handB: { x: -2.5, y: -6.5 }, glare: 0.3, wave: 4 }),
+      at({ handA: { x: 1, y: -1 }, handB: { x: -1, y: -1 }, bob: -1, glare: 0.5, wave: 5 }),
+      at({ handA: { x: -1.5, y: -6.5 }, handB: { x: 1.5, y: -6.5 }, boo: true, glare: 1, bob: 3, wave: 6 }),
+      at({ handA: shudder, handB: { x: 2, y: -5 }, boo: true, glare: 0.85, bob: 2, shake: 1, wave: 7 }),
+      at({ handA: shudder, handB: { x: 2, y: -5 }, boo: true, glare: 0.6, bob: 2, shake: -1, wave: 8 }),
+      at({ handA: { x: 0, y: -2 }, handB: { x: 0, y: -2 }, glare: 0.3, bob: 1, shake: 1, wave: 9 }),
+      at({ bob: 1, wave: 2, handA: { x: 0, y: -1 }, handB: { x: 0, y: -1 } }),
+    ];
+  }
   // Its sheet hands: over the eyes, halfway there, and one dropped to peek.
   const eyeA = { x: 5.2, y: -5.5 };
   const eyeB = { x: -5.2, y: -5.5 };
@@ -496,6 +743,7 @@ function drawFrame(dir: Dir, p: PolterPose): PixelCanvas {
   const c = new PixelCanvas(POLTER_W, POLTER_H).offset(BODY_X + p.shake, BODY_Y);
   const view: View = dir === 'left' || dir === 'right' ? 'side' : dir;
   if (L.tea) drawTeaGirl(c, p, view);
+  else if (L.banshee) drawBanshee(c, p, view);
   else drawSheetGhost(c, p, view);
   return dir === 'right' ? c.mirrored() : c;
 }
@@ -517,8 +765,10 @@ export function buildPolterFrames(look: PolterLook = POLTER_LOOK): PolterFrame[]
 // The haunted things it throws
 
 export const HAUNT_SIZE = 16;
-export type HauntKind = 'chair' | 'book' | 'candle' | 'pot' | 'trunk' | 'cup' | 'saucer' | 'jug' | 'teapot';
-export const HAUNT_KINDS: HauntKind[] = ['chair', 'book', 'candle', 'pot', 'trunk', 'cup', 'saucer', 'jug', 'teapot'];
+export type HauntKind = 'chair' | 'book' | 'candle' | 'pot' | 'trunk' | 'cup' | 'saucer' | 'jug' | 'teapot' | 'comb' | 'mirror' | 'urn' | 'bell' | 'coffin';
+export const HAUNT_KINDS: HauntKind[] = ['chair', 'book', 'candle', 'pot', 'trunk', 'cup', 'saucer', 'jug', 'teapot', 'comb', 'mirror', 'urn', 'bell', 'coffin'];
+/** The Banshee's things: a mourner's keepsakes, glowing sickly green-silver. */
+const KEEPSAKES: HauntKind[] = ['comb', 'mirror', 'urn', 'bell', 'coffin'];
 
 const OAK: Material = { ramp: ramp('#2e1a0c', '#5a361a', '#8a5a2e', '#b88448'), outline: hex('#120a04') };
 const CLOTH: Material = { ramp: ramp('#3a0e1a', '#6a1a2e', '#a02e46', '#d05a6e'), outline: hex('#160408') };
@@ -529,6 +779,10 @@ const FLAME: Material = { ramp: ramp('#ff8a2a', '#ffd860', '#fffbe0'), outline: 
 const CHINA: Material = { ramp: ramp('#8a92b4', '#c4cce4', '#f0f4ff', '#ffffff'), outline: hex('#20243a'), shine: true };
 const CHINA_BLUE: Material = { ramp: ramp('#1a2a7a', '#3a5ad0'), outline: hex('#0a1030'), noOutline: true };
 const TEA: Material = { ramp: ramp('#3a1a06', '#7a3e12'), outline: hex('#1a0a02'), noOutline: true };
+const GLASS: Material = { ramp: ramp('#22403a', '#4a7a70', '#94c8b8', '#e0fff2'), outline: hex('#0a1a16'), shine: true, emissive: 0.3 };
+const VERDIGRIS: Material = { ramp: ramp('#183e30', '#2e6a52', '#58a07e', '#9cd8b4'), outline: hex('#08180f'), shine: true };
+const PEWTER: Material = { ramp: ramp('#262c30', '#454e54', '#6e7a80', '#a0acb0'), outline: hex('#0c1012'), shine: true };
+const COFFIN_WOOD: Material = { ramp: ramp('#120a0e', '#24161c', '#3a2429', '#563640'), outline: hex('#050204') };
 
 /**
  * A haunted thing, drawn upright in a HAUNT_SIZE square: a ghostly glow
@@ -602,6 +856,64 @@ export function hauntFrame(kind: HauntKind): PixelCanvas {
       c.px(cx - 3, 4, CHINA);
       c.line(cx - 2, 10, cx + 2, 10, CHINA_BLUE);
       break;
+    case 'comb':
+      // A long silver comb, a pearl set in its back.
+      c.shape(4, 6, (y) => (y === 4 ? [3.5, 12.5] : [2.5, 13.5]), SILVER, (_x, _y, t, u) => sphere(t * 0.6, -0.6 + u * 0.8, 1));
+      c.part();
+      for (let x = 3; x <= 13; x += 2) c.line(x, 7, x, 11, SILVER, () => ({ x: 0, y: 0.3, z: 0.95 }));
+      c.px(8, 4, GLASS, sphere(0, -0.5), { glow: 0.6 });
+      break;
+    case 'mirror':
+      // A hand mirror in a silver frame, its glass cracked across.
+      c.capsule(cx, 10, cx, 15, 1, 0.8, SILVER);
+      c.part();
+      c.ellipse(cx, 6, 4.4, 5, SILVER);
+      c.part();
+      c.ellipse(cx, 6, 3.2, 3.8, GLASS, { normal: (_x, _y, dx, dy) => sphere(dx * 0.5, dy * 0.5, 1) });
+      c.part();
+      c.line(5, 4, 8, 7, VOID);
+      c.line(8, 7, 7, 9, VOID);
+      c.line(8, 7, 11, 6, VOID);
+      break;
+    case 'urn':
+      // A funeral urn of pewter, with a lid and two handles.
+      c.shape(5, 14, (y) => {
+        const k = (y - 5) / 9;
+        const hw = 2 + Math.sin(k * Math.PI * 0.9) * 2.6;
+        return [cx - hw, cx + hw];
+      }, PEWTER, (_x, _y, t) => cyl(t, 0.1));
+      c.part();
+      c.ellipse(cx, 4.5, 2.8, 1, PEWTER, { flatten: 0.4 });
+      c.px(cx - 1, 3, PEWTER, sphere(0, -0.8));
+      c.px(cx, 3, PEWTER, sphere(0.3, -0.8));
+      for (const s of [-1, 1]) c.capsule(cx + s * 4.2, 6, cx + s * 4.8, 9, 0.6, 0.6, PEWTER);
+      for (let x = cx - 3; x <= cx + 2; x++) c.px(x, 11, VERDIGRIS, sphere(0, 0.2), { bias: x & 1 });
+      break;
+    case 'bell':
+      // A mourner's hand bell gone green with age, its clapper hanging.
+      c.capsule(cx, 1, cx, 4, 0.9, 0.9, COFFIN_WOOD);
+      c.part();
+      c.shape(4, 11, (y) => {
+        const k = (y - 4) / 7;
+        const hw = 1.8 + k * k * 3.4;
+        return [cx - hw, cx + hw];
+      }, VERDIGRIS, (_x, _y, t) => cyl(t, -0.1));
+      c.part();
+      c.ellipse(cx, 11.5, 5.2, 1, VERDIGRIS, { flatten: 0.4 });
+      c.px(cx - 1, 13, PEWTER, sphere(0, 0.6));
+      c.px(cx, 13, PEWTER, sphere(0.3, 0.6));
+      break;
+    case 'coffin':
+      // A coffin, the long six-sided kind, a silver cross on its lid.
+      c.shape(1, 15, (y) => {
+        const hw = y < 5 ? 2.6 + (y - 1) * 0.7 : 5.4 - (y - 5) * 0.28;
+        return [cx - hw, cx + hw];
+      }, COFFIN_WOOD, (_x, _y, t, u) => sphere(t * 0.7, -0.3 + u * 0.4, 1));
+      c.part();
+      c.line(cx, 4, cx, 11, SILVER);
+      c.line(cx - 2, 6, cx + 2, 6, SILVER);
+      for (const [x, y] of [[cx - 4, 5], [cx + 3, 5], [cx - 3, 13], [cx + 2, 13]]) c.px(x, y, SILVER, sphere(0, -0.4));
+      break;
     case 'teapot':
       c.ellipse(cx, 9, 5, 4, CHINA);
       c.part();
@@ -617,7 +929,18 @@ export function hauntFrame(kind: HauntKind): PixelCanvas {
   }
   // The haunting: a faint glow hugging its outline.
   const tea = kind === 'cup' || kind === 'saucer' || kind === 'jug' || kind === 'teapot';
-  const glow: RGB = tea ? [210, 190, 255] : [150, 255, 210];
+  const keepsake = KEEPSAKES.includes(kind);
+  const glow: RGB = tea ? [210, 190, 255] : keepsake ? SICK_GLOW : [150, 255, 210];
+  if (keepsake) {
+    // A wisp curling up off the top of it, as if something of the dead still clung there.
+    let top = 0;
+    const empty = (y: number): boolean => {
+      for (let x = 0; x < HAUNT_SIZE; x++) if (c.filled(x, y)) return false;
+      return true;
+    };
+    while (top < HAUNT_SIZE && empty(top)) top++;
+    for (let i = 1; i <= 3; i++) c.spark(cx - 1 + Math.round(Math.sin(i * 1.7) * 1.5), top - i, SICK_GLOW, 0.55 - i * 0.12);
+  }
   for (let y = 0; y < HAUNT_SIZE; y++) {
     for (let x = 0; x < HAUNT_SIZE; x++) {
       if (c.filled(x, y)) continue;
@@ -632,6 +955,51 @@ export function hauntFrame(kind: HauntKind): PixelCanvas {
 
 const POLTER_TONES: Tones = [hex('#eefff8'), hex('#9ff0d4'), hex('#4ac8a0'), hex('#1a6a5a')];
 const TEA_TONES: Tones = [hex('#fff4ff'), hex('#e0c8ff'), hex('#a888e0'), hex('#4a3a7a')];
+const BANSHEE_TONES: Tones = [hex('#f6fff4'), hex('#d4f4c4'), hex('#8cc49a'), hex('#24443a')];
+
+/** The Banshee's throw: her silver comb tumbling through the air, sickly wisps streaming behind. */
+export function bansheeHurlIcon(): Uint8ClampedArray {
+  const t = BANSHEE_TONES;
+  const lit = hex('#e8f2f0');
+  const dim = hex('#7a8a8e');
+  return icon16((put) => {
+    for (const [y, x0, x1] of [[6, 0, 3], [9, 1, 5], [12, 0, 4]] as const) seg(put, x0, y, x1, y, t[2]);
+    for (const [x, y] of [[4, 5], [6, 8], [5, 11]]) put(x, y, t[1]);
+    // The comb's back, a diagonal bar, and its teeth off one side.
+    seg(put, 6, 4, 12, 10, lit);
+    seg(put, 7, 4, 13, 10, lit);
+    for (let k = 0; k <= 6; k += 2) seg(put, 6 + k, 5 + k, 4 + k, 7 + k, dim);
+    put(9, 7, t[0]);
+    // A wisp curling off it.
+    for (const [x, y] of [[13, 7], [14, 5], [13, 3], [14, 2]]) put(x, y, t[1]);
+  });
+}
+
+/** The Banshee's rattle: a wailing face, the keen spreading off it in rings. */
+export function keenIcon(): Uint8ClampedArray {
+  const t = BANSHEE_TONES;
+  return icon16((put) => {
+    for (const [r, c] of [[7.5, t[3]], [6, t[2]], [4.5, t[1]]] as const) {
+      for (let i = 0; i <= 24; i++) {
+        const a = Math.PI * (1.05 + (i / 24) * 0.9);
+        put(8 + Math.cos(a) * r, 11 + Math.sin(a) * r * 0.85, c);
+      }
+    }
+    // The face: pale and long, dark eyes, the mouth a long dark O.
+    for (let y = 8; y <= 14; y++) for (let x = 6; x <= 10; x++) if ((x - 8) ** 2 / 6.5 + (y - 11) ** 2 / 11 <= 1) put(x, y, hex('#dceae6'));
+    // Her silver hair, round the face and falling past it.
+    for (let x = 6; x <= 10; x++) put(x, 7, hex('#e8f2f0'));
+    for (let y = 8; y <= 15; y++) {
+      put(5, y, hex('#c0ccd2'));
+      put(11, y, hex('#c0ccd2'));
+    }
+    put(7, 10, hex('#05060a'));
+    put(9, 10, hex('#05060a'));
+    for (let y = 12; y <= 14; y++) put(8, y, hex('#05060a'));
+    put(7, 11, t[1]);
+    put(9, 11, t[1]);
+  });
+}
 
 /** The throw: a haunted chair (or a teacup) tumbling through the air, streaks of ghost-light behind. */
 export function hurlIcon(tea = false): Uint8ClampedArray {

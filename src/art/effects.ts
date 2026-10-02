@@ -19,6 +19,14 @@ export interface SpellColors {
   star?: boolean;
   /** Petals: the orb's motes and the burst's sparks are petals in the accent colour (Titania, Lotus). */
   petals?: boolean;
+  /** Bats: the orb's motes and the burst's sparks are little bats in the deep colour, rimmed in the accent (the vampire lord). */
+  bats?: boolean;
+  /** Refracted light: a faceted white heart in a ring of these colours, turning, and a burst in rainbow (the Prism). */
+  spectrum?: RGB[];
+  /** Feathers: the orb's motes and some of the burst's sparks are flame feathers, gold to crimson (the Firebird). */
+  feathers?: boolean;
+  /** Glints: the orb's motes catch the accent colour, like the sun on water (the Siren). */
+  glints?: boolean;
 }
 
 /** A petal two pixels long, lying at angle `a`, its tip paler than its base. */
@@ -26,6 +34,28 @@ function petal(c: PixelCanvas, x: number, y: number, a: number, k: SpellColors, 
   c.spark(x, y, k.accent, alpha);
   c.spark(x + Math.cos(a), y + Math.sin(a), k.core, alpha * 0.7);
 }
+
+/** A bat four pixels across at (x, y): wings up (an M) or down (a W) by `up`, its body a pixel of light. */
+function bat(c: PixelCanvas, x: number, y: number, up: boolean, k: SpellColors, alpha: number): void {
+  const w = up ? -1 : 1;
+  c.spark(x, y, k.hot, alpha);
+  c.spark(x - 1, y + (up ? -1 : 0), k.mid, alpha);
+  c.spark(x + 1, y + (up ? -1 : 0), k.mid, alpha);
+  c.spark(x - 2, y + (up ? 0 : w), k.accent, alpha * 0.8);
+  c.spark(x + 2, y + (up ? 0 : w), k.accent, alpha * 0.8);
+}
+
+/** A flame feather three pixels long, its bright tip at (x, y) leading the way `a` points, its quill trailing crimson. */
+function feather(c: PixelCanvas, x: number, y: number, a: number, k: SpellColors, alpha: number): void {
+  const bx = -Math.cos(a);
+  const by = -Math.sin(a);
+  c.spark(x, y, k.core, alpha);
+  c.spark(x + bx, y + by, k.hot, alpha * 0.9);
+  c.spark(x + bx * 2, y + by * 2, k.deep, alpha * 0.8);
+}
+
+/** The spectrum's colour for an angle (radians) turned by `turn` sixths. */
+const hue = (s: RGB[], a: number, turn = 0): RGB => s[(((Math.floor(((a + Math.PI) / (Math.PI * 2)) * s.length) + turn) % s.length) + s.length) % s.length];
 
 export const ARCANE_SPELL: SpellColors = { core: MAGIC_CORE, hot: MAGIC_HOT, mid: MAGIC_MID, deep: MAGIC_DEEP, accent: MAGIC_VIOLET };
 export const VOID_SPELL: SpellColors = { core: VOID_CORE, hot: VOID_HOT, mid: VOID_MID, deep: VOID_DEEP, accent: VOID_TEAL, hollow: true };
@@ -46,6 +76,7 @@ export const ORB_FRAMES = 4;
  */
 export function orbFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanvas {
   if (k.star) return starOrbFrame(f, k);
+  if (k.spectrum) return prismOrbFrame(f, k, k.spectrum);
   const c = new PixelCanvas(ORB_SIZE, ORB_SIZE);
   const cx = 8;
   const cy = 8;
@@ -71,10 +102,57 @@ export function orbFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanvas 
     }
     return c;
   }
+  if (k.bats) {
+    // Two bats wheeling round it, flapping as they go.
+    for (let m = 0; m < 2; m++) {
+      const a = ((f * 45 + m * 180) * Math.PI) / 180;
+      bat(c, cx + Math.cos(a) * 5.4, cy + Math.sin(a) * 4.6, (f + m) % 2 === 0, k, 1);
+    }
+    return c;
+  }
+  if (k.feathers) {
+    // Three flame feathers wheeling round it, tips first.
+    for (let m = 0; m < 3; m++) {
+      const a = ((f * 40 + m * 120) * Math.PI) / 180;
+      feather(c, cx + Math.cos(a) * 5.6, cy + Math.sin(a) * 5.6, a + Math.PI / 2, k, 1);
+    }
+    return c;
+  }
   for (let m = 0; m < 2; m++) {
     const a = ((f * 45 + m * 180) * Math.PI) / 180;
-    c.spark(cx + Math.cos(a) * 5.6, cy + Math.sin(a) * 5.6, k.hollow ? k.accent : k.hot, 1);
+    c.spark(cx + Math.cos(a) * 5.6, cy + Math.sin(a) * 5.6, k.hollow || k.glints ? k.accent : k.hot, 1);
     c.spark(cx + Math.cos(a - 0.5) * 5.6, cy + Math.sin(a - 0.5) * 5.6, k.mid, 0.5);
+  }
+  // Sun on the water: a glint winking on the ball's lit side every other frame.
+  if (k.glints && f % 2 === 0) c.spark(cx - 2, cy - 2, k.accent, 0.8);
+  return c;
+}
+
+/**
+ * Light through a prism: a white diamond of a heart, cut sharp, inside a ring
+ * of the spectrum that turns a sixth each frame, a faint violet haze, and two
+ * motes of colour circling it.
+ */
+function prismOrbFrame(f: number, k: SpellColors, s: RGB[]): PixelCanvas {
+  const c = new PixelCanvas(ORB_SIZE, ORB_SIZE);
+  const cx = 8;
+  const cy = 8;
+  for (let y = 0; y < ORB_SIZE; y++) {
+    for (let x = 0; x < ORB_SIZE; x++) {
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      const d = Math.hypot(dx, dy);
+      const cut = Math.abs(dx) + Math.abs(dy);
+      if (cut <= 2.1) c.spark(x, y, k.core, 1);
+      else if (cut <= 3.2) c.spark(x, y, k.hot, 1);
+      else if (d <= 4.3) c.spark(x, y, hue(s, Math.atan2(dy, dx), f), 0.9);
+      else if (d <= 5.4 && hash(x, y, f) > 0.45) c.spark(x, y, k.deep, 0.45);
+    }
+  }
+  for (let m = 0; m < 2; m++) {
+    const a = ((f * 45 + m * 180) * Math.PI) / 180;
+    c.spark(cx + Math.cos(a) * 5.8, cy + Math.sin(a) * 5.8, s[(f + m * 3) % s.length], 1);
+    c.spark(cx + Math.cos(a - 0.5) * 5.8, cy + Math.sin(a - 0.5) * 5.8, k.core, 0.4);
   }
   return c;
 }
@@ -139,7 +217,9 @@ export function burstFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanva
       }
       if (f <= 1 && d <= 3.6 - f * 1.2) c.spark(x, y, k.core, 1);
       else if (f <= 2 && d <= 5 - f) c.spark(x, y, k.hot, 0.7);
-      if (Math.abs(d - r) <= thick / 2 && hash(x, y, f) > t * 0.55) c.spark(x, y, ringCol, 1 - t * 0.6);
+      // The Prism's ring splits into the spectrum round its circle, turning as it spreads.
+      const ring = k.spectrum && f >= 1 ? hue(k.spectrum, Math.atan2(y + 0.5 - cy, x + 0.5 - cx), f) : ringCol;
+      if (Math.abs(d - r) <= thick / 2 && hash(x, y, f) > t * 0.55) c.spark(x, y, ring, 1 - t * 0.6);
     }
   }
   if (k.star && f < 5) {
@@ -157,11 +237,21 @@ export function burstFrame(f: number, k: SpellColors = ARCANE_SPELL): PixelCanva
     const dist = r + 1.5 + hash(i, 2) * 3;
     const col = i % 3 === 0 ? k.accent : k.hot;
     // Petal looks fling petals, tumbling a little as they fly.
+    // The bats scatter from it.
+    if (k.bats && i % 3 === 0) {
+      if (f < BURST_FRAMES - 1) bat(c, cx + Math.cos(a) * (dist + f), cy + Math.sin(a) * (dist + f) - f, f % 2 === 0, k, 1 - t * 0.7);
+      continue;
+    }
     if (k.petals && i % 2 === 0) {
       if (f < BURST_FRAMES - 1) petal(c, cx + Math.cos(a) * dist, cy + Math.sin(a) * dist, a + f * 0.9, k, 1 - t * 0.8);
       continue;
     }
-    if (f < BURST_FRAMES - 1) c.spark(cx + Math.cos(a) * dist, cy + Math.sin(a) * dist, col, 1 - t);
+    // Feather looks fling burning feathers, tip first, curling as they fly.
+    if (k.feathers && i % 2 === 0) {
+      if (f < BURST_FRAMES - 1) feather(c, cx + Math.cos(a) * dist, cy + Math.sin(a) * dist, a + f * 0.35, k, 1 - t * 0.7);
+      continue;
+    }
+    if (f < BURST_FRAMES - 1) c.spark(cx + Math.cos(a) * dist, cy + Math.sin(a) * dist, k.spectrum ? k.spectrum[i % k.spectrum.length] : col, 1 - t);
   }
   return c;
 }

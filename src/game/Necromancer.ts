@@ -8,7 +8,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
 import { SmiteBurst } from './Holy';
-import { BLOOD_FX, Risen, SOUL_FX, SoulBolt, TOMB_FX, WYRM_FX, type BoltKind, type RisenStats } from './Souls';
+import { BatFlight, BLOOD_FX, DIGGER_FX, GRAVE_DIRT, NOVA_BATS, Risen, SOUL_FX, SoulBolt, TOMB_FX, VAMPIRE_FX, WYRM_FX, type BoltKind, type RisenStats } from './Souls';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
@@ -89,6 +89,17 @@ export const TOMB_KIT: NecroKit = {
 
 /** The blood mage as the wyrmblood: the same lances and nova, molten. */
 export const WYRM_KIT: NecroKit = { ...BLOOD_KIT, key: 'necro_wyrm', bolt: { ...BLOOD_KIT.bolt, suffix: '_wyrm', fx: WYRM_FX } };
+
+/** The bonecaller as the gravedigger: the same dead, in lantern green, his bolts shedding grave dirt. */
+export const DIGGER_KIT: NecroKit = {
+  ...NECRO_KIT,
+  key: 'necro_digger',
+  bolt: { ...NECRO_KIT.bolt, suffix: '_digger', fx: DIGGER_FX, motes: GRAVE_DIRT },
+  special: { kind: 'raise', risen: { ...(NECRO_KIT.special as { risen: RisenStats }).risen, fx: DIGGER_FX } },
+};
+
+/** The blood mage as the vampire lord: the same lances and nova in dark blood, bats scattering from both. */
+export const VAMPIRE_KIT: NecroKit = { ...BLOOD_KIT, key: 'necro_vampire', bolt: { ...BLOOD_KIT.bolt, suffix: '_vampire', fx: VAMPIRE_FX, bats: true } };
 
 /**
  * The necromancer: casts on the attack button, a bolt from his open palm (at
@@ -283,6 +294,7 @@ export class Necromancer implements Hero {
     this.world.addEffect(new SmiteBurst(this.world, x, y, true, fx, radius));
     this.world.debris([fx.core, fx.hot, fx.mid, fx.deep], snap(x), snap(y) - 10, 22, y + 20);
     sound.bloodNova(this.world.pan(x));
+    if (this.kit.bolt.bats) this.world.addEffect(new BatFlight(this.world, x, y - 12, NOVA_BATS, y + 20));
     this.world.cameras.main.shake(120, 0.0006);
     const hits = this.world.melee({ kind: 'circle', x, y: y - 6, radius }, { damage, heavy: true, knock: 110, fromX: x, fromY: y - 6 });
     if (hits.length) {

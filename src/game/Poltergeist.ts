@@ -7,7 +7,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals, type Hurtbox } from './combat';
 import { Phase, PHASE_SPEED } from './phase';
-import { bloom, Fx, pal, type Pal } from './ultimate/ink';
+import { bloom, clamp01, easeOut, Fx, GROUND, pal, ring, type Ink, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
@@ -22,7 +22,10 @@ import { stand } from './rest';
 //    of the ground, flinging the foes near it into the air.
 //  - Special: Haunted House (see ultimate/phantom.ts).
 // Like every Phantom it phases through the next blow (see phase.ts).
-// The Tea Party throws the tea set (the teapot is the big one); it plays the same.
+// The Tea Party throws the tea set (the teapot is the big one); the Banshee
+// a mourner's keepsakes (a comb, a mirror, an urn, a bell; a coffin for the
+// big one), and her rattle goes out as a keening shriek in rings. Both play
+// the same.
 
 const THROW_EVERY = 400;
 const THROW_RANGE = 160;
@@ -39,6 +42,10 @@ const RATTLE_DAMAGE = 10;
 const RATTLE_UP_MS = 700;
 const RATTLE_LIFT = 14;
 const RATTLE_COOLDOWN = 5200;
+/** The Banshee's keen: rings of shriek spreading out past the rattle's reach, one after another. */
+const KEEN_MS = 560;
+const KEEN_RINGS = 3;
+const KEEN_GAP = 90;
 
 type State = 'free' | 'throw' | 'rattle';
 
@@ -51,6 +58,10 @@ export interface PolterKit {
   things: HauntKind[];
   big: HauntKind;
   pal: Pal;
+  /** The colours a thrown thing breaks into (wood by default). */
+  bits?: number[];
+  /** The rattle goes out as a keening shriek in rings (the Banshee). */
+  keen?: boolean;
 }
 
 export const POLTER_KIT: PolterKit = {
@@ -70,6 +81,18 @@ export const TEA_KIT: PolterKit = {
   things: ['cup', 'saucer', 'jug', 'cup'],
   big: 'teapot',
   pal: pal(0xfff4ff, 0xe0c8ff, 0xa888e0, 0x4a3a7a, 0xd0b0ff),
+  bits: [0xffffff, 0xf0f4ff, 0x3a5ad0],
+};
+
+/** The Banshee: a mourner's keepsakes glowing sickly green-silver, and a keen for a rattle. */
+export const BANSHEE_KIT: PolterKit = {
+  ...POLTER_KIT,
+  key: 'polter_banshee',
+  things: ['comb', 'mirror', 'urn', 'bell'],
+  big: 'coffin',
+  pal: pal(0xf6fff4, 0xd4f4c4, 0x8cc49a, 0x24443a, 0xc0f0b8),
+  bits: [0xdce8e4, 0x8a989c, 0x58a07e],
+  keen: true,
 };
 
 export class Poltergeist implements Hero {
@@ -240,6 +263,10 @@ export class Poltergeist implements Hero {
     }
     w.debris([0xb8a888, 0x8a7a60], snap(x), snap(y), 16, y + 2, 'burst');
     bloom(w, x, y - 6, this.kit.pal.mid, 2.2, 360, y + 20);
+    if (this.kit.keen) {
+      w.addEffect(new Keen(w, x, y, this.kit.pal));
+      sound.wail(w.pan(x));
+    }
     w.cameras.main.shake(140, 0.0008);
     sound.creak(w.pan(x));
     sound.slam(w.pan(x));
@@ -355,8 +382,7 @@ class HauntedThing extends Fx {
 
   private shatter(): void {
     const w = this.world;
-    const china = this.kit.tea;
-    const bits = china ? [0xffffff, 0xf0f4ff, 0x3a5ad0] : [0xb88448, 0x8a5a2e, 0xe0d4b0];
+    const bits = this.kit.bits ?? [0xb88448, 0x8a5a2e, 0xe0d4b0];
     w.debris([...bits, this.kit.pal.hot], this.x, this.y, this.big ? 22 : 10, this.y + POLTER_CHEST_Y + 4, 'burst');
     if (this.big) {
       for (const h of w.hurtboxesWhere((b) => b.alive && Math.hypot(b.x - this.x, b.y - b.bodyY - this.y) <= BIG_SPLASH + b.radius)) {
@@ -367,5 +393,36 @@ class HauntedThing extends Fx {
     }
     sound.shatter(w.pan(this.x), this.big);
     this.destroy();
+  }
+}
+
+/**
+ * The Banshee's keen: rings of shriek going out from her one after another,
+ * ragged (broken into arcs that shift as they spread) and fading, read at
+ * chest height so they look like sound and not a mark on the ground.
+ */
+class Keen extends Fx {
+  private g: Ink;
+
+  constructor(
+    world: WorldScene,
+    private x: number,
+    private y: number,
+    private p: Pal,
+  ) {
+    super(world, KEEN_MS + KEEN_GAP * (KEEN_RINGS - 1));
+    const R = RATTLE_R + 24;
+    this.g = this.ink(R * 2 + 8, Math.ceil(R * 2 * GROUND) + 8);
+  }
+
+  protected step(): void {
+    const g = this.g.begin(this.x, this.y - POLTER_CHEST_Y + 4, this.y + 30);
+    for (let i = 0; i < KEEN_RINGS; i++) {
+      const k = clamp01((this.t - i * KEEN_GAP) / KEEN_MS);
+      if (k <= 0 || k >= 1) continue;
+      const r = 6 + (RATTLE_R + 18) * easeOut(k);
+      ring(g, this.x, this.y - POLTER_CHEST_Y + 4, r, 1.4 - k * 0.6, this.p, (1 - k) * 0.9, GROUND, 0.3, i * 7 + Math.floor(this.t / 60));
+    }
+    g.end();
   }
 }

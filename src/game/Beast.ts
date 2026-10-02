@@ -31,6 +31,12 @@ export interface BeastKit {
   fx: Scheme;
   /** A club skin (its feathers, fire and roars in the club's colours). */
   club: boolean;
+  /**
+   * What a creature of myth sheds as it fights: the Phoenix's embers off its
+   * quills and wingbeat, the Nemean lion's gold sparks off his claws, the
+   * Jade Serpent's wisps of cloud in his fire.
+   */
+  motes?: number[];
 }
 
 export abstract class Beast implements Hero {

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
-import { DIVER_H, DIVER_HAND_Y, DIVER_HELM_Y, DIVER_ORIGIN_X, DIVER_ORIGIN_Y, DIVER_PROJ_DIRS, DIVER_W } from '../art/diver';
+import { DIVER_H, DIVER_HAND_Y, DIVER_HELM_Y, DIVER_ORIGIN_X, DIVER_ORIGIN_Y, DIVER_PROJ_DIRS, DIVER_W } from '../art/deepdiver';
 import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';

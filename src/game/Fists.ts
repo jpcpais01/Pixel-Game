@@ -27,6 +27,17 @@ export const STONE_FX: Scheme = { core: 0xfff4e0, hot: 0xe8d8b8, mid: 0xb09878, 
 /** The stone guardian's double palm and earthshaker: fire from the cracks in him. */
 export const MAGMA_FX: Scheme = { core: 0xfff4d0, hot: 0xffc050, mid: 0xff6a1a, deep: 0xa02a10, light: 0xff8a30 };
 
+/** Tigerclaw's punches: pale air going orange, a black edge to it like a stripe. */
+export const TIGER_AIR_FX: Scheme = { core: 0xffffff, hot: 0xfff0dc, mid: 0xffa040, deep: 0x1c0e08 };
+/** Tigerclaw's finisher and barrage: tiger orange burning to black. */
+export const TIGER_FX: Scheme = { core: 0xfff4e0, hot: 0xffb040, mid: 0xff6a10, deep: 0x1c0c06, light: 0xff8a30 };
+/** The Monkey King's palms: bright gold with a red edge. */
+export const WUKONG_AIR_FX: Scheme = { core: 0xffffff, hot: 0xfff4c8, mid: 0xffd04a, deep: 0xc0301a };
+/** The Monkey King's double palm and earthshaker: blazing gold and red. */
+export const WUKONG_FX: Scheme = { core: 0xfffbe8, hot: 0xffe070, mid: 0xffb020, deep: 0xb8201a, light: 0xffc850 };
+/** The somersault cloud's puffs: white-gold, rimmed in amber. */
+export const CLOUD_FX: Scheme = { core: 0xffffff, hot: 0xfff4cc, mid: 0xffd060, deep: 0xb06818 };
+
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -284,6 +295,198 @@ export class Flurry {
     this.scene.lights.removeLight(this.light);
     this.embers.stop();
     this.scene.time.delayedCall(500, () => this.embers.destroy());
+  }
+}
+
+/** Claw slashes: how long they last, how long each is (half), how far apart, and their slant off the punch. */
+const CLAW_MS = 280;
+const CLAW_LEN = 6.5;
+const CLAW_GAP = 3;
+const CLAW_SLANT = (62 * Math.PI) / 180;
+
+/**
+ * Tigerclaw's mark: three parallel claw slashes raked across the line of a
+ * punch, opening one after another, then fading. Each is a thin bowed
+ * crescent with a bright edge and a black one, like a stripe torn in the air.
+ */
+export class ClawRake implements Effect {
+  dead = false;
+  private layer: PixelLayer;
+  private glow: Phaser.GameObjects.Image;
+  private half: number;
+  private age = 0;
+  private readonly duration: number;
+  /** The slashes' own axis. */
+  private ax: number;
+  private ay: number;
+
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    ux: number,
+    uy: number,
+    private scheme: Scheme,
+    depth: number,
+    private size = 1,
+  ) {
+    this.duration = CLAW_MS + 70 * (size - 1);
+    // Raked across the punch at a slant, the way a paw comes down.
+    const a = CLAW_SLANT;
+    this.ax = ux * Math.cos(a) - uy * Math.sin(a);
+    this.ay = ux * Math.sin(a) + uy * Math.cos(a);
+    this.half = Math.ceil(CLAW_LEN * size + 4 * size) + 2;
+    this.layer = new PixelLayer(scene, this.half * 2, this.half * 2);
+    this.layer.image.setPosition(Math.round(x - this.half), Math.round(y - this.half)).setDepth(uy < -0.5 ? depth - 0.5 : depth + 0.32);
+    this.glow = scene.add.image(x, y, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(scheme.mid).setScale(0.45 * size).setDepth(depth + 0.25);
+    this.draw();
+  }
+
+  update(dt: number): void {
+    if (this.dead) return;
+    this.age += dt;
+    if (this.age >= this.duration) {
+      this.destroy();
+      return;
+    }
+    this.draw();
+  }
+
+  private draw(): void {
+    const { ax, ay, size: k, scheme: c, half: H } = this;
+    const t = this.age / this.duration;
+    const fade = t < 0.45 ? 1 : 1 - (t - 0.45) / 0.55;
+    const L = CLAW_LEN * k;
+    const b = this.layer;
+    b.clear();
+    for (let py = 0; py < H * 2; py++) {
+      for (let px = 0; px < H * 2; px++) {
+        const rx = px + 0.5 - H;
+        const ry = py + 0.5 - H;
+        const ra = rx * ax + ry * ay;
+        const rb = -rx * ay + ry * ax;
+        for (let i = 0; i < 3; i++) {
+          // Each claw a beat behind the last, and set a little further along.
+          const reveal = Math.min(1, Math.max(0, (t - i * 0.06) / 0.28));
+          if (reveal <= 0) continue;
+          const s = (ra - (i - 1) * 1.2 * k) / L;
+          if (Math.abs(s) > 1 || s > -1 + 2 * reveal) continue;
+          const w = (1 - s * s) * 1.05 * k + 0.25;
+          const d = rb - (i - 1) * CLAW_GAP * k - (1 - s * s) * 1.3 * k;
+          const tip = reveal < 1 && s > -1 + 2 * reveal - 0.3;
+          if (Math.abs(d) < w * 0.45) b.put(px, py, tip || t < 0.2 ? c.core : c.hot, fade);
+          else if (Math.abs(d) < w) b.put(px, py, c.mid, fade);
+          else if (d > 0 && d < w + 0.9) b.put(px, py, c.deep, fade * 0.9);
+          else continue;
+          break;
+        }
+      }
+    }
+    b.flush();
+    this.glow.setAlpha(0.45 * fade);
+  }
+
+  destroy(): void {
+    if (this.dead) return;
+    this.dead = true;
+    this.layer.destroy();
+    this.glow.destroy();
+  }
+}
+
+/** How long a puff of the somersault cloud lingers. */
+const CLOUD_MS = 720;
+
+/**
+ * A puff of the Monkey King's somersault cloud: three round billows on a
+ * flat foot with a curl in the biggest, the old auspicious-cloud shape,
+ * blooming, drifting off along (vx, vy) as it slows, and breaking up.
+ */
+export class CloudCurl implements Effect {
+  dead = false;
+  private layer: PixelLayer;
+  private half: number;
+  private age = 0;
+  private x: number;
+  private y: number;
+  /** Mirrored at random, so a ring of them doesn't look stamped. */
+  private flip: number;
+
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    private vx: number,
+    private vy: number,
+    private scheme: Scheme,
+    depth: number,
+    private size = 1,
+  ) {
+    this.x = x;
+    this.y = y;
+    this.flip = Math.random() < 0.5 ? -1 : 1;
+    this.half = Math.ceil(7.5 * size) + 2;
+    this.layer = new PixelLayer(scene, this.half * 2, this.half * 2);
+    this.layer.image.setDepth(depth);
+    this.draw();
+  }
+
+  update(dt: number): void {
+    if (this.dead) return;
+    this.age += dt;
+    if (this.age >= CLOUD_MS) {
+      this.destroy();
+      return;
+    }
+    // Drifting, and slowing as it goes.
+    const slow = 1 - this.age / CLOUD_MS;
+    this.x += (this.vx * slow * dt) / 1000;
+    this.y += (this.vy * slow * dt) / 1000;
+    this.draw();
+  }
+
+  private draw(): void {
+    const t = this.age / CLOUD_MS;
+    const g = this.size * (0.45 + 0.55 * easeOut(t / 0.22)) * (1 + 0.12 * t);
+    const fade = t < 0.55 ? 1 : 1 - (t - 0.55) / 0.45;
+    const c = this.scheme;
+    const H = this.half;
+    const b = this.layer;
+    b.image.setPosition(Math.round(this.x - H), Math.round(this.y - H));
+    b.clear();
+    const f = this.flip;
+    const bumps: [number, number, number][] = [
+      [-3 * f, 0.6, 2.2],
+      [0, -0.9, 3],
+      [3.2 * f, 0.7, 2],
+    ];
+    const foot = 2 * g;
+    const inside = (x: number, y: number) => y < foot && bumps.some(([bx, by, r]) => Math.hypot(x - bx * g, y - by * g) < r * g);
+    const ox = bumps[1][0] * g;
+    const oy = bumps[1][1] * g;
+    for (let py = 0; py < H * 2; py++) {
+      for (let px = 0; px < H * 2; px++) {
+        const x = px + 0.5 - H;
+        const y = py + 0.5 - H;
+        if (!inside(x, y)) continue;
+        // It breaks up from the edges in as it fades.
+        if (hash(px, py, 7) > fade + 0.15) continue;
+        const rim = !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1);
+        const dc = Math.hypot(x - ox, y - oy);
+        const ang = Math.atan2(y - oy, (x - ox) * f);
+        // The curl: a ring in the big billow, open at the bottom right, and its heart.
+        const curl = (Math.abs(dc - 1.5 * g) < 0.5 && !(ang > 0.2 && ang < 1.9)) || dc < 0.5;
+        const col = rim ? c.deep : curl ? c.mid : y < -1.2 * g ? c.core : y > foot - 1.2 ? c.mid : c.hot;
+        b.put(px, py, col, rim ? 0.85 * fade : fade);
+      }
+    }
+    b.flush();
+  }
+
+  destroy(): void {
+    if (this.dead) return;
+    this.dead = true;
+    this.layer.destroy();
   }
 }
 

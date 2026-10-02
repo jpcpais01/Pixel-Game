@@ -58,6 +58,15 @@ export const SPORTING_KIT: BeastKit = {
   club: true,
 };
 
+/** The Nemean lion: a hide like bronze-gold, claws raking in gold sparks, a roar of bronze and gold. */
+export const NEMEAN_KIT: BeastKit = {
+  ...LION_KIT,
+  key: 'lion_nemean',
+  pal: pal(0xfffbe0, 0xffe27a, 0xe0a030, 0x8a5210, 0xffd060),
+  fx: { core: 0xfffbe0, hot: 0xffe27a, mid: 0xe0a030, deep: 0x8a5210, light: 0xffd060 },
+  motes: [0xfff6c0, 0xffd060, 0xe0a030],
+};
+
 export class Lion extends Beast {
   private step = 0;
   private lastBlowAt = -99999;
@@ -133,6 +142,7 @@ export class Lion extends Beast {
       this.fx.push(new ClawMarks(w, bx - u.y * 3, by + u.x * 3, Math.atan2(u.y, u.x) + Math.PI / 2 + 0.3, 7, k.pal, snap(this.y) + 2));
       this.fx.push(new ClawMarks(w, bx + u.y * 3, by - u.x * 3, Math.atan2(u.y, u.x) + Math.PI / 2 - 0.3, 7, k.pal, snap(this.y) + 2));
       w.debris([0xa4703c, 0x7a4c26, 0xd8c8a0], bx, by + 10, 8, by + 20, 'burst');
+      if (k.motes) w.debris(k.motes, bx, by, 10, by + 20, 'burst');
       sound.rake(w.pan(bx), true);
       if (hits.length) w.cameras.main.shake(120, 0.0006);
       return;
@@ -144,6 +154,7 @@ export class Lion extends Beast {
     const hits = w.melee({ kind: 'arc', x: cx, y: cy, radius: CLAW_REACH, angle: a, spread: (100 * Math.PI) / 180 }, { damage: CLAW_DAMAGE, knock: 70 });
     for (const h of hits) {
       this.fx.push(new HitSpark(w, h.x, h.y, k.fx, h.y + 13, false));
+      if (k.motes) w.debris(k.motes, h.x, h.y - 12, 6, h.y + 13, 'burst');
       sound.rake(w.pan(h.x), false);
     }
     if (hits.length) w.cameras.main.shake(70, 0.0003);
@@ -160,6 +171,7 @@ export class Lion extends Beast {
     this.fx.push(new RoarWaves(w, this.x, this.y, ROAR_R, this.kit.pal, 1));
     this.fx.push(new Shockwave(w, snap(this.x), snap(this.y), ROAR_R * 0.6, this.kit.fx));
     w.debris([0xa4703c, 0x7a4c26, 0xd8c8a0], this.x, this.y, 12, this.y + 10, 'burst');
+    if (this.kit.motes) w.debris(this.kit.motes, this.x, this.y - 14, 16, this.y + 10, 'burst');
     w.cameras.main.shake(260, 0.0009);
     sound.roar(w.pan(this.x), false);
   }

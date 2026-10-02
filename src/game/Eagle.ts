@@ -60,6 +60,15 @@ export const BENFICA_KIT: BeastKit = {
   club: true,
 };
 
+/** The Phoenix: a bird of flame, his feathers burning quills, his wingbeat a gust of embers. */
+export const PHOENIX_KIT: BeastKit = {
+  ...EAGLE_KIT,
+  key: 'eagle_phoenix',
+  pal: pal(0xfffbe0, 0xffd860, 0xff7a1a, 0xb02008, 0xff9a30),
+  fx: { core: 0xfffbe0, hot: 0xffd860, mid: 0xff7a1a, deep: 0xb02008, light: 0xff9a30 },
+  motes: [0xfff0a0, 0xffb030, 0xff5a10],
+};
+
 export class Eagle extends Beast {
   private hand = 0;
   private gustCd = 0;
@@ -137,7 +146,9 @@ export class Eagle extends Beast {
     );
     for (const h of hits) this.fx.push(new HitSpark(w, h.x, h.y, this.kit.fx, h.y + 13, false));
     this.fx.push(new Gale(w, this.x, this.y, u.x, u.y, this.kit.pal));
-    w.debris(this.kit.club ? [0xde2230, 0xffffff, 0xdab058] : [0x7a5229, 0xa07642, 0xf4f6fc], this.x, this.y - 12, 10, this.y + 4, 'burst');
+    w.debris(this.kit.motes ?? (this.kit.club ? [0xde2230, 0xffffff, 0xdab058] : [0x7a5229, 0xa07642, 0xf4f6fc]), this.x, this.y - 12, 10, this.y + 4, 'burst');
+    // A wingbeat of flame throws embers that drift up on the heat.
+    if (this.kit.motes) w.debris(this.kit.motes, this.x + u.x * 14, this.y - 10 + u.y * 10, 14, this.y + 6, 'spores');
     sound.gust(w.pan(this.x));
     this.hopT = 0;
     this.hopDir = { x: -u.x, y: -u.y };
@@ -219,6 +230,8 @@ export class Feather implements Effect {
       this.trailT = 45;
       const p = this.kit.pal;
       this.world.debris([p.hot, p.mid], snap(this.x - this.ux * 4), snap(this.y - FEATHER_H - this.uy * 4), 1, this.y, 'trail');
+      // A burning quill leaves embers rising behind it.
+      if (this.kit.motes && Math.random() < 0.5) this.world.debris(this.kit.motes, snap(this.x - this.ux * 6), snap(this.y - FEATHER_H - this.uy * 6), 1, this.y, 'spores');
     }
   }
 

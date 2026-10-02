@@ -42,6 +42,10 @@ const KNEEL_MS = 1400;
 const DECREE_WARD = 12;
 const WARD_PER_FOE = 6;
 const BARRIER_MAX = 40;
+/** The Sun King's decree: how many rays turn round the crown, and from how far out to how far. */
+const SUN_RAYS = 8;
+const SUN_RAY_IN = 5;
+const SUN_RAY_OUT = 9;
 
 // Walk frames where a foot lands.
 const FOOTFALLS = new Set([1, 4]);
@@ -64,6 +68,8 @@ export interface KingKit {
   /** The faint light around him at night. */
   aura: number;
   specialCooldown: number;
+  /** The decree's crown blazes with a ring of sun rays turning round it. */
+  rays?: boolean;
 }
 
 const kingStats = HERO_STATS['warrior.king'];
@@ -87,6 +93,17 @@ export const AFONSO_KIT: KingKit = {
   heavy: { core: 0xffffff, hot: 0xd8e8ff, mid: 0x5a8aff, deep: 0x1a3a9a, light: 0x8ab0ff },
   pal: pal(0xffffff, 0xd8e8ff, 0x5a8aff, 0x1a3a9a, 0x8ab0ff),
   aura: 0xd0e0ff,
+};
+
+/** The Sun King: radiant gold cuts with a royal-blue depth, and a decree that shines like the sun. */
+export const SUNKING_KIT: KingKit = {
+  ...KING_KIT,
+  key: 'warrior_sunking',
+  swing: { core: 0xffffff, hot: 0xfff4c0, mid: 0xffd050, deep: 0x2a4ab8 },
+  heavy: { core: 0xfffff0, hot: 0xffe680, mid: 0xffb820, deep: 0x1a3a9a, light: 0xffd870 },
+  pal: pal(0xfffff0, 0xffe680, 0xffb820, 0x1a3a9a, 0xffd870),
+  aura: 0xffe8a0,
+  rays: true,
 };
 
 export class King implements Hero {
@@ -299,7 +316,7 @@ export class King implements Hero {
     }
     const v = this.vitals;
     v.barrier = Math.min(v.barrierMax, v.barrier + DECREE_WARD + knelt * WARD_PER_FOE);
-    w.addEffect(new Decree(w, this, this.kit.pal));
+    w.addEffect(new Decree(w, this, this.kit.pal, !!this.kit.rays));
     w.cameras.main.shake(160, 0.0009);
     sound.decree(w.pan(x));
     this.specialCd = this.kit.specialCooldown;
@@ -356,10 +373,11 @@ class Decree extends Fx {
     world: WorldScene,
     private king: { x: number; y: number },
     private p: Pal,
+    private rays = false,
   ) {
     super(world, 900);
     this.ground = this.ink(DECREE_RADIUS * 2 + 12, Math.ceil(DECREE_RADIUS * 2 * GROUND + 12));
-    this.head = this.ink(11, 7);
+    this.head = rays ? this.ink(SUN_RAY_OUT * 2 + 3, SUN_RAY_OUT * 2 + 3) : this.ink(11, 7);
     this.lamp = this.light(king.x, king.y - 30, 140, p.light, 1.6);
     flare(world, king.x, king.y - 20, 160, p.light, 3, 500);
     bloom(world, king.x, king.y - 34, p.hot, 1.6, 400, king.y + 30);
@@ -379,8 +397,20 @@ class Decree extends Fx {
     }
     g.end();
     // The crown over his head, rising a little as it fades.
-    const h = this.head.begin(x, y - 40 - Math.round(easeOut(t / 900) * 4), y + 40);
-    crownGlyph(h, x, y - 38 - Math.round(easeOut(t / 900) * 4), p, fade);
+    const rise = Math.round(easeOut(t / 900) * 4);
+    const h = this.head.begin(x, y - 40 - rise, y + 40);
+    if (this.rays) {
+      // The Sun King's: rays of sunlight turning slowly round the crown, long and short by turns.
+      const turn = t * 0.0015;
+      for (let i = 0; i < SUN_RAYS; i++) {
+        const a = turn + (i / SUN_RAYS) * Math.PI * 2;
+        const out = i % 2 ? SUN_RAY_OUT - 2 : SUN_RAY_OUT;
+        for (let r = SUN_RAY_IN; r <= out; r++) {
+          h.put(x + Math.round(Math.cos(a) * r), y - 40 - rise + Math.round(Math.sin(a) * r), r === SUN_RAY_IN ? p.hot : p.mid, fade * (1 - (r - SUN_RAY_IN) / (out + 1 - SUN_RAY_IN)));
+        }
+      }
+    }
+    crownGlyph(h, x, y - 38 - rise, p, fade);
     h.end();
     this.lamp.setPosition(x, y - 30);
     this.lamp.intensity = 1.6 * fade;

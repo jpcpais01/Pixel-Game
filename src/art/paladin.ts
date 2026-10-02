@@ -12,6 +12,7 @@
 import { PixelCanvas, cyl, sphere, type Material, type RGB, type Vec3 } from './pixel';
 import { AZURE, BLACK_PLATE, BLACK_PLATE_DARK, CRIMSON, EYE, GOLD, HALLOW, HOLY_CORE, HOLY_HOT, HOLY_MID, IVORY, LEATHER, PLATE, PLATE_DARK, SKIN, SUNFIRE, SUN_CORE, SUN_HOT, SUN_MID, WOOD } from './palette';
 import { DAWN, DAWN_CORE, DAWN_HOT, DAWN_MID, ECLIPSE_CORE, ECLIPSE_HOT, ECLIPSE_MID, FEATHER, HALO, HORN, OATH_CLOTH, OATH_PLATE, OATH_PLATE_DARK, PEARL, PEARL_DARK, SERAPH_HAIR, TARNISH, VOIDFIRE } from './heroSkins';
+import { HAT, INQ_COAT, INQ_HAIR, INQ_LEATHER, INQ_RED, INQ_STEEL, LION_CORE, LION_FIRE, LION_HOT, LION_MID, LION_PLATE, LION_PLATE_DARK, LION_RED, MANE, PURGE, PURGE_CORE, PURGE_EMBER, PURGE_HOT, SILVER } from './paladinSkins';
 import { DIRS, type Dir } from './wizard';
 
 export const PALADIN_W = 48;
@@ -44,6 +45,10 @@ export interface PaladinLook {
   seraph?: boolean;
   /** Horns on the great helm, spiked pauldrons, a tattered cloak and an eclipse on the shield (the Crusader's Oathbreaker skin). */
   oath?: boolean;
+  /** A closed helm with a golden lion's face in a tawny mane, gold lions on the tabard and shield, a lion-headed mace (the Templar's Lionheart skin). */
+  lion?: boolean;
+  /** A wide-brimmed hat over a steel half-mask, a long coat and crimson sash, a censer at the belt and a white flame on the shield (the Crusader's Inquisitor skin). */
+  inquisitor?: boolean;
 }
 
 export const HOLY_LOOK: PaladinLook = {
@@ -98,7 +103,35 @@ export const OATH_LOOK: PaladinLook = {
   oath: true,
 };
 
-export const PALADIN_LOOKS = [HOLY_LOOK, CRUSADER_LOOK, SERAPH_LOOK, OATH_LOOK];
+/** The Templar's Lionheart skin: white-and-gold plate, a lion's face and mane on the helm, crimson and gold. */
+export const LION_LOOK: PaladinLook = {
+  key: 'paladin_lion',
+  plate: LION_PLATE,
+  plateDark: LION_PLATE_DARK,
+  cape: LION_RED,
+  emblem: LION_FIRE,
+  light: [LION_CORE, LION_HOT, LION_MID],
+  crusader: false,
+  trim: GOLD,
+  tabard: LION_RED,
+  lion: true,
+};
+
+/** The Crusader's Inquisitor skin: dark steel and black leather, a brimmed hat, a crimson sash and white fire. */
+export const INQUISITOR_LOOK: PaladinLook = {
+  key: 'paladin_inquisitor',
+  plate: INQ_STEEL,
+  plateDark: INQ_LEATHER,
+  cape: INQ_COAT,
+  emblem: PURGE,
+  light: [PURGE_CORE, PURGE_HOT, PURGE_EMBER],
+  crusader: true,
+  trim: SILVER,
+  tabard: INQ_RED,
+  inquisitor: true,
+};
+
+export const PALADIN_LOOKS = [HOLY_LOOK, CRUSADER_LOOK, SERAPH_LOOK, OATH_LOOK, LION_LOOK, INQUISITOR_LOOK];
 
 /** The look being drawn; set by buildPaladinFrames. */
 let S: PaladinLook = HOLY_LOOK;
@@ -194,17 +227,20 @@ function drawMace(c: PixelCanvas, m: Mace, glow: number): { x: number; y: number
     const n = facing(px * side - 0.3, py * side + 0.3, 0.8);
     if (along < 1.1) c.px(x, y, LEATHER, n);
     else if (Math.abs(along - (m.len - 2)) < 0.55) c.px(x, y, S.trim, n);
-    else c.px(x, y, WOOD, n, { bias: 1 });
+    else c.px(x, y, S.lion ? S.plate : WOOD, n, { bias: 1 });
   });
-  // Flanges across the head and a spike on top, then the head over them.
-  c.part();
-  box((x, y, along, side) => {
-    const flange = Math.abs(along - m.len) < 0.6 && Math.abs(side) < 2.7;
-    const spike = along > m.len && along < m.len + 3 && Math.abs(side) < 0.6;
-    if (flange || spike) c.px(x, y, glow > 0.5 ? S.emblem : S.trim, facing(px * side * 0.4 - 0.2, py * side * 0.4 - 0.3, 0.85), { glow: glow * 0.9 });
-  });
-  c.part();
-  c.ellipse(head.x, head.y, 1.8, 1.8, glow > 0.5 ? S.emblem : S.plate, { glow: glow * 0.9 });
+  if (S.lion) lionHead(c, head, dx, dy, glow);
+  else {
+    // Flanges across the head and a spike on top, then the head over them.
+    c.part();
+    box((x, y, along, side) => {
+      const flange = Math.abs(along - m.len) < 0.6 && Math.abs(side) < 2.7;
+      const spike = along > m.len && along < m.len + 3 && Math.abs(side) < 0.6;
+      if (flange || spike) c.px(x, y, glow > 0.5 ? S.emblem : S.trim, facing(px * side * 0.4 - 0.2, py * side * 0.4 - 0.3, 0.85), { glow: glow * 0.9 });
+    });
+    c.part();
+    c.ellipse(head.x, head.y, 1.8, 1.8, glow > 0.5 ? S.emblem : S.plate, { glow: glow * 0.9 });
+  }
 
   if (glow > 0) {
     // Motes of light circling the head.
@@ -216,6 +252,27 @@ function drawMace(c: PixelCanvas, m: Mace, glow: number): { x: number; y: number
     c.spark(head.x, head.y, S.light[0], glow);
   }
   return head;
+}
+
+/**
+ * The Lionheart's mace head: a lion's face in gold inside a tufted mane, its
+ * eyes toward the mace's tip; (dx, dy) is the way up the haft.
+ */
+function lionHead(c: PixelCanvas, head: { x: number; y: number }, dx: number, dy: number, glow: number): void {
+  c.part();
+  for (let y = Math.floor(head.y - 4); y <= Math.ceil(head.y + 4); y++) {
+    for (let x = Math.floor(head.x - 4); x <= Math.ceil(head.x + 4); x++) {
+      const rx = x + 0.5 - head.x;
+      const ry = y + 0.5 - head.y;
+      const tuft = 0.5 + 0.5 * Math.cos(Math.atan2(ry, rx) * 6);
+      if (Math.hypot(rx, ry) > 2.4 + tuft * 0.6) continue;
+      c.px(x, y, MANE, sphere(rx / 3, ry / 3, 1), { bias: tuft < 0.3 ? -1 : 0 });
+    }
+  }
+  c.part();
+  c.ellipse(head.x, head.y, 1.7, 1.7, glow > 0.5 ? S.emblem : S.trim, { glow: glow * 0.9 });
+  // Two eyes a pixel toward the tip, either side of the nose.
+  for (const k of [-1, 1]) c.shade(head.x + dx * 0.7 - dy * k * 0.9, head.y + dy * 0.7 + dx * k * 0.9, -2);
 }
 
 /** The Crusader's warhammer: a long haft, a squared steel head banded in gold, and a spike above it. */
@@ -249,7 +306,7 @@ function drawHammer(c: PixelCanvas, m: Mace, glow: number): { x: number; y: numb
     if (along < -1.7 || along > m.len - 1.4 || Math.abs(side) > 0.6) return;
     const n = facing(px * side - 0.3, py * side + 0.3, 0.8);
     if (along < 1.1) c.px(x, y, LEATHER, n);
-    else c.px(x, y, WOOD, n, { bias: 1 });
+    else c.px(x, y, S.inquisitor ? S.plate : WOOD, n, { bias: 1 });
   });
   // The spike, then the head across the haft: steel faces with gold bands at each end.
   c.part();
@@ -347,6 +404,19 @@ function shieldFront(c: PixelCanvas, cx: number, cy: number, hw: number, glow: n
   const sx = Math.floor(cx);
   const g = { glow: 0.3 + glow * 0.7 };
   const arm = hw > 2.5 ? 2 : 1;
+  if (S.lion) {
+    lionBoss(c, sx, sy, arm === 2, glow);
+    return;
+  }
+  if (S.inquisitor) {
+    // A white flame, the purging fire, with an ember flying off its tip.
+    const flame = arm === 2 ? [[0, -2], [0, -1], [1, -1], [-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1], [1, 1], [0, 2]] : [[0, -2], [0, -1], [-1, 0], [0, 0], [-1, 1], [0, 1], [0, 2]];
+    for (const [ox, oy] of flame) c.px(sx + ox, sy + oy, S.emblem, { x: ox * 0.3, y: 0.3 - oy * 0.15, z: 0.9 }, { glow: 0.4 + glow * 0.6, bias: oy < 0 ? 1 : 0 });
+    c.spark(sx, sy + 1, S.light[0], 0.3 + glow * 0.7);
+    c.spark(sx + 1, sy - 3, S.light[2], 0.45 + glow * 0.5);
+    if (glow > 0) for (const [ox, oy] of [[0, -4], [-arm, -2], [arm, -1]]) c.spark(sx + ox, sy + oy, S.light[1], glow * 0.45);
+    return;
+  }
   if (S.oath) {
     // An eclipse: a ring of violet fire round a black heart.
     for (const [ox, oy] of [[0, -2], [1, -2], [-1, -1], [2, -1], [-1, 0], [2, 0], [0, 1], [1, 1]]) c.px(sx + ox - (arm === 1 ? 0 : 0), sy + oy, S.emblem, { x: (ox - 0.5) * 0.3, y: -(oy + 0.5) * 0.3, z: 0.9 }, g);
@@ -359,6 +429,28 @@ function shieldFront(c: PixelCanvas, cx: number, cy: number, hw: number, glow: n
   if (glow > 0) {
     c.spark(sx, sy, S.light[0], glow);
     for (const [ox, oy] of [[0, -3], [0, 4], [-arm - 1, 0], [arm + 1, 0]]) c.spark(sx + ox, sy + oy, S.light[1], glow * 0.45);
+  }
+}
+
+/** The Lionheart's shield boss: a lion's face of kindled gold in a ring of gold mane. */
+function lionBoss(c: PixelCanvas, sx: number, sy: number, wide: boolean, glow: number): void {
+  const g = { glow: 0.3 + glow * 0.7 };
+  if (wide) {
+    for (const [ox, oy] of [[-1, -2], [0, -2], [1, -2], [-2, -1], [2, -1], [-2, 0], [2, 0], [-2, 1], [2, 1], [-1, 2], [1, 2]]) {
+      c.px(sx + ox, sy + oy, S.trim, { x: ox * 0.3, y: -oy * 0.3, z: 0.88 }, { bias: oy < 0 ? 1 : 0 });
+    }
+    for (const [ox, oy] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [0, 0], [1, 0], [0, 1], [0, 2]]) c.px(sx + ox, sy + oy, S.emblem, { x: ox * 0.2 - 0.1, y: 0.3 - oy * 0.15, z: 0.92 }, g);
+    c.shade(sx - 1, sy - 1, -2);
+    c.shade(sx + 1, sy - 1, -2);
+    c.shade(sx, sy + 1, -1);
+  } else {
+    for (const [ox, oy] of [[0, -2], [-1, -1], [-1, 0], [-1, 1], [0, 2]]) c.px(sx + ox, sy + oy, S.trim, { x: -0.3, y: -oy * 0.3, z: 0.88 });
+    for (const [ox, oy] of [[0, -1], [0, 0], [0, 1]]) c.px(sx + ox, sy + oy, S.emblem, { x: -0.1, y: 0.3 - oy * 0.15, z: 0.92 }, g);
+    c.shade(sx, sy - 1, -2);
+  }
+  if (glow > 0) {
+    c.spark(sx, sy, S.light[0], glow);
+    for (const [ox, oy] of [[0, -3], [0, 3], [-3, 0], [3, 0]]) c.spark(sx + ox, sy + oy, S.light[1], glow * 0.45);
   }
 }
 
@@ -399,7 +491,7 @@ function dome(c: PixelCanvas, cx: number, y0: number, y1: number, hw: number, ba
 
 /** A small white wing on the helm, from its root sweeping up and out by (sx, sy). */
 function wing(c: PixelCanvas, x: number, y: number, sx: number, sy: number): void {
-  if (S.crusader) return;
+  if (S.crusader || S.lion) return;
   c.part();
   c.capsule(x, y, x + sx, y + sy, 1.05, 0.55, IVORY, { bias: 1 });
   c.part();
@@ -646,6 +738,270 @@ function tatters(c: PixelCanvas, l: number, r: number, y: number, m: Material): 
 }
 
 // ---------------------------------------------------------------------------
+// The Lionheart and the Inquisitor
+
+const MANE_TUFTS = 9;
+/** How deep the notches between the mane's tufts cut, as a share of its radius. */
+const MANE_NOTCH = 0.18;
+
+/** A tufted mane round (cx, cy): tufts reach the full radius, notches cut in between. */
+function maneRuff(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number, phase = 0): void {
+  c.part();
+  for (let y = Math.floor(cy - ry - 1); y <= Math.ceil(cy + ry + 1); y++) {
+    for (let x = Math.floor(cx - rx - 1); x <= Math.ceil(cx + rx + 1); x++) {
+      const dx = (x + 0.5 - cx) / rx;
+      const dy = (y + 0.5 - cy) / ry;
+      const q = Math.hypot(dx, dy);
+      const tuft = 0.5 + 0.5 * Math.cos(Math.atan2(dy, dx) * MANE_TUFTS + phase);
+      if (q > 1 - MANE_NOTCH * (1 - tuft)) continue;
+      // Strands darken into the notches, so the tufts read apart.
+      c.px(x, y, MANE, sphere(dx * 0.9, dy * 0.9, 1), { bias: tuft < 0.35 && q > 0.6 ? -1 : 0 });
+    }
+  }
+}
+
+/** The short tawny plume on the crown of the lion helm, from its root up by (sx, sy). */
+function maneTuft(c: PixelCanvas, x: number, y: number, sx: number, sy: number): void {
+  c.part();
+  c.capsule(x, y, x + sx, y + sy, 1.6, 0.9, MANE, { bias: 1 });
+}
+
+/** Small round gold ears on the helm. */
+function lionEar(c: PixelCanvas, x: number, y: number): void {
+  c.part();
+  c.ellipse(x, y, 1.15, 1.1, S.trim, { bias: 1 });
+  c.shade(Math.floor(x), Math.floor(y) + 1, -1);
+}
+
+/**
+ * The lion helm from the front: a white dome ringed by a tawny mane, gold
+ * ears, and a golden lion's face for a visor whose eyes burn amber.
+ */
+function lionHelmFront(c: PixelCanvas, cx: number, U: number, blink: boolean): void {
+  maneRuff(c, cx, 10.4 + U, 6.6, 5.8);
+  maneTuft(c, cx - 0.3, 5.2 + U, 0.6, -1.6);
+  dome(c, cx, 5 + U, 10 + U, 4.6);
+  lionEar(c, cx - 3.4, 6.4 + U);
+  lionEar(c, cx + 3.4, 6.4 + U);
+  c.part();
+  c.shape(11 + U, 14 + U, (y) => {
+    const hw = y === 14 + U ? 3.6 : 4.3;
+    return [cx - hw, cx + hw];
+  }, S.plate, (_x, _y, t) => cyl(t * 0.95, 0));
+  // The face: a muzzle of gold, rounded so it catches the light at the brow and nose.
+  c.part();
+  const rows: [number, number][] = [[9, 14], [9, 14], [10, 13], [10, 13], [11, 12]];
+  rows.forEach(([l, r], i) => {
+    for (let x = l; x <= r; x++) c.px(x, 11 + i + U, S.trim, sphere((x + 0.5 - cx) / 3.2, (i - 1.6) / 2.8, 1), { bias: i === 0 ? 1 : 0 });
+  });
+  // Nose bridge, the nose pad, a snarling mouth and the eyes.
+  c.shade(11, 12 + U, 1);
+  c.shade(11, 13 + U, -1);
+  c.shade(12, 13 + U, -1);
+  c.shade(11, 14 + U, -2);
+  c.shade(12, 14 + U, -2);
+  if (!blink) {
+    c.px(10, 11 + U, EYE);
+    c.px(13, 11 + U, EYE);
+    c.spark(10, 11 + U, S.light[1], 0.75);
+    c.spark(13, 11 + U, S.light[1], 0.75);
+  } else {
+    c.shade(10, 11 + U, -2);
+    c.shade(13, 11 + U, -2);
+  }
+}
+
+/** The lion helm from behind: the mane all round, falling in three locks over the nape. */
+function lionHelmBack(c: PixelCanvas, cx: number, U: number): void {
+  maneRuff(c, cx, 10.6 + U, 6.6, 6.0, 0.4);
+  c.part();
+  c.ellipse(cx, 10.2 + U, 4.8, 4.5, S.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.15, 1) });
+  c.part();
+  c.shape(Math.round(13 + U), Math.round(13 + U), () => [cx - 3.6, cx + 3.6], S.trim, (_x, _y, t) => cyl(t, -0.2));
+  lionEar(c, cx - 3.4, 6.4 + U);
+  lionEar(c, cx + 3.4, 6.4 + U);
+  maneTuft(c, cx - 0.3, 5.2 + U, 0.6, -1.6);
+  for (const k of [-1, 0, 1]) {
+    c.part();
+    c.capsule(cx + k * 1.7, 13.4 + U, cx + k * 2.2, 17.4 + U - Math.abs(k) * 0.9, 1.25, 0.7, MANE, { bias: k ? -1 : 0 });
+  }
+}
+
+/** The lion helm in profile, facing left: the gold muzzle juts forward, the mane sweeps back. */
+function lionHelmSide(c: PixelCanvas, hx: number, U: number, blink: boolean): void {
+  maneRuff(c, hx + 1.6, 10.4 + U, 5.0, 5.8, 0.6);
+  maneTuft(c, hx + 0.4, 5.0 + U, 1.4, -1.4);
+  dome(c, hx - 0.2, 5 + U, 10 + U, 4.6, 0.6);
+  lionEar(c, hx + 1.2, 6.0 + U);
+  c.part();
+  c.shape(11 + U, 14 + U, (y) => [hx - 2, hx + 3.4 - (y - 11 - U) * 0.3], S.plate, (_x, _y, t, u) => sphere(t * 0.7 + 0.2, u * 0.8, 1));
+  c.part();
+  const front = [-4.8, -5.0, -5.6, -5.6, -5.0, -3.8];
+  c.shape(10 + U, 15 + U, (y) => [hx + front[y - 10 - U], hx - 1.2], S.trim, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, u * 1.2 - 0.5, 1));
+  c.shade(hx - 6, 12 + U, 1);
+  c.shade(hx - 6, 13 + U, -1);
+  c.shade(hx - 5, 14 + U, -2);
+  c.shade(hx - 4, 14 + U, -1);
+  if (!blink) {
+    c.px(hx - 3, 11 + U, EYE);
+    c.spark(hx - 3, 11 + U, S.light[1], 0.75);
+  } else c.shade(hx - 3, 11 + U, -2);
+}
+
+/** A gold lion rampant (rearing, facing the viewer's left), six pixels wide, rows y-2..y+3. */
+const RAMPANT = ['.XX...', 'XXX..X', 'XXXX.X', '.XXXX.', '..XXX.', '.XX.XX'];
+function rampant(c: PixelCanvas, y: number): void {
+  RAMPANT.forEach((row, r) => {
+    for (let i = 0; i < row.length; i++) {
+      if (row[i] !== 'X') continue;
+      c.px(9 + i, y - 2 + r, S.trim, { x: (i - 2.5) * 0.12, y: 0.35 - r * 0.08, z: 0.9 }, { bias: r < 2 ? 1 : 0 });
+    }
+  });
+}
+
+/** A swinging censer on its chain from the belt at (x, y): a silver ball with a coal of white fire. */
+function censer(c: PixelCanvas, x: number, y: number, sway = 0): void {
+  c.part();
+  c.px(x, y, S.trim, { x: -0.3, y: 0.3, z: 0.9 });
+  c.px(x + (sway > 0 ? 1 : 0), y + 1, S.trim, { x: -0.3, y: 0.3, z: 0.9 });
+  c.part();
+  const bx = x + 0.5 + sway;
+  c.ellipse(bx, y + 3.4, 1.4, 1.3, S.trim);
+  c.px(Math.floor(bx), y + 3, S.emblem, { x: 0, y: 0.3, z: 0.95 }, { glow: 0.6 });
+  c.spark(Math.floor(bx), y + 3, S.light[1], 0.5);
+  c.spark(Math.floor(bx), y + 1, S.light[2], 0.3);
+}
+
+/** Two crimson sash tails hanging from a knot at (x, y) down to row `y1`, swaying by `sway`; `k` the way they spread. */
+function sashTails(c: PixelCanvas, x: number, y: number, y1: number, sway: number, k = 1): void {
+  c.part();
+  c.capsule(x, y + 0.5, x + k * 0.4 + sway * 0.6, y1, 0.95, 0.75, INQ_RED, { bias: -1 });
+  c.capsule(x + k * 1.2, y + 0.5, x + k * 2.2 + sway, y1 - 1.2, 0.9, 0.7, INQ_RED);
+  c.part();
+  c.ellipse(x + k * 0.6, y + 0.4, 1.3, 1.0, INQ_RED, { bias: 1 });
+}
+
+/** The Inquisitor's seal on his sash: a silver ring round a coal of white fire, on row `y`. */
+function seal(c: PixelCanvas, y: number): void {
+  for (const [x, yy] of [[11, y - 1], [12, y - 1], [10, y], [13, y], [11, y + 1], [12, y + 1]]) {
+    c.px(x, yy, S.trim, { x: (x - 11.5) * 0.3, y: -(yy - y) * 0.35, z: 0.88 }, { bias: yy < y ? 1 : 0 });
+  }
+  c.px(11, y, S.emblem, { x: -0.2, y: 0.3, z: 0.93 }, { glow: 0.6 });
+  c.px(12, y, S.emblem, { x: 0.2, y: 0.3, z: 0.93 }, { glow: 0.5 });
+  c.spark(11, y, S.light[1], 0.35);
+}
+
+/** A hem of silver studs: the trimmed row darkened between studs. */
+function studs(c: PixelCanvas, l: number, r: number, y: number): void {
+  for (let x = Math.round(l); x < Math.round(r); x++) if (x % 2) c.shade(x, y, -3);
+}
+
+/** The Inquisitor's hat brim, a broad flat ellipse of felt centred on (cx, cy). */
+function brim(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number): void {
+  c.part();
+  for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
+    for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+      const dx = (x + 0.5 - cx) / rx;
+      const dy = (y + 0.5 - cy) / ry;
+      if (dx * dx + dy * dy > 1) continue;
+      // The top of the brim faces the sky; its front lip turns down into shade.
+      c.px(x, y, HAT, { x: dx * 0.35, y: dy < 0 ? 0.75 : -0.25, z: 0.65 }, { bias: dy > 0.35 ? -1 : 0 });
+    }
+  }
+}
+
+/** The hat's crown, rows 3..8 between l and r, with a crimson band and (seen from the front) a silver buckle at `buckle`. */
+function crown(c: PixelCanvas, l: number, r: number, U: number, buckle?: number): void {
+  c.part();
+  c.shape(3 + U, 8 + U, (y) => {
+    const top = y === 3 + U ? 0.6 : 0;
+    const flare = (y - 3 - U) * 0.06;
+    return [l + top - flare, r - top + flare];
+  }, HAT, (_x, y, t) => cyl(t * 0.95, y === 3 + U ? 0.8 : 0.15));
+  c.part();
+  c.shape(7 + U, 7 + U, () => [l - 0.5, r + 0.5], INQ_RED, (_x, _y, t) => cyl(t, 0.1));
+  if (buckle !== undefined) {
+    c.part();
+    c.px(buckle, 7 + U, S.trim, { x: -0.3, y: 0.4, z: 0.85 }, { bias: 1 });
+    c.px(buckle + 1, 7 + U, S.trim, { x: 0.2, y: 0.4, z: 0.85 });
+  }
+}
+
+/**
+ * The Inquisitor from the front: a lean face in the brim's shadow, grey hair
+ * at the temples, eyes catching an ember's glint, a steel half-mask from the
+ * nose down, the coat's high collar, and the broad black hat.
+ */
+function hatFront(c: PixelCanvas, cx: number, U: number, blink: boolean): void {
+  c.part();
+  c.ellipse(cx, 12.4 + U, 3.1, 2.7, SKIN, { bias: -1 });
+  c.part();
+  for (let y = 10; y <= 12; y++) {
+    c.px(8, y + U, INQ_HAIR, cyl(-0.8, 0.1));
+    c.px(15, y + U, INQ_HAIR, cyl(0.8, 0.1));
+  }
+  c.part();
+  if (blink) {
+    c.px(10, 11 + U, SKIN, FLAT_DOWN, { bias: -2 });
+    c.px(13, 11 + U, SKIN, FLAT_DOWN, { bias: -2 });
+  } else {
+    c.px(10, 11 + U, EYE);
+    c.px(13, 11 + U, EYE);
+    c.spark(10, 11 + U, S.light[2], 0.5);
+    c.spark(13, 11 + U, S.light[2], 0.5);
+  }
+  c.part();
+  const mask = [3.3, 3.1, 2.3];
+  c.shape(12 + U, 14 + U, (y) => [cx - mask[y - 12 - U], cx + mask[y - 12 - U]], S.plate, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.2, 1));
+  c.shade(11, 12 + U, 1);
+  c.shade(10, 13 + U, -2);
+  c.shade(13, 13 + U, -2);
+  c.px(9, 12 + U, S.trim, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
+  c.px(14, 12 + U, S.trim, { x: 0.5, y: 0.3, z: 0.8 });
+  // The coat's standing collar either side of the jaw.
+  c.part();
+  c.shape(12 + U, 15 + U, (y) => [cx - 4.7, cx - 3.3 + (y - 12 - U) * 0.15], S.cape, (_x, _y, t) => cyl(t * 0.6 - 0.4, 0.2));
+  c.shape(12 + U, 15 + U, (y) => [cx + 3.3 - (y - 12 - U) * 0.15, cx + 4.7], S.cape, (_x, _y, t) => cyl(t * 0.6 + 0.4, 0.2));
+  brim(c, cx, 8.9 + U, 7.6, 1.35);
+  crown(c, cx - 3, cx + 3, U, 11);
+}
+
+/** The Inquisitor from behind: grey hair at the nape over the high collar, under the hat. */
+function hatBack(c: PixelCanvas, cx: number, U: number): void {
+  c.part();
+  c.ellipse(cx, 11.6 + U, 3.6, 2.6, INQ_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8, 1) });
+  c.shade(11, 12 + U, -1);
+  c.shade(13, 11 + U, -1);
+  c.part();
+  c.shape(13 + U, 15 + U, (y) => [cx - 4.4 + (15 + U - y) * 0.2, cx + 4.4 - (15 + U - y) * 0.2], S.cape, (_x, _y, t) => cyl(t, 0.3));
+  brim(c, cx, 8.9 + U, 7.6, 1.35);
+  crown(c, cx - 3, cx + 3, U);
+}
+
+/** The Inquisitor in profile, facing left: the mask's beak, the long brim reaching forward. */
+function hatSide(c: PixelCanvas, hx: number, U: number, blink: boolean): void {
+  c.part();
+  c.ellipse(hx - 1.2, 12.6 + U, 2.9, 2.6, SKIN, { bias: -1 });
+  c.part();
+  c.shape(10 + U, 13 + U, (y) => [hx + 0.2, hx + 3.2 - (y - 10 - U) * 0.2], INQ_HAIR, (_x, _y, t, u) => sphere(t * 0.8 + 0.1, u - 0.4, 1));
+  c.part();
+  if (blink) c.px(hx - 3, 11 + U, SKIN, FLAT_DOWN, { bias: -2 });
+  else {
+    c.px(hx - 3, 11 + U, EYE);
+    c.spark(hx - 3, 11 + U, S.light[2], 0.5);
+  }
+  c.part();
+  const nose = [0, 0.2, 1.0];
+  c.shape(12 + U, 14 + U, (y) => [hx - 4.6 + nose[y - 12 - U], hx - 0.4], S.plate, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, u * 0.9 - 0.2, 1));
+  c.shade(hx - 3, 13 + U, -2);
+  c.px(hx - 1, 12 + U, S.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
+  c.part();
+  c.shape(12 + U, 15 + U, () => [hx + 0.6, hx + 3.0], S.cape, (_x, _y, t) => cyl(t * 0.6 + 0.2, 0.2));
+  brim(c, hx - 0.6, 8.9 + U, 6.8, 1.2);
+  crown(c, hx - 3, hx + 2.6, U);
+}
+
+// ---------------------------------------------------------------------------
 // Directions
 
 function drawDown(c: PixelCanvas, p: Pose): PaladinMeta {
@@ -718,11 +1074,11 @@ function drawDown(c: PixelCanvas, p: Pose): PaladinMeta {
   c.part();
   const tab = (y: number): [number, number] => {
     const u = Math.max(0, (y - waist) / (hem - waist));
-    const hw = 2.0 + u * 0.5;
+    const hw = (S.lion ? 2.6 : 2.0) + u * 0.5;
     const x = cx + p.cape * 0.4 * u * u;
     return [x - hw, x + hw];
   };
-  c.shape(top + 2, hem, tab, S.tabard, (_x, _y, t, u) => cyl(t * 0.6, 0.2 - u * 0.3));
+  c.shape(top + (S.lion ? 1 : 2), hem, tab, S.tabard, (_x, _y, t, u) => cyl(t * 0.6, 0.2 - u * 0.3));
   c.part();
   const te = tab(hem + 1);
   c.shape(hem + 1, hem + 1, () => te, S.trim, (_x, _y, t) => cyl(t, -0.1));
@@ -733,8 +1089,11 @@ function drawDown(c: PixelCanvas, p: Pose): PaladinMeta {
   c.px(12, waist, S.trim, { x: 0.2, y: 0.3, z: 0.9 });
   c.part();
   if (S.oath) eclipse(c, 18 + U);
+  else if (S.inquisitor) seal(c, 18 + U);
   else if (S.crusader) cross(c, 18 + U, CRIMSON);
+  else if (S.lion) rampant(c, 18 + U);
   else sun(c, 18 + U);
+  if (S.inquisitor) censer(c, 8, waist + 1, p.cape > 0 ? 0.5 : p.cape < 0 ? -0.5 : 0);
 
   // Gorget between chin and breastplate.
   c.part();
@@ -745,8 +1104,10 @@ function drawDown(c: PixelCanvas, p: Pose): PaladinMeta {
   // The idle moment may nudge the head (bowed in prayer): drawn through a shifted canvas.
   const hd = p.head;
   if (hd) c.offset(BODY_X + hd.x, BODY_Y + hd.y);
-  if (S.crusader) greatHelmFront(c, cx, U, !!p.blink);
+  if (S.inquisitor) hatFront(c, cx, U, !!p.blink);
+  else if (S.crusader) greatHelmFront(c, cx, U, !!p.blink);
   else if (S.seraph) seraphHeadFront(c, cx, U, !!p.blink, p.holy ?? 0);
+  else if (S.lion) lionHelmFront(c, cx, U, !!p.blink);
   else {
   c.part();
   c.ellipse(cx, 12.6 + U, 3.2, 2.8, SKIN);
@@ -848,6 +1209,7 @@ function drawUp(c: PixelCanvas, p: Pose): PaladinMeta {
   else {
     c.part();
     c.shape(cb + 1, cb + 1, () => ce, S.trim, (_x, _y, t) => cyl(t, -0.1));
+    if (S.inquisitor) studs(c, ce[0], ce[1], cb + 1);
   }
   for (let y = Math.round(ct + 5); y <= cb; y++) {
     const [l, r] = capeEdges(y);
@@ -858,7 +1220,17 @@ function drawUp(c: PixelCanvas, p: Pose): PaladinMeta {
   c.part();
   const sy = Math.round(19 + U);
   if (S.oath) eclipse(c, sy);
-  else if (S.crusader) cross(c, sy, S.trim);
+  else if (S.inquisitor) {
+    // The coat's back seam studded in silver, and the sash knotted at the small of the back.
+    for (let y = sy - 3; y <= cb; y++) {
+      const [l, r] = capeEdges(y);
+      const mid = Math.round((l + r) / 2);
+      c.shade(mid, y, -1);
+      if ((y - sy) % 3 === 0) c.px(mid - 1, y, S.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
+    }
+    sashTails(c, cx + 0.6, waist, cb - 1 + Math.max(0, p.cape), p.cape * 0.5);
+  } else if (S.crusader) cross(c, sy, S.trim);
+  else if (S.lion) rampant(c, sy - 1);
   else sun(c, sy);
   // The Seraph's wings spread from the shoulder blades, over the cape.
   if (S.seraph) {
@@ -870,6 +1242,8 @@ function drawUp(c: PixelCanvas, p: Pose): PaladinMeta {
   c.part();
   c.shape(13 + U, 15 + U, () => [cx - 3.4, cx + 3.4], S.plateDark, (_x, _y, t) => cyl(t, 0));
   if (S.seraph) seraphHeadBack(c, cx, U);
+  else if (S.lion) lionHelmBack(c, cx, U);
+  else if (S.inquisitor) hatBack(c, cx, U);
   else {
     c.part();
     c.ellipse(cx, 10.2 + U, 4.8, 4.5, S.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.15, 1) });
@@ -920,6 +1294,7 @@ function drawSide(c: PixelCanvas, p: Pose): PaladinMeta {
   else {
     c.part();
     c.shape(cb + 1, cb + 1, () => ce, S.trim, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
+    if (S.inquisitor) studs(c, ce[0], ce[1], cb + 1);
   }
 
   // Legs: back leg in shade first, then the front leg.
@@ -961,12 +1336,19 @@ function drawSide(c: PixelCanvas, p: Pose): PaladinMeta {
   c.shape(waist, waist, () => [bl - 0.1, br + 0.2], LEATHER, (_x, _y, t) => cyl(t, 0));
   c.part();
   c.px(Math.round(bl), waist, S.trim, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
+  if (S.inquisitor) {
+    // The sash's tails trail from a knot at his back; the censer swings at his hip.
+    sashTails(c, br - 0.6, waist, hem + 2, 0.6 + p.cape * 0.5);
+    censer(c, Math.round(cx - 0.6 + LN * 0.5), waist + 1, p.cape > 1 ? 0.5 : 0);
+  }
 
   // Head: profile face under the helm, cheek guard, crest and wing.
   c.part();
   c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.8], S.plateDark, (_x, _y, t) => cyl(t, 0.2));
-  if (S.crusader) greatHelmSide(c, hx, U, !!p.blink);
+  if (S.inquisitor) hatSide(c, hx, U, !!p.blink);
+  else if (S.crusader) greatHelmSide(c, hx, U, !!p.blink);
   else if (S.seraph) seraphHeadSide(c, hx, U, !!p.blink);
+  else if (S.lion) lionHelmSide(c, hx, U, !!p.blink);
   else {
   c.part();
   c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, SKIN);
