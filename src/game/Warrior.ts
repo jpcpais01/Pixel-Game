@@ -10,6 +10,7 @@ import { GOLD_FX, HitSpark, JADE_FX, JADE_STEEL_FX, STEEL_FX, Shockwave, SlashAr
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
+import { DRAGON_EMBERS } from '../art/dragonslayer';
 import { stand } from './rest';
 
 export const MAX_HP = HERO_STATS['warrior.knight'].hp;
@@ -20,6 +21,10 @@ const SPECIAL_COOLDOWN = 5000;
 const SPIN_TIME = 1400;
 const SPIN_SPEED = 0.95; // degrees per ms, about 2.6 turns a second
 const SPIN_HIT_EVERY = 160;
+/** How many embers a skin with them throws off a slash, a thrust and the whirlwind's slam. */
+const EMBERS_SWING = 4;
+const EMBERS_THRUST = 6;
+const EMBERS_SLAM = 18;
 
 const SWINGS = ['slash1', 'slash2', 'thrust'] as const;
 type Swing = (typeof SWINGS)[number];
@@ -38,6 +43,8 @@ export interface WarriorSkin {
   heavy: Scheme;
   /** The faint light around him at night. */
   aura: number;
+  /** Flecks thrown off the blade as each blow lands and the whirlwind slams down (tints), if any. */
+  embers?: number[];
 }
 
 export const KNIGHT_SKIN: WarriorSkin = { key: 'warrior', swing: STEEL_FX, heavy: GOLD_FX, aura: 0xffd2a0 };
@@ -55,6 +62,15 @@ export const HEADLESS_SKIN: WarriorSkin = {
   swing: { core: 0xffffff, hot: 0xeaffd8, mid: 0x9ef08a, deep: 0x2e8a5a },
   heavy: { core: 0xfff4d0, hot: 0xffb040, mid: 0xff6a14, deep: 0x5a1a7a, light: 0xff8a2a },
   aura: 0xffa050,
+};
+
+/** The Dragonslayer: ember-red cuts trailing ash, and dragonfire for the thrust, the whirlwind and its shockwave. */
+export const DRAGON_SKIN: WarriorSkin = {
+  key: 'warrior_dragon',
+  swing: { core: 0xfff4e0, hot: 0xffb070, mid: 0xe8401a, deep: 0x4a1410 },
+  heavy: { core: 0xfff0d0, hot: 0xffa040, mid: 0xff5a14, deep: 0x5a0e08, light: 0xff7a2a },
+  aura: 0xff9a60,
+  embers: DRAGON_EMBERS,
 };
 
 /**
@@ -221,6 +237,7 @@ export class Warrior implements Hero {
     const u = this.facing();
     if (this.swing === 'thrust') {
       this.fx.push(new ThrustStreak(this.world, cx, cy, u.x, u.y, 30, this.skin.heavy, depth));
+      if (this.skin.embers) this.world.debris(this.skin.embers, cx + u.x * 26, cy + u.y * 26, EMBERS_THRUST, depth + 2, 'spores');
       this.dash = { vx: u.x * 120, vy: u.y * 120, t: 100 };
       const hits = this.world.melee({ kind: 'line', x0: cx, y0: cy, x1: cx + u.x * 34, y1: cy + u.y * 34, radius: 7 }, { damage: 18, heavy: true, knock: 160 });
       this.impact(hits, this.skin.heavy, true);
@@ -231,6 +248,11 @@ export class Warrior implements Hero {
     const hand = this.dir === 'right' ? -1 : 1;
     const sweep = this.swing === 'slash1' ? hand : -hand;
     this.fx.push(new SlashArc(this.world, cx, cy, deg + sweep * 100, deg - sweep * 100, 17, this.skin.swing, depth));
+    if (this.skin.embers) {
+      // Embers and ash shaken off the blade, rising from the end of its sweep.
+      const end = ((deg - sweep * 70) * Math.PI) / 180;
+      this.world.debris(this.skin.embers, cx + Math.cos(end) * 15, cy + Math.sin(end) * 15, EMBERS_SWING, depth + 2, 'spores');
+    }
     const hits = this.world.melee({ kind: 'arc', x: cx, y: cy, radius: 22, angle: (deg * Math.PI) / 180, spread: (115 * Math.PI) / 180 }, { damage: 11 });
     this.impact(hits, this.skin.swing, false);
   }
@@ -289,6 +311,11 @@ export class Warrior implements Hero {
     const x = snap(this.x);
     const y = snap(this.y);
     this.fx.push(new Shockwave(this.world, x, y - 1, 40, this.skin.heavy));
+    if (this.skin.embers) {
+      // The slam throws up a burst of embers, and ash drifts up after it.
+      this.world.debris(this.skin.embers, x, y - 6, EMBERS_SLAM, y + 20, 'burst');
+      this.world.debris(this.skin.embers, x, y - 10, EMBERS_SLAM / 2, y + 20, 'spores');
+    }
     const hits = this.world.melee({ kind: 'circle', x, y: y - CHEST_Y, radius: 36 }, { damage: 16, heavy: true, knock: 170 });
     this.impact(hits, this.skin.heavy, true);
     sound.slam(this.world.pan(x));

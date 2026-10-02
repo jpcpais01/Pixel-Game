@@ -17,8 +17,8 @@ import { ARCANE_SKIN, ASTRAL_SKIN, VOID_SKIN, Wizard } from './Wizard';
 import { EMBER_FIRE, HELL_FIRE, HELL_SKIN, PUMPKIN_FIRE, PUMPKIN_SKIN, PYRO_SKIN, Pyromancy } from './Pyro';
 import { ABYSS_MAGIC, ABYSS_SKIN, TIDE_MAGIC, TIDE_SKIN, Tidecraft } from './Tide';
 import { LOTUS_MAGIC, LOTUS_SKIN } from './Tide';
-import { HEADLESS_SKIN, JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
-import { AFONSO_KIT, King, KING_KIT } from './King';
+import { DRAGON_SKIN, HEADLESS_SKIN, JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
+import { AFONSO_KIT, King, KING_KIT, SUNKING_KIT } from './King';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
 import { CRUSADER_KIT, HOLY_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
@@ -443,6 +443,17 @@ const KITS: KitDef[] = [
             },
             season: 'hallows',
           },
+          {
+            // Blackened plate seamed with molten red, a horned dragon's skull on the helm, a cloak of red scales and a jagged blade with a burning edge.
+            id: 'dragon',
+            name: 'Dragonslayer',
+            accent: 0xff5a1a,
+            preview: { texture: 'warrior_dragon', glow: 'warrior_dragon_e', idle: 'warrior_dragon_idle_down', chosen: 'warrior_dragon_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_sword_dragon' },
+              special: { texture: 'icon_whirl_dragon' },
+            },
+          },
         ],
       },
       {
@@ -471,12 +482,23 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_decree_afonso' },
             },
           },
+          {
+            // A baroque sun monarch: a tall curled wig under a small crown, a blue mantle sewn with gold fleurs-de-lis over ermine, a sunburst on the breast and a gilded greatsword.
+            id: 'sunking',
+            name: 'Sun King',
+            accent: 0xffc840,
+            preview: { texture: 'warrior_sunking', glow: 'warrior_sunking_e', idle: 'warrior_sunking_idle_down', chosen: 'warrior_sunking_decree_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_sword_sunking' },
+              special: { texture: 'icon_decree_sunking' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'king' || look === 'afonso') return new King(world, x, y, look === 'afonso' ? AFONSO_KIT : KING_KIT);
-      return new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : look === 'headless' ? HEADLESS_SKIN : KNIGHT_SKIN);
+      if (look === 'king' || look === 'afonso' || look === 'sunking') return new King(world, x, y, look === 'afonso' ? AFONSO_KIT : look === 'sunking' ? SUNKING_KIT : KING_KIT);
+      return new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : look === 'headless' ? HEADLESS_SKIN : look === 'dragon' ? DRAGON_SKIN : KNIGHT_SKIN);
     },
   },
   {
