@@ -6,7 +6,7 @@ import { collection } from '../game/collection';
 import { account } from '../game/cloud';
 import { sound } from '../audio';
 import { titleBitmap } from '../art/font';
-import { autoBackdrop, autoBench, autoBoard, autoCloud, autoIcons, BENCH_SLOT, boardSize, CELL_H, CELL_W, FACE, RIM, traitIcons } from '../art/autoArt';
+import { autoBackdrop, autoBench, autoBoard, autoIcons, BENCH_SLOT, boardSize, CELL_H, CELL_W, FACE, RIM, traitIcons } from '../art/autoArt';
 import { BUTTON_GOLD, BUTTON_PLAIN, PANEL, PANEL_INSET, PixelButton, panelTexture, pixelText, type PanelStyle } from '../ui/widgets';
 import { hex } from '../art/pixel';
 import { cropToWindow, fitLine } from './SelectScene';
@@ -18,6 +18,7 @@ import { COST_COLORS, traitCounts, TRAITS, unitDef, type TraitId } from '../game
 import { BOON_SECONDS, boonDef, cleanBoons, isBoonRound, offerBoons, roundTier, TIER_NAMES, type BoonTier } from '../game/auto/boons';
 import { BOON_LINE, boonBack, boonBadge, boonCard, boonIcon, boonLayout, tierAccent } from '../art/boonArt';
 import { FightView, UnitView, cellPt, styleOf, type BoardFrame } from '../game/auto/view';
+import { AutoAmbience } from '../game/auto/ambience';
 import { FxLayer } from '../game/auto/fx';
 import { pieceNumbers, spellText } from '../game/auto/info';
 import { AUTO_ARENA, BOARD_WAIT_MS, cleanBoard, cleanRound, cleanSeats } from '../game/auto/online';
@@ -107,14 +108,6 @@ const RESULT_SECONDS = 2.6;
  */
 const QUAKE_PX = 750;
 const QUAKE_STEP = 33;
-/**
- * Clouds drift between the board and the land far below, their shadows on
- * the land behind them (offset: the land is a long way down). Speeds in
- * page px a second; nearer (bigger, faster) ones pass over farther ones.
- */
-const CLOUDS = 6;
-const CLOUD_SPEED = [5, 9];
-const CLOUD_SHADOW = { x: -22, y: 30, alpha: 0.2 };
 /** Seconds a finished fight lingers on its winners' cheer. */
 const LINGER = 1.3;
 /** Gems for winning a whole match. */
@@ -451,7 +444,7 @@ export class AutoScene extends Phaser.Scene {
 
   // The world: the board, bench, heroes and effects, drawn at their own zoom `s` (world px to page px) from (wx, wy).
   private sky!: Phaser.GameObjects.Image;
-  private clouds: { img: Phaser.GameObjects.Image; shade: Phaser.GameObjects.Image; v: number }[] = [];
+  private ambience!: AutoAmbience;
   private world!: Phaser.GameObjects.Container;
   private s = 1;
   private wx = 0;
@@ -589,16 +582,7 @@ export class AutoScene extends Phaser.Scene {
       if (!this.textures.exists(key)) this.textures.addCanvas(key, titleBitmap(text).toCanvas());
 
     this.sky = this.add.image(0, 0, '__DEFAULT').setOrigin(0);
-    for (let i = 0; i < CLOUDS; i++) {
-      const key = autoCloud(this, i);
-      const shade = this.add.image(0, 0, key).setOrigin(0).setTintFill(0x0a0820).setAlpha(CLOUD_SHADOW.alpha);
-      const img = this.add.image(0, 0, key).setOrigin(0).setAlpha(0.92);
-      const v = CLOUD_SPEED[0] + (CLOUD_SPEED[1] - CLOUD_SPEED[0]) * (i / (CLOUDS - 1));
-      this.clouds.push({ img, shade, v });
-    }
-    // Shadows lie on the land, under every cloud.
-    for (const c of this.clouds) c.shade.setDepth(-1);
-    this.sky.setDepth(-2);
+    this.ambience = new AutoAmbience(this);
     this.world = this.add.container(0, 0);
     this.boardImg = this.add.image(0, 0, autoBoard(this, COLS, ROWS)).setOrigin(0);
     this.benchImg = this.add.image(0, 0, '__DEFAULT').setOrigin(0);
@@ -730,13 +714,7 @@ export class AutoScene extends Phaser.Scene {
     const vw = (this.vw = Math.floor(width / z));
     const vh = (this.vh = Math.floor(height / z));
     this.sky.setTexture(autoBackdrop(this, vw + 1, vh + 1));
-    // Scatter the clouds over the page anew (left to right, at different heights).
-    this.clouds.forEach((c, i) => {
-      const x = Math.round(((i + 0.5) / CLOUDS) * (vw + c.img.width) - c.img.width + ((i * 53) % 29));
-      const y = Math.round(((i * 0.618 + 0.1) % 1) * (vh - c.img.height * 0.5) - c.img.height * 0.25);
-      c.img.setPosition(x, y);
-      c.shade.setPosition(x + CLOUD_SHADOW.x, y + CLOUD_SHADOW.y);
-    });
+    this.ambience.resize(vw + 1, vh + 1);
 
     // Keep clear of the mute button in the top-right corner.
     const corner = Math.ceil(soundCorner(width, height) / z);
@@ -1489,13 +1467,7 @@ export class AutoScene extends Phaser.Scene {
       const f = 0.55 + Math.sin(this.time.now / 90 + i * 2.1) * 0.08 + Math.sin(this.time.now / 37 + i) * 0.05;
       t.setAlpha(f).setScale(0.9 + f * 0.3, 0.7 + f * 0.25);
     }
-    for (const c of this.clouds) {
-      let x = c.img.x + c.v * dt;
-      // Gone off the right (shadow and all): back in from the left.
-      if (x > this.vw - CLOUD_SHADOW.x) x = -c.img.width;
-      c.img.x = x;
-      c.shade.x = x + CLOUD_SHADOW.x;
-    }
+    this.ambience.update(dt);
     for (const c of this.cards) c.tick();
     if (this.boonView) this.tickBoons(dt);
     this.fx.update(dt);
