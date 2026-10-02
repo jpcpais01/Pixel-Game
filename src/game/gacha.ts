@@ -45,6 +45,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'beast:benfica': 'legendary',
   'beast:sporting': 'legendary',
   'beast:porto': 'legendary',
+  'lightwright:stargazer': 'legendary',
   'bard:orpheus': 'legendary',
   'druid:titania': 'legendary',
   'wizard:astral': 'epic',

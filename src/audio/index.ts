@@ -1055,6 +1055,21 @@ class GameSound {
     if (t !== null) this.sfx!.ultReady(t);
   }
 
+  focusRay(pan = 0, struck = false): void {
+    const t = this.slot('focusRay');
+    if (t !== null) this.sfx!.focusRay(t, pan, struck);
+  }
+
+  prism(pan = 0, hum = false, shatter = false): void {
+    const t = this.slot('prism');
+    if (t !== null) this.sfx!.prism(t, pan, hum, shatter);
+  }
+
+  burningMirror(pan = 0, lit = false): void {
+    const t = this.slot('burningMirror');
+    if (t !== null) this.sfx!.burningMirror(t, pan, lit);
+  }
+
   /**
    * When a one-shot may start, or null to drop it. Phones glitch when the audio
    * thread is handed dozens of overlapping voices at once (a swarm all

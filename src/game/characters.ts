@@ -61,6 +61,8 @@ import { BENFICA_KIT, EAGLE_KIT, Eagle } from './Eagle';
 import { LION_KIT, Lion, SPORTING_KIT } from './Lion';
 import { DRAGON_KIT, Dragon, PORTO_KIT } from './Dragon';
 import { BEAST_H, BEAST_ORIGIN_Y } from '../art/beast';
+import { Lightwright, LIGHTWRIGHT_KIT, STARGAZER_KIT } from './Lightwright';
+import { LW_H, LW_ORIGIN_Y } from '../art/lightwright';
 import { worn } from './skins';
 import type { Vitals } from './combat';
 
@@ -1831,6 +1833,44 @@ const KITS: KitDef[] = [
       if (look === 'dragon') return new Dragon(world, x, y, DRAGON_KIT);
       if (look === 'porto') return new Dragon(world, x, y, PORTO_KIT);
       return new Eagle(world, x, y, EAGLE_KIT);
+    },
+  },
+  {
+    id: 'lightwright',
+    name: 'Lightwright',
+    blurb: 'Lenses, prisms and the sun itself',
+    types: [
+      {
+        // An optician-inventor in a mustard coat and cream waistcoat, a brass loupe over one eye, a lens cannon at his hip.
+        id: 'lightwright',
+        name: 'Lightwright',
+        role: 'Master of light and lenses',
+        accent: 0xffd060,
+        attack: 'Focus beam',
+        special: 'Prism',
+        preview: { texture: 'lightwright', glow: 'lightwright_e', idle: 'lightwright_idle_down', chosen: 'lightwright_unveil_down', originY: LW_ORIGIN_Y / LW_H },
+        buttons: {
+          attack: { texture: 'icon_focus_lightwright' },
+          special: { texture: 'icon_prism_lightwright' },
+        },
+        lookName: 'Brass optics',
+        skins: [
+          {
+            // An astronomer in a midnight coat stitched with silver constellations, silver hair and beard, silver optics shining starlight.
+            id: 'stargazer',
+            name: 'Stargazer',
+            accent: 0x9ac4ff,
+            preview: { texture: 'lightwright_star', glow: 'lightwright_star_e', idle: 'lightwright_star_idle_down', chosen: 'lightwright_star_unveil_down', originY: LW_ORIGIN_Y / LW_H },
+            buttons: {
+              attack: { texture: 'icon_focus_lightwright_star' },
+              special: { texture: 'icon_prism_lightwright_star' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Lightwright(world, x, y, look === 'stargazer' ? STARGAZER_KIT : LIGHTWRIGHT_KIT);
     },
   },
 ];

@@ -2697,6 +2697,64 @@ export class Sfx {
       o.stop(at + 0.3);
     }
   }
+
+  // ------------------------------------------------------------ The Lightwright
+
+  /** The focus beam: a bright glassy zing through the lens, and a hiss where it sears. */
+  focusRay(t: number, pan: number, struck: boolean): void {
+    const out = this.out(pan, 0.45, 0.3);
+    this.chirp(out, t, 'sine', 2600, 1700, 0.12, 0.09);
+    this.chirp(out, t, 'triangle', 1320, 1180, 0.08, 0.12);
+    this.bell(out, t, 3136, 0.025, 0.25);
+    if (struck) this.burstNoise(out, t + 0.03, 'highpass', 2600, 4200, 1, 0.22, 0.12);
+  }
+
+  /** The prism: a crystal chime as it settles in the air, a soft glassy hum while it turns, a tinkling shatter. */
+  prism(t: number, pan: number, hum: boolean, shatter: boolean): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, shatter ? 0.6 : hum ? 0.25 : 0.45, 0.6);
+    if (shatter) {
+      this.burstNoise(out, t, 'highpass', 4000, 6000, 1, 0.3, 0.2);
+      [2637, 3136, 3520, 4186, 2349].forEach((f, i) => this.bell(out, t + i * 0.035, f, 0.03, 0.5));
+      return;
+    }
+    if (hum) {
+      const g = gain(ctx, 0, filter(ctx, 'lowpass', 2400, 0.7, out));
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.04, t + 0.2);
+      g.gain.linearRampToValueAtTime(0, t + 0.6);
+      for (const f of [880, 1318]) {
+        const o = osc(ctx, 'sine', f * rand(0.995, 1.005), g);
+        o.start(t);
+        o.stop(t + 0.65);
+      }
+      return;
+    }
+    [1568, 2093, 2637].forEach((f, i) => this.bell(out, t + i * 0.05, f, 0.045, 0.9));
+  }
+
+  /** The Burning Mirror: petals of metal clacking open, then the sun caught, a deep swelling roar with a bright ring over it. */
+  burningMirror(t: number, pan: number, lit: boolean): void {
+    const ctx = this.m.ctx;
+    if (!lit) {
+      const out = this.out(pan, 0.5, 0.25);
+      for (let i = 0; i < 8; i++) this.burstNoise(out, t + i * 0.05, 'bandpass', 2600, 1800, 3, 0.25, 0.03);
+      this.bell(out, t + 0.4, 740, 0.04, 0.6);
+      return;
+    }
+    const out = this.out(pan, 0.8, 0.6);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.4, t + 0.08);
+    g.gain.setTargetAtTime(0, t + 0.5, 0.25);
+    const lo = osc(ctx, 'sine', 90, g);
+    sweep(lo.frequency, t, 70, 140, 0.6);
+    lo.start(t);
+    lo.stop(t + 1.6);
+    this.burstNoise(out, t, 'lowpass', 900, 3200, 0.8, 0.45, 0.9);
+    this.bell(out, t + 0.02, 1760, 0.05, 1.4);
+    this.bell(out, t + 0.02, 2637, 0.03, 1.2);
+  }
 }
 
 /**

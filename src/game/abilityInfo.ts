@@ -207,4 +207,9 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Pours out a long cone of fire that turns with the aim.',
     special: 'A flame serpent coils round the spot, raking, then dives in a blast.',
   },
+  'lightwright.lightwright': {
+    attack: 'A ray of focused sunlight instantly sears the first foe in line.',
+    ability: 'A hovering prism sweeps spectrum beams round it, then shatters.',
+    special: 'A great mirror focuses a steerable heat ray that scorches the ground.',
+  },
 };

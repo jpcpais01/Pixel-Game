@@ -155,6 +155,7 @@ import { buildSnowQueenSheet, snowQueenFx } from './snowQueen';
 import { buildWinterKingSheet, winterKingFx } from './winterKing';
 import { buildColossusSheet, colossusFx } from './colossus';
 import { buildAurelithSheet, aurelithFx } from './aurelith';
+import { lightwrightFx } from './lightwright';
 
 import { CHUNK, ForestGen, EVERWOOD_SEED } from '../world/forestGen';
 import { forestTile } from '../world/forestGround';
@@ -594,6 +595,8 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_grid', toCanvas(16, 16, gridIcon()));
   scene.textures.addCanvas('icon_drone_hive', toCanvas(16, 16, droneIcon(true)));
   scene.textures.addCanvas('icon_grid_hive', toCanvas(16, 16, gridIcon(true)));
+  // The Lightwright's prisms ('lw_prism_<look>', turning 'p0'..'p7') and his buttons.
+  lightwrightFx(fxRegistrar(scene));
 
   yield;
   // Items: hotbar icons and the bottles monsters drop.

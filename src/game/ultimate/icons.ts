@@ -572,3 +572,30 @@ export const tempestIcon: IconPainter = (put, p) => {
   // Leaves caught in it.
   for (const [x, y] of [[2, 5], [13, 8], [4, 11]]) put(x, y, p.deep);
 };
+
+/** Burning Mirror: a great dish on its mast, a shaft of sun falling into it, a beam narrowing to a blazing point. */
+export const burningMirrorIcon: IconPainter = (put, p) => {
+  // The sun's shaft from above.
+  seg(put, 4, 0, 4, 3, p.mid);
+  seg(put, 5, 0, 5, 3, p.hot);
+  // The dish: a crescent bowl facing right, its rim and face.
+  for (let y = 2; y <= 12; y++) {
+    const k = (y - 7) / 5;
+    const x0 = Math.round(2 + 2.2 * k * k);
+    put(x0, y, p.deep);
+    put(x0 + 1, y, Math.abs(k) < 0.45 ? p.core : p.hot);
+  }
+  // The mast and its feet.
+  seg(put, 3, 8, 3, 15, p.deep);
+  seg(put, 3, 15, 1, 15, p.deep);
+  seg(put, 3, 15, 5, 15, p.deep);
+  // The beam, wide at the dish, narrowing to the focus.
+  for (let x = 4; x <= 12; x++) {
+    const half = Math.round((12 - x) * 0.4);
+    const y = Math.round(7 + (x - 4) * 0.45);
+    for (let d = -half; d <= half; d++) put(x, y + d, d === 0 ? p.core : Math.abs(d) === half ? p.mid : p.hot);
+  }
+  // The blazing point and its rays.
+  put(13, 11, p.core);
+  for (const [x, y] of [[14, 11], [12, 11], [13, 10], [13, 12], [15, 11], [13, 13], [14, 9], [15, 13]] as const) put(x, y, x === 15 || y === 13 || y === 9 ? p.mid : p.hot);
+};

@@ -40,6 +40,8 @@ import { BENFICA_KIT, EAGLE_KIT } from '../Eagle';
 import { LION_KIT, SPORTING_KIT } from '../Lion';
 import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
+import { LIGHTWRIGHT_KIT, STARGAZER_KIT } from '../Lightwright';
+import { burningMirror } from './lightwright';
 import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
 import * as icons from './icons';
@@ -435,6 +437,16 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.wyrmIcon,
     cast: wyrmWrath,
   },
+  'lightwright:lightwright': {
+    name: 'Burning Mirror',
+    cost: 70,
+    windup: 600,
+    aim: 'dir',
+    pal: LIGHTWRIGHT_KIT.light.pal,
+    icon: icons.burningMirrorIcon,
+    // The mirror stands behind him while he braces and steers it (see Lightwright.braceMirror).
+    cast: burningMirror,
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -501,6 +513,7 @@ const SKINS: Record<string, UltSkin> = {
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
+  'lightwright:stargazer': { pal: STARGAZER_KIT.light.pal },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */
