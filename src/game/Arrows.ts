@@ -137,6 +137,32 @@ export const SUN_ARROW: ArrowStyle = {
   sun: true,
 };
 
+/** Ironbeard's: forge-hot oak bolts with ember vanes, trailing sparks and throwing them where they bite. */
+export const IRONBEARD_ARROW: ArrowStyle = {
+  core: 0xfff4c8,
+  hot: 0xffc060,
+  mid: 0xff7a1a,
+  deep: 0x8a2a08,
+  light: 0xffa040,
+  suffix: '_ironbeard',
+  storm: false,
+  spirit: true,
+  petals: [0xfff0a0, 0xffb040, 0xff6a1a, 0xc83a0a],
+};
+
+/** Snow Owl's: birch arrows with ice heads and white owl fletching, trailing frost and shedding down and snowflakes. */
+export const OWL_ARROW: ArrowStyle = {
+  core: 0xffffff,
+  hot: 0xe8f6ff,
+  mid: 0xa8d4f4,
+  deep: 0x4a7ab0,
+  light: 0xc8e8ff,
+  suffix: '_owl',
+  storm: false,
+  spirit: true,
+  petals: [0xffffff, 0xeef4fa, 0xc8e0f4, 0x9ab8d4],
+};
+
 /** How an arrow flies, when not the bow's usual way. */
 export interface ArrowFlight {
   /** World px a second. */

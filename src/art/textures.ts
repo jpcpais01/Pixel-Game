@@ -15,6 +15,7 @@ import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbow
 import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
 import { sunBowIcon, sunRainIcon } from './apolloIcons';
 import { BLOOD_SPELL, DIGGER_ICON, DIGGER_SPELL, SOUL_SPELL, TOMB_SPELL, VAMPIRE_ICON, VAMPIRE_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, batCanvas, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
+import { chainNetIcon, ironCrossbowIcon, owlFanIcon, owlVaultIcon } from './archerIcons';
 import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
 import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, ORPHEUS_LOOK, VAGABOND_LOOK, WILD_LOOK, NOTE_SIZE, banjoIcon, drumIcon, guitarraIcon, luteIcon, lyreIcon, noteFrame, rhythmIcon, skinSongIcon, songIcon } from './bard';
@@ -238,6 +239,12 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     ];
     register(scene, `arrow${sfx}`, pack(arrows, ARROW_SIZE, ARROW_SIZE), ARROW_SIZE, ARROW_SIZE);
     // The arbalest's and windrunner's own icons carry no suffix; their skins' do.
+    if (look.iron || look.owl) {
+      const [attack, special] = look.iron ? ['crossbow', 'netbolt'] : ['fanshot', 'vault'];
+      scene.textures.addCanvas(`icon_${attack}${sfx}`, toCanvas(16, 16, look.iron ? ironCrossbowIcon() : owlFanIcon()));
+      scene.textures.addCanvas(`icon_${special}${sfx}`, toCanvas(16, 16, look.iron ? chainNetIcon() : owlVaultIcon()));
+      continue;
+    }
     if (look.briar) {
       scene.textures.addCanvas(`icon_crossbow${sfx}`, toCanvas(16, 16, briarCrossbowIcon()));
       scene.textures.addCanvas(`icon_netbolt${sfx}`, toCanvas(16, 16, briarNetIcon()));

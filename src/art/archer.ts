@@ -211,6 +211,10 @@ export interface ArcherLook {
   arb?: Arbalest;
   /** The windrunner: an elf with a high tail of hair and a scarf for a cloak. */
   elf?: Elf;
+  /** Ironbeard (an arbalest skin): a dwarf's horned helm and great braided beard, riveted plate, a rune-painted pavise, a geared crossbow. */
+  iron?: IronKit;
+  /** Snow Owl (a windrunner skin): an owl-feather hood with ear tufts and a feathered mantle, a silver braid, fur boots, a frosted birch bow. */
+  owl?: OwlKit;
   /** Gloves, legs and boots, when not the ranger's bare hands, dark trousers and soft boots. */
   glove?: Material;
   trouser?: Material;
@@ -619,6 +623,119 @@ let S: ArcherLook = RANGER_LOOK;
 /** The frame being drawn has one eye shut (the far one, screen right). */
 let winking = false;
 
+// ---------------------------------------------------------------------------
+// Ironbeard and Snow Owl: an arbalest skin and a windrunner skin.
+//
+// Ironbeard is a dwarven siege gunner: a horned iron helm with a nose guard
+// over a great red-copper beard that spills down his chest and ends in two
+// braids bound with iron rings; riveted iron pauldrons and breastplate over
+// studded leather; a pavise of dark oak rimmed in iron and painted night-blue
+// with a gilt hammer and runes; a chunky oak-and-iron crossbow with a brass
+// cog on its crank that turns as he winds it, loaded with forge-hot bolts.
+//
+// Snow Owl is a winter elf scout: a hood of white owl feathers with little
+// ear tufts, flecked like a snowy owl's, and a feathered mantle over her
+// shoulders that folds down her back like wings; a pale ice-blue tunic and
+// leggings, a silver-white braid over her shoulder tied with a bead of ice,
+// soft fur boots, and a pale birch bow rimed with frost at its tips.
+
+/** Ironbeard's own materials, besides those he shares with the arbalest's kit. */
+export interface IronKit {
+  horn: Material;
+  /** The rings in his beard's braids, and the rim of his pavise. */
+  ring: Material;
+  /** The cog on his crank, the hammer and runes on his pavise. */
+  brass: Material;
+}
+
+/** Snow Owl's own materials. Her mantle is her cloak (her scarf, in the windrunner's terms). */
+export interface OwlKit {
+  feather: Material;
+  /** The dark flecks and the tips of her ear tufts. */
+  fleck: Material;
+  /** Rime on her bow's tips, the bead in her braid. */
+  frost: Material;
+  fur: Material;
+}
+
+const COPPER_BEARD: Material = { ramp: ramp('#3a1206', '#6a2410', '#9c3e1a', '#c8622a', '#ee9450'), outline: hex('#170602'), outlineLit: hex('#2c0c04') };
+const IRON: Material = { ramp: ramp('#121418', '#22262e', '#383e48', '#58606c', '#8a94a2'), outline: hex('#06070a'), outlineLit: hex('#14161c'), shine: true };
+// The plate and pauldrons are the same iron, kept as their own materials so the rivets and lames land on them alone.
+const IRON_PLATE: Material = { ...IRON };
+const PAULDRON: Material = { ...IRON };
+const HORN: Material = { ramp: ramp('#4a3a22', '#7e6842', '#b8a074', '#e2d2a8', '#fbf2d6'), outline: hex('#1c140a'), outlineLit: hex('#30251a') };
+const STUDDED: Material = { ramp: ramp('#22140b', '#3a2313', '#58361f', '#78502f', '#9a6c44'), outline: hex('#0d0704') };
+const OAK: Material = { ramp: ramp('#2e1e10', '#4e341c', '#72502c', '#987040', '#bc9258'), outline: hex('#100a04'), outlineLit: hex('#22160a'), shine: true };
+const BRASS: Material = { ramp: ramp('#3e2a08', '#6e4e14', '#a87c24', '#dcb048', '#fff0a0'), outline: hex('#1a1004'), shine: true };
+const NIGHT_FIELD: Material = { ramp: ramp('#0a1322', '#132238', '#1e3454', '#2e4c76', '#466a98'), outline: hex('#04070d'), outlineLit: hex('#0a1220') };
+const DARK_OAK: Material = { ramp: ramp('#160e08', '#261a10', '#3a2a1a', '#503c26', '#6a5236'), outline: hex('#080503') };
+const EMBER_VANE: Material = { ramp: ramp('#4a1406', '#86300e', '#c4561a', '#f0882e', '#ffb860'), outline: hex('#1c0702') };
+const FORGE_HOT: Material = { ramp: ramp('#7a2406', '#d0500e', '#ff902a', '#ffd070', '#fff6c8'), outline: hex('#2a0a02'), emissive: 0.7, noAO: true };
+const CHAIN: Material = { ramp: ramp('#1c1e24', '#363a44', '#5a606c', '#8a92a0', '#c4ccd8'), outline: hex('#08090c'), shine: true };
+const DWARF_WOOL: Material = { ramp: ramp('#1a1614', '#2a2420', '#3e3630', '#564c42', '#706456'), outline: hex('#090706') };
+const FORGE_LIGHT: [RGB, RGB, RGB] = [hex('#fff4c8'), hex('#ffb040'), hex('#ff6a1a')];
+
+export const IRONBEARD_LOOK: ArcherLook = {
+  ...ARBALEST_LOOK,
+  key: 'archer_ironbeard',
+  // His "cloak" is his pair of riveted pauldrons.
+  cloak: PAULDRON,
+  tunic: STUDDED,
+  jerkin: IRON_PLATE,
+  hair: COPPER_BEARD,
+  bow: IRON,
+  fletch: EMBER_VANE,
+  head: FORGE_HOT,
+  shaft: OAK,
+  metal: BRASS,
+  light: FORGE_LIGHT,
+  wrap: LEATHER,
+  trouser: DWARF_WOOL,
+  boot: GLOVE,
+  // His net is iron chain, iron balls for its weights.
+  arb: { helm: IRON, beard: COPPER_BEARD, stock: OAK, prod: IRON, board: DARK_OAK, field: [NIGHT_FIELD, NIGHT_FIELD], boss: BRASS, rope: CHAIN, lead: IRON },
+  iron: { horn: HORN, ring: CHAIN, brass: BRASS },
+};
+
+const OWL_FEATHER: Material = { ramp: ramp('#68728a', '#a2acbe', '#d0d8e6', '#eef2f8', '#ffffff'), outline: hex('#232a3a'), outlineLit: hex('#384052') };
+const OWL_FLECK: Material = { ramp: ramp('#262a36', '#404858', '#626a7e', '#8a92a6'), outline: hex('#0c0e14') };
+const ICE_SILK: Material = { ramp: ramp('#22344e', '#344c6c', '#4e6a8e', '#7090b4', '#9cb8d6'), outline: hex('#121c2a'), outlineLit: hex('#1e2c3e') };
+const ICE_LEATHER: Material = { ramp: ramp('#1e2836', '#2e3c4e', '#465668', '#647688', '#8a9cae'), outline: hex('#10161e') };
+const SNOW_HAIR: Material = { ramp: ramp('#646a80', '#9298ae', '#c2c6d6', '#e4e6f0', '#ffffff'), outline: hex('#20223a'), outlineLit: hex('#343850') };
+const FROST_EYE: Material = { ramp: ramp('#1a4a7a', '#3a8ad0', '#9ad4ff', '#eaf8ff'), outline: hex('#0a1a30'), emissive: 0.8, noAO: true };
+const RIME: Material = { ramp: ramp('#2a6a9a', '#62aee0', '#b0e4ff', '#f0fbff'), outline: hex('#0e2a40'), emissive: 0.6, shine: true, noAO: true };
+const FROST_STRING: Material = { ramp: ramp('#7aa8d0', '#b8dcf6', '#e8f6ff', '#ffffff'), outline: hex('#203a54'), emissive: 0.6, noAO: true, noOutline: true };
+const FUR_BOOT: Material = { ramp: ramp('#464a56', '#767c8a', '#a6acba', '#d2d6e0', '#f2f4f8'), outline: hex('#181a22') };
+const SNOWFLAKE: Material = { ramp: ramp('#8ab8e0', '#cce6ff', '#ffffff'), outline: hex('#2a4a6a'), emissive: 0.5, noAO: true };
+const OWL_LIGHT: [RGB, RGB, RGB] = [hex('#f6fcff'), hex('#c8e8ff'), hex('#86bcea')];
+
+export const OWL_LOOK: ArcherLook = {
+  ...WIND_LOOK,
+  key: 'archer_owl',
+  cloak: OWL_FEATHER,
+  tunic: ICE_SILK,
+  jerkin: ICE_LEATHER,
+  hair: SNOW_HAIR,
+  eye: FROST_EYE,
+  bow: BIRCH,
+  string: FROST_STRING,
+  fletch: OWL_FEATHER,
+  head: RIME,
+  shaft: BIRCH,
+  metal: SILVER,
+  light: OWL_LIGHT,
+  crackle: OWL_LIGHT,
+  wrap: ICE_LEATHER,
+  trouser: ICE_SILK,
+  boot: FUR_BOOT,
+  // The leaf of her idle moment is a snowflake; the gem in her grip a bead of ice.
+  elf: { scarf: OWL_FEATHER, gem: RIME, leaf: SNOWFLAKE },
+  owl: { feather: OWL_FEATHER, fleck: OWL_FLECK, frost: RIME, fur: FUR_BOOT },
+};
+
+// Added on a line of their own, after the looks above are listed.
+ARCHER_LOOKS.push(IRONBEARD_LOOK, OWL_LOOK);
+
 const H = (f: number, s: number, h: number): Hand => ({ f, s, h });
 
 type View = 'down' | 'up' | 'side';
@@ -745,6 +862,8 @@ function drawBow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, bi
     c.px(f.x + f.ax * 0.9, f.y + f.ay * 0.9, w.bloom, sphere(0.2, -0.2), { bias });
   } else if (S.apollo) {
     sunBow(c, at, f.x, f.y, bias);
+  } else if (S.owl) {
+    owlBow(c, f, at, bias);
   } else if (S.elf) {
     // A wind-gem set in the grip, and the limbs swelling leaf-like halfway out.
     c.part();
@@ -819,11 +938,12 @@ function drawCrossbow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Place
   const by = r.y - ny * 2.2;
   const ex = f.x + nx * 3.4;
   const ey = f.y + ny * 3.4;
-  // The stock, swelling to the butt.
+  // The stock, swelling to the butt (Ironbeard's is a stout dwarven one).
+  const fat = S.iron ? 0.3 : 0;
   c.part();
-  c.capsule(bx, by, ex, ey, 1.15, 0.75, k.stock, o);
+  c.capsule(bx, by, ex, ey, 1.15 + fat, 0.75 + fat, k.stock, o);
   c.part();
-  c.capsule(bx - nx * 0.3, by - ny * 0.3, r.x - nx * 0.5, r.y - ny * 0.5, 1.4, 1.2, k.stock, o);
+  c.capsule(bx - nx * 0.3, by - ny * 0.3, r.x - nx * 0.5, r.y - ny * 0.5, 1.4 + fat, 1.2 + fat, k.stock, o);
   // The long trigger bar hanging under it.
   let [dx, dy] = [-ny, nx];
   if (dy < 0) [dx, dy] = [-dx, -dy];
@@ -858,6 +978,7 @@ function drawCrossbow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Place
   c.part();
   for (const s of [-1, 1]) c.px(ex + qx * s * 0.9 + nx * 0.5, ey + qy * s * 0.9 + ny * 0.5, k.prod, sphere(s * 0.4, -0.2), o);
   c.px(ex + nx * 1.4, ey + ny * 1.4, k.prod, sphere(0, -0.3), o);
+  if (S.iron) ironFittings(c, p, bx, by, ex, ey, nx, ny, qx, qy, bias);
   const br = S.briar;
   if (br) {
     // A briar wound round the thornwood limbs, thorns standing off it, a leaf
@@ -1033,6 +1154,7 @@ function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): voi
     c.px(x - (side ? 1.8 : 1.9), y - 3.0, sc.straw, sphere(-0.5, -0.4), { bias });
     c.px(x + (side ? 2.2 : 2.4), y - 3.4, sc.straw, sphere(0.3, -0.5), { bias });
   }
+  if (S.owl) furCuff(c, x, y, side, bias);
 }
 
 /** The quiver's mouth: arrow fletchings fanned at (x, y), leaning `lean` px per row. */
@@ -2086,6 +2208,10 @@ function torsoBack(c: PixelCanvas, cx: number, top: number, waist: number): void
 /** A leaf drifting on the wind, two or three pixels, catching the light. */
 function leaf(c: PixelCanvas, x: number, y: number): void {
   const m = S.elf!.leaf;
+  if (S.owl) {
+    snowflake(c, x, y, m);
+    return;
+  }
   c.part();
   c.px(x, y, m, sphere(-0.4, -0.5), { bias: 1 });
   c.px(x + 1, y, m, sphere(0.2, -0.3));
@@ -2594,6 +2720,512 @@ function briarSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
 }
 
 // ---------------------------------------------------------------------------
+// Ironbeard
+
+/**
+ * Ironbeard's crossbow fittings: iron bands round its stout oak stock, and a
+ * brass cog on its flank by the butt. The cog has four teeth and turns an
+ * eighth of a turn a frame as he winds the crank, so it reads as turning.
+ */
+function ironFittings(c: PixelCanvas, p: Pose, bx: number, by: number, ex: number, ey: number, nx: number, ny: number, qx: number, qy: number, bias: number): void {
+  const k = S.arb!;
+  const ir = S.iron!;
+  c.part();
+  for (const f of [0.34, 0.66]) {
+    const x = bx + (ex - bx) * f;
+    const y = by + (ey - by) * f;
+    for (const s of [-1, 0, 1]) c.px(x + qx * s * 1.2, y + qy * s * 1.2, k.prod, sphere(qx * s * 0.6, -0.3), { bias: bias + 1 });
+  }
+  const gx = bx + nx * 1.2;
+  const gy = by + ny * 1.2;
+  const turn = p.crank ? p.draw * 6 * (Math.PI / 4) : 0;
+  c.part();
+  c.ellipse(gx, gy, 1.3, 1.3, ir.brass, { bias: bias + 1 });
+  for (let i = 0; i < 4; i++) {
+    const a = turn + (i * Math.PI) / 2;
+    c.px(gx + Math.cos(a) * 2.1, gy + Math.sin(a) * 2.1, ir.brass, sphere(Math.cos(a) * 0.6, Math.sin(a) * 0.6 - 0.2), { bias: bias + 1 });
+  }
+  c.part();
+  c.px(gx, gy, k.prod, sphere(0, -0.4), { bias: bias + 2 });
+}
+
+/** One of the helm's horns, from its root at the helm's side out through `pts` ([x, y, radius] in body coordinates) to its tip, ringed where it bends. */
+function horn(c: PixelCanvas, pts: [number, number, number][], bias = 0): void {
+  const m = S.iron!.horn;
+  c.part();
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0, r0] = pts[i];
+    const [x1, y1, r1] = pts[i + 1];
+    c.capsule(x0, y0, x1, y1, r0, r1, m, { bias });
+  }
+  // Worn rings round the horn where the helm's smith bound it.
+  c.shade(pts[1][0], pts[1][1], -1);
+  c.shade(pts[2][0], pts[2][1] + 0.5, -1);
+}
+
+/** Both horns, curling out from the helm's sides and up (from the front or behind). */
+function hornsFront(c: PixelCanvas, cx: number, U: number): void {
+  for (const s of [-1, 1]) {
+    horn(c, [
+      [cx + s * 3.4, 9.8 + U, 1.05],
+      [cx + s * 5.2, 9.0 + U, 0.85],
+      [cx + s * 6.2, 7.2 + U, 0.7],
+      [cx + s * 6.2, 5.2 + U, 0.5],
+      [cx + s * 5.4, 3.9 + U, 0.3],
+    ]);
+  }
+}
+
+/**
+ * The helm's iron dome on its brow band, from the front or behind: a raised
+ * ridge over the crown, rivets round the band, and from the front a nose
+ * guard dropping between the eyes.
+ */
+function helmFront(c: PixelCanvas, cx: number, U: number, back: boolean): void {
+  const k = S.arb!;
+  const base = 11.2 + U;
+  c.part();
+  c.shape(6 + U, 10 + U, (y) => {
+    const v = (y + 0.5 - base) / 4.9;
+    const hw = 4.0 * Math.sqrt(Math.max(0, 1 - v * v));
+    return [cx - hw, cx + hw];
+  }, k.helm, (_x, y, t) => sphere(t * 0.9, ((y + 0.5 - base) / 4.9) * 0.9, 1));
+  for (let y = 6; y <= 10; y++) {
+    c.shade(cx - 1, y + U, 1);
+    c.shade(cx, y + U, -1);
+  }
+  c.part();
+  c.shape(11 + U, 11 + U, () => [cx - 4.3, cx + 4.3], k.helm, (_x, _y, t) => cyl(t, 0.15));
+  for (const x of [cx - 4, cx - 2, cx + 1, cx + 3]) c.shade(x, 11 + U, 2);
+  if (back) return;
+  c.part();
+  c.px(cx - 1, 12 + U, k.helm, sphere(-0.2, -0.2), { bias: 1 });
+}
+
+/** His great beard from the front: broad over his chest from cheek to cheek, combed into locks, a moustache across it, two braids ringed in iron. */
+function beardFront(c: PixelCanvas, cx: number, U: number): void {
+  const m = S.arb!.beard;
+  const ring = S.iron!.ring;
+  const top = 13 + U;
+  const bot = 20 + U;
+  // Sideburns either side of his eyes.
+  c.part();
+  c.px(cx - 3, 12 + U, m, sphere(-0.6, -0.1));
+  c.px(cx + 2, 12 + U, m, sphere(0.6, -0.1));
+  c.part();
+  c.shape(top, bot, (y) => {
+    const u = (y - top) / (bot - top);
+    const hw = 3.9 - u * u * 1.7;
+    return [cx - hw, cx + hw];
+  }, m, (_x, _y, t, u) => sphere(t * 0.8, u * 0.7 - 0.25, 1));
+  // Locks combed down it, wavering a little.
+  for (let y = top + 2; y <= bot; y++) for (const x of [cx - 3, cx - 1, cx + 1]) c.shade(x + ((y >> 1) & 1), y, -1);
+  // The braids, plaited light and dark, an iron ring partway and one at the end, a tuft past it.
+  for (const x0 of [cx - 3, cx + 1]) {
+    c.part();
+    for (let y = bot + 1; y <= bot + 4; y++) {
+      const k = y & 1;
+      c.px(x0, y, m, sphere(-0.5, k ? -0.4 : 0.3));
+      c.px(x0 + 1, y, m, sphere(0.5, k ? 0.3 : -0.4));
+    }
+    c.part();
+    for (const y of [bot + 2, bot + 4]) {
+      c.px(x0, y, ring, sphere(-0.5, -0.4), { bias: 1 });
+      c.px(x0 + 1, y, ring, sphere(0.4, -0.2));
+    }
+    c.part();
+    c.px(x0, bot + 5, m, sphere(-0.3, 0.6));
+    c.px(x0 + 1, bot + 5, m, sphere(0.3, 0.6), { bias: -1 });
+  }
+  // The moustache sweeping across over his mouth, its ends drooping into the beard.
+  c.part();
+  c.shape(14 + U, 14 + U, () => [cx - 3.3, cx + 3.3], m, (_x, _y, t) => sphere(t * 0.7, -0.6, 1), { bias: 1 });
+  c.px(cx - 4, 15 + U, m, sphere(-0.6, 0.2), { bias: 1 });
+  c.px(cx + 3, 15 + U, m, sphere(0.6, 0.2), { bias: 1 });
+  c.shade(cx - 1, 15 + U, -2);
+  c.shade(cx, 15 + U, -2);
+}
+
+/** His head from the front: horns, the helm and its nose guard, his eyes between it and his beard, a big nose. */
+function ironFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  hornsFront(c, cx, U);
+  c.part();
+  c.px(cx - 4, 12 + U, SKIN, sphere(-0.7, 0.1));
+  c.px(cx + 3, 12 + U, SKIN, sphere(0.7, 0.1));
+  c.part();
+  c.ellipse(cx, 12.4 + U, 2.7, 2.4, SKIN);
+  beardFront(c, cx, U);
+  c.part();
+  c.px(cx - 1, 13 + U, SKIN, sphere(-0.2, -0.5), { bias: 1 });
+  c.px(cx, 13 + U, SKIN, sphere(0.5, 0.1));
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  helmFront(c, cx, U, false);
+}
+
+/** His head from behind: pauldrons over the pavise's straps, the horned helm, copper hair under it and his beard showing past his jaw. */
+function ironBack(c: PixelCanvas, cx: number, U: number, _p: Pose): void {
+  const k = S.arb!;
+  for (const s of [-1, 1]) {
+    c.part();
+    c.ellipse(cx + s * 4.6, 15.6 + U, 2.4, 1.8, S.cloak, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.3, 1) });
+  }
+  hornsFront(c, cx, U);
+  c.part();
+  c.px(cx - 4, 12 + U, SKIN, sphere(-0.7, 0.1));
+  c.px(cx + 3, 12 + U, SKIN, sphere(0.7, 0.1));
+  c.part();
+  for (const x of [cx - 5, cx + 4]) for (let y = 13; y <= 15; y++) c.px(x, y + U, k.beard, sphere(x < cx ? -0.7 : 0.7, (y - 14) * 0.4));
+  c.part();
+  c.ellipse(cx, 12.4 + U, 3.0, 2.4, k.beard, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  for (let y = 12; y <= 14; y++) for (const x of [cx - 2, cx, cx + 2]) c.shade(x - (y & 1), y + U, -1);
+  helmFront(c, cx, U, true);
+}
+
+/** His head in profile (facing left): the far horn, the helm and its nose guard, a big nose, the beard thrust out over his chest, the near horn. */
+function ironSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const k = S.arb!;
+  const ring = S.iron!.ring;
+  // Seen side on, one horn curls up ahead of the helm and the other behind it, so he keeps the silhouette he has from the front.
+  const sideHorn = (x: number, s: number, bias: number) =>
+    horn(c, [
+      [x, 9.6 + U, 1.0],
+      [x + s * 1.8, 8.8 + U, 0.85],
+      [x + s * 2.9, 7.1 + U, 0.7],
+      [x + s * 3.0, 5.2 + U, 0.5],
+      [x + s * 2.3, 3.9 + U, 0.3],
+    ], bias);
+  sideHorn(hx + 1.6, 1, -1);
+  c.part();
+  c.ellipse(hx + 0.8, 12 + U, 2.4, 2.6, k.beard, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8, 1) });
+  c.part();
+  c.ellipse(hx - 1.4, 12.6 + U, 2.2, 2.2, SKIN);
+  c.part();
+  c.px(hx + 0.2, 12 + U, SKIN, sphere(0.5, 0.2));
+  c.shade(hx + 0.2, 13 + U, -1);
+  // The beard, from his jaw out over his chest, then a braid ringed in iron.
+  const rows: [number, number][] = [[-4.0, 0.8], [-4.6, 1.0], [-4.8, 0.6], [-4.7, 0.2], [-4.5, -0.3], [-4.2, -0.8], [-3.8, -1.4], [-3.4, -2.0]];
+  c.part();
+  c.shape(13 + U, 20 + U, (y) => {
+    const [a, b] = rows[y - 13 - U];
+    return [hx + a, hx + b];
+  }, k.beard, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, u * 0.7 - 0.25, 1));
+  for (let y = 15; y <= 20; y++) for (const dx of [-3, -1]) c.shade(hx + dx + ((y >> 1) & 1), y + U, -1);
+  c.part();
+  for (let y = 21; y <= 23; y++) {
+    c.px(hx - 3.4, y + U, k.beard, sphere(-0.5, y & 1 ? -0.4 : 0.3));
+    c.px(hx - 2.4, y + U, k.beard, sphere(0.5, y & 1 ? 0.3 : -0.4));
+  }
+  c.part();
+  c.px(hx - 3.4, 22 + U, ring, sphere(-0.5, -0.4), { bias: 1 });
+  c.px(hx - 2.4, 22 + U, ring, sphere(0.4, -0.2));
+  c.px(hx - 3.4, 24 + U, k.beard, sphere(-0.3, 0.6));
+  // Moustache, and the big nose over it.
+  c.part();
+  c.shape(14 + U, 14 + U, () => [hx - 5.2, hx - 1.8], k.beard, (_x, _y, t) => sphere(t * 0.7 - 0.2, -0.6, 1), { bias: 1 });
+  c.px(hx - 5, 15 + U, k.beard, sphere(-0.6, 0.3), { bias: 1 });
+  c.part();
+  c.px(hx - 4, 12 + U, SKIN, sphere(-0.6, -0.3), { bias: 1 });
+  c.px(hx - 5, 13 + U, SKIN, sphere(-0.7, 0.1), { bias: 1 });
+  c.px(hx - 4, 13 + U, SKIN, sphere(-0.2, 0.3));
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  // The helm in profile: dome, brow band, nose guard down his nose.
+  c.part();
+  const base = 11.2 + U;
+  c.shape(6 + U, 10 + U, (y) => {
+    const v = (y + 0.5 - base) / 4.9;
+    const hw = 3.8 * Math.sqrt(Math.max(0, 1 - v * v));
+    return [hx - 0.6 - hw, hx - 0.6 + hw];
+  }, k.helm, (_x, y, t) => sphere(t * 0.9 - 0.1, ((y + 0.5 - base) / 4.9) * 0.9, 1));
+  c.part();
+  c.shape(11 + U, 11 + U, () => [hx - 4.6, hx + 3.2], k.helm, (_x, _y, t) => cyl(t, 0.15));
+  for (const x of [hx - 3, hx - 1, hx + 1]) c.shade(x, 11 + U, 2);
+  c.part();
+  c.px(hx - 4.4, 12 + U, k.helm, sphere(-0.6, -0.2), { bias: 1 });
+  sideHorn(hx - 2.6, -1, 0);
+}
+
+/**
+ * Ironbeard's pavise from behind: dark oak painted night-blue, rimmed in
+ * studded iron, a gilt hammer across it and runes either side of its haft.
+ */
+function ironPavise(c: PixelCanvas, cx: number, U: number, L: number): void {
+  const k = S.arb!;
+  const ir = S.iron!;
+  const [top, bot] = paviseRows(U, L);
+  const edge = (y: number): number => (y === top ? 5.4 : 6.4);
+  const n = (x: number, y: number) => sphere(((x + 0.5 - cx) / 6.4) * 0.7, ((y - top) / (bot - top)) * 0.5 - 0.35, 1);
+  c.part();
+  c.shape(top, bot, (y) => [cx - edge(y), cx + edge(y)], k.field[0], (x, y) => n(x, y));
+  c.part();
+  for (let y = top; y <= bot; y++) {
+    const l = Math.round(cx - edge(y));
+    const r = Math.round(cx + edge(y)) - 1;
+    if (y === top || y === bot) for (let x = l; x <= r; x++) c.px(x, y, ir.ring, n(x, y));
+    else {
+      c.px(l, y, ir.ring, sphere(-0.7, 0));
+      c.px(r, y, ir.ring, sphere(0.7, 0));
+    }
+    if ((y - top) % 3 === 1) {
+      c.shade(l, y, 2);
+      c.shade(r, y, 2);
+    }
+  }
+  // The hammer: its broad head across the board under his shoulders, the haft wound with leather, a pommel.
+  const hy = 16 + U;
+  c.part();
+  c.shape(hy, hy + 1, () => [cx - 3.5, cx + 3.5], ir.brass, (_x, y, t) => sphere(t * 0.6, y === hy ? -0.6 : 0.4, 1));
+  c.part();
+  c.shape(hy + 2, bot - 3, () => [cx - 1, cx + 1], ir.brass, (_x, _y, t) => sphere(t * 0.7, 0, 1));
+  for (let y = hy + 3; y <= bot - 3; y += 2) {
+    c.shade(cx - 1, y, -2);
+    c.shade(cx, y, -2);
+  }
+  c.part();
+  c.shape(bot - 2, bot - 2, () => [cx - 1.5, cx + 1.5], ir.brass, (_x, _y, t) => sphere(t * 0.7, 0.4, 1));
+  // Runes down either side of the haft: an up-arrow and a hooked stave, painted in gold.
+  c.part();
+  const rune = (x: number, y: number, cells: [number, number][]) => {
+    for (const [dx, dy] of cells) c.px(x + dx, y + dy, ir.brass, sphere(0, -0.2), { bias: -1 });
+  };
+  rune(cx - 4, hy + 3, [[0, 0], [-1, 1], [1, 1], [0, 1], [0, 2], [0, 3]]);
+  rune(cx + 3, hy + 3, [[0, 0], [0, 1], [0, 2], [0, 3], [1, 0], [1, 1], [-1, 2]]);
+}
+
+/** Studs in his leather, lames on his pauldrons, rivets along the seams of his breastplate. Run once the figure is drawn. */
+function ironTexture(c: PixelCanvas): void {
+  for (let y = -BODY_Y; y < ARCHER_H - BODY_Y; y++) {
+    for (let x = -BODY_X; x < ARCHER_W - BODY_X; x++) {
+      const m = c.materialAt(x, y);
+      const ym = ((y % 3) + 3) % 3;
+      const xm = ((x % 3) + 3) % 3;
+      if (m === S.tunic && xm === 1 && ym === 1) c.shade(x, y, 2);
+      else if (m === S.jerkin) {
+        if (ym === 0) c.shade(x, y, -1);
+        else if (ym === 1 && (x & 3) === 0) c.shade(x, y, 2);
+      } else if (m === S.cloak && (y & 1) === 0) c.shade(x, y, -1);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Snow Owl
+
+/** Snow Owl's bow: pale birch flecked with bark, rime glittering on its tips, a bead of ice in the grip and an owl's feather hung from it. */
+function owlBow(c: PixelCanvas, f: BowFrame, at: (t: number) => [number, number], bias: number): void {
+  const o = S.owl!;
+  for (const t of [-0.7, -0.38, 0.3, 0.64]) {
+    const [kx, ky] = at(t);
+    c.shade(kx, ky, -2);
+  }
+  c.part();
+  for (const s of [-1, 1]) {
+    for (const t of [0.78, 0.9, 1]) {
+      const [x, y] = at(s * t);
+      c.px(x, y, o.frost, sphere(-0.3, -0.5), { bias: bias + 1 });
+    }
+    const [x, y] = at(s);
+    c.spark(x, y, S.light[0], 0.55);
+  }
+  c.part();
+  c.px(f.x, f.y, S.elf!.gem, sphere(-0.3, -0.4), { bias: bias + 1 });
+  c.px(f.x + 0.6, f.y + 1.6, o.feather, sphere(-0.3, 0), { bias });
+  c.px(f.x + 0.6, f.y + 2.6, o.feather, sphere(0.2, 0.4), { bias });
+}
+
+/** Snow Owl's fur boots: a soft white cuff fluffed out over the boot's top. */
+function furCuff(c: PixelCanvas, x: number, y: number, side: boolean, bias: number): void {
+  const row = Math.round(y - 2.4);
+  c.part();
+  c.shape(row - 1, row, () => [x - (side ? 1.8 : 2.0), x + 2.0], S.owl!.fur, (px, _y, t, u) => sphere(t * 0.8, u - 0.5 + (px & 1 ? 0.25 : -0.25), 1), { bias });
+}
+
+/** A snowflake on the wind (her idle moment's leaf): a little cross of ice catching the light. */
+function snowflake(c: PixelCanvas, x: number, y: number, m: Material): void {
+  c.part();
+  c.px(x, y, m, sphere(0, -0.6), { bias: 1 });
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.px(x + dx, y + dy, m, sphere(dx * 0.5, dy * 0.5 - 0.2));
+  c.spark(x, y, S.light[0], 0.5);
+}
+
+/** The hood's two ear tufts, from their roots under its crown up and out to dark tips. */
+function tufts(c: PixelCanvas, cx: number, U: number): void {
+  const o = S.owl!;
+  for (const s of [-1, 1]) {
+    c.part();
+    c.capsule(cx + s * 2.3, 8.6 + U, cx + s * 3.9, 5.5 + U, 1.15, 0.35, o.feather);
+    c.part();
+    c.px(cx + s * 3.9, 5.4 + U, o.fleck, sphere(s * 0.3, -0.5));
+    c.shade(cx + s * 3.2, 7 + U, -1);
+  }
+}
+
+/** Her silver braid falling from (x0, y0) to y1 (drifting `drift` px a row), plaited light and dark, tied with a bead of ice and a little tassel. */
+function braidDown(c: PixelCanvas, x0: number, y0: number, y1: number, drift: number): void {
+  const o = S.owl!;
+  c.part();
+  for (let y = y0; y <= y1; y++) {
+    const x = x0 + (y - y0) * drift;
+    const k = y & 1;
+    c.px(x, y, S.hair, sphere(-0.5, k ? -0.4 : 0.3));
+    c.px(x + 1, y, S.hair, sphere(0.5, k ? 0.3 : -0.4));
+  }
+  const xe = x0 + (y1 + 1 - y0) * drift;
+  c.part();
+  c.px(xe + 0.5, y1 + 1, o.frost, sphere(-0.2, -0.4), { bias: 1 });
+  c.spark(xe + 0.5, y1 + 1, S.light[1], 0.4);
+  c.px(xe, y1 + 2, S.hair, sphere(-0.3, 0.4));
+  c.px(xe + 1, y1 + 2, S.hair, sphere(0.3, 0.5), { bias: -1 });
+}
+
+/**
+ * Her head from the front: a hood of owl feathers with its ear tufts, a ruff
+ * round her face, a silver fringe with a bead of ice at her brow, eyes lit
+ * like frost, and her braid falling from the hood over her shoulder.
+ */
+function owlFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const o = S.owl!;
+  tufts(c, cx, U);
+  c.part();
+  c.ellipse(cx, 11.0 + U, 4.0, 3.8, o.feather, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  // The ruff round the face opening, turned in and shadowed, framing her face like an owl's disc.
+  c.ellipse(cx, 12.5 + U, 3.1, 2.9, o.feather, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.6 + 0.35, 1), bias: -2 });
+  c.part();
+  c.ellipse(cx, 12.7 + U, 2.5, 2.3, SKIN, { normal: SOFT_FACE });
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 2.6, cx + 2.6], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+  c.px(cx - 3, 11 + U, S.hair, sphere(-0.6, 0.2));
+  c.px(cx + 2, 11 + U, S.hair, sphere(0.6, 0.2));
+  c.part();
+  c.px(cx - 1, 10 + U, o.frost, sphere(-0.3, -0.4), { bias: 1 });
+  c.spark(cx - 1, 10 + U, S.light[1], 0.45);
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  c.shade(cx - 1, 14 + U, -1);
+  braidDown(c, cx + 2, 13 + U, 19 + U, 0.15);
+}
+
+/** Her head from behind: the ear tufts, the round of the hood, its point falling onto her mantle between her shoulders. */
+function owlBack(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const o = S.owl!;
+  tufts(c, cx, U);
+  c.part();
+  c.ellipse(cx, 11.2 + U, 4.0, 3.8, o.feather, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  c.part();
+  const sw = p.sway * 0.4;
+  c.shape(14 + U, 17 + U, (y) => {
+    const u = (y - 14 - U) / 3;
+    const hw = 2.1 - u * 1.7;
+    return hw < 0.3 ? null : [cx - hw + u * sw, cx + hw + u * sw];
+  }, o.feather, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
+}
+
+/** Her head in profile (facing left): tufts swept back, the hood round her face, fringe, the ice bead, her braid down in front of her shoulder. */
+function owlSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const o = S.owl!;
+  for (const [dx, b] of [[1.6, -1], [0, 0]] as const) {
+    c.part();
+    c.capsule(hx + 0.6 + dx, 8.6 + U, hx + 2.0 + dx, 5.6 + U, 1.1, 0.35, o.feather, { bias: b });
+    c.part();
+    c.px(hx + 2.0 + dx, 5.4 + U, o.fleck, sphere(0.2, -0.5), { bias: b });
+  }
+  c.part();
+  c.ellipse(hx + 0.6, 11.2 + U, 3.6, 3.7, o.feather, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.capsule(hx + 2.8, 12.5 + U, hx + 3.6 + p.sway * 0.3, 15.4 + U, 1.1, 0.6, o.feather);
+  c.part();
+  c.ellipse(hx - 1.4, 12.8 + U, 2.2, 2.2, SKIN, { normal: SOFT_FACE });
+  c.part();
+  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.shade(hx - 3, 14 + U, -1);
+  c.part();
+  c.shape(10 + U, 10 + U, () => [hx - 3.4, hx + 0.4], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+  c.px(hx - 0.2, 11 + U, S.hair, sphere(0.3, 0.2));
+  c.part();
+  c.shape(8 + U, 9 + U, (y) => [hx - 3.8 + (9 + U - y) * 0.8, hx + 3], o.feather, (_x, _y, t, u) => sphere(t * 0.9, u - 0.7, 1));
+  c.part();
+  c.px(hx - 3, 10 + U, o.frost, sphere(-0.4, -0.4), { bias: 1 });
+  c.spark(hx - 3, 10 + U, S.light[1], 0.45);
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  braidDown(c, hx - 0.6, 14 + U, 19 + U, -0.1);
+}
+
+/** Her feathered mantle from the front: over her shoulders, clasped at the throat with silver and ice, its hem cut into feathers. */
+function mantleFront(c: PixelCanvas, cx: number, U: number, _p: Pose): void {
+  const o = S.owl!;
+  const top = 14 + U;
+  c.part();
+  c.shape(top, top + 3, (y) => {
+    const u = (y - top) / 3;
+    const hw = 3.2 + Math.sqrt(u) * 2.9;
+    return [cx - hw, cx + hw];
+  }, o.feather, (_x, _y, t, u) => sphere(t * 0.95, u - 0.6, 1));
+  // The hem: a feather tip every other pixel, longer at the shoulders where it falls over the arms.
+  for (let x = Math.floor(cx - 6.1); x <= Math.ceil(cx + 6.1); x++) {
+    const d = x + 0.5 - cx;
+    if (Math.abs(d) > 6.1 || (x & 1) === 1) continue;
+    c.px(x, top + 4, o.feather, sphere(d / 6.1, 0.5), { bias: -1 });
+    if (Math.abs(d) > 3.5) c.px(x, top + 5, o.feather, sphere(d / 6.1, 0.7), { bias: -1 });
+  }
+  // It parts down the middle under the clasp.
+  for (let y = top + 2; y <= top + 4; y++) c.shade(cx - 1, y, -2);
+  c.part();
+  c.px(cx - 1, top + 1, S.metal, sphere(-0.3, -0.4), { bias: 1 });
+  c.px(cx, top + 1, o.frost, sphere(0.2, -0.3), { bias: 1 });
+  c.spark(cx, top + 1, S.light[1], 0.4);
+}
+
+/** Her mantle from behind, folded down her back like an owl's wings: two of them meeting down her spine, their tips parting at the bottom. */
+function mantleBack(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const o = S.owl!;
+  const top = 14 + U;
+  const bot = 23 + U;
+  const sw = p.sway * 0.6 + (p.gust ?? 0) * 1.2;
+  for (const s of [-1, 1]) {
+    c.part();
+    c.shape(top, bot, (y) => {
+      const u = (y - top) / (bot - top);
+      const out = u < 0.25 ? 3.6 + u * 9 : 5.85 - (u - 0.25) * 2.0;
+      const inner = u > 0.75 ? (u - 0.75) * 7 : 0;
+      const sh = u * sw;
+      return s < 0 ? [cx - out + sh, cx - inner + sh] : [cx + inner + sh, cx + out + sh];
+    }, o.feather, (_x, _y, t, u) => sphere(t * 0.7 + s * 0.3, u * 0.5 - 0.3, 1));
+    // The long flight feathers down each wing.
+    for (let y = top + 4; y <= bot; y++) c.shade(Math.round(cx + s * 3 - 0.5 + ((y - top) / (bot - top)) * sw), y, -1);
+  }
+}
+
+/** Her mantle in profile: over her shoulder, its feathered hem streaming back behind her. */
+function mantleSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const o = S.owl!;
+  const g = p.gust ?? 0;
+  const top = 14 + U;
+  const bot = 19 + U;
+  const back = (u: number) => hx + 3.0 + u * (1.6 + p.sway + g * 2);
+  c.part();
+  c.shape(top, bot, (y) => {
+    const u = (y - top) / (bot - top);
+    return [hx - 2.8 + u * 2.2, back(u)];
+  }, o.feather, (_x, _y, t, u) => sphere(t * 0.9 + 0.1, u * 0.5 - 0.4, 1));
+  for (let x = Math.round(hx - 0.6); x <= Math.round(back(1)); x++) {
+    if ((x & 1) === 0) c.px(x, bot + 1, o.feather, sphere(0.2, 0.6), { bias: -1 });
+  }
+  c.part();
+  c.px(hx - 2, top + 1, o.frost, sphere(-0.4, -0.3), { bias: 1 });
+}
+
+/** Rows of overlapping feathers on her hood and mantle, and a snowy owl's dark flecks. Run once the figure is drawn. */
+function owlTexture(c: PixelCanvas): void {
+  const o = S.owl!;
+  for (let y = -BODY_Y; y < ARCHER_H - BODY_Y; y++) {
+    for (let x = -BODY_X; x < ARCHER_W - BODY_X; x++) {
+      if (c.materialAt(x, y) !== o.feather) continue;
+      if ((y & 1) === 1 && ((x + (y >> 1)) & 1) === 0) c.shade(x, y, -1);
+      else if ((((x * 7 + y * 13) % 17) + 17) % 17 === 0) c.shade(x, y, -3);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Directions
 // ---------------------------------------------------------------------------
 // Directions
@@ -2647,7 +3279,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     c.capsule(6.9, 13.8 + U, 8.2, 13.8 + U, 0.8, 0.8, S.wrap ?? LEATHER);
   }
   if (S.wisteria) wistHairBack(c, cx, U, p);
-  else if (S.elf) tailFront(c, cx, U, p);
+  else if (S.elf && !S.owl) tailFront(c, cx, U, p);
   else if (!S.arb) {
     // The cloak hangs behind him, showing at his sides.
     c.part();
@@ -2726,6 +3358,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   c.capsule(8.2, 15.4 + U, 15.4, 21.4 + U, 0.55, 0.55, S.wisteria?.vine ?? S.scarecrow?.rope ?? LEATHER);
 
   if (S.wisteria) wistBraidFront(c, cx, U, p);
+  else if (S.owl) mantleFront(c, cx, U, p);
   else if (S.elf) scarfFront(c, cx, U, p);
   else if (S.briar) capeletFront(c, cx, U);
   else if (S.apollo) apolloDrapeFront(c, cx, U, p);
@@ -2749,11 +3382,11 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   } else if (S.briar) {
     head(() => briarFront(c, cx, U, p));
   } else if (S.arb) {
-    head(() => kettleFront(c, cx, U, p));
+    head(() => (S.iron ? ironFront(c, cx, U, p) : kettleFront(c, cx, U, p)));
   } else if (S.wisteria) {
     head(() => wistFront(c, cx, U, p));
   } else if (S.elf) {
-    head(() => elfFront(c, cx, U, p));
+    head(() => (S.owl ? owlFront(c, cx, U, p) : elfFront(c, cx, U, p)));
   } else {
     // Head: the hood, a face in its shadow, a fringe of hair under its edge.
     head(() => {
@@ -2852,12 +3485,22 @@ function drawUp(c: PixelCanvas, p: Pose): void {
       briarBack(c, cx, U);
     } else if (S.arb) {
       boltCase(c, cx - 4.6, 21 + U);
-      paviseFace(c, cx, U, L);
-      cowl(c, cx, U, 5.8, 5.8);
-      kettleBack(c, cx, U, p);
+      if (S.iron) {
+        ironPavise(c, cx, U, L);
+        ironBack(c, cx, U, p);
+      } else {
+        paviseFace(c, cx, U, L);
+        cowl(c, cx, U, 5.8, 5.8);
+        kettleBack(c, cx, U, p);
+      }
     } else if (S.wisteria) {
       quiver(c, 16.2, 13.4 + U, 10.8, 22 + U);
       wistBack(c, cx, U, p);
+    } else if (S.owl) {
+      // Her mantle folded down her back like an owl's wings, the quiver slung over it.
+      mantleBack(c, cx, U, p);
+      quiver(c, 16.2, 13.4 + U, 10.8, 22 + U);
+      owlBack(c, cx, U, p);
     } else {
       quiver(c, 16.2, 13.4 + U, 10.8, 22 + U);
       scarfBack(c, cx, U, p);
@@ -3025,7 +3668,8 @@ function drawSide(c: PixelCanvas, p: Pose): void {
 
   // (Wisteria's hair and braid come with her head.)
   if (S.elf) {
-    if (!S.wisteria) scarfSide(c, hx, U, p);
+    if (S.owl) mantleSide(c, hx, U, p);
+    else if (!S.wisteria) scarfSide(c, hx, U, p);
   } else if (S.briar) capeletSide(c, hx, U, p);
   else if (S.apollo) apolloDrapeSide(c, hx, U);
   else cowl(c, hx, U, 4.2, 4.4, S.scarecrow ? S.tunic : S.cloak);
@@ -3036,6 +3680,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     // The crossbow on his shoulder goes behind his head; raised, it's out before him.
     if (p.xb) weapon();
     if (S.briar) briarSide(c, hx, U, p);
+    else if (S.iron) ironSide(c, hx, U, p);
     else kettleSide(c, hx, U, p);
     if (!p.xb) weapon();
     arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1], false);
@@ -3044,6 +3689,8 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     apolloSide(c, hx, U, p);
   } else if (S.wisteria) {
     wistSide(c, hx, U, p);
+  } else if (S.owl) {
+    owlSide(c, hx, U, p);
   } else if (S.elf) {
     elfSide(c, hx, U, p);
   } else if (S.hunt) {
@@ -3531,6 +4178,35 @@ export const ARBALEST_ANIMS: ArcherAnimDef[] = [
 /** Briar Rose moves as the arbalest does, but for her idle moment. */
 export const BRIAR_ANIMS: ArcherAnimDef[] = ARBALEST_ANIMS.map((a) => (a.name === 'rest' ? { ...a, poses: briarRest, order: BRIAR_ORDER } : a));
 
+/** Ironbeard's hand at his chin, halfway down his beard, and at its braids. */
+const BEARD_CHIN = H(1.4, 0.6, 3.2);
+const BEARD_MID = H(1.6, 0.7, 1.4);
+const BEARD_TIP = H(1.8, 0.8, -0.6);
+
+/**
+ * Ironbeard's idle moment: he sets the crossbow down on its nose and leans on
+ * it, strokes his great beard from chin to braids, twice over with his eyes
+ * shut in contentment, then lifts his chin proudly and shoulders it again.
+ */
+const IRON_REST: Pose[] = [
+  fromArb({}),
+  fromArb({ xb: { r: H(1, 2.4, 1.4), f: H(2.6, 3.2, -2.4) }, a: H(1, 2.4, 1.4), sway: 0.2 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: LEAN_B, breath: 1 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: BEARD_CHIN }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: BEARD_MID, blink: true }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: BEARD_TIP, blink: true, breath: 1 }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: BEARD_CHIN, blink: true }),
+  fromArb({ xb: XB_LEAN, a: LEAN_A, b: LEAN_B, headY: -1 }),
+];
+const IRON_ORDER = [0, 1, 2, 2, 2, 3, 4, 5, 5, 6, 4, 5, 5, 3, 7, 7, 7, 2, 2, 1, 0];
+
+function ironRest(view: View): Pose[] {
+  return view === 'down' ? IRON_REST : [];
+}
+
+/** Ironbeard moves as the arbalest does, but for his idle moment. */
+export const IRON_ANIMS: ArcherAnimDef[] = ARBALEST_ANIMS.map((a) => (a.name === 'rest' ? { ...a, poses: ironRest, order: IRON_ORDER } : a));
+
 export const WIND_ANIMS: ArcherAnimDef[] = [
   { name: 'idle', fps: 7, loop: true, poses: windIdle },
   { name: 'walk', fps: 11, loop: true, poses: windWalk },
@@ -3540,7 +4216,7 @@ export const WIND_ANIMS: ArcherAnimDef[] = [
 ];
 
 /** A look's moves: the ranger's (and his skins'), the arbalest's or the windrunner's. */
-export const archerAnimsFor = (look: ArcherLook): ArcherAnimDef[] => (look.briar ? BRIAR_ANIMS : look.arb ? ARBALEST_ANIMS : look.elf ? WIND_ANIMS : ARCHER_ANIMS);
+export const archerAnimsFor = (look: ArcherLook): ArcherAnimDef[] => (look.iron ? IRON_ANIMS : look.briar ? BRIAR_ANIMS :look.arb ? ARBALEST_ANIMS : look.elf ? WIND_ANIMS : ARCHER_ANIMS);
 
 /** Frame index at which each shot is loosed. */
 export const LOOSE_FRAME = { shoot: 3, volley: 4, fire: 2, brace: 4, fan: 2, vault: 3 } as const;
@@ -3560,8 +4236,10 @@ function drawArcherFrame(dir: Dir, pose: Pose): PixelCanvas {
   else drawSide(c, pose);
   winking = false;
   if (S.scarecrow) plaid(c);
-  if (S.arb && !S.briar) arbTexture(c);
+  if (S.iron) ironTexture(c);
+  else if (S.arb && !S.briar) arbTexture(c);
   if (S.apollo) apolloFinish(c, dir, pose);
+  if (S.owl) owlTexture(c);
   return dir === 'right' ? c.mirrored() : c;
 }
 
@@ -3629,6 +4307,15 @@ export function arrowFrame(i: number, look: ArcherLook = RANGER_LOOK): PixelCanv
       const [rx, ry] = px(4.8, s);
       c.spark(rx, ry, look.light[2], 0.35);
     }
+  }
+  if (look.owl) {
+    // A down feather and a fleck of snow shed from her fletching, tumbling in its wake.
+    c.part();
+    const [ax, ay] = px(-6.8, 1.1);
+    const [bx2, by2] = px(-7.2, -1.4);
+    c.px(ax, ay, look.owl.feather, sphere(-0.3, -0.4), { bias: 1 });
+    c.px(ax + 1, ay, look.owl.feather, sphere(0.3, -0.2));
+    c.px(bx2, by2, look.owl.frost, sphere(0, -0.3), { bias: 1, glow: 0.5 });
   }
   if (look.crackle) {
     c.spark(hx, hy, look.crackle[0], 0.8);
@@ -3699,6 +4386,15 @@ export function boltFrame(i: number, look: ArcherLook = ARBALEST_LOOK): PixelCan
     }
     const [rx, ry] = px(-5.8, -1.2);
     c.px(rx, ry, br.rose, sphere(-0.3, -0.3), { bias: 1 });
+  }
+  if (look.iron) {
+    // A forge-hot head: it burns at its tip and throws sparks back along the shaft.
+    const [, hot, mid] = look.light;
+    c.spark(hx, hy, look.light[0], 0.8);
+    for (const [t, s, a] of [[2.4, 1.2, 0.6], [-1.2, -1.4, 0.45], [-6.2, 0.8, 0.35]] as const) {
+      const [sx, sy] = px(t, s);
+      c.spark(sx, sy, t > 0 ? hot : mid, a);
+    }
   }
   return c;
 }

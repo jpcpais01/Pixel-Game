@@ -15,7 +15,8 @@ import { bloom, bump, circle, clamp01, dither, drag, easeOut, flare, Fx, GROUND,
 //
 // Their skins change more than colour here: Briar Rose's Rosethorn Bloom lobs
 // a great rosebud instead of a keg, which bursts in petals and thorns over a
-// ring of briar; Wisteria's Gale whirls wisteria petals up its funnel.
+// ring of briar; Wisteria's Gale whirls wisteria petals up its funnel, and
+// Snow Owl's whirls snow.
 
 /** Black Powder: the keg's flight, its fuse, and the blast. */
 const KEG_FLIGHT = 380;
@@ -34,6 +35,9 @@ const BUD = [0xff8088, 0xe4344a, 0xb4162e, 0x7c0c22];
 const SEPAL = [0x76a048, 0x3a5e24];
 const ROSE_PETALS = [0xffd0d8, 0xff8088, 0xe4344a, 0xb4162e];
 const BRIAR_LEAVES = [0x76a048, 0x4a9036, 0x2e6e24];
+/** What Wisteria's Gale and Snow Owl's whirl up their funnels, lit to shadowed. */
+const WIST_PETALS = [0xffffff, 0xe0ccff, 0xb48af0, 0x8a52d8];
+const SNOW = [0xffffff, 0xf0f8ff, 0xc8e0f4, 0x8ab0d8];
 
 /** A great bolt with a keg of black powder lashed behind its head, lobbed onto the aimed spot. */
 export class PowderKeg extends Fx {
@@ -251,15 +255,15 @@ export class Tempest extends Fx {
   private burst = false;
   private whirlIn = 0;
   private readonly seed = Math.floor(Math.random() * 1000);
-  /** Wisteria's Gale: petals whirled up the funnel instead of leaves and dust. */
-  private readonly petals: boolean;
+  /** Wisteria's Gale: petals whirled up the funnel instead of leaves and dust (Snow Owl's: snow), lit to shadowed. */
+  private readonly petals: number[] | null;
 
   constructor(
     world: WorldScene,
     private c: Cast,
   ) {
     super(world, TEMPEST_TIME + TEMPEST_FADE);
-    this.petals = c.look === 'wisteria';
+    this.petals = c.look === 'wisteria' ? WIST_PETALS : c.look === 'owl' ? SNOW : null;
     this.x = c.x + c.dx * 20;
     this.y = c.y + c.dy * 14;
     this.pix = this.ink(72, 72);
@@ -299,7 +303,7 @@ export class Tempest extends Fx {
       // Leaves and dust whipped round it.
       if (Math.random() < dt / 40) {
         const a = Math.random() * Math.PI * 2;
-        world.debris(this.petals ? [0xffffff, 0xe0ccff, 0xb48af0, 0x8a52d8] : [c.pal.hot, c.pal.mid, 0x8ac06a, 0xd8c078], this.x + Math.cos(a) * 14, this.y - 4 - Math.random() * 30, 1, this.y + 4, 'gather');
+        world.debris(this.petals ?? [c.pal.hot, c.pal.mid, 0x8ac06a, 0xd8c078],this.x + Math.cos(a) * 14, this.y - 4 - Math.random() * 30, 1, this.y + 4, 'gather');
       }
     } else if (!this.burst) {
       this.blowOut();
@@ -364,10 +368,10 @@ export class Tempest extends Fx {
         const u = front ? (streak > 0.75 ? 0 : streak > 0.45 ? 1 : 2) : 3;
         const col = [p.core, p.hot, p.mid, p.deep][u];
         if (dither(Math.round(px), Math.round(py)) < fade * (front ? 1 : 0.55)) g.put(px, py, col, front ? 1 : 0.7);
-        // Wisteria petals caught in the streaks, tumbling as they go round.
+        // Wisteria petals (or snow) caught in the streaks, tumbling as they go round.
         if (this.petals && front && streak > 0.9 && hash(k, i, this.seed) < 0.5) {
-          g.put(px, py, 0x8a52d8);
-          g.put(px + (Math.floor(t / 80 + i) % 2 ? 1 : 0), py - 1, 0xe0ccff);
+          g.put(px, py, this.petals[3]);
+          g.put(px + (Math.floor(t / 80 + i) % 2 ? 1 : 0), py - 1, this.petals[1]);
         }
       }
     }
