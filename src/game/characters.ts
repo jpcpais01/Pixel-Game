@@ -41,7 +41,7 @@ import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, 
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
 import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT, PRIMAVERA_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
-import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT } from './Samurai';
+import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT, SNOWFALL_KIT, TENGU_KIT } from './Samurai';
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { AUTUMN_MAGIC, AUTUMN_SKIN, FROST_MAGIC, FROST_SKIN, GROVE_MAGIC, GROVE_SKIN, Grovecraft, WILD_MAGIC, WILD_SKIN, Wildcraft } from './Druid';
 import { TITANIA_MAGIC, TITANIA_SKIN } from './Druid';
@@ -1339,6 +1339,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_windblade_kitsune' },
             },
           },
+          {
+            // A crow tengu: a black beaked crow mask and tokin cap, a feather mantle over folded wings, white bonten on the chest, white and indigo hakama, a straight blade in dusk violet.
+            id: 'tengu',
+            name: 'Tengu',
+            accent: 0xa070ff,
+            preview: { texture: 'samurai_tengu', glow: 'samurai_tengu_e', idle: 'samurai_tengu_idle_down', chosen: 'samurai_tengu_slash1_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
+            buttons: {
+              attack: { texture: 'icon_katana_tengu' },
+              special: { texture: 'icon_windblade_tengu' },
+            },
+          },
         ],
       },
       {
@@ -1376,11 +1387,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_cross_shogun' },
             },
           },
+          {
+            // A winter wanderer: a snow-dusted kasa, a straw mino cape over a white kimono, a grey fur collar, wrapped shins and straw sandals, an ice-blue edge.
+            id: 'snowfall',
+            name: 'Snowfall',
+            accent: 0x8ad8ff,
+            preview: { texture: 'ronin_snowfall', glow: 'ronin_snowfall_e', idle: 'ronin_snowfall_idle_down', chosen: 'ronin_snowfall_slash2_down', originY: SAMURAI_ORIGIN_Y / SAMURAI_H },
+            buttons: {
+              attack: { texture: 'icon_iai_snowfall' },
+              special: { texture: 'icon_cross_snowfall' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { bladewind: BLADEWIND_KIT, oni: ONI_KIT, kitsune: KITSUNE_KIT, ronin: RONIN_KIT, sakura: SAKURA_KIT, shogun: SHOGUN_KIT }[look] ?? BLADEWIND_KIT;
+      const kit = { bladewind: BLADEWIND_KIT, oni: ONI_KIT, kitsune: KITSUNE_KIT, ronin: RONIN_KIT, sakura: SAKURA_KIT, shogun: SHOGUN_KIT, tengu: TENGU_KIT, snowfall: SNOWFALL_KIT }[look] ?? BLADEWIND_KIT;
       return new Samurai(world, x, y, kit);
     },
   },

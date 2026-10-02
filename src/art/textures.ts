@@ -355,6 +355,10 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_windblade_kitsune', toCanvas(16, 16, dashIcon(['#f0fff8', '#b0ffe0', '#40e8b0', '#107a6a'], '#b0ffe8')));
   scene.textures.addCanvas('icon_iai_shogun', toCanvas(16, 16, katanaIcon('#f4f2ff', '#565060', null)));
   scene.textures.addCanvas('icon_cross_shogun', toCanvas(16, 16, crossIcon(['#fffcf0', '#fff0b8', '#a89cff', '#3a2e9a'])));
+  scene.textures.addCanvas('icon_katana_tengu', toCanvas(16, 16, katanaIcon('#c4a4ff', '#48425a', ['#f2eaff', '#c4a4ff', '#8456d8', '#22143e'], 'feather')));
+  scene.textures.addCanvas('icon_windblade_tengu', toCanvas(16, 16, dashIcon(['#f2eaff', '#c4a4ff', '#8456d8', '#22143e'], '#c4a4ff', 'feather')));
+  scene.textures.addCanvas('icon_iai_snowfall', toCanvas(16, 16, katanaIcon('#d8f2ff', '#8e9ab4', null, 'snow')));
+  scene.textures.addCanvas('icon_cross_snowfall', toCanvas(16, 16, crossIcon(['#ffffff', '#d8f2ff', '#88ccf4', '#3a74b0'], 'snow')));
 
   yield;
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.

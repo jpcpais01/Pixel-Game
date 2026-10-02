@@ -16,7 +16,7 @@ import { PowderKeg, Tempest } from './archers';
 import { Encore, ThunderOfWar } from './bard';
 import { Legion, TimeStop } from './chrono';
 import { HundredCuts, quakeGate, SkyQuake } from './samurai';
-import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT } from '../Samurai';
+import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT, SNOWFALL_KIT, TENGU_KIT } from '../Samurai';
 import { schemePal } from '../Blades';
 import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
 import { PrimalStampede, WildWrath } from './druid';
@@ -490,6 +490,8 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:empress': { pal: EMPRESS_KIT.dominion, type: 'sith' },
   'samurai:kitsune': { pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
+  'samurai:tengu': { pal: schemePal(TENGU_KIT.wind) },
+  'samurai:snowfall': { pal: schemePal(SNOWFALL_KIT.wind), type: 'ronin' },
   'druid:autumn': { pal: AUTUMN_MAGIC.pal },
   'druid:titania': { pal: pal(0xfffaf0, 0xffd88a, 0xff9ac0, 0xb8487a, 0xffb8d0) },
   'druid:frostfang': { pal: FROST_MAGIC.pal, type: 'wild' },

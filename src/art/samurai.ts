@@ -6,7 +6,10 @@
 // guard and a long high ponytail; the Oni a red demon face guard; the Ronin a
 // straw kasa hat over a worn haori jacket with a crest on its back; the
 // Kitsune fox ears, a fox mask and a great tail tipped in foxfire; the Shogun
-// laced black armour and a helmet crowned with a golden crescent.
+// laced black armour and a helmet crowned with a golden crescent; the Tengu a
+// crow's beaked mask, a little black cap and a mantle of crow feathers over
+// folded wings; Snowfall a snow-dusted kasa over a shaggy straw mino cape, a
+// fur collar, and his hakama tucked up over wrapped shins.
 //
 // The body keeps to the 24x32 box; frames are larger so the blade can reach
 // past it. Drawing functions work in body-box coordinates.
@@ -68,6 +71,26 @@ export interface SamuraiLook {
    * crescent moon crest over the brow.
    */
   armor?: { plate: Material; lace: Material; crest: Material };
+  /**
+   * A crow tengu of the mountains: a glossy black crow mask with a hooked
+   * beak, a little black yamabushi cap (tokin) on the brow, a mantle of
+   * layered crow feathers over the shoulders and a ruff round the neck, folded
+   * wings hanging down his back, and white pom-poms (bonten) on a cord down
+   * his chest.
+   */
+  tengu?: { feather: Material; face: Material; beak: Material; cap: Material; bonten: Material };
+  /**
+   * A straw mino rain cape in shaggy tiers from the shoulders to the thighs in
+   * place of the haori, a grey fur collar, and snow lying on the cape's
+   * shoulders and the kasa's crown.
+   */
+  mino?: { straw: Material; snow: Material; fur: Material };
+  /** A band of another cloth round the hakama's hem. */
+  hem?: Material;
+  /** The hakama tucked up for the road, showing shins wrapped in this cloth. */
+  wraps?: Material;
+  /** A straight blade (a chokuto) rather than the katana's curve. */
+  straight?: boolean;
   /** The idle moment he plays: the Bladewind's leaf caught on the blade, or the Ronin's swig from his gourd. */
   rest: 'leaf' | 'gourd';
 }
@@ -221,7 +244,70 @@ export const SHOGUN_LOOK: SamuraiLook = {
   },
 };
 
-export const SAMURAI_LOOKS = [BLADEWIND_LOOK, ONI_LOOK, KITSUNE_LOOK, RONIN_LOOK, SAKURA_LOOK, SHOGUN_LOOK];
+/**
+ * The Tengu skin: a crow tengu of the mountain shrines. A glossy black crow
+ * mask with a hooked beak and burning gold eyes, a shaggy slate mane under a
+ * little black tokin cap, a mantle and ruff of crow feathers over folded wings,
+ * a deep indigo gi with white bonten down the chest, white hakama banded in
+ * indigo, and a straight blade tempered in dusk violet.
+ */
+export const TENGU_LOOK: SamuraiLook = {
+  ...BLADEWIND_LOOK,
+  key: 'samurai_tengu',
+  gi: mat('#05050c', '#0e1026', '#1a1e3e', '#282e58', '#3a4274'),
+  hakama: mat('#2e2e3c', '#7c7e92', '#b4b8ca', '#dcdee9', '#f6f6fb'),
+  hem: mat('#05071a', '#121a42', '#1e2a62', '#2e3e86'),
+  obi: mat('#08051a', '#1c1040', '#2e1e68', '#443092', '#5c46b8'),
+  hair: mat('#0e0c16', '#24203a', '#3a3456', '#544c74', '#726a96'),
+  foot: TABI,
+  trim: mat('#1a0e30', '#5a3aa0', '#8a64d8', '#c0a4ff'),
+  pad: null,
+  ponytail: false,
+  eye: { ramp: ramp('#ffa818', '#fff0a0'), outline: hex('#030205'), emissive: 1, noAO: true },
+  steel: { ...mat('#040408', '#16141e', '#2c2838', '#48425a', '#6c6482'), shine: true },
+  edge: { ...mat('#120628', '#52309a', '#9468e0', '#d0b8ff', '#f8f0ff'), shine: true },
+  tsuba: IRON_TSUBA,
+  grip: mat('#04040a', '#0e1026', '#1c2044', '#2c3262'),
+  bladeGlow: hex('#a070ff'),
+  straight: true,
+  tengu: {
+    feather: { ...mat('#020205', '#0a0a14', '#161a2c', '#262c48', '#3c4470', '#5a64a0'), shine: true },
+    face: { ...mat('#020204', '#0a0a12', '#161624', '#26263a', '#3e3e5c'), shine: true },
+    beak: { ...mat('#040406', '#18181f', '#2e2e3a', '#4a4a5c', '#727288'), shine: true },
+    cap: { ...mat('#010102', '#08080c', '#121218', '#202028', '#363644'), shine: true },
+    bonten: mat('#4a4458', '#a49eb6', '#dcd8e8', '#f6f4fb', '#ffffff'),
+  },
+};
+
+/**
+ * The Snowfall skin: a wanderer of the winter roads. A wide kasa with snow on
+ * its crown, a shaggy straw mino cape with snow on its shoulders over a white
+ * kimono and indigo hakama tucked up over wrapped shins, a grey fur collar,
+ * straw sandals, and a blade with an ice-blue edge.
+ */
+export const SNOWFALL_LOOK: SamuraiLook = {
+  ...RONIN_LOOK,
+  key: 'ronin_snowfall',
+  gi: mat('#363848', '#83889e', '#bec3d4', '#e2e6f0', '#f8faff'),
+  collar: mat('#05071a', '#121a42', '#1e2a62', '#2e3e86'),
+  hakama: mat('#04050d', '#0c122c', '#162046', '#222e60', '#30427c'),
+  obi: mat('#0a0e16', '#222c3a', '#3a4a5e', '#566a84', '#768ca8'),
+  foot: mat('#241a0a', '#54401e', '#846a38', '#b09456', '#d6bc84'),
+  haori: null,
+  hat: mat('#1c150b', '#43341c', '#6e5c38', '#988656', '#bfae7e', '#ded0a4'),
+  edge: { ...mat('#08223e', '#3e8ccc', '#8ed2f8', '#d8f2ff', '#ffffff'), shine: true },
+  tsuba: IRON_TSUBA,
+  grip: mat('#03040b', '#0c122c', '#1a2446', '#283862'),
+  bladeGlow: hex('#8ad8ff'),
+  wraps: mat('#262834', '#666a7e', '#9ea2b6', '#cacede', '#e8eaf4'),
+  mino: {
+    straw: mat('#170f06', '#3a2a12', '#624a24', '#8a7038', '#b09656', '#d0b87c'),
+    snow: { ramp: ramp('#8e9cb8', '#c8d4e8', '#eaf2fc', '#ffffff'), outline: hex('#4a5878') },
+    fur: mat('#16161c', '#3a3a44', '#5e5e6a', '#888894', '#b2b2bc', '#d4d4dc'),
+  },
+};
+
+export const SAMURAI_LOOKS = [BLADEWIND_LOOK, ONI_LOOK, KITSUNE_LOOK, TENGU_LOOK, RONIN_LOOK, SAKURA_LOOK, SHOGUN_LOOK, SNOWFALL_LOOK];
 
 /** The look being drawn; set by buildSamuraiFrames. */
 let S: SamuraiLook = BLADEWIND_LOOK;
@@ -283,6 +369,8 @@ const GUARD = 1.6;
 /** How much the blade curves back towards its spine. */
 const CURVE = 0.012;
 const FLAT_DOWN: Vec3 = { x: 0, y: -0.3, z: 0.95 };
+/** How far a traveller's hakama is tucked up over his wrapped shins. */
+const TUCK = 2;
 /** The idle moment's props: an autumn maple leaf, and the Ronin's gourd in red lacquer, with its cork. */
 const LEAF = mat('#3a0c04', '#8a2408', '#c84a12', '#f0822a', '#ffc070');
 const GOURD = { ...mat('#200604', '#5a120a', '#8e2412', '#c0421e', '#ee7a44'), shine: true };
@@ -304,6 +392,7 @@ function drawKatana(c: PixelCanvas, s: Blade): { x: number; y: number } {
   const py = dx;
   const end = GUARD + s.len;
   const reach = end + 4;
+  const curve = S.straight ? 0 : CURVE;
   const box = (fn: (x: number, y: number, along: number, side: number) => void) =>
     each(s.hx - reach, s.hy - reach, s.hx + reach, s.hy + reach, (x, y) => {
       const rx = x + 0.5 - s.hx;
@@ -320,7 +409,7 @@ function drawKatana(c: PixelCanvas, s: Blade): { x: number; y: number } {
   box((x, y, along, side) => {
     if (along < GUARD + 0.2 || along > end) return;
     const out = along - GUARD;
-    const sd = side - CURVE * out * out;
+    const sd = side - curve * out * out;
     const rest = end - along;
     const hw = rest < 1.4 ? 0.55 : 0.9;
     if (Math.abs(sd) >= hw) return;
@@ -345,7 +434,7 @@ function drawKatana(c: PixelCanvas, s: Blade): { x: number; y: number } {
     else c.px(x, y, S.grip, n, { bias: Math.floor(along * 1.4) % 2 === 0 ? 1 : 0 });
   });
   const out = s.len;
-  const tipSide = CURVE * out * out;
+  const tipSide = curve * out * out;
   return { x: s.hx + dx * end + px * tipSide, y: s.hy + dy * end + py * tipSide };
 }
 
@@ -371,7 +460,14 @@ function foot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): voi
 
 function shoulder(c: PixelCanvas, x: number, y: number, rx = 2.2, ry = 1.6): void {
   c.part();
-  c.ellipse(x, y, rx, ry, S.haori ?? S.gi, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
+  c.ellipse(x, y, rx, ry, S.mino?.straw ?? S.haori ?? S.gi, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
+  if (S.mino) {
+    // Straw strands, and snow lying on the top of the shoulder.
+    for (let i = -1; i <= 1; i++) c.shade(Math.round(x + i - 0.5), Math.round(y + 0.6), i === 0 ? 1 : -1);
+    c.part();
+    for (let i = -1; i <= 0; i++) c.px(Math.round(x + i), Math.round(y - ry + 0.3), S.mino.snow, sphere(i * 0.4 + 0.2, -0.8));
+    c.px(Math.round(x - 1.2), Math.round(y - ry + 1.1), S.mino.snow, sphere(-0.5, -0.5), { bias: -1 });
+  }
 }
 
 /** The lacquered shoulder guard: a rounded plate in bands, with a bright rim. */
@@ -387,7 +483,7 @@ function pad(c: PixelCanvas, x: number, y: number, rx = 2.7, ry = 2.2): void {
 function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
   c.part();
   for (const [x, y] of pts) {
-    if (blink) c.px(x, y, S.fox ? S.fox.mask : S.skin, FLAT_DOWN, { bias: -1 });
+    if (blink) c.px(x, y, S.fox ? S.fox.mask : S.tengu ? S.tengu.face : S.skin, FLAT_DOWN, { bias: -1 });
     else c.px(x, y, S.eye);
   }
 }
@@ -409,6 +505,20 @@ function kasa(c: PixelCanvas, hx: number, U: number, rim = 6.9): void {
     c.shade(x, bottom, (x & 1) === 0 ? -1 : 0);
   }
   c.px(Math.floor(hx), top, S.hat, sphere(-0.2, -0.8), { bias: 1 });
+  if (S.mino) {
+    // Snow lying on the crown, thinning down the slope to a few flakes caught in the weave.
+    const snow = S.mino.snow;
+    c.part();
+    for (let y = top; y <= top + 3; y++) {
+      const u = (y + 0.5 - top) / (bottom + 1 - top);
+      const hw = (0.9 + (rim - 0.9) * Math.pow(u, 0.85)) * (y === top + 3 ? 0.75 : 0.85);
+      for (let x = Math.round(hx - hw); x < Math.round(hx + hw); x++) {
+        if (y === top + 2 && ((x * 3) & 3) === 1) continue;
+        if (y === top + 3 && ((x * 5 + 1) % 3) !== 0) continue;
+        c.px(x, y, snow, sphere(((x + 0.5 - hx) / (hw + 1)) * 0.8, -0.85 + (y - top) * 0.15), { bias: y - top > 1 ? -1 : 0 });
+      }
+    }
+  }
 }
 
 /** The demon face guard over nose and mouth, with a snarl of teeth. */
@@ -569,6 +679,20 @@ function leaf(c: PixelCanvas, x: number, y: number, turn: number): void {
     [[0, -1], [0, 0], [1, 0], [-1, 1]],
     [[-1, 0], [0, 0], [1, 0]],
   ];
+  if (S.tengu) {
+    // The Tengu's is one of his own crow feathers, drifting down long and slim, a pale quill at its base.
+    const quills: [number, number][][] = [
+      [[-2, -1], [-1, -1], [0, 0], [1, 0], [2, 1]],
+      [[-1, -2], [-1, -1], [0, 0], [0, 1], [1, 2]],
+      [[-1, 0], [0, 0], [1, 0]],
+    ];
+    const q = quills[turn % 3];
+    c.part();
+    q.forEach(([dx, dy], i) => c.px(x + dx, y + dy, S.tengu!.feather, sphere(dx * 0.3 - 0.2, -0.4, 1), { bias: i === 1 ? 1 : 0 }));
+    const [qx, qy] = q[q.length - 1];
+    c.px(x + qx + (turn % 3 === 1 ? 0 : 1), y + qy + (turn % 3 === 2 ? 0 : 1), S.tengu.bonten, sphere(0.2, 0.3), { bias: -1 });
+    return;
+  }
   c.part();
   for (const [dx, dy] of shapes[turn % 3]) c.px(x + dx, y + dy, LEAF, sphere(dx * 0.5 - 0.1, dy * 0.5 - 0.3, 1), { bias: dx + dy < 0 ? 1 : 0 });
   // Its stem, a darker tick at the base.
@@ -602,6 +726,239 @@ function gourdGrip(lx: number, ly: number, angle: number): { x: number; y: numbe
 }
 
 // ---------------------------------------------------------------------------
+// The Tengu's and Snowfall's parts
+
+/**
+ * A folded crow's wing hanging from (x0, y0) to its tips at (x1, y1): broad
+ * coverts at the shoulder in rows of scales, narrowing to three long primary
+ * feathers that end in separate points, the leading edge (`side` -1 left, 1
+ * right, as seen) catching the light.
+ */
+function wing(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, w: number, side: -1 | 1, bias = 0): void {
+  if (!S.tengu) return;
+  const F = S.tengu.feather;
+  const vx = x1 - x0;
+  const vy = y1 - y0;
+  const len = Math.hypot(vx, vy) || 1;
+  const ux = vx / len;
+  const uy = vy / len;
+  c.part();
+  each(Math.min(x0, x1) - w - 1, Math.min(y0, y1) - w - 1, Math.max(x0, x1) + w + 1, Math.max(y0, y1) + 1, (x, y) => {
+    const rx = x + 0.5 - x0;
+    const ry = y + 0.5 - y0;
+    const t = (rx * ux + ry * uy) / len;
+    if (t < -0.05) return;
+    const d = (rx * -uy + ry * ux) * -side; // + toward the leading edge
+    const hw = w * (1 - 0.5 * Math.max(0, t)) + (t < 0.12 ? 0.3 : 0);
+    if (Math.abs(d) > hw) return;
+    // Three primaries, the leading one longest, each ending in its own point.
+    const f = ((hw - d) / (2 * hw)) * 3;
+    const k = Math.min(2, Math.floor(f));
+    const tip = 1 - k * 0.09 - Math.abs(f - k - 0.5) * 0.07;
+    if (t > tip) return;
+    const across = d / hw;
+    let b = bias;
+    // Rows of scale-like coverts high on the wing, and dark seams between the primaries lower down.
+    if (t < 0.42 && Math.round(t * len) % 3 === 0 && ((x + y) & 1) === 0) b -= 1;
+    if (t >= 0.42 && k > 0 && f - k < 0.28) b -= 1;
+    if (across > 0.6) b += 1;
+    c.px(x, y, F, sphere(across * 0.6 * side, t * 0.6 - 0.35, 1), { bias: b });
+  });
+}
+
+/**
+ * A mantle of crow feathers over one shoulder: a dome of layered feathers
+ * whose hem hangs in points, longer toward the outside (`side` -1 left, 1 right).
+ */
+function mantle(c: PixelCanvas, x: number, y: number, side: -1 | 1, rx = 2.9, ry = 2.1): void {
+  if (!S.tengu) return;
+  const F = S.tengu.feather;
+  c.part();
+  c.ellipse(x, y, rx, ry, F, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.4, 0.9) });
+  // The hem in feather points, the outer ones hanging lowest.
+  const x0 = Math.floor(x - rx + 0.4);
+  const x1 = Math.ceil(x + rx - 0.4) - 1;
+  for (let xx = x0; xx <= x1; xx++) {
+    const t = (xx + 0.5 - x) / rx;
+    const out = t * side;
+    const drop = (((xx - x0) & 1) === 0 ? 2 : 1) + (out > 0.35 ? 1 : 0);
+    const by = Math.floor(y + ry * Math.sqrt(Math.max(0, 1 - t * t)) - 0.3);
+    for (let k = 1; k <= drop; k++) c.px(xx, by + k, F, sphere(t * 0.7, 0.3 + k * 0.15, 1), { bias: k === drop ? -1 : 0 });
+  }
+  // Two rows of feather scales across it.
+  for (let xx = x0; xx <= x1; xx++) {
+    if ((xx & 1) === 0) c.shade(xx, Math.round(y - 0.6), -1);
+    else c.shade(xx, Math.round(y + 1), -1);
+  }
+  c.shade(Math.round(x - side * 0.8 - 0.5), Math.round(y - ry + 0.5), 1);
+}
+
+/** A ruff of crow feathers standing round the neck, from x0 to x1, its top edge in points. */
+function ruff(c: PixelCanvas, x0: number, x1: number, y: number, bias = 0): void {
+  if (!S.tengu) return;
+  const F = S.tengu.feather;
+  c.part();
+  for (let x = Math.round(x0); x < Math.round(x1); x++) {
+    const t = ((x + 0.5 - x0) / (x1 - x0)) * 2 - 1;
+    const h = 2 + ((x & 1) === 0 ? 1 : 0);
+    for (let k = 0; k < h; k++) c.px(x, y - k, F, sphere(t * 0.8, -0.2 - k * 0.2, 1), { bias: bias + (k === h - 1 ? 1 : 0) });
+  }
+}
+
+/** A white bonten: a little round pom-pom of wool, 2x2, on the cord down the chest. */
+function bonten(c: PixelCanvas, x: number, y: number): void {
+  if (!S.tengu) return;
+  c.part();
+  c.px(x, y, S.tengu.bonten, sphere(-0.5, -0.5), { bias: 1 });
+  c.px(x + 1, y, S.tengu.bonten, sphere(0.5, -0.5));
+  c.px(x, y + 1, S.tengu.bonten, sphere(-0.5, 0.5));
+  c.px(x + 1, y + 1, S.tengu.bonten, sphere(0.5, 0.5), { bias: -1 });
+}
+
+/** The tokin, the yamabushi's little black cap, perched on the brow. */
+function tokin(c: PixelCanvas, x: number, y: number): void {
+  if (!S.tengu) return;
+  const C = S.tengu.cap;
+  c.part();
+  c.shape(y, y + 2, (row) => (row === y ? [x - 0.6, x + 1.6] : row === y + 1 ? [x - 1.2, x + 2.2] : [x - 1.4, x + 2.4]), C, (_x, _y, t, u) => sphere(t * 0.8, u - 0.7, 1));
+  // Its pleats.
+  c.shade(Math.round(x), y + 1, -1);
+  c.shade(Math.round(x) + 1, y + 1, 1);
+}
+
+/** The crow's head from the front: the shaggy mane, the black mask, the hooked beak and the cap. */
+function tenguFront(c: PixelCanvas, cx: number, U: number): void {
+  if (!S.tengu) return;
+  const T = S.tengu;
+  // The mane, wild and falling past the jaw in ragged locks.
+  c.part();
+  const widths = [2.6, 3.6, 4.1, 4.3];
+  c.shape(7 + U, 10 + U, (y) => [cx - widths[y - 7 - U], cx + widths[y - 7 - U]], S.hair, (_x, _y, t, u) => sphere(t * 0.9, u * 1.2 - 0.9, 1));
+  c.part();
+  for (const [x, y0, y1] of [[8, 11, 14], [7, 12, 13], [15, 11, 15], [16, 12, 14]]) for (let y = y0; y <= y1; y++) c.px(x, y + U, S.hair, cyl(x < cx ? -0.8 : 0.8, 0), { bias: y === y1 ? -1 : 0 });
+  for (const x of [9, 14]) c.px(x, 6 + U, S.hair, sphere(x < cx ? -0.4 : 0.4, -0.7));
+  // The mask over brow and eyes, glossy as a crow's back.
+  c.part();
+  const mrows: [number, number][] = [[-3.0, 3.0], [-3.3, 3.3], [-3.2, 3.2]];
+  c.shape(10 + U, 12 + U, (y) => [cx + mrows[y - 10 - U][0], cx + mrows[y - 10 - U][1]], T.face, (_x, _y, t, u) => sphere(t * 0.9, u * 0.8 - 0.5, 1));
+  for (const x of [10, 13]) c.shade(x, 11 + U, 1);
+  // The beak, hooked down over the mouth.
+  c.part();
+  const brows: [number, number][] = [[-1.7, 1.7], [-1.3, 1.3], [-1.0, 1.0], [-0.5, 0.5]];
+  c.shape(13 + U, 16 + U, (y) => [cx + brows[y - 13 - U][0], cx + brows[y - 13 - U][1]], T.beak, (_x, _y, t, u) => sphere(t * 0.7, u * 0.8 - 0.1, 1));
+  c.shade(cx - 1, 13 + U, 1);
+  c.shade(cx - 1, 14 + U, 1);
+  c.shade(cx, 16 + U, -1);
+  tokin(c, cx - 0.5, 6 + U);
+}
+
+/** The crow's head from behind: the mane hanging in ragged locks, the cap's crown just showing. */
+function tenguBack(c: PixelCanvas, cx: number, U: number): void {
+  if (!S.tengu) return;
+  c.part();
+  c.ellipse(cx, 11 + U, 3.9, 3.9, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
+  c.part();
+  for (let x = cx - 4; x <= cx + 3; x++) {
+    const end = 15 + ((x * 5) % 3 === 0 ? 1 : 0) + (x === cx - 1 || x === cx + 1 ? 1 : 0);
+    for (let y = 14; y <= end; y++) c.px(x, y + U, S.hair, cyl((x + 0.5 - cx) / 4, -0.2), { bias: y === end ? -1 : 0 });
+  }
+  // Streaks through the mane.
+  for (const x of [cx - 3, cx, cx + 2]) c.shade(x, 12 + U, -1);
+  for (let y = 8; y <= 13; y++) {
+    c.shade(cx - 2, y + U, y < 11 ? 1 : 0);
+    c.shade(cx + 1, y + U, y > 9 ? 1 : 0);
+  }
+  c.shade(cx - 1, 8 + U, 1);
+  c.part();
+  c.ellipse(cx, 6.9 + U, 1.6, 0.9, S.tengu.cap, { normal: (_x, _y, dx, dy) => sphere(dx, dy - 0.5) });
+}
+
+/** The crow's head facing left: mane behind, the mask, the beak jutting and hooking down, the cap. */
+function tenguSide(c: PixelCanvas, hx: number, U: number): void {
+  if (!S.tengu) return;
+  const T = S.tengu;
+  c.part();
+  const rows: [number, number][] = [
+    [-2.6, 2.6],
+    [-3.6, 3.2],
+    [-4.1, 3.4],
+    [-4.0, 3.5],
+    [-0.4, 3.6],
+    [0.0, 3.7],
+    [0.4, 3.6],
+    [0.8, 3.8],
+    [1.4, 3.4],
+  ];
+  c.shape(7 + U, 15 + U, (y) => [hx + rows[y - 7 - U][0], hx + rows[y - 7 - U][1]], S.hair, (_x, _y, t, u) => sphere(t * 0.9, u * 1.4 - 0.9, 1));
+  for (const [x, y] of [[3, 15], [2, 14], [4, 13]]) c.shade(hx + x, y + U, -1);
+  c.px(hx + 3, 16 + U, S.hair, sphere(0.6, 0.6), { bias: -1 });
+  c.px(hx + 2, 6 + U, S.hair, sphere(0.3, -0.7));
+  // The mask over the brow and eye.
+  c.part();
+  c.shape(10 + U, 12 + U, (y) => (y === 10 + U ? [hx - 4.4, hx - 0.2] : [hx - 4.6, hx - 0.6]), T.face, (_x, _y, t, u) => sphere(t * 0.8 - 0.4, u * 0.8 - 0.5, 1));
+  c.shade(hx - 3, 11 + U, 1);
+  // The beak, jutting out and hooking down at the tip.
+  c.part();
+  const brows: [number, number][] = [[-6.2, -3.6], [-6.8, -3.6], [-6.4, -4.6]];
+  c.shape(12 + U, 14 + U, (y) => [hx + brows[y - 12 - U][0], hx + brows[y - 12 - U][1]], T.beak, (_x, _y, t, u) => sphere(t * 0.5 - 0.3, u * 0.9 - 0.4, 1));
+  c.shade(hx - 5, 12 + U, 1);
+  c.shade(hx - 5, 13 + U, -1);
+  c.px(hx - 6, 15 + U, T.beak, sphere(-0.4, 0.6), { bias: -1 });
+  tokin(c, hx - 2.2, 6 + U);
+}
+
+/** A shin wrapped in cloth, from under the tucked hakama down to the foot, crossed with darker turns. */
+function shin(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, bias = 0): void {
+  if (!S.wraps) return;
+  const W = S.wraps;
+  c.part();
+  c.capsule(x0, y0, x1, y1, 1.25, 1.1, W, { bias });
+  for (let y = Math.floor(y0); y <= Math.ceil(y1); y++) for (let x = Math.floor(Math.min(x0, x1) - 2); x <= Math.ceil(Math.max(x0, x1) + 2); x++) {
+    if (c.materialAt(x, y) === W && ((x + y) & 1) === 0) c.shade(x, y, -1);
+  }
+}
+
+/**
+ * The straw mino over the shoulders: rows `top` to `hem`, `edges` giving each
+ * row's span. The straw hangs in strands, overlapping in tiers, and the hem is
+ * ragged.
+ */
+function mino(c: PixelCanvas, top: number, hem: number, edges: (y: number) => [number, number], normal: (t: number, u: number) => Vec3, bias = 0): void {
+  if (!S.mino) return;
+  const M = S.mino;
+  c.part();
+  c.shape(top, hem, edges, M.straw, (_x, _y, t, u) => normal(t, u), { bias });
+  for (let y = top; y <= hem; y++) {
+    const [l, r] = edges(y);
+    const tier = (y - top) % 4;
+    for (let x = Math.round(l); x < Math.round(r); x++) {
+      if (c.materialAt(x, y) !== M.straw) continue;
+      // Strands down the straw, the bottom of each tier in shadow, the top of the next lit.
+      if (((x + (y >> 2)) & 1) === 0) c.shade(x, y, -1);
+      if (tier === 3 && y < hem - 1) c.shade(x, y, -1);
+      if (tier === 0 && y > top) c.shade(x, y, 1);
+      // A ragged hem.
+      if (y === hem && ((x * 7 + 3) % 3) !== 0) c.erase(x, y);
+      if (y === hem - 1 && ((x * 5) % 4) === 0) c.erase(x, y);
+    }
+  }
+}
+
+/** The grey fur collar round the neck, its lower edge in tufts. */
+function furCollar(c: PixelCanvas, x: number, y: number, rx: number, ry = 1.4): void {
+  if (!S.mino) return;
+  const F = S.mino.fur;
+  c.part();
+  c.ellipse(x, y, rx, ry, F, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 1) });
+  const by = Math.round(y + ry - 0.5);
+  for (let xx = Math.floor(x - rx); xx <= Math.ceil(x + rx); xx++) {
+    if (c.materialAt(xx, by) !== F) continue;
+    if ((xx & 1) === 0) c.px(xx, by + 1, F, sphere((xx + 0.5 - x) / rx, 0.6), { bias: -1 });
+    else c.shade(xx, by - 1, 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Directions
 
 type Meta = { tip: { x: number; y: number }; hand: { x: number; y: number } };
@@ -610,14 +967,20 @@ type Meta = { tip: { x: number; y: number }; hand: { x: number; y: number } };
 function hakama(c: PixelCanvas, cx: number, U: number, L: number, fa: number, fb: number, sway: number): void {
   const waist = 22 + U;
   const leg = (side: -1 | 1, lift: number) => {
-    const hem = 28 + L - lift;
-    c.part();
-    c.shape(waist, hem, (y) => {
+    const hem = 28 + L - lift - (S.wraps ? TUCK : 0);
+    const edges = (y: number): [number, number] => {
       const u = (y + 0.5 - waist) / (hem + 1 - waist);
-      const hw = 4.1 + 2.1 * u;
+      const hw = 4.1 + (S.wraps ? 1.6 : 2.1) * u;
       const x = cx + sway * 0.5 * u * u;
       return side < 0 ? [x - hw, x + 0.1] : [x - 0.1, x + hw];
-    }, S.hakama, (_x, _y, t, u) => cyl(t * 0.8 + side * 0.25, 0.15 - u * 0.25), { bias: side > 0 ? 0 : -1 + (lift ? 1 : 0) });
+    };
+    const normal = (_x: number, _y: number, t: number, u: number) => cyl(t * 0.8 + side * 0.25, 0.15 - u * 0.25);
+    const bias = side > 0 ? 0 : -1 + (lift ? 1 : 0);
+    // Wrapped shins under a tucked hakama.
+    if (S.wraps) shin(c, cx + side * 2.3, hem - 1, cx + side * 2.3, 29 - lift, bias);
+    c.part();
+    c.shape(waist, hem, edges, S.hakama, normal, { bias });
+    if (S.hem) c.shape(hem - 1, hem, edges, S.hem, normal, { bias });
     // Pleats.
     for (let y = waist + 2; y <= hem; y++) {
       const u = (y + 0.5 - waist) / (hem + 1 - waist);
@@ -627,7 +990,8 @@ function hakama(c: PixelCanvas, cx: number, U: number, L: number, fa: number, fb
   leg(-1, fa);
   leg(1, fb);
   // The split between the legs, at the hem.
-  for (let y = 26 + L; y <= 28 + L; y++) c.shade(cx - 0.5, y, -2);
+  const tuck = S.wraps ? TUCK : 0;
+  for (let y = 26 + L - tuck; y <= 28 + L - tuck; y++) c.shade(cx - 0.5, y, -2);
 }
 
 function drawDown(c: PixelCanvas, p: Pose): Meta {
@@ -643,6 +1007,9 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   };
   // The fox's tail sweeping out and up behind him.
   foxTail(c, 14.5, 23 + U, 21 + p.sway, 24 + U, 19.5 + p.sway * 0.5, 13.5 + U, p.sway, -1);
+  // The tengu's folded wings, their points showing either side of him.
+  wing(c, 6.6, 16.4 + U, 4.4 + p.sway * 0.3, 26 + L, 1.8, -1, -1);
+  wing(c, 17.4, 16.4 + U, 19.6 + p.sway * 0.3, 26 + L, 1.8, 1, -1);
   if (p.bladeBehind) swordArm();
 
   // The ponytail swinging behind the head, peeking out at the side.
@@ -702,6 +1069,35 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     }
   }
 
+  if (S.tengu) {
+    // A white cord down each side of the chest, strung with two bonten each.
+    c.part();
+    for (let y = top + 1; y <= waist - 2; y++) {
+      c.px(cx - 3, y, S.tengu.bonten, cyl(-0.5, 0.2), { bias: -1 });
+      c.px(cx + 2, y, S.tengu.bonten, cyl(0.5, 0.2), { bias: -1 });
+    }
+    bonten(c, cx - 3, top + 2);
+    bonten(c, cx + 1, top + 2);
+    bonten(c, cx - 3, top + 5);
+    bonten(c, cx + 1, top + 5);
+  }
+
+  // The mino: shaggy straw panels from the shoulders to the thighs, open in front.
+  if (S.mino) {
+    const rt = 15 + U;
+    const rb = 25 + L;
+    const panel = (side: -1 | 1) => (y: number): [number, number] => {
+      const u = (y + 0.5 - rt) / (rb + 1 - rt);
+      const hw = 5.0 + 2.2 * u;
+      const gap = 2.1 + 0.8 * u;
+      const x = cx + p.sway * 0.5 * u;
+      return side < 0 ? [x - hw, x - gap] : [x + gap, x + hw];
+    };
+    mino(c, rt, rb, panel(-1), (t, u) => cyl(t * 0.6 - 0.35, 0.25 - u * 0.35));
+    mino(c, rt, rb, panel(1), (t, u) => cyl(t * 0.6 + 0.35, 0.25 - u * 0.35));
+  }
+  furCollar(c, cx, top + 0.3, 4.4);
+
   // The haori: open panels from the shoulders to the hips.
   if (S.haori) {
     const rt = 15 + U;
@@ -731,8 +1127,11 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     hand(c, fh.x, fh.y);
   };
   if (!p.handFront) freeArm();
+  // The tengu's ruff of feathers, standing up behind his head.
+  ruff(c, cx - 5.2, cx + 5.2, top, -1);
   shoulder(c, 16.8, 16.2 + U);
   pad(c, 17.3, 16.4 + U);
+  mantle(c, 17.2, 16.2 + U, 1);
 
   // Head, tipped back by the pose.
   c.offset(BODY_X, BODY_Y + (p.headY ?? 0));
@@ -749,6 +1148,8 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     for (let x = 9; x <= 14; x++) c.shade(x, 11 + U, -2);
   } else if (S.armor) {
     kabuto(c, 'front', cx, U);
+  } else if (S.tengu) {
+    tenguFront(c, cx, U);
   } else {
     // Hair swept back to the knot, one loose lock over the brow.
     c.part();
@@ -781,6 +1182,7 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   if (!p.bladeBehind) swordArm();
   shoulder(c, 7.2, 16.2 + U);
   if (S.armor) pad(c, 6.7, 16.4 + U);
+  mantle(c, 6.8, 16.2 + U, -1);
   if (p.glint) {
     // A star of light off the tip as the blade snaps up.
     c.spark(tip.x, tip.y, S.bladeGlow, p.glint);
@@ -865,6 +1267,20 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
     for (const [x, y] of [[11, 16], [12, 16], [10, 17], [13, 17], [10, 18], [13, 18], [11, 19], [12, 19]]) c.px(x, y + U, S.trim, { x: 0, y: 0.3, z: 0.95 });
     c.px(11, 17.5 + U, S.trim, { x: 0, y: 0.3, z: 0.95 }, { bias: 1 });
   }
+  if (S.mino) {
+    // The mino from behind: one great shaggy cape from the shoulders to the thighs.
+    const rt = Math.ceil(top);
+    const rb = 26 + L;
+    mino(c, rt, rb, (y) => {
+      const u = Math.max(0, (y + 0.5 - rt) / (rb + 1 - rt));
+      const hw = 4.9 + 2.3 * u;
+      const x = cx + p.sway * 0.5 * u;
+      return [x - hw, x + hw];
+    }, (t, u) => cyl(t * 0.9, 0.25 - u * 0.35));
+  }
+  // The tengu's folded wings down his back, crossing at their points.
+  wing(c, 15.2, 15.6 + U, 13 + p.sway * 0.4, 27.5 + L, 2.7, 1);
+  wing(c, 8.8, 15.6 + U, 11 + p.sway * 0.4, 27.5 + L, 2.7, -1);
   // The fox's tail over the hakama, curling up to one side.
   foxTail(c, 12.5, 22.5 + U, 19 + p.sway, 26 + U, 18.5 + p.sway * 0.6, 15 + U, p.sway);
 
@@ -873,6 +1289,8 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
     hand(c, fh.x, fh.y);
   }
 
+  ruff(c, cx - 5.4, cx + 5.4, top + 1);
+  furCollar(c, cx, top + 0.4, 4.6);
   if (S.hat) {
     // The back of the head under the kasa, then the hat.
     c.part();
@@ -880,6 +1298,8 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
     kasa(c, cx, U);
   } else if (S.armor) {
     kabuto(c, 'back', cx, U);
+  } else if (S.tengu) {
+    tenguBack(c, cx, U);
   } else {
     c.part();
     c.ellipse(cx, 11 + U, 3.9, 3.9, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
@@ -902,6 +1322,8 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
   shoulder(c, 16.8, 16.2 + U);
   pad(c, 6.7, 16.4 + U);
   if (S.armor) pad(c, 17.3, 16.4 + U);
+  mantle(c, 6.8, 16.2 + U, -1);
+  mantle(c, 17.2, 16.2 + U, 1);
   return { tip, hand: { x: p.blade.hx, y: p.blade.hy } };
 }
 
@@ -916,6 +1338,8 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   const sh = { x: hx + 0.6, y: 17.4 + U };
   // The fox's tail streaming out behind and curling up.
   foxTail(c, hx + 2.8, 22 + U, hx + 9.5 + p.sway, 23.5 + U, hx + 8.5 + p.sway * 0.5, 13 + U, p.sway, -1);
+  // The tengu's far wing, a little behind the near one.
+  wing(c, hx + 3, 16 + U, hx + 5.6 + p.sway * 0.7, 26 + L, 2, 1, -1);
   if (p.bladeBehind) tip = drawKatana(c, p.blade);
 
   // The ponytail streaming behind.
@@ -934,14 +1358,19 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   // Hakama in profile: each leg a wide pleated tube swinging with its foot.
   const waist = 22 + U;
   const leg = (f: number, bias: number) => {
-    const hem = 28 + L - Math.max(0, f) * 0.35;
-    c.part();
-    c.shape(waist, hem, (y) => {
+    const hem = 28 + L - Math.max(0, f) * 0.35 - (S.wraps ? TUCK : 0);
+    const edges = (y: number): [number, number] => {
       const u = (y + 0.5 - waist) / (hem + 1 - waist);
       const x = cx + 0.3 - f * 0.9 * u + Sx * 0.4 * (1 - u);
-      const hw = 2.3 + 1.6 * u;
+      const hw = 2.3 + (S.wraps ? 1.2 : 1.6) * u;
       return [x - hw, x + hw];
-    }, S.hakama, (_x, _y, t, u) => cyl(t * 0.9, 0.15 - u * 0.25), { bias });
+    };
+    const normal = (_x: number, _y: number, t: number, u: number) => cyl(t * 0.9, 0.15 - u * 0.25);
+    // Wrapped shins under a tucked hakama, down to the foot.
+    if (S.wraps) shin(c, cx + 0.3 - f * 0.9, hem - 1, cx + 0.1 - f * 1.05, 29 - Math.max(0, f) * 0.35, bias);
+    c.part();
+    c.shape(waist, hem, edges, S.hakama, normal, { bias });
+    if (S.hem) c.shape(Math.ceil(hem) - 1, hem, edges, S.hem, normal, { bias });
     for (let y = waist + 2; y <= hem; y++) {
       const u = (y + 0.5 - waist) / (hem + 1 - waist);
       c.shade(Math.round(cx + 0.3 - f * 0.9 * u), y, -1);
@@ -972,6 +1401,23 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
     }, (t, u) => cyl(t * 0.8 - 0.1, 0.2 - u * 0.3));
     for (let y = waist + 1; y <= waist + 4; y++) c.shade(cx, y, -2);
   }
+  if (S.tengu) {
+    // The cord and its bonten down the chest, and the near wing folded over his back.
+    c.part();
+    for (let y = top + 1; y <= waist - 2; y++) c.px(Math.round(hx - 2.2), y, S.tengu.bonten, cyl(-0.6, 0.2), { bias: -1 });
+    bonten(c, Math.round(hx - 3.4), top + 1);
+    bonten(c, Math.round(hx - 3.4), top + 4);
+    wing(c, hx + 1.4, 16 + U, hx + 3.6 + p.sway * 0.7, 26.5 + L, 2.4, 1);
+  }
+  if (S.mino) {
+    const rt = 15 + U;
+    const rb = 25 + L;
+    mino(c, rt, rb, (y) => {
+      const u = Math.max(0, (y + 0.5 - rt) / (rb + 1 - rt));
+      return [hx - 1.4 - 1.6 * u, hx + 3.4 + 2.2 * u + p.sway * 0.6 * u];
+    }, (t, u) => cyl(t * 0.8 - 0.1, 0.25 - u * 0.3));
+  }
+  furCollar(c, hx + 0.4, top + 0.3, 3.2);
   if (S.haori) {
     const rt = 15 + U;
     const rb = 24 + L;
@@ -997,6 +1443,8 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
     for (let x = Math.floor(hx - 5); x <= hx + 1; x++) c.shade(x, 11 + U, -2);
   } else if (S.armor) {
     kabuto(c, 'side', hx, U);
+  } else if (S.tengu) {
+    tenguSide(c, hx, U);
   } else {
     c.part();
     const rows: [number, number][] = [
@@ -1030,6 +1478,7 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   hand(c, p.blade.hx, p.blade.hy);
   shoulder(c, hx + 0.8, 16.8 + U, 2.1, 1.6);
   if (S.armor) pad(c, hx + 1, 17.2 + U, 2.3, 2.5);
+  mantle(c, hx + 1, 16.6 + U, 1, 2.6, 2.1);
   return { tip, hand: { x: p.blade.hx, y: p.blade.hy } };
 }
 
@@ -1415,9 +1864,35 @@ function icon(): { px: Uint8ClampedArray; put: (x: number, y: number, c: string)
   return { px, put };
 }
 
+/** A skin's flourish on its buttons: crow feathers or snowflakes in the icon's empty corners. */
+export type IconDeco = 'feather' | 'snow';
+
+/** A crow feather angled up and right from its quill at (x, y): a dark vane and a pale shaft. */
+function featherMark(put: (x: number, y: number, c: string) => void, x: number, y: number): void {
+  for (let i = 0; i < 4; i++) {
+    put(x + i, y - i, i === 0 ? '#8c80d0' : '#3a3460');
+    put(x + i + 1, y - i, '#12101e');
+  }
+  put(x + 4, y - 4, '#12101e');
+  put(x + 2, y - 3, '#2a2648');
+}
+
+/** A snowflake at (x, y): a white point, with arms when `big`. */
+function flakeMark(put: (x: number, y: number, c: string) => void, x: number, y: number, big: boolean): void {
+  if (big) for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) put(x + ox, y + oy, '#a8dcff');
+  put(x, y, '#ffffff');
+}
+
 /** A katana from the lower left up to the upper right, a gold guard, and `wind` curling round the point. */
-export function katanaIcon(edge: string, steel: string, wind: Cols | null): Uint8ClampedArray {
+export function katanaIcon(edge: string, steel: string, wind: Cols | null, deco?: IconDeco): Uint8ClampedArray {
   const { px, put } = icon();
+  if (deco === 'feather') featherMark(put, 9, 14);
+  if (deco === 'snow') {
+    flakeMark(put, 3, 3, true);
+    flakeMark(put, 12, 12, true);
+    flakeMark(put, 14, 8, false);
+    flakeMark(put, 7, 1, false);
+  }
   if (wind) {
     for (let k = 0; k < 16; k++) {
       const a = k * 0.55;
@@ -1439,8 +1914,12 @@ export function katanaIcon(edge: string, steel: string, wind: Cols | null): Uint
 }
 
 /** The dash: a blade streaking right between lines of wind. */
-export function dashIcon(wind: Cols, edge: string): Uint8ClampedArray {
+export function dashIcon(wind: Cols, edge: string, deco?: IconDeco): Uint8ClampedArray {
   const { px, put } = icon();
+  if (deco === 'feather') {
+    featherMark(put, 1, 15);
+    featherMark(put, 10, 4);
+  }
   for (let x = 0; x < 11; x++) {
     if (x % 4 !== 3) put(x, 4, wind[2]);
     if (x % 3 !== 1) put(x + 2, 12, wind[2]);
@@ -1457,8 +1936,14 @@ export function dashIcon(wind: Cols, edge: string): Uint8ClampedArray {
 }
 
 /** Two cuts crossing, flaring where they meet. */
-export function crossIcon(cols: Cols): Uint8ClampedArray {
+export function crossIcon(cols: Cols, deco?: IconDeco): Uint8ClampedArray {
   const { px, put } = icon();
+  if (deco === 'snow') {
+    flakeMark(put, 7, 2, true);
+    flakeMark(put, 2, 8, true);
+    flakeMark(put, 13, 8, false);
+    flakeMark(put, 8, 13, true);
+  }
   for (let i = 1; i < 15; i++) {
     const k = Math.abs(i - 7.5) / 7.5;
     const c = k < 0.3 ? cols[0] : k < 0.65 ? cols[1] : cols[2];

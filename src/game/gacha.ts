@@ -66,6 +66,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'bard:fadista': 'epic',
   'chronomancer:clockwork': 'epic',
   'samurai:shogun': 'epic',
+  'samurai:tengu': 'epic',
   'druid:autumn': 'epic',
   'wizard:lotus': 'epic',
   'druid:frostfang': 'epic',
