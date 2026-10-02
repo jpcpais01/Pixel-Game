@@ -27,6 +27,11 @@ import { MECH_ANIMS, MECH_H, MECH_LOOKS, MECH_W, buildMechFrames } from './mech'
 import { SYNTH_ANIMS, SYNTH_H, SYNTH_LOOKS, SYNTH_W, buildSynthFrames } from './synth';
 import { POLTER_ANIMS, POLTER_H, POLTER_LOOKS, POLTER_W, buildPolterFrames } from './poltergeist';
 import { WRAITH_ANIMS, WRAITH_H, WRAITH_LOOKS, WRAITH_W, buildWraithFrames } from './wraith';
+import { BANSHEE_ANIMS, BANSHEE_H, BANSHEE_LOOKS, BANSHEE_W, buildBansheeFrames } from './banshee';
+import { YUREI_ANIMS, YUREI_H, YUREI_LOOKS, YUREI_W, buildYureiFrames } from './yurei';
+import { CAPTAIN_ANIMS, CAPTAIN_H, CAPTAIN_LOOKS, CAPTAIN_W, buildCaptainFrames } from './captain';
+import { BALLET_ANIMS, BALLET_H, BALLET_LOOKS, BALLET_W, buildBalletFrames } from './ballerina';
+import { JUGG_ANIMS, JUGG_H, JUGG_LOOKS, JUGG_W, buildJuggFrames } from './juggernaut';
 import { INV_H, INV_W, INVENTOR_LOOKS, buildInventorFrames, inventorAnims } from './inventor';
 import { BEAST_H, BEAST_LOOKS, BEAST_W, beastAnims, buildBeastFrames } from './beast';
 import { SAGE_ANIMS, SAGE_H, SAGE_LOOKS, SAGE_W, buildSageFrames } from './sage';
@@ -176,6 +181,11 @@ rig(MECH_LOOKS, MECH_W, MECH_H, buildMechFrames, () => MECH_ANIMS);
 rig(SYNTH_LOOKS, SYNTH_W, SYNTH_H, buildSynthFrames, () => SYNTH_ANIMS);
 rig(POLTER_LOOKS, POLTER_W, POLTER_H, buildPolterFrames, () => POLTER_ANIMS);
 rig(WRAITH_LOOKS, WRAITH_W, WRAITH_H, buildWraithFrames, () => WRAITH_ANIMS);
+rig(BANSHEE_LOOKS, BANSHEE_W, BANSHEE_H, buildBansheeFrames, () => BANSHEE_ANIMS);
+rig(YUREI_LOOKS, YUREI_W, YUREI_H, buildYureiFrames, () => YUREI_ANIMS);
+rig(CAPTAIN_LOOKS, CAPTAIN_W, CAPTAIN_H, buildCaptainFrames, () => CAPTAIN_ANIMS);
+rig(BALLET_LOOKS, BALLET_W, BALLET_H, buildBalletFrames, () => BALLET_ANIMS);
+rig(JUGG_LOOKS, JUGG_W, JUGG_H, buildJuggFrames, () => JUGG_ANIMS);
 rig(INVENTOR_LOOKS, INV_W, INV_H, buildInventorFrames, inventorAnims);
 rig(BEAST_LOOKS, BEAST_W, BEAST_H, buildBeastFrames, beastAnims);
 // The Force Sage: a Jedi-class type on a rig of her own.

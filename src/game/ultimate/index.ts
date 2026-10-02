@@ -38,6 +38,16 @@ import { BANSHEE_KIT, POLTER_KIT, TEA_KIT } from '../Poltergeist';
 import { CALA_KIT, FERRY_KIT, FIREFLY_KIT, WRAITH_KIT } from '../Wraith';
 import { ENGINEER_KIT, FORGEBEARD_KIT } from '../Engineer';
 import { EINSTEIN_KIT, SCIENTIST_KIT, TESLA_KIT } from '../Scientist';
+import { Lament, lamentIcon } from './banshee';
+import { BANSHEE_KIT as WEEPER_KIT, BRIDE_KIT } from '../Banshee';
+import { HundredCandles, candlesIcon } from './yurei';
+import { YUKI_KIT, YUREI_KIT } from '../Yurei';
+import { GhostShip, ghostShipIcon } from './captain';
+import { ADMIRAL_KIT, CAPTAIN_KIT } from '../Captain';
+import { MusicBox, MUSIC_MS, musicBoxIcon } from './ballerina';
+import { BALLET_KIT, FIREBIRD_KIT, type Ballerina } from '../Ballerina';
+import { JUGG_KIT, TINMAN_KIT, type Juggernaut } from '../Juggernaut';
+import { MELT_MS, meltdownIcon } from './juggernaut';
 import { chainReaction, megaSentry } from './inventor';
 import { BENFICA_KIT, EAGLE_KIT, PHOENIX_KIT } from '../Eagle';
 import { LION_KIT, NEMEAN_KIT, SPORTING_KIT } from '../Lion';
@@ -478,6 +488,58 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.nightIcon,
     cast: (c) => c.world.addEffect(new DeadOfNight(c.world, c)),
   },
+  'automaton:juggernaut': {
+    name: 'Meltdown',
+    cost: 70,
+    windup: 550,
+    aim: 'self',
+    pal: JUGG_KIT.pal,
+    icon: meltdownIcon,
+    // The Juggernaut does it itself (see Juggernaut.meltdown): its heat pinned hot, steam scalding all round, a great vent at the end.
+    lasts: MELT_MS,
+    cast: (c) => (c.hero as Partial<Juggernaut>).meltdown?.(c),
+  },
+  'automaton:ballerina': {
+    name: 'Music Box',
+    cost: 70,
+    windup: 550,
+    aim: 'self',
+    pal: BALLET_KIT.pal,
+    icon: musicBoxIcon,
+    // She spins the vortex herself (Ballerina.dance); the box, the blades and the petals are MusicBox.
+    lasts: MUSIC_MS,
+    cast: (c) => {
+      (c.hero as Partial<Ballerina>).dance?.(MUSIC_MS);
+      c.world.addEffect(new MusicBox(c.world, c));
+    },
+  },
+  'phantom:captain': {
+    name: 'Ghost Ship',
+    cost: 75,
+    windup: 600,
+    aim: 'dir',
+    pal: CAPTAIN_KIT.pal,
+    icon: ghostShipIcon,
+    cast: (c) => c.world.addEffect(new GhostShip(c.world, c)),
+  },
+  'phantom:yurei': {
+    name: 'Hundred Candles',
+    cost: 75,
+    windup: 600,
+    aim: 'self',
+    pal: YUREI_KIT.pal,
+    icon: candlesIcon,
+    cast: (c) => c.world.addEffect(new HundredCandles(c.world, c)),
+  },
+  'phantom:weeper': {
+    name: 'Lament',
+    cost: 75,
+    windup: 600,
+    aim: 'self',
+    pal: WEEPER_KIT.pal,
+    icon: lamentIcon,
+    cast: (c) => c.world.addEffect(new Lament(c.world, c)),
+  },
   'inventor:engineer': {
     name: 'Mega Sentry',
     cost: 70,
@@ -696,6 +758,11 @@ const SKINS: Record<string, UltSkin> = {
   'phantom:firefly': { pal: FIREFLY_KIT.pal, type: 'wraith' },
   'phantom:banshee': { pal: BANSHEE_KIT.pal },
   'phantom:ferryman': { pal: FERRY_KIT.pal, type: 'wraith' },
+  'automaton:tinman': { pal: TINMAN_KIT.pal, type: 'juggernaut' },
+  'automaton:firebird': { pal: FIREBIRD_KIT.pal, type: 'ballerina' },
+  'phantom:admiral': { pal: ADMIRAL_KIT.pal, type: 'captain' },
+  'phantom:yuki': { pal: YUKI_KIT.pal, type: 'yurei' },
+  'phantom:bride': { pal: BRIDE_KIT.pal, type: 'weeper' },
   'inventor:einstein': { pal: EINSTEIN_KIT.pal, type: 'scientist' },
   'inventor:forgebeard': { pal: FORGEBEARD_KIT.pal },
   'inventor:tesla': { pal: TESLA_KIT.pal, type: 'scientist' },
