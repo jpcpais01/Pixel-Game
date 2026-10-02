@@ -20,7 +20,7 @@ import { LOTUS_MAGIC, LOTUS_SKIN } from './Tide';
 import { HEADLESS_SKIN, JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
 import { AFONSO_KIT, King, KING_KIT } from './King';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
-import { CRUSADER_KIT, HOLY_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
+import { CRUSADER_KIT, HOLY_KIT, INQUISITOR_KIT, LIONHEART_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { GUARD_STYLE, Jedi, JEDI_STYLE, MASTER_STYLE } from './Jedi';
 import { Sith, SITH_KIT, WARLORD_KIT } from './Sith';
@@ -509,6 +509,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_sanctuary_seraph' },
             },
           },
+          {
+            // A lion knight in white-and-gold plate: a golden lion's face for a visor in a tawny mane, crimson tabard and shield bearing gold lions, a lion-headed mace.
+            id: 'lionheart',
+            name: 'Lionheart',
+            accent: 0xffb43a,
+            preview: { texture: 'paladin_lion', glow: 'paladin_lion_e', idle: 'paladin_lion_idle_down', chosen: 'paladin_lion_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
+            buttons: {
+              attack: { texture: 'icon_mace_lion' },
+              special: { texture: 'icon_sanctuary_lion' },
+            },
+          },
         ],
       },
       {
@@ -537,11 +548,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_sunfall_oath' },
             },
           },
+          {
+            // A grim witch-hunter: wide-brimmed black hat over a steel half-mask, dark steel and a black leather coat, a crimson sash, a censer at the belt, white fire.
+            id: 'inquisitor',
+            name: 'Inquisitor',
+            accent: 0xdfe6f4,
+            preview: { texture: 'paladin_inquisitor', glow: 'paladin_inquisitor_e', idle: 'paladin_inquisitor_idle_down', chosen: 'paladin_inquisitor_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
+            buttons: {
+              attack: { texture: 'icon_hammer_inquisitor' },
+              special: { texture: 'icon_sunfall_inquisitor' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { holy: HOLY_KIT, seraph: SERAPH_KIT, crusader: CRUSADER_KIT, oathbreaker: OATH_KIT }[look] ?? HOLY_KIT;
+      const kit = { holy: HOLY_KIT, seraph: SERAPH_KIT, lionheart: LIONHEART_KIT, crusader: CRUSADER_KIT, oathbreaker: OATH_KIT, inquisitor: INQUISITOR_KIT }[look] ?? HOLY_KIT;
       return new Paladin(world, x, y, kit);
     },
   },

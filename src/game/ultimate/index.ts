@@ -481,6 +481,8 @@ const SKINS: Record<string, UltSkin> = {
   'warrior:afonso': { pal: AFONSO_KIT.pal, type: 'king' },
   'paladin:seraph': { pal: pal(0xffffff, 0xfff0d0, 0xffc890, 0xff8ab8, 0xffd8b0) },
   'paladin:oathbreaker': { pal: pal(0xf6eeff, 0xd8b0ff, 0xa060ff, 0x4a1a8a, 0xb070ff), type: 'crusader' },
+  'paladin:lionheart': { pal: pal(0xfffbe8, 0xffd870, 0xffb43a, 0xa01828, 0xffc870) },
+  'paladin:inquisitor': { pal: pal(0xffffff, 0xe8eef8, 0xb8c4d8, 0x9a1428, 0xdfe6f4), type: 'crusader' },
   'jedi:guard': { pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
   'jedi:master': { pal: pal(0xf4fff4, 0x9af4a8, 0x2ed058, 0x0e7a32, 0x5aff7a) },
   'jedi:warlord': { pal: WARLORD_KIT.dominion, type: 'sith' },
