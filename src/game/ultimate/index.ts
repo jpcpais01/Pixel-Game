@@ -33,8 +33,8 @@ import { SIEGE_MS, SwarmProtocol } from './robot';
 import { DeadOfNight, HauntedHouse } from './phantom';
 import { POLTER_KIT, TEA_KIT } from '../Poltergeist';
 import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT } from '../Wraith';
-import { ENGINEER_KIT } from '../Engineer';
-import { EINSTEIN_KIT, SCIENTIST_KIT } from '../Scientist';
+import { ENGINEER_KIT, FORGEBEARD_KIT } from '../Engineer';
+import { EINSTEIN_KIT, SCIENTIST_KIT, TESLA_KIT } from '../Scientist';
 import { chainReaction, megaSentry } from './inventor';
 import { BENFICA_KIT, EAGLE_KIT } from '../Eagle';
 import { LION_KIT, SPORTING_KIT } from '../Lion';
@@ -498,6 +498,8 @@ const SKINS: Record<string, UltSkin> = {
   'phantom:cala': { pal: CALA_KIT.pal, type: 'wraith' },
   'phantom:firefly': { pal: FIREFLY_KIT.pal, type: 'wraith' },
   'inventor:einstein': { pal: EINSTEIN_KIT.pal, type: 'scientist' },
+  'inventor:forgebeard': { pal: FORGEBEARD_KIT.pal },
+  'inventor:tesla': { pal: TESLA_KIT.pal, type: 'scientist' },
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },

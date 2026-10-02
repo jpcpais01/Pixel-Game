@@ -100,7 +100,7 @@ import { birdSheet } from './skyArena';
 import { BOLT_DIRS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, reticle, salvoIcon } from './mech';
 import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
 import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
-import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
+import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, coilOrbIcon, hammerWrenchIcon, orbIcon, runeTurretIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
 import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, LION_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
@@ -556,18 +556,25 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   // The Inventor's turret ('turret': unfolding 'b0'..'b4', turned 'h0'..'h7'
   // and firing 'f0'..'f7'), and its icons. The Engineer and the Scientist
   // themselves are hero sheets (see heroSheets.ts).
-  const turret = [
-    ...Array.from({ length: TURRET_BUILD }, (_, i) => ({ name: `b${i}`, r: turretFrame(2, i / (TURRET_BUILD - 1) * 0.9).render() })),
-    ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `h${i}`, r: turretFrame(i).render() })),
-    ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `f${i}`, r: turretFrame(i, 1, 1).render() })),
-  ];
-  register(scene, 'turret', pack(turret, TURRET_SIZE, TURRET_SIZE), TURRET_SIZE, TURRET_SIZE);
+  // Forgebeard's stone-and-brass sentries are 'turret_forge', framed the same.
+  for (const [key, forge] of [['turret', false], ['turret_forge', true]] as const) {
+    const turret = [
+      ...Array.from({ length: TURRET_BUILD }, (_, i) => ({ name: `b${i}`, r: turretFrame(2, i / (TURRET_BUILD - 1) * 0.9, 0, forge).render() })),
+      ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `h${i}`, r: turretFrame(i, 1, 0, forge).render() })),
+      ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `f${i}`, r: turretFrame(i, 1, 1, forge).render() })),
+    ];
+    register(scene, key, pack(turret, TURRET_SIZE, TURRET_SIZE), TURRET_SIZE, TURRET_SIZE);
+  }
   scene.textures.addCanvas('icon_wrench', toCanvas(16, 16, wrenchIcon()));
   scene.textures.addCanvas('icon_turret', toCanvas(16, 16, turretIcon()));
   scene.textures.addCanvas('icon_tesla', toCanvas(16, 16, teslaIcon()));
   scene.textures.addCanvas('icon_orb', toCanvas(16, 16, orbIcon()));
   scene.textures.addCanvas('icon_tesla_einstein', toCanvas(16, 16, teslaIcon(true)));
   scene.textures.addCanvas('icon_orb_einstein', toCanvas(16, 16, orbIcon(true)));
+  scene.textures.addCanvas('icon_wrench_forgebeard', toCanvas(16, 16, hammerWrenchIcon()));
+  scene.textures.addCanvas('icon_turret_forgebeard', toCanvas(16, 16, runeTurretIcon()));
+  scene.textures.addCanvas('icon_tesla_tesla', toCanvas(16, 16, teslaIcon(false, true)));
+  scene.textures.addCanvas('icon_orb_tesla', toCanvas(16, 16, coilOrbIcon()));
   // The Beastkin: the eagle's razor feathers ('feather_<look>': headings
   // 'r0'..'r15'), the dragon's firebolts ('firebolt_<look>': flickering
   // 'f0'..'f3'), and the buttons. The beasts themselves are hero sheets.
