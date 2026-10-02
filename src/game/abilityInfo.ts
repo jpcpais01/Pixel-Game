@@ -222,4 +222,9 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'A chain hook drags the first foe to him, stunned; bosses are yanked and slowed.',
     special: 'A steam torpedo runs along the ground and bursts, knocking foes back and soaking them.',
   },
+  'bear.bear': {
+    attack: 'Two wide, heavy swipes, then a two-paw smash that cracks the ground and throws foes back.',
+    ability: 'Rears up and slams down: the earth cracks round him, striking and stunning every foe near.',
+    special: 'Grows huge in a rage: takes far less harm, and every maul blow sends a shockwave ahead.',
+  },
 };

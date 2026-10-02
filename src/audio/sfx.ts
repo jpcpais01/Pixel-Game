@@ -2844,6 +2844,38 @@ export class Sfx {
     this.burstNoise(out, t + 0.04, 'bandpass', 900, 2600, 0.9, 0.35, 0.45);
     for (let i = 0; i < 8; i++) this.burstNoise(out, t + 0.25 + i * rand(0.03, 0.07), 'highpass', rand(3000, 5000), 2500, 1, 0.08, 0.04);
   }
+
+  /** A bear's growl: deeper and rougher than the lion's roar, a chesty rumble that rises into a bellow; the wrath's rolls on longer. */
+  bearGrowl(t: number, pan: number, big: boolean): void {
+    const ctx = this.m.ctx;
+    const dur = big ? 1.2 : 0.6;
+    const out = this.out(pan, big ? 0.95 : 0.75, 0.45);
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 900, 1.4, out));
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.42, t + dur * 0.3);
+    g.gain.setTargetAtTime(0, t + dur * 0.65, dur * 0.2);
+    // A slow, ragged flutter: the growl's grit.
+    const depth = gain(ctx, 14);
+    const flutter = osc(ctx, 'square', 17, depth);
+    for (const [f, type] of [[62, 'sawtooth'], [93, 'sawtooth'], [41, 'square']] as const) {
+      const o = osc(ctx, type, f, g);
+      depth.connect(o.frequency);
+      sweep(o.frequency, t, f * 0.85, f * 1.2, dur * 0.4);
+      o.start(t);
+      o.stop(t + dur + 0.3);
+    }
+    flutter.start(t);
+    flutter.stop(t + dur + 0.3);
+    const air = gain(ctx, 0, out);
+    air.gain.setValueAtTime(0, t);
+    air.gain.linearRampToValueAtTime(0.22, t + dur * 0.35);
+    air.gain.setTargetAtTime(0, t + dur * 0.6, dur * 0.2);
+    const bp = filter(ctx, 'bandpass', 420, 1.6, air);
+    sweep(bp.frequency, t, 300, 640, dur * 0.4);
+    const src = this.m.noiseSource(true);
+    src.connect(bp);
+    this.m.startNoise(src, t, dur + 0.3);
+  }
 }
 
 /**

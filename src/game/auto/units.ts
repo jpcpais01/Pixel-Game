@@ -244,6 +244,10 @@ const DEFS: Record<string, Def> = {
   'aquanaut.aquanaut': { cost: 3, origin: 'forged', range: 2, attack: ['fire'], missile: 'arrow', mana: 90,
     skill: { name: 'Reel in', cd: 7, kind: 'bolt', aim: 'far', dmg: 1.2, stun: 1, pull: true, fx: 'water', anim: 'hook' },
     ult: { kind: 'blast', aim: 'target', r: 1.6, dmg: 4, knock: 1, slow: 2.5, delay: 0.7, fx: 'water', anim: 'surge' } },
+  // The Bear: a Wild frontline wall
+  'bear.bear': { cost: 3, origin: 'wild', range: 1, attack: ['swipe', 'swipe2', 'smash'], mana: 90,
+    skill: { name: 'Earthsplitter', cd: 7, kind: 'nova', aim: 'self', r: 1.6, dmg: 1.4, stun: 1, fx: 'quake', anim: 'quake' },
+    ult: { kind: 'mend', aim: 'self', r: 0, dmg: 0, shield: 0.35, haste: 0.4, dur: 6, fx: 'roar', anim: 'rally' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

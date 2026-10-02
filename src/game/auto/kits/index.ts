@@ -13,6 +13,7 @@ import { BLADE_KITS } from './blade';
 import { LIGHTWRIGHT_KITS } from './lightwright';
 import { TRANSMUTER_KITS } from './transmuter';
 import { AQUANAUT_KITS } from './aquanaut';
+import { BEAR_KITS } from './bear';
 
 export const KITS: Record<string, Kit> = {
   ...ARCANE_KITS,
@@ -25,6 +26,7 @@ export const KITS: Record<string, Kit> = {
   ...LIGHTWRIGHT_KITS,
   ...TRANSMUTER_KITS,
   ...AQUANAUT_KITS,
+  ...BEAR_KITS,
 };
 
 export const kitFor = (key: string): Kit => KITS[key] ?? {};
