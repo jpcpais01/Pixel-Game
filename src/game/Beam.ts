@@ -523,13 +523,22 @@ export class Beam {
         if (along > 3 && along < cur && d > 0.55 && d <= 1.25) {
           const off = Math.sin(along * 0.23 - t * 0.021) * hw * 1.05;
           if (Math.abs(side - off) < 0.55 || Math.abs(side + off) < 0.55) {
-            b.put(px - lx, py - ly, k.accent, 0.85);
+            // The Prism's strands run through the colours along the beam.
+            b.put(px - lx, py - ly, k.spectrum ? k.spectrum[Math.floor(along / 4) % k.spectrum.length] : k.accent, 0.85);
             continue;
           }
         }
 
         const qx = px - lx;
         const qy = py - ly;
+        // The Prism: a white heart, its outer bands split across the beam, red at one edge to violet at the other.
+        if (k.spectrum && d > 0.58 && d <= 1.4) {
+          const s = k.spectrum;
+          const band = Math.max(0, Math.min(s.length - 1, Math.floor(((side / Math.max(0.6, hw * 1.4) + 1) / 2) * s.length)));
+          if (d <= 1) b.put(qx, qy, s[band], d <= 0.82 ? 1 : 0.85);
+          else if (hash(px, py, frame + 5) > 0.82) b.put(qx, qy, s[band], 0.6);
+          continue;
+        }
         if (d <= 0.3) b.put(qx, qy, k.core);
         else if (d <= 0.58) b.put(qx, qy, flow ? k.core : k.hot);
         else if (d <= 0.82) b.put(qx, qy, flow ? k.hot : k.mid);

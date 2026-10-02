@@ -19,6 +19,9 @@ import { ABYSS_MAGIC, ABYSS_SKIN, TIDE_MAGIC, TIDE_SKIN, Tidecraft } from './Tid
 import { LOTUS_MAGIC, LOTUS_SKIN } from './Tide';
 import { DRAGON_SKIN, HEADLESS_SKIN, JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
 import { AFONSO_KIT, King, KING_KIT, SUNKING_KIT } from './King';
+import { SIREN_MAGIC, SIREN_SKIN } from './Tide';
+import { PRISM_SKIN } from './Wizard';
+import { FIREBIRD_FIRE, FIREBIRD_SKIN } from './Pyro';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
 import { CRUSADER_KIT, HOLY_KIT, INQUISITOR_KIT, LIONHEART_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
@@ -255,6 +258,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_beam_astral' },
             },
           },
+          {
+            // A crystal mage: an indigo bob under a crown of floating quartz shards, a robe of pale quartz whose edges split the light, and a staff holding a clear prism.
+            id: 'prism',
+            name: 'Prism',
+            accent: 0xd8e4ff,
+            preview: { texture: 'wizard_prism', glow: 'wizard_prism_e', idle: 'wizard_prism_idle_down', chosen: 'wizard_prism_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_prism_e', frame: 'o0', anim: 'orb_prism_spin' },
+              special: { texture: 'icon_beam_prism' },
+            },
+          },
         ],
       },
       {
@@ -293,6 +307,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_meteor_pumpkin' },
             },
             season: 'hallows',
+          },
+          {
+            // A firebird priestess: a crimson hood shaped like the bird's crested head with a gold beak over the brow, a mantle of flame feathers, tail feathers at the hem, and a gilded staff crowned with burning plumes.
+            id: 'firebird',
+            name: 'Firebird',
+            accent: 0xffb030,
+            preview: { texture: 'wizard_firebird', glow: 'wizard_firebird_e', idle: 'wizard_firebird_idle_down', chosen: 'wizard_firebird_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_firebird_e', frame: 'o0', anim: 'orb_firebird_spin' },
+              special: { texture: 'icon_meteor_firebird' },
+            },
           },
         ],
       },
@@ -333,15 +358,27 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_wave_lotus' },
             },
           },
+          {
+            // A siren of the sunset sea: seafoam hair in long waves under a crown of pearls and shell, a gown of iridescent scales flaring into fins, shell pauldrons, and a coral trident.
+            id: 'siren',
+            name: 'Siren',
+            accent: 0x4ae0c8,
+            preview: { texture: 'wizard_siren', glow: 'wizard_siren_e', idle: 'wizard_siren_idle_down', chosen: 'wizard_siren_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_siren_e', frame: 'o0', anim: 'orb_siren_spin' },
+              special: { texture: 'icon_wave_siren' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'pyro' || look === 'hellfire' || look === 'pumpkin') {
+      if (look === 'pyro' || look === 'hellfire' || look === 'pumpkin' || look === 'firebird') {
         // Fireballs that blast and burn; a charged meteor called down where it's aimed.
         const hell = look === 'hellfire';
         const pumpkin = look === 'pumpkin';
-        const fire = new Pyromancy(world, pumpkin ? PUMPKIN_FIRE : hell ? HELL_FIRE : EMBER_FIRE);
+        const firebird = look === 'firebird';
+        const fire = new Pyromancy(world, firebird ? FIREBIRD_FIRE : pumpkin ? PUMPKIN_FIRE : hell ? HELL_FIRE : EMBER_FIRE);
         const w = new Wizard(
           world,
           x,
@@ -352,17 +389,18 @@ const KITS: KitDef[] = [
             target: (dx, dy, level, dist) => fire.target(dx, dy, level, dist),
             untarget: () => fire.untarget(),
           },
-          pumpkin ? PUMPKIN_SKIN : hell ? HELL_SKIN : PYRO_SKIN,
+          firebird ? FIREBIRD_SKIN : pumpkin ? PUMPKIN_SKIN : hell ? HELL_SKIN : PYRO_SKIN,
         );
         fire.caster = w;
         world.addEffect(fire);
         return w;
       }
-      if (look === 'tide' || look === 'abyssal' || look === 'lotus') {
+      if (look === 'tide' || look === 'abyssal' || look === 'lotus' || look === 'siren') {
         // Bolts that splash and throw back; a charged tidal wave that rolls out and carries foes away.
         const abyss = look === 'abyssal';
         const lotus = look === 'lotus';
-        const craft = new Tidecraft(world, lotus ? LOTUS_MAGIC : abyss ? ABYSS_MAGIC : TIDE_MAGIC);
+        const siren = look === 'siren';
+        const craft = new Tidecraft(world, siren ? SIREN_MAGIC : lotus ? LOTUS_MAGIC : abyss ? ABYSS_MAGIC : TIDE_MAGIC);
         const w = new Wizard(
           world,
           x,
@@ -371,13 +409,13 @@ const KITS: KitDef[] = [
             cast: (x, y, dx, dy) => craft.bolt(x, y, dx, dy),
             beam: (_x, _y, dx, dy, power) => craft.wave(dx, dy, power),
           },
-          lotus ? LOTUS_SKIN : abyss ? ABYSS_SKIN : TIDE_SKIN,
+          siren ? SIREN_SKIN : lotus ? LOTUS_SKIN : abyss ? ABYSS_SKIN : TIDE_SKIN,
         );
         craft.caster = w;
         world.addEffect(craft);
         return w;
       }
-      const skin = look === 'void' ? VOID_SKIN : look === 'astral' ? ASTRAL_SKIN : ARCANE_SKIN;
+      const skin = look === 'void' ? VOID_SKIN : look === 'astral' ? ASTRAL_SKIN : look === 'prism' ? PRISM_SKIN : ARCANE_SKIN;
       const w: Wizard = new Wizard(
         world,
         x,

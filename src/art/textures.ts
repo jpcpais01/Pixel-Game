@@ -30,6 +30,9 @@ import { RIFT_PLATFORM_H, RIFT_PLATFORM_W, SHARD_H, SHARD_W, TEAR_FRAMES, TEAR_H
 import { RIFT_H, RIFT_W } from '../world/riftLayout';
 import { ABYSS_SPELL, ABYSS_TONES, TIDE_SPELL, waveIcon } from './tide';
 import { LOTUS_SPELL, lilyWaveIcon } from './tide';
+import { SIREN_SPELL, sunsetWaveIcon } from './tide';
+import { PRISM_SPELL, prismBeamIcon } from './prism';
+import { FIREBIRD_EMBERS, FIREBIRD_SPELL, firebirdMeteor, firebirdMeteorIcon } from './firebird';
 import { TITANIA_SPELL, blossomSeedIcon, faerieRingIcon } from './druid';
 import { PUMPKIN_EMBERS, PUMPKIN_METEOR, PUMPKIN_SPELL, jackOrbFrame, pumpkinMeteorIcon } from './pumpkin';
 import { AUTUMN_SPELL, AUTUMN_TONES, FROST_SPELL, FROST_TONES, GROVE_SPELL, WILD_SPELL, clawsIcon, groveIcon, pounceIcon, thornSeedIcon } from './druid';
@@ -359,7 +362,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
 
   yield;
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
-  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL], ['_grove', GROVE_SPELL], ['_wild', WILD_SPELL], ['_autumn', AUTUMN_SPELL], ['_frost', FROST_SPELL], ['_tide', TIDE_SPELL], ['_abyss', ABYSS_SPELL], ['_titania', TITANIA_SPELL], ['_lotus', LOTUS_SPELL]] as const) {
+  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL], ['_grove', GROVE_SPELL], ['_wild', WILD_SPELL], ['_autumn', AUTUMN_SPELL], ['_frost', FROST_SPELL], ['_tide', TIDE_SPELL], ['_abyss', ABYSS_SPELL], ['_titania', TITANIA_SPELL], ['_lotus', LOTUS_SPELL], ['_prism', PRISM_SPELL], ['_firebird', FIREBIRD_SPELL], ['_siren', SIREN_SPELL]] as const) {
     register(scene, `orb${suffix}`, pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i, k)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
     register(scene, `burst${suffix}`, pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i, k)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
     scene.anims.create({ key: `orb${suffix}_spin`, frames: scene.anims.generateFrameNames(`orb${suffix}_e`, { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });
@@ -444,6 +447,12 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   const pumpkinMeteors = scene.textures.addCanvas('pyro_meteor_pumpkin', toCanvas(PYRO_METEOR_W * 3, PYRO_METEOR_H, sideBySide(PYRO_METEOR_W, PYRO_METEOR_H, [0, 1, 2].map((f) => pyroMeteor(f, PUMPKIN_METEOR)))))!;
   for (let i = 0; i < 3; i++) pumpkinMeteors.add(`m${i}`, 0, i * PYRO_METEOR_W, 0, PYRO_METEOR_W, PYRO_METEOR_H);
   scene.textures.addCanvas('scorch_pumpkin', toCanvas(48, 24, scorchCanvas(48, 24, PUMPKIN_EMBERS)));
+  // The Firebird: the bird itself plunging as the meteor, and its button.
+  scene.textures.addCanvas('icon_meteor_firebird', toCanvas(16, 16, firebirdMeteorIcon()));
+  const firebirdMeteors = scene.textures.addCanvas('pyro_meteor_firebird', toCanvas(PYRO_METEOR_W * 3, PYRO_METEOR_H, sideBySide(PYRO_METEOR_W, PYRO_METEOR_H, [0, 1, 2].map((f) => firebirdMeteor(f)))))!;
+  for (let i = 0; i < 3; i++) firebirdMeteors.add(`m${i}`, 0, i * PYRO_METEOR_W, 0, PYRO_METEOR_W, PYRO_METEOR_H);
+  scene.textures.addCanvas('scorch_firebird', toCanvas(48, 24, scorchCanvas(48, 24, FIREBIRD_EMBERS)));
+  scene.textures.addCanvas('icon_beam_prism', toCanvas(16, 16, prismBeamIcon()));
   scene.textures.addCanvas('icon_sword_spartan', toCanvas(16, 16, swordIcon({ blade: '#dfe8f7', bladeDark: '#8d9dbd', tip: '#f4f8ff', guard: '#cc8c3e', guardLit: '#f4d08a', guardDark: '#955a24', grip: '#6e3a20', ink: '#140904' })));
   scene.textures.addCanvas('icon_whirl_spartan', toCanvas(16, 16, whirlIcon([hex('#fff0e8'), hex('#ff9a80'), hex('#f03a3a'), hex('#8a0a1a')])));
   // The Headless Knight's (Hallow's Eve): the notched, smouldering blade and a whirl round a jack-o'-lantern.
@@ -528,6 +537,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_wave', toCanvas(16, 16, waveIcon()));
   scene.textures.addCanvas('icon_wave_abyss', toCanvas(16, 16, waveIcon(ABYSS_TONES)));
   scene.textures.addCanvas('icon_wave_lotus', toCanvas(16, 16, lilyWaveIcon()));
+  scene.textures.addCanvas('icon_wave_siren', toCanvas(16, 16, sunsetWaveIcon()));
   scene.textures.addCanvas('icon_spear_sun', toCanvas(16, 16, spearIcon(false, SUN_INK, SUN_TONES)));
   scene.textures.addCanvas('icon_spearthrow_sun', toCanvas(16, 16, spearThrowIcon(SUN_TONES)));
   scene.textures.addCanvas('icon_spear_swan', toCanvas(16, 16, swanSpearIcon()));

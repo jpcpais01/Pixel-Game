@@ -25,6 +25,8 @@ export interface SpellStyle {
   /** Emissive textures and animations of the energy ball and its impact. */
   orb: { texture: string; anim: string };
   burst: { texture: string; anim: string };
+  /** Refracted light (the Prism): the beam's edges split into these colours, warm on one side to cool on the other. */
+  spectrum?: number[];
 }
 
 export const ARCANE_STYLE: SpellStyle = {

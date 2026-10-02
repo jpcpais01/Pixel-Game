@@ -21,6 +21,7 @@ import { schemePal } from '../Blades';
 import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL, SANDGLASS_PAL, VHS_PAL } from '../Chronos';
 import { PrimalStampede, WildWrath } from './druid';
 import { Maelstrom } from './tide';
+import { PRISM_STYLE } from '../Wizard';
 import { ABYSS_MAGIC, TIDE_MAGIC } from '../Tide';
 import { AsgardThunder, OdinSpear } from './valkyrie';
 import { KingsCrown } from './king';
@@ -71,7 +72,7 @@ const ULTS: Record<string, UltDef> = {
     range: 120,
     pal: pal(0xf2ffff, 0x9ff6ff, 0x39c6f0, 0x3a5ce0, 0x6fe4ff),
     icon: icons.singularityIcon,
-    cast: (c) => c.world.addEffect(new Singularity(c.world, c.tx, c.ty, c.pal)),
+    cast: (c) => c.world.addEffect(new Singularity(c.world, c.tx, c.ty, c.pal, c.look === 'prism' ? PRISM_STYLE.spectrum : undefined)),
   },
   'wizard:pyro': {
     name: 'Inferno',
@@ -480,6 +481,9 @@ const SKINS: Record<string, UltSkin> = {
   'wizard:pumpkin': { pal: pal(0xfff4d8, 0xffc04a, 0xff7a1a, 0x7a2ad0, 0xff8a30), type: 'pyro' },
   'wizard:abyssal': { pal: ABYSS_MAGIC.pal, type: 'tide' },
   'wizard:lotus': { pal: pal(0xfff4fa, 0xffb8d4, 0x3ed0b0, 0x1a7a78, 0xffa0c8), type: 'tide' },
+  'wizard:prism': { pal: pal(0xffffff, 0xe4f2ff, 0x9ab8ff, 0x7a5ae8, 0xd8e4ff) },
+  'wizard:firebird': { pal: pal(0xfffdf0, 0xffe680, 0xffb030, 0xc8183a, 0xffb84a), type: 'pyro' },
+  'wizard:siren': { pal: pal(0xfffaf2, 0xffd0a8, 0x4ae0c8, 0x6a50c0, 0xffc08a), type: 'tide' },
   'warrior:spartan': { pal: pal(0xfff0e8, 0xff9a80, 0xf03a3a, 0x8a0a1a, 0xff6a50) },
   'warrior:headless': { pal: pal(0xfff4d0, 0xffb040, 0xff6a14, 0x5a1a7a, 0xff8a2a) },
   'warrior:afonso': { pal: AFONSO_KIT.pal, type: 'king' },
