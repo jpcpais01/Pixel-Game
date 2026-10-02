@@ -455,6 +455,8 @@ const SKINS: Record<string, UltSkin> = {
   'rogue:corsair': { pal: pal(0xfffbe0, 0xffe08a, 0xe0a030, 0x8a5018, 0xffc050) },
   'rogue:kitsune': { pal: pal(0xf4fbff, 0xa8e0ff, 0x4a9cff, 0x1a3aa0, 0x70b0ff), type: 'dancer' },
   'rogue:nightbloom': { pal: pal(0xffffff, 0xe4e8fa, 0x8a7ef0, 0x241a6a, 0xc8c0ff), type: 'dancer' },
+  'rogue:gentleman': { pal: pal(0xffffff, 0xeef0fa, 0xd0303e, 0x4a0814, 0xff5060) },
+  'rogue:cobra': { pal: pal(0xfaffe0, 0xd8ff8a, 0x5ad040, 0x0e4a26, 0xffd860), type: 'dancer' },
   'archer:storm': { pal: pal(0xf2fbff, 0xa8e4ff, 0x5ec8ff, 0x3a6ad8, 0x8ad8ff) },
   'chronomancer:moon': { pal: MOON_PAL },
   'chronomancer:aeon': { pal: AEON_PAL, type: 'paradox' },

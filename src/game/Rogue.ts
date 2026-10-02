@@ -137,6 +137,24 @@ export const NIGHTBLOOM_STYLE: RogueStyle = {
   shadow: { smoke: 'rogue_nightbloom_smoke', echo: 0x4a3ec0, glow: true, petal: 'rogue_petal' },
 };
 
+/** The gentleman thief: the cutthroat's blades in silver and crimson, calling cards scattering from his shadow. */
+export const GENTLEMAN_STYLE: RogueStyle = {
+  ...ROGUE_STYLE,
+  key: 'rogue_gentleman',
+  steel: { core: 0xffffff, hot: 0xf4f6ff, mid: 0xc8d0e4, deep: 0x5a6280 },
+  shade: { core: 0xfff0f0, hot: 0xff8a90, mid: 0xd0303e, deep: 0x5a0a18, light: 0xff5060 },
+  shadow: { smoke: 'rogue_gentleman_smoke', echo: 0x1a1018, glow: false, petal: 'rogue_card' },
+};
+
+/** The cobra: the shadow dancer's fangs in venom green and gold, venom dripping from her shadow. */
+export const COBRA_STYLE: RogueStyle = {
+  ...DANCER_STYLE,
+  key: 'rogue_cobra',
+  steel: { core: 0xffffff, hot: 0xe8ffc8, mid: 0x8ae060, deep: 0x1e7a34, light: 0x9cff6a },
+  shade: { core: 0xfffbe0, hot: 0xffe07a, mid: 0x5ad040, deep: 0x0e4a26, light: 0x8af060 },
+  shadow: { smoke: 'rogue_cobra_smoke', echo: 0x2a9a40, glow: true, petal: 'rogue_venom' },
+};
+
 type State = 'free' | 'strike' | 'step' | 'dance';
 
 /**
@@ -334,7 +352,7 @@ export class Rogue implements Hero {
     } else if (b.shape === 'spin') {
       area = { kind: 'circle', x: cx, y: cy, radius: b.reach };
       this.fx.push(new SlashArc(this.world, cx, cy, deg, deg + 360, b.reach - 3, this.style.shade, depth, 240));
-      // Nightbloom's spin throws a ring of moonflower petals off her blades.
+      // Nightbloom's spin throws a ring of moonflower petals off her blades (the cobra's, drops of venom).
       const petal = this.style.shadow.petal;
       if (petal) this.world.addEffect(new PetalDrift(this.world, cx, cy, petal, 8, 70));
     } else {

@@ -16,7 +16,7 @@ import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
 import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, ORPHEUS_LOOK, VAGABOND_LOOK, WILD_LOOK, NOTE_SIZE, banjoIcon, drumIcon, guitarraIcon, luteIcon, lyreIcon, noteFrame, rhythmIcon, skinSongIcon, songIcon } from './bard';
 import { crossIcon, cutMark, dashIcon, katanaIcon } from './samurai';
-import { daggersIcon, petalCanvas, ROGUE_ICONS, ROGUE_LOOKS, shadowstepIcon, smokeCanvas } from './rogue';
+import { cardCanvas, daggersIcon, petalCanvas, ROGUE_ICONS, venomCanvas, ROGUE_LOOKS, shadowstepIcon, smokeCanvas } from './rogue';
 import { gourdIcon, registerMoreSkinIcons, SKIN_BREWS, SKIN_QUIVERS } from './moreSkinIcons';
 import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, eclipseFallIcon, oathHammerIcon, pikeSaberIcon, seraphMaceIcon } from './heroSkins';
 import { hex } from './pixel';
@@ -274,6 +274,9 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   }
   // Nightbloom's moonflower petals, scattered by her shadow.
   scene.textures.addCanvas('rogue_petal', toCanvas(5, 5, petalCanvas()));
+  // The gentleman thief's calling cards and the cobra's venom drops, flung the same way.
+  scene.textures.addCanvas('rogue_card', toCanvas(5, 5, cardCanvas()));
+  scene.textures.addCanvas('rogue_venom', toCanvas(5, 5, venomCanvas()));
 
   yield;
   // The necromancers' bolts use the spell orbs below ('orb_soul', 'orb_blood'); the dead
