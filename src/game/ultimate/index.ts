@@ -452,6 +452,8 @@ const SKINS: Record<string, UltSkin> = {
   'archer:hunt': { pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
   'archer:wisteria': { pal: pal(0xffffff, 0xe8dcff, 0xb48ae8, 0x5a7a58, 0xd0b8ff), type: 'wind' },
   'archer:briar': { pal: pal(0xfff0f2, 0xffa0b0, 0xe8344a, 0x2e6e24, 0xff6a7a), type: 'arbalest' },
+  'archer:ironbeard': { pal: pal(0xfff4c8, 0xffb040, 0xff6a1a, 0x5a2410, 0xff8a30), type: 'arbalest' },
+  'archer:owl': { pal: pal(0xffffff, 0xe4f4ff, 0x9ccaf0, 0x4a78b0, 0xc8e8ff), type: 'wind' },
   'rogue:corsair': { pal: pal(0xfffbe0, 0xffe08a, 0xe0a030, 0x8a5018, 0xffc050) },
   'rogue:kitsune': { pal: pal(0xf4fbff, 0xa8e0ff, 0x4a9cff, 0x1a3aa0, 0x70b0ff), type: 'dancer' },
   'rogue:nightbloom': { pal: pal(0xffffff, 0xe4e8fa, 0x8a7ef0, 0x241a6a, 0xc8c0ff), type: 'dancer' },

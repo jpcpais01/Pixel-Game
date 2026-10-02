@@ -30,8 +30,8 @@ import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CHEM_STYLE, CRYO_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
 import { Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from './Archer';
-import { Arbalest, BRIAR_STYLE } from './Arbalest';
-import { Windrunner, WISTERIA_STYLE } from './Windrunner';
+import { Arbalest, BRIAR_STYLE, IRONBEARD_STYLE } from './Arbalest';
+import { OWL_STYLE, Windrunner, WISTERIA_STYLE } from './Windrunner';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
 import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
@@ -862,6 +862,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_netbolt_briar' },
             },
           },
+          {
+            // A dwarven siege gunner: a horned iron helm, a great braided red-copper beard, riveted plate, a rune-painted pavise, a geared crossbow.
+            id: 'ironbeard',
+            name: 'Ironbeard',
+            accent: 0xff8a2a,
+            preview: { texture: 'archer_ironbeard', glow: 'archer_ironbeard_e', idle: 'archer_ironbeard_idle_down', chosen: 'archer_ironbeard_brace_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+            buttons: {
+              attack: { texture: 'icon_crossbow_ironbeard' },
+              special: { texture: 'icon_netbolt_ironbeard' },
+            },
+          },
         ],
       },
       {
@@ -890,14 +901,25 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_vault_wisteria' },
             },
           },
+          {
+            // A winter elf scout: a white owl-feather hood with ear tufts and a feathered mantle, a silver braid, fur boots, a frosted birch bow.
+            id: 'owl',
+            name: 'Snow Owl',
+            accent: 0xa8d8ff,
+            preview: { texture: 'archer_owl', glow: 'archer_owl_e', idle: 'archer_owl_idle_down', chosen: 'archer_owl_fan_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+            buttons: {
+              attack: { texture: 'icon_fanshot_owl' },
+              special: { texture: 'icon_vault_owl' },
+            },
+          },
         ],
       },
     ],
     spawn: (world, x, y, look) =>
-      look === 'arbalest' || look === 'briar'
-        ? new Arbalest(world, x, y, look === 'briar' ? BRIAR_STYLE : undefined)
-        : look === 'wind' || look === 'wisteria'
-          ? new Windrunner(world, x, y, look === 'wisteria' ? WISTERIA_STYLE : undefined)
+      look === 'arbalest' || look === 'briar' || look === 'ironbeard'
+        ? new Arbalest(world, x, y, look === 'briar' ? BRIAR_STYLE : look === 'ironbeard' ? IRONBEARD_STYLE : undefined)
+        : look === 'wind' || look === 'wisteria' || look === 'owl'
+          ? new Windrunner(world, x, y, look === 'wisteria' ? WISTERIA_STYLE : look === 'owl' ? OWL_STYLE : undefined)
           : new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : RANGER_STYLE),
   },
   {
