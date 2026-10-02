@@ -512,7 +512,7 @@ export class FightView {
           span: e.spell.delay ?? 1.2,
         });
         // Kits shake the view themselves, on their big moments.
-        if (!move && e.spell.kind !== 'mend') this.scene.cameras.main.shake(e.ult ? 140 : 70, e.ult ? 0.004 : 0.002);
+        if (!move && e.spell.kind !== 'mend') this.fx.shake(e.ult ? 140 : 70, e.ult ? 0.004 : 0.002, at);
         this.sfx(() => (e.spell.kind === 'mend' ? sound.heal() : e.ult ? sound.blast() : sound.impact(0, true)));
         break;
       }

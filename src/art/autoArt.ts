@@ -58,22 +58,20 @@ const CLOUD: RGB[] = ['#1a1236', '#2a1c4a', '#3c2a5e', '#56386e', '#7a4c7a', '#a
 
 /**
  * The sky the arena hangs in, `w` x `h`: night deepening overhead, a warm
- * dusk low down, stars, a pale moon, far floating islands, and a sea of
- * cloud below the horizon.
+ * dusk low down, stars, far floating islands, and a sea of cloud below the
+ * horizon. What moves in it (birds, wisps, a falling star) is
+ * `game/auto/ambience.ts`.
  */
 export function autoBackdrop(scene: Phaser.Scene, w: number, h: number): string {
   const key = `ab_sky_${w}x${h}`;
   if (scene.textures.exists(key)) return key;
   const b = new Bitmap(w, h);
   const horizon = Math.round(h * 0.62);
-  const moon = { x: Math.round(w * 0.82), y: Math.round(h * 0.2), r: Math.max(9, Math.round(h * 0.055)) };
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      // Sky: the glow gathers toward the horizon and the moon.
+      // Sky: the glow gathers toward the horizon.
       const t = Math.pow(clamp01(y / horizon), 1.6);
-      const md = Math.hypot(x - moon.x, (y - moon.y) * 1.1);
-      const halo = clamp01(1 - md / (moon.r * 5)) * 0.18;
-      let c = ramp(SKY, t * 0.95 + halo, x, y);
+      let c = ramp(SKY, t * 0.95, x, y);
       // Wisps of high cloud drifting across the dusk.
       const wisp = fbm(x / 60, y / 9, 3);
       if (y < horizon && wisp > 0.62 && t > 0.25) c = mix(c, hex('#c87a8a'), (wisp - 0.62) * 1.6 * t);
@@ -93,16 +91,6 @@ export function autoBackdrop(scene: Phaser.Scene, w: number, h: number): string 
       b.set(x - 1, y, dim);
       b.set(x, y + 1, dim);
       b.set(x, y - 1, dim);
-    }
-  }
-  // The moon: a lit disc with soft maria, shaded on its lower left.
-  for (let y = -moon.r; y <= moon.r; y++) {
-    for (let x = -moon.r; x <= moon.r; x++) {
-      const d = Math.hypot(x, y) / moon.r;
-      if (d > 1) continue;
-      const lit = clamp01(0.95 - (-x * 0.35 + y * 0.45) / moon.r - d * 0.2);
-      const mare = fbm((x + 40) / 5, (y + 40) / 5, 9) > 0.58 ? 0.18 : 0;
-      b.set(moon.x + x, moon.y + y, ramp(['#8a86b8', '#b8b4d8', '#dcd8ee', '#f4f0ff'].map(hex), lit - mare, x, y));
     }
   }
   // Far islands on the horizon, dark against the dusk, with a lit rim.

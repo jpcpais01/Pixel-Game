@@ -18,6 +18,7 @@ import { COST_COLORS, traitCounts, TRAITS, unitDef, type TraitId } from '../game
 import { BOON_SECONDS, boonDef, cleanBoons, isBoonRound, offerBoons, roundTier, TIER_NAMES, type BoonTier } from '../game/auto/boons';
 import { BOON_LINE, boonBack, boonBadge, boonCard, boonIcon, boonLayout, tierAccent } from '../art/boonArt';
 import { FightView, UnitView, cellPt, styleOf, type BoardFrame } from '../game/auto/view';
+import { AutoAmbience } from '../game/auto/ambience';
 import { FxLayer } from '../game/auto/fx';
 import { pieceNumbers, spellText } from '../game/auto/info';
 import { AUTO_ARENA, BOARD_WAIT_MS, cleanBoard, cleanRound, cleanSeats } from '../game/auto/online';
@@ -99,6 +100,14 @@ const SHINE_W = 5;
 const DRAG_SLOP = 4;
 /** Seconds the result stands before the next round. */
 const RESULT_SECONDS = 2.6;
+/**
+ * Big blows shake the battlefield (the board and bench), never the page: the
+ * HUD, tray and traits keep still. A shake's strength (the kits' 0.002 to
+ * 0.005) times this is its first jolt in screen px, easing to nothing, with a
+ * new jolt this often (ms).
+ */
+const QUAKE_PX = 750;
+const QUAKE_STEP = 33;
 /** Seconds a finished fight lingers on its winners' cheer. */
 const LINGER = 1.3;
 /** Gems for winning a whole match. */
@@ -435,10 +444,16 @@ export class AutoScene extends Phaser.Scene {
 
   // The world: the board, bench, heroes and effects, drawn at their own zoom `s` (world px to page px) from (wx, wy).
   private sky!: Phaser.GameObjects.Image;
+  private ambience!: AutoAmbience;
   private world!: Phaser.GameObjects.Container;
   private s = 1;
   private wx = 0;
   private wy = 0;
+  /** The battlefield's shake: when it began and ends, its first jolt (screen px), and when it last jolted. */
+  private quakeAt = 0;
+  private quakeEnd = 0;
+  private quakePx = 0;
+  private quakeStep = 0;
   /** The wide layout (bench beside the board, shop on the right), else the tall one. */
   private wide = true;
   private benchCols = BENCH_SIZE;
@@ -567,6 +582,7 @@ export class AutoScene extends Phaser.Scene {
       if (!this.textures.exists(key)) this.textures.addCanvas(key, titleBitmap(text).toCanvas());
 
     this.sky = this.add.image(0, 0, '__DEFAULT').setOrigin(0);
+    this.ambience = new AutoAmbience(this);
     this.world = this.add.container(0, 0);
     this.boardImg = this.add.image(0, 0, autoBoard(this, COLS, ROWS)).setOrigin(0);
     this.benchImg = this.add.image(0, 0, '__DEFAULT').setOrigin(0);
@@ -575,6 +591,7 @@ export class AutoScene extends Phaser.Scene {
     this.layer = this.add.container(0, 0);
     this.fxOver = this.add.container(0, 0);
     this.fx = new FxLayer(this, this.fxUnder, this.fxOver);
+    this.fx.onQuake = (ms, amt) => this.quake(ms, amt);
     for (let i = 0; i < 4; i++) this.torches.push(this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffa040));
     this.world.add([this.boardImg, ...this.torches, this.benchImg, this.marks, this.fxUnder, this.layer, this.fxOver]);
     this.probe = pixelText(this, 0, 0, '').setVisible(false);
@@ -697,6 +714,7 @@ export class AutoScene extends Phaser.Scene {
     const vw = (this.vw = Math.floor(width / z));
     const vh = (this.vh = Math.floor(height / z));
     this.sky.setTexture(autoBackdrop(this, vw + 1, vh + 1));
+    this.ambience.resize(vw + 1, vh + 1);
 
     // Keep clear of the mute button in the top-right corner.
     const corner = Math.ceil(soundCorner(width, height) / z);
@@ -750,6 +768,7 @@ export class AutoScene extends Phaser.Scene {
     this.benchX = benchX;
     this.benchY = benchY;
     this.boardImg.setPosition(bx, by);
+    this.fx.setGround(this.boardImg.texture.key, bx, by);
     this.frame = { ...this.frame, x: bx + RIM, y: by + RIM };
     const corners = [
       [bx + 4, by + 4],
@@ -1413,15 +1432,46 @@ export class AutoScene extends Phaser.Scene {
     if (this.boonOffer) this.showBoons(true);
   }
 
+  /** A shake of the battlefield; a stronger one takes over a weaker one under way. */
+  private quake(ms: number, amt: number): void {
+    const now = this.time.now;
+    const px = amt * QUAKE_PX;
+    const left = this.quakeEnd > now ? (this.quakePx * (this.quakeEnd - now)) / Math.max(1, this.quakeEnd - this.quakeAt) : 0;
+    if (px < left) return;
+    this.quakeAt = now;
+    this.quakeEnd = now + ms;
+    this.quakePx = px;
+    this.quakeStep = 0;
+  }
+
+  /** Jolt the battlefield by whole screen px, easing out; back to its place once the shake ends. */
+  private tickQuake(): void {
+    const now = this.time.now;
+    if (!this.quakePx) return;
+    if (now >= this.quakeEnd) {
+      this.quakePx = 0;
+      this.world.setPosition(this.wx, this.wy);
+      return;
+    }
+    if (now - this.quakeStep < QUAKE_STEP) return;
+    this.quakeStep = now;
+    const k = (this.quakeEnd - now) / Math.max(1, this.quakeEnd - this.quakeAt);
+    const amp = this.quakePx * k * k;
+    const jolt = () => Math.round((Math.random() * 2 - 1) * amp) / this.z;
+    this.world.setPosition(this.wx + jolt(), this.wy + jolt() * 0.7);
+  }
+
   update(_t: number, delta: number): void {
     const dt = Math.min(0.1, delta / 1000);
     for (const [i, t] of this.torches.entries()) {
       const f = 0.55 + Math.sin(this.time.now / 90 + i * 2.1) * 0.08 + Math.sin(this.time.now / 37 + i) * 0.05;
       t.setAlpha(f).setScale(0.9 + f * 0.3, 0.7 + f * 0.25);
     }
+    this.ambience.update(dt);
     for (const c of this.cards) c.tick();
     if (this.boonView) this.tickBoons(dt);
     this.fx.update(dt);
+    this.tickQuake();
     if (this.phase === 'plan') {
       this.timer -= dt;
       this.drawBanner();
