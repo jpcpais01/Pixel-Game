@@ -45,8 +45,6 @@ import { GhostShip, ghostShipIcon } from './captain';
 import { ADMIRAL_KIT, CAPTAIN_KIT } from '../Captain';
 import { MusicBox, MUSIC_MS, musicBoxIcon } from './ballerina';
 import { BALLET_KIT, FIREBIRD_KIT, type Ballerina } from '../Ballerina';
-import { BARNACLE_KIT, DIVER_KIT } from '../Diver';
-import { CrushingDepths, depthsIcon } from './diver';
 import { JUGG_KIT, TINMAN_KIT, type Juggernaut } from '../Juggernaut';
 import { MELT_MS, meltdownIcon } from './juggernaut';
 import { chainReaction, megaSentry } from './inventor';
@@ -54,13 +52,26 @@ import { BENFICA_KIT, EAGLE_KIT, PHOENIX_KIT } from '../Eagle';
 import { LION_KIT, NEMEAN_KIT, SPORTING_KIT } from '../Lion';
 import { DRAGON_KIT, JADE_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
+import { LIGHTWRIGHT_KIT, STARGAZER_KIT } from '../Lightwright';
+import { burningMirror } from './lightwright';
+import { ursineWrath } from './bear';
+import { BEAR_KIT, PANDA_KIT } from '../Bear';
+import { bombingRun } from './aviator';
+import { ACE_KIT, AVIATOR_KIT } from '../Aviator';
 import { DarkDominion } from './sith';
 import { EMPRESS_KIT, SITH_KIT, WARLORD_KIT } from '../Sith';
+import { magnumOpus } from './transmuter';
+import { AQUANAUT_KIT, BARNACLE_KIT } from '../Aquanaut';
+import { torpedo } from './aquanaut';
+import { Skyburst } from './fireworks';
+import { CARNIVAL_STYLE, VERMILION_STYLE } from '../Pyrotechnist';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
 import { heroBuffs } from '../buffs';
 import { heroTimers, LASTING_MS, type TimeLeft } from '../timers';
+import { BREW_KIT, JARL_KIT } from '../Brewmaster';
+import { rollingThunder } from './brewmaster';
 
 /** An effect that can say how long it has left (every `Fx`, the sentry). */
 interface TimeTeller {
@@ -412,16 +423,6 @@ const ULTS: Record<string, UltDef> = {
     lasts: MELT_MS,
     cast: (c) => (c.hero as Partial<Juggernaut>).meltdown?.(c),
   },
-  'automaton:diver': {
-    name: 'Crushing Depths',
-    cost: 70,
-    windup: 600,
-    aim: 'spot',
-    range: 110,
-    pal: DIVER_KIT.pal,
-    icon: depthsIcon,
-    cast: (c) => c.world.addEffect(new CrushingDepths(c.world, c)),
-  },
   'automaton:ballerina': {
     name: 'Music Box',
     cost: 70,
@@ -510,6 +511,72 @@ const ULTS: Record<string, UltDef> = {
     pal: DRAGON_KIT.pal,
     icon: icons.wyrmIcon,
     cast: wyrmWrath,
+  },
+  'lightwright:lightwright': {
+    name: 'Burning Mirror',
+    cost: 70,
+    windup: 600,
+    aim: 'dir',
+    pal: LIGHTWRIGHT_KIT.light.pal,
+    icon: icons.burningMirrorIcon,
+    // The mirror stands behind him while he braces and steers it (see Lightwright.braceMirror).
+    cast: burningMirror,
+  },
+  'transmuter:transmuter': {
+    name: 'Magnum Opus',
+    cost: 70,
+    windup: 600,
+    aim: 'self',
+    pal: pal(0xfffbe8, 0xffe08a, 0xf0b030, 0x8a5a14, 0xffd060),
+    icon: icons.magnumOpusIcon,
+    cast: magnumOpus,
+  },
+  'aquanaut:aquanaut': {
+    name: 'Torpedo',
+    cost: 65,
+    windup: 550,
+    aim: 'dir',
+    pal: AQUANAUT_KIT.style.pal,
+    icon: icons.torpedoIcon,
+    cast: torpedo,
+  },
+  'bear:bear': {
+    name: 'Ursine Wrath',
+    cost: 65,
+    windup: 550,
+    aim: 'self',
+    pal: BEAR_KIT.pal,
+    icon: icons.ursineWrathIcon,
+    // The rage is the bear himself (see Bear.enrage); its badge is the wrath's buff.
+    cast: ursineWrath,
+  },
+  'brewmaster:brewmaster': {
+    name: 'Rolling Thunder',
+    cost: 65,
+    windup: 620,
+    aim: 'dir',
+    pal: BREW_KIT.ult,
+    icon: icons.rollingThunderIcon,
+    cast: rollingThunder,
+  },
+  'aviator:aviator': {
+    name: 'Bombing Run',
+    cost: 65,
+    windup: 550,
+    aim: 'dir',
+    pal: AVIATOR_KIT.pal,
+    icon: icons.bombingRunIcon,
+    cast: bombingRun,
+  },
+  'pyrotechnist:pyrotechnist': {
+    name: 'Skyburst',
+    cost: 70,
+    windup: 600,
+    aim: 'spot',
+    range: 120,
+    pal: VERMILION_STYLE.pal,
+    icon: icons.skyburstIcon,
+    cast: (c) => c.world.addEffect(new Skyburst(c.world, c)),
   },
 };
 
@@ -609,7 +676,6 @@ const SKINS: Record<string, UltSkin> = {
   'phantom:banshee': { pal: BANSHEE_KIT.pal },
   'phantom:ferryman': { pal: FERRY_KIT.pal, type: 'wraith' },
   'automaton:tinman': { pal: TINMAN_KIT.pal, type: 'juggernaut' },
-  'automaton:barnacle': { pal: BARNACLE_KIT.pal, type: 'diver' },
   'automaton:firebird': { pal: FIREBIRD_KIT.pal, type: 'ballerina' },
   'phantom:admiral': { pal: ADMIRAL_KIT.pal, type: 'captain' },
   'phantom:yuki': { pal: YUKI_KIT.pal, type: 'yurei' },
@@ -620,6 +686,13 @@ const SKINS: Record<string, UltSkin> = {
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
+  'lightwright:stargazer': { pal: STARGAZER_KIT.light.pal },
+  'transmuter:rubedo': { pal: pal(0xfff0e0, 0xffc070, 0xe8402a, 0x7a0e14, 0xff7a40) },
+  'aquanaut:barnacle': { pal: BARNACLE_KIT.style.pal },
+  'bear:panda': { pal: PANDA_KIT.pal, type: 'bear' },
+  'brewmaster:jarl': { pal: JARL_KIT.ult },
+  'aviator:ace': { pal: ACE_KIT.pal },
+  'pyrotechnist:carnival': { pal: CARNIVAL_STYLE.pal },
   'beast:phoenix': { pal: PHOENIX_KIT.pal, type: 'eagle' },
   'beast:nemean': { pal: NEMEAN_KIT.pal, type: 'lion' },
   'beast:jade': { pal: JADE_KIT.pal, type: 'dragon' },

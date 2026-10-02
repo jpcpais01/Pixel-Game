@@ -103,13 +103,19 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'phantom.yurei': { role: 'caster', hp: 85, damage: 8, defense: 12, rate: 2.78, speed: 60, regen: 0.8, skill: 3.5, ult: 124, kit: 12 },
   'phantom.captain': { role: 'melee', hp: 100, damage: 9.5, defense: 18, rate: 3.13, speed: 62, regen: 0.8, skill: 4.33, ult: 84, kit: 11.33 },
   'automaton.ballerina': { role: 'melee', hp: 92, damage: 10, defense: 18, rate: 2.95, speed: 70, regen: 0.8, skill: 2.77, ult: 68, kit: 10 },
-  'automaton.diver': { role: 'melee', hp: 120, damage: 12, defense: 21, rate: 1.72, speed: 50, regen: 1, skill: 2.67, ult: 68, kit: 12.67 },
   'automaton.juggernaut': { role: 'tank', hp: 125, damage: 8, defense: 22, rate: 2.19, speed: 52, regen: 1, skill: 4.33, ult: 178, kit: 13.6 },
   'inventor.engineer': { role: 'caster', hp: 100, damage: 9, defense: 12, rate: 2.54, speed: 56, regen: 0.6, skill: 11, ult: 344, kit: 12.3 },
   'beast.eagle': { role: 'ranged', hp: 95, damage: 8.5, defense: 12, rate: 3.5, speed: 68, regen: 0.6, skill: 1.3, ult: 60, kit: 8 },
   'beast.lion': { role: 'melee', hp: 110, damage: 10, defense: 18, rate: 3.13, speed: 62, regen: 0.9, skill: 1.25, ult: 80, kit: 11.3 },
   'beast.dragon': { role: 'ranged', hp: 105, damage: 9, defense: 15, rate: 2.75, speed: 56, regen: 0.8, skill: 3.4, ult: 55, kit: 9 },
   'inventor.scientist': { role: 'caster', hp: 85, damage: 9, defense: 12, rate: 2.22, speed: 62, regen: 0.8, skill: 4.6, ult: 72, kit: 9 },
+  'lightwright.lightwright': { role: 'caster', hp: 95, damage: 9, defense: 12, rate: 2.08, speed: 60, regen: 0.8, skill: 3.4, ult: 190, kit: 11 },
+  'transmuter.transmuter': { role: 'caster', hp: 85, damage: 10, defense: 12, rate: 2.15, speed: 60, regen: 0.8, skill: 2.5, ult: 66, kit: 10 },
+  'aquanaut.aquanaut': { role: 'tank', hp: 130, damage: 18, defense: 22, rate: 1.21, speed: 48, regen: 1, skill: 2, ult: 60, kit: 20 },
+  'bear.bear': { role: 'tank', hp: 130, damage: 9.5, defense: 24, rate: 2.18, speed: 52, regen: 0.8, skill: 2.1, ult: 138, kit: 14 },
+  'brewmaster.brewmaster': { role: 'melee', hp: 130, damage: 12, defense: 16, rate: 2.57, speed: 52, regen: 0.9, skill: 4.3, ult: 60, kit: 14 },
+  'aviator.aviator': { role: 'ranged', hp: 95, damage: 10, defense: 11, rate: 2.5, speed: 68, regen: 0.6, skill: 1.67, ult: 50, kit: 8 },
+  'pyrotechnist.pyrotechnist': { role: 'ranged', hp: 100, damage: 8.5, defense: 12, rate: 2.98, speed: 64, regen: 0.6, skill: 2, ult: 138, kit: 8 },
 };
 
 /** An even spread on the budget, for a type not in the table yet (its Damage scale is 1: its code's own numbers). */

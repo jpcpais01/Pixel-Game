@@ -14,8 +14,13 @@ import { BANSHEE_AUTO } from './banshee';
 import { YUREI_AUTO } from './yurei';
 import { CAPTAIN_AUTO } from './captain';
 import { BALLERINA_AUTO } from './ballerina';
-import { DIVER_AUTO } from './diver';
 import { JUGG_AUTO } from './juggernaut';
+import { LIGHTWRIGHT_KITS } from './lightwright';
+import { TRANSMUTER_KITS } from './transmuter';
+import { AQUANAUT_KITS } from './aquanaut';
+import { BEAR_KITS } from './bear';
+import { AVIATOR_KITS } from './aviator';
+import { PYRO_KITS } from './pyrotechnist';
 
 export const KITS: Record<string, Kit> = {
   ...ARCANE_KITS,
@@ -29,8 +34,13 @@ export const KITS: Record<string, Kit> = {
   ...YUREI_AUTO,
   ...CAPTAIN_AUTO,
   ...BALLERINA_AUTO,
-  ...DIVER_AUTO,
   ...JUGG_AUTO,
+  ...LIGHTWRIGHT_KITS,
+  ...TRANSMUTER_KITS,
+  ...AQUANAUT_KITS,
+  ...BEAR_KITS,
+  ...AVIATOR_KITS,
+  ...PYRO_KITS,
 };
 
 export const kitFor = (key: string): Kit => KITS[key] ?? {};

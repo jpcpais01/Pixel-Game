@@ -572,3 +572,162 @@ export const tempestIcon: IconPainter = (put, p) => {
   // Leaves caught in it.
   for (const [x, y] of [[2, 5], [13, 8], [4, 11]]) put(x, y, p.deep);
 };
+
+/** Burning Mirror: a great dish on its mast, a shaft of sun falling into it, a beam narrowing to a blazing point. */
+export const burningMirrorIcon: IconPainter = (put, p) => {
+  // The sun's shaft from above.
+  seg(put, 4, 0, 4, 3, p.mid);
+  seg(put, 5, 0, 5, 3, p.hot);
+  // The dish: a crescent bowl facing right, its rim and face.
+  for (let y = 2; y <= 12; y++) {
+    const k = (y - 7) / 5;
+    const x0 = Math.round(2 + 2.2 * k * k);
+    put(x0, y, p.deep);
+    put(x0 + 1, y, Math.abs(k) < 0.45 ? p.core : p.hot);
+  }
+  // The mast and its feet.
+  seg(put, 3, 8, 3, 15, p.deep);
+  seg(put, 3, 15, 1, 15, p.deep);
+  seg(put, 3, 15, 5, 15, p.deep);
+  // The beam, wide at the dish, narrowing to the focus.
+  for (let x = 4; x <= 12; x++) {
+    const half = Math.round((12 - x) * 0.4);
+    const y = Math.round(7 + (x - 4) * 0.45);
+    for (let d = -half; d <= half; d++) put(x, y + d, d === 0 ? p.core : Math.abs(d) === half ? p.mid : p.hot);
+  }
+  // The blazing point and its rays.
+  put(13, 11, p.core);
+  for (const [x, y] of [[14, 11], [12, 11], [13, 10], [13, 12], [15, 11], [13, 13], [14, 9], [15, 13]] as const) put(x, y, x === 15 || y === 13 || y === 9 ? p.mid : p.hot);
+};
+
+export const magnumOpusIcon: IconPainter = (put, p) => {
+  // The golden array: a ring, a seven-pointed star in it, the philosopher's stone blazing at the heart.
+  for (let i = 0; i < 56; i++) {
+    const a = (i / 56) * Math.PI * 2;
+    put(Math.round(8 + Math.cos(a) * 7 - 0.5), Math.round(8 + Math.sin(a) * 7 - 0.5), p.mid);
+  }
+  const pts: [number, number][] = [];
+  for (let i = 0; i < 7; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI * 2) / 7;
+    pts.push([7.5 + Math.cos(a) * 6, 7.5 + Math.sin(a) * 6]);
+  }
+  for (let i = 0; i < 7; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 3) % 7];
+    for (let s = 0; s <= 12; s++) put(Math.round(x0 + ((x1 - x0) * s) / 12), Math.round(y0 + ((y1 - y0) * s) / 12), p.hot);
+  }
+  for (const [x, y] of pts) put(Math.round(x), Math.round(y), p.core);
+  disc(put, 8, 8, 2, p.deep);
+  disc(put, 8, 8, 1, p.core);
+};
+
+/** Torpedo: a finned torpedo running up and right, its nose bright, a trail of bubbles behind. */
+export const torpedoIcon: IconPainter = (put, p) => {
+  // The hull: a thick diagonal, lit along its upper side.
+  for (let k = 0; k <= 7; k++) {
+    const x = 5 + k;
+    const y = 11 - k;
+    put(x, y, p.mid);
+    put(x + 1, y, p.hot);
+    put(x, y - 1, p.hot);
+    put(x - 1, y, p.deep);
+    put(x, y + 1, p.deep);
+  }
+  // The nose, and the fins and propeller at its tail.
+  put(13, 3, p.core);
+  put(12, 3, p.core);
+  put(13, 4, p.hot);
+  seg(put, 4, 10, 2, 10, p.hot);
+  seg(put, 5, 13, 5, 15, p.hot);
+  put(3, 13, p.core);
+  // Bubbles rising from the wake.
+  ellipse(put, 2.5, 6.5, 1.3, 1.3, 0.45, p.mid);
+  put(5, 5, p.hot);
+  put(9, 14, p.mid);
+  ellipse(put, 12.5, 12.5, 1.3, 1.3, 0.45, p.mid);
+};
+
+/** Ursine Wrath: a bear's head roaring, eyes ablaze, the rage flaring off it in spikes. */
+export const ursineWrathIcon: IconPainter = (put, p) => {
+  // The rage flaring round the head.
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + 0.2;
+    seg(put, 8 + Math.cos(a) * 5.6, 8.5 + Math.sin(a) * 5.6, 8 + Math.cos(a) * (i % 2 ? 7 : 7.8), 8.5 + Math.sin(a) * (i % 2 ? 7 : 7.8), i % 2 ? p.deep : p.mid);
+  }
+  // Ears, then the head over them.
+  disc(put, 4, 4.5, 1.9, p.mid);
+  disc(put, 12, 4.5, 1.9, p.mid);
+  put(4, 4, p.deep);
+  put(11, 4, p.deep);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.hypot(x + 0.5 - 8, (y + 0.5 - 8.8) * 1.1) <= 5) put(x, y, y < 7 ? p.mid : p.hot);
+  // The muzzle, the nose, the jaws wide.
+  disc(put, 8, 10.6, 2.6, p.core);
+  put(7, 9, p.deep);
+  put(8, 9, p.deep);
+  seg(put, 7, 11, 8, 11, 0x1a0808);
+  seg(put, 7, 12, 8, 12, 0x1a0808);
+  put(6, 11, 0xffffff);
+  put(9, 11, 0xffffff);
+  // Eyes ablaze.
+  put(5, 7, p.core);
+  put(10, 7, p.core);
+  put(6, 7, p.hot);
+  put(9, 7, p.hot);
+};
+
+/** Rolling Thunder: a great keg seen end on, rolling to the right, speed lines behind and froth spraying ahead. */
+export const rollingThunderIcon: IconPainter = (put, p) => {
+  // Speed lines trailing it.
+  seg(put, 0, 6, 3, 6, p.deep);
+  seg(put, 0, 9, 2, 9, p.mid);
+  seg(put, 1, 12, 3, 12, p.deep);
+  // The head of the keg: a ring of hoop, boards across it turned with the roll, the bung.
+  disc(put, 8.5, 9.5, 5.4, p.mid);
+  ellipse(put, 8.5, 9.5, 5.4, 5.4, 0.13, p.hot);
+  for (let i = -2; i <= 2; i += 2) seg(put, Math.round(8.5 + i - 2.4), Math.round(9.5 - i - 2.4), Math.round(8.5 + i + 2.4), Math.round(9.5 - i + 2.4), p.deep);
+  put(6, 7, p.core);
+  put(7, 6, p.hot);
+  put(10, 12, p.core);
+  // Froth spraying off ahead of it.
+  for (const [x, y, c] of [[14, 13, p.core], [15, 11, p.hot], [14, 9, p.core], [15, 14, p.mid], [13, 15, p.hot], [15, 7, p.mid], [12, 3, p.hot], [14, 4, p.core]] as const) put(x, y, c);
+};
+
+/** Bombing Run: a biplane seen from above flying right, a line of bombs falling behind it onto a blast. */
+export const bombingRunIcon: IconPainter = (put, p) => {
+  // The blast on the ground, bottom left.
+  for (let y = 11; y <= 15; y++) for (let x = 0; x <= 7; x++) if (Math.hypot((x - 3.5) / 3.8, (y - 13.2) / 2.6) <= 1) put(x, y, Math.hypot(x - 3.5, y - 13.2) < 1.6 ? p.core : y < 13 ? p.hot : p.mid);
+  // The bombs, falling in a line toward it.
+  for (const [x, y] of [[8, 10], [5, 8]]) {
+    put(x, y, p.deep);
+    put(x, y + 1, p.deep);
+  }
+  // The fuselage, the tailplane, the wing across, the cowling and the propeller's blur.
+  seg(put, 4, 4, 13, 4, p.mid);
+  seg(put, 5, 5, 13, 5, p.deep);
+  seg(put, 4, 2, 4, 7, p.mid);
+  for (let y = 0; y <= 9; y++) {
+    put(9, y, p.hot);
+    put(10, y, y === 0 || y === 9 ? p.hot : p.core);
+  }
+  put(14, 4, p.hot);
+  put(14, 5, p.hot);
+  seg(put, 15, 2, 15, 7, p.mid);
+};
+
+/** Skyburst: a rocket's trail climbing from the corner into a great chrysanthemum, glitter falling under it. */
+export const skyburstIcon: IconPainter = (put, p) => {
+  seg(put, 2, 15, 4, 12, p.deep);
+  seg(put, 4, 11, 6, 9, p.mid);
+  // The burst: long and short rays in turn, white-hot near the heart, drooping to their deep tips.
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + 0.13;
+    const len = i % 2 ? 4.5 : 6.2;
+    for (let r = 1.5; r <= len; r += 0.5) {
+      const f = r / len;
+      put(Math.round(9.5 + Math.cos(a) * r - 0.5), Math.round(6.5 + Math.sin(a) * r * 0.9 + f * f * 1.3 - 0.5), f < 0.45 ? p.hot : f < 0.85 ? p.mid : p.deep);
+    }
+  }
+  disc(put, 9.5, 6.5, 1.4, p.core);
+  // Glitter falling.
+  for (const [x, y] of [[7, 13], [10, 15], [13, 13], [9, 12], [12, 15], [5, 15]]) put(x, y, p.core);
+};

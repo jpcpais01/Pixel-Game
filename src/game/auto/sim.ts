@@ -43,6 +43,8 @@ const SKILL_LOCK = 0.5;
 const SKILL_AT = 0.28;
 const CRIT = 1.75;
 const SLOW = 1.4;
+/** Blows on a brittle foe (turned to lead) land this much harder. */
+const BRITTLE = 1.3;
 const BURN_SECONDS = 3;
 
 export interface Placed {
@@ -95,6 +97,7 @@ export interface SimUnit {
   lockT: number;
   stunT: number;
   slowT: number;
+  brittleT: number;
   dodgeT: number;
   hasteT: number;
   haste: number;
@@ -220,6 +223,7 @@ export class Battle {
       lockT: 0,
       stunT: 0,
       slowT: 0,
+      brittleT: 0,
       dodgeT: 0,
       hasteT: 0,
       haste: 0,
@@ -299,6 +303,7 @@ export class Battle {
       }
       if (regen && u.regen > 0 && u.hp < u.maxHp) this.heal(u, u.maxHp * u.regen, false);
       if (u.slowT > 0) u.slowT--;
+      if (u.brittleT > 0) u.brittleT--;
       if (u.dodgeT > 0) u.dodgeT--;
       if (u.hasteT > 0 && --u.hasteT === 0) u.haste = 0;
       if (u.skillT > 0) u.skillT--;
@@ -664,6 +669,7 @@ export class Battle {
       this.emit({ t: 'stun', u: o.uid, sec: s.stun });
     }
     if (s.slow) o.slowT = Math.max(o.slowT, secs(s.slow));
+    if (s.brittle) o.brittleT = Math.max(o.brittleT, secs(s.brittle));
     if (s.burn) {
       const dps = (u.dmg * s.burn * (ult ? u.spellMul : 1)) / BURN_SECONDS;
       if (dps >= o.burnDps || o.burnT <= 0) {
@@ -673,6 +679,15 @@ export class Battle {
       o.burnT = secs(BURN_SECONDS);
     }
     if (s.knock) this.shove(u, o, s.knock);
+    if (s.pull) this.pull(u, o);
+  }
+
+  /** Drag `o` to the free cell beside `u` nearest it (none free: it stays where it is). */
+  private pull(u: SimUnit, o: SimUnit): void {
+    const spot = this.landing(o, u, false);
+    if (!spot || (spot[0] === o.c && spot[1] === o.r)) return;
+    this.moveTo(o, spot[0], spot[1], secs(0.3));
+    this.emit({ t: 'knock', u: o.uid });
   }
 
   /** Throw `o` straight away from `u`, a cell at a time while the way is free. */
@@ -726,6 +741,7 @@ export class Battle {
       amount *= CRIT;
     }
     if (src && src.exec > 1 && dst.hp < dst.maxHp * EXECUTE_AT) amount *= src.exec;
+    if (dst.brittleT > 0) amount *= BRITTLE;
     amount *= defenseFactor(dst.armor);
     let left = amount;
     if (dst.shield > 0) {

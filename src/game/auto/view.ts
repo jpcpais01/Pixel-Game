@@ -630,7 +630,10 @@ function swingSound(cls: string): void {
     case 'rogue':
       return sound.knife();
     case 'beast':
+    case 'bear':
       return sound.rake();
+    case 'brewmaster':
+      return sound.paddle();
     case 'bard':
       return sound.drumBeat();
     case 'inventor':

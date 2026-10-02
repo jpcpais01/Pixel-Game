@@ -40,6 +40,7 @@ import {
   type Stage,
 } from '../paint';
 import { flight, gather, HAND, scorch, smoke, splash, trail } from './common';
+import { BREWMASTER_KIT } from './brewmaster';
 
 // --- Materials -------------------------------------------------------------------
 
@@ -1275,4 +1276,5 @@ export const FORGED_KITS: Record<string, Kit> = {
     ult: swarm,
   },
   'inventor.engineer': { melee: wrenchBlow, skill: sentryMove, ult: megaSentryMove },
+  'brewmaster.brewmaster': BREWMASTER_KIT,
 };

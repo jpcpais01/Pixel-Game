@@ -126,6 +126,10 @@ export abstract class Monster implements Hurtbox {
   private heldT = 0;
   private heldLift = 0;
   private lift = 0;
+  /** Turned to metal (a transmuter's lead, her gold): every blow lands `frailK` times as hard for `frailT` more ms, the body drawn in `frailTint`. */
+  private frailK = 1;
+  private frailT = 0;
+  private frailTint = 0xffffff;
 
   constructor(
     world: WorldScene,
@@ -227,6 +231,10 @@ export abstract class Monster implements Hurtbox {
     this.timer -= dt;
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.flashT = Math.max(0, this.flashT - dt);
+    if (this.frailT > 0) {
+      this.frailT -= dt;
+      if (this.frailT <= 0) this.unfrail();
+    }
     // Strung up: it hangs where the strings hold it, then drops back down.
     if (this.heldT > 0) this.heldT = Math.max(0, this.heldT - dt);
     const lift = this.heldT > 0 ? this.heldLift : 0;
@@ -311,7 +319,7 @@ export abstract class Monster implements Hurtbox {
   hurt(hit: Hit): void {
     if (!this.alive || this.intangible) return;
     // Buffs like Might make every blow land harder; its tier's Defense takes the edge off.
-    const damage = hit.damage * this.world.mightOf(hit) * defenseFactor(mobDefense(this.stats.key));
+    const damage = hit.damage * this.world.mightOf(hit) * defenseFactor(mobDefense(this.stats.key)) * this.frailty;
     if (!hit.wild) this.world.leech(Math.min(damage, Math.max(0, this.hp)));
     this.world.heroStruck(this, hit);
     Monster.net?.hit(this, hit, damage);
@@ -548,11 +556,60 @@ export abstract class Monster implements Hurtbox {
     const f = this.flashT > 0;
     this.flash.setVisible(f);
     if (f) this.flash.setPosition(rx, hy).setDepth(ry + 0.2).setFrame(frame).setScale(scale).setAlpha(this.state === 'dying' ? alpha : Math.min(1, this.flashT / FLASH_TIME) * 0.85);
+    if (this.frailT > 0) this.syncMetal(rx, hy, ry, frame, scale, alpha);
     const up = Math.min(1, (this.hover + this.lift) / 10);
     this.shadow.setPosition(rx, ry - 1).setAlpha(alpha * this.fade * (1 - up * 0.4)).setScale((this.stats.radius / 7) * this.size, this.size);
     this.castShadow.setPosition(rx, ry - 1).setFrame(frame).setAlpha(SUN_SHADOW_ALPHA * this.daylight * alpha);
     if (!this.stats.noBar) this.bar.update(dt, rx, ry - Math.round(this.stats.barY * this.size) - Math.round(this.lift), this.state === 'dying' ? 0 : this.hp, this.maxHp, 0, this.fade);
     if (this.paceT > 0) this.syncClock(rx, hy);
+  }
+
+  /**
+   * Turned to metal for `ms`: every blow lands `k` times as hard, and the body
+   * is drawn in the metal's `tint` (lead, gold). The strongest and the longest win.
+   */
+  frail(k: number, ms: number, tint: number): void {
+    if (!this.alive) return;
+    this.frailK = this.frailT > 0 ? Math.max(this.frailK, k) : k;
+    this.frailT = Math.max(this.frailT, ms);
+    this.frailTint = tint;
+  }
+
+  /** How much harder blows land on it right now (1 unless turned to metal). */
+  get frailty(): number {
+    return this.frailT > 0 ? this.frailK : 1;
+  }
+
+  private unfrail(): void {
+    this.frailT = 0;
+    this.frailK = 1;
+    if (this.paceT <= 0) this.body.clearTint();
+    this.flash.clearTint().setVisible(this.flashT > 0);
+  }
+
+  /**
+   * Metal: the body darkened under the metal's colour, and its white
+   * silhouette laid over it in that colour, so the creature's own colours all
+   * but drain away; a slow sheen runs over it. A blow's white flash shows through.
+   */
+  private syncMetal(rx: number, hy: number, ry: number, frame: string, scale: number, alpha: number): void {
+    const t = this.frailTint;
+    const ch = (s: number) => Math.round(((t >> s) & 255) * 0.4);
+    this.body.setTint((ch(16) << 16) | (ch(8) << 8) | ch(0));
+    if (this.flashT > 0) {
+      this.flash.clearTint();
+      return;
+    }
+    const sheen = 0.5 + 0.5 * Math.sin(this.world.time.now * 0.006 + this.x * 0.13);
+    const fade = Math.min(1, this.frailT / 200);
+    this.flash
+      .setVisible(true)
+      .setTint(t)
+      .setPosition(rx, hy)
+      .setDepth(ry + 0.2)
+      .setFrame(frame)
+      .setScale(scale)
+      .setAlpha((0.42 + 0.14 * sheen) * fade * alpha * this.fade);
   }
 
   /** Slowed: the body pales towards frost, and a little clock ticks over its head, its hand crawling (or stopped). */
