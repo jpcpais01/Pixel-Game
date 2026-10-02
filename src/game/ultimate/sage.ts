@@ -13,7 +13,7 @@ import type { Cast, IconPainter } from './types';
 // pebbles rising with it), drifting there for a breath; then she brings her
 // arms down and they are all slammed into the ground together, dust bursting
 // from each. Bosses are too heavy to lift: the Force holds them nearly still
-// instead, and they're slammed all the same. The Starseer's is starlight.
+// instead, and they're slammed all the same. The Dawnseer's is morning gold.
 
 /** The ring she lifts: its reach on the ground. */
 const R = 64;

@@ -6,20 +6,22 @@
 // with her hands folded in her wide bell sleeves; the Force she works is a
 // sea-glass teal.
 //
-// Her Starseer skin: deep night-blue robes embroidered with silver stars, a
-// violet under-robe, a silver sash, a pale silver braid, and starlight-white
-// Force touched with violet.
+// Her Dawnseer skin, an oracle of the morning sun: layered robes of white
+// and saffron edged in rose gold, a sunrise stitched in gold thread at the
+// hem, a halo-crown of thin gold rays behind her head with a pale gold veil
+// falling from it, warm brown skin, a long dark braid wound with gold
+// thread, and Force of warm gold and dawn rose.
 //
 // Also here: the stones she tears out of the ground and throws (and the
-// Starseer's glowing meteorites), drawn turned to eight angles so they spin
-// cleanly, and her button icons.
+// Dawnseer's sunstones, amber crystal lit from within), drawn turned to
+// eight angles so they spin cleanly, and her button icons.
 //
 // The body keeps to the 24x32 box (the ground at y 31); frames are larger so
 // raised arms and the idle moment's orbiting pebbles fit. Drawing functions
 // work in body-box coordinates; right-facing frames mirror the left ones.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
-import { EYE, HILT_DARK, PALE_SKIN, SILVER, SKIN } from './palette';
+import { EYE, HILT_DARK, SILVER, SKIN } from './palette';
 import { DIRS, type Dir } from './wizard';
 import { icon16, seg, type Tones } from './druid';
 
@@ -54,15 +56,22 @@ const LEATHER_BOOK: Material = { ramp: ramp('#2a1008', '#4e2010', '#78381c', '#9
 const PAGE: Material = { ramp: ramp('#a89a7a', '#d8ccac', '#f4ecd2', '#fffaec'), outline: hex('#2a2414') };
 const PEBBLE: Material = { ramp: ramp('#3a3630', '#5e5850', '#8a8478', '#b4ae9e'), outline: hex('#16140f') };
 
-const STAR_ROBE: Material = { ramp: ramp('#070a1e', '#10183a', '#1a2656', '#28387a', '#3e509c'), outline: hex('#03040c'), outlineLit: hex('#0a0e22') };
-const STAR_UNDER: Material = { ramp: ramp('#120a28', '#221446', '#36266a', '#523f94'), outline: hex('#08040e') };
-const STAR_SASH: Material = { ramp: ramp('#4a5068', '#8a90aa', '#c4c8da', '#eef0fa'), outline: hex('#161824'), shine: true };
-const STAR_TRIM: Material = { ramp: ramp('#40465e', '#7e86a2', '#bcc2d8', '#f0f4ff'), outline: hex('#121420'), shine: true, emissive: 0.12 };
-const STAR_HAIR: Material = { ramp: ramp('#5a5e76', '#8a8ea8', '#b8bcd2', '#dfe2f0', '#fbfcff'), outline: hex('#1e2030'), outlineLit: hex('#2c2e42'), emissive: 0.06 };
-const STAR_STITCH: Material = { ramp: ramp('#b8c0e0', '#ffffff'), outline: hex('#121630'), emissive: 0.7, noOutline: true, noAO: true };
-const STAR_THREAD: Material = { ramp: ramp('#4a5684', '#6e7cb0'), outline: hex('#121630'), emissive: 0.25, noOutline: true, noAO: true };
-const STAR_BOOK: Material = { ramp: ramp('#0a0e2a', '#162050', '#24327a', '#3a4ca0'), outline: hex('#04050e') };
-const METEOR_PEBBLE: Material = { ramp: ramp('#1a1622', '#2e2838', '#4a4058', '#6a5e7e'), outline: hex('#08060c'), emissive: 0.1 };
+// The Dawnseer: white and saffron, rose gold, warm brown skin, a dark braid wound with gold thread.
+const DAWN_ROBE: Material = { ramp: ramp('#7a6656', '#b8a490', '#e2d4c0', '#f6eee0', '#fffcf4'), outline: hex('#2e2018'), outlineLit: hex('#423024') };
+const DAWN_UNDER: Material = { ramp: ramp('#7a3a0c', '#b25e14', '#e08a24', '#f8b648', '#ffd67a'), outline: hex('#2a1204') };
+const DAWN_SASH: Material = { ramp: ramp('#5a1a14', '#8e3220', '#c4542c', '#ea7c3c', '#ffa860'), outline: hex('#220806') };
+const ROSE_GOLD: Material = { ramp: ramp('#6a3226', '#a85e48', '#dc8e70', '#f8c0a0', '#fff0e2'), outline: hex('#28120c'), shine: true, emissive: 0.08 };
+const DAWN_SKIN: Material = { ramp: ramp('#4a2416', '#6e3a22', '#965a34', '#b87a4a', '#d29a68'), outline: hex('#1e0c06'), outlineLit: hex('#3a1c10') };
+const DAWN_HAIR: Material = { ramp: ramp('#140a08', '#24140e', '#3a2216', '#563420', '#74482c'), outline: hex('#080403'), outlineLit: hex('#1a0e08') };
+const DAWN_BOOK: Material = { ramp: ramp('#4a1a10', '#7a301a', '#a8482a', '#cc6a3a'), outline: hex('#1a0806') };
+const SUNSTONE_PEBBLE: Material = { ramp: ramp('#7a3c0c', '#c06a14', '#f0a030', '#ffd870'), outline: hex('#2a1204'), emissive: 0.35, shine: true };
+/** The halo-crown's rays: thin gold, lit from within. */
+const SUN_GOLD: Material = { ramp: ramp('#6a3e0e', '#a8701a', '#dca434', '#f8d468', '#fff2b8'), outline: hex('#2a1806'), shine: true, emissive: 0.15 };
+const SUN_RAY: Material = { ramp: ramp('#8a5214', '#c8901e', '#ecbc40', '#ffe07a'), outline: hex('#2a1806'), emissive: 0.25, noOutline: true };
+/** Gold thread wound through the braid, and the robe's sunrise embroidery. */
+const GOLD_THREAD: Material = { ramp: ramp('#c08a2a', '#ffd870', '#fff4c0'), outline: hex('#2a1806'), emissive: 0.5, noOutline: true, noAO: true };
+/** The veil falling from the crown: fine pale gold gauze. */
+const DAWN_VEIL: Material = { ramp: ramp('#6e4e2a', '#a4824e', '#cfae72', '#e8cc94', '#f6e2b4'), outline: hex('#4a3218'), outlineLit: hex('#7a5a30') };
 
 export interface SageLook {
   /** Texture key; animations are `${key}_${anim}_${dir}`. */
@@ -81,10 +90,14 @@ export interface SageLook {
   pebble: Material;
   /** Force light in her palms: core, hot, mid. */
   force: [RGB, RGB, RGB];
-  /** Silver stars stitched over the robe (the Starseer). */
-  stars?: boolean;
+  /**
+   * The Dawnseer's dress: a sunburst halo-crown behind her head with a veil
+   * falling from it, gold thread wound through her braid, and a sunrise
+   * stitched in rose gold rising from the robe's hem.
+   */
+  dawn?: boolean;
   /** What the stones she throws are made of, and the glow round them. */
-  stone: 'rock' | 'meteor';
+  stone: StoneMat;
 }
 
 export const SAGE_LOOK: SageLook = {
@@ -101,22 +114,22 @@ export const SAGE_LOOK: SageLook = {
   stone: 'rock',
 };
 
-export const STARSEER_LOOK: SageLook = {
-  key: 'jedi_starseer',
-  robe: STAR_ROBE,
-  under: STAR_UNDER,
-  sash: STAR_SASH,
-  trim: STAR_TRIM,
-  skin: PALE_SKIN,
-  hair: STAR_HAIR,
-  book: STAR_BOOK,
-  pebble: METEOR_PEBBLE,
-  force: [hex('#ffffff'), hex('#e6dcff'), hex('#a68cff')],
-  stars: true,
-  stone: 'meteor',
+export const DAWNSEER_LOOK: SageLook = {
+  key: 'jedi_dawnseer',
+  robe: DAWN_ROBE,
+  under: DAWN_UNDER,
+  sash: DAWN_SASH,
+  trim: ROSE_GOLD,
+  skin: DAWN_SKIN,
+  hair: DAWN_HAIR,
+  book: DAWN_BOOK,
+  pebble: SUNSTONE_PEBBLE,
+  force: [hex('#fffbe8'), hex('#ffd88a'), hex('#ff9a6a')],
+  dawn: true,
+  stone: 'sunstone',
 };
 
-export const SAGE_LOOKS = [SAGE_LOOK, STARSEER_LOOK];
+export const SAGE_LOOKS = [SAGE_LOOK, DAWNSEER_LOOK];
 
 /** The look being drawn; set by buildSageFrames. */
 let S: SageLook = SAGE_LOOK;
@@ -258,6 +271,14 @@ function braid(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): 
     const w = i % 2 ? 0.35 : -0.35;
     plait(c, x0 + (x1 - x0) * t + w, y0 + (y1 - y0) * t, i, 1.15 - t * 0.25, 0.85);
   }
+  if (S.dawn) {
+    // Gold thread wound round it: a glint crossing every other plait, spiralling down.
+    c.part();
+    for (let i = 1; i < n; i += 2) {
+      const t = i / n;
+      c.px(x0 + (x1 - x0) * t + (i % 4 === 1 ? -0.6 : 0.6), y0 + (y1 - y0) * t + 0.4, GOLD_THREAD, sphere(i % 4 === 1 ? -0.3 : 0.3, -0.2, 1));
+    }
+  }
   c.part();
   c.px(x1, y1 + 1, S.trim, sphere(-0.3, -0.2, 1));
   c.px(x1 + 1, y1 + 1, S.trim, sphere(0.4, -0.2, 1));
@@ -372,6 +393,69 @@ function motes(c: PixelCanvas, seed: number, L: number): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// The Dawnseer's dress
+
+/**
+ * Her halo-crown: a thin gold band round the back of her head and rays
+ * fanning out from it, long and short by turns, their tips glowing. `sx`
+ * squashes it sideways (the side view sees it nearly edge on); `from`..`to`
+ * is the arc of rays, in radians.
+ */
+function halo(c: PixelCanvas, x: number, y: number, sx: number, from: number, to: number, rays = 11): void {
+  const [core, hot] = S.force;
+  c.part();
+  for (let i = 0; i < rays; i++) {
+    const a = from + ((to - from) * i) / (rays - 1);
+    const len = i % 2 ? 1.4 : 3;
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    for (let r = 4.3; r <= 4.3 + len; r += 0.5) c.px(x + ca * r * sx, y + sa * r, SUN_RAY, sphere(ca * 0.4, sa * 0.5 - 0.3, 1));
+    if (i % 2 === 0) c.spark(x + ca * (4.8 + len) * sx, y + sa * (4.8 + len), i % 4 ? hot : core, 0.3);
+  }
+  c.part();
+  const n = Math.ceil(Math.abs(to - from) * 4.2);
+  for (let i = 0; i <= n; i++) {
+    const a = from + ((to - from) * i) / n;
+    c.px(x + Math.cos(a) * 3.8 * sx, y + Math.sin(a) * 3.8, SUN_GOLD, sphere(Math.cos(a) * 0.6, Math.sin(a) * 0.6 - 0.2, 1));
+  }
+}
+
+/** The veil, hanging from the crown between `top` and `hem`; `span(u)` gives its edges down its length (0 at the crown, 1 at the hem). */
+function veil(c: PixelCanvas, top: number, hem: number, span: (u: number) => [number, number], folds: number[]): void {
+  const h = hem + 1 - top;
+  c.part();
+  c.shape(Math.round(top), Math.round(hem), (y) => span((y + 0.5 - top) / h), DAWN_VEIL, (_x, _y, t, u) => cyl(t * 0.45, 0.35 - u * 0.4));
+  // Soft folds in the gauze, and its hem edged in rose gold.
+  for (let y = Math.round(top + 2); y <= hem; y++) {
+    const u = (y + 0.5 - top) / h;
+    const [l, r] = span(u);
+    for (const f of folds) c.shade(Math.round(l + (r - l) * f), y, -1);
+  }
+  const [l, r] = span(1 - 0.5 / h);
+  for (let x = Math.round(l); x < r; x++) if (c.materialAt(x, Math.round(hem)) === DAWN_VEIL) c.px(x, Math.round(hem), S.trim, cyl((x + 0.5 - (l + r) / 2) / ((r - l) / 2 || 1), -0.3));
+}
+
+/**
+ * A sunrise stitched in gold thread rising from the outer robe's hem: rays
+ * on every other column, tallest at her middle. Found by where the robe
+ * lies, so it follows the hem in every pose.
+ */
+function sunHem(c: PixelCanvas): void {
+  c.part();
+  for (let x = -4; x < 28; x += 1) {
+    if ((x & 1) !== 0) continue;
+    let y = 40;
+    while (y > 18 && c.materialAt(x, y) !== S.robe) y--;
+    if (y <= 18) continue;
+    const len = Math.max(1, Math.round(3.2 - Math.abs(x + 0.5 - cx0) * 0.3));
+    for (let k = 0; k < len; k++) {
+      if (c.materialAt(x, y - k) !== S.robe) break;
+      c.px(x, y - k, GOLD_THREAD, sphere(0, -0.3, 1));
+    }
+  }
+}
+
 /**
  * The pebbles circling her as she reads, on a flat ring round her middle:
  * the far ones (behind her) or the near ones, each lit and glinting.
@@ -389,7 +473,7 @@ function pebbles(c: PixelCanvas, turn: number | undefined, U: number, half: 'bac
     c.ellipse(x, y, r + 0.2, r, S.pebble, { bias: sa < 0 ? -1 : 0 });
     // A thread of the Force under each.
     c.spark(x, y + 2, S.force[2], 0.3);
-    if (S.stone === 'meteor') c.spark(x, y, S.force[1], 0.45);
+    if (S.stone === 'sunstone') c.spark(x, y, S.force[1], 0.45);
   }
 }
 
@@ -437,6 +521,11 @@ function drawDown(c: PixelCanvas, p: SagePose): void {
   const U = L + p.breath + D;
   const cx = cx0;
   pebbles(c, p.orbit, U, 'back');
+  if (S.dawn) {
+    // The halo-crown behind her head, and the veil falling from it behind her shoulders.
+    halo(c, cx, 10.6 + U, 1, Math.PI * 0.95, Math.PI * 2.05, 11);
+    veil(c, 9.4 + U, 21 + U, (u) => [cx - 4.4 - 1.6 * u - p.robe * 0.3 * u, cx + 4.4 + 1.6 * u - p.robe * 0.3 * u], []);
+  }
 
   // Slippers, under the hem.
   if (s === 0) {
@@ -588,6 +677,11 @@ function drawUp(c: PixelCanvas, p: SagePose): void {
   c.ellipse(cx, 11.4 + U, 3.3, 3.1, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
   crown(c, cx, 9.8 + U, 3.5, 2.2, Math.PI * 0.08, Math.PI * 0.92);
   braid(c, cx, 13.6 + U, cx + p.robe * 0.5, 23.6 + U);
+  if (S.dawn) {
+    // The veil over the back of her head, the braid coming out from under it, and the crown's rays over all.
+    veil(c, 9.6 + U, 16.6 + U, (u) => [cx - 3.4 - 1.2 * u + p.robe * 0.3 * u, cx + 3.4 + 1.2 * u + p.robe * 0.3 * u], [0.3, 0.7]);
+    halo(c, cx, 10.4 + U, 1, Math.PI * 0.95, Math.PI * 2.05, 11);
+  }
 
   c.part();
   c.ellipse(8.2, 16.6 + U, 1.9, 1.4, S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
@@ -613,6 +707,8 @@ function drawSide(c: PixelCanvas, p: SagePose): void {
 
   // The far arm, behind her.
   arm(c, hx + 1.4, 17 + U, hb.x, hb.y, p.gb, -1);
+  // The Dawnseer's veil, hanging behind her from the crown.
+  if (S.dawn) veil(c, 9.6 + U, 21 + U, (u) => [hx + 0.4, hx + 3.6 + 1.6 * u + p.robe * 0.4 * u], [0.6]);
   // The long braid down her back, swinging with her stride.
   braid(c, hx + 2.6, 13.4 + U, hx + 3.6 + p.robe * 0.6, 22.6 + U);
 
@@ -676,6 +772,8 @@ function drawSide(c: PixelCanvas, p: SagePose): void {
   c.px(Math.round(hx + 2), Math.round(12.8 + U), S.trim, sphere(0.4, -0.6, 1));
   c.px(Math.round(hx - 2), Math.round(14 + U), S.trim, sphere(-0.4, -0.4, 1));
 
+  // The halo-crown, nearly edge on, behind her head.
+  if (S.dawn) halo(c, hx + 2.2, 10.6 + U, 0.6, Math.PI * 0.95, Math.PI * 2.05, 9);
   // Head in profile.
   c.part();
   c.ellipse(hx - 0.9, 11.9 + U, 2.7, 2.7, S.skin);
@@ -704,30 +802,6 @@ function drawSide(c: PixelCanvas, p: SagePose): void {
   c.ellipse(hx + 0.4, 16.6 + U, 1.9, 1.5, S.robe, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
   arm(c, hx + 0.4, 17 + U, ha.x, ha.y, p.ga);
   motes(c, p.motes ?? 0, L);
-}
-
-// ---------------------------------------------------------------------------
-// The Starseer's embroidery: silver stars stitched over the robe, a few of
-// them joined by faint threads into constellations. Placed by where they lie
-// on her body, so they stay put on the cloth as she moves.
-
-function stitchStars(c: PixelCanvas, U: number): void {
-  const at = (x: number, y: number) => c.materialAt(x, y) === S.robe;
-  for (let y = 0; y < 34; y++) {
-    for (let x = -4; x < 28; x++) {
-      if (!at(x, y)) continue;
-      const k = hash(x, y - U, 77);
-      if (k < 0.055) {
-        c.px(x, y, STAR_STITCH, sphere(0, -0.3, 1));
-        c.spark(x, y, [200, 210, 255], 0.35);
-        // A constellation: a thread on to the next stitched star, if it's near.
-        if (k < 0.02 && at(x + 1, y + 1) && at(x + 2, y + 1)) {
-          c.px(x + 1, y + 1, STAR_THREAD, FLAT_DOWN);
-          c.px(x + 2, y + 1, STAR_STITCH, sphere(0, -0.3, 1));
-        }
-      }
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1107,7 +1181,7 @@ function drawFrame(dir: Dir, p: SagePose): PixelCanvas {
   if (view === 'down') drawDown(c, p);
   else if (view === 'up') drawUp(c, p);
   else drawSide(c, p);
-  if (S.stars) stitchStars(c, -p.lift + p.breath + Math.round((p.sit ?? 0) * SIT_DROP));
+  if (S.dawn) sunHem(c);
   return dir === 'right' ? c.mirrored() : c;
 }
 
@@ -1126,19 +1200,22 @@ export function buildSageFrames(look: SageLook = SAGE_LOOK): SageFrame[] {
 
 // ---------------------------------------------------------------------------
 // The stones she throws: a chunk of rock torn out of the ground (a slab for
-// the heave), or the Starseer's meteorites, dark and veined with light.
-// Each is drawn turned to STONE_TURNS angles: the outline and its facets are
-// worked out in the stone's own frame, so it tumbles without smearing.
+// the heave), or the Dawnseer's sunstones, clusters of amber crystal lit from
+// within (a great cluster on a root of rock for the heave). Each is drawn
+// turned to STONE_TURNS angles: the outline and its facets are worked out in
+// the stone's own frame, so it tumbles without smearing.
 
 export const STONE_SIZE = 20;
 export const STONE_TURNS = 8;
 export type StoneKind = 'rock' | 'slab';
+/** What her stones are: plain rock, or the Dawnseer's sunstone. */
+export type StoneMat = 'rock' | 'sunstone';
 
 const ROCK: Material = { ramp: ramp('#2a2620', '#4a443a', '#6e665a', '#958c7c', '#bcb4a0'), outline: hex('#110f0c') };
 const ROCK_MOSS: Material = { ramp: ramp('#1e2a14', '#344a20', '#4e6a2c'), outline: hex('#0c1208') };
 const EARTH: Material = { ramp: ramp('#2a1a10', '#4a3020', '#6a4a30'), outline: hex('#120a06') };
-const BASALT: Material = { ramp: ramp('#0c0a12', '#1a1622', '#2c2638', '#423a52', '#5a5070'), outline: hex('#050408'), shine: true };
-const VEIN: Material = { ramp: ramp('#8a70ff', '#d4c8ff', '#ffffff'), outline: hex('#2a1a5a'), emissive: 1, noAO: true, noOutline: true };
+const SUNSTONE: Material = { ramp: ramp('#6a2c08', '#a8520e', '#de8a1c', '#f8bc3e', '#ffe48a'), outline: hex('#2a1004'), shine: true, emissive: 0.3 };
+const SUN_HEART: Material = { ramp: ramp('#ffc860', '#fff0b0', '#ffffff'), outline: hex('#5a2a08'), emissive: 1, noAO: true, noOutline: true };
 
 /** The stone's radius at angle `a` in its own frame: lumpy, with a flat broken face or two. */
 function stoneRadius(kind: StoneKind, seed: number, a: number): number {
@@ -1148,13 +1225,59 @@ function stoneRadius(kind: StoneKind, seed: number, a: number): number {
   return r;
 }
 
+/** One crystal of a sunstone cluster: centred at (x, y) in the stone's frame, along angle `a`, `l` from its middle to each tip, `w` half across. */
+interface Crystal {
+  x: number;
+  y: number;
+  a: number;
+  l: number;
+  w: number;
+}
+
+/** A sunstone: one long crystal with a short one grown off its side; the heave's cluster has three on a knuckle of rock. */
+const CLUSTERS: Record<StoneKind, Crystal[]> = {
+  rock: [
+    { x: 0.6, y: -0.3, a: 0, l: 5.2, w: 2.3 },
+    { x: -1.4, y: 1.6, a: 0.85, l: 3, w: 1.4 },
+  ],
+  slab: [
+    { x: 0.8, y: 0, a: 0, l: 7.4, w: 3.1 },
+    { x: -2.4, y: 2.6, a: 0.75, l: 4, w: 1.8 },
+    { x: -2.6, y: -2.5, a: -0.7, l: 3.6, w: 1.6 },
+  ],
+};
+
+/**
+ * Where a point of the stone's frame falls on a crystal: its face (the long
+ * upper or lower side, or one of the four tip facets) and how near its
+ * heart, or null if it misses. A crystal is an elongated hexagon in profile.
+ */
+function onCrystal(k: Crystal, lx: number, ly: number): { nx: number; ny: number; heart: boolean; face: number } | null {
+  const dx = lx - k.x;
+  const dy = ly - k.y;
+  const u = dx * Math.cos(k.a) + dy * Math.sin(k.a);
+  const v = -dx * Math.sin(k.a) + dy * Math.cos(k.a);
+  const au = Math.abs(u);
+  const sh = k.l * 0.55;
+  const half = au <= sh ? k.w : (k.w * (k.l - au)) / (k.l - sh);
+  if (Math.abs(v) > half + 0.15) return null;
+  // The face's normal in the crystal's frame: the long faces tilt up or down, the tip facets out along it too.
+  const tip = au > sh;
+  const nu = tip ? Math.sign(u) * 0.6 : 0;
+  const nv = v < 0 ? -0.7 : 0.45;
+  const nx = nu * Math.cos(k.a) - nv * Math.sin(k.a);
+  const ny = nu * Math.sin(k.a) + nv * Math.cos(k.a);
+  return { nx, ny, heart: Math.abs(v) < 0.55 && au < k.l * 0.7, face: (tip ? 2 + (u > 0 ? 1 : 0) : 0) * 2 + (v < 0 ? 0 : 1) };
+}
+
 /** One stone, turned by `turn` of a whole turn. */
-export function stoneFrame(kind: StoneKind, meteor: boolean, turn: number, seed = 1.3): PixelCanvas {
+export function stoneFrame(kind: StoneKind, mat: StoneMat, turn: number, seed = 1.3): PixelCanvas {
   const c = new PixelCanvas(STONE_SIZE, STONE_SIZE);
   const m = STONE_SIZE / 2;
   const phi = turn * Math.PI * 2;
+  const sun = mat === 'sunstone';
   const facets = kind === 'slab' ? 7 : 6;
-  const body = meteor ? BASALT : ROCK;
+  const rot = (x: number, y: number): Vec3 => sphere(x * Math.cos(phi) - y * Math.sin(phi), x * Math.sin(phi) + y * Math.cos(phi), 1);
   c.part();
   for (let y = 0; y < STONE_SIZE; y++) {
     for (let x = 0; x < STONE_SIZE; x++) {
@@ -1163,6 +1286,17 @@ export function stoneFrame(kind: StoneKind, meteor: boolean, turn: number, seed 
       // Into the stone's own frame.
       const lx = dx * Math.cos(-phi) - dy * Math.sin(-phi);
       const ly = dx * Math.sin(-phi) + dy * Math.cos(-phi);
+      if (sun) {
+        // The crystals, the first listed in front; the heave's cluster sits on a knuckle of the rock it grew in.
+        let hit = null;
+        for (const k of CLUSTERS[kind]) if ((hit = onCrystal(k, lx, ly))) break;
+        if (hit) {
+          c.px(x, y, hit.heart ? SUN_HEART : SUNSTONE, rot(hit.nx, hit.ny), { bias: hit.heart ? 0 : hit.face % 2 ? -1 : 0 });
+          continue;
+        }
+        if (kind === 'slab' && Math.hypot(lx + 5.6, ly * 1.1) < 2.9) c.px(x, y, hash(Math.round(lx * 2), Math.round(ly * 2), 3) < 0.5 ? EARTH : ROCK, rot((lx + 5.6) / 3, ly / 3));
+        continue;
+      }
       const a = Math.atan2(ly, lx);
       const d = Math.hypot(lx, ly);
       const R = stoneRadius(kind, seed, a);
@@ -1172,52 +1306,51 @@ export function stoneFrame(kind: StoneKind, meteor: boolean, turn: number, seed 
       const fa = ((f + 0.5) / facets) * Math.PI * 2 - Math.PI + phi;
       const out = d / R > 0.5 ? 0.75 : 0.25;
       const n: Vec3 = sphere(Math.cos(fa) * out, Math.sin(fa) * out, 1);
-      // The face it was torn from: earth still clinging (rock), or veins of light (meteor).
-      let mat = body;
-      if (!meteor && lx < -R * 0.45 && hash(Math.round(lx * 2), Math.round(ly * 2), 3) < 0.7) mat = EARTH;
-      if (!meteor && ly < -R * 0.55 && lx > 0) mat = ROCK_MOSS;
-      if (meteor) {
-        const v = Math.abs(Math.sin(lx * 1.3 + ly * 0.7 + seed) + Math.sin(ly * 1.7 - lx * 0.4));
-        if (v < 0.22 && d < R - 0.8) mat = VEIN;
-      }
-      c.px(x, y, mat, n, { bias: f % 2 ? 0 : -1 });
+      // The face it was torn from, earth still clinging, and moss on its top.
+      let mt = ROCK;
+      if (lx < -R * 0.45 && hash(Math.round(lx * 2), Math.round(ly * 2), 3) < 0.7) mt = EARTH;
+      if (ly < -R * 0.55 && lx > 0) mt = ROCK_MOSS;
+      c.px(x, y, mt, n, { bias: f % 2 ? 0 : -1 });
     }
   }
-  // A crack across it.
-  const ca = phi + 0.6;
-  for (let k = -2; k <= 2; k++) c.shade(m + Math.cos(ca) * k * 1.1 + Math.sin(ca) * 0.6, m + Math.sin(ca) * k * 1.1 - Math.cos(ca) * 0.6, -1);
+  if (!sun) {
+    // A crack across it.
+    const ca = phi + 0.6;
+    for (let k = -2; k <= 2; k++) c.shade(m + Math.cos(ca) * k * 1.1 + Math.sin(ca) * 0.6, m + Math.sin(ca) * k * 1.1 - Math.cos(ca) * 0.6, -1);
+  }
   // Held by the Force: its light hugging the outline.
-  const glow: RGB = meteor ? [196, 176, 255] : [120, 240, 220];
+  const glow: RGB = sun ? [255, 200, 110] : [120, 240, 220];
   for (let y = 0; y < STONE_SIZE; y++) {
     for (let x = 0; x < STONE_SIZE; x++) {
       if (c.filled(x, y)) continue;
-      if (c.filled(x - 1, y) || c.filled(x + 1, y) || c.filled(x, y - 1) || c.filled(x, y + 1)) c.spark(x, y, glow, meteor ? 0.5 : 0.4);
+      if (c.filled(x - 1, y) || c.filled(x + 1, y) || c.filled(x, y - 1) || c.filled(x, y + 1)) c.spark(x, y, glow, sun ? 0.5 : 0.4);
     }
   }
   return c;
 }
 
 /** Every stone frame, named `<rock|slab>_<turn>`, for one look's texture. */
-export function stoneFrames(meteor: boolean): { name: string; canvas: PixelCanvas }[] {
+export function stoneFrames(mat: StoneMat): { name: string; canvas: PixelCanvas }[] {
   const out: { name: string; canvas: PixelCanvas }[] = [];
   for (const kind of ['rock', 'slab'] as const) {
-    for (let i = 0; i < STONE_TURNS; i++) out.push({ name: `${kind}_${i}`, canvas: stoneFrame(kind, meteor, i / STONE_TURNS, kind === 'slab' ? 2.1 : 1.3) });
+    for (let i = 0; i < STONE_TURNS; i++) out.push({ name: `${kind}_${i}`, canvas: stoneFrame(kind, mat, i / STONE_TURNS, kind === 'slab' ? 2.1 : 1.3) });
   }
   return out;
 }
 
 /** The texture key of a look's stones. */
-export const stoneKey = (meteor: boolean): string => (meteor ? 'sage_meteor' : 'sage_stone');
+export const stoneKey = (mat: StoneMat): string => (mat === 'sunstone' ? 'sage_sunstone' : 'sage_stone');
 
 // ---------------------------------------------------------------------------
 // Icons
 
 export const SAGE_TONES: Tones = [hex('#f0fffc'), hex('#9cf6e8'), hex('#3ad0c0'), hex('#14605a')];
-export const STARSEER_TONES: Tones = [hex('#ffffff'), hex('#e6dcff'), hex('#a68cff'), hex('#3a2a7a')];
+export const DAWNSEER_TONES: Tones = [hex('#fffbe8'), hex('#ffd88a'), hex('#ff9a6a'), hex('#8a3420')];
 
-/** The Force throw: a stone flying, a trail of Force behind it and grit falling off it. */
-export function throwIcon(t: Tones, meteor = false): Uint8ClampedArray {
-  const rock: [RGB, RGB, RGB] = meteor ? [hex('#4a4058'), hex('#2c2638'), hex('#1a1622')] : [hex('#b4ac98'), hex('#7e7666'), hex('#4a443a')];
+/** The Force throw: a stone flying (or a sunstone crystal), a trail of Force behind it and grit (or golden shards) falling off it. */
+export function throwIcon(t: Tones, sunstone = false): Uint8ClampedArray {
+  const rock: [RGB, RGB, RGB] = [hex('#b4ac98'), hex('#7e7666'), hex('#4a443a')];
+  const amber: [RGB, RGB, RGB] = [hex('#ffc848'), hex('#e48a1c'), hex('#9a480e')];
   return icon16((put) => {
     // The trail, curving up from the lower left.
     for (let i = 0; i < 7; i++) {
@@ -1225,6 +1358,23 @@ export function throwIcon(t: Tones, meteor = false): Uint8ClampedArray {
       const y = 13 - i * 1.1 + Math.sin(i * 0.9) * 0.4;
       put(x, y, i > 4 ? t[1] : t[2]);
       if (i > 1) put(x, y + 1, t[3]);
+    }
+    if (sunstone) {
+      // A long crystal flying point first up to the right: the upper face lit, the lower in shade, a white heart down its length.
+      for (let y = 1; y <= 12; y++) {
+        for (let x = 4; x <= 15; x++) {
+          const u = (x - 10 - (y - 6)) * 0.7071; // along its length, up to the right
+          const v = (x - 10 + (y - 6)) * 0.7071; // across it: below it is positive
+          const au = Math.abs(u);
+          const half = au <= 2.4 ? 2.6 : (2.6 * (5.6 - au)) / 3.2;
+          if (Math.abs(v) > half + 0.6) continue;
+          if (Math.abs(v) > half - 0.4) put(x, y, t[3]);
+          else put(x, y, Math.abs(v) < 0.6 && au < 3.6 ? t[0] : v < 0 ? amber[0] : au > 2.6 ? amber[2] : amber[1]);
+        }
+      }
+      // Golden shards falling.
+      for (const [x, y] of [[6, 12], [9, 13], [12, 12], [13, 14], [10, 15]]) put(x, y, (x + y) % 2 ? t[1] : t[0]);
+      return;
     }
     // The stone: lit top-left, darker below, its outline glowing.
     for (let y = 2; y <= 10; y++) {
@@ -1237,16 +1387,22 @@ export function throwIcon(t: Tones, meteor = false): Uint8ClampedArray {
         else put(x, y, dx + dy < -2 ? rock[0] : dx + dy < 2 ? rock[1] : rock[2]);
       }
     }
-    if (meteor) for (const [x, y] of [[9, 5], [10, 6], [11, 7], [8, 8]]) put(x, y, t[0]);
-    else for (const [x, y] of [[9, 7], [10, 8], [11, 8]]) put(x, y, rock[2]);
+    for (const [x, y] of [[9, 7], [10, 8], [11, 8]]) put(x, y, rock[2]);
     // Grit falling.
     for (const [x, y] of [[7, 12], [10, 13], [12, 12], [13, 14]]) put(x, y, t[1]);
   });
 }
 
 /** The Force barrier: a dome of light over the ground, a glint on its shoulder. */
-export function barrierIcon(t: Tones): Uint8ClampedArray {
+export function barrierIcon(t: Tones, sunburst = false): Uint8ClampedArray {
   return icon16((put) => {
+    if (sunburst) {
+      // The Dawnseer's: rays of dawn fanning up inside it from the ground at its heart.
+      for (const a of [0.2, 0.5, 0.8]) {
+        const th = Math.PI + a * Math.PI;
+        for (let r = 2; r <= 5; r++) put(8 + Math.cos(th) * r * 0.85, 12 + Math.sin(th) * r * 1.1, r > 3 ? t[3] : t[2]);
+      }
+    }
     for (let i = 0; i <= 40; i++) {
       const a = Math.PI + (i / 40) * Math.PI;
       const x = 8 + Math.cos(a) * 6.6;
@@ -1254,8 +1410,11 @@ export function barrierIcon(t: Tones): Uint8ClampedArray {
       put(x, y, t[1]);
       put(8 + Math.cos(a) * 5.4, 12 + Math.sin(a) * 7, i % 3 ? t[3] : t[2]);
     }
-    // Hexes across it.
-    for (const [x, y] of [[6, 7], [10, 7], [8, 9], [5, 10], [11, 10], [8, 5]]) {
+    // Hexes across it (the Dawnseer's: a sun rising at its foot).
+    if (sunburst) {
+      for (let x = 6; x <= 10; x++) put(x, 11, t[1]);
+      for (let x = 7; x <= 9; x++) put(x, 10, t[0]);
+    } else for (const [x, y] of [[6, 7], [10, 7], [8, 9], [5, 10], [11, 10], [8, 5]]) {
       put(x, y, t[2]);
       put(x + 1, y, t[3]);
     }

@@ -28,7 +28,7 @@ import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { GUARD_STYLE, Jedi, JEDI_STYLE, MASTER_STYLE, NOMAD_STYLE } from './Jedi';
 import { EMPRESS_KIT, Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
-import { Sage, SAGE_KIT, STARSEER_KIT } from './Sage';
+import { DAWNSEER_KIT, Sage, SAGE_KIT } from './Sage';
 import { SAGE_H, SAGE_ORIGIN_Y } from '../art/sage';
 import { PEACOCK_KIT, Twin, TWIN_KIT } from './Twin';
 import { TWIN_H, TWIN_ORIGIN_Y } from '../art/twin';
@@ -767,14 +767,14 @@ const KITS: KitDef[] = [
         lookName: 'Scholar',
         skins: [
           {
-            // Night-blue robes stitched with silver star charts, a pale silver braid, starlight Force, and meteorites to throw.
-            id: 'starseer',
-            name: 'Starseer',
-            accent: 0xb8a4ff,
-            preview: { texture: 'jedi_starseer', glow: 'jedi_starseer_e', idle: 'jedi_starseer_idle_down', chosen: 'jedi_starseer_levitate_down', originY: SAGE_ORIGIN_Y / SAGE_H },
+            // An oracle of the morning sun: white and saffron robes, a sunburst halo-crown and veil, gold and dawn-rose Force, sunstones to throw.
+            id: 'dawnseer',
+            name: 'Dawnseer',
+            accent: 0xffb45a,
+            preview: { texture: 'jedi_dawnseer', glow: 'jedi_dawnseer_e', idle: 'jedi_dawnseer_idle_down', chosen: 'jedi_dawnseer_levitate_down', originY: SAGE_ORIGIN_Y / SAGE_H },
             buttons: {
-              attack: { texture: 'icon_forcethrow_starseer' },
-              special: { texture: 'icon_barrier_starseer' },
+              attack: { texture: 'icon_forcethrow_dawnseer' },
+              special: { texture: 'icon_barrier_dawnseer' },
             },
           },
         ],
@@ -837,7 +837,7 @@ const KITS: KitDef[] = [
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'sage' || look === 'starseer') return new Sage(world, x, y, look === 'starseer' ? STARSEER_KIT : SAGE_KIT);
+      if (look === 'sage' || look === 'dawnseer') return new Sage(world, x, y, look === 'dawnseer' ? DAWNSEER_KIT : SAGE_KIT);
       if (look === 'sith' || look === 'warlord' || look === 'empress') return new Sith(world, x, y, look === 'warlord' ? WARLORD_KIT : look === 'empress' ? EMPRESS_KIT : SITH_KIT);
       if (look === 'twin' || look === 'peacock') return new Twin(world, x, y, look === 'peacock' ? PEACOCK_KIT : TWIN_KIT);
       if (look === 'inquisitor' || look === 'voidhunter') return new Inquisitor(world, x, y, look === 'voidhunter' ? VOIDHUNTER_KIT : RINGBLADE_KIT);

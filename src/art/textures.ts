@@ -127,7 +127,7 @@ import { registerAquanautArt } from './aquanautKit';
 import { registerBearIcons } from './bear';
 import { BREW_LOOKS, KEG_SIZE, kegFrames, kegKey, fireIcon as brewFireIcon, paddleIcon } from './brewmaster';
 import { pyroIcons } from './pyrotechnist';
-import { SAGE_TONES, STARSEER_TONES, STONE_SIZE, barrierIcon, stoneFrames, stoneKey, throwIcon } from './sage';
+import { DAWNSEER_TONES, SAGE_TONES, STONE_SIZE, barrierIcon, stoneFrames, stoneKey, throwIcon } from './sage';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import {
   MERCHANT_FRAMES,
@@ -681,14 +681,14 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_rattle', toCanvas(16, 16, rattleIcon()));
   scene.textures.addCanvas('icon_hurl_tea', toCanvas(16, 16, hurlIcon(true)));
   scene.textures.addCanvas('icon_rattle_tea', toCanvas(16, 16, rattleIcon(true)));
-  // The Force Sage's stones ('sage_stone', the Starseer's 'sage_meteor': '<rock|slab>_<turn>') and her buttons.
-  for (const meteor of [false, true]) {
-    register(scene, stoneKey(meteor), pack(stoneFrames(meteor).map((f) => ({ name: f.name, r: f.canvas.render() })), STONE_SIZE, STONE_SIZE), STONE_SIZE, STONE_SIZE);
+  // The Force Sage's stones ('sage_stone', the Dawnseer's 'sage_sunstone': '<rock|slab>_<turn>') and her buttons.
+  for (const mat of ['rock', 'sunstone'] as const) {
+    register(scene, stoneKey(mat), pack(stoneFrames(mat).map((f) => ({ name: f.name, r: f.canvas.render() })), STONE_SIZE, STONE_SIZE), STONE_SIZE, STONE_SIZE);
   }
   scene.textures.addCanvas('icon_forcethrow', toCanvas(16, 16, throwIcon(SAGE_TONES)));
   scene.textures.addCanvas('icon_barrier', toCanvas(16, 16, barrierIcon(SAGE_TONES)));
-  scene.textures.addCanvas('icon_forcethrow_starseer', toCanvas(16, 16, throwIcon(STARSEER_TONES, true)));
-  scene.textures.addCanvas('icon_barrier_starseer', toCanvas(16, 16, barrierIcon(STARSEER_TONES)));
+  scene.textures.addCanvas('icon_forcethrow_dawnseer', toCanvas(16, 16, throwIcon(DAWNSEER_TONES, true)));
+  scene.textures.addCanvas('icon_barrier_dawnseer', toCanvas(16, 16, barrierIcon(DAWNSEER_TONES, true)));
   scene.textures.addCanvas('icon_hurl_banshee', toCanvas(16, 16, bansheeHurlIcon()));
   scene.textures.addCanvas('icon_rattle_banshee', toCanvas(16, 16, keenIcon()));
   scene.textures.addCanvas('icon_lantern', toCanvas(16, 16, lanternIcon()));
