@@ -899,6 +899,28 @@ class GameSound {
     if (t !== null) this.sfx!.bloodNova(t, pan);
   }
 
+  /** The Reaper's scythe swung; `heavy` for the spinning reap. */
+  reap(pan = 0, heavy = false): void {
+    const t = this.slot('reap');
+    if (t !== null) this.sfx!.reap(t, pan, heavy);
+  }
+
+  reapHit(pan = 0, heavy = false): void {
+    const t = this.slot('reapHit');
+    if (t !== null) this.sfx!.reapHit(t, pan, heavy);
+  }
+
+  deathStep(pan = 0): void {
+    const t = this.slot('deathStep');
+    if (t !== null) this.sfx!.deathStep(t, pan);
+  }
+
+  /** The Harvest's great scythe coming round (`n` its turn), and the last reap (`n` 0 for its tolling start). */
+  reapHarvest(pan = 0, n = 0): void {
+    const t = this.slot(`reapHarvest${n}`);
+    if (t !== null) this.sfx!.reapHarvest(t, pan, n);
+  }
+
   lutePluck(pan = 0): void {
     const t = this.slot('lutePluck');
     if (t !== null) this.sfx!.lutePluck(t, pan);

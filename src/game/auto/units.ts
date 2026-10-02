@@ -229,6 +229,9 @@ const DEFS: Record<string, Def> = {
   'samurai.ronin': { cost: 1, origin: 'blade', range: 1, attack: ['slash1', 'slash2'], mana: 70,
     skill: { name: 'Iaido', cd: 6, kind: 'dash', aim: 'weak', dmg: 2, fx: 'steel', anim: 'dash' },
     ult: { kind: 'nova', aim: 'self', r: 2, dmg: 4, dodge: 0.8, fx: 'steel', anim: 'slash1' } },
+  'necromancer.reaper': { cost: 4, origin: 'blade', range: 1, attack: ['reap1', 'reap2', 'reap3'], mana: 80,
+    skill: { name: "Death's step", cd: 6, kind: 'dash', aim: 'weak', dmg: 1.8, dodge: 0.4, fx: 'shadow', anim: 'step' },
+    ult: { kind: 'nova', aim: 'self', r: 2, dmg: 4, drain: 0.5, fx: 'souls', anim: 'harvest' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

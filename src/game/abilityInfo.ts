@@ -112,6 +112,11 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: "Spends the hero's own blood on a nova that hits and drains foes around.",
     special: 'A crimson moon rains lances of blood on foes below, then bursts.',
   },
+  'necromancer.reaper': {
+    attack: 'Two wide scythe sweeps and a spinning reap; each foe cut frees a soul that heals the hero.',
+    ability: 'Steps through shade along the aim, cutting and marking foes passed; marked foes take more from reaps.',
+    special: 'A great ghost scythe sweeps round twice drawing foes in, then reaps, executing the nearly dead.',
+  },
   'bard.minstrel': {
     attack: 'Lute notes that bend toward foes and leap from one to the next.',
     ability: "A song that quickens the hero's feet and heals.",

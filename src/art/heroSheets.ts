@@ -28,6 +28,7 @@ import { POLTER_ANIMS, POLTER_H, POLTER_LOOKS, POLTER_W, buildPolterFrames } fro
 import { WRAITH_ANIMS, WRAITH_H, WRAITH_LOOKS, WRAITH_W, buildWraithFrames } from './wraith';
 import { INV_H, INV_W, INVENTOR_LOOKS, buildInventorFrames, inventorAnims } from './inventor';
 import { BEAST_H, BEAST_LOOKS, BEAST_W, beastAnims, buildBeastFrames } from './beast';
+import { REAPER_ANIMS, REAPER_H, REAPER_LOOKS, REAPER_W, buildReaperFrames, reaperSpins } from './reaper';
 
 /** The rigs whose frames carry points the game reads (a crystal, a blade tip): the same for every look of the rig. */
 export type MetaKind = 'wizard' | 'warrior' | 'paladin' | 'jedi' | 'samurai';
@@ -163,6 +164,8 @@ rig(POLTER_LOOKS, POLTER_W, POLTER_H, buildPolterFrames, () => POLTER_ANIMS);
 rig(WRAITH_LOOKS, WRAITH_W, WRAITH_H, buildWraithFrames, () => WRAITH_ANIMS);
 rig(INVENTOR_LOOKS, INV_W, INV_H, buildInventorFrames, inventorAnims);
 rig(BEAST_LOOKS, BEAST_W, BEAST_H, buildBeastFrames, beastAnims);
+// The Reaper's third reap is a spin drawn once for every facing.
+rig(REAPER_LOOKS, REAPER_W, REAPER_H, buildReaperFrames, () => REAPER_ANIMS, { extra: (look) => reaperSpins(look.key) });
 
 /** Every hero sheet's key, in roster order. */
 export const HERO_SHEETS: readonly string[] = [...SHEETS.keys()];
