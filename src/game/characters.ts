@@ -58,6 +58,16 @@ import { BANSHEE_KIT, POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
 import { CALA_KIT, FERRY_KIT, FIREFLY_KIT, WRAITH_KIT, Wraith } from './Wraith';
 import { POLTER_H, POLTER_ORIGIN_Y } from '../art/poltergeist';
 import { WRAITH_H, WRAITH_ORIGIN_Y } from '../art/wraith';
+import { BANSHEE_KIT as WEEPER_KIT, Banshee, BRIDE_KIT } from './Banshee';
+import { BANSHEE_H, BANSHEE_ORIGIN_Y } from '../art/banshee';
+import { YUKI_KIT, YUREI_KIT, Yurei } from './Yurei';
+import { YUREI_H, YUREI_ORIGIN_Y } from '../art/yurei';
+import { ADMIRAL_KIT, CAPTAIN_KIT, Captain } from './Captain';
+import { CAPTAIN_H, CAPTAIN_ORIGIN_Y } from '../art/captain';
+import { BALLET_KIT, Ballerina, FIREBIRD_KIT } from './Ballerina';
+import { BALLET_H, BALLET_ORIGIN_Y } from '../art/ballerina';
+import { JUGG_KIT, Juggernaut, TINMAN_KIT } from './Juggernaut';
+import { JUGG_H, JUGG_ORIGIN_Y } from '../art/juggernaut';
 import { ENGINEER_KIT, Engineer, FORGEBEARD_KIT } from './Engineer';
 import { EINSTEIN_KIT, SCIENTIST_KIT, Scientist, TESLA_KIT } from './Scientist';
 import { INV_H, INV_ORIGIN_Y } from '../art/inventor';
@@ -1985,10 +1995,70 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // A steam-powered iron brawler: piston-driven jabs and a slam, a boiler-blast charge, and a furnace that bursts open.
+        id: 'juggernaut',
+        name: 'Juggernaut',
+        role: 'Piston fists, full steam',
+        accent: 0xff6a3a,
+        attack: 'Piston fists',
+        special: 'Steam rush',
+        preview: { texture: 'jugg', glow: 'jugg_e', idle: 'jugg_idle_down', chosen: 'jugg_cast_down', originY: JUGG_ORIGIN_Y / JUGG_H },
+        buttons: {
+          attack: { texture: 'icon_jugg_fists' },
+          special: { texture: 'icon_jugg_rush' },
+        },
+        lookName: 'Boiler',
+        skins: [
+          {
+            // Tin plate and rivets, a funnel hat that puffs, a painted face with rosy cheeks, a heart-shaped furnace window and an oil can at his hip.
+            id: 'tinman',
+            name: 'Tin Man',
+            accent: 0xff7a9a,
+            preview: { texture: 'jugg_tinman', glow: 'jugg_tinman_e', idle: 'jugg_tinman_idle_down', chosen: 'jugg_tinman_cast_down', originY: JUGG_ORIGIN_Y / JUGG_H },
+            buttons: {
+              attack: { texture: 'icon_jugg_fists_tinman' },
+              special: { texture: 'icon_jugg_rush_tinman' },
+            },
+          },
+        ],
+      },
+      {
+        // A clockwork music-box dancer: pirouettes on a tutu of steel blades, a soaring jeté, and a vortex dance to her own music box.
+        id: 'ballerina',
+        name: 'Ballerina',
+        role: 'Clockwork grace, bladed spins',
+        accent: 0xff9ad0,
+        attack: 'Pirouette',
+        special: 'Grand jete',
+        preview: { texture: 'ballet', glow: 'ballet_e', idle: 'ballet_idle_down', chosen: 'ballet_cast_down', originY: BALLET_ORIGIN_Y / BALLET_H },
+        buttons: {
+          attack: { texture: 'icon_ballet_spin' },
+          special: { texture: 'icon_ballet_leap' },
+        },
+        lookName: 'Music Box',
+        skins: [
+          {
+            // Stravinsky's Firebird: crimson lacquer scaled in gold, a tutu of flame feathers, a plumed headdress and a train of tail plumes, gilded clockwork.
+            id: 'firebird',
+            name: 'Crimson Plume',
+            accent: 0xff6a1a,
+            preview: { texture: 'ballet_firebird', glow: 'ballet_firebird_e', idle: 'ballet_firebird_idle_down', chosen: 'ballet_firebird_cast_down', originY: BALLET_ORIGIN_Y / BALLET_H },
+            buttons: {
+              attack: { texture: 'icon_ballet_spin_firebird' },
+              special: { texture: 'icon_ballet_leap_firebird' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
       if (look === 'synth') return new Synth(world, x, y, SYNTH_KIT);
       if (look === 'hive') return new Synth(world, x, y, HIVE_KIT);
+      if (look === 'juggernaut') return new Juggernaut(world, x, y, JUGG_KIT);
+      if (look === 'tinman') return new Juggernaut(world, x, y, TINMAN_KIT);
+      if (look === 'ballerina') return new Ballerina(world, x, y, BALLET_KIT);
+      if (look === 'firebird') return new Ballerina(world, x, y, FIREBIRD_KIT);
       if (look === 'vaporwave') return new Synth(world, x, y, VAPOR_KIT);
       return new Mech(world, x, y, look === 'scrap' ? SCRAP_KIT : look === 'dreadnought' ? DREAD_KIT : MECH_KIT);
     },
@@ -2087,11 +2157,101 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // A drowned pirate's ghost: cutlass strokes and a flintlock shot, a boarding hook that hauls him to a foe.
+        id: 'captain',
+        name: 'Drowned Captain',
+        role: 'Cutlass, flintlock and a ghost ship',
+        accent: 0x50e0b0,
+        attack: 'Cutlass and pistol',
+        special: 'Boarding hook',
+        preview: { texture: 'captain', glow: 'captain_e', idle: 'captain_idle_down', chosen: 'captain_cast_down', originY: CAPTAIN_ORIGIN_Y / CAPTAIN_H },
+        buttons: {
+          attack: { texture: 'icon_captain_cutlass' },
+          special: { texture: 'icon_captain_hook' },
+        },
+        lookName: 'Drowned',
+        skins: [
+          {
+            // A skeleton in an admiral's dress: a skull under a plumed bicorne, gold epaulettes and braid on navy, a sabre, violet ghost-light.
+            id: 'admiral',
+            name: 'Bone Admiral',
+            accent: 0xb890ff,
+            preview: { texture: 'captain_admiral', glow: 'captain_admiral_e', idle: 'captain_admiral_idle_down', chosen: 'captain_admiral_cast_down', originY: CAPTAIN_ORIGIN_Y / CAPTAIN_H },
+            buttons: {
+              attack: { texture: 'icon_captain_cutlass_admiral' },
+              special: { texture: 'icon_captain_hook_admiral' },
+            },
+          },
+        ],
+      },
+      {
+        // Talismans that stick and burn, hair that pours out and holds, and spirit flames circling her.
+        id: 'yurei',
+        name: 'Yurei',
+        role: 'Talismans, hair and a hundred candles',
+        accent: 0x8ac8ff,
+        attack: 'Ofuda',
+        special: 'Grasping hair',
+        preview: { texture: 'yurei', glow: 'yurei_e', idle: 'yurei_idle_down', chosen: 'yurei_cast_down', originY: YUREI_ORIGIN_Y / YUREI_H },
+        buttons: {
+          attack: { texture: 'icon_yurei_ofuda' },
+          special: { texture: 'icon_yurei_hair' },
+        },
+        lookName: 'Burial white',
+        skins: [
+          {
+            // The snow woman: an ice-blue kimono worked with frost, silver hair on a wind, ice-blue lips, an ice crystal in her hair, snow round her.
+            id: 'yuki',
+            name: 'Yuki-onna',
+            accent: 0xc8ecff,
+            preview: { texture: 'yurei_yuki', glow: 'yurei_yuki_e', idle: 'yurei_yuki_idle_down', chosen: 'yurei_yuki_cast_down', originY: YUREI_ORIGIN_Y / YUREI_H },
+            buttons: {
+              attack: { texture: 'icon_yurei_ofuda_yuki' },
+              special: { texture: 'icon_yurei_hair_yuki' },
+            },
+          },
+        ],
+      },
+      {
+        // A keening spirit: a cone of wailing sound, and a shriek that sends foes fleeing in terror.
+        id: 'weeper',
+        name: 'Weeping Lady',
+        role: 'A wail that kills',
+        accent: 0xa0b8ff,
+        attack: 'Keen',
+        special: 'Shriek',
+        preview: { texture: 'weeper', glow: 'weeper_e', idle: 'weeper_idle_down', chosen: 'weeper_cast_down', originY: BANSHEE_ORIGIN_Y / BANSHEE_H },
+        buttons: {
+          attack: { texture: 'icon_banshee_keen' },
+          special: { texture: 'icon_banshee_shriek' },
+        },
+        lookName: 'Shroud',
+        skins: [
+          {
+            // A jilted ghost bride: a torn wedding gown with a train, lace sleeves, pearls, a streaming veil and a wilted bouquet of blue roses.
+            id: 'bride',
+            name: 'Ghost Bride',
+            accent: 0xc8b8ff,
+            preview: { texture: 'weeper_bride', glow: 'weeper_bride_e', idle: 'weeper_bride_idle_down', chosen: 'weeper_bride_cast_down', originY: BANSHEE_ORIGIN_Y / BANSHEE_H },
+            buttons: {
+              attack: { texture: 'icon_banshee_keen_bride' },
+              special: { texture: 'icon_banshee_shriek_bride' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
       if (look === 'wraith') return new Wraith(world, x, y, WRAITH_KIT);
       if (look === 'cala') return new Wraith(world, x, y, CALA_KIT);
       if (look === 'firefly') return new Wraith(world, x, y, FIREFLY_KIT);
+      if (look === 'captain') return new Captain(world, x, y, CAPTAIN_KIT);
+      if (look === 'admiral') return new Captain(world, x, y, ADMIRAL_KIT);
+      if (look === 'yurei') return new Yurei(world, x, y, YUREI_KIT);
+      if (look === 'yuki') return new Yurei(world, x, y, YUKI_KIT);
+      if (look === 'weeper') return new Banshee(world, x, y, WEEPER_KIT);
+      if (look === 'bride') return new Banshee(world, x, y, BRIDE_KIT);
       if (look === 'ferryman') return new Wraith(world, x, y, FERRY_KIT);
       if (look === 'banshee') return new Poltergeist(world, x, y, BANSHEE_KIT);
       return new Poltergeist(world, x, y, look === 'tea' ? TEA_KIT : POLTER_KIT);

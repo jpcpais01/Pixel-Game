@@ -10,6 +10,11 @@ import { WILD_KITS } from './wild';
 import { FORGED_KITS } from './forged';
 import { SHOW_KITS } from './show';
 import { BLADE_KITS } from './blade';
+import { BANSHEE_AUTO } from './banshee';
+import { YUREI_AUTO } from './yurei';
+import { CAPTAIN_AUTO } from './captain';
+import { BALLERINA_AUTO } from './ballerina';
+import { JUGG_AUTO } from './juggernaut';
 import { LIGHTWRIGHT_KITS } from './lightwright';
 import { TRANSMUTER_KITS } from './transmuter';
 import { AQUANAUT_KITS } from './aquanaut';
@@ -25,6 +30,11 @@ export const KITS: Record<string, Kit> = {
   ...FORGED_KITS,
   ...SHOW_KITS,
   ...BLADE_KITS,
+  ...BANSHEE_AUTO,
+  ...YUREI_AUTO,
+  ...CAPTAIN_AUTO,
+  ...BALLERINA_AUTO,
+  ...JUGG_AUTO,
   ...LIGHTWRIGHT_KITS,
   ...TRANSMUTER_KITS,
   ...AQUANAUT_KITS,
