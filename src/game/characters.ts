@@ -25,6 +25,8 @@ import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { GUARD_STYLE, Jedi, JEDI_STYLE, MASTER_STYLE } from './Jedi';
 import { Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
+import { DUNE_KIT, Twin, TWIN_KIT } from './Twin';
+import { TWIN_H, TWIN_ORIGIN_Y } from '../art/twin';
 import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CHEM_STYLE, CRYO_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
@@ -616,9 +618,38 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // A Jar'Kai duelist, a saber in each hand: a four-cut flurry ending in an X, a parry that answers, a storm of blinks.
+        id: 'twin',
+        name: 'Twin Blade',
+        role: 'Two sabers, no openings',
+        accent: 0x3ee6ff,
+        attack: 'Twin flurry',
+        special: 'Riposte',
+        preview: { texture: 'jedi_twin', glow: 'jedi_twin_e', idle: 'jedi_twin_idle_down', chosen: 'jedi_twin_draw_down', originY: TWIN_ORIGIN_Y / TWIN_H },
+        buttons: {
+          attack: { texture: 'icon_twin' },
+          special: { texture: 'icon_riposte' },
+        },
+        lookName: 'Duelist',
+        skins: [
+          {
+            // A desert nomad: sand wraps, an indigo face scarf, goggles on the headwrap, a sun-bleached cloak, bronze hilts, amber and violet blades.
+            id: 'dune',
+            name: 'Dune Wanderer',
+            accent: 0xffb040,
+            preview: { texture: 'jedi_dune', glow: 'jedi_dune_e', idle: 'jedi_dune_idle_down', chosen: 'jedi_dune_draw_down', originY: TWIN_ORIGIN_Y / TWIN_H },
+            buttons: {
+              attack: { texture: 'icon_twin_dune' },
+              special: { texture: 'icon_riposte_dune' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
       if (look === 'sith' || look === 'warlord') return new Sith(world, x, y, look === 'warlord' ? WARLORD_KIT : SITH_KIT);
+      if (look === 'twin' || look === 'dune') return new Twin(world, x, y, look === 'dune' ? DUNE_KIT : TWIN_KIT);
       return new Jedi(world, x, y, look === 'guard' ? GUARD_STYLE : look === 'master' ? MASTER_STYLE : JEDI_STYLE);
     },
   },

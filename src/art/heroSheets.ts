@@ -28,6 +28,7 @@ import { POLTER_ANIMS, POLTER_H, POLTER_LOOKS, POLTER_W, buildPolterFrames } fro
 import { WRAITH_ANIMS, WRAITH_H, WRAITH_LOOKS, WRAITH_W, buildWraithFrames } from './wraith';
 import { INV_H, INV_W, INVENTOR_LOOKS, buildInventorFrames, inventorAnims } from './inventor';
 import { BEAST_H, BEAST_LOOKS, BEAST_W, beastAnims, buildBeastFrames } from './beast';
+import { TWIN_ANIMS, TWIN_H, TWIN_LOOKS, TWIN_W, buildTwinFrames } from './twin';
 
 /** The rigs whose frames carry points the game reads (a crystal, a blade tip): the same for every look of the rig. */
 export type MetaKind = 'wizard' | 'warrior' | 'paladin' | 'jedi' | 'samurai';
@@ -163,6 +164,8 @@ rig(POLTER_LOOKS, POLTER_W, POLTER_H, buildPolterFrames, () => POLTER_ANIMS);
 rig(WRAITH_LOOKS, WRAITH_W, WRAITH_H, buildWraithFrames, () => WRAITH_ANIMS);
 rig(INVENTOR_LOOKS, INV_W, INV_H, buildInventorFrames, inventorAnims);
 rig(BEAST_LOOKS, BEAST_W, BEAST_H, buildBeastFrames, beastAnims);
+// The Twin Blade, the Jedi class's third type, on a rig of his own; his frames carry the Jedi's points (blade tips).
+rig(TWIN_LOOKS, TWIN_W, TWIN_H, buildTwinFrames, () => TWIN_ANIMS, { meta: 'jedi' });
 
 /** Every hero sheet's key, in roster order. */
 export const HERO_SHEETS: readonly string[] = [...SHEETS.keys()];

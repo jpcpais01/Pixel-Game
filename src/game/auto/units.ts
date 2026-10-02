@@ -229,6 +229,9 @@ const DEFS: Record<string, Def> = {
   'samurai.ronin': { cost: 1, origin: 'blade', range: 1, attack: ['slash1', 'slash2'], mana: 70,
     skill: { name: 'Iaido', cd: 6, kind: 'dash', aim: 'weak', dmg: 2, fx: 'steel', anim: 'dash' },
     ult: { kind: 'nova', aim: 'self', r: 2, dmg: 4, dodge: 0.8, fx: 'steel', anim: 'slash1' } },
+  'jedi.twin': { cost: 3, origin: 'blade', range: 1, attack: ['cut1', 'cut2', 'cut3', 'xcut'], mana: 70,
+    skill: { name: 'Riposte', cd: 6, kind: 'nova', aim: 'self', r: 1.2, dmg: 1.8, dodge: 1, fx: 'saber', anim: 'counter' },
+    ult: { kind: 'chain', aim: 'target', n: 5, dmg: 3.5, dodge: 1.2, fx: 'saber', anim: 'xcut' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

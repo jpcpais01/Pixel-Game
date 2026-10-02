@@ -2697,6 +2697,61 @@ export class Sfx {
       o.stop(at + 0.3);
     }
   }
+
+  // ------------------------------------------------------------ The Twin Blade
+
+  /**
+   * A blow turned on two crossed sabers: a hard electric snap, the blades
+   * grinding against each other, then a bright ring like a struck bell, a
+   * little out of tune between its two blades.
+   */
+  saberParry(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.9, 0.4);
+    this.burstNoise(out, t, 'highpass', 3200, 6000, 0.8, 0.45, 0.09);
+    const grind = gain(ctx, 0, filter(ctx, 'bandpass', 1400, 2, out));
+    hit(grind.gain, t, 0.22, 0.002, 0.16);
+    for (const f of [118, 131]) {
+      const o = osc(ctx, 'sawtooth', f, grind);
+      sweep(o.frequency, t, f * 1.8, f, 0.14);
+      o.start(t);
+      o.stop(t + 0.2);
+    }
+    const ring = gain(ctx, 0, filter(ctx, 'highpass', 900, 0.7, out));
+    hit(ring.gain, t + 0.01, 0.11, 0.002, 0.7);
+    for (const f of [1320, 1395, 2210, 3480]) {
+      const r = osc(ctx, 'triangle', f * rand(0.99, 1.01), gain(ctx, 0.45, ring));
+      r.start(t + 0.01);
+      r.stop(t + 0.8);
+    }
+    const th = gain(ctx, 0, out);
+    hit(th.gain, t, 0.35, 0.002, 0.12);
+    const lo = osc(ctx, 'sine', 170, th);
+    sweep(lo.frequency, t, 170, 60, 0.12);
+    lo.start(t);
+    lo.stop(t + 0.16);
+  }
+
+  /** Thousand Cuts' last flash: two blades crossing at once, a rising hiss and a deep, double saber bite. */
+  saberCross(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 1, 0.5);
+    this.burstNoise(out, t, 'bandpass', 900, 6200, 1.2, 0.4, 0.22);
+    for (const [d, f] of [[0, 96], [0.045, 128]] as const) {
+      const g = gain(ctx, 0, filter(ctx, 'lowpass', 2200, 1.5, out));
+      hit(g.gain, t + d, 0.3, 0.003, 0.3);
+      const o = osc(ctx, 'sawtooth', f, g);
+      sweep(o.frequency, t + d, f * 2.2, f * 0.7, 0.28);
+      o.start(t + d);
+      o.stop(t + d + 0.34);
+    }
+    const th = gain(ctx, 0, out);
+    hit(th.gain, t + 0.04, 0.55, 0.003, 0.3);
+    const lo = osc(ctx, 'sine', 120, th);
+    sweep(lo.frequency, t + 0.04, 120, 38, 0.3);
+    lo.start(t + 0.04);
+    lo.stop(t + 0.4);
+  }
 }
 
 /**

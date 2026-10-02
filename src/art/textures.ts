@@ -6,6 +6,7 @@ import { worldMapTextures } from './worldMap';
 import type Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { lightningIcon, MASTER_FORCE_ICON, MASTER_SABER_ICON, SITH_BOLT_ICON, SITH_STAFF_ICON, staffIcon, WARLORD_BOLT_ICON, WARLORD_STAFF_ICON } from './sith';
+import { DUNE_ICON, riposteIcon, TWIN_ICON, twinIcon } from './twin';
 import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, PYRO_SPELL, PYRO_METEOR_H, PYRO_METEOR_W, meteorIcon, pyroMeteor, scorchCanvas, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, hammerIcon, sunfallIcon, saberIcon, forceIcon, fistIcon, barrageIcon, palmIcon, quakeIcon, flaskIcon, bogIcon, canisterIcon, chemBarrageIcon, fumeCanvas, CHEM_BREW_COLORS, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
 import { ALCHEMIST_LOOKS, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, flaskFrame } from './alchemist';
 import { FOXGLOVE_BREW, foxBogIcon, foxFlaskIcon } from './foxglove';
@@ -422,6 +423,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_lightning', toCanvas(16, 16, lightningIcon(SITH_BOLT_ICON)));
   scene.textures.addCanvas('icon_staff_warlord', toCanvas(16, 16, staffIcon(WARLORD_STAFF_ICON)));
   scene.textures.addCanvas('icon_lightning_warlord', toCanvas(16, 16, lightningIcon(WARLORD_BOLT_ICON, [150, 70, 60])));
+  // The Twin Blade's flurry and Riposte, and the Dune Wanderer's.
+  scene.textures.addCanvas('icon_twin', toCanvas(16, 16, twinIcon(TWIN_ICON)));
+  scene.textures.addCanvas('icon_riposte', toCanvas(16, 16, riposteIcon(TWIN_ICON)));
+  scene.textures.addCanvas('icon_twin_dune', toCanvas(16, 16, twinIcon(DUNE_ICON)));
+  scene.textures.addCanvas('icon_riposte_dune', toCanvas(16, 16, riposteIcon(DUNE_ICON)));
 
   yield;
   // Skins: the Astral's beam, the Hellfire's meteor and scorch, and the

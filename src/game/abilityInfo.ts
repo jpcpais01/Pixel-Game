@@ -57,6 +57,11 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Lightning pours into foes ahead, jumping on and slowing them.',
     special: 'Lifts and squeezes foes on a spot, draining life, then crushes.',
   },
+  'jedi.twin': {
+    attack: 'Three quick crossing cuts, hand after hand, then an X-cut that staggers.',
+    ability: 'Crossed blades turn the next blow aside and answer it with a hard counter-cut.',
+    special: 'Blinks from foe to foe cutting each, then every cut bursts at once.',
+  },
   'fighter.brawler': {
     attack: 'A five-punch combo ending in a flying straight that launches.',
     ability: 'A stream of chi fists hammers far ahead, ending in a finisher.',
