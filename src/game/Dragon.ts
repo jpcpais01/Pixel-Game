@@ -57,6 +57,15 @@ export const PORTO_KIT: BeastKit = {
   club: true,
 };
 
+/** The Jade Serpent: an Eastern dragon whose fire burns pale jade and gold, curling into wisps of cloud. */
+export const JADE_KIT: BeastKit = {
+  ...DRAGON_KIT,
+  key: 'dragon_jade',
+  pal: pal(0xfffff0, 0xf4e8a0, 0x5ad8a0, 0x147a5a, 0x9af0c0),
+  fx: { core: 0xfffff0, hot: 0xf4e8a0, mid: 0x5ad8a0, deep: 0x147a5a, light: 0x9af0c0 },
+  motes: [0xffffff, 0xdcf4ec, 0xb8e8d8],
+};
+
 export class Dragon extends Beast {
   private breathCd = 0;
   private tickT = 0;
@@ -108,7 +117,7 @@ export class Dragon extends Beast {
       return;
     }
     // The breath: the flame lives as long as he pours it out.
-    const f = new Breath(this.world, this.kit.pal);
+    const f = new Breath(this.world, this.kit.pal, this.kit.motes);
     this.flame = f;
     this.fx.push(f);
     sound.ignite();
@@ -200,6 +209,8 @@ class Firebolt implements Effect {
       this.trailT = 30;
       const p = this.kit.pal;
       this.world.debris([p.hot, p.mid, p.deep], snap(this.x - this.ux * 4), snap(this.y - BOLT_H - this.uy * 4), 1, this.y, 'trail');
+      // The Jade Serpent's bolt trails little wisps of cloud.
+      if (this.kit.motes && Math.random() < 0.35) this.world.debris(this.kit.motes, snap(this.x - this.ux * 6), snap(this.y - BOLT_H - this.uy * 6), 1, this.y, 'spores');
     }
   }
 
@@ -260,6 +271,8 @@ class Breath extends Fx {
   constructor(
     world: WorldScene,
     private p: Pal,
+    /** What drifts off the flame's end instead of its sparks (the Jade Serpent's cloud wisps). */
+    private motes?: number[],
   ) {
     super(world, 60000);
     this.g = this.ink(BREATH_REACH * 2 + 24, BREATH_REACH * 2 + 24);
@@ -315,6 +328,6 @@ class Breath extends Fx {
     g.end();
     this.lamp.setPosition(mx + ux * reach * 0.5, my + uy * reach * 0.5);
     this.lamp.intensity = 2.2 * grow * (0.85 + 0.15 * Math.sin(this.t * 0.05));
-    if (Math.random() < dt / 40) this.world.debris(p.tints, mx + ux * reach * 0.8, my + uy * reach * 0.7, 1, this.ground + 20, 'spores');
+    if (Math.random() < dt / 40) this.world.debris(this.motes ?? p.tints, mx + ux * reach * 0.8, my + uy * reach * 0.7, 1, this.ground + 20, 'spores');
   }
 }

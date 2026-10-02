@@ -1,7 +1,7 @@
 import { heroTimers } from './timers';
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
-import { WRAITH_CHEST_Y, WRAITH_H, WRAITH_LANTERN_Y, WRAITH_ORIGIN_X, WRAITH_ORIGIN_Y, WRAITH_W } from '../art/wraith';
+import { FERRY_LANTERN_Y, WRAITH_CHEST_Y, WRAITH_H, WRAITH_LANTERN_Y, WRAITH_ORIGIN_X, WRAITH_ORIGIN_Y, WRAITH_W } from '../art/wraith';
 import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
@@ -28,8 +28,9 @@ import { stand } from './rest';
 //  - Special: Dead of Night (see ultimate/phantom.ts).
 // Like every Phantom it phases through the next blow (see phase.ts).
 // The Calavera leaves marigold petals and gives the possessed a sugar-skull
-// face; the Firefly leaves fireflies and crowns the possessed in fern. Both
-// play the same.
+// face; the Firefly leaves fireflies and crowns the possessed in fern; the
+// Ferryman leaves pale teal soul-flames, lays a coin on the possessed's eyes,
+// and dives in on a trail of river mist. All play the same.
 
 const SWING_EVERY = 460;
 /** The lantern strikes this long into the swing. */
@@ -72,8 +73,12 @@ export interface WraithKit {
   speed: number;
   /** The wisp texture (its animation is `<wisp>_flicker`), and the possession mark's frame. */
   wisp: string;
-  mark: 'w' | 'c' | 'f';
+  mark: 'w' | 'c' | 'f' | 'r';
   pal: Pal;
+  /** How high the lantern hangs at rest (where wisps are left and its light sits), if not the usual. */
+  lanternY?: number;
+  /** Mist left low along the ground as it dives (the Ferryman's river mist). */
+  mist?: number[];
 }
 
 export const WRAITH_KIT: WraithKit = {
@@ -102,6 +107,17 @@ export const FIREFLY_KIT: WraithKit = {
   wisp: 'soulwisp_firefly',
   mark: 'f',
   pal: pal(0xfbffd8, 0xe4ff8a, 0xa8e04a, 0x2e5a22, 0xd0ff70),
+};
+
+/** The Ferryman: pale teal ghostfire on a punting pole's crook, river mist on the dive. */
+export const FERRY_KIT: WraithKit = {
+  ...WRAITH_KIT,
+  key: 'wraith_ferry',
+  wisp: 'soulwisp_ferry',
+  mark: 'r',
+  pal: pal(0xe8fffc, 0x8af0e4, 0x2eb4b0, 0x0c3e48, 0x7ae8e0),
+  lanternY: FERRY_LANTERN_Y,
+  mist: [0x5a8a9a, 0x3a6474, 0x8ab4c0],
 };
 
 type Bindable = Hurtbox & { bind?(ms: number, lift: number): boolean; shove?(dx: number, dy: number): void };
@@ -243,7 +259,7 @@ export class Wraith implements Hero {
     for (const h of hits) w.debris(this.kit.pal.tints, h.x, h.y, 4, h.y + 12, 'burst');
     if (hits.length) sound.impact(w.pan(cx), true);
     const lx = this.x + (this.dir === 'left' ? -4.5 : this.dir === 'right' ? 4.5 : 5.5) + u.x * 4;
-    const ly = this.y - WRAITH_LANTERN_Y + u.y * 4;
+    const ly = this.y - (this.kit.lanternY ?? WRAITH_LANTERN_Y) + u.y * 4;
     for (let i = 0; i < WISPS_PER_SWING && wispsAlive < WISPS_MAX; i++) {
       w.addEffect(new Wisp(w, lx + (i ? 4 : -4), ly - i * 3, this.kit, this));
     }
@@ -300,7 +316,10 @@ export class Wraith implements Hero {
     }
     this.x = this.dive.x0 + (h.x - this.dive.x0) * k;
     this.y = this.dive.y0 + (h.y - this.dive.y0) * k;
-    if (Math.floor(this.diveT / 30) !== Math.floor((this.diveT - dt) / 30)) this.world.debris(this.kit.pal.tints, this.x, this.y - WRAITH_CHEST_Y, 1, this.y + 10, 'trail');
+    if (Math.floor(this.diveT / 30) !== Math.floor((this.diveT - dt) / 30)) {
+      this.world.debris(this.kit.pal.tints, this.x, this.y - WRAITH_CHEST_Y, 1, this.y + 10, 'trail');
+      if (this.kit.mist) this.world.debris(this.kit.mist, this.x + (Math.random() - 0.5) * 8, this.y - 2, 2, this.y + 1, 'spores');
+    }
     if (k < 1) return;
     const w = this.world;
     this.possessCd = POSSESS_COOLDOWN;
@@ -433,7 +452,7 @@ export class Wraith implements Hero {
       this.aura.intensity = 1.2;
       if (Math.floor(this.clock / 120) !== Math.floor((this.clock - 16) / 120)) this.world.debris(this.kit.pal.tints, h.x + (Math.random() - 0.5) * 10, hy - 4, 1, h.y + 10, 'spores');
     } else {
-      this.aura.setPosition(rx + (this.dir === 'left' ? -4.5 : 4.5), ry - WRAITH_LANTERN_Y);
+      this.aura.setPosition(rx + (this.dir === 'left' ? -4.5 : 4.5), ry - (this.kit.lanternY ?? WRAITH_LANTERN_Y));
       this.aura.intensity = 0.9 * (1 - this.daylight) + 0.3;
     }
   }

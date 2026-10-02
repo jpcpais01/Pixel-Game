@@ -17,6 +17,18 @@
 // stick of chalk glowing at its tip where the Tesla gun was. When he makes
 // his discovery he sticks out his tongue.
 //
+// Forgebeard is a skin of the engineer: a dwarven runesmith, short and
+// stout on the same rig (his head sits low on broad shoulders, no neck to
+// speak of). A great braided copper-red beard ringed in brass hides his
+// chest, a steel half-helm with a rune on its brow and goggles pushed up
+// over it, chainmail under a heavy leather apron, and a rune-etched
+// hammer-wrench of oak and steel. A stone rune-chest rides on his back.
+//
+// Tesla is a skin of the scientist: slicked black hair parted in the middle,
+// a neat moustache, a high white wing collar and a black three-piece suit
+// with a gold watch chain across the waistcoat, pale gloves, and a slim
+// ebony lightning rod wound with a copper coil, a violet spark at its tip.
+//
 // The body keeps to the 24x32 box; frames are larger so the wrench and the
 // raised arms fit. Hands are posed in the rig's own terms (forward, out to the
 // side, height) and placed per view; so is the direction the tool points.
@@ -69,6 +81,25 @@ const OLD_TROUSER: Material = { ramp: ramp('#131317', '#23232b', '#35353e', '#49
 const CHALK: Material = { ramp: ramp('#8a8a92', '#cacad2', '#f4f4fa'), outline: hex('#2a2a32') };
 const TONGUE: Material = { ramp: ramp('#6a1a2a', '#b83a50', '#e86a7a'), outline: hex('#2a0810') };
 
+// Forgebeard's.
+const BEARD: Material = { ramp: ramp('#3a1206', '#6e240c', '#a8401a', '#d8682e', '#f4985a'), outline: hex('#1a0802'), outlineLit: hex('#2c0e04') };
+const IRON: Material = { ramp: ramp('#1c1e26', '#363a48', '#5a6072', '#8a92a6', '#d0d8e8'), outline: hex('#0a0b10'), shine: true };
+const MAIL: Material = { ramp: ramp('#16181e', '#2c3038', '#4a505c', '#707888', '#9aa2b2'), outline: INK, outlineLit: hex('#1a1c24') };
+const APRON: Material = { ramp: ramp('#22120a', '#3e2416', '#603c26', '#845a3a', '#a4784e'), outline: hex('#0e0604'), outlineLit: hex('#1e100a') };
+const OAK: Material = { ramp: ramp('#2a1608', '#4a2a12', '#6e4220', '#94602e'), outline: hex('#120a04') };
+const STONE: Material = { ramp: ramp('#26262c', '#44444c', '#68666c', '#908c8a', '#b8b2aa'), outline: hex('#101012'), outlineLit: hex('#1c1c20') };
+const WOOL: Material = { ramp: ramp('#1c160e', '#31281a', '#4a3c28', '#64533a'), outline: INK };
+const RUNE: Material = { ramp: ramp('#8a2a06', '#ff6a1a', '#ffb050', '#fff0d0'), outline: hex('#3a1002'), emissive: 1, noAO: true };
+
+// Tesla's.
+const SLICK: Material = { ramp: ramp('#040406', '#0c0c12', '#16161e', '#22222e', '#3a3a50'), outline: hex('#020204'), shine: true };
+const SUIT: Material = { ramp: ramp('#09090d', '#15151d', '#24242f', '#363646', '#4c4c60'), outline: hex('#020204'), outlineLit: hex('#0e0e16') };
+const WAISTCOAT: Material = { ramp: ramp('#120e16', '#221c28', '#362e3e', '#4c4256'), outline: hex('#040306') };
+const SILK: Material = { ramp: ramp('#06060a', '#141420', '#2a2a40', '#484868'), outline: hex('#020204'), shine: true };
+const PALE_GLOVE: Material = { ramp: ramp('#5e5e6a', '#9c9caa', '#d0d0dc', '#f4f4fc'), outline: hex('#1c1c24') };
+const EBONY: Material = { ramp: ramp('#0a0810', '#1c1824', '#363046', '#5c5470'), outline: hex('#020104'), shine: true };
+const VIOLET_BULB: Material = { ramp: ramp('#3a1a6a', '#7a4ac8', '#c8a0ff', '#f4ecff'), outline: hex('#140828'), emissive: 0.8, noAO: true, shine: true };
+
 // ---------------------------------------------------------------------------
 // Looks
 
@@ -79,6 +110,10 @@ export interface InventorLook {
   kind: InventorKind;
   /** The scientist's Einstein skin. */
   einstein?: boolean;
+  /** The engineer's Forgebeard skin: the dwarven runesmith. */
+  forge?: boolean;
+  /** The scientist's Tesla skin. */
+  tesla?: boolean;
   /** Light of the gadget (the hat lamp's for the engineer), brightest first. */
   light: [RGB, RGB, RGB, RGB];
 }
@@ -86,15 +121,21 @@ export interface InventorLook {
 export const ENGINEER_LOOK: InventorLook = { key: 'engineer', kind: 'engineer', light: [hex('#fffbe8'), hex('#ffe6a0'), hex('#ffc050'), hex('#b8701e')] };
 export const SCIENTIST_LOOK: InventorLook = { key: 'scientist', kind: 'scientist', light: [hex('#f0ffff'), hex('#a8f4ff'), hex('#40d0ff'), hex('#1a6ab0')] };
 export const EINSTEIN_LOOK: InventorLook = { key: 'scientist_einstein', kind: 'scientist', einstein: true, light: [hex('#fffdf0'), hex('#fff0b0'), hex('#ffd060'), hex('#c08020')] };
-export const INVENTOR_LOOKS = [ENGINEER_LOOK, SCIENTIST_LOOK, EINSTEIN_LOOK];
+export const FORGEBEARD_LOOK: InventorLook = { key: 'engineer_forgebeard', kind: 'engineer', forge: true, light: [hex('#fff0d8'), hex('#ffb050'), hex('#ff6a1a'), hex('#a8360a')] };
+export const TESLA_LOOK: InventorLook = { key: 'scientist_tesla', kind: 'scientist', tesla: true, light: [hex('#faf4ff'), hex('#dcc4ff'), hex('#a478ff'), hex('#5a2ab0')] };
+export const INVENTOR_LOOKS = [ENGINEER_LOOK, SCIENTIST_LOOK, EINSTEIN_LOOK, FORGEBEARD_LOOK, TESLA_LOOK];
 
 /** The look being drawn; set by buildInventorFrames. */
 let S: InventorLook = ENGINEER_LOOK;
 
 const eng = () => S.kind === 'engineer';
 const ein = () => !!S.einstein;
-const handMat = (): Material => (eng() ? LEATHER : ein() ? SKIN : GLOVE);
-const trouser = (): Material => (eng() ? DENIM : ein() ? OLD_TROUSER : SLACKS);
+const dwarf = () => !!S.forge;
+const tes = () => !!S.tesla;
+const handMat = (): Material => (eng() ? LEATHER : ein() ? SKIN : tes() ? PALE_GLOVE : GLOVE);
+const trouser = (): Material => (dwarf() ? WOOL : eng() ? DENIM : ein() ? OLD_TROUSER : tes() ? SUIT : SLACKS);
+/** How much lower the dwarf's head sits on his shoulders, and his shoulders on him. */
+const DWARF_DROP = 2;
 
 // ---------------------------------------------------------------------------
 // The rig
@@ -230,7 +271,22 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   const [ex, ey] = elbow(sx, sy, p.x, p.y, reach, hint);
   const wx = ex + (p.x - ex) * 0.7;
   const wy = ey + (p.y - ey) * 0.7;
-  if (eng()) {
+  if (dwarf()) {
+    // A thick chainmail sleeve, then a studded leather bracer to the glove.
+    c.part();
+    c.capsule(sx, sy, ex, ey, 2.2, 1.8, MAIL, { bias });
+    c.part();
+    c.capsule(ex, ey, wx, wy, 1.6, 1.5, APRON, { bias });
+    c.px(wx, wy, BRASS, sphere(0, -0.3), { bias: bias + 1 });
+  } else if (tes()) {
+    // A slim black suit sleeve, a white cuff showing at the wrist.
+    c.part();
+    c.capsule(sx, sy, ex, ey, 1.6, 1.4, SUIT, { bias });
+    c.part();
+    c.capsule(ex, ey, wx, wy, 1.4, 1.3, SUIT, { bias });
+    c.part();
+    c.ellipse(wx, wy, 1.1, 0.9, WHITE_SHIRT, { bias });
+  } else if (eng()) {
     c.part();
     c.capsule(sx, sy, ex, ey, 1.9, 1.6, WORK_SHIRT, { bias });
     c.part();
@@ -257,7 +313,9 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
   c.part();
   if (eng()) {
-    c.ellipse(x, y, side ? 2.4 : 1.9, 1.35, BOOT, { flatten: 0.8, bias });
+    // The dwarf's boots are broader still, for a broad stance.
+    const big = dwarf() ? 0.35 : 0;
+    c.ellipse(x, y, (side ? 2.4 : 1.9) + big, 1.35 + big * 0.4, BOOT, { flatten: 0.8, bias });
     c.part();
     if (side) c.px(x - 2, y, STEEL, sphere(-0.5, 0.2), { bias });
     else c.px(x - 0.5, y + 0.6, STEEL, sphere(0, 0.4), { bias });
@@ -296,7 +354,27 @@ function drawTool(c: PixelCanvas, p: Placed, d: { x: number; y: number; k: numbe
   const vy = ux;
   const hx = p.x;
   const hy = p.y;
-  if (eng()) {
+  if (dwarf()) {
+    // The hammer-wrench: an oak haft bound in brass, a heavy iron head
+    // (a hammer face one end, a wrench's hooked jaw the other), runes
+    // cut into it that kindle as he works.
+    const len = 9.5 * k;
+    c.part();
+    c.capsule(hx - ux * 1.8, hy - uy * 1.8, hx + ux * (len - 2), hy + uy * (len - 2), 0.8, 0.75, OAK, { bias });
+    c.part();
+    for (const q of [0.45, 0.78]) c.px(hx + ux * len * q, hy + uy * len * q, BRASS, sphere(vx * 0.4, vy * 0.4 - 0.3), { bias: bias + 1 });
+    const ex = hx + ux * (len - 1.2);
+    const ey = hy + uy * (len - 1.2);
+    c.part();
+    c.capsule(ex - vx * 2.2, ey - vy * 2.2, ex + vx * 1.9, ey + vy * 1.9, 1.45, 1.35, IRON, { bias });
+    c.part();
+    c.capsule(ex - vx * 2.2, ey - vy * 2.2, ex - vx * 1.9 + ux * 2, ey - vy * 1.9 + uy * 2, 0.8, 0.6, IRON, { bias });
+    c.part();
+    const k2 = 0.35 + glow * 0.65;
+    c.px(ex - vx * 0.4, ey - vy * 0.4, RUNE, sphere(0, 0), { bias, glow: k2 });
+    c.px(ex + vx * 0.9, ey + vy * 0.9, RUNE, sphere(0, 0), { bias, glow: k2 });
+    if (glow > 0.5) glowAt(c, ex, ey, (glow - 0.5) * 1.6);
+  } else if (eng()) {
     const len = 9.5 * k;
     c.part();
     c.capsule(hx - ux * 1.6, hy - uy * 1.6, hx + ux * (len - 2), hy + uy * (len - 2), 0.75, 0.7, PIPE_RED, { bias });
@@ -308,6 +386,31 @@ function drawTool(c: PixelCanvas, p: Placed, d: { x: number; y: number; k: numbe
     c.part();
     c.capsule(ex - vx * 1.8, ey - vy * 1.8, ex - vx * 1.5 + ux * 1.8, ey - vy * 1.5 + uy * 1.8, 0.75, 0.6, STEEL, { bias });
     c.px(ex + vx * 0.4 - ux * 0.6, ey + vy * 0.4 - uy * 0.6, BRASS, sphere(0, 0), { bias });
+  } else if (tes()) {
+    // The lightning rod: a slim ebony wand, a copper coil wound near its tip,
+    // a little violet bulb on the end that crackles.
+    const len = 6.8 * k;
+    c.part();
+    c.capsule(hx - ux * 1, hy - uy * 1, hx + ux * len, hy + uy * len, 0.65, 0.5, EBONY, { bias });
+    // The coil: a few turns of copper wire, glinting on alternate sides.
+    c.part();
+    for (let i = 0; i < 3; i++) {
+      const q = 0.55 + i * 0.15;
+      const sd = i % 2 ? 1 : -1;
+      c.px(hx + ux * len * q + vx * 0.7 * sd, hy + uy * len * q + vy * 0.7 * sd, COPPER, sphere(vx * 0.6 * sd, vy * 0.6 * sd - 0.3), { bias: bias + 1 });
+    }
+    const bx = hx + ux * (len + 0.9);
+    const by = hy + uy * (len + 0.9);
+    c.part();
+    c.ellipse(bx, by, 1.0, 1.0, VIOLET_BULB, { bias, glow: 0.5 + glow * 0.5 });
+    const [core, hot, mid] = S.light;
+    c.spark(bx, by, core, 0.45 + glow * 0.55);
+    if (glow > 0.2) {
+      const a = (tick % 4) * (Math.PI / 2) + 0.8;
+      c.spark(bx + Math.round(Math.cos(a) * 2), by + Math.round(Math.sin(a) * 2), hot, glow);
+      c.spark(bx + Math.round(Math.cos(a + 2.6) * 2.6), by + Math.round(Math.sin(a + 2.6) * 2.6), mid, glow * 0.8);
+      if (glow > 0.6) glowAt(c, bx, by, (glow - 0.6) * 2);
+    }
   } else if (ein()) {
     const len = 3.2 * k + 0.6;
     c.part();
@@ -353,6 +456,17 @@ function drawTool(c: PixelCanvas, p: Placed, d: { x: number; y: number; k: numbe
 
 /** The crate the engineer tosses: a little wooden box banded in hazard yellow. */
 function drawCrate(c: PixelCanvas, p: Placed): void {
+  if (dwarf()) {
+    // Forgebeard's: a block of dressed stone banded in brass, a rune on its face.
+    c.part();
+    c.shape(Math.round(p.y - 3), Math.round(p.y + 1), () => [p.x - 2.6, p.x + 2.6], STONE, (_x, y, t) => sphere(t * 0.8, (y - p.y + 1) / 3, 1));
+    c.part();
+    for (let x = Math.round(p.x - 2.6); x < p.x + 2.6; x++) c.px(x, Math.round(p.y - 2), BRASS, cyl(0, 0));
+    c.px(p.x - 0.5, p.y - 0.4, RUNE, sphere(0, 0), { glow: 0.8 });
+    c.part();
+    c.ellipse(p.x, p.y + 0.5, 1.2, 1.1, handMat());
+    return;
+  }
   c.part();
   c.shape(Math.round(p.y - 3), Math.round(p.y + 1), () => [p.x - 2.6, p.x + 2.6], CRATE, (_x, y, t) => sphere(t * 0.8, (y - p.y + 1) / 3, 1));
   c.part();
@@ -526,6 +640,290 @@ function wildHair(c: PixelCanvas, cx: number, U: number, tick: number, view: Vie
     c.px(x0 + dx * (1 + 0.3 * k), dy + U - k * (dy < 11 ? 2 : 0.8), WILD_HAIR, sphere(dx / 6, -0.5), { bias: i % 2 });
   });
   for (const s of [-1, 1]) c.shade(Math.round(x0 + s * 3), Math.round(11 + U), -1);
+}
+
+// ---------------------------------------------------------------------------
+// The skins' heads and bodies
+
+/**
+ * Forgebeard's half-helm: a riveted iron dome with a brow band, a rune cut in
+ * the band that kindles with `glow` (where the engineer's hat lamp was), and
+ * brass goggles pushed up on the dome. `V` is his (lowered) head's offset.
+ */
+function halfHelm(c: PixelCanvas, cx: number, V: number, glow: number, view: View, hx = cx): void {
+  c.part();
+  const x0 = view === 'side' ? hx - 0.4 : cx;
+  const widths = [2.6, 3.7, 4.1];
+  c.shape(Math.round(7 + V), Math.round(9 + V), (y) => {
+    const w = widths[Math.min(2, Math.max(0, y - Math.round(7 + V)))];
+    return [x0 - w, x0 + w];
+  }, IRON, (_x, y, t) => sphere(t * 0.9, (y - 7 - V) / 3 - 0.8, 1));
+  // The brow band, standing a little proud of the dome, studded with brass rivets.
+  c.part();
+  if (view === 'side') c.shape(Math.round(10 + V), Math.round(10 + V), () => [hx - 4.8, hx + 4], IRON, (_x, _y, t) => cyl(t, 0.4), { bias: -1 });
+  else c.shape(Math.round(10 + V), Math.round(10 + V), () => [cx - 4.5, cx + 4.5], IRON, (_x, _y, t) => cyl(t, 0.4), { bias: -1 });
+  c.part();
+  if (view === 'side') c.px(hx + 2, 10 + V, BRASS, sphere(0.3, -0.2));
+  else for (const x of [cx - 4, cx + 3]) c.px(x, 10 + V, BRASS, sphere(x < cx ? -0.5 : 0.5, -0.2));
+  // The goggles' strap round the dome, and their lenses on the front.
+  c.part();
+  if (view === 'up') {
+    c.shape(Math.round(8 + V), Math.round(8 + V), () => [cx - 3.8, cx + 3.8], APRON, (_x, _y, t) => cyl(t, 0.2), { bias: -1 });
+    return;
+  }
+  if (view === 'side') {
+    c.shape(Math.round(8 + V), Math.round(8 + V), () => [hx - 2.4, hx + 3.6], APRON, (_x, _y, t) => cyl(t, 0.2), { bias: -1 });
+    c.ellipse(hx - 3, 8.2 + V, 1.2, 1.1, BRASS);
+    c.px(hx - 4, 8 + V, LENS, sphere(-0.5, 0.4));
+  } else {
+    c.shape(Math.round(8 + V), Math.round(8 + V), () => [cx - 3.8, cx + 3.8], APRON, (_x, _y, t) => cyl(t, 0.2), { bias: -1 });
+    for (const x of [cx - 2.3, cx + 1.3]) {
+      c.ellipse(x, 8.2 + V, 1.3, 1.1, BRASS);
+      c.px(x - 0.5, 7.7 + V, LENS, sphere(-0.3, 0.4));
+    }
+  }
+  // The rune on the band.
+  c.part();
+  const k = 0.45 + glow * 0.55;
+  const [core, hot] = S.light;
+  if (view === 'side') {
+    c.px(hx - 4, 10 + V, RUNE, sphere(-0.6, 0), { glow: k });
+    c.spark(hx - 4, 10 + V, core, k * 0.7);
+    c.spark(hx - 5, 10 + V, hot, 0.3 * k);
+  } else {
+    c.px(cx - 1, 10 + V, RUNE, sphere(0, 0), { glow: k });
+    c.px(cx, 10 + V, RUNE, sphere(0, 0), { glow: k * 0.8 });
+    c.spark(cx - 1, 10 + V, core, k * 0.7);
+    c.spark(cx - 1, 9 + V, hot, 0.3 * k);
+  }
+}
+
+/** A braid of beard hanging from `y0` to `y1`, plaited (each row a little to one side) with a brass ring. */
+function braid(c: PixelCanvas, x: number, y0: number, y1: number, ring: number): void {
+  c.part();
+  for (let y = Math.round(y0); y <= Math.round(y1); y++) {
+    const s = (y & 1) * 0.6;
+    c.px(x + s, y, BEARD, sphere(s ? 0.4 : -0.4, 0.2), { bias: y & 1 ? 0 : -1 });
+  }
+  c.part();
+  c.px(x, ring, BRASS, sphere(0, -0.3), { bias: 1 });
+  c.px(x + 1, ring, BRASS, sphere(0.5, -0.3));
+}
+
+/**
+ * Forgebeard from the front: his head low on his shoulders under the
+ * half-helm, bushy copper brows, a round nose, and the great beard spilling
+ * over his chest, its two braids ringed in brass.
+ */
+function forgeDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const V = U + DWARF_DROP;
+  // Hair at the sides, running down into the beard.
+  c.part();
+  c.ellipse(cx, 12.2 + V, 4.2, 2.6, BEARD, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.6, 1) });
+  c.part();
+  c.ellipse(cx, 12.4 + V, 3.2, 2.7, SKIN);
+  c.part();
+  for (const x of [cx - 3, cx - 2, cx + 1, cx + 2]) c.px(x, 11 + V, BEARD, sphere((x + 0.5 - cx) / 4, -0.6), { bias: 1 });
+  eyes(c, [[cx - 2, 12 + V], [cx + 1, 12 + V]], p.blink);
+  // The beard: broad at the cheeks, a bushy spade down the chest.
+  c.part();
+  const bt = Math.round(13 + V);
+  const bb = Math.round(20 + V);
+  c.shape(bt, bb, (y) => {
+    const u = (y - bt) / (bb - bt);
+    const hw = u < 0.3 ? 4.2 + u : 4.5 - (u - 0.3) * 2.6;
+    return [cx - hw, cx + hw];
+  }, BEARD, (_x, y, t) => sphere(t * 0.85, ((y - bt) / (bb - bt)) * 0.9 - 0.15, 1));
+  // Strands: darker grooves combed down it.
+  for (let y = bt + 2; y <= bb; y++) for (const x of [cx - 3, cx - 1, cx + 1, cx + 3]) if ((y + x) % 3 !== 0) c.shade(x, y, -1);
+  // The face shows between the cheeks: the nose sits on top of the moustache.
+  c.part();
+  for (const x of [cx - 2, cx - 1, cx, cx + 1]) c.px(x, 13 + V, SKIN, sphere((x + 0.5 - cx) / 3, 0.1));
+  c.px(cx - 1, 13 + V, SKIN, sphere(-0.3, -0.5), { bias: 2 });
+  c.px(cx, 13 + V, SKIN, sphere(0.3, -0.4), { bias: 1 });
+  // The moustache sweeping out over it, its ends curled.
+  c.part();
+  for (let x = cx - 4; x <= cx + 3; x++) c.px(x, 14 + V, BEARD, sphere((x + 0.5 - cx) / 4.5, -0.5), { bias: x === cx - 1 || x === cx ? 0 : 1 });
+  c.px(cx - 5, 13 + V, BEARD, sphere(-0.8, -0.4), { bias: 1 });
+  c.px(cx + 4, 13 + V, BEARD, sphere(0.8, -0.4), { bias: 1 });
+  // The two braids.
+  braid(c, cx - 2, 21 + V, 24 + V, Math.round(22 + V));
+  braid(c, cx + 1, 21 + V, 24 + V, Math.round(22 + V));
+  halfHelm(c, cx, V, p.glow, 'down');
+}
+
+/**
+ * Forgebeard's body from the front or back: a broad chainmail torso, a heavy
+ * leather apron to the knees (its straps crossing on his back), a wide belt
+ * with a brass buckle and a hammer-loop.
+ */
+function forgeBody(c: PixelCanvas, cx: number, U: number, L: number, back: boolean): void {
+  const top = 16 + U;
+  const waist = 22 + U;
+  c.part();
+  c.shape(top, Math.round(24 + L), (y) => {
+    const u = Math.min(1, (y + 0.5 - top) / (waist - top));
+    const hw = 5.9 - 0.7 * u * u;
+    return [cx - hw, cx + hw];
+  }, MAIL, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.35, 1));
+  // The rings: a sparse dither of dark links.
+  for (let y = top + 1; y <= 24 + L; y++) for (let x = cx - 6; x <= cx + 5; x++) if ((x + 2 * y) % 3 === 0) c.shade(x, y, -1);
+  if (back) {
+    // The apron's straps crossing between the shoulder blades, and its ties.
+    c.part();
+    c.line(cx - 4, top, cx + 3, waist, APRON, () => sphere(0, -0.2));
+    c.line(cx + 3, top, cx - 4, waist, APRON, () => sphere(0, -0.2));
+  } else {
+    // The apron, from under the beard to the knees, a little flared.
+    c.part();
+    c.shape(top + 3, Math.round(27 + L), (y) => {
+      const u = (y - top - 3) / (27 + L - top - 3);
+      const hw = 3.6 + u * 1.0;
+      return [cx - hw, cx + hw];
+    }, APRON, (_x, y, t) => sphere(t * 0.8, ((y - top - 3) / 8) * 0.6 - 0.1, 1));
+    // Scorch marks and a stitched hem.
+    c.shade(cx - 2, waist + 3, -2);
+    c.shade(cx + 2, waist + 2, -1);
+    for (let x = cx - 4; x <= cx + 3; x += 2) c.shade(x, Math.round(27 + L), 1);
+  }
+  // The belt and its great buckle; a little hammer hung at the hip.
+  c.part();
+  c.shape(waist + 1, waist + 1, () => [cx - 5.6, cx + 5.6], LEATHER, (_x, _y, t) => cyl(t, 0));
+  if (!back) {
+    c.part();
+    c.px(cx - 1, waist + 1, BRASS, sphere(-0.3, -0.2));
+    c.px(cx, waist + 1, BRASS, sphere(0.3, -0.2));
+    c.px(cx - 1, waist + 2, BRASS, sphere(-0.3, 0.4), { bias: -1 });
+    c.px(cx, waist + 2, BRASS, sphere(0.3, 0.4), { bias: -1 });
+    c.line(cx + 5, waist + 2, cx + 5, waist + 4, OAK, () => sphere(0.3, 0));
+    c.px(cx + 4, waist + 2, IRON, sphere(0.2, -0.3));
+    c.px(cx + 6, waist + 2, IRON, sphere(0.5, -0.3));
+  }
+}
+
+/** The stone rune-chest on Forgebeard's back (seen from behind): brass bands, a rune glowing in its face. */
+function runeChest(c: PixelCanvas, cx: number, U: number, glow: number): void {
+  c.part();
+  c.shape(Math.round(17 + U), Math.round(22 + U), () => [cx - 3.8, cx + 3.8], STONE, (_x, y, t) => sphere(t * 0.8, (y - 17 - U) / 5 - 0.5, 1));
+  c.part();
+  for (let x = Math.round(cx - 3.8); x < cx + 3.8; x++) c.px(x, Math.round(18 + U), BRASS, cyl((x + 0.5 - cx) / 3.8, -0.2));
+  for (let y = Math.round(17 + U); y <= 22 + U; y++) {
+    c.px(cx - 4, y, BRASS, sphere(-0.6, 0));
+    c.px(cx + 3, y, BRASS, sphere(0.6, 0));
+  }
+  c.part();
+  const k = 0.5 + glow * 0.5;
+  for (const [x, y] of [[cx - 1, 20], [cx, 20], [cx - 1, 21], [cx, 19]] as const) c.px(x, y + U, RUNE, sphere(0, 0), { glow: k });
+  c.spark(cx - 1, 20 + U, S.light[1], 0.4 * k);
+}
+
+/** Tesla from the front: black hair slicked flat and parted in the middle, a long face, a neat moustache. */
+function teslaDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const k = p.poof ?? 0;
+  c.part();
+  c.ellipse(cx, 10.2 + U - 1.3 * k, 3.7 + 1.6 * k, 2.7 + 1.7 * k, SLICK, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.7 - 0.5, 1) });
+  if (k > 0) staticSpikes(c, cx, 10.2 + U - 1.3 * k, 4.3 + 1.6 * k, 3.6 + 1.7 * k, k, SLICK, p);
+  c.part();
+  c.ellipse(cx, 12.8 + U, 3.0, 3.1, SKIN);
+  c.part();
+  c.px(cx - 4, 12 + U, SKIN, cyl(-0.8, 0));
+  c.px(cx + 3, 12 + U, SKIN, cyl(0.8, 0));
+  // The hairline: combed down flat to the temples from the parting, the brow showing in the middle.
+  if (k < 0.5) {
+    c.part();
+    for (let x = cx - 3; x <= cx + 2; x++) c.px(x, 9 + U, SLICK, sphere((x + 0.5 - cx) / 3, -0.6));
+    for (const x of [cx - 3, cx - 2, cx + 1, cx + 2]) c.px(x, 10 + U, SLICK, sphere((x + 0.5 - cx) / 3, -0.3), { bias: -1 });
+    // The parting, and the shine on each side of it.
+    c.part();
+    c.px(cx - 1, 8 + U, SKIN, sphere(0, -0.8), { bias: -2 });
+    c.shade(cx - 2, 8 + U, 2);
+    c.shade(cx, 8 + U, 2);
+    c.shade(cx - 2, 9 + U, 1);
+    c.shade(cx, 9 + U, 1);
+  }
+  c.part();
+  for (const x of [cx - 2, cx + 1]) c.px(x, 11 + U, SLICK, sphere(0, -0.6));
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  c.part();
+  c.px(cx - 1, 13 + U, SKIN, sphere(-0.2, -0.4), { bias: 1 });
+  // The moustache: neat, trimmed short.
+  c.part();
+  for (let x = cx - 2; x <= cx + 1; x++) c.px(x, 14 + U, SLICK, sphere((x + 0.5 - cx) / 2.5, -0.3), { bias: 1 });
+  c.shade(cx - 1, 15 + U, -1);
+  c.shade(cx, 15 + U, -1);
+}
+
+/**
+ * Tesla's black suit from the front or back: a long jacket cut away below
+ * the waist over a waistcoat, a white wing collar and black silk tie at the
+ * throat, a gold watch chain draped across the waistcoat.
+ */
+function teslaSuit(c: PixelCanvas, cx: number, U: number, L: number, sway: number, back: boolean): void {
+  const top = 15 + U;
+  const waist = 21 + U;
+  const hem = 27 + L;
+  if (!back) {
+    c.part();
+    c.shape(top, waist + 1, () => [cx - 2.6, cx + 2.6], WAISTCOAT, (_x, _y, t) => cyl(t, 0.2));
+    c.shape(waist + 2, hem, () => [cx - 2, cx + 2], SUIT, (_x, _y, t) => cyl(t, 0.2));
+  }
+  c.part();
+  c.shape(top, hem, (y) => {
+    const hw = y <= waist ? 4.6 - 0.5 * ((y + 0.5 - top) / (waist - top)) ** 2 : 4.1 + (y - waist) * 0.15;
+    const s = y > waist ? ((y - waist) / (hem - waist)) * sway : 0;
+    return [cx - hw + s, cx + hw + s];
+  }, SUIT, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.25, 1));
+  if (back) {
+    for (let y = waist + 1; y <= hem; y++) c.shade(cx - 1 + Math.round(((y - waist) / (hem - waist)) * sway), y, -1);
+    // The jacket's collar turned up behind the neck.
+    c.part();
+    c.shape(Math.round(14 + U), Math.round(15 + U), () => [cx - 3, cx + 3], SUIT, (_x, _y, t) => cyl(t, -0.4));
+    return;
+  }
+  // The opening: a deep V to the waist, then cut away to the hem.
+  const gap = (y: number): number => (y < top + 3 ? 2.4 - (y - top) * 0.2 : y <= waist ? 1.8 : 1.8 + (y - waist) * 0.3);
+  for (let y = top; y <= hem; y++) {
+    const s = y > waist ? ((y - waist) / (hem - waist)) * sway : 0;
+    const w = gap(y);
+    for (let x = Math.round(cx - w + s); x < Math.round(cx + w + s); x++) c.erase(x, y);
+  }
+  c.part();
+  c.shape(top, waist + 1, (y) => [cx - gap(y), cx + gap(y)], WAISTCOAT, (_x, _y, t) => cyl(t, 0.2), { bias: -1 });
+  c.part();
+  c.shape(waist + 2, hem, (y) => {
+    const s = ((y - waist) / (hem - waist)) * sway;
+    const w = Math.min(gap(y), 2);
+    return [cx - w + s, cx + w + s];
+  }, SUIT, (_x, _y, t) => cyl(t, 0.2), { bias: -1 });
+  // Lapels: a lit fold either side of the V.
+  for (let y = top; y < top + 4; y++) {
+    const w = gap(y);
+    c.shade(Math.round(cx - w - 1), y, 1);
+    c.shade(Math.round(cx + w), y, 1);
+  }
+  // The shirt front, the wing collar standing up under the chin, and the tie.
+  c.part();
+  c.shape(top, top + 1, () => [cx - 1.6, cx + 1.6], WHITE_SHIRT, (_x, _y, t) => cyl(t * 0.6, 0.3));
+  c.part();
+  c.px(cx - 2, top - 1, WHITE_SHIRT, sphere(-0.5, -0.5), { bias: 1 });
+  c.px(cx + 1, top - 1, WHITE_SHIRT, sphere(0.5, -0.5), { bias: 1 });
+  c.px(cx - 2, top, WHITE_SHIRT, sphere(-0.5, 0), { bias: 1 });
+  c.px(cx + 1, top, WHITE_SHIRT, sphere(0.5, 0), { bias: 1 });
+  c.part();
+  c.px(cx - 1, top, SILK, sphere(-0.2, -0.2));
+  c.px(cx, top, SILK, sphere(0.2, -0.2));
+  c.px(cx - 1, top + 1, SILK, sphere(0, 0.3));
+  // The waistcoat's buttons, and the watch chain draped from a button to the pocket.
+  c.part();
+  for (let y = top + 3; y <= waist; y += 2) c.px(cx - 1, y, BOOT, sphere(0, 0), { bias: 1 });
+  c.px(cx - 2, waist - 2, BRASS, sphere(-0.3, -0.3));
+  c.px(cx - 1, waist - 1, BRASS, sphere(0, 0.3));
+  c.px(cx, waist - 1, BRASS, sphere(0, 0.3));
+  c.px(cx + 1, waist - 2, BRASS, sphere(0.3, -0.3));
+  // A white pocket square on the breast.
+  c.px(cx + 3, top + 3, WHITE_SHIRT, sphere(0.4, -0.5));
+  c.shade(cx + 2, top + 4, -1);
+  c.shade(cx + 3, top + 4, -1);
 }
 
 // ---------------------------------------------------------------------------
@@ -775,12 +1173,19 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const fa = place('down', 'a', p.a, U, cx);
   const fb = place('down', 'b', p.b, U, cx);
   const td = toolDir('down', p.t);
-  const armA = () => arm(c, 7.2, 16.4 + U, fa, REACH_FRONT, [-0.6, 1], fa.behind ? -1 : 0);
-  const armB = () => arm(c, 16.8, 16.4 + U, fb, REACH_FRONT, [0.6, 1], fb.behind ? -1 : 0);
+  // The dwarf's shoulders sit broader and lower.
+  const sw = dwarf() ? 0.6 : 0;
+  const sy = 16.4 + (dwarf() ? 1.2 : 0);
+  const armA = () => arm(c, 7.2 - sw, sy + U, fa, REACH_FRONT, [-0.6, 1], fa.behind ? -1 : 0);
+  const armB = () => arm(c, 16.8 + sw, sy + U, fb, REACH_FRONT, [0.6, 1], fb.behind ? -1 : 0);
   const tool = (bias = 0) => drawTool(c, fb, td, p.glow, p.tick, bias);
 
-  // The toolbox's corners peek over his shoulders.
-  if (eng()) {
+  // The toolbox's (or rune-chest's) corners peek over his shoulders.
+  if (dwarf()) {
+    c.part();
+    c.px(cx - 5, 16 + U, STONE, sphere(-0.5, -0.5), { bias: -1 });
+    c.px(cx + 4, 16 + U, STONE, sphere(0.5, -0.5), { bias: -1 });
+  } else if (eng()) {
     c.part();
     c.px(cx - 4, 15 + U, PIPE_RED, sphere(-0.5, -0.5), { bias: -1 });
     c.px(cx + 3, 15 + U, PIPE_RED, sphere(0.5, -0.5), { bias: -1 });
@@ -792,12 +1197,16 @@ function drawDown(c: PixelCanvas, p: Pose): void {
 
   if (kneel > 0.5) legsKneel(c, L, Math.min(1, kneel / KNEEL_DROP));
   else legsFront(c, L, p.footA, p.footB, false);
-  if (eng()) engineerBody(c, cx, U, L, false);
+  if (dwarf()) forgeBody(c, cx, U, L, false);
+  else if (eng()) engineerBody(c, cx, U, L, false);
   else if (ein()) cardigan(c, cx, U, L, p.sway, false);
+  else if (tes()) teslaSuit(c, cx, U, L, p.sway, false);
   else labCoat(c, cx, U, L, p.sway, false);
 
-  if (eng()) engineerDown(c, cx, U, p);
+  if (dwarf()) forgeDown(c, cx, U, p);
+  else if (eng()) engineerDown(c, cx, U, p);
   else if (ein()) einsteinDown(c, cx, U, p);
+  else if (tes()) teslaDown(c, cx, U, p);
   else scientistDown(c, cx, U, p);
 
   if (!fb.behind) armB();
@@ -819,8 +1228,10 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   const fa = place('up', 'a', p.a, U, cx);
   const fb = place('up', 'b', p.b, U, cx);
   const td = toolDir('up', p.t);
-  const armA = () => arm(c, 16.8, 16.4 + U, fa, REACH_FRONT, [0.6, 0.8], fa.behind ? -1 : 0);
-  const armB = () => arm(c, 7.2, 16.4 + U, fb, REACH_FRONT, [-0.6, 0.8], fb.behind ? -1 : 0);
+  const sw = dwarf() ? 0.6 : 0;
+  const sy = 16.4 + (dwarf() ? 1.2 : 0);
+  const armA = () => arm(c, 16.8 + sw, sy + U, fa, REACH_FRONT, [0.6, 0.8], fa.behind ? -1 : 0);
+  const armB = () => arm(c, 7.2 - sw, sy + U, fb, REACH_FRONT, [-0.6, 0.8], fb.behind ? -1 : 0);
   const tool = (bias = 0) => drawTool(c, fb, td, p.glow, p.tick, bias);
 
   const toolBack = td.away || fb.behind;
@@ -830,7 +1241,19 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   if (p.crate && fa.behind) drawCrate(c, fa);
 
   legsFront(c, L, p.footA, p.footB, true);
-  if (eng()) {
+  if (dwarf()) {
+    forgeBody(c, cx, U, L, true);
+    // The back of his head: copper hair under the helm, the beard's edges
+    // showing past his cheeks, a braid of hair down the nape.
+    const V = U + DWARF_DROP;
+    c.part();
+    c.ellipse(cx, 14.8 + V, 4.6, 1.8, BEARD, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.5 + 0.2, 1) });
+    c.part();
+    c.ellipse(cx, 12.4 + V, 3.4, 3.0, BEARD, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.7, 1) });
+    for (let y = Math.round(11 + V); y <= 15 + V; y++) for (const x of [cx - 2, cx, cx + 2]) if ((x + y) & 1) c.shade(x, y, -1);
+    halfHelm(c, cx, V, p.glow, 'up');
+    runeChest(c, cx, U, p.glow);
+  } else if (eng()) {
     engineerBody(c, cx, U, L, true);
     // The back of his head under the hat, the toolbox over the straps.
     c.part();
@@ -841,6 +1264,15 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     c.px(cx + 3, 12 + U, SKIN, cyl(0.8, 0));
     hardHat(c, cx, U, p.glow, 'up');
     toolbox(c, cx, U);
+  } else if (tes()) {
+    teslaSuit(c, cx, U, L, p.sway, true);
+    c.part();
+    c.ellipse(cx, 11 + U - 1.3 * (p.poof ?? 0), 3.7 + 1.6 * (p.poof ?? 0), 3.6 + 1.6 * (p.poof ?? 0), SLICK, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 1) });
+    // Combed straight back: fine lines of shine down the crown.
+    for (let y = Math.round(9 + U); y <= 13 + U; y++) for (const x of [cx - 2, cx + 1]) c.shade(x, y, 1);
+    c.part();
+    c.px(cx - 4, 12 + U, SKIN, cyl(-0.8, 0));
+    c.px(cx + 3, 12 + U, SKIN, cyl(0.8, 0));
   } else if (ein()) {
     cardigan(c, cx, U, L, p.sway, true);
     c.part();
@@ -881,7 +1313,8 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const waist = 21 + U;
 
   // The far arm behind everything, unless it reaches out in front.
-  const armA = (bias: number) => arm(c, hx + 1.2, 16.4 + U, fa, REACH_SIDE, [0.3, 1], bias);
+  const sy = dwarf() ? 1.2 : 0;
+  const armA = (bias: number) => arm(c, hx + 1.2, 16.4 + sy + U, fa, REACH_SIDE, [0.3, 1], bias);
   if (fa.behind) {
     armA(-1);
     if (p.crate) drawCrate(c, fa);
@@ -900,7 +1333,60 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   c.capsule(cx - 0.6, 24 + L, cx - 0.4 - p.footA, 29 - lift(p.footA), 1.6, 1.4, m);
   boot(c, cx - 1.2 - p.footA, 30.3 - lift(p.footA), true);
 
-  if (eng()) {
+  if (dwarf()) {
+    const V = U + DWARF_DROP;
+    const dtop = 16 + U;
+    // The rune-chest on his back.
+    c.part();
+    c.shape(Math.round(16.5 + U), Math.round(22 + U), () => [hx + 3, hx + 6.2], STONE, (_x, y, t) => sphere(t * 0.8, (y - 16.5 - U) / 5.5 - 0.5, 1));
+    c.part();
+    for (let y = Math.round(16.5 + U); y <= 22 + U; y++) c.px(hx + 6, y, BRASS, sphere(0.6, 0));
+    c.px(hx + 5, 19 + U, RUNE, sphere(0.5, 0), { glow: 0.5 + p.glow * 0.5 });
+    // A broad mailed body, the apron hanging in front, the belt.
+    c.part();
+    c.shape(dtop, Math.round(24 + L), (y) => {
+      const u = Math.min(1, (y + 0.5 - dtop) / 6);
+      const hw = 4.2 - 0.4 * u * u;
+      const k = Math.max(0, Math.min(1, (y - 22 - U) / 2));
+      const x = hx + (cx - hx) * k;
+      return [x - hw - 0.3, x + hw];
+    }, MAIL, (_x, y, t) => sphere(t * 0.9 - 0.1, ((y - dtop) / 6) * 0.8 - 0.35, 1));
+    for (let y = dtop + 1; y <= 24 + L; y++) for (let x = Math.round(hx - 4); x <= hx + 4; x++) if ((x + 2 * y) % 3 === 0) c.shade(x, y, -1);
+    c.part();
+    c.shape(dtop + 3, Math.round(27 + L), (y) => {
+      const u = (y - dtop - 3) / (27 + L - dtop - 3);
+      const x = hx + (cx - hx) * Math.min(1, u * 1.5);
+      return [x - 4.8 - u * 0.6, x - 1.6];
+    }, APRON, (_x, _y, t) => cyl(t, 0.1));
+    c.part();
+    c.shape(Math.round(23 + U), Math.round(23 + U), () => [hx - 4.4, hx + 4.2], LEATHER, (_x, _y, t) => cyl(t, 0));
+    c.px(hx - 4, 23 + U, BRASS, sphere(-0.5, 0));
+    // The head in profile: hair at the back under the helm, the great beard jutting forward with its braid.
+    c.part();
+    c.ellipse(hx + 0.6, 12.6 + V, 3.0, 2.8, BEARD, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.7, 1) });
+    c.part();
+    c.ellipse(hx - 0.8, 12.3 + V, 2.9, 2.8, SKIN);
+    c.part();
+    c.px(hx + 0.6, 12 + V, SKIN, cyl(0.6, 0), { bias: -1 });
+    c.px(hx - 3, 11 + V, BEARD, sphere(0, -0.6), { bias: 1 });
+    c.px(hx - 2, 11 + V, BEARD, sphere(0, -0.6), { bias: 1 });
+    eyes(c, [[hx - 3, 12 + V]], p.blink);
+    c.part();
+    const bt = Math.round(13 + V);
+    const bb = Math.round(20 + V);
+    c.shape(bt, bb, (y) => {
+      const u = (y - bt) / (bb - bt);
+      return [hx - 4.6 - u * 0.8, hx + 1.4 - u * 2.2];
+    }, BEARD, (_x, y, t) => sphere(t * 0.7 - 0.3, ((y - bt) / (bb - bt)) * 0.9 - 0.15, 1));
+    for (let y = bt + 2; y <= bb; y++) for (const x of [hx - 4, hx - 2]) if ((y + Math.round(x)) % 3 !== 0) c.shade(x, y, -1);
+    c.part();
+    c.px(hx - 5, 13 + V, SKIN, sphere(-0.7, -0.2), { bias: 2 });
+    c.px(hx - 4, 13 + V, SKIN, sphere(-0.3, -0.3), { bias: 1 });
+    c.part();
+    for (const x of [hx - 6, hx - 5, hx - 4, hx - 3]) c.px(x, 14 + V, BEARD, sphere(-0.4, -0.5), { bias: 1 });
+    braid(c, hx - 4, 21 + V, 24 + V, Math.round(22 + V));
+    halfHelm(c, cx, V, p.glow, 'side', hx);
+  } else if (eng()) {
     // The toolbox on his back.
     c.part();
     c.shape(Math.round(15.5 + U), Math.round(21 + U), () => [hx + 2.6, hx + 5.4], PIPE_RED, (_x, y, t) => sphere(t * 0.8, (y - 15.5 - U) / 5.5 - 0.5, 1));
@@ -972,6 +1458,46 @@ function drawSide(c: PixelCanvas, p: Pose): void {
       c.px(hx - 4, 16 + U, TONGUE, sphere(-0.4, 0.4));
       c.px(hx - 3, 15 + U, TONGUE, sphere(0, 0));
     }
+  } else if (tes()) {
+    // The suit in profile, its tails trailing back as he moves.
+    const hem = 27 + L;
+    c.part();
+    c.shape(top, hem, (y) => {
+      const u = y <= waist ? 0 : (y - waist) / (hem - waist);
+      const shift = y <= waist ? hx : hx + (cx - hx) * Math.min(1, u * 2);
+      const hw = y <= waist ? 3.3 - 0.4 * ((y + 0.5 - top) / (waist - top)) ** 2 : 3.0 + (y - waist) * 0.2;
+      // Cut away in front below the waist, so the tails hang behind.
+      const front = y <= waist ? shift - hw - 0.2 : shift - hw + 1.4 * u;
+      return [front, shift + hw + 0.2 + u * p.sway];
+    }, SUIT, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.25, 1));
+    for (let y = waist + 2; y < hem; y++) c.shade(Math.round(hx + 1 + ((y - waist) / (hem - waist)) * p.sway), y, -1);
+    // The waistcoat at the front, its watch chain, the wing collar and tie.
+    c.part();
+    c.shape(top + 1, waist + 1, () => [hx - 3.6, hx - 2.4], WAISTCOAT, (_x, _y, t) => cyl(t, 0.2));
+    c.px(hx - 3, waist - 1, BRASS, sphere(-0.4, 0.2));
+    c.part();
+    c.px(hx - 4, top - 1, WHITE_SHIRT, sphere(-0.5, -0.5), { bias: 1 });
+    c.px(hx - 4, top, WHITE_SHIRT, sphere(-0.5, 0));
+    c.px(hx - 3, top, WHITE_SHIRT, sphere(0, 0), { bias: 1 });
+    c.px(hx - 4, top + 1, SILK, sphere(-0.5, 0.2));
+    c.shade(hx - 2, top + 1, 1);
+    // The head: black hair slicked straight back, a long face, the moustache.
+    const k = p.poof ?? 0;
+    c.part();
+    c.ellipse(hx + 0.6, 10.8 + U - k, 3.4 + k, 3.1 + k, SLICK, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.4, 1) });
+    c.part();
+    c.ellipse(hx - 0.8, 12.8 + U, 2.8, 3.0, SKIN);
+    c.part();
+    c.px(hx - 4, 13 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+    c.px(hx + 0.8, 12 + U, SKIN, cyl(0.6, 0), { bias: -1 });
+    c.part();
+    for (const [x, y] of [[hx - 3, 9], [hx - 2, 9], [hx - 1, 9], [hx - 3, 10]] as const) c.px(x, y + U, SLICK, sphere(-0.3, -0.6));
+    for (let x = Math.round(hx - 1); x <= hx + 3; x++) c.shade(x, Math.round(9 + U), 1);
+    c.px(hx - 3, 11 + U, SLICK, sphere(0, -0.6));
+    eyes(c, [[hx - 3, 12 + U]], p.blink);
+    c.part();
+    c.px(hx - 4, 14 + U, SLICK, sphere(-0.4, -0.2), { bias: 1 });
+    c.px(hx - 3, 14 + U, SLICK, sphere(-0.2, -0.2), { bias: 1 });
   } else {
     // The lab coat in profile, trailing back as he moves.
     const hem = 28 + L;
@@ -1014,7 +1540,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     if (p.crate) drawCrate(c, fa);
   }
   // The near arm last, the tool in its hand.
-  arm(c, hx + 0.2, 16.7 + U, fb, REACH_SIDE, [0.4, 1], 0);
+  arm(c, hx + 0.2, 16.7 + sy + U, fb, REACH_SIDE, [0.4, 1], 0);
   if (!toolBack) drawTool(c, fb, td, p.glow, p.tick);
   drawOrb(c, fa, p.orb, p.tick);
 }
@@ -1027,6 +1553,8 @@ const REST_A = H(0.8, 4.2, -3.2);
 /** The engineer's wrench resting on his shoulder; the scientist's gadget held ready, pointing ahead. */
 const WRENCH_B = H(0.6, 3.4, 1.4);
 const WRENCH_T = H(-0.6, -0.3, 1);
+/** The dwarf is too short to shoulder it straight up: his hammer-wrench leans out over his shoulder. */
+const DWARF_T = H(-0.5, 1, 0.8);
 const GADGET_B = H(1.6, 4.6, -1.6);
 const GADGET_T = H(1, 0.25, -0.25);
 
@@ -1043,7 +1571,7 @@ const base = (view: View): Pose => {
     lean: 0,
     a: view === 'side' ? side(REST_A, 'a') : { ...REST_A },
     b: view === 'side' ? side(b, 'b') : { ...b },
-    t: { ...(eng() ? WRENCH_T : GADGET_T) },
+    t: { ...(dwarf() ? DWARF_T : eng() ? WRENCH_T : GADGET_T) },
     glow: 0.2,
     orb: 0,
     crate: false,
@@ -1064,7 +1592,8 @@ function idle(view: View): Pose[] {
     p.blink = f === 4;
     p.glow = 0.2 + 0.15 * Math.sin(ph);
     // The wrench taps on his shoulder; the gadget bobs.
-    if (eng()) p.t = H(-0.6 + Math.sin(ph) * 0.15, -0.3, 1);
+    if (dwarf()) p.t = H(DWARF_T.f + Math.sin(ph) * 0.15, DWARF_T.s, DWARF_T.h);
+    else if (eng()) p.t = H(-0.6 + Math.sin(ph) * 0.15, -0.3, 1);
     else p.b.h += Math.sin(ph) * 0.4;
     frames.push(p);
   }
@@ -1223,6 +1752,13 @@ const TINKER_B = H(2, 5, -1.4);
  */
 function tinker(view: View): Pose[] {
   if (view !== 'down') return [];
+  const frames = tinkerFrames();
+  // Forgebeard shoulders his hammer-wrench leaning out, not straight up.
+  if (dwarf()) for (const i of [1, 11, 12]) frames[i].t = H(DWARF_T.f + (i === 12 ? -0.15 : 0), DWARF_T.s, DWARF_T.h);
+  return frames;
+}
+
+function tinkerFrames(): Pose[] {
   return [
     still(),
     // Anticipation: a dip, the hand to the pouch, the wrench lifting off the shoulder.
@@ -1369,17 +1905,29 @@ const EYE_RED: Material = { ramp: ramp('#6a0a0a', '#e0301e', '#ff9070'), outline
  * eye. `grow` 0..1 unfolds it from the crate it was tossed out as; `recoil`
  * pulls the barrels back as they fire (the muzzle flash is drawn by the game).
  */
-export function turretFrame(heading: number, grow = 1, recoil = 0): PixelCanvas {
+export function turretFrame(heading: number, grow = 1, recoil = 0, forge = false): PixelCanvas {
   const c = new PixelCanvas(TURRET_SIZE, TURRET_SIZE);
+  // Forgebeard's is dwarf-work: a stone block for a crate, brass legs and
+  // barrels, a carved stone head banded in brass, and a rune for an eye.
+  const box = forge ? STONE : CRATE;
+  const band = forge ? BRASS : HAZARD;
+  const leg = forge ? BRASS : STEEL;
+  const head = forge ? STONE : HAZARD;
+  const gun = forge ? BRASS : STEEL;
+  const eye = forge ? RUNE : EYE_RED;
   const cx = 10;
   const foot = TURRET_FOOT;
   if (grow < 0.2) {
     // Still a crate.
     c.part();
-    c.shape(foot - 5, foot, () => [cx - 4, cx + 4], CRATE, (_x, y, t) => sphere(t * 0.8, (y - foot + 5) / 5 - 0.4, 1));
+    c.shape(foot - 5, foot, () => [cx - 4, cx + 4], box, (_x, y, t) => sphere(t * 0.8, (y - foot + 5) / 5 - 0.4, 1));
     c.part();
-    for (let x = cx - 4; x < cx + 4; x++) c.px(x, foot - 3, HAZARD, cyl((x + 0.5 - cx) / 4, 0));
+    for (let x = cx - 4; x < cx + 4; x++) c.px(x, foot - 3, band, cyl((x + 0.5 - cx) / 4, 0));
     for (let y = foot - 5; y <= foot; y++) c.shade(cx - 1, y, -1);
+    if (forge) {
+      c.part();
+      for (const [x, y] of [[cx - 1, foot - 2], [cx, foot - 1], [cx - 1, foot]] as const) c.px(x, y, RUNE, sphere(0, 0), { glow: 0.7 });
+    }
     return c;
   }
   const k = Math.min(1, (grow - 0.2) / 0.8);
@@ -1387,16 +1935,16 @@ export function turretFrame(heading: number, grow = 1, recoil = 0): PixelCanvas 
   const hub = foot - 3 - 3 * k;
   c.part();
   const spread = 1.5 + 3.5 * k;
-  c.line(cx, hub, cx - spread, foot, STEEL, () => sphere(-0.4, 0));
-  c.line(cx - 0.5, hub, cx + spread, foot, STEEL, () => sphere(0.4, 0));
-  c.line(cx, hub, cx + 0.5, foot + 0.5, STEEL, () => sphere(0, 0.3), { bias: -1 });
+  c.line(cx, hub, cx - spread, foot, leg, () => sphere(-0.4, 0));
+  c.line(cx - 0.5, hub, cx + spread, foot, leg, () => sphere(0.4, 0));
+  c.line(cx, hub, cx + 0.5, foot + 0.5, leg, () => sphere(0, 0.3), { bias: -1 });
   c.part();
-  c.ellipse(cx, hub, 2.6, 1.5, STEEL);
+  c.ellipse(cx, hub, 2.6, 1.5, forge ? STONE : STEEL);
   if (k < 0.4) {
     // The crate's opened boards still lying round its feet.
     c.part();
-    c.line(cx - 5, foot, cx - 2, foot, CRATE);
-    c.line(cx + 2, foot, cx + 5, foot, CRATE);
+    c.line(cx - 5, foot, cx - 2, foot, box);
+    c.line(cx + 2, foot, cx + 5, foot, box);
     return c;
   }
   const a = (heading / TURRET_HEADINGS) * Math.PI * 2;
@@ -1411,20 +1959,27 @@ export function turretFrame(heading: number, grow = 1, recoil = 0): PixelCanvas 
     for (const s of [-1, 1]) {
       const bx = cx + px * s * 1.1;
       const by = hy + py * s * 0.8;
-      c.capsule(bx, by, bx + dx * len, by + dy * len, 0.7, 0.6, STEEL);
+      c.capsule(bx, by, bx + dx * len, by + dy * len, 0.7, 0.6, gun);
     }
   };
   if (dy < -0.1) barrels();
   c.part();
-  c.ellipse(cx, hy, 3.6, 2.8, HAZARD, { normal: (_x, _y, ex, ey) => sphere(ex * 0.9, ey * 0.8 - 0.3, 1) });
-  // A black band of hazard stripe round the head.
+  c.ellipse(cx, hy, 3.6, 2.8, head, { normal: (_x, _y, ex, ey) => sphere(ex * 0.9, ey * 0.8 - 0.3, 1) });
   c.part();
-  for (let x = cx - 3; x <= cx + 2; x++) if ((x & 1) === 0) c.shade(x, Math.round(hy + 1), -2);
+  if (forge) {
+    // A brass band round the stone, and a rune glowing on the crown.
+    for (let x = cx - 3; x <= cx + 2; x++) c.px(x, Math.round(hy + 1), BRASS, cyl((x + 0.5 - cx) / 3.6, 0.2));
+    c.px(cx - 1, Math.round(hy - 2), RUNE, sphere(0, -0.6), { glow: 0.7 });
+    c.px(cx, Math.round(hy - 1), RUNE, sphere(0, -0.4), { glow: 0.5 });
+  } else {
+    // A black band of hazard stripe round the head.
+    for (let x = cx - 3; x <= cx + 2; x++) if ((x & 1) === 0) c.shade(x, Math.round(hy + 1), -2);
+  }
   if (dy >= -0.1) barrels();
   // The eye, on the side it faces.
   if (dy > -0.45) {
     c.part();
-    c.px(cx + dx * 2 - 0.5 + (dx > 0 ? 0 : 0), hy - 0.5 + dy * 1.5, EYE_RED);
+    c.px(cx + dx * 2 - 0.5, hy - 0.5 + dy * 1.5, eye);
   }
   return c;
 }
@@ -1435,6 +1990,64 @@ export function turretFrame(heading: number, grow = 1, recoil = 0): PixelCanvas 
 const ENGINEER_TONES: Tones = [hex('#fffbe8'), hex('#ffe070'), hex('#e0a020'), hex('#6a4a10')];
 const SCIENCE_TONES: Tones = [hex('#f0ffff'), hex('#a8f4ff'), hex('#40d0ff'), hex('#1a5ab0')];
 const EINSTEIN_TONES: Tones = [hex('#fffdf0'), hex('#fff0b0'), hex('#ffd060'), hex('#a86a18')];
+const RUNE_TONES: Tones = [hex('#fff0d8'), hex('#ffb050'), hex('#ff6a1a'), hex('#8a2a06')];
+const TESLA_TONES: Tones = [hex('#faf4ff'), hex('#dcc4ff'), hex('#a478ff'), hex('#4a20a0')];
+
+/** Forgebeard's hammer-wrench: an oak haft, an iron head with a hammer face and a hooked jaw, runes glowing in it. */
+export function hammerWrenchIcon(): Uint8ClampedArray {
+  const oak: RGB = hex('#94602e');
+  const oakDk: RGB = hex('#4a2a12');
+  const iron: RGB = hex('#8a92a6');
+  const ironDk: RGB = hex('#363a48');
+  const brass: RGB = hex('#dcae4a');
+  const t = RUNE_TONES;
+  return icon16((put) => {
+    seg(put, 2, 14, 9, 7, oak);
+    seg(put, 3, 14, 9, 8, oakDk);
+    put(5, 11, brass);
+    put(7, 9, brass);
+    // The head across the haft's end: a block with a hammer face at its lower
+    // right, the wrench's jaw hooking out at its upper left, runes in its middle.
+    const ironHi: RGB = hex('#d0d8e8');
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const u = (x + 0.5 - 10.5 + (y + 0.5 - 5.5)) / Math.SQRT2;
+        const v = (x + 0.5 - 10.5 - (y + 0.5 - 5.5)) / Math.SQRT2;
+        const head = Math.abs(u) <= 4 && Math.abs(v) <= 1.8;
+        const jaw = u >= -4 && u <= -2.2 && v > 1.8 && v <= 3.6;
+        if (head || jaw) put(x, y, v > 1 ? ironHi : v < -0.8 ? ironDk : iron);
+      }
+    }
+    put(10, 5, t[1]);
+    put(11, 6, t[2]);
+    put(9, 6, t[2]);
+    put(15, 10, t[0]);
+    put(15, 12, t[1]);
+    put(13, 12, t[2]);
+  });
+}
+
+/** Forgebeard's build: a stone sentry banded in brass on brass legs, a rune for an eye, its barrels flashing. */
+export function runeTurretIcon(): Uint8ClampedArray {
+  const stone: RGB = hex('#908c8a');
+  const stoneDk: RGB = hex('#5a585c');
+  const brass: RGB = hex('#dcae4a');
+  const t = RUNE_TONES;
+  return icon16((put) => {
+    seg(put, 7, 10, 3, 15, brass);
+    seg(put, 8, 10, 12, 15, brass);
+    seg(put, 7, 10, 7, 15, brass);
+    for (let y = 4; y <= 9; y++) for (let x = 3; x <= 10; x++) if ((x - 6.5) ** 2 / 14 + (y - 6.5) ** 2 / 7 <= 1) put(x, y, y > 7 ? stoneDk : stone);
+    for (let x = 3; x <= 10; x++) put(x, 7, brass);
+    seg(put, 10, 5, 14, 5, brass);
+    seg(put, 10, 7, 14, 7, brass);
+    put(9, 6, t[1]);
+    put(6, 4, t[2]);
+    put(15, 5, t[0]);
+    put(15, 7, t[0]);
+    put(15, 6, t[1]);
+  });
+}
 
 /** The wrench: a red pipe wrench swung on a diagonal, a spark where it lands. */
 export function wrenchIcon(): Uint8ClampedArray {
@@ -1477,8 +2090,8 @@ export function turretIcon(): Uint8ClampedArray {
 }
 
 /** The Tesla zap: a bolt forking from the gadget's bulb to two foes (Einstein's in gold). */
-export function teslaIcon(einstein = false): Uint8ClampedArray {
-  const t = einstein ? EINSTEIN_TONES : SCIENCE_TONES;
+export function teslaIcon(einstein = false, tesla = false): Uint8ClampedArray {
+  const t = einstein ? EINSTEIN_TONES : tesla ? TESLA_TONES : SCIENCE_TONES;
   return icon16((put) => {
     for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x * x + y * y <= 4) put(3 + x, 12 + y, x * x + y * y <= 1 ? t[0] : t[1]);
     const a: [number, number][] = [[4, 10], [7, 9], [6, 7], [9, 6], [9, 4], [12, 3]];
@@ -1512,5 +2125,33 @@ export function orbIcon(einstein = false): Uint8ClampedArray {
         }
       }
     }
+  });
+}
+
+/** Tesla's orb: a copper-wound sphere, violet arcs leaping off it. */
+export function coilOrbIcon(): Uint8ClampedArray {
+  const t = TESLA_TONES;
+  const cu: RGB = hex('#e09050');
+  const cuDk: RGB = hex('#7a3a1a');
+  return icon16((put) => {
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const d = Math.hypot(x + 0.5 - 8, (y + 0.5 - 8.5) * 1.05);
+        if (d <= 3.6) put(x, y, y % 2 ? cuDk : x < 8 && y < 8 ? t[1] : cu);
+      }
+    }
+    // The terminal on top, and the arcs.
+    put(7, 3, t[0]);
+    put(8, 3, t[0]);
+    put(7, 4, t[1]);
+    const arcs: [number, number][][] = [
+      [[8, 3], [10, 1], [12, 2], [14, 0]],
+      [[4, 8], [2, 7], [1, 9], [0, 8]],
+      [[12, 10], [13, 12], [15, 12]],
+      [[6, 12], [5, 14], [3, 15]],
+    ];
+    arcs.forEach((a, n) => {
+      for (let i = 0; i < a.length - 1; i++) seg(put, a[i][0], a[i][1], a[i + 1][0], a[i + 1][1], n === 0 ? t[0] : i % 2 ? t[2] : t[1]);
+    });
   });
 }

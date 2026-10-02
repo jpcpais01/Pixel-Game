@@ -26,19 +26,20 @@ import { AsgardThunder, OdinSpear } from './valkyrie';
 import { KingsCrown } from './king';
 import { AFONSO_KIT, KING_KIT } from '../King';
 import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
+import { CINDER_MAGIC, MYCELIA_MAGIC } from '../Druid';
 import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
 import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
-import { HIVE_KIT, SYNTH_KIT } from '../Synth';
+import { HIVE_KIT, SYNTH_KIT, VAPOR_KIT } from '../Synth';
 import { SIEGE_MS, SwarmProtocol } from './robot';
 import { DeadOfNight, HauntedHouse } from './phantom';
-import { POLTER_KIT, TEA_KIT } from '../Poltergeist';
-import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT } from '../Wraith';
-import { ENGINEER_KIT } from '../Engineer';
-import { EINSTEIN_KIT, SCIENTIST_KIT } from '../Scientist';
+import { BANSHEE_KIT, POLTER_KIT, TEA_KIT } from '../Poltergeist';
+import { CALA_KIT, FERRY_KIT, FIREFLY_KIT, WRAITH_KIT } from '../Wraith';
+import { ENGINEER_KIT, FORGEBEARD_KIT } from '../Engineer';
+import { EINSTEIN_KIT, SCIENTIST_KIT, TESLA_KIT } from '../Scientist';
 import { chainReaction, megaSentry } from './inventor';
-import { BENFICA_KIT, EAGLE_KIT } from '../Eagle';
-import { LION_KIT, SPORTING_KIT } from '../Lion';
-import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
+import { BENFICA_KIT, EAGLE_KIT, PHOENIX_KIT } from '../Eagle';
+import { LION_KIT, NEMEAN_KIT, SPORTING_KIT } from '../Lion';
+import { DRAGON_KIT, JADE_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
 import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
@@ -318,7 +319,7 @@ const ULTS: Record<string, UltDef> = {
     range: 110,
     pal: GROVE_PAL,
     icon: icons.wrathIcon,
-    cast: (c) => c.world.addEffect(new WildWrath(c.world, c.tx, c.ty, c.pal, c.look === 'titania')),
+    cast: (c) => c.world.addEffect(new WildWrath(c.world, c.tx, c.ty, c.pal, c.look === 'titania' ? 'blossom' : c.look === 'mycelia' ? 'shroom' : undefined)),
   },
   'druid:wild': {
     name: 'Primal Stampede',
@@ -327,7 +328,7 @@ const ULTS: Record<string, UltDef> = {
     aim: 'dir',
     pal: WILD_PAL,
     icon: icons.stampedeIcon,
-    cast: (c) => c.world.addEffect(new PrimalStampede(c.world, c)),
+    cast: (c) => c.world.addEffect(new PrimalStampede(c.world, c, c.look === 'cinderhide' ? CINDER_MAGIC.smoke : undefined)),
   },
   'valkyrie:spear': {
     name: 'Spear of Odin',
@@ -466,6 +467,8 @@ const SKINS: Record<string, UltSkin> = {
   'bard:fadista': { pal: pal(0xf4f8ff, 0xb8d2ff, 0x3c7cff, 0x1a2e9a, 0x6a9cff) },
   'bard:orpheus': { pal: pal(0xfffdf2, 0xffeeaa, 0xffc84a, 0x7a3ab0, 0xffd870) },
   'bard:howl': { pal: pal(0xf2f4ff, 0xbcc8ff, 0x6c7cff, 0x2c2a9a, 0x8a9aff), type: 'drummer' },
+  'bard:skald': { pal: pal(0xfffcee, 0xffe8a0, 0x8ccfff, 0x2c5c9e, 0xbfe2ff) },
+  'bard:taiko': { pal: pal(0xfff8e6, 0xffd24a, 0xff4a1e, 0x8a1208, 0xff6a2a), type: 'drummer' },
   'chronomancer:clockwork': { pal: CLOCKWORK_PAL },
   'chronomancer:primavera': { pal: pal(0xfffaf2, 0xffd0de, 0xf48cae, 0x3e9a78, 0xd8f4e4) },
   'chronomancer:anomaly': { pal: ANOMALY_PAL, type: 'paradox' },
@@ -489,18 +492,30 @@ const SKINS: Record<string, UltSkin> = {
   'druid:autumn': { pal: AUTUMN_MAGIC.pal },
   'druid:titania': { pal: pal(0xfffaf0, 0xffd88a, 0xff9ac0, 0xb8487a, 0xffb8d0) },
   'druid:frostfang': { pal: FROST_MAGIC.pal, type: 'wild' },
+  'druid:mycelia': { pal: MYCELIA_MAGIC.pal },
+  'druid:cinderhide': { pal: CINDER_MAGIC.pal, type: 'wild' },
   'valkyrie:sunshield': { pal: SUN_KIT.pal },
   'valkyrie:swan': { pal: SWAN_KIT.pal },
   'valkyrie:raven': { pal: RAVEN_KIT.pal, type: 'storm' },
   'automaton:scrap': { pal: SCRAP_KIT.boom },
+  // Gunmetal and signal-flag red and yellow.
+  'automaton:dreadnought': { pal: pal(0xfff6d8, 0xffd040, 0xe02a20, 0x3a3f48, 0xffa040) },
   'automaton:hive': { pal: HIVE_KIT.pal, type: 'synth' },
+  'automaton:vaporwave': { pal: VAPOR_KIT.pal, type: 'synth' },
   'phantom:tea': { pal: TEA_KIT.pal },
   'phantom:cala': { pal: CALA_KIT.pal, type: 'wraith' },
   'phantom:firefly': { pal: FIREFLY_KIT.pal, type: 'wraith' },
+  'phantom:banshee': { pal: BANSHEE_KIT.pal },
+  'phantom:ferryman': { pal: FERRY_KIT.pal, type: 'wraith' },
   'inventor:einstein': { pal: EINSTEIN_KIT.pal, type: 'scientist' },
+  'inventor:forgebeard': { pal: FORGEBEARD_KIT.pal },
+  'inventor:tesla': { pal: TESLA_KIT.pal, type: 'scientist' },
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
+  'beast:phoenix': { pal: PHOENIX_KIT.pal, type: 'eagle' },
+  'beast:nemean': { pal: NEMEAN_KIT.pal, type: 'lion' },
+  'beast:jade': { pal: JADE_KIT.pal, type: 'dragon' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */
