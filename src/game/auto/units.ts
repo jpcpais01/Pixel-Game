@@ -118,6 +118,9 @@ const DEFS: Record<string, Def> = {
   'inventor.scientist': { cost: 4, origin: 'arcane', range: 3, attack: ['zap'], missile: 'spark', mana: 80,
     skill: { name: 'Polarity orb', cd: 6, kind: 'blast', aim: 'crowd', r: 1.4, dmg: 2, stun: 0.6, delay: 0.6, fx: 'lightning', anim: 'toss' },
     ult: { kind: 'chain', aim: 'target', n: 6, dmg: 4.2, stun: 0.4, fx: 'lightning', anim: 'eureka' } },
+  'necromancer.lich': { cost: 5, origin: 'arcane', range: 3, attack: ['cast'], missile: 'shard', mana: 90,
+    skill: { name: 'Bone spikes', cd: 7, kind: 'beam', aim: 'target', r: 3.5, dmg: 1.6, stun: 0.6, fx: 'shards', anim: 'spikes' },
+    ult: { kind: 'nova', aim: 'self', r: 2.2, dmg: 3.6, slow: 3, stun: 1.2, fx: 'shards', anim: 'winter' } },
 
   // Order
   'archer.arbalest': { cost: 3, origin: 'order', range: 4, attack: ['fire'], missile: 'arrow', mana: 80,

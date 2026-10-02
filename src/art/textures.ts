@@ -16,6 +16,7 @@ import { BIRD_H as HAWK_H, BIRD_LOOKS as HAWK_LOOKS, BIRD_W as HAWK_W, birdFrame
 import { FALCONER_TONES, falconIcon, quickShotIcon, SNOWFEATHER_TONES } from './falconerIcons';
 import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
 import { deathStepIcon, reapIcon } from './reaper';
+import { boneSpikesIcon, DROWNED_ICON, rimeBoltIcon } from './lich';
 import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { MOSSGRAVE_ICON, graveIcon, spadeIcon } from './digger';
 import { GRAVE_LOOK, MOSS_GRAVE_LOOK, buildGhoulSheet, buildStoneSheet } from './diggerFx';
@@ -327,6 +328,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_deathstep', toCanvas(16, 16, deathStepIcon()));
   scene.textures.addCanvas('icon_reap_catrina', toCanvas(16, 16, reapIcon(true)));
   scene.textures.addCanvas('icon_deathstep_catrina', toCanvas(16, 16, deathStepIcon(true)));
+  // The Lich's (and the Drowned King's) rime bolt and bone spikes.
+  scene.textures.addCanvas('icon_rime', toCanvas(16, 16, rimeBoltIcon()));
+  scene.textures.addCanvas('icon_bonespikes', toCanvas(16, 16, boneSpikesIcon()));
+  scene.textures.addCanvas('icon_rime_drowned', toCanvas(16, 16, rimeBoltIcon(DROWNED_ICON)));
+  scene.textures.addCanvas('icon_bonespikes_drowned', toCanvas(16, 16, boneSpikesIcon(DROWNED_ICON)));
 
   yield;
   // The bards' glowing notes (the minstrel's ('note_e', frames n0 and n1; the wildsong's leaf notes and wisps in

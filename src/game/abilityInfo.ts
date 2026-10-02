@@ -142,6 +142,11 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Steps through shade along the aim, cutting and marking foes passed; marked foes take more from reaps.',
     special: 'A great ghost scythe sweeps round twice drawing foes in, then reaps, executing the nearly dead.',
   },
+  'necromancer.lich': {
+    attack: 'Shards of bone-ice that chill foes; every third on one foe freezes it.',
+    ability: 'A line of ice-and-bone spikes bursts up along the aim, rooting foes.',
+    special: 'A blizzard round the hero slows and bites foes, then freezes and shatters them.',
+  },
   'bard.minstrel': {
     attack: 'Lute notes that bend toward foes and leap from one to the next.',
     ability: "A song that quickens the hero's feet and heals.",

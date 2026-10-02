@@ -92,6 +92,7 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'necromancer.blood': { role: 'caster', hp: 100, damage: 8, defense: 11, rate: 2.65, speed: 62, regen: 0.8, skill: 2.7, ult: 320, kit: 6 },
   'necromancer.digger': { role: 'tank', hp: 120, damage: 10, defense: 22, rate: 2.13, speed: 54, regen: 1, skill: 6.9, ult: 194, kit: 14 },
   'necromancer.reaper': { role: 'melee', hp: 110, damage: 12, defense: 18, rate: 2.08, speed: 60, regen: 0.8, skill: 2, ult: 60, kit: 10.7 },
+  'necromancer.lich': { role: 'caster', hp: 95, damage: 8, defense: 15, rate: 2.1, speed: 56, regen: 0.8, skill: 1.3, ult: 72, kit: 7 },
   'bard.minstrel': { role: 'caster', hp: 85, damage: 9, defense: 12, rate: 2.16, speed: 64, regen: 0.8, skill: 0, ult: 187, kit: 7 },
   'bard.drummer': { role: 'tank', hp: 115, damage: 10, defense: 22, rate: 2.33, speed: 58, regen: 1, skill: 0.5, ult: 90, kit: 11 },
   'chronomancer.keeper': { role: 'caster', hp: 82, damage: 10, defense: 12, rate: 2.15, speed: 60, regen: 0.8, skill: 1.7, ult: 0, kit: 8 },

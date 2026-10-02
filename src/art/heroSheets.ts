@@ -19,6 +19,7 @@ import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, buildAlchemistFrames 
 import { ARCHER_H, ARCHER_LOOKS, ARCHER_W, archerAnimsFor, buildArcherFrames } from './archer';
 import { buildRogueFrames, ROGUE_ANIMS, ROGUE_H, ROGUE_LOOKS, ROGUE_W } from './rogue';
 import { buildNecroFrames, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W } from './necromancer';
+import { buildLichFrames, LICH_ANIMS, LICH_H, LICH_LOOKS, LICH_W } from './lich';
 import { BARD_H, BARD_LOOKS, BARD_W, bardAnims, buildBardFrames } from './bard';
 import { CHRONO_H, CHRONO_LOOKS, CHRONO_W, buildChronoFrames, chronoAnims } from './chrono';
 import { SAMURAI_ANIMS, SAMURAI_H, SAMURAI_LOOKS, SAMURAI_W, SPIN_FPS, SPIN_FRAMES, buildSamuraiFrames, spinStart } from './samurai';
@@ -160,6 +161,7 @@ rig(ALCHEMIST_LOOKS, ALCH_W, ALCH_H, buildAlchemistFrames, (look) => ALCHEMIST_A
 rig(ARCHER_LOOKS, ARCHER_W, ARCHER_H, buildArcherFrames, archerAnimsFor);
 rig(ROGUE_LOOKS, ROGUE_W, ROGUE_H, buildRogueFrames, () => ROGUE_ANIMS, { flash: true });
 rig(NECRO_LOOKS, NECRO_W, NECRO_H, buildNecroFrames, () => NECRO_ANIMS);
+rig(LICH_LOOKS, LICH_W, LICH_H, buildLichFrames, () => LICH_ANIMS);
 rig(BARD_LOOKS, BARD_W, BARD_H, buildBardFrames, bardAnims);
 rig(CHRONO_LOOKS, CHRONO_W, CHRONO_H, buildChronoFrames, chronoAnims);
 rig(SAMURAI_LOOKS, SAMURAI_W, SAMURAI_H, buildSamuraiFrames, () => SAMURAI_ANIMS, { meta: 'samurai', extra: (look) => turn(look.key, 'spin', SPIN_FRAMES, SPIN_FPS, spinStart) });
