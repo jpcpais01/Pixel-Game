@@ -18,6 +18,7 @@ import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAME
 import { crossIcon, cutMark, dashIcon, katanaIcon } from './samurai';
 import { daggersIcon, petalCanvas, ROGUE_ICONS, ROGUE_LOOKS, shadowstepIcon, smokeCanvas } from './rogue';
 import { gourdIcon, registerMoreSkinIcons, SKIN_BREWS, SKIN_QUIVERS } from './moreSkinIcons';
+import { inquisitorHammerIcon, lionGroundIcon, lionMaceIcon, purgeFallIcon } from './paladinSkins';
 import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, eclipseFallIcon, oathHammerIcon, pikeSaberIcon, seraphMaceIcon } from './heroSkins';
 import { hex } from './pixel';
 import { bakedCanvas, pixelCanvas } from './canvas';
@@ -454,6 +455,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_sanctuary_seraph', toCanvas(16, 16, dawnGroundIcon()));
   scene.textures.addCanvas('icon_hammer_oath', toCanvas(16, 16, oathHammerIcon()));
   scene.textures.addCanvas('icon_sunfall_oath', toCanvas(16, 16, eclipseFallIcon()));
+  // The Lionheart's and the Inquisitor's buttons.
+  scene.textures.addCanvas('icon_mace_lion', toCanvas(16, 16, lionMaceIcon()));
+  scene.textures.addCanvas('icon_sanctuary_lion', toCanvas(16, 16, lionGroundIcon()));
+  scene.textures.addCanvas('icon_hammer_inquisitor', toCanvas(16, 16, inquisitorHammerIcon()));
+  scene.textures.addCanvas('icon_sunfall_inquisitor', toCanvas(16, 16, purgeFallIcon()));
   scene.textures.addCanvas('icon_saber_guard', toCanvas(16, 16, pikeSaberIcon()));
   scene.textures.addCanvas('icon_force_guard', toCanvas(16, 16, forceIcon([hex('#fffbe8'), hex('#ffe08a'), hex('#f0b030'), hex('#8a5a18')])));
 
