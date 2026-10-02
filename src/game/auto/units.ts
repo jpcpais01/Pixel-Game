@@ -229,6 +229,10 @@ const DEFS: Record<string, Def> = {
   'samurai.ronin': { cost: 1, origin: 'blade', range: 1, attack: ['slash1', 'slash2'], mana: 70,
     skill: { name: 'Iaido', cd: 6, kind: 'dash', aim: 'weak', dmg: 2, fx: 'steel', anim: 'dash' },
     ult: { kind: 'nova', aim: 'self', r: 2, dmg: 4, dodge: 0.8, fx: 'steel', anim: 'slash1' } },
+  // The Pyrotechnist, a Forged backliner with the Alchemists
+  'pyrotechnist.pyrotechnist': { cost: 3, origin: 'forged', range: 3, attack: ['fire'], missile: 'fire', mana: 80,
+    skill: { name: 'Firecrackers', cd: 7, kind: 'blast', aim: 'crowd', r: 1.2, dmg: 1.6, stun: 0.6, delay: 0.5, fx: 'fire', anim: 'toss' },
+    ult: { kind: 'rain', aim: 'crowd', r: 2, n: 6, dmg: 7.5, delay: 1.4, fx: 'fire', anim: 'finale' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

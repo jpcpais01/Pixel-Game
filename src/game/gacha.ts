@@ -73,6 +73,8 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'warrior:headless': 'legendary',
   'wizard:pumpkin': 'epic',
   'archer:scarecrow': 'epic',
+  // Wished for like the rest (not a season's).
+  'pyrotechnist:carnival': 'epic',
 };
 
 /** One skin as the shop knows it. */

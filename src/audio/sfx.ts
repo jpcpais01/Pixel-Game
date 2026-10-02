@@ -2697,6 +2697,59 @@ export class Sfx {
       o.stop(at + 0.3);
     }
   }
+
+  /** The Roman candle's shot: a soft paper thump and a short rising whistle as the star leaves the tube. */
+  candle(t: number, pan: number): void {
+    const out = this.out(pan, 0.55, 0.2);
+    this.chirp(out, t, 'sine', 180, 70, 0.4, 0.07);
+    this.burstNoise(out, t, 'bandpass', 1600, 700, 1.4, 0.3, 0.06, true);
+    const f = rand(1500, 1800);
+    this.chirp(filter(this.m.ctx, 'lowpass', 4200, 1, out), t + 0.02, 'sine', f, f * 1.6, 0.06, 0.1);
+  }
+
+  /** A star bursting on a foe: a crackle of tiny pops and a glint. */
+  starPop(t: number, pan: number): void {
+    const out = this.out(pan, 0.5, 0.25);
+    for (let i = 0; i < 4; i++) this.burstNoise(out, t + i * rand(0.02, 0.04), 'highpass', rand(3200, 4800), 6000, 0.8, 0.22, 0.025);
+    this.chirp(out, t, 'triangle', rand(1900, 2300), 1500, 0.06, 0.12);
+  }
+
+  /** A firecracker going off: a hard, dry crack with a little thump under it. */
+  firecracker(t: number, pan: number): void {
+    const out = this.out(pan, 0.6, 0.18);
+    this.burstNoise(out, t, 'highpass', rand(1800, 2600), 1200, 0.7, 0.6, 0.035);
+    this.burstNoise(out, t, 'bandpass', rand(900, 1200), 500, 1.2, 0.35, 0.05, true);
+    this.chirp(out, t, 'sine', rand(260, 320), 80, 0.3, 0.05);
+  }
+
+  /** A skyrocket climbing: a whistle that rises and wavers, over a rushing hiss. */
+  rocketWhistle(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.35, 0.3);
+    const g = gain(ctx, 0, out);
+    hit(g.gain, t, 0.07, 0.04, 0.5);
+    const f = rand(900, 1100);
+    const o = osc(ctx, 'sine', f, g);
+    sweep(o.frequency, t, f, f * 2.4, 0.5);
+    const vib = osc(ctx, 'sine', 18, gain(ctx, 40, o.frequency));
+    o.start(t);
+    o.stop(t + 0.6);
+    vib.start(t);
+    vib.stop(t + 0.6);
+    this.burstNoise(out, t, 'bandpass', 1200, 3600, 1.2, 0.18, 0.45);
+  }
+
+  /** A great firework bursting in the sky: a deep boom, then a long tail of crackling glitter. */
+  fireworkBurst(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.6);
+    this.chirp(out, t, 'sine', 120, 34, 0.6, 0.35);
+    this.burstNoise(out, t, 'lowpass', 2400, 200, 0.8, 0.5, 0.4, true);
+    for (let i = 0; i < 12; i++) {
+      const at = t + 0.12 + i * rand(0.04, 0.08);
+      this.burstNoise(out, at, 'highpass', rand(3000, 5200), 6400, 0.9, 0.12 * (1 - i / 14), 0.02);
+    }
+    this.sparkle(out, t + 0.2, 3, 0.09);
+  }
 }
 
 /**

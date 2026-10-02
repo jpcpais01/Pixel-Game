@@ -207,4 +207,9 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Pours out a long cone of fire that turns with the aim.',
     special: 'A flame serpent coils round the spot, raking, then dives in a blast.',
   },
+  'pyrotechnist.pyrotechnist': {
+    attack: 'Fires stars of coloured fire that pop on the first foe, singeing those near.',
+    ability: 'Tosses a string of firecrackers; each bang hurts and staggers foes near it.',
+    special: 'Six rockets burst over foes near the spot, raining glitter that burns.',
+  },
 };

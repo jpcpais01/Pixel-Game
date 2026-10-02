@@ -42,6 +42,8 @@ import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
 import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
+import { Skyburst } from './fireworks';
+import { CARNIVAL_STYLE, VERMILION_STYLE } from '../Pyrotechnist';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
@@ -435,6 +437,16 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.wyrmIcon,
     cast: wyrmWrath,
   },
+  'pyrotechnist:pyrotechnist': {
+    name: 'Skyburst',
+    cost: 70,
+    windup: 600,
+    aim: 'spot',
+    range: 120,
+    pal: VERMILION_STYLE.pal,
+    icon: icons.skyburstIcon,
+    cast: (c) => c.world.addEffect(new Skyburst(c.world, c)),
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -501,6 +513,7 @@ const SKINS: Record<string, UltSkin> = {
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
+  'pyrotechnist:carnival': { pal: CARNIVAL_STYLE.pal },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */
