@@ -64,6 +64,8 @@ export interface Spell {
   dodge?: number;
   /** How long a haste lasts. */
   dur?: number;
+  /** Drag each foe struck to a free cell beside the caster (the Aquanaut's reel). */
+  pull?: boolean;
   fx: SpellFx;
   /** The hero's own move played for it. */
   anim: string;
@@ -229,6 +231,11 @@ const DEFS: Record<string, Def> = {
   'samurai.ronin': { cost: 1, origin: 'blade', range: 1, attack: ['slash1', 'slash2'], mana: 70,
     skill: { name: 'Iaido', cd: 6, kind: 'dash', aim: 'weak', dmg: 2, fx: 'steel', anim: 'dash' },
     ult: { kind: 'nova', aim: 'self', r: 2, dmg: 4, dodge: 0.8, fx: 'steel', anim: 'slash1' } },
+
+  // The Aquanaut: a sturdy diver who stands near the front and hauls a backliner in to him.
+  'aquanaut.aquanaut': { cost: 3, origin: 'forged', range: 2, attack: ['fire'], missile: 'arrow', mana: 90,
+    skill: { name: 'Reel in', cd: 7, kind: 'bolt', aim: 'far', dmg: 1.2, stun: 1, pull: true, fx: 'water', anim: 'hook' },
+    ult: { kind: 'blast', aim: 'target', r: 1.6, dmg: 4, knock: 1, slow: 2.5, delay: 0.7, fx: 'water', anim: 'surge' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

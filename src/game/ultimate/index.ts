@@ -42,6 +42,8 @@ import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
 import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
+import { AQUANAUT_KIT, BARNACLE_KIT } from '../Aquanaut';
+import { torpedo } from './aquanaut';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
@@ -435,6 +437,15 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.wyrmIcon,
     cast: wyrmWrath,
   },
+  'aquanaut:aquanaut': {
+    name: 'Torpedo',
+    cost: 65,
+    windup: 550,
+    aim: 'dir',
+    pal: AQUANAUT_KIT.style.pal,
+    icon: icons.torpedoIcon,
+    cast: torpedo,
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -501,6 +512,7 @@ const SKINS: Record<string, UltSkin> = {
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
+  'aquanaut:barnacle': { pal: BARNACLE_KIT.style.pal },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

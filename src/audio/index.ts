@@ -1024,6 +1024,26 @@ class GameSound {
     if (t !== null) this.sfx!.hundredCuts(t, pan);
   }
 
+  harpoon(pan = 0): void {
+    const t = this.slot('harpoon');
+    if (t !== null) this.sfx!.harpoon(t, pan);
+  }
+
+  chainReel(pan = 0): void {
+    const t = this.slot('chainReel');
+    if (t !== null) this.sfx!.chainReel(t, pan);
+  }
+
+  torpedo(pan = 0): void {
+    const t = this.slot('torpedo');
+    if (t !== null) this.sfx!.torpedo(t, pan);
+  }
+
+  seaBurst(pan = 0): void {
+    const t = this.slot('seaBurst');
+    if (t !== null) this.sfx!.seaBurst(t, pan);
+  }
+
   step(): void {
     const t = this.slot('step');
     if (t !== null) this.sfx!.step(t);

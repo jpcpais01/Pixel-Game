@@ -101,6 +101,7 @@ import { BOLT_DIRS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, reticle, 
 import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
 import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
 import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
+import { registerAquanautArt } from './aquanautKit';
 import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, LION_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
@@ -594,6 +595,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_grid', toCanvas(16, 16, gridIcon()));
   scene.textures.addCanvas('icon_drone_hive', toCanvas(16, 16, droneIcon(true)));
   scene.textures.addCanvas('icon_grid_hive', toCanvas(16, 16, gridIcon(true)));
+  registerAquanautArt(scene);
 
   yield;
   // Items: hotbar icons and the bottles monsters drop.
