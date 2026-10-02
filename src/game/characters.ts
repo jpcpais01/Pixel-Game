@@ -30,7 +30,7 @@ import { EMPRESS_KIT, Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { Sage, SAGE_KIT, STARSEER_KIT } from './Sage';
 import { SAGE_H, SAGE_ORIGIN_Y } from '../art/sage';
-import { DUNE_KIT, Twin, TWIN_KIT } from './Twin';
+import { PEACOCK_KIT, Twin, TWIN_KIT } from './Twin';
 import { TWIN_H, TWIN_ORIGIN_Y } from '../art/twin';
 import { Inquisitor, RINGBLADE_KIT, VOIDHUNTER_KIT } from './Inquisitor';
 import { INQ_H, INQ_ORIGIN_Y } from '../art/inquisitor';
@@ -795,14 +795,14 @@ const KITS: KitDef[] = [
         lookName: 'Duelist',
         skins: [
           {
-            // A desert nomad: sand wraps, an indigo face scarf, goggles on the headwrap, a sun-bleached cloak, bronze hilts, amber and violet blades.
-            id: 'dune',
-            name: 'Dune Wanderer',
-            accent: 0xffb040,
-            preview: { texture: 'jedi_dune', glow: 'jedi_dune_e', idle: 'jedi_dune_idle_down', chosen: 'jedi_dune_draw_down', originY: TWIN_ORIGIN_Y / TWIN_H },
+            // A court duelist of a jewelled palace: teal and sapphire brocade stitched in gold, a gold sash, a half-cape fanned in feather eyes, a pinned high knot, emerald and sapphire blades.
+            id: 'peacock',
+            name: 'Peacock',
+            accent: 0x2ad0a0,
+            preview: { texture: 'jedi_peacock', glow: 'jedi_peacock_e', idle: 'jedi_peacock_idle_down', chosen: 'jedi_peacock_draw_down', originY: TWIN_ORIGIN_Y / TWIN_H },
             buttons: {
-              attack: { texture: 'icon_twin_dune' },
-              special: { texture: 'icon_riposte_dune' },
+              attack: { texture: 'icon_twin_peacock' },
+              special: { texture: 'icon_riposte_peacock' },
             },
           },
         ],
@@ -839,7 +839,7 @@ const KITS: KitDef[] = [
     spawn(world, x, y, look) {
       if (look === 'sage' || look === 'starseer') return new Sage(world, x, y, look === 'starseer' ? STARSEER_KIT : SAGE_KIT);
       if (look === 'sith' || look === 'warlord' || look === 'empress') return new Sith(world, x, y, look === 'warlord' ? WARLORD_KIT : look === 'empress' ? EMPRESS_KIT : SITH_KIT);
-      if (look === 'twin' || look === 'dune') return new Twin(world, x, y, look === 'dune' ? DUNE_KIT : TWIN_KIT);
+      if (look === 'twin' || look === 'peacock') return new Twin(world, x, y, look === 'peacock' ? PEACOCK_KIT : TWIN_KIT);
       if (look === 'inquisitor' || look === 'voidhunter') return new Inquisitor(world, x, y, look === 'voidhunter' ? VOIDHUNTER_KIT : RINGBLADE_KIT);
       return new Jedi(world, x, y, look === 'guard' ? GUARD_STYLE : look === 'master' ? MASTER_STYLE : look === 'nomad' ? NOMAD_STYLE : JEDI_STYLE);
     },

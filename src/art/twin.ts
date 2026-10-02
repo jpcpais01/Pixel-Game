@@ -6,16 +6,17 @@
 // tail falling behind. A long cyan blade in his right hand and a short
 // magenta shoto in his left.
 //
-// His skin, the Dune Wanderer, is a desert nomad: sand wraps over everything,
-// a headwrap with brass goggles pushed up on it, an indigo scarf over the
-// face, a sun-bleached cloak hanging to his calves, bronze hilts, and blades
-// of amber and violet.
+// His skin, the Peacock, is a court duelist of a jewelled palace: teal and
+// sapphire brocade stitched in gold, a gold sash, a short half-cape whose hem
+// fans out in feathers with an eye on each, his hair in a high knot with a
+// gold pin through it, gold-chased hilts, an emerald blade and a sapphire
+// shoto.
 //
 // Like the Jedi, the body keeps to the 24x32 box inside a larger frame, so
 // the blades can reach past it; drawing works in body-box coordinates.
 // Right-facing frames are the left-facing ones mirrored.
 
-import { PixelCanvas, cyl, hex, sphere, type Material, type RGB, type Vec3 } from './pixel';
+import { PixelCanvas, cyl, hex, sphere, type Material, type NormalFn, type RGB, type Vec3 } from './pixel';
 import { blade, BOOT, EYE, HILT_DARK, LEATHER, SILVER } from './palette';
 import { DIRS, type Dir } from './wizard';
 import type { JediMeta } from './jedi';
@@ -87,59 +88,81 @@ const SABER_ROSE = blade(['#ffe0f2', '#fff6fb'], ['#b81274', '#ea2e9c', '#ff7ac8
 const SABER_ROSE_GLOW = hex('#ff3aa8');
 
 // ---------------------------------------------------------------------------
-// Materials: the Dune Wanderer
+// Materials: the Peacock
 
-const DUNE_SKIN: Material = {
-  ramp: ramp('#38201a', '#5e362a', '#86523e', '#ac7656', '#c8946c'),
-  outline: hex('#1a0c08'),
-  outlineLit: hex('#2e1810'),
+const PEA_SKIN: Material = {
+  ramp: ramp('#3a2016', '#643826', '#8e5a3a', '#b67e56', '#d6a272'),
+  outline: hex('#1c0c08'),
+  outlineLit: hex('#321810'),
 };
 
-/** Sand-coloured cloth: the headwrap, the arm and chest wraps. */
-const DUNE_SAND: Material = {
-  ramp: ramp('#5a4630', '#8a7050', '#b89a70', '#dcc49a', '#f2e2bc'),
-  outline: hex('#2a1e12'),
-  outlineLit: hex('#3e2e1c'),
+/** Blue-black hair, oiled to a sheen. */
+const PEA_HAIR: Material = {
+  ramp: ramp('#05060a', '#0c0f17', '#151a25', '#212938', '#303c50'),
+  outline: hex('#020205'),
 };
 
-/** The tabard, a darker, dustier umber. */
-const DUNE_TABARD: Material = {
-  ramp: ramp('#2a1a10', '#46301e', '#664830', '#8a6844', '#ac8a60'),
-  outline: hex('#140c06'),
-  outlineLit: hex('#22160c'),
+/** Teal brocade: the doublet under the tabard and the gaiters round his shins. */
+const PEA_TEAL: Material = {
+  ramp: ramp('#041a1e', '#0a3238', '#105056', '#187072', '#2a9690'),
+  outline: hex('#020c0e'),
+  outlineLit: hex('#06262a'),
 };
 
-/** Indigo: the face scarf and the tabard's stripes, like the veils of the deep desert. */
-const DUNE_INDIGO: Material = {
-  ramp: ramp('#0c0c26', '#18183e', '#26285e', '#383c80', '#5058a2'),
-  outline: hex('#06060f'),
-  outlineLit: hex('#10102a'),
+/** Deep sapphire silk: the tabard and the sleeves. */
+const PEA_BLUE: Material = {
+  ramp: ramp('#05082a', '#0c1446', '#142266', '#1e3488', '#3050b0'),
+  outline: hex('#020414'),
+  outlineLit: hex('#0a1238'),
 };
 
-/** The cloak, bleached nearly white by the sun. */
-const DUNE_CLOAK: Material = {
-  ramp: ramp('#6e6050', '#9a8c78', '#c4b69e', '#e2d8c2', '#f6f0e2'),
-  outline: hex('#2e261c'),
-  outlineLit: hex('#463c30'),
+const PEA_TROUSER: Material = {
+  ramp: ramp('#06081a', '#0c1030', '#141a46', '#1e285c'),
+  outline: hex('#03040c'),
 };
 
-const DUNE_BRONZE: Material = {
-  ramp: ramp('#2a1608', '#5a3412', '#8e5a22', '#c48a3e', '#ecc074'),
-  outline: hex('#140a02'),
+const PEA_CUFF: Material = {
+  ramp: ramp('#040620', '#0a1036', '#121c52', '#1c2a6c', '#2a3e8a'),
+  outline: hex('#02030e'),
+};
+
+const PEA_BOOT: Material = {
+  ramp: ramp('#06060e', '#0e0f1e', '#191b32', '#262a4a'),
+  outline: hex('#020205'),
+};
+
+/** Bright gold: embroidery, the edging, the hilts, the hair pin. */
+const PEA_GOLD: Material = {
+  ramp: ramp('#3a2406', '#7a5214', '#b88a2a', '#e6c050', '#fff0a0'),
+  outline: hex('#1c1002'),
   shine: true,
 };
 
-/** The goggles' lenses: dark glass that catches a glint. */
-const DUNE_LENS: Material = {
-  ramp: ramp('#0e1418', '#1e3038', '#3a5a64', '#7aa6ae'),
-  outline: hex('#060a0c'),
+/** The sash: gold silk, softer than the metal. */
+const PEA_SASH: Material = {
+  ramp: ramp('#4a2c08', '#80561a', '#b48430', '#dcb456', '#f4dc94'),
+  outline: hex('#221402'),
+  outlineLit: hex('#3a2408'),
+};
+
+/** The cape's feathers: emerald shading into teal. */
+const PEA_PLUME: Material = {
+  ramp: ramp('#021a12', '#063422', '#0c5236', '#14744a', '#24a064', '#56d08a'),
+  outline: hex('#010c08'),
+  outlineLit: hex('#042016'),
+};
+
+/** The feathers' eyes, and the pin's jewels: sapphire. */
+const PEA_SAPPHIRE: Material = {
+  ramp: ramp('#060c3c', '#10207a', '#2040c0', '#4a78f0', '#a8c8ff'),
+  outline: hex('#030620'),
   shine: true,
 };
 
-const SABER_AMBER = blade(['#fff2d0', '#fffaf0'], ['#c86206', '#f29a14', '#ffc858']);
-const SABER_AMBER_GLOW = hex('#ffa020');
-const SABER_VIOLET = blade(['#efe0ff', '#faf4ff'], ['#6420d0', '#9a4cff', '#c89aff']);
-const SABER_VIOLET_GLOW = hex('#9a50ff');
+const SABER_EMERALD = blade(['#e0ffe8', '#f6fff8'], ['#0c9a48', '#22d070', '#86f4ae']);
+const SABER_EMERALD_GLOW = hex('#30e07a');
+const SABER_SAPPHIRE = blade(['#e2eaff', '#f6f8ff'], ['#1838c8', '#3a68ff', '#94b4ff']);
+const SABER_SAPPHIRE_GLOW = hex('#4a74ff');
 
 // ---------------------------------------------------------------------------
 // Looks
@@ -168,12 +191,16 @@ export interface TwinLook {
   /** The shoto, in his left. */
   shoto: { core: Material; edge: Material };
   shotoGlow: RGB;
-  /** Upper arms wrapped in this instead of bare. */
+  /** Upper arms sleeved in this instead of bare. */
   sleeve?: Material;
-  /** The nomad: a headwrap over the hair (its tail the ponytail's), goggles on it, a scarf over the face. */
-  nomad?: { headwrap: Material; scarf: Material; lens: Material };
-  /** A cloak hanging from the shoulders to the calves, its hem worn ragged. */
-  cloak?: Material;
+  /** Gold embroidery: a lattice over the doublet, a lozenge and a row of studs down the tabard. */
+  brocade?: Material;
+  /** A short half-cape from the shoulders to the hips, its hem fanned out in feathers, each with an eye. */
+  cape?: { feather: Material; eye: Material; ring: Material };
+  /** The topknot set high on the crown, a pin through it with a jewel at each end. */
+  pin?: { metal: Material; jewel: Material };
+  /** The belt a wide silk sash, knotted at the hip, its two tails hanging. */
+  sash?: boolean;
 }
 
 export const TWIN_LOOK: TwinLook = {
@@ -195,30 +222,37 @@ export const TWIN_LOOK: TwinLook = {
   shotoGlow: SABER_ROSE_GLOW,
 };
 
-/** The Dune Wanderer: sand wraps, an indigo face scarf, a bleached cloak, bronze hilts, amber and violet blades. */
-export const DUNE_LOOK: TwinLook = {
-  key: 'jedi_dune',
-  skin: DUNE_SKIN,
-  hair: DUNE_SAND,
-  tabard: DUNE_TABARD,
-  trim: DUNE_INDIGO,
-  buckle: DUNE_BRONZE,
-  wrap: DUNE_SAND,
-  cuff: DUNE_SAND,
-  trouser: DUNE_TABARD,
-  boot: LEATHER,
-  belt: DUNE_INDIGO,
-  hilt: DUNE_BRONZE,
-  main: SABER_AMBER,
-  mainGlow: SABER_AMBER_GLOW,
-  shoto: SABER_VIOLET,
-  shotoGlow: SABER_VIOLET_GLOW,
-  sleeve: DUNE_SAND,
-  nomad: { headwrap: DUNE_SAND, scarf: DUNE_INDIGO, lens: DUNE_LENS },
-  cloak: DUNE_CLOAK,
+/**
+ * The Peacock: a court duelist of a jewelled palace. Teal brocade under a
+ * sapphire tabard, both stitched in gold, a gold sash, a half-cape fanned in
+ * feather eyes, a gold pin through a high knot, an emerald blade and a
+ * sapphire shoto on gold-chased hilts.
+ */
+export const PEACOCK_LOOK: TwinLook = {
+  key: 'jedi_peacock',
+  skin: PEA_SKIN,
+  hair: PEA_HAIR,
+  tabard: PEA_BLUE,
+  trim: PEA_GOLD,
+  buckle: PEA_GOLD,
+  wrap: PEA_TEAL,
+  cuff: PEA_CUFF,
+  trouser: PEA_TROUSER,
+  boot: PEA_BOOT,
+  belt: PEA_SASH,
+  hilt: PEA_GOLD,
+  main: SABER_EMERALD,
+  mainGlow: SABER_EMERALD_GLOW,
+  shoto: SABER_SAPPHIRE,
+  shotoGlow: SABER_SAPPHIRE_GLOW,
+  sleeve: PEA_BLUE,
+  brocade: PEA_GOLD,
+  cape: { feather: PEA_PLUME, eye: PEA_SAPPHIRE, ring: PEA_GOLD },
+  pin: { metal: PEA_GOLD, jewel: PEA_SAPPHIRE },
+  sash: true,
 };
 
-export const TWIN_LOOKS = [TWIN_LOOK, DUNE_LOOK];
+export const TWIN_LOOKS = [TWIN_LOOK, PEACOCK_LOOK];
 
 /** The look being drawn; set by buildTwinFrames. */
 let S: TwinLook = TWIN_LOOK;
@@ -244,7 +278,7 @@ interface Pose {
   footB: number;
   /** Upper body shifted forward (side view). */
   lean: number;
-  /** The tabard's flap (and the cloak) swinging, in pixels. */
+  /** The tabard's flap (and the cape) swinging, in pixels. */
   flap: number;
   /** The ponytail swinging, in pixels. */
   tail: number;
@@ -358,7 +392,7 @@ function arm(c: PixelCanvas, sx: number, sy: number, hx: number, hy: number, bia
   const my = sy + vy * k;
   c.part();
   c.capsule(mx, my, hx - (vx / l) * 0.9, hy - (vy / l) * 0.9, 1.3, 1.2, S.cuff, { bias });
-  if (!S.nomad) c.px(mx + vx / l, my + vy / l, S.buckle, sphere(-0.3, -0.4, 1), { bias });
+  c.px(mx + vx / l, my + vy / l, S.buckle, sphere(-0.3, -0.4, 1), { bias });
 }
 
 function hand(c: PixelCanvas, x: number, y: number, bias = 0): void {
@@ -366,10 +400,14 @@ function hand(c: PixelCanvas, x: number, y: number, bias = 0): void {
   c.ellipse(x, y, 1.1, 1.1, S.skin, { bias });
 }
 
-/** A round shoulder: bare skin, or the nomad's wrapped cloth. */
+/** A round shoulder: bare skin, the sleeve's silk, or the cape's feathers lying over it, edged in gold. */
 function shoulder(c: PixelCanvas, x: number, y: number, rx = 1.8, ry = 1.5): void {
   c.part();
-  c.ellipse(x, y, rx, ry, S.sleeve ?? S.skin, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
+  c.ellipse(x, y, rx, ry, S.cape?.feather ?? S.sleeve ?? S.skin, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.3, 0.95) });
+  if (S.cape) {
+    c.part();
+    c.px(x - 0.5, y + ry - 0.6, S.cape.ring, sphere(0, 0.4, 1), { bias: -1 });
+  }
 }
 
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
@@ -396,24 +434,124 @@ function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefine
 }
 
 /**
- * The ponytail (or the nomad's headwrap tail): from the knot down behind the
- * head, swinging by `sway`. Tapered, a tie of brass at its root.
+ * The ponytail: from the knot down behind the head, swinging by `sway`.
+ * Tapered, a tie of the buckle's metal at its root.
  */
-function tail(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, cloth: boolean): void {
+function tail(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
   c.part();
-  const m = cloth ? S.nomad!.headwrap : S.hair;
-  c.capsule(x0, y0, x1, y1, cloth ? 1.25 : 1.15, cloth ? 0.9 : 0.55, m, { bias: -1 });
-  if (!cloth) {
+  c.capsule(x0, y0, x1, y1, 1.15, 0.55, S.hair, { bias: -1 });
+  c.part();
+  c.px(x0, y0, S.buckle, sphere(-0.2, -0.3, 1));
+}
+
+/** The cape's feathers repeat every this many pixels along its hem. */
+const FEATHER = 4;
+
+/**
+ * The half-cape: its cloth from `top` to `bot` between `edges`, the hem cut
+ * into rounded feather tips two pixels wide with a notch between each, a seam
+ * of shade up from every notch where the feathers part, and an eye on each
+ * feather: a sapphire heart that glints under an arc of gold. `axis` is the
+ * pixel boundary the pattern is mirrored about (the body's middle from the
+ * front or back, so the fan is even). `rows` 2 adds a second row of eyes,
+ * staggered, higher up the cape (ringed in the feathers' own sheen), and
+ * `collar` a gold edge along its top.
+ */
+function cape(c: PixelCanvas, top: number, bot: number, edges: (y: number) => [number, number], normal: NormalFn, axis: number, bias: number, rows: number, collar = false): void {
+  const k = S.cape!;
+  // 0 and 3: a feather's two middle pixels; 1 and 2: the notch between two.
+  const at = (x: number) => (((x - axis) % FEATHER) + FEATHER) % FEATHER;
+  const tip = (x: number) => at(x) === 0 || at(x) === 3;
+  c.part();
+  c.shape(top, bot - 1, edges, k.feather, normal, { bias });
+  {
+    const [l, r] = edges(bot);
+    for (let x = Math.round(l); x <= Math.round(r) - 1; x++) {
+      if (!tip(x)) continue;
+      const t = ((x + 0.5 - l) / (r - l)) * 2 - 1;
+      c.px(x, bot, k.feather, normal(x, bot, t, 1), { bias: bias + 1 });
+    }
+  }
+  const mine = (x: number, y: number) => c.materialAt(x, y) === k.feather;
+  const [l, r] = edges(bot - 1);
+  const xa = Math.round(l) - 1;
+  const xb = Math.round(r);
+  // The feathers parting: a seam of shade up from each notch, fading out.
+  for (let x = xa; x <= xb; x++) {
+    if (tip(x)) continue;
+    for (let y = bot - 3; y < bot; y++) if (mine(x, y)) c.shade(x, y, y === bot - 3 ? -1 : -2);
+  }
+  // The eyes: a sapphire heart that glints, gold arched over it.
+  const eye = (x: number, y: number, edge: boolean, gold: boolean) => {
+    if (!mine(x, y)) return;
+    c.px(x, y, k.eye, sphere(edge ? -0.4 : 0.4, -0.2, 1), { bias: edge ? 0 : 1 });
+    c.spark(x, y, hex('#6c9cff'), 0.35);
+    if (!mine(x, y - 1)) return;
+    if (gold) c.px(x, y - 1, k.ring, sphere(edge ? -0.3 : 0.3, -0.6, 1), { bias: -1 });
+    else c.shade(x, y - 1, 2);
+  };
+  for (let x = xa; x <= xb; x++) if (tip(x)) eye(x, bot - 1, at(x) === 3, true);
+  if (rows > 1 && bot - 5 > top + 2) {
+    for (let x = xa; x <= xb; x++) if (!tip(x)) eye(x, bot - 5, at(x) === 1, false);
+    // Another notch's seam over the upper row, the feathers overlapping like scales.
+    for (let x = xa; x <= xb; x++) if (tip(x) && mine(x, bot - 6)) c.shade(x, bot - 6, -1);
+  }
+  if (collar) {
+    // The collar edged in gold.
     c.part();
-    c.px(x0, y0, S.buckle, sphere(-0.2, -0.3, 1));
+    const [cl, cr] = edges(top);
+    for (let x = Math.round(cl); x <= Math.round(cr) - 1; x++) c.px(x, top, k.ring, cyl(((x + 0.5 - cl) / (cr - cl)) * 2 - 1, -0.4));
   }
 }
 
 /**
- * The cloak's hem, worn ragged: the row's ends nibbled away in a fixed
- * pattern so the tatters don't crawl from frame to frame.
+ * The gold pin through the knot from the front or back: a slanted bar
+ * across it, a jewel at each end. `dir` 1 rises to the right, -1 to the left.
  */
-const ragged = (x: number): boolean => ((x * 7 + 3) % 5) < 2;
+function pinFront(c: PixelCanvas, cx: number, y: number, dir: number): void {
+  const k = S.pin!;
+  c.part();
+  // Drawn before the knot, so only its two ends show either side of it.
+  for (let i = -4; i <= 3; i++) {
+    const yy = y + (i * dir < -1 ? 1 : 0);
+    c.px(cx + i, yy, k.metal, sphere(i / 4, -0.5, 1));
+  }
+  const lo = dir > 0 ? cx - 5 : cx + 4;
+  const hi = dir > 0 ? cx + 4 : cx - 5;
+  c.part();
+  c.px(lo, y + 1, k.jewel, sphere(-0.5, -0.4, 1), { bias: 1 });
+  c.px(hi, y, k.jewel, sphere(0.5, -0.4, 1));
+  c.spark(lo, y + 1, hex('#7aa4ff'), 0.4);
+  c.spark(hi, y, hex('#7aa4ff'), 0.25);
+}
+
+/**
+ * The sash's knot at a hip and its two tails hanging from it, swinging with
+ * the flap. `out` is the side the knot sits on (-1 screen left).
+ */
+function sashKnot(c: PixelCanvas, x: number, y: number, out: number, flap: number, bias = 0): void {
+  c.part();
+  c.capsule(x + out * 0.3, y + 0.8, x + out * 0.9 + flap * 0.5, y + 4.4, 0.55, 0.45, S.belt, { bias: bias - 1 });
+  c.part();
+  c.capsule(x - out * 0.3, y + 0.8, x - out * 0.1 + flap * 0.4, y + 3.4, 0.5, 0.4, S.belt, { bias: bias - 1 });
+  c.part();
+  c.ellipse(x, y, 0.9, 0.8, S.belt, { bias: bias + 1, normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
+}
+
+/**
+ * The chest's texture: a turn of linen every couple of rows, or on the
+ * Peacock a lattice of gold stitches over the brocade. `slant` turns the
+ * wraps' lines one way from the front, the other from behind.
+ */
+function wrapLines(c: PixelCanvas, x0: number, x1: number, top: number, waist: number, slant: number): void {
+  for (let y = top + 1; y < waist; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (S.brocade) {
+        if (y % 2 === 0 && (x + y) % 4 === 0 && c.materialAt(x, y) === S.wrap) c.px(x, y, S.brocade, cyl(0, -0.2), { bias: -1 });
+      } else if ((x + slant * y * 2) % 4 === 0) c.shade(x, y, -1);
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Directions
@@ -445,20 +583,18 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     hand(c, p.shoto.hx, p.shoto.hy);
   };
 
-  // Behind him: the cloak's back, and the ponytail peeking past his neck.
-  if (S.cloak) {
+  // Behind him: the cape fanning out past his hips, and the ponytail peeking past his neck.
+  if (S.cape) {
     const top = 15 + U;
-    const bot = 29 + L;
-    c.part();
-    c.shape(top, bot, (y) => {
-      const u = (y + 0.5 - top) / (bot + 1 - top);
-      const hw = 4.6 + 1.9 * u;
+    const bot = 25 + L;
+    cape(c, top, bot, (y) => {
+      const u = Math.max(0, (y + 0.5 - top) / (bot + 1 - top));
+      const hw = 4.6 + 4.6 * u * u;
       const x = cx + p.flap * u * u;
       return [x - hw, x + hw];
-    }, S.cloak, (_x, _y, t, u) => cyl(t, 0.2 - u * 0.3), { bias: -2 });
-    for (let x = 4; x <= 20; x++) if (ragged(x)) c.erase(x, bot);
+    }, (_x, _y, t, u) => cyl(t * 0.9, 0.2 - u * 0.3), Math.round(cx + p.flap * 0.9), -2, 1);
   }
-  tail(c, 13.6, 9 + U, 15.2 + p.tail * 0.6, 15.6 + U, !!S.nomad);
+  tail(c, 13.6, (S.pin ? 8 : 9) + U, 15.2 + p.tail * 0.6, 15.6 + U);
   if (p.mainBehind) mainArm(true);
   if (p.shotoBehind) shotoArm(true);
 
@@ -477,9 +613,7 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     const hw = 3.9 - 0.7 * u * u;
     return [cx - hw, cx + hw];
   }, S.wrap, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
-  for (let y = top + 1; y < waist; y++) {
-    for (let x = cx - 4; x <= cx + 4; x++) if ((x + y * 2) % 4 === 0) c.shade(x, y, -1);
-  }
+  wrapLines(c, cx - 4, cx + 4, top, waist, 1);
   // The neck, between the wraps and the jaw.
   c.part();
   c.shape(top - 0.5, top, () => [cx - 1.4, cx + 1.4], S.skin, (_x, _y, t) => cyl(t, 0.1), { bias: -1 });
@@ -501,12 +635,19 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     c.px(Math.round(l), y, S.trim, cyl(-0.6, 0.2));
     c.px(Math.round(r) - 1, y, S.trim, cyl(0.6, 0.2), { bias: -1 });
   }
-  // A stripe down the middle of the nomad's, a fold down the other's; the hem turned up in the trim.
+  // A fold down the middle below the belt; the hem turned up in the trim.
   for (let y = tt + 1; y < hem; y++) {
     const [l, r] = panel(y);
     const mid = Math.round((l + r) / 2 - 0.5);
-    if (S.nomad) c.px(mid, y, S.trim, cyl(0, 0.2), { bias: -1 });
-    else if (y > waist + 1) c.shade(mid, y, -1);
+    if (S.brocade) {
+      // Embroidered: a feather's eye on the breast, gold arched over a sapphire heart, and a band of gold across the skirt.
+      if (y === tt + 2) for (const x of [mid, mid + 1]) c.px(x, y, S.brocade, sphere((x - mid - 0.5) * 0.6, -0.6, 1));
+      if (y === tt + 3 && S.cape) {
+        for (const x of [mid, mid + 1]) c.px(x, y, S.cape.eye, sphere((x - mid - 0.5) * 0.6, -0.2, 1), { bias: 1 });
+        c.spark(mid, y, hex('#6c9cff'), 0.3);
+      }
+      if (y === waist + 3) for (const x of [mid, mid + 1]) c.px(x, y, S.brocade, cyl((x - mid - 0.5) * 0.6, 0.2), { bias: -1 });
+    } else if (y > waist + 1) c.shade(mid, y, -1);
   }
   {
     const [l, r] = panel(hem);
@@ -517,14 +658,21 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   c.px(cx - 1, tt, S.wrap, sphere(-0.2, -0.5, 1));
   c.px(cx, tt, S.wrap, sphere(0.2, -0.5, 1));
   c.px(cx - 1, tt + 1, S.wrap, sphere(0, -0.3, 1), { bias: -1 });
-  // The belt, a pouch on his right hip, the buckle.
-  c.part();
-  c.shape(waist, waist, () => [cx - 3.6, cx + 3.6], S.belt, (_x, _y, t) => cyl(t, 0));
-  c.part();
-  c.ellipse(cx - 3.4, waist + 1.2, 1.2, 1.1, S.belt, { bias: -1 });
-  c.part();
-  c.px(cx - 1, waist, S.buckle, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
-  c.px(cx, waist, S.buckle, { x: 0.2, y: 0.3, z: 0.9 });
+  if (S.sash) {
+    // The sash wound twice round his waist, knotted on his right hip, its tails hanging.
+    c.part();
+    c.shape(waist, waist, () => [cx - 3.7, cx + 3.7], S.belt, (_x, _y, t) => cyl(t, 0.1));
+    sashKnot(c, cx - 3.4, waist + 0.4, -1, p.flap);
+  } else {
+    // The belt, a pouch on his right hip, the buckle.
+    c.part();
+    c.shape(waist, waist, () => [cx - 3.6, cx + 3.6], S.belt, (_x, _y, t) => cyl(t, 0));
+    c.part();
+    c.ellipse(cx - 3.4, waist + 1.2, 1.2, 1.1, S.belt, { bias: -1 });
+    c.part();
+    c.px(cx - 1, waist, S.buckle, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
+    c.px(cx, waist, S.buckle, { x: 0.2, y: 0.3, z: 0.9 });
+  }
 
   // Shoulders, then the arms that aren't behind him.
   shoulder(c, 16.9, 16.3 + U);
@@ -540,9 +688,8 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   c.px(12, 13 + U, S.skin, sphere(0.35, -0.2));
   c.shade(11, 14 + U, -1);
   c.shade(12, 14 + U, -1);
-  if (S.nomad) nomadFront(c, cx, U);
-  else {
-    // Hair pulled back tight from a low widow's peak, a knot on the crown.
+  {
+    // Hair pulled back tight from a low widow's peak, a knot on the crown (set higher, and pinned, on the Peacock).
     c.part();
     const widths = [2.4, 3.3, 3.7, 3.9];
     c.shape(7 + U, 10 + U, (y) => [cx - widths[y - 7 - U], cx + widths[y - 7 - U]], S.hair, (_x, _y, t, u) => sphere(t * 0.9, u * 1.2 - 0.9, 1));
@@ -553,10 +700,17 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
     c.px(12, 10 + U, S.skin, sphere(0.1, -0.8));
     c.shade(10, 8 + U, 1);
     c.part();
-    c.ellipse(cx, 6.3 + U, 1.5, 1.2, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
-    c.part();
-    c.px(cx - 1, 7 + U, S.buckle, sphere(-0.3, 0, 1));
-    c.px(cx, 7 + U, S.buckle, sphere(0.3, 0, 1), { bias: -1 });
+    if (S.pin) {
+      pinFront(c, cx, 5 + U, 1);
+      c.part();
+      c.ellipse(cx, 5.2 + U, 1.9, 1.7, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
+      c.shade(cx - 1, 4 + U, 1);
+    } else {
+      c.ellipse(cx, 6.3 + U, 1.5, 1.2, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
+      c.part();
+      c.px(cx - 1, 7 + U, S.buckle, sphere(-0.3, 0, 1));
+      c.px(cx, 7 + U, S.buckle, sphere(0.3, 0, 1), { bias: -1 });
+    }
     // Brows, set low and level.
     c.shade(10, 11 + U, -2);
     c.shade(13, 11 + U, -2);
@@ -568,38 +722,6 @@ function drawDown(c: PixelCanvas, p: Pose): Meta {
   if (!p.shotoBehind && p.overHead) shotoArm(false);
   if (!p.mainBehind) mainArm(false);
   return { tip, hand: { x: p.main.hx, y: p.main.hy }, palm: tip2 };
-}
-
-/**
- * The nomad's head from the front: a headwrap wound round the crown (its
- * folds slanting), brass goggles pushed up on it, and the indigo scarf drawn
- * up over the nose so only the eyes show.
- */
-function nomadFront(c: PixelCanvas, cx: number, U: number): void {
-  const n = S.nomad!;
-  c.part();
-  const widths = [2.6, 3.6, 4.1, 4.3, 4.2];
-  c.shape(6 + U, 10 + U, (y) => [cx - widths[y - 6 - U], cx + widths[y - 6 - U]], n.headwrap, (_x, _y, t, u) => sphere(t * 0.9, u * 1.1 - 0.85, 1));
-  for (let y = 7; y <= 10; y++) for (let x = 8; x <= 16; x++) if ((x - y * 2) % 4 === 0) c.shade(x, y + U, -1);
-  c.part();
-  c.px(8, 11 + U, n.headwrap, cyl(-0.8, 0));
-  c.px(15, 11 + U, n.headwrap, cyl(0.8, 0));
-  // The goggles on the brow of the wrap: two lenses in a brass rim, a strap between.
-  c.part();
-  for (const x of [9, 10, 13, 14]) c.px(x, 8 + U, S.buckle, sphere((x - cx + 0.5) / 4, -0.3, 1));
-  c.px(11, 8 + U, S.buckle, sphere(-0.1, -0.2, 1), { bias: -1 });
-  c.px(12, 8 + U, S.buckle, sphere(0.1, -0.2, 1), { bias: -1 });
-  c.part();
-  c.px(10, 9 + U, n.lens, sphere(-0.4, -0.5, 1), { bias: 1 });
-  c.px(13, 9 + U, n.lens, sphere(0.3, -0.5, 1));
-  c.spark(10, 9 + U, hex('#e8f4ff'), 0.25);
-  // The scarf over the nose and mouth, gathered round the neck.
-  c.part();
-  const sw = [3.0, 3.2, 3.0, 2.4];
-  c.shape(13 + U, 16 + U, (y) => [cx - sw[y - 13 - U], cx + sw[y - 13 - U]], n.scarf, (_x, _y, t, u) => sphere(t * 0.85, u * 0.8 - 0.2, 1));
-  c.shade(11, 14 + U, -1);
-  c.shade(12, 15 + U, -1);
-  c.shade(10, 15 + U, -1);
 }
 
 function drawUp(c: PixelCanvas, p: Pose): Meta {
@@ -639,9 +761,7 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
     const hw = 3.9 - 0.7 * u * u;
     return [cx - hw, cx + hw];
   }, S.wrap, (_x, _y, t, u) => sphere(t * 0.9, (u - 0.35) * 1.1, 1));
-  for (let y = top + 1; y < waist; y++) {
-    for (let x = cx - 4; x <= cx + 4; x++) if ((x - y * 2) % 4 === 0) c.shade(x, y, -1);
-  }
+  wrapLines(c, cx - 4, cx + 4, top, waist, -1);
   const tt = 15.5 + U;
   const hem = 27 + L;
   const panel = (y: number): [number, number] => {
@@ -665,45 +785,32 @@ function drawUp(c: PixelCanvas, p: Pose): Meta {
   c.px(cx + 1, waist + 1, S.belt, cyl(0.2, -0.3), { bias: -1 });
   c.px(cx + 1, waist + 2, S.belt, cyl(0.2, -0.3), { bias: -1 });
 
-  if (S.cloak) {
-    // The cloak over his back from the shoulders to the calves, its hem in tatters.
+  if (S.cape) {
+    // The half-cape over his back, fanning out at the hips into a row of feathers, eyes on them in two rows.
     const ct = 15 + U;
-    const cb = 29 + L;
-    const edges = (y: number): [number, number] => {
+    const cb = 25 + L;
+    cape(c, ct, cb, (y) => {
       const u = Math.max(0, (y + 0.5 - ct) / (cb + 1 - ct));
-      const hw = 4.4 + 1.8 * Math.pow(u, 1.1);
+      const hw = 4.5 + 4.4 * Math.pow(u, 1.6);
       const x = cx + p.flap * u * u;
       return [x - hw, x + hw];
-    };
-    c.part();
-    c.shape(ct, cb, edges, S.cloak, (_x, _y, t, u) => cyl(t * 0.9, 0.3 - u * 0.4));
-    for (let y = ct + 4; y <= cb; y++) {
-      const [l, r] = edges(y);
-      c.shade(Math.round(l + (r - l) * 0.34), y, -1);
-      c.shade(Math.round(l + (r - l) * 0.68), y, -1);
-    }
-    for (let x = 4; x <= 20; x++) if (ragged(x)) c.erase(x, cb);
+    }, (_x, _y, t, u) => cyl(t * 0.9, 0.3 - u * 0.4), Math.round(cx + p.flap * 0.9), 0, 2, true);
   }
 
   // The back of the head and the tail falling from the knot down his back.
-  if (S.nomad) {
-    c.part();
-    c.ellipse(cx, 10.8 + U, 4.1, 3.9, S.nomad.headwrap, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
-    for (let y = 8; y <= 13; y++) for (let x = 8; x <= 16; x++) if ((x + y * 2) % 4 === 0) c.shade(x, y + U, -1);
-    // The goggles' strap round the back of the wrap, the scarf's knot at the nape.
-    c.part();
-    for (let x = 9; x <= 15; x++) c.px(x, 9 + U, S.buckle, cyl((x - cx) / 4, 0.1), { bias: -1 });
-    c.part();
-    c.ellipse(cx, 14.6 + U, 2.2, 1.1, S.nomad.scarf);
-    tail(c, cx, 12 + U, cx + p.tail * 0.8 + 0.5, 21 + U, true);
-  } else {
+  {
     c.part();
     c.ellipse(cx, 11 + U, 3.7, 3.8, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.2, 1) });
     c.shade(cx - 1, 8 + U, 1);
     for (let y = 9; y <= 13; y++) c.shade(y % 2 ? cx - 2 : cx + 1, y + U, -1);
     c.part();
-    c.ellipse(cx, 6.6 + U, 1.5, 1.2, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
-    tail(c, cx, 8 + U, cx + p.tail * 0.8, 18.5 + U, false);
+    if (S.pin) {
+      pinFront(c, cx, 5 + U, -1);
+      c.part();
+      c.ellipse(cx, 5.6 + U, 1.9, 1.7, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
+      c.shade(cx, 4 + U, 1);
+    } else c.ellipse(cx, 6.6 + U, 1.5, 1.2, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
+    tail(c, cx, (S.pin ? 7 : 8) + U, cx + p.tail * 0.8, 18.5 + U);
   }
 
   shoulder(c, 7.1, 16.3 + U);
@@ -731,19 +838,18 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
     hand(c, p.shoto.hx, p.shoto.hy, -1);
   };
 
-  // The cloak streaming behind him.
-  if (S.cloak) {
+  // The cape streaming behind him, its feathers fanned.
+  if (S.cape) {
     const ct = 15 + U;
-    const cb = 29 + L;
-    c.part();
-    c.shape(ct, cb, (y) => {
+    const cb = 25 + L;
+    const edges = (y: number): [number, number] => {
       const u = Math.max(0, (y + 0.5 - ct) / (cb + 1 - ct));
-      return [hx + 0.6 - Sx * u, hx + 3.2 + 2.8 * Math.pow(u, 1.2) + p.flap * u * u - Sx * u];
-    }, S.cloak, (_x, _y, t, u) => cyl(t * 0.8 + 0.15, 0.25 - u * 0.3), { bias: -1 });
-    for (let x = 10; x <= 22; x++) if (ragged(x)) c.erase(x, cb);
+      return [hx + 0.4 - Sx * u - 0.8 * u * u, hx + 3.4 + 6.6 * Math.pow(u, 1.3) + p.flap * u * u - Sx * u];
+    };
+    cape(c, ct, cb, edges, (_x, _y, t, u) => cyl(t * 0.7 + 0.25, 0.3 - u * 0.3), Math.round(edges(cb)[0]) + 1, 0, 2);
   }
   // The tail streaming out behind his head.
-  tail(c, hx + 2.4, (S.nomad ? 10 : 7.6) + U, hx + 4.8 + p.tail, 14 + U + Math.abs(p.tail) * -0.3, !!S.nomad);
+  tail(c, hx + 2.4, (S.pin ? 7 : 7.6) + U, hx + 4.8 + p.tail, 14 + U + Math.abs(p.tail) * -0.3);
 
   // The far arm and the shoto, mostly behind him.
   if (p.shotoBehind !== false) shotoArm(true);
@@ -759,7 +865,7 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   const waist = 22 + U;
   c.part();
   c.shape(top, waist, (y) => [hx - 2.6 - (y >= top + 1 && y <= top + 3 ? 0.3 : 0), hx + 2.4], S.wrap, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
-  for (let y = top + 1; y < waist; y++) for (let x = Math.round(hx - 3); x <= hx + 3; x++) if ((x + y * 2) % 4 === 0) c.shade(x, y, -1);
+  wrapLines(c, Math.round(hx - 3), hx + 3, top, waist, 1);
   c.part();
   c.shape(top - 0.5, top, () => [hx - 2.2, hx + 0.4], S.skin, (_x, _y, t) => cyl(t, 0.1), { bias: -1 });
   const hem = 27 + L;
@@ -779,12 +885,19 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   for (let y = 16 + U; y <= hem; y++) c.px(Math.round(front(y)[0]), y, S.trim, cyl(-0.7, 0.2));
   c.part();
   c.shape(hem, hem, front, S.trim, (_x, _y, t) => cyl(t, -0.2), { bias: -1 });
-  c.part();
-  c.shape(waist, waist, () => [hx - 3.0, hx + 2.6], S.belt, (_x, _y, t) => cyl(t, 0));
-  c.part();
-  c.px(Math.round(hx - 3.0), waist, S.buckle, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
-  c.part();
-  c.ellipse(hx + 1.6, waist + 1.3, 1.1, 1.1, S.belt, { bias: -1 });
+  if (S.sash) {
+    // The sash, two turns deep, knotted at the far hip with its tails swinging behind.
+    c.part();
+    c.shape(waist - 1, waist, () => [hx - 3.0, hx + 2.6], S.belt, (_x, y, t) => cyl(t, y < waist ? -0.3 : 0.25));
+    sashKnot(c, hx + 2.2, waist + 0.4, 1, p.flap, -1);
+  } else {
+    c.part();
+    c.shape(waist, waist, () => [hx - 3.0, hx + 2.6], S.belt, (_x, _y, t) => cyl(t, 0));
+    c.part();
+    c.px(Math.round(hx - 3.0), waist, S.buckle, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
+    c.part();
+    c.ellipse(hx + 1.6, waist + 1.3, 1.1, 1.1, S.belt, { bias: -1 });
+  }
 
   // Head.
   c.offset(BODY_X, BODY_Y + (p.headY ?? 0));
@@ -793,32 +906,7 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
   c.part();
   c.px(hx - 5, 13 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
   c.shade(hx - 4, 14 + U, -1);
-  if (S.nomad) {
-    const n = S.nomad;
-    // The headwrap round the crown, folds slanting back, the goggles on its brow.
-    c.part();
-    const rows: [number, number][] = [[-2.6, 2.0], [-3.8, 2.8], [-4.3, 3.2], [-4.4, 3.3], [-4.2, 3.3], [-0.2, 3.2]];
-    c.shape(6 + U, 11 + U, (y) => {
-      const [l, r] = rows[y - 6 - U];
-      return [hx + l, hx + r];
-    }, n.headwrap, (_x, _y, t, u) => sphere(t * 0.9, u * 1.2 - 0.9, 1));
-    for (let y = 7; y <= 11; y++) for (let x = Math.round(hx - 4); x <= hx + 3; x++) if ((x + y * 2) % 4 === 1) c.shade(x, y + U, -1);
-    c.part();
-    c.px(hx - 4, 8 + U, S.buckle, sphere(-0.6, -0.3, 1));
-    c.px(hx - 3, 8 + U, S.buckle, sphere(-0.2, -0.3, 1));
-    for (let x = Math.round(hx - 2); x <= hx + 2; x++) c.px(x, 8 + U, S.buckle, cyl((x - hx) / 4, 0), { bias: -1 });
-    c.part();
-    c.px(hx - 4, 9 + U, n.lens, sphere(-0.6, -0.4, 1), { bias: 1 });
-    // The scarf over the lower face, wrapped round to the nape.
-    c.part();
-    const srows: [number, number][] = [[-5.2, 1.4], [-5.0, 1.6], [-4.4, 1.6], [-3.4, 1.2]];
-    c.shape(13 + U, 16 + U, (y) => {
-      const [l, r] = srows[y - 13 - U];
-      return [hx + l, hx + r];
-    }, n.scarf, (_x, _y, t, u) => sphere(t * 0.85 - 0.1, u * 0.8 - 0.2, 1));
-    c.shade(hx - 3, 14 + U, -1);
-    c.shade(hx - 1, 15 + U, -1);
-  } else {
+  {
     // Hair swept back to the knot at the crown.
     c.part();
     const rows: [number, number][] = [
@@ -837,7 +925,17 @@ function drawSide(c: PixelCanvas, p: Pose): Meta {
     c.erase(hx - 5, 10 + U);
     c.shade(hx - 3, 11 + U, -2);
     c.part();
-    c.ellipse(hx + 1.4, 6.6 + U, 1.4, 1.2, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
+    if (S.pin) {
+      // The knot set high, the pin through it slanting back, a jewel at its end.
+      c.ellipse(hx + 1.3, 5.4 + U, 1.8, 1.6, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
+      c.shade(hx + 1, 4 + U, 1);
+      const k = S.pin;
+      c.part();
+      c.px(hx - 1, 4 + U, k.jewel, sphere(-0.5, -0.4, 1), { bias: 1 });
+      c.spark(hx - 1, 4 + U, hex('#7aa4ff'), 0.4);
+      for (const [x, y] of [[0, 4], [1, 5], [2, 5], [3, 6]]) c.px(hx + x, y + U, k.metal, sphere(x / 3 - 0.3, -0.5, 1), { bias: x === 3 ? -1 : 0 });
+      c.px(hx + 4, 6 + U, k.jewel, sphere(0.5, -0.2, 1), { bias: -1 });
+    } else c.ellipse(hx + 1.4, 6.6 + U, 1.4, 1.2, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.2, 1) });
   }
   eyes(c, [[hx - 3, 12 + U]], p.blink);
   c.offset(BODY_X, BODY_Y);
@@ -1380,9 +1478,9 @@ export const TWIN_ICON: TwinIconColors = {
   main: [hex('#f6ffff'), hex('#7aeeff'), hex('#22d0ec')],
   shoto: [hex('#fff6fb'), hex('#ff7ac8'), hex('#ea2e9c')],
 };
-export const DUNE_ICON: TwinIconColors = {
-  main: [hex('#fffaf0'), hex('#ffc858'), hex('#f29a14')],
-  shoto: [hex('#faf4ff'), hex('#c89aff'), hex('#9a4cff')],
+export const PEACOCK_ICON: TwinIconColors = {
+  main: [hex('#f6fff8'), hex('#86f4ae'), hex('#22d070')],
+  shoto: [hex('#f6f8ff'), hex('#94b4ff'), hex('#3a68ff')],
 };
 
 type Px = { px: Uint8ClampedArray; add: (x: number, y: number, c: RGB, a?: number) => void };
