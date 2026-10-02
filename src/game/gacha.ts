@@ -80,6 +80,8 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'bear:panda': 'legendary',
   // The Brewmaster's Mead Jarl (wished for like any other).
   'brewmaster:jarl': 'epic',
+  // The Aviator's Flying Ace.
+  'aviator:ace': 'epic',
 };
 
 /** One skin as the shop knows it. */

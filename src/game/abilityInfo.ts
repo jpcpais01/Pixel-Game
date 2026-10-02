@@ -232,4 +232,9 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'A swig from the jug spat through a flame: a short cone of fire that burns.',
     special: 'A huge keg rolls along the aim, bowling foes aside, then bursts in foam.',
   },
+  'aviator.aviator': {
+    attack: 'Quick flare shots that burst in sparks on a foe; every third is a bigger star shell.',
+    ability: 'The jetpack hops her to a spot, untouchable in the air; the landing blasts foes back.',
+    special: 'Her biplane roars over along the aim, dropping a line of bombs, the last one biggest.',
+  },
 };

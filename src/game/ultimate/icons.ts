@@ -691,3 +691,25 @@ export const rollingThunderIcon: IconPainter = (put, p) => {
   // Froth spraying off ahead of it.
   for (const [x, y, c] of [[14, 13, p.core], [15, 11, p.hot], [14, 9, p.core], [15, 14, p.mid], [13, 15, p.hot], [15, 7, p.mid], [12, 3, p.hot], [14, 4, p.core]] as const) put(x, y, c);
 };
+
+/** Bombing Run: a biplane seen from above flying right, a line of bombs falling behind it onto a blast. */
+export const bombingRunIcon: IconPainter = (put, p) => {
+  // The blast on the ground, bottom left.
+  for (let y = 11; y <= 15; y++) for (let x = 0; x <= 7; x++) if (Math.hypot((x - 3.5) / 3.8, (y - 13.2) / 2.6) <= 1) put(x, y, Math.hypot(x - 3.5, y - 13.2) < 1.6 ? p.core : y < 13 ? p.hot : p.mid);
+  // The bombs, falling in a line toward it.
+  for (const [x, y] of [[8, 10], [5, 8]]) {
+    put(x, y, p.deep);
+    put(x, y + 1, p.deep);
+  }
+  // The fuselage, the tailplane, the wing across, the cowling and the propeller's blur.
+  seg(put, 4, 4, 13, 4, p.mid);
+  seg(put, 5, 5, 13, 5, p.deep);
+  seg(put, 4, 2, 4, 7, p.mid);
+  for (let y = 0; y <= 9; y++) {
+    put(9, y, p.hot);
+    put(10, y, y === 0 || y === 9 ? p.hot : p.core);
+  }
+  put(14, 4, p.hot);
+  put(14, 5, p.hot);
+  seg(put, 15, 2, 15, 7, p.mid);
+};

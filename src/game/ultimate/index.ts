@@ -44,6 +44,8 @@ import { LIGHTWRIGHT_KIT, STARGAZER_KIT } from '../Lightwright';
 import { burningMirror } from './lightwright';
 import { ursineWrath } from './bear';
 import { BEAR_KIT, PANDA_KIT } from '../Bear';
+import { bombingRun } from './aviator';
+import { ACE_KIT, AVIATOR_KIT } from '../Aviator';
 import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
 import { magnumOpus } from './transmuter';
@@ -491,6 +493,15 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.rollingThunderIcon,
     cast: rollingThunder,
   },
+  'aviator:aviator': {
+    name: 'Bombing Run',
+    cost: 65,
+    windup: 550,
+    aim: 'dir',
+    pal: AVIATOR_KIT.pal,
+    icon: icons.bombingRunIcon,
+    cast: bombingRun,
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -562,6 +573,7 @@ const SKINS: Record<string, UltSkin> = {
   'aquanaut:barnacle': { pal: BARNACLE_KIT.style.pal },
   'bear:panda': { pal: PANDA_KIT.pal, type: 'bear' },
   'brewmaster:jarl': { pal: JARL_KIT.ult },
+  'aviator:ace': { pal: ACE_KIT.pal },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

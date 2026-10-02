@@ -109,6 +109,7 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'aquanaut.aquanaut': { role: 'tank', hp: 130, damage: 18, defense: 22, rate: 1.21, speed: 48, regen: 1, skill: 2, ult: 60, kit: 20 },
   'bear.bear': { role: 'tank', hp: 130, damage: 9.5, defense: 24, rate: 2.18, speed: 52, regen: 0.8, skill: 2.1, ult: 138, kit: 14 },
   'brewmaster.brewmaster': { role: 'melee', hp: 130, damage: 12, defense: 16, rate: 2.57, speed: 52, regen: 0.9, skill: 4.3, ult: 60, kit: 14 },
+  'aviator.aviator': { role: 'ranged', hp: 95, damage: 10, defense: 11, rate: 2.5, speed: 68, regen: 0.6, skill: 1.67, ult: 50, kit: 8 },
 };
 
 /** An even spread on the budget, for a type not in the table yet (its Damage scale is 1: its code's own numbers). */

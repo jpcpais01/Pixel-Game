@@ -14,6 +14,7 @@ import { LIGHTWRIGHT_KITS } from './lightwright';
 import { TRANSMUTER_KITS } from './transmuter';
 import { AQUANAUT_KITS } from './aquanaut';
 import { BEAR_KITS } from './bear';
+import { AVIATOR_KITS } from './aviator';
 
 export const KITS: Record<string, Kit> = {
   ...ARCANE_KITS,
@@ -27,6 +28,7 @@ export const KITS: Record<string, Kit> = {
   ...TRANSMUTER_KITS,
   ...AQUANAUT_KITS,
   ...BEAR_KITS,
+  ...AVIATOR_KITS,
 };
 
 export const kitFor = (key: string): Kit => KITS[key] ?? {};

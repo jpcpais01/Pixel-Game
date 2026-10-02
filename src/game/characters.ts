@@ -66,6 +66,8 @@ import { LW_H, LW_ORIGIN_Y } from '../art/lightwright';
 import { AQUANAUT_KIT, Aquanaut, BARNACLE_KIT } from './Aquanaut';
 import { AQUA_H, AQUA_ORIGIN_Y } from '../art/aquanaut';
 import { Bear, BEAR_KIT, PANDA_KIT } from './Bear';
+import { ACE_KIT, AVIATOR_KIT, Aviator } from './Aviator';
+import { AVI_H, AVI_ORIGIN_Y } from '../art/aviator';
 import { worn } from './skins';
 import { QUICKSILVER_KIT, RUBEDO_KIT, Transmuter } from './Transmuter';
 import { TRANS_H, TRANS_ORIGIN_Y } from '../art/transmuter';
@@ -2031,6 +2033,44 @@ const KITS: KitDef[] = [
     ],
     spawn(world, x, y, look) {
       return new Brewmaster(world, x, y, look === 'jarl' ? JARL_KIT : BREW_KIT);
+    },
+  },
+  {
+    id: 'aviator',
+    name: 'Aviator',
+    blurb: 'A jetpack, a flare pistol and a biplane she built',
+    types: [
+      {
+        // Quick flare shots, a rocket hop to where she aims, and a biplane that bombs a line.
+        id: 'aviator',
+        name: 'Aviator',
+        role: 'Hops in on a jetpack, lights them up',
+        accent: 0xffa848,
+        attack: 'Flare pistol',
+        special: 'Rocket hop',
+        preview: { texture: 'aviator', glow: 'aviator_e', idle: 'aviator_idle_down', chosen: 'aviator_signal_down', originY: AVI_ORIGIN_Y / AVI_H },
+        buttons: {
+          attack: { texture: 'icon_flare_aviator' },
+          special: { texture: 'icon_hop_aviator' },
+        },
+        lookName: 'Barnstormer',
+        skins: [
+          {
+            // A crimson jacket, a cream scarf, silver goggles, red fins on her jetpack, red-white fire and a red biplane.
+            id: 'ace',
+            name: 'Flying Ace',
+            accent: 0xff4a42,
+            preview: { texture: 'aviator_ace', glow: 'aviator_ace_e', idle: 'aviator_ace_idle_down', chosen: 'aviator_ace_signal_down', originY: AVI_ORIGIN_Y / AVI_H },
+            buttons: {
+              attack: { texture: 'icon_flare_aviator_ace' },
+              special: { texture: 'icon_hop_aviator_ace' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Aviator(world, x, y, look === 'ace' ? ACE_KIT : AVIATOR_KIT);
     },
   },
 ];
