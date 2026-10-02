@@ -1024,6 +1024,11 @@ class GameSound {
     if (t !== null) this.sfx!.hundredCuts(t, pan);
   }
 
+  ringSaber(pan = 0): void {
+    const t = this.slot('ringSaber');
+    if (t !== null) this.sfx!.ringSaber(t, pan);
+  }
+
   step(): void {
     const t = this.slot('step');
     if (t !== null) this.sfx!.step(t);

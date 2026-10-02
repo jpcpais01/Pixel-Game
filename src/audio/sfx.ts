@@ -2686,6 +2686,40 @@ export class Sfx {
     this.sparkle(out, t + 0.35, 3, 0.07);
   }
 
+  /**
+   * A ring saber thrown: its two blades' hum chopped into a fast wub-wub as
+   * it spins, bending down as it flies off and back up as it comes home.
+   */
+  ringSaber(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const dur = 0.62;
+    const out = this.out(pan, 0.6, 0.3);
+    const hum = gain(ctx, 0, out);
+    hum.gain.setValueAtTime(0, t);
+    hum.gain.linearRampToValueAtTime(0.2, t + 0.04);
+    hum.gain.setTargetAtTime(0.12, t + 0.2, 0.1);
+    hum.gain.setTargetAtTime(0, t + dur - 0.1, 0.05);
+    // The spin: the hum's loudness wheeling round many times a second.
+    const chop = gain(ctx, 0.5, hum);
+    const wob = osc(ctx, 'triangle', 18, gain(ctx, 0.5, chop.gain));
+    sweep(wob.frequency, t, 16, 24, dur);
+    const lp = filter(ctx, 'lowpass', 1100, 2.2, chop);
+    for (const [f, d] of [
+      [96, -7],
+      [144, 6],
+    ]) {
+      const o = osc(ctx, 'sawtooth', f, lp);
+      o.detune.value = d;
+      sweep(o.frequency, t, f * 1.25, f * 0.8, dur * 0.5);
+      sweep(o.frequency, t + dur * 0.5, f * 0.8, f * 1.15, dur * 0.5);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+    wob.start(t);
+    wob.stop(t + dur + 0.05);
+    this.burstNoise(out, t, 'bandpass', 900, 2400, 1.6, 0.14, dur * 0.8);
+  }
+
   private sparkle(dest: AudioNode, t: number, n: number, gap: number): void {
     const ctx = this.m.ctx;
     for (let i = 0; i < n; i++) {
