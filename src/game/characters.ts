@@ -63,6 +63,8 @@ import { DRAGON_KIT, Dragon, PORTO_KIT } from './Dragon';
 import { BEAST_H, BEAST_ORIGIN_Y } from '../art/beast';
 import { Lightwright, LIGHTWRIGHT_KIT, STARGAZER_KIT } from './Lightwright';
 import { LW_H, LW_ORIGIN_Y } from '../art/lightwright';
+import { AQUANAUT_KIT, Aquanaut, BARNACLE_KIT } from './Aquanaut';
+import { AQUA_H, AQUA_ORIGIN_Y } from '../art/aquanaut';
 import { worn } from './skins';
 import { QUICKSILVER_KIT, RUBEDO_KIT, Transmuter } from './Transmuter';
 import { TRANS_H, TRANS_ORIGIN_Y } from '../art/transmuter';
@@ -1912,6 +1914,44 @@ const KITS: KitDef[] = [
     spawn(world, x, y, look) {
       if (look === 'rubedo') return new Transmuter(world, x, y, RUBEDO_KIT);
       return new Transmuter(world, x, y, QUICKSILVER_KIT);
+    },
+  },
+  {
+    id: 'aquanaut',
+    name: 'Aquanaut',
+    blurb: 'A hard-hat diver up from the deep',
+    types: [
+      {
+        // A heavy harpoon gun that pierces, a chain hook that reels foes in, and a steam torpedo.
+        id: 'aquanaut',
+        name: 'Aquanaut',
+        role: 'Hauls foes up from the deep',
+        accent: 0x3cc0e8,
+        attack: 'Harpoon',
+        special: 'Reel in',
+        preview: { texture: 'aquanaut', glow: 'aquanaut_e', idle: 'aquanaut_idle_down', chosen: 'aquanaut_surge_down', originY: AQUA_ORIGIN_Y / AQUA_H },
+        buttons: {
+          attack: { texture: 'icon_harpoon' },
+          special: { texture: 'icon_reel' },
+        },
+        lookName: 'Brass helm',
+        skins: [
+          {
+            // A helmet gone green with verdigris, crusted with barnacles and a starfish, kelp trailing, a sea-green suit.
+            id: 'barnacle',
+            name: 'Barnacle',
+            accent: 0x4ad0a0,
+            preview: { texture: 'aquanaut_barnacle', glow: 'aquanaut_barnacle_e', idle: 'aquanaut_barnacle_idle_down', chosen: 'aquanaut_barnacle_surge_down', originY: AQUA_ORIGIN_Y / AQUA_H },
+            buttons: {
+              attack: { texture: 'icon_harpoon_barnacle' },
+              special: { texture: 'icon_reel_barnacle' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Aquanaut(world, x, y, look === 'barnacle' ? BARNACLE_KIT : AQUANAUT_KIT);
     },
   },
 ];

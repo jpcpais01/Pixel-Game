@@ -72,6 +72,7 @@ export function spellText(s: Spell, dps: number): string {
     s.kind !== 'mend' && s.shield ? `${Math.round(s.shield * 100)}% barrier` : '',
     s.kind !== 'mend' && s.haste ? `${Math.round(s.haste * 100)}% faster attacks` : '',
     s.dodge ? `untouchable ${sec(s.dodge)}` : '',
+    s.pull ? 'drags it in' : '',
   ].filter(Boolean);
   return extra.length ? `${main}; ${extra.join(', ')}.` : `${main}.`;
 }

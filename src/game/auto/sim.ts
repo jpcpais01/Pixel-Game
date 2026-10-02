@@ -679,6 +679,15 @@ export class Battle {
       o.burnT = secs(BURN_SECONDS);
     }
     if (s.knock) this.shove(u, o, s.knock);
+    if (s.pull) this.pull(u, o);
+  }
+
+  /** Drag `o` to the free cell beside `u` nearest it (none free: it stays where it is). */
+  private pull(u: SimUnit, o: SimUnit): void {
+    const spot = this.landing(o, u, false);
+    if (!spot || (spot[0] === o.c && spot[1] === o.r)) return;
+    this.moveTo(o, spot[0], spot[1], secs(0.3));
+    this.emit({ t: 'knock', u: o.uid });
   }
 
   /** Throw `o` straight away from `u`, a cell at a time while the way is free. */

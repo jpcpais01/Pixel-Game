@@ -217,4 +217,9 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Chalks a circle; foes in it turn to lead: held, and struck 30% harder.',
     special: 'A golden array gilds foes round her into statues, then shatters them.',
   },
+  'aquanaut.aquanaut': {
+    attack: 'A slow, heavy harpoon that pierces up to two foes and sticks in the ground.',
+    ability: 'A chain hook drags the first foe to him, stunned; bosses are yanked and slowed.',
+    special: 'A steam torpedo runs along the ground and bursts, knocking foes back and soaking them.',
+  },
 };

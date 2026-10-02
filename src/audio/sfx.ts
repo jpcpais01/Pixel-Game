@@ -2805,6 +2805,45 @@ export class Sfx {
     this.bell(out, t + 0.02, 1760, 0.05, 1.4);
     this.bell(out, t + 0.02, 2637, 0.03, 1.2);
   }
+
+  // ------------------------------------------------------------ The Aquanaut
+
+  /** The harpoon gun: a deep pneumatic thunk, a hiss of escaping air and the line whipping out. */
+  harpoon(t: number, pan: number): void {
+    const out = this.out(pan, 0.7, 0.25);
+    this.chirp(out, t, 'sine', 150, 55, 0.6, 0.18);
+    this.burstNoise(out, t, 'lowpass', 1600, 300, 0.8, 0.45, 0.08, true);
+    this.burstNoise(out, t + 0.02, 'highpass', 4200, 2400, 0.7, 0.18, 0.22);
+    this.chirp(out, t + 0.03, 'triangle', 900, 1500, 0.05, 0.12);
+  }
+
+  /** The reel's chain: a run of iron clinks over the ratchet's grind. */
+  chainReel(t: number, pan: number): void {
+    const out = this.out(pan, 0.55, 0.2);
+    this.chirp(out, t, 'sawtooth', 70, 95, 0.08, 0.35);
+    for (let i = 0; i < 7; i++) this.burstNoise(out, t + i * 0.045, 'bandpass', rand(2600, 3800), 2000, 9, 0.22 - i * 0.02, 0.03);
+  }
+
+  /** The torpedo set loose: a valve's release and a churning, bubbling whoosh. */
+  torpedo(t: number, pan: number): void {
+    const out = this.out(pan, 0.65, 0.35);
+    this.burstNoise(out, t, 'highpass', 3000, 1200, 0.8, 0.25, 0.18);
+    this.burstNoise(out, t + 0.05, 'bandpass', 400, 1400, 1.2, 0.3, 0.6, true);
+    // Bubbles: little sine blips, each rising in pitch as it pops.
+    for (let i = 0; i < 6; i++) {
+      const f = rand(300, 650);
+      this.chirp(out, t + 0.08 + i * rand(0.05, 0.09), 'sine', f, f * 1.8, 0.07, 0.05);
+    }
+  }
+
+  /** The torpedo bursts: a deep watery boom, a heavy splash, and spray pattering back down. */
+  seaBurst(t: number, pan: number): void {
+    const out = this.out(pan, 0.85, 0.6);
+    this.chirp(out, t, 'sine', 110, 32, 0.8, 0.55);
+    this.burstNoise(out, t, 'lowpass', 1800, 200, 0.7, 0.6, 0.5, true);
+    this.burstNoise(out, t + 0.04, 'bandpass', 900, 2600, 0.9, 0.35, 0.45);
+    for (let i = 0; i < 8; i++) this.burstNoise(out, t + 0.25 + i * rand(0.03, 0.07), 'highpass', rand(3000, 5000), 2500, 1, 0.08, 0.04);
+  }
 }
 
 /**

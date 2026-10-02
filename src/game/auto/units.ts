@@ -66,6 +66,8 @@ export interface Spell {
   dodge?: number;
   /** How long a haste lasts. */
   dur?: number;
+  /** Drag each foe struck to a free cell beside the caster (the Aquanaut's reel). */
+  pull?: boolean;
   fx: SpellFx;
   /** The hero's own move played for it. */
   anim: string;
@@ -237,6 +239,11 @@ const DEFS: Record<string, Def> = {
   'transmuter.transmuter': { cost: 3, origin: 'forged', range: 3, attack: ['flick'], missile: 'flask', mana: 80,
     skill: { name: 'Transmutation circle', cd: 7, kind: 'blast', aim: 'crowd', r: 1.2, dmg: 0.6, stun: 1.5, brittle: 2.5, delay: 0.5, fx: 'steel', anim: 'inscribe' },
     ult: { kind: 'blast', aim: 'crowd', r: 1.8, dmg: 4.2, stun: 1, delay: 0.9, fx: 'steel', anim: 'opus' } },
+
+  // The Aquanaut: a sturdy diver who stands near the front and hauls a backliner in to him.
+  'aquanaut.aquanaut': { cost: 3, origin: 'forged', range: 2, attack: ['fire'], missile: 'arrow', mana: 90,
+    skill: { name: 'Reel in', cd: 7, kind: 'bolt', aim: 'far', dmg: 1.2, stun: 1, pull: true, fx: 'water', anim: 'hook' },
+    ult: { kind: 'blast', aim: 'target', r: 1.6, dmg: 4, knock: 1, slow: 2.5, delay: 0.7, fx: 'water', anim: 'surge' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

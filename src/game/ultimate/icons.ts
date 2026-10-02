@@ -620,3 +620,29 @@ export const magnumOpusIcon: IconPainter = (put, p) => {
   disc(put, 8, 8, 2, p.deep);
   disc(put, 8, 8, 1, p.core);
 };
+
+/** Torpedo: a finned torpedo running up and right, its nose bright, a trail of bubbles behind. */
+export const torpedoIcon: IconPainter = (put, p) => {
+  // The hull: a thick diagonal, lit along its upper side.
+  for (let k = 0; k <= 7; k++) {
+    const x = 5 + k;
+    const y = 11 - k;
+    put(x, y, p.mid);
+    put(x + 1, y, p.hot);
+    put(x, y - 1, p.hot);
+    put(x - 1, y, p.deep);
+    put(x, y + 1, p.deep);
+  }
+  // The nose, and the fins and propeller at its tail.
+  put(13, 3, p.core);
+  put(12, 3, p.core);
+  put(13, 4, p.hot);
+  seg(put, 4, 10, 2, 10, p.hot);
+  seg(put, 5, 13, 5, 15, p.hot);
+  put(3, 13, p.core);
+  // Bubbles rising from the wake.
+  ellipse(put, 2.5, 6.5, 1.3, 1.3, 0.45, p.mid);
+  put(5, 5, p.hot);
+  put(9, 14, p.mid);
+  ellipse(put, 12.5, 12.5, 1.3, 1.3, 0.45, p.mid);
+};

@@ -75,6 +75,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'warrior:headless': 'legendary',
   'wizard:pumpkin': 'epic',
   'archer:scarecrow': 'epic',
+  'aquanaut:barnacle': 'epic',
 };
 
 /** One skin as the shop knows it. */
