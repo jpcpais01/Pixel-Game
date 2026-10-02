@@ -101,7 +101,7 @@ import { BOLT_DIRS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, reticle, 
 import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
 import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
 import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
-import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, LION_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
+import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, JADE_SERPENT_LOOK, LION_LOOK, NEMEAN_LOOK, PHOENIX_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import {
@@ -571,16 +571,16 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   // The Beastkin: the eagle's razor feathers ('feather_<look>': headings
   // 'r0'..'r15'), the dragon's firebolts ('firebolt_<look>': flickering
   // 'f0'..'f3'), and the buttons. The beasts themselves are hero sheets.
-  for (const look of [EAGLE_LOOK, BENFICA_LOOK]) {
+  for (const look of [EAGLE_LOOK, BENFICA_LOOK, PHOENIX_LOOK]) {
     register(scene, `feather_${look.key}`, pack(frameList(Array.from({ length: FEATHER_DIRS }, (_, i) => featherFrame(i, look)), 'r'), FEATHER_SIZE, FEATHER_SIZE), FEATHER_SIZE, FEATHER_SIZE);
     scene.textures.addCanvas(`icon_feather_${look.key}`, toCanvas(16, 16, featherIcon(look)));
     scene.textures.addCanvas(`icon_gust_${look.key}`, toCanvas(16, 16, gustIcon(look)));
   }
-  for (const look of [LION_LOOK, SPORTING_LOOK]) {
+  for (const look of [LION_LOOK, SPORTING_LOOK, NEMEAN_LOOK]) {
     scene.textures.addCanvas(`icon_claw_${look.key}`, toCanvas(16, 16, clawIcon(look)));
     scene.textures.addCanvas(`icon_roar_${look.key}`, toCanvas(16, 16, roarIcon(look)));
   }
-  for (const look of [DRAGON_LOOK, PORTO_LOOK]) {
+  for (const look of [DRAGON_LOOK, PORTO_LOOK, JADE_SERPENT_LOOK]) {
     register(scene, `firebolt_${look.key}`, pack(frameList(Array.from({ length: FIREBOLT_FRAMES }, (_, i) => fireboltFrame(i, look)), 'f'), FIREBOLT_SIZE, FIREBOLT_SIZE), FIREBOLT_SIZE, FIREBOLT_SIZE);
     scene.textures.addCanvas(`icon_fire_${look.key}`, toCanvas(16, 16, fireIcon(look)));
     scene.textures.addCanvas(`icon_breath_${look.key}`, toCanvas(16, 16, breathIcon(look)));

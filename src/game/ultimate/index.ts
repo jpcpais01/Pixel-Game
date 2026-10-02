@@ -36,9 +36,9 @@ import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT } from '../Wraith';
 import { ENGINEER_KIT } from '../Engineer';
 import { EINSTEIN_KIT, SCIENTIST_KIT } from '../Scientist';
 import { chainReaction, megaSentry } from './inventor';
-import { BENFICA_KIT, EAGLE_KIT } from '../Eagle';
-import { LION_KIT, SPORTING_KIT } from '../Lion';
-import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
+import { BENFICA_KIT, EAGLE_KIT, PHOENIX_KIT } from '../Eagle';
+import { LION_KIT, NEMEAN_KIT, SPORTING_KIT } from '../Lion';
+import { DRAGON_KIT, JADE_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
 import { DarkDominion } from './sith';
 import { SITH_KIT, WARLORD_KIT } from '../Sith';
@@ -501,6 +501,9 @@ const SKINS: Record<string, UltSkin> = {
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
+  'beast:phoenix': { pal: PHOENIX_KIT.pal, type: 'eagle' },
+  'beast:nemean': { pal: NEMEAN_KIT.pal, type: 'lion' },
+  'beast:jade': { pal: JADE_KIT.pal, type: 'dragon' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

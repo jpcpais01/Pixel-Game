@@ -57,9 +57,9 @@ import { WRAITH_H, WRAITH_ORIGIN_Y } from '../art/wraith';
 import { ENGINEER_KIT, Engineer } from './Engineer';
 import { EINSTEIN_KIT, SCIENTIST_KIT, Scientist } from './Scientist';
 import { INV_H, INV_ORIGIN_Y } from '../art/inventor';
-import { BENFICA_KIT, EAGLE_KIT, Eagle } from './Eagle';
-import { LION_KIT, Lion, SPORTING_KIT } from './Lion';
-import { DRAGON_KIT, Dragon, PORTO_KIT } from './Dragon';
+import { BENFICA_KIT, EAGLE_KIT, Eagle, PHOENIX_KIT } from './Eagle';
+import { LION_KIT, Lion, NEMEAN_KIT, SPORTING_KIT } from './Lion';
+import { DRAGON_KIT, Dragon, JADE_KIT, PORTO_KIT } from './Dragon';
 import { BEAST_H, BEAST_ORIGIN_Y } from '../art/beast';
 import { worn } from './skins';
 import type { Vitals } from './combat';
@@ -1765,6 +1765,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_gust_eagle_benfica' },
             },
           },
+          {
+            // A bird of flame: crimson plumage burning to a golden head, a flowing crest of fire, ember-tipped wings, long glowing tail plumes, burning quills.
+            id: 'phoenix',
+            name: 'Phoenix',
+            accent: 0xff8a20,
+            preview: { texture: 'eagle_phoenix', glow: 'eagle_phoenix_e', idle: 'eagle_phoenix_idle_down', chosen: 'eagle_phoenix_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+            buttons: {
+              attack: { texture: 'icon_feather_eagle_phoenix' },
+              special: { texture: 'icon_gust_eagle_phoenix' },
+            },
+          },
         ],
       },
       {
@@ -1791,6 +1802,17 @@ const KITS: KitDef[] = [
             buttons: {
               attack: { texture: 'icon_claw_lion_sporting' },
               special: { texture: 'icon_roar_lion_sporting' },
+            },
+          },
+          {
+            // The Nemean lion: a gleaming bronze-gold hide, a dark bronze mane, a laurel wreath, meander-keyed bracers, gold sparks off his claws.
+            id: 'nemean',
+            name: 'Nemean',
+            accent: 0xe8b852,
+            preview: { texture: 'lion_nemean', glow: 'lion_nemean_e', idle: 'lion_nemean_idle_down', chosen: 'lion_nemean_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+            buttons: {
+              attack: { texture: 'icon_claw_lion_nemean' },
+              special: { texture: 'icon_roar_lion_nemean' },
             },
           },
         ],
@@ -1821,11 +1843,25 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_breath_dragon_porto' },
             },
           },
+          {
+            // An Eastern dragon: jade scales, no wings, antlers, a golden mane and whiskers, a glowing pearl, a cloud at his feet, and pale jade-and-gold fire.
+            id: 'jade',
+            name: 'Jade Serpent',
+            accent: 0x5ad8a0,
+            preview: { texture: 'dragon_jade', glow: 'dragon_jade_e', idle: 'dragon_jade_idle_down', chosen: 'dragon_jade_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+            buttons: {
+              attack: { texture: 'icon_fire_dragon_jade' },
+              special: { texture: 'icon_breath_dragon_jade' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
       if (look === 'benfica') return new Eagle(world, x, y, BENFICA_KIT);
+      if (look === 'phoenix') return new Eagle(world, x, y, PHOENIX_KIT);
+      if (look === 'nemean') return new Lion(world, x, y, NEMEAN_KIT);
+      if (look === 'jade') return new Dragon(world, x, y, JADE_KIT);
       if (look === 'lion') return new Lion(world, x, y, LION_KIT);
       if (look === 'sporting') return new Lion(world, x, y, SPORTING_KIT);
       if (look === 'dragon') return new Dragon(world, x, y, DRAGON_KIT);
