@@ -34,6 +34,7 @@ import { TITANIA_SPELL, blossomSeedIcon, faerieRingIcon } from './druid';
 import { PUMPKIN_EMBERS, PUMPKIN_METEOR, PUMPKIN_SPELL, jackOrbFrame, pumpkinMeteorIcon } from './pumpkin';
 import { AUTUMN_SPELL, AUTUMN_TONES, FROST_SPELL, FROST_TONES, GROVE_SPELL, WILD_SPELL, clawsIcon, groveIcon, pounceIcon, thornSeedIcon } from './druid';
 import { RAVEN_INK, RAVEN_TONES, SUN_INK, SUN_TONES, diveIcon, spearIcon, spearThrowIcon, swanSpearIcon, swanThrowIcon } from './valkyrie';
+import { amazonSpearIcon, amazonThrowIcon, auroraDiveIcon, auroraSpearIcon } from './valkyrie';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
 import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
 import { GEAR } from '../game/gear';
@@ -526,6 +527,10 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_spearthrow_swan', toCanvas(16, 16, swanThrowIcon()));
   scene.textures.addCanvas('icon_spear_raven', toCanvas(16, 16, spearIcon(true, RAVEN_INK, RAVEN_TONES)));
   scene.textures.addCanvas('icon_dive_raven', toCanvas(16, 16, diveIcon(RAVEN_TONES)));
+  scene.textures.addCanvas('icon_spear_amazon', toCanvas(16, 16, amazonSpearIcon()));
+  scene.textures.addCanvas('icon_spearthrow_amazon', toCanvas(16, 16, amazonThrowIcon()));
+  scene.textures.addCanvas('icon_spear_north', toCanvas(16, 16, auroraSpearIcon()));
+  scene.textures.addCanvas('icon_dive_north', toCanvas(16, 16, auroraDiveIcon()));
 
   // The Automaton's icons; the Synth's drones hover on a loop ('drone_spin',
   // 'drone_hive_spin').

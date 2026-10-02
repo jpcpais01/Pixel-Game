@@ -45,7 +45,7 @@ import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SH
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { AUTUMN_MAGIC, AUTUMN_SKIN, FROST_MAGIC, FROST_SKIN, GROVE_MAGIC, GROVE_SKIN, Grovecraft, WILD_MAGIC, WILD_SKIN, Wildcraft } from './Druid';
 import { TITANIA_MAGIC, TITANIA_SKIN } from './Druid';
-import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT, Valkyrie } from './Valkyrie';
+import { AMAZON_KIT, NORTH_KIT, RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT, Valkyrie } from './Valkyrie';
 import { MECH_KIT, Mech, SCRAP_KIT } from './Mech';
 import { HIVE_KIT, SYNTH_KIT, Synth } from './Synth';
 import { MECH_H, MECH_ORIGIN_Y } from '../art/mech';
@@ -1576,6 +1576,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_spearthrow_swan' },
             },
           },
+          {
+            // A jungle queen: bronze over deep green, a leopard capelet, scarlet macaw wings, dark braids and a feathered gold headband.
+            id: 'amazon',
+            name: 'Amazon',
+            accent: 0xe8a040,
+            preview: { texture: 'valkyrie_amazon', glow: 'valkyrie_amazon_e', idle: 'valkyrie_amazon_idle_down', chosen: 'valkyrie_amazon_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_spear_amazon' },
+              special: { texture: 'icon_spearthrow_amazon' },
+            },
+          },
         ],
       },
       {
@@ -1604,11 +1615,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_dive_raven' },
             },
           },
+          {
+            // Frost-silver plate, white-blonde hair, a crescent of ice on the helm and wings of the aurora, green to violet.
+            id: 'northlight',
+            name: 'Northlight',
+            accent: 0x7affc8,
+            preview: { texture: 'valkyrie_north', glow: 'valkyrie_north_e', idle: 'valkyrie_north_idle_down', chosen: 'valkyrie_north_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_spear_north' },
+              special: { texture: 'icon_dive_north' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { spear: SPEAR_KIT, sunshield: SUN_KIT, swan: SWAN_KIT, storm: STORM_KIT, raven: RAVEN_KIT }[look] ?? SPEAR_KIT;
+      const kit = { spear: SPEAR_KIT, sunshield: SUN_KIT, swan: SWAN_KIT, amazon: AMAZON_KIT, storm: STORM_KIT, raven: RAVEN_KIT, northlight: NORTH_KIT }[look] ?? SPEAR_KIT;
       return new Valkyrie(world, x, y, kit);
     },
   },

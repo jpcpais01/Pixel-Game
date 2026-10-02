@@ -36,6 +36,7 @@ import { DIRS, type Dir } from './wizard';
 import { AFONSO_BEARD, CROSS_BLUE, ERMINE, ERMINE_TAIL, KING_HAIR, NORMAN_IRON, ROYAL, RUBY, SAPPHIRE, SURCOAT } from './king';
 import { HOLLOW_BLADE, HOLLOW_CLOAK, HOLLOW_GLOW, HOLLOW_IRON, HOLLOW_MAIL, PUMPKIN, RUST, lanternBack, lanternFront, lanternSide } from './headless';
 import { ASH, BIRCH, BLONDE, COPPER, GILT, LAKE_SILK, MOON_PEARL, MOON_STEEL, PEARL, PLATINUM, RAVEN_CLOTH, RAVEN_HAIR, RAVEN_STEEL, RAVEN_WING, ROSE_LIP, ROSE_WING, SKY_CLOTH, SLATE_WING, STORM_ASH, STORM_CLOTH, STORM_STEEL, SUN_WOOD, SWAN, SWAN_DOWN, SWAN_TIP, WHITE_HAIR } from './valkyrie';
+import { AURORA_FEATHERS, EMERALD, FROST_BLONDE, FROST_DOWN, FROST_SILVER, ICE, ICE_SHARD, IRONWOOD, JUNGLE, JUNGLE_HAIR, LEAF_BRONZE, LEOPARD, MACAW_BLUE, MACAW_GOLD, MACAW_RED, MACAW_TEAL, NIGHT_WEB, POLAR_NIGHT, ROSETTE, SILVERWOOD, SUNBRONZE, UMBER_LIP, UMBER_SKIN } from './valkyrie';
 
 // ---------------------------------------------------------------------------
 // Looks (skins). Every look shares the rig and poses, so the blade sits on the
@@ -106,6 +107,30 @@ export interface WarriorLook {
   swan?: boolean;
   tip?: Material;
   lips?: Material;
+  /**
+   * The Amazon (with `valkyrie`): the Swan Maiden's bare head and long hair,
+   * dark, under a gold headband with an emerald and a fan of macaw feathers;
+   * scarlet macaw wings on the swan's frame, longer and more pointed (`wing`
+   * the red small coverts, `band` the golden coverts, `flight` the blue
+   * flight feathers, `tip` their teal tips); a bronze cuirass over a kilt of
+   * green strips, bare arms and legs with bronze bracers and greaves, a
+   * leopard `pelt` capelet over her shoulders; and a
+   * broad bronze leaf of a spear with macaw feathers tied under its head.
+   */
+  amazon?: boolean;
+  pelt?: Material;
+  band?: Material;
+  flight?: Material;
+  /**
+   * The Northlight (with `storm`): a crescent of ice on the helm instead of
+   * the crest of lightning, longer hair, a star on the breastplate, icicles
+   * for the shoulder spikes and an ice shard of a spearhead; her flight
+   * feathers one material each (`feathers`, innermost first, the aurora's
+   * green through teal to violet, glowing), over a `web` of night sky.
+   */
+  aurora?: boolean;
+  feathers?: Material[];
+  web?: Material;
   /**
    * The King: a bare head under a jewelled crown, hair to the shoulders and a
    * full beard, an ermine mantle on the shoulders instead of pauldrons, a
@@ -296,6 +321,60 @@ export const SWAN_LOOK: WarriorLook = {
   swan: true,
 };
 
+/** The Spearmaiden's Amazon skin: a jungle queen in bronze over deep green, a leopard pelt, scarlet macaw wings, dark braids and a feathered gold headband. */
+export const AMAZON_LOOK: WarriorLook = {
+  ...SPEAR_LOOK,
+  key: 'valkyrie_amazon',
+  plate: SUNBRONZE,
+  mail: JUNGLE,
+  cloth: JUNGLE,
+  plume: JUNGLE,
+  trim: GOLD,
+  belt: LEATHER,
+  glove: UMBER_SKIN,
+  boot: LEATHER,
+  trouser: UMBER_SKIN,
+  skin: UMBER_SKIN,
+  arms: UMBER_SKIN,
+  blade: LEAF_BRONZE,
+  grip: IRONWOOD,
+  guard: GOLD,
+  wing: MACAW_RED,
+  band: MACAW_GOLD,
+  flight: MACAW_BLUE,
+  tip: MACAW_TEAL,
+  pelt: LEOPARD,
+  hair: JUNGLE_HAIR,
+  lips: UMBER_LIP,
+  gem: EMERALD,
+  glow: { core: hex('#fffbe8'), hot: hex('#ffe08a'), mid: hex('#d8a040') },
+  amazon: true,
+};
+
+/** The Stormwing's Northlight skin: frost-silver plate, white-blonde hair, a crescent of ice and wings of the aurora. */
+export const NORTH_LOOK: WarriorLook = {
+  ...STORM_LOOK,
+  key: 'valkyrie_north',
+  plate: FROST_SILVER,
+  mail: POLAR_NIGHT,
+  cloth: POLAR_NIGHT,
+  plume: POLAR_NIGHT,
+  trim: ICE,
+  belt: POLAR_NIGHT,
+  glove: FROST_SILVER,
+  boot: FROST_SILVER,
+  trouser: POLAR_NIGHT,
+  blade: ICE_SHARD,
+  grip: SILVERWOOD,
+  guard: SILVER,
+  wing: FROST_DOWN,
+  web: NIGHT_WEB,
+  feathers: AURORA_FEATHERS,
+  hair: FROST_BLONDE,
+  glow: { core: hex('#f0fff8'), hot: hex('#9cffc8'), mid: hex('#40e0b0') },
+  aurora: true,
+};
+
 /** The King: bright steel, royal purple and gold, an ermine mantle, a jewelled crown. */
 export const KING_LOOK: WarriorLook = {
   key: 'warrior_king',
@@ -363,7 +442,7 @@ export const HEADLESS_LOOK: WarriorLook = {
   headless: true,
 };
 
-export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK, HEADLESS_LOOK, SPEAR_LOOK, STORM_LOOK, SUN_LOOK, RAVEN_LOOK, SWAN_LOOK, KING_LOOK, AFONSO_LOOK];
+export const WARRIOR_LOOKS = [KNIGHT_LOOK, JADE_LOOK, SPARTAN_LOOK, HEADLESS_LOOK, SPEAR_LOOK, STORM_LOOK, SUN_LOOK, RAVEN_LOOK, SWAN_LOOK, AMAZON_LOOK, NORTH_LOOK, KING_LOOK, AFONSO_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let LK: WarriorLook = KNIGHT_LOOK;
@@ -574,9 +653,15 @@ function drawSpear(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
     const u = (along - neck) / SPEAR_HEAD;
     let off = 0;
     let hw: number;
-    if (LK.storm) {
+    if (LK.aurora) {
+      // A shard of ice: flaring fast from the socket, then a long straight taper.
+      hw = u < 0.16 ? 0.45 + (u / 0.16) * 0.75 : 0.08 + (1.12 * (1 - u)) / 0.84;
+    } else if (LK.storm) {
       off = (Math.floor(u * 3.2) % 2 ? 0.75 : -0.75) * (1 - u);
       hw = u < 0.12 ? 0.5 + u * 3 : 0.3 + 0.75 * (1 - u);
+    } else if (LK.amazon) {
+      // A broad bronze leaf, round-shouldered, widest near its middle.
+      hw = u < 0.4 ? 0.5 + Math.sin((u / 0.4) * Math.PI * 0.5) * 0.8 : 0.1 + (1.2 * (1 - u)) / 0.6;
     } else if (LK.swan) {
       // A slimmer willow leaf, widest low down and drawn out to a long point.
       hw = u < 0.3 ? 0.45 + (u / 0.3) * 0.6 : 0.1 + (0.95 * (1 - u)) / 0.7;
@@ -586,6 +671,23 @@ function drawSpear(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
     c.px(x, y, LK.blade, facing(px * k * 0.7, py * k * 0.7, 0.72), { glow: LK.storm ? Math.max(0.3, glow * 0.85) : glow * 0.85 });
   });
   if (LK.storm) c.spark(tip.x, tip.y, LK.glow.hot, 0.5);
+  if (LK.aurora) {
+    // The shard's cold heart: a line of light up its middle.
+    for (let t = neck + 1; t < end - 0.8; t += 1) c.spark(s.hx + dx * t, s.hy + dy * t, LK.glow.core, 0.3);
+  }
+  if (LK.amazon) {
+    // Three macaw feathers, scarlet, blue and gold, tied under the socket and
+    // hanging down whichever way the spear points, bound with a gold bead.
+    const nx = s.hx + dx * (neck - 1.2);
+    const ny = s.hy + dy * (neck - 1.2);
+    c.part();
+    for (const [ox, len, m] of [[-0.9, 2.9, LK.wing], [0, 3.4, LK.flight], [0.9, 2.4, LK.band]] as const) {
+      const fx = nx + ox;
+      c.capsule(fx, ny + 0.4, fx + ox * 0.7, ny + 0.4 + len, 0.5, 0.3, m ?? LK.plate, { bias: ox < 0 ? 1 : 0 });
+    }
+    c.part();
+    c.px(nx, ny, LK.guard, { x: -0.3, y: 0.4, z: 0.86 }, { bias: 1 });
+  }
   if (LK.swan) {
     // A tassel of white feathers tied under the socket, hanging down whichever
     // way the spear points, and a pearl bead where it is bound.
@@ -622,7 +724,7 @@ function drawSpear(c: PixelCanvas, s: Sword, glow: number): { x: number; y: numb
  * `flap` raises it, `size` shrinks the far wing seen from the side.
  */
 function wing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, size = 1, bias = 0, spread = 0, ruffle = 0): void {
-  if (LK.swan) {
+  if (LK.swan || LK.amazon) {
     swanWing(c, rx, ry, k, flap, size, bias, spread, ruffle);
     return;
   }
@@ -654,12 +756,15 @@ function wing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, s
   c.part();
   for (let i = 0; i < n - 1; i++) {
     const q = [bases[i], tips[i], tips[i + 1], bases[i + 1]];
-    fillQuad(c, q, m, { x: k * 0.3, y: -0.2, z: 0.93 }, bias - 1);
+    // The Northlight's web takes each feather's colour, deepened, so the aurora runs right across the wing.
+    const web = LK.feathers?.[i] ?? LK.web ?? m;
+    fillQuad(c, q, web, { x: k * 0.3, y: -0.2, z: 0.93 }, bias - (LK.feathers ? 2 : 1));
   }
-  // Then the long feathers over it, each a lighter ridge.
+  // Then the long feathers over it, each a lighter ridge (the Northlight's
+  // each its own colour of the aurora, green low down to violet at the top).
   for (let i = 0; i < n; i++) {
     c.part();
-    c.capsule(bases[i].x, bases[i].y, tips[i].x, tips[i].y, 1.1 * size, storm ? 0.3 : 0.5, m, { bias: bias + (i % 2 ? 1 : 0) });
+    c.capsule(bases[i].x, bases[i].y, tips[i].x, tips[i].y, 1.1 * size, storm ? 0.3 : 0.5, LK.feathers?.[i] ?? m, { bias: bias + (i % 2 ? 1 : 0) });
   }
   // Coverts over the feathers' roots, lit along the leading edge.
   c.part();
@@ -667,7 +772,11 @@ function wing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, s
   c.capsule(rx + (wx - rx) * 0.2, ry + (wy - ry) * 0.2 + 1.2, rx + (wx - rx) * 0.75, ry + (wy - ry) * 0.75 + 1.4, 1.3 * size, 0.9 * size, m, { bias });
   if (LK.storm) {
     // Lightning playing along the feather tips and the leading edge.
-    tips.forEach((p, i) => c.spark(p.x, p.y, i % 2 ? LK.glow.hot : LK.glow.mid, 0.55));
+    // The Northlight's shimmer in each feather's own colour.
+    tips.forEach((p, i) => {
+      const f = LK.feathers?.[i];
+      c.spark(p.x, p.y, f ? f.ramp[f.ramp.length - 2] : i % 2 ? LK.glow.hot : LK.glow.mid, 0.55);
+    });
     for (let t = 0.15; t < 1; t += 0.3) c.spark(rx + (wx - rx) * t, ry + (wy - ry) * t - 1.2, LK.glow.core, 0.4);
   }
 }
@@ -709,6 +818,10 @@ function helmWing(c: PixelCanvas, x: number, y: number, k: number, size = 1, bia
  * it lies along the helm from brow to nape.
  */
 function stormCrest(c: PixelCanvas, x: number, U: number, side: boolean): void {
+  if (LK.aurora) {
+    iceCrescent(c, x, U, side);
+    return;
+  }
   const pts: [number, number][] = side
     ? [[x - 3.4, 5.6], [x - 1.4, 3.2], [x + 0.2, 4.6], [x + 2.4, 2.2], [x + 4.4, 4.2]]
     : [[x, 5.8], [x + 1.3, 3.9], [x - 0.7, 2.7], [x + 0.8, 0.8]];
@@ -720,6 +833,57 @@ function stormCrest(c: PixelCanvas, x: number, U: number, side: boolean): void {
   const [tx, ty] = pts[pts.length - 1];
   c.spark(tx, ty + U, LK.glow.core, 0.8);
   pts.forEach(([px, py], i) => i > 0 && c.spark(px, py + U, LK.glow.hot, 0.45));
+}
+
+/** The crescent's radius and where its centre sits above the helm. */
+const CRESCENT_R = 3.4;
+const CRESCENT_Y = 2.2;
+
+/**
+ * The Northlight's crest: a crescent of ice standing on the helm, horns up,
+ * thickest where it sits and fining to points that catch the light. Seen
+ * from the side it is edge-on, a slim curved sliver.
+ */
+function iceCrescent(c: PixelCanvas, x: number, U: number, side: boolean): void {
+  c.part();
+  if (side) {
+    c.capsule(x, 5.6 + U, x - 0.5, 3.6 + U, 0.9, 0.6, LK.trim, { bias: 1 });
+    c.capsule(x - 0.5, 3.6 + U, x - 1.6, 1.7 + U, 0.6, 0.3, LK.trim, { bias: 1 });
+    c.capsule(x - 0.1, 3.9 + U, x + 0.9, 2 + U, 0.5, 0.3, LK.trim);
+    c.spark(x - 1.6, 1.7 + U, LK.glow.core, 0.7);
+    return;
+  }
+  const n = 12;
+  let prev: { x: number; y: number; r: number } | null = null;
+  for (let i = 0; i <= n; i++) {
+    // From one horn round the bottom of the bowl to the other.
+    const q = (-0.06 + (i / n) * 1.12) * Math.PI;
+    const pt = { x: x + Math.cos(q) * CRESCENT_R, y: CRESCENT_Y + U + Math.sin(q) * CRESCENT_R * 0.92, r: 0.35 + 0.7 * Math.max(0, Math.sin(q)) };
+    if (prev) c.capsule(prev.x, prev.y, pt.x, pt.y, prev.r, pt.r, LK.trim, { bias: q > Math.PI / 2 ? 1 : 0 });
+    prev = pt;
+  }
+  // The horns' points glint; a cold light at the heart of the bowl.
+  for (const k of [-1, 1]) c.spark(x + k * CRESCENT_R * 0.98, CRESCENT_Y + U - 0.4, LK.glow.core, 0.75);
+  c.spark(x - 0.5, CRESCENT_Y + U + CRESCENT_R * 0.92, LK.glow.hot, 0.35);
+}
+
+/** The aurora's violet, from the top of the Northlight's wing. */
+function auroraViolet(): RGB {
+  const f = LK.feathers?.[LK.feathers.length - 1];
+  return f ? f.ramp[3] : LK.glow.mid;
+}
+
+/** A small star of the aurora burning on her breastplate, its rays green and violet, at row y. */
+function auroraStar(c: PixelCanvas, y: number): void {
+  const v = auroraViolet();
+  c.spark(11, y, LK.glow.core, 0.9);
+  c.spark(12, y, LK.glow.core, 0.9);
+  c.spark(11, y - 1, LK.glow.hot, 0.6);
+  c.spark(12, y + 1, LK.glow.hot, 0.6);
+  c.spark(10, y, LK.glow.mid, 0.5);
+  c.spark(13, y, LK.glow.mid, 0.5);
+  c.spark(12, y - 2, v, 0.45);
+  c.spark(11, y + 2, v, 0.45);
 }
 
 /** A loose mane of hair falling from under the helm, rows y0..y1 between `edges`, strands shaded through it. */
@@ -766,21 +930,32 @@ const SWAN_FEATHERS = 9;
 const SWAN_ARCH = 1.3;
 /** How much of each flight feather, from its tip, is silver-blue. */
 const SWAN_TIP_LEN = 0.38;
+// The Amazon's macaw wing on the same frame: fewer, longer flight feathers
+// drawn out to points, a flatter edge, the wrist set higher.
+const MACAW_FEATHERS = 7;
+const MACAW_ARCH = 0.8;
+const MACAW_TIP_LEN = 0.3;
 
 /**
  * A swan's wing, rooted at (rx, ry) like `wing`: a long arched leading edge,
  * nine flight feathers growing longer toward the wrist with silver-blue tips,
  * a row of coverts laid over their roots and a thick row of small coverts
- * along the edge, each row its own layer so the feathers read in tiers.
+ * along the edge, each row its own layer so the feathers read in tiers. The
+ * Amazon's macaw wing is built the same way, each tier in its own colour:
+ * blue flight feathers tipped in teal, a band of gold coverts, red along the edge.
  */
 function swanWing(c: PixelCanvas, rx: number, ry: number, k: number, flap: number, size: number, bias: number, spread: number, ruffle: number): void {
+  const macaw = !!LK.amazon;
   const m = LK.wing ?? LK.cloth;
-  const tipM = LK.tip ?? m;
-  size *= 0.92;
-  const wx = rx + k * (6 - flap * 0.3 + spread * 1.4) * size;
-  const wy = ry - (8.2 + flap * 1.6 + spread * 1.2) * size;
-  const along = (t: number) => ({ x: rx + (wx - rx) * t, y: ry + (wy - ry) * t - Math.sin(t * Math.PI) * SWAN_ARCH * size });
-  const n = SWAN_FEATHERS;
+  const flightM = LK.flight ?? m;
+  const bandM = LK.band ?? m;
+  const tipM = LK.tip ?? flightM;
+  size *= macaw ? 0.95 : 0.92;
+  const wx = rx + k * ((macaw ? 5.4 : 6) - flap * 0.3 + spread * 1.4) * size;
+  const wy = ry - ((macaw ? 9 : 8.2) + flap * 1.6 + spread * 1.2) * size;
+  const arch = macaw ? MACAW_ARCH : SWAN_ARCH;
+  const along = (t: number) => ({ x: rx + (wx - rx) * t, y: ry + (wy - ry) * t - Math.sin(t * Math.PI) * arch * size });
+  const n = macaw ? MACAW_FEATHERS : SWAN_FEATHERS;
   const bases: { x: number; y: number }[] = [];
   const tips: { x: number; y: number }[] = [];
   const angles: number[] = [];
@@ -789,7 +964,7 @@ function swanWing(c: PixelCanvas, rx: number, ry: number, k: number, flap: numbe
     const t = i / (n - 1);
     const b = along(t * 0.96);
     const a = (24 + spread * 14 + t * (74 + flap * 6 + spread * 30)) * RAD;
-    const len = (5.6 + t * t * 6.4) * size * (1 + spread * 0.12);
+    const len = (macaw ? 5 + t * t * 8.2 : 5.6 + t * t * 6.4) * size * (1 + spread * 0.12);
     bases.push(b);
     angles.push(a);
     lens.push(len);
@@ -797,24 +972,35 @@ function swanWing(c: PixelCanvas, rx: number, ry: number, k: number, flap: numbe
   }
   // The web under the feathers, in shade.
   c.part();
-  for (let i = 0; i < n - 1; i++) fillQuad(c, [bases[i], tips[i], tips[i + 1], bases[i + 1]], m, { x: k * 0.3, y: -0.2, z: 0.93 }, bias - 1);
-  // The flight feathers, inner ones over outer so the trailing edge scallops, each tipped in silver-blue.
+  for (let i = 0; i < n - 1; i++) fillQuad(c, [bases[i], tips[i], tips[i + 1], bases[i + 1]], flightM, { x: k * 0.3, y: -0.2, z: 0.93 }, bias - 1);
+  // The flight feathers, inner ones over outer so the trailing edge scallops, each tipped.
+  const tipLen = macaw ? MACAW_TIP_LEN : SWAN_TIP_LEN;
   for (let i = n - 1; i >= 0; i--) {
     const b = bases[i];
     const p = tips[i];
-    const f = 1 - SWAN_TIP_LEN;
+    const f = 1 - tipLen;
     const fb = bias + (i % 2 ? 0 : 1);
     c.part();
-    c.capsule(b.x, b.y, p.x, p.y, 1.2 * size, 0.55, m, { bias: fb });
-    c.capsule(b.x + (p.x - b.x) * f, b.y + (p.y - b.y) * f, p.x, p.y, 0.95 * size, 0.5, tipM, { bias: fb });
+    c.capsule(b.x, b.y, p.x, p.y, 1.2 * size, macaw ? 0.35 : 0.55, flightM, { bias: fb });
+    c.capsule(b.x + (p.x - b.x) * f, b.y + (p.y - b.y) * f, p.x, p.y, (macaw ? 0.8 : 0.95) * size, macaw ? 0.3 : 0.5, tipM, { bias: fb });
   }
   // Coverts over the feathers' roots: shorter, laid a little closer.
   for (let i = n - 2; i >= 0; i -= 1) {
     const b = along((i / (n - 1)) * 0.9);
     const a = angles[i] - 8 * RAD;
-    const len = lens[i] * 0.52;
+    const len = lens[i] * (macaw ? 0.58 : 0.52);
     c.part();
-    c.capsule(b.x, b.y, b.x + k * Math.sin(a) * len, b.y + Math.cos(a) * len, 1.3 * size, 0.75, m, { bias: bias + 1 + (i % 2 ? 0 : 1) });
+    c.capsule(b.x, b.y, b.x + k * Math.sin(a) * len, b.y + Math.cos(a) * len, 1.3 * size, 0.75, bandM, { bias: bias + 1 + (i % 2 ? 0 : 1) });
+  }
+  if (macaw) {
+    // A row of scarlet median coverts over the gold, so the wing reads red, gold, blue from its edge out.
+    for (let i = n - 2; i >= 0; i--) {
+      const b = along((i / (n - 1)) * 0.9);
+      const a = angles[i] - 14 * RAD;
+      const len = lens[i] * 0.32;
+      c.part();
+      c.capsule(b.x, b.y, b.x + k * Math.sin(a) * len, b.y + Math.cos(a) * len, 1.35 * size, 0.85, m, { bias: bias + 1 + (i % 2 ? 1 : 0) });
+    }
   }
   // The small coverts thick along the arched edge, lit along the top.
   const mid = along(0.5);
@@ -842,7 +1028,8 @@ function swanHairBehind(c: PixelCanvas, cx: number, U: number, sway: number): vo
   const y1 = 20 + U;
   const edges = (y: number): [number, number] => {
     const u = (y - y0) / (y1 - y0);
-    const hw = 4.6 + Math.sin(Math.min(1, u * 1.6) * Math.PI * 0.5) * 0.9 - Math.max(0, u - 0.7) * 2;
+    // The Amazon's mane is thicker and wilder.
+    const hw = 4.6 + (LK.amazon ? 0.6 : 0) + Math.sin(Math.min(1, u * 1.6) * Math.PI * 0.5) * 0.9 - Math.max(0, u - 0.7) * 2;
     const x = cx + sway * u * u * 0.4;
     return [x - hw, x + hw];
   };
@@ -856,19 +1043,38 @@ function pearl(c: PixelCanvas, x: number, y: number): void {
   c.px(x, y, LK.gem ?? LK.trim, { x: -0.35, y: 0.4, z: 0.85 }, { bias: 1 });
 }
 
-/** A single swan feather standing from the diadem at (x, y), curving out to the side `k` and up. */
-function diademFeather(c: PixelCanvas, x: number, y: number, k: number, sway = 0): void {
-  const m = LK.wing ?? LK.plate;
-  const mx = x + k * 1.4;
-  const my = y - 2.4;
-  const tx = x + k * 2.6 + sway * 0.4;
-  const ty = y - 4.6;
+/**
+ * A single swan feather standing from the diadem at (x, y), curving out to
+ * the side `k` and up; `len` scales it and `lean` lays it further out to the
+ * side (the Amazon's fan), `m` and `tip` colour its vane and tip.
+ */
+function diademFeather(c: PixelCanvas, x: number, y: number, k: number, sway = 0, m = LK.wing ?? LK.plate, tip = LK.tip ?? m, len = 1, lean = 0): void {
+  const mx = x + k * (1.4 + lean * 0.6) * len;
+  const my = y - 2.4 * len + lean * 0.4;
+  const tx = x + k * (2.6 + lean * 1.4) * len + sway * 0.4;
+  const ty = y - 4.6 * len + lean * 1.2;
   c.part();
   c.capsule(x, y, mx, my, 0.5, 0.7, m, { bias: 1 });
   c.capsule(mx, my, tx, ty, 0.7, 0.35, m, { bias: 1 });
-  // Its tip in silver-blue, and the quill as a fine shade down its middle.
-  c.px(tx, ty, LK.tip ?? m, { x: k * 0.3, y: 0.5, z: 0.8 });
+  // Its tip, and the quill as a fine shade down its middle.
+  c.px(tx, ty, tip, { x: k * 0.3, y: 0.5, z: 0.8 });
   c.shade(x + k * 0.6, y - 1.6, -1);
+}
+
+/** The Amazon's fan of macaw feathers at her temple: a tall scarlet one tipped blue, a blue one, a short gold one in front. */
+function macawFan(c: PixelCanvas, x: number, y: number, k: number, sway = 0): void {
+  const red = LK.wing ?? LK.plate;
+  const blue = LK.flight ?? red;
+  const gold = LK.band ?? red;
+  diademFeather(c, x - k * 0.2, y, k, sway, red, blue, 1.3, -0.5);
+  diademFeather(c, x + k * 0.4, y + 0.4, k, sway * 0.7, blue, LK.tip ?? blue, 1.05, 0.35);
+  diademFeather(c, x + k * 0.7, y + 0.9, k, sway * 0.5, gold, gold, 0.7, 0.9);
+}
+
+/** The feather (or the Amazon's fan) worn at the temple, standing from (x, y) to the side `k`. */
+function templeFeather(c: PixelCanvas, x: number, y: number, k: number, sway: number): void {
+  if (LK.amazon) macawFan(c, x, y, k, sway);
+  else diademFeather(c, x, y, k, sway);
 }
 
 /** The Swan Maiden's head from the front: face, parted platinum hair, side locks, the diadem and its feather. */
@@ -923,13 +1129,13 @@ function swanHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.part();
   pearl(c, 11, 9 + U);
   c.px(12, 9 + U, LK.gem ?? LK.trim, { x: 0.3, y: 0.3, z: 0.9 });
-  diademFeather(c, cx + 3.6, 8.6 + U, 1, p.plume);
+  templeFeather(c, cx + 3.6, 8.6 + U, 1, p.plume);
 }
 
 /** The Swan Maiden's head from behind: the back of her hair under the diadem's band, falling into one long braid. */
 function swanHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   const hair = LK.hair ?? LK.plume;
-  diademFeather(c, cx - 3.6, 8.6 + U, -1, p.plume);
+  templeFeather(c, cx - 3.6, 8.6 + U, -1, p.plume);
   c.part();
   c.ellipse(cx, 10.3 + U, 4.4, 4.3, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.15, 1) });
   for (let y = 7; y <= 14; y++) for (let x = 9; x <= 15; x += 2) c.shade(x + ((y >> 1) & 1), y + U, -1);
@@ -964,7 +1170,7 @@ function swanHeadSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
   c.part();
   c.shape(y0, y1, fall, hair, (_x, _y, t, u) => cyl(t * 0.8 + 0.2, 0.2 - u * 0.3), { bias: -1 });
   strands(c, y0, y1, fall);
-  diademFeather(c, hx + 1.4, 8.4 + U, 1, p.plume);
+  templeFeather(c, hx + 1.4, 8.4 + U, 1, p.plume);
   c.part();
   c.ellipse(hx - 1.2, 12.8 + U, 2.9, 2.7, LK.skin);
   c.part();
@@ -1120,16 +1326,151 @@ function swanBodySide(c: PixelCanvas, cx: number, hx: number, S: number, U: numb
   swanTassets(c, [hx - 0.6], waist + 1, -1);
 }
 
+// ---------------------------------------------------------------------------
+// The Amazon: a bronze cuirass, a kilt of green strips, a leopard pelt
+
+/** Leopard rosettes dotted over whatever pelt is drawn in the box: dark spots on a loose lattice, in the pelt's own layer. */
+function rosettes(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
+  const pelt = LK.pelt;
+  if (!pelt) return;
+  each(x0, y0, x1, y1, (x, y) => {
+    if (c.materialAt(x, y) !== pelt) return;
+    const h = (((x * 5 + y * 3) % 7) + 7) % 7;
+    if (h === 0) c.px(x, y, ROSETTE, { x: 0, y: 0.2, z: 0.98 });
+  });
+}
+
+/** A kilt of deep green strips from the waist, a dark seam between each, every other strip tipped with a gold stud below the hem. */
+function amazonKilt(c: PixelCanvas, waist: number, hem: number, edges: (u: number) => [number, number]): void {
+  const e = (y: number) => edges((y + 0.5 - waist) / (hem + 1 - waist));
+  c.part();
+  c.shape(waist, hem, e, LK.cloth, (_x, _y, t, u) => cyl(t * 0.9, 0.1 - u * 0.25));
+  for (let y = waist + 1; y <= hem; y++) {
+    const [l, r] = e(y);
+    for (let x = Math.round(l) + 1; x < Math.round(r); x += 2) c.shade(x, y, -1);
+  }
+  c.part();
+  const [l, r] = e(hem + 1);
+  for (let x = Math.round(l); x < Math.round(r); x += 2) c.px(x, hem + 1, LK.trim, { x: (x - (l + r) / 2) * 0.12, y: 0.3, z: 0.94 });
+}
+
+/** The bronze cuirass, rows top..waist-1 between `edges`, sculpted to her figure. */
+function amazonCuirass(c: PixelCanvas, top: number, waist: number, edges: (u: number) => [number, number], lean = 0): void {
+  c.part();
+  c.shape(top, waist - 1, (y) => edges((y + 0.5 - top) / (waist - top)), LK.plate, (_x, _y, t, u) => sphere(t * 0.9 + lean, (u - 0.35) * 1.1, 1));
+}
+
+/** A belt of dark leather studded in gold, its buckle a gold mount set with an emerald at `bx` (none seen from behind). */
+function amazonBelt(c: PixelCanvas, waist: number, l: number, r: number, bx: number | null): void {
+  c.part();
+  c.shape(waist, waist, () => [l, r], LK.belt, (_x, _y, t) => cyl(t, 0));
+  c.part();
+  for (let x = Math.round(l) + 1; x < Math.round(r) - 1; x += 3) if (bx === null || Math.abs(x - bx) > 1) c.px(x, waist, LK.trim, { x: 0, y: 0.4, z: 0.92 });
+  if (bx === null) return;
+  c.px(bx - 1, waist, LK.trim, { x: -0.4, y: 0.3, z: 0.86 }, { bias: 1 });
+  c.px(bx, waist, LK.gem ?? LK.trim, { x: 0.1, y: 0.4, z: 0.9 });
+  c.px(bx + 1, waist, LK.trim, { x: 0.4, y: 0.3, z: 0.86 });
+}
+
+/** The Amazon from the front: the kilt, the sculpted cuirass, the pelt's capelet over her shoulders, the studded belt. */
+function amazonBodyDown(c: PixelCanvas, cx: number, U: number, L: number, cape: number): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  amazonKilt(c, waist, 26 + L, (u) => {
+    const hw = 3.9 + 1.3 * u;
+    const x = cx + cape * 0.3 * u;
+    return [x - hw, x + hw];
+  });
+  amazonCuirass(c, top, waist, (u) => {
+    const hw = 4.4 - 1.1 * u * u;
+    return [cx - hw, cx + hw];
+  });
+  // Sculpted: the bust's curve shaded beneath, a ridge down the middle.
+  for (const x of [9, 10, 13, 14]) c.shade(x, top + 3, -1);
+  c.shade(cx, top + 4, 1);
+  c.shade(cx, top + 5, 1);
+  // The pelt's capelet over her shoulders, parted at the neck, its edge falling in two points onto the bronze.
+  c.part();
+  c.shape(top, top + 2, (y) => {
+    const d = y - top;
+    return [cx - 5.2 + d * 0.9, cx - 1.6 - d * 0.5];
+  }, LK.pelt ?? LK.cloth, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, u * 0.9 - 0.5, 1));
+  c.shape(top, top + 2, (y) => {
+    const d = y - top;
+    return [cx + 1.6 + d * 0.5, cx + 5.2 - d * 0.9];
+  }, LK.pelt ?? LK.cloth, (_x, _y, t, u) => sphere(t * 0.8 + 0.2, u * 0.9 - 0.5, 1));
+  rosettes(c, cx - 6, top, cx + 6, top + 3);
+  // A gold clasp where the pelt is knotted.
+  c.part();
+  c.px(cx - 2, top + 1, LK.trim, { x: -0.3, y: 0.5, z: 0.8 }, { bias: 1 });
+  c.px(cx + 1, top + 1, LK.trim, { x: 0.3, y: 0.5, z: 0.8 });
+  amazonBelt(c, waist, cx - 4, cx + 4, 12);
+}
+
+/** The Amazon from behind: kilt, the cuirass's back, the pelt's capelet, the belt. */
+function amazonBodyUp(c: PixelCanvas, cx: number, U: number, L: number, cape: number): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  amazonKilt(c, waist, 26 + L, (u) => {
+    const hw = 3.9 + 1.3 * u;
+    const x = cx + cape * 0.5 * u;
+    return [x - hw, x + hw];
+  });
+  amazonCuirass(c, top, waist, (u) => {
+    const hw = 4.4 - 1.1 * u * u;
+    return [cx - hw, cx + hw];
+  });
+  // The spine's groove.
+  for (let y = top + 2; y < waist - 1; y++) c.shade(cx, y, -1);
+  // The pelt's capelet across her shoulders.
+  c.part();
+  c.shape(top, top + 2, (y) => {
+    const hw = 5 - (y - top) * 0.8;
+    return [cx - hw, cx + hw];
+  }, LK.pelt ?? LK.cloth, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.4, 1));
+  rosettes(c, cx - 6, top, cx + 6, top + 3);
+  amazonBelt(c, waist, cx - 4, cx + 4, null);
+}
+
+/** The Amazon in profile, facing left: the kilt swinging back, the cuirass, the capelet, the buckle at the front. */
+function amazonBodySide(c: PixelCanvas, cx: number, hx: number, S: number, U: number, L: number, cape: number): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  amazonKilt(c, waist, 26 + L, (u) => [cx - 3.1 + S * 0.5 - u * 0.7, cx + 3.0 + u * 1.3 + cape * u * u * 0.6]);
+  c.part();
+  c.shape(top, waist - 1, (y) => {
+    const u = (y + 0.5 - top) / (waist - top);
+    const bust = y >= top + 1 && y <= top + 3 ? 0.8 : 0;
+    return [hx - 2.7 - bust + u * 0.4, hx + 2.6 - u * 0.4];
+  }, LK.plate, (_x, _y, t, u) => sphere(t * 0.9 - 0.1, (u - 0.35) * 1.1, 1));
+  c.shade(Math.round(hx - 3), top + 4, -1);
+  c.part();
+  c.px(hx - 3, top + 1, LK.trim, { x: -0.5, y: 0.4, z: 0.77 }, { bias: 1 });
+  // The capelet over her shoulder, falling to a point at her back.
+  c.part();
+  c.shape(top, top + 2, (y) => {
+    const d = y - top;
+    return [hx - 2.2 + d * 0.8, hx + 2.9 - d * 0.2];
+  }, LK.pelt ?? LK.cloth, (_x, _y, t, u) => sphere(t * 0.8, u * 0.9 - 0.5, 1));
+  rosettes(c, hx - 4, top, hx + 4, top + 3);
+  amazonBelt(c, waist, hx - 2.6, hx + 2.4, Math.round(hx - 2));
+}
+
 function arm(c: PixelCanvas, sx: number, sy: number, hx: number, hy: number, bias = 0): void {
   c.part();
   const vx = hx - sx;
   const vy = hy - sy;
   const l = Math.hypot(vx, vy) || 1;
   c.capsule(sx, sy, hx - (vx / l) * 1.0, hy - (vy / l) * 1.0, 1.3, 1.1, LK.arms ?? LK.mail, { bias });
-  if (LK.spartan) {
+  if (LK.spartan || LK.amazon) {
     // A bronze bracer on the forearm.
     c.part();
     c.capsule(sx + vx * 0.55, sy + vy * 0.55, hx - (vx / l) * 1.2, hy - (vy / l) * 1.2, 1.2, 1.15, LK.plate, { bias });
+  }
+  if (LK.amazon) {
+    // And a gold armlet round the upper arm.
+    c.part();
+    c.capsule(sx + vx * 0.26, sy + vy * 0.26, sx + vx * 0.32, sy + vy * 0.32, 1.25, 1.25, LK.trim, { bias });
   }
 }
 
@@ -1141,6 +1482,15 @@ function glove(c: PixelCanvas, x: number, y: number): void {
 function pauldron(c: PixelCanvas, x: number, y: number, rx = 2.3, ry = 1.75): void {
   if (LK.swan) {
     swanCap(c, x, y, rx, ry);
+    return;
+  }
+  if (LK.amazon) {
+    // The leopard pelt's mantle over the shoulder, a bronze disc pinning it.
+    c.part();
+    c.ellipse(x, y + 0.3, rx + 0.2, ry + 0.35, LK.pelt ?? LK.cloth, { normal: (_x, _y, dx, dy) => sphere(dx * 0.85, dy * 0.85 - 0.3, 1) });
+    rosettes(c, x - rx - 1, y - ry - 1, x + rx + 1, y + ry + 1);
+    c.part();
+    c.px(x - 0.5, y - 0.4, LK.plate, { x: -0.3, y: 0.5, z: 0.8 }, { bias: 1 });
     return;
   }
   if (LK.samurai) {
@@ -1208,7 +1558,7 @@ function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): voi
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
   c.part();
   c.capsule(hx, hy, fx, fy, 1.4, 1.2, LK.trouser, { bias });
-  if (LK.spartan) {
+  if (LK.spartan || LK.amazon) {
     // Bronze greaves over the shins.
     c.part();
     c.capsule(hx + (fx - hx) * 0.5, hy + (fy - hy) * 0.5, fx, fy - 0.2, 1.4, 1.25, LK.plate, { bias });
@@ -1729,7 +2079,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     const flap = flapOf(p);
     wing(c, cx - 3.2, 17.5 + U, -1, flap, 1, -1, p.spread ?? 0, p.ruffle ?? 0);
     wing(c, cx + 3.2, 17.5 + U, 1, flap, 1, -1, p.spread ?? 0, -(p.ruffle ?? 0));
-    if (LK.swan) {
+    if (LK.swan || LK.amazon) {
       if (p.head) c.offset(BODY_X + p.head.x, BODY_Y + p.head.y);
       swanHairBehind(c, cx, U, p.cape);
       if (p.head) c.offset(BODY_X, BODY_Y);
@@ -1755,6 +2105,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   boot(c, 14.4, 29.7 - p.footB);
 
   if (LK.swan) swanBodyDown(c, cx, U, L, p.cape);
+  else if (LK.amazon) amazonBodyDown(c, cx, U, L, p.cape);
   else {
   // Breastplate, rounded so it catches the light at the upper left.
   const top = 15 + U;
@@ -1803,7 +2154,8 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   c.part();
   c.px(11, waist, LK.trim, { x: -0.3, y: 0.3, z: 0.9 }, { bias: 1 });
   c.px(12, waist, LK.trim, { x: 0.2, y: 0.3, z: 0.9 });
-  if (LK.storm) {
+  if (LK.aurora) auroraStar(c, top + 3);
+  else if (LK.storm) {
     // A rune of lightning burning on the bare breastplate.
     for (const [x, y, k] of [[12, 1, 1], [11, 2, 0.8], [12, 3, 1], [11, 4, 0.8], [12, 5, 0.6]] as const) c.spark(x, top + y, k > 0.9 ? LK.glow.core : LK.glow.hot, k * 0.8);
   }
@@ -1833,7 +2185,7 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
 
   // Mail gorget between chin and breastplate (a bare neck under the Spartan's helm).
   c.part();
-  c.shape(15 + U, 15 + U, () => [cx - 2.4, cx + 2.4], LK.spartan || LK.swan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
+  c.shape(15 + U, 15 + U, () => [cx - 2.4, cx + 2.4], LK.spartan || LK.swan || LK.amazon ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
   if (LK.king && !LK.afonso) ermineCollar(c, cx - 4.8, cx + 4.8, 15 + U);
   // The idle moment may nudge the head (a tilt, a nod): drawn through a shifted canvas.
   const hd = p.head;
@@ -1845,14 +2197,15 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
     corinthianFront(c, cx, U);
   } else if (LK.king) {
     kingHeadDown(c, cx, U, !!p.blink, p.look ?? 0);
-  } else if (LK.swan) {
+  } else if (LK.swan || LK.amazon) {
     swanHeadDown(c, cx, U, p);
   } else {
     // Head: face framed by the helmet's cheek guards, a plume on top.
     if (LK.valkyrie && LK.storm) {
       // Her mane falls either side of the face, over the shoulders.
-      mane(c, 11 + U, 19 + U, (u) => [cx - 4.9 + u * 0.4 + p.cape * u * 0.4, cx - 2.2 - u * 0.2 + p.cape * u * 0.4]);
-      mane(c, 11 + U, 19 + U, (u) => [cx + 2.2 + u * 0.2 + p.cape * u * 0.4, cx + 4.9 - u * 0.4 + p.cape * u * 0.4]);
+      const fall = (LK.aurora ? 20 : 19) + U;
+      mane(c, 11 + U, fall, (u) => [cx - 4.9 + u * 0.4 + p.cape * u * 0.4, cx - 2.2 - u * 0.2 + p.cape * u * 0.4]);
+      mane(c, 11 + U, fall, (u) => [cx + 2.2 + u * 0.2 + p.cape * u * 0.4, cx + 4.9 - u * 0.4 + p.cape * u * 0.4]);
     }
     if (LK.sun) sunHalo(c, cx, 8 + U);
     c.part();
@@ -1915,8 +2268,8 @@ function drawDown(c: PixelCanvas, p: Pose): WarriorMeta {
   if (LK.valkyrie && !LK.storm) {
     // Her braids, falling from under the helm over her shoulders.
     if (hd) c.offset(BODY_X + hd.x, BODY_Y + hd.y);
-    braid(c, cx - 3, 13 + U, (LK.swan ? 23 : 19) + U, p.cape * 0.5);
-    braid(c, cx + 4, 13 + U, (LK.swan ? 23 : 19) + U, p.cape * 0.5);
+    braid(c, cx - 3, 13 + U, (LK.swan || LK.amazon ? 23 : 19) + U, p.cape * 0.5);
+    braid(c, cx + 4, 13 + U, (LK.swan || LK.amazon ? 23 : 19) + U, p.cape * 0.5);
     if (hd) c.offset(BODY_X, BODY_Y);
   }
   p.fx?.(c);
@@ -1950,6 +2303,7 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
   const waist = 22 + U;
   const hem = 26 + L;
   if (LK.swan) swanBodyUp(c, cx, U, L, p.cape);
+  else if (LK.amazon) amazonBodyUp(c, cx, U, L, p.cape);
   else {
   c.part();
   c.shape(top, waist - 1, (y) => {
@@ -1998,12 +2352,12 @@ function drawUp(c: PixelCanvas, p: Pose): WarriorMeta {
     // The ermine collar over the cape's shoulders, then his head.
     if (!LK.afonso) ermineCollar(c, cx - 4.8, cx + 4.8, Math.round(ct));
     kingHeadUp(c, cx, U, p.cape);
-  } else if (LK.swan) {
+  } else if (LK.swan || LK.amazon) {
     swanHeadUp(c, cx, U, p);
   } else {
   // Helmet from behind, with a mail neck guard; the plume runs down its back.
   c.part();
-  c.shape(13 + U, 15 + U, () => [cx - 3.4, cx + 3.4], LK.spartan || LK.swan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0));
+  c.shape(13 + U, 15 + U, () => [cx - 3.4, cx + 3.4], LK.spartan || LK.swan || LK.amazon ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0));
   if (LK.samurai) crest(c, cx, 5.8 + U, 'back'); // behind the helmet: only the horns show
   c.part();
   c.ellipse(cx, 10.2 + U, 4.7, 4.5, LK.plate, { normal: (_x, _y, dx, dy) => sphere(dx * 0.95, dy * 0.9 - 0.15, 1) });
@@ -2121,6 +2475,7 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
   boot(c, cx - 0.5 - p.footA, 29.7 - lift(p.footA), true);
 
   if (LK.swan) swanBodySide(c, cx, hx, S, U, L, p.cape);
+  else if (LK.amazon) amazonBodySide(c, cx, hx, S, U, L, p.cape);
   else {
   // Breastplate in profile, chest pushed forward.
   const top = 15 + U;
@@ -2145,6 +2500,11 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     c.shade(Math.round(hx - 2), top + 3, -1);
     c.shade(Math.round(hx - 1), top + 3, -1);
     c.shade(Math.round(hx - 2), top + 5, -1);
+  } else if (LK.aurora) {
+    c.spark(Math.round(hx - 2), top + 2, LK.glow.hot, 0.6);
+    c.spark(Math.round(hx - 2), top + 3, LK.glow.core, 0.8);
+    c.spark(Math.round(hx - 1), top + 3, auroraViolet(), 0.5);
+    c.spark(Math.round(hx - 2), top + 4, auroraViolet(), 0.45);
   } else if (LK.storm) {
     c.spark(Math.round(hx - 2), top + 2, LK.glow.hot, 0.7);
     c.spark(Math.round(hx - 1), top + 3, LK.glow.core, 0.7);
@@ -2171,7 +2531,7 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
 
   // Head: profile face under the helmet, cheek guard, plume streaming back.
   c.part();
-  c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.6], LK.spartan || LK.swan ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
+  c.shape(15 + U, 15 + U, () => [hx - 2.2, hx + 1.6], LK.spartan || LK.swan || LK.amazon ? LK.skin : LK.mail, (_x, _y, t) => cyl(t, 0.2));
   if (LK.king && !LK.afonso) ermineCollar(c, hx - 2.8, hx + 2.8, 15 + U);
   if (LK.headless) {
     lanternSide(c, hx, U, emberPhase(p));
@@ -2180,7 +2540,7 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     corinthianSide(c, hx, U);
   } else if (LK.king) {
     kingHeadSide(c, hx, U, !!p.blink);
-  } else if (LK.swan) {
+  } else if (LK.swan || LK.amazon) {
     swanHeadSide(c, hx, U, p);
   } else {
     c.part();
@@ -2193,7 +2553,7 @@ function drawSide(c: PixelCanvas, p: Pose): WarriorMeta {
     else c.px(hx - 3, 12 + U, EYE);
     if (LK.valkyrie && LK.storm) {
       // Her mane streaming back behind her.
-      mane(c, 11 + U, 20 + U, (u) => [hx + 0.4 + u * 0.5, hx + 4.6 + u * 1.6 + p.cape * u * 1.2]);
+      mane(c, 11 + U, (LK.aurora ? 21 : 20) + U, (u) => [hx + 0.4 + u * 0.5, hx + 4.6 + u * 1.6 + p.cape * u * 1.2]);
     } else if (LK.valkyrie) {
       // The braid behind her neck, and the far wing of the helm peeking over it.
       if (LK.sun) sunHalo(c, hx + 0.5, 8 + U);

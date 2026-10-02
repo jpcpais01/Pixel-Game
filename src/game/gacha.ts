@@ -57,6 +57,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'fighter:wukong': 'legendary',
   'alchemist:shaman': 'epic',
   'alchemist:foxglove': 'epic',
+  'valkyrie:northlight': 'epic',
   'archer:hunt': 'epic',
   'archer:wisteria': 'epic',
   'rogue:kitsune': 'epic',

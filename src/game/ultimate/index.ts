@@ -26,7 +26,7 @@ import { AsgardThunder, OdinSpear } from './valkyrie';
 import { KingsCrown } from './king';
 import { AFONSO_KIT, KING_KIT } from '../King';
 import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
-import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
+import { AMAZON_KIT, NORTH_KIT, RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
 import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
 import { HIVE_KIT, SYNTH_KIT } from '../Synth';
 import { SIEGE_MS, SwarmProtocol } from './robot';
@@ -337,7 +337,7 @@ const ULTS: Record<string, UltDef> = {
     range: 105,
     pal: SPEAR_KIT.pal,
     icon: icons.odinIcon,
-    cast: (c) => c.world.addEffect(new OdinSpear(c.world, c.tx, c.ty, c.pal, c.look === 'swan')),
+    cast: (c) => c.world.addEffect(new OdinSpear(c.world, c.tx, c.ty, c.pal, c.look === 'swan' || c.look === 'amazon', c.look === 'amazon' ? AMAZON_KIT.featherTints : undefined)),
   },
   'valkyrie:storm': {
     name: 'Thunder of Asgard',
@@ -497,6 +497,8 @@ const SKINS: Record<string, UltSkin> = {
   'druid:frostfang': { pal: FROST_MAGIC.pal, type: 'wild' },
   'valkyrie:sunshield': { pal: SUN_KIT.pal },
   'valkyrie:swan': { pal: SWAN_KIT.pal },
+  'valkyrie:amazon': { pal: AMAZON_KIT.pal },
+  'valkyrie:northlight': { pal: NORTH_KIT.pal, type: 'storm' },
   'valkyrie:raven': { pal: RAVEN_KIT.pal, type: 'storm' },
   'automaton:scrap': { pal: SCRAP_KIT.boom },
   'automaton:hive': { pal: HIVE_KIT.pal, type: 'synth' },
