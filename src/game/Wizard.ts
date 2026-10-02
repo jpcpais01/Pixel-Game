@@ -59,6 +59,26 @@ export const ARCANE_SKIN: WizardSkin = { key: 'wizard', style: ARCANE_STYLE };
 export const VOID_SKIN: WizardSkin = { key: 'wizard_void', style: VOID_STYLE };
 export const ASTRAL_SKIN: WizardSkin = { key: 'wizard_astral', style: ASTRAL_STYLE };
 
+/** The Arcanist's Prism skin: white light, split into the spectrum at its edges. */
+export const PRISM_STYLE: SpellStyle = {
+  core: 0xffffff,
+  hot: 0xe4f2ff,
+  mid: 0x9ab8ff,
+  deep: 0x7a5ae8,
+  accent: 0xffb0e0,
+  sparks: [0xff5a78, 0xffa040, 0xffe860, 0x60f090, 0x50c0ff, 0xa070ff],
+  glow: 0xb8ccff,
+  light: 0xd8e4ff,
+  flash: 0xffffff,
+  unstable: 0xff70c0,
+  fizzle: 0x9a9ab8,
+  fizzleSparks: [0x9a9ab8, 0x9ab8ff, 0xffb0e0],
+  orb: { texture: 'orb_prism_e', anim: 'orb_prism_spin' },
+  burst: { texture: 'burst_prism_e', anim: 'burst_prism_pop' },
+  spectrum: [0xff5a78, 0xffa040, 0xffe860, 0x60f090, 0x50c0ff, 0xa070ff],
+};
+export const PRISM_SKIN: WizardSkin = { key: 'wizard_prism', style: PRISM_STYLE };
+
 type State = 'free' | 'cast' | 'charge' | 'beam';
 
 export class Wizard implements Hero {

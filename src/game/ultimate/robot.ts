@@ -10,7 +10,8 @@ import type { Cast } from './types';
 //    planting its stabilisers and firing both guns for a while.
 //  - Swarm Protocol (the Synth): its chest opens and a storm of micro-drones
 //    pours out, each hunting a foe near the Synth, zapping it and moving on;
-//    when it's over they stream back in. The Hive Queen's are bees.
+//    when it's over they stream back in. The Hive Queen's are bees, the
+//    Vaporwave's little neon triangles.
 
 /** How long the mech stays planted in siege. */
 export const SIEGE_MS = 4500;
@@ -41,6 +42,7 @@ export class SwarmProtocol extends Fx {
   private g: Ink;
   private micros: Micro[] = [];
   private hive: boolean;
+  private vapor: boolean;
   private buzzT = 0;
 
   constructor(
@@ -49,6 +51,7 @@ export class SwarmProtocol extends Fx {
   ) {
     super(world, SWARM_MS);
     this.hive = c.look === 'hive';
+    this.vapor = c.look === 'vaporwave';
     this.g = this.ink(SWARM_W, SWARM_H);
     const h = c.hero;
     for (let i = 0; i < SWARM; i++) {
@@ -129,6 +132,18 @@ export class SwarmProtocol extends Fx {
     const x = Math.round(m.x);
     const y = Math.round(m.y);
     const beat = Math.floor((this.t + m.seed * 10) / 45) % 2;
+    if (this.vapor) {
+      // A neon triangle, pink or cyan by turns, with a ghost of the other colour behind it.
+      const pink = Math.floor(m.seed) % 2 === 0;
+      const ink = pink ? p.mid : p.deep;
+      const ghost = pink ? p.deep : p.mid;
+      g.put(x - Math.sign(m.vx), y + 1, ghost, 0.45);
+      g.put(x, y - 1, ink);
+      g.put(x - 1, y + 1, ink);
+      g.put(x, y + 1, beat ? p.core : ink);
+      g.put(x + 1, y + 1, ink);
+      return;
+    }
     if (this.hive) {
       // A striped bee, three wide and two tall, wings flickering over it.
       for (const [dx, c] of [[-1, 0xf4c63e], [0, 0x221f32], [1, 0xf4c63e]] as const) {

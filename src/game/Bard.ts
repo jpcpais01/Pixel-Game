@@ -7,7 +7,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
 import { heroBuffs } from './buffs';
-import { DRUM_PAL, FADISTA_HASTE, FADISTA_SONG, HARLEQUIN_HASTE, HARLEQUIN_SONG, HASTE, HOWL_PAL, HOWL_RHYTHM, Note, ORPHEUS_HASTE, ORPHEUS_SONG, RHYTHM, Shockwave, SongBurst, TROUBADOUR_SONG, VAGABOND_HASTE, VAGABOND_SONG, WILD_HASTE, WILD_SONG, type NoteKind, type SongLook } from './Songs';
+import { DRUM_PAL, SKALD_HASTE, SKALD_SONG, TAIKO_PAL, TAIKO_RHYTHM, FADISTA_HASTE, FADISTA_SONG, HARLEQUIN_HASTE, HARLEQUIN_SONG, HASTE, HOWL_PAL, HOWL_RHYTHM, Note, ORPHEUS_HASTE, ORPHEUS_SONG, RHYTHM, Shockwave, SongBurst, TROUBADOUR_SONG, VAGABOND_HASTE, VAGABOND_SONG, WILD_HASTE, WILD_SONG, type NoteKind, type SongLook } from './Songs';
 import type { Pal } from './ultimate/ink';
 import type { BuffDef } from './buffs';
 import type { Aim, Hero } from './characters';
@@ -55,6 +55,8 @@ export interface BardKit {
   /** The colours of the drummer's blows, and his rhythm's buff as it shows (the same buff in each look). */
   drumPal: Pal;
   rhythm: BuffDef;
+  /** The drummer's blows break like brushstrokes (the taiko's). */
+  brush?: boolean;
 }
 
 /**
@@ -94,6 +96,9 @@ export const FADISTA_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_fadista', song
 /** The minstrel as Orpheus, with his golden lyre: gold and underworld violet. */
 export const ORPHEUS_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_orpheus', song: ORPHEUS_SONG, haste: ORPHEUS_HASTE };
 
+/** The minstrel as a skald of the north, with his round lyre: runes in pale gold and ice blue. */
+export const SKALD_KIT: BardKit = { ...MINSTREL_KIT, key: 'bard_skald', song: SKALD_SONG, haste: SKALD_HASTE };
+
 /**
  * The war drummer: tougher and slower, beating waves of sound out of his drum
  * that throw foes back, two beats and a boom; the battle rhythm makes every
@@ -119,6 +124,9 @@ export const DRUMMER_KIT: BardKit = {
 
 /** The war drummer in his moonhowl skin: the same drums, beaten in spirit light. */
 export const HOWL_KIT: BardKit = { ...DRUMMER_KIT, key: 'bard_howl', drumPal: HOWL_PAL, rhythm: HOWL_RHYTHM };
+
+/** The war drummer at the odaiko: the same blows, breaking like brushed waves in vermilion and gold. */
+export const TAIKO_KIT: BardKit = { ...DRUMMER_KIT, key: 'bard_taiko', drumPal: TAIKO_PAL, rhythm: TAIKO_RHYTHM, brush: true };
 
 const CHAIN: Act[] = ['beat', 'beat2', 'boom'];
 
@@ -308,7 +316,7 @@ export class Bard implements Hero {
     const oy = this.y - 8;
     const angle = Math.atan2(u.y, u.x);
     sound.drumBeat(this.world.pan(ox), big);
-    this.world.addEffect(new Shockwave(this.world, ox + u.x * 4, this.y - 6 + u.y * 3, angle, b.spread, b.radius + 4, this.kit.drumPal, big ? 340 : 260));
+    this.world.addEffect(new Shockwave(this.world, ox + u.x * 4, this.y - 6 + u.y * 3, angle, b.spread, b.radius + 4, this.kit.drumPal, big ? 340 : 260, this.kit.brush));
     const hits = this.world.melee({ kind: 'arc', x: ox, y: oy, radius: b.radius, angle, spread: b.spread }, { damage: b.damage, heavy: big, knock: b.knock, fromX: ox, fromY: oy });
     for (const h of hits) this.world.debris(this.kit.drumPal.tints, snap(h.x), snap(h.y), big ? 6 : 4, h.y + 20);
     if (big) this.world.cameras.main.shake(90, 0.0012);
@@ -320,7 +328,7 @@ export class Bard implements Hero {
     heroBuffs.add(this.kit.rhythm);
     this.world.buffGained(this.kit.rhythm);
     sound.drumBeat(this.world.pan(this.x), true);
-    this.world.addEffect(new Shockwave(this.world, this.x, this.y - 4, 0, Math.PI, 40, this.kit.drumPal, 420));
+    this.world.addEffect(new Shockwave(this.world, this.x, this.y - 4, 0, Math.PI, 40, this.kit.drumPal, 420, this.kit.brush));
     this.world.melee({ kind: 'circle', x: this.x, y: this.y - 6, radius: 32 }, { damage: 6, heavy: false, knock: 200, fromX: this.x, fromY: this.y - 6 });
     this.world.cameras.main.shake(120, 0.0015);
   }

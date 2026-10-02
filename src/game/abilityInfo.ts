@@ -242,4 +242,39 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Pours out a long cone of fire that turns with the aim.',
     special: 'A flame serpent coils round the spot, raking, then dives in a blast.',
   },
+  'lightwright.lightwright': {
+    attack: 'A ray of focused sunlight instantly sears the first foe in line.',
+    ability: 'A hovering prism sweeps spectrum beams round it, then shatters.',
+    special: 'A great mirror focuses a steerable heat ray that scorches the ground.',
+  },
+  'transmuter.transmuter': {
+    attack: 'Flicks a quicksilver bead that bursts and splits after two more foes.',
+    ability: 'Chalks a circle; foes in it turn to lead: held, and struck 30% harder.',
+    special: 'A golden array gilds foes round her into statues, then shatters them.',
+  },
+  'aquanaut.aquanaut': {
+    attack: 'A slow, heavy harpoon that pierces up to two foes and sticks in the ground.',
+    ability: 'A chain hook drags the first foe to him, stunned; bosses are yanked and slowed.',
+    special: 'A steam torpedo runs along the ground and bursts, knocking foes back and soaking them.',
+  },
+  'bear.bear': {
+    attack: 'Two wide, heavy swipes, then a two-paw smash that cracks the ground and throws foes back.',
+    ability: 'Rears up and slams down: the earth cracks round him, striking and stunning every foe near.',
+    special: 'Grows huge in a rage: takes far less harm, and every maul blow sends a shockwave ahead.',
+  },
+  'brewmaster.brewmaster': {
+    attack: 'Two paddle swings, then a belly-first slam that throws foes back.',
+    ability: 'A swig from the jug spat through a flame: a short cone of fire that burns.',
+    special: 'A huge keg rolls along the aim, bowling foes aside, then bursts in foam.',
+  },
+  'aviator.aviator': {
+    attack: 'Quick flare shots that burst in sparks on a foe; every third is a bigger star shell.',
+    ability: 'The jetpack hops her to a spot, untouchable in the air; the landing blasts foes back.',
+    special: 'Her biplane roars over along the aim, dropping a line of bombs, the last one biggest.',
+  },
+  'pyrotechnist.pyrotechnist': {
+    attack: 'Fires stars of coloured fire that pop on the first foe, singeing those near.',
+    ability: 'Tosses a string of firecrackers; each bang hurts and staggers foes near it.',
+    special: 'Six rockets burst over foes near the spot, raining glitter that burns.',
+  },
 };

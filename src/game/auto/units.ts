@@ -48,6 +48,8 @@ export interface Spell {
   stun?: number;
   /** Seconds foes attack 40% slower. */
   slow?: number;
+  /** Seconds foes take 30% more damage (turned to lead). */
+  brittle?: number;
   /** Extra damage over 3 s, in seconds of the caster's attack damage. */
   burn?: number;
   /** Cells foes are thrown back. */
@@ -64,6 +66,8 @@ export interface Spell {
   dodge?: number;
   /** How long a haste lasts. */
   dur?: number;
+  /** Drag each foe struck to a free cell beside the caster (the Aquanaut's reel). */
+  pull?: boolean;
   fx: SpellFx;
   /** The hero's own move played for it. */
   anim: string;
@@ -216,6 +220,9 @@ const DEFS: Record<string, Def> = {
   'necromancer.barrow': { cost: 3, origin: 'forged', range: 1, attack: ['swing1', 'swing2', 'slam'], mana: 90,
     skill: { name: 'Open grave', cd: 7, kind: 'blast', aim: 'crowd', r: 1.1, dmg: 1.4, stun: 1.6, delay: 0.4, fx: 'souls', anim: 'dig' },
     ult: { kind: 'nova', aim: 'self', r: 2.2, dmg: 3.6, knock: 1, stun: 0.5, fx: 'haunt', anim: 'dig' } },
+  'aviator.aviator': { cost: 3, origin: 'forged', range: 3, attack: ['shoot'], missile: 'spark', mana: 80,
+    skill: { name: 'Rocket hop', cd: 7, kind: 'leap', aim: 'crowd', r: 1.2, dmg: 1.6, knock: 1, fx: 'fire', anim: 'hop' },
+    ult: { kind: 'beam', aim: 'target', r: 6, dmg: 4.2, fx: 'fire', anim: 'signal' } },
 
   // Mystics: the Bard's and the Druid's
   'bard.minstrel': { cost: 1, origin: 'show', range: 3, attack: ['strum'], missile: 'note', mana: 80,
@@ -250,6 +257,30 @@ const DEFS: Record<string, Def> = {
   'necromancer.reaper': { cost: 4, origin: 'blade', range: 1, attack: ['reap1', 'reap2', 'reap3'], mana: 80,
     skill: { name: "Death's step", cd: 6, kind: 'dash', aim: 'weak', dmg: 1.8, dodge: 0.4, fx: 'shadow', anim: 'step' },
     ult: { kind: 'nova', aim: 'self', r: 2, dmg: 4, drain: 0.5, fx: 'souls', anim: 'harvest' } },
+  'lightwright.lightwright': { cost: 3, origin: 'forged', range: 3, attack: ['focus'], missile: 'orb', mana: 80,
+    skill: { name: 'Rainbow prism', cd: 7, kind: 'blast', aim: 'crowd', r: 1.4, dmg: 1.8, delay: 0.4, fx: 'light', anim: 'toss' },
+    ult: { kind: 'beam', aim: 'target', r: 5, dmg: 4.4, burn: 1, fx: 'fire', anim: 'unveil' } },
+  'transmuter.transmuter': { cost: 3, origin: 'forged', range: 3, attack: ['flick'], missile: 'flask', mana: 80,
+    skill: { name: 'Transmutation circle', cd: 7, kind: 'blast', aim: 'crowd', r: 1.2, dmg: 0.6, stun: 1.5, brittle: 2.5, delay: 0.5, fx: 'steel', anim: 'inscribe' },
+    ult: { kind: 'blast', aim: 'crowd', r: 1.8, dmg: 4.2, stun: 1, delay: 0.9, fx: 'steel', anim: 'opus' } },
+
+  // The Aquanaut: a sturdy diver who stands near the front and hauls a backliner in to him.
+  'aquanaut.aquanaut': { cost: 3, origin: 'forged', range: 2, attack: ['fire'], missile: 'arrow', mana: 90,
+    skill: { name: 'Reel in', cd: 7, kind: 'bolt', aim: 'far', dmg: 1.2, stun: 1, pull: true, fx: 'water', anim: 'hook' },
+    ult: { kind: 'blast', aim: 'target', r: 1.6, dmg: 4, knock: 1, slow: 2.5, delay: 0.7, fx: 'water', anim: 'surge' } },
+  // The Bear: a Wild frontline wall
+  'bear.bear': { cost: 3, origin: 'wild', range: 1, attack: ['swipe', 'swipe2', 'smash'], mana: 90,
+    skill: { name: 'Earthsplitter', cd: 7, kind: 'nova', aim: 'self', r: 1.6, dmg: 1.4, stun: 1, fx: 'quake', anim: 'quake' },
+    ult: { kind: 'mend', aim: 'self', r: 0, dmg: 0, shield: 0.35, haste: 0.4, dur: 6, fx: 'roar', anim: 'rally' } },
+
+  // The Brewmaster: a front-line bruiser of the forge's own
+  'brewmaster.brewmaster': { cost: 3, origin: 'forged', range: 1, attack: ['swing', 'swing2', 'slam'], mana: 90,
+    skill: { name: 'Firebreath', cd: 7, kind: 'beam', aim: 'target', r: 2, dmg: 1.4, burn: 1.2, fx: 'flame', anim: 'breath' },
+    ult: { kind: 'beam', aim: 'target', r: 6, dmg: 3.6, knock: 1, stun: 0.6, fx: 'quake', anim: 'heave' } },
+  // The Pyrotechnist, a Forged backliner with the Alchemists
+  'pyrotechnist.pyrotechnist': { cost: 3, origin: 'forged', range: 3, attack: ['fire'], missile: 'fire', mana: 80,
+    skill: { name: 'Firecrackers', cd: 7, kind: 'blast', aim: 'crowd', r: 1.2, dmg: 1.6, stun: 0.6, delay: 0.5, fx: 'fire', anim: 'toss' },
+    ult: { kind: 'rain', aim: 'crowd', r: 2, n: 6, dmg: 7.5, delay: 1.4, fx: 'fire', anim: 'finale' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

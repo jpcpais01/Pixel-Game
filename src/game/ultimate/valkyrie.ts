@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import { sound } from '../../audio';
 import type { Hurtbox } from '../combat';
 import { onGround } from '../Toxins';
-import { DriftFeathers, Thunderbolt } from '../Valkyrie';
+import { DriftFeathers, Thunderbolt, type FeatherTint } from '../Valkyrie';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { bloom, clamp01, dither, easeIn, easeOut, flare, Fx, GROUND, hash, line, ring, rune, strikeGround, type Ink, type Pal } from './ink';
 import type { Cast } from './types';
@@ -77,6 +77,8 @@ export class OdinSpear extends Fx {
     private p: Pal,
     /** The Swan Maiden's Swan Song: the runes burst into a ring of drifting white feathers. */
     private feathers = false,
+    /** The feathers' own colours (the Amazon's macaw feathers). */
+    private tints?: FeatherTint[],
   ) {
     super(world, ODIN_LIFE);
     this.spear = this.ink(28, 100);
@@ -162,7 +164,7 @@ export class OdinSpear extends Fx {
     if (this.feathers) {
       for (let i = 0; i < SWAN_FEATHER_PUFFS; i++) {
         const q = (i / SWAN_FEATHER_PUFFS) * Math.PI * 2;
-        world.addEffect(new DriftFeathers(world, x + Math.cos(q) * RUNE_R * 0.8, y + Math.sin(q) * RUNE_R * 0.8 * GROUND - 14, 2, p));
+        world.addEffect(new DriftFeathers(world, x + Math.cos(q) * RUNE_R * 0.8, y + Math.sin(q) * RUNE_R * 0.8 * GROUND - 14, 2, p, this.tints));
       }
     }
   }

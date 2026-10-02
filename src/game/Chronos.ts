@@ -31,6 +31,18 @@ export const PRIMAVERA_PAL: Pal = pal(0xfffaf2, 0xffd0de, 0xf48cae, 0x4cb88c, 0x
 const PETALS = [0xffa8c4, 0xffd0de, 0xfff4ea, 0x8ed8a8];
 /** The blossoms a flower clock wears at its hours, in turn. */
 const BLOOMS = [0xffa8c4, 0xfff6ee, 0xffc8a4];
+/** The Sandglass's: dune gold over desert indigo. */
+export const SANDGLASS_PAL: Pal = pal(0xfff8e0, 0xffe08a, 0xe8b04a, 0x3a48b0, 0xffd070);
+/** The grains the Sandglass's magic sheds, palest to darkest gold. */
+export const GRAINS = [0xfff4c0, 0xffd870, 0xe0a83a, 0xb87a2a];
+/** The Rewind's: hot magenta and electric cyan over midnight purple. */
+export const VHS_PAL: Pal = pal(0xfff0ff, 0xff6ae0, 0x30e8ff, 0x3a1a8a, 0xff5ad8);
+/** The Rewind's two neon lights, laid down apart like a tape out of true. */
+const NEON_PINK = [0xff5ad0, 0xffb4ee];
+const NEON_CYAN = [0x30e8ff, 0xb4faff];
+
+/** A stasis clock dressed for a skin: Primavera's flowers, or the Sandglass's sand. */
+export type ClockDress = 'flowers' | 'sand';
 
 /** How a bolt (or a shard) flies and what it does. */
 export interface BoltKind {
@@ -51,6 +63,10 @@ export interface BoltKind {
   lit: boolean;
   /** Primavera's: it trails drifting petals, and bursts into them. */
   petals?: boolean;
+  /** The Sandglass's: it trails falling grains, and bursts into sand. */
+  sand?: boolean;
+  /** The Rewind's: it trails magenta and cyan a pixel apart, like a worn tape. */
+  scan?: boolean;
 }
 
 /** Is a body standing at (x, y) close enough to the ground point (gx, gy) for a bolt passing over it to strike it? */
@@ -119,6 +135,14 @@ export class TimeBolt implements Effect {
       this.trailT = 45;
       this.world.debris(this.kind.pal.tints, snap(this.x - this.ux * 4), snap(this.y - BOLT_H - this.uy * 4), 1, this.y - 0.2, 'trail');
       if (this.kind.petals && Math.random() < 0.4) this.world.debris(PETALS, snap(this.x - this.ux * 5), snap(this.y - BOLT_H - this.uy * 5), 1, this.y - 0.2, 'spores');
+      if (this.kind.sand && Math.random() < 0.5) this.world.debris(GRAINS, snap(this.x - this.ux * 5), snap(this.y - BOLT_H - this.uy * 5) + 1, 1, this.y - 0.2, 'spores');
+      if (this.kind.scan) {
+        // The two colours a pixel either side of its path, as if the picture had slipped.
+        const tx = snap(this.x - this.ux * 6);
+        const ty = snap(this.y - BOLT_H - this.uy * 6);
+        this.world.debris(NEON_PINK, tx - 1, ty, 1, this.y - 0.2, 'trail');
+        this.world.debris(NEON_CYAN, tx + 1, ty, 1, this.y - 0.2, 'trail');
+      }
     }
   }
 
@@ -126,7 +150,8 @@ export class TimeBolt implements Effect {
     const k = this.kind;
     h.hurt({ damage: k.damage, heavy: false, knock: k.rift ? 70 : 35, fromX: h.x - this.ux * 8, fromY: h.y - h.bodyY - this.uy * 8 });
     if (k.slow < 1 && h.slow) h.slow(Math.max(k.slowFloor, (h.tempo ?? 1) * k.slow), k.slowMs, k.pal.hot);
-    this.world.debris(k.petals ? PETALS : k.pal.tints, snap(h.x - this.ux * (h.radius - 1)), snap(h.y - h.bodyY), 6, h.y + 20, k.petals ? 'spores' : 'burst');
+    const bits = k.petals ? PETALS : k.sand ? GRAINS : k.pal.tints;
+    this.world.debris(bits, snap(h.x - this.ux * (h.radius - 1)), snap(h.y - h.bodyY), k.sand ? 9 : 6, h.y + 20, k.petals || k.sand ? 'spores' : 'burst');
     sound.chronoHit(this.world.pan(h.x), k.rift);
     this.pop(1);
   }
@@ -225,8 +250,8 @@ export class StasisClock extends Fx {
     private y: number,
     private p: Pal,
     private damage: number,
-    /** Primavera's flower clock: blossoms at the hours, each opening as the hand reaches it. */
-    private flowers = false,
+    /** Primavera's flower clock (blossoms opening at the hours) or the Sandglass's (a river of sand round the rim). */
+    private dress?: ClockDress,
   ) {
     super(world, STASIS_TIME + 420);
     this.face = this.ink(STASIS_R * 2 + 14, Math.ceil(STASIS_R * 2 * GROUND) + 14);
@@ -242,7 +267,7 @@ export class StasisClock extends Fx {
       const open = easeOut(t / 260);
       const fade = Math.min(1, (STASIS_TIME - t) / 120 + 0.6);
       const r = STASIS_R * open;
-      clockFace(g, x, y, r, p, open * fade, Math.floor((t / STASIS_TIME) * 12) / 12, t / STASIS_TIME / 12, GROUND, this.flowers);
+      clockFace(g, x, y, r, p, open * fade, Math.floor((t / STASIS_TIME) * 12) / 12, t / STASIS_TIME / 12, GROUND, this.dress);
       // Everything on it is held all but still, and the hold keeps being renewed.
       this.holdT -= dt;
       if (this.holdT <= 0) {
@@ -268,7 +293,8 @@ export class StasisClock extends Fx {
     sound.hourStrike(this.world.pan(x));
     flare(this.world, x, y - 6, 110, p.light, 2.6, 500);
     bloom(this.world, x, y - 4, p.hot, 2.2, 380, y + 30, 0.8);
-    this.world.debris(this.flowers ? PETALS : p.tints, snap(x), snap(y) - 4, this.flowers ? 24 : 16, y + 20, 'spores');
+    const bits = this.dress === 'flowers' ? PETALS : this.dress === 'sand' ? GRAINS : p.tints;
+    this.world.debris(bits, snap(x), snap(y) - 4, this.dress ? 24 : 16, y + 20, 'spores');
   }
 }
 
@@ -277,7 +303,7 @@ export class StasisClock extends Fx {
  * quarters brighter), and two hands from the middle. `minute` and `hour` are
  * fractions of a turn from twelve.
  */
-export function clockFace(g: Ink, x: number, y: number, r: number, p: Pal, a: number, minute: number, hour: number, sq = GROUND, flowers = false): void {
+export function clockFace(g: Ink, x: number, y: number, r: number, p: Pal, a: number, minute: number, hour: number, sq = GROUND, dress?: ClockDress): void {
   if (r < 3 || a <= 0) return;
   ring(g, x, y, r, 1.4, p, a, sq);
   circle(g, x, y, r * 0.78, p.mid, a * 0.8, sq);
@@ -297,7 +323,8 @@ export function clockFace(g: Ink, x: number, y: number, r: number, p: Pal, a: nu
     line(g, x, y, ex, ey, c0, a);
     line(g, x + 1, y, ex + 1, ey, c1, a * 0.5);
   };
-  if (flowers) flowerHours(g, x, y, r, a, minute, sq);
+  if (dress === 'flowers') flowerHours(g, x, y, r, a, minute, sq);
+  else if (dress === 'sand') sandHours(g, x, y, r, a, minute, sq);
   hand(hour, 0.4, p.hot, p.mid);
   hand(minute, 0.7, p.core, p.hot);
   g.put(x, y, p.core, a);
@@ -333,5 +360,26 @@ function flowerHours(g: Ink, x: number, y: number, r: number, a: number, minute:
     for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) for (let i = 1; i <= k; i++) g.put(fx + dx * i, fy + dy * i, col, a);
     if (k > 1) for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) g.put(fx + dx, fy + dy, col, a * 0.7);
     g.put(fx, fy, 0xfff4a8, a);
+  }
+}
+
+/**
+ * A sand clock's hours: a river of grains pouring round the rim behind the
+ * minute hand, thickest where the hand is and thinning out behind it, and a
+ * little dune heaped at each quarter.
+ */
+function sandHours(g: Ink, x: number, y: number, r: number, a: number, minute: number, sq: number): void {
+  const n = Math.max(24, Math.round(r * 1.4));
+  for (let i = 0; i < n; i++) {
+    const th = -Math.PI / 2 + (minute - (i / n) * 0.35) * Math.PI * 2;
+    // Each grain a little in or out of the river's line, the same every frame.
+    const rr = r * (0.84 + ((i * 37) % 7) / 60);
+    g.put(x + Math.cos(th) * rr, y + Math.sin(th) * rr * sq, GRAINS[i % 4], a * (1 - (i / n) * 0.85));
+  }
+  for (let h = 0; h < 12; h += 3) {
+    const th = -Math.PI / 2 + (h / 12) * Math.PI * 2;
+    const fx = Math.round(x + Math.cos(th) * r * 0.9);
+    const fy = Math.round(y + Math.sin(th) * r * 0.9 * sq);
+    for (const [dx, dy, c] of [[-1, 0, 2], [0, 0, 1], [1, 0, 2], [0, -1, 0]] as const) g.put(fx + dx, fy + dy, GRAINS[c], a);
   }
 }

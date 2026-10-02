@@ -30,19 +30,40 @@ interface Cricket {
   next: number;
 }
 
+/** Where the creatures' calls are written: the live mixer, or a baked chunk's stems (see Stream). */
+interface Calls {
+  m: Mixer;
+  /** Birds, crickets, owls, frogs and the woodpecker, with their reverb. */
+  nature: AudioNode;
+  /** The fire's crackle (mono), under the fire's live level. */
+  fire: AudioNode;
+  /** The brook's bubbles (mono), under its live level and side. */
+  water: AudioNode;
+  /** The live time that is time 0 of `m`'s context. */
+  origin: number;
+}
+
 /**
  * The world's bed of sound. Day: wind in the leaves and a few birds that each
  * keep their own song. Night: crickets and the odd owl. The braziers crackle
  * louder the closer you stand.
+ *
+ * Two halves: the beds (wind, leaves, the fire's roar, the brook's rush) are a
+ * few endless noise loops whose levels move live; the calls (every bird, cricket,
+ * crackle and bubble) are written a chunk at a time into a baked stream, so the
+ * live audio thread never builds them note by note.
  */
 export class Ambience {
   private m: Mixer;
-  private day: GainNode;
-  private night: GainNode;
+  /** Nature's level: 1 in a world, 0 out in the void. */
+  private nature: GainNode;
   private wind: GainNode;
   private windTone: BiquadFilterNode;
   private leaves: GainNode;
   private fire: GainNode;
+  private bubbles: GainNode;
+  private gurgle: StereoPannerNode;
+  private calls: Calls;
   private birds: Bird[];
   private crickets: Cricket[];
   private daylight = 0;
@@ -56,7 +77,7 @@ export class Ambience {
   private nextOwl = 0;
   /** The forest's water, frogs and woodpecker: built the first time the Everwood is entered. */
   private wild: Wild | null = null;
-  private water: { level: GainNode; pan: StereoPannerNode; gurgle: StereoPannerNode } | null = null;
+  private water: { level: GainNode; pan: StereoPannerNode } | null = null;
   private nextBubble = 0;
   private nextFrog = 0;
   private nextPeck = 0;
@@ -64,8 +85,7 @@ export class Ambience {
   constructor(m: Mixer) {
     this.m = m;
     const ctx = m.ctx;
-    this.day = gain(ctx, 0, m.ambience);
-    this.night = gain(ctx, 1, m.ambience);
+    this.nature = gain(ctx, 1, m.ambience);
 
     // Wind: slow pink noise through a wandering bandpass.
     this.wind = gain(ctx, 0.3, m.ambience);
@@ -89,6 +109,13 @@ export class Ambience {
     f.connect(roar);
     f.start();
 
+    // The brook's bubbles: on the stream's side, louder the nearer it runs.
+    this.gurgle = panner(ctx, 0, m.ambience);
+    this.gurgle.connect(gain(ctx, 0.3, m.reverb));
+    this.bubbles = gain(ctx, 0, this.gurgle);
+
+    this.calls = { m, nature: this.nature, fire: this.fire, water: this.bubbles, origin: 0 };
+
     const calls: Call[] = ['chirps', 'whistle', 'trill', 'warble'];
     this.birds = calls.map((call, i) => ({
       call,
@@ -106,12 +133,26 @@ export class Ambience {
     this.nextOwl = rand(12, 25);
   }
 
+  /** The live places a baked chunk of calls plays into: nature (stereo), fire and water (mono). */
+  get stems(): { dest: AudioNode; stereo: boolean }[] {
+    return [
+      { dest: this.nature, stereo: true },
+      { dest: this.fire, stereo: false },
+      { dest: this.bubbles, stereo: false },
+    ];
+  }
+
+  /** Write the calls into a bake mixer's stems for the chunk starting at live time `origin`. */
+  bindCalls(m: Mixer, stems: AudioNode[], origin: number): void {
+    // Nature goes in by the bake mixer's ambience bus: it and the reverb's return
+    // both reach that mixer's master, which is stem 0.
+    this.calls = { m, nature: m.ambience, fire: stems[1], water: stems[2], origin };
+  }
+
   /** 0 = night, 1 = full day. */
   setDaylight(d: number, t: number): void {
     if (Math.abs(d - this.daylight) < 0.005) return;
     this.daylight = d;
-    this.day.gain.setTargetAtTime(d * this.outdoors, t, 0.3);
-    this.night.gain.setTargetAtTime((1 - d) * this.outdoors, t, 0.3);
     this.wind.gain.setTargetAtTime(this.windLevel(), t, 0.3);
   }
 
@@ -120,8 +161,7 @@ export class Ambience {
     const k = on ? 1 : 0;
     if (k === this.outdoors) return;
     this.outdoors = k;
-    this.day.gain.setTargetAtTime(this.daylight * k, t, 0.3);
-    this.night.gain.setTargetAtTime((1 - this.daylight) * k, t, 0.3);
+    this.nature.gain.setTargetAtTime(k, t, 0.3);
     this.wind.gain.setTargetAtTime(this.windLevel(), t, 0.3);
   }
 
@@ -145,21 +185,20 @@ export class Ambience {
       const n = this.m.noiseLoop(false);
       n.connect(shelf);
       n.start();
-      const gurgle = panner(ctx, 0, this.m.ambience);
-      gurgle.connect(gain(ctx, 0.3, this.m.reverb));
-      this.water = { level, pan, gurgle };
+      this.water = { level, pan };
       this.nextPeck = t + rand(12, 30);
     }
     if (!this.water) return;
     const rush = w ? Math.pow(w.stream, 1.6) * 0.075 : 0;
     this.water.level.gain.setTargetAtTime(rush * this.outdoors, t, 0.4);
     this.water.pan.pan.setTargetAtTime(w ? w.streamPan * 0.8 : 0, t, 0.4);
-    this.water.gurgle.pan.setTargetAtTime(w ? w.streamPan * 0.8 : 0, t, 0.4);
+    this.gurgle.pan.setTargetAtTime(w ? w.streamPan * 0.8 : 0, t, 0.4);
+    this.bubbles.gain.setTargetAtTime(w ? w.stream * this.outdoors : 0, t, 0.4);
   }
 
+  /** The beds' live movement: gusts and the leaves' flutter. */
   tick(now: number, until: number): void {
     const catchUp = (x: number) => (x < now - 0.5 ? now + rand(0.1, 1) : x);
-    if (this.wild && this.water) this.tickWild(until, catchUp);
     this.nextGust = catchUp(this.nextGust);
     while (this.nextGust < until) {
       const t = this.nextGust;
@@ -176,11 +215,22 @@ export class Ambience {
       this.leaves.gain.setTargetAtTime(0.09 * amount * Math.pow(Math.random(), 2), t, 0.025);
       this.nextRustle += rand(0.04, 0.14);
     }
+  }
+
+  /**
+   * The calls that start before `until`. Baked, every crackle is written and the
+   * fire's live level decides how much of it is heard, so walking up to a fire
+   * brings its crackle in at once rather than a chunk later.
+   */
+  tickCalls(now: number, until: number, baked: boolean): void {
+    const catchUp = (x: number) => (x < now - 0.5 ? now + rand(0.1, 1) : x);
+    const at = (x: number) => x - this.calls.origin;
+    if (this.wild) this.tickWild(until, catchUp, at);
 
     for (const b of this.birds) {
       b.next = catchUp(b.next);
       while (b.next < until) {
-        if (this.daylight > 0.05) this.sing(b, b.next);
+        if (this.daylight > 0.05 && this.outdoors) this.sing(b, at(b.next));
         b.next += rand(3.5, 11);
       }
     }
@@ -188,7 +238,7 @@ export class Ambience {
     for (const c of this.crickets) {
       c.next = catchUp(c.next);
       while (c.next < until) {
-        if (this.daylight < 0.95) this.chirp(c, c.next);
+        if (this.daylight < 0.95 && this.outdoors) this.chirp(c, at(c.next));
         // Crickets hold steady for a while, then pause.
         c.next += c.period * rand(0.97, 1.03) + (Math.random() < 0.06 ? rand(2, 6) : 0);
       }
@@ -196,44 +246,45 @@ export class Ambience {
 
     this.nextOwl = catchUp(this.nextOwl);
     while (this.nextOwl < until) {
-      if (this.daylight < 0.3) this.owl(this.nextOwl);
+      if (this.daylight < 0.3 && this.outdoors) this.owl(at(this.nextOwl));
       this.nextOwl += rand(22, 45);
     }
 
     this.nextCrackle = catchUp(this.nextCrackle);
     while (this.nextCrackle < until) {
-      if (this.fireLevel > 0.02) this.crackle(this.nextCrackle, Math.random() < 0.08);
+      if (baked || this.fireLevel > 0.02) this.crackle(at(this.nextCrackle), Math.random() < 0.08);
       this.nextCrackle += Math.random() < 0.3 ? rand(0.01, 0.05) : rand(0.08, 0.4);
     }
   }
 
   /** The brook's bubbles and plinks, frogs by still water at night, and a woodpecker drumming somewhere by day. */
-  private tickWild(until: number, catchUp: (x: number) => number): void {
+  private tickWild(until: number, catchUp: (x: number) => number, at: (x: number) => number): void {
     const w = this.wild!;
     this.nextBubble = catchUp(this.nextBubble);
     while (this.nextBubble < until) {
-      if (w.stream > 0.08 && this.outdoors) this.bubble(this.nextBubble, w.stream);
+      if (w.stream > 0.08 && this.outdoors) this.bubble(at(this.nextBubble));
       // The nearer the brook, the busier its chatter.
       this.nextBubble += rand(0.05, 0.16) / Math.max(0.3, w.stream);
     }
     this.nextFrog = catchUp(this.nextFrog);
     while (this.nextFrog < until) {
-      if (w.pond > 0.12 && this.daylight < 0.6 && this.outdoors) this.croak(this.nextFrog, w.pond, w.pondPan);
+      if (w.pond > 0.12 && this.daylight < 0.6 && this.outdoors) this.croak(at(this.nextFrog), w.pond, w.pondPan);
       this.nextFrog += Math.random() < 0.35 ? rand(0.5, 0.9) : rand(2, 6);
     }
     this.nextPeck = catchUp(this.nextPeck);
     while (this.nextPeck < until) {
-      if (this.daylight > 0.4 && this.outdoors) this.drum(this.nextPeck);
+      if (this.daylight > 0.4 && this.outdoors) this.drum(at(this.nextPeck));
       this.nextPeck += rand(25, 60);
     }
   }
 
   /** One bubble: a tiny rising plink of water. */
-  private bubble(t: number, near: number): void {
-    const ctx = this.m.ctx;
-    const g = gain(ctx, 0, this.water!.gurgle);
+  private bubble(t: number): void {
+    const ctx = this.calls.m.ctx;
+    // Full strength here: the brook's live level (its nearness) sets how loud it is.
+    const g = gain(ctx, 0, this.calls.water);
     const dur = rand(0.025, 0.06);
-    hit(g.gain, t, 0.035 * near * rand(0.4, 1), 0.003, dur);
+    hit(g.gain, t, 0.035 * rand(0.4, 1), 0.003, dur);
     const f = rand(450, 1300);
     const o = osc(ctx, 'sine', f, g);
     sweep(o.frequency, t, f, f * rand(1.4, 2.2), dur);
@@ -243,8 +294,8 @@ export class Ambience {
 
   /** A frog's croak: a buzzing pulse train, low and wooden. */
   private croak(t: number, near: number, pan: number): void {
-    const ctx = this.m.ctx;
-    const out = this.voice(pan * 0.8 + rand(-0.15, 0.15), 0.06 * near, this.night, 0.4);
+    const ctx = this.calls.m.ctx;
+    const out = this.voice(pan * 0.8 + rand(-0.15, 0.15), 0.06 * near * (1 - this.daylight), 0.4);
     const bp = filter(ctx, 'bandpass', rand(500, 800), 3, out);
     const g = gain(ctx, 0, bp);
     const pulses = Math.floor(rand(5, 10));
@@ -261,17 +312,17 @@ export class Ambience {
 
   /** A woodpecker far off in the trees: a quick roll of knocks, speeding up and dying away. */
   private drum(t: number): void {
-    const ctx = this.m.ctx;
-    const out = this.voice(rand(-0.85, 0.85), 0.05, this.day, 0.7);
+    const ctx = this.calls.m.ctx;
+    const out = this.voice(rand(-0.85, 0.85), 0.05 * this.daylight, 0.7);
     const bp = filter(ctx, 'bandpass', rand(1400, 1900), 2.5, out);
     const knocks = Math.floor(rand(12, 20));
     let at = t;
     for (let i = 0; i < knocks; i++) {
       const g = gain(ctx, 0, bp);
       hit(g.gain, at, 1 - (i / knocks) * 0.7, 0.001, 0.02);
-      const src = this.m.noiseSource();
+      const src = this.calls.m.noiseSource();
       src.connect(g);
-      this.m.startNoise(src, at, 0.02);
+      this.calls.m.startNoise(src, at, 0.02);
       at += 0.06 - (i / knocks) * 0.02;
     }
   }
@@ -280,28 +331,28 @@ export class Ambience {
     return (0.1 + this.gust * 0.35) * (0.6 + 0.4 * this.daylight) * this.outdoors;
   }
 
-  /** A voice routed through a pan, with some of it sent into the reverb. */
-  private voice(pan: number, level: number, bus: AudioNode, wet = 0.5): GainNode {
-    const ctx = this.m.ctx;
-    const out = gain(ctx, level, panner(ctx, pan, bus));
-    out.connect(gain(ctx, wet, this.m.reverb));
+  /** A creature's voice routed through a pan into nature, with some of it sent into the reverb. */
+  private voice(pan: number, level: number, wet = 0.5): GainNode {
+    const ctx = this.calls.m.ctx;
+    const out = gain(ctx, level, panner(ctx, pan, this.calls.nature));
+    out.connect(gain(ctx, wet, this.calls.m.reverb));
     return out;
   }
 
   private tone(dest: AudioNode, t: number, f0: number, f1: number, dur: number, peak: number, type: OscillatorType = 'sine'): void {
-    const g = gain(this.m.ctx, 0, dest);
+    const g = gain(this.calls.m.ctx, 0, dest);
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(peak, t + Math.min(0.012, dur * 0.25));
     g.gain.setValueAtTime(peak, t + dur * 0.6);
     g.gain.linearRampToValueAtTime(0, t + dur);
-    const o = osc(this.m.ctx, type, f0, g);
+    const o = osc(this.calls.m.ctx, type, f0, g);
     sweep(o.frequency, t, f0, f1, dur);
     o.start(t);
     o.stop(t + dur + 0.02);
   }
 
   private sing(b: Bird, t: number): void {
-    const out = this.voice(b.pan + rand(-0.1, 0.1), 0.05 * b.level, this.day);
+    const out = this.voice(b.pan + rand(-0.1, 0.1), 0.05 * b.level * this.daylight);
     const p = b.pitch;
     switch (b.call) {
       case 'chirps': {
@@ -344,8 +395,8 @@ export class Ambience {
   }
 
   private chirp(c: Cricket, t: number): void {
-    const ctx = this.m.ctx;
-    const out = this.voice(c.pan, 0.022 * c.level, this.night, 0.25);
+    const ctx = this.calls.m.ctx;
+    const out = this.voice(c.pan, 0.022 * c.level * (1 - this.daylight), 0.25);
     const g = gain(ctx, 0, out);
     for (let i = 0; i < c.pulses; i++) {
       const at = t + i * 0.024;
@@ -360,14 +411,14 @@ export class Ambience {
   }
 
   private owl(t: number): void {
-    const out = this.voice(rand(-0.8, 0.8), 0.07, this.night, 1.2);
-    const soft = filter(this.m.ctx, 'lowpass', 900, 0.5, out);
+    const out = this.voice(rand(-0.8, 0.8), 0.07 * (1 - this.daylight), 1.2);
+    const soft = filter(this.calls.m.ctx, 'lowpass', 900, 0.5, out);
     const hoot = (at: number, dur: number) => {
-      const g = gain(this.m.ctx, 0, soft);
+      const g = gain(this.calls.m.ctx, 0, soft);
       g.gain.setValueAtTime(0, at);
       g.gain.linearRampToValueAtTime(1, at + dur * 0.35);
       g.gain.linearRampToValueAtTime(0, at + dur);
-      const o = osc(this.m.ctx, 'sine', 330, g);
+      const o = osc(this.calls.m.ctx, 'sine', 330, g);
       o.frequency.setValueAtTime(330, at);
       o.frequency.linearRampToValueAtTime(375, at + dur * 0.4);
       o.frequency.linearRampToValueAtTime(350, at + dur);
@@ -381,9 +432,9 @@ export class Ambience {
   }
 
   private crackle(t: number, pop: boolean): void {
-    const m = this.m;
+    const m = this.calls.m;
     const dur = pop ? rand(0.02, 0.04) : rand(0.003, 0.012);
-    const g = gain(m.ctx, 0, this.fire);
+    const g = gain(m.ctx, 0, this.calls.fire);
     hit(g.gain, t, pop ? 0.5 : rand(0.1, 0.3), 0.001, dur);
     const bp = filter(m.ctx, 'bandpass', pop ? rand(900, 1600) : rand(1800, 5000), 1.2, g);
     const src = m.noiseSource();

@@ -45,6 +45,8 @@ export interface NetLook {
   /** Briar: thorns standing off the cords, a leaf under each weight (a rosebud). */
   thorns?: number;
   leaf?: number;
+  /** Chain: cords drawn link by link, and sparks where it bursts (Ironbeard's). */
+  chain?: boolean;
 }
 
 /** The arbalest's: hemp cord, lead weights, a steel canister on a walnut bolt. */
@@ -67,6 +69,17 @@ export const BRIAR_NET: NetLook = {
   slow: 0x8ac060,
   thorns: 0x96402c,
   leaf: 0x2e6e24,
+};
+
+/** Ironbeard's: a net of iron chain, iron balls for its weights, on a forge-hot bolt with ember vanes. */
+export const CHAIN_NET: NetLook = {
+  cord: { core: 0xe6eef8, hot: 0xa8b4c8, mid: 0x5c6880 },
+  weight: [0x8a94a2, 0x383e48, 0x1c1f26],
+  head: [0xffd070, 0xff902a, 0xa83a10],
+  shaft: [0xbc9258, 0x987040],
+  vane: 0xf0882e,
+  slow: 0x9aa2b2,
+  chain: true,
 };
 
 /**
@@ -161,6 +174,8 @@ export class NetBolt extends Fx {
     world.debris([k.head[0], k.cord.hot, k.cord.mid], this.px, this.py - ARROW_H, 8, this.py + 2);
     // The briar net bursts in a flurry of rose petals.
     if (k.leaf !== undefined) world.debris([k.weight[0], k.weight[1], k.cord.core, k.leaf], this.px, this.py - ARROW_H, 14, this.py + 2, 'spores');
+    // The chain net's hot canister bursts in a spray of forge sparks.
+    if (k.chain) world.debris([0xfff4c8, k.head[0], k.head[1], k.head[2]], this.px, this.py - ARROW_H, 12, this.py + 2, 'burst');
     sound.netSwish(world.pan(this.px));
     for (const h of world.hurtboxesWhere((b) => b.alive && onGround(b, this.px, this.py, NET_R))) {
       h.hurt({ damage: NET_DAMAGE, heavy: false, knock: 0, fromX: this.px, fromY: this.py });
@@ -203,6 +218,11 @@ export class NetBolt extends Fx {
       const [x1, y1] = at(th, R);
       line(g, cx, cy + 1, x1, y1 + 1, 0x1a1208, 0.35 * fade);
       line(g, cx, cy, x1, y1, a % 2 ? look.cord.mid : look.cord.hot, fade);
+      // Chain: every other link catches the light.
+      if (look.chain) {
+        const n = Math.ceil(Math.hypot(x1 - cx, y1 - cy));
+        for (let j = 1; j < n; j += 2) g.put(cx + ((x1 - cx) * j) / n, cy + ((y1 - cy) * j) / n, j % 4 === 1 ? look.cord.core : look.cord.mid, fade);
+      }
       // Briar cords bristle with thorns along their length.
       if (look.thorns !== undefined) {
         for (const f of [0.35, 0.7]) g.put(cx + (x1 - cx) * f + (a % 2 ? 1 : -1), cy + (y1 - cy) * f, look.thorns, fade);
@@ -217,7 +237,7 @@ export class NetBolt extends Fx {
         const sag = 1 - Math.abs(Math.sin(th * 4)) * 0.08;
         const [x, y] = at(th, r * sag);
         g.put(x, y + 1, 0x1a1208, 0.3 * fade);
-        if (dither(Math.round(x), Math.round(y)) < 0.92) g.put(x, y, c, fade);
+        if (dither(Math.round(x), Math.round(y)) < 0.92) g.put(x, y, look.chain && i % 2 ? look.cord.core : c, fade);
       }
     }
     // The knot in the middle.

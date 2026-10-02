@@ -171,6 +171,118 @@ export function briarNetIcon(): Uint8ClampedArray {
   return px;
 }
 
+/** Ironbeard's attack: his oak-and-iron crossbow from above, iron bands on its stock, a brass cog by the butt, a forge-hot bolt in the groove. */
+export function ironCrossbowIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  const oak = ['#bc9258', '#987040', '#72502c'];
+  for (let i = 0; i <= 9; i++) {
+    const x = 2 + i;
+    const y = 13 - i;
+    put(x, y, oak[i < 3 ? 2 : i < 7 ? 1 : 0]);
+    // A stout dwarven stock: two pixels thick all along, three at the butt.
+    put(x - 1, y, oak[2]);
+    if (i < 4) put(x, y + 1, oak[2]);
+  }
+  const iron = ['#8a94a2', '#58606c', '#383e48'];
+  const prod: [number, number, number][] = [[6, 2, 2], [7, 2, 1], [8, 3, 1], [9, 4, 0], [10, 5, 0], [11, 6, 0], [12, 7, 1], [13, 8, 1], [13, 9, 2]];
+  for (const [x, y, c] of prod) put(x, y, iron[c]);
+  // Iron bands round the stock.
+  for (const [x, y] of [[5, 9], [4, 10], [8, 6], [7, 7]]) put(x, y, iron[1]);
+  // The brass cog at the butt: a hub with four teeth.
+  for (const [x, y, c] of [[2, 12, '#dcb048'], [3, 12, '#a87c24'], [2, 13, '#a87c24'], [3, 13, '#6e4e14'], [1, 11, '#fff0a0'], [4, 11, '#dcb048'], [1, 14, '#a87c24'], [4, 14, '#6e4e14']] as const) put(x, y, c);
+  outline('#0a0604');
+  // The string to the nut, the ember vanes, and the bolt's glowing head past the prod.
+  for (const [x, y] of [[7, 3], [7, 4], [7, 5], [7, 6], [12, 9], [11, 9], [10, 9], [9, 8]]) put(x, y, '#d8d0b8');
+  put(8, 7, '#987040');
+  for (const [x, y, c] of [[12, 3, '#ffd070'], [13, 2, '#fff6c8'], [13, 3, '#ff902a'], [12, 2, '#ff902a']] as const) put(x, y, c);
+  put(14, 1, '#ffb040');
+  put(6, 9, '#f0882e');
+  put(5, 8, '#c4561a');
+  return px;
+}
+
+/** Ironbeard's ability: a net of iron chain spread over the ground, its links glinting, iron balls round its rim, a hot bolt plunging in with sparks. */
+export function chainNetIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  const cx = 8;
+  const cy = 10;
+  const inside = (x: number, y: number, k = 1) => ((x + 0.5 - cx) / (7 * k)) ** 2 + ((y + 0.5 - cy) / (4.6 * k)) ** 2 <= 1;
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (inside(x, y) && !inside(x, y, 0.8)) put(x, y, (x + y) & 1 ? '#5a606c' : '#8a92a0');
+  outline('#06070a');
+  // The mesh: chain on the diagonals, link by link, light and dark.
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      if (!inside(x, y, 0.86)) continue;
+      if ((x + y) % 3 === 0 || (x - y + 30) % 3 === 0) put(x, y, (x & 1) === 0 ? (x + y < 17 ? '#c4ccd8' : '#8a92a0') : '#5a606c');
+    }
+  }
+  // Iron balls round its rim.
+  for (let a = 0; a < 8; a++) {
+    const th = (a / 8) * Math.PI * 2 + 0.2;
+    const x = Math.round(cx - 0.5 + Math.cos(th) * 7);
+    const y = Math.round(cy - 0.5 + Math.sin(th) * 4.6);
+    put(x, y, '#383e48');
+    put(x, y - 1, '#8a94a2');
+  }
+  // The bolt, glowing from the forge, coming down from the upper right into its middle; sparks off it.
+  for (let i = 0; i < 6; i++) put(14 - i, 1 + i, i < 2 ? '#f0882e' : '#987040');
+  put(8, 7, '#ffd070');
+  put(7, 8, '#fff6c8');
+  for (const [x, y] of [[5, 6], [10, 8], [6, 9]]) put(x, y, '#ffb040');
+  return px;
+}
+
+/** Snow Owl's attack: three birch arrows fanned from one nock, white owl-feather fletching, heads of ice, snowflakes drifting behind. */
+export function owlFanIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  const ox = 2;
+  const oy = 13;
+  for (const a of [-0.5, 0, 0.5]) {
+    const th = -Math.PI / 4 + a;
+    const ux = Math.cos(th);
+    const uy = Math.sin(th);
+    const at = (r: number, o = 0) => [Math.round(ox + ux * r - uy * o), Math.round(oy + uy * r + ux * o)] as const;
+    for (let r = 1.5; r <= 9; r += 0.5) put(...at(r), '#d6cfbc');
+    put(...at(11), '#f0fbff');
+    put(...at(10), '#b0e4ff');
+    put(...at(9.5, -0.9), '#b0e4ff');
+    put(...at(9.5, 0.9), '#62aee0');
+    put(...at(0.5, -0.9), '#ffffff');
+    put(...at(0.5, 0.9), '#a2acbe');
+  }
+  outline('#121c2a');
+  // Snowflakes drifting off behind.
+  for (const [x, y] of [[1, 8], [5, 15]]) {
+    put(x, y, '#ffffff');
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) put(x + dx, y + dy, '#c8e8ff');
+  }
+  put(4, 6, '#e8f6ff');
+  return px;
+}
+
+/** Snow Owl's ability: a leap back in an arc of white owl feathers, snow whirling off it, the gale arrow streaking ahead. */
+export function owlVaultIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  for (let i = 0; i <= 24; i++) {
+    const t = i / 24;
+    const x = Math.round(13 - t * 10);
+    const y = Math.round(13 - Math.sin(t * Math.PI) * 9);
+    put(x, y, t < 0.35 ? '#a2acbe' : t < 0.7 ? '#d0d8e6' : '#ffffff');
+    // Feathers hanging off the arc, flecked like a snowy owl's.
+    if (i % 4 === 2) {
+      put(x, y + 1, '#eef2f8');
+      put(x, y + 2, i % 8 === 2 ? '#626a7e' : '#d0d8e6');
+    }
+  }
+  outline('#121c2a');
+  for (let x = 6; x <= 14; x++) put(x, 6, x > 12 ? '#f0fbff' : '#d6cfbc');
+  put(14, 5, '#b0e4ff');
+  put(14, 7, '#b0e4ff');
+  put(15, 6, '#ffffff');
+  for (const [x, y] of [[7, 4], [9, 3], [11, 8], [8, 9]]) put(x, y, '#c8e8ff');
+  return px;
+}
+
 /** Wisteria's attack: three birch arrows fanned from one nock, violet fletching, petals drifting behind. */
 export function petalFanIcon(): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();

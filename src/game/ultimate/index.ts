@@ -3,7 +3,7 @@ import { bakedCanvas } from '../../art/canvas';
 import { sound } from '../../audio';
 import { dirOf } from '../Wizard';
 import { energy } from '../energy';
-import { CHEM_TOX, CRYO_TOX, FOXGLOVE_TOX, HEX_TOX, PLAGUE_TOX, SPIRIT_TOX, type ToxStyle } from '../Toxins';
+import { CARNIVAL_TOX, CHEM_TOX, CRYO_TOX, DIVER_TOX, FOXGLOVE_TOX, HEX_TOX, PLAGUE_TOX, SPIRIT_TOX, type ToxStyle } from '../Toxins';
 import type { Aim, CharacterDef, Hero } from '../characters';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { bloom, easeOut, flare, Fx, Ink, pal, ring, rune, type Pal } from './ink';
@@ -17,47 +17,62 @@ import { Skyhunt, skyhuntIcon } from './falconer';
 import { Encore, ThunderOfWar } from './bard';
 import { Legion, TimeStop } from './chrono';
 import { HundredCuts, quakeGate, SkyQuake } from './samurai';
-import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT } from '../Samurai';
+import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT, SNOWFALL_KIT, TENGU_KIT } from '../Samurai';
 import { schemePal } from '../Blades';
-import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
+import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL, SANDGLASS_PAL, VHS_PAL } from '../Chronos';
 import { PrimalStampede, WildWrath } from './druid';
 import { Maelstrom } from './tide';
+import { PRISM_STYLE } from '../Wizard';
 import { ABYSS_MAGIC, TIDE_MAGIC } from '../Tide';
 import { AsgardThunder, OdinSpear } from './valkyrie';
 import { KingsCrown } from './king';
-import { AFONSO_KIT, KING_KIT } from '../King';
+import { AFONSO_KIT, KING_KIT, SUNKING_KIT } from '../King';
 import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
-import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
+import { CINDER_MAGIC, MYCELIA_MAGIC } from '../Druid';
+import { AMAZON_KIT, NORTH_KIT, RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
 import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
-import { HIVE_KIT, SYNTH_KIT } from '../Synth';
+import { HIVE_KIT, SYNTH_KIT, VAPOR_KIT } from '../Synth';
 import { SIEGE_MS, SwarmProtocol } from './robot';
 import { DeadOfNight, HauntedHouse } from './phantom';
-import { POLTER_KIT, TEA_KIT } from '../Poltergeist';
-import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT } from '../Wraith';
-import { ENGINEER_KIT } from '../Engineer';
-import { EINSTEIN_KIT, SCIENTIST_KIT } from '../Scientist';
+import { BANSHEE_KIT, POLTER_KIT, TEA_KIT } from '../Poltergeist';
+import { CALA_KIT, FERRY_KIT, FIREFLY_KIT, WRAITH_KIT } from '../Wraith';
+import { ENGINEER_KIT, FORGEBEARD_KIT } from '../Engineer';
+import { EINSTEIN_KIT, SCIENTIST_KIT, TESLA_KIT } from '../Scientist';
 import { chainReaction, megaSentry } from './inventor';
-import { BENFICA_KIT, EAGLE_KIT } from '../Eagle';
-import { LION_KIT, SPORTING_KIT } from '../Lion';
-import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
+import { BENFICA_KIT, EAGLE_KIT, PHOENIX_KIT } from '../Eagle';
+import { LION_KIT, NEMEAN_KIT, SPORTING_KIT } from '../Lion';
+import { DRAGON_KIT, JADE_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
+import { LIGHTWRIGHT_KIT, STARGAZER_KIT } from '../Lightwright';
+import { burningMirror } from './lightwright';
+import { ursineWrath } from './bear';
+import { BEAR_KIT, PANDA_KIT } from '../Bear';
+import { bombingRun } from './aviator';
+import { ACE_KIT, AVIATOR_KIT } from '../Aviator';
 import { DarkDominion } from './sith';
 import { Graveyard, graveyardIcon } from './barrow';
-import { SITH_KIT, WARLORD_KIT } from '../Sith';
 import { Levitation, levitationIcon } from './sage';
 import { SAGE_KIT, STARSEER_KIT } from '../Sage';
 import { cutsGate, ThousandCuts, thousandCutsIcon } from './twin';
 import { Purge, purgeIcon } from './inquisitor';
-import { INQUISITOR_KIT, VOIDHUNTER_KIT } from '../Inquisitor';
+import { RINGBLADE_KIT, VOIDHUNTER_KIT } from '../Inquisitor';
 import { harvest, harvestIcon } from './reaper';
 import { CATRINA_KIT, REAPER_KIT } from '../Reaper';
 import { EternalWinter, eternalWinterIcon } from './lich';
 import { DROWNED_KIT, LICH_KIT } from '../Lich';
+import { EMPRESS_KIT, SITH_KIT, WARLORD_KIT } from '../Sith';
+import { magnumOpus } from './transmuter';
+import { AQUANAUT_KIT, BARNACLE_KIT } from '../Aquanaut';
+import { torpedo } from './aquanaut';
+import { Skyburst } from './fireworks';
+import { CARNIVAL_STYLE, VERMILION_STYLE } from '../Pyrotechnist';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
 import { heroBuffs } from '../buffs';
 import { heroTimers, LASTING_MS, type TimeLeft } from '../timers';
+import { BREW_KIT, JARL_KIT } from '../Brewmaster';
+import { rollingThunder } from './brewmaster';
 
 /** An effect that can say how long it has left (every `Fx`, the sentry). */
 interface TimeTeller {
@@ -82,7 +97,7 @@ const ULTS: Record<string, UltDef> = {
     range: 120,
     pal: pal(0xf2ffff, 0x9ff6ff, 0x39c6f0, 0x3a5ce0, 0x6fe4ff),
     icon: icons.singularityIcon,
-    cast: (c) => c.world.addEffect(new Singularity(c.world, c.tx, c.ty, c.pal)),
+    cast: (c) => c.world.addEffect(new Singularity(c.world, c.tx, c.ty, c.pal, c.look === 'prism' ? PRISM_STYLE.spectrum : undefined)),
   },
   'wizard:pyro': {
     name: 'Inferno',
@@ -185,7 +200,7 @@ const ULTS: Record<string, UltDef> = {
     cost: 65,
     windup: 600,
     aim: 'self',
-    pal: INQUISITOR_KIT.pal,
+    pal: RINGBLADE_KIT.pal,
     icon: purgeIcon,
     cast: (c) => c.world.addEffect(new Purge(c.world, c)),
   },
@@ -216,7 +231,7 @@ const ULTS: Record<string, UltDef> = {
     range: 110,
     pal: toxPal(PLAGUE_TOX),
     icon: icons.pestilenceIcon,
-    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : c.look === 'shaman' ? SPIRIT_TOX : c.look === 'foxglove' ? FOXGLOVE_TOX : PLAGUE_TOX)),
+    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : c.look === 'shaman' ? SPIRIT_TOX : c.look === 'foxglove' ? FOXGLOVE_TOX : c.look === 'carnevale' ? CARNIVAL_TOX : PLAGUE_TOX)),
   },
   'alchemist:chem': {
     name: 'Chem Bomb',
@@ -226,7 +241,7 @@ const ULTS: Record<string, UltDef> = {
     range: 120,
     pal: toxPal(CHEM_TOX),
     icon: icons.chemBombIcon,
-    cast: (c) => c.world.addEffect(new ChemBomb(c.world, c, c.look === 'cryo' ? CRYO_TOX : CHEM_TOX)),
+    cast: (c) => c.world.addEffect(new ChemBomb(c.world, c, c.look === 'cryo' ? CRYO_TOX : c.look === 'diver' ? DIVER_TOX : CHEM_TOX)),
   },
   'archer:ranger': {
     name: 'Great Arrow',
@@ -394,7 +409,7 @@ const ULTS: Record<string, UltDef> = {
     range: 110,
     pal: GROVE_PAL,
     icon: icons.wrathIcon,
-    cast: (c) => c.world.addEffect(new WildWrath(c.world, c.tx, c.ty, c.pal, c.look === 'titania')),
+    cast: (c) => c.world.addEffect(new WildWrath(c.world, c.tx, c.ty, c.pal, c.look === 'titania' ? 'blossom' : c.look === 'mycelia' ? 'shroom' : undefined)),
   },
   'druid:wild': {
     name: 'Primal Stampede',
@@ -403,7 +418,7 @@ const ULTS: Record<string, UltDef> = {
     aim: 'dir',
     pal: WILD_PAL,
     icon: icons.stampedeIcon,
-    cast: (c) => c.world.addEffect(new PrimalStampede(c.world, c)),
+    cast: (c) => c.world.addEffect(new PrimalStampede(c.world, c, c.look === 'cinderhide' ? CINDER_MAGIC.smoke : undefined)),
   },
   'valkyrie:spear': {
     name: 'Spear of Odin',
@@ -413,7 +428,7 @@ const ULTS: Record<string, UltDef> = {
     range: 105,
     pal: SPEAR_KIT.pal,
     icon: icons.odinIcon,
-    cast: (c) => c.world.addEffect(new OdinSpear(c.world, c.tx, c.ty, c.pal, c.look === 'swan')),
+    cast: (c) => c.world.addEffect(new OdinSpear(c.world, c.tx, c.ty, c.pal, c.look === 'swan' || c.look === 'amazon', c.look === 'amazon' ? AMAZON_KIT.featherTints : undefined)),
   },
   'valkyrie:storm': {
     name: 'Thunder of Asgard',
@@ -511,6 +526,72 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.wyrmIcon,
     cast: wyrmWrath,
   },
+  'lightwright:lightwright': {
+    name: 'Burning Mirror',
+    cost: 70,
+    windup: 600,
+    aim: 'dir',
+    pal: LIGHTWRIGHT_KIT.light.pal,
+    icon: icons.burningMirrorIcon,
+    // The mirror stands behind him while he braces and steers it (see Lightwright.braceMirror).
+    cast: burningMirror,
+  },
+  'transmuter:transmuter': {
+    name: 'Magnum Opus',
+    cost: 70,
+    windup: 600,
+    aim: 'self',
+    pal: pal(0xfffbe8, 0xffe08a, 0xf0b030, 0x8a5a14, 0xffd060),
+    icon: icons.magnumOpusIcon,
+    cast: magnumOpus,
+  },
+  'aquanaut:aquanaut': {
+    name: 'Torpedo',
+    cost: 65,
+    windup: 550,
+    aim: 'dir',
+    pal: AQUANAUT_KIT.style.pal,
+    icon: icons.torpedoIcon,
+    cast: torpedo,
+  },
+  'bear:bear': {
+    name: 'Ursine Wrath',
+    cost: 65,
+    windup: 550,
+    aim: 'self',
+    pal: BEAR_KIT.pal,
+    icon: icons.ursineWrathIcon,
+    // The rage is the bear himself (see Bear.enrage); its badge is the wrath's buff.
+    cast: ursineWrath,
+  },
+  'brewmaster:brewmaster': {
+    name: 'Rolling Thunder',
+    cost: 65,
+    windup: 620,
+    aim: 'dir',
+    pal: BREW_KIT.ult,
+    icon: icons.rollingThunderIcon,
+    cast: rollingThunder,
+  },
+  'aviator:aviator': {
+    name: 'Bombing Run',
+    cost: 65,
+    windup: 550,
+    aim: 'dir',
+    pal: AVIATOR_KIT.pal,
+    icon: icons.bombingRunIcon,
+    cast: bombingRun,
+  },
+  'pyrotechnist:pyrotechnist': {
+    name: 'Skyburst',
+    cost: 70,
+    windup: 600,
+    aim: 'spot',
+    range: 120,
+    pal: VERMILION_STYLE.pal,
+    icon: icons.skyburstIcon,
+    cast: (c) => c.world.addEffect(new Skyburst(c.world, c)),
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -521,17 +602,26 @@ const SKINS: Record<string, UltSkin> = {
   'fighter:lucha': { pal: pal(0xfff8e8, 0xffd35c, 0xff4fa0, 0x9a1c6a, 0xff80b8) },
   'fighter:champ': { pal: pal(0xf8ffe8, 0x9cff5a, 0xff8a2a, 0x1c7a1a, 0x8cf060) },
   'fighter:guardian': { pal: pal(0xfff4d0, 0xffc050, 0xff6a1a, 0xa02a10, 0xff8a30), type: 'monk' },
+  'fighter:tigerclaw': { pal: pal(0xfff4e0, 0xffb040, 0xff6a10, 0x2a1008, 0xff8a30) },
+  'fighter:wukong': { pal: pal(0xfffbe8, 0xffe070, 0xffb020, 0xb8201a, 0xffc850), type: 'monk' },
   'alchemist:shaman': { pal: toxPal(SPIRIT_TOX) },
   'alchemist:foxglove': { pal: toxPal(FOXGLOVE_TOX) },
   'alchemist:cryo': { pal: toxPal(CRYO_TOX), type: 'chem' },
+  'alchemist:carnevale': { pal: toxPal(CARNIVAL_TOX) },
+  'alchemist:diver': { pal: toxPal(DIVER_TOX), type: 'chem' },
   'archer:scarecrow': { pal: pal(0xfff4d0, 0xffb048, 0xff7a1a, 0x2a7a3a, 0x9cff9a) },
   'archer:hunt': { pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
+  'archer:apollo': { pal: pal(0xfffbe8, 0xffe890, 0xffc030, 0xb06a10, 0xffd860) },
   'archer:wisteria': { pal: pal(0xffffff, 0xe8dcff, 0xb48ae8, 0x5a7a58, 0xd0b8ff), type: 'wind' },
   'archer:snowfeather': { pal: pal(0xffffff, 0xe8f6ff, 0x9ad8ff, 0x4a86c0, 0xc0e8ff), type: 'falconer' },
   'archer:briar': { pal: pal(0xfff0f2, 0xffa0b0, 0xe8344a, 0x2e6e24, 0xff6a7a), type: 'arbalest' },
+  'archer:ironbeard': { pal: pal(0xfff4c8, 0xffb040, 0xff6a1a, 0x5a2410, 0xff8a30), type: 'arbalest' },
+  'archer:owl': { pal: pal(0xffffff, 0xe4f4ff, 0x9ccaf0, 0x4a78b0, 0xc8e8ff), type: 'wind' },
   'rogue:corsair': { pal: pal(0xfffbe0, 0xffe08a, 0xe0a030, 0x8a5018, 0xffc050) },
   'rogue:kitsune': { pal: pal(0xf4fbff, 0xa8e0ff, 0x4a9cff, 0x1a3aa0, 0x70b0ff), type: 'dancer' },
   'rogue:nightbloom': { pal: pal(0xffffff, 0xe4e8fa, 0x8a7ef0, 0x241a6a, 0xc8c0ff), type: 'dancer' },
+  'rogue:gentleman': { pal: pal(0xffffff, 0xeef0fa, 0xd0303e, 0x4a0814, 0xff5060) },
+  'rogue:cobra': { pal: pal(0xfaffe0, 0xd8ff8a, 0x5ad040, 0x0e4a26, 0xffd860), type: 'dancer' },
   'archer:storm': { pal: pal(0xf2fbff, 0xa8e4ff, 0x5ec8ff, 0x3a6ad8, 0x8ad8ff) },
   'chronomancer:moon': { pal: MOON_PAL },
   'chronomancer:aeon': { pal: AEON_PAL, type: 'paradox' },
@@ -541,14 +631,20 @@ const SKINS: Record<string, UltSkin> = {
   'necromancer:mossgrave': { pal: pal(0xecfffc, 0x9ff8ee, 0x3ad0c8, 0x0e5a68, 0x6af0e8), type: 'barrow' },
   'necromancer:catrina': { pal: CATRINA_KIT.pal, type: 'reaper' },
   'necromancer:drowned': { pal: DROWNED_KIT.winter, type: 'lich' },
+  'necromancer:gravedigger': { pal: pal(0xf6ffe0, 0xd4ff8a, 0x8ad83a, 0x3a6a1a, 0xa8f05a) },
+  'necromancer:vampire': { pal: pal(0xffe8ec, 0xff6a7a, 0xc0102a, 0x3a0410, 0xff3048), type: 'blood' },
   'bard:harlequin': { pal: pal(0xfff4fb, 0xffb0e8, 0xff4ab8, 0x8a1a6a, 0xff6ac8) },
   'bard:vagabond': { pal: pal(0xfbf6ff, 0xe2d0ff, 0xb08cff, 0x5a3aa8, 0xc0a0ff) },
   'bard:fadista': { pal: pal(0xf4f8ff, 0xb8d2ff, 0x3c7cff, 0x1a2e9a, 0x6a9cff) },
   'bard:orpheus': { pal: pal(0xfffdf2, 0xffeeaa, 0xffc84a, 0x7a3ab0, 0xffd870) },
   'bard:howl': { pal: pal(0xf2f4ff, 0xbcc8ff, 0x6c7cff, 0x2c2a9a, 0x8a9aff), type: 'drummer' },
+  'bard:skald': { pal: pal(0xfffcee, 0xffe8a0, 0x8ccfff, 0x2c5c9e, 0xbfe2ff) },
+  'bard:taiko': { pal: pal(0xfff8e6, 0xffd24a, 0xff4a1e, 0x8a1208, 0xff6a2a), type: 'drummer' },
   'chronomancer:clockwork': { pal: CLOCKWORK_PAL },
   'chronomancer:primavera': { pal: pal(0xfffaf2, 0xffd0de, 0xf48cae, 0x3e9a78, 0xd8f4e4) },
   'chronomancer:anomaly': { pal: ANOMALY_PAL, type: 'paradox' },
+  'chronomancer:sandglass': { pal: SANDGLASS_PAL },
+  'chronomancer:rewind': { pal: VHS_PAL, type: 'paradox' },
   'samurai:oni': { pal: schemePal(ONI_KIT.wind) },
   'samurai:sakura': { pal: schemePal(SAKURA_KIT.wind), type: 'ronin' },
   'wizard:astral': { pal: pal(0xfffdf2, 0xfff0a8, 0xffc860, 0x6a5ae0, 0xffe08a) },
@@ -556,34 +652,66 @@ const SKINS: Record<string, UltSkin> = {
   'wizard:pumpkin': { pal: pal(0xfff4d8, 0xffc04a, 0xff7a1a, 0x7a2ad0, 0xff8a30), type: 'pyro' },
   'wizard:abyssal': { pal: ABYSS_MAGIC.pal, type: 'tide' },
   'wizard:lotus': { pal: pal(0xfff4fa, 0xffb8d4, 0x3ed0b0, 0x1a7a78, 0xffa0c8), type: 'tide' },
+  'wizard:prism': { pal: pal(0xffffff, 0xe4f2ff, 0x9ab8ff, 0x7a5ae8, 0xd8e4ff) },
+  'wizard:firebird': { pal: pal(0xfffdf0, 0xffe680, 0xffb030, 0xc8183a, 0xffb84a), type: 'pyro' },
+  'wizard:siren': { pal: pal(0xfffaf2, 0xffd0a8, 0x4ae0c8, 0x6a50c0, 0xffc08a), type: 'tide' },
   'warrior:spartan': { pal: pal(0xfff0e8, 0xff9a80, 0xf03a3a, 0x8a0a1a, 0xff6a50) },
   'warrior:headless': { pal: pal(0xfff4d0, 0xffb040, 0xff6a14, 0x5a1a7a, 0xff8a2a) },
   'warrior:afonso': { pal: AFONSO_KIT.pal, type: 'king' },
+  'warrior:dragon': { pal: pal(0xfff0d0, 0xffa040, 0xff4a14, 0x3a0a06, 0xff6a20) },
+  'warrior:sunking': { pal: SUNKING_KIT.pal, type: 'king' },
   'paladin:seraph': { pal: pal(0xffffff, 0xfff0d0, 0xffc890, 0xff8ab8, 0xffd8b0) },
   'paladin:oathbreaker': { pal: pal(0xf6eeff, 0xd8b0ff, 0xa060ff, 0x4a1a8a, 0xb070ff), type: 'crusader' },
+  'paladin:lionheart': { pal: pal(0xfffbe8, 0xffd870, 0xffb43a, 0xa01828, 0xffc870) },
+  'paladin:inquisitor': { pal: pal(0xffffff, 0xe8eef8, 0xb8c4d8, 0x9a1428, 0xdfe6f4), type: 'crusader' },
   'jedi:guard': { pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
   'jedi:master': { pal: pal(0xf4fff4, 0x9af4a8, 0x2ed058, 0x0e7a32, 0x5aff7a) },
   'jedi:warlord': { pal: WARLORD_KIT.dominion, type: 'sith' },
   'jedi:starseer': { pal: STARSEER_KIT.lift, type: 'sage' },
   'jedi:dune': { pal: pal(0xfffaf0, 0xffd27a, 0xf29a14, 0x9a4cff, 0xffb040), type: 'twin' },
   'jedi:voidhunter': { pal: VOIDHUNTER_KIT.pal, type: 'inquisitor' },
+  'jedi:nomad': { pal: pal(0xf6fffd, 0xa8f0ea, 0x3ac8cc, 0x1a7480, 0x6ae0dc) },
+  'jedi:empress': { pal: EMPRESS_KIT.dominion, type: 'sith' },
   'samurai:kitsune': { pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
+  'samurai:tengu': { pal: schemePal(TENGU_KIT.wind) },
+  'samurai:snowfall': { pal: schemePal(SNOWFALL_KIT.wind), type: 'ronin' },
   'druid:autumn': { pal: AUTUMN_MAGIC.pal },
   'druid:titania': { pal: pal(0xfffaf0, 0xffd88a, 0xff9ac0, 0xb8487a, 0xffb8d0) },
   'druid:frostfang': { pal: FROST_MAGIC.pal, type: 'wild' },
+  'druid:mycelia': { pal: MYCELIA_MAGIC.pal },
+  'druid:cinderhide': { pal: CINDER_MAGIC.pal, type: 'wild' },
   'valkyrie:sunshield': { pal: SUN_KIT.pal },
   'valkyrie:swan': { pal: SWAN_KIT.pal },
+  'valkyrie:amazon': { pal: AMAZON_KIT.pal },
+  'valkyrie:northlight': { pal: NORTH_KIT.pal, type: 'storm' },
   'valkyrie:raven': { pal: RAVEN_KIT.pal, type: 'storm' },
   'automaton:scrap': { pal: SCRAP_KIT.boom },
+  // Gunmetal and signal-flag red and yellow.
+  'automaton:dreadnought': { pal: pal(0xfff6d8, 0xffd040, 0xe02a20, 0x3a3f48, 0xffa040) },
   'automaton:hive': { pal: HIVE_KIT.pal, type: 'synth' },
+  'automaton:vaporwave': { pal: VAPOR_KIT.pal, type: 'synth' },
   'phantom:tea': { pal: TEA_KIT.pal },
   'phantom:cala': { pal: CALA_KIT.pal, type: 'wraith' },
   'phantom:firefly': { pal: FIREFLY_KIT.pal, type: 'wraith' },
+  'phantom:banshee': { pal: BANSHEE_KIT.pal },
+  'phantom:ferryman': { pal: FERRY_KIT.pal, type: 'wraith' },
   'inventor:einstein': { pal: EINSTEIN_KIT.pal, type: 'scientist' },
+  'inventor:forgebeard': { pal: FORGEBEARD_KIT.pal },
+  'inventor:tesla': { pal: TESLA_KIT.pal, type: 'scientist' },
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },
   'beast:porto': { pal: PORTO_KIT.pal, type: 'dragon' },
+  'lightwright:stargazer': { pal: STARGAZER_KIT.light.pal },
+  'transmuter:rubedo': { pal: pal(0xfff0e0, 0xffc070, 0xe8402a, 0x7a0e14, 0xff7a40) },
+  'aquanaut:barnacle': { pal: BARNACLE_KIT.style.pal },
+  'bear:panda': { pal: PANDA_KIT.pal, type: 'bear' },
+  'brewmaster:jarl': { pal: JARL_KIT.ult },
+  'aviator:ace': { pal: ACE_KIT.pal },
+  'pyrotechnist:carnival': { pal: CARNIVAL_STYLE.pal },
+  'beast:phoenix': { pal: PHOENIX_KIT.pal, type: 'eagle' },
+  'beast:nemean': { pal: NEMEAN_KIT.pal, type: 'lion' },
+  'beast:jade': { pal: JADE_KIT.pal, type: 'dragon' },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

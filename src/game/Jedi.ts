@@ -8,7 +8,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
 import { HitSpark, SlashArc, type Effect, type Scheme } from './Slash';
-import { ForceWave } from './Force';
+import { ForceWave, sandPuff } from './Force';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
@@ -37,6 +37,8 @@ export interface JediStyle {
   light: number;
   /** The push crackles with lightning. */
   dark: boolean;
+  /** Tints of sand his push and his cuts kick up (the Dune Nomad). */
+  sand?: readonly number[];
 }
 
 export const JEDI_STYLE: JediStyle = {
@@ -64,6 +66,19 @@ export const MASTER_STYLE: JediStyle = {
   light: 0x5aff7a,
   dark: false,
 };
+
+/** The Dune Nomad: a sun-bleached cyan blade, a pale Force, and sand drifting off both. */
+export const NOMAD_STYLE: JediStyle = {
+  key: 'jedi_nomad',
+  saber: { core: 0xf4fffd, hot: 0x8aeee6, mid: 0x2cc6cc, deep: 0x127a88 },
+  force: { core: 0xfffcf2, hot: 0xd8f6f0, mid: 0x8edcd4, deep: 0x9a7a4a },
+  light: 0x5ae0dc,
+  dark: false,
+  sand: [0xeedcae, 0xd2b47c, 0xb08a52],
+};
+
+/** Grains of sand a saber cut (the twirl twice as many) flicks off the Nomad's cloak. */
+const SAND_CUT = 7;
 
 type State = 'free' | 'swing' | 'push';
 
@@ -234,6 +249,7 @@ export class Jedi implements Hero {
     if (this.swing === 'twirl') {
       // A full turn, starting and ending where he faces.
       this.fx.push(new SlashArc(this.world, cx, cy, deg, deg + 360, 19, saber, depth, 260));
+      if (this.style.sand) for (const a of [deg, deg + 180]) sandPuff(this.world, cx, cy + 6, a, SAND_CUT, this.style.sand, depth + 0.2);
       this.impact(this.world.melee({ kind: 'circle', x: cx, y: cy, radius: 22 }, { damage: 14, heavy: true }), true);
       return;
     }
@@ -241,6 +257,7 @@ export class Jedi implements Hero {
     const hand = this.dir === 'right' ? -1 : 1;
     const sweep = this.swing === 'slash1' ? hand : -hand;
     this.fx.push(new SlashArc(this.world, cx, cy, deg + sweep * 100, deg - sweep * 100, 17, saber, depth, 170));
+    if (this.style.sand) sandPuff(this.world, cx, cy + 6, deg, SAND_CUT, this.style.sand, depth + 0.2);
     this.impact(this.world.melee({ kind: 'arc', x: cx, y: cy, radius: 22, angle: (deg * Math.PI) / 180, spread: (115 * Math.PI) / 180 }, { damage: 9 }), false);
   }
 
@@ -268,7 +285,7 @@ export class Jedi implements Hero {
     const u = this.pushDir;
     const x = snap(this.x) + u.x * 6;
     const y = snap(this.y) - CHEST_Y + 1 + u.y * 4;
-    this.fx.push(new ForceWave(this.world, x, y, u.x, u.y, PUSH_REACH, this.style.force, snap(this.y), this.style.dark));
+    this.fx.push(new ForceWave(this.world, x, y, u.x, u.y, PUSH_REACH, this.style.force, snap(this.y), this.style.dark, this.style.sand));
     const hits = this.world.melee({ kind: 'arc', x, y, radius: PUSH_REACH, angle: Math.atan2(u.y, u.x), spread: PUSH_SPREAD }, { damage: 10, heavy: true, knock: 260, fromX: x, fromY: y });
     for (const h of hits) this.fx.push(new HitSpark(this.world, h.x, h.y, this.style.force, h.y + 13, true));
     sound.forcePush(this.world.pan(x), this.style.dark);

@@ -7,6 +7,29 @@ import type { Effect, Scheme } from './Slash';
 
 const SQUASH = 0.78;
 const SPREAD = (38 * Math.PI) / 180;
+/** Sand grains a push throws up (the Dune Nomad's). */
+const SAND_PUSH = 26;
+
+/**
+ * Sand kicked up and drifting off: solid grains (not light) thrown out round
+ * `angle` (degrees), slowing as they go and settling a little as they fade.
+ */
+export function sandPuff(scene: Phaser.Scene, x: number, y: number, angle: number, count: number, tints: readonly number[], depth: number): void {
+  const grains = scene.add
+    .particles(0, 0, 'spark', {
+      lifespan: { min: 450, max: 900 },
+      speed: { min: 20, max: 85 },
+      angle: { min: angle - 40, max: angle + 40 },
+      scale: { start: 0.42, end: 0.22 },
+      alpha: { start: 0.95, end: 0 },
+      gravityY: 26,
+      tint: [...tints],
+      emitting: false,
+    })
+    .setDepth(depth);
+  grains.explode(count, x, y);
+  scene.time.delayedCall(950, () => grains.destroy());
+}
 
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
@@ -37,6 +60,8 @@ export class ForceWave implements Effect {
     private scheme: Scheme,
     depth: number,
     private lightning: boolean,
+    /** Tints of sand grains the push also kicks up (the Dune Nomad), if any. */
+    sand?: readonly number[],
   ) {
     this.scene = scene;
     this.angle = Math.atan2(uy, ux);
@@ -62,6 +87,7 @@ export class ForceWave implements Effect {
       .setDepth(depth + 0.35);
     dust.explode(22, x + ux * 4, y + uy * 4);
     scene.time.delayedCall(600, () => dust.destroy());
+    if (sand) sandPuff(scene, x + ux * 6, y + uy * 6, a, SAND_PUSH, sand, depth + 0.3);
     this.draw();
   }
 

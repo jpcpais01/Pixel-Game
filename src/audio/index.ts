@@ -1,8 +1,9 @@
 import { Ambience, type Wild } from './ambience';
+import { SfxBaker, Stream } from './bake';
 import { Mixer, gain } from './mixer';
-import { Music } from './music';
-import { ShopMusic, type ShopMood } from './shopMusic';
-import { Sfx, type BeamHum, type FrostSound, type WindBed } from './sfx';
+import { CHORD_SECONDS, Music } from './music';
+import { SHOP_CHORD_SECONDS, ShopMusic, type ShopMood } from './shopMusic';
+import { LUTE_NOTES, Sfx, type BeamHum, type FrostSound, type WindBed } from './sfx';
 import { note } from '../diagnostics';
 
 const MUTE_KEY = 'pixel-game:muted';
@@ -12,15 +13,33 @@ const TICK_MS = 100;
 const TRACK_FADE = 2.4;
 const SAME_SOUND_GAP = 0.04; // seconds before the same one-shot may play again
 const BUSY_WINDOW = 0.25; // seconds
-const PHONE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-/** New one-shots allowed per window: fewer on phones, whose audio thread chokes sooner. */
-const BUSY_LIMIT = PHONE ? 8 : 12;
 /**
- * And per second. Most effects ring for half a second or more, so a fight that
- * fills every short window keeps piling voices up; this caps the steady load.
+ * New one-shots allowed per window. A baked effect is a single buffer source, so
+ * this is about keeping a fight legible now, not about sparing the audio thread.
  */
+const BUSY_LIMIT = 12;
+/** And per second: most effects ring for half a second or more, and a wall of them is mush. */
 const SUSTAIN_WINDOW = 1; // seconds
-const SUSTAIN_LIMIT = PHONE ? 24 : 40;
+const SUSTAIN_LIMIT = 40;
+/** Seconds of the music's fade-in when the sound first starts. */
+const MUSIC_FADE_IN = 6;
+/**
+ * The phone's output buffer, in seconds. Bigger rides out the moments a phone
+ * busy drawing the game is late to the audio thread; 70 ms is still too short
+ * to hear between a tap and its sound.
+ */
+const PHONE_LATENCY = 0.07;
+/** Baked streams: seconds rendered past each chunk's end, for its notes' tails and echoes. */
+const MUSIC_TAIL = 6;
+const CALLS_CHUNK = 6;
+const CALLS_TAIL = 3.5;
+/** Their sample rates: the music and the creatures hold nothing near the top of the range. */
+const MUSIC_RATE = 32000;
+const CALLS_RATE = 22050;
+
+/** The sound effects that are one-shots: methods of Sfx taking the start time first. */
+type OneShot = { [K in keyof Sfx]: Sfx[K] extends (t: number, ...a: never[]) => void ? K : never }[keyof Sfx];
+type ShotArgs<K extends OneShot> = Sfx[K] extends (t: number, ...a: infer A) => unknown ? A : never;
 /** Effects in the last second before the crowd trim starts easing them down. */
 const CROWD_FREE = 4;
 
@@ -48,6 +67,10 @@ class GameSound {
   private sfx: Sfx | null = null;
   private hum: BeamHum | null = null;
   private wind: WindBed | null = null;
+  private baker: SfxBaker | null = null;
+  private streams: { main: Stream; shop: Stream; calls: Stream } | null = null;
+  /** The lute's place in the minstrel's tune. */
+  private lute = 0;
   private listeners = new Set<Listener>();
   private lastPlayed = new Map<string, number>();
   private recent: number[] = [];
@@ -167,41 +190,34 @@ class GameSound {
 
   /** A gust coming through the forest, 0..1 strong, from the side `pan` says. */
   forestGust(strength: number, pan = 0): void {
-    const t = this.slot('forestGust');
-    if (t !== null) this.sfx!.forestGust(t, strength, pan);
+    this.fx('forestGust', 'forestGust', [strength, pan], 1);
   }
 
   /** Wings: `n` birds starting up, or an owl (`soft`) leaving its branch. */
   wings(pan = 0, n = 4, soft = false): void {
-    const t = this.slot('wings');
-    if (t !== null) this.sfx!.wings(t, pan, n, soft);
+    this.fx('wings', 'wings', [pan, n, soft], 0);
   }
 
   /** A deer snorting its alarm and bounding off. */
   deerBolt(pan = 0): void {
-    const t = this.slot('deerBolt');
-    if (t !== null) this.sfx!.deerBolt(t, pan);
+    this.fx('deerBolt', 'deerBolt', [pan], 0);
   }
 
   /** An owl hooting from its branch, `level` 0..1 with how near it sits. */
   owlHoot(pan = 0, level = 1): void {
-    const t = this.slot('owlHoot');
-    if (t !== null) this.sfx!.owlHoot(t, pan, level);
+    this.fx('owlHoot', 'owlHoot', [pan, level], 0);
   }
 
   charge(): void {
-    const t = this.slot('charge');
-    if (t !== null) this.sfx!.charge(t);
+    this.fx('charge', 'charge', []);
   }
 
   cast(pan = 0): void {
-    const t = this.slot('cast');
-    if (t !== null) this.sfx!.cast(t, pan);
+    this.fx('cast', 'cast', [pan], 0);
   }
 
   impact(pan = 0, struck = false): void {
-    const t = this.slot('impact');
-    if (t !== null) this.sfx!.impact(t, pan, struck);
+    this.fx('impact', 'impact', [pan, struck], 0);
   }
 
   /** The beam's gathering hum: `level` 0..1 is the charge, `over` 0..1 the unstable hold. */
@@ -221,146 +237,118 @@ class GameSound {
 
   beamFire(pan = 0, power = 1): void {
     this.beamChargeEnd();
-    const t = this.slot('beamFire');
-    if (t !== null) this.sfx!.beamFire(t, pan, power);
+    this.fx('beamFire', 'beamFire', [pan, power], 0);
   }
 
   beamFizzle(): void {
     this.beamChargeEnd();
-    const t = this.slot('beamFizzle');
-    if (t !== null) this.sfx!.beamFizzle(t);
+    this.fx('beamFizzle', 'beamFizzle', []);
   }
 
   swing(step: number, pan = 0): void {
-    const t = this.slot('swing');
-    if (t !== null) this.sfx!.swing(t, pan, step);
+    this.fx('swing', 'swing', [pan, step], 0);
   }
 
   clash(pan = 0, heavy = false): void {
-    const t = this.slot('clash');
-    if (t !== null) this.sfx!.clash(t, pan, heavy);
+    this.fx('clash', 'clash', [pan, heavy], 0);
   }
 
   /** The Forge's anvil ringing under Brenna's hammer, `level` 0..1 with how near the hero is. */
   anvil(pan = 0, level = 1): void {
-    const t = this.slot('anvil');
-    if (t !== null) this.sfx!.anvil(t, pan, level);
+    this.fx('anvil', 'anvil', [pan, level], 0);
   }
 
   /** A piece forged at Brenna's counter: three blows and the ring of it done. */
   forged(): void {
-    const t = this.slot('forged');
-    if (t !== null) this.sfx!.forged(t);
+    this.fx('forged', 'forged', []);
   }
 
   rise(): void {
-    const t = this.slot('rise');
-    if (t !== null) this.sfx!.rise(t);
+    this.fx('rise', 'rise', []);
   }
 
   whirl(pan = 0): void {
-    const t = this.slot('whirl');
-    if (t !== null) this.sfx!.whirl(t, pan);
+    this.fx('whirl', 'whirl', [pan], 0);
   }
 
   slam(pan = 0): void {
-    const t = this.slot('slam');
-    if (t !== null) this.sfx!.slam(t, pan);
+    this.fx('slam', 'slam', [pan], 0);
   }
 
   hallow(): void {
-    const t = this.slot('hallow');
-    if (t !== null) this.sfx!.hallow(t);
+    this.fx('hallow', 'hallow', []);
   }
 
   smite(pan = 0, struck = false): void {
-    const t = this.slot('smite');
-    if (t !== null) this.sfx!.smite(t, pan, struck);
+    this.fx('smite', 'smite', [pan, struck], 0);
   }
 
   consecrate(pan = 0): void {
-    const t = this.slot('consecrate');
-    if (t !== null) this.sfx!.consecrate(t, pan);
+    this.fx('consecrate', 'consecrate', [pan], 0);
   }
 
   drink(swift = false): void {
-    const t = this.slot('drink');
-    if (t !== null) this.sfx!.drink(t, swift);
+    this.fx('drink', 'drink', [swift]);
   }
 
   gear(rare = false): void {
-    const t = this.slot('gear');
-    if (t !== null) this.sfx!.gear(t, rare);
+    this.fx('gear', 'gear', [rare]);
   }
 
   lootFall(pan = 0): void {
-    const t = this.slot('lootFall');
-    if (t !== null) this.sfx!.lootFall(t, pan);
+    this.fx('lootFall', 'lootFall', [pan], 0);
   }
 
   lootLand(grade: number, pan = 0): void {
-    const t = this.slot('lootLand');
-    if (t !== null) this.sfx!.lootLand(t, pan, grade);
+    this.fx('lootLand', 'lootLand', [pan, grade], 0);
   }
 
   gemLand(n: number, pan = 0): void {
-    const t = this.slot('gemLand');
-    if (t !== null) this.sfx!.gemLand(t, pan, n);
+    this.fx('gemLand', 'gemLand', [pan, n], 0);
   }
 
   gemPickup(n: number): void {
-    const t = this.slot('gemPickup');
-    if (t !== null) this.sfx!.gemPickup(t, n);
+    this.fx('gemPickup', 'gemPickup', [n]);
   }
 
   gemTink(pan = 0): void {
-    const t = this.slot('gemTink');
-    if (t !== null) this.sfx!.gemTink(t, pan);
+    this.fx('gemTink', 'gemTink', [pan], 0);
   }
 
   gemCollect(step: number): void {
-    const t = this.slot('gemCollect');
-    if (t !== null) this.sfx!.gemCollect(t, step);
+    this.fx('gemCollect', 'gemCollect', [step]);
   }
 
   candyPickup(n: number): void {
-    const t = this.slot('candyPickup');
-    if (t !== null) this.sfx!.candyPickup(t, n);
+    this.fx('candyPickup', 'candyPickup', [n]);
   }
 
   gemSpend(): void {
-    const t = this.slot('gemSpend');
-    if (t !== null) this.sfx!.gemSpend(t);
+    this.fx('gemSpend', 'gemSpend', []);
   }
 
   glideRing(pan = 0, step = 0, big = false): void {
-    const t = this.slot('glideRing');
-    if (t !== null) this.sfx!.glideRing(t, pan, step, big);
+    this.fx('glideRing', 'glideRing', [pan, step, big], 0);
   }
 
   glideGust(): void {
-    const t = this.slot('glideGust');
-    if (t !== null) this.sfx!.glideGust(t);
+    this.fx('glideGust', 'glideGust', []);
   }
 
   glideWhoosh(pan = 0, level = 1): void {
-    const t = this.slot('glideWhoosh');
-    if (t !== null) this.sfx!.glideWhoosh(t, pan, level);
+    this.fx('glideWhoosh', 'glideWhoosh', [pan, level], 0);
   }
 
   glideCount(go = false): void {
-    const t = this.slot('glideCount');
-    if (t !== null) this.sfx!.glideCount(t, go);
+    this.fx('glideCount', 'glideCount', [go]);
   }
 
   glideSplash(): void {
-    const t = this.slot('glideSplash');
-    if (t !== null) this.sfx!.glideSplash(t);
+    this.fx('glideSplash', 'glideSplash', []);
   }
 
   glideLand(): void {
-    const t = this.slot('glideLand');
-    if (t !== null) this.sfx!.glideLand(t);
+    this.fx('glideLand', 'glideLand', []);
   }
 
   /** The wind round the glider: `speed` 0..1 of top speed. */
@@ -378,274 +366,220 @@ class GameSound {
   }
 
   gemTick(): void {
-    const t = this.slot('gemTick');
-    if (t !== null) this.sfx!.gemTick(t);
+    this.fx('gemTick', 'gemTick', []);
   }
 
   /** `tier`: the best rarity inside, 0 rare .. 2 legendary; `seconds` of charging. */
   wishCharge(seconds: number, tier: number): void {
-    const t = this.slot('wishCharge');
-    if (t !== null) this.sfx!.wishCharge(t, seconds, tier);
+    this.fx('wishCharge', 'wishCharge', [seconds, tier]);
   }
 
   wishBurst(tier: number): void {
-    const t = this.slot('wishBurst');
-    if (t !== null) this.sfx!.wishBurst(t, tier);
+    this.fx('wishBurst', 'wishBurst', [tier]);
   }
 
   netSwish(pan = 0): void {
-    const t = this.slot('netSwish');
-    if (t !== null) this.sfx!.netSwish(t, pan);
+    this.fx('netSwish', 'netSwish', [pan], 0);
   }
 
   critterCatch(tier: number): void {
-    const t = this.slot('critterCatch');
-    if (t !== null) this.sfx!.critterCatch(t, tier);
+    this.fx('critterCatch', 'critterCatch', [tier]);
   }
 
   fishCast(): void {
-    const t = this.slot('fishCast');
-    if (t !== null) this.sfx!.fishCast(t);
+    this.fx('fishCast', 'fishCast', []);
   }
 
   fishPlop(pan = 0): void {
-    const t = this.slot('fishPlop');
-    if (t !== null) this.sfx!.fishPlop(t, pan);
+    this.fx('fishPlop', 'fishPlop', [pan], 0);
   }
 
   fishNibble(pan = 0): void {
-    const t = this.slot('fishNibble');
-    if (t !== null) this.sfx!.fishNibble(t, pan);
+    this.fx('fishNibble', 'fishNibble', [pan], 0);
   }
 
   fishBite(pan = 0): void {
-    const t = this.slot('fishBite');
-    if (t !== null) this.sfx!.fishBite(t, pan);
+    this.fx('fishBite', 'fishBite', [pan], 0);
   }
 
   reelTick(): void {
-    const t = this.slot('reelTick');
-    if (t !== null) this.sfx!.reelTick(t);
+    this.fx('reelTick', 'reelTick', []);
   }
 
   fishLanded(tier: number): void {
-    const t = this.slot('fishLanded');
-    if (t !== null) this.sfx!.fishLanded(t, tier);
+    this.fx('fishLanded', 'fishLanded', [tier]);
   }
 
   fishLost(): void {
-    const t = this.slot('fishLost');
-    if (t !== null) this.sfx!.fishLost(t);
+    this.fx('fishLost', 'fishLost', []);
   }
 
   plant(pan = 0): void {
-    const t = this.slot('plant');
-    if (t !== null) this.sfx!.plant(t, pan);
+    this.fx('plant', 'plant', [pan], 0);
   }
 
   harvest(tier: number): void {
-    const t = this.slot('harvest');
-    if (t !== null) this.sfx!.harvest(t, tier);
+    this.fx('harvest', 'harvest', [tier]);
   }
 
   cooked(tier: number): void {
-    const t = this.slot('cooked');
-    if (t !== null) this.sfx!.cooked(t, tier);
+    this.fx('cooked', 'cooked', [tier]);
   }
 
   critterRelease(pan = 0): void {
-    const t = this.slot('critterRelease');
-    if (t !== null) this.sfx!.critterRelease(t, pan);
+    this.fx('critterRelease', 'critterRelease', [pan], 0);
   }
 
   stag(kind: 'appear' | 'reveal' | 'flee', pan = 0): void {
-    const t = this.slot(`stag_${kind}`);
-    if (t !== null) this.sfx!.stag(t, pan, kind);
+    this.fx(`stag_${kind}`, 'stag', [pan, kind], 0);
   }
 
   cardFlip(tier: number): void {
-    const t = this.slot('cardFlip');
-    if (t !== null) this.sfx!.cardFlip(t, tier);
+    this.fx('cardFlip', 'cardFlip', [tier]);
   }
 
   pickup(pan = 0): void {
-    const t = this.slot('pickup');
-    if (t !== null) this.sfx!.pickup(t, pan);
+    this.fx('pickup', 'pickup', [pan], 0);
   }
 
   heal(pan = 0): void {
-    const t = this.slot('heal');
-    if (t !== null) this.sfx!.heal(t, pan);
+    this.fx('heal', 'heal', [pan], 0);
   }
 
   notice(pan = 0): void {
-    const t = this.slot('notice');
-    if (t !== null) this.sfx!.notice(t, pan);
+    this.fx('notice', 'notice', [pan], 0);
   }
 
   gulp(pan = 0): void {
-    const t = this.slot('gulp');
-    if (t !== null) this.sfx!.gulp(t, pan);
+    this.fx('gulp', 'gulp', [pan], 0);
   }
 
   spit(pan = 0): void {
-    const t = this.slot('spit');
-    if (t !== null) this.sfx!.spit(t, pan);
+    this.fx('spit', 'spit', [pan], 0);
   }
 
   hop(pan = 0): void {
-    const t = this.slot('hop');
-    if (t !== null) this.sfx!.hop(t, pan);
+    this.fx('hop', 'hop', [pan], 0);
   }
 
   splash(pan = 0): void {
-    const t = this.slot('splash');
-    if (t !== null) this.sfx!.splash(t, pan);
+    this.fx('splash', 'splash', [pan], 0);
   }
 
   chitter(pan = 0): void {
-    const t = this.slot('chitter');
-    if (t !== null) this.sfx!.chitter(t, pan);
+    this.fx('chitter', 'chitter', [pan], 0);
   }
 
   buzz(pan = 0): void {
-    const t = this.slot('buzz');
-    if (t !== null) this.sfx!.buzz(t, pan);
+    this.fx('buzz', 'buzz', [pan], 0);
   }
 
   thud(pan = 0, hard = false): void {
-    const t = this.slot('thud');
-    if (t !== null) this.sfx!.thud(t, pan, hard);
+    this.fx('thud', 'thud', [pan, hard], 0);
   }
 
   swell(pan = 0): void {
-    const t = this.slot('swell');
-    if (t !== null) this.sfx!.swell(t, pan);
+    this.fx('swell', 'swell', [pan], 0);
   }
 
   puff(pan = 0): void {
-    const t = this.slot('puff');
-    if (t !== null) this.sfx!.puff(t, pan);
+    this.fx('puff', 'puff', [pan], 0);
   }
 
   monsterDie(pan = 0, mass = 1): void {
-    const t = this.slot('monsterDie');
-    if (t !== null) this.sfx!.monsterDie(t, pan, mass);
+    this.fx('monsterDie', 'monsterDie', [pan, mass], 0);
   }
 
   hurt(): void {
-    const t = this.slot('hurt');
-    if (t !== null) this.sfx!.hurt(t);
+    this.fx('hurt', 'hurt', []);
   }
 
   fall(): void {
-    const t = this.slot('fall');
-    if (t !== null) this.sfx!.fall(t);
+    this.fx('fall', 'fall', []);
   }
 
   echoWake(pan = 0): void {
-    const t = this.slot('echoWake');
-    if (t !== null) this.sfx!.echoWake(t, pan);
+    this.fx('echoWake', 'echoWake', [pan], 0);
   }
 
   echoBless(): void {
-    const t = this.slot('echoBless');
-    if (t !== null) this.sfx!.echoBless(t);
+    this.fx('echoBless', 'echoBless', []);
   }
 
   revive(): void {
-    const t = this.slot('revive');
-    if (t !== null) this.sfx!.revive(t);
+    this.fx('revive', 'revive', []);
   }
 
   saberSwing(step: number, pan = 0): void {
-    const t = this.slot('saberSwing');
-    if (t !== null) this.sfx!.saberSwing(t, pan, step);
+    this.fx('saberSwing', 'saberSwing', [pan, step], 0);
   }
 
   saberHit(pan = 0, heavy = false): void {
-    const t = this.slot('saberHit');
-    if (t !== null) this.sfx!.saberHit(t, pan, heavy);
+    this.fx('saberHit', 'saberHit', [pan, heavy], 0);
   }
 
   ignite(): void {
-    const t = this.slot('ignite');
-    if (t !== null) this.sfx!.ignite(t);
+    this.fx('ignite', 'ignite', []);
   }
 
   starcall(pan = 0): void {
-    const t = this.slot('starcall');
-    if (t !== null) this.sfx!.starcall(t, pan);
+    this.fx('starcall', 'starcall', [pan], 0);
   }
 
   omen(mood: 'dark' | 'bright' | 'strange'): void {
-    const t = this.slot('omen');
-    if (t !== null) this.sfx!.omen(t, mood);
+    this.fx('omen', 'omen', [mood]);
   }
 
   portal(pan = 0): void {
-    const t = this.slot('portal');
-    if (t !== null) this.sfx!.portal(t, pan);
+    this.fx('portal', 'portal', [pan], 0);
   }
 
   cackle(pan = 0): void {
-    const t = this.slot('cackle');
-    if (t !== null) this.sfx!.cackle(t, pan);
+    this.fx('cackle', 'cackle', [pan], 0);
   }
 
   starImpact(pan = 0): void {
-    const t = this.slot('starImpact');
-    if (t !== null) this.sfx!.starImpact(t, pan);
+    this.fx('starImpact', 'starImpact', [pan], 0);
   }
 
   gravityWell(seconds: number): void {
-    const t = this.slot('gravityWell');
-    if (t !== null) this.sfx!.gravityWell(t, seconds);
+    this.fx('gravityWell', 'gravityWell', [seconds]);
   }
 
   bossRoar(pan = 0, myth = false): void {
-    const t = this.slot('bossRoar');
-    if (t !== null) this.sfx!.bossRoar(t, pan, myth);
+    this.fx('bossRoar', 'bossRoar', [pan, myth], 0);
   }
 
   bossTitle(myth = false): void {
-    const t = this.slot('bossTitle');
-    if (t !== null) this.sfx!.bossTitle(t, myth);
+    this.fx('bossTitle', 'bossTitle', [myth]);
   }
 
   finalBlow(myth = false): void {
-    const t = this.slot('finalBlow');
-    if (t !== null) this.sfx!.finalBlow(t, myth);
+    this.fx('finalBlow', 'finalBlow', [myth]);
   }
 
   nova(): void {
-    const t = this.slot('nova');
-    if (t !== null) this.sfx!.nova(t);
+    this.fx('nova', 'nova', []);
   }
 
   forceGather(): void {
-    const t = this.slot('forceGather');
-    if (t !== null) this.sfx!.forceGather(t);
+    this.fx('forceGather', 'forceGather', []);
   }
 
   forcePush(pan = 0, dark = false): void {
-    const t = this.slot('forcePush');
-    if (t !== null) this.sfx!.forcePush(t, pan, dark);
+    this.fx('forcePush', 'forcePush', [pan, dark], 0);
   }
 
   forceLightning(pan = 0, seconds = 0.5): void {
-    const t = this.slot('forceLightning');
-    if (t !== null) this.sfx!.forceLightning(t, pan, seconds);
+    this.fx('forceLightning', 'forceLightning', [pan, seconds], 0);
   }
 
   forceGrip(pan = 0): void {
-    const t = this.slot('forceGrip');
-    if (t !== null) this.sfx!.forceGrip(t, pan);
+    this.fx('forceGrip', 'forceGrip', [pan], 0);
   }
 
   forceCrush(pan = 0): void {
-    const t = this.slot('forceCrush');
-    if (t !== null) this.sfx!.forceCrush(t, pan);
+    this.fx('forceCrush', 'forceCrush', [pan], 0);
   }
 
   /** The Force Sage's stones: torn up, shattering on a foe, or a slab bursting (see Sfx.forceStone). */
@@ -661,149 +595,120 @@ class GameSound {
   }
 
   punch(step: number, pan = 0): void {
-    const t = this.slot('punch');
-    if (t !== null) this.sfx!.punch(t, pan, step);
+    this.fx('punch', 'punch', [pan, step], 0);
   }
 
   punchHit(pan = 0, heavy = false): void {
-    const t = this.slot('punchHit');
-    if (t !== null) this.sfx!.punchHit(t, pan, heavy);
+    this.fx('punchHit', 'punchHit', [pan, heavy], 0);
   }
 
   flurry(pan = 0): void {
-    const t = this.slot('flurry');
-    if (t !== null) this.sfx!.flurry(t, pan);
+    this.fx('flurry', 'flurry', [pan], 0);
   }
 
   kiai(): void {
-    const t = this.slot('kiai');
-    if (t !== null) this.sfx!.kiai(t);
+    this.fx('kiai', 'kiai', []);
   }
 
   toss(pan = 0, big = false): void {
-    const t = this.slot('toss');
-    if (t !== null) this.sfx!.toss(t, pan, big);
+    this.fx('toss', 'toss', [pan, big], 0);
   }
 
   /** The Aurora Colosseum's frost: ice cracking, freezing, a howl, a chime, a crunch of snow, a gust (see Sfx.frost). */
   frost(kind: FrostSound, pan = 0, big = false): void {
-    const t = this.slot(`frost:${kind}`);
-    if (t !== null) this.sfx!.frost(t, kind, pan, big);
+    this.fx(`frost:${kind}`, 'frost', [kind, pan, big], 1);
   }
 
   shatter(pan = 0, big = false): void {
-    const t = this.slot('shatter');
-    if (t !== null) this.sfx!.shatter(t, pan, big);
+    this.fx('shatter', 'shatter', [pan, big], 0);
   }
 
   brew(): void {
-    const t = this.slot('brew');
-    if (t !== null) this.sfx!.brew(t);
+    this.fx('brew', 'brew', []);
   }
 
   bog(pan = 0): void {
-    const t = this.slot('bog');
-    if (t !== null) this.sfx!.bog(t, pan);
+    this.fx('bog', 'bog', [pan], 0);
   }
 
   sizzle(pan = 0): void {
-    const t = this.slot('sizzle');
-    if (t !== null) this.sfx!.sizzle(t, pan);
+    this.fx('sizzle', 'sizzle', [pan], 0);
   }
 
   bowDraw(big = false): void {
-    const t = this.slot('bowDraw');
-    if (t !== null) this.sfx!.bowDraw(t, big);
+    this.fx('bowDraw', 'bowDraw', [big]);
   }
 
   wail(pan = 0): void {
-    const t = this.slot('wail');
-    if (t !== null) this.sfx!.wail(t, pan);
+    this.fx('wail', 'wail', [pan], 0);
   }
 
   creak(pan = 0): void {
-    const t = this.slot('creak');
-    if (t !== null) this.sfx!.creak(t, pan);
+    this.fx('creak', 'creak', [pan], 0);
   }
 
   doorOpen(pan = 0, level = 1): void {
-    const t = this.slot('doorOpen');
-    if (t !== null) this.sfx!.doorOpen(t, pan, level);
+    this.fx('doorOpen', 'doorOpen', [pan, level], 0);
   }
 
   doorShut(pan = 0, level = 1): void {
-    const t = this.slot('doorShut');
-    if (t !== null) this.sfx!.doorShut(t, pan, level);
+    this.fx('doorShut', 'doorShut', [pan, level], 0);
   }
 
   gateOpen(pan = 0, iron = false): void {
-    const t = this.slot('gateOpen');
-    if (t !== null) this.sfx!.gateOpen(t, pan, iron);
+    this.fx('gateOpen', 'gateOpen', [pan, iron], 0);
   }
 
   gateShut(pan = 0, level = 1, iron = false): void {
-    const t = this.slot('gateShut');
-    if (t !== null) this.sfx!.gateShut(t, pan, level, iron);
+    this.fx('gateShut', 'gateShut', [pan, level, iron], 0);
   }
 
   cannon(pan = 0, scrap = false): void {
-    const t = this.slot('cannon');
-    if (t !== null) this.sfx!.cannon(t, pan, scrap);
+    this.fx('cannon', 'cannon', [pan, scrap], 0);
   }
 
   missile(pan = 0, scrap = false): void {
-    const t = this.slot('missile');
-    if (t !== null) this.sfx!.missile(t, pan, scrap);
+    this.fx('missile', 'missile', [pan, scrap], 0);
   }
 
   lockOn(n: number): void {
-    const t = this.slot('lockOn');
-    if (t !== null) this.sfx!.lockOn(t, n);
+    this.fx('lockOn', 'lockOn', [n]);
   }
 
   blast(pan = 0): void {
-    const t = this.slot('blast');
-    if (t !== null) this.sfx!.blast(t, pan);
+    this.fx('blast', 'blast', [pan], 0);
   }
 
   vent(): void {
-    const t = this.slot('vent');
-    if (t !== null) this.sfx!.vent(t);
+    this.fx('vent', 'vent', []);
   }
 
   droneZap(pan = 0, hive = false): void {
-    const t = this.slot('droneZap');
-    if (t !== null) this.sfx!.droneZap(t, pan, hive);
+    this.fx('droneZap', 'droneZap', [pan, hive], 0);
   }
 
   wrench(pan = 0, heavy = false): void {
-    const t = this.slot('wrench');
-    if (t !== null) this.sfx!.wrench(t, pan, heavy);
+    this.fx('wrench', 'wrench', [pan, heavy], 0);
   }
 
   ratchet(pan = 0): void {
-    const t = this.slot('ratchet');
-    if (t !== null) this.sfx!.ratchet(t, pan);
+    this.fx('ratchet', 'ratchet', [pan], 0);
   }
 
   turretShot(pan = 0, mega = false): void {
-    const t = this.slot('turretShot');
-    if (t !== null) this.sfx!.turretShot(t, pan, mega);
+    this.fx('turretShot', 'turretShot', [pan, mega], 0);
   }
 
   tesla(pan = 0, chain = false): void {
-    const t = this.slot('tesla');
-    if (t !== null) this.sfx!.tesla(t, pan, chain);
+    this.fx('tesla', 'tesla', [pan, chain], 0);
   }
 
   feather(pan = 0): void {
-    const t = this.slot('feather');
-    if (t !== null) this.sfx!.feather(t, pan);
+    this.fx('feather', 'feather', [pan], 0);
   }
 
   screech(pan = 0): void {
-    const t = this.slot('screech');
-    if (t !== null) this.sfx!.screech(t, pan);
+    this.fx('screech', 'screech', [pan], 0);
   }
 
   /** The falconer's bird calling as it leaves her fist: a falcon's "kek-kek-kek", or an owl's bark. */
@@ -819,108 +724,87 @@ class GameSound {
   }
 
   roar(pan = 0, big = false): void {
-    const t = this.slot('roar');
-    if (t !== null) this.sfx!.roar(t, pan, big);
+    this.fx('roar', 'roar', [pan, big], 0);
   }
 
   rake(pan = 0, heavy = false): void {
-    const t = this.slot('rake');
-    if (t !== null) this.sfx!.rake(t, pan, heavy);
+    this.fx('rake', 'rake', [pan, heavy], 0);
   }
 
   fireball(pan = 0): void {
-    const t = this.slot('fireball');
-    if (t !== null) this.sfx!.fireball(t, pan);
+    this.fx('fireball', 'fireball', [pan], 0);
   }
 
   flame(pan = 0): void {
-    const t = this.slot('flame');
-    if (t !== null) this.sfx!.flame(t, pan);
+    this.fx('flame', 'flame', [pan], 0);
   }
 
   servo(pan = 0): void {
-    const t = this.slot('servo');
-    if (t !== null) this.sfx!.servo(t, pan);
+    this.fx('servo', 'servo', [pan], 0);
   }
 
   crossbow(pan = 0): void {
-    const t = this.slot('crossbow');
-    if (t !== null) this.sfx!.crossbow(t, pan);
+    this.fx('crossbow', 'crossbow', [pan], 0);
   }
 
   bowShot(pan = 0, storm = false): void {
-    const t = this.slot('bowShot');
-    if (t !== null) this.sfx!.bowShot(t, pan, storm);
+    this.fx('bowShot', 'bowShot', [pan, storm], 0);
   }
 
   arrowHit(pan = 0, storm = false): void {
-    const t = this.slot('arrowHit');
-    if (t !== null) this.sfx!.arrowHit(t, pan, storm);
+    this.fx('arrowHit', 'arrowHit', [pan, storm], 0);
   }
 
   arrowStick(pan = 0, level = 0.4): void {
-    const t = this.slot('arrowStick');
-    if (t !== null) this.sfx!.arrowStick(t, pan, level);
+    this.fx('arrowStick', 'arrowStick', [pan, level], 0);
   }
 
   volley(pan = 0, storm = false): void {
-    const t = this.slot('volley');
-    if (t !== null) this.sfx!.volley(t, pan, storm);
+    this.fx('volley', 'volley', [pan, storm], 0);
   }
 
   arrowRain(pan = 0, storm = false): void {
-    const t = this.slot('arrowRain');
-    if (t !== null) this.sfx!.arrowRain(t, pan, storm);
+    this.fx('arrowRain', 'arrowRain', [pan, storm], 0);
   }
 
   knife(pan = 0, step = 1, finisher = false): void {
-    const t = this.slot('knife');
-    if (t !== null) this.sfx!.knife(t, pan, step, finisher);
+    this.fx('knife', 'knife', [pan, step, finisher], 0);
   }
 
   knifeHit(pan = 0, heavy = false): void {
-    const t = this.slot('knifeHit');
-    if (t !== null) this.sfx!.knifeHit(t, pan, heavy);
+    this.fx('knifeHit', 'knifeHit', [pan, heavy], 0);
   }
 
   vanish(pan = 0, dance = false): void {
-    const t = this.slot('vanish');
-    if (t !== null) this.sfx!.vanish(t, pan, dance);
+    this.fx('vanish', 'vanish', [pan, dance], 0);
   }
 
   blink(pan = 0): void {
-    const t = this.slot('blink');
-    if (t !== null) this.sfx!.blink(t, pan);
+    this.fx('blink', 'blink', [pan], 0);
   }
 
   soulCast(pan = 0, blood = false): void {
-    const t = this.slot('soulCast');
-    if (t !== null) this.sfx!.soulCast(t, pan, blood);
+    this.fx('soulCast', 'soulCast', [pan, blood], 0);
   }
 
   soulHit(pan = 0, blood = false): void {
-    const t = this.slot('soulHit');
-    if (t !== null) this.sfx!.soulHit(t, pan, blood);
+    this.fx('soulHit', 'soulHit', [pan, blood], 0);
   }
 
   raiseDead(pan = 0): void {
-    const t = this.slot('raiseDead');
-    if (t !== null) this.sfx!.raiseDead(t, pan);
+    this.fx('raiseDead', 'raiseDead', [pan], 0);
   }
 
   boneHit(pan = 0): void {
-    const t = this.slot('boneHit');
-    if (t !== null) this.sfx!.boneHit(t, pan);
+    this.fx('boneHit', 'boneHit', [pan], 0);
   }
 
   boneCrumble(pan = 0): void {
-    const t = this.slot('boneCrumble');
-    if (t !== null) this.sfx!.boneCrumble(t, pan);
+    this.fx('boneCrumble', 'boneCrumble', [pan], 0);
   }
 
   bloodNova(pan = 0): void {
-    const t = this.slot('bloodNova');
-    if (t !== null) this.sfx!.bloodNova(t, pan);
+    this.fx('bloodNova', 'bloodNova', [pan], 0);
   }
 
   spadeSwing(pan = 0, heavy = false): void {
@@ -965,128 +849,131 @@ class GameSound {
   }
 
   lutePluck(pan = 0): void {
-    const t = this.slot('lutePluck');
-    if (t !== null) this.sfx!.lutePluck(t, pan);
+    this.fx('lutePluck', 'lutePluck', [pan, this.lute++ % LUTE_NOTES], 0);
   }
 
   noteHit(pan = 0, leap = 0): void {
-    const t = this.slot('noteHit');
-    if (t !== null) this.sfx!.noteHit(t, pan, leap);
+    this.fx('noteHit', 'noteHit', [pan, leap], 0);
   }
 
   song(pan = 0): void {
-    const t = this.slot('song');
-    if (t !== null) this.sfx!.song(t, pan);
+    this.fx('song', 'song', [pan], 0);
   }
 
   encore(pan = 0): void {
-    const t = this.slot('encore');
-    if (t !== null) this.sfx!.encore(t, pan);
+    this.fx('encore', 'encore', [pan], 0);
   }
 
   drumBeat(pan = 0, heavy = false): void {
-    const t = this.slot('drumBeat');
-    if (t !== null) this.sfx!.drumBeat(t, pan, heavy);
+    this.fx('drumBeat', 'drumBeat', [pan, heavy], 0);
   }
 
   drumRoll(pan = 0): void {
-    const t = this.slot('drumRoll');
-    if (t !== null) this.sfx!.drumRoll(t, pan);
+    this.fx('drumRoll', 'drumRoll', [pan], 0);
   }
 
   chronoCast(pan = 0, rift = false): void {
-    const t = this.slot('chronoCast');
-    if (t !== null) this.sfx!.chronoCast(t, pan, rift);
+    this.fx('chronoCast', 'chronoCast', [pan, rift], 0);
   }
 
   chronoHit(pan = 0, rift = false): void {
-    const t = this.slot('chronoHit');
-    if (t !== null) this.sfx!.chronoHit(t, pan, rift);
+    this.fx('chronoHit', 'chronoHit', [pan, rift], 0);
   }
 
   stasis(pan = 0): void {
-    const t = this.slot('stasis');
-    if (t !== null) this.sfx!.stasis(t, pan);
+    this.fx('stasis', 'stasis', [pan], 0);
   }
 
   decree(pan = 0): void {
-    const t = this.slot('decree');
-    if (t !== null) this.sfx!.decree(t, pan);
+    this.fx('decree', 'decree', [pan], 0);
   }
 
   hourStrike(pan = 0): void {
-    const t = this.slot('hourStrike');
-    if (t !== null) this.sfx!.hourStrike(t, pan);
+    this.fx('hourStrike', 'hourStrike', [pan], 0);
   }
 
   rewind(pan = 0): void {
-    const t = this.slot('rewind');
-    if (t !== null) this.sfx!.rewind(t, pan);
+    this.fx('rewind', 'rewind', [pan], 0);
   }
 
   timeStop(pan = 0): void {
-    const t = this.slot('timeStop');
-    if (t !== null) this.sfx!.timeStop(t, pan);
+    this.fx('timeStop', 'timeStop', [pan], 0);
   }
 
   echoes(pan = 0): void {
-    const t = this.slot('echoes');
-    if (t !== null) this.sfx!.echoes(t, pan);
+    this.fx('echoes', 'echoes', [pan], 0);
   }
 
   clack(pan = 0, heavy = false): void {
-    const t = this.slot('clack');
-    if (t !== null) this.sfx!.clack(t, pan, heavy);
+    this.fx('clack', 'clack', [pan, heavy], 0);
   }
 
   katana(pan = 0, heavy = false): void {
-    const t = this.slot('katana');
-    if (t !== null) this.sfx!.katana(t, pan, heavy);
+    this.fx('katana', 'katana', [pan, heavy], 0);
   }
 
   katanaHit(pan = 0, heavy = false): void {
-    const t = this.slot('katanaHit');
-    if (t !== null) this.sfx!.katanaHit(t, pan, heavy);
+    this.fx('katanaHit', 'katanaHit', [pan, heavy], 0);
   }
 
   gust(pan = 0): void {
-    const t = this.slot('gust');
-    if (t !== null) this.sfx!.gust(t, pan);
+    this.fx('gust', 'gust', [pan], 0);
   }
 
   windCharge(pan = 0): void {
-    const t = this.slot('windCharge');
-    if (t !== null) this.sfx!.windCharge(t, pan);
+    this.fx('windCharge', 'windCharge', [pan], 0);
   }
 
   windDash(pan = 0): void {
-    const t = this.slot('windDash');
-    if (t !== null) this.sfx!.windDash(t, pan);
+    this.fx('windDash', 'windDash', [pan], 0);
   }
 
   sheathe(pan = 0): void {
-    const t = this.slot('sheathe');
-    if (t !== null) this.sfx!.sheathe(t, pan);
+    this.fx('sheathe', 'sheathe', [pan], 0);
   }
 
   sever(pan = 0, n = 1): void {
-    const t = this.slot('sever');
-    if (t !== null) this.sfx!.sever(t, pan, n);
+    this.fx('sever', 'sever', [pan, n], 0);
   }
 
   skyQuake(pan = 0): void {
-    const t = this.slot('skyQuake');
-    if (t !== null) this.sfx!.skyQuake(t, pan);
+    this.fx('skyQuake', 'skyQuake', [pan], 0);
   }
 
   quakeSlam(pan = 0): void {
-    const t = this.slot('quakeSlam');
-    if (t !== null) this.sfx!.quakeSlam(t, pan);
+    this.fx('quakeSlam', 'quakeSlam', [pan], 0);
   }
 
   hundredCuts(pan = 0): void {
-    const t = this.slot('hundredCuts');
-    if (t !== null) this.sfx!.hundredCuts(t, pan);
+    this.fx('hundredCuts', 'hundredCuts', [pan], 0);
+  }
+
+  harpoon(pan = 0): void {
+    this.fx('harpoon', 'harpoon', [pan], 0);
+  }
+
+  chainReel(pan = 0): void {
+    this.fx('chainReel', 'chainReel', [pan], 0);
+  }
+
+  torpedo(pan = 0): void {
+    this.fx('torpedo', 'torpedo', [pan], 0);
+  }
+
+  seaBurst(pan = 0): void {
+    this.fx('seaBurst', 'seaBurst', [pan], 0);
+  }
+
+  paddle(pan = 0, heavy = false): void {
+    this.fx('paddle', 'paddle', [pan, heavy], 0);
+  }
+
+  kegRoll(pan = 0): void {
+    this.fx('kegRoll', 'kegRoll', [pan], 0);
+  }
+
+  foamBurst(pan = 0): void {
+    this.fx('foamBurst', 'foamBurst', [pan], 0);
   }
 
   /** The Twin Blade's Riposte: a blow turned on his crossed sabers. */
@@ -1107,8 +994,42 @@ class GameSound {
   }
 
   step(): void {
-    const t = this.slot('step');
-    if (t !== null) this.sfx!.step(t);
+    this.fx('step', 'step', []);
+  }
+
+  /**
+   * Play a one-shot: from its baked clip once there is one, otherwise (the very
+   * first time it's heard on this device) synthesized live while it bakes.
+   * `panAt` is which of `args` is the side, so one clip serves every side.
+   */
+  private fx<K extends OneShot>(slot: string, method: K, args: ShotArgs<K>, panAt = -1): void {
+    const t = this.slot(slot);
+    if (t === null) return;
+    const list = args as unknown[];
+    const pan = panAt >= 0 ? Number(list[panAt]) || 0 : 0;
+    let baked = false;
+    safely(`clip ${method}`, () => (baked = this.baker!.play(method, list, panAt, t, pan)));
+    if (!baked) (this.sfx![method] as (t: number, ...a: unknown[]) => void)(t, ...list);
+  }
+
+  candle(pan = 0): void {
+    this.fx('candle', 'candle', [pan], 0);
+  }
+
+  starPop(pan = 0): void {
+    this.fx('starPop', 'starPop', [pan], 0);
+  }
+
+  firecracker(pan = 0): void {
+    this.fx('firecracker', 'firecracker', [pan], 0);
+  }
+
+  rocketWhistle(pan = 0): void {
+    this.fx('rocketWhistle', 'rocketWhistle', [pan], 0);
+  }
+
+  fireworkBurst(pan = 0): void {
+    this.fx('fireworkBurst', 'fireworkBurst', [pan], 0);
   }
 
   private live(): boolean {
@@ -1117,24 +1038,76 @@ class GameSound {
 
   /** A Special gathering power for `seconds`. */
   ultCharge(seconds: number): void {
-    const t = this.slot('ultCharge');
-    if (t !== null) this.sfx!.ultCharge(t, seconds);
+    this.fx('ultCharge', 'ultCharge', [seconds]);
   }
 
   ultRelease(pan = 0): void {
-    const t = this.slot('ultRelease');
-    if (t !== null) this.sfx!.ultRelease(t, pan);
+    this.fx('ultRelease', 'ultRelease', [pan], 0);
   }
 
   /** Energy soaking into the hero; `step` counts the motes of one kill, so each chimes a note higher. */
   energy(pan = 0, step = 0): void {
-    const t = this.slot('energy');
-    if (t !== null) this.sfx!.energy(t, pan, step);
+    this.fx('energy', 'energy', [pan, step], 0);
   }
 
   ultReady(): void {
-    const t = this.slot('ultReady');
-    if (t !== null) this.sfx!.ultReady(t);
+    this.fx('ultReady', 'ultReady', []);
+  }
+
+  focusRay(pan = 0, struck = false): void {
+    this.fx('focusRay', 'focusRay', [pan, struck], 0);
+  }
+
+  prism(pan = 0, hum = false, shatter = false): void {
+    this.fx('prism', 'prism', [pan, hum, shatter], 0);
+  }
+
+  burningMirror(pan = 0, lit = false): void {
+    this.fx('burningMirror', 'burningMirror', [pan, lit], 0);
+  }
+
+  quicksilver(pan = 0): void {
+    this.fx('quicksilver', 'quicksilver', [pan], 0);
+  }
+
+  quickSplash(pan = 0, small = false): void {
+    this.fx('quickSplash', 'quickSplash', [pan, small], 0);
+  }
+
+  chalk(pan = 0): void {
+    this.fx('chalk', 'chalk', [pan], 0);
+  }
+
+  transmute(pan = 0, struck = false): void {
+    this.fx('transmute', 'transmute', [pan, struck], 0);
+  }
+
+  gild(pan = 0, gild = false): void {
+    this.fx('gild', 'gild', [pan, gild], 0);
+  }
+
+  opusShatter(pan = 0): void {
+    this.fx('opusShatter', 'opusShatter', [pan], 0);
+  }
+
+  bearGrowl(pan = 0, big = false): void {
+    this.fx('bearGrowl', 'bearGrowl', [pan, big], 0);
+  }
+
+  flareShot(pan = 0, star = false): void {
+    this.fx('flareShot', 'flareShot', [pan, star], 0);
+  }
+
+  jetHop(pan = 0): void {
+    this.fx('jetHop', 'jetHop', [pan], 0);
+  }
+
+  biplane(pan = 0): void {
+    this.fx('biplane', 'biplane', [pan], 0);
+  }
+
+  bombWhistle(pan = 0): void {
+    this.fx('bombWhistle', 'bombWhistle', [pan], 0);
   }
 
   /**
@@ -1184,7 +1157,7 @@ class GameSound {
       // Phones get a roomier output buffer (~45 ms): the smallest one underruns,
       // which is heard as stutter, whenever the audio thread has a busy moment.
       const touch = window.matchMedia?.('(pointer: coarse)').matches ?? false;
-      this.ctx = new AC({ latencyHint: touch ? 0.045 : 'interactive' });
+      this.ctx = new AC({ latencyHint: touch ? PHONE_LATENCY : 'interactive' });
       this.ctx.addEventListener('statechange', () => this.emit());
       this.build(this.ctx);
     }
@@ -1197,11 +1170,43 @@ class GameSound {
     if (this._muted) m.master.gain.value = 0;
     this.applyVolumes(m, 0);
     this.tracks = { main: gain(ctx, this.track === 'main' ? 1 : 0, m.music), shop: gain(ctx, this.track === 'shop' ? 1 : 0, m.music) };
-    this.music = new Music(m, this.tracks.main);
-    this.shopMusic = new ShopMusic(m, this.tracks.shop);
-    this.shopMusic.setMood(this.shopMood);
+    // The game's music fades in from silence the first time the sound starts.
+    const intro = gain(ctx, 0, this.tracks.main);
+    intro.gain.setValueAtTime(0, ctx.currentTime);
+    intro.gain.linearRampToValueAtTime(1, ctx.currentTime + MUSIC_FADE_IN);
     this.ambience = new Ambience(m);
     this.sfx = guarded(new Sfx(m));
+    this.baker = new SfxBaker(m);
+    if (this.baker.enabled) {
+      // Everything continuous is baked a few seconds ahead (see bake.ts).
+      const music = (this.music = new Music());
+      const shop = (this.shopMusic = new ShopMusic());
+      const amb = this.ambience;
+      this.streams = {
+        main: new Stream(m, { chunk: CHORD_SECONDS, tail: MUSIC_TAIL, rate: MUSIC_RATE, stems: [{ dest: intro, stereo: true }] }, (bm, _s, origin, len) => {
+          music.bind(bm, bm.music, origin);
+          // Live, the music's reverb skipped the music bus's own level; baked, it rides inside the music.
+          bm.musicVerb.gain.value = 1 / MUSIC_LEVEL;
+          music.tick(origin, origin + len);
+        }),
+        shop: new Stream(m, { chunk: SHOP_CHORD_SECONDS * 2, tail: MUSIC_TAIL, rate: MUSIC_RATE, stems: [{ dest: this.tracks.shop, stereo: true }] }, (bm, _s, origin, len) => {
+          shop.bind(bm, bm.music, origin);
+          bm.musicVerb.gain.value = 1 / MUSIC_LEVEL;
+          shop.tick(origin, origin + len);
+        }),
+        calls: new Stream(m, { chunk: CALLS_CHUNK, tail: CALLS_TAIL, rate: CALLS_RATE, stems: amb.stems }, (bm, stems, origin, len) => {
+          amb.bindCalls(bm, stems, origin);
+          // Likewise the creatures' reverb, which now passes the ambience bus's level.
+          bm.reverb.gain.value = 1 / AMBIENCE_LEVEL;
+          amb.tickCalls(origin, origin + len, true);
+        }),
+      };
+      this.baker.warm();
+    } else {
+      this.music = new Music(m, intro);
+      this.shopMusic = new ShopMusic(m, this.tracks.shop);
+    }
+    this.shopMusic.setMood(this.shopMood);
     this.ambience.setDaylight(this.daylight, 0);
     this.ambience.setOutdoors(this.outdoors, 0);
     this.ambience.setFire(this.fire, 0);
@@ -1217,8 +1222,16 @@ class GameSound {
     const now = ctx.currentTime;
     // Only the track playing (and, while it fades out, the one before it) is written.
     const fading = now < this.fadeUntil;
-    if (this.track === 'main' || fading) safely('music', () => this.music!.tick(now, now + LOOKAHEAD));
-    if (this.track === 'shop' || fading) safely('shop music', () => this.shopMusic!.tick(now, now + LOOKAHEAD));
+    const s = this.streams;
+    if (s) {
+      if (this.track === 'main' || fading) safely('music', () => s.main.tick(now));
+      if (this.track === 'shop' || fading) safely('shop music', () => s.shop.tick(now));
+      safely('calls', () => s.calls.tick(now));
+    } else {
+      if (this.track === 'main' || fading) safely('music', () => this.music!.tick(now, now + LOOKAHEAD));
+      if (this.track === 'shop' || fading) safely('shop music', () => this.shopMusic!.tick(now, now + LOOKAHEAD));
+      safely('calls', () => this.ambience!.tickCalls(now, now + LOOKAHEAD, false));
+    }
     safely('ambience', () => this.ambience!.tick(now, now + LOOKAHEAD));
     // Let the effects bus come back up once a fight goes quiet.
     this.trimCrowd(now);

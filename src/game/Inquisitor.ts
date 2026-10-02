@@ -85,7 +85,7 @@ export interface InquisitorKit {
   light: number;
 }
 
-export const INQUISITOR_KIT: InquisitorKit = {
+export const RINGBLADE_KIT: InquisitorKit = {
   key: 'jedi_inquisitor',
   blade: { core: 0xfff6f2, hot: 0xff6a62, mid: 0xf0283a, deep: 0xa00a22, light: 0xff4a3a },
   pal: pal(0xfff0ec, 0xff7a6a, 0xe8283a, 0x4a0610, 0xff4a4a),
@@ -255,7 +255,7 @@ export class Inquisitor implements Hero {
     return this.body;
   }
 
-  constructor(world: WorldScene, x: number, y: number, kit: InquisitorKit = INQUISITOR_KIT) {
+  constructor(world: WorldScene, x: number, y: number, kit: InquisitorKit = RINGBLADE_KIT) {
     this.world = world;
     this.kit = kit;
     this.x = x;

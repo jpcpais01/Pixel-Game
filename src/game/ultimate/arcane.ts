@@ -25,6 +25,8 @@ export class Singularity extends Fx {
     private x: number,
     private y: number,
     private p: Pal,
+    /** The Prism's: its arms and disc split into these colours. */
+    private spectrum?: number[],
   ) {
     super(world, 2700);
     this.ground = this.ink(150, 96);
@@ -84,7 +86,8 @@ export class Singularity extends Fx {
           const th = spin + (arm * Math.PI * 2) / 3 + f * 3.4;
           const px = x + Math.cos(th) * rho;
           const py = y + Math.sin(th) * rho * GROUND - f * 16;
-          const c = f > 0.8 ? p.core : f > 0.55 ? p.hot : f > 0.3 ? p.mid : p.deep;
+          const sp = this.spectrum;
+          const c = f > 0.8 ? p.core : sp ? sp[(arm * 2 + Math.floor(f * 8)) % sp.length] : f > 0.55 ? p.hot : f > 0.3 ? p.mid : p.deep;
           a.put(px, py, c, grow);
           if (f > 0.4) a.put(px + 1, py, p.deep, grow * 0.7);
         }
@@ -104,7 +107,7 @@ export class Singularity extends Fx {
         const py = oy + Math.sin(th) * disc * 0.3;
         // The far half of the disc hides behind the star.
         if (Math.sin(th) < 0 && Math.abs(px - x) < orb) continue;
-        a.put(px, py, hash(i, 3) > 0.5 ? p.hot : p.mid, 0.95);
+        a.put(px, py, this.spectrum ? this.spectrum[Math.floor(i / 4) % this.spectrum.length] : hash(i, 3) > 0.5 ? p.hot : p.mid, 0.95);
       }
     }
     a.end();

@@ -17,6 +17,12 @@ import { TWIN_KITS } from './twin';
 import { INQUISITOR_KITS } from './inquisitor';
 import { REAPER_KITS } from './reaper';
 import { LICH_KITS } from './lich';
+import { LIGHTWRIGHT_KITS } from './lightwright';
+import { TRANSMUTER_KITS } from './transmuter';
+import { AQUANAUT_KITS } from './aquanaut';
+import { BEAR_KITS } from './bear';
+import { AVIATOR_KITS } from './aviator';
+import { PYRO_KITS } from './pyrotechnist';
 
 export const KITS: Record<string, Kit> = {
   ...ARCANE_KITS,
@@ -33,6 +39,12 @@ export const KITS: Record<string, Kit> = {
   ...INQUISITOR_KITS,
   ...REAPER_KITS,
   ...LICH_KITS,
+  ...LIGHTWRIGHT_KITS,
+  ...TRANSMUTER_KITS,
+  ...AQUANAUT_KITS,
+  ...BEAR_KITS,
+  ...AVIATOR_KITS,
+  ...PYRO_KITS,
 };
 
 export const kitFor = (key: string): Kit => KITS[key] ?? {};
