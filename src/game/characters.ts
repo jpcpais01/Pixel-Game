@@ -45,6 +45,7 @@ import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SH
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { AUTUMN_MAGIC, AUTUMN_SKIN, FROST_MAGIC, FROST_SKIN, GROVE_MAGIC, GROVE_SKIN, Grovecraft, WILD_MAGIC, WILD_SKIN, Wildcraft } from './Druid';
 import { TITANIA_MAGIC, TITANIA_SKIN } from './Druid';
+import { CINDER_MAGIC, CINDER_SKIN, MYCELIA_MAGIC, MYCELIA_SKIN } from './Druid';
 import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT, Valkyrie } from './Valkyrie';
 import { MECH_KIT, Mech, SCRAP_KIT } from './Mech';
 import { HIVE_KIT, SYNTH_KIT, Synth } from './Synth';
@@ -1380,6 +1381,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_grove_titania' },
             },
           },
+          {
+            // A mushroom druid of the deep woods: a broad spotted toadstool for a hat, glowing gills at her hem, glowcaps on her shoulders and a staff crowned with luminous mushrooms.
+            id: 'mycelia',
+            name: 'Mycelia',
+            accent: 0x6af0e0,
+            preview: { texture: 'druid_mycelia', glow: 'druid_mycelia_e', idle: 'druid_mycelia_idle_down', chosen: 'druid_mycelia_cast_down' },
+            buttons: {
+              attack: { texture: 'icon_thorn_mycelia' },
+              special: { texture: 'icon_grove_mycelia' },
+            },
+          },
         ],
       },
       {
@@ -1408,13 +1420,25 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_pounce_frost' },
             },
           },
+          {
+            // A volcano's shaman: an obsidian pelt cracked with lava under a charred wolf's skull, ash on her face, and a spirit wolf of ember fire trailing smoke.
+            id: 'cinderhide',
+            name: 'Cinderhide',
+            accent: 0xff7a24,
+            preview: { texture: 'druid_cinder', glow: 'druid_cinder_e', idle: 'druid_cinder_idle_down', chosen: 'druid_cinder_cast_down' },
+            buttons: {
+              attack: { texture: 'icon_claws_cinder' },
+              special: { texture: 'icon_pounce_cinder' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'wild' || look === 'frostfang') {
+      if (look === 'wild' || look === 'frostfang' || look === 'cinderhide') {
         const frost = look === 'frostfang';
-        const craft = new Wildcraft(world, frost ? FROST_MAGIC : WILD_MAGIC);
+        const cinder = look === 'cinderhide';
+        const craft = new Wildcraft(world, cinder ? CINDER_MAGIC : frost ? FROST_MAGIC : WILD_MAGIC);
         const w = new Wizard(
           world,
           x,
@@ -1425,7 +1449,7 @@ const KITS: KitDef[] = [
             target: (dx, dy, level, dist) => craft.target(dx, dy, level, dist),
             untarget: () => craft.untarget(),
           },
-          frost ? FROST_SKIN : WILD_SKIN,
+          cinder ? CINDER_SKIN : frost ? FROST_SKIN : WILD_SKIN,
         );
         craft.caster = w;
         world.addEffect(craft);
@@ -1433,7 +1457,8 @@ const KITS: KitDef[] = [
       }
       const autumn = look === 'autumn';
       const titania = look === 'titania';
-      const craft = new Grovecraft(world, titania ? TITANIA_MAGIC : autumn ? AUTUMN_MAGIC : GROVE_MAGIC);
+      const mycelia = look === 'mycelia';
+      const craft = new Grovecraft(world, mycelia ? MYCELIA_MAGIC : titania ? TITANIA_MAGIC : autumn ? AUTUMN_MAGIC : GROVE_MAGIC);
       const w = new Wizard(
         world,
         x,
@@ -1444,7 +1469,7 @@ const KITS: KitDef[] = [
           target: (dx, dy, level, dist) => craft.target(dx, dy, level, dist),
           untarget: () => craft.untarget(),
         },
-        titania ? TITANIA_SKIN : autumn ? AUTUMN_SKIN : GROVE_SKIN,
+        mycelia ? MYCELIA_SKIN : titania ? TITANIA_SKIN : autumn ? AUTUMN_SKIN : GROVE_SKIN,
       );
       craft.caster = w;
       world.addEffect(craft);

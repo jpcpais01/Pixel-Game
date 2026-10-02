@@ -4,7 +4,7 @@ import type { Hurtbox } from '../combat';
 import { bindFoe } from '../Strings';
 import { spiritBeast } from '../Druid';
 import type { WorldScene } from '../../scenes/WorldScene';
-import { bloom, clamp01, easeOut, flare, Fx, GROUND, hash, pool, ring, segDist, strikeGround, type Ink, type Pal } from './ink';
+import { bloom, clamp01, dither, easeOut, flare, Fx, GROUND, hash, pool, ring, segDist, strikeGround, type Ink, type Pal } from './ink';
 import type { Cast } from './types';
 
 // The Druid's Specials: the Grovekeeper's Wrath of the Wild, roots bursting up
@@ -53,8 +53,11 @@ export class WildWrath extends Fx {
     private x: number,
     private y: number,
     private p: Pal,
-    /** Titania's Midsummer Dream: every root's tip opens into a blossom, and the crush throws up petals. */
-    private blossom = false,
+    /**
+     * What opens at every root's tip: Titania's Midsummer Dream a blossom, and
+     * the crush throws up petals; Mycelia's a glowcap, and the crush a cloud of spores.
+     */
+    private tips?: 'blossom' | 'shroom',
   ) {
     super(world, WRATH_LIFE);
     this.ground = this.ink(WRATH_R * 2 + 16, Math.ceil(WRATH_R * 2 * GROUND + 16));
@@ -100,7 +103,8 @@ export class WildWrath extends Fx {
       const sink = clamp01((t - (WRATH_LIFE - 500 - r.seed * 12)) / 350);
       const h = Math.round(r.h * up * (1 - sink));
       drawRoot(R, r, h, p, this.crushed && t - CRUSH_AT < 200);
-      if (this.blossom && h > 3) blossomAt(R, r, h, p, clamp01((t - r.at - 120) / 260));
+      if (this.tips === 'blossom' && h > 3) blossomAt(R, r, h, p, clamp01((t - r.at - 120) / 260));
+      if (this.tips === 'shroom' && h > 3) glowcapAt(R, r, h, p, clamp01((t - r.at - 120) / 260), t);
     }
     R.end();
   }
@@ -131,7 +135,8 @@ export class WildWrath extends Fx {
     strikeGround(world, x, y, WRATH_R, { damage: Math.round(CRUSH_DAMAGE / 2), heavy: false, knock: 60, fromX: x, fromY: y }, this.held);
     flare(world, x, y - 12, 200, p.light, 3.5, 600);
     bloom(world, x, y - 10, p.hot, 3.2, 420, y + 30);
-    if (this.blossom) world.debris([p.core, p.mid, p.hot, 0xffb8d0], x, y - 16, 22, y + 20, 'spores');
+    if (this.tips === 'blossom') world.debris([p.core, p.mid, p.hot, 0xffb8d0], x, y - 16, 22, y + 20, 'spores');
+    if (this.tips === 'shroom') world.debris([p.core, p.hot, p.mid, p.deep], x, y - 12, 30, y + 20, 'spores');
     world.cameras.main.shake(220, 0.003);
     sound.slam(world.pan(x));
   }
@@ -150,6 +155,22 @@ function blossomAt(g: Ink, r: Root, h: number, p: Pal, open: number): void {
   for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [-1, 1], [1, 1]]) g.put(x + ox, y + oy, p.mid);
   g.put(x, y, p.hot);
   g.put(x, y - 1, p.core, 0.8);
+}
+
+/** A glowcap swelling at a root's tip, `open` 0..1: a button, then a domed cap on a pale stem, a spore drifting off it. */
+function glowcapAt(g: Ink, r: Root, h: number, p: Pal, open: number, t: number): void {
+  if (open <= 0) return;
+  const x = Math.round(r.x + r.lean * h + Math.sign(r.lean || 1) * 2.5);
+  const y = r.y - h - 2;
+  g.put(x, y + 1, 0xd8ccc0);
+  if (open < 0.5) {
+    g.put(x, y, p.mid);
+    return;
+  }
+  for (let ox = -2; ox <= 2; ox++) g.put(x + ox, y, Math.abs(ox) === 2 ? p.deep : p.mid);
+  for (let ox = -1; ox <= 1; ox++) g.put(x + ox, y - 1, ox < 0 ? p.core : p.hot);
+  const rise = (t * 0.008 + r.seed * 1.7) % 6;
+  g.put(x + Math.round(Math.sin(t * 0.004 + r.seed) * 1.5), y - 3 - rise, p.hot, 1 - rise / 6);
 }
 
 /** A root `h` px tall: thick and barked at its foot, twisting as it rises, thorns along it and a glowing tip curling outward. */
@@ -211,6 +232,8 @@ export class PrimalStampede extends Fx {
   constructor(
     world: WorldScene,
     private c: Cast,
+    /** Cinderhide's herd of ember fire drags plumes of smoke, darkest first. */
+    private smoke?: [number, number],
   ) {
     super(world, RUN_TIME + Math.max(...DELAYS) + 300);
     this.dir = c.dx >= 0 ? 1 : -1;
@@ -249,6 +272,20 @@ export class PrimalStampede extends Fx {
         // They come out of the air behind her and fade back into it at the end of the run.
         const a = Math.min(clamp01(k / 0.12), 1 - clamp01((k - 0.85) / 0.15));
         const stride = 0.5 + 0.5 * Math.sin(t * 0.03 + b.lane);
+        // Smoke billowing off its back, thickest close behind it.
+        const smoke = this.smoke;
+        if (smoke) {
+          for (let i = 0; i < 4; i++) {
+            const back = 9 + i * 4;
+            const sx = pos.x - c.dx * back;
+            const sy = pos.y - 11 - i * 1.5 - c.dy * back * GROUND + Math.sin(t * 0.015 + i + b.lane) * 1.5;
+            const r = 1.8 + i * 0.7;
+            for (let oy = -4; oy <= 4; oy++) for (let ox = -4; ox <= 4; ox++) {
+              if (Math.hypot(ox, oy) > r || dither(Math.round(sx + ox), Math.round(sy + oy)) > a * (0.8 - i * 0.16)) continue;
+              g.put(sx + ox, sy + oy, smoke[(ox + oy + i) & 1], 0.8);
+            }
+          }
+        }
         // Two ghosts behind each, the way it came.
         for (const back of [12, 6]) spiritBeast(g, pos.x - c.dx * back, pos.y - 8 - c.dy * back * GROUND, this.dir, b.kind, stride, c.pal, a * (back > 8 ? 0.25 : 0.45));
         spiritBeast(g, pos.x, pos.y - 8, this.dir, b.kind, stride, c.pal, a);
