@@ -99,8 +99,8 @@ import { DRAFT_FRAMES, DRAFT_H, DRAFT_W, RING, RING_FRAMES, SEA_TILE, archArt, d
 import { GOAL, ISLETS as SKY_ISLETS } from '../world/glideLayout';
 import { birdSheet } from './skyArena';
 import { BOLT_DIRS, BOLT_KINDS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, dreadCannonIcon, dreadSalvoIcon, reticle, salvoIcon } from './mech';
-import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
-import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
+import { HAUNT_KINDS, HAUNT_SIZE, bansheeHurlIcon, hauntFrame, hurlIcon, keenIcon, rattleIcon } from './poltergeist';
+import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, ferryLanternIcon, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
 import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, coilOrbIcon, hammerWrenchIcon, orbIcon, runeTurretIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
 import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, JADE_SERPENT_LOOK, LION_LOOK, NEMEAN_LOOK, PHOENIX_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon, vaporDroneIcon, vaporGridIcon } from './synth';
@@ -538,27 +538,31 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   const bolts = BOLT_KINDS.flatMap((k) => frameList(Array.from({ length: BOLT_DIRS }, (_, i) => mechBolt(k, i)), `${k}_`));
   register(scene, 'mech_bolt', pack(bolts, MECH_BOLT_SIZE, MECH_BOLT_SIZE), MECH_BOLT_SIZE, MECH_BOLT_SIZE);
   scene.textures.addCanvas('mech_reticle', toCanvas(13, 13, reticle()));
-  // The Phantom's haunted things thrown ('haunt', by kind), the wisps ('soulwisp' and
-  // 'soulwisp_petal' and 'soulwisp_firefly', flickering on a loop), the possession marks, the Dead of
+  // The Phantom's haunted things thrown ('haunt', by kind), the wisps ('soulwisp',
+  // 'soulwisp_petal', 'soulwisp_firefly' and 'soulwisp_ferry', flickering on a loop), the possession marks, the Dead of
   // Night's dark, and the icons.
   register(scene, 'haunt', pack(HAUNT_KINDS.map((k) => ({ name: k, r: hauntFrame(k).render() })), HAUNT_SIZE, HAUNT_SIZE), HAUNT_SIZE, HAUNT_SIZE);
-  for (const [key, petal, fly] of [['soulwisp', false, false], ['soulwisp_petal', true, false], ['soulwisp_firefly', false, true]] as const) {
-    register(scene, key, pack(frameList(Array.from({ length: WISP_FRAMES }, (_, f) => wispFrame(f, petal, fly)), 'w'), WISP_SIZE, WISP_SIZE), WISP_SIZE, WISP_SIZE);
+  for (const [key, petal, fly, ferry] of [['soulwisp', false, false, false], ['soulwisp_petal', true, false, false], ['soulwisp_firefly', false, true, false], ['soulwisp_ferry', false, false, true]] as const) {
+    register(scene, key, pack(frameList(Array.from({ length: WISP_FRAMES }, (_, f) => wispFrame(f, petal, fly, ferry)), 'w'), WISP_SIZE, WISP_SIZE), WISP_SIZE, WISP_SIZE);
     scene.anims.create({ key: `${key}_flicker`, frames: Array.from({ length: WISP_FRAMES }, (_, f) => ({ key, frame: `w${f}` })), frameRate: petal || fly ? 8 : 12, repeat: -1 });
   }
-  const possessMarks = [{ name: 'w', r: possessMark(false).render() }, { name: 'c', r: possessMark(true).render() }, { name: 'f', r: possessMark(false, true).render() }];
+  const possessMarks = [{ name: 'w', r: possessMark(false).render() }, { name: 'c', r: possessMark(true).render() }, { name: 'f', r: possessMark(false, true).render() }, { name: 'r', r: possessMark(false, false, true).render() }];
   register(scene, 'possess_mark', pack(possessMarks, POSSESS_MARK, POSSESS_MARK), POSSESS_MARK, POSSESS_MARK);
   scene.textures.addCanvas('night_hole', toCanvas(128, 128, nightHole()));
   scene.textures.addCanvas('icon_hurl', toCanvas(16, 16, hurlIcon()));
   scene.textures.addCanvas('icon_rattle', toCanvas(16, 16, rattleIcon()));
   scene.textures.addCanvas('icon_hurl_tea', toCanvas(16, 16, hurlIcon(true)));
   scene.textures.addCanvas('icon_rattle_tea', toCanvas(16, 16, rattleIcon(true)));
+  scene.textures.addCanvas('icon_hurl_banshee', toCanvas(16, 16, bansheeHurlIcon()));
+  scene.textures.addCanvas('icon_rattle_banshee', toCanvas(16, 16, keenIcon()));
   scene.textures.addCanvas('icon_lantern', toCanvas(16, 16, lanternIcon()));
   scene.textures.addCanvas('icon_possess', toCanvas(16, 16, possessIcon()));
   scene.textures.addCanvas('icon_lantern_cala', toCanvas(16, 16, lanternIcon(true)));
   scene.textures.addCanvas('icon_possess_cala', toCanvas(16, 16, possessIcon(true)));
   scene.textures.addCanvas('icon_lantern_firefly', toCanvas(16, 16, lanternIcon(false, true)));
   scene.textures.addCanvas('icon_possess_firefly', toCanvas(16, 16, possessIcon(false, true)));
+  scene.textures.addCanvas('icon_lantern_ferry', toCanvas(16, 16, ferryLanternIcon()));
+  scene.textures.addCanvas('icon_possess_ferry', toCanvas(16, 16, possessIcon(false, false, true)));
   // The Inventor's turret ('turret': unfolding 'b0'..'b4', turned 'h0'..'h7'
   // and firing 'f0'..'f7'), and its icons. The Engineer and the Scientist
   // themselves are hero sheets (see heroSheets.ts).
