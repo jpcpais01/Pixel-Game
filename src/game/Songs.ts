@@ -6,7 +6,7 @@ import type { BuffDef } from './buffs';
 import { inFlight, type Hurtbox } from './combat';
 import type { Effect } from './Slash';
 import type { WorldScene } from '../scenes/WorldScene';
-import { bloom, dither, easeOut, flare, Fx, type Ink, pal, ring, shade, type Pal } from './ultimate/ink';
+import { bloom, dither, easeOut, flare, Fx, hash, type Ink, pal, ring, shade, type Pal } from './ultimate/ink';
 
 // The bard's music made visible: the minstrel's notes, which fly from the
 // lute and leap from foe to foe; the war drummer's shockwaves, rolling out of
@@ -26,6 +26,10 @@ export const VAGABOND_PAL: Pal = pal(0xfbf6ff, 0xe2d0ff, 0xb08cff, 0x5a3aa8, 0xc
 export const FADISTA_PAL: Pal = pal(0xf4f8ff, 0xb8d2ff, 0x3c7cff, 0x1a2e9a, 0x6a9cff);
 /** The minstrel's Orpheus skin: gold, the underworld's violet at its edge. */
 export const ORPHEUS_PAL: Pal = pal(0xfffdf2, 0xffeeaa, 0xffc84a, 0x7a3ab0, 0xffd870);
+/** The minstrel's skald skin: runes of pale gold, edged in ice blue. */
+export const SKALD_PAL: Pal = pal(0xfffcee, 0xffe8a0, 0x8ccfff, 0x2c5c9e, 0xbfe2ff);
+/** The drummer's taiko skin: vermilion and gold. */
+export const TAIKO_PAL: Pal = pal(0xfff8e6, 0xffd24a, 0xff4a1e, 0x8a1208, 0xff6a2a);
 /** The drummer's moonhowl skin: pale spirit indigo. */
 export const HOWL_PAL: Pal = pal(0xf2f4ff, 0xbcc8ff, 0x6c7cff, 0x2c2a9a, 0x8a9aff);
 
@@ -46,6 +50,8 @@ export const HARLEQUIN_HASTE: BuffDef = { ...HASTE, name: 'Song of mirth', icon:
 export const VAGABOND_HASTE: BuffDef = { ...HASTE, name: 'Song of the road', icon: 'icon_song_vagabond', tint: 0xc0a0ff };
 export const FADISTA_HASTE: BuffDef = { ...HASTE, name: 'Song of saudade', icon: 'icon_song_fadista', tint: 0x6a9cff };
 export const ORPHEUS_HASTE: BuffDef = { ...HASTE, name: 'Hymn of the Muses', icon: 'icon_song_orpheus', tint: 0xffd870 };
+/** The skald's keeps the song's own name: only its icon and colour are his. */
+export const SKALD_HASTE: BuffDef = { ...HASTE, icon: 'icon_song_skald', tint: 0x9cd6ff };
 
 /** How the minstrel's music looks: the notes' texture (frames n0 and n1) and their colours. */
 export interface SongLook {
@@ -64,6 +70,8 @@ export const VAGABOND_SONG: SongLook = { tex: 'note_vagabond_e', pal: VAGABOND_P
 export const FADISTA_SONG: SongLook = { tex: 'note_fadista_e', pal: FADISTA_PAL };
 /** Laurel-flagged notes and little golden lyres. */
 export const ORPHEUS_SONG: SongLook = { tex: 'note_orpheus_e', pal: ORPHEUS_PAL };
+/** Runes: Fehu and Sowilo. */
+export const SKALD_SONG: SongLook = { tex: 'note_skald_e', pal: SKALD_PAL };
 
 /** Each minstrel look's music and song of haste, by look id (the minstrel's own when it isn't here). */
 export const MINSTREL_SONGS: Record<string, { song: SongLook; haste: BuffDef }> = {
@@ -73,6 +81,7 @@ export const MINSTREL_SONGS: Record<string, { song: SongLook; haste: BuffDef }> 
   vagabond: { song: VAGABOND_SONG, haste: VAGABOND_HASTE },
   fadista: { song: FADISTA_SONG, haste: FADISTA_HASTE },
   orpheus: { song: ORPHEUS_SONG, haste: ORPHEUS_HASTE },
+  skald: { song: SKALD_SONG, haste: SKALD_HASTE },
 };
 
 /** The drummer's rhythm: every blow lands harder. */
@@ -87,6 +96,8 @@ export const RHYTHM: BuffDef = {
 
 /** The same rhythm in the moonhowl's voice. */
 export const HOWL_RHYTHM: BuffDef = { ...RHYTHM, name: 'Pack rhythm', icon: 'icon_rhythm_howl', tint: 0x8a9aff };
+/** The taiko's keeps the rhythm's own name: only its icon and colour are his. */
+export const TAIKO_RHYTHM: BuffDef = { ...RHYTHM, icon: 'icon_rhythm_taiko', tint: 0xff6a2a };
 
 /** How a note flies and what it does. */
 export interface NoteKind {
@@ -302,6 +313,8 @@ export class Shockwave extends Fx {
     private radius: number,
     private p: Pal,
     life = 280,
+    /** Break like a brushstroke (the taiko's): thick where the brush lands, thinning and running dry as it lifts. */
+    private brush = false,
   ) {
     super(world, life);
     this.pix = this.ink(Math.ceil(radius * 2 + 12), Math.ceil(radius * 1.4 + 12));
@@ -326,13 +339,17 @@ export class Shockwave extends Fx {
         const e = full ? 1 : 1 - Math.pow(Math.abs(u * 2 - 1), 3);
         const c = Math.cos(th);
         const sn = Math.sin(th) * 0.7;
-        const n = Math.ceil(w);
+        // A brushstroke presses in at its start and thins toward its end.
+        const bw = this.brush ? w * (0.5 + 1.1 * Math.min(1, u * 5) * (1 - u * 0.75)) : w;
+        const n = Math.ceil(bw);
         for (let j = -n; j <= n; j++) {
-          const o = j * (w / n);
+          const o = j * (bw / n);
+          // Dry streaks running along the stroke, more of them as the brush lifts.
+          if (this.brush && hash(j + 9, Math.floor(u * 9), band) < u * 0.55) continue;
           const px = Math.round(x + c * (rb + o));
           const py = Math.round(y + sn * (rb + o));
           if (dither(px, py) >= a * e * 1.3) continue;
-          g.put(px, py, shade(p, Math.abs(o) / (w || 1)), Math.min(1, a * e * 1.2));
+          g.put(px, py, shade(p, Math.abs(o) / (bw || 1)), Math.min(1, a * e * 1.2));
         }
       }
     }

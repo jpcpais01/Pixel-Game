@@ -3,10 +3,10 @@ import { sound } from '../../audio';
 import { heroBuffs } from '../buffs';
 import { snap } from '../display';
 import { NOTE_H } from '../../art/bard';
-import { HOWL_RHYTHM, MINSTREL_SONGS, Note, RHYTHM, TROUBADOUR_SONG, type NoteKind } from '../Songs';
+import { HOWL_RHYTHM, MINSTREL_SONGS, Note, RHYTHM, TAIKO_RHYTHM, TROUBADOUR_SONG, type NoteKind } from '../Songs';
 import type { Hurtbox } from '../combat';
 import type { WorldScene } from '../../scenes/WorldScene';
-import { circle, clamp01, easeOut, flare, Fx, hash, line, ring, rune, strikeGround, type Ink, type Pal } from './ink';
+import { circle, clamp01, easeOut, flare, Fx, GROUND, hash, line, ring, rune, shade, strikeGround, type Ink, type Pal } from './ink';
 import type { Cast } from './types';
 
 // The Bard's Specials: the minstrel's encore, a ring of notes that turns
@@ -29,6 +29,8 @@ export class Encore extends Fx {
   private song = TROUBADOUR_SONG;
   /** Orpheus's: the dead rise to listen. */
   private orpheus: boolean;
+  /** The skald's: runes of the elder futhark turning round him on the ground. */
+  private skald: boolean;
 
   constructor(
     world: WorldScene,
@@ -38,6 +40,7 @@ export class Encore extends Fx {
     const { song, haste } = MINSTREL_SONGS[c.look] ?? MINSTREL_SONGS.minstrel;
     this.song = { tex: song.tex, pal: c.pal };
     this.orpheus = c.look === 'orpheus';
+    this.skald = c.look === 'skald';
     this.ground = this.ink(this.orpheus ? 120 : 96, this.orpheus ? 96 : 60);
     for (let i = 0; i < 6; i++) this.notes.push(this.own(world.add.image(c.x, c.y, this.song.tex, i % 2 ? 'n1' : 'n0').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0)));
     const v = c.hero.vitals;
@@ -88,6 +91,9 @@ export class Encore extends Fx {
     if (this.orpheus) {
       greekKey(g, h.x, h.y, 22 * open, t * 0.0012, c.pal, 0.75 * open);
       shades(g, h.x, h.y, t, c.pal, open);
+    } else if (this.skald) {
+      rune(g, h.x, h.y, 14 * open, t * 0.003, c.pal, 0.6 * open);
+      runeRing(g, h.x, h.y, 27 * open, -t * 0.0009, t, c.pal, 0.8 * open);
     } else rune(g, h.x, h.y, 14 * open, t * 0.003, c.pal, 0.6 * open);
     g.end();
   }
@@ -148,6 +154,78 @@ function shades(g: Ink, cx: number, cy: number, t: number, p: Pal, open: number)
   }
 }
 
+/** Runes of the elder futhark as strokes on a 2x4 grid: Fehu, Uruz, Thurisaz, Raido, Kenaz, Algiz, Sowilo, Tiwaz. */
+const FUTHARK: [number, number, number, number][][] = [
+  [[0, 0, 0, 4], [0, 1, 2, 0], [0, 2, 2, 1]],
+  [[0, 4, 0, 0], [0, 0, 2, 1.5], [2, 1.5, 2, 4]],
+  [[0, 0, 0, 4], [0, 1, 1.6, 2], [1.6, 2, 0, 3]],
+  [[0, 0, 0, 4], [0, 0, 2, 1], [2, 1, 0, 2], [0, 2, 2, 4]],
+  [[2, 0, 0, 2], [0, 2, 2, 4]],
+  [[1, 0, 1, 4], [1, 1.6, 0, 0], [1, 1.6, 2, 0]],
+  [[2, 0, 0, 1.4], [0, 1.4, 2, 2.6], [2, 2.6, 0, 4]],
+  [[1, 0, 1, 4], [1, 0, 0, 1.3], [1, 0, 2, 1.3]],
+];
+
+/** The skald's ring of runes: eight upright glyphs of light standing round him on the ground, turning slowly, each flaring in turn as the saga reaches it. */
+function runeRing(g: Ink, cx: number, cy: number, r: number, rot: number, t: number, p: Pal, a: number): void {
+  if (r < 8 || a <= 0) return;
+  FUTHARK.forEach((strokes, i) => {
+    const th = rot + (i / FUTHARK.length) * Math.PI * 2;
+    const x0 = cx + Math.cos(th) * r - 1.5;
+    const y0 = cy + Math.sin(th) * r * GROUND - 6;
+    const lit = Math.max(0, Math.sin(t * 0.004 - i * 0.8));
+    const k = a * (0.55 + 0.45 * lit);
+    for (const [ax, ay, bx, by] of strokes) {
+      // A halo of ice under the gold stroke.
+      line(g, x0 + ax * 1.5 + 1, y0 + ay * 1.5, x0 + bx * 1.5 + 1, y0 + by * 1.5, p.mid, k * 0.5);
+      line(g, x0 + ax * 1.5, y0 + ay * 1.5, x0 + bx * 1.5, y0 + by * 1.5, lit > 0.7 ? p.core : p.hot, k);
+    }
+  });
+}
+
+/** An ensō: one stroke of the brush round the ground, pressed thick where it starts, thinning and running dry before it closes. */
+function enso(g: Ink, cx: number, cy: number, r: number, w: number, start: number, p: Pal, a: number): void {
+  if (r < 3 || a <= 0) return;
+  const sweep = Math.PI * 1.82;
+  const steps = Math.ceil(sweep * r * 1.4);
+  for (let i = 0; i <= steps; i++) {
+    const u = i / steps;
+    const th = start + sweep * u;
+    const bw = w * (0.45 + 1.15 * Math.min(1, u * 6) * (1 - u * 0.7));
+    const n = Math.max(1, Math.ceil(bw));
+    for (let j = -n; j <= n; j++) {
+      if (hash(j + 5, Math.floor(u * 14)) < u * u * 0.6) continue;
+      const rr = r + (j / n) * bw;
+      g.put(cx + Math.cos(th) * rr, cy + Math.sin(th) * rr * GROUND, shade(p, Math.abs(j / n)), a);
+    }
+  }
+  // A spatter flung off where the brush lifted.
+  const end = start + sweep;
+  for (let i = 0; i < 4; i++) g.put(cx + Math.cos(end + i * 0.07) * (r + 2 + i * 1.6), cy + Math.sin(end + i * 0.07) * (r + 2 + i * 1.6) * GROUND, p.mid, a * (1 - i * 0.2));
+}
+
+/** Mitsudomoe: three commas chasing round a ring, the crest painted on the taiko's head, here turning on the ground. */
+function tomoe(g: Ink, cx: number, cy: number, r: number, rot: number, p: Pal, a: number): void {
+  if (r < 6 || a <= 0) return;
+  circle(g, cx, cy, r, p.hot, a);
+  for (let i = 0; i < 3; i++) {
+    const th0 = rot + (i / 3) * Math.PI * 2;
+    // The comma's head: a round blot two-fifths out.
+    const hx = cx + Math.cos(th0) * r * 0.42;
+    const hy = cy + Math.sin(th0) * r * 0.42 * GROUND;
+    const hr = r * 0.26;
+    for (let dy = -hr; dy <= hr; dy++) for (let dx = -hr; dx <= hr; dx++) if (Math.hypot(dx, dy / GROUND) <= hr) g.put(hx + dx, hy + dy * GROUND, Math.hypot(dx, dy) < hr * 0.5 ? p.core : p.mid, a);
+    // Its tail sweeping round behind it, thinning.
+    for (let k = 0; k <= 14; k++) {
+      const u = k / 14;
+      const th = th0 - u * 1.9;
+      const rr = r * (0.42 + u * 0.4);
+      const tw = hr * (1 - u) * 0.9;
+      for (let j = -1; j <= 1; j++) g.put(cx + Math.cos(th) * (rr + j * tw), cy + Math.sin(th) * (rr + j * tw) * GROUND, j === 0 ? p.hot : p.mid, a * (1 - u * 0.4));
+    }
+  }
+}
+
 /** When each great beat falls, in ms; the last is the heaviest. */
 const BEATS = [0, 360, 720, 1080, 1500];
 
@@ -156,6 +234,8 @@ export class ThunderOfWar extends Fx {
   private ground: Ink;
   private next = 0;
   private rings: { t0: number; x: number; y: number; r: number }[] = [];
+  /** The taiko's: each beat an ensō brushed round him, the drum's three commas turning beneath. */
+  private taiko: boolean;
 
   constructor(
     world: WorldScene,
@@ -163,7 +243,8 @@ export class ThunderOfWar extends Fx {
   ) {
     super(world, 2200);
     this.ground = this.ink(260, 170);
-    const rhythm = c.look === 'howl' ? HOWL_RHYTHM : RHYTHM;
+    this.taiko = c.look === 'taiko';
+    const rhythm = c.look === 'howl' ? HOWL_RHYTHM : this.taiko ? TAIKO_RHYTHM : RHYTHM;
     heroBuffs.add(rhythm);
     world.buffGained(rhythm);
   }
@@ -187,12 +268,20 @@ export class ThunderOfWar extends Fx {
     for (const rg of this.rings) {
       const k = (t - rg.t0) / 520;
       if (k < 0 || k > 1) continue;
+      if (this.taiko) {
+        const start = hash(Math.round(rg.t0), 3) * Math.PI * 2;
+        enso(g, rg.x, rg.y, 6 + (rg.r - 6) * easeOut(k), 4 * (1 - k) + 1, start, p, 1 - k);
+        const k2 = k - 0.18;
+        if (k2 > 0) enso(g, rg.x, rg.y, 4 + (rg.r - 16) * easeOut(k2), 2 * (1 - k2) + 0.6, start + 2.4, p, 0.6 * (1 - k2));
+        continue;
+      }
       ring(g, rg.x, rg.y, 6 + (rg.r - 6) * easeOut(k), 4 * (1 - k) + 1, p, 1 - k);
       const k2 = k - 0.18;
       if (k2 > 0) ring(g, rg.x, rg.y, 4 + (rg.r - 16) * easeOut(k2), 2 * (1 - k2) + 0.5, p, 0.6 * (1 - k2));
     }
     const fade = clamp01((this.life - t) / 500);
-    rune(g, h.x, h.y, 22 * easeOut(t / 250) * fade, t * 0.004, p, fade);
+    if (this.taiko) tomoe(g, h.x, h.y, 22 * easeOut(t / 250) * fade, t * 0.004, p, fade);
+    else rune(g, h.x, h.y, 22 * easeOut(t / 250) * fade, t * 0.004, p, fade);
     g.end();
   }
 }

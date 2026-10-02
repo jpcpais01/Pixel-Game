@@ -467,6 +467,8 @@ const SKINS: Record<string, UltSkin> = {
   'bard:fadista': { pal: pal(0xf4f8ff, 0xb8d2ff, 0x3c7cff, 0x1a2e9a, 0x6a9cff) },
   'bard:orpheus': { pal: pal(0xfffdf2, 0xffeeaa, 0xffc84a, 0x7a3ab0, 0xffd870) },
   'bard:howl': { pal: pal(0xf2f4ff, 0xbcc8ff, 0x6c7cff, 0x2c2a9a, 0x8a9aff), type: 'drummer' },
+  'bard:skald': { pal: pal(0xfffcee, 0xffe8a0, 0x8ccfff, 0x2c5c9e, 0xbfe2ff) },
+  'bard:taiko': { pal: pal(0xfff8e6, 0xffd24a, 0xff4a1e, 0x8a1208, 0xff6a2a), type: 'drummer' },
   'chronomancer:clockwork': { pal: CLOCKWORK_PAL },
   'chronomancer:primavera': { pal: pal(0xfffaf2, 0xffd0de, 0xf48cae, 0x3e9a78, 0xd8f4e4) },
   'chronomancer:anomaly': { pal: ANOMALY_PAL, type: 'paradox' },
