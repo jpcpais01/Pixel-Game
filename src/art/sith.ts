@@ -93,6 +93,142 @@ export const SABER_GREEN = blade(['#dcffe0', '#f4fff4'], ['#0e9a36', '#2ed058', 
 export const SABER_GREEN_GLOW = hex('#2ee05a');
 
 // ---------------------------------------------------------------------------
+// The Dune Nomad (the Jedi knight's skin): a wanderer of the deep desert.
+// Sand-bleached travelling cloak frayed to rags at the hem over rust wraps, a
+// pale linen wrap round the head with brass goggles pushed up on it, a rust
+// scarf drawn over the mouth and nose, and a worn, leather-bound hilt with a
+// sun-bleached cyan blade.
+
+export const NOMAD_CLOAK: Material = {
+  ramp: ramp('#3a2818', '#644630', '#8f6c46', '#b8966a', '#d8c092'),
+  outline: hex('#1a1008'),
+  outlineLit: hex('#34241a'),
+};
+
+export const NOMAD_TUNIC: Material = {
+  ramp: ramp('#38160c', '#5e2618', '#883e24', '#ae5c34'),
+  outline: hex('#170804'),
+  outlineLit: hex('#2c120a'),
+};
+
+/** The head wrap: pale, sun-worn linen. */
+export const NOMAD_WRAP: Material = {
+  ramp: ramp('#56483a', '#86765c', '#b6a486', '#dcd0b0', '#f2e8d0'),
+  outline: hex('#221a10'),
+  outlineLit: hex('#3a3022'),
+};
+
+/** The scarf over his face and round his shoulders: dusty rust red. */
+export const NOMAD_SCARF: Material = {
+  ramp: ramp('#36120a', '#601e10', '#8e3218', '#b64c26', '#d6703e'),
+  outline: hex('#160604'),
+  outlineLit: hex('#2c0e08'),
+};
+
+export const NOMAD_BRASS: Material = {
+  ramp: ramp('#42280e', '#7e561c', '#b8882c', '#e6bc62', '#fff0b4'),
+  outline: hex('#1a0e04'),
+  shine: true,
+};
+
+/** The goggles' lenses: sea-green glass that catches the light. */
+export const NOMAD_LENS: Material = {
+  ramp: ramp('#0a3238', '#18727a', '#4ed0c8', '#c4fff6'),
+  outline: hex('#061416'),
+  emissive: 0.45,
+  shine: true,
+  noAO: true,
+};
+
+/** Sun-darkened skin. */
+export const NOMAD_SKIN: Material = {
+  ramp: ramp('#40241a', '#6e432c', '#9c6a46', '#c08c62'),
+  outline: hex('#1c0e08'),
+  outlineLit: hex('#34201a'),
+};
+
+/** The hilt's grip, bound in old leather. */
+export const NOMAD_GRIP: Material = {
+  ramp: ramp('#1c1009', '#362214', '#56381f', '#74502c'),
+  outline: hex('#0c0704'),
+};
+
+export const SABER_DUNE = blade(['#e2fffb', '#f8fffe'], ['#0e8a98', '#28c4cc', '#86eee6']);
+export const SABER_DUNE_GLOW = hex('#30d4d4');
+
+// ---------------------------------------------------------------------------
+// The Dark Empress (the Sith's skin): a dark sorceress enthroned. A tall
+// spiked obsidian crown banded in silver with amethysts that glow, long black
+// hair round a porcelain face and violet eyes, a high flared collar, a black
+// gown over amethyst silk to the floor with silver filigree at its edges and a
+// train behind, and an ornate silver saberstaff burning violet-magenta.
+
+export const EMPRESS_GOWN: Material = {
+  ramp: ramp('#07040b', '#130b1b', '#22142e', '#342046', '#4e3066'),
+  outline: hex('#030105'),
+  outlineLit: hex('#1a1024'),
+};
+
+/** The bodice and underskirt: amethyst silk. */
+export const EMPRESS_SILK: Material = {
+  ramp: ramp('#22083a', '#3c1260', '#5c1e8a', '#8232b4', '#a858d8'),
+  outline: hex('#0c0216'),
+  outlineLit: hex('#1e0830'),
+  shine: true,
+};
+
+/** Silver filigree on the gown, collar and crown. */
+export const EMPRESS_SILVER: Material = {
+  ramp: ramp('#2c2638', '#5c5872', '#9896b2', '#cacadf', '#eeeef8'),
+  outline: hex('#0e0b14'),
+  shine: true,
+};
+
+/** The crown and collar: polished obsidian. */
+export const EMPRESS_CROWN: Material = {
+  ramp: ramp('#050407', '#0f0b15', '#1d1728', '#302842', '#4c4268'),
+  outline: hex('#020103'),
+  outlineLit: hex('#1a1424'),
+  shine: true,
+};
+
+/** The amethysts set in the crown, collar and hilt: lit from within. */
+export const EMPRESS_GEM: Material = {
+  ramp: ramp('#701aa0', '#ac46e4', '#dc88ff', '#fce0ff'),
+  outline: hex('#24063a'),
+  emissive: 0.9,
+  shine: true,
+  noAO: true,
+};
+
+/** Porcelain skin with a cold lilac shade. */
+export const EMPRESS_SKIN: Material = {
+  ramp: ramp('#6a5a74', '#a898b2', '#dcd0e4', '#faf4fc'),
+  outline: hex('#1e1424'),
+  outlineLit: hex('#3a2e42'),
+};
+
+export const EMPRESS_HAIR: Material = {
+  ramp: ramp('#050308', '#0d0914', '#191324', '#2a2238', '#3e3454'),
+  outline: hex('#020103'),
+  outlineLit: hex('#140f1c'),
+};
+
+export const EMPRESS_LIPS: Material = {
+  ramp: ramp('#3a0a2c', '#661448', '#942a6c'),
+  outline: hex('#140410'),
+};
+
+/** Long black silk gloves. */
+export const EMPRESS_GLOVE: Material = {
+  ramp: ramp('#050407', '#100c17', '#1e1829', '#302842'),
+  outline: hex('#020103'),
+};
+
+export const SABER_AMETHYST = blade(['#fbe8ff', '#fff6ff'], ['#7a10b8', '#c430f0', '#f080ff']);
+export const SABER_AMETHYST_GLOW = hex('#c838f0');
+
+// ---------------------------------------------------------------------------
 // Button icons (16x16), drawn additively like the Jedi's (see effects.ts).
 
 type Px = { px: Uint8ClampedArray; add: (x: number, y: number, c: RGB, a?: number) => void };
@@ -189,3 +325,8 @@ export const WARLORD_STAFF_ICON: IconColors = [hex('#fff8f0'), hex('#ffa060'), h
 export const WARLORD_BOLT_ICON: IconColors = [hex('#fff4ee'), hex('#ffa08a'), hex('#ff3a2a'), hex('#8a0a14')];
 export const MASTER_SABER_ICON: IconColors = [hex('#f4fff4'), hex('#8af09a'), hex('#2ed058'), hex('#0e9a36')];
 export const MASTER_FORCE_ICON: IconColors = [hex('#ffffff'), hex('#dcffe4'), hex('#8ee8a4'), hex('#2e8a4e')];
+// The Dune Nomad's sun-bleached cyan, and the Dark Empress's violet-magenta (her gloved hand dark in the lightning's light).
+export const NOMAD_SABER_ICON: IconColors = [hex('#f8fffe'), hex('#86eee6'), hex('#28c4cc'), hex('#0e8a98')];
+export const NOMAD_FORCE_ICON: IconColors = [hex('#fffcf2'), hex('#d8f6f0'), hex('#8edcd4'), hex('#9a7a4a')];
+export const EMPRESS_STAFF_ICON: IconColors = [hex('#fff6ff'), hex('#f080ff'), hex('#c430f0'), hex('#7a10b8')];
+export const EMPRESS_BOLT_ICON: IconColors = [hex('#fff4ff'), hex('#f0b0ff'), hex('#d050ff'), hex('#5a1080')];

@@ -1,7 +1,7 @@
 import { heroTimers } from './timers';
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
-import { CONSECRATE_HIT, CRUSADER_LOOK, HOLY_LOOK, OATH_LOOK, SERAPH_LOOK, PALADIN_H, PALADIN_ORIGIN_X, PALADIN_ORIGIN_Y, PALADIN_W, SMITE_HIT, type PaladinLook } from '../art/paladin';
+import { CONSECRATE_HIT, CRUSADER_LOOK, HOLY_LOOK, INQUISITOR_LOOK, LION_LOOK, OATH_LOOK, SERAPH_LOOK, PALADIN_H, PALADIN_ORIGIN_X, PALADIN_ORIGIN_Y, PALADIN_W, SMITE_HIT, type PaladinLook } from '../art/paladin';
 import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
@@ -89,6 +89,30 @@ export const OATH_KIT: PaladinKit = {
   motes: [0xf6eeff, 0xb07aff, 0x7a3ad8],
   aura: 0xc8a0ff,
   aegis: [0x8a4ae0, 0xd0b0ff],
+};
+
+/** The Templar's Lionheart skin: warm sunlit gold with a roaring amber edge. */
+const LION_FX: Scheme = { core: 0xfffbe8, hot: 0xffe08a, mid: 0xffb43a, deep: 0xd8501a, light: 0xffc870 };
+/** The Crusader's Inquisitor skin: purging white-silver fire throwing crimson embers. */
+const PURGE_FX: Scheme = { core: 0xffffff, hot: 0xe8eef8, mid: 0xb8c4d8, deep: 0xc81e32, light: 0xdfe6f4 };
+
+export const LIONHEART_KIT: PaladinKit = {
+  ...HOLY_KIT,
+  look: LION_LOOK,
+  fx: LION_FX,
+  motes: [0xfffbe8, 0xffd870, 0xff9a2a],
+  aura: 0xffe0a0,
+  aegis: [0xff9a2a, 0xffe6a8],
+  groundEdge: 0xb8401a,
+};
+
+export const INQUISITOR_KIT: PaladinKit = {
+  ...CRUSADER_KIT,
+  look: INQUISITOR_LOOK,
+  fx: PURGE_FX,
+  motes: [0xffffff, 0xd0d8e8, 0xe8404a],
+  aura: 0xdde4f0,
+  aegis: [0xc81e32, 0xe8eef8],
 };
 
 /** Barrier lost per second once he leaves the consecrated ground (or his Zeal ends). */

@@ -3,7 +3,7 @@ import { sound } from '../../audio';
 import { snap } from '../display';
 import { dirOf } from '../Wizard';
 import { onGround } from '../Toxins';
-import { clockFace, TimeBolt, type BoltKind } from '../Chronos';
+import { clockFace, GRAINS, TimeBolt, type BoltKind, type ClockDress } from '../Chronos';
 import { CHRONO_H, CHRONO_ORIGIN_X, CHRONO_ORIGIN_Y, CHRONO_W } from '../../art/chrono';
 import type { Hurtbox } from '../combat';
 import type { WorldScene } from '../../scenes/WorldScene';
@@ -26,15 +26,15 @@ export class TimeStop extends Fx {
   private holdT = 0;
   private struck = false;
   private caught = new Set<Hurtbox>();
-  /** Primavera's Eternal Spring: the great clock is a flower clock, and petals drift down over it. */
-  private spring: boolean;
+  /** Primavera's: the great clock is a flower clock, and petals drift down over it; the Sandglass's: sand pours round it and grains blow across. */
+  private dress?: ClockDress;
 
   constructor(
     world: WorldScene,
     private c: Cast,
   ) {
     super(world, STOP_TIME + 520);
-    this.spring = c.look === 'primavera';
+    this.dress = c.look === 'primavera' ? 'flowers' : c.look === 'sandglass' ? 'sand' : undefined;
     this.face = this.ink(STOP_R * 2 + 16, Math.ceil(STOP_R * 2 * 0.58) + 16);
     sound.timeStop(world.pan(c.x));
     // Dust hangs in the air, stopped where it was.
@@ -52,13 +52,13 @@ export class TimeStop extends Fx {
       const open = easeOut(t / 420);
       const fade = t > STOP_TIME - 200 ? 0.7 + 0.3 * Math.sin(t * 0.08) : 1;
       // The minute hand ticks round once, a notch at a time; the hour hand creeps.
-      clockFace(g, c.x, c.y, STOP_R * open, c.pal, open * fade, Math.floor((t / STOP_TIME) * 12) / 12, t / STOP_TIME / 12, 0.58, this.spring);
+      clockFace(g, c.x, c.y, STOP_R * open, c.pal, open * fade, Math.floor((t / STOP_TIME) * 12) / 12, t / STOP_TIME / 12, 0.58, this.dress);
       circle(g, c.x, c.y, STOP_R * open * 0.5, c.pal.deep, open * 0.6);
-      if (this.spring && Math.floor(t / 70) !== Math.floor((t - dt) / 70)) {
-        // Petals drifting down over the stilled ground.
+      if (this.dress && Math.floor(t / 70) !== Math.floor((t - dt) / 70)) {
+        // Petals (or grains of sand) drifting down over the stilled ground.
         const a = Math.random() * Math.PI * 2;
         const r = Math.sqrt(Math.random()) * STOP_R * 0.9;
-        this.world.debris(SPRING_PETALS, snap(c.x + Math.cos(a) * r), snap(c.y + Math.sin(a) * r * 0.58) - 10, 1, c.y + 40, 'spores');
+        this.world.debris(this.dress === 'sand' ? GRAINS : SPRING_PETALS, snap(c.x + Math.cos(a) * r), snap(c.y + Math.sin(a) * r * 0.58) - 10, 1, c.y + 40, 'spores');
       }
       // Everything under it stands frozen, the hold renewed so newcomers freeze too.
       this.holdT -= dt;
@@ -113,7 +113,7 @@ export class Legion extends Fx {
   ) {
     super(world, LEGION_TIME);
     this.key = c.hero.sprite.texture.key;
-    this.bolt = { key: this.key, rift: true, pal: c.pal, damage: 8, speed: 250, range: 175, slow: 1, slowFloor: 1, slowMs: 0, lit: false };
+    this.bolt = { key: this.key, rift: true, pal: c.pal, damage: 8, speed: 250, range: 175, slow: 1, slowFloor: 1, slowMs: 0, lit: false, scan: c.look === 'rewind' };
     for (let i = 0; i < LEGION_N; i++) {
       const s = this.own(
         world.add

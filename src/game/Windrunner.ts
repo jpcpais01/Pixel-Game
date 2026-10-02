@@ -6,7 +6,7 @@ import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals } from './combat';
-import { Arrow, WIND_ARROW, WISTERIA_ARROW } from './Arrows';
+import { Arrow, OWL_ARROW, WIND_ARROW, WISTERIA_ARROW } from './Arrows';
 import { GaleShot } from './Bolts';
 import type { ArcherStyle } from './Archer';
 import type { Aim, Hero } from './characters';
@@ -43,6 +43,8 @@ type State = 'free' | 'fan' | 'vault';
 export const WIND_STYLE: ArcherStyle = { key: 'archer_wind', arrow: WIND_ARROW };
 /** Wisteria: arrows shedding wisteria petals, and a gale that whirls them. */
 export const WISTERIA_STYLE: ArcherStyle = { key: 'archer_wisteria', arrow: WISTERIA_ARROW };
+/** Snow Owl: frost-headed arrows shedding down and snowflakes, and a gale that carries snow. */
+export const OWL_STYLE: ArcherStyle = { key: 'archer_owl', arrow: OWL_ARROW };
 
 /**
  * The windrunner: a light elven skirmisher who never stands still. The attack

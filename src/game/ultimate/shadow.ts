@@ -64,6 +64,8 @@ export class FanOfKnives extends Fx {
       for (let i = 0; i < KNIVES; i++) this.knives.push({ a: off + (i / KNIVES) * Math.PI * 2, born: t, dead: false });
       sound.knife(world.pan(cx), this.wave + 1, this.wave === KNIFE_WAVES - 1);
       world.debris(p.tints, cx, cy, 6, c.y + 10, 'burst');
+      // The Gentleman Thief's fan is a deck flung from his hands: spare cards flutter down round him.
+      if (c.look === 'gentleman') world.addEffect(new PetalDrift(world, cx, cy, 'rogue_card', 4, 60));
       this.wave++;
     }
 
@@ -86,6 +88,18 @@ export class FanOfKnives extends Fx {
         this.bleed.dose(foe, 2500);
         world.debris(BLEED.tints, x, y, 4, foe.y + 10, 'burst');
         sound.knifeHit(world.pan(x));
+        continue;
+      }
+      if (c.look === 'gentleman') {
+        // A calling card tumbling end over end: tall, then wide, a crimson heart on its face.
+        const tall = Math.floor((t - k.born) / 70 + k.a * 3) % 2 === 0;
+        const w = tall ? 2 : 3;
+        const h = tall ? 3 : 2;
+        const x0 = Math.round(x) - 1;
+        const y0 = Math.round(y) - 1;
+        for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) g.put(x0 + dx, y0 + dy, p.core);
+        g.put(x0 + (tall ? 0 : 1), y0 + (tall ? 1 : 0), p.mid);
+        for (let i = 4; i < 10; i++) if (dither(Math.round(x - ux * i), Math.round(y - uy * i)) < 0.35) g.put(x - ux * i, y - uy * i, p.mid, 0.7);
         continue;
       }
       // Blade (bright at the point), a dark grip, and a faint streak behind.
@@ -173,12 +187,14 @@ export class Eclipse extends Fx {
       world.addEffect(new CrossCut(world, x, y, feet + 20, hash(this.next, 7) * Math.PI, p));
       // Nightbloom's Moonflower Waltz: every cut sheds a flurry of moonflower petals.
       if (c.look === 'nightbloom') world.addEffect(new PetalDrift(world, x, y, 'rogue_petal', 5, 55));
+      // The Cobra's: every bite splashes venom.
+      if (c.look === 'cobra') world.addEffect(new PetalDrift(world, x, y, 'rogue_venom', 4, 50));
       world.debris(p.tints, x, y, 5, feet + 20, 'burst');
       sound.blink(world.pan(x));
     }
     const g = this.ground.begin(c.x, c.y, 2.5);
     const open = easeOut(t / 260) * (1 - clamp01((t - 1600) / 400));
-    pool(g, c.x, c.y, 82 * open, c.look === 'nightbloom' ? 0x080620 : 0x0c0616, p.deep, open, GROUND, 0.7);
+    pool(g, c.x, c.y, 82 * open, c.look === 'nightbloom' ? 0x080620 : c.look === 'cobra' ? 0x03140a : 0x0c0616, p.deep, open, GROUND, 0.7);
     circle(g, c.x, c.y, 82 * open, p.mid, open * 0.9);
     circle(g, c.x, c.y, 80 * open, p.deep, open * 0.6, GROUND, t * 0.003, t * 0.003 + Math.PI);
     // Petals of shadow drifting up out of the dark.

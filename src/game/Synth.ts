@@ -26,7 +26,9 @@ import { stand } from './rest';
 //    storm of micro-drones pours out to hunt everything near.
 // Everything warms it (see heat.ts); overheated, it vents and stalls.
 // The Hive Queen's drones are bee-bots whose stings leave honey, and her
-// grid is a wall of honeycomb; she plays the same.
+// grid is a wall of honeycomb; she plays the same. The Vaporwave's drones
+// are chrome dolphins firing straight hot-pink lasers ghosted in cyan, and
+// its grid glows over a scrolling retro grid.
 
 const DRONES = 3;
 const ORBIT_R = 12;
@@ -61,6 +63,8 @@ const FOOTFALLS = new Set([1, 4]);
 export interface SynthKit {
   key: string;
   hive: boolean;
+  /** The Vaporwave's lasers and grid. */
+  vapor?: boolean;
   maxHp: number;
   speed: number;
   /** Drone texture (its animation is `<drone>_spin`). */
@@ -86,6 +90,16 @@ export const HIVE_KIT: SynthKit = {
   drone: 'drone_hive',
   pal: pal(0xfffbe0, 0xffe08a, 0xffb03a, 0xc86a0e, 0xffc860),
   aura: 0xffe0a0,
+};
+
+/** The Vaporwave: hot pink with cyan for its ghosting (the deep tone). */
+export const VAPOR_KIT: SynthKit = {
+  ...SYNTH_KIT,
+  key: 'synth_vapor',
+  vapor: true,
+  drone: 'drone_vapor',
+  pal: pal(0xfff0fa, 0xff8ad4, 0xff3aa8, 0x2ad8ff, 0xff7ad0),
+  aura: 0xffb0e8,
 };
 
 type Goal = Hurtbox | { x: number; y: number };
@@ -295,7 +309,7 @@ export class Synth implements Hero {
     const w = this.world;
     h.hurt({ damage: ZAP_DAMAGE * this.heat.power, heavy: false, knock: 35, fromX: d.x, fromY: d.y });
     h.slow?.(ZAP_SLOW, ZAP_SLOW_MS, this.kit.pal.mid);
-    w.addEffect(new Zap(w, d.x, d.y - d.z, h.x, h.y - h.bodyY, this.kit.pal, this.kit.hive, h.y));
+    w.addEffect(new Zap(w, d.x, d.y - d.z, h.x, h.y - h.bodyY, this.kit.pal, this.kit.hive, h.y, this.kit.vapor));
     sound.droneZap(w.pan(d.x), this.kit.hive);
   }
 
@@ -393,7 +407,7 @@ export class Synth implements Hero {
       d.goal = null;
       d.zapT = 0;
     });
-    this.grid = new LaserGrid(this.world, this.drones, this.kit.pal, this.kit.hive);
+    this.grid = new LaserGrid(this.world, this.drones, this.kit.pal, this.kit.hive, this.kit.vapor);
     this.world.addEffect(this.grid);
     this.gridT = GRID_MS;
     heroTimers.follow('grid', 'ability', '', this.kit.pal.hot, () => (this.grid ? { left: this.gridT, total: GRID_MS } : null));
@@ -459,6 +473,7 @@ class Zap extends Fx {
     private p: Pal,
     private hive: boolean,
     private ground: number,
+    private vapor = false,
   ) {
     super(world, 170);
     this.g = this.ink(Math.ceil(Math.abs(x1 - x0) + 12), Math.ceil(Math.abs(y1 - y0) + 12));
@@ -473,6 +488,12 @@ class Zap extends Fx {
       line(g, x0, y0, x1, y1, p.mid, a * 0.8);
       line(g, x0, y0 + 1, x1, y1 + 1, p.deep, a * 0.4);
       g.put(x1, y1, p.core, a);
+    } else if (this.vapor) {
+      // A dead-straight laser, its cyan ghost a pixel off like a worn videotape.
+      line(g, x0 + 1, y0 + 1, x1 + 1, y1 + 1, p.deep, a * 0.55);
+      line(g, x0, y0, x1, y1, p.mid, a);
+      g.put(x1, y1, p.core, a);
+      g.put(x0, y0, p.hot, a);
     } else bolt(g, x0, y0, x1, y1, p, Math.floor(t / 40), a, 0.5);
     g.end();
   }
@@ -492,6 +513,7 @@ class LaserGrid extends Fx {
     private drones: Drone[],
     private p: Pal,
     private hive: boolean,
+    private vapor = false,
   ) {
     super(world, GRID_MS + 400);
     this.g = this.ink(GRID_R * 2 + 40, GRID_R * 2 + 50);
@@ -510,11 +532,15 @@ class LaserGrid extends Fx {
     const g = this.g.begin(cx, cy - POST_H, cy + GRID_R);
     const up = this.up;
     const a = up ? 0.85 + 0.15 * Math.sin(this.t * 0.03) : 0.3;
+    if (this.vapor && up) this.retro(g, posts);
     for (let i = 0; i < 3; i++) {
       const s = posts[i];
       const e = posts[(i + 1) % 3];
       if (this.hive) this.comb(g, s.x, s.y, e.x, e.y, a);
-      else {
+      else if (this.vapor) {
+        line(g, s.x + 1, s.y + 1, e.x + 1, e.y + 1, this.p.deep, a * 0.6);
+        line(g, s.x, s.y, e.x, e.y, this.p.mid, a);
+      } else {
         line(g, s.x, s.y, e.x, e.y, this.p.hot, a);
         // A flickering glow either side of the beam.
         if (up) {
@@ -549,6 +575,36 @@ class LaserGrid extends Fx {
       w.debris(this.hive ? [0xfff0b0, 0xffb03a] : this.p.tints, h.x, h.y - h.bodyY, 3, h.y + 10, 'spores');
     }
     if (cut.length) sound.droneZap(w.pan(this.bounds.x), this.hive);
+  }
+
+  /**
+   * The Vaporwave's floor: a retro grid of faint lines across the triangle,
+   * the cross lines scrolling towards the viewer like a road into a sunset.
+   */
+  private retro(g: Ink, posts: { x: number; y: number }[]): void {
+    const ys = posts.map((q) => q.y);
+    const top = Math.ceil(Math.min(...ys));
+    const bottom = Math.floor(Math.max(...ys));
+    const scroll = Math.floor(this.t / 90) % 4;
+    for (let y = top; y <= bottom; y++) {
+      // The triangle's span on this row.
+      let l = Infinity;
+      let r = -Infinity;
+      for (let i = 0; i < 3; i++) {
+        const s = posts[i];
+        const e = posts[(i + 1) % 3];
+        if ((y < s.y && y < e.y) || (y > s.y && y > e.y) || s.y === e.y) continue;
+        const x = s.x + ((y - s.y) / (e.y - s.y)) * (e.x - s.x);
+        l = Math.min(l, x);
+        r = Math.max(r, x);
+      }
+      if (!(r > l)) continue;
+      const cross = (y - top + scroll) % 4 === 0;
+      for (let x = Math.ceil(l) + 1; x < r - 1; x++) {
+        if (cross) g.put(x, y, this.p.mid, 0.35);
+        else if ((x - Math.round((l + r) / 2)) % 4 === 0) g.put(x, y, this.p.deep, 0.3);
+      }
+    }
   }
 
   /** A chain of little hexagons from one post to the next, the cells filled with honey light. */

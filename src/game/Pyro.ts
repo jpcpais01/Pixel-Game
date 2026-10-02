@@ -48,6 +48,27 @@ export const PUMPKIN_STYLE: SpellStyle = {
 /** The Pumpkin Witch skin (Hallow's Eve): the same pyromancer, casting jack-o'-lanterns. */
 export const PUMPKIN_SKIN: WizardSkin = { key: 'wizard_pumpkin', style: PUMPKIN_STYLE, kit: PYRO_KIT };
 
+/** The Firebird's flame: white-gold at the heart, burning down through gold to crimson, with rose flecks. */
+export const FIREBIRD_STYLE: SpellStyle = {
+  core: 0xfffdf0,
+  hot: 0xffec90,
+  mid: 0xffb83a,
+  deep: 0xd8203e,
+  accent: 0xff6a8a,
+  sparks: [0xffec90, 0xffb83a, 0xd8203e, 0xfffdf0],
+  glow: 0xffa030,
+  light: 0xffb84a,
+  flash: 0xffe8a0,
+  unstable: 0xe0203a,
+  fizzle: 0x8a5a50,
+  fizzleSparks: [0x8a5a50, 0xffb83a, 0xd8203e],
+  orb: { texture: 'orb_firebird_e', anim: 'orb_firebird_spin' },
+  burst: { texture: 'burst_firebird_e', anim: 'burst_firebird_pop' },
+};
+
+/** The Firebird skin: the same pyromancer, hooded as the firebird. */
+export const FIREBIRD_SKIN: WizardSkin = { key: 'wizard_firebird', style: FIREBIRD_STYLE, kit: PYRO_KIT };
+
 /** Burning: stacks and ticks like poison, in fire colours. */
 const BURN: ToxStyle = {
   core: 0xfff8e0,
@@ -132,6 +153,28 @@ export const PUMPKIN_FIRE: PyroFire = {
   chips: [0xffa440, 0xe0661a, 0x7a2ad0],
   meteor: 'pyro_meteor_pumpkin',
   scorch: 'scorch_pumpkin',
+};
+
+export const FIREBIRD_FIRE: PyroFire = {
+  spell: FIREBIRD_STYLE,
+  burn: {
+    core: 0xfffdf0,
+    hot: 0xffec90,
+    mid: 0xffb83a,
+    deep: 0xd8203e,
+    murk: 0x3a0812,
+    tints: [0xfff4c0, 0xffc040, 0xe8304a],
+    light: 0xffa840,
+    numbers: 0xffc050,
+    suffix: '_firebird',
+  },
+  mark: [0xffb030, 0xff5a6a],
+  halo: 0xffa030,
+  light: 0xffb84a,
+  flash: 0xffe090,
+  chips: [0xffec90, 0xff6a8a, 0xd8203e],
+  meteor: 'pyro_meteor_firebird',
+  scorch: 'scorch_firebird',
 };
 
 const BALL_SPEED = 140;

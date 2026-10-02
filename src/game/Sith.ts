@@ -88,6 +88,15 @@ export const WARLORD_KIT: SithKit = {
   light: 0xff5a2a,
 };
 
+/** The Dark Empress: violet-magenta blades and amethyst lightning. */
+export const EMPRESS_KIT: SithKit = {
+  key: 'jedi_empress',
+  staff: { core: 0xfff6ff, hot: 0xf080ff, mid: 0xc430f0, deep: 0x6a0aa0 },
+  bolt: pal(0xfff4ff, 0xf0b0ff, 0xd050ff, 0x5a1080, 0xe070ff),
+  dominion: pal(0xfff0fc, 0xf090ff, 0xb02ae0, 0x2a0640, 0xd050ff),
+  light: 0xc840f0,
+};
+
 export class Sith implements Hero {
   x: number;
   y: number;

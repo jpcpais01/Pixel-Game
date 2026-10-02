@@ -70,8 +70,8 @@ export interface ChronoLook {
   hair: Material;
   /** Light of the magic, brightest first. */
   light: [RGB, RGB, RGB, RGB];
-  /** A skin that changes the cut, not just the cloth: the clockwork (a timekeeper) or the anomaly (a paradox). */
-  style?: 'clockwork' | 'anomaly' | 'primavera';
+  /** A skin that changes the cut, not just the cloth: the clockwork, Primavera and the Sandglass (timekeepers), or the anomaly and the Rewind (paradoxes). */
+  style?: 'clockwork' | 'anomaly' | 'primavera' | 'sandglass' | 'rewind';
   /** Hands, when not bare. */
   hand?: Material;
 }
@@ -189,10 +189,66 @@ export const PRIMAVERA_LOOK: ChronoLook = {
   light: [hex('#fffaf2'), hex('#ffd0de'), hex('#f48cae'), hex('#4cb88c')],
 };
 
+// The Sandglass's own materials: sun-darkened skin, glowing sand, and the pale sea-green glass of a desert hourglass.
+const DUSK: Material = { ramp: ramp('#4a2a18', '#7a4a2c', '#a46a42', '#c88c5c'), outline: hex('#1e0e06') };
+const SAND: Material = { ramp: ramp('#a8661a', '#e0a83a', '#ffd870', '#fff4c0'), outline: hex('#3a2208'), emissive: 0.7, noAO: true, noOutline: true };
+const DESERT_GLASS: Material = { ramp: ramp('#3c5e5c', '#5a8684', '#86b4ac', '#c4ece0'), outline: hex('#101c1c'), emissive: 0.12, shine: true, noAO: true };
+
+/**
+ * Sandglass, the timekeeper's skin: a sage of the deep desert. A long robe of
+ * sun-bleached linen hemmed in an indigo band stitched with gold, a wide
+ * indigo sash wound at the waist with its tails hanging to the knee, a white
+ * turban wound high with a gold jewel at its brow and its tail down his back,
+ * and an indigo veil over his face to the eyes, edged with gold coins. Gold
+ * bangles at his wrists. He leans on a staff crowned with a great glass
+ * hourglass whose gold sand pours and glows, and for a halo a ring of sand
+ * runs round his head in streams. His magic is dune gold over indigo.
+ */
+export const SANDGLASS_LOOK: ChronoLook = {
+  key: 'chrono_sandglass',
+  rift: false,
+  robe: { ramp: ramp('#5e4830', '#8e7250', '#bc9e72', '#dcc496', '#f2e2bc'), outline: hex('#261a0e'), outlineLit: hex('#3a2a18') },
+  inner: { ramp: ramp('#0c1038', '#18205e', '#283686', '#3e52ae', '#6278d0'), outline: hex('#05071c') },
+  trim: { ramp: ramp('#4a2c08', '#8a5a14', '#c8902a', '#f0c850', '#fff2a8'), outline: hex('#1e1204'), shine: true, noAO: true },
+  hair: { ramp: ramp('#867c6c', '#b8af9c', '#ddd5c2', '#f6f0e0', '#ffffff'), outline: hex('#2a261c'), outlineLit: hex('#3e382c') },
+  hand: DUSK,
+  style: 'sandglass',
+  light: [hex('#fff8e0'), hex('#ffe08a'), hex('#e8b04a'), hex('#3a48b0')],
+};
+
+// The Rewind's own materials: hot neon, a chrome-cyan visor, white high-tops and the cassette in his hand.
+const NEON_PINK: Material = { ramp: ramp('#8a1a6a', '#d02aa0', '#ff5ad0', '#ffb4ee'), outline: hex('#2a0626'), emissive: 0.6, noAO: true };
+const SHADES: Material = { ramp: ramp('#0a1236', '#14306a', '#1c5ea0', '#2ea4d8', '#b0f6ff'), outline: hex('#04061a'), emissive: 0.3, shine: true, noAO: true };
+const HIGHTOP: Material = { ramp: ramp('#5e5a74', '#a6a2bc', '#dedcec', '#ffffff'), outline: hex('#16142a') };
+const TAPE: Material = { ramp: ramp('#0c0a14', '#18141f', '#26202e', '#3a3246'), outline: hex('#040306'), shine: true };
+/** The synthwave sun on his back, gold at the top to magenta at the horizon. */
+const SUNSET: RGB[] = ['#fff2a0', '#ffc860', '#ff8a6a', '#ff4aa8'].map(hex);
+
+/**
+ * Rewind, the paradox's skin: a time-glitch out of a 1980s that never was.
+ * A cropped midnight-purple jacket with padded shoulders, a popped collar and
+ * neon trim laid out like the grid of a synthwave horizon, a neon sunset
+ * across its back; slim trousers with a cyan stripe and white high-tops; a
+ * swept-up magenta pompadour over a wraparound visor of cyan scanlines. In his
+ * hand, for a watch, a glowing cassette whose reels spin. His edges never sit
+ * quite still: magenta ghosts off one side and cyan off the other, like a worn
+ * tape, and a tracking line rolls down him.
+ */
+export const VHS_LOOK: ChronoLook = {
+  key: 'chrono_vhs',
+  rift: true,
+  robe: { ramp: ramp('#120a26', '#1e1240', '#2c1a5c', '#40287a', '#5a3c9e'), outline: hex('#06030e'), outlineLit: hex('#1c0e3a') },
+  inner: { ramp: ramp('#07050d', '#0e0a18', '#181226', '#241c36'), outline: hex('#030206') },
+  trim: { ramp: ramp('#0a5a8a', '#14a0d0', '#3ae4ff', '#b4faff'), outline: hex('#041a2c'), emissive: 0.6, noAO: true },
+  hair: { ramp: ramp('#4a0a3e', '#8a1670', '#c82a9a', '#f05ac4', '#ffa0e4'), outline: hex('#1e0418'), outlineLit: hex('#3a0a30'), shine: true },
+  style: 'rewind',
+  light: [hex('#fff0ff'), hex('#ff6ae0'), hex('#30e8ff'), hex('#3a1a8a')],
+};
+
 /** The anomaly's other light, where it tears. */
 const MAGENTA: RGB = hex('#ff38c8');
 
-export const CHRONO_LOOKS = [KEEPER_LOOK, MOON_LOOK, PARADOX_LOOK, AEON_LOOK, CLOCKWORK_LOOK, ANOMALY_LOOK, PRIMAVERA_LOOK];
+export const CHRONO_LOOKS = [KEEPER_LOOK, MOON_LOOK, PARADOX_LOOK, AEON_LOOK, CLOCKWORK_LOOK, ANOMALY_LOOK, PRIMAVERA_LOOK, SANDGLASS_LOOK, VHS_LOOK];
 
 /** The look being drawn; set by buildChronoFrames. */
 let S: ChronoLook = KEEPER_LOOK;
@@ -331,6 +387,21 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   else c.capsule(ex, ey, wx, wy, 1.5, 2.1, S.robe, { bias });
   c.part();
   c.ellipse(wx, wy, S.rift ? 1.1 : 1.5, S.rift ? 1.0 : 1.2, S.trim, { bias });
+  if (S.style === 'rewind') {
+    // A stripe of hot pink round the neon cuff, like the jacket's grid.
+    c.part();
+    c.px(wx - 0.5, wy + 0.5, NEON_PINK, sphere(0, 0.3), { bias });
+  }
+  if (S.style === 'sandglass') {
+    // Gold bangles stacked on the bare wrist between the sleeve and the hand.
+    const bx = wx + (p.x - wx) * 0.55;
+    const by = wy + (p.y - wy) * 0.55;
+    c.part();
+    c.ellipse(bx, by, 1.0, 0.8, DUSK, { bias });
+    c.part();
+    c.px(bx - 0.5, by, S.trim, sphere(-0.3, -0.2), { bias });
+    c.px(bx + 0.5, by, S.trim, sphere(0.4, 0), { bias });
+  }
   c.part();
   c.ellipse(p.x, p.y, 1.15, 1.1, S.hand ?? SKIN, { bias });
 }
@@ -338,6 +409,13 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
 /** Small dark boots under the hem. */
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
   c.part();
+  if (S.style === 'rewind') {
+    // White high-tops: a chunky sole, a flash of pink at the heel.
+    c.ellipse(x, y - 0.2, side ? 2.2 : 1.7, 1.35, HIGHTOP, { flatten: 0.8, bias });
+    c.part();
+    c.px(side ? x + 1.2 : x - 0.5, y - 0.6, NEON_PINK, sphere(side ? 0.6 : 0, -0.2), { bias });
+    return;
+  }
   c.ellipse(x, y, side ? 2.1 : 1.6, 1.2, BOOT, { flatten: 0.8, bias });
 }
 
@@ -499,6 +577,26 @@ function halo(c: PixelCanvas, cx: number, cy: number, rx: number, ry: number, ti
         c.px(x, y, BLOSSOMS[h % 3], sphere(0, -0.2), { bias: front ? 0 : -1 });
       }
       c.spark(x, y, on ? core : hot, on ? 0.9 : 0.25);
+    }
+    return;
+  }
+  if (S.style === 'sandglass') {
+    // The Sandglass's ring of sand: grains running round in four streams
+    // with gaps between, each stream thinning at its tail, the quarters marked
+    // by brighter grains and the light running round the hours.
+    for (const [x, y, dx, dy] of ring) {
+      // The grain's place round the whole ring, so hidden stretches don't shift the streams.
+      const i = Math.round(((Math.atan2(dy, dx) + Math.PI * 2) / (Math.PI * 2)) * steps) % steps;
+      const k = (i - tick * 2 + steps * 10) % 16;
+      if (k > 9) continue;
+      if (k > 6 && i % 2) continue;
+      c.px(x, y, k > 6 ? S.trim : SAND, sphere(dx * 0.6, dy * 0.6), { bias: front ? 0 : -1 });
+    }
+    const lit = tick % 12;
+    for (const [x, y, h] of hours) {
+      const on = h === lit || h === (lit + 6) % 12;
+      if (on) c.spark(x, y, core, 0.9);
+      else if (h % 3 === 0) c.spark(x, y, hot, 0.45);
     }
     return;
   }
@@ -1151,6 +1249,489 @@ function springCompany(c: PixelCanvas, tick: number, view: View): void {
 }
 
 // ---------------------------------------------------------------------------
+// The Sandglass: his turban and veil, his robe and sash, his great hourglass and the drifting sand
+
+/** Wraps of cloth wound round the turban: diagonal creases across what's drawn of it between rows y0 and y1. */
+function turbanWraps(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, slant: number): void {
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (c.materialAt(x, y) !== S.hair) continue;
+      const k = (((x + y * slant) % 4) + 4) % 4;
+      if (k === 0) c.shade(x, y, -1);
+      else if (k === 1 && y < y1) c.shade(x, y, 1);
+    }
+  }
+}
+
+/** The turban's jewel: a drop of glowing amber in a gold setting. */
+function turbanJewel(c: PixelCanvas, x: number, y: number, bias = 0): void {
+  c.part();
+  c.px(x, y, SAND, sphere(0, -0.3), { bias });
+  c.px(x, y + 1, S.trim, sphere(0, 0.3), { bias });
+  c.spark(x, y, S.light[0], 0.5);
+}
+
+/** The turban from the front or behind: wound high and wider than the head, its wraps sweeping across. */
+function turbanFront(c: PixelCanvas, cx: number, U: number, back: boolean): void {
+  c.part();
+  c.shape(Math.round(6 + U), Math.round(11 + U), (y) => {
+    const u = (y - 6 - U) / 5;
+    const hw = u < 0.45 ? 2.0 + Math.sqrt(u / 0.45) * 2.2 : 4.2 - (u - 0.45) * 0.9;
+    return [cx - 0.5 - hw, cx - 0.5 + hw];
+  }, S.hair, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.5, 1));
+  turbanWraps(c, cx - 5, cx + 4, Math.round(7 + U), Math.round(10 + U), back ? -1 : 1);
+  // The lowest wrap rolled tight over the brow.
+  c.part();
+  c.shape(Math.round(11 + U), Math.round(11 + U), () => [cx - 4.0, cx + 3.0], S.hair, (_x, _y, t) => cyl(t, 0.3));
+}
+
+/** His head from the front: dark eyes over the gold-coined veil, the turban above, its jewel at the brow. */
+function sandHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(cx - 0.5, 12.2 + U, 2.9, 3.0, DUSK, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6, 1) });
+  turbanFront(c, cx, U, false);
+  turbanJewel(c, cx - 1, 8 + U);
+  // Eyes lined in kohl, a gold glint in them.
+  c.shade(cx - 3, 12 + U, -1);
+  c.shade(cx + 2, 12 + U, -1);
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  if (!p.blink) {
+    c.spark(cx - 2, 12 + U, S.light[0], 0.4);
+    c.spark(cx + 1, 12 + U, S.light[0], 0.4);
+  }
+  // The veil over the face from the nose down, falling to a point on his chest, a row of gold coins along its edge.
+  c.part();
+  c.shape(Math.round(13 + U), Math.round(18 + U), (y) => {
+    const u = (y - 13 - U) / 5;
+    const hw = 3.3 - u * u * 2.9;
+    return [cx - 0.5 - hw, cx - 0.5 + hw];
+  }, S.inner, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6 - 0.1, 1));
+  for (let y = 15; y <= 17; y++) c.shade(cx - 1 + (y & 1), y + U, -1);
+  c.part();
+  for (const x of [cx - 4, cx - 2, cx, cx + 2]) c.px(x, 13 + U, S.trim, sphere((x - cx) * 0.2, -0.3));
+  c.px(cx - 1, 19 + U, S.trim, sphere(0, 0.3));
+}
+
+/** His head from behind: the turban, the veil's ties at the nape, and the turban's tail down his back. */
+function sandHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(cx - 0.5, 12.2 + U, 2.9, 3.0, DUSK);
+  // The veil's band round the back of the head, knotted, its ends hanging.
+  c.part();
+  c.shape(Math.round(12 + U), Math.round(13 + U), () => [cx - 3.4, cx + 2.4], S.inner, (_x, _y, t) => cyl(t, 0));
+  c.part();
+  c.ellipse(cx - 0.5, 13.4 + U, 1.1, 0.9, S.inner);
+  turbanFront(c, cx, U, true);
+  // The turban's tail, falling from under the wraps down between his shoulders.
+  c.part();
+  c.capsule(cx + 0.6, 11 + U, cx + 1 + p.sway * 0.5, 19.5 + U, 1.4, 1.1, S.hair);
+  for (let y = 13; y <= 19; y += 2) c.shade(cx + 1, y + U, -1);
+  c.part();
+  for (const x of [cx, cx + 1, cx + 2]) c.px(x + Math.round(p.sway * 0.5), 20 + U, S.trim, sphere(0, 0.4));
+}
+
+/** His head in profile, facing left: the turban with its tail behind, the veil over his face below the eye. */
+function sandHeadSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  c.part();
+  c.capsule(hx + 2.6, 10.5 + U, hx + 3.6 + p.sway * 0.4, 18.5 + U, 1.3, 1.0, S.hair, { bias: -1 });
+  c.part();
+  c.ellipse(hx - 0.9, 12.2 + U, 2.6, 3.0, DUSK, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 - 0.2, dy * 0.6, 1) });
+  c.part();
+  c.shape(Math.round(6 + U), Math.round(11 + U), (y) => {
+    const u = (y - 6 - U) / 5;
+    const back = hx + 3.2 - (u < 0.3 ? (0.3 - u) * 4 : 0);
+    const front = hx - 1.6 - Math.sqrt(Math.min(1, u * 2.2)) * 2.4;
+    return [front, back];
+  }, S.hair, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.5, 1));
+  turbanWraps(c, hx - 5, hx + 4, Math.round(7 + U), Math.round(10 + U), 1);
+  turbanJewel(c, hx - 4, 8 + U);
+  c.shade(hx - 2, 12 + U, -1);
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  if (!p.blink) c.spark(hx - 3, 12 + U, S.light[1], 0.3);
+  // The veil from the bridge of the nose, hanging forward of his chin.
+  c.part();
+  c.shape(Math.round(13 + U), Math.round(17 + U), (y) => {
+    const u = (y - 13 - U) / 4;
+    return [hx - 4.3 + u * 1.2, hx + 1.2 - u * 0.8];
+  }, S.inner, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, u * 0.6 - 0.1, 1));
+  c.part();
+  for (const x of [hx - 4, hx - 2, hx]) c.px(x, 13 + U, S.trim, sphere(-0.2, -0.3));
+}
+
+/**
+ * His robe from the front or back: sun-bleached linen falling wide, its hem
+ * an indigo band stitched with gold, a wide indigo sash wound twice round the
+ * waist and knotted at the hip, its long tails hanging to the knee.
+ */
+function desertRobe(c: PixelCanvas, cx: number, U: number, L: number, sway: number, back: boolean): void {
+  const top = 15 + U;
+  const waist = 21 + U;
+  const hem = 30 + L;
+  const at = (y: number) => (y > waist ? ((y - waist) / (hem - waist)) * sway : 0);
+  c.part();
+  c.shape(top, hem, (y) => {
+    const hw = y <= waist ? 4.7 - 0.6 * ((y + 0.5 - top) / (waist - top)) ** 2 : 4.1 + (y - waist) * 0.3;
+    return [cx - hw + at(y), cx + hw + at(y)];
+  }, S.robe, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.25, 1));
+  // Folds spreading from the sash, a lit ridge beside each.
+  for (let y = waist + 2; y < hem - 2; y++) {
+    const u = (y - waist) / (hem - waist);
+    for (const k of [-3, 0, 3]) {
+      const x = Math.round(cx - 0.5 + k * (0.7 + u * 0.6) + at(y));
+      c.shade(x, y, -1);
+      c.shade(x - 1, y, 1);
+    }
+  }
+  // The hem: an indigo band, a zigzag of gold stitched along it, gold at the edge.
+  c.part();
+  for (let y = hem - 2; y < hem; y++) for (let x = cx - 9; x <= cx + 9; x++) if (c.filled(x, y)) c.px(x, y, S.inner, sphere((x - cx) / 9, 0.3));
+  c.part();
+  for (let x = cx - 9; x <= cx + 9; x++) {
+    const m = (((x - cx) % 3) + 3) % 3;
+    if (m === 0 && c.filled(x, hem - 2)) c.px(x, hem - 2, S.trim, sphere(0, 0.2));
+    if (m !== 0 && m === (back ? 2 : 1) && c.filled(x, hem - 1)) c.px(x, hem - 1, S.trim, sphere(0, 0.3));
+    if (c.filled(x, hem)) c.px(x, hem, S.trim, sphere((x - cx) / 8, 0.3));
+  }
+  // The sash, wound twice, a thread of gold between the turns.
+  c.part();
+  c.shape(waist - 1, waist, () => [cx - 4.4, cx + 4.4], S.inner, (_x, y, t) => cyl(t, y === waist - 1 ? 0.35 : -0.1));
+  c.part();
+  for (let x = cx - 4; x <= cx + 3; x += 2) c.px(x, waist - 1, S.trim, sphere(0, -0.2));
+  // Its knot at the hip and its tails hanging to the knee.
+  const kx = back ? cx + 2 : cx - 3;
+  c.part();
+  c.ellipse(kx, waist, 1.3, 1.1, S.inner, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.2, 1) });
+  c.part();
+  const tails: [number, number][] = [[-0.6, 7], [0.9, 5.5]];
+  for (const [o, len] of tails) c.capsule(kx + o, waist + 1, kx + o * 1.6 + sway * 0.7, waist + 1 + len, 0.75, 0.75, S.inner);
+  c.part();
+  for (const [o, len] of tails) c.px(kx + o * 1.6 + sway * 0.7, waist + 2 + len, S.trim, sphere(0, 0.4));
+}
+
+/**
+ * His staff: dark wood banded with gold, crowned with a great hourglass in a
+ * gold frame, sea-green glass round sand that glows: a heap below, the last
+ * of it above, a thread pouring between, and a grain or two blowing off its
+ * crown. `up` is the staff's direction from the hand.
+ */
+function drawSandStaff(c: PixelCanvas, p: Placed, ux: number, uy: number, glow: number, tick: number, bias = 0): void {
+  const below = 10;
+  const above = 9.5;
+  const vx = -uy;
+  const vy = ux;
+  c.part();
+  c.line(p.x - ux * below, p.y - uy * below, p.x + ux * above, p.y + uy * above, STAFF_WOOD, () => sphere(vx * 0.6, vy * 0.6 - 0.2), { bias });
+  c.part();
+  c.px(p.x - ux * below, p.y - uy * below, S.trim, sphere(0, 0.3), { bias });
+  c.px(p.x + ux * 5, p.y + uy * 5, S.trim, sphere(0, -0.3), { bias });
+  c.px(p.x + ux * 7, p.y + uy * 7, S.trim, sphere(0, -0.3), { bias });
+  const at = (k: number) => [p.x + ux * (above + k), p.y + uy * (above + k)] as const;
+  /** A bar across the staff at `k` above its top, `w` either side. */
+  const bar = (k: number, w: number, r: number, m: Material) => {
+    const [x, y] = at(k);
+    c.capsule(x - vx * w, y - vy * w, x + vx * w, y + vy * w, r, r, m, { bias });
+  };
+  // The glass, two full bulbs pinched to a neck.
+  c.part();
+  for (const [k, w] of [[1.6, 1.3], [2.6, 1.1], [3.6, 0.5], [4.6, 0], [5.6, 0.5], [6.6, 1.1], [7.6, 1.3]] as const) bar(k, w, 0.6, DESERT_GLASS);
+  // The sand: heaped in the lower bulb, a cone of what's left in the upper, a thread falling through the neck.
+  c.part();
+  bar(1.4, 1.2, 0.6, SAND);
+  bar(2.4, 0.7, 0.55, SAND);
+  bar(3.3, 0, 0.5, SAND);
+  bar(5.6, 0, 0.5, SAND);
+  bar(6.6, 0.6, 0.5, SAND);
+  const [core, hot, mid, deep] = S.light;
+  const k = 0.4 + 0.6 * glow;
+  const [lx, ly] = at(2.2);
+  c.spark(lx, ly, hot, 0.8 * k);
+  for (let j = 0; j < 2; j++) {
+    const [fx, fy] = at(3.0 + ((tick + j) % 2) * 0.9 + j * 0.4);
+    c.spark(fx, fy, core, 0.85 * k);
+  }
+  const [ux2, uy2] = at(6.5);
+  c.spark(ux2, uy2, mid, 0.5 * k);
+  // The gold caps above and below, the glass bare between them so its pinched waist shows.
+  c.part();
+  bar(0.4, 2.2, 0.7, S.trim);
+  bar(8.8, 2.2, 0.7, S.trim);
+  c.part();
+  const [tx, ty] = at(9.8);
+  c.px(tx, ty, S.trim, sphere(0, -0.6), { bias });
+  // Grains blowing off its crown.
+  const d = tick % 4;
+  c.spark(tx + vx * (1 + d) + ux * d * 0.5, ty + vy * (1 + d) + uy * d * 0.5, d < 2 ? hot : deep, 0.6 - d * 0.1);
+  if (glow > 0.5) glowAt(c, lx, ly - 1, (glow - 0.5) * 1.6);
+}
+
+/** Sand blowing off his hem: a few grains caught by the wind, drifting out and settling. */
+function sandDrift(c: PixelCanvas, tick: number, view: View): void {
+  const [, hot, mid] = S.light;
+  for (let i = 0; i < 3; i++) {
+    const d = (tick + i * 4) % 12;
+    if (d > 8) continue;
+    const out = view === 'side' ? 1 : i % 2 ? 1 : -1;
+    const x0 = view === 'side' ? 16 + i : i % 2 ? 17 : 6 + i;
+    const x = x0 + out * Math.round(d * 0.7);
+    const y = 29 - (i === 2 ? 3 : 0) - Math.round(Math.sin((d / 8) * Math.PI) * 2);
+    c.spark(x, y, d < 3 ? hot : mid, 0.75 - d * 0.07);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The Rewind: his pompadour and visor, his jacket, his cassette and the worn tape he's played back on
+
+/** The visor's scanlines across rows y and y+1, from x0 to x1: a bright line with a glint running along it, a dimmer one below, and the eyes faint behind. */
+function visorLines(c: PixelCanvas, x0: number, x1: number, y: number, p: Pose, eyes: number[]): void {
+  const [core, hot, mid] = S.light;
+  const run = x0 + ((p.tick >> 1) % (x1 - x0 + 3)) - 1;
+  for (let x = x0; x <= x1; x++) {
+    c.spark(x, y, x === run ? core : mid, x === run ? 0.9 : 0.4);
+    if ((x + p.tick) % 2 === 0) c.spark(x, y + 1, hot, 0.3);
+  }
+  if (!p.blink) for (const x of eyes) c.spark(x, y + 1, core, 0.5);
+}
+
+/** His head from the front: the magenta pompadour swept up, the wraparound visor, a smirk, the popped collar. */
+function rewindHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(cx - 0.5, 11.2 + U, 3.4, 3.0, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 1) });
+  // The quiff: swept up off the brow and leaning to his left, a streak of shine in it.
+  c.part();
+  c.shape(Math.round(6 + U), Math.round(8 + U), (y) => {
+    const u = (y - 6 - U) / 2;
+    return [cx - 2.2 - u * 1.4, cx + 0.6 + u * 1.8];
+  }, S.hair, (_x, _y, t, u) => sphere(t * 0.8 - 0.1, u * 0.6 - 0.7, 1));
+  c.shade(cx - 2, 7 + U, 1);
+  c.shade(cx - 1, 8 + U, 1);
+  c.part();
+  c.ellipse(cx - 0.5, 12.9 + U, 2.6, 2.7, SKIN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6, 1) });
+  // The visor, wrapping past the temples.
+  c.part();
+  c.shape(Math.round(12 + U), Math.round(13 + U), () => [cx - 4.0, cx + 3.0], SHADES, (_x, y, t) => sphere(t * 0.9, y === Math.round(12 + U) ? -0.4 : 0.2, 1));
+  const look = p.look ?? 0;
+  visorLines(c, cx - 3, cx + 1, 12 + U, p, [cx - 2 + look, cx + 1 + look]);
+  c.shade(cx - 1, 15 + U, -1);
+  c.shade(cx, 15 + U, -1);
+  // The popped collar standing up either side of his jaw, lined in neon.
+  c.part();
+  for (const s of [-1, 1]) {
+    c.shape(Math.round(14 + U), Math.round(15 + U), (y) => {
+      const u = y - 14 - U;
+      return s < 0 ? [cx - 4.4 + u * 0.2, cx - 2.8] : [cx + 1.8, cx + 3.4 - u * 0.2];
+    }, S.robe, (_x, _y, t) => sphere(t * 0.6 + s * 0.3, -0.2, 1));
+  }
+  c.part();
+  c.px(cx - 4, 14 + U, S.trim, sphere(-0.4, -0.5));
+  c.px(cx + 2, 14 + U, S.trim, sphere(0.4, -0.5));
+}
+
+/** His head from behind: the pompadour and a short mullet to the collar, the visor's ends at his temples, the collar up. */
+function rewindHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(cx - 0.5, 11.2 + U, 3.4, 3.0, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.shape(Math.round(6 + U), Math.round(8 + U), (y) => {
+    const u = (y - 6 - U) / 2;
+    return [cx - 2.4 - u * 1.2, cx + 1.4 + u * 1.2];
+  }, S.hair, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6 - 0.7, 1));
+  c.part();
+  c.shape(Math.round(12 + U), Math.round(15 + U), (y) => {
+    const u = (y - 12 - U) / 3;
+    return [cx - 3.0 + u * 0.4 + p.sway * u * 0.4, cx + 2.0 - u * 0.4 + p.sway * u * 0.4];
+  }, S.hair, (_x, _y, t, u) => sphere(t * 0.8, u * 0.5, 1));
+  for (let y = 12; y <= 15; y++) c.shade(cx - 1 + (y & 1), y + U, -1);
+  c.part();
+  c.px(cx - 4, 12 + U, SHADES, sphere(-0.7, 0));
+  c.px(cx + 3, 12 + U, SHADES, sphere(0.7, 0));
+  c.spark(cx - 4, 12 + U, S.light[2], 0.4);
+  c.spark(cx + 3, 12 + U, S.light[2], 0.4);
+  c.part();
+  c.shape(Math.round(15 + U), Math.round(16 + U), () => [cx - 3.8, cx + 2.8], S.robe, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6 - 0.4, 1));
+  c.part();
+  for (const x of [cx - 4, cx + 2]) c.px(x, 15 + U, S.trim, sphere(0, -0.5));
+}
+
+/** His head in profile, facing left: the quiff jutting forward, the mullet behind, the visor wrapping to his ear, the collar up behind his jaw. */
+function rewindHeadSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  c.part();
+  c.capsule(hx + 2.2, 11.5 + U, hx + 2.8 + p.sway * 0.3, 15.2 + U, 1.5, 1.1, S.hair);
+  c.part();
+  c.ellipse(hx + 0.2, 11.2 + U, 3.3, 3.0, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.1, dy * 0.8 - 0.3, 1) });
+  c.part();
+  c.shape(Math.round(6 + U), Math.round(8 + U), (y) => {
+    const u = (y - 6 - U) / 2;
+    return [hx - 3.6 - u * 0.8, hx - 0.2 + u * 2.4];
+  }, S.hair, (_x, _y, t, u) => sphere(t * 0.8 - 0.3, u * 0.6 - 0.7, 1));
+  c.shade(hx - 3, 7 + U, 1);
+  c.shade(hx - 2, 8 + U, 1);
+  c.part();
+  c.ellipse(hx - 1.6, 13.0 + U, 2.1, 2.5, SKIN, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 - 0.3, dy * 0.6, 1) });
+  c.px(hx - 4, 14 + U, SKIN, sphere(-0.8, 0));
+  c.part();
+  c.shape(Math.round(12 + U), Math.round(13 + U), (y) => [y === Math.round(12 + U) ? hx - 4.4 : hx - 4.0, hx + 1.0], SHADES, (_x, y, t) => sphere(t * 0.6 - 0.4, y === Math.round(12 + U) ? -0.4 : 0.2, 1));
+  visorLines(c, hx - 4, hx - 1, 12 + U, p, [hx - 3]);
+  c.shade(hx - 3, 15 + U, -1);
+  c.part();
+  c.shape(Math.round(13 + U), Math.round(15 + U), (y) => {
+    const u = (y - 13 - U) / 2;
+    return [hx - 0.2 - u * 0.6, hx + 2.8];
+  }, S.robe, (_x, _y, t, u) => sphere(t * 0.6 + 0.3, u * 0.6 - 0.3, 1));
+  c.part();
+  c.px(hx, 13 + U, S.trim, sphere(-0.3, -0.5));
+}
+
+/** The jacket's half-width at row y: padded square shoulders, tapering to a fitted waistband. */
+function jacketHw(y: number, top: number, waist: number, side: boolean): number {
+  const k = side ? 0.72 : 1;
+  if (y === top) return 4.6 * k;
+  if (y === top + 1) return 5.4 * k;
+  if (y === top + 2) return 5.2 * k;
+  return Math.max(4.1, 5.2 - ((y - top - 2) * 1.1) / Math.max(1, waist - top - 2)) * k;
+}
+
+/**
+ * His jacket from the front or back: cropped at the waist, midnight purple,
+ * shoulders padded square and piped in neon, a grid of light at the
+ * waistband like a synthwave horizon. In front it hangs open over a black
+ * tee; across the back blazes a striped neon sunset over the grid.
+ */
+function rewindJacket(c: PixelCanvas, cx: number, U: number, back: boolean): void {
+  const top = 15 + U;
+  const waist = 21 + U;
+  const band = waist + 1;
+  c.part();
+  c.shape(top, band, (y) => {
+    const hw = y === band ? 4.3 : jacketHw(y, top, waist, false);
+    return [cx - hw, cx + hw];
+  }, S.robe, (_x, y, t) => sphere(t * 0.9, ((y - top) / (band - top)) * 0.8 - 0.4, 1));
+  // The shoulder pads' seams.
+  c.shade(cx - 3, top + 2, -1);
+  c.shade(cx + 2, top + 2, -1);
+  if (!back) {
+    // Open over the tee, its lapels catching the light.
+    c.part();
+    c.shape(top, waist, (y) => {
+      const w = 1.3 - ((y - top) / (waist - top)) * 0.3;
+      return [cx - w, cx + w];
+    }, S.inner, (_x, _y, t) => cyl(t, 0.1), { bias: -1 });
+    for (let y = top + 1; y < waist; y++) {
+      c.shade(cx - 2, y, 1);
+      c.shade(cx + 1, y, 1);
+    }
+    // A neon triangle printed on the tee.
+    c.part();
+    c.px(cx - 1, top + 3, NEON_PINK, sphere(0, -0.2));
+    c.px(cx, top + 3, NEON_PINK, sphere(0, -0.2));
+    c.spark(cx - 1, top + 4, S.light[2], 0.6);
+  } else {
+    // The sunset: a sun in bands of gold to magenta, cut by stripes as it sinks, over a horizon of neon.
+    const sun: [number, number, number][] = [[top + 2, -2, 0], [top + 3, -3, 1], [top + 4, -3, 2], [top + 5, -3, 3]];
+    for (const [y, x0, i] of sun) {
+      for (let x = cx + x0; x <= cx - 1 - x0; x++) {
+        if (i === 3 && (x & 1)) continue;
+        c.spark(x, y, SUNSET[i], i === 3 ? 0.75 : 0.85);
+      }
+    }
+  }
+  // Neon piping along the tops of the padded shoulders.
+  c.part();
+  for (const x of [cx - 5, cx - 4, cx + 3, cx + 4]) if (c.filled(x, top + 1)) c.px(x, top + 1, S.trim, sphere(x < cx ? -0.6 : 0.6, -0.5));
+  // The grid at the waistband: posts of cyan light over a line of magenta.
+  c.part();
+  for (let x = cx - 4; x <= cx + 3; x++) {
+    if ((x - cx) % 2 === 0 && c.filled(x, waist)) c.px(x, waist, S.trim, sphere((x - cx) / 5, 0));
+    if (c.filled(x, band)) c.px(x, band, NEON_PINK, sphere((x - cx) / 5, 0.3));
+  }
+}
+
+/** His legs: slim dark trousers from the jacket's hem down, a cyan stripe down the outside. `fa`/`fb` lift each foot. */
+function rewindLegsFront(c: PixelCanvas, L: number, fa: number, fb: number, bias = 0): void {
+  c.part();
+  c.capsule(10.2, 22 + L, 10, 29 - fa, 1.5, 1.25, S.inner, { bias });
+  c.capsule(13.8, 22 + L, 14, 29 - fb, 1.5, 1.25, S.inner, { bias });
+  c.part();
+  c.line(9, 23 + L, 9, 28 - fa, S.trim, () => sphere(-0.5, 0), { bias: bias - 2, glow: 0.25 });
+  c.line(14, 23 + L, 14, 28 - fb, S.trim, () => sphere(0.5, 0), { bias: bias - 2, glow: 0.25 });
+}
+
+/** The jacket in profile, facing left: padded shoulder, the tee at the open front, the grid at the waist, a sliver of the sunset at his back. */
+function rewindJacketSide(c: PixelCanvas, hx: number, U: number): void {
+  const top = 15 + U;
+  const waist = 21 + U;
+  const band = waist + 1;
+  c.part();
+  c.shape(top, band, (y) => {
+    const hw = y === band ? 3.2 : jacketHw(y, top, waist, true);
+    return [hx - hw - 0.2, hx + hw + 0.2];
+  }, S.robe, (_x, y, t) => sphere(t * 0.9 - 0.1, ((y - top) / (band - top)) * 0.8 - 0.4, 1));
+  c.part();
+  for (let y = top + 1; y <= top + 3; y++) c.px(Math.round(hx - jacketHw(y, top, waist, true) - 0.2), y, S.inner, sphere(-0.5, 0));
+  c.part();
+  c.px(hx - 3, top + 1, S.trim, sphere(-0.5, -0.5));
+  c.px(hx + 3, top + 1, S.trim, sphere(0.5, -0.5));
+  const backX = Math.round(hx + jacketHw(top + 3, top, waist, true) + 0.2) - 1;
+  for (let i = 0; i < 3; i++) c.spark(backX, top + 2 + i, SUNSET[i + 1], 0.75);
+  c.part();
+  for (let x = Math.round(hx - 4); x <= Math.round(hx + 3); x++) {
+    if ((x & 1) === 0 && c.filled(x, waist)) c.px(x, waist, S.trim, sphere(0, 0));
+    if (c.filled(x, band)) c.px(x, band, NEON_PINK, sphere(0, 0.3));
+  }
+}
+
+/**
+ * His cassette, held where another man would hold a watch: a black shell,
+ * a hot-pink label, and two cyan reels that wink in turn as the tape winds
+ * back.
+ */
+function drawTape(c: PixelCanvas, p: Placed, glow: number, tick: number): void {
+  const [core, hot, mid] = S.light;
+  const x = Math.round(p.x - 2);
+  const y = Math.round(p.y + 0.4);
+  c.part();
+  c.shape(y, y + 2, () => [x, x + 5], TAPE, (_x, _y, t, u) => sphere(t * 0.6, u * 0.8 - 0.4, 1));
+  c.part();
+  for (let i = 1; i <= 3; i++) c.px(x + i, y, NEON_PINK, sphere(0, -0.4));
+  c.shade(x + 2, y + 1, -1);
+  const k = 0.5 + 0.5 * glow;
+  const spin = tick % 2;
+  c.spark(x + 1, y + 1, spin ? core : mid, 0.9 * k);
+  c.spark(x + 4, y + 1, spin ? mid : core, 0.9 * k);
+  c.spark(x + 2, y + 1, hot, 0.25 * k);
+  if (glow > 0.4) glowAt(c, x + 2, y + 1, (glow - 0.4) * 1.5);
+}
+
+/**
+ * The worn tape he's played back on: his edges ghost magenta on one side and
+ * cyan on the other in bands that crawl as he moves, and a tracking line
+ * rolls down him. Picked from the frame's tick and view, so each frame
+ * always looks the same.
+ */
+function vhs(c: PixelCanvas, tick: number, view: View): void {
+  const [core, hot, mid] = S.light;
+  const off = view === 'down' ? 0 : view === 'up' ? 9 : 17;
+  const track = BODY_Y + 4 + ((tick * 3 + off) % 27);
+  for (let y = 0; y < c.h; y++) {
+    let l = -1;
+    let r = -1;
+    for (let x = 0; x < c.w; x++) {
+      if (c.mat[y * c.w + x] < 0) continue;
+      if (l < 0) l = x;
+      r = x;
+    }
+    if (l < 0) continue;
+    // Spark takes figure coordinates; undo the frame's offset.
+    if (((y + tick) >> 1) % 3 === 0) {
+      c.spark(l - 1 - BODY_X, y - BODY_Y, hot, 0.55);
+      c.spark(r + 1 - BODY_X, y - BODY_Y, mid, 0.55);
+    }
+    if (y === track || y === track - 1) {
+      for (let x = l; x <= r; x++) if (c.mat[y * c.w + x] >= 0) c.spark(x - BODY_X, y - BODY_Y, y === track ? core : mid, y === track ? 0.2 : 0.1);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Bodies
 
 /** The timekeeper's robe from the front or back: brass-hemmed, the stole down its front, a clock for a buckle. */
@@ -1270,8 +1851,8 @@ function fractures(c: PixelCanvas, cx: number, hem: number, sway: number, tick: 
 const REACH_FRONT = 4.5;
 const REACH_SIDE = 5.2;
 
-/** The look's staff: brass and hourglass, the clockwork's cog, or Primavera's flower clock. */
-const staffOf = () => (S.style === 'clockwork' ? drawCogStaff : S.style === 'primavera' ? drawBloomStaff : drawStaff);
+/** The look's staff: brass and hourglass, the clockwork's cog, Primavera's flower clock, or the Sandglass's great hourglass. */
+const staffOf = () => (S.style === 'clockwork' ? drawCogStaff : S.style === 'primavera' ? drawBloomStaff : S.style === 'sandglass' ? drawSandStaff : drawStaff);
 
 /** The staff's direction from the hand: upright, tipping forward (towards the viewer, or out to the side from the front). */
 function staffUp(view: View, tilt: number): [number, number] {
@@ -1291,7 +1872,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   const [sx, sy] = staffUp('down', p.tilt);
   const staff = staffOf();
 
-  if (S.rift && S.style !== 'anomaly') {
+  if (S.rift && S.style !== 'anomaly' && S.style !== 'rewind') {
     // The hood's back drapes behind the shoulders.
     c.part();
     c.ellipse(cx, 16 + U, 4.8, 2.2, S.robe, { bias: -1 });
@@ -1304,7 +1885,11 @@ function drawDown(c: PixelCanvas, p: Pose): void {
 
   boot(c, 10, 30.4 - p.footA);
   boot(c, 14, 30.4 - p.footB);
-  if (S.rift) {
+  if (S.style === 'rewind') {
+    rewindLegsFront(c, L, p.footA, p.footB);
+    rewindJacket(c, cx, U, false);
+    rewindHeadDown(c, cx, U, p);
+  } else if (S.rift) {
     c.part();
     c.capsule(10.2, 26 + L, 10, 29 - p.footA, 1.3, 1.2, S.inner);
     c.capsule(13.8, 26 + L, 14, 29 - p.footB, 1.3, 1.2, S.inner);
@@ -1322,6 +1907,10 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     gownFront(c, cx, U, L, p.sway, false);
     springHeadDown(c, cx, U, p);
     halo(c, cx - 0.5, 10.6 + U, 7.2, 6.6, p.tick, false);
+  } else if (S.style === 'sandglass') {
+    desertRobe(c, cx, U, L, p.sway, false);
+    sandHeadDown(c, cx, U, p);
+    halo(c, cx - 0.5, 10 + U, 6.4, 6.0, p.tick, false);
   } else {
     robeFront(c, cx, U, L, p.sway, false);
     sageDown(c, cx, U, p.blink);
@@ -1331,6 +1920,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   if (!fb.behind) armB();
   if (!fa.behind) armA();
   if (S.style === 'anomaly') drawCube(c, fa, p.glow, p.tick);
+  else if (S.style === 'rewind') drawTape(c, fa, p.glow, p.tick);
   else if (S.rift) drawWatch(c, fa, [CHAIN_AT[0] - 5, CHAIN_AT[1] + U], p.glow, p.tick);
   else if (!fa.behind) staff(c, fa, sx, sy, p.glow, p.tick);
   if (p.pocket) pocketWatch(c, fb, [cx + 2, 21.6 + U], p.pocket, p.tick);
@@ -1354,7 +1944,11 @@ function drawUp(c: PixelCanvas, p: Pose): void {
 
   boot(c, 10, 30.4 - p.footB);
   boot(c, 14, 30.4 - p.footA);
-  if (S.rift) {
+  if (S.style === 'rewind') {
+    rewindLegsFront(c, L, p.footB, p.footA);
+    rewindJacket(c, cx, U, true);
+    rewindHeadUp(c, cx, U, p);
+  } else if (S.rift) {
     c.part();
     c.capsule(10.2, 26 + L, 10, 29 - p.footB, 1.3, 1.2, S.inner);
     c.capsule(13.8, 26 + L, 14, 29 - p.footA, 1.3, 1.2, S.inner);
@@ -1402,6 +1996,10 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     gownFront(c, cx, U, L, p.sway, true);
     springHeadUp(c, cx, U, p);
     halo(c, cx - 0.5, 10.6 + U, 7.2, 6.6, p.tick, true);
+  } else if (S.style === 'sandglass') {
+    desertRobe(c, cx, U, L, p.sway, true);
+    sandHeadUp(c, cx, U, p);
+    halo(c, cx - 0.5, 10 + U, 6.4, 6.0, p.tick, true);
   } else {
     robeFront(c, cx, U, L, p.sway, true);
     // The back of the head: the bald crown, the fringe of white hair round it.
@@ -1445,9 +2043,15 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   // Feet: the back one in shade first.
   const lift = (f: number) => Math.max(0, f) * 0.35;
   if (S.rift) {
+    // The Rewind's cropped jacket shows his legs from the waist, a cyan stripe down the near one.
+    const hip = S.style === 'rewind' ? 22.5 : 25.5;
     c.part();
-    c.capsule(cx + 0.8, 25.5 + L, cx + 1 - p.footB, 29 - lift(p.footB), 1.3, 1.2, S.inner, { bias: -1 });
-    c.capsule(cx - 0.6, 25.5 + L, cx - 0.4 - p.footA, 29 - lift(p.footA), 1.3, 1.2, S.inner);
+    c.capsule(cx + 0.8, hip + L, cx + 1 - p.footB, 29 - lift(p.footB), 1.3, 1.2, S.inner, { bias: -1 });
+    c.capsule(cx - 0.6, hip + L, cx - 0.4 - p.footA, 29 - lift(p.footA), 1.3, 1.2, S.inner);
+    if (S.style === 'rewind') {
+      c.part();
+      c.line(cx - 0.6, hip + 1 + L, cx - 0.4 - p.footA, 28 - lift(p.footA), S.trim, () => sphere(-0.3, 0), { bias: -2, glow: 0.25 });
+    }
   }
   boot(c, cx + 0.4 - p.footB, 30.4 - lift(p.footB), true, -1);
   boot(c, cx - 1.2 - p.footA, 30.4 - lift(p.footA), true);
@@ -1455,6 +2059,9 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const hem = (S.rift ? 28 : 30) + L;
   if (S.style === 'clockwork') {
     clockSide(c, cx, hx, U, L, p);
+  } else if (S.style === 'rewind') {
+    rewindJacketSide(c, hx, U);
+    rewindHeadSide(c, hx, U, p);
   } else {
   // The robe or coat in profile, trailing back as he moves.
   c.part();
@@ -1530,6 +2137,27 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     for (let x = cx - 8; x <= cx + 9; x++) if (c.filled(x, hem)) c.px(x, hem, S.trim, sphere(0, 0.3));
     springHeadSide(c, hx, U, p);
     halo(c, hx + 3, 10.4 + U, 1.8, 6.6, p.tick, false);
+  } else if (S.style === 'sandglass') {
+    // The hem's indigo band and gold zigzag, the sash and its tails behind at the hip.
+    c.part();
+    for (let x = cx - 8; x <= cx + 9; x++) for (let y = hem - 2; y < hem; y++) if (c.filled(x, y)) c.px(x, y, S.inner, sphere(0, 0.3));
+    c.part();
+    for (let x = cx - 8; x <= cx + 9; x++) {
+      if ((x & 1) === 0 && c.filled(x, hem - 2)) c.px(x, hem - 2, S.trim, sphere(0, 0.2));
+      else if (c.filled(x, hem - 1) && (x & 1)) c.px(x, hem - 1, S.trim, sphere(0, 0.3));
+      if (c.filled(x, hem)) c.px(x, hem, S.trim, sphere(0, 0.3));
+    }
+    c.part();
+    c.shape(waist - 1, waist, () => [hx - 3.4, hx + 3.4], S.inner, (_x, y, t) => cyl(t, y === waist - 1 ? 0.35 : -0.1));
+    c.part();
+    c.ellipse(hx + 2.6, waist, 1.2, 1.1, S.inner);
+    c.part();
+    c.capsule(hx + 3, waist + 1, hx + 4 + p.sway * 0.8, waist + 7, 0.75, 0.75, S.inner);
+    c.part();
+    c.px(hx + 4 + p.sway * 0.8, waist + 8, S.trim, sphere(0, 0.4));
+    for (let x = hx - 3; x <= hx + 2; x += 2) c.px(x, waist - 1, S.trim, sphere(0, -0.2));
+    sandHeadSide(c, hx, U, p);
+    halo(c, hx + 2.6, 10 + U, 1.6, 6.0, p.tick, false);
   } else {
     // The stole over the shoulder, the belt, the brass hem.
     c.part();
@@ -1573,6 +2201,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   // The near arm last.
   arm(c, hx + 0.2, 16.7 + U, fb, REACH_SIDE, [0.4, 1], 0);
   if (S.style === 'anomaly') drawCube(c, fa.behind ? fb : fa, p.glow, p.tick);
+  else if (S.style === 'rewind') drawTape(c, fa.behind ? fb : fa, p.glow, p.tick);
   else if (S.rift) drawWatch(c, fa.behind ? fb : fa, [hx - 1.5, waist], p.glow, p.tick, fa.behind ? 0 : 0);
   glowAt(c, fb.x - 0.5, fb.y, p.cast);
 }
@@ -1879,6 +2508,8 @@ function stampEcho(c: PixelCanvas, pose: Pose, dx: number, k: number): void {
         if (edge) {
           add(t, hot, 0.95 * k);
           if (S.style === 'anomaly' && empty(s + 1)) add(t, MAGENTA, 0.45 * k);
+          // The Rewind's echo is played back off a worn tape: cyan off its far edge too.
+          if (S.style === 'rewind' && empty(s + 1)) add(t, mid, 0.5 * k);
         } else if (e.mat[s - w] !== e.mat[s]) add(t, mid, 0.6 * k);
         else add(t, e.glow[s] > 0 ? hot : mid, e.glow[s] > 0 ? 0.6 * k : 0.28 * k);
       }
@@ -1895,6 +2526,8 @@ function drawChronoFrame(dir: Dir, pose: Pose): PixelCanvas {
   if (pose.echo) stampEcho(c, pose.echo.pose, pose.echo.dx, pose.echo.k);
   if (S.style === 'anomaly') glitch(c, pose.tick, dir === 'down' || dir === 'up' ? dir : 'side');
   if (S.style === 'primavera') springCompany(c, pose.tick, dir === 'down' || dir === 'up' ? dir : 'side');
+  if (S.style === 'sandglass') sandDrift(c, pose.tick, dir === 'down' || dir === 'up' ? dir : 'side');
+  if (S.style === 'rewind') vhs(c, pose.tick, dir === 'down' || dir === 'up' ? dir : 'side');
   return dir === 'right' ? c.mirrored() : c;
 }
 
@@ -1961,6 +2594,46 @@ export function boltFrame(i: number, look: ChronoLook): PixelCanvas {
     }
     const la = turn + Math.PI / 5;
     c.spark(o + Math.round(Math.cos(la) * 4.6), o + Math.round(Math.sin(la) * 4.6), deep, 0.8);
+    return c;
+  }
+  if (look.style === 'sandglass') {
+    // A little hourglass of light, sand heaped in its lower bulb, inside a
+    // ring of grains running round in three streams that turn a frame at a time.
+    for (let a = 0; a < 18; a++) {
+      const k = (a + i * 2) % 6;
+      if (k > 3) continue;
+      const t = (a / 18) * Math.PI * 2;
+      c.spark(o + Math.round(Math.cos(t) * 4), o + Math.round(Math.sin(t) * 4), k === 0 ? core : k === 1 ? hot : mid, 1 - k * 0.18);
+    }
+    for (const [dy, w, col] of [[-2, 1, mid], [-1, 0, hot], [0, 0, core], [1, 0, hot], [2, 1, hot]] as const) {
+      for (let dx = -w; dx <= w; dx++) c.spark(o + dx, o + dy, col, 1);
+    }
+    c.spark(o, o + 2, core, 0.6);
+    c.spark(o - 2, o - 2, deep, 0.6);
+    c.spark(o + 2, o + 2, deep, 0.6);
+    return c;
+  }
+  if (look.style === 'rewind') {
+    // A neon shard turned a quarter each frame, split like a worn tape: a
+    // magenta copy off one side, a cyan copy off the other, a white-hot
+    // core where they cross, and every other line dimmed like a scanline.
+    const t = (i / BOLT_FRAMES) * Math.PI;
+    const ux = Math.cos(t);
+    const uy = Math.sin(t);
+    const sliver = (sx: number, col: RGB, a: number, size: number) => {
+      for (let y = 0; y < BOLT_SIZE; y++) {
+        for (let x = 0; x < BOLT_SIZE; x++) {
+          const dx = x - o - sx;
+          const dy = y - o;
+          const d = Math.abs(dx * ux + dy * uy) / (4.4 * size) + Math.abs(-dx * uy + dy * ux) / (1.5 * size);
+          if (d > 1) continue;
+          c.spark(x, y, col, a * ((y + i) % 2 ? 1 : 0.6));
+        }
+      }
+    };
+    sliver(-1, hot, 0.8, 1);
+    sliver(1, mid, 0.8, 1);
+    sliver(0, core, 1, 0.45);
     return c;
   }
   if (look.style === 'anomaly') {
@@ -2041,6 +2714,10 @@ export interface ChronoIconColors {
   outline: string;
   /** Flowers instead of ticks: blossoms at the hours and at the hand's root (Primavera). */
   bloom?: boolean;
+  /** Sand instead of brass: a ring of grains, sand pouring off the hand and round the dial (the Sandglass). */
+  sand?: boolean;
+  /** Neon on a worn tape: shards split magenta and cyan, and a cassette for the watch (the Rewind). */
+  neon?: boolean;
 }
 
 export const BRASS_ICON: ChronoIconColors = { metal: ['#6a4418', '#a8742a', '#f0cc6a'], light: ['#fffbe8', '#ffe6a0', '#ffc050', '#b8701e'], outline: '#1e1006' };
@@ -2051,6 +2728,10 @@ export const CLOCKWORK_ICON: ChronoIconColors = { metal: ['#5a2c14', '#a85a2a', 
 export const ANOMALY_ICON: ChronoIconColors = { metal: ['#1a1c24', '#e8eef4', '#ffffff'], light: ['#f0ffff', '#a0faff', '#20d8f0', '#1a4aa0'], outline: '#04060c' };
 /** Primavera's: living green for the metal, rose and mint light, and blossoms at the hours. */
 export const PRIMAVERA_ICON: ChronoIconColors = { metal: ['#2e5a32', '#5c9a52', '#a8dc88'], light: ['#fffaf2', '#ffd0de', '#f48cae', '#2e6a4e'], outline: '#0c1a0e', bloom: true };
+/** The Sandglass's: gold, dune light over indigo, and sand. */
+export const SANDGLASS_ICON: ChronoIconColors = { metal: ['#8a5a14', '#c8902a', '#f6d070'], light: ['#fff8e0', '#ffe08a', '#e8b04a', '#26307a'], outline: '#1a1006', sand: true };
+/** The Rewind's: midnight purple, hot magenta and electric cyan. */
+export const VHS_ICON: ChronoIconColors = { metal: ['#1e1240', '#40287a', '#7a5ab8'], light: ['#fff0ff', '#ff6ae0', '#30e8ff', '#3a1a8a'], outline: '#06030e', neon: true };
 
 /** The second hand: a clock's long hand of light, loosed and flying, a ring of ticks behind it. */
 export function handIcon(k: ChronoIconColors): Uint8ClampedArray {
@@ -2058,7 +2739,9 @@ export function handIcon(k: ChronoIconColors): Uint8ClampedArray {
   for (let a = 0; a < 40; a++) {
     const t = (a / 40) * Math.PI * 2;
     if (Math.cos(t) > 0.5 && Math.sin(t) < 0) continue;
-    put(Math.round(6 + Math.cos(t) * 5.2), Math.round(9 + Math.sin(t) * 5.2), a % 10 === 0 ? k.metal[2] : k.metal[0]);
+    // The Sandglass's ring is grains in streams, not a band of brass.
+    if (k.sand && a % 5 > 2) continue;
+    put(Math.round(6 + Math.cos(t) * 5.2), Math.round(9 + Math.sin(t) * 5.2), k.sand ? (a % 5 === 0 ? k.light[1] : k.metal[1]) : a % 10 === 0 ? k.metal[2] : k.metal[0]);
   }
   // The hand: a long diamond from the centre up to the right.
   for (let i = 0; i <= 11; i++) {
@@ -2077,6 +2760,11 @@ export function handIcon(k: ChronoIconColors): Uint8ClampedArray {
     put(6, 9, '#f6d050');
     put(13, 6, '#ffd0de');
     put(11, 9, '#ffffff');
+  }
+  if (k.sand) {
+    // Sand pouring off the hand's tip and blowing away beneath it.
+    for (const [x, y, i] of [[14, 4, 1], [15, 6, 2], [14, 8, 2], [15, 10, 3]] as const) put(x, y, k.light[i]);
+    put(5, 9, k.light[3]);
   }
   outline(k.outline);
   return px;
@@ -2097,9 +2785,29 @@ export function stasisIcon(k: ChronoIconColors): Uint8ClampedArray {
     const y = Math.round(7.5 + Math.sin(t) * 4.2);
     put(x, y, k.bloom ? ['#ffa8c4', '#ffffff', '#ffc8a4'][h % 3] : h % 3 === 0 ? k.light[0] : k.light[2]);
   }
-  for (let r = 0; r <= 3; r++) put(8, 8 - r, k.light[r < 2 ? 1 : 0]);
-  for (let r = 0; r <= 2; r++) put(8 + r, 8, k.light[1]);
-  put(8, 8, k.light[0]);
+  if (k.sand) {
+    // A river of sand running round the rim from twelve, thinning behind the hand.
+    for (let i = 0; i < 18; i++) {
+      const t = -Math.PI / 2 + (i / 24) * Math.PI * 2;
+      if (i > 12 && i % 2) continue;
+      put(Math.round(7.5 + Math.cos(t) * 5.6), Math.round(7.5 + Math.sin(t) * 5.6), i < 6 ? k.light[0] : i < 12 ? k.light[1] : k.light[2]);
+    }
+  }
+  if (!k.sand) {
+    for (let r = 0; r <= 3; r++) put(8, 8 - r, k.light[r < 2 ? 1 : 0]);
+    for (let r = 0; r <= 2; r++) put(8 + r, 8, k.light[1]);
+    put(8, 8, k.light[0]);
+  } else {
+    // For hands, a little hourglass of light: gold caps, sand heaped below, a grain falling.
+    for (let x = 6; x <= 10; x++) {
+      put(x, 4, k.metal[2]);
+      put(x, 12, k.metal[2]);
+    }
+    for (const [y, x0, x1, c] of [[5, 6, 10, 2], [6, 7, 9, 1], [7, 8, 8, 1], [8, 8, 8, 0], [9, 8, 8, 1], [10, 7, 9, 1], [11, 6, 10, 2]] as const) {
+      for (let x = x0; x <= x1; x++) put(x, y, k.light[c]);
+    }
+    put(8, 10, k.light[0]);
+  }
   for (let x = 6; x <= 10; x++) put(x, 0, k.metal[2]);
   outline(k.outline);
   return px;
@@ -2120,12 +2828,17 @@ export function shardsIcon(k: ChronoIconColors): Uint8ClampedArray {
   sliver(1, 14, 2);
   sliver(4, 11, 1);
   sliver(7, 8, 0);
+  if (k.neon) {
+    // Played back off a worn tape: a magenta ghost of the lead shard slipping under it, a pixel behind.
+    for (let i = 0; i <= 6; i++) put(Math.round(6 + i), Math.round(8 - i * 0.55) + 2, k.light[1]);
+  }
   outline(k.outline);
   return px;
 }
 
 /** The rewind: a pocket watch, an arrow of light running backwards round it. */
 export function rewindIcon(k: ChronoIconColors): Uint8ClampedArray {
+  if (k.neon) return tapeRewindIcon(k);
   const { px, put, outline } = iconPainter();
   for (let y = 0; y < 16; y++) {
     for (let x = 0; x < 16; x++) {
@@ -2144,6 +2857,33 @@ export function rewindIcon(k: ChronoIconColors): Uint8ClampedArray {
   put(8, 7, k.light[1]);
   put(9, 10, k.light[1]);
   put(8, 3, '#f4cf6a');
+  outline(k.outline);
+  return px;
+}
+
+/** The Rewind's rewind: a cassette, its label hot pink and its reels cyan, a neon arrow running back round it. */
+function tapeRewindIcon(k: ChronoIconColors): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  // The arrow's arc over the top, from the right round to the left, pointing back.
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const d = Math.hypot(x + 0.5 - 8, y + 0.5 - 9.5);
+      const a = Math.atan2(y + 0.5 - 9.5, x + 0.5 - 8);
+      if (Math.abs(d - 6.6) < 0.6 && a < -0.35 && a > -2.6) put(x, y, a < -1.6 ? k.light[1] : k.light[2]);
+    }
+  }
+  for (const [x, y] of [[2, 4], [1, 5], [2, 5], [3, 5], [2, 6]]) put(x, y, k.light[0]);
+  // The shell.
+  for (let y = 7; y <= 13; y++) for (let x = 2; x <= 13; x++) put(x, y, y === 7 || x === 2 || x === 13 ? k.metal[1] : y === 13 ? k.metal[0] : k.metal[0]);
+  // The label, the window and the two reels.
+  for (let x = 4; x <= 11; x++) put(x, 8, k.light[1]);
+  for (let x = 5; x <= 10; x++) put(x, 10, k.light[3]);
+  for (const cx of [5, 10]) {
+    put(cx, 10, k.light[2]);
+    put(cx, 11, k.light[2]);
+    put(cx + (cx < 8 ? 1 : -1), 10, k.light[0]);
+  }
+  for (let x = 4; x <= 11; x += 2) put(x, 12, k.metal[2]);
   outline(k.outline);
   return px;
 }

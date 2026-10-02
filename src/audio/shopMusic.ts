@@ -1,4 +1,5 @@
 import { Mixer, filter, gain, hit, mtof, osc, pick, rand } from './mixer';
+import { drift } from './music';
 
 // The Wishing Sanctum's music: a slow, dreamy waltz in E-flat. A music box
 // turns arpeggios over the chords, soft pads swell under them, a sparse
@@ -10,6 +11,8 @@ const BPM = 84;
 const EIGHTH = 30 / BPM;
 /** Eighths per chord: two bars of 3/4. */
 const STEPS = 12;
+/** One chord's length (the baked shop music is rendered two at a time). */
+export const SHOP_CHORD_SECONDS = EIGHTH * STEPS;
 
 interface Chord {
   bass: number;
@@ -36,10 +39,11 @@ const NEST_UP = 4;
 export type ShopMood = 'sanctum' | 'nest';
 
 export class ShopMusic {
-  private m: Mixer;
-  private out: AudioNode;
-  private box: GainNode;
-  private pad: BiquadFilterNode;
+  private m!: Mixer;
+  private out!: AudioNode;
+  private box!: GainNode;
+  private pad!: BiquadFilterNode;
+  private boxTone!: BiquadFilterNode;
   private step = 0;
   private next = 0;
   private chimeAt = 0;
@@ -47,20 +51,27 @@ export class ShopMusic {
   private mood: ShopMood = 'sanctum';
   /** Semitones up from E-flat for the chord now playing. */
   private up = 0;
-  private boxTone: BiquadFilterNode;
+  /** The live time that is time 0 of the context being written (a baked chunk's start). */
+  private origin = 0;
 
-  /** `out`: this track's own level on the music bus (see GameSound.setTrack). */
-  constructor(m: Mixer, out: AudioNode) {
+  /** `out`: this track's own level on the music bus (see GameSound.setTrack). Without a mixer it waits to be bound to baked chunks. */
+  constructor(m?: Mixer, out?: AudioNode) {
+    if (m && out) this.bind(m, out, 0);
+  }
+
+  /** Build the instruments on the live mixer or a bake mixer (see Music.bind). */
+  bind(m: Mixer, out: AudioNode, origin: number): void {
     this.m = m;
     this.out = out;
+    this.origin = origin;
     const ctx = m.ctx;
     // Pads: dark and wide, deep in the reverb, the filter slowly breathing.
     const padOut = gain(ctx, 1, out);
     padOut.connect(gain(ctx, 1.4, m.musicVerb));
     this.pad = filter(ctx, 'lowpass', 900, 0.4, padOut);
-    osc(ctx, 'sine', 0.05, gain(ctx, 300, this.pad.frequency)).start();
+    drift(this.pad.frequency, m, origin, 900, 300, 0.05);
     // The music box, with a soft echo a dotted eighth behind.
-    this.boxTone = filter(ctx, 'lowpass', 5200, 0.5, out);
+    this.boxTone = filter(ctx, 'lowpass', this.mood === 'nest' ? 9000 : 5200, 0.5, out);
     this.box = gain(ctx, 1, this.boxTone);
     this.box.connect(gain(ctx, 0.9, m.musicVerb));
     const delay = ctx.createDelay(2);
@@ -71,9 +82,10 @@ export class ShopMusic {
     this.box.connect(delay);
   }
 
-  /** The Sanctum or the Nest: the key moves at the next chord, the box's tone at once (gently). */
+  /** The Sanctum or the Nest: the key moves at the next chord, the box's tone at once (gently; baked, from the next chunk). */
   setMood(mood: ShopMood): void {
     this.mood = mood;
+    if (!this.m || this.m.baking) return;
     const t = this.m.ctx.currentTime;
     this.boxTone.frequency.setTargetAtTime(mood === 'nest' ? 9000 : 5200, t, 0.4);
   }
@@ -87,13 +99,13 @@ export class ShopMusic {
       this.chimeAt = now + rand(2, 4);
     }
     while (this.next < until) {
-      this.play(this.step, this.next);
+      this.play(this.step, this.next - this.origin);
       this.next += EIGHTH;
       this.step++;
     }
-    if (this.chimeAt < until) {
-      if (this.mood === 'nest') this.chirp(Math.max(now, this.chimeAt));
-      else this.chime(Math.max(now, this.chimeAt));
+    while (this.chimeAt < until) {
+      if (this.mood === 'nest') this.chirp(Math.max(now, this.chimeAt) - this.origin);
+      else this.chime(Math.max(now, this.chimeAt) - this.origin);
       this.chimeAt += this.mood === 'nest' ? rand(2.5, 5.5) : rand(3.5, 7);
     }
   }

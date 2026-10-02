@@ -25,6 +25,8 @@ export interface SpellStyle {
   /** Emissive textures and animations of the energy ball and its impact. */
   orb: { texture: string; anim: string };
   burst: { texture: string; anim: string };
+  /** Refracted light (the Prism): the beam's edges split into these colours, warm on one side to cool on the other. */
+  spectrum?: number[];
 }
 
 export const ARCANE_STYLE: SpellStyle = {
@@ -238,6 +240,42 @@ export const TITANIA_STYLE: SpellStyle = {
   fizzleSparks: [0x9a7a8a, 0xff9ac0, 0xffd88a],
   orb: { texture: 'orb_titania_e', anim: 'orb_titania_spin' },
   burst: { texture: 'burst_titania_e', anim: 'burst_titania_pop' },
+};
+
+/** The Grovekeeper's Mycelia skin: glowing spores, pale cyan through teal, deepening to a woodland violet. */
+export const MYCELIA_STYLE: SpellStyle = {
+  core: 0xeffffb,
+  hot: 0x8ef6e6,
+  mid: 0x36c4cc,
+  deep: 0x5a3aa8,
+  accent: 0xc8a4ff,
+  sparks: [0x8ef6e6, 0x36c4cc, 0x5a3aa8, 0xc8a4ff],
+  glow: 0x30c0c8,
+  light: 0x6af0e0,
+  flash: 0xc8fff4,
+  unstable: 0x8a5af0,
+  fizzle: 0x5a4a6a,
+  fizzleSparks: [0x5a4a6a, 0x36c4cc, 0x5a3aa8],
+  orb: { texture: 'orb_mycelia_e', anim: 'orb_mycelia_spin' },
+  burst: { texture: 'burst_mycelia_e', anim: 'burst_mycelia_pop' },
+};
+
+/** The Shapeshifter's Cinderhide skin: ember fire, white-hot to flame orange, down to a smoky red. */
+export const CINDER_STYLE: SpellStyle = {
+  core: 0xfff4d8,
+  hot: 0xffc04a,
+  mid: 0xff6a14,
+  deep: 0x6a1a0c,
+  accent: 0xffe0a0,
+  sparks: [0xffc04a, 0xff6a14, 0x6a1a0c, 0xfff4d8],
+  glow: 0xff6a1a,
+  light: 0xff8a30,
+  flash: 0xffd090,
+  unstable: 0xd8300e,
+  fizzle: 0x4a3a34,
+  fizzleSparks: [0x4a3a34, 0xff6a14, 0x6a1a0c],
+  orb: { texture: 'orb_cinder_e', anim: 'orb_cinder_spin' },
+  burst: { texture: 'burst_cinder_e', anim: 'burst_cinder_pop' },
 };
 
 /** The Tidecaller's Lotus skin: clear jade water carrying pink lotus petals. */

@@ -7,7 +7,7 @@ import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals, type Hurtbox } from './combat';
 import { HitSpark, Shockwave, SlashArc, ThrustStreak, type Effect, type Scheme } from './Slash';
-import { bloom, bolt, clamp01, easeOut, flare, Fx, GROUND, pal, ring, segDist, shade, type Ink, type Pal } from './ultimate/ink';
+import { bloom, bolt, clamp01, dither, easeOut, flare, Fx, GROUND, pal, ring, segDist, shade, type Ink, type Pal } from './ultimate/ink';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { HERO_STATS } from './stats';
@@ -81,7 +81,14 @@ export interface ValkyrieKit {
   specialCooldown: number;
   /** White feathers drift down where her blows land and in the thrown spear's wake (the Swan Maiden). */
   feathers?: boolean;
+  /** The feathers' own colours instead of the light's, one picked for each (the Amazon's macaw feathers). */
+  featherTints?: FeatherTint[];
+  /** Curtains of the aurora ripple up where her blows and her dive land (the Northlight). */
+  aurora?: boolean;
 }
+
+/** A drifting feather's colours: its lit vane, its shaded vane, its tip. */
+export type FeatherTint = [number, number, number];
 
 // The Swan Maiden's drifting feathers.
 const FEATHER_LIFE = 1300;
@@ -89,6 +96,12 @@ const FEATHERS_PER_HIT = 2;
 const FEATHERS_PER_HEAVY = 4;
 /** One feather in the thrown spear's wake every this many ms. */
 const FEATHER_TRAIL_MS = 110;
+
+// The Northlight's curtains of aurora: how long one lasts, and how wide and tall
+// it stands where a blow lands and where her dive comes down.
+const VEIL_LIFE = 950;
+const VEIL_HIT = { w: 14, h: 20 };
+const VEIL_DIVE = { w: 46, h: 44 };
 
 export const SPEAR_KIT: ValkyrieKit = {
   key: 'valkyrie',
@@ -143,6 +156,33 @@ export const SWAN_KIT: ValkyrieKit = {
   pal: pal(0xffffff, 0xdfeaff, 0x8cb8e8, 0x2e5a9a, 0xb8d4ff),
   aura: 0xd8e6ff,
   feathers: true,
+};
+
+/** The Spearmaiden's Amazon skin: bronze-gold light with jungle-green depths, and scarlet, blue and gold macaw feathers. */
+export const AMAZON_KIT: ValkyrieKit = {
+  ...SPEAR_KIT,
+  key: 'valkyrie_amazon',
+  swing: { core: 0xffffff, hot: 0xfff0c0, mid: 0xe8b450, deep: 0x2a8a48 },
+  heavy: { core: 0xfffbe8, hot: 0xffe08a, mid: 0xd8a040, deep: 0x1e7a3e, light: 0xffd070 },
+  pal: pal(0xfffbe8, 0xffe08a, 0xd8a040, 0x1e7a3e, 0xffd070),
+  aura: 0xffe0a0,
+  feathers: true,
+  featherTints: [
+    [0xff7a4a, 0xe83a22, 0x2e7ce4],
+    [0x6ab0ff, 0x2e7ce4, 0x0e5070],
+    [0xfff094, 0xf4c834, 0x2a9a4a],
+  ],
+};
+
+/** The Stormwing's Northlight skin: lightning of the aurora, green running to violet, and curtains of it where she strikes. */
+export const NORTH_KIT: ValkyrieKit = {
+  ...STORM_KIT,
+  key: 'valkyrie_north',
+  swing: { core: 0xffffff, hot: 0xd8fff0, mid: 0x7af0c8, deep: 0x6a48d0 },
+  heavy: { core: 0xf0fff8, hot: 0x9cffc8, mid: 0x40e0b0, deep: 0x7a3ad8, light: 0x8af0d0 },
+  pal: pal(0xf0fff8, 0x9cffc8, 0x40e0b0, 0x7a3ad8, 0x8af0d0),
+  aura: 0xb0ffe0,
+  aurora: true,
 };
 
 export class Valkyrie implements Hero {
@@ -335,7 +375,8 @@ export class Valkyrie implements Hero {
       sound.clash(this.world.pan(h.x), heavy);
     }
     if (hits.length) this.world.cameras.main.shake(heavy ? 110 : 70, heavy ? 0.0005 : 0.0003);
-    if (this.kit.feathers && hits.length) this.world.addEffect(new DriftFeathers(this.world, hits[0].x, hits[0].y - 12, heavy ? FEATHERS_PER_HEAVY : FEATHERS_PER_HIT, this.kit.pal));
+    if (this.kit.feathers && hits.length) this.world.addEffect(new DriftFeathers(this.world, hits[0].x, hits[0].y - 12, heavy ? FEATHERS_PER_HEAVY : FEATHERS_PER_HIT, this.kit.pal, this.kit.featherTints));
+    if (this.kit.aurora && hits.length) this.world.addEffect(new AuroraVeil(this.world, hits[0].x, hits[0].y + 2, VEIL_HIT.w * (heavy ? 1.4 : 1), VEIL_HIT.h * (heavy ? 1.3 : 1), this.kit.pal));
     if (this.kit.storm && hits.length) arcFrom(this.world, hits[0].x, hits[0].y, ARC_RANGE, ARC_TARGETS, ARC_DAMAGE, this.kit.pal);
   }
 
@@ -364,7 +405,7 @@ export class Valkyrie implements Hero {
     const a = this.abilityAim;
     const x = this.x + a.x * 6;
     const y = this.y - CHEST_Y + a.y * 4;
-    this.world.addEffect(new ThrownSpear(this.world, this, x, y, a.x, a.y, this.kit.pal, this.kit.heavy, !!this.kit.feathers));
+    this.world.addEffect(new ThrownSpear(this.world, this, x, y, a.x, a.y, this.kit.pal, this.kit.heavy, !!this.kit.feathers, this.kit.featherTints));
     sound.windDash(this.world.pan(x));
     this.specialCd = this.kit.specialCooldown;
   }
@@ -414,6 +455,7 @@ export class Valkyrie implements Hero {
     const x = snap(this.x);
     const y = snap(this.y);
     w.addEffect(new Thunderbolt(w, x, y, this.kit.pal, DIVE_RADIUS));
+    if (this.kit.aurora) w.addEffect(new AuroraVeil(w, x, y + 4, VEIL_DIVE.w, VEIL_DIVE.h, this.kit.pal));
     this.fx.push(new Shockwave(w, x, y - 1, DIVE_RADIUS + 6, this.kit.heavy));
     const hits = w.melee({ kind: 'circle', x, y: y - 6, radius: DIVE_RADIUS }, { damage: DIVE_DAMAGE, heavy: true, knock: 160, fromX: x, fromY: y });
     for (const h of hits) this.fx.push(new HitSpark(w, h.x, h.y, this.kit.heavy, h.y + 13, true));
@@ -589,6 +631,7 @@ class ThrownSpear extends Fx {
     private p: Pal,
     private scheme: Scheme,
     private feathers = false,
+    private tints?: FeatherTint[],
   ) {
     super(world, 4000);
     this.ux = dx;
@@ -645,7 +688,7 @@ class ThrownSpear extends Fx {
     if (this.trail.length > 6) this.trail.shift();
     if (Math.floor(this.t / 35) !== Math.floor((this.t - dt) / 35)) this.world.debris([this.p.hot, this.p.mid], this.x - this.ux * 10, this.y - this.uy * 10, 1, this.y + 30, 'trail');
     if (this.feathers && this.phase !== 'hang' && Math.floor(this.t / FEATHER_TRAIL_MS) !== Math.floor((this.t - dt) / FEATHER_TRAIL_MS)) {
-      this.world.addEffect(new DriftFeathers(this.world, this.x - this.ux * 12, this.y - this.uy * 12, 1, this.p));
+      this.world.addEffect(new DriftFeathers(this.world, this.x - this.ux * 12, this.y - this.uy * 12, 1, this.p, this.tints));
     }
     this.draw();
   }
@@ -699,24 +742,29 @@ class ThrownSpear extends Fx {
  */
 export class DriftFeathers extends Fx {
   private g: Ink;
-  private bits: { x: number; y: number; vx: number; phase: number; rate: number }[] = [];
+  private bits: { x: number; y: number; vx: number; phase: number; rate: number; tint: FeatherTint }[] = [];
 
   constructor(
     world: WorldScene,
     private x: number,
     private y: number,
     n: number,
-    private p: Pal,
+    p: Pal,
+    /** Each feather's own colours, one picked at random for each (else the light's). */
+    tints?: FeatherTint[],
   ) {
     super(world, FEATHER_LIFE);
     this.g = this.ink(48, 48);
+    // Taken in turn from a random start, so a puff of three shows every colour.
+    const first = Math.floor(Math.random() * 3);
     for (let i = 0; i < n; i++) {
-      this.bits.push({ x: (Math.random() - 0.5) * 8, y: (Math.random() - 0.5) * 6, vx: (Math.random() - 0.5) * 30, phase: Math.random() * Math.PI * 2, rate: 0.006 + Math.random() * 0.003 });
+      const tint: FeatherTint = tints?.length ? tints[(first + i) % tints.length] : [p.core, p.hot, p.mid];
+      this.bits.push({ x: (Math.random() - 0.5) * 8, y: (Math.random() - 0.5) * 6, vx: (Math.random() - 0.5) * 30, phase: Math.random() * Math.PI * 2, rate: 0.006 + Math.random() * 0.003, tint });
     }
   }
 
   protected step(dt: number): void {
-    const { p, t } = this;
+    const { t } = this;
     const s = dt / 1000;
     const a = 1 - clamp01((t - FEATHER_LIFE * 0.6) / (FEATHER_LIFE * 0.4));
     const g = this.g.begin(this.x, this.y + 8, this.y + 26);
@@ -728,13 +776,65 @@ export class DriftFeathers extends Fx {
       const swing = Math.sin(t * b.rate + b.phase);
       const fx = this.x + b.x + swing * 3;
       const fy = this.y + b.y + Math.abs(swing) * 1.2;
-      // Four pixels on a slant that follows the swing: quill tip in blue, vane white.
+      // Four pixels on a slant that follows the swing: the vane lit then shaded, the tip.
       const k = swing > 0 ? 1 : -1;
-      g.put(fx - k, fy - 1, p.core, a);
-      g.put(fx, fy, p.core, a);
-      g.put(fx + k, fy + 1, p.hot, a);
-      g.put(fx + k * 2, fy + 1, p.mid, a * 0.9);
-      g.put(fx, fy - 1, p.hot, a * 0.6);
+      const [lit, shaded, tip] = b.tint;
+      g.put(fx - k, fy - 1, lit, a);
+      g.put(fx, fy, lit, a);
+      g.put(fx + k, fy + 1, shaded, a);
+      g.put(fx + k * 2, fy + 1, tip, a * 0.9);
+      g.put(fx, fy - 1, shaded, a * 0.6);
+    }
+    g.end();
+  }
+}
+
+/**
+ * A curtain of the aurora rippling up from the ground at (x, y): a bright
+ * green hem low down, going teal and then violet as it climbs, its folds
+ * swaying side to side as it rises, then fading away from the top down.
+ */
+export class AuroraVeil extends Fx {
+  private g: Ink;
+  private lamp: Phaser.GameObjects.Light;
+
+  constructor(
+    world: WorldScene,
+    private x: number,
+    private y: number,
+    private w: number,
+    private h: number,
+    private p: Pal,
+  ) {
+    super(world, VEIL_LIFE);
+    this.g = this.ink(Math.ceil(w + 12), Math.ceil(h + 8));
+    this.lamp = this.light(x, y - h * 0.4, w + 30, p.light, 0.9);
+  }
+
+  protected step(): void {
+    const { x, y, w, h, p, t } = this;
+    const rise = easeOut(t / 260);
+    // It fades from the top down: the hem lingers longest.
+    const fade = clamp01((t - VEIL_LIFE * 0.4) / (VEIL_LIFE * 0.6));
+    this.lamp.intensity = 0.9 * rise * (1 - fade);
+    const g = this.g.begin(x, y, y + 2, 0.5, 1);
+    const half = w / 2;
+    for (let i = -half; i <= half; i++) {
+      const edge = Math.pow(1 - Math.abs(i) / (half + 1), 0.7);
+      // Each fold's height and hem rise and fall along the curtain, and travel.
+      const tall = h * rise * (0.62 + 0.38 * Math.sin(i * 0.23 + t * 0.004)) * edge;
+      const hem = y - 1 + Math.sin(i * 0.45 + t * 0.006) * 1.5;
+      for (let v = 0; v < tall; v++) {
+        const u = v / Math.max(1, tall);
+        if (u > 1 - fade) break;
+        const sway = Math.sin(t * 0.005 + v * 0.14 + i * 0.05) * (1 + u * 2);
+        const c = v < 1 ? p.core : u < 0.3 ? p.hot : u < 0.6 ? p.mid : p.deep;
+        const a = (v < 1 ? 0.9 : 0.62 * Math.pow(1 - u, 0.6)) * edge;
+        // Thin it in vertical streaks, as the light hangs in rays.
+        const ray = 0.55 + 0.45 * Math.sin(i * 1.7 + t * 0.002);
+        if (v > 0 && dither(Math.round(x + i), Math.round(hem - v)) > ray + 0.3) continue;
+        g.put(x + i + sway, hem - v, c, a);
+      }
     }
     g.end();
   }

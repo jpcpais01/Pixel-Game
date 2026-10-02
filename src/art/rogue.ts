@@ -31,6 +31,21 @@
 // bare midriff, a silver chain belt and a skirt of indigo silk petals, long
 // sashes trailing from her hip, silver bracelets and anklets, and slim curved
 // moonsilver daggers shaped like petals.
+//
+// The gentleman thief is the cutthroat's other skin: a phantom thief of the
+// night. A tall black top hat with a crimson band, slicked black hair, a white
+// domino mask with a monocle glinting over one eye, a black tailcoat open over
+// a white shirt and a crimson cravat, a rose in the lapel, a black cape lined
+// with crimson standing up in a high collar behind his head and flaring as he
+// moves, white gloves, and slim silver blades.
+//
+// The cobra is the shadow dancer's third skin: a desert serpent assassin. A
+// cobra's hood of emerald scales edged in gold flares round her head, the
+// serpent itself rearing over her brow from a gold circlet; kohl-lined eyes
+// over an emerald veil hemmed with gold coins; bare bronze arms coiled with
+// gold snake armlets; emerald silks wrapped across her and a gold sash with
+// long tails; loose silk trousers gathered at gold anklets; and twin curved
+// fang daggers dripping venom.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
 import { BLADE, BOOT, CRIMSON, EYE, GOLD, SKIN, STEEL } from './palette';
@@ -56,8 +71,12 @@ const REST_FPS = 9;
 const SWIRL_TRAIL = 6;
 const SWIRL_RX = 8;
 const SWIRL_RY = 2.6;
-/** How far Nightbloom's petal blades bow to one side, in pixels. */
+/** How far Nightbloom's petal blades bow to one side, in pixels, and the cobra's fangs (more: a fang's hook). */
 const PETAL_BOW = 0.8;
+const FANG_BOW = 1.25;
+/** How tall the gentleman's top hat stands above its brim, and how far his cape flares out at its hem. */
+const HAT_TALL = 5;
+const CAPE_FLARE = 1.6;
 
 // ---------------------------------------------------------------------------
 // Materials
@@ -122,6 +141,33 @@ const NB_HILT: Material = { ramp: ramp('#0c0a1e', '#18143a', '#262058', '#342c74
 /** The moonflowers' pale gold hearts. */
 const BLOOM_HEART: RGB = [255, 240, 190];
 
+// The gentleman thief's.
+/** Black silk, the hat's and the cape's: deep, with a sheen. */
+const SILK_HAT: Material = { ramp: ramp('#060609', '#0f0f15', '#1a1a23', '#2a2a37', '#444458'), outline: hex('#020203'), outlineLit: hex('#14141c'), shine: true };
+const TAILCOAT: Material = { ramp: ramp('#07070b', '#101016', '#1a1a22', '#272732', '#3a3a4a'), outline: hex('#020203'), outlineLit: hex('#121219') };
+const DRESS_SHIRT: Material = { ramp: ramp('#5e6070', '#9c9eb0', '#d4d6e2', '#f2f3f8', '#ffffff'), outline: hex('#16161e'), outlineLit: hex('#2c2c38') };
+/** The cravat, the hat's band, the cape's lining and the rose: crimson satin. */
+const SATIN: Material = { ramp: ramp('#2e040c', '#5a0a18', '#8e1426', '#c42636', '#ec5a62'), outline: hex('#140206'), outlineLit: hex('#2a0610'), shine: true };
+const WHITE_GLOVE: Material = { ramp: ramp('#6a6c7c', '#a4a6b8', '#d8dae6', '#f4f5fa', '#ffffff'), outline: hex('#18181f'), outlineLit: hex('#2e2e3a') };
+const SLICK_HAIR: Material = { ramp: ramp('#050407', '#0e0c12', '#19161f', '#2a2534', '#46405a'), outline: hex('#020103'), shine: true };
+const SILVER: Material = { ramp: ramp('#3a3e50', '#6e7488', '#a8aec2', '#dfe4f0', '#ffffff'), outline: hex('#10121a'), shine: true };
+const SLIM_BLADE: Material = { ramp: ramp('#5a6680', '#9eaac4', '#d8e0f0', '#f8fbff'), outline: hex('#10141f'), shine: true };
+const PATENT: Material = { ramp: ramp('#060608', '#121218', '#22222c', '#3a3a48'), outline: hex('#020203'), shine: true };
+
+// The cobra's.
+const COBRA_SCALE: Material = { ramp: ramp('#04241a', '#08402a', '#0f623e', '#1a8a54', '#34b674'), outline: hex('#02120a'), outlineLit: hex('#06281a') };
+/** The hood's pale belly scales, seen from the front. */
+const COBRA_BELLY: Material = { ramp: ramp('#2a4a22', '#4e7a3a', '#86ac5a', '#bcd48a', '#e4f0b8'), outline: hex('#0c1a08'), outlineLit: hex('#1a2e10') };
+const COBRA_SILK: Material = { ramp: ramp('#05261e', '#0a3e30', '#115c46', '#1c7e60', '#32a47e'), outline: hex('#02120c'), outlineLit: hex('#08261c') };
+/** The veil and the sash's tails: a sheerer, lighter emerald. */
+const COBRA_VEIL: Material = { ramp: ramp('#0c3a2a', '#165a40', '#22805a', '#3ea67a', '#6ccaa0'), outline: hex('#041a10'), outlineLit: hex('#0c2e1e') };
+const COBRA_SKIN: Material = { ramp: ramp('#4a2818', '#7a462a', '#a66c44', '#c89064', '#e2b486'), outline: hex('#1e0e08'), outlineLit: hex('#3a1e12') };
+const KOHL: Material = { ramp: ramp('#06040a', '#120c16'), outline: hex('#020103'), noAO: true };
+const FANG: Material = { ramp: ramp('#3a6a2a', '#8ab470', '#d8e8c0', '#f6faea', '#ffffff'), outline: hex('#0a1a08'), emissive: 0.55, shine: true, noAO: true };
+const COBRA_HILT: Material = { ramp: ramp('#06140c', '#0c2416', '#163a22', '#225232'), outline: hex('#020a04') };
+/** The serpent's eyes on the brow and the armlets' little emeralds: venom green, lit. */
+const VENOM: RGB = [140, 255, 110];
+
 /** One look for the rogue: its texture key, its cloth and its blades. */
 export interface RogueLook {
   key: string;
@@ -156,6 +202,16 @@ export interface RogueLook {
    * petal blades.
    */
   bloom?: boolean;
+  /** The gentleman thief: a top hat, a domino mask and monocle, a tailcoat, a cravat and a crimson-lined cape. */
+  gent?: boolean;
+  /** The cobra: a hood of scales round the head, the serpent on the brow, a veil, wrapped silks, bare arms with armlets. */
+  cobra?: boolean;
+  /** The fists, the legs and the feet, when not the gloves, wraps and boots. */
+  glove?: Material;
+  legs?: Material;
+  boots?: Material;
+  /** Blades that curve to one side by this many pixels (petals, fangs). */
+  bow?: number;
 }
 
 export const ROGUE_LOOK: RogueLook = {
@@ -240,9 +296,53 @@ export const NIGHTBLOOM_LOOK: RogueLook = {
   forearm: NB_SKIN,
   bloom: true,
   dance: true,
+  bow: PETAL_BOW,
 };
 
-export const ROGUE_LOOKS = [ROGUE_LOOK, DANCER_LOOK, CORSAIR_LOOK, KITSUNE_LOOK, NIGHTBLOOM_LOOK];
+export const GENTLEMAN_LOOK: RogueLook = {
+  key: 'rogue_gentleman',
+  hood: SILK_HAT,
+  shirt: DRESS_SHIRT,
+  vest: TAILCOAT,
+  scarf: SATIN,
+  sash: SATIN,
+  blade: SLIM_BLADE,
+  hilt: TAILCOAT,
+  metal: SILVER,
+  mask: true,
+  tails: 0,
+  sleeve: TAILCOAT,
+  forearm: TAILCOAT,
+  glove: WHITE_GLOVE,
+  legs: TAILCOAT,
+  boots: PATENT,
+  gent: true,
+};
+
+export const COBRA_LOOK: RogueLook = {
+  key: 'rogue_cobra',
+  hood: COBRA_SCALE,
+  shirt: COBRA_SKIN,
+  vest: COBRA_SILK,
+  scarf: COBRA_VEIL,
+  sash: GOLD,
+  blade: FANG,
+  hilt: COBRA_HILT,
+  metal: GOLD,
+  mask: false,
+  tails: 7,
+  lit: VENOM,
+  sleeve: COBRA_SKIN,
+  forearm: COBRA_SKIN,
+  glove: COBRA_SKIN,
+  legs: COBRA_SILK,
+  boots: COBRA_HILT,
+  cobra: true,
+  dance: true,
+  bow: FANG_BOW,
+};
+
+export const ROGUE_LOOKS = [ROGUE_LOOK, DANCER_LOOK, CORSAIR_LOOK, KITSUNE_LOOK, NIGHTBLOOM_LOOK, GENTLEMAN_LOOK, COBRA_LOOK];
 
 /** The look being drawn; set by buildRogueFrames. */
 let S: RogueLook = ROGUE_LOOK;
@@ -348,7 +448,7 @@ function dagger(c: PixelCanvas, p: Placed, tx: number, ty: number, gleam: number
   // The blade, a lit edge and a darker back.
   c.part();
   const glow = S.lit ? { glow: 0.55 + gleam * 0.4, bias } : { bias };
-  if (S.bloom) petalBlade(c, gx + ux * 0.9, gy + uy * 0.9, tx, ty, glow);
+  if (S.bow) petalBlade(c, gx + ux * 0.9, gy + uy * 0.9, tx, ty, glow, S.bow);
   else c.line(gx + ux * 0.9, gy + uy * 0.9, tx, ty, S.blade, (i, n) => sphere(-0.35, -0.4 + (i / Math.max(1, n)) * 0.2), glow);
   if (S.lit) {
     const [r, g, b] = S.lit;
@@ -362,10 +462,11 @@ function dagger(c: PixelCanvas, p: Placed, tx: number, ty: number, gleam: number
 }
 
 /**
- * Nightbloom's blade: a slim petal of moonsilver, bellied in its first half
- * and bowed to one side, so it curves to its point like a moonflower's petal.
+ * A curved blade: Nightbloom's slim petal of moonsilver, bellied in its first
+ * half and bowed to one side, so it curves to its point like a moonflower's
+ * petal; or the cobra's fang, thick from the hilt and hooked harder.
  */
-function petalBlade(c: PixelCanvas, x0: number, y0: number, tx: number, ty: number, o: { glow?: number; bias: number }): void {
+function petalBlade(c: PixelCanvas, x0: number, y0: number, tx: number, ty: number, o: { glow?: number; bias: number }, bowBy: number): void {
   const dx = tx - x0;
   const dy = ty - y0;
   const l = Math.hypot(dx, dy) || 1;
@@ -375,11 +476,12 @@ function petalBlade(c: PixelCanvas, x0: number, y0: number, tx: number, ty: numb
   const n = Math.max(2, Math.ceil(l * 1.6));
   for (let i = 0; i <= n; i++) {
     const t = i / n;
-    const bow = Math.sin(t * Math.PI) * PETAL_BOW;
+    // A fang hooks most near its point; a petal bows evenly.
+    const bow = (S.cobra ? Math.sin(Math.pow(t, 0.8) * Math.PI * 0.9) : Math.sin(t * Math.PI)) * bowBy;
     const x = x0 + dx * t + nx * bow;
     const y = y0 + dy * t + ny * bow;
     c.px(x, y, S.blade, sphere(-0.35, -0.45 + t * 0.3), o);
-    if (t > 0.15 && t < 0.6) c.px(x - nx * 0.9, y - ny * 0.9, S.blade, sphere(0.3, 0.2), { ...o, bias: o.bias - 1 });
+    if (S.cobra ? t < 0.5 : t > 0.15 && t < 0.6) c.px(x - nx * 0.9, y - ny * 0.9, S.blade, sphere(0.3, 0.2), { ...o, bias: o.bias - 1 });
   }
 }
 
@@ -422,7 +524,7 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
     }
   }
   c.part();
-  const slim = S.bloom ? 0.3 : 0;
+  const slim = S.bloom ? 0.3 : S.cobra ? 0.15 : 0;
   c.capsule(sx, sy, ex, ey, 1.45 - slim, 1.25 - slim, S.sleeve ?? S.shirt, { bias });
   c.part();
   c.capsule(ex, ey, fx, fy, 1.25 - slim, 1.1 - slim, S.forearm ?? WRAPS, { bias });
@@ -431,6 +533,21 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
     c.part();
     c.capsule(ex + (fx - ex) * 0.55, ey + (fy - ey) * 0.55, ex + (fx - ex) * 0.75, ey + (fy - ey) * 0.75, 1.45, 1.45, S.metal, { bias });
     c.px(ex + (fx - ex) * 0.88, ey + (fy - ey) * 0.88, LINEN, sphere(0, -0.3), { bias });
+  }
+  if (S.gent) {
+    // A white shirt cuff showing past the coat's sleeve.
+    c.part();
+    c.px(ex + (fx - ex) * 0.8, ey + (fy - ey) * 0.8, DRESS_SHIRT, sphere(0, -0.3), { bias });
+  }
+  if (S.cobra) {
+    // A gold snake coiled twice round the upper arm, its emerald eye glinting, and a gold cuff at the wrist.
+    c.part();
+    const ax = sx + (ex - sx) * 0.45;
+    const ay = sy + (ey - sy) * 0.45;
+    c.px(ax, ay, S.metal, sphere(-0.3, -0.4), { bias });
+    c.px(sx + (ex - sx) * 0.7, sy + (ey - sy) * 0.7, S.metal, sphere(0.3, -0.2), { bias });
+    c.spark(ax, ay, VENOM, 0.35);
+    c.px(ex + (fx - ex) * 0.7, ey + (fy - ey) * 0.7, S.metal, sphere(-0.2, -0.4), { bias });
   }
   if (S.bloom) {
     // A silver armlet above the elbow, and two thin bangles at the wrist.
@@ -443,7 +560,7 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
     return;
   }
   c.part();
-  c.ellipse(fx, fy, 1.15, 1.1, GLOVE, { bias });
+  c.ellipse(fx, fy, 1.15, 1.1, S.glove ?? GLOVE, { bias });
 }
 
 function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bias = 0): void {
@@ -457,8 +574,22 @@ function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bia
     c.spark(fx - 1, ay, [230, 236, 255], 0.25);
     return;
   }
+  if (S.cobra) {
+    // Loose silk trousers, full at the knee, gathered at a gold anklet.
+    c.part();
+    const kx = hx + (fx - hx) * 0.55;
+    const ky = hy + (fy - hy) * 0.55;
+    c.capsule(hx, hy, kx, ky, 1.5, 1.75, S.legs!, { bias });
+    c.capsule(kx, ky, fx, fy - 0.6, 1.75, 1.05, S.legs!, { bias });
+    c.part();
+    const ay = Math.round(fy - 0.6);
+    for (const dx of [-1, 0]) c.px(fx + dx, ay, S.metal, sphere(dx ? -0.4 : 0.3, -0.3), { bias });
+    return;
+  }
   c.part();
-  c.capsule(hx, hy, fx, fy, 1.55, 1.25, WRAPS, { bias });
+  c.capsule(hx, hy, fx, fy, 1.55, 1.25, S.legs ?? WRAPS, { bias });
+  // A gentleman's trousers are pressed, not bound.
+  if (S.gent) return;
   // Bindings round the shin.
   const y = Math.round(hy + (fy - hy) * 0.72);
   const x = hx + (fx - hx) * 0.72;
@@ -473,6 +604,25 @@ function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): voi
     c.part();
     if (side) c.ellipse(x - 0.6, y + 0.2, 1.9, 0.85, NB_HILT, { flatten: 0.8, bias });
     else c.ellipse(x, y + 0.2, 1.1, 1.0, NB_HILT, { flatten: 0.8, bias });
+    return;
+  }
+  if (S.cobra) {
+    // A soft slipper, its pointed toe curling up in gold.
+    c.part();
+    if (side) {
+      c.ellipse(x - 0.6, y + 0.2, 2.0, 0.9, S.boots!, { flatten: 0.8, bias });
+      c.px(x - 2.6, y - 0.4, S.metal, sphere(-0.5, -0.5), { bias });
+    } else {
+      c.ellipse(x, y + 0.2, 1.2, 1.0, S.boots!, { flatten: 0.8, bias });
+      c.px(x - 0.5, y + 0.6, S.metal, sphere(0, 0.2), { bias: bias + 1 });
+    }
+    return;
+  }
+  if (S.gent) {
+    // Polished evening shoes under the trouser hem.
+    c.part();
+    if (side) c.ellipse(x - 0.5, y + 0.15, 2.2, 1.0, S.boots!, { flatten: 0.8, bias });
+    else c.ellipse(x, y + 0.15, 1.45, 1.1, S.boots!, { flatten: 0.8, bias });
     return;
   }
   c.part();
@@ -521,7 +671,7 @@ function tails(c: PixelCanvas, x: number, y: number, dir: number, stream: number
 function eyes(c: PixelCanvas, pts: [number, number][], blink: boolean | undefined): void {
   c.part();
   for (const [x, y] of pts) {
-    if (blink) c.px(x, y, S.bloom ? NB_SKIN : S.kitsune ? FOX_MASK : S.mask ? MASK : SKIN, sphere(0, -0.3), { bias: -1 });
+    if (blink) c.px(x, y, S.bloom ? NB_SKIN : S.cobra ? COBRA_SKIN : S.kitsune ? FOX_MASK : S.mask && !S.gent ? MASK : SKIN, sphere(0, -0.3), { bias: -1 });
     else if (S.bloom) c.px(x, y, NB_EYE);
     else if (S.lit) {
       c.px(x, y, EYE);
@@ -939,6 +1089,530 @@ function bloomSide(c: PixelCanvas, p: Pose, U: number, L: number, hx: number, fa
   nearArm();
 }
 
+// ---------------------------------------------------------------------------
+// The gentleman thief
+
+/**
+ * His top hat from the front, behind or the side (`hx` its middle): a tall
+ * crown in black silk, a crimson band round its foot with a playing card
+ * tucked in it, and a brim curled up at both sides.
+ */
+function topHat(c: PixelCanvas, hx: number, U: number, front: boolean, side = false): void {
+  const top = 9 - HAT_TALL + U;
+  const foot = 8 + U;
+  c.part();
+  c.shape(top, foot, (y) => {
+    const hw = y === top ? 2.9 : 2.6;
+    return [hx - hw, hx + hw];
+  }, S.hood, (_x, y, t) => (y === top ? sphere(t * 0.8, -0.85, 1) : cyl(t, 0.1)));
+  c.part();
+  c.shape(foot - 1, foot, () => [hx - 2.7, hx + 2.7], SATIN, (_x, y, t) => cyl(t, y === foot - 1 ? 0.3 : -0.1));
+  if (front || side) {
+    // A playing card tucked into the band, standing up out of it.
+    c.part();
+    const kx = hx + 1.6;
+    c.px(kx, foot - 3, DRESS_SHIRT, sphere(0.2, -0.5));
+    c.px(kx, foot - 2, DRESS_SHIRT, sphere(0.2, -0.2));
+    c.spark(kx, foot - 2, [255, 120, 130], 0.35);
+  }
+  // The brim, its sides curled up.
+  c.part();
+  const bl = hx - 4.4;
+  const br = hx + 4.4;
+  c.shape(foot + 1, foot + 1, () => [bl, br], S.hood, (_x, _y, t) => sphere(t * 0.7, front ? -0.2 : 0.3, 1), { bias: front ? 0 : -1 });
+  c.px(bl, foot, S.hood, sphere(-0.6, -0.6), { bias: 1 });
+  c.px(br - 1, foot, S.hood, sphere(0.6, -0.6));
+}
+
+/**
+ * The cape from the front: it hangs behind him, so what shows round his
+ * figure is its crimson lining, edged in black, flaring at the hem; and its
+ * high collar stands up behind his head, crimson within.
+ */
+function capeFront(c: PixelCanvas, cx: number, U: number, L: number, sway: number, stream: number): void {
+  const top = 15 + U;
+  const hem = 27 + L;
+  const flare = CAPE_FLARE + stream * 1.2;
+  c.part();
+  const edge = (y: number): [number, number] => {
+    const u = (y - top) / (hem - top);
+    const hw = 4.8 + u * (1.4 + flare);
+    const s = sway * u * 0.6;
+    return [cx - hw + s, cx + hw + s];
+  };
+  c.shape(top, hem, edge, SATIN, (_x, y, t) => sphere(-t * 0.8, ((y - top) / (hem - top)) * 0.4 - 0.2, 1), { bias: -1 });
+  // Black silk at its outer edges and along the hem: the cape's outside, turning back.
+  c.part();
+  for (let y = top + 1; y <= hem; y++) {
+    const [l, r] = edge(y);
+    const xa = Math.round(l);
+    const xb = Math.round(r) - 1;
+    c.px(xa, y, S.hood, sphere(-0.7, 0.1));
+    c.px(xb, y, S.hood, sphere(0.7, 0.1), { bias: -1 });
+    if (y === hem) for (let x = xa + 1; x < xb; x++) c.px(x, y, S.hood, sphere(0, 0.5), { bias: -1 });
+  }
+  // The collar's two wings standing up behind his head, black at their outer edge.
+  c.part();
+  for (const sd of [-1, 1]) {
+    const out = (y: number) => 5.2 - ((y - 10 - U) / 5) * 0.6;
+    c.shape(10 + U, 15 + U, (y) => {
+      const inn = 3.0 + ((y - 10 - U) / 5) * 0.2;
+      return sd < 0 ? [cx - out(y), cx - inn] : [cx + inn, cx + out(y)];
+    }, SATIN, (_x, _y, t) => sphere(t * 0.6 * -sd, -0.2, 1));
+    for (let y = 10 + U; y <= 14 + U; y++) c.px(sd < 0 ? Math.round(cx - out(y)) : Math.round(cx + out(y)) - 1, y, S.hood, sphere(sd * 0.7, y === 10 + U ? -0.6 : 0));
+  }
+}
+
+/** The tailcoat over the shirt from the front: open in a deep V with silk lapels, a cravat, a rose, silver buttons. */
+function gentTorso(c: PixelCanvas, cx: number, U: number): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  c.part();
+  c.shape(top, waist, (y) => {
+    const hw = torsoWidth(y, top, waist, 4.2);
+    return [cx - hw, cx + hw];
+  }, S.shirt, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.35, 1));
+  c.part();
+  c.shape(top, waist + 1, (y) => {
+    const hw = torsoWidth(y, top, waist, 4.3) + 0.1;
+    return [cx - hw, cx + hw];
+  }, S.vest, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.3, 1));
+  // The V: the shirt shows down to the waist, the lapels in black silk beside it.
+  const open = [2, 2, 2, 1, 1, 1, 0];
+  c.part();
+  open.forEach((w, i) => {
+    const y = top + i;
+    for (let x = cx - w; x < cx + w; x++) c.px(x, y, S.shirt, sphere((x - cx + 0.5) * 0.3, -0.1 + i * 0.1), { bias: x === cx - w ? -1 : 0 });
+    if (i < 5) {
+      c.px(cx - w - 1, y, S.hood, sphere(-0.5, -0.3));
+      c.px(cx + w, y, S.hood, sphere(0.5, -0.3), { bias: -1 });
+    }
+  });
+  // The front cut away at the waist, the coat's skirts falling to either side.
+  for (let x = cx - 1; x <= cx; x++) c.erase(x, waist + 1);
+  // The cravat at his throat and its fall down the shirt, a pearl pin in it.
+  c.part();
+  c.px(cx - 1, top, SATIN, sphere(-0.3, -0.4));
+  c.px(cx, top, SATIN, sphere(0.3, -0.4));
+  c.px(cx - 1, top + 1, SATIN, sphere(-0.2, 0.1));
+  c.px(cx, top + 1, SATIN, sphere(0.3, 0.1), { bias: -1 });
+  c.px(cx - 1, top + 2, SATIN, sphere(0, 0.4), { bias: -1 });
+  c.spark(cx - 1, top + 1, [255, 255, 255], 0.3);
+  // A shirt stud, and silver buttons on the coat.
+  c.part();
+  c.px(cx - 1, top + 4, S.metal, sphere(0, -0.4));
+  for (const y of [top + 5, waist]) {
+    c.px(cx - 3, y, S.metal, sphere(-0.3, -0.4));
+    c.px(cx + 2, y, S.metal, sphere(0.3, -0.4), { bias: -1 });
+  }
+  // A red rose in his buttonhole, on his left lapel, a leaf under it.
+  c.part();
+  c.px(cx + 2, top + 1, SATIN, sphere(-0.3, -0.4));
+  c.px(cx + 3, top + 1, SATIN, sphere(0.3, -0.4));
+  c.px(cx + 2, top + 2, SATIN, sphere(0, 0.3), { bias: -1 });
+  c.px(cx + 3, top + 2, COBRA_SCALE, sphere(0.3, 0.3));
+  c.spark(cx + 2, top + 1, [255, 90, 100], 0.4);
+}
+
+/** His face from the front: slicked hair, the domino mask, the monocle's glint, a knowing smile. */
+function gentFace(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined, gleam: number): void {
+  c.part();
+  c.ellipse(cx, 11.7 + U, 3.3, 3.1, SLICK_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 1) });
+  c.part();
+  c.ellipse(cx, 12.9 + U, 2.5, 2.4, SKIN);
+  // Hair combed back and gleaming at the brow under the hat.
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 2.9, cx + 2.9], SLICK_HAIR, (_x, _y, t) => sphere(t * 0.8, -0.6, 1));
+  // The domino mask, swept up into points at the temples.
+  c.part();
+  c.shape(11 + U, 12 + U, (y) => (y === 11 + U ? [cx - 3.2, cx + 3.2] : [cx - 2.8, cx + 2.8]), MASK, (_x, y, t) => sphere(t * 0.9, y === 11 + U ? 0.3 : -0.1, 1));
+  c.px(cx - 4, 10 + U, MASK, sphere(-0.6, -0.5));
+  c.px(cx + 3, 10 + U, MASK, sphere(0.6, -0.5), { bias: -1 });
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], blink);
+  // The monocle over his left eye: a glint on the lens, its rim, its gold chain.
+  c.part();
+  c.px(cx + 2, 13 + U, S.metal, sphere(0.4, 0.2));
+  c.px(cx + 2, 14 + U, GOLD, sphere(0.3, 0.3), { bias: -1 });
+  if (!blink) c.spark(cx + 1, 12 + U, [255, 255, 255], 0.55 + gleam * 0.45);
+  // A thin, knowing smile.
+  c.shade(cx - 1, 14 + U, -1);
+  c.shade(cx, 14 + U, -1);
+}
+
+function gentDown(c: PixelCanvas, p: Pose, U: number, L: number, behindArms: () => void, frontArms: () => void, head: (d: () => void) => void): void {
+  const cx = 12;
+  capeFront(c, cx, U, L, p.sway, p.stream);
+  // The tailcoat's skirts behind his legs.
+  c.part();
+  c.shape(22 + U, 26 + L, (y) => {
+    const u = (y - 22 - U) / Math.max(1, 4 + L - U);
+    const hw = 4.2 + u * 0.6;
+    return [cx - hw + p.sway * u * 0.4, cx + hw + p.sway * u * 0.4];
+  }, S.vest, (_x, _y, t, u) => sphere(t * 0.9, u * 0.4, 1), { bias: -1 });
+  behindArms();
+  leg(c, 10.3, 22.5 + L, 10 - p.footA * 0.2, 28.4 - p.footA);
+  leg(c, 13.7, 22.5 + L, 14 + p.footB * 0.2, 28.4 - p.footB);
+  boot(c, 10, 29.6 - p.footA);
+  boot(c, 14, 29.6 - p.footB);
+  gentTorso(c, cx, U);
+  head(() => {
+    gentFace(c, cx, U, p.blink, p.gleam);
+    topHat(c, cx, U, true);
+  });
+  frontArms();
+}
+
+function gentUp(c: PixelCanvas, p: Pose, U: number, L: number, behindArms: () => void, frontArms: () => void): void {
+  const cx = 12;
+  behindArms();
+  leg(c, 10.3, 22.5 + L, 10, 28.4 - p.footB);
+  leg(c, 13.7, 22.5 + L, 14, 28.4 - p.footA);
+  boot(c, 10, 29.6 - p.footB);
+  boot(c, 14, 29.6 - p.footA);
+  // The cape over his back in black silk, swinging, a long fold down each side and the crimson lining at its hem.
+  const top = 15 + U;
+  const hem = 27 + L;
+  c.part();
+  const flare = CAPE_FLARE + p.stream * 1.2;
+  const edge = (y: number): [number, number] => {
+    const u = (y - top) / (hem - top);
+    const hw = 4.5 + u * (1.4 + flare);
+    const s = p.sway * u * 0.6;
+    return [cx - hw + s, cx + hw + s];
+  };
+  c.shape(top, hem, edge, S.hood, (_x, y, t) => sphere(t * 0.9, ((y - top) / (hem - top)) * 0.5 - 0.3, 1));
+  for (let y = top + 3; y < hem; y++) {
+    const [l, r] = edge(y);
+    const w = r - l;
+    c.shade(Math.round(l + w * 0.3), y, -1);
+    c.shade(Math.round(l + w * 0.68), y, -1);
+  }
+  const [hl, hr] = edge(hem);
+  c.part();
+  for (let x = Math.round(hl); x < Math.round(hr); x++) c.px(x, hem, SATIN, sphere(0, 0.4), { bias: -1 });
+  // The collar standing up round his neck, black outside.
+  c.part();
+  c.shape(12 + U, 15 + U, (y) => {
+    const hw = 4.6 - ((y - 12 - U) / 3) * 0.4;
+    return [cx - hw, cx + hw];
+  }, S.hood, (_x, y, t) => sphere(t * 0.9, (y - 13.5 - U) * 0.3, 1));
+  // The back of his head, his hair slicked down to the collar, and the hat.
+  c.part();
+  c.ellipse(cx, 11.6 + U, 3.2, 3.0, SLICK_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  for (const x of [cx - 2, cx, cx + 1]) c.shade(x, 12 + U, -1);
+  topHat(c, cx, U, false);
+  frontArms();
+}
+
+/** Facing left: the cape streaming back behind him, crimson showing beneath it; the hat, mask and monocle in profile. */
+function gentSide(c: PixelCanvas, p: Pose, U: number, L: number, hx: number, farArm: () => void, nearArm: () => void): void {
+  const cx = 12;
+  const k = p.stream;
+  const top = 14 + U;
+  const hem = Math.round(27 + L - k * 2);
+  c.part();
+  const edge = (y: number): [number, number] => {
+    const u = (y - top) / (hem - top);
+    return [hx + 0.4 + u * (0.6 + k * 1.6), hx + 3.4 + u * (CAPE_FLARE + 0.6 + k * 5.5)];
+  };
+  c.shape(top, hem, edge, S.hood, (_x, y, t) => sphere(t * 0.8 + 0.2, ((y - top) / (hem - top)) * 0.5 - 0.3, 1), { bias: -1 });
+  // The crimson lining shows along its inner edge as it lifts, and all along the hem.
+  c.part();
+  for (let y = top + 3; y <= hem; y++) {
+    const [l, r] = edge(y);
+    const u = (y - top) / (hem - top);
+    const n = u > 0.4 ? 1 + Math.round(k * 2) : 0;
+    for (let i = 0; i < n; i++) c.px(Math.round(l) + i, y, SATIN, sphere(-0.3, 0.2), { bias: -1 });
+    if (y === hem) for (let x = Math.round(l); x < Math.round(r); x++) c.px(x, y, SATIN, sphere(0, 0.4), { bias: -1 });
+  }
+  // The tailcoat's skirts behind his legs.
+  c.part();
+  c.shape(22 + U, 26 + L, (y) => {
+    const u = (y - 22 - U) / Math.max(1, 4 + L - U);
+    return [hx + 0.2 + (cx - hx) * u * 0.5, hx + 3.2 + u * (0.8 + k * 1.4)];
+  }, S.vest, (_x, _y, t, u) => sphere(t * 0.9 + 0.1, u * 0.4, 1), { bias: -1 });
+  farArm();
+  const lift = (f: number) => Math.max(0, f) * 0.35;
+  leg(c, cx + 0.8, 22.5 + L, cx + 1 - p.footB, 28.4 - lift(p.footB), -1);
+  boot(c, cx + 0.4 - p.footB, 29.7 - lift(p.footB), true, -1);
+  leg(c, cx - 0.6, 22.5 + L, cx - 0.4 - p.footA, 28.4 - lift(p.footA));
+  boot(c, cx - 1.2 - p.footA, 29.7 - lift(p.footA), true);
+  // The coat in profile, the shirt front and cravat at its open front, the rose.
+  const ttop = 15 + U;
+  const waist = 22 + U;
+  c.part();
+  c.shape(ttop, waist, (y) => {
+    const hw = torsoWidth(y, ttop, waist, 3);
+    return [hx - hw - 0.2, hx + hw + 0.2];
+  }, S.vest, (_x, y, t) => sphere(t * 0.9 - 0.1, ((y - ttop) / (waist - ttop)) * 0.8 - 0.3, 1));
+  c.part();
+  c.shape(ttop + 1, waist - 1, () => [hx - 3.2, hx - 2.2], S.shirt, () => sphere(-0.6, 0, 1));
+  for (let y = ttop + 1; y <= waist - 3; y++) c.px(hx - 2, y, S.hood, sphere(-0.4, -0.2));
+  c.part();
+  c.px(hx - 4, ttop, SATIN, sphere(-0.5, -0.3));
+  c.px(hx - 3, ttop, SATIN, sphere(-0.2, -0.3));
+  c.px(hx - 4, ttop + 1, SATIN, sphere(-0.5, 0.2), { bias: -1 });
+  c.px(hx - 1, ttop + 1, SATIN, sphere(-0.2, -0.3));
+  c.spark(hx - 1, ttop + 1, [255, 90, 100], 0.35);
+  c.px(hx - 3, waist - 2, S.metal, sphere(-0.4, -0.3));
+  // The collar standing up behind his head.
+  c.part();
+  c.shape(10 + U, 15 + U, (y) => {
+    const u = (y - 10 - U) / 5;
+    return [hx + 1.4 - u * 0.4, hx + 3.6 - u * 0.6];
+  }, S.hood, (_x, _y, t) => sphere(t * 0.7 + 0.2, -0.2, 1));
+  for (let y = 11 + U; y <= 14 + U; y++) c.px(Math.round(hx + 1.4 - ((y - 10 - U) / 5) * 0.4), y, SATIN, sphere(-0.4, 0));
+  // His head: slicked hair, the face, the mask in profile, the monocle's glint, the hat.
+  c.part();
+  c.ellipse(hx + 0.8, 11.9 + U, 2.8, 2.9, SLICK_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.ellipse(hx - 1.3, 12.9 + U, 2.2, 2.3, SKIN);
+  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.part();
+  c.shape(11 + U, 12 + U, (y) => [hx - 4.2, hx + (y === 11 + U ? 0.6 : -0.2)], MASK, (_x, y, t) => sphere(t * 0.9 - 0.2, y === 11 + U ? 0.3 : -0.1, 1));
+  c.px(hx + 1, 10 + U, MASK, sphere(0.5, -0.5));
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  c.part();
+  c.px(hx - 2, 13 + U, S.metal, sphere(-0.2, 0.2));
+  c.px(hx - 1, 14 + U, GOLD, sphere(0, 0.3), { bias: -1 });
+  if (!p.blink) c.spark(hx - 3, 12 + U, [255, 255, 255], 0.55 + p.gleam * 0.45);
+  c.shade(hx - 3, 14 + U, -1);
+  topHat(c, hx + 0.4, U, false, true);
+  nearArm();
+}
+
+// ---------------------------------------------------------------------------
+// The cobra
+
+/** The width of the cobra's hood each row down from its crown, from the front or behind. */
+const HOOD_W = [1.8, 3.2, 4.4, 5.4, 6.0, 6.4, 6.4, 6.1, 5.6, 4.9, 4.1, 3.3];
+
+/**
+ * The cobra's hood round her head from the front or behind: emerald scales in
+ * rows, rimmed in gold. From behind it carries the cobra's spectacle mark.
+ */
+function cobraHood(c: PixelCanvas, cx: number, U: number, sway: number, front: boolean): void {
+  const top = 6 + U;
+  const bot = top + HOOD_W.length - 1;
+  const edge = (y: number): [number, number] => {
+    const i = y - top;
+    const s = sway * (i / HOOD_W.length) * 0.25;
+    return [cx - HOOD_W[i] + s, cx + HOOD_W[i] + s];
+  };
+  c.part();
+  c.shape(top, bot, edge, S.hood, (_x, y, t) => sphere(t * (front ? -0.6 : 0.9), ((y - top) / (bot - top)) * 0.9 - 0.5, 1), { bias: front ? -1 : 0 });
+  // Scales: a staggered lattice of shaded pixels down the hood.
+  for (let y = top + 1; y <= bot; y++) {
+    const [l, r] = edge(y);
+    for (let x = Math.round(l) + 1; x < Math.round(r) - 1; x++) if (((x + (y >> 1)) & 1) === 0 && (y & 1) === 0) c.shade(x, y, -1);
+  }
+  // The gold rim round its edge.
+  c.part();
+  for (let y = top; y <= bot; y++) {
+    const [l, r] = edge(y);
+    c.px(Math.round(l), y, S.metal, sphere(-0.7, -0.2), { bias: y > bot - 3 ? -1 : 0 });
+    c.px(Math.round(r) - 1, y, S.metal, sphere(0.7, -0.2), { bias: -1 });
+  }
+  if (!front) {
+    // The spectacle mark: two pale rings joined by a bridge.
+    c.part();
+    for (const [dx, dy] of [[-4, 11], [-3, 10], [-2, 11], [-3, 12], [1, 11], [2, 10], [3, 11], [2, 12], [-1, 12], [0, 12]] as const) c.px(cx + dx, dy + U, COBRA_BELLY, sphere(dx * 0.15, -0.2));
+  }
+}
+
+/** The serpent rearing from her circlet over her brow, its little hood spread and its eyes lit. */
+function browSerpent(c: PixelCanvas, cx: number, U: number): void {
+  // Its pale belly rising from the circlet, standing out against the dark hood behind.
+  c.part();
+  for (let y = 6 + U; y <= 8 + U; y++) {
+    c.px(cx - 1, y, COBRA_BELLY, sphere(-0.3, 0));
+    c.px(cx, y, COBRA_BELLY, sphere(0.3, 0), { bias: -1 });
+  }
+  c.shade(cx - 1, 7 + U, -1);
+  c.part();
+  c.shape(4 + U, 5 + U, (y) => (y === 4 + U ? [cx - 1.2, cx + 1.2] : [cx - 2.2, cx + 2.2]), S.hood, (_x, y, t) => sphere(t * 0.8, y === 4 + U ? -0.6 : 0, 1));
+  c.px(cx - 2, 5 + U, S.metal, sphere(-0.5, -0.2));
+  c.px(cx + 1, 5 + U, S.metal, sphere(0.5, -0.2), { bias: -1 });
+  for (const x of [cx - 1, cx]) c.spark(x, 4 + U, VENOM, 0.75);
+}
+
+/** Her torso from the front or behind: bronze skin, emerald silks wrapped across her with a gold edge, a bare midriff, the gold sash. */
+function cobraBody(c: PixelCanvas, cx: number, U: number, sway: number, front: boolean): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  c.part();
+  c.shape(top, waist + 1, (y) => {
+    const hw = torsoWidth(y, top, waist, 3.9);
+    return [cx - hw, cx + hw];
+  }, S.shirt, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.35, 1));
+  // The wrap: from her right shoulder across to her left hip, its gold edge showing where it crosses.
+  c.part();
+  c.shape(top + 1, waist - 2, (y) => {
+    const hw = torsoWidth(y, top, waist, 3.9) + 0.1;
+    return [cx - hw, cx + hw];
+  }, S.vest, (_x, y, t) => sphere(t * 0.9, ((y - top) / (waist - top)) * 0.8 - 0.3, 1));
+  for (let y = top + 1; y <= waist - 2; y++) {
+    const x = Math.round((front ? cx - 3 : cx + 2) + (y - top - 1) * (front ? 0.9 : -0.9));
+    c.px(x, y, S.metal, sphere(front ? 0.2 : -0.2, -0.2), { bias: -1 });
+    c.shade(x + (front ? -1 : 1), y, -1);
+  }
+  if (front) c.shade(cx - 1, waist - 1, -1);
+  // The gold sash, knotted at her hip.
+  c.part();
+  c.shape(waist, waist + 1, () => [cx - 4, cx + 4], S.sash, (_x, y, t) => cyl(t, y === waist ? 0.3 : -0.2));
+  c.part();
+  c.ellipse(cx + (front ? 2.6 : -2.6), waist + 0.6, 1.1, 1, S.sash);
+  // A panel of emerald silk hanging from the sash, hemmed in gold.
+  c.part();
+  const s = sway * 0.3;
+  c.shape(waist + 2, waist + 5, (y) => [cx - 1.4 + s * ((y - waist) / 5), cx + 1.4 + s * ((y - waist) / 5)], S.vest, (_x, _y, t, u) => sphere(t * 0.8, u * 0.4, 1));
+  c.px(cx - 1 + Math.round(s), waist + 5, S.metal, sphere(-0.3, 0.4));
+  c.px(cx + Math.round(s), waist + 5, S.metal, sphere(0.3, 0.4), { bias: -1 });
+}
+
+/** Her face from the front: kohl-lined eyes lit venom green over a veil hemmed with gold coins, and the gold circlet. */
+function cobraFace(c: PixelCanvas, cx: number, U: number, blink: boolean | undefined): void {
+  c.part();
+  c.ellipse(cx, 12.6 + U, 2.6, 2.6, COBRA_SKIN);
+  // Black hair under the circlet.
+  c.part();
+  c.shape(9 + U, 10 + U, (y) => (y === 9 + U ? [cx - 3, cx + 3] : [cx - 3.1, cx + 3.1]), NB_HAIR, (_x, y, t) => sphere(t * 0.8, y === 9 + U ? -0.5 : 0, 1));
+  c.px(cx - 3, 11 + U, NB_HAIR, sphere(-0.6, 0));
+  c.px(cx + 2, 11 + U, NB_HAIR, sphere(0.6, 0));
+  c.part();
+  c.shape(9 + U, 9 + U, () => [cx - 3.3, cx + 3.3], S.metal, (_x, _y, t) => cyl(t, 0.3));
+  // Kohl: dark lids and a wing flicked out from each eye.
+  c.part();
+  c.px(cx - 3, 12 + U, KOHL);
+  c.px(cx + 2, 12 + U, KOHL);
+  c.shade(cx - 2, 11 + U, -1);
+  c.shade(cx + 1, 11 + U, -1);
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], blink);
+  // The veil from cheek to cheek, a little gold coin at every other pixel of its hem.
+  c.part();
+  c.shape(13 + U, 15 + U, (y) => (y === 15 + U ? [cx - 2.6, cx + 2.6] : [cx - 2.9, cx + 2.9]), S.scarf, (_x, y, t) => sphere(t * 0.9, (y - 13 - U) * 0.35 - 0.2, 1));
+  c.shade(cx - 1, 14 + U, -1);
+  for (let x = cx - 2; x <= cx + 1; x += 2) {
+    c.px(x, 16 + U, S.metal, sphere(0, 0.3));
+    c.spark(x, 16 + U, [255, 230, 150], 0.2);
+  }
+}
+
+function cobraDown(c: PixelCanvas, p: Pose, U: number, L: number, behindArms: () => void, frontArms: () => void, head: (d: () => void) => void): void {
+  const cx = 12;
+  head(() => cobraHood(c, cx, U, p.sway, true));
+  behindArms();
+  leg(c, 10.3, 22.5 + L, 10 - p.footA * 0.2, 28.4 - p.footA);
+  leg(c, 13.7, 22.5 + L, 14 + p.footB * 0.2, 28.4 - p.footB);
+  boot(c, 10, 29.6 - p.footA);
+  boot(c, 14, 29.6 - p.footB);
+  cobraBody(c, cx, U, p.sway, true);
+  // The sash's long emerald tails from the knot at her hip.
+  tails(c, cx + 2.6, 22.8 + U, 1, Math.max(0.35, p.stream), p.sway);
+  head(() => {
+    cobraFace(c, cx, U, p.blink);
+    browSerpent(c, cx, U);
+  });
+  frontArms();
+}
+
+function cobraUp(c: PixelCanvas, p: Pose, U: number, L: number, behindArms: () => void, frontArms: () => void): void {
+  const cx = 12;
+  behindArms();
+  leg(c, 10.3, 22.5 + L, 10, 28.4 - p.footB);
+  leg(c, 13.7, 22.5 + L, 14, 28.4 - p.footA);
+  boot(c, 10, 29.6 - p.footB);
+  boot(c, 14, 29.6 - p.footA);
+  cobraBody(c, cx, U, p.sway, false);
+  tails(c, cx - 2.6, 22.8 + U, -1, p.stream * 0.3 + 0.1, p.sway);
+  // A long braid from under the hood down her back, bound with gold rings.
+  c.part();
+  const bx = cx - 0.5 + p.sway * 0.35;
+  c.capsule(cx - 0.5, 16 + U, bx, 21.5 + U, 1.0, 0.7, NB_HAIR);
+  for (const t of [0.3, 0.75]) c.px(cx - 0.5 + (bx - cx + 0.5) * t, 16 + U + 5.5 * t, S.metal, sphere(0, -0.3));
+  cobraHood(c, cx, U, p.sway, false);
+  // The serpent's head above the hood's crown.
+  c.part();
+  c.shape(4 + U, 5 + U, (y) => (y === 4 + U ? [cx - 1.2, cx + 1.2] : [cx - 2.2, cx + 2.2]), S.hood, (_x, y, t) => sphere(t * 0.8, y === 4 + U ? -0.6 : 0, 1));
+  c.px(cx - 2, 5 + U, S.metal, sphere(-0.5, -0.2));
+  c.px(cx + 1, 5 + U, S.metal, sphere(0.5, -0.2), { bias: -1 });
+  frontArms();
+}
+
+/** Facing left: the hood flaring behind her head, the serpent over her brow tasting the air, the braid and sash tails streaming. */
+function cobraSide(c: PixelCanvas, p: Pose, U: number, L: number, hx: number, farArm: () => void, nearArm: () => void): void {
+  const cx = 12;
+  const k = p.stream;
+  // The braid down her back.
+  c.part();
+  c.capsule(hx + 2, 13 + U, hx + 3.4 + k * 2.6, 21 + U - k * 2.4, 1.0, 0.7, NB_HAIR, { bias: -1 });
+  c.px(hx + 2.7 + k * 1.3, 17 + U - k * 1.2, S.metal, sphere(0.3, -0.3), { bias: -1 });
+  farArm();
+  const lift = (f: number) => Math.max(0, f) * 0.35;
+  leg(c, cx + 0.8, 22.5 + L, cx + 1 - p.footB, 28.4 - lift(p.footB), -1);
+  boot(c, cx + 0.4 - p.footB, 29.7 - lift(p.footB), true, -1);
+  leg(c, cx - 0.6, 22.5 + L, cx - 0.4 - p.footA, 28.4 - lift(p.footA));
+  boot(c, cx - 1.2 - p.footA, 29.7 - lift(p.footA), true);
+  // Her torso in profile, the wrap's gold edge, the sash and its tails, the silk panel at the front.
+  const top = 15 + U;
+  const waist = 22 + U;
+  c.part();
+  c.shape(top, waist + 1, (y) => {
+    const hw = torsoWidth(y, top, waist, 2.8);
+    return [hx - hw - 0.2, hx + hw + 0.2];
+  }, S.shirt, (_x, y, t) => sphere(t * 0.9 - 0.1, ((y - top) / (waist - top)) * 0.8 - 0.3, 1));
+  c.part();
+  c.shape(top + 1, waist - 2, (y) => [hx - torsoWidth(y, top, waist, 2.8) - 0.3, hx + torsoWidth(y, top, waist, 2.8) + 0.3], S.vest, (_x, y, t) => sphere(t * 0.9 - 0.1, ((y - top) / (waist - top)) * 0.8 - 0.3, 1));
+  for (let y = top + 1; y <= waist - 2; y++) c.px(Math.round(hx - 2.6 + (y - top - 1) * 0.5), y, S.metal, sphere(-0.3, -0.2), { bias: -1 });
+  c.part();
+  c.shape(waist, waist + 1, () => [hx - 3, hx + 3], S.sash, (_x, y, t) => cyl(t, y === waist ? 0.3 : -0.2));
+  c.ellipse(hx + 2.4, waist + 0.6, 1.1, 1, S.sash);
+  tails(c, hx + 2.4, waist + 0.8, 1, k, 0);
+  c.part();
+  c.shape(waist + 2, waist + 5, (y) => {
+    const u = (y - waist - 2) / 3;
+    return [hx - 2.6 + u * k * 0.8, hx - 0.6 + u * k * 1.4];
+  }, S.vest, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, u * 0.4, 1));
+  // The hood in profile: rising off her crown and flaring down behind her head, gold along its back.
+  const htop = 6 + U;
+  const hbot = 17 + U;
+  c.part();
+  const hood = (y: number): [number, number] => {
+    const u = (y - htop) / (hbot - htop);
+    const flare = Math.sin(Math.min(1, u * 1.25) * Math.PI) * 2.4;
+    return [hx - 0.6 + u * 1.4, hx + 2.2 + flare + u * k * 1.2];
+  };
+  c.shape(htop, hbot, hood, S.hood, (_x, y, t) => sphere(t * 0.8 + 0.2, ((y - htop) / (hbot - htop)) * 0.9 - 0.5, 1));
+  for (let y = htop + 1; y <= hbot; y++) {
+    const [l, r] = hood(y);
+    for (let x = Math.round(l) + 1; x < Math.round(r) - 1; x++) if (((x + (y >> 1)) & 1) === 0 && (y & 1) === 0) c.shade(x, y, -1);
+    c.px(Math.round(r) - 1, y, S.metal, sphere(0.7, -0.1), { bias: -1 });
+  }
+  // Her face, the circlet, the kohl wing, the veil with its coins.
+  c.part();
+  c.ellipse(hx - 1.2, 12.8 + U, 2.2, 2.4, COBRA_SKIN);
+  c.px(hx - 4, 12.6 + U, COBRA_SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.part();
+  c.shape(9 + U, 10 + U, (y) => [hx - 3.4 + (y === 9 + U ? 0.4 : 0), hx + 0.8], NB_HAIR, (_x, y, t) => sphere(t * 0.8, y === 9 + U ? -0.5 : 0, 1));
+  c.part();
+  c.shape(9 + U, 9 + U, () => [hx - 3.6, hx + 0.8], S.metal, (_x, _y, t) => cyl(t, 0.3));
+  c.part();
+  c.px(hx - 2, 12 + U, KOHL);
+  c.px(hx - 2, 11 + U, KOHL);
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  c.part();
+  c.shape(13 + U, 15 + U, (y) => [hx - 4.1 + (y === 13 + U ? 0 : 0.3), hx + 0.4], S.scarf, (_x, y, t) => sphere(t * 0.9, (y - 13 - U) * 0.35 - 0.2, 1));
+  for (const x of [hx - 3, hx - 1]) c.px(x, 16 + U, S.metal, sphere(0, 0.3));
+  // The serpent rearing over her brow, facing where she faces, its tongue flickering.
+  c.part();
+  for (let y = 6 + U; y <= 8 + U; y++) c.px(hx - 1, y, COBRA_BELLY, sphere(-0.3, 0));
+  c.shape(4 + U, 5 + U, (y) => (y === 4 + U ? [hx - 3, hx - 0.4] : [hx - 2.6, hx + 0.6]), S.hood, (_x, y, t) => sphere(t * 0.8, y === 4 + U ? -0.6 : 0, 1));
+  c.px(hx, 5 + U, S.metal, sphere(0.5, -0.2), { bias: -1 });
+  c.spark(hx - 2, 4 + U, VENOM, 0.8);
+  c.px(hx - 4, 5 + U, SATIN, sphere(-0.4, 0), { glow: 0.3 });
+  nearArm();
+}
+
 function drawDown(c: PixelCanvas, p: Pose): void {
   const L = -p.lift;
   const U = L + p.breath;
@@ -969,6 +1643,17 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     if (tby >= fb.y - 1) dagger(c, fb, tbx, tby, p.gleam, bias);
   };
 
+  if (S.gent || S.cobra) {
+    (S.gent ? gentDown : cobraDown)(c, p, U, L, () => {
+      if (fa.behind) armA(-1);
+      if (fb.behind) armB(-1);
+    }, () => {
+      if (!fb.behind) armB(0);
+      if (!fa.behind) armA(0);
+      flying();
+    }, head);
+    return;
+  }
   if (S.bloom) {
     bloomDown(c, p, U, L, () => {
       if (fa.behind) armA(-1);
@@ -1120,6 +1805,16 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     dagger(c, fb, tbx, tby, p.gleam, bias);
     arm(c, 16.4, 16.4 + U, fb, REACH_FRONT, [0.35, 0.8], bias);
   };
+  if (S.gent || S.cobra) {
+    (S.gent ? gentUp : cobraUp)(c, p, U, L, () => {
+      if (fa.behind) armA(-1);
+      if (fb.behind) armB(-1);
+    }, () => {
+      if (!fb.behind) armB(0);
+      if (!fa.behind) armA(0);
+    });
+    return;
+  }
   if (S.bloom) {
     bloomUp(c, p, U, L, () => {
       if (fa.behind) armA(-1);
@@ -1219,6 +1914,18 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   const [tax, tay] = bladeTip('side', 'a', p.a, p.da, U, hx, fa);
   const [tbx, tby] = bladeTip('side', 'b', p.b, p.db, U, hx, fb);
 
+  if (S.gent || S.cobra) {
+    (S.gent ? gentSide : cobraSide)(c, p, U, L, hx, () => {
+      dagger(c, fb, tbx, tby, p.gleam, -1);
+      arm(c, hx + 1.2, 16.6 + U, fb, REACH_SIDE, [0.3, 1], -1);
+    }, () => {
+      const back = tax > fa.x + 1;
+      if (back) dagger(c, fa, tax, tay, p.gleam);
+      arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1]);
+      if (!back) dagger(c, fa, tax, tay, p.gleam);
+    });
+    return;
+  }
   if (S.bloom) {
     bloomSide(c, p, U, L, hx, () => {
       dagger(c, fb, tbx, tby, p.gleam, -1);
@@ -1726,6 +2433,10 @@ export interface DaggerColors {
   ink: string;
   /** Moonflower petals drifting round the icon (Nightbloom's), light and shade. */
   petal?: [string, string];
+  /** Playing cards fluttering round the icon (the gentleman thief's): the card, and its pip. */
+  card?: [string, string];
+  /** Drops of venom falling from the blades (the cobra's), light and shade. */
+  venom?: [string, string];
 }
 
 export const ROGUE_DAGGERS: DaggerColors = {
@@ -1774,6 +2485,26 @@ export const NIGHTBLOOM_DAGGERS: DaggerColors = {
   petal: ['#ffffff', '#b4bce0'],
 };
 
+export const GENTLEMAN_DAGGERS: DaggerColors = {
+  blade: ['#ffffff', '#d8e0f0', '#7a86a0'],
+  hilt: ['#2a2a37', '#0f0f15'],
+  guard: '#dfe4f0',
+  smoke: ['#4a4656', '#24212c', '#121016'],
+  glint: '#ff4a5a',
+  ink: '#030305',
+  card: ['#f4f5fa', '#d0303e'],
+};
+
+export const COBRA_DAGGERS: DaggerColors = {
+  blade: ['#ffffff', '#d8e8c0', '#5a8a40'],
+  hilt: ['#225232', '#0c2416'],
+  guard: '#f4cf6a',
+  smoke: ['#5ad07a', '#1a7a44', '#08381e'],
+  glint: '#ffe07a',
+  ink: '#02120a',
+  venom: ['#c8ff8a', '#4ac040'],
+};
+
 /** Each look's icons: its dagger colours, and whether its special is the dance (a blink) or the shadowstep. */
 export const ROGUE_ICONS: Record<string, { daggers: DaggerColors; dance: boolean }> = {
   rogue: { daggers: ROGUE_DAGGERS, dance: false },
@@ -1781,6 +2512,8 @@ export const ROGUE_ICONS: Record<string, { daggers: DaggerColors; dance: boolean
   rogue_corsair: { daggers: CORSAIR_DAGGERS, dance: false },
   rogue_kitsune: { daggers: KITSUNE_DAGGERS, dance: true },
   rogue_nightbloom: { daggers: NIGHTBLOOM_DAGGERS, dance: true },
+  rogue_gentleman: { daggers: GENTLEMAN_DAGGERS, dance: false },
+  rogue_cobra: { daggers: COBRA_DAGGERS, dance: true },
 };
 
 function painter(): { px: Uint8ClampedArray; put: (x: number, y: number, c: string) => void; outline: (c: string) => void } {
@@ -1836,10 +2569,35 @@ export function daggersIcon(k: DaggerColors = ROGUE_DAGGERS): Uint8ClampedArray 
     petals(put, k.petal, [[2, 3], [13, 4]]);
     return px;
   }
+  if (k.card) {
+    // A calling card held up between the blades' points.
+    card(put, k, 6, 0, k.ink);
+  }
+  if (k.venom) drops(put, k.venom, [[13, 5], [2, 5]]);
   put(7, 7, k.glint);
   put(8, 7, k.glint);
   put(7, 6, '#ffffff');
   return px;
+}
+
+/** A playing card 4x5 with its corner at (x, y): white, a crimson heart in its middle, outlined. */
+function card(put: (x: number, y: number, c: string) => void, k: DaggerColors, x: number, y: number, ink: string): void {
+  const [paper, pip] = k.card!;
+  for (let dy = 0; dy < 5; dy++) for (let dx = 0; dx < 4; dx++) put(x + dx, y + dy, dx === 0 || dy === 0 || dx === 3 || dy === 4 ? ink : paper);
+  put(x + 1, y + 1, paper);
+  put(x + 2, y + 1, paper);
+  put(x + 1, y + 2, pip);
+  put(x + 2, y + 2, pip);
+  put(x + 1, y + 3, pip);
+  put(x + 2, y + 3, paper);
+}
+
+/** Drops of venom: a bright head over a darker tail, at each spot. */
+function drops(put: (x: number, y: number, c: string) => void, k: [string, string], at: [number, number][]): void {
+  for (const [x, y] of at) {
+    put(x, y, k[1]);
+    put(x, y + 1, k[0]);
+  }
 }
 
 /** Little two-pixel petals, light over shade, at each spot. */
@@ -1879,6 +2637,15 @@ export function shadowstepIcon(k: DaggerColors = ROGUE_DAGGERS, dance = false): 
     for (let i = 0; i < 4; i++) put(2 + i, 4 - Math.floor(i / 2), k.blade[2]);
   }
   if (k.petal) petals(put, k.petal, [[1, 1], [12, 12], [5, 14]]);
+  if (k.card) {
+    // A card left behind where he stood, and another flicked after him.
+    card(put, k, 0, 0, k.ink);
+    put(13, 12, k.card[0]);
+    put(14, 12, k.card[0]);
+    put(13, 13, k.card[1]);
+    put(14, 13, k.card[0]);
+  }
+  if (k.venom) drops(put, k.venom, [[2, 2], [12, 11], [14, 13]]);
   put(14, 1, k.glint);
   return px;
 }
@@ -1923,5 +2690,33 @@ export function petalCanvas(size = 5): Uint8ClampedArray {
       px.set([r, g, b, 255], (y * size + x) * 4);
     }
   }
+  return px;
+}
+
+/**
+ * One of the gentleman thief's calling cards, 5 px square, for his shadow's
+ * effects: a white card with a crimson heart, lying on its side or upright as
+ * it turns.
+ */
+export function cardCanvas(): Uint8ClampedArray {
+  const rows = ['.www.', '.wrw.', '.rrr.', '.wrw.', '.www.'];
+  const tones: Record<string, RGB> = { w: hex('#f4f5fa'), r: hex('#d0303e') };
+  const px = new Uint8ClampedArray(5 * 5 * 4);
+  rows.forEach((row, y) => [...row].forEach((ch, x) => {
+    const c = tones[ch];
+    if (c) px.set([c[0], c[1], c[2], 255], (y * 5 + x) * 4);
+  }));
+  return px;
+}
+
+/** A drop of the cobra's venom, 5 px square: bright green, a pale glint at its round end. */
+export function venomCanvas(): Uint8ClampedArray {
+  const rows = ['..a..', '..b..', '.bcb.', '.bdb.', '..b..'];
+  const tones: Record<string, RGB> = { a: hex('#2a8a30'), b: hex('#5ad040'), c: hex('#b8ff7a'), d: hex('#e8ffc8') };
+  const px = new Uint8ClampedArray(5 * 5 * 4);
+  rows.forEach((row, y) => [...row].forEach((ch, x) => {
+    const c = tones[ch];
+    if (c) px.set([c[0], c[1], c[2], 255], (y * 5 + x) * 4);
+  }));
   return px;
 }

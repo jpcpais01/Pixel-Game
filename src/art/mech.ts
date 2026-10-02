@@ -5,7 +5,13 @@
 // with a goblin in welding goggles peering out of a porthole (his ears poke
 // out of holes in the lid), a traffic cone for a hat, a bent stovepipe,
 // copper pipe legs on coil springs (one foot a tyre, one an iron boot), and a
-// crane claw and a drill for arms.
+// crane claw and a drill for arms. Its Dreadnought skin is a walking
+// battleship: a riveted hull in navy grey with a teak deck, a red waterline
+// under a white boot-top line, lit portholes and an anchor on the bow; a
+// bridge on top where the captain in his peaked cap peers through
+// binoculars, a mast flying a red-and-yellow signal flag, twin funnels,
+// twin-barrelled gun turrets for arms, and anchors on chains for its
+// stabilisers.
 //
 // Three views like every hero: down, up, and the side view drawn facing
 // left and mirrored for right. Frames are MECH_W x MECH_H with the feet on
@@ -56,6 +62,20 @@ const TOOTH: Material = { ramp: ramp('#b8b09a', '#fff8e0'), outline: hex('#140a0
 const WOOD: Material = { ramp: ramp('#3a220e', '#6a4420', '#9a6c38', '#c89a58'), outline: hex('#140a04') };
 const PAINT: Material = { ramp: ramp('#7a0e0e', '#c82020'), outline: hex('#2a0404'), noOutline: true, noAO: true };
 
+// The Dreadnought's ship.
+const NAVAL: Material = { ramp: ramp('#22282f', '#38414c', '#56606c', '#7c8692', '#adb6c0'), outline: hex('#0a0d11'), outlineLit: hex('#161b22'), shine: true };
+const TEAK: Material = { ramp: ramp('#3e2410', '#6a4220', '#986634', '#c49456'), outline: hex('#160c04') };
+const WATERLINE: Material = { ramp: ramp('#3e0808', '#721412', '#a8241c', '#d84a36'), outline: hex('#1a0303'), outlineLit: hex('#2a0606') };
+const BOOT_TOP: Material = { ramp: ramp('#8a9098', '#cfd4da', '#f4f6f8'), outline: hex('#1a0303') };
+const FUNNEL_TOP: Material = { ramp: ramp('#07080a', '#121418', '#20232a'), outline: hex('#030304') };
+/** Warm cabin light through the portholes and bridge windows. */
+const PORT: Material = { ramp: ramp('#d87a20', '#ffc860', '#fff2c8'), outline: hex('#3a1e06'), emissive: 0.9, noAO: true };
+const CAP: Material = { ramp: ramp('#9ca2aa', '#dfe3e8', '#ffffff'), outline: hex('#22262e'), shine: true };
+const SKIN: Material = { ramp: ramp('#6e4028', '#b07450', '#e2aa82'), outline: hex('#2a140a') };
+const FLAG_RED: Material = { ramp: ramp('#8a1010', '#d02a20', '#ff5a40'), outline: hex('#2a0404'), noAO: true };
+const FLAG_YELLOW: Material = { ramp: ramp('#9a7208', '#e8b820', '#fff070'), outline: hex('#2a1e02'), noAO: true };
+const ANCHOR_PAINT: Material = { ramp: ramp('#b08a2a', '#e8c25a', '#fff0a8'), outline: hex('#1e1404'), noOutline: true, shine: true };
+
 // The idle moment's: the lamps and goggles with the power cut, the steam it
 // lets off, and the pilot's snores.
 const LAMP_OFF: Material = { ramp: ramp('#2a2016', '#4a3a26', '#6a563a'), outline: hex('#140c04'), shine: true };
@@ -68,11 +88,14 @@ export interface MechLook {
   key: string;
   /** The Scrap Titan: everything made of junk. */
   scrap: boolean;
+  /** The Dreadnought: a walking battleship. */
+  dread?: boolean;
 }
 
 export const MECH_LOOK: MechLook = { key: 'mech', scrap: false };
 export const SCRAP_LOOK: MechLook = { key: 'mech_scrap', scrap: true };
-export const MECH_LOOKS = [MECH_LOOK, SCRAP_LOOK];
+export const DREAD_LOOK: MechLook = { key: 'mech_dread', scrap: false, dread: true };
+export const MECH_LOOKS = [MECH_LOOK, SCRAP_LOOK, DREAD_LOOK];
 
 /** The look being drawn; set by buildMechFrames. */
 let L: MechLook = MECH_LOOK;
@@ -146,7 +169,7 @@ function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, kne
     // A coil spring for a knee.
     for (let i = -2; i <= 2; i++) c.ellipse(kx, ky + i, 2.2, 0.7, i % 2 ? RUST : COPPER, { flatten: 0.6 });
   } else c.ellipse(kx, ky, 2.2, 2.2, JOINT);
-  c.capsule(kx, ky, fx, fy - 2, 2.4, 2.1, scrap ? COPPER : PLATE);
+  c.capsule(kx, ky, fx, fy - 2, 2.4, 2.1, scrap ? COPPER : L.dread ? NAVAL : PLATE);
   c.part();
   if (foot === 'tyre') {
     if (view === 'side') {
@@ -175,10 +198,38 @@ function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, kne
 
 /** A stabiliser strut let down from the hull to the ground, with a claw foot. */
 function strut(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
+  if (L.dread) {
+    anchorChain(c, x0, y0, x1, y1);
+    return;
+  }
   c.capsule(x0, y0, x1, y1 - 1, 1.5, 1.3, L.scrap ? RUST : GUNMETAL);
   c.px(Math.round(x1 - 1), Math.round(y1), JOINT);
   c.px(Math.round(x1), Math.round(y1), JOINT);
   c.px(Math.round(x1 + 1), Math.round(y1), JOINT);
+}
+
+/**
+ * The Dreadnought's stabiliser: an anchor let down on its chain, its links
+ * catching the light by turns, the flukes biting the ground.
+ */
+function anchorChain(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
+  const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - 5 - y0)));
+  for (let i = 0; i <= n; i++) {
+    const k = i / n;
+    c.px(Math.round(x0 + (x1 - x0) * k), Math.round(y0 + (y1 - 5 - y0) * k), STEEL, { x: i % 2 ? 0.5 : -0.5, y: 0.4, z: 0.8 }, { bias: i % 2 ? -1 : 1 });
+  }
+  c.part();
+  const x = Math.round(x1);
+  const y = Math.round(y1);
+  // Ring, stock, shank, and the two flukes curling up either side.
+  c.px(x, y - 5, GUNMETAL, { x: 0, y: 0.6, z: 0.8 }, { bias: 1 });
+  for (let dx = -1; dx <= 1; dx++) c.px(x + dx, y - 4, GUNMETAL, cyl(dx / 1.5, 0.4));
+  for (let yy = y - 3; yy <= y; yy++) c.px(x, yy, GUNMETAL, cyl(0, 0.2));
+  for (const s of [-1, 1]) {
+    c.px(x + s, y, GUNMETAL, { x: s * 0.4, y: -0.3, z: 0.9 });
+    c.px(x + s * 2, y - 1, GUNMETAL, { x: s * 0.6, y: 0.2, z: 0.8 });
+    c.px(x + s * 2, y - 2, GUNMETAL, { x: s * 0.6, y: 0.6, z: 0.6 }, { bias: 1 });
+  }
 }
 
 /** The glass dome with the pilot inside, the glass drawn only round its rim and in a glint so he shows through. */
@@ -252,6 +303,7 @@ function drawFront(c: PixelCanvas, p: MechPose, back: boolean): void {
   // The hull.
   c.part();
   if (scrap) barrel(c, CX - 9.5, CX + 9.5, ht - 1, hb + 1, back, p.power, p.nod);
+  else if (L.dread) dreadHull(c, p, back, ht, hb);
   else {
     slab(c, CX - 11, ht, CX + 11, hb, PLATE, 2.5);
     c.part();
@@ -295,6 +347,8 @@ function drawFront(c: PixelCanvas, p: MechPose, back: boolean): void {
       c.ellipse(clawX + 1, ht + 11, 2.2, 2, STEEL);
       c.ellipse(drillX - 1, ht + 11, 2.2, 2, STEEL);
     }
+  } else if (L.dread) {
+    for (const s of [-1, 1]) turret(c, CX + s * MECH_GUN_X, ht, p, s < 0 ? p.recoilA : p.recoilB, s < 0 ? p.flashA : p.flashB, back);
   } else {
     for (const s of [-1, 1]) {
       const sx = CX + s * MECH_GUN_X;
@@ -363,10 +417,12 @@ const PUFFS: [number, number, number, number][][] = [
 
 function puff(c: PixelCanvas, ht: number, stage: number): void {
   // The smokestack's mouth, or the stovepipe's bent end.
-  const mx = L.scrap ? CX + 10.5 : CX + 6.5;
-  const my = L.scrap ? ht - 7.5 : ht - 6.5;
+  // (The Dreadnought puffs from both funnels, the far one a beat behind.)
+  const mouths: [number, number, number][] = L.dread
+    ? [[CX + 7.5, ht - 8.5, stage], [CX - 7.5, ht - 8.5, Math.max(0, stage - 1)]]
+    : [[L.scrap ? CX + 10.5 : CX + 6.5, L.scrap ? ht - 7.5 : ht - 6.5, stage]];
   c.part();
-  for (const [dx, dy, r, solid] of PUFFS[stage]) {
+  for (const [mx, my, st] of mouths) for (const [dx, dy, r, solid] of PUFFS[st]) {
     const cx = mx + dx;
     const cy = Math.max(r, my + dy);
     for (let y = Math.floor(cy - r); y <= cy + r; y++)
@@ -414,6 +470,10 @@ function snore(c: PixelCanvas, ht: number, stage: number): void {
 function chimney(c: PixelCanvas, ht: number, front: boolean): void {
   c.part();
   const x = CX + 6;
+  if (L.dread) {
+    funnels(c, ht);
+    return;
+  }
   if (L.scrap) {
     c.capsule(x, ht + 1, x + 1, ht - 5, 1.3, 1.3, RUST);
     c.capsule(x + 1, ht - 5, x + 4, ht - 7, 1.3, 1.3, RUST);
@@ -428,6 +488,11 @@ function chimney(c: PixelCanvas, ht: number, front: boolean): void {
 function backGun(c: PixelCanvas, sx: number, ht: number, recoil: number): void {
   if (L.scrap) return;
   c.part();
+  if (L.dread) {
+    // Twin barrels standing up past the turret.
+    for (const b of [-1.4, 1.4]) slab(c, sx + b - 0.8, ht - 4 + recoil, sx + b + 0.8, ht + 4, GUNMETAL, 0.5);
+    return;
+  }
   slab(c, sx - 2, ht - 3 + recoil, sx + 2, ht + 4, GUNMETAL, 1);
 }
 
@@ -479,14 +544,16 @@ function pod(c: PixelCanvas, sx: number, y: number, open: number): void {
 }
 
 /** A flash of fire out of a muzzle, pointing (dx, dy). */
-function muzzle(c: PixelCanvas, x: number, y: number, dx: number, dy: number): void {
+function muzzle(c: PixelCanvas, x: number, y: number, dx: number, dy: number, big = false): void {
   const core: RGB = [255, 250, 220];
   const hot: RGB = [255, 200, 90];
   const mid: RGB = [255, 120, 40];
   const px = -dy;
   const py = dx;
-  for (let i = 0; i < 5; i++) {
-    const w = i < 2 ? 1.5 : 2.5 - (i - 2) * 0.8;
+  // A naval gun's is longer and rounder, a ball of fire rolling out of the muzzle.
+  const n = big ? 7 : 5;
+  for (let i = 0; i < n; i++) {
+    const w = big ? (i < 1 ? 1.5 : i < 5 ? 2.5 + Math.sin((i / 5) * Math.PI) * 0.8 : 2 - (i - 5) * 0.8) : i < 2 ? 1.5 : 2.5 - (i - 2) * 0.8;
     for (let s = -w; s <= w; s += 0.5) c.spark(x + dx * i + px * s, y + dy * i + py * s, Math.abs(s) < 0.7 ? core : Math.abs(s) < 1.5 ? hot : mid, 1 - i * 0.12);
   }
 }
@@ -559,6 +626,223 @@ function cone(c: PixelCanvas, x: number, base: number): void {
 }
 
 // ---------------------------------------------------------------------------
+// The Dreadnought's ship
+
+/** The hull seen bow-on (or from the stern): a deck on top, drawing in to the keel, portholes, the waterline, and the bridge. */
+function dreadHull(c: PixelCanvas, p: MechPose, back: boolean, ht: number, hb: number): void {
+  const edges = (y: number): [number, number] => {
+    const k = (y - ht) / (hb - ht);
+    const hw = 11.5 - Math.max(0, k - 0.4) * 5;
+    return [CX - hw, CX + hw];
+  };
+  c.shape(ht, hb, edges, NAVAL, (_x, _y, t, u) => cyl(t * 0.85, 0.25 - u * 0.45));
+  c.part();
+  for (let y = ht; y <= hb; y++) {
+    const [l, r] = edges(y);
+    for (let x = Math.round(l); x < Math.round(r); x++) {
+      const t = ((x + 0.5 - l) / (r - l)) * 2 - 1;
+      // The teak deck's edge along the top; the white boot-top line and the red below the waterline.
+      if (y === ht) c.px(x, y, TEAK, { x: t * 0.3, y: 0.8, z: 0.6 }, { bias: x % 3 === 0 ? -1 : 0 });
+      else if (y === hb - 3) c.px(x, y, BOOT_TOP, cyl(t * 0.85, 0));
+      else if (y > hb - 3) c.px(x, y, WATERLINE, cyl(t * 0.85, -0.2));
+    }
+  }
+  // Rivets along the plating's seams.
+  for (let x = CX - 9; x <= CX + 9; x += 3) {
+    c.px(x, ht + 2, NAVAL, { x: -0.3, y: 0.4, z: 0.9 }, { bias: 1 });
+    c.px(x, hb - 5, NAVAL, { x: -0.3, y: 0.4, z: 0.9 }, { bias: 1 });
+  }
+  if (back) {
+    // The engine room's grilles, glowing (blazing when it overheats).
+    c.part();
+    for (let i = 0; i < 3; i++) {
+      const y = ht + 5 + i * 2;
+      for (let x = CX - 5; x <= CX + 5; x++) c.px(x, y, VENT, { x: 0, y: -0.4, z: 0.9 }, { glow: 0.5 + p.vent * 0.5, bias: p.vent > 0.5 ? 1 : 0 });
+    }
+  } else {
+    // Portholes, two either side, lit from the cabins (dark in the idle moment); the anchor in the middle.
+    const [port, po] = lit(PORT, LAMP_OFF, p.power);
+    for (const x of [CX - 8, CX - 5, CX + 5, CX + 8]) {
+      c.part();
+      c.ellipse(x + 0.5, ht + 8.5, 1.5, 1.5, BRASS);
+      c.part();
+      c.px(x, ht + 8, port, { x: 0, y: 0, z: 1 }, po);
+      if (p.power > 1) flare(c, x + 0.5, ht + 8.5, p.power - 1);
+    }
+    c.part();
+    const ANCHOR = ['..#..', '.###.', '..#..', '..#..', '#.#.#', '.###.'];
+    ANCHOR.forEach((row, r) => [...row].forEach((b, k) => b === '#' && c.px(CX - 2 + k, ht + 5 + r, ANCHOR_PAINT, { x: 0, y: 0.1, z: 1 }, { bias: r === 0 ? 1 : 0 })));
+  }
+  bridge(c, ht, p.nod, back ? 'up' : 'down', p.power);
+}
+
+/** The mast behind the bridge, flying a signal flag split red and yellow on the diagonal. */
+function mast(c: PixelCanvas, x: number, top: number, foot: number): void {
+  c.part();
+  c.line(x, foot, x, top, GUNMETAL, () => cyl(0, 0.3));
+  c.px(x - 1, top + 2, GUNMETAL);
+  c.px(x + 1, top + 2, GUNMETAL);
+  c.part();
+  for (let dy = 0; dy < 3; dy++)
+    for (let dx = 1; dx <= 3; dx++) {
+      // The fly end tapers and ripples.
+      if (dx === 3 && dy === 2) continue;
+      c.px(x + dx, top + dy + (dx === 3 ? 0.5 : 0), dx + dy < 3 ? FLAG_RED : FLAG_YELLOW, { x: 0, y: dx === 2 ? 0.3 : -0.2, z: 1 });
+    }
+}
+
+/**
+ * The bridge: a squat tower with a band of lit windows, and the captain over
+ * its rail in a white peaked cap, binoculars to his eyes (lowered, and
+ * nodding off, in the idle moment).
+ */
+function bridge(c: PixelCanvas, ht: number, nod: number, view: View, power: number): void {
+  const side = view === 'side';
+  const bx = side ? CX - 3 : CX;
+  mast(c, side ? CX : CX + 3.5, ht - 12, ht - 4);
+  // The captain, behind the bridge's front so it hides his chin.
+  c.part();
+  const hx = side ? bx - 0.5 : bx;
+  const hy = ht - 7.3 + nod;
+  c.ellipse(hx, hy, side ? 1.6 : 1.8, 1.6, view === 'up' ? FUNNEL_TOP : SKIN);
+  c.part();
+  if (view === 'down') {
+    if (nod > 0) {
+      // Dozing: eyes shut, binoculars hanging at his chest.
+      c.px(Math.round(hx - 1), Math.round(hy), FUNNEL_TOP);
+      c.px(Math.round(hx + 0.5), Math.round(hy), FUNNEL_TOP);
+    } else {
+      for (const dx of [-1, 0]) c.px(Math.round(hx + dx), Math.round(hy), GUNMETAL, { x: 0, y: 0, z: 1 });
+      c.px(Math.round(hx - 1), Math.round(hy), GLASS, { x: -0.4, y: 0.5, z: 0.8 }, { bias: 2 });
+    }
+  } else if (side) {
+    if (nod > 0) c.px(Math.round(hx - 1), Math.round(hy), FUNNEL_TOP);
+    else {
+      c.px(Math.round(hx - 2), Math.round(hy), GUNMETAL, { x: -0.6, y: 0.2, z: 0.8 });
+      c.px(Math.round(hx - 3), Math.round(hy), GLASS, { x: -0.6, y: 0.5, z: 0.6 }, { bias: 2 });
+    }
+  }
+  // The cap: a white crown, a black band with a gold badge, and the peak.
+  c.part();
+  const cy = hy - 2.2;
+  c.ellipse(hx + (side ? 0.3 : 0), cy - 0.6, side ? 2.2 : 2.6, 1.1, CAP, { flatten: 0.6 });
+  for (let x = Math.round(hx - 2); x <= hx + 1.5; x++) c.px(x, Math.round(cy + 0.5), FUNNEL_TOP, cyl((x + 0.5 - hx) / 2.5, 0.2));
+  if (view === 'down') c.px(Math.round(hx - 0.5), Math.round(cy + 0.5), ANCHOR_PAINT, { x: 0, y: 0.2, z: 1 }, { bias: 1 });
+  if (side) c.px(Math.round(hx - 3), Math.round(cy + 0.8), FUNNEL_TOP, { x: -0.4, y: 0.6, z: 0.7 });
+  // The bridge itself.
+  c.part();
+  const w = side ? 3.2 : 4.5;
+  slab(c, bx - w, ht - 5, bx + w, ht + 1.5, NAVAL, 1, 0.35);
+  c.part();
+  const [port, po] = lit(PORT, LAMP_OFF, power);
+  if (view === 'up') {
+    // A door at its back.
+    for (let y = ht - 3; y <= ht; y++) c.px(Math.round(bx - 0.5), y, FUNNEL_TOP);
+  } else {
+    // The windows: dark panes with a warm light here and there.
+    const x0 = Math.round(bx - w + 1);
+    const x1 = side ? Math.round(bx - 0.5) : Math.round(bx + w - 1);
+    for (let x = x0; x < x1; x++) {
+      const litPane = (x - x0) % 2 === 1;
+      c.px(x, ht - 3, litPane ? port : JOINT, { x: 0, y: 0, z: 1 }, litPane ? po : undefined);
+    }
+  }
+  // The rail along its top.
+  for (let x = Math.round(bx - w); x <= bx + w; x++) c.px(x, ht - 5, NAVAL, { x: 0, y: 0.9, z: 0.4 }, { bias: 1 });
+}
+
+/** Twin funnels, banded red under a soot-black cap: behind the bridge either side (front and back), one behind the other (side). */
+function funnels(c: PixelCanvas, ht: number, side = false): void {
+  const xs = side ? [CX + 6.5, CX + 3] : [CX - 7.5, CX + 7.5];
+  // Raked back a touch in the side view.
+  const rake = side ? 0.25 : 0;
+  const off = (y: number) => (ht + 1 - y) * rake;
+  for (const x of xs) {
+    c.part();
+    c.shape(Math.round(ht - 8), Math.round(ht + 1), (y) => [x - 1.6 + off(y), x + 1.6 + off(y)], NAVAL, (_x, _y, t) => cyl(t, 0.25));
+    c.part();
+    for (let y = Math.round(ht - 8); y <= ht - 7; y++) for (let xx = Math.round(x - 1.6 + off(y)); xx < x + 1.6 + off(y); xx++) c.px(xx, y, FUNNEL_TOP, cyl((xx + 0.5 - x - off(y)) / 1.6, 0.3));
+    const by = Math.round(ht - 5);
+    for (let xx = Math.round(x - 1.6 + off(by)); xx < x + 1.6 + off(by); xx++) c.px(xx, by, WATERLINE, cyl((xx + 0.5 - x - off(by)) / 1.6, 0.2));
+    c.ellipse(x + off(ht - 8), ht - 8, 1.4, 0.6, JOINT, { flatten: 0.5 });
+  }
+}
+
+/** A gun turret on the shoulder with two barrels, pointing at the viewer (front) or standing up past it (back). */
+function turret(c: PixelCanvas, sx: number, ht: number, p: MechPose, recoil: number, flash: boolean, back: boolean): void {
+  c.part();
+  c.ellipse(sx, ht + 4, 4, 3.4, NAVAL);
+  c.part();
+  // The armoured face of the turret, and a rangefinder's ears.
+  slab(c, sx - 3, ht + 3.5, sx + 3, ht + 6.5, NAVAL, 1, -0.1);
+  for (const s of [-1, 1]) c.px(Math.round(sx + s * 3.5 - 0.5), Math.round(ht + 2), GUNMETAL, { x: s * 0.5, y: 0.5, z: 0.7 });
+  if (p.pods > 0) pod(c, sx, ht + 1, p.pods);
+  if (back) return;
+  c.part();
+  const gy = ht - recoil + p.sag;
+  for (const b of [-1.4, 1.4]) {
+    slab(c, sx + b - 0.8, gy + 6, sx + b + 0.8, gy + 13, GUNMETAL, 0.5);
+    c.px(Math.round(sx + b - 0.5), Math.round(gy + 13), JOINT);
+  }
+  if (flash) for (const b of [-1.4, 1.4]) muzzle(c, sx + b, ht + 15 - recoil, 0, 1, true);
+}
+
+/** The hull side on, bow to the left: raked stem, tucked stern, a row of portholes, an anchor at the hawse. */
+function dreadSide(c: PixelCanvas, p: MechPose, ht: number, hb: number): void {
+  const edges = (y: number): [number, number] => {
+    const k = (y - ht) / (hb - ht);
+    return [CX - 11 + k * 3.5, CX + 9.5 - Math.max(0, k - 0.5) * 3];
+  };
+  c.shape(ht, hb, edges, NAVAL, (_x, _y, _t, u) => cyl(-0.2, 0.3 - u * 0.5));
+  c.part();
+  for (let y = ht; y <= hb; y++) {
+    const [l, r] = edges(y);
+    for (let x = Math.round(l); x < Math.round(r); x++) {
+      if (y === ht) c.px(x, y, TEAK, { x: 0, y: 0.8, z: 0.6 }, { bias: x % 3 === 0 ? -1 : 0 });
+      else if (y === hb - 3) c.px(x, y, BOOT_TOP, { x: -0.2, y: 0, z: 1 });
+      else if (y > hb - 3) c.px(x, y, WATERLINE, { x: -0.2, y: -0.2, z: 1 });
+    }
+  }
+  for (let x = CX - 7; x <= CX + 8; x += 3) c.px(x, ht + 2, NAVAL, { x: -0.3, y: 0.4, z: 0.9 }, { bias: 1 });
+  // The grilles aft, for the overheat's glow.
+  for (let y = ht + 4; y <= ht + 6; y += 2) for (let x = CX + 5; x <= CX + 7; x++) c.px(x, y, VENT, { x: 0.5, y: 0, z: 0.8 }, { glow: 0.5 + p.vent * 0.5 });
+  const [port, po] = lit(PORT, LAMP_OFF, p.power);
+  for (const x of [CX - 5, CX - 1, CX + 3]) {
+    c.part();
+    c.ellipse(x + 0.5, ht + 8.5, 1.5, 1.5, BRASS);
+    c.part();
+    c.px(x, ht + 8, port, { x: 0, y: 0, z: 1 }, po);
+  }
+  // The anchor stowed at the bow.
+  c.part();
+  const ax = Math.round(CX - 8);
+  const ay = Math.round(ht + 3);
+  c.px(ax, ay, JOINT);
+  for (let y = ay + 1; y <= ay + 4; y++) c.px(ax, y, GUNMETAL, cyl(0, 0.2));
+  for (const s of [-1, 1]) {
+    c.px(ax + s, ay + 1, GUNMETAL);
+    c.px(ax + s, ay + 4, GUNMETAL);
+    c.px(ax + s, ay + 3, GUNMETAL, { x: s * 0.5, y: 0.5, z: 0.7 }, { bias: 1 });
+  }
+  bridge(c, ht, p.nod, 'side', p.power);
+  if (p.pods > 0) pod(c, CX + 1, ht + 1, p.pods);
+}
+
+/** A twin-barrelled turret seen side on, guns to the left. */
+function sideTurret(c: PixelCanvas, sx: number, sy: number, recoil: number, flash: boolean, far: boolean): void {
+  c.part();
+  c.ellipse(sx, sy + 0.5, 3.8, 3.2, NAVAL, { flatten: far ? 0.7 : 1 });
+  c.part();
+  const x0 = sx - 14 + recoil;
+  for (const row of [sy - 1, sy + 2]) {
+    c.shape(Math.round(row), Math.round(row), () => [x0, sx - 1], GUNMETAL, () => cyl(0, row < sy ? 0.6 : -0.1));
+    c.px(Math.round(x0), Math.round(row), JOINT);
+  }
+  if (far) for (let x = Math.round(x0); x <= sx + 4; x++) for (let y = Math.round(sy - 3); y <= sy + 4; y++) c.shade(x, y, -1);
+  if (flash) for (const row of [sy - 1, sy + 2]) muzzle(c, x0 - 2, row + 0.5, -1, 0, true);
+}
+
+// ---------------------------------------------------------------------------
 // The side view, facing left
 
 function drawSide(c: PixelCanvas, p: MechPose): void {
@@ -576,15 +860,19 @@ function drawSide(c: PixelCanvas, p: MechPose): void {
     arm(c, CX + 1, ht + 5, -1);
     c.part();
     sideDrill(c, CX - 3, ht + 12, p.recoilB, p.drill, p.flashB);
-  } else sideGun(c, CX + 1, ht + 3, p.recoilB, p.flashB, true);
+  } else if (L.dread) sideTurret(c, CX + 1, ht + 3, p.recoilB, p.flashB, true);
+  else sideGun(c, CX + 1, ht + 3, p.recoilB, p.flashB, true);
   // Far leg, then the near.
   leg(c, CX + 2, hb, CX + 1 + p.strideB, GROUND - p.liftB, 3, scrap ? 'boot' : 'plate', 'side');
-  // The chimney at the back.
-  chimney(c, ht, false);
+  // The chimney at the back (the funnels amidships).
+  if (L.dread) funnels(c, ht, true);
+  else chimney(c, ht, false);
   // The hull.
   c.part();
   if (scrap) {
     barrelSide(c, ht, hb);
+  } else if (L.dread) {
+    dreadSide(c, p, ht, hb);
   } else {
     slab(c, CX - 9, ht, CX + 9, hb, PLATE, 2.5);
     c.part();
@@ -611,7 +899,8 @@ function drawSide(c: PixelCanvas, p: MechPose): void {
     cone(c, CX - 1, ht - 1);
     // An ear out of the lid.
     for (let i = 0; i < 4; i++) c.px(Math.round(CX + 4 + i), Math.round(ht - 1 - i * 0.6), GOBLIN, sphere(0.3, 0.5, 1));
-  } else sideGun(c, CX + 1, ht + 10, p.recoilA, p.flashA, false);
+  } else if (L.dread) sideTurret(c, CX + 1, ht + 10, p.recoilA, p.flashA, false);
+  else sideGun(c, CX + 1, ht + 10, p.recoilA, p.flashA, false);
   if (p.sign && L.scrap) sign(c, CX + 8, GROUND - 17);
   if (p.vent > 0) steam(c, p.vent, ht, false);
 }
@@ -878,6 +1167,51 @@ export function cannonIcon(scrap = false): Uint8ClampedArray {
   });
 }
 
+/** The Dreadnought's guns: a grey turret with twin barrels, a ball of fire and a puff of smoke out of the upper one. */
+export function dreadCannonIcon(): Uint8ClampedArray {
+  const grey: Tones = [hex('#c8d0d8'), hex('#8a949e'), hex('#5c6672'), hex('#2e343c')];
+  const fire: Tones = [hex('#fffbe8'), hex('#ffd860'), hex('#ff8a2a'), hex('#c83a10')];
+  return icon16((put) => {
+    // The turret: a rounded housing on the left, banded red at its foot.
+    for (let y = 5; y <= 13; y++) for (let x = 0; x <= 6; x++) {
+      const d = ((x - 3) * (x - 3)) / 12 + ((y - 9) * (y - 9)) / 20;
+      if (d <= 1) put(x, y, y === 12 ? hex('#a8241c') : y < 8 ? grey[1] : x < 3 ? grey[1] : grey[2]);
+    }
+    put(2, 6, grey[0]);
+    // Twin barrels to the right.
+    for (const y0 of [7, 10]) for (let x = 6; x <= 11; x++) {
+      put(x, y0, grey[1]);
+      put(x, y0 + 1, grey[3]);
+    }
+    // The flash out of the upper one, and grey smoke rolling up off it.
+    for (let i = 0; i < 4; i++) for (let s = -1; s <= 1; s++) put(12 + i, 7.5 + s * (i < 2 ? 1 : 0.6), s === 0 ? fire[0] : fire[1 + (i > 1 ? 1 : 0)]);
+    put(15, 7, fire[3]);
+    for (const [x, y] of [[12, 3], [13, 2], [14, 3], [13, 4], [11, 4]]) put(x, y, hex('#a8acb4'));
+    put(12, 12, fire[2]);
+  });
+}
+
+/** The Dreadnought's salvo: a reticle in signal red and yellow, and two torpedoes running in on white wakes. */
+export function dreadSalvoIcon(): Uint8ClampedArray {
+  const red = hex('#e02a20');
+  const yellow = hex('#ffd040');
+  return icon16((put) => {
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      put(10 + Math.cos(a) * 4, 6 + Math.sin(a) * 4, i % 6 < 3 ? red : yellow);
+    }
+    for (const [x0, y0, x1, y1] of [[10, 0, 10, 3], [10, 9, 10, 12], [4, 6, 7, 6], [13, 6, 15, 6]]) seg(put, x0, y0, x1, y1, yellow);
+    put(10, 6, hex('#ffffff'));
+    for (const [x, y] of [[2, 13], [5, 15]]) {
+      seg(put, x, y, x + 3, y - 3, hex('#9aa4b0'));
+      put(x + 3, y - 3, red);
+      put(x - 1, y + 1, hex('#e6f0ff'));
+      put(x - 2, y + 1, hex('#b8c8dc'));
+      put(x - 1, y + 2, hex('#b8c8dc'));
+    }
+  });
+}
+
 /** Lock-on salvo: a target reticle and missiles (or bottle rockets) curving in. */
 export function salvoIcon(scrap = false): Uint8ClampedArray {
   const ring: Tones = scrap ? [hex('#ffffff'), hex('#ff8a8a'), hex('#e02020'), hex('#7a0e0e')] : [hex('#ffffff'), hex('#ffb0a0'), hex('#ff5a3a'), hex('#8a1e06')];
@@ -906,12 +1240,17 @@ export function salvoIcon(scrap = false): Uint8ClampedArray {
 
 export const MECH_BOLT_SIZE = 14;
 export const BOLT_DIRS = 16;
-export type BoltKind = 'shell' | 'nail' | 'missile' | 'rocket';
+export type BoltKind = 'shell' | 'nail' | 'missile' | 'rocket' | 'naval' | 'torpedo';
+/** Every kind, in the order they are packed. */
+export const BOLT_KINDS: readonly BoltKind[] = ['shell', 'nail', 'missile', 'rocket', 'naval', 'torpedo'];
 
 const BRASS: Material = { ramp: ramp('#5a3a0e', '#a8761e', '#e8b440', '#fff0a0'), outline: hex('#1e1204'), shine: true };
 const WARHEAD: Material = { ramp: ramp('#6a0e0a', '#c02a1a', '#ff6a4a'), outline: hex('#200404'), shine: true };
 const MISSILE: Material = { ramp: ramp('#5a6070', '#aab4c4', '#eef2f8'), outline: hex('#141820'), shine: true };
 const ROCKET: Material = { ramp: ramp('#6a0a0a', '#c82020', '#ff6060'), outline: hex('#200404'), shine: true };
+/** The Dreadnought's shell, glowing hot at its nose, and its torpedo's grey hull. */
+const HOT_NOSE: Material = { ramp: ramp('#c84a10', '#ff9a30', '#fff0b0'), outline: hex('#3a1004'), emissive: 0.8, noAO: true };
+const TORPEDO: Material = { ramp: ramp('#2e343c', '#5c6672', '#9aa4b0', '#d6dce4'), outline: hex('#0a0d11'), shine: true };
 
 /** One shot, turned to heading `i`: a brass tracer, a nail, a missile with fins and flame, or a bottle rocket on its stick. */
 export function boltFrame(kind: BoltKind, i: number): PixelCanvas {
@@ -956,6 +1295,38 @@ export function boltFrame(kind: BoltKind, i: number): PixelCanvas {
       put(-3, WARHEAD, s * 1.5);
     }
     flame(-4, 3);
+  } else if (kind === 'naval') {
+    // A fat naval shell: a brass body with a white-hot nose, a long orange tracer and a curl of gun smoke behind.
+    for (let k = -1.5; k <= 1; k += 0.5) {
+      put(k, BRASS);
+      put(k, BRASS, 0.8);
+    }
+    put(1.5, HOT_NOSE);
+    put(2, HOT_NOSE);
+    const [nx, ny] = at(2.5);
+    c.spark(nx, ny, [255, 250, 220], 1);
+    for (let k = 1; k <= 4; k++) {
+      const [tx, ty] = at(-1.5 - k);
+      c.spark(tx, ty, [255, 150, 50], 0.75 - k * 0.15);
+    }
+    for (const [k, sd] of [[-5.5, 0.6], [-6.5, -0.4]]) {
+      const [x, y] = at(k, sd);
+      c.px(x, y, STEAM, { x: 0, y: 0.5, z: 0.8 }, { glow: 0, bias: -1 });
+    }
+  } else if (kind === 'torpedo') {
+    // A torpedo-like rocket: a long grey hull, a red band behind its nose, a propeller at its tail, and a white wake spreading behind.
+    for (let k = -3; k <= 2; k += 0.5) put(k, TORPEDO);
+    put(2.5, WARHEAD);
+    put(1.5, WARHEAD);
+    for (const sd of [-1, 1]) put(-3.5, STEEL, sd);
+    for (let k = 1; k <= 3; k++) {
+      for (const sd of [-k * 0.6, k * 0.6]) {
+        const [x, y] = at(-3.5 - k, sd);
+        c.spark(x, y, [235, 245, 255], 0.8 - k * 0.18);
+      }
+    }
+    const [wx, wy] = at(-4);
+    c.spark(wx, wy, [255, 200, 120], 0.9);
   } else {
     // A bottle rocket: a red tube with a paper cone, sparks spitting out behind, and its stick trailing.
     for (let k = -1.5; k <= 1.5; k += 0.5) put(k, ROCKET);

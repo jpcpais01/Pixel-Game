@@ -3,6 +3,7 @@ import { Mixer, filter, gain, hit, mtof, osc, panner, pick, rand, sweep } from '
 const SPARKLE = [2093, 2349, 2637, 3136, 3520, 4186]; // C major pentatonic, high
 /** The minstrel's tune, one note per strum (MIDI, D dorian): his attacks play it through. */
 const LUTE_TUNE = [62, 65, 69, 67, 65, 64, 62, 57, 62, 69, 67, 72, 69, 65, 67, 62];
+export const LUTE_NOTES = LUTE_TUNE.length;
 
 /** The Aurora Colosseum's frost sounds (see Sfx.frost). */
 export type FrostSound = 'crack' | 'freeze' | 'howl' | 'chime' | 'crunch' | 'gust';
@@ -11,7 +12,6 @@ export type FrostSound = 'crack' | 'freeze' | 'howl' | 'chime' | 'crunch' | 'gus
 export class Sfx {
   private m: Mixer;
   private foot = 0;
-  private tune = 0;
 
   constructor(m: Mixer) {
     this.m = m;
@@ -19,7 +19,8 @@ export class Sfx {
 
   private out(pan: number, level: number, wet: number): GainNode {
     const ctx = this.m.ctx;
-    const g = gain(ctx, level, panner(ctx, pan * 0.7, this.m.sfx));
+    // Baked clips are made unpanned: their side is set when they play (see bake.ts).
+    const g = gain(ctx, level, this.m.baking ? this.m.sfx : panner(ctx, pan * 0.7, this.m.sfx));
     if (wet > 0) g.connect(gain(ctx, wet, this.m.reverb));
     return g;
   }
@@ -1999,9 +2000,9 @@ export class Sfx {
   }
 
   /** A strum across the lute: a low string and the tune's next note on top, a hair apart. */
-  lutePluck(t: number, pan: number): void {
+  lutePluck(t: number, pan: number, note: number): void {
     const out = this.out(pan, 0.7, 0.4);
-    const top = LUTE_TUNE[this.tune++ % LUTE_TUNE.length];
+    const top = LUTE_TUNE[note % LUTE_TUNE.length];
     this.pluck(out, t, mtof(top - 12), 0.12, 0.45);
     this.pluck(out, t + 0.028, mtof(top), 0.2, 0.7, false);
   }

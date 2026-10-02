@@ -25,7 +25,9 @@ import { stand } from './rest';
 //    stabilisers and becomes a turret, both guns hammering at whatever it
 //    aims at, rooted to the spot.
 // Everything it fires warms it (see heat.ts); overheated, it vents and stalls.
-// The Scrap Titan fires nails and bottle rockets instead; it plays the same.
+// The Scrap Titan fires nails and bottle rockets instead; the Dreadnought
+// naval shells in balls of fire and gun smoke, and torpedoes on white wakes.
+// They play the same.
 
 const FIRE_EVERY = 190;
 const SHELL_SPEED = 330;
@@ -69,6 +71,13 @@ export interface MechKit {
   glow: number;
   /** The faint light around it at night (its headlamps). */
   aura: number;
+  /** Gun smoke puffed at the muzzle and left by a burst, if any. */
+  smoke?: number[];
+  /** A shot's tracer, and the missile's trail (its 'trail' debris), when not the usual. */
+  tracer?: number[];
+  wake?: number[];
+  /** Two funnels, so the smoke rises from each in turn. */
+  funnels?: boolean;
 }
 
 export const MECH_KIT: MechKit = {
@@ -93,6 +102,21 @@ export const SCRAP_KIT: MechKit = {
   boom: pal(0xffffff, 0xfff080, 0xff5a8a, 0x5a8aff, 0xff9ad0),
   glow: 0xfff0c0,
   aura: 0xffd8a0,
+};
+
+/** The Dreadnought: naval shells and torpedoes, in fire, gun smoke and white water. */
+export const DREAD_KIT: MechKit = {
+  ...MECH_KIT,
+  key: 'mech_dread',
+  shot: 'naval',
+  missile: 'torpedo',
+  boom: pal(0xfff6d8, 0xffc040, 0xff6a1a, 0x5a5e66, 0xffa040),
+  glow: 0xffa040,
+  aura: 0xfff0c8,
+  smoke: [0x9a9ea6, 0x7a7e86, 0xb8bcc4],
+  tracer: [0xffb040, 0xff6a1a],
+  wake: [0xffffff, 0xe6f0ff, 0xc8dcf0],
+  funnels: true,
 };
 
 const boltFrame = (kind: BoltKind, dx: number, dy: number): string => {
@@ -131,6 +155,8 @@ export class Mech implements Hero {
   private launchAim = { x: 0, y: 1 };
   private siegeT = 0;
   private smokeT = 0;
+  /** Which funnel smokes next, for a two-funnelled look. */
+  private funnel = 0;
   private prevSpecial = false;
 
   get sprite(): Phaser.GameObjects.Sprite {
@@ -248,6 +274,7 @@ export class Mech implements Hero {
     const m = this.muzzle(which, u);
     this.world.addEffect(new Shot(this.world, m.x, m.y, u.x, u.y, SHELL_SPEED, SHELL_RANGE, SHELL_DAMAGE * this.heat.power, this.kit, this.y));
     this.casing(which, u);
+    this.gunSmoke(m);
     sound.cannon(this.world.pan(m.x), this.kit.scrap);
     this.heat.add(SHELL_HEAT);
   }
@@ -267,6 +294,11 @@ export class Mech implements Hero {
     const w = this.world;
     const back = { x: this.x - u.x * 4 + (which ? 6 : -6), y: this.y - MECH_GUN_Y + 4 };
     w.debris(this.kit.scrap ? [0xd4dce8, 0x8a94a6] : [0xfff0a0, 0xe8b440, 0xa8761e], snap(back.x), snap(back.y), 1, this.y + 3, 'burst');
+  }
+
+  /** A puff of gun smoke left hanging at the muzzle (the Dreadnought's). */
+  private gunSmoke(m: { x: number; y: number }): void {
+    if (this.kit.smoke) this.world.debris(this.kit.smoke, snap(m.x), snap(m.y), 3, this.y + 3, 'spores');
   }
 
   // -------------------------------------------------------------------------
@@ -389,6 +421,7 @@ export class Mech implements Hero {
         this.world.addEffect(new Shot(this.world, m.x, m.y, Math.cos(a), Math.sin(a), SHELL_SPEED * 1.15, SHELL_RANGE + 20, SIEGE_DAMAGE, this.kit, this.y)),
       );
       this.casing(which, u);
+      this.gunSmoke(m);
       sound.cannon(this.world.pan(m.x), this.kit.scrap);
     }
     if (this.siegeT <= 0) {
@@ -452,8 +485,15 @@ export class Mech implements Hero {
     this.smokeT -= dt;
     if (this.smokeT <= 0) {
       this.smokeT = 420 - hot * 300;
-      const back = this.dir === 'left' ? 6 : this.dir === 'right' ? -6 : 6;
-      const top = this.kit.scrap ? 34 : 33;
+      let back = this.dir === 'left' ? 6 : this.dir === 'right' ? -6 : 6;
+      let top = this.kit.scrap ? 34 : 33;
+      if (this.kit.funnels) {
+        // Each funnel in turn: either side of the bridge, or one behind the other side on.
+        this.funnel = 1 - this.funnel;
+        const side = this.dir === 'left' ? 1 : this.dir === 'right' ? -1 : 0;
+        back = side ? side * (this.funnel ? 7 : 3) : this.funnel ? 7 : -7;
+        top = 35;
+      }
       this.world.debris(hot > 0.7 ? [0x6a6a70, 0x4a4a50, 0x8a8a90] : [0x9a9aa0, 0x7a7a80, 0xb8b8c0], rx + back, ry - top, 1, ry + 1, 'spores');
     }
   }
@@ -517,7 +557,7 @@ class Shot extends Fx {
     this.trailT -= dt;
     if (this.trailT <= 0 && !this.kit.scrap) {
       this.trailT = 40;
-      w.debris([0xffd860, 0xff8a2a], this.x - this.dx * 5, this.y - this.dy * 5, 1, depth, 'trail');
+      w.debris(this.kit.tracer ?? [0xffd860, 0xff8a2a], this.x - this.dx * 5, this.y - this.dy * 5, 1, depth, 'trail');
     }
   }
 }
@@ -601,7 +641,7 @@ class Missile extends Fx {
     this.trailT -= dt;
     if (this.trailT <= 0) {
       this.trailT = 30;
-      const tints = this.kit.scrap ? [0xfff8c0, 0xffd860, 0xffffff] : [0xe6ecf4, 0xc8d0dc, 0xffb040];
+      const tints = this.kit.wake ?? (this.kit.scrap ? [0xfff8c0, 0xffd860, 0xffffff] : [0xe6ecf4, 0xc8d0dc, 0xffb040]);
       w.debris(tints, this.x - this.vx * 5, this.y - this.vy * 5, 1, depth, this.kit.scrap ? 'spores' : 'trail');
     }
   }
@@ -617,6 +657,7 @@ class Missile extends Fx {
     w.addEffect(new Burst(w, x, gy, p, this.kit.scrap));
     w.debris(p.tints, x, y, this.kit.scrap ? 26 : 16, gy + 20, 'burst');
     if (this.kit.scrap) w.debris([0xffffff, 0xfff080, 0x9affc0, 0x9ad0ff], x, y, 14, gy + 20, 'spores');
+    if (this.kit.smoke) w.debris(this.kit.smoke, x, y, 10, gy + 20, 'spores');
     bloom(w, x, y, p.hot, 1.4, 260, gy + 40);
     flare(w, x, y, 90, p.light, 2.2, 260);
     w.cameras.main.shake(90, 0.0006);

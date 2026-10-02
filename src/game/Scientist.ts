@@ -23,6 +23,8 @@ import { stand } from './rest';
 //    over a spot, arcs lashing out of it, and then it splits.
 // Einstein plays the same: his chalk throws golden sparks, his orb is a
 // gravity well that bends the ground round it, and his Special is E = mc².
+// Tesla's arcs are violet-white and fork as they leap; his orb is a
+// copper-wound coil sphere throwing bolts out to the rim of its pull.
 
 const ZAP_EVERY = 450;
 /** The zap leaves the gun on its release frame. */
@@ -50,6 +52,8 @@ const FOOTFALLS = new Set([1, 4]);
 export interface ScientistKit {
   key: string;
   einstein: boolean;
+  /** Tesla: forking arcs, and the coil-sphere orb. */
+  tesla?: boolean;
   maxHp: number;
   speed: number;
   pal: Pal;
@@ -68,6 +72,13 @@ export const EINSTEIN_KIT: ScientistKit = {
   key: 'scientist_einstein',
   einstein: true,
   pal: pal(0xfffdf0, 0xfff0b0, 0xffd060, 0xc08020, 0xffe090),
+};
+
+export const TESLA_KIT: ScientistKit = {
+  ...SCIENTIST_KIT,
+  key: 'scientist_tesla',
+  tesla: true,
+  pal: pal(0xfaf4ff, 0xdcc4ff, 0xa478ff, 0x4a20a0, 0xb890ff),
 };
 
 export class Scientist implements Hero {
@@ -188,7 +199,7 @@ export class Scientist implements Hero {
     this.charge = 1;
     if (!first) {
       pts.push({ x: m.x + u.x * FIZZLE, y: m.y + u.y * FIZZLE });
-      w.addEffect(new Arc(w, pts, this.kit.pal, this.y, this.kit.einstein));
+      w.addEffect(new Arc(w, pts, this.kit.pal, this.y, this.kit.einstein, undefined, this.kit.tesla));
       sound.tesla(w.pan(this.x), false);
       return;
     }
@@ -213,7 +224,7 @@ export class Scientist implements Hero {
         }
       }
     }
-    w.addEffect(new Arc(w, pts, this.kit.pal, Math.max(...pts.map((p) => p.y)) + 20, this.kit.einstein));
+    w.addEffect(new Arc(w, pts, this.kit.pal, Math.max(...pts.map((p) => p.y)) + 20, this.kit.einstein, undefined, this.kit.tesla));
     sound.tesla(w.pan(first.x), pts.length > 2);
   }
 
@@ -249,7 +260,7 @@ export class Scientist implements Hero {
       ty = this.y + u.y * r - (this.aim?.dist === undefined ? 0 : INV_HAND_Y * 0.5);
       if (this.world.walkable(tx, ty)) break;
     }
-    this.world.addEffect(new PolarityOrb(this.world, this.x - u.x * 3, this.y - INV_HAND_Y - 2, tx, ty, this.kit.pal, this.kit.einstein));
+    this.world.addEffect(new PolarityOrb(this.world, this.x - u.x * 3, this.y - INV_HAND_Y - 2, tx, ty, this.kit.pal, this.kit.einstein, !!this.kit.tesla));
     sound.toss();
   }
 
@@ -286,7 +297,8 @@ export class Scientist implements Hero {
 
 /**
  * The zap: a jagged, flickering bolt through each point in turn (the gun,
- * then every foe it leapt to). Einstein's is golden and throws sparks.
+ * then every foe it leapt to). Einstein's is golden and throws sparks;
+ * Tesla's throws off thin forks that crackle out and die.
  */
 export class Arc extends Fx {
   private g: Ink;
@@ -300,6 +312,7 @@ export class Arc extends Fx {
     private depth: number,
     private sparks = false,
     life = 200,
+    private forks = false,
   ) {
     super(world, life);
     const xs = pts.map((q) => q.x);
@@ -319,6 +332,14 @@ export class Arc extends Fx {
       const e = this.pts[i + 1];
       bolt(g, s.x, s.y, e.x, e.y, this.p, seed + i * 7, a, 0.6);
       g.put(e.x, e.y, this.p.core, a);
+      if (this.forks) {
+        // A thin branch off the middle of each leap, flicking to a new spot every few frames.
+        const mx = (s.x + e.x) / 2;
+        const my = (s.y + e.y) / 2;
+        const ang = Math.atan2(e.y - s.y, e.x - s.x) + ((seed + i) % 2 ? 0.9 : -0.9);
+        const len = 6 + ((seed * 7 + i * 3) % 5);
+        bolt(g, mx, my, mx + Math.cos(ang) * len, my + Math.sin(ang) * len, this.p, seed + i * 13 + 5, a * 0.7, 0.4);
+      }
       if (this.sparks && (seed + i) % 2 === 0) for (let k = 0; k < 3; k++) g.put(e.x + (Math.random() - 0.5) * 7, e.y + (Math.random() - 0.5) * 7, this.p.hot, a);
     }
     g.end();
@@ -339,7 +360,8 @@ const ORB_H = 9;
  * The polarity orb: tossed in an arc, it hangs over the spot crackling with
  * field lines that curl in, drags every foe near into it, then bursts in a
  * ring of shock. Einstein's is a gravity well: the ground bends into it in
- * rings that close on the middle.
+ * rings that close on the middle. Tesla's is a coil sphere: copper bands
+ * wound round it, bolts leaping from it out to the rim of its pull.
  */
 class PolarityOrb extends Fx {
   private g: Ink;
@@ -355,6 +377,7 @@ class PolarityOrb extends Fx {
     private ty: number,
     private p: Pal,
     private well: boolean,
+    private coil = false,
   ) {
     super(world, ORB_FLY + ORB_PULL + 420);
     this.g = this.ink(ORB_R * 2 + 24, Math.ceil(ORB_R * 1.4) + 60);
@@ -381,6 +404,15 @@ class PolarityOrb extends Fx {
           ring(g, tx, ty, r, 0.6, p, 0.7 * (1 - r / ORB_R) + 0.15);
         }
         circle(g, tx, ty, ORB_R, p.deep, 0.35);
+      } else if (this.coil) {
+        // Bolts leaping from the sphere out to the rim, a new handful every few frames.
+        const seed = Math.floor(this.t / 60);
+        for (let i = 0; i < 3; i++) {
+          const a = ((seed * 2.39 + i * 2.1) % (Math.PI * 2));
+          const r = ORB_R * (0.55 + 0.45 * (((seed + i * 5) % 7) / 6));
+          bolt(g, tx, ty - ORB_H, tx + Math.cos(a) * r, ty + Math.sin(a) * r * 0.58, p, seed * 3 + i, 0.75, 0.5);
+        }
+        circle(g, tx, ty, ORB_R, p.deep, 0.3);
       } else {
         // Field lines curling in from the rim.
         for (let arm = 0; arm < 6; arm++) {
@@ -427,12 +459,29 @@ class PolarityOrb extends Fx {
       return;
     }
     // The orb itself: a hot core, a ring of light round it, arcs flicking.
-    const r = this.well ? 2.6 : 2.2;
-    for (let y = -4; y <= 4; y++) {
-      for (let x = -4; x <= 4; x++) {
-        const d = Math.hypot(x, y);
-        if (d <= r) g.put(ox + x, oy + y, this.well && d < 1.2 ? 0x140c02 : d < r * 0.5 ? p.core : p.hot);
-        else if (d <= r + 1.2) g.put(ox + x, oy + y, this.well ? p.core : p.mid, 0.7);
+    if (this.coil) {
+      // A copper ball wound in bands, a bright terminal on top.
+      for (let y = -3; y <= 3; y++) {
+        for (let x = -3; x <= 3; x++) {
+          if (Math.hypot(x, y) > 3.1) continue;
+          const lit = x + y < -1;
+          g.put(ox + x, oy + y, (y & 1) ? (lit ? 0xb0602c : 0x6a3216) : lit ? 0xf0a868 : 0xc87a3c);
+        }
+      }
+      for (let i = 0; i < 16; i++) {
+        const b = (i / 16) * Math.PI * 2;
+        g.put(ox + Math.cos(b) * 4.2, oy + Math.sin(b) * 4.2, p.mid, 0.35);
+      }
+      g.put(ox, oy - 4, p.core);
+      g.put(ox, oy - 3, p.hot);
+    } else {
+      const r = this.well ? 2.6 : 2.2;
+      for (let y = -4; y <= 4; y++) {
+        for (let x = -4; x <= 4; x++) {
+          const d = Math.hypot(x, y);
+          if (d <= r) g.put(ox + x, oy + y, this.well && d < 1.2 ? 0x140c02 : d < r * 0.5 ? p.core : p.hot);
+          else if (d <= r + 1.2) g.put(ox + x, oy + y, this.well ? p.core : p.mid, 0.7);
+        }
       }
     }
     const a = this.t * 0.03;
