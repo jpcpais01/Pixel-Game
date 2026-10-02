@@ -11,6 +11,7 @@ import { ALCHEMIST_LOOKS, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, flaskFrame }
 import { FOXGLOVE_BREW, foxBogIcon, foxFlaskIcon } from './foxglove';
 import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbowBoltFrame, stuckArrowFrame, stuckBoltFrame } from './archer';
 import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
+import { sunBowIcon, sunRainIcon } from './apolloIcons';
 import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
@@ -253,6 +254,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     if (look.elf) {
       scene.textures.addCanvas('icon_fanshot', toCanvas(16, 16, fanShotIcon()));
       scene.textures.addCanvas('icon_vault', toCanvas(16, 16, vaultIcon()));
+      continue;
+    }
+    if (look.apollo) {
+      scene.textures.addCanvas(`icon_bow${sfx}`, toCanvas(16, 16, sunBowIcon()));
+      scene.textures.addCanvas(`icon_rain${sfx}`, toCanvas(16, 16, sunRainIcon()));
       continue;
     }
     const q = SKIN_QUIVERS[look.key] ?? (look.storm ? STORM_QUIVER : RANGER_QUIVER);

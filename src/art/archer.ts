@@ -29,6 +29,15 @@
 // a crooked branch and strung with twine, and crow-fletched arrows tipped with
 // embers that trail ghost-green light.
 //
+// Apollo is his legendary skin, the sun god with a bow: golden curls under a
+// gilded laurel wreath with a little sun at its front, a white chiton pinned
+// at one shoulder with a sun brooch (the other shoulder bare) and hemmed in a
+// gold key pattern, a sun-yellow himation over the other shoulder and down his
+// back, gold armlets, gold sandals laced up bare shins; a gilded bow whose
+// limbs end in small suns, strung with a thread of sunlight, and swan-fletched
+// arrows of golden light with white-hot heads. A soft halo of light rings his
+// head (light only, so it never hides him).
+//
 // The arbalest is the archer's second type, on the same rig: a crossbowman
 // in a steel kettle hat with a brown beard under its brim, a quilted
 // wine-red gambeson, a navy brigandine studded with rivets, a mail tippet,
@@ -196,6 +205,8 @@ export interface ArcherLook {
   hunt?: { skull: Material; antler: Material };
   /** The scarecrow: a sack head under a felt hat, straw everywhere, overalls and a crow. */
   scarecrow?: Scarecrow;
+  /** Apollo: golden curls under a laurel wreath, a chiton and himation, sandals, a bow tipped with suns, a halo. */
+  apollo?: ApolloKit;
   /** The arbalest: a kettle hat, a pavise on his back, a crossbow for a bow. */
   arb?: Arbalest;
   /** The windrunner: an elf with a high tail of hair and a scarf for a cloak. */
@@ -393,6 +404,59 @@ export const SCARECROW_LOOK: ArcherLook = {
   },
 };
 
+// Apollo's materials: white linen and saffron wool, so the gold (and the
+// light) is what the eye goes to.
+const AP_HAIR: Material = { ramp: ramp('#4a2a06', '#86560e', '#c08a1c', '#e8b83e', '#fce28a'), outline: hex('#1e1004'), outlineLit: hex('#3a2208') };
+const CHITON: Material = { ramp: ramp('#6e6a64', '#a8a398', '#d4cfc2', '#efebe0', '#fffcf2'), outline: hex('#24221e'), outlineLit: hex('#3a3832') };
+const CHITON_BODICE: Material = { ramp: ramp('#726c62', '#aca596', '#d8d1c0', '#f2ecdc', '#fffbee'), outline: hex('#24221e'), outlineLit: hex('#3a3832') };
+const HIMATION: Material = { ramp: ramp('#5a2404', '#94460a', '#d07a14', '#f2a82a', '#ffd25a'), outline: hex('#220c02'), outlineLit: hex('#3c1a04') };
+const GILT: Material = { ramp: ramp('#4a2e08', '#8a5c12', '#c99424', '#f0cc54', '#fff2b0'), outline: hex('#1c1004'), shine: true };
+/** The bow's gilding catches a little light of its own. */
+const GILT_BOW: Material = { ...GILT, emissive: 0.3 };
+const LAUREL: Material = { ramp: ramp('#5a3a0a', '#9a7016', '#d8a830', '#f8dc6a', '#fffad0'), outline: hex('#221404'), emissive: 0.35, shine: true };
+const SUN_DISC: Material = { ramp: ramp('#e07a10', '#ffb428', '#ffe080', '#fffbe8'), outline: hex('#5a2604'), emissive: 0.95, noAO: true };
+const SUN_STRING: Material = { ramp: ramp('#ffa818', '#ffd458', '#fff0b0', '#ffffff'), outline: hex('#4a2404'), emissive: 0.9, noAO: true };
+const SUN_SHAFT: Material = { ramp: ramp('#8a5410', '#d09a28', '#f8d460', '#fff4c0'), outline: hex('#2a1604'), emissive: 0.55 };
+const SWAN: Material = { ramp: ramp('#9a8a6a', '#d4c8a8', '#f2eadc', '#ffffff'), outline: hex('#2a2418'), emissive: 0.2 };
+/** The quiver and the bow's grip: white kid leather, so they stand off the saffron behind them. */
+const AP_IVORY: Material = { ramp: ramp('#5a5040', '#8e826a', '#c4b896', '#e8dec4', '#fff8e8'), outline: hex('#221c12') };
+const AP_SANDAL: Material = { ramp: ramp('#2e1a06', '#5a3810', '#94641e', '#c8963a', '#ecc464'), outline: hex('#120a02') };
+const AP_EYE: Material = { ramp: ramp('#1a0e04', '#1a0e04'), outline: hex('#0a0602'), noAO: true };
+/** Sunlight: white-hot at the heart, gold round it, amber at the edge. */
+const SUN_LIGHT: [RGB, RGB, RGB] = [hex('#fffbe8'), hex('#ffd860'), hex('#ffa020')];
+
+/** Apollo's own materials. His tunic is the chiton, his jerkin its breast, his cloak the himation. */
+export interface ApolloKit {
+  laurel: Material;
+  /** Brooch settings, armlets, the bow arm's cuff, the key pattern, the sandals' straps. */
+  gilt: Material;
+  /** The little suns: the bow's tips and grip, the brooch, the wreath's front. */
+  sun: Material;
+  sandal: Material;
+}
+
+export const APOLLO_LOOK: ArcherLook = {
+  key: 'archer_apollo',
+  cloak: HIMATION,
+  tunic: CHITON,
+  jerkin: CHITON_BODICE,
+  hair: AP_HAIR,
+  eye: AP_EYE,
+  bow: GILT_BOW,
+  string: SUN_STRING,
+  fletch: SWAN,
+  head: SUN_DISC,
+  shaft: SUN_SHAFT,
+  metal: GILT,
+  trim: GILT,
+  light: SUN_LIGHT,
+  storm: false,
+  crackle: SUN_LIGHT,
+  wrap: AP_IVORY,
+  trouser: SKIN,
+  apollo: { laurel: LAUREL, gilt: GILT, sun: SUN_DISC, sandal: AP_SANDAL },
+};
+
 // The arbalest's materials: soldier's colours, wine-red and navy and steel,
 // so the painted pavise and the bright prod are what catch the eye.
 const ARB_BEARD: Material = { ramp: ramp('#2a140a', '#4c2814', '#74401e', '#9c5e2e', '#c08046'), outline: hex('#120804') };
@@ -545,7 +609,7 @@ export const BRIAR_LOOK: ArcherLook = {
   briar: { hood: ROSE_CLOTH, rose: ROSE, leaf: ROSE_LEAF, thorn: THORN, lace: GOLD, lip: ROSE_LIP },
 };
 
-export const ARCHER_LOOKS = [RANGER_LOOK, STORM_LOOK, HUNT_LOOK, SCARECROW_LOOK, ARBALEST_LOOK, WIND_LOOK, WISTERIA_LOOK, BRIAR_LOOK];
+export const ARCHER_LOOKS = [RANGER_LOOK, STORM_LOOK, HUNT_LOOK, SCARECROW_LOOK, ARBALEST_LOOK, WIND_LOOK, WISTERIA_LOOK, BRIAR_LOOK, APOLLO_LOOK];
 
 /** A lady's look: a long gown instead of the short tunic and trousers. */
 const gowned = (): boolean => !!(S.wisteria || S.briar);
@@ -679,6 +743,8 @@ function drawBow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, bi
     }
     c.px(f.x, f.y, w.bloom, sphere(-0.3, -0.4), { bias: bias + 1, glow: 0.3 });
     c.px(f.x + f.ax * 0.9, f.y + f.ay * 0.9, w.bloom, sphere(0.2, -0.2), { bias });
+  } else if (S.apollo) {
+    sunBow(c, at, f.x, f.y, bias);
   } else if (S.elf) {
     // A wind-gem set in the grip, and the limbs swelling leaf-like halfway out.
     c.part();
@@ -919,16 +985,19 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
       }
     }
   }
+  // Apollo's arms are bare, a gold armlet above the elbow and a gold cuff for a bracer.
+  const sleeve = S.apollo ? SKIN : S.tunic;
   c.part();
-  c.capsule(sx, sy, ex, ey, 1.65, 1.4, S.tunic, { bias });
+  c.capsule(sx, sy, ex, ey, 1.65, 1.4, sleeve, { bias });
+  if (S.apollo) armlet(c, sx, sy, ex, ey, bias);
   c.part();
   const sc = S.scarecrow;
   if (bracer && !sc) {
-    c.capsule(ex, ey, ex + (fx - ex) * 0.35, ey + (fy - ey) * 0.35, 1.35, 1.35, S.tunic, { bias });
+    c.capsule(ex, ey, ex + (fx - ex) * 0.35, ey + (fy - ey) * 0.35, 1.35, 1.35, sleeve, { bias });
     c.part();
-    c.capsule(ex + (fx - ex) * 0.35, ey + (fy - ey) * 0.35, fx, fy, 1.45, 1.35, S.jerkin, { bias: bias + 1 });
+    c.capsule(ex + (fx - ex) * 0.35, ey + (fy - ey) * 0.35, fx, fy, 1.45, 1.35, S.apollo?.gilt ?? S.jerkin, { bias: bias + 1 });
   } else {
-    c.capsule(ex, ey, fx, fy, 1.4, 1.25, S.tunic, { bias });
+    c.capsule(ex, ey, fx, fy, 1.4, 1.25, sleeve, { bias });
   }
   if (sc) {
     // Straw bursting out of the cuff either side of the wrist.
@@ -950,6 +1019,7 @@ function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bia
 
 /** A soft leather boot with a turned-down cuff. */
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
+  if (S.apollo) return sandal(c, x, y, side, bias);
   const m = S.boot ?? BOOT;
   c.part();
   if (side) c.ellipse(x, y, 2.2, 1.2, m, { flatten: 0.8, bias });
@@ -1320,6 +1390,335 @@ function scarecrowSide(c: PixelCanvas, hx: number, U: number, blink: boolean | u
   c.shape(7 + V, 7 + V, () => [hx - 2.6, hx + 3.4], k.band, (_x, _y, t) => cyl(t, 0.1));
   patch(c, hx - 1, 5 + V, 2, 2);
   crow(c, hx + 4, 8 + V, -1);
+}
+
+// ---------------------------------------------------------------------------
+// Apollo
+
+/** How far out from the middle of his head the halo's ring sits, and how far its rays reach past it, px. */
+const HALO_R = 5.6;
+const HALO_RAY = 2.2;
+const HALO_RAYS = 12;
+
+/**
+ * Curls: the hair's surface tipped this way and that in a staggered 2x2
+ * pattern, so it catches the light in little ringlets instead of as one
+ * smooth cap.
+ */
+const CURLS = (x: number, y: number, dx: number, dy: number) => {
+  const k = ((x >> 1) + (y >> 1) + (y & 1 ? 1 : 0) * (x & 1)) & 1;
+  return sphere(dx * 0.85 + (k ? 0.2 : -0.05), dy * 0.8 - 0.15 + (k ? -0.22 : 0.12), 1);
+};
+
+/** A curl standing out from the hair at (x, y), its top catching the light. */
+function curl(c: PixelCanvas, x: number, y: number, side: number): void {
+  c.px(x, y, S.hair, sphere(side * 0.6, -0.4), { bias: 1 });
+}
+
+/** A laurel leaf on the wreath at (x, y), facing out along (nx, ny). */
+function bay(c: PixelCanvas, x: number, y: number, nx: number, ny: number, bright = 0): void {
+  c.px(x, y, S.apollo!.laurel, sphere(nx, ny), { bias: bright });
+}
+
+/** A little sun at (x, y): a bright pixel and a cross of light round it. */
+function sunPoint(c: PixelCanvas, x: number, y: number, rays = 0.4): void {
+  c.px(x, y, S.apollo!.sun, sphere(-0.3, -0.4), { bias: 1 });
+  c.spark(x, y, S.light[0], 0.5);
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(x + dx, y + dy, S.light[1], rays);
+}
+
+/**
+ * Apollo's head from the front: golden curls falling round his face to the
+ * jaw, a curl on his brow, and the laurel wreath: a gilded band of leaves
+ * round his head, their tips standing up along it and fanning out at his
+ * temples, a little sun at the front where the two branches meet.
+ */
+function apolloFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(cx, 11.2 + U, 3.8, 3.5, S.hair, { normal: CURLS });
+  // The curls down either side of his face, bobbing in and out.
+  c.part();
+  for (let y = 11; y <= 15; y++) {
+    c.px(cx - 4, y + U, S.hair, CURLS(cx - 4, y, -0.7, (y - 13) * 0.3));
+    c.px(cx + 3, y + U, S.hair, CURLS(cx + 3, y, 0.7, (y - 13) * 0.3));
+  }
+  for (const y of [12, 14]) curl(c, cx - 5, y + U, -1);
+  for (const y of [13, 15]) curl(c, cx + 4, y + U, 1);
+  c.px(cx - 3, 15 + U, S.hair, sphere(-0.3, 0.5));
+  c.px(cx + 2, 15 + U, S.hair, sphere(0.3, 0.5), { bias: -1 });
+  c.part();
+  c.ellipse(cx, 12.7 + U, 2.5, 2.3, SKIN, { normal: SOFT_FACE });
+  // The fringe of curls over his brow, one of them falling onto it.
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 3, cx + 3], S.hair, (x, y, t) => CURLS(x, y, t * 0.8, -0.2));
+  c.px(cx - 3, 11 + U, S.hair, sphere(-0.6, 0.2));
+  c.px(cx + 2, 11 + U, S.hair, sphere(0.6, 0.2));
+  c.px(cx, 11 + U, S.hair, sphere(0.2, 0.3), { bias: 1 });
+  eyes(c, [[cx - 2, 12 + U], [cx + 1, 12 + U]], p.blink);
+  c.shade(cx - 1, 14 + U, -1);
+  // The wreath.
+  c.part();
+  c.shape(9 + U, 9 + U, () => [cx - 4, cx + 4], S.apollo!.laurel, (x, _y, t) => sphere(t * 0.8, x & 1 ? -0.5 : 0.2, 1));
+  c.part();
+  for (const [x, y, nx] of [[-4, 8, -0.6], [-2, 8, -0.3], [1, 8, 0.3], [3, 8, 0.6]] as const) bay(c, cx + x, y + U, nx, -0.6, 1);
+  for (const [x, y, nx] of [[-5, 9, -0.8], [-5, 10, -0.7], [4, 9, 0.8], [4, 10, 0.7]] as const) bay(c, cx + x, y + U, nx, 0.1);
+  sunPoint(c, cx - 1, 9 + U, 0.3);
+}
+
+/**
+ * Apollo's head from behind: a full head of curls down to the nape, the
+ * wreath round it tied at the back with a saffron ribbon whose two tails
+ * flutter down over the curls.
+ */
+function apolloBack(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  c.part();
+  c.ellipse(cx, 11.4 + U, 3.8, 3.6, S.hair, { normal: CURLS });
+  c.part();
+  c.shape(14 + U, 15 + U, (y) => (y === 14 + U ? [cx - 3.4, cx + 3.4] : [cx - 2.6, cx + 2.6]), S.hair, (x, y, t, u) => CURLS(x, y, t * 0.8, 0.2 + u * 0.4));
+  // A bobbing edge where the curls end.
+  for (let x = cx - 2; x <= cx + 1; x += 2) c.erase(x, 15 + U);
+  for (const y of [11, 13]) curl(c, cx - 5, y + U, -1);
+  for (const y of [12, 14]) curl(c, cx + 4, y + U, 1);
+  c.part();
+  c.shape(9 + U, 9 + U, () => [cx - 4, cx + 4], S.apollo!.laurel, (x, _y, t) => sphere(t * 0.8, x & 1 ? -0.5 : 0.2, 1));
+  c.part();
+  for (const [x, y, nx] of [[-4, 8, -0.6], [-3, 8, -0.5], [2, 8, 0.5], [3, 8, 0.6]] as const) bay(c, cx + x, y + U, nx, -0.6, 1);
+  for (const [x, y, nx] of [[-5, 9, -0.8], [-5, 10, -0.7], [4, 9, 0.8], [4, 10, 0.7]] as const) bay(c, cx + x, y + U, nx, 0.1);
+  // The ribbon's knot and its tails.
+  const sw = p.sway * 0.35;
+  c.part();
+  c.line(cx - 1, 10 + U, cx - 2 + sw, 14 + U, S.cloak, () => sphere(-0.3, 0.1));
+  c.line(cx, 10 + U, cx + 1 + sw, 13 + U, S.cloak, () => sphere(0.3, 0.1));
+  c.part();
+  c.px(cx - 1, 9 + U, S.cloak, sphere(-0.3, -0.5), { bias: 1 });
+  c.px(cx, 9 + U, S.cloak, sphere(0.3, -0.4));
+}
+
+/**
+ * Apollo's head in profile (facing left): curls tumbling down behind to his
+ * nape, a curl before his ear and one on his brow, the wreath's leaves
+ * sweeping back along the band, its ribbon fluttering behind.
+ */
+function apolloSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
+  const sw = p.sway * 0.4;
+  // The ribbon's tails, behind everything.
+  c.part();
+  c.line(hx + 3.6, 10 + U, hx + 5 + sw, 14 + U, S.cloak, () => sphere(0.3, 0.1), { bias: -1 });
+  c.line(hx + 3.6, 10 + U, hx + 5.6 + sw * 1.4, 12.6 + U, S.cloak, () => sphere(0.4, -0.2), { bias: -1 });
+  c.part();
+  c.capsule(hx + 1.6, 12 + U, hx + 2.4 + sw * 0.5, 15.2 + U, 1.7, 1.1, S.hair);
+  c.part();
+  c.ellipse(hx + 0.6, 11.2 + U, 3.3, 3.4, S.hair, { normal: CURLS });
+  for (const [x, y] of [[4, 11], [4, 13], [3, 15]] as const) curl(c, hx + x, y + U, 1);
+  c.part();
+  c.ellipse(hx - 1.4, 12.8 + U, 2.2, 2.2, SKIN);
+  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.shade(hx - 3, 14 + U, -1);
+  // The fringe, a curl on his brow and one before his ear.
+  c.part();
+  c.shape(10 + U, 10 + U, () => [hx - 3.4, hx + 0.6], S.hair, (x, y, t) => CURLS(x, y, t * 0.8, -0.3));
+  c.px(hx - 4, 10 + U, S.hair, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(hx - 0.4, 11 + U, S.hair, sphere(0.3, 0.1));
+  c.px(hx - 0.4, 12 + U, S.hair, sphere(0.3, 0.4));
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  // The wreath: the band from brow to nape, leaves standing off it and sweeping back.
+  c.part();
+  c.shape(9 + U, 9 + U, () => [hx - 3.6, hx + 3.8], S.apollo!.laurel, (x, _y, t) => sphere(t * 0.8, x & 1 ? -0.5 : 0.2, 1));
+  c.part();
+  for (const [x, y] of [[-2, 8], [0, 8], [2, 8]] as const) bay(c, hx + x, y + U, 0.3, -0.7, 1);
+  for (const [x, y] of [[3, 8], [4, 10]] as const) bay(c, hx + x, y + U, 0.7, 0, 0);
+  sunPoint(c, hx - 3.6, 9 + U, 0.25);
+}
+
+/**
+ * The chiton's breast from the front: pinned at one shoulder, it leaves the
+ * other side of his chest bare, its edge running down from the brooch to
+ * under his far arm.
+ */
+function apolloChest(c: PixelCanvas, cx: number, top: number): void {
+  c.part();
+  for (let r = 0; r <= 4; r++) {
+    const x0 = cx - 1 + r;
+    for (let x = x0; x <= cx + 4; x++) {
+      if (!c.filled(x, top + r)) continue;
+      c.px(x, top + r, SKIN, sphere(((x + 0.5 - cx) / 4.4) * 0.8, -0.2 + r * 0.15, 1));
+    }
+    // The chiton's edge, a fold of linen along the neckline.
+    if (c.materialAt(x0 - 1, top + r) === S.jerkin) c.shade(x0 - 1, top + r, 1);
+  }
+}
+
+/**
+ * Over his shoulders from the front: the chiton's shoulder pinned with a sun
+ * brooch on the near side; the himation thrown over the far shoulder, its
+ * gold-edged fold hanging down his side.
+ */
+function apolloDrapeFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const top = 14 + U;
+  c.part();
+  c.shape(top, top + 1, (y) => (y === top ? [cx - 4.6, cx - 1] : [cx - 5.6, cx - 1.6]), S.tunic, (_x, _y, t, u) => sphere(t * 0.9, u - 0.5, 1));
+  c.part();
+  c.shape(top, top + 2, (y) => (y === top ? [cx + 1.4, cx + 5] : [cx + 2 + (y - top) * 0.4, cx + 6]), S.cloak, (_x, _y, t, u) => sphere(t * 0.9, u - 0.6, 1));
+  const sw = p.sway * 0.4;
+  c.part();
+  c.shape(top + 3, 23 + U, (y) => {
+    const u = (y - top - 3) / 6;
+    return [cx + 4 + u * sw, cx + 6 + u * (0.4 + sw)];
+  }, S.cloak, (_x, _y, t, u) => sphere(t * 0.8 + 0.2, u * 0.4, 1));
+  for (let y = top + 1; y <= 23 + U; y++) {
+    const x = Math.round(cx + (y <= top + 2 ? 2 + (y - top) * 0.4 : 4 + ((y - top - 3) / 6) * sw));
+    if (c.materialAt(x, y) === S.cloak) c.px(x, y, S.trim!, sphere(-0.4, 0));
+  }
+  sunPoint(c, cx - 4, top + 1, 0.3);
+}
+
+/** Over his shoulders in profile: the chiton's linen, the himation's fold over the back of it, the brooch at the front. */
+function apolloDrapeSide(c: PixelCanvas, hx: number, U: number): void {
+  const top = 14 + U;
+  c.part();
+  c.shape(top, top + 2, (y) => {
+    const k = Math.sqrt((y - top) / 2) * 0.75 + 0.25;
+    return [hx - 4.2 * k, hx + 4.4 * k];
+  }, S.tunic, (_x, _y, t, u) => sphere(t * 0.95, u - 0.6, 1));
+  c.part();
+  c.shape(top, top + 3, (y) => [hx + 0.4 + (y - top) * 0.3, hx + 4.6], S.cloak, (_x, _y, t, u) => sphere(t * 0.9 + 0.2, u - 0.5, 1));
+  for (let y = top; y <= top + 3; y++) c.px(Math.round(hx + 0.4 + (y - top) * 0.3), y, S.trim!, sphere(-0.3, 0));
+  sunPoint(c, hx - 2, top + 1, 0.3);
+}
+
+/**
+ * His back: the chiton, a gold cord at the waist, and the himation thrown
+ * over one shoulder and falling slantwise across his back to the knee, its
+ * folds running with it, edged in gold, the chiton's other shoulder bare of it.
+ */
+function apolloBackBody(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  torsoBack(c, cx, top, waist);
+  c.part();
+  c.shape(14 + U, 14 + U, () => [cx - 1, cx + 4.4], S.tunic, (_x, _y, t) => sphere(t * 0.8, -0.6, 1));
+  c.part();
+  c.shape(waist, waist, () => [cx - 4.2, cx + 4.2], LEATHER, (_x, _y, t) => cyl(t, 0));
+  const t0 = 14 + U;
+  const hem = 26 + L;
+  const v = (y: number) => (y - t0) / (hem - t0);
+  const sw = (y: number) => v(y) ** 2 * p.sway;
+  const right = (y: number) => cx + 0.6 + Math.min(1, (y - t0) / 6) * 4.4 + v(y) * 1.2 + sw(y);
+  c.part();
+  c.shape(t0, hem, (y) => [cx - 5.4 - v(y) * 0.6 + sw(y), right(y)], S.cloak, (_x, _y, t, u) => sphere(t * 0.9, u * 0.6 - 0.3, 1));
+  // The hem slants up towards the hip it's caught on; the folds run slantwise with it.
+  for (let x = cx - 7; x <= cx + 8; x++) {
+    const h = Math.round(hem - Math.max(0, x + 0.5 - (cx - 3)) * 0.28);
+    for (let y = h + 1; y <= hem; y++) if (c.materialAt(x, y) === S.cloak) c.erase(x, y);
+    for (let y = t0 + 2; y < h; y++) {
+      if (c.materialAt(x, y) !== S.cloak) continue;
+      const k = (((x - Math.round((y - t0) * 0.7)) % 4) + 4) % 4;
+      if (k === 0) c.shade(x, y, -1);
+      else if (k === 1 && y > t0 + 4) c.shade(x, y, 1);
+    }
+    if (c.materialAt(x, h) === S.cloak) c.px(x, h, S.trim!, sphere(0, 0.4));
+  }
+  // Its gold edge up along the slant, from the hip to the shoulder.
+  for (let y = t0; y <= t0 + 6; y++) {
+    const x = Math.round(right(y)) - 1;
+    if (c.materialAt(x, y) === S.cloak) c.px(x, y, S.trim!, sphere(0.4, 0));
+  }
+}
+
+/** An armlet round the upper arm from (sx, sy) to the elbow (ex, ey): three gold pixels across it. */
+function armlet(c: PixelCanvas, sx: number, sy: number, ex: number, ey: number, bias: number): void {
+  const [ux, uy] = unit(ex - sx, ey - sy);
+  const mx = sx + (ex - sx) * 0.55;
+  const my = sy + (ey - sy) * 0.55;
+  c.part();
+  for (const k of [-1, 0, 1]) c.px(mx - uy * k * 1.1, my + ux * k * 1.1, S.apollo!.gilt, sphere(-uy * k * 0.6, -0.3), { bias: bias + (k < 0 ? 1 : 0) });
+}
+
+/**
+ * A gold sandal: the bare foot on a gilded sole, a strap over the toes and
+ * its laces crossing up the shin, a knot of them under the calf.
+ */
+function sandal(c: PixelCanvas, x: number, y: number, side: boolean, bias: number): void {
+  const k = S.apollo!;
+  c.part();
+  if (side) c.ellipse(x, y - 0.2, 2.1, 1.0, SKIN, { flatten: 0.8, bias });
+  else c.ellipse(x, y - 0.2, 1.5, 1.1, SKIN, { flatten: 0.8, bias });
+  c.part();
+  const sole = Math.round(y + 0.6);
+  c.shape(sole, sole, () => (side ? [x - 2.4, x + 2.0] : [x - 1.7, x + 1.7]), k.sandal, (_x, _y, t) => cyl(t, 0.4), { bias });
+  c.part();
+  const fx = Math.floor(x);
+  c.px(fx - 1, sole - 1, k.gilt, sphere(-0.3, -0.4), { bias });
+  c.px(side ? fx - 2 : fx, sole - 1, k.gilt, sphere(0.2, -0.3), { bias });
+  for (let r = 2; r <= 4; r++) c.px(fx - 1 + (r & 1), sole - r, k.gilt, sphere(r & 1 ? 0.4 : -0.4, -0.2), { bias });
+  c.px(fx - 1 + (side ? 1 : 0), sole - 5, k.gilt, sphere(-0.3, -0.5), { bias: bias + 1 });
+}
+
+/**
+ * The bow's gilding: a little sun at each tip, its light raying out round
+ * it, and a sun set in the grip. `at` walks the limbs from tip (-1) to tip (1).
+ */
+function sunBow(c: PixelCanvas, at: (t: number) => [number, number], gx: number, gy: number, bias: number): void {
+  const k = S.apollo!;
+  for (const s of [-1, 1]) {
+    const [sx, sy] = at(s);
+    c.part();
+    c.ellipse(sx, sy, 1.2, 1.2, k.sun, { bias: bias + 1 });
+    c.spark(sx, sy, S.light[0], 0.6);
+    for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) c.spark(sx + dx, sy + dy, S.light[1], 0.4);
+    for (const [dx, dy] of [[1.6, 1.6], [-1.6, 1.6], [1.6, -1.6], [-1.6, -1.6]]) c.spark(sx + dx, sy + dy, S.light[2], 0.25);
+  }
+  c.part();
+  c.px(gx, gy, k.sun, sphere(-0.3, -0.4), { bias: bias + 1 });
+}
+
+/**
+ * The last touches once Apollo is drawn: the gold key pattern along the
+ * chiton's hem, his leather made gilt (belt cord, strap, the quiver's
+ * baldric), and the halo: a soft ring of light behind his head with short
+ * rays round it, only where nothing of him is, so it never hides him.
+ */
+function apolloFinish(c: PixelCanvas, dir: Dir, p: Pose): void {
+  const k = S.apollo!;
+  const U = -p.lift + p.breath;
+  // The hem: a gold line along the chiton's lowest row, a key of teeth above it.
+  for (let x = -BODY_X; x < ARCHER_W - BODY_X; x++) {
+    for (let y = ARCHER_H - BODY_Y - 1; y >= 23 + U; y--) {
+      if (c.materialAt(x, y) !== S.tunic || c.materialAt(x, y + 1) === S.tunic) continue;
+      c.part();
+      c.px(x, y, k.gilt, sphere(0, 0.3));
+      const m = ((x % 3) + 3) % 3;
+      if (c.materialAt(x, y - 1) === S.tunic) {
+        if (m === 0) c.px(x, y - 1, k.gilt, sphere(-0.2, -0.2));
+        else if (m === 1) c.shade(x, y - 1, -1);
+      }
+      break;
+    }
+  }
+  c.remap((m) => (m === LEATHER ? GILT : m));
+  // The halo, round the middle of his head.
+  const side = dir === 'left' || dir === 'right';
+  const hx = side ? 12 - p.lean + 0.8 : 12 + (dir === 'down' ? (p.headX ?? 0) : 0);
+  const hy = 11.4 + U + (dir === 'down' ? (p.headY ?? 0) : 0);
+  const near = (x: number, y: number) => c.filled(x, y) || c.filled(x + 1, y) || c.filled(x - 1, y) || c.filled(x, y + 1) || c.filled(x, y - 1);
+  const [core, hot, mid] = S.light;
+  const reach = HALO_R + HALO_RAY;
+  for (let y = Math.floor(hy - reach); y <= hy + reach; y++) {
+    for (let x = Math.floor(hx - reach); x <= hx + reach; x++) {
+      const d = Math.hypot(x + 0.5 - hx, y + 0.5 - hy);
+      if (d > reach || near(x, y)) continue;
+      if (Math.abs(d - HALO_R) < 0.55) c.spark(x, y, hot, 0.32);
+      else if (d < HALO_R) c.spark(x, y, core, 0.07 + 0.1 * (d / HALO_R));
+      else {
+        // A ray every twelfth of the way round, every other one longer.
+        const a = ((Math.atan2(y + 0.5 - hy, x + 0.5 - hx) / (Math.PI * 2)) * HALO_RAYS + HALO_RAYS + 0.5) % HALO_RAYS;
+        const n = Math.floor(a);
+        const off = Math.abs(a - n - 0.5) * ((Math.PI * 2 * d) / HALO_RAYS);
+        const len = n % 2 === 0 ? HALO_RAY : HALO_RAY * 0.55;
+        if (off < 0.6 && d - HALO_R < len) c.spark(x, y, mid, 0.3 * (1 - (d - HALO_R) / (len + 0.4)));
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2301,6 +2700,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
       // Gold lacing criss-crossing down the bodice.
       c.part();
       for (let y = top + 2; y < waist; y++) c.px(cx - 1 + (y & 1), y, S.briar.lace, sphere(0, -0.3));
+    } else if (S.apollo) {
+      apolloChest(c, cx, top);
     } else if (!S.arb) {
       for (let y = top + 1; y <= top + 3; y++) {
         const v = 1.6 - (y - top - 1) * 0.6;
@@ -2327,6 +2728,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   if (S.wisteria) wistBraidFront(c, cx, U, p);
   else if (S.elf) scarfFront(c, cx, U, p);
   else if (S.briar) capeletFront(c, cx, U);
+  else if (S.apollo) apolloDrapeFront(c, cx, U, p);
   else cowl(c, cx, U, 5.8, 5.8, S.scarecrow ? S.tunic : S.cloak);
   // The crossbow on his shoulder: over his body, under his head.
   if (p.xb) weapon(0);
@@ -2342,6 +2744,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
       antlers(c, cx, U);
       skullFront(c, cx, U, p.blink);
     });
+  } else if (S.apollo) {
+    head(() => apolloFront(c, cx, U, p));
   } else if (S.briar) {
     head(() => briarFront(c, cx, U, p));
   } else if (S.arb) {
@@ -2459,6 +2863,17 @@ function drawUp(c: PixelCanvas, p: Pose): void {
       scarfBack(c, cx, U, p);
       elfBack(c, cx, U, p);
     }
+    if (!fb.behind) armB();
+    if (!behind) weapon(0);
+    if (!fa.behind) armA();
+    return;
+  }
+
+  if (S.apollo) {
+    // The himation slung slantwise across his back, the quiver over it.
+    apolloBackBody(c, cx, U, L, p);
+    quiver(c, 16.2, 13.4 + U, 10.8, 22 + U);
+    apolloBack(c, cx, U, p);
     if (!fb.behind) armB();
     if (!behind) weapon(0);
     if (!fa.behind) armA();
@@ -2612,6 +3027,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   if (S.elf) {
     if (!S.wisteria) scarfSide(c, hx, U, p);
   } else if (S.briar) capeletSide(c, hx, U, p);
+  else if (S.apollo) apolloDrapeSide(c, hx, U);
   else cowl(c, hx, U, 4.2, 4.4, S.scarecrow ? S.tunic : S.cloak);
 
   if (S.scarecrow) {
@@ -2624,6 +3040,8 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     if (!p.xb) weapon();
     arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1], false);
     return;
+  } else if (S.apollo) {
+    apolloSide(c, hx, U, p);
   } else if (S.wisteria) {
     wistSide(c, hx, U, p);
   } else if (S.elf) {
@@ -3143,6 +3561,7 @@ function drawArcherFrame(dir: Dir, pose: Pose): PixelCanvas {
   winking = false;
   if (S.scarecrow) plaid(c);
   if (S.arb && !S.briar) arbTexture(c);
+  if (S.apollo) apolloFinish(c, dir, pose);
   return dir === 'right' ? c.mirrored() : c;
 }
 
@@ -3199,6 +3618,17 @@ export function arrowFrame(i: number, look: ArcherLook = RANGER_LOOK): PixelCanv
     const [bx2, by2] = px(-6.2, -1.6);
     c.px(ax, ay, look.wisteria.bloom, sphere(-0.3, -0.3), { bias: 1, glow: 0.35 });
     c.px(bx2, by2, look.wisteria.bloom, sphere(0.3, -0.3), { bias: 2, glow: 0.35 });
+  }
+  if (look.apollo) {
+    // A ray of sunlight trailing off the fletching, and the white-hot head flaring either side.
+    for (const [t, k] of [[-6.4, 0.4], [-7.4, 0.22]] as const) {
+      const [sx, sy] = px(t);
+      c.spark(sx, sy, look.light[1], k);
+    }
+    for (const s of [-1, 1]) {
+      const [rx, ry] = px(4.8, s);
+      c.spark(rx, ry, look.light[2], 0.35);
+    }
   }
   if (look.crackle) {
     c.spark(hx, hy, look.crackle[0], 0.8);

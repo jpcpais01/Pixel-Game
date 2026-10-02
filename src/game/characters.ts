@@ -29,7 +29,7 @@ import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CHEM_STYLE, CRYO_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
-import { Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from './Archer';
+import { APOLLO_STYLE, Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from './Archer';
 import { Arbalest, BRIAR_STYLE } from './Arbalest';
 import { Windrunner, WISTERIA_STYLE } from './Windrunner';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
@@ -834,6 +834,17 @@ const KITS: KitDef[] = [
             },
             season: 'hallows',
           },
+          {
+            // The sun god: golden curls under a laurel wreath, a white chiton and saffron himation, a halo, a bow tipped with suns.
+            id: 'apollo',
+            name: 'Apollo',
+            accent: 0xffc840,
+            preview: { texture: 'archer_apollo', glow: 'archer_apollo_e', idle: 'archer_apollo_idle_down', chosen: 'archer_apollo_volley_down', originY: ARCHER_ORIGIN_Y / ARCHER_H },
+            buttons: {
+              attack: { texture: 'icon_bow_apollo' },
+              special: { texture: 'icon_rain_apollo' },
+            },
+          },
         ],
       },
       {
@@ -898,7 +909,7 @@ const KITS: KitDef[] = [
         ? new Arbalest(world, x, y, look === 'briar' ? BRIAR_STYLE : undefined)
         : look === 'wind' || look === 'wisteria'
           ? new Windrunner(world, x, y, look === 'wisteria' ? WISTERIA_STYLE : undefined)
-          : new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : RANGER_STYLE),
+          : new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : look === 'apollo' ? APOLLO_STYLE : RANGER_STYLE),
   },
   {
     id: 'rogue',

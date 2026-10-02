@@ -29,6 +29,8 @@ export interface ArrowStyle {
   spirit?: boolean;
   /** Petals its shots shed as they fly and scatter where they strike (Wisteria's, Briar Rose's). */
   petals?: number[];
+  /** Sunlight (Apollo's): sparks of sun shed as they fly and burst where they strike, and the rain comes down as shafts of sunlight. */
+  sun?: boolean;
 }
 
 export const RANGER_ARROW: ArrowStyle = {
@@ -120,6 +122,19 @@ export const BRIAR_ARROW: ArrowStyle = {
   suffix: '_briar',
   storm: false,
   petals: [0xffb0bc, 0xe8344a, 0xb4162e, 0x4a9036],
+};
+
+/** Apollo's: arrows of golden light with white-hot heads, shedding sparks of sun. */
+export const SUN_ARROW: ArrowStyle = {
+  core: 0xffffff,
+  hot: 0xfff0b0,
+  mid: 0xffc840,
+  deep: 0xc07a10,
+  light: 0xffd870,
+  suffix: '_apollo',
+  storm: false,
+  spirit: true,
+  sun: true,
 };
 
 /** How an arrow flies, when not the bow's usual way. */
@@ -240,6 +255,8 @@ export class Arrow implements Effect {
       this.world.debris(s.storm || s.spirit ? [s.core, s.hot, s.mid] : [s.hot, s.mid], snap(this.x - this.ux * 5), snap(this.y - ARROW_H - this.uy * 5), 1, this.y - 0.2, 'trail');
       // Now and then a petal comes loose and drifts off behind it.
       if (s.petals && Math.random() < 0.3) this.world.debris(s.petals, snap(this.x - this.ux * 7), snap(this.y - ARROW_H - this.uy * 7), 1, this.y - 0.2, 'spores');
+      // Sparks of sun drifting off behind it.
+      if (s.sun && Math.random() < 0.35) this.world.debris([s.core, s.hot, s.mid], snap(this.x - this.ux * 7), snap(this.y - ARROW_H - this.uy * 7), 1, this.y - 0.2, 'spores');
     }
   }
 
@@ -261,6 +278,7 @@ export class Arrow implements Effect {
     this.world.debris([s.core, s.hot, s.mid], snap(bx), snap(by), s.storm ? 12 : s.spirit ? 10 : 7, h.y + 20);
     if (s.petals) this.world.debris(s.petals, snap(bx), snap(by), 6, h.y + 20, 'spores');
     if (s.storm) this.world.addEffect(new Zap(this.world, bx, by, h.y + 20, s));
+    if (s.sun) this.world.debris([s.core, s.hot, s.mid], snap(bx), snap(by), 6, h.y + 20, 'burst');
     sound.arrowHit(this.world.pan(bx), s.storm);
     this.onHit(h, this.x, this.y);
     // A piercing bolt carries on through, until it runs out of bite.
@@ -390,6 +408,8 @@ const RAIN_TIME = 1100;
 /** How long an arrow takes to fall into view and land. */
 const FALL_TIME = 150;
 const FALL_H = 72;
+/** How long a shaft of sunlight shows where one of Apollo's arrows lands. */
+const BEAM_TIME = 160;
 /** How long the stuck arrows stay after the last has fallen. */
 const LINGER = 700;
 
@@ -414,6 +434,8 @@ export class ArrowRain implements Effect {
   private started = false;
   /** Bolts still showing: where, and ms left. */
   private bolts: { x: number; y: number; left: number; seed: number }[] = [];
+  /** Shafts of sunlight still showing (Apollo's rain): where, and ms left. */
+  private beams: { x: number; y: number; left: number }[] = [];
   private readonly gw: number;
   private readonly gh: number;
   private readonly ah: number;
@@ -504,6 +526,8 @@ export class ArrowRain implements Effect {
 
     for (const b of this.bolts) b.left -= dt;
     this.bolts = this.bolts.filter((b) => b.left > 0);
+    for (const b of this.beams) b.left -= dt;
+    this.beams = this.beams.filter((b) => b.left > 0);
     this.light.intensity = Math.max(this.light.intensity - dt * 0.012, this.markerLight());
 
     const t = this.age - (RAIN_DELAY + RAIN_TIME);
@@ -557,6 +581,11 @@ export class ArrowRain implements Effect {
     if (s.storm && i % 2 === 0) {
       this.bolts.push({ x: a.x, y: a.y, left: 90, seed: i });
       this.light.intensity = 3.2;
+    } else if (s.sun) {
+      // Every arrow lands in a shaft of sunlight, a flash of sparks at its foot.
+      this.beams.push({ x: a.x, y: a.y, left: BEAM_TIME });
+      this.world.debris([s.core, s.hot], a.x, a.y - 2, 3, a.y + 1, 'burst');
+      this.light.intensity = Math.max(this.light.intensity, 2.4);
     } else {
       this.light.intensity = Math.max(this.light.intensity, 1.4);
     }
@@ -614,6 +643,25 @@ export class ArrowRain implements Effect {
         air.put(px + 1, y, c.mid, 0.6);
         if (hash(y, b.seed, f + 9) > 0.93) for (let k = 1; k < 4; k++) air.put(px - k, y + k, c.mid, 0.8 - k * 0.2);
       }
+    }
+    // Shafts of sunlight down onto the arrows as they land: a white-hot core,
+    // gold either side, brightest at the foot and fading as they go.
+    for (const b of this.beams) {
+      const k = b.left / BEAM_TIME;
+      const x = Math.round(b.x - this.x + gw);
+      const y1 = b.y - this.y + ah;
+      for (let y = 0; y <= y1; y++) {
+        const v = (y / y1) ** 0.7 * k;
+        air.put(x, y, c.core, v);
+        air.put(x - 1, y, c.hot, v * 0.6);
+        air.put(x + 1, y, c.hot, v * 0.6);
+        if (y > y1 - 12) {
+          air.put(x - 2, y, c.mid, v * 0.35);
+          air.put(x + 2, y, c.mid, v * 0.35);
+        }
+      }
+      // Its pool of light on the ground.
+      for (let dx = -4; dx <= 4; dx++) g.put(Math.round(b.x - this.x + gw + dx), Math.round(b.y - this.y + gh), Math.abs(dx) < 2 ? c.hot : c.mid, k * (1 - Math.abs(dx) / 5));
     }
     g.flush();
     air.flush();
