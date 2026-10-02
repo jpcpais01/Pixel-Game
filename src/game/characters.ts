@@ -54,8 +54,8 @@ import { POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
 import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT, Wraith } from './Wraith';
 import { POLTER_H, POLTER_ORIGIN_Y } from '../art/poltergeist';
 import { WRAITH_H, WRAITH_ORIGIN_Y } from '../art/wraith';
-import { ENGINEER_KIT, Engineer } from './Engineer';
-import { EINSTEIN_KIT, SCIENTIST_KIT, Scientist } from './Scientist';
+import { ENGINEER_KIT, Engineer, FORGEBEARD_KIT } from './Engineer';
+import { EINSTEIN_KIT, SCIENTIST_KIT, Scientist, TESLA_KIT } from './Scientist';
 import { INV_H, INV_ORIGIN_Y } from '../art/inventor';
 import { BENFICA_KIT, EAGLE_KIT, Eagle, PHOENIX_KIT } from './Eagle';
 import { LION_KIT, Lion, NEMEAN_KIT, SPORTING_KIT } from './Lion';
@@ -1721,6 +1721,19 @@ const KITS: KitDef[] = [
           special: { texture: 'icon_turret' },
         },
         lookName: 'Hard hat',
+        skins: [
+          {
+            // A stout dwarven runesmith: a braided copper beard ringed in brass, a rune-browed half-helm with goggles, mail under a leather apron, a rune-cut hammer-wrench, and sentries of stone and brass.
+            id: 'forgebeard',
+            name: 'Forgebeard',
+            accent: 0xff7a2a,
+            preview: { texture: 'engineer_forgebeard', glow: 'engineer_forgebeard_e', idle: 'engineer_forgebeard_idle_down', chosen: 'engineer_forgebeard_eureka_down', originY: INV_ORIGIN_Y / INV_H },
+            buttons: {
+              attack: { texture: 'icon_wrench_forgebeard' },
+              special: { texture: 'icon_turret_forgebeard' },
+            },
+          },
+        ],
       },
       {
         // Lightning that leaps from foe to foe, and an orb that drags them in and bursts.
@@ -1748,12 +1761,25 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_orb_einstein' },
             },
           },
+          {
+            // Slicked black hair parted in the middle, a neat moustache, a wing collar and black three-piece suit with a watch chain, and a copper-coiled lightning rod.
+            id: 'tesla',
+            name: 'Tesla',
+            accent: 0xa478ff,
+            preview: { texture: 'scientist_tesla', glow: 'scientist_tesla_e', idle: 'scientist_tesla_idle_down', chosen: 'scientist_tesla_eureka_down', originY: INV_ORIGIN_Y / INV_H },
+            buttons: {
+              attack: { texture: 'icon_tesla_tesla' },
+              special: { texture: 'icon_orb_tesla' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
       if (look === 'scientist') return new Scientist(world, x, y, SCIENTIST_KIT);
       if (look === 'einstein') return new Scientist(world, x, y, EINSTEIN_KIT);
+      if (look === 'tesla') return new Scientist(world, x, y, TESLA_KIT);
+      if (look === 'forgebeard') return new Engineer(world, x, y, FORGEBEARD_KIT);
       return new Engineer(world, x, y, ENGINEER_KIT);
     },
   },
