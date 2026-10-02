@@ -713,3 +713,21 @@ export const bombingRunIcon: IconPainter = (put, p) => {
   put(14, 5, p.hot);
   seg(put, 15, 2, 15, 7, p.mid);
 };
+
+/** Skyburst: a rocket's trail climbing from the corner into a great chrysanthemum, glitter falling under it. */
+export const skyburstIcon: IconPainter = (put, p) => {
+  seg(put, 2, 15, 4, 12, p.deep);
+  seg(put, 4, 11, 6, 9, p.mid);
+  // The burst: long and short rays in turn, white-hot near the heart, drooping to their deep tips.
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + 0.13;
+    const len = i % 2 ? 4.5 : 6.2;
+    for (let r = 1.5; r <= len; r += 0.5) {
+      const f = r / len;
+      put(Math.round(9.5 + Math.cos(a) * r - 0.5), Math.round(6.5 + Math.sin(a) * r * 0.9 + f * f * 1.3 - 0.5), f < 0.45 ? p.hot : f < 0.85 ? p.mid : p.deep);
+    }
+  }
+  disc(put, 9.5, 6.5, 1.4, p.core);
+  // Glitter falling.
+  for (const [x, y] of [[7, 13], [10, 15], [13, 13], [9, 12], [12, 15], [5, 15]]) put(x, y, p.core);
+};

@@ -51,6 +51,8 @@ import { SITH_KIT, WARLORD_KIT } from '../Sith';
 import { magnumOpus } from './transmuter';
 import { AQUANAUT_KIT, BARNACLE_KIT } from '../Aquanaut';
 import { torpedo } from './aquanaut';
+import { Skyburst } from './fireworks';
+import { CARNIVAL_STYLE, VERMILION_STYLE } from '../Pyrotechnist';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
@@ -502,6 +504,16 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.bombingRunIcon,
     cast: bombingRun,
   },
+  'pyrotechnist:pyrotechnist': {
+    name: 'Skyburst',
+    cost: 70,
+    windup: 600,
+    aim: 'spot',
+    range: 120,
+    pal: VERMILION_STYLE.pal,
+    icon: icons.skyburstIcon,
+    cast: (c) => c.world.addEffect(new Skyburst(c.world, c)),
+  },
 };
 
 /** Skins' colours for their type's Special, by `class:skin` (the name stays the type's). */
@@ -574,6 +586,7 @@ const SKINS: Record<string, UltSkin> = {
   'bear:panda': { pal: PANDA_KIT.pal, type: 'bear' },
   'brewmaster:jarl': { pal: JARL_KIT.ult },
   'aviator:ace': { pal: ACE_KIT.pal },
+  'pyrotechnist:carnival': { pal: CARNIVAL_STYLE.pal },
 };
 
 /** The Special as worn: its def, and its name, colours and icon for this look. */

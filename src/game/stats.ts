@@ -110,6 +110,7 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'bear.bear': { role: 'tank', hp: 130, damage: 9.5, defense: 24, rate: 2.18, speed: 52, regen: 0.8, skill: 2.1, ult: 138, kit: 14 },
   'brewmaster.brewmaster': { role: 'melee', hp: 130, damage: 12, defense: 16, rate: 2.57, speed: 52, regen: 0.9, skill: 4.3, ult: 60, kit: 14 },
   'aviator.aviator': { role: 'ranged', hp: 95, damage: 10, defense: 11, rate: 2.5, speed: 68, regen: 0.6, skill: 1.67, ult: 50, kit: 8 },
+  'pyrotechnist.pyrotechnist': { role: 'ranged', hp: 100, damage: 8.5, defense: 12, rate: 2.98, speed: 64, regen: 0.6, skill: 2, ult: 138, kit: 8 },
 };
 
 /** An even spread on the budget, for a type not in the table yet (its Damage scale is 1: its code's own numbers). */

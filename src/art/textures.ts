@@ -105,6 +105,7 @@ import { registerAquanautArt } from './aquanautKit';
 import { registerBearIcons } from './bear';
 import { BREW_LOOKS, KEG_SIZE, kegFrames, kegKey, fireIcon as brewFireIcon, paddleIcon } from './brewmaster';
 import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, LION_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
+import { pyroIcons } from './pyrotechnist';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import {
@@ -595,6 +596,8 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   registerBearIcons((key, px) => scene.textures.addCanvas(key, toCanvas(16, 16, px)));
   // The Aviator's biplane, its bombs and her buttons (she herself is a hero sheet).
   aviatorTextures(fxRegistrar(scene));
+  // The Pyrotechnist's buttons: the Roman candle and the firecrackers, in each look.
+  for (const [key, px] of pyroIcons()) scene.textures.addCanvas(key, toCanvas(16, 16, px));
 
   scene.textures.addCanvas('icon_cannon', toCanvas(16, 16, cannonIcon()));
   scene.textures.addCanvas('icon_salvo', toCanvas(16, 16, salvoIcon()));

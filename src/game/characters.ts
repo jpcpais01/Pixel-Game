@@ -68,6 +68,8 @@ import { AQUA_H, AQUA_ORIGIN_Y } from '../art/aquanaut';
 import { Bear, BEAR_KIT, PANDA_KIT } from './Bear';
 import { ACE_KIT, AVIATOR_KIT, Aviator } from './Aviator';
 import { AVI_H, AVI_ORIGIN_Y } from '../art/aviator';
+import { CARNIVAL_STYLE, Pyrotechnist, VERMILION_STYLE } from './Pyrotechnist';
+import { PYRO_H, PYRO_ORIGIN_Y } from '../art/pyrotechnist';
 import { worn } from './skins';
 import { QUICKSILVER_KIT, RUBEDO_KIT, Transmuter } from './Transmuter';
 import { TRANS_H, TRANS_ORIGIN_Y } from '../art/transmuter';
@@ -2071,6 +2073,44 @@ const KITS: KitDef[] = [
     ],
     spawn(world, x, y, look) {
       return new Aviator(world, x, y, look === 'ace' ? ACE_KIT : AVIATOR_KIT);
+    },
+  },
+  {
+    id: 'pyrotechnist',
+    name: 'Pyrotechnist',
+    blurb: 'Fireworks for every foe',
+    types: [
+      {
+        // A Roman candle's stars of coloured fire, and a string of firecrackers that staggers a crowd.
+        id: 'pyrotechnist',
+        name: 'Pyrotechnist',
+        role: 'Fireworks and firecrackers',
+        accent: 0xff7a3a,
+        attack: 'Roman candle',
+        special: 'Firecrackers',
+        preview: { texture: 'pyrotechnist', glow: 'pyrotechnist_e', idle: 'pyrotechnist_idle_down', chosen: 'pyrotechnist_finale_down', originY: PYRO_ORIGIN_Y / PYRO_H },
+        buttons: {
+          attack: { texture: 'icon_candle' },
+          special: { texture: 'icon_crackers' },
+        },
+        lookName: 'Vermilion',
+        skins: [
+          {
+            // A Venetian carnival: harlequin diamonds in purple, teal and gold, a gilded half mask, a plumed hat.
+            id: 'carnival',
+            name: 'Carnival',
+            accent: 0xb070f0,
+            preview: { texture: 'pyrotechnist_carnival', glow: 'pyrotechnist_carnival_e', idle: 'pyrotechnist_carnival_idle_down', chosen: 'pyrotechnist_carnival_finale_down', originY: PYRO_ORIGIN_Y / PYRO_H },
+            buttons: {
+              attack: { texture: 'icon_candle_carnival' },
+              special: { texture: 'icon_crackers_carnival' },
+            },
+          },
+        ],
+      },
+    ],
+    spawn(world, x, y, look) {
+      return new Pyrotechnist(world, x, y, look === 'carnival' ? CARNIVAL_STYLE : VERMILION_STYLE);
     },
   },
 ];

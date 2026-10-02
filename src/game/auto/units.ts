@@ -256,6 +256,10 @@ const DEFS: Record<string, Def> = {
   'brewmaster.brewmaster': { cost: 3, origin: 'forged', range: 1, attack: ['swing', 'swing2', 'slam'], mana: 90,
     skill: { name: 'Firebreath', cd: 7, kind: 'beam', aim: 'target', r: 2, dmg: 1.4, burn: 1.2, fx: 'flame', anim: 'breath' },
     ult: { kind: 'beam', aim: 'target', r: 6, dmg: 3.6, knock: 1, stun: 0.6, fx: 'quake', anim: 'heave' } },
+  // The Pyrotechnist, a Forged backliner with the Alchemists
+  'pyrotechnist.pyrotechnist': { cost: 3, origin: 'forged', range: 3, attack: ['fire'], missile: 'fire', mana: 80,
+    skill: { name: 'Firecrackers', cd: 7, kind: 'blast', aim: 'crowd', r: 1.2, dmg: 1.6, stun: 0.6, delay: 0.5, fx: 'fire', anim: 'toss' },
+    ult: { kind: 'rain', aim: 'crowd', r: 2, n: 6, dmg: 7.5, delay: 1.4, fx: 'fire', anim: 'finale' } },
 };
 
 export const UNITS: Record<string, UnitDef> = {};

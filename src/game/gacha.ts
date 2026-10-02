@@ -82,6 +82,8 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'brewmaster:jarl': 'epic',
   // The Aviator's Flying Ace.
   'aviator:ace': 'epic',
+  // Wished for like the rest (not a season's).
+  'pyrotechnist:carnival': 'epic',
 };
 
 /** One skin as the shop knows it. */

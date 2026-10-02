@@ -237,4 +237,9 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'The jetpack hops her to a spot, untouchable in the air; the landing blasts foes back.',
     special: 'Her biplane roars over along the aim, dropping a line of bombs, the last one biggest.',
   },
+  'pyrotechnist.pyrotechnist': {
+    attack: 'Fires stars of coloured fire that pop on the first foe, singeing those near.',
+    ability: 'Tosses a string of firecrackers; each bang hurts and staggers foes near it.',
+    special: 'Six rockets burst over foes near the spot, raining glitter that burns.',
+  },
 };

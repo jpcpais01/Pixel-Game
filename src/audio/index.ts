@@ -1064,6 +1064,31 @@ class GameSound {
     if (t !== null) this.sfx!.step(t);
   }
 
+  candle(pan = 0): void {
+    const t = this.slot('candle');
+    if (t !== null) this.sfx!.candle(t, pan);
+  }
+
+  starPop(pan = 0): void {
+    const t = this.slot('starPop');
+    if (t !== null) this.sfx!.starPop(t, pan);
+  }
+
+  firecracker(pan = 0): void {
+    const t = this.slot('firecracker');
+    if (t !== null) this.sfx!.firecracker(t, pan);
+  }
+
+  rocketWhistle(pan = 0): void {
+    const t = this.slot('rocketWhistle');
+    if (t !== null) this.sfx!.rocketWhistle(t, pan);
+  }
+
+  fireworkBurst(pan = 0): void {
+    const t = this.slot('fireworkBurst');
+    if (t !== null) this.sfx!.fireworkBurst(t, pan);
+  }
+
   private live(): boolean {
     return this.running && !this._muted;
   }
