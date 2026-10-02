@@ -37,7 +37,7 @@ import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, RO
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
-import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
+import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, SKALD_KIT, TAIKO_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
 import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT, PRIMAVERA_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
@@ -1118,6 +1118,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_song_orpheus' },
             },
           },
+          {
+            // A Norse saga-singer: iron spangenhelm, flaxen braids, a bearskin over blue-grey wool, a carved round lyre; his notes fly as runes.
+            id: 'skald',
+            name: 'Skald',
+            accent: 0x9cd6ff,
+            preview: { texture: 'bard_skald', glow: 'bard_skald_e', idle: 'bard_skald_idle_down', chosen: 'bard_skald_song_down', originY: BARD_ORIGIN_Y / BARD_H },
+            buttons: {
+              attack: { texture: 'icon_lute_skald' },
+              special: { texture: 'icon_song_skald' },
+            },
+          },
         ],
       },
       {
@@ -1146,11 +1157,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_rhythm_howl' },
             },
           },
+          {
+            // A taiko drummer: white hachimaki, indigo happi, a lacquered odaiko with brass tacks, long hinoki bachi.
+            id: 'taiko',
+            name: 'Taiko',
+            accent: 0xff5a2a,
+            preview: { texture: 'bard_taiko', glow: 'bard_taiko_e', idle: 'bard_taiko_idle_down', chosen: 'bard_taiko_boom_down', originY: BARD_ORIGIN_Y / BARD_H },
+            buttons: {
+              attack: { texture: 'icon_drum_taiko' },
+              special: { texture: 'icon_rhythm_taiko' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { minstrel: MINSTREL_KIT, wildsong: WILD_KIT, harlequin: HARLEQUIN_KIT, vagabond: VAGABOND_KIT, fadista: FADISTA_KIT, orpheus: ORPHEUS_KIT, drummer: DRUMMER_KIT, howl: HOWL_KIT }[look] ?? MINSTREL_KIT;
+      const kit = { minstrel: MINSTREL_KIT, wildsong: WILD_KIT, harlequin: HARLEQUIN_KIT, vagabond: VAGABOND_KIT, fadista: FADISTA_KIT, orpheus: ORPHEUS_KIT, skald: SKALD_KIT, drummer: DRUMMER_KIT, howl: HOWL_KIT, taiko: TAIKO_KIT }[look] ?? MINSTREL_KIT;
       return new Bard(world, x, y, kit);
     },
   },
