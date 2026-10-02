@@ -13,6 +13,7 @@ import { HeavensLight, SunWrath } from './holy';
 import { BloodMoon, Eclipse, FanOfKnives, SoulStorm } from './shadow';
 import { ChemBomb, GreatArrow, Pestilence } from './nature';
 import { PowderKeg, Tempest } from './archers';
+import { Skyhunt, skyhuntIcon } from './falconer';
 import { Encore, ThunderOfWar } from './bard';
 import { Legion, TimeStop } from './chrono';
 import { HundredCuts, quakeGate, SkyQuake } from './samurai';
@@ -215,6 +216,15 @@ const ULTS: Record<string, UltDef> = {
     pal: pal(0xffffff, 0xd8fff6, 0x6ef0dc, 0x2a9a9a, 0xa0fff0),
     icon: icons.tempestIcon,
     cast: (c) => c.world.addEffect(new Tempest(c.world, c)),
+  },
+  'archer:falconer': {
+    name: 'Skyhunt',
+    cost: 65,
+    windup: 550,
+    aim: 'self',
+    pal: pal(0xffffff, 0xfff0c8, 0xf0b050, 0x9a5a22, 0xffc880),
+    icon: skyhuntIcon,
+    cast: (c) => c.world.addEffect(new Skyhunt(c.world, c)),
   },
   'rogue:rogue': {
     name: 'Fan of Knives',
@@ -451,6 +461,7 @@ const SKINS: Record<string, UltSkin> = {
   'archer:scarecrow': { pal: pal(0xfff4d0, 0xffb048, 0xff7a1a, 0x2a7a3a, 0x9cff9a) },
   'archer:hunt': { pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
   'archer:wisteria': { pal: pal(0xffffff, 0xe8dcff, 0xb48ae8, 0x5a7a58, 0xd0b8ff), type: 'wind' },
+  'archer:snowfeather': { pal: pal(0xffffff, 0xe8f6ff, 0x9ad8ff, 0x4a86c0, 0xc0e8ff), type: 'falconer' },
   'archer:briar': { pal: pal(0xfff0f2, 0xffa0b0, 0xe8344a, 0x2e6e24, 0xff6a7a), type: 'arbalest' },
   'rogue:corsair': { pal: pal(0xfffbe0, 0xffe08a, 0xe0a030, 0x8a5018, 0xffc050) },
   'rogue:kitsune': { pal: pal(0xf4fbff, 0xa8e0ff, 0x4a9cff, 0x1a3aa0, 0x70b0ff), type: 'dancer' },

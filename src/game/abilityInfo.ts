@@ -92,6 +92,11 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Flips back out of reach, firing a gale arrow that pierces and blows foes away.',
     special: 'A walking cyclone pulls foes in, wears at them, then flings them away.',
   },
+  'archer.falconer': {
+    attack: 'Quick, light arrows from a short bow, loosed on the move.',
+    ability: 'Casts her falcon at a foe: it rakes it three times and marks it, and her arrows hit marked foes harder.',
+    special: 'She whistles up a flight of hawks that circle overhead, then stoop on every foe around her.',
+  },
   'rogue.rogue': {
     attack: 'Two bleeding stabs, then an X cut that rips the wounds open.',
     ability: 'Dashes through foes unharmed, then hides for a double-damage ambush.',

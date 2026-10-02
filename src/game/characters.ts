@@ -33,6 +33,8 @@ import { Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from '
 import { Arbalest, BRIAR_STYLE } from './Arbalest';
 import { Windrunner, WISTERIA_STYLE } from './Windrunner';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
+import { Falconer, SNOWFEATHER_KIT } from './Falconer';
+import { FALC_H, FALC_ORIGIN_Y } from '../art/falconer';
 import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
@@ -892,13 +894,43 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // A falconer in a leather hood and furred coat, a short hunting bow, her peregrine on the gauntlet.
+        id: 'falconer',
+        name: 'Falconer',
+        role: 'Bow and bird',
+        accent: 0xe0a040,
+        attack: 'Quick shot',
+        special: 'Falcon strike',
+        preview: { texture: 'archer_falconer', glow: 'archer_falconer_e', idle: 'archer_falconer_idle_down', chosen: 'archer_falconer_whistle_down', originY: FALC_ORIGIN_Y / FALC_H },
+        buttons: {
+          attack: { texture: 'icon_quickshot' },
+          special: { texture: 'icon_falcon' },
+        },
+        lookName: 'Peregrine',
+        skins: [
+          {
+            // White and grey furs, a snowy owl on the glove, a pale birch bow fletched in frost blue.
+            id: 'snowfeather',
+            name: 'Snowfeather',
+            accent: 0xbfe6ff,
+            preview: { texture: 'archer_falconer_snow', glow: 'archer_falconer_snow_e', idle: 'archer_falconer_snow_idle_down', chosen: 'archer_falconer_snow_whistle_down', originY: FALC_ORIGIN_Y / FALC_H },
+            buttons: {
+              attack: { texture: 'icon_quickshot_snow' },
+              special: { texture: 'icon_falcon_snow' },
+            },
+          },
+        ],
+      },
     ],
     spawn: (world, x, y, look) =>
       look === 'arbalest' || look === 'briar'
         ? new Arbalest(world, x, y, look === 'briar' ? BRIAR_STYLE : undefined)
         : look === 'wind' || look === 'wisteria'
           ? new Windrunner(world, x, y, look === 'wisteria' ? WISTERIA_STYLE : undefined)
-          : new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : RANGER_STYLE),
+          : look === 'falconer' || look === 'snowfeather'
+            ? new Falconer(world, x, y, look === 'snowfeather' ? SNOWFEATHER_KIT : undefined)
+            : new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : RANGER_STYLE),
   },
   {
     id: 'rogue',

@@ -794,6 +794,18 @@ class GameSound {
     if (t !== null) this.sfx!.screech(t, pan);
   }
 
+  /** The falconer's bird calling as it leaves her fist: a falcon's "kek-kek-kek", or an owl's bark. */
+  falconCall(pan = 0, owl = false): void {
+    const t = this.slot('falconCall');
+    if (t !== null) this.sfx!.falconCall(t, pan, owl);
+  }
+
+  /** The falconer's whistle, two fingers at her lips: a long rising note and a sharp fall. */
+  whistle(pan = 0): void {
+    const t = this.slot('whistle');
+    if (t !== null) this.sfx!.whistle(t, pan);
+  }
+
   roar(pan = 0, big = false): void {
     const t = this.slot('roar');
     if (t !== null) this.sfx!.roar(t, pan, big);
