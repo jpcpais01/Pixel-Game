@@ -48,6 +48,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'bard:orpheus': 'legendary',
   'druid:titania': 'legendary',
   'wizard:astral': 'epic',
+  'necromancer:drowned': 'epic',
   'jedi:master': 'epic',
   'wizard:abyssal': 'epic',
   'warrior:spartan': 'epic',

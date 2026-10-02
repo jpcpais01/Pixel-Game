@@ -11,6 +11,7 @@ import { ALCHEMIST_LOOKS, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, flaskFrame }
 import { FOXGLOVE_BREW, foxBogIcon, foxFlaskIcon } from './foxglove';
 import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbowBoltFrame, stuckArrowFrame, stuckBoltFrame } from './archer';
 import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
+import { boneSpikesIcon, DROWNED_ICON, rimeBoltIcon } from './lich';
 import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
@@ -287,6 +288,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_raise_tomb', toCanvas(16, 16, tombRaiseIcon()));
   scene.textures.addCanvas('icon_lance_wyrm', toCanvas(16, 16, bloodLanceIcon(WYRM_ICON)));
   scene.textures.addCanvas('icon_nova_wyrm', toCanvas(16, 16, novaIcon(WYRM_ICON)));
+  // The Lich's (and the Drowned King's) rime bolt and bone spikes.
+  scene.textures.addCanvas('icon_rime', toCanvas(16, 16, rimeBoltIcon()));
+  scene.textures.addCanvas('icon_bonespikes', toCanvas(16, 16, boneSpikesIcon()));
+  scene.textures.addCanvas('icon_rime_drowned', toCanvas(16, 16, rimeBoltIcon(DROWNED_ICON)));
+  scene.textures.addCanvas('icon_bonespikes_drowned', toCanvas(16, 16, boneSpikesIcon(DROWNED_ICON)));
 
   yield;
   // The bards' glowing notes (the minstrel's ('note_e', frames n0 and n1; the wildsong's leaf notes and wisps in

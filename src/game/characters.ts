@@ -36,6 +36,8 @@ import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
 import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
+import { DROWNED_KIT, Lich, LICH_KIT } from './Lich';
+import { LICH_H, LICH_ORIGIN_Y } from '../art/lich';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
@@ -1037,8 +1039,39 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // A crowned skeleton king in midnight robes and frost-rimed fur: shards of
+        // bone-ice that chill and freeze, spikes bursting from the ground, and a
+        // blizzard round him instead of raising the dead.
+        id: 'lich',
+        name: 'Lich',
+        role: 'Frost and the grave',
+        accent: 0x8ad8ff,
+        attack: 'Rime bolt',
+        special: 'Bone spikes',
+        preview: { texture: 'necro_lich', glow: 'necro_lich_e', idle: 'necro_lich_idle_down', chosen: 'necro_lich_winter_down', originY: LICH_ORIGIN_Y / LICH_H },
+        buttons: {
+          attack: { texture: 'icon_rime' },
+          special: { texture: 'icon_bonespikes' },
+        },
+        lookName: 'Rimecrown',
+        skins: [
+          {
+            // A sea king risen from the deep: a barnacled verdigris crown set with coral, kelp over sea-green robes, a driftwood staff and a pearl for a soul.
+            id: 'drowned',
+            name: 'Drowned King',
+            accent: 0x3ae8c0,
+            preview: { texture: 'necro_drowned', glow: 'necro_drowned_e', idle: 'necro_drowned_idle_down', chosen: 'necro_drowned_winter_down', originY: LICH_ORIGIN_Y / LICH_H },
+            buttons: {
+              attack: { texture: 'icon_rime_drowned' },
+              special: { texture: 'icon_bonespikes_drowned' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
+      if (look === 'lich' || look === 'drowned') return new Lich(world, x, y, look === 'drowned' ? DROWNED_KIT : LICH_KIT);
       const kit = { necro: NECRO_KIT, tomb: TOMB_KIT, blood: BLOOD_KIT, wyrm: WYRM_KIT }[look] ?? NECRO_KIT;
       return new Necromancer(world, x, y, kit);
     },
