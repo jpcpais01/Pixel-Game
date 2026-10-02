@@ -1,35 +1,41 @@
 // The Force Sage's effects on the board: stones torn from the ground and
 // hurled, the Force barrier's dome and burst, and Levitation, every foe round
-// her lifted off its shadow and slammed down. The Starseer's stones are dark
-// meteorites veined with her starlight.
+// her lifted off its shadow and slammed down. The Dawnseer's stones are
+// sunstones, amber crystals lit from within that burst into golden shards,
+// and her dome bears a faint sunburst.
 
 import { CHEST, clamp01, dither, disc, easeIn, easeOut, FLAT, hash, impact, OVER, ring, rune, type Kit, type Move, type Pal, type Pt, type Px, type Stage } from '../paint';
 import { flight } from './common';
 
 const ROCK = [0xbcb4a0, 0x958c7c, 0x6e665a, 0x4a443a];
-const METEOR = [0x5a5070, 0x423a52, 0x2c2638, 0x1a1622];
+const SUNSTONE = [0xffe48a, 0xf8bc3e, 0xde8a1c, 0xa8520e];
 const GRIT = [0x8a7a64, 0x6a5a48, 0x4a3a2a];
 
-/** Her stones are meteorites when her Force is starlight (the Starseer's palette). */
-const meteor = (p: Pal): boolean => ((p.mid >> 16) & 255) > ((p.mid >> 8) & 255);
+/** Her stones are sunstones when her Force is the morning's gold (the Dawnseer's palette, warmer than it is green). */
+const sunstone = (p: Pal): boolean => ((p.mid >> 16) & 255) > ((p.mid >> 8) & 255);
 
-/** A lumpy stone `r` px across turned to `th`: lit on its upper left, a rim of the Force round it. */
+/** A lumpy stone `r` px across turned to `th` (or a sunstone crystal, long and pointed): lit on its upper left, a rim of the Force round it. */
 function stone(px: Px, x: number, y: number, r: number, th: number, p: Pal, a = 1): void {
-  const tones = meteor(p) ? METEOR : ROCK;
-  const R = Math.ceil(r + 1);
+  const sun = sunstone(p);
+  const tones = sun ? SUNSTONE : ROCK;
+  const R = Math.ceil(r * (sun ? 1.5 : 1) + 1);
   for (let dy = -R; dy <= R; dy++)
     for (let dx = -R; dx <= R; dx++) {
-      const ang = Math.atan2(dy, dx) - th;
-      const rr = r * (1 + 0.16 * Math.sin(ang * 3 + 1.3));
-      const d = Math.hypot(dx, dy);
       const X = Math.round(x + dx);
       const Y = Math.round(y + dy);
       if (a < 1 && dither(X, Y) >= a) continue;
-      if (d <= rr) {
+      // Its reach from the middle, as a share of its edge there: a lumpy round rock, or a crystal's diamond.
+      let e: number;
+      if (sun) {
+        const u = dx * Math.cos(th) + dy * Math.sin(th);
+        const v = -dx * Math.sin(th) + dy * Math.cos(th);
+        e = Math.abs(u) / (r * 1.45) + Math.abs(v) / (r * 0.75);
+      } else e = Math.hypot(dx, dy) / (r * (1 + 0.16 * Math.sin((Math.atan2(dy, dx) - th) * 3 + 1.3)));
+      if (e <= 1) {
         const lit = -(dx + dy) / (r * 1.4);
-        const c = meteor(p) && Math.abs(Math.sin(dx * 1.4 + dy * 0.8 + th)) < 0.2 ? p.core : tones[lit > 0.4 ? 0 : lit > 0 ? 1 : lit > -0.4 ? 2 : 3];
+        const c = sun && e < 0.35 ? p.core : tones[lit > 0.4 ? 0 : lit > 0 ? 1 : lit > -0.4 ? 2 : 3];
         px.put(X, Y, c, 1);
-      } else if (d <= rr + 1) px.put(X, Y, p.mid, 0.9);
+      } else if (e <= 1 + 1 / Math.max(1, r)) px.put(X, Y, p.mid, 0.9);
     }
 }
 
@@ -48,7 +54,7 @@ function stoneShot(s: Stage, a: Pt, b: Pt, dur: number, p: Pal): void {
     L.light(q.x, q.y, 14, p.light, 0.45);
   }, 0, () => {
     impact(s, b, p, 0.6);
-    s.sparks(b.x, b.y, 7, meteor(p) ? [p.core, ...METEOR.slice(0, 2)] : [...ROCK.slice(0, 2), ...GRIT], { speed: 26, up: 28, g: 140, life: 0.45, z: CHEST });
+    s.sparks(b.x, b.y, 7, sunstone(p) ? [p.core, ...SUNSTONE.slice(0, 3)] : [...ROCK.slice(0, 2), ...GRIT], { speed: 26, up: 28, g: 140, life: 0.45, z: CHEST });
   });
 }
 
@@ -93,6 +99,17 @@ function dome(ground: Px, air: Px, x: number, y: number, r: number, h: number, p
       const Y = Math.round(y - h * u + Math.sin(th) * rr * FLAT);
       if (dither(X, Y) >= a * 0.7) continue;
       air.put(X, Y, p.mid, 1);
+    }
+  }
+  if (sunstone(p)) {
+    // The Dawnseer's: a faint sunburst of rays fanning up from her feet.
+    for (let i = 1; i < 8; i++) {
+      const th = (i / 8) * Math.PI;
+      for (let k = 0.3; k < (i % 2 ? 0.9 : 0.65); k += 0.08) {
+        const X = Math.round(x + Math.cos(th) * r * k);
+        const Y = Math.round(y - Math.sin(th) * h * k);
+        if (dither(X, Y) < a * 0.4) air.put(X, Y, i % 2 ? p.hot : p.mid, 1);
+      }
     }
   }
   ring(ground, x, y, r, 0.8, p, a);

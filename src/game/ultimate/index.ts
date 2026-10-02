@@ -52,7 +52,7 @@ import { ACE_KIT, AVIATOR_KIT } from '../Aviator';
 import { DarkDominion } from './sith';
 import { Graveyard, graveyardIcon } from './barrow';
 import { Levitation, levitationIcon } from './sage';
-import { SAGE_KIT, STARSEER_KIT } from '../Sage';
+import { DAWNSEER_KIT, SAGE_KIT } from '../Sage';
 import { cutsGate, ThousandCuts, thousandCutsIcon } from './twin';
 import { Purge, purgeIcon } from './inquisitor';
 import { RINGBLADE_KIT, VOIDHUNTER_KIT } from '../Inquisitor';
@@ -667,7 +667,7 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:guard': { pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
   'jedi:master': { pal: pal(0xf4fff4, 0x9af4a8, 0x2ed058, 0x0e7a32, 0x5aff7a) },
   'jedi:warlord': { pal: WARLORD_KIT.dominion, type: 'sith' },
-  'jedi:starseer': { pal: STARSEER_KIT.lift, type: 'sage' },
+  'jedi:dawnseer': { pal: DAWNSEER_KIT.lift, type: 'sage' },
   'jedi:peacock': { pal: pal(0xf6fff8, 0x86f4ae, 0x22d070, 0x3a68ff, 0xffd060), type: 'twin' },
   'jedi:voidhunter': { pal: VOIDHUNTER_KIT.pal, type: 'inquisitor' },
   'jedi:nomad': { pal: pal(0xf6fffd, 0xa8f0ea, 0x3ac8cc, 0x1a7480, 0x6ae0dc) },

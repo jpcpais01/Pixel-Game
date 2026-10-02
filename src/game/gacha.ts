@@ -64,7 +64,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'wizard:prism': 'epic',
   'wizard:firebird': 'legendary',
   'jedi:master': 'epic',
-  'jedi:starseer': 'epic',
+  'jedi:dawnseer': 'epic',
   'jedi:peacock': 'epic',
   'wizard:abyssal': 'epic',
   'warrior:spartan': 'epic',

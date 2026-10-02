@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Dir } from '../art/wizard';
-import { SAGE_CHEST_Y, SAGE_H, SAGE_ORIGIN_X, SAGE_ORIGIN_Y, SAGE_RELEASE, SAGE_W, STONE_TURNS, stoneKey, type StoneKind } from '../art/sage';
+import { SAGE_CHEST_Y, SAGE_H, SAGE_ORIGIN_X, SAGE_ORIGIN_Y, SAGE_RELEASE, SAGE_W, STONE_TURNS, stoneKey, type StoneKind, type StoneMat } from '../art/sage';
 import { snap } from './display';
 import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
@@ -28,7 +28,8 @@ import { stand } from './rest';
 //    outward and throws them back.
 //  - Her Special, Levitation, is in ultimate/sage.ts: she holds every foe
 //    round her up in the air (she plays it through `channel`).
-// The Starseer throws meteorites, dark and veined with starlight; she plays the same.
+// The Dawnseer tears up sunstones, amber crystal that bursts into golden
+// shards, and her dome bears a faint sunburst; she plays the same.
 
 const stats = HERO_STATS['jedi.sage'];
 
@@ -68,8 +69,10 @@ type State = 'free' | 'throw' | 'heave' | 'barrier' | 'channel' | 'slam';
 /** How a Sage look plays: its texture, its stones, and the colours of her Force and her Special. */
 export interface SageKit {
   key: string;
-  /** The stones are the Starseer's meteorites. */
-  meteor: boolean;
+  /** What her stones are (the Dawnseer's sunstones). */
+  stone: StoneMat;
+  /** A faint sunburst of rays across her dome (the Dawnseer). */
+  rays: boolean;
   /** Her Force: the throw's trail, the dome, the bursts. */
   force: Pal;
   /** Levitation's colours. */
@@ -80,19 +83,21 @@ export interface SageKit {
 
 export const SAGE_KIT: SageKit = {
   key: 'jedi_sage',
-  meteor: false,
+  stone: 'rock',
+  rays: false,
   force: pal(0xf0fffc, 0x9cf6e8, 0x3ad0c0, 0x14605a, 0x6ee8d8),
   lift: pal(0xf4fffd, 0xa8f8ea, 0x40d4c4, 0x166a62, 0x7aeedc),
   grit: [0xbcb4a0, 0x958c7c, 0x6e665a, 0x4a3020],
 };
 
-/** The Starseer: starlight-white and violet, and meteorites for stones. */
-export const STARSEER_KIT: SageKit = {
-  key: 'jedi_starseer',
-  meteor: true,
-  force: pal(0xffffff, 0xe6dcff, 0xa68cff, 0x3a2a7a, 0xc0a8ff),
-  lift: pal(0xffffff, 0xe8e0ff, 0xae94ff, 0x3e2c86, 0xc8b4ff),
-  grit: [0xffffff, 0xd4c8ff, 0x423a52, 0x1a1622],
+/** The Dawnseer: warm gold and dawn rose, and sunstones for stones. */
+export const DAWNSEER_KIT: SageKit = {
+  key: 'jedi_dawnseer',
+  stone: 'sunstone',
+  rays: true,
+  force: pal(0xfffbe8, 0xffd88a, 0xff9a6a, 0x8a3420, 0xffc070),
+  lift: pal(0xfffcec, 0xffe09a, 0xffa868, 0x8e3a1e, 0xffc878),
+  grit: [0xfff4c0, 0xffc850, 0xe08a20, 0xa8520e],
 };
 
 export class Sage implements Hero {
@@ -322,7 +327,7 @@ export class Sage implements Hero {
     this.world.time.delayedCall((SAGE_RELEASE.barrier / 12) * 1000, () => {
       if (!this.vitals.alive) return;
       this.dome?.end(false);
-      this.dome = new Dome(this.world, this, this.kit.force);
+      this.dome = new Dome(this.world, this, this.kit.force, this.kit.rays);
       this.world.addEffect(this.dome);
       const dome = this.dome;
       heroTimers.follow(dome, 'ability', '', this.kit.force.hot, () => dome.timeLeft());
@@ -396,7 +401,7 @@ class Stone extends Fx {
     super(world, 4000);
     this.x = x;
     this.y = y;
-    this.key = stoneKey(kit.meteor);
+    this.key = stoneKey(kit.stone);
     this.shade = this.own(world.add.image(snap(x), snap(y), 'shadow').setDepth(1.5).setAlpha(0.5).setScale(kind === 'slab' ? 0.9 : 0.55));
     this.img = this.own(world.add.image(snap(x), snap(y), this.key, `${kind}_0`).setPipeline('Lit'));
     this.glow = this.own(world.add.image(snap(x), snap(y), `${this.key}_e`, `${kind}_0`).setBlendMode(Phaser.BlendModes.ADD));
@@ -495,7 +500,7 @@ class Stone extends Fx {
         struck.add(h);
         w.addEffect(new HitSpark(w, h.x, h.y - h.bodyY, p, h.y + 13, near));
       }
-      w.addEffect(new Crater(w, this.x, this.y, p, this.kit.meteor));
+      w.addEffect(new Crater(w, this.x, this.y, p, this.kit.stone === 'sunstone'));
       bloom(w, this.x, this.y - 4, p.hot, 1.8, 300, this.y + 20);
       flare(w, this.x, this.y - 6, 90, p.light, 1.8, 380);
       w.cameras.main.shake(150, struck.size ? 0.0016 : 0.001);
@@ -534,7 +539,8 @@ class Crater extends Fx {
     private x: number,
     private y: number,
     private p: Pal,
-    private meteor: boolean,
+    /** Sunstone: golden shards strewn where it burst, rather than dirt. */
+    private shards: boolean,
   ) {
     super(world, 650);
     this.g = this.ink(HEAVE.splash * 2 + 20, Math.ceil(HEAVE.splash * 2 * GROUND) + 20);
@@ -544,13 +550,13 @@ class Crater extends Fx {
     const k = this.t / this.life;
     const g = this.g.begin(this.x, this.y, 2.4);
     ring(g, this.x, this.y, HEAVE.splash * easeOut(Math.min(1, k * 2.2)), 2.2 * (1 - k) + 0.6, this.p, 1 - k);
-    const dirt = this.meteor ? 0x2c2638 : 0x4a3a2a;
+    const dirt = 0x4a3a2a;
     for (let i = 0; i < 7; i++) {
       const a = (i / 7) * Math.PI * 2 + 0.4;
       for (let s = 2; s < 10; s++) {
         const x = this.x + Math.cos(a + Math.sin(s + i) * 0.15) * s;
         const y = this.y + Math.sin(a + Math.sin(s + i) * 0.15) * s * GROUND;
-        if (dither(Math.round(x), Math.round(y)) > 1 - k) g.put(x, y, s < 4 && !this.meteor ? dirt : s < 4 ? this.p.hot : dirt, 0.85);
+        if (dither(Math.round(x), Math.round(y)) > 1 - k) g.put(x, y, this.shards ? (s % 3 ? this.p.mid : this.p.core) : dirt, 0.85);
       }
     }
     g.end();
@@ -578,6 +584,8 @@ class Dome extends Fx {
     world: WorldScene,
     private hero: Sage,
     private p: Pal,
+    /** A faint sunburst across it (the Dawnseer's). */
+    private rays = false,
   ) {
     super(world, BARRIER.ms);
     this.x = hero.x;
@@ -701,6 +709,17 @@ class Dome extends Fx {
     for (let y = Math.round(cy - h); y <= cy; y++) {
       const e = Math.sqrt(Math.max(0, 1 - ((cy - y) / (h || 1)) ** 2)) * r;
       for (let x = Math.round(cx - e) + 1; x < cx + e - 1; x++) if ((x + y) % 4 === 0) put(x, y, p.mid, a * (0.22 + this.flash * 0.35), false);
+    }
+    if (this.rays) {
+      // Rays of dawn fanning up from her feet to its skin, the long and short by turns, shimmering outward.
+      for (let i = 1; i < 10; i++) {
+        const th = (i / 10) * Math.PI;
+        const reach = i % 2 ? 0.95 : 0.7;
+        for (let s = 0.25; s < reach; s += 0.05) {
+          const pulse = 0.5 + 0.5 * Math.sin(s * 9 - t * 0.012);
+          put(cx + Math.cos(th) * r * s, cy - Math.sin(th) * h * s, i % 2 ? p.hot : p.mid, a * (0.18 + 0.22 * pulse), false);
+        }
+      }
     }
     for (let i = 0; i < 6; i++) {
       const th = hash(i, Math.floor(t / 90), 3) * Math.PI;
