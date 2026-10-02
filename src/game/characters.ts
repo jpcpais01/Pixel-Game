@@ -46,8 +46,8 @@ import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { AUTUMN_MAGIC, AUTUMN_SKIN, FROST_MAGIC, FROST_SKIN, GROVE_MAGIC, GROVE_SKIN, Grovecraft, WILD_MAGIC, WILD_SKIN, Wildcraft } from './Druid';
 import { TITANIA_MAGIC, TITANIA_SKIN } from './Druid';
 import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT, Valkyrie } from './Valkyrie';
-import { MECH_KIT, Mech, SCRAP_KIT } from './Mech';
-import { HIVE_KIT, SYNTH_KIT, Synth } from './Synth';
+import { DREAD_KIT, MECH_KIT, Mech, SCRAP_KIT } from './Mech';
+import { HIVE_KIT, SYNTH_KIT, Synth, VAPOR_KIT } from './Synth';
 import { MECH_H, MECH_ORIGIN_Y } from '../art/mech';
 import { SYNTH_H, SYNTH_ORIGIN_Y } from '../art/synth';
 import { POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
@@ -1562,6 +1562,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_salvo_scrap' },
             },
           },
+          {
+            // A walking battleship: grey riveted hull, red waterline, portholes, a bridge with a capped captain, twin funnels and twin-gun turrets.
+            id: 'dreadnought',
+            name: 'Dreadnought',
+            accent: 0xe02a20,
+            preview: { texture: 'mech_dread', glow: 'mech_dread_e', idle: 'mech_dread_idle_down', chosen: 'mech_dread_deploy_down', originY: MECH_ORIGIN_Y / MECH_H },
+            buttons: {
+              attack: { texture: 'icon_cannon_dread' },
+              special: { texture: 'icon_salvo_dread' },
+            },
+          },
         ],
       },
       {
@@ -1590,13 +1601,25 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_grid_hive' },
             },
           },
+          {
+            // A retro chrome android: pearl shell, pink-to-cyan panels, a sunset in its black visor, a neon fin crest, and chrome dolphins for drones.
+            id: 'vaporwave',
+            name: 'Vaporwave',
+            accent: 0xff5ab8,
+            preview: { texture: 'synth_vapor', glow: 'synth_vapor_e', idle: 'synth_vapor_idle_down', chosen: 'synth_vapor_open_down', originY: SYNTH_ORIGIN_Y / SYNTH_H },
+            buttons: {
+              attack: { texture: 'icon_drone_vapor' },
+              special: { texture: 'icon_grid_vapor' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
       if (look === 'synth') return new Synth(world, x, y, SYNTH_KIT);
       if (look === 'hive') return new Synth(world, x, y, HIVE_KIT);
-      return new Mech(world, x, y, look === 'scrap' ? SCRAP_KIT : MECH_KIT);
+      if (look === 'vaporwave') return new Synth(world, x, y, VAPOR_KIT);
+      return new Mech(world, x, y, look === 'scrap' ? SCRAP_KIT : look === 'dreadnought' ? DREAD_KIT : MECH_KIT);
     },
   },
   {

@@ -97,12 +97,12 @@ import { ISLE_H, ISLE_W } from '../world/islandLayout';
 import { DRAFT_FRAMES, DRAFT_H, DRAFT_W, RING, RING_FRAMES, SEA_TILE, archArt, deckPuff, draftFrame, isletArt, ringFrame, seaTile, streak as windStreak } from './glide';
 import { GOAL, ISLETS as SKY_ISLETS } from '../world/glideLayout';
 import { birdSheet } from './skyArena';
-import { BOLT_DIRS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, reticle, salvoIcon } from './mech';
+import { BOLT_DIRS, BOLT_KINDS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, dreadCannonIcon, dreadSalvoIcon, reticle, salvoIcon } from './mech';
 import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
 import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
 import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
 import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, LION_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
-import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
+import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon, vaporDroneIcon, vaporGridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import {
   MERCHANT_FRAMES,
@@ -524,12 +524,13 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   // The Automaton's icons; the Synth's drones hover on a loop ('drone_spin',
   // 'drone_hive_spin').
   for (const look of SYNTH_LOOKS) {
-    const dk = look.hive ? 'drone_hive' : 'drone';
-    register(scene, dk, pack(frameList(Array.from({ length: DRONE_FRAMES }, (_, f) => droneFrame(f, look.hive)), 'd'), DRONE_SIZE, DRONE_SIZE), DRONE_SIZE, DRONE_SIZE);
-    scene.anims.create({ key: `${dk}_spin`, frames: Array.from({ length: DRONE_FRAMES }, (_, f) => ({ key: dk, frame: `d${f}` })), frameRate: look.hive ? 24 : 16, repeat: -1 });
+    // (The Vaporwave's 'drone_vapor' are dolphins, swimming at a slower beat.)
+    const dk = look.hive ? 'drone_hive' : look.vapor ? 'drone_vapor' : 'drone';
+    register(scene, dk, pack(frameList(Array.from({ length: DRONE_FRAMES }, (_, f) => droneFrame(f, look.hive, look.vapor)), 'd'), DRONE_SIZE, DRONE_SIZE), DRONE_SIZE, DRONE_SIZE);
+    scene.anims.create({ key: `${dk}_spin`, frames: Array.from({ length: DRONE_FRAMES }, (_, f) => ({ key: dk, frame: `d${f}` })), frameRate: look.hive ? 24 : look.vapor ? 8 : 16, repeat: -1 });
   }
   // What the mechs fire, in sixteen headings each ('shell_0'.. 'rocket_15'), and the lock-on reticle.
-  const bolts = (['shell', 'nail', 'missile', 'rocket'] as const).flatMap((k) => frameList(Array.from({ length: BOLT_DIRS }, (_, i) => mechBolt(k, i)), `${k}_`));
+  const bolts = BOLT_KINDS.flatMap((k) => frameList(Array.from({ length: BOLT_DIRS }, (_, i) => mechBolt(k, i)), `${k}_`));
   register(scene, 'mech_bolt', pack(bolts, MECH_BOLT_SIZE, MECH_BOLT_SIZE), MECH_BOLT_SIZE, MECH_BOLT_SIZE);
   scene.textures.addCanvas('mech_reticle', toCanvas(13, 13, reticle()));
   // The Phantom's haunted things thrown ('haunt', by kind), the wisps ('soulwisp' and
@@ -590,10 +591,14 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_salvo', toCanvas(16, 16, salvoIcon()));
   scene.textures.addCanvas('icon_cannon_scrap', toCanvas(16, 16, cannonIcon(true)));
   scene.textures.addCanvas('icon_salvo_scrap', toCanvas(16, 16, salvoIcon(true)));
+  scene.textures.addCanvas('icon_cannon_dread', toCanvas(16, 16, dreadCannonIcon()));
+  scene.textures.addCanvas('icon_salvo_dread', toCanvas(16, 16, dreadSalvoIcon()));
   scene.textures.addCanvas('icon_drone', toCanvas(16, 16, droneIcon()));
   scene.textures.addCanvas('icon_grid', toCanvas(16, 16, gridIcon()));
   scene.textures.addCanvas('icon_drone_hive', toCanvas(16, 16, droneIcon(true)));
   scene.textures.addCanvas('icon_grid_hive', toCanvas(16, 16, gridIcon(true)));
+  scene.textures.addCanvas('icon_drone_vapor', toCanvas(16, 16, vaporDroneIcon()));
+  scene.textures.addCanvas('icon_grid_vapor', toCanvas(16, 16, vaporGridIcon()));
 
   yield;
   // Items: hotbar icons and the bottles monsters drop.

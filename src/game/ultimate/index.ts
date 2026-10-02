@@ -28,7 +28,7 @@ import { AFONSO_KIT, KING_KIT } from '../King';
 import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
 import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
 import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
-import { HIVE_KIT, SYNTH_KIT } from '../Synth';
+import { HIVE_KIT, SYNTH_KIT, VAPOR_KIT } from '../Synth';
 import { SIEGE_MS, SwarmProtocol } from './robot';
 import { DeadOfNight, HauntedHouse } from './phantom';
 import { POLTER_KIT, TEA_KIT } from '../Poltergeist';
@@ -493,7 +493,10 @@ const SKINS: Record<string, UltSkin> = {
   'valkyrie:swan': { pal: SWAN_KIT.pal },
   'valkyrie:raven': { pal: RAVEN_KIT.pal, type: 'storm' },
   'automaton:scrap': { pal: SCRAP_KIT.boom },
+  // Gunmetal and signal-flag red and yellow.
+  'automaton:dreadnought': { pal: pal(0xfff6d8, 0xffd040, 0xe02a20, 0x3a3f48, 0xffa040) },
   'automaton:hive': { pal: HIVE_KIT.pal, type: 'synth' },
+  'automaton:vaporwave': { pal: VAPOR_KIT.pal, type: 'synth' },
   'phantom:tea': { pal: TEA_KIT.pal },
   'phantom:cala': { pal: CALA_KIT.pal, type: 'wraith' },
   'phantom:firefly': { pal: FIREFLY_KIT.pal, type: 'wraith' },

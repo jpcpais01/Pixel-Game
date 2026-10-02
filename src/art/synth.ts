@@ -5,7 +5,11 @@
 // bee's head with great amber compound eyes, curled antennae with glowing
 // tips and a little gold tiara; honeycomb armour over the chest with a hive
 // core, black chitin limbs with gold greaves, a striped abdomen behind and
-// four see-through wings that beat. Her drones are bee-bots.
+// four see-through wings that beat. Her drones are bee-bots. Its Vaporwave
+// skin is a chrome android out of an '80s album cover: a pearl shell, chest
+// panels running pink to violet to cyan with a grid scored over them, a
+// black visor with a scanline sunset in it, a neon pink fin of a crest in
+// place of the halo, and light-up soles. Its drones are chrome dolphins.
 //
 // Three views like every hero: down, up, and the side view drawn facing
 // left and mirrored for right.
@@ -44,15 +48,29 @@ const EYE: Material = { ramp: ramp('#200602', '#561604', '#963a0c', '#d87424', '
 const AMBER: Material = { ramp: ramp('#b0580a', '#f0a030', '#ffe090'), outline: hex('#3a1a02'), emissive: 1, noAO: true };
 const WING: Material = { ramp: ramp('#8a7040', '#c0a868', '#e8d8a8'), outline: hex('#4a3410'), emissive: 0.3, noAO: true };
 
+// The Vaporwave's: pearl and pink-tinged chrome, neon, the gradient panels, and the visor's sunset.
+const PEARL: Material = { ramp: ramp('#5a4a6e', '#8e7ea6', '#c4b6d6', '#ece4f4', '#ffffff'), outline: hex('#1a1228'), outlineLit: hex('#2a2038'), shine: true };
+const VCHROME: Material = { ramp: ramp('#1e1a30', '#3e3a5c', '#7a7ca0', '#c0c8e0', '#f4f8ff'), outline: hex('#0a0814'), shine: true };
+const NPINK: Material = { ramp: ramp('#7a1050', '#d02a8a', '#ff5ab8', '#ffb0e0'), outline: hex('#2a0418'), emissive: 1, noAO: true };
+const NCYAN: Material = { ramp: ramp('#0a4a66', '#16a0c8', '#40e0ff', '#b0f8ff'), outline: hex('#041c28'), emissive: 1, noAO: true };
+const PANEL_PINK: Material = { ramp: ramp('#7a2060', '#c0408e', '#f070bc', '#ffbce2'), outline: hex('#2a0418'), shine: true, emissive: 0.25 };
+const PANEL_VIOLET: Material = { ramp: ramp('#3e2478', '#6a40c0', '#9a70f0', '#d4c0ff'), outline: hex('#140a2a'), shine: true, emissive: 0.25 };
+const PANEL_CYAN: Material = { ramp: ramp('#105070', '#2290c0', '#50d0f0', '#b4f2ff'), outline: hex('#041c28'), shine: true, emissive: 0.25 };
+const VISOR: Material = { ramp: ramp('#050308', '#0e0a16', '#1c1628'), outline: hex('#020104'), shine: true };
+const SUN: Material = { ramp: ramp('#ff3a8a', '#ff8a4a', '#ffd060', '#fff6a0'), outline: hex('#2a0418'), emissive: 1, noAO: true, noOutline: true };
+
 export interface SynthLook {
   key: string;
   /** The Hive Queen. */
   hive: boolean;
+  /** The Vaporwave android. */
+  vapor?: boolean;
 }
 
 export const SYNTH_LOOK: SynthLook = { key: 'synth', hive: false };
 export const HIVE_LOOK: SynthLook = { key: 'synth_hive', hive: true };
-export const SYNTH_LOOKS = [SYNTH_LOOK, HIVE_LOOK];
+export const VAPOR_LOOK: SynthLook = { key: 'synth_vapor', hive: false, vapor: true };
+export const SYNTH_LOOKS = [SYNTH_LOOK, HIVE_LOOK, VAPOR_LOOK];
 
 let L: SynthLook = SYNTH_LOOK;
 
@@ -107,14 +125,30 @@ function limb(c: PixelCanvas, a: Pt, b: Pt, bend: Pt, upper: Material, lower: Ma
 
 function leg(c: PixelCanvas, hip: Pt, foot: Pt, out: number, side: boolean): void {
   c.part();
-  limb(c, hip, { x: foot.x, y: foot.y - 1.5 }, { x: out * 0.4, y: -0.3 }, L.hive ? CHITIN : SHELL, L.hive ? GOLD : CHROME, 1.35, 1.2, JOINT);
+  const vapor = L.vapor;
+  limb(c, hip, { x: foot.x, y: foot.y - 1.5 }, { x: out * 0.4, y: -0.3 }, L.hive ? CHITIN : vapor ? PEARL : SHELL, L.hive ? GOLD : vapor ? VCHROME : CHROME, 1.35, 1.2, vapor ? NPINK : JOINT);
   c.part();
-  if (side) c.shape(Math.round(foot.y - 1), Math.round(foot.y), (y) => [foot.x - (y < foot.y - 0.5 ? 1.5 : 2.5), foot.x + 1.2], L.hive ? CHITIN : CHROME, (_x, _y, t) => cyl(t, 0.4));
-  else c.ellipse(foot.x, foot.y - 0.6, 1.5, 1.1, L.hive ? CHITIN : CHROME);
+  const boot = L.hive ? CHITIN : vapor ? VCHROME : CHROME;
+  if (side) c.shape(Math.round(foot.y - 1), Math.round(foot.y), (y) => [foot.x - (y < foot.y - 0.5 ? 1.5 : 2.5), foot.x + 1.2], boot, (_x, _y, t) => cyl(t, 0.4));
+  else c.ellipse(foot.x, foot.y - 0.6, 1.5, 1.1, boot);
+  if (vapor) {
+    // Light-up soles.
+    c.part();
+    const [x0, x1] = side ? [foot.x - 2.5, foot.x + 1] : [foot.x - 1.5, foot.x + 1];
+    for (let x = Math.round(x0); x < x1; x++) c.px(x, Math.round(foot.y), NCYAN, { x: 0, y: -0.3, z: 0.9 });
+  }
 }
 
 function arm(c: PixelCanvas, shoulder: Pt, hand: Pt, out: number): void {
   c.part();
+  if (L.vapor) {
+    // Pink shoulder pads, pearl and chrome, a neon band at the elbow.
+    c.ellipse(shoulder.x, shoulder.y, 1.8, 1.6, PANEL_PINK);
+    limb(c, { x: shoulder.x, y: shoulder.y + 0.8 }, hand, { x: out * 0.5, y: 0 }, PEARL, VCHROME, 1.15, 1.05, NCYAN);
+    c.part();
+    c.ellipse(hand.x, hand.y + 0.4, 1, 1, VCHROME);
+    return;
+  }
   c.ellipse(shoulder.x, shoulder.y, 1.7, 1.6, L.hive ? GOLD : SHELL);
   limb(c, { x: shoulder.x, y: shoulder.y + 0.8 }, hand, { x: out * 0.5, y: 0 }, L.hive ? CHITIN : SHELL, L.hive ? CHITIN : CHROME, 1.15, 1.05, L.hive ? GOLD : CHROME);
   c.part();
@@ -135,7 +169,7 @@ function hexEdge(x: number, y: number, s = 2.4): boolean {
 /** The chest: shoulders to waist, its seam and core (parted for the Special). */
 function torso(c: PixelCanvas, cx: number, top: number, open: number, view: View): void {
   const bottom = top + 7;
-  const m = L.hive ? GOLD : SHELL;
+  const m = L.hive ? GOLD : L.vapor ? PEARL : SHELL;
   const edges = (y: number): [number, number] => {
     const k = (y - top) / (bottom - top);
     const hw = view === 'side' ? 3.2 - k * 0.6 : 4.8 - k * 1.6;
@@ -152,6 +186,17 @@ function torso(c: PixelCanvas, cx: number, top: number, open: number, view: View
       const [l, r] = edges(y);
       for (let x = Math.round(l); x < r; x++) if (hexEdge(x, y)) c.shade(x, y, -1);
     }
+  } else if (L.vapor) {
+    // The panels, inset in the pearl: pink at the top through violet to cyan, a grid scored over them.
+    for (let y = top + 1; y <= bottom - 1; y++) {
+      const [l, r] = edges(y);
+      const k = (y - top - 1) / (bottom - top - 2);
+      const band = k < 0.34 ? PANEL_PINK : k < 0.67 ? PANEL_VIOLET : PANEL_CYAN;
+      for (let x = Math.round(l + 1); x < r - 1; x++) {
+        const t = ((x + 0.5 - cx) / (r - l)) * 2;
+        c.px(x, y, band, sphere(t * 0.9, k * 0.9 - 0.4, 1), { bias: (x - Math.round(cx)) % 2 === 0 && view !== 'side' ? -1 : 0 });
+      }
+    }
   } else if (view !== 'side') {
     for (let y = top + 3; y <= bottom; y++) c.shade(Math.round(cx - 0.5), y, -1);
   }
@@ -163,13 +208,23 @@ function torso(c: PixelCanvas, cx: number, top: number, open: number, view: View
         const hw = r - Math.abs(y + 0.5 - coreY) * 0.5;
         for (let x = Math.round(cx - hw); x < cx + hw; x++) c.px(x, y, AMBER, sphere((x + 0.5 - cx) / r, (y + 0.5 - coreY) / r), { glow: 0.8 + open * 0.2 });
       }
+    } else if (L.vapor) {
+      // A setting sun for a core: gold on top, pink below, cut by dark scanlines.
+      for (let y = Math.floor(coreY - r); y <= coreY + r; y++)
+        for (let x = Math.floor(cx - r); x <= cx + r; x++) {
+          const dx = (x + 0.5 - cx) / r;
+          const dy = (y + 0.5 - coreY) / r;
+          if (dx * dx + dy * dy > 1) continue;
+          const scan = dy > 0 && (y & 1) === 1;
+          c.px(x, y, scan ? VISOR : SUN, sphere(dx, dy), scan ? undefined : { glow: 0.8 + open * 0.2, bias: dy < -0.3 ? 2 : dy < 0.2 ? 1 : 0 });
+        }
     } else c.ellipse(cx, coreY, r, r, CYAN, { glow: 0.8 + open * 0.2 });
     if (open > 0) {
-      const core: RGB = L.hive ? hex('#fff0b0') : hex('#e6fcff');
+      const core: RGB = L.hive ? hex('#fff0b0') : L.vapor ? hex('#ffd0f0') : hex('#e6fcff');
       for (let i = 1; i <= 3; i++) for (let s = -1; s <= 1; s++) c.spark(cx + s, coreY + r + i, core, open * (0.6 - i * 0.12));
     }
   } else if (view === 'up') {
-    for (let y = top + 1; y <= bottom - 1; y++) c.px(Math.round(cx - 0.5), y, L.hive ? AMBER : CYAN, { x: 0, y: 0, z: 1 }, { glow: 0.5 });
+    for (let y = top + 1; y <= bottom - 1; y++) c.px(Math.round(cx - 0.5), y, L.hive ? AMBER : L.vapor ? NPINK : CYAN, { x: 0, y: 0, z: 1 }, { glow: 0.5 });
   }
 }
 
@@ -193,6 +248,70 @@ function synthHead(c: PixelCanvas, cx: number, cy: number, view: View, tilt = 0,
     c.px(Math.round(cx - 0.5), Math.round(cy + 2.5), CYAN);
     c.ellipse(cx - 4, cy + 0.3, 0.7, 1.2, CHROME);
     c.ellipse(cx + 4, cy + 0.3, 0.7, 1.2, CHROME);
+  }
+}
+
+/** The Vaporwave's head: chrome, with a black visor holding a scanline sunset over a cyan horizon. */
+function vaporHead(c: PixelCanvas, cx: number, cy: number, view: View, ping = 0): void {
+  c.part();
+  c.ellipse(cx, cy, view === 'side' ? 4.1 : 4.6, 4.3, VCHROME, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.15, 1) });
+  c.part();
+  const lit = ping > 0 ? { glow: 1, bias: 1 } : undefined;
+  const y0 = Math.round(cy - 0.8);
+  if (view === 'down') {
+    for (let x = Math.round(cx - 3.5); x < cx + 3.5; x++) {
+      const t = (x + 0.5 - cx) / 3.5;
+      const d = x + 0.5 - cx;
+      // Row by row: the sun's top, its wider middle (gold to pink), and the horizon's grid line.
+      c.px(x, y0, Math.abs(d) < 1 ? SUN : VISOR, sphere(t, 0.2, 1), Math.abs(d) < 1 ? { bias: 0 } : undefined);
+      c.px(x, y0 + 1, Math.abs(d) < 2 ? SUN : VISOR, sphere(t, 0, 1), Math.abs(d) < 2 ? { bias: -2 } : undefined);
+      c.px(x, y0 + 2, NCYAN, sphere(t, -0.2, 1), lit ?? { bias: x % 2 ? 0 : -1 });
+    }
+    if (ping > 0) for (let x = Math.round(cx - 3); x < cx + 3; x++) c.spark(x, y0 + 1, hex('#ffd0f0'), ping * 0.5);
+  } else if (view === 'side') {
+    for (let x = Math.round(cx - 4); x <= cx - 1.5; x++) {
+      c.px(x, y0, VISOR, { x: -0.7, y: 0.2, z: 0.7 });
+      c.px(x, y0 + 1, x === Math.round(cx - 3) ? SUN : VISOR, { x: -0.7, y: 0, z: 0.7 }, x === Math.round(cx - 3) ? { bias: 2 } : undefined);
+      c.px(x, y0 + 2, NCYAN, { x: -0.7, y: 0, z: 0.7 });
+    }
+    c.ellipse(cx + 1, cy + 0.3, 1.1, 1.3, PANEL_PINK);
+  } else {
+    c.ellipse(cx - 4, cy + 0.3, 0.7, 1.2, PANEL_PINK);
+    c.ellipse(cx + 4, cy + 0.3, 0.7, 1.2, PANEL_PINK);
+    c.px(Math.round(cx - 0.5), Math.round(cy + 2.5), NPINK);
+  }
+}
+
+/**
+ * The neon fin of a crest over the head, pink with cyan tips: seen edge-on
+ * from the front and back, swept back like a shark's fin side on. In the
+ * idle moment a bright spot runs along it (`spin`), as the halo's does.
+ */
+function crest(c: PixelCanvas, cx: number, cy: number, view: View, spin = -1): void {
+  c.part();
+  const pts: [number, number, Material][] = [];
+  if (view === 'side') {
+    // Rooted along the crown from the brow back, tallest over the top, trailing off behind.
+    const H = [1, 2, 3, 3, 3, 2, 2, 1];
+    H.forEach((h, i) => {
+      const x = Math.round(cx - 2.5 + i);
+      const dx = (x + 0.5 - cx) / 4.1;
+      const surf = Math.round(cy - 4.3 * Math.sqrt(Math.max(0, 1 - dx * dx)));
+      // Swept back: each column leans its top a little further behind.
+      for (let k = 1; k <= h; k++) pts.push([x + (k > 2 ? 1 : 0), surf - k + (i > 5 ? 1 : 0), k === h && h > 1 ? NCYAN : NPINK]);
+    });
+  } else {
+    const top = Math.round(cy - 4.3);
+    const x0 = Math.round(cx - 1);
+    // Edge-on: a single blade of light standing up off the crown.
+    for (let k = 0; k < 4; k++) pts.push([x0 + 1, top - k, k === 3 ? NCYAN : NPINK]);
+  }
+  pts.forEach(([x, y, m]) => c.px(x, y, m, { x: 0, y: 0.3, z: 0.9 }));
+  if (spin < 0 || !pts.length) return;
+  const hot = hex('#ffe0f4');
+  for (let t = 0; t < 3; t++) {
+    const [x, y] = pts[(((spin - t) % pts.length) + pts.length) % pts.length];
+    c.spark(x, y, hot, 0.9 - t * 0.3);
   }
 }
 
@@ -402,12 +521,15 @@ function drawFigure(c: PixelCanvas, p: SynthPose, view: View): void {
 
   const hx = cx + p.tilt;
   if (hive) beeHead(c, hx, headY, view, p.float, p.tilt, p.ping);
-  else {
+  else if (L.vapor) {
+    vaporHead(c, hx, headY, view, p.ping);
+    crest(c, hx, headY, view, p.spin);
+  } else {
     synthHead(c, hx, headY, view, p.tilt, p.ping);
     halo(c, hx, headY - 6.4 - p.float, p.spin);
   }
   if (view !== 'side' && p.handB.y <= RAISED) arm(c, { x: cx + 5, y: chest + 1 }, { x: cx + 5.8 + p.handB.x, y: hipY - 1.5 + p.handB.y }, 1);
-  if (p.scan !== null) scanBeam(c, hx - 0.5, headY + (hive ? 0.4 : 0.4), p.scan, hive ? hex('#ffc860') : hex('#7ae8ff'));
+  if (p.scan !== null) scanBeam(c, hx - 0.5, headY + (hive ? 0.4 : 0.4), p.scan, hive ? hex('#ffc860') : L.vapor ? hex('#ff6ac8') : hex('#7ae8ff'));
 }
 
 // ---------------------------------------------------------------------------
@@ -573,10 +695,11 @@ export const DRONE_FRAMES = 4;
  * eye and a rotor either side, blurring round; the Hive Queen's a round
  * striped bee-bot with an amber eye, a stinger and wings beating.
  */
-export function droneFrame(f: number, hive: boolean): PixelCanvas {
+export function droneFrame(f: number, hive: boolean, vapor = false): PixelCanvas {
   const c = new PixelCanvas(DRONE_SIZE, DRONE_SIZE);
   const cx = 6;
   const cy = 6;
+  if (vapor) return dolphin(c, f);
   if (hive) {
     c.part();
     // Wings, up and down in turn.
@@ -609,6 +732,33 @@ export function droneFrame(f: number, hive: boolean): PixelCanvas {
   return c;
 }
 
+/**
+ * The Vaporwave's drone: a chrome dolphin swimming through the air, nose to
+ * the right, its body rising and dipping with each beat of its tail; a
+ * pink belly, a cyan eye, a glint along its back.
+ */
+function dolphin(c: PixelCanvas, f: number): PixelCanvas {
+  const bob = [0, -0.5, 0, 0.5][f % 4];
+  const flick = [-1.5, -0.5, 1, -0.5][f % 4];
+  const cy = 6.5 + bob;
+  c.part();
+  // Tail flukes, flicking up and down.
+  c.capsule(3, cy, 1.2, cy + flick * 0.6, 0.9, 0.6, VCHROME);
+  c.ellipse(0.8, cy + flick, 0.9, 1.4, VCHROME, { flatten: 0.7 });
+  // The dorsal fin.
+  c.capsule(5.5, cy - 1, 4.5, cy - 3, 0.9, 0.4, VCHROME);
+  c.part();
+  c.ellipse(6, cy, 4, 1.9, VCHROME);
+  // The beak.
+  c.capsule(9, cy + 0.3, 11, cy + 0.6, 0.9, 0.6, VCHROME);
+  c.part();
+  for (let x = 4; x <= 9; x++) c.px(x, Math.round(cy + 1.4), PANEL_PINK, { x: 0, y: -0.5, z: 0.8 }, { bias: x === 6 ? 1 : 0 });
+  c.px(7, Math.round(cy + 2.3), PANEL_PINK);
+  c.px(9, Math.round(cy - 0.6), NCYAN);
+  for (let x = 4; x <= 7; x++) c.shade(x, Math.round(cy - 1.5), 2);
+  return c;
+}
+
 // ---------------------------------------------------------------------------
 // Button icons
 
@@ -637,6 +787,47 @@ export function droneIcon(hive = false): Uint8ClampedArray {
     const pts: [number, number][] = [[8, 8], [10, 9], [9, 11], [12, 12], [11, 14], [15, 15]];
     for (let i = 0; i < pts.length - 1; i++) seg(put, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], i % 2 ? t[1] : t[0]);
     put(15, 15, t[0]);
+  });
+}
+
+/** The Vaporwave's drone strike: a chrome dolphin and a straight laser out of it, pink with a cyan ghost. */
+export function vaporDroneIcon(): Uint8ClampedArray {
+  const pink = hex('#ff5ab8');
+  const cyan = hex('#40e0ff');
+  const hot = hex('#ffe0f4');
+  return icon16((put) => {
+    // Body, beak, fin and flukes.
+    for (let y = -2; y <= 2; y++) for (let x = -4; x <= 4; x++) if ((x * x) / 16 + (y * y) / 4.5 <= 1) put(5 + x, 6 + y, y > 0 ? hex('#f070bc') : y < -1 ? hex('#f4f8ff') : hex('#c0c8e0'));
+    seg(put, 9, 6, 11, 7, hex('#c0c8e0'));
+    seg(put, 4, 4, 3, 2, hex('#7a7ca0'));
+    seg(put, 1, 6, 0, 4, hex('#7a7ca0'));
+    seg(put, 1, 6, 0, 8, hex('#7a7ca0'));
+    put(8, 5, cyan);
+    // The laser to the corner.
+    seg(put, 10, 9, 15, 15, cyan);
+    seg(put, 9, 9, 14, 15, pink);
+    put(15, 15, hot);
+  });
+}
+
+/** The Vaporwave's grid: a neon triangle, cyan ghosting the pink, a sunset inside cut by scanlines. */
+export function vaporGridIcon(): Uint8ClampedArray {
+  const pts: [number, number][] = [[8, 2], [2, 13], [14, 13]];
+  return icon16((put) => {
+    // The sun, a half disc on the horizon.
+    for (let y = 8; y <= 12; y++) for (let x = 4; x <= 12; x++) {
+      const d = ((x - 8) * (x - 8)) / 9 + ((y - 12) * (y - 12)) / 16;
+      if (d <= 1 && y % 2 === 0) put(x, y, y < 10 ? hex('#ffd060') : hex('#ff6a9a'));
+    }
+    for (let i = 0; i < 3; i++) {
+      const [x0, y0] = pts[i];
+      const [x1, y1] = pts[(i + 1) % 3];
+      seg(put, x0 + 1, y0, x1 + 1, y1, hex('#40e0ff'));
+      seg(put, x0, y0, x1, y1, hex('#ff5ab8'));
+    }
+    for (const [x, y] of pts) {
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) put(x + dx, y + dy, dx === 0 && dy === 0 ? hex('#40e0ff') : hex('#f4f8ff'));
+    }
   });
 }
 

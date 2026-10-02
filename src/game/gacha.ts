@@ -39,6 +39,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'valkyrie:swan': 'legendary',
   'warrior:afonso': 'legendary',
   'automaton:hive': 'legendary',
+  'automaton:dreadnought': 'legendary',
   'phantom:cala': 'legendary',
   'fighter:champ': 'legendary',
   'inventor:einstein': 'legendary',
@@ -68,6 +69,7 @@ const RARITY_OF: Record<string, SkinRarity> = {
   'wizard:lotus': 'epic',
   'druid:frostfang': 'epic',
   'automaton:scrap': 'epic',
+  'automaton:vaporwave': 'epic',
   'phantom:tea': 'epic',
   // Hallow's Eve's, bought with candy rather than wished for (see game/season.ts).
   'warrior:headless': 'legendary',
