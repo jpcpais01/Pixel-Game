@@ -18,38 +18,60 @@ export class Mixer {
   readonly musicVerb: GainNode;
   readonly white: AudioBuffer;
   readonly pink: AudioBuffer;
+  /** Where the reverb's return comes back in. */
+  readonly verbReturn: GainNode;
+  /**
+   * A bake mixer (see bake.ts) renders sounds ahead of time into clips: every
+   * bus at unity straight to the output, no compressor, and effects unpanned,
+   * as their side is chosen when the clip plays.
+   */
+  readonly baking: boolean;
 
-  constructor(ctx: BaseAudioContext) {
+  /**
+   * `from`: the live mixer, when this one bakes clips for it (its noise is shared).
+   * `room`: false skips building the convolver, for bakes that take the reverb send raw.
+   */
+  constructor(ctx: BaseAudioContext, from?: Mixer, room = true) {
     this.ctx = ctx;
-    // Glue and a ceiling in one node. The old gentle 3:1 with an 8 ms attack let
-    // the first hit of every sound through untouched, so a fight's pile of
-    // overlapping hits went past full scale and clipped: harsh crackle that grew
-    // with the size of the battle. A fast, steep knee keeps the sum under 0 dB.
-    const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -12;
-    comp.knee.value = 8;
-    comp.ratio.value = 12;
-    comp.attack.value = 0.002;
-    comp.release.value = 0.2;
-    comp.connect(ctx.destination);
+    this.baking = !!from;
+    let out: AudioNode = ctx.destination;
+    if (!from) {
+      // Glue and a ceiling in one node. The old gentle 3:1 with an 8 ms attack let
+      // the first hit of every sound through untouched, so a fight's pile of
+      // overlapping hits went past full scale and clipped: harsh crackle that grew
+      // with the size of the battle. A fast, steep knee keeps the sum under 0 dB.
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -12;
+      comp.knee.value = 8;
+      comp.ratio.value = 12;
+      comp.attack.value = 0.002;
+      comp.release.value = 0.2;
+      comp.connect(ctx.destination);
+      out = comp;
+    }
 
-    this.master = gain(ctx, 0.9, comp);
-    this.music = gain(ctx, 0.3, this.master);
-    this.ambience = gain(ctx, 0.55, this.master);
+    this.master = gain(ctx, from ? 1 : 0.9, out);
+    this.music = gain(ctx, from ? 1 : 0.3, this.master);
+    this.ambience = gain(ctx, from ? 1 : 0.55, this.master);
     // Sound effects pass through the crowd trim, which GameSound lowers as more
     // of them overlap, so a busy fight gets fuller rather than louder.
     this.crowd = gain(ctx, 1, this.master);
-    this.sfx = gain(ctx, 0.75, this.crowd);
+    this.sfx = gain(ctx, from ? 1 : 0.75, this.crowd);
 
-    const conv = ctx.createConvolver();
-    // Short enough to stay cheap on phones; the tail is near silent past this anyway.
-    conv.buffer = impulse(ctx, 1.8);
-    this.reverb = gain(ctx, 1, conv);
-    conv.connect(gain(ctx, 0.5, this.master));
+    this.verbReturn = gain(ctx, 0.5, this.master);
+    if (room) {
+      const conv = ctx.createConvolver();
+      // Short enough to stay cheap on phones; the tail is near silent past this anyway.
+      conv.buffer = impulse(ctx, 1.8);
+      this.reverb = gain(ctx, 1, conv);
+      conv.connect(this.verbReturn);
+    } else {
+      this.reverb = gain(ctx, 1);
+    }
     this.musicVerb = gain(ctx, 1, this.reverb);
 
-    this.white = noise(ctx, 2, false);
-    this.pink = noise(ctx, 6, true);
+    this.white = from ? from.white : noise(ctx, 2, false);
+    this.pink = from ? from.pink : noise(ctx, 6, true);
   }
 
   /** A one-shot noise source starting at a random point in the buffer. */
@@ -173,7 +195,18 @@ function noise(ctx: BaseAudioContext, seconds: number, pink: boolean): AudioBuff
 }
 
 /** A soft outdoor-ish room: decaying stereo noise that darkens as it fades. */
+/** One room per sample rate: a convolver needs its own rate, and bakes make many mixers. */
+const rooms = new Map<number, AudioBuffer>();
+
 function impulse(ctx: BaseAudioContext, seconds: number): AudioBuffer {
+  const room = rooms.get(ctx.sampleRate);
+  if (room) return room;
+  const buf = paintRoom(ctx, seconds);
+  rooms.set(ctx.sampleRate, buf);
+  return buf;
+}
+
+function paintRoom(ctx: BaseAudioContext, seconds: number): AudioBuffer {
   const len = Math.floor(ctx.sampleRate * seconds);
   const buf = ctx.createBuffer(2, len, ctx.sampleRate);
   for (let c = 0; c < 2; c++) {

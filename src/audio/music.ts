@@ -3,6 +3,8 @@ import { Mixer, filter, gain, hit, mtof, osc, pick } from './mixer';
 const BPM = 70;
 const EIGHTH = 30 / BPM;
 const STEPS = 16; // eighths per chord (two bars)
+/** One chord's length: the baked music is rendered a chord at a time. */
+export const CHORD_SECONDS = EIGHTH * STEPS;
 
 interface Chord {
   bass: number;
@@ -32,29 +34,42 @@ const DENSITY = [0.55, 1, 0, 0.8, 1, 0.6];
  * melody that invents a four-chord motif and answers it with a variation.
  */
 export class Music {
-  private m: Mixer;
-  private pad: BiquadFilterNode;
-  private wobble: GainNode;
-  private lead: GainNode;
+  private m!: Mixer;
+  private pad!: BiquadFilterNode;
+  private wobble!: GainNode;
+  private lead!: GainNode;
+  private out!: AudioNode;
   private step = 0;
   private next = 0;
+  /** The live time that is time 0 of the context being written (a baked chunk's start). */
+  private origin = 0;
   private phrases: (number | null)[][] = [];
   private melIdx = 3;
-  /** Where this track plays into: its own level on the music bus, so it can fade out while another fades in. */
-  private out: GainNode;
 
-  constructor(m: Mixer, out: AudioNode = m.music) {
+  /**
+   * `out`: this track's own level on the music bus, so it can fade out while
+   * another fades in. Without a mixer it waits to be bound to baked chunks.
+   */
+  constructor(m?: Mixer, out?: AudioNode) {
+    if (m) this.bind(m, out ?? m.music, 0);
+  }
+
+  /**
+   * Build the instruments on a mixer: the live one, or a bake mixer rendering the
+   * chunk that starts at live time `origin` (see Stream). The tune carries on
+   * from wherever it was, whichever context it is written into.
+   */
+  bind(m: Mixer, out: AudioNode, origin: number): void {
     this.m = m;
+    this.out = out;
+    this.origin = origin;
     const ctx = m.ctx;
-    // Its own fade-in level, so starting up never touches the music bus the slider sets.
-    this.out = out = gain(ctx, 1, out);
 
     const padOut = gain(ctx, 1, out);
     padOut.connect(m.musicVerb);
     this.pad = filter(ctx, 'lowpass', 1100, 0.4, padOut);
     // The filter drifts open and closed over half a minute.
-    const drift = gain(ctx, 380, this.pad.frequency);
-    osc(ctx, 'sine', 0.035, drift).start();
+    drift(this.pad.frequency, m, origin, 1100, 380, 0.035);
     // Gentle tape wobble shared by every pad oscillator.
     this.wobble = gain(ctx, 5);
     osc(ctx, 'sine', 0.45, this.wobble).start();
@@ -75,18 +90,13 @@ export class Music {
   start(t: number): void {
     this.step = 0;
     this.next = t + 0.1;
-    // Fade in from silence. This used to ramp the music bus itself back up to its
-    // starting level, which undid the saved music volume (even zero) at every launch.
-    const g = this.out.gain;
-    g.setValueAtTime(0, t);
-    g.linearRampToValueAtTime(1, t + 6);
   }
 
   /** Schedule everything that starts before `until`. */
   tick(now: number, until: number): void {
     if (this.next < now - 0.5) this.next = now + 0.05; // woke from a stall
     while (this.next < until) {
-      this.play(this.step, this.next);
+      this.play(this.step, this.next - this.origin);
       // A touch of swing.
       this.next += EIGHTH * (this.step % 2 === 0 ? 1.08 : 0.92);
       this.step++;
@@ -173,9 +183,10 @@ export class Music {
         const o = osc(ctx, type, f, g);
         o.detune.value = cents;
         this.wobble.connect(o.detune);
+        // Live, the shared wobble would otherwise hold every finished note.
+        if (!this.m.baking) o.onended = () => this.wobble.disconnect(o.detune);
         o.start(t);
         o.stop(end);
-        o.onended = () => this.wobble.disconnect(o.detune);
       }
     }
     this.bass(ch.bass + 12, t, len, 0.6);
@@ -231,4 +242,23 @@ function fit(i: number, ch: Chord): number {
     if (pcs.has(SCALE[k] % 12)) return k;
   }
   return i;
+}
+
+/**
+ * A slow sine drift on a parameter: an LFO when playing live, or, in a baked
+ * chunk, the same curve written out against the live clock, so the drift runs
+ * on smoothly from one chunk into the next instead of restarting each time.
+ */
+export function drift(p: AudioParam, m: Mixer, origin: number, base: number, depth: number, hz: number): void {
+  const ctx = m.ctx;
+  if (!m.baking) {
+    p.value = base;
+    osc(ctx, 'sine', hz, gain(ctx, depth, p)).start();
+    return;
+  }
+  const secs = (ctx as OfflineAudioContext).length / ctx.sampleRate;
+  const n = Math.max(2, Math.ceil(secs * 10));
+  const curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) curve[i] = base + depth * Math.sin(2 * Math.PI * hz * (origin + (i / (n - 1)) * secs));
+  p.setValueCurveAtTime(curve, 0, secs);
 }

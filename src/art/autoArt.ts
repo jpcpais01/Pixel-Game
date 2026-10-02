@@ -6,7 +6,6 @@ import Phaser from 'phaser';
 import { Bitmap, bayer, clamp01, mix } from './bitmap';
 import { hex, type RGB } from './pixel';
 import type { TraitId } from '../game/auto/units';
-import { paintBelow, paintCloud } from './autoBelow';
 
 /** A board cell's size in art pixels (wide, and deep as seen from above). */
 export const CELL_W = 24;
@@ -54,22 +53,83 @@ function add(scene: Phaser.Scene, key: string, b: Bitmap): string {
   return key;
 }
 
+const SKY: RGB[] = ['#07061a', '#0d0a26', '#161036', '#221748', '#33205a', '#4a2a68', '#6a3670', '#8e4a72', '#b8646a', '#e08a64'].map(hex);
+const CLOUD: RGB[] = ['#1a1236', '#2a1c4a', '#3c2a5e', '#56386e', '#7a4c7a', '#a86a82'].map(hex);
+
 /**
- * The backdrop, `w` x `h`: the world far below the Floating Island
- * (`art/autoBelow.ts`). The drifting clouds are `autoCloud`.
+ * The sky the arena hangs in, `w` x `h`: night deepening overhead, a warm
+ * dusk low down, stars, far floating islands, and a sea of cloud below the
+ * horizon. What moves in it (birds, wisps, a falling star) is
+ * `game/auto/ambience.ts`.
  */
 export function autoBackdrop(scene: Phaser.Scene, w: number, h: number): string {
-  const key = `ab_below_${w}x${h}`;
+  const key = `ab_sky_${w}x${h}`;
   if (scene.textures.exists(key)) return key;
-  return add(scene, key, paintBelow(w, h));
-}
-
-/** Cloud puff number `i` (sizes vary with it), drifting between the board and the land. */
-export function autoCloud(scene: Phaser.Scene, i: number): string {
-  const key = `ab_cloud_${i}`;
-  if (scene.textures.exists(key)) return key;
-  const w = 56 + Math.round(((i * 37) % 7) * 9);
-  return add(scene, key, paintCloud(w, Math.round(w * 0.5), i));
+  const b = new Bitmap(w, h);
+  const horizon = Math.round(h * 0.62);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      // Sky: the glow gathers toward the horizon.
+      const t = Math.pow(clamp01(y / horizon), 1.6);
+      let c = ramp(SKY, t * 0.95, x, y);
+      // Wisps of high cloud drifting across the dusk.
+      const wisp = fbm(x / 60, y / 9, 3);
+      if (y < horizon && wisp > 0.62 && t > 0.25) c = mix(c, hex('#c87a8a'), (wisp - 0.62) * 1.6 * t);
+      b.set(x, y, c);
+    }
+  }
+  // Stars: brighter and more of them overhead, a few twinkle-crosses.
+  for (let i = 0; i < (w * h) / 180; i++) {
+    const x = Math.floor(hash(i, 1, 5) * w);
+    const y = Math.floor(Math.pow(hash(i, 2, 5), 1.8) * horizon * 0.85);
+    const lum = hash(i, 3, 5);
+    const col = lum > 0.85 ? hex('#fff4d6') : lum > 0.5 ? hex('#b8c0ff') : hex('#6a6aa8');
+    b.set(x, y, col);
+    if (lum > 0.95) {
+      const dim = mix(col, hex('#2a2150'), 0.5);
+      b.set(x + 1, y, dim);
+      b.set(x - 1, y, dim);
+      b.set(x, y + 1, dim);
+      b.set(x, y - 1, dim);
+    }
+  }
+  // Far islands on the horizon, dark against the dusk, with a lit rim.
+  const islands = [
+    { x: 0.1, y: 0.5, s: 0.1 },
+    { x: 0.27, y: 0.56, s: 0.05 },
+    { x: 0.66, y: 0.53, s: 0.07 },
+    { x: 0.93, y: 0.47, s: 0.09 },
+  ];
+  islands.forEach((isl, k) => {
+    const cx = isl.x * w;
+    const top = isl.y * h;
+    const half = isl.s * w;
+    for (let x = Math.floor(cx - half); x <= cx + half; x++) {
+      const u = (x - cx) / half;
+      const edge = Math.sqrt(Math.max(0, 1 - u * u));
+      const bump = (fbm(x / 7, k, 11) - 0.5) * 4;
+      const y0 = Math.round(top - edge * 3 + bump);
+      const depth = edge * half * 0.55 * (0.7 + fbm(x / 5, k, 12) * 0.6);
+      for (let y = y0; y < top + depth; y++) {
+        const shade = (y - y0) / Math.max(1, top + depth - y0);
+        b.set(x, y, y === y0 ? hex('#c0708a') : mix(hex('#2a1a44'), hex('#150e2a'), shade));
+      }
+      // A tree or ruin now and then on top.
+      if (hash(x, k, 14) > 0.9 && edge > 0.4) for (let y = y0 - 1 - Math.floor(hash(x, k, 15) * 4); y < y0; y++) b.set(x, y, hex('#1c1232'));
+    }
+  });
+  // The sea of cloud below: billows with lit tops fading into the deep.
+  for (let y = horizon; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const t = (y - horizon) / (h - horizon);
+      const bill = fbm(x / 26, y / 7 - t * 3, 21);
+      const lit = clamp01(bill * 1.25 - t * 0.55 + 0.1);
+      b.set(x, y, ramp(CLOUD, lit, x, y));
+    }
+  }
+  // The horizon's thin bright seam.
+  for (let x = 0; x < w; x++) if (fbm(x / 26, 0, 21) > 0.35) b.set(x, horizon, hex('#e0a0a0'));
+  return add(scene, key, b);
 }
 
 const STONE: RGB[] = ['#1e1a34', '#2c2748', '#3a3458', '#4a4468', '#5c567a', '#726c90', '#8c86a8'].map(hex);
