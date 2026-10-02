@@ -18,16 +18,17 @@ import { Legion, TimeStop } from './chrono';
 import { HundredCuts, quakeGate, SkyQuake } from './samurai';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, SHOGUN_KIT, SNOWFALL_KIT, TENGU_KIT } from '../Samurai';
 import { schemePal } from '../Blades';
-import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL } from '../Chronos';
+import { AEON_PAL, ANOMALY_PAL, CLOCKWORK_PAL, KEEPER_PAL, MOON_PAL, RIFT_PAL, SANDGLASS_PAL, VHS_PAL } from '../Chronos';
 import { PrimalStampede, WildWrath } from './druid';
 import { Maelstrom } from './tide';
+import { PRISM_STYLE } from '../Wizard';
 import { ABYSS_MAGIC, TIDE_MAGIC } from '../Tide';
 import { AsgardThunder, OdinSpear } from './valkyrie';
 import { KingsCrown } from './king';
-import { AFONSO_KIT, KING_KIT } from '../King';
+import { AFONSO_KIT, KING_KIT, SUNKING_KIT } from '../King';
 import { AUTUMN_MAGIC, FROST_MAGIC, GROVE_PAL, WILD_PAL } from '../Druid';
 import { CINDER_MAGIC, MYCELIA_MAGIC } from '../Druid';
-import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
+import { AMAZON_KIT, NORTH_KIT, RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT } from '../Valkyrie';
 import { MECH_KIT, SCRAP_KIT, type Mech } from '../Mech';
 import { HIVE_KIT, SYNTH_KIT, VAPOR_KIT } from '../Synth';
 import { SIEGE_MS, SwarmProtocol } from './robot';
@@ -72,7 +73,7 @@ const ULTS: Record<string, UltDef> = {
     range: 120,
     pal: pal(0xf2ffff, 0x9ff6ff, 0x39c6f0, 0x3a5ce0, 0x6fe4ff),
     icon: icons.singularityIcon,
-    cast: (c) => c.world.addEffect(new Singularity(c.world, c.tx, c.ty, c.pal)),
+    cast: (c) => c.world.addEffect(new Singularity(c.world, c.tx, c.ty, c.pal, c.look === 'prism' ? PRISM_STYLE.spectrum : undefined)),
   },
   'wizard:pyro': {
     name: 'Inferno',
@@ -338,7 +339,7 @@ const ULTS: Record<string, UltDef> = {
     range: 105,
     pal: SPEAR_KIT.pal,
     icon: icons.odinIcon,
-    cast: (c) => c.world.addEffect(new OdinSpear(c.world, c.tx, c.ty, c.pal, c.look === 'swan')),
+    cast: (c) => c.world.addEffect(new OdinSpear(c.world, c.tx, c.ty, c.pal, c.look === 'swan' || c.look === 'amazon', c.look === 'amazon' ? AMAZON_KIT.featherTints : undefined)),
   },
   'valkyrie:storm': {
     name: 'Thunder of Asgard',
@@ -446,6 +447,8 @@ const SKINS: Record<string, UltSkin> = {
   'fighter:lucha': { pal: pal(0xfff8e8, 0xffd35c, 0xff4fa0, 0x9a1c6a, 0xff80b8) },
   'fighter:champ': { pal: pal(0xf8ffe8, 0x9cff5a, 0xff8a2a, 0x1c7a1a, 0x8cf060) },
   'fighter:guardian': { pal: pal(0xfff4d0, 0xffc050, 0xff6a1a, 0xa02a10, 0xff8a30), type: 'monk' },
+  'fighter:tigerclaw': { pal: pal(0xfff4e0, 0xffb040, 0xff6a10, 0x2a1008, 0xff8a30) },
+  'fighter:wukong': { pal: pal(0xfffbe8, 0xffe070, 0xffb020, 0xb8201a, 0xffc850), type: 'monk' },
   'alchemist:shaman': { pal: toxPal(SPIRIT_TOX) },
   'alchemist:foxglove': { pal: toxPal(FOXGLOVE_TOX) },
   'alchemist:cryo': { pal: toxPal(CRYO_TOX), type: 'chem' },
@@ -481,6 +484,8 @@ const SKINS: Record<string, UltSkin> = {
   'chronomancer:clockwork': { pal: CLOCKWORK_PAL },
   'chronomancer:primavera': { pal: pal(0xfffaf2, 0xffd0de, 0xf48cae, 0x3e9a78, 0xd8f4e4) },
   'chronomancer:anomaly': { pal: ANOMALY_PAL, type: 'paradox' },
+  'chronomancer:sandglass': { pal: SANDGLASS_PAL },
+  'chronomancer:rewind': { pal: VHS_PAL, type: 'paradox' },
   'samurai:oni': { pal: schemePal(ONI_KIT.wind) },
   'samurai:sakura': { pal: schemePal(SAKURA_KIT.wind), type: 'ronin' },
   'wizard:astral': { pal: pal(0xfffdf2, 0xfff0a8, 0xffc860, 0x6a5ae0, 0xffe08a) },
@@ -488,11 +493,18 @@ const SKINS: Record<string, UltSkin> = {
   'wizard:pumpkin': { pal: pal(0xfff4d8, 0xffc04a, 0xff7a1a, 0x7a2ad0, 0xff8a30), type: 'pyro' },
   'wizard:abyssal': { pal: ABYSS_MAGIC.pal, type: 'tide' },
   'wizard:lotus': { pal: pal(0xfff4fa, 0xffb8d4, 0x3ed0b0, 0x1a7a78, 0xffa0c8), type: 'tide' },
+  'wizard:prism': { pal: pal(0xffffff, 0xe4f2ff, 0x9ab8ff, 0x7a5ae8, 0xd8e4ff) },
+  'wizard:firebird': { pal: pal(0xfffdf0, 0xffe680, 0xffb030, 0xc8183a, 0xffb84a), type: 'pyro' },
+  'wizard:siren': { pal: pal(0xfffaf2, 0xffd0a8, 0x4ae0c8, 0x6a50c0, 0xffc08a), type: 'tide' },
   'warrior:spartan': { pal: pal(0xfff0e8, 0xff9a80, 0xf03a3a, 0x8a0a1a, 0xff6a50) },
   'warrior:headless': { pal: pal(0xfff4d0, 0xffb040, 0xff6a14, 0x5a1a7a, 0xff8a2a) },
   'warrior:afonso': { pal: AFONSO_KIT.pal, type: 'king' },
+  'warrior:dragon': { pal: pal(0xfff0d0, 0xffa040, 0xff4a14, 0x3a0a06, 0xff6a20) },
+  'warrior:sunking': { pal: SUNKING_KIT.pal, type: 'king' },
   'paladin:seraph': { pal: pal(0xffffff, 0xfff0d0, 0xffc890, 0xff8ab8, 0xffd8b0) },
   'paladin:oathbreaker': { pal: pal(0xf6eeff, 0xd8b0ff, 0xa060ff, 0x4a1a8a, 0xb070ff), type: 'crusader' },
+  'paladin:lionheart': { pal: pal(0xfffbe8, 0xffd870, 0xffb43a, 0xa01828, 0xffc870) },
+  'paladin:inquisitor': { pal: pal(0xffffff, 0xe8eef8, 0xb8c4d8, 0x9a1428, 0xdfe6f4), type: 'crusader' },
   'jedi:guard': { pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
   'jedi:master': { pal: pal(0xf4fff4, 0x9af4a8, 0x2ed058, 0x0e7a32, 0x5aff7a) },
   'jedi:warlord': { pal: WARLORD_KIT.dominion, type: 'sith' },
@@ -509,6 +521,8 @@ const SKINS: Record<string, UltSkin> = {
   'druid:cinderhide': { pal: CINDER_MAGIC.pal, type: 'wild' },
   'valkyrie:sunshield': { pal: SUN_KIT.pal },
   'valkyrie:swan': { pal: SWAN_KIT.pal },
+  'valkyrie:amazon': { pal: AMAZON_KIT.pal },
+  'valkyrie:northlight': { pal: NORTH_KIT.pal, type: 'storm' },
   'valkyrie:raven': { pal: RAVEN_KIT.pal, type: 'storm' },
   'automaton:scrap': { pal: SCRAP_KIT.boom },
   // Gunmetal and signal-flag red and yellow.

@@ -17,11 +17,12 @@ import { sunBowIcon, sunRainIcon } from './apolloIcons';
 import { BLOOD_SPELL, DIGGER_ICON, DIGGER_SPELL, SOUL_SPELL, TOMB_SPELL, VAMPIRE_ICON, VAMPIRE_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, batCanvas, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { chainNetIcon, ironCrossbowIcon, owlFanIcon, owlVaultIcon } from './archerIcons';
 import { buildSkeletonSheet } from './skeleton';
-import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
+import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, SANDGLASS_ICON, VHS_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
 import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, SKALD_LOOK, TAIKO_DRUM_ICON, skaldLyreIcon, NOTE_FRAMES, ORPHEUS_LOOK, VAGABOND_LOOK, WILD_LOOK, NOTE_SIZE, banjoIcon, drumIcon, guitarraIcon, luteIcon, lyreIcon, noteFrame, rhythmIcon, skinSongIcon, songIcon } from './bard';
 import { crossIcon, cutMark, dashIcon, katanaIcon } from './samurai';
 import { cardCanvas, daggersIcon, petalCanvas, ROGUE_ICONS, venomCanvas, ROGUE_LOOKS, shadowstepIcon, smokeCanvas } from './rogue';
 import { gourdIcon, registerMoreSkinIcons, SKIN_BREWS, SKIN_QUIVERS } from './moreSkinIcons';
+import { inquisitorHammerIcon, lionGroundIcon, lionMaceIcon, purgeFallIcon } from './paladinSkins';
 import { ASTRAL_SPELL, FEL_EMBERS, HELL_METEOR, HELL_SPELL, dawnGroundIcon, eclipseFallIcon, oathHammerIcon, pikeSaberIcon, seraphMaceIcon } from './heroSkins';
 import { hex } from './pixel';
 import { bakedCanvas, pixelCanvas } from './canvas';
@@ -33,11 +34,15 @@ import { RIFT_PLATFORM_H, RIFT_PLATFORM_W, SHARD_H, SHARD_W, TEAR_FRAMES, TEAR_H
 import { RIFT_H, RIFT_W } from '../world/riftLayout';
 import { ABYSS_SPELL, ABYSS_TONES, TIDE_SPELL, waveIcon } from './tide';
 import { LOTUS_SPELL, lilyWaveIcon } from './tide';
+import { SIREN_SPELL, sunsetWaveIcon } from './tide';
+import { PRISM_SPELL, prismBeamIcon } from './prism';
+import { FIREBIRD_EMBERS, FIREBIRD_SPELL, firebirdMeteor, firebirdMeteorIcon } from './firebird';
 import { TITANIA_SPELL, blossomSeedIcon, faerieRingIcon } from './druid';
 import { CINDER_SPELL, CINDER_TONES, MYCELIA_SPELL, shroomRingIcon, sporeIcon } from './druid';
 import { PUMPKIN_EMBERS, PUMPKIN_METEOR, PUMPKIN_SPELL, jackOrbFrame, pumpkinMeteorIcon } from './pumpkin';
 import { AUTUMN_SPELL, AUTUMN_TONES, FROST_SPELL, FROST_TONES, GROVE_SPELL, WILD_SPELL, clawsIcon, groveIcon, pounceIcon, thornSeedIcon } from './druid';
 import { RAVEN_INK, RAVEN_TONES, SUN_INK, SUN_TONES, diveIcon, spearIcon, spearThrowIcon, swanSpearIcon, swanThrowIcon } from './valkyrie';
+import { amazonSpearIcon, amazonThrowIcon, auroraDiveIcon, auroraSpearIcon } from './valkyrie';
 import { DROP_H, DROP_W, ITEM_ICON_SIZE, potionDrop, potionIcon } from './items';
 import { GEAR_DROP, GEAR_ICON, chestIcon, gearArt } from './gear';
 import { GEAR } from '../game/gear';
@@ -78,6 +83,8 @@ import { matIcon } from '../game/forge';
 import { AFONSO_TONES, decreeIcon, KING_TONES } from './king';
 import { JADE_LOOK } from './warrior';
 import { hollowSwordIcon, lanternWhirlIcon } from './headless';
+import { dragonSwordIcon, dragonWhirlIcon } from './dragonslayer';
+import { sunDecreeIcon, sunSwordIcon } from './sunking';
 import { WIND_DEEP } from './palette';
 import { buildBarklingSheet, buildBeetleSheet, buildFrogSheet, buildGlowmothSheet, buildPuffcapSheet, ringCanvas, thornFrame, THORN_H, THORN_W, venomGlob, type MonsterSheet } from './monsters';
 import { buildWardenSheet } from './warden';
@@ -354,11 +361,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     register(scene, `${look.key}_bolt`, pack(frameList(Array.from({ length: BOLT_FRAMES }, (_, i) => boltFrame(i, look)), 'b'), BOLT_SIZE, BOLT_SIZE), BOLT_SIZE, BOLT_SIZE);
   }
   register(scene, 'chrono_mark', pack(frameList(Array.from({ length: MARK_FRAMES }, (_, i) => markFrame(i)), 'm'), MARK_SIZE, MARK_SIZE), MARK_SIZE, MARK_SIZE);
-  for (const [suffix, k] of [['', BRASS_ICON], ['_moon', MOON_ICON], ['_clockwork', CLOCKWORK_ICON], ['_primavera', PRIMAVERA_ICON]] as const) {
+  for (const [suffix, k] of [['', BRASS_ICON], ['_moon', MOON_ICON], ['_clockwork', CLOCKWORK_ICON], ['_primavera', PRIMAVERA_ICON], ['_sandglass', SANDGLASS_ICON]] as const) {
     scene.textures.addCanvas(`icon_hand${suffix}`, toCanvas(16, 16, handIcon(k)));
     scene.textures.addCanvas(`icon_stasis${suffix}`, toCanvas(16, 16, stasisIcon(k)));
   }
-  for (const [suffix, k] of [['', RIFT_ICON], ['_aeon', AEON_ICON], ['_anomaly', ANOMALY_ICON]] as const) {
+  for (const [suffix, k] of [['', RIFT_ICON], ['_aeon', AEON_ICON], ['_anomaly', ANOMALY_ICON], ['_vhs', VHS_ICON]] as const) {
     scene.textures.addCanvas(`icon_shards${suffix}`, toCanvas(16, 16, shardsIcon(k)));
     scene.textures.addCanvas(`icon_rewind${suffix}`, toCanvas(16, 16, rewindIcon(k)));
   }
@@ -390,7 +397,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
 
   yield;
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
-  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL], ['_digger', DIGGER_SPELL], ['_vampire', VAMPIRE_SPELL], ['_grove', GROVE_SPELL], ['_wild', WILD_SPELL], ['_autumn', AUTUMN_SPELL], ['_frost', FROST_SPELL], ['_tide', TIDE_SPELL], ['_abyss', ABYSS_SPELL], ['_titania', TITANIA_SPELL], ['_lotus', LOTUS_SPELL], ['_mycelia', MYCELIA_SPELL], ['_cinder', CINDER_SPELL]] as const) {
+  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL], ['_digger', DIGGER_SPELL], ['_vampire', VAMPIRE_SPELL], ['_grove', GROVE_SPELL], ['_wild', WILD_SPELL], ['_autumn', AUTUMN_SPELL], ['_frost', FROST_SPELL], ['_tide', TIDE_SPELL], ['_abyss', ABYSS_SPELL], ['_titania', TITANIA_SPELL], ['_lotus', LOTUS_SPELL], ['_prism', PRISM_SPELL], ['_firebird', FIREBIRD_SPELL], ['_siren', SIREN_SPELL], ['_mycelia', MYCELIA_SPELL], ['_cinder', CINDER_SPELL]] as const) {
     register(scene, `orb${suffix}`, pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i, k)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
     register(scene, `burst${suffix}`, pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i, k)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
     scene.anims.create({ key: `orb${suffix}_spin`, frames: scene.anims.generateFrameNames(`orb${suffix}_e`, { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });
@@ -478,6 +485,12 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   const pumpkinMeteors = scene.textures.addCanvas('pyro_meteor_pumpkin', toCanvas(PYRO_METEOR_W * 3, PYRO_METEOR_H, sideBySide(PYRO_METEOR_W, PYRO_METEOR_H, [0, 1, 2].map((f) => pyroMeteor(f, PUMPKIN_METEOR)))))!;
   for (let i = 0; i < 3; i++) pumpkinMeteors.add(`m${i}`, 0, i * PYRO_METEOR_W, 0, PYRO_METEOR_W, PYRO_METEOR_H);
   scene.textures.addCanvas('scorch_pumpkin', toCanvas(48, 24, scorchCanvas(48, 24, PUMPKIN_EMBERS)));
+  // The Firebird: the bird itself plunging as the meteor, and its button.
+  scene.textures.addCanvas('icon_meteor_firebird', toCanvas(16, 16, firebirdMeteorIcon()));
+  const firebirdMeteors = scene.textures.addCanvas('pyro_meteor_firebird', toCanvas(PYRO_METEOR_W * 3, PYRO_METEOR_H, sideBySide(PYRO_METEOR_W, PYRO_METEOR_H, [0, 1, 2].map((f) => firebirdMeteor(f)))))!;
+  for (let i = 0; i < 3; i++) firebirdMeteors.add(`m${i}`, 0, i * PYRO_METEOR_W, 0, PYRO_METEOR_W, PYRO_METEOR_H);
+  scene.textures.addCanvas('scorch_firebird', toCanvas(48, 24, scorchCanvas(48, 24, FIREBIRD_EMBERS)));
+  scene.textures.addCanvas('icon_beam_prism', toCanvas(16, 16, prismBeamIcon()));
   scene.textures.addCanvas('icon_sword_spartan', toCanvas(16, 16, swordIcon({ blade: '#dfe8f7', bladeDark: '#8d9dbd', tip: '#f4f8ff', guard: '#cc8c3e', guardLit: '#f4d08a', guardDark: '#955a24', grip: '#6e3a20', ink: '#140904' })));
   scene.textures.addCanvas('icon_whirl_spartan', toCanvas(16, 16, whirlIcon([hex('#fff0e8'), hex('#ff9a80'), hex('#f03a3a'), hex('#8a0a1a')])));
   // The Headless Knight's (Hallow's Eve): the notched, smouldering blade and a whirl round a jack-o'-lantern.
@@ -488,10 +501,20 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_decree', toCanvas(16, 16, decreeIcon(KING_TONES)));
   scene.textures.addCanvas('icon_sword_afonso', toCanvas(16, 16, swordIcon({ blade: '#d6dce8', bladeDark: '#7a869c', tip: '#f4f8ff', guard: '#5e6878', guardLit: '#98a2b4', guardDark: '#252a34', grip: '#6a3d26', ink: '#06070a' })));
   scene.textures.addCanvas('icon_decree_afonso', toCanvas(16, 16, decreeIcon(AFONSO_TONES)));
+  // The Dragonslayer's burning jagged blade and a whirl of dragonfire round a horned skull; the Sun King's sun-pommelled sword and his sun over the decree.
+  scene.textures.addCanvas('icon_sword_dragon', toCanvas(16, 16, dragonSwordIcon()));
+  scene.textures.addCanvas('icon_whirl_dragon', toCanvas(16, 16, dragonWhirlIcon()));
+  scene.textures.addCanvas('icon_sword_sunking', toCanvas(16, 16, sunSwordIcon()));
+  scene.textures.addCanvas('icon_decree_sunking', toCanvas(16, 16, sunDecreeIcon()));
   scene.textures.addCanvas('icon_mace_seraph', toCanvas(16, 16, seraphMaceIcon()));
   scene.textures.addCanvas('icon_sanctuary_seraph', toCanvas(16, 16, dawnGroundIcon()));
   scene.textures.addCanvas('icon_hammer_oath', toCanvas(16, 16, oathHammerIcon()));
   scene.textures.addCanvas('icon_sunfall_oath', toCanvas(16, 16, eclipseFallIcon()));
+  // The Lionheart's and the Inquisitor's buttons.
+  scene.textures.addCanvas('icon_mace_lion', toCanvas(16, 16, lionMaceIcon()));
+  scene.textures.addCanvas('icon_sanctuary_lion', toCanvas(16, 16, lionGroundIcon()));
+  scene.textures.addCanvas('icon_hammer_inquisitor', toCanvas(16, 16, inquisitorHammerIcon()));
+  scene.textures.addCanvas('icon_sunfall_inquisitor', toCanvas(16, 16, purgeFallIcon()));
   scene.textures.addCanvas('icon_saber_guard', toCanvas(16, 16, pikeSaberIcon()));
   scene.textures.addCanvas('icon_force_guard', toCanvas(16, 16, forceIcon([hex('#fffbe8'), hex('#ffe08a'), hex('#f0b030'), hex('#8a5a18')])));
 
@@ -556,12 +579,17 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_wave', toCanvas(16, 16, waveIcon()));
   scene.textures.addCanvas('icon_wave_abyss', toCanvas(16, 16, waveIcon(ABYSS_TONES)));
   scene.textures.addCanvas('icon_wave_lotus', toCanvas(16, 16, lilyWaveIcon()));
+  scene.textures.addCanvas('icon_wave_siren', toCanvas(16, 16, sunsetWaveIcon()));
   scene.textures.addCanvas('icon_spear_sun', toCanvas(16, 16, spearIcon(false, SUN_INK, SUN_TONES)));
   scene.textures.addCanvas('icon_spearthrow_sun', toCanvas(16, 16, spearThrowIcon(SUN_TONES)));
   scene.textures.addCanvas('icon_spear_swan', toCanvas(16, 16, swanSpearIcon()));
   scene.textures.addCanvas('icon_spearthrow_swan', toCanvas(16, 16, swanThrowIcon()));
   scene.textures.addCanvas('icon_spear_raven', toCanvas(16, 16, spearIcon(true, RAVEN_INK, RAVEN_TONES)));
   scene.textures.addCanvas('icon_dive_raven', toCanvas(16, 16, diveIcon(RAVEN_TONES)));
+  scene.textures.addCanvas('icon_spear_amazon', toCanvas(16, 16, amazonSpearIcon()));
+  scene.textures.addCanvas('icon_spearthrow_amazon', toCanvas(16, 16, amazonThrowIcon()));
+  scene.textures.addCanvas('icon_spear_north', toCanvas(16, 16, auroraSpearIcon()));
+  scene.textures.addCanvas('icon_dive_north', toCanvas(16, 16, auroraDiveIcon()));
 
   // The Automaton's icons; the Synth's drones hover on a loop ('drone_spin',
   // 'drone_hive_spin').

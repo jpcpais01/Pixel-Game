@@ -39,7 +39,30 @@ export interface TideMagic {
   spray: number[];
   /** Lily pads riding the wave's back and petals in its face (Lotus): the pads' dark and light greens, and the petals' pink. */
   lily?: { pad: [number, number]; petal: number };
+  /** Sunset glints flecking the wave's face among the foam (Siren). */
+  glint?: number;
 }
+
+/** The Siren skin's water: seafoam and teal, violet in its depths, glinting gold-pink with the low sun. */
+export const SIREN_STYLE: SpellStyle = {
+  core: 0xfffaf2,
+  hot: 0xb8fff0,
+  mid: 0x4ae0c8,
+  deep: 0x6a50c0,
+  accent: 0xffc08a,
+  sparks: [0xb8fff0, 0x4ae0c8, 0xffc08a, 0xfffaf2],
+  glow: 0x4ae0c8,
+  light: 0x8af0e0,
+  flash: 0xe0fff8,
+  unstable: 0xff9a8a,
+  fizzle: 0x6a8a90,
+  fizzleSparks: [0x6a8a90, 0x4ae0c8, 0xffc08a],
+  orb: { texture: 'orb_siren_e', anim: 'orb_siren_spin' },
+  burst: { texture: 'burst_siren_e', anim: 'burst_siren_pop' },
+};
+
+/** The Siren skin: a siren of the sunset sea. */
+export const SIREN_SKIN: WizardSkin = { key: 'wizard_siren', style: SIREN_STYLE, kit: TIDE_KIT };
 
 export const TIDE_MAGIC: TideMagic = {
   style: TIDE_STYLE,
@@ -53,6 +76,14 @@ export const LOTUS_MAGIC: TideMagic = {
   pal: pal(0xf4fffa, 0xa8f4dc, 0x3ed0b0, 0x1a7a78, 0x7af0d0),
   spray: [0xf4fffa, 0xa8f4dc, 0xffa0c8, 0x3ed0b0],
   lily: { pad: [0x2e7e32, 0x5ec850], petal: 0xffa0c8 },
+};
+
+/** The Siren: seafoam water, violet in its depths, the sunset glinting gold-pink in its foam and spray. */
+export const SIREN_MAGIC: TideMagic = {
+  style: SIREN_STYLE,
+  pal: pal(0xfffaf2, 0xb8fff0, 0x4ae0c8, 0x6a50c0, 0x8af0e0),
+  spray: [0xfffaf2, 0xb8fff0, 0xffc08a, 0x4ae0c8],
+  glint: 0xffc08a,
 };
 
 /** The Abyssal: black water lit by living teal, violet in its depths. */
@@ -346,7 +377,7 @@ class TidalWave extends Fx {
           let col = up > 0.72 ? pl.hot : up > 0.38 ? pl.mid : pl.deep;
           // Foam: the top of the crest, and flecks the churn throws up the face.
           if (j === h && (face || slope > 0.6)) col = pl.core;
-          else if (face && up > 0.5 && hash(Math.round(c * 1.4), j, seed) > 0.86) col = this.m.lily && hash(Math.round(c * 1.4), j, seed + 7) > 0.5 ? this.m.lily.petal : pl.core;
+          else if (face && up > 0.5 && hash(Math.round(c * 1.4), j, seed) > 0.86) col = (this.m.lily?.petal ?? this.m.glint) !== undefined && hash(Math.round(c * 1.4), j, seed + 7) > 0.5 ? (this.m.lily?.petal ?? this.m.glint)! : pl.core;
           g.put(gx, gy - j, col, alpha);
         }
       }

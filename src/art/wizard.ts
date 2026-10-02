@@ -73,6 +73,9 @@ import { FAE_BLOSSOM, FAE_GOLD, FAE_GOWN, FAE_PETAL, FAE_WING, HONEY_HAIR, MOONF
 import { MYC_SKIN } from './druid';
 import { ASH_HAIR, ASH_PAINT, CHAR_BONE, CHAR_HIDE, CINDER_CORE, CINDER_DEEP, CINDER_HOT, CINDER_MID, CINDER_TUNIC, CINDER_WOOD, GLOWCAP, LAVA, MAGMA, MYC_CAP, MYC_CORE, MYC_DEEP, MYC_GILL, MYC_HAIR, MYC_HOT, MYC_LOAM, MYC_MID, MYC_ROBE, MYC_SPOT, MYC_STEM, MYC_WOOD, OBSIDIAN_PELT } from './druid';
 import { GNARLWOOD, JACK_FIRE, JACK_RIND, JACK_STEM, PUMPKIN_TRIM, WITCH_CORE, WITCH_DEEP, WITCH_EYE, WITCH_GHOST, WITCH_HAIR, WITCH_HAT, WITCH_HOT, WITCH_LINING, WITCH_MID, WITCH_RIBBON, WITCH_ROBE, WITCH_SKIN } from './pumpkin';
+import { ASHWOOD, PRISM_CORE, PRISM_DEEP, PRISM_GEM, PRISM_HAIR, PRISM_HOT, PRISM_MID, PRISM_SILVER, QUARTZ, QUARTZ_LINING, QUARTZ_ROBE, SPECTRUM } from './prism';
+import { FIREBIRD_CORE, FIREBIRD_DEEP, FIREBIRD_EMBER, FIREBIRD_GOLD, FIREBIRD_HOT, FIREBIRD_INNER, FIREBIRD_MID, FIREBIRD_ROBE, FIREBIRD_ROSE, PLUME } from './firebird';
+import { SIREN_CORAL, SIREN_CORE, SIREN_DEEP, SIREN_FIN, SIREN_GLINT, SIREN_HAIR, SIREN_HOT, SIREN_MID, SIREN_PEARL, SIREN_SCALE, SIREN_SHELL, SIREN_SILK } from './tide';
 import { ANTLER, AMBER, AUBURN, AUTUMN_LEAF, AUTUMN_ROBE, BARE_ANTLER, BARK, EMBER_SEED, FANG, FROST_HAIR, FROST_HIDE, FROST_TUNIC, FROST_WOOD, HIDE, ICE, ICE_FANG, LEAF, LIVEWOOD, MOSS, MUZZLE, PELT, SEED, SNOW_PELT, TUNIC, WOAD, WOLF_NOSE, AUTUMN_CORE, AUTUMN_DEEP, AUTUMN_HOT, AUTUMN_MID, FROST_CORE, FROST_DEEP, FROST_HOT, FROST_MID, GROVE_CORE, GROVE_DEEP, GROVE_HOT, GROVE_MID, WILD_CORE, WILD_DEEP, WILD_HOT, WILD_MID } from './druid';
 
 // ---------------------------------------------------------------------------
@@ -138,7 +141,13 @@ export interface WizardLook {
    * staff, a hem frilled into glowing gills, foxfire freckles and spores
    * drifting up round her, and a gnarled staff crowned with luminous mushrooms.
    */
-  head?: 'astral' | 'fiend' | 'grove' | 'wild' | 'tide' | 'witch' | 'faerie' | 'lotus' | 'cap';
+  head?: 'astral' | 'fiend' | 'grove' | 'wild' | 'tide' | 'witch' | 'faerie' | 'lotus' | 'prism' | 'firebird' | 'siren' | 'cap';
+  /** The Prism's quartz: its floating crown, pauldrons and hem points. */
+  shard?: Material;
+  /** The Firebird's flame feathers: crest, mantle, hem and the staff's plumes. */
+  plume?: Material;
+  /** The Siren's fins at the hem. */
+  fin?: Material;
   /** Mycelia's toadstool: its cap, the glowing spots on it, and the mushrooms' pale stems. */
   shroom?: { cap: Material; spot: Material; stem: Material };
   /**
@@ -443,7 +452,63 @@ export const CINDER_LOOK: WizardLook = {
   cinder: { lava: LAVA, paint: ASH_PAINT },
 };
 
-export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK, AUTUMN_LOOK, FROST_LOOK, TIDE_LOOK, ABYSS_LOOK, PUMPKIN_LOOK, TITANIA_LOOK, LOTUS_LOOK, MYCELIA_LOOK, CINDER_LOOK];
+/** The Arcanist's Prism skin: a crystal mage in pale quartz, crowned with floating shards, who splits the light. */
+export const PRISM_LOOK: WizardLook = {
+  key: 'wizard_prism',
+  rest: 'arcane',
+  robe: QUARTZ_ROBE,
+  inner: QUARTZ_LINING,
+  trim: PRISM_SILVER,
+  belt: QUARTZ_LINING,
+  boot: BOOT,
+  skin: SKIN,
+  shaft: ASHWOOD,
+  crystal: PRISM_GEM,
+  magic: { core: PRISM_CORE, hot: PRISM_HOT, mid: PRISM_MID, deep: PRISM_DEEP },
+  hooded: false,
+  head: 'prism',
+  hair: PRISM_HAIR,
+  shard: QUARTZ,
+};
+
+/** The Pyromancer's Firebird skin: a priestess hooded as the firebird, feathered in crimson and gold. */
+export const FIREBIRD_LOOK: WizardLook = {
+  key: 'wizard_firebird',
+  rest: 'pyro',
+  robe: FIREBIRD_ROBE,
+  inner: FIREBIRD_INNER,
+  trim: FIREBIRD_GOLD,
+  belt: FIREBIRD_GOLD,
+  boot: BOOT,
+  skin: SKIN,
+  shaft: FIREBIRD_GOLD,
+  crystal: FIREBIRD_EMBER,
+  magic: { core: FIREBIRD_CORE, hot: FIREBIRD_HOT, mid: FIREBIRD_MID, deep: FIREBIRD_DEEP },
+  hooded: false,
+  head: 'firebird',
+  plume: PLUME,
+};
+
+/** The Tidecaller's Siren skin: a siren of the sunset sea, in iridescent scales and shells, with a coral trident. */
+export const SIREN_LOOK: WizardLook = {
+  ...TIDE_LOOK,
+  key: 'wizard_siren',
+  robe: SIREN_SCALE,
+  inner: SIREN_SILK,
+  trim: SIREN_SHELL,
+  belt: SIREN_SILK,
+  boot: SIREN_FIN,
+  shaft: SIREN_CORAL,
+  crystal: SIREN_PEARL,
+  magic: { core: SIREN_CORE, hot: SIREN_HOT, mid: SIREN_MID, deep: SIREN_DEEP },
+  head: 'siren',
+  hair: SIREN_HAIR,
+  coral: SIREN_CORAL,
+  shell: SIREN_SHELL,
+  fin: SIREN_FIN,
+};
+
+export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK, AUTUMN_LOOK, FROST_LOOK, TIDE_LOOK, ABYSS_LOOK, PUMPKIN_LOOK, TITANIA_LOOK, LOTUS_LOOK, PRISM_LOOK, FIREBIRD_LOOK, SIREN_LOOK, MYCELIA_LOOK, CINDER_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let S: WizardLook = ARCANE_LOOK;
@@ -704,6 +769,65 @@ function drawStaff(c: PixelCanvas, s: Staff, glow: number, free?: { x: number; y
     c.part();
     const cup = at(0, -0.4);
     c.ellipse(cup.x, cup.y, 1.3, 0.9, S.pad ?? S.shaft, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6, 1) });
+  } else if (S.head === 'prism') {
+    // A silver claw grips the prism's foot: a collar on the ash, and two thin prongs curling up its sides.
+    const px = -g.dy;
+    const py = g.dx;
+    const at = (side: number, up: number) => ({ x: g.top.x + px * side + g.dx * up, y: g.top.y + py * side + g.dy * up });
+    for (const k of [-1, 1]) {
+      c.part();
+      const a0 = at(k * 0.5, 0);
+      const a1 = at(k * 2.0, 0.9);
+      const a2 = at(k * 2.1, 2.5);
+      c.capsule(a0.x, a0.y, a1.x, a1.y, 0.5, 0.45, S.trim, { bias: 1 });
+      c.capsule(a1.x, a1.y, a2.x, a2.y, 0.45, 0.28, S.trim, { bias: k < 0 ? 1 : 0 });
+    }
+    c.part();
+    const col = at(0, -0.4);
+    c.ellipse(col.x, col.y, 1.1, 0.8, S.trim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6, 1) });
+  } else if (S.head === 'firebird') {
+    // Three burning plumes fan up behind the ember from a gold cup, the middle
+    // one tallest, the outer two curling out; each burns crimson at the quill
+    // to gold at the tip.
+    const px = -g.dy;
+    const py = g.dx;
+    const at = (side: number, up: number) => ({ x: g.top.x + px * side + g.dx * up, y: g.top.y + py * side + g.dy * up });
+    plumeFeather(c, [at(0, 0.6), at(0, 3.0), at(0.2, 5.4), at(0.9, 6.8)], 0.85, 0.3);
+    for (const k of [-1, 1]) plumeFeather(c, [at(k * 0.6, 0.4), at(k * 2.2, 2.0), at(k * 3.0, 4.0), at(k * 2.7, 5.4)], 0.75, 0.25);
+    c.part();
+    const cup = at(0, -0.3);
+    c.ellipse(cup.x, cup.y, 1.5, 1.0, S.trim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6, 1) });
+  } else if (S.head === 'siren') {
+    // A coral trident: a crossbar at the head of the shaft, two barbed prongs
+    // rising either side of the pearl, and the middle one standing tall behind
+    // it to a spear point; a shell bound where the coral meets the shaft.
+    const px = -g.dy;
+    const py = g.dx;
+    const at = (side: number, up: number) => ({ x: g.top.x + px * side + g.dx * up, y: g.top.y + py * side + g.dy * up });
+    const coral = S.coral ?? S.trim;
+    c.part();
+    const m0 = at(0, 0);
+    const m1 = at(0, 5.4);
+    const m2 = at(0, 7.0);
+    c.capsule(m0.x, m0.y, m1.x, m1.y, 0.5, 0.45, coral);
+    c.capsule(m1.x, m1.y, m2.x, m2.y, 0.6, 0.15, coral, { bias: 1 });
+    c.part();
+    const b0 = at(-2.1, 0.5);
+    const b1 = at(2.1, 0.5);
+    c.capsule(b0.x, b0.y, b1.x, b1.y, 0.5, 0.5, coral, { bias: 1 });
+    for (const k of [-1, 1]) {
+      c.part();
+      const p0 = at(k * 2.1, 0.5);
+      const p1 = at(k * 2.3, 3.5);
+      const p2 = at(k * 2.5, 4.9);
+      c.capsule(p0.x, p0.y, p1.x, p1.y, 0.45, 0.4, coral, { bias: k < 0 ? 1 : 0 });
+      c.capsule(p1.x, p1.y, p2.x, p2.y, 0.5, 0.15, coral, { bias: 1 });
+      const barb = at(k * 3.1, 3.3);
+      c.px(barb.x, barb.y, coral, { x: k * 0.5 - 0.2, y: 0.4, z: 0.8 }, { bias: 1 });
+    }
+    c.part();
+    const sh = at(0, -0.9);
+    c.ellipse(sh.x, sh.y, 1.2, 1.0, S.shell ?? S.trim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.2, 1) });
   } else if (S.head === 'witch') {
     // Gnarled wood: burls bulging off the shaft, and two crooked twigs curling
     // up round the pumpkin like fingers.
@@ -742,6 +866,7 @@ function drawStaff(c: PixelCanvas, s: Staff, glow: number, free?: { x: number; y
 
 /** The crystal: a small faceted gem, brighter on its upper-left facet. */
 function crystal(c: PixelCanvas, gx: number, gy: number, glow: number): { x: number; y: number } {
+  if (S.head === 'prism') return prismGem(c, gx, gy, glow);
   c.part();
   const cg = 0.55 + glow * 0.45;
   c.ellipse(gx, gy, 1.55, 2.3, S.crystal, {
@@ -754,6 +879,43 @@ function crystal(c: PixelCanvas, gx: number, gy: number, glow: number): { x: num
     },
   });
   return { x: gx, y: gy };
+}
+
+/**
+ * The Prism's prism, where the crystal would be: a triangle of clear glass
+ * standing on its base, its two faces toward us meeting at a bright ridge, the
+ * one turned to the light paler, its base a darker band.
+ */
+function prismGem(c: PixelCanvas, gx: number, gy: number, glow: number): { x: number; y: number } {
+  c.part();
+  const lit = { glow: S.crystal.emissive! * (0.55 + glow * 0.45) };
+  const top = gy - 2.9;
+  const bot = gy + 1.9;
+  const mid = Math.floor(gx);
+  for (let y = Math.floor(top); y <= Math.floor(bot); y++) {
+    const u = (y + 0.5 - top) / (bot - top);
+    if (u < 0 || u > 1.1) continue;
+    const hw = 0.5 + Math.min(1, u) * 1.9;
+    for (let x = Math.floor(gx - hw); x <= Math.floor(gx + hw); x++) {
+      if (Math.abs(x + 0.5 - gx) > hw) continue;
+      const base = y === Math.floor(bot);
+      const n: Vec3 = base ? { x: 0, y: -0.55, z: 0.83 } : x === mid ? { x: -0.1, y: 0.3, z: 0.95 } : x < mid ? { x: -0.7, y: 0.25, z: 0.67 } : { x: 0.62, y: 0.2, z: 0.76 };
+      c.px(x, y, S.crystal, n, { ...lit, bias: x === mid && !base ? 1 : 0 });
+    }
+  }
+  return { x: gx, y: gy };
+}
+
+/** A flame feather along a chain of points, quill first: crimson at its root, burning out to gold at its tip. */
+function plumeFeather(c: PixelCanvas, pts: { x: number; y: number }[], r0: number, r1: number): void {
+  const m = S.plume ?? S.trim;
+  c.part();
+  const n = pts.length - 1;
+  for (let i = 0; i < n; i++) {
+    const ra = r0 + ((r1 - r0) * i) / n;
+    const rb = r0 + ((r1 - r0) * (i + 1)) / n;
+    c.capsule(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, ra, rb, m, { bias: Math.round(-1 + (2 * i) / Math.max(1, n - 1)) });
+  }
 }
 
 /**
@@ -1012,6 +1174,58 @@ function hemTrim(c: PixelCanvas, edges: (y: number) => [number, number], hem: nu
     for (let x = Math.round(l) + 1; x <= Math.round(r) - 2; x++) {
       const k = (((x - Math.round(sway)) % 4) + 4) % 4;
       if (k === 1 || k === 2) c.px(x, hem + 1, S.inner, cyl(0, -0.3), { bias: k === 1 ? 0 : -1 });
+    }
+    return;
+  }
+  if (S.head === 'prism') {
+    // A band of silver, and quartz teeth hanging below it: each a lit facet
+    // and a shadowed one, with a gap between, drifting with the sway.
+    c.part();
+    c.shape(hem, hem, () => [l, r], S.trim, (_x, _y, t) => cyl(t, -0.1));
+    const q = S.shard ?? S.trim;
+    c.part();
+    for (let x = Math.round(l) + 1; x <= Math.round(r) - 2; x++) {
+      const k = (((x - Math.round(sway)) % 3) + 3) % 3;
+      if (k === 0) c.px(x, hem + 1, q, { x: -0.6, y: -0.1, z: 0.8 }, { bias: 1 });
+      else if (k === 1) c.px(x, hem + 1, q, { x: 0.55, y: -0.2, z: 0.8 }, { bias: -1 });
+    }
+    return;
+  }
+  if (S.head === 'firebird') {
+    // Tail feathers: a row of flame feathers along the hem, quills dark
+    // between them, hanging in gold-tipped points that stir with the sway, and
+    // fanning out a pixel past the robe at each side like a bird's tail.
+    const plume = S.plume ?? S.trim;
+    c.part();
+    c.shape(hem, hem, () => [l - 1, r + 1], plume, (_x, _y, t) => cyl(t, -0.1), { bias: -1 });
+    for (let x = Math.round(l) - 1; x <= Math.round(r); x++) {
+      const k = (((x - Math.round(sway)) % 3) + 3) % 3;
+      if (k === 0) c.px(x, hem + 1, plume, cyl(0, -0.3), { bias: 1 });
+      else if (k === 1) c.px(x, hem + 1, plume, cyl(0, -0.3), { bias: 0 });
+      else c.shade(x, hem, -1);
+    }
+    return;
+  }
+  if (S.head === 'siren') {
+    // The gown flares into fins at the hem: a band of rose fin, ribbed, its
+    // lower edge scalloped, and a fin tip sweeping out past each side.
+    const fin = S.fin ?? S.trim;
+    c.part();
+    c.shape(hem - 1, hem, (y) => {
+      const [el, er] = edges(y);
+      return [el - (y - hem + 1), er + (y - hem + 1)];
+    }, fin, (_x, _y, t) => cyl(t, -0.05));
+    for (let x = Math.round(l) - 1; x <= Math.round(r); x++) {
+      if ((((x - Math.round(sway)) % 2) + 2) % 2 === 0) {
+        c.shade(x, hem - 1, -1);
+        c.shade(x, hem, -1);
+      }
+      if ((((x - Math.round(sway)) % 3) + 3) % 3 === 1 && x > Math.round(l) && x < Math.round(r) - 1) c.px(x, hem + 1, fin, cyl(0, -0.3), { bias: -1 });
+    }
+    c.part();
+    for (const [x, b] of [[Math.round(l) - 2, 1], [Math.round(r) + 1, 0]] as const) {
+      c.px(x, hem, fin, { x: x < l ? -0.6 : 0.6, y: 0.2, z: 0.77 }, { bias: b });
+      c.px(x + (x < l ? -1 : 1), hem + 1, fin, { x: x < l ? -0.6 : 0.6, y: 0, z: 0.8 }, { bias: b + 1 });
     }
     return;
   }
@@ -3052,8 +3266,515 @@ function cinderCracks(c: PixelCanvas, U: number, p: Pose): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Heads: the Prism's indigo bob, floating crown of quartz and crystal pauldrons
+
+/**
+ * A quartz shard from its foot (x0, y0) to its point (x1, y1), `w` its
+ * half-width at the shoulder: two facets either side of a bright ridge, each
+ * lit by the way it faces, cut to a sharp point.
+ */
+function shard(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, w: number): void {
+  const m = S.shard ?? S.crystal;
+  const vx = x1 - x0;
+  const vy = y1 - y0;
+  const len = Math.hypot(vx, vy) || 1;
+  const ux = vx / len;
+  const uy = vy / len;
+  c.part();
+  for (let y = Math.floor(Math.min(y0, y1) - w - 1); y <= Math.ceil(Math.max(y0, y1) + w + 1); y++) {
+    for (let x = Math.floor(Math.min(x0, x1) - w - 1); x <= Math.ceil(Math.max(x0, x1) + w + 1); x++) {
+      const ox = x + 0.5 - x0;
+      const oy = y + 0.5 - y0;
+      const t = (ox * ux + oy * uy) / len;
+      if (t < -0.1 || t > 1) continue;
+      const d = -ox * uy + oy * ux;
+      const half = t < 0.3 ? w * (0.65 + (0.35 * Math.max(0, t)) / 0.3) : (w * (1 - t)) / 0.7;
+      if (Math.abs(d) > Math.max(half, t < 0.85 ? 0.5 : 0)) continue;
+      const ridge = Math.abs(d) < 0.5;
+      // A facet faces square off the shard, toward the side it lies on.
+      const s = d < 0 ? -1 : 1;
+      const n: Vec3 = ridge ? { x: -0.15, y: 0.25, z: 0.95 } : { x: -uy * s * 0.62, y: -ux * s * 0.62, z: 0.75 };
+      c.px(x, y, m, n, { bias: ridge ? 1 : 0 });
+    }
+  }
+}
+
+/** Five quartz shards hovering over the head in an arc, the middle one tallest, each bobbing on its own beat and splitting off a colour. */
+function shardCrown(c: PixelCanvas, cx: number, y: number, p: Pose, spread = 1): void {
+  const ph = p.glow * 7 + p.staff.float * 2 + p.breath * 2.3 + p.hat * 1.3;
+  const shards: [number, number, number][] = [[-60, 2.6, 0.8], [-30, 3.6, 0.95], [0, 4.8, 1.15], [30, 3.6, 0.95], [60, 2.6, 0.8]];
+  shards.forEach(([deg, len, w], i) => {
+    const a = deg * RAD;
+    const bob = Math.round(Math.sin(ph + i * 1.9) * 0.7);
+    const bx = cx + Math.sin(a) * 4.5 * spread;
+    const by = y + (1 - Math.cos(a)) * 2.6 + bob;
+    shard(c, bx, by, bx + Math.sin(a) * len * 0.45 * spread, by - len, w);
+    c.spark(bx + Math.sin(a) * len * 0.2 - 0.5, by - len * 0.45, SPECTRUM[(i + Math.round(ph)) % SPECTRUM.length], 0.35 + p.glow * 0.25);
+  });
+}
+
+/** Quartz on a shoulder at (x, U-relative 17): a long shard leaning out (`k`: the way out) and a short one beside it. */
+function quartzPauldron(c: PixelCanvas, x: number, U: number, k: number, lean = 1): void {
+  shard(c, x - k * 0.6, 17.0 + U, x - k * 0.3, 14.9 + U, 0.8);
+  shard(c, x + k * 0.5, 17.4 + U, x + k * 2.2 * lean, 14.1 + U, 1.15);
+  // A colour caught in the long shard, so the quartz reads against the pale robe.
+  c.spark(x + k * 1.4 * lean, 15.6 + U, SPECTRUM[k < 0 ? 4 : 1], 0.5);
+}
+
+/** The Prism's eyes: plain, a pale glint of the prism's light in them. */
+function prismEyes(c: PixelCanvas, pts: [number, number][], p: Pose): void {
+  c.part();
+  for (const [x, y] of pts) {
+    if (p.blink) c.px(x, y, S.skin, FLAT_DOWN, { bias: -1 });
+    else c.px(x, y, EYE);
+  }
+}
+
+function prismHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  // The bob behind the face, cut straight at the jaw.
+  c.part();
+  c.ellipse(cx, 11.6 + U, 4.4, 3.2, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9) });
+  c.shape(12 + U, 15 + U, () => [cx - 4.6, cx + 4.6], hair, (_x, _y, t, u) => cyl(t * 0.9, 0.2 - u * 0.4));
+  // A quartz brooch at the throat.
+  c.part();
+  c.px(cx - 1, 16 + U, S.shard ?? S.crystal, { x: -0.5, y: 0.4, z: 0.77 }, { bias: 1 });
+  c.px(cx, 16 + U, S.shard ?? S.crystal, { x: 0.5, y: 0.3, z: 0.8 });
+  // Face.
+  c.part();
+  c.ellipse(cx, 13.4 + U, 3.0, 2.7, S.skin);
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
+  c.shade(12, 15 + U, -1);
+  const [gx, gy] = p.gaze ?? [0, 0];
+  prismEyes(c, [[10 + gx, 13 + U + gy], [13 + gx, 13 + U + gy]], p);
+  // The crown of the head, sleek, a band of light across it; blunt bangs straight over the brow.
+  c.part();
+  c.ellipse(cx, 10.4 + U, 4.2, 2.1, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.5, 1) });
+  c.shade(10, 9 + U, 1);
+  c.shade(11, 9 + U, 1);
+  c.shape(11 + U, 11 + U, () => [cx - 3.5, cx + 3.5], hair, (_x, _y, t) => cyl(t * 0.8, -0.25));
+  c.shade(10, 11 + U, -1);
+  c.shade(13, 11 + U, -1);
+  // The sides of the bob before the cheeks, the ends turning in at the jaw.
+  for (let y = 12; y <= 15; y++) {
+    c.px(8, y + U, hair, cyl(-0.6, 0.1), { bias: y === 15 ? -1 : 0 });
+    c.px(15, y + U, hair, cyl(0.6, 0.1), { bias: y === 15 ? -1 : 0 });
+  }
+  c.px(9, 15 + U, hair, cyl(-0.3, -0.3), { bias: -1 });
+  c.px(14, 15 + U, hair, cyl(0.3, -0.3), { bias: -1 });
+  quartzPauldron(c, 7.6, U, -1);
+  quartzPauldron(c, 16.4, U, 1);
+  shardCrown(c, cx, 7.0 + U, p);
+}
+
+function prismHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  c.part();
+  c.ellipse(cx, 11.4 + U, 4.4, 3.3, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 0.9) });
+  c.shape(12 + U, 15 + U, () => [cx - 4.6, cx + 4.6], hair, (_x, _y, t, u) => cyl(t * 0.9, 0.2 - u * 0.4));
+  // A sheen across the back of the head, strands falling to the blunt ends.
+  c.shade(10, 9 + U, 1);
+  c.shade(11, 9 + U, 1);
+  c.shade(13, 9 + U, 1);
+  for (let y = 12; y <= 15; y++) {
+    c.shade(cx - 2, y + U, -1);
+    c.shade(cx + 1, y + U, -1);
+  }
+  for (let x = 7; x <= 16; x += 2) c.shade(x, 15 + U, -1);
+  quartzPauldron(c, 7.6, U, -1);
+  quartzPauldron(c, 16.4, U, 1);
+  shardCrown(c, cx, 7.0 + U, p);
+}
+
+/** Facing left, like drawSide. */
+function prismHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  quartzPauldron(c, cx + 1.6, U, 1, 0.6);
+  c.part();
+  c.ellipse(cx + 0.8, 12.0 + U, 3.6, 3.1, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9) });
+  c.shape(12 + U, 15 + U, () => [cx - 0.6, cx + 4.4], hair, (_x, _y, t, u) => cyl(t * 0.8 + 0.2, 0.2 - u * 0.4));
+  c.shade(cx + 2, 13 + U, -1);
+  c.shade(cx + 2, 14 + U, -1);
+  // Face in profile.
+  c.part();
+  c.ellipse(cx - 1.3, 13.5 + U, 2.7, 2.5, S.skin);
+  c.part();
+  c.px(cx - 5, 13 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(cx - 5, 14 + U, S.skin, sphere(-0.5, 0.3));
+  prismEyes(c, [[cx - 3, 13 + U]], p);
+  // Crown of the head, the bangs cut straight over the brow, and the bob's side before the ear.
+  c.part();
+  c.shape(9 + U, 10 + U, (y) => (y === 9 + U ? [cx - 3.0, cx + 3.0] : [cx - 4.3, cx + 3.8]), hair, (_x, _y, t, u) => sphere(t * 0.9, u - 0.8, 1));
+  c.shade(cx - 1, 9 + U, 1);
+  c.shape(11 + U, 11 + U, () => [cx - 4.6, cx - 0.4], hair, (_x, _y, t) => cyl(t * 0.8 - 0.2, -0.25));
+  for (let y = 12; y <= 15; y++) c.px(cx, y + U, hair, cyl(-0.3, 0), { bias: y === 15 ? -1 : 0 });
+  c.px(cx - 1, 15 + U, hair, cyl(-0.4, -0.3), { bias: -1 });
+  shardCrown(c, cx - 0.3, 7.0 + U, p, 0.7);
+}
+
+/**
+ * Light splitting along the Prism's edges: where the quartz robe meets the
+ * air its rim shimmers in colours, warm down one side and cool down the other
+ * as through a prism, with a few white glints in the cloth. Fixed to the
+ * cloth, so it rides along with it.
+ */
+function prismFlecks(c: PixelCanvas, U: number, p: Pose): void {
+  for (let y = 16; y < FRAME_H; y++) {
+    for (let x = 0; x < FRAME_W; x++) {
+      const m = c.materialAt(x, y);
+      if (m !== S.robe && m !== S.trim) continue;
+      const left = !c.materialAt(x - 1, y);
+      const right = !c.materialAt(x + 1, y);
+      const h = hash(x, y - U, 41);
+      if ((left || right) && h > 0.35) {
+        const band = ((y - U + Math.round(p.glow * 3)) % 3 + 3) % 3;
+        c.spark(x, y, SPECTRUM[left ? band : 3 + band], 0.6);
+      } else if (m === S.robe && h > 0.975) c.spark(x, y, S.magic.core, 0.45);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Heads: the Firebird's crested hood, gold beak and mantle of flame feathers
+
+/** A mantle of flame feathers over the shoulders: crimson rows overlapping, the lowest burning out to gold-tipped points. */
+function featherMantle(c: PixelCanvas, l: number, r: number, U: number, flare: number, sway: number): void {
+  const plume = S.plume ?? S.trim;
+  const top = 15 + U;
+  const bottom = 18 + U;
+  const edges = (y: number): [number, number] => {
+    const u = (y - top) / (bottom - top);
+    return [l - flare * u, r + flare * u];
+  };
+  c.part();
+  c.shape(top, top + 1, edges, plume, (_x, _y, t, u) => cyl(t, 0.55 - u * 0.2), { bias: -2 });
+  c.shape(top + 2, bottom, edges, plume, (_x, _y, t, u) => cyl(t, 0.35 - u * 0.4), { bias: -1 });
+  // The tips of the upper row lying over the lower, and the lowest row's points.
+  c.part();
+  const [ml, mr] = edges(top + 2);
+  for (let x = Math.round(ml); x < Math.round(mr); x++) {
+    const k = (((x - Math.round(sway)) % 3) + 3) % 3;
+    if (k === 1) c.px(x, top + 2, plume, cyl((x + 0.5 - (ml + mr) / 2) / ((mr - ml) / 2), 0.1), { bias: -1 });
+    else if (k === 2) c.shade(x, top + 2, 1);
+  }
+  const [bl, br] = edges(bottom);
+  for (let x = Math.round(bl); x < Math.round(br); x++) {
+    const k = (((x - Math.round(sway)) % 3) + 3) % 3;
+    const t = (x + 0.5 - (bl + br) / 2) / ((br - bl) / 2);
+    if (k === 0) c.px(x, bottom + 1, plume, cyl(t, -0.3), { bias: 1 });
+    else if (k === 1) c.shade(x, bottom, 1);
+    else c.shade(x, bottom, -1);
+  }
+  c.shade(Math.round(l), top, 1);
+  c.shade(Math.round(r) - 1, top, 1);
+}
+
+/** The bird's skull of the hood, round on top and falling to the shoulders: its half-width for a row. */
+const birdHoodHW = (y: number, top: number) => 5.2 * Math.sqrt(Math.min(1, Math.max(0, (y + 0.5 - top) / 4.2)));
+
+/** Flame-feather texture on the hood: short rows of scallops, a little lighter at each feather's tip. */
+function hoodFeathers(c: PixelCanvas, pts: [number, number][]): void {
+  for (const [x, y] of pts) {
+    c.shade(x, y, -1);
+    c.shade(x + 1, y, -1);
+  }
+}
+
+function firebirdHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  featherMantle(c, cx - 5.0, cx + 5.0, U, 1.3, p.hem);
+  const top = 6 + U;
+  c.part();
+  c.shape(top, 16 + U, (y) => {
+    const hw = birdHoodHW(y, top) - (y === 16 + U ? 0.4 : 0);
+    return [cx - hw, cx + hw];
+  }, S.robe, (_x, _y, t, u) => cyl(t, 0.5 - u * 0.45));
+  hoodFeathers(c, [[cx - 5, 12 + U], [cx + 4, 12 + U], [cx - 5, 15 + U], [cx + 4, 15 + U]]);
+  // The opening: a smouldering lining round the face.
+  c.part();
+  c.ellipse(cx, 13.2 + U, 3.6, 3.3, S.inner, { normal: (_x, _y, dx, dy) => ({ x: -dx * 0.55, y: dy * 0.45, z: 0.75 }) });
+  c.part();
+  c.ellipse(cx, 13.7 + U, 2.9, 2.5, S.skin);
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
+  // Gold marks under the eyes, like the firebird's.
+  c.px(9, 14 + U, S.plume ?? S.trim, FLAT_DOWN, { bias: 1 });
+  c.px(14, 14 + U, S.plume ?? S.trim, FLAT_DOWN, { bias: 1 });
+  const [gx, gy] = p.gaze ?? [0, 0];
+  prismEyes(c, [[10 + gx, 13 + U + gy], [13 + gx, 13 + U + gy]], p);
+  // The beak: gold, from the hood's brow down over the forehead to a hooked point between the eyes.
+  c.part();
+  c.shape(9 + U, 11 + U, (y) => {
+    const hw = [2.6, 1.8, 1.0][y - 9 - U];
+    return [cx - hw, cx + hw];
+  }, S.trim, (_x, _y, t, u) => sphere(t * 0.8, 0.3 - u * 0.9, 1));
+  c.px(cx - 1, 12 + U, S.trim, sphere(0, -0.6), { bias: -1 });
+  c.shade(cx - 1, 11 + U, 1);
+  // The firebird's eyes on the hood, either side of the beak's root.
+  c.part();
+  for (const x of [cx - 4, cx + 3]) {
+    c.px(x, 9 + U, S.trim, { x: 0, y: 0.2, z: 0.98 }, { bias: 1 });
+    c.spark(x, 9 + U, S.magic.hot, 0.35);
+  }
+  // The crest: three burning feathers sweeping back off the crown, swaying with the step.
+  const s = p.hat * 0.6;
+  plumeFeather(c, [{ x: cx - 1.2, y: 7.6 + U }, { x: cx - 2.6, y: 4.6 + U }, { x: cx - 3.0 - s, y: 2.6 + U }], 0.8, 0.3);
+  plumeFeather(c, [{ x: cx + 1.4, y: 7.6 + U }, { x: cx + 3.6, y: 5.0 + U }, { x: cx + 5.0 + s, y: 4.2 + U }], 0.8, 0.3);
+  plumeFeather(c, [{ x: cx, y: 7.2 + U }, { x: cx + 0.6, y: 3.6 + U }, { x: cx + 1.8 + s, y: 0.8 + U }], 0.95, 0.3);
+  for (const [x, y] of [[cx - 3 - s, 2 + U], [cx + 5 + s, 4 + U], [cx + 2 + s, 0 + U]]) c.spark(x, y, S.magic.hot, 0.35 + p.glow * 0.25);
+}
+
+function firebirdHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  featherMantle(c, cx - 5.0, cx + 5.0, U, 1.3, -p.hem);
+  const top = 6 + U;
+  c.part();
+  c.shape(top, 16 + U, (y) => {
+    const hw = birdHoodHW(y, top) - (y === 16 + U ? 0.4 : 0);
+    return [cx - hw, cx + hw];
+  }, S.robe, (_x, _y, t, u) => cyl(t, 0.45 - u * 0.45));
+  // Rows of feathers down the back of the hood.
+  hoodFeathers(c, [[cx - 3, 10 + U], [cx + 2, 10 + U], [cx - 1, 13 + U], [cx - 4, 15 + U], [cx + 3, 15 + U]]);
+  const s = -p.hat * 0.6;
+  plumeFeather(c, [{ x: cx + 1.2, y: 7.6 + U }, { x: cx + 2.6, y: 4.6 + U }, { x: cx + 3.0 - s, y: 2.6 + U }], 0.8, 0.3);
+  plumeFeather(c, [{ x: cx - 1.4, y: 7.6 + U }, { x: cx - 3.6, y: 5.0 + U }, { x: cx - 5.0 + s, y: 4.2 + U }], 0.8, 0.3);
+  plumeFeather(c, [{ x: cx, y: 7.2 + U }, { x: cx - 0.6, y: 3.6 + U }, { x: cx - 1.8 + s, y: 0.8 + U }], 0.95, 0.3);
+}
+
+/** Facing left, like drawSide. */
+function firebirdHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  featherMantle(c, cx - 3.8, cx + 3.6, U, 1.0, p.hem);
+  // The crest streams back off the crown, behind the hood.
+  const s = p.hat * 0.6;
+  plumeFeather(c, [{ x: cx + 1.4, y: 7.0 + U }, { x: cx + 4.2, y: 5.2 + U }, { x: cx + 6.4 + s, y: 5.6 + U }], 0.8, 0.3);
+  plumeFeather(c, [{ x: cx + 0.6, y: 6.6 + U }, { x: cx + 3.0, y: 3.4 + U }, { x: cx + 5.6 + s, y: 2.4 + U }], 0.9, 0.3);
+  const top = 6 + U;
+  c.part();
+  c.shape(top, 16 + U, (y) => {
+    const hw = birdHoodHW(y, top);
+    const f = hw / 5.2;
+    return [cx + 0.2 - 4.4 * f, cx + 0.2 + 3.8 * f];
+  }, S.robe, (_x, _y, t, u) => cyl(t * 0.9 + 0.1, 0.5 - u * 0.45));
+  hoodFeathers(c, [[cx + 1, 10 + U], [cx + 2, 14 + U]]);
+  // The opening at the front, the face in profile within it.
+  c.part();
+  c.ellipse(cx - 2.2, 13.3 + U, 2.6, 3.1, S.inner, { normal: (_x, _y, dx, dy) => ({ x: -dx * 0.5, y: dy * 0.45, z: 0.75 }) });
+  c.part();
+  c.ellipse(cx - 2.0, 13.7 + U, 2.3, 2.4, S.skin);
+  c.part();
+  c.px(cx - 5, 13 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(cx - 5, 14 + U, S.skin, sphere(-0.5, 0.3));
+  c.px(cx - 2, 14 + U, S.plume ?? S.trim, FLAT_DOWN, { bias: 1 });
+  prismEyes(c, [[cx - 3, 13 + U]], p);
+  // The beak juts out over the brow and hooks down before the face.
+  c.part();
+  c.shape(10 + U, 11 + U, (y) => (y === 10 + U ? [cx - 5.6, cx - 0.8] : [cx - 6.6, cx - 3.6]), S.trim, (_x, _y, t, u) => sphere(t * 0.8 - 0.2, 0.3 - u * 0.8, 1));
+  c.px(cx - 6, 12 + U, S.trim, sphere(-0.3, -0.6), { bias: -1 });
+  c.part();
+  c.px(cx - 1, 9 + U, S.trim, { x: 0, y: 0.2, z: 0.98 }, { bias: 1 });
+  c.spark(cx - 1, 9 + U, S.magic.hot, 0.35);
+  plumeFeather(c, [{ x: cx - 0.4, y: 6.8 + U }, { x: cx + 1.0, y: 3.2 + U }, { x: cx + 2.8 + s, y: 0.8 + U }], 0.95, 0.3);
+  for (const [x, y] of [[cx + 6 + s, 5 + U], [cx + 5 + s, 2 + U], [cx + 3 + s, 0 + U]]) c.spark(x, y, S.magic.hot, 0.35 + p.glow * 0.25);
+}
+
+/**
+ * The robe feathered below the belt: rows of scalloped feather tips, each row
+ * offset from the one above, a little lit at the tips; and embers drifting up
+ * round her.
+ */
+function firebirdFlecks(c: PixelCanvas, U: number, p: Pose): void {
+  for (let y = 23 + U; y < FRAME_H; y++) {
+    const row = y - 23 - U;
+    if (row % 3 !== 2) continue;
+    const off = Math.floor(row / 3) % 2 ? 2 : 0;
+    for (let x = 0; x < FRAME_W; x++) {
+      if (c.materialAt(x, y) !== S.robe) continue;
+      if ((x + off) % 4 === 0 && row > 0) c.shade(x, y, -1);
+    }
+  }
+  const ph = p.glow * 5 + p.staff.float * 2 + p.breath * 1.1 + p.hem * 0.7;
+  ([[3, 26], [20.5, 24], [4.5, 18], [19.5, 15]] as [number, number][]).forEach(([x, y], i) => {
+    const rise = ((ph * 1.6 + i * 2.3) % 6 + 6) % 6;
+    const a = 0.6 * (1 - rise / 6) + 0.15;
+    const ex = x + Math.sin(ph * 2 + i * 1.9) * 0.8;
+    c.spark(ex, y - rise * 1.5, i % 2 ? S.magic.hot : FIREBIRD_ROSE, a);
+    if (i < 2) c.spark(ex, y - rise * 1.5 + 1, S.magic.deep, a * 0.5);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Heads: the Siren's waves of seafoam hair, crown of pearls and shell pauldrons
+
+/**
+ * A scallop shell standing on its hinge at (x, y): a fan of ribs, the rim lit,
+ * the furrows between the ribs darker, two small ears at the hinge. `w` and
+ * `h` its half-width and height.
+ */
+function scallop(c: PixelCanvas, x: number, y: number, w: number, h: number, lean = 0): void {
+  const m = S.shell ?? S.trim;
+  c.part();
+  for (let yy = Math.floor(y - h); yy <= Math.floor(y); yy++) {
+    for (let xx = Math.floor(x - w - 1); xx <= Math.ceil(x + w + 1); xx++) {
+      const dx = (xx + 0.5 - x) / w;
+      const dy = (yy + 0.5 - (y + 0.4)) / (h + 0.4);
+      const d = dx * dx + dy * dy;
+      if (d > 1 || dy > 0.05) continue;
+      // Ribs fan out from the hinge; every other one sits in a furrow.
+      const a = Math.atan2(dx, -dy);
+      const rib = Math.floor((a + 1.6) * 2.2) % 2;
+      c.px(xx, yy, m, sphere(dx * 0.6 + lean, dy * 0.6 - 0.2, 1), { bias: d > 0.7 ? 1 : rib ? -1 : 0 });
+    }
+  }
+  c.px(x - 1.5, y, m, { x: -0.3, y: -0.2, z: 0.93 }, { bias: -1 });
+  c.px(x + 0.5, y, m, { x: 0.3, y: -0.2, z: 0.93 }, { bias: -1 });
+}
+
+/** A pearl: one bright, cool pixel and a wink of the sunset in it. */
+function pearl(c: PixelCanvas, x: number, y: number, p: Pose, i: number): void {
+  c.px(x, y, S.crystal, { x: -0.3, y: 0.4, z: 0.86 });
+  if ((i + Math.round(p.glow * 4)) % 3 === 0) c.spark(x, y, SIREN_GLINT, 0.35);
+}
+
+/** A long lock of hair falling in waves from (x, top) to `bottom`, rippling sideways, lit on the crest of each wave. */
+function waveLock(c: PixelCanvas, x: number, top: number, bottom: number, w0: number, w1: number, k: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  const xAt = (y: number) => {
+    const u = (y - top) / (bottom - top);
+    return x + Math.sin(u * 7 + k * 1.3 + p.hem * 0.6) * 0.9 * u + p.hem * u * 0.5 + k * u * 0.8;
+  };
+  c.part();
+  c.shape(top, bottom, (y) => {
+    const u = (y - top) / (bottom - top);
+    const hw = w0 + (w1 - w0) * u - (y === bottom ? 0.4 : 0);
+    const m = xAt(y);
+    return [m - hw, m + hw];
+  }, hair, (_x, _y, t, u) => cyl(t * 0.85 + k * 0.2, 0.3 - u * 0.3));
+  for (let y = top + 1; y <= bottom; y++) {
+    const ph = ((y + Math.round(p.hem)) % 4 + 4) % 4;
+    const m = Math.floor(xAt(y));
+    if (ph === 0) c.shade(m, y, 1);
+    else if (ph === 2) c.shade(m + (k < 0 ? 1 : -1), y, -1);
+  }
+  // The curl at its end.
+  c.px(Math.floor(xAt(bottom)) + k, bottom, hair, cyl(k * 0.6, -0.3), { bias: 1 });
+}
+
+function sirenHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  // The mass of her hair behind, falling past the shoulders.
+  c.part();
+  c.shape(10 + U, 19 + U, (y) => {
+    const u = (y - 10 - U) / 9;
+    const hw = 4.4 + Math.max(0, u - 0.4) * 1.4;
+    return [cx - hw, cx + hw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.3, 0.9));
+  scallop(c, 7.0, 17.6 + U, 2.6, 2.4, -0.3);
+  scallop(c, 17.0, 17.6 + U, 2.6, 2.4, 0.3);
+  // Face, coral lips.
+  c.part();
+  c.ellipse(cx, 13.4 + U, 3.1, 2.7, S.skin);
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
+  c.px(12, 15 + U, S.coral ?? S.skin, FLAT_DOWN);
+  const gx = p.gaze?.[0] ?? 0;
+  tideEyes(c, [[10 + gx, 13 + U], [13 + gx, 13 + U]], p);
+  // The crown of the head, parted in the middle, and two long waves falling before the shoulders.
+  c.part();
+  c.ellipse(cx, 10.6 + U, 4.0, 2.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.5, 1) });
+  c.shade(cx, 10 + U, -1);
+  c.shade(cx - 2, 10 + U, 1);
+  waveLock(c, 7.9, 11 + U, 24 + U, 0.9, 1.4, -1, p);
+  waveLock(c, 16.1, 11 + U, 24 + U, 0.9, 1.4, 1, p);
+  // The crown: a band of shell set with pearls, a scallop standing at its heart.
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 3.6, cx + 3.6], S.shell ?? S.trim, (_x, _y, t) => cyl(t, 0.2));
+  scallop(c, cx, 9.4 + U, 1.7, 1.9);
+  c.part();
+  [[8, 10], [10, 10], [14, 10], [16, 10], [12, 10]].forEach(([x, y], i) => pearl(c, x, y + U, p, i));
+}
+
+function sirenHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  scallop(c, 7.0, 17.6 + U, 2.6, 2.4, -0.3);
+  scallop(c, 17.0, 17.6 + U, 2.6, 2.4, 0.3);
+  c.part();
+  c.ellipse(cx, 11.8 + U, 4.1, 3.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 0.9) });
+  // Her hair falls in waves down her back to the waist: three locks side by side.
+  waveLock(c, cx - 2.3, 12 + U, 25 + U, 1.4, 1.6, -1, p);
+  waveLock(c, cx + 2.3, 12 + U, 25 + U, 1.4, 1.6, 1, p);
+  waveLock(c, cx, 12 + U, 26 + U, 1.5, 1.4, 0, p);
+  // The crown seen from behind: the band and its pearls, the scallop's back above.
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 4.0, cx + 4.0], S.shell ?? S.trim, (_x, _y, t) => cyl(t, 0.1));
+  scallop(c, cx, 9.4 + U, 1.7, 1.9);
+  c.part();
+  [[8, 10], [10, 10], [14, 10], [16, 10]].forEach(([x, y], i) => pearl(c, x, y + U, p, i));
+}
+
+/** Facing left, like drawSide. */
+function sirenHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  // Hair behind, falling in waves down her back and drifting out behind her.
+  c.part();
+  c.ellipse(cx + 0.8, 12.4 + U, 3.4, 3.0, hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 0.9) });
+  waveLock(c, cx + 2.2, 12 + U, 24 + U, 1.6, 1.8, 1, p);
+  scallop(c, cx + 0.6, 17.6 + U, 2.2, 2.4, 0.2);
+  // Face in profile, coral lips.
+  c.part();
+  c.ellipse(cx - 1.3, 13.5 + U, 2.8, 2.5, S.skin);
+  c.part();
+  c.px(cx - 5, 13 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.px(cx - 5, 14 + U, S.skin, sphere(-0.5, 0.3));
+  c.px(cx - 4, 15 + U, S.coral ?? S.skin, FLAT_DOWN);
+  tideEyes(c, [[cx - 3, 13 + U]], p);
+  // Crown of the head and fringe, a wavy lock by the cheek.
+  c.part();
+  c.shape(9 + U, 10 + U, (y) => (y === 9 + U ? [cx - 3.2, cx + 2.8] : [cx - 4.4, cx + 3.6]), hair, (_x, _y, t, u) => sphere(t * 0.9, u - 0.8, 1));
+  c.px(cx - 5, 11 + U, hair, cyl(-0.7, 0.2));
+  for (let y = 13; y <= 17; y++) c.px(cx + ((y + Math.round(p.hem)) % 3 === 0 ? 1 : 0), y + U, hair, cyl(-0.2, 0), { bias: y > 15 ? -1 : 0 });
+  // The crown: the band round her head, its pearls, the scallop standing over the brow.
+  c.part();
+  c.shape(10 + U, 10 + U, () => [cx - 4.4, cx + 2.4], S.shell ?? S.trim, (_x, _y, t) => cyl(t * 0.9 - 0.1, 0.2));
+  scallop(c, cx - 2.2, 9.4 + U, 1.3, 1.9, -0.2);
+  c.part();
+  [[cx - 4, 10], [cx + 1, 10], [cx - 1, 10]].forEach(([x, y], i) => pearl(c, x, y + U, p, i));
+}
+
+/**
+ * The Siren's gown and the sea round her: rows of scales down the gown, each
+ * row set half a scale over from the last; sunset glints winking on them, and
+ * bubbles rising.
+ */
+function sirenFlecks(c: PixelCanvas, U: number, p: Pose): void {
+  const ph = p.glow * 5 + p.staff.float * 2 + p.breath * 1.1 + p.hem * 0.7;
+  for (let y = 16; y < FRAME_H; y++) {
+    const row = y - U;
+    for (let x = 0; x < FRAME_W; x++) {
+      if (c.materialAt(x, y) !== S.robe) continue;
+      // A scale's lower edge every other row, the rows staggered.
+      if (row % 2 === 1 && (x + (Math.floor(row / 2) % 2) * 2) % 4 === 0) c.shade(x, y, -1);
+      else if (row % 2 === 0 && (x + (Math.floor(row / 2) % 2) * 2) % 4 === 1) c.shade(x, y, 1);
+      const h = hash(x, row, 53);
+      if (h > 0.965) c.spark(x, y, h > 0.985 ? SIREN_GLINT : S.magic.hot, 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(ph * 2 + h * 40)));
+    }
+  }
+  ([[3, 27], [20.5, 26], [4.5, 20], [19.5, 19]] as [number, number][]).forEach(([x, y], i) => {
+    const rise = ((ph * 1.6 + i * 2.3) % 6 + 6) % 6;
+    const bx = x + Math.sin(ph * 2 + i * 1.9) * 0.8;
+    const a = 0.55 * (1 - rise / 6) + 0.15;
+    c.spark(bx, y - rise * 1.4, S.magic.hot, a);
+    if (i < 2) c.spark(bx + 1, y - rise * 1.4 - 1, SIREN_GLINT, a * 0.5);
+  });
+}
+
 function headDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
-  if (S.head === 'astral') astralHeadDown(c, cx, U, p);
+  if (S.head === 'prism') prismHeadDown(c, cx, U, p);
+  else if (S.head === 'firebird') firebirdHeadDown(c, cx, U, p);
+  else if (S.head === 'siren') sirenHeadDown(c, cx, U, p);
+  else if (S.head === 'astral') astralHeadDown(c, cx, U, p);
   else if (S.head === 'fiend') fiendHeadDown(c, cx, U, p);
   else if (S.head === 'grove') groveHeadDown(c, cx, U, p);
   else if (S.head === 'wild') wildHeadDown(c, cx, U, p);
@@ -3067,7 +3788,10 @@ function headDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
 }
 
 function headUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
-  if (S.head === 'astral') astralHeadUp(c, cx, U, p);
+  if (S.head === 'prism') prismHeadUp(c, cx, U, p);
+  else if (S.head === 'firebird') firebirdHeadUp(c, cx, U, p);
+  else if (S.head === 'siren') sirenHeadUp(c, cx, U, p);
+  else if (S.head === 'astral') astralHeadUp(c, cx, U, p);
   else if (S.head === 'fiend') fiendHeadUp(c, cx, U, p);
   else if (S.head === 'grove') groveHeadUp(c, cx, U, p);
   else if (S.head === 'wild') wildHeadUp(c, cx, U, p);
@@ -3081,7 +3805,10 @@ function headUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
 }
 
 function headSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
-  if (S.head === 'astral') astralHeadSide(c, cx, U, p);
+  if (S.head === 'prism') prismHeadSide(c, cx, U, p);
+  else if (S.head === 'firebird') firebirdHeadSide(c, cx, U, p);
+  else if (S.head === 'siren') sirenHeadSide(c, cx, U, p);
+  else if (S.head === 'astral') astralHeadSide(c, cx, U, p);
   else if (S.head === 'fiend') fiendHeadSide(c, cx, U, p);
   else if (S.head === 'grove') groveHeadSide(c, cx, U, p);
   else if (S.head === 'wild') wildHeadSide(c, cx, U, p);
@@ -3118,7 +3845,7 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   // Open robe front showing the darker inner layer (Titania's gown is closed, its petals unbroken).
   const belt = 21 + U;
   c.part();
-  if (S.head !== 'faerie') c.shape(belt + 1, hem - 1, (y) => {
+  if (S.head !== 'faerie' && S.head !== 'siren') c.shape(belt + 1, hem - 1, (y) => {
     const u = (y - belt) / (hem - belt);
     const x = cx + p.hem * Math.pow((y + 0.5 - top) / (hem + 1 - top), 2);
     return [x - 0.5 - u * 0.6, x + 0.5 + u * 0.6];
@@ -3163,6 +3890,9 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'witch') witchFlecks(c, p);
   if (S.head === 'faerie') faerieFlecks(c, U, p);
   if (S.head === 'lotus') lotusFlecks(c, p);
+  if (S.head === 'prism') prismFlecks(c, U, p);
+  if (S.head === 'firebird') firebirdFlecks(c, U, p);
+  if (S.head === 'siren') sirenFlecks(c, U, p);
   if (S.head === 'cap') capFlecks(c, U, p);
   if (S.cinder) cinderCracks(c, U, p);
   finishMagic(c, p, tip);
@@ -3212,6 +3942,9 @@ function drawUp(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'grove') groveFlecks(c, U, p);
   if (S.head === 'tide') tideFlecks(c, U, p);
   if (S.head === 'witch') witchFlecks(c, p);
+  if (S.head === 'prism') prismFlecks(c, U, p);
+  if (S.head === 'firebird') firebirdFlecks(c, U, p);
+  if (S.head === 'siren') sirenFlecks(c, U, p);
   if (S.head === 'faerie') faerieFlecks(c, U, p);
   if (S.head === 'lotus') lotusFlecks(c, p);
   if (S.head === 'cap') capFlecks(c, U, p);
@@ -3274,7 +4007,7 @@ function drawSide(c: PixelCanvas, p: Pose): FrameMeta {
   c.part();
   c.px(Math.round(bl), belt, S.trim, { x: -0.5, y: 0.3, z: 0.8 }, { bias: 1 });
   // Front edge of the robe opening.
-  for (let y = belt + 1; y < hem && S.head !== 'faerie'; y++) {
+  for (let y = belt + 1; y < hem && S.head !== 'faerie' && S.head !== 'siren'; y++) {
     const [l] = edges(y);
     c.px(Math.round(l) + 1, y, S.inner, cyl(-0.4, 0));
   }
@@ -3294,6 +4027,9 @@ function drawSide(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'witch') witchFlecks(c, p);
   if (S.head === 'faerie') faerieFlecks(c, U, p);
   if (S.head === 'lotus') lotusFlecks(c, p);
+  if (S.head === 'prism') prismFlecks(c, U, p);
+  if (S.head === 'firebird') firebirdFlecks(c, U, p);
+  if (S.head === 'siren') sirenFlecks(c, U, p);
   if (S.head === 'cap') capFlecks(c, U, p);
   if (S.cinder) cinderCracks(c, U, p);
   finishMagic(c, p, tip);
@@ -3336,6 +4072,21 @@ function finishMagic(c: PixelCanvas, p: Pose, tip: { x: number; y: number }): vo
     const lean = p.hat + (p.staff.float % 2 ? 1 : 0);
     c.spark(tip.x - 0.4 + (lean % 2 ? 1.5 : -1.5), tip.y - 3.2, S.magic.hot, 0.35 + p.glow * 0.25);
     c.spark(tip.x - 0.4 + (lean % 2 ? -1 : 1), tip.y - 4.6, S.magic.core, 0.2 + p.glow * 0.2);
+  } else if (S.head === 'firebird') {
+    // The ember burns: a tongue of gold licking up off it, a rose fleck above flickering side to side.
+    const lean = p.hat + (p.staff.float % 2 ? 1 : 0);
+    c.spark(tip.x - 0.4, tip.y - 3, S.magic.hot, 0.5 + p.glow * 0.3);
+    c.spark(tip.x - 0.4 + (lean % 2 ? 1 : -1), tip.y - 4, FIREBIRD_ROSE, 0.35 + p.glow * 0.25);
+  } else if (S.head === 'siren') {
+    // The low sun winks on the pearl.
+    c.spark(tip.x - 1.4, tip.y - 1.4, SIREN_GLINT, 0.35 + p.glow * 0.3);
+  } else if (S.head === 'prism') {
+    // The prism throws a little rainbow out of its far face, spreading down and away.
+    const a = 0.25 + p.glow * 0.3;
+    for (let b = 0; b < SPECTRUM.length; b++) {
+      const deg = (14 + b * 10) * RAD;
+      for (let j = 2; j <= 4; j++) c.spark(tip.x + 1 + Math.cos(deg) * j, tip.y + Math.sin(deg) * j, SPECTRUM[b], a * (1.2 - j * 0.2));
+    }
   } else if (S.head === 'astral') {
     // The star at the staff's head throws out four long rays.
     const r = 2 + Math.round(p.glow * 1.5);

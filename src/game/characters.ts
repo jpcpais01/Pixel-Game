@@ -17,15 +17,18 @@ import { ARCANE_SKIN, ASTRAL_SKIN, VOID_SKIN, Wizard } from './Wizard';
 import { EMBER_FIRE, HELL_FIRE, HELL_SKIN, PUMPKIN_FIRE, PUMPKIN_SKIN, PYRO_SKIN, Pyromancy } from './Pyro';
 import { ABYSS_MAGIC, ABYSS_SKIN, TIDE_MAGIC, TIDE_SKIN, Tidecraft } from './Tide';
 import { LOTUS_MAGIC, LOTUS_SKIN } from './Tide';
-import { HEADLESS_SKIN, JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
-import { AFONSO_KIT, King, KING_KIT } from './King';
+import { DRAGON_SKIN, HEADLESS_SKIN, JADE_SKIN, KNIGHT_SKIN, SPARTAN_SKIN, Warrior } from './Warrior';
+import { AFONSO_KIT, King, KING_KIT, SUNKING_KIT } from './King';
+import { SIREN_MAGIC, SIREN_SKIN } from './Tide';
+import { PRISM_SKIN } from './Wizard';
+import { FIREBIRD_FIRE, FIREBIRD_SKIN } from './Pyro';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
-import { CRUSADER_KIT, HOLY_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
+import { CRUSADER_KIT, HOLY_KIT, INQUISITOR_KIT, LIONHEART_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { GUARD_STYLE, Jedi, JEDI_STYLE, MASTER_STYLE, NOMAD_STYLE } from './Jedi';
 import { EMPRESS_KIT, Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
-import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
+import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE, TIGER_STYLE, WUKONG_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CARNEVALE_STYLE, CHEM_STYLE, CRYO_STYLE, DIVER_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
@@ -39,14 +42,14 @@ import { BLOOD_KIT, DIGGER_KIT, NECRO_KIT, Necromancer, TOMB_KIT, VAMPIRE_KIT, W
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, SKALD_KIT, TAIKO_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
-import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT, PRIMAVERA_KIT } from './Chrono';
+import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT, PRIMAVERA_KIT, SANDGLASS_KIT, VHS_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT, SNOWFALL_KIT, TENGU_KIT } from './Samurai';
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { AUTUMN_MAGIC, AUTUMN_SKIN, FROST_MAGIC, FROST_SKIN, GROVE_MAGIC, GROVE_SKIN, Grovecraft, WILD_MAGIC, WILD_SKIN, Wildcraft } from './Druid';
 import { TITANIA_MAGIC, TITANIA_SKIN } from './Druid';
 import { CINDER_MAGIC, CINDER_SKIN, MYCELIA_MAGIC, MYCELIA_SKIN } from './Druid';
-import { RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT, Valkyrie } from './Valkyrie';
+import { AMAZON_KIT, NORTH_KIT, RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT, Valkyrie } from './Valkyrie';
 import { DREAD_KIT, MECH_KIT, Mech, SCRAP_KIT } from './Mech';
 import { HIVE_KIT, SYNTH_KIT, Synth, VAPOR_KIT } from './Synth';
 import { MECH_H, MECH_ORIGIN_Y } from '../art/mech';
@@ -256,6 +259,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_beam_astral' },
             },
           },
+          {
+            // A crystal mage: an indigo bob under a crown of floating quartz shards, a robe of pale quartz whose edges split the light, and a staff holding a clear prism.
+            id: 'prism',
+            name: 'Prism',
+            accent: 0xd8e4ff,
+            preview: { texture: 'wizard_prism', glow: 'wizard_prism_e', idle: 'wizard_prism_idle_down', chosen: 'wizard_prism_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_prism_e', frame: 'o0', anim: 'orb_prism_spin' },
+              special: { texture: 'icon_beam_prism' },
+            },
+          },
         ],
       },
       {
@@ -294,6 +308,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_meteor_pumpkin' },
             },
             season: 'hallows',
+          },
+          {
+            // A firebird priestess: a crimson hood shaped like the bird's crested head with a gold beak over the brow, a mantle of flame feathers, tail feathers at the hem, and a gilded staff crowned with burning plumes.
+            id: 'firebird',
+            name: 'Phoenix Priestess',
+            accent: 0xffb030,
+            preview: { texture: 'wizard_firebird', glow: 'wizard_firebird_e', idle: 'wizard_firebird_idle_down', chosen: 'wizard_firebird_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_firebird_e', frame: 'o0', anim: 'orb_firebird_spin' },
+              special: { texture: 'icon_meteor_firebird' },
+            },
           },
         ],
       },
@@ -334,15 +359,27 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_wave_lotus' },
             },
           },
+          {
+            // A siren of the sunset sea: seafoam hair in long waves under a crown of pearls and shell, a gown of iridescent scales flaring into fins, shell pauldrons, and a coral trident.
+            id: 'siren',
+            name: 'Siren',
+            accent: 0x4ae0c8,
+            preview: { texture: 'wizard_siren', glow: 'wizard_siren_e', idle: 'wizard_siren_idle_down', chosen: 'wizard_siren_cast_down' },
+            buttons: {
+              attack: { texture: 'orb_siren_e', frame: 'o0', anim: 'orb_siren_spin' },
+              special: { texture: 'icon_wave_siren' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'pyro' || look === 'hellfire' || look === 'pumpkin') {
+      if (look === 'pyro' || look === 'hellfire' || look === 'pumpkin' || look === 'firebird') {
         // Fireballs that blast and burn; a charged meteor called down where it's aimed.
         const hell = look === 'hellfire';
         const pumpkin = look === 'pumpkin';
-        const fire = new Pyromancy(world, pumpkin ? PUMPKIN_FIRE : hell ? HELL_FIRE : EMBER_FIRE);
+        const firebird = look === 'firebird';
+        const fire = new Pyromancy(world, firebird ? FIREBIRD_FIRE : pumpkin ? PUMPKIN_FIRE : hell ? HELL_FIRE : EMBER_FIRE);
         const w = new Wizard(
           world,
           x,
@@ -353,17 +390,18 @@ const KITS: KitDef[] = [
             target: (dx, dy, level, dist) => fire.target(dx, dy, level, dist),
             untarget: () => fire.untarget(),
           },
-          pumpkin ? PUMPKIN_SKIN : hell ? HELL_SKIN : PYRO_SKIN,
+          firebird ? FIREBIRD_SKIN : pumpkin ? PUMPKIN_SKIN : hell ? HELL_SKIN : PYRO_SKIN,
         );
         fire.caster = w;
         world.addEffect(fire);
         return w;
       }
-      if (look === 'tide' || look === 'abyssal' || look === 'lotus') {
+      if (look === 'tide' || look === 'abyssal' || look === 'lotus' || look === 'siren') {
         // Bolts that splash and throw back; a charged tidal wave that rolls out and carries foes away.
         const abyss = look === 'abyssal';
         const lotus = look === 'lotus';
-        const craft = new Tidecraft(world, lotus ? LOTUS_MAGIC : abyss ? ABYSS_MAGIC : TIDE_MAGIC);
+        const siren = look === 'siren';
+        const craft = new Tidecraft(world, siren ? SIREN_MAGIC : lotus ? LOTUS_MAGIC : abyss ? ABYSS_MAGIC : TIDE_MAGIC);
         const w = new Wizard(
           world,
           x,
@@ -372,13 +410,13 @@ const KITS: KitDef[] = [
             cast: (x, y, dx, dy) => craft.bolt(x, y, dx, dy),
             beam: (_x, _y, dx, dy, power) => craft.wave(dx, dy, power),
           },
-          lotus ? LOTUS_SKIN : abyss ? ABYSS_SKIN : TIDE_SKIN,
+          siren ? SIREN_SKIN : lotus ? LOTUS_SKIN : abyss ? ABYSS_SKIN : TIDE_SKIN,
         );
         craft.caster = w;
         world.addEffect(craft);
         return w;
       }
-      const skin = look === 'void' ? VOID_SKIN : look === 'astral' ? ASTRAL_SKIN : ARCANE_SKIN;
+      const skin = look === 'void' ? VOID_SKIN : look === 'astral' ? ASTRAL_SKIN : look === 'prism' ? PRISM_SKIN : ARCANE_SKIN;
       const w: Wizard = new Wizard(
         world,
         x,
@@ -444,6 +482,17 @@ const KITS: KitDef[] = [
             },
             season: 'hallows',
           },
+          {
+            // Blackened plate seamed with molten red, a horned dragon's skull on the helm, a cloak of red scales and a jagged blade with a burning edge.
+            id: 'dragon',
+            name: 'Dragonslayer',
+            accent: 0xff5a1a,
+            preview: { texture: 'warrior_dragon', glow: 'warrior_dragon_e', idle: 'warrior_dragon_idle_down', chosen: 'warrior_dragon_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_sword_dragon' },
+              special: { texture: 'icon_whirl_dragon' },
+            },
+          },
         ],
       },
       {
@@ -472,12 +521,23 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_decree_afonso' },
             },
           },
+          {
+            // A baroque sun monarch: a tall curled wig under a small crown, a blue mantle sewn with gold fleurs-de-lis over ermine, a sunburst on the breast and a gilded greatsword.
+            id: 'sunking',
+            name: 'Sun King',
+            accent: 0xffc840,
+            preview: { texture: 'warrior_sunking', glow: 'warrior_sunking_e', idle: 'warrior_sunking_idle_down', chosen: 'warrior_sunking_decree_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_sword_sunking' },
+              special: { texture: 'icon_decree_sunking' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'king' || look === 'afonso') return new King(world, x, y, look === 'afonso' ? AFONSO_KIT : KING_KIT);
-      return new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : look === 'headless' ? HEADLESS_SKIN : KNIGHT_SKIN);
+      if (look === 'king' || look === 'afonso' || look === 'sunking') return new King(world, x, y, look === 'afonso' ? AFONSO_KIT : look === 'sunking' ? SUNKING_KIT : KING_KIT);
+      return new Warrior(world, x, y, look === 'jade' ? JADE_SKIN : look === 'spartan' ? SPARTAN_SKIN : look === 'headless' ? HEADLESS_SKIN : look === 'dragon' ? DRAGON_SKIN : KNIGHT_SKIN);
     },
   },
   {
@@ -510,6 +570,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_sanctuary_seraph' },
             },
           },
+          {
+            // A lion knight in white-and-gold plate: a golden lion's face for a visor in a tawny mane, crimson tabard and shield bearing gold lions, a lion-headed mace.
+            id: 'lionheart',
+            name: 'Lionheart',
+            accent: 0xffb43a,
+            preview: { texture: 'paladin_lion', glow: 'paladin_lion_e', idle: 'paladin_lion_idle_down', chosen: 'paladin_lion_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
+            buttons: {
+              attack: { texture: 'icon_mace_lion' },
+              special: { texture: 'icon_sanctuary_lion' },
+            },
+          },
         ],
       },
       {
@@ -538,11 +609,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_sunfall_oath' },
             },
           },
+          {
+            // A grim witch-hunter: wide-brimmed black hat over a steel half-mask, dark steel and a black leather coat, a crimson sash, a censer at the belt, white fire.
+            id: 'inquisitor',
+            name: 'Inquisitor',
+            accent: 0xdfe6f4,
+            preview: { texture: 'paladin_inquisitor', glow: 'paladin_inquisitor_e', idle: 'paladin_inquisitor_idle_down', chosen: 'paladin_inquisitor_consecrate_down', originY: PALADIN_ORIGIN_Y / PALADIN_H },
+            buttons: {
+              attack: { texture: 'icon_hammer_inquisitor' },
+              special: { texture: 'icon_sunfall_inquisitor' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { holy: HOLY_KIT, seraph: SERAPH_KIT, crusader: CRUSADER_KIT, oathbreaker: OATH_KIT }[look] ?? HOLY_KIT;
+      const kit = { holy: HOLY_KIT, seraph: SERAPH_KIT, lionheart: LIONHEART_KIT, crusader: CRUSADER_KIT, oathbreaker: OATH_KIT, inquisitor: INQUISITOR_KIT }[look] ?? HOLY_KIT;
       return new Paladin(world, x, y, kit);
     },
   },
@@ -689,6 +771,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_barrage_champ' },
             },
           },
+          {
+            // A kung-fu tiger: a striped orange gi, a tiger's-head hood with ears and fangs, a tail, and claws on his fists.
+            id: 'tigerclaw',
+            name: 'Tigerclaw',
+            accent: 0xff8a1a,
+            preview: { texture: 'fighter_tiger', glow: 'fighter_tiger_e', idle: 'fighter_tiger_idle_down', chosen: 'fighter_tiger_smash_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
+            buttons: {
+              attack: { texture: 'icon_fist_tiger' },
+              special: { texture: 'icon_barrage_tiger' },
+            },
+          },
         ],
       },
       {
@@ -716,11 +809,39 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_quake_guardian' },
             },
           },
+          {
+            // Sun Wukong: gold mail and a red sash, a circlet plumed with pheasant feathers, the staff on his back and a curling tail.
+            id: 'wukong',
+            name: 'Monkey King',
+            accent: 0xffc83a,
+            preview: { texture: 'fighter_wukong', glow: 'fighter_wukong_e', idle: 'fighter_wukong_idle_down', chosen: 'fighter_wukong_leap_down', originY: FIGHTER_ORIGIN_Y / FIGHTER_H },
+            buttons: {
+              attack: { texture: 'icon_palm_wukong' },
+              special: { texture: 'icon_quake_wukong' },
+            },
+          },
         ],
       },
     ],
     spawn: (world, x, y, look) =>
-      new Fighter(world, x, y, look === 'monk' ? MONK_STYLE : look === 'guardian' ? GUARDIAN_STYLE : look === 'lucha' ? LUCHA_STYLE : look === 'champ' ? CHAMP_STYLE : BRAWLER_STYLE),
+      new Fighter(
+        world,
+        x,
+        y,
+        look === 'monk'
+          ? MONK_STYLE
+          : look === 'guardian'
+            ? GUARDIAN_STYLE
+            : look === 'wukong'
+              ? WUKONG_STYLE
+              : look === 'lucha'
+                ? LUCHA_STYLE
+                : look === 'champ'
+                  ? CHAMP_STYLE
+                  : look === 'tigerclaw'
+                    ? TIGER_STYLE
+                    : BRAWLER_STYLE,
+      ),
   },
   {
     id: 'alchemist',
@@ -1353,6 +1474,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_stasis_primavera' },
             },
           },
+          {
+            // A sage of the deep desert: linen robe and indigo sash, a turban and gold-coined veil, gold bangles, and a great hourglass of glowing sand.
+            id: 'sandglass',
+            name: 'Sandglass',
+            accent: 0xffd070,
+            preview: { texture: 'chrono_sandglass', glow: 'chrono_sandglass_e', idle: 'chrono_sandglass_idle_down', chosen: 'chrono_sandglass_field_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+            buttons: {
+              attack: { texture: 'icon_hand_sandglass' },
+              special: { texture: 'icon_stasis_sandglass' },
+            },
+          },
         ],
       },
       {
@@ -1391,11 +1523,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_rewind_anomaly' },
             },
           },
+          {
+            // A synthwave glitch from a 1980s that never was: a magenta pompadour, a scanline visor, a cropped neon-grid jacket, a cassette for a watch.
+            id: 'rewind',
+            name: 'Rewind',
+            accent: 0xff5ad8,
+            preview: { texture: 'chrono_vhs', glow: 'chrono_vhs_e', idle: 'chrono_vhs_idle_down', chosen: 'chrono_vhs_rewind_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+            buttons: {
+              attack: { texture: 'icon_shards_vhs' },
+              special: { texture: 'icon_rewind_vhs' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, clockwork: CLOCKWORK_KIT, primavera: PRIMAVERA_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT, anomaly: ANOMALY_KIT }[look] ?? KEEPER_KIT;
+      const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, clockwork: CLOCKWORK_KIT, primavera: PRIMAVERA_KIT, sandglass: SANDGLASS_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT, anomaly: ANOMALY_KIT, rewind: VHS_KIT }[look] ?? KEEPER_KIT;
       return new Chrono(world, x, y, kit);
     },
   },
@@ -1686,6 +1829,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_spearthrow_swan' },
             },
           },
+          {
+            // A jungle queen: bronze over deep green, a leopard capelet, scarlet macaw wings, dark braids and a feathered gold headband.
+            id: 'amazon',
+            name: 'Amazon',
+            accent: 0xe8a040,
+            preview: { texture: 'valkyrie_amazon', glow: 'valkyrie_amazon_e', idle: 'valkyrie_amazon_idle_down', chosen: 'valkyrie_amazon_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_spear_amazon' },
+              special: { texture: 'icon_spearthrow_amazon' },
+            },
+          },
         ],
       },
       {
@@ -1714,11 +1868,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_dive_raven' },
             },
           },
+          {
+            // Frost-silver plate, white-blonde hair, a crescent of ice on the helm and wings of the aurora, green to violet.
+            id: 'northlight',
+            name: 'Northlight',
+            accent: 0x7affc8,
+            preview: { texture: 'valkyrie_north', glow: 'valkyrie_north_e', idle: 'valkyrie_north_idle_down', chosen: 'valkyrie_north_thrust_down', originY: WARRIOR_ORIGIN_Y / WARRIOR_H },
+            buttons: {
+              attack: { texture: 'icon_spear_north' },
+              special: { texture: 'icon_dive_north' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { spear: SPEAR_KIT, sunshield: SUN_KIT, swan: SWAN_KIT, storm: STORM_KIT, raven: RAVEN_KIT }[look] ?? SPEAR_KIT;
+      const kit = { spear: SPEAR_KIT, sunshield: SUN_KIT, swan: SWAN_KIT, amazon: AMAZON_KIT, storm: STORM_KIT, raven: RAVEN_KIT, northlight: NORTH_KIT }[look] ?? SPEAR_KIT;
       return new Valkyrie(world, x, y, kit);
     },
   },

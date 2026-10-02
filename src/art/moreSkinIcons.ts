@@ -14,6 +14,8 @@ import {
   palmIcon,
   quakeIcon,
   type BrewColors,
+  type FistColors,
+  type PalmColors,
   type QuiverColors,
 } from './effects';
 
@@ -102,6 +104,68 @@ export function gourdIcon(b: BrewColors): Uint8ClampedArray {
   return px;
 }
 
+/** Writes a hex colour straight into a 16x16 icon's pixels, over whatever is there. */
+function paint(px: Uint8ClampedArray, x: number, y: number, c: string): void {
+  if (x < 0 || y < 0 || x >= 16 || y >= 16) return;
+  const n = parseInt(c.slice(1), 16);
+  const i = (y * 16 + x) * 4;
+  px[i] = n >> 16;
+  px[i + 1] = (n >> 8) & 255;
+  px[i + 2] = n & 255;
+  px[i + 3] = 255;
+}
+
+/** Tigerclaw's: a dark leather glove, a white-wrapped wrist, orange streaks. */
+const TIGER_FIST: FistColors = { glove: ['#b07a4a', '#7e5230', '#54341e', '#2a180c'], shine: '#e0b488', wrist: ['#ffffff', '#e8e2ea', '#aea6b4'], lines: ['#ffd08a', '#ff7a1a'] };
+
+/** Tigerclaw's attack: the clawed glove, three ivory claws hooked out over the knuckles. */
+function tigerFistIcon(): Uint8ClampedArray {
+  const px = fistIcon(TIGER_FIST);
+  for (const [x, y, c] of [
+    [8, 1, '#cabc98'], [9, 0, '#ffffff'], [10, 1, '#1a140c'], [11, 1, '#cabc98'], [12, 0, '#ffffff'], [13, 1, '#1a140c'], [13, 2, '#cabc98'], [14, 1, '#ffffff'],
+    [8, 0, '#1a140c'], [10, 0, '#1a140c'], [11, 0, '#1a140c'], [13, 0, '#1a140c'], [15, 1, '#1a140c'], [14, 0, '#1a140c'],
+  ] as const) paint(px, x, y, c);
+  // A stripe across the back of the glove, in orange.
+  for (const [x, y] of [[8, 6], [9, 7], [12, 7], [13, 8]] as const) paint(px, x, y, '#f48a26');
+  return px;
+}
+
+/** Tigerclaw's barrage: the burning fists, three black-edged claw slashes torn across them. */
+function tigerBarrageIcon(): Uint8ClampedArray {
+  const px = barrageIcon([hex('#fff4e0'), hex('#ffb040'), hex('#ff6a10'), hex('#7a2a08')]);
+  for (const i of [0, 1, 2]) {
+    for (let k = 0; k < 6; k++) {
+      const x = 3 + i * 4 + Math.round(k * 0.5);
+      const y = 3 + k + (i === 1 ? 2 : 0);
+      paint(px, x, y, k === 0 || k === 5 ? '#ffb040' : '#fff4e0');
+      paint(px, x + 1, y, '#140806');
+    }
+  }
+  return px;
+}
+
+/** The Monkey King's: a bare palm, a golden bracer, golden qi. */
+const WUKONG_PALM: PalmColors = {
+  skin: ['#fcd4b4', '#e8a682', '#b06a50'],
+  bracer: ['#fffad0', '#ffd860', '#d8a428', '#90600e'],
+  qi: ['#fffbe8', '#ffe070', '#ffb020'],
+  outline: '#1a0a02',
+};
+
+/** A little golden auspicious cloud in an icon's corner: two billows, a curl, an amber rim. */
+function cloudBadge(px: Uint8ClampedArray, ox: number, oy: number): void {
+  const fill: [number, number][] = [
+    [1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [5, 2], [6, 2], [1, 3], [2, 3], [3, 3], [4, 3], [5, 3],
+    [4, 0],
+  ];
+  for (const [x, y] of fill) paint(px, ox + x, oy + y, y === 0 ? '#ffffff' : y === 3 ? '#ffd060' : '#fff4cc');
+  for (const [x, y] of [[2, 1], [2, 2], [1, 2]] as const) paint(px, ox + x, oy + y, '#ffb020');
+  for (const [x, y] of [[0, 0], [3, 0], [5, 0], [-1, 1], [6, 1], [-1, 2], [7, 2], [0, 3], [6, 3], [1, 4], [2, 4], [3, 4], [4, 4], [5, 4]] as const) {
+    const i = ((oy + y) * 16 + ox + x) * 4;
+    if (ox + x >= 0 && ox + x < 16 && oy + y >= 0 && oy + y < 16 && px[i + 3] === 0) paint(px, ox + x, oy + y, '#7a3a0a');
+  }
+}
+
 /** The fighter's skins' ability icons, registered under their keys by `add`. */
 export function registerMoreSkinIcons(add: (key: string, px: Uint8ClampedArray) => void): void {
   add('icon_fist_lucha', fistIcon(LUCHA_FIST));
@@ -110,4 +174,10 @@ export function registerMoreSkinIcons(add: (key: string, px: Uint8ClampedArray) 
   add('icon_barrage_champ', barrageIcon([hex('#f8ffe8'), hex('#9cff5a'), hex('#ff8a2a'), hex('#1c7a1a')]));
   add('icon_palm_guardian', palmIcon(GUARDIAN_PALM));
   add('icon_quake_guardian', quakeIcon(GUARDIAN_PALM));
+  add('icon_fist_tiger', tigerFistIcon());
+  add('icon_barrage_tiger', tigerBarrageIcon());
+  add('icon_palm_wukong', palmIcon(WUKONG_PALM));
+  const quake = quakeIcon(WUKONG_PALM);
+  cloudBadge(quake, 9, 3);
+  add('icon_quake_wukong', quake);
 }

@@ -195,6 +195,185 @@ export const MOON_PEARL: Material = {
 };
 
 // ---------------------------------------------------------------------------
+// The Spearmaiden's Amazon skin: a jungle warrior queen. A burnished bronze
+// cuirass and greaves over deep green, a leopard pelt over her shoulders,
+// scarlet macaw wings, long dark braids under a gold
+// headband with a fan of macaw feathers, and a broad bronze leaf of a spear.
+
+/** Burnished bronze with a coppery blush, redder than the gold of her pelt. */
+export const SUNBRONZE: Material = {
+  ramp: ramp('#2a0e04', '#5a2810', '#904a1c', '#c47a34', '#f0bc72'),
+  outline: hex('#140802'),
+  outlineLit: hex('#2c1608'),
+  shine: true,
+};
+
+/** The spear's leaf of bronze, freshly honed: brighter and yellower than her armour. */
+export const LEAF_BRONZE: Material = {
+  ramp: ramp('#4a2a0e', '#8a5a20', '#c89440', '#ecc46c', '#fff0c0'),
+  outline: hex('#1e0e04'),
+  outlineLit: hex('#3a2008'),
+  shine: true,
+};
+
+/** The deep green of her kilt of strips. */
+export const JUNGLE: Material = {
+  ramp: ramp('#06140c', '#0e2a18', '#184426', '#246034', '#347e46'),
+  outline: hex('#030a06'),
+  outlineLit: hex('#0a1c10'),
+};
+
+/** Her skin, a warm deep brown. */
+export const UMBER_SKIN: Material = {
+  ramp: ramp('#40200f', '#70401f', '#a2663a', '#ca8c54', '#e6b07a'),
+  outline: hex('#1a0a04'),
+  outlineLit: hex('#2e140a'),
+};
+
+/** Long hair, nearly black with a warm brown sheen. */
+export const JUNGLE_HAIR: Material = {
+  ramp: ramp('#0a0605', '#1a100c', '#2e1c14', '#46301e', '#62462c'),
+  outline: hex('#040202'),
+};
+
+/** The leopard's tawny gold pelt (its rosettes are `ROSETTE`). */
+export const LEOPARD: Material = {
+  ramp: ramp('#6a4614', '#a87c26', '#d8b048', '#f0d478', '#fff0bc'),
+  outline: hex('#221004'),
+  outlineLit: hex('#3a1e08'),
+};
+
+/** A leopard's dark rosette. */
+export const ROSETTE: Material = {
+  ramp: ramp('#140a04', '#28160a', '#3e2412'),
+  outline: hex('#0a0402'),
+};
+
+/** Scarlet macaw: the small coverts along the wing's edge. */
+export const MACAW_RED: Material = {
+  ramp: ramp('#3e0606', '#7a0e0c', '#b81a14', '#e83a22', '#ff7a4a'),
+  outline: hex('#1a0202'),
+  outlineLit: hex('#300606'),
+};
+
+/** The band of golden coverts across the wing. */
+export const MACAW_GOLD: Material = {
+  ramp: ramp('#4a3004', '#8a5e0a', '#cc9614', '#f4c834', '#fff094'),
+  outline: hex('#1e1202'),
+  outlineLit: hex('#342006'),
+};
+
+/** The flight feathers' rich blue. */
+export const MACAW_BLUE: Material = {
+  ramp: ramp('#081440', '#10307e', '#1a52b8', '#2e7ce4', '#6ab0ff'),
+  outline: hex('#020618'),
+  outlineLit: hex('#081030'),
+};
+
+/** The flight feathers' tips, darkening to teal. */
+export const MACAW_TEAL: Material = {
+  ramp: ramp('#041826', '#08304a', '#0e5070', '#1a7894'),
+  outline: hex('#020a10'),
+};
+
+/** Ironwood, dark and close-grained, for the shaft. */
+export const IRONWOOD: Material = {
+  ramp: ramp('#1a0e08', '#341e10', '#52321a', '#704a28'),
+  outline: hex('#0a0402'),
+};
+
+/** Her lips, a deep rose-brown. */
+export const UMBER_LIP: Material = {
+  ramp: ramp('#4a1a16', '#74302a', '#9a463a', '#b8604c'),
+  outline: hex('#1e0a08'),
+  noAO: true,
+};
+
+/** An emerald (the headband's and the buckle's), with a little green fire at night. */
+export const EMERALD: Material = {
+  ramp: ramp('#043a1c', '#0a6a32', '#1aa84e', '#5ae68a', '#c8ffd8'),
+  outline: hex('#021208'),
+  emissive: 0.45,
+  noAO: true,
+};
+
+// ---------------------------------------------------------------------------
+// The Stormwing's Northlight skin: a valkyrie of the aurora. Pale frost-silver
+// plate, long white-blonde hair, a helm crowned with a crescent of ice, and
+// great wings whose flight feathers shimmer from aurora green through teal to
+// violet, glowing softly against the night.
+
+/** Frost-silver plate: pale, cool, with a hard sheen. */
+export const FROST_SILVER: Material = {
+  ramp: ramp('#2a3448', '#4e6078', '#8298b0', '#bccfe0', '#eef6ff'),
+  outline: hex('#0c1220'),
+  outlineLit: hex('#1a2234'),
+  shine: true,
+};
+
+/** Midnight blue for her hose and the undersides of things. */
+export const POLAR_NIGHT: Material = {
+  ramp: ramp('#060a18', '#0c162c', '#162644', '#22385e', '#344e7c'),
+  outline: hex('#02040a'),
+  outlineLit: hex('#0a1020'),
+};
+
+/** Clear blue ice: the crescent, the shoulders' icicles, the bindings. */
+export const ICE: Material = {
+  ramp: ramp('#2a6a8a', '#58a8c8', '#94dcf0', '#d2f6ff', '#ffffff'),
+  outline: hex('#0a2232'),
+  outlineLit: hex('#14384a'),
+  emissive: 0.3,
+  shine: true,
+};
+
+/** The spear's head, a shard of ice lit from within. */
+export const ICE_SHARD: Material = {
+  ramp: ramp('#3a7aa0', '#6ab8d8', '#a8e8f8', '#e4fcff', '#ffffff'),
+  outline: hex('#0c2638'),
+  emissive: 0.4,
+  shine: true,
+};
+
+/** White-blonde hair, a warm white against the cold plate. */
+export const FROST_BLONDE: Material = {
+  ramp: ramp('#6e6448', '#aaa07a', '#d8d0a8', '#f2ecd0', '#fffcec'),
+  outline: hex('#242014'),
+  outlineLit: hex('#383222'),
+};
+
+/** Her wings' coverts: silver-white down, cool in the shade. */
+export const FROST_DOWN: Material = {
+  ramp: ramp('#4a5a76', '#8496b4', '#c2d0e6', '#eef4ff'),
+  outline: hex('#121a2a'),
+  outlineLit: hex('#202a3e'),
+};
+
+/** The dark web of her wings, the night sky showing between the feathers. */
+export const NIGHT_WEB: Material = {
+  ramp: ramp('#0a0c22', '#141a3a', '#222c56', '#30406e'),
+  outline: hex('#04040e'),
+};
+
+/** Pale birch, silvered, for the shaft. */
+export const SILVERWOOD: Material = {
+  ramp: ramp('#4a4e5a', '#7a8090', '#aab2c0', '#d4dce6'),
+  outline: hex('#14161e'),
+};
+
+/** One aurora feather: a ramp from deep to bright in one hue, glowing softly. */
+const auroraFeather = (...c: string[]): Material => ({ ramp: ramp(...c), outline: hex('#04060e'), outlineLit: hex('#0c1020'), emissive: 0.42 });
+
+/** Her flight feathers, innermost (lowest) first: green, teal, blue, then violet at the top of the wing. */
+export const AURORA_FEATHERS: Material[] = [
+  auroraFeather('#0a3a24', '#147a44', '#2ac270', '#7affb0', '#d8ffe8'),
+  auroraFeather('#08383c', '#107468', '#1ebaa0', '#5af0d0', '#ccfff4'),
+  auroraFeather('#0a2a4a', '#145a8a', '#2490cc', '#5ac4f4', '#c8f0ff'),
+  auroraFeather('#1a1e52', '#323c9a', '#5266d8', '#8a9cff', '#dce2ff'),
+  auroraFeather('#2a1050', '#52209a', '#8240dc', '#b67cff', '#ecdcff'),
+];
+
+// ---------------------------------------------------------------------------
 // Button icons (additive, see druid.ts icon16).
 
 export const SPEAR_TONES: Tones = [hex('#fffdf2'), hex('#ffe6a0'), hex('#f4c050'), hex('#a06a1e')];
@@ -345,5 +524,105 @@ export function swanThrowIcon(t: Tones = SWAN_TONES): Uint8ClampedArray {
     // Feathers falling behind it.
     iconFeather(put, 1.5, 9.5, 5.5, 13.5, t);
     iconFeather(put, 7.5, 9, 11, 12, t);
+  });
+}
+
+// The Amazon's icons: a bronze spear and its macaw feathers.
+export const AMAZON_TONES: Tones = [hex('#fffbe8'), hex('#ffe08a'), hex('#d8a040'), hex('#1e7a3e')];
+export const AMAZON_INK: SpearInk = { head: hex('#c8862e'), headLit: hex('#ffe8a0'), shaft: hex('#3e2414'), shaftLit: hex('#6e4a2a'), band: hex('#f4cf6a') };
+/** Each macaw feather's tones on an icon: the lit vane, the shaded vane, the tip. */
+const MACAW_RED_T: Tones = [hex('#ff8a5a'), hex('#e0301c'), hex('#2e7ce4'), hex('#7a0e0c')];
+const MACAW_BLUE_T: Tones = [hex('#6ab0ff'), hex('#2a6ad0'), hex('#0e5070'), hex('#10307e')];
+const MACAW_GOLD_T: Tones = [hex('#fff094'), hex('#f4c834'), hex('#2a9a4a'), hex('#8a5e0a')];
+
+/** The Amazon's chain: a broad bronze leaf of a spear, three macaw feathers (scarlet, blue, gold) tied under its head. */
+export function amazonSpearIcon(k: SpearInk = AMAZON_INK, t: Tones = AMAZON_TONES): Uint8ClampedArray {
+  return icon16((put) => {
+    spear(put, 1.5, 14.5, 13.5, 2.5, k);
+    // A broader leaf: widen the head a pixel either side.
+    for (const [x, y] of [[10, 4], [11, 3], [11, 5], [12, 4]] as const) put(x, y, k.head);
+    // The feathers hang from the socket, fanned.
+    iconFeather(put, 8.6, 8.2, 6.4, 11.8, MACAW_RED_T);
+    iconFeather(put, 9.2, 8.6, 9.2, 12.6, MACAW_BLUE_T);
+    iconFeather(put, 9.8, 8.4, 11.6, 11.4, MACAW_GOLD_T);
+    put(14, 2, t[0]);
+    put(15, 1, t[1]);
+    put(13, 1, t[2]);
+    put(15, 3, t[2]);
+  });
+}
+
+/** The Amazon's throw: a bronze spear of light, jungle-green streaks behind it and macaw feathers tumbling in its wake. */
+export function amazonThrowIcon(t: Tones = AMAZON_TONES): Uint8ClampedArray {
+  return icon16((put) => {
+    seg(put, 0, 2, 4, 2, t[3]);
+    seg(put, 1, 5, 4, 5, t[3]);
+    for (let x = 4; x <= 10; x++) put(x, 5, x > 7 ? t[1] : t[2]);
+    // A broad leaf of a head.
+    for (let x = 10; x <= 15; x++) {
+      const hw = x < 13 ? Math.min(2, x - 9) : 15 - x;
+      for (let dy = -hw; dy <= hw; dy++) put(x, 5 + dy, dy === 0 ? t[0] : t[1]);
+    }
+    iconFeather(put, 1.5, 9, 4.5, 13.5, MACAW_RED_T);
+    iconFeather(put, 6, 8.5, 8, 12.5, MACAW_BLUE_T);
+    iconFeather(put, 10, 9, 13.5, 11.5, MACAW_GOLD_T);
+  });
+}
+
+// The Northlight's icons: an ice-shard spear and the aurora's ribbon of light.
+export const NORTH_TONES: Tones = [hex('#f0fff8'), hex('#9cffc8'), hex('#40e0b0'), hex('#7a3ad8')];
+export const NORTH_INK: SpearInk = { head: hex('#94dcf0'), headLit: hex('#ffffff'), shaft: hex('#7a8090'), shaftLit: hex('#d4dce6'), band: hex('#d2f6ff') };
+/** The aurora's colours along a ribbon, green to violet. */
+const AURORA_RIBBON: RGB[] = [hex('#7affb0'), hex('#3ae0c0'), hex('#4aa8f0'), hex('#8a70ff'), hex('#b67cff')];
+
+/** A colour partway along the aurora, `u` 0 (green) to 1 (violet). */
+function auroraAt(u: number): RGB {
+  const f = Math.max(0, Math.min(1, u)) * (AURORA_RIBBON.length - 1);
+  const i = Math.min(AURORA_RIBBON.length - 2, Math.floor(f));
+  const k = f - i;
+  const a = AURORA_RIBBON[i];
+  const b = AURORA_RIBBON[i + 1];
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+}
+
+/** The Northlight's chain: a spear tipped with a shard of ice, a ribbon of aurora rippling along it. */
+export function auroraSpearIcon(k: SpearInk = NORTH_INK, t: Tones = NORTH_TONES): Uint8ClampedArray {
+  return icon16((put) => {
+    // The ribbon first, rippling across behind the spear: a bright strand over a dimmer one, green to violet along it.
+    for (let x = 0; x <= 15; x += 0.5) {
+      const u = x / 15;
+      const y = 8.5 + Math.sin(u * Math.PI * 2.4 + 0.6) * 2.6 - u * 1.5;
+      const c = auroraAt(u);
+      put(x, y, c);
+      put(x, y + 1, [c[0] * 0.55, c[1] * 0.55, c[2] * 0.55]);
+    }
+    spear(put, 1.5, 14.5, 13.5, 2.5, k);
+    put(14, 2, t[0]);
+    put(15, 1, t[1]);
+    put(13, 1, t[1]);
+    put(15, 3, t[1]);
+  });
+}
+
+/** The Northlight's dive: an aurora-feathered wing over a bolt of pale light, a ring where it strikes. */
+export function auroraDiveIcon(k: Tones = NORTH_TONES): Uint8ClampedArray {
+  return icon16((put) => {
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const d = Math.hypot((x + 0.5 - 8) / 6.5, (y + 0.5 - 13.5) / 2.2);
+        if (Math.abs(d - 1) < 0.2) put(x, y, auroraAt(x / 15));
+      }
+    }
+    const pts: [number, number][] = [[9, 4], [6, 8], [9, 8], [7, 13]];
+    for (let i = 0; i < pts.length - 1; i++) seg(put, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], k[0]);
+    seg(put, 10, 4, 7, 8, k[1]);
+    seg(put, 10, 8, 8, 13, k[1]);
+    // The wing: its leading edge in frost-white, five feathers green to violet.
+    seg(put, 2, 5, 13, 1, hex('#e4ecfa'));
+    for (let i = 0; i < 5; i++) {
+      const bx = 3.6 + i * 2.2;
+      const by = 4.6 - i * 0.8;
+      seg(put, bx, by, bx - 1.5, by + 3.2 - i * 0.3, auroraAt(i / 4));
+    }
   });
 }
