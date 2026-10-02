@@ -182,6 +182,36 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Dives into a foe to steer it into the others, then bursts out.',
     special: 'Darkness freezes foes with fear, then the lantern flares and burns.',
   },
+  'automaton.juggernaut': {
+    attack: 'Two piston jabs, then a steam-blasted slam that throws foes back.',
+    ability: 'Charges ahead, carrying foes it rams, and ends in a double shove.',
+    special: 'Furnace bursts open: always hot, scalding steam, shockwave punches, a great vent.',
+  },
+  'automaton.diver': {
+    attack: 'Whirls the anchor on its chain in wide sweeps, every third slammed down.',
+    ability: 'A harpoon on a chain pierces a line of foes and reels them all back in.',
+    special: 'A dome of deep sea drops on a spot, crushing foes inside, then bursts.',
+  },
+  'automaton.ballerina': {
+    attack: 'Two bladed pirouettes cut all round her, then a kick flings a blade arc through foes.',
+    ability: 'A soaring leap the way she aims, landing in a ring of steel that slashes all round.',
+    special: 'A music box plays as she spins a vortex of blades, pulling foes in, then bursts in petals.',
+  },
+  'phantom.captain': {
+    attack: 'Two cutlass strokes, then a flintlock shot that flies far.',
+    ability: 'Flings a hook; if it bites a foe he is hauled to it and cuts.',
+    special: 'A ghost ship sails along the aim firing broadsides, then sinks.',
+  },
+  'phantom.yurei': {
+    attack: 'Flicks talismans that stick to foes and burst into spirit-fire; three at once go up together.',
+    ability: 'Her hair pours along the ground into a pool that holds and wrings every foe in it.',
+    special: 'A ring of candles goes out one by one, each sending a spirit at a foe, then all flare.',
+  },
+  'phantom.weeper': {
+    attack: 'Hold to wail a cone of keening sound that strikes every foe in it.',
+    ability: 'A shriek in a ring hurts nearby foes and sends them fleeing in terror.',
+    special: 'Rises and sings: pealing rings slow and hurt foes, then a knell strikes.',
+  },
   'inventor.engineer': {
     attack: 'Two wrench sweeps, then an overhead bonk that staggers.',
     ability: 'Tosses a crate that unfolds into a turret shooting the nearest foe.',

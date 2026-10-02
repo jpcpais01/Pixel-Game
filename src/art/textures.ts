@@ -100,6 +100,12 @@ import { birdSheet } from './skyArena';
 import { BOLT_DIRS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, reticle, salvoIcon } from './mech';
 import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
 import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
+import { keenIcon, shriekIcon } from './banshee';
+import { HITODAMA_FRAMES, HITODAMA_H, HITODAMA_W, OFUDA_FRAMES, OFUDA_SIZE, hairIcon, hitodamaFrame, ofudaFrame, ofudaIcon } from './yurei';
+import { captainCutlassIcon, captainHookIcon } from './captain';
+import { balletLeapIcon, balletSpinIcon } from './ballerina';
+import { ANCHOR_SIZE, DIVER_LOOKS, DIVER_PROJ_DIRS, HARPOON_SIZE, anchorFrame, anchorIcon, harpoonFrame, harpoonIcon } from './diver';
+import { fistsIcon as juggFistsIcon, rushIcon as juggRushIcon } from './juggernaut';
 import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
 import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, LION_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
 import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
@@ -553,6 +559,49 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_possess_cala', toCanvas(16, 16, possessIcon(true)));
   scene.textures.addCanvas('icon_lantern_firefly', toCanvas(16, 16, lanternIcon(false, true)));
   scene.textures.addCanvas('icon_possess_firefly', toCanvas(16, 16, possessIcon(false, true)));
+  scene.textures.addCanvas('icon_jugg_fists', toCanvas(16, 16, juggFistsIcon()));
+  scene.textures.addCanvas('icon_jugg_rush', toCanvas(16, 16, juggRushIcon()));
+  scene.textures.addCanvas('icon_jugg_fists_tinman', toCanvas(16, 16, juggFistsIcon(true)));
+  scene.textures.addCanvas('icon_jugg_rush_tinman', toCanvas(16, 16, juggRushIcon(true)));
+  // The Deep Diver's anchor and harpoon in flight, sixteen headings each
+  // ('<look>_anchor' 'a0'..'a15', '<look>_harpoon' 'h0'..'h15'), and its icons.
+  for (const look of DIVER_LOOKS) {
+    register(scene, `${look.key}_anchor`, pack(frameList(Array.from({ length: DIVER_PROJ_DIRS }, (_, i) => anchorFrame(look, i)), 'a'), ANCHOR_SIZE, ANCHOR_SIZE), ANCHOR_SIZE, ANCHOR_SIZE);
+    register(scene, `${look.key}_harpoon`, pack(frameList(Array.from({ length: DIVER_PROJ_DIRS }, (_, i) => harpoonFrame(look, i)), 'h'), HARPOON_SIZE, HARPOON_SIZE), HARPOON_SIZE, HARPOON_SIZE);
+  }
+  scene.textures.addCanvas('icon_diver_anchor', toCanvas(16, 16, anchorIcon()));
+  scene.textures.addCanvas('icon_diver_harpoon', toCanvas(16, 16, harpoonIcon()));
+  scene.textures.addCanvas('icon_diver_anchor_barnacle', toCanvas(16, 16, anchorIcon(true)));
+  scene.textures.addCanvas('icon_diver_harpoon_barnacle', toCanvas(16, 16, harpoonIcon(true)));
+  // The Ballerina's: a pirouette in a ring of blades, and the grand jeté (the Firebird's in flame).
+  scene.textures.addCanvas('icon_ballet_spin', toCanvas(16, 16, balletSpinIcon()));
+  scene.textures.addCanvas('icon_ballet_leap', toCanvas(16, 16, balletLeapIcon()));
+  scene.textures.addCanvas('icon_ballet_spin_firebird', toCanvas(16, 16, balletSpinIcon(true)));
+  scene.textures.addCanvas('icon_ballet_leap_firebird', toCanvas(16, 16, balletLeapIcon(true)));
+  // The Drowned Captain's buttons (his ball, hook, smoke and ship are drawn live, see Captain.ts and ultimate/captain.ts).
+  scene.textures.addCanvas('icon_captain_cutlass', toCanvas(16, 16, captainCutlassIcon()));
+  scene.textures.addCanvas('icon_captain_hook', toCanvas(16, 16, captainHookIcon()));
+  scene.textures.addCanvas('icon_captain_cutlass_admiral', toCanvas(16, 16, captainCutlassIcon(true)));
+  scene.textures.addCanvas('icon_captain_hook_admiral', toCanvas(16, 16, captainHookIcon(true)));
+  // The Yurei's talismans ('yurei_ofuda', turning 'f0'..'f3', stuck 'f4'), her
+  // hitodama ('yurei_wisp', flickering on a loop), Yuki-onna's frost-paper and
+  // ice-white flames, and the icons.
+  for (const yuki of [false, true]) {
+    const ok = yuki ? 'yurei_ofuda_yuki' : 'yurei_ofuda';
+    register(scene, ok, pack(frameList(Array.from({ length: OFUDA_FRAMES + 1 }, (_, f) => ofudaFrame(f, yuki)), 'f'), OFUDA_SIZE, OFUDA_SIZE), OFUDA_SIZE, OFUDA_SIZE);
+    const wk = yuki ? 'yurei_wisp_yuki' : 'yurei_wisp';
+    register(scene, wk, pack(frameList(Array.from({ length: HITODAMA_FRAMES }, (_, f) => hitodamaFrame(f, yuki)), 'w'), HITODAMA_W, HITODAMA_H), HITODAMA_W, HITODAMA_H);
+    scene.anims.create({ key: `${wk}_flicker`, frames: Array.from({ length: HITODAMA_FRAMES }, (_, f) => ({ key: wk, frame: `w${f}` })), frameRate: 12, repeat: -1 });
+  }
+  scene.textures.addCanvas('icon_yurei_ofuda', toCanvas(16, 16, ofudaIcon()));
+  scene.textures.addCanvas('icon_yurei_hair', toCanvas(16, 16, hairIcon()));
+  scene.textures.addCanvas('icon_yurei_ofuda_yuki', toCanvas(16, 16, ofudaIcon(true)));
+  scene.textures.addCanvas('icon_yurei_hair_yuki', toCanvas(16, 16, hairIcon(true)));
+  // The Banshee's buttons (her keen and shriek are drawn live, no sheets).
+  scene.textures.addCanvas('icon_banshee_keen', toCanvas(16, 16, keenIcon()));
+  scene.textures.addCanvas('icon_banshee_shriek', toCanvas(16, 16, shriekIcon()));
+  scene.textures.addCanvas('icon_banshee_keen_bride', toCanvas(16, 16, keenIcon(true)));
+  scene.textures.addCanvas('icon_banshee_shriek_bride', toCanvas(16, 16, shriekIcon(true)));
   // The Inventor's turret ('turret': unfolding 'b0'..'b4', turned 'h0'..'h7'
   // and firing 'f0'..'f7'), and its icons. The Engineer and the Scientist
   // themselves are hero sheets (see heroSheets.ts).

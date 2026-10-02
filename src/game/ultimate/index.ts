@@ -33,6 +33,18 @@ import { SIEGE_MS, SwarmProtocol } from './robot';
 import { DeadOfNight, HauntedHouse } from './phantom';
 import { POLTER_KIT, TEA_KIT } from '../Poltergeist';
 import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT } from '../Wraith';
+import { Lament, lamentIcon } from './banshee';
+import { BANSHEE_KIT, BRIDE_KIT } from '../Banshee';
+import { HundredCandles, candlesIcon } from './yurei';
+import { YUKI_KIT, YUREI_KIT } from '../Yurei';
+import { GhostShip, ghostShipIcon } from './captain';
+import { ADMIRAL_KIT, CAPTAIN_KIT } from '../Captain';
+import { MusicBox, MUSIC_MS, musicBoxIcon } from './ballerina';
+import { BALLET_KIT, FIREBIRD_KIT, type Ballerina } from '../Ballerina';
+import { BARNACLE_KIT, DIVER_KIT } from '../Diver';
+import { CrushingDepths, depthsIcon } from './diver';
+import { JUGG_KIT, TINMAN_KIT, type Juggernaut } from '../Juggernaut';
+import { MELT_MS, meltdownIcon } from './juggernaut';
 import { ENGINEER_KIT } from '../Engineer';
 import { EINSTEIN_KIT, SCIENTIST_KIT } from '../Scientist';
 import { chainReaction, megaSentry } from './inventor';
@@ -387,6 +399,68 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.nightIcon,
     cast: (c) => c.world.addEffect(new DeadOfNight(c.world, c)),
   },
+  'automaton:juggernaut': {
+    name: 'Meltdown',
+    cost: 70,
+    windup: 550,
+    aim: 'self',
+    pal: JUGG_KIT.pal,
+    icon: meltdownIcon,
+    // The Juggernaut does it itself (see Juggernaut.meltdown): its heat pinned hot, steam scalding all round, a great vent at the end.
+    lasts: MELT_MS,
+    cast: (c) => (c.hero as Partial<Juggernaut>).meltdown?.(c),
+  },
+  'automaton:diver': {
+    name: 'Crushing Depths',
+    cost: 70,
+    windup: 600,
+    aim: 'spot',
+    range: 110,
+    pal: DIVER_KIT.pal,
+    icon: depthsIcon,
+    cast: (c) => c.world.addEffect(new CrushingDepths(c.world, c)),
+  },
+  'automaton:ballerina': {
+    name: 'Music Box',
+    cost: 70,
+    windup: 550,
+    aim: 'self',
+    pal: BALLET_KIT.pal,
+    icon: musicBoxIcon,
+    // She spins the vortex herself (Ballerina.dance); the box, the blades and the petals are MusicBox.
+    lasts: MUSIC_MS,
+    cast: (c) => {
+      (c.hero as Partial<Ballerina>).dance?.(MUSIC_MS);
+      c.world.addEffect(new MusicBox(c.world, c));
+    },
+  },
+  'phantom:captain': {
+    name: 'Ghost Ship',
+    cost: 75,
+    windup: 600,
+    aim: 'dir',
+    pal: CAPTAIN_KIT.pal,
+    icon: ghostShipIcon,
+    cast: (c) => c.world.addEffect(new GhostShip(c.world, c)),
+  },
+  'phantom:yurei': {
+    name: 'Hundred Candles',
+    cost: 75,
+    windup: 600,
+    aim: 'self',
+    pal: YUREI_KIT.pal,
+    icon: candlesIcon,
+    cast: (c) => c.world.addEffect(new HundredCandles(c.world, c)),
+  },
+  'phantom:weeper': {
+    name: 'Lament',
+    cost: 75,
+    windup: 600,
+    aim: 'self',
+    pal: BANSHEE_KIT.pal,
+    icon: lamentIcon,
+    cast: (c) => c.world.addEffect(new Lament(c.world, c)),
+  },
   'inventor:engineer': {
     name: 'Mega Sentry',
     cost: 70,
@@ -497,6 +571,12 @@ const SKINS: Record<string, UltSkin> = {
   'phantom:tea': { pal: TEA_KIT.pal },
   'phantom:cala': { pal: CALA_KIT.pal, type: 'wraith' },
   'phantom:firefly': { pal: FIREFLY_KIT.pal, type: 'wraith' },
+  'automaton:tinman': { pal: TINMAN_KIT.pal, type: 'juggernaut' },
+  'automaton:barnacle': { pal: BARNACLE_KIT.pal, type: 'diver' },
+  'automaton:firebird': { pal: FIREBIRD_KIT.pal, type: 'ballerina' },
+  'phantom:admiral': { pal: ADMIRAL_KIT.pal, type: 'captain' },
+  'phantom:yuki': { pal: YUKI_KIT.pal, type: 'yurei' },
+  'phantom:bride': { pal: BRIDE_KIT.pal, type: 'weeper' },
   'inventor:einstein': { pal: EINSTEIN_KIT.pal, type: 'scientist' },
   'beast:benfica': { pal: BENFICA_KIT.pal, type: 'eagle' },
   'beast:sporting': { pal: SPORTING_KIT.pal, type: 'lion' },

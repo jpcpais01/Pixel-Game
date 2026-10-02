@@ -10,6 +10,12 @@ import { WILD_KITS } from './wild';
 import { FORGED_KITS } from './forged';
 import { SHOW_KITS } from './show';
 import { BLADE_KITS } from './blade';
+import { BANSHEE_AUTO } from './banshee';
+import { YUREI_AUTO } from './yurei';
+import { CAPTAIN_AUTO } from './captain';
+import { BALLERINA_AUTO } from './ballerina';
+import { DIVER_AUTO } from './diver';
+import { JUGG_AUTO } from './juggernaut';
 
 export const KITS: Record<string, Kit> = {
   ...ARCANE_KITS,
@@ -19,6 +25,12 @@ export const KITS: Record<string, Kit> = {
   ...FORGED_KITS,
   ...SHOW_KITS,
   ...BLADE_KITS,
+  ...BANSHEE_AUTO,
+  ...YUREI_AUTO,
+  ...CAPTAIN_AUTO,
+  ...BALLERINA_AUTO,
+  ...DIVER_AUTO,
+  ...JUGG_AUTO,
 };
 
 export const kitFor = (key: string): Kit => KITS[key] ?? {};
