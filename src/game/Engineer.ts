@@ -25,6 +25,8 @@ import { stand } from './rest';
 //  - Special: Mega Sentry (see ultimate/inventor.ts). A giant turret drops
 //    from the sky, crushing what it lands on, then hoses everything near with
 //    fire and rockets.
+// Forgebeard plays the same: his sentries are dwarf-work of stone and brass
+// with a rune for an eye, and everything he strikes or fires burns rune-orange.
 
 const SWINGS = ['swing', 'swing2', 'bonk'] as const;
 type Swing = (typeof SWINGS)[number];
@@ -51,12 +53,27 @@ const FOOTFALLS = new Set([1, 4]);
 const WRENCH_FX: Scheme = { core: 0xffffff, hot: 0xeef2fa, mid: 0xaab4c8, deep: 0x5a6478 };
 const BONK_FX: Scheme = { core: 0xfffbe8, hot: 0xffe070, mid: 0xffa030, deep: 0xc0501a, light: 0xffc050 };
 
+/** How a look's turrets are drawn: their sheet, and the bits they fall apart into. */
+export interface TurretLook {
+  texture: string;
+  parts: number[];
+}
+
+export const SENTRY_LOOK: TurretLook = { texture: 'turret', parts: [0xf6cc3c, 0xaab4c8, 0x737d93, 0x7a4c26] };
+export const RUNE_SENTRY_LOOK: TurretLook = { texture: 'turret_forge', parts: [0xdcae4a, 0x908c8a, 0x68666c, 0xff8030] };
+
 export interface EngineerKit {
   key: string;
   maxHp: number;
   speed: number;
   /** The turret's tracers and the Special's blasts. */
   pal: Pal;
+  /** The wrench's arc, and the bonk's ring and sparks. */
+  wrench: Scheme;
+  bonk: Scheme;
+  /** The light he carries (the hat lamp; Forgebeard's helm rune). */
+  lamp: number;
+  turret: TurretLook;
 }
 
 export const ENGINEER_KIT: EngineerKit = {
@@ -64,6 +81,21 @@ export const ENGINEER_KIT: EngineerKit = {
   maxHp: HERO_STATS['inventor.engineer'].hp,
   speed: HERO_STATS['inventor.engineer'].speed,
   pal: pal(0xfffbe8, 0xffe070, 0xffa030, 0xc0501a, 0xffc050),
+  wrench: WRENCH_FX,
+  bonk: BONK_FX,
+  lamp: 0xffe6a0,
+  turret: SENTRY_LOOK,
+};
+
+/** Forgebeard: rune-orange light, a heavier iron arc, sentries of stone and brass. */
+export const FORGEBEARD_KIT: EngineerKit = {
+  ...ENGINEER_KIT,
+  key: 'engineer_forgebeard',
+  pal: pal(0xfff0d8, 0xffb050, 0xff6a1a, 0x8a2a0a, 0xff8030),
+  wrench: { core: 0xfff4e8, hot: 0xd0d8e8, mid: 0x8a92a6, deep: 0x5a3018 },
+  bonk: { core: 0xfff0d8, hot: 0xffb050, mid: 0xff6a1a, deep: 0x8a2a0a, light: 0xff8030 },
+  lamp: 0xff9a50,
+  turret: RUNE_SENTRY_LOOK,
 };
 
 export class Engineer implements Hero {
@@ -112,7 +144,7 @@ export class Engineer implements Hero {
     this.body = world.add.sprite(x, y, key, 'idle_down_0').setOrigin(ox, oy).setPipeline('Lit');
     this.glowLayer = world.add.sprite(x, y, `${key}_e`, 'idle_down_0').setOrigin(ox, oy).setBlendMode(Phaser.BlendModes.ADD);
     // The hard hat's lamp lights the way at night.
-    this.lamp = world.lights.addLight(x, y, 70, 0xffe6a0, 0);
+    this.lamp = world.lights.addLight(x, y, 70, kit.lamp, 0);
     this.body.play(`${key}_idle_down`);
     this.body.on(Phaser.Animations.Events.ANIMATION_UPDATE, (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
       if (anim.key.startsWith(`${key}_walk_`) && FOOTFALLS.has(frame.index - 1)) sound.step();
@@ -194,9 +226,9 @@ export class Engineer implements Hero {
     if (s === 'bonk') {
       const bx = cx + u.x * 12;
       const by = cy + u.y * 10;
-      this.fx.push(new Shockwave(w, snap(bx), snap(this.y + u.y * 10), 16, BONK_FX));
+      this.fx.push(new Shockwave(w, snap(bx), snap(this.y + u.y * 10), 16, this.kit.bonk));
       const hits = w.melee({ kind: 'circle', x: bx, y: by, radius: 17 }, { damage: BONK_DAMAGE, heavy: true, knock: 150 });
-      for (const h of hits) this.fx.push(new HitSpark(w, h.x, h.y, BONK_FX, h.y + 13, true));
+      for (const h of hits) this.fx.push(new HitSpark(w, h.x, h.y, this.kit.bonk, h.y + 13, true));
       w.debris(this.kit.pal.tints, bx, by + 8, 8, by + 20, 'burst');
       sound.wrench(w.pan(bx), true);
       if (hits.length) w.cameras.main.shake(110, 0.0005);
@@ -205,10 +237,10 @@ export class Engineer implements Hero {
     const deg = (Math.atan2(u.y, u.x) * 180) / Math.PI;
     const hand = this.dir === 'right' ? -1 : 1;
     const sweep = s === 'swing' ? hand : -hand;
-    this.fx.push(new SlashArc(w, cx, cy, deg + sweep * 95, deg - sweep * 95, 16, WRENCH_FX, depth));
+    this.fx.push(new SlashArc(w, cx, cy, deg + sweep * 95, deg - sweep * 95, 16, this.kit.wrench, depth));
     const hits = w.melee({ kind: 'arc', x: cx, y: cy, radius: REACH, angle: Math.atan2(u.y, u.x), spread: (110 * Math.PI) / 180 }, { damage: SWING_DAMAGE });
     for (const h of hits) {
-      this.fx.push(new HitSpark(w, h.x, h.y, WRENCH_FX, h.y + 13, false));
+      this.fx.push(new HitSpark(w, h.x, h.y, this.kit.wrench, h.y + 13, false));
       sound.wrench(w.pan(h.x), false);
     }
     if (hits.length) w.cameras.main.shake(70, 0.0003);
@@ -240,7 +272,7 @@ export class Engineer implements Hero {
       if (this.world.walkable(tx, ty)) break;
     }
     if (this.turrets.length >= MAX_TURRETS) this.turrets.shift()?.expire();
-    const t = new Turret(this.world, this.x + u.x * 4, this.y, tx, ty, SENTRY, this.kit.pal);
+    const t = new Turret(this.world, this.x + u.x * 4, this.y, tx, ty, SENTRY, this.kit.pal, this.kit.turret);
     this.turrets.push(t);
     this.world.addEffect(t);
     heroTimers.follow(t, 'ability', '', this.kit.pal.hot, () => t.timeLeft());
@@ -337,12 +369,13 @@ export class Turret implements Effect {
     readonly y: number,
     private spec: TurretSpec,
     private p: Pal,
+    private look: TurretLook = SENTRY_LOOK,
   ) {
     const s = spec.scale;
     this.flyMs = spec.drop ? DROP_MS : FLY_MS;
     this.shade = world.add.image(x, y, 'shadow').setScale(0.7 * s, 0.6 * s).setAlpha(0).setDepth(1);
-    this.sprite = world.add.sprite(fromX, fromY, 'turret', 'b0').setOrigin(0.5, TURRET_FOOT / TURRET_SIZE).setScale(s).setPipeline('Lit');
-    this.glow = world.add.sprite(fromX, fromY, 'turret_e', 'b0').setOrigin(0.5, TURRET_FOOT / TURRET_SIZE).setScale(s).setBlendMode(Phaser.BlendModes.ADD);
+    this.sprite = world.add.sprite(fromX, fromY, look.texture, 'b0').setOrigin(0.5, TURRET_FOOT / TURRET_SIZE).setScale(s).setPipeline('Lit');
+    this.glow = world.add.sprite(fromX, fromY, `${look.texture}_e`, 'b0').setOrigin(0.5, TURRET_FOOT / TURRET_SIZE).setScale(s).setBlendMode(Phaser.BlendModes.ADD);
   }
 
   /** Time left until it folds away, for the HUD's timer. */
@@ -463,7 +496,7 @@ export class Turret implements Effect {
   /** Its time is up: it falls apart into a puff of parts. */
   private fallApart(): void {
     const w = this.world;
-    w.debris([0xf6cc3c, 0xaab4c8, 0x737d93, 0x7a4c26], this.x, this.y - 6 * this.spec.scale, this.spec.scale > 1 ? 20 : 8, this.y + 10, 'burst');
+    w.debris(this.look.parts, this.x, this.y - 6 * this.spec.scale, this.spec.scale > 1 ? 20 : 8, this.y + 10, 'burst');
     sound.clack(w.pan(this.x), true);
     this.destroy();
   }

@@ -70,6 +70,8 @@ import {
 import { ABYSS_BONE, ABYSS_DEEP, ABYSS_FIN, ABYSS_HAIR, ABYSS_HOT, ABYSS_INNER, ABYSS_MID, ABYSS_CORE, ABYSS_ROBE, ABYSS_SKIN, CORAL, DRIFTWOOD, FOAM, LURE, PEARL, SEA_HAIR, SHELL, TIDE_CORE, TIDE_DEEP, TIDE_HOT, TIDE_INNER, TIDE_MID, TIDE_ROBE } from './tide';
 import { BAMBOO, INK_HAIR, JADE_ROBE, LILY_PAD, LOTUS_CORE, LOTUS_DEEP, LOTUS_GOLD, LOTUS_HOT, LOTUS_MID, LOTUS_PEARL, LOTUS_PINK, LOTUS_SILK } from './tide';
 import { FAE_BLOSSOM, FAE_GOLD, FAE_GOWN, FAE_PETAL, FAE_WING, HONEY_HAIR, MOONFLOWER, MOONWOOD, TITANIA_CORE, TITANIA_DEEP, TITANIA_HOT, TITANIA_MID } from './druid';
+import { MYC_SKIN } from './druid';
+import { ASH_HAIR, ASH_PAINT, CHAR_BONE, CHAR_HIDE, CINDER_CORE, CINDER_DEEP, CINDER_HOT, CINDER_MID, CINDER_TUNIC, CINDER_WOOD, GLOWCAP, LAVA, MAGMA, MYC_CAP, MYC_CORE, MYC_DEEP, MYC_GILL, MYC_HAIR, MYC_HOT, MYC_LOAM, MYC_MID, MYC_ROBE, MYC_SPOT, MYC_STEM, MYC_WOOD, OBSIDIAN_PELT } from './druid';
 import { GNARLWOOD, JACK_FIRE, JACK_RIND, JACK_STEM, PUMPKIN_TRIM, WITCH_CORE, WITCH_DEEP, WITCH_EYE, WITCH_GHOST, WITCH_HAIR, WITCH_HAT, WITCH_HOT, WITCH_LINING, WITCH_MID, WITCH_RIBBON, WITCH_ROBE, WITCH_SKIN } from './pumpkin';
 import { ANTLER, AMBER, AUBURN, AUTUMN_LEAF, AUTUMN_ROBE, BARE_ANTLER, BARK, EMBER_SEED, FANG, FROST_HAIR, FROST_HIDE, FROST_TUNIC, FROST_WOOD, HIDE, ICE, ICE_FANG, LEAF, LIVEWOOD, MOSS, MUZZLE, PELT, SEED, SNOW_PELT, TUNIC, WOAD, WOLF_NOSE, AUTUMN_CORE, AUTUMN_DEEP, AUTUMN_HOT, AUTUMN_MID, FROST_CORE, FROST_DEEP, FROST_HOT, FROST_MID, GROVE_CORE, GROVE_DEEP, GROVE_HOT, GROVE_MID, WILD_CORE, WILD_DEEP, WILD_HOT, WILD_MID } from './druid';
 
@@ -130,8 +132,21 @@ export interface WizardLook {
    * in a high bun with a lotus in it, jade robes crossed over white silk with
    * a pink sash, lily pads on her shoulders, petals drifting round her, and a
    * bamboo staff whose head is an opening lotus cradling a pearl.
+   * 'cap': the Grovekeeper's Mycelia, a mushroom druid of the deep woods: a
+   * broad spotted toadstool for a hat with glowing gills under its brim, dark
+   * hair to the shoulders, glowcaps sprouting on her shoulders and up her
+   * staff, a hem frilled into glowing gills, foxfire freckles and spores
+   * drifting up round her, and a gnarled staff crowned with luminous mushrooms.
    */
-  head?: 'astral' | 'fiend' | 'grove' | 'wild' | 'tide' | 'witch' | 'faerie' | 'lotus';
+  head?: 'astral' | 'fiend' | 'grove' | 'wild' | 'tide' | 'witch' | 'faerie' | 'lotus' | 'cap';
+  /** Mycelia's toadstool: its cap, the glowing spots on it, and the mushrooms' pale stems. */
+  shroom?: { cap: Material; spot: Material; stem: Material };
+  /**
+   * The Shapeshifter's Cinderhide: the wolf's head becomes its charred skull
+   * (in `trim`, with embers in its sockets), lava cracks open through the pelt
+   * and the hide, ash on her face in place of woad, and eyes of ember.
+   */
+  cinder?: { lava: Material; paint: Material };
   /** Titania's wings. */
   wing?: Material;
   /** Flowers worn in the hair: Titania's white blossoms, Lotus's pink lotus (and her staff's petals). */
@@ -396,7 +411,39 @@ export const LOTUS_LOOK: WizardLook = {
   pad: LILY_PAD,
 };
 
-export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK, AUTUMN_LOOK, FROST_LOOK, TIDE_LOOK, ABYSS_LOOK, PUMPKIN_LOOK, TITANIA_LOOK, LOTUS_LOOK];
+/** The Grovekeeper's Mycelia skin: a mushroom druid of the deep woods, lit only by what grows on her. */
+export const MYCELIA_LOOK: WizardLook = {
+  ...GROVE_LOOK,
+  key: 'druid_mycelia',
+  robe: MYC_ROBE,
+  inner: MYC_LOAM,
+  trim: MYC_GILL,
+  belt: MYC_STEM,
+  skin: MYC_SKIN,
+  shaft: MYC_WOOD,
+  crystal: GLOWCAP,
+  magic: { core: MYC_CORE, hot: MYC_HOT, mid: MYC_MID, deep: MYC_DEEP },
+  head: 'cap',
+  hair: MYC_HAIR,
+  shroom: { cap: MYC_CAP, spot: MYC_SPOT, stem: MYC_STEM },
+};
+
+/** The Shapeshifter's Cinderhide skin: a volcano's shaman, in an obsidian pelt cracked with fire under a charred wolf's skull. */
+export const CINDER_LOOK: WizardLook = {
+  ...WILD_LOOK,
+  key: 'druid_cinder',
+  robe: CHAR_HIDE,
+  inner: CINDER_TUNIC,
+  trim: CHAR_BONE,
+  shaft: CINDER_WOOD,
+  crystal: MAGMA,
+  hair: OBSIDIAN_PELT,
+  beard: ASH_HAIR,
+  magic: { core: CINDER_CORE, hot: CINDER_HOT, mid: CINDER_MID, deep: CINDER_DEEP },
+  cinder: { lava: LAVA, paint: ASH_PAINT },
+};
+
+export const WIZARD_LOOKS = [ARCANE_LOOK, VOID_LOOK, PYRO_LOOK, ASTRAL_LOOK, HELL_LOOK, GROVE_LOOK, WILD_LOOK, AUTUMN_LOOK, FROST_LOOK, TIDE_LOOK, ABYSS_LOOK, PUMPKIN_LOOK, TITANIA_LOOK, LOTUS_LOOK, MYCELIA_LOOK, CINDER_LOOK];
 
 /** The look being drawn. Frame drawing is synchronous, so a module slot is enough. */
 let S: WizardLook = ARCANE_LOOK;
@@ -497,6 +544,13 @@ function drawStaff(c: PixelCanvas, s: Staff, glow: number, free?: { x: number; y
     const t = i / steps;
     c.shade(Math.round(g.bottom.x + (g.top.x - g.bottom.x) * t), Math.round(g.bottom.y + (g.top.y - g.bottom.y) * t), -1);
   }
+  // Cinderhide's staff is charred through, still glowing in its cracks.
+  if (S.cinder) {
+    for (let i = 3; i < steps - 1; i += 5) {
+      const t = i / steps;
+      c.px(Math.round(g.bottom.x + (g.top.x - g.bottom.x) * t), Math.round(g.bottom.y + (g.top.y - g.bottom.y) * t), S.cinder.lava, woodN, { glow: 0.3 + glow * 0.3, bias: -1 });
+    }
+  }
   if (S.hooded) {
     // A silver crescent cradling the crystal, horns curling up past it.
     c.part();
@@ -559,6 +613,8 @@ function drawStaff(c: PixelCanvas, s: Staff, glow: number, free?: { x: number; y
       const leaf = at(k * 3.3, 1.2);
       c.px(leaf.x, leaf.y, S.trim, { x: k * 0.5 - 0.2, y: 0.4, z: 0.8 }, { bias: 1 });
     }
+  } else if (S.head === 'cap') {
+    return glowcapStaff(c, g, glow);
   } else if (S.head === 'wild') {
     // Two fangs curve up either side of the amber; a feather hangs from a thong below it.
     const px = -g.dy;
@@ -732,6 +788,52 @@ function jackOLantern(c: PixelCanvas, gx: number, gy: number, glow: number): { x
   return { x: gx, y: gy };
 }
 
+/**
+ * Mycelia's staff head, where the crystal would be: the gnarled wood splits
+ * into three stems, each topped with a glowcap, the middle one tallest and
+ * broadest; two shelf fungi glow on the shaft below. Returns the big cap's
+ * heart, where the magic gathers.
+ */
+function glowcapStaff(c: PixelCanvas, g: ReturnType<typeof staffGeom>, glow: number): { x: number; y: number } {
+  const shroom = S.shroom!;
+  const px = -g.dy;
+  const py = g.dx;
+  const at = (side: number, up: number) => ({ x: g.top.x + px * side + g.dx * up, y: g.top.y + py * side + g.dy * up });
+  const cg = S.crystal.emissive! * (0.55 + glow * 0.45);
+  // Shelf fungi on the shaft: little brackets on either side, lower down.
+  for (const [side, up] of [[1.2, -4.6]] as const) {
+    c.part();
+    const f = at(side, up);
+    const f2 = at(side * 1.9, up + 0.3);
+    c.px(f.x, f.y, S.crystal, { x: side * 0.3, y: 0.6, z: 0.75 }, { glow: cg * 0.7 });
+    c.px(f2.x, f2.y, S.crystal, { x: side * 0.5, y: 0.5, z: 0.7 }, { glow: cg * 0.6, bias: -1 });
+  }
+  // The stems, the side ones leaning out.
+  c.part();
+  for (const k of [-1, 1]) {
+    const a0 = at(k * 0.5, -0.2);
+    const a1 = at(k * 2.3, 1.6);
+    c.capsule(a0.x, a0.y, a1.x, a1.y, 0.55, 0.45, shroom.stem, { bias: k < 0 ? 1 : 0 });
+  }
+  const m0 = at(0, -0.4);
+  const m1 = at(0, 2.6);
+  c.capsule(m0.x, m0.y, m1.x, m1.y, 0.6, 0.5, shroom.stem, { bias: 1 });
+  // The side caps: small domes.
+  for (const k of [-1, 1]) {
+    c.part();
+    const sc = at(k * 2.6, 2.2);
+    c.ellipse(sc.x, sc.y, 1.45, 0.95, S.crystal, { glow: cg * 0.85, normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.9 - 0.45, 1) });
+  }
+  // The crowning cap, broad and domed, a spot or two on it.
+  c.part();
+  const top = at(0, 3.4);
+  c.ellipse(top.x, top.y, 2.6, 1.6, S.crystal, { glow: cg, normal: (_x, _y, dx, dy) => sphere(dx * 0.85, dy * 0.9 - 0.4, 1) });
+  c.part();
+  c.px(top.x - 1, top.y - 1, shroom.spot, { x: -0.3, y: 0.6, z: 0.75 }, { glow: 0.9 });
+  c.px(top.x + 1, top.y, shroom.spot, { x: 0.3, y: 0.4, z: 0.85 }, { glow: 0.8 });
+  return top;
+}
+
 function drawTrail(c: PixelCanvas, s: Staff, angles: number[]): void {
   // A sweeping ribbon of light following the crystal around the hand.
   const r = s.len * (1 - s.grip) + s.float + 1.6;
@@ -878,6 +980,22 @@ function hemTrim(c: PixelCanvas, edges: (y: number) => [number, number], hem: nu
     }
     return;
   }
+  if (S.head === 'cap') {
+    // The hem frills into gills: a glowing band two rows deep, fine dark lines
+    // through it like the underside of a mushroom, and soft scallops hanging
+    // below that drift with the sway.
+    c.part();
+    c.shape(hem - 1, hem, edges, S.trim, (_x, _y, t) => cyl(t, -0.35));
+    for (let x = Math.round(l); x <= Math.round(r) - 1; x++) {
+      const k = (((x - Math.round(sway)) % 3) + 3) % 3;
+      if (k === 1) {
+        c.shade(x, hem - 1, -1);
+        c.shade(x, hem, -1);
+      }
+      if (k === 0 && x > Math.round(l) && x < Math.round(r) - 1) c.px(x, hem + 1, S.trim, cyl(0, -0.5), { bias: -1 });
+    }
+    return;
+  }
   if (S.head === 'faerie') {
     // Cream petal tips falling below the hem, and a pale one catching the light beside each.
     c.part();
@@ -918,6 +1036,8 @@ function hemTrim(c: PixelCanvas, edges: (y: number) => [number, number], hem: nu
     else if (k === 1) c.shade(x, hem, -1);
     // The warlock's rags smoulder: fel embers along the torn edge.
     if (S.head === 'fiend' && k !== 0) c.spark(x, hem, (x + hem) % 2 ? S.magic.mid : S.magic.deep, 0.55);
+    // Cinderhide's hide smoulders: embers along its burnt edge.
+    if (S.cinder && k === 0 && (x + hem) % 2) c.spark(x, hem + 1, S.magic.mid, 0.5);
     // The witch's rags smoulder faintly violet at the tips.
     if (S.head === 'witch' && k === 0 && (x + hem) % 2) c.spark(x, hem + 1, S.magic.deep, 0.35);
   }
@@ -1770,16 +1890,22 @@ function wildHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.px(11, 14 + V, S.skin, sphere(-0.4, -0.3), { bias: 1 });
   c.px(12, 14 + V, S.skin, sphere(0.35, -0.2));
   c.shade(12, 15 + V, -1);
-  c.px(9, 14 + V, WOAD, FLAT_DOWN);
-  c.px(14, 14 + V, WOAD, FLAT_DOWN);
+  const paint = S.cinder?.paint ?? WOAD;
+  c.px(9, 14 + V, paint, FLAT_DOWN);
+  c.px(14, 14 + V, paint, FLAT_DOWN);
+  // Cinderhide's ash runs across her eyes like a mask.
+  if (S.cinder) {
+    c.px(9, 13 + V, paint, FLAT_DOWN, { bias: -1 });
+    c.px(14, 13 + V, paint, FLAT_DOWN, { bias: -1 });
+  }
   c.part();
   const gx = p.gaze?.[0] ?? 0;
   if (p.blink || h > 0) {
     c.px(10 + gx, 13 + V, S.skin, FLAT_DOWN, { bias: -1 });
     c.px(13 + gx, 13 + V, S.skin, FLAT_DOWN, { bias: -1 });
   } else {
-    c.px(10 + gx, 13 + V, EYE);
-    c.px(13 + gx, 13 + V, EYE);
+    herEye(c, 10 + gx, 13 + V);
+    herEye(c, 13 + gx, 13 + V);
   }
   if (h > 0) {
     // The mouth open on the howl: a small o as the head goes back, then wide, the jaw dropped.
@@ -1793,23 +1919,48 @@ function wildHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
       c.px(12, 17 + V, S.skin, sphere(0.3, 0.7), { bias: -1 });
     }
   }
-  // The wolf's head over her brow: its skull, ears, and the muzzle resting on her forehead.
+  // The wolf's head over her brow: its skull, ears, and the muzzle resting on
+  // her forehead. Cinderhide's is the bare skull, charred black, the pelt's
+  // ears still standing behind it.
+  const skull = !!S.cinder;
   wolfEar(c, cx - 3.3 + sh, P);
   wolfEar(c, cx + 3.3 + sh, P);
   c.part();
-  c.ellipse(cx + sh, 9.3 + P, 4.6, 2.9, pelt, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.4, 1) });
+  c.ellipse(cx + sh, 9.3 + P, skull ? 4.2 : 4.6, 2.9, skull ? S.trim : pelt, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.4, 1) });
   c.shade(cx - 1 + sh, 7 + P, 1);
   c.shade(cx + sh, 8 + P, -1);
   c.part();
   // Pointing at the sky, the snout stands up past the skull between the ears.
   const my = h > 1 ? 6.5 + P : 11.2 + P - h;
-  c.ellipse(cx + sh, my, h > 1 ? 1.6 : 2.2, h > 1 ? 1.9 : 1.3, MUZZLE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.7 - 0.2 - h * 0.25, 1) });
+  c.ellipse(cx + sh, my, h > 1 ? 1.6 : skull ? 1.9 : 2.2, h > 1 ? 1.9 : 1.3, skull ? S.trim : MUZZLE, { bias: skull ? 1 : 0, normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.7 - 0.2 - h * 0.25, 1) });
   c.part();
   // Its nose sits at the tip of the muzzle: at the bottom looking at us, on top when it points at the sky.
   const ny = h > 1 ? Math.floor(my) - 1 : Math.floor(my) + (h > 0 ? 0 : 1);
-  c.px(11 + sh, ny, WOLF_NOSE, FLAT_DOWN);
-  c.px(12 + sh, ny, WOLF_NOSE, FLAT_DOWN);
+  c.px(11 + sh, ny, skull ? HOOD_SHADOW : WOLF_NOSE, FLAT_DOWN);
+  c.px(12 + sh, ny, skull ? HOOD_SHADOW : WOLF_NOSE, FLAT_DOWN);
+  if (skull) {
+    // Fangs hanging from the skull's jaw over her brow, and a crack of fire across its crown.
+    if (h === 0) {
+      c.px(10 + sh, 12 + P, S.trim, { x: -0.2, y: 0.2, z: 0.95 }, { bias: 2 });
+      c.px(13 + sh, 12 + P, S.trim, { x: 0.2, y: 0.2, z: 0.95 }, { bias: 2 });
+    }
+    c.px(cx + 1 + sh, 7 + P, S.cinder!.lava, FLAT_DOWN, { glow: 0.6 + p.glow * 0.3 });
+    c.px(cx + 2 + sh, 8 + P, S.cinder!.lava, FLAT_DOWN, { glow: 0.5 + p.glow * 0.3 });
+    // Its eyes are empty sockets with embers burning deep in them.
+    c.px(10 + sh, 9 + P, HOOD_SHADOW, FLAT_DOWN);
+    c.px(13 + sh, 9 + P, HOOD_SHADOW, FLAT_DOWN);
+  }
   wolfEyes(c, [[9 + sh, 9 + P], [14 + sh, 9 + P]], p);
+}
+
+/** Her own eye: plain, or Cinderhide's ember. */
+function herEye(c: PixelCanvas, x: number, y: number): void {
+  if (!S.cinder) {
+    c.px(x, y, EYE);
+    return;
+  }
+  c.px(x, y, S.cinder.lava, { x: 0, y: 0, z: 1 }, { glow: 0.9 });
+  c.spark(x, y, S.magic.hot, 0.3);
 }
 
 function wildHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
@@ -1825,6 +1976,13 @@ function wildHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   wolfEar(c, cx + 3.3, U);
   c.part();
   c.ellipse(cx, 10.2 + U, 4.6, 3.3, pelt, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  // Cinderhide: the back of the skull's crown shows over the pelt, cracked with fire.
+  if (S.cinder) {
+    c.part();
+    c.ellipse(cx, 8.6 + U, 3.2, 1.8, S.trim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.5, 1) });
+    c.px(cx - 1, 8 + U, S.cinder.lava, FLAT_DOWN, { glow: 0.6 + p.glow * 0.3 });
+    c.px(cx, 9 + U, S.cinder.lava, FLAT_DOWN, { glow: 0.5 + p.glow * 0.3 });
+  }
   // The hide runs down her back to the tail, a darker stripe along its spine.
   const top = 12 + U;
   const tail = 23 + U;
@@ -1837,7 +1995,8 @@ function wildHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   }, pelt, (_x, _y, t, u) => cyl(t, 0.3 - u * 0.4));
   for (let y = 9 + U; y < tail; y++) c.shade(Math.round(cx - p.hem * Math.max(0, (y - top) / (tail - top)) * 0.6), y, -1);
   c.part();
-  c.px(cx - Math.round(p.hem * 0.6), tail + 1, MUZZLE, cyl(0, -0.2));
+  // The tail's tip: pale, or on Cinderhide an ember.
+  c.px(cx - Math.round(p.hem * 0.6), tail + 1, S.cinder?.lava ?? MUZZLE, cyl(0, -0.2));
 }
 
 /** Facing left, like drawSide. */
@@ -1858,18 +2017,27 @@ function wildHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.ellipse(cx - 1.3, 13.9 + U, 2.8, 2.4, S.skin);
   c.part();
   c.px(cx - 5, 14 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
-  c.px(cx - 2, 14 + U, WOAD, FLAT_DOWN);
+  const paint = S.cinder?.paint ?? WOAD;
+  c.px(cx - 2, 14 + U, paint, FLAT_DOWN);
+  if (S.cinder) c.px(cx - 2, 13 + U, paint, FLAT_DOWN, { bias: -1 });
   c.part();
   if (p.blink) c.px(cx - 3, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
-  else c.px(cx - 3, 13 + U, EYE);
-  // The wolf's head in profile, its muzzle jutting out over her brow.
+  else herEye(c, cx - 3, 13 + U);
+  // The wolf's head in profile, its muzzle jutting out over her brow (Cinderhide's a charred skull).
+  const skull = !!S.cinder;
   wolfEar(c, cx + 1.6, U);
   c.part();
-  c.ellipse(cx + 0.2, 9.6 + U, 4.0, 2.7, pelt, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 - 0.1, dy * 0.8 - 0.3, 1) });
+  c.ellipse(cx + 0.2, 9.6 + U, skull ? 3.7 : 4.0, 2.7, skull ? S.trim : pelt, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 - 0.1, dy * 0.8 - 0.3, 1) });
   c.part();
-  c.capsule(cx - 3, 10.6 + U, cx - 6.0, 11.2 + U, 1.35, 0.95, MUZZLE);
+  c.capsule(cx - 3, 10.6 + U, cx - 6.0, 11.2 + U, skull ? 1.2 : 1.35, skull ? 0.8 : 0.95, skull ? S.trim : MUZZLE, { bias: skull ? 1 : 0 });
   c.part();
-  c.px(cx - 7, 11 + U, WOLF_NOSE, FLAT_DOWN);
+  c.px(cx - 7, 11 + U, skull ? HOOD_SHADOW : WOLF_NOSE, FLAT_DOWN);
+  if (skull) {
+    c.px(cx - 5, 12 + U, S.trim, { x: -0.2, y: 0.2, z: 0.95 }, { bias: 2 });
+    c.px(cx - 3, 12 + U, S.trim, { x: -0.1, y: 0.2, z: 0.95 }, { bias: 2 });
+    c.px(cx + 1, 8 + U, S.cinder!.lava, FLAT_DOWN, { glow: 0.6 + p.glow * 0.3 });
+    c.px(cx - 1, 9 + U, HOOD_SHADOW, FLAT_DOWN);
+  }
   wolfEyes(c, [[cx - 2, 9 + U]], p);
 }
 
@@ -2694,6 +2862,196 @@ function lotusFlecks(c: PixelCanvas, p: Pose): void {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Heads: Mycelia's toadstool, glowcaps and spores
+
+/**
+ * The toadstool: a broad dome from `top` down to its brim at `rim`, `hw` wide
+ * either side of `cx` at the brim (`lean` nudges its crown), freckled with
+ * glowing spots; with `gills`, the glowing underside shows as a band below the
+ * brim, that many pixels either side, scored with fine lines.
+ */
+function toadstool(c: PixelCanvas, cx: number, top: number, rim: number, hw: number, lean: number, spots: [number, number][], gills: number): void {
+  const shroom = S.shroom!;
+  c.part();
+  c.shape(top, rim, (y) => {
+    const u = (y + 0.5 - top) / (rim + 1 - top);
+    const w = Math.max(1.4, hw * Math.sqrt(1 - (1 - u) * (1 - u)));
+    const x = cx + lean * (1 - u);
+    return [x - w, x + w];
+  }, shroom.cap, (_x, _y, t, u) => sphere(t * 0.85, u * 1.1 - 0.85, 1));
+  // The brim curls under a little: its lowest row a shade darker at the ends.
+  c.shade(Math.round(cx - hw), rim, -1);
+  c.shade(Math.round(cx + hw) - 1, rim, -1);
+  c.part();
+  for (const [x, y] of spots) c.px(x, y, shroom.spot, { x: (x - cx) * 0.06, y: 0.55, z: 0.83 });
+  if (gills > 0) {
+    c.part();
+    const y = rim + 1;
+    for (let x = Math.round(cx - gills); x <= Math.round(cx + gills) - 1; x++) {
+      const t = (x + 0.5 - cx) / gills;
+      c.px(x, y, S.trim, { x: t * 0.5, y: -0.5, z: 0.7 }, { bias: (x & 1) === (Math.round(cx) & 1) ? -1 : 0 });
+    }
+  }
+}
+
+/** Little glowcaps sprouting from her shoulders: [x, y of the cap, size 0 small or 1]. */
+function shoulderCaps(c: PixelCanvas, caps: [number, number, number][], p: Pose): void {
+  const stem = S.shroom!.stem;
+  const cg = S.crystal.emissive! * (0.45 + p.glow * 0.3);
+  for (const [x, y, big] of caps) {
+    c.part();
+    c.px(x, y + 1, stem, cyl(0, 0.2));
+    if (big) c.px(x, y + 2, stem, cyl(0, 0.1), { bias: -1 });
+    c.part();
+    for (let ox = -big; ox <= big + 1; ox++) c.px(x - 0.5 + ox, y, S.crystal, { x: ox * 0.4 - 0.1, y: 0.3, z: 0.88 }, { glow: cg, bias: ox === -big ? 1 : 0 });
+    if (big) c.px(x, y - 1, S.crystal, { x: -0.2, y: 0.7, z: 0.7 }, { glow: cg, bias: 1 });
+  }
+}
+
+function capHeadDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  leafMantle(c, cx - 5.0, cx + 5.0, U, 1.2, p.hem);
+  // Dark hair to the shoulders, behind the face.
+  c.part();
+  c.shape(10 + U, 17 + U, (y) => {
+    const u = (y - 10 - U) / 7;
+    const hw = 4.1 + u * 0.7;
+    const sw = p.hem * u * 0.4;
+    return [cx - hw + sw, cx + hw + sw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.9, u * 0.9 - 0.3, 0.9));
+  c.shade(8, 16 + U, -1);
+  c.shade(15, 16 + U, -1);
+  shoulderCaps(c, [[cx + 4.6, 15.4 + U, 1], [cx + 2.9, 16.6 + U, 0], [cx - 4.4, 16.2 + U, 0]], p);
+  // The face, pale as a mushroom's stem.
+  c.part();
+  c.ellipse(cx, 13.4 + U, 3.0, 2.7, S.skin);
+  c.part();
+  c.px(11, 14 + U, S.skin, sphere(-0.4, -0.3), { bias: 1 });
+  c.px(12, 14 + U, S.skin, sphere(0.35, -0.2));
+  c.shade(12, 15 + U, -1);
+  const [gx, gy] = p.gaze ?? [0, 0];
+  c.part();
+  if (p.blink) {
+    c.px(10 + gx, 13 + U + gy, S.skin, FLAT_DOWN, { bias: -1 });
+    c.px(13 + gx, 13 + U + gy, S.skin, FLAT_DOWN, { bias: -1 });
+  } else {
+    c.px(10 + gx, 13 + U + gy, EYE);
+    c.px(13 + gx, 13 + U + gy, EYE);
+  }
+  // The brim's glow on her brow.
+  c.spark(10, 11 + U, S.magic.mid, 0.25);
+  c.spark(13, 11 + U, S.magic.mid, 0.25);
+  toadstool(c, cx, 2 + U + Math.round(p.hat * 0.3), 9 + U, 7.6, p.hat * 0.5, [[cx - 4, 5 + U], [cx - 3, 5 + U], [cx, 3 + U], [cx + 3, 4 + U], [cx + 5, 7 + U], [cx - 6, 8 + U], [cx + 1, 7 + U]], 6.2);
+}
+
+function capHeadUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  leafMantle(c, cx - 5.0, cx + 5.0, U, 1.2, -p.hem);
+  // Her hair down her back.
+  c.part();
+  c.shape(10 + U, 18 + U, (y) => {
+    const u = (y - 10 - U) / 8;
+    const hw = 4.1 - Math.max(0, u - 0.6) * 1.6;
+    const sw = -p.hem * u * 0.5;
+    return [cx - hw + sw, cx + hw + sw];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.85, u * 0.7, 0.9));
+  for (let y = 12; y <= 18; y++) c.shade(cx - 1 + ((y + Math.round(p.hem)) % 3 === 0 ? 1 : 0), y + U, -1);
+  shoulderCaps(c, [[cx - 4.6, 15.4 + U, 1], [cx - 2.9, 16.6 + U, 0], [cx + 4.4, 16.2 + U, 0]], p);
+  toadstool(c, cx, 2 + U + Math.round(p.hat * 0.3), 9 + U, 7.6, -p.hat * 0.5, [[cx + 3, 5 + U], [cx + 4, 5 + U], [cx - 1, 3 + U], [cx - 4, 4 + U], [cx - 5, 7 + U], [cx + 6, 8 + U], [cx, 6 + U]], 0);
+}
+
+/** Facing left, like drawSide. */
+function capHeadSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
+  const hair = S.hair ?? HAIR;
+  leafMantle(c, cx - 3.8, cx + 3.6, U, 1.0, p.hem);
+  // Hair behind, falling to the shoulders and stirring back.
+  c.part();
+  c.shape(10 + U, 17 + U, (y) => {
+    const u = (y - 10 - U) / 7;
+    const d = p.hem * u * 0.4 + u * 0.6;
+    return [cx - 1.6 + d, cx + 3.6 + d];
+  }, hair, (_x, _y, t, u) => sphere(t * 0.8 + 0.1, u * 0.8 - 0.2, 0.9));
+  shoulderCaps(c, [[cx + 2.4, 15.4 + U, 1], [cx + 0.8, 16.4 + U, 0]], p);
+  // The face in profile.
+  c.part();
+  c.ellipse(cx - 2.6, 13.4 + U, 2.0, 2.6, S.skin);
+  c.px(cx - 5, 13 + U, S.skin, sphere(-0.6, -0.2), { bias: 1 });
+  c.part();
+  if (p.blink) c.px(cx - 4, 13 + U, S.skin, FLAT_DOWN, { bias: -1 });
+  else c.px(cx - 4, 13 + U, EYE);
+  c.spark(cx - 4, 11 + U, S.magic.mid, 0.25);
+  // The cap sits a little forward, its brim reaching out over her face.
+  toadstool(c, cx - 0.8, 2 + U + Math.round(p.hat * 0.3), 9 + U, 6.8, p.hat * 0.5, [[cx - 4, 5 + U], [cx - 1, 3 + U], [cx + 2, 4 + U], [cx + 4, 7 + U], [cx - 6, 8 + U], [cx, 6 + U]], 5.6);
+}
+
+/** Foxfire freckling the robe's lower half, and spores drifting up round her. */
+function capFlecks(c: PixelCanvas, U: number, p: Pose): void {
+  const spot = S.shroom!.spot;
+  c.part();
+  for (let y = 23; y < FRAME_H - 3; y++) {
+    for (let x = 0; x < FRAME_W; x++) {
+      if (c.materialAt(x, y) !== S.robe) continue;
+      const h = hash(x, y - U, 41);
+      if (h > 0.975 - (y - 23) * 0.004) c.px(x, y, spot, cyl(0, 0.2), { glow: 0.35, bias: h > 0.99 ? 0 : -1 });
+    }
+  }
+  const ph = p.glow * 6 + p.staff.float * 2.5 + p.breath * 1.2 + p.hem * 0.8;
+  ([[3, 28], [20.5, 26], [5.5, 22], [18.5, 19]] as [number, number][]).forEach(([x, y], i) => {
+    const rise = ((ph * 1.3 + i * 2.7) % 7 + 7) % 7;
+    const a = 0.55 * (1 - rise / 7) + 0.1;
+    c.spark(x + Math.sin(ph * 1.7 + i * 1.9) * 0.9, y - rise * 1.6, i % 2 ? S.magic.hot : S.magic.core, a);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Cinderhide's lava cracks
+
+/**
+ * Lava cracks through the obsidian pelt (and smouldering low on the hide):
+ * a few veins, each starting where the hash picks a spot and zigzagging down
+ * a few pixels, now and then forking. Measured on the body (y less the
+ * breath), so the same cracks ride with it from frame to frame. Only inside
+ * the shape: the edges stay whole, so the silhouette keeps its outline.
+ */
+function cinderCracks(c: PixelCanvas, U: number, p: Pose): void {
+  const lava = S.cinder!.lava;
+  const pelt = S.hair;
+  const inside = (x: number, y: number): boolean => {
+    const m = c.materialAt(x, y);
+    if (m !== pelt && m !== lava && (m !== S.robe || y - U < 23)) return false;
+    return c.filled(x - 1, y) && c.filled(x + 1, y) && c.filled(x, y - 1) && c.filled(x, y + 1);
+  };
+  const seeds: [number, number][] = [];
+  for (let y = 0; y < FRAME_H; y++) {
+    for (let x = 0; x < FRAME_W; x++) {
+      const h = hash(x, y - U, 77);
+      // Denser on the pelt than on the hide.
+      if (h > (c.materialAt(x, y) === pelt ? 0.9 : 0.955) && inside(x, y)) seeds.push([x, y]);
+    }
+  }
+  c.part();
+  const lit: [number, number][] = [];
+  for (const [sx, sy] of seeds) {
+    let x = sx;
+    let y = sy;
+    const len = 3 + Math.floor(hash(sx, sy - U, 78) * 3);
+    for (let i = 0; i < len && inside(x, y); i++) {
+      lit.push([x, y]);
+      const h = hash(x, y - U, 79 + i);
+      // Mostly down, wandering a pixel aside; sometimes a fork off the other way.
+      if (h > 0.82 && inside(x + (h > 0.91 ? 1 : -1), y)) lit.push([x + (h > 0.91 ? 1 : -1), y]);
+      x += h < 0.3 ? -1 : h > 0.7 ? 1 : 0;
+      y += 1;
+    }
+  }
+  for (const [x, y] of lit) {
+    // The cracks pulse with the staff's glow, some stretches hotter than others.
+    const k = 0.5 + 0.3 * p.glow + 0.2 * hash(x, y - U, 74);
+    c.px(x, y, lava, FLAT_DOWN, { glow: k, bias: hash(x, y - U, 75) > 0.55 ? 0 : -1 });
+  }
+}
+
 function headDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   if (S.head === 'astral') astralHeadDown(c, cx, U, p);
   else if (S.head === 'fiend') fiendHeadDown(c, cx, U, p);
@@ -2703,6 +3061,7 @@ function headDown(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   else if (S.head === 'witch') witchHeadDown(c, cx, U, p);
   else if (S.head === 'faerie') faerieHeadDown(c, cx, U, p);
   else if (S.head === 'lotus') lotusHeadDown(c, cx, U, p);
+  else if (S.head === 'cap') capHeadDown(c, cx, U, p);
   else if (S.hooded) hoodDown(c, cx, U, p);
   else beardedHeadDown(c, cx, U, p);
 }
@@ -2716,6 +3075,7 @@ function headUp(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   else if (S.head === 'witch') witchHeadUp(c, cx, U, p);
   else if (S.head === 'faerie') faerieHeadUp(c, cx, U, p);
   else if (S.head === 'lotus') lotusHeadUp(c, cx, U, p);
+  else if (S.head === 'cap') capHeadUp(c, cx, U, p);
   else if (S.hooded) hoodUp(c, cx, U, p);
   else beardedHeadUp(c, cx, U, p);
 }
@@ -2729,6 +3089,7 @@ function headSide(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   else if (S.head === 'witch') witchHeadSide(c, cx, U, p);
   else if (S.head === 'faerie') faerieHeadSide(c, cx, U, p);
   else if (S.head === 'lotus') lotusHeadSide(c, cx, U, p);
+  else if (S.head === 'cap') capHeadSide(c, cx, U, p);
   else if (S.hooded) hoodSide(c, cx, U, p);
   else beardedHeadSide(c, cx, U, p);
 }
@@ -2802,6 +3163,8 @@ function drawDown(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'witch') witchFlecks(c, p);
   if (S.head === 'faerie') faerieFlecks(c, U, p);
   if (S.head === 'lotus') lotusFlecks(c, p);
+  if (S.head === 'cap') capFlecks(c, U, p);
+  if (S.cinder) cinderCracks(c, U, p);
   finishMagic(c, p, tip);
   p.fx?.(c);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
@@ -2851,6 +3214,8 @@ function drawUp(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'witch') witchFlecks(c, p);
   if (S.head === 'faerie') faerieFlecks(c, U, p);
   if (S.head === 'lotus') lotusFlecks(c, p);
+  if (S.head === 'cap') capFlecks(c, U, p);
+  if (S.cinder) cinderCracks(c, U, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -2929,6 +3294,8 @@ function drawSide(c: PixelCanvas, p: Pose): FrameMeta {
   if (S.head === 'witch') witchFlecks(c, p);
   if (S.head === 'faerie') faerieFlecks(c, U, p);
   if (S.head === 'lotus') lotusFlecks(c, p);
+  if (S.head === 'cap') capFlecks(c, U, p);
+  if (S.cinder) cinderCracks(c, U, p);
   finishMagic(c, p, tip);
   return { tipX: tip.x, tipY: tip.y, glow: p.glow };
 }
@@ -2952,6 +3319,18 @@ function finishMagic(c: PixelCanvas, p: Pose, tip: { x: number; y: number }): vo
     const lean = p.hat + (p.staff.float % 2 ? 1 : 0);
     c.spark(tip.x - 0.4 + (lean % 2 ? 1 : 0), tip.y - 3.6, S.magic.deep, 0.5 + p.glow * 0.2);
     c.spark(tip.x - 0.4 + (lean % 2 ? 0 : 1), tip.y - 4.8, WITCH_GHOST, 0.3 + p.glow * 0.25);
+  } else if (S.head === 'cap') {
+    // Spores puff up off the glowcaps and drift away, rising higher each beat.
+    const lean = p.hat + (p.staff.float % 2 ? 1 : 0);
+    c.spark(tip.x - 0.4 + (lean % 2 ? -2 : 2), tip.y - 2.6, S.magic.hot, 0.35 + p.glow * 0.25);
+    c.spark(tip.x - 0.4 + (lean % 2 ? 1 : -1), tip.y - 4.2, S.magic.mid, 0.3 + p.glow * 0.25);
+    c.spark(tip.x - 0.4 + (lean % 2 ? -0.5 : 0.5), tip.y - 5.8, S.magic.core, 0.15 + p.glow * 0.2);
+  } else if (S.cinder) {
+    // The magma breathes: a tongue of flame licks up off it, an ember flicking off to one side.
+    const lean = p.hat + (p.staff.float % 2 ? 1 : 0);
+    c.spark(tip.x - 0.4, tip.y - 3, S.magic.hot, 0.45 + p.glow * 0.3);
+    c.spark(tip.x - 0.4 + (lean % 2 ? 1 : -1), tip.y - 4, S.magic.mid, 0.35 + p.glow * 0.25);
+    c.spark(tip.x - 0.4 + (lean % 2 ? -2 : 2), tip.y - 5.5, S.magic.mid, 0.2 + p.glow * 0.2);
   } else if (S.head === 'faerie') {
     // Pollen lifts off the moonflower, a mote either side by turns.
     const lean = p.hat + (p.staff.float % 2 ? 1 : 0);
@@ -3517,7 +3896,8 @@ function restGrove(look: WizardLook): Pose[] {
   const frames: Pose[] = [stand()];
   const { x: hx, y: hy } = PERCH;
   // The blossom on the right antler's tip (see groveHeadDown); for Titania, the right blossom of her crown.
-  const bloom = look.head === 'faerie' ? { x: 15, y: 9 } : { x: 19, y: 2 };
+  // For Mycelia, the brightest spot on her toadstool.
+  const bloom = look.head === 'faerie' ? { x: 15, y: 9 } : look.head === 'cap' ? { x: 17, y: 5 } : { x: 19, y: 2 };
   const at = (i: number, f: Partial<Pose>, fly?: [number, number, number], fx?: (c: PixelCanvas) => void) => {
     const p = { ...stand(), ...f };
     p.fx = (c) => {

@@ -315,6 +315,174 @@ export const TITANIA_DEEP = hex('#b8487a');
 export const TITANIA_SPELL: SpellColors = { core: TITANIA_CORE, hot: TITANIA_HOT, mid: TITANIA_MID, deep: TITANIA_DEEP, accent: hex('#fff0b0'), petals: true };
 
 // ---------------------------------------------------------------------------
+// The Grovekeeper's Mycelia skin: a mushroom druid of the deep woods, where
+// no sun reaches and the only light is what grows. A broad spotted toadstool
+// for a hat, a dusky violet-brown robe whose hem frills into glowing gills,
+// little glowcaps sprouting on her shoulders and up her staff, and a gnarled
+// staff crowned with a cluster of luminous mushrooms.
+
+export const MYC_ROBE: Material = {
+  ramp: ramp('#150d15', '#231623', '#352333', '#4a3244', '#614456'),
+  outline: hex('#070407'),
+  outlineLit: hex('#1a0f19'),
+};
+
+/** The robe's underlayer, dark as leaf mould. */
+export const MYC_LOAM: Material = {
+  ramp: ramp('#0e0a0e', '#1a141c', '#282030', '#382c40'),
+  outline: hex('#050306'),
+};
+
+/**
+ * The gills under the cap and the frills at the hem and mantle: teal light,
+ * glowing softly on their own like foxfire.
+ */
+export const MYC_GILL: Material = {
+  ramp: ramp('#103a42', '#1c707a', '#36bcbc', '#94f2e2'),
+  outline: hex('#061418'),
+  outlineLit: hex('#0c262c'),
+  emissive: 0.55,
+  noAO: true,
+};
+
+/** The toadstool's cap: deep plum, glossy as wet fungus. */
+export const MYC_CAP: Material = {
+  ramp: ramp('#1a0b1c', '#321532', '#4e2249', '#6e345c', '#8f4870'),
+  outline: hex('#090309'),
+  outlineLit: hex('#220d20'),
+  shine: true,
+};
+
+/** The pale spots on the cap, lit from within. */
+export const MYC_SPOT: Material = {
+  ramp: ramp('#3e9aa2', '#8eeadf', '#e4fff8'),
+  outline: hex('#12323a'),
+  emissive: 0.75,
+  noAO: true,
+};
+
+/** Mushroom stems: pale and soft, a little lilac in the shadow. */
+export const MYC_STEM: Material = {
+  ramp: ramp('#4e4048', '#7e6e74', '#b0a29e', '#ddd2c4'),
+  outline: hex('#1a1216'),
+};
+
+/** The glowcaps on her staff and shoulders. */
+export const GLOWCAP: Material = {
+  ramp: ramp('#124a64', '#2290b0', '#56d4dc', '#c0faf2'),
+  outline: hex('#071c2a'),
+  outlineLit: hex('#0c2a3a'),
+  emissive: 0.9,
+  shine: true,
+  noAO: true,
+};
+
+/** Her skin, pale as a mushroom's flesh, with a cool cast from never seeing the sun. */
+export const MYC_SKIN: Material = {
+  ramp: ramp('#6a4a52', '#a8848a', '#dcc0bc', '#f6e6de'),
+  outline: hex('#2a161c'),
+};
+
+/** Old wood, gnarled and grey, threaded with mycelium. */
+export const MYC_WOOD: Material = {
+  ramp: ramp('#18121a', '#2a2228', '#41363a', '#5a4e4e'),
+  outline: hex('#080608'),
+};
+
+export const MYC_HAIR: Material = {
+  ramp: ramp('#0d0911', '#1a1322', '#2a1f36', '#3c2e4c'),
+  outline: hex('#050307'),
+};
+
+// Spore light (light-only colours): pale cyan, through teal, deepening to a woodland violet.
+export const MYC_CORE = hex('#effffb');
+export const MYC_HOT = hex('#8ef6e6');
+export const MYC_MID = hex('#36c4cc');
+export const MYC_DEEP = hex('#5a3aa8');
+
+export const MYCELIA_SPELL: SpellColors = { core: MYC_CORE, hot: MYC_HOT, mid: MYC_MID, deep: MYC_DEEP, accent: hex('#c8a4ff') };
+
+// ---------------------------------------------------------------------------
+// The Shapeshifter's Cinderhide skin: a shaman of the volcano. An obsidian
+// pelt split by glowing lava cracks, a charred wolf's skull for a headdress
+// with embers in its sockets, ash on her face, ember eyes, a hide burnt black,
+// and a charred staff round a heart of magma.
+
+/** The pelt: black as obsidian, glassy where the light catches it. */
+export const OBSIDIAN_PELT: Material = {
+  ramp: ramp('#07070a', '#121218', '#1f1e27', '#302e3a', '#47434f'),
+  outline: hex('#020203'),
+  outlineLit: hex('#0d0c11'),
+  shine: true,
+};
+
+/** The hide, burnt black-brown. */
+export const CHAR_HIDE: Material = {
+  ramp: ramp('#0d0908', '#191110', '#271a17', '#372521', '#4a322c'),
+  outline: hex('#050303'),
+  outlineLit: hex('#140d0c'),
+};
+
+/** The tunic under it, a smouldering dark red. */
+export const CINDER_TUNIC: Material = {
+  ramp: ramp('#180705', '#2c0d09', '#45150f', '#5e2018'),
+  outline: hex('#080202'),
+};
+
+/** Charred bone: the skull, and the fangs on her staff and belt. */
+export const CHAR_BONE: Material = {
+  ramp: ramp('#221c18', '#463e38', '#746a62', '#a49a8e', '#d0c6b4'),
+  outline: hex('#090706'),
+  outlineLit: hex('#16120f'),
+  shine: true,
+};
+
+/** Her hair, grey as ash. */
+export const ASH_HAIR: Material = {
+  ramp: ramp('#262222', '#433e3e', '#666060', '#8c8684'),
+  outline: hex('#0c0a0a'),
+};
+
+/** Ash daubed on her face. */
+export const ASH_PAINT: Material = {
+  ramp: ramp('#5e5a5a', '#8a8686', '#b4b0ae'),
+  outline: hex('#1a1818'),
+  noAO: true,
+};
+
+/** Molten rock in the cracks of the pelt, and her eyes. */
+export const LAVA: Material = {
+  ramp: ramp('#7a1806', '#d84a0c', '#ff9a1e', '#ffe48a'),
+  outline: hex('#1a0502'),
+  emissive: 1,
+  noAO: true,
+};
+
+/** The staff's charred wood. */
+export const CINDER_WOOD: Material = {
+  ramp: ramp('#100a08', '#1e140e', '#2e2016', '#422e1e'),
+  outline: hex('#060302'),
+};
+
+/** The heart of magma the fangs hold. */
+export const MAGMA: Material = {
+  ramp: ramp('#6a1004', '#d0400a', '#ff9a1e', '#fff0a0'),
+  outline: hex('#200602'),
+  outlineLit: hex('#300a04'),
+  emissive: 0.95,
+  shine: true,
+  noAO: true,
+};
+
+// Ember light (light-only colours): white-hot, gold, flame orange, down to a smoky red.
+export const CINDER_CORE = hex('#fff4d8');
+export const CINDER_HOT = hex('#ffc04a');
+export const CINDER_MID = hex('#ff6a14');
+export const CINDER_DEEP = hex('#6a1a0c');
+
+export const CINDER_SPELL: SpellColors = { core: CINDER_CORE, hot: CINDER_HOT, mid: CINDER_MID, deep: CINDER_DEEP, accent: hex('#ffe0a0') };
+
+// ---------------------------------------------------------------------------
 // Button icons: 16x16, drawn additively on the buttons, so black is empty and
 // where shapes overlap the brighter colour stays.
 
@@ -353,6 +521,8 @@ export const WILD_TONES: Tones = [WILD_CORE, WILD_HOT, WILD_MID, WILD_DEEP];
 export const AUTUMN_TONES: Tones = [AUTUMN_CORE, AUTUMN_HOT, AUTUMN_MID, AUTUMN_DEEP];
 export const FROST_TONES: Tones = [FROST_CORE, FROST_HOT, FROST_MID, FROST_DEEP];
 export const TITANIA_TONES: Tones = [TITANIA_CORE, TITANIA_HOT, TITANIA_MID, TITANIA_DEEP];
+export const MYCELIA_TONES: Tones = [MYC_CORE, MYC_HOT, MYC_MID, MYC_DEEP];
+export const CINDER_TONES: Tones = [CINDER_CORE, CINDER_HOT, CINDER_MID, CINDER_DEEP];
 
 /** The thorn seed: a glowing seed bristling with thorns, a leaf sprouting from its top. */
 export function thornSeedIcon(k: Tones = GROVE_TONES): Uint8ClampedArray {
@@ -499,5 +669,69 @@ export function faerieRingIcon(k: Tones = TITANIA_TONES): Uint8ClampedArray {
     for (const [x, y] of [[4, 3], [12, 2], [10, 6]]) put(x, y, k[1]);
     put(7, 1, k[0]);
     for (const [x, y] of [[6, 1], [8, 1], [7, 0], [7, 2]]) put(x, y, k[1]);
+  });
+}
+
+/** Mycelia's spore: a glowing spore pod, a tiny glowcap sprouting from its top, spores puffing off it. */
+export function sporeIcon(k: Tones = MYCELIA_TONES): Uint8ClampedArray {
+  return icon16((put) => {
+    const dim: RGB = [k[3][0] >> 1, k[3][1] >> 1, k[3][2] >> 1];
+    // A soft halo of spores round the pod, thinner further out.
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + 0.3;
+      const r = 5.4 + (i % 3) * 0.9;
+      put(8 + Math.cos(a) * r, 10 + Math.sin(a) * r * 0.85, i % 3 === 0 ? k[1] : k[3]);
+    }
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const dx = (x + 0.5 - 8) / 3.6;
+        const dy = (y + 0.5 - 10.4) / 3.6;
+        const d = Math.hypot(dx, dy);
+        if (d > 1) continue;
+        // Lit from the upper left, freckled with darker pores.
+        const lit = d < 0.35 ? k[0] : dx + dy < -0.25 ? k[1] : d < 0.8 ? k[2] : k[3];
+        put(x, y, (x * 3 + y * 5) % 7 === 0 && d > 0.4 ? dim : lit);
+      }
+    }
+    // The glowcap on top: a stem and a little domed cap, a spot on it.
+    put(8, 6, k[2]);
+    put(8, 5, k[2]);
+    for (let x = 6; x <= 10; x++) put(x, 4, x === 6 || x === 10 ? k[3] : k[1]);
+    for (let x = 7; x <= 9; x++) put(x, 3, k[1]);
+    put(8, 2, k[2]);
+    put(7, 3, k[0]);
+    // Spores puffing up off it.
+    for (const [x, y] of [[11, 1], [4, 1], [12, 3]]) put(x, y, k[0]);
+  });
+}
+
+/** Mycelia's grove: three glowing toadstools in a ring of light, threads of mycelium beneath and spores rising. */
+export function shroomRingIcon(k: Tones = MYCELIA_TONES): Uint8ClampedArray {
+  return icon16((put) => {
+    const dim: RGB = [k[3][0] >> 1, k[3][1] >> 1, k[3][2] >> 1];
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const d = Math.hypot((x + 0.5 - 8) / 7.2, (y + 0.5 - 12.6) / 2.8);
+        if (d > 1) continue;
+        if (d > 0.8) put(x, y, k[3]);
+        else if ((x + y) % 2) put(x, y, dim);
+      }
+    }
+    // The mycelium: pale threads wandering under the ground between the caps.
+    for (const [x, y] of [[3, 13], [4, 14], [6, 14], [7, 13], [9, 14], [10, 13], [12, 14], [13, 13]]) put(x, y, k[2]);
+    /** A toadstool: stem from the ground up to `top`, a cap `w` wide either side, spotted. */
+    const shroom = (x: number, top: number, w: number) => {
+      for (let y = top + 1; y <= 12; y++) put(x, y, k[2]);
+      for (let ox = -w; ox <= w; ox++) put(x + ox, top, Math.abs(ox) === w ? k[3] : k[1]);
+      for (let ox = -w + 1; ox <= w - 1; ox++) put(x + ox, top - 1, k[1]);
+      if (w > 1) for (let ox = -w + 2; ox <= w - 2; ox++) put(x + ox, top - 2, k[2]);
+      put(x - 1, top - 1, k[0]);
+      if (w > 2) put(x + 1, top - 2, k[0]);
+    };
+    shroom(8, 6, 3);
+    shroom(4, 9, 2);
+    shroom(12, 9, 2);
+    // Spores rising over them.
+    for (const [x, y] of [[3, 3], [13, 4], [10, 1], [6, 2]]) put(x, y, k[0]);
   });
 }

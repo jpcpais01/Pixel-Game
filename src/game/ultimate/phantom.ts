@@ -19,6 +19,7 @@ import type { Cast } from './types';
 //    of candles floating round her and marigold petals falling. The
 //    Firefly's is Thousand Fireflies: a deep green forest dusk, a swarm of
 //    fireflies wheeling round her, blinking, and rising out of the grass.
+//    The Ferryman's falls the cold blue-black of the river of the dead.
 
 const HOUSE_MS = 4000;
 const HOUSE_R = 46;
@@ -41,6 +42,9 @@ const SWARM_R = 64;
 /** Her dusk: a deep forest green, and how deep it falls. */
 const FOREST_DUSK = 0x0a1a10;
 const FOREST_DEPTH = 0.55;
+/** The Ferryman's: the cold blue-black of the river of the dead. */
+const RIVER_DUSK = 0x030c14;
+const RIVER_DEPTH = 0.75;
 
 const inside = (h: Hurtbox, x: number, y: number, r: number): boolean => {
   const dx = (h.x - x) / (r + h.radius);
@@ -66,7 +70,12 @@ export class HauntedHouse extends Fx {
     this.x = c.tx;
     this.y = c.ty;
     this.g = this.ink(HOUSE_R * 2 + 30, HOUSE_R * 2 + 70);
-    const kinds: HauntKind[] = this.tea ? ['cup', 'saucer', 'jug', 'teapot', 'cup', 'saucer', 'cup', 'jug'] : ['chair', 'book', 'candle', 'pot', 'trunk', 'chair', 'book', 'candle'];
+    // The Banshee's whirl is her keepsakes, a coffin among them.
+    const kinds: HauntKind[] = this.tea
+      ? ['cup', 'saucer', 'jug', 'teapot', 'cup', 'saucer', 'cup', 'jug']
+      : c.look === 'banshee'
+        ? ['comb', 'mirror', 'urn', 'coffin', 'bell', 'comb', 'mirror', 'urn']
+        : ['chair', 'book', 'candle', 'pot', 'trunk', 'chair', 'book', 'candle'];
     for (const k of kinds) this.things.push(this.own(world.add.image(this.x, this.y, 'haunt', k).setPipeline('Lit').setAlpha(0)));
     bloom(world, this.x, this.y - 10, c.pal.mid, 3, 500, this.y + 40);
     world.debris(c.pal.tints, this.x, this.y, 24, this.y + 20, 'burst');
@@ -210,6 +219,7 @@ export class DeadOfNight extends Fx {
   private candles: Ink | null = null;
   private flies: Ink | null = null;
   private firefly: boolean;
+  private ferry: boolean;
   private tickT = 0;
   private cala: boolean;
   private flared = false;
@@ -224,14 +234,20 @@ export class DeadOfNight extends Fx {
     super(world, NIGHT_MS + 500);
     this.cala = c.look === 'cala';
     this.firefly = c.look === 'firefly';
+    this.ferry = c.look === 'ferryman';
     this.ghost = !!(world as unknown as { __ghost?: boolean }).__ghost;
-    const tint = this.cala ? 0x3a1420 : this.firefly ? FOREST_DUSK : 0x000000;
+    const tint = this.dusk();
     this.dark = this.own(world.add.image(c.hero.x, c.hero.y, 'night_hole').setScale(NIGHT_SCALE).setDepth(9500).setTint(tint).setAlpha(0));
     this.rim = this.own(world.add.graphics().setDepth(9500));
     this.lamp = this.light(c.hero.x, c.hero.y, 110, c.pal.light, 0);
     if (this.cala) this.candles = this.ink(150, 110);
     if (this.firefly) this.flies = this.ink(SWARM_R * 2 + 30, SWARM_R + 60);
     sound.wail(world.pan(c.hero.x));
+  }
+
+  /** The colour the night falls in. */
+  private dusk(): number {
+    return this.cala ? 0x3a1420 : this.firefly ? FOREST_DUSK : this.ferry ? RIVER_DUSK : 0x000000;
   }
 
   protected step(dt: number): void {
@@ -242,13 +258,13 @@ export class DeadOfNight extends Fx {
     const y = h.y - 12;
     const on = this.t < NIGHT_MS;
     const k = on ? clamp01(this.t / 450) : 1 - clamp01((this.t - NIGHT_MS) / 450);
-    const depth = this.ghost ? 0 : this.cala ? 0.45 : this.firefly ? FOREST_DEPTH : 0.8;
+    const depth = this.ghost ? 0 : this.cala ? 0.45 : this.firefly ? FOREST_DEPTH : this.ferry ? RIVER_DEPTH : 0.8;
     this.dark.setPosition(Math.round(x), Math.round(y)).setAlpha(k * depth);
     // Past the image's edges the dark carries on, to cover the whole view.
     const half = (128 * NIGHT_SCALE) / 2;
     const cam = w.cameras.main.worldView;
     const g = this.rim.clear();
-    g.fillStyle(this.cala ? 0x3a1420 : this.firefly ? FOREST_DUSK : 0x000000, k * depth);
+    g.fillStyle(this.dusk(), k * depth);
     const l = x - half;
     const r = x + half;
     const t = y - half;

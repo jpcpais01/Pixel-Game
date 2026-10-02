@@ -24,6 +24,16 @@
 // his fire blue, and a little gold crown between his horns. The shirts carry
 // a small badge, not any club's crest.
 //
+// And each has a creature of myth: the Phoenix, an eagle of living flame,
+// crimson plumage burning up to a golden head, a crest of fire flowing back
+// from the crown, ember-tipped wings and long tail plumes that glow at their
+// ends; the Nemean lion, his hide gleaming like hammered bronze-gold under a
+// dark bronze mane, a laurel wreath on his brow, Greek bracers with a meander
+// key and a purple kilt hemmed in it; and the Jade Serpent, an Eastern
+// dragon without wings, jade scales over a cream belly, small antlers, a
+// golden mane flowing down his spine to the tuft of his tail, long whiskers,
+// a glowing pearl in his hand and a little cloud curling at his feet.
+//
 // The body keeps to the 24x32 box; frames are larger so spread wings and
 // raised arms fit. Hands are posed in the rig's own terms (forward, out to
 // the side, height) and placed per view, like the Inventor's.
@@ -97,6 +107,37 @@ const CROWN_GOLD: Material = { ramp: ramp('#5a3a08', '#9a6c14', '#d8a830', '#ffd
 const ICE_EYE: Material = { ramp: ramp('#1a4ab0', '#6ad0ff', '#e8fcff'), outline: INK, emissive: 1, noAO: true };
 const BLUE_FIRE: Material = { ramp: ramp('#0a2a8a', '#2a8cff', '#9ee4ff', '#f4ffff'), outline: hex('#020a30'), emissive: 1, noAO: true };
 
+// The Phoenix: crimson body, a head of gold, wings burning from crimson to gold.
+const PHOENIX_RED: Material = { ramp: ramp('#2a0406', '#5c0c0c', '#9a1a10', '#d23a14', '#ff7a2a'), outline: hex('#140203'), outlineLit: hex('#2a0604'), shine: true };
+const PHOENIX_GOLD: Material = { ramp: ramp('#5a2404', '#a8560a', '#e8961a', '#ffc840', '#fff2a0'), outline: hex('#2a0e02'), outlineLit: hex('#3e1804'), emissive: 0.12 };
+const PHOENIX_WING: Material = { ramp: ramp('#2a0406', '#681008', '#b02a0c', '#e8641a', '#ffb43a', '#ffe890'), outline: hex('#120202'), outlineLit: hex('#260604'), emissive: 0.1 };
+/** Living flame: the crest, the feathers' ember tips, the tail plumes' eyes. */
+const PHOENIX_FLAME: Material = { ramp: ramp('#b83400', '#ff7a10', '#ffc838', '#fff6c8'), outline: hex('#4a0e00'), emissive: 0.85, noAO: true };
+const PHOENIX_BEAK: Material = { ramp: ramp('#5a3a14', '#a07a3a', '#dcc080', '#fff4d0'), outline: hex('#24160a'), shine: true };
+const PHOENIX_LEG: Material = { ramp: ramp('#3a1a04', '#7a400a', '#c0781a', '#f0b040'), outline: hex('#1a0a02') };
+const PHOENIX_EYE: Material = { ramp: ramp('#a86000', '#ffd040', '#fffad0'), outline: INK, emissive: 1, noAO: true };
+const CINDER: Material = { ramp: ramp('#140608', '#2a0c0e', '#481616', '#6a2420', '#8e3628'), outline: INK, outlineLit: hex('#1e0808') };
+
+// The Nemean lion: a hide like burnished bronze-gold, a mane of dark bronze.
+const NEMEAN_HIDE: Material = { ramp: ramp('#3a2008', '#7a4a14', '#b8802a', '#e8b852', '#fff0b0'), outline: hex('#180c02'), outlineLit: hex('#2a1804'), shine: true };
+const NEMEAN_MANE: Material = { ramp: ramp('#2a1406', '#4e2c0e', '#7e4c1c', '#ae742e', '#e0aa58'), outline: hex('#0e0602'), outlineLit: hex('#1e0e04'), shine: true };
+const NEMEAN_CREAM: Material = { ramp: ramp('#7a5a2a', '#b8945a', '#e6cc8e', '#fff2c8'), outline: hex('#2e1e0a'), outlineLit: hex('#40280e'), shine: true };
+const NEMEAN_EYE: Material = { ramp: ramp('#7a4a00', '#ffc030', '#fff6b0'), outline: INK, emissive: 0.8, noAO: true };
+const TYRIAN: Material = { ramp: ramp('#14061a', '#2e1036', '#4c1c56', '#6e2c78', '#94469c'), outline: hex('#0a020c'), outlineLit: hex('#1a0820') };
+const LAUREL: Material = { ramp: ramp('#0e2a0c', '#1e4a16', '#367024', '#5a9a3a', '#94d064'), outline: hex('#061404'), outlineLit: hex('#0c2008') };
+
+// The Jade Serpent: jade scales, a golden mane, antlers, crimson silk, a pearl.
+const JADE_SCALE: Material = { ramp: ramp('#03201a', '#0a4032', '#14684e', '#2a9a6e', '#6ad6a0'), outline: hex('#010e0a'), outlineLit: hex('#031a14'), shine: true };
+const JADE_BELLY: Material = { ramp: ramp('#6a5a3a', '#a8946a', '#dccaa0', '#fbf0d4'), outline: hex('#2a2010'), outlineLit: hex('#3a2e18') };
+const JADE_MANE: Material = { ramp: ramp('#5a3204', '#9a6010', '#d89a28', '#ffd060', '#fff0a8'), outline: hex('#241402'), outlineLit: hex('#382006'), shine: true };
+const ANTLER: Material = { ramp: ramp('#4a2e18', '#8a6038', '#c89a62', '#f0d4a0'), outline: hex('#1e1208'), shine: true };
+const IVORY: Material = { ramp: ramp('#6a6250', '#a8a088', '#ddd6c0', '#fffaec'), outline: hex('#24201a'), shine: true };
+const JADE_EYE: Material = { ramp: ramp('#8a5a00', '#ffd040', '#fffad0'), outline: INK, emissive: 1, noAO: true };
+const JADE_SILK: Material = { ramp: ramp('#2a0408', '#5a0a12', '#961a20', '#c8322c', '#ee6a50'), outline: hex('#140204'), outlineLit: hex('#240408') };
+const JADE_FIRE: Material = { ramp: ramp('#0a6a4a', '#4ad8a0', '#eef0a8', '#fffff0'), outline: hex('#02281a'), emissive: 1, noAO: true };
+const PEARL: Material = { ramp: ramp('#5a8a80', '#b8e8d8', '#f0fff8', '#ffffff'), outline: hex('#183a30'), emissive: 0.6, shine: true, noAO: true };
+const CLOUD: Material = { ramp: ramp('#5a6a78', '#9aacb8', '#d4e2e8', '#f8fcff'), outline: hex('#2a3440'), outlineLit: hex('#3a4654'), noAO: true };
+
 // ---------------------------------------------------------------------------
 // Looks
 
@@ -142,6 +183,8 @@ export interface BeastLook {
   kit?: Kit;
   /** Porto's little crown. */
   crown?: boolean;
+  /** A creature of myth, with the extra pieces its rig draws (crest, wreath, antlers...). */
+  myth?: 'phoenix' | 'nemean' | 'jade';
   /** Light of its power (feathers, roar, fire), brightest first. */
   light: [RGB, RGB, RGB, RGB];
 }
@@ -237,7 +280,59 @@ export const PORTO_LOOK: BeastLook = {
   light: [hex('#f4ffff'), hex('#9ee4ff'), hex('#2a8cff'), hex('#0a2a8a')],
 };
 
-export const BEAST_LOOKS = [EAGLE_LOOK, BENFICA_LOOK, LION_LOOK, SPORTING_LOOK, DRAGON_LOOK, PORTO_LOOK];
+export const PHOENIX_LOOK: BeastLook = {
+  ...EAGLE_LOOK,
+  key: 'eagle_phoenix',
+  myth: 'phoenix',
+  hide: PHOENIX_RED,
+  head: PHOENIX_GOLD,
+  mane: PHOENIX_GOLD,
+  wing: PHOENIX_WING,
+  belly: PHOENIX_LEG,
+  limb: PHOENIX_LEG,
+  beak: PHOENIX_BEAK,
+  eye: PHOENIX_EYE,
+  cloth: CINDER,
+  trim: GOLD,
+  light: [hex('#fffbe0'), hex('#ffd860'), hex('#ff7a1a'), hex('#b02008')],
+};
+
+export const NEMEAN_LOOK: BeastLook = {
+  ...LION_LOOK,
+  key: 'lion_nemean',
+  myth: 'nemean',
+  hide: NEMEAN_HIDE,
+  head: NEMEAN_HIDE,
+  limb: NEMEAN_HIDE,
+  wing: NEMEAN_MANE,
+  mane: NEMEAN_MANE,
+  belly: NEMEAN_CREAM,
+  eye: NEMEAN_EYE,
+  cloth: TYRIAN,
+  trim: BRONZE,
+  light: [hex('#fffbe0'), hex('#ffe27a'), hex('#e0a030'), hex('#8a5210')],
+};
+
+export const JADE_SERPENT_LOOK: BeastLook = {
+  ...DRAGON_LOOK,
+  key: 'dragon_jade',
+  myth: 'jade',
+  hide: JADE_SCALE,
+  head: JADE_SCALE,
+  limb: JADE_SCALE,
+  belly: JADE_BELLY,
+  mane: ANTLER,
+  beak: JADE_MANE,
+  claw: IVORY,
+  wing: JADE_MANE,
+  eye: JADE_EYE,
+  cloth: JADE_SILK,
+  trim: GOLD,
+  fire: JADE_FIRE,
+  light: [hex('#fffff0'), hex('#f4e8a0'), hex('#5ad8a0'), hex('#147a5a')],
+};
+
+export const BEAST_LOOKS = [EAGLE_LOOK, BENFICA_LOOK, PHOENIX_LOOK, LION_LOOK, SPORTING_LOOK, NEMEAN_LOOK, DRAGON_LOOK, PORTO_LOOK, JADE_SERPENT_LOOK];
 
 /** The look being drawn; set by buildBeastFrames. */
 let S: BeastLook = EAGLE_LOOK;
@@ -245,6 +340,9 @@ let S: BeastLook = EAGLE_LOOK;
 const eagle = () => S.kind === 'eagle';
 const lion = () => S.kind === 'lion';
 const dragon = () => S.kind === 'dragon';
+const phoenix = () => S.myth === 'phoenix';
+const nemean = () => S.myth === 'nemean';
+const jade = () => S.myth === 'jade';
 
 // ---------------------------------------------------------------------------
 // The rig
@@ -420,13 +518,23 @@ function featherWing(c: PixelCanvas, rx: number, ry: number, k: number, open: nu
     const b = bases[i];
     const t = tips[i];
     c.capsule(b.x, b.y, t.x, t.y, 1.05 * size, 0.45, m, { bias: bias + (i % 2 ? 1 : 0) });
-    if (i >= n - 3) c.capsule(b.x + (t.x - b.x) * 0.72, b.y + (t.y - b.y) * 0.72, t.x, t.y, 0.7, 0.4, m, { bias: bias - 1 });
+    if (phoenix()) {
+      // The Phoenix's feathers burn at their ends: an ember tip on every one, the primaries longest.
+      const from = i >= n - 3 ? 0.66 : 0.78;
+      c.part();
+      c.capsule(b.x + (t.x - b.x) * from, b.y + (t.y - b.y) * from, t.x, t.y, 0.75, 0.4, PHOENIX_FLAME, { bias });
+      c.spark(t.x, t.y, S.light[1], 0.35 + open * 0.25);
+    } else if (i >= n - 3) c.capsule(b.x + (t.x - b.x) * 0.72, b.y + (t.y - b.y) * 0.72, t.x, t.y, 0.7, 0.4, m, { bias: bias - 1 });
   }
   // Coverts over the feathers' roots, lit along the leading edge.
   c.part();
   c.capsule(rx, ry, wx, wy, 1.8 * size, 1.1 * size, m, { bias: bias + 1 });
   c.capsule(rx + (wx - rx) * 0.15, ry + (wy - ry) * 0.15 + 1.4, rx + (wx - rx) * 0.8, ry + (wy - ry) * 0.8 + 1.6, 1.35 * size, 0.9 * size, m, { bias });
   // Gilded wings glint along the leading edge and at the tips.
+  if (phoenix()) {
+    // Flame licking along the leading edge.
+    for (let t = 0.15; t < 1; t += 0.28) c.spark(rx + (wx - rx) * t, ry + (wy - ry) * t - 1.2, S.light[2], 0.3 + open * 0.2);
+  }
   if (S.kit && eagle()) {
     for (let t = 0.2; t < 1; t += 0.3) c.spark(rx + (wx - rx) * t, ry + (wy - ry) * t - 1, S.light[1], 0.25 + open * 0.2);
     if (open > 0.5) tips.slice(n - 3).forEach((p) => c.spark(p.x, p.y, hex('#fff0b0'), 0.35));
@@ -491,7 +599,8 @@ function membraneWing(c: PixelCanvas, rx: number, ry: number, k: number, open: n
 
 /** Both wings, as the kind has them. */
 function wings(c: PixelCanvas, view: View, cx: number, U: number, p: Pose, when: 'behind' | 'front', hx = cx): void {
-  if (lion()) return;
+  // The lion has none, and the Jade Serpent flies without them.
+  if (lion() || jade()) return;
   const draw = eagle() ? featherWing : membraneWing;
   const ry = 15.6 + U;
   if (view === 'down') {
@@ -518,8 +627,40 @@ function wings(c: PixelCanvas, view: View, cx: number, U: number, p: Pose, when:
 /** The dragon's tail curled round his feet, seen from the front: out past the right foot, round in front, the spade by the left. */
 const CURL: [number, number][] = [[0, 0], [4, 2.4], [5.6, 5.4], [4.2, 7.8], [0.6, 8.8], [-3.4, 8.6], [-6.2, 7.2], [-7.6, 5.4]];
 
+/**
+ * The Phoenix's long tail plumes: each a streamer of plumage on a gentle
+ * curve from root to end, burning at the tip in an eye of flame.
+ */
+function plume(c: PixelCanvas, a: P, ctl: P, b: P, bias: number): void {
+  const at = (t: number): P => ({ x: (1 - t) * (1 - t) * a.x + 2 * t * (1 - t) * ctl.x + t * t * b.x, y: (1 - t) * (1 - t) * a.y + 2 * t * (1 - t) * ctl.y + t * t * b.y });
+  const N = 6;
+  c.part();
+  for (let i = 0; i < N; i++) {
+    const p0 = at(i / N);
+    const p1 = at((i + 1) / N);
+    c.capsule(p0.x, p0.y, p1.x, p1.y, 0.85 - i * 0.05, 0.8 - i * 0.05, i < N - 2 ? S.wing : PHOENIX_FLAME, { bias });
+  }
+  c.part();
+  c.ellipse(b.x, b.y, 1.2, 1.1, PHOENIX_FLAME, { bias: bias + 1 });
+  c.spark(b.x, b.y, S.light[0], 0.45);
+}
+
+function phoenixPlumes(c: PixelCanvas, x: number, y: number, k: number, swing: number, view: View, bias: number): void {
+  if (view === 'side') {
+    // Streaming out behind him along the ground, the ends lifting.
+    for (const [dx, dy, lift] of [[11.5, 5.4, 1.6], [13, 4.2, 2.8], [10, 6.4, 0.6]] as const) {
+      plume(c, { x, y: y + 1 }, { x: x + k * dx * 0.5, y: y + dy + 1.5 }, { x: x + k * dx + swing * 0.8, y: y + dy - lift }, bias);
+    }
+  } else if (view === 'up') {
+    // Hanging down his back to the ground, fanned a little, swaying.
+    for (const t of [-1, 0, 1]) plume(c, { x: x + t * 0.8, y: y + 2 }, { x: x + t * 2 + swing * 0.5, y: y + 6 }, { x: x + t * 4 + swing * 1.2, y: y + 9.5 - Math.abs(t) * 0.8 }, bias);
+  }
+  // From the front they hang hidden behind him, like the eagle's fan.
+}
+
 function tail(c: PixelCanvas, x: number, y: number, k: number, swing: number, view: View, bias = 0, curl = 0): void {
   if (eagle()) {
+    if (phoenix()) phoenixPlumes(c, x, y, k, swing, view, Math.max(bias, -1));
     // A fan of five white feathers from under the kilt.
     const spread = view === 'side' ? 0.45 : 1;
     for (let i = 0; i < 5; i++) {
@@ -541,11 +682,12 @@ function tail(c: PixelCanvas, x: number, y: number, k: number, swing: number, vi
     } else {
       // The dragon's lies heavy on the ground, sweeping out behind (or curled round, at rest).
       const sx = x + k * (t * 9.5) + swing * t * t * 2.5;
-      const sy = y + t * 5.2 - t * t * 1.4;
+      // The Jade Serpent's is a serpent's: it ripples as it goes.
+      const sy = y + t * 5.2 - t * t * 1.4 + (jade() ? Math.sin(t * Math.PI * 2 + swing) * 1.3 * t : 0);
       pts.push({ x: sx + (x + CURL[i][0] - sx) * curl, y: sy + (y + CURL[i][1] - sy) * curl });
     }
   }
-  const r0 = lion() ? 0.8 : 2.1;
+  const r0 = lion() ? 0.8 : jade() ? 1.6 : 2.1;
   const r1 = lion() ? 0.6 : 0.6;
   c.part();
   for (let i = 0; i < N; i++) {
@@ -557,6 +699,19 @@ function tail(c: PixelCanvas, x: number, y: number, k: number, swing: number, vi
   c.part();
   if (lion()) {
     c.ellipse(end.x + k * 0.4, end.y - 0.4, 1.4, 1.5, S.mane, { bias });
+  } else if (jade()) {
+    // A tuft of golden mane at the tip, and the mane running along its top.
+    const dx = end.x - pts[N - 1].x;
+    const dy = end.y - pts[N - 1].y;
+    for (const s of [-0.7, 0, 0.7]) {
+      const a = Math.atan2(dy, dx) + s;
+      c.capsule(end.x, end.y, end.x + Math.cos(a) * 3.4, end.y + Math.sin(a) * 3.4 - 0.6, 1.0, 0.4, S.beak, { bias: bias + 1 });
+    }
+    c.part();
+    for (let i = 1; i < N; i++) {
+      const r = r0 + (r1 - r0) * (i / N);
+      c.capsule(pts[i].x, pts[i].y - r, pts[i].x + k * 1.2, pts[i].y - r - 1.1, 0.6, 0.35, S.beak, { bias });
+    }
   } else {
     // The spade: a leaf of scale, and a row of spines along the tail's top.
     const dir = { x: end.x - pts[N - 1].x, y: end.y - pts[N - 1].y };
@@ -567,6 +722,204 @@ function tail(c: PixelCanvas, x: number, y: number, k: number, swing: number, vi
     tri(c, { x: end.x - uy * 2, y: end.y + ux * 2 }, tip, { x: end.x + uy * 2, y: end.y - ux * 2 }, S.hide, sphere(k * 0.2, -0.3), bias + 1);
     c.part();
     for (let i = 1; i < N; i += 2) c.px(pts[i].x, pts[i].y - (r0 + (r1 - r0) * (i / N)) - 0.4, S.claw, sphere(0, 0.6), { bias });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The creatures of myth's own pieces
+
+/** The Phoenix's crest: tongues of flame rising from the crown, flowing back, flickering frame to frame. */
+function flameCrest(c: PixelCanvas, x: number, U: number, view: View, tick: number): void {
+  const flick = (i: number) => ((tick + i) % 3 === 0 ? 0.8 : (tick + i) % 3 === 1 ? 0 : 0.4);
+  const tongues: [number, number, number, number][] =
+    view === 'side'
+      ? // From the brow back over the nape: [root x, rise, sweep back, width].
+        [[-1.2, 4.6, 3.4, 1.1], [0.6, 5.6, 5.2, 1.15], [2.2, 3.8, 5.6, 1.0], [3.2, 2.2, 4.2, 0.85]]
+      : [[0, 6, 0.4, 1.2], [-1.7, 4.4, -1.2, 1.05], [1.7, 4.4, 1.2, 1.05], [-3, 2.6, -1.6, 0.85], [3, 2.6, 1.6, 0.85]];
+  tongues.forEach(([dx, rise, sweep, w], i) => {
+    const h = rise + flick(i);
+    const bx = x + dx - (view === 'side' ? 0 : 0.5);
+    const by = (view === 'side' ? 8.6 : 8.8) + U;
+    const mx = bx + sweep * 0.45;
+    const my = by - h * 0.6;
+    const tx = bx + sweep + (view === 'side' ? flick(i + 1) * 0.6 : 0);
+    const ty = by - h;
+    c.part();
+    c.capsule(bx, by, mx, my, w, w * 0.75, PHOENIX_FLAME, { bias: i === 1 || (view !== 'side' && i === 0) ? 1 : 0 });
+    c.capsule(mx, my, tx, ty, w * 0.75, 0.3, PHOENIX_FLAME, { bias: 1 });
+    c.spark(tx, ty, S.light[1], 0.6);
+    c.spark(mx, my, S.light[0], 0.25);
+  });
+}
+
+/** Embers drifting up off the Phoenix's shoulders and wings, a different few each frame. */
+function emberMotes(c: PixelCanvas, cx: number, U: number, tick: number): void {
+  const [core, hot, mid] = S.light;
+  const at: [number, number][][] = [
+    [[-8, 10], [7, 7], [-4, 3]],
+    [[-7, 7], [8, 11], [3, 2]],
+    [[-9, 4], [6, 8], [-2, 0]],
+    [[-6, 12], [9, 5], [5, 1]],
+    [[-8, 8], [7, 12], [-5, 2]],
+    [[-7, 5], [8, 9], [2, 4]],
+  ];
+  at[tick % at.length].forEach(([dx, dy], i) => c.spark(cx + dx, dy + U, i === 2 ? core : i ? hot : mid, 0.5 - i * 0.08));
+}
+
+/** The Nemean lion's laurel wreath: leaves along the brow toward the front, ribbons of gold tied at the back. */
+function laurel(c: PixelCanvas, x: number, U: number, view: View): void {
+  c.part();
+  if (view === 'side') {
+    // Facing left: from the forehead back over the crown to the knot.
+    for (let i = 0; i <= 6; i++) {
+      const t = i / 6;
+      const lx = x - 3.2 + t * 5.6;
+      const ly = 9.8 - Math.sin(t * Math.PI) * 1.4 + U;
+      c.px(lx, ly, LAUREL, sphere(-0.4, -0.5), { bias: i % 2 ? 1 : 0 });
+      if (i % 2 === 0) c.px(lx - 0.6, ly - 1, LAUREL, sphere(-0.5, -0.7), { bias: 1 });
+    }
+    c.part();
+    c.capsule(x + 2.6, 10 + U, x + 4, 13 + U, 0.5, 0.4, GOLD);
+    c.capsule(x + 2.6, 10 + U, x + 3.2, 13.8 + U, 0.45, 0.35, GOLD, { bias: -1 });
+    return;
+  }
+  // Round the head, leaves pointing toward the front in pairs.
+  const from = view === 'up' ? 0.05 : 1.08;
+  const to = view === 'up' ? 0.95 : 1.92;
+  for (let i = 0; i <= 8; i++) {
+    const a = (from + ((to - from) * i) / 8) * Math.PI;
+    const lx = x - 0.5 + Math.cos(a) * 3.7;
+    const ly = (view === 'up' ? 9.6 : 11.2) + Math.sin(a) * (view === 'up' ? 1 : 2.7) + U;
+    c.px(lx, ly, LAUREL, sphere(Math.cos(a) * 0.6, -0.5), { bias: i % 2 ? 1 : 0 });
+    if (i !== 4) c.px(lx + (Math.cos(a) > 0 ? 0.8 : -0.8), ly - 0.7, LAUREL, sphere(Math.cos(a) * 0.8, -0.7), { bias: (i + 1) % 2 ? 1 : 0 });
+  }
+  if (view === 'up') {
+    c.part();
+    c.capsule(x - 0.6, 10.6 + U, x - 1.6, 14.6 + U, 0.5, 0.4, GOLD);
+    c.capsule(x, 10.6 + U, x + 1, 14.2 + U, 0.5, 0.4, GOLD);
+  } else c.spark(x - 0.5, 8.4 + U, S.light[1], 0.2);
+}
+
+/** A Greek bracer of bronze along the forearm, a meander key worked round it. */
+function meanderBracer(c: PixelCanvas, ex: number, ey: number, wx: number, wy: number, r: number, bias: number): void {
+  const x0 = ex + (wx - ex) * 0.25;
+  const y0 = ey + (wy - ey) * 0.25;
+  c.part();
+  c.capsule(x0, y0, wx, wy, r, r * 0.95, S.trim, { bias: bias + 1 });
+  // The key: a stepped line of shade along the bracer, and a lit rim at either end.
+  const l = Math.hypot(wx - x0, wy - y0) || 1;
+  const ux = (wx - x0) / l;
+  const uy = (wy - y0) / l;
+  for (let i = 0; i <= 3; i++) {
+    const t = 0.15 + i * 0.24;
+    const s = i % 2 ? 0.5 : -0.5;
+    c.shade(x0 + (wx - x0) * t - uy * s, y0 + (wy - y0) * t + ux * s, -2);
+  }
+  c.spark(x0, y0, S.light[1], 0.2);
+  c.spark(wx + ux * 0.6, wy + uy * 0.6, S.light[1], 0.2);
+}
+
+/** The Jade Serpent's antlers: a short beam on each side with two tines, curving back at the tip. */
+function antlers(c: PixelCanvas, cx: number, U: number, view: View, hx = cx): void {
+  c.part();
+  if (view === 'side') {
+    for (const [o, b] of [[1.2, -1], [0, 0]] as const) {
+      const x = hx + o;
+      c.capsule(x + 0.4, 8.6 + U, x + 2.2, 6 + U, 0.8, 0.6, S.mane, { bias: b });
+      c.capsule(x + 2.2, 6 + U, x + 4.2, 3.8 + U, 0.6, 0.3, S.mane, { bias: b });
+      c.capsule(x + 2.2, 6 + U, x + 1, 4.2 + U, 0.5, 0.3, S.mane, { bias: b });
+      c.capsule(x + 3.2, 4.9 + U, x + 5.2, 5.2 + U, 0.45, 0.3, S.mane, { bias: b });
+    }
+    return;
+  }
+  const b = view === 'up' ? 0 : -1;
+  for (const s of [-1, 1]) {
+    c.capsule(cx + s * 2.2 - 0.5, 8.8 + U, cx + s * 3.4 - 0.5, 6.4 + U, 0.85, 0.6, S.mane, { bias: b });
+    c.capsule(cx + s * 3.4 - 0.5, 6.4 + U, cx + s * 3 - 0.5, 3.6 + U, 0.6, 0.3, S.mane, { bias: b });
+    c.capsule(cx + s * 3.4 - 0.5, 6.6 + U, cx + s * 5.4 - 0.5, 5.4 + U, 0.5, 0.3, S.mane, { bias: b });
+    c.capsule(cx + s * 3.2 - 0.5, 5 + U, cx + s * 1.8 - 0.5, 3.8 + U, 0.45, 0.3, S.mane, { bias: b });
+  }
+}
+
+/** Long whiskers of gold from the snout, drooping and curling, swaying a touch frame to frame. */
+function whiskers(c: PixelCanvas, x: number, U: number, view: View, tick: number): void {
+  const sway = tick % 4 < 2 ? 0 : 0.6;
+  const run = (pts: [number, number][]) => {
+    for (let i = 0; i < pts.length - 1; i++) c.line(pts[i][0], pts[i][1] + U, pts[i + 1][0], pts[i + 1][1] + U, S.beak, () => sphere(0, -0.3));
+  };
+  c.part();
+  if (view === 'side') {
+    run([[x - 5.4, 12.6], [x - 7, 13.4], [x - 7.6 - sway, 15.4], [x - 6.8 - sway, 17.4], [x - 7.6 - sway, 19]]);
+    c.part();
+    run([[x - 3.6, 13.8], [x - 3.2, 15.6], [x - 1.8 + sway, 17]]);
+    return;
+  }
+  for (const s of [-1, 1]) {
+    const o = -0.5;
+    const pts: [number, number][] =
+      view === 'up'
+        ? [[x + o + s * 3.6, 13], [x + o + s * 5.4, 14.6], [x + o + s * (6 + sway), 16.6]]
+        : [[x + o + s * 2.6, 13.2], [x + o + s * 4.6, 13.8], [x + o + s * (6 + sway), 15.6], [x + o + s * (5.2 + sway), 17.4], [x + o + s * (6 + sway), 19]];
+    run(pts);
+  }
+}
+
+/** The Jade Serpent's golden mane: locks flowing out behind his head (front), or down his spine (back, side). */
+function jadeMane(c: PixelCanvas, cx: number, U: number, view: View, tick: number, hx = cx): void {
+  const m = S.beak;
+  c.part();
+  if (view === 'down') {
+    for (const s of [-1, 1]) {
+      const x = cx - 0.5;
+      c.capsule(x + s * 2.4, 9.6 + U, x + s * 5.2, 12.6 + U, 1.2, 0.6, m, { bias: -1 });
+      c.capsule(x + s * 2.6, 11.4 + U, x + s * 6, 15.6 + U + (tick % 2) * 0.4, 1.1, 0.4, m);
+    }
+    return;
+  }
+  if (view === 'up') {
+    for (let y = 10, i = 0; y <= 22; y += 1.6, i++) {
+      const s = i % 2 ? 1 : -1;
+      const w = Math.sin((y + tick) * 0.9) * 0.5;
+      c.capsule(cx - 0.5 + w, y + U, cx - 0.5 + w + s * 1.8, y + 2.2 + U, i < 3 ? 1.2 : 0.9, 0.4, m, { bias: i % 2 });
+    }
+    return;
+  }
+  // Side, facing left: along the back of the head and neck and down the spine, flowing back.
+  for (let y = 9, i = 0; y <= 22; y += 1.5, i++) {
+    const back = y < 15 ? hx + 2.2 : hx + 3.2;
+    const flow = 2 + (i % 2) * 0.8 + ((tick + i) % 3 === 0 ? 0.5 : 0);
+    c.capsule(back, y + U, back + flow, y + 1.4 + U, i < 4 ? 1.1 : 0.8, 0.35, m, { bias: i % 2 });
+  }
+}
+
+/** The pearl held in his hand, glowing, a mote of light circling it. */
+function pearl(c: PixelCanvas, h: Placed, tick: number, k = 1): void {
+  const x = h.x;
+  const y = h.y - 1.6;
+  c.part();
+  c.ellipse(x, y, 1.35, 1.3, PEARL, { bias: 1 });
+  const [core, hot, mid] = S.light;
+  c.spark(x - 0.5, y - 0.5, core, 0.7 * k);
+  const a = (tick / 6) * Math.PI * 2;
+  c.spark(x + Math.cos(a) * 2.6, y + Math.sin(a) * 1.8, mid, 0.6 * k);
+  c.spark(x - Math.cos(a) * 2.4, y - Math.sin(a) * 1.6, hot, 0.35 * k);
+}
+
+/** A little cloud curling at the Jade Serpent's feet: puffs either side, a curl of shade in each. */
+function cloud(c: PixelCanvas, cx: number, y: number, tick: number, bias: number): void {
+  const drift = tick % 6 < 3 ? 0 : 0.5;
+  c.part();
+  c.ellipse(cx - 0.5, y + 0.6, 4.6, 1.2, CLOUD, { bias: bias - 1, flatten: 0.6 });
+  for (const s of [-1, 1]) {
+    const x = cx - 0.5 + s * (6.2 + drift);
+    c.part();
+    c.ellipse(x, y, 2.6, 1.5, CLOUD, { bias, flatten: 0.8 });
+    c.ellipse(x + s * 2.4, y + 0.5, 1.6, 1.1, CLOUD, { bias, flatten: 0.8 });
+    c.ellipse(x - s * 1.6, y - 0.9, 1.5, 1.1, CLOUD, { bias: bias + 1, flatten: 0.8 });
+    // The curl.
+    c.shade(x, y, -1);
+    c.shade(x + s, y, -1);
+    c.shade(x + s, y - 1, -1);
   }
 }
 
@@ -593,7 +946,8 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
   }
   c.part();
   c.capsule(ex, ey, wx, wy, 1.5 * thick, 1.3 * thick, S.hide, { bias });
-  if (!kit) {
+  if (nemean()) meanderBracer(c, ex, ey, wx, wy, 1.45 * thick, bias);
+  else if (!kit) {
     c.part();
     c.ellipse(wx, wy, 1.4 * thick, 1.1, S.trim, { bias: bias + 1 });
   }
@@ -907,6 +1261,10 @@ function lionSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
 
 /** The dragon's horns, sweeping back and up from the brow; Porto's gold crown sits between them. */
 function horns(c: PixelCanvas, cx: number, U: number, view: View, hx = cx): void {
+  if (jade()) {
+    antlers(c, cx, U, view, hx);
+    return;
+  }
   c.part();
   if (view === 'side') {
     c.capsule(hx + 0.4, 8.2 + U, hx + 3.4, 6.2 + U, 0.9, 0.6, S.mane, { bias: -1 });
@@ -981,6 +1339,7 @@ function dragonUp(c: PixelCanvas, cx: number, U: number): void {
   c.part();
   c.ellipse(cx, 10.8 + U, 3.2, 2.9, S.head);
   horns(c, cx, U, 'up');
+  if (jade()) return;
   // Spines down the back of the neck.
   c.part();
   for (const y of [12.6, 14.2]) {
@@ -1013,6 +1372,7 @@ function dragonSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
   c.shade(hx - 2, 9 + U, 1);
   c.shade(hx - 3, 9.4 + U, -1);
   horns(c, hx, U, 'side', hx);
+  if (jade()) return;
   // Spines down the nape.
   c.part();
   c.px(hx + 2.4, 12 + U, S.claw, sphere(0.6, -0.3));
@@ -1091,7 +1451,19 @@ function eagleBody(c: PixelCanvas, cx: number, U: number, L: number, back: boole
       c.px(cx + hw - 0.4, y + 1, S.kit ? S.kit.shirt : S.hide, sphere(0.8, -0.3), { bias: 1 });
     }
   }
-  if (!S.kit) {
+  if (phoenix()) {
+    // No strap: the breast's plumage burns from crimson at the flanks to gold
+    // down the middle, in scallops; at the back, a gold seam of down.
+    c.part();
+    for (let y = top + 1; y < waist; y++) {
+      const hw = back ? 0.6 : 2.6 - (y - top) * 0.25;
+      for (let x = Math.round(cx - hw); x < cx + hw; x++) {
+        const t = (x + 0.5 - cx) / Math.max(1, hw);
+        c.px(x, y, S.head, sphere(t * 0.7, (y - top) / 8 - 0.3, 1), { bias: (y + x) % 2 ? 0 : -1 });
+      }
+    }
+    if (!back) c.spark(cx - 0.5, top + 2, S.light[1], 0.3);
+  } else if (!S.kit) {
     c.part();
     c.line(back ? cx + 3 : cx - 4, top + 1, back ? cx - 3 : cx + 3, waist - 1, LEATHER, () => sphere(0, -0.3));
     if (!back) {
@@ -1127,6 +1499,8 @@ function lionBody(c: PixelCanvas, cx: number, U: number, L: number, back: boolea
     c.ellipse(px, 15.8 + U, 2.5, 1.9, S.trim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.4, 1) });
     c.shade(px - 0.5, 16.4 + U, -1);
     c.shade(px + 0.5, 16.4 + U, -1);
+    // The Nemean hide gleams like metal where the light catches it.
+    if (nemean()) for (const [x, y] of [[back ? cx - 4 : cx + 3, 16], [back ? cx + 2 : cx - 3, 21]]) c.spark(x, y + U, S.light[1], 0.28);
   }
   hips(c, cx, U, L, back, 4.7);
 }
@@ -1146,7 +1520,7 @@ function dragonBody(c: PixelCanvas, cx: number, U: number, L: number, back: bool
     for (let y = top + 2; y <= waist; y += 2) for (let x = cx - 2; x < cx + 2; x++) c.shade(x, y, -1);
     if (glow > 0.3) for (let y = top + 1; y <= top + 4; y++) c.spark(cx - 0.5, y, S.light[2], (glow - 0.3) * 0.5);
   }
-  if (back && !S.kit) {
+  if (back && !S.kit && !jade()) {
     // A ridge of spines down the back.
     c.part();
     for (let y = top; y <= waist; y += 2) c.px(cx - (y & 2 ? 1 : 0), y, S.claw, sphere(0, -0.5));
@@ -1191,7 +1565,11 @@ function hips(c: PixelCanvas, cx: number, U: number, L: number, back: boolean, h
   const w = hw + (hy - waist) * (eagle() ? 0.28 : 0.18);
   for (let x = Math.round(cx - w); x < cx + w; x++) {
     if (eagle()) c.px(x, hy, S.trim, cyl((x + 0.5 - cx) / w, 0));
-    else if (lion() && x % 2 === 0) c.px(x, hy, S.trim, sphere(0, 0.3));
+    else if (nemean()) {
+      // A meander key round the hem: a bronze line, a tooth rising from it every third pixel.
+      c.px(x, hy, S.trim, cyl((x + 0.5 - cx) / w, 0.2));
+      if ((x + 30) % 3 === 0) c.px(x, hy - 1, S.trim, sphere(0, -0.3), { bias: 1 });
+    } else if (lion() && x % 2 === 0) c.px(x, hy, S.trim, sphere(0, 0.3));
   }
   // The belt and its buckle.
   c.part();
@@ -1246,19 +1624,26 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   wings(c, 'down', cx, U, p, 'behind');
   // The tail swings out past a leg (or, curled round, lies in front of the feet).
   if (!eagle() && curl <= 0.5) tail(c, cx + 2, 24 + L, 1, p.tail, 'down', -2, curl);
+  if (jade()) cloud(c, cx, 30.6, p.tick, 0);
   if (fa.behind) armA();
   if (fb.behind) armB();
   legsFront(c, L, p.footA, p.footB, false);
   if (dragon() && curl > 0.5) tail(c, cx + 2, 24 + L, 1, p.tail, 'down', 0, curl);
-  body(c, cx, U, L, false, p);
   const hx = cx + (p.turn ?? 0);
   const hU = U + (p.nod ?? 0);
+  if (jade()) jadeMane(c, hx, hU, 'down', p.tick);
+  body(c, cx, U, L, false, p);
   if (eagle()) eagleDown(c, hx, hU, p);
   else if (lion()) lionDown(c, hx, hU, p);
   else dragonDown(c, hx, hU, p);
+  if (phoenix()) flameCrest(c, hx, hU, 'down', p.tick);
+  if (nemean()) laurel(c, hx, hU, 'down');
+  if (jade()) whiskers(c, hx, hU, 'down', p.tick);
   if (!fb.behind) armB();
   if (!fa.behind) armA();
   held(c, p, fa, fb);
+  if (jade()) pearl(c, fa, p.tick);
+  if (phoenix()) emberMotes(c, cx, U, p.tick);
   if (p.rings) smokeRings(c, hx, 12.4 + hU, p.rings);
   if (p.embers) embers(c, hx, 12.4 + hU, p.embers, p.tick);
   if (p.down) looseFeather(c, p.down.x, p.down.y);
@@ -1316,16 +1701,25 @@ function drawUp(c: PixelCanvas, p: Pose): void {
 
   if (fa.behind) armA();
   if (fb.behind) armB();
+  if (jade()) cloud(c, cx, 30.6, p.tick, 0);
   legsFront(c, L, p.footA, p.footB, true);
   body(c, cx, U, L, true, p);
   if (eagle()) eagleUp(c, cx, U);
   else if (lion()) lionUp(c, cx, U, p);
   else dragonUp(c, cx, U);
+  if (phoenix()) flameCrest(c, cx, U, 'up', p.tick);
+  if (nemean()) laurel(c, cx, U, 'up');
+  if (jade()) {
+    whiskers(c, cx, U, 'up', p.tick);
+    jadeMane(c, cx, U, 'up', p.tick);
+  }
   tail(c, cx - 1, 23.4 + L, -1, -p.tail, 'up', 0);
   wings(c, 'up', cx, U, p, 'front');
   if (!fb.behind) armB();
   if (!fa.behind) armA();
   held(c, p, fa, fb, 0.7);
+  if (jade() && !fa.behind) pearl(c, fa, p.tick, 0.6);
+  if (phoenix()) emberMotes(c, cx, U, p.tick + 2);
 }
 
 /** Facing left. Right-facing frames are mirrored from these. */
@@ -1345,6 +1739,7 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   if (fa.behind) armA(-1);
   tail(c, cx + 2.6, eagle() ? 23 + L : 23.6 + L, 1, p.tail, 'side', -1);
 
+  if (jade()) cloud(c, cx + 1, 30.6, p.tick, 0);
   // Legs: the back one in shade first.
   const lift = (f: number) => Math.max(0, f) * 0.35;
   leg(c, cx + 0.8, 24 + L, cx + 1 - p.footB, 29.4 - lift(p.footB), -1);
@@ -1388,7 +1783,11 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     for (let y = top + 2; y <= waist; y += 2) c.shade(Math.round(hx - hw), y, -1);
     if (p.glow > 0.3) c.spark(hx - hw + 0.4, top + 2, S.light[2], (p.glow - 0.3) * 0.5);
     c.part();
-    for (let y = top; y <= waist; y += 2) c.px(hx + hw - 0.2, y, S.claw, sphere(0.6, -0.4));
+    if (!jade()) for (let y = top; y <= waist; y += 2) c.px(hx + hw - 0.2, y, S.claw, sphere(0.6, -0.4));
+  } else if (phoenix()) {
+    c.part();
+    c.shape(top + 1, waist - 1, (y) => [hx - hw - 0.3, hx - hw + 2.2 - (y - top) * 0.15], S.head, (_x, _y, t) => cyl(t - 0.4, 0.2));
+    for (let y = top + 2; y < waist; y += 2) c.shade(Math.round(hx - hw + 0.4), y, -1);
   } else {
     c.part();
     c.line(hx - 3, top + 1, hx + 2, waist - 1, LEATHER, () => sphere(0, -0.3));
@@ -1408,7 +1807,10 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     c.shape(Math.round(waist), Math.round(waist), () => [hx - 3.9, hx + 3.7], eagle() ? LEATHER : S.trim, (_x, _y, t) => cyl(t, 0));
     c.part();
     if (eagle()) for (let x = Math.round(cx - 3.8); x < cx + 3.4; x++) c.px(x, Math.round(hem), S.trim, cyl(0, 0));
-    if (lion()) for (let x = Math.round(cx - 3.8); x < cx + 3.4; x += 2) c.px(x, Math.round(hem), S.trim, sphere(0, 0.3));
+    if (nemean()) for (let x = Math.round(cx - 3.8); x < cx + 3.4; x++) {
+      c.px(x, Math.round(hem), S.trim, cyl(0, 0.2));
+      if ((x + 30) % 3 === 0) c.px(x, Math.round(hem) - 1, S.trim, sphere(0, -0.3), { bias: 1 });
+    } else if (lion()) for (let x = Math.round(cx - 3.8); x < cx + 3.4; x += 2) c.px(x, Math.round(hem), S.trim, sphere(0, 0.3));
     if (dragon()) {
       c.shape(Math.round(waist + 1), Math.round(27.5 + L), () => [hx - 4.2, hx - 2.4], S.cloth, (_x, _y, t) => cyl(t, 0.2), { bias: 1 });
       c.px(hx - 4, Math.round(27.5 + L), GOLD, sphere(0, 0.3));
@@ -1420,15 +1822,21 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     c.ellipse(hx + 0.2, 15.6 + U, 2.4, 1.8, S.trim, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.9 - 0.4, 1) });
   }
 
+  if (jade()) jadeMane(c, hx, U, 'side', p.tick);
   if (eagle()) eagleSide(c, hx, U, p);
   else if (lion()) lionSide(c, hx, U, p);
   else dragonSide(c, hx, U, p);
+  if (phoenix()) flameCrest(c, hx, U, 'side', p.tick);
+  if (nemean()) laurel(c, hx - 0.8, U, 'side');
+  if (jade()) whiskers(c, hx, U, 'side', p.tick);
 
   wings(c, 'side', cx, U, p, 'front', hx);
   if (!fa.behind) armA(0);
   // The near arm last.
   arm(c, hx + 0.2, 16.7 + U, fb, REACH_SIDE, [0.4, 1], p.claws, 0);
   held(c, p, fa, fb);
+  if (jade()) pearl(c, fb, p.tick);
+  if (phoenix()) emberMotes(c, cx + 2, U, p.tick + 4);
 }
 
 /** A feather of light held ready in a hand. */
@@ -1841,8 +2249,10 @@ export function featherFrame(i: number, look: BeastLook = EAGLE_LOOK): PixelCanv
   const uy = Math.sin(a);
   const m = FEATHER_SIZE / 2;
   const at = (t: number, s = 0): [number, number] => [m + ux * t - uy * s, m + uy * t + ux * s];
-  const vane: Material = look.kit ? { ...BENFICA_RED, emissive: 0.25 } : { ...EAGLE_WHITE, emissive: 0.2 };
-  const edge: Material = look.kit ? { ...KIT_WHITE, emissive: 0.5, noAO: true } : { ramp: ramp('#4a8ac0', '#8ad0f4', '#e0f8ff'), outline: hex('#0c2440'), emissive: 0.5, noAO: true };
+  const fire = look.myth === 'phoenix';
+  // The Phoenix's are burning quills: crimson vanes edged in flame.
+  const vane: Material = fire ? { ...PHOENIX_WING, emissive: 0.45 } : look.kit ? { ...BENFICA_RED, emissive: 0.25 } : { ...EAGLE_WHITE, emissive: 0.2 };
+  const edge: Material = fire ? PHOENIX_FLAME : look.kit ? { ...KIT_WHITE, emissive: 0.5, noAO: true } : { ramp: ramp('#4a8ac0', '#8ad0f4', '#e0f8ff'), outline: hex('#0c2440'), emissive: 0.5, noAO: true };
   c.part();
   // The vane: widest a little behind the middle, tapering to the tip.
   for (let t = -4; t <= 4; t += 0.5) {
@@ -1856,10 +2266,17 @@ export function featherFrame(i: number, look: BeastLook = EAGLE_LOOK): PixelCanv
   // The quill down its middle.
   const [x0, y0] = at(-5);
   const [x1, y1] = at(3.5);
-  c.line(x0, y0, x1, y1, look.kit ? KIT_WHITE : SCALY_YELLOW, () => sphere(0, -0.4));
+  c.line(x0, y0, x1, y1, fire ? PHOENIX_GOLD : look.kit ? KIT_WHITE : SCALY_YELLOW, () => sphere(0, -0.4));
   const [tx, ty] = at(4.4);
   c.spark(tx, ty, look.light[0], 0.9);
   c.spark(tx - ux, ty - uy, look.light[1], 0.6);
+  if (fire) {
+    // Flame licking back off the quill's end.
+    for (const [t, s, k] of [[-5.5, 0, 0.7], [-6, 0.8, 0.5], [-6, -0.8, 0.5], [-6.5, 0, 0.35]] as const) {
+      const [fx, fy] = at(t, s);
+      c.spark(fx, fy, k > 0.6 ? look.light[1] : look.light[2], k);
+    }
+  }
   return c;
 }
 
@@ -1877,12 +2294,17 @@ export function fireboltFrame(f: number, look: BeastLook = DRAGON_LOOK): PixelCa
       const dx = x + 0.5 - cx;
       const dy = y + 0.5 - cy;
       const ang = Math.atan2(dy, dx);
-      // Tongues of flame round the rim, turning with the frame.
-      const r = 3.6 + 1.3 * Math.sin(ang * 5 + f * 1.7) + 0.6 * Math.sin(ang * 3 - f * 2.3);
+      // Tongues of flame round the rim, turning with the frame; the Jade
+      // Serpent's curl into a swirl of cloud, arms winding out from the heart.
+      const r = look.myth === 'jade'
+        ? 3.4 + 1.5 * Math.sin(ang * 3 + Math.hypot(dx, dy) * 1.3 - f * 1.6)
+        : 3.6 + 1.3 * Math.sin(ang * 5 + f * 1.7) + 0.6 * Math.sin(ang * 3 - f * 2.3);
       const d = Math.hypot(dx, dy);
       if (d > r) continue;
       const u = d / r;
-      c.spark(x, y, u < 0.3 ? core : u < 0.55 ? hot : u < 0.8 ? mid : deep, u < 0.8 ? 1 : 0.7);
+      // The swirl's arms are thin, so the Jade Serpent's burns brighter further out.
+      const [a, b, m] = look.myth === 'jade' ? [0.4, 0.68, 0.9] : [0.3, 0.55, 0.8];
+      c.spark(x, y, u < a ? core : u < b ? hot : u < m ? mid : deep, u < m ? 1 : 0.7);
     }
   }
   return c;
@@ -1896,8 +2318,8 @@ const tones = (look: BeastLook): Tones => look.light;
 /** Razor feathers: three feathers fanned out on a diagonal, their edges lit. */
 export function featherIcon(look: BeastLook = EAGLE_LOOK): Uint8ClampedArray {
   const t = tones(look);
-  const vane: RGB = look.kit ? hex('#de2230') : hex('#e8ecf6');
-  const dark: RGB = look.kit ? hex('#700a12') : hex('#8a90a8');
+  const vane: RGB = look.myth === 'phoenix' ? hex('#ff8a20') : look.kit ? hex('#de2230') : hex('#e8ecf6');
+  const dark: RGB = look.myth === 'phoenix' ? hex('#9a1a10') : look.kit ? hex('#700a12') : hex('#8a90a8');
   return icon16((put) => {
     for (const [ox, oy, len] of [[-3, 2, 9], [0, 0, 11], [3, -2, 9]] as const) {
       const x0 = 3 + ox;
@@ -1922,8 +2344,8 @@ export function featherIcon(look: BeastLook = EAGLE_LOOK): Uint8ClampedArray {
 /** Gale: a pair of spread wings beating down, wind curling out beneath them. */
 export function gustIcon(look: BeastLook = EAGLE_LOOK): Uint8ClampedArray {
   const t = tones(look);
-  const wing: RGB = look.kit ? hex('#dab058') : hex('#7a5229');
-  const dark: RGB = look.kit ? hex('#7e541c') : hex('#3a2212');
+  const wing: RGB = look.myth === 'phoenix' ? hex('#e8641a') : look.kit ? hex('#dab058') : hex('#7a5229');
+  const dark: RGB = look.myth === 'phoenix' ? hex('#9a1a10') : look.kit ? hex('#7e541c') : hex('#3a2212');
   return icon16((put) => {
     for (const k of [-1, 1]) {
       for (let i = 0; i < 5; i++) {
@@ -1934,8 +2356,13 @@ export function gustIcon(look: BeastLook = EAGLE_LOOK): Uint8ClampedArray {
         seg(put, x0 + k * i * 0.9, y0 - i * 0.3, x0 + k * (i * 0.9 + Math.sin(a) * len), y0 - i * 0.3 + Math.cos(a) * len * 0.6 - 1, i % 2 ? dark : wing);
       }
     }
-    put(7, 4, look.kit ? hex('#de2230') : hex('#f4f6fc'));
-    put(8, 4, look.kit ? hex('#de2230') : hex('#f4f6fc'));
+    const head = look.myth === 'phoenix' ? hex('#ffc840') : look.kit ? hex('#de2230') : hex('#f4f6fc');
+    put(7, 4, head);
+    put(8, 4, head);
+    if (look.myth === 'phoenix') {
+      put(7, 3, t[1]);
+      put(8, 2, t[0]);
+    }
     // Wind swirling out underneath.
     for (let i = 0; i < 9; i++) {
       const a = i * 0.7;
@@ -1967,8 +2394,8 @@ export function clawIcon(look: BeastLook = LION_LOOK): Uint8ClampedArray {
 /** The roar: a lion's head in its mane, jaws wide, rings of sound rolling out. */
 export function roarIcon(look: BeastLook = LION_LOOK): Uint8ClampedArray {
   const t = tones(look);
-  const mane: RGB = look.kit ? hex('#ae6a26') : hex('#6a3614');
-  const fur: RGB = look.kit ? hex('#eeba3a') : hex('#d69a3a');
+  const mane: RGB = look.myth === 'nemean' ? hex('#6a3c14') : look.kit ? hex('#ae6a26') : hex('#6a3614');
+  const fur: RGB = look.myth === 'nemean' ? hex('#e8b852') : look.kit ? hex('#eeba3a') : hex('#d69a3a');
   const cream: RGB = hex('#f6e6c4');
   return icon16((put) => {
     for (let y = 0; y < 16; y++) {
@@ -1984,6 +2411,11 @@ export function roarIcon(look: BeastLook = LION_LOOK): Uint8ClampedArray {
     put(6, 10, cream);
     put(5, 10, hex('#6e1820'));
     put(5, 11, hex('#6e1820'));
+    if (look.myth === 'nemean') {
+      // The laurel across his brow.
+      for (const [x, y] of [[2, 6], [3, 5], [4, 5], [6, 5], [7, 5], [8, 6]] as const) put(x, y, hex('#5a9a3a'));
+      put(5, 4, hex('#94d064'));
+    }
     // Sound rolling out to the right.
     for (let r = 0; r < 3; r++) {
       for (let a = -0.9; a <= 0.9; a += 0.15) {
@@ -2018,9 +2450,10 @@ export function fireIcon(look: BeastLook = DRAGON_LOOK): Uint8ClampedArray {
 /** Flame breath: a dragon's head in profile, a cone of fire roaring from its jaws. */
 export function breathIcon(look: BeastLook = DRAGON_LOOK): Uint8ClampedArray {
   const t = tones(look);
-  const scale: RGB = look.kit ? hex('#2a58c8') : hex('#c0302a');
-  const dark: RGB = look.kit ? hex('#0a1c58') : hex('#560c10');
-  const horn: RGB = look.kit ? hex('#ffd860') : hex('#c8baa0');
+  const jadeLook = look.myth === 'jade';
+  const scale: RGB = jadeLook ? hex('#2a9a6e') : look.kit ? hex('#2a58c8') : hex('#c0302a');
+  const dark: RGB = jadeLook ? hex('#0a4032') : look.kit ? hex('#0a1c58') : hex('#560c10');
+  const horn: RGB = jadeLook ? hex('#c89a62') : look.kit ? hex('#ffd860') : hex('#c8baa0');
   return icon16((put) => {
     // The fire first, so the head sits over its root.
     for (let x = 6; x < 16; x++) {
@@ -2037,5 +2470,11 @@ export function breathIcon(look: BeastLook = DRAGON_LOOK): Uint8ClampedArray {
     put(3, 6, t[1]);
     seg(put, 1, 4, 0, 1, horn);
     seg(put, 3, 4, 3, 1, horn);
+    if (jadeLook) {
+      // A whisker of gold trailing down from the snout, and an antler's tine.
+      seg(put, 5, 10, 4, 13, hex('#ffd060'));
+      put(5, 14, hex('#ffd060'));
+      put(4, 2, horn);
+    }
   });
 }

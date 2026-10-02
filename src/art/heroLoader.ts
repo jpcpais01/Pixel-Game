@@ -4,9 +4,11 @@
 // Nothing else has to know: asking the texture manager for a look's texture
 // (or its `_e`, `_s`, `_w` layers) or the animation manager for one of its
 // animations builds the look right there if it isn't built yet. Meanwhile
-// workers build every look in the background, the ones on show first, and
-// the main thread only uploads them, one per frame, so by the time a menu or
-// a run needs a look it's usually waiting.
+// workers build the looks the hero select shows in the background, and the
+// main thread only uploads them, one per frame, so by the time a menu or a
+// run needs one it's usually waiting. Not every look: all of them come to
+// some 500 MB of textures, enough to make a phone drop the game's graphics
+// (a black screen while the game runs on), and most are never worn.
 
 import Phaser from 'phaser';
 import { registerAtlas } from './atlas';
@@ -198,7 +200,7 @@ export function lazyHeroSheets(scene: Phaser.Scene): void {
 
 let later: { game: Phaser.Game; first: string[] } | null = null;
 
-/** Build every look in the background (see warmHeroSheets), once startHeroWarm says so. */
+/** Build the looks in `first` in the background (see warmHeroSheets), once startHeroWarm says so. */
 export function warmHeroSheetsLater(game: Phaser.Game, first: string[]): void {
   later = { game, first };
 }
@@ -216,12 +218,13 @@ export function startHeroWarm(): void {
 }
 
 /**
- * Build every look in the background, `first` before the rest: in workers
+ * Build the looks in `first` in the background, in that order: in workers
  * when the browser has them, else one look a frame here. Each finished look
- * is uploaded on a frame of its own.
+ * is uploaded on a frame of its own. Any other look is built when it's first
+ * shown (a skin tried on, another player's hero).
  */
 export function warmHeroSheets(game: Phaser.Game, first: string[]): void {
-  const queue = [...new Set([...first.filter((k) => pending.has(k)), ...HERO_SHEETS])];
+  const queue = [...new Set(first.filter((k) => pending.has(k)))];
   const next = (): string | undefined => {
     let k = queue.shift();
     while (k !== undefined && !pending.has(k)) k = queue.shift();
@@ -268,7 +271,7 @@ export function warmHeroSheets(game: Phaser.Game, first: string[]): void {
       const k = next();
       if (k !== undefined) buildNow(k);
     }
-    if (!pending.size && !ready.length) game.events.off(Phaser.Core.Events.POST_STEP, step);
+    if (!ready.length && !queue.length && workers <= 0) game.events.off(Phaser.Core.Events.POST_STEP, step);
   };
   game.events.on(Phaser.Core.Events.POST_STEP, step);
 }

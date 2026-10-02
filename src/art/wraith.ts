@@ -10,9 +10,15 @@
 // hooded cloak trimmed with ferns and tiny mushrooms, open over a pale sage
 // gown, a soft face in the hood with long leafy hair spilling out of it, a
 // willow-wicker lantern full of fireflies, and fireflies drifting round her.
+// Its Ferryman skin is the ferryman of the dead: taller, in a deep hooded
+// robe of charcoal-blue frayed at the hem and tied with a cord, a skull in
+// the hood's shadow lit only by two pale cyan eye-lights, a coin for the
+// crossing hung on a cord at its chest, and a long punting pole whose crook
+// carries the lantern, burning with a spectral teal ghostfire.
 //
 // Also here: the wisps it leaves (green soul-flames; marigold petals for the
-// Calavera; fireflies for the Firefly) and the icons.
+// Calavera; fireflies for the Firefly; pale teal soul-flames for the
+// Ferryman) and the icons.
 
 import { PixelCanvas, cyl, hex, sphere, type Material, type RGB } from './pixel';
 import { DIRS, type Dir } from './wizard';
@@ -37,6 +43,9 @@ const WISPS = 18;
 const SWARM = 7;
 const SWARM_RX = 9;
 const SWARM_RY = 6;
+/** The Ferryman stands this much taller, and its lantern hangs from the pole's crook, this high at rest. */
+const FERRY_TALL = 1;
+export const FERRY_LANTERN_Y = 19;
 
 // ---------------------------------------------------------------------------
 // Materials
@@ -82,17 +91,35 @@ const FIREFLY: Material = { ramp: ramp('#8ac02a', '#d0f050', '#f6ffb0'), outline
 /** The fireflies' light, for sparks. */
 const FLY_GLOW: RGB = [210, 255, 120];
 
+// The Ferryman.
+const FERRY_ROBE: Material = { ramp: ramp('#07090f', '#0f131d', '#19202e', '#252e42', '#354058'), outline: hex('#020306'), outlineLit: hex('#0a0e16') };
+/** The skull in the hood's shadow: bone, but dim, lit from its own eyes. */
+const SHADE_SKULL: Material = { ramp: ramp('#262a2e', '#464a4a', '#6e706a', '#9a988c'), outline: hex('#050607'), noAO: true };
+const CYAN_EYE: Material = { ramp: ramp('#2a9ab0', '#62d8f0', '#a8f4ff'), outline: hex('#0a3a44'), emissive: 1, noAO: true, noOutline: true };
+const POLE: Material = { ramp: ramp('#18140f', '#30271d', '#4c3f2f', '#6c5c48', '#8c7a64'), outline: hex('#080604') };
+const GHOSTFIRE: Material = { ramp: ramp('#1a7e86', '#36c8b6', '#7af0dc', '#c4fff2'), outline: hex('#063036'), emissive: 1, noAO: true, noOutline: true };
+const FERRY_SOUL: Material = { ramp: ramp('#2a8a96', '#7ae8e0', '#dafffa'), outline: hex('#08343a'), emissive: 1, noAO: true, noOutline: true };
+const RIVER_MIST: Material = { ramp: ramp('#162c38', '#2e5464', '#5a8a9a'), outline: hex('#08141a'), emissive: 0.3, noAO: true, noOutline: true };
+const COIN: Material = { ramp: ramp('#5a3a0e', '#a07420', '#e0b440', '#fff0a0'), outline: hex('#1e1204'), shine: true, emissive: 0.1 };
+const CORD: Material = { ramp: ramp('#140e08', '#2e2214', '#4a3820'), outline: hex('#060402'), noAO: true };
+/** The ghostfire's light, and the eye-lights', for sparks. */
+const TEAL_GLOW: RGB = [120, 255, 230];
+const CYAN_GLOW: RGB = [150, 240, 255];
+
 export interface WraithLook {
   key: string;
   calavera: boolean;
   /** The Firefly: a forest maiden in a mossy cloak, a wicker lantern of fireflies. */
   firefly?: boolean;
+  /** The Ferryman: a skull in a deep hood, a punting pole with the lantern on its crook. */
+  ferryman?: boolean;
 }
 
 export const WRAITH_LOOK: WraithLook = { key: 'wraith', calavera: false };
 export const CALAVERA_LOOK: WraithLook = { key: 'wraith_cala', calavera: true };
 export const FIREFLY_LOOK: WraithLook = { key: 'wraith_firefly', calavera: false, firefly: true };
-export const WRAITH_LOOKS = [WRAITH_LOOK, CALAVERA_LOOK, FIREFLY_LOOK];
+export const FERRYMAN_LOOK: WraithLook = { key: 'wraith_ferry', calavera: false, ferryman: true };
+export const WRAITH_LOOKS = [WRAITH_LOOK, CALAVERA_LOOK, FIREFLY_LOOK, FERRYMAN_LOOK];
 
 let L: WraithLook = WRAITH_LOOK;
 
@@ -128,11 +155,16 @@ function robe(c: PixelCanvas, cx: number, top: number, hem: number, p: WraithPos
   const side = view === 'side';
   const cala = L.calavera;
   const fly = !!L.firefly;
-  const m = cala ? GOWN : fly ? MOSS : ROBE;
+  const ferry = !!L.ferryman;
+  const m = cala ? GOWN : fly ? MOSS : ferry ? FERRY_ROBE : ROBE;
   const edge = (y: number): [number, number] => {
     const u = (y - top) / (hem - top);
     // The Firefly's cloak is narrow at the shoulders and flares to its hem.
-    const hw = fly ? (side ? 2.9 : 3.5) + u * u * (side ? 2.6 : 3.0) : (side ? 3.4 : 4.3) + u * u * (side ? 2.2 : 2.4);
+    const hw = fly
+      ? (side ? 2.9 : 3.5) + u * u * (side ? 2.6 : 3.0)
+      : ferry
+        ? (side ? 3.2 : 4.0) + u * u * (side ? 2.0 : 2.3)
+        : (side ? 3.4 : 4.3) + u * u * (side ? 2.2 : 2.4);
     const back = side ? u * u * (1 + p.trail) : 0;
     return [cx - hw + back * 0.3, cx + hw + back];
   };
@@ -146,7 +178,19 @@ function robe(c: PixelCanvas, cx: number, top: number, hem: number, p: WraithPos
   // The hem: ragged strips, or mist.
   c.part();
   const [l, r] = edge(hem);
-  for (let x = Math.round(l); x < r; x++) {
+  for (let x = Math.round(l); ferry && x < r; x++) {
+    // The Ferryman's hem is frayed: loose threads of every length hanging
+    // from it, thinning out, and the river's mist curling round their ends.
+    const n = 1 + Math.round(hash(x, 5) * 3);
+    for (let i = 1; i <= n + 2; i++) {
+      const y = Math.round(hem + i);
+      const drift = side ? Math.round((i / (n + 2)) * (0.5 + p.trail * 0.5)) : Math.round(Math.sin(x * 0.7 + p.flutter) * (i / (n + 2)) * 0.8);
+      if (i <= n) {
+        if (i < 2 || (x + i) % 2 === 0) c.px(x + drift, y, FERRY_ROBE, sphere(0, -0.3), { bias: i > 1 ? -1 : 0 });
+      } else if ((x + y + Math.round(p.flutter)) % 2 === 0) c.px(x + drift, y, RIVER_MIST, { x: 0, y: 0, z: 1 });
+    }
+  }
+  for (let x = Math.round(l); !ferry && x < r; x++) {
     const n = cala ? 3 : fly ? 1 + (hash(x, 7) > 0.45 ? 1 : 0) : 1 + (((x * 7 + 3) % 3) + ((x + Math.round(p.flutter)) % 2));
     for (let i = 1; i <= n; i++) {
       const y = Math.round(hem + i);
@@ -160,7 +204,9 @@ function robe(c: PixelCanvas, cx: number, top: number, hem: number, p: WraithPos
     }
   }
   c.part();
-  if (fly) {
+  if (ferry) {
+    ferryTrim(c, cx, top, hem, edge, view);
+  } else if (fly) {
     fernTrim(c, cx, top, hem, edge, p, view);
   } else if (cala) {
     // Embroidered flowers, and black lace ruffles.
@@ -192,17 +238,21 @@ function sleeve(c: PixelCanvas, sx: number, sy: number, hx: number, hy: number):
     c.ellipse(hx, hy + 0.3, 0.8, 0.85, FAE_SKIN);
     return;
   }
-  c.capsule(sx, sy, hx, hy - 0.8, 1.4, L.calavera ? 1.2 : 1.9, L.calavera ? GOWN : ROBE);
+  c.capsule(sx, sy, hx, hy - 0.8, 1.4, L.calavera ? 1.2 : 1.9, L.calavera ? GOWN : L.ferryman ? FERRY_ROBE : ROBE);
   if (L.calavera) for (let a = -1; a <= 0; a++) c.px(Math.round(hx + a), Math.round(hy - 0.5), LACE_BLACK, { x: 0, y: -0.3, z: 0.9 });
   c.ellipse(hx, hy + 0.3, 0.9, 0.9, BONE);
 }
 
 /** The lantern hanging from the hand: an iron one with a soul-flame, or a paper one glowing gold. */
-function lantern(c: PixelCanvas, hx: number, hy: number, p: WraithPose): void {
+function lantern(c: PixelCanvas, hx: number, hy: number, p: WraithPose, view: View): void {
   const lx = hx + p.swing;
   const ly = hy + 1.5 - p.lift;
   if (L.firefly) {
     wickerLantern(c, hx, hy, lx, ly, p);
+    return;
+  }
+  if (L.ferryman) {
+    ferryPole(c, hx, hy, p, view);
     return;
   }
   c.part();
@@ -233,6 +283,10 @@ function lantern(c: PixelCanvas, hx: number, hy: number, p: WraithPose): void {
 function hood(c: PixelCanvas, cx: number, cy: number, view: View, p: WraithPose): void {
   if (L.firefly) {
     faeHood(c, cx, cy, view, p);
+    return;
+  }
+  if (L.ferryman) {
+    ferryHood(c, cx, cy, view, p);
     return;
   }
   c.part();
@@ -461,20 +515,134 @@ function swarm(c: PixelCanvas, cx: number, top: number, p: WraithPose): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// The Ferryman
+
+/** The Ferryman's robe: a seam down its front and a cord tied at the waist, its ends hanging. */
+function ferryTrim(c: PixelCanvas, cx: number, top: number, hem: number, edge: (y: number) => [number, number], view: View): void {
+  const side = view === 'side';
+  if (!side) for (let y = Math.round(top + 3); y < hem; y++) c.shade(Math.round(cx - 0.5), y, -1);
+  const by = Math.round(top + 5);
+  const [l, r] = edge(by);
+  for (let x = Math.round(l); x < r; x++) if (c.filled(x, by)) c.px(x, by, CORD, cyl(((x + 0.5 - l) / (r - l)) * 2 - 1, -0.2));
+  if (view === 'up') return;
+  // The knot, and its two ends hanging down the front.
+  const kx = side ? Math.round(l + 1) : Math.round(cx - 1.5);
+  c.part();
+  c.px(kx, by, CORD, sphere(0, -0.5), { bias: 1 });
+  for (let i = 1; i <= 3; i++) {
+    c.px(kx, by + i, CORD, sphere(-0.3, 0.2));
+    if (i < 3 && !side) c.px(kx + 1, by + i + 1, CORD, sphere(0.3, 0.2));
+  }
+}
+
+/** The Ferryman's hood: deep and pointed, and in its dark a skull, dim, lit only by two cyan eye-lights. */
+function ferryHood(c: PixelCanvas, cx: number, cy: number, view: View, p: WraithPose): void {
+  const side = view === 'side';
+  c.part();
+  c.ellipse(cx + (side ? 0.7 : 0), cy, side ? 4.0 : 4.4, 4.3, FERRY_ROBE, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.capsule(cx + (side ? 1.8 : 0.3), cy - 3, cx + (side ? 4.6 : 1.4 - p.tilt * 2.2), cy - 6.2 + Math.abs(p.tilt) * 0.8, 1.8, 0.5, FERRY_ROBE);
+  if (view === 'up') return;
+  c.part();
+  const ox = side ? cx - 2 : cx;
+  c.ellipse(ox, cy + 0.7, side ? 1.6 : 2.7, 3.0, HOOD_DARK);
+  // The skull, set back in the dark: its brow lost in the hood's shadow.
+  c.part();
+  const sx = ox - (side ? 0.3 : 0);
+  c.ellipse(sx, cy + 1.2, side ? 1.3 : 1.9, 2.1, SHADE_SKULL, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 + 0.3, 1) });
+  for (let x = Math.floor(sx - 2); x <= sx + 2; x++) c.shade(x, Math.round(cy - 0.6), -1);
+  for (const [ex, ey] of eyeSpots(ox, cy, side, p.tilt)) {
+    c.px(ex, ey, CYAN_EYE, { x: 0, y: 0, z: 1 }, { glow: 0.75 + p.blaze * 0.25 });
+    c.spark(ex, ey, CYAN_GLOW, 0.2 + p.blaze * 0.25);
+  }
+  c.px(Math.round(sx - 0.5), Math.round(cy + 1.5), HOOD_DARK);
+  // The teeth: a row of bone with dark between.
+  const ty = Math.round(cy + 2.5);
+  for (let x = Math.round(sx - (side ? 1.2 : 1.5)); x <= sx + (side ? 0 : 0.6); x++) c.px(x, ty, (x & 1) === 0 ? SHADE_SKULL : HOOD_DARK, sphere(0, 0.2), { bias: 1 });
+  // The hood's lip, catching a little light round the opening.
+  for (let i = 0; i < 9; i++) {
+    const a = Math.PI * 0.12 + (i / 8) * Math.PI * 0.76;
+    if (side && Math.cos(a) > 0) continue;
+    c.px(Math.round(ox - 0.5 - Math.cos(a) * (side ? 1.8 : 2.9)), Math.round(cy + 0.7 - Math.sin(a) * 3.2), FERRY_ROBE, sphere(-Math.cos(a) * 0.5, -0.5), { bias: 1 });
+  }
+}
+
+/** The coin for the crossing, hung on a cord round the neck. */
+function obol(c: PixelCanvas, hx: number, headY: number, side: boolean): void {
+  c.part();
+  const cx = side ? hx - 2.6 : hx - 0.5;
+  const cy = headY + 7.8;
+  if (side) c.line(hx - 1.4, headY + 4, cx, cy - 1, CORD);
+  else {
+    c.line(hx - 2.2, headY + 4, cx - 0.5, cy - 1, CORD);
+    c.line(hx + 1.2, headY + 4, cx + 0.5, cy - 1, CORD);
+  }
+  c.part();
+  c.ellipse(cx, cy + 0.2, side ? 0.7 : 1.15, 1.15, COIN);
+  c.spark(cx - 0.5, cy - 0.3, [255, 230, 150], 0.35);
+}
+
+/**
+ * The punting pole: grey weathered wood from below the hem to above the
+ * head, gripped in the bony hand, a shepherd's crook at the top with the
+ * lantern hung from it on a short chain, burning teal. It tilts as the
+ * lantern is swung, and the lantern lags behind on its chain.
+ */
+function ferryPole(c: PixelCanvas, hx: number, hy: number, p: WraithPose, view: View): void {
+  const o = view === 'side' ? -1 : 1;
+  const bx = hx - p.swing * 0.3;
+  const by = hy + 9;
+  const tx = hx + p.swing * 0.8;
+  const ty = hy - 12 - p.lift * 0.6;
+  c.part();
+  c.line(bx, by, tx, ty, POLE, () => sphere(-0.35, 0, 1));
+  c.px(Math.round(bx), Math.round(by), IRON, sphere(0, 0.3));
+  // The crook.
+  const pts: [number, number][] = [
+    [tx, ty],
+    [tx + o * 0.8, ty - 1.2],
+    [tx + o * 2, ty - 1.7],
+    [tx + o * 3.1, ty - 0.9],
+    [tx + o * 3.3, ty + 0.2],
+  ];
+  for (let i = 1; i < pts.length; i++) c.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], POLE, () => sphere(0, -0.6, 1));
+  const kx = tx + o * 3.3;
+  const ky = ty + 0.6;
+  const lx = kx - p.swing * 0.25;
+  const ly = ky + 1.6;
+  c.line(kx, ky, lx, ly, IRON);
+  c.part();
+  const glow = 0.5 + p.blaze * 0.5;
+  c.shape(Math.round(ly + 1), Math.round(ly + 4), () => [lx - 1.6, lx + 1.6], IRON, (_x, _y, t) => cyl(t, 0.2));
+  c.part();
+  for (let y = Math.round(ly + 1.5); y <= ly + 3.5; y++) c.px(Math.round(lx - 0.5), y, GHOSTFIRE, { x: 0, y: 0, z: 1 }, { glow, bias: y < ly + 2.5 ? 1 : 0 });
+  c.ellipse(lx, ly + 0.6, 2, 0.7, IRON, { flatten: 0.5 });
+  c.ellipse(lx, ly + 4.6, 2, 0.6, IRON, { flatten: 0.5 });
+  for (let a = 0; a < 10; a++) {
+    const q = (a / 10) * Math.PI * 2;
+    c.spark(lx + Math.cos(q) * 3.2, ly + 2.6 + Math.sin(q) * 3.2, TEAL_GLOW, 0.1 + p.blaze * 0.18);
+  }
+  // The bony hand round the pole.
+  if (view === 'up') return;
+  c.part();
+  c.ellipse(hx, hy + 0.3, 0.9, 0.9, BONE);
+}
+
 function drawFigure(c: PixelCanvas, p: WraithPose, view: View): void {
   const side = view === 'side';
   const cala = L.calavera;
   const U = -p.bob;
   const stretch = Math.round(p.stretch * 2);
-  const top = 15 + U - stretch;
+  const tall = L.ferryman ? FERRY_TALL : 0;
+  const top = 15 + U - stretch - tall;
   const hem = 26 + U;
-  const headY = 10.4 + U - stretch * 0.7;
+  const headY = 10.4 + U - stretch * 0.7 - tall;
   const cx = 12 - (side ? p.lean : 0);
   const hx = side ? cx - 4.5 - p.lean * 0.5 : cx + 5.5;
   const hy = top + 5.5;
 
   if (cala && view !== 'down') veil(c, cx, headY, view);
-  if (view === 'up') lantern(c, cx + 5.5, hy, p);
+  if (view === 'up') lantern(c, cx + 5.5, hy, p, view);
   if (side) {
     c.part();
     sleeve(c, cx + 0.8, top + 1.5, cx + 2.5, top + 6.5);
@@ -495,8 +663,9 @@ function drawFigure(c: PixelCanvas, p: WraithPose, view: View): void {
   const headX = cx + p.tilt;
   if (cala) skull(c, headX, headY, view, p);
   else hood(c, headX, headY, view, p);
+  if (L.ferryman && view !== 'up') obol(c, headX, headY, side);
   if (p.fade > 0) dissolve(c, cx, headY, hem, p);
-  if (view !== 'up') lantern(c, hx, hy, p);
+  if (view !== 'up') lantern(c, hx, hy, p, view);
   if (L.firefly) swarm(c, cx, top, p);
 }
 
@@ -538,10 +707,11 @@ function dissolve(c: PixelCanvas, cx: number, headY: number, hem: number, p: Wra
       c.px(x, y, FIREFLY, { x: 0, y: 0, z: 1 }, { glow: 0.8 });
       c.spark(x, y, FLY_GLOW, 0.3);
     } else {
-      c.px(x, y, SOUL, { x: 0, y: 0, z: 1 }, { glow: 0.55 });
-      // A faint tail of mist below each, where it came from.
-      if (p.scatter > 0.3) c.px(x - Math.round(Math.sin(a)), y + 1, MIST, { x: 0, y: 0, z: 1 });
-      c.spark(x, y, [110, 255, 190], 0.2);
+      const ferry = !!L.ferryman;
+      c.px(x, y, ferry ? FERRY_SOUL : SOUL, { x: 0, y: 0, z: 1 }, { glow: 0.55 });
+      // A faint tail of mist below each, where it came from (river mist for the Ferryman).
+      if (p.scatter > 0.3) c.px(x - Math.round(Math.sin(a)), y + 1, ferry ? RIVER_MIST : MIST, { x: 0, y: 0, z: 1 });
+      c.spark(x, y, ferry ? TEAL_GLOW : [110, 255, 190], 0.2);
     }
   }
   // The eyes stay, glowing cold in the air, the last to go and the first back.
@@ -550,9 +720,9 @@ function dissolve(c: PixelCanvas, cx: number, headY: number, hem: number, p: Wra
   const eyes: [number, number][] = cala
     ? [-1.5, 1.5].map((dx) => [Math.round(hx + dx - 0.5), Math.round(headY + (Math.sign(dx) === Math.sign(p.tilt) ? 1 : 0) + 0.3)])
     : eyeSpots(hx, headY, false, p.tilt);
-  const col: RGB = cala ? [255, 210, 110] : L.firefly ? FLY_GLOW : [110, 255, 190];
+  const col: RGB = cala ? [255, 210, 110] : L.firefly ? FLY_GLOW : L.ferryman ? CYAN_GLOW : [110, 255, 190];
   for (const [ex, ey] of eyes) {
-    c.px(ex, ey, cala ? GOLD_LIGHT : L.firefly ? FIREFLY : SOUL, { x: 0, y: 0, z: 1 }, { glow: 1, bias: 2 });
+    c.px(ex, ey, cala ? GOLD_LIGHT : L.firefly ? FIREFLY : L.ferryman ? CYAN_EYE : SOUL, { x: 0, y: 0, z: 1 }, { glow: 1, bias: 2 });
     // With the body gone they burn a little bigger: a soft halo round each.
     c.spark(ex, ey, col, 0.3 + p.fade * 0.5);
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.spark(ex + dx, ey + dy, col, p.fade * 0.3);
@@ -705,8 +875,21 @@ export function buildWraithFrames(look: WraithLook = WRAITH_LOOK): WraithFrame[]
 export const WISP_SIZE = 10;
 export const WISP_FRAMES = 4;
 
-export function wispFrame(f: number, petal: boolean, fly = false): PixelCanvas {
+export function wispFrame(f: number, petal: boolean, fly = false, ferry = false): PixelCanvas {
   const c = new PixelCanvas(WISP_SIZE, WISP_SIZE);
+  if (ferry) {
+    // A pale teal soul-flame, tall and thin, a white heart in it, swaying, a breath of river mist under it.
+    const lick = [0, 1, 0, -1][f];
+    c.px(4 + (f & 1), 9, RIVER_MIST, { x: 0, y: 0, z: 1 });
+    c.px(6 - (f & 1), 9, RIVER_MIST, { x: 0, y: 0, z: 1 });
+    c.part();
+    c.ellipse(5, 6.8, 1.9, 2, FERRY_SOUL);
+    c.capsule(5, 6.2, 5 + lick, 1.5, 1.3, 0.3, FERRY_SOUL);
+    c.part();
+    c.ellipse(5, 6.8, 0.8, 1.1, FERRY_SOUL, { bias: 2 });
+    c.spark(5, 6, TEAL_GLOW, 0.5);
+    return c;
+  }
   if (fly) {
     // A firefly: a dark little body, wings beating, its tail glowing brighter and dimmer.
     c.px(5, 3, FAE_EYE);
@@ -744,6 +927,37 @@ export function wispFrame(f: number, petal: boolean, fly = false): PixelCanvas {
 const WRAITH_TONES: Tones = [hex('#e0fff4'), hex('#7af0c0'), hex('#2ab888'), hex('#0e4a3a')];
 const CALA_TONES: Tones = [hex('#fffbd0'), hex('#ffd860'), hex('#ff9a2a'), hex('#a0400a')];
 const FLY_TONES: Tones = [hex('#fbffd8'), hex('#e4ff8a'), hex('#a8e04a'), hex('#2e5a22')];
+const FERRY_TONES: Tones = [hex('#e8fffc'), hex('#8af0e4'), hex('#2eb4b0'), hex('#0c3e48')];
+
+/** The Ferryman's swing: the punting pole sweeping, the lantern on its crook at the end of the arc, wisps behind. */
+export function ferryLanternIcon(): Uint8ClampedArray {
+  const t = FERRY_TONES;
+  const wood = hex('#6c5c48');
+  const dark = hex('#30271d');
+  return icon16((put) => {
+    for (let i = 0; i <= 10; i++) {
+      const a = Math.PI * (0.55 + (i / 10) * 0.5);
+      put(9 + Math.cos(a) * 8, 3 + Math.sin(a) * 9, t[3]);
+    }
+    // The pole, leaning across, and its crook.
+    seg(put, 2, 15, 9, 2, wood);
+    seg(put, 3, 15, 10, 2, dark);
+    seg(put, 9, 1, 11, 0, wood);
+    seg(put, 12, 0, 13, 2, wood);
+    put(13, 3, hex('#34384a'));
+    // The lantern on it, teal fire inside.
+    for (let y = 4; y <= 9; y++) {
+      for (let x = 11; x <= 15; x++) {
+        const rim = x === 11 || x === 15 || y === 4 || y === 9;
+        put(x, y, rim ? hex('#545a70') : y < 6 ? t[0] : t[1]);
+      }
+    }
+    for (const [x, y] of [[5, 6], [7, 11], [12, 13]]) {
+      put(x, y, t[1]);
+      put(x, y - 1, t[2]);
+    }
+  });
+}
 
 /** The lantern's swing: a lantern at the end of its arc, wisps left behind it. */
 export function lanternIcon(cala = false, fly = false): Uint8ClampedArray {
@@ -771,13 +985,19 @@ export function lanternIcon(cala = false, fly = false): Uint8ClampedArray {
 }
 
 /** Possess: a ghostly figure diving head-first into a dark shape. */
-export function possessIcon(cala = false, fly = false): Uint8ClampedArray {
-  const t = fly ? FLY_TONES : cala ? CALA_TONES : WRAITH_TONES;
+export function possessIcon(cala = false, fly = false, ferry = false): Uint8ClampedArray {
+  const t = ferry ? FERRY_TONES : fly ? FLY_TONES : cala ? CALA_TONES : WRAITH_TONES;
   return icon16((put) => {
     // The foe: a dark mound, its eyes lit by the ghost inside.
     for (let y = 8; y <= 15; y++) for (let x = 6; x <= 15; x++) if ((x - 10.5) ** 2 / 20 + (y - 13) ** 2 / 25 <= 1) put(x, y, hex('#2a2e3a'));
-    put(9, 11, t[0]);
-    put(12, 11, t[0]);
+    // Its eyes lit by the ghost inside (the Ferryman's foe has a coin laid on each).
+    const eye = ferry ? hex('#e0b440') : t[0];
+    put(9, 11, eye);
+    put(12, 11, eye);
+    if (ferry) {
+      put(9, 12, hex('#a07420'));
+      put(12, 12, hex('#a07420'));
+    }
     // The ghost diving in, its trail streaming back.
     seg(put, 1, 1, 8, 8, t[2]);
     seg(put, 2, 1, 9, 8, t[1]);
@@ -795,12 +1015,22 @@ export function possessIcon(cala = false, fly = false): Uint8ClampedArray {
 // ---------------------------------------------------------------------------
 // A possessed foe wears a mark over its face: two soul-lights burning in it,
 // or (for the Calavera) a little painted sugar skull, or (for the Firefly) a
-// wreath of fern with two fireflies for eyes. Frames 'w', 'c' and 'f'.
+// wreath of fern with two fireflies for eyes, or (for the Ferryman) a coin
+// on each eye. Frames 'w', 'c', 'f' and 'r'.
 
 export const MARK_SIZE = 9;
 
-export function possessMark(cala: boolean, fly = false): PixelCanvas {
+export function possessMark(cala: boolean, fly = false, ferry = false): PixelCanvas {
   const c = new PixelCanvas(MARK_SIZE, MARK_SIZE);
+  if (ferry) {
+    // Coins on the eyes, as the dead are laid out for the crossing, the cyan light showing round them.
+    for (const ex of [2.5, 6.5]) {
+      c.ellipse(ex, 4.5, 1.25, 1.25, COIN);
+      c.spark(ex - 0.5, 3.5, [255, 230, 150], 0.4);
+      c.spark(ex - 0.5, 6, CYAN_GLOW, 0.6);
+    }
+    return c;
+  }
   if (fly) {
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;

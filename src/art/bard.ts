@@ -42,6 +42,23 @@
 // up the shins. His golden lyre, its bowl a tortoise shell, never quite stops
 // shining; its light is gold with the violet of the underworld at its edge.
 //
+// The skald sings the sagas of the north: an iron spangenhelm with a nasal
+// guard over flaxen braids, a beard braided in two, a bearskin over his
+// shoulders clasped with a gold trefoil, a blue-grey wool tunic with a madder
+// braid at its hem, gold rings on his arms and linen wrapped up his shins. He
+// plays a carved round lyre, the old northern kind with a hand-hole through
+// its head and knotwork on its frame; his music flies as runes, pale gold
+// edged in ice blue.
+//
+// The taiko drummer is a skin of the war drummer: a white hachimaki tied
+// round his brow, its ends flicking, his black hair up in a knot; an indigo
+// happi coat with a white collar band, white waves at its hem and a white
+// crest on its back, tied with a vermilion obi; bare arms with indigo hand
+// guards, dark momohiki and split-toed tabi. His drum is a barrel-bodied
+// odaiko of lacquered zelkova, brass tacks round its heads, a vermilion cord
+// round its belly and three commas painted on its skin, beaten with long
+// hinoki bachi; its blows break like brushed waves in vermilion and gold.
+//
 // The body keeps to the 24x32 box; frames are larger so the mallets can be
 // raised overhead and the plume can stream back. Hands are posed in the
 // bard's own terms (forward, out to the side, height) and placed per view.
@@ -210,6 +227,45 @@ const TORTOISE: Material = { ramp: ramp('#180a04', '#381c0a', '#663814', '#985c2
 const LYRE_STRING: Material = { ramp: ramp('#7a5a22', '#b88c3c', '#ecc870'), outline: hex('#2a1606'), noOutline: true, noAO: true, emissive: 0.18 };
 const HELLAS: Dress = { coat: CHITON, cloak: HIMATION, cuff: GOLD, hose: SKIN, boot: LEATHER, hand: SKIN, lute: TORTOISE, neck: GOLD, sleeve: { upper: SKIN, fore: SKIN, cap: CHITON } };
 
+// The skald.
+/** Undyed wool woven blue-grey, the colour of the northern sea. */
+const WADMAL: Material = { ramp: ramp('#161e28', '#263444', '#3a4e62', '#566e84', '#7a94a8'), outline: INK, outlineLit: hex('#141c26') };
+/** The bearskin: thick brown fur, frosted lighter at its tips. */
+const BEAR: Material = { ramp: ramp('#1a110a', '#302014', '#4a3220', '#664830', '#866646'), outline: hex('#0c0805'), outlineLit: hex('#1c120a') };
+/** Flaxen hair and beard. */
+const FLAX: Material = { ramp: ramp('#4e3816', '#86662e', '#b8964e', '#dcc07a', '#f4e0a6'), outline: hex('#24180a'), outlineLit: hex('#382610') };
+const BREECH: Material = { ramp: ramp('#14110e', '#26201a', '#3a3128', '#50463a'), outline: INK };
+/** Linen leg wraps. */
+const WRAP: Material = { ramp: ramp('#5e5444', '#8e826a', '#bcb094', '#dcd2b6'), outline: hex('#221c12'), noOutline: true };
+/** Tablet-woven braid along the hems: madder red. */
+const MADDER: Material = { ramp: ramp('#3a0a08', '#62140e', '#8e2418', '#b43a24'), outline: hex('#1a0404'), noOutline: true };
+/** Carved oak, the lyre's frame, dark and oiled. */
+const OAK: Material = { ramp: ramp('#1c1008', '#341f0e', '#523418', '#6e4a24', '#8e6636'), outline: hex('#0c0603'), shine: true };
+/** The lyre's soundboard: paler maple. */
+const MAPLE: Material = { ramp: ramp('#3e2810', '#62421e', '#88602e', '#a87e44', '#c49a5c'), outline: hex('#1e1206'), shine: true };
+/** A rune cut in the lyre, holding a little light. */
+const RUNE_CUT: Material = { ramp: ramp('#6a8ab0', '#a8ccef', '#e8f4ff'), outline: hex('#0c1a2c'), noOutline: true, noAO: true, emissive: 0.45 };
+const SAGA: Dress = { coat: WADMAL, cloak: BEAR, cuff: GOLD, hose: BREECH, boot: LEATHER, hand: SKIN, lute: MAPLE, neck: OAK, sleeve: { upper: WADMAL, fore: WADMAL } };
+
+// The taiko drummer.
+/** The happi coat: deep indigo cotton. */
+const AI: Material = { ramp: ramp('#080c22', '#121a3e', '#1c285c', '#2a3c80', '#4256a6'), outline: hex('#03040c'), outlineLit: hex('#0a0e22') };
+/** White cotton: the collar band, the crest, the headband. */
+const COTTON: Material = { ramp: ramp('#767a88', '#acb0bc', '#dcdee6', '#ffffff'), outline: hex('#1e202a') };
+/** Vermilion: the obi and the drum's cord. */
+const SHU: Material = { ramp: ramp('#480806', '#7c120c', '#b22214', '#de3a1e', '#ff6a3a'), outline: hex('#1c0402'), outlineLit: hex('#360804') };
+/** The odaiko's barrel: one trunk of zelkova, lacquered to a warm shine. */
+const KEYAKI: Material = { ramp: ramp('#240c04', '#44190a', '#6c2e14', '#94481e', '#c06c34'), outline: hex('#100402'), shine: true };
+/** Brass tacks round the head, and the iron ring. */
+const TACK: Material = { ramp: ramp('#4a3010', '#8a6420', '#d4a83c', '#fff0a0'), outline: hex('#1a1004'), noOutline: true, shine: true };
+/** The bachi: pale hinoki sticks. */
+const HINOKI: Material = { ramp: ramp('#7a5c32', '#a88650', '#d0b07a', '#ecd4a2'), outline: hex('#2a1c0a') };
+/** Momohiki, tight trousers in the darkest indigo, and the split-toed tabi. */
+const MOMOHIKI: Material = { ramp: ramp('#070914', '#0e1226', '#181e3a', '#242c52'), outline: hex('#020308') };
+const TABI: Material = { ramp: ramp('#050610', '#0c0e1c', '#181a2e', '#282c46'), outline: hex('#020206') };
+const RAVEN_HAIR: Material = { ramp: ramp('#060506', '#121014', '#201c22', '#322c34'), outline: hex('#020202'), outlineLit: hex('#0e0c10') };
+const TAIKO: Gear = { fur: AI, vest: AI, paint: SHU, beard: RAVEN_HAIR, bead: GOLD, kilt: MOMOHIKI, shell: KEYAKI, rim: KEYAKI, rope: SHU, hide: HIDE, handle: HINOKI, knob: HINOKI };
+
 /** One look for the bard: its texture key, its instrument, and the light of its music. */
 export interface BardLook {
   key: string;
@@ -220,7 +276,7 @@ export interface BardLook {
   /** The wildsong: hooded, cloaked in moss, wisps drifting round him. */
   wild?: boolean;
   /** A skin that changes the cut, not just the cloth: the harlequin (a minstrel) or the moonhowl (a drummer). */
-  style?: 'harlequin' | 'howl' | 'vagabond' | 'fadista' | 'orpheus';
+  style?: 'harlequin' | 'howl' | 'vagabond' | 'fadista' | 'orpheus' | 'skald' | 'taiko';
   /** The drummer's kit. */
   gear?: Gear;
   /** Light of the music, brightest first. */
@@ -296,7 +352,26 @@ export const ORPHEUS_LOOK: BardLook = {
   light: [hex('#fffdf2'), hex('#ffeeaa'), hex('#ffc84a'), hex('#7a3ab0')],
 };
 
-export const BARD_LOOKS = [MINSTREL_LOOK, DRUMMER_LOOK, WILD_LOOK, HARLEQUIN_LOOK, HOWL_LOOK, VAGABOND_LOOK, FADISTA_LOOK, ORPHEUS_LOOK];
+/** The minstrel's skald skin: runes in pale gold, edged in the ice blue of a northern sky. */
+export const SKALD_LOOK: BardLook = {
+  key: 'bard_skald',
+  drum: false,
+  dress: SAGA,
+  style: 'skald',
+  light: [hex('#fffcee'), hex('#ffe8a0'), hex('#8ccfff'), hex('#2c5c9e')],
+};
+
+/** The war drummer's taiko skin: vermilion and gold. */
+export const TAIKO_LOOK: BardLook = {
+  key: 'bard_taiko',
+  drum: true,
+  dress: TROUBADOUR,
+  style: 'taiko',
+  gear: TAIKO,
+  light: [hex('#fff8e6'), hex('#ffd24a'), hex('#ff4a1e'), hex('#8a1208')],
+};
+
+export const BARD_LOOKS = [MINSTREL_LOOK, DRUMMER_LOOK, WILD_LOOK, HARLEQUIN_LOOK, HOWL_LOOK, VAGABOND_LOOK, FADISTA_LOOK, ORPHEUS_LOOK, SKALD_LOOK, TAIKO_LOOK];
 
 /** The look being drawn; set by buildBardFrames. */
 let S: BardLook = MINSTREL_LOOK;
@@ -432,6 +507,14 @@ function sleevedArm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: nu
     c.part();
     c.px(ex - 0.5, ey - 0.5, BEDROLL, sphere(0, -0.2), { bias: bias + 1 });
   }
+  if (S.style === 'skald') {
+    // A twisted gold ring round the upper arm, over the sleeve.
+    c.part();
+    const rx = sx + (ex - sx) * 0.62;
+    const ry = sy + (ey - sy) * 0.62;
+    c.px(rx - 0.6, ry, GOLD, sphere(-0.4, -0.3), { bias: bias + 1 });
+    c.px(rx + 0.6, ry, GOLD, sphere(0.4, -0.3), { bias: bias + 1 });
+  }
   // A slash of the doublet down the puff (the wildsong's is all cloak).
   if (!S.wild && !plain) {
     c.part();
@@ -478,6 +561,18 @@ function stickDir(view: View, arm: 'a' | 'b', k: number): [number, number] {
 /** A mallet in the fist: a short wooden handle and a padded red head, lit on the beat. */
 function mallet(c: PixelCanvas, view: View, arm: 'a' | 'b', p: Placed, k: number, glow: number, bias = 0): void {
   const [ux, uy] = stickDir(view, arm, k);
+  if (S.style === 'taiko') {
+    // Long bachi of pale hinoki, no padded head: a straight stick with a rounded, lighter tip.
+    const blen = 6.6;
+    c.part();
+    c.line(p.x - ux * 1.0, p.y - uy * 1.0, p.x + ux * blen, p.y + uy * blen, G.handle, () => sphere(-uy * 0.5, ux * 0.5 - 0.3), { bias });
+    c.part();
+    const tx = p.x + ux * (blen + 0.6);
+    const ty = p.y + uy * (blen + 0.6);
+    c.px(tx, ty, G.handle, sphere(ux * 0.4, uy * 0.4 - 0.5), { bias: bias + 1 });
+    if (glow > 0 && k < 0.35) glowAt(c, tx, ty, glow * 0.7);
+    return;
+  }
   const len = 5.2;
   c.part();
   c.line(p.x - ux * 0.8, p.y - uy * 0.8, p.x + ux * len, p.y + uy * len, G.handle, () => sphere(-uy * 0.5, ux * 0.5 - 0.3), { bias });
@@ -498,6 +593,34 @@ function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bia
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
   if (S.style === 'orpheus') {
     sandal(c, x, y, side, bias);
+    return;
+  }
+  if (S.style === 'taiko') {
+    // Jika-tabi: soft dark cloth to the ankle, the big toe split from the rest.
+    c.part();
+    if (side) c.ellipse(x, y, 2.1, 1.15, TABI, { flatten: 0.8, bias });
+    else c.ellipse(x, y, 1.5, 1.25, TABI, { flatten: 0.8, bias });
+    c.part();
+    const w = side ? 1.3 : 1.5;
+    const top = Math.round(y - 2.2);
+    c.shape(top, top + 1, () => [x - w, x + w], TABI, (_x, _y, t) => cyl(t, 0.2), { bias: bias + 1 });
+    if (side) c.shade(x - 2, y, -2);
+    else c.shade(x - 0.5, y + 1, -2);
+    return;
+  }
+  if (S.style === 'skald') {
+    // Low turnshoes, and linen wrapped in a spiral up the shin.
+    c.part();
+    if (side) c.ellipse(x, y, 2.2, 1.2, D.boot, { flatten: 0.8, bias });
+    else c.ellipse(x, y, 1.6, 1.3, D.boot, { flatten: 0.8, bias });
+    c.part();
+    // Linen strips crossing up the dark trousers, one way and back.
+    for (let i = 0; i < 3; i++) {
+      const yy = Math.round(y - 1.6 - i * 1.1);
+      const o = i & 1 ? 0.6 : -0.6;
+      c.px(x + o - 0.5, yy, WRAP, sphere(o, -0.2), { bias: bias + 1 });
+      if (!side) c.px(x - o - 0.5, yy, WRAP, sphere(-o, -0.2), { bias: bias + 1 });
+    }
     return;
   }
   c.part();
@@ -566,6 +689,10 @@ function drawLute(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, b
   const vy = ux;
   if (S.style === 'orpheus') {
     drawLyre(c, p, bx, by, ux, uy, vx, vy, bias);
+    return;
+  }
+  if (S.style === 'skald') {
+    drawRoundLyre(c, p, bx, by, ux, uy, vx, vy, bias);
     return;
   }
   const banjo = S.style === 'vagabond';
@@ -769,6 +896,68 @@ function drawLyre(c: PixelCanvas, p: Pose, bx: number, by: number, ux: number, u
   stringLight(c, gx, gy, ux, uy, p.glow);
 }
 
+/**
+ * The skald's round lyre, the old northern kind: one long slab of oak
+ * rounded at both ends, a hand-hole cut through its head for the fingers
+ * that stop the strings, a pale maple soundboard below it with a bridge and
+ * a tailpiece, knotwork carved round the frame, and a rune cut in its crown
+ * that holds a little light.
+ */
+function drawRoundLyre(c: PixelCanvas, p: Pose, bx: number, by: number, ux: number, uy: number, vx: number, vy: number, bias: number): void {
+  const at = (u: number, v: number): [number, number] => [bx + ux * u + vx * v, by + uy * u + vy * v];
+  const MID = 3.4;
+  const HALF = 6.6;
+  const HW = 2.9;
+  const [mx, my] = at(MID, 0);
+  c.part();
+  for (let y = Math.floor(my - 9); y <= Math.ceil(my + 9); y++) {
+    for (let x = Math.floor(mx - 9); x <= Math.ceil(mx + 9); x++) {
+      const dx = x + 0.5 - bx;
+      const dy = y + 0.5 - by;
+      const u = dx * ux + dy * uy;
+      const v = dx * vx + dy * vy;
+      // A squircle: straight sides, rounded ends.
+      const e = ((u - MID) / HALF) ** 4 + (v / HW) ** 4;
+      if (e > 1) continue;
+      // The hand-hole, right through.
+      if (u > 6.1 && u < 8.7 && Math.abs(v) < 1.45) continue;
+      const frame = e > 0.3 || u > 5.4;
+      const n = sphere((v / HW) * 0.7, -0.35 + ((u - MID) / HALF) * 0.3, 1);
+      if (!frame) {
+        c.px(x, y, D.lute, n, { bias });
+        continue;
+      }
+      // Knotwork: two strands crossing over and under along the frame, cut as light and dark.
+      const k = (((x + y * 2) % 4) + 4) % 4;
+      c.px(x, y, D.neck, n, { bias: bias + (k === 0 ? 1 : 0) });
+    }
+  }
+  // The strings, from the tailpiece over the bridge to the yoke under the hand-hole.
+  c.part();
+  for (const v of [-1.0, 0, 1.0]) {
+    const [sx, sy] = at(-2.4, v * 0.7);
+    const [tx, ty] = at(6.0, v);
+    c.line(sx, sy, tx, ty, STRING, () => sphere(0, -0.3), { bias });
+  }
+  c.part();
+  for (const v of [-1.3, 0, 1.3]) {
+    const [x, y] = at(-0.5, v);
+    c.px(x, y, D.neck, sphere(0, -0.5), { bias: bias + 1 });
+  }
+  const [tx, ty] = at(-2.7, 0);
+  c.px(tx, ty, GOLD, sphere(0, -0.4), { bias: bias + 1 });
+  // The rune in the crown, and a glint of it travelling round the knotwork.
+  const [rx, ry] = at(9.4, 0);
+  c.part();
+  c.px(rx, ry, RUNE_CUT, sphere(0, -0.5), { bias: bias + 1 });
+  c.spark(rx, ry, S.light[1], 0.35 + p.glow * 0.4);
+  const round: [number, number][] = [[4.6, 2.3], [7.6, 2.4], [9.6, 1.0], [9.6, -1.0], [7.6, -2.4], [4.6, -2.3]];
+  const [gx, gy] = at(...round[p.tick % round.length]);
+  c.spark(gx, gy, S.light[2], 0.3 + p.glow * 0.3);
+  const [sx, sy] = at(0.6, 0);
+  stringLight(c, sx, sy, ux, uy, p.glow);
+}
+
 // ---------------------------------------------------------------------------
 // The drum
 
@@ -777,6 +966,10 @@ function drawLyre(c: PixelCanvas, p: Pose, bx: number, by: number, ux: number, u
  * two bronze rims, its hide head seen from above, lit when it's struck.
  */
 function drawDrum(c: PixelCanvas, cx: number, top: number, rx: number, glow: number, bias = 0): void {
+  if (S.style === 'taiko') {
+    drawOdaiko(c, cx, top, rx + 0.6, glow, bias);
+    return;
+  }
   const bot = top + 4.4;
   c.part();
   c.shape(Math.round(top), Math.round(bot), () => [cx - rx, cx + rx], G.shell, (_x, _y, t) => cyl(t, 0.1), { bias });
@@ -807,6 +1000,67 @@ function drawDrum(c: PixelCanvas, cx: number, top: number, rx: number, glow: num
     }
     c.spark(cx, top - 1, hot, glow * 0.5);
     c.spark(cx, top + 1, mid, glow * 0.4);
+  }
+}
+
+/**
+ * The taiko drummer's odaiko: a barrel of lacquered zelkova bulging at its
+ * belly, brass tacks in a ring under the head, a vermilion cord round its
+ * waist with an iron ring for carrying, and three commas (mitsudomoe)
+ * painted on the pale skin of its head.
+ */
+function drawOdaiko(c: PixelCanvas, cx: number, top: number, rx: number, glow: number, bias: number): void {
+  const H = 5.2;
+  const bot = top + H;
+  const hw = (y: number) => rx + Math.sin(Math.PI * Math.min(1, Math.max(0, (y + 0.5 - top) / H))) * 0.9;
+  c.part();
+  c.shape(Math.round(top), Math.round(bot), (y) => [cx - hw(y), cx + hw(y)], G.shell, (x, y) => {
+    const t = (x + 0.5 - cx) / hw(y);
+    return sphere(t * 0.9, ((y + 0.5 - top) / H - 0.5) * 0.9, 1);
+  }, { bias });
+  // The bottom edge, curving with the barrel, a shade darker.
+  c.part();
+  for (let x = Math.floor(cx - rx); x < Math.ceil(cx + rx); x++) {
+    const t = (x + 0.5 - cx) / rx;
+    if (Math.abs(t) > 1) continue;
+    c.px(x, Math.round(bot) + Math.round((1 - t * t) * 0.9), G.shell, cyl(t, 0.6), { bias: bias - 1 });
+  }
+  // Brass tacks in a ring just under the head, curving round the barrel.
+  c.part();
+  for (let x = Math.floor(cx - rx) + 1; x < Math.ceil(cx + rx); x += 2) {
+    const t = (x + 0.5 - cx) / rx;
+    if (Math.abs(t) > 0.95) continue;
+    c.px(x, Math.round(top + 1.4 + (1 - t * t) * 0.6), TACK, sphere(t * 0.6, -0.4), { bias: bias + 1 });
+  }
+  // The cord round its belly, twisted vermilion, and the iron ring hanging from it.
+  c.part();
+  const mid = top + H * 0.62;
+  for (let x = Math.floor(cx - hw(mid)); x <= Math.ceil(cx + hw(mid)); x++) {
+    const t = (x + 0.5 - cx) / hw(mid);
+    if (Math.abs(t) > 1) continue;
+    c.px(x, Math.round(mid + (1 - t * t) * 0.8), G.rope, sphere(t * 0.8, -0.2), { bias: bias + ((x & 1) ? 1 : 0) });
+  }
+  c.part();
+  c.px(cx + rx * 0.55, Math.round(mid + 1.6), TACK, sphere(0.3, 0.2), { bias: bias + 1 });
+  // The head: the skin's rolled edge, then the skin itself.
+  c.part();
+  c.ellipse(cx, top, rx + 0.5, 2.0, G.hide, { normal: (_x, _y, dx, dy) => sphere(dx * 0.6, dy * 0.3 - 0.8, 1), bias: bias - 1 });
+  c.part();
+  c.ellipse(cx, top - 0.1, rx - 0.6, 1.35, G.hide, { normal: (_x, _y, dx) => sphere(dx * 0.3, -0.9, 1), bias });
+  // Three commas swirling round the head's middle.
+  c.part();
+  for (const [dx, dy] of [[-2, 0], [-1, -1], [1, -1], [2, 0], [0, 1], [-1, 1]] as const) {
+    c.px(Math.round(cx) + dx - 0.5, Math.round(top) + dy, (dx + dy) & 1 ? SHU : RAVEN_HAIR, sphere(0, -0.9), { bias: bias + 1 });
+  }
+  if (glow > 0) {
+    const [core, hot, mid2] = S.light;
+    c.spark(cx, top, core, glow);
+    for (let i = 1; i <= Math.round(rx - 1); i++) {
+      c.spark(cx - i, top, i < 2 ? hot : mid2, glow * (0.8 - i * 0.11));
+      c.spark(cx + i, top, i < 2 ? hot : mid2, glow * (0.8 - i * 0.11));
+    }
+    c.spark(cx, top - 1, hot, glow * 0.5);
+    c.spark(cx, top + 1, mid2, glow * 0.4);
   }
 }
 
@@ -1934,6 +2188,467 @@ function capaSide(c: PixelCanvas, hx: number, top: number, L: number, sway: numb
 }
 
 // ---------------------------------------------------------------------------
+// The skald
+
+/** A ragged fur hem under row `y`: tufts hanging off the fur here and there, a frosted tip on some. */
+function furHem(c: PixelCanvas, x0: number, x1: number, y: number, bias = 0): void {
+  c.part();
+  for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) {
+    if (c.materialAt(x, y) !== BEAR) continue;
+    const k = (((x * 5) % 7) + 7) % 7;
+    if (k < 3) c.px(x, y + 1, BEAR, sphere(0, 0.6), { bias: bias + (k === 0 ? 1 : 0) });
+    if (k === 0) c.px(x, y + 2, BEAR, sphere(0, 0.7), { bias });
+  }
+}
+
+/** Strands of fur combed down the bearskin: dark streaks broken every few rows, a lighter tip here and there. */
+function furStrands(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number): void {
+  for (let y = Math.round(y0); y <= Math.round(y1); y++) {
+    for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) {
+      if (c.materialAt(x, y) !== BEAR) continue;
+      const k = (((x * 3 + (y >> 1)) % 5) + 5) % 5;
+      if (k === 0) c.shade(x, y, -1);
+      else if (k === 3 && (y & 1)) c.shade(x, y, 1);
+    }
+  }
+}
+
+/** The bearskin seen from the front: hanging behind him on both sides, to his knees. */
+function bearBehind(c: PixelCanvas, cx: number, U: number, L: number, sway: number): void {
+  const top = 14.8 + U;
+  const hem = 27 + L;
+  c.part();
+  c.shape(top, Math.round(hem), (y) => {
+    const u = (y - top) / (hem - top);
+    return [cx - 5.8 - u * 1.3 + u * sway, cx + 5.8 + u * 1.3 + u * sway];
+  }, BEAR, (_x, _y, t, u) => sphere(t * 0.9, u * 0.4, 1), { bias: -1 });
+  furStrands(c, cx - 9, cx + 9, top + 2, hem);
+  furHem(c, cx - 9, cx + 9, Math.round(hem), -1);
+}
+
+/** The fur over his shoulders from the front: a thick roll of it, falling a little down his chest either side. */
+function bearShoulders(c: PixelCanvas, cx: number, U: number): void {
+  c.part();
+  for (const s of [-1, 1]) c.capsule(cx + s * 4.3, 15.6 + U, cx + s * 3.6, 19.4 + U, 1.5, 1.0, BEAR);
+  const n = 7;
+  for (let i = 0; i < n; i++) {
+    const k = (i / (n - 1)) * 2 - 1;
+    c.ellipse(cx + k * 5.4, 15.5 + U - (1 - k * k) * 0.5, 1.5, 1.35, BEAR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + k * 0.3, dy * 0.8 - 0.25, 1) });
+  }
+  furStrands(c, cx - 7, cx + 7, 15 + U, 20 + U);
+}
+
+/** Fur heaped over a shoulder, over the arm. */
+function bearCap(c: PixelCanvas, x: number, y: number, s: number): void {
+  c.part();
+  c.ellipse(x, y, 2.0, 1.6, BEAR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + s * 0.3, dy * 0.8 - 0.3, 1) });
+  c.shade(Math.round(x), Math.round(y + 1), -1);
+  c.shade(Math.round(x - s), Math.round(y - 1), 1);
+}
+
+/** A gold trefoil brooch: three lobes and a bright heart. */
+function trefoil(c: PixelCanvas, x: number, y: number): void {
+  c.part();
+  c.px(x - 1, y, BROOCH, sphere(-0.4, -0.3));
+  c.px(x + 1, y, BROOCH, sphere(0.4, -0.3));
+  c.px(x, y + 1, BROOCH, sphere(0, 0.2));
+  c.px(x, y, GOLD, sphere(0, -0.6), { bias: 1 });
+  c.spark(x, y, S.light[1], 0.3);
+}
+
+/** A braid: a rope of hair from (x0, y0) to (x1, y1), its plaits pricked out, bound with a gold ring at its end. */
+function braid(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number, r: number): void {
+  c.part();
+  c.capsule(x0, y0, x1, y1, r, r * 0.75, FLAX);
+  const n = Math.max(1, Math.round(Math.abs(y1 - y0)));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    c.shade(Math.round(x0 + (x1 - x0) * t - 0.5 + (i & 1)), Math.round(y0 + (y1 - y0) * t), i & 1 ? -1 : 1);
+  }
+  c.part();
+  c.px(x1, y1 + 0.6, GOLD, sphere(0, -0.3), { bias: 1 });
+}
+
+/** A madder braid woven along the hem's row `y`, a gold thread through it, wherever the tunic is. */
+function sagaHem(c: PixelCanvas, x0: number, x1: number, y: number): void {
+  const cloth: number[] = [];
+  for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) if (c.materialAt(x, y) === WADMAL) cloth.push(x);
+  c.part();
+  for (const x of cloth) c.px(x, y, ((x % 3) + 3) % 3 === 1 ? GOLD : MADDER, sphere(0, 0.3));
+}
+
+/** The spangenhelm from the front: an iron dome riveted to bronze strips, a brow band and a nasal guard. */
+function spangenDown(c: PixelCanvas, cx: number, U: number, nasal = true): void {
+  c.part();
+  c.shape(Math.round(6.2 + U), Math.round(9.6 + U), (y) => {
+    const u = (y - 6.2 - U) / 3.4;
+    const hw = 1.6 + Math.sqrt(Math.max(0, u)) * 2.5;
+    return [cx - hw - 0.3, cx + hw - 0.1];
+  }, IRON, (_x, _y, t, u) => sphere(t * 0.9, u * 0.7 - 0.6, 1));
+  // The spangen: bronze strips up the front and the sides to the crown.
+  c.part();
+  for (let y = Math.round(6.6 + U); y <= Math.round(9.4 + U); y++) c.px(cx - 0.5, y, BRONZE, sphere(0, -0.5));
+  for (const s of [-1, 1]) c.px(cx - 0.4 + s * 2.6, 9 + U, BRONZE, sphere(s * 0.6, -0.3));
+  c.px(cx - 0.5, 5.8 + U, BRONZE, sphere(0, -0.9), { bias: 1 });
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => [cx - 4.2, cx + 3.9], BRONZE, (_x, _y, t) => cyl(t, 0.3));
+  for (const x of [cx - 3, cx + 2]) c.shade(x, 10 + U, 2);
+  if (!nasal) return;
+  // The nasal guard, down over the bridge of his nose.
+  c.part();
+  c.px(cx - 1, 11 + U, IRON, sphere(0, -0.3), { bias: 1 });
+  c.px(cx - 1, 12 + U, IRON, sphere(0, 0), { bias: 1 });
+}
+
+/** The skald's head from the front: helm, flaxen braids at his temples, the beard braided in two. */
+function skaldHead(c: PixelCanvas, hx: number, hU: number, p: Pose): void {
+  c.part();
+  c.ellipse(hx, 11.8 + hU, 3.9, 3.5, FLAX, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.ellipse(hx - 0.2, 12.8 + hU, 2.55, 2.4, SKIN);
+  eyes(c, [[hx - 2, 12 + hU], [hx + 1, 12 + hU]], p.blink);
+  // The helm's shadow over the brow.
+  for (let x = hx - 2; x <= hx + 1; x++) c.shade(x, 11 + hU, -1);
+  // A full beard over the jaw, the mouth lost in it, then two braids.
+  c.part();
+  c.shape(Math.round(13.6 + hU), Math.round(15 + hU), (y) => (y <= Math.round(14 + hU) ? [hx - 2.9, hx + 2.5] : [hx - 2.3, hx + 1.9]), FLAX, (_x, _y, t) => sphere(t * 0.8, 0.2, 1));
+  c.shade(hx - 1, 14 + hU, -1);
+  c.shade(hx, 14 + hU, -1);
+  braid(c, hx - 1.4, 15.6 + hU, hx - 1.6, 18.2 + hU, 0.85);
+  braid(c, hx + 0.8, 15.6 + hU, hx + 1.0, 18.2 + hU, 0.85);
+  // Braids at the temples, falling over the fur in front of his shoulders.
+  braid(c, hx - 3.5, 12.6 + hU, hx - 3.9, 17.4 + hU, 0.8);
+  braid(c, hx + 3.1, 12.6 + hU, hx + 3.5, 17.4 + hU, 0.8);
+  spangenDown(c, hx, hU);
+}
+
+/** The skald from the front: the wool tunic and its braid, belt and horn, the bearskin and its brooch. */
+function skaldDown(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 25.4 + L;
+  fitted(c, cx, top, waist, hem, WADMAL, 0.5);
+  for (let y = waist + 1; y <= Math.round(hem); y++) {
+    c.shade(cx - 2, y, -1);
+    c.shade(cx + 2, y, -1);
+  }
+  // The keyhole at the throat, trimmed in madder.
+  c.part();
+  c.px(cx - 1, top + 1, MADDER, sphere(-0.3, -0.4));
+  c.px(cx, top + 1, MADDER, sphere(0.3, -0.4));
+  c.shade(cx, top + 2, -2);
+  sagaHem(c, cx - 8, cx + 8, Math.round(hem));
+  // The belt and its buckle, and a drinking horn hung at his hip.
+  c.part();
+  c.shape(waist, waist, () => [cx - 4.1, cx + 4.1], LEATHER, (_x, _y, t) => cyl(t, 0));
+  c.part();
+  c.px(cx, waist, GOLD, sphere(0, -0.3));
+  c.part();
+  c.capsule(cx + 4.4, waist + 0.8, cx + 5.0, waist + 3.2, 0.9, 0.6, IVORY);
+  c.px(cx + 4.6, waist + 3.8, BRONZE, sphere(0.2, 0.4), { bias: 1 });
+  c.px(cx + 4.2, waist + 0.4, BRONZE, sphere(0, -0.4), { bias: 1 });
+  bearShoulders(c, cx, U);
+  trefoil(c, cx - 2, 16.6 + U);
+  skaldHead(c, cx + (p.head?.[0] ?? 0), U + (p.head?.[1] ?? 0), p);
+}
+
+/** The skald from behind: the bearskin over his back to the knee, a braid down it, the helm. */
+function skaldUp(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  fitted(c, cx, top, waist, 25.4 + L, WADMAL, 0.5);
+  sagaHem(c, cx - 8, cx + 8, Math.round(25.4 + L));
+  const hem = 27 + L;
+  c.part();
+  c.shape(Math.round(top - 0.6), Math.round(hem), (y) => {
+    const u = (y - top) / (hem - top);
+    return [cx - 5.6 - u * 1.0 + u * p.sway * 0.5, cx + 5.6 + u * (1.0 + p.sway)];
+  }, BEAR, (_x, _y, t, u) => sphere(t * 0.9, u * 0.6 - 0.3, 1));
+  furStrands(c, cx - 9, cx + 9, top, hem);
+  furHem(c, cx - 9, cx + 9, Math.round(hem));
+  // Flaxen hair to the nape, a long braid down the fur, the helm (no nasal from behind).
+  c.part();
+  c.ellipse(cx, 11.6 + U, 3.9, 3.6, FLAX, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.shape(Math.round(13 + U), Math.round(15.4 + U), (y) => {
+    const hw = 3.4 - (y - 13 - U) * 0.9;
+    return [cx - hw, cx + hw];
+  }, FLAX, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
+  braid(c, cx - 0.2, 15 + U, cx + p.sway * 0.4, 19.0 + U, 0.8);
+  spangenDown(c, cx, U, false);
+}
+
+/** The skald in profile, facing left: the tunic, the fur on his shoulder, the helm's nasal out over his nose. */
+function skaldSide(c: PixelCanvas, cx: number, hx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 25.4 + L;
+  fittedSide(c, cx, hx, top, waist, hem, WADMAL, 0.5);
+  sagaHem(c, cx - 8, cx + 8, Math.round(hem));
+  c.part();
+  c.shape(waist, waist, () => [hx - 3.1, hx + 3.1], LEATHER, (_x, _y, t) => cyl(t, 0));
+  c.part();
+  c.px(Math.round(hx - 3.1), waist, GOLD, sphere(-0.5, -0.3));
+  // The horn hangs at the back of his hip.
+  c.part();
+  c.capsule(hx + 2.8, waist + 0.7, hx + 3.6 + p.sway * 0.2, waist + 3.0, 0.9, 0.6, IVORY);
+  c.px(hx + 3.8 + p.sway * 0.2, waist + 3.6, BRONZE, sphere(0.2, 0.4), { bias: 1 });
+  // The fur over his shoulder.
+  c.part();
+  c.ellipse(hx + 0.6, 16.0 + U, 3.8, 2.0, BEAR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + 0.1, dy * 0.6 - 0.4, 1) });
+  furStrands(c, hx - 4, hx + 5, 14 + U, 18 + U);
+  trefoil(c, hx - 2, 16.6 + U);
+  // Head: hair to the nape, the face turned left, the beard and its braid.
+  c.part();
+  c.ellipse(hx + 0.6, 11.8 + U, 3.4, 3.5, FLAX, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.ellipse(hx - 1.4, 12.9 + U, 2.2, 2.3, SKIN);
+  c.part();
+  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  c.shade(hx - 3, 11 + U, -1);
+  c.part();
+  c.shape(Math.round(13.8 + U), Math.round(15 + U), (y) => (y <= Math.round(14 + U) ? [hx - 3.8, hx + 0.6] : [hx - 3.4, hx + 0.2]), FLAX, (_x, _y, t) => sphere(t * 0.8, 0.2, 1));
+  braid(c, hx - 2.4, 15.6 + U, hx - 2.8, 18.2 + U, 0.85);
+  braid(c, hx + 1.8, 12.6 + U, hx + 2.4 + p.sway * 0.3, 17.0 + U, 0.85);
+  // The helm in profile.
+  c.part();
+  c.shape(Math.round(6.4 + U), Math.round(9.6 + U), (y) => {
+    const u = Math.sqrt(Math.max(0, (y - 6.4 - U) / 3.2));
+    return [hx - 1.4 - u * 2.1, hx + 1.6 + u * 1.8];
+  }, IRON, (_x, _y, t, u) => sphere(t * 0.9, u * 0.7 - 0.6, 1));
+  c.part();
+  for (let y = Math.round(6.8 + U); y <= Math.round(9.4 + U); y++) c.px(hx - 0.4 - (y - 6.8 - U) * 0.35, y, BRONZE, sphere(-0.2, -0.5));
+  c.px(hx, 5.9 + U, BRONZE, sphere(0, -0.9), { bias: 1 });
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => [hx - 3.9, hx + 3.4], BRONZE, (_x, _y, t) => cyl(t, 0.3));
+  c.shade(hx + 1, 10 + U, 2);
+  c.part();
+  c.px(hx - 4, 11 + U, IRON, sphere(-0.5, -0.2), { bias: 1 });
+  c.px(hx - 4, 12 + U, IRON, sphere(-0.5, 0.1), { bias: 1 });
+}
+
+/** The bearskin streaming behind him in profile, to his knees. */
+function bearSide(c: PixelCanvas, hx: number, top: number, L: number, sway: number): void {
+  const hem = 27 + L;
+  c.part();
+  c.shape(Math.round(top - 1), Math.round(hem), (y) => {
+    const u = (y - top + 1) / (hem - top + 1);
+    return [hx + 0.2 - u * 0.4, hx + 4.6 + u * (1.8 + sway)];
+  }, BEAR, (_x, _y, t, u) => sphere(t * 0.9 + 0.1, u * 0.5 - 0.2, 1), { bias: -1 });
+  furStrands(c, hx - 1, hx + 9, top, hem);
+  furHem(c, hx - 1, hx + 9, Math.round(hem), -1);
+}
+
+// ---------------------------------------------------------------------------
+// The taiko drummer
+
+/** White waves along the happi's hem: a white border on row `y`, crests rising off it every third pixel. */
+function waveHem(c: PixelCanvas, x0: number, x1: number, y: number): void {
+  const cloth: number[] = [];
+  for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) if (c.materialAt(x, y) === AI) cloth.push(x);
+  c.part();
+  for (const x of cloth) {
+    c.px(x, y, COTTON, sphere(0, 0.3));
+    const k = ((x % 3) + 3) % 3;
+    if (k === 0 && c.materialAt(x, y - 1) === AI) c.px(x, y - 1, COTTON, sphere(0, 0));
+  }
+}
+
+/** A cord twisted of vermilion and white, from (x0, y0) to (x1, y1). */
+function twistCord(c: PixelCanvas, x0: number, y0: number, x1: number, y1: number): void {
+  c.part();
+  const n = Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    c.px(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, i % 3 === 2 ? COTTON : SHU, sphere(0, -0.3));
+  }
+}
+
+/** The hachimaki's two ends, out from its knot at (x, y), flicking in the air as he moves. */
+function headbandTails(c: PixelCanvas, x: number, y: number, dir: number, tick: number, drop = 0): void {
+  const flick = [0, 0.5, 0.8, 0.4, 0, -0.3][tick % 6];
+  c.part();
+  c.capsule(x, y, x + dir * 2.2, y - 1.2 + flick + drop, 0.65, 0.45, COTTON);
+  c.capsule(x, y + 0.3, x + dir * 1.8, y + 1.5 + flick * 0.6 + drop, 0.6, 0.4, COTTON);
+  c.part();
+  c.px(x, y, COTTON, sphere(dir * 0.4, -0.4), { bias: 1 });
+}
+
+/** The taiko drummer's head from the front: black hair up in a knot, a white hachimaki, a hard stare. */
+function taikoHead(c: PixelCanvas, hx: number, hU: number, p: Pose): void {
+  headbandTails(c, hx + 3.2, 10.2 + hU, 1, p.tick);
+  c.part();
+  c.ellipse(hx, 11.2 + hU, 3.3, 3.2, RAVEN_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 1) });
+  c.part();
+  c.ellipse(hx, 7.6 + hU, 1.4, 1.2, RAVEN_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.4, 1) });
+  c.shade(hx - 1, 7 + hU, 2);
+  c.part();
+  c.ellipse(hx, 12.4 + hU, 3.0, 2.8, SKIN);
+  // Sideburns cut short.
+  c.part();
+  c.px(hx - 3, 11 + hU, RAVEN_HAIR, sphere(-0.6, 0));
+  c.px(hx + 2, 11 + hU, RAVEN_HAIR, sphere(0.6, 0));
+  // The hachimaki round his brow, a red sun at its front.
+  c.part();
+  c.shape(Math.round(10 + hU), Math.round(10 + hU), () => [hx - 3.4, hx + 3.2], COTTON, (_x, _y, t) => cyl(t, 0.2));
+  c.px(hx - 1, 10 + hU, SHU, sphere(0, -0.3), { bias: 1 });
+  eyes(c, [[hx - 2, 12 + hU], [hx + 1, 12 + hU]], p.blink);
+  // Brows set hard, and a mouth ready to shout the kiai.
+  c.shade(hx - 2, 11 + hU, -2);
+  c.shade(hx + 1, 11 + hU, -2);
+  c.shade(hx - 1, 14 + hU, -1);
+  c.shade(hx, 14 + hU, -1);
+}
+
+/** The happi's front: indigo to the hips, the white collar band crossing over the chest, waves at the hem, the vermilion obi knotted at the side. */
+function taikoDown(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 25.6 + L;
+  c.part();
+  c.shape(top, Math.round(hem), (y) => {
+    if (y < waist) {
+      const u = (y + 0.5 - top) / (waist - top);
+      const hw = 5.1 - 0.7 * u * u;
+      return [cx - hw, cx + hw];
+    }
+    const hw = 4.5 + (y - waist) * 0.25;
+    const s = (y - waist) * 0.1 * p.sway;
+    return [cx - hw + s, cx + hw + s];
+  }, AI, (_x, y, t) => sphere(t * 0.9, y < waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1));
+  for (let y = waist + 2; y <= Math.round(hem); y++) for (const x of [cx - 3, cx + 3]) c.shade(x, y, -1);
+  // His chest in the V of the collar, then the collar band: the long side crossing down to the obi.
+  c.part();
+  for (let y = top; y <= top + 2; y++) {
+    const hw = 1.6 - (y - top) * 0.6;
+    c.shape(y, y, () => [cx - 0.5 - hw, cx - 0.5 + hw], SKIN, (_x, _y, t) => sphere(t * 0.5, -0.2, 1));
+  }
+  c.part();
+  c.line(cx + 2.2, top, cx - 1.6, waist - 1, COTTON, () => sphere(0.2, -0.3));
+  c.line(cx - 2.6, top, cx - 0.8, top + 2.6, COTTON, () => sphere(-0.2, -0.3));
+  // Characters brushed down the long band.
+  c.shade(cx + 1, top + 2, -3);
+  c.shade(cx, top + 4, -3);
+  waveHem(c, cx - 8, cx + 8, Math.round(hem));
+  // The obi, knotted at his right hip, its ends hanging.
+  c.part();
+  c.shape(waist, waist + 1, () => [cx - 4.7, cx + 4.7], SHU, (_x, y, t) => sphere(t * 0.9, y === waist ? -0.3 : 0.3, 1));
+  c.part();
+  c.ellipse(cx - 3.2, waist + 0.5, 1.2, 1.0, SHU, { bias: 1 });
+  c.px(cx - 4, waist + 2, SHU, sphere(-0.3, 0.4), { bias: 1 });
+  c.px(cx - 3, waist + 3, SHU, sphere(0, 0.5), { bias: 1 });
+  twistCord(c, 15.8, 15.4 + U, 8.6, 21.2 + U);
+  drawDrum(c, cx, 21 + U, 4.6, p.glow);
+  taikoHead(c, cx + (p.head?.[0] ?? 0), U + (p.head?.[1] ?? 0), p);
+}
+
+/** The happi's back: a white crest between the shoulders, the obi's bow, the headband knotted at the nape. */
+function taikoUp(c: PixelCanvas, cx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 25.6 + L;
+  c.part();
+  c.shape(top, Math.round(hem), (y) => {
+    if (y < waist) {
+      const u = (y + 0.5 - top) / (waist - top);
+      const hw = 5.1 - 0.7 * u * u;
+      return [cx - hw, cx + hw];
+    }
+    const hw = 4.5 + (y - waist) * 0.25;
+    return [cx - hw, cx + hw];
+  }, AI, (_x, _y, t, u) => sphere(t * 0.9, u * 0.6 - 0.3, 1));
+  for (let y = waist + 2; y <= Math.round(hem); y++) c.shade(cx, y, -1);
+  // The crest: a white ring round three commas, the drum's own sign.
+  const my = top + 3.4;
+  c.part();
+  c.ellipse(cx, my, 2.3, 2.2, COTTON, { normal: (_x, _y, dx, dy) => sphere(dx * 0.5, dy * 0.5 - 0.3, 1) });
+  c.part();
+  for (const [dx, dy] of [[-1, -1], [0, 0], [-1, 0]] as const) c.px(cx + dx, Math.round(my) + dy, AI, sphere(0, -0.3), { bias: 1 });
+  waveHem(c, cx - 8, cx + 8, Math.round(hem));
+  c.part();
+  c.shape(waist, waist + 1, () => [cx - 4.7, cx + 4.7], SHU, (_x, y, t) => sphere(t * 0.9, y === waist ? -0.3 : 0.3, 1));
+  // The obi's bow at the small of his back.
+  c.part();
+  c.ellipse(cx - 2, waist + 0.4, 1.4, 1.0, SHU, { bias: 1 });
+  c.ellipse(cx + 1.4, waist + 0.4, 1.4, 1.0, SHU, { bias: 1 });
+  c.px(cx - 0.5, waist + 0.5, SHU, sphere(0, -0.4), { bias: 2 });
+  c.px(cx - 1, waist + 2, SHU, sphere(0, 0.4), { bias: 1 });
+  c.px(cx, waist + 2.6, SHU, sphere(0, 0.5), { bias: 1 });
+  twistCord(c, 8.2, 15.4 + U, 15.4, 21.2 + U);
+  // His head from behind: black hair, the knot, the band's knot at the nape and its ends hanging.
+  c.part();
+  c.ellipse(cx, 11.6 + U, 3.2, 3.2, RAVEN_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+  c.part();
+  c.ellipse(cx, 7.6 + U, 1.4, 1.2, RAVEN_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.4, 1) });
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => [cx - 3.3, cx + 3.3], COTTON, (_x, _y, t) => cyl(t, 0.2));
+  // The knot at the nape, its two ends hanging down it and stirring.
+  const flick = [0, 0.4, 0.6, 0.3, 0, -0.2][p.tick % 6];
+  c.part();
+  c.capsule(cx - 0.6, 10.6 + U, cx - 1.2 - flick * 0.5, 13.8 + U, 0.6, 0.45, COTTON);
+  c.capsule(cx + 0.2, 10.6 + U, cx + 0.9 + flick, 13.4 + U, 0.6, 0.45, COTTON);
+  c.part();
+  c.px(cx - 0.5, 10 + U, COTTON, sphere(0, -0.5), { bias: 2 });
+}
+
+/** The taiko drummer in profile, facing left: the happi and its collar band, the obi, the headband's ends streaming back. */
+function taikoSide(c: PixelCanvas, cx: number, hx: number, U: number, L: number, p: Pose): void {
+  const top = 15 + U;
+  const waist = 22 + U;
+  const hem = 25.6 + L;
+  c.part();
+  c.shape(top, Math.round(hem), (y) => {
+    if (y < waist) {
+      const u = (y + 0.5 - top) / (waist - top);
+      const hw = 3.6 - 0.5 * u * u;
+      return [hx - hw - 0.4, hx + hw];
+    }
+    const u = Math.min(1, (y - waist) / 3);
+    const shift = hx + (cx - hx) * u;
+    const hw = 3.4 + (y - waist) * 0.25;
+    return [shift - hw, shift + hw + u * p.sway * 0.5];
+  }, AI, (_x, y, t) => sphere(t * 0.9 - 0.1, y < waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1));
+  c.part();
+  c.px(hx - 3.6, top, SKIN, sphere(-0.5, -0.3));
+  c.line(hx - 2.4, top, hx - 3.6, waist - 1, COTTON, () => sphere(-0.4, -0.2));
+  c.shade(Math.round(hx - 3), top + 3, -3);
+  waveHem(c, cx - 8, cx + 8, Math.round(hem));
+  c.part();
+  c.shape(waist, waist + 1, () => [hx - 3.6, hx + 3.6], SHU, (_x, y, t) => sphere(t * 0.9 - 0.1, y === waist ? -0.3 : 0.3, 1));
+  c.part();
+  c.ellipse(hx + 3.6, waist + 0.4, 1.0, 1.1, SHU, { bias: 1 });
+  c.px(hx + 4 + p.sway * 0.3, waist + 2, SHU, sphere(0.3, 0.4), { bias: 1 });
+  twistCord(c, hx + 1.6, 15.2 + U, hx - 2.2, 21 + U);
+  // Head: hair and its knot, the face turned left, the band and its ends streaming back.
+  headbandTails(c, hx + 3.0, 10.2 + U, 1, p.tick, 0.4);
+  c.part();
+  c.ellipse(hx + 0.6, 11.4 + U, 3.0, 3.1, RAVEN_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.2, 1) });
+  c.part();
+  c.ellipse(hx + 0.8, 7.6 + U, 1.3, 1.2, RAVEN_HAIR, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.4, 1) });
+  c.part();
+  c.ellipse(hx - 1.2, 12.6 + U, 2.5, 2.5, SKIN);
+  c.part();
+  c.px(hx - 4, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+  c.px(hx + 0.4, 11 + U, RAVEN_HAIR, sphere(0.3, 0));
+  c.part();
+  c.shape(Math.round(10 + U), Math.round(10 + U), () => [hx - 3.8, hx + 3.0], COTTON, (_x, _y, t) => cyl(t, 0.2));
+  c.px(hx - 4, 10 + U, SHU, sphere(-0.5, -0.3), { bias: 1 });
+  eyes(c, [[hx - 3, 12 + U]], p.blink);
+  c.shade(hx - 3, 11 + U, -2);
+  c.shade(hx - 3, 14 + U, -1);
+}
+
+/** The happi's short sleeves capping his shoulders over the bare arms, hemmed in white. */
+function happiSleeve(c: PixelCanvas, x: number, y: number, s: number): void {
+  c.part();
+  c.ellipse(x, y, 1.9, 1.5, AI, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + s * 0.3, dy * 0.8 - 0.3, 1) });
+  c.part();
+  c.px(x - 0.5, y + 1.4, COTTON, sphere(s * 0.3, 0.4));
+  c.px(x + 0.5 * s, y + 1.2, COTTON, sphere(s * 0.3, 0.4));
+}
+
+// ---------------------------------------------------------------------------
 // Views
 
 const REACH_FRONT = 4.5;
@@ -1954,6 +2669,7 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   else if (S.style === 'vagabond') bedrollFront(c, cx, U);
   else if (S.style === 'fadista') capaBehind(c, cx, U, L, p.sway);
   else if (S.style === 'orpheus') himationBehind(c, cx, U, L, p.sway);
+  else if (S.style === 'skald') bearBehind(c, cx, U, L, p.sway);
   else if (!drum && !S.style) {
     // The half-cape hangs from his left shoulder, showing behind him on that side.
     c.part();
@@ -1984,7 +2700,9 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   // The head may bob on its own (the idle moment); everything else stays put.
   const hx = cx + (p.head?.[0] ?? 0);
   const hU = U + (p.head?.[1] ?? 0);
-  if (drum) {
+  if (drum && S.style === 'taiko') {
+    taikoDown(c, cx, U, L, p);
+  } else if (drum) {
     // A kilt of leather strips, then the bare chest under an open vest.
     c.part();
     c.shape(waist, Math.round(hem), (y) => {
@@ -2053,6 +2771,8 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     vagabondDown(c, cx, U, L, p);
   } else if (S.style === 'fadista') {
     fadistaDown(c, cx, U, L, p);
+  } else if (S.style === 'skald') {
+    skaldDown(c, cx, U, L, p);
   } else if (S.style === 'orpheus') {
     orpheusDown(c, cx, U, L, p);
   } else if (S.wild) {
@@ -2111,7 +2831,12 @@ function drawDown(c: PixelCanvas, p: Pose): void {
     armA();
     sticks('a');
   }
-  if (drum) {
+  if (S.style === 'taiko') {
+    // The happi's short sleeves capping his shoulders, over the arms.
+    for (const s of [-1, 1]) happiSleeve(c, cx + s * 5.0, 15.9 + U, s);
+  } else if (S.style === 'skald') {
+    for (const s of [-1, 1]) bearCap(c, cx + s * 5.0, 15.7 + U, s);
+  } else if (drum) {
     // Fur spilling over the tops of his shoulders, over the arms.
     c.part();
     for (const s of [-1, 1]) {
@@ -2229,7 +2954,9 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   const top = 15 + U;
   const waist = 22 + U;
   const howl = S.style === 'howl';
-  if (drum) {
+  if (drum && S.style === 'taiko') {
+    taikoUp(c, cx, U, L, p);
+  } else if (drum) {
     c.part();
     c.shape(waist, 26 + L, (y) => {
       const hw = 4.6 + (y - waist) * 0.35;
@@ -2283,6 +3010,8 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     vagabondUp(c, cx, U, L, p);
   } else if (S.style === 'fadista') {
     fadistaUp(c, cx, U, L, p);
+  } else if (S.style === 'skald') {
+    skaldUp(c, cx, U, L, p);
   } else if (S.style === 'orpheus') {
     orpheusUp(c, cx, U, L, p);
   } else if (S.wild) {
@@ -2327,6 +3056,8 @@ function drawUp(c: PixelCanvas, p: Pose): void {
     armA();
     sticks('a');
   }
+  if (S.style === 'taiko') for (const s of [-1, 1]) happiSleeve(c, cx + s * 5.0, 15.6 + U, s);
+  if (S.style === 'skald') for (const s of [-1, 1]) bearCap(c, cx + s * 5.0, 15.4 + U, s);
   if (S.wild) wisps(c, U, p.tick);
 }
 
@@ -2359,6 +3090,8 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     capaSide(c, hx, top, L, p.sway);
   } else if (S.style === 'orpheus') {
     himationSide(c, hx, top, L, p.sway);
+  } else if (S.style === 'skald') {
+    bearSide(c, hx, top, L, p.sway);
   } else if (!drum && !S.style) {
     // The cape streaming behind him.
     const hem = 25 + L;
@@ -2388,7 +3121,9 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   leg(c, cx - 0.6, 24.5 + L, cx - 0.4 - p.footA, 28.4 - lift(p.footA), 0, harl ? MOTLEY_A : undefined);
   boot(c, cx - 1.2 - p.footA, 29.7 - lift(p.footA), true);
 
-  if (drum) {
+  if (drum && S.style === 'taiko') {
+    taikoSide(c, cx, hx, U, L, p);
+  } else if (drum) {
     c.part();
     c.shape(waist, 26 + L, (y) => {
       const u = (y - waist) / 4;
@@ -2486,6 +3221,8 @@ function drawSide(c: PixelCanvas, p: Pose): void {
     vagabondSide(c, cx, hx, U, L, p);
   } else if (S.style === 'fadista') {
     fadistaSide(c, cx, hx, U, L, p);
+  } else if (S.style === 'skald') {
+    skaldSide(c, cx, hx, U, L, p);
   } else if (S.style === 'orpheus') {
     orpheusSide(c, cx, hx, U, L, p);
   } else if (S.wild) {
@@ -2537,6 +3274,8 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   if (drum) bareArm(c, hx + 0.2, 16.7 + U, fb, REACH_SIDE, [0.4, 1], 0);
   else sleevedArm(c, hx + 0.2, 16.7 + U, fb, REACH_SIDE, [0.4, 1], 0, S.style === 'harlequin');
   if (drum) mallet(c, 'side', 'b', fb, p.stickB, p.glow);
+  if (S.style === 'taiko') happiSleeve(c, hx + 0.4, 16.4 + U, -1);
+  if (S.style === 'skald') bearCap(c, hx + 0.6, 16.0 + U, -1);
   if (S.wild) wisps(c, U, p.tick);
 }
 
@@ -3087,6 +3826,30 @@ export function noteFrame(i: number, look: BardLook = MINSTREL_LOOK): PixelCanva
     }
     return c;
   }
+  if (look.style === 'skald') {
+    // Runes cut in light: Fehu (wealth, the song's reward) and Sowilo (the sun). Each stroke pale gold at its heart,
+    // a glow of ice blue round it.
+    const strokes: [number, number, number, number][] =
+      i === 0
+        ? [[4, 1, 4, 9], [4, 2, 7, 0], [4, 5, 7, 3]]
+        : [[7, 1, 3, 4], [3, 4, 7, 6], [7, 6, 3, 9]];
+    const core0 = new Set<string>();
+    for (const [x0, y0, x1, y1] of strokes) {
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+      for (let s = 0; s <= n; s++) core0.add(`${Math.round(x0 + ((x1 - x0) * s) / n)},${Math.round(y0 + ((y1 - y0) * s) / n)}`);
+    }
+    for (const key of core0) {
+      const [x, y] = key.split(',').map(Number);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (!core0.has(`${x + dx},${y + dy}`)) lit(x + dx, y + dy, mid, 0.55);
+    }
+    for (const key of core0) {
+      const [x, y] = key.split(',').map(Number);
+      lit(x, y, (x + y) % 3 === 0 ? core : hot);
+    }
+    lit(9, 9, deep, 0.6);
+    lit(1, 1, deep, 0.5);
+    return c;
+  }
   if (look.style === 'orpheus') {
     if (i === 0) {
       // A golden note whose flag is a sprig of laurel.
@@ -3240,6 +4003,8 @@ export interface DrumIconColors {
 export const WAR_DRUM_ICON: DrumIconColors = { shell: ['#c8402e', '#a42420', '#7a1618'], rim: '#d4984a', lace: '#ece0bc', head: '#f4e6c4', handle: '#906a42', knob: '#d8704a', light: ['#fffbe8', '#ffd98a', '#ff9a3a', '#b8401e'], outline: '#140204' };
 /** The moonhowl's: a black spirit drum painted with woad, bone mallets, a moon-pale head. */
 export const HOWL_DRUM_ICON: DrumIconColors = { shell: ['#3c3a58', '#2a2840', '#1a1828'], rim: '#5a4430', lace: '#6c7cff', head: '#e4e8f4', handle: '#e8e0cc', knob: '#bcc8ff', light: ['#f2f4ff', '#bcc8ff', '#6c7cff', '#2c2a9a'], outline: '#06060e' };
+/** The taiko's: a lacquered zelkova barrel, brass tacks, a vermilion cord, long pale bachi; vermilion and gold. */
+export const TAIKO_DRUM_ICON: DrumIconColors = { shell: ['#c06c34', '#94481e', '#6c2e14'], rim: '#d4a83c', lace: '#de3a1e', head: '#f4e6c4', handle: '#ecd4a2', knob: '#ecd4a2', light: ['#fff8e6', '#ffd24a', '#ff4a1e', '#8a1208'], outline: '#100402' };
 
 /** The war drum: a red shell laced with rope under a pale head, two mallets crossed over it. */
 export function drumIcon(k: DrumIconColors = WAR_DRUM_ICON): Uint8ClampedArray {
@@ -3254,6 +4019,16 @@ export function drumIcon(k: DrumIconColors = WAR_DRUM_ICON): Uint8ClampedArray {
     const d = Math.hypot((x + 0.5 - 8) / 6.2, (y + 0.5 - 7) / 2.2);
     if (d <= 1) put(x, y, d > 0.8 ? k.rim : k.head);
   }
+  if (k === TAIKO_DRUM_ICON) {
+    // A straight cord round its belly instead of lacing, brass tacks under the head, three commas on the skin.
+    for (let x = 2; x < 14; x++) {
+      for (let y = 9; y <= 12; y++) put(x, y, x < 6 ? k.shell[0] : x < 10 ? k.shell[1] : k.shell[2]);
+      put(x, 11, x % 3 === 0 ? '#ffffff' : k.lace);
+      if (x % 2 === 0) put(x, 9, k.rim);
+    }
+    for (const [x, y] of [[6, 6], [7, 6], [9, 7], [9, 6], [7, 8], [8, 8]]) put(x, y, k.lace);
+    put(8, 7, '#140806');
+  }
   if (k === HOWL_DRUM_ICON) {
     // A wolf's paw painted on the head in woad.
     for (const [x, y] of [[7, 7], [8, 7], [9, 7], [8, 8], [6, 6], [8, 5], [10, 6]]) put(x, y, k.light[2]);
@@ -3263,7 +4038,11 @@ export function drumIcon(k: DrumIconColors = WAR_DRUM_ICON): Uint8ClampedArray {
     put(3 + i, 1 + i * 0.5 | 0, k.handle);
     put(12 - i, 1 + i * 0.5 | 0, k.handle);
   }
-  for (const [x, y] of [[2, 0], [3, 0], [2, 1], [12, 0], [13, 0], [13, 1]]) put(x, y, k.knob);
+  if (k === TAIKO_DRUM_ICON) {
+    // Bachi: long and plain, reaching further.
+    put(2, 0, k.handle);
+    put(13, 0, k.handle);
+  } else for (const [x, y] of [[2, 0], [3, 0], [2, 1], [12, 0], [13, 0], [13, 1]]) put(x, y, k.knob);
   outline(k.outline);
   return px;
 }
@@ -3274,9 +4053,14 @@ export function rhythmIcon(k: DrumIconColors = WAR_DRUM_ICON): Uint8ClampedArray
   for (let y = 0; y < 16; y++) {
     for (let x = 0; x < 16; x++) {
       const d = Math.hypot((x + 0.5 - 8) / 1.0, (y + 0.5 - 9) / 0.7);
+      // The taiko's waves break like brushstrokes: thick where the brush lands, a dry gap where it lifts.
+      const brush = k === TAIKO_DRUM_ICON;
+      const a = Math.atan2(y + 0.5 - 9, x + 0.5 - 8);
+      const dry = brush && a > -1.1 && a < -0.5;
+      const w = brush ? 0.45 + (a + Math.PI) * 0.12 : 0.6;
       if (d <= 3.2) put(x, y, d < 1.6 ? k.light[0] : k.light[1]);
-      else if (Math.abs(d - 5.6) <= 0.6 && y < 13) put(x, y, k.light[2]);
-      else if (Math.abs(d - 7.8) <= 0.6 && y < 12) put(x, y, k.light[3]);
+      else if (!dry && Math.abs(d - 5.6) <= w && y < 13) put(x, y, k.light[2]);
+      else if (!dry && Math.abs(d - 7.8) <= w && y < 12) put(x, y, k.light[3]);
     }
   }
   for (let x = 5; x <= 11; x++) put(x, 13, k.shell[2]);
@@ -3285,6 +4069,7 @@ export function rhythmIcon(k: DrumIconColors = WAR_DRUM_ICON): Uint8ClampedArray
     // The moon the pack howls at, over the waves.
     for (const [x, y] of [[13, 0], [14, 0], [15, 1], [15, 2], [14, 3], [13, 3], [14, 1], [14, 2]]) put(x, y, x === 14 && (y === 1 || y === 2) ? '#6c7cff' : k.light[0]);
   }
+  if (k === TAIKO_DRUM_ICON) for (const [x, y] of [[14, 1], [15, 3], [13, 0]]) put(x, y, k.light[2]);
   outline(k === HOWL_DRUM_ICON ? '#06060e' : '#1e0806');
   return px;
 }
@@ -3296,14 +4081,15 @@ interface SongIconColors {
   spark: string;
 }
 
-const SONG_ICONS: Record<'vagabond' | 'fadista' | 'orpheus', SongIconColors> = {
+const SONG_ICONS: Record<'vagabond' | 'fadista' | 'orpheus' | 'skald', SongIconColors> = {
+  skald: { light: ['#fffcee', '#ffe8a0', '#8ccfff'], outline: '#0c1c34', spark: '#bfe2ff' },
   vagabond: { light: ['#fbf6ff', '#e2d0ff', '#b08cff'], outline: '#1c0e3a', spark: '#ffe8c0' },
   fadista: { light: ['#f4f8ff', '#b8d2ff', '#3c7cff'], outline: '#06103a', spark: '#ffffff' },
   orpheus: { light: ['#fffdf2', '#ffeeaa', '#ffc84a'], outline: '#2a1040', spark: '#c890ff' },
 };
 
 /** The song in a newer minstrel skin's colours, with its own sign over the beam: a seed adrift, a swallow, a sprig of laurel. */
-export function skinSongIcon(style: 'vagabond' | 'fadista' | 'orpheus'): Uint8ClampedArray {
+export function skinSongIcon(style: 'vagabond' | 'fadista' | 'orpheus' | 'skald'): Uint8ClampedArray {
   const { px, put, outline } = iconPainter();
   const k = SONG_ICONS[style];
   const [core, hot, mid] = k.light;
@@ -3322,6 +4108,8 @@ export function skinSongIcon(style: 'vagabond' | 'fadista' | 'orpheus'): Uint8Cl
   if (style === 'vagabond') for (const [x, y] of [[2, 1], [3, 0], [4, 1], [3, 2], [3, 3], [3, 4]]) put(x, y, y < 2 ? core : '#8a6c40');
   if (style === 'fadista') for (const [x, y] of [[1, 2], [2, 3], [3, 3], [4, 2], [3, 1], [5, 1], [2, 4]]) put(x, y, x === 3 && y === 3 ? '#ffffff' : '#2a52c4');
   if (style === 'orpheus') for (const [x, y] of [[8, 0], [9, 1], [10, 0], [11, 1], [12, 0]]) put(x, y, (x & 1) ? '#5a9632' : '#8cc456');
+  // The skald's: Fehu, a rune of gold.
+  if (style === 'skald') for (const [x, y] of [[2, 0], [2, 1], [2, 2], [2, 3], [2, 4], [3, 1], [4, 0], [3, 3], [4, 2]]) put(x, y, '#ffe8a0');
   outline(k.outline);
   for (const [x, y] of [[1, 7], [9, 7], [14, 14], [15, 4]]) put(x, y, k.spark);
   return px;
@@ -3384,5 +4172,29 @@ export function lyreIcon(): Uint8ClampedArray {
   put(7, 6, '#fffdf2');
   put(1, 0, '#c890ff');
   put(14, 0, '#c890ff');
+  return px;
+}
+
+/** The skald's round lyre: a slab of carved oak, a hand-hole through its head, a paler soundboard and its strings, a rune glowing in the crown. */
+export function skaldLyreIcon(): Uint8ClampedArray {
+  const { px, put, outline } = iconPainter();
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const u = (y + 0.5 - 8) / 7.6;
+      const v = (x + 0.5 - 8) / 4.6;
+      if (u ** 4 + v ** 4 > 1) continue;
+      const hole = y >= 2 && y <= 4 && x >= 6 && x <= 9;
+      if (hole) continue;
+      const frame = u ** 4 + v ** 4 > 0.35 || y < 6;
+      put(x, y, frame ? ((x + y * 2) % 4 === 0 ? '#8e6636' : x < 8 ? '#6e4a24' : '#523418') : y < 10 ? '#c49a5c' : '#a87e44');
+    }
+  }
+  outline('#0c0603');
+  for (const x of [6, 8, 10]) for (let y = 6; y <= 13; y++) put(x - (x === 10 ? 1 : 0), y, '#f4ecd8');
+  for (let x = 5; x <= 10; x++) put(x, 12, '#341f0e');
+  put(7, 1, '#e8f4ff');
+  put(8, 1, '#a8ccef');
+  put(13, 3, '#bfe2ff');
+  put(2, 12, '#ffe8a0');
   return px;
 }

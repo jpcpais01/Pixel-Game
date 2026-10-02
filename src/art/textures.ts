@@ -18,7 +18,7 @@ import { BLOOD_SPELL, DIGGER_ICON, DIGGER_SPELL, SOUL_SPELL, TOMB_SPELL, VAMPIRE
 import { chainNetIcon, ironCrossbowIcon, owlFanIcon, owlVaultIcon } from './archerIcons';
 import { buildSkeletonSheet } from './skeleton';
 import { AEON_ICON, ANOMALY_ICON, PRIMAVERA_ICON, BOLT_FRAMES, BOLT_SIZE, BRASS_ICON, CLOCKWORK_ICON, CHRONO_LOOKS, MARK_FRAMES, MARK_SIZE, MOON_ICON, RIFT_ICON, boltFrame, handIcon, markFrame, rewindIcon, shardsIcon, stasisIcon } from './chrono';
-import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, NOTE_FRAMES, ORPHEUS_LOOK, VAGABOND_LOOK, WILD_LOOK, NOTE_SIZE, banjoIcon, drumIcon, guitarraIcon, luteIcon, lyreIcon, noteFrame, rhythmIcon, skinSongIcon, songIcon } from './bard';
+import { FADISTA_LOOK, HARLEQUIN_LOOK, HOWL_DRUM_ICON, MINSTREL_LOOK, SKALD_LOOK, TAIKO_DRUM_ICON, skaldLyreIcon, NOTE_FRAMES, ORPHEUS_LOOK, VAGABOND_LOOK, WILD_LOOK, NOTE_SIZE, banjoIcon, drumIcon, guitarraIcon, luteIcon, lyreIcon, noteFrame, rhythmIcon, skinSongIcon, songIcon } from './bard';
 import { crossIcon, cutMark, dashIcon, katanaIcon } from './samurai';
 import { cardCanvas, daggersIcon, petalCanvas, ROGUE_ICONS, venomCanvas, ROGUE_LOOKS, shadowstepIcon, smokeCanvas } from './rogue';
 import { gourdIcon, registerMoreSkinIcons, SKIN_BREWS, SKIN_QUIVERS } from './moreSkinIcons';
@@ -34,6 +34,7 @@ import { RIFT_H, RIFT_W } from '../world/riftLayout';
 import { ABYSS_SPELL, ABYSS_TONES, TIDE_SPELL, waveIcon } from './tide';
 import { LOTUS_SPELL, lilyWaveIcon } from './tide';
 import { TITANIA_SPELL, blossomSeedIcon, faerieRingIcon } from './druid';
+import { CINDER_SPELL, CINDER_TONES, MYCELIA_SPELL, shroomRingIcon, sporeIcon } from './druid';
 import { PUMPKIN_EMBERS, PUMPKIN_METEOR, PUMPKIN_SPELL, jackOrbFrame, pumpkinMeteorIcon } from './pumpkin';
 import { AUTUMN_SPELL, AUTUMN_TONES, FROST_SPELL, FROST_TONES, GROVE_SPELL, WILD_SPELL, clawsIcon, groveIcon, pounceIcon, thornSeedIcon } from './druid';
 import { RAVEN_INK, RAVEN_TONES, SUN_INK, SUN_TONES, diveIcon, spearIcon, spearThrowIcon, swanSpearIcon, swanThrowIcon } from './valkyrie';
@@ -101,12 +102,12 @@ import { ISLE_H, ISLE_W } from '../world/islandLayout';
 import { DRAFT_FRAMES, DRAFT_H, DRAFT_W, RING, RING_FRAMES, SEA_TILE, archArt, deckPuff, draftFrame, isletArt, ringFrame, seaTile, streak as windStreak } from './glide';
 import { GOAL, ISLETS as SKY_ISLETS } from '../world/glideLayout';
 import { birdSheet } from './skyArena';
-import { BOLT_DIRS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, reticle, salvoIcon } from './mech';
-import { HAUNT_KINDS, HAUNT_SIZE, hauntFrame, hurlIcon, rattleIcon } from './poltergeist';
-import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
-import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, orbIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
-import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, LION_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
-import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon } from './synth';
+import { BOLT_DIRS, BOLT_KINDS, MECH_BOLT_SIZE, boltFrame as mechBolt, cannonIcon, dreadCannonIcon, dreadSalvoIcon, reticle, salvoIcon } from './mech';
+import { HAUNT_KINDS, HAUNT_SIZE, bansheeHurlIcon, hauntFrame, hurlIcon, keenIcon, rattleIcon } from './poltergeist';
+import { MARK_SIZE as POSSESS_MARK, WISP_FRAMES, WISP_SIZE, ferryLanternIcon, lanternIcon, nightHole, possessIcon, possessMark, wispFrame } from './wraith';
+import { TURRET_BUILD, TURRET_HEADINGS, TURRET_SIZE, coilOrbIcon, hammerWrenchIcon, orbIcon, runeTurretIcon, teslaIcon, turretFrame, turretIcon, wrenchIcon } from './inventor';
+import { BENFICA_LOOK, DRAGON_LOOK, EAGLE_LOOK, FEATHER_DIRS, FEATHER_SIZE, FIREBOLT_FRAMES, FIREBOLT_SIZE, JADE_SERPENT_LOOK, LION_LOOK, NEMEAN_LOOK, PHOENIX_LOOK, PORTO_LOOK, SPORTING_LOOK, breathIcon, clawIcon, featherFrame, featherIcon, fireIcon, fireboltFrame, gustIcon, roarIcon } from './beast';
+import { DRONE_FRAMES, DRONE_SIZE, SYNTH_LOOKS, droneFrame, droneIcon, gridIcon, vaporDroneIcon, vaporGridIcon } from './synth';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import {
   MERCHANT_FRAMES,
@@ -326,7 +327,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_lute_harlequin', toCanvas(16, 16, luteIcon('harlequin')));
   scene.textures.addCanvas('icon_song_harlequin', toCanvas(16, 16, songIcon('harlequin')));
   // The vagabond's, the fadista's and Orpheus's: dandelion seeds, swallows and tiles, lyres; their instruments and songs.
-  for (const look of [VAGABOND_LOOK, FADISTA_LOOK, ORPHEUS_LOOK]) {
+  for (const look of [VAGABOND_LOOK, FADISTA_LOOK, ORPHEUS_LOOK, SKALD_LOOK]) {
     register(scene, look.key.replace('bard_', 'note_'), pack(frameList(Array.from({ length: NOTE_FRAMES }, (_, i) => noteFrame(i, look)), 'n'), NOTE_SIZE, NOTE_SIZE), NOTE_SIZE, NOTE_SIZE);
   }
   scene.textures.addCanvas('icon_lute_vagabond', toCanvas(16, 16, banjoIcon()));
@@ -335,10 +336,15 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_song_vagabond', toCanvas(16, 16, skinSongIcon('vagabond')));
   scene.textures.addCanvas('icon_song_fadista', toCanvas(16, 16, skinSongIcon('fadista')));
   scene.textures.addCanvas('icon_song_orpheus', toCanvas(16, 16, skinSongIcon('orpheus')));
+  // The skald's round lyre and runic song.
+  scene.textures.addCanvas('icon_lute_skald', toCanvas(16, 16, skaldLyreIcon()));
+  scene.textures.addCanvas('icon_song_skald', toCanvas(16, 16, skinSongIcon('skald')));
   scene.textures.addCanvas('icon_drum', toCanvas(16, 16, drumIcon()));
   scene.textures.addCanvas('icon_rhythm', toCanvas(16, 16, rhythmIcon()));
   scene.textures.addCanvas('icon_drum_howl', toCanvas(16, 16, drumIcon(HOWL_DRUM_ICON)));
   scene.textures.addCanvas('icon_rhythm_howl', toCanvas(16, 16, rhythmIcon(HOWL_DRUM_ICON)));
+  scene.textures.addCanvas('icon_drum_taiko', toCanvas(16, 16, drumIcon(TAIKO_DRUM_ICON)));
+  scene.textures.addCanvas('icon_rhythm_taiko', toCanvas(16, 16, rhythmIcon(TAIKO_DRUM_ICON)));
 
   yield;
   yield;
@@ -384,7 +390,7 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
 
   yield;
   // Energy ball and impact per spell look: 'orb'/'burst' (arcane), 'orb_void'/'burst_void', 'orb_pyro'/'burst_pyro'.
-  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL], ['_digger', DIGGER_SPELL], ['_vampire', VAMPIRE_SPELL], ['_grove', GROVE_SPELL], ['_wild', WILD_SPELL], ['_autumn', AUTUMN_SPELL], ['_frost', FROST_SPELL], ['_tide', TIDE_SPELL], ['_abyss', ABYSS_SPELL], ['_titania', TITANIA_SPELL], ['_lotus', LOTUS_SPELL]] as const) {
+  for (const [suffix, k] of [['', ARCANE_SPELL], ['_void', VOID_SPELL], ['_pyro', PYRO_SPELL], ['_astral', ASTRAL_SPELL], ['_hell', HELL_SPELL], ['_soul', SOUL_SPELL], ['_blood', BLOOD_SPELL], ['_tomb', TOMB_SPELL], ['_wyrm', WYRM_SPELL], ['_digger', DIGGER_SPELL], ['_vampire', VAMPIRE_SPELL], ['_grove', GROVE_SPELL], ['_wild', WILD_SPELL], ['_autumn', AUTUMN_SPELL], ['_frost', FROST_SPELL], ['_tide', TIDE_SPELL], ['_abyss', ABYSS_SPELL], ['_titania', TITANIA_SPELL], ['_lotus', LOTUS_SPELL], ['_mycelia', MYCELIA_SPELL], ['_cinder', CINDER_SPELL]] as const) {
     register(scene, `orb${suffix}`, pack(frameList(Array.from({ length: ORB_FRAMES }, (_, i) => orbFrame(i, k)), 'o'), ORB_SIZE, ORB_SIZE), ORB_SIZE, ORB_SIZE);
     register(scene, `burst${suffix}`, pack(frameList(Array.from({ length: BURST_FRAMES }, (_, i) => burstFrame(i, k)), 'b'), BURST_SIZE, BURST_SIZE), BURST_SIZE, BURST_SIZE);
     scene.anims.create({ key: `orb${suffix}_spin`, frames: scene.anims.generateFrameNames(`orb${suffix}_e`, { prefix: 'o', start: 0, end: ORB_FRAMES - 1 }), frameRate: 14, repeat: -1 });
@@ -542,6 +548,10 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_grove_titania', toCanvas(16, 16, faerieRingIcon()));
   scene.textures.addCanvas('icon_claws_frost', toCanvas(16, 16, clawsIcon(FROST_TONES)));
   scene.textures.addCanvas('icon_pounce_frost', toCanvas(16, 16, pounceIcon(FROST_TONES)));
+  scene.textures.addCanvas('icon_thorn_mycelia', toCanvas(16, 16, sporeIcon()));
+  scene.textures.addCanvas('icon_grove_mycelia', toCanvas(16, 16, shroomRingIcon()));
+  scene.textures.addCanvas('icon_claws_cinder', toCanvas(16, 16, clawsIcon(CINDER_TONES)));
+  scene.textures.addCanvas('icon_pounce_cinder', toCanvas(16, 16, pounceIcon(CINDER_TONES)));
   // The Tidecaller's wave, and the Abyssal's.
   scene.textures.addCanvas('icon_wave', toCanvas(16, 16, waveIcon()));
   scene.textures.addCanvas('icon_wave_abyss', toCanvas(16, 16, waveIcon(ABYSS_TONES)));
@@ -556,63 +566,75 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   // The Automaton's icons; the Synth's drones hover on a loop ('drone_spin',
   // 'drone_hive_spin').
   for (const look of SYNTH_LOOKS) {
-    const dk = look.hive ? 'drone_hive' : 'drone';
-    register(scene, dk, pack(frameList(Array.from({ length: DRONE_FRAMES }, (_, f) => droneFrame(f, look.hive)), 'd'), DRONE_SIZE, DRONE_SIZE), DRONE_SIZE, DRONE_SIZE);
-    scene.anims.create({ key: `${dk}_spin`, frames: Array.from({ length: DRONE_FRAMES }, (_, f) => ({ key: dk, frame: `d${f}` })), frameRate: look.hive ? 24 : 16, repeat: -1 });
+    // (The Vaporwave's 'drone_vapor' are dolphins, swimming at a slower beat.)
+    const dk = look.hive ? 'drone_hive' : look.vapor ? 'drone_vapor' : 'drone';
+    register(scene, dk, pack(frameList(Array.from({ length: DRONE_FRAMES }, (_, f) => droneFrame(f, look.hive, look.vapor)), 'd'), DRONE_SIZE, DRONE_SIZE), DRONE_SIZE, DRONE_SIZE);
+    scene.anims.create({ key: `${dk}_spin`, frames: Array.from({ length: DRONE_FRAMES }, (_, f) => ({ key: dk, frame: `d${f}` })), frameRate: look.hive ? 24 : look.vapor ? 8 : 16, repeat: -1 });
   }
   // What the mechs fire, in sixteen headings each ('shell_0'.. 'rocket_15'), and the lock-on reticle.
-  const bolts = (['shell', 'nail', 'missile', 'rocket'] as const).flatMap((k) => frameList(Array.from({ length: BOLT_DIRS }, (_, i) => mechBolt(k, i)), `${k}_`));
+  const bolts = BOLT_KINDS.flatMap((k) => frameList(Array.from({ length: BOLT_DIRS }, (_, i) => mechBolt(k, i)), `${k}_`));
   register(scene, 'mech_bolt', pack(bolts, MECH_BOLT_SIZE, MECH_BOLT_SIZE), MECH_BOLT_SIZE, MECH_BOLT_SIZE);
   scene.textures.addCanvas('mech_reticle', toCanvas(13, 13, reticle()));
-  // The Phantom's haunted things thrown ('haunt', by kind), the wisps ('soulwisp' and
-  // 'soulwisp_petal' and 'soulwisp_firefly', flickering on a loop), the possession marks, the Dead of
+  // The Phantom's haunted things thrown ('haunt', by kind), the wisps ('soulwisp',
+  // 'soulwisp_petal', 'soulwisp_firefly' and 'soulwisp_ferry', flickering on a loop), the possession marks, the Dead of
   // Night's dark, and the icons.
   register(scene, 'haunt', pack(HAUNT_KINDS.map((k) => ({ name: k, r: hauntFrame(k).render() })), HAUNT_SIZE, HAUNT_SIZE), HAUNT_SIZE, HAUNT_SIZE);
-  for (const [key, petal, fly] of [['soulwisp', false, false], ['soulwisp_petal', true, false], ['soulwisp_firefly', false, true]] as const) {
-    register(scene, key, pack(frameList(Array.from({ length: WISP_FRAMES }, (_, f) => wispFrame(f, petal, fly)), 'w'), WISP_SIZE, WISP_SIZE), WISP_SIZE, WISP_SIZE);
+  for (const [key, petal, fly, ferry] of [['soulwisp', false, false, false], ['soulwisp_petal', true, false, false], ['soulwisp_firefly', false, true, false], ['soulwisp_ferry', false, false, true]] as const) {
+    register(scene, key, pack(frameList(Array.from({ length: WISP_FRAMES }, (_, f) => wispFrame(f, petal, fly, ferry)), 'w'), WISP_SIZE, WISP_SIZE), WISP_SIZE, WISP_SIZE);
     scene.anims.create({ key: `${key}_flicker`, frames: Array.from({ length: WISP_FRAMES }, (_, f) => ({ key, frame: `w${f}` })), frameRate: petal || fly ? 8 : 12, repeat: -1 });
   }
-  const possessMarks = [{ name: 'w', r: possessMark(false).render() }, { name: 'c', r: possessMark(true).render() }, { name: 'f', r: possessMark(false, true).render() }];
+  const possessMarks = [{ name: 'w', r: possessMark(false).render() }, { name: 'c', r: possessMark(true).render() }, { name: 'f', r: possessMark(false, true).render() }, { name: 'r', r: possessMark(false, false, true).render() }];
   register(scene, 'possess_mark', pack(possessMarks, POSSESS_MARK, POSSESS_MARK), POSSESS_MARK, POSSESS_MARK);
   scene.textures.addCanvas('night_hole', toCanvas(128, 128, nightHole()));
   scene.textures.addCanvas('icon_hurl', toCanvas(16, 16, hurlIcon()));
   scene.textures.addCanvas('icon_rattle', toCanvas(16, 16, rattleIcon()));
   scene.textures.addCanvas('icon_hurl_tea', toCanvas(16, 16, hurlIcon(true)));
   scene.textures.addCanvas('icon_rattle_tea', toCanvas(16, 16, rattleIcon(true)));
+  scene.textures.addCanvas('icon_hurl_banshee', toCanvas(16, 16, bansheeHurlIcon()));
+  scene.textures.addCanvas('icon_rattle_banshee', toCanvas(16, 16, keenIcon()));
   scene.textures.addCanvas('icon_lantern', toCanvas(16, 16, lanternIcon()));
   scene.textures.addCanvas('icon_possess', toCanvas(16, 16, possessIcon()));
   scene.textures.addCanvas('icon_lantern_cala', toCanvas(16, 16, lanternIcon(true)));
   scene.textures.addCanvas('icon_possess_cala', toCanvas(16, 16, possessIcon(true)));
   scene.textures.addCanvas('icon_lantern_firefly', toCanvas(16, 16, lanternIcon(false, true)));
   scene.textures.addCanvas('icon_possess_firefly', toCanvas(16, 16, possessIcon(false, true)));
+  scene.textures.addCanvas('icon_lantern_ferry', toCanvas(16, 16, ferryLanternIcon()));
+  scene.textures.addCanvas('icon_possess_ferry', toCanvas(16, 16, possessIcon(false, false, true)));
   // The Inventor's turret ('turret': unfolding 'b0'..'b4', turned 'h0'..'h7'
   // and firing 'f0'..'f7'), and its icons. The Engineer and the Scientist
   // themselves are hero sheets (see heroSheets.ts).
-  const turret = [
-    ...Array.from({ length: TURRET_BUILD }, (_, i) => ({ name: `b${i}`, r: turretFrame(2, i / (TURRET_BUILD - 1) * 0.9).render() })),
-    ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `h${i}`, r: turretFrame(i).render() })),
-    ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `f${i}`, r: turretFrame(i, 1, 1).render() })),
-  ];
-  register(scene, 'turret', pack(turret, TURRET_SIZE, TURRET_SIZE), TURRET_SIZE, TURRET_SIZE);
+  // Forgebeard's stone-and-brass sentries are 'turret_forge', framed the same.
+  for (const [key, forge] of [['turret', false], ['turret_forge', true]] as const) {
+    const turret = [
+      ...Array.from({ length: TURRET_BUILD }, (_, i) => ({ name: `b${i}`, r: turretFrame(2, i / (TURRET_BUILD - 1) * 0.9, 0, forge).render() })),
+      ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `h${i}`, r: turretFrame(i, 1, 0, forge).render() })),
+      ...Array.from({ length: TURRET_HEADINGS }, (_, i) => ({ name: `f${i}`, r: turretFrame(i, 1, 1, forge).render() })),
+    ];
+    register(scene, key, pack(turret, TURRET_SIZE, TURRET_SIZE), TURRET_SIZE, TURRET_SIZE);
+  }
   scene.textures.addCanvas('icon_wrench', toCanvas(16, 16, wrenchIcon()));
   scene.textures.addCanvas('icon_turret', toCanvas(16, 16, turretIcon()));
   scene.textures.addCanvas('icon_tesla', toCanvas(16, 16, teslaIcon()));
   scene.textures.addCanvas('icon_orb', toCanvas(16, 16, orbIcon()));
   scene.textures.addCanvas('icon_tesla_einstein', toCanvas(16, 16, teslaIcon(true)));
   scene.textures.addCanvas('icon_orb_einstein', toCanvas(16, 16, orbIcon(true)));
+  scene.textures.addCanvas('icon_wrench_forgebeard', toCanvas(16, 16, hammerWrenchIcon()));
+  scene.textures.addCanvas('icon_turret_forgebeard', toCanvas(16, 16, runeTurretIcon()));
+  scene.textures.addCanvas('icon_tesla_tesla', toCanvas(16, 16, teslaIcon(false, true)));
+  scene.textures.addCanvas('icon_orb_tesla', toCanvas(16, 16, coilOrbIcon()));
   // The Beastkin: the eagle's razor feathers ('feather_<look>': headings
   // 'r0'..'r15'), the dragon's firebolts ('firebolt_<look>': flickering
   // 'f0'..'f3'), and the buttons. The beasts themselves are hero sheets.
-  for (const look of [EAGLE_LOOK, BENFICA_LOOK]) {
+  for (const look of [EAGLE_LOOK, BENFICA_LOOK, PHOENIX_LOOK]) {
     register(scene, `feather_${look.key}`, pack(frameList(Array.from({ length: FEATHER_DIRS }, (_, i) => featherFrame(i, look)), 'r'), FEATHER_SIZE, FEATHER_SIZE), FEATHER_SIZE, FEATHER_SIZE);
     scene.textures.addCanvas(`icon_feather_${look.key}`, toCanvas(16, 16, featherIcon(look)));
     scene.textures.addCanvas(`icon_gust_${look.key}`, toCanvas(16, 16, gustIcon(look)));
   }
-  for (const look of [LION_LOOK, SPORTING_LOOK]) {
+  for (const look of [LION_LOOK, SPORTING_LOOK, NEMEAN_LOOK]) {
     scene.textures.addCanvas(`icon_claw_${look.key}`, toCanvas(16, 16, clawIcon(look)));
     scene.textures.addCanvas(`icon_roar_${look.key}`, toCanvas(16, 16, roarIcon(look)));
   }
-  for (const look of [DRAGON_LOOK, PORTO_LOOK]) {
+  for (const look of [DRAGON_LOOK, PORTO_LOOK, JADE_SERPENT_LOOK]) {
     register(scene, `firebolt_${look.key}`, pack(frameList(Array.from({ length: FIREBOLT_FRAMES }, (_, i) => fireboltFrame(i, look)), 'f'), FIREBOLT_SIZE, FIREBOLT_SIZE), FIREBOLT_SIZE, FIREBOLT_SIZE);
     scene.textures.addCanvas(`icon_fire_${look.key}`, toCanvas(16, 16, fireIcon(look)));
     scene.textures.addCanvas(`icon_breath_${look.key}`, toCanvas(16, 16, breathIcon(look)));
@@ -622,10 +644,14 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_salvo', toCanvas(16, 16, salvoIcon()));
   scene.textures.addCanvas('icon_cannon_scrap', toCanvas(16, 16, cannonIcon(true)));
   scene.textures.addCanvas('icon_salvo_scrap', toCanvas(16, 16, salvoIcon(true)));
+  scene.textures.addCanvas('icon_cannon_dread', toCanvas(16, 16, dreadCannonIcon()));
+  scene.textures.addCanvas('icon_salvo_dread', toCanvas(16, 16, dreadSalvoIcon()));
   scene.textures.addCanvas('icon_drone', toCanvas(16, 16, droneIcon()));
   scene.textures.addCanvas('icon_grid', toCanvas(16, 16, gridIcon()));
   scene.textures.addCanvas('icon_drone_hive', toCanvas(16, 16, droneIcon(true)));
   scene.textures.addCanvas('icon_grid_hive', toCanvas(16, 16, gridIcon(true)));
+  scene.textures.addCanvas('icon_drone_vapor', toCanvas(16, 16, vaporDroneIcon()));
+  scene.textures.addCanvas('icon_grid_vapor', toCanvas(16, 16, vaporGridIcon()));
 
   yield;
   // Items: hotbar icons and the bottles monsters drop.
