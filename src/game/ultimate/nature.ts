@@ -13,6 +13,11 @@ const CLOUD_R = 48;
 const CLOUD_TIME = 5000;
 /** Foxgloves standing round Foxglove's Deadly Bloom. */
 const BLOOM_SPIKES = 14;
+/** Confetti fluttering down through Carnevale's cloud, and how long each takes to fall. */
+const CONFETTI_FLECKS = 22;
+const CONFETTI_FALL = 1600;
+/** ms between bubbles rising off the Diver's Chem Bomb pool. */
+const BOMB_BUBBLE_EVERY = 70;
 
 /** The Plague doctor's Pestilence: a great churning miasma settles on the spot, poisoning everything inside deeper and deeper. */
 export class Pestilence extends Fx {
@@ -86,6 +91,19 @@ export class Pestilence extends Fx {
           circleSmall(c, bx, by - 1, r, tox.hot);
           c.put(bx - 1, by - 2, tox.core);
         } else star(c, bx, by - 1, 2, { core: tox.core, hot: tox.hot, mid: tox.mid, deep: tox.deep, light: tox.light, tints: tox.tints });
+      }
+      // Carnevale's: confetti fluttering down through the miasma, swaying as it falls, flashing as it turns.
+      const cf = tox.confetti;
+      if (cf) {
+        for (let i = 0; i < CONFETTI_FLECKS; i++) {
+          const life = ((t + hash(i, 51) * CONFETTI_FALL) % CONFETTI_FALL) / CONFETTI_FALL;
+          const lap = Math.floor((t + hash(i, 51) * CONFETTI_FALL) / CONFETTI_FALL);
+          const fx = x + (hash(i, lap, 52) - 0.5) * CLOUD_R * 1.6 * open + Math.sin(life * 9 + i) * 2;
+          const fy = y - 26 + life * 30 + (hash(i, lap, 53) - 0.5) * CLOUD_R * GROUND;
+          const turn = Math.floor(t / 90 + i) % 3;
+          c.put(fx, fy, turn === 0 ? tox.core : cf[i % cf.length], open * (1 - life * 0.4));
+          if (turn === 1) c.put(fx + 1, fy, cf[i % cf.length], open * (1 - life * 0.4));
+        }
       }
     }
     c.end();
@@ -193,6 +211,12 @@ export class ChemBomb extends Fx {
         ring(g, tx, ty, 4 + 44 * easeOut(k * 1.3), 2, p, 0.8 * (1 - k), GROUND, 0.4, 5);
       }
       g.end();
+      // The Diver's pool fizzes: bubbles breaking off it and wobbling up.
+      if (tox.bubbles !== undefined && pooled > 0.3 && Math.floor(a / BOMB_BUBBLE_EVERY) !== Math.floor((a - dt) / BOMB_BUBBLE_EVERY)) {
+        const an = Math.random() * Math.PI * 2;
+        const d = Math.sqrt(Math.random()) * 46 * pooled;
+        world.debris([tox.bubbles, tox.hot], tx + Math.cos(an) * d, ty + Math.sin(an) * d * GROUND - 2, 2, ty + 30, 'spores');
+      }
 
       // The blast's cloud: a stem of green fire, and a cap of smoke boiling up over it and thinning away.
       const m = this.plume.begin(tx, ty + 4, ty + 3, 0.5, 1);

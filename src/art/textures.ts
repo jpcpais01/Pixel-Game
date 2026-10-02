@@ -9,6 +9,8 @@ import { lightningIcon, MASTER_FORCE_ICON, MASTER_SABER_ICON, SITH_BOLT_ICON, SI
 import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, PYRO_SPELL, PYRO_METEOR_H, PYRO_METEOR_W, meteorIcon, pyroMeteor, scorchCanvas, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, hammerIcon, sunfallIcon, saberIcon, forceIcon, fistIcon, barrageIcon, palmIcon, quakeIcon, flaskIcon, bogIcon, canisterIcon, chemBarrageIcon, fumeCanvas, CHEM_BREW_COLORS, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
 import { ALCHEMIST_LOOKS, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, flaskFrame } from './alchemist';
 import { FOXGLOVE_BREW, foxBogIcon, foxFlaskIcon } from './foxglove';
+import { CARNIVAL_BREW_COLORS, carnBogIcon, carnFlaskIcon } from './carnevale';
+import { bellBarrageIcon, bellIcon, DIVER_BREW_COLORS } from './diver';
 import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbowBoltFrame, stuckArrowFrame, stuckBoltFrame } from './archer';
 import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
 import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
@@ -216,11 +218,11 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     for (const [key, big, size] of [[`flask${sfx}`, false, FLASK_SIZE], [`flask_big${sfx}`, true, BIG_FLASK_SIZE]] as const) {
       register(scene, key, pack(frameList(Array.from({ length: FLASK_FRAMES }, (_, i) => flaskFrame(i, big, look)), 'r'), size, size), size, size);
     }
-    const brew = SKIN_BREWS[look.key] ?? (look.herbal ? FOXGLOVE_BREW : look.chem ? CHEM_BREW_COLORS : look.witch ? HEX_BREW_COLORS : PLAGUE_BREW);
+    const brew = SKIN_BREWS[look.key] ?? (look.carnival ? CARNIVAL_BREW_COLORS : look.diver ? DIVER_BREW_COLORS : look.herbal ? FOXGLOVE_BREW : look.chem ? CHEM_BREW_COLORS : look.witch ? HEX_BREW_COLORS : PLAGUE_BREW);
     const fumes = scene.textures.addCanvas(`fume${sfx}`, toCanvas(18 * 3, 18, sideBySide(18, 18, [0, 1, 2].map((v) => fumeCanvas(18, v, brew)))))!;
     [0, 1, 2].forEach((v) => fumes.add(`f${v}`, 0, v * 18, 0, 18, 18));
-    scene.textures.addCanvas(`icon_flask${sfx}`, toCanvas(16, 16, look.chem ? canisterIcon(brew) : look.shaman ? gourdIcon(brew) : look.herbal ? foxFlaskIcon(brew) : flaskIcon(brew)));
-    scene.textures.addCanvas(`icon_bog${sfx}`, toCanvas(16, 16, look.chem ? chemBarrageIcon(brew) : look.herbal ? foxBogIcon(brew) : bogIcon(brew)));
+    scene.textures.addCanvas(`icon_flask${sfx}`, toCanvas(16, 16, look.diver ? bellIcon(brew) : look.chem ? canisterIcon(brew) : look.shaman ? gourdIcon(brew) : look.herbal ? foxFlaskIcon(brew) : look.carnival ? carnFlaskIcon(brew) : flaskIcon(brew)));
+    scene.textures.addCanvas(`icon_bog${sfx}`, toCanvas(16, 16, look.diver ? bellBarrageIcon(brew) : look.chem ? chemBarrageIcon(brew) : look.herbal ? foxBogIcon(brew) : look.carnival ? carnBogIcon(brew) : bogIcon(brew)));
   }
 
   yield;

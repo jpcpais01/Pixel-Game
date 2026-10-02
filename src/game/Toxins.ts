@@ -33,6 +33,17 @@ export interface ToxStyle {
    * shaded), their speckled throats, the stems and the pollen.
    */
   flowers?: { petal: number; shade: number; throat: number; stem: number; pollen: number };
+  /**
+   * Carnevale's brews throw confetti: flecks of these colours fly out of the
+   * splash with the droplets, lie twinkling on the bog and flutter down
+   * through the Special's cloud.
+   */
+  confetti?: number[];
+  /**
+   * The Brass Diver's chem fizzes: bubbles of this colour wobble up off the
+   * splash instead of fumes, and rise off the pools.
+   */
+  bubbles?: number;
 }
 
 export const PLAGUE_TOX: ToxStyle = {
@@ -111,6 +122,34 @@ export const FOXGLOVE_TOX: ToxStyle = {
   flowers: { petal: 0xf07ad0, shade: 0xa83aa8, throat: 0xfff4fa, stem: 0x4e8a3a, pollen: 0xffe27a },
 };
 
+/** Carnevale's brew: magenta shot with gold, and confetti. */
+export const CARNIVAL_TOX: ToxStyle = {
+  core: 0xfff0fa,
+  hot: 0xff7ad8,
+  mid: 0xe03ab0,
+  deep: 0x8a1a78,
+  murk: 0x3a0a34,
+  tints: [0xfff0fa, 0xff7ad8, 0xe03ab0, 0xffd860],
+  light: 0xf060d0,
+  numbers: 0xff8ae0,
+  suffix: '_carnevale',
+  confetti: [0xffd860, 0xff6ad8, 0x6ae0ff, 0xfff4d0, 0xff4a6a],
+};
+
+/** The Brass Diver's chem: bioluminescent teal-green, fizzing with bubbles. */
+export const DIVER_TOX: ToxStyle = {
+  core: 0xe8fff6,
+  hot: 0x6affc8,
+  mid: 0x1ad8a0,
+  deep: 0x0a7a6a,
+  murk: 0x06302c,
+  tints: [0xe8fff6, 0x6affc8, 0x1ad8a0],
+  light: 0x40f0c0,
+  numbers: 0x7affd0,
+  suffix: '_diver',
+  bubbles: 0xc8fff0,
+};
+
 /** A pixel canvas: Ink's and PixelLayer's `put`. */
 type Put = (x: number, y: number, c: number, a?: number) => void;
 
@@ -141,6 +180,9 @@ const GROUND_DEPTH = 3;
 const FOX_SPIKE_ROOM = 9;
 const FOX_SPIKE_EVERY = 4;
 const POLLEN_EVERY = 140;
+/** Confetti flecks lying on Carnevale's bog, per px of radius; ms between bubbles off the Diver's pools. */
+const CONFETTI_PER_R = 0.45;
+const BUBBLE_EVERY = 160;
 
 const hash = (a: number, b: number, c = 0) => {
   let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
@@ -379,18 +421,24 @@ export class Splash implements Effect {
         const py = Math.sin(an) * reach * SQUASH * easeOut(k) - up * 4 * k * (1 - k);
         const shard = i % 4 === 0;
         const fl = this.style.flowers;
-        // Foxglove's flasks throw petals where the others throw glass.
-        const col = shard ? (fl ? (k < 0.5 ? fl.petal : fl.shade) : k < 0.5 ? 0xeaffff : 0x8fc0c8) : k < 0.35 ? this.style.hot : this.style.mid;
+        const cf = this.style.confetti;
+        // Foxglove's flasks throw petals where the others throw glass; Carnevale's throw confetti too.
+        const col = cf && i % 2 === 0 ? cf[i % cf.length] : shard ? (fl ? (k < 0.5 ? fl.petal : fl.shade) : k < 0.5 ? 0xeaffff : 0x8fc0c8) : k < 0.35 ? this.style.hot : this.style.mid;
         a.put(Math.round(gw + px), Math.round(ah + py - 2), col, 1 - k * 0.5);
       }
     }
-    // Fumes curling up off the puddle.
+    // Fumes curling up off the puddle; the Diver's chem fizzes bubbles instead, wobbling up, the odd one a ring.
     if (t > 0.1 && pr > 2) {
-      for (let i = 0; i < 4; i++) {
+      const bub = this.style.bubbles;
+      for (let i = 0; i < (bub ? 5 : 4); i++) {
         const life = ((ms / 700 + hash(i, 5, seed)) % 1);
-        const px = (hash(i, 6, seed) - 0.5) * pr * 1.2 + Math.sin(life * 6 + i) * 1.2;
-        const py = -life * 10;
-        a.put(Math.round(gw + px), Math.round(ah + py - 1), life < 0.5 ? this.style.hot : this.style.mid, 0.8 * (1 - life));
+        const px = (hash(i, 6, seed) - 0.5) * pr * 1.2 + Math.sin(life * (bub ? 9 : 6) + i) * 1.2;
+        const py = -life * (bub ? 13 : 10);
+        const bx = Math.round(gw + px);
+        const by = Math.round(ah + py - 1);
+        if (bub && i % 2 === 0 && life > 0.2) {
+          for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) a.put(bx + dx, by + dy, bub, 0.8 * (1 - life));
+        } else a.put(bx, by, bub ?? (life < 0.5 ? this.style.hot : this.style.mid), 0.8 * (1 - life));
       }
     }
     g.flush();
@@ -513,6 +561,14 @@ export class Bog implements Effect {
       this.world.debris([fl.pollen, 0xfff6c0, fl.petal], Math.round(this.x + Math.cos(an) * d), Math.round(this.y + Math.sin(an) * d * SQUASH) - 4, 1, this.y + 14, 'spores');
     }
 
+    // Bubbles breaking off the Diver's pools and wobbling up.
+    const bub = this.style.bubbles;
+    if (bub !== undefined && fade > 0.3 && Math.floor(this.age / BUBBLE_EVERY) !== Math.floor((this.age - dt) / BUBBLE_EVERY)) {
+      const an = Math.random() * Math.PI * 2;
+      const d = Math.sqrt(Math.random()) * this.radius * 0.75 * grow;
+      this.world.debris([bub, this.style.hot], Math.round(this.x + Math.cos(an) * d), Math.round(this.y + Math.sin(an) * d * SQUASH) - 2, 1, this.y + 14, 'spores');
+    }
+
     // Fumes: soft puffs drifting up off the pool, fewer as it dies away.
     this.fumeIn -= dt;
     if (this.fumeIn <= 0 && fade > 0.2) {
@@ -592,6 +648,20 @@ export class Bog implements Effect {
         if (h < 1) continue;
         const sway = Math.sin(this.age * 0.003 + i * 1.7) > 0.6 ? 1 : 0;
         foxSpike((x, y, c, a) => b.put(x, y, c, a), Math.round(hw + Math.cos(an) * d), Math.round(hh + Math.sin(an) * d * SQUASH), h, fl, fade, sway);
+      }
+    }
+    // Confetti lying on Carnevale's bog, each fleck catching the light in turn as the pool churns.
+    const cf = this.style.confetti;
+    if (cf) {
+      const n = Math.round(this.radius * CONFETTI_PER_R);
+      for (let i = 0; i < n; i++) {
+        const an = hash(i, 41, seed) * Math.PI * 2 + this.age * 0.0004 * (i & 1 ? 1 : -1);
+        const d = Math.sqrt(hash(i, 42, seed)) * R * 0.82;
+        const fx = Math.round(hw + Math.cos(an) * d);
+        const fy = Math.round(hh + Math.sin(an) * d * SQUASH);
+        const lit = (Math.floor(this.age / 160) + i) % 4 === 0;
+        b.put(fx, fy, lit ? this.style.core : cf[i % cf.length], fade);
+        if (i % 3 === 0) b.put(fx + 1, fy, cf[i % cf.length], fade * 0.8);
       }
     }
     // Bubbles swell into rings and pop in a flash.
