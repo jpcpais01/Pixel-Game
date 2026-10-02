@@ -17,6 +17,9 @@ import type { Cast } from './types';
 //  - Wrath of the Wyrm (the Dragon): a serpent of living flame pours from
 //    his jaws, coils round the spot he aims at, raking what it passes, then
 //    dives into it in a blast. Porto's is Fury of the Invicta, burning blue.
+//  The creatures of myth wear them in their own colours: the Phoenix's in
+//  crimson and gold flame, the Nemean lion's in bronze and gold, the Jade
+//  Serpent's in pale jade and gold.
 
 // ---------------------------------------------------------------------------
 // Sky Sovereign

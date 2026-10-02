@@ -446,6 +446,8 @@ export class ArenaLoadScene extends Phaser.Scene {
     if (this.loadedAt !== null && !this.leaving && t >= MIN_SHOW && this.shown > 0.97) {
       this.leaving = true;
       const cam = this.cameras.main;
+      // A fade still going (a slow first frame) would swallow this one, and the world would never be entered.
+      cam.fadeEffect.reset();
       cam.fadeOut(FADE_OUT, 7, 8, 13);
       cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => enterArena(this, this.character, this.arena.id));
     }

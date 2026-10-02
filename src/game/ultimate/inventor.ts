@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { sound } from '../../audio';
 import { INV_HAND_Y } from '../../art/inventor';
-import { Turret, type TurretSpec } from '../Engineer';
+import { FORGEBEARD_KIT, ENGINEER_KIT, Turret, type TurretSpec } from '../Engineer';
 import { Arc } from '../Scientist';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { bloom, clamp01, easeOut, flare, Fx, ring, strikeGround, type Ink } from './ink';
@@ -15,6 +15,7 @@ import type { Cast } from './types';
 //    electrons whirling faster and faster, arcs lashing from it to the foes
 //    round it; then it splits, in a blinding flash and a ring of force.
 //    Einstein's is E = mc²: golden, with the equation chalked in the air.
+// Forgebeard's Mega Sentry is his own stone-and-brass work, rune-eyed.
 
 export const MEGA_SENTRY: TurretSpec = {
   scale: 2,
@@ -30,7 +31,8 @@ export const MEGA_SENTRY: TurretSpec = {
 };
 
 export function megaSentry(c: Cast): void {
-  c.world.addEffect(new Turret(c.world, c.tx, c.ty, c.tx, c.ty, MEGA_SENTRY, c.pal));
+  const kit = c.look === 'forgebeard' ? FORGEBEARD_KIT : ENGINEER_KIT;
+  c.world.addEffect(new Turret(c.world, c.tx, c.ty, c.tx, c.ty, MEGA_SENTRY, c.pal, kit.turret));
 }
 
 const FORM_MS = 1500;

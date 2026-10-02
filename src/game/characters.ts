@@ -40,7 +40,7 @@ import { CORSAIR_STYLE, DANCER_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, RO
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necromancer';
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
-import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
+import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, SKALD_KIT, TAIKO_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
 import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT, PRIMAVERA_KIT, SANDGLASS_KIT, VHS_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
@@ -48,21 +48,22 @@ import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SH
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
 import { AUTUMN_MAGIC, AUTUMN_SKIN, FROST_MAGIC, FROST_SKIN, GROVE_MAGIC, GROVE_SKIN, Grovecraft, WILD_MAGIC, WILD_SKIN, Wildcraft } from './Druid';
 import { TITANIA_MAGIC, TITANIA_SKIN } from './Druid';
+import { CINDER_MAGIC, CINDER_SKIN, MYCELIA_MAGIC, MYCELIA_SKIN } from './Druid';
 import { AMAZON_KIT, NORTH_KIT, RAVEN_KIT, SPEAR_KIT, STORM_KIT, SUN_KIT, SWAN_KIT, Valkyrie } from './Valkyrie';
-import { MECH_KIT, Mech, SCRAP_KIT } from './Mech';
-import { HIVE_KIT, SYNTH_KIT, Synth } from './Synth';
+import { DREAD_KIT, MECH_KIT, Mech, SCRAP_KIT } from './Mech';
+import { HIVE_KIT, SYNTH_KIT, Synth, VAPOR_KIT } from './Synth';
 import { MECH_H, MECH_ORIGIN_Y } from '../art/mech';
 import { SYNTH_H, SYNTH_ORIGIN_Y } from '../art/synth';
-import { POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
-import { CALA_KIT, FIREFLY_KIT, WRAITH_KIT, Wraith } from './Wraith';
+import { BANSHEE_KIT, POLTER_KIT, Poltergeist, TEA_KIT } from './Poltergeist';
+import { CALA_KIT, FERRY_KIT, FIREFLY_KIT, WRAITH_KIT, Wraith } from './Wraith';
 import { POLTER_H, POLTER_ORIGIN_Y } from '../art/poltergeist';
 import { WRAITH_H, WRAITH_ORIGIN_Y } from '../art/wraith';
-import { ENGINEER_KIT, Engineer } from './Engineer';
-import { EINSTEIN_KIT, SCIENTIST_KIT, Scientist } from './Scientist';
+import { ENGINEER_KIT, Engineer, FORGEBEARD_KIT } from './Engineer';
+import { EINSTEIN_KIT, SCIENTIST_KIT, Scientist, TESLA_KIT } from './Scientist';
 import { INV_H, INV_ORIGIN_Y } from '../art/inventor';
-import { BENFICA_KIT, EAGLE_KIT, Eagle } from './Eagle';
-import { LION_KIT, Lion, SPORTING_KIT } from './Lion';
-import { DRAGON_KIT, Dragon, PORTO_KIT } from './Dragon';
+import { BENFICA_KIT, EAGLE_KIT, Eagle, PHOENIX_KIT } from './Eagle';
+import { LION_KIT, Lion, NEMEAN_KIT, SPORTING_KIT } from './Lion';
+import { DRAGON_KIT, Dragon, JADE_KIT, PORTO_KIT } from './Dragon';
 import { BEAST_H, BEAST_ORIGIN_Y } from '../art/beast';
 import { worn } from './skins';
 import type { Vitals } from './combat';
@@ -311,7 +312,7 @@ const KITS: KitDef[] = [
           {
             // A firebird priestess: a crimson hood shaped like the bird's crested head with a gold beak over the brow, a mantle of flame feathers, tail feathers at the hem, and a gilded staff crowned with burning plumes.
             id: 'firebird',
-            name: 'Firebird',
+            name: 'Phoenix Priestess',
             accent: 0xffb030,
             preview: { texture: 'wizard_firebird', glow: 'wizard_firebird_e', idle: 'wizard_firebird_idle_down', chosen: 'wizard_firebird_cast_down' },
             buttons: {
@@ -1239,6 +1240,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_song_orpheus' },
             },
           },
+          {
+            // A Norse saga-singer: iron spangenhelm, flaxen braids, a bearskin over blue-grey wool, a carved round lyre; his notes fly as runes.
+            id: 'skald',
+            name: 'Skald',
+            accent: 0x9cd6ff,
+            preview: { texture: 'bard_skald', glow: 'bard_skald_e', idle: 'bard_skald_idle_down', chosen: 'bard_skald_song_down', originY: BARD_ORIGIN_Y / BARD_H },
+            buttons: {
+              attack: { texture: 'icon_lute_skald' },
+              special: { texture: 'icon_song_skald' },
+            },
+          },
         ],
       },
       {
@@ -1267,11 +1279,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_rhythm_howl' },
             },
           },
+          {
+            // A taiko drummer: white hachimaki, indigo happi, a lacquered odaiko with brass tacks, long hinoki bachi.
+            id: 'taiko',
+            name: 'Taiko',
+            accent: 0xff5a2a,
+            preview: { texture: 'bard_taiko', glow: 'bard_taiko_e', idle: 'bard_taiko_idle_down', chosen: 'bard_taiko_boom_down', originY: BARD_ORIGIN_Y / BARD_H },
+            buttons: {
+              attack: { texture: 'icon_drum_taiko' },
+              special: { texture: 'icon_rhythm_taiko' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { minstrel: MINSTREL_KIT, wildsong: WILD_KIT, harlequin: HARLEQUIN_KIT, vagabond: VAGABOND_KIT, fadista: FADISTA_KIT, orpheus: ORPHEUS_KIT, drummer: DRUMMER_KIT, howl: HOWL_KIT }[look] ?? MINSTREL_KIT;
+      const kit = { minstrel: MINSTREL_KIT, wildsong: WILD_KIT, harlequin: HARLEQUIN_KIT, vagabond: VAGABOND_KIT, fadista: FADISTA_KIT, orpheus: ORPHEUS_KIT, skald: SKALD_KIT, drummer: DRUMMER_KIT, howl: HOWL_KIT, taiko: TAIKO_KIT }[look] ?? MINSTREL_KIT;
       return new Bard(world, x, y, kit);
     },
   },
@@ -1523,6 +1546,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_grove_titania' },
             },
           },
+          {
+            // A mushroom druid of the deep woods: a broad spotted toadstool for a hat, glowing gills at her hem, glowcaps on her shoulders and a staff crowned with luminous mushrooms.
+            id: 'mycelia',
+            name: 'Mycelia',
+            accent: 0x6af0e0,
+            preview: { texture: 'druid_mycelia', glow: 'druid_mycelia_e', idle: 'druid_mycelia_idle_down', chosen: 'druid_mycelia_cast_down' },
+            buttons: {
+              attack: { texture: 'icon_thorn_mycelia' },
+              special: { texture: 'icon_grove_mycelia' },
+            },
+          },
         ],
       },
       {
@@ -1551,13 +1585,25 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_pounce_frost' },
             },
           },
+          {
+            // A volcano's shaman: an obsidian pelt cracked with lava under a charred wolf's skull, ash on her face, and a spirit wolf of ember fire trailing smoke.
+            id: 'cinderhide',
+            name: 'Cinderhide',
+            accent: 0xff7a24,
+            preview: { texture: 'druid_cinder', glow: 'druid_cinder_e', idle: 'druid_cinder_idle_down', chosen: 'druid_cinder_cast_down' },
+            buttons: {
+              attack: { texture: 'icon_claws_cinder' },
+              special: { texture: 'icon_pounce_cinder' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'wild' || look === 'frostfang') {
+      if (look === 'wild' || look === 'frostfang' || look === 'cinderhide') {
         const frost = look === 'frostfang';
-        const craft = new Wildcraft(world, frost ? FROST_MAGIC : WILD_MAGIC);
+        const cinder = look === 'cinderhide';
+        const craft = new Wildcraft(world, cinder ? CINDER_MAGIC : frost ? FROST_MAGIC : WILD_MAGIC);
         const w = new Wizard(
           world,
           x,
@@ -1568,7 +1614,7 @@ const KITS: KitDef[] = [
             target: (dx, dy, level, dist) => craft.target(dx, dy, level, dist),
             untarget: () => craft.untarget(),
           },
-          frost ? FROST_SKIN : WILD_SKIN,
+          cinder ? CINDER_SKIN : frost ? FROST_SKIN : WILD_SKIN,
         );
         craft.caster = w;
         world.addEffect(craft);
@@ -1576,7 +1622,8 @@ const KITS: KitDef[] = [
       }
       const autumn = look === 'autumn';
       const titania = look === 'titania';
-      const craft = new Grovecraft(world, titania ? TITANIA_MAGIC : autumn ? AUTUMN_MAGIC : GROVE_MAGIC);
+      const mycelia = look === 'mycelia';
+      const craft = new Grovecraft(world, mycelia ? MYCELIA_MAGIC : titania ? TITANIA_MAGIC : autumn ? AUTUMN_MAGIC : GROVE_MAGIC);
       const w = new Wizard(
         world,
         x,
@@ -1587,7 +1634,7 @@ const KITS: KitDef[] = [
           target: (dx, dy, level, dist) => craft.target(dx, dy, level, dist),
           untarget: () => craft.untarget(),
         },
-        titania ? TITANIA_SKIN : autumn ? AUTUMN_SKIN : GROVE_SKIN,
+        mycelia ? MYCELIA_SKIN : titania ? TITANIA_SKIN : autumn ? AUTUMN_SKIN : GROVE_SKIN,
       );
       craft.caster = w;
       world.addEffect(craft);
@@ -1727,6 +1774,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_salvo_scrap' },
             },
           },
+          {
+            // A walking battleship: grey riveted hull, red waterline, portholes, a bridge with a capped captain, twin funnels and twin-gun turrets.
+            id: 'dreadnought',
+            name: 'Dreadnought',
+            accent: 0xe02a20,
+            preview: { texture: 'mech_dread', glow: 'mech_dread_e', idle: 'mech_dread_idle_down', chosen: 'mech_dread_deploy_down', originY: MECH_ORIGIN_Y / MECH_H },
+            buttons: {
+              attack: { texture: 'icon_cannon_dread' },
+              special: { texture: 'icon_salvo_dread' },
+            },
+          },
         ],
       },
       {
@@ -1755,13 +1813,25 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_grid_hive' },
             },
           },
+          {
+            // A retro chrome android: pearl shell, pink-to-cyan panels, a sunset in its black visor, a neon fin crest, and chrome dolphins for drones.
+            id: 'vaporwave',
+            name: 'Vaporwave',
+            accent: 0xff5ab8,
+            preview: { texture: 'synth_vapor', glow: 'synth_vapor_e', idle: 'synth_vapor_idle_down', chosen: 'synth_vapor_open_down', originY: SYNTH_ORIGIN_Y / SYNTH_H },
+            buttons: {
+              attack: { texture: 'icon_drone_vapor' },
+              special: { texture: 'icon_grid_vapor' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
       if (look === 'synth') return new Synth(world, x, y, SYNTH_KIT);
       if (look === 'hive') return new Synth(world, x, y, HIVE_KIT);
-      return new Mech(world, x, y, look === 'scrap' ? SCRAP_KIT : MECH_KIT);
+      if (look === 'vaporwave') return new Synth(world, x, y, VAPOR_KIT);
+      return new Mech(world, x, y, look === 'scrap' ? SCRAP_KIT : look === 'dreadnought' ? DREAD_KIT : MECH_KIT);
     },
   },
   {
@@ -1793,6 +1863,17 @@ const KITS: KitDef[] = [
             buttons: {
               attack: { texture: 'icon_hurl_tea' },
               special: { texture: 'icon_rattle_tea' },
+            },
+          },
+          {
+            // The wailing spirit: long streaming silver hair, a hollow face wailing, a tattered sea-green shroud, a mourner's keepsakes.
+            id: 'banshee',
+            name: 'Banshee',
+            accent: 0xc8eccc,
+            preview: { texture: 'polter_banshee', glow: 'polter_banshee_e', idle: 'polter_banshee_idle_down', chosen: 'polter_banshee_cast_down', originY: POLTER_ORIGIN_Y / POLTER_H },
+            buttons: {
+              attack: { texture: 'icon_hurl_banshee' },
+              special: { texture: 'icon_rattle_banshee' },
             },
           },
         ],
@@ -1834,6 +1915,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_possess_firefly' },
             },
           },
+          {
+            // The ferryman of the dead: a skull in a deep charcoal-blue hood, cyan eye-lights, a coin on a cord, the lantern on a punting pole's crook.
+            id: 'ferryman',
+            name: 'Ferryman',
+            accent: 0x7ae8e0,
+            preview: { texture: 'wraith_ferry', glow: 'wraith_ferry_e', idle: 'wraith_ferry_idle_down', chosen: 'wraith_ferry_cast_down', originY: WRAITH_ORIGIN_Y / WRAITH_H },
+            buttons: {
+              attack: { texture: 'icon_lantern_ferry' },
+              special: { texture: 'icon_possess_ferry' },
+            },
+          },
         ],
       },
     ],
@@ -1841,6 +1933,8 @@ const KITS: KitDef[] = [
       if (look === 'wraith') return new Wraith(world, x, y, WRAITH_KIT);
       if (look === 'cala') return new Wraith(world, x, y, CALA_KIT);
       if (look === 'firefly') return new Wraith(world, x, y, FIREFLY_KIT);
+      if (look === 'ferryman') return new Wraith(world, x, y, FERRY_KIT);
+      if (look === 'banshee') return new Poltergeist(world, x, y, BANSHEE_KIT);
       return new Poltergeist(world, x, y, look === 'tea' ? TEA_KIT : POLTER_KIT);
     },
   },
@@ -1863,6 +1957,19 @@ const KITS: KitDef[] = [
           special: { texture: 'icon_turret' },
         },
         lookName: 'Hard hat',
+        skins: [
+          {
+            // A stout dwarven runesmith: a braided copper beard ringed in brass, a rune-browed half-helm with goggles, mail under a leather apron, a rune-cut hammer-wrench, and sentries of stone and brass.
+            id: 'forgebeard',
+            name: 'Forgebeard',
+            accent: 0xff7a2a,
+            preview: { texture: 'engineer_forgebeard', glow: 'engineer_forgebeard_e', idle: 'engineer_forgebeard_idle_down', chosen: 'engineer_forgebeard_eureka_down', originY: INV_ORIGIN_Y / INV_H },
+            buttons: {
+              attack: { texture: 'icon_wrench_forgebeard' },
+              special: { texture: 'icon_turret_forgebeard' },
+            },
+          },
+        ],
       },
       {
         // Lightning that leaps from foe to foe, and an orb that drags them in and bursts.
@@ -1890,12 +1997,25 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_orb_einstein' },
             },
           },
+          {
+            // Slicked black hair parted in the middle, a neat moustache, a wing collar and black three-piece suit with a watch chain, and a copper-coiled lightning rod.
+            id: 'tesla',
+            name: 'Tesla',
+            accent: 0xa478ff,
+            preview: { texture: 'scientist_tesla', glow: 'scientist_tesla_e', idle: 'scientist_tesla_idle_down', chosen: 'scientist_tesla_eureka_down', originY: INV_ORIGIN_Y / INV_H },
+            buttons: {
+              attack: { texture: 'icon_tesla_tesla' },
+              special: { texture: 'icon_orb_tesla' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
       if (look === 'scientist') return new Scientist(world, x, y, SCIENTIST_KIT);
       if (look === 'einstein') return new Scientist(world, x, y, EINSTEIN_KIT);
+      if (look === 'tesla') return new Scientist(world, x, y, TESLA_KIT);
+      if (look === 'forgebeard') return new Engineer(world, x, y, FORGEBEARD_KIT);
       return new Engineer(world, x, y, ENGINEER_KIT);
     },
   },
@@ -1930,6 +2050,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_gust_eagle_benfica' },
             },
           },
+          {
+            // A bird of flame: crimson plumage burning to a golden head, a flowing crest of fire, ember-tipped wings, long glowing tail plumes, burning quills.
+            id: 'phoenix',
+            name: 'Firebird',
+            accent: 0xff8a20,
+            preview: { texture: 'eagle_phoenix', glow: 'eagle_phoenix_e', idle: 'eagle_phoenix_idle_down', chosen: 'eagle_phoenix_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+            buttons: {
+              attack: { texture: 'icon_feather_eagle_phoenix' },
+              special: { texture: 'icon_gust_eagle_phoenix' },
+            },
+          },
         ],
       },
       {
@@ -1956,6 +2087,17 @@ const KITS: KitDef[] = [
             buttons: {
               attack: { texture: 'icon_claw_lion_sporting' },
               special: { texture: 'icon_roar_lion_sporting' },
+            },
+          },
+          {
+            // The Nemean lion: a gleaming bronze-gold hide, a dark bronze mane, a laurel wreath, meander-keyed bracers, gold sparks off his claws.
+            id: 'nemean',
+            name: 'Nemean',
+            accent: 0xe8b852,
+            preview: { texture: 'lion_nemean', glow: 'lion_nemean_e', idle: 'lion_nemean_idle_down', chosen: 'lion_nemean_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+            buttons: {
+              attack: { texture: 'icon_claw_lion_nemean' },
+              special: { texture: 'icon_roar_lion_nemean' },
             },
           },
         ],
@@ -1986,11 +2128,25 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_breath_dragon_porto' },
             },
           },
+          {
+            // An Eastern dragon: jade scales, no wings, antlers, a golden mane and whiskers, a glowing pearl, a cloud at his feet, and pale jade-and-gold fire.
+            id: 'jade',
+            name: 'Jade Serpent',
+            accent: 0x5ad8a0,
+            preview: { texture: 'dragon_jade', glow: 'dragon_jade_e', idle: 'dragon_jade_idle_down', chosen: 'dragon_jade_rally_down', originY: BEAST_ORIGIN_Y / BEAST_H },
+            buttons: {
+              attack: { texture: 'icon_fire_dragon_jade' },
+              special: { texture: 'icon_breath_dragon_jade' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
       if (look === 'benfica') return new Eagle(world, x, y, BENFICA_KIT);
+      if (look === 'phoenix') return new Eagle(world, x, y, PHOENIX_KIT);
+      if (look === 'nemean') return new Lion(world, x, y, NEMEAN_KIT);
+      if (look === 'jade') return new Dragon(world, x, y, JADE_KIT);
       if (look === 'lion') return new Lion(world, x, y, LION_KIT);
       if (look === 'sporting') return new Lion(world, x, y, SPORTING_KIT);
       if (look === 'dragon') return new Dragon(world, x, y, DRAGON_KIT);
