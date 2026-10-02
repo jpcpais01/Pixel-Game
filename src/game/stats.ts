@@ -83,6 +83,7 @@ export const HERO_STATS: Record<string, HeroStats> = {
   'archer.ranger': { role: 'ranged', hp: 95, damage: 9, defense: 12, rate: 2.99, speed: 64, regen: 0.6, skill: 5, ult: 62, kit: 8 },
   'archer.arbalest': { role: 'ranged', hp: 110, damage: 22, defense: 15, rate: 1.18, speed: 56, regen: 0.6, skill: 0.9, ult: 90, kit: 20 },
   'archer.wind': { role: 'ranged', hp: 88, damage: 8, defense: 11, rate: 3.15, speed: 72, regen: 0.6, skill: 2.4, ult: 94, kit: 9 },
+  'archer.falconer': { role: 'ranged', hp: 90, damage: 5, defense: 11, rate: 4.1, speed: 68, regen: 0.6, skill: 6.5, ult: 84, kit: 5 },
   'rogue.rogue': { role: 'melee', hp: 80, damage: 7, defense: 20, rate: 4.65, speed: 70, regen: 0.8, skill: 0.8, ult: 120, kit: 8.8 },
   'rogue.dancer': { role: 'melee', hp: 72, damage: 8, defense: 20, rate: 3.81, speed: 74, regen: 0.8, skill: 2, ult: 264, kit: 6.6 },
   'necromancer.necro': { role: 'caster', hp: 80, damage: 6, defense: 12, rate: 2.49, speed: 60, regen: 0.8, skill: 17, ult: 75, kit: 7 },

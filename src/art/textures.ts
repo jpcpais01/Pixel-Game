@@ -10,6 +10,8 @@ import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, A
 import { ALCHEMIST_LOOKS, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, flaskFrame } from './alchemist';
 import { FOXGLOVE_BREW, foxBogIcon, foxFlaskIcon } from './foxglove';
 import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbowBoltFrame, stuckArrowFrame, stuckBoltFrame } from './archer';
+import { BIRD_H as HAWK_H, BIRD_LOOKS as HAWK_LOOKS, BIRD_W as HAWK_W, birdFrames as hawkFrames, FALCONER_LOOKS, falconArrowFrame, falconStuckFrame } from './falconer';
+import { FALCONER_TONES, falconIcon, quickShotIcon, SNOWFEATHER_TONES } from './falconerIcons';
 import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
 import { BLOOD_SPELL, SOUL_SPELL, TOMB_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { MOSSGRAVE_ICON, graveIcon, spadeIcon } from './digger';
@@ -261,6 +263,24 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     const q = SKIN_QUIVERS[look.key] ?? (look.storm ? STORM_QUIVER : RANGER_QUIVER);
     scene.textures.addCanvas(`icon_bow${sfx}`, toCanvas(16, 16, bowIcon(q)));
     scene.textures.addCanvas(`icon_rain${sfx}`, toCanvas(16, 16, rainIcon(q, look.storm)));
+  }
+  // The falconer's short arrows ('arrow_falconer', '_snow' for Snowfeather),
+  // her icons, and the birds that fly: her falcon, the snowy owl and the
+  // Special's hawks ('bird_<kind>', frames f0..f5, g0..g1, d0..d1, k0..k3).
+  for (const look of FALCONER_LOOKS) {
+    const sfx = look.key.slice('archer'.length);
+    const arrows = [
+      ...frameList(Array.from({ length: ARROW_DIRS }, (_, i) => falconArrowFrame(i, look)), 'r'),
+      ...frameList([0, 1, 2].map((k) => falconStuckFrame(k, look)), 'k'),
+    ];
+    register(scene, `arrow${sfx}`, pack(arrows, ARROW_SIZE, ARROW_SIZE), ARROW_SIZE, ARROW_SIZE);
+    const tones = look.snow ? SNOWFEATHER_TONES : FALCONER_TONES;
+    const isfx = look.snow ? '_snow' : '';
+    scene.textures.addCanvas(`icon_quickshot${isfx}`, toCanvas(16, 16, quickShotIcon(tones)));
+    scene.textures.addCanvas(`icon_falcon${isfx}`, toCanvas(16, 16, falconIcon(tones)));
+  }
+  for (const { key, bird } of HAWK_LOOKS) {
+    register(scene, key, pack(hawkFrames(bird).map((f) => ({ name: f.name, r: f.canvas.render() })), HAWK_W, HAWK_H), HAWK_W, HAWK_H);
   }
 
   yield;

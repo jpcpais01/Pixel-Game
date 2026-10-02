@@ -30,6 +30,7 @@ import { INV_H, INV_W, INVENTOR_LOOKS, buildInventorFrames, inventorAnims } from
 import { BEAST_H, BEAST_LOOKS, BEAST_W, beastAnims, buildBeastFrames } from './beast';
 import { SAGE_ANIMS, SAGE_H, SAGE_LOOKS, SAGE_W, buildSageFrames } from './sage';
 import { DIGGER_ANIMS, DIGGER_H, DIGGER_LOOKS, DIGGER_W, buildDiggerFrames } from './digger';
+import { FALC_H, FALC_W, FALCONER_ANIMS, FALCONER_LOOKS, buildFalconerFrames } from './falconer';
 
 /** The rigs whose frames carry points the game reads (a crystal, a blade tip): the same for every look of the rig. */
 export type MetaKind = 'wizard' | 'warrior' | 'paladin' | 'jedi' | 'samurai';
@@ -168,6 +169,7 @@ rig(BEAST_LOOKS, BEAST_W, BEAST_H, buildBeastFrames, beastAnims);
 // The Force Sage: a Jedi-class type on a rig of her own.
 rig(SAGE_LOOKS, SAGE_W, SAGE_H, buildSageFrames, () => SAGE_ANIMS);
 rig(DIGGER_LOOKS, DIGGER_W, DIGGER_H, buildDiggerFrames, () => DIGGER_ANIMS);
+rig(FALCONER_LOOKS, FALC_W, FALC_H, buildFalconerFrames, () => FALCONER_ANIMS);
 
 /** Every hero sheet's key, in roster order. */
 export const HERO_SHEETS: readonly string[] = [...SHEETS.keys()];

@@ -2592,6 +2592,48 @@ export class Sfx {
     vib.stop(t + 0.6);
     this.burstNoise(out, t, 'highpass', 3000, 5000, 1, 0.08, 0.2);
   }
+  /** A falcon's chatter, "kek-kek-kek-kek", hard and quick; or a snowy owl's low, gruff bark. */
+  falconCall(t: number, pan: number, owl: boolean): void {
+    const out = this.out(pan, 0.35, 0.35);
+    if (owl) {
+      const soft = filter(this.m.ctx, 'lowpass', 1200, 0.7, out);
+      this.chirp(soft, t, 'triangle', 520, 380, 0.3, 0.16);
+      this.chirp(soft, t + 0.2, 'triangle', 500, 360, 0.24, 0.14);
+      this.burstNoise(out, t, 'bandpass', 900, 600, 1.2, 0.08, 0.2, true);
+      return;
+    }
+    for (let i = 0; i < 4; i++) {
+      const at = t + i * 0.075;
+      const f = rand(2500, 2700) - i * 60;
+      this.chirp(out, at, 'sawtooth', f, f * 0.82, 0.12 * (1 - i * 0.12), 0.05);
+      this.chirp(out, at, 'triangle', f * 1.5, f * 1.2, 0.08, 0.04);
+    }
+  }
+
+  /** A falconer's whistle: breath, a long note sliding up, held, and snapped down at the end. */
+  whistle(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.4, 0.55);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.2, t + 0.05);
+    g.gain.setValueAtTime(0.2, t + 0.5);
+    g.gain.linearRampToValueAtTime(0, t + 0.68);
+    const o = osc(ctx, 'sine', 1700, g);
+    o.frequency.setValueAtTime(1700, t);
+    o.frequency.linearRampToValueAtTime(2600, t + 0.3);
+    o.frequency.setValueAtTime(2600, t + 0.5);
+    o.frequency.linearRampToValueAtTime(1900, t + 0.66);
+    const depth = gain(ctx, 18);
+    const vib = osc(ctx, 'sine', 6, depth);
+    depth.connect(o.frequency);
+    o.start(t);
+    o.stop(t + 0.72);
+    vib.start(t);
+    vib.stop(t + 0.72);
+    this.burstNoise(out, t, 'bandpass', 2400, 2800, 3, 0.06, 0.6);
+  }
+
 
   /**
    * The Aurora Colosseum's frost, by kind:
