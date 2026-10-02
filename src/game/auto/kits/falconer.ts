@@ -1,6 +1,6 @@
 // The Falconer's effects on the board: her quick arrows, her falcon cast at
-// a foe to rake it (a snowy owl for Snowfeather), and Skyhunt, a flight of
-// hawks (owls) wheeling over her and stooping one after another on the foes.
+// a foe to rake it (a golden eagle for Berkut), and Skyhunt, a flight of
+// hawks (eagles) wheeling over her and stooping one after another on the foes.
 
 import {
   angle,
@@ -64,42 +64,46 @@ const FALCON_STOOP = [
   '...ccak',
   '.....k.',
 ];
-const OWL_UP = [
-  '.aa.......',
-  '..aaa.....',
-  '...aaa.bb.',
-  'abbbcccbbk',
-  '..bbccc...',
-  '..........',
+// The golden eagle: bigger, broad wings fingered at the tips, a golden head (c) and a heavy beak.
+const EAGLE_UP = [
+  '.a.a........',
+  '..aaa.......',
+  '...aaaa.....',
+  '....aaaa.cc.',
+  'aabbbbbbbcck',
+  '..aabbbb..k.',
+  '............',
 ];
-const OWL_DOWN = [
-  '..........',
-  '.......bb.',
-  'abbbcccbbk',
-  '..baaccc..',
-  '..aaa.....',
-  '.aa.......',
+const EAGLE_DOWN = [
+  '............',
+  '.........cc.',
+  'aabbbbbbbcck',
+  '..abbaabb.k.',
+  '...aaaa.....',
+  '..aaa.......',
+  '.a.a........',
 ];
-const OWL_STOOP = [
-  'aa......',
-  '.abbb...',
-  '..bccbb.',
-  '...cccbk',
-  '.....kk.',
+const EAGLE_STOOP = [
+  'aa.......',
+  '.aabb....',
+  '..abbbb..',
+  '...abbcc.',
+  '....bbcck',
+  '.......kk',
 ];
 
-const owlish = (look: string): boolean => look === 'snowfeather';
+const eagleish = (look: string): boolean => look === 'berkut';
 
 function plumage(look: string, p: Pal): Record<string, number> {
-  return owlish(look)
-    ? { a: 0x8a94a6, b: 0xdfe6ee, c: 0xffffff, k: 0xe8c860 }
+  return eagleish(look)
+    ? { a: 0x2a1a10, b: 0x6a4428, c: 0xf0c058, k: 0xf0c040 }
     : { a: 0x3a4254, b: 0x7a86a0, c: 0xefe6cc, k: p.hot };
 }
 
 /** The bird at (x, y) in the air, facing along `th`: flapping (f) or stooping. */
 function bird(px: Px, x: number, y: number, th: number, f: number, look: string, p: Pal, a = 1, stoop = false): void {
-  const owl = owlish(look);
-  const rows = stoop ? (owl ? OWL_STOOP : FALCON_STOOP) : f % 2 ? (owl ? OWL_DOWN : FALCON_DOWN) : owl ? OWL_UP : FALCON_UP;
+  const eagle = eagleish(look);
+  const rows = stoop ? (eagle ? EAGLE_STOOP : FALCON_STOOP) : f % 2 ? (eagle ? EAGLE_DOWN : FALCON_DOWN) : eagle ? EAGLE_UP : FALCON_UP;
   sprite(px, x, y, rows, plumage(look, p), a, { flip: Math.cos(th) < -0.05, ay: rows.length / 2 });
 }
 

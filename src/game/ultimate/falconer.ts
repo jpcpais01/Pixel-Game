@@ -5,8 +5,8 @@ import { BirdSprite, Feathers, Rake } from '../Falcon';
 import type { Cast, IconPainter } from './types';
 import { bloom, circle, clamp01, dither, easeIn, easeOut, flare, Fx, GROUND, hash, type Ink } from './ink';
 
-// The falconer's Special, Skyhunt. She whistles, and a flight of hawks (owls
-// for Snowfeather) answers out of the sky: they wheel over her in a wide ring,
+// The falconer's Special, Skyhunt. She whistles, and a flight of hawks (golden
+// eagles for Berkut) answers out of the sky: they wheel over her in a wide ring,
 // their shadows sweeping the ground under them, then one after another they
 // fold their wings and stoop on the foes round her, each striking hard in a
 // burst of feathers before beating away up into the sky.
@@ -48,7 +48,7 @@ interface Hawk {
 export class Skyhunt extends Fx {
   private hawks: Hawk[] = [];
   private ground: Ink;
-  private readonly owls: boolean;
+  private readonly eagles: boolean;
   private readonly seed = Math.floor(Math.random() * 1000);
   private readonly feathers: number[];
 
@@ -57,8 +57,8 @@ export class Skyhunt extends Fx {
     private c: Cast,
   ) {
     super(world, LIFE);
-    this.owls = c.look === 'snowfeather';
-    this.feathers = this.owls ? [0xffffff, 0xccd4e0, 0xe8eef6, 0x8a94a6] : [0xeee0c6, 0x946a46, 0xd2bea2, 0xcc6630];
+    this.eagles = c.look === 'berkut';
+    this.feathers = this.eagles ? [0xf0c058, 0x6a4428, 0xa0743e, 0x2a1a10] : [0xeee0c6, 0x946a46, 0xd2bea2, 0xcc6630];
     this.ground = this.ink(HUNT_R * 2 + 8, Math.ceil(HUNT_R * GROUND * 2) + 8);
     // Each hawk takes the next foe nearest her, round the ring; with more hawks than foes they double up.
     const foes = world
@@ -69,7 +69,7 @@ export class Skyhunt extends Fx {
       const a = (i / HAWKS) * Math.PI * 2 + hash(i, this.seed) * 0.4;
       const r = HUNT_R * (0.35 + hash(i, this.seed, 1) * 0.5);
       this.hawks.push({
-        bird: this.own(new BirdSprite(world, this.owls ? 'bird_owl' : 'bird_hawk')),
+        bird: this.own(new BirdSprite(world, this.eagles ? 'bird_eagle' : 'bird_hawk')),
         a0: (i / HAWKS) * Math.PI * 2,
         go: ARRIVE + WHEEL + i * STAGGER,
         prey,
@@ -85,7 +85,8 @@ export class Skyhunt extends Fx {
     sound.whistle(world.pan(c.x));
     world.time.delayedCall(260, () => {
       sound.screech(world.pan(c.x));
-      sound.wings(world.pan(c.x), 5, this.owls);
+      if (this.eagles) sound.falconCall(world.pan(c.x), true);
+      sound.wings(world.pan(c.x), this.eagles ? 3 : 5);
     });
   }
 

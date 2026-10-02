@@ -42,7 +42,7 @@ import { APOLLO_STYLE, Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_
 import { Arbalest, BRIAR_STYLE, IRONBEARD_STYLE } from './Arbalest';
 import { OWL_STYLE, Windrunner, WISTERIA_STYLE } from './Windrunner';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
-import { Falconer, SNOWFEATHER_KIT } from './Falconer';
+import { BERKUT_KIT, Falconer } from './Falconer';
 import { FALC_H, FALC_ORIGIN_Y } from '../art/falconer';
 import { BARROW_KIT, BarrowKnight, MOSSGRAVE_KIT } from './BarrowKnight';
 import { BARROW_H, BARROW_ORIGIN_Y } from '../art/barrow';
@@ -1224,14 +1224,14 @@ const KITS: KitDef[] = [
         lookName: 'Peregrine',
         skins: [
           {
-            // White and grey furs, a snowy owl on the glove, a pale birch bow fletched in frost blue.
-            id: 'snowfeather',
-            name: 'Snowfeather',
-            accent: 0xbfe6ff,
-            preview: { texture: 'archer_falconer_snow', glow: 'archer_falconer_snow_e', idle: 'archer_falconer_snow_idle_down', chosen: 'archer_falconer_snow_whistle_down', originY: FALC_ORIGIN_Y / FALC_H },
+            // An eagle hunter of the steppe: a tall fox-fur hat, a crimson felt coat bordered in indigo and worked in white and gold, a horn bow, a hooded golden eagle.
+            id: 'berkut',
+            name: 'Berkut',
+            accent: 0xd8483a,
+            preview: { texture: 'archer_falconer_berkut', glow: 'archer_falconer_berkut_e', idle: 'archer_falconer_berkut_idle_down', chosen: 'archer_falconer_berkut_whistle_down', originY: FALC_ORIGIN_Y / FALC_H },
             buttons: {
-              attack: { texture: 'icon_quickshot_snow' },
-              special: { texture: 'icon_falcon_snow' },
+              attack: { texture: 'icon_quickshot_berkut' },
+              special: { texture: 'icon_falcon_berkut' },
             },
           },
         ],
@@ -1242,8 +1242,8 @@ const KITS: KitDef[] = [
         ? new Arbalest(world, x, y, look === 'briar' ? BRIAR_STYLE : look === 'ironbeard' ? IRONBEARD_STYLE : undefined)
         : look === 'wind' || look === 'wisteria' || look === 'owl'
           ? new Windrunner(world, x, y, look === 'wisteria' ? WISTERIA_STYLE : look === 'owl' ? OWL_STYLE : undefined)
-          : look === 'falconer' || look === 'snowfeather'
-            ? new Falconer(world, x, y, look === 'snowfeather' ? SNOWFEATHER_KIT : undefined)
+          : look === 'falconer' || look === 'berkut'
+            ? new Falconer(world, x, y, look === 'berkut' ? BERKUT_KIT : undefined)
             : new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : look === 'apollo' ? APOLLO_STYLE : RANGER_STYLE),
   },
   {

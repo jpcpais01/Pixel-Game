@@ -50,14 +50,14 @@ export interface FalconerKit {
 export const FALCONER_KIT: FalconerKit = {
   key: 'archer_falconer',
   arrow: { core: 0xffffff, hot: 0xfff0c8, mid: 0xf0b050, deep: 0x9a5a22, light: 0xffc880, suffix: '_falconer', storm: false },
-  falcon: { bird: 'bird_falcon', owl: false, feathers: [0xefe6cc, 0x7a86a0, 0xd6c8a6, 0x3a4254], claw: [0xffffff, 0xffd890, 0xd88a30], light: 0xffc880 },
+  falcon: { bird: 'bird_falcon', eagle: false, feathers: [0xefe6cc, 0x7a86a0, 0xd6c8a6, 0x3a4254], claw: [0xffffff, 0xffd890, 0xd88a30], light: 0xffc880 },
 };
 
-/** Snowfeather: frost-blue shots, a snowy owl. */
-export const SNOWFEATHER_KIT: FalconerKit = {
-  key: 'archer_falconer_snow',
-  arrow: { core: 0xffffff, hot: 0xe8f6ff, mid: 0x9ad8ff, deep: 0x4a86c0, light: 0xc0e8ff, suffix: '_falconer_snow', storm: false, spirit: true },
-  falcon: { bird: 'bird_owl', owl: true, feathers: [0xffffff, 0xccd4e0, 0xe8eef6, 0x8a94a6], claw: [0xffffff, 0xd4f0ff, 0x7ac4ff], light: 0xc0e8ff },
+/** Berkut: gold-and-crimson shots, a golden eagle. */
+export const BERKUT_KIT: FalconerKit = {
+  key: 'archer_falconer_berkut',
+  arrow: { core: 0xffffff, hot: 0xffe8a8, mid: 0xe8a030, deep: 0xa8281e, light: 0xffc060, suffix: '_falconer_berkut', storm: false },
+  falcon: { bird: 'bird_eagle', eagle: true, feathers: [0xf0c058, 0x6a4428, 0xa0743e, 0x2a1a10], claw: [0xffffff, 0xffd060, 0xc8301e], light: 0xffc060 },
 };
 
 /**

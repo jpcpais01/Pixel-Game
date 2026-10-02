@@ -1,6 +1,7 @@
 // Button icons for the Falconer: her quick shot from a short bow and her
-// falcon's strike, in her own tones and in Snowfeather's (birch, frost and a
-// snowy owl). 16x16, outlined, lit from the top left like the other icons.
+// falcon's strike, in her own tones and in Berkut's (a dark horn bow, crimson
+// fletching, a golden eagle). 16x16, outlined, lit from the top left like the
+// other icons.
 
 import { iconPainter } from './effects';
 
@@ -28,14 +29,14 @@ export const FALCONER_TONES: FalconerIconTones = {
   ink: '#0c0806',
 };
 
-export const SNOWFEATHER_TONES: FalconerIconTones = {
-  wood: ['#f2ece0', '#cfc6b4', '#8e8676'],
-  head: '#ffffff',
-  fletch: '#7ac4ff',
-  bird: ['#ffffff', '#dfe6ee', '#8a94a6'],
-  claw: '#e8c860',
-  rake: ['#ffffff', '#9ad8ff'],
-  ink: '#0e1016',
+export const BERKUT_TONES: FalconerIconTones = {
+  wood: ['#e8d4a8', '#6a4428', '#2a1a0e'],
+  head: '#eef2f8',
+  fletch: '#d0402e',
+  bird: ['#f0c058', '#6a4428', '#2a1a10'],
+  claw: '#f0c040',
+  rake: ['#fff4d0', '#ffb040'],
+  ink: '#0c0604',
 };
 
 /** Quick shot: a short recurve bow drawn, an arrow leaving it fast up and right, speed lines behind. */

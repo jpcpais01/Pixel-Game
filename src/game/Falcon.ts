@@ -1,21 +1,21 @@
 import Phaser from 'phaser';
 import type { Effect } from './Slash';
 import type { Hurtbox } from './combat';
-import { BIRD_FLAP, BIRD_H, BIRD_W } from '../art/falconer';
+import { BIRD_CX, BIRD_CY, BIRD_FLAP, BIRD_H, BIRD_W } from '../art/falconer';
 import { Ink } from './ultimate/ink';
 import { snap } from './display';
 import { sound } from '../audio';
 import type { WorldScene } from '../scenes/WorldScene';
 
-// The falconer's birds: the falcon (or Snowfeather's owl) in flight, the
+// The falconer's birds: the falcon (or Berkut's golden eagle) in flight, the
 // hawks of her Special, the hunter's mark left on what they raked, and the
 // feathers they shed. A bird flies at a height `z` over a ground point; it is
 // drawn z px higher, its shadow lies on the ground under it and shrinks and
 // fades as it climbs.
 
 /** Its sheet's frame size, and where the body's middle sits in it. */
-const OX = 17 / BIRD_W;
-const OY = 15 / BIRD_H;
+const OX = BIRD_CX / BIRD_W;
+const OY = BIRD_CY / BIRD_H;
 /** Wingbeats a second, flapping. */
 const FLAP_FPS = 15;
 
@@ -241,9 +241,10 @@ export class HuntMarks {
 
 /** The colours a falcon's moves are drawn in. */
 export interface FalconStyle {
-  /** Bird sheet: 'bird_falcon' or 'bird_owl'. */
+  /** Bird sheet: 'bird_falcon' or 'bird_eagle'. */
   bird: string;
-  owl: boolean;
+  /** The golden eagle: a deeper cry, heavier wingbeats. */
+  eagle: boolean;
   /** Feathers it sheds, light to dark. */
   feathers: number[];
   /** Its rakes and marks, bright to deep. */
@@ -282,7 +283,6 @@ export class FalconStrike implements Effect {
   private t = 0;
   private rakes = 0;
   private faceRight: boolean;
-  private lamp: Phaser.GameObjects.Light | null = null;
   private stoopFrom = { x: 0, y: 0, z: 0 };
 
   constructor(
@@ -305,9 +305,8 @@ export class FalconStrike implements Effect {
     this.phase = prey ? 'out' : 'wheel';
     this.faceRight = (prey?.x ?? spot.x) >= x;
     this.bird = new BirdSprite(world, style.bird);
-    if (style.owl) this.lamp = world.lights.addLight(x, y, 30, style.light, 0.5);
-    sound.wings(world.pan(x), 2, style.owl);
-    sound.falconCall(world.pan(x), style.owl);
+    sound.wings(world.pan(x), style.eagle ? 1 : 2);
+    sound.falconCall(world.pan(x), style.eagle);
     this.draw('f0');
   }
 
@@ -414,7 +413,6 @@ export class FalconStrike implements Effect {
         break;
       }
     }
-    this.lamp?.setPosition(this.x, this.y - this.z);
   }
 
   /** Back on her shoulder at once (she whistled it in): a flurry of feathers where it was. */
@@ -471,6 +469,5 @@ export class FalconStrike implements Effect {
     if (this.dead) return;
     this.dead = true;
     this.bird.destroy();
-    if (this.lamp) this.world.lights.removeLight(this.lamp);
   }
 }
