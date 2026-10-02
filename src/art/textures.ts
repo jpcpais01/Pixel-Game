@@ -15,7 +15,7 @@ import { CARNIVAL_BREW_COLORS, carnBogIcon, carnFlaskIcon } from './carnevale';
 import { bellBarrageIcon, bellIcon, DIVER_BREW_COLORS } from './diver';
 import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbowBoltFrame, stuckArrowFrame, stuckBoltFrame } from './archer';
 import { BIRD_H as HAWK_H, BIRD_LOOKS as HAWK_LOOKS, BIRD_W as HAWK_W, birdFrames as hawkFrames, FALCONER_LOOKS, falconArrowFrame, falconStuckFrame } from './falconer';
-import { FALCONER_TONES, falconIcon, quickShotIcon, SNOWFEATHER_TONES } from './falconerIcons';
+import { BERKUT_TONES, FALCONER_TONES, falconIcon, quickShotIcon } from './falconerIcons';
 import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
 import { deathStepIcon, reapIcon } from './reaper';
 import { boneSpikesIcon, DROWNED_ICON, rimeBoltIcon } from './lich';
@@ -298,8 +298,8 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     scene.textures.addCanvas(`icon_bow${sfx}`, toCanvas(16, 16, bowIcon(q)));
     scene.textures.addCanvas(`icon_rain${sfx}`, toCanvas(16, 16, rainIcon(q, look.storm)));
   }
-  // The falconer's short arrows ('arrow_falconer', '_snow' for Snowfeather),
-  // her icons, and the birds that fly: her falcon, the snowy owl and the
+  // The falconer's short arrows ('arrow_falconer', '_berkut' for Berkut),
+  // her icons, and the birds that fly: her falcon, the golden eagle and the
   // Special's hawks ('bird_<kind>', frames f0..f5, g0..g1, d0..d1, k0..k3).
   for (const look of FALCONER_LOOKS) {
     const sfx = look.key.slice('archer'.length);
@@ -308,8 +308,8 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
       ...frameList([0, 1, 2].map((k) => falconStuckFrame(k, look)), 'k'),
     ];
     register(scene, `arrow${sfx}`, pack(arrows, ARROW_SIZE, ARROW_SIZE), ARROW_SIZE, ARROW_SIZE);
-    const tones = look.snow ? SNOWFEATHER_TONES : FALCONER_TONES;
-    const isfx = look.snow ? '_snow' : '';
+    const tones = look.berkut ? BERKUT_TONES : FALCONER_TONES;
+    const isfx = look.berkut ? '_berkut' : '';
     scene.textures.addCanvas(`icon_quickshot${isfx}`, toCanvas(16, 16, quickShotIcon(tones)));
     scene.textures.addCanvas(`icon_falcon${isfx}`, toCanvas(16, 16, falconIcon(tones)));
   }

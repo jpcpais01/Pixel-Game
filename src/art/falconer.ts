@@ -12,13 +12,16 @@
 //
 // While the falcon is out hunting she is drawn without it (the `bare_`
 // moves); the bird in flight is its own small sheet, drawn at the end of this
-// file with the hawks of her Special and the snowy owl of her skin.
+// file with the hawks of her Special and the golden eagle of her skin.
 //
-// Snowfeather is her skin: a northern huntress in a white fur-lined hood over
-// grey wool edged in white fur, a silver-blonde braid, a frost-blue crystal
-// at her throat, a pale birch bow, frost-blue fletching, and a snowy owl on
-// her shoulder, white flecked with grey, with eyes like lamps.
-//
+// Berkut is her skin: an eagle hunter of the steppe in a tall fox-fur hat
+// (a russet fur brim and ear flaps round a red felt crown, a tassel on top),
+// a long quilted felt coat of deep crimson bordered in indigo and worked in
+// white and gold ram's-horn scrolls, a wide belt set with silver plaques,
+// high black boots, a heavy leather gauntlet, a horn-and-sinew bow, and on
+// her shoulder a great golden eagle, dark brown with a golden nape, hooded in
+// tooled leather with a red plume until it flies.
+
 // The rig is the archer's (see archer.ts): hands posed in her own terms and
 // placed for each view, the bow aimed from the draw hand through the grip.
 
@@ -41,24 +44,24 @@ const mat = (r: string[], outline: string, o: Partial<Material> = {}): Material 
 // ---------------------------------------------------------------------------
 // Looks
 
-/** A bird's feathers: the falcon, the hawks of the Special, the snowy owl. */
+/** A bird's feathers: the falcon, the hawks of the Special, the golden eagle. */
 export interface BirdLook {
   /** Back and wings, and the dark flight feathers at their tips. */
   back: Material;
   primary: Material;
-  /** Crown and moustache (the owl's is its white face). */
+  /** Crown and moustache (the eagle's golden crown and nape). */
   hood: Material;
   /** Breast, throat and underwing. */
   breast: Material;
-  /** The bars on the breast and tail, the owl's flecks. */
+  /** The bars on the breast and tail (the eagle's tawny shoulders and leggings). */
   bar: Material;
   tail: Material;
-  /** Cere, feet and (the owl's) eyes. */
+  /** Cere and feet. */
   foot: Material;
   beak: Material;
   eye: Material;
-  /** Round-headed and broad-winged, flat-faced, flecked. */
-  owl?: boolean;
+  /** Big, broad-winged and long-fingered, a heavy hooked beak; hooded while perched. */
+  eagle?: boolean;
   /** Its size against the falcon's. */
   size: number;
 }
@@ -101,8 +104,25 @@ export interface FalconerLook {
   bird: BirdLook;
   /** Light her arrowheads gather, brightest first. */
   light: [RGB, RGB, RGB];
-  /** Snowfeather: a fur-lined hood for a cap, fur at the cuffs and hem, a crystal at the throat. */
-  snow?: { fur: Material; gem: Material };
+  /** Berkut: the fox-fur hat, the coat's indigo borders and their embroidery, the belt's plaques, the eagle's hood. */
+  berkut?: BerkutDress;
+}
+
+/** What Berkut wears over the falconer's rig. */
+export interface BerkutDress {
+  /** Fox fur: the hat's brim and ear flaps. */
+  fur: Material;
+  /** Indigo felt: the coat's borders, collar and cuffs, the hat's crown seams. */
+  felt: Material;
+  /** The embroidery: white felt and gold thread. */
+  stitch: Material;
+  gold: Material;
+  /** The hat's tassel and the hood's plume. */
+  tassel: Material;
+  /** Silver plaques on the belt. */
+  plaque: Material;
+  /** The eagle's tooled leather hood. */
+  hood: Material;
 }
 
 // The peregrine.
@@ -135,21 +155,21 @@ export const HAWK: BirdLook = {
   size: 1.12,
 };
 
-/** Snowfeather's snowy owl: white, flecked with grey, its eyes burning gold. */
-export const SNOWY_OWL: BirdLook = {
-  back: mat(['#7c8696', '#a6b0c0', '#ccd4e0', '#e8eef6', '#ffffff'], '#262c38'),
-  primary: mat(['#5c6676', '#8a94a6', '#b4bece', '#dce4ee'], '#1e2430'),
-  hood: mat(['#9aa4b4', '#c4ccd8', '#e4eaf2', '#f6f9fc', '#ffffff'], '#262c38'),
-  breast: mat(['#8e98a8', '#bac2d0', '#dfe5ee', '#f4f7fb', '#ffffff'], '#262c38'),
-  bar: mat(['#30343e', '#464c58', '#5e6472'], '#101216'),
-  tail: mat(['#7c8696', '#a6b0c0', '#ccd4e0', '#eef2f8'], '#262c38'),
-  foot: mat(['#9aa4b4', '#c4ccd8', '#e4eaf2'], '#262c38'),
-  beak: mat(['#1c1e24', '#34363e', '#50535e'], '#08090b'),
-  eye: mat(['#8a6408', '#e0a818', '#ffd84a', '#fff4a8'], '#2a1c02', { emissive: 0.55, noAO: true }),
-  owl: true,
-  size: 1.08,
+/** Berkut's golden eagle: dark brown, a golden crown and nape, tawny shoulders and leggings, a slate beak. */
+export const GOLDEN_EAGLE: BirdLook = {
+  back: mat(['#100906', '#1e130c', '#311e12', '#472e1c', '#604228'], '#050302'),
+  primary: mat(['#0a0604', '#140e0a', '#201812', '#2e241c'], '#030201'),
+  hood: mat(['#5a3410', '#8a5418', '#b87a24', '#dca040', '#f6cc6a'], '#1e1004'),
+  breast: mat(['#140a06', '#24140c', '#3a2414', '#523420', '#6e4c2c'], '#060302'),
+  bar: mat(['#3e2612', '#64401e', '#8c6030', '#ae7e46'], '#140a04'),
+  tail: mat(['#1a120c', '#2e2218', '#463628', '#5e4c3c'], '#080604'),
+  foot: mat(['#7a5410', '#b88a18', '#e8be30', '#fff07a'], '#2a1a04', { noAO: true }),
+  beak: mat(['#14161c', '#2c3040', '#4c5266', '#6c7488'], '#050608'),
+  eye: mat(['#2a1204', '#6a3a0c'], '#030201', { noAO: true }),
+  eagle: true,
+  size: 1.35,
 };
-SNOWY_OWL.back.outlineLit = hex('#3c4454');
+GOLDEN_EAGLE.hood.outlineLit = hex('#2e1a08');
 
 export const FALCONER_LOOK: FalconerLook = {
   key: 'archer_falconer',
@@ -182,43 +202,51 @@ export const FALCONER_LOOK: FalconerLook = {
   light: [hex('#fffbea'), hex('#ffd890'), hex('#e8a040')],
 };
 
-export const SNOWFEATHER_LOOK: FalconerLook = {
-  key: 'archer_falconer_snow',
-  cap: mat(['#2e3440', '#454e5e', '#5e6a7c', '#7c899c', '#9aa8ba'], '#0e1016'),
-  capBand: mat(['#8e98a6', '#bcc4d0', '#e0e6ee', '#f8fbff'], '#262a34'),
-  quill: mat(['#a4aebc', '#ccd4de', '#eef2f8', '#ffffff'], '#2a3040'),
-  quillBar: mat(['#3a404c', '#565e6c', '#727a88'], '#14161c'),
-  hair: mat(['#5c5648', '#8a826e', '#b6ad94', '#dcd4ba', '#f6f0dc'], '#24201a'),
-  tie: mat(['#2a4a6a', '#4a7aa4', '#7ab0dc'], '#0e1c2a'),
-  eye: mat(['#1a3a5a', '#2a5a8a'], '#0a1420', { noAO: true }),
-  lip: mat(['#8a4a52', '#ae646a', '#cc8086'], '#2a1418', { noAO: true }),
-  coat: mat(['#1a1e26', '#2a303a', '#3e4652', '#56606e', '#727e8e'], '#090b0e'),
-  shirt: mat(['#8e98a6', '#b8c0cc', '#dce2ea', '#f2f5f9', '#ffffff'], '#262a32'),
-  trouser: mat(['#16181e', '#24272e', '#363a44', '#4a505c', '#606876'], '#07080a'),
-  boot: mat(['#20242c', '#343a44', '#4c5460', '#66707e', '#808c9a'], '#0a0c10'),
-  glove: mat(['#5a5e66', '#80868e', '#a8aeb6', '#ccd0d6', '#e8ebef'], '#20232a'),
-  cuff: mat(['#8e98a6', '#bcc4d0', '#e0e6ee', '#f6f9fc', '#ffffff'], '#262a34'),
-  pad: mat(['#2a2e36', '#40464f', '#5a616c', '#767e8a', '#959eaa'], '#0e1014'),
-  strap: mat(['#20242a', '#343a42', '#4c545e', '#66707a'], '#0a0c0e'),
-  buckle: mat(['#4a5868', '#7a8ca0', '#b4c6d8', '#eef6ff'], '#141c26', { shine: true }),
-  bag: mat(['#2a2e36', '#40464f', '#5a616c', '#767e8a', '#959eaa'], '#0e1014'),
-  bow: mat(['#5a5448', '#8e8676', '#b8b09c', '#d6cfbc', '#ebe6d6'], '#221e18', { shine: true }),
-  tip: mat(['#4a5868', '#7a8ca0', '#b4c6d8', '#eef6ff'], '#141c26', { shine: true }),
-  string: mat(['#9ab8d4', '#cce0f2', '#f2f9ff'], '#2a3a4a', { emissive: 0.2 }),
-  fletch: mat(['#2a5a8a', '#4a8ac0', '#8ac4ee', '#d4f0ff'], '#0e2236'),
-  fletchBar: mat(['#e8f4ff', '#ffffff'], '#3a5a7a'),
-  head: mat(['#3a5a7a', '#6a90b4', '#a8d0ee', '#e0f4ff', '#ffffff'], '#0e1a28', { shine: true }),
-  shaft: mat(['#7a7262', '#a49a84', '#cac0a8', '#e6dec8'], '#2a261c'),
-  bird: SNOWY_OWL,
-  light: [hex('#ffffff'), hex('#d4f0ff'), hex('#7ac4ff')],
-  snow: {
-    fur: mat(['#8a94a2', '#b4bcc8', '#d8dee6', '#f0f3f7', '#ffffff'], '#2a2e38'),
-    gem: mat(['#1a4a8a', '#3a86d0', '#8ad0ff', '#e4f8ff'], '#08182e', { emissive: 0.75, shine: true, noAO: true }),
+export const BERKUT_LOOK: FalconerLook = {
+  key: 'archer_falconer_berkut',
+  // The hat's red felt crown (the brim is the fur below).
+  cap: mat(['#300406', '#560a0e', '#7c1214', '#a01e1c', '#bc3428'], '#140202'),
+  capBand: mat(['#3a1406', '#64260c', '#924016', '#bc5e22', '#de8a44'], '#160602'),
+  // The lure on her bag: tawny eagle feathers.
+  quill: mat(['#76502a', '#a0743e', '#c89e5e', '#ead2a0'], '#1e1006'),
+  quillBar: mat(['#1a0e08', '#2c1a0e', '#422816'], '#080402'),
+  hair: mat(['#060508', '#100e12', '#1c181e', '#2a242c', '#3c3440'], '#020202'),
+  tie: mat(['#5a0c0c', '#9a1e18', '#d0402e'], '#1a0404'),
+  eye: mat(['#140a04', '#24140a'], '#080402', { noAO: true }),
+  lip: mat(['#7a3030', '#a2463e', '#c25e52'], '#2a0e0c', { noAO: true }),
+  coat: mat(['#2a0408', '#4a0a10', '#6e1218', '#941e22', '#b63832'], '#120204'),
+  shirt: mat(['#0c0e26', '#161a40', '#22285e', '#323a7e', '#48529c'], '#04050e'),
+  trouser: mat(['#0c0c18', '#16162a', '#22223e', '#303052', '#424268'], '#040408'),
+  boot: mat(['#0c0908', '#1a1410', '#2a201a', '#3c3026', '#544436'], '#040302', { shine: true }),
+  glove: mat(['#2a1608', '#4a2a12', '#70441e', '#966030', '#ba824c'], '#120802'),
+  cuff: mat(['#1e0e06', '#36200e', '#523218', '#704a26', '#8e6438'], '#0c0602'),
+  pad: mat(['#1e1008', '#341e10', '#4e301a', '#6a4626', '#865e36'], '#0a0503'),
+  strap: mat(['#160c06', '#28160c', '#3e2414', '#56361e'], '#080402'),
+  buckle: mat(['#4a4e58', '#7e8492', '#b4bac6', '#eef2f8'], '#14161c', { shine: true }),
+  bag: mat(['#1e1008', '#382010', '#56341c', '#74502c', '#926c40'], '#0a0503'),
+  // Horn and sinew: dark horn limbs, pale bone ears, a sinew string.
+  bow: mat(['#100806', '#20140c', '#342214', '#4c341e', '#6a4c2e'], '#060302', { shine: true }),
+  tip: mat(['#6a5a3a', '#a8946a', '#d8c49a', '#f4e8c8'], '#221c10'),
+  string: mat(['#6a5034', '#9a7a52', '#c8a87a'], '#22180c'),
+  fletch: mat(['#2a1a0e', '#4a3018', '#6e4a26', '#946a3a'], '#0c0604'),
+  fletchBar: mat(['#bcae92', '#e8dcc0', '#fff8e8'], '#3a3020'),
+  head: mat(['#2a2e3a', '#4e5466', '#7e8698', '#bcc4d2', '#eef2f8'], '#0c0e14', { shine: true }),
+  shaft: mat(['#5a4428', '#866a40', '#b09060', '#d4b886'], '#1a120a'),
+  bird: GOLDEN_EAGLE,
+  light: [hex('#fffbe8'), hex('#ffd870'), hex('#e89a30')],
+  berkut: {
+    fur: mat(['#2a0e06', '#4c1c0a', '#763212', '#9e481a', '#c0642a', '#d8844a'], '#120502'),
+    felt: mat(['#0c0e26', '#161a40', '#22285e', '#323a7e', '#48529c'], '#04050e'),
+    stitch: mat(['#a8a8b4', '#dcdce4', '#f6f6fa', '#ffffff'], '#1a1a24', { noAO: true }),
+    gold: mat(['#7a5410', '#b88a20', '#e8bc3a', '#fff08a'], '#2a1a04', { shine: true, noAO: true }),
+    tassel: mat(['#5a0a08', '#9a1a12', '#d0341e', '#f0603a'], '#1a0202'),
+    plaque: mat(['#4a4e58', '#7e8492', '#b4bac6', '#eef2f8'], '#14161c', { shine: true, noAO: true }),
+    hood: mat(['#2a0606', '#4c0e0c', '#721a14', '#962a1c', '#b4442c'], '#100202'),
   },
 };
-SNOWFEATHER_LOOK.cap.outlineLit = hex('#1e222c');
+BERKUT_LOOK.cap.outlineLit = hex('#2a0404');
 
-export const FALCONER_LOOKS = [FALCONER_LOOK, SNOWFEATHER_LOOK];
+export const FALCONER_LOOKS = [FALCONER_LOOK, BERKUT_LOOK];
 
 /** The look being drawn; set by buildFalconerFrames. */
 let S: FalconerLook = FALCONER_LOOK;
@@ -371,11 +399,16 @@ function drawBow(c: PixelCanvas, view: View, p: Pose, fa: Placed, fb: Placed, bi
     const [x1, y1] = at(s);
     c.line(x0, y0, x1, y1, S.tip, () => sphere(-0.3, -0.4), { bias: bias + 1 });
   }
-  if (S.snow) {
-    // Birch: dark flecks along the pale limbs.
-    for (const t of [-0.6, -0.3, 0.34, 0.62]) {
+  if (S.berkut) {
+    // Horn and sinew: the limbs' horn bellies lit along their length, and red-and-gold thread bound round them where the bone ears are set.
+    for (const t of [-0.5, -0.25, 0.25, 0.5]) {
       const [kx, ky] = at(t);
-      c.shade(kx, ky, -2);
+      c.shade(kx, ky, 1);
+    }
+    c.part();
+    for (const t of [-0.72, 0.72]) {
+      const [kx, ky] = at(t);
+      c.px(kx, ky, S.berkut.gold, sphere(-0.3, -0.4), { bias: bias + 1 });
     }
   }
   // The grip, wrapped.
@@ -456,20 +489,27 @@ function arm(c: PixelCanvas, sx: number, sy: number, p: Placed, reach: number, h
     c.capsule(cx0, cy0, fx, fy, 1.75, 1.45, S.glove, { bias });
     c.part();
     c.capsule(cx0, cy0, ex + (fx - ex) * 0.3, ey + (fy - ey) * 0.3, 2.05, 1.85, S.cuff, { bias: bias + 1 });
-    if (S.snow) {
+    if (S.berkut) {
+      // The berkutchi's gauntlet is heavier still: a thick welt round the cuff, stitched in gold.
       c.part();
-      c.capsule(ex, ey, ex + (fx - ex) * 0.14, ey + (fy - ey) * 0.14, 1.9, 1.9, S.snow.fur, { bias: bias + 1 });
+      const wx = ex + (fx - ex) * 0.2;
+      const wy = ey + (fy - ey) * 0.2;
+      c.capsule(ex + (fx - ex) * 0.1, ey + (fy - ey) * 0.1, wx, wy, 2.25, 2.25, S.cuff, { bias: bias + 1 });
+      c.part();
+      c.px(wx, wy, S.berkut.gold, sphere(-0.2, -0.4));
     }
     c.part();
     c.ellipse(fx, fy, 1.45, 1.35, S.glove, { bias });
   } else {
     c.capsule(ex, ey, fx, fy, 1.45, 1.25, S.coat, { bias });
-    if (S.snow) {
-      // A ring of fur at the wrist.
+    if (S.berkut) {
+      // An indigo cuff at the wrist, a white stitch on it.
       const wx = ex + (fx - ex) * 0.72;
       const wy = ey + (fy - ey) * 0.72;
       c.part();
-      c.ellipse(wx, wy, 1.4, 1.3, S.snow.fur, { bias });
+      c.ellipse(wx, wy, 1.5, 1.35, S.berkut.felt, { bias });
+      c.part();
+      c.px(wx - 0.4, wy - 0.4, S.berkut.stitch, sphere(-0.3, -0.4), { bias });
     }
     c.part();
     c.ellipse(fx, fy, 1.2, 1.15, SKIN, { bias });
@@ -481,15 +521,21 @@ function leg(c: PixelCanvas, hx: number, hy: number, fx: number, fy: number, bia
   c.capsule(hx, hy, fx, fy, 1.5, 1.3, S.trouser, { bias });
 }
 
-/** A tall riding boot, its top turned down (a fur cuff on Snowfeather). */
+/** A tall riding boot, its top turned down (Berkut's rise higher, plain and black, a toe turned up). */
 function boot(c: PixelCanvas, x: number, y: number, side = false, bias = 0): void {
   c.part();
   if (side) c.ellipse(x, y, 2.2, 1.2, S.boot, { flatten: 0.8, bias });
   else c.ellipse(x, y, 1.6, 1.3, S.boot, { flatten: 0.8, bias });
+  if (S.berkut) {
+    if (side) c.px(x - 2.4, y - 1, S.boot, sphere(-0.6, -0.5), { bias });
+    c.part();
+    c.shape(Math.round(y - 4.6), Math.round(y - 1), () => [x - (side ? 1.3 : 1.5), x + (side ? 1.5 : 1.5)], S.boot, (_x, _y, t) => cyl(t, 0.2), { bias });
+    return;
+  }
   c.part();
   c.shape(Math.round(y - 3.2), Math.round(y - 1), () => [x - (side ? 1.3 : 1.5), x + (side ? 1.5 : 1.5)], S.boot, (_x, _y, t) => cyl(t, 0.2), { bias });
   c.part();
-  c.shape(Math.round(y - 3.6), Math.round(y - 3.6), () => [x - (side ? 1.6 : 1.8), x + (side ? 1.8 : 1.8)], S.snow ? S.snow.fur : S.cuff, (_x, _y, t) => cyl(t, 0.4), { bias: bias + 1 });
+  c.shape(Math.round(y - 3.6), Math.round(y - 3.6), () => [x - (side ? 1.6 : 1.8), x + (side ? 1.8 : 1.8)], S.cuff, (_x, _y, t) => cyl(t, 0.4), { bias: bias + 1 });
 }
 
 /** The side quiver at her hip, mouth up and back: barred fletchings fanned out of it. */
@@ -579,15 +625,49 @@ function capFeather(c: PixelCanvas, pts: [number, number][], bias = 0): void {
   }
 }
 
-/** A fur trim's broken edge: a few pixels nudged light and dark so it reads as fur, not cloth. */
-function furry(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, seed: number): void {
-  if (!S.snow) return;
-  for (let y = y0; y <= y1; y++) {
+/** Fur: a few pixels nudged light and dark so it reads as fur, not cloth. */
+function furry(c: PixelCanvas, fur: Material, x0: number, x1: number, y0: number, y1: number, seed: number): void {
+  for (let y = Math.round(y0); y <= y1; y++) {
     for (let x = Math.round(x0); x <= Math.round(x1); x++) {
-      if (c.materialAt(x, y) !== S.snow.fur) continue;
+      if (c.materialAt(x, y) !== fur) continue;
       const h = ((x * 7 + y * 13 + seed * 5) % 5 + 5) % 5;
       if (h === 0) c.shade(x, y, -1);
       else if (h === 3) c.shade(x, y, 1);
+    }
+  }
+}
+
+/**
+ * Berkut's embroidery over whatever indigo felt lies in a box: ram's-horn
+ * scrolls, little arches curling out at their feet, white and gold by turns.
+ * Across a band (`across`), the arches run along it two rows deep; down a
+ * band they stand one over another, a chain of horns.
+ */
+function ornament(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, across: boolean, phase = 0): void {
+  const B = S.berkut;
+  if (!B) return;
+  const X0 = Math.round(x0);
+  const Y0 = Math.round(y0);
+  for (let y = Y0; y <= y1; y++) {
+    for (let x = X0; x <= Math.round(x1); x++) {
+      if (c.materialAt(x, y) !== B.felt) continue;
+      // Position along the band (i) and across it (j).
+      const i = (across ? x - X0 : y - Y0) + phase;
+      const j = across ? y - Y0 : x - X0;
+      let m: Material | null = null;
+      if (across) {
+        // Arches two rows deep, white and gold by turns, a gap between.
+        const q = ((i % 5) + 5) % 5;
+        const on = j % 2 === 0 ? q === 1 || q === 2 : q === 0 || q === 3;
+        if (on) m = Math.floor(i / 5) % 2 ? B.gold : B.stitch;
+      } else {
+        // Down a narrow border: a chain of white and gold stitches zigzagging from side to side.
+        const q = ((i % 4) + 4) % 4;
+        if (j % 2 === 0 && q === 0) m = B.stitch;
+        else if (j % 2 === 1 && q === 2) m = B.gold;
+      }
+      if (!m) continue;
+      c.px(x, y, m, sphere(0, j % 2 ? 0.3 : -0.3));
     }
   }
 }
@@ -603,8 +683,8 @@ function furry(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, s
  */
 function perched(c: PixelCanvas, x: number, y: number, view: View, p: Pose): void {
   const B = S.bird;
+  if (B.eagle) return perchedEagle(c, x, y, view, p);
   const w = p.wing;
-  const owl = !!B.owl;
   const peer = p.peer ?? 0;
   const fat = w === 'ruffle' ? 0.7 : 0;
   const by = y - 3.6;
@@ -642,7 +722,7 @@ function perched(c: PixelCanvas, x: number, y: number, view: View, p: Pose): voi
           const fy = tipy + k * 1.5;
           c.capsule(wx + dir * 0.6, wy + 0.4 + k * 0.6, fx, fy, 0.8, 0.45, B.primary, { bias });
         }
-        if (!owl) for (let k = 0; k < 3; k++) c.shade(sx + dir * (1.8 + k * 1.2), by - 1 + k * 0.4, -1);
+        for (let k = 0; k < 3; k++) c.shade(sx + dir * (1.8 + k * 1.2), by - 1 + k * 0.4, -1);
         if (side === 0) break;
       }
     }
@@ -662,8 +742,7 @@ function perched(c: PixelCanvas, x: number, y: number, view: View, p: Pose): voi
       const fx = x - 1.9 - fat - Math.sin(u * Math.PI) * 0.6 + u * 1.4;
       return [fx, fx + 1.9];
     }, B.breast, (_x, _y, t, u) => sphere(t * 0.6 - 0.4, u * 0.6 - 0.2, 1));
-    if (owl) speckle(c, x - 2.6, x + 2.8, by - 3, y, 3);
-    else for (let yy = Math.round(by - 1); yy <= y - 2; yy += 2) c.shade(x - 1, yy, -1);
+    for (let yy = Math.round(by - 1); yy <= y - 2; yy += 2) c.shade(x - 1, yy, -1);
     if (w === 'fold' || w === 'eat' || w === 'gulp' || w === 'preen' || w === 'ruffle') {
       c.part();
       c.capsule(x + 0.2, by - 2, x + 2.4, y - 0.4, 1.2 + fat * 0.6, 0.8, B.back, { bias: -1 });
@@ -703,11 +782,9 @@ function perched(c: PixelCanvas, x: number, y: number, view: View, p: Pose): voi
     c.part();
     c.ellipse(x, by + 0.4, 2.1 + fat, 2.9 + fat * 0.6, back ? B.back : B.breast, { normal: bodyN });
     if (!back) {
-      if (owl) speckle(c, x - 2.6, x + 2.6, by - 2, by + 3, 0);
-      else
-        for (let yy = Math.round(by); yy <= by + 2.4; yy += 2)
-          for (let xx = Math.round(x - 1.2); xx <= x + 1.2; xx += 2) c.px(xx + ((Math.round(yy) & 2) ? 1 : 0), yy, B.bar, sphere(0, 0.2));
-    } else if (owl) speckle(c, x - 2.6, x + 2.6, by - 3, by + 3, 4);
+      for (let yy = Math.round(by); yy <= by + 2.4; yy += 2)
+        for (let xx = Math.round(x - 1.2); xx <= x + 1.2; xx += 2) c.px(xx + ((Math.round(yy) & 2) ? 1 : 0), yy, B.bar, sphere(0, 0.2));
+    }
     if (folded && back) {
       foldWings();
       c.shade(x, by + 1, -1);
@@ -728,50 +805,317 @@ function perched(c: PixelCanvas, x: number, y: number, view: View, p: Pose): voi
   if (!(view === 'up')) {
     c.part();
     for (const s of view === 'side' ? [0] : [-1, 1]) c.px(x + s * 0.9 - (view === 'side' ? 0.6 : 0), y, B.foot, sphere(s * 0.3, -0.3));
-    if (!owl) {
-      c.part();
-      c.px(x + 0.4, y + 1, S.strap, sphere(0, 0.2));
-      c.px(x + 0.8, y + 2, S.strap, sphere(0, 0.4), { bias: -1 });
-    }
+    c.part();
+    c.px(x + 0.4, y + 1, S.strap, sphere(0, 0.2));
+    c.px(x + 0.8, y + 2, S.strap, sphere(0, 0.4), { bias: -1 });
   }
 }
 
-/** Flecks on the owl (or bars on the hawk), scattered over a box. */
-function speckle(c: PixelCanvas, x0: number, x1: number, y0: number, y1: number, seed: number): void {
+/**
+ * Berkut's golden eagle perched: half again the falcon's size and hunched,
+ * broad in the shoulder: its folded wings tawny at the shoulder, dark brown
+ * down their length, near black at their tips; a dark breast, tawny
+ * feathered legs, a long banded tail; its golden head in a tooled leather hood
+ * with a plume, so the gold nape and the great hooked beak show. It mantles,
+ * spreads its wings and screams through the hood, takes a morsel, rouses and
+ * preens, like the falcon. On her shoulder it sits a little further out than
+ * the falcon, clear of her hat.
+ */
+function perchedEagle(c: PixelCanvas, x0: number, y: number, view: View, p: Pose): void {
   const B = S.bird;
-  for (let y = Math.round(y0); y <= y1; y++) {
-    for (let x = Math.round(x0); x <= x1; x++) {
-      const m = c.materialAt(x, y);
-      if (m !== B.breast && m !== B.back) continue;
-      const h = ((x * 5 + y * 11 + seed * 3) % 7 + 7) % 7;
-      if (h === 0 || (h === 4 && m === B.back)) c.px(x, y, B.bar, sphere(0, 0));
+  const leather = S.berkut?.hood ?? B.back;
+  const w = p.wing;
+  const peer = p.peer ?? 0;
+  const fat = w === 'ruffle' ? 0.8 : 0;
+  const side = view === 'side';
+  const back = view === 'up';
+  // On her shoulder it sits further out than the falcon, clear of her hat; on her raised fist, out past her face.
+  const x = x0 + (p.bird === 'shoulder' ? (side ? 2.2 : 1.4) : side ? -2.6 : 2.6);
+  /** The top of its shoulders. */
+  const sy = y - 9;
+  const folded = w !== 'spread' && w !== 'cry' && w !== 'mantle';
+
+  /** The tawny band over the shoulder of a wing, from (ax, ay) towards (bx, by). */
+  const coverts = (ax: number, ay: number, bx: number, bY: number, n: number) => {
+    for (let i = 0; i < n; i++) {
+      const u = (i + 0.5) / n;
+      c.px(ax + (bx - ax) * u, ay + (bY - ay) * u, B.bar, sphere(0, -0.4));
+    }
+  };
+  /** An open wing: the arm from shoulder to wrist, the hand out towards the tip, four primaries fingering from it. */
+  const openWing = (sx: number, sy0: number, wx: number, wy: number, tx: number, ty: number, rx: number, ry: number, dir: number, bias: number) => {
+    const hx = wx + (tx - wx) * 0.5;
+    const hy = wy + (ty - wy) * 0.5;
+    c.part();
+    tri(c, sx, sy0, wx, wy, rx, ry, B.back, () => sphere(dir * 0.3, -0.6), bias);
+    tri(c, wx, wy, hx, hy, rx, ry, B.back, () => sphere(dir * 0.5, -0.3), bias);
+    c.part();
+    // The fingers: from the hand out, spread apart, the first longest.
+    for (let k = 0; k < 4; k++) {
+      const u = k / 3;
+      const fx = tx + (rx - tx) * u * 0.6;
+      const fy = ty + (ry - ty) * u * 0.6;
+      const bx = hx + (rx - hx) * u * 0.5;
+      const by = hy + (ry - hy) * u * 0.5;
+      c.capsule(bx, by, fx, fy, 0.75, 0.4, B.primary, { bias });
+    }
+    // The tawny coverts along the arm, the leading edge lit.
+    c.part();
+    coverts(sx + (rx - sx) * 0.18, sy0 + (ry - sy0) * 0.18, wx + (rx - wx) * 0.2, wy + (ry - wy) * 0.2, 4);
+  };
+
+  if (w === 'mantle') {
+    // Half open and drooped over the perch, like a cloak.
+    for (const s of side ? [1.4, 0] : [-1, 1]) {
+      if (side) {
+        const b = s > 0 ? -1 : 0;
+        c.part();
+        tri(c, x + 0.4 + s, sy + 1 - s * 0.6, x + 3.6 + s, sy - 0.6 - s * 0.6, x + 4.8 + s, y + 0.6, B.back, () => sphere(0.4, -0.4), b);
+        c.part();
+        c.capsule(x + 3.8 + s, sy - 0.4 - s * 0.6, x + 5.2 + s, y - 0.6, 1.0, 0.6, B.primary, { bias: b });
+        if (s === 0) coverts(x + 0.8, sy + 1.4, x + 3.4, sy + 0.2, 3);
+      } else {
+        const ax = x + s * 2.6;
+        c.part();
+        tri(c, ax, sy + 0.6, ax + s * 3.4, sy - 0.4, ax + s * 3, y + 1.4, B.back, () => sphere(s * 0.5, -0.4));
+        c.part();
+        c.capsule(ax + s * 3.4, sy, ax + s * 3.6, y + 0.6, 1.0, 0.6, B.primary);
+        coverts(ax + s * 0.6, sy + 1.2, ax + s * 3, sy + 0.4, 3);
+      }
+    }
+  } else if (w === 'spread' || w === 'cry') {
+    // Heraldic, up and out. From the front the wing on her side is swept higher, over her hat rather than across her face.
+    if (side) {
+      for (const s of [1.4, 0]) {
+        const ax = x + 0.6 + s;
+        const ay = sy + 1.6 - s * 0.6;
+        openWing(ax, ay, ax + 2.4, ay - 5, ax + 6.2, ay - 7.4, ax + 3.8, y - 1, 1, s > 0 ? -1 : 0);
+      }
+    } else {
+      for (const s of [-1, 1]) {
+        const high = s < 0;
+        const ax = x + s * 2.2;
+        const ay = sy + 1.2;
+        openWing(ax, ay, ax + s * (high ? 2.6 : 4.4), ay - (high ? 5.8 : 4.8), ax + s * (high ? 5.2 : 9.4), ay - (high ? 8.6 : 2.2), ax + s * (high ? 1.4 : 2.8), y - (high ? 1.6 : 0.6), s, 0);
+      }
     }
   }
+
+  // Leather jesses hanging from its legs, and the yellow feet gripping, black talons at their tips.
+  const feet = (fx: number[]) => {
+    c.part();
+    for (const f of fx) {
+      c.px(f, y, B.foot, sphere(0, -0.3));
+      c.px(f + (f < x ? -1 : 1), y, B.beak, sphere(0, 0.2), { bias: -1 });
+    }
+    c.part();
+    c.px(x + 0.4, y + 1, S.strap, sphere(0, 0.2));
+    c.px(x + 0.9, y + 2, S.strap, sphere(0, 0.4), { bias: -1 });
+    c.px(x - 0.7, y + 1, S.strap, sphere(0, 0.3), { bias: -1 });
+  };
+
+  let hx: number;
+  let hy: number;
+  if (side) {
+    // Facing left: the long tail down behind, the body hunched forward, the folded wing along its back.
+    c.part();
+    c.capsule(x + 2.0, y - 1.2, x + 3.8 + fat, y + 3.8, 1.4, 1.0, B.tail);
+    for (const k of [0.45, 0.75]) c.shade(x + 2 + (1.8 + fat) * k, y - 1.2 + 5 * k, -1);
+    c.part();
+    c.capsule(x + 1.4, y - 2, x - 0.4, sy + 2.2, 2.4 + fat, 2.8 + fat, B.back);
+    c.part();
+    c.shape(Math.round(sy + 1), Math.round(y - 1), (yy) => {
+      const u = (yy - (sy + 1)) / (y - 1 - (sy + 1));
+      const fx = x - 3 - fat - Math.sin(u * Math.PI) * 0.6 + u * 1.8;
+      return [fx, fx + 2.4];
+    }, B.breast, (_x, _y, t, u) => sphere(t * 0.6 - 0.4, u * 0.6 - 0.2, 1));
+    for (let yy = Math.round(sy + 2); yy <= y - 2; yy += 2) c.shade(x - 1.8 + ((yy & 2) ? 0.6 : 0), yy, -1);
+    c.part();
+    c.ellipse(x - 0.6, y - 1.4, 1.5, 1.7, B.bar, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6, 1) });
+    c.shade(x - 0.4, y - 1, -1);
+    if (folded) {
+      c.part();
+      c.capsule(x + 0.2, sy + 1.6, x + 3, y + 0.2, 2.0 + fat * 0.6, 1.0, B.back, { bias: -1 });
+      c.part();
+      c.shape(Math.round(sy + 0.6), Math.round(sy + 3.4), (yy) => {
+        const u = (yy - sy - 0.6) / 2.8;
+        return [x - 1.4 + u * 1.2, x + 1.8 + u * 0.6];
+      }, B.bar, (_x, _y, t, u) => sphere(t * 0.6, u * 0.4 - 0.5, 1));
+      c.part();
+      c.capsule(x + 1.6, y - 2.4, x + 3.6, y + 1.8, 1.1, 0.5, B.primary);
+    }
+    feet([x - 1.4]);
+    hx = x - 1.6;
+    hy = sy - 1.2;
+    if (w === 'eat') {
+      hx -= 1.8;
+      hy += 2.2;
+    } else if (w === 'gulp') {
+      hy -= 0.6;
+      hx += 0.2;
+    } else if (w === 'preen') {
+      hx += 2.2;
+      hy += 2;
+    } else if (w === 'ruffle') hy += 0.6;
+  } else {
+    // Front or back: the tail below, the folded wings broad at the shoulder and narrowing to their crossed tips.
+    c.part();
+    c.capsule(x, y - 1, x + (back ? 0 : 0.3), y + 4.2, 1.6, 1.2, B.tail);
+    for (const yy of [y + 1.6, y + 3.2]) for (const dx of [-1, 0, 1]) c.shade(x + dx, yy, -1);
+    const foldWings = () => {
+      c.part();
+      c.shape(Math.round(sy), Math.round(y + 2), (yy) => {
+        const u = Math.max(0, (yy + 0.5 - sy) / (y + 2 - sy));
+        const hw = (u < 0.3 ? 3.2 + u * 1.4 : 3.6 - (u - 0.3) * 3) + fat;
+        return [x - hw, x + hw];
+      }, B.back, (_x, _y, t, u) => sphere(t * 0.9, u * 0.7 - 0.45, 1), { bias: back ? 0 : -1 });
+      // Tawny shoulders, near-black tips crossed below.
+      c.part();
+      for (let yy = Math.round(sy); yy <= sy + 3; yy++)
+        for (let xx = Math.round(x - 4 - fat); xx <= x + 4 + fat; xx++) {
+          const m = c.materialAt(xx, yy);
+          if (m !== B.back) continue;
+          if (back ? yy < sy + 2 || (yy < sy + 3 && Math.abs(xx + 0.5 - x) > 1.6) : Math.abs(xx + 0.5 - x) > 1.6) c.px(xx, yy, B.bar, sphere(Math.sign(xx + 0.5 - x) * 0.5, -0.5));
+        }
+      for (let yy = Math.round(y - 1); yy <= y + 2; yy++)
+        for (let xx = Math.round(x - 3); xx <= x + 3; xx++) if (c.materialAt(xx, yy) === B.back) c.px(xx, yy, B.primary, sphere(Math.sign(xx + 0.5 - x) * 0.5, 0.3));
+      // The edges of the feathers, rows of them down the wing.
+      for (let yy = Math.round(sy + 4); yy < y - 1; yy += 2)
+        for (const s of [-1, 1]) c.shade(x + s * 2.4, yy, -1);
+    };
+    foldWings();
+    if (!back) {
+      // The dark breast between them, streaked, and the tawny leggings under it.
+      c.part();
+      c.shape(Math.round(sy + 1), Math.round(y - 2), (yy) => {
+        const u = (yy + 0.5 - sy - 1) / (y - 3 - sy);
+        const hw = 1.9 + fat * 0.8 - Math.max(0, u - 0.6) * 1.2;
+        return [x - hw, x + hw];
+      }, B.breast, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6 - 0.3, 1));
+      for (let yy = Math.round(sy + 2); yy <= y - 3; yy += 2) c.shade(x - 0.6 + ((yy & 2) ? 1 : 0), yy, -1);
+      c.part();
+      for (const s of [-1, 1]) {
+        c.ellipse(x + s * 1.1, y - 1.5, 1.2, 1.4, B.bar, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 + s * 0.2, dy * 0.6, 1) });
+        c.shade(x + s * 1.1, y - 2, -1);
+      }
+      feet([x - 1.4, x + 1.0]);
+    } else {
+      c.shade(x, sy + 3, -1);
+      c.shade(x, sy + 5, -1);
+    }
+    hx = x + peer * 0.6;
+    hy = sy - 1.4;
+    if (w === 'eat') {
+      hx -= 1.8;
+      hy += 2;
+    } else if (w === 'gulp') hy -= 0.6;
+    else if (w === 'preen') {
+      hx += 2;
+      hy += 2.2;
+    } else if (w === 'ruffle') hy += 0.6;
+  }
+  eagleHead(c, hx, hy, view, w, peer, leather);
 }
 
-/** The bird's head at (hx, hy): the falcon's dark hood, moustache and hooked beak; the owl's round white face and gold eyes. */
+/**
+ * The hooded eagle's head at (hx, hy): golden all round its nape and cheeks,
+ * the leather hood a snug cap over its crown and eyes, tooled with a gold
+ * boss and tufted with a gold-and-white plume, the cere and the great dark
+ * hook of the beak out under it.
+ */
+function eagleHead(c: PixelCanvas, hx: number, hy: number, view: View, w: Wing, peer: number, leather: Material): void {
+  const B = S.bird;
+  const gold = S.berkut?.gold ?? B.foot;
+  const plume = S.berkut?.stitch ?? B.breast;
+  const hackles = (x0: number, x1: number, y0: number, y1: number) => {
+    for (let y = Math.round(y0); y <= y1; y++)
+      for (let x = Math.round(x0); x <= x1; x++) if (c.materialAt(x, y) === B.hood && (x + y * 2) % 3 === 0) c.shade(x, y, -1);
+  };
+  const plumeAt = (px: number, py: number, lean: number) => {
+    c.part();
+    c.px(px, py, gold, sphere(-0.2, -0.5));
+    c.part();
+    c.px(px + lean * 0.6, py - 1, plume, sphere(-0.3, -0.5));
+    c.px(px + lean * 1.4, py - 1.4, plume, sphere(0.3, -0.4), { bias: -1 });
+  };
+  if (view === 'up') {
+    // From behind: the golden nape and hackles, the back of the hood laced shut, its braces hanging.
+    c.part();
+    c.ellipse(hx, hy + 0.4, 2.4, 2.3, B.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.7 - 0.1, 1) });
+    hackles(hx - 2.4, hx + 2.4, hy, hy + 3);
+    c.part();
+    c.ellipse(hx, hy - 0.8, 1.8, 1.4, leather, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.3, 1) });
+    c.part();
+    c.px(hx, hy - 0.4, gold, sphere(0, 0));
+    c.px(hx - 0.8, hy + 0.6, S.strap, sphere(-0.2, 0.2));
+    c.px(hx - 1, hy + 1.6, S.strap, sphere(-0.2, 0.4), { bias: -1 });
+    c.px(hx + 0.8, hy + 0.6, S.strap, sphere(0.2, 0.2));
+    plumeAt(hx, hy - 2.3, 1);
+    return;
+  }
+  // From the side it faces her way. From the front its body faces the viewer but its head is
+  // turned in profile, away from her (towards her when it peers her way or takes a morsel):
+  // the hook of the beak is what tells an eagle.
+  const d = view === 'side' || peer < 0 || w === 'eat' || w === 'gulp' ? -1 : 1;
+  eagleProfile(c, hx, hy, d, w, leather);
+}
+
+/** The hooded eagle's head in profile at (hx, hy), its beak towards `d` (-1 left, 1 right). */
+function eagleProfile(c: PixelCanvas, hx: number, hy: number, d: number, w: Wing, leather: Material): void {
+  const B = S.bird;
+  const gold = S.berkut?.gold ?? B.foot;
+  const plume = S.berkut?.stitch ?? B.breast;
+  const X = (dx: number) => hx + dx * -d;
+  // The golden head and its hackles running down its nape, the hood over its crown and eye.
+  c.part();
+  c.ellipse(X(0.6), hy + 1.6, 2.2, 1.6, B.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.5, 1) });
+  c.ellipse(X(0), hy + 0.1, 2.5, 2.2, B.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.7 - 0.1, 1) });
+  for (let y = Math.round(hy + 1); y <= hy + 3.4; y++)
+    for (let x = Math.round(X(0) - 3); x <= X(0) + 3; x++) if (c.materialAt(x, y) === B.hood && (x + y * 2) % 3 === 0) c.shade(x, y, -1);
+  c.part();
+  c.ellipse(X(-0.4), hy - 0.8, 1.8, 1.2, leather, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 - d * 0.1, dy * 0.8 - 0.3, 1) });
+  c.part();
+  c.px(X(-1), hy - 0.6, gold, sphere(d * 0.3, -0.2));
+  c.px(X(1.2), hy + 0.2, S.strap, sphere(-d * 0.3, 0.1));
+  c.px(X(1.8), hy + 1.2, S.strap, sphere(-d * 0.3, 0.3), { bias: -1 });
+  // The cere and the great hook of the beak, its gape running back under the hood.
+  c.part();
+  if (w === 'gulp') {
+    c.px(X(-2.2), hy - 0.4, B.foot, sphere(d * 0.4, -0.5));
+    c.px(X(-3), hy - 1, B.beak, sphere(d * 0.5, -0.6), { bias: 1 });
+    c.px(X(-3.6), hy - 0.4, B.beak, sphere(d * 0.5, -0.2), { bias: -1 });
+  } else {
+    c.px(X(-2.2), hy + 0.2, B.foot, sphere(d * 0.4, -0.4));
+    c.px(X(-1.6), hy + 1, B.foot, sphere(d * 0.2, 0), { bias: -1 });
+    c.px(X(-3), hy + 0.2, B.beak, sphere(d * 0.5, -0.5), { bias: 1 });
+    c.px(X(-3), hy + 1.1, B.beak, sphere(d * 0.5, 0.1));
+    c.px(X(-3.8), hy + 0.9, B.beak, sphere(d * 0.6, -0.2), { bias: 1 });
+    c.px(X(-3.8), hy + 1.9, B.beak, sphere(d * 0.5, 0.5), { bias: -1 });
+    if (w === 'cry' || w === 'eat') {
+      c.px(X(-2.8), hy + 2.4, B.beak, sphere(d * 0.4, 0.5), { bias: -1 });
+      c.erase(X(-3), hy + 1.6);
+    }
+  }
+  // The plume: a gold knot, a white tuft lying back.
+  c.part();
+  c.px(X(0), hy - 2.1, gold, sphere(-0.2, -0.5));
+  c.part();
+  c.px(X(0.8), hy - 2.6, plume, sphere(-d * 0.3, -0.5));
+  c.px(X(1.6), hy - 2.4, plume, sphere(-d * 0.3, -0.3), { bias: -1 });
+}
+
+/** The bird's head at (hx, hy): the falcon's dark hood, moustache and hooked beak. */
 function perchedHead(c: PixelCanvas, hx: number, hy: number, view: View, w: Wing, peer: number): void {
   const B = S.bird;
-  const owl = !!B.owl;
-  const r = owl ? 2.3 : 1.95;
+  const r = 1.95;
   c.part();
   if (view === 'up') {
-    c.ellipse(hx, hy, r, r * 0.95, owl ? B.hood : B.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
-    if (owl) speckle(c, hx - 2, hx + 2, hy - 2, hy + 1, 2);
+    c.ellipse(hx, hy, r, r * 0.95, B.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
     return;
   }
   if (view === 'side') {
-    c.ellipse(hx, hy, r, r * 0.92, owl ? B.hood : B.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.1, dy * 0.8 - 0.1, 1) });
-    if (owl) {
-      // The flat face, one gold eye looking out of it, a little hooked beak.
-      c.part();
-      c.ellipse(hx - 0.8, hy + 0.2, 1.4, 1.6, B.breast, { normal: (_x, _y, dx, dy) => sphere(dx * 0.4 - 0.5, dy * 0.6, 1) });
-      c.part();
-      c.px(hx - 1.2, hy - 0.4, B.eye, sphere(-0.3, -0.3));
-      c.px(hx - 2.2, hy + 0.8, B.beak, sphere(-0.5, 0.2));
-      if (w === 'cry' || w === 'eat') c.px(hx - 2.2, hy + 1.8, B.beak, sphere(-0.5, 0.4), { bias: -1 });
-      if (w !== 'preen') speckle(c, hx - 0.4, hx + 2, hy - 2, hy + 1, 7);
-    } else {
+    c.ellipse(hx, hy, r, r * 0.92, B.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.1, dy * 0.8 - 0.1, 1) });
+    {
       // Cream cheek and throat under the dark hood, the moustache streak, the eye, the beak.
       c.part();
       c.shape(Math.round(hy), Math.round(hy + 1.6), () => [hx - 2, hx + 0.2], B.breast, (_x, _y, t) => sphere(t * 0.6 - 0.3, 0.3, 1));
@@ -787,27 +1131,7 @@ function perchedHead(c: PixelCanvas, hx: number, hy: number, view: View, w: Wing
     return;
   }
   // From the front.
-  c.ellipse(hx, hy, r, r * 0.92, owl ? B.hood : B.breast, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
-  if (owl) {
-    // A round white face, two gold eyes, a small beak buried in the feathers.
-    c.part();
-    const ex = hx + peer * 0.5;
-    if (w === 'preen') {
-      c.px(ex + 0.6, hy - 0.2, B.eye, sphere(0.3, -0.3));
-    } else {
-      c.px(ex - 1, hy - 0.2, B.eye, sphere(-0.3, -0.3));
-      c.px(ex + 1, hy - 0.2, B.eye, sphere(0.3, -0.3));
-      if (w === 'gulp') {
-        // Eyes shut in bliss, swallowing.
-        c.px(ex - 1, hy - 0.2, B.hood, sphere(-0.3, -0.3), { bias: -1 });
-        c.px(ex + 1, hy - 0.2, B.hood, sphere(0.3, -0.3), { bias: -1 });
-      }
-    }
-    c.px(ex, hy + 1, B.beak, sphere(0, 0.2));
-    if (w === 'cry' || w === 'eat') c.px(ex, hy + 2, B.beak, sphere(0, 0.5), { bias: -1 });
-    speckle(c, hx - 2.4, hx + 2.4, hy - 2.2, hy - 1, 5);
-    return;
-  }
+  c.ellipse(hx, hy, r, r * 0.92, B.breast, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
   // The falcon's dark crown down over its eyes, its moustache streaks on the cream cheeks.
   c.part();
   c.shape(Math.round(hy - 1.9), Math.round(hy - 0.9), (yy) => {
@@ -841,24 +1165,20 @@ function perchedHead(c: PixelCanvas, hx: number, hy: number, view: View, w: Wing
 // ---------------------------------------------------------------------------
 // Her head
 
-/** The face, hair, cap and feather (or Snowfeather's fur hood), from the front. */
+/** The face, hair, cap and feather (or Berkut's fox-fur hat), from the front. */
 function headFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   const fy = 12.6 + U;
-  if (S.snow) {
-    const fur = S.snow.fur;
-    // The hood behind, then the face in its fur ruff.
+  if (S.berkut) {
+    // Black hair behind the face, the fox-fur ear flaps, the face, then the hat.
     c.part();
-    c.ellipse(cx, 11.2 + U, 4.1, 3.9, S.cap, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.2, 1) });
+    c.ellipse(cx, 11.8 + U, 3.6, 3.4, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+    earFlaps(c, cx, U, 3.5);
     c.part();
-    c.px(cx + 1, 7 + U, S.cap, sphere(0.3, -0.8));
+    c.ellipse(cx, fy, 2.6, 2.4, SKIN);
     c.part();
-    c.ellipse(cx, 12.6 + U, 3.3, 3.1, fur, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.1, 1) });
-    furry(c, cx - 4, cx + 4, 9 + U, 16 + U, 1);
-    c.part();
-    c.ellipse(cx, fy + 0.1, 2.4, 2.2, SKIN);
-    c.part();
-    c.shape(Math.round(10.6 + U), Math.round(10.6 + U), () => [cx - 2.4, cx + 2.2], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
-    c.px(cx - 2.6, 11.6 + U, S.hair, sphere(-0.6, 0.2));
+    c.px(cx - 2.6, 11.2 + U, S.hair, sphere(-0.6, 0.1));
+    c.px(cx + 2.2, 11.2 + U, S.hair, sphere(0.5, 0.1), { bias: -1 });
+    foxHat(c, cx, U, 'down', p.sway);
   } else {
     // Hair behind the face, the face, the fringe swept to one side.
     c.part();
@@ -896,17 +1216,15 @@ function headFront(c: PixelCanvas, cx: number, U: number, p: Pose): void {
   c.shade(cx - 1, 14.8 + U, -1);
 }
 
-/** Her head from behind: the hair (or the hood), the cap, the feather's sweep over it. */
-function headBack(c: PixelCanvas, cx: number, U: number): void {
-  if (S.snow) {
+/** Her head from behind: the hair, the cap, the feather's sweep over it (Berkut: two braids, the fox-fur hat). */
+function headBack(c: PixelCanvas, cx: number, U: number, sway = 0): void {
+  if (S.berkut) {
     c.part();
-    c.ellipse(cx, 11.4 + U, 4.0, 3.8, S.cap, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
-    c.part();
-    c.shape(14 + U, 16 + U, (y) => {
-      const hw = 2.4 - (y - 14 - U) * 0.6;
-      return [cx - hw, cx + hw];
-    }, S.cap, (_x, _y, t, u) => sphere(t * 0.8, u * 0.6, 1));
-    c.shade(cx, 9 + U, 1);
+    c.ellipse(cx, 11.6 + U, 3.6, 3.5, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.8 - 0.1, 1) });
+    for (let y = 11; y <= 14; y++) c.shade(cx, y + U, -1);
+    for (const s of [-1, 1]) braid(c, [[cx + s * 1.5, 13.6 + U], [cx + s * 2.1, 16.4 + U], [cx + s * 2.2 + sway * 0.3, 19.4 + U]]);
+    earFlaps(c, cx, U, 3.5);
+    foxHat(c, cx, U, 'up', sway);
     return;
   }
   c.part();
@@ -921,21 +1239,22 @@ function headBack(c: PixelCanvas, cx: number, U: number): void {
 
 /** Her head facing left: the profile under the cap, the feather sweeping back, the braid down her back. */
 function headSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
-  if (S.snow) {
-    const fur = S.snow.fur;
+  if (S.berkut) {
+    // The braid behind, the black hair, the face, the near ear flap, then the hat tipped a little back.
+    braid(c, [[hx + 2.2, 12.6 + U], [hx + 3 + p.sway * 0.3, 15.4 + U], [hx + 3.2 + p.sway * 0.6, 18.6 + U]], -1);
     c.part();
-    c.ellipse(hx + 0.4, 11.4 + U, 3.6, 3.7, S.cap, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
+    c.ellipse(hx + 0.6, 11.8 + U, 3.2, 3.2, S.hair, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9 + 0.2, dy * 0.8 - 0.1, 1) });
     c.part();
-    c.capsule(hx + 2.8, 12.5 + U, hx + 3.4 + p.sway * 0.3, 15.4 + U, 1.2, 0.7, S.cap);
+    c.ellipse(hx - 1.4, 12.8 + U, 2.2, 2.2, SKIN);
     c.part();
-    c.ellipse(hx - 1.3, 12.6 + U, 2.8, 2.8, fur, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8 - 0.2, dy * 0.8, 1) });
-    furry(c, hx - 5, hx + 2, 9 + U, 16 + U, 2);
+    c.px(hx - 3.9, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
+    c.shade(hx - 3, 14 + U, -1);
     c.part();
-    c.ellipse(hx - 1.6, 12.8 + U, 2.0, 2.1, SKIN);
+    c.px(hx - 3.2, 11.2 + U, S.hair, sphere(-0.5, 0.1));
     c.part();
-    c.px(hx - 3.8, 12.6 + U, SKIN, sphere(-0.7, -0.1), { bias: 1 });
-    c.part();
-    c.shape(Math.round(10.6 + U), Math.round(10.6 + U), () => [hx - 3.4, hx - 0.2], S.hair, (_x, _y, t) => sphere(t * 0.8, -0.3, 1));
+    c.capsule(hx + 0.9, 10.8 + U, hx + 0.7, 14 + U, 1.5, 1.1, S.berkut.fur, { bias: -1 });
+    furry(c, S.berkut.fur, hx - 1, hx + 3, 10 + U, 16 + U, 4);
+    foxHat(c, hx, U, 'side', p.sway);
   } else {
     // The braid first, hanging behind her.
     braid(c, [[hx + 2.2, 12.6 + U], [hx + 3 + p.sway * 0.3, 15.4 + U], [hx + 3.2 + p.sway * 0.6, 18.6 + U]], -1);
@@ -961,6 +1280,70 @@ function headSide(c: PixelCanvas, hx: number, U: number, p: Pose): void {
   else c.px(hx - 3, 12.2 + U, S.eye);
 }
 
+/** Berkut's fox-fur ear flaps, hanging either side of her face (`r` out from its middle). */
+function earFlaps(c: PixelCanvas, cx: number, U: number, r: number): void {
+  const fur = S.berkut!.fur;
+  c.part();
+  for (const s of [-1, 1]) c.capsule(cx + s * r, 10.4 + U, cx + s * (r - 0.3), 13.8 + U, 1.4, 1.1, fur, { bias: -1 });
+  furry(c, fur, cx - r - 2, cx + r + 2, 10 + U, 16 + U, 5);
+}
+
+/**
+ * Berkut's tall hat at (cx, U): a great round of russet fox fur standing up
+ * from her brow, ragged at its edges, and set into its top a small crown of
+ * red felt seamed in gold, a red tassel on a cord at its peak. From the side
+ * it tips a little back and the tassel swings behind.
+ */
+function foxHat(c: PixelCanvas, cx: number, U: number, view: View, sway: number): void {
+  const D = S.berkut!;
+  const back = view === 'side' ? 1 : 0;
+  const top = 3.8 + U;
+  // The crown, a felt dome rising out of the fur.
+  c.part();
+  const crownX = cx + back * 0.8;
+  c.shape(Math.round(top), Math.round(7 + U), (y) => {
+    const u = Math.max(0, (y + 0.5 - top) / (7 + U - top));
+    const hw = 1.2 + 1.7 * Math.sqrt(u);
+    return [crownX - hw, crownX + hw];
+  }, S.cap, (_x, _y, t, u) => sphere(t * 0.85, u * 0.5 - 0.6, 1));
+  // Its seam in gold, quartering it.
+  c.part();
+  for (let y = Math.round(top) + 1; y <= 6 + U; y++) {
+    const x = crownX - (view === 'side' ? 0.8 : 0.5);
+    if (c.materialAt(x, y) === S.cap) c.px(x, y, D.gold, sphere(-0.1, -0.3), { bias: y === Math.round(top) + 1 ? 1 : 0 });
+  }
+  // The fur: a round of it, thick and ragged, standing tall round her head.
+  c.part();
+  const bx = cx + back * 0.3;
+  const by = 8.4 + U;
+  const rx = view === 'side' ? 4.3 : 4.6;
+  c.ellipse(bx, by, rx, 2.6, D.fur, { normal: (_x, _y, dx, dy) => sphere(dx * 0.9, dy * 0.75 - 0.15, 1) });
+  // Tufts breaking its outline, and a shadow under its lip where it meets her brow.
+  for (const [dx, dy] of [[-4.8, -0.6], [4.6, 0.4], [-3.8, -2.2], [3.6, -2.0], [-1.6, -2.9], [1.8, -2.8], [-4.4, 1.4], [4.2, 1.6]] as const) {
+    c.px(bx + dx, by + dy, D.fur, sphere(dx * 0.2, dy * 0.35 - 0.1), { bias: dy < 0 ? 1 : 0 });
+  }
+  furry(c, D.fur, bx - 6, bx + 6, by - 4, by + 3, 2);
+  // Dark streaks down the pelt, where the fox's guard hairs part.
+  for (const dx of [-2.6, 0.4, 3]) {
+    if (view === 'side' && dx > 2) continue;
+    c.shade(bx + dx, by - 0.6, -1);
+    c.shade(bx + dx + 0.4, by + 0.6, -1);
+  }
+  // The tassel: a gold knot at the peak, a red cord swinging off it to a tuft.
+  const kx = crownX;
+  const sw = sway * 0.4 + (view === 'side' ? 0.8 : 0);
+  const dir = view === 'up' ? -1 : 1;
+  c.part();
+  c.px(kx, top - 0.6, D.gold, sphere(-0.2, -0.6), { bias: 1 });
+  c.part();
+  c.line(kx + dir * 0.6, top - 0.4, kx + dir * (1.6 + sw), top + 0.6, D.tassel, () => sphere(dir * 0.3, -0.3));
+  c.part();
+  const tx = kx + dir * (2.0 + sw);
+  c.px(tx, top + 1.4, D.tassel, sphere(-0.3, 0.1));
+  c.px(tx + dir, top + 1.6, D.tassel, sphere(0.3, 0.2), { bias: -1 });
+  c.px(tx + dir * 0.5, top + 2.4, D.tassel, sphere(0, 0.5), { bias: -1 });
+}
+
 // ---------------------------------------------------------------------------
 // Directions
 
@@ -974,6 +1357,43 @@ function coatWidth(y: number, top: number, waist: number, chest: number): number
     return chest - 0.6 * u * u;
   }
   return chest - 0.5 + (y - waist) * 0.3;
+}
+
+/** Berkut's wide belt: silver plaques along it two rows tall, and a buckle (one pixel per x given). */
+function beltPlaques(c: PixelCanvas, at: number[], waist: number, buckle: number[] | null): void {
+  const D = S.berkut!;
+  for (const x of at) {
+    c.px(x, waist, D.plaque, sphere(-0.2, -0.5));
+    c.px(x, waist + 1, D.plaque, sphere(-0.2, 0.3), { bias: -1 });
+  }
+  if (buckle) {
+    for (const x of buckle) {
+      c.px(x, waist, S.buckle, sphere(x - buckle[0] - 0.5, -0.4), { bias: 1 });
+      c.px(x, waist + 1, S.buckle, sphere(x - buckle[0] - 0.5, 0.4));
+    }
+  }
+}
+
+/**
+ * The back of Berkut's coat: a medallion of indigo felt on the skirts under
+ * her belt, a pair of ram's horns curling out from a stem in white and gold.
+ */
+function hornMedallion(c: PixelCanvas, cx: number, y: number): void {
+  const D = S.berkut!;
+  c.part();
+  c.ellipse(cx, y + 1.5, 2.9, 2.2, D.felt, { normal: (_x, _y, dx, dy) => sphere(dx * 0.6, dy * 0.6 - 0.1, 1) });
+  c.part();
+  // The stem, gold, and the horns curling out and down from its top, white.
+  c.px(cx - 0.5, y + 1, D.gold, sphere(0, -0.3));
+  c.px(cx - 0.5, y + 2, D.gold, sphere(0, 0.1));
+  c.px(cx - 0.5, y + 3, D.gold, sphere(0, 0.3));
+  for (const s of [-1, 1]) {
+    const o = s < 0 ? -0.5 : -0.5;
+    c.px(cx + o + s * 1, y, D.stitch, sphere(s * 0.3, -0.4));
+    c.px(cx + o + s * 2, y + 0.4, D.stitch, sphere(s * 0.4, -0.3));
+    c.px(cx + o + s * 2.2, y + 1.6, D.stitch, sphere(s * 0.5, 0));
+    c.px(cx + o + s * 1.4, y + 2, D.stitch, sphere(s * 0.3, 0.2));
+  }
 }
 
 function drawDown(c: PixelCanvas, p: Pose): void {
@@ -1002,43 +1422,57 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   boot(c, 10, 29.6 - p.footA - air);
   boot(c, 14, 29.6 - p.footB - air);
 
-  // The gambeson, quilted, split at the front below the belt.
+  // The gambeson, quilted, split at the front below the belt (Berkut's felt coat longer, to the shin).
   const top = 15 + U;
   const waist = 22 + U;
-  const hem = 26 + L;
-  c.part();
-  c.shape(top, hem, (y) => {
+  const hem = (S.berkut ? 28 : 26) + L;
+  const edges = (y: number): [number, number] => {
     const hw = coatWidth(y, top, waist, 4.6);
     const sw = y > waist ? ((y - waist) / (hem - waist)) * p.sway * 0.5 : 0;
     return [cx - hw + sw, cx + hw + sw];
-  }, S.coat, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1));
+  };
+  c.part();
+  c.shape(top, hem, edges, S.coat, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1));
   quilt(c, cx - 5.6, cx + 5.6, top + 2, hem - 1);
   for (let y = top + 1; y <= hem; y++) c.shade(cx, y, -1);
   for (let y = waist + 1; y <= hem; y++) c.erase(cx, y);
-  if (S.snow) {
-    // White fur along the hem.
+  if (S.berkut) {
+    const felt = S.berkut.felt;
+    // Indigo borders down the front edges and round the hem, worked in ram's horns.
     c.part();
-    c.shape(hem, hem + 1, (y) => {
-      const hw = coatWidth(y - 1, top, waist, 4.6) + 0.2;
-      return [cx - hw + p.sway * 0.5, cx + hw + p.sway * 0.5];
-    }, S.snow.fur, (_x, _y, t) => cyl(t, 0.4));
-    furry(c, cx - 7, cx + 7, hem, hem + 1, 3);
+    c.shape(top + 3, waist - 1, () => [cx - 1, cx + 1], felt, (_x, _y, t) => sphere(t * 0.5, -0.1, 1));
+    c.shape(waist + 1, hem, (y) => {
+      const [l] = edges(y);
+      const sw = (edges(y)[0] + edges(y)[1]) / 2 - cx;
+      return [Math.max(l, cx - 2 + sw), cx + sw];
+    }, felt, (_x, _y, t) => sphere(t * 0.5 - 0.2, 0.2, 1));
+    c.shape(waist + 1, hem, (y) => {
+      const sw = (edges(y)[0] + edges(y)[1]) / 2 - cx;
+      return [cx + 1 + sw, cx + 3 + sw];
+    }, felt, (_x, _y, t) => sphere(t * 0.5 + 0.2, 0.2, 1));
+    c.shape(hem - 1, hem, edges, felt, (_x, _y, t) => cyl(t, 0.3));
+    for (let y = waist + 1; y <= hem; y++) c.erase(cx + Math.round(((y - waist) / (hem - waist)) * p.sway * 0.5), y);
+    ornament(c, cx - 1, cx, top + 3, waist - 1, false);
+    ornament(c, cx - 2.5, cx - 1, waist + 1, hem - 2, false, 1);
+    ornament(c, cx + 1, cx + 2.5, waist + 1, hem - 2, false, 1);
+    ornament(c, cx - 7, cx + 7, hem - 1, hem, true);
   }
-  // The shirt at the open collar, the coat's quilted collar standing round it.
+  // The shirt at the open collar, the coat's quilted collar standing round it (Berkut: a stand collar of indigo, a gold clasp).
   c.part();
   c.shape(top, top + 2, (y) => {
     const v = 1.8 - (y - top) * 0.7;
     return v < 0.3 ? null : [cx - v, cx + v];
-  }, S.snow ? S.snow.fur : S.shirt, (_x, _y, t) => sphere(t * 0.7, -0.2, 1));
-  if (S.snow) {
+  }, S.shirt, (_x, _y, t) => sphere(t * 0.7, -0.2, 1));
+  if (S.berkut) {
     c.part();
-    c.px(cx - 0.5, top + 2, S.snow.gem, sphere(-0.3, -0.4));
+    c.px(cx - 0.5, top + 2, S.berkut.gold, sphere(-0.3, -0.4));
   }
-  // The belt and buckle; the hawking bag at her left hip.
+  // The belt and buckle (Berkut's wide, set with silver plaques); the hawking bag at her left hip.
   c.part();
-  c.shape(waist, waist, () => [cx - 4.1, cx + 4.1], S.strap, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist + (S.berkut ? 1 : 0), () => [cx - 4.1, cx + 4.1], S.strap, (_x, _y, t) => cyl(t, 0));
   c.part();
-  c.px(cx - 1, waist, S.buckle, sphere(-0.2, -0.3));
+  if (S.berkut) beltPlaques(c, [cx - 3.4, cx + 2.6], waist, [cx - 1, cx]);
+  else c.px(cx - 1, waist, S.buckle, sphere(-0.2, -0.3));
   hawkingBag(c, 16.2, 23.4 + U, 0, p.sway);
   // The quiver's strap over her left shoulder down to her right hip.
   c.part();
@@ -1048,9 +1482,10 @@ function drawDown(c: PixelCanvas, p: Pose): void {
   c.ellipse(16.4, 15.2 + U, 2.6, 1.5, S.pad, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 - 0.5, 1) });
   c.shade(15, 16 + U, -1);
 
-  if (!S.snow) braid(c, [[8.4, 13.6 + U], [7.6, 16.2 + U], [7.8 + p.sway * 0.3, 19.6 + U]]);
+  if (!S.berkut) braid(c, [[8.4, 13.6 + U], [7.6, 16.2 + U], [7.8 + p.sway * 0.3, 19.6 + U]]);
   head(() => headFront(c, cx, U, p));
-  if (S.snow) braid(c, [[9.2, 14.2 + U], [8.2, 16.6 + U], [8.2 + p.sway * 0.3, 19.8 + U]]);
+  // Berkut's braid falls in front of her ear flap, over her shoulder.
+  if (S.berkut) braid(c, [[8.6, 14.6 + U], [7.8, 17 + U], [8 + p.sway * 0.3, 20.2 + U]]);
 
   if (p.bird === 'shoulder') perched(c, 16.6, 14.2 + U - (p.birdUp ?? 0), 'down', p);
   if (!fb.behind) armB();
@@ -1103,27 +1538,33 @@ function drawUp(c: PixelCanvas, p: Pose): void {
 
   const top = 15 + U;
   const waist = 22 + U;
-  const hem = 26 + L;
+  const hem = (S.berkut ? 28 : 26) + L;
   hawkingBag(c, 7.8, 23.4 + U, -1, -p.sway);
-  c.part();
-  c.shape(top, hem, (y) => {
+  const edges = (y: number): [number, number] => {
     const hw = coatWidth(y, top, waist, 4.6);
     const sw = y > waist ? ((y - waist) / (hem - waist)) * p.sway * 0.5 : 0;
     return [cx - hw + sw, cx + hw + sw];
-  }, S.coat, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.6 - 0.1 : 0.3, 1));
+  };
+  c.part();
+  c.shape(top, hem, edges, S.coat, (_x, y, t) => sphere(t * 0.9, y <= waist ? ((y - top) / (waist - top)) * 0.6 - 0.1 : 0.3, 1));
   quilt(c, cx - 5.6, cx + 5.6, top + 1, hem - 1);
-  // A vent up the back of the skirts.
-  for (let y = waist + 2; y <= hem; y++) c.shade(cx, y, -2);
-  if (S.snow) {
+  if (S.berkut) {
+    // The hem's indigo border, and a great ram's-horn medallion worked across her shoulders.
+    const felt = S.berkut.felt;
     c.part();
-    c.shape(hem, hem + 1, (y) => {
-      const hw = coatWidth(y - 1, top, waist, 4.6) + 0.2;
-      return [cx - hw + p.sway * 0.5, cx + hw + p.sway * 0.5];
-    }, S.snow.fur, (_x, _y, t) => cyl(t, 0.4));
-    furry(c, cx - 7, cx + 7, hem, hem + 1, 3);
+    c.shape(hem - 1, hem, edges, felt, (_x, _y, t) => cyl(t, 0.3));
+    ornament(c, cx - 7, cx + 7, hem - 1, hem, true);
+    hornMedallion(c, cx + p.sway * 0.3, waist + 1.6);
+  } else {
+    // A vent up the back of the skirts.
+    for (let y = waist + 2; y <= hem; y++) c.shade(cx, y, -2);
   }
   c.part();
-  c.shape(waist, waist, () => [cx - 4.1, cx + 4.1], S.strap, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist + (S.berkut ? 1 : 0), () => [cx - 4.1, cx + 4.1], S.strap, (_x, _y, t) => cyl(t, 0));
+  if (S.berkut) {
+    c.part();
+    beltPlaques(c, [cx - 2.6, cx + 1.6], waist, null);
+  }
   // The quiver at her hip and its strap across her back.
   quiver(c, 17.8, 20.6 + U, 18.8, 26.4 + L);
   c.part();
@@ -1132,9 +1573,9 @@ function drawUp(c: PixelCanvas, p: Pose): void {
   c.ellipse(16.4, 15.2 + U, 2.6, 1.5, S.pad, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 - 0.5, 1) });
   // The collar, and her head.
   c.part();
-  c.shape(top - 1, top, () => [cx - 2.6, cx + 2.6], S.snow ? S.snow.fur : S.coat, (_x, _y, t) => cyl(t, -0.2));
-  headBack(c, cx, U);
-  if (!S.snow) {
+  c.shape(top - 1, top, () => [cx - 2.6, cx + 2.6], S.berkut ? S.berkut.felt : S.coat, (_x, _y, t) => cyl(t, -0.2));
+  headBack(c, cx, U, p.sway);
+  if (!S.berkut) {
     // The braid's root, the rest of it over her shoulder in front.
     c.part();
     c.capsule(14.2, 13.4 + U, 15.0, 15.2 + U, 1.2, 1.0, S.hair, { bias: -1 });
@@ -1171,29 +1612,35 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   // The gambeson in profile.
   const top = 15 + U;
   const waist = 22 + U;
-  const hem = 26 + L;
-  c.part();
-  c.shape(top, hem, (y) => {
+  const hem = (S.berkut ? 28 : 26) + L;
+  const edges = (y: number): [number, number] => {
     const u = y <= waist ? 0 : (y - waist) / (hem - waist);
     const shift = y <= waist ? hx : hx + (cx - hx) * u + u * p.sway * 0.6;
     const hw = coatWidth(y, top, waist, 3.2);
     return [shift - hw - 0.2, shift + hw + 0.2];
-  }, S.coat, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1));
+  };
+  c.part();
+  c.shape(top, hem, edges, S.coat, (_x, y, t) => sphere(t * 0.9 - 0.1, y <= waist ? ((y - top) / (waist - top)) * 0.8 - 0.35 : 0.3, 1));
   quilt(c, hx - 5, hx + 6, top + 2, hem - 1);
-  if (S.snow) {
+  if (S.berkut) {
+    // The coat's front edge bordered in indigo down to the hem, and the hem's border round.
+    const felt = S.berkut.felt;
     c.part();
-    c.shape(hem, hem + 1, (y) => {
-      const hw = coatWidth(y - 1, top, waist, 3.2) + 0.2;
-      return [cx - hw + p.sway * 0.6, cx + hw + p.sway * 0.6];
-    }, S.snow.fur, (_x, _y, t) => cyl(t, 0.4));
-    furry(c, cx - 6, cx + 6, hem, hem + 1, 3);
+    c.shape(top + 2, hem, (y) => {
+      const [l] = edges(y);
+      return [l, l + 2];
+    }, felt, (_x, _y, t) => sphere(t * 0.5 - 0.4, 0, 1));
+    c.shape(hem - 1, hem, edges, felt, (_x, _y, t) => cyl(t - 0.1, 0.3));
+    ornament(c, hx - 6, hx - 1, top + 2, hem - 2, false);
+    ornament(c, hx - 7, hx + 8, hem - 1, hem, true, 2);
   }
   c.part();
-  c.shape(top, top + 1, () => [hx - 3, hx - 1], S.snow ? S.snow.fur : S.shirt, (_x, _y, t) => sphere(t * 0.7 - 0.3, -0.2, 1));
+  c.shape(top, top + 1, () => [hx - 3, hx - 1], S.shirt, (_x, _y, t) => sphere(t * 0.7 - 0.3, -0.2, 1));
   c.part();
-  c.shape(waist, waist, () => [hx - 3.2, hx + 3.2], S.strap, (_x, _y, t) => cyl(t, 0));
+  c.shape(waist, waist + (S.berkut ? 1 : 0), () => [hx - 3.2, hx + 3.2], S.strap, (_x, _y, t) => cyl(t, 0));
   c.part();
-  c.px(Math.round(hx - 3.2), waist, S.buckle, sphere(-0.5, -0.3));
+  if (S.berkut) beltPlaques(c, [hx - 0.6, hx + 1.8], waist, [hx - 3.2]);
+  else c.px(Math.round(hx - 3.2), waist, S.buckle, sphere(-0.5, -0.3));
   // The quiver at her near hip, mouth back, and its strap up across her chest.
   quiver(c, hx + 2.6, 20.2 + U, hx - 0.4, 25.6 + L);
   c.part();
@@ -1201,15 +1648,18 @@ function drawSide(c: PixelCanvas, p: Pose): void {
   // The shoulder pad.
   c.part();
   c.ellipse(hx + 1.4, 15.2 + U, 2.4, 1.5, S.pad, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.6 - 0.5, 1) });
-  if (S.snow) {
+  if (S.berkut) {
     c.part();
-    c.px(hx - 2.6, top + 1, S.snow.gem, sphere(-0.4, -0.3));
+    c.px(hx - 2.6, top + 1, S.berkut.gold, sphere(-0.4, -0.3));
   }
 
+  // The eagle on her far fist is behind her head, up past it; the falcon is small enough to sit in front.
+  const big = !!S.bird.eagle;
+  if (p.bird === 'fist' && big) perched(c, fb.x, fb.y - 1.6, 'side', p);
   headSide(c, hx, U, p);
   if (p.bird === 'shoulder') perched(c, hx + 2.4, 14.2 + U - (p.birdUp ?? 0), 'side', p);
   drawBow(c, 'side', p, fa, fb, 0);
-  if (p.bird === 'fist') perched(c, fb.x, fb.y - 1.6, 'side', p);
+  if (p.bird === 'fist' && !big) perched(c, fb.x, fb.y - 1.6, 'side', p);
   arm(c, hx + 0.2, 16.8 + U, fa, REACH_SIDE, [0.4, 1], false);
   if (p.morsel) {
     c.part();
@@ -1505,9 +1955,9 @@ export function falconArrowFrame(i: number, look: FalconerLook): PixelCanvas {
   const [hx, hy] = px(5.4);
   c.px(bx, by, look.head, sphere(-0.3, -0.3));
   c.px(hx, hy, look.head, sphere(-0.5, -0.5), { bias: 1 });
-  if (look.snow) {
-    // Rime on the head: a cold glint.
-    c.spark(hx, hy, look.light[1], 0.6);
+  if (look.berkut) {
+    // A wisp of gold off the head.
+    c.spark(hx, hy, look.light[1], 0.45);
   }
   return c;
 }
@@ -1534,20 +1984,20 @@ export function falconStuckFrame(k: number, look: FalconerLook): PixelCanvas {
 // ---------------------------------------------------------------------------
 // Birds in flight
 
-/** A flying bird's frame, facing right, its body's middle at BIRD_CX, BIRD_CY. */
-export const BIRD_W = 36;
-export const BIRD_H = 30;
-const BIRD_CX = 17;
-const BIRD_CY = 15;
+/** A flying bird's frame, facing right, its body's middle at BIRD_CX, BIRD_CY (room for the eagle's wings). */
+export const BIRD_W = 44;
+export const BIRD_H = 38;
+export const BIRD_CX = 21;
+export const BIRD_CY = 19;
 
 /** The birds' frames: a flap cycle, glides, the stoop, the strike. */
 export const BIRD_FLAP = 6;
 export type BirdFrame = `f${number}` | `g${number}` | `d${number}` | `k${number}`;
 
-/** The birds that fly: the falcon, the owl, and the hawks of the Special. */
+/** The birds that fly: the falcon, the golden eagle, and the hawks of the Special. */
 export const BIRD_LOOKS: { key: string; bird: BirdLook }[] = [
   { key: 'bird_falcon', bird: FALCON },
-  { key: 'bird_owl', bird: SNOWY_OWL },
+  { key: 'bird_eagle', bird: GOLDEN_EAGLE },
   { key: 'bird_hawk', bird: HAWK },
 ];
 
@@ -1578,7 +2028,7 @@ interface Flight {
 function flyingBird(B: BirdLook, f: Flight): PixelCanvas {
   const c = new PixelCanvas(BIRD_W, BIRD_H);
   const k = B.size;
-  const owl = !!B.owl;
+  const eagle = !!B.eagle;
   const cp = Math.cos(f.pitch);
   const sp = Math.sin(f.pitch);
   // Bird space: +u forward (head), +v down.
@@ -1591,7 +2041,7 @@ function flyingBird(B: BirdLook, f: Flight): PixelCanvas {
   const wing = (far: boolean) => {
     const [sx, sy] = shoulder(far);
     const beat = f.beat * (far ? 0.9 : 1);
-    const span = owl ? 10.5 : 11.5;
+    const span = 11.5;
     // The wrist swings on the beat; folded back by the tuck.
     const th = (-0.15 - beat * 1.05) * (1 - f.tuck) + (-0.05) * f.tuck;
     const reach = (far ? 0.82 : 1) * (1 - f.tuck * 0.45);
@@ -1600,12 +2050,11 @@ function flyingBird(B: BirdLook, f: Flight): PixelCanvas {
     const wristU = wu + (1 - Math.abs(Math.sin(th))) * 0.4;
     const [wx, wy] = P(wristU + (far ? 0.6 : 0), wv - (far ? 1.6 : 1.0));
     const tipTh = th * 1.18 + (f.beat < 0 ? 0.22 : -0.1) * (1 - f.tuck);
-    const tipU = wristU - 2.4 - f.tuck * 4.2 - (owl ? 0 : 1);
+    const tipU = wristU - 2.4 - f.tuck * 4.2 - 1;
     const tipV = Math.sin(tipTh) * span * reach - (far ? 1.6 : 1.0);
     const [tx, ty] = P(tipU + (far ? 0.6 : 0), tipV);
-    // The trailing edge, back towards the tail.
-    // The trailing edge, back towards the tail, lifted a little with the wing so it reads broad.
-    const [rx, ry] = P(-4.6 - f.tuck * 0.6 + (owl ? -0.6 : 0), -0.8 + Math.sin(th) * 2.2 * reach - (far ? 0.6 : 0));
+    // The trailing edge, back towards the tail, lifted a little with the wing so it reads broad (broader still on the eagle).
+    const [rx, ry] = P(-4.6 - f.tuck * 0.6 - (eagle ? 0.8 : 0), -0.8 + Math.sin(th) * 2.2 * reach - (far ? 0.6 : 0));
     const bias = far ? -2 : 0;
     const n = () => sphere(far ? -0.2 : -0.4, f.beat > 0 ? -0.6 : -0.2, 1);
     c.part();
@@ -1614,100 +2063,121 @@ function flyingBird(B: BirdLook, f: Flight): PixelCanvas {
     // The leading edge: the arm, thick at the shoulder.
     c.part();
     c.capsule(sx, sy, wx, wy, 1.3 * k, 1.0 * k, B.back, { bias: bias + 1 });
-    // The primaries, fingered at the tip (broad on the owl).
+    // The primaries, fingered at the tip: the eagle's five long fingers splay wide.
     c.part();
-    const fingers = owl ? 4 : 3;
+    const fingers = eagle ? 5 : 3;
+    const splay = eagle ? 0.7 : 0.45;
     for (let i = 0; i < fingers; i++) {
       const u = i / (fingers - 1);
-      const ex = tx + (rx - tx) * u * 0.45;
-      const ey = ty + (ry - ty) * u * 0.45;
+      const ex = tx + (rx - tx) * u * splay;
+      const ey = ty + (ry - ty) * u * splay;
       c.capsule(wx + (tx - wx) * 0.35, wy + (ty - wy) * 0.35, ex, ey, 0.85 * k, 0.45, B.primary, { bias });
     }
-    // Bars across the underwing on the near wing, from the barred birds.
-    if (!far && !owl) {
+    if (eagle) {
+      // The tawny band over the near wing's shoulder.
+      if (!far) {
+        for (let i = 0; i < 4; i++) {
+          const u = (i + 0.5) / 4;
+          const x = sx + (wx - sx) * u + (rx - sx) * 0.22;
+          const y = sy + (wy - sy) * u + (ry - sy) * 0.22;
+          c.px(x, y, B.bar, sphere(-0.3, -0.4), { bias });
+        }
+      }
+    } else if (!far) {
+      // Bars across the underwing on the near wing, from the barred birds.
       for (let i = 1; i <= 3; i++) {
         const u = i / 4;
         c.shade(sx + (tx - sx) * u * 0.8 + (rx - sx) * 0.25, sy + (ty - sy) * u * 0.8 + (ry - sy) * 0.25, -1);
       }
     }
-    if (owl && !far) {
-      for (let i = 0; i < 5; i++) {
-        const u = (i + 0.5) / 5;
-        const x = sx + (tx - sx) * u * 0.7 + (rx - sx) * 0.3 * ((i * 3) % 2);
-        const y = sy + (ty - sy) * u * 0.7 + (ry - sy) * 0.3 * ((i * 3) % 2);
-        c.px(x, y, B.bar, sphere(-0.3, -0.3), { bias });
-      }
-    }
   };
 
   wing(true);
-  // The tail: narrow and square on the falcon, fanned when braking, short on the owl.
+  // The tail: narrow and square on the falcon, longer and rounder on the eagle, fanned when braking.
   c.part();
-  const tl = owl ? 3.4 : 5.2;
+  const tl = eagle ? 4.4 : 5.2;
   const [t0x, t0y] = P(-3.2, 0.2);
-  for (let i = -1; i <= 1; i++) {
+  const feathers = eagle ? [-1.2, -0.4, 0.4, 1.2] : [-1, 0, 1];
+  for (const i of feathers) {
     const spread = (0.25 + f.fan * 0.6) * i;
-    const [ex, ey] = P(-3.2 - tl, 0.4 + spread * 3 + f.fan * 1.4);
-    c.capsule(t0x, t0y, ex, ey, 1.1 * k, 0.9 * k, B.tail, { bias: i === 1 ? -1 : 0 });
+    const [ex, ey] = P(-3.2 - tl + Math.abs(i) * (eagle ? 0.5 : 0), 0.4 + spread * 3 + f.fan * 1.4);
+    c.capsule(t0x, t0y, ex, ey, 1.1 * k, 0.9 * k, B.tail, { bias: i > 0.5 ? -1 : 0 });
   }
-  if (!owl) {
-    const [bx, by] = P(-3.2 - tl * 0.55, 0.6 + f.fan);
+  // Its bars.
+  for (const q of eagle ? [0.4, 0.62, 0.84] : [0.55, 0.85]) {
+    const [bx, by] = P(-3.2 - tl * q, 0.6 + f.fan);
     c.shade(bx, by, -1);
-    const [b2x, b2y] = P(-3.2 - tl * 0.85, 0.7 + f.fan);
-    c.shade(b2x, b2y, -1);
   }
   // The body: a teardrop from the tail to the chest, the breast underneath.
   c.part();
   const [b0x, b0y] = P(-3.6, 0.2);
   const [b1x, b1y] = P(2.0, -0.4);
-  c.capsule(b0x, b0y, b1x, b1y, 1.4 * k, (owl ? 2.5 : 2.2) * k, B.back);
+  c.capsule(b0x, b0y, b1x, b1y, 1.4 * k, 2.2 * k, B.back);
   c.part();
   const [c0x, c0y] = P(-2.6, 1.0);
   const [c1x, c1y] = P(2.0, 0.8);
   c.capsule(c0x, c0y, c1x, c1y, 1.0 * k, 1.4 * k, B.breast, { bias: 0 });
-  if (!owl) {
-    for (let i = 0; i < 3; i++) {
-      const [qx, qy] = P(-1.6 + i * 1.5, 1.6);
-      c.shade(qx, qy, -1);
-    }
+  for (let i = 0; i < 3; i++) {
+    const [qx, qy] = P(-1.6 + i * 1.5, 1.6);
+    c.shade(qx, qy, -1);
+  }
+  // The eagle's feathered leggings, tawny, under it.
+  if (eagle && !f.talons) {
+    c.part();
+    const [lx, ly] = P(-1.2, 1.8);
+    c.ellipse(lx, ly, 1.2 * k, 0.9 * k, B.bar, { normal: (_x, _y, dx, dy) => sphere(dx * 0.6, dy * 0.6 + 0.3, 1) });
   }
   // The feet: tucked under in flight, thrown forward to strike.
   c.part();
   if (f.talons) {
     const [hx0, hy0] = P(0.4, 1.6);
     const [fx, fy] = P(3.4, 4.6);
+    if (eagle) {
+      c.capsule(hx0, hy0, (hx0 + fx) / 2, (hy0 + fy) / 2, 1.1 * k, 0.8 * k, B.bar);
+      c.part();
+    }
     c.capsule(hx0, hy0, fx, fy, 0.75, 0.6, B.foot);
     c.part();
     for (const [du, dv] of [[1.2, 0.2], [0.8, 1.0], [-0.4, 1.0]]) {
       const [x, y] = P(3.4 + du, 4.6 + dv);
       c.px(x, y, B.beak, sphere(0.3, 0.4));
     }
-  } else if (!owl || f.tuck < 0.5) {
+  } else {
     const [fx, fy] = P(-1.6, 2.4);
     c.px(fx, fy, B.foot, sphere(0, 0.3), { bias: -1 });
   }
   // The head.
   const [hx, hy] = P(3.6, -1.2);
-  const r = (owl ? 2.5 : 2.0) * k;
+  const r = 2.0 * k;
   c.part();
   c.ellipse(hx, hy, r, r * 0.92, B.hood, { normal: (_x, _y, dx, dy) => sphere(dx * 0.8, dy * 0.8 - 0.2, 1) });
   const [ex, ey] = P(4.2, -1.4);
-  if (owl) {
+  c.part();
+  const [cx0, cy0] = P(3.8, 0.2);
+  c.ellipse(cx0, cy0, 1.3 * k, 0.9 * k, B.breast, { normal: (_x, _y, dx, dy) => sphere(dx * 0.5 + 0.3, dy * 0.5 + 0.2, 1) });
+  if (eagle) {
+    // The golden hackles ruffled at the nape; a heavy brow over the eye; the great hooked beak.
+    for (const [du, dv] of [[2.0, -0.4], [1.8, 0.6], [2.4, -1.8]]) {
+      const [nx, ny] = P(du, dv);
+      c.px(nx, ny, B.hood, sphere(-0.3, -0.2), { bias: 1 });
+    }
     c.part();
-    const [fx, fy] = P(4.6, -0.8);
-    c.ellipse(fx, fy, 1.5 * k, 1.7 * k, B.breast, { normal: (_x, _y, dx, dy) => sphere(dx * 0.4 + 0.5, dy * 0.6, 1) });
-    c.part();
-    c.px(ex + 0.6, ey, B.eye, sphere(0.3, -0.3));
-    const [bkx, bky] = P(6.2, -0.4);
-    c.px(bkx, bky, B.beak, sphere(0.5, 0.2));
+    c.px(ex, ey, B.eye, sphere(0.3, -0.3));
+    const [brx, bry] = P(4.2, -2.2);
+    c.shade(brx, bry, -1);
+    const [cerex, cerey] = P(5.2, -0.8);
+    c.px(cerex, cerey, B.foot, sphere(0.5, -0.4));
+    const [bkx, bky] = P(6.1, -0.6);
+    c.px(bkx, bky, B.beak, sphere(0.6, -0.3), { bias: 1 });
+    const [b2x, b2y] = P(6.6, 0.2);
+    c.px(b2x, b2y, B.beak, sphere(0.6, 0.2));
+    const [b3x, b3y] = P(6.2, 0.8);
+    c.px(b3x, b3y, B.beak, sphere(0.5, 0.5), { bias: -1 });
     if (f.cry) {
-      const [b2x, b2y] = P(6.0, 0.6);
-      c.px(b2x, b2y, B.beak, sphere(0.5, 0.4), { bias: -1 });
+      const [b4x, b4y] = P(5.4, 1.4);
+      c.px(b4x, b4y, B.beak, sphere(0.4, 0.5), { bias: -1 });
     }
   } else {
-    c.part();
-    const [cx0, cy0] = P(3.8, 0.2);
-    c.ellipse(cx0, cy0, 1.3 * k, 0.9 * k, B.breast, { normal: (_x, _y, dx, dy) => sphere(dx * 0.5 + 0.3, dy * 0.5 + 0.2, 1) });
     const [mx, my] = P(4.0, 0.0);
     c.px(mx, my, B.hood, sphere(0.2, 0.2));
     c.part();
@@ -1722,14 +2192,6 @@ function flyingBird(B: BirdLook, f: Flight): PixelCanvas {
       const [b3x, b3y] = P(5.6, 1.2);
       c.px(b3x, b3y, B.beak, sphere(0.4, 0.5), { bias: -1 });
     }
-  }
-  if (owl) {
-    // Flecks over the back and wings.
-    for (let y = 0; y < BIRD_H; y++)
-      for (let x = 0; x < BIRD_W; x++) {
-        const m = c.materialAt(x, y);
-        if ((m === B.back || m === B.hood) && ((x * 5 + y * 11) % 9 === 0)) c.px(x, y, B.bar, sphere(0, -0.3));
-      }
   }
   wing(false);
   return c;

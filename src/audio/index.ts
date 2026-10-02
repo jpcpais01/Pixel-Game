@@ -711,10 +711,10 @@ class GameSound {
     this.fx('screech', 'screech', [pan], 0);
   }
 
-  /** The falconer's bird calling as it leaves her fist: a falcon's "kek-kek-kek", or an owl's bark. */
-  falconCall(pan = 0, owl = false): void {
+  /** The falconer's bird calling as it leaves her fist: a falcon's "kek-kek-kek", or a golden eagle's scream. */
+  falconCall(pan = 0, eagle = false): void {
     const t = this.slot('falconCall');
-    if (t !== null) this.sfx!.falconCall(t, pan, owl);
+    if (t !== null) this.sfx!.falconCall(t, pan, eagle);
   }
 
   /** The falconer's whistle, two fingers at her lips: a long rising note and a sharp fall. */

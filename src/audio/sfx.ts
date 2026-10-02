@@ -2664,14 +2664,18 @@ export class Sfx {
     vib.stop(t + 0.6);
     this.burstNoise(out, t, 'highpass', 3000, 5000, 1, 0.08, 0.2);
   }
-  /** A falcon's chatter, "kek-kek-kek-kek", hard and quick; or a snowy owl's low, gruff bark. */
-  falconCall(t: number, pan: number, owl: boolean): void {
-    const out = this.out(pan, 0.35, 0.35);
-    if (owl) {
-      const soft = filter(this.m.ctx, 'lowpass', 1200, 0.7, out);
-      this.chirp(soft, t, 'triangle', 520, 380, 0.3, 0.16);
-      this.chirp(soft, t + 0.2, 'triangle', 500, 360, 0.24, 0.14);
-      this.burstNoise(out, t, 'bandpass', 900, 600, 1.2, 0.08, 0.2, true);
+  /** A falcon's chatter, "kek-kek-kek-kek", hard and quick; or a golden eagle's ringing scream, two long yelps falling away. */
+  falconCall(t: number, pan: number, eagle: boolean): void {
+    const out = this.out(pan, 0.35, 0.45);
+    if (eagle) {
+      const ring = filter(this.m.ctx, 'bandpass', 1900, 2.5, out);
+      for (let i = 0; i < 2; i++) {
+        const at = t + i * 0.26;
+        const f = rand(1750, 1850) - i * 120;
+        this.chirp(ring, at, 'sawtooth', f, f * 0.62, 0.2 * (1 - i * 0.25), 0.22 + i * 0.06);
+        this.chirp(out, at, 'triangle', f * 1.02, f * 0.66, 0.07, 0.2);
+        this.burstNoise(out, at, 'bandpass', 2600, 1500, 2, 0.05, 0.18);
+      }
       return;
     }
     for (let i = 0; i < 4; i++) {
