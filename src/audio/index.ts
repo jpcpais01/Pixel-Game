@@ -582,6 +582,18 @@ class GameSound {
     this.fx('forceCrush', 'forceCrush', [pan], 0);
   }
 
+  /** The Force Sage's stones: torn up, shattering on a foe, or a slab bursting (see Sfx.forceStone). */
+  forceStone(pan = 0, kind: 'rip' | 'hit' | 'big' = 'hit'): void {
+    const t = this.slot(`forceStone:${kind}`);
+    if (t !== null) this.sfx!.forceStone(t, pan, kind);
+  }
+
+  /** The Force Sage's barrier: springing up, taking a blow, or bursting (see Sfx.forceBarrier). */
+  forceBarrier(pan = 0, kind: 'up' | 'hit' | 'break' = 'up'): void {
+    const t = this.slot(`forceBarrier:${kind}`);
+    if (t !== null) this.sfx!.forceBarrier(t, pan, kind);
+  }
+
   punch(step: number, pan = 0): void {
     this.fx('punch', 'punch', [pan, step], 0);
   }
@@ -699,6 +711,18 @@ class GameSound {
     this.fx('screech', 'screech', [pan], 0);
   }
 
+  /** The falconer's bird calling as it leaves her fist: a falcon's "kek-kek-kek", or a golden eagle's scream. */
+  falconCall(pan = 0, eagle = false): void {
+    const t = this.slot('falconCall');
+    if (t !== null) this.sfx!.falconCall(t, pan, eagle);
+  }
+
+  /** The falconer's whistle, two fingers at her lips: a long rising note and a sharp fall. */
+  whistle(pan = 0): void {
+    const t = this.slot('whistle');
+    if (t !== null) this.sfx!.whistle(t, pan);
+  }
+
   roar(pan = 0, big = false): void {
     this.fx('roar', 'roar', [pan, big], 0);
   }
@@ -781,6 +805,47 @@ class GameSound {
 
   bloodNova(pan = 0): void {
     this.fx('bloodNova', 'bloodNova', [pan], 0);
+  }
+
+  maulSwing(pan = 0, heavy = false): void {
+    const t = this.slot('maulSwing');
+    if (t !== null) this.sfx!.maulSwing(t, pan, heavy);
+  }
+
+  maulSlam(pan = 0): void {
+    const t = this.slot('maulSlam');
+    if (t !== null) this.sfx!.maulSlam(t, pan);
+  }
+
+  graveOpen(pan = 0): void {
+    const t = this.slot('graveOpen');
+    if (t !== null) this.sfx!.graveOpen(t, pan);
+  }
+
+  tombRise(pan = 0): void {
+    const t = this.slot('tombRise');
+    if (t !== null) this.sfx!.tombRise(t, pan);
+  }
+  /** The Reaper's scythe swung; `heavy` for the spinning reap. */
+  reap(pan = 0, heavy = false): void {
+    const t = this.slot('reap');
+    if (t !== null) this.sfx!.reap(t, pan, heavy);
+  }
+
+  reapHit(pan = 0, heavy = false): void {
+    const t = this.slot('reapHit');
+    if (t !== null) this.sfx!.reapHit(t, pan, heavy);
+  }
+
+  deathStep(pan = 0): void {
+    const t = this.slot('deathStep');
+    if (t !== null) this.sfx!.deathStep(t, pan);
+  }
+
+  /** The Harvest's great scythe coming round (`n` its turn), and the last reap (`n` 0 for its tolling start). */
+  reapHarvest(pan = 0, n = 0): void {
+    const t = this.slot(`reapHarvest${n}`);
+    if (t !== null) this.sfx!.reapHarvest(t, pan, n);
   }
 
   lutePluck(pan = 0): void {
@@ -909,6 +974,23 @@ class GameSound {
 
   foamBurst(pan = 0): void {
     this.fx('foamBurst', 'foamBurst', [pan], 0);
+  }
+
+  /** The Twin Blade's Riposte: a blow turned on his crossed sabers. */
+  saberParry(pan = 0): void {
+    const t = this.slot('saberParry');
+    if (t !== null) this.sfx!.saberParry(t, pan);
+  }
+
+  /** Thousand Cuts' last crossing flash. */
+  saberCross(pan = 0): void {
+    const t = this.slot('saberCross');
+    if (t !== null) this.sfx!.saberCross(t, pan);
+  }
+
+  ringSaber(pan = 0): void {
+    const t = this.slot('ringSaber');
+    if (t !== null) this.sfx!.ringSaber(t, pan);
   }
 
   step(): void {

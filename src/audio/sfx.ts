@@ -1555,6 +1555,59 @@ export class Sfx {
     this.burstNoise(out, t + 0.01, 'bandpass', 1800, 900, 2, 0.3, 0.12);
   }
 
+  /**
+   * The Force Sage's stones: 'rip', a stone torn out of the ground (a gritty
+   * crunch and a rising hum of the Force under it); 'hit', it shatters on a
+   * foe (a dry crack and pebbles); 'big', a slab bursting on the ground (a
+   * deep thud under the crack, and rubble raining down).
+   */
+  forceStone(t: number, pan: number, kind: 'rip' | 'hit' | 'big'): void {
+    const ctx = this.m.ctx;
+    if (kind === 'rip') {
+      const out = this.out(pan, 0.6, 0.3);
+      this.burstNoise(out, t, 'lowpass', 900, 300, 1.2, 0.35, 0.16, true);
+      for (let i = 0; i < 4; i++) this.burstNoise(out, t + i * rand(0.015, 0.03), 'bandpass', rand(1800, 2600), rand(1200, 1800), 3, 0.12, 0.03);
+      this.chirp(filter(ctx, 'lowpass', 1400, 1.5, out), t + 0.02, 'triangle', 160, 420, 0.1, 0.22);
+      return;
+    }
+    const big = kind === 'big';
+    const out = this.out(pan, big ? 1 : 0.75, big ? 0.45 : 0.25);
+    // The crack.
+    this.burstNoise(out, t, 'bandpass', big ? 1600 : 2400, big ? 600 : 900, 1.1, big ? 0.55 : 0.42, big ? 0.14 : 0.08);
+    this.chirp(out, t, 'sine', big ? 150 : 210, big ? 38 : 70, big ? 0.6 : 0.35, big ? 0.32 : 0.14);
+    // Pebbles skittering off.
+    for (let i = 0; i < (big ? 8 : 4); i++) this.burstNoise(out, t + 0.03 + i * rand(0.02, 0.045), 'bandpass', rand(2600, 4200), rand(1800, 3000), 4, big ? 0.14 : 0.1, 0.025);
+    if (big) this.burstNoise(out, t, 'lowpass', 1200, 200, 0.8, 0.5, 0.45, true);
+  }
+
+  /**
+   * The Force barrier: 'up', a dome of light springing up (a soft rising
+   * shimmer over a hum); 'hit', a blow turned on it (a glassy ping); 'break',
+   * it bursts outward (a ringing shatter and a push of air).
+   */
+  forceBarrier(t: number, pan: number, kind: 'up' | 'hit' | 'break'): void {
+    const ctx = this.m.ctx;
+    if (kind === 'hit') {
+      const out = this.out(pan, 0.55, 0.4);
+      this.bell(out, t, rand(1500, 1700), 0.06, 0.4);
+      this.burstNoise(out, t, 'highpass', 3000, 5000, 0.7, 0.12, 0.08);
+      return;
+    }
+    if (kind === 'up') {
+      const out = this.out(pan, 0.7, 0.6);
+      this.chirp(filter(ctx, 'lowpass', 1600, 1.2, out), t, 'triangle', 220, 660, 0.18, 0.5);
+      this.chirp(out, t + 0.05, 'sine', 440, 1320, 0.08, 0.45);
+      this.sparkle(out, t + 0.08, 4, 0.06);
+      return;
+    }
+    const out = this.out(pan, 0.9, 0.55);
+    this.bell(out, t, 1320, 0.08, 0.6);
+    this.bell(out, t + 0.02, 1980, 0.05, 0.45);
+    for (let i = 0; i < 6; i++) this.burstNoise(out, t + i * rand(0.01, 0.02), 'bandpass', rand(4000, 7000), rand(3000, 5000), 5, 0.18, 0.03);
+    this.burstNoise(out, t, 'lowpass', 2000, 250, 0.9, 0.45, 0.4, true);
+    this.chirp(out, t, 'sine', 120, 40, 0.4, 0.35);
+  }
+
   /** A punch cutting the air: a short, tight whoosh, heavier and lower down the combo. */
   punch(t: number, pan: number, step: number): void {
     const ctx = this.m.ctx;
@@ -1755,6 +1808,119 @@ export class Sfx {
     const src = this.m.noiseSource();
     src.connect(lp);
     this.m.startNoise(src, t + 0.12, 0.9);
+  }
+
+  /**
+   * The Barrow Knight's grave maul heaved through the air: a slow, low whoosh
+   * of a great weight, the creak of its iron bands riding it; lower and
+   * longer for the dragging backhand.
+   */
+  maulSwing(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.55 : 0.45, 0.14);
+    const dur = heavy ? 0.26 : 0.2;
+    this.burstNoise(out, t, 'bandpass', heavy ? 320 : 480, heavy ? 900 : 1300, 1.1, 0.34, dur, true);
+    this.chirp(out, t, 'triangle', heavy ? 120 : 160, 60, 0.1, dur * 0.8);
+    // The iron bands and the haft's socket grating.
+    this.chirp(out, t + 0.02, 'sawtooth', rand(210, 240), rand(170, 190), 0.018, 0.09);
+  }
+
+  /** The gravestone brought down: a deep thud of stone into earth, a dull ring of iron, grit and stone chips after. */
+  maulSlam(t: number, pan: number): void {
+    const out = this.out(pan, 0.95, 0.45);
+    this.chirp(out, t, 'sine', 110, 32, 0.85, 0.32);
+    this.burstNoise(out, t, 'lowpass', 900, 150, 0.8, 0.55, 0.32, true);
+    // Stone on earth: a short, hard crack before the rumble.
+    this.burstNoise(out, t, 'bandpass', 1800, 900, 1.5, 0.3, 0.04);
+    this.bell(out, t + 0.01, rand(380, 430), 0.045, 0.3);
+    for (let i = 0; i < 5; i++) this.burstNoise(out, t + 0.06 + i * rand(0.04, 0.08), 'bandpass', rand(700, 1400), 500, 2.5, 0.14, 0.04, true);
+  }
+
+  /** The ground torn open: earth splitting, a groan from below, bones clattering up. */
+  graveOpen(t: number, pan: number): void {
+    const out = this.out(pan, 0.85, 0.5);
+    this.chirp(out, t, 'sine', 90, 34, 0.6, 0.45);
+    this.burstNoise(out, t, 'lowpass', 700, 140, 0.9, 0.45, 0.5, true);
+    this.chirp(out, t + 0.05, 'sawtooth', 70, 55, 0.08, 0.6);
+    for (let i = 0; i < 7; i++) this.burstNoise(out, t + 0.08 + i * rand(0.03, 0.06), 'bandpass', rand(1800, 3000), 1400, 4, 0.18, 0.03);
+  }
+
+  /** Headstones heaving up out of the earth: a grinding rumble and a stony knock. */
+  tombRise(t: number, pan: number): void {
+    const out = this.out(pan, 0.9, 0.55);
+    this.chirp(out, t, 'sine', 70, 30, 0.7, 0.6);
+    this.burstNoise(out, t, 'bandpass', 300, 600, 1.5, 0.4, 0.55, true);
+    for (let i = 0; i < 6; i++) this.burstNoise(out, t + 0.1 + i * rand(0.04, 0.09), 'bandpass', rand(700, 1300), 500, 3, 0.2, 0.05, true);
+  }
+
+  // ------------------------------------------------------------ The Reaper
+
+  /** A scythe swung: a long low whoosh of a heavy blade through the air, a cold ring of its edge riding it. */
+  reap(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.8 : 0.65, 0.35);
+    const dur = heavy ? 0.42 : 0.26;
+    this.burstNoise(out, t, 'bandpass', 380, heavy ? 1800 : 1400, 1.3, heavy ? 0.45 : 0.36, dur, true);
+    this.burstNoise(out, t + dur * 0.4, 'bandpass', 1600, 700, 1.1, 0.18, dur * 0.6, true);
+    this.chirp(out, t + 0.03, 'sine', rand(2900, 3100), rand(2500, 2600), 0.02, dur);
+    if (heavy) this.chirp(out, t + 0.15, 'sine', rand(3300, 3400), 2900, 0.018, 0.25);
+  }
+
+  /** The scythe biting: a dry hiss of a cut, a hollow knock, and a breath of something leaving. */
+  reapHit(t: number, pan: number, heavy: boolean): void {
+    const out = this.out(pan, heavy ? 0.85 : 0.7, 0.4);
+    this.burstNoise(out, t, 'highpass', 2800, 1500, 0.8, heavy ? 0.42 : 0.32, heavy ? 0.12 : 0.08);
+    this.chirp(out, t, 'sine', heavy ? 160 : 200, 55, heavy ? 0.34 : 0.22, 0.12);
+    this.chirp(out, t + 0.05, 'triangle', 640, 1100, 0.035, 0.22);
+  }
+
+  /** Death's step: a hiss drawn in, a hollow rush of shade, and a breath out where he forms. */
+  deathStep(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.7, 0.55);
+    this.burstNoise(out, t, 'bandpass', 3200, 900, 1.2, 0.2, 0.14);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t + 0.08);
+    g.gain.linearRampToValueAtTime(0.32, t + 0.14);
+    g.gain.setTargetAtTime(0, t + 0.2, 0.08);
+    const bp = filter(ctx, 'bandpass', 260, 2, g);
+    sweep(bp.frequency, t + 0.08, 260, 1400, 0.25);
+    const src = this.m.noiseSource(true);
+    src.connect(bp);
+    this.m.startNoise(src, t + 0.08, 0.5);
+    this.chirp(out, t + 0.1, 'sine', 180, 90, 0.18, 0.25);
+  }
+
+  /**
+   * The Harvest: first a deep bell tolling (n 0), then the great spectral
+   * scythe's whoosh each time it comes round (n 1, 2), and the last reap (n 3):
+   * a cleave and a rising chorus of souls let go.
+   */
+  reapHarvest(t: number, pan: number, n: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.9, 0.7);
+    if (n === 0) {
+      this.bell(out, t, 98, 0.22, 2.2);
+      this.bell(out, t, 196, 0.1, 1.6);
+      this.bell(out, t + 0.01, 293, 0.05, 1.2);
+      return;
+    }
+    if (n < 3) {
+      this.burstNoise(out, t, 'bandpass', 200, 1200, 1.2, 0.5, 0.5, true);
+      this.burstNoise(out, t + 0.2, 'bandpass', 1400, 400, 1.2, 0.3, 0.35, true);
+      this.chirp(out, t + 0.05, 'sine', 2600, 2100, 0.02, 0.4);
+      return;
+    }
+    this.burstNoise(out, t, 'highpass', 3600, 1400, 0.8, 0.5, 0.18);
+    this.chirp(out, t, 'sine', 130, 38, 0.6, 0.4);
+    const g = gain(ctx, 0, filter(ctx, 'lowpass', 2600, 1, out));
+    g.gain.setValueAtTime(0, t + 0.05);
+    g.gain.linearRampToValueAtTime(0.09, t + 0.3);
+    g.gain.linearRampToValueAtTime(0, t + 1.2);
+    for (const f of [330, 415, 494]) {
+      const o = osc(ctx, 'triangle', f * 0.7, g);
+      sweep(o.frequency, t + 0.05, f * 0.7, f * 1.25, 1.1);
+      o.start(t + 0.05);
+      o.stop(t + 1.3);
+    }
   }
 
   /** The bow drawn: the wood creaking as the string comes back, longer for the volley. */
@@ -2507,6 +2673,52 @@ export class Sfx {
     vib.stop(t + 0.6);
     this.burstNoise(out, t, 'highpass', 3000, 5000, 1, 0.08, 0.2);
   }
+  /** A falcon's chatter, "kek-kek-kek-kek", hard and quick; or a golden eagle's ringing scream, two long yelps falling away. */
+  falconCall(t: number, pan: number, eagle: boolean): void {
+    const out = this.out(pan, 0.35, 0.45);
+    if (eagle) {
+      const ring = filter(this.m.ctx, 'bandpass', 1900, 2.5, out);
+      for (let i = 0; i < 2; i++) {
+        const at = t + i * 0.26;
+        const f = rand(1750, 1850) - i * 120;
+        this.chirp(ring, at, 'sawtooth', f, f * 0.62, 0.2 * (1 - i * 0.25), 0.22 + i * 0.06);
+        this.chirp(out, at, 'triangle', f * 1.02, f * 0.66, 0.07, 0.2);
+        this.burstNoise(out, at, 'bandpass', 2600, 1500, 2, 0.05, 0.18);
+      }
+      return;
+    }
+    for (let i = 0; i < 4; i++) {
+      const at = t + i * 0.075;
+      const f = rand(2500, 2700) - i * 60;
+      this.chirp(out, at, 'sawtooth', f, f * 0.82, 0.12 * (1 - i * 0.12), 0.05);
+      this.chirp(out, at, 'triangle', f * 1.5, f * 1.2, 0.08, 0.04);
+    }
+  }
+
+  /** A falconer's whistle: breath, a long note sliding up, held, and snapped down at the end. */
+  whistle(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.4, 0.55);
+    const g = gain(ctx, 0, out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.2, t + 0.05);
+    g.gain.setValueAtTime(0.2, t + 0.5);
+    g.gain.linearRampToValueAtTime(0, t + 0.68);
+    const o = osc(ctx, 'sine', 1700, g);
+    o.frequency.setValueAtTime(1700, t);
+    o.frequency.linearRampToValueAtTime(2600, t + 0.3);
+    o.frequency.setValueAtTime(2600, t + 0.5);
+    o.frequency.linearRampToValueAtTime(1900, t + 0.66);
+    const depth = gain(ctx, 18);
+    const vib = osc(ctx, 'sine', 6, depth);
+    depth.connect(o.frequency);
+    o.start(t);
+    o.stop(t + 0.72);
+    vib.start(t);
+    vib.stop(t + 0.72);
+    this.burstNoise(out, t, 'bandpass', 2400, 2800, 3, 0.06, 0.6);
+  }
+
 
   /**
    * The Aurora Colosseum's frost, by kind:
@@ -2687,6 +2899,40 @@ export class Sfx {
     this.sparkle(out, t + 0.35, 3, 0.07);
   }
 
+  /**
+   * A ring saber thrown: its two blades' hum chopped into a fast wub-wub as
+   * it spins, bending down as it flies off and back up as it comes home.
+   */
+  ringSaber(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const dur = 0.62;
+    const out = this.out(pan, 0.6, 0.3);
+    const hum = gain(ctx, 0, out);
+    hum.gain.setValueAtTime(0, t);
+    hum.gain.linearRampToValueAtTime(0.2, t + 0.04);
+    hum.gain.setTargetAtTime(0.12, t + 0.2, 0.1);
+    hum.gain.setTargetAtTime(0, t + dur - 0.1, 0.05);
+    // The spin: the hum's loudness wheeling round many times a second.
+    const chop = gain(ctx, 0.5, hum);
+    const wob = osc(ctx, 'triangle', 18, gain(ctx, 0.5, chop.gain));
+    sweep(wob.frequency, t, 16, 24, dur);
+    const lp = filter(ctx, 'lowpass', 1100, 2.2, chop);
+    for (const [f, d] of [
+      [96, -7],
+      [144, 6],
+    ]) {
+      const o = osc(ctx, 'sawtooth', f, lp);
+      o.detune.value = d;
+      sweep(o.frequency, t, f * 1.25, f * 0.8, dur * 0.5);
+      sweep(o.frequency, t + dur * 0.5, f * 0.8, f * 1.15, dur * 0.5);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+    wob.start(t);
+    wob.stop(t + dur + 0.05);
+    this.burstNoise(out, t, 'bandpass', 900, 2400, 1.6, 0.14, dur * 0.8);
+  }
+
   // ------------------------------------------------------------ The Transmuter
 
   /** A bead of quicksilver flicked off the gauntlet: a liquid, rising plip and a little metal ring. */
@@ -2788,6 +3034,61 @@ export class Sfx {
       o.start(at);
       o.stop(at + 0.3);
     }
+  }
+
+  // ------------------------------------------------------------ The Twin Blade
+
+  /**
+   * A blow turned on two crossed sabers: a hard electric snap, the blades
+   * grinding against each other, then a bright ring like a struck bell, a
+   * little out of tune between its two blades.
+   */
+  saberParry(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 0.9, 0.4);
+    this.burstNoise(out, t, 'highpass', 3200, 6000, 0.8, 0.45, 0.09);
+    const grind = gain(ctx, 0, filter(ctx, 'bandpass', 1400, 2, out));
+    hit(grind.gain, t, 0.22, 0.002, 0.16);
+    for (const f of [118, 131]) {
+      const o = osc(ctx, 'sawtooth', f, grind);
+      sweep(o.frequency, t, f * 1.8, f, 0.14);
+      o.start(t);
+      o.stop(t + 0.2);
+    }
+    const ring = gain(ctx, 0, filter(ctx, 'highpass', 900, 0.7, out));
+    hit(ring.gain, t + 0.01, 0.11, 0.002, 0.7);
+    for (const f of [1320, 1395, 2210, 3480]) {
+      const r = osc(ctx, 'triangle', f * rand(0.99, 1.01), gain(ctx, 0.45, ring));
+      r.start(t + 0.01);
+      r.stop(t + 0.8);
+    }
+    const th = gain(ctx, 0, out);
+    hit(th.gain, t, 0.35, 0.002, 0.12);
+    const lo = osc(ctx, 'sine', 170, th);
+    sweep(lo.frequency, t, 170, 60, 0.12);
+    lo.start(t);
+    lo.stop(t + 0.16);
+  }
+
+  /** Thousand Cuts' last flash: two blades crossing at once, a rising hiss and a deep, double saber bite. */
+  saberCross(t: number, pan: number): void {
+    const ctx = this.m.ctx;
+    const out = this.out(pan, 1, 0.5);
+    this.burstNoise(out, t, 'bandpass', 900, 6200, 1.2, 0.4, 0.22);
+    for (const [d, f] of [[0, 96], [0.045, 128]] as const) {
+      const g = gain(ctx, 0, filter(ctx, 'lowpass', 2200, 1.5, out));
+      hit(g.gain, t + d, 0.3, 0.003, 0.3);
+      const o = osc(ctx, 'sawtooth', f, g);
+      sweep(o.frequency, t + d, f * 2.2, f * 0.7, 0.28);
+      o.start(t + d);
+      o.stop(t + d + 0.34);
+    }
+    const th = gain(ctx, 0, out);
+    hit(th.gain, t + 0.04, 0.55, 0.003, 0.3);
+    const lo = osc(ctx, 'sine', 120, th);
+    sweep(lo.frequency, t + 0.04, 120, 38, 0.3);
+    lo.start(t + 0.04);
+    lo.stop(t + 0.4);
   }
 
   // ------------------------------------------------------------ The Lightwright

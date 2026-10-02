@@ -57,6 +57,21 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Lightning pours into foes ahead, jumping on and slowing them.',
     special: 'Lifts and squeezes foes on a spot, draining life, then crushes.',
   },
+  'jedi.sage': {
+    attack: 'Tears stones from the ground and hurls them, then a slab that bursts.',
+    ability: 'A dome of light soaks blows for 3 s, then bursts and throws foes back.',
+    special: 'Lifts every foe in a wide ring into the air, then slams them all down.',
+  },
+  'jedi.twin': {
+    attack: 'Three quick crossing cuts, hand after hand, then an X-cut that staggers.',
+    ability: 'Crossed blades turn the next blow aside and answer it with a hard counter-cut.',
+    special: 'Blinks from foe to foe cutting each, then every cut bursts at once.',
+  },
+  'jedi.inquisitor': {
+    attack: 'Throws the ring saber out and back, cutting foes both ways; whirls it up close.',
+    ability: 'Leaps onto a foe ahead and lands in a red shockwave that staggers all round.',
+    special: 'The ring saber spirals round him, out wide and back, carving all it passes.',
+  },
   'fighter.brawler': {
     attack: 'A five-punch combo ending in a flying straight that launches.',
     ability: 'A stream of chi fists hammers far ahead, ending in a finisher.',
@@ -92,6 +107,11 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     ability: 'Flips back out of reach, firing a gale arrow that pierces and blows foes away.',
     special: 'A walking cyclone pulls foes in, wears at them, then flings them away.',
   },
+  'archer.falconer': {
+    attack: 'Quick, light arrows from a short bow, loosed on the move.',
+    ability: 'Casts her falcon at a foe: it rakes it three times and marks it, and her arrows hit marked foes harder.',
+    special: 'She whistles up a flight of hawks that circle overhead, then stoop on every foe around her.',
+  },
   'rogue.rogue': {
     attack: 'Two bleeding stabs, then an X cut that rips the wounds open.',
     ability: 'Dashes through foes unharmed, then hides for a double-damage ambush.',
@@ -111,6 +131,21 @@ export const ABILITY_INFO: Record<string, AbilityInfo> = {
     attack: 'Fast lances that pierce three foes and heal for each hit.',
     ability: "Spends the hero's own blood on a nova that hits and drains foes around.",
     special: 'A crimson moon rains lances of blood on foes below, then bursts.',
+  },
+  'necromancer.barrow': {
+    attack: 'Two swings of a gravestone maul, the second flinging earth, then a slam that cracks the ground and throws foes back.',
+    ability: 'Drives the maul into the earth and opens a grave at the aim: arms burst out and hold every foe on it, and a ghoul climbs out to fight.',
+    special: 'Headstones burst up in a ring, throwing foes back, and ghosts streak from them into foes nearby.',
+  },
+  'necromancer.reaper': {
+    attack: 'Two wide scythe sweeps and a spinning reap; each foe cut frees a soul that heals the hero.',
+    ability: 'Steps through shade along the aim, cutting and marking foes passed; marked foes take more from reaps.',
+    special: 'A great ghost scythe sweeps round twice drawing foes in, then reaps, executing the nearly dead.',
+  },
+  'necromancer.lich': {
+    attack: 'Shards of bone-ice that chill foes; every third on one foe freezes it.',
+    ability: 'A line of ice-and-bone spikes bursts up along the aim, rooting foes.',
+    special: 'A blizzard round the hero slows and bites foes, then freezes and shatters them.',
   },
   'bard.minstrel': {
     attack: 'Lute notes that bend toward foes and leap from one to the next.',

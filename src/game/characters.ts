@@ -28,6 +28,12 @@ import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
 import { GUARD_STYLE, Jedi, JEDI_STYLE, MASTER_STYLE, NOMAD_STYLE } from './Jedi';
 import { EMPRESS_KIT, Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
+import { DAWNSEER_KIT, Sage, SAGE_KIT } from './Sage';
+import { SAGE_H, SAGE_ORIGIN_Y } from '../art/sage';
+import { PEACOCK_KIT, Twin, TWIN_KIT } from './Twin';
+import { TWIN_H, TWIN_ORIGIN_Y } from '../art/twin';
+import { Inquisitor, RINGBLADE_KIT, VOIDHUNTER_KIT } from './Inquisitor';
+import { INQ_H, INQ_ORIGIN_Y } from '../art/inquisitor';
 import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE, TIGER_STYLE, WUKONG_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
 import { Alchemist, CARNEVALE_STYLE, CHEM_STYLE, CRYO_STYLE, DIVER_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
@@ -36,6 +42,14 @@ import { APOLLO_STYLE, Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_
 import { Arbalest, BRIAR_STYLE, IRONBEARD_STYLE } from './Arbalest';
 import { OWL_STYLE, Windrunner, WISTERIA_STYLE } from './Windrunner';
 import { ARCHER_H, ARCHER_ORIGIN_Y } from '../art/archer';
+import { BERKUT_KIT, Falconer } from './Falconer';
+import { FALC_H, FALC_ORIGIN_Y } from '../art/falconer';
+import { BARROW_KIT, BarrowKnight, MOSSGRAVE_KIT } from './BarrowKnight';
+import { BARROW_H, BARROW_ORIGIN_Y } from '../art/barrow';
+import { DROWNED_KIT, Lich, LICH_KIT } from './Lich';
+import { LICH_H, LICH_ORIGIN_Y } from '../art/lich';
+import { CATRINA_KIT, Reaper, REAPER_KIT } from './Reaper';
+import { REAPER_H, REAPER_ORIGIN_Y } from '../art/reaper';
 import { COBRA_STYLE, CORSAIR_STYLE, DANCER_STYLE, GENTLEMAN_STYLE, KITSUNE_STYLE, NIGHTBLOOM_STYLE, Rogue, ROGUE_STYLE } from './Rogue';
 import { ROGUE_H, ROGUE_ORIGIN_Y } from '../art/rogue';
 import { BLOOD_KIT, DIGGER_KIT, NECRO_KIT, Necromancer, TOMB_KIT, VAMPIRE_KIT, WYRM_KIT } from './Necromancer';
@@ -749,9 +763,96 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // A scholar of the Force who fights with the mind: stones torn from the ground and hurled, a dome of light, foes lifted and slammed.
+        id: 'sage',
+        name: 'Force Sage',
+        role: 'The mind as a weapon',
+        accent: 0x5ae0d0,
+        attack: 'Force throw',
+        special: 'Force barrier',
+        preview: { texture: 'jedi_sage', glow: 'jedi_sage_e', idle: 'jedi_sage_idle_down', chosen: 'jedi_sage_levitate_down', originY: SAGE_ORIGIN_Y / SAGE_H },
+        buttons: {
+          attack: { texture: 'icon_forcethrow' },
+          special: { texture: 'icon_barrier' },
+        },
+        lookName: 'Scholar',
+        skins: [
+          {
+            // An oracle of the morning sun: white and saffron robes, a sunburst halo-crown and veil, gold and dawn-rose Force, sunstones to throw.
+            id: 'dawnseer',
+            name: 'Dawnseer',
+            accent: 0xffb45a,
+            preview: { texture: 'jedi_dawnseer', glow: 'jedi_dawnseer_e', idle: 'jedi_dawnseer_idle_down', chosen: 'jedi_dawnseer_levitate_down', originY: SAGE_ORIGIN_Y / SAGE_H },
+            buttons: {
+              attack: { texture: 'icon_forcethrow_dawnseer' },
+              special: { texture: 'icon_barrier_dawnseer' },
+            },
+          },
+        ],
+      },
+      {
+        // A Jar'Kai duelist, a saber in each hand: a four-cut flurry ending in an X, a parry that answers, a storm of blinks.
+        id: 'twin',
+        name: 'Twin Blade',
+        role: 'Two sabers, no openings',
+        accent: 0x3ee6ff,
+        attack: 'Twin flurry',
+        special: 'Riposte',
+        preview: { texture: 'jedi_twin', glow: 'jedi_twin_e', idle: 'jedi_twin_idle_down', chosen: 'jedi_twin_draw_down', originY: TWIN_ORIGIN_Y / TWIN_H },
+        buttons: {
+          attack: { texture: 'icon_twin' },
+          special: { texture: 'icon_riposte' },
+        },
+        lookName: 'Duelist',
+        skins: [
+          {
+            // A court duelist of a jewelled palace: teal and sapphire brocade stitched in gold, a gold sash, a half-cape fanned in feather eyes, a pinned high knot, emerald and sapphire blades.
+            id: 'peacock',
+            name: 'Peacock',
+            accent: 0x2ad0a0,
+            preview: { texture: 'jedi_peacock', glow: 'jedi_peacock_e', idle: 'jedi_peacock_idle_down', chosen: 'jedi_peacock_draw_down', originY: TWIN_ORIGIN_Y / TWIN_H },
+            buttons: {
+              attack: { texture: 'icon_twin_peacock' },
+              special: { texture: 'icon_riposte_peacock' },
+            },
+          },
+        ],
+      },
+      {
+        // A dark-side hunter in grey-black armour and a short cape, his ring saber thrown like a boomerang.
+        id: 'inquisitor',
+        name: 'Ringblade',
+        role: 'Hunter of the light',
+        accent: 0xe8403c,
+        attack: 'Ring saber',
+        special: "Hunter's leap",
+        preview: { texture: 'jedi_inquisitor', glow: 'jedi_inquisitor_e', idle: 'jedi_inquisitor_idle_down', chosen: 'jedi_inquisitor_purge_down', originY: INQ_ORIGIN_Y / INQ_H },
+        buttons: {
+          attack: { texture: 'icon_ringsaber' },
+          special: { texture: 'icon_hunterleap' },
+        },
+        lookName: 'Pale crest',
+        skins: [
+          {
+            // Obsidian armour with violet seams that glow, a horned black helm with one slit of light, a violet-white ring blade.
+            id: 'voidhunter',
+            name: 'Voidhunter',
+            accent: 0xb06cff,
+            preview: { texture: 'jedi_voidhunter', glow: 'jedi_voidhunter_e', idle: 'jedi_voidhunter_idle_down', chosen: 'jedi_voidhunter_purge_down', originY: INQ_ORIGIN_Y / INQ_H },
+            buttons: {
+              attack: { texture: 'icon_ringsaber_voidhunter' },
+              special: { texture: 'icon_hunterleap_voidhunter' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
+      if (look === 'sage' || look === 'dawnseer') return new Sage(world, x, y, look === 'dawnseer' ? DAWNSEER_KIT : SAGE_KIT);
       if (look === 'sith' || look === 'warlord' || look === 'empress') return new Sith(world, x, y, look === 'warlord' ? WARLORD_KIT : look === 'empress' ? EMPRESS_KIT : SITH_KIT);
+      if (look === 'twin' || look === 'peacock') return new Twin(world, x, y, look === 'peacock' ? PEACOCK_KIT : TWIN_KIT);
+      if (look === 'inquisitor' || look === 'voidhunter') return new Inquisitor(world, x, y, look === 'voidhunter' ? VOIDHUNTER_KIT : RINGBLADE_KIT);
       return new Jedi(world, x, y, look === 'guard' ? GUARD_STYLE : look === 'master' ? MASTER_STYLE : look === 'nomad' ? NOMAD_STYLE : JEDI_STYLE);
     },
   },
@@ -1119,13 +1220,43 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // A falconer in a leather hood and furred coat, a short hunting bow, her peregrine on the gauntlet.
+        id: 'falconer',
+        name: 'Falconer',
+        role: 'Bow and bird',
+        accent: 0xe0a040,
+        attack: 'Quick shot',
+        special: 'Falcon strike',
+        preview: { texture: 'archer_falconer', glow: 'archer_falconer_e', idle: 'archer_falconer_idle_down', chosen: 'archer_falconer_whistle_down', originY: FALC_ORIGIN_Y / FALC_H },
+        buttons: {
+          attack: { texture: 'icon_quickshot' },
+          special: { texture: 'icon_falcon' },
+        },
+        lookName: 'Peregrine',
+        skins: [
+          {
+            // An eagle hunter of the steppe: a tall fox-fur hat, a crimson felt coat bordered in indigo and worked in white and gold, a horn bow, a hooded golden eagle.
+            id: 'berkut',
+            name: 'Berkut',
+            accent: 0xd8483a,
+            preview: { texture: 'archer_falconer_berkut', glow: 'archer_falconer_berkut_e', idle: 'archer_falconer_berkut_idle_down', chosen: 'archer_falconer_berkut_whistle_down', originY: FALC_ORIGIN_Y / FALC_H },
+            buttons: {
+              attack: { texture: 'icon_quickshot_berkut' },
+              special: { texture: 'icon_falcon_berkut' },
+            },
+          },
+        ],
+      },
     ],
     spawn: (world, x, y, look) =>
       look === 'arbalest' || look === 'briar' || look === 'ironbeard'
         ? new Arbalest(world, x, y, look === 'briar' ? BRIAR_STYLE : look === 'ironbeard' ? IRONBEARD_STYLE : undefined)
         : look === 'wind' || look === 'wisteria' || look === 'owl'
           ? new Windrunner(world, x, y, look === 'wisteria' ? WISTERIA_STYLE : look === 'owl' ? OWL_STYLE : undefined)
-          : new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : look === 'apollo' ? APOLLO_STYLE : RANGER_STYLE),
+          : look === 'falconer' || look === 'berkut'
+            ? new Falconer(world, x, y, look === 'berkut' ? BERKUT_KIT : undefined)
+            : new Archer(world, x, y, look === 'storm' ? STORM_STYLE : look === 'hunt' ? HUNT_STYLE : look === 'scarecrow' ? SCARECROW_STYLE : look === 'apollo' ? APOLLO_STYLE : RANGER_STYLE),
   },
   {
     id: 'rogue',
@@ -1308,8 +1439,102 @@ const KITS: KitDef[] = [
           },
         ],
       },
+      {
+        // The class's tank: a knight of the old kings risen from his barrow
+        // in rusted plate, a gravestone for a maul, who opens the earth and
+        // calls up its dead.
+        id: 'barrow',
+        name: 'Barrow Knight',
+        role: 'Iron, earth and the restless dead',
+        accent: 0xb8e05a,
+        attack: 'Grave maul',
+        special: 'Open grave',
+        preview: { texture: 'necro_barrow', glow: 'necro_barrow_e', idle: 'necro_barrow_idle_down', chosen: 'necro_barrow_dig_down', originY: BARROW_ORIGIN_Y / BARROW_H },
+        buttons: {
+          attack: { texture: 'icon_gravemaul' },
+          special: { texture: 'icon_grave' },
+        },
+        lookName: 'Rusted',
+        skins: [
+          {
+            // Long buried and grown over: moss and lichen on his plate, toadstools on his pauldrons, roots binding his maul, a wisp's light in his eyes.
+            id: 'mossgrave',
+            name: 'Mossgrave',
+            accent: 0x5ae8d8,
+            preview: { texture: 'necro_mossgrave', glow: 'necro_mossgrave_e', idle: 'necro_mossgrave_idle_down', chosen: 'necro_mossgrave_dig_down', originY: BARROW_ORIGIN_Y / BARROW_H },
+            buttons: {
+              attack: { texture: 'icon_gravemaul_mossgrave' },
+              special: { texture: 'icon_grave_mossgrave' },
+            },
+          },
+        ],
+      },
+      {
+        // Death's own harvester: a gaunt skull in a tattered black-green shroud
+        // with a great scythe; broad reaps that tear souls loose to heal him, a
+        // step through shade that marks foes, and a Harvest that executes.
+        id: 'reaper',
+        name: 'Reaper',
+        role: 'The harvest of souls',
+        accent: 0xb0f080,
+        attack: 'Reap',
+        special: "Death's step",
+        preview: { texture: 'necro_reaper', glow: 'necro_reaper_e', idle: 'necro_reaper_idle_down', chosen: 'necro_reaper_harvest_down', originY: REAPER_ORIGIN_Y / REAPER_H },
+        buttons: {
+          attack: { texture: 'icon_reap' },
+          special: { texture: 'icon_deathstep' },
+        },
+        lookName: 'Shroud',
+        skins: [
+          {
+            // A Día de Muertos calavera: a painted sugar skull, a wide black hat crowned with marigolds and a pink plume,
+            // a black gown with a magenta panel and marigold ruffles, a lacquered scythe wound with a marigold garland.
+            id: 'catrina',
+            name: 'Catrina',
+            accent: 0xff8ab0,
+            preview: { texture: 'necro_catrina', glow: 'necro_catrina_e', idle: 'necro_catrina_idle_down', chosen: 'necro_catrina_harvest_down', originY: REAPER_ORIGIN_Y / REAPER_H },
+            buttons: {
+              attack: { texture: 'icon_reap_catrina' },
+              special: { texture: 'icon_deathstep_catrina' },
+            },
+          },
+        ],
+      },
+      {
+        // A crowned skeleton king in midnight robes and frost-rimed fur: shards of
+        // bone-ice that chill and freeze, spikes bursting from the ground, and a
+        // blizzard round him instead of raising the dead.
+        id: 'lich',
+        name: 'Lich',
+        role: 'Frost and the grave',
+        accent: 0x8ad8ff,
+        attack: 'Rime bolt',
+        special: 'Bone spikes',
+        preview: { texture: 'necro_lich', glow: 'necro_lich_e', idle: 'necro_lich_idle_down', chosen: 'necro_lich_winter_down', originY: LICH_ORIGIN_Y / LICH_H },
+        buttons: {
+          attack: { texture: 'icon_rime' },
+          special: { texture: 'icon_bonespikes' },
+        },
+        lookName: 'Rimecrown',
+        skins: [
+          {
+            // A sea king risen from the deep: a barnacled verdigris crown set with coral, kelp over sea-green robes, a driftwood staff and a pearl for a soul.
+            id: 'drowned',
+            name: 'Drowned King',
+            accent: 0x3ae8c0,
+            preview: { texture: 'necro_drowned', glow: 'necro_drowned_e', idle: 'necro_drowned_idle_down', chosen: 'necro_drowned_winter_down', originY: LICH_ORIGIN_Y / LICH_H },
+            buttons: {
+              attack: { texture: 'icon_rime_drowned' },
+              special: { texture: 'icon_bonespikes_drowned' },
+            },
+          },
+        ],
+      },
     ],
     spawn(world, x, y, look) {
+      if (look === 'barrow' || look === 'mossgrave') return new BarrowKnight(world, x, y, look === 'mossgrave' ? MOSSGRAVE_KIT : BARROW_KIT);
+      if (look === 'reaper' || look === 'catrina') return new Reaper(world, x, y, look === 'catrina' ? CATRINA_KIT : REAPER_KIT);
+      if (look === 'lich' || look === 'drowned') return new Lich(world, x, y, look === 'drowned' ? DROWNED_KIT : LICH_KIT);
       const kit = { necro: NECRO_KIT, tomb: TOMB_KIT, gravedigger: DIGGER_KIT, blood: BLOOD_KIT, wyrm: WYRM_KIT, vampire: VAMPIRE_KIT }[look] ?? NECRO_KIT;
       return new Necromancer(world, x, y, kit);
     },

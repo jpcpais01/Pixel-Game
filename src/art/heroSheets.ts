@@ -19,6 +19,7 @@ import { ALCHEMIST_ANIMS, ALCHEMIST_LOOKS, ALCH_H, ALCH_W, buildAlchemistFrames 
 import { ARCHER_H, ARCHER_LOOKS, ARCHER_W, archerAnimsFor, buildArcherFrames } from './archer';
 import { buildRogueFrames, ROGUE_ANIMS, ROGUE_H, ROGUE_LOOKS, ROGUE_W } from './rogue';
 import { buildNecroFrames, NECRO_ANIMS, NECRO_H, NECRO_LOOKS, NECRO_W } from './necromancer';
+import { buildLichFrames, LICH_ANIMS, LICH_H, LICH_LOOKS, LICH_W } from './lich';
 import { BARD_H, BARD_LOOKS, BARD_W, bardAnims, buildBardFrames } from './bard';
 import { CHRONO_H, CHRONO_LOOKS, CHRONO_W, buildChronoFrames, chronoAnims } from './chrono';
 import { SAMURAI_ANIMS, SAMURAI_H, SAMURAI_LOOKS, SAMURAI_W, SPIN_FPS, SPIN_FRAMES, buildSamuraiFrames, spinStart } from './samurai';
@@ -34,6 +35,12 @@ import { JUGG_ANIMS, JUGG_H, JUGG_LOOKS, JUGG_W, buildJuggFrames } from './jugge
 import { GUNSL_ANIMS, GUNSL_H, GUNSL_LOOKS, GUNSL_W, buildGunslFrames } from './gunslinger';
 import { INV_H, INV_W, INVENTOR_LOOKS, buildInventorFrames, inventorAnims } from './inventor';
 import { BEAST_H, BEAST_LOOKS, BEAST_W, beastAnims, buildBeastFrames } from './beast';
+import { SAGE_ANIMS, SAGE_H, SAGE_LOOKS, SAGE_W, buildSageFrames } from './sage';
+import { BARROW_ANIMS, BARROW_H, BARROW_LOOKS, BARROW_W, buildBarrowFrames } from './barrow';
+import { FALC_H, FALC_W, FALCONER_ANIMS, FALCONER_LOOKS, buildFalconerFrames } from './falconer';
+import { TWIN_ANIMS, TWIN_H, TWIN_LOOKS, TWIN_W, buildTwinFrames } from './twin';
+import { INQ_ANIMS, INQ_H, INQ_W, INQUISITOR_LOOKS, buildInquisitorFrames } from './inquisitor';
+import { REAPER_ANIMS, REAPER_H, REAPER_LOOKS, REAPER_W, buildReaperFrames, reaperSpins } from './reaper';
 import { LIGHTWRIGHT_ANIMS, LIGHTWRIGHT_LOOKS, LW_H, LW_W, buildLightwrightFrames } from './lightwright';
 import { TRANSMUTER_ANIMS, TRANSMUTER_LOOKS, TRANS_H, TRANS_W, buildTransmuterFrames } from './transmuter';
 import { AQUA_H, AQUA_W, AQUANAUT_LOOKS, aquanautAnims, buildAquanautFrames } from './aquanaut';
@@ -167,6 +174,7 @@ rig(ALCHEMIST_LOOKS, ALCH_W, ALCH_H, buildAlchemistFrames, (look) => ALCHEMIST_A
 rig(ARCHER_LOOKS, ARCHER_W, ARCHER_H, buildArcherFrames, archerAnimsFor);
 rig(ROGUE_LOOKS, ROGUE_W, ROGUE_H, buildRogueFrames, () => ROGUE_ANIMS, { flash: true });
 rig(NECRO_LOOKS, NECRO_W, NECRO_H, buildNecroFrames, () => NECRO_ANIMS);
+rig(LICH_LOOKS, LICH_W, LICH_H, buildLichFrames, () => LICH_ANIMS);
 rig(BARD_LOOKS, BARD_W, BARD_H, buildBardFrames, bardAnims);
 rig(CHRONO_LOOKS, CHRONO_W, CHRONO_H, buildChronoFrames, chronoAnims);
 rig(SAMURAI_LOOKS, SAMURAI_W, SAMURAI_H, buildSamuraiFrames, () => SAMURAI_ANIMS, { meta: 'samurai', extra: (look) => turn(look.key, 'spin', SPIN_FRAMES, SPIN_FPS, spinStart) });
@@ -182,6 +190,15 @@ rig(JUGG_LOOKS, JUGG_W, JUGG_H, buildJuggFrames, () => JUGG_ANIMS);
 rig(GUNSL_LOOKS, GUNSL_W, GUNSL_H, buildGunslFrames, () => GUNSL_ANIMS);
 rig(INVENTOR_LOOKS, INV_W, INV_H, buildInventorFrames, inventorAnims);
 rig(BEAST_LOOKS, BEAST_W, BEAST_H, buildBeastFrames, beastAnims);
+// The Force Sage: a Jedi-class type on a rig of her own.
+rig(SAGE_LOOKS, SAGE_W, SAGE_H, buildSageFrames, () => SAGE_ANIMS);
+rig(BARROW_LOOKS, BARROW_W, BARROW_H, buildBarrowFrames, () => BARROW_ANIMS);
+rig(FALCONER_LOOKS, FALC_W, FALC_H, buildFalconerFrames, () => FALCONER_ANIMS);
+// The Twin Blade, the Jedi class's third type, on a rig of his own; his frames carry the Jedi's points (blade tips).
+rig(TWIN_LOOKS, TWIN_W, TWIN_H, buildTwinFrames, () => TWIN_ANIMS, { meta: 'jedi' });
+rig(INQUISITOR_LOOKS, INQ_W, INQ_H, buildInquisitorFrames, () => INQ_ANIMS);
+// The Reaper's third reap is a spin drawn once for every facing.
+rig(REAPER_LOOKS, REAPER_W, REAPER_H, buildReaperFrames, () => REAPER_ANIMS, { extra: (look) => reaperSpins(look.key) });
 rig(LIGHTWRIGHT_LOOKS, LW_W, LW_H, buildLightwrightFrames, () => LIGHTWRIGHT_ANIMS);
 rig(TRANSMUTER_LOOKS, TRANS_W, TRANS_H, buildTransmuterFrames, () => TRANSMUTER_ANIMS);
 rig(AQUANAUT_LOOKS, AQUA_W, AQUA_H, buildAquanautFrames, aquanautAnims);

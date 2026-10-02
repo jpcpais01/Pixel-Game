@@ -6,13 +6,21 @@ import { worldMapTextures } from './worldMap';
 import type Phaser from 'phaser';
 import type { PixelCanvas, RenderedFrame } from './pixel';
 import { EMPRESS_BOLT_ICON, EMPRESS_STAFF_ICON, lightningIcon, MASTER_FORCE_ICON, MASTER_SABER_ICON, NOMAD_FORCE_ICON, NOMAD_SABER_ICON, SITH_BOLT_ICON, SITH_STAFF_ICON, staffIcon, WARLORD_BOLT_ICON, WARLORD_STAFF_ICON } from './sith';
+import { PEACOCK_ICON, riposteIcon, TWIN_ICON, twinIcon } from './twin';
+import { hunterLeapIcon, ringSaberIcon, VOIDHUNTER_ICON } from './inquisitor';
 import { ORB_FRAMES, ORB_SIZE, BURST_FRAMES, BURST_SIZE, orbFrame, burstFrame, ARCANE_SPELL, VOID_SPELL, PYRO_SPELL, PYRO_METEOR_H, PYRO_METEOR_W, meteorIcon, pyroMeteor, scorchCanvas, glowCanvas, shadowCanvas, cloudShadowCanvas, sunShaftCanvas, skyIcon, beamIcon, swordIcon, whirlIcon, JADE_SWORD_ICON, maceIcon, sanctuaryIcon, hammerIcon, sunfallIcon, saberIcon, forceIcon, fistIcon, barrageIcon, palmIcon, quakeIcon, flaskIcon, bogIcon, canisterIcon, chemBarrageIcon, fumeCanvas, CHEM_BREW_COLORS, HEX_BREW_COLORS, PLAGUE_BREW, bowIcon, rainIcon, RANGER_QUIVER, STORM_QUIVER, type IconColors } from './effects';
 import { ALCHEMIST_LOOKS, BIG_FLASK_SIZE, FLASK_FRAMES, FLASK_SIZE, flaskFrame } from './alchemist';
 import { FOXGLOVE_BREW, foxBogIcon, foxFlaskIcon } from './foxglove';
 import { CARNIVAL_BREW_COLORS, carnBogIcon, carnFlaskIcon } from './carnevale';
 import { bellBarrageIcon, bellIcon, DIVER_BREW_COLORS } from './diver';
 import { ARCHER_LOOKS, ARROW_DIRS, ARROW_SIZE, arrowFrame, boltFrame as crossbowBoltFrame, stuckArrowFrame, stuckBoltFrame } from './archer';
+import { BIRD_H as HAWK_H, BIRD_LOOKS as HAWK_LOOKS, BIRD_W as HAWK_W, birdFrames as hawkFrames, FALCONER_LOOKS, falconArrowFrame, falconStuckFrame } from './falconer';
+import { BERKUT_TONES, FALCONER_TONES, falconIcon, quickShotIcon } from './falconerIcons';
 import { blossomVaultIcon, briarCrossbowIcon, briarNetIcon, crossbowIcon, fanShotIcon, netBoltIcon, petalFanIcon, vaultIcon } from './archerIcons';
+import { deathStepIcon, reapIcon } from './reaper';
+import { boneSpikesIcon, DROWNED_ICON, rimeBoltIcon } from './lich';
+import { MOSSGRAVE_ICON, graveIcon, maulIcon } from './barrow';
+import { GRAVE_LOOK, MOSS_GRAVE_LOOK, buildGhoulSheet, buildStoneSheet } from './barrowFx';
 import { sunBowIcon, sunRainIcon } from './apolloIcons';
 import { BLOOD_SPELL, DIGGER_ICON, DIGGER_SPELL, SOUL_SPELL, TOMB_SPELL, VAMPIRE_ICON, VAMPIRE_SPELL, WYRM_ICON, WYRM_SPELL, ankhBoltIcon, batCanvas, bloodLanceIcon, tombRaiseIcon, novaIcon, raiseIcon, soulBoltIcon } from './necromancer';
 import { chainNetIcon, ironCrossbowIcon, owlFanIcon, owlVaultIcon } from './archerIcons';
@@ -125,6 +133,7 @@ import { registerAquanautArt } from './aquanautKit';
 import { registerBearIcons } from './bear';
 import { BREW_LOOKS, KEG_SIZE, kegFrames, kegKey, fireIcon as brewFireIcon, paddleIcon } from './brewmaster';
 import { pyroIcons } from './pyrotechnist';
+import { DAWNSEER_TONES, SAGE_TONES, STONE_SIZE, barrierIcon, stoneFrames, stoneKey, throwIcon } from './sage';
 import { brazierFrame, crystalCluster, rock, dummyFrame } from './env';
 import {
   MERCHANT_FRAMES,
@@ -295,6 +304,24 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
     scene.textures.addCanvas(`icon_bow${sfx}`, toCanvas(16, 16, bowIcon(q)));
     scene.textures.addCanvas(`icon_rain${sfx}`, toCanvas(16, 16, rainIcon(q, look.storm)));
   }
+  // The falconer's short arrows ('arrow_falconer', '_berkut' for Berkut),
+  // her icons, and the birds that fly: her falcon, the golden eagle and the
+  // Special's hawks ('bird_<kind>', frames f0..f5, g0..g1, d0..d1, k0..k3).
+  for (const look of FALCONER_LOOKS) {
+    const sfx = look.key.slice('archer'.length);
+    const arrows = [
+      ...frameList(Array.from({ length: ARROW_DIRS }, (_, i) => falconArrowFrame(i, look)), 'r'),
+      ...frameList([0, 1, 2].map((k) => falconStuckFrame(k, look)), 'k'),
+    ];
+    register(scene, `arrow${sfx}`, pack(arrows, ARROW_SIZE, ARROW_SIZE), ARROW_SIZE, ARROW_SIZE);
+    const tones = look.berkut ? BERKUT_TONES : FALCONER_TONES;
+    const isfx = look.berkut ? '_berkut' : '';
+    scene.textures.addCanvas(`icon_quickshot${isfx}`, toCanvas(16, 16, quickShotIcon(tones)));
+    scene.textures.addCanvas(`icon_falcon${isfx}`, toCanvas(16, 16, falconIcon(tones)));
+  }
+  for (const { key, bird } of HAWK_LOOKS) {
+    register(scene, key, pack(hawkFrames(bird).map((f) => ({ name: f.name, r: f.canvas.render() })), HAWK_W, HAWK_H), HAWK_W, HAWK_H);
+  }
 
   yield;
   // Each rogue look's smoke and icons ('rogue', 'rogue_dancer' for the shadow
@@ -326,6 +353,25 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_raise_tomb', toCanvas(16, 16, tombRaiseIcon()));
   scene.textures.addCanvas('icon_lance_wyrm', toCanvas(16, 16, bloodLanceIcon(WYRM_ICON)));
   scene.textures.addCanvas('icon_nova_wyrm', toCanvas(16, 16, novaIcon(WYRM_ICON)));
+  // The Barrow Knight's ghouls and headstones (the Graveyard's), plain and Mossgrave's, and his buttons.
+  registerMonster(scene, 'ghoul', buildGhoulSheet(GRAVE_LOOK));
+  registerMonster(scene, 'ghoul_moss', buildGhoulSheet(MOSS_GRAVE_LOOK));
+  registerMonster(scene, 'headstones', buildStoneSheet(GRAVE_LOOK));
+  registerMonster(scene, 'headstones_moss', buildStoneSheet(MOSS_GRAVE_LOOK));
+  scene.textures.addCanvas('icon_gravemaul', toCanvas(16, 16, maulIcon()));
+  scene.textures.addCanvas('icon_grave', toCanvas(16, 16, graveIcon()));
+  scene.textures.addCanvas('icon_gravemaul_mossgrave', toCanvas(16, 16, maulIcon(MOSSGRAVE_ICON)));
+  scene.textures.addCanvas('icon_grave_mossgrave', toCanvas(16, 16, graveIcon(MOSSGRAVE_ICON)));
+  // The Reaper's Reap and Death's step, and the Catrina's.
+  scene.textures.addCanvas('icon_reap', toCanvas(16, 16, reapIcon()));
+  scene.textures.addCanvas('icon_deathstep', toCanvas(16, 16, deathStepIcon()));
+  scene.textures.addCanvas('icon_reap_catrina', toCanvas(16, 16, reapIcon(true)));
+  scene.textures.addCanvas('icon_deathstep_catrina', toCanvas(16, 16, deathStepIcon(true)));
+  // The Lich's (and the Drowned King's) rime bolt and bone spikes.
+  scene.textures.addCanvas('icon_rime', toCanvas(16, 16, rimeBoltIcon()));
+  scene.textures.addCanvas('icon_bonespikes', toCanvas(16, 16, boneSpikesIcon()));
+  scene.textures.addCanvas('icon_rime_drowned', toCanvas(16, 16, rimeBoltIcon(DROWNED_ICON)));
+  scene.textures.addCanvas('icon_bonespikes_drowned', toCanvas(16, 16, boneSpikesIcon(DROWNED_ICON)));
   scene.textures.addCanvas('icon_soul_digger', toCanvas(16, 16, soulBoltIcon(DIGGER_ICON)));
   scene.textures.addCanvas('icon_raise_digger', toCanvas(16, 16, raiseIcon(DIGGER_ICON)));
   scene.textures.addCanvas('icon_lance_vampire', toCanvas(16, 16, bloodLanceIcon(VAMPIRE_ICON)));
@@ -478,6 +524,16 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_lightning', toCanvas(16, 16, lightningIcon(SITH_BOLT_ICON)));
   scene.textures.addCanvas('icon_staff_warlord', toCanvas(16, 16, staffIcon(WARLORD_STAFF_ICON)));
   scene.textures.addCanvas('icon_lightning_warlord', toCanvas(16, 16, lightningIcon(WARLORD_BOLT_ICON, [150, 70, 60])));
+  // The Twin Blade's flurry and Riposte, and the Peacock's.
+  scene.textures.addCanvas('icon_twin', toCanvas(16, 16, twinIcon(TWIN_ICON)));
+  scene.textures.addCanvas('icon_riposte', toCanvas(16, 16, riposteIcon(TWIN_ICON)));
+  scene.textures.addCanvas('icon_twin_peacock', toCanvas(16, 16, twinIcon(PEACOCK_ICON)));
+  scene.textures.addCanvas('icon_riposte_peacock', toCanvas(16, 16, riposteIcon(PEACOCK_ICON)));
+  // The Inquisitor's ring saber and leap, and the Voidhunter's.
+  scene.textures.addCanvas('icon_ringsaber', toCanvas(16, 16, ringSaberIcon()));
+  scene.textures.addCanvas('icon_hunterleap', toCanvas(16, 16, hunterLeapIcon()));
+  scene.textures.addCanvas('icon_ringsaber_voidhunter', toCanvas(16, 16, ringSaberIcon(VOIDHUNTER_ICON)));
+  scene.textures.addCanvas('icon_hunterleap_voidhunter', toCanvas(16, 16, hunterLeapIcon(VOIDHUNTER_ICON)));
   scene.textures.addCanvas('icon_staff_empress', toCanvas(16, 16, staffIcon(EMPRESS_STAFF_ICON)));
   scene.textures.addCanvas('icon_lightning_empress', toCanvas(16, 16, lightningIcon(EMPRESS_BOLT_ICON, [120, 96, 150])));
 
@@ -631,6 +687,14 @@ export function* textureSteps(scene: Phaser.Scene): Generator<void, void, void> 
   scene.textures.addCanvas('icon_rattle', toCanvas(16, 16, rattleIcon()));
   scene.textures.addCanvas('icon_hurl_tea', toCanvas(16, 16, hurlIcon(true)));
   scene.textures.addCanvas('icon_rattle_tea', toCanvas(16, 16, rattleIcon(true)));
+  // The Force Sage's stones ('sage_stone', the Dawnseer's 'sage_sunstone': '<rock|slab>_<turn>') and her buttons.
+  for (const mat of ['rock', 'sunstone'] as const) {
+    register(scene, stoneKey(mat), pack(stoneFrames(mat).map((f) => ({ name: f.name, r: f.canvas.render() })), STONE_SIZE, STONE_SIZE), STONE_SIZE, STONE_SIZE);
+  }
+  scene.textures.addCanvas('icon_forcethrow', toCanvas(16, 16, throwIcon(SAGE_TONES)));
+  scene.textures.addCanvas('icon_barrier', toCanvas(16, 16, barrierIcon(SAGE_TONES)));
+  scene.textures.addCanvas('icon_forcethrow_dawnseer', toCanvas(16, 16, throwIcon(DAWNSEER_TONES, true)));
+  scene.textures.addCanvas('icon_barrier_dawnseer', toCanvas(16, 16, barrierIcon(DAWNSEER_TONES, true)));
   scene.textures.addCanvas('icon_hurl_banshee', toCanvas(16, 16, bansheeHurlIcon()));
   scene.textures.addCanvas('icon_rattle_banshee', toCanvas(16, 16, keenIcon()));
   scene.textures.addCanvas('icon_lantern', toCanvas(16, 16, lanternIcon()));

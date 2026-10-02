@@ -13,6 +13,7 @@ import { HeavensLight, SunWrath } from './holy';
 import { BloodMoon, Eclipse, FanOfKnives, SoulStorm } from './shadow';
 import { ChemBomb, GreatArrow, Pestilence } from './nature';
 import { PowderKeg, Tempest } from './archers';
+import { Skyhunt, skyhuntIcon } from './falconer';
 import { Encore, ThunderOfWar } from './bard';
 import { Legion, TimeStop } from './chrono';
 import { HundredCuts, quakeGate, SkyQuake } from './samurai';
@@ -61,6 +62,16 @@ import { BEAR_KIT, PANDA_KIT } from '../Bear';
 import { bombingRun } from './aviator';
 import { ACE_KIT, AVIATOR_KIT } from '../Aviator';
 import { DarkDominion } from './sith';
+import { Graveyard, graveyardIcon } from './barrow';
+import { Levitation, levitationIcon } from './sage';
+import { DAWNSEER_KIT, SAGE_KIT } from '../Sage';
+import { cutsGate, ThousandCuts, thousandCutsIcon } from './twin';
+import { Purge, purgeIcon } from './inquisitor';
+import { RINGBLADE_KIT, VOIDHUNTER_KIT } from '../Inquisitor';
+import { harvest, harvestIcon } from './reaper';
+import { CATRINA_KIT, REAPER_KIT } from '../Reaper';
+import { EternalWinter, eternalWinterIcon } from './lich';
+import { DROWNED_KIT, LICH_KIT } from '../Lich';
 import { EMPRESS_KIT, SITH_KIT, WARLORD_KIT } from '../Sith';
 import { magnumOpus } from './transmuter';
 import { AQUANAUT_KIT, BARNACLE_KIT } from '../Aquanaut';
@@ -176,6 +187,35 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.dominionIcon,
     cast: (c) => c.world.addEffect(new DarkDominion(c.world, c)),
   },
+  'jedi:sage': {
+    name: 'Levitation',
+    cost: 65,
+    windup: 550,
+    aim: 'self',
+    pal: SAGE_KIT.lift,
+    icon: levitationIcon,
+    cast: (c) => c.world.addEffect(new Levitation(c.world, c)),
+  },
+  'jedi:twin': {
+    name: 'Thousand Cuts',
+    cost: 65,
+    windup: 500,
+    aim: 'self',
+    // The long blade's cyan, the shoto's magenta as its deepest colour (see ultimate/twin.ts).
+    pal: pal(0xf4ffff, 0x8af4ff, 0x22d0ec, 0xea2e9c, 0x5ae8ff),
+    icon: thousandCutsIcon,
+    gate: cutsGate,
+    cast: (c) => c.world.addEffect(new ThousandCuts(c.world, c)),
+  },
+  'jedi:inquisitor': {
+    name: 'Purge',
+    cost: 65,
+    windup: 600,
+    aim: 'self',
+    pal: RINGBLADE_KIT.pal,
+    icon: purgeIcon,
+    cast: (c) => c.world.addEffect(new Purge(c.world, c)),
+  },
   'fighter:brawler': {
     name: 'Dragon Rush',
     cost: 55,
@@ -243,6 +283,15 @@ const ULTS: Record<string, UltDef> = {
     icon: icons.tempestIcon,
     cast: (c) => c.world.addEffect(new Tempest(c.world, c)),
   },
+  'archer:falconer': {
+    name: 'Skyhunt',
+    cost: 65,
+    windup: 550,
+    aim: 'self',
+    pal: pal(0xffffff, 0xfff0c8, 0xf0b050, 0x9a5a22, 0xffc880),
+    icon: skyhuntIcon,
+    cast: (c) => c.world.addEffect(new Skyhunt(c.world, c)),
+  },
   'rogue:rogue': {
     name: 'Fan of Knives',
     cost: 55,
@@ -279,6 +328,33 @@ const ULTS: Record<string, UltDef> = {
     pal: pal(0xfff0f0, 0xff8a8a, 0xff3a4a, 0x8a0f1f, 0xff4a5a),
     icon: icons.bloodMoonIcon,
     cast: (c) => c.world.addEffect(new BloodMoon(c.world, c.tx, c.ty, c)),
+  },
+  'necromancer:barrow': {
+    name: 'Graveyard',
+    cost: 70,
+    windup: 600,
+    aim: 'self',
+    pal: pal(0xf4ffe0, 0xd0ff8a, 0x8ad84a, 0x2e6a2a, 0xb8f070),
+    icon: graveyardIcon,
+    cast: (c) => c.world.addEffect(new Graveyard(c.world, c)),
+  },
+  'necromancer:reaper': {
+    name: 'Harvest',
+    cost: 70,
+    windup: 550,
+    aim: 'self',
+    pal: REAPER_KIT.pal,
+    icon: harvestIcon,
+    cast: harvest,
+  },
+  'necromancer:lich': {
+    name: 'Eternal Winter',
+    cost: 75,
+    windup: 650,
+    aim: 'self',
+    pal: LICH_KIT.winter,
+    icon: eternalWinterIcon,
+    cast: (c) => c.world.addEffect(new EternalWinter(c.world, c)),
   },
   'bard:minstrel': {
     name: 'Encore',
@@ -616,6 +692,7 @@ const SKINS: Record<string, UltSkin> = {
   'archer:hunt': { pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
   'archer:apollo': { pal: pal(0xfffbe8, 0xffe890, 0xffc030, 0xb06a10, 0xffd860) },
   'archer:wisteria': { pal: pal(0xffffff, 0xe8dcff, 0xb48ae8, 0x5a7a58, 0xd0b8ff), type: 'wind' },
+  'archer:berkut': { pal: pal(0xfffbe8, 0xffd870, 0xe89a30, 0xa8281e, 0xffc060), type: 'falconer' },
   'archer:briar': { pal: pal(0xfff0f2, 0xffa0b0, 0xe8344a, 0x2e6e24, 0xff6a7a), type: 'arbalest' },
   'archer:ironbeard': { pal: pal(0xfff4c8, 0xffb040, 0xff6a1a, 0x5a2410, 0xff8a30), type: 'arbalest' },
   'archer:owl': { pal: pal(0xffffff, 0xe4f4ff, 0x9ccaf0, 0x4a78b0, 0xc8e8ff), type: 'wind' },
@@ -630,6 +707,9 @@ const SKINS: Record<string, UltSkin> = {
   'bard:wildsong': { pal: pal(0xfffde6, 0xeaffa0, 0x9ee85a, 0x2e7a3e, 0xb8f070) },
   'necromancer:tomb': { pal: pal(0xf4fbff, 0xa8dcff, 0x3c94f0, 0x1a3894, 0x5aa8ff) },
   'necromancer:wyrm': { pal: pal(0xfff8e0, 0xffc860, 0xff6a1a, 0x8a1e0a, 0xff8a30), type: 'blood' },
+  'necromancer:mossgrave': { pal: pal(0xecfffc, 0x9ff8ee, 0x3ad0c8, 0x0e5a68, 0x6af0e8), type: 'barrow' },
+  'necromancer:catrina': { pal: CATRINA_KIT.pal, type: 'reaper' },
+  'necromancer:drowned': { pal: DROWNED_KIT.winter, type: 'lich' },
   'necromancer:gravedigger': { pal: pal(0xf6ffe0, 0xd4ff8a, 0x8ad83a, 0x3a6a1a, 0xa8f05a) },
   'necromancer:vampire': { pal: pal(0xffe8ec, 0xff6a7a, 0xc0102a, 0x3a0410, 0xff3048), type: 'blood' },
   'bard:harlequin': { pal: pal(0xfff4fb, 0xffb0e8, 0xff4ab8, 0x8a1a6a, 0xff6ac8) },
@@ -666,6 +746,9 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:guard': { pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
   'jedi:master': { pal: pal(0xf4fff4, 0x9af4a8, 0x2ed058, 0x0e7a32, 0x5aff7a) },
   'jedi:warlord': { pal: WARLORD_KIT.dominion, type: 'sith' },
+  'jedi:dawnseer': { pal: DAWNSEER_KIT.lift, type: 'sage' },
+  'jedi:peacock': { pal: pal(0xf6fff8, 0x86f4ae, 0x22d070, 0x3a68ff, 0xffd060), type: 'twin' },
+  'jedi:voidhunter': { pal: VOIDHUNTER_KIT.pal, type: 'inquisitor' },
   'jedi:nomad': { pal: pal(0xf6fffd, 0xa8f0ea, 0x3ac8cc, 0x1a7480, 0x6ae0dc) },
   'jedi:empress': { pal: EMPRESS_KIT.dominion, type: 'sith' },
   'samurai:kitsune': { pal: schemePal(KITSUNE_KIT.wind) },
