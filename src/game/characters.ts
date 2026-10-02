@@ -39,7 +39,7 @@ import { BLOOD_KIT, NECRO_KIT, Necromancer, TOMB_KIT, WYRM_KIT } from './Necroma
 import { NECRO_H, NECRO_ORIGIN_Y } from '../art/necromancer';
 import { Bard, DRUMMER_KIT, FADISTA_KIT, HARLEQUIN_KIT, HOWL_KIT, MINSTREL_KIT, ORPHEUS_KIT, VAGABOND_KIT, WILD_KIT } from './Bard';
 import { BARD_H, BARD_ORIGIN_Y } from '../art/bard';
-import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT, PRIMAVERA_KIT } from './Chrono';
+import { AEON_KIT, ANOMALY_KIT, CLOCKWORK_KIT, Chrono, KEEPER_KIT, MOON_KIT, PARADOX_KIT, PRIMAVERA_KIT, SANDGLASS_KIT, VHS_KIT } from './Chrono';
 import { CHRONO_H, CHRONO_ORIGIN_Y } from '../art/chrono';
 import { BLADEWIND_KIT, KITSUNE_KIT, ONI_KIT, RONIN_KIT, SAKURA_KIT, Samurai, SHOGUN_KIT } from './Samurai';
 import { SAMURAI_H, SAMURAI_ORIGIN_Y } from '../art/samurai';
@@ -1206,6 +1206,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_stasis_primavera' },
             },
           },
+          {
+            // A sage of the deep desert: linen robe and indigo sash, a turban and gold-coined veil, gold bangles, and a great hourglass of glowing sand.
+            id: 'sandglass',
+            name: 'Sandglass',
+            accent: 0xffd070,
+            preview: { texture: 'chrono_sandglass', glow: 'chrono_sandglass_e', idle: 'chrono_sandglass_idle_down', chosen: 'chrono_sandglass_field_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+            buttons: {
+              attack: { texture: 'icon_hand_sandglass' },
+              special: { texture: 'icon_stasis_sandglass' },
+            },
+          },
         ],
       },
       {
@@ -1244,11 +1255,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_rewind_anomaly' },
             },
           },
+          {
+            // A synthwave glitch from a 1980s that never was: a magenta pompadour, a scanline visor, a cropped neon-grid jacket, a cassette for a watch.
+            id: 'rewind',
+            name: 'Rewind',
+            accent: 0xff5ad8,
+            preview: { texture: 'chrono_vhs', glow: 'chrono_vhs_e', idle: 'chrono_vhs_idle_down', chosen: 'chrono_vhs_rewind_down', originY: CHRONO_ORIGIN_Y / CHRONO_H },
+            buttons: {
+              attack: { texture: 'icon_shards_vhs' },
+              special: { texture: 'icon_rewind_vhs' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, clockwork: CLOCKWORK_KIT, primavera: PRIMAVERA_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT, anomaly: ANOMALY_KIT }[look] ?? KEEPER_KIT;
+      const kit = { keeper: KEEPER_KIT, moon: MOON_KIT, clockwork: CLOCKWORK_KIT, primavera: PRIMAVERA_KIT, sandglass: SANDGLASS_KIT, paradox: PARADOX_KIT, aeon: AEON_KIT, anomaly: ANOMALY_KIT, rewind: VHS_KIT }[look] ?? KEEPER_KIT;
       return new Chrono(world, x, y, kit);
     },
   },
