@@ -22,8 +22,8 @@ import { AFONSO_KIT, King, KING_KIT } from './King';
 import { WARRIOR_H, WARRIOR_ORIGIN_Y } from '../art/warrior';
 import { CRUSADER_KIT, HOLY_KIT, OATH_KIT, Paladin, SERAPH_KIT } from './Paladin';
 import { PALADIN_H, PALADIN_ORIGIN_Y } from '../art/paladin';
-import { GUARD_STYLE, Jedi, JEDI_STYLE, MASTER_STYLE } from './Jedi';
-import { Sith, SITH_KIT, WARLORD_KIT } from './Sith';
+import { GUARD_STYLE, Jedi, JEDI_STYLE, MASTER_STYLE, NOMAD_STYLE } from './Jedi';
+import { EMPRESS_KIT, Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
@@ -586,6 +586,18 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_force_master' },
             },
           },
+          {
+            // A desert wanderer: a sand-bleached cloak frayed to rags over rust wraps, a linen head wrap with brass goggles
+            // pushed up on it, a scarf over the mouth, and a worn leather-bound hilt with a sun-bleached cyan blade.
+            id: 'nomad',
+            name: 'Dune Nomad',
+            accent: 0x2cc6cc,
+            preview: { texture: 'jedi_nomad', glow: 'jedi_nomad_e', idle: 'jedi_nomad_idle_down', chosen: 'jedi_nomad_push_down', originY: JEDI_ORIGIN_Y / JEDI_H },
+            buttons: {
+              attack: { texture: 'icon_saber_nomad' },
+              special: { texture: 'icon_force_nomad' },
+            },
+          },
         ],
       },
       {
@@ -614,12 +626,25 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_lightning_warlord' },
             },
           },
+          {
+            // A dark sorceress enthroned: a tall spiked crown set with glowing amethysts, a porcelain face and violet eyes,
+            // a high flared collar, a black gown over amethyst silk trimmed in silver filigree with a train, and an ornate
+            // silver saberstaff burning violet-magenta.
+            id: 'empress',
+            name: 'Dark Empress',
+            accent: 0xc840f0,
+            preview: { texture: 'jedi_empress', glow: 'jedi_empress_e', idle: 'jedi_empress_idle_down', chosen: 'jedi_empress_grip_down', originY: JEDI_ORIGIN_Y / JEDI_H },
+            buttons: {
+              attack: { texture: 'icon_staff_empress' },
+              special: { texture: 'icon_lightning_empress' },
+            },
+          },
         ],
       },
     ],
     spawn(world, x, y, look) {
-      if (look === 'sith' || look === 'warlord') return new Sith(world, x, y, look === 'warlord' ? WARLORD_KIT : SITH_KIT);
-      return new Jedi(world, x, y, look === 'guard' ? GUARD_STYLE : look === 'master' ? MASTER_STYLE : JEDI_STYLE);
+      if (look === 'sith' || look === 'warlord' || look === 'empress') return new Sith(world, x, y, look === 'warlord' ? WARLORD_KIT : look === 'empress' ? EMPRESS_KIT : SITH_KIT);
+      return new Jedi(world, x, y, look === 'guard' ? GUARD_STYLE : look === 'master' ? MASTER_STYLE : look === 'nomad' ? NOMAD_STYLE : JEDI_STYLE);
     },
   },
   {

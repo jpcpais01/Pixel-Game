@@ -41,7 +41,7 @@ import { LION_KIT, SPORTING_KIT } from '../Lion';
 import { DRAGON_KIT, PORTO_KIT } from '../Dragon';
 import { kingsRoar, skySovereign, wyrmWrath } from './beast';
 import { DarkDominion } from './sith';
-import { SITH_KIT, WARLORD_KIT } from '../Sith';
+import { EMPRESS_KIT, SITH_KIT, WARLORD_KIT } from '../Sith';
 import * as icons from './icons';
 import type { Cast, UltDef, UltSkin } from './types';
 import type { Effect } from '../Slash';
@@ -484,6 +484,8 @@ const SKINS: Record<string, UltSkin> = {
   'jedi:guard': { pal: pal(0xfffdf2, 0xffe680, 0xf2c630, 0xa86a10, 0xffd04a) },
   'jedi:master': { pal: pal(0xf4fff4, 0x9af4a8, 0x2ed058, 0x0e7a32, 0x5aff7a) },
   'jedi:warlord': { pal: WARLORD_KIT.dominion, type: 'sith' },
+  'jedi:nomad': { pal: pal(0xf6fffd, 0xa8f0ea, 0x3ac8cc, 0x1a7480, 0x6ae0dc) },
+  'jedi:empress': { pal: EMPRESS_KIT.dominion, type: 'sith' },
   'samurai:kitsune': { pal: schemePal(KITSUNE_KIT.wind) },
   'samurai:shogun': { pal: schemePal(SHOGUN_KIT.wind), type: 'ronin' },
   'druid:autumn': { pal: AUTUMN_MAGIC.pal },
