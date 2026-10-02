@@ -3,7 +3,7 @@ import { bakedCanvas } from '../../art/canvas';
 import { sound } from '../../audio';
 import { dirOf } from '../Wizard';
 import { energy } from '../energy';
-import { CHEM_TOX, CRYO_TOX, FOXGLOVE_TOX, HEX_TOX, PLAGUE_TOX, SPIRIT_TOX, type ToxStyle } from '../Toxins';
+import { CARNIVAL_TOX, CHEM_TOX, CRYO_TOX, DIVER_TOX, FOXGLOVE_TOX, HEX_TOX, PLAGUE_TOX, SPIRIT_TOX, type ToxStyle } from '../Toxins';
 import type { Aim, CharacterDef, Hero } from '../characters';
 import type { WorldScene } from '../../scenes/WorldScene';
 import { bloom, easeOut, flare, Fx, Ink, pal, ring, rune, type Pal } from './ink';
@@ -176,7 +176,7 @@ const ULTS: Record<string, UltDef> = {
     range: 110,
     pal: toxPal(PLAGUE_TOX),
     icon: icons.pestilenceIcon,
-    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : c.look === 'shaman' ? SPIRIT_TOX : c.look === 'foxglove' ? FOXGLOVE_TOX : PLAGUE_TOX)),
+    cast: (c) => c.world.addEffect(new Pestilence(c.world, c.tx, c.ty, c.look === 'witch' ? HEX_TOX : c.look === 'shaman' ? SPIRIT_TOX : c.look === 'foxglove' ? FOXGLOVE_TOX : c.look === 'carnevale' ? CARNIVAL_TOX : PLAGUE_TOX)),
   },
   'alchemist:chem': {
     name: 'Chem Bomb',
@@ -186,7 +186,7 @@ const ULTS: Record<string, UltDef> = {
     range: 120,
     pal: toxPal(CHEM_TOX),
     icon: icons.chemBombIcon,
-    cast: (c) => c.world.addEffect(new ChemBomb(c.world, c, c.look === 'cryo' ? CRYO_TOX : CHEM_TOX)),
+    cast: (c) => c.world.addEffect(new ChemBomb(c.world, c, c.look === 'cryo' ? CRYO_TOX : c.look === 'diver' ? DIVER_TOX : CHEM_TOX)),
   },
   'archer:ranger': {
     name: 'Great Arrow',
@@ -448,6 +448,8 @@ const SKINS: Record<string, UltSkin> = {
   'alchemist:shaman': { pal: toxPal(SPIRIT_TOX) },
   'alchemist:foxglove': { pal: toxPal(FOXGLOVE_TOX) },
   'alchemist:cryo': { pal: toxPal(CRYO_TOX), type: 'chem' },
+  'alchemist:carnevale': { pal: toxPal(CARNIVAL_TOX) },
+  'alchemist:diver': { pal: toxPal(DIVER_TOX), type: 'chem' },
   'archer:scarecrow': { pal: pal(0xfff4d0, 0xffb048, 0xff7a1a, 0x2a7a3a, 0x9cff9a) },
   'archer:hunt': { pal: pal(0xfbf8ff, 0xd8c8ff, 0x9a80f0, 0x4a3a9a, 0xb8a0ff) },
   'archer:apollo': { pal: pal(0xfffbe8, 0xffe890, 0xffc030, 0xb06a10, 0xffd860) },

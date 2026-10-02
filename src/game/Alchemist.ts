@@ -6,7 +6,7 @@ import { dirOf, sunShadow, SUN_SHADOW_ALPHA } from './Wizard';
 import { beamHud, comboHud } from './controls';
 import { sound } from '../audio';
 import { Vitals, type Hurtbox } from './combat';
-import { Bog, CHEM_TOX, CRYO_TOX, Flask, FOXGLOVE_TOX, HEX_TOX, onGround, PLAGUE_TOX, SPIRIT_TOX, Splash, Venom, type ToxStyle } from './Toxins';
+import { Bog, CARNIVAL_TOX, CHEM_TOX, CRYO_TOX, DIVER_TOX, Flask, FOXGLOVE_TOX, HEX_TOX, onGround, PLAGUE_TOX, SPIRIT_TOX, Splash, Venom, type ToxStyle } from './Toxins';
 import type { Aim, Hero } from './characters';
 import type { WorldScene } from '../scenes/WorldScene';
 import { turnMidMove } from './anims';
@@ -93,6 +93,8 @@ export const CHEM_STYLE: AlchemistStyle = { key: 'alchemist_chem', tox: CHEM_TOX
 export const SHAMAN_STYLE: AlchemistStyle = { key: 'alchemist_shaman', tox: SPIRIT_TOX, kit: PLAGUE_KIT };
 export const CRYO_STYLE: AlchemistStyle = { key: 'alchemist_cryo', tox: CRYO_TOX, kit: CHEM_KIT };
 export const FOXGLOVE_STYLE: AlchemistStyle = { key: 'alchemist_foxglove', tox: FOXGLOVE_TOX, kit: PLAGUE_KIT };
+export const CARNEVALE_STYLE: AlchemistStyle = { key: 'alchemist_carnevale', tox: CARNIVAL_TOX, kit: PLAGUE_KIT };
+export const DIVER_STYLE: AlchemistStyle = { key: 'alchemist_diver', tox: DIVER_TOX, kit: CHEM_KIT };
 
 /**
  * The alchemist: lobs flasks of poison on the attack button that burst where

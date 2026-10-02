@@ -27,7 +27,7 @@ import { EMPRESS_KIT, Sith, SITH_KIT, WARLORD_KIT } from './Sith';
 import { JEDI_H, JEDI_ORIGIN_Y } from '../art/jedi';
 import { BRAWLER_STYLE, CHAMP_STYLE, Fighter, GUARDIAN_STYLE, LUCHA_STYLE, MONK_STYLE } from './Fighter';
 import { FIGHTER_H, FIGHTER_ORIGIN_Y } from '../art/fighter';
-import { Alchemist, CHEM_STYLE, CRYO_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
+import { Alchemist, CARNEVALE_STYLE, CHEM_STYLE, CRYO_STYLE, DIVER_STYLE, FOXGLOVE_STYLE, PLAGUE_STYLE, SHAMAN_STYLE, WITCH_STYLE } from './Alchemist';
 import { ALCH_H, ALCH_ORIGIN_Y } from '../art/alchemist';
 import { APOLLO_STYLE, Archer, HUNT_STYLE, RANGER_STYLE, SCARECROW_STYLE, STORM_STYLE } from './Archer';
 import { Arbalest, BRIAR_STYLE } from './Arbalest';
@@ -772,6 +772,17 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_bog_foxglove' },
             },
           },
+          {
+            // A Venetian carnival medico: a gilded beak mask painted with crimson swirls, a gold-laced tricorn under plumes, a harlequin coat, a white ruff, ribboned flasks of magenta.
+            id: 'carnevale',
+            name: 'Carnevale',
+            accent: 0xf04ac8,
+            preview: { texture: 'alchemist_carnevale', glow: 'alchemist_carnevale_e', idle: 'alchemist_carnevale_idle_down', chosen: 'alchemist_carnevale_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
+            buttons: {
+              attack: { texture: 'icon_flask_carnevale' },
+              special: { texture: 'icon_bog_carnevale' },
+            },
+          },
         ],
       },
       {
@@ -801,11 +812,22 @@ const KITS: KitDef[] = [
               special: { texture: 'icon_bog_cryo' },
             },
           },
+          {
+            // An old deep-sea diver: a brass helmet with three portholes and a face glowing behind the glass, a canvas suit, lead boots, an air hose to the tank, diving bells of glowing teal.
+            id: 'diver',
+            name: 'Brass Diver',
+            accent: 0x2af0b0,
+            preview: { texture: 'alchemist_diver', glow: 'alchemist_diver_e', idle: 'alchemist_diver_idle_down', chosen: 'alchemist_diver_brew_down', originY: ALCH_ORIGIN_Y / ALCH_H },
+            buttons: {
+              attack: { texture: 'icon_flask_diver' },
+              special: { texture: 'icon_bog_diver' },
+            },
+          },
         ],
       },
     ],
     spawn: (world, x, y, look) =>
-      new Alchemist(world, x, y, look === 'chem' ? CHEM_STYLE : look === 'cryo' ? CRYO_STYLE : look === 'witch' ? WITCH_STYLE : look === 'shaman' ? SHAMAN_STYLE : look === 'foxglove' ? FOXGLOVE_STYLE : PLAGUE_STYLE),
+      new Alchemist(world, x, y, look === 'chem' ? CHEM_STYLE : look === 'cryo' ? CRYO_STYLE : look === 'diver' ? DIVER_STYLE : look === 'carnevale' ? CARNEVALE_STYLE : look === 'witch' ? WITCH_STYLE : look === 'shaman' ? SHAMAN_STYLE : look === 'foxglove' ? FOXGLOVE_STYLE : PLAGUE_STYLE),
   },
   {
     id: 'archer',
