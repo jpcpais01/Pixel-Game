@@ -2,7 +2,10 @@
 //
 // - App icons are drawn in code (src/art/icon.ts) and emitted as PNGs, so the
 //   repo holds no icon files.
-// - The web app manifest launches the game fullscreen in landscape.
+// - The web app manifest launches the game standalone, with no fixed
+//   orientation: on some phones (Xiaomi HyperOS) an installed app with one
+//   never opens. Landscape comes from the loading screen's tap to start
+//   instead (src/pwa.ts).
 // - A small service worker precaches every file in the build, so the game
 //   loads offline and starts instantly on later launches.
 //
@@ -37,9 +40,7 @@ function manifest() {
     description: 'Top-down pixel-art PvE battles with friends.',
     start_url: './',
     scope: './',
-    display: 'fullscreen',
-    display_override: ['fullscreen', 'standalone'],
-    orientation: 'landscape',
+    display: 'standalone',
     background_color: BG,
     theme_color: BG,
     categories: ['games'],
