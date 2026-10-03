@@ -109,6 +109,14 @@
         animation: flicker 0.3s steps(2) infinite;
       }
       #boot canvas { image-rendering: pixelated; }
+      /* Loaded, on a phone: the bar stays full and the line beckons until a tap starts the game. */
+      #boot.ready { cursor: pointer; }
+      #boot.ready .head { opacity: 0; }
+      #boot.ready .status { animation: beckon 1.4s ease-in-out infinite; filter: drop-shadow(0 0 6px rgba(255, 208, 96, 0.55)); }
+      /* A phone held upright sees the loading screen turned sideways, as the game will be once tapped. */
+      @media (orientation: portrait) and (pointer: coarse) {
+        #boot { inset: auto; top: 0; left: 100vw; width: 100vh; height: 100vw; transform-origin: 0 0; transform: rotate(90deg); }
+      }
       @keyframes twinkle { 0%, 100% { opacity: 0.12; } 50% { opacity: 1; } }
       @keyframes rise { 0% { opacity: 0; transform: translateY(0); } 10% { opacity: 1; } 80% { opacity: 0.7; } 100% { opacity: 0; transform: translateY(-75vh) translateX(var(--dx)); } }
       @keyframes pulse { 0%, 100% { opacity: 0.65; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1.08); } }
@@ -119,6 +127,7 @@
       @keyframes glint { 0% { background-position: 0 calc(var(--lh) * var(--s) * -1); } 13% { background-position: 0 calc(var(--lh) * var(--s) * -14); } 13.01%, 100% { background-position: 0 0; } }
       @keyframes stripes { to { background-position: 12px 0; } }
       @keyframes flicker { 50% { opacity: 0.6; } }
+      @keyframes beckon { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.94); } }
       @media (prefers-reduced-motion: reduce) {
         #boot *, #boot *::after { animation: none !important; }
       }
@@ -148,7 +157,10 @@
       (function () {
         var el = document.getElementById('boot');
         var boot = window.__BOOT || {};
-        var W = innerWidth, H = innerHeight;
+        // Upright phones see this screen turned sideways (the CSS), so its sizes swap.
+        var touch = matchMedia('(pointer: coarse)').matches;
+        var upright = touch && matchMedia('(orientation: portrait)').matches;
+        var W = upright ? innerHeight : innerWidth, H = upright ? innerWidth : innerHeight;
         var frag = document.createDocumentFragment(), i, n;
         for (i = 0; i < 56; i++) {
           n = document.createElement('i');
@@ -215,7 +227,8 @@
         }
         var WORDS = [[0.14, 'WAKING THE REALM'], [0.34, 'FORGING HEROES'], [0.54, 'WEAVING SPELLS'], [0.74, 'SUMMONING MONSTERS'], [0.93, 'PAINTING THE SKY'], [0.999, 'LIGHTING THE TORCHES'], [2, 'READY']];
         var fill = el.querySelector('.fill'), head = el.querySelector('.head');
-        var target = 0, shown = 0, said = '', dots = 0, last = 0, gone = false;
+        var target = 0, shown = 0, said = '', dots = 0, last = 0, gone = false, ready = false;
+        var TAP = 'TAP ANYWHERE TO START';
         function words(p) {
           for (var k = 0; k < WORDS.length; k++) if (p < WORDS[k][0]) return WORDS[k][1];
           return 'READY';
@@ -232,6 +245,16 @@
             last = t;
             dots = (dots + 1) % 4;
           }
+          if (ready) {
+            if (said !== TAP) {
+              said = TAP;
+              var gold = [];
+              for (var g = 0; g < TAP.length; g++) gold.push(g % 2 ? '#ffe08a' : '#ffd060');
+              spell(TAP, gold);
+            }
+            requestAnimationFrame(frame);
+            return;
+          }
           var w = words(p), pct = Math.floor(p * 100) + '%';
           var line = w === 'READY' ? w : w + '...'.slice(0, dots) + '   '.slice(dots) + ' ' + pct;
           if (line !== said) {
@@ -244,18 +267,43 @@
         }
         requestAnimationFrame(frame);
 
+        function leave() {
+          el.classList.add('done');
+          setTimeout(function () {
+            gone = true;
+            el.remove();
+          }, 700);
+        }
+
         window.bootLoader = {
           progress: function (p) {
             target = Math.max(target, Math.min(1, p));
           },
           done: function () {
             target = shown = 1;
-            el.classList.add('done');
             window.bootLoader = undefined;
-            setTimeout(function () {
-              gone = true;
-              el.remove();
-            }, 700);
+            if (!touch) return leave();
+            // On a phone the game waits for a tap: that tap may go fullscreen and turn
+            // to landscape (src/pwa.ts), which the manifest can't safely ask for. Its
+            // events stop here, so nothing on the home screen beneath is pressed.
+            ready = true;
+            el.classList.add('ready');
+            el.setAttribute('aria-label', 'Tap anywhere to start');
+            var swallow = function (e) {
+              e.stopPropagation();
+            };
+            var start = function (e) {
+              e.stopPropagation();
+              if (!ready) return;
+              ready = false;
+              if (window.enterFullscreen) window.enterFullscreen();
+              leave();
+            };
+            ['pointerdown', 'touchstart', 'touchend', 'mousedown', 'mouseup'].forEach(function (k) {
+              el.addEventListener(k, swallow);
+            });
+            el.addEventListener('pointerup', start);
+            el.addEventListener('click', start);
           },
         };
       })();

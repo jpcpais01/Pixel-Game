@@ -1,5 +1,5 @@
-// App shell behaviour: offline service worker, fullscreen landscape on
-// phones, an install button, and a nudge to turn the phone sideways.
+// App shell behaviour: offline service worker, fullscreen landscape on a
+// phone's tap, an install button, and a nudge to turn the phone sideways.
 
 import { afterLoad } from './loaded';
 
@@ -13,23 +13,32 @@ function registerServiceWorker(): void {
 }
 
 /**
- * On a phone, the first touch goes fullscreen and locks to landscape
- * (Android). Installed apps too: the manifest's fullscreen hides the bars,
- * but Chrome only lets the page draw round the camera cutout (the black
- * strip down the notch side in landscape) in the Fullscreen API's own
- * fullscreen, with viewport-fit=cover (index.html). Leaving it (the app sent
- * to the background, say) goes back in on the next touch.
+ * On a phone, a tap goes fullscreen and locks to landscape (Android). The
+ * loading screen ends on "Tap anywhere to start" (index.html) so the first
+ * tap is this one. The manifest can't ask for landscape itself: with a fixed
+ * orientation some phones (Xiaomi HyperOS) install the app but never open
+ * it. Fullscreen is also how Chrome lets the page draw round the camera
+ * cutout, with viewport-fit=cover (index.html). Leaving it (the app sent to
+ * the background, say) goes back in on the next tap. pointerup and click,
+ * never pointerdown: a touch's pointerdown isn't a gesture that may go
+ * fullscreen. A refusal changes nothing: the game plays on as it is.
  */
-function fullscreenOnFirstTouch(): void {
+function fullscreenOnTap(): void {
+  let pending = false;
   const go = () => {
-    if (!touch() || document.fullscreenElement) return;
+    if (pending || !touch() || document.fullscreenElement) return;
     const el = document.documentElement;
     if (!el.requestFullscreen) return; // iPhone Safari: add to Home Screen instead.
+    pending = true;
     el.requestFullscreen({ navigationUI: 'hide' })
       .then(() => (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape'))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => (pending = false));
   };
   window.addEventListener('pointerup', go, { passive: true });
+  window.addEventListener('click', go, { passive: true });
+  // The loading screen's tap keeps its events to itself, so it calls this.
+  (window as Window & { enterFullscreen?: () => void }).enterFullscreen = go;
 }
 
 interface InstallPrompt extends Event {
@@ -77,7 +86,7 @@ function rotateHint(): void {
 
 export function setupApp(): void {
   registerServiceWorker();
-  fullscreenOnFirstTouch();
+  fullscreenOnTap();
   installButton();
   rotateHint();
 }
