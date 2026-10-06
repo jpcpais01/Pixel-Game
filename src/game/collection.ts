@@ -18,11 +18,12 @@ export const START_GEMS = 200;
 export const DAILY_GEMS = 5;
 /** Accounts (by username, lower case) that own every skin. */
 const ADMINS = ['kel'];
-/** One-off gifts of gems to an account (by username, lower case), each given once and remembered in its save by id. */
-const GRANTS: { id: string; user: string; gems: number }[] = [
+/** One-off gifts of gems or skins ("class:skin") to an account (by username, lower case), each given once and remembered in its save by id. */
+const GRANTS: { id: string; user: string; gems?: number; skins?: string[] }[] = [
   { id: 'kel-100k', user: 'kel', gems: 100000 },
   { id: 'keldog-10k', user: 'keldog', gems: 10000 },
   { id: 'tiago-10k', user: 'tiago', gems: 10000 },
+  { id: 'tiago-porto', user: 'tiago', skins: ['beast:porto'] },
 ];
 /** Set once this device has given a guest the welcome gems, so a fresh guest game can't be made again and again for more. */
 const WELCOMED_KEY = 'pixel-battle.welcomed';
@@ -596,7 +597,8 @@ class Collection {
     for (const g of GRANTS) {
       if (g.user !== a.username.toLowerCase() || this.data.grants.includes(g.id)) continue;
       this.data.grants.push(g.id);
-      this.data.gems += g.gems;
+      this.data.gems += g.gems ?? 0;
+      for (const id of g.skins ?? []) if (!this.data.skins.includes(id)) this.data.skins.push(id);
     }
   }
 
