@@ -24,6 +24,8 @@ import { freeBox } from '../world/common';
 import { asGhost } from './ghost';
 import type { PeerInfo } from './session';
 import { rouse } from '../game/rest';
+import { Companion } from '../game/Companion';
+import { petById } from '../game/pets';
 
 /** A player's state, sent many times a second. Aim fields are absent when nothing is aimed at. */
 export interface HeroState {
@@ -48,6 +50,8 @@ export interface HeroState {
   dn: 0 | 1;
   /** The gear set their sprite wears (4+ pieces), if any. */
   ds?: SetId;
+  /** The companion that came along with them, if any. */
+  pt?: string;
 }
 
 /** Their hero is too far from where they say it is: it jumps there instead of gliding. */
@@ -100,6 +104,8 @@ export class RemotePlayer implements Hurtbox {
   private pruneT = 0;
   private gone = false;
   private dress: HeroDress;
+  /** Their companion, following their hero: its powers play out for show, like the hero's blows. */
+  private pet: Companion | null = null;
 
   constructor(
     private world: WorldScene,
@@ -171,6 +177,7 @@ export class RemotePlayer implements Hurtbox {
     this.prev = { x: s.x, y: s.y, at: now };
     this.state = s;
     this.dress.set = s.ds && s.ds in GEAR_SETS ? s.ds : null;
+    if (s.pt !== this.pet?.def.id) this.wearPet(s.pt, s.x, s.y);
     this.at = now;
     if (!was) {
       // First word from them: stand where they are.
@@ -178,6 +185,14 @@ export class RemotePlayer implements Hurtbox {
       this.hero.y = s.y;
     } else if (s.hp < was.hp && !s.dn) this.flash();
     if (was && was.dn && !s.dn) this.fade = 1;
+  }
+
+  /** Their companion came (or changed, or went): it stands up beside where they are. */
+  private wearPet(id: string | undefined, x: number, y: number): void {
+    this.pet?.destroy();
+    this.pet = null;
+    const def = id ? petById(id) : undefined;
+    if (def) this.pet = asGhost(() => new Companion(this.view, def, x, y));
   }
 
   /** They unleashed their Special, from (x, y). */
@@ -235,6 +250,9 @@ export class RemotePlayer implements Hurtbox {
       h.y += dy * k;
     }
 
+    const pet = this.pet;
+    if (pet) asGhost(() => pet.update(dt, h.x, h.y, !!s.dn, daylight));
+
     this.fade = s.dn ? Math.max(0, this.fade - dt / 700) : 1;
     h.alpha = this.fade;
     if (this.tint > 0) {
@@ -259,6 +277,8 @@ export class RemotePlayer implements Hurtbox {
     if (this.gone) return;
     this.gone = true;
     this.dress.destroy();
+    this.pet?.destroy();
+    this.pet = null;
     this.ult.cancel();
     for (const o of this.objects) if (o.scene) o.destroy();
     this.objects = [];
@@ -350,6 +370,13 @@ export class RemotePlayer implements Hurtbox {
           update: (dt: number) => asGhost(() => e.update(dt)),
           destroy: () => e.destroy(),
         }),
+      // Their companion mends their hero in their own game (the health comes
+      // over in their state); here it only shows the bloom when they're hurt.
+      mendHero: (share: number) => {
+        const st = this.state;
+        return st && !st.dn && st.hp < st.mh ? Math.max(1, Math.round(st.mh * share)) : 0;
+      },
+      dropGems: noop,
       leech: noop,
       evade: noop,
       buffGained: noop,

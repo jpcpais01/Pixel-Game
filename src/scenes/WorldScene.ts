@@ -213,6 +213,10 @@ export class WorldScene extends Phaser.Scene {
   private frost: FrostArena | null = null;
   /** The companion following the hero, if one is worn. */
   private companion: Companion | null = null;
+  /** The companion that came along, for the others online to see beside this hero. */
+  get petWorn(): string | undefined {
+    return this.companion?.def.id;
+  }
   /** The critters out near the hero, to be caught with the net (arenas that have them). */
   private critters: CritterField | null = null;
   /** The hero swung, cast or used their Special this frame (the White Stag shies from a fight). */

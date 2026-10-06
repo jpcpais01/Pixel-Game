@@ -215,6 +215,7 @@ export class NetPlay {
       br: Math.round(v.barrier),
       dn: this.world.heroDown ? 1 : 0,
       ...(gear.dress ? { ds: gear.dress } : {}),
+      ...(this.world.petWorn ? { pt: this.world.petWorn } : {}),
     };
     this.attackHeld = this.specialHeld = false;
     session.send(s as unknown as Msg);
