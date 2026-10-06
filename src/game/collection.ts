@@ -22,6 +22,7 @@ const ADMINS = ['kel'];
 const GRANTS: { id: string; user: string; gems: number }[] = [
   { id: 'kel-100k', user: 'kel', gems: 100000 },
   { id: 'keldog-10k', user: 'keldog', gems: 10000 },
+  { id: 'tiago-10k', user: 'tiago', gems: 10000 },
 ];
 /** Set once this device has given a guest the welcome gems, so a fresh guest game can't be made again and again for more. */
 const WELCOMED_KEY = 'pixel-battle.welcomed';
