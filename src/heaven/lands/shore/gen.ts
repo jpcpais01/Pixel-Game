@@ -344,6 +344,8 @@ export class ShoreGen implements LandGen {
         const t = 6 - lv * 9;
         const fl = Math.floor(t);
         c.tone = Math.max(1, t - fl > bayer(x, y) ? fl + 1 : fl);
+        // Faint ripples catching the light on still water.
+        if (lv > 0.15 && valueNoise(x, y * 5, 22, s + 63) > 0.8) c.tone += 1;
         if (lv < 0.12) c.glow = 0.75 * (1 - lv / 0.12);
         else if (hash2(x, y, s + 61) > 0.992) c.glow = 0.6;
         return;

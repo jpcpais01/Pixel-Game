@@ -701,9 +701,11 @@ export class WorldScene extends Phaser.Scene {
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scene.stop('forestload'));
     }
     this.showBanner(arena.name);
-    // The minimap in the corner (and in the Everwood, the explorer's map).
-    this.scene.launch('map');
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scene.stop('map'));
+    // The minimap in the corner (and in the Everwood, the explorer's map). Heaven Lands' endless lands have none yet.
+    if (!(cozy.on && cozy.arena?.(arena.id))) {
+      this.scene.launch('map');
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scene.stop('map'));
+    }
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this));
 
