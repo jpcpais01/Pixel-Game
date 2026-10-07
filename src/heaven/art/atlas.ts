@@ -42,17 +42,18 @@ export const ISLE_SPOTS: Record<string, IsleSpot> = {
   garden: { x: 470, y: 444, lift: 24, links: ['everwood'] },
   glimmerdeep: { x: 160, y: 412, lift: 28 },
   starwatch: { x: 540, y: 72, lift: 40 },
+  shore: { x: 652, y: 494, lift: 26, links: ['garden', 'everwood'] },
+  saltflats: { x: 116, y: 236, lift: 22, links: ['cloudrest', 'glimmerdeep', 'home'] },
+  hushfall: { x: 760, y: 142, lift: 36, links: ['starwatch', 'everwood'] },
+  lumen: { x: 452, y: 200, lift: 32, links: ['home', 'cloudrest', 'starwatch'] },
 };
 
 /** Open sky for places still to come, taken in turn by places the table doesn't know. */
 export const SPARE_SPOTS: [number, number][] = [
-  [118, 232],
-  [462, 204],
-  [744, 146],
-  [624, 500],
   [290, 502],
+  [632, 186],
   [92, 96],
-  [770, 470],
+  [796, 456],
 ];
 
 export interface Isle {

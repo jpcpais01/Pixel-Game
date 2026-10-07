@@ -79,6 +79,8 @@ interface BodyOpts {
   roots?: number;
   /** How ragged the top's edge is. */
   wobble?: number;
+  /** Extra light on the top at a pixel (rolling ground, drifts), added to its shading. */
+  relief?: (x: number, y: number) => number;
 }
 
 interface Body {
@@ -162,7 +164,7 @@ function body(a: Art, o: BodyOpts): Body {
       if (!top[y * w + x]) continue;
       const nx = (x + 0.5 - cx) / rx;
       const ny = (y + 0.5 - cy) / ry;
-      let v = lit(nx * 0.8, ny * 0.8, 0.6) + (fbm(x, y, 6, seed + 2, 2) - 0.5) * 0.3;
+      let v = lit(nx * 0.8, ny * 0.8, 0.6) + (fbm(x, y, 6, seed + 2, 2) - 0.5) * 0.3 + (o.relief ? o.relief(x, y) : 0);
       const above = y > 0 && top[(y - 1) * w + x];
       const below = y < h - 1 && top[(y + 1) * w + x];
       if (!above) v += 0.16;
@@ -1017,6 +1019,847 @@ function starwatchIsle(): IsleArt {
   };
 }
 
+// ---------------------------------------------------------------- Helpers for the shore, the flats, the snow and the meadow
+
+/** Distance from a point to a winding line (a stream, a path), for painting along it. */
+function lineDist(pts: [number, number][]): (x: number, y: number) => number {
+  return (x, y) => {
+    let best = Infinity;
+    for (let i = 1; i < pts.length; i++) {
+      const [x0, y0] = pts[i - 1];
+      const vx = pts[i][0] - x0;
+      const vy = pts[i][1] - y0;
+      const t = Math.max(0, Math.min(1, ((x - x0) * vx + (y - y0) * vy) / (vx * vx + vy * vy)));
+      best = Math.min(best, Math.hypot(x - x0 - vx * t, y - y0 - vy * t));
+    }
+    return best;
+  };
+}
+
+/**
+ * A sprite's mirror image in still water below its foot row: blended into
+ * the water (so it reads as a reflection, not a second thing), and only on
+ * pixels `wet` says are water. Every few rows a pixel is skipped, the
+ * faintest ripple, so it still reads as water up close.
+ */
+function reflect(a: Art, sprite: Art, ox: number, oy: number, footY: number, wet: (x: number, y: number) => boolean, k = 0.5): void {
+  for (let sy = 0; sy < sprite.h; sy++) {
+    for (let sx = 0; sx < sprite.w; sx++) {
+      if (sprite.alpha(sx, sy) < 128) continue;
+      const x = ox + sx;
+      const y = 2 * footY - (oy + sy) - 1;
+      if (y < footY || !wet(x, y) || ((y - footY) % 4 === 3 && hash2(x, y, 3) < 0.5)) continue;
+      const i = (sy * sprite.w + sx) * 4;
+      // Further from the foot the reflection fades into the water's own colour.
+      const fade = Math.max(0.2, 1 - (y - footY) / (sprite.h * 1.2));
+      a.set(x, y, mix(a.get(x, y), [sprite.data[i], sprite.data[i + 1], sprite.data[i + 2]], k * fade));
+    }
+  }
+}
+
+/** A sprite drawn in its own box and outlined, to be stamped (and maybe reflected) later. */
+function sprite(w: number, h: number, draw: (p: Art) => void, rim: RGB = INK): Art {
+  const p = new Art(w + 2, h + 2);
+  draw(p);
+  p.outline(rim);
+  return p;
+}
+
+// ---------------------------------------------------------------- Glowtide Shore
+
+const SAND = ramp('#7a4c36', '#a06a44', '#c48c52', '#dcac66', '#ecc67c', '#f8de9a', '#fff2c4');
+const WET_SAND = ramp('#6a4232', '#8a5a3c', '#a87448');
+const SHALLOWS = ramp('#124a66', '#16667e', '#1c8494', '#28a4a8', '#46c2b8', '#78dcc6', '#b4f0da', '#eafff2');
+const FOAM = hex('#f4fff4');
+const TROPIC = ramp('#163a2c', '#1e5232', '#286a36', '#3c843a', '#5c9e40', '#86b84c', '#b8d064', '#e2e28e');
+const PALM_BARK = ramp('#3a2620', '#5e402e', '#86603e', '#ac8656', '#d4b07a');
+const FROND = ramp('#12302a', '#1a482e', '#246232', '#367e36', '#529c3c', '#7cb84a', '#b0d466');
+
+/**
+ * A palm with its foot at (x, y): a ringed trunk curving `lean` px over as it
+ * rises `h`, and a crown of drooping fronds, those at the back first, lit on
+ * their top left. Its shadow falls to the right like the trees'.
+ */
+function palm(a: Art, x: number, y: number, h: number, lean: number, seed: number): void {
+  const rand = rng(seed);
+  const L = Math.round(h * 0.55) + 3;
+  const pad = L + 2;
+  const bw = pad * 2 + Math.abs(lean) + 2;
+  const bh = h + L + 3;
+  const fx = pad + Math.max(0, -lean);
+  const fy = bh;
+  softShadow(a, x + lean + L * 0.4, y + 1, L * 0.95, 2, 0.72);
+  softShadow(a, x + 2, y, 2.5, 1, 0.75);
+  piece(a, x - fx, y - fy + 1, bw, bh, (p) => {
+    // The trunk bends more toward its top; rings every other row, lit on its left.
+    const at = (t: number) => fx + lean * t * t;
+    for (let i = 0; i <= h; i++) {
+      const t = i / h;
+      const px = Math.round(at(t));
+      const py = fy - i;
+      const ring = i % 2 === 0;
+      p.set(px, py, PALM_BARK[ring ? 2 : 4]);
+      p.set(px + 1, py, PALM_BARK[ring ? 0 : 2]);
+      if (i < 2) p.set(px - 1, py, PALM_BARK[1]);
+    }
+    const tx = at(1) + 0.5;
+    const ty = fy - h;
+    // Fronds round the crown: the back ones first, the ones facing us drooping over the trunk.
+    const n = 8;
+    const fronds: { ang: number; len: number }[] = [];
+    for (let k = 0; k < n; k++) fronds.push({ ang: (k / n) * Math.PI * 2 + rand() * 0.4, len: L * (0.8 + rand() * 0.3) });
+    fronds.sort((f, g) => Math.sin(f.ang) - Math.sin(g.ang));
+    for (const { ang, len } of fronds) {
+      const dx = Math.cos(ang);
+      const dy = Math.sin(ang) * 0.5;
+      const droop = 0.55 + Math.abs(dx) * 0.35;
+      const steps = Math.ceil(len * 1.6);
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const px = tx + dx * len * t;
+        const py = ty + dy * len * t + droop * len * t * t * 0.7 - (1 - t) * t * 2.2;
+        // Leaflets either side of the rib, widest a third of the way out.
+        const w = Math.round(Math.sin(Math.min(1, t * 1.4) * Math.PI) * 1.6);
+        for (let o = -w; o <= w; o++) {
+          // Leaflets across the frond: up and down for a frond going sideways, left and right for one coming at us.
+          const ox = Math.abs(dx) > 0.55 ? 0 : o;
+          const oy = Math.abs(dx) > 0.55 ? o : 0;
+          if (o !== 0 && hash2(Math.round(px * 3) + o, Math.round(py * 3), seed) < 0.22) continue;
+          const v = 0.62 - dx * 0.22 - dy * 0.5 - t * 0.22 - (oy > 0 || ox > 0 ? 0.16 : 0) + (o === 0 ? 0.1 : 0);
+          p.set(Math.round(px + ox), Math.round(py + oy), tone(FROND, v, Math.round(px), Math.round(py), 0.7));
+        }
+      }
+    }
+    // Coconuts tucked under the crown.
+    p.set(Math.round(tx) - 1, ty + 1, hex('#6a4426'));
+    p.set(Math.round(tx), ty + 2, hex('#4a2c1c'));
+    p.set(Math.round(tx) + 1, ty + 1, hex('#8a5c32'));
+  }, mix(FROND[0], INK, 0.5));
+}
+
+/** A little wooden pier running out from the beach at (x, y0) toward us to y1, on posts, a lantern at its end; returns the lamp's spot. */
+function pier(a: Art, x: number, y0: number, y1: number): { x: number; y: number } {
+  const PLANK = ramp('#3e2620', '#6e4430', '#946040', '#b88454', '#dcb07a', '#f4d49a');
+  const W = 4;
+  // Its shadow on the water, cast to the right.
+  for (let y = y0 + 2; y <= y1 + 3; y++) {
+    a.shade(x + W + 1, y, 0.66);
+    if (bayer(x + W + 2, y) > 0.45) a.shade(x + W + 2, y, 0.8);
+  }
+  piece(a, x, y0, W, y1 - y0 + 3, (p) => {
+    for (let py = 1; py <= y1 - y0 + 1; py++) {
+      // Planks across, a dark seam every other row, the deck lit on its left.
+      const seam = py % 2 === 0;
+      for (let px = 1; px <= W; px++) p.set(px, py, tone(PLANK, (seam ? 0.5 : 0.8) - (px - 1) * 0.08 + (hash2(px, py, 9) < 0.15 ? 0.1 : 0), px, py, 0.3));
+    }
+    // The deck's front edge, and its posts going down into the water.
+    for (let px = 1; px <= W; px++) p.set(px, y1 - y0 + 2, PLANK[1]);
+    p.set(1, y1 - y0 + 3, PLANK[0]);
+    p.set(W, y1 - y0 + 3, PLANK[0]);
+  }, mix(PLANK[0], INK, 0.5));
+  for (const px of [x, x + W - 1]) a.set(px, y1 + 4, mix(PLANK[0], SHALLOWS[3], 0.5));
+  // The lantern on its post at the pier's end, on its right corner.
+  const lx = x + W;
+  piece(a, lx - 1, y1 - 7, 3, 9, (p) => {
+    for (let i = 4; i < 9; i++) p.set(2, i, PLANK[i % 3 === 0 ? 3 : 2]);
+    p.set(2, 1, hex('#4a2a22'));
+    p.rect(1, 2, 3, 3, (px, py) => (px === 2 ? hex('#fff6c8') : py === 2 ? hex('#ffd070') : hex('#f09a40')));
+  });
+  return { x: lx, y: y1 - 4 };
+}
+
+/** A hibiscus bush: a low round clump with red and coral flowers. */
+function hibiscus(a: Art, x: number, y: number, seed: number): void {
+  tree(a, x, y, 'meadow', 3, seed);
+  const rand = rng(seed + 1);
+  for (let k = 0; k < 3; k++) {
+    const px = Math.round(x - 2 + rand() * 4);
+    const py = Math.round(y - 5 + rand() * 3);
+    a.set(px, py, k === 1 ? hex('#ff7a5a') : hex('#e83a5a'));
+  }
+}
+
+/**
+ * Glowtide Shore: a tropical isle whose south east is a bay, a crescent of
+ * golden sand curving round turquoise shallows that run out over the rim and
+ * pour away in a little waterfall; palms lean over the beach, and a tiny pier
+ * with a lantern runs out into the water.
+ */
+function shoreIsle(): IsleArt {
+  const a = new Art(120, 116);
+  const cx = 58;
+  const cy = 44;
+  const rx = 46;
+  const ry = 22;
+  const b = body(a, { cx, cy, rx, ry, depth: 36, seed: 81, grass: TROPIC, soil: ramp('#3a2220', '#5e3a2a', '#86583a', '#ac7c4e'), roots: 7, spikes: 3 });
+  vines(a, b, 82, 7, TROPIC);
+  // The bay: an oval of water centred out past the south east rim, sand round its edge.
+  const bx = cx + 24;
+  const by = cy + 21;
+  const bay = (x: number, y: number): number => Math.hypot((x + 0.5 - bx) / 34, (y + 0.5 - by) / 19) + (valueNoise(x, y, 5, 83) - 0.5) * 0.08;
+  const SANDY = 1.5;
+  const water = (x: number, y: number): boolean => b.inTop(x, y) && bay(x, y) < 1;
+  for (let y = 0; y < a.h; y++) {
+    for (let x = 0; x < a.w; x++) {
+      if (!b.inTop(x, y)) continue;
+      const e = bay(x, y);
+      if (e >= SANDY) continue;
+      if (e >= 1) {
+        // Sand: wet and dark at the water's edge, dry and pale up the beach, a fringe of grass where it meets the meadow.
+        const u = (e - 1) / (SANDY - 1);
+        if (u > 0.86 && hash2(x, y, 84) < 0.5) continue;
+        if (u < 0.14) a.set(x, y, tone(WET_SAND, 0.7 - (x - cx) / rx * 0.3, x, y));
+        else a.set(x, y, tone(SAND, 0.42 + u * 0.48 - (x - cx) / rx * 0.18 + (hash2(x, y, 85) < 0.06 ? 0.14 : 0), x, y, 0.7));
+        continue;
+      }
+      // The shallows: pale over the sand near the beach, deepening toward the bay's middle, sun on the water.
+      let v = 0.12 + Math.pow(e, 2.4) * 0.74 - (x - cx) / rx * 0.08;
+      // Lines of gentle swell running parallel to the beach.
+      for (const ring of [0.78, 0.56]) if (Math.abs(e - ring) < 0.025 && hash2(x, 0, Math.round(ring * 10)) < 0.7) v += 0.22;
+      let c = tone(SHALLOWS, v, x, y, 0.7);
+      if (hash2(x, y, 86) < 0.03 && e > 0.3) c = hex('#ffe4b4');
+      a.set(x, y, c);
+      // Foam where the water laps the sand.
+      if (e > 0.94) a.set(x, y, e > 0.97 ? FOAM : SHALLOWS[6]);
+    }
+  }
+  // Where the shallows meet the rim they spill over: a sheet of water down the soil, and in the
+  // middle of the span a stream pouring down the rock face, whitening into spray as it falls.
+  const span: number[] = [];
+  for (let x = 0; x < a.w; x++) if (b.rim[x] >= 0 && water(x, b.rim[x])) span.push(x);
+  let fall = { x: bx, y: by };
+  if (span.length) {
+    const mid = span[Math.floor(span.length * 0.45)];
+    for (const x of span) {
+      const r = b.rim[x];
+      a.set(x, r, FOAM);
+      const sheet = 2 + (Math.abs(x - mid) < 4 ? 0 : Math.floor(hash2(x, 5, 87) * 2));
+      for (let k = 1; k <= sheet; k++) a.set(x, r + k, tone(SHALLOWS, 0.85 - k * 0.12, x, r + k));
+    }
+    for (let x = mid - 2; x <= mid + 1; x++) {
+      if (b.rim[x] < 0) continue;
+      const low = b.bottom[mid] + 3;
+      for (let y = b.rim[x] + 1; y <= low; y++) {
+        const u = (y - b.rim[x]) / (low - b.rim[x]);
+        // Long streaks down the fall, the lit side on the left, whitening as it drops.
+        const streak = (y + x * 5 + Math.floor(hash2(x, 1, 88) * 4)) % 6 < 2 ? 0.16 : 0;
+        if (u > 0.75 && bayer(x, y) < (u - 0.75) * 3.6) continue;
+        const side = x === mid - 2 ? 0.12 : x === mid + 1 ? -0.2 : 0;
+        a.set(x, y, tone(SHALLOWS, 0.5 + u * 0.4 + streak + side, x, y, 0.6));
+      }
+      // Spray where it breaks up.
+      for (let k = 0; k < 3; k++) a.set(x + Math.round((hash2(x, k, 88) - 0.5) * 6), low + 2 + k * 2, SHALLOWS[7]);
+    }
+    fall = { x: mid, y: b.rim[mid] + 1 };
+  }
+  // Flowers and beach grass in the meadow.
+  const rand = rng(89);
+  for (let k = 0; k < 36; k++) {
+    const px = Math.round(cx + (rand() * 2 - 1) * 42);
+    const py = Math.round(cy + (rand() * 2 - 1) * 19);
+    if (b.inTop(px, py, 2) && bay(px, py) > SANDY + 0.05) a.set(px, py, [hex('#fff4e0'), hex('#ff7a8a'), hex('#ffd860'), hex('#ff9a5a')][k % 4]);
+  }
+  for (let k = 0; k < 14; k++) {
+    const px = Math.round(bx + (rand() * 2 - 1) * 40);
+    const py = Math.round(by + (rand() * 2 - 1.4) * 20);
+    const e = bay(px, py);
+    if (!b.inTop(px, py, 1) || e < 1.2 || e > SANDY + 0.1) continue;
+    a.set(px, py, TROPIC[4]);
+    a.set(px, py - 1, TROPIC[5]);
+    if (k % 2) a.set(px + 1, py - 1, TROPIC[3]);
+  }
+  // Shells and a starfish on the sand.
+  for (const [px, py, c] of [[66, 50, '#fff0e8'], [60, 57, '#ffc0b0'], [76, 44, '#fff0e8']] as [number, number, string][]) if (bay(px, py) > 1.05 && bay(px, py) < SANDY) a.set(px, py, hex(c));
+  const items: { y: number; draw: () => void }[] = [];
+  let lamp = { x: 0, y: 0 };
+  items.push({ y: by - 7, draw: () => (lamp = pier(a, bx - 10, by - 20, by - 9)) });
+  // A rowboat pulled up on the sand.
+  items.push({
+    y: 58,
+    draw: () => {
+      softShadow(a, 49, 59, 5, 1.6, 0.75);
+      piece(a, 43, 55, 9, 4, (p) => {
+        p.poly([[1, 1], [10, 1], [9, 4], [2, 4]], (_px, py) => (py === 1 ? hex('#f4e4c8') : py === 2 ? hex('#4a6a9a') : hex('#c8584a')));
+        p.rect(3, 2, 8, 2, (px) => (px % 3 === 0 ? hex('#6a4430') : hex('#a87850')));
+      });
+    },
+  });
+  for (const [x, y, h, lean, s] of [
+    [68, 36, 14, 5, 1],
+    [77, 41, 11, 7, 2],
+    [58, 47, 12, 4, 3],
+    [30, 30, 13, -2, 4],
+    [20, 46, 10, -3, 5],
+  ] as [number, number, number, number, number][]) items.push({ y, draw: () => palm(a, x, y, h, lean, 90 + s) });
+  for (const [x, y, s] of [[42, 34, 1], [36, 56, 2], [86, 30, 3]] as [number, number, number][]) items.push({ y, draw: () => hibiscus(a, x, y, 95 + s) });
+  items.push({ y: 28, draw: () => tree(a, 50, 28, 'oak', 5, 99) });
+  items.sort((p, q) => p.y - q.y).forEach((i) => i.draw());
+  return {
+    art: a,
+    ax: cx,
+    ay: cy,
+    rx,
+    ry,
+    falls: [fall],
+    glows: [{ ...lamp, r: 10, tint: 0xffc060 }, { x: bx - 6, y: by - 4, r: 12, tint: 0x60e0d0 }],
+    glints: [{ x: bx - 8, y: by - 3 }, { x: bx + 2, y: by - 6 }, { x: bx - 14, y: by }, fall],
+  };
+}
+
+// ---------------------------------------------------------------- Saltglass Flats
+
+/** Salt crust: lavender seams, white cells warmed cream where the sun is on them. */
+const SALT = ramp('#6a5a86', '#8e7ea4', '#b4a6c0', '#d8ccd8', '#f2e8e6', '#fff8f0');
+/** The sky held in the still water: rose and lavender overhead, apricot and cream toward the low sun. */
+const MIRROR = ramp('#5a4a8a', '#72589a', '#9268a6', '#b47aa8', '#d68ea6', '#eca8a2', '#f8c4a2', '#ffdcb0', '#fff0d0');
+const PALE_ROCK = ramp('#2c2238', '#3e3048', '#56425a', '#705a6c', '#8c7480', '#a89096', '#c4aeae', '#dccac2');
+const PINK = ramp('#9a3458', '#cc5276', '#ee7c98', '#ffaabc', '#ffd4d8');
+
+/** Distance to the nearest seam of a hex grid of cells `s` px across (squashed, as the flats are seen at a slant). */
+function hexSeam(x: number, y: number, s: number): number {
+  const w = s;
+  const h = s * 0.62;
+  const j = Math.round(y / h);
+  let d1 = Infinity;
+  let d2 = Infinity;
+  for (let jj = j - 1; jj <= j + 1; jj++) {
+    const off = (jj & 1) * w * 0.5;
+    const i = Math.round((x - off) / w);
+    for (let ii = i - 1; ii <= i + 1; ii++) {
+      // Cells nudged off the grid a little, so the crust looks grown rather than tiled.
+      const px = ii * w + off + (hash2(ii, jj, 7) - 0.5) * s * 0.3;
+      const py = jj * h + (hash2(ii, jj, 8) - 0.5) * s * 0.2;
+      const d = Math.hypot(x - px, (y - py) / 0.62);
+      if (d < d1) {
+        d2 = d1;
+        d1 = d;
+      } else if (d < d2) d2 = d;
+    }
+  }
+  return (d2 - d1) / 2;
+}
+
+/** A tea house on stilts, standing in the water; its foot row is the sprite's last row. */
+function teaHouse(): { art: Art; lamp: { x: number; y: number }; windows: { x: number; y: number }[] } {
+  const ROOF = ramp('#2e1a2a', '#4a2432', '#6e323c', '#964a46', '#bc6a54', '#e09670');
+  const WOOD = ramp('#2e1c1c', '#4e3026', '#704634', '#946446', '#b8885e');
+  const PAPER_LIT = ramp('#c87a3a', '#eca450', '#ffd27c', '#fff2c0');
+  const art = sprite(19, 19, (p) => {
+    // Stilts down into the water.
+    for (const sx of [3, 8, 13, 17]) for (let y = 15; y <= 19; y++) p.set(sx, y, sx < 10 ? WOOD[2] : WOOD[1]);
+    // The platform, with a rail along its front.
+    p.rect(1, 13, 19, 14, (px, py) => tone(WOOD, py === 13 ? 0.9 - px * 0.02 : 0.3, px, py));
+    for (let x = 1; x <= 19; x++) {
+      p.set(x, 11, WOOD[3]);
+      if (x % 3 === 1) p.set(x, 12, WOOD[2]);
+    }
+    // Paper walls lit from inside, in a frame of dark wood; the door slid open in the middle.
+    p.rect(3, 6, 17, 12, (px, py) => {
+      if (px === 3 || px === 17 || py === 6) return WOOD[1];
+      if (px === 10) return hex('#7a3a24');
+      if ((px - 3) % 2 === 0 && py > 6) return WOOD[2];
+      return tone(PAPER_LIT, 0.9 - (px - 3) / 14 * 0.35 - (py - 6) * 0.03, px, py);
+    });
+    // The roof: dark tiles in rows, its eaves sweeping up at the corners.
+    p.poly([[5, 1], [15, 1], [19, 5], [21, 6], [0, 6], [2, 5]], (px, py) => {
+      let v = 0.62 - (px - 10) / 11 * 0.3 - (py - 1) * 0.03;
+      if (py % 2 === 0) v -= 0.12;
+      if (py === 1) v += 0.2;
+      if (py >= 5) v -= 0.25;
+      return tone(ROOF, v, px, py, 0.6);
+    });
+    p.set(1, 5, ROOF[3]);
+    p.set(20, 5, ROOF[1]);
+    p.rect(5, 0, 15, 0, (px) => (px < 10 ? ROOF[5] : ROOF[4]));
+    p.set(10, 0, hex('#f4c860'));
+    // A paper lantern hanging from the eave's corner.
+    p.rect(18, 7, 19, 8, (px, py) => (px === 18 && py === 7 ? hex('#fff0b0') : hex('#ff6a3a')));
+  }, mix(INK, hex('#4a2a3a'), 0.3));
+  return { art, lamp: { x: 19, y: 8 }, windows: [{ x: 7, y: 9 }, { x: 14, y: 9 }] };
+}
+
+/** A flamingo, facing left (or right), on two legs or one. */
+function flamingo(flip: boolean, oneLeg: boolean): Art {
+  const P = PINK;
+  const pts: [number, number, RGB][] = [
+    // Beak and head, the neck's curve, then the body and its dark tail.
+    [0, 1, hex('#2a1a22')], [1, 0, P[3]], [2, 0, P[2]], [1, 1, P[2]],
+    [2, 2, P[2]], [2, 3, P[3]], [1, 4, P[2]], [2, 5, P[3]], [3, 5, P[4]], [4, 5, P[2]], [2, 6, P[2]], [3, 6, P[1]], [4, 6, P[0]],
+  ];
+  const legs: [number, number][] = oneLeg ? [[3, 7], [3, 8], [3, 9], [4, 8]] : [[2, 7], [2, 8], [2, 9], [4, 7], [4, 8], [4, 9]];
+  return sprite(5, 10, (p) => {
+    for (const [x, y, c] of pts) p.set((flip ? 4 - x : x) + 1, y + 1, c);
+    for (const [x, y] of legs) p.set((flip ? 4 - x : x) + 1, y + 1, hex('#d0607a'));
+  }, mix(P[0], INK, 0.6));
+}
+
+/**
+ * Saltglass Flats: a flat isle whose whole top is a sheet of still water
+ * holding the golden sky, clouds and all, with a crust of white salt cells
+ * round its edge. A tea house stands out in the water on stilts, a pair of
+ * flamingos wade near the shore, and everything stands on its own reflection.
+ */
+function saltIsle(): IsleArt {
+  const a = new Art(124, 92);
+  const cx = 62;
+  const cy = 38;
+  const rx = 49;
+  const ry = 21;
+  const b = body(a, { cx, cy, rx, ry, depth: 26, seed: 91, grass: SALT, rock: PALE_ROCK, soil: ramp('#4a3a4a', '#6a5866', '#8c7a84', '#ad9ca2'), bounce: hex('#f4b8b0'), cliff: 2, spikes: 4, roots: 0, wobble: 0.06 });
+  // How far into the top a point is (0 at the rim, 1 in the middle), wavering, to set where the crust gives way to water.
+  const inward = (x: number, y: number): number => 1 - Math.hypot((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry) + (fbm(x, y, 9, 92, 2) - 0.5) * 0.3;
+  const SHORE = 0.13;
+  const wet = (x: number, y: number): boolean => b.inTop(x, y) && inward(x, y) > SHORE && !(fbm(x, y, 6, 93, 2) > 0.7 && inward(x, y) < 0.6);
+  // Clouds held in the water: soft bright heaps, upside down, as the mirror shows them.
+  const cloud = (x: number, y: number): number => smooth(0.5, 0.7, fbm(x * 0.8, y * 1.6, 14, 94, 3));
+  for (let y = 0; y < a.h; y++) {
+    for (let x = 0; x < a.w; x++) {
+      if (!b.inTop(x, y)) continue;
+      const nx = (x + 0.5 - cx) / rx;
+      const ny = (y + 0.5 - cy) / ry;
+      if (wet(x, y)) {
+        // The far water holds the sky low down near the sun (warm, bright); the near water the sky overhead (rose, lavender).
+        let v = 0.56 - ny * 0.36 - nx * 0.2 + cloud(x, y) * 0.32;
+        // The sun's own glare, a long blaze on the water toward the west.
+        const glare = Math.max(0, 1 - Math.hypot((x - cx + 24) / 12, (y - cy + 4) / 3));
+        v += glare * 0.4;
+        let c = tone(MIRROR, v, x, y, 0.7);
+        // The faintest ripple lines, a pixel here and there.
+        if (y % 5 === 0 && hash2(x >> 2, y, 95) < 0.3) c = mix(c, MIRROR[8], 0.35);
+        a.set(x, y, c);
+        continue;
+      }
+      // Salt: white cells with lavender seams, the crust thicker (and its seams bolder) toward the rim.
+      // Salt grows in polygons whose edges are pushed up into white ridges, lit on their sunward side; the cells sag between.
+      const seam = hexSeam(x, y, 6);
+      let v = 0.6 - nx * 0.2 - ny * 0.08 + (hash2(x, y, 96) < 0.08 ? 0.06 : 0);
+      if (seam < 0.6) v += 0.32;
+      else if (seam < 1.2) v -= hexSeam(x - 1, y - 1, 6) < 0.6 ? 0.14 : 0.04;
+      if (y > 0 && !b.inTop(x, y - 1)) v += 0.1;
+      if (!b.inTop(x, y + 1)) v -= 0.3;
+      a.set(x, y, tone(SALT, v, x, y, 0.6));
+    }
+  }
+  // The water's edge against the salt: a bright wet lip on the far side of each patch, a shadowed one on the near.
+  for (let y = 1; y < a.h - 1; y++) {
+    for (let x = 1; x < a.w - 1; x++) {
+      if (!wet(x, y)) continue;
+      if (!wet(x, y - 1) && b.inTop(x, y - 1)) a.set(x, y, mix(a.get(x, y), SALT[3], 0.6));
+      else if (!wet(x, y + 1) && b.inTop(x, y + 1)) a.set(x, y + 1, mix(a.get(x, y + 1), SALT[2], 0.5));
+    }
+  }
+  // Salt crystals hanging under the rim, glassy and pink-white.
+  const GLASS = ramp('#8a6a9a', '#c4a4c4', '#f0dcea', '#fff4f8', '#ffffff');
+  const rand = rng(97);
+  for (let k = 0; k < 7; k++) {
+    const x = Math.round(cx + (rand() * 2 - 1) * rx * 0.7);
+    if (b.bottom[x] < 0) continue;
+    const h = Math.round(3 + rand() * 5 * (1 - Math.abs(x - cx) / rx));
+    crystal(a, x, b.bottom[x] - 1 - Math.floor(rand() * 3), h, 1, GLASS, true);
+  }
+  // A boardwalk from the eastern crust out to the tea house.
+  const tx = 76;
+  const ty = 36;
+  const PLANK = ramp('#4e3026', '#7a5236', '#a8784e', '#d0a470');
+  for (let x = tx + 4; x < 104; x++) {
+    const y = ty + Math.round((x - tx) * 0.06);
+    if (!b.inTop(x, y)) break;
+    a.set(x, y, tone(PLANK, x % 2 ? 0.95 : 0.7, x, y));
+    a.set(x, y + 1, PLANK[0]);
+    if (wet(x, y + 2)) a.set(x, y + 2, mix(a.get(x, y + 2), PLANK[0], 0.35));
+  }
+  // The tea house and the flamingos, each standing on its reflection.
+  const house = teaHouse();
+  const hx = tx - 10;
+  const hy = ty - house.art.h + 2;
+  reflect(a, house.art, hx, hy, ty + 1, wet, 0.42);
+  const birds: [number, number, boolean, boolean][] = [[33, 42, false, true], [43, 47, true, false]];
+  const birdArts = birds.map(([, , flip, one]) => flamingo(flip, one));
+  birds.forEach(([x, y], i) => reflect(a, birdArts[i], x - 3, y - birdArts[i].h + 1, y + 1, wet, 0.55));
+  // Little wakes round the stilts and the birds' legs.
+  for (const [x, y] of [[hx + 4, ty + 2], [hx + 9, ty + 2], [hx + 14, ty + 2], [hx + 18, ty + 2], [33, 43], [42, 48]]) {
+    a.set(x - 1, y, MIRROR[8]);
+    a.set(x + 1, y, MIRROR[7]);
+  }
+  a.stamp(house.art, hx, hy);
+  birds.forEach(([x, y], i) => a.stamp(birdArts[i], x - 3, y - birdArts[i].h + 1));
+  return {
+    art: a,
+    ax: cx,
+    ay: cy,
+    rx,
+    ry,
+    falls: [],
+    glows: [...house.windows.map((w) => ({ x: hx + w.x, y: hy + w.y, r: 9, tint: 0xffc070 })), { x: hx + house.lamp.x, y: hy + house.lamp.y, r: 8, tint: 0xff8a50 }, { x: cx - 24, y: cy - 4, r: 14, tint: 0xffe0b0 }],
+    glints: [{ x: cx - 26, y: cy - 4 }, { x: cx - 20, y: cy - 3 }, { x: cx + 8, y: cy + 10 }, { x: cx - 4, y: cy - 12 }],
+  };
+}
+
+// ---------------------------------------------------------------- Hushfall
+
+/** Snow at golden hour: lavender in the shade, rose, then cream and apricot where the low sun lies on it. */
+const SNOW = ramp('#4a4478', '#5e5a8e', '#7a74a6', '#9c92ba', '#bfb0cc', '#dccad6', '#f2e0de', '#fff2e8');
+const ICE_ROCK = ramp('#181830', '#222440', '#2e3252', '#3c4264', '#4e5678', '#646e8e', '#7e88a6', '#9ea8c0');
+const FIR = ramp('#0c1e26', '#122a2e', '#183834', '#22483c', '#2e5a44', '#3e6e4e');
+const ICE = ramp('#5a6ea8', '#8ab0dc', '#c4e0f4', '#f4fcff');
+
+/** A fir with snow lying on its tiers, foot at (x, y). */
+function snowFir(a: Art, x: number, y: number, R: number, seed: number): void {
+  softShadow(a, x + R * 0.6, y, R * 0.9, Math.max(1.6, R * 0.32), 0.72);
+  const H = Math.round(R * 2.8);
+  const bw = R * 2 + 3;
+  const bh = H + 2;
+  piece(a, Math.round(x - R - 1), Math.round(y - bh + 1), bw, bh, (p) => {
+    const fx = R + 2;
+    const fy = bh;
+    p.set(fx - 1, fy, TRUNK[2]);
+    p.set(fx, fy, TRUNK[1]);
+    p.set(fx - 1, fy - 1, TRUNK[1]);
+    p.set(fx, fy - 1, TRUNK[0]);
+    const tiers = 4;
+    for (let k = 0; k < tiers; k++) {
+      const ty = fy - H + Math.round((k * (H - 3)) / (tiers + 0.4));
+      const th = Math.round((H - 2) / 2.4);
+      const half = R * (0.45 + (k / (tiers - 1)) * 0.6);
+      for (let py = ty; py <= ty + th; py++) {
+        const u = (py - ty) / th;
+        const hw = half * u + 0.5;
+        for (let px = Math.floor(fx - 0.5 - hw); px <= Math.ceil(fx - 0.5 + hw); px++) {
+          const s = (px + 0.5 - (fx - 0.5)) / Math.max(1, hw);
+          if (Math.abs(s) > 1) continue;
+          if (u > 0.85 && hash2(px, py, seed) < 0.35) continue;
+          // Snow lies thick on the top of each tier and in lumps along the hem, thinner on the shaded right.
+          const lump = valueNoise(px, py, 1.5, seed + 4);
+          const snowy = u < 0.26 - s * 0.16 + lump * 0.12 || (u > 0.66 && u < 0.8 && lump > 0.62 && s < 0.3);
+          if (snowy) p.set(px, py, tone(SNOW, 0.86 - s * 0.32 - u * 0.25, px, py, 0.6));
+          else p.set(px, py, tone(FIR, 0.6 - s * 0.36 - u * 0.25 + (hash2(px, py, seed + 2) < 0.12 ? 0.14 : 0), px, py, 0.8));
+        }
+      }
+    }
+  }, mix(FIR[0], INK, 0.5));
+}
+
+/** A log cabin, its gable end to us and its foot centred on (x, y): a steep snowy roof, lit windows, a stone chimney. */
+function cabin(a: Art, x: number, y: number): { windows: { x: number; y: number }[]; chimney: { x: number; y: number } } {
+  const ox = Math.round(x - 11);
+  const oy = Math.round(y - 22);
+  softShadow(a, x + 8, y - 2, 10, 4.5, 0.66);
+  const LOG = ramp('#2e1c1c', '#4a2c24', '#6c4232', '#8e5c40', '#b07a52');
+  const STONE = ramp('#3a3650', '#56506a', '#787088', '#9a92a8');
+  const LIT = (px: number, py: number, cx: number, cy: number) => (px === cx || py === cy ? hex('#e8963a') : py < cy ? hex('#fff0b4') : hex('#ffcc6a'));
+  piece(a, ox, oy, 22, 23, (p) => {
+    // The chimney up through the right slope, capped with snow.
+    p.rect(16, 2, 18, 9, (px, py) => tone(STONE, 0.75 - (px - 16) * 0.22 + ((py + (px & 1)) % 3 === 0 ? -0.15 : 0), px, py));
+    p.rect(15, 1, 19, 2, (px, py) => SNOW[py === 1 ? 7 : px < 17 ? 6 : 4]);
+    // The gable and the front wall, all logs, their ends showing at the corners.
+    for (let py = 4; py <= 22; py++) {
+      const half = py < 13 ? (py - 4) * 1.05 + 1 : 10;
+      const log = py % 2 === 0;
+      for (let px = Math.round(11 - half); px <= Math.round(11 + half); px++) p.set(px, py, tone(LOG, (log ? 0.72 : 0.4) - (px - 1) / 20 * 0.28, px, py));
+      if (py >= 13 && log) {
+        p.set(0, py, LOG[4]);
+        p.set(22, py, LOG[2]);
+      }
+    }
+    // A round window up in the gable, and a square one by the door, both lit from inside.
+    p.rect(10, 8, 12, 10, (px, py) => LIT(px, py, 11, 9));
+    p.rect(3, 15, 7, 19, () => LOG[0]);
+    p.rect(4, 16, 6, 18, (px, py) => LIT(px, py, 5, 17));
+    p.rect(3, 20, 7, 20, (px) => SNOW[px < 5 ? 7 : 6]);
+    // The door.
+    p.rect(12, 16, 16, 22, (px, py) => (py === 16 && (px === 12 || px === 16) ? null : px === 12 ? hex('#6a3a24') : hex('#4a2618')));
+    p.set(15, 19, hex('#f4cf6a'));
+    // The roof's two slopes, heavy with snow, a dark eave under each, icicles along the hems.
+    for (let py = 0; py <= 14; py++) {
+      const reach = py * 0.85;
+      for (let side = -1; side <= 1; side += 2) {
+        for (let k = 0; k < 4; k++) {
+          const px = Math.round(11 + side * (reach + k * 0.9 - 1.2));
+          const snow = k < 3;
+          if (px < 0 || px > 22) continue;
+          const v = 0.9 - (side > 0 ? 0.3 : 0) - k * 0.1 - py * 0.012;
+          p.set(px, py, snow ? tone(SNOW, v, px, py, 0.5) : LOG[0]);
+        }
+      }
+    }
+    for (const [ix, iy] of [[1, 14], [3, 13], [20, 14], [18, 13], [21, 15]]) p.set(ix, iy + 1, ICE[ix % 2 ? 3 : 2]);
+  });
+  // Snow banked against the wall's foot.
+  for (let px = ox + 1; px <= ox + 23; px++) if (hash2(px, 0, 61) < 0.6 && (px < ox + 13 || px > ox + 18)) a.set(px, y + 1, SNOW[6]);
+  return { windows: [{ x: ox + 12, y: oy + 10 }, { x: ox + 6, y: oy + 18 }], chimney: { x: ox + 18, y: oy } };
+}
+
+/** A hot spring: milky blue-green water in a ring of snowy stones, the near stones in front. */
+function hotSpring(a: Art, cx: number, cy: number, rx: number, ry: number): void {
+  const SPRING = ramp('#123a4e', '#1a5466', '#22707e', '#348e96', '#58aeac', '#8ed0c4', '#d0f4e8');
+  const STONE = ramp('#24223a', '#3a3852', '#56526e', '#7a728e', '#a29ab0');
+  a.oval(cx, cy, rx + 1, ry + 1, () => STONE[0]);
+  a.oval(cx, cy, rx, ry, (x, y, nx, ny) => {
+    // Deep in the middle, pale at the edges, the far bank's shadow on it, the sky caught in the near water.
+    let v = 0.22 + Math.hypot(nx, ny) * 0.38 + ny * 0.15;
+    if (ny < -0.55) v -= 0.18;
+    if ((x * 2 + y * 3) % 11 === 0) v += 0.25;
+    return tone(SPRING, v, x, y, 0.6);
+  });
+  // Stones round the rim, each lit on its top left with a cap of snow on the far ones.
+  const n = Math.round((rx + ry) * 1.1);
+  for (let k = 0; k < n; k++) {
+    const ang = (k / n) * Math.PI * 2 + hash2(k, 0, 63) * 0.3;
+    const sx = Math.round(cx + Math.cos(ang) * (rx + 1));
+    const sy = Math.round(cy + Math.sin(ang) * (ry + 0.6));
+    const big = hash2(k, 1, 63) < 0.5;
+    a.set(sx, sy, STONE[big ? 3 : 2]);
+    a.set(sx + 1, sy, STONE[1]);
+    a.set(sx, sy + 1, STONE[1]);
+    if (big) {
+      a.set(sx - 1, sy, STONE[2]);
+      a.set(sx, sy - 1, Math.sin(ang) < 0.2 ? SNOW[7] : STONE[4]);
+    }
+  }
+}
+
+/** Steam rising off the spring: see-through curls, thinning as they go up. */
+function steam(a: Art, cx: number, cy: number, seed: number): void {
+  const rand = rng(seed);
+  for (let k = 0; k < 3; k++) {
+    const x0 = cx - 4 + k * 4 + (rand() - 0.5) * 2;
+    const ph = rand() * 6;
+    for (let i = 0; i < 12; i++) {
+      const t = i / 12;
+      const x = Math.round(x0 + Math.sin(i * 0.5 + ph) * (1 + t * 2.5));
+      const y = cy - 1 - i;
+      // Bright on the lit side, a lavender shade on the other, so the steam still reads over the snow.
+      const al = 0.85 * (1 - t * 0.8);
+      a.over(x, y, hex('#fffaf4'), al);
+      a.over(x + 1, y, hex('#9a88b8'), al * 0.7);
+      if (t > 0.3) a.over(x - 1, y, hex('#f6e4ea'), al * 0.6);
+    }
+  }
+}
+
+/**
+ * Hushfall: a snowy isle of firs heavy with snow round a steaming hot spring
+ * ringed with stones, a log cabin with its window lit, and icicles hanging
+ * all along the rim and under the rock.
+ */
+function hushfallIsle(): IsleArt {
+  const a = new Art(112, 108);
+  const cx = 56;
+  const cy = 42;
+  const rx = 43;
+  const ry = 20;
+  // Drifts: long soft swells across the snow, each lit on its windward side.
+  const drift = (x: number, y: number): number => (valueNoise(x - 1.5, y - 1.5, 9, 101) - valueNoise(x + 1.5, y + 1.5, 9, 101)) * 1.2;
+  const b = body(a, { cx, cy, rx, ry, depth: 40, seed: 101, grass: SNOW, rock: ICE_ROCK, soil: ramp('#1e1a2a', '#2e2638', '#40344a', '#54465c'), bounce: hex('#c8a0c8'), roots: 4, relief: drift });
+  // Icicles under the rim: a fringe hanging off the lip over the soil, longer ones from the rock's foot.
+  for (let x = 0; x < a.w; x++) {
+    if (b.rim[x] < 0) continue;
+    const h = hash2(x, 3, 102);
+    if (h < 0.55) {
+      const len = 1 + Math.floor(hash2(x, 4, 102) * (h < 0.15 ? 5 : 3));
+      for (let i = 1; i <= len; i++) a.set(x, b.rim[x] + i, ICE[i === 1 ? 3 : i === len ? 1 : 2]);
+    }
+  }
+  const rand = rng(103);
+  for (let k = 0; k < 16; k++) {
+    const x = Math.round(cx + (rand() * 2 - 1) * rx * 0.8);
+    if (b.bottom[x] < 0) continue;
+    const len = Math.round(2 + rand() * 7 * (1 - Math.abs(x - cx) / rx));
+    const y0 = b.bottom[x];
+    for (let i = 0; i < len; i++) {
+      a.set(x, y0 + i, ICE[i < len * 0.3 ? 3 : i < len - 1 ? 2 : 1]);
+      if (i < len * 0.4 && len > 4) a.set(x + 1, y0 + i, ICE[0]);
+    }
+  }
+  // A trodden path through the snow from the cabin's door to the spring.
+  const track = lineDist([[65, 40], [63, 45], [56, 49], [48, 52]]);
+  for (let y = 36; y < 58; y++) {
+    for (let x = 40; x < 66; x++) {
+      if (b.inTop(x, y, 1) && track(x, y) < 1.3) a.set(x, y, (x + y) % 3 === 0 ? SNOW[2] : SNOW[4]);
+    }
+  }
+  const sx = 38;
+  const sy = 52;
+  hotSpring(a, sx, sy, 9, 4.3);
+  const items: { y: number; draw: () => void }[] = [];
+  let home: ReturnType<typeof cabin> | null = null;
+  items.push({ y: 38, draw: () => (home = cabin(a, 62, 38)) });
+  for (const [x, y, R, s] of [
+    [24, 34, 5, 1], [16, 44, 4, 2], [33, 29, 4, 3], [44, 26, 5, 4], [84, 30, 5, 5], [92, 40, 4, 6], [80, 48, 4, 7], [74, 26, 3, 8], [27, 58, 3, 9], [88, 53, 3, 10],
+  ] as [number, number, number, number][]) items.push({ y, draw: () => snowFir(a, x, y, R, 105 + s) });
+  // A little snowman by the path.
+  items.push({
+    y: 50,
+    draw: () => {
+      softShadow(a, 70, 50, 3, 1.2, 0.75);
+      piece(a, 66, 43, 5, 8, (p) => {
+        p.oval(3, 6, 2.5, 2.2, (px, py, nx, ny) => tone(SNOW, 0.8 - nx * 0.3 - ny * 0.3, px, py));
+        p.oval(3, 2.5, 1.8, 1.7, (px, py, nx, ny) => tone(SNOW, 0.85 - nx * 0.3 - ny * 0.3, px, py));
+        p.set(4, 3, hex('#f08a3a'));
+        p.set(2, 4, hex('#c83a3a'));
+        p.set(3, 4, hex('#e85a4a'));
+      });
+    },
+  });
+  items.push({ y: sy + 4, draw: () => steam(a, sx, sy, 106) });
+  items.sort((p, q) => p.y - q.y).forEach((i) => i.draw());
+  const h = home as unknown as ReturnType<typeof cabin>;
+  return {
+    art: a,
+    ax: cx,
+    ay: cy,
+    rx,
+    ry,
+    falls: [],
+    glows: [...h.windows.map((w) => ({ ...w, r: 9, tint: 0xffc060 })), { x: sx, y: sy, r: 10, tint: 0x9af0e0 }],
+    glints: [{ x: sx - 3, y: sy }, { x: sx + 3, y: sy + 1 }, { x: 30, y: 72 }, { x: 70, y: 70 }],
+    smoke: h.chimney,
+  };
+}
+
+// ---------------------------------------------------------------- Lumen Meadow
+
+/** A cool, deep meadow green, so the glowing flowers stand out even in the golden light. */
+const LUMEN_GRASS = ramp('#142636', '#183442', '#1e4448', '#28584c', '#366c52', '#4c8258', '#6a9a62', '#98b672');
+const GLOW_CAP = ramp('#24184e', '#382878', '#5040a4', '#6c5cd0', '#8e80ec', '#b8acff', '#e4dcff');
+const BLOOMS: RGB[] = [hex('#8af4ff'), hex('#5ac8ff'), hex('#b49aff'), hex('#e0a8ff'), hex('#f0f8ff')];
+
+/** A giant glowing mushroom, foot at (x, y): a pale stem and a domed violet cap spotted with light; returns the cap's middle. */
+function glowShroom(a: Art, x: number, y: number, r: number, h: number): { x: number; y: number } {
+  const STEM = ramp('#6a6a9a', '#9a9cc4', '#cccee6', '#f2f2ff');
+  softShadow(a, x + r * 0.7, y + 1, r * 1.1, r * 0.4, 0.66);
+  const bw = r * 2 + 3;
+  const bh = h + Math.ceil(r * 0.9) + 2;
+  piece(a, x - r - 1, y - bh + 1, bw, bh, (p) => {
+    const fx = r + 1.5;
+    const capY = Math.ceil(r * 0.9) + 1;
+    // The stem, a little thicker at its foot, lit on its left, the gills' shadow at its top.
+    for (let py = capY; py <= bh; py++) {
+      const half = 1.4 + (py > bh - 2 ? 0.8 : 0);
+      for (let px = Math.floor(fx - half); px <= Math.ceil(fx + half - 1); px++) {
+        const s = (px + 0.5 - fx) / half;
+        p.set(px, py, tone(STEM, 0.75 - s * 0.4 - (py - capY < 2 ? 0.4 : 0), px, py));
+      }
+    }
+    // The cap: a dome, its underside a band of glowing gills.
+    p.oval(fx, capY, r, r * 0.9, (px, py, nx, ny) => {
+      if (ny > 0.45) return ny > 0.7 ? hex('#a8f0ff') : hex('#6ac8f0');
+      return tone(GLOW_CAP, lit(nx, ny * 1.4, 0.4) + (hash2(px, py, 7) < 0.1 ? 0.1 : 0), px, py, 0.6);
+    });
+    // Spots of light on the cap.
+    for (const [sx, sy] of [[-0.45, -0.15], [0.1, -0.45], [0.5, -0.05], [-0.1, 0.15], [0.35, -0.6]] as [number, number][]) {
+      const px = Math.round(fx + sx * r);
+      const py = Math.round(capY + sy * r * 0.9);
+      p.set(px, py, hex('#c8faff'));
+      if (r > 5) p.set(px + 1, py, hex('#7ae0ff'));
+    }
+  }, mix(GLOW_CAP[0], INK, 0.4));
+  return { x, y: y - h - Math.round(r * 0.4) };
+}
+
+/** A little glowing mushroom, foot at (x, y): a pale stalk under a cap of violet or blue. */
+function littleShroom(a: Art, x: number, y: number, big: boolean, blue: boolean): void {
+  const CAP = blue ? ramp('#1a3a7a', '#2a6ac0', '#4aaaf0', '#9ae8ff') : ramp('#3a2878', '#6a4ac8', '#9a80f0', '#d4c8ff');
+  const w = big ? 5 : 3;
+  const h = big ? 6 : 4;
+  piece(a, x - Math.floor(w / 2), y - h + 1, w, h, (p) => {
+    p.rect(Math.ceil(w / 2), 3, Math.ceil(w / 2), h, (_px, py) => (py === 3 ? hex('#8ab8e0') : hex('#d8dcf4')));
+    p.rect(1, 1, w, big ? 2 : 1, (px, py) => CAP[py === 1 ? (px < w / 2 + 1 ? 3 : 2) : px < w / 2 + 1 ? 2 : 1]);
+    if (big) p.set(2, 1, hex('#e8ffff'));
+  }, mix(CAP[0], INK, 0.4));
+}
+
+/**
+ * Lumen Meadow: a rolling meadow isle starred with glowing blue and violet
+ * flowers, a giant glow-mushroom standing over smaller ones, a glowing stream
+ * winding across to spill off the rim, and fireflies over the grass: it glows
+ * a little even in the golden light.
+ */
+function lumenIsle(): IsleArt {
+  const a = new Art(116, 102);
+  const cx = 58;
+  const cy = 42;
+  const rx = 45;
+  const ry = 21;
+  // Rolling ground: long low swells, each lit on the side toward the sun.
+  const swell = (x: number, y: number): number => fbm(x * 0.9, y * 1.6, 16, 111, 2);
+  const roll = (x: number, y: number): number => (swell(x - 1.5, y - 1) - swell(x + 1.5, y + 1)) * 2.4;
+  const b = body(a, { cx, cy, rx, ry, depth: 36, seed: 111, grass: LUMEN_GRASS, rock: DEEP_ROCK, bounce: hex('#b890d8'), roots: 8, relief: roll });
+  vines(a, b, 112, 8, LUMEN_GRASS);
+  // The stream: from a spring under the mushroom, winding south west across the meadow to the rim.
+  const course: [number, number][] = [[70, 34], [64, 38], [66, 43], [58, 47], [50, 46], [44, 51], [40, 58], [38, 66]];
+  const dist = lineDist(course);
+  const STREAM = ramp('#1a2a5a', '#244a8a', '#3a7ac0', '#5ab4e8', '#9ae8ff', '#e0ffff');
+  for (let y = 0; y < a.h; y++) {
+    for (let x = 0; x < a.w; x++) {
+      if (!b.inTop(x, y)) continue;
+      const d = dist(x + 0.5, y + 0.5);
+      // A bright core, glowing water either side, dark wet banks.
+      if (d < 1.9) a.set(x, y, tone(STREAM, 0.95 - d * 0.32 + ((x + y * 2) % 6 === 0 ? 0.15 : 0), x, y, 0.5));
+      else if (d < 2.7) a.set(x, y, tone(LUMEN_GRASS, 0.12, x, y));
+    }
+  }
+  let ox = 38;
+  while (ox < a.w && b.rim[ox] < 0) ox++;
+  for (let y = 60; y <= b.rim[ox]; y++) if (dist(ox, y) < 2) a.set(ox, y, STREAM[4]);
+  const fall = outlet(a, b, ox);
+  // Glowing flowers in drifts: blue and violet, a few white, thickest in the hollows by the stream.
+  const rand = rng(113);
+  const blooms: { x: number; y: number }[] = [];
+  for (let k = 0; k < 260; k++) {
+    const px = Math.round(cx + (rand() * 2 - 1) * 42);
+    const py = Math.round(cy + (rand() * 2 - 1) * 19);
+    if (!b.inTop(px, py, 2) || dist(px, py) < 3) continue;
+    const drift = fbm(px, py, 10, 114, 2);
+    if (rand() > drift * 1.6 - 0.25) continue;
+    const c = BLOOMS[Math.floor(rand() * BLOOMS.length)];
+    a.set(px, py, c);
+    a.set(px, py + 1, LUMEN_GRASS[2]);
+    // Most flowers open in little clusters of three.
+    if (rand() < 0.5) {
+      a.set(px + 1, py, mix(c, LUMEN_GRASS[3], 0.35));
+      a.set(px + 1, py + 1, LUMEN_GRASS[1]);
+    }
+    // Some stand taller, a stalk under a bud.
+    if (rand() < 0.3) {
+      a.set(px, py - 1, mix(c, hex('#ffffff'), 0.4));
+      a.set(px, py + 1, LUMEN_GRASS[5]);
+    }
+    blooms.push({ x: px, y: py });
+  }
+  const items: { y: number; draw: () => void }[] = [];
+  let cap = { x: 0, y: 0 };
+  items.push({ y: 35, draw: () => (cap = glowShroom(a, 73, 35, 9, 13)) });
+  for (const [x, y, big, blue] of [[81, 38, 1, 0], [84, 40, 0, 1], [63, 31, 0, 0], [86, 33, 0, 1], [29, 46, 1, 1], [33, 48, 0, 0], [56, 56, 0, 1], [74, 52, 1, 0], [77, 54, 0, 1]] as [number, number, number, number][]) items.push({ y, draw: () => littleShroom(a, x, y, !!big, !!blue) });
+  for (const [x, y, R, s] of [[22, 34, 5, 1], [32, 27, 4, 2], [92, 40, 4, 3], [48, 25, 4, 4]] as [number, number, number, number][]) items.push({ y, draw: () => tree(a, x, y, 'hollow', R, 115 + s) });
+  items.sort((p, q) => p.y - q.y).forEach((i) => i.draw());
+  // Fireflies drifting over the grass: a bright point with a softer one beside.
+  const flies: { x: number; y: number }[] = [];
+  for (let k = 0; k < 14; k++) {
+    const px = Math.round(cx + (rand() * 2 - 1) * 40);
+    const py = Math.round(cy - 6 + (rand() * 2 - 1) * 18);
+    if (!b.inTop(px, py + 6)) continue;
+    a.set(px, py, hex('#fffcb0'));
+    a.over(px + 1, py, hex('#d8ff70'), 0.5);
+    flies.push({ x: px, y: py });
+  }
+  return {
+    art: a,
+    ax: cx,
+    ay: cy,
+    rx,
+    ry,
+    falls: [fall],
+    glows: [
+      { ...cap, r: 18, tint: 0x8a7aff },
+      { x: 62, y: 42, r: 10, tint: 0x5ad8ff },
+      { x: 44, y: 52, r: 10, tint: 0x5ad8ff },
+      ...blooms.filter((_, i) => i % 9 === 0).slice(0, 4).map((f) => ({ ...f, r: 7, tint: 0xa890ff })),
+    ],
+    glints: [...flies.slice(0, 8), { x: cap.x - 3, y: cap.y - 2 }],
+  };
+}
+
 /** A place with no picture of its own yet: a grassy isle with a few trees and a waymarker. */
 function genericIsle(): IsleArt {
   const a = new Art(88, 88);
@@ -1050,6 +1893,10 @@ export const ISLE_ART: Record<string, () => IsleArt> = {
   garden: gardenIsle,
   glimmerdeep: glimmerIsle,
   starwatch: starwatchIsle,
+  shore: shoreIsle,
+  saltflats: saltIsle,
+  hushfall: hushfallIsle,
+  lumen: lumenIsle,
   generic: genericIsle,
 };
 

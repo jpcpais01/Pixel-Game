@@ -91,6 +91,36 @@ export const PLACES: Place[] = [
     together: true,
     dayNight: true,
   },
+  {
+    id: 'saltflats',
+    arena: 'saltflats',
+    name: 'Saltglass Flats',
+    blurb: 'Where the sky lies down',
+    lore: 'An endless salt flat under a sheet of still water, so calm it holds the whole sky like glass. Flamingos wade its rose lagoons by day, and by night you walk among the stars.',
+    endless: true,
+    together: true,
+    dayNight: true,
+  },
+  {
+    id: 'hushfall',
+    arena: 'hushfall',
+    name: 'Hushfall',
+    blurb: 'Where the snow falls softly',
+    lore: "A white vale where the snow never stops, only softens. Old lanterns still burn along the pilgrims' way, and the hot springs steam warm all night.",
+    endless: true,
+    together: true,
+    dayNight: true,
+  },
+  {
+    id: 'lumen',
+    arena: 'lumen',
+    name: 'Lumen Meadow',
+    blurb: 'A meadow that glows at night',
+    lore: 'Tall grass and wildflowers roll on under a wide sky, with streams winding through and willows hung with lantern fruit. When night falls, every bluebell, stream and firefly lights up blue and violet.',
+    endless: true,
+    together: true,
+    dayNight: true,
+  },
 ];
 
 export const placeById = (id: string | undefined): Place => PLACES.find((p) => p.id === id || p.arena === id) ?? PLACES[0];

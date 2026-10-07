@@ -6,9 +6,18 @@
 import type { LandGen, SheetDef } from './types';
 import { ShoreGen } from './shore/gen';
 import { shoreSheets } from './shore/art';
+import { SaltGen } from './saltflats/gen';
+import { saltSheets } from './saltflats/art';
+import { HushGen } from './hushfall/gen';
+import { hushSheets } from './hushfall/art';
+import { LumenGen } from './lumen/gen';
+import { lumenSheets } from './lumen/art';
 
 const MAKERS: Record<string, { gen: () => LandGen; sheets: () => SheetDef[] }> = {
   shore: { gen: () => new ShoreGen(), sheets: shoreSheets },
+  saltflats: { gen: () => new SaltGen(), sheets: saltSheets },
+  hushfall: { gen: () => new HushGen(), sheets: hushSheets },
+  lumen: { gen: () => new LumenGen(), sheets: lumenSheets },
 };
 
 const made = new Map<string, LandGen>();
