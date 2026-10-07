@@ -14,7 +14,6 @@ import { StatsHud } from '../ui/statsHud';
 import type { MapScene } from './MapScene';
 import type { WorldScene } from './WorldScene';
 import { build } from '../game/build';
-import { cozy, type CozyHud } from '../game/cozy';
 import { energy } from '../game/energy';
 import { ensureUltIcons, ultFor } from '../game/ultimate';
 import type { Pal } from '../game/ultimate/ink';
@@ -129,8 +128,6 @@ export class UIScene extends Phaser.Scene {
   /** 0..1 shown, easing in and out. */
   private netShown = 0;
   private netPressed = 0;
-  /** Heaven Lands' buttons, when it runs. */
-  private cozyHud: CozyHud | null = null;
 
   /**
    * The left column under the minimap (scenes/MapScene.ts, top-left): where
@@ -319,7 +316,6 @@ export class UIScene extends Phaser.Scene {
     this.netButton = this.add.graphics();
     this.netIcon = this.add.image(0, 0, 'icon_net').setVisible(false);
     this.netShown = this.netPressed = 0;
-    this.cozyHud = cozy.on && cozy.hud ? cozy.hud(this) : null;
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       controls.mouse = !p.wasTouch;
@@ -332,13 +328,11 @@ export class UIScene extends Phaser.Scene {
         // The "i" card is open: a tap anywhere closes it.
       } else if (this.keeperHud.pointerDown(p)) {
         // A keeper's counter is open: it takes every press.
-      } else if (!cozy.on && this.gearHud.pointerDown(p)) {
+      } else if (this.gearHud.pointerDown(p)) {
         // The bag's button, or a tap while the bag is open.
       } else if (this.buildHud.pointerDown(p)) {
         // The build and friends buttons, or the build tray.
-      } else if (this.cozyHud?.pointerDown(p)) {
-        // Heaven Lands' emote buttons.
-      } else if (!cozy.on && this.statsHud.pointerDown(p)) {
+      } else if (this.statsHud.pointerDown(p)) {
         // The stats panel folds or opens; the "i" opens the card.
       } else if (build.on) {
         // Building: a touch by the joystick still walks; any other press builds (a right click erases).
@@ -537,7 +531,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    if (!cozy.on) this.gearHud.update(delta);
+    this.gearHud.update(delta);
     this.keeperHud.update(delta);
     this.buildHud.update(delta);
     if (!build.on) this.buildPointer = null;
@@ -604,14 +598,8 @@ export class UIScene extends Phaser.Scene {
       }
     }
 
-    if (cozy.on) {
-      // No fighting: the emote buttons stand where the ability buttons were.
-      for (const o of [this.button, this.icon, this.beamButton, this.beamIcon, this.ultButton, this.ultIcon, this.ultKey]) o.setVisible(false);
-      this.cozyHud?.update(delta, build.on || fishHud.active || this.covered);
-    } else {
-      this.drawBeamButton(R * k, u);
-      this.drawUltButton(R * k, u);
-    }
+    this.drawBeamButton(R * k, u);
+    this.drawUltButton(R * k, u);
     this.drawNetButton(delta);
 
     const col = this.column;
@@ -636,7 +624,7 @@ export class UIScene extends Phaser.Scene {
     const want = col.y + timers;
     this.statsY = this.statsY < 0 ? want : this.statsY + (want - this.statsY) * Math.min(1, delta / 90);
     if (Math.abs(want - this.statsY) < 0.5) this.statsY = want;
-    this.statsHud.place(col.x, this.statsY, z, cozy.on || build.on || fishHud.active);
+    this.statsHud.place(col.x, this.statsY, z, build.on || fishHud.active);
     this.statsHud.update();
   }
 
@@ -648,7 +636,7 @@ export class UIScene extends Phaser.Scene {
     const drawn = [this.ultKey, this.netIcon, ...this.slotIcons];
     const fixed = [this.button, this.icon, this.beamButton, this.beamIcon, this.ultButton, this.ultIcon, this.bar, this.netButton, ...this.slotKeys, ...this.slotCounts];
     if (on) for (const o of [...drawn, ...fixed]) o.setVisible(false);
-    else for (const o of fixed) if (!cozy.on || o === this.bar || o === this.netButton || this.slotKeys.includes(o as never) || this.slotCounts.includes(o as never)) o.setVisible(true);
+    else for (const o of fixed) o.setVisible(true);
     this.building = on;
   }
 

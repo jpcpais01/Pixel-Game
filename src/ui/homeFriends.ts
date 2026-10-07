@@ -6,7 +6,6 @@
 import { account } from '../game/cloud';
 import { characterById } from '../game/characters';
 import { session } from '../net/session';
-import { cozy } from '../game/cozy';
 import { onlineStyles } from './onlineForm';
 
 export interface FriendsOptions {
@@ -84,7 +83,7 @@ export function openHomeFriends(o: FriendsOptions): void {
   });
 
   const ch = characterById(o.character);
-  const me = cozy.on && cozy.me ? cozy.me() : { name: account()?.username ?? ch.name, hero: ch.id, look: ch.look };
+  const me = { name: account()?.username ?? ch.name, hero: ch.id, look: ch.look };
   const go = async (req: Parameters<typeof session.open>[0]) => {
     if (busy) return;
     setBusy(true);
