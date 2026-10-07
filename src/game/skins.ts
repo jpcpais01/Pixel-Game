@@ -9,6 +9,7 @@
 // change), and the first time a class is opened it starts from them: from the
 // kit last played if it is in this class, else from its first kit.
 
+import { cozy } from './cozy';
 import { classById, kitById, kitOf, type CharacterDef, type ClassDef, type SkinDef, type TypeDef } from './characters';
 import { collection } from './collection';
 
@@ -168,6 +169,7 @@ export function worn(cls: ClassDef, look: Look = lookOf(cls)): CharacterDef {
  * own first look.
  */
 export function playedAs(kit: string | undefined, look: string | undefined): CharacterDef {
+  if (cozy.on && cozy.character) return cozy.character(kit, look);
   const cls = classById(kit);
   const k = kitById(kit);
   const found = lookIn(kit, look);

@@ -101,6 +101,7 @@ import { AVI_H, AVI_ORIGIN_Y } from '../art/aviator';
 import { CARNIVAL_STYLE, Pyrotechnist, VERMILION_STYLE } from './Pyrotechnist';
 import { PYRO_H, PYRO_ORIGIN_Y } from '../art/pyrotechnist';
 import { worn } from './skins';
+import { cozy } from './cozy';
 import { QUICKSILVER_KIT, RUBEDO_KIT, Transmuter } from './Transmuter';
 import { TRANS_H, TRANS_ORIGIN_Y } from '../art/transmuter';
 import type { Vitals } from './combat';
@@ -140,6 +141,10 @@ export interface Hero {
   dodge?(): boolean;
   /** The Special has thrown the hero's weapon (true) or it has come back (false): drawn empty-handed and unable to strike meanwhile. */
   holdSaber?(away: boolean): void;
+  /** The emote the hero last made, tagged with a count so the same one made again is told apart (Heaven Lands' wanderer). */
+  readonly emoteTag?: string;
+  /** Another player made an emote (their tag, as sent): play it. */
+  netEmote?(tag: string): void;
 }
 
 /** The animated portrait on the select screen. */
@@ -3046,5 +3051,6 @@ export const classById = (id: string | undefined): ClassDef =>
 
 /** The class as played in its chosen type and skin. */
 export function characterById(id: string | undefined): CharacterDef {
+  if (cozy.on && cozy.character) return cozy.character();
   return worn(classById(id));
 }

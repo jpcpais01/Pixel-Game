@@ -28,6 +28,7 @@ import { COLUMNS, ISLE_H, ISLE_SPAWN, ISLE_W, RING_CX, RING_CY, islandScenery, i
 import { HOME_ARENA } from './homeGround';
 import { GARDEN_GROUND, GARDEN_SPAWN, GARDEN_SPAWNS, POOL, gardenLayout, gardenScenery, gardenWalkable } from './sunken';
 import { FOREST_ARENA } from './forestArena';
+import { cozy } from '../game/cozy';
 
 /** A sprite shown in the arena's window on its select card (world coordinates). */
 export interface PreviewSprite {
@@ -491,6 +492,8 @@ export function warmArenasAhead(scene: Phaser.Scene, budget: number): boolean {
 export function arenaById(id: string | undefined): ArenaDef {
   // The Home isn't on the select, but friends' invites and the Home button lead there.
   if (id === HOME_ARENA.id) return HOME_ARENA;
+  const extra = cozy.on && id ? cozy.arena?.(id) : undefined;
+  if (extra) return extra;
   return ARENAS.find((a) => a.id === id) ?? ARENAS[0];
 }
 
