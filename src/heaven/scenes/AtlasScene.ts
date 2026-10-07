@@ -138,6 +138,8 @@ interface Floater {
   t: number;
   life: number;
   ph: number;
+  /** The island a puff of smoke rises from. */
+  spot?: Spot;
 }
 
 interface Flock {
@@ -492,12 +494,11 @@ export class AtlasScene extends Phaser.Scene {
       this.layers.sky.add([glow, img]);
       this.lanterns.push({ img, glow, x: 0, y: 0, t: -k * 5200 - rnd(0, 2000), life: 0, ph: Math.random() * 6 });
     }
-    const chimney = this.spots.find((s) => s.info.smoke);
-    if (chimney) {
+    for (const chimney of this.spots.filter((s) => s.info.smoke)) {
       for (let k = 0; k < 3; k++) {
         const img = this.add.image(0, 0, 'atlas_bits', 'smoke').setAlpha(0);
         this.layers.sky.add(img);
-        this.smoke.push({ img, x: 0, y: 0, t: -k * 1100, life: 3300, ph: k });
+        this.smoke.push({ img, x: 0, y: 0, t: -k * 1100, life: 3300, ph: k, spot: chimney });
       }
     }
     for (let k = 0; k < GLINTS; k++) {
@@ -944,13 +945,13 @@ export class AtlasScene extends Phaser.Scene {
     }
   }
 
-  /** Puffs of smoke from the cottage's chimney, leaning with the wind. */
+  /** Puffs of smoke from the chimneys (Hearthhome's cottage, Hushfall's cabin), leaning with the wind. */
   private stepSmoke(dt: number): void {
-    const home = this.spots.find((s) => s.info.smoke);
-    if (!home?.info.smoke) return;
-    const ox = home.root.x - home.info.ax + home.info.smoke.x;
-    const oy = home.root.y - home.info.ay + home.info.smoke.y;
     for (const p of this.smoke) {
+      const home = p.spot;
+      if (!home?.info.smoke) continue;
+      const ox = home.root.x - home.info.ax + home.info.smoke.x;
+      const oy = home.root.y - home.info.ay + home.info.smoke.y;
       p.t += dt;
       if (p.t < 0) continue;
       if (p.t >= p.life) p.t -= p.life;
