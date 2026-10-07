@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#f6cfc4" />
+    <meta name="description" content="A cozy pixel world to build, grow and wander with friends." />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Heaven Lands" />
+    <meta name="application-name" content="Heaven Lands" />
+    <title>Heaven Lands</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #f6cfc4; overflow: hidden; overscroll-behavior: none; }
+      body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+      #app { position: fixed; inset: 0; overflow: hidden; }
+      canvas { display: block; image-rendering: pixelated; }
+      .chrome { font: 13px/1.3 ui-monospace, Menlo, monospace; color: #4a2850; }
+      .chrome[hidden] { display: none !important; }
+      #install {
+        position: fixed; z-index: 2;
+        top: calc(10px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right));
+        padding: 7px 12px; border: 0; border-radius: 0; cursor: pointer;
+        background: #fff1dc; color: #4a2850;
+        box-shadow: inset 2px 2px 0 #ffffff, inset -2px -2px 0 #eaa947, 0 0 0 2px #4a2850;
+      }
+      #install:active { box-shadow: inset 2px 2px 0 #eaa947, inset -2px -2px 0 #ffffff, 0 0 0 2px #4a2850; }
+      #rotate {
+        position: fixed; inset: 0; z-index: 3;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+        background: rgba(250, 222, 210, 0.94); text-align: center; padding: 24px;
+      }
+      #rotate img { width: 96px; height: 96px; image-rendering: pixelated; animation: tilt 2.4s steps(1) infinite; }
+      #rotate b { font-size: 16px; color: #4a2850; }
+      #rotate small { color: #8a6496; }
+      @keyframes tilt { 0%, 45% { transform: rotate(0deg); } 50%, 95% { transform: rotate(90deg); } }
+
+      /* The loading screen: up from the first paint until the game's first screen has drawn.
+         A soft dawn: clouds drift across, motes of light float up, the title breathes in its
+         glow. Only transforms and opacity move, which the browser animates on its own even
+         while the game is busy building its art. */
+      #boot {
+        position: fixed; inset: 0; z-index: 4; overflow: hidden;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: min(3.2vh, 22px);
+        background:
+          radial-gradient(ellipse 60% 46% at 50% 44%, rgba(255, 246, 216, 0.95) 0%, rgba(255, 232, 196, 0.6) 40%, rgba(255, 220, 190, 0) 75%),
+          linear-gradient(180deg, #c8b2e6 0%, #dfb4dc 22%, #f4bccb 46%, #ffcdb9 70%, #ffe2b4 100%);
+        transition: opacity 0.6s ease;
+      }
+      #boot.done { opacity: 0; pointer-events: none; }
+      #boot .clouds, #boot .motes { position: absolute; inset: 0; pointer-events: none; }
+      /* Clouds: pixel-art puffs (drawn by the script below) drifting left to right at their own pace. */
+      #boot .clouds i {
+        position: absolute; left: 0; top: 0; background-repeat: no-repeat; image-rendering: pixelated;
+        animation: drift linear infinite;
+      }
+      /* Motes: round specks of light, rising slowly and swaying as they go. */
+      #boot .motes b { position: absolute; bottom: -8px; width: 3px; height: 3px; border-radius: 50%; opacity: 0; animation: float-up 11s ease-in-out infinite; }
+      #boot .motes b.big { width: 4px; height: 4px; }
+      /* The title's stage: slow warm rays, a breathing glow and soft rings behind it, twinkles over it. */
+      #boot .stage { position: relative; display: flex; align-items: center; justify-content: center; transition: transform 0.6s ease; animation: bob 4.2s ease-in-out infinite; }
+      #boot.done .stage { transform: scale(1.1); }
+      #boot .rays {
+        position: absolute; left: 50%; top: 50%; width: 600px; height: 600px; margin: -300px 0 0 -300px;
+        background: repeating-conic-gradient(from 0deg, rgba(255, 244, 210, 0.3) 0deg 6deg, rgba(255, 244, 210, 0) 6deg 18deg);
+        -webkit-mask-image: radial-gradient(circle, #000 10%, rgba(0, 0, 0, 0.45) 30%, transparent 60%);
+        mask-image: radial-gradient(circle, #000 10%, rgba(0, 0, 0, 0.45) 30%, transparent 60%);
+        animation: spin 90s linear infinite;
+      }
+      #boot .aura {
+        position: absolute; left: 50%; top: 50%; width: 480px; height: 280px; margin: -140px 0 0 -240px;
+        background: radial-gradient(ellipse, rgba(255, 252, 236, 0.85) 0%, rgba(255, 214, 150, 0.45) 34%, rgba(246, 170, 200, 0.22) 58%, rgba(255, 255, 255, 0) 72%);
+        animation: breathe 5s ease-in-out infinite;
+      }
+      #boot .ring {
+        position: absolute; left: 50%; top: 50%; width: 220px; height: 120px; margin: -60px 0 0 -110px;
+        border: 2px solid rgba(255, 255, 255, 0.75); border-radius: 50%; opacity: 0;
+        animation: ripple 5.4s ease-out infinite;
+      }
+      #boot .ring.b { border-color: rgba(255, 214, 120, 0.7); animation-delay: -2.7s; }
+      #boot .stage em {
+        position: absolute; width: 11px; height: 11px; margin: -5px 0 0 -5px; opacity: 0;
+        background: #ffffff; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+        filter: drop-shadow(0 0 4px #ffb8cc);
+        animation: twinkle 3.4s ease-in-out infinite;
+      }
+      #boot .logo {
+        width: calc(var(--lw) * var(--s)); height: calc(var(--lh) * var(--s));
+        background-repeat: no-repeat; background-size: calc(var(--lw) * var(--s)) calc(var(--lh) * var(--lf) * var(--s));
+        image-rendering: pixelated;
+        /* The logo's own glint (its frames 1 to 13), every few seconds. */
+        animation: glint 6s steps(13, end) infinite;
+        position: relative;
+        filter: drop-shadow(0 0 12px rgba(255, 236, 190, 0.8)) drop-shadow(0 0 26px rgba(240, 160, 196, 0.45));
+      }
+      #boot .bar {
+        position: relative; width: var(--bw); height: 12px;
+        background: #f7e2dc;
+        box-shadow: 0 0 0 2px #4a2850, 0 0 0 4px #eaa947, 0 0 0 5px #ffe9a8, 0 0 0 7px #4a2850, 0 0 26px 8px rgba(255, 244, 214, 0.6);
+      }
+      #boot .fill {
+        position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(0);
+        background: linear-gradient(90deg, #e9a0c8, #f7a9a8 35%, #ffc98a 70%, #fff0b0);
+      }
+      #boot .fill::after {
+        content: ''; position: absolute; inset: 0;
+        background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0 6px, rgba(255, 255, 255, 0) 6px 12px);
+        animation: stripes 1.4s linear infinite;
+      }
+      #boot .fill::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(255, 255, 255, 0.55); }
+      #boot .head {
+        position: absolute; left: -5px; top: -4px; width: 10px; height: 20px;
+        background: radial-gradient(ellipse, #ffffff 0%, rgba(255, 240, 200, 0.85) 35%, rgba(255, 240, 200, 0) 70%);
+        animation: shimmer 1.2s ease-in-out infinite;
+      }
+      #boot canvas { image-rendering: pixelated; }
+      /* Loaded, on a phone: the bar stays full and the line beckons until a tap starts the game. */
+      #boot.ready { cursor: pointer; }
+      #boot.ready .head { opacity: 0; }
+      #boot.ready .status { animation: beckon 1.8s ease-in-out infinite; filter: drop-shadow(0 0 6px rgba(255, 246, 214, 0.9)); }
+      /* A phone held upright sees the loading screen turned sideways, as the game will be once tapped. */
+      @media (orientation: portrait) and (pointer: coarse) {
+        #boot { inset: auto; top: 0; left: 100vw; width: 100vh; height: 100vw; transform-origin: 0 0; transform: rotate(90deg); }
+      }
+      @keyframes drift { from { transform: translate(var(--x0), var(--y)); } to { transform: translate(var(--x1), var(--y)); } }
+      @keyframes float-up {
+        0% { opacity: 0; transform: translate(0, 0); }
+        12% { opacity: 0.9; }
+        35% { transform: translate(var(--dx), -26vh); }
+        65% { transform: translate(calc(var(--dx) * -0.6), -52vh); opacity: 0.8; }
+        100% { opacity: 0; transform: translate(var(--dx), -80vh); }
+      }
+      @keyframes breathe { 0%, 100% { opacity: 0.7; transform: scale(0.94); } 50% { opacity: 1; transform: scale(1.06); } }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes bob { 0%, 100% { transform: translateY(-4px); } 50% { transform: translateY(4px); } }
+      @keyframes ripple { 0% { opacity: 0; transform: scale(0.6); } 15% { opacity: 0.7; } 100% { opacity: 0; transform: scale(2.1); } }
+      @keyframes twinkle { 0%, 70%, 100% { opacity: 0; transform: scale(0.2) rotate(0deg); } 80% { opacity: 1; transform: scale(1) rotate(45deg); } 90% { opacity: 0.6; transform: scale(0.6) rotate(90deg); } }
+      @keyframes glint { 0% { background-position: 0 calc(var(--lh) * var(--s) * -1); } 13% { background-position: 0 calc(var(--lh) * var(--s) * -14); } 13.01%, 100% { background-position: 0 0; } }
+      @keyframes stripes { to { background-position: 12px 0; } }
+      @keyframes shimmer { 50% { opacity: 0.55; } }
+      @keyframes beckon { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.95); } }
+      @media (prefers-reduced-motion: reduce) {
+        #boot *, #boot *::after { animation: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="boot" aria-label="Loading">
+      <div class="clouds"></div>
+      <div class="motes"></div>
+      <div class="stage">
+        <div class="rays"></div>
+        <div class="aura"></div>
+        <div class="ring"></div>
+        <div class="ring b"></div>
+        <div class="logo"></div>
+      </div>
+      <div class="bar"><div class="fill"></div><div class="head"></div></div>
+      <canvas class="status" width="1" height="1"></canvas>
+    </div>
+    <script>
+      // The loading screen's life: pixel clouds drifting by and motes of light
+      // scattered at random, the logo sized to the screen, and a bar and a line
+      // of pixel text that follow the boot (window.bootLoader, called by the
+      // game). Words are spelt with the game's own font (window.__BOOT, from
+      // scripts/pwa.ts).
+      (function () {
+        var el = document.getElementById('boot');
+        var boot = window.__BOOT || {};
+        // Upright phones see this screen turned sideways (the CSS), so its sizes swap.
+        var touch = matchMedia('(pointer: coarse)').matches;
+        var upright = touch && matchMedia('(orientation: portrait)').matches;
+        var W = upright ? innerHeight : innerWidth, H = upright ? innerWidth : innerHeight;
+        var short = Math.min(W, H);
+        var frag = document.createDocumentFragment(), i, n;
+
+        // A pixel-art cloud: overlapping round puffs on a flat belly, white on
+        // top, a blush of rose in the middle, lilac underneath, a soft rim.
+        var CLOUD_TONES = ['#ffffff', '#fff6f0', '#ffe2e6', '#ecc6e2', '#d8b2e0'];
+        function cloudArt(seed) {
+          var rnd = function () {
+            seed = (seed * 16807) % 2147483647;
+            return seed / 2147483647;
+          };
+          var cw = 30 + Math.floor(rnd() * 18), ch = 14;
+          var puffs = [], x = 4;
+          while (x < cw - 4) {
+            var r = 3 + rnd() * 3.5;
+            puffs.push([x + r * 0.6, ch - 4 - r * 0.55, r]);
+            x += r * 1.1;
+          }
+          var c = document.createElement('canvas');
+          c.width = cw;
+          c.height = ch;
+          var ctx = c.getContext('2d');
+          for (var y = 0; y < ch; y++) for (var xx = 0; xx < cw; xx++) {
+            var best = -1;
+            for (var k = 0; k < puffs.length; k++) {
+              var p = puffs[k], dx = xx + 0.5 - p[0], dy = y + 0.5 - p[1];
+              var d = p[2] - Math.sqrt(dx * dx + dy * dy);
+              if (d > best) best = d;
+            }
+            // The flat belly: everything over the bottom rows between the outer puffs.
+            if (y >= ch - 5 && y < ch - 1 && xx > 2 && xx < cw - 3) best = Math.max(best, 0.5);
+            if (best < 0) continue;
+            var t = y / (ch - 1);
+            var tone = t < 0.35 ? 0 : t < 0.55 ? 1 : t < 0.72 ? 2 : t < 0.86 ? 3 : 4;
+            if (best < 1 && tone < 2) tone = 1;
+            ctx.fillStyle = CLOUD_TONES[tone];
+            ctx.fillRect(xx, y, 1, 1);
+          }
+          return { src: c.toDataURL(), w: cw, h: ch };
+        }
+        var CLOUDS = 7;
+        for (i = 0; i < CLOUDS; i++) {
+          var art = cloudArt(1 + Math.floor(Math.random() * 100000));
+          // Bigger, nearer clouds drift faster and sit lower; far ones are small and faint.
+          var near = i / (CLOUDS - 1);
+          var scale = Math.max(2, Math.round(short / 160) + Math.round(near * 2));
+          var cw = art.w * scale;
+          var secs = 120 - near * 70 + Math.random() * 20;
+          n = document.createElement('i');
+          n.style.cssText =
+            'width:' + cw + 'px;height:' + art.h * scale + 'px;background-image:url(' + art.src + ');background-size:100% 100%;' +
+            'opacity:' + (0.55 + near * 0.4).toFixed(2) + ';--x0:' + -cw + 'px;--x1:' + W + 'px;--y:' + Math.round(H * (0.05 + Math.random() * 0.8)) + 'px;' +
+            'animation-duration:' + secs.toFixed(1) + 's;animation-delay:-' + (Math.random() * secs).toFixed(1) + 's';
+          frag.appendChild(n);
+        }
+        el.querySelector('.clouds').appendChild(frag);
+        var tints = ['#ffffff', '#fff0b0', '#ffd6e2', '#ffe8c0', '#f2dcff'];
+        for (i = 0; i < 22; i++) {
+          n = document.createElement('b');
+          if (Math.random() < 0.3) n.className = 'big';
+          n.style.cssText = 'left:' + (Math.random() * 100).toFixed(1) + '%;background:' + tints[i % tints.length] + ';box-shadow:0 0 6px 1px ' + tints[i % tints.length] + ';--dx:' + ((Math.random() - 0.5) * 70).toFixed(0) + 'px;animation-duration:' + (9 + Math.random() * 7).toFixed(2) + 's;animation-delay:-' + (Math.random() * 14).toFixed(2) + 's';
+          frag.appendChild(n);
+        }
+        el.querySelector('.motes').appendChild(frag);
+
+        // Sizes: the logo at a whole-number scale, and the bar.
+        var logo = boot.logo;
+        var st = el.style;
+        st.setProperty('--bw', Math.round(Math.min(300, W * 0.6)) + 'px');
+        var logoEl = el.querySelector('.logo');
+        if (logo) {
+          var s = Math.max(1, Math.min(5, Math.floor(Math.min((W * 0.82) / logo.w, (H * 0.5) / logo.h))));
+          st.setProperty('--lw', logo.w + 'px');
+          st.setProperty('--lh', logo.h + 'px');
+          st.setProperty('--lf', logo.frames);
+          st.setProperty('--s', s);
+          logoEl.style.backgroundImage = 'url(' + logo.src + ')';
+          // Twinkles here and there over the title, each on its own beat.
+          var stage = el.querySelector('.stage');
+          for (i = 0; i < 7; i++) {
+            n = document.createElement('em');
+            n.style.cssText = 'left:' + (8 + Math.random() * 84).toFixed(1) + '%;top:' + (10 + Math.random() * 80).toFixed(1) + '%;animation-delay:-' + (Math.random() * 3.4).toFixed(2) + 's;animation-duration:' + (2.8 + Math.random() * 1.8).toFixed(2) + 's';
+            stage.appendChild(n);
+          }
+        } else logoEl.remove();
+
+        // A line of text in the pixel font: light letters with a plum outline, tinted.
+        var canvas = el.querySelector('.status');
+        var glyphs = boot.glyphs || {};
+        function spell(text, colors) {
+          var cells = text.length * 6 + 1, h = 9;
+          canvas.width = cells;
+          canvas.height = h;
+          var scale = Math.max(1, Math.round(Math.min(3, short / 180)));
+          canvas.style.width = cells * scale + 'px';
+          canvas.style.height = h * scale + 'px';
+          var ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, cells, h);
+          for (var pass = 0; pass < 2; pass++) {
+            for (var c = 0; c < text.length; c++) {
+              var g = glyphs[text[c]];
+              if (!g) continue;
+              var rows = g.split(' ');
+              ctx.fillStyle = pass ? colors[c] : '#4a2850';
+              for (var y = 0; y < 7; y++) for (var x = 0; x < 5; x++) {
+                if (rows[y][x] !== '#') continue;
+                if (pass) ctx.fillRect(c * 6 + 1 + x, 1 + y, 1, 1);
+                else ctx.fillRect(c * 6 + x, y, 3, 3);
+              }
+            }
+          }
+        }
+        var WORDS = [[0.2, 'GATHERING CLOUDS'], [0.42, 'WARMING THE HEARTH'], [0.64, 'PLANTING SEEDS'], [0.86, 'WAKING THE BREEZE'], [0.999, 'OPENING THE GATES'], [2, 'READY']];
+        var fill = el.querySelector('.fill'), head = el.querySelector('.head');
+        var target = 0, shown = 0, said = '', dots = 0, last = 0, gone = false, ready = false;
+        var TAP = 'TAP ANYWHERE TO START';
+        function words(p) {
+          for (var k = 0; k < WORDS.length; k++) if (p < WORDS[k][0]) return WORDS[k][1];
+          return 'READY';
+        }
+        function frame(t) {
+          if (gone) return;
+          // The bar eases toward the real progress, and creeps on a little while the game builds.
+          shown += (target - shown) * 0.18;
+          if (target < 1) shown = Math.min(target + 0.02, shown + 0.0006);
+          var p = Math.min(1, shown);
+          fill.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+          head.style.transform = 'translateX(' + (p * parseFloat(st.getPropertyValue('--bw'))).toFixed(1) + 'px)';
+          if (t - last > 420) {
+            last = t;
+            dots = (dots + 1) % 4;
+          }
+          if (ready) {
+            if (said !== TAP) {
+              said = TAP;
+              var gold = [];
+              for (var g = 0; g < TAP.length; g++) gold.push(g % 2 ? '#fff4d0' : '#ffe08a');
+              spell(TAP, gold);
+            }
+            requestAnimationFrame(frame);
+            return;
+          }
+          var w = words(p), pct = Math.floor(p * 100) + '%';
+          var line = w === 'READY' ? w : w + '...'.slice(0, dots) + '   '.slice(dots) + ' ' + pct;
+          if (line !== said) {
+            said = line;
+            var colors = [];
+            for (var c = 0; c < line.length; c++) colors.push(c > w.length + 3 ? '#ffd56a' : w === 'READY' ? '#ffffff' : '#fff1e4');
+            spell(line, colors);
+          }
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+
+        function leave() {
+          el.classList.add('done');
+          setTimeout(function () {
+            gone = true;
+            el.remove();
+          }, 700);
+        }
+
+        window.bootLoader = {
+          progress: function (p) {
+            target = Math.max(target, Math.min(1, p));
+          },
+          done: function () {
+            target = shown = 1;
+            window.bootLoader = undefined;
+            if (!touch) return leave();
+            // On a phone the game waits for a tap: that tap may go fullscreen and turn
+            // to landscape (src/pwa.ts), which the manifest can't safely ask for. Its
+            // events stop here, so nothing on the first screen beneath is pressed.
+            ready = true;
+            el.classList.add('ready');
+            el.setAttribute('aria-label', 'Tap anywhere to start');
+            var swallow = function (e) {
+              e.stopPropagation();
+            };
+            var start = function (e) {
+              e.stopPropagation();
+              if (!ready) return;
+              ready = false;
+              if (window.enterFullscreen) window.enterFullscreen();
+              leave();
+            };
+            ['pointerdown', 'touchstart', 'touchend', 'mousedown', 'mouseup'].forEach(function (k) {
+              el.addEventListener(k, swallow);
+            });
+            el.addEventListener('pointerup', start);
+            el.addEventListener('click', start);
+          },
+        };
+      })();
+    </script>
+    <button id="install" class="chrome" hidden>Install</button>
+    <div id="rotate" class="chrome" hidden>
+      <img src="icons/icon-192.png" alt="" />
+      <b>Turn your phone sideways</b>
+      <small>Tap to play in portrait anyway</small>
+    </div>
+    <script type="module" src="/src/heaven/entry.ts"></script>
+  </body>
+</html>

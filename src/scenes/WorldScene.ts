@@ -59,6 +59,7 @@ import { ForestSpawner } from '../world/ForestSpawner';
 import { EVERWOOD_SEED, ForestGen, useForest } from '../world/forestGen';
 import { omenMods, resetOmens } from '../game/omens';
 import { BossIntro, FinalBlow, bossTint } from '../game/BossIntro';
+import { cozy, type CozyLand } from '../game/cozy';
 
 type V3 = [number, number, number];
 
@@ -106,7 +107,7 @@ import { sound } from '../audio';
 import { inventory, rollDrop, STARTING_ITEMS, HOTBAR_SIZE, type ItemContext } from '../game/items';
 import { heroBuffs, type BuffDef } from '../game/buffs';
 import { heroTimers } from '../game/timers';
-import { GemTally, LootFlare, Pickup } from '../game/Pickup';
+import { GemTally, LootFlare, Pickup, type Loot } from '../game/Pickup';
 import { gear, GEAR_SETS, RARITY, type GearDef, type SetId } from '../game/gear';
 import { HeroDress } from '../game/heroDress';
 import { SetPowers } from '../game/setPowers';
@@ -320,6 +321,8 @@ export class WorldScene extends Phaser.Scene {
   private inSpecial = false;
   /** Items lying on the ground. */
   private pickups: Pickup[] = [];
+  /** A Heaven Lands land's living parts (see game/cozy.ts). */
+  private land: CozyLand | null = null;
   /** Time until the next speck of the speed trail. */
   private trailT = 0;
   /** What items may do to the world when used. */
@@ -466,6 +469,15 @@ export class WorldScene extends Phaser.Scene {
       this.shadows.push(...this.island.shadows);
     }
 
+    // Heaven Lands' own lands stand up their ground and life themselves.
+    const land = cozy.on ? (cozy.land?.(this, arena.id, (img) => ground(img) as Phaser.GameObjects.Image, this.view) ?? null) : null;
+    this.land = land;
+    if (land)
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        land.destroy();
+        if (this.land === land) this.land = null;
+      });
+
     // Faint shafts of sunlight over the clearing's ground. Drifting cloud
     // shadows are drawn over everything, with the vignette (see below).
     if (arena.id === 'clearing') {
@@ -556,7 +568,8 @@ export class WorldScene extends Phaser.Scene {
     }
     const ch = characterById(data?.character);
     const before = new Set(this.children.list);
-    this.hero = ch.spawn(this, this.spawnX, this.spawnY);
+    // Heaven Lands plays its own wanderer, dressed in its character creator.
+    this.hero = cozy.on && cozy.spawn ? cozy.spawn(this, this.spawnX, this.spawnY) : ch.spawn(this, this.spawnX, this.spawnY);
     this.dress = new HeroDress(this, this.hero.sprite, this.children.list.filter((o) => !before.has(o)));
     this.stats = heroStats(ch.id, ch.type.id);
     diag.hero = `${ch.id} / ${ch.type.id} / ${ch.skin?.id ?? 'no skin'}`;
@@ -594,7 +607,7 @@ export class WorldScene extends Phaser.Scene {
     // Echoes of the fallen, wherever monsters can fell a hero: not the
     // peaceful clearing, and not a duel, where the fallen fell to a friend.
     this.echoes = null;
-    if (arena.id !== 'clearing' && !duel && arena.id !== 'island' && arena.id !== 'home' && arena.id !== 'forest') {
+    if (!cozy.on && arena.id !== 'clearing' && !duel && arena.id !== 'island' && arena.id !== 'home' && arena.id !== 'forest') {
       const echoes = (this.echoes = new EchoGraves(this, arena.id, this.hero, ch.skin?.name ?? ch.type.name, arena.spawn));
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
         echoes.destroy();
@@ -624,12 +637,13 @@ export class WorldScene extends Phaser.Scene {
         this.scene.stop('rift');
       });
     } else if (this.forest) {
-      // The forest's creatures wake and sleep with the chunks round the players.
-      this.spawners.push(new ForestSpawner(this, this.forest.gen, (x, y) => !!this.forest?.edits?.warded(x, y)));
+      // The forest's creatures wake and sleep with the chunks round the players (none in Heaven Lands).
+      if (!cozy.on) this.spawners.push(new ForestSpawner(this, this.forest.gen, (x, y) => !!this.forest?.edits?.warded(x, y)));
     } else {
       // A season's monsters (Hallow's Eve's pumpkins and bats) join the arena's own while it runs.
-      const extra = arena.monsters.length ? seasonalSpots(arena.id, arena.monsters, arena.walkable) : [];
-      this.spawners.push(new Spawner(this, [...arena.monsters, ...extra], arena.respawn));
+      // Heaven Lands' places are peaceful: no monsters anywhere.
+      const extra = arena.monsters.length && !cozy.on ? seasonalSpots(arena.id, arena.monsters, arena.walkable) : [];
+      this.spawners.push(new Spawner(this, cozy.on ? [] : [...arena.monsters, ...extra], arena.respawn));
     }
     this.scenery = new Scenery(this, arena.scenery(), arena.drift);
     this.net = session.active ? new NetPlay(this) : null;
@@ -651,7 +665,7 @@ export class WorldScene extends Phaser.Scene {
       this.paceWorld(1);
     });
     // Now and then something happens in the monster arenas (see world/Omens.ts); its overlay shows it.
-    this.omens = OMEN_ARENAS.has(arena.id) ? new Omens(this) : null;
+    this.omens = OMEN_ARENAS.has(arena.id) && !cozy.on ? new Omens(this) : null;
     if (this.omens) {
       this.scene.launch('omen');
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -901,6 +915,11 @@ export class WorldScene extends Phaser.Scene {
    * chances at gear, rolled as a strong monster's are.
    */
   openTreasure(x: number, y: number): void {
+    // Heaven Lands has no loot: its chests hold seeds and keepsakes.
+    if (cozy.on) {
+      cozy.treasure?.(this, x, y);
+      return;
+    }
     const odds = riftMods.odds;
     this.pickups.push(new Pickup(this, x, y, { kind: 'item', id: Math.random() < 0.65 ? 'health' : 'speed' }));
     for (let k = 0; k < 2; k++) for (const def of gear.roll('chest', omenMods.bump, odds)) this.dropGear(def, x, y);
@@ -908,6 +927,11 @@ export class WorldScene extends Phaser.Scene {
     this.dropDust(4 + Math.floor(Math.random() * 6), x, y);
     sound.lootFall(this.pan(x));
     this.debris([0xfff0a0, 0xffd060, 0xffffff], snap(x), snap(y), 30, y + 20, 'burst');
+  }
+
+  /** Something to pick up, dropped at (x, y) (Heaven Lands' chests). */
+  dropLoot(loot: Loot, x: number, y: number): void {
+    this.pickups.push(new Pickup(this, x, y, loot));
   }
 
   /** A word across the screen, as the arena's name is shown. */
@@ -970,7 +994,7 @@ export class WorldScene extends Phaser.Scene {
   /** A companion mends the hero by `share` of their health, if they are hurt and up; returns the health restored. */
   /** Energy for the Special from something in the world (a will-o'-wisp caught): motes fly in to the hero, as from a slain foe. */
   chargeSpecial(x: number, y: number, amount: number): void {
-    if (this.downT > 0) return;
+    if (this.downT > 0 || cozy.on) return;
     this.addEffect(new EnergyMotes(this, x, y, this.hero, amount * petMods.energy * omenMods.energy, this.ult.ult.pal));
   }
 
@@ -1202,7 +1226,7 @@ export class WorldScene extends Phaser.Scene {
       if (Math.abs(this.pushX) + Math.abs(this.pushY) < 2) this.pushX = this.pushY = 0;
     }
     const v = h.vitals;
-    this.heroBar.update(dt, snap(h.x), snap(h.y) - 34, this.downT > 0 ? 0 : v.hp, v.max, v.barrier);
+    if (!cozy.on) this.heroBar.update(dt, snap(h.x), snap(h.y) - 34, this.downT > 0 ? 0 : v.hp, v.max, v.barrier);
   }
 
   /**
@@ -2245,6 +2269,8 @@ export class WorldScene extends Phaser.Scene {
     let special = controls.beam || controls.beamTap || controls.rightClick || k.K.isDown || k.SHIFT.isDown;
     let ultPressed = controls.ultTap || Phaser.Input.Keyboard.JustDown(k.SPACE);
     controls.ultTap = false;
+    // Nothing to fight in Heaven Lands: the hero only walks (its emotes come from its own HUD).
+    if (cozy.on) attack = special = ultPressed = false;
     // Online the world keeps going while the menu is open; the hero just stands.
     if (session.paused) {
       mx = my = 0;
@@ -2359,6 +2385,7 @@ export class WorldScene extends Phaser.Scene {
     this.ground?.update(this.view, settings.values.quality !== 'full' ? 2.5 : 4);
     this.scenery.update(time, dt, d, this.hero, this.view);
     this.forest?.update(time, dt, d, { x: this.hero.x, y: this.hero.y, alive: this.downT <= 0 }, this.view, this.net?.targets());
+    this.land?.update(time, dt, d, this.hero, this.view);
     this.garden?.update(time, dt, target, d, this.view);
     // After the day/night light: the cosmos lights itself.
     this.cosmos?.update(time, dt);
