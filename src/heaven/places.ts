@@ -81,6 +81,16 @@ export const PLACES: Place[] = [
     together: true,
     dayNight: false,
   },
+  {
+    id: 'shore',
+    arena: 'shore',
+    name: 'Glowtide Shore',
+    blurb: 'A coast that never ends',
+    lore: "Warm sand, turquoise shallows and a sea that never stirs much above a whisper. Walk it east or west for as long as you like; by night the water's edge glows blue where the waves come in.",
+    endless: true,
+    together: true,
+    dayNight: true,
+  },
 ];
 
 export const placeById = (id: string | undefined): Place => PLACES.find((p) => p.id === id || p.arena === id) ?? PLACES[0];

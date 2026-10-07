@@ -12,6 +12,7 @@ import { profile } from './profile';
 import { Wanderer } from './Wanderer';
 import { EmoteButtons } from './ui/emoteButtons';
 import { PLACES } from './places';
+import { buildLand, landArena } from './lands';
 
 /** Seed packets in a chest: how many, and the odds a packet is a magic seed rather than a wild one. */
 const CHEST_SEEDS: [number, number] = [2, 3];
@@ -36,6 +37,8 @@ export function wireCozy(): void {
   cozy.spawn = (world, x, y) => new Wanderer(world, x, y, profile.look, true);
   cozy.me = () => ({ name: profile.name, ...lookFields(profile.look) });
   cozy.hud = (scene) => new EmoteButtons(scene);
+  cozy.arena = (id) => landArena(id);
+  cozy.land = (world, arena, ground, view) => buildLand(world, arena, ground, view);
   cozy.placeName = (arena) => PLACES.find((p) => p.arena === arena)?.name ?? arena;
   cozy.treasure = (world, x, y) => {
     const wild = CROPS.filter((c) => c.kind === 'wild');
