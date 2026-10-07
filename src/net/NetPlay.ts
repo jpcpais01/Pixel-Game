@@ -216,7 +216,6 @@ export class NetPlay {
       dn: this.world.heroDown ? 1 : 0,
       ...(gear.dress ? { ds: gear.dress } : {}),
       ...(this.world.petWorn ? { pt: this.world.petWorn } : {}),
-      ...(h.emoteTag ? { em: h.emoteTag } : {}),
     };
     this.attackHeld = this.specialHeld = false;
     session.send(s as unknown as Msg);

@@ -5,7 +5,6 @@
 
 import { account } from '../game/cloud';
 import { characterById } from '../game/characters';
-import { cozy } from '../game/cozy';
 import { difficultyDef, isWaveArena, riftDifficulty } from '../game/rift';
 import type { ArenaDef } from '../world/arenas';
 import { session, type Joined } from '../net/session';
@@ -42,9 +41,6 @@ export function onlineStyles(): void {
  * `onStart` gets the room's arena once in a room (a friend's may differ from
  * the one picked here).
  */
-/** A place's name as Heaven Lands calls it (its own arenas are named there). */
-const placeName = (arena: ArenaDef): string => cozy.placeName?.(arena.id) ?? arena.name;
-
 export function openOnlineForm(arena: ArenaDef, character: string, onStart: (room: Joined) => void, onClose: () => void): void {
   if (document.getElementById('online')) return;
   onlineStyles();
@@ -55,9 +51,9 @@ export function openOnlineForm(arena: ArenaDef, character: string, onStart: (roo
   root.className = 'chrome';
   root.innerHTML = `
     <div class="box">
-      <h2>${cozy.on ? 'Play together' : 'Play online'}</h2>
+      <h2>Play online</h2>
       <h3>New room</h3>
-      <p>${cozy.on ? `Wander ${placeName(arena)} with up to 3 friends.` : duel ? `A 1v1 duel on the ${arena.name}.` : arena.mode?.race ? `A ${arena.name} race, up to 4 heroes launching together.` : isWaveArena(arena.id) ? `The ${arena.name} on ${difficultyDef(riftDifficulty()).name}, up to 4 heroes holding it together.` : `Co-op in the ${arena.name}, up to 4 heroes.`} You'll get a code to send your friends.</p>
+      <p>${duel ? `A 1v1 duel on the ${arena.name}.` : arena.mode?.race ? `A ${arena.name} race, up to 4 heroes launching together.` : isWaveArena(arena.id) ? `The ${arena.name} on ${difficultyDef(riftDifficulty()).name}, up to 4 heroes holding it together.` : `Co-op in the ${arena.name}, up to 4 heroes.`} You'll get a code to send your friends.</p>
       <button type="button" class="go" data-create>Create room</button>
       <div class="sep"></div>
       <h3>Join a friend</h3>
@@ -96,7 +92,7 @@ export function openOnlineForm(arena: ArenaDef, character: string, onStart: (roo
     if (e.target === root) close();
   });
 
-  const me = cozy.on && cozy.me ? cozy.me() : { name: account()?.username ?? ch.name, hero: ch.id, look: ch.look };
+  const me = { name: account()?.username ?? ch.name, hero: ch.id, look: ch.look };
   const go = async (req: Parameters<typeof session.open>[0]) => {
     if (busy) return;
     setBusy(true);

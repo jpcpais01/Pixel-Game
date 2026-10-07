@@ -26,7 +26,6 @@ import type { PeerInfo } from './session';
 import { rouse } from '../game/rest';
 import { Companion } from '../game/Companion';
 import { petById } from '../game/pets';
-import { cozy } from '../game/cozy';
 
 /** A player's state, sent many times a second. Aim fields are absent when nothing is aimed at. */
 export interface HeroState {
@@ -53,8 +52,6 @@ export interface HeroState {
   ds?: SetId;
   /** The companion that came along with them, if any. */
   pt?: string;
-  /** The emote they last made (Heaven Lands), tagged so a repeat of the same one still plays. */
-  em?: string;
 }
 
 /** Their hero is too far from where they say it is: it jumps there instead of gliding. */
@@ -181,7 +178,6 @@ export class RemotePlayer implements Hurtbox {
     this.state = s;
     this.dress.set = s.ds && s.ds in GEAR_SETS ? s.ds : null;
     if (s.pt !== this.pet?.def.id) this.wearPet(s.pt, s.x, s.y);
-    if (s.em && s.em !== was?.em) this.hero.netEmote?.(s.em);
     this.at = now;
     if (!was) {
       // First word from them: stand where they are.
@@ -263,11 +259,11 @@ export class RemotePlayer implements Hurtbox {
       this.tint -= dt;
       if (this.tint <= 0) h.sprite.clearTint();
     }
-    if (!cozy.on) this.bar.update(dt, snap(h.x), snap(h.y) - 34, s.dn ? 0 : s.hp, s.mh, s.br);
+    this.bar.update(dt, snap(h.x), snap(h.y) - 34, s.dn ? 0 : s.hp, s.mh, s.br);
     this.tag
       .setVisible(this.fade > 0.05)
       .setAlpha(this.fade * 0.9)
-      .setPosition(snap(h.x), snap(h.y) - (cozy.on ? 45 : 37));
+      .setPosition(snap(h.x), snap(h.y) - 37);
 
     this.pruneT -= dt;
     if (this.pruneT <= 0) {
