@@ -11,10 +11,10 @@ import type { LandWorld } from './landWorld';
 import { LAND_WORLD, type LandDef } from './types';
 
 /**
- * The texture the minimap (scenes/MapScene.ts) waits for before it paints a
- * painted arena's map. It never exists: a land is endless, and drawing a map
- * the size of its world would take all the memory there is, so the minimap
- * waits on it quietly instead.
+ * A painted arena's picture layer, which a land doesn't have: it never
+ * exists. A land is endless, so its minimap (scenes/MapScene.ts) is painted
+ * round the hero from the gen (landMap.ts) rather than from a picture the
+ * size of its whole world; this only keeps a picture from being looked for.
  */
 const NO_MAP = '__land_no_map';
 

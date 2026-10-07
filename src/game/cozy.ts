@@ -28,6 +28,19 @@ export interface CozyHooks {
   placeName: ((arena: string) => string) | null;
   /** The living parts of an arena Heaven Lands adds (its endless lands): built by the world on the way in, or null. */
   land: ((world: WorldScene, arena: string, ground: (img: Phaser.GameObjects.Image) => Phaser.GameObjects.Image, view: Phaser.Geom.Rectangle) => CozyLand | null) | null;
+  /** The map of an arena Heaven Lands adds (its endless lands), painted in tiles round where it's looked at, or null. */
+  map: ((arena: string) => CozyMap | null) | null;
+}
+
+/** An endless land's map for the minimap (scenes/MapScene.ts): tiles of `size` map pixels, one map pixel per MAP_CELL px of ground. */
+export interface CozyMap {
+  readonly size: number;
+  /** Raised when a tile is painted, so whatever shows them draws again. */
+  version: number;
+  /** Tile (tx, ty), or null while it waits to be painted (asking for it queues it). */
+  tile(tx: number, ty: number): HTMLCanvasElement | null;
+  /** Paint waiting tiles for about `budget` ms. */
+  work(budget: number): void;
 }
 
 export interface CozyLand {
@@ -41,4 +54,4 @@ export interface CozyHud {
   update(dt: number, hidden: boolean): void;
 }
 
-export const cozy: CozyHooks = { on: false, character: null, spawn: null, me: null, treasure: null, hud: null, arena: null, placeName: null, land: null };
+export const cozy: CozyHooks = { on: false, character: null, spawn: null, me: null, treasure: null, hud: null, arena: null, placeName: null, land: null, map: null };

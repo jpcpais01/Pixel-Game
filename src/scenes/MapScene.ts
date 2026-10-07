@@ -3,6 +3,7 @@ import { sound } from '../audio';
 import { bakedCanvas, pixelCanvas } from '../art/canvas';
 import { INK, MAP_CELL, RING_M, RING_MID, TREK_T, diskRow, groundMapBase, mapIconSheet, reliefMap, ringFrame, stampCrowns, type MapBase } from '../art/mapArt';
 import { BUILD_PX, paintBuilds, type BuiltSource } from '../art/mapBuilds';
+import { cozy, type CozyMap } from '../game/cozy';
 import { DPR as D, menuZoom } from '../game/display';
 import { activeSeason } from '../game/season';
 import { settings } from '../game/settings';
@@ -34,6 +35,11 @@ import type { WorldScene } from './WorldScene';
 // they're found. The scroll button beside it (or Tab) opens the whole map:
 // drag to look round, zoom in and out, and tap a campfire rested at, or a
 // shrine found, to travel back to it.
+//
+// In Heaven Lands there's no folding: a tap on the minimap opens the big map
+// of wherever the wanderer is (the explorer's map in the Everwood, the
+// arena's whole picture in the fixed places), and an endless land's minimap
+// is painted round the hero from the land itself (heaven/lands/landMap.ts).
 
 /** The minimap's width across against the screen's short side, and folded. */
 const MINI = 0.25;
@@ -48,6 +54,8 @@ const TILE_MS_OPEN = 10;
 const MAX_MOBS = 80;
 /** How near (device px) a tap must land to a campfire or shrine to pick it. */
 const PICK = 22;
+/** The ground past an endless land's painted tiles, while they come in. */
+const LAND_BACK = '#1a1c26';
 /** Remembered: the minimap folded. */
 const FOLD_KEY = 'pixel-battle.minimap';
 
@@ -73,6 +81,18 @@ function arenaPins(id: string): { icon: string; x: number; y: number }[] {
     default:
       return [];
   }
+}
+
+/** What the big map shows when it isn't the Everwood's explorer's map: an endless land's tiles, or an arena's whole picture. */
+interface MapView {
+  title: string;
+  /** Fill where nothing is painted. */
+  back: string;
+  version(): number;
+  /** Draw the map from map pixel (x0, y0), w x h, onto `ctx`. */
+  draw(ctx: CanvasRenderingContext2D, x0: number, y0: number, w: number, h: number): void;
+  /** The map's size in map pixels when it has edges (an arena's picture): the view keeps inside it. Null for an endless land, or while the picture is painted. */
+  size(): { w: number; h: number } | null;
 }
 
 /** A pool of icons drawn from the map's sheet, given out afresh each frame. */
@@ -123,6 +143,8 @@ export class MapScene extends Phaser.Scene {
   private world!: WorldScene;
   private arena!: ArenaDef;
   private trekMap: TrekMap | null = null;
+  /** An endless Heaven Lands land's map, painted in tiles round the hero. */
+  private landMap: CozyMap | null = null;
 
   // ---- the minimap
   private rect = new Phaser.Geom.Rectangle();
@@ -183,7 +205,8 @@ export class MapScene extends Phaser.Scene {
     this.homeSig = '';
     ensureIcons(this);
     try {
-      this.folded = localStorage.getItem(FOLD_KEY) === '1';
+      // Heaven Lands' tap opens the big map instead, so its minimap never stays folded.
+      this.folded = !cozy.on && localStorage.getItem(FOLD_KEY) === '1';
     } catch {
       this.folded = false;
     }
@@ -196,14 +219,16 @@ export class MapScene extends Phaser.Scene {
     const hidden = () => document.visibilityState === 'hidden' && this.trekMap && trek.save();
     document.addEventListener('visibilitychange', hidden);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => document.removeEventListener('visibilitychange', hidden));
-    this.full = forest ? null : (arenaMaps.get(this.arena.id) ?? null);
-    this.job = forest || this.full ? null : this.buildArena();
+    // An endless land has no picture of itself to paint (it would be the size of its whole world): its map is painted round the hero instead.
+    this.landMap = cozy.on && !forest ? (cozy.map?.(this.arena.id) ?? null) : null;
+    this.full = forest || this.landMap ? null : (arenaMaps.get(this.arena.id) ?? null);
+    this.job = forest || this.landMap || this.full ? null : this.buildArena();
 
     this.img = this.add.image(0, 0, '__DEFAULT').setOrigin(0).setDepth(2);
     this.frame = this.add.image(0, 0, '__DEFAULT').setOrigin(0).setDepth(2.5);
     this.icons = new Icons(this, 3);
     this.zone = this.add.zone(0, 0, 1, 1).setOrigin(0).setInteractive({ useHandCursor: true });
-    this.zone.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => this.fold(!this.folded));
+    this.zone.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => (cozy.on ? this.openBig() : this.fold(!this.folded)));
 
     if (forest) {
       const g = this.add.graphics().setDepth(1);
@@ -223,6 +248,9 @@ export class MapScene extends Phaser.Scene {
         this.drawMapButton();
         this.openBig();
       });
+    }
+    // Tab opens the whole map wherever there's one to open by tapping too.
+    if (forest || cozy.on) {
       const kb = this.input.keyboard;
       kb?.addKey(Phaser.Input.Keyboard.KeyCodes.TAB, true).on('down', () => (this.big ? this.closeBig() : this.openBig()));
       kb?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC, false).on('down', () => this.closeBig());
@@ -243,6 +271,7 @@ export class MapScene extends Phaser.Scene {
       if (this.big) this.closeBig();
       if (this.trekMap) trek.save();
       this.trekMap = null;
+      this.landMap = null;
       this.job = null;
       if (this.tex) this.textures.remove(this.tex);
       if (this.frameTex) this.textures.remove(this.frameTex);
@@ -438,6 +467,7 @@ export class MapScene extends Phaser.Scene {
       tm.sync();
       tm.work(this.big ? TILE_MS_OPEN : TILE_MS, !!this.big || this.game.loop.frame % 6 === 0);
     }
+    this.landMap?.work(this.big ? TILE_MS_OPEN : TILE_MS);
 
     if (this.big) {
       this.big.update();
@@ -491,16 +521,19 @@ export class MapScene extends Phaser.Scene {
       x0 = this.full.w <= cw ? Math.round((this.full.w - cw) / 2) : Phaser.Math.Clamp(x0, 0, this.full.w - cw);
       y0 = this.full.h <= ch ? Math.round((this.full.h - ch) / 2) : Phaser.Math.Clamp(y0, 0, this.full.h - ch);
     }
-    const key = `${x0},${y0},${tm ? `${tm.version},${this.built?.version}` : this.fullVersion}`;
+    const lm = this.landMap;
+    const key = `${x0},${y0},${tm ? `${tm.version},${this.built?.version}` : lm ? lm.version : this.fullVersion}`;
     if (key !== this.drawn && this.tex) {
       this.drawn = key;
       const ctx = this.tex.context;
       ctx.imageSmoothingEnabled = false;
-      ctx.fillStyle = tm ? '#dcc495' : '#0b0a14';
+      ctx.fillStyle = tm ? '#dcc495' : lm ? LAND_BACK : '#0b0a14';
       ctx.fillRect(0, 0, cw, ch);
       if (tm) {
         drawTrek(ctx, tm, x0, y0, cw, ch);
         this.built?.draw(ctx, x0, y0, cw, ch);
+      } else if (lm) {
+        drawLand(ctx, lm, x0, y0, cw, ch);
       } else if (this.full) {
         const sx = Math.max(0, x0);
         const sy = Math.max(0, y0);
@@ -585,14 +618,39 @@ export class MapScene extends Phaser.Scene {
 
   private openBig(): void {
     // Not over the pause menu, or a counter or the bag.
-    if (this.big || !this.trekMap || this.ui?.covered || !this.scene.isActive('world')) return;
-    this.big = new BigMap(this, this.world, this.trekMap, this.built, () => this.closeBig(), () => this.last.dir);
+    if (this.big || this.ui?.covered || !this.scene.isActive('world')) return;
+    const view = this.trekMap ? null : this.mapView();
+    if (!this.trekMap && !view) return;
+    this.big = new BigMap(this, this.world, this.trekMap, view, this.built, () => this.closeBig(), () => this.last.dir);
     sound.cardFlip(0);
     // Alone, the world waits while the map is read; online it can't.
     if (!session.active) {
       this.scene.pause('world');
       if (this.scene.isActive('ui')) this.scene.pause('ui');
     }
+  }
+
+  /** The big map's view of a Heaven Lands place that isn't the Everwood: its land's tiles, or the arena's picture (null in Myths, where only the Everwood has one). */
+  private mapView(): MapView | null {
+    if (!cozy.on) return null;
+    const title = (cozy.placeName?.(this.arena.id) ?? this.arena.name).toUpperCase();
+    const lm = this.landMap;
+    if (lm) return { title, back: LAND_BACK, version: () => lm.version, draw: (ctx, x0, y0, w, h) => drawLand(ctx, lm, x0, y0, w, h), size: () => null };
+    return {
+      title,
+      back: '#0b0a14',
+      version: () => this.fullVersion,
+      draw: (ctx, x0, y0, w, h) => {
+        const f = this.full;
+        if (!f) return;
+        const sx = Math.max(0, x0);
+        const sy = Math.max(0, y0);
+        const sw = Math.min(f.w, x0 + w) - sx;
+        const sh = Math.min(f.h, y0 + h) - sy;
+        if (sw > 0 && sh > 0) ctx.drawImage(f.canvas, sx, sy, sw, sh, sx - x0, sy - y0, sw, sh);
+      },
+      size: () => (this.full ? { w: this.full.w, h: this.full.h } : null),
+    };
   }
 
   private closeBig(): void {
@@ -666,6 +724,17 @@ function paintedBase(scene: Phaser.Scene, a: ArenaDef, w: number, h: number): Ma
     rgb[i * 3 + 2] = d[i * 4 + 2];
   }
   return { w, h, rgb, raised: new Uint8Array(w * h) };
+}
+
+/** Draw an endless land's map from map pixel (x0, y0), w x h, onto `ctx`. */
+function drawLand(ctx: CanvasRenderingContext2D, lm: CozyMap, x0: number, y0: number, w: number, h: number): void {
+  const T = lm.size;
+  for (let ty = Math.floor(y0 / T); ty <= Math.floor((y0 + h - 1) / T); ty++) {
+    for (let tx = Math.floor(x0 / T); tx <= Math.floor((x0 + w - 1) / T); tx++) {
+      const t = lm.tile(tx, ty);
+      if (t) ctx.drawImage(t, tx * T - x0, ty * T - y0);
+    }
+  }
 }
 
 /** Draw the Everwood's map from map pixel (x0, y0), w x h, onto `ctx`. */
@@ -775,7 +844,9 @@ class BuiltLayer {
  * The whole explorer's map, open over the screen as a scroll of parchment
  * between two rods: dragged to look round, zoomed in and out, the names of
  * the woods written where they were walked, and every campfire rested at
- * and shrine found a place to travel back to.
+ * and shrine found a place to travel back to. In Heaven Lands the same
+ * scroll opens on any place's map (a MapView): no pins, names or travel
+ * there, only the map, friends and the hero.
  */
 class BigMap {
   private shade: Phaser.GameObjects.Graphics;
@@ -812,7 +883,8 @@ class BigMap {
   constructor(
     private scene: MapScene,
     private world: WorldScene,
-    private tm: TrekMap,
+    private tm: TrekMap | null,
+    private view: MapView | null,
     private built: BuiltLayer | null,
     private onClose: () => void,
     private heading: () => number,
@@ -824,7 +896,7 @@ class BigMap {
     this.paper = add.graphics().setDepth(101);
     this.img = add.image(0, 0, '__DEFAULT').setOrigin(0).setDepth(102);
     this.icons = new Icons(scene, 104);
-    this.title = add.bitmapText(0, 0, 'pixel', 'THE EVERWOOD').setLetterSpacing(-1).setOrigin(0.5, 0.5).setTint(0xfff0c8).setDepth(110);
+    this.title = add.bitmapText(0, 0, 'pixel', view?.title ?? 'THE EVERWOOD').setLetterSpacing(-1).setOrigin(0.5, 0.5).setTint(0xfff0c8).setDepth(110);
     this.hint = add.bitmapText(0, 0, 'pixel', '').setLetterSpacing(-1).setOrigin(0.5, 1).setTint(0x3b2a1e).setDepth(110);
     this.buttons = add.graphics().setDepth(110);
     this.zone = add.zone(0, 0, 1, 1).setOrigin(0).setDepth(103).setInteractive();
@@ -845,7 +917,14 @@ class BigMap {
     scene.input.on(Phaser.Input.Events.POINTER_UP, this.up, this);
     this.wheel = (_p, _o, _dx, dy) => this.setLevel(this.level + (dy < 0 ? 1 : -1));
     scene.input.on(Phaser.Input.Events.POINTER_WHEEL, this.wheel);
+    // An arena's picture opens as big as it will go and still fit whole.
+    const size = view?.size();
+    if (size) this.level = 2;
     this.layout();
+    while (size && this.level > 1 && (size.w > this.vw || size.h > this.vh)) {
+      this.level--;
+      this.layout();
+    }
   }
 
   private move(p: Phaser.Input.Pointer): void {
@@ -854,6 +933,16 @@ class BigMap {
     d.moved = Math.max(d.moved, Math.hypot(p.x - d.x, p.y - d.y));
     this.cx = d.cx - ((p.x - d.x) / this.bz) * MAP_CELL;
     this.cy = d.cy - ((p.y - d.y) / this.bz) * MAP_CELL;
+    this.keepInside();
+  }
+
+  /** A map with edges (an arena's picture) keeps the view inside it, or sits in the middle when it's smaller than the sheet. */
+  private keepInside(): void {
+    const size = this.view?.size();
+    if (!size) return;
+    const fit = (c: number, n: number, v: number) => (n <= v ? (n / 2) * MAP_CELL : Phaser.Math.Clamp(c, (v / 2) * MAP_CELL, (n - v / 2) * MAP_CELL));
+    this.cx = fit(this.cx, size.w, this.vw);
+    this.cy = fit(this.cy, size.h, this.vh);
   }
 
   private up(p: Phaser.Input.Pointer): void {
@@ -992,6 +1081,10 @@ class BigMap {
     this.travel?.destroy();
     this.travel = null;
     const f = this.picked;
+    if (!this.tm) {
+      this.hint.setText('');
+      return;
+    }
     this.hint.setText(f ? '' : trek.fires.size || builtFires(this.world) || this.pins.some((p) => p.fire) ? 'TAP A CAMPFIRE OR SHRINE TO TRAVEL' : 'REST AT A CAMPFIRE TO TRAVEL BACK LATER');
     if (!f) return;
     const z = this.zoom;
@@ -1006,8 +1099,18 @@ class BigMap {
 
   update(): void {
     const tm = this.tm;
-    const key = `${this.x0},${this.y0},${tm.version},${this.built?.version},${this.bz}`;
-    if (key !== this.drawn && this.tex) {
+    const view = this.view;
+    this.keepInside();
+    const key = `${this.x0},${this.y0},${tm ? tm.version : view?.version()},${this.built?.version},${this.bz}`;
+    if (key !== this.drawn && this.tex && !tm && view) {
+      this.drawn = key;
+      const ctx = this.tex.context;
+      ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle = view.back;
+      ctx.fillRect(0, 0, this.vw, this.vh);
+      view.draw(ctx, this.x0, this.y0, this.vw, this.vh);
+      this.tex.refresh();
+    } else if (key !== this.drawn && this.tex && tm) {
       this.drawn = key;
       const ctx = this.tex.context;
       ctx.imageSmoothingEnabled = false;
@@ -1028,7 +1131,7 @@ class BigMap {
     const c1 = Math.floor(((this.x0 + this.vw) * MAP_CELL) / CHUNK);
     const r1 = Math.floor(((this.y0 + this.vh) * MAP_CELL) / CHUNK);
     const pk = `${c0},${r0},${c1},${r1},${trek.version},${this.world.everwood?.edits?.version ?? 0}`;
-    if (pk !== this.pinsKey) {
+    if (tm && pk !== this.pinsKey) {
       this.pinsKey = pk;
       this.pins = everwoodPins(this.world, tm, c0 * CHUNK, r0 * CHUNK, (c1 + 1) * CHUNK, (r1 + 1) * CHUNK);
     }
